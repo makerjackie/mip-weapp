@@ -12,11 +12,21 @@
         <view class="absolute left-0 top-[78rpx] h-[2rpx] w-full bg-panel"></view>
         <view class="absolute top-[76rpx] h-[4rpx] w-[376rpx] bg-brand" style="left:{{figma.tabs.leftActive ? 0 : 376}}rpx"></view>
       </view>
-      <view wx:if="{{figma.search}}" class="absolute left-[24rpx] top-[24rpx] h-[80rpx] w-[702rpx] rounded-[16rpx] bg-panel">
-        <mip-icon class="absolute left-[24rpx] top-[20rpx]" name="search-big-left-1" size="{{20}}" color="var(--color-muted)" />
-        <view class="absolute left-[80rpx] top-0 flex h-full items-center text-[length:24rpx] leading-[33.6rpx] text-muted">搜索姓名，行业，简介等</view>
-      </view>
-      <view wx:for="{{figma.chips}}" wx:key="label" class="absolute flex h-[56rpx] items-center justify-center rounded-[16rpx] text-[length:28rpx] {{item.active ? 'bg-brand font-medium text-on-brand' : 'bg-panel text-muted'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx || 128}}rpx;width:{{item.widthRpx}}rpx">{{item.label}}</view>
+      <mip-search-bar
+        wx:if="{{figma.search}}"
+        class="absolute left-[24rpx] top-[24rpx]"
+        style="width:702rpx"
+        placeholder="{{figma.search}}"
+      />
+      <mip-tag-chip
+        wx:for="{{figma.chips}}"
+        wx:key="label"
+        class="absolute"
+        style="left:{{item.leftRpx}}rpx;top:{{item.topRpx || 128}}rpx;width:{{item.widthRpx}}rpx"
+        label="{{item.label}}"
+        active="{{item.active}}"
+        block="{{true}}"
+      />
       <view wx:for="{{figma.cards}}" wx:key="name" class="absolute h-[374rpx] w-[340rpx] overflow-hidden rounded-[16rpx] {{item.highlight ? 'bg-[#333333]' : 'bg-panel'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
         <view wx:if="{{item.chipAt}}" class="absolute flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[length:20rpx] font-semibold leading-[28rpx] text-brand" style="left:{{item.chipAt.leftRpx}}rpx;top:{{item.chipAt.topRpx}}rpx">Lv.23</view>
         <view wx:else class="absolute left-[16rpx] top-[16rpx] flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[length:20rpx] font-semibold leading-[28rpx] text-brand">Lv.23</view>
@@ -45,9 +55,9 @@
     <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
-  <view wx:elif="{{state === 'access'}}"><app-empty-state title="需要完成身份信息" description="完成身份信息后可以查看心动记录。" action-text="继续" bind:action="openAccess" /></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载心动记录" description="请检查网络后重试。" action-text="重新加载" bind:action="retry" /></view>
-  <app-empty-state wx:elif="{{state === 'empty'}}" title="{{kind === 'SENT' ? '暂无我点过的人' : '暂无对我心动的人'}}" description="活动签到后的心动记录会显示在这里。" />
+  <view wx:elif="{{state === 'access'}}"><mip-empty-state title="需要完成身份信息" description="完成身份信息后可以查看心动记录。" action-text="继续" bind:action="openAccess" /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法加载心动记录" description="请检查网络后重试。" action-text="重新加载" bind:action="retry" /></view>
+  <mip-empty-state wx:elif="{{state === 'empty'}}" title="{{kind === 'SENT' ? '暂无我点过的人' : '暂无对我心动的人'}}" description="活动签到后的心动记录会显示在这里。" />
   <view wx:else class="mt-4 flex flex-col gap-3">
     <view wx:for="{{items}}" wx:key="viewKey" class="rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-event-id="{{item.event.id}}" bind:tap="openEvent">
       <view class="flex items-center gap-3" data-profile-ref="{{item.person.profileRef}}" catch:tap="openProfile">

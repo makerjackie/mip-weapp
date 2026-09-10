@@ -26,12 +26,12 @@
 
 .mip-talent-card__avatar {
   position: absolute;
-  left: 24rpx;
   top: 34rpx;
+  left: 24rpx;
   width: 112rpx;
   height: 112rpx;
-  border-radius: 50%;
   background: var(--color-panel-raised);
+  border-radius: 50%;
 }
 
 .mip-talent-card__avatar-placeholder {
@@ -44,104 +44,104 @@
 
 .mip-talent-card__name-row {
   position: absolute;
-  left: 160rpx;
-  right: 24rpx;
   top: 26rpx;
-  height: 40rpx;
+  right: 24rpx;
+  left: 160rpx;
   display: flex;
   align-items: center;
+  height: 40rpx;
 }
 
 .mip-talent-card__name {
   min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
   font-size: 32rpx;
-  line-height: 44.8rpx;
   font-weight: 500;
+  line-height: 44.8rpx;
   color: var(--color-ink);
+  white-space: nowrap;
 }
 
 .mip-talent-card__level {
-  flex: none;
-  margin-left: 8rpx;
-  height: 32rpx;
   box-sizing: border-box;
-  padding: 0 8rpx;
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
+  height: 32rpx;
+  padding: 0 8rpx;
+  margin-left: 8rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 28rpx;
+  color: var(--color-brand);
   background: var(--color-panel-raised);
   border: 1rpx solid var(--color-canvas);
   border-radius: 8rpx;
-  font-size: 20rpx;
-  line-height: 28rpx;
-  font-weight: 600;
-  color: var(--color-brand);
 }
 
 .mip-talent-card__badge {
   flex: none;
-  margin-left: 8rpx;
   width: 40rpx;
   height: 40rpx;
+  margin-left: 8rpx;
 }
 
 .mip-talent-card__kind {
   flex: none;
-  margin-left: 8rpx;
   padding: 0 8rpx;
-  border-radius: 8rpx;
-  background: var(--color-brand-soft);
+  margin-left: 8rpx;
   font-size: 20rpx;
   line-height: 32rpx;
   color: var(--color-brand);
+  background: var(--color-brand-soft);
+  border-radius: 8rpx;
 }
 
 .mip-talent-card__meta {
   position: absolute;
-  left: 160rpx;
-  right: 24rpx;
   top: 76rpx;
+  right: 24rpx;
+  left: 160rpx;
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
   font-size: 24rpx;
   line-height: 33.6rpx;
   color: var(--color-muted);
+  white-space: nowrap;
 }
 
 .mip-talent-card__supporting {
   position: absolute;
-  left: 160rpx;
-  right: 24rpx;
   top: 118rpx;
+  right: 24rpx;
+  left: 160rpx;
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
   font-size: 20rpx;
   line-height: 28rpx;
   color: var(--color-muted);
+  white-space: nowrap;
 }
 
 .mip-talent-card__roles {
   position: absolute;
-  left: 24rpx;
   top: 24rpx;
+  left: 24rpx;
   display: flex;
-  align-items: center;
   gap: 16rpx;
+  align-items: center;
 }
 
 .mip-talent-card__role-tag {
   position: relative;
-  height: 32rpx;
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  padding-left: 40rpx;
+  height: 32rpx;
   padding-right: 8rpx;
+  padding-left: 40rpx;
   background: var(--color-brand);
   border: 1rpx solid var(--color-canvas);
   border-radius: 8rpx;
@@ -157,14 +157,14 @@
 
 .mip-talent-card__role-icon {
   position: absolute;
-  left: 0;
   top: 0;
-  width: 32rpx;
-  height: 32rpx;
+  left: 0;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 32rpx;
+  height: 32rpx;
   background: var(--color-panel);
   border: 1rpx solid var(--color-canvas);
   border-radius: 8rpx 0 0 8rpx;
@@ -177,31 +177,31 @@
 
 .mip-talent-card__role-label {
   font-size: 20rpx;
-  line-height: 28rpx;
   font-weight: 500;
+  line-height: 28rpx;
   color: var(--color-on-brand);
   white-space: nowrap;
 }
 
 .mip-talent-card__inviter {
   position: absolute;
-  right: 24rpx;
   top: 16rpx;
+  right: 24rpx;
   display: flex;
-  align-items: center;
   gap: 16rpx;
+  align-items: center;
 }
 
 .mip-talent-card__inviter-name {
   max-width: 180rpx;
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
-  text-align: right;
   font-size: 20rpx;
-  line-height: 28rpx;
   font-weight: 500;
+  line-height: 28rpx;
   color: var(--color-brand);
+  text-align: right;
+  white-space: nowrap;
 }
 
 .mip-talent-card__inviter-avatar {
@@ -214,14 +214,14 @@
 
 .mip-talent-card__target {
   position: absolute;
-  right: 24rpx;
   top: 16rpx;
+  right: 24rpx;
   max-width: 320rpx;
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
-  text-align: right;
   font-size: 20rpx;
   line-height: 28rpx;
   color: var(--color-brand);
+  text-align: right;
+  white-space: nowrap;
 }

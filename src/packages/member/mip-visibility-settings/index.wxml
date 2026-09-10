@@ -2,7 +2,7 @@
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
-  <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载公开设置" description="{{message}}" action-text="重新加载" bind:action="load" />
+  <mip-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载公开设置" description="{{message}}" action-text="重新加载" bind:action="load" />
   <block wx:else>
     <view class="rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] leading-6 text-muted">关闭后，对应信息不会出现在他人看到的公开档案或个人名片中。</view>
 

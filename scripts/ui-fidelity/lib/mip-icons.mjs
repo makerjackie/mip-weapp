@@ -7,23 +7,30 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import vm from 'node:vm'
 
 /** Loads the icon registry without TS tooling by stripping its type surface. */
 export function loadIconRegistry(srcDir) {
-  const ts = fs.readFileSync(path.join(srcDir, 'components/mip-icon/icons.ts'), 'utf8')
+  const ts = fs.readFileSync(
+    path.join(srcDir, 'components/mip-icon/icons.ts'),
+    'utf8',
+  )
   const body = ts
-    .replace(/export interface[\s\S]*?\n}\n/, '')
+    .replace(/export interface[\s\S]*?\n\}\n/, '')
     .replace(/export const ICONS[^=]*=/, 'return')
-  return new Function(body)()
+  return new vm.Script(`(function () {\n${body}\n})()`).runInNewContext()
 }
 
 /** Loads the component's token→hex mirror (colors.ts) so var() colors resolve like the component does. */
 export function loadIconColors(srcDir) {
-  const ts = fs.readFileSync(path.join(srcDir, 'components/mip-icon/colors.ts'), 'utf8')
+  const ts = fs.readFileSync(
+    path.join(srcDir, 'components/mip-icon/colors.ts'),
+    'utf8',
+  )
   const body = ts
     .replace(/export function[\s\S]*$/, '')
     .replace(/export const ICON_COLOR_TOKENS[^=]*=/, 'return')
-  return new Function(body)()
+  return new vm.Script(`(function () {\n${body}\n})()`).runInNewContext()
 }
 
 export function resolveIconColor(color, colors = {}) {
@@ -35,14 +42,22 @@ export function resolveIconColor(color, colors = {}) {
   return value || '#ffffff'
 }
 
-export function mipIconHtml(registry, { name, size, color = '#ffffff' }, colors = {}) {
+export function mipIconHtml(
+  registry,
+  { name, size, color = '#ffffff' },
+  colors = {},
+) {
   const icon = registry[name]
-  if (!icon) { return '' }
+  if (!icon) {
+    return ''
+  }
   const hex = resolveIconColor(color, colors)
   const n = Number(size) || 0
   const width = n > 0 ? n : Number(icon.w) || Number(icon.h) || 16
   const height = n > 0 ? n : Number(icon.h) || Number(icon.w) || 16
-  const body = icon.mono ? (icon.body ?? '').replace(/currentColor/g, hex) : (icon.body ?? '')
+  const body = icon.mono
+    ? (icon.body ?? '').replace(/currentColor/g, hex)
+    : (icon.body ?? '')
   const svg = [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${icon.vb}"`,
     `width="${width}" height="${height}" fill="${icon.mono ? hex : 'none'}">`,

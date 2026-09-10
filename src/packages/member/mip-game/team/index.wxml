@@ -1,6 +1,6 @@
 <view id="mip-game-team-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载队伍" description="{{message}}" action-text="重新加载" bind:action="loadTeam" /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法加载队伍" description="{{message}}" action-text="重新加载" bind:action="loadTeam" /></view>
   <block wx:else>
     <view class="text-[length:40rpx] font-bold">队伍大本营</view><view class="mt-2 text-[length:24rpx] text-muted">{{team.seasonName}}</view>
     <view class="headquarters headquarters-level-{{team.headquartersLevel.number}} mt-5 overflow-hidden rounded-[16rpx] px-5 py-6">

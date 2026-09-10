@@ -8,8 +8,10 @@ export interface CooperationCardVariant {
   name: string
 }
 
-/** 六角色烘焙卡（references/wechat-component-contracts.md）。
- *  image 只能用 <image> 承载，WXSS background-image 不行；bg 仅作底图加载前的垫底色。 */
+/**
+ * 六角色烘焙卡（references/wechat-component-contracts.md）。
+ *  image 只能用 <image> 承载，WXSS background-image 不行；bg 仅作底图加载前的垫底色。
+ */
 export const cooperationCardVariants: Record<string, CooperationCardVariant> = {
   'dogplaner': { image: '/assets/mip/coop-card-dogplaner@3x.png', bg: '#7b00ff', light: '#f2e5ff', name: '狗策划 DOGPLANER' },
   'upstart': { image: '/assets/mip/coop-card-upstart@3x.png', bg: '#7a2900', light: '#fadab3', name: '暴发户 UPSTART' },
@@ -37,9 +39,9 @@ export interface CooperationNameRun {
 /** Figma 里中文段 PingFang 600、拉丁段 Baloo 400（characterStyleOverrides 实测），按 run 拆分。 */
 export function cooperationNameRuns(name: string): CooperationNameRun[] {
   return String(name ?? '')
-    .split(/([A-Za-z0-9][A-Za-z0-9\s'!.-]*)/)
+    .split(/([A-Z0-9][A-Z0-9\s'!.-]*)/i)
     .filter(Boolean)
-    .map(text => ({ text, latin: /^[A-Za-z0-9]/.test(text) }))
+    .map(text => ({ text, latin: /^[A-Z0-9]/i.test(text) }))
 }
 
 export interface CooperationRoleCardInput {

@@ -1,7 +1,7 @@
 <view id="mip-cooperation-list-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <!-- figmaList:2004_2227 合作卡列表稿:导航下方直接堆叠六张整卡烘焙(卡高 400rpx,
        稿内卡间距在 423-425rpx 间取整,故逐卡绝对定位)。生产保持搜索 + 筛选 + 人才聚合列表,
-       角色卡走 cooperation-role-card 组件。ref 页含 88px 导航,impl y = ref y - 88。 -->
+       角色卡走 mip-cooperation-card 组件。ref 页含 88px 导航,impl y = ref y - 88。 -->
   <block wx:if="{{figmaList}}">
     <view class="-mx-4 -mt-4 relative min-h-[2552rpx]">
       <image class="absolute left-[24rpx] top-[4rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-dogplaner.png" />
@@ -81,17 +81,17 @@
     <view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
-  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载合作卡" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><mip-empty-state title="暂时无法加载合作卡" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
   <view wx:elif="{{mine && !cards.length}}" class="mt-5">
-    <app-empty-state title="暂时没有合作卡" description="创建后的草稿和已发布合作卡会显示在这里。" action-text="创建合作卡" bind:action="create" />
+    <mip-empty-state title="暂时没有合作卡" description="创建后的草稿和已发布合作卡会显示在这里。" action-text="创建合作卡" bind:action="create" />
   </view>
   <view wx:elif="{{!mine && !talents.length && !figmaList}}" class="mt-5">
-    <app-empty-state title="没有找到人才" description="{{hasAppliedFilters ? '调整筛选条件后重试。' : '已发布合作卡的人才会显示在这里。'}}" action-text="{{hasAppliedFilters ? '清除筛选' : ''}}" bind:action="clearAppliedFilters" />
+    <mip-empty-state title="没有找到人才" description="{{hasAppliedFilters ? '调整筛选条件后重试。' : '已发布合作卡的人才会显示在这里。'}}" action-text="{{hasAppliedFilters ? '清除筛选' : ''}}" bind:action="clearAppliedFilters" />
   </view>
 
   <view wx:elif="{{mine}}" class="mt-5 flex flex-col gap-4">
     <view wx:for="{{cards}}" wx:key="id" class="overflow-hidden rounded-[32rpx] bg-panel active:opacity-90" data-id="{{item.id}}" bind:tap="openCard">
-      <cooperation-role-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
+      <mip-cooperation-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
       <view class="px-4 py-4">
         <view class="flex min-h-[72rpx] items-center justify-between gap-3 border-b border-line pb-3">
           <view class="min-w-0 flex-1"><view class="text-[length:22rpx] text-muted">成员</view><view class="mt-1 truncate text-[length:24rpx] font-semibold">{{item.author.nickname}}</view></view>

@@ -1,7 +1,10 @@
 {
   "navigationBarTitleText": "账号设置",
   "usingComponents": {
-    "app-empty-state": "/components/empty-state/index",
+    "mip-empty-state": "/components/mip-empty-state/index",
+    "mip-section-header": "/components/mip-section-header/index",
+    "mip-detail-row-group": "/components/mip-detail-row-group/index",
+    "mip-detail-row": "/components/mip-detail-row/index",
     "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",

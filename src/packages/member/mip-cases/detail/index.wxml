@@ -3,7 +3,7 @@
     <view class="h-[300rpx] rounded-[16rpx] bg-brand-soft" />
     <view class="rounded-[16rpx] bg-panel px-4 py-5"><t-skeleton row-col="{{[1,1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法查看案例" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法查看案例" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
 
   <!-- figma 2037_12261 / 1987_30162 超级案例详情：黄色 hero 卡(整体烘焙) + 连续信息行 +
        展开讲讲面板。生产保持下方卡片详情布局(被 mip-case-detail 测试 pin)。
@@ -26,14 +26,14 @@
   </block>
   <view wx:elif="{{state === 'ready' && !item}}">
     <!-- figmaEmpty:1987_30475 空数据图标稿内为全屏居中 3D 问号(整体烘焙,底色与页面同为 #080808 可无缝贴合)。
-         生产保持 app-empty-state 卡片式空态。ref 页含 88px 导航,impl y = ref y - 88。 -->
+         生产保持 mip-empty-state 卡片式空态。ref 页含 88px 导航,impl y = ref y - 88。 -->
     <block wx:if="{{figmaEmpty}}">
       <view class="-mx-3 -mt-3 relative min-h-[1376rpx] overflow-hidden">
         <image class="absolute left-[267rpx] top-[307rpx] h-[196rpx] w-[222rpx]" src="/packages/member/assets/figma/cases/empty-3d.png" />
         <text class="absolute left-0 top-[588rpx] w-full text-center text-[length:30rpx] leading-[42rpx] text-ink">页面不在MIP星球</text>
       </view>
     </block>
-    <block wx:else><app-empty-state title="案例不存在" description="当前案例可能已删除或下架。" /><app-page-exit /></block>
+    <block wx:else><mip-empty-state title="案例不存在" description="当前案例可能已删除或下架。" /><app-page-exit /></block>
   </view>
   <block wx:elif="{{item}}">
     <view class="flex h-[300rpx] items-center justify-center overflow-hidden rounded-[16rpx] bg-brand">

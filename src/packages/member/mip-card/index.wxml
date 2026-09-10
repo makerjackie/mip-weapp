@@ -1,6 +1,6 @@
 <view id="mip-member-card-page" class="mip-member-page min-h-screen bg-canvas px-[24rpx] pb-[calc(env(safe-area-inset-bottom)+180rpx)] pt-[24rpx] text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载名片" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法加载名片" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
   <block wx:else>
     <!-- figma 1732_20401 版式无页头；「编辑名片」入口用 showHeader 保留在生产环境。 -->
     <view wx:if="{{showHeader}}" class="flex items-center justify-between">
@@ -70,13 +70,21 @@
           <mip-icon name="share-circle-2" size="20" color="var(--color-brand)" />
           <text class="text-[32rpx] font-medium text-brand">分享名片</text>
         </button>
-        <button wx:if="{{!isGuest}}" class="mip-card-action flex h-[80rpx] flex-1 items-center justify-center gap-[16rpx] rounded-full border border-black bg-brand {{generating ? 'opacity-60' : ''}}" bind:tap="savePoster">
-          <mip-icon name="download-2" size="20" color="var(--color-canvas)" />
-          <text class="text-[32rpx] font-medium text-canvas">下载名片</text>
-        </button>
-        <button wx:else class="mip-card-action flex h-[80rpx] w-full items-center justify-center rounded-full border border-black bg-brand" bind:tap="guestLogin">
-          <text class="text-[32rpx] font-medium text-canvas">登录制作我的名片</text>
-        </button>
+        <mip-pill-button
+          wx:if="{{!isGuest}}"
+          class="mip-card-action flex-1"
+          style="width:100%"
+          label="下载名片"
+          disabled="{{generating}}"
+          bind:tap="savePoster"
+        />
+        <mip-pill-button
+          wx:else
+          class="mip-card-action"
+          style="width:100%"
+          label="登录制作我的名片"
+          bind:tap="guestLogin"
+        />
       </view>
     </mip-sticky-actions>
   </block>

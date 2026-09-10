@@ -12,7 +12,7 @@
   padding-bottom: env(safe-area-inset-bottom);
   pointer-events: auto;
   background-color: #202020;
-  border-top: 1rpx solid #333333;
+  border-top: 1rpx solid #333;
 }
 
 .tab-bar-row {

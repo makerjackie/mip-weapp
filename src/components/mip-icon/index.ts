@@ -49,7 +49,7 @@ Component({
     },
   },
   observers: {
-    'name, size, color'() {
+    'name, size, color': function () {
       this.render()
     },
   },
@@ -58,6 +58,7 @@ Component({
       const { name, size, color } = this.data as { name: string, size: number, color: string }
       const icon = ICONS[name]
       if (!icon) {
+        // eslint-disable-next-line no-console -- The MIP icon contract requires a development warning.
         console.warn(`[mip-icon] unknown icon: ${name}`)
         this.setData({ src: '', style: '' })
         return

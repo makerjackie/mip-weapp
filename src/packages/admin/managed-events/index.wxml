@@ -16,13 +16,13 @@
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6">
-    <app-empty-state title="暂时无法加载活动" description="{{message}}" action-text="重新加载" bind:action="loadEvents" />
+    <mip-empty-state title="暂时无法加载活动" description="{{message}}" action-text="重新加载" bind:action="loadEvents" />
   </view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6">
-    <app-empty-state title="没有活动权限" description="当前账号不能查看现场活动。" />
+    <mip-empty-state title="没有活动权限" description="当前账号不能查看现场活动。" />
   </view>
   <view wx:elif="{{events.length === 0}}" class="mt-6">
-    <app-empty-state title="暂无活动" description="符合当前筛选条件的授权活动会显示在这里。" />
+    <mip-empty-state title="暂无活动" description="符合当前筛选条件的授权活动会显示在这里。" />
   </view>
   <view wx:else class="mt-5 flex flex-col gap-3">
     <view wx:for="{{events}}" wx:key="id" class="rounded-[24rpx] bg-panel px-4 py-4" data-id="{{item.id}}" aria-role="button" bind:tap="openEvent">

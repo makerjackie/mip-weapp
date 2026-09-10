@@ -1,6 +1,6 @@
 <view id="mip-case-editor-page" class="mip-member-page case-editor-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法编辑案例" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法编辑案例" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
   <!-- figmaEditor:2173_42605 编辑超级案例稿:引导横幅(全宽 brand) + AI助手卡(brand 描边面板,
        内容居中) + 我的案例标题 + 两组字段行(panel 92rpx 行,2rpx 缝隙) + 展开讲讲面板 +
        添加项目 + 保存胶囊。生产保持真实编辑器布局(被 mip-case-editor-visual 测试 pin)。

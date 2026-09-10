@@ -1,0 +1,11 @@
+<view class="mip-primary-button">
+  <button
+    class="mip-primary-button__core"
+    aria-role="button"
+    aria-disabled="{{disabled || loading}}"
+    disabled="{{disabled || loading}}"
+    bind:tap="handleTap"
+  >
+    {{label}}
+  </button>
+</view>

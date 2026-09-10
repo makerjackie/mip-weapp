@@ -1,6 +1,6 @@
 <view id="mip-badge-detail-page" class="mip-member-page badge-detail-page min-h-screen bg-canvas text-ink">
   <view wx:if="{{state === 'loading'}}" class="px-6 py-8"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error' || state === 'empty'}}" class="px-6 py-8"><app-empty-state title="{{state === 'empty' ? '未找到徽章' : '暂时无法加载徽章'}}" description="{{message}}" action-text="重新加载" bind:action="loadBadge" /></view>
+  <view wx:elif="{{state === 'error' || state === 'empty'}}" class="px-6 py-8"><mip-empty-state title="{{state === 'empty' ? '未找到徽章' : '暂时无法加载徽章'}}" description="{{message}}" action-text="重新加载" bind:action="loadBadge" /></view>
   <view wx:else class="badge-detail-content">
     <view class="badge-detail-art-wrap">
       <image wx:if="{{badge.imageUrl || badge.artFallbackUrl}}" class="badge-detail-art" mode="aspectFit" src="{{badge.imageUrl || badge.artFallbackUrl}}" />

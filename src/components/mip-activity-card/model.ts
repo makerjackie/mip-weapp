@@ -36,7 +36,9 @@ const ORDER_TAG_PRESETS: Record<string, { bg: string, border: string, color: str
 
 function orderTagStyle(label: string) {
   const preset = ORDER_TAG_PRESETS[label]
-  if (!preset) { return '' }
+  if (!preset) {
+    return ''
+  }
   return `background:${preset.bg};border-color:${preset.border};color:${preset.color}`
 }
 

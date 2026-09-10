@@ -3,11 +3,11 @@
     <view class="rounded-[16rpx] bg-panel px-3 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
   <view wx:elif="{{state === 'blocked'}}" class="pt-5">
-    <app-empty-state title="已屏蔽该用户" description="可以在屏蔽列表中解除屏蔽。" action-text="查看屏蔽列表" bind:action="openBlockedList" />
+    <mip-empty-state title="已屏蔽该用户" description="可以在屏蔽列表中解除屏蔽。" action-text="查看屏蔽列表" bind:action="openBlockedList" />
     <app-page-exit />
   </view>
   <view wx:elif="{{state === 'error'}}" class="pt-5">
-    <app-empty-state title="暂时无法查看档案" description="{{message}}" action-text="重新加载" bind:action="loadProfile" />
+    <mip-empty-state title="暂时无法查看档案" description="{{message}}" action-text="重新加载" bind:action="loadProfile" />
     <app-page-exit />
   </view>
 
@@ -51,7 +51,7 @@
         </view>
         <view class="absolute left-0 top-[446rpx] h-[2rpx] w-full bg-panel" />
         <view class="absolute left-[24rpx] top-[472rpx] w-[702rpx]">
-          <cooperation-role-card role-key="{{figma.card.roleKey}}" name="{{figma.card.name}}" positioning="{{figma.card.positioning}}" target-summary="{{figma.card.targetSummary}}" />
+          <mip-cooperation-card role-key="{{figma.card.roleKey}}" name="{{figma.card.name}}" positioning="{{figma.card.positioning}}" target-summary="{{figma.card.targetSummary}}" />
         </view>
         <view class="absolute left-[24rpx] top-[896rpx] flex h-[200rpx] w-[702rpx] flex-row items-center justify-center gap-[8rpx] rounded-[16rpx] border-[1rpx] border-dashed border-brand bg-panel">
           <mip-icon name="icon-plus-fill" size="28rpx" color="var(--color-brand)" />
@@ -73,7 +73,7 @@
 
       <block wx:if="{{figma.variant === 'talent'}}">
         <view class="absolute left-[24rpx] top-[208rpx] w-[702rpx]">
-          <cooperation-role-card role-key="{{figma.card.roleKey}}" name="{{figma.card.name}}" show-details="{{false}}" />
+          <mip-cooperation-card role-key="{{figma.card.roleKey}}" name="{{figma.card.name}}" show-details="{{false}}" />
         </view>
         <view class="absolute left-[24rpx] top-[448rpx] h-[80rpx] w-[702rpx] bg-[#191919]">
           <text class="absolute left-[24rpx] top-[24rpx] w-[654rpx] text-center text-[24rpx] font-medium leading-[33.6rpx] text-brand">{{figma.positioningQuote}}</text>
@@ -198,7 +198,7 @@
         <view class="absolute left-0 top-[446rpx] h-[2rpx] w-full bg-panel" />
         <block wx:if="{{figma.variant === 'coops'}}">
           <view wx:for="{{figma.cards}}" wx:key="roleKey" class="absolute left-[24rpx] w-[702rpx]" style="top:{{item.topRpx}}rpx">
-            <cooperation-role-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
+            <mip-cooperation-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
           </view>
         </block>
         <block wx:if="{{figma.variant === 'cases'}}">
@@ -269,7 +269,7 @@
     <view wx:if="{{activeSection === 'cooperation'}}" class="pt-3">
       <view wx:if="{{cooperationCards.length}}" class="flex flex-col gap-3">
         <view wx:for="{{cooperationCards}}" wx:key="id" class="overflow-hidden rounded-[32rpx] bg-panel active:bg-panel-raised" aria-role="button" data-id="{{item.id}}" bind:tap="openCooperationCard">
-          <cooperation-role-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
+          <mip-cooperation-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
         </view>
       </view>
       <view wx:else class="py-12 text-center text-[length:22rpx] text-muted">暂无已发布合作卡。</view>

@@ -18,11 +18,11 @@
   </view>
 
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6">
-    <app-empty-state title="没有运营管理权限" description="{{message}}" />
+    <mip-empty-state title="没有运营管理权限" description="{{message}}" />
   </view>
 
   <view wx:elif="{{state === 'expired' || state === 'error'}}" class="mt-6">
-    <app-empty-state title="无法确认网页登录" description="{{message}}" />
+    <mip-empty-state title="无法确认网页登录" description="{{message}}" />
   </view>
 
   <view wx:else class="mt-6 rounded-[24rpx] bg-panel px-5 py-6">

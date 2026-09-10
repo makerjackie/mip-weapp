@@ -4,7 +4,7 @@
     <view class="min-h-[360rpx] rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <app-page-exit always label="取消" />
   </view>
-  <view wx:elif="{{state === 'error'}}" class="pt-3"><app-empty-state title="暂时无法编辑机会" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit always label="取消" /></view>
+  <view wx:elif="{{state === 'error'}}" class="pt-3"><mip-empty-state title="暂时无法编辑机会" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit always label="取消" /></view>
   <!-- figma 1766_36864 发布机会-编辑还原态：黄条提示 + 虚线粘贴卡 + 图标小节标签 +
        输入卡/城市九宫格 chip。生产保持下方流式表单（opportunity-editor 测试 pin）。
        fixture figmaLayout 打开时按稿渲染，文案与图标都来自 ui-fidelity manifest fixture。 -->

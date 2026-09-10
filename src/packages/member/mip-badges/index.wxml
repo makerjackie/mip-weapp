@@ -53,8 +53,8 @@
     <view class="badge-tab {{activeCategory === 'HONOR' ? 'badge-tab--active' : ''}}" data-category="HONOR" bind:tap="chooseCategory">荣誉成就</view>
   </view>
   <view wx:if="{{state === 'loading'}}" class="px-6 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="px-6 py-8"><app-empty-state title="暂时无法加载徽章" description="{{message}}" action-text="重新加载" bind:action="loadBadges" /></view>
-  <view wx:elif="{{state === 'empty'}}" class="px-6 py-8"><app-empty-state title="暂无徽章" description="徽章由运营人员根据实际记录授予。" /></view>
+  <view wx:elif="{{state === 'error'}}" class="px-6 py-8"><mip-empty-state title="暂时无法加载徽章" description="{{message}}" action-text="重新加载" bind:action="loadBadges" /></view>
+  <view wx:elif="{{state === 'empty'}}" class="px-6 py-8"><mip-empty-state title="暂无徽章" description="徽章由运营人员根据实际记录授予。" /></view>
   <view wx:else class="px-6 pt-10">
     <view wx:if="{{visibleItems.length === 0}}" class="py-10 text-center text-[length:24rpx] text-muted">当前分类暂无徽章。</view>
     <view wx:else class="badge-grid">

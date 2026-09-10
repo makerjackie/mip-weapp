@@ -1,6 +1,6 @@
 <view id="mip-task-detail-page" class="mip-member-page min-h-screen bg-canvas px-[24rpx] pb-[calc(env(safe-area-inset-bottom)+180rpx)] pt-[24rpx] text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载任务" description="{{message}}" action-text="重新加载" bind:action="loadTask" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法加载任务" description="{{message}}" action-text="重新加载" bind:action="loadTask" /><app-page-exit /></view>
   <block wx:else>
     <!-- figma 1725_18515/18577: 任务卡 351×132 全圆角，内部与列表卡一致
          （星组/EXP @12,12；名称 @12,44；任务周期 @12,76；完成条件 @12,103，值列 x=90）。 -->

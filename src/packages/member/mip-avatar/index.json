@@ -3,7 +3,7 @@
   "backgroundColor": "#080808",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "app-empty-state": "/components/empty-state/index",
+    "mip-empty-state": "/components/mip-empty-state/index",
     "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",

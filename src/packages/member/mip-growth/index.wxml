@@ -1,6 +1,6 @@
 <view id="mip-growth-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="px-3 pt-3"><view class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
-  <view wx:elif="{{state === 'error'}}" class="px-3 pt-3"><app-empty-state title="暂时无法加载成长记录" description="请检查网络后重试。" action-text="重新加载" bind:action="loadGrowth" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}" class="px-3 pt-3"><mip-empty-state title="暂时无法加载成长记录" description="请检查网络后重试。" action-text="重新加载" bind:action="loadGrowth" /><app-page-exit /></view>
   <block wx:else>
     <!-- figma 1948_14079: hero = baked composite (curved yellow field + color-burn sphere +
          generated art + 经验值详情 pill, ref HTML y88-230); Lv/EXP/progress/有效期 are live

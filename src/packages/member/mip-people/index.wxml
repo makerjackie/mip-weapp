@@ -40,8 +40,8 @@
   </view>
 
   <view wx:if="{{!filterOpen && state === 'loading'}}" class="mt-3 flex flex-col gap-3"><view class="flex h-[254rpx] items-center rounded-[16rpx] bg-panel px-3"><view class="h-[112rpx] w-[112rpx] rounded-full bg-panel-raised" /><view class="min-w-0 flex-1 pl-3"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view><view class="flex h-[254rpx] items-center rounded-[16rpx] bg-panel px-3"><view class="h-[112rpx] w-[112rpx] rounded-full bg-panel-raised" /><view class="min-w-0 flex-1 pl-3"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view></view>
-  <view wx:elif="{{!filterOpen && state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载人才档案" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
-  <view wx:elif="{{!filterOpen && state === 'empty'}}" class="mt-5"><app-empty-state title="没有找到公开档案" description="调整筛选条件后重试。" action-text="清除筛选" bind:action="clearAllFilters" /></view>
+  <view wx:elif="{{!filterOpen && state === 'error'}}" class="mt-5"><mip-empty-state title="暂时无法加载人才档案" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+  <view wx:elif="{{!filterOpen && state === 'empty'}}" class="mt-5"><mip-empty-state title="没有找到公开档案" description="调整筛选条件后重试。" action-text="清除筛选" bind:action="clearAllFilters" /></view>
 
   <view wx:if="{{!filterOpen && state === 'ready'}}" class="mt-3 flex flex-col gap-3">
     <view wx:for="{{people}}" wx:key="profileRef" class="active:bg-panel-raised" aria-role="button" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">

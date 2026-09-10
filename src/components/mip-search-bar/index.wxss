@@ -1,0 +1,33 @@
+.mip-search-bar {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 80rpx;
+  padding: 0 24rpx 0 16rpx;
+  background: var(--mip-bg-surface);
+  border-radius: 16rpx;
+}
+
+.mip-search-bar__icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.mip-search-bar__input {
+  width: 100%;
+  height: 100%;
+  margin-left: 8rpx;
+  font-size: 28rpx;
+  line-height: 40rpx;
+  color: var(--mip-text-primary);
+  background: transparent;
+}
+
+.mip-search-bar__placeholder {
+  color: var(--mip-text-secondary);
+}

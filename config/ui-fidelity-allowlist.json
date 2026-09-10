@@ -3,10 +3,51 @@
   "notes": [
     "Explicit, reviewable exceptions to the Layer-1 token audit. Every entry needs a reason.",
     "context: property names whose value is rendered by WeChat itself, not by MIP UI.",
-    "colors: file + literal pairs kept for product-content reasons (card art presets)."
+    "colors: file + literal pairs kept for product-content reasons (card art presets).",
+    "foreignIcons: registry gaps and runtime-selected names that remain TDesign until the missing glyphs are exported from Figma; approximate MIP glyphs are forbidden."
   ],
   "contexts": [
     "confirmColor"
+  ],
+  "foreignIcons": [
+    {
+      "names": [
+        "ai-edit",
+        "card",
+        "certificate",
+        "chat",
+        "check-circle",
+        "check-circle-filled",
+        "chevron-left",
+        "edit",
+        "file-edit",
+        "folder",
+        "gamepad",
+        "gender-female",
+        "gender-male",
+        "grid-view",
+        "heart",
+        "heart-filled",
+        "info-circle",
+        "lock-on-filled",
+        "notification",
+        "order",
+        "pending",
+        "play-circle-stroke",
+        "scan",
+        "stop-circle",
+        "tag",
+        "user",
+        "user-avatar",
+        "usergroup",
+        "view-list"
+      ],
+      "reason": "TDesign glyph has no equivalent in the 451-name MIP registry; importing a foreign glyph into the subset registry or substituting a different shape would violate the icon contract."
+    },
+    {
+      "dynamic": true,
+      "reason": "Runtime-selected TDesign names require a runtime name source; migration is deferred until dynamic MIP icon names are modeled and validated."
+    }
   ],
   "colors": [
     {
@@ -45,32 +86,32 @@
       "reason": "卡面预设 品牌色 次要文字"
     },
     {
-      "file": "src/components/event-card/model.ts",
+      "file": "src/components/mip-activity-card/model.ts",
       "value": "#fde530",
       "reason": "OrderTag 契约预设 仅玩家 底（skill wechat-component-contracts.md OrderTag）"
     },
     {
-      "file": "src/components/event-card/model.ts",
+      "file": "src/components/mip-activity-card/model.ts",
       "value": "#d0b801",
       "reason": "OrderTag 契约预设 仅玩家 描边"
     },
     {
-      "file": "src/components/event-card/model.ts",
+      "file": "src/components/mip-activity-card/model.ts",
       "value": "#000000",
       "reason": "OrderTag 契约预设 仅玩家 文字"
     },
     {
-      "file": "src/components/event-card/model.ts",
+      "file": "src/components/mip-activity-card/model.ts",
       "value": "#428bff",
       "reason": "OrderTag 契约预设 沙龙 底"
     },
     {
-      "file": "src/components/event-card/model.ts",
+      "file": "src/components/mip-activity-card/model.ts",
       "value": "#075adf",
       "reason": "OrderTag 契约预设 沙龙 描边"
     },
     {
-      "file": "src/components/event-card/model.ts",
+      "file": "src/components/mip-activity-card/model.ts",
       "value": "#f7f7f7",
       "reason": "OrderTag 契约预设 沙龙 文字"
     },
@@ -123,7 +164,144 @@
       "file": "src/packages/member/mip-hearts/index.wxml",
       "value": "#ff2238",
       "reason": "心动值列表 红心计数与未读红点（figma 1732_19460 实测 rgb(255,34,56) 的设计探索态红，非语义 danger #ff4d5e）"
+    },
+    {
+      "file": "src/app.css",
+      "value": "#3b3925",
+      "reason": "brand-dim 主题 token 的定义处；SOT palette 暂无同名 token"
+    },
+    {
+      "file": "src/components/mip-icon/colors.ts",
+      "value": "#3b3925",
+      "reason": "app.css --color-brand-dim 的 mip-icon 解析镜像"
+    },
+    {
+      "file": "src/packages/member/mip-ai/index.wxml",
+      "value": "#eaeaea",
+      "reason": "AI 录音删除/确认弹窗系统按钮与分隔线参考色（fixture-gated）"
+    },
+    {
+      "file": "src/packages/member/mip-ai/index.wxml",
+      "value": "#576b95",
+      "reason": "AI 录音 iOS 弹窗确认文字参考色（fixture-gated）"
+    },
+    {
+      "file": "src/packages/member/mip-ai/index.wxml",
+      "value": "#999999",
+      "reason": "AI 录音提示与系统弹窗取消文字参考色（fixture-gated）"
+    },
+    {
+      "file": "src/packages/member/mip-ai/index.wxml",
+      "value": "#484848",
+      "reason": "AI 录音删除/确认弹窗分隔线参考色（fixture-gated）"
+    },
+    {
+      "file": "src/packages/member/mip-events/mine/index.wxml",
+      "value": "#999999",
+      "reason": "我的活动取消报名弹窗提示文字参考色（fixture-gated）"
+    },
+    {
+      "file": "src/packages/member/mip-events/mine/index.wxml",
+      "value": "#484848",
+      "reason": "我的活动取消报名弹窗分隔线参考色（fixture-gated）"
+    },
+    {
+      "file": "src/packages/member/mip-events/mine/index.wxml",
+      "value": "#576b95",
+      "reason": "我的活动 iOS 弹窗确认文字参考色（fixture-gated）"
+    },
+    {
+      "file": "src/packages/member/mip-events/registration/index.wxml",
+      "value": "#80ccff",
+      "reason": "沙龙角标活动类型蓝（figma 1821_19274 参考色，同 app.css tag-type token）"
+    },
+    {
+      "file": "src/packages/member/mip-profile/index.wxml",
+      "value": "#3f3c27",
+      "reason": "编辑信息主按钮外圈参考色（figma 1774_41143，介于 brand-dim 与 surface-2 之间）"
+    },
+    {
+      "file": "src/packages/member/mip-public-profile/index.wxml",
+      "value": "#3f3c27",
+      "reason": "档案主按钮外圈参考色（figma 2058/1769 参考色，介于 brand-dim 与 surface-2 之间）"
+    },
+    {
+      "file": "src/packages/member/order-detail/index.wxml",
+      "value": "#999999",
+      "reason": "订单详情退款弹窗系统文字参考色（fixture-gated）"
+    },
+    {
+      "file": "src/packages/member/order-detail/index.wxml",
+      "value": "#eaeaea",
+      "reason": "订单详情退款弹窗系统按钮/分隔线参考色（fixture-gated）"
+    },
+    {
+      "file": "src/packages/member/order-detail/index.wxml",
+      "value": "#80ccff",
+      "reason": "沙龙角标活动类型蓝（figma 2172_42168 参考色，同 app.css tag-type token）"
+    },
+    {
+      "file": "src/packages/member/order-detail/index.wxml",
+      "value": "#484848",
+      "reason": "订单详情退款弹窗分隔线参考色（fixture-gated）"
+    },
+    {
+      "file": "src/packages/member/user-agreement/index.wxml",
+      "value": "#4088fb",
+      "reason": "入会协议服务政策/隐私政策链接参考色（figma 1948_14226）"
+    },
+    {
+      "file": "src/packages/member/user-agreement/index.wxml",
+      "value": "#3b3925",
+      "reason": "确认发布按钮外圈 brand-dim 参考色（figma 1948_14226）"
+    },
+    {
+      "file": "src/pages/events/index.wxml",
+      "value": "#474747",
+      "reason": "活动原生日期选择分隔线参考色（fixture-gated）"
+    },
+    {
+      "file": "src/pages/events/index.wxml",
+      "value": "#3a3a3a",
+      "reason": "活动原生日期选择取消按钮参考色（fixture-gated）"
+    },
+    {
+      "file": "src/pages/events/index.wxml",
+      "value": "#0a0a0a",
+      "reason": "活动原生日期选择完成按钮文字参考色（fixture-gated）"
+    },
+    {
+      "file": "src/pages/index/index.json",
+      "value": "#040404",
+      "reason": "WeChat scroll container requires an opaque near-canvas #040404 (verify-build contract)"
+    },
+    {
+      "file": "src/pages/events/index.json",
+      "value": "#040404",
+      "reason": "WeChat scroll container requires an opaque near-canvas #040404 (verify-build contract)"
+    },
+    {
+      "file": "src/pages/opportunities/index.json",
+      "value": "#040404",
+      "reason": "WeChat scroll container requires an opaque near-canvas #040404 (verify-build contract)"
+    },
+    {
+      "file": "src/pages/profile/index.json",
+      "value": "#040404",
+      "reason": "WeChat scroll container requires an opaque near-canvas #040404 (verify-build contract)"
     }
   ],
-  "allowlistTodo": "名片四套卡面预设色是产品内容色，尚未在 figma-restored 的「我的名片A/B/C-详情」屏中找到对应 token；Layer 3 打分后需按设计稿校准并删除本 allowlist 条目。"
+  "allowlistTodo": "名片四套卡面预设色是产品内容色，尚未在 figma-restored 的「我的名片A/B/C-详情」屏中找到对应 token；Layer 3 打分后需按设计稿校准并删除本 allowlist 条目。",
+  "pageBackgrounds": [
+    {
+      "route": "packages/member/mip-growth/index",
+      "value": "#FCDF03",
+      "reason": "成长页品牌黄导航与首屏一体（figma 成长页）"
+    },
+    {
+      "route": "packages/member/mip-public-profile/index",
+      "value": "#202020",
+      "reason": "公开档案导航使用 panel 色与卡面一体（figma 人才档案）"
+    }
+  ]
 }

@@ -860,8 +860,10 @@ Page({
     void this.openProtected(url, 'PUBLISH_OPPORTUNITY')
   },
 
-  /** figma 2198_44284: signed-out visitors get the player teaser on the
-   *  opportunities tab; the identity snapshot decides which surface shows. */
+  /**
+   * figma 2198_44284: signed-out visitors get the player teaser on the
+   *  opportunities tab; the identity snapshot decides which surface shows.
+   */
   async refreshAuthState() {
     const snapshot = await mipIdentityModule.loadSnapshot().catch(() => null)
     if (snapshot) {

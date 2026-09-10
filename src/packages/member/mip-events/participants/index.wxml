@@ -57,15 +57,15 @@
     <view class="participant-card participant-card--loading"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
   <view wx:elif="{{activeView === 'PUBLIC' && state === 'error'}}">
-    <app-empty-state title="暂时无法加载参与人" description="{{message}}" action-text="重新加载" bind:action="loadParticipants" />
+    <mip-empty-state title="暂时无法加载参与人" description="{{message}}" action-text="重新加载" bind:action="loadParticipants" />
     <app-page-exit />
   </view>
   <view wx:elif="{{activeView !== 'PUBLIC' && heartState === 'restricted'}}">
-    <app-empty-state title="心动功能暂不可用" description="完成登录、必要资料和本场签到后可查看和使用心动功能。" action-text="查看全部参与人" bind:action="showPublicParticipants" />
+    <mip-empty-state title="心动功能暂不可用" description="完成登录、必要资料和本场签到后可查看和使用心动功能。" action-text="查看全部参与人" bind:action="showPublicParticipants" />
     <app-page-exit />
   </view>
   <view wx:elif="{{activeView !== 'PUBLIC' && heartState === 'error'}}">
-    <app-empty-state title="暂时无法加载心动信息" description="{{heartMessage}}" action-text="重新加载" bind:action="retryHeartState" />
+    <mip-empty-state title="暂时无法加载心动信息" description="{{heartMessage}}" action-text="重新加载" bind:action="retryHeartState" />
     <app-page-exit />
   </view>
   <block wx:else>
@@ -73,7 +73,7 @@
       <t-icon name="lock-on-filled" size="14px" color="var(--color-muted)" />
       <text>心动信息仅本人可见</text>
     </view>
-    <app-empty-state wx:if="{{displayItems.length === 0}}" title="{{emptyTitle}}" description="{{emptyDescription}}" />
+    <mip-empty-state wx:if="{{displayItems.length === 0}}" title="{{emptyTitle}}" description="{{emptyDescription}}" />
     <view wx:else class="participants-grid">
       <view wx:for="{{displayItems}}" wx:key="profileRef" class="participant-card" hover-class="participant-card--pressed" aria-role="button" aria-label="查看{{item.displayName}}的公开档案" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
         <view class="participant-card__visual">

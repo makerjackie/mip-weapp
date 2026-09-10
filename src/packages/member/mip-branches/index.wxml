@@ -3,9 +3,9 @@
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view id="mip-branches-empty-state" wx:elif="{{state === 'empty'}}">
-    <app-empty-state title="暂无城市分会" description="城市分会配置后会显示在这里。" />
+    <mip-empty-state title="暂无城市分会" description="城市分会配置后会显示在这里。" />
   </view>
-  <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载" description="城市分会服务暂时没有响应。" action-text="重新加载" bind:action="loadBranches" />
+  <mip-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载" description="城市分会服务暂时没有响应。" action-text="重新加载" bind:action="loadBranches" />
   <block wx:else>
     <view class="text-[length:40rpx] font-bold">城市分会</view>
     <view class="mt-2 text-[length:24rpx] leading-6 text-muted">每位用户只有一个主分会，可以浏览和参加其他城市的活动。</view>

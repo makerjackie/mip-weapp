@@ -1,0 +1,3 @@
+<view class="mip-detail-row-group" aria-role="group">
+  <slot />
+</view>

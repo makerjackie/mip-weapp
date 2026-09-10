@@ -1,0 +1,11 @@
+<view
+  class="mip-pill-button mip-pill-button--{{variant}} {{disabled || loading ? 'mip-pill-button--disabled' : ''}}"
+  aria-role="button"
+  aria-disabled="{{disabled || loading}}"
+  bind:tap="handleTap"
+>
+  <view wx:if="{{withIcon}}" class="mip-pill-button__icon">
+    <slot name="icon" />
+  </view>
+  <text class="mip-pill-button__label">{{label}}</text>
+</view>

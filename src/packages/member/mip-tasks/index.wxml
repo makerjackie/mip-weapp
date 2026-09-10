@@ -16,8 +16,8 @@
   </view>
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-3 mt-5 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><app-empty-state title="暂时无法加载任务" description="{{message}}" action-text="重新加载" bind:action="loadTasks" /></view>
-  <view wx:elif="{{state === 'empty' || (state === 'ready' && visibleTasks.length === 0)}}" class="mx-3 mt-5"><app-empty-state title="{{filter === 'ended' ? '暂无已结束任务' : '暂无待完成任务'}}" description="{{filter === 'ended' ? '已结束的任务会显示在这里。' : '当前没有需要完成的任务。'}}" /></view>
+  <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><mip-empty-state title="暂时无法加载任务" description="{{message}}" action-text="重新加载" bind:action="loadTasks" /></view>
+  <view wx:elif="{{state === 'empty' || (state === 'ready' && visibleTasks.length === 0)}}" class="mx-3 mt-5"><mip-empty-state title="{{filter === 'ended' ? '暂无已结束任务' : '暂无待完成任务'}}" description="{{filter === 'ended' ? '已结束的任务会显示在这里。' : '当前没有需要完成的任务。'}}" /></view>
 
   <!-- figma 1725_18357/18445: 任务单元 = 卡片(132px) [+ 附件卡(72px)] [+ 操作条(40px)]，
        单元内 1px 拼接缝，单元间 12px；卡片星组/EXP/名称/任务周期/完成条件按参考绝对定位。 -->

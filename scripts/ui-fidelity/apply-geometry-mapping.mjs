@@ -62,7 +62,10 @@ const RADIUS = {
 const PATTERNS = [
   { kind: 'font', re: /(\bfont-size:\s*)(\d+)(rpx)/g },
   { kind: 'font', re: /(\btext-\[(?:length:)?)(\d+)(rpx\])/g },
-  { kind: 'font', re: /(--[a-z0-9-]*(?:font|text|size)[a-z0-9-]*:\s*)(\d+)(rpx)/g },
+  {
+    kind: 'font',
+    re: /(--[a-z0-9-]*(?:font|text|size)[a-z0-9-]*:\s*)(\d+)(rpx)/g,
+  },
   { kind: 'radius', re: /(\bborder-radius:\s*)(\d+)(rpx)/g },
   { kind: 'radius', re: /(\brounded(?:-[a-z]{1,2})*-\[)(\d+)(rpx\])/g },
   { kind: 'radius', re: /(--[a-z0-9-]*radius[a-z0-9-]*:\s*)(\d+)(rpx)/g },
@@ -70,7 +73,10 @@ const PATTERNS = [
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith('.') || (entry.isDirectory() && SKIP_DIRS.has(entry.name))) {
+    if (
+      entry.name.startsWith('.')
+      || (entry.isDirectory() && SKIP_DIRS.has(entry.name))
+    ) {
       continue
     }
     const full = path.join(dir, entry.name)
@@ -112,4 +118,6 @@ for (const file of walk(SRC)) {
 }
 
 console.log(`${dryRun ? 'would rewrite' : 'rewrote'} ${filesChanged} files`)
-for (const [key, count] of [...counts].sort((a, b) => b[1] - a[1])) { console.log(`  ${key}  x${count}`) }
+for (const [key, count] of [...counts].sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${key}  x${count}`)
+}

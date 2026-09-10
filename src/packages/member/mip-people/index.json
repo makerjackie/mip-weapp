@@ -6,7 +6,7 @@
   "enablePullDownRefresh": true,
   "onReachBottomDistance": 160,
   "usingComponents": {
-    "app-empty-state": "/components/empty-state/index",
+    "mip-empty-state": "/components/mip-empty-state/index",
     "app-page-exit": "/components/page-exit/index",
     "mip-catalog-selector": "/components/catalog-selector/index",
     "mip-talent-card": "/components/talent-card/index",

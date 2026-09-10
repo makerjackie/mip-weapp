@@ -130,8 +130,10 @@ Page({
     })
   },
 
-  /** figma 1746_3663 keeps the equipped row passive; manage mode (reorder,
-   *  remove, save) is entered by long-pressing it. */
+  /**
+   * figma 1746_3663 keeps the equipped row passive; manage mode (reorder,
+   *  remove, save) is entered by long-pressing it.
+   */
   toggleEditing() {
     this.setData({ editing: !this.data.editing })
   },

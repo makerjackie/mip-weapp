@@ -2,7 +2,7 @@
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
-  <view wx:elif="{{state === 'error'}}" class="mx-3 mt-3"><app-empty-state title="暂时无法加载资料" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="loadProfile" /></view>
+  <view wx:elif="{{state === 'error'}}" class="mx-3 mt-3"><mip-empty-state title="暂时无法加载资料" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="loadProfile" /></view>
 
   <!-- figma 1774_41143/1774_41253/1822_19405 编辑信息：黄色横幅 + 基础信息(头像/昵称/性别
        三行分组卡) + 代表行业(选择卡 + 12 标签) + 当前身份状态(7 标签) + 一句话介绍(textarea)。
@@ -45,11 +45,13 @@
         <image class="absolute left-[24rpx] top-[24rpx] h-[112rpx] w-[112rpx] rounded-full" mode="aspectFill" src="/assets/figma/profile/avatar-mine.png" />
         <text class="absolute right-[24rpx] top-[60rpx] text-[28rpx] leading-[40rpx] text-ink">更换头像</text>
       </view>
-      <view class="absolute left-[24rpx] top-[318rpx] h-[92rpx] w-[702rpx] bg-panel">
-        <text class="absolute left-[24rpx] top-[24rpx] text-[28rpx] leading-[40rpx] text-ink">昵称 <text class="text-[22rpx] text-[#ff2238]">*</text></text>
-        <text wx:if="{{figma.nickname}}" class="absolute right-[24rpx] top-[24rpx] text-[28rpx] leading-[40rpx] text-ink">{{figma.nickname}}</text>
-        <text wx:else class="absolute right-[24rpx] top-[24rpx] text-[28rpx] leading-[40rpx] text-muted">请输入您的昵称</text>
-      </view>
+      <mip-form-field-row
+        class="absolute left-[24rpx] top-[318rpx]"
+        style="width:702rpx"
+        label="昵称 *"
+        value="{{figma.nickname}}"
+        placeholder="请输入您的昵称"
+      />
       <view class="absolute left-[24rpx] top-[412rpx] h-[92rpx] w-[702rpx] bg-panel">
         <text class="absolute left-[24rpx] top-[28rpx] text-[28rpx] leading-[40rpx] text-ink">性别</text>
         <view class="absolute left-[470rpx] top-[18rpx] flex h-[56rpx] w-[96rpx] items-center justify-center gap-[4rpx] rounded-full border-[2rpx] {{figma.gender === 'MALE' ? 'border-brand bg-brand' : 'border-muted'}}">
@@ -231,7 +233,16 @@
     </view>
     </block>
 
-    <mip-sticky-actions><view slot="actions" class="w-full"><t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{avatarUploading}}" bind:tap="saveProfile">保存资料</t-button></view></mip-sticky-actions>
+    <mip-sticky-actions>
+      <view slot="actions" class="w-full">
+        <mip-primary-button
+          label="保存资料"
+          loading="{{saving}}"
+          disabled="{{avatarUploading}}"
+          bind:tap="saveProfile"
+        />
+      </view>
+    </mip-sticky-actions>
   </block>
   <app-page-exit />
 </view>

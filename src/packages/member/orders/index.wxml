@@ -7,7 +7,7 @@
   </view>
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="订单暂时无法加载" description="请稍后重试。" action-text="重新加载" bind:action="loadOrders" /></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><mip-empty-state title="订单暂时无法加载" description="请稍后重试。" action-text="重新加载" bind:action="loadOrders" /></view>
   <block wx:elif="{{figmaLayout}}">
     <!-- figma 1723_16988/17090/17153/17217 我的-订单：
          设计稿是 4 列 tab + 活动订单卡（封面烘焙自参考稿），卡底多一条
@@ -38,7 +38,7 @@
       </view>
     </view>
   </block>
-  <view wx:elif="{{orders.length === 0}}" class="mt-5"><app-empty-state title="{{allOrders.length ? '当前分类暂无订单' : '还没有订单'}}" description="{{allOrders.length ? '可切换其他分类查看。' : '购买会员、活动或单内容后，订单会显示在这里。'}}" /></view>
+  <view wx:elif="{{orders.length === 0}}" class="mt-5"><mip-empty-state title="{{allOrders.length ? '当前分类暂无订单' : '还没有订单'}}" description="{{allOrders.length ? '可切换其他分类查看。' : '购买会员、活动或单内容后，订单会显示在这里。'}}" /></view>
   <view wx:else class="mt-4 flex flex-col gap-3">
     <view wx:for="{{orders}}" wx:key="id" data-order-id="{{item.id}}" class="order-card overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised {{item.orderType === 'EVENT' ? 'order-card--event' : ''}}" bind:tap="openOrder">
       <image wx:if="{{item.orderType === 'EVENT' && item.event.coverUrl}}" class="order-card__cover h-[298rpx] w-full bg-panel-raised" src="{{item.event.coverUrl}}" mode="aspectFill" />

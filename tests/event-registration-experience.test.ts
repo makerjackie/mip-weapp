@@ -152,7 +152,7 @@ describe('event registration experience', () => {
     expect(mineView).toContain('data-action="order"')
     expect(mineView).toContain('variant="text"')
     expect(mineView).not.toContain('show-cancel=')
-    expect(read('src/components/event-card/index.ts')).not.toContain('handleCancel')
+    expect(read('src/components/mip-activity-card/index.ts')).not.toContain('handleCancel')
   })
 
   it('carries optimistic versions for cancellation and first or subsequent feedback saves', () => {
@@ -172,12 +172,12 @@ describe('event registration experience', () => {
     const home = read('src/pages/index/index.wxml')
     const homePage = read('src/pages/index/index.ts')
     const eventsPage = read('src/pages/events/index.ts')
-    const eventCard = read('src/components/event-card/index.wxml')
+    const eventCard = read('src/components/mip-activity-card/index.wxml')
 
     expect(read('src/config/brand.ts')).toContain('/assets/brand/mip-logo-yellow.png')
     expect(home).toContain('src="{{logoPath}}"')
     expect(fs.existsSync(path.join(root, 'src/assets/brand/mip-logo-yellow.png'))).toBe(true)
-    expect(home).toContain('<event-card')
+    expect(home).toContain('<mip-activity-card')
     expect(home).toContain('<mip-opportunity-card')
     expect(home).toContain('cover-url="{{item.coverUrl || \'\'}}"')
     expect(eventCard).toContain('event.coverUrl')

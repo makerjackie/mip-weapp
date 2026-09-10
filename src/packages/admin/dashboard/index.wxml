@@ -9,10 +9,10 @@
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6">
-    <app-empty-state title="暂时无法加载现场工作台" description="{{message}}" action-text="重新加载" bind:action="retrySession" />
+    <mip-empty-state title="暂时无法加载现场工作台" description="{{message}}" action-text="重新加载" bind:action="retrySession" />
   </view>
   <view id="admin-dashboard-forbidden-state" wx:elif="{{state === 'forbidden'}}" class="mt-6">
-    <app-empty-state title="没有现场工作台权限" description="{{message}}" action-text="重新验证" bind:action="retrySession" />
+    <mip-empty-state title="没有现场工作台权限" description="{{message}}" action-text="重新验证" bind:action="retrySession" />
   </view>
 
   <view wx:else>

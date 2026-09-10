@@ -10,13 +10,14 @@
   --color-panel-muted: #242424;
   --color-ink: #fff;
   --color-muted: #b3b3b3;
-  --color-line: #333333;
+  --color-line: #333;
   --color-brand: #fcdf03;
   --color-on-brand: #080808;
   --color-brand-active: #d0b801;
   --color-brand-soft: #4d4400;
   --color-brand-dim: #3b3925;
   --color-tag-player: #fde530;
+
   /* figma 1861_17860 detail screen: brand-alt highlight yellow, event-type chip
      blue, and the iOS systemGray used by secondary detail labels. Yellow chip
      strokes use the registered brand-active stroke per the design system. */
@@ -43,12 +44,12 @@
   --td-bg-color-container: #202020;
   --td-bg-color-container-active: #242424;
   --td-bg-color-secondarycontainer: #242424;
-  --td-bg-color-secondarycontainer-active: #333333;
+  --td-bg-color-secondarycontainer-active: #333;
   --td-bg-color-component: #242424;
-  --td-bg-color-component-active: #333333;
-  --td-bg-color-component-disabled: #333333;
-  --td-component-stroke: #333333;
-  --td-component-border: #333333;
+  --td-bg-color-component-active: #333;
+  --td-bg-color-component-disabled: #333;
+  --td-component-stroke: #333;
+  --td-component-border: #333;
   --td-loading-full-bg-color: rgb(8 8 8 / 92%);
   --td-loading-color: #fcdf03;
   --td-loading-text-color: #fff;
@@ -57,13 +58,14 @@
   --td-skeleton-animation-gradient: rgb(255 255 255 / 8%);
   --td-button-default-color: #fff;
   --td-button-default-bg-color: #242424;
-  --td-button-default-border-color: #333333;
-  --td-button-default-active-bg-color: #333333;
+  --td-button-default-border-color: #333;
+  --td-button-default-active-bg-color: #333;
   --td-button-primary-color: #080808;
   --td-button-primary-bg-color: #fcdf03;
   --td-button-primary-border-color: #fcdf03;
   --td-button-primary-active-bg-color: #d0b801;
   --td-button-primary-active-border-color: #d0b801;
+
   /* Contracts: PrimaryButton disabled is the brand core at 40% opacity, on-brand text. */
   --td-button-primary-disabled-color: #080808;
   --td-button-primary-disabled-bg: rgb(252 223 3 / 40%);
@@ -89,7 +91,7 @@
   --td-tab-bar-color: #b3b3b3;
   --td-tab-bar-bg-color: #202020;
   --td-tab-bar-active-bg: #202020;
-  --td-tab-bar-border-color: #333333;
+  --td-tab-bar-border-color: #333;
   --td-collapse-icon-color: #b3b3b3;
 
   /* Keep the mobile member surfaces on the same radius scale as the Figma frames. */

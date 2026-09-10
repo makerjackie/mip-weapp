@@ -1,6 +1,6 @@
 <view id="mip-card-edit-page" class="mip-member-page min-h-screen bg-canvas text-ink">
   <view wx:if="{{state === 'loading'}}" class="mx-[24rpx] mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mx-[24rpx] mt-[24rpx]"><app-empty-state title="暂时无法加载名片" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}" class="mx-[24rpx] mt-[24rpx]"><mip-empty-state title="暂时无法加载名片" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
   <block wx:else>
     <!-- figma 1732_20291: 名片卡 351×246 r16 @页面 (12,12)，烘焙黄底+吉祥物（card-bg-d-yellow），
          姓名 fs20 @ (12,12)，公司/职位/组织/组织职位 fs12 @ 44/65/94/115，

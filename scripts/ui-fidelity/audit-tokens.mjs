@@ -11,7 +11,14 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
-import { formatColor, isYellow, loadPalette, nearestToken, parseColor, repoRoot } from './lib/palette.mjs'
+import {
+  formatColor,
+  isYellow,
+  loadPalette,
+  nearestToken,
+  parseColor,
+  repoRoot,
+} from './lib/palette.mjs'
 
 const root = repoRoot(import.meta.dirname)
 const SRC = path.join(root, 'src')
@@ -29,14 +36,20 @@ const YELLOW_RE = /#[0-9a-f]{3,8}\b/gi
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith('.') || (entry.isDirectory() && SKIP_DIRS.has(entry.name))) {
+    if (
+      entry.name.startsWith('.')
+      || (entry.isDirectory() && SKIP_DIRS.has(entry.name))
+    ) {
       continue
     }
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
       walk(full, out)
     }
-    else if (SCAN_EXTS.has(path.extname(entry.name)) && !SKIP_FILES.has(path.relative(SRC, full).replace(/^\.\.\//, ''))) {
+    else if (
+      SCAN_EXTS.has(path.extname(entry.name))
+      && !SKIP_FILES.has(path.relative(SRC, full).replace(/^\.\.\//, ''))
+    ) {
       out.push(full)
     }
   }
@@ -44,10 +57,16 @@ function walk(dir, out = []) {
 }
 
 function loadAllowlist() {
-  if (!fs.existsSync(ALLOWLIST)) { return { keys: new Set(), contexts: new Set() } }
+  if (!fs.existsSync(ALLOWLIST)) {
+    return { keys: new Set(), contexts: new Set() }
+  }
   const doc = JSON.parse(fs.readFileSync(ALLOWLIST, 'utf8'))
   return {
-    keys: new Set((doc.colors ?? []).map(entry => `${entry.file}::${normalize(entry.value)}`)),
+    keys: new Set(
+      (doc.colors ?? []).map(
+        entry => `${entry.file}::${normalize(entry.value)}`,
+      ),
+    ),
     contexts: new Set(doc.contexts ?? []),
   }
 }
@@ -63,8 +82,12 @@ function contextOf(line, index) {
   if (prop) {
     return prop[1]
   }
-  const cls = before.match(/class="([^"]*)$/)?.[1]?.match(/([a-z-]+)-\[[^\]]*$/)
-  if (cls) { return `class:${cls[1]}` }
+  const cls = before
+    .match(/class="([^"]*)$/)?.[1]
+    ?.match(/([a-z-]+)-\[[^\]]*$/)
+  if (cls) {
+    return `class:${cls[1]}`
+  }
   const key = before.match(/"(\w+)"\s*:\s*(?:"\s*)?$/)?.[1]
   if (key) {
     return key
@@ -85,8 +108,7 @@ function findViolations(palette, allow) {
         return
       }
       COLOR_RE.lastIndex = 0
-      let match
-      while ((match = COLOR_RE.exec(line))) {
+      for (const match of line.matchAll(COLOR_RE)) {
         const literal = match[0]
         const parsed = parseColor(literal)
         if (!parsed) {
@@ -95,8 +117,14 @@ function findViolations(palette, allow) {
         const rgb = formatColor(parsed)
         const triple = `${parsed.r},${parsed.g},${parsed.b}`
         const translucent = parsed.a < 0.999
-        const generic = translucent && [...GENERIC_RGB].some(prefix => `rgba(${triple},`.startsWith(prefix))
-        const hit = palette.index.get(rgb) ?? (translucent ? palette.triples.get(triple) : null)
+        const generic
+          = translucent
+            && [...GENERIC_RGB].some(prefix =>
+              `rgba(${triple},`.startsWith(prefix),
+            )
+        const hit
+          = palette.index.get(rgb)
+            ?? (translucent ? palette.triples.get(triple) : null)
         const record = {
           file: rel,
           line: i + 1,
@@ -114,13 +142,28 @@ function findViolations(palette, allow) {
         else if (hit) {
           record.severity = translucent ? 'alpha' : 'ok'
         }
-        else if (allow.keys.has(`${rel}::${rgb}`) || allow.contexts.has(record.context)) {
+        else if (
+          allow.keys.has(`${rel}::${rgb}`)
+          || allow.contexts.has(record.context)
+        ) {
           record.severity = 'allowed'
         }
         else {
           const nearest = nearestToken(parsed, palette)
-          record.suggestion = nearest ? { token: nearest.entry.token, rgb: nearest.entry.rgb, distance: Number(nearest.distance.toFixed(1)) } : null
-          record.severity = classifySeverity(rel, rgb, parsed, record.context, nearest)
+          record.suggestion = nearest
+            ? {
+                token: nearest.entry.token,
+                rgb: nearest.entry.rgb,
+                distance: Number(nearest.distance.toFixed(1)),
+              }
+            : null
+          record.severity = classifySeverity(
+            rel,
+            rgb,
+            parsed,
+            record.context,
+            nearest,
+          )
         }
         findings.push(record)
       }
@@ -134,7 +177,11 @@ function classifySeverity(file, rgb, color, context, nearest) {
     return 'high'
   }
   const bgish = /background|bg|canvas|panel|surface|color/.test(context)
-  const surfaceToken = rgb === '#040404' || rgb === '#090909' || rgb === '#111111' || rgb === '#040000'
+  const surfaceToken
+    = rgb === '#040404'
+      || rgb === '#090909'
+      || rgb === '#111111'
+      || rgb === '#040000'
   const isChrome = /app\.json|app\.css|brand\.ts|index\.json$/.test(file)
   if (surfaceToken && bgish) {
     return 'high'
@@ -153,7 +200,9 @@ function auditTheme(palette) {
   const block = appCss.match(/@theme[^{]*\{([\s\S]*?)\n\}/)?.[1] ?? ''
   const results = []
   for (const [cssVar, mapping] of Object.entries(palette.doc.themeMapping)) {
-    const actual = block.match(new RegExp(`${cssVar}:\\s*([^;]+);`))?.[1]?.trim()
+    const actual = block
+      .match(new RegExp(`${cssVar}:\\s*([^;]+);`))?.[1]
+      ?.trim()
     const expected = palette.colors.find(c => c.token === mapping.token)
     const actualRgb = actual ? formatColor(parseColor(actual) ?? {}) : null
     results.push({
@@ -178,33 +227,67 @@ function auditGeometry(palette) {
     const rel = path.relative(root, file)
     const text = fs.readFileSync(file, 'utf8')
     text.split('\n').forEach((line, i) => {
-      for (const [, size] of line.matchAll(/font-size:\s*(\d+(?:\.\d+)?)rpx/g)) {
+      for (const [, size] of line.matchAll(
+        /font-size:\s*(\d+(?:\.\d+)?)rpx/g,
+      )) {
         const value = Number.parseFloat(size)
         if (fontOk.has(value)) {
           findings.font.ok += 1
         }
-        else { findings.font.off.push({ file: rel, line: i + 1, value, nearestDesignPx: Math.round(value / 2) }) }
+        else {
+          findings.font.off.push({
+            file: rel,
+            line: i + 1,
+            value,
+            nearestDesignPx: Math.round(value / 2),
+          })
+        }
       }
-      for (const [, r] of line.matchAll(/border-radius:\s*(\d+(?:\.\d+)?)rpx/g)) {
+      for (const [, r] of line.matchAll(
+        /border-radius:\s*(\d+(?:\.\d+)?)rpx/g,
+      )) {
         const value = Number.parseFloat(r)
         if (radiusOk.has(value) || value >= 200) {
           findings.radius.ok += 1
         }
-        else { findings.radius.off.push({ file: rel, line: i + 1, value, nearestDesignPx: Math.round(value / 2) }) }
+        else {
+          findings.radius.off.push({
+            file: rel,
+            line: i + 1,
+            value,
+            nearestDesignPx: Math.round(value / 2),
+          })
+        }
       }
       for (const [, r] of line.matchAll(/rounded-\[?(\d+)rpx\]?/g)) {
         const value = Number.parseFloat(r)
         if (radiusOk.has(value) || value >= 200) {
           findings.radius.ok += 1
         }
-        else { findings.radius.off.push({ file: rel, line: i + 1, value, nearestDesignPx: Math.round(value / 2) }) }
+        else {
+          findings.radius.off.push({
+            file: rel,
+            line: i + 1,
+            value,
+            nearestDesignPx: Math.round(value / 2),
+          })
+        }
       }
-      for (const [, r] of line.matchAll(/text-\[(?:length:)?(\d+(?:\.\d+)?)rpx\]/g)) {
+      for (const [, r] of line.matchAll(
+        /text-\[(?:length:)?(\d+(?:\.\d+)?)rpx\]/g,
+      )) {
         const value = Number.parseFloat(r)
         if (fontOk.has(value)) {
           findings.font.ok += 1
         }
-        else { findings.font.off.push({ file: rel, line: i + 1, value, nearestDesignPx: Math.round(value / 2) }) }
+        else {
+          findings.font.off.push({
+            file: rel,
+            line: i + 1,
+            value,
+            nearestDesignPx: Math.round(value / 2),
+          })
+        }
       }
     })
   }
@@ -214,7 +297,18 @@ function auditGeometry(palette) {
 function auditHardRules(palette) {
   const breaches = []
   const brandRgb = palette.colors.find(c => c.token === 'brand')?.rgb
-  const yellows = new Set(['#fcdf03', '#fde530', '#ffdd02', '#fde104', '#d0b801', '#feeb5d', '#fff7b8', '#e3c900', '#72680f', '#3b3505'])
+  const yellows = new Set([
+    '#fcdf03',
+    '#fde530',
+    '#ffdd02',
+    '#fde104',
+    '#d0b801',
+    '#feeb5d',
+    '#fff7b8',
+    '#e3c900',
+    '#72680f',
+    '#3b3505',
+  ])
   for (const file of walk(SRC)) {
     const rel = path.relative(root, file)
     const text = fs.readFileSync(file, 'utf8')
@@ -223,26 +317,57 @@ function auditHardRules(palette) {
       for (const match of line.matchAll(YELLOW_RE)) {
         const parsed = parseColor(match[0])
         if (parsed && isYellow(parsed) && !yellows.has(formatColor(parsed))) {
-          breaches.push({ rule: 'unregistered-yellow', file: rel, line: i + 1, value: match[0], expected: brandRgb })
+          breaches.push({
+            rule: 'unregistered-yellow',
+            file: rel,
+            line: i + 1,
+            value: match[0],
+            expected: brandRgb,
+          })
         }
       }
       if (/background-image\s*:\s*url\((?!data:)/i.test(line)) {
-        breaches.push({ rule: 'wxss-local-background-image', file: rel, line: i + 1, value: line.trim().slice(0, 120) })
+        breaches.push({
+          rule: 'wxss-local-background-image',
+          file: rel,
+          line: i + 1,
+          value: line.trim().slice(0, 120),
+        })
       }
       if (/figma-restored\//.test(line)) {
-        breaches.push({ rule: 'upstream-runtime-path', file: rel, line: i + 1, value: line.trim().slice(0, 120) })
+        breaches.push({
+          rule: 'upstream-runtime-path',
+          file: rel,
+          line: i + 1,
+          value: line.trim().slice(0, 120),
+        })
       }
-      if (/^\s*import\s+(?:\S.*)?from\s+['"](react|react-dom|next)['"]/.test(line)) {
-        breaches.push({ rule: 'react-import', file: rel, line: i + 1, value: line.trim().slice(0, 120) })
+      if (
+        /^\s*import\s+(?:\S.*)?from\s+['"](?:react|react-dom|next)['"]/.test(line)
+      ) {
+        breaches.push({
+          rule: 'react-import',
+          file: rel,
+          line: i + 1,
+          value: line.trim().slice(0, 120),
+        })
       }
     })
   }
   const appCss = fs.readFileSync(path.join(SRC, 'app.css'), 'utf8')
-  const pageBg = appCss.match(/page\s*\{[\s\S]*?background(?:-color)?\s*:\s*([^;]+);/)?.[1]?.trim()
+  const pageBg = appCss
+    .match(/page\s*\{[\s\S]*?background(?:-color)?\s*:\s*([^;\s][^;]*);/)?.[1]
+    ?.trim()
   const pageBgRgb = pageBg ? formatColor(parseColor(pageBg) ?? {}) : null
   const expectedPage = palette.colors.find(c => c.token === 'bg-page')?.rgb
   if (pageBgRgb && pageBgRgb !== expectedPage) {
-    breaches.push({ rule: 'page-background', file: 'src/app.css', line: 1, value: pageBg, expected: expectedPage })
+    breaches.push({
+      rule: 'page-background',
+      file: 'src/app.css',
+      line: 1,
+      value: pageBg,
+      expected: expectedPage,
+    })
   }
   return breaches
 }
@@ -255,18 +380,36 @@ export function runTokenAudit({ jsonPath, quiet = false } = {}) {
   const geometry = auditGeometry(palette)
   const hardRules = auditHardRules(palette)
 
-  const violations = findings.filter(f => ['high', 'medium', 'low'].includes(f.severity))
-  const counted = findings.filter(f => !['generic', 'allowed'].includes(f.severity))
+  const violations = findings.filter(f =>
+    ['high', 'medium', 'low'].includes(f.severity),
+  )
+  const counted = findings.filter(
+    f => !['generic', 'allowed'].includes(f.severity),
+  )
   const conformant = counted.length - violations.length
   const colorScore = counted.length === 0 ? 1 : conformant / counted.length
   const themeScore = theme.filter(t => t.ok).length / theme.length
-  const geoTotal = geometry.font.ok + geometry.font.off.length + geometry.radius.ok + geometry.radius.off.length
-  const geometryScore = geoTotal === 0 ? 1 : (geometry.font.ok + geometry.radius.ok) / geoTotal
-  const score = Number(((0.6 * colorScore + 0.25 * themeScore + 0.15 * geometryScore) * 100).toFixed(2))
+  const geoTotal
+    = geometry.font.ok
+      + geometry.font.off.length
+      + geometry.radius.ok
+      + geometry.radius.off.length
+  const geometryScore
+    = geoTotal === 0 ? 1 : (geometry.font.ok + geometry.radius.ok) / geoTotal
+  const score = Number(
+    (
+      (0.6 * colorScore + 0.25 * themeScore + 0.15 * geometryScore)
+      * 100
+    ).toFixed(2),
+  )
 
   const report = {
     layer: 'tokens',
-    baseline: { file: path.relative(root, BASELINE), colors: palette.colors.length, skillSnapshot: palette.doc.skillSnapshot },
+    baseline: {
+      file: path.relative(root, BASELINE),
+      colors: palette.colors.length,
+      skillSnapshot: palette.doc.skillSnapshot,
+    },
     score,
     thresholds: { pass: 92 },
     pass: score >= 92 && hardRules.length === 0,
@@ -280,7 +423,10 @@ export function runTokenAudit({ jsonPath, quiet = false } = {}) {
       geometryConformance: Number((geometryScore * 100).toFixed(2)),
       filesScanned: walk(SRC).length,
     },
-    violationsBySeverity: violations.reduce((acc, v) => ({ ...acc, [v.severity]: (acc[v.severity] ?? 0) + 1 }), {}),
+    violationsBySeverity: violations.reduce(
+      (acc, v) => ({ ...acc, [v.severity]: (acc[v.severity] ?? 0) + 1 }),
+      {},
+    ),
     topOffenders: topOffenders(violations),
     theme,
     hardRules,
@@ -293,10 +439,20 @@ export function runTokenAudit({ jsonPath, quiet = false } = {}) {
     fs.writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`)
   }
   if (!quiet) {
-    console.log(`Layer 1 tokens: ${score}%  (color ${report.metrics.colorConformance}%, theme ${report.metrics.themeConformance}%, geometry ${report.metrics.geometryConformance}%)`)
-    console.log(`  ${violations.length} violations, ${hardRules.length} hard-rule breaches, ${report.metrics.filesScanned} files`)
-    for (const offender of report.topOffenders.slice(0, 12)) { console.log(`  ${offender.rgb} -> ${offender.suggestion?.token ?? '?'} x${offender.count}  ${offender.files}`) }
-    if (jsonPath) { console.log(`  report: ${path.relative(root, jsonPath)}`) }
+    console.log(
+      `Layer 1 tokens: ${score}%  (color ${report.metrics.colorConformance}%, theme ${report.metrics.themeConformance}%, geometry ${report.metrics.geometryConformance}%)`,
+    )
+    console.log(
+      `  ${violations.length} violations, ${hardRules.length} hard-rule breaches, ${report.metrics.filesScanned} files`,
+    )
+    for (const offender of report.topOffenders.slice(0, 12)) {
+      console.log(
+        `  ${offender.rgb} -> ${offender.suggestion?.token ?? '?'} x${offender.count}  ${offender.files}`,
+      )
+    }
+    if (jsonPath) {
+      console.log(`  report: ${path.relative(root, jsonPath)}`)
+    }
   }
   return report
 }
@@ -318,14 +474,25 @@ function topOffenders(violations) {
   }
   return [...map.values()]
     .sort((a, b) => b.count - a.count)
-    .map(e => ({ ...e, files: [...e.files].slice(0, 4).join(', ') + (e.files.size > 4 ? ` (+${e.files.size - 4})` : ''), fileCount: e.files.size }))
+    .map(e => ({
+      ...e,
+      files:
+        [...e.files].slice(0, 4).join(', ')
+        + (e.files.size > 4 ? ` (+${e.files.size - 4})` : ''),
+      fileCount: e.files.size,
+    }))
 }
 
-const invokedDirectly = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)
+const invokedDirectly
+  = process.argv[1]
+    && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)
 if (invokedDirectly) {
   const args = process.argv.slice(2)
   const jsonIdx = args.indexOf('--json')
-  const jsonPath = jsonIdx >= 0 ? path.resolve(args[jsonIdx + 1]) : path.join(root, '.ui-fidelity/layer1-tokens.json')
+  const jsonPath
+    = jsonIdx >= 0
+      ? path.resolve(args[jsonIdx + 1])
+      : path.join(root, '.ui-fidelity/layer1-tokens.json')
   const report = runTokenAudit({ jsonPath })
   process.exitCode = report.pass ? 0 : 1
 }

@@ -1,4 +1,4 @@
-import type { EventCardView } from '../../components/event-card/model'
+import type { EventCardView } from '../../components/mip-activity-card/model'
 import type { EventId } from '../../modules/mip'
 import type { MipPublicBanner } from '../../modules/mip-banners'
 import type {
@@ -9,7 +9,7 @@ import type {
   EventListView,
   EventSortDirection,
 } from '../../modules/mip-events'
-import { presentEventCard } from '../../components/event-card/model'
+import { presentEventCard } from '../../components/mip-activity-card/model'
 import { mipOperationsConfig } from '../../config/mip-operations'
 import { mipBannerModule } from '../../modules/mip-banners'
 import { publicEventTypeLabel, resolvePrimaryBranchCity } from '../../modules/mip-events'

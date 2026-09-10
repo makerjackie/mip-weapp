@@ -1,0 +1,46 @@
+.mip-pill-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  gap: 16rpx;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 80rpx;
+  padding: 0 32rpx;
+  border: 1rpx solid #080808;
+  border-radius: 100rpx;
+}
+
+.mip-pill-button--primary {
+  background: var(--mip-brand);
+}
+
+.mip-pill-button--secondary {
+  background: var(--mip-bg-surface);
+}
+
+.mip-pill-button--disabled {
+  opacity: 0.4;
+}
+
+.mip-pill-button__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.mip-pill-button--primary .mip-pill-button__label {
+  color: var(--mip-text-on-brand);
+}
+
+.mip-pill-button--secondary .mip-pill-button__label {
+  color: var(--mip-brand);
+}
+
+.mip-pill-button__label {
+  font-size: 32rpx;
+  font-weight: 500;
+  line-height: 44.8rpx;
+}

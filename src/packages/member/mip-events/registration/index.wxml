@@ -1,7 +1,7 @@
 <view id="mip-event-registration-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] pt-3 text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="无法打开报名" description="{{message || '请稍后重试。'}}" action-text="重新加载" bind:action="loadEvent" /><app-page-exit /></view>
-  <view wx:elif="{{state === 'blocked'}}"><app-empty-state title="{{editing ? '当前不能修改报名' : '当前不能报名'}}" description="{{message}}" action-text="查看我的活动" bind:action="openMine" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="无法打开报名" description="{{message || '请稍后重试。'}}" action-text="重新加载" bind:action="loadEvent" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'blocked'}}"><mip-empty-state title="{{editing ? '当前不能修改报名' : '当前不能报名'}}" description="{{message}}" action-text="查看我的活动" bind:action="openMine" /><app-page-exit /></view>
   <view wx:elif="{{state === 'submitted'}}" class="pt-10">
     <view class="rounded-[16rpx] bg-panel px-5 py-8 text-center">
       <view class="mx-auto flex h-[88rpx] w-[88rpx] items-center justify-center rounded-full bg-brand-soft"><mip-icon name="check" size="{{24}}" color="var(--color-brand)" /></view>

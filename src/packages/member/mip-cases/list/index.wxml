@@ -17,8 +17,8 @@
       <view class="rounded-[16rpx] bg-panel px-4 py-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     </view>
   </view>
-  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载案例" description="{{message}}" action-text="重新加载" bind:action="retry" /></view>
-  <view wx:elif="{{!items.length}}" class="mt-5"><app-empty-state title="暂时没有案例" description="{{mine ? '草稿和已发布案例会显示在这里。' : '已发布案例会显示在这里。'}}" action-text="{{mine ? '发布案例' : ''}}" bind:action="create" /></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><mip-empty-state title="暂时无法加载案例" description="{{message}}" action-text="重新加载" bind:action="retry" /></view>
+  <view wx:elif="{{!items.length}}" class="mt-5"><mip-empty-state title="暂时没有案例" description="{{mine ? '草稿和已发布案例会显示在这里。' : '已发布案例会显示在这里。'}}" action-text="{{mine ? '发布案例' : ''}}" bind:action="create" /></view>
   <view wx:else class="relative mt-5 pl-[100rpx] pr-3">
     <view class="absolute bottom-6 left-[36rpx] top-3 w-[2rpx] bg-brand" />
     <view wx:for="{{items}}" wx:key="id" class="relative pb-6">

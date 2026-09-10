@@ -1,15 +1,15 @@
 <view id="mip-event-comments-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-3 text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'access'}}">
-    <app-empty-state title="完成身份信息后查看评论" description="活动评论需要确认协议、手机号、昵称和主分会。" action-text="继续" bind:action="openAccess" />
+    <mip-empty-state title="完成身份信息后查看评论" description="活动评论需要确认协议、手机号、昵称和主分会。" action-text="继续" bind:action="openAccess" />
     <app-page-exit />
   </view>
   <view wx:elif="{{state === 'error'}}">
-    <app-empty-state title="暂时无法加载评论" description="{{message || '请检查网络后重试。'}}" action-text="重新加载" bind:action="retry" />
+    <mip-empty-state title="暂时无法加载评论" description="{{message || '请检查网络后重试。'}}" action-text="重新加载" bind:action="retry" />
     <app-page-exit />
   </view>
   <view wx:elif="{{state === 'forbidden'}}">
-    <app-empty-state title="活动评论不可查看" description="{{message || '当前账号无法查看此活动的评论。'}}" />
+    <mip-empty-state title="活动评论不可查看" description="{{message || '当前账号无法查看此活动的评论。'}}" />
     <app-page-exit />
   </view>
   <block wx:else>
@@ -35,7 +35,7 @@
       <view class="text-[length:22rpx] text-muted">{{comments.length}} 条已加载</view>
     </view>
 
-    <app-empty-state wx:if="{{comments.length === 0}}" title="暂无评论" description="已发布的评论会显示在这里。" />
+    <mip-empty-state wx:if="{{comments.length === 0}}" title="暂无评论" description="已发布的评论会显示在这里。" />
     <view wx:else class="flex flex-col gap-3">
       <view wx:for="{{comments}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
         <view class="flex items-center gap-3" data-id="{{item.id}}" bind:tap="openAuthor">

@@ -4,11 +4,11 @@
     <view class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
   <view wx:elif="{{state === 'error'}}">
-    <app-empty-state title="暂时无法加载数字分身" description="{{message || '请检查网络后重试。'}}" action-text="重新加载" bind:action="loadPage" />
+    <mip-empty-state title="暂时无法加载数字分身" description="{{message || '请检查网络后重试。'}}" action-text="重新加载" bind:action="loadPage" />
     <app-page-exit />
   </view>
   <view wx:elif="{{state === 'unconfigured'}}">
-    <app-empty-state title="数字分身暂未开放" description="当前无法生成数字分身。" />
+    <mip-empty-state title="数字分身暂未开放" description="当前无法生成数字分身。" />
     <app-page-exit />
   </view>
   <block wx:else>

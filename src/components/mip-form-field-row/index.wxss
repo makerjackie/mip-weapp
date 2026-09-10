@@ -1,0 +1,57 @@
+.mip-form-field-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 92rpx;
+  padding: 20rpx 20rpx 20rpx 24rpx;
+  background: var(--mip-bg-surface);
+}
+
+.mip-form-field-row--disabled {
+  opacity: 0.4;
+}
+
+.mip-form-field-row__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 28rpx;
+  font-weight: 500;
+  line-height: 40rpx;
+  color: var(--mip-text-primary);
+  white-space: nowrap;
+}
+
+.mip-form-field-row__trailing {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 12rpx;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  margin-left: 16rpx;
+}
+
+.mip-form-field-row__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 28rpx;
+  line-height: 40rpx;
+  color: var(--mip-text-primary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mip-form-field-row__value--placeholder {
+  color: var(--mip-text-secondary);
+}
+
+.mip-form-field-row__icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32rpx;
+  height: 32rpx;
+}

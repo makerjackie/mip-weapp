@@ -12,8 +12,8 @@ describe('MIP opportunity Figma surfaces', () => {
   const editor = source('src/packages/member/mip-opportunities/editor/index.wxml')
   const editorScript = source('src/packages/member/mip-opportunities/editor/index.ts')
   const editorConfig = source('src/packages/member/mip-opportunities/editor/index.json')
-  const opportunityCard = source('src/components/opportunity-card/index.wxml')
-  const opportunityCardStyles = source('src/components/opportunity-card/index.wxss')
+  const opportunityCard = source('src/components/mip-opportunity-card/index.wxml')
+  const opportunityCardStyles = source('src/components/mip-opportunity-card/index.wxss')
   const discoveryScript = source('src/pages/opportunities/index.ts')
   const discoveryStyles = source('src/pages/opportunities/index.wxss')
 

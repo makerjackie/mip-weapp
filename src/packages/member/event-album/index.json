@@ -2,7 +2,7 @@
   "navigationBarTitleText": "活动相册",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "app-empty-state": "/components/empty-state/index",
+    "mip-empty-state": "/components/mip-empty-state/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "app-page-exit": "/components/page-exit/index"

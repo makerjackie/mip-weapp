@@ -34,7 +34,10 @@ const MAPPING = [
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith('.') || (entry.isDirectory() && SKIP_DIRS.has(entry.name))) {
+    if (
+      entry.name.startsWith('.')
+      || (entry.isDirectory() && SKIP_DIRS.has(entry.name))
+    ) {
       continue
     }
     const full = path.join(dir, entry.name)
@@ -56,7 +59,9 @@ function regexFor(literal) {
 
 function matchCase(sample, target) {
   const hexish = /^#[0-9a-f]+$/i.test(sample)
-  return hexish && sample.slice(1) !== sample.slice(1).toLowerCase() ? target.toUpperCase() : target
+  return hexish && sample.slice(1) !== sample.slice(1).toLowerCase()
+    ? target.toUpperCase()
+    : target
 }
 
 const dryRun = process.argv.includes('--dry-run')
@@ -83,5 +88,7 @@ for (const file of walk(SRC)) {
 console.log(`${dryRun ? 'would rewrite' : 'rewrote'} ${filesChanged} files`)
 for (const { from, to, note } of MAPPING) {
   const count = counts.get(from) ?? 0
-  if (count) { console.log(`  ${from} -> ${to}  x${count}  (${note})`) }
+  if (count) {
+    console.log(`  ${from} -> ${to}  x${count}  (${note})`)
+  }
 }

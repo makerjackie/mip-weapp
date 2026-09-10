@@ -1,6 +1,6 @@
 <view id="mip-ai-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载 AI 草稿" description="请检查网络后重试。" action-text="重新加载" bind:action="loadDrafts" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法加载 AI 草稿" description="请检查网络后重试。" action-text="重新加载" bind:action="loadDrafts" /><app-page-exit /></view>
   <block wx:elif="{{figmaLayout}}">
     <!-- figma 2172_42168/42177/42196/42217 AI助手录音：
          全屏录音台（提示语 + 品牌色计时 + 麦克风/录音控制簇，按钮烘焙自

@@ -3,9 +3,9 @@
     <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
-  <view wx:elif="{{state === 'access'}}" id="mip-event-feedback-access-state"><app-empty-state title="需要完成使用准备" description="完成身份信息后可填写活动反馈。" action-text="继续" bind:action="openAccess" /><app-page-exit /></view>
-  <view wx:elif="{{state === 'blocked'}}" id="mip-event-feedback-blocked-state"><app-empty-state title="活动反馈暂不可用" description="{{message}}" /><app-page-exit /></view>
-  <view wx:elif="{{state === 'error'}}" id="mip-event-feedback-error-state"><app-empty-state title="暂时无法加载活动反馈" description="{{message}}" action-text="重新加载" bind:action="retry" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'access'}}" id="mip-event-feedback-access-state"><mip-empty-state title="需要完成使用准备" description="完成身份信息后可填写活动反馈。" action-text="继续" bind:action="openAccess" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'blocked'}}" id="mip-event-feedback-blocked-state"><mip-empty-state title="活动反馈暂不可用" description="{{message}}" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}" id="mip-event-feedback-error-state"><mip-empty-state title="暂时无法加载活动反馈" description="{{message}}" action-text="重新加载" bind:action="retry" /><app-page-exit /></view>
   <block wx:else>
     <view id="mip-event-feedback-event-summary" class="rounded-[16rpx] bg-panel px-3 py-3">
       <view class="flex flex-wrap items-center gap-1">

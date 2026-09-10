@@ -5,7 +5,7 @@ import {
   cooperationNameRuns,
   cooperationRoleCardView,
   variantByRoleKey,
-} from '../src/components/cooperation-role-card/model'
+} from '../src/components/mip-cooperation-card/model'
 import { cooperationRoles } from '../src/config/mip-catalogs'
 
 const figmaRawSourceNodes = {
@@ -19,10 +19,10 @@ const figmaRawSourceNodes = {
 
 /** 烘焙卡合约（references/wechat-component-contracts.md）：六变种的底色/浅色/名称/底图。 */
 const bakedVariants = {
-  dogplaner: { bg: '#7b00ff', light: '#f2e5ff', name: '狗策划 DOGPLANER' },
-  upstart: { bg: '#7a2900', light: '#fadab3', name: '暴发户 UPSTART' },
+  'dogplaner': { bg: '#7b00ff', light: '#f2e5ff', name: '狗策划 DOGPLANER' },
+  'upstart': { bg: '#7a2900', light: '#fadab3', name: '暴发户 UPSTART' },
   'design-slave': { bg: '#04a44f', light: '#e5fff1', name: '死美工 Design Slave' },
-  pimp: { bg: '#df07a9', light: '#ffe5f9', name: '皮条客 pimp' },
+  'pimp': { bg: '#df07a9', light: '#ffe5f9', name: '皮条客 pimp' },
   'business-man': { bg: '#ff5500', light: '#ffeee5', name: '生意佬 business man' },
   'old-nanny': { bg: '#1a71ff', light: '#e5efff', name: '老保姆 old nanny' },
 } as const
@@ -110,8 +110,8 @@ describe('MIP cooperation role visual component', () => {
   })
 
   it('keeps one neutral component structure instead of six repeated templates', () => {
-    const config = JSON.parse(source('src/components/cooperation-role-card/index.json'))
-    const component = source('src/components/cooperation-role-card/index.wxml')
+    const config = JSON.parse(source('src/components/mip-cooperation-card/index.json'))
+    const component = source('src/components/mip-cooperation-card/index.wxml')
     expect(config).toEqual({
       component: true,
       styleIsolation: 'apply-shared',
@@ -120,7 +120,7 @@ describe('MIP cooperation role visual component', () => {
     expect(component).toContain('style="background-color: {{view.bg}}"')
     expect(component).toContain('src="{{view.image}}"')
     expect(component).toContain('mode="scaleToFill"')
-    expect(component).toContain('cooperation-role-card__name-run--latin')
+    expect(component).toContain('mip-cooperation-card__name-run--latin')
     expect(component).toContain('<mip-icon name="target"')
     expect(component).toContain('<mip-icon name="cup"')
     expect(component).not.toContain('avatarUrl')
@@ -147,10 +147,10 @@ describe('MIP cooperation role visual component', () => {
     ]
 
     for (const page of pages) {
-      expect(JSON.parse(source(page.config)).usingComponents['cooperation-role-card'])
-        .toBe('/components/cooperation-role-card/index')
+      expect(JSON.parse(source(page.config)).usingComponents['mip-cooperation-card'])
+        .toBe('/components/mip-cooperation-card/index')
       const template = source(page.template)
-      expect(template).toContain('<cooperation-role-card')
+      expect(template).toContain('<mip-cooperation-card')
       expect(template).toContain('role-key="{{item.roleKey}}"')
       expect(template).toContain('positioning="{{item.positioning}}"')
       expect(template).toContain('target-summary="{{item.targetSummary}}"')

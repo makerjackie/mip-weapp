@@ -2,7 +2,7 @@
   "navigationBarTitleText": "影响力数据",
   "backgroundColor": "#080808",
   "usingComponents": {
-    "app-empty-state": "/components/empty-state/index",
+    "mip-empty-state": "/components/mip-empty-state/index",
     "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",

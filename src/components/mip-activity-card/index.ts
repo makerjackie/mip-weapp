@@ -1,4 +1,5 @@
-import { openWechatChannelsDestination, type WechatChannelsDestination } from '../../platform/wechat/channels'
+import type { WechatChannelsDestination } from '../../platform/wechat/channels'
+import { openWechatChannelsDestination } from '../../platform/wechat/channels'
 
 interface RecapEntry {
   destination: WechatChannelsDestination

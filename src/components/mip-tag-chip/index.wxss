@@ -1,0 +1,34 @@
+.mip-tag-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: 56rpx;
+  padding: 0 16rpx;
+  background: var(--mip-bg-surface);
+  border: 1rpx solid #080808;
+  border-radius: 16rpx;
+}
+
+.mip-tag-chip--active {
+  background: var(--mip-brand);
+}
+
+.mip-tag-chip--disabled {
+  opacity: 0.4;
+}
+
+.mip-tag-chip--block {
+  justify-content: center;
+  width: 100%;
+}
+
+.mip-tag-chip__label {
+  font-size: 24rpx;
+  font-weight: 500;
+  line-height: 34rpx;
+  color: var(--mip-text-secondary);
+}
+
+.mip-tag-chip--active .mip-tag-chip__label {
+  color: var(--mip-text-on-brand);
+}

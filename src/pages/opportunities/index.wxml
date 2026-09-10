@@ -213,9 +213,9 @@
       <view class="mt-4 flex h-[80rpx] w-[372rpx] items-center justify-center rounded-full border border-canvas bg-brand text-[length:32rpx] font-medium text-on-brand" aria-role="button" bind:tap="openLogin">玩家登录</view>
       <view class="mt-[78rpx] text-[length:32rpx] font-medium leading-[44rpx] text-ink" aria-role="button" bind:tap="openLogin">去成为玩家解锁权限></view>
     </view>
-    <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><app-empty-state title="暂时无法加载内容" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
-    <view wx:elif="{{mode === 'opportunities' && !opportunities.length}}" class="mx-3 mt-5"><app-empty-state title="没有找到相关机会" description="调整筛选条件后重试。" action-text="{{hasAppliedFilters ? '清除筛选' : ''}}" bind:action="clearAppliedFilters" /></view>
-    <view wx:elif="{{mode === 'cooperation' && !cooperationTalents.length}}" class="mx-3 mt-5"><app-empty-state title="没有找到人才" description="{{hasAppliedFilters ? '调整筛选条件后重试。' : '已发布合作卡的人才会显示在这里。'}}" action-text="{{hasAppliedFilters ? '清除筛选' : ''}}" bind:action="clearAppliedFilters" /></view>
+    <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><mip-empty-state title="暂时无法加载内容" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+    <view wx:elif="{{mode === 'opportunities' && !opportunities.length}}" class="mx-3 mt-5"><mip-empty-state title="没有找到相关机会" description="调整筛选条件后重试。" action-text="{{hasAppliedFilters ? '清除筛选' : ''}}" bind:action="clearAppliedFilters" /></view>
+    <view wx:elif="{{mode === 'cooperation' && !cooperationTalents.length}}" class="mx-3 mt-5"><mip-empty-state title="没有找到人才" description="{{hasAppliedFilters ? '调整筛选条件后重试。' : '已发布合作卡的人才会显示在这里。'}}" action-text="{{hasAppliedFilters ? '清除筛选' : ''}}" bind:action="clearAppliedFilters" /></view>
 
     <view wx:if="{{state === 'ready' && mode === 'opportunities' && authenticated}}" class="mx-3 mt-3 flex flex-col gap-3">
       <!-- The shared opportunity card keeps the frozen 120x160 cover contract and count-only referral treatment. -->

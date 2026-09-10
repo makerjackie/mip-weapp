@@ -1,6 +1,6 @@
 <view id="mip-cooperation-editor-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法编辑合作卡" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法编辑合作卡" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
 
   <!-- figma 2571_34139 编辑合作卡：黄色横幅 + AI助手卡(黄描边) + 特征打分星格 +
        目标三组输入 + 圈子/臭毛病表 + 保存胶囊。生产保持下方 表单+slider 布局

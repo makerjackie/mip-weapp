@@ -1,0 +1,20 @@
+<view class="mip-cooperation-card" style="background-color: {{view.bg}}" aria-label="{{view.name}}合作卡">
+  <image wx:if="{{view.image}}" class="mip-cooperation-card__art" mode="scaleToFill" fade-show="{{false}}" src="{{view.image}}" />
+  <view wx:if="{{view.name}}" class="mip-cooperation-card__name" style="color: {{view.light}}">
+    <text wx:for="{{view.nameRuns}}" wx:key="index" class="mip-cooperation-card__name-run {{item.latin ? 'mip-cooperation-card__name-run--latin' : ''}}">{{item.text}}</text>
+  </view>
+  <view wx:if="{{showDetails && view.goal}}" class="mip-cooperation-card__strip mip-cooperation-card__strip--goal">
+    <view class="mip-cooperation-card__badge">
+      <view class="mip-cooperation-card__badge-circle"><mip-icon name="target" color="var(--color-panel)" /></view>
+      <text class="mip-cooperation-card__badge-label">{{goalLabel}}</text>
+    </view>
+    <text class="mip-cooperation-card__value">{{view.goal}}</text>
+  </view>
+  <view wx:if="{{showDetails && view.referral}}" class="mip-cooperation-card__strip mip-cooperation-card__strip--referral">
+    <view class="mip-cooperation-card__badge">
+      <view class="mip-cooperation-card__badge-circle"><mip-icon name="cup" color="var(--color-panel)" /></view>
+      <text class="mip-cooperation-card__badge-label">{{referralLabel}}</text>
+    </view>
+    <text class="mip-cooperation-card__value">{{view.referral}}</text>
+  </view>
+</view>

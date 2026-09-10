@@ -4,11 +4,11 @@
     <view class="profile-loading-card"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
   <view wx:elif="{{state === 'error'}}" class="profile-state">
-    <app-empty-state title="暂时无法加载资料" description="资料服务暂时没有响应。" action-text="重新加载" bind:action="loadProfile" />
+    <mip-empty-state title="暂时无法加载资料" description="资料服务暂时没有响应。" action-text="重新加载" bind:action="loadProfile" />
   </view>
 
   <!-- figma 1732_19949/1774_41441 我的（放大头变体）：面板头 + 等级横幅 + 统计 + 功能 + 操作 +
-       tab 条；合作卡 tab = production cooperation-role-card + 虚线添加卡，超级案例 tab =
+       tab 条；合作卡 tab = production mip-cooperation-card + 虚线添加卡，超级案例 tab =
        黄点时间线 + 案例卡。生产保持下方 profile-* 布局（被 vitest pin）。fixture
        figmaLayout 打开时按稿渲染，数据来自 ui-fidelity manifest fixture。 -->
   <block wx:elif="{{figmaLayout}}">
@@ -61,7 +61,7 @@
 
       <block wx:if="{{figma.activeTab === 0}}">
         <view class="absolute left-[24rpx] top-[1008rpx] w-[702rpx]">
-          <cooperation-role-card role-key="{{figma.card.roleKey}}" name="{{figma.card.name}}" positioning="{{figma.card.positioning}}" target-summary="{{figma.card.targetSummary}}" />
+          <mip-cooperation-card role-key="{{figma.card.roleKey}}" name="{{figma.card.name}}" positioning="{{figma.card.positioning}}" target-summary="{{figma.card.targetSummary}}" />
         </view>
         <view class="absolute left-[24rpx] top-[1432rpx] flex h-[200rpx] w-[702rpx] flex-row items-center justify-center gap-[8rpx] rounded-[16rpx] border-[1rpx] border-dashed border-brand bg-panel">
           <mip-icon name="icon-plus-fill" size="28rpx" color="var(--color-brand)" />
@@ -168,29 +168,29 @@
 
     <block wx:if="{{authenticated && portfolioTab === 'cooperation'}}">
       <view wx:if="{{cooperationState === 'loading'}}" class="profile-portfolio-loading"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-      <view wx:elif="{{cooperationState === 'error'}}" class="profile-state"><app-empty-state title="合作卡暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadCooperation" /></view>
+      <view wx:elif="{{cooperationState === 'error'}}" class="profile-state"><mip-empty-state title="合作卡暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadCooperation" /></view>
       <view wx:else class="profile-portfolio-list">
         <view wx:for="{{cooperationCards}}" wx:key="id" class="profile-cooperation-card" data-id="{{item.id}}" bind:tap="openCooperation">
-          <cooperation-role-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
+          <mip-cooperation-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
         </view>
-        <app-empty-state wx:if="{{cooperationCards.length === 0}}" title="暂无合作卡" description="添加后会显示在这里。" action-text="添加合作卡" bind:action="openCooperationList" />
+        <mip-empty-state wx:if="{{cooperationCards.length === 0}}" title="暂无合作卡" description="添加后会显示在这里。" action-text="添加合作卡" bind:action="openCooperationList" />
         <view wx:else class="profile-add-card {{openingAction === 'cooperation-list' ? 'profile-add-card--loading' : ''}}" aria-role="button" aria-disabled="{{openingAction === 'cooperation-list'}}" bind:tap="openCooperationList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" /><text wx:if="{{openingAction === 'cooperation-list'}}">正在打开</text><text wx:else>管理合作卡</text></view></view>
       </view>
     </block>
 
     <block wx:elif="{{authenticated && portfolioTab === 'cases'}}">
       <view wx:if="{{caseState === 'loading'}}" class="profile-portfolio-loading"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-      <view wx:elif="{{caseState === 'error'}}" class="profile-state"><app-empty-state title="超级案例暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadCases" /></view>
+      <view wx:elif="{{caseState === 'error'}}" class="profile-state"><mip-empty-state title="超级案例暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadCases" /></view>
       <view wx:else class="profile-portfolio-list">
         <view wx:for="{{cases}}" wx:key="id" class="profile-content-card" data-id="{{item.id}}" bind:tap="openCase"><view class="profile-content-title">{{item.projectName}}</view><view class="profile-content-summary">{{item.summary}}</view></view>
-        <app-empty-state wx:if="{{cases.length === 0}}" title="暂无超级案例" description="添加后会显示在这里。" action-text="添加超级案例" bind:action="openCaseList" />
+        <mip-empty-state wx:if="{{cases.length === 0}}" title="暂无超级案例" description="添加后会显示在这里。" action-text="添加超级案例" bind:action="openCaseList" />
         <view wx:else class="profile-add-card" aria-role="button" bind:tap="openCaseList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" />管理超级案例</view></view>
       </view>
     </block>
 
     <block wx:elif="{{authenticated}}">
       <view wx:if="{{opportunityState === 'loading'}}" class="profile-portfolio-loading"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-      <view wx:elif="{{opportunityState === 'error'}}" class="profile-state"><app-empty-state title="相关机会暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadOpportunities" /></view>
+      <view wx:elif="{{opportunityState === 'error'}}" class="profile-state"><mip-empty-state title="相关机会暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadOpportunities" /></view>
       <view wx:else>
         <view class="profile-opportunity-chips">
           <view class="profile-opportunity-chip profile-opportunity-chip--active">发布机会 {{publishedOpportunityCount}}</view>
@@ -198,7 +198,7 @@
         </view>
         <view class="profile-portfolio-list">
           <view wx:for="{{opportunities}}" wx:key="id" data-id="{{item.id}}" bind:tap="openOpportunity"><mip-opportunity-card title="{{item.title}}" cover-url="{{item.coverUrl || ''}}" value-text="{{item.commercialTerms.amountDisplay || item.valueSummary}}" location-text="{{item.commercialTerms.locationDisplay || item.cityName || '全国'}}" target-text="{{item.targetSummary}}" referral-count="{{item.referralCount}}" avatars="{{item.avatars}}" /></view>
-          <app-empty-state wx:if="{{opportunities.length === 0}}" title="暂无相关机会" description="发布的机会会显示在这里。" action-text="查看我的机会" bind:action="openOpportunityList" />
+          <mip-empty-state wx:if="{{opportunities.length === 0}}" title="暂无相关机会" description="发布的机会会显示在这里。" action-text="查看我的机会" bind:action="openOpportunityList" />
           <view wx:else class="profile-add-card" aria-role="button" bind:tap="openOpportunityList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" />管理机会</view></view>
         </view>
       </view>

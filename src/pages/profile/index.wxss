@@ -210,10 +210,10 @@
 
 /* StatHeader: 68px shell, four 48px columns at left 31.5+i*80 (design px). */
 .profile-stats {
+  box-sizing: border-box;
   display: flex;
   gap: 64rpx;
   align-items: center;
-  box-sizing: border-box;
   height: 136rpx;
   padding: 0 63rpx;
   margin-top: 24rpx;
@@ -258,8 +258,8 @@
   font-size: 20rpx;
   font-weight: 500;
   line-height: 28rpx;
-  text-align: center;
   color: var(--color-ink);
+  text-align: center;
   background: #ff2238;
   border-radius: 999rpx;
 }
@@ -349,30 +349,30 @@
 
 .profile-opportunity-chips {
   display: flex;
-  align-items: center;
   gap: 40rpx;
-  margin-top: 24rpx;
+  align-items: center;
   padding-left: 26rpx;
+  margin-top: 24rpx;
 }
 
 .profile-opportunity-chip {
   box-sizing: border-box;
-  height: 56rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 56rpx;
   padding: 0 16rpx;
-  border-radius: 16rpx;
-  background: var(--color-panel);
   font-size: 28rpx;
-  line-height: 39.2rpx;
   font-weight: 500;
+  line-height: 39.2rpx;
   color: var(--color-ink);
+  background: var(--color-panel);
+  border-radius: 16rpx;
 }
 
 .profile-opportunity-chip--active {
-  background: var(--color-brand);
   color: var(--color-on-brand);
+  background: var(--color-brand);
 }
 
 .profile-portfolio-loading,
@@ -556,40 +556,41 @@
 
 /* Guest (not logged in) hero per figma 1862_18360. */
 .profile-guest {
+  padding-top: 30rpx;
+
   /* Reference panel starts at the crop edge; cancel the page container inset. */
   margin-top: -30rpx;
   background: var(--color-panel);
-  padding-top: 30rpx;
 }
 
 .profile-guest-hero {
   display: flex;
-  align-items: center;
   gap: 24rpx;
+  align-items: center;
   height: 160rpx;
   padding: 0 24rpx;
 }
 
 .profile-guest-avatar {
+  box-sizing: border-box;
   width: 160rpx;
   height: 160rpx;
-  box-sizing: border-box;
+  background: var(--color-brand);
   border: 4rpx solid var(--color-canvas);
   border-radius: 50%;
-  background: var(--color-brand);
 }
 
 .profile-guest-login {
   font-size: 32rpx;
-  line-height: 44.8rpx;
   font-weight: 500;
+  line-height: 44.8rpx;
   color: var(--color-ink);
 }
 
 .profile-guest-banner {
   position: relative;
-  margin: 24rpx 24rpx 0;
   height: 160rpx;
+  margin: 24rpx 24rpx 0;
   overflow: hidden;
   background: var(--color-brand);
   border-radius: 32rpx 32rpx 0 0;
@@ -597,19 +598,19 @@
 
 .profile-guest-banner-text {
   position: absolute;
-  left: 28rpx;
   top: 18rpx;
+  left: 28rpx;
   z-index: 2;
   font-size: 28rpx;
-  line-height: 39.2rpx;
   font-weight: 600;
+  line-height: 39.2rpx;
   color: var(--color-on-brand);
 }
 
 .profile-guest-banner-sphere {
   position: absolute;
-  left: 150rpx;
   top: 0;
+  left: 150rpx;
   width: 552rpx;
   height: 160rpx;
   mix-blend-mode: color-burn;

@@ -16,8 +16,8 @@
   </view>
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载内容" description="{{message}}" action-text="重新加载" bind:action="loadFiltersAndContents" /></view>
-  <view wx:elif="{{state === 'empty'}}" class="mt-5"><app-empty-state title="暂无内容" description="当前筛选条件下没有已发布内容。" /></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><mip-empty-state title="暂时无法加载内容" description="{{message}}" action-text="重新加载" bind:action="loadFiltersAndContents" /></view>
+  <view wx:elif="{{state === 'empty'}}" class="mt-5"><mip-empty-state title="暂无内容" description="当前筛选条件下没有已发布内容。" /></view>
   <view wx:else class="mt-5 flex flex-col gap-3">
     <view wx:for="{{items}}" wx:key="id" class="overflow-hidden rounded-[16rpx] bg-panel" data-id="{{item.id}}" bind:tap="openContent">
       <image wx:if="{{item.coverUrl}}" class="h-[260rpx] w-full bg-panel-raised" mode="aspectFill" src="{{item.coverUrl}}" />

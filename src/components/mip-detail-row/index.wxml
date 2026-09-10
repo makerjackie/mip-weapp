@@ -1,0 +1,13 @@
+<view
+  class="mip-detail-row"
+  aria-role="{{actionable ? 'button' : ''}}"
+  bind:tap="handleTap"
+>
+  <text class="mip-detail-row__label">{{label}}</text>
+  <view class="mip-detail-row__trailing">
+    <text wx:if="{{value}}" class="mip-detail-row__value">{{value}}</text>
+    <view wx:if="{{chevron}}" class="mip-detail-row__chevron">
+      <mip-icon name="chevron-down-1-6" color="var(--color-muted)" />
+    </view>
+  </view>
+</view>

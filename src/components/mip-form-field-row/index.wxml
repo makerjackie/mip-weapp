@@ -1,0 +1,17 @@
+<view
+  class="mip-form-field-row {{disabled ? 'mip-form-field-row--disabled' : ''}}"
+  aria-role="button"
+  aria-disabled="{{disabled}}"
+  bind:tap="handleTap"
+>
+  <text class="mip-form-field-row__label">{{label}}</text>
+  <view class="mip-form-field-row__trailing">
+    <text class="mip-form-field-row__value {{value ? '' : 'mip-form-field-row__value--placeholder'}}">{{value || placeholder}}</text>
+    <view wx:if="{{trailing === 'calendar'}}" class="mip-form-field-row__icon">
+      <mip-icon name="calendar-schedule" size="{{14}}" color="var(--color-muted)" />
+    </view>
+    <view wx:if="{{trailing === 'chevron'}}" class="mip-form-field-row__icon">
+      <mip-icon name="chevron-down-1" color="var(--color-muted)" />
+    </view>
+  </view>
+</view>

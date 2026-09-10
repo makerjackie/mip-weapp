@@ -21,16 +21,16 @@
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view id="admin-event-registrations-error-state" wx:elif="{{state === 'error'}}" class="mt-6">
-    <app-empty-state title="暂时无法加载名单" description="{{message}}" action-text="重新加载" bind:action="loadRoster" />
+    <mip-empty-state title="暂时无法加载名单" description="{{message}}" action-text="重新加载" bind:action="loadRoster" />
   </view>
   <view id="admin-event-registrations-conflict-state" wx:elif="{{state === 'conflict'}}" class="mt-6">
-    <app-empty-state title="暂时无法加载名单" description="{{message}}" action-text="重新加载" bind:action="loadRoster" />
+    <mip-empty-state title="暂时无法加载名单" description="{{message}}" action-text="重新加载" bind:action="loadRoster" />
   </view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6">
-    <app-empty-state title="没有名单权限" description="当前账号不能查看这场活动的参与者。" />
+    <mip-empty-state title="没有名单权限" description="当前账号不能查看这场活动的参与者。" />
   </view>
   <view wx:elif="{{items.length === 0}}" class="mt-6">
-    <app-empty-state title="暂无参与者" description="符合当前筛选条件的参与者会显示在这里。" />
+    <mip-empty-state title="暂无参与者" description="符合当前筛选条件的参与者会显示在这里。" />
   </view>
   <view wx:else class="mt-5 flex flex-col gap-3">
     <view wx:for="{{items}}" wx:key="id" class="rounded-[24rpx] bg-panel px-4 py-4">

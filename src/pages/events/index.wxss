@@ -9,18 +9,15 @@
    156rpx) to land on the same reference rows (device values: 172rpx / 68rpx). */
 .events-city-notice {
   position: fixed;
-  left: 0;
-  right: 0;
-  top: 84rpx;
-  bottom: 156rpx;
+  inset: 84rpx 0 156rpx;
   z-index: 60;
-  background: rgba(8, 8, 8, 0.7);
+  background: rgb(8 8 8 / 70%);
 }
 
 .events-city-notice__panel {
   position: absolute;
-  left: 54rpx;
   top: 408rpx;
+  left: 54rpx;
   width: 640rpx;
   height: 464rpx;
   overflow: hidden;
@@ -30,39 +27,39 @@
 
 .events-city-notice__title {
   position: absolute;
-  left: 48rpx;
   top: 64rpx;
+  left: 48rpx;
   width: 544rpx;
-  text-align: center;
   font-size: 34rpx;
-  line-height: 47.6rpx;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  line-height: 47.6rpx;
+  color: rgb(255 255 255 / 90%);
+  text-align: center;
 }
 
 .events-city-notice__body {
   position: absolute;
-  left: 48rpx;
   top: 144rpx;
+  left: 48rpx;
   width: 544rpx;
-  text-align: center;
   font-size: 34rpx;
   line-height: 47.6rpx;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
+  text-align: center;
 }
 
 .events-city-notice__footer {
   position: absolute;
-  left: 0;
   top: 352rpx;
-  width: 640rpx;
-  height: 112rpx;
+  left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-top: 2rpx solid rgba(255, 255, 255, 0.1);
+  width: 640rpx;
+  height: 112rpx;
   font-size: 34rpx;
-  line-height: 47.6rpx;
   font-weight: 500;
+  line-height: 47.6rpx;
   color: var(--td-text-color-disabled);
+  border-top: 2rpx solid rgb(255 255 255 / 10%);
 }

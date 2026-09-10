@@ -1,0 +1,9 @@
+<view
+  class="mip-tag-chip {{active ? 'mip-tag-chip--active' : ''}} {{disabled ? 'mip-tag-chip--disabled' : ''}} {{block ? 'mip-tag-chip--block' : ''}}"
+  aria-role="button"
+  aria-disabled="{{disabled}}"
+  bind:tap="handleTap"
+>
+  <text class="mip-tag-chip__label">{{label}}</text>
+  <slot />
+</view>

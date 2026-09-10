@@ -7,7 +7,7 @@
     <view class="min-h-[240rpx] rounded-[16rpx] bg-panel px-4 py-5"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <app-page-exit label="返回机会" />
   </view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法查看机会" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法查看机会" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
   <!-- figma 1768_37414/1768_37369 机会详情还原态：信息卡(封面+三行要素+发表时间) +
        项目介绍长面板(烘焙稿) + 底部双胶囊 CTA(发布者=编辑/结束招募，访客=+3想引荐/我想引荐)。
        生产保持下方 skeleton+卡片+介绍+评论布局（opportunity-detail 测试 pin）。fixture

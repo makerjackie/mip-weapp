@@ -22,15 +22,15 @@ reported as unscored — fixtures, not the renderer, are the remaining bulk work
 
 ## Baseline (2026-09-09, after icon migration)
 
-| Layer | Metric | Score |
-| ----- | ------ | ----- |
-| 1 tokens | color / theme / geometry | 100% / 100% / 99.91% → **99.99%**, 0 hard-rule breaches |
-| 2 contracts | registry-valid `mip-icon` of all icon usages | **65.8%** (127/193; 66 foreign `t-icon`, all SOT gaps or dynamic) |
-| 2 contracts | baked `/assets/mip/*` refs | **100%** (7 refs, 0 missing, 0 unused) |
-| 2 contracts | CooperationCard / LevelBanner checks | **100%**; component coverage 3/18 (informational) |
-| 2 contracts | composite | **88.6%** (pass mark 92 — pre-existing debt, see icon migration record) |
-| screens | routes ≥92% static conformance | **47/70** (mean 94.47%) |
-| 3 pixel | scored screens ≥92% | **3/3** (mean 96.18%) — `profile-我的-a` 93.7%, `events-活动-首页-a` 95.93%, `events-往期活动` 98.9%; ~98 unscored |
+| Layer       | Metric                                       | Score                                                                                                              |
+| ----------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 1 tokens    | color / theme / geometry                     | 100% / 100% / 99.91% → **99.99%**, 0 hard-rule breaches                                                            |
+| 2 contracts | registry-valid `mip-icon` of all icon usages | **65.8%** (127/193; 66 foreign `t-icon`, all SOT gaps or dynamic)                                                  |
+| 2 contracts | baked `/assets/mip/*` refs                   | **100%** (7 refs, 0 missing, 0 unused)                                                                             |
+| 2 contracts | CooperationCard / LevelBanner checks         | **100%**; component coverage 3/18 (informational)                                                                  |
+| 2 contracts | composite                                    | **88.6%** (pass mark 92 — pre-existing debt, see icon migration record)                                            |
+| screens     | routes ≥92% static conformance               | **47/70** (mean 94.47%)                                                                                            |
+| 3 pixel     | scored screens ≥92%                          | **3/3** (mean 96.18%) — `profile-我的-a` 93.7%, `events-活动-首页-a` 95.93%, `events-往期活动` 98.9%; ~98 unscored |
 
 ## Renderer (Layer 3 proxy)
 
@@ -46,7 +46,7 @@ Renderer fixes now baked in (each one invalidated all earlier pixel numbers):
   inlined recursively with their own styles.
 - Kebab-case attributes map to camelCase component props, mirroring WeChat.
 - `ctx.componentData` supplies observer-built render data the proxy cannot
-  compute (e.g. `cooperation-role-card`'s `view` from `model.ts`, loaded via
+  compute (e.g. `mip-cooperation-card`'s `view` from `model.ts`, loaded via
   `lib/component-models.mjs` — TS evaluated with `node:module`
   `stripTypeScriptTypes`, no bundler needed).
 - The tag tokenizer tolerates `>` and `<` inside quoted attribute values
@@ -84,7 +84,7 @@ alone misleads; measure the rendered screenshot instead.
   `file→file-text`, `file-copy→file-copy`, `star-filled→star-favorite-3`,
   `image→image`, `microphone→mic-ai-fill-1`, `add→icon-plus-fill`,
   `close→close`, `time→time`, `gift→gift`.
-  **Gotcha:** `chevron-down-1` is a *right*-pointing chevron (3×6 glyph) and
+  **Gotcha:** `chevron-down-1` is a _right_-pointing chevron (3×6 glyph) and
   `chevron-down-1-15` is the down-pointing one (8×4) — the Figma export names
   lie. Sizes converted `NNrpx → {{NN/2}}` design px, `NNpx → {{NN}}`.
 - `size` is a Number (design px, ×2 → rpx); `color` stays a `var(--color-*)`
@@ -153,7 +153,7 @@ alone misleads; measure the rendered screenshot instead.
 - **OrderCard / OrderTag contract** (skill `wechat-component-contracts.md`):
   feed cover 351×149 r8; tag chips bottom-right, 32rpx tall / 8rpx radius /
   1rpx stroke / 20rpx-500 text, presets 仅玩家 `#fde530/#d0b801/#000`,
-  沙龙 `#428bff/#075adf/#f7f7f7` (hex lives in `event-card/model.ts` +
+  沙龙 `#428bff/#075adf/#f7f7f7` (hex lives in `mip-activity-card/model.ts` +
   allowlist, never in templates); participant pill h28 `#242424` rounded-full,
   24px avatars overlapping −9px, small `+` then `{n}参加`
   (`registrationCount − preview length`); title 16/22.4 medium; info rows

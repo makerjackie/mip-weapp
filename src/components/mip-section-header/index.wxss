@@ -1,0 +1,32 @@
+.mip-section-header {
+  display: flex;
+  gap: 8rpx;
+  align-items: center;
+  padding: 0 24rpx;
+}
+
+.mip-section-header__icon {
+  flex: 0 0 auto;
+}
+
+.mip-section-header__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 32rpx;
+  font-weight: 500;
+  line-height: 44.8rpx;
+  color: var(--mip-text-primary);
+  white-space: nowrap;
+}
+
+.mip-section-header__extra {
+  flex: 1 1 auto;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: var(--mip-text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}

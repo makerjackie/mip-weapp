@@ -1,0 +1,10 @@
+.mip-detail-row-group {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16rpx;
+}
+
+.mip-detail-row-group {
+  gap: 1rpx;
+}

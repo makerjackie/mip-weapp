@@ -11,13 +11,13 @@
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view wx:elif="{{state === 'error'}}" class="mt-5">
-    <app-empty-state title="相册加载失败" description="{{message}}" action-text="重新加载" bind:action="load" />
+    <mip-empty-state title="相册加载失败" description="{{message}}" action-text="重新加载" bind:action="load" />
   </view>
   <view wx:elif="{{state === 'disabled'}}" class="mt-5">
-    <app-empty-state title="相册未开放" description="当前活动未开放相册。" />
+    <mip-empty-state title="相册未开放" description="当前活动未开放相册。" />
   </view>
   <view wx:elif="{{state === 'empty'}}" class="mt-5">
-    <app-empty-state title="暂无照片" description="{{canSubmit ? '可以提交活动照片。' : '已发布照片会显示在这里。'}}" action-text="{{canSubmit ? '上传照片' : ''}}" bind:action="upload" />
+    <mip-empty-state title="暂无照片" description="{{canSubmit ? '可以提交活动照片。' : '已发布照片会显示在这里。'}}" action-text="{{canSubmit ? '上传照片' : ''}}" bind:action="upload" />
   </view>
   <view wx:else class="mt-5 grid grid-cols-2 gap-3">
     <view wx:for="{{items}}" wx:key="id" class="overflow-hidden rounded-[24rpx] bg-panel">

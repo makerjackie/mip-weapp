@@ -1,0 +1,5 @@
+<view class="mip-section-header">
+  <mip-icon wx:if="{{icon}}" class="mip-section-header__icon" name="{{icon}}" color="var(--color-brand)" />
+  <text class="mip-section-header__title">{{title}}</text>
+  <text wx:if="{{extra}}" class="mip-section-header__extra">{{extra}}</text>
+</view>

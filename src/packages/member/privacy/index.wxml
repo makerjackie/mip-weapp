@@ -2,9 +2,9 @@
   <view wx:if="{{state === 'loading'}}" class="rounded-[24rpx] bg-panel px-5 py-7">
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
-  <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载账号状态" description="{{message}}" action-text="重新加载" bind:action="loadAccountState" />
+  <mip-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载账号状态" description="{{message}}" action-text="重新加载" bind:action="loadAccountState" />
   <view wx:elif="{{state === 'success'}}">
-    <app-empty-state title="账号已注销" description="公开资料与可撤销状态已关闭。订单、支付、退款、活动记录和审计记录按规则保留。" />
+    <mip-empty-state title="账号已注销" description="公开资料与可撤销状态已关闭。订单、支付、退款、活动记录和审计记录按规则保留。" />
     <app-page-exit always label="返回首页" tab-url="/pages/index/index" />
   </view>
   <block wx:else>
@@ -34,36 +34,18 @@
          绑定手机/绑定微信/隐私设置/会员服务协议暂无落地路由（见 manifest notes）。 -->
     <block wx:elif="{{figmaLayout}}">
       <view class="mt-[15rpx] -mx-3">
-        <view class="text-[length:32rpx] leading-[44.8rpx] font-medium">账号与安全</view>
-        <view class="mt-[23.2rpx] flex flex-col gap-[2rpx]">
-          <view class="flex h-[92rpx] items-center justify-between rounded-t-[16rpx] bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]">
-            <view class="text-[length:28rpx] leading-[40rpx] font-medium">绑定手机</view>
-            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
-          </view>
-          <view class="flex h-[92rpx] items-center justify-between bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]">
-            <view class="text-[length:28rpx] leading-[40rpx] font-medium">绑定微信</view>
-            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
-          </view>
-          <view class="flex h-[92rpx] items-center justify-between rounded-b-[16rpx] bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]" aria-role="button" bind:tap="openPrivacySettings">
-            <view class="text-[length:28rpx] leading-[40rpx] font-medium">隐私设置</view>
-            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
-          </view>
-        </view>
-        <view class="mt-[48rpx] text-[length:32rpx] leading-[44.8rpx] font-medium">账号与安全</view>
-        <view class="mt-[23.2rpx] flex flex-col gap-[2rpx]">
-          <view class="flex h-[92rpx] items-center justify-between rounded-t-[16rpx] bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]" aria-role="button" bind:tap="openUserAgreement">
-            <view class="text-[length:28rpx] leading-[40rpx] font-medium">用户使用协议</view>
-            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
-          </view>
-          <view class="flex h-[92rpx] items-center justify-between bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]" aria-role="button" bind:tap="openPrivacyPolicy">
-            <view class="text-[length:28rpx] leading-[40rpx] font-medium">隐私政策</view>
-            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
-          </view>
-          <view class="flex h-[92rpx] items-center justify-between rounded-b-[16rpx] bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]">
-            <view class="text-[length:28rpx] leading-[40rpx] font-medium">会员服务协议</view>
-            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
-          </view>
-        </view>
+        <mip-section-header title="账号与安全" />
+        <mip-detail-row-group class="mt-[23.2rpx]">
+          <mip-detail-row label="绑定手机" />
+          <mip-detail-row label="绑定微信" />
+          <mip-detail-row label="隐私设置" actionable="{{true}}" bind:tap="openPrivacySettings" />
+        </mip-detail-row-group>
+        <mip-section-header class="mt-[48rpx]" title="账号与安全" />
+        <mip-detail-row-group class="mt-[23.2rpx]">
+          <mip-detail-row label="用户使用协议" actionable="{{true}}" bind:tap="openUserAgreement" />
+          <mip-detail-row label="隐私政策" actionable="{{true}}" bind:tap="openPrivacyPolicy" />
+          <mip-detail-row label="会员服务协议" />
+        </mip-detail-row-group>
       </view>
     </block>
     <block wx:else>

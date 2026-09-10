@@ -1,6 +1,6 @@
 <view id="order-detail-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="订单暂时无法加载" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
+  <view wx:elif="{{state === 'error'}}"><mip-empty-state title="订单暂时无法加载" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
   <block wx:elif="{{figmaLayout}}">
     <!-- figma 1723_16459/1724_17741 订单详情（含退款提示稿）：
          封面卡 + 活动信息卡 + 订单ID 条 + 费用明细 + 购买须知 + 退款按钮；
