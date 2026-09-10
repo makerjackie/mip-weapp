@@ -60,6 +60,12 @@ export const DOCUMENTED_EXTENSIONS = [
     note: 'contracts Dialog action 参考色',
   },
   {
+    token: 'legacy-dialog-cancel',
+    value: '#eaeaea',
+    group: 'text',
+    note: 'contracts Dialog cancel action 参考色',
+  },
+  {
     token: 'illus-navy',
     value: '#09121f',
     group: 'illustration',

@@ -265,6 +265,14 @@
       "note": "contracts Dialog action 参考色"
     },
     {
+      "token": "legacy-dialog-cancel",
+      "value": "#eaeaea",
+      "rgb": "#eaeaea",
+      "alpha": 1,
+      "group": "text",
+      "note": "contracts Dialog cancel action 参考色"
+    },
+    {
       "token": "illus-navy",
       "value": "#09121f",
       "rgb": "#09121f",
