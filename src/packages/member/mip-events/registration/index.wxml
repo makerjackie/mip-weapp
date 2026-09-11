@@ -89,10 +89,10 @@
       </view>
     </view>
 
-    <view class="mt-3 flex min-h-[104rpx] items-center justify-between rounded-[16rpx] bg-panel px-4">
+    <!-- <view class="mt-3 flex min-h-[104rpx] items-center justify-between rounded-[16rpx] bg-panel px-4">
       <view class="min-w-0 pr-3"><view class="text-[length:24rpx] font-semibold">在参与者列表展示公开资料</view><view class="mt-1 text-[length:20rpx] text-muted">仅影响本场活动的参与者列表</view></view>
       <t-switch value="{{shareProfile}}" bind:change="onShareProfileChange" />
-    </view>
+    </view> -->
     <view wx:if="{{!editing && event.accessType === 'PAID'}}" class="mt-3 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] leading-5 text-brand">提交后将暂时保留名额并创建报名订单，支付确认后报名才会生效。</view>
     <view class="mt-3 rounded-[16rpx] bg-panel px-4 py-4 text-[length:20rpx] leading-6 text-muted">
       <view>{{cancellationText}}</view>
