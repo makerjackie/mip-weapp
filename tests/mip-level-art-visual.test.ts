@@ -31,7 +31,7 @@ describe('MIP level artwork presentation', () => {
     const styles = read('src/packages/member/mip-growth/index.wxss')
 
     expect(markup).toContain('class="growth-level-art ')
-    expect(markup).toContain('src="/packages/member/assets/figma/profile/level-art.png"')
+    expect(markup).toContain('src="/packages/member/assets/figma/profile/level-art.webp"')
     expect(markup).toContain('bg-brand px-5 py-6 text-on-brand')
     expect(markup).toContain('relative z-10')
     expect(styles).toContain('.growth-level-art {\n  mix-blend-mode: screen;\n}')

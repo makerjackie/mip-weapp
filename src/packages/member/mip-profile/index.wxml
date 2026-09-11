@@ -42,7 +42,7 @@
       <text class="absolute left-[64rpx] top-[88rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">基础信息</text>
 
       <view class="absolute left-[24rpx] top-[156rpx] h-[160rpx] w-[702rpx] bg-panel">
-        <image class="absolute left-[24rpx] top-[24rpx] h-[112rpx] w-[112rpx] rounded-full" mode="aspectFill" src="/packages/member/assets/figma/profile/avatar-mine.png" />
+        <image class="absolute left-[24rpx] top-[24rpx] h-[112rpx] w-[112rpx] rounded-full" mode="aspectFill" src="/packages/member/assets/figma/profile/avatar-mine.webp" />
         <text class="absolute right-[24rpx] top-[60rpx] text-[28rpx] leading-[40rpx] text-ink">更换头像</text>
       </view>
       <mip-form-field-row

@@ -903,7 +903,7 @@
           "key": "badge-honor-a",
           "name": "徽章名称",
           "description": "这是一行勋章简介可能挺长",
-          "imageUrl": "/assets/figma/badges/badge-detail-art.png",
+          "imageUrl": "/pixel-assets/figma/badges/badge-detail-art.png",
           "placeholderShape": "HEXAGON",
           "category": "HONOR",
           "status": "ACTIVE",
@@ -934,7 +934,7 @@
           "key": "badge-honor-d",
           "name": "徽章名称",
           "description": "这是一行勋章简介可能挺长",
-          "imageUrl": "/assets/figma/badges/badge-detail-art.png",
+          "imageUrl": "/pixel-assets/figma/badges/badge-detail-art.png",
           "placeholderShape": "HEXAGON",
           "category": "HONOR",
           "status": "ACTIVE",
@@ -964,7 +964,7 @@
           "key": "badge-honor-b",
           "name": "徽章名称",
           "description": "这是一行勋章简介可能挺长",
-          "imageUrl": "/assets/figma/badges/badge-detail-art.png",
+          "imageUrl": "/pixel-assets/figma/badges/badge-detail-art.png",
           "placeholderShape": "HEXAGON",
           "category": "HONOR",
           "status": "ACTIVE",
@@ -1053,7 +1053,7 @@
           {
             "id": "g1",
             "name": "徽章名称",
-            "imageUrl": "/assets/figma/badges/badge-benben-white.png",
+            "imageUrl": "/pixel-assets/figma/badges/badge-benben-white.png",
             "artFallbackUrl": "",
             "placeholderShape": "HEXAGON",
             "category": "IDENTITY",
@@ -1066,7 +1066,7 @@
           {
             "id": "g2",
             "name": "徽章名称",
-            "imageUrl": "/assets/figma/badges/badge-benben-red.png",
+            "imageUrl": "/pixel-assets/figma/badges/badge-benben-red.png",
             "artFallbackUrl": "",
             "placeholderShape": "HEXAGON",
             "category": "IDENTITY",
@@ -1079,7 +1079,7 @@
           {
             "id": "g3",
             "name": "徽章名称",
-            "imageUrl": "/assets/figma/badges/badge-benben-purple.png",
+            "imageUrl": "/pixel-assets/figma/badges/badge-benben-purple.png",
             "artFallbackUrl": "",
             "placeholderShape": "HEXAGON",
             "category": "IDENTITY",
@@ -1092,7 +1092,7 @@
           {
             "id": "g4",
             "name": "徽章名称",
-            "imageUrl": "/assets/figma/badges/badge-benben-green.png",
+            "imageUrl": "/pixel-assets/figma/badges/badge-benben-green.png",
             "artFallbackUrl": "",
             "placeholderShape": "HEXAGON",
             "category": "IDENTITY",
@@ -1105,7 +1105,7 @@
           {
             "id": "g5",
             "name": "徽章名称",
-            "imageUrl": "/assets/figma/badges/badge-benben-gray.png",
+            "imageUrl": "/pixel-assets/figma/badges/badge-benben-gray.png",
             "artFallbackUrl": "",
             "placeholderShape": "HEXAGON",
             "category": "IDENTITY",
@@ -1118,7 +1118,7 @@
           {
             "id": "g6",
             "name": "徽章名称",
-            "imageUrl": "/assets/figma/badges/badge-benben-blue.png",
+            "imageUrl": "/pixel-assets/figma/badges/badge-benben-blue.png",
             "artFallbackUrl": "",
             "placeholderShape": "HEXAGON",
             "category": "IDENTITY",
@@ -1133,7 +1133,7 @@
           {
             "id": "e1",
             "name": "徽章名称",
-            "imageUrl": "/assets/figma/badges/badge-benben-pink.png",
+            "imageUrl": "/pixel-assets/figma/badges/badge-benben-pink.png",
             "artFallbackUrl": "",
             "placeholderShape": "HEXAGON",
             "category": "IDENTITY",
@@ -1146,7 +1146,7 @@
           {
             "id": "e2",
             "name": "徽章名称",
-            "imageUrl": "/assets/figma/badges/badge-detail-art.png",
+            "imageUrl": "/pixel-assets/figma/badges/badge-detail-art.png",
             "artFallbackUrl": "",
             "placeholderShape": "HEXAGON",
             "category": "IDENTITY",
@@ -1159,7 +1159,7 @@
           {
             "id": "e3",
             "name": "徽章名称",
-            "imageUrl": "/assets/figma/badges/badge-leader-spirit.png",
+            "imageUrl": "/pixel-assets/figma/badges/badge-leader-spirit.png",
             "artFallbackUrl": "",
             "placeholderShape": "HEXAGON",
             "category": "IDENTITY",
@@ -1186,7 +1186,7 @@
         "version": 1,
         "earnedCount": 3,
         "memberName": "大鹅飞飞",
-        "avatarUrl": "/assets/figma/badges/badge-list-avatar.png",
+        "avatarUrl": "/assets/figma/profile/avatar.png",
         "saving": false,
         "dirty": false,
         "editing": false,
@@ -4403,12 +4403,12 @@
           "fields": [
             {
               "label": "项目名称",
-              "icon": "/pixel-assets/figma/opportunities/edit-draft.svg",
+              "icon": "/packages/member/assets/figma/opportunities/edit-draft.svg",
               "labelTopRpx": 312
             },
             {
               "label": "价值金额",
-              "icon": "/pixel-assets/figma/opportunities/money-cny-circle.svg",
+              "icon": "/assets/figma/opportunities/money-cny-circle.svg",
               "labelTopRpx": 496
             },
             {
@@ -4418,7 +4418,7 @@
             },
             {
               "label": "主营地区（选填）",
-              "icon": "/pixel-assets/figma/opportunities/location.svg",
+              "icon": "/assets/figma/opportunities/location.svg",
               "labelTopRpx": 1042
             },
             {

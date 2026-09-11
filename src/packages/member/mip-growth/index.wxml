@@ -8,7 +8,7 @@
          bar with 2px inset fill, (24,112) 10px. -->
     <view class="growth-hero relative h-[284rpx] overflow-hidden bg-brand px-5 py-6 text-on-brand">
       <image class="pointer-events-none absolute inset-0 h-full w-full" mode="scaleToFill" src="/packages/member/assets/figma/growth/hero-bg.webp" />
-      <image wx:if="{{legacyLevelArtVisible}}" class="growth-level-art pointer-events-none absolute -bottom-[4rpx] -right-[300rpx] h-[240rpx] w-[1052rpx]" mode="aspectFit" src="/packages/member/assets/figma/profile/level-art.png" />
+      <image wx:if="{{legacyLevelArtVisible}}" class="growth-level-art pointer-events-none absolute -bottom-[4rpx] -right-[300rpx] h-[240rpx] w-[1052rpx]" mode="aspectFit" src="/packages/member/assets/figma/profile/level-art.webp" />
       <view class="relative z-10 ml-[8rpx] mt-[16rpx]">
         <view class="text-[length:96rpx] font-bold leading-[104.2rpx]">Lv.{{currentLevelNumber}}</view>
         <view class="text-[length:20rpx] font-semibold leading-[28rpx]">EXP: {{snapshot.account.experienceBalance}}<text wx:if="{{nextLevelThreshold}}"> I {{nextLevelThreshold}}</text></view>

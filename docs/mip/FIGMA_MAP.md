@@ -54,7 +54,7 @@
 | 节点 | 设计内容 | 本地实现 |
 | --- | --- | --- |
 | `1770:38879` | 姓名、等级、分会/行业/身份与简介 | `src/pages/profile/index.wxml` 的个人信息区 |
-| `1770:38886` | 玩家等级黄色横幅与装饰图 | `src/pages/profile/index.wxml`、`src/assets/figma/profile/level-art.png` |
+| `1770:38886` | 玩家等级黄色横幅与装饰图 | `src/pages/profile/index.wxml`、`src/assets/figma/profile/level-art.webp` |
 | `1770:38896` | 四列数据卡和访客未读标记 | 服务端按统一合同返回嘉宾、互动、感兴趣和访客；点击进入对应真实列表，缺失汇总显示 `—` |
 | `1770:38916`、`1770:38919` | NPC 任务与 MIP 勋章入口 | `mip-tasks`、`mip-badges` 真实路由及对应导出图 |
 | `1770:38922` | 活动、名片、订单、设置四入口 | 对应现有受保护路由；图标使用 Figma 导出的本地 SVG |

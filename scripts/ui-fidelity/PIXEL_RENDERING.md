@@ -126,7 +126,7 @@ alone misleads; measure the rendered screenshot instead.
   A 3-layer composite reconstruction from the reference HTML was attempted
   first and abandoned — nested absolute positioning misreads easily; pixel
   rebake is the reliable path. The unused `@2x` variant was deleted.
-- `src/assets/figma/profile/level-art.png` is kept (mip-growth screen blend).
+- `src/assets/figma/profile/level-art.webp` is kept (mip-growth screen blend).
 - `src/assets/figma/cooperation/*.webp` ×6 deleted — superseded by the baked
   coop cards, zero references.
 

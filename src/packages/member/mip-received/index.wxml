@@ -48,7 +48,7 @@
           <view wx:else class="absolute left-[20rpx] top-[196rpx] whitespace-nowrap text-[length:20rpx] leading-[33.6rpx] text-ink">{{item.tagline}}</view>
           <view class="absolute left-[24rpx] top-[238rpx] w-[288rpx] text-[length:20rpx] leading-[28rpx] text-muted">{{item.intro}}</view>
           <image class="absolute left-[16rpx] top-[318rpx] h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/bear.png" />
-          <image wx:if="{{item.inviter}}" class="absolute left-[172rpx] top-[312rpx] h-[52rpx] w-[152rpx]" src="/packages/member/assets/figma/guests/inviter-bear.png" />
+          <image wx:if="{{item.inviter}}" class="absolute left-[172rpx] top-[312rpx] h-[52rpx] w-[152rpx]" src="/packages/member/assets/figma/guests/inviter-bear.webp" />
           <view wx:if="{{item.dot}}" class="absolute h-[16rpx] w-[16rpx] rounded-full bg-[#ff2238]" style="left:{{item.dot.leftRpx}}rpx;top:{{item.dot.topRpx}}rpx"></view>
         </view>
       </view>

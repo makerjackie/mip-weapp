@@ -63,6 +63,16 @@ function buildDocument({ route, fixture }) {
   const iconRegistry = loadIconRegistry(SRC)
   const iconColors = loadIconColors(SRC)
   const cardModel = loadCooperationCardModel(SRC)
+  const resolveAssetFile = (assetPath) => {
+    const exact = path.join(root, 'tests/fixtures/ui-fidelity', assetPath)
+    if (fs.existsSync(exact)) {
+      return exact
+    }
+    const webp = assetPath.endsWith('.png')
+      ? path.join(root, 'tests/fixtures/ui-fidelity', `${assetPath.slice(0, -4)}.webp`)
+      : exact
+    return fs.existsSync(webp) ? webp : exact
+  }
   const ctx = {
     instanceCount: 0,
     componentStyles,
@@ -73,11 +83,7 @@ function buildDocument({ route, fixture }) {
     // itself is a local file.
     resolveAsset: src =>
       src?.startsWith('/pixel-assets/')
-        ? path.join(
-            root,
-            'tests/fixtures/ui-fidelity',
-            src.slice('/pixel-assets/'.length),
-          )
+        ? resolveAssetFile(src.slice('/pixel-assets/'.length))
         : src?.startsWith('/packages/member/assets/')
           ? path.join(root, 'src', src.slice(1))
           : src?.startsWith('/packages/member/')
