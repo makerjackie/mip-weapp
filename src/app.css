@@ -97,8 +97,9 @@
   /* Keep the mobile member surfaces on the same radius scale as the Figma frames. */
   --mip-radius-card: 32rpx;
   --mip-radius-card-medium: 24rpx;
---mip-radius-card-small: 16rpx;
-  --mip-radius-control: 16rpx;  --mip-radius-button: 24rpx;
+  --mip-radius-card-small: 16rpx;
+  --mip-radius-control: 16rpx;
+  --mip-radius-button: 24rpx;
 }
 
 @layer base {
@@ -202,5 +203,29 @@
 @media (min-width: 960px) {
   .mip-member-page {
     --mip-member-shell-max-width: 840px;
+  }
+}
+
+/* Liquid glass surface shared by every fixed bottom action bar: frosted panel
+   that lets scrolled content bleed through. The -webkit-backdrop-filter prefix
+   and @supports fallback live in src/styles/liquid-glass.wxss because this
+   pipeline strips them. */
+.mip-liquid-glass {
+  background: linear-gradient(165deg, rgb(255 255 255 / 12%), rgb(255 255 255 / 5%));
+  border: 1px solid rgb(255 255 255 / 14%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+
+  /* TDesign buttons inside a fixed bottom action bar follow the Figma frame:
+     pill-shaped 80rpx surfaces with Medium (500) 32rpx labels. */
+  --td-button-border-radius: 9999rpx;
+  --td-button-large-height: 80rpx;
+  --td-button-large-font: 500 32rpx/44rpx var(--td-font-family, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+  --td-button-medium-font: 500 32rpx/44rpx var(--td-font-family, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .mip-liquid-glass {
+    background: rgb(32 32 32 / 92%);
   }
 }

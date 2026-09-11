@@ -1,21 +1,9 @@
-/* Liquid glass surface shared by every fixed bottom action bar: translucent
-   frosted panel that lets scrolled content bleed through, instead of a solid
-   brand-soft fill.
+/* iOS-critical half of the liquid-glass surface; the rest lives in app.css.
    Kept in a plain wxss file (@import'ed by each page) because the tailwind
-   app.css pipeline strips the -webkit-backdrop-filter prefix that iOS still
-   requires. */
+   app.css pipeline strips the -webkit-backdrop-filter prefix and the
+   @supports fallback that iOS still requires. */
 .mip-liquid-glass {
-  background: linear-gradient(165deg, rgb(255 255 255 / 12%), rgb(255 255 255 / 5%));
-  border: 1px solid rgb(255 255 255 / 14%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
-  backdrop-filter: blur(20px) saturate(150%);
-
-  /* TDesign buttons inside a fixed bottom action bar follow the Figma frame:
-     pill-shaped 80rpx surfaces with Medium (500) 32rpx labels. */
-  --td-button-border-radius: 9999rpx;
-  --td-button-large-height: 80rpx;
-  --td-button-large-font: 500 32rpx/44rpx var(--td-font-family, 'PingFang SC', 'Microsoft YaHei', sans-serif);
-  --td-button-medium-font: 500 32rpx/44rpx var(--td-font-family, 'PingFang SC', 'Microsoft YaHei', sans-serif);
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
