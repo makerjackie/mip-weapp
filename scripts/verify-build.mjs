@@ -129,10 +129,17 @@ assert(privacyWxml.includes('privacy-account-page'), 'Runtime-stable privacy sel
 assert(privacyPolicyWxml.includes('mip-privacy-policy-page'), 'Runtime-stable privacy policy selector is missing')
 assert(Object.values(components).some(value => String(value).includes('tdesign-miniprogram/button')), 'TDesign button was not auto-imported')
 assert(Object.values(components).some(value => String(value).includes('tdesign-miniprogram/skeleton')), 'TDesign cold-start skeleton was not auto-imported')
-assert(Object.values(tabBarJson.usingComponents).some(value => String(value).includes('tdesign-miniprogram/icon')), 'TDesign custom TabBar icons were not built')
-const tabConfig = read('src/config/tabs.ts')
-for (const icon of ['compass-filled', 'calendar-event-filled', 'work-filled', 'user-filled']) {
-  assert(tabConfig.includes(`'${icon}'`), `Built TabBar TDesign icon ${icon} is missing`)
+assert(
+  !Object.values(tabBarJson.usingComponents).some(value => String(value).includes('tdesign-miniprogram/icon')),
+  'Custom TabBar must not register TDesign icons; it renders design-system glyph compositions',
+)
+assert(
+  walk('dist').some(file => !file.startsWith('dist/miniprogram_npm/') && file.endsWith('.js') && read(file).includes('data:image/svg+xml')),
+  'Built custom TabBar must embed the design-system SVG icon data URIs',
+)
+const tabIconsConfig = read('src/config/tab-icons.ts')
+for (const icon of ['smileys-13-2-2', 'document-note-paper-angle-right-3', 'satchel-bag-3', 'smileys-13-11']) {
+  assert(tabIconsConfig.includes(`'${icon}':`), `Built TabBar design-system icon ${icon} is missing`)
 }
 assertOfficialCustomTabBar(tabBarWxml, appJson, assert, 'MIP built custom TabBar', { compiled: true, wxss: tabBarWxss })
 assert(

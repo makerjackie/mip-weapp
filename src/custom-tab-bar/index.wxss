@@ -1,3 +1,5 @@
+/* MIP TabBar 合同(mip-design-system skill):375×56 仅 Tab 行,背景 #080808;
+   图标盒 56rpx @top 16rpx,标签 20rpx/500 居中,激活 #fcdf03,未激活 #b3b3b3。 */
 .tab-bar {
   --color-brand: #fcdf03;
   --color-muted: #b3b3b3;
@@ -11,8 +13,7 @@
   width: 100%;
   padding-bottom: env(safe-area-inset-bottom);
   pointer-events: auto;
-  background-color: #202020;
-  border-top: 1rpx solid #333;
+  background-color: #080808;
 }
 
 .tab-bar-row {
@@ -20,18 +21,18 @@
   align-items: stretch;
   width: 100%;
   max-width: 100%;
-  height: 96rpx;
+  height: 112rpx;
   margin-right: auto;
   margin-left: auto;
 }
 
 .tab-bar-item {
+  box-sizing: border-box;
   display: flex;
   flex: 1;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 88rpx;
+  padding-top: 16rpx;
 }
 
 .tab-bar-icon {
@@ -39,6 +40,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 56rpx;
+  height: 56rpx;
+}
+
+.tab-bar-icon-image {
+  display: block;
+  width: 56rpx;
+  height: 56rpx;
 }
 
 .tab-bar-badge {
@@ -54,14 +63,17 @@
   color: #080808;
   text-align: center;
   background: #fcdf03;
-  border: 2rpx solid #202020;
+  border: 2rpx solid #080808;
   border-radius: 999rpx;
 }
 
 .tab-bar-label {
+  width: 112rpx;
   margin-top: 4rpx;
-  font-size: 22rpx;
-  line-height: 30rpx;
+  font-size: 20rpx;
+  font-weight: 500;
+  line-height: 28rpx;
+  text-align: center;
 }
 
 @media (min-width: 600px) and (max-width: 959px) {

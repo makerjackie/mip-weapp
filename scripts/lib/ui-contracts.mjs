@@ -73,15 +73,25 @@ export function assertOfficialCustomTabBar(source, appJson, assert, label, { com
   const combined = `${source}\n${wxss}`
   assert(combined.includes('env(safe-area-inset-bottom)') || combined.includes('safe-area-inset-bottom'), `${label} must reserve the device safe area`)
   assert(
-    /height:\s*96rpx/.test(wxss) || (!compiled && source.includes('h-[96rpx]')),
-    `${label} must use the native 48px / 96rpx content height`,
+    /height:\s*112rpx/.test(wxss) || (!compiled && source.includes('h-[112rpx]')),
+    `${label} must use the design-system 56px / 112rpx tab row height`,
   )
   assert(
     /background(?:-color)?:\s*#[0-9A-Fa-f]{3,8}/.test(wxss),
     `${label} must paint an opaque background in its own stylesheet; custom-tab-bar is not a child of page`,
   )
-  assert(source.includes('<t-icon'), `${label} visible icons must use TDesign t-icon`)
-  assert(!source.includes('<image') && !source.includes('assets/tab'), `${label} must not render raster tab icons in the custom component`)
+  assert(
+    /#080808/.test(wxss),
+    `${label} must paint the design-system TabBar surface #080808`,
+  )
+  assert(!source.includes('<t-icon'), `${label} visible icons must use design-system glyphs, not TDesign t-icon`)
+  const iconImages = [...source.matchAll(/<image\b([^>]*)>/g)]
+  assert(iconImages.length > 0, `${label} must render its icons from the design-system registry`)
+  for (const image of iconImages) {
+    const src = readAttribute(image[1], 'src')
+    assert(src.includes('{{'), `${label} tab icons must be bound to the design-system registry, not a static path: ${src}`)
+  }
+  assert(!source.includes('assets/tab'), `${label} must not render raster tab icons in the custom component`)
   assert(source.includes('selected'), `${label} must sync the selected index`)
   const list = appJson?.tabBar?.list || []
   assert(list.length >= 2 && list.length <= 5, `${label} app.json tabBar.list must have 2-5 items`)
