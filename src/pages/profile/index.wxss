@@ -426,7 +426,7 @@
   color: var(--color-brand);
   background: var(--color-panel);
   border: 1rpx dashed var(--color-brand);
-  border-radius: var(--mip-radius-card-medium);
+  border-radius: var(--mip-radius-card-small);
 }
 
 .profile-add-card--loading {

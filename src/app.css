@@ -85,6 +85,7 @@
   /* Keep the mobile member surfaces on the same radius scale as the Figma frames. */
   --mip-radius-card: 32rpx;
   --mip-radius-card-medium: 24rpx;
+  --mip-radius-card-small: 16rpx;
   --mip-radius-control: 20rpx;
   --mip-radius-button: 24rpx;
 }
@@ -125,6 +126,10 @@
 
 .mip-radius-card-medium {
   border-radius: var(--mip-radius-card-medium);
+}
+
+.mip-radius-card-small {
+  border-radius: var(--mip-radius-card-small);
 }
 
 .mip-radius-control {
