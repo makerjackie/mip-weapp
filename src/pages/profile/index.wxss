@@ -208,17 +208,9 @@
   border-radius: 999rpx;
 }
 
-/* StatHeader: 68px shell, four 48px columns at left 31.5+i*80 (design px). */
 .profile-stats {
-  box-sizing: border-box;
-  display: flex;
-  gap: 64rpx;
-  align-items: center;
-  height: 136rpx;
-  padding: 0 63rpx;
+  display: block;
   margin-top: 24rpx;
-  background: var(--color-panel);
-  border-radius: var(--mip-radius-card-medium);
 }
 
 .profile-stat {

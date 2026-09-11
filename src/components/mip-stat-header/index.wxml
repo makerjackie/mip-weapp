@@ -5,7 +5,6 @@
     class="mip-stat-header__column"
     data-index="{{index}}"
     bind:tap="handleSelect"
-    style="left:{{63 + index * 160}}rpx"
   >
     <view class="mip-stat-header__value-wrap">
       <text class="mip-stat-header__value">{{item.value}}</text>

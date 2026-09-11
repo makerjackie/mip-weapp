@@ -1,16 +1,20 @@
+/* Card geometry from figma 1770:38896: 351x68 shell, four 48px columns at left 31.5+i*80 (design px). */
 .mip-stat-header {
-  position: relative;
   box-sizing: border-box;
+  display: flex;
+  gap: 64rpx;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 136rpx;
+  padding: 0 63rpx;
   background: var(--mip-bg-surface);
   border-radius: 16rpx;
 }
 
 .mip-stat-header__column {
-  position: absolute;
-  top: 24rpx;
   display: flex;
+  flex: none;
   flex-direction: column;
   gap: 4rpx;
   align-items: center;
