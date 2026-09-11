@@ -178,8 +178,8 @@
         <view wx:for="{{cooperationCards}}" wx:key="id" class="profile-cooperation-card" data-id="{{item.id}}" bind:tap="openCooperation">
           <mip-cooperation-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
         </view>
-        <mip-empty-state wx:if="{{cooperationCards.length === 0}}" title="暂无合作卡" description="添加后会显示在这里。" action-text="添加合作卡" bind:action="openCooperationList" />
-        <view wx:else class="profile-add-card {{openingAction === 'cooperation-list' ? 'profile-add-card--loading' : ''}}" aria-role="button" aria-disabled="{{openingAction === 'cooperation-list'}}" bind:tap="openCooperationList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" /><text wx:if="{{openingAction === 'cooperation-list'}}">正在打开</text><text wx:else>管理合作卡</text></view></view>
+        <mip-empty-state wx:if="{{cooperationCards.length === 0}}" title="暂无合作卡" description="添加后会显示在这里。" action-text="添加合作卡" bind:action="openCooperationEditor" />
+        <view wx:else class="profile-add-card {{openingAction === 'cooperation-editor' ? 'profile-add-card--loading' : ''}}" aria-role="button" aria-label="添加合作卡" aria-disabled="{{openingAction === 'cooperation-editor'}}" bind:tap="openCooperationEditor"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" /><text wx:if="{{openingAction === 'cooperation-editor'}}">正在打开</text><text wx:else>添加</text></view></view>
       </view>
     </block>
 

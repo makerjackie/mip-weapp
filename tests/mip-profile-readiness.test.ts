@@ -82,7 +82,17 @@ describe('profile page readiness', () => {
     expect(source).toContain('openingAction: \'\' as OpeningAction')
     expect(source).toContain('openingActionLock = false')
     expect(source).toContain('if (this.openingActionLock || this.data.openingAction)')
-    expect(source).toContain('\'cooperation-list\'')
+    expect(source).toContain('\'cooperation-editor\'')
     expect(source).toContain('[\'AUTHENTICATED\', \'AGREEMENTS\']')
+  })
+
+  it('opens the cooperation add entry straight into the cooperation card editor', () => {
+    const template = readFileSync(new URL('../src/pages/profile/index.wxml', import.meta.url), 'utf8')
+    const editorBody = methodBody('openCooperationEditor', 'openCaseList')
+    expect(editorBody).toContain('/packages/member/mip-cooperation/editor/index')
+    expect(editorBody).not.toContain('/packages/member/mip-cooperation/list/index')
+    expect(template).toContain('bind:tap="openCooperationEditor"')
+    expect(template).toContain('bind:action="openCooperationEditor"')
+    expect(template).not.toContain('openCooperationList')
   })
 })

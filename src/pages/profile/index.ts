@@ -23,7 +23,7 @@ import { formatLocalDate } from '../../utils/date'
 
 type PortfolioTab = 'cooperation' | 'cases' | 'opportunities'
 type SectionState = 'loading' | 'ready' | 'error'
-type OpeningAction = '' | 'cooperation-list' | 'other'
+type OpeningAction = '' | 'cooperation-editor' | 'other'
 
 const PROFILE_REFRESH_INTERVAL_MS = 30_000
 
@@ -492,7 +492,7 @@ Page({
       }
       const accessSnapshotFresh = this.lastSuccessfulRefreshAt > 0
         && Date.now() - this.lastSuccessfulRefreshAt < PROFILE_REFRESH_INTERVAL_MS
-      if (openingAction === 'cooperation-list' && accessSnapshotFresh) {
+      if (openingAction === 'cooperation-editor' && accessSnapshotFresh) {
         const cached = mipIdentityModule.peekSnapshot()
         if (cached && evaluateAccess(cached, intent).ready) {
           this.resumeDestination = ''
@@ -553,12 +553,12 @@ Page({
   openGrowth() { void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE') },
   openBadges() { void this.openProtected('/packages/member/mip-badges/index', 'VIEW_RESTRICTED_PROFILE') },
   openTasks() { void this.openProtected('/packages/member/mip-tasks/index', 'VIEW_RESTRICTED_PROFILE') },
-  openCooperationList() {
+  openCooperationEditor() {
     void this.openProtected(
-      '/packages/member/mip-cooperation/list/index?mine=1',
+      '/packages/member/mip-cooperation/editor/index',
       'INTERACT',
       undefined,
-      'cooperation-list',
+      'cooperation-editor',
       ['AUTHENTICATED', 'AGREEMENTS'],
     )
   },
