@@ -82,7 +82,7 @@
         "banners": [
           {
             "id": "banner-connect-fitness",
-            "imageUrl": "/packages/member/assets/figma/events/banner-connect-fitness.webp",
+            "imageUrl": "/pixel-assets/figma/events/banner-connect-fitness.webp",
             "accessibilityLabel": "MIP CONNECT 见人不如健身"
           }
         ],
@@ -106,7 +106,7 @@
         "events": [
           {
             "id": "e1",
-            "coverUrl": "/assets/figma/events/cover-ai-medical.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-ai-medical.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -118,15 +118,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -136,7 +136,7 @@
           },
           {
             "id": "e2",
-            "coverUrl": "/assets/figma/events/cover-comfort-standup.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-comfort-standup.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -148,15 +148,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -182,7 +182,7 @@
         "banners": [
           {
             "id": "banner-connect-fitness",
-            "imageUrl": "/packages/member/assets/figma/events/banner-connect-fitness.webp",
+            "imageUrl": "/pixel-assets/figma/events/banner-connect-fitness.webp",
             "accessibilityLabel": "MIP CONNECT 见人不如健身"
           }
         ],
@@ -206,7 +206,7 @@
         "events": [
           {
             "id": "e1",
-            "coverUrl": "/assets/figma/events/cover-ai-medical.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-ai-medical.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -218,15 +218,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -236,7 +236,7 @@
           },
           {
             "id": "e2",
-            "coverUrl": "/assets/figma/events/cover-comfort-standup.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-comfort-standup.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -248,15 +248,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -281,7 +281,7 @@
         "banners": [
           {
             "id": "banner-connect-fitness",
-            "imageUrl": "/packages/member/assets/figma/events/banner-connect-fitness.webp",
+            "imageUrl": "/pixel-assets/figma/events/banner-connect-fitness.webp",
             "accessibilityLabel": "MIP CONNECT 见人不如健身"
           }
         ],
@@ -305,7 +305,7 @@
         "events": [
           {
             "id": "e1",
-            "coverUrl": "/assets/figma/events/cover-ai-medical.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-ai-medical.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -317,15 +317,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -335,7 +335,7 @@
           },
           {
             "id": "e2",
-            "coverUrl": "/assets/figma/events/cover-comfort-standup.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-comfort-standup.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -347,15 +347,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -380,7 +380,7 @@
         "banners": [
           {
             "id": "banner-connect-fitness",
-            "imageUrl": "/packages/member/assets/figma/events/banner-connect-fitness.webp",
+            "imageUrl": "/pixel-assets/figma/events/banner-connect-fitness.webp",
             "accessibilityLabel": "MIP CONNECT 见人不如健身"
           }
         ],
@@ -404,7 +404,7 @@
         "events": [
           {
             "id": "e1",
-            "coverUrl": "/assets/figma/events/cover-invest-you.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-invest-you.webp",
             "title": "MIP反人性早会第328场",
             "videoRecaps": [
               {
@@ -422,7 +422,7 @@
           },
           {
             "id": "e2",
-            "coverUrl": "/assets/figma/events/cover-concert-recap.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-concert-recap.webp",
             "title": "MIP反人性早会第328场",
             "videoRecaps": [
               {
@@ -465,7 +465,7 @@
           {
             "id": "o1",
             "title": "设计户外过两天再说露营地",
-            "coverUrl": "/assets/figma/opportunities/cover-campsite.png",
+            "coverUrl": "/pixel-assets/figma/opportunities/cover-campsite.png",
             "valueSummary": "15000",
             "commercialTerms": {
               "amountDisplay": "15000",
@@ -474,15 +474,15 @@
             "targetSummary": "露营地帐篷供应商",
             "referralCount": 45,
             "avatars": [
-              "/assets/figma/events/avatar-1.png",
-              "/assets/figma/events/avatar-2.png",
-              "/assets/figma/events/avatar-3.png"
+              "/pixel-assets/figma/events/avatar-1.png",
+              "/pixel-assets/figma/events/avatar-2.png",
+              "/pixel-assets/figma/events/avatar-3.png"
             ]
           },
           {
             "id": "o2",
             "title": "建造可爱接头点快闪店",
-            "coverUrl": "/assets/figma/opportunities/cover-popstore.png",
+            "coverUrl": "/pixel-assets/figma/opportunities/cover-popstore.png",
             "valueSummary": "20000",
             "commercialTerms": {
               "amountDisplay": "20000",
@@ -491,9 +491,9 @@
             "targetSummary": "快闪店成熟的渠道",
             "referralCount": 45,
             "avatars": [
-              "/assets/figma/events/avatar-1.png",
-              "/assets/figma/events/avatar-2.png",
-              "/assets/figma/events/avatar-3.png"
+              "/pixel-assets/figma/events/avatar-1.png",
+              "/pixel-assets/figma/events/avatar-2.png",
+              "/pixel-assets/figma/events/avatar-3.png"
             ]
           }
         ]
@@ -548,7 +548,7 @@
           {
             "id": "o1",
             "title": "设计户外过两天再说露营地",
-            "coverUrl": "/assets/figma/opportunities/cover-campsite.png",
+            "coverUrl": "/pixel-assets/figma/opportunities/cover-campsite.png",
             "valueSummary": "15000",
             "commercialTerms": {
               "amountDisplay": "15000",
@@ -557,15 +557,15 @@
             "targetSummary": "露营地帐篷供应商",
             "referralCount": 45,
             "avatars": [
-              "/assets/figma/events/avatar-1.png",
-              "/assets/figma/events/avatar-2.png",
-              "/assets/figma/events/avatar-3.png"
+              "/pixel-assets/figma/events/avatar-1.png",
+              "/pixel-assets/figma/events/avatar-2.png",
+              "/pixel-assets/figma/events/avatar-3.png"
             ]
           },
           {
             "id": "o2",
             "title": "建造可爱接头点快闪店",
-            "coverUrl": "/assets/figma/opportunities/cover-popstore.png",
+            "coverUrl": "/pixel-assets/figma/opportunities/cover-popstore.png",
             "valueSummary": "20000",
             "commercialTerms": {
               "amountDisplay": "20000",
@@ -574,9 +574,9 @@
             "targetSummary": "快闪店成熟的渠道",
             "referralCount": 45,
             "avatars": [
-              "/assets/figma/events/avatar-1.png",
-              "/assets/figma/events/avatar-2.png",
-              "/assets/figma/events/avatar-3.png"
+              "/pixel-assets/figma/events/avatar-1.png",
+              "/pixel-assets/figma/events/avatar-2.png",
+              "/pixel-assets/figma/events/avatar-3.png"
             ]
           }
         ],
@@ -634,15 +634,15 @@
             "primaryPositioning": "这是介绍自己的一句话，只有一句话可能只有这么长。",
             "roleTags": [
               {
-                "icon": "/assets/figma/opportunities/role-dog.svg",
+                "icon": "/pixel-assets/figma/opportunities/role-dog.svg",
                 "label": "狗策划"
               },
               {
-                "icon": "/assets/figma/opportunities/role-money-bag.svg",
+                "icon": "/pixel-assets/figma/opportunities/role-money-bag.svg",
                 "label": "暴发户"
               }
             ],
-            "badgeImageUrl": "/assets/figma/opportunities/talent-badge.png",
+            "badgeImageUrl": "/pixel-assets/figma/opportunities/talent-badge.png",
             "inviterName": "菠萝你个大凤梨",
             "inviterAvatarUrl": "/assets/figma/profile/avatar.png"
           },
@@ -651,7 +651,7 @@
             "profileRef": "p2",
             "author": {
               "nickname": "菠萝凤梨",
-              "avatarUrl": "/assets/figma/events/avatar-1.png",
+              "avatarUrl": "/pixel-assets/figma/events/avatar-1.png",
               "cityName": "深圳",
               "primaryIndustry": {
                 "label": "金融行业"
@@ -662,11 +662,11 @@
             "primaryPositioning": "这是介绍自己的一句话，只有一句话可能只有这么长。",
             "roleTags": [
               {
-                "icon": "/assets/figma/opportunities/role-dog.svg",
+                "icon": "/pixel-assets/figma/opportunities/role-dog.svg",
                 "label": "狗策划"
               },
               {
-                "icon": "/assets/figma/opportunities/role-money-bag.svg",
+                "icon": "/pixel-assets/figma/opportunities/role-money-bag.svg",
                 "label": "暴发户"
               }
             ]
@@ -709,7 +709,7 @@
           "backgroundColor": "rgba(8, 8, 8, 0.7)"
         },
         "event": {
-          "coverUrl": "/assets/figma/events/detail-cover.webp",
+          "coverUrl": "/pixel-assets/figma/events/detail-cover.webp",
           "eventTypeLabel": "沙龙",
           "branchName": "",
           "tags": [],
@@ -739,7 +739,7 @@
           "notices": "",
           "contentMedia": [
             {
-              "imageUrl": "/assets/figma/events/detail-content-relationship.webp",
+              "imageUrl": "/pixel-assets/figma/events/detail-content-relationship.webp",
               "caption": "找人才、找资源、找投资就来参加创意人早会，这里是一段可以自定义的活动..."
             }
           ],
@@ -747,32 +747,32 @@
             {
               "participantRef": "p1",
               "nickname": "铁锤妹妹",
-              "avatarUrl": "/assets/figma/events/detail-avatar-1.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-1.png"
             },
             {
               "participantRef": "p2",
               "nickname": "Ame",
-              "avatarUrl": "/assets/figma/events/detail-avatar-2.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-2.png"
             },
             {
               "participantRef": "p3",
               "nickname": "Dylan",
-              "avatarUrl": "/assets/figma/events/detail-avatar-3.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-3.png"
             },
             {
               "participantRef": "p4",
               "nickname": "Nehz",
-              "avatarUrl": "/assets/figma/events/detail-avatar-4.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-4.png"
             },
             {
               "participantRef": "p5",
               "nickname": "大鹅飞飞",
-              "avatarUrl": "/assets/figma/events/detail-avatar-5.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-5.png"
             },
             {
               "participantRef": "p6",
               "nickname": "哈库呐玛",
-              "avatarUrl": "/assets/figma/events/detail-avatar-6.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-6.png"
             }
           ]
         }
@@ -815,7 +815,7 @@
           "backgroundColor": "rgba(8, 8, 8, 0.7)"
         },
         "event": {
-          "coverUrl": "/assets/figma/events/detail-cover.webp",
+          "coverUrl": "/pixel-assets/figma/events/detail-cover.webp",
           "eventTypeLabel": "沙龙",
           "branchName": "",
           "tags": [],
@@ -846,7 +846,7 @@
           "notices": "",
           "contentMedia": [
             {
-              "imageUrl": "/assets/figma/events/detail-content-relationship.webp",
+              "imageUrl": "/pixel-assets/figma/events/detail-content-relationship.webp",
               "caption": "找人才、找资源、找投资就来参加创意人早会，这里是一段可以自定义的活动..."
             }
           ],
@@ -854,32 +854,32 @@
             {
               "participantRef": "p1",
               "nickname": "铁锤妹妹",
-              "avatarUrl": "/assets/figma/events/detail-avatar-1.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-1.png"
             },
             {
               "participantRef": "p2",
               "nickname": "Ame",
-              "avatarUrl": "/assets/figma/events/detail-avatar-2.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-2.png"
             },
             {
               "participantRef": "p3",
               "nickname": "Dylan",
-              "avatarUrl": "/assets/figma/events/detail-avatar-3.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-3.png"
             },
             {
               "participantRef": "p4",
               "nickname": "Nehz",
-              "avatarUrl": "/assets/figma/events/detail-avatar-4.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-4.png"
             },
             {
               "participantRef": "p5",
               "nickname": "大鹅飞飞",
-              "avatarUrl": "/assets/figma/events/detail-avatar-5.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-5.png"
             },
             {
               "participantRef": "p6",
               "nickname": "哈库呐玛",
-              "avatarUrl": "/assets/figma/events/detail-avatar-6.png"
+              "avatarUrl": "/pixel-assets/figma/events/detail-avatar-6.png"
             }
           ]
         }
@@ -4218,7 +4218,7 @@
         "figmaLayout": true,
         "figma": {
           "title": "设计户外过两天再说露营地",
-          "cover": "/assets/figma/opportunities/cover-campsite.png",
+          "cover": "/pixel-assets/figma/opportunities/cover-campsite.png",
           "rows": [
             {
               "icon": "money-cny-circle",
@@ -4254,7 +4254,7 @@
         "figmaLayout": true,
         "figma": {
           "title": "设计户外过两天再说露营地",
-          "cover": "/assets/figma/opportunities/cover-campsite.png",
+          "cover": "/pixel-assets/figma/opportunities/cover-campsite.png",
           "rows": [
             {
               "icon": "money-cny-circle",
@@ -4341,7 +4341,7 @@
           "cards": [
             {
               "title": "设计户外过两天再说露营地",
-              "cover": "/assets/figma/opportunities/cover-campsite.png",
+              "cover": "/pixel-assets/figma/opportunities/cover-campsite.png",
               "topRpx": 552,
               "rows": [
                 {
@@ -4363,7 +4363,7 @@
             },
             {
               "title": "建造可爱接头点快闪店",
-              "cover": "/assets/figma/opportunities/cover-popstore.png",
+              "cover": "/pixel-assets/figma/opportunities/cover-popstore.png",
               "topRpx": 928,
               "rows": [
                 {
@@ -4403,27 +4403,27 @@
           "fields": [
             {
               "label": "项目名称",
-              "icon": "/assets/figma/opportunities/edit-draft.svg",
+              "icon": "/pixel-assets/figma/opportunities/edit-draft.svg",
               "labelTopRpx": 312
             },
             {
               "label": "价值金额",
-              "icon": "/assets/figma/opportunities/money-cny-circle.svg",
+              "icon": "/pixel-assets/figma/opportunities/money-cny-circle.svg",
               "labelTopRpx": 496
             },
             {
               "label": "主营城市",
-              "icon": "/assets/figma/opportunities/icon-building.png",
+              "icon": "/pixel-assets/figma/opportunities/icon-building.png",
               "labelTopRpx": 680
             },
             {
               "label": "主营地区（选填）",
-              "icon": "/assets/figma/opportunities/location.svg",
+              "icon": "/pixel-assets/figma/opportunities/location.svg",
               "labelTopRpx": 1042
             },
             {
               "label": "寻找合作方",
-              "icon": "/assets/figma/opportunities/icon-heart-hands.png",
+              "icon": "/pixel-assets/figma/opportunities/icon-heart-hands.png",
               "labelTopRpx": 1230
             }
           ],
@@ -5240,7 +5240,7 @@
           },
           "cards": [
             {
-              "cover": "/assets/figma/events/cover-standup.png",
+              "cover": "/pixel-assets/figma/events/cover-standup.png",
               "topRpx": 104,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00–12:00",
@@ -5248,7 +5248,7 @@
               "action": ""
             },
             {
-              "cover": "/assets/figma/events/cover-workout.png",
+              "cover": "/pixel-assets/figma/events/cover-workout.png",
               "topRpx": 604,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00–12:00",
@@ -5278,7 +5278,7 @@
           },
           "cards": [
             {
-              "cover": "/assets/figma/events/cover-standup.png",
+              "cover": "/pixel-assets/figma/events/cover-standup.png",
               "topRpx": 104,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00–12:00",
@@ -5286,7 +5286,7 @@
               "action": "取消报名"
             },
             {
-              "cover": "/assets/figma/events/cover-workout.png",
+              "cover": "/pixel-assets/figma/events/cover-workout.png",
               "topRpx": 604,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00–12:00",
@@ -5320,7 +5320,7 @@
           "underlineLeftRpx": 0,
           "cards": [
             {
-              "cover": "/packages/member/assets/figma/events/cover-standup.webp",
+              "cover": "/pixel-assets/figma/events/cover-standup.webp",
               "topRpx": 104,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00-12:00",
@@ -5331,7 +5331,7 @@
               "amount": "589"
             },
             {
-              "cover": "/packages/member/assets/figma/events/cover-workout.webp",
+              "cover": "/pixel-assets/figma/events/cover-workout.webp",
               "topRpx": 686,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00-12:00",
@@ -5361,7 +5361,7 @@
           "underlineLeftRpx": 187.5,
           "cards": [
             {
-              "cover": "/packages/member/assets/figma/events/cover-standup.webp",
+              "cover": "/pixel-assets/figma/events/cover-standup.webp",
               "topRpx": 104,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00-12:00",
@@ -5391,7 +5391,7 @@
           "underlineLeftRpx": 375,
           "cards": [
             {
-              "cover": "/packages/member/assets/figma/events/cover-standup.webp",
+              "cover": "/pixel-assets/figma/events/cover-standup.webp",
               "topRpx": 104,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00-12:00",
@@ -5421,7 +5421,7 @@
           "underlineLeftRpx": 562.5,
           "cards": [
             {
-              "cover": "/packages/member/assets/figma/events/cover-workout.webp",
+              "cover": "/pixel-assets/figma/events/cover-workout.webp",
               "topRpx": 104,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00-12:00",
@@ -6160,7 +6160,7 @@
         "banners": [
           {
             "id": "banner-connect-fitness",
-            "imageUrl": "/packages/member/assets/figma/events/banner-connect-fitness.webp",
+            "imageUrl": "/pixel-assets/figma/events/banner-connect-fitness.webp",
             "accessibilityLabel": "MIP CONNECT 见人不如健身"
           }
         ],
@@ -6184,7 +6184,7 @@
         "events": [
           {
             "id": "e1",
-            "coverUrl": "/assets/figma/events/cover-ai-medical.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-ai-medical.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -6196,15 +6196,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -6214,7 +6214,7 @@
           },
           {
             "id": "e2",
-            "coverUrl": "/assets/figma/events/cover-comfort-standup.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-comfort-standup.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -6226,15 +6226,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -6259,7 +6259,7 @@
         "banners": [
           {
             "id": "banner-connect-fitness",
-            "imageUrl": "/packages/member/assets/figma/events/banner-connect-fitness.webp",
+            "imageUrl": "/pixel-assets/figma/events/banner-connect-fitness.webp",
             "accessibilityLabel": "MIP CONNECT 见人不如健身"
           }
         ],
@@ -6283,7 +6283,7 @@
         "events": [
           {
             "id": "e1",
-            "coverUrl": "/assets/figma/events/cover-ai-medical.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-ai-medical.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -6295,15 +6295,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -6313,7 +6313,7 @@
           },
           {
             "id": "e2",
-            "coverUrl": "/assets/figma/events/cover-comfort-standup.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-comfort-standup.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -6325,15 +6325,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -6623,7 +6623,7 @@
         "banners": [
           {
             "id": "banner-connect-fitness",
-            "imageUrl": "/packages/member/assets/figma/events/banner-connect-fitness.webp",
+            "imageUrl": "/pixel-assets/figma/events/banner-connect-fitness.webp",
             "accessibilityLabel": "MIP CONNECT 见人不如健身"
           }
         ],
@@ -6647,7 +6647,7 @@
         "events": [
           {
             "id": "e1",
-            "coverUrl": "/assets/figma/events/cover-ai-medical.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-ai-medical.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -6659,15 +6659,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -6677,7 +6677,7 @@
           },
           {
             "id": "e2",
-            "coverUrl": "/assets/figma/events/cover-comfort-standup.webp",
+            "coverUrl": "/pixel-assets/figma/events/cover-comfort-standup.webp",
             "title": "MIP反人性早会第328场",
             "startsText": "12月12日 10:00-12:00",
             "locationText": "深圳 新洲二街海松大厦A座1706室",
@@ -6689,15 +6689,15 @@
             "participantPreview": [
               {
                 "participantRef": "p1",
-                "avatarUrl": "/assets/figma/events/avatar-1.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
               },
               {
                 "participantRef": "p2",
-                "avatarUrl": "/assets/figma/events/avatar-2.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
               },
               {
                 "participantRef": "p3",
-                "avatarUrl": "/assets/figma/events/avatar-3.png"
+                "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
               }
             ],
             "plusLabel": "+",
@@ -6740,7 +6740,7 @@
         "locationText": "深圳 新洲二街海松大厦A座1706室",
         "primaryLabel": "立即报名",
         "event": {
-          "coverUrl": "/assets/figma/events/detail-cover.webp",
+          "coverUrl": "/pixel-assets/figma/events/detail-cover.webp",
           "title": "MIP反人性早会第328场",
           "eventTypeLabel": "沙龙",
           "canInteract": true,
@@ -6756,17 +6756,17 @@
             {
               "participantRef": "p1",
               "nickname": "玩家A",
-              "avatarUrl": "/assets/figma/events/avatar-1.png"
+              "avatarUrl": "/pixel-assets/figma/events/avatar-1.png"
             },
             {
               "participantRef": "p2",
               "nickname": "玩家B",
-              "avatarUrl": "/assets/figma/events/avatar-2.png"
+              "avatarUrl": "/pixel-assets/figma/events/avatar-2.png"
             },
             {
               "participantRef": "p3",
               "nickname": "玩家C",
-              "avatarUrl": "/assets/figma/events/avatar-3.png"
+              "avatarUrl": "/pixel-assets/figma/events/avatar-3.png"
             }
           ]
         }
@@ -6826,7 +6826,7 @@
         "figmaLayout": true,
         "figma": {
           "title": "设计户外过两天再说露营地",
-          "cover": "/assets/figma/opportunities/cover-default.png",
+          "cover": "/pixel-assets/figma/opportunities/cover-default.png",
           "rows": [
             {
               "icon": "money-cny-circle",

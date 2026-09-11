@@ -72,13 +72,19 @@ function buildDocument({ route, fixture }) {
     // on disk; the headless shell reads them over file:// when the document
     // itself is a local file.
     resolveAsset: src =>
-      src?.startsWith('/packages/member/assets/')
-        ? path.join(root, 'src', src.slice(1))
-        : src?.startsWith('/packages/member/')
+      src?.startsWith('/pixel-assets/')
+        ? path.join(
+            root,
+            'tests/fixtures/ui-fidelity',
+            src.slice('/pixel-assets/'.length),
+          )
+        : src?.startsWith('/packages/member/assets/')
           ? path.join(root, 'src', src.slice(1))
-          : src?.startsWith('/')
-            ? path.join(SRC, src)
-            : src,
+          : src?.startsWith('/packages/member/')
+            ? path.join(root, 'src', src.slice(1))
+            : src?.startsWith('/')
+              ? path.join(SRC, src)
+              : src,
     // Token colors resolve through the component's colors.ts mirror, exactly
     // like the mini-program component does (data-URI SVGs cannot see CSS vars).
     renderMipIcon: props => mipIconHtml(iconRegistry, props, iconColors),
