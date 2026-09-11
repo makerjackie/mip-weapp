@@ -132,7 +132,7 @@
     </view>
     </block>
 
-    <mip-sticky-actions><view slot="actions" class="w-full"><t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{avatarUploading}}" bind:tap="saveProfile">保存资料</t-button></view></mip-sticky-actions>
+    <mip-sticky-actions><view slot="actions" class="w-full"><t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{avatarUploading}}" bind:tap="saveProfile">保存</t-button></view></mip-sticky-actions>
   </block>
   <app-page-exit />
 </view>

@@ -1,4 +1,4 @@
 <view class="mip-sticky-actions-spacer" aria-hidden="true" />
-<view class="mip-sticky-actions-shell">
+<view class="mip-sticky-actions-shell mip-liquid-glass">
   <slot name="actions" />
 </view>

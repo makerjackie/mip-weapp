@@ -30,7 +30,7 @@
     <view class="mt-5 text-[length:32rpx] font-medium">能力选择</view>
     <view wx:if="{{abilityOptions.length}}" class="mt-2 flex flex-wrap gap-2"><view wx:for="{{abilityOptions}}" wx:key="id" class="people-filter-chip-hit" aria-role="checkbox" aria-checked="{{item.selected}}" data-id="{{item.id}}" bind:tap="toggleAbility"><view class="flex h-[56rpx] items-center rounded-[16rpx] px-3 text-[length:28rpx] {{item.selected ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}">{{item.label}}</view></view></view>
     <view wx:else class="mt-3 text-[length:22rpx] text-muted">能力筛选项暂时无法加载。</view>
-    <view class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 rounded-[20rpx] border border-brand bg-brand-soft p-2">
+    <view class="mip-liquid-glass mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 rounded-[20rpx] p-2">
       <view class="px-3 pb-1 text-[length:22rpx] text-brand">已选行业 {{draftIndustryTagIds.length}}/8</view>
       <view class="flex items-center gap-3">
         <view class="flex h-[88rpx] w-[176rpx] shrink-0 items-center justify-center rounded-full border border-canvas bg-panel text-[length:32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="resetFilterDraft">清除</view>

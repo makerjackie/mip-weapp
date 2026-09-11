@@ -58,11 +58,9 @@
       <view class="mt-2">提交报名表示已阅读并同意<text class="text-brand" bind:tap="openAgreement">《服务协议》</text>和<text class="text-brand" bind:tap="openPrivacy">《隐私政策》</text>。</view>
     </view>
     <app-page-exit />
-    <view class="mip-member-fixed-edge fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-panel px-3 pb-[calc(env(safe-area-inset-bottom)+16rpx)] pt-3">
-      <view class="flex h-[104rpx] items-center gap-3 rounded-full bg-brand-soft p-2">
-        <view class="flex min-w-[152rpx] items-center justify-center text-[length:26rpx] font-semibold text-brand">{{priceText}}</view>
-        <t-button class="min-w-0 flex-1" block size="large" theme="primary" loading="{{busy}}" bind:tap="submit">{{editing ? '保存修改' : '提交报名'}}</t-button>
-      </view>
+    <view class="mip-liquid-glass mip-member-fixed-inset box-border fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
+      <view class="flex min-w-[152rpx] items-baseline justify-center leading-none text-brand" aria-label="{{priceText}}"><text wx:if="{{priceSymbol}}" class="text-[length:24rpx] font-medium leading-none">{{priceSymbol}}</text><text class="text-[length:40rpx] font-medium leading-none">{{priceAmount}}</text></view>
+      <t-button class="min-w-0 flex-1" block size="large" theme="primary" loading="{{busy}}" bind:tap="submit">{{editing ? '保存修改' : '提交报名'}}</t-button>
     </view>
   </block>
 </view>

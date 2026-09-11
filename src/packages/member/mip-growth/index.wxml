@@ -87,7 +87,7 @@
   </block>
 
   <mip-sticky-actions wx:if="{{isPlayer}}">
-    <view id="growth-member-actions" slot="actions" class="flex h-[112rpx] w-full items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
+    <view id="growth-member-actions" slot="actions" class="flex h-[112rpx] w-full items-center gap-2">
       <button open-type="share" disabled="{{!invitationReady}}" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-line bg-panel p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-brand disabled:opacity-50" aria-label="邀请加入 MIP"><t-icon name="share" size="30rpx" color="var(--color-brand)" /><text>邀请加入</text></button>
       <button class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-on-brand active:bg-brand-active" aria-label="进入会员方案续费" bind:tap="renewMembership"><t-icon name="card" size="30rpx" color="var(--color-on-brand)" /><text>立即续费</text></button>
     </view>
