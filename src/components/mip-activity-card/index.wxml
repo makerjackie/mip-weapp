@@ -15,9 +15,9 @@
     <view wx:else class="flex h-full w-full items-center justify-center bg-brand-soft"><mip-icon name="calendar-schedule" size="{{35}}" color="var(--color-brand)" /></view>
     <event-participant-preview class="absolute bottom-2 left-2" participants="{{event.participantPreview}}" count="{{event.registrationCount}}" count-text="{{event.countText}}" plus-label="{{event.plusLabel}}" remain-text="{{event.remainText}}" />
     <view class="absolute bottom-2 right-2 flex max-w-[60%] flex-wrap justify-end gap-1">
-      <view wx:if="{{event.accessLabel}}" class="box-border flex h-[32rpx] items-center rounded-[8rpx] border border-line px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-ink" style="{{event.accessTagStyle}}">{{event.accessLabel}}</view>
-      <view wx:if="{{event.eventTypeLabel}}" class="box-border flex h-[32rpx] items-center rounded-[8rpx] border border-line px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-ink" style="{{event.typeTagStyle}}">{{event.eventTypeLabel}}</view>
-      <view wx:if="{{event.statusLabel}}" class="box-border flex h-[32rpx] items-center rounded-[8rpx] bg-brand-soft px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-brand">{{event.statusLabel}}</view>
+      <mip-order-tag wx:if="{{event.accessLabel}}" label="{{event.accessLabel}}" />
+      <mip-order-tag wx:if="{{event.eventTypeLabel}}" label="{{event.eventTypeLabel}}" />
+      <mip-order-tag wx:if="{{event.statusLabel}}" label="{{event.statusLabel}}" bg="var(--color-brand-soft)" border="transparent" color="var(--color-brand)" />
     </view>
   </view>
   <view class="relative px-3 pb-[22rpx] pt-2">

@@ -13,10 +13,10 @@
         <view class="relative box-border h-[252rpx] overflow-hidden rounded-[16rpx] bg-panel px-3 py-3">
           <view class="flex min-w-0 flex-col pr-[152rpx]">
             <view class="flex flex-wrap items-center gap-1">
-              <text class="box-border flex h-[32rpx] items-center rounded-[8rpx] border-[length:0.5px] border-tag-type-line bg-tag-type px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-on-brand">{{event.eventTypeLabel}}</text>
-              <text class="box-border flex h-[32rpx] items-center rounded-[8rpx] border-[length:0.5px] border-brand-active bg-brand-alt px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-on-brand">{{accessLabel}}</text>
-              <text wx:if="{{event.branchName}}" class="box-border flex h-[32rpx] items-center rounded-[8rpx] bg-panel-raised px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-muted">{{event.branchName}}</text>
-              <text wx:for="{{event.tags}}" wx:for-item="tag" wx:key="*this" class="box-border flex h-[32rpx] items-center rounded-[8rpx] bg-panel-raised px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-muted">{{tag}}</text>
+              <mip-order-tag label="{{event.eventTypeLabel}}" bg="var(--color-tag-type)" border="var(--color-tag-type-line)" color="var(--color-on-brand)" />
+              <mip-order-tag label="{{accessLabel}}" bg="var(--color-brand-alt)" border="var(--color-brand-active)" color="var(--color-on-brand)" />
+              <mip-order-tag wx:if="{{event.branchName}}" label="{{event.branchName}}" bg="var(--color-panel-raised)" border="transparent" color="var(--color-muted)" />
+              <mip-order-tag wx:for="{{event.tags}}" wx:for-item="tag" wx:key="*this" label="{{tag}}" bg="var(--color-panel-raised)" border="transparent" color="var(--color-muted)" />
             </view>
             <view class="mt-[16rpx] truncate text-[length:32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
             <view wx:if="{{event.summary}}" class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{event.summary}}</view>

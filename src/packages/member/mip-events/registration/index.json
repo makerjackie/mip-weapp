@@ -3,6 +3,7 @@
   "usingComponents": {
     "mip-empty-state": "/components/mip-empty-state/index",
     "app-page-exit": "/components/page-exit/index",
+    "mip-order-tag": "/components/mip-order-tag/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "t-switch": "tdesign-miniprogram/switch/switch",

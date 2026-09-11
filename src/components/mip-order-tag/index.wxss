@@ -1,0 +1,20 @@
+/* OrderTag contract: 32rpx tall, 8rpx radius, 1rpx keyline, 20rpx/500 text.
+   Every tag keeps a filled surface — the cover behind it must never show through. */
+.mip-order-tag {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 32rpx;
+  padding: 0 12rpx;
+  background: var(--color-panel-raised);
+  border: 1rpx solid var(--color-line);
+  border-radius: 8rpx;
+}
+
+.mip-order-tag__label {
+  font-size: 20rpx;
+  font-weight: 500;
+  line-height: 28rpx;
+  color: var(--color-ink);
+}
