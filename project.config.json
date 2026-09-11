@@ -15,7 +15,13 @@
     "disableSWC": true,
     "minifyWXML": true,
     "minifyWXSS": true,
-    "uploadWithSourceMap": true
+    "uploadWithSourceMap": true,
+    "packNpmRelationList": [
+      {
+        "packageJsonPath": "./package.json",
+        "miniprogramNpmDistDir": "dist/"
+      }
+    ]
   },
   "simulatorType": "wechat",
   "condition": {},
