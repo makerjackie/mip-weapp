@@ -19,7 +19,6 @@
               <mip-order-tag wx:for="{{event.tags}}" wx:for-item="tag" wx:key="*this" label="{{tag}}" bg="var(--color-panel-raised)" border="transparent" color="var(--color-muted)" />
             </view>
             <view class="mt-[16rpx] truncate text-[length:32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
-            <view wx:if="{{event.summary}}" class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{event.summary}}</view>
             <view class="mt-[24rpx] flex h-[36rpx] items-center gap-1.5"><mip-icon name="calendar-schedule" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[length:24rpx] leading-[33.6rpx]">{{startsText}}<text wx:if="{{endsText}}" class="text-muted"> 至 {{endsText}}</text></text></view>
             <view class="mt-[16rpx] flex h-[36rpx] items-center gap-1.5" bind:tap="openLocation"><mip-icon name="icon-map-pin-line" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[length:24rpx] leading-[33.6rpx]">{{locationText}}</text></view>
           </view>
