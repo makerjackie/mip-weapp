@@ -1,0 +1,5426 @@
+[
+ {
+  "name": "battery-end-2",
+  "file": "battery-end-1x4.svg",
+  "vb": "0 0 2 5",
+  "w": 1,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 98
+ },
+ {
+  "name": "mobile-signal-2",
+  "file": "icon-mobile-signal-18x12.svg",
+  "vb": "0 0 18 12",
+  "w": 18,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 98
+ },
+ {
+  "name": "nav-home-ring",
+  "file": "union-17x17.svg",
+  "vb": "0 0 17 17",
+  "w": 17,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 98
+ },
+ {
+  "name": "statusbar-battery-fill",
+  "file": "fill-21x9.svg",
+  "vb": "0 0 21 9",
+  "w": 21,
+  "h": 9,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 98
+ },
+ {
+  "name": "statusbar-battery-outline",
+  "file": "outline-25x13.svg",
+  "vb": "0 0 25 13",
+  "w": 25,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 98
+ },
+ {
+  "name": "statusbar-island",
+  "file": "union-19x7.svg",
+  "vb": "0 0 19 7",
+  "w": 19,
+  "h": 7,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 98
+ },
+ {
+  "name": "nav-back",
+  "file": "vector-52-8x15.svg",
+  "vb": "0 0 9 17",
+  "w": 8,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 79
+ },
+ {
+  "name": "star-favorite-3",
+  "file": "vector-16x15.svg",
+  "vb": "0 0 17 16",
+  "w": 16,
+  "h": 15,
+  "mono": false,
+  "colors": [
+   "#fcdf03",
+   "#d0b801"
+  ],
+  "uses": 54
+ },
+ {
+  "name": "nav-divider",
+  "file": "line-0x17-2.svg",
+  "vb": "0 0 1 17",
+  "w": 24,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 48
+ },
+ {
+  "name": "nav-divider-2",
+  "file": "line-0x17.svg",
+  "vb": "0 0 1 17",
+  "w": 0,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 40
+ },
+ {
+  "name": "wifi",
+  "file": "wifi-17x12-2.svg",
+  "vb": "0 0 17 12",
+  "w": 17,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 39
+ },
+ {
+  "name": "icon-map-pin-fill",
+  "file": "vector-12x14.svg",
+  "vb": "0 0 12 15",
+  "w": 12,
+  "h": 14,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 31
+ },
+ {
+  "name": "letter-e-12",
+  "file": "vector-4x6.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 26
+ },
+ {
+  "name": "letter-i-6",
+  "file": "vector-1x6-2.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 26
+ },
+ {
+  "name": "letter-l-6",
+  "file": "vector-4x6-4.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 26
+ },
+ {
+  "name": "letter-s-2-2",
+  "file": "vector-5x6-3.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 26
+ },
+ {
+  "name": "letter-s-7",
+  "file": "vector-5x6-2.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 26
+ },
+ {
+  "name": "smileys-13-2-2",
+  "file": "vector-22x22-3.svg",
+  "vb": "0 0 24 24",
+  "w": 22,
+  "h": 22,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 22
+ },
+ {
+  "name": "calendar-schedule",
+  "file": "vector-14x14.svg",
+  "vb": "0 0 14 14",
+  "w": 14,
+  "h": 14,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 21
+ },
+ {
+  "name": "icon-heart-fill",
+  "file": "vector-18x16.svg",
+  "vb": "0 0 18 16",
+  "w": 18,
+  "h": 16,
+  "mono": false,
+  "colors": [
+   "#ff2238",
+   "#b30516"
+  ],
+  "uses": 20
+ },
+ {
+  "name": "tab-note-line",
+  "file": "vector-9x0.svg",
+  "vb": "0 0 12 2",
+  "w": 9,
+  "h": 0,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 20
+ },
+ {
+  "name": "cup",
+  "file": "vector-10x9-2.svg",
+  "vb": "0 0 10 9",
+  "w": 10,
+  "h": 9,
+  "mono": true,
+  "colors": [
+   "#202020"
+  ],
+  "uses": 19
+ },
+ {
+  "name": "target",
+  "file": "vector-10x10-2.svg",
+  "vb": "0 0 11 11",
+  "w": 10,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#202020"
+  ],
+  "uses": 19
+ },
+ {
+  "name": "wifi-9",
+  "file": "wifi-17x12.svg",
+  "vb": "0 0 17 12",
+  "w": 17,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 18
+ },
+ {
+  "name": "search-big-left-1",
+  "file": "vector-12x12.svg",
+  "vb": "0 0 14 14",
+  "w": 12,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 17
+ },
+ {
+  "name": "search-big-left-1-2",
+  "file": "vector-3x3.svg",
+  "vb": "0 0 5 5",
+  "w": 3,
+  "h": 3,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 17
+ },
+ {
+  "name": "smileys-13-12-2",
+  "file": "vector-8x8.svg",
+  "vb": "0 0 11 11",
+  "w": 8,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 16
+ },
+ {
+  "name": "tab-bag-dash",
+  "file": "vector-4x0.svg",
+  "vb": "0 0 6 2",
+  "w": 4,
+  "h": 0,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 16
+ },
+ {
+  "name": "tab-bag-handle",
+  "file": "vector-9x7.svg",
+  "vb": "0 0 12 9",
+  "w": 9,
+  "h": 7,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 16
+ },
+ {
+  "name": "wifi-6",
+  "file": "wifi-17x12-7.svg",
+  "vb": "0 0 17 12",
+  "w": 17,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 16
+ },
+ {
+  "name": "icon-plus-fill",
+  "file": "vector-14x14-2.svg",
+  "vb": "0 0 14 14",
+  "w": 14,
+  "h": 14,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 15
+ },
+ {
+  "name": "letter-a-3",
+  "file": "vector-6x6-2.svg",
+  "vb": "0 0 6 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-b-2-2",
+  "file": "vector-4x6-6.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-b-7",
+  "file": "vector-4x6-3.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-e-2-2",
+  "file": "vector-4x6-7.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-i-2-2",
+  "file": "vector-1x6.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-i-display-6",
+  "file": "vector-4x15.svg",
+  "vb": "0 0 5 15",
+  "w": 4,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#f2e6ff"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-k-7",
+  "file": "vector-5x6.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-m-2-2",
+  "file": "vector-6x6.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-m-9",
+  "file": "vector-6x6-3.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-o-12",
+  "file": "vector-6x6-4.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-o-2-2",
+  "file": "vector-6x6-5.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-p-2-2",
+  "file": "vector-4x6-5.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-p-4",
+  "file": "vector-4x6-2.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "letter-p-display-13",
+  "file": "vector-17x15-2.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#f2e6ff"
+  ],
+  "uses": 13
+ },
+ {
+  "name": "document-note-paper-angle-right-1",
+  "file": "vector-11x2.svg",
+  "vb": "0 0 12 2",
+  "w": 11,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 12
+ },
+ {
+  "name": "navigationbar-accessory-3",
+  "file": "line-0x17-5.svg",
+  "vb": "0 0 1 17",
+  "w": 24,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 12
+ },
+ {
+  "name": "deco-slash-7",
+  "file": "vector-5x8.svg",
+  "vb": "0 0 6 9",
+  "w": 5,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 11
+ },
+ {
+  "name": "letter-p-display-7",
+  "file": "vector-11x13.svg",
+  "vb": "0 0 12 14",
+  "w": 11,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 11
+ },
+ {
+  "name": "remix-icons-finance-money-cny-circle",
+  "file": "vector-13x13-9.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 11
+ },
+ {
+  "name": "satchel-bag-3",
+  "file": "vector-21x16-2.svg",
+  "vb": "0 0 23 19",
+  "w": 21,
+  "h": 16,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 11
+ },
+ {
+  "name": "service",
+  "file": "vector-14x13.svg",
+  "vb": "0 0 15 13",
+  "w": 14,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 11
+ },
+ {
+  "name": "smileys-13-2",
+  "file": "vector-16x8-2.svg",
+  "vb": "0 0 16 8",
+  "w": 16,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 11
+ },
+ {
+  "name": "tabbar-tab-2",
+  "file": "union-28x28-11.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 11
+ },
+ {
+  "name": "tab-note-fold",
+  "file": "vector-7x7.svg",
+  "vb": "0 0 9 9",
+  "w": 7,
+  "h": 7,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 10
+ },
+ {
+  "name": "wifi-2",
+  "file": "wifi-17x12-3.svg",
+  "vb": "0 0 17 12",
+  "w": 17,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 10
+ },
+ {
+  "name": "icon-heart-red",
+  "file": "vector-18x16-2.svg",
+  "vb": "0 0 18 16",
+  "w": 18,
+  "h": 16,
+  "mono": false,
+  "colors": [
+   "#ff2238",
+   "#b30516"
+  ],
+  "uses": 9
+ },
+ {
+  "name": "tabbar-tab-4",
+  "file": "union-28x28-13.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 9
+ },
+ {
+  "name": "tabbar-tab-6",
+  "file": "union-28x28-2.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 9
+ },
+ {
+  "name": "file-warning",
+  "file": "vector-12x13-2.svg",
+  "vb": "0 0 12 14",
+  "w": 12,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 8
+ },
+ {
+  "name": "gift",
+  "file": "vector-22x19.svg",
+  "vb": "0 0 22 19",
+  "w": 22,
+  "h": 19,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 8
+ },
+ {
+  "name": "icon-map-pin-line",
+  "file": "vector-12x14-2.svg",
+  "vb": "0 0 12 15",
+  "w": 12,
+  "h": 14,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 8
+ },
+ {
+  "name": "letter-e-3-2",
+  "file": "vector-4x6-8.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 8
+ },
+ {
+  "name": "letter-i-3-2",
+  "file": "vector-1x6-4.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 8
+ },
+ {
+  "name": "letter-l-2",
+  "file": "vector-4x6-11.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 8
+ },
+ {
+  "name": "letter-s-3-2",
+  "file": "vector-5x6-5.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 8
+ },
+ {
+  "name": "letter-s-4-2",
+  "file": "vector-5x6-6.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 8
+ },
+ {
+  "name": "navigationbar-accessory-8",
+  "file": "vector-19x16.svg",
+  "vb": "0 0 18 17",
+  "w": 19,
+  "h": 16,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 8
+ },
+ {
+  "name": "time",
+  "file": "vector-13x13.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 8
+ },
+ {
+  "name": "cellphone-3",
+  "file": "vector-9x15.svg",
+  "vb": "0 0 10 15",
+  "w": 9,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 7
+ },
+ {
+  "name": "contacts-1-1",
+  "file": "vector-15x14.svg",
+  "vb": "0 0 15 14",
+  "w": 15,
+  "h": 14,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 7
+ },
+ {
+  "name": "deco-arc-smile-3",
+  "file": "vector-24x10-4.svg",
+  "vb": "0 0 24 11",
+  "w": 24,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 7
+ },
+ {
+  "name": "deco-spintop-6",
+  "file": "vector-104x55.svg",
+  "vb": "0 0 104 55",
+  "w": 104,
+  "h": 55,
+  "mono": true,
+  "colors": [
+   "#6500d1"
+  ],
+  "uses": 7
+ },
+ {
+  "name": "deco-sticker-bg-5",
+  "file": "vector-2-176x141.svg",
+  "vb": "0 0 176 141",
+  "w": 176,
+  "h": 141,
+  "mono": true,
+  "colors": [
+   "#dab8ff"
+  ],
+  "uses": 7
+ },
+ {
+  "name": "mail",
+  "file": "vector-13x12-2.svg",
+  "vb": "0 0 14 12",
+  "w": 13,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 7
+ },
+ {
+  "name": "remix-icons-document-draft",
+  "file": "vector-13x13-11.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 7
+ },
+ {
+  "name": "remix-icons-document-survey",
+  "file": "vector-12x13-4.svg",
+  "vb": "0 0 12 14",
+  "w": 12,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 7
+ },
+ {
+  "name": "wechat-2",
+  "file": "vector-13x13-6.svg",
+  "vb": "0 0 14 13",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 7
+ },
+ {
+  "name": "calendar-2-1-1",
+  "file": "vector-17x17-6.svg",
+  "vb": "0 0 17 17",
+  "w": 17,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "comment-text-outlined-1",
+  "file": "vector-13x12-8.svg",
+  "vb": "0 0 14 12",
+  "w": 13,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "deco-bar-black",
+  "file": "rectangle-1028-289x63.svg",
+  "vb": "0 0 289 63",
+  "w": 289,
+  "h": 63,
+  "mono": true,
+  "colors": [
+   "#202020"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "document-note-paper-angle-right-1-2",
+  "file": "vector-21x21-3.svg",
+  "vb": "0 0 23 23",
+  "w": 21,
+  "h": 21,
+  "mono": false,
+  "colors": [
+   "#080808",
+   "#fcdf03"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "document-note-paper-angle-right-1-3",
+  "file": "vector-7x7-2.svg",
+  "vb": "0 0 9 9",
+  "w": 7,
+  "h": 7,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "files-labeled-outlined-1-2",
+  "file": "vector-13x15.svg",
+  "vb": "0 0 13 15",
+  "w": 13,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "folder-2",
+  "file": "vector-13x12-5.svg",
+  "vb": "0 0 14 12",
+  "w": 13,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "share-circle",
+  "file": "vector-13x13-18.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "star-favorite-5",
+  "file": "vector-16x15-2.svg",
+  "vb": "0 0 17 16",
+  "w": 16,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#d0b801"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "tabbar-tab-14",
+  "file": "union-28x28.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "wifi-8",
+  "file": "wifi-17x12-9.svg",
+  "vb": "0 0 17 12",
+  "w": 17,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 6
+ },
+ {
+  "name": "calendar-event-1",
+  "file": "vector-23x23.svg",
+  "vb": "0 0 24 24",
+  "w": 23,
+  "h": 23,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "document-note-paper-angle-right-3",
+  "file": "vector-21x21-2.svg",
+  "vb": "0 0 23 23",
+  "w": 21,
+  "h": 21,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "file-text",
+  "file": "vector-21x23.svg",
+  "vb": "0 0 21 24",
+  "w": 21,
+  "h": 23,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "info-card",
+  "file": "vector-26x19.svg",
+  "vb": "0 0 26 19",
+  "w": 26,
+  "h": 19,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "satchel-bag-3-12",
+  "file": "vector-6x2.svg",
+  "vb": "0 0 6 2",
+  "w": 6,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#fde530"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "satchel-bag-3-13",
+  "file": "vector-9x7-2.svg",
+  "vb": "0 0 12 9",
+  "w": 9,
+  "h": 7,
+  "mono": false,
+  "colors": [
+   "#080808",
+   "#fde530"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "satchel-bag-3-14",
+  "file": "vector-9x7-3.svg",
+  "vb": "0 0 12 9",
+  "w": 9,
+  "h": 7,
+  "mono": true,
+  "colors": [
+   "#fde530"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "satchel-bag-3-2",
+  "file": "vector-21x16-3.svg",
+  "vb": "0 0 23 19",
+  "w": 21,
+  "h": 16,
+  "mono": false,
+  "colors": [
+   "#080808",
+   "#fde530"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "settings",
+  "file": "vector-22x26.svg",
+  "vb": "0 0 23 26",
+  "w": 22,
+  "h": 26,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "share-circle-3",
+  "file": "vector-17x17.svg",
+  "vb": "0 0 17 17",
+  "w": 17,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "smileys-13-11",
+  "file": "vector-16x8.svg",
+  "vb": "0 0 16 8",
+  "w": 16,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "smileys-13-11-2",
+  "file": "vector-22x22.svg",
+  "vb": "0 0 24 24",
+  "w": 22,
+  "h": 22,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "smileys-13-12",
+  "file": "vector-22x22-2.svg",
+  "vb": "0 0 24 24",
+  "w": 22,
+  "h": 22,
+  "mono": false,
+  "colors": [
+   "#202020",
+   "#b3b3b3"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "tab-bag-body",
+  "file": "vector-21x16.svg",
+  "vb": "0 0 23 19",
+  "w": 21,
+  "h": 16,
+  "mono": false,
+  "colors": [
+   "#202020",
+   "#b3b3b3"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "tab-note-outline",
+  "file": "vector-21x21.svg",
+  "vb": "0 0 23 23",
+  "w": 21,
+  "h": 21,
+  "mono": false,
+  "colors": [
+   "#202020",
+   "#b3b3b3"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "thumbs-up-like-3-big-1",
+  "file": "vector-17x16.svg",
+  "vb": "0 0 19 18",
+  "w": 17,
+  "h": 16,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "thumbs-up-like-3-big-1-2",
+  "file": "vector-2x12.svg",
+  "vb": "0 0 2 12",
+  "w": 2,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "wifi-4",
+  "file": "wifi-17x12-5.svg",
+  "vb": "0 0 17 12",
+  "w": 17,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 5
+ },
+ {
+  "name": "chevron-down-1",
+  "file": "vector-3x6.svg",
+  "vb": "0 0 4 7",
+  "w": 3,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "chevron-down-1-12",
+  "file": "vector-4x8.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "contacts-book-3",
+  "file": "vector-13x13-4.svg",
+  "vb": "0 0 13 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "download-2",
+  "file": "vector-17x15-4.svg",
+  "vb": "0 0 17 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "folder-5-2",
+  "file": "vector-20x18.svg",
+  "vb": "0 0 20 18",
+  "w": 20,
+  "h": 18,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "heart-rounded-1-1",
+  "file": "vector-17x15-24.svg",
+  "vb": "0 0 18 17",
+  "w": 17,
+  "h": 15,
+  "mono": false,
+  "colors": [
+   "#ff2238",
+   "black"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "id-card",
+  "file": "vector-18x13.svg",
+  "vb": "0 0 19 14",
+  "w": 18,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-a-7",
+  "file": "vector-6x6-7.svg",
+  "vb": "0 0 6 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-b",
+  "file": "vector-4x6-10.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-b-2",
+  "file": "vector-4x6-13.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-e",
+  "file": "vector-4x6-14.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-e-2",
+  "file": "vector-4x6-15.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-i-13",
+  "file": "vector-4x15-2.svg",
+  "vb": "0 0 5 15",
+  "w": 4,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-i-7",
+  "file": "vector-1x6-3.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-i-9",
+  "file": "vector-1x6-6.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-k-5",
+  "file": "vector-5x6-4.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-l",
+  "file": "vector-4x6-18.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-m-12",
+  "file": "vector-6x6-6.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-m-13",
+  "file": "vector-6x6-8.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-m-display",
+  "file": "vector-17x15-10.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#f2e6ff"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-m-display-7",
+  "file": "vector-17x15-21.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#f2e6ff"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-o",
+  "file": "vector-6x6-10.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-o-13",
+  "file": "vector-6x6-9.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-p",
+  "file": "vector-4x6-12.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-p-13",
+  "file": "vector-4x6-9.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-p-display-14",
+  "file": "vector-17x15-7.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-s-10",
+  "file": "vector-5x6-8.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "letter-s-11",
+  "file": "vector-5x6-9.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "mic-ai-fill-1",
+  "file": "vector-28x31.svg",
+  "vb": "0 0 28 31",
+  "w": 28,
+  "h": 31,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "navigationbar-accessory",
+  "file": "line-0x17-3.svg",
+  "vb": "0 0 1 17",
+  "w": 24,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "navigationbar-accessory-2",
+  "file": "line-0x17-4.svg",
+  "vb": "0 0 1 17",
+  "w": 24,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "parent",
+  "file": "vector-13x13-5.svg",
+  "vb": "0 0 14 13",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "satchel-bag-3-5",
+  "file": "vector-21x2-3.svg",
+  "vb": "0 0 23 5",
+  "w": 21,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "thumbs-up-like-3-big-1-4",
+  "file": "vector-53-13x16.svg",
+  "vb": "0 0 13 16",
+  "w": 13,
+  "h": 16,
+  "mono": true,
+  "colors": [
+   "#ffd3a7"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "wifi-7",
+  "file": "wifi-17x12-8.svg",
+  "vb": "0 0 17 12",
+  "w": 17,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 4
+ },
+ {
+  "name": "check",
+  "file": "vector-23x16.svg",
+  "vb": "0 0 23 17",
+  "w": 23,
+  "h": 16,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "close",
+  "file": "vector-17x17-4.svg",
+  "vb": "0 0 17 17",
+  "w": 17,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "deco-arc-smile-2",
+  "file": "vector-24x10-3.svg",
+  "vb": "0 0 24 11",
+  "w": 24,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "deco-dot-yellow",
+  "file": "vector-3x3-3.svg",
+  "vb": "0 0 4 4",
+  "w": 3,
+  "h": 3,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "deco-slash",
+  "file": "vector-5x8-2.svg",
+  "vb": "0 0 6 9",
+  "w": 5,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "deco-spintop-7",
+  "file": "vector-115x61.svg",
+  "vb": "0 0 115 61",
+  "w": 115,
+  "h": 61,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "dialog-divider-h-2",
+  "file": "path-3-320x1-2.svg",
+  "vb": "0 0 320 1",
+  "w": 320,
+  "h": 1,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "dialog-divider-v",
+  "file": "path-2-1x56.svg",
+  "vb": "0 0 1 56",
+  "w": 1,
+  "h": 56,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "file-copy",
+  "file": "vector-12x13.svg",
+  "vb": "0 0 12 14",
+  "w": 12,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "file-list-3",
+  "file": "vector-10x10.svg",
+  "vb": "0 0 10 10",
+  "w": 10,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "file-text-2",
+  "file": "vector-9x10.svg",
+  "vb": "0 0 9 10",
+  "w": 9,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "icon-home-line",
+  "file": "vector-19x16-2.svg",
+  "vb": "0 0 18 17",
+  "w": 19,
+  "h": 16,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "letter-e-14",
+  "file": "vector-5x6-22.svg",
+  "vb": "0 0 6 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff2248"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "letter-e-15",
+  "file": "vector-5x6-23.svg",
+  "vb": "0 0 6 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff2248"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "letter-e-16",
+  "file": "vector-6x5.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 5,
+  "mono": true,
+  "colors": [
+   "#ff2248"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "letter-e-17",
+  "file": "vector-6x5-2.svg",
+  "vb": "0 0 6 6",
+  "w": 6,
+  "h": 5,
+  "mono": true,
+  "colors": [
+   "#ff2248"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "letter-m-display-10",
+  "file": "vector-17x15-8.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "letter-p-display",
+  "file": "vector-11x13-2.svg",
+  "vb": "0 0 12 14",
+  "w": 11,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "letter-u-1",
+  "file": "vector-5x6-24.svg",
+  "vb": "0 0 5 7",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff2248"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "lifebuoy-1-1",
+  "file": "vector-13x13-14.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "money-cny-box",
+  "file": "vector-10x9.svg",
+  "vb": "0 0 10 9",
+  "w": 10,
+  "h": 9,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "pencil-ai",
+  "file": "vector-13x13-17.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "women",
+  "file": "vector-10x15.svg",
+  "vb": "0 0 10 16",
+  "w": 10,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 3
+ },
+ {
+  "name": "arrow-right-s",
+  "file": "vector-8x13-2.svg",
+  "vb": "0 0 8 13",
+  "w": 8,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "arrow-right-s-2",
+  "file": "vector-8x13.svg",
+  "vb": "0 0 8 13",
+  "w": 8,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "battery-end",
+  "file": "battery-end-1x4-2.svg",
+  "vb": "0 0 2 5",
+  "w": 1,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "book-2",
+  "file": "vector-12x13-3.svg",
+  "vb": "0 0 12 14",
+  "w": 12,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "chat-smile-ai-3",
+  "file": "vector-12x6.svg",
+  "vb": "0 0 12 6",
+  "w": 12,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "chat-smile-ai-3-2",
+  "file": "vector-22x21.svg",
+  "vb": "0 0 22 21",
+  "w": 22,
+  "h": 21,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "chevron-down-1-15",
+  "file": "vector-8x4-3.svg",
+  "vb": "0 0 10 6",
+  "w": 8,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "chevron-down-1-17",
+  "file": "vector-8x4-5.svg",
+  "vb": "0 0 10 6",
+  "w": 8,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "chevron-down-1-4",
+  "file": "vector-4x8-2.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "chevron-down-3-2",
+  "file": "vector-10x5-3.svg",
+  "vb": "0 0 12 7",
+  "w": 10,
+  "h": 5,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "chevron-down-3-4",
+  "file": "vector-10x5.svg",
+  "vb": "0 0 12 7",
+  "w": 10,
+  "h": 5,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "copper-diamond",
+  "file": "vector-10x10-3.svg",
+  "vb": "0 0 10 10",
+  "w": 10,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-arc-smile",
+  "file": "vector-24x10-2.svg",
+  "vb": "0 0 24 11",
+  "w": 24,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-arc-smile-4",
+  "file": "vector-24x10-5.svg",
+  "vb": "0 0 24 11",
+  "w": 24,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-arc-smile-9",
+  "file": "vector-24x10.svg",
+  "vb": "0 0 24 11",
+  "w": 24,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-flower-line",
+  "file": "vector-18x18-4.svg",
+  "vb": "0 0 18 18",
+  "w": 18,
+  "h": 18,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-hex-fill",
+  "file": "vector-184x201.svg",
+  "vb": "0 0 185 202",
+  "w": 184,
+  "h": 201,
+  "mono": false,
+  "colors": [
+   "#fcdf03",
+   "white"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-hex-fill-2",
+  "file": "vector-208x240.svg",
+  "vb": "0 0 209 241",
+  "w": 208,
+  "h": 240,
+  "mono": true,
+  "colors": [
+   "#4c4c4c"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-hex-line",
+  "file": "vector-125x144.svg",
+  "vb": "0 0 126 145",
+  "w": 125,
+  "h": 144,
+  "mono": true,
+  "colors": [
+   "#4c4c4c"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-hex-line-2",
+  "file": "vector-166x192.svg",
+  "vb": "0 0 168 193",
+  "w": 166,
+  "h": 192,
+  "mono": true,
+  "colors": [
+   "#4c4c4c"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-hex-line-5",
+  "file": "vector-42x48.svg",
+  "vb": "0 0 43 50",
+  "w": 42,
+  "h": 48,
+  "mono": true,
+  "colors": [
+   "#4c4c4c"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-hex-line-6",
+  "file": "vector-83x96.svg",
+  "vb": "0 0 84 97",
+  "w": 83,
+  "h": 96,
+  "mono": true,
+  "colors": [
+   "#4c4c4c"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-panel-yellow",
+  "file": "rectangle-1106-375x230.svg",
+  "vb": "0 0 375 230",
+  "w": 375,
+  "h": 230,
+  "mono": true,
+  "colors": [
+   "#fde104"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-slash-2",
+  "file": "vector-5x8-3.svg",
+  "vb": "0 0 6 9",
+  "w": 5,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-spintop",
+  "file": "vector-104x55-2.svg",
+  "vb": "0 0 104 55",
+  "w": 104,
+  "h": 55,
+  "mono": true,
+  "colors": [
+   "#4d1a00"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-sticker-bg",
+  "file": "vector-2-176x141-2.svg",
+  "vb": "0 0 176 141",
+  "w": 176,
+  "h": 141,
+  "mono": true,
+  "colors": [
+   "#fadab3"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-sticker-bg-3",
+  "file": "vector-2-176x141-4.svg",
+  "vb": "0 0 176 141",
+  "w": 176,
+  "h": 141,
+  "mono": true,
+  "colors": [
+   "#ffe6f9"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "deco-wave-2",
+  "file": "vector-24x10-10.svg",
+  "vb": "0 0 24 11",
+  "w": 24,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "delete-bin-6",
+  "file": "vector-13x13-2.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "dialog-divider-h",
+  "file": "path-3-320x1.svg",
+  "vb": "0 0 320 1",
+  "w": 320,
+  "h": 1,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "dog_-1",
+  "file": "vector-12x13-6.svg",
+  "vb": "0 0 12 13",
+  "w": 12,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "dog_-1-2",
+  "file": "vector-1x1.svg",
+  "vb": "0 0 1 1",
+  "w": 1,
+  "h": 1,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "dog_-1-3",
+  "file": "vector-3x3-2.svg",
+  "vb": "0 0 4 4",
+  "w": 3,
+  "h": 3,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "file-check",
+  "file": "vector-13x14.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 14,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "filter-2",
+  "file": "vector-11x13-10.svg",
+  "vb": "0 0 11 13",
+  "w": 11,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "focus-2",
+  "file": "vector-13x13-3.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "icon-plus-bold",
+  "file": "vector-14x14-3.svg",
+  "vb": "0 0 14 14",
+  "w": 14,
+  "h": 14,
+  "mono": true,
+  "colors": [
+   "#09121f"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-a",
+  "file": "vector-6x6-12.svg",
+  "vb": "0 0 6 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-b-14",
+  "file": "vector-5x8-8.svg",
+  "vb": "0 0 6 9",
+  "w": 5,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-b-3",
+  "file": "vector-4x6-17.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-b-4",
+  "file": "vector-4x6-20.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-e-10",
+  "file": "vector-4x6-43.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-e-3",
+  "file": "vector-4x6-21.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-e-4",
+  "file": "vector-4x6-22.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-e-6",
+  "file": "vector-4x6-29.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-e-8",
+  "file": "vector-4x6-36.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-i",
+  "file": "vector-1x6-10.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-i-11",
+  "file": "vector-1x6-8.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-i-15",
+  "file": "vector-1x4-2.svg",
+  "vb": "0 0 1 5",
+  "w": 1,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-i-3",
+  "file": "vector-1x6-12.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-i-5",
+  "file": "vector-1x6-14.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-i-8",
+  "file": "vector-1x6-5.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-i-display",
+  "file": "vector-4x15-3.svg",
+  "vb": "0 0 5 15",
+  "w": 4,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#fadab3"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-k-6",
+  "file": "vector-5x6-7.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-l-3",
+  "file": "vector-4x6-25.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-l-4",
+  "file": "vector-4x6-32.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-l-5",
+  "file": "vector-4x6-39.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-l-7",
+  "file": "vector-4x6-46.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-l-8",
+  "file": "vector-3x4-5.svg",
+  "vb": "0 0 3 5",
+  "w": 3,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-m",
+  "file": "vector-6x6-11.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-m-2",
+  "file": "vector-6x6-13.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-m-display-8",
+  "file": "vector-17x15-3.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#f2e6ff"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-m-display-9",
+  "file": "vector-17x15-5.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#f2e6ff"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-o-2",
+  "file": "vector-6x6-14.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-o-3",
+  "file": "vector-6x6-15.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-p-15",
+  "file": "vector-11x13-9.svg",
+  "vb": "0 0 12 14",
+  "w": 11,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#3b007a"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-p-16",
+  "file": "vector-3x4-2.svg",
+  "vb": "0 0 3 5",
+  "w": 3,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-p-2",
+  "file": "vector-4x6-16.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-p-3",
+  "file": "vector-4x6-19.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-p-display-2",
+  "file": "vector-11x13-3.svg",
+  "vb": "0 0 12 14",
+  "w": 11,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#7a2900"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-p-display-8",
+  "file": "vector-17x15-11.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#fadab3"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-s",
+  "file": "vector-5x6-11.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-s-12",
+  "file": "vector-4x4-3.svg",
+  "vb": "0 0 4 5",
+  "w": 4,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-s-13",
+  "file": "vector-4x4-4.svg",
+  "vb": "0 0 4 5",
+  "w": 4,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-s-2",
+  "file": "vector-5x6-12.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-s-3",
+  "file": "vector-5x6-14.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-s-4",
+  "file": "vector-5x6-15.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-s-5",
+  "file": "vector-5x6-17.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-s-6",
+  "file": "vector-5x6-18.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-s-8",
+  "file": "vector-5x6-20.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "letter-s-9",
+  "file": "vector-5x6-21.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "lifebuoy",
+  "file": "vector-10x10-4.svg",
+  "vb": "0 0 10 10",
+  "w": 10,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "lock-fill-1",
+  "file": "vector-9x10-2.svg",
+  "vb": "0 0 9 10",
+  "w": 9,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "men",
+  "file": "vector-13x13-10.svg",
+  "vb": "0 0 13 13",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "mobile-signal",
+  "file": "icon-mobile-signal-18x12-2.svg",
+  "vb": "0 0 18 12",
+  "w": 18,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "money-bag-dollar_-1",
+  "file": "vector-10x13.svg",
+  "vb": "0 0 11 13",
+  "w": 10,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "money-bag-dollar_-1-2",
+  "file": "vector-1x5.svg",
+  "vb": "0 0 1 6",
+  "w": 1,
+  "h": 5,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "money-bag-dollar_-1-3",
+  "file": "vector-3x4.svg",
+  "vb": "0 0 4 4",
+  "w": 3,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "money-bag-dollar_-1-4",
+  "file": "vector-5x1.svg",
+  "vb": "0 0 6 2",
+  "w": 5,
+  "h": 1,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "navigationbar-accessory-6",
+  "file": "union-17x17-2.svg",
+  "vb": "0 0 17 17",
+  "w": 17,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "navigationbar-accessory-7",
+  "file": "union-19x7-2.svg",
+  "vb": "0 0 19 7",
+  "w": 19,
+  "h": 7,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "navigationbar-accessory-9",
+  "file": "vector-52-8x15-2.svg",
+  "vb": "0 0 9 17",
+  "w": 8,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "play-circle",
+  "file": "vector-33x33.svg",
+  "vb": "0 0 34 34",
+  "w": 33,
+  "h": 33,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "remix-icons-document-file-copy",
+  "file": "vector-12x13-5.svg",
+  "vb": "0 0 12 14",
+  "w": 12,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "remix-icons-fill-system-close-circle-fill",
+  "file": "vector-13x13-13.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#09121f"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "satchel-bag-3-10",
+  "file": "vector-21x2-8.svg",
+  "vb": "0 0 23 5",
+  "w": 21,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "satchel-bag-3-11",
+  "file": "vector-21x2-9.svg",
+  "vb": "0 0 23 5",
+  "w": 21,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "satchel-bag-3-3",
+  "file": "vector-21x2-10.svg",
+  "vb": "0 0 23 5",
+  "w": 21,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#fde530"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "satchel-bag-3-4",
+  "file": "vector-21x2-2.svg",
+  "vb": "0 0 23 5",
+  "w": 21,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "satchel-bag-3-6",
+  "file": "vector-21x2-4.svg",
+  "vb": "0 0 23 5",
+  "w": 21,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "satchel-bag-3-8",
+  "file": "vector-21x2-6.svg",
+  "vb": "0 0 23 5",
+  "w": 21,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "satchel-bag-3-9",
+  "file": "vector-21x2-7.svg",
+  "vb": "0 0 23 5",
+  "w": 21,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#fde530"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "signpost-fill-1",
+  "file": "vector-16x17.svg",
+  "vb": "0 0 16 17",
+  "w": 16,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "statusbar-base-on-ios-16-ui-kit-by-joey-banks",
+  "file": "outline-25x13-2.svg",
+  "vb": "0 0 25 13",
+  "w": 25,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "statusbar-battery-fill-2",
+  "file": "fill-21x9-2.svg",
+  "vb": "0 0 21 9",
+  "w": 21,
+  "h": 9,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "tab-bag-band",
+  "file": "vector-21x2.svg",
+  "vb": "0 0 23 5",
+  "w": 21,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "tabbar-tab",
+  "file": "union-28x28-10.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "tabbar-tab-10",
+  "file": "union-28x28-6.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "tabbar-tab-11",
+  "file": "union-28x28-7.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "tabbar-tab-12",
+  "file": "union-28x28-8.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "tabbar-tab-13",
+  "file": "union-28x28-9.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "tabbar-tab-5",
+  "file": "union-28x28-14.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "tabbar-tab-7",
+  "file": "union-28x28-3.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "tabbar-tab-9",
+  "file": "union-28x28-5.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "target-2",
+  "file": "vector-13x13-15.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "track",
+  "file": "track-51x31.svg",
+  "vb": "0 0 51 31",
+  "w": 51,
+  "h": 31,
+  "mono": true,
+  "colors": [
+   "#07c160"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "virus",
+  "file": "vector-10x10-5.svg",
+  "vb": "0 0 11 11",
+  "w": 10,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 2
+ },
+ {
+  "name": "badge-circle",
+  "file": "形状结合-20x20.svg",
+  "vb": "0 0 20 20",
+  "w": 20,
+  "h": 20,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "bank-card-1-1",
+  "file": "vector-17x15-6.svg",
+  "vb": "0 0 17 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "building",
+  "file": "vector-15x12-2.svg",
+  "vb": "0 0 15 12",
+  "w": 15,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "calendar-schedule-2",
+  "file": "vector-18x18.svg",
+  "vb": "0 0 18 18",
+  "w": 18,
+  "h": 18,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "cellphone",
+  "file": "vector-9x15-2.svg",
+  "vb": "0 0 10 15",
+  "w": 9,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "cellphone-2",
+  "file": "vector-9x15-3.svg",
+  "vb": "0 0 10 15",
+  "w": 9,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-10",
+  "file": "vector-4x8-8.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-11",
+  "file": "vector-4x8-9.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-13",
+  "file": "vector-8x4-10.svg",
+  "vb": "0 0 10 6",
+  "w": 8,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-14",
+  "file": "vector-8x4-2.svg",
+  "vb": "0 0 10 6",
+  "w": 8,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-16",
+  "file": "vector-8x4-4.svg",
+  "vb": "0 0 10 6",
+  "w": 8,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-18",
+  "file": "vector-8x4-6.svg",
+  "vb": "0 0 10 6",
+  "w": 8,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-19",
+  "file": "vector-8x4-7.svg",
+  "vb": "0 0 10 6",
+  "w": 8,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-2",
+  "file": "vector-4x8-10.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-20",
+  "file": "vector-8x4-8.svg",
+  "vb": "0 0 10 6",
+  "w": 8,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-21",
+  "file": "vector-8x4-9.svg",
+  "vb": "0 0 10 6",
+  "w": 8,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-22",
+  "file": "vector-8x4.svg",
+  "vb": "0 0 10 6",
+  "w": 8,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-3",
+  "file": "vector-4x8-11.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-5",
+  "file": "vector-4x8-3.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-6",
+  "file": "vector-4x8-4.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-7",
+  "file": "vector-4x8-5.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-8",
+  "file": "vector-4x8-6.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-1-9",
+  "file": "vector-4x8-7.svg",
+  "vb": "0 0 6 10",
+  "w": 4,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-3",
+  "file": "vector-10x5-2.svg",
+  "vb": "0 0 12 7",
+  "w": 10,
+  "h": 5,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "chevron-down-3-3",
+  "file": "vector-10x5-4.svg",
+  "vb": "0 0 12 7",
+  "w": 10,
+  "h": 5,
+  "mono": true,
+  "colors": [
+   "#979797"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "comment-text-outlined-1-2",
+  "file": "vector-13x12-9.svg",
+  "vb": "0 0 14 12",
+  "w": 13,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "copper-diamond-2",
+  "file": "vector-13x13-16.svg",
+  "vb": "0 0 14 14",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "cup-2",
+  "file": "vector-13x12-6.svg",
+  "vb": "0 0 14 12",
+  "w": 13,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "customer-service-2",
+  "file": "vector-21x22.svg",
+  "vb": "0 0 21 22",
+  "w": 21,
+  "h": 22,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "customer-service-2-2",
+  "file": "vector-22x22-4.svg",
+  "vb": "0 0 22 22",
+  "w": 22,
+  "h": 22,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-arc-smile-5",
+  "file": "vector-24x10-6.svg",
+  "vb": "0 0 24 11",
+  "w": 24,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-arc-smile-6",
+  "file": "vector-24x10-7.svg",
+  "vb": "0 0 24 11",
+  "w": 24,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-arc-smile-7",
+  "file": "vector-24x10-8.svg",
+  "vb": "0 0 24 11",
+  "w": 24,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-arc-smile-8",
+  "file": "vector-24x10-9.svg",
+  "vb": "0 0 24 11",
+  "w": 24,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-flower-fill",
+  "file": "vector-18x18-5.svg",
+  "vb": "0 0 18 18",
+  "w": 18,
+  "h": 18,
+  "mono": true,
+  "colors": [
+   "#6c0000"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-hex-line-3",
+  "file": "vector-184x202-2.svg",
+  "vb": "0 0 187 205",
+  "w": 184,
+  "h": 202,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-hex-line-4",
+  "file": "vector-184x202.svg",
+  "vb": "0 0 187 205",
+  "w": 184,
+  "h": 202,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-slash-3",
+  "file": "vector-5x8-4.svg",
+  "vb": "0 0 6 9",
+  "w": 5,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-slash-4",
+  "file": "vector-5x8-5.svg",
+  "vb": "0 0 6 9",
+  "w": 5,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-slash-5",
+  "file": "vector-5x8-6.svg",
+  "vb": "0 0 6 9",
+  "w": 5,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-slash-6",
+  "file": "vector-5x8-7.svg",
+  "vb": "0 0 6 9",
+  "w": 5,
+  "h": 8,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-spintop-2",
+  "file": "vector-104x55-3.svg",
+  "vb": "0 0 104 55",
+  "w": 104,
+  "h": 55,
+  "mono": true,
+  "colors": [
+   "#028840"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-spintop-3",
+  "file": "vector-104x55-4.svg",
+  "vb": "0 0 104 55",
+  "w": 104,
+  "h": 55,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-spintop-4",
+  "file": "vector-104x55-5.svg",
+  "vb": "0 0 104 55",
+  "w": 104,
+  "h": 55,
+  "mono": true,
+  "colors": [
+   "#d14600"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-spintop-5",
+  "file": "vector-104x55-6.svg",
+  "vb": "0 0 104 55",
+  "w": 104,
+  "h": 55,
+  "mono": true,
+  "colors": [
+   "#0445af"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-spintop-8",
+  "file": "vector-80x42.svg",
+  "vb": "0 0 80 43",
+  "w": 80,
+  "h": 42,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-sticker-bg-2",
+  "file": "vector-2-176x141-3.svg",
+  "vb": "0 0 176 141",
+  "w": 176,
+  "h": 141,
+  "mono": true,
+  "colors": [
+   "#affdd4"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-sticker-bg-4",
+  "file": "vector-2-176x141-5.svg",
+  "vb": "0 0 176 141",
+  "w": 176,
+  "h": 141,
+  "mono": true,
+  "colors": [
+   "#e6efff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "deco-wave-1",
+  "file": "vector-16x7.svg",
+  "vb": "0 0 16 7",
+  "w": 16,
+  "h": 7,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "eye",
+  "file": "vector-14x12.svg",
+  "vb": "0 0 15 12",
+  "w": 14,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "file-download",
+  "file": "vector-15x17-2.svg",
+  "vb": "0 0 15 17",
+  "w": 15,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "file-download-2",
+  "file": "vector-15x17.svg",
+  "vb": "0 0 15 17",
+  "w": 15,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "files-labeled-outlined-1",
+  "file": "vector-13x15-2.svg",
+  "vb": "0 0 13 15",
+  "w": 13,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "filter-2-2",
+  "file": "vector-11x13-8.svg",
+  "vb": "0 0 11 13",
+  "w": 11,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#b3b3b3"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "folder-5",
+  "file": "vector-13x12.svg",
+  "vb": "0 0 14 12",
+  "w": 13,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "heart-rounded-1-1-2",
+  "file": "vector-17x15-25.svg",
+  "vb": "0 0 18 17",
+  "w": 17,
+  "h": 15,
+  "mono": false,
+  "colors": [
+   "white",
+   "black"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "icon-locate-ring",
+  "file": "vector-12x12-2.svg",
+  "vb": "0 0 12 13",
+  "w": 12,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "icon-pin-locate",
+  "file": "vector-12x14-3.svg",
+  "vb": "0 0 12 15",
+  "w": 12,
+  "h": 14,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "image",
+  "file": "vector-13x12-7.svg",
+  "vb": "0 0 14 12",
+  "w": 13,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-a-2",
+  "file": "vector-6x6-17.svg",
+  "vb": "0 0 6 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-a-4",
+  "file": "vector-6x6-22.svg",
+  "vb": "0 0 6 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-a-5",
+  "file": "vector-6x6-27.svg",
+  "vb": "0 0 6 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-a-6",
+  "file": "vector-6x6-32.svg",
+  "vb": "0 0 6 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-a-8",
+  "file": "vector-4x4.svg",
+  "vb": "0 0 5 5",
+  "w": 4,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-b-10",
+  "file": "vector-4x6-38.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-b-11",
+  "file": "vector-4x6-41.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-b-12",
+  "file": "vector-4x6-45.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-b-13",
+  "file": "vector-4x6-48.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-b-5",
+  "file": "vector-4x6-24.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-b-6",
+  "file": "vector-4x6-27.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-b-8",
+  "file": "vector-4x6-31.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-b-9",
+  "file": "vector-4x6-34.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-e-11",
+  "file": "vector-4x6-49.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-e-13",
+  "file": "vector-3x4-8.svg",
+  "vb": "0 0 3 5",
+  "w": 3,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-e-5",
+  "file": "vector-4x6-28.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-e-7",
+  "file": "vector-4x6-35.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-e-9",
+  "file": "vector-4x6-42.svg",
+  "vb": "0 0 4 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-10",
+  "file": "vector-1x6-7.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-12",
+  "file": "vector-1x6-9.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-14",
+  "file": "vector-1x4.svg",
+  "vb": "0 0 1 5",
+  "w": 1,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-16",
+  "file": "vector-3x10.svg",
+  "vb": "0 0 3 10",
+  "w": 3,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-17",
+  "file": "vector-3x5.svg",
+  "vb": "0 0 4 6",
+  "w": 3,
+  "h": 5,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-2",
+  "file": "vector-1x6-11.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-4",
+  "file": "vector-1x6-13.svg",
+  "vb": "0 0 2 6",
+  "w": 1,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-display-2",
+  "file": "vector-4x15-4.svg",
+  "vb": "0 0 5 15",
+  "w": 4,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#e6fff1"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-display-3",
+  "file": "vector-4x15-5.svg",
+  "vb": "0 0 5 15",
+  "w": 4,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#ffe6f9"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-display-4",
+  "file": "vector-4x15-6.svg",
+  "vb": "0 0 5 15",
+  "w": 4,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#ffeee6"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-i-display-5",
+  "file": "vector-4x15-7.svg",
+  "vb": "0 0 5 15",
+  "w": 4,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#e6efff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-k",
+  "file": "vector-5x6-10.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-k-2",
+  "file": "vector-5x6-13.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-k-3",
+  "file": "vector-5x6-16.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-k-4",
+  "file": "vector-5x6-19.svg",
+  "vb": "0 0 5 6",
+  "w": 5,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-k-8",
+  "file": "vector-4x4-2.svg",
+  "vb": "0 0 4 5",
+  "w": 4,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-10",
+  "file": "vector-6x6-31.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-11",
+  "file": "vector-6x6-33.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-14",
+  "file": "vector-11x10-2.svg",
+  "vb": "0 0 12 10",
+  "w": 11,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-15",
+  "file": "vector-17x15-22.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#fadab3"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-16",
+  "file": "vector-17x15-23.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#f2e6ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-17",
+  "file": "vector-5x4.svg",
+  "vb": "0 0 5 5",
+  "w": 5,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-18",
+  "file": "vector-5x4-2.svg",
+  "vb": "0 0 5 5",
+  "w": 5,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-3",
+  "file": "vector-6x6-16.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-4",
+  "file": "vector-6x6-18.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-5",
+  "file": "vector-6x6-21.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-6",
+  "file": "vector-6x6-23.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-7",
+  "file": "vector-6x6-26.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-8",
+  "file": "vector-6x6-28.svg",
+  "vb": "0 0 7 6",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-display-11",
+  "file": "vector-17x15-9.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-display-2",
+  "file": "vector-17x15-12.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#fadab3"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-display-3",
+  "file": "vector-17x15-14.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#e6fff1"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-display-4",
+  "file": "vector-17x15-16.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#ffe6f9"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-display-5",
+  "file": "vector-17x15-18.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#ffeee6"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-m-display-6",
+  "file": "vector-17x15-20.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#e6efff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-o-10",
+  "file": "vector-6x6-34.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-o-11",
+  "file": "vector-6x6-35.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-o-14",
+  "file": "vector-5x5.svg",
+  "vb": "0 0 5 5",
+  "w": 5,
+  "h": 5,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-o-15",
+  "file": "vector-5x5-2.svg",
+  "vb": "0 0 5 5",
+  "w": 5,
+  "h": 5,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-o-4",
+  "file": "vector-6x6-19.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-o-5",
+  "file": "vector-6x6-20.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-o-6",
+  "file": "vector-6x6-24.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-o-7",
+  "file": "vector-6x6-25.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-o-8",
+  "file": "vector-6x6-29.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-o-9",
+  "file": "vector-6x6-30.svg",
+  "vb": "0 0 6 7",
+  "w": 6,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-10",
+  "file": "vector-4x6-40.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-11",
+  "file": "vector-4x6-44.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-12",
+  "file": "vector-4x6-47.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-14",
+  "file": "vector-11x10.svg",
+  "vb": "0 0 12 10",
+  "w": 11,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-17",
+  "file": "vector-3x4-3.svg",
+  "vb": "0 0 4 5",
+  "w": 3,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-18",
+  "file": "vector-3x4-6.svg",
+  "vb": "0 0 4 5",
+  "w": 3,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-19",
+  "file": "vector-8x9.svg",
+  "vb": "0 0 8 9",
+  "w": 8,
+  "h": 9,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-5",
+  "file": "vector-4x6-23.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-6",
+  "file": "vector-4x6-26.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-7",
+  "file": "vector-4x6-30.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-8",
+  "file": "vector-4x6-33.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-9",
+  "file": "vector-4x6-37.svg",
+  "vb": "0 0 5 6",
+  "w": 4,
+  "h": 6,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-display-10",
+  "file": "vector-17x15-15.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#ffe6f9"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-display-11",
+  "file": "vector-17x15-17.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#ffeee6"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-display-12",
+  "file": "vector-17x15-19.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#e6efff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-display-3",
+  "file": "vector-11x13-4.svg",
+  "vb": "0 0 12 14",
+  "w": 11,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#04a44f"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-display-4",
+  "file": "vector-11x13-5.svg",
+  "vb": "0 0 12 14",
+  "w": 11,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#af0484"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-display-5",
+  "file": "vector-11x13-6.svg",
+  "vb": "0 0 12 14",
+  "w": 11,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#ff5500"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-display-6",
+  "file": "vector-11x13-7.svg",
+  "vb": "0 0 12 14",
+  "w": 11,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#1a71ff"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-p-display-9",
+  "file": "vector-17x15-13.svg",
+  "vb": "0 0 18 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#e6fff1"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-r-1",
+  "file": "vector-3x4-4.svg",
+  "vb": "0 0 4 5",
+  "w": 3,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "letter-r-2",
+  "file": "vector-3x4-7.svg",
+  "vb": "0 0 4 5",
+  "w": 3,
+  "h": 4,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "link-m-1",
+  "file": "vector-18x18-3.svg",
+  "vb": "0 0 18 18",
+  "w": 18,
+  "h": 18,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "mail-2",
+  "file": "vector-13x12-3.svg",
+  "vb": "0 0 14 12",
+  "w": 13,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "mail-3",
+  "file": "vector-13x12-4.svg",
+  "vb": "0 0 14 12",
+  "w": 13,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "mail-send",
+  "file": "vector-15x12.svg",
+  "vb": "0 0 15 12",
+  "w": 15,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "men-2",
+  "file": "vector-13x13-12.svg",
+  "vb": "0 0 13 13",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "navigationbar-accessory-4",
+  "file": "line-0x17-6.svg",
+  "vb": "0 0 1 17",
+  "w": 24,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#d2d2d2"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "navigationbar-accessory-5",
+  "file": "line-0x17-7.svg",
+  "vb": "0 0 1 17",
+  "w": 24,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#d2d2d2"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "qr-code",
+  "file": "vector-18x18-2.svg",
+  "vb": "0 0 18 18",
+  "w": 18,
+  "h": 18,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "question",
+  "file": "vector-10x10-6.svg",
+  "vb": "0 0 10 10",
+  "w": 10,
+  "h": 10,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "remix-icons-document-draft-2",
+  "file": "vector-17x17-5.svg",
+  "vb": "0 0 17 17",
+  "w": 17,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "remix-icons-fill-system-checkbox-circle-fill",
+  "file": "vector-17x17-2.svg",
+  "vb": "0 0 17 17",
+  "w": 17,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#fde530"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "remix-icons-fill-system-checkbox-circle-fill-2",
+  "file": "vector-20x20.svg",
+  "vb": "0 0 20 20",
+  "w": 20,
+  "h": 20,
+  "mono": true,
+  "colors": [
+   "#fde530"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "satchel-bag-3-7",
+  "file": "vector-21x2-5.svg",
+  "vb": "0 0 23 5",
+  "w": 21,
+  "h": 2,
+  "mono": true,
+  "colors": [
+   "#fde530"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "share-circle-2",
+  "file": "vector-17x17-3.svg",
+  "vb": "0 0 17 17",
+  "w": 17,
+  "h": 17,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "share-circle-4",
+  "file": "vector-19x20.svg",
+  "vb": "0 0 20 20",
+  "w": 19,
+  "h": 20,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "share-circle-5",
+  "file": "vector-20x20-2.svg",
+  "vb": "0 0 20 20",
+  "w": 20,
+  "h": 20,
+  "mono": true,
+  "colors": [
+   "#fcdf03"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "tabbar-tab-3",
+  "file": "union-28x28-12.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#191919"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "tabbar-tab-8",
+  "file": "union-28x28-4.svg",
+  "vb": "0 0 28 28",
+  "w": 28,
+  "h": 28,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "thumbs-up-like-3-big-1-3",
+  "file": "vector-53-13x16-2.svg",
+  "vb": "0 0 13 16",
+  "w": 13,
+  "h": 16,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "upload-2",
+  "file": "vector-17x15.svg",
+  "vb": "0 0 17 15",
+  "w": 17,
+  "h": 15,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "wechat",
+  "file": "vector-22x18.svg",
+  "vb": "0 0 22 18",
+  "w": 22,
+  "h": 18,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "wechat-2-2",
+  "file": "vector-13x13-7.svg",
+  "vb": "0 0 14 13",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "#080808"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "wechat-2-3",
+  "file": "vector-13x13-8.svg",
+  "vb": "0 0 14 13",
+  "w": 13,
+  "h": 13,
+  "mono": true,
+  "colors": [
+   "white"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "wifi-3",
+  "file": "wifi-17x12-4.svg",
+  "vb": "0 0 17 12",
+  "w": 17,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 1
+ },
+ {
+  "name": "wifi-5",
+  "file": "wifi-17x12-6.svg",
+  "vb": "0 0 17 12",
+  "w": 17,
+  "h": 12,
+  "mono": true,
+  "colors": [
+   "black"
+  ],
+  "uses": 1
+ }
+]

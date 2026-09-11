@@ -1,0 +1,9 @@
+<image
+  wx:if="{{src}}"
+  class="mip-icon"
+  style="{{style}}"
+  src="{{src}}"
+  mode="aspectFit"
+  aria-role="img"
+  aria-label="{{name}}"
+/>

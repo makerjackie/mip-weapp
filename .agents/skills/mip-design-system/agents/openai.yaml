@@ -1,0 +1,7 @@
+interface:
+  display_name: "MIP Design System"
+  short_description: "Implement MIP miniprogram UI correctly"
+  brand_color: "#FCDF03"
+  default_prompt: "Use $mip-design-system to implement the selected MIP page with WXML, WXSS, and JavaScript."
+policy:
+  allow_implicit_invocation: true
