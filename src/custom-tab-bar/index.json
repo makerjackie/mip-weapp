@@ -1,7 +1,5 @@
 {
   "component": true,
   "styleIsolation": "isolated",
-  "usingComponents": {
-    "t-icon": "tdesign-miniprogram/icon/icon"
-  }
+  "usingComponents": {}
 }

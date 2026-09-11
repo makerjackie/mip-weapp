@@ -13,10 +13,11 @@
       bindtap="switchTab"
     >
       <view class="tab-bar-icon">
-        <t-icon
-          name="{{selected === index ? item.iconActive : item.icon}}"
-          size="48rpx"
-          color="{{selected === index ? 'var(--color-brand)' : 'var(--color-muted)'}}"
+        <image
+          class="tab-bar-icon-image"
+          src="{{selected === index ? item.iconOn : item.iconOff}}"
+          mode="aspectFit"
+          aria-hidden="true"
         />
         <view wx:if="{{item.value === 'pages/profile/index' && unreadCount > 0}}" class="tab-bar-badge">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
       </view>

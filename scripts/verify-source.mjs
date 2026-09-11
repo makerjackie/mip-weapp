@@ -111,7 +111,6 @@ const appJson = JSON.parse(read('src/app.json'))
 const appCss = read('src/app.css')
 const buildConfig = read('weapp-vite.config.ts')
 const runtimeConfig = read('src/config/runtime.ts')
-const tabConfig = read('src/config/tabs.ts')
 const customTabBar = read('src/custom-tab-bar/index.wxml')
 const customTabBarWxss = read('src/custom-tab-bar/index.wxss')
 const customTabBarJson = JSON.parse(read('src/custom-tab-bar/index.json'))
@@ -176,16 +175,35 @@ assert(scriptsWithDeviceAuth.length === 1 && scriptsWithDeviceAuth[0] === 'scrip
 assert(read('scripts/cloudbase-device-auth.mjs').includes('--allow-device-auth'), 'Device authorization must require the explicit maintainer approval flag')
 
 assert(customTabBarJson.styleIsolation === 'isolated', 'Custom TabBar must isolate styles')
-for (const icon of ['compass-filled', 'calendar-event-filled', 'work-filled', 'user-filled']) {
-  assert(tabConfig.includes(`'${icon}'`), `MIP TabBar icon is missing: ${icon}`)
+const tabIconsConfig = read('src/config/tab-icons.ts')
+for (const icon of [
+  'smileys-13-12',
+  'smileys-13-12-2',
+  'smileys-13-2-2',
+  'tab-note-outline',
+  'tab-note-fold',
+  'tab-note-line',
+  'document-note-paper-angle-right-3',
+  'tab-bag-body',
+  'tab-bag-band',
+  'tab-bag-handle',
+  'tab-bag-dash',
+  'satchel-bag-3',
+  'smileys-13-11-2',
+  'smileys-13-11',
+]) {
+  assert(tabIconsConfig.includes(`'${icon}':`), `MIP TabBar design-system icon is missing: ${icon}`)
 }
+assert(
+  tabIconsConfig.includes('ACTIVE_COLOR = \'#fcdf03\'') && tabIconsConfig.includes('INACTIVE_COLOR = \'#b3b3b3\''),
+  'MIP TabBar icons must use the design-system brand/muted colors',
+)
 assertOfficialCustomTabBar(customTabBar, appJson, assert, 'MIP custom TabBar', { wxss: customTabBarWxss })
 assert(allWxml.includes('<t-icon'), 'MIP UI must use bundled TDesign icons')
 assert(!allWxml.includes('nav-chevron') && !/>\s*[›‹✓×＋]\s*</.test(allWxml), 'MIP UI must not use raw text glyphs as interface icons')
 assert(!allWxml.includes('<t-loading'), 'Full-page loading must use stable skeletons')
 assertValidTDesignIconNames({
   sources: [allWxml],
-  declaredNames: [...tabConfig.matchAll(/icon(?:Active)?: '([a-z0-9-]+)'/g)].map(match => match[1]),
   repositoryRoot: root,
   assert,
   label: 'MIP source UI',

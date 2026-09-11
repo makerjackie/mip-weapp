@@ -189,17 +189,26 @@ describe('MIP member responsive foundation', () => {
     expectDeclarations(stylesheet, '.tab-bar', {
       'bottom': '0',
       'padding-bottom': 'env(safe-area-inset-bottom)',
-      'background-color': '#202020',
+      'background-color': '#080808',
       'z-index': '9999',
       'pointer-events': 'auto',
     })
     expectDeclarations(stylesheet, '.tab-bar-row', {
       'width': '100%',
       'max-width': '100%',
-      'height': '96rpx',
+      'height': '112rpx',
       'margin-right': 'auto',
       'margin-left': 'auto',
     }, true)
+    expectDeclarations(stylesheet, '.tab-bar-icon', {
+      width: '56rpx',
+      height: '56rpx',
+    })
+    expectDeclarations(stylesheet, '.tab-bar-label', {
+      'font-size': '20rpx',
+      'font-weight': '500',
+      'line-height': '28rpx',
+    })
     expectDeclarations(findMedia(stylesheet, '(min-width: 600px) and (max-width: 959px)'), '.tab-bar-row', {
       'max-width': '720px',
     })

@@ -1,6 +1,21 @@
 import { selectionHaptic } from '@weapp/shared/haptics'
+import { tabIconSources } from '../config/tab-icons'
 import { tabBarItems } from '../config/tabs'
 import { mipMessagingModule } from '../modules/mip-messaging/client'
+
+interface TabBarViewItem {
+  value: string
+  label: string
+  iconOff: string
+  iconOn: string
+}
+
+const tabs: TabBarViewItem[] = tabBarItems.map(item => ({
+  value: item.value,
+  label: item.label,
+  iconOff: tabIconSources[item.label]?.iconOff ?? '',
+  iconOn: tabIconSources[item.label]?.iconOn ?? '',
+}))
 
 function selectedIndex(value: string) {
   const index = tabBarItems.findIndex(item => item.value === value)
@@ -11,7 +26,7 @@ Component({
   data: {
     selected: 0,
     value: 'pages/index/index',
-    tabs: tabBarItems,
+    tabs,
     unreadCount: 0,
   },
 
