@@ -16,12 +16,23 @@
     "minifyWXML": true,
     "minifyWXSS": true,
     "uploadWithSourceMap": true,
+    "compileWorklet": false,
+    "uglifyFileName": false,
     "packNpmRelationList": [
       {
         "packageJsonPath": "./package.json",
         "miniprogramNpmDistDir": "dist/"
       }
-    ]
+    ],
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "useCompilerPlugins": false,
+    "condition": false,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
   },
   "simulatorType": "wechat",
   "condition": {},
@@ -35,5 +46,6 @@
     "ignore": [],
     "include": []
   },
-  "appid": "touristappid"
+  "appid": "wx2705752cc8830ac6",
+  "simulatorPluginLibVersion": {}
 }

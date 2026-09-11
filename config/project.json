@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "slug": "mip-weapp",
-  "name": "MIP奇点聚合",
+  "name": "MIP",
   "namespace": "mip",
   "routes": [
     {
