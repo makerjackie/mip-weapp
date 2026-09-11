@@ -35,9 +35,21 @@
   font-weight: 400;
 }
 
-.mip-cooperation-card__strip {
+/* 单一黑色容器承载两行，行间不存在独立元素的拼接缝；
+   底部过绘 2rpx 交由卡片圆角裁切，杜绝底边取整露出底图 */
+.mip-cooperation-card__details {
   position: absolute;
+  top: 240rpx;
+  bottom: -2rpx;
   left: 0;
+  box-sizing: border-box;
+  width: 100%;
+  background: #202020;
+  border-radius: 32rpx 32rpx 0 0;
+}
+
+.mip-cooperation-card__strip {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   gap: 16rpx;
@@ -46,17 +58,6 @@
   width: 100%;
   height: 80rpx;
   padding: 0 24rpx;
-  background: #202020;
-}
-
-.mip-cooperation-card__strip--goal {
-  top: 240rpx;
-  border-radius: 32rpx 32rpx 0 0;
-}
-
-.mip-cooperation-card__strip--referral {
-  top: 320rpx;
-  border-radius: 0 0 32rpx 32rpx;
 }
 
 .mip-cooperation-card__badge {
