@@ -159,7 +159,7 @@
       <view class="mt-4 text-center text-[length:22rpx] text-muted active:text-brand" aria-role="button" aria-label="打开更多入口" bind:tap="openDiscoveryMenu">找不到想要的？打开更多入口</view>
     </view>
 
-    <view id="opportunities-filter-actions" class="mip-member-fixed-inset opportunities-filter-actions fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+112rpx)] z-20 grid min-h-[112rpx] grid-cols-2 items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
+    <view id="opportunities-filter-actions" class="mip-liquid-glass mip-member-fixed-inset opportunities-filter-actions fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+112rpx)] z-20 grid min-h-[112rpx] grid-cols-2 items-center gap-2 rounded-full p-2">
       <view class="min-w-0"><t-button block size="large" variant="outline" theme="primary" bind:tap="resetFilters">清除</t-button></view>
       <view class="min-w-0"><t-button block size="large" theme="primary" bind:tap="applyFilters">确认筛选</t-button></view>
     </view>

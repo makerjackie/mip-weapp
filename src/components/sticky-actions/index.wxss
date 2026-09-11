@@ -1,3 +1,5 @@
+@import '../../styles/liquid-glass.wxss';
+
 .mip-sticky-actions-spacer {
   height: calc(128rpx + env(safe-area-inset-bottom));
 }
@@ -15,6 +17,7 @@
   max-width: calc(var(--mip-member-shell-max-width, 100%) - 48rpx);
   min-height: 112rpx;
   padding: 8rpx;
+  border-radius: 9999rpx;
   transform: translateX(-50%);
 }
 

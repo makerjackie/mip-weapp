@@ -69,6 +69,14 @@ function registrationPriceText(event: MipEventDetail) {
     : '免费'
 }
 
+/* Bottom-bar price follows the Figma frame: small currency symbol, large amount. */
+function registrationPriceParts(event: MipEventDetail) {
+  return {
+    priceSymbol: event.accessType === 'PAID' ? '¥' : '',
+    priceAmount: event.accessType === 'PAID' ? (event.priceCents / 100).toFixed(2) : '免费',
+  }
+}
+
 function isAccessRequired(error: unknown) {
   return error instanceof MipEventsError && error.code === 'AUTH_REQUIRED'
 }
@@ -217,6 +225,7 @@ Page({
           : '是否可以取消以活动当前状态为准',
         accessText: registrationAccessText(event),
         priceText: registrationPriceText(event),
+        ...registrationPriceParts(event),
       })
       if (this.pendingAccessResume) {
         this.pendingAccessResume = false

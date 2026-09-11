@@ -87,7 +87,7 @@
     <view wx:elif="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] leading-5 text-brand">{{message}}</view>
     <app-page-exit />
 
-    <view class="fixed bottom-[env(safe-area-inset-bottom)] left-0 right-0 z-50 box-border bg-brand-soft px-3 py-2">
+    <view class="mip-liquid-glass fixed bottom-[env(safe-area-inset-bottom)] left-0 right-0 z-50 box-border px-3 py-2">
       <t-button id="mip-event-feedback-save" block size="large" theme="primary" loading="{{saving}}" disabled="{{saving}}" bind:tap="saveFeedback">保存</t-button>
     </view>
   </block>
