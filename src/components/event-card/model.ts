@@ -7,6 +7,23 @@ export interface EventCardView extends MipEventListItem {
   accessLabel: string
   statusLabel: string
   locationText: string
+  countText: string
+  plusLabel: string
+  remainText: string
+}
+
+/** With an avatar stack the count reads as the remainder beyond the shown avatars (“+45参加”). */
+function participantCountText(event: MipEventListItem) {
+  const shown = event.participantPreview?.length ?? 0
+  const count = event.registrationCount ?? 0
+  return shown > 0 ? `+${Math.max(count - shown, 0)}参加` : `${count}参加`
+}
+
+/** The pill splits the leading “+” (smaller type) from the remainder text. */
+function participantRemainText(event: MipEventListItem) {
+  const shown = event.participantPreview?.length ?? 0
+  const count = event.registrationCount ?? 0
+  return shown > 0 ? `${Math.max(count - shown, 0)}参加` : `${count}参加`
 }
 
 function accessLabel(event: MipEventListItem) {
@@ -48,7 +65,10 @@ export function presentEventCard(event: MipEventListItem): EventCardView {
     startsText: formatChineseDateTime(event.startsAt),
     accessLabel: accessLabel(event),
     statusLabel: statusLabel(event),
-    locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
+    locationText: [event.cityName, event.venueName].filter(Boolean).join(' ') || '地点待公布',
     eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
+    countText: participantCountText(event),
+    plusLabel: (event.participantPreview?.length ?? 0) > 0 ? '+' : '',
+    remainText: participantRemainText(event),
   }
 }

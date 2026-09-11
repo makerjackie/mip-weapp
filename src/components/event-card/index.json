@@ -3,6 +3,7 @@
   "styleIsolation": "apply-shared",
   "usingComponents": {
     "event-participant-preview": "/components/event-participant-preview/index",
+    "mip-order-tag": "/components/mip-order-tag/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon"
   }
