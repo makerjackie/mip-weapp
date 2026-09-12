@@ -1235,8 +1235,7 @@ async function getEvent(db, {
       createdAt: iso(change.created_at),
     })),
     canRegister: row.status === 'PUBLISHED' && !activeStatus && timestamp >= opensAt && timestamp < deadline,
-    canCancel: cancellableRegistrationStatuses.has(row.registration_status)
-      && timestamp < cancellationDeadline.getTime(),
+    canCancel: canCancelRegistration({ ...row, cancellation_deadline: cancellationDeadline }, row.registration_status, now),
     canRetryRefund: canRetryRegistrationRefund(row),
     ...(row.registration_status ? { registrationVersion: Number(row.registration_version) } : {}),
     canCheckIn: ['REGISTERED', 'ATTENDED'].includes(row.registration_status),

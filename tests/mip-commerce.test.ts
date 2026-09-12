@@ -69,6 +69,7 @@ describe('MIP membership commerce', () => {
       getOrder: vi.fn(async () => order('PAYMENT_CREATED')),
       reconcileOrder: vi.fn(async () => order('PAID')),
       listOrders: vi.fn(async () => []),
+      listOrderPage: vi.fn(async () => ({ items: [] })),
       requestRefund: vi.fn(async () => ({ refundId: 'refund-1' as never, status: 'PENDING' })),
       submitRefund: vi.fn(async () => ({ status: 'PROVIDER_CREATED' })),
     } satisfies CommerceGateway

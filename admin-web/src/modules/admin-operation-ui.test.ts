@@ -58,4 +58,14 @@ describe('admin operation UI', () => {
       kind: 'CARD', card: '合作信息', case: '不应提交',
     }), { kind: 'CARD', card: '合作信息' })
   })
+  it('keeps calendar dates local while converting timestamps to UTC', () => {
+    const picker = { format: () => '2026-09-14', toISOString: () => '2026-09-13T16:00:00.000Z' }
+    assert.deepEqual(normalizeOperationValues([
+      { key: 'day', label: '日期', kind: 'date' },
+      { key: 'timestamp', label: '时间', kind: 'datetime' },
+    ], { day: picker, timestamp: picker }), {
+      day: '2026-09-14', timestamp: '2026-09-13T16:00:00.000Z',
+    })
+  })
+
 })

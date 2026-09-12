@@ -549,8 +549,28 @@ function createCommerceRepository(database, options = {}) {
     return orderDto(rows[0], rows[0].refunded_amount_cents)
   }
 
+  // Legacy readers retain the array response; paged readers share the same scoped query.
   async function listOrders(caller, limit) {
-    const rows = await database.query(
+    const rows = await queryOrders(caller, { limit })
+    return rows.map(row => orderDto(row, row.refunded_amount_cents))
+  }
+
+  async function listOrderPage(caller, { limit, serviceStatus, cursor }) {
+    const rows = await queryOrders(caller, { limit: limit + 1, serviceStatus, cursor })
+    const items = rows.slice(0, limit)
+    const last = items.at(-1)
+    return {
+      items: items.map(row => orderDto(row, row.refunded_amount_cents)),
+      ...(rows.length > limit && last ? {
+        nextCursor: Buffer.from(JSON.stringify({
+          createdAt: dateValue(last.created_at), id: last.id,
+        })).toString('base64url'),
+      } : {}),
+    }
+  }
+
+  async function queryOrders(caller, { limit, serviceStatus, cursor }) {
+    return database.query(
       `SELECT o.*,
               event_row.title AS event_title, event_row.starts_at AS event_starts_at,
               event_row.ends_at AS event_ends_at, event_row.city_name AS event_city_name,
@@ -572,11 +592,14 @@ function createCommerceRepository(database, options = {}) {
         AND event_cover.status = 'READY'
        ${ORDER_SERVICE_FACT_JOINS_SQL}
        WHERE o.app_id = ?
+         ${serviceStatus ? `AND (${ORDER_SERVICE_STATUS_SQL}) = ?` : ''}
+         ${cursor ? 'AND (o.created_at < ? OR (o.created_at = ? AND o.id < ?))' : ''}
        ORDER BY o.created_at DESC, o.id DESC
        LIMIT ${limit}`,
-      [caller.identityKey, caller.appId],
+      [caller.identityKey, caller.appId,
+        ...(serviceStatus ? [serviceStatus] : []),
+        ...(cursor ? [new Date(cursor.createdAt), new Date(cursor.createdAt), cursor.id] : [])],
     )
-    return rows.map(row => orderDto(row, row.refunded_amount_cents))
   }
 
   async function requestRefund(caller, input, ids, amountResolver) {
@@ -673,6 +696,7 @@ function createCommerceRepository(database, options = {}) {
     getMembershipBenefits,
     getOrder,
     listOrders,
+    listOrderPage,
     listPlans,
     requestRefund,
     resolveMembershipInviter,

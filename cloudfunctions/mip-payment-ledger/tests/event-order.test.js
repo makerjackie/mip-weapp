@@ -12,6 +12,8 @@ function eventOrder(overrides = {}) {
     app_id: 'app-1',
     user_id: '20000000-0000-4000-8000-000000000001',
     order_type: 'EVENT',
+    event_status: 'PUBLISHED',
+    event_ends_at: '2026-08-24T06:00:00Z',
     resource_id: '30000000-0000-4000-8000-000000000001',
     merchant_order_no: 'MIPEVENT100',
     amount_cents: 9900,
@@ -41,7 +43,7 @@ function fulfillment(overrides = {}) {
   }
 }
 
-function fakeDatabase(order, relation, affectedRows = () => 1) {
+function fakeDatabase(order, relation, affectedRows = () => 1, event = { status: 'PUBLISHED', ends_at: '2026-08-24T06:00:00Z' }) {
   const calls = []
   let callbackHash
   return {
@@ -56,6 +58,7 @@ function fakeDatabase(order, relation, affectedRows = () => 1) {
         async one(sql, params) {
           const normalized = String(sql).replace(/\s+/g, ' ').trim()
           calls.push({ kind: 'one', sql: normalized, params })
+          if (normalized.includes('FROM mip_events')) return event
           if (normalized.includes('FROM mip_user_identities')) return paymentIdentity(order)
           if (normalized.includes('FROM mip_payment_callbacks')) {
             return {
@@ -538,4 +541,75 @@ describe('canonical MIP event payment ledger', () => {
       && call.params?.includes('EVENT_REFUND_RECONCILIATION_REQUIRED')))
     assert.equal(calls.some(call => call.sql.includes('INSERT INTO mip_outbox_events')), false)
   })
+})
+
+describe('ended event payment recovery', () => {
+  it('blocks new payment after ending but permits authoritative reconciliation', async () => {
+    for (const event of [
+      { event_status: 'ENDED' },
+      { event_status: 'PUBLISHED', event_ends_at: null },
+      { event_status: 'PUBLISHED', event_ends_at: 'invalid' },
+      { event_status: 'PUBLISHED', event_ends_at: '2026-08-24T04:00:00Z' },
+    ]) {
+      const order = eventOrder({ hold_status: 'ACTIVE', hold_expires_at: '2026-08-24T04:15:00Z', ...event })
+      const db = { one: async () => order }
+      await assert.rejects(getPayableOrder(db, paymentInput(order), { now: () => paidAt }), /ORDER_NOT_PAYABLE/)
+      assert.equal((await getPayableOrder(db, { ...paymentInput(order), forSync: true }, { now: () => paidAt })).id, order.id)
+    }
+  })
+
+  for (const [time, status] of [
+    ['20260824120300', 'PAID'],
+    ['2026-08-24T04:03:00Z', 'PAID'],
+    ['20260824120400', 'REFUND_PENDING'],
+    ['20260824120500', 'REFUND_PENDING'],
+  ]) {
+    it(`settles trusted provider time ${time} as ${status} after ending`, async () => {
+      const order = eventOrder()
+      const db = fakeDatabase(order, fulfillment(), () => 1, {
+        status: 'ENDED', ended_at: '2026-08-24T04:04:00Z', ends_at: '2026-08-24T06:00:00Z',
+      })
+      const result = await applyPaymentCallback(db, { ...paymentInput(order), providerPaidAt: time }, { now: () => paidAt, createId: idFactory() })
+      assert.equal(result.status, status)
+      assert.equal(db.calls.some(call => call.sql.includes('INSERT INTO mip_refunds')), status === 'REFUND_PENDING')
+    })
+  }
+
+  for (const [providerPaidAt, error] of [[undefined, /PAYMENT_TIME_REQUIRED/], ['invalid', /PAYMENT_TIME_INVALID/], ['20260824130000', /PAYMENT_TIME_INVALID/]]) {
+    it(`fails closed without reliable payment time (${providerPaidAt})`, async () => {
+      const order = eventOrder()
+      const db = fakeDatabase(order, fulfillment(), () => 1, { status: 'ENDED', ended_at: '2026-08-24T04:04:00Z' })
+      await assert.rejects(applyPaymentCallback(db, { ...paymentInput(order), providerPaidAt }, { now: () => paidAt }), error)
+      assert.equal(db.calls.some(call => call.sql.includes('INSERT INTO mip_refunds')), false)
+    })
+  }
+})
+
+it('refunds payment after the scheduled end even if operations marks ENDED later', async () => {
+  const order = eventOrder()
+  const db = fakeDatabase(order, fulfillment(), () => 1, {
+    status: 'ENDED', ends_at: '2026-08-24T04:02:00Z', ended_at: '2026-08-24T04:04:00Z',
+  })
+  const result = await applyPaymentCallback(db, {
+    ...paymentInput(order), providerPaidAt: '20260824120300',
+  }, { now: () => paidAt, createId: idFactory() })
+  assert.equal(result.status, 'REFUND_PENDING')
+  assert.equal(db.calls.some(call => call.sql.includes('INSERT INTO mip_refunds')), true)
+  assert.equal(db.calls.some(call => call.sql.includes("SET status = 'REGISTERED'")), false)
+})
+
+it('does not infer a late payment from receipt time after the scheduled end', async () => {
+  const order = eventOrder()
+  const event = { status: 'PUBLISHED', ends_at: '2026-08-24T04:04:00Z' }
+  const db = fakeDatabase(order, fulfillment(), () => 1, event)
+  await assert.rejects(applyPaymentCallback(db, paymentInput(order), {
+    now: () => paidAt, createId: idFactory(),
+  }), /PAYMENT_TIME_REQUIRED/)
+  assert.equal(db.calls.some(call => call.sql.includes('INSERT INTO mip_refunds')), false)
+  assert.equal(db.calls.some(call => call.sql.includes("SET status = 'REGISTERED'")), false)
+  const reconciled = fakeDatabase(order, fulfillment(), () => 1, event)
+  const result = await applyPaymentCallback(reconciled, {
+    ...paymentInput(order), providerPaidAt: '20260824120300',
+  }, { now: () => paidAt, createId: idFactory() })
+  assert.equal(result.status, 'PAID')
 })

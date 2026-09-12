@@ -76,6 +76,7 @@ describe('mip CloudPay adapter', () => {
     assert.equal(providerCalls[0].totalFee, 79900)
     assert.equal(providerCalls[0].subOpenid, caller.openId)
     assert.equal(calls[0].input.identityKey, caller.identityKey)
+    assert.equal(calls[0].input.forSync, undefined)
     assert.equal(calls[1].input.amountCents, 79900)
     assert.equal(JSON.stringify(calls).includes(caller.openId), false)
   })
@@ -175,4 +176,27 @@ describe('mip CloudPay adapter', () => {
     await assert.rejects(() => service.submitRefund(caller, { refundId }), /REFUND_MANUAL_REVIEW/)
     assert.equal(providerCalled, false)
   })
+})
+
+it('reconciles an existing payment using provider time without reopening new payment eligibility', async () => {
+  const calls = []
+  const service = createPaymentService({
+    config: config(), nonce: () => 'nonce',
+    async callLedger(action, input) {
+      calls.push({ action, input })
+      if (action === 'getPayableOrder') return {
+        id: orderId, status: 'PAYMENT_CREATED', description: '活动',
+        merchantOrderNo: 'MIPEVENT', amountCents: 9900, currency: 'CNY',
+      }
+      return { status: 'PAID' }
+    },
+    cloudPay: { async queryOrder() { return {
+      returnCode: 'SUCCESS', resultCode: 'SUCCESS', tradeState: 'SUCCESS',
+      outTradeNo: 'MIPEVENT', transactionId: 'transaction', totalFee: 9900,
+      feeType: 'CNY', timeEnd: '20260824120300',
+    } } },
+  })
+  assert.deepEqual(await service.syncPayment(caller, { orderId, providerPaidAt: 'forged' }), { status: 'PAID' })
+  assert.equal(calls[0].input.forSync, true)
+  assert.equal(calls[1].input.providerPaidAt, '20260824120300')
 })

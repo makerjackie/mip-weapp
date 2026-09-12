@@ -36,6 +36,7 @@ function gateway(overrides: Partial<CommerceGateway> = {}): CommerceGateway {
     getOrder: vi.fn(),
     reconcileOrder: vi.fn(),
     listOrders: vi.fn(async () => []),
+    listOrderPage: vi.fn(async () => ({ items: [] })),
     requestRefund: vi.fn(),
     submitRefund: vi.fn(),
     ...overrides,

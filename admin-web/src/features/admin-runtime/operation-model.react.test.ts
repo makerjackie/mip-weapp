@@ -1,3 +1,6 @@
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import { normalizeOperationValues } from '../../modules/admin-operation-ui'
 import { describe, expect, it } from 'vitest'
 import type { AdminDetailView } from '../../modules/admin-details'
 import {
@@ -5,6 +8,8 @@ import {
   isReviewedOperationAction,
   operationCapability,
 } from './operation-model'
+
+dayjs.extend(utc)
 
 const scores = {
   business_development: 1,
@@ -213,4 +218,54 @@ describe('admin operation model', () => {
     expect((input?.draft as Record<string, unknown>).startedOn).toBe('2030-01-02')
     expect(Object.hasOwn(input?.draft as object, 'roleKey')).toBe(false)
   })
+  it('submits local calendar dates from the picker for weekly matches and super cases', async () => {
+    const date = dayjs.utc('2026-09-13T16:00:00Z').utcOffset(480)
+    const seasonId = '11111111-1111-4111-8111-111111111111'
+    const teamAId = '22222222-2222-4222-8222-222222222222'
+    const teamBId = '33333333-3333-4333-8333-333333333333'
+    const match = await createOperationModel('mip.admin.game.matches.save', '', {
+      ...basicDetail, source: { season: { id: seasonId }, teams: [
+        { id: teamAId, status: 'ACTIVE' }, { id: teamBId, status: 'ACTIVE' },
+      ] },
+    }, {}, async <T>() => ({} as T))
+    const normalized = normalizeOperationValues(match.fields, {
+      ...match.values, weekStart: date, weekEnd: date.add(6, 'day'),
+    }, match.values)
+    expect(match.buildInput(normalized)).toEqual({ match: {
+      seasonId, teamAId, teamBId, weekStart: '2026-09-14', weekEnd: '2026-09-20',
+    } })
+
+    const model = await createOperationModel('mip.admin.userContent.save', '', null,
+      { values: { kind: 'SUPER_CASE' } }, async <T>() => ({} as T))
+    const values = normalizeOperationValues(model.fields, {
+      kind: 'SUPER_CASE', ownerUserId: 'user-1', draft: {
+        projectName: '品牌升级', summary: '完成品牌升级', startedOn: date,
+        endedOn: date.add(1, 'day'), responsibility: '负责品牌策略', description: '项目说明',
+        mediaAssetIds: '', status: 'DRAFT',
+      },
+    }, model.values)
+    expect(model.buildInput(values)?.draft).toMatchObject({ startedOn: '2026-09-14', endedOn: '2026-09-15' })
+  })
+
+  it('round-trips an existing opportunity draft without losing content or copying display fields', async () => {
+    const opportunity = {
+      id: 'opp-1', version: 4, ownerUserId: 'user-1', scopeType: 'PLATFORM', branchId: null,
+      title: '合作机会', valueSummary: '提供资源', targetSummary: '寻找伙伴', description: '完整介绍',
+      cityTagId: null, roleKeys: ['connector'], tagIds: ['tag-1'], deadlineAt: null,
+      commercialTerms: { currency: 'CNY', amountUnit: 'CNY_CENTS', minAmountCents: 100,
+        maxAmountCents: 200, amountDisplay: '展示金额', locations: [{ type: 'CITY', cityTagId: 'city-1', cityName: '上海' }] },
+    }
+    const model = await createOperationModel('mip.admin.opportunities.save', 'opp-1', {
+      ...basicDetail, source: { opportunity },
+    }, {}, async <T>() => ({} as T))
+    const input = model.buildInput(model.values)
+    expect(input).toMatchObject({ opportunityId: 'opp-1', expectedVersion: 4, draft: {
+      ownerUserId: 'user-1', title: '合作机会', valueSummary: '提供资源', targetSummary: '寻找伙伴',
+      description: '完整介绍', roleKeys: ['connector'], tagIds: ['tag-1'],
+      commercialTerms: { minAmountCents: 100, maxAmountCents: 200, locations: [{ type: 'CITY', cityTagId: 'city-1' }] },
+    } })
+    expect(JSON.stringify(input)).not.toContain('cityName')
+    expect(JSON.stringify(input)).not.toContain('amountDisplay')
+  })
+
 })

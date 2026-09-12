@@ -118,6 +118,15 @@ function createCommerceService(options) {
     return repository.listOrders(caller, limit)
   }
 
+  function listOrderPage(caller, value) {
+    const limit = boundedLimit(value?.limit)
+    const serviceStatus = value?.serviceStatus
+    if (serviceStatus !== undefined && !['PENDING_USE', 'COMPLETED', 'REFUNDED'].includes(serviceStatus)) {
+      throw new Error('VALIDATION_FAILED')
+    }
+    return repository.listOrderPage(caller, { limit, serviceStatus, cursor: orderCursor(value?.cursor) })
+  }
+
   function requestRefund(caller, value) {
     const input = refundInput(value)
     return repository.requestRefund(caller, input, {
@@ -135,6 +144,7 @@ function createCommerceService(options) {
     getMembershipBenefits,
     getOrder,
     listOrders,
+    listOrderPage,
     listPlans,
     requestRefund,
     resolveMembershipInvitationScene,
@@ -182,6 +192,21 @@ function planDto(row) {
     benefits: jsonStringArray(row.benefits_json),
     status: row.status,
     version: Number(row.version),
+  }
+}
+
+function orderCursor(value) {
+  if (value === undefined || value === '') return undefined
+  try {
+    if (typeof value !== 'string' || value.length > 256 || !/^[\w-]+$/.test(value)) throw new Error()
+    const cursor = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
+    if (typeof cursor.createdAt !== 'string'
+      || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(cursor.createdAt)
+      || new Date(cursor.createdAt).toISOString() !== cursor.createdAt) throw new Error()
+    return { createdAt: cursor.createdAt, id: uuid(cursor.id) }
+  }
+  catch {
+    throw new Error('VALIDATION_FAILED')
   }
 }
 

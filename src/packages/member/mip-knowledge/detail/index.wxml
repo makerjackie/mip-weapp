@@ -22,6 +22,7 @@
     <view wx:else class="mt-3 rounded-[8rpx] bg-panel px-4 py-3 text-[length:24rpx] text-muted">当前内容已关闭评论。</view>
     <view wx:if="{{!comments.length}}" class="mt-3"><mip-empty-state title="暂无评论" description="已发布的评论会显示在这里。" /></view>
     <view wx:else class="mt-3 flex flex-col gap-3"><view wx:for="{{comments}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-center justify-between gap-3"><view class="text-[length:24rpx] font-semibold">{{item.author.nickname}}</view><view class="text-[length:22rpx] text-muted">{{item.status === 'PENDING' ? '待审核' : ''}}</view></view><view class="mt-2 whitespace-pre-wrap text-[length:24rpx] leading-[1.65]">{{item.body}}</view><view class="mt-3 flex justify-end gap-4 text-[length:22rpx]"><text wx:if="{{item.canDelete}}" class="text-danger" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="deleteComment">删除</text><text wx:if="{{!item.mine}}" class="text-muted" data-id="{{item.id}}" bind:tap="reportComment">举报</text></view></view></view>
+    <t-button wx:if="{{commentsNextCursor}}" class="mt-3" block variant="outline" loading="{{loadingComments}}" disabled="{{refreshingComments}}" bind:tap="loadMoreComments">加载更多评论</t-button>
     <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] bg-panel px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
   </block>
   <app-page-exit />

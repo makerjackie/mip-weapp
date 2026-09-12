@@ -66,7 +66,12 @@ function normalizeSubmittedField(
     writePath(target, path, splitLines(String(raw || '')).map(assetId => ({ assetId, caption: '' })))
     return
   }
-  if (['datetime', 'datetime-local', 'date'].includes(field.kind)
+  if (field.kind === 'date' && raw && typeof raw === 'object'
+    && 'format' in raw && typeof raw.format === 'function') {
+    writePath(target, path, raw.format('YYYY-MM-DD'))
+    return
+  }
+  if (['datetime', 'datetime-local'].includes(field.kind)
     && raw && typeof raw === 'object' && 'toISOString' in raw
     && typeof raw.toISOString === 'function') {
     writePath(target, path, raw.toISOString())

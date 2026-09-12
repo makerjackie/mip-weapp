@@ -4,6 +4,7 @@ import type {
   CatalogStage,
   CheckoutIntent,
   CommerceGateway,
+  CommerceOrderFilter,
   MembershipBenefitsSnapshot,
   PaymentAdapter,
   RefundId,
@@ -122,6 +123,10 @@ export function createMipCommerceModule(
 
     listOrders() {
       return gateway.listOrders()
+    },
+
+    listOrderPage(filter: CommerceOrderFilter = {}) {
+      return gateway.listOrderPage(filter)
     },
 
     createMembershipInvitation() {

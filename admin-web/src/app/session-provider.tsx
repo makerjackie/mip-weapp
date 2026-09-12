@@ -175,7 +175,19 @@ export function SessionProvider({ children, client = defaultClient }: { children
     return Boolean(session?.capabilities?.some(item => item.capability === capability && item.scopeType === scopeType))
   }, [client.demoMode, session])
 
-  const request = useCallback(<T,>(action: AdminOperationAction, input: AdminRequestInput = {}) => client.request<T>(action, input), [client])
+  const request = useCallback(async <T,>(action: AdminOperationAction, input: AdminRequestInput = {}) => {
+    const identity = sessionIdentity.current
+    const flow = loginFlow.current
+    try { return await client.request<T>(action, input) }
+    catch (reason) {
+      if (reason instanceof AdminApiClientError && reason.code === 'AUTH_REQUIRED'
+        && identity === sessionIdentity.current && flow === loginFlow.current) {
+        commitSession(null)
+        setError(reason)
+      }
+      throw reason
+    }
+  }, [client, commitSession])
 
   const value = useMemo<SessionContextValue>(() => ({
     client,

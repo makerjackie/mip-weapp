@@ -47,6 +47,18 @@ function aliasPaths() {
 }
 
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      output: {
+        minify: {
+          // Keep unused-code cleanup so generated template sidecars are removed.
+          compress: true,
+          mangle: false,
+          codegen: { removeWhitespace: true, legalComments: 'inline' },
+        },
+      },
+    },
+  },
   resolve: {
     alias: aliases,
   },

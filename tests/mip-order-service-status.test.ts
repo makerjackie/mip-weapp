@@ -18,12 +18,9 @@ describe('member order service status contract', () => {
   })
 
   it('filters only on the server projection and keeps payment status separate', () => {
-    const start = ordersSource.indexOf('function filterOrders')
-    const end = ordersSource.indexOf('\n}\n\nPage(', start) + 2
-    const filterSource = ordersSource.slice(start, end)
-    expect(filterSource).toContain('order.serviceStatus === filter')
-    expect(filterSource).not.toContain('order.status')
-    expect(filterSource).not.toContain('paymentPending')
+    expect(ordersSource).toContain('mipCommerceModule.listOrderPage(')
+    expect(ordersSource).toContain('serviceStatus: filter')
+    expect(ordersSource).not.toContain('order.status === filter')
     expect(detailView).toContain('使用状态')
     expect(detailView).toContain('订单状态')
   })

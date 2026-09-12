@@ -1,6 +1,6 @@
 import type { OrderId } from '../mip'
 import type { ClientPaymentOutcome } from '../mip-commerce'
-import type { MipKnowledgeGateway } from './gateway'
+import type { KnowledgeCommentIntent, MipKnowledgeGateway } from './gateway'
 import type { KnowledgePurchaseOutcome } from './types'
 
 export interface MipKnowledgePaymentPort {
@@ -31,13 +31,17 @@ export function createMipKnowledgeModule(
     getContent: gateway.getContent,
     listComments: gateway.listComments,
 
-    createComment(contentId: string, body: string, parentCommentId?: string) {
-      return gateway.createComment({
+    createCommentIntent(contentId: string, body: string, parentCommentId?: string): KnowledgeCommentIntent {
+      return {
         contentId,
         body,
         parentCommentId,
         idempotencyKey: createRequestId('knowledge-comment'),
-      })
+      }
+    },
+
+    createComment(intent: KnowledgeCommentIntent) {
+      return gateway.createComment(intent)
     },
 
     deleteComment(commentId: string, expectedVersion: number) {

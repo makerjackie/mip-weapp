@@ -412,6 +412,23 @@ function prefillContentValues(action: ContentMutationAction, values: OperationVa
         : action.startsWith('mip.admin.badges.') || action === 'mip.admin.growth.adjust' ? 'userId' : ''
   if (idKey && targetId) next[idKey] = targetId
   if (resource.version !== undefined) next.expectedVersion = resource.version
+  if (action === 'mip.admin.opportunities.save') {
+    const draft = { ...record(next.draft) }
+    for (const key of Object.keys(draft)) if (resource[key] !== undefined) draft[key] = resource[key]
+    if (resource.commercialTerms) {
+      const terms = record(resource.commercialTerms)
+      draft.commercialTerms = {
+        minAmountCents: terms.minAmountCents ?? '',
+        maxAmountCents: terms.maxAmountCents ?? '',
+        locations: records(terms.locations).map(location => ({
+          type: location.type,
+          ...(location.type === 'CITY' ? { cityTagId: location.cityTagId } : {}),
+        })),
+      }
+    }
+    next.draft = draft
+    return next
+  }
   if (action.endsWith('.save')) for (const key of Object.keys(next)) if (resource[key] !== undefined) next[key] = resource[key]
   return next
 }

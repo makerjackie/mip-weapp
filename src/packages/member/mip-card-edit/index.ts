@@ -215,7 +215,13 @@ Page({
     this.setData({ phoneBinding: true, message: '' })
     try {
       await mipIdentityModule.rebindWechatPhone(code)
-      await this.load()
+      const profile = await mipIdentityModule.getProfile()
+      this.setData({
+        profileVersion: profile.version,
+        phoneBound: Boolean(profile.privateContact?.phoneBound),
+        phoneMasked: profile.privateContact?.phoneMasked || '',
+      })
+      this.syncPreview()
       wx.showToast({ title: '手机号已更新', icon: 'success' })
     }
     catch (error) {

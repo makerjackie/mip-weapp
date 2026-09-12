@@ -212,6 +212,17 @@ export interface WechatPaymentParameters {
   paySign: string
 }
 
+export interface CommerceOrderFilter {
+  serviceStatus?: Exclude<OrderServiceStatus, 'UNAVAILABLE'>
+  cursor?: string
+  limit?: number
+}
+
+export interface CommerceOrderPage {
+  items: CommerceOrder[]
+  nextCursor?: string
+}
+
 export interface CommerceGateway {
   listPlans: () => Promise<MembershipPlan[]>
   getMembershipBenefits: () => Promise<MembershipBenefitsSnapshot>
@@ -223,6 +234,7 @@ export interface CommerceGateway {
   getOrder: (orderId: OrderId) => Promise<CommerceOrder>
   reconcileOrder: (orderId: OrderId) => Promise<CommerceOrder>
   listOrders: () => Promise<CommerceOrder[]>
+  listOrderPage: (filter?: CommerceOrderFilter) => Promise<CommerceOrderPage>
   requestRefund: (intent: RefundIntent) => Promise<{ refundId: RefundId, status: string }>
   submitRefund: (refundId: RefundId) => Promise<{ status: string }>
 }

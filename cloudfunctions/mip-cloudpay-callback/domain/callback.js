@@ -59,6 +59,8 @@ function createCallbackHandler(options) {
       providerTransactionId,
       amountCents,
       currency,
+      ...(pick(resource, 'timeEnd', 'time_end', 'successTime', 'success_time')
+        ? { providerPaidAt: pick(resource, 'timeEnd', 'time_end', 'successTime', 'success_time') } : {}),
     })
     return { kind: 'payment' }
   }

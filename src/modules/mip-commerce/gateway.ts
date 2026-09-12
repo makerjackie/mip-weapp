@@ -1,6 +1,7 @@
 import type {
   CommerceGateway,
   CommerceOrder,
+  CommerceOrderPage,
   MembershipBenefitsSnapshot,
   MembershipInvitation,
   MembershipInvitationCode,
@@ -117,6 +118,10 @@ export function createMipCommerceGateway(
 
     listOrders() {
       return commerce<CommerceOrder[]>('listOrders', {}, true)
+    },
+
+    listOrderPage(filter = {}) {
+      return commerce<CommerceOrderPage>('listOrderPage', { ...filter }, true)
     },
 
     async requestRefund(intent: RefundIntent) {

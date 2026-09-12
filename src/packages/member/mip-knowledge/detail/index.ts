@@ -1,3 +1,4 @@
+import type { KnowledgeCommentIntent } from '../../../../modules/mip-knowledge/gateway'
 import type { KnowledgeComment, KnowledgeContentDetail } from '../../../../modules/mip-knowledge/types'
 import { reportCategoryOptions } from '../../../../modules/mip-community'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
@@ -13,6 +14,9 @@ Page({
     priceLabel: '',
     comments: [] as KnowledgeComment[],
     commentsEnabled: false,
+    commentsNextCursor: '',
+    loadingComments: false,
+    refreshingComments: false,
     commentBody: '',
     submitting: false,
     purchasing: false,
@@ -20,6 +24,8 @@ Page({
     paymentEnabled: mipKnowledgeModule.paymentEnabled,
   },
   resumePurchase: false,
+  commentIntent: null as KnowledgeCommentIntent | null,
+  loadSequence: 0,
 
   onLoad(query: Record<string, string | undefined>) {
     const contentId = String(query.contentId || '')
@@ -37,7 +43,12 @@ Page({
     void this.load()
   },
 
+  onHide() { this.loadSequence += 1 },
+  onUnload() { this.loadSequence += 1 },
+
   async load() {
+    const sequence = ++this.loadSequence
+    this.setData({ loadingComments: false, refreshingComments: true })
     if (!this.data.detail) {
       this.setData({ state: 'loading', message: '' })
     }
@@ -46,17 +57,58 @@ Page({
         mipKnowledgeModule.getContent(this.data.contentId),
         mipKnowledgeModule.listComments(this.data.contentId),
       ])
+      if (sequence !== this.loadSequence) {
+        return
+      }
       this.setData({
         state: 'ready',
         detail,
         priceLabel: detail.product ? `¥${(detail.product.priceCents / 100).toFixed(2)}` : '',
         comments: comments.items,
+        commentsNextCursor: comments.nextCursor || '',
         commentsEnabled: comments.settings.commentsEnabled,
         message: '',
       })
     }
     catch (error) {
+      if (sequence !== this.loadSequence) {
+        return
+      }
       this.setData({ state: this.data.detail ? 'ready' : 'error', message: error instanceof Error ? error.message : '内容加载失败' })
+    }
+    finally {
+      if (sequence === this.loadSequence) {
+        this.setData({ refreshingComments: false })
+      }
+    }
+  },
+
+  async loadMoreComments() {
+    if (!this.data.commentsNextCursor || this.data.loadingComments || this.data.refreshingComments) {
+      return
+    }
+    const sequence = this.loadSequence
+    this.setData({ loadingComments: true, message: '' })
+    try {
+      const page = await mipKnowledgeModule.listComments(this.data.contentId, this.data.commentsNextCursor)
+      if (sequence !== this.loadSequence) {
+        return
+      }
+      const existing = new Set(this.data.comments.map(comment => comment.id))
+      this.setData({
+        comments: this.data.comments.concat(page.items.filter(comment => !existing.has(comment.id))),
+        commentsNextCursor: page.nextCursor || '',
+      })
+    }
+    catch (error) {
+      if (sequence === this.loadSequence) {
+        this.setData({ message: error instanceof Error ? error.message : '更多评论加载失败' })
+      }
+    }
+    finally {
+      if (sequence === this.loadSequence) {
+        this.setData({ loadingComments: false })
+      }
     }
   },
 
@@ -71,8 +123,14 @@ Page({
     }
     this.setData({ submitting: true, message: '' })
     try {
-      await mipKnowledgeModule.createComment(this.data.contentId, body)
-      this.setData({ commentBody: '' })
+      if (!this.commentIntent || this.commentIntent.contentId !== this.data.contentId || this.commentIntent.body !== body) {
+        this.commentIntent = mipKnowledgeModule.createCommentIntent(this.data.contentId, body)
+      }
+      await mipKnowledgeModule.createComment(this.commentIntent)
+      this.commentIntent = null
+      if (this.data.commentBody.trim() === body) {
+        this.setData({ commentBody: '' })
+      }
       await this.load()
       wx.showToast({ title: '评论已提交', icon: 'success' })
     }

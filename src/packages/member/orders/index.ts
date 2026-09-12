@@ -46,55 +46,78 @@ function presentOrder(order: CommerceOrder, plans: readonly MembershipPlan[]): D
   }
 }
 
-function filterOrders(orders: DisplayOrder[], filter: OrderFilter) {
-  return filter === 'all' ? orders : orders.filter(order => order.serviceStatus === filter)
-}
-
 Page({
   data: {
     // ui-fidelity fixture 开关：默认走生产布局（被 vitest pin）。
     figmaLayout: false,
     state: 'loading' as 'loading' | 'ready' | 'error',
-    allOrders: [] as DisplayOrder[],
+    nextCursor: '',
+    loadingMore: false,
+    refreshing: false,
     orders: [] as DisplayOrder[],
     filter: 'all' as OrderFilter,
     message: '',
   },
   requestSeq: 0,
+  plans: [] as MembershipPlan[],
 
   onShow() {
     void this.loadOrders()
   },
 
   async loadOrders() {
-    if (this.data.state !== 'ready') {
-      this.setData({ state: 'loading', message: '' })
+    await this.fetchOrders(false)
+  },
+
+  async loadMore() {
+    await this.fetchOrders(true)
+  },
+
+  onReachBottom() {
+    void this.loadMore()
+  },
+
+  async fetchOrders(append: boolean) {
+    if (append && (!this.data.nextCursor || this.data.loadingMore || this.data.refreshing)) {
+      return
     }
-    const requestSeq = this.requestSeq + 1
-    this.requestSeq = requestSeq
+    const requestSeq = ++this.requestSeq
+    const filter = this.data.filter
+    this.setData(append
+      ? { loadingMore: true, message: '' }
+      : { refreshing: true, loadingMore: false, message: '', state: this.data.state === 'ready' ? 'ready' : 'loading' })
     try {
-      const [orders, plans] = await Promise.all([
-        mipCommerceModule.listOrders(),
-        mipCommerceModule.listPlans().catch(() => [] as MembershipPlan[]),
+      const [page, plans] = await Promise.all([
+        mipCommerceModule.listOrderPage({
+          ...(filter === 'all' ? {} : { serviceStatus: filter }),
+          ...(append ? { cursor: this.data.nextCursor } : {}),
+        }),
+        append ? Promise.resolve(this.plans) : mipCommerceModule.listPlans().catch(() => [] as MembershipPlan[]),
       ])
       if (requestSeq !== this.requestSeq) {
         return
       }
-      const allOrders = orders.map(order => presentOrder(order, plans))
-      this.setData({
-        state: 'ready',
-        allOrders,
-        orders: filterOrders(allOrders, this.data.filter),
-        message: '',
-      })
+      this.plans = plans
+      const incoming = page.items.map(order => presentOrder(order, plans))
+      const orders = append
+        ? [...new Map([...this.data.orders, ...incoming].map(order => [order.id, order])).values()]
+        : incoming
+      this.setData({ state: 'ready', orders, nextCursor: page.nextCursor || '', message: '' })
     }
     catch {
       if (requestSeq !== this.requestSeq) {
         return
       }
-      this.setData(this.data.allOrders.length
-        ? { message: '订单更新失败，已保留上次结果。' }
-        : { state: 'error', message: '订单暂时无法加载。' })
+      this.setData(append
+        ? { message: '更多订单加载失败，请重试。' }
+        : this.data.orders.length
+          ? { message: '订单更新失败，已保留上次结果。' }
+          : { state: 'error', message: '订单暂时无法加载。' })
+    }
+    finally {
+      if (requestSeq === this.requestSeq) {
+        this.setData({ loadingMore: false, refreshing: false })
+      }
     }
   },
 
@@ -112,7 +135,11 @@ Page({
     if (!['all', 'PENDING_USE', 'COMPLETED', 'REFUNDED'].includes(filter)) {
       return
     }
-    this.setData({ filter, orders: filterOrders(this.data.allOrders, filter) })
+    if (filter === this.data.filter) {
+      return
+    }
+    this.setData({ filter, orders: [], nextCursor: '', state: 'loading' })
+    void this.loadOrders()
   },
 
   openOrder(event: WechatMiniprogram.TouchEvent) {

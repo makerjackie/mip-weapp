@@ -30,7 +30,7 @@ describe('MIP knowledge module', () => {
       { paymentEnabled: true, createRequestId: prefix => `${prefix}-request` },
     )
 
-    await module.createComment('content-1', '正文', 'parent-1')
+    await module.createComment(module.createCommentIntent('content-1', '正文', 'parent-1'))
     await module.deleteComment('comment-1', 1)
     await module.reportComment('comment-1', 'SPAM', '说明')
 

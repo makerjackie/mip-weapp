@@ -34,6 +34,15 @@ function SessionProbe() {
   )
 }
 
+function ExpiringSessionProbe() {
+  const session = useAdminSession()
+  return <>
+    <span>{session.session?.actor?.id || 'anonymous'}</span>
+    <span>{session.error?.code || 'no-error'}</span>
+    <button onClick={() => void session.request('mip.admin.users.list').catch(() => undefined)}>加载用户</button>
+  </>
+}
+
 class ConfirmedLoginFailureClient extends AdminApiClient {
   private reads = 0
 
@@ -145,4 +154,37 @@ describe('admin session query boundary', () => {
     await waitFor(() => expect(screen.getByText('no-code')).toBeVisible())
     expect(poll).not.toHaveBeenCalled()
   })
+  it('clears the session and protected cache when a normal request requires login', async () => {
+    const client = new SessionClient()
+    const failure = new AdminApiClientError('AUTH_REQUIRED', '请登录后继续')
+    vi.spyOn(client, 'request').mockRejectedValue(failure)
+    const queryClient = new QueryClient()
+    render(<QueryClientProvider client={queryClient}><SessionProvider client={client}>
+      <ExpiringSessionProbe />
+    </SessionProvider></QueryClientProvider>)
+    await screen.findByText('actor-a')
+    queryClient.setQueryData(['admin', 'users'], { private: '用户详情' })
+    queryClient.setQueryData(['public-catalog'], { public: true })
+    await userEvent.click(screen.getByRole('button', { name: '加载用户' }))
+    await screen.findByText('anonymous')
+    expect(screen.getByText('AUTH_REQUIRED')).toBeVisible()
+    expect(queryClient.getQueryData(['admin', 'users'])).toBeUndefined()
+    expect(queryClient.getQueryData(['public-catalog'])).toEqual({ public: true })
+  })
+
+  it('preserves the current session and cache after a non-authentication request failure', async () => {
+    const client = new SessionClient()
+    const request = vi.spyOn(client, 'request').mockRejectedValue(new AdminApiClientError('FORBIDDEN', '权限不足'))
+    const queryClient = new QueryClient()
+    render(<QueryClientProvider client={queryClient}><SessionProvider client={client}>
+      <ExpiringSessionProbe />
+    </SessionProvider></QueryClientProvider>)
+    await screen.findByText('actor-a')
+    queryClient.setQueryData(['admin', 'users'], { private: '用户详情' })
+    await userEvent.click(screen.getByRole('button', { name: '加载用户' }))
+    expect(request).toHaveBeenCalledOnce()
+    expect(screen.getByText('actor-a')).toBeVisible()
+    expect(queryClient.getQueryData(['admin', 'users'])).toEqual({ private: '用户详情' })
+  })
+
 })

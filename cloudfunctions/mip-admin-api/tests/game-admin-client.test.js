@@ -200,14 +200,15 @@ describe('game admin typed client', () => {
     assert.equal(boundedTimeout(50_001), DEFAULT_TIMEOUT_MS)
   })
 
-  it('fails closed when the configured Game function exceeds its timeout', async () => {
+  it('fails closed when the configured Game function exceeds its timeout', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] })
     const client = clientWith({
       async callFunction() {
         await new Promise(resolve => setTimeout(resolve, 300))
         return { result: { ok: true, data: {} } }
       },
     }, { timeoutMs: 250 })
-    await assert.rejects(
+    const rejection = assert.rejects(
       () => client.execute({
         appId: APP_ID,
         actorUserId: USER_ID,
@@ -216,5 +217,7 @@ describe('game admin typed client', () => {
       }),
       error => error.code === 'GAME_DISPATCH_UNAVAILABLE' && error.retryable === true,
     )
+    t.mock.timers.tick(250)
+    await rejection
   })
 })

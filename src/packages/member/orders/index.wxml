@@ -44,7 +44,7 @@
       </view>
     </view>
   </block>
-  <view wx:elif="{{orders.length === 0}}" class="mt-5"><mip-empty-state title="{{allOrders.length ? '当前分类暂无订单' : '还没有订单'}}" description="{{allOrders.length ? '可切换其他分类查看。' : '购买会员、活动或单内容后，订单会显示在这里。'}}" /></view>
+  <view wx:elif="{{orders.length === 0}}" class="mt-5"><mip-empty-state title="{{filter !== 'all' ? '当前分类暂无订单' : '还没有订单'}}" description="{{filter !== 'all' ? '可切换其他分类查看。' : '购买会员、活动或单内容后，订单会显示在这里。'}}" /></view>
   <view wx:else class="mt-4 flex flex-col gap-3">
     <view wx:for="{{orders}}" wx:key="id" data-order-id="{{item.id}}" class="order-card overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised {{item.orderType === 'EVENT' ? 'order-card--event' : ''}}" bind:tap="openOrder">
       <image wx:if="{{item.orderType === 'EVENT' && item.event.coverUrl}}" class="order-card__cover h-[298rpx] w-full bg-panel-raised" src="{{item.event.coverUrl}}" mode="aspectFill" />
@@ -67,5 +67,8 @@
     </view>
   </view>
   <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx]">{{message}}</view>
+  <view wx:if="{{state === 'ready' && nextCursor}}" class="mt-4 text-center">
+    <button class="mip-btn-secondary" loading="{{loadingMore}}" disabled="{{loadingMore || refreshing}}" bind:tap="loadMore">加载更多</button>
+  </view>
   <app-page-exit label="返回" />
 </view>

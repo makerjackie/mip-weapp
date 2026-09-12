@@ -279,3 +279,14 @@ describe('MIP public event detail', () => {
     ])
   })
 })
+
+it('keeps unpaid cancellation available after the formal cancellation deadline', async () => {
+  for (const [status, expected] of [['PAYMENT_PENDING', true], ['REGISTERED', false]]) {
+    const result = await getEvent(eventDatabase(eventRow({ registration_status: status, registration_version: 1 })), {
+      appId: 'wx-app', userId: 'participant-1', eventId: 'event-1',
+      now: new Date('2026-08-24T12:00:00Z'), tokenSecret: '',
+      profileRefSecret: 'public-organizer-profile-ref-pepper-more-than-32-characters',
+    })
+    assert.equal(result.canCancel, expected)
+  }
+})

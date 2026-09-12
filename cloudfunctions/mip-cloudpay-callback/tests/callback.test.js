@@ -28,9 +28,11 @@ describe('mip CloudPay callback', () => {
         transactionId: 'provider-transaction',
         totalFee: 79900,
         feeType: 'CNY',
+        timeEnd: '20260824120300',
       },
     })
     assert.equal(calls[0].action, 'applyPaymentCallback')
+    assert.equal(calls[0].input.providerPaidAt, '20260824120300')
     assert.equal(calls[0].input.identityKey, 'hashed-identity-key')
     assert.equal(JSON.stringify(calls[0].input).includes('provider-open-id'), false)
     assert.equal(Object.hasOwn(calls[0].input, 'openId'), false)

@@ -70,6 +70,7 @@ function createPaymentService(options) {
       orderId,
       identityKey: caller.identityKey,
       paymentMode: config.paymentMode,
+      forSync: true,
     })
     assertPayableOrder(order)
     if (order.status === 'PAID') {
@@ -102,6 +103,7 @@ function createPaymentService(options) {
       providerTransactionId: record.providerTransactionId,
       amountCents: record.amountCents,
       currency: record.currency,
+      ...(record.providerPaidAt ? { providerPaidAt: record.providerPaidAt } : {}),
     })
     return { status: applied.status }
   }
@@ -240,6 +242,7 @@ function paymentRecord(result) {
     status: pick(resource, 'tradeState', 'trade_state'),
     merchantOrderNo: pick(resource, 'outTradeNo', 'out_trade_no'),
     providerTransactionId: pick(resource, 'transactionId', 'transaction_id'),
+    providerPaidAt: pick(resource, 'timeEnd', 'time_end', 'successTime', 'success_time'),
     openId: pick(resource, 'subOpenid', 'sub_openid', 'openid') || payer.openid,
     amountCents: Number(pick(resource, 'totalFee', 'total_fee') ?? amount.total),
     currency: pick(resource, 'feeType', 'fee_type') || amount.currency || 'CNY',

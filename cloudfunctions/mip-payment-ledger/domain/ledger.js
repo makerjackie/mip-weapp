@@ -33,6 +33,23 @@ function assertPaymentMatches(order, value) {
   }
 }
 
+function providerPaymentTime(value, receivedAt) {
+  let text = value
+  if (typeof text !== 'string') throw new Error('PAYMENT_TIME_INVALID')
+  if (/^\d{14}$/.test(text)) {
+    text = `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}T${text.slice(8, 10)}:${text.slice(10, 12)}:${text.slice(12, 14)}+08:00`
+  }
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(text)) {
+    throw new Error('PAYMENT_TIME_INVALID')
+  }
+  const [year, month, day] = text.slice(0, 10).split('-').map(Number)
+  const calendarDate = new Date(Date.UTC(year, month - 1, day))
+  if (calendarDate.toISOString().slice(0, 10) !== text.slice(0, 10)) throw new Error('PAYMENT_TIME_INVALID')
+  const date = new Date(text)
+  if (!Number.isFinite(date.getTime()) || date > receivedAt) throw new Error('PAYMENT_TIME_INVALID')
+  return date
+}
+
 async function getPayableOrder(db, input, options = {}) {
   const now = options.now || (() => new Date())
   const order = await db.one(
@@ -40,7 +57,8 @@ async function getPayableOrder(db, input, options = {}) {
        knowledge_product.catalog_stage AS content_catalog_stage,
        knowledge_product.status AS content_product_status,
        knowledge_content.status AS content_status,
-       h.status AS hold_status, h.expires_at AS hold_expires_at
+       h.status AS hold_status, h.expires_at AS hold_expires_at,
+       event.status AS event_status, event.ends_at AS event_ends_at
      FROM mip_orders o
      JOIN mip_user_identities i
        ON i.app_id = o.app_id AND i.user_id = o.user_id
@@ -49,6 +67,7 @@ async function getPayableOrder(db, input, options = {}) {
        ON p.app_id = o.app_id AND p.id = o.membership_plan_id
      LEFT JOIN mip_event_seat_holds h
        ON h.app_id = o.app_id AND h.order_id = o.id
+     LEFT JOIN mip_events event ON event.app_id = o.app_id AND event.id = o.resource_id AND o.order_type = 'EVENT'
      LEFT JOIN mip_knowledge_products knowledge_product
        ON knowledge_product.app_id = o.app_id AND knowledge_product.content_id = o.resource_id
       AND JSON_UNQUOTE(JSON_EXTRACT(o.product_snapshot_json, '$.productId')) = knowledge_product.id
@@ -69,7 +88,11 @@ async function getPayableOrder(db, input, options = {}) {
   else if (order.status !== 'PAID' && !['EVENT', 'CONTENT'].includes(order.order_type)) {
     throw new Error('ORDER_NOT_PAYABLE')
   }
-  if (order.status !== 'PAID' && order.order_type === 'EVENT') {
+  if (order.status !== 'PAID' && order.order_type === 'EVENT' && input.forSync !== true) {
+    const eventEndsAt = order.event_ends_at ? new Date(order.event_ends_at).getTime() : Number.NaN
+    if (order.event_status !== 'PUBLISHED' || !Number.isFinite(eventEndsAt) || eventEndsAt <= now().getTime()) {
+      throw new Error('ORDER_NOT_PAYABLE')
+    }
     const expiresAt = new Date(order.hold_expires_at)
     if (order.hold_status !== 'ACTIVE'
       || !Number.isFinite(expiresAt.getTime())
@@ -177,7 +200,9 @@ async function applyPaymentCallback(db, input, options = {}) {
     if (!payable && !closedEventPayment) {
       throw new Error('ORDER_INVALID_STATE')
     }
-    const paidAt = now()
+    const paidAt = order.order_type === 'EVENT' && input.providerPaidAt
+      ? providerPaymentTime(input.providerPaidAt, now())
+      : now()
     if (order.order_type === 'EVENT') {
       const result = await applyEventPayment(tx, {
         appId: input.appId,
@@ -245,10 +270,11 @@ async function applyEventPayment(tx, {
   payable,
 }) {
   // Seat conversion shares the event lock with registration, hold renewal, and admin approval.
-  await tx.one(
-    `SELECT id FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
+  const event = await tx.one(
+    `SELECT id, status, ended_at, ends_at FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
     [appId, order.resource_id],
   )
+  if (!event) throw new Error('EVENT_ORDER_INVALID')
   const fulfillment = await tx.one(
     `SELECT h.id AS hold_id, h.order_id AS hold_order_id, h.event_id, h.user_id,
        h.status AS hold_status,
@@ -309,7 +335,18 @@ async function applyEventPayment(tx, {
     || !['PAYMENT_PENDING', 'CANCELLED'].includes(fulfillment.registration_status)) {
     throw new Error('EVENT_FULFILLMENT_INVALID')
   }
-  const seatAvailable = payable
+  const eventEndTimes = [event.ended_at, event.ends_at]
+    .filter(value => value !== null && value !== undefined && value !== '')
+    .map(value => new Date(value).getTime())
+    .filter(Number.isFinite)
+  const eventEnd = eventEndTimes.length ? new Date(Math.min(...eventEndTimes)) : null
+  const eventEnded = event?.status === 'ENDED' || (eventEnd && new Date(eventEnd) <= paidAt)
+  // Receipt time cannot establish whether a payment preceded the scheduled or operator end.
+  if (eventEnded && (!input.providerPaidAt || !eventEnd)) {
+    throw new Error('PAYMENT_TIME_REQUIRED')
+  }
+  const beforeEventEnd = !eventEnded || (eventEnd && paidAt < new Date(eventEnd))
+  const seatAvailable = beforeEventEnd && payable
     && fulfillment.hold_status === 'ACTIVE'
     && fulfillment.registration_status === 'PAYMENT_PENDING'
     && Number.isFinite(holdExpiry.getTime())
