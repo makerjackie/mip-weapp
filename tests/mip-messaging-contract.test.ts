@@ -60,7 +60,7 @@ afterEach(() => {
 })
 
 describe('MIP messaging v1 contract', () => {
-  it('sends all four actions as direct business input', async () => {
+  it('sends all five actions as direct business input', async () => {
     const calls: MipMessagingRequest[] = []
     const gateway = createMipMessagingGateway({
       async invoke(request) {
@@ -71,6 +71,7 @@ describe('MIP messaging v1 contract', () => {
 
     await gateway.listInbox('cursor-1', 12)
     await gateway.markRead(messageId)
+    await gateway.markAllRead()
     await gateway.recordCustomerServiceInteraction()
     await gateway.recordSubscriptionDecision('EVENT_REMINDER', 'ACCEPTED')
 
@@ -84,6 +85,11 @@ describe('MIP messaging v1 contract', () => {
         contractVersion: 1,
         action: 'markRead',
         input: { messageId },
+      },
+      {
+        contractVersion: 1,
+        action: 'markAllRead',
+        input: {},
       },
       {
         contractVersion: 1,
@@ -142,6 +148,7 @@ describe('MIP messaging v1 contract', () => {
 
     const mutations = [
       { contractVersion: 1, action: 'markRead', input: { messageId } },
+      { contractVersion: 1, action: 'markAllRead', input: {} },
       { contractVersion: 1, action: 'recordCustomerServiceInteraction', input: {} },
       {
         contractVersion: 1,
@@ -175,6 +182,7 @@ describe('MIP messaging v1 contract', () => {
       : inbox)
     const gateway = {
       listInbox,
+      markAllRead: vi.fn(),
       markRead,
       recordCustomerServiceInteraction: vi.fn(),
       recordSubscriptionDecision: vi.fn(),

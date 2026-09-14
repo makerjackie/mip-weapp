@@ -9,10 +9,11 @@ const {
   normalizeRequest,
 } = require('../domain/handler')
 
-test('fixes the public contract at four user actions plus health', async () => {
+test('fixes the public contract at five user actions plus health', async () => {
   assert.equal(CONTRACT_VERSION, 1)
   assert.deepEqual(Object.keys(actions).sort(), [
     'listInbox',
+    'markAllRead',
     'markRead',
     'recordCustomerServiceInteraction',
     'recordSubscriptionDecision',
@@ -224,4 +225,19 @@ test('health checks persistence without exposing configuration', async () => {
     ok: true,
     data: { service: 'mip-notifications-api', persistence: 'cloudbase-mysql' },
   })
+})
+
+
+test('bulk read ignores forged recipient input and uses trusted caller identity', async () => {
+  const { createNotificationsService } = require('../domain/service')
+  const calls = []
+  const handler = createHandler({
+    async resolveCaller() { return { appId: 'trusted-app', userId: 'trusted-user' } },
+    service: createNotificationsService({ repository: {
+      async markAllRead(...args) { calls.push(args); return { readAt: '2026-09-14T01:00:00.000Z' } },
+    } }),
+  })
+  const result = await handler({ contractVersion: 1, action: 'markAllRead', input: { appId: 'forged', userId: 'other' } })
+  assert.equal(result.ok, true)
+  assert.deepEqual(calls, [['trusted-app', 'trusted-user']])
 })

@@ -61,6 +61,7 @@ test('marks only the trusted user message as read', async () => {
 
 test('rejects notification writes for closed callers before changing user data', async () => {
   const operations = [
+    repository => repository.markAllRead(appId, userId),
     repository => repository.markRead(appId, userId, messageId),
     repository => repository.createGrant({
       id: '30000000-0000-4000-8000-000000000001',
@@ -104,4 +105,37 @@ test('rejects notification writes for closed callers before changing user data',
     assert.deepEqual(reads[0].params, [appId, userId])
     assert.equal(writes.length, 0)
   }
+})
+
+test('inbox unread count excludes profile visitors', async () => {
+  const repository = createNotificationsRepository({
+    async query() { return [] },
+    async one(sql, params) {
+      assert.doesNotMatch(sql, /mip_profile_visits/)
+      assert.match(sql, /FROM mip_inbox_messages[\s\S]*read_at IS NULL/)
+      assert.deepEqual(params, [appId, userId])
+      return { count: 0 }
+    },
+  })
+  assert.equal((await repository.listInbox(appId, userId)).unreadCount, 0)
+})
+
+test('bulk read scopes all unread pages to the active caller and preserves existing read times', async () => {
+  const calls = []
+  const readAt = new Date('2026-09-14T01:00:00.000Z')
+  const repository = createNotificationsRepository({
+    async transaction(work) {
+      return work({
+        async one(sql) {
+          return sql.includes('mip_users') ? { status: 'ACTIVE' } : { read_at: readAt }
+        },
+        async query(sql, params) { calls.push({ sql, params }) },
+      })
+    },
+  })
+  assert.deepEqual(await repository.markAllRead(appId, userId), { readAt: readAt.toISOString() })
+  assert.equal(calls.length, 1)
+  assert.match(calls[0].sql, /WHERE app_id = \? AND recipient_user_id = \? AND read_at IS NULL/)
+  assert.doesNotMatch(calls[0].sql, /LIMIT|mip_profile_visits/)
+  assert.deepEqual(calls[0].params, [readAt, appId, userId])
 })

@@ -46,6 +46,7 @@ export function createMipMessagingGateway(transport: MipMessagingTransport): Mip
 
   return {
     listInbox: (cursor, limit) => call('listInbox', { cursor, limit }),
+    markAllRead: () => call('markAllRead', {}),
     markRead: messageId => call('markRead', { messageId }),
     recordCustomerServiceInteraction: () => call('recordCustomerServiceInteraction', {}),
     recordSubscriptionDecision: (templateKey, decision) => call('recordSubscriptionDecision', {

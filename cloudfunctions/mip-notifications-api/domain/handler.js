@@ -15,6 +15,7 @@ const CONTRACT_VERSION = 1
 
 const actions = Object.freeze({
   listInbox: (service, caller, input) => service.listInbox(caller, input),
+  markAllRead: (service, caller) => service.markAllRead(caller),
   markRead: (service, caller, input) => service.markRead(caller, input),
   recordCustomerServiceInteraction: (service, caller) => service.recordCustomerServiceInteraction(caller),
   recordSubscriptionDecision: (service, caller, input) => service.recordSubscriptionDecision(caller, input),

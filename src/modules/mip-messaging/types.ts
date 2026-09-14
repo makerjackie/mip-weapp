@@ -84,6 +84,7 @@ export const MIP_MESSAGING_CONTRACT_VERSION = 1 as const
 
 export interface MipMessagingActionInputMap {
   listInbox: { cursor?: string, limit?: number }
+  markAllRead: Record<string, never>
   markRead: { messageId: InboxMessageId }
   recordCustomerServiceInteraction: Record<string, never>
   recordSubscriptionDecision: { templateKey: string, decision: SubscriptionDecision }
@@ -91,6 +92,7 @@ export interface MipMessagingActionInputMap {
 
 export interface MipMessagingActionResultMap {
   listInbox: InboxMessagePage
+  markAllRead: { readAt: string }
   markRead: MarkInboxMessageReadResult
   recordCustomerServiceInteraction: CustomerServiceWindowResult
   recordSubscriptionDecision: SubscriptionGrantResult
@@ -106,6 +108,7 @@ export interface MipMessagingRequest<A extends MipMessagingAction = MipMessaging
 
 export interface MipMessagingGateway {
   listInbox: (cursor?: string, limit?: number) => Promise<InboxMessagePage>
+  markAllRead: () => Promise<{ readAt: string }>
   markRead: (messageId: InboxMessageId) => Promise<MarkInboxMessageReadResult>
   recordSubscriptionDecision: (
     templateKey: string,

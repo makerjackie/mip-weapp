@@ -19,6 +19,8 @@ Page({
     unreadCount: 0,
     nextCursor: '',
     loadingMore: false,
+    refreshing: false,
+    markingAllRead: false,
     message: '',
   },
   requestSeq: 0,
@@ -29,7 +31,10 @@ Page({
     if (cached) {
       this.applyPage(cached)
     }
-    void this.loadInbox()
+  },
+
+  onShow() {
+    void this.loadInbox(true)
   },
 
   onHide() {
@@ -46,12 +51,15 @@ Page({
   },
 
   async loadInbox(force = false) {
+    if (this.data.markingAllRead || this.openingMessageId) {
+      return
+    }
     const seq = this.requestSeq + 1
     this.requestSeq = seq
     if (!this.data.items.length) {
       this.setData({ state: 'loading', message: '' })
     }
-    this.setData({ loadingMore: false })
+    this.setData({ loadingMore: false, refreshing: true })
     try {
       const page = await mipMessagingModule.listInbox(undefined, { force })
       if (seq !== this.requestSeq) {
@@ -66,6 +74,36 @@ Page({
       this.setData(this.data.items.length
         ? { message: '消息更新失败，已保留上次结果。' }
         : { state: 'error', message: error instanceof Error ? error.message : '消息加载失败' })
+    }
+    finally {
+      if (seq === this.requestSeq) {
+        this.setData({ refreshing: false })
+      }
+    }
+  },
+
+  onReachBottom() {
+    void this.loadMore()
+  },
+
+  async markAllRead() {
+    if (this.data.markingAllRead || this.data.refreshing || this.data.loadingMore || this.openingMessageId || !this.data.unreadCount) {
+      return
+    }
+    this.requestSeq += 1
+    this.setData({ markingAllRead: true, message: '' })
+    try {
+      const result = await mipMessagingModule.markAllRead()
+      this.setData({
+        unreadCount: 0,
+        items: this.data.items.map(item => ({ ...item, readAt: item.readAt || result.readAt })),
+      })
+    }
+    catch {
+      this.setData({ message: '全部已读失败，请重试。' })
+    }
+    finally {
+      this.setData({ markingAllRead: false })
     }
   },
 
@@ -82,7 +120,7 @@ Page({
   async openMessage(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '') as InboxMessageId
     const item = this.data.items.find(message => message.id === id)
-    if (!item || this.openingMessageId) {
+    if (!item || this.openingMessageId || this.data.markingAllRead || this.data.refreshing || this.data.loadingMore) {
       return
     }
     this.openingMessageId = id
@@ -112,7 +150,7 @@ Page({
   },
 
   async loadMore() {
-    if (!this.data.nextCursor || this.data.loadingMore) {
+    if (!this.data.nextCursor || this.data.loadingMore || this.data.refreshing || this.data.markingAllRead || this.openingMessageId) {
       return
     }
     const seq = this.requestSeq

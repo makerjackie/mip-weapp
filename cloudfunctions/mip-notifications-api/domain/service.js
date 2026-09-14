@@ -17,6 +17,10 @@ function createNotificationsService(options) {
       return repository.listInbox(caller.appId, caller.userId, event)
     },
 
+    markAllRead(caller) {
+      return repository.markAllRead(caller.appId, caller.userId)
+    },
+
     markRead(caller, event) {
       return repository.markRead(caller.appId, caller.userId, event.messageId)
     },

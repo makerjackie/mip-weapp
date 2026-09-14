@@ -21,31 +21,9 @@ function createNotificationsRepository(database) {
         params,
       ),
       database.one(
-        `SELECT (
-           SELECT COUNT(*)
-           FROM mip_inbox_messages
-           WHERE app_id = ? AND recipient_user_id = ? AND read_at IS NULL
-         ) + (
-           SELECT COUNT(*) FROM (
-             SELECT visit.visitor_user_id
-             FROM mip_profile_visits visit
-             INNER JOIN mip_users visitor
-               ON visitor.app_id = visit.app_id
-               AND visitor.id = visit.visitor_user_id
-               AND visitor.status = 'ACTIVE'
-             WHERE visit.app_id = ? AND visit.profile_user_id = ? AND visit.read_at IS NULL
-               AND NOT EXISTS (
-                 SELECT 1 FROM mip_user_blocks block
-                 WHERE block.app_id = visit.app_id AND block.status = 'ACTIVE'
-                   AND (
-                     (block.blocker_user_id = ? AND block.blocked_user_id = visit.visitor_user_id)
-                     OR (block.blocker_user_id = visit.visitor_user_id AND block.blocked_user_id = ?)
-                   )
-               )
-             GROUP BY visit.visitor_user_id
-           ) visitor_unread
-         ) AS count`,
-        [appId, userId, appId, userId, userId, userId],
+        `SELECT COUNT(*) AS count FROM mip_inbox_messages
+         WHERE app_id = ? AND recipient_user_id = ? AND read_at IS NULL`,
+        [appId, userId],
       ),
     ])
     const page = rows.slice(0, limit)
@@ -72,6 +50,19 @@ function createNotificationsRepository(database) {
       )
       if (!row) throw new Error('NOT_FOUND')
       return { messageId: row.id, readAt: iso(row.read_at) }
+    })
+  }
+
+  async function markAllRead(appId, userId) {
+    return database.transaction(async (tx) => {
+      await lockActiveUser(tx, appId, userId)
+      const now = await tx.one('SELECT UTC_TIMESTAMP(3) AS read_at', [])
+      await tx.query(
+        `UPDATE mip_inbox_messages SET read_at = ?
+         WHERE app_id = ? AND recipient_user_id = ? AND read_at IS NULL`,
+        [now.read_at, appId, userId],
+      )
+      return { readAt: iso(now.read_at) }
     })
   }
 
@@ -142,7 +133,7 @@ function createNotificationsRepository(database) {
     })
   }
 
-  return { createCustomerServiceGrant, createGrant, listInbox, markRead, revokeGrants }
+  return { createCustomerServiceGrant, createGrant, listInbox, markRead, markAllRead, revokeGrants }
 }
 
 async function lockActiveUser(adapter, appId, userId) {
