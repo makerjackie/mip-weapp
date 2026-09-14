@@ -112,6 +112,10 @@ Page({
     const shouldForceRefresh = this.refreshOnReturn
     const refreshIsDue = Date.now() - this.lastSuccessfulRefreshAt >= PROFILE_REFRESH_INTERVAL_MS
     if (!shouldForceRefresh && this.data.state === 'ready' && !refreshIsDue) {
+      const unreadCount = mipMessagingModule.peekUnreadCount()
+      if (unreadCount !== undefined) {
+        this.setData({ notificationUnreadCount: unreadCount })
+      }
       return
     }
     this.refreshOnReturn = false
@@ -519,6 +523,10 @@ Page({
   },
   openStat(event: WechatMiniprogram.CustomEvent<{ label: string }>) {
     const label = String(event.detail.label || '')
+    if (label === '心动值') {
+      void this.openProtected('/packages/member/mip-received/index?scope=hearts&category=ACTIVE_INTEREST', 'INTERACT')
+      return
+    }
     if (label === '访客') {
       this.openReceivedInteractions()
       return
@@ -544,7 +552,10 @@ Page({
   openOpportunityList() { void this.openProtected('/packages/member/mip-opportunities/mine/index', 'INTERACT') },
   openReferredOpportunities() { void this.openProtected('/packages/member/mip-opportunities/mine/index?tab=REFERRED', 'INTERACT') },
   openSettings() { caseNavigateTo({ url: '/packages/member/privacy/index' }) },
-  openServices() { caseNavigateTo({ url: '/packages/member/mip-services/index' }) },
+  openNotifications() { void this.openProtected('/packages/member/mip-notifications/index', 'INTERACT') },
+  openGame() { void this.openProtected('/packages/member/mip-game/index', 'VIEW_RESTRICTED_PROFILE') },
+  openBranches() { caseNavigateTo({ url: '/packages/member/mip-branches/index' }) },
+  openHelp() { caseNavigateTo({ url: '/packages/member/help/index' }) },
 
   openCooperation(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')

@@ -1,10 +1,11 @@
 /**
  * 玩家等级黄卡（LevelBanner，references/wechat-component-contracts.md）。
- * 装饰簇烘焙为 level-banner-deco@3x.png，组件只叠文案与进度条；不接受 deco 属性。
+ * 原图左侧含示例文字与进度条，只展示右半部分装饰，业务数值由组件绘制。
  */
 Component({
   options: {
     virtualHost: false,
+    styleIsolation: 'apply-shared',
   },
   properties: {
     level: { type: String, value: 'Lv.23' },

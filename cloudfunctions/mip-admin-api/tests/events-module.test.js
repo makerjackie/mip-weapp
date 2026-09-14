@@ -557,3 +557,23 @@ describe('admin events deep module', () => {
     }).action, 'admin.communications.publish')
   })
 })
+
+it('rechecks an errored content review on publish using the stored version and never publishes failed checks', async () => {
+  let verdict = 'PASSED'
+  const writes = []
+  const repo = repository({
+    async getEventScope() { return { scopeType: 'EVENT', scopeId: EVENT_ID, eventScopeType: 'BRANCH', branchId: BRANCH_ID, status: 'DRAFT', version: 3, contentSafetyStatus: 'ERROR' } },
+    async changeEventStatus(input) { writes.push(input); return { id: EVENT_ID, status: 'PUBLISHED', version: 4, refundIds: [] } },
+  })
+  const service = events(repo, { contentSafety: async value => { assert.equal(value.description, '介绍'); return verdict } })
+  const request = { eventId: EVENT_ID, expectedVersion: 3, status: 'PUBLISHED' }
+  await service.changeEventStatus(caller, request)
+  assert.deepEqual(writes[0].contentSafetyReview, { version: 3 })
+  for (const [value, code] of [['ERROR', 'CONTENT_SAFETY_UNAVAILABLE'], ['REJECTED', 'CONTENT_SAFETY_REQUIRED']]) {
+    verdict = value
+    await assert.rejects(() => service.changeEventStatus(caller, request), error => error.code === code)
+  }
+  verdict = 'PASSED'
+  await assert.rejects(() => service.changeEventStatus(caller, { ...request, expectedVersion: 2 }), error => error.code === 'CONFLICT')
+  assert.equal(writes.length, 1)
+})

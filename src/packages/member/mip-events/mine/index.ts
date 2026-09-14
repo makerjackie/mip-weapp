@@ -227,7 +227,7 @@ Page({
     }
     const confirmation = await wx.showModal({
       title: retryRefund ? '继续处理退款' : '取消报名',
-      content: retryRefund ? '将继续查询或提交现有退款，不会重复创建退款。' : '取消资格和退款状态将由服务端核对。',
+      content: retryRefund ? '将继续查询或提交现有退款，不会重复创建退款。' : '确认取消报名？如需退款，可在订单详情查看处理进度。',
       confirmText: retryRefund ? '继续处理' : '确认取消',
       confirmColor: '#FF4D5E',
     })

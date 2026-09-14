@@ -71,5 +71,6 @@
     <view wx:if="{{nextCursor}}" class="mt-1"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
   </view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+  <mip-subscription-prompt wx:if="{{state === 'ready' || state === 'empty'}}" template-key="HEART_RECEIVED" label="接收心动提醒" description="有人在活动中向你发送心动时，通过微信提醒你。" />
   <app-page-exit />
 </view>

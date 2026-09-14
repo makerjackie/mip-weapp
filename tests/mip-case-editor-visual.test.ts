@@ -65,8 +65,6 @@ describe('MIP super case editor visual contract', () => {
       navigationBarTextStyle: 'white',
     })
     expect(template).toContain('填写展现能力的超级案例')
-    expect(template).toContain('id="case-editor-ai-assistant"')
-    expect(template).toContain('min-h-[200rpx]')
     expect(template).toContain('>我的案例</view>')
     expect(template).toContain('case-editor-field-group')
     expect(template).toContain('case-editor-field-row')
@@ -106,7 +104,6 @@ describe('MIP super case editor visual contract', () => {
     }
     expect(page).toContain('publish,')
     for (const handler of [
-      'openAiAssistant',
       'changeStart',
       'changeEnd',
       'clearDates',

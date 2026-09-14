@@ -5,7 +5,6 @@ import { decodeInvitationToken, MipEventsError, publicEventTypeLabel } from '../
 import { mipCheckInResumeStore, mipEventsModule, mipRegistrationDraftStore } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { showErrorFeedback } from '../../../../platform/feedback/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { formatChineseDateTime } from '../../../../utils/date'
@@ -563,12 +562,9 @@ Page({
     if (!this.data.canContinueCheckIn || !mipCheckInResumeStore.peek(String(this.data.eventId))) {
       this.setData({
         canContinueCheckIn: false,
-        resultDescription: '签到意图已失效，请返回现场重新扫描活动码。',
+        resultDescription: '请重新扫描现场签到码。',
       })
       return
-    }
-    if (mipMessagingModule.subscriptionCapability('CHECKIN_RESULT').available) {
-      await mipMessagingModule.requestWechatSubscription('CHECKIN_RESULT').catch(() => undefined)
     }
     caseNavigateTo({
       url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}&resumeCheckIn=1`,

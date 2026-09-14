@@ -189,6 +189,7 @@ Page({
   data: {
     state: 'loading' as PageState,
     influenceMode: false,
+    heartsMode: false,
     category: 'REFERRAL' as ReceivedInteractionCategory,
     items: [] as InteractionView[],
     referralUnreadCount: 0,
@@ -205,6 +206,8 @@ Page({
     // 生产保持 总浏览量+tabs+列表（mip-received-interactions 测试 pin）。
     figmaLayout: false,
   },
+  markingVisitorsRead: false,
+  pageHidden: false,
   accessReady: false,
   checkingAccess: false,
   categoryCache: {
@@ -218,18 +221,29 @@ Page({
   } as Record<ReceivedInteractionCategory, CategoryCache>,
 
   onLoad(query: Record<string, string | undefined>) {
+    const heartsMode = query.scope === 'hearts'
+    if (heartsMode) {
+      wx.setNavigationBarTitle({ title: '心动记录' })
+    }
     const influenceMode = query.scope === 'influence'
     const requested = String(query.category || '').toUpperCase() as ReceivedInteractionCategory
-    const allowed = influenceMode
-      ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR']
-      : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR']
+    const allowed = heartsMode
+      ? ['ACTIVE_INTEREST', 'OUTBOUND_INTEREST']
+      : influenceMode
+        ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR']
+        : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR']
     this.setData({
       influenceMode,
-      category: allowed.includes(requested) ? requested : (influenceMode ? 'GUEST' : 'REFERRAL'),
+      heartsMode,
+      category: allowed.includes(requested) ? requested : (heartsMode ? 'ACTIVE_INTEREST' : influenceMode ? 'GUEST' : 'REFERRAL'),
     })
   },
 
+  onHide() { this.pageHidden = true },
+  onUnload() { this.pageHidden = true },
+
   onShow() {
+    this.pageHidden = false
     const resumed = mipIdentityModule.consumePendingResume()
     if (!this.accessReady || resumed) {
       void this.checkAccess()
@@ -248,11 +262,15 @@ Page({
     if (!ready) {
       return
     }
-    const categories = this.data.influenceMode
-      ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR'] as const
-      : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR'] as const
+    const categories = this.data.heartsMode
+      ? ['ACTIVE_INTEREST', 'OUTBOUND_INTEREST'] as const
+      : this.data.influenceMode
+        ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR'] as const
+        : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR'] as const
     await Promise.all(categories.map(category => this.loadCategory(category, true)))
   },
+
+  openEventHearts() { caseNavigateTo({ url: '/packages/member/mip-hearts/index' }) },
 
   openAccess() {
     if (this.data.accessToken) {
@@ -262,9 +280,11 @@ Page({
 
   changeCategory(event: WechatMiniprogram.TouchEvent) {
     const category = String(event.currentTarget.dataset.category || '') as ReceivedInteractionCategory
-    const allowed = this.data.influenceMode
-      ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR']
-      : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR']
+    const allowed = this.data.heartsMode
+      ? ['ACTIVE_INTEREST', 'OUTBOUND_INTEREST']
+      : this.data.influenceMode
+        ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR']
+        : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR']
     if (!allowed.includes(category) || category === this.data.category) {
       return
     }
@@ -284,11 +304,57 @@ Page({
       referralUnreadCount: this.categoryCache.REFERRAL.unreadCount,
       interestUnreadCount: this.categoryCache.PROFILE_INTEREST.unreadCount,
       visitorUnreadCount: this.categoryCache.VISITOR.unreadCount,
+    }, () => {
+      if (category === 'VISITOR' && cache.state === 'ready') {
+        void this.markDisplayedVisitorsRead()
+      }
     })
+  },
+
+  async markDisplayedVisitorsRead() {
+    if (this.markingVisitorsRead || this.pageHidden || this.data.category !== 'VISITOR') {
+      return
+    }
+    const cache = this.categoryCache.VISITOR
+    const displayed = cache.items.filter(item => item.unread && item.messageId)
+    if (!displayed.length) {
+      return
+    }
+    this.markingVisitorsRead = true
+    let failed = false
+    try {
+      for (const item of displayed) {
+        if (this.pageHidden || this.data.category !== 'VISITOR') {
+          break
+        }
+        try {
+          await opportunityModule.markReceivedRead(item.messageId, 'VISITOR')
+          item.unread = false
+          cache.unreadCount = Math.max(0, cache.unreadCount - 1)
+          mipMessagingModule.invalidate()
+        }
+        catch {
+          failed = true
+        }
+      }
+      if (!this.pageHidden && this.data.category === 'VISITOR') {
+        this.setData({
+          items: cache.items,
+          visitorUnreadCount: cache.unreadCount,
+          message: failed ? '部分访客未读状态同步失败，请刷新重试。' : '',
+        })
+      }
+    }
+    finally {
+      this.markingVisitorsRead = false
+    }
   },
 
   async loadCategory(category: ReceivedInteractionCategory, reset: boolean) {
     const cache = this.categoryCache[category]
+    if (category === 'VISITOR' && this.markingVisitorsRead) {
+      return
+    }
     if (!reset && (!cache.nextCursor || this.data.loadingMore)) {
       return
     }
@@ -381,7 +447,7 @@ Page({
       return
     }
     this.setData({ openingKey: viewKey, message: '' })
-    if (item.unread && item.messageId) {
+    if (item.unread && item.messageId && !(this.data.category === 'VISITOR' && this.markingVisitorsRead)) {
       try {
         if (this.data.category === 'VISITOR') {
           await opportunityModule.markReceivedRead(item.messageId, this.data.category)

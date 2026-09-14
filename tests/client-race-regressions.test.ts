@@ -82,7 +82,6 @@ interface PageDefinition {
 let capturedPage: PageDefinition
 let homePage: PageDefinition
 let paymentResultPage: PageDefinition
-let matchingPage: PageDefinition
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -118,8 +117,6 @@ beforeAll(async () => {
   homePage = capturedPage
   await import('../src/packages/member/payment-result/index')
   paymentResultPage = capturedPage
-  await import('../src/packages/member/mip-opportunity-matching/index')
-  matchingPage = capturedPage
 })
 
 beforeEach(() => {
@@ -212,25 +209,5 @@ describe('page request ordering', () => {
     finally {
       vi.useRealTimers()
     }
-  })
-
-  it('does not let an older matching tab response replace the active tab', async () => {
-    const talent = deferred<{ items: Array<{ id: string, explanation: never[], feedback: null }>, nextCursor: string }>()
-    const project = deferred<{ items: Array<{ id: string, explanation: never[], feedback: null }>, nextCursor: string }>()
-    matchingMocks.listMatchingResults.mockReturnValueOnce(talent.promise).mockReturnValueOnce(project.promise)
-    const page = createPage(matchingPage)
-    page.data.requestId = 'request-1'
-    page.data.tab = 'TALENT'
-
-    const talentRun = callPage(page, 'loadResults', true) as Promise<unknown>
-    page.data.tab = 'PROJECT'
-    const projectRun = callPage(page, 'loadResults', true) as Promise<unknown>
-    project.resolve({ items: [{ id: 'project-result', explanation: [], feedback: null }], nextCursor: '' })
-    await projectRun
-    talent.resolve({ items: [{ id: 'talent-result', explanation: [], feedback: null }], nextCursor: '' })
-    await talentRun
-
-    expect(page.data.tab).toBe('PROJECT')
-    expect(page.data.results).toEqual([expect.objectContaining({ id: 'project-result' })])
   })
 })

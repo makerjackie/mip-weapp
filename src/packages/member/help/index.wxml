@@ -3,7 +3,7 @@
   <view class="mt-5 overflow-hidden rounded-[24rpx] bg-panel">
     <t-collapse>
       <t-collapse-panel header="公开资料" value="profile"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">进入“我的”，选择“编辑档案”，可以更新昵称、主城市分会、行业、能力和个人介绍。</view></t-collapse-panel>
-      <t-collapse-panel header="会员权益" value="benefits"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">玩家权益以当前会员方案和服务端有效权益记录为准，可在会员权益页查看。</view></t-collapse-panel>
+      <t-collapse-panel header="会员权益" value="benefits"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">可在会员权益页查看当前方案、有效期和可享权益。</view></t-collapse-panel>
       <t-collapse-panel header="取消活动报名" value="event"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">进入“我的活动”，打开对应活动，在允许取消的时间内选择“取消报名”。付费报名会先进入退款流程。</view></t-collapse-panel>
       <t-collapse-panel header="支付与退款" value="refund"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">进入“我的”中的“订单与售后”，打开订单查看支付确认或退款进度。</view></t-collapse-panel>
       <t-collapse-panel header="手机号可见性" value="privacy"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">手机号仅用于活动联系、订单和售后，不会展示在公开档案中。</view></t-collapse-panel>

@@ -69,6 +69,9 @@ Page({
     }
   },
 
+  openNotificationSettings() { caseNavigateTo({ url: '/packages/member/mip-opportunity-settings/index' }) },
+  openAbout() { caseNavigateTo({ url: '/packages/member/about/index' }) },
+
   openVisibilitySettings() {
     caseNavigateTo({ url: '/packages/member/mip-visibility-settings/index' })
   },

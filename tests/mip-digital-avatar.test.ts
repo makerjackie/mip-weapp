@@ -24,7 +24,6 @@ describe('MIP digital avatar', () => {
   it('has stable styles, strict provider output, and no fake local success path', () => {
     const types = source('src/modules/mip-ai/types.ts')
     const provider = source('cloudfunctions/mip-ai-api/lib/provider.js')
-    const page = source('src/packages/member/mip-avatar/index.ts')
     const app = JSON.parse(source('src/app.json'))
     const memberPackage = app.subPackages.find((item: { root: string }) => item.root === 'packages/member')
 
@@ -34,12 +33,7 @@ describe('MIP digital avatar', () => {
     expect(provider).toMatch(/return call\('generateDigitalAvatar'/)
     expect(provider).toMatch(/\['contentType', 'imageBase64', 'providerJobKey'\]/)
     expect(provider).not.toContain('outputUrl: value.outputUrl')
-    expect(page).toContain('mipIdentityModule.loadSnapshot()')
-    expect(page).toContain('snapshot.profile.avatarAssetId')
-    expect(page).toContain('mipAiModule.generateDigitalAvatar')
-    expect(page).toMatch(/selectStyle[\s\S]*setData\([\s\S]*void this\.generate\(\)/)
-    expect(page).not.toContain('canvas')
-    expect(memberPackage.pages).toContain('mip-avatar/index')
+    expect(memberPackage.pages).not.toContain('mip-avatar/index')
   })
 
   it('declares image safety and deploys the isolated avatar provider configuration', () => {
@@ -70,12 +64,9 @@ describe('MIP digital avatar', () => {
   })
 
   it('reuses one request identity across an uncertain client retry', () => {
-    const page = source('src/packages/member/mip-avatar/index.ts')
     const validation = source('cloudfunctions/mip-ai-api/domain/validation.js')
     const repository = source('cloudfunctions/mip-ai-api/domain/repository.js')
 
-    expect(page).toContain('generationRequestId: requestId')
-    expect(page).toMatch(/\['SERVICE_UNAVAILABLE', 'DIGITAL_AVATAR_GENERATION_IN_PROGRESS'\]/)
     expect(validation).toContain('event.requestId.trim()')
     expect(validation).toContain('{8,128}')
     expect(repository).toContain('request_id = ? FOR UPDATE')

@@ -897,16 +897,14 @@ Page({
   openDiscoveryMenu() {
     const entries: Array<{
       label: string
-      action: 'people' | 'matching' | 'mine' | 'cases'
+      action: 'people' | 'mine' | 'cases'
     }> = this.data.mode === 'opportunities'
       ? [
           { label: '找人才', action: 'people' },
-          { label: '机会撮合', action: 'matching' },
           { label: '我的机会', action: 'mine' },
         ]
       : [
           { label: '人才名录', action: 'people' },
-          { label: '机会撮合', action: 'matching' },
           { label: '我的合作卡', action: 'mine' },
           { label: '超级案例', action: 'cases' },
         ]
@@ -916,9 +914,6 @@ Page({
         const action = entries[tapIndex]?.action
         if (action === 'people') {
           this.openPeople()
-        }
-        else if (action === 'matching') {
-          this.openMatching()
         }
         else if (action === 'mine') {
           this.openMine()
@@ -935,10 +930,6 @@ Page({
       ? '/packages/member/mip-opportunities/mine/index'
       : '/packages/member/mip-cooperation/list/index?mine=1'
     void this.openProtected(url, 'INTERACT')
-  },
-
-  openMatching() {
-    void this.openProtected('/packages/member/mip-opportunity-matching/index', 'INTERACT')
   },
 
   openCases() {

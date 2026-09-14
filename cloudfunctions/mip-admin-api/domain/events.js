@@ -298,6 +298,16 @@ function createAdminEvents({
       : ''
     const version = expectedVersion(input.expectedVersion)
     const idempotencyKey = normalizeOptionalIdempotencyKey(input.idempotencyKey)
+    let contentSafetyReview
+    if (input.status === 'PUBLISHED' && scope.contentSafetyStatus === 'ERROR') {
+      const event = await repository.getEvent(context.caller.appId, eventId)
+      if (!event) throw new AdminError('NOT_FOUND', '活动不存在')
+      if (event.version !== version) throw new AdminError('CONFLICT', '活动已更新，请刷新后重试')
+      const safety = await contentSafety(event, caller)
+      if (safety === 'ERROR') throw new AdminError('CONTENT_SAFETY_UNAVAILABLE', '内容检查服务暂不可用，请稍后重新发布')
+      if (safety !== 'PASSED') throw new AdminError('CONTENT_SAFETY_REQUIRED', '内容安全检查未通过，暂不能发布')
+      contentSafetyReview = { version }
+    }
     const result = await repository.changeEventStatus({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
@@ -306,6 +316,7 @@ function createAdminEvents({
       status: input.status,
       reason,
       idempotencyKey,
+      ...(contentSafetyReview ? { contentSafetyReview } : {}),
       authorization: access.mutationAuthorization(grant, CAPABILITIES.EVENTS_WRITE),
       authorizedScope: scope,
       audit: access.audit(context, grant, {

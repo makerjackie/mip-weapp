@@ -293,6 +293,19 @@ Page({
     void this.runProfileAction('interest')
   },
 
+  async openProfileMore() {
+    if (this.data.isSelf || this.safetyActionBusy) {
+      return
+    }
+    const selected = await wx.showActionSheet({ itemList: ['举报', '屏蔽'] }).catch(() => null)
+    if (selected?.tapIndex === 0) {
+      this.reportProfile()
+    }
+    else if (selected?.tapIndex === 1) {
+      this.blockProfile()
+    }
+  },
+
   blockProfile() {
     void this.runProfileAction('block')
   },
@@ -350,7 +363,7 @@ Page({
   async confirmBlock() {
     const confirmed = await wx.showModal({
       title: '屏蔽用户',
-      content: '屏蔽后，你们将无法查看对方的公开档案，相关公开列表也会隐藏对方。',
+      content: '屏蔽后，你们将无法查看对方的公开档案，相关公开列表也会隐藏对方。屏蔽不会通知对方。',
       confirmText: '确认屏蔽',
       confirmColor: '#FF4D5E',
     }).catch(() => null)
@@ -393,10 +406,10 @@ Page({
     }
     const category = reportCategoryOptions[selected.tapIndex].value as ReportCategory
     const description = await wx.showModal({
-      title: '补充说明',
+      title: '举报说明',
       content: '',
       editable: true,
-      placeholderText: '可选，最多 300 字',
+      placeholderText: '仅运营人员可见，可选，最多 300 字',
       confirmText: '提交',
     }).catch(() => null)
     if (!description?.confirm) {

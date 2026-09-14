@@ -37,7 +37,7 @@ describe('MIP received interaction client flow', () => {
     expect(pageConfig.navigationBarTitleText).toBe('影响力数据')
     expect(profile).toContain('bind:select="openStat"')
     expect(profile).toContain('target: \'visitor\'')
-    expect(profile).toContain('visitorUnreadCount > 99')
+    expect(profile).toContain('badge: visitorUnreadCount > 0')
     expect(profilePage).toContain('opportunityModule.listReceived(\'VISITOR\')')
     expect(profilePage).toContain('Promise.allSettled([')
     expect(profilePage).toContain('summaryResult.status === \'fulfilled\'')

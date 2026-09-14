@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 70,
+  "routeCount": 66,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 70 paths.",
+    "config/project.json routes must list the same 66 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -47,7 +47,11 @@
     {
       "id": "subscription-message",
       "label": "活动订阅消息",
-      "routes": ["packages/member/mip-notifications/index"],
+      "routes": [
+        "packages/member/mip-events/registration/index",
+        "packages/member/mip-events/detail/index",
+        "packages/member/mip-hearts/index"
+      ],
       "reason": "订阅授权必须由用户手势触发，授权结果和微信送达都需要真机验证"
     },
     {
@@ -133,7 +137,6 @@
       "routes": [
         "pages/membership/index",
         "packages/admin/event-console/index",
-        "packages/member/mip-avatar/index",
         "packages/member/mip-card/index",
         "packages/member/mip-events/detail/index"
       ],
@@ -153,12 +156,6 @@
       "label": "网页登录小程序码",
       "routes": ["packages/admin/web-login-confirm/index"],
       "reason": "动态小程序码打开、运营账号授权、显式确认和网页会话交换需要微信真机与电脑浏览器联合验证"
-    },
-    {
-      "id": "ai-voice",
-      "label": "AI 语音草稿",
-      "routes": ["packages/member/mip-ai/index"],
-      "reason": "录音权限、音频上传和语音整理链路需要真机验证"
     }
   ],
   "sensitivePatterns": [
@@ -268,33 +265,21 @@
     },
     {
       "id": "disabled",
-      "route": "packages/member/mip-ai/index",
+      "route": "packages/member/privacy/index",
       "patch": {
         "state": "ready",
-        "capability": {
-          "textDrafts": false,
-          "voiceDrafts": false
-        },
-        "drafts": [],
-        "recording": false,
-        "generating": false
+        "closureState": "processing",
+        "confirmationPhrase": "",
+        "requiredConfirmationPhrase": "注销账号"
       },
       "dataAssertions": [
         {
-          "path": "state",
-          "equals": "ready"
-        },
-        {
-          "path": "capability.textDrafts",
-          "equals": false
-        },
-        {
-          "path": "capability.voiceDrafts",
-          "equals": false
+          "path": "closureState",
+          "equals": "processing"
         }
       ],
       "visibleAssertion": {
-        "selector": "#mip-ai-page #mip-ai-disabled-state"
+        "selector": "#privacy-account-page #privacy-sign-out"
       }
     }
   ],
@@ -565,16 +550,6 @@
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
       "tab": true
-    },
-    {
-      "id": "M48",
-      "name": "全部服务",
-      "path": "packages/member/mip-services/index",
-      "selector": "#mip-services-page",
-      "group": "member",
-      "kind": "static",
-      "states": ["ready"],
-      "readyAssertion": "state === 'ready'"
     },
     {
       "id": "M49",
@@ -859,7 +834,8 @@
         "photo-save",
         "share",
         "video-channel",
-        "wechat-pay"
+        "wechat-pay",
+        "subscription-message"
       ]
     },
     {
@@ -902,7 +878,11 @@
           "eventId": "id"
         }
       },
-      "deviceRequired": ["phone-auth", "wechat-pay"]
+      "deviceRequired": [
+        "phone-auth",
+        "wechat-pay",
+        "subscription-message"
+      ]
     },
     {
       "id": "M07",
@@ -1036,16 +1016,6 @@
       "name": "我的机会",
       "path": "packages/member/mip-opportunities/mine/index",
       "selector": "#mip-opportunity-mine-page",
-      "group": "member",
-      "kind": "data",
-      "states": ["loading", "ready", "error"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "M42",
-      "name": "机会撮合",
-      "path": "packages/member/mip-opportunity-matching/index",
-      "selector": "#mip-opportunity-matching-page",
       "group": "member",
       "kind": "data",
       "states": ["loading", "ready", "error"],
@@ -1203,18 +1173,6 @@
       "deviceRequired": ["phone-auth"]
     },
     {
-      "id": "M37",
-      "name": "数字分身",
-      "path": "packages/member/mip-avatar/index",
-      "selector": "#mip-avatar-page",
-      "group": "member",
-      "kind": "data",
-      "states": ["loading", "ready", "unconfigured", "error"],
-      "acceptStates": ["ready", "unconfigured"],
-      "readyAssertion": "state === 'ready' || state === 'unconfigured'",
-      "deviceRequired": ["photo-save"]
-    },
-    {
       "id": "M34",
       "name": "团队 PK",
       "path": "packages/member/mip-game/index",
@@ -1336,7 +1294,7 @@
       "kind": "data",
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["subscription-message"]
+      "deviceRequired": []
     },
     {
       "id": "M24",
@@ -1358,18 +1316,8 @@
       "kind": "data",
       "states": ["loading", "ready", "empty", "error", "access"],
       "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "M21",
-      "name": "AI 草稿",
-      "path": "packages/member/mip-ai/index",
-      "selector": "#mip-ai-page",
-      "group": "member",
-      "kind": "data",
-      "states": ["loading", "ready", "error"],
-      "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["ai-voice"]
+      "readyAssertion": "state === 'ready' || state === 'empty'",
+      "deviceRequired": ["subscription-message"]
     },
     {
       "id": "M29",

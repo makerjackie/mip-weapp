@@ -2,16 +2,18 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { parseReceivedVisitors } from '../src/modules/mip-opportunities/received-visitors'
 import { clearLoadingDiagnostics, getLoadingDiagnostics } from '../src/platform/cloudbase/loading-diagnostics'
 
-const mocks = vi.hoisted(() => ({ access: vi.fn(), list: vi.fn() }))
+const mocks = vi.hoisted(() => ({ access: vi.fn(), list: vi.fn(), markRead: vi.fn(), invalidate: vi.fn() }))
 vi.mock('../src/modules/mip-identity', () => ({ mipAccessPageUrl: vi.fn() }))
 vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: { beginProtectedAction: mocks.access } }))
-vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: {} }))
-vi.mock('../src/modules/mip-opportunities', () => ({ opportunityModule: { listReceived: mocks.list } }))
+vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: { invalidate: mocks.invalidate } }))
+vi.mock('../src/modules/mip-opportunities', () => ({ opportunityModule: { listReceived: mocks.list, markReceivedRead: mocks.markRead } }))
 vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn() }))
 
 interface TestPage {
   data: Record<string, unknown>
   categoryCache: Record<string, unknown>
+  onHide: () => void
+  openInteraction: (event: unknown) => Promise<void>
   accessReady: boolean
   checkingAccess: boolean
   setData: (patch: Record<string, unknown>) => void
@@ -26,8 +28,9 @@ function page() {
     ...definition,
     data: { ...structuredClone(definition.data), category: 'VISITOR' },
     categoryCache: structuredClone(definition.categoryCache),
-    setData(patch: Record<string, unknown>) {
+    setData(patch: Record<string, unknown>, callback?: () => void) {
       Object.assign(this.data, patch)
+      callback?.()
     },
   }
 }
@@ -51,8 +54,69 @@ describe('received interactions failure recovery', () => {
     mocks.list.mockResolvedValueOnce(parseReceivedVisitors({ items: [{ profileRef: 'public-ref', nickname: '访客甲', visitCount: 3, lastVisitedAt: '2026-09-12T03:00:00Z', unread: true }], unreadCount: 1, totalViewCount: 3 }))
     await p.loadCategory('VISITOR', true)
     expect(p.data.state).toBe('ready')
-    expect(p.data.items).toEqual([expect.objectContaining({ actorName: '访客甲', messageId: 'public-ref', unread: true, detailText: '访问了你的公开档案 3 次' })])
+    expect(p.data.items).toEqual([expect.objectContaining({ actorName: '访客甲', messageId: 'public-ref', unread: false, detailText: '访问了你的公开档案 3 次' })])
     expect(p.data.totalViewCount).toBe(3)
+  })
+
+  it('only marks displayed visitors and retains unloaded unread records', async () => {
+    const p = page()
+    mocks.list.mockResolvedValueOnce(parseReceivedVisitors({ items: [{ profileRef: 'public-ref', nickname: '访客甲', visitCount: 3, lastVisitedAt: '2026-09-12T03:00:00Z', unread: true }], unreadCount: 2, totalViewCount: 4 }))
+    await p.loadCategory('VISITOR', true)
+    await vi.waitFor(() => expect(p.data.visitorUnreadCount).toBe(1))
+    expect(mocks.markRead).toHaveBeenCalledWith('public-ref', 'VISITOR')
+    expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not mark background preloaded visitors read', async () => {
+    const p = page()
+    p.data.category = 'GUEST'
+    mocks.list.mockResolvedValueOnce(parseReceivedVisitors({ items: [{ profileRef: 'public-ref', nickname: '访客甲', visitCount: 1, lastVisitedAt: '2026-09-12T03:00:00Z', unread: true }], unreadCount: 1, totalViewCount: 1 }))
+    await p.loadCategory('VISITOR', true)
+    expect(mocks.markRead).not.toHaveBeenCalled()
+    expect(p.data.visitorUnreadCount).toBe(1)
+  })
+
+  it('retains unread state and the list when read synchronization fails', async () => {
+    const p = page()
+    mocks.markRead.mockRejectedValueOnce(new Error('offline'))
+    mocks.list.mockResolvedValueOnce(parseReceivedVisitors({ items: [{ profileRef: 'public-ref', nickname: '访客甲', visitCount: 1, lastVisitedAt: '2026-09-12T03:00:00Z', unread: true }], unreadCount: 1, totalViewCount: 1 }))
+    await p.loadCategory('VISITOR', true)
+    await vi.waitFor(() => expect(p.data.message).toContain('刷新重试'))
+    expect(p.data.state).toBe('ready')
+    expect(p.data.visitorUnreadCount).toBe(1)
+    expect(p.data.items).toEqual([expect.objectContaining({ unread: true })])
+  })
+
+  it('waits for rendering before marking visitors read', async () => {
+    const p = page()
+    const rendered: Array<() => void> = []
+    p.setData = function (patch, callback) {
+      Object.assign(this.data, patch)
+      if (callback) {
+        rendered.push(callback)
+      }
+    }
+    mocks.list.mockResolvedValueOnce(parseReceivedVisitors({ items: [{ profileRef: 'public-ref', nickname: '访客甲', visitCount: 1, lastVisitedAt: '2026-09-12T03:00:00Z', unread: true }], unreadCount: 1, totalViewCount: 1 }))
+    await p.loadCategory('VISITOR', true)
+    expect(mocks.markRead).not.toHaveBeenCalled()
+    p.onHide()
+    rendered.forEach(callback => callback())
+    expect(mocks.markRead).not.toHaveBeenCalled()
+  })
+
+  it('does not mark a visitor twice when opening their profile during synchronization', async () => {
+    const p = page()
+    let finish!: () => void
+    mocks.markRead.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      finish = resolve
+    }))
+    mocks.list.mockResolvedValueOnce(parseReceivedVisitors({ items: [{ profileRef: 'public-ref', nickname: '访客甲', visitCount: 1, lastVisitedAt: '2026-09-12T03:00:00Z', unread: true }], unreadCount: 2, totalViewCount: 2 }))
+    await p.loadCategory('VISITOR', true)
+    const items = p.data.items as Array<{ viewKey: string }>
+    await p.openInteraction({ currentTarget: { dataset: { key: items[0].viewKey } } })
+    expect(mocks.markRead).toHaveBeenCalledTimes(1)
+    finish()
+    await vi.waitFor(() => expect(p.data.visitorUnreadCount).toBe(1))
   })
 
   it('rechecks failed identity before loading any interaction lists', async () => {

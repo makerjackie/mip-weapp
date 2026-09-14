@@ -51,12 +51,9 @@ describe('runtime page privacy and normal unavailable states', () => {
 
   it('classifies direct access recovery as external wait and optional avatar availability as settled', () => {
     const access = contract.routes.find((route: { path: string }) => route.path === 'packages/member/mip-access/index')
-    const avatar = contract.routes.find((route: { path: string }) => route.path === 'packages/member/mip-avatar/index')
 
     expect(evaluateRouteState(access, { state: 'expired' })).toMatchObject({ status: 'external-wait', state: 'expired' })
     expect(evaluateRouteState(access, { state: 'ready' })).toMatchObject({ status: 'passed', state: 'ready' })
-    expect(evaluateRouteState(avatar, { state: 'unconfigured' })).toMatchObject({ status: 'passed', state: 'unconfigured' })
-    expect(avatar.pendingStates).toBeUndefined()
     expect(read('src/packages/member/mip-access/index.wxml')).toContain('state === \'expired\'')
   })
 

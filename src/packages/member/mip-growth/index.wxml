@@ -46,19 +46,15 @@
       <view wx:else class="mt-2 text-[length:22rpx] text-muted">当前等级暂未配置权益。</view>
     </view>
 
-    <!-- figma 1948_14079: task cards 351×67 on a 12px gap, first top at impl raw y330;
-         line1 12px medium (12,14), line2 10px white (12,32), + EXP 16/12/16 brand (169,23),
-         pill button 64×25 at (275,21). -->
     <view aria-label="正在加载" aria-busy="true" wx:if="{{tasksState === 'loading'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view wx:elif="{{tasksState === 'error'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:24rpx]">成长任务暂时无法加载</view><view class="mt-2 text-[length:22rpx] text-muted">{{tasksMessage}}</view><view class="mt-3 flex min-h-[88rpx] items-center text-[length:22rpx] text-brand" aria-role="button" bind:tap="loadTasks">重新加载</view></view>
     <view wx:elif="{{tasksState === 'empty'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5 text-[length:22rpx] text-muted">暂无可完成的成长任务。</view>
     <view wx:else class="mx-3 mt-[24rpx] flex flex-col gap-[24rpx]">
-      <view wx:for="{{tasks}}" wx:key="id" class="relative h-[134rpx] rounded-[16rpx] bg-panel active:bg-panel-muted" aria-role="button" aria-label="查看任务 {{item.name}}" data-id="{{item.id}}" bind:tap="openTask">
-        <view class="absolute left-[24rpx] top-[28rpx] max-w-[270rpx] truncate text-[length:24rpx] font-medium leading-[33.6rpx]">{{item.name}}</view>
-        <view class="absolute left-[24rpx] top-[64rpx] max-w-[270rpx] truncate text-[length:20rpx] leading-[28rpx]">{{item.content}}</view>
-        <view class="absolute left-[338rpx] top-[46rpx] whitespace-nowrap text-[length:32rpx] font-medium leading-[44.8rpx] text-brand">+ <text class="text-[length:24rpx]">EXP</text> {{item.rewardExperience}}</view>
-        <view wx:if="{{item.status === 'AVAILABLE'}}" class="absolute right-[24rpx] top-[42rpx] flex h-[50rpx] w-[128rpx] items-center justify-center rounded-full bg-brand text-[length:24rpx] font-medium text-on-brand">{{item.actionText}}</view>
-        <view wx:else class="absolute right-[24rpx] top-[42rpx] flex h-[50rpx] w-[128rpx] items-center justify-center rounded-full bg-canvas text-[length:24rpx] font-medium text-brand">{{item.actionText}}</view>
+      <view wx:for="{{tasks}}" wx:key="id" class="flex min-h-[104rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3 py-3 active:bg-panel-muted" aria-role="button" aria-label="{{item.name}}，奖励 {{item.rewardExperience}} 经验" data-id="{{item.id}}" bind:tap="openTask">
+        <view class="min-w-0 flex-1 truncate text-[length:26rpx] font-medium">{{item.name}}</view>
+        <view class="shrink-0 whitespace-nowrap text-[length:24rpx] font-medium text-brand">+{{item.rewardExperience}} 经验</view>
+        <view wx:if="{{item.status === 'AVAILABLE'}}" class="flex h-[52rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-[length:24rpx] font-medium text-on-brand">{{item.actionText}}</view>
+        <view wx:else class="flex h-[52rpx] shrink-0 items-center justify-center rounded-full bg-canvas px-3 text-[length:24rpx] font-medium text-brand">{{item.actionText}}</view>
       </view>
     </view>
 

@@ -209,4 +209,5 @@
     </block>
     <app-page-exit wx:if="{{state !== 'ready'}}" />
   </block>
+  <mip-subscription-prompt wx:if="{{state === 'ready' && event && event.status === 'PUBLISHED' && (event.registrationStatus === 'REGISTERED' || event.registrationStatus === 'WAITLISTED' || event.registrationStatus === 'PENDING_REVIEW')}}" />
 </view>

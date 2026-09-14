@@ -33,6 +33,7 @@ Page({
     }
     const value = Boolean(event.detail.value)
     const next = {
+      ...preferences,
       notifications: { ...preferences.notifications },
       opportunities: { ...preferences.opportunities },
     }
@@ -43,18 +44,6 @@ Page({
       ;(next.opportunities as unknown as Record<string, unknown>)[path.slice(14)] = value
     }
     this.setData({ preferences: next })
-  },
-
-  setScope(event: WechatMiniprogram.TouchEvent) {
-    const scope = String(event.currentTarget.dataset.scope || '') as 'PLATFORM' | 'PRIMARY_BRANCH'
-    const preferences = this.data.preferences
-    if (!preferences || !['PLATFORM', 'PRIMARY_BRANCH'].includes(scope)) {
-      return
-    }
-    this.setData({ preferences: {
-      ...preferences,
-      opportunities: { ...preferences.opportunities, matchingScope: scope },
-    } })
   },
 
   async save() {

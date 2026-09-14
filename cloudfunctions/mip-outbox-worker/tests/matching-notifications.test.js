@@ -19,41 +19,9 @@ function event(overrides = {}) {
 }
 
 describe('matching and opportunity notification projection', () => {
-  it('rehydrates a current recommendation and routes it to the matching center', async () => {
-    const outboxEvent = event()
-    const result = await projectEvent({
-      async one(sql, params) {
-        assert.match(sql, /opportunity_matching_notifications_enabled/)
-        assert.match(sql, /source\.version = request\.source_version/)
-        assert.deepEqual(params, [APP_ID, outboxEvent.aggregate_id, 1])
-        return {
-          requester_user_id: '30000000-0000-4000-8000-000000000001',
-          result_count: 7,
-          source_title: '城市品牌合作',
-        }
-      },
-    }, outboxEvent)
-
-    assert.equal(result.reason, 'PROJECTED')
-    assert.deepEqual(result.notifications[0], {
-      recipientUserId: '30000000-0000-4000-8000-000000000001',
-      dedupeKey: `outbox:${outboxEvent.id}:matching-ready`,
-      messageType: 'OPPORTUNITY',
-      title: '机会撮合结果已生成',
-      body: '“城市品牌合作”已有 7 条推荐。',
-      targetType: 'MATCHING',
-      targetId: outboxEvent.aggregate_id,
-      external: {
-        channel: 'WECHAT_CUSTOMER_SERVICE',
-        templateKey: 'CUSTOMER_SERVICE_TEXT',
-        fields: { content: '机会撮合结果已生成，请在小程序内查看。' },
-      },
-    })
-  })
-
-  it('suppresses a recommendation when the current preference or source fact is unavailable', async () => {
-    const result = await projectEvent({ one: async () => null }, event())
-    assert.equal(result.reason, 'FACT_NO_LONGER_CURRENT')
+  it('suppresses retired matching recommendations without reading candidate data', async () => {
+    const result = await projectEvent({}, event())
+    assert.equal(result.reason, 'FEATURE_RETIRED')
     assert.deepEqual(result.notifications, [])
   })
 

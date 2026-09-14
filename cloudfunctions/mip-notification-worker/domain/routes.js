@@ -3,7 +3,6 @@
 const routes = {
   EVENT: id => `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(id)}`,
   OPPORTUNITY: id => `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(id)}`,
-  MATCHING: id => `/packages/member/mip-opportunity-matching/index?requestId=${encodeURIComponent(id)}`,
   ORDER: id => `/packages/member/order-detail/index?orderId=${encodeURIComponent(id)}`,
   PROFILE: profileRef => `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}`,
   GROWTH: () => '/packages/member/mip-growth/index',
@@ -14,6 +13,7 @@ const routes = {
 function buildTarget(type, id) {
   if (type === undefined && id === undefined) return null
   const normalizedType = text(type).toUpperCase()
+  if (normalizedType === 'MATCHING') return null
   const normalizedId = text(id)
   const validId = normalizedType === 'PROFILE' ? isProfileRef(normalizedId) : isUuid(normalizedId)
   if (!routes[normalizedType] || !validId) {

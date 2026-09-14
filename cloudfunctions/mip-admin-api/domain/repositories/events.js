@@ -648,7 +648,7 @@ function createAdminEventRepository(database, dependencies) {
             status, content_safety_status, starts_at, ends_at,
             registration_deadline, cancellation_deadline, venue_name, address, city_name,
             latitude, longitude, online_url, capacity, waitlist_enabled, price_cents, currency, registration_schema_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
           [eventId, input.appId, input.draft.scopeType, input.draft.branchId || null,
             input.actorUserId, input.draft.title, input.draft.summary, input.draft.description,
             input.draft.notices || null, input.draft.coverAssetId, input.draft.eventTypeKey, input.draft.eventMode,
@@ -863,6 +863,16 @@ function createAdminEventRepository(database, dependencies) {
         ENDED: [],
       }
       if (!allowedTransitions[event.status]?.includes(input.status)) throw codeError('INVALID_STATE')
+      if (input.status === 'PUBLISHED' && event.content_safety_status === 'ERROR'
+        && input.contentSafetyReview?.version === input.expectedVersion) {
+        const reviewed = await tx.query(
+          `UPDATE mip_events SET content_safety_status = 'PASSED'
+           WHERE app_id = ? AND id = ? AND version = ? AND content_safety_status = 'ERROR'`,
+          [input.appId, input.eventId, input.expectedVersion],
+        )
+        if (Number(reviewed.affectedRows) !== 1) throw codeError('CONFLICT')
+        event.content_safety_status = 'PASSED'
+      }
       if (input.status === 'PUBLISHED' && event.content_safety_status !== 'PASSED') throw codeError('CONTENT_SAFETY_REQUIRED')
       const changedAt = now()
       if (input.status === 'PUBLISHED' && new Date(event.starts_at) <= changedAt) throw codeError('INVALID_STATE')

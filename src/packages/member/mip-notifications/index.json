@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "站内消息",
+  "navigationBarTitleText": "消息",
   "enablePullDownRefresh": true,
   "backgroundColor": "#080808",
   "usingComponents": {

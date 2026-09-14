@@ -52,14 +52,6 @@
       </view>
     </view>
 
-    <!-- 分身头像管理为存量功能，设计稿（1732_20401）未收录；showAvatarManager 保留生产入口。 -->
-    <view wx:if="{{showAvatarManager}}" class="mip-radius-card-medium mt-5 bg-panel px-4 py-4">
-      <view class="flex items-center justify-between gap-3"><view><view class="text-[length:24rpx] font-semibold">名片头像</view><view class="mt-1 text-[length:22rpx] text-muted">可使用当前头像或数字分身。</view></view><view class="shrink-0 text-[length:22rpx] text-brand" bind:tap="openDigitalAvatar">管理分身</view></view>
-      <view class="mt-3 grid grid-cols-2 gap-2">
-        <view class="mip-radius-control px-3 py-3 text-center text-[length:22rpx] {{avatarSource === 'ORIGINAL' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-source="ORIGINAL" bind:tap="chooseAvatarSource">当前头像</view>
-        <view class="mip-radius-control px-3 py-3 text-center text-[length:22rpx] {{avatarSource === 'DIGITAL' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-source="DIGITAL" bind:tap="chooseAvatarSource">{{digitalAvatarUrl ? '数字分身' : '暂未生成'}}</view>
-      </view>
-    </view>
 
     <image wx:if="{{posterPath}}" class="mt-4 h-[300rpx] w-full rounded-[16rpx] bg-panel" mode="aspectFit" src="{{posterPath}}" bind:tap="previewPoster" />
     <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] bg-panel px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>

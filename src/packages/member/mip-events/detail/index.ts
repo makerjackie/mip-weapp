@@ -4,7 +4,6 @@ import { brand } from '../../../../config/brand'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { decodeInvitationToken, eventInvitationPath, eventRichTextNodes, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
-import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { peekCloudFileUrls } from '../../../../platform/storage/cloud-media'
 import { clearComponentMedia, updateComponentMedia } from '../../../../platform/storage/component-media'
@@ -507,7 +506,7 @@ Page({
     context.fillText('使用微信扫码查看活动详情', POSTER_WIDTH / 2, 474)
     context.textAlign = 'start'
     context.font = '400 12px sans-serif'
-    context.fillText('邀请关系将在报名时由服务端确认', 28, 526)
+    context.fillText('邀请你一起参加', 28, 526)
     if (node.requestAnimationFrame) {
       await new Promise<void>(resolve => node.requestAnimationFrame?.(resolve))
     }
@@ -622,13 +621,10 @@ Page({
   },
 
   async openCheckIn() {
-    if (mipMessagingModule.subscriptionCapability('CHECKIN_RESULT').available) {
-      await mipMessagingModule.requestWechatSubscription('CHECKIN_RESULT').catch(() => undefined)
-    }
     if (!mipCheckInResumeStore.peek(String(this.data.eventId))) {
       this.setData({
         hasCheckInIntent: false,
-        message: '签到意图已失效，请重新扫描现场活动码。',
+        message: '请重新扫描现场签到码。',
       })
       return
     }

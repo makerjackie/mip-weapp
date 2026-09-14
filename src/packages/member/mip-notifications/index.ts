@@ -8,10 +8,8 @@ interface MessageView extends InboxMessage {
   createdText: string
 }
 
-type SubscriptionTemplateKey = 'EVENT_REMINDER' | 'CHECKIN_RESULT' | 'HEART_RECEIVED'
-
 function messageView(item: InboxMessage): MessageView {
-  return { ...item, createdText: formatChineseMonthDayTime(item.createdAt) }
+  return { ...item, target: item.target && isTrustedInboxRoute(item.target.route) ? item.target : undefined, createdText: formatChineseMonthDayTime(item.createdAt) }
 }
 
 Page({
@@ -21,10 +19,6 @@ Page({
     unreadCount: 0,
     nextCursor: '',
     loadingMore: false,
-    eventReminderAvailable: false,
-    checkInResultAvailable: false,
-    heartReceivedAvailable: false,
-    requestingSubscription: '' as SubscriptionTemplateKey | '',
     message: '',
   },
   requestSeq: 0,
@@ -35,11 +29,6 @@ Page({
     if (cached) {
       this.applyPage(cached)
     }
-    this.setData({
-      eventReminderAvailable: mipMessagingModule.subscriptionCapability('EVENT_REMINDER').available,
-      checkInResultAvailable: mipMessagingModule.subscriptionCapability('CHECKIN_RESULT').available,
-      heartReceivedAvailable: mipMessagingModule.subscriptionCapability('HEART_RECEIVED').available,
-    })
     void this.loadInbox()
   },
 
@@ -153,29 +142,4 @@ Page({
     }
   },
 
-  async requestWechatSubscription(event: WechatMiniprogram.TouchEvent) {
-    const templateKey = String(event.currentTarget.dataset.templateKey || '') as SubscriptionTemplateKey
-    const available = templateKey === 'EVENT_REMINDER'
-      ? this.data.eventReminderAvailable
-      : templateKey === 'CHECKIN_RESULT'
-        ? this.data.checkInResultAvailable
-        : templateKey === 'HEART_RECEIVED' && this.data.heartReceivedAvailable
-    if (!available || this.data.requestingSubscription) {
-      return
-    }
-    this.setData({ requestingSubscription: templateKey, message: '' })
-    try {
-      const result = await mipMessagingModule.requestWechatSubscription(templateKey)
-      wx.showToast({
-        title: result.grantAvailable ? '微信通知已授权' : '未授权微信通知',
-        icon: result.grantAvailable ? 'success' : 'none',
-      })
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '微信提醒授权失败' })
-    }
-    finally {
-      this.setData({ requestingSubscription: '' })
-    }
-  },
 })

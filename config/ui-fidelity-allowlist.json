@@ -176,26 +176,6 @@
       "reason": "app.css --color-brand-dim 的 mip-icon 解析镜像"
     },
     {
-      "file": "src/packages/member/mip-ai/index.wxml",
-      "value": "#eaeaea",
-      "reason": "AI 录音删除/确认弹窗系统按钮与分隔线参考色（fixture-gated）"
-    },
-    {
-      "file": "src/packages/member/mip-ai/index.wxml",
-      "value": "#576b95",
-      "reason": "AI 录音 iOS 弹窗确认文字参考色（fixture-gated）"
-    },
-    {
-      "file": "src/packages/member/mip-ai/index.wxml",
-      "value": "#999999",
-      "reason": "AI 录音提示与系统弹窗取消文字参考色（fixture-gated）"
-    },
-    {
-      "file": "src/packages/member/mip-ai/index.wxml",
-      "value": "#484848",
-      "reason": "AI 录音删除/确认弹窗分隔线参考色（fixture-gated）"
-    },
-    {
       "file": "src/packages/member/mip-events/mine/index.wxml",
       "value": "#999999",
       "reason": "我的活动取消报名弹窗提示文字参考色（fixture-gated）"

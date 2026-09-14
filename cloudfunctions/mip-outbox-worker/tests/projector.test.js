@@ -261,17 +261,7 @@ describe('outbox event projector', () => {
       },
     }, checkedInEvent)
     assert.deepEqual(checkedIn.growth, [{ action: 'applyCheckInTransition', transitionId }])
-    assert.equal(checkedIn.notifications[0].recipientUserId, userId)
-    assert.deepEqual(checkedIn.notifications[0].external, {
-      channel: 'WECHAT_SUBSCRIPTION',
-      templateKey: 'CHECKIN_RESULT',
-      fields: {
-        title: 'MIP 城市交流活动',
-        checkedAt: '2026-08-24 16:30',
-        participationMethod: '现场签到',
-        status: '签到成功',
-      },
-    })
+    assert.deepEqual(checkedIn.notifications, [])
     assert.doesNotMatch(JSON.stringify(checkedIn), /attacker-controlled/)
 
     const reversalId = '61000000-0000-4000-8000-000000000002'
@@ -371,8 +361,7 @@ describe('outbox event projector', () => {
     const userCancelled = await projectEvent({
       one: async () => ({ ...fact, cancelled_by_type: 'USER' }),
     }, event)
-    assert.equal(userCancelled.notifications.length, 1)
-    assert.equal(userCancelled.notifications[0].title, '活动报名已取消')
+    assert.deepEqual(userCancelled.notifications, [])
   })
 
   it('rebuilds published event updates and recipients only from current app-scoped facts', async () => {
@@ -883,5 +872,32 @@ describe('outbox event projector', () => {
     const announcement = await projectEvent({}, { ...base, event_type: 'announcement.published' })
     assert.equal(announcement.supported, true)
     assert.equal(announcement.reason, 'NO_PROJECTION_REQUIRED')
+  })
+})
+
+describe('actionable inbox policy', () => {
+  const fact = { id: base.aggregate_id, user_id: base.aggregate_id, event_id: base.aggregate_id, status: 'REGISTERED' }
+  const event = { ...base, aggregate_type: 'EVENT_REGISTRATION', event_type: 'event.registration_confirmed' }
+  it('suppresses direct confirmation but retains reviewed and promoted confirmations', async () => {
+    const db = { one: async () => fact }
+    assert.deepEqual((await projectEvent(db, event)).notifications, [])
+    const reviewed = await projectEvent(db, { ...event, payload_json: { reviewedByUserId: base.aggregate_id } })
+    assert.equal(reviewed.notifications[0].title, '活动报名审核已通过')
+    const promoted = await projectEvent(db, { ...event, payload_json: JSON.stringify({ promotedFromWaitlist: true }) })
+    assert.equal(promoted.notifications[0].title, '活动候补进度已更新')
+  })
+  it('retains promotion to review while suppressing initial review submission', async () => {
+    const db = { one: async () => ({ ...fact, status: 'PENDING_REVIEW' }) }
+    const submitted = { ...event, event_type: 'event.registration_submitted' }
+    assert.deepEqual((await projectEvent(db, submitted)).notifications, [])
+    const promoted = await projectEvent(db, { ...submitted, payload_json: { promotedFromWaitlist: true } })
+    assert.equal(promoted.notifications[0].body, '已获得候补名额，报名正在审核。')
+  })
+  it('retains operator cancellation and suppresses member payment receipts and retired matching', async () => {
+    const cancelled = await projectEvent({ one: async () => ({ ...fact, status: 'CANCELLED', cancelled_by_type: 'ADMIN' }) }, { ...event, event_type: 'event.registration_cancelled' })
+    assert.equal(cancelled.notifications[0].title, '活动报名已取消')
+    for (const eventType of ['membership.payment_confirmed', 'matching.recommendation_ready']) {
+      assert.deepEqual((await projectEvent({}, { ...base, event_type: eventType })).notifications, [])
+    }
   })
 })

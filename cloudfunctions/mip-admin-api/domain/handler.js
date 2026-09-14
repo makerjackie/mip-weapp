@@ -128,6 +128,7 @@ function errorResponse(error) {
     MATCHING_DISPATCH_CONFIG_REQUIRED: '机会撮合重算服务尚未配置',
     MATCHING_DISPATCH_UNAVAILABLE: '机会撮合重算服务暂时不可用',
     CONTENT_SAFETY_REQUIRED: '内容安全检查未通过，暂不能发布',
+    CONTENT_SAFETY_UNAVAILABLE: '内容检查服务暂不可用，请稍后重新发布',
     CONTENT_REFUND_NOT_AVAILABLE: '内容已访问或已超过可退款时间',
     DEMO_ORDER: '演示订单不支持退款',
     INSUFFICIENT_BALANCE: '调整后余额不能小于零',

@@ -16,66 +16,27 @@ describe('MIP profile notification entry', () => {
     expect(page).toMatch(/if \(!snapshot\.authenticated\) \{[\s\S]*?notificationUnreadCount: 0/)
   })
 
-  it('moves the inbox into all services while keeping the profile unread badge', () => {
+  it('opens messages directly from profile with the unread count', () => {
     const page = readSource('src/pages/profile/index.ts')
     const template = readSource('src/pages/profile/index.wxml')
-    const servicesPage = readSource('src/packages/member/mip-services/index.ts')
-    const servicesTemplate = readSource('src/packages/member/mip-services/index.wxml')
-
-    expect(page).toContain(`openServices() { caseNavigateTo({ url: '/packages/member/mip-services/index' }) }`)
-    expect(template).toContain('bind:tap="openServices"')
-    expect(template).toContain('aria-role="button"')
-    expect(template).toContain('全部服务')
-    expect(template).toContain(`{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}`)
-    expect(template).not.toContain('更多服务')
-    expect(servicesPage).toContain(`openNotifications() { void this.openProtected('/packages/member/mip-notifications/index', 'INTERACT') }`)
-    expect(servicesTemplate).toContain('bind:tap="openNotifications"')
-    expect(servicesTemplate).toContain('站内消息')
-    expect(servicesTemplate).toContain('{{notificationUnreadCount}} 条未读')
-    expect(servicesTemplate).toContain('暂无未读')
-    expect(servicesTemplate).toContain(`{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}`)
+    expect(page).toContain('\'/packages/member/mip-notifications/index\'')
+    expect(template).toContain('bind:tap="openNotifications"')
+    expect(template).toContain('notificationUnreadCount > 99')
+    expect(template).not.toContain('全部服务')
+    expect(template).not.toContain('openServices')
   })
 
-  it('groups every former profile service on the secondary page', () => {
-    const page = readSource('src/packages/member/mip-services/index.ts')
-    const template = readSource('src/packages/member/mip-services/index.wxml')
-    const config = JSON.parse(readSource('src/packages/member/mip-services/index.json'))
-
-    expect(config.navigationBarTitleText).toBe('全部服务')
-    for (const group of ['互动', '工具', '账号与支持']) {
-      expect(template).toContain(`>${group}</view>`)
+  it('retires tools and consolidates settings and support', () => {
+    const app = readSource('src/app.json')
+    for (const route of ['mip-services/index', 'mip-ai/index', 'mip-avatar/index', 'mip-opportunity-matching/index']) {
+      expect(app).not.toContain(route)
     }
-    for (const handler of [
-      'openGame',
-      'openHeartHistory',
-      'openNotifications',
-      'openDigitalAvatar',
-      'openAiDrafts',
-      'openMatching',
-      'openBranches',
-      'openOpportunitySettings',
-      'openBenefits',
-      'openHelp',
-      'openAbout',
-    ]) {
-      expect(template).toContain(`bind:tap="${handler}"`)
+    const profile = readSource('src/pages/profile/index.wxml')
+    for (const action of ['openGame', 'openHelp', 'openSettings']) {
+      expect(profile).toContain(action)
     }
-    for (const route of [
-      '/packages/member/mip-game/index',
-      '/packages/member/mip-hearts/index',
-      '/packages/member/mip-notifications/index',
-      '/packages/member/mip-avatar/index',
-      '/packages/member/mip-ai/index',
-      '/packages/member/mip-opportunity-matching/index',
-      '/packages/member/mip-branches/index',
-      '/packages/member/mip-opportunity-settings/index',
-      '/packages/member/benefits/index',
-      '/packages/member/help/index',
-      '/packages/member/about/index',
-    ]) {
-      expect(page).toContain(route)
-    }
-    expect(template).toContain('<app-page-exit label="返回我的"')
+    expect(readSource('src/packages/member/privacy/index.wxml')).toContain('openNotificationSettings')
+    expect(readSource('src/packages/member/mip-notifications/index.wxml')).not.toContain('requestWechatSubscription')
   })
 
   it('keeps every portfolio tab at the figma 80rpx band height (1770:38871)', () => {

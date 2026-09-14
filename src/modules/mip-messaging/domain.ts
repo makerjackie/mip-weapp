@@ -8,7 +8,6 @@ import type {
 const routeByTargetType: Readonly<Record<string, (id: string) => string>> = {
   EVENT: id => `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(id)}`,
   OPPORTUNITY: id => `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(id)}`,
-  MATCHING: id => `/packages/member/mip-opportunity-matching/index?requestId=${encodeURIComponent(id)}`,
   ORDER: id => `/packages/member/order-detail/index?orderId=${encodeURIComponent(id)}`,
   PROFILE: profileRef => `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}`,
   GROWTH: () => '/packages/member/mip-growth/index',
@@ -19,7 +18,6 @@ const routeByTargetType: Readonly<Record<string, (id: string) => string>> = {
 const trustedRoutePrefixes = [
   '/packages/member/mip-events/detail/index?eventId=',
   '/packages/member/mip-opportunities/detail/index?id=',
-  '/packages/member/mip-opportunity-matching/index?requestId=',
   '/packages/member/order-detail/index?orderId=',
   '/packages/member/mip-knowledge/detail/index?contentId=',
 ] as const

@@ -17,6 +17,7 @@
       <view wx:if="{{orderId}}" class="mt-3"><t-button block variant="{{canContinueCheckIn ? 'outline' : 'base'}}" size="large" theme="{{canContinueCheckIn ? 'default' : 'primary'}}" bind:tap="openOrder">查看订单详情</t-button></view>
       <view class="mt-3"><t-button block variant="{{canContinueCheckIn || orderId ? 'text' : 'base'}}" size="large" theme="{{canContinueCheckIn || orderId ? 'default' : 'primary'}}" bind:tap="openMine">查看我的活动</t-button></view>
     </view>
+    <mip-subscription-prompt />
     <app-page-exit />
   </view>
   <!-- figma 1821_19274 活动报名：像素基线变体，fixture-gated（figmaLayout），生产布局见下方 wx:else。 -->

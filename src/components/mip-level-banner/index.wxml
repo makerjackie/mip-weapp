@@ -1,7 +1,9 @@
 <view class="mip-level-banner">
-  <image class="mip-level-banner__base" mode="scaleToFill" fade-show="{{false}}" src="/assets/mip/level-banner-deco@3x.png" />
+  <view class="mip-level-banner__decoration" aria-hidden="true">
+    <image class="mip-level-banner__base" mode="scaleToFill" fade-show="{{false}}" src="/assets/mip/level-banner-deco@3x.png" />
+  </view>
   <text class="mip-level-banner__level">{{level}}</text>
-  <text class="mip-level-banner__experience">{{current}} I {{target}}</text>
+  <text class="mip-level-banner__experience">{{current}} / {{target}}</text>
   <view class="mip-level-banner__action">
     <text class="mip-level-banner__action-label">玩家等级</text>
     <view class="mip-level-banner__arrow"><mip-icon name="chevron-down-1" color="var(--color-on-brand)" /></view>

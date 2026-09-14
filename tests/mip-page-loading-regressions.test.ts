@@ -64,7 +64,14 @@ describe('page loading and profile interaction regressions', () => {
     expect(instance.data.visitorUnreadCount).toBe(0)
   })
 
-  it.each([['嘉宾', 'GUEST'], ['互动过', 'INTERACTION'], ['心动值', 'ACTIVE_INTEREST']])('opens the %s statistic', (label, category) => {
+  it('opens a unified heart history from the heart statistic', () => {
+    const instance = page(profile)
+    instance.openProtected = vi.fn()
+    instance.openStat({ detail: { label: '心动值' } })
+    expect(instance.openProtected).toHaveBeenCalledWith('/packages/member/mip-received/index?scope=hearts&category=ACTIVE_INTEREST', 'INTERACT')
+  })
+
+  it.each([['嘉宾', 'GUEST'], ['互动过', 'INTERACTION']])('opens the %s statistic', (label, category) => {
     const instance = page(profile)
     instance.openInfluenceList = vi.fn()
     instance.openStat({ detail: { label } })

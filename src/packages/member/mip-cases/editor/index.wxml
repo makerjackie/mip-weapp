@@ -57,14 +57,8 @@
   <block wx:else>
     <view class="case-editor-guidance -mx-3 flex min-h-[64rpx] items-center justify-center bg-brand px-4 text-center text-[length:24rpx] font-medium text-on-brand">填写展现能力的超级案例</view>
 
-    <view id="case-editor-ai-assistant" class="case-editor-ai mt-3 flex min-h-[200rpx] items-center justify-center rounded-[16rpx] border border-brand bg-panel active:bg-panel-raised" aria-role="button" aria-label="打开 AI 助手" bind:tap="openAiAssistant">
-      <view class="case-editor-ai__label flex items-center gap-2 text-[length:28rpx] font-medium text-brand">
-        <image class="case-editor-ai__icon h-[48rpx] w-[48rpx]" src="/packages/member/mip-cases/editor/assets/ai-assistant.svg" mode="aspectFit" />
-        <text>AI 助手</text>
-      </view>
-    </view>
 
-    <view wx:if="{{aiDraftLoaded}}" class="mt-3 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:24rpx] leading-6 text-brand">已载入 AI 草稿，可继续修改后保存。</view>
+
 
     <view class="case-editor-section-heading mt-4 flex min-h-[56rpx] items-center justify-between gap-3">
       <view class="flex min-w-0 items-center gap-2">

@@ -3,7 +3,6 @@ import { isEventAccessRequirementError, MipEventsError } from '../../../../modul
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 function decoded(value: string) {
@@ -59,7 +58,7 @@ Page({
           eventId: query.eventId || '',
           hasScanToken: false,
           state: 'error',
-          message: '签到意图已失效，请重新扫描现场活动码。',
+          message: '请重新扫描现场签到码。',
         })
         return
       }
@@ -98,9 +97,6 @@ Page({
 
   async scanCode() {
     try {
-      if (mipMessagingModule.subscriptionCapability('CHECKIN_RESULT').available) {
-        await mipMessagingModule.requestWechatSubscription('CHECKIN_RESULT').catch(() => undefined)
-      }
       if (this.hasCheckInCredential()) {
         this.accessRetryAttempted = false
         await this.confirmCheckIn()
@@ -166,7 +162,7 @@ Page({
         this.retainCheckInIntent()
         this.setData({
           state: 'registration-pending',
-          message: '报名支付或资格尚未生效，请等待服务端确认后重试。',
+          message: '报名尚未完成，请先在“我的活动”查看报名结果。',
         })
         return
       }
@@ -238,7 +234,7 @@ Page({
       this.scanToken = ''
       this.resumeToken = ''
       this.resolvedScene = null
-      this.setData({ state: 'error', hasScanToken: false, message: '签到意图已失效，请重新扫描现场活动码。' })
+      this.setData({ state: 'error', hasScanToken: false, message: '请重新扫描现场签到码。' })
       return
     }
     caseNavigateTo({

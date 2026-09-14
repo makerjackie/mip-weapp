@@ -171,7 +171,6 @@ describe('mip-weapp UI runtime contract', () => {
       'packages/member/mip-public-profile/index',
       'packages/member/mip-notifications/index',
       'packages/member/mip-received/index',
-      'packages/member/mip-ai/index',
     ]))
   })
 
@@ -430,7 +429,6 @@ describe('mip-weapp UI runtime contract', () => {
   it('keeps real-device capabilities explicit and unresolved by DevTools', () => {
     const capabilityIds = contract.deviceRequiredCapabilities.map(item => item.id).sort()
     expect(capabilityIds).toEqual([
-      'ai-voice',
       'calendar-location',
       'customer-service',
       'event-album-photo',
@@ -486,8 +484,7 @@ describe('mip-weapp UI runtime contract', () => {
       'packages/member/mip-events/check-in/index',
       'packages/admin/event-registrations/index',
     ]))
-    expect(byId.get('subscription-message')?.routes).toEqual(['packages/member/mip-notifications/index'])
-    expect(byId.get('ai-voice')?.routes).toEqual(['packages/member/mip-ai/index'])
+    expect(byId.get('subscription-message')?.routes).toContain('packages/member/mip-events/registration/index')
     expect(byId.get('share')?.routes).toContain('packages/member/mip-growth/index')
     expect(contract.routes.find(route => route.path === 'packages/member/mip-growth/index')?.deviceRequired)
       .toContain('share')

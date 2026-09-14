@@ -32,19 +32,18 @@
   color: var(--mip-text-primary);
 }
 
+.mip-stat-header__label-wrap {
+  position: relative;
+}
+
 .mip-stat-header__badge {
   position: absolute;
-  top: -8rpx;
-  right: -2rpx;
-  min-width: 28rpx;
-  padding: 0 4rpx;
-  font-size: 20rpx;
-  font-weight: 500;
-  line-height: 26rpx;
-  color: var(--mip-text-primary);
-  text-align: center;
-  background: #ff2238;
-  border-radius: 100rpx;
+  top: 0;
+  left: calc(100% + 6rpx);
+  width: 12rpx;
+  height: 12rpx;
+  background: var(--color-danger);
+  border-radius: 50%;
 }
 
 .mip-stat-header__label {

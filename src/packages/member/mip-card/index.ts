@@ -1,5 +1,4 @@
 import type { IdentityAccessSnapshot, MipProfileSnapshot, PublicMipProfile } from '../../../modules/mip-identity'
-import { mipAiModule } from '../../../modules/mip-ai/client'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 
@@ -115,9 +114,7 @@ Page({
     nickname: '',
     initial: 'M',
     avatarUrl: '',
-    digitalAvatarUrl: '',
     cardAvatarUrl: '',
-    avatarSource: 'ORIGINAL' as 'ORIGINAL' | 'DIGITAL',
     memberType: 'MIP 成员',
     gender: '',
     identityStatus: '',
@@ -140,7 +137,6 @@ Page({
     // figma 1732_20401 版式只有卡片/样式选择/底栏；页头与分身管理是存量功能，
     // 用开关保留生产入口，打分 fixture 关闭以对齐设计稿。
     showHeader: true,
-    showAvatarManager: true,
     // figma 2165_17277 访客视角：无样式选择，底栏为单按钮「登录制作我的名片」。
     // 访客入口携带 guest=1 打开（路由缺口，见 ui-fidelity manifest notes）。
     isGuest: false,
@@ -183,17 +179,15 @@ Page({
       const codePromise = this.data.codeUrl && !this.data.codeMessage
         ? Promise.resolve({ codeUrl: this.data.codeUrl })
         : mipIdentityModule.getMyProfileCardCode().catch(() => ({ codeUrl: '' }))
-      const [profile, privateProfile, avatarHistory, cardCode] = await Promise.all([
+      const [profile, privateProfile, cardCode] = await Promise.all([
         mipIdentityModule.getPublicProfile(snapshot.profileRef),
         mipIdentityModule.getProfile(),
-        mipAiModule.listDigitalAvatars().catch(() => ({ items: [] })),
         codePromise,
       ])
       if (sequence !== this.loadSequence) {
         return
       }
-      const digitalAvatar = avatarHistory.items.find(item => item.status === 'READY' && item.outputUrl)
-      this.applyCard(snapshot, profile, privateProfile, digitalAvatar?.outputUrl || '', cardCode.codeUrl)
+      this.applyCard(snapshot, profile, privateProfile, cardCode.codeUrl)
     }
     catch (error) {
       if (sequence !== this.loadSequence) {
@@ -203,10 +197,9 @@ Page({
     }
   },
 
-  applyCard(snapshot: IdentityAccessSnapshot, profile: PublicMipProfile, privateProfile: MipProfileSnapshot, digitalAvatarUrl = '', codeUrl = '') {
+  applyCard(snapshot: IdentityAccessSnapshot, profile: PublicMipProfile, privateProfile: MipProfileSnapshot, codeUrl = '') {
     const nickname = compactText(privateProfile.realName || profile.realName || profile.nickname, 'MIP 成员')
     const avatarUrl = profile.avatarUrl || ''
-    const avatarSource = this.data.avatarSource === 'DIGITAL' && digitalAvatarUrl ? 'DIGITAL' : 'ORIGINAL'
     const company = profile.companies?.[0]
     const organization = profile.organizations?.[0]
     const contact = privateProfile.privateContact
@@ -217,9 +210,7 @@ Page({
       nickname,
       initial: nickname.slice(0, 1) || 'M',
       avatarUrl,
-      digitalAvatarUrl,
-      avatarSource,
-      cardAvatarUrl: avatarSource === 'DIGITAL' ? digitalAvatarUrl : avatarUrl,
+      cardAvatarUrl: avatarUrl,
       memberType: profile.userKind === 'PLAYER' ? '玩家' : profile.userKind === 'GUEST' ? '嘉宾' : 'MIP 成员',
       gender: profile.gender === 'MALE' ? '男' : profile.gender === 'FEMALE' ? '女' : '',
       identityStatus: compactText(profile.identityStatus),
@@ -239,23 +230,6 @@ Page({
       posterPath: '',
       message: '',
     })
-  },
-
-  chooseAvatarSource(event: WechatMiniprogram.TouchEvent) {
-    const source = String(event.currentTarget.dataset.source || '') as 'ORIGINAL' | 'DIGITAL'
-    if (!['ORIGINAL', 'DIGITAL'].includes(source) || (source === 'DIGITAL' && !this.data.digitalAvatarUrl)) {
-      return
-    }
-    this.setData({
-      avatarSource: source,
-      cardAvatarUrl: source === 'DIGITAL' ? this.data.digitalAvatarUrl : this.data.avatarUrl,
-      posterPath: '',
-      message: '',
-    })
-  },
-
-  openDigitalAvatar() {
-    caseNavigateTo({ url: '/packages/member/mip-avatar/index' })
   },
 
   openProfileEdit() {

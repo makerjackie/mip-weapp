@@ -53,6 +53,7 @@ const {
 } = require('./domain/knowledge-scheduling-repository')
 const { createKnowledgeSchedulingService } = require('./domain/knowledge-scheduling-service')
 const { checkCompleteContentSafety } = require('./lib/content-safety')
+const { createWechatTextChecker } = require('./lib/wechat-text-checker')
 const { fetchPinnedHttpsText } = require('./lib/safe-http')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -107,8 +108,12 @@ const webLoginQrCodeRoute = createWebLoginQrCodeRoute({
   wechatAppId: process.env.MIP_WECHAT_APP_ID,
   wechatAppSecret: process.env.MIP_WECHAT_APP_SECRET,
 })
+const httpTextChecker = process.env.MIP_WECHAT_APP_ID && process.env.MIP_WECHAT_APP_SECRET
+  ? createWechatTextChecker({ appId: process.env.MIP_WECHAT_APP_ID, appSecret: process.env.MIP_WECHAT_APP_SECRET })
+  : null
 async function contentSafety(draft, caller) {
-  const checker = cloud.openapi?.security?.msgSecCheck
+  if (httpTextChecker && caller.appId !== process.env.MIP_WECHAT_APP_ID) return 'ERROR'
+  const checker = httpTextChecker || cloud.openapi?.security?.msgSecCheck
   return checkCompleteContentSafety(draft, caller, checker)
 }
 

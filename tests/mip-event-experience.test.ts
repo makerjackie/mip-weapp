@@ -73,7 +73,7 @@ describe('MIP event experience contracts', () => {
 
     const detail = source('src/packages/member/mip-events/detail/index.ts')
     expect(detail).toContain('`报名链接：${eventInvitationPath(')
-    expect(detail).toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
+    expect(detail).not.toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
   })
 
   it('recovers protected check-in gestures and requests the result subscription per use', () => {
@@ -91,8 +91,8 @@ describe('MIP event experience contracts', () => {
     expect(checkIn).toContain('mipEventsModule.resolveCheckInScene(this.scanToken)')
     expect(checkIn).toContain('error.code === \'REGISTRATION_REQUIRED\'')
     expect(checkIn).toContain('error.code === \'REGISTRATION_PENDING\'')
-    expect(checkIn).toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
-    expect(registration).toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
+    expect(checkIn).not.toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
+    expect(registration).not.toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
     expect(checkInView).toContain('前往报名')
     expect(checkInView).toContain('重新核对报名')
     expect(checkInView).toContain('hasScanToken ? \'确认签到\' : \'扫描活动码\'')

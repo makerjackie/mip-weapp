@@ -241,6 +241,7 @@
           <view wx:if="{{profile.branchText || profile.primaryIndustry || profile.identityStatus}}" class="mt-2 truncate text-[length:22rpx] text-ink"><text wx:if="{{profile.branchText}}">{{profile.branchText}}</text><text wx:if="{{profile.branchText && (profile.primaryIndustry || profile.identityStatus)}}">｜</text><text wx:if="{{profile.primaryIndustry}}">{{profile.primaryIndustry.label}}</text><text wx:if="{{profile.primaryIndustry && profile.identityStatus}}">｜</text><text wx:if="{{profile.identityStatus}}">{{profile.identityStatus}}</text></view>
           <view wx:if="{{profile.headline}}" class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{profile.headline}}</view>
         </view>
+        <view wx:if="{{!isSelf}}" class="flex h-[88rpx] w-[88rpx] shrink-0 items-center justify-center self-start" aria-role="button" aria-label="更多操作" bind:tap="openProfileMore"><t-icon name="more" size="40rpx" color="var(--color-muted)" /></view>
       </view>
       <view wx:if="{{profile.abilities.length}}" class="mt-4 flex flex-wrap gap-2"><text wx:for="{{profile.abilities}}" wx:key="id" class="rounded-[8rpx] bg-panel-raised px-2 py-1 text-[length:22rpx] text-muted">{{item.label}}</text></view>
       <view wx:if="{{profile.badges.length}}" class="mt-3 flex flex-wrap gap-2">
@@ -311,14 +312,8 @@
       </view>
     </view>
 
-    <view wx:if="{{!isSelf}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4">
-      <view class="text-[length:28rpx] font-medium">社区安全</view>
-      <view class="mt-2 text-[length:22rpx] leading-5 text-muted">举报只提交给运营人员处理，屏蔽不会通知对方。</view>
-      <view wx:if="{{safetyState === 'access'}}" class="mt-4 rounded-[8rpx] bg-panel-raised px-3 py-3"><view class="text-[length:22rpx]">需要完成身份信息后继续。</view><view class="mt-3"><t-button block theme="primary" bind:tap="openAccess">继续</t-button></view></view>
-      <view wx:else class="mt-4 grid grid-cols-2 gap-3"><t-button block variant="outline" disabled="{{safetyState === 'loading' || safetyState === 'processing'}}" bind:tap="reportProfile">举报</t-button><t-button block variant="outline" theme="danger" loading="{{safetyState === 'processing'}}" disabled="{{safetyState === 'loading'}}" bind:tap="blockProfile">屏蔽</t-button></view>
-      <view wx:if="{{safetyMessage && safetyState === 'error'}}" class="mt-3 text-[length:22rpx] text-danger">{{safetyMessage}}</view><view wx:elif="{{safetyMessage}}" class="mt-3 text-[length:22rpx] text-muted">{{safetyMessage}}</view>
-      <view wx:if="{{canRetryReport}}" class="mt-3"><t-button block variant="outline" bind:tap="retryReport">重新提交举报</t-button></view>
-    </view>
+    <view wx:if="{{!isSelf && safetyState === 'access'}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx]">需要完成身份信息后继续。</view><t-button block theme="primary" bind:tap="openAccess">继续</t-button></view>
+    <view wx:if="{{!isSelf && safetyState === 'error'}}" class="mt-4 text-[length:24rpx] text-danger">{{safetyMessage}}<t-button wx:if="{{canRetryReport}}" variant="outline" bind:tap="retryReport">重新提交举报</t-button></view>
 
     <app-page-exit />
     <view wx:if="{{interestMessage}}" class="fixed inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+132rpx)] z-20 rounded-[8rpx] border border-danger bg-panel px-3 py-2 text-center text-[length:22rpx] text-danger">{{interestMessage}}</view>

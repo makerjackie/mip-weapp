@@ -5,7 +5,6 @@ import { cooperationAbilityDimensions, cooperationRoles } from '../../../../conf
 import { aiObject, aiText } from '../../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { cooperationModule } from '../../../../modules/mip-cooperation'
-import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 interface RoleOption { key: CooperationRoleKey, name: string }
 interface FieldView { key: string, label: string, placeholder: string, value: string, input: string }
@@ -51,7 +50,7 @@ Page({
   onLoad(options: Record<string, string | undefined>) {
     this.setData({
       id: String(options.id || '') as CooperationCardId | '',
-      aiDraftId: String(options.aiDraftId || ''),
+      aiDraftId: '',
     })
     void this.initialize()
   },
@@ -163,10 +162,6 @@ Page({
   updateAbility(event: WechatMiniprogram.CustomEvent<{ value: number }>) {
     const key = String(event.currentTarget.dataset.key || '')
     this.setData({ abilities: this.data.abilities.map(item => item.key === key ? { ...item, score: Number(event.detail.value) } : item) })
-  },
-
-  openAiAssistant() {
-    caseNavigateTo({ url: '/packages/member/mip-ai/index' })
   },
 
   saveDraft() { void this.save(false, 'back') },

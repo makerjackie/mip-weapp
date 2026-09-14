@@ -68,7 +68,7 @@ Page({
   onLoad(query: Record<string, string>) {
     this.setData({
       token: String(query.token || ''),
-      aiDraftId: String(query.aiDraftId || ''),
+      aiDraftId: '',
     })
     void this.loadProfile()
   },

@@ -106,7 +106,6 @@
 
   <block wx:else>
     <view class="bg-brand px-3 py-2 text-center text-[length:24rpx] text-on-brand">资料用于个人名片和公开档案展示</view>
-    <view wx:if="{{aiDraftLoaded}}" class="mx-3 mt-3 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:24rpx] text-brand">已载入 AI 草稿，可继续修改后保存。</view>
     <view wx:if="{{aiOrganizationDraftLoaded}}" class="mx-3 mt-3 rounded-[16rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] leading-6 text-muted">草稿中的公司和组织信息会随本次保存同步更新，可在名片编辑中继续调整。</view>
     <view wx:if="{{message}}" data-profile-message="true" class="mx-3 mt-3 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:24rpx] leading-6">{{message}}</view>
 

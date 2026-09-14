@@ -12,7 +12,7 @@ const base = {
 }
 
 describe('knowledge outbox projection', () => {
-  it('routes confirmed content payment to the purchaser and knowledge detail', async () => {
+  it('suppresses the immediate content payment receipt', async () => {
     const event = { ...base, aggregate_type: 'ORDER', event_type: 'knowledge.payment_confirmed' }
     const result = await projectEvent({
       async one() {
@@ -23,8 +23,8 @@ describe('knowledge outbox projection', () => {
         }
       },
     }, event)
-    assert.equal(result.notifications[0].targetType, 'KNOWLEDGE')
-    assert.equal(result.notifications[0].recipientUserId, '20000000-0000-4000-8000-000000000001')
+    assert.deepEqual(result.notifications, [])
+    assert.equal(result.reason, 'OPERATION_RECEIPT_SUPPRESSED')
   })
 
   it('routes a published comment to the current content creator from current facts', async () => {

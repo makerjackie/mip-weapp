@@ -15,6 +15,7 @@
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-popup": "tdesign-miniprogram/popup/popup",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "mip-icon": "/components/mip-icon/index"
+    "mip-icon": "/components/mip-icon/index",
+    "mip-subscription-prompt": "/components/mip-subscription-prompt/index"
   }
 }

@@ -101,7 +101,7 @@ Page({
     try {
       const invitation = await mipCommerceModule.resolveMembershipInvitationScene(scene)
       this.incomingInvitationToken = invitation.token
-      this.setData({ invitationMessage: '会员邀请已识别，购买后邀请来源将由服务端记录。' })
+      this.setData({ invitationMessage: '已识别好友的会员邀请。' })
     }
     catch {
       this.incomingInvitationToken = ''
@@ -385,7 +385,7 @@ Page({
     context.fillText('使用微信扫码打开 MIP 小程序', POSTER_WIDTH / 2, 454)
     context.textAlign = 'start'
     context.font = '400 12px sans-serif'
-    context.fillText('邀请来源和会员权益以服务端记录为准', 28, 524)
+    context.fillText('和朋友一起，探索更多可能', 28, 524)
     if (node.requestAnimationFrame) {
       await new Promise<void>(resolve => node.requestAnimationFrame?.(resolve))
     }

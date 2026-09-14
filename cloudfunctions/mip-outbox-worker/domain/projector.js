@@ -61,11 +61,11 @@ async function projectEvent(database, event) {
     case 'membership.adjustment_granted':
       return projectMembershipAdjustment(database, event)
     case 'membership.payment_confirmed':
-      return projectMembershipPayment(database, event)
+      return projection([], [], 'OPERATION_RECEIPT_SUPPRESSED')
     case 'membership.refund_confirmed':
       return projectMembershipRefund(database, event)
     case 'knowledge.payment_confirmed':
-      return projectKnowledgePayment(database, event)
+      return projection([], [], 'OPERATION_RECEIPT_SUPPRESSED')
     case 'knowledge.refund_confirmed':
       return projectKnowledgeRefund(database, event)
     case 'knowledge.comment_published':
@@ -105,7 +105,7 @@ async function projectEvent(database, event) {
     case 'super_case.published':
       return projectSuperCasePublished(database, event)
     case 'matching.recommendation_ready':
-      return projectMatchingRecommendation(database, event)
+      return projection([], [], 'FEATURE_RETIRED')
     case 'opportunity.comment_published':
       return projectOpportunityComment(database, event)
     case 'event.comment_published':
@@ -115,34 +115,6 @@ async function projectEvent(database, event) {
         ? projection([], [], 'NO_PROJECTION_REQUIRED')
         : { supported: false, notifications: [], growth: [], reason: 'EVENT_TYPE_UNSUPPORTED' }
   }
-}
-
-async function projectKnowledgePayment(database, event) {
-  assertAggregate(event, 'ORDER')
-  const row = await database.one(
-    `SELECT order_row.id AS order_id, order_row.user_id, content.id AS content_id
-     FROM mip_orders order_row
-     INNER JOIN mip_knowledge_contents content
-       ON content.app_id = order_row.app_id AND content.id = order_row.resource_id
-     INNER JOIN mip_knowledge_entitlements entitlement
-       ON entitlement.app_id = order_row.app_id AND entitlement.order_id = order_row.id
-        AND entitlement.status = 'ACTIVE'
-     INNER JOIN mip_users user
-       ON user.app_id = order_row.app_id AND user.id = order_row.user_id AND user.status = 'ACTIVE'
-     WHERE order_row.app_id = ? AND order_row.id = ? AND order_row.order_type = 'CONTENT'
-       AND order_row.status = 'PAID'`,
-    [event.app_id, event.aggregate_id],
-  )
-  if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
-  return projection([
-    message(event, row.user_id, 'content-payment-confirmed', {
-      messageType: 'MEMBERSHIP',
-      title: '内容支付已确认',
-      body: '内容访问权益已生效。',
-      targetType: 'KNOWLEDGE',
-      targetId: row.content_id,
-    }),
-  ], [], 'PROJECTED')
 }
 
 async function projectKnowledgeRefund(database, event) {
@@ -248,41 +220,6 @@ async function projectKnowledgePublication(database, event) {
   })), [], page.length ? 'PROJECTED' : 'NO_EFFECTIVE_RECIPIENTS', continuation)
 }
 
-async function projectMatchingRecommendation(database, event) {
-  assertAggregate(event, 'MATCHING_REQUEST')
-  const row = await database.one(
-    `SELECT request.requester_user_id, request.result_count,
-            source.title AS source_title
-     FROM mip_matching_requests request
-     INNER JOIN mip_opportunities source
-       ON source.app_id = request.app_id AND source.id = request.source_opportunity_id
-         AND source.status = 'PUBLISHED' AND source.version = request.source_version
-     INNER JOIN mip_users recipient
-       ON recipient.app_id = request.app_id AND recipient.id = request.requester_user_id
-         AND recipient.status = 'ACTIVE'
-     LEFT JOIN mip_user_notification_preferences preference
-       ON preference.app_id = request.app_id AND preference.user_id = request.requester_user_id
-     WHERE request.app_id = ? AND request.id = ? AND request.status = 'COMPLETED'
-       AND request.result_version = ? AND request.result_count > 0
-       AND COALESCE(preference.opportunity_matching_notifications_enabled, 1) = 1`,
-    [event.app_id, event.aggregate_id, event.source_version],
-  )
-  if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
-  return projection([
-    message(event, row.requester_user_id, 'matching-ready', {
-      messageType: 'OPPORTUNITY',
-      title: '机会撮合结果已生成',
-      body: `“${boundedText(row.source_title, 40)}”已有 ${Number(row.result_count)} 条推荐。`,
-      targetType: 'MATCHING',
-      targetId: event.aggregate_id,
-      external: {
-        channel: 'WECHAT_CUSTOMER_SERVICE',
-        templateKey: 'CUSTOMER_SERVICE_TEXT',
-        fields: { content: '机会撮合结果已生成，请在小程序内查看。' },
-      },
-    }),
-  ], [], 'PROJECTED')
-}
 
 async function projectOpportunityComment(database, event) {
   assertAggregate(event, 'OPPORTUNITY_COMMENT')
@@ -500,28 +437,6 @@ async function projectMembershipAdjustment(database, event) {
   ], [], 'PROJECTED')
 }
 
-async function projectMembershipPayment(database, event) {
-  assertAggregate(event, 'ORDER')
-  const row = await database.one(
-    `SELECT o.id AS order_id, o.user_id
-     FROM mip_orders o
-     INNER JOIN mip_users u ON u.app_id = o.app_id AND u.id = o.user_id AND u.status = 'ACTIVE'
-     WHERE o.app_id = ? AND o.id = ? AND o.order_type = 'MEMBERSHIP'
-       AND o.paid_at IS NOT NULL`,
-    [event.app_id, event.aggregate_id],
-  )
-  if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
-  return projection([
-    message(event, row.user_id, 'payment-confirmed', {
-      messageType: 'MEMBERSHIP',
-      title: '会员支付已确认',
-      body: '会员权益已按支付结果更新。',
-      targetType: 'ORDER',
-      targetId: row.order_id,
-    }),
-  ], [], 'PROJECTED')
-}
-
 async function projectMembershipRefund(database, event) {
   assertAggregate(event, 'REFUND')
   const row = await database.one(
@@ -555,13 +470,22 @@ async function projectRegistration(database, event) {
     && ['event.registration_cancelled', 'event.registration_refund_requested'].includes(event.event_type)) {
     return projection([], [], 'PROJECTED_BY_EVENT_NOTICE')
   }
+  const payload = typeof event.payload_json === 'string' ? JSON.parse(event.payload_json) : (event.payload_json || {})
+  const reviewed = Boolean(payload.reviewedByUserId)
+  const promoted = payload.promotedFromWaitlist === true
+  if ((event.event_type === 'event.registration_confirmed' && !reviewed && !promoted)
+    || (event.event_type === 'event.registration_submitted' && !promoted)
+    || event.event_type === 'event.registration_refund_requested'
+    || (event.event_type === 'event.registration_cancelled' && row.cancelled_by_type === 'USER')) {
+    return projection([], [], 'OPERATION_RECEIPT_SUPPRESSED')
+  }
   const details = registrationMessage(event.event_type, row.status)
   if (!details) return projection([], [], 'FACT_NO_LONGER_CURRENT')
   return projection([
     message(event, row.user_id, details.key, {
       messageType: 'EVENT',
-      title: details.title,
-      body: details.body,
+      title: promoted ? '活动候补进度已更新' : reviewed && event.event_type === 'event.registration_confirmed' ? '活动报名审核已通过' : details.title,
+      body: promoted ? (row.status === 'PENDING_REVIEW' ? '已获得候补名额，报名正在审核。' : '候补已转为正式报名，请查看活动安排。') : details.body,
       targetType: 'EVENT',
       targetId: row.event_id,
     }),
@@ -643,16 +567,7 @@ async function projectCheckIn(database, event) {
     [event.source_version, event.app_id, event.aggregate_id],
   )
   if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
-  return projection([
-    message(event, row.user_id, 'checked-in', {
-      messageType: 'EVENT',
-      title: '活动签到成功',
-      body: '到场状态已记录。',
-      targetType: 'EVENT',
-      targetId: row.event_id,
-      external: checkInExternal(row.event_title, row.checked_in_at),
-    }),
-  ], [checkInGrowth(row.transition_id)], 'PROJECTED')
+  return projection([], [checkInGrowth(row.transition_id)], 'PROJECTED')
 }
 
 async function projectCheckInTransition(database, event) {
@@ -696,16 +611,7 @@ async function projectCheckInTransition(database, event) {
   if (expectedType === 'REVOKED' || row.reversal_id || row.user_status !== 'ACTIVE') {
     return projection([], growthEvents, 'PROJECTED')
   }
-  return projection([
-    message(event, row.user_id, 'checked-in', {
-      messageType: 'EVENT',
-      title: '活动签到成功',
-      body: '到场状态已记录。',
-      targetType: 'EVENT',
-      targetId: row.event_id,
-      external: checkInExternal(row.event_title, row.occurred_at),
-    }),
-  ], growthEvents, 'PROJECTED')
+  return projection([], growthEvents, 'PROJECTED')
 }
 
 async function projectEventNotice(database, event) {
@@ -1269,18 +1175,6 @@ function message(event, recipientUserId, key, details) {
   }
 }
 
-function checkInExternal(title, occurredAt) {
-  return {
-    channel: 'WECHAT_SUBSCRIPTION',
-    templateKey: 'CHECKIN_RESULT',
-    fields: {
-      title: boundedText(title, 100),
-      checkedAt: notificationDateTime(occurredAt),
-      participationMethod: '现场签到',
-      status: '签到成功',
-    },
-  }
-}
 
 function notificationDateTime(value) {
   const date = new Date(value)

@@ -309,6 +309,14 @@ describe('admin event repository module', () => {
     const typeIndex = calls.findIndex(call => call.sql?.includes('INSERT INTO mip_event_types'))
     const eventIndex = calls.findIndex(call => call.sql?.includes('INSERT INTO mip_events'))
     assert.ok(typeIndex >= 0 && eventIndex > typeIndex)
+    const eventWrite = calls[eventIndex]
+    const insert = /INSERT INTO mip_events\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/.exec(eventWrite.sql)
+    const columns = insert[1].split(',').map(value => value.trim())
+    const values = insert[2].split(',').map(value => value.trim())
+    assert.equal(values.length, columns.length)
+    assert.equal(values.filter(value => value === '?').length, eventWrite.params.length)
+    assert.equal(values[columns.indexOf('currency')], "'CNY'")
+    assert.equal(values[columns.indexOf('status')], "'DRAFT'")
     const typeWrite = calls[typeIndex]
     assert.match(typeWrite.sql, /SELECT \?, \?, \?, \?, '', 0, 'ACTIVE', 1, \?, \?/)
     assert.match(typeWrite.sql, /WHERE NOT EXISTS[\s\S]*existing\.app_id = \?[\s\S]*existing\.type_key = \?/)
@@ -518,4 +526,28 @@ describe('admin event repository module', () => {
     assert.equal(calls.some(sql => sql.includes('UPDATE mip_events SET')), false)
     assert.equal(calls.some(sql => sql.includes("SET status = 'REMOVED'")), false)
   })
+})
+
+it('publishes a reviewed error atomically and rejects missing or stale review evidence', async () => {
+  for (const [status, reviewVersion, expectedError] of [['ERROR', 2, null], ['ERROR', undefined, 'CONTENT_SAFETY_REQUIRED'], ['ERROR', 1, 'CONTENT_SAFETY_REQUIRED'], ['REJECTED', 2, 'CONTENT_SAFETY_REQUIRED']]) {
+    const writes = []
+    const tx = {
+      async one() { return { id: EVENT_ID, branch_id: 'branch-a', status: 'DRAFT', content_safety_status: status, starts_at: '2031-09-21T12:00:00Z', version: 2 } },
+      async query(sql, params) { writes.push({ sql, params }); return { affectedRows: 1 } },
+    }
+    const pending = repository({ transaction: work => work(tx) }).changeEventStatus({
+      appId: APP_ID, actorUserId: USER_ID, eventId: EVENT_ID, expectedVersion: 2, status: 'PUBLISHED',
+      ...(reviewVersion === undefined ? {} : { contentSafetyReview: { version: reviewVersion } }),
+    })
+    if (expectedError) {
+      await assert.rejects(() => pending, error => error.code === expectedError)
+      assert.equal(writes.length, 0)
+    }
+    else {
+      assert.equal((await pending).status, 'PUBLISHED')
+      assert.match(writes[0].sql, /content_safety_status = 'PASSED'/)
+      assert.deepEqual(writes[0].params, [APP_ID, EVENT_ID, 2])
+      assert.match(writes[1].sql, /SET status =/)
+    }
+  }
 })

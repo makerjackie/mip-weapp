@@ -34,20 +34,11 @@ describe('MIP AI opportunity matching contract', () => {
     expect(migration).not.toMatch(/\b(DROP TABLE|TRUNCATE TABLE|DELETE FROM)\b/i)
   })
 
-  it('keeps matching behind the opportunity module and exposes user routes', () => {
-    const app = JSON.parse(read('src/app.json')) as {
-      subPackages: Array<{ root: string, pages: string[] }>
-    }
-    const member = app.subPackages.find(item => item.root === 'packages/member')
-    expect(member?.pages).toContain('mip-opportunity-matching/index')
-    expect(member?.pages).toContain('mip-opportunity-settings/index')
-
-    const page = read('src/packages/member/mip-opportunity-matching/index.ts')
-    expect(page).toContain('opportunityModule.createMatchingRequest')
-    expect(page).toContain('retainMatchingRequestIntent')
-    expect(page).toContain('retainMatchingFeedbackIntent')
-    expect(page).toContain('candidateRef')
-    expect(page).not.toContain('wx.cloud')
+  it('retires matching UI while retaining notification preferences', () => {
+    const app = JSON.parse(read('src/app.json'))
+    const member = app.subPackages.find((item: { root: string }) => item.root === 'packages/member')
+    expect(member.pages).not.toContain('mip-opportunity-matching/index')
+    expect(member.pages).toContain('mip-opportunity-settings/index')
   })
 
   it('retains one idempotency key for the same user intent and rotates it after intent changes', () => {

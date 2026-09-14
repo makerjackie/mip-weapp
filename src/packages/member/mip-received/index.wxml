@@ -77,13 +77,21 @@
       </view>
     </block>
     <block wx:else>
-    <view class="rounded-[16rpx] bg-panel px-5 py-5">
+    <view wx:if="{{!heartsMode}}" class="rounded-[16rpx] bg-panel px-5 py-5">
       <view class="text-[length:22rpx] text-muted">主页总浏览量</view>
       <view aria-label="正在加载" aria-busy="true" wx:if="{{totalViewState === 'loading'}}" class="mt-3"><t-skeleton row-col="{{[1]}}" theme="paragraph" animation="gradient" loading /></view>
       <view wx:elif="{{totalViewState === 'error'}}" class="mt-2 text-[length:22rpx] text-muted">暂时无法加载</view>
       <view wx:else class="mt-2 text-[length:48rpx] font-bold text-brand">{{totalViewCount}}</view>
     </view>
-    <view wx:if="{{influenceMode}}" class="mt-4 grid grid-cols-4 border-b border-line text-center text-[length:22rpx]">
+    <view wx:if="{{heartsMode}}">
+      <view class="text-[length:32rpx] font-semibold">心动记录</view>
+      <view class="mt-3 grid grid-cols-2 border-b border-line text-center text-[length:26rpx]">
+        <view class="min-h-[88rpx] py-4 {{category === 'ACTIVE_INTEREST' ? 'text-brand' : 'text-muted'}}" data-category="ACTIVE_INTEREST" bind:tap="changeCategory">收到的心动</view>
+        <view class="min-h-[88rpx] py-4 {{category === 'OUTBOUND_INTEREST' ? 'text-brand' : 'text-muted'}}" data-category="OUTBOUND_INTEREST" bind:tap="changeCategory">发出的心动</view>
+      </view>
+      <view class="my-3 flex min-h-[88rpx] items-center justify-between rounded-[16rpx] bg-panel px-4" bind:tap="openEventHearts"><text class="text-[length:24rpx]">活动心动记录</text><mip-icon name="chevron-down-1" size="{{16}}" /></view>
+    </view>
+    <view wx:elif="{{influenceMode}}" class="mt-4 grid grid-cols-4 border-b border-line text-center text-[length:22rpx]">
       <view wx:if="{{category === 'GUEST'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-category="GUEST" bind:tap="changeCategory">嘉宾</view>
       <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-category="GUEST" bind:tap="changeCategory">嘉宾</view>
       <view wx:if="{{category === 'INTERACTION'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-category="INTERACTION" bind:tap="changeCategory">互动</view>
@@ -106,10 +114,10 @@
 
     <mip-empty-state wx:if="{{state === 'empty' && category === 'GUEST'}}" title="暂无嘉宾" description="通过你的邀请参加活动且公开资料的嘉宾会显示在这里。" />
     <mip-empty-state wx:elif="{{state === 'empty' && category === 'INTERACTION'}}" title="暂无互动" description="活动中收到的有效心动会显示在这里。" />
-    <mip-empty-state wx:elif="{{state === 'empty' && category === 'ACTIVE_INTEREST'}}" title="暂无感兴趣的用户" description="当前对你标记感兴趣的用户会显示在这里。" />
+    <mip-empty-state wx:elif="{{state === 'empty' && category === 'ACTIVE_INTEREST'}}" title="{{heartsMode ? '暂无收到的心动' : '暂无感兴趣的用户'}}" description="当前对你标记感兴趣的用户会显示在这里。" />
     <mip-empty-state wx:elif="{{state === 'empty' && category === 'REFERRAL'}}" title="暂无被引荐机会" description="新的引荐会显示在这里。" />
     <mip-empty-state wx:elif="{{state === 'empty' && category === 'PROFILE_INTEREST'}}" title="暂无对你感兴趣的用户" description="新的感兴趣记录会显示在这里。" />
-    <mip-empty-state wx:elif="{{state === 'empty' && category === 'OUTBOUND_INTEREST'}}" title="暂无感兴趣的用户" description="你标记感兴趣的用户会显示在这里。" />
+    <mip-empty-state wx:elif="{{state === 'empty' && category === 'OUTBOUND_INTEREST'}}" title="{{heartsMode ? '暂无发出的心动' : '暂无感兴趣的用户'}}" description="你标记感兴趣的用户会显示在这里。" />
     <mip-empty-state wx:elif="{{state === 'empty'}}" title="暂无访客记录" description="公开档案的访客会显示在这里。" />
     <view wx:else class="mt-4 flex flex-col gap-3">
       <view wx:for="{{items}}" wx:key="viewKey" class="relative rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-key="{{item.viewKey}}" bind:tap="openInteraction">
@@ -129,7 +137,7 @@
       </view>
     </view>
     <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}<t-button wx:if="{{category === 'VISITOR'}}" variant="text" bind:tap="retry">刷新重试</t-button></view>
     </block>
     <app-page-exit />
   </block>

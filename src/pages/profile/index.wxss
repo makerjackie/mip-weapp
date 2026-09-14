@@ -623,3 +623,9 @@
   left: 358rpx;
   width: 308rpx;
 }
+
+.profile-action-unread {
+  position: absolute;
+  top: 0;
+  right: 8rpx;
+}

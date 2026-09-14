@@ -117,7 +117,7 @@ Page({
 
   onLoad(options: Record<string, string | undefined>) {
     const id = String(options.id || '') as OpportunityId | ''
-    this.setData({ id, aiDraftId: String(options.aiDraftId || '') })
+    this.setData({ id, aiDraftId: '' })
     wx.setNavigationBarTitle({ title: id ? '编辑机会' : '发布机会' })
     void this.initialize()
   },

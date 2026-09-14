@@ -111,7 +111,7 @@
             <image wx:elif="{{primaryBadge}}" class="profile-rank-mark" mode="aspectFit" src="/assets/figma/profile/rank-mark.png" />
           </view>
           <view class="profile-meta">
-            <text>{{primaryBranchName}}</text>
+            <text catch:tap="openBranches">{{primaryBranchName}}</text>
             <text wx:if="{{primaryIndustryName}}"> I {{primaryIndustryName}}</text>
             <text wx:if="{{identityStatus}}"> I {{identityStatus}}</text>
           </view>
@@ -144,7 +144,7 @@
         {value: guestCount === null ? '—' : guestCount, label: '嘉宾', category: 'GUEST', target: 'influence'},
         {value: interactionCount === null ? '—' : interactionCount, label: '互动过', category: 'INTERACTION', target: 'influence'},
         {value: interestCount === null ? '—' : interestCount, label: '心动值', category: 'ACTIVE_INTEREST', target: 'influence'},
-        {value: visitorCount === null ? '—' : visitorCount, label: '访客', target: 'visitor', badge: visitorUnreadCount > 99 ? '99+' : (visitorUnreadCount > 0 ? visitorUnreadCount : '')}
+        {value: visitorCount === null ? '—' : visitorCount, label: '访客', target: 'visitor', badge: visitorUnreadCount > 0}
       ]}}"
       bind:select="openStat"
     />
@@ -158,7 +158,7 @@
       <view class="profile-action" bind:tap="openRegistrations"><image class="profile-action-icon" mode="aspectFit" src="/assets/figma/profile/action-events.svg" /><text>活动</text></view>
       <view class="profile-action" bind:tap="openMemberCard"><image class="profile-action-icon" mode="aspectFit" src="/assets/figma/profile/action-card.svg" /><text>名片</text></view>
       <view class="profile-action" bind:tap="openOrders"><image class="profile-action-icon" mode="aspectFit" src="/assets/figma/profile/action-orders.svg" /><text>订单</text></view>
-      <view class="profile-action" bind:tap="openSettings"><image class="profile-action-icon" mode="aspectFit" src="/assets/figma/profile/action-settings.svg" /><text>设置</text></view>
+      <view class="profile-action relative" bind:tap="openNotifications"><t-icon name="notification" size="44rpx" color="var(--color-brand)" /><text>消息</text><view wx:if="{{notificationUnreadCount > 0}}" class="profile-unread-badge profile-action-unread">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view></view>
     </view>
 
     <view wx:if="{{adminVisible && authenticated}}" class="profile-admin-entry profile-admin-entry--primary" bind:tap="openAdmin"><view><view class="profile-more-label">现场工作台</view><view class="profile-more-description">授权活动、签到与网页登录</view></view><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-brand)" /></view>
@@ -210,16 +210,10 @@
       </view>
     </block>
 
-    <view wx:if="{{authenticated}}" class="profile-services-entry" aria-role="button" bind:tap="openServices">
-      <view class="profile-services-icon"><t-icon name="grid-view" size="42rpx" color="var(--color-brand)" /></view>
-      <view class="profile-services-copy">
-        <view class="profile-more-label">全部服务</view>
-        <view class="profile-more-description">消息、互动、工具与支持</view>
-      </view>
-      <view class="profile-services-trailing">
-        <view wx:if="{{notificationUnreadCount > 0}}" class="profile-unread-badge">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view>
-        <mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" />
-      </view>
+    <view class="mx-3 mt-6 overflow-hidden rounded-[24rpx] bg-panel">
+      <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" aria-role="button" bind:tap="openGame"><text class="text-[length:28rpx]">团队 PK</text><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" /></view>
+      <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" aria-role="button" bind:tap="openHelp"><text class="text-[length:28rpx]">帮助与客服</text><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" /></view>
+      <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" aria-role="button" bind:tap="openSettings"><text class="text-[length:28rpx]">设置</text><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" /></view>
     </view>
 
     <view wx:if="{{message}}" class="profile-message">{{message}}</view>

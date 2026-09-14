@@ -29,10 +29,6 @@
       "pathName": "pages/profile/index"
     },
     {
-      "name": "全部服务",
-      "pathName": "packages/member/mip-services/index"
-    },
-    {
       "name": "机会广场",
       "pathName": "pages/opportunities/index"
     },
@@ -55,10 +51,6 @@
     {
       "name": "名片设置",
       "pathName": "packages/member/mip-card-edit/index"
-    },
-    {
-      "name": "数字分身",
-      "pathName": "packages/member/mip-avatar/index"
     },
     {
       "name": "玩家与嘉宾",
@@ -123,10 +115,6 @@
     {
       "name": "我的机会",
       "pathName": "packages/member/mip-opportunities/mine/index"
-    },
-    {
-      "name": "机会撮合",
-      "pathName": "packages/member/mip-opportunity-matching/index"
     },
     {
       "name": "消息与机会权限",
@@ -211,10 +199,6 @@
     {
       "name": "心动记录",
       "pathName": "packages/member/mip-hearts/index"
-    },
-    {
-      "name": "AI 草稿",
-      "pathName": "packages/member/mip-ai/index"
     },
     {
       "name": "我的订单",

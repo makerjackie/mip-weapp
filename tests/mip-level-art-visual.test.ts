@@ -20,7 +20,7 @@ describe('MIP level artwork presentation', () => {
     expect(bannerMarkup).toContain('src="/assets/mip/level-banner-deco@3x.png"')
     expect(bannerMarkup).toContain('mode="scaleToFill"')
     expect(bannerMarkup).toContain('{{level}}')
-    expect(bannerMarkup).toContain('{{current}} I {{target}}')
+    expect(bannerMarkup).toContain('{{current}} / {{target}}')
     expect(bannerStyles).toContain('background: var(--color-brand);')
     expect(bannerStyles).toContain('border-radius: 32rpx 32rpx 0 0;')
     expect(bannerStyles).toContain('.mip-level-banner__base {')

@@ -93,6 +93,7 @@ function taskView(task: UserTaskCard): GrowthTaskView {
   const ended = task.status === 'ENDED'
   return {
     ...task,
+    name: task.name === '完善合作资料' ? '完善资料' : task.name,
     actionText: completed ? '已完成' : ended ? '已截止' : '去完成',
   }
 }

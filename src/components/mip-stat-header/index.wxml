@@ -8,8 +8,7 @@
   >
     <view class="mip-stat-header__value-wrap">
       <text class="mip-stat-header__value">{{item.value}}</text>
-      <text wx:if="{{item.badge}}" class="mip-stat-header__badge">{{item.badge}}</text>
     </view>
-    <text class="mip-stat-header__label">{{item.label}}</text>
+    <view class="mip-stat-header__label-wrap"><text class="mip-stat-header__label">{{item.label}}</text><view wx:if="{{item.badge}}" class="mip-stat-header__badge" aria-label="有新访客" /></view>
   </view>
 </view>

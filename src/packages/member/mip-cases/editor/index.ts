@@ -7,7 +7,6 @@ import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { superCaseModule } from '../../../../modules/mip-cases'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
-import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { chooseMultipleImages, chooseSingleImage } from '../../../../platform/wechat/image-upload'
 
 interface CaseMediaDraft { assetId: string, imageUrl: string }
@@ -91,7 +90,7 @@ Page({
   onLoad(options: Record<string, string | undefined>) {
     this.setData({
       id: String(options.id || '') as SuperCaseId | '',
-      aiDraftId: String(options.aiDraftId || ''),
+      aiDraftId: '',
     })
     void this.initialize()
   },
@@ -109,10 +108,6 @@ Page({
       clearTimeout(this.navigationTimer)
       this.navigationTimer = undefined
     }
-  },
-
-  openAiAssistant() {
-    caseNavigateTo({ url: '/packages/member/mip-ai/index' })
   },
 
   async initialize() {
