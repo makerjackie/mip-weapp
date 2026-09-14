@@ -10,6 +10,7 @@ const homeMocks = vi.hoisted(() => ({
   loadIdentity: vi.fn(),
 }))
 const paymentMocks = vi.hoisted(() => ({
+  getOrder: vi.fn(),
   listOrders: vi.fn(),
   listPlans: vi.fn(),
   reconcile: vi.fn(),
@@ -54,6 +55,8 @@ vi.mock('../src/modules/mip-opportunities', () => ({
 }))
 vi.mock('../src/modules/mip-commerce/client', () => ({
   mipCommerceModule: {
+    getOrder: paymentMocks.getOrder,
+    peekPlans: () => [],
     listOrders: paymentMocks.listOrders,
     listPlans: paymentMocks.listPlans,
     reconcile: paymentMocks.reconcile,
@@ -121,6 +124,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   homeMocks.listAnnouncements.mockReset()
+  paymentMocks.getOrder.mockReset()
   paymentMocks.listOrders.mockReset()
   paymentMocks.listPlans.mockReset().mockResolvedValue([])
   paymentMocks.reconcile.mockReset()
@@ -166,11 +170,33 @@ describe('page request ordering', () => {
     expect(page.data.announcement).toEqual(expect.objectContaining({ id: 'branch-announcement' }))
   })
 
+  it('shows the paid order without waiting for order lists or plan requests', async () => {
+    paymentMocks.listPlans.mockReturnValue(new Promise(() => {}))
+    const order = { id: 'order-1', status: 'PAID', orderType: 'CONTENT', amountCents: 10, resourceId: 'content-1' }
+    paymentMocks.getOrder.mockResolvedValue(order)
+    const page = createPage(paymentResultPage)
+    callPage(page, 'onLoad', { orderId: order.id })
+    await callPage(page, 'check')
+    expect(page.data.result).toBe('success')
+    expect(paymentMocks.getOrder).toHaveBeenCalledWith(order.id)
+    expect(paymentMocks.listOrders).not.toHaveBeenCalled()
+    expect(paymentMocks.listPlans).not.toHaveBeenCalled()
+  })
+
+  it('stops the spinner when checking fails instead of repeating failed requests', async () => {
+    paymentMocks.getOrder.mockRejectedValue(new Error('service unavailable'))
+    const page = createPage(paymentResultPage)
+    callPage(page, 'onLoad', { orderId: 'order-1' })
+    await callPage(page, 'check')
+    expect(page.data.result).toBe('pending')
+    expect(page.pollTimer).toBeUndefined()
+  })
+
   it('does not resume payment polling after the page is hidden during a request', async () => {
     vi.useFakeTimers()
     try {
       const orders = deferred<never[]>()
-      paymentMocks.listOrders.mockReturnValue(orders.promise)
+      paymentMocks.getOrder.mockReturnValue(orders.promise)
       const page = createPage(paymentResultPage)
       callPage(page, 'onLoad', { orderId: 'order-1' })
 

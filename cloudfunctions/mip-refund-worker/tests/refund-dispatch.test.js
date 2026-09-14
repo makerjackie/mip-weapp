@@ -67,10 +67,10 @@ describe('refund provider worker', () => {
     })
     const result = await service.dispatchRefund(appId, { refundId, amountCents: 1 })
     assert.deepEqual(result, { status: 'PROVIDER_CREATED', operation: 'SUBMITTED' })
-    assert.equal(providerCalls[0].totalFee, 79900)
-    assert.equal(providerCalls[0].refundFee, 19900)
-    assert.equal(providerCalls[0].outTradeNo, 'MIP123')
-    assert.equal(providerCalls[0].outRefundNo, 'MIPR123')
+    assert.equal(providerCalls[0].total_fee, 79900)
+    assert.equal(providerCalls[0].refund_fee, 19900)
+    assert.equal(providerCalls[0].out_trade_no, 'MIP123')
+    assert.equal(providerCalls[0].out_refund_no, 'MIPR123')
     assert.deepEqual(ledgerCalls[0].input, { refundId })
   })
 
@@ -87,14 +87,15 @@ describe('refund provider worker', () => {
         return { status: 'SUCCEEDED' }
       },
       cloudPay: {
-        async queryRefund() {
+        async queryRefund(input) {
+          assert.deepEqual(input, { sub_mch_id: config().merchantId, nonce_str: 'nonce', out_refund_no: 'MIPR123' })
           return {
             returnCode: 'SUCCESS',
             resultCode: 'SUCCESS',
-            outRefundNoList: ['MIPR123'],
-            refundStatusList: ['SUCCESS'],
-            refundIdList: ['provider-refund'],
-            refundFeeList: [19900],
+            out_refund_no_0: 'MIPR123',
+            refund_status_0: 'SUCCESS',
+            refund_id_0: 'provider-refund',
+            refund_fee_0: 19900,
           }
         },
       },

@@ -9,7 +9,7 @@
   <view wx:if="{{order}}" class="mt-8 overflow-hidden rounded-[16rpx] bg-panel text-left">
     <view class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="text-muted">订单</text><text class="text-right font-semibold">{{planName}}</text></view>
     <view class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="text-muted">金额</text><text class="font-semibold">{{amountText}}</text></view>
-    <view class="flex min-h-[92rpx] items-center justify-between gap-4 px-4"><text class="text-muted">服务端状态</text><text class="text-right text-brand">{{statusText}}</text></view>
+    <view class="flex min-h-[92rpx] items-center justify-between gap-4 px-4"><text class="text-muted">订单状态</text><text class="text-right text-brand">{{statusText}}</text></view>
   </view>
   <view wx:if="{{!isEventOrder && !isContentOrder && membershipEndsText}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 text-[length:24rpx]">会员有效期至 {{membershipEndsText}}</view>
 

@@ -8,6 +8,23 @@ const appId = 'wx1234567890abcdef'
 const orderId = '10000000-0000-4000-8000-000000000001'
 
 describe('mip CloudPay callback', () => {
+  it('accepts a native V2 payment notification without queryOrder trade_state', async () => {
+    const calls = []
+    const handle = createCallbackHandler({
+      appId, identityKey: () => 'hashed-identity-key',
+      async callLedger(action, input) { calls.push({ action, input }) },
+    })
+    await handle({
+      return_code: 'SUCCESS', result_code: 'SUCCESS',
+      sub_appid: appId, sub_openid: 'provider-open-id', out_trade_no: 'MIP123',
+      transaction_id: 'verified-transaction', total_fee: 10,
+      attach: JSON.stringify({ version: 1, orderId }), time_end: '20260914150500',
+    })
+    assert.equal(calls[0].input.amountCents, 10)
+    assert.equal(calls[0].input.providerTransactionId, 'verified-transaction')
+    assert.equal(calls[0].input.orderId, orderId)
+  })
+
   it('converts a verified payment resource into an identity-keyed ledger fact', async () => {
     const calls = []
     const handle = createCallbackHandler({
@@ -78,7 +95,7 @@ describe('mip CloudPay callback', () => {
   })
 
   it('does not treat transport SUCCESS or a non-final trade state as payment success', async () => {
-    for (const tradeState of [undefined, 'PROCESSING']) {
+    for (const failure of [{}, { resultCode: 'FAIL' }, { resultCode: 'SUCCESS', tradeState: 'PROCESSING' }]) {
       let called = false
       const handle = createCallbackHandler({
         appId,
@@ -88,8 +105,7 @@ describe('mip CloudPay callback', () => {
       await assert.rejects(() => handle({
         subAppid: appId,
         returnCode: 'SUCCESS',
-        resultCode: 'SUCCESS',
-        ...(tradeState ? { tradeState } : {}),
+        ...failure,
         attach: JSON.stringify({ version: 1, orderId }),
         subOpenid: 'provider-open-id',
         outTradeNo: 'MIP123',

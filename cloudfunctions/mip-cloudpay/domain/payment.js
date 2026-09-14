@@ -77,10 +77,10 @@ function createPaymentService(options) {
       return { status: 'PAID' }
     }
     const result = await options.cloudPay.queryOrder({
-      subMchId: config.merchantId,
-      subAppid: caller.appId,
-      nonceStr: options.nonce(),
-      outTradeNo: order.merchantOrderNo,
+      sub_mch_id: config.merchantId,
+      sub_appid: caller.appId,
+      nonce_str: options.nonce(),
+      out_trade_no: order.merchantOrderNo,
     })
     if (!successful(result)) {
       throw new Error('PAYMENT_QUERY_UNAVAILABLE')
@@ -122,14 +122,14 @@ function createPaymentService(options) {
     const result = await options.cloudPay.refund({
       envId: config.envId,
       functionName: config.callbackFunction,
-      subMchId: config.merchantId,
-      nonceStr: options.nonce(),
-      outTradeNo: refund.merchantOrderNo,
-      outRefundNo: refund.merchantRefundNo,
-      totalFee: refund.totalCents,
-      refundFee: refund.amountCents,
-      refundFeeType: refund.currency,
-      refundDesc: String(refund.reason || 'MIP 订单退款').slice(0, 80),
+      sub_mch_id: config.merchantId,
+      nonce_str: options.nonce(),
+      out_trade_no: refund.merchantOrderNo,
+      out_refund_no: refund.merchantRefundNo,
+      total_fee: refund.totalCents,
+      refund_fee: refund.amountCents,
+      refund_fee_type: refund.currency,
+      refund_desc: String(refund.reason || 'MIP 订单退款').slice(0, 80),
     })
     if (!successful(result)) {
       throw new Error('REFUND_UNAVAILABLE')
@@ -151,9 +151,9 @@ function createPaymentService(options) {
     })
     assertRefund(refund)
     const result = await options.cloudPay.queryRefund({
-      subMchId: config.merchantId,
-      nonceStr: options.nonce(),
-      outRefundNo: refund.merchantRefundNo,
+      sub_mch_id: config.merchantId,
+      nonce_str: options.nonce(),
+      out_refund_no: refund.merchantRefundNo,
     })
     if (!successful(result)) {
       throw new Error('REFUND_QUERY_UNAVAILABLE')
@@ -250,6 +250,19 @@ function paymentRecord(result) {
 }
 
 function refundRecord(result, merchantRefundNo) {
+  // Native queryRefund returns numbered fields, not an array of refund records.
+  for (const key of Object.keys(result || {})) {
+    const match = /^out_refund_no_(\d+)$/.exec(key)
+    if (match && result[key] === merchantRefundNo) {
+      const index = match[1]
+      return {
+        status: result[`refund_status_${index}`],
+        providerRefundId: result[`refund_id_${index}`],
+        amountCents: Number(result[`refund_fee_${index}`]),
+      }
+    }
+  }
+
   const numbers = pick(result, 'outRefundNoList', 'out_refund_no_list')
   const statuses = pick(result, 'refundStatusList', 'refund_status_list')
   const ids = pick(result, 'refundIdList', 'refund_id_list')

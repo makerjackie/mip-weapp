@@ -121,6 +121,10 @@ export function createMipCommerceModule(
       planCache.clear()
     },
 
+    getOrder(orderId: OrderId) {
+      return gateway.getOrder(orderId)
+    },
+
     listOrders() {
       return gateway.listOrders()
     },

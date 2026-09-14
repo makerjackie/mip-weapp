@@ -3,14 +3,14 @@
 const { createHmac, timingSafeEqual } = require('node:crypto')
 
 const signedFieldsByAction = Object.freeze(Object.assign(Object.create(null), {
-  getPayableOrder: ['action', 'appId', 'signedAt', 'nonce', 'orderId', 'identityKey', 'paymentMode'],
+  getPayableOrder: ['action', 'appId', 'signedAt', 'nonce', 'orderId', 'identityKey', 'paymentMode', 'forSync'],
   markPaymentCreated: [
     'action', 'appId', 'signedAt', 'nonce', 'orderId', 'identityKey', 'merchantOrderNo',
     'amountCents', 'currency', 'attemptId', 'requestHash', 'prepayId', 'provider',
   ],
   applyPaymentCallback: [
     'action', 'appId', 'signedAt', 'nonce', 'orderId', 'identityKey', 'merchantOrderNo',
-    'providerTransactionId', 'amountCents', 'currency',
+    'providerTransactionId', 'amountCents', 'currency', 'providerPaidAt',
   ],
   getRefundRequest: ['action', 'appId', 'signedAt', 'nonce', 'refundId', 'identityKey'],
   getRefundRequestForProvider: ['action', 'appId', 'signedAt', 'nonce', 'refundId'],

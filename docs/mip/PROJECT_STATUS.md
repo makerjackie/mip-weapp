@@ -61,6 +61,7 @@
 
 ## 证据入口
 
+- [2026-09-14 微信支付修复与验收](evidence/2026-09-14-wechat-pay-fix.md)（CloudPay 查单、通知和内部签名已修复并部署；用户确认会员支付正常，活动支付及退款闭环仍待验收）
 - [当前 React Web 线上验收](evidence/admin-web-live-2026-08-28-react/README.md)
 - [早期 React Web 线上证据](evidence/admin-web-live-2026-08-28/README.md)（只作历史追溯）
 - [旧小程序完整管理端响应式密度验收](evidence/admin-density-2026-08-26/README.md)（只作历史追溯，不证明当前现场工作台）

@@ -108,8 +108,8 @@ describe('mip CloudPay adapter', () => {
       },
     })
     await service.submitRefund(caller, { refundId, amountCents: 1 })
-    assert.equal(providerCalls[0].totalFee, 79900)
-    assert.equal(providerCalls[0].refundFee, 19900)
+    assert.equal(providerCalls[0].total_fee, 79900)
+    assert.equal(providerCalls[0].refund_fee, 19900)
   })
 
   it('marks provider CHANGE for manual review and does not mark it failed', async () => {
@@ -190,7 +190,9 @@ it('reconciles an existing payment using provider time without reopening new pay
       }
       return { status: 'PAID' }
     },
-    cloudPay: { async queryOrder() { return {
+    cloudPay: { async queryOrder(input) {
+      assert.deepEqual(input, { sub_mch_id: config().merchantId, sub_appid: caller.appId, nonce_str: 'nonce', out_trade_no: 'MIPEVENT' })
+      return {
       returnCode: 'SUCCESS', resultCode: 'SUCCESS', tradeState: 'SUCCESS',
       outTradeNo: 'MIPEVENT', transactionId: 'transaction', totalFee: 9900,
       feeType: 'CNY', timeEnd: '20260824120300',

@@ -19,7 +19,7 @@ Page({
     contentId: '',
     attempts: 0,
     title: '正在确认支付',
-    description: '支付调起完成不代表订单已支付，请等待服务端确认。',
+    description: '正在查询支付结果，请稍候。',
     amountText: '',
     planName: '',
     statusText: '',
@@ -73,16 +73,10 @@ Page({
       return
     }
     try {
-      const [orders, plans] = await Promise.all([
-        mipCommerceModule.listOrders(),
-        mipCommerceModule.listPlans().catch(() => [] as MembershipPlan[]),
-      ])
+      let order = await mipCommerceModule.getOrder(this.data.orderId)
+      const plans = mipCommerceModule.peekPlans() || []
       if (!this.isCurrentCheck(requestSeq)) {
         return
-      }
-      let order = orders.find(item => item.id === this.data.orderId)
-      if (!order) {
-        throw new Error('NOT_FOUND')
       }
       if (presentOrderStatus(order.status).paymentPending) {
         order = await mipCommerceModule.reconcile(order.id)
@@ -103,14 +97,11 @@ Page({
         return
       }
       this.setData({
-        result: attempts >= 6 ? 'pending' : 'checking',
+        result: 'pending',
         attempts,
-        title: attempts >= 6 ? '支付结果仍在确认' : '正在确认支付',
-        description: '暂时无法获取最新订单状态。你可以稍后再查，期间不会重复发起支付。',
+        title: '暂时无法查询支付结果',
+        description: '若微信已扣款，请勿重复支付。可稍后刷新，或在“我的订单”查看。',
       })
-      if (attempts < 6) {
-        this.schedulePoll(requestSeq)
-      }
     }
   },
 
@@ -147,8 +138,8 @@ Page({
             attempts,
             title: '支付已确认',
             description: attempts >= 6
-              ? '报名资格仍在同步，请重新查询。资格生效前不能签到。'
-              : '正在等待活动报名资格生效，资格生效前不能签到。',
+              ? '已付款，报名仍在处理中，请稍后刷新。'
+              : '已付款，正在确认报名。',
           })
           if (attempts < 6) {
             this.schedulePoll(requestSeq)
@@ -169,8 +160,8 @@ Page({
         result: 'success',
         title: '支付已确认',
         description: isContentOrder
-          ? '服务端已确认订单为已支付，内容访问权益已生效。'
-          : '服务端已确认订单为已支付，会员权益已生效。',
+          ? '支付成功，现在可以查看内容。'
+          : '支付成功，会员权益已开通。',
       })
       if (!isEventOrder && !isContentOrder) {
         void this.loadMembershipEnd(requestSeq)
@@ -183,12 +174,12 @@ Page({
         ...base,
         result: attempts >= 6 ? 'pending' : 'checking',
         attempts,
-        title: attempts >= 6 ? '支付结果仍在确认' : '正在确认支付',
+        title: attempts >= 6 ? '支付结果待确认' : '正在确认支付',
         description: isEventOrder
-          ? '订单尚未达到已支付状态，活动报名尚未生效。'
+          ? '尚未确认付款，报名暂未完成。若已扣款，请稍后刷新。'
           : isContentOrder
-            ? '订单尚未达到已支付状态，内容访问权益暂未生效。'
-            : '订单尚未达到已支付状态，会员权益暂未生效。',
+            ? '尚未确认付款。若已扣款，请稍后刷新。'
+            : '尚未确认付款，会员暂未开通。若已扣款，请稍后刷新。',
       })
       if (attempts < 6) {
         this.schedulePoll(requestSeq)
@@ -209,10 +200,10 @@ Page({
       result: 'failed',
       title: presentOrderStatus(order.status).label,
       description: isEventOrder
-        ? '这笔订单未达到已支付状态，活动报名未生效。'
+        ? '这笔订单未完成付款，报名未成功。'
         : isContentOrder
-          ? '这笔订单未达到已支付状态，内容访问权益未生效。'
-          : '这笔订单未达到已支付状态，会员权益未生效。',
+          ? '这笔订单未完成付款，暂时无法查看内容。'
+          : '这笔订单未完成付款，会员未开通。',
     })
   },
 
@@ -274,7 +265,7 @@ Page({
     if (!this.data.eventId || !mipCheckInResumeStore.peek(this.data.eventId)) {
       this.setData({
         canContinueCheckIn: false,
-        description: '签到意图已失效，请返回现场重新扫描活动码。',
+        description: '请重新扫描现场签到码。',
       })
       return
     }

@@ -14,21 +14,21 @@ import { formatLocalDateTime } from '../../../utils/date'
 function statusDescription(order: CommerceOrder) {
   switch (order.status) {
     case 'CREATED': return '订单已创建，尚未确认支付。'
-    case 'PAYMENT_CREATED': return '已调起支付，正在等待服务端确认。'
+    case 'PAYMENT_CREATED': return '付款结果尚未确认，若已扣款，请稍后刷新。'
     case 'PAID': return order.orderType === 'EVENT'
-      ? '服务端已确认支付，活动报名资格以活动服务当前状态为准。'
+      ? '已付款，可在“我的活动”查看报名结果。'
       : order.orderType === 'CONTENT'
-        ? '服务端已确认支付，内容访问权益已生效。'
-        : '服务端已确认支付，会员权益已生效。'
+        ? '支付成功，现在可以查看内容。'
+        : '支付成功，会员权益已开通。'
     case 'FAILED': return '这笔订单未完成支付。'
     case 'CLOSED': return '这笔订单已关闭。'
-    case 'REFUND_PENDING': return '退款意图已提交，处理结果以服务端状态为准。'
+    case 'REFUND_PENDING': return '退款申请已提交，正在处理。'
     case 'PARTIALLY_REFUNDED': return '这笔订单已完成部分退款。'
     case 'REFUNDED': return order.orderType === 'EVENT'
-      ? '退款已完成，活动报名状态已按服务端事实更新。'
+      ? '退款已完成，可在“我的活动”查看报名状态。'
       : order.orderType === 'CONTENT'
-        ? '退款已完成，内容访问权益已按服务端事实更新。'
-        : '退款已完成，会员权益已按服务端事实更新。'
+        ? '退款已完成，可在内容详情查看当前访问权限。'
+        : '退款已完成，可在会员页查看当前权益。'
   }
 }
 
@@ -252,7 +252,7 @@ Page({
     if (this.data.checkInResumeState !== 'ready' || !this.data.eventId || !mipCheckInResumeStore.peek(this.data.eventId)) {
       this.setData({
         checkInResumeState: 'pending',
-        checkInResumeMessage: '签到意图已失效，请返回现场重新扫描活动码。',
+        checkInResumeMessage: '请重新扫描现场签到码。',
       })
       return
     }
@@ -387,7 +387,7 @@ Page({
     }
     const confirmation = await wx.showModal({
       title: '申请退款',
-      content: '提交后将由服务端核对可退金额和订单关联状态。',
+      content: '确认提交退款申请？提交后可在订单详情查看进度。',
       confirmText: '确认提交',
       cancelText: '取消',
     })
@@ -401,7 +401,7 @@ Page({
         idempotencyKey: this.refundKey,
         reason: '用户申请退款',
       })
-      this.setData({ message: '退款意图已提交，请以订单状态为准。' })
+      this.setData({ message: '退款申请已提交，可在本页查看进度。' })
       await this.load()
     }
     catch (error) {

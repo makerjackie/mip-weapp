@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import vm from 'node:vm'
 import { describe, expect, it } from 'vitest'
 
 const root = path.resolve(import.meta.dirname, '..')
@@ -16,6 +17,18 @@ function normalizedCommandSource(source: string) {
 }
 
 describe('MIP payment deployment contract', () => {
+  it('can wait for a deploying function before reaching the helper declaration', async () => {
+    const source = read('scripts/deploy-payment-function.mjs')
+    const start = source.search(/const delay =|function delay\(/)
+    const end = source.indexOf('async function waitForFunctionActive', start)
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    const result = vm.runInNewContext(`const pending = delay(0);\n${source.slice(start, end)}\npending`, {
+      setTimeout: (resolve: () => void) => resolve(),
+    })
+    await expect(result).resolves.toBeUndefined()
+  })
+
   it('uses the core deployment permission convergence helper', () => {
     const coreDeploy = read('scripts/deploy-functions.mjs')
     const paymentDeploy = read('scripts/deploy-payment-function.mjs')

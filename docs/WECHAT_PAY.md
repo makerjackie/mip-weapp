@@ -30,6 +30,8 @@ MIP 使用 `mip-cloudpay`、`mip-cloudpay-callback`、`mip-refund-worker` 和 `m
 
 付费活动占位过期后，订单页先请求报名服务按当前资格、容量及窗口续期原订单占位，再调用支付；旧订单页必须匹配报名当前关联订单，不能续期另一笔订单。已取消重报后，原订单迟到付款创建独立的 `PENDING` 退款；仅当原占位已取消或过期、原订单不再关联报名且退款幂等标识匹配时，允许退款 worker 提交和回调收敛。该退款不取消新报名，也不受新报名的签到状态影响。
 
+支付适配器与 ledger 的 HMAC 字段必须一致：`getPayableOrder.forSync` 和 `applyPaymentCallback.providerPaidAt` 都参与签名。增加内部请求字段时，必须同步 ledger 的签名字段清单，并用真实适配器客户端对接 ledger 验签器测试正常请求与字段篡改，不能只分别模拟两端成功响应。
+
 ## 退款
 
 退款请求先在同一事务写入 `mip_refunds` 并把订单锁定为 `REFUND_PENDING`。用户退款可由 `mip-cloudpay` 提交；管理端单笔退款和活动取消产生的退款由 `mip-refund-worker` 提交。两个适配器都只向 ledger 提交退款 ID，商户订单号、退款单号、金额、货币和权益全部由 ledger 回查，不能采用客户端或管理页面传入的金额。
@@ -40,7 +42,9 @@ MIP 使用 `mip-cloudpay`、`mip-cloudpay-callback`、`mip-refund-worker` 和 `m
 
 `mip-refund-worker` 使用独立 HMAC，只接受管理 API 或受控运营命令调用。每次退款尝试使用不可变的服务端商户退款单号；进程中断、活动批量退款超过单次处理上限、晚到支付自动退款或 provider 仍处理中时，可重复运行恢复命令。worker 会扫描 `PENDING`、`PROVIDER_CREATED`、`PROCESSING`，提交或查单后再由 ledger 收敛状态；重复调用不得重复扣减权益。provider 返回 `CHANGE` 时不得释放退款占额：ledger 以 `PROCESSING + MANUAL_REVIEW_CHANGE` 保留不可自动重提的人工核对事实，批处理扫描会排除该记录，显式查单和权威 `SUCCESS` 回调仍可收敛；只有 `REFUNDCLOSE` 可以迁移为 `FAILED` 并释放占额。历史上误记为 `FAILED + CHANGE` 的记录只在不存在竞争中的退款且累计成功金额不超订单金额时接受迟到 `SUCCESS`，否则失败关闭并进入回调补偿核对。退款命令不复用通知或成长 outbox，worker 也不安装高频定时器。
 
-支付回调只接受明确的 `tradeState=SUCCESS`，退款回调只接受明确的 `refundStatus=SUCCESS`。`returnCode/resultCode=SUCCESS` 仅表示通信或接口调用成功，不能作为支付或退款完成事实；`PROCESSING`、`CHANGE`、`REFUNDCLOSE` 以及缺少业务成功字段的回调全部失败关闭，不得写入 ledger 成功状态。
+支付查单只接受明确的 `tradeState/trade_state=SUCCESS`。CloudPay 原生 V2 支付通知没有 `tradeState` 时，`returnCode/return_code` 和 `resultCode/result_code` 均为 `SUCCESS` 表示该支付通知的成功结果；回调函数仅接受平台调用，禁止客户端调用，并继续核对 AppID、订单、身份、交易号和金额，使用 ledger 幂等入账。不得把统一下单的接口成功等同于支付通知成功，也不得让通信 SUCCESS 覆盖显式非成功交易状态。退款通知只接受 `refundStatus/refund_status=SUCCESS`。
+
+`unifiedOrder` 使用驼峰参数；`queryOrder`、`refund` 和 `queryRefund` 按官方接口使用 `sub_mch_id`、`out_trade_no`、`nonce_str` 等下划线参数，不能套用下单参数。原生退款查询的 `out_refund_no_0`、`refund_status_0` 等编号字段也必须解析。管理端 SCF 直接调用缺少微信云调用令牌，可能返回 `invalid wx openapi access_token`；不能用这种调用的失败推断商户授权未完成。
 
 单内容商品的退款合同存入订单快照。`BEFORE_ACCESS` 只允许在快照规定的窗口内、尚未首次访问受保护正文且一次退还剩余全额时申请；`NON_REFUNDABLE` 始终拒绝。全额退款确认后 ledger 撤销单内容权益。后台和用户端复用同一服务端判断，不能读取当前商品配置覆盖历史订单规则。
 

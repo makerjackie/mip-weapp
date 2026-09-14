@@ -87,7 +87,12 @@ function parseAttach(value) {
 }
 
 function paymentSucceeded(resource) {
-  return pick(resource, 'tradeState', 'trade_state') === 'SUCCESS'
+  const tradeState = pick(resource, 'tradeState', 'trade_state')
+  if (tradeState) return tradeState === 'SUCCESS'
+  // In a platform-delivered V2 payment notification, result_code is the payment
+  // outcome. This differs from unifiedOrder/queryOrder transport status.
+  return pick(resource, 'returnCode', 'return_code') === 'SUCCESS'
+    && pick(resource, 'resultCode', 'result_code') === 'SUCCESS'
 }
 
 function refundSucceeded(resource) {

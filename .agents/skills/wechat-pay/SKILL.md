@@ -27,6 +27,9 @@ description: Use for membership checkout, CloudPay, ledger, callback, or refund 
 4. 回调验签、幂等，重复回调不得重复发货。
 5. test 与 live 商品目录必须隔离。
 6. 未配置支付时真实模式失败关闭，界面写「尚未配置」或「会员服务即将开放」，不要伪造成功。
+7. 原生 CloudPay V2 支付通知与查单响应不是同一协议：平台通知的 `returnCode/resultCode=SUCCESS` 可表示付款成功，不能强制要求查单的 `tradeState`；必须保留客户端禁止调用、身份/金额校验与 ledger 幂等。
+8. `unifiedOrder` 使用驼峰参数；`queryOrder`、`refund`、`queryRefund` 使用官方下划线参数。退款查单还会返回 `refund_status_0` 等编号字段，测试应覆盖真实字段形状。
+9. 管理端 SCF 直接调用可能缺少微信云调用令牌并报 `invalid wx openapi access_token`；应通过真实小程序登录态验证，不据此要求重做商户授权。
 
 ## Scripts
 

@@ -226,7 +226,9 @@ function existingFunctionDetail(functionName) {
   }
 }
 
-const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
+function delay(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds))
+}
 
 async function waitForFunctionActive(functionName) {
   for (let attempt = 0; attempt < 30; attempt += 1) {
