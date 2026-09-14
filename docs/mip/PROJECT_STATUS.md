@@ -61,6 +61,8 @@
 
 ## 证据入口
 
+- [2026-09-14 消息分页与已读修复发布](evidence/2026-09-14-inbox-release.md)（消息函数已更新，小程序实际调用验证未读数为 0，开发版本已上传；全量云端管理验收仍受 CAM 鉴权阻塞）
+
 - [2026-09-14 微信支付修复与验收](evidence/2026-09-14-wechat-pay-fix.md)（CloudPay 查单、通知和内部签名已修复并部署；用户确认会员支付正常，活动支付及退款闭环仍待验收）
 - [当前 React Web 线上验收](evidence/admin-web-live-2026-08-28-react/README.md)
 - [早期 React Web 线上证据](evidence/admin-web-live-2026-08-28/README.md)（只作历史追溯）
