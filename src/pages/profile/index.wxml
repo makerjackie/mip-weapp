@@ -210,7 +210,7 @@
       </view>
     </block>
 
-    <view class="mx-3 mt-6 overflow-hidden rounded-[24rpx] bg-panel">
+    <view class="mt-6 overflow-hidden rounded-[24rpx] bg-panel">
       <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" aria-role="button" bind:tap="openGame"><text class="text-[length:28rpx]">团队 PK</text><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" /></view>
       <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" aria-role="button" bind:tap="openHelp"><text class="text-[length:28rpx]">帮助与客服</text><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" /></view>
       <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" aria-role="button" bind:tap="openSettings"><text class="text-[length:28rpx]">设置</text><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" /></view>

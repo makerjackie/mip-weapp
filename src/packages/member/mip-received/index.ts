@@ -333,7 +333,11 @@ Page({
           cache.unreadCount = Math.max(0, cache.unreadCount - 1)
           mipMessagingModule.invalidate()
         }
-        catch {
+        catch (error) {
+          recordLoadingFailure('opportunities.response', error)
+          if (requiresIdentityRefresh(error)) {
+            this.accessReady = false
+          }
           failed = true
         }
       }
@@ -341,7 +345,7 @@ Page({
         this.setData({
           items: cache.items,
           visitorUnreadCount: cache.unreadCount,
-          message: failed ? '部分访客未读状态同步失败，请刷新重试。' : '',
+          message: failed ? '访客已显示，未读标记暂未更新，请刷新重试。' : '',
         })
       }
     }
@@ -417,7 +421,7 @@ Page({
   },
 
   retry() {
-    if (this.data.state !== 'error') {
+    if (this.data.state !== 'error' && !(this.data.state === 'ready' && this.data.message)) {
       return
     }
     return this.accessReady

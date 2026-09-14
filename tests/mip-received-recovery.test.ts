@@ -87,6 +87,35 @@ describe('received interactions failure recovery', () => {
     expect(p.data.items).toEqual([expect.objectContaining({ unread: true })])
   })
 
+  it('retries read synchronization from a ready list and clears the unread badge', async () => {
+    const p = page()
+    p.accessReady = true
+    const visitors = parseReceivedVisitors({ items: [{ profileRef: 'public-ref', nickname: '访客甲', visitCount: 1, lastVisitedAt: '2026-09-12T03:00:00Z', unread: true }], unreadCount: 1, totalViewCount: 1 })
+    mocks.list.mockResolvedValue(visitors)
+    mocks.markRead.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({})
+    await p.loadCategory('VISITOR', true)
+    await vi.waitFor(() => expect(p.data.message).toContain('刷新重试'))
+    expect(p.data.state).toBe('ready')
+    await p.retry()
+    await vi.waitFor(() => expect(p.data.visitorUnreadCount).toBe(0))
+    expect(mocks.markRead).toHaveBeenCalledTimes(2)
+    expect(p.data.message).toBe('')
+    expect(p.data.items).toEqual([expect.objectContaining({ actorName: '访客甲', unread: false })])
+  })
+
+  it('refreshes expired identity before retrying unread synchronization', async () => {
+    const p = page()
+    p.accessReady = true
+    mocks.list.mockResolvedValueOnce(parseReceivedVisitors({ items: [{ profileRef: 'public-ref', nickname: '访客甲', visitCount: 1, lastVisitedAt: '2026-09-12T03:00:00Z', unread: true }], unreadCount: 1 }))
+    mocks.markRead.mockRejectedValueOnce(Object.assign(new Error('登录已过期'), { code: 'AUTH_REQUIRED' }))
+    await p.loadCategory('VISITOR', true)
+    await vi.waitFor(() => expect(p.data.message).toContain('刷新重试'))
+    expect(p.accessReady).toBe(false)
+    expect(getLoadingDiagnostics()).toContainEqual(expect.objectContaining({ errorCode: 'AUTH_REQUIRED' }))
+    await p.retry()
+    expect(mocks.access).toHaveBeenCalledTimes(1)
+  })
+
   it('waits for rendering before marking visitors read', async () => {
     const p = page()
     const rendered: Array<() => void> = []
