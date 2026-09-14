@@ -108,7 +108,9 @@ const adminWebQueryActions = Object.freeze([
 const adminWebMutationPolicies = Object.freeze([
   domainIdempotentWebMutation('mip.admin.memberships.grant', ['durationMonths', 'expectedChainVersion', 'reason', 'userId']),
   domainIdempotentWebMutation('mip.admin.events.clone', ['expectedVersion', 'sourceEventId']),
-  domainIdempotentWebMutation('mip.admin.events.changeStatus', ['eventId', 'expectedVersion', 'status']),
+  // domain/events.js requires reason whenever status is CANCELLED, so the BFF input schema has to
+  // allow the key for that action.
+  domainIdempotentWebMutation('mip.admin.events.changeStatus', ['eventId', 'expectedVersion', 'status'], ['reason']),
   domainIdempotentWebMutation('mip.admin.events.archive', ['eventId', 'expectedVersion', 'reason']),
   domainIdempotentWebMutation('mip.admin.communications.publishEventReminder', ['eventId', 'expectedVersion', 'sendWechatReminder']),
   domainIdempotentWebMutation('mip.admin.refunds.submit', ['orderId', 'reason']),

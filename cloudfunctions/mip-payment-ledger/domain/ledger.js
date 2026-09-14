@@ -222,12 +222,7 @@ async function applyPaymentCallback(db, input, options = {}) {
       [input.providerTransactionId, paidAt, input.appId, order.id, order.version],
     )
     assertAffected(updated, 'ORDER_STATUS_CONFLICT')
-    await tx.query(
-      `UPDATE mip_payment_attempts
-       SET provider_payment_id = ?, status = 'SUCCEEDED', version = version + 1
-       WHERE app_id = ? AND order_id = ? AND status <> 'SUCCEEDED'`,
-      [input.providerTransactionId, input.appId, order.id],
-    )
+    await markPaymentAttemptSucceeded(tx, input.appId, order.id, input.providerTransactionId)
     if (order.order_type === 'MEMBERSHIP') {
       await rebuildMembershipEntitlements(tx, input.appId, order.user_id, {
         chain: membershipChain,
@@ -480,10 +475,14 @@ async function applyEventPayment(tx, {
 }
 
 async function markPaymentAttemptSucceeded(tx, appId, orderId, providerTransactionId) {
+  // mip_payment_attempts_provider_id_uk is (app_id, provider, provider_payment_id), so writing the
+  // same provider payment id to every attempt of the order raises ER_DUP_ENTRY when the order has
+  // more than one attempt and rolls back the whole callback. Settle exactly one attempt instead.
   await tx.query(
     `UPDATE mip_payment_attempts
      SET provider_payment_id = ?, status = 'SUCCEEDED', version = version + 1
-     WHERE app_id = ? AND order_id = ? AND status <> 'SUCCEEDED'`,
+     WHERE app_id = ? AND order_id = ? AND status <> 'SUCCEEDED'
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
     [providerTransactionId, appId, orderId],
   )
 }

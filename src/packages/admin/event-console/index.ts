@@ -41,7 +41,9 @@ function wrappedLines(
     if (current && context.measureText(next).width > maxWidth) {
       lines.push(current)
       current = character
-      if (lines.length === limit - 1) {
+      // Stop once limit lines are full; breaking at limit - 1 left the last line holding a single
+      // character and dropped the rest of the title.
+      if (lines.length === limit) {
         break
       }
     }

@@ -115,7 +115,7 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
       ['所属服务器', text(user.branchName)],
       ['城市', text(user.cityName)],
       ['资料版本', numberText(user.profileVersion)],
-      ['用户版本', numberText(user.version)],
+      ['用户版本', numberText(user.userVersion)],
       ['简介', text(user.headline)],
       ['个人介绍', text(user.introduction)],
       ['注册时间', dateTime(user.createdAt)],

@@ -639,16 +639,30 @@ function createKnowledgeAdminService(database, options = {}) {
         throw codeError(errorCode)
       }
     }
-    const normalized = items.slice(0, 50)
-      .map(item => normalizeIngestionItem(item, { allowedHosts: webviewAllowedHosts }))
+    // mip_knowledge_ingestion_items has UNIQUE (app_id, run_id, source_external_id), and a feed can
+    // repeat a guid/link (or two items can share the contentHash fallback). Keep one item per
+    // externalId, exactly like the scheduler worker's normalizedWorkerItems, so the run cannot abort
+    // on a duplicate-key error halfway through its transaction.
+    const seenExternalIds = new Set()
+    const normalized = []
+    for (const raw of items.slice(0, 50)) {
+      const item = normalizeIngestionItem(raw, { allowedHosts: webviewAllowedHosts })
+      if (seenExternalIds.has(item.externalId)) continue
+      seenExternalIds.add(item.externalId)
+      normalized.push(item)
+    }
     if (!normalized.length) throw codeError('VALIDATION_FAILED')
     const requestHash = createHash('sha256').update(JSON.stringify({ sourceId, categoryId, items: normalized })).digest('hex')
     return database.transaction(async (tx) => {
       const context = await lockAdmin(tx, caller, authorization.userId)
       const replay = await tx.one(
-        `SELECT id, request_hash, status, fetched_count, created_count, duplicate_count, rejected_count
-         FROM mip_knowledge_ingestion_runs
-         WHERE app_id = ? AND source_id = ? AND idempotency_key = ? FOR UPDATE`,
+        `SELECT run.id, run.request_hash, run.source_id, source.name AS source_name, run.trigger_type,
+                run.status, run.fetched_count, run.created_count, run.duplicate_count,
+                run.rejected_count, run.last_error_code, run.started_at, run.completed_at
+         FROM mip_knowledge_ingestion_runs run
+         INNER JOIN mip_knowledge_sources source
+           ON source.app_id = run.app_id AND source.id = run.source_id
+         WHERE run.app_id = ? AND run.source_id = ? AND run.idempotency_key = ? FOR UPDATE`,
         [context.appId, sourceId, idempotencyKey],
       )
       if (replay) {
@@ -824,7 +838,11 @@ async function completeIdempotency(tx, input) {
 
 function normalizeSchedule(input) {
   const scheduleId = input.scheduleId ? requiredUuid(input.scheduleId) : null
-  const expectedVersion = nonNegativeInteger(input.expectedVersion)
+  // expectedVersion is optional in the Web contract and is omitted when creating a schedule; an
+  // absent version means "expect no existing row" (0). Updates still have to send version >= 1.
+  const expectedVersion = input.expectedVersion === undefined || input.expectedVersion === null
+    ? 0
+    : nonNegativeInteger(input.expectedVersion)
   if ((scheduleId && expectedVersion < 1) || (!scheduleId && expectedVersion !== 0)) {
     throw codeError('VALIDATION_FAILED')
   }

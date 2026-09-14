@@ -284,7 +284,11 @@ Page({
 
   changeDateFilter(event: WechatMiniprogram.TouchEvent) {
     const dateFilter = String(event.currentTarget.dataset.filter || '') as EventDateFilter
-    if (!['RECENT', 'ENDED', 'TODAY'].includes(dateFilter) || dateFilter === this.data.dateFilter) {
+    // 「已结束」status radio only sets dateFilter and keeps the upcoming view, so the returning
+    // 往期活动 tab must still be able to flip the view for the same dateFilter.
+    const nextView = dateFilter === 'ENDED' ? 'PAST' : 'UPCOMING'
+    if (!['RECENT', 'ENDED', 'TODAY'].includes(dateFilter)
+      || (dateFilter === this.data.dateFilter && this.data.view === nextView)) {
       return
     }
     this.setData({
@@ -396,7 +400,7 @@ Page({
       draftTagKeys,
       draftAccessType: this.data.selectedAccessType,
       draftSortDirection: this.data.selectedSortDirection
-        || (this.data.view === 'PAST' ? 'DESC' : 'ASC'),
+        || (this.data.view === 'PAST' || this.data.dateFilter === 'ENDED' ? 'DESC' : 'ASC'),
       eventTypeOptions: selectedOptions(this.data.eventTypeOptions, draftEventTypeKey, true),
       tagOptions: selectedOptions(this.data.tagOptions, draftTagKeys),
     })

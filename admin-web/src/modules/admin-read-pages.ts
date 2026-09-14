@@ -140,7 +140,7 @@ export async function loadAdminReadPage(
     case 'permissions': return loadPermissions(query, request, access)
     case 'messages': return loadMessages(query, request)
     case 'knowledge': return loadKnowledge(query, request)
-    case 'opportunities': return loadOpportunities(query, request)
+    case 'opportunities': return loadOpportunities(query, request, access)
     case 'growth': return loadGrowth(query, request, access)
     case 'operations': return loadOperations(query, request, access)
   }

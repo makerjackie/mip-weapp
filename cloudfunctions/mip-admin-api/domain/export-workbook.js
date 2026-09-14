@@ -92,7 +92,9 @@ function workbookForExport(input) {
   if (!definition || !Array.isArray(input.rows)) throw new Error('EXPORT_TYPE_INVALID')
   const columns = [...definition.columns]
   if (input.includesPhone) {
-    const index = input.exportType === 'USERS' ? 6 : input.exportType === 'EVENT_ROSTER_ALL' ? 6 : 4
+    // USERS gained playerNumber at index 1, so 城市 moved from index 5 to 6: the phone column
+    // belongs after it, not between 分会 and 城市.
+    const index = input.exportType === 'USERS' ? 7 : input.exportType === 'EVENT_ROSTER_ALL' ? 6 : 4
     columns.splice(index, 0, ['phoneNumber', '手机号'])
   }
   const rows = input.rows.map((source) => {

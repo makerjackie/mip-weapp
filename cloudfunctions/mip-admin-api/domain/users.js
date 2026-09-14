@@ -3,6 +3,8 @@
 const {
   CAPABILITIES,
   authorize,
+  capabilitiesForBinding,
+  coversScope,
   firstGrant,
   visibilityForCapability,
 } = require('./capabilities')
@@ -30,18 +32,24 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
       pageLimit,
       cursor,
     ))
-    const items = page.items.map(item => projectUser(item, {
-      appId: context.caller.appId,
-      includePhone,
-      phoneEncryptionKey,
-    }))
+    const items = page.items.map((item) => {
+      // The list can span scopes the phone grant does not cover (for example a platform-scoped
+      // users.read binding next to a branch-only phone grant), so phone numbers are only decrypted
+      // for rows the caller's phone capability actually covers.
+      const readable = includePhone && phoneReadCovers(context.bindings, item)
+      return projectUser(item, {
+        appId: context.caller.appId,
+        includePhone: readable,
+        phoneEncryptionKey,
+      })
+    })
     if (includePhone) {
       await repository.recordAudit(access.audit(context, phoneGrant, {
         scopeType: phoneGrant.scopeType,
         scopeId: phoneGrant.scopeId,
         action: 'admin.users.phone.view',
         resourceType: 'USER_LIST',
-        metadata: { count: items.length, filters, cursor: Boolean(cursor) },
+        metadata: { count: items.filter(item => item.phoneNumber).length, filters, cursor: Boolean(cursor) },
       }))
     }
     return { items, nextCursor: page.nextCursor }
@@ -188,6 +196,14 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
     setUserControl,
     updateUser,
   }
+}
+
+function phoneReadCovers(bindings, item) {
+  const requested = item?.primaryBranchId
+    ? { scopeType: 'BRANCH', scopeId: item.primaryBranchId }
+    : { scopeType: 'PLATFORM', scopeId: null }
+  return bindings.some(binding => capabilitiesForBinding(binding).includes(CAPABILITIES.USERS_PHONE_READ)
+    && coversScope(binding, requested))
 }
 
 function projectUser(item, { appId, includePhone, phoneEncryptionKey, userId = item.id }) {

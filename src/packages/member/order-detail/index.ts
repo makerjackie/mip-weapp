@@ -113,14 +113,12 @@ Page({
     const requestSeq = this.requestSeq + 1
     this.requestSeq = requestSeq
     try {
-      const [orders, plans] = await Promise.all([
-        mipCommerceModule.listOrders(),
+      // getOrder resolves the order directly; listOrders() only returns the 30 most recent orders,
+      // so looking the order up there made older orders impossible to open.
+      let [order, plans] = await Promise.all([
+        mipCommerceModule.getOrder(this.data.orderId),
         mipCommerceModule.listPlans().catch(() => [] as MembershipPlan[]),
       ])
-      let order = orders.find(item => item.id === this.data.orderId)
-      if (!order) {
-        throw new Error('NOT_FOUND')
-      }
       if (presentOrderStatus(order.status).paymentPending) {
         try {
           order = await mipCommerceModule.reconcile(order.id)
@@ -138,7 +136,8 @@ Page({
       if (requestSeq !== this.requestSeq) {
         return
       }
-      const notFound = error instanceof Error && error.message === 'NOT_FOUND'
+      // The commerce gateway puts the business code on error.code; error.message is Chinese copy.
+      const notFound = (error as { code?: unknown })?.code === 'NOT_FOUND'
       this.setData(this.data.order
         ? { message: '订单更新失败，已保留上次结果。' }
         : { state: 'error', message: notFound ? '没有找到这笔订单。' : '订单暂时无法加载。' })

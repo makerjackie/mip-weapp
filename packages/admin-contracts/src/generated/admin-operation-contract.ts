@@ -2068,7 +2068,9 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
         "expectedVersion",
         "status"
       ],
-      "optionalInputKeys": [],
+      "optionalInputKeys": [
+        "reason"
+      ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
     },

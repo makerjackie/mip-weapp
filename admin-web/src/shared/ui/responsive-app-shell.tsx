@@ -38,6 +38,16 @@ export function ResponsiveAppShell() {
 
   const loginVisible = loginOpen && !session?.enabled
 
+  // A confirmed web login must close the gate for good. Without this the flag stayed set and a later
+  // AUTH_REQUIRED reopened the modal with no challenge, no polling and no retry action. Adjust the
+  // state during render (React's documented alternative to an effect for prop-driven state).
+  const sessionEnabled = session?.enabled === true
+  const [loginSessionEnabled, setLoginSessionEnabled] = useState(sessionEnabled)
+  if (sessionEnabled !== loginSessionEnabled) {
+    setLoginSessionEnabled(sessionEnabled)
+    if (sessionEnabled) setLoginOpen(false)
+  }
+
   const visibleNavigation = useMemo(() => {
     if (demoMode) return adminNavigation
     if (!session?.enabled) return adminNavigation.filter(item => item.path === '/overview')

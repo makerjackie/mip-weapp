@@ -422,7 +422,7 @@ function normalizeRule(value) {
     ? null
     : Number(value.dailyLimitValue)
   if (dailyLimitValue !== null
-    && (!Number.isInteger(dailyLimitValue) || dailyLimitValue < 0)) {
+    && (!Number.isInteger(dailyLimitValue) || dailyLimitValue < 0 || dailyLimitValue > 4_294_967_295)) {
     throw new AdminError('VALIDATION_FAILED', '每日上限无效')
   }
   const scopeType = value.scopeType === undefined || value.scopeType === ''
@@ -438,6 +438,10 @@ function normalizeRule(value) {
   }
   const effectiveFrom = dateTimeFilter(value.effectiveFrom, '生效开始时间') || null
   const effectiveTo = dateTimeFilter(value.effectiveTo, '生效结束时间') || null
+  // mip_growth_rules_effective_window_ck rejects effective_to without effective_from.
+  if (effectiveTo && !effectiveFrom) {
+    throw new AdminError('VALIDATION_FAILED', '填写生效结束时间前需要先填写生效开始时间')
+  }
   if (effectiveFrom && effectiveTo && effectiveTo <= effectiveFrom) {
     throw new AdminError('VALIDATION_FAILED', '生效结束时间必须晚于开始时间')
   }

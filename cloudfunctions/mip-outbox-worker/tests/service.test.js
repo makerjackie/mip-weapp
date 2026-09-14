@@ -43,13 +43,16 @@ describe('outbox service', () => {
     assert.equal(result.delivered, 1)
   })
 
-  it('enqueues a cursor continuation before completing a recipient page', async () => {
+  it('re-arms the leased row for a cursor continuation instead of completing it', async () => {
     const order = []
     const continuation = { knowledgeRecipientCursor: '20000000-0000-4000-8000-000000000500' }
     const service = createOutboxService({
       repository: {
         leaseBatch: async () => ({ events: [event], reaped: [] }),
-        enqueueContinuation: async (_event, value) => order.push(`continue:${value.knowledgeRecipientCursor}`),
+        enqueueContinuation: async (_event, value) => {
+          order.push(`continue:${value.knowledgeRecipientCursor}`)
+          return { eventId: event.id, status: 'CONTINUED' }
+        },
         completeEvent: async () => {
           order.push('complete')
           return { eventId: event.id, status: 'DELIVERED' }
@@ -61,8 +64,10 @@ describe('outbox service', () => {
       clients: {},
     })
     const result = await service.runBatch({ appId: 'wx-app', limit: 1 })
-    assert.deepEqual(order, [`continue:${continuation.knowledgeRecipientCursor}`, 'complete'])
+    assert.deepEqual(order, [`continue:${continuation.knowledgeRecipientCursor}`])
     assert.equal(result.results[0].continuation, true)
+    assert.equal(result.results[0].status, 'CONTINUED')
+    assert.equal(result.delivered, 0)
   })
 
   it('keeps a bounded drain active until the queued cursor continuation is processed', async () => {
@@ -75,6 +80,7 @@ describe('outbox service', () => {
       },
       async enqueueContinuation(parent, payload) {
         queue.push({ ...parent, id: '90000000-0000-4000-8000-000000000002', payload_json: JSON.stringify(payload) })
+        return { eventId: parent.id, status: 'CONTINUED' }
       },
       async completeEvent(value) {
         completed.push(value.id)
@@ -95,8 +101,8 @@ describe('outbox service', () => {
       clients: {},
     })
     const result = await service.runBatch({ appId: 'wx-app', limit: 5, drain: true, maxBatches: 5 })
-    assert.deepEqual(completed, [event.id, '90000000-0000-4000-8000-000000000002'])
-    assert.equal(result.delivered, 2)
+    assert.deepEqual(completed, ['90000000-0000-4000-8000-000000000002'])
+    assert.equal(result.delivered, 1)
   })
 
   it('retries a transient target failure and never marks the event delivered', async () => {

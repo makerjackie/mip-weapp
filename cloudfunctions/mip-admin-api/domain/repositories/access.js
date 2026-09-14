@@ -2,6 +2,32 @@
 
 const { cursorPredicateFor, pageRows } = require('../pagination')
 
+// Derived branch columns every branchDto response needs. They must be selected by every query that
+// feeds branchDto (list and mutation paths), otherwise currentPlayerCount/branchAdminNames silently
+// degrade to 0/[] right after a branch is edited.
+const BRANCH_DERIVED_COLUMNS = `
+        (SELECT COUNT(DISTINCT m.user_id) FROM mip_branch_memberships m
+          INNER JOIN mip_users u
+            ON u.app_id = m.app_id AND u.id = m.user_id
+          WHERE m.app_id = b.app_id AND m.branch_id = b.id
+            AND m.status = 'ACTIVE' AND u.status = 'ACTIVE'
+            AND EXISTS (
+              SELECT 1 FROM mip_membership_entitlements entitlement
+              WHERE entitlement.app_id = m.app_id AND entitlement.user_id = m.user_id
+                AND entitlement.status = 'ACTIVE'
+                AND entitlement.starts_at <= UTC_TIMESTAMP(3)
+                AND entitlement.ends_at > UTC_TIMESTAMP(3)
+            )) AS current_player_count,
+        (SELECT JSON_ARRAYAGG(COALESCE(NULLIF(p.nickname, ''), '未设置昵称'))
+         FROM mip_admin_role_bindings r
+         INNER JOIN mip_users u
+           ON u.app_id = r.app_id AND u.id = r.user_id AND u.status = 'ACTIVE'
+         LEFT JOIN mip_profiles p
+           ON p.app_id = r.app_id AND p.user_id = r.user_id
+         WHERE r.app_id = b.app_id AND r.scope_type = 'BRANCH'
+           AND r.scope_id = b.id AND r.role_key = 'BRANCH_ADMIN'
+           AND r.status = 'ACTIVE') AS branch_admin_names_json`
+
 function branchBlockersFromRow(row = {}) {
   return {
     activeMemberships: Number(row.active_memberships || 0),
@@ -171,8 +197,9 @@ function createAdminAccessRepository(database, options) {
     return database.transaction(async (tx) => {
       await authorizeMutation(tx, input, { scopeType: 'PLATFORM', scopeId: null })
       const current = await tx.one(
-        `SELECT id, branch_key, name, city_name, summary, status, version
-         FROM mip_city_branches WHERE app_id = ? AND id = ? FOR UPDATE`,
+        `SELECT b.id, b.branch_key, b.name, b.city_name, b.summary, b.status, b.version,
+          ${BRANCH_DERIVED_COLUMNS}
+         FROM mip_city_branches b WHERE b.app_id = ? AND b.id = ? FOR UPDATE`,
         [input.appId, input.branchId],
       )
       if (!current) {
@@ -205,8 +232,9 @@ function createAdminAccessRepository(database, options) {
     return database.transaction(async (tx) => {
       await authorizeMutation(tx, input, { scopeType: 'PLATFORM', scopeId: null })
       const current = await tx.one(
-        `SELECT id, branch_key, name, city_name, summary, status, version
-         FROM mip_city_branches WHERE app_id = ? AND id = ? FOR UPDATE`,
+        `SELECT b.id, b.branch_key, b.name, b.city_name, b.summary, b.status, b.version,
+          ${BRANCH_DERIVED_COLUMNS}
+         FROM mip_city_branches b WHERE b.app_id = ? AND b.id = ? FOR UPDATE`,
         [input.appId, input.branchId],
       )
       if (!current) {

@@ -443,6 +443,35 @@ describe('admin service', () => {
     }, cursor: false })
   })
 
+  it('decrypts only the rows the caller phone capability actually covers', async () => {
+    const repo = repository()
+    repo.listRoleBindings = async () => [
+      {
+        roleKey: 'PLATFORM_OPERATIONS',
+        scopeType: 'PLATFORM',
+        scopeId: null,
+        policyCapabilities: ['users.read', 'branches.manage'],
+      },
+      { roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: 'branch-b' },
+    ]
+    const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })
+    const uncovered = await service.listUsers(caller, { includePhone: true })
+    assert.equal(uncovered.items[0].phoneNumber, null)
+    assert.equal(uncovered.items[0].phoneBound, true)
+
+    repo.listRoleBindings = async () => [
+      {
+        roleKey: 'PLATFORM_OPERATIONS',
+        scopeType: 'PLATFORM',
+        scopeId: null,
+        policyCapabilities: ['users.read', 'branches.manage'],
+      },
+      { roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: 'branch-a' },
+    ]
+    const covered = await service.listUsers(caller, { includePhone: true })
+    assert.equal(covered.items[0].phoneNumber, '+86 13800138000')
+  })
+
   it('returns only phone binding state until an original phone read is authorized', async () => {
     const repo = repository('PLATFORM_OPERATIONS')
     const service = createAdminService({ repository: repo, phoneEncryptionKey: '' })

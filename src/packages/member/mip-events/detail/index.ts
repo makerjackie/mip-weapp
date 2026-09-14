@@ -29,7 +29,9 @@ function wrappedLines(context: WechatMiniprogram.CanvasRenderingContext.CanvasRe
     if (current && context.measureText(candidate).width > maxWidth) {
       lines.push(current)
       current = character
-      if (lines.length === maxLines - 1) {
+      // Stop once maxLines lines are full; breaking at maxLines - 1 left the last line holding a
+      // single character and dropped the rest of the title.
+      if (lines.length === maxLines) {
         break
       }
     }

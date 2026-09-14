@@ -591,6 +591,15 @@ function createAdminPrdExtensions(database, options = {}) {
         minimumExperience: Number(row.minimum_experience), status: row.status,
       }))
       projection.push({ minimumExperience: input.draft.minimumExperience, status: input.draft.status })
+      // mip_growth_levels_threshold_uk is (app_id, minimum_experience) across every status, so a
+      // threshold used by a DRAFT/INACTIVE level still collides at INSERT/UPDATE time.
+      const thresholds = new Set()
+      for (const item of projection) {
+        if (thresholds.has(item.minimumExperience)) {
+          throw codeError('GROWTH_LEVEL_THRESHOLD_CONFLICT')
+        }
+        thresholds.add(item.minimumExperience)
+      }
       const active = projection.filter(item => item.status === 'ACTIVE').sort((a, b) => a.minimumExperience - b.minimumExperience)
       if (active.filter(item => item.minimumExperience === 0).length !== 1
         || active.some((item, index) => index > 0 && active[index - 1].minimumExperience >= item.minimumExperience)) {

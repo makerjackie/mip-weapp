@@ -15,7 +15,7 @@ import {
 } from './lib/palette.mjs'
 
 const root = path.resolve(import.meta.dirname, '../..')
-const skillDir = path.join(root, '.claude/skills/mip-design-system')
+const skillDir = path.join(root, '.agents/skills/mip-design-system')
 const tokensPath = path.join(skillDir, 'assets/wechat/tokens.wxss')
 const manifestPath = path.join(skillDir, 'assets/MANIFEST.md')
 const outPath = path.join(root, 'config/mip-palette.json')
@@ -32,7 +32,9 @@ const snapshot
   = (manifestPath && fs.existsSync(manifestPath)
     ? fs.readFileSync(manifestPath, 'utf8')
     : ''
-  ).match(/snapshot[:\s]+([0-9.]+)/i)?.[1] ?? 'unknown'
+  // The manifest line is `- Snapshot: 2026-09-09 15:16 worktree`; the old [0-9.]+ pattern
+  // captured only the year and wrote "2026" into config/mip-palette.json.
+  ).match(/snapshot[:\s]+(\d{4}-\d{2}-\d{2}[^\n]*)/i)?.[1]?.trim() ?? 'unknown'
 const scales
   = tokensSource.match(/--mip-([a-z0-9-]+)\s*:\s*([^;\s][^;]*);/g) ?? []
 

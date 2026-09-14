@@ -226,6 +226,8 @@ describe('mip payment ledger', () => {
       && entitlementWrite > orderUpdate
       && outboxWrite > entitlementWrite
       && callbackProcessed > outboxWrite)
+    const attemptSettlement = statements.find(sql => sql.includes('UPDATE mip_payment_attempts'))
+    assert.match(attemptSettlement, /ORDER BY created_at DESC, id DESC LIMIT 1/)
   })
 
   it('rejects a duplicate provider callback whose immutable facts changed', async () => {

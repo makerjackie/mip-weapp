@@ -91,7 +91,9 @@ Page({
         return
       }
       const attempts = this.data.attempts + 1
-      const notFound = error instanceof Error && error.message === 'NOT_FOUND'
+      // The commerce gateway puts the business code on error.code; error.message is Chinese copy,
+      // so comparing the message left this branch unreachable and polled six times instead.
+      const notFound = (error as { code?: unknown })?.code === 'NOT_FOUND'
       if (notFound) {
         this.setData({ result: 'failed', attempts, title: '没有找到订单', description: '请返回订单列表重新查看。' })
         return

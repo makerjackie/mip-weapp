@@ -236,7 +236,8 @@ function auditCooperationCard() {
   )
   push(
     'no text baked into reusable asset',
-    !/roleName|positioning/.test(model.match(/image:/g) ?? ''),
+    // match(/image:/g) returns an array, so testing it directly always passed; inspect the lines.
+    !(model.match(/image:[^\n]*/g) ?? []).some(line => /roleName|positioning/.test(line)),
     '',
   )
   return checks

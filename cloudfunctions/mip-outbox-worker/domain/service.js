@@ -71,10 +71,11 @@ function createOutboxService(options) {
       for (const growth of projected.growth) {
         await clients.recordConfirmedEvent(event.app_id, growth)
       }
-      if (projected.continuation) {
-        await repository.enqueueContinuation(event, projected.continuation)
-      }
-      const completed = await repository.completeEvent(event)
+      // A continuation re-arms the leased row with the next cursor instead of completing it,
+      // so the row must not be marked DELIVERED on this lease.
+      const completed = projected.continuation
+        ? await repository.enqueueContinuation(event, projected.continuation)
+        : await repository.completeEvent(event)
       const externalDelivery = projected.notifications.some(notification => notification.external)
         ? await observeExternalDelivery(clients, event.app_id)
         : externalDeliverySummary('NOT_REQUESTED')

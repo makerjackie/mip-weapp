@@ -6,10 +6,22 @@ const { XLSX_CONTENT_TYPE, isXlsxBuffer } = require('../lib/xlsx')
 const {
   CAPABILITIES,
   authorize,
+  capabilitiesForBinding,
+  coversScope,
   visibilityForCapability,
 } = require('./capabilities')
 const { exportFileName, workbookForExport } = require('./export-workbook')
 const { AdminError, requiredId } = require('./validation')
+
+// authorize() returns the first covering binding, and PLATFORM_FINANCE sorts before the other
+// platform roles. A dual-role administrator (for example finance + operations) therefore looked
+// like a finance-only account and was denied every non-order export. The restriction only applies
+// when every binding that could authorize this export scope is the finance role.
+function financeOnlyExportScope(bindings, scope) {
+  const covering = bindings.filter(binding => capabilitiesForBinding(binding).includes(CAPABILITIES.EXPORT_CREATE)
+    && coversScope(binding, scope))
+  return covering.length > 0 && covering.every(binding => binding.roleKey === 'PLATFORM_FINANCE')
+}
 
 function createAdminExports({
   access,
@@ -40,7 +52,7 @@ function createAdminExports({
     }
     const scope = await exportScope(context, exportType, input)
     const grant = authorize(context.bindings, CAPABILITIES.EXPORT_CREATE, scope)
-    if (grant.roleKey === 'PLATFORM_FINANCE'
+    if (financeOnlyExportScope(context.bindings, scope)
       && !['ORDERS', 'EVENT_ORDERS'].includes(exportType)) {
       throw new AdminError('FORBIDDEN', '当前账号不能创建该类导出')
     }
@@ -102,7 +114,7 @@ function createAdminExports({
       scope = eventScope
     }
     const grant = authorize(context.bindings, CAPABILITIES.EXPORT_CREATE, scope)
-    if (grant.roleKey === 'PLATFORM_FINANCE'
+    if (financeOnlyExportScope(context.bindings, scope)
       && !['ORDERS', 'EVENT_ORDERS'].includes(ticket.exportType)) {
       throw new AdminError('FORBIDDEN', '当前账号不能处理该类导出')
     }

@@ -296,8 +296,13 @@ function renderNode(node, scope, ctx) {
     const namedSlots = new Map()
     collectNamedSlots(node.children ?? [], namedSlots)
     for (const [name, nodes] of namedSlots) {
-      slots[name] = renderToHtml(nodes, scope, { ...ctx, slotHtml: '' })
+      const slotCtx = { ...ctx, slotHtml: '' }
+      slots[name] = renderToHtml(nodes, scope, slotCtx)
+      ctx.instanceCount = Math.max(ctx.instanceCount, slotCtx.instanceCount)
     }
+    // ctx is shallow-copied for nested component renders, so the instance counter must be carried
+    // back from each child render: otherwise siblings reuse the same `c${n}` id and duplicate DOM
+    // ids overwrite each other's scoped CSS in the pixel scorer.
     const componentCtx = { ...ctx }
     const parentResolveAsset = componentCtx.resolveAsset
     componentCtx.resolveAsset = src =>
@@ -306,12 +311,13 @@ function renderNode(node, scope, ctx) {
       && !src.endsWith('banner-connect-fitness.png')
         ? `/packages/member${src}`
         : parentResolveAsset?.(src)
-    const inner = renderToHtml(resolved.nodes, { ...props, ...data }, {
-      ...componentCtx,
+    Object.assign(componentCtx, {
       slotHtml: slots.default || '',
       namedSlots: slots,
       usingComponents: resolved.usingComponents,
     })
+    const inner = renderToHtml(resolved.nodes, { ...props, ...data }, componentCtx)
+    ctx.instanceCount = Math.max(ctx.instanceCount, componentCtx.instanceCount)
     const outerStyle = rpxToPx(String(interpolate(attrs.style, scope) ?? ''))
     return `<div class="wx-comp ${interpolate(attrs.class, scope)}" id="${id}"${outerStyle ? ` style="${outerStyle}"` : ''}>${inner}</div>`
   }

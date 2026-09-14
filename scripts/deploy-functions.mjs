@@ -196,9 +196,15 @@ for (const spec of deploymentManifest) {
 }
 const disabledPaymentFunctionsProtected = []
 if (paymentMode === 'disabled') {
-  for (const spec of deploymentManifest.filter(item => ['pay', 'callback', 'refund'].includes(item.role))) {
-    const { name: functionName, role } = spec
-    if (!existingFunctionDetail(functionName)) {
+  // Payment functions are deployed outside the MIP core manifest, so filter by their resolved
+  // names instead of deploymentManifest roles (which never contain pay/callback/refund).
+  const paymentFunctions = [
+    { name: functionNames.pay, role: 'pay' },
+    { name: functionNames.callback, role: 'callback' },
+    { name: functionNames.refund, role: 'refund' },
+  ]
+  for (const { name: functionName, role } of paymentFunctions) {
+    if (!functionName || !existingFunctionDetail(functionName)) {
       continue
     }
     disableClientInvocation(functionName)

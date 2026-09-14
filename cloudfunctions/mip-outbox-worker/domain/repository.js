@@ -1,7 +1,5 @@
 'use strict'
 
-const { createHash } = require('node:crypto')
-
 function createOutboxRepository(database, options = {}) {
   const leaseMilliseconds = options.leaseMilliseconds || 2 * 60 * 1000
   const maxAttempts = options.maxAttempts || 5
@@ -85,17 +83,21 @@ function createOutboxRepository(database, options = {}) {
     return { eventId: event.id, status: 'DELIVERED' }
   }
 
+  // A continuation carries the same identity as its parent row
+  // (app_id, aggregate_type, aggregate_id, event_type, source_version), which is exactly
+  // mip_outbox_events_source_uk. Inserting it as a second row can therefore never succeed, so
+  // the continuation cursor is written back onto the parent row instead: the row is re-armed and
+  // the caller must skip completeEvent for this lease.
   async function enqueueContinuation(event, payload) {
-    const id = continuationId(event.id, payload)
-    await database.query(
-      `INSERT INTO mip_outbox_events (
-        id, app_id, aggregate_type, aggregate_id, event_type, source_version, payload_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE id = VALUES(id)`,
-      [id, event.app_id, event.aggregate_type, event.aggregate_id,
-        event.event_type, event.source_version, JSON.stringify(payload)],
+    const result = await database.query(
+      `UPDATE mip_outbox_events
+       SET payload_json = ?, status = 'PENDING', attempts = 0,
+           available_at = UTC_TIMESTAMP(3), lease_expires_at = NULL, last_error_code = NULL
+       WHERE app_id = ? AND id = ? AND status = 'PROCESSING' AND lease_expires_at = ?`,
+      [JSON.stringify(payload), event.app_id, event.id, event.lease_expires_at],
     )
-    return { eventId: id }
+    assertLease(result)
+    return { eventId: event.id, status: 'CONTINUED' }
   }
 
   async function retryEvent(event, errorCode, now = new Date()) {
@@ -154,17 +156,6 @@ function createOutboxRepository(database, options = {}) {
   }
 }
 
-function continuationId(parentId, payload) {
-  const hex = createHash('sha256')
-    .update(`${parentId}\0${JSON.stringify(payload)}`)
-    .digest('hex')
-    .slice(0, 32)
-    .split('')
-  hex[12] = '5'
-  hex[16] = ['8', '9', 'a', 'b'][Number.parseInt(hex[16], 16) % 4]
-  return `${hex.slice(0, 8).join('')}-${hex.slice(8, 12).join('')}-${hex.slice(12, 16).join('')}-${hex.slice(16, 20).join('')}-${hex.slice(20).join('')}`
-}
-
 async function writeAudit(tx, event, action, reason) {
   await tx.query(
     `INSERT INTO mip_audit_logs (
@@ -212,7 +203,6 @@ function iso(value) {
 }
 
 module.exports = {
-  continuationId,
   createOutboxRepository,
   retryDelayMs,
   safeErrorCode,

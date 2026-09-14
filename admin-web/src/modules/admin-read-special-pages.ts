@@ -22,10 +22,13 @@ import {
   communityReportRowActions,
 } from './admin-row-operations.ts'
 
-export async function loadOpportunities(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
+export async function loadOpportunities(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
   const contentStatus = ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'].includes(query.status)
     ? query.status
     : 'ALL'
+  // mip.admin.matching.get authorizes opportunities.moderate at PLATFORM scope, so a branch-scoped
+  // operator must not issue it: the rejected request would fail the whole page.
+  const canReadMatching = canRead(access, 'opportunities.moderate', 'PLATFORM')
   const [opportunityPayload, contentPayload, matchingPayload] = await Promise.all([
     request('mip.admin.opportunities.list', {
       cursor: query.cursor || undefined,
@@ -37,7 +40,7 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
       status: contentStatus,
       limit: query.limit,
     }),
-    request('mip.admin.matching.get', {}),
+    canReadMatching ? request('mip.admin.matching.get', {}) : null,
   ])
   const opportunityItems = pageValue(opportunityPayload).items
   const opportunityRows = filterRows(opportunityItems.map(item => ({

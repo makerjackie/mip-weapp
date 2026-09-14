@@ -197,6 +197,10 @@ describe('configurable role capabilities', () => {
     assert.equal(result.version, 1)
     assert.equal(writes.some(item => item.sql.includes('INSERT INTO mip_role_capability_policies')), true)
     assert.equal(writes.some(item => item.sql.includes('INSERT INTO mip_audit_logs')), true)
+    const audit = writes.find(item => item.sql.includes('INSERT INTO mip_audit_logs'))
+    assert.doesNotMatch(audit.sql, /\(\s*id,/)
+    assert.match(audit.sql, /actor_type/)
+    assert.match(audit.sql, /'ADMIN'/)
   })
 
   it('marks the locked custom policy as default and audits an owner reset', async () => {

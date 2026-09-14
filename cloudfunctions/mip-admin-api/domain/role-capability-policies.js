@@ -1,7 +1,5 @@
 'use strict'
 
-const { randomUUID } = require('node:crypto')
-
 const { capabilitiesForBinding, roleCapabilities } = require('./capabilities')
 
 const configurableRoleKeys = Object.freeze([
@@ -55,7 +53,6 @@ function mapPolicy(row) {
 }
 
 function createRoleCapabilityPolicyRepository(database, options = {}) {
-  const createId = options.id || randomUUID
   const lockMutation = options.lockMutation
   if (typeof lockMutation !== 'function') {
     throw new TypeError('lockMutation is required')
@@ -114,12 +111,13 @@ function createRoleCapabilityPolicyRepository(database, options = {}) {
 
       await tx.query(
         `INSERT INTO mip_audit_logs (
-          id, app_id, actor_user_id, scope_type, scope_id, action,
+          app_id, actor_user_id, actor_type, scope_type, scope_id, action,
           resource_type, resource_id, effective_role, metadata_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [createId(), input.audit.appId, input.audit.actorUserId, input.audit.scopeType,
-          input.audit.scopeId, input.audit.action, input.audit.resourceType,
-          input.audit.resourceId, input.audit.effectiveRole, JSON.stringify(input.audit.metadata || {})],
+        ) VALUES (?, ?, 'ADMIN', ?, ?, ?, ?, ?, ?, ?)`,
+        [input.audit.appId, input.audit.actorUserId, input.audit.scopeType,
+          input.audit.scopeId || null, input.audit.action, input.audit.resourceType,
+          input.audit.resourceId || null, input.audit.effectiveRole || null,
+          JSON.stringify(input.audit.metadata || {})],
       )
       return {
         roleKey: input.roleKey,
@@ -171,12 +169,13 @@ function createRoleCapabilityPolicyRepository(database, options = {}) {
 
       await tx.query(
         `INSERT INTO mip_audit_logs (
-          id, app_id, actor_user_id, scope_type, scope_id, action,
+          app_id, actor_user_id, actor_type, scope_type, scope_id, action,
           resource_type, resource_id, effective_role, metadata_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [createId(), input.audit.appId, input.audit.actorUserId, input.audit.scopeType,
-          input.audit.scopeId, input.audit.action, input.audit.resourceType,
-          input.audit.resourceId, input.audit.effectiveRole, JSON.stringify(input.audit.metadata || {})],
+        ) VALUES (?, ?, 'ADMIN', ?, ?, ?, ?, ?, ?, ?)`,
+        [input.audit.appId, input.audit.actorUserId, input.audit.scopeType,
+          input.audit.scopeId || null, input.audit.action, input.audit.resourceType,
+          input.audit.resourceId || null, input.audit.effectiveRole || null,
+          JSON.stringify(input.audit.metadata || {})],
       )
       return {
         roleKey: input.roleKey,

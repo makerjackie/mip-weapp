@@ -570,7 +570,7 @@ function normalizeOpportunityDraft(value) {
     scopeType,
     branchId: scopeType === 'BRANCH' ? requiredId(value.branchId, '城市分会') : null,
     title: text(value.title, 120, { required: true, label: '机会标题' }),
-    valueSummary: text(value.valueSummary, 300, { required: true, label: '机会价值' }),
+    valueSummary: text(value.valueSummary, 240, { required: true, label: '机会价值' }),
     targetSummary: text(value.targetSummary, 300),
     description: text(value.description, 5_000),
     cityTagId: value.cityTagId ? requiredId(value.cityTagId, '城市') : null,

@@ -279,6 +279,8 @@ function createAdminOrderRepository(database, options = {}) {
        LEFT JOIN mip_membership_plans mp ON mp.app_id = o.app_id AND mp.id = o.membership_plan_id
        LEFT JOIN mip_events e
          ON e.app_id = o.app_id AND e.id = o.resource_id AND o.order_type = 'EVENT'
+       LEFT JOIN mip_knowledge_contents knowledge
+         ON knowledge.app_id = o.app_id AND knowledge.id = o.resource_id AND o.order_type = 'CONTENT'
        WHERE ${clauses.join(' AND ')}`,
       params,
     )

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "mip-design-system skill (assets/wechat/tokens.wxss + references/DESIGN.md)",
-  "skillSnapshot": "2026",
+  "skillSnapshot": "2026-09-09 15:16 worktree",
   "conversion": "1 design px = 2 rpx",
   "colors": [
     {

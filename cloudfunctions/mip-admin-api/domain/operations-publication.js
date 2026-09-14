@@ -185,7 +185,10 @@ function eventReminderFacts(event, sendWechatReminder) {
   if (!eventTitle || !startsAt || !location) {
     throw codeError('COMMUNICATIONS_EVENT_FACT_INVALID')
   }
-  const description = boundedText(event?.description_label || event?.description, 100) || eventTitle
+  // The reminder SELECT returns the full description (there is no description_label column), and
+  // boundedText() drops anything over the limit, so long descriptions used to collapse into the
+  // event title. Truncate to the template's 100-char field instead.
+  const description = truncateText(String(event?.description || '').trim(), 100) || eventTitle
   const title = truncateText(`活动提醒：${eventTitle}`, 100)
   const body = `活动“${eventTitle}”将于 ${startsAt} 开始，地点：${location}。`
   if (body.length > 500) throw codeError('COMMUNICATIONS_EVENT_FACT_INVALID')

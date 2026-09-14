@@ -8,9 +8,12 @@ function normalizeMessageCampaignDraft(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new AdminError('VALIDATION_FAILED', '消息活动内容无效')
   }
-  const scopeType = value.scopeType === 'BRANCH' ? 'BRANCH' : 'PLATFORM'
+  // Unknown enums used to fall back to the widest audience (PLATFORM + ALL), so a typo such as
+  // audienceType:'explicit' silently turned a targeted campaign into a full broadcast and dropped
+  // recipientRefs. Reject anything that is not a documented value instead of widening it.
+  const scopeType = enumValue(value.scopeType, ['PLATFORM', 'BRANCH'], '发送范围', 'PLATFORM')
   const branchId = scopeType === 'BRANCH' ? requiredId(value.branchId, '城市分会') : null
-  const audienceType = value.audienceType === 'EXPLICIT' ? 'EXPLICIT' : 'ALL'
+  const audienceType = enumValue(value.audienceType, ['ALL', 'EXPLICIT'], '发送对象', 'ALL')
   const recipientRefs = audienceType === 'EXPLICIT' ? profileRefs(value.recipientRefs) : []
   return {
     scopeType,
@@ -21,6 +24,15 @@ function normalizeMessageCampaignDraft(value) {
     title: text(value.title, 100, { required: true, label: '消息标题' }),
     body: text(value.body, 500, { required: true, label: '消息正文' }),
   }
+}
+
+function enumValue(value, allowed, label, fallback) {
+  const provided = typeof value === 'string' ? value.trim().toUpperCase() : ''
+  if (!provided) return fallback
+  if (!allowed.includes(provided)) {
+    throw new AdminError('VALIDATION_FAILED', `${label}无效`)
+  }
+  return provided
 }
 
 function normalizeMessageCampaignFilters(value = {}) {

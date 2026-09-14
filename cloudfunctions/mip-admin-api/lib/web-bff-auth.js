@@ -201,8 +201,10 @@ function trustedIdentifier(value, maximum) {
 }
 
 function validMutationIdempotencyKey(value) {
+  // Downstream domain transports (task/game/banner admin clients, exports) all require 12..128
+  // characters; accepting shorter keys here only deferred the rejection to an unmapped error.
   return typeof value === 'string'
-    && /^[A-Za-z0-9_.:-]{1,128}$/.test(value.trim())
+    && /^[A-Za-z0-9_.:-]{12,128}$/.test(value.trim())
 }
 
 function reviewedMutationInputSchema(action) {

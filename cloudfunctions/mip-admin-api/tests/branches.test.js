@@ -322,6 +322,8 @@ describe('admin branch management', () => {
     assert.equal(result.version, 5)
     assert.deepEqual(oneCalls[0].params, ['wx-app', 'branch-a'])
     assert.match(oneCalls[0].sql, /FOR UPDATE/)
+    assert.match(oneCalls[0].sql, /current_player_count/)
+    assert.match(oneCalls[0].sql, /branch_admin_names_json/)
     const update = queryCalls.find(call => call.sql.includes('UPDATE mip_city_branches'))
     assert.ok(update)
     assert.doesNotMatch(update.sql, /branch_key\s*=/)

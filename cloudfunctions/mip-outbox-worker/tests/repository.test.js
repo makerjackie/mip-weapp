@@ -59,7 +59,7 @@ describe('outbox repository', () => {
     assert.equal(retryDelayMs(5), 4_000)
   })
 
-  it('enqueues continuation events with a deterministic idempotent key', async () => {
+  it('re-arms the leased parent row with the continuation cursor under the lease guard', async () => {
     const calls = []
     const database = {
       async query(sql, params) {
@@ -69,12 +69,20 @@ describe('outbox repository', () => {
     }
     const repository = createOutboxRepository(database)
     const payload = { knowledgeRecipientCursor: '20000000-0000-4000-8000-000000000500' }
-    const first = await repository.enqueueContinuation(event, payload)
-    const replay = await repository.enqueueContinuation(event, payload)
-    assert.equal(first.eventId, replay.eventId)
-    assert.match(first.eventId, /^[0-9a-f-]{36}$/)
-    assert.match(calls[0].sql, /ON DUPLICATE KEY UPDATE/)
-    assert.equal(calls[0].params[6], JSON.stringify(payload))
+    const result = await repository.enqueueContinuation(event, payload)
+    assert.equal(result.eventId, event.id)
+    assert.equal(result.status, 'CONTINUED')
+    assert.match(calls[0].sql, /UPDATE mip_outbox_events/)
+    assert.match(calls[0].sql, /status = 'PROCESSING' AND lease_expires_at = \?/)
+    assert.deepEqual(calls[0].params, [JSON.stringify(payload), event.app_id, event.id, lease])
+  })
+
+  it('reports a lost lease when the continuation row can no longer be re-armed', async () => {
+    const repository = createOutboxRepository({ async query() { return { affectedRows: 0 } } })
+    await assert.rejects(
+      () => repository.enqueueContinuation(event, { knowledgeRecipientCursor: 'x' }),
+      /OUTBOX_LEASE_LOST/,
+    )
   })
 
   it('moves the final failed attempt to CANCELLED and appends a system audit', async () => {

@@ -396,6 +396,9 @@ function prefillEventValues(action: AdminEventMutationAction, values: OperationV
   if (action !== 'mip.admin.events.save') return next
   const event = record(record(detail?.source).event)
   for (const field of eventMutationConfig(action).fields) if (!field.hidden && event[field.key] !== undefined) next[field.key] = event[field.key]
+  // registrationSchema is a hidden field the web form does not edit; without carrying the stored
+  // value over, every save submitted the empty default and reset the event's registration form.
+  if (event.registrationSchema !== undefined) next.registrationSchema = event.registrationSchema
   return next
 }
 
