@@ -8,7 +8,8 @@
     <app-page-exit />
   </view>
   <view wx:elif="{{state === 'error'}}">
-    <mip-empty-state title="暂时无法加载互动记录" description="请检查网络后重试。" action-text="重新加载" bind:action="retry" />
+    <mip-empty-state title="暂时无法加载互动记录" description="{{message || '互动服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="retry" />
+    <view class="mt-3 flex min-h-[88rpx] items-center justify-center text-[length:24rpx] text-muted" aria-role="button" bind:tap="copyLoadingDiagnostics">复制诊断信息</view>
     <app-page-exit />
   </view>
   <block wx:else>

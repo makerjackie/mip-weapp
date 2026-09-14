@@ -1,6 +1,6 @@
 <view wx:if="{{variant === 'recap'}}" class="mip-activity-card mip-activity-card--recap mip-radius-card overflow-hidden bg-panel" bind:tap="handleRecap">
   <view class="relative h-[394rpx] w-full active:opacity-80">
-    <image wx:if="{{event.coverUrl}}" class="h-full w-full bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
+    <image wx:if="{{displayCoverUrl}}" class="h-full w-full bg-brand-soft" mode="aspectFill" src="{{displayCoverUrl}}" />
     <view wx:else class="flex h-full w-full items-center justify-center bg-brand-soft"><mip-icon name="calendar-schedule" size="{{35}}" color="var(--color-brand)" /></view>
     <view class="pointer-events-none absolute inset-0 bg-canvas opacity-50" />
     <view class="pointer-events-none absolute inset-0 flex items-center justify-center"><mip-icon name="play-circle-line" size="{{33.3}}" color="var(--color-ink)" /></view>
@@ -11,9 +11,9 @@
 </view>
 <view wx:elif="{{variant === 'feed'}}" class="mip-activity-card mip-activity-card--feed mip-radius-card overflow-hidden bg-panel">
   <view class="relative h-[298rpx] w-full active:opacity-80" bind:tap="handleSelect">
-    <image wx:if="{{event.coverUrl}}" class="h-full w-full bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
+    <image wx:if="{{displayCoverUrl}}" class="h-full w-full bg-brand-soft" mode="aspectFill" src="{{displayCoverUrl}}" />
     <view wx:else class="flex h-full w-full items-center justify-center bg-brand-soft"><mip-icon name="calendar-schedule" size="{{35}}" color="var(--color-brand)" /></view>
-    <event-participant-preview class="absolute bottom-2 left-2" participants="{{event.participantPreview}}" count="{{event.registrationCount}}" count-text="{{event.countText}}" plus-label="{{event.plusLabel}}" remain-text="{{event.remainText}}" />
+    <event-participant-preview class="absolute bottom-2 left-2" participants="{{displayParticipants}}" count="{{event.registrationCount}}" count-text="{{event.countText}}" plus-label="{{event.plusLabel}}" remain-text="{{event.remainText}}" />
     <view class="absolute bottom-2 right-2 flex max-w-[60%] flex-wrap justify-end gap-1">
       <mip-order-tag wx:if="{{event.accessLabel}}" label="{{event.accessLabel}}" />
       <mip-order-tag wx:if="{{event.eventTypeLabel}}" label="{{event.eventTypeLabel}}" />
@@ -28,7 +28,7 @@
   </view>
 </view>
 <view wx:elif="{{compact}}" class="mip-radius-card-medium flex h-[210rpx] overflow-hidden border border-line bg-panel active:bg-panel-muted" bind:tap="handleSelect">
-  <image wx:if="{{event.coverUrl}}" class="h-[210rpx] w-[210rpx] shrink-0 bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
+  <image wx:if="{{displayCoverUrl}}" class="h-[210rpx] w-[210rpx] shrink-0 bg-brand-soft" mode="aspectFill" src="{{displayCoverUrl}}" />
   <view wx:else class="flex h-[210rpx] w-[210rpx] shrink-0 items-center justify-center bg-brand-soft"><mip-icon name="calendar-event-1" size="{{27}}" color="var(--color-brand)" /></view>
   <view class="flex min-w-0 flex-1 flex-col px-4 py-3">
     <view class="flex items-center justify-between gap-2">
@@ -45,7 +45,7 @@
 </view>
 <view wx:else class="mip-radius-card overflow-hidden bg-panel shadow-[0_8rpx_32rpx_rgba(0,0,0,0.45)]">
   <view class="active:opacity-80" bind:tap="handleSelect">
-    <image wx:if="{{event.coverUrl}}" class="h-[280rpx] w-full bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
+    <image wx:if="{{displayCoverUrl}}" class="h-[280rpx] w-full bg-brand-soft" mode="aspectFill" src="{{displayCoverUrl}}" />
     <view class="px-4 py-4">
       <view class="flex items-start justify-between gap-4">
         <view class="min-w-0 flex-1">

@@ -89,6 +89,7 @@
     "navigationBarBackgroundColor": "#080808",
     "navigationBarTextStyle": "white",
     "backgroundColor": "#080808",
+    "backgroundColorContent": "#080808",
     "backgroundColorTop": "#080808",
     "backgroundColorBottom": "#080808",
     "backgroundTextStyle": "light"

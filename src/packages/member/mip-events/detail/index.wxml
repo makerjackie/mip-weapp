@@ -10,7 +10,7 @@
       <view class="relative z-10 -mt-[28rpx] px-3">
         <!-- figma 1861_17860: 351x126 info card. Left column flows (chips, title,
              date, location); feedback / 指引 / price stack pins to the top-right. -->
-        <view class="relative box-border h-[252rpx] overflow-hidden rounded-[16rpx] bg-panel px-3 py-3">
+        <view class="relative box-border min-h-[252rpx] rounded-[16rpx] bg-panel px-3 py-3">
           <view class="flex min-w-0 flex-col pr-[152rpx]">
             <view class="flex flex-wrap items-center gap-1">
               <mip-order-tag label="{{event.eventTypeLabel}}" bg="var(--color-tag-type)" border="var(--color-tag-type-line)" color="var(--color-on-brand)" />
@@ -74,8 +74,8 @@
         <view wx:if="{{contentSection === 'INTRO'}}" class="mt-3 rounded-[16rpx] bg-panel px-3 py-3">
           <rich-text wx:if="{{descriptionNodes.length}}" class="mip-event-rich-content text-[length:24rpx] leading-7 text-muted" nodes="{{descriptionNodes}}" />
           <view wx:if="{{event.contentMedia.length}}" class="{{descriptionNodes.length ? 'mt-3' : ''}} flex flex-col gap-3">
-            <view wx:for="{{event.contentMedia}}" wx:key="imageUrl">
-              <image class="w-full bg-panel-raised" mode="widthFix" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="previewContentImage" />
+            <view wx:for="{{event.contentMedia}}" wx:key="renderKey">
+              <image wx:if="{{item.imageUrl}}" class="w-full bg-panel-raised" mode="widthFix" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="previewContentImage" />
               <view wx:if="{{item.caption}}" class="mt-3 text-[length:24rpx] leading-[33.6rpx] text-muted">{{item.caption}}</view>
             </view>
           </view>

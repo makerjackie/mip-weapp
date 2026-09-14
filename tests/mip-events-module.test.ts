@@ -418,3 +418,42 @@ describe('MIP events client module', () => {
     expect(() => module.withdrawEventAlbumPhoto(photoId, 0)).toThrow('照片状态无效')
   })
 })
+
+describe('activity discovery catalog request reuse', () => {
+  it('shares concurrent loads, expires after five minutes and supports explicit refresh', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000)
+    try {
+      const filters = { eventTypes: [], tags: [] }
+      const getDiscoveryFilters = vi.fn().mockResolvedValue(filters)
+      const module = createMipEventsModule({ ...createGateway(), getDiscoveryFilters })
+      await Promise.all([module.getDiscoveryFilters(), module.getDiscoveryFilters()])
+      expect(getDiscoveryFilters).toHaveBeenCalledTimes(1)
+      await module.getDiscoveryFilters()
+      expect(getDiscoveryFilters).toHaveBeenCalledTimes(1)
+      clock.mockReturnValue(301_000)
+      await module.getDiscoveryFilters()
+      expect(getDiscoveryFilters).toHaveBeenCalledTimes(2)
+      await module.getDiscoveryFilters({ force: true })
+      expect(getDiscoveryFilters).toHaveBeenCalledTimes(3)
+    }
+    finally {
+      clock.mockRestore()
+    }
+  })
+
+  it('does not refill a signed-out cache from an older in-flight request', async () => {
+    let finish!: (value: { eventTypes: [], tags: [] }) => void
+    const old = new Promise<{ eventTypes: [], tags: [] }>((resolve) => {
+      finish = resolve
+    })
+    const getDiscoveryFilters = vi.fn().mockReturnValueOnce(old).mockResolvedValue({ eventTypes: [], tags: [] })
+    const module = createMipEventsModule({ ...createGateway(), getDiscoveryFilters })
+    const pending = module.getDiscoveryFilters()
+    module.invalidate()
+    finish({ eventTypes: [], tags: [] })
+    await pending
+    expect(module.peekDiscoveryFilters()).toBeNull()
+    await module.getDiscoveryFilters()
+    expect(getDiscoveryFilters).toHaveBeenCalledTimes(2)
+  })
+})

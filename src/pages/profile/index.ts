@@ -18,6 +18,7 @@ import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity
 import { mipMessagingModule } from '../../modules/mip-messaging/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
 import { canManageEvents, hasCapability, membershipPresentation } from '../../modules/mip-shell'
+import { getLoadingDiagnostics, recordLoadingFailure } from '../../platform/cloudbase/loading-diagnostics'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
 import { formatLocalDate } from '../../utils/date'
 
@@ -31,14 +32,13 @@ interface CooperationCardView extends CooperationCardSummary {
   roleName: string
 }
 
-interface ProfileStatView {
-  value: number | string
-  label: string
-  category?: string
-  badge?: string | number
-}
-
 Page({
+  copyLoadingDiagnostics() {
+    wx.setClipboardData({
+      data: JSON.stringify({ format: 1, page: 'profile', collectedAt: new Date().toISOString(), samples: getLoadingDiagnostics() }),
+      fail: () => wx.showToast({ title: '复制失败，请重试', icon: 'none' }),
+    })
+  },
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     identityState: 'loading' as 'loading' | 'ready' | 'error',
@@ -73,7 +73,6 @@ Page({
     interestCount: null as number | null,
     visitorUnreadCount: 0,
     visitorCount: null as number | null,
-    stats: [] as ProfileStatView[],
     notificationUnreadCount: 0,
     portfolioTab: 'cooperation' as PortfolioTab,
     // ui-fidelity fixture 开关：默认走生产布局（被 vitest pin）。
@@ -84,8 +83,6 @@ Page({
     cases: [] as SuperCaseSummary[],
     opportunityState: 'loading' as SectionState,
     opportunities: [] as OpportunitySummary[],
-    publishedOpportunityCount: 0,
-    referralOpportunityCount: 0,
     openingAction: '' as OpeningAction,
     message: '',
   },
@@ -164,7 +161,8 @@ Page({
       snapshot = await mipIdentityModule.loadSnapshot()
       this.applyIdentity(snapshot)
     }
-    catch {
+    catch (error) {
+      recordLoadingFailure('identity.response', error)
       if (!cached) {
         this.setData({
           state: 'error',
@@ -178,6 +176,7 @@ Page({
       this.applyIdentity(snapshot)
       this.setData({ identityState: 'error', message: '资料更新失败，已保留上次结果。' })
     }
+    this.setData({ state: 'ready', initialSectionsState: 'loading' })
     const sectionResults = await Promise.allSettled([
       this.loadBranch(snapshot, options),
       this.loadIndustry(snapshot),
@@ -206,7 +205,6 @@ Page({
         interestCount: null,
         visitorCount: null,
         visitorUnreadCount: 0,
-        stats: [],
       })
       return
     }
@@ -214,7 +212,7 @@ Page({
       opportunityModule.getProfileInfluence(),
       opportunityModule.listReceived('VISITOR'),
     ])
-    const updates: Record<string, unknown> = {}
+    const updates: Partial<typeof this.data> = {}
     if (summaryResult.status === 'fulfilled') {
       const summary = summaryResult.value
       Object.assign(updates, {
@@ -231,24 +229,6 @@ Page({
       updates.message = this.data.message || '部分影响力数据暂时无法加载，请稍后重试。'
     }
     if (Object.keys(updates).length) {
-      const stats = [{
-        value: this.data.guestCount ?? '—',
-        label: '嘉宾',
-        category: 'GUEST',
-      }, {
-        value: this.data.interactionCount ?? '—',
-        label: '互动过',
-        category: 'INTERACTION',
-      }, {
-        value: this.data.interestCount ?? '—',
-        label: '心动值',
-        category: 'ACTIVE_INTEREST',
-      }, {
-        value: this.data.visitorCount ?? '—',
-        label: '访客',
-        badge: this.data.visitorUnreadCount > 99 ? '99+' : (this.data.visitorUnreadCount || ''),
-      }]
-      this.setData({ stats })
       this.setData(updates)
     }
   },
@@ -543,9 +523,7 @@ Page({
       this.openReceivedInteractions()
       return
     }
-    const category = ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST'].find(item => (
-      (this.data.stats || []).find(stat => stat.label === item)?.label === label
-    ))
+    const category = ({ 嘉宾: 'GUEST', 互动过: 'INTERACTION', 心动值: 'ACTIVE_INTEREST' } as Record<string, string>)[label]
     if (category) {
       this.openInfluenceList({ currentTarget: { dataset: { category } } } as unknown as WechatMiniprogram.TouchEvent)
     }
@@ -564,6 +542,7 @@ Page({
   },
   openCaseList() { void this.openProtected('/packages/member/mip-cases/list/index?mine=1', 'INTERACT') },
   openOpportunityList() { void this.openProtected('/packages/member/mip-opportunities/mine/index', 'INTERACT') },
+  openReferredOpportunities() { void this.openProtected('/packages/member/mip-opportunities/mine/index?tab=REFERRED', 'INTERACT') },
   openSettings() { caseNavigateTo({ url: '/packages/member/privacy/index' }) },
   openServices() { caseNavigateTo({ url: '/packages/member/mip-services/index' }) },
 

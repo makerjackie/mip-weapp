@@ -1,8 +1,22 @@
 import { brand } from '../../config/brand'
+import { clearComponentMedia, updateComponentMedia } from '../../platform/storage/component-media'
 
 Component({
   data: {
     fallbackCoverUrl: brand.logoPath,
+    displayCoverUrl: '',
+    displayAvatars: [],
+  },
+  observers: {
+    coverUrl(value: string) {
+      updateComponentMedia(this, 'displayCoverUrl', value)
+    },
+    avatars(value: unknown[]) {
+      updateComponentMedia(this, 'displayAvatars', value)
+    },
+  },
+  lifetimes: {
+    detached() { clearComponentMedia(this) },
   },
   properties: {
     title: { type: String, value: '' },

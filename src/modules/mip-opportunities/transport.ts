@@ -1,6 +1,7 @@
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../../platform/cloudbase/client'
+import { measureLoading } from '../../platform/cloudbase/loading-diagnostics'
 import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import { MipOpportunityError } from './error'
 
@@ -52,14 +53,15 @@ function unwrap<T>(value: unknown, resultUnknown: boolean): T {
 export async function callOpportunityApi<T>(action: string, data: Record<string, unknown> = {}) {
   const resultUnknown = !readActions.has(action)
   try {
-    const response = await retryTransport(async () => {
+    const response = await measureLoading('opportunities.request', () => retryTransport(async () => {
       const cloud = await requireCloudClient()
       return cloud.callFunction({
         name: runtimeConfig.cloudbase.opportunitiesFunctionName,
         data: { action, ...data },
       })
-    }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 })
-    return await resolveCloudFileUrls(unwrap<T>(response.result, resultUnknown))
+    }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }))
+    const result = unwrap<T>(response.result, resultUnknown)
+    return action === 'listOpportunities' ? result : await resolveCloudFileUrls(result)
   }
   catch (error) {
     if (error instanceof MipOpportunityError) {

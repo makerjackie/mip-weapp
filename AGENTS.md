@@ -52,6 +52,8 @@
 
 ### 微信代码上传
 
+- 每次上传体验版或正式版本前，必须执行并通过完整 `pnpm verify:all`；测试、构建或预算失败时停止上传，不以专项测试或旧报告替代。即使使用开发者工具 CLI，也不得绕过此门禁。`pnpm wechat:upload` 自动执行该检查。
+
 - 日常上传优先使用已登录的微信开发者工具登录态，通过仓库现有的 `weapp upload` 流程操作；不把登录态、二维码或凭证写入仓库。
 - 微信开发者工具登录态不可用时，使用 `miniprogram-ci` 读取 `.env.local` 中的 `MIP_WECHAT_CODE_UPLOAD_KEY_PATH` 作为 `privateKeyPath` 上传；当前默认路径为仓库根目录下的本地微信私钥文件。
 - 私钥只作为本地文件保存，并由 `.gitignore` 忽略；不得读取、打印、复制到源码、构建产物、云函数或日志，也不得修改包含它的文件夹权限。
@@ -78,6 +80,9 @@ API Key 是日常通道，Device Flow 是部署高权限通道。只有创建、
 ## 11. 测试和验收
 
 `pnpm verify` 只验证微信小程序与 CloudBase；`pnpm admin:web:verify` 独立验证 Web；`pnpm verify:all` 顺序执行两者。小程序 UI 还要 `pnpm runtime:preflight`；Web UI 要按 `admin-web/AGENTS.md` 验证桌面和手机视口；支付/手机号要真机。
+
+- 排查列表加载问题时，必须包含非空服务端响应到页面展示的合同测试；TypeScript 类型声明、空列表和重试成功不能代替真实字段结构校验。
+- 受保护页面的身份检查锁只覆盖身份决策，不覆盖后续列表；身份失败后的重试必须重新确认身份。可选目录或装饰性请求失败不得让已成功的正文变成整页错误。
 
 ## 12. Skill
 

@@ -1,4 +1,5 @@
 <view id="mip-knowledge-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view wx:if="{{catalogMessage}}" class="px-3 py-3 text-[length:24rpx] text-muted" aria-role="button" bind:tap="retryCategories">{{catalogMessage}} 点击重试</view>
   <view class="text-[length:40rpx] font-bold">知识内容</view>
   <view class="mt-2 text-[length:24rpx] text-muted">查看热点、玩家攻略、视频和专家分享</view>
 

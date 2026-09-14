@@ -118,12 +118,16 @@ Page({
   },
 
   async loadPage(options: { force?: boolean } = {}) {
-    await this.initializeDefaultCity()
-    await this.loadDiscoveryFilters(options.force === true)
-    await Promise.all([
-      this.loadEvents(options),
-      this.loadBanners(options.force === true),
-    ])
+    const filters = this.loadDiscoveryFilters(options.force === true)
+    const feed = (async () => {
+      await this.initializeDefaultCity()
+      // Only selected catalog filters need validation before querying the feed.
+      if (this.data.selectedEventTypeKey || this.data.selectedTagKeys.length) {
+        await filters
+      }
+      await this.loadEvents(options)
+    })()
+    await Promise.all([filters, feed, this.loadBanners(options.force === true)])
   },
 
   async loadDiscoveryFilters(force = false) {
@@ -132,7 +136,7 @@ Page({
       this.applyDiscoveryFilters(cached)
     }
     try {
-      const filters = await mipEventsModule.getDiscoveryFilters({ force: force || Boolean(cached) })
+      const filters = await mipEventsModule.getDiscoveryFilters({ force })
       this.applyDiscoveryFilters(filters)
     }
     catch {
@@ -642,7 +646,7 @@ Page({
       path: eventId
         ? `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}`
         : '/pages/events/index',
-      imageUrl: item?.coverUrl,
+      imageUrl: item?.coverUrl?.startsWith('cloud://') ? undefined : item?.coverUrl,
     }
   },
 })

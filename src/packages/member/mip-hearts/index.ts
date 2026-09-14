@@ -2,6 +2,7 @@ import type { HeartHistoryItem, HeartHistoryKind } from '../../../modules/mip-ev
 import { mipEventsModule } from '../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { ensureProtectedPageAccess, requiresIdentityRefresh } from '../../../modules/mip-identity/protected-page-load'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatChineseDate, formatChineseDateTime } from '../../../utils/date'
 
@@ -71,33 +72,14 @@ Page({
   },
 
   async checkAccess() {
-    if (this.checkingAccess) {
+    const ready = await ensureProtectedPageAccess(this, () => mipIdentityModule.beginProtectedAction({
+      action: 'INTERACT',
+      source: { navigation: 'navigateBack' },
+    }))
+    if (!ready) {
       return
     }
-    this.checkingAccess = true
-    if (!this.accessReady) {
-      this.setData({ state: 'loading', message: '' })
-    }
-    try {
-      const session = await mipIdentityModule.beginProtectedAction({
-        action: 'INTERACT',
-        source: { navigation: 'navigateBack' },
-      })
-      if (!session.decision.ready) {
-        this.accessReady = false
-        this.setData({ state: 'access', accessToken: session.token, message: '' })
-        return
-      }
-      this.accessReady = true
-      this.setData({ accessToken: '', message: '' })
-      await this.load(this.data.kind, true)
-    }
-    catch {
-      this.setData({ state: 'error', message: '身份状态暂时无法确认。' })
-    }
-    finally {
-      this.checkingAccess = false
-    }
+    await this.load(this.data.kind, true)
   },
 
   openAccess() {
@@ -154,6 +136,9 @@ Page({
       }
     }
     catch (error) {
+      if (requiresIdentityRefresh(error)) {
+        this.accessReady = false
+      }
       current.state = current.items.length ? 'ready' : 'error'
       if (kind === this.data.kind) {
         this.apply(kind)
@@ -170,11 +155,12 @@ Page({
   },
 
   retry() {
-    if (this.data.state === 'access') {
-      void this.checkAccess()
+    if (this.data.state === 'loading') {
       return
     }
-    void this.load(this.data.kind, true)
+    return this.accessReady
+      ? this.load(this.data.kind, true)
+      : this.checkAccess()
   },
 
   loadMore() {

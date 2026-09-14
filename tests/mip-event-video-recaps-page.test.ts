@@ -24,9 +24,11 @@ vi.mock('../src/modules/mip-messaging/client', () => ({
   },
 }))
 vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn() }))
+vi.mock('../src/platform/cloudbase/client', () => ({ requireCloudClient: vi.fn() }))
 
 interface PageDefinition {
   data: Record<string, unknown>
+  onShow: () => void
   openVideoRecap: (event: { currentTarget: { dataset: { id: string } } }) => Promise<void>
 }
 
@@ -72,6 +74,19 @@ beforeEach(() => {
 })
 
 describe('MIP event video recap page', () => {
+  it('does not duplicate the initial request when onShow follows a cached onLoad', () => {
+    const instance = {
+      data: { state: 'ready', eventId: 'event-1' },
+      loadingEvent: true,
+      refreshCheckInIntent: vi.fn(),
+      loadEvent: vi.fn(),
+    }
+    definition.onShow.call(instance)
+    expect(instance.loadEvent).not.toHaveBeenCalled()
+    instance.loadingEvent = false
+    definition.onShow.call(instance)
+    expect(instance.loadEvent).toHaveBeenCalledWith({ force: true })
+  })
   it.each([
     ['unsupported', '当前微信版本不支持打开视频号，请升级微信后重试。'],
     ['cancelled', '已取消打开视频回顾。'],

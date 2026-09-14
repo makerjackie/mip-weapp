@@ -2,6 +2,7 @@ import type { EventId } from '../mip'
 import type {
   AdminEventFeedbackQuery,
   CheckInCredentialMode,
+  EventDiscoveryFilters,
   EventFeedbackAnswers,
   EventFeedbackDraft,
   EventFeedQuery,
@@ -129,6 +130,8 @@ export function createMipEventsModule(
   const eventCache = new Map<string, Awaited<ReturnType<MipEventsGateway['getEvent']>>>()
   const feedCache = new Map<string, Awaited<ReturnType<MipEventsGateway['listEvents']>>>()
   let discoveryFiltersCache: Awaited<ReturnType<NonNullable<MipEventsGateway['getDiscoveryFilters']>>> | null = null
+  let discoveryFiltersLoadedAt = 0
+  let discoveryFiltersFlight: Promise<EventDiscoveryFilters> | null = null
   let generation = 0
 
   async function runInCurrentSession<T>(work: () => Promise<T>): Promise<T> {
@@ -179,28 +182,44 @@ export function createMipEventsModule(
       if (!gateway.getDiscoveryFilters) {
         return { eventTypes: [], tags: [] }
       }
-      if (!options.force && discoveryFiltersCache) {
+      if (!options.force && discoveryFiltersCache && Date.now() - discoveryFiltersLoadedAt < 300_000) {
         return discoveryFiltersCache
       }
-      const loadGeneration = generation
-      const result = await gateway.getDiscoveryFilters()
-      if (loadGeneration === generation) {
-        discoveryFiltersCache = result
+      if (discoveryFiltersFlight) {
+        return discoveryFiltersFlight
       }
-      return result
+      const loadGeneration = generation
+      const flight = gateway.getDiscoveryFilters().then((result) => {
+        if (loadGeneration === generation) {
+          discoveryFiltersCache = result
+          discoveryFiltersLoadedAt = Date.now()
+        }
+        return result
+      })
+      discoveryFiltersFlight = flight
+      try {
+        return await flight
+      }
+      finally {
+        if (discoveryFiltersFlight === flight) {
+          discoveryFiltersFlight = null
+        }
+      }
     },
 
     peekEvent(eventId: EventId) {
       return eventCache.get(String(eventId))
     },
 
-    async getEvent(eventId: EventId, options: { force?: boolean } = {}) {
+    async getEvent(eventId: EventId, options: { force?: boolean, progressiveMedia?: boolean } = {}) {
       const key = String(eventId)
       if (options.force) {
         eventCache.delete(key)
       }
       const loadGeneration = generation
-      const result = await gateway.getEvent(eventId)
+      const result = options.progressiveMedia
+        ? await gateway.getEvent(eventId, { progressiveMedia: true })
+        : await gateway.getEvent(eventId)
       if (loadGeneration === generation) {
         eventCache.set(key, {
           ...result,
@@ -396,6 +415,8 @@ export function createMipEventsModule(
       eventCache.clear()
       feedCache.clear()
       discoveryFiltersCache = null
+      discoveryFiltersLoadedAt = 0
+      discoveryFiltersFlight = null
     },
   }
 }

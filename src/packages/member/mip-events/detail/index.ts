@@ -6,6 +6,8 @@ import { decodeInvitationToken, eventInvitationPath, eventRichTextNodes, MipEven
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
+import { peekCloudFileUrls } from '../../../../platform/storage/cloud-media'
+import { clearComponentMedia, updateComponentMedia } from '../../../../platform/storage/component-media'
 import { openWechatChannelsDestination } from '../../../../platform/wechat/channels'
 import { formatChineseDateTime, formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
 
@@ -169,6 +171,7 @@ Page({
     contentSection: 'INTRO' as 'INTRO' | 'ORGANIZER' | 'NOTICE',
   },
   requestSeq: 0,
+  loadingEvent: false,
   onlineRequested: false,
   entryScene: '',
 
@@ -206,9 +209,14 @@ Page({
 
   onShow() {
     this.refreshCheckInIntent()
-    if (this.data.state === 'ready' && this.data.eventId) {
+    if (!this.loadingEvent && this.data.state === 'ready' && this.data.eventId) {
       void this.loadEvent({ force: true })
     }
+  },
+
+  onUnload() {
+    this.requestSeq += 1
+    clearComponentMedia(this)
   },
 
   async loadCheckInScene(scene: string) {
@@ -266,13 +274,14 @@ Page({
   },
 
   async loadEvent(options: { force?: boolean } = {}) {
+    this.loadingEvent = true
     if (!this.data.event) {
       this.setData({ state: 'loading', message: '' })
     }
     const requestSeq = this.requestSeq + 1
     this.requestSeq = requestSeq
     try {
-      const event = await mipEventsModule.getEvent(this.data.eventId, options)
+      const event = await mipEventsModule.getEvent(this.data.eventId, { ...options, progressiveMedia: true })
       if (requestSeq === this.requestSeq) {
         this.applyEvent(event)
       }
@@ -284,6 +293,11 @@ Page({
       this.setData(this.data.event
         ? { message: '活动更新失败，已保留上次结果。' }
         : { state: 'error', message: error instanceof Error ? error.message : '活动加载失败' })
+    }
+    finally {
+      if (requestSeq === this.requestSeq) {
+        this.loadingEvent = false
+      }
     }
   },
 
@@ -299,13 +313,15 @@ Page({
       : Boolean(mipCheckInResumeStore.peek(String(event.id)))
     const action = primaryAction(event, hasCheckInIntent)
     const onlineUrl = safeHttpsEventUrl(event.onlineUrl)
+    const contentMedia = (event.contentMedia || []).map((item, index) => ({ ...item, renderKey: `media-${index}` }))
     const normalizedEvent = {
       ...event,
       eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
-      contentMedia: event.contentMedia || [],
+      coverUrl: peekCloudFileUrls(event.coverUrl || ''),
+      contentMedia: peekCloudFileUrls(contentMedia),
       tags: event.tags || [],
       videoRecaps: event.videoRecaps || [],
-      participantPreview: event.participantPreview || [],
+      participantPreview: peekCloudFileUrls(event.participantPreview || []),
       changes: event.changes || [],
     }
     this.setData({
@@ -334,6 +350,9 @@ Page({
       hasCheckInIntent,
       message: this.onlineRequested && !onlineUrl ? '当前暂不能进入线上活动。' : '',
     })
+    updateComponentMedia(this, 'event.coverUrl', event.coverUrl || '')
+    updateComponentMedia(this, 'event.participantPreview', event.participantPreview || [])
+    updateComponentMedia(this, 'event.contentMedia', contentMedia)
   },
 
   refreshCheckInIntent() {

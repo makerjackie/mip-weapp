@@ -7,6 +7,7 @@ import { mipGlobalAccessGuard } from './modules/mip-identity/runtime'
 import { mipPopupMessagePresenter } from './modules/mip-messaging/client'
 import { createPopupForegroundCoordinator } from './modules/mip-messaging/popup'
 import { profileInterestMutations } from './modules/mip-opportunities/client'
+import { clearLoadingDiagnostics, getLoadingDiagnostics } from './platform/cloudbase/loading-diagnostics'
 import { clearCloudMediaCache } from './platform/storage/cloud-media'
 
 const popupForeground = createPopupForegroundCoordinator(
@@ -15,6 +16,7 @@ const popupForeground = createPopupForegroundCoordinator(
 )
 registerMipLocalUserCache(() => popupForeground.invalidate())
 registerMipLocalUserCache(clearCloudMediaCache)
+registerMipLocalUserCache(clearLoadingDiagnostics)
 
 let launchRestore: Promise<ReturnType<typeof mipGlobalAccessGuard.ensureLaunch>> | undefined
 let launchRestoreConsumed = false
@@ -29,6 +31,8 @@ const runtimeAcceptance = Object.freeze({
 })
 
 App({
+  getLoadingDiagnostics,
+  clearLoadingDiagnostics,
   globalData: {
     runtimeAcceptance: { ...runtimeAcceptance },
   },

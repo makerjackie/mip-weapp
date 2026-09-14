@@ -45,6 +45,12 @@ Page({
   publishedRequestSeq: 0,
   referredRequestSeq: 0,
 
+  onLoad(query: { tab?: string }) {
+    if (query.tab === 'REFERRED') {
+      this.setData({ tab: 'REFERRED' })
+    }
+  },
+
   onShow() {
     void Promise.allSettled([
       this.loadPublished(true),

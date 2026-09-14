@@ -34,6 +34,7 @@ import type {
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../../platform/cloudbase/client'
+import { measureLoading } from '../../platform/cloudbase/loading-diagnostics'
 import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import { parseEventDiscoveryFilters, parseEventFeedResult, parseMipEventDetail } from './dto'
 import { MipEventsError } from './types'
@@ -81,16 +82,18 @@ function unwrap<T>(value: unknown): T {
   return envelope.data as T
 }
 
-async function callEvents<T>(action: string, data: Record<string, unknown> = {}) {
+async function callEvents<T>(action: string, data: Record<string, unknown> = {}, progressiveMedia = false) {
   try {
-    const response = await retryTransport(async () => {
+    const response = await measureLoading('events.request', () => retryTransport(async () => {
       const cloud = await requireCloudClient()
       return cloud.callFunction({
         name: runtimeConfig.cloudbase.eventsFunctionName,
         data: { action, ...data },
       })
-    }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 })
-    return resolveCloudFileUrls(unwrap<T>(response.result))
+    }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }))
+    const result = unwrap<T>(response.result)
+    // Feed cards localize images after displaying business data.
+    return action === 'mip.events.list' || progressiveMedia ? result : resolveCloudFileUrls(result)
   }
   catch (error) {
     if (error instanceof MipEventsError) {
@@ -111,8 +114,8 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
     )
   },
 
-  async getEvent(eventId: EventId) {
-    return parseMipEventDetail(await callEvents<MipEventDetail>('mip.events.detail', { eventId }))
+  async getEvent(eventId: EventId, options = {}) {
+    return parseMipEventDetail(await callEvents<MipEventDetail>('mip.events.detail', { eventId }, options.progressiveMedia))
   },
 
   listPublicParticipants(eventId: EventId, query = {}) {

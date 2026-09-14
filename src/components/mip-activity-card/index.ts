@@ -1,4 +1,5 @@
 import type { WechatChannelsDestination } from '../../platform/wechat/channels'
+import { clearComponentMedia, updateComponentMedia } from '../../platform/storage/component-media'
 import { openWechatChannelsDestination } from '../../platform/wechat/channels'
 
 interface RecapEntry {
@@ -6,6 +7,19 @@ interface RecapEntry {
 }
 
 Component({
+  data: {
+    displayCoverUrl: '',
+    displayParticipants: [],
+  },
+  observers: {
+    event(value: { coverUrl?: string, participantPreview?: unknown[] }) {
+      updateComponentMedia(this, 'displayCoverUrl', value?.coverUrl || '')
+      updateComponentMedia(this, 'displayParticipants', value?.participantPreview || [])
+    },
+  },
+  lifetimes: {
+    detached() { clearComponentMedia(this) },
+  },
   properties: {
     event: { type: Object, value: {} },
     variant: { type: String, value: 'default' },

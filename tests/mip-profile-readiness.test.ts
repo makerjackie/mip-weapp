@@ -12,7 +12,7 @@ function methodBody(name: string, nextMethod: string) {
 }
 
 describe('profile page readiness', () => {
-  it('waits for every first-screen section before exposing the overall ready state', () => {
+  it('tracks completion of every first-screen section independently of the page shell', () => {
     const loadBody = methodBody('async loadProfileOnce', 'async loadInfluenceSummary')
     const allSettledStart = loadBody.indexOf('const sectionResults = await Promise.allSettled([')
     const allSettledEnd = loadBody.indexOf('])', allSettledStart)

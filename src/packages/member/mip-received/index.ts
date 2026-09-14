@@ -4,8 +4,10 @@ import type {
 } from '../../../modules/mip-opportunities'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { ensureProtectedPageAccess, requiresIdentityRefresh } from '../../../modules/mip-identity/protected-page-load'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { opportunityModule } from '../../../modules/mip-opportunities'
+import { getLoadingDiagnostics, recordLoadingFailure } from '../../../platform/cloudbase/loading-diagnostics'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatChineseMonthDayTime } from '../../../utils/date'
 
@@ -239,36 +241,17 @@ Page({
   },
 
   async checkAccess() {
-    if (this.checkingAccess) {
+    const ready = await ensureProtectedPageAccess(this, () => mipIdentityModule.beginProtectedAction({
+      action: 'INTERACT',
+      source: { navigation: 'navigateBack' },
+    }))
+    if (!ready) {
       return
     }
-    this.checkingAccess = true
-    if (!this.accessReady) {
-      this.setData({ state: 'loading', message: '' })
-    }
-    try {
-      const session = await mipIdentityModule.beginProtectedAction({
-        action: 'INTERACT',
-        source: { navigation: 'navigateBack' },
-      })
-      if (!session.decision.ready) {
-        this.accessReady = false
-        this.setData({ state: 'access', accessToken: session.token, message: '' })
-        return
-      }
-      this.accessReady = true
-      this.setData({ accessToken: '', message: '' })
-      const categories = this.data.influenceMode
-        ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR'] as const
-        : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR'] as const
-      await Promise.all(categories.map(category => this.loadCategory(category, true)))
-    }
-    catch {
-      this.setData({ state: 'error', message: '身份状态暂时无法确认。' })
-    }
-    finally {
-      this.checkingAccess = false
-    }
+    const categories = this.data.influenceMode
+      ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR'] as const
+      : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR'] as const
+    await Promise.all(categories.map(category => this.loadCategory(category, true)))
   },
 
   openAccess() {
@@ -345,6 +328,10 @@ Page({
       }
     }
     catch (error) {
+      recordLoadingFailure('opportunities.response', error)
+      if (requiresIdentityRefresh(error)) {
+        this.accessReady = false
+      }
       cache.state = cache.items.length ? 'ready' : 'error'
       if (category === 'VISITOR' && this.data.totalViewCount === null) {
         this.setData({ totalViewState: 'error' })
@@ -364,9 +351,19 @@ Page({
   },
 
   retry() {
-    if (this.data.state === 'error') {
-      void this.loadCategory(this.data.category, true)
+    if (this.data.state !== 'error') {
+      return
     }
+    return this.accessReady
+      ? this.loadCategory(this.data.category, true)
+      : this.checkAccess()
+  },
+
+  copyLoadingDiagnostics() {
+    wx.setClipboardData({
+      data: JSON.stringify({ format: 1, page: 'received', category: this.data.category, collectedAt: new Date().toISOString(), samples: getLoadingDiagnostics() }),
+      fail: () => wx.showToast({ title: '复制失败，请重试', icon: 'none' }),
+    })
   },
 
   loadMore() {

@@ -2,6 +2,7 @@ import type { BlockedProfile } from '../../../modules/mip-community'
 import { mipCommunityModule } from '../../../modules/mip-community'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { ensureProtectedPageAccess, requiresIdentityRefresh } from '../../../modules/mip-identity/protected-page-load'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 
 type PageState = 'loading' | 'ready' | 'empty' | 'error' | 'access'
@@ -45,33 +46,14 @@ Page({
   },
 
   async checkAccess() {
-    if (this.checkingAccess) {
+    const ready = await ensureProtectedPageAccess(this, () => mipIdentityModule.beginProtectedAction({
+      action: 'INTERACT',
+      source: { navigation: 'navigateBack' },
+    }))
+    if (!ready) {
       return
     }
-    this.checkingAccess = true
-    if (!this.accessReady) {
-      this.setData({ state: 'loading', message: '' })
-    }
-    try {
-      const session = await mipIdentityModule.beginProtectedAction({
-        action: 'INTERACT',
-        source: { navigation: 'navigateBack' },
-      })
-      if (!session.decision.ready) {
-        this.accessReady = false
-        this.setData({ state: 'access', accessToken: session.token, message: '' })
-        return
-      }
-      this.accessReady = true
-      this.setData({ accessToken: '' })
-      await this.loadItems(true)
-    }
-    catch {
-      this.setData({ state: 'error', message: '身份状态暂时无法确认。' })
-    }
-    finally {
-      this.checkingAccess = false
-    }
+    await this.loadItems(true)
   },
 
   openAccess() {
@@ -103,6 +85,9 @@ Page({
       })
     }
     catch (error) {
+      if (requiresIdentityRefresh(error)) {
+        this.accessReady = false
+      }
       this.setData(this.data.items.length
         ? { state: 'ready', message: '列表更新失败，已保留当前结果。' }
         : {
@@ -148,9 +133,12 @@ Page({
   },
 
   retry() {
-    if (this.data.state === 'error') {
-      void this.loadItems(true)
+    if (this.data.state === 'loading') {
+      return
     }
+    return this.accessReady
+      ? this.loadItems(true)
+      : this.checkAccess()
   },
 
   async onPullDownRefresh() {

@@ -21,3 +21,5 @@
 `pnpm verify:all` 顺序执行 `pnpm verify` 与 `pnpm admin:web:verify`，用于确认两个构建目标没有互相污染。Web 视觉变更还需要 1280×720、1440×900 与 390×844 浏览器运行时截图；支付、手机号与生产 CloudBase 事实仍保留真机或生产验收边界。
 
 CI 另用 Cloud Function 声明的 Node 20.19.0 运行完整服务端验证，防止只在根工程 Node 22 通过。`pnpm release:verify` 使用 `verify:all`，但生产依赖、CloudBase 权限、真机支付与现网数据仍需各自环境验收。
+
+微信体验版和正式版每次上传前均须通过当前工作区的 `pnpm verify:all`。`pnpm wechat:upload` 自动执行完整检查，失败即退出；开发者工具 CLI 上传遵守相同要求。专项测试和历史通过结果不能代替发版门禁。

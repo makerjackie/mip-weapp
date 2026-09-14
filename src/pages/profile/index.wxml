@@ -5,6 +5,7 @@
   </view>
   <view wx:elif="{{state === 'error'}}" class="profile-state">
     <mip-empty-state title="暂时无法加载资料" description="资料服务暂时没有响应。" action-text="重新加载" bind:action="loadProfile" />
+    <view class="mt-3 flex min-h-[88rpx] items-center justify-center text-[length:24rpx] text-brand" aria-role="button" bind:tap="copyLoadingDiagnostics">复制诊断信息</view>
   </view>
 
   <!-- figma 1732_19949/1774_41441 我的（放大头变体）：面板头 + 等级横幅 + 统计 + 功能 + 操作 +
@@ -198,8 +199,8 @@
       <view wx:elif="{{opportunityState === 'error'}}" class="profile-state"><mip-empty-state title="相关机会暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadOpportunities" /></view>
       <view wx:else>
         <view class="profile-opportunity-chips">
-          <view class="profile-opportunity-chip profile-opportunity-chip--active">发布机会 {{publishedOpportunityCount}}</view>
-          <view class="profile-opportunity-chip">引荐机会 {{referralOpportunityCount}}</view>
+          <view class="profile-opportunity-chip profile-opportunity-chip--active" aria-role="button" bind:tap="openOpportunityList">发布机会</view>
+          <view class="profile-opportunity-chip" aria-role="button" bind:tap="openReferredOpportunities">引荐给我的</view>
         </view>
         <view class="profile-portfolio-list">
           <view wx:for="{{opportunities}}" wx:key="id" data-id="{{item.id}}" bind:tap="openOpportunity"><mip-opportunity-card title="{{item.title}}" cover-url="{{item.coverUrl || ''}}" value-text="{{item.commercialTerms.amountDisplay || item.valueSummary}}" location-text="{{item.commercialTerms.locationDisplay || item.cityName || '全国'}}" target-text="{{item.targetSummary}}" referral-count="{{item.referralCount}}" avatars="{{item.avatars}}" /></view>

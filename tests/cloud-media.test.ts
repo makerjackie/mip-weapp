@@ -100,3 +100,56 @@ describe('CloudBase media URLs', () => {
     expect(getTempFileURL).not.toHaveBeenCalled()
   })
 })
+
+describe('concurrent media loading', () => {
+  afterEach(() => clearCloudMediaCache())
+
+  it('limits total native downloads across independently rendering cards', async () => {
+    let active = 0
+    let peak = 0
+    const downloadFile = vi.fn(async () => {
+      active += 1
+      peak = Math.max(peak, active)
+      await new Promise(resolve => setTimeout(resolve, 5))
+      active -= 1
+      return { tempFilePath: 'wxfile://tmp/cover.jpg' }
+    })
+    const cloud = { downloadFile } as unknown as CaseCloudClient
+    await Promise.all(Array.from({ length: 9 }, (_, index) =>
+      resolveCloudFileUrls(`cloud://test/${index}.jpg`, cloud)))
+    expect(downloadFile).toHaveBeenCalledTimes(9)
+    expect(peak).toBe(3)
+  })
+
+  it('shares the same avatar download between simultaneous page sections', async () => {
+    let finish!: (value: { tempFilePath: string }) => void
+    const downloadFile = vi.fn(() => new Promise<{ tempFilePath: string }>((resolve) => {
+      finish = resolve
+    }))
+    const cloud = { downloadFile } as unknown as CaseCloudClient
+    const source = { avatarUrl: 'cloud://media-test/shared-avatar.jpg' }
+    const first = resolveCloudFileUrls(source, cloud)
+    const second = resolveCloudFileUrls(source, cloud)
+    expect(downloadFile).toHaveBeenCalledTimes(1)
+    finish({ tempFilePath: 'wxfile://tmp/shared-avatar.jpg' })
+    expect(await first).toEqual(await second)
+  })
+
+  it('does not reuse a pending image across an identity boundary', async () => {
+    let finish!: (value: { tempFilePath: string }) => void
+    const downloadFile = vi.fn()
+      .mockImplementationOnce(() => new Promise<{ tempFilePath: string }>((resolve) => {
+        finish = resolve
+      }))
+      .mockResolvedValue({ tempFilePath: 'wxfile://tmp/new-session.jpg' })
+    const cloud = { downloadFile } as unknown as CaseCloudClient
+    const source = { avatarUrl: 'cloud://media-test/shared-avatar.jpg' }
+    const old = resolveCloudFileUrls(source, cloud)
+    clearCloudMediaCache()
+    const current = await resolveCloudFileUrls(source, cloud)
+    finish({ tempFilePath: 'wxfile://tmp/old-session.jpg' })
+    await old
+    expect(await resolveCloudFileUrls(source, cloud)).toEqual(current)
+    expect(downloadFile).toHaveBeenCalledTimes(2)
+  })
+})

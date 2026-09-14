@@ -440,7 +440,7 @@ export interface AdminEventFeedbackPage {
 export interface MipEventsGateway {
   listEvents: (query: EventFeedQuery) => Promise<EventFeedResult>
   getDiscoveryFilters?: () => Promise<EventDiscoveryFilters>
-  getEvent: (eventId: EventId) => Promise<MipEventDetail>
+  getEvent: (eventId: EventId, options?: { progressiveMedia?: boolean }) => Promise<MipEventDetail>
   listPublicParticipants: (eventId: EventId, query?: PublicEventParticipantQuery) => Promise<PublicEventParticipantPage>
   listEventAlbum: (eventId: EventId, cursor?: string, limit?: number) => Promise<EventAlbumPage>
   listMyEventAlbumSubmissions: (eventId: EventId) => Promise<MyEventAlbumSubmissions>

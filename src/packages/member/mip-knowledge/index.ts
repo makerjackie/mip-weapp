@@ -54,6 +54,7 @@ Page({
     nextCursor: '',
     loadingMore: false,
     message: '',
+    catalogMessage: '',
     typeOptions: [
       { value: '', label: '全部' },
       ...Object.entries(typeLabels).map(([value, label]) => ({ value, label })),
@@ -63,6 +64,10 @@ Page({
 
   onLoad() {
     void this.loadFiltersAndContents()
+  },
+
+  onUnload() {
+    this.contentRequestSequence += 1
   },
 
   async onPullDownRefresh() {
@@ -81,24 +86,21 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     this.setData({ nextCursor: '', loadingMore: false })
+    const categoriesLoad = this.loadCategories(requestSequence)
     try {
-      const [categories, page] = await Promise.all([
-        mipKnowledgeModule.listCategories(),
-        mipKnowledgeModule.listContents({
-          categoryId: this.data.categoryId || undefined,
-          contentType: this.data.contentType,
-          accessType: this.data.accessType,
-          query: this.data.query,
-          limit: 20,
-        }),
-      ])
+      const page = await mipKnowledgeModule.listContents({
+        categoryId: this.data.categoryId || undefined,
+        contentType: this.data.contentType,
+        accessType: this.data.accessType,
+        query: this.data.query,
+        limit: 20,
+      })
       if (requestSequence !== this.contentRequestSequence) {
         return
       }
       const items = page.items.map(contentView)
       this.setData({
         state: items.length ? 'ready' : 'empty',
-        categories,
         items,
         nextCursor: page.nextCursor || '',
         message: '',
@@ -113,6 +115,28 @@ Page({
         message: error instanceof Error ? error.message : '内容加载失败',
       })
     }
+    finally {
+      await categoriesLoad
+    }
+  },
+
+  async loadCategories(sequence?: number) {
+    const requestSequence = sequence ?? this.contentRequestSequence
+    try {
+      const categories = await mipKnowledgeModule.listCategories()
+      if (requestSequence === this.contentRequestSequence) {
+        this.setData({ categories, catalogMessage: '' })
+      }
+    }
+    catch {
+      if (requestSequence === this.contentRequestSequence) {
+        this.setData({ catalogMessage: '分类暂时无法更新，内容仍可浏览。' })
+      }
+    }
+  },
+
+  retryCategories() {
+    return this.loadCategories()
   },
 
   reloadContents() {

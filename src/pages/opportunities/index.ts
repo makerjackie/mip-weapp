@@ -213,6 +213,7 @@ Page({
   requestSequence: 0,
   resumeDestination: '',
   lastSuccessfulRefreshAt: 0,
+  refreshOnReturn: false,
 
   onShow() {
     syncCaseNavigation(this, 'pages/opportunities/index')
@@ -229,7 +230,9 @@ Page({
     }
     void this.refreshAuthState()
     const refreshIsDue = Date.now() - this.lastSuccessfulRefreshAt >= OPPORTUNITY_REFRESH_INTERVAL_MS
-    if (this.data.state !== 'ready' || refreshIsDue) {
+    const refreshOnReturn = this.refreshOnReturn
+    this.refreshOnReturn = false
+    if (this.data.state !== 'ready' || refreshIsDue || refreshOnReturn) {
       void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
     }
   },
@@ -822,6 +825,7 @@ Page({
   openOpportunity(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '') as OpportunityId
     if (id) {
+      this.refreshOnReturn = true
       caseNavigateTo({ url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(id)}` })
     }
   },
@@ -834,6 +838,7 @@ Page({
   },
 
   async openProtected(destination: string, action: ProtectedActionKey) {
+    this.refreshOnReturn = true
     this.resumeDestination = destination
     try {
       const session = await mipIdentityModule.beginProtectedAction({

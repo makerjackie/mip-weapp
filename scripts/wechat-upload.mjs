@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
@@ -83,6 +84,12 @@ const robotValue = option('robot')
 const robot = robotValue ? Number(robotValue) : undefined
 if (robotValue && (!Number.isInteger(robot) || robot < 1 || robot > 30)) {
   fail('--robot 必须是 1 到 30 之间的整数。')
+}
+
+console.log('[wechat-upload] 上传前执行全部质量门禁。')
+const verification = spawnSync('pnpm', ['verify:all'], { cwd: repositoryRoot, stdio: 'inherit', env: process.env })
+if (verification.error || verification.status !== 0) {
+  fail('完整检查未通过，已停止上传。')
 }
 
 const require = createRequire(import.meta.url)

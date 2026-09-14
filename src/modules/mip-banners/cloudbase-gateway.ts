@@ -2,6 +2,7 @@ import type { MipBannerTransport } from './gateway'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../../platform/cloudbase/client'
+import { measureLoading } from '../../platform/cloudbase/loading-diagnostics'
 import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import { createMipBannerGateway } from './gateway'
 import { MipBannerError } from './types'
@@ -19,10 +20,10 @@ export function createMipBannerCloudbaseTransport(
   return {
     async invoke(request) {
       try {
-        const response = await retryTransport(async () => {
+        const response = await measureLoading('banners.request', () => retryTransport(async () => {
           const cloud = await requireCloudClient()
           return cloud.callFunction({ name: bannerFunctionName, data: request })
-        }, COLD_START_READ_RETRY)
+        }, COLD_START_READ_RETRY))
         const cloud = await requireCloudClient()
         return resolveCloudFileUrls(response.result, cloud)
       }

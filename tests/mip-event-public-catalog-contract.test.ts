@@ -124,6 +124,27 @@ describe('MIP public event catalog and recap client contract', () => {
     })
   })
 
+  it('returns event text without starting or awaiting image downloads', async () => {
+    const item = { ...eventListItem(), coverUrl: 'cloud://test/slow-cover.jpg' }
+    const downloadFile = vi.fn(() => new Promise(() => {}))
+    vi.mocked(requireCloudClient).mockResolvedValue({ callFunction, downloadFile } as never)
+    callFunction.mockResolvedValue({ result: { ok: true, data: { items: [item] } } })
+    await expect(cloudbaseMipEventsGateway.listEvents({ view: 'UPCOMING', dateFilter: 'RECENT' }))
+      .resolves
+      .toEqual({ items: [item] })
+    expect(downloadFile).not.toHaveBeenCalled()
+  })
+
+  it('lets the detail page request text before media while retaining the legacy default', async () => {
+    const detail = { ...eventDetail(), coverUrl: 'cloud://test/detail.jpg' }
+    const downloadFile = vi.fn().mockResolvedValue({ tempFilePath: 'wxfile://detail.jpg' })
+    vi.mocked(requireCloudClient).mockResolvedValue({ callFunction, downloadFile } as never)
+    callFunction.mockResolvedValue({ result: { ok: true, data: detail } })
+    await expect(cloudbaseMipEventsGateway.getEvent(eventId as never, { progressiveMedia: true })).resolves.toEqual(detail)
+    expect(downloadFile).not.toHaveBeenCalled()
+    await expect(cloudbaseMipEventsGateway.getEvent(eventId as never)).resolves.toMatchObject({ coverUrl: 'wxfile://detail.jpg' })
+  })
+
   it('keeps catalog and recap facts through the event facade and cache', async () => {
     const gateway = {
       listEvents: vi.fn(async () => ({ items: [eventListItem()] })),

@@ -28,6 +28,7 @@ import {
   createProfileInterestMutationStore,
   PROFILE_INTEREST_MUTATION_STORAGE_KEY,
 } from './profile-interest-mutation'
+import { parseReceivedVisitors } from './received-visitors'
 import { callOpportunityApi } from './transport'
 import {
   createMutationKey,
@@ -108,7 +109,7 @@ export const opportunityModule = {
       category,
       cursor,
       limit: 20,
-    })
+    }).then(page => category === 'VISITOR' ? parseReceivedVisitors(page) : page)
   },
 
   markReceivedRead(
