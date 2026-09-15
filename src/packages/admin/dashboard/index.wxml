@@ -1,8 +1,7 @@
-<view id="admin-dashboard-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-dashboard-page" class="mip-admin-page min-h-screen bg-canvas px-[24rpx] pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="border-b border-line pb-5">
     <view class="text-[length:22rpx] font-semibold text-brand">MIP 管理</view>
     <view class="mt-2 text-[length:40rpx] font-bold">现场工作台</view>
-    <view class="mt-2 text-[length:24rpx] text-muted">用于活动现场和网页登录确认。</view>
   </view>
 
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[24rpx] bg-panel px-5 py-6">
@@ -20,7 +19,6 @@
     <view class="mt-3 flex min-h-[112rpx] items-center rounded-[24rpx] bg-panel px-4" aria-role="button" bind:tap="openEvents">
       <view class="min-w-0 flex-1">
         <view class="text-[length:28rpx] font-semibold">活动现场</view>
-        <view class="mt-1 text-[length:22rpx] text-muted">查看授权活动、参与者名单和签到码</view>
       </view>
       <mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-brand)" />
     </view>
@@ -29,7 +27,7 @@
     <view class="mt-3 flex min-h-[112rpx] items-center rounded-[24rpx] border border-line bg-panel px-4" aria-role="button" bind:tap="openWebLogin">
       <view class="min-w-0 flex-1">
         <view class="text-[length:28rpx] font-semibold">确认网页登录</view>
-        <view class="mt-1 text-[length:22rpx] text-muted">输入网页显示的 6 位数字登录码</view>
+        <view class="mt-1 text-[length:22rpx] text-muted">输入 6 位登录码</view>
       </view>
       <mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-brand)" />
     </view>

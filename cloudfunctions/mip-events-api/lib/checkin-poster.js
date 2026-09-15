@@ -4,6 +4,7 @@ const { createHash, createHmac, randomUUID } = require('node:crypto')
 const { DomainError } = require('../domain/rules')
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff])
 const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const EVENT_CODE_SPECS = Object.freeze({
   CHECKIN_POSTER: {
@@ -26,7 +27,7 @@ function deploymentStage(value) {
   return stage
 }
 
-function buildEventCodeKey({ appId, eventId, referenceId, purpose, env = process.env }) {
+function buildEventCodeKey({ appId, eventId, referenceId, purpose, extension = 'png', env = process.env }) {
   const spec = EVENT_CODE_SPECS[purpose]
   const secret = String(env.MIP_MEDIA_SCOPE_SECRET || '')
   if (typeof appId !== 'string'
@@ -39,7 +40,8 @@ function buildEventCodeKey({ appId, eventId, referenceId, purpose, env = process
   }
   const stage = deploymentStage(env.MIP_DEPLOYMENT_STAGE)
   const appScope = createHmac('sha256', secret).update(appId).digest('hex').slice(0, 24)
-  return `mip/${stage}/${appScope}/${spec.directory}/${eventId}/${referenceId}.png`
+  if (!['png', 'jpg'].includes(extension)) throw new Error('CHECKIN_POSTER_CONFIG_REQUIRED')
+  return `mip/${stage}/${appScope}/${spec.directory}/${eventId}/${referenceId}.${extension}`
 }
 
 function buildCheckInCodeKey({ appId, eventId, credentialId, env = process.env }) {
@@ -81,6 +83,23 @@ function assertUploadedObject(fileId, objectKey) {
   return true
 }
 
+function binaryBuffer(value) {
+  if (Buffer.isBuffer(value)) return value
+  if (value instanceof ArrayBuffer) return Buffer.from(value)
+  if (ArrayBuffer.isView(value)) return Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+  return null
+}
+
+function imageContent(content) {
+  if (content.length >= PNG_SIGNATURE.length && content.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)) {
+    return { contentType: 'image/png', extension: 'png' }
+  }
+  if (content.length >= JPEG_SIGNATURE.length && content.subarray(0, JPEG_SIGNATURE.length).equals(JPEG_SIGNATURE)) {
+    return { contentType: 'image/jpeg', extension: 'jpg' }
+  }
+  return null
+}
+
 async function deleteUploadedObject(cloud, fileId, objectKey) {
   if (typeof cloud?.deleteFile !== 'function') return false
   try {
@@ -118,7 +137,8 @@ async function createEventCodeAsset({
     throw new Error('CHECKIN_POSTER_UNAVAILABLE')
   }
   const stage = deploymentStage(env.MIP_DEPLOYMENT_STAGE)
-  const objectKey = buildEventCodeKey({ appId, eventId, referenceId, purpose, env })
+  // Validate the scope and configuration before making an external API call.
+  buildEventCodeKey({ appId, eventId, referenceId, purpose, env })
   const response = await cloud.openapi.wxacode.getUnlimited({
     scene,
     page: 'packages/member/mip-events/detail/index',
@@ -126,13 +146,12 @@ async function createEventCodeAsset({
     checkPath: false,
     envVersion: codeEnvironment(stage),
   })
-  const content = Buffer.isBuffer(response) ? response : response?.buffer
-  if (!Buffer.isBuffer(content)
-    || content.length < PNG_SIGNATURE.length
-    || content.length > 2 * 1024 * 1024
-    || !content.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)) {
+  const content = binaryBuffer(response) || binaryBuffer(response?.buffer)
+  const format = content && content.length <= 2 * 1024 * 1024 ? imageContent(content) : null
+  if (!content || !format || content.length < 3) {
     throw new Error('CHECKIN_POSTER_UNAVAILABLE')
   }
+  const objectKey = buildEventCodeKey({ appId, eventId, referenceId, purpose, extension: format.extension, env })
   const uploaded = await cloud.uploadFile({ cloudPath: objectKey, fileContent: content })
   const codeUrl = typeof uploaded?.fileID === 'string' ? uploaded.fileID.trim() : ''
   assertUploadedObject(codeUrl, objectKey)
@@ -143,7 +162,7 @@ async function createEventCodeAsset({
       `INSERT INTO mip_media_assets (
         id, app_id, owner_user_id, purpose, object_key, cloud_file_id,
         content_sha256, content_type, content_bytes, width_px, height_px, status
-      ) VALUES (?, ?, NULL, ?, ?, ?, ?, 'image/png', ?, 430, 430, 'PENDING')`,
+      ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, 430, 430, 'PENDING')`,
       [
         assetId,
         appId,
@@ -151,6 +170,7 @@ async function createEventCodeAsset({
         objectKey,
         codeUrl,
         createHash('sha256').update(content).digest('hex'),
+        format.contentType,
         content.length,
       ],
     )

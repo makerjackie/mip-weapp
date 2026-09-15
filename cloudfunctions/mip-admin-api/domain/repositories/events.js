@@ -1,6 +1,7 @@
 'use strict'
 
 const { createHash, randomBytes, randomUUID } = require('node:crypto')
+const { isDeepStrictEqual } = require('node:util')
 const { createOperationsPublisher } = require('../operations-publication')
 const { cursorPredicateFor, pageRows } = require('../pagination')
 const { claimOptional, complete } = require('../idempotency')
@@ -577,7 +578,8 @@ function createAdminEventRepository(database, dependencies) {
       let nextVersion = 1
       if (input.eventId) {
         const current = await tx.one(
-          `SELECT id, scope_type, branch_id, status, version, cover_asset_id
+          `SELECT id, scope_type, branch_id, status, version, form_version,
+             registration_schema_json, cover_asset_id
            FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
           [input.appId, eventId],
         )
@@ -598,6 +600,11 @@ function createAdminEventRepository(database, dependencies) {
         await assertEventContentMedia(tx, input, eventId)
         status = current.status
         nextVersion = Number(current.version) + 1
+        const currentSchema = json(current.registration_schema_json, [])
+        const nextSchema = input.draft.registrationSchema
+        const formVersion = isDeepStrictEqual(currentSchema, nextSchema)
+          ? Number(current.form_version || 1)
+          : Number(current.form_version || 1) + 1
         await ensureEventTypeCatalog(tx, {
           appId: input.appId,
           actorUserId: input.actorUserId,
@@ -612,7 +619,7 @@ function createAdminEventRepository(database, dependencies) {
             event_type_key = ?, event_mode = ?, access_type = ?, registration_policy = ?,
             album_enabled = ?, album_submission_policy = ?,
             online_url = ?, waitlist_enabled = ?, price_cents = ?,
-            registration_schema_json = ?, form_version = form_version + 1,
+            registration_schema_json = ?, form_version = ?,
             content_safety_status = ?, version = version + 1
            WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'UNPUBLISHED')`,
           [input.draft.scopeType, input.draft.branchId || null,
@@ -626,7 +633,7 @@ function createAdminEventRepository(database, dependencies) {
             input.draft.registrationPolicy, input.draft.albumEnabled ? 1 : 0,
             input.draft.albumSubmissionPolicy, input.draft.onlineUrl || null,
             input.draft.waitlistEnabled ? 1 : 0, input.draft.priceCents,
-            JSON.stringify(input.draft.registrationSchema), input.contentSafetyStatus,
+            JSON.stringify(input.draft.registrationSchema), formVersion, input.contentSafetyStatus,
             input.appId, eventId, input.expectedVersion],
         )
         if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')

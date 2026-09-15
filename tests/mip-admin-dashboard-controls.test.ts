@@ -72,6 +72,20 @@ describe('onsite dashboard and Web login confirmation', () => {
     expect(template).toContain('bind:tap="openEvents"')
   })
 
+  it('keeps onsite copy concise while retaining both actions', () => {
+    const dashboard = readFileSync(new URL('../src/packages/admin/dashboard/index.wxml', import.meta.url), 'utf8')
+    const consoleView = readFileSync(new URL('../src/packages/admin/event-console/index.wxml', import.meta.url), 'utf8')
+    const profile = readFileSync(new URL('../src/pages/profile/index.wxml', import.meta.url), 'utf8')
+
+    expect(dashboard).toContain('活动现场')
+    expect(dashboard).toContain('确认网页登录')
+    expect(dashboard).toContain('输入 6 位登录码')
+    expect(dashboard).not.toContain('查看授权活动、参与者名单和签到码')
+    expect(consoleView).not.toContain('查看名单、确认签到或按权限撤销签到')
+    expect(consoleView).not.toContain('静态码适合提前制作海报')
+    expect(profile).not.toContain('授权活动、签到与网页登录')
+  })
+
   it('normalizes and confirms exactly six Web login digits', async () => {
     const page = createPage()
     callPage(page, 'changeWebLoginCode', { detail: { value: 'abcd234567' } })

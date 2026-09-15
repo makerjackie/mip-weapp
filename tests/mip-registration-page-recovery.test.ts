@@ -52,6 +52,53 @@ beforeEach(() => {
   mocks.peekSnapshot.mockReturnValue({ userId: 'u1' })
 })
 describe('registration page recovery', () => {
+  it('submits only once when tapped twice while an invitation is resolving', async () => {
+    const instance = page()
+    instance.data.eventId = 'e1'
+    await instance.loadEvent()
+    instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '参加交流' } })
+    let resolveInvitation!: () => void
+    instance.invitationResolution = new Promise<void>((resolve) => {
+      resolveInvitation = resolve
+    })
+    mocks.register.mockResolvedValue({ kind: 'REGISTERED' })
+    const first = instance.submit()
+    const second = instance.submit()
+    expect(instance.data.busy).toBe(true)
+    instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '提交时更改' } })
+    instance.onShareProfileChange({ detail: { value: true } })
+    expect(instance.data.fields[0].value).toBe('参加交流')
+    expect(instance.submissionIdempotencyKey).not.toBe('')
+    resolveInvitation()
+    await Promise.all([first, second])
+    expect(mocks.register).toHaveBeenCalledTimes(1)
+    expect(mocks.register).toHaveBeenCalledWith(expect.objectContaining({
+      eventId: 'e1',
+      formVersion: 2,
+      answers: { reason: '参加交流', choice: '' },
+      shareProfile: false,
+    }))
+    expect(instance.data.state).toBe('submitted')
+    expect(instance.data.resultTitle).toBe('报名成功')
+    expect(instance.data.busy).toBe(false)
+  })
+  it('retries an uncertain submission with the same request and preserves the form', async () => {
+    const instance = page()
+    instance.data.eventId = 'e1'
+    await instance.loadEvent()
+    instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '参加交流' } })
+    mocks.register.mockRejectedValueOnce(new Error('连接中断')).mockResolvedValueOnce({ kind: 'REGISTERED' })
+    await instance.submit()
+    expect(instance.data.state).toBe('ready')
+    expect(instance.data.busy).toBe(false)
+    expect(instance.data.fields[0].value).toBe('参加交流')
+    expect(mocks.removeDraft).not.toHaveBeenCalled()
+    await instance.submit()
+    expect(mocks.register).toHaveBeenCalledTimes(2)
+    expect(mocks.register.mock.calls[1][0]).toEqual(mocks.register.mock.calls[0][0])
+    expect(instance.data.state).toBe('submitted')
+    expect(mocks.removeDraft).toHaveBeenCalledWith('u1', 'e1')
+  })
   it('refreshes a first-registration schema conflict while preserving compatible answers', async () => {
     const instance = page()
     instance.data.eventId = 'e1'

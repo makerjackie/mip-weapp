@@ -144,6 +144,26 @@ describe('admin operation model', () => {
     expect(refund.buildInput({ reason: '' })).toBeNull()
   })
 
+  it('fails closed when an event detail has no server version', async () => {
+    const request = async <T>() => ({} as T)
+    const detailWithoutVersion: AdminDetailView = {
+      ...basicDetail,
+      sections: [{ title: '活动信息', fields: [] }],
+    }
+    const publish = await createOperationModel(
+      'mip.admin.events.changeStatus', 'event-1', detailWithoutVersion,
+      { targetStatus: 'PUBLISHED' }, request,
+    )
+    const clone = await createOperationModel(
+      'mip.admin.events.clone', 'event-1', detailWithoutVersion, {}, request,
+    )
+
+    expect(publish.values.expectedVersion).toBe('')
+    expect(clone.values.expectedVersion).toBe('')
+    expect(publish.buildInput({ ...publish.values, status: 'PUBLISHED' })).toBeNull()
+    expect(clone.buildInput(clone.values)).toBeNull()
+  })
+
   it('locks an event row version even if the form submits a different value', async () => {
     const model = await createOperationModel(
       'mip.admin.events.catalog.archive', 'catalog-1', null,

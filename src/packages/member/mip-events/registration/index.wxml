@@ -81,10 +81,10 @@
     <view wx:else class="mt-3 flex flex-col gap-3">
       <view wx:for="{{fields}}" wx:key="key" id="registration-field-{{index}}" class="rounded-[16rpx] bg-panel px-4 py-4">
         <view class="text-[length:24rpx] font-semibold">{{item.label}}<text wx:if="{{item.required}}" class="ml-1 text-danger">*</text></view>
-        <textarea aria-label="{{item.label}}" wx:if="{{item.type === 'TEXTAREA'}}" class="box-border mt-3 h-[180rpx] w-full max-w-full rounded-[8rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 500}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
-        <input aria-label="{{item.label}}" wx:elif="{{item.type === 'TEXT'}}" class="box-border mt-3 h-[88rpx] w-full max-w-full rounded-[8rpx] bg-panel-raised px-3 text-[length:24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 120}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
-        <picker wx:elif="{{item.type === 'SELECT'}}" range="{{item.options}}" value="{{item.selectedIndex}}" data-index="{{index}}" bindchange="onSelectChange"><view class="mt-3 flex min-h-[80rpx] items-center justify-between gap-2 rounded-[8rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]"><text class="min-w-0 flex-1 break-all">{{item.selectedLabel}}</text><mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></picker>
-        <view wx:else class="mt-3 flex min-h-[80rpx] items-center justify-between"><text class="text-[length:24rpx] text-muted">确认</text><t-switch value="{{item.checked}}" data-index="{{index}}" bind:change="onBooleanChange" /></view>
+        <textarea disabled="{{busy}}" aria-label="{{item.label}}" wx:if="{{item.type === 'TEXTAREA'}}" class="box-border mt-3 h-[180rpx] w-full max-w-full rounded-[8rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 500}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
+        <input disabled="{{busy}}" aria-label="{{item.label}}" wx:elif="{{item.type === 'TEXT'}}" class="box-border mt-3 h-[88rpx] w-full max-w-full rounded-[8rpx] bg-panel-raised px-3 text-[length:24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 120}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
+        <picker disabled="{{busy}}" wx:elif="{{item.type === 'SELECT'}}" range="{{item.options}}" value="{{item.selectedIndex}}" data-index="{{index}}" bindchange="onSelectChange"><view class="mt-3 flex min-h-[80rpx] items-center justify-between gap-2 rounded-[8rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]"><text class="min-w-0 flex-1 break-all">{{item.selectedLabel}}</text><mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></picker>
+        <view wx:else class="mt-3 flex min-h-[80rpx] items-center justify-between"><text class="text-[length:24rpx] text-muted">确认</text><t-switch disabled="{{busy}}" value="{{item.checked}}" data-index="{{index}}" bind:change="onBooleanChange" /></view>
         <view wx:if="{{item.type === 'TEXT' || item.type === 'TEXTAREA'}}" class="mt-2 text-right text-[length:20rpx] text-muted">{{item.currentLength}}/{{item.maxLength || (item.type === 'TEXTAREA' ? 500 : 120)}}</view>
         <view wx:if="{{item.error}}" class="mt-2 text-[length:20rpx] text-danger">{{item.error}}</view>
       </view>
@@ -92,7 +92,7 @@
 
     <!-- <view class="mt-3 flex min-h-[104rpx] items-center justify-between rounded-[16rpx] bg-panel px-4">
       <view class="min-w-0 pr-3"><view class="text-[length:24rpx] font-semibold">在参与者列表展示公开资料</view><view class="mt-1 text-[length:20rpx] text-muted">仅影响本场活动的参与者列表</view></view>
-      <t-switch value="{{shareProfile}}" bind:change="onShareProfileChange" />
+      <t-switch disabled="{{busy}}" value="{{shareProfile}}" bind:change="onShareProfileChange" />
     </view> -->
     <view wx:if="{{!editing && event.accessType === 'PAID'}}" class="mt-3 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] leading-5 text-brand">提交后将暂时保留名额并创建报名订单，支付确认后报名才会生效。</view>
     <view class="mt-3 rounded-[16rpx] bg-panel px-4 py-4 text-[length:20rpx] leading-6 text-muted">

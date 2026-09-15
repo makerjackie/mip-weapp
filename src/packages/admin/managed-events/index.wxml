@@ -1,6 +1,5 @@
-<view id="admin-managed-events-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-managed-events-page" class="mip-admin-page min-h-screen bg-canvas px-[24rpx] pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="text-[length:40rpx] font-bold">活动现场</view>
-  <view class="mt-2 text-[length:24rpx] text-muted">只显示当前账号有权查看的活动。</view>
 
   <view class="mt-5 rounded-[24rpx] bg-panel p-3">
     <t-input class="box-border max-w-full" value="{{query}}" placeholder="搜索活动名称" bind:change="updateQuery" bind:enter="search" />
@@ -25,7 +24,7 @@
     <mip-empty-state title="暂无活动" description="符合当前筛选条件的授权活动会显示在这里。" />
   </view>
   <view wx:else class="mt-5 flex flex-col gap-3">
-    <view wx:for="{{events}}" wx:key="id" class="rounded-[24rpx] bg-panel px-4 py-4" data-id="{{item.id}}" aria-role="button" bind:tap="openEvent">
+    <view wx:for="{{events}}" wx:key="id" class="rounded-[24rpx] bg-panel px-3 py-4" data-id="{{item.id}}" aria-role="button" bind:tap="openEvent">
       <view class="flex items-start justify-between gap-3">
         <view class="min-w-0 flex-1 break-all text-[length:28rpx] font-semibold">{{item.title}}</view>
         <t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag>

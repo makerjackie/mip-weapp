@@ -86,7 +86,9 @@ export function MutationDialog({ open, title, description, fields, values, loadi
       mask={{ closable: !loading }}
       keyboard={!loading}
       onCancel={onCancel}
-      onOk={() => void form.validateFields().then(onSubmit)}
+      onOk={() => void form.validateFields().then(onSubmit, () => {
+        // Ant Design displays validation errors beside the fields.
+      })}
       afterOpenChange={(next) => { if (next) form.setFieldsValue(formValues(fields, values)) }}
     >
       <p className="mutation-description">{description}</p>

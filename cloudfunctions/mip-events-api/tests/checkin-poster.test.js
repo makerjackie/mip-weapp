@@ -28,6 +28,10 @@ function pngBuffer() {
   ])
 }
 
+function jpegBuffer() {
+  return Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00])
+}
+
 function posterCloud(deleteFile) {
   return {
     openapi: { wxacode: { async getUnlimited() { return { buffer: pngBuffer() } } } },
@@ -134,6 +138,48 @@ describe('MIP check-in mini-program code asset', () => {
     assert.match(calls.find(call => call.kind === 'user-lock').sql, /FROM mip_users[\s\S]*FOR UPDATE/)
     assert.match(calls.find(call => call.kind === 'pending').sql, /owner_user_id[\s\S]*'PENDING'/)
     assert.match(calls.find(call => call.kind === 'database').sql, /status = 'READY'/)
+  })
+
+  it('accepts JPEG and records a matching object suffix and content type', async () => {
+    const calls = []
+    const result = await createCheckInCodeAsset({
+      ...input,
+      env,
+      createId: () => '40000000-0000-4000-8000-000000000001',
+      cloud: {
+        openapi: { wxacode: { async getUnlimited() { return { buffer: jpegBuffer() } } } },
+        async uploadFile(options) { calls.push(options); return { fileID: `cloud://env.test/${options.cloudPath}` } },
+      },
+      database: {
+        async query(sql, params) { calls.push({ sql, params }); return { affectedRows: 1 } },
+        async transaction(work) { return work({ async one() { return { id: input.ownerUserId, status: 'ACTIVE' } }, async query() { return { affectedRows: 1 } } }) },
+      },
+    })
+    assert.match(result.objectKey, /\.jpg$/)
+    const pending = calls.find(call => call.sql?.includes('INSERT INTO mip_media_assets'))
+    assert.equal(pending.params.includes('image/jpeg'), true)
+  })
+
+  it('honors a TypedArray byte offset and rejects an error JSON body', async () => {
+    const source = Buffer.concat([Buffer.from([0xaa, 0xbb]), pngBuffer(), Buffer.from([0xcc])])
+    const run = (buffer, direct = false) => createCheckInCodeAsset({
+      ...input,
+      env,
+      createId: () => '40000000-0000-4000-8000-000000000001',
+      cloud: {
+        openapi: { wxacode: { async getUnlimited() { return direct ? buffer : { buffer } } } },
+        async uploadFile(options) { return { fileID: `cloud://env.test/${options.cloudPath}` } },
+      },
+      database: {
+        async query() { return { affectedRows: 1 } },
+        async transaction(work) { return work({ async one() { return { id: input.ownerUserId, status: 'ACTIVE' } }, async query() { return { affectedRows: 1 } } }) },
+      },
+    })
+    await assert.doesNotReject(run(new Uint8Array(source.buffer, source.byteOffset + 2, pngBuffer().length)))
+    const view = new Uint8Array(source.buffer, source.byteOffset + 2, pngBuffer().length)
+    await assert.doesNotReject(run(view, true))
+    await assert.doesNotReject(run(Uint8Array.from(pngBuffer()).buffer, true))
+    await assert.rejects(run(Buffer.from('{"errcode":41001}')), /CHECKIN_POSTER_UNAVAILABLE/)
   })
 
   it('keeps a PENDING cleanup fact when closure wins and the exact delete is uncertain', async () => {

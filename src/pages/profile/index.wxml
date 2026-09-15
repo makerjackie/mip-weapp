@@ -161,7 +161,7 @@
       <view class="profile-action relative" bind:tap="openNotifications"><t-icon name="notification" size="44rpx" color="var(--color-brand)" /><text>消息</text><view wx:if="{{notificationUnreadCount > 0}}" class="profile-unread-badge profile-action-unread">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view></view>
     </view>
 
-    <view wx:if="{{adminVisible && authenticated}}" class="profile-admin-entry profile-admin-entry--primary" bind:tap="openAdmin"><view><view class="profile-more-label">现场工作台</view><view class="profile-more-description">授权活动、签到与网页登录</view></view><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-brand)" /></view>
+    <view wx:if="{{adminVisible && authenticated}}" class="profile-admin-entry profile-admin-entry--primary" bind:tap="openAdmin"><view><view class="profile-more-label">现场工作台</view></view><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-brand)" /></view>
 
     <view wx:if="{{authenticated}}" class="profile-tabs" aria-role="tablist">
       <view wx:if="{{portfolioTab === 'cooperation'}}" id="profile-tab-cooperation" class="profile-tab profile-tab--active" aria-role="tab" aria-selected="true" data-tab="cooperation" bind:tap="changePortfolioTab">合作卡</view>

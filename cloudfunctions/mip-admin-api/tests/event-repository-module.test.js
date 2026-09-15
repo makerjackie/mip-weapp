@@ -359,6 +359,53 @@ describe('admin event repository module', () => {
     ])
   })
 
+  it('keeps the registration form version when only event copy changes', async () => {
+    const calls = []
+    const schema = [{ key: 'role', type: 'TEXT', label: '参与身份', required: false, maxLength: 120 }]
+    const tx = {
+      async one(sql, params) {
+        calls.push({ method: 'one', sql, params })
+        if (sql.includes('FROM mip_events')) {
+          return {
+            id: EVENT_ID, scope_type: 'BRANCH', branch_id: 'branch-a',
+            status: 'UNPUBLISHED', version: 2, form_version: 7,
+            registration_schema_json: JSON.stringify([{ label: '参与身份', maxLength: 120, required: false, type: 'TEXT', key: 'role' }]), cover_asset_id: null,
+          }
+        }
+        return null
+      },
+      async query(sql, params) {
+        calls.push({ method: 'query', sql, params })
+        return { affectedRows: sql.includes('INSERT INTO mip_event_types') ? 0 : 1 }
+      },
+    }
+    await repository({ async transaction(work) { return work(tx) } }).saveEvent(
+      saveInput(eventDraft({
+        title: '更新后的活动标题',
+        eventTypeKey: 'workshop',
+        registrationSchema: schema,
+      })),
+    )
+    const update = calls.find(call => call.sql?.includes('UPDATE mip_events SET'))
+    assert.ok(update)
+    const schemaIndex = update.sql.indexOf('registration_schema_json = ?')
+    const prefix = update.sql.slice(0, schemaIndex)
+    const questionCount = (prefix.match(/\?/g) || []).length
+    assert.equal(update.params[questionCount + 1], 7)
+    assert.match(update.sql, /registration_schema_json = \?, form_version = \?,/)
+
+    await repository({ async transaction(work) { return work(tx) } }).saveEvent(
+      saveInput(eventDraft({
+        eventTypeKey: 'workshop',
+        registrationSchema: [...schema, { key: 'company', type: 'TEXT', label: '公司', required: false, maxLength: 120 }],
+      })),
+    )
+    const changedUpdate = calls.filter(call => call.sql?.includes('UPDATE mip_events SET')).at(-1)
+    const changedSchemaIndex = changedUpdate.sql.indexOf('registration_schema_json = ?')
+    const changedQuestionCount = (changedUpdate.sql.slice(0, changedSchemaIndex).match(/\?/g) || []).length
+    assert.equal(changedUpdate.params[changedQuestionCount + 1], 8)
+  })
+
   it('accepts only a verified target-key duplicate from a concurrent catalog creator', async () => {
     const calls = []
     const tx = {

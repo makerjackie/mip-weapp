@@ -85,6 +85,7 @@ Page({
     message: '',
   },
   posterCountdownTimer: 0 as number | ReturnType<typeof setInterval>,
+  requestSeq: 0,
 
   onLoad(query: Record<string, string>) {
     this.setData({ eventId: query.eventId || '' })
@@ -100,10 +101,12 @@ Page({
   },
 
   onHide() {
+    this.requestSeq += 1
     this.clearPosterCountdown()
   },
 
   onUnload() {
+    this.requestSeq += 1
     this.clearPosterCountdown()
   },
 
@@ -112,12 +115,17 @@ Page({
     if (!hasContent) {
       this.setData({ state: 'loading', message: '' })
     }
+    const seq = this.requestSeq + 1
+    this.requestSeq = seq
     try {
       const [session, event] = await Promise.all([
         mipAdminModule.session.get(force),
         mipAdminModule.events.get(this.data.eventId, force),
       ])
       const scope = { scopeType: 'EVENT' as const, scopeId: event.id, branchId: event.branchId }
+      if (seq !== this.requestSeq) {
+        return
+      }
       this.setData({
         state: 'ready',
         event,
@@ -129,7 +137,9 @@ Page({
       })
     }
     catch (error) {
-      this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '活动信息加载失败' }))
+      if (seq === this.requestSeq) {
+        this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '活动信息加载失败' }))
+      }
     }
   },
 

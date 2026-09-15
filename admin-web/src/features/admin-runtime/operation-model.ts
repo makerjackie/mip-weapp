@@ -206,7 +206,10 @@ function createBasicOperationModel(
   targetStatus: 'PUBLISHED' | 'UNPUBLISHED' | undefined,
   idempotencyKey: string,
 ): OperationModel {
-  const expectedVersion = readField('活动信息', '版本') || '1'
+  // A version is a server fact. Never invent version 1 when the detail is
+  // incomplete; the validator will keep the mutation un-submittable until the
+  // detail is refreshed.
+  const expectedVersion = readField('活动信息', '版本')
   const capability = basicOperationCapability(action)
   if (action === 'mip.admin.memberships.grant') {
     const values = {

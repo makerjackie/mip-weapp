@@ -241,6 +241,9 @@ Page({
   },
 
   onTextInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (this.data.busy) {
+      return
+    }
     const index = Number(event.currentTarget.dataset.index)
     const fields = this.data.fields.map((field, fieldIndex) => fieldIndex === index
       ? { ...field, value: event.detail.value, currentLength: event.detail.value.length, error: '' }
@@ -251,6 +254,9 @@ Page({
   },
 
   onSelectChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (this.data.busy) {
+      return
+    }
     const index = Number(event.currentTarget.dataset.index)
     const selectedIndex = Number(event.detail.value)
     const fields = this.data.fields.map((field, fieldIndex) => fieldIndex === index
@@ -268,6 +274,9 @@ Page({
   },
 
   onBooleanChange(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    if (this.data.busy) {
+      return
+    }
     const index = Number(event.currentTarget.dataset.index)
     const fields = this.data.fields.map((field, fieldIndex) => fieldIndex === index
       ? { ...field, checked: event.detail.value, error: '' }
@@ -278,6 +287,9 @@ Page({
   },
 
   onShareProfileChange(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    if (this.data.busy) {
+      return
+    }
     this.submissionIdempotencyKey = ''
     this.setData({ shareProfile: event.detail.value, message: '' })
     this.persistDraft()
@@ -314,13 +326,13 @@ Page({
     if (!event || this.data.busy || !this.validate()) {
       return
     }
-    await this.invitationResolution
     const answers = answersFromFields(this.data.fields)
     if (!this.submissionIdempotencyKey) {
       this.submissionIdempotencyKey = requestKey(this.data.editing ? 'event-registration-update' : 'event-registration')
     }
     this.setData({ busy: true, message: '' })
     try {
+      await this.invitationResolution
       if (this.data.editing) {
         const registration = this.data.registration
         if (!registration?.canEdit) {
