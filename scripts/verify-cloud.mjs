@@ -106,7 +106,14 @@ assertNotificationEnvironment(coreDetails.get('notifications'), coreDetails.get(
 assertRefundDispatchEnvironment(coreDetails.get('admin'))
 assertTaskAdminEnvironment(coreDetails.get('admin'), coreDetails.get('tasks'))
 assertDomainAdminEnvironment(coreDetails)
-assertAdminWebPublicNetwork(coreDetails.get('admin'))
+const eventVariables = environmentVariables(coreDetails.get('events'))
+if (eventVariables.MIP_WECHAT_APP_ID !== appId
+  || !env.MIP_WECHAT_APP_SECRET
+  || eventVariables.MIP_WECHAT_APP_SECRET !== env.MIP_WECHAT_APP_SECRET) {
+  throw new Error('Event WeChat API credentials do not match the configured app')
+}
+assertWechatApiPublicNetwork(coreDetails.get('admin'), functionNames.admin)
+assertWechatApiPublicNetwork(coreDetails.get('events'), functionNames.events)
 assertKnowledgeEnvironment(coreDetails.get('admin'))
 assertOwnerTestMembershipEnvironment(coreDetails.get('ledger'))
 for (const spec of coreManifest) {
@@ -433,9 +440,9 @@ function assertDomainAdminEnvironment(details) {
   }
 }
 
-function assertAdminWebPublicNetwork(detail) {
+function assertWechatApiPublicNetwork(detail, functionName) {
   if (functionDetail(detail)?.PublicNetConfig?.PublicNetStatus !== 'ENABLE') {
-    throw new Error('mip-admin-api public network is required for the signed Web login callback')
+    throw new Error(`${functionName} public network is required for WeChat API access`)
   }
 }
 

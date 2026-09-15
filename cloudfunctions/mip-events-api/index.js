@@ -75,10 +75,26 @@ function errorResponse(error) {
       error: { code: error.code, message: error.message, retryable: error.retryable === true },
     }
   }
-  console.error('[mip-events-api] request failed', error?.code || error?.name || 'UNKNOWN')
+  const diagnostic = error?.posterDiagnostic
+  console.error('[mip-events-api] request failed', error?.code || error?.name || 'UNKNOWN',
+    diagnostic?.stage || '', diagnostic?.code || '')
+  const posterMessages = {
+    'wxacode.getUnlimited': '微信码生成失败，请稍后重试',
+    'wxacode.response': '微信码图片无效，请稍后重试',
+    'storage.uploadFile': '海报上传失败，请稍后重试',
+    'storage.uploadFile.response': '海报上传结果无效，请稍后重试',
+    'media_assets.insert': '海报保存失败，请稍后重试',
+    'media_assets.bind': '海报保存失败，请稍后重试',
+  }
+  const posterMessage = posterMessages[diagnostic?.stage]
+  const numericCode = /^-?\d{1,10}$/.test(diagnostic?.code || '') ? `（${diagnostic.code}）` : ''
   return {
     ok: false,
-    error: { code: 'SERVICE_UNAVAILABLE', message: '活动服务暂时不可用', retryable: true },
+    error: {
+      code: 'SERVICE_UNAVAILABLE',
+      message: posterMessage ? `${posterMessage}${numericCode}` : '活动服务暂时不可用',
+      retryable: true,
+    },
   }
 }
 

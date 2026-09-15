@@ -182,6 +182,77 @@ describe('MIP check-in mini-program code asset', () => {
     await assert.rejects(run(Buffer.from('{"errcode":41001}')), /CHECKIN_POSTER_UNAVAILABLE/)
   })
 
+  it('attaches only a safe stage and code when wxacode fails', async () => {
+    const secretMessage = 'access_token=secret-value scene=s1.private user-id-123'
+    await assert.rejects(() => createCheckInCodeAsset({
+      ...input,
+      env,
+      cloud: {
+        openapi: { wxacode: { async getUnlimited() { throw Object.assign(new Error(secretMessage), { errCode: 41030 }) } } },
+        async uploadFile() { throw new Error('should not upload') },
+      },
+      database: { async query() { throw new Error('should not write') } },
+    }), error => {
+      assert.equal(error.posterDiagnostic.stage, 'wxacode.getUnlimited')
+      assert.equal(error.posterDiagnostic.code, '41030')
+      assert.equal(JSON.stringify(error.posterDiagnostic).includes('secret-value'), false)
+      assert.equal(JSON.stringify(error.posterDiagnostic).includes('s1.private'), false)
+      return true
+    })
+  })
+
+  it('diagnoses an error JSON response without exposing its body', async () => {
+    await assert.rejects(() => createCheckInCodeAsset({
+      ...input,
+      env,
+      cloud: {
+        openapi: { wxacode: { async getUnlimited() { return { buffer: Buffer.from('{"errcode":41001,"errmsg":"secret-token"}') } } } },
+        async uploadFile() { throw new Error('should not upload') },
+      },
+      database: { async query() { throw new Error('should not write') } },
+    }), error => {
+      assert.equal(error.posterDiagnostic.stage, 'wxacode.response')
+      assert.equal(error.posterDiagnostic.code, '41001')
+      assert.equal(JSON.stringify(error.posterDiagnostic).includes('secret-token'), false)
+      return true
+    })
+  })
+
+  it('tags database insert failures without changing the original error', async () => {
+    await assert.rejects(() => createCheckInCodeAsset({
+      ...input,
+      env,
+      cloud: posterCloud(),
+      database: {
+        async query() { throw Object.assign(new Error('db secret'), { code: 'ER_ACCESS_DENIED' }) },
+        async one() { return null },
+      },
+    }), error => {
+      assert.equal(error.message, 'db secret')
+      assert.deepEqual(error.posterDiagnostic, { stage: 'media_assets.insert', code: 'ER_ACCESS_DENIED' })
+      return true
+    })
+  })
+
+  it('tags binding transaction failures and still performs cleanup lookup', async () => {
+    let lookupCount = 0
+    await assert.rejects(() => createCheckInCodeAsset({
+      ...input,
+      env,
+      cloud: posterCloud(),
+      database: {
+        async query() { return { affectedRows: 1 } },
+        async one() { lookupCount += 1; return { owner_user_id: null, status: 'PENDING' } },
+        async transaction() { throw Object.assign(new Error('db timeout'), { code: 'ETIMEDOUT' }) },
+      },
+    }), error => {
+      assert.equal(error.message, 'db timeout')
+      assert.deepEqual(error.posterDiagnostic, { stage: 'media_assets.bind', code: 'ETIMEDOUT' })
+      return true
+    })
+    assert.equal(lookupCount, 1)
+  })
+
   it('keeps a PENDING cleanup fact when closure wins and the exact delete is uncertain', async () => {
     let status = null
     const database = {

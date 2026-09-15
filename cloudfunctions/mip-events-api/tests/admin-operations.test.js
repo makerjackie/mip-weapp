@@ -11,13 +11,14 @@ const removedActions = [
   'mip.events.admin.undoCheckIn',
 ]
 
-function loadHandlerWithDatabaseProbe() {
+function loadHandlerWithDatabaseProbe(failure) {
   const indexPath = require.resolve('../index')
   delete require.cache[indexPath]
   const metrics = { databaseFactories: 0, operations: [] }
   const database = {
     async one(sql) {
       metrics.operations.push({ kind: 'one', sql })
+      if (failure) throw failure
       return null
     },
     async query(sql) {
@@ -59,6 +60,28 @@ function loadHandlerWithDatabaseProbe() {
 }
 
 describe('MIP event administration boundary', () => {
+  it('returns fixed poster messages and only numeric provider codes without exposing exception content', async () => {
+    for (const [diagnostic, message] of [
+      [{ stage: 'wxacode.getUnlimited', code: '-604101' }, '微信码生成失败，请稍后重试（-604101）'],
+      [{ stage: 'storage.uploadFile', code: 'secret-token' }, '海报上传失败，请稍后重试'],
+      [{ stage: 'unknown-secret-stage', code: '41001' }, '活动服务暂时不可用'],
+      [undefined, '活动服务暂时不可用'],
+    ]) {
+      const failure = new Error('secret-token https://example.test/private?secret=hidden')
+      failure.posterDiagnostic = diagnostic
+      const { handler } = loadHandlerWithDatabaseProbe(failure)
+      const originalError = console.error
+      let result
+      try {
+        console.error = () => {}
+        result = await handler.main({ action: 'health' })
+      }
+      finally { console.error = originalError }
+      assert.deepEqual(result, { ok: false, error: { code: 'SERVICE_UNAVAILABLE', message, retryable: true } })
+      assert.doesNotMatch(JSON.stringify(result), /secret|private|hidden/)
+    }
+  })
+
   it('rejects legacy mutation routes before resolving identity or touching MySQL', async () => {
     const { handler, metrics } = loadHandlerWithDatabaseProbe()
 

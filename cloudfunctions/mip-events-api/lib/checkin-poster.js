@@ -2,9 +2,11 @@
 
 const { createHash, createHmac, randomUUID } = require('node:crypto')
 const { DomainError } = require('../domain/rules')
+const { createWechatCodeProvider } = require('./wechat-code-provider')
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff])
+const DIAGNOSTIC_CODE_PATTERN = /^[A-Za-z0-9_.-]{1,64}$/
 const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const EVENT_CODE_SPECS = Object.freeze({
   CHECKIN_POSTER: {
@@ -18,6 +20,8 @@ const EVENT_CODE_SPECS = Object.freeze({
     forbiddenMessage: '当前账号不能生成活动分享码',
   },
 })
+let recentWechatProvider
+let recentWechatProviderKey = ''
 
 function deploymentStage(value) {
   const stage = String(value || '').trim().toLowerCase()
@@ -100,6 +104,30 @@ function imageContent(content) {
   return null
 }
 
+function diagnosticCode(error) {
+  const value = error?.errCode ?? error?.errcode ?? error?.code ?? error?.errorCode
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  return typeof value === 'string' && DIAGNOSTIC_CODE_PATTERN.test(value) ? value : 'UNKNOWN'
+}
+
+function posterDiagnostic(error, stage, code) {
+  const wrapped = error instanceof Error ? error : new Error('CHECKIN_POSTER_UNAVAILABLE')
+  wrapped.posterDiagnostic = { stage, code: code || diagnosticCode(error) }
+  return wrapped
+}
+
+function responseErrorCode(response, content) {
+  const direct = response && typeof response === 'object' && !Buffer.isBuffer(response) ? response : null
+  const hasDirectCode = direct && (direct.errCode !== undefined || direct.errcode !== undefined || direct.errorCode !== undefined)
+  const candidate = hasDirectCode
+    ? direct
+    : content && content.length <= 4096
+      ? (() => { try { return JSON.parse(content.toString('utf8')) } catch { return null } })()
+      : null
+  const value = candidate?.errCode ?? candidate?.errcode ?? candidate?.errorCode
+  return typeof value === 'number' && Number.isFinite(value) ? String(value) : ''
+}
+
 async function deleteUploadedObject(cloud, fileId, objectKey) {
   if (typeof cloud?.deleteFile !== 'function') return false
   try {
@@ -129,36 +157,72 @@ async function createEventCodeAsset({
   createId = randomUUID,
 }) {
   const spec = EVENT_CODE_SPECS[purpose]
+  const configuredAppId = String(env.MIP_WECHAT_APP_ID || '').trim()
+  const configuredSecret = String(env.MIP_WECHAT_APP_SECRET || '')
+  if (Boolean(configuredAppId) !== Boolean(configuredSecret)) {
+    throw posterDiagnostic(new Error('CHECKIN_POSTER_CONFIG_REQUIRED'), 'wxacode.config')
+  }
   if (!spec
     || !spec.scenePattern.test(scene)
     || scene.length > 32
-    || typeof cloud?.openapi?.wxacode?.getUnlimited !== 'function'
+    || (!configuredSecret && typeof cloud?.openapi?.wxacode?.getUnlimited !== 'function')
     || typeof cloud?.uploadFile !== 'function') {
     throw new Error('CHECKIN_POSTER_UNAVAILABLE')
   }
   const stage = deploymentStage(env.MIP_DEPLOYMENT_STAGE)
   // Validate the scope and configuration before making an external API call.
   buildEventCodeKey({ appId, eventId, referenceId, purpose, env })
-  const response = await cloud.openapi.wxacode.getUnlimited({
-    scene,
-    page: 'packages/member/mip-events/detail/index',
-    width: 430,
-    checkPath: false,
-    envVersion: codeEnvironment(stage),
-  })
+  if (configuredSecret && configuredAppId !== appId) {
+    throw posterDiagnostic(new Error('CHECKIN_POSTER_CONFIG_REQUIRED'), 'wxacode.config')
+  }
+  let codeProvider = cloud?.openapi?.wxacode
+  if (configuredSecret) {
+    const providerKey = `${configuredAppId}\0${configuredSecret}`
+    if (providerKey !== recentWechatProviderKey) {
+      recentWechatProvider = createWechatCodeProvider({ appId, appSecret: configuredSecret, expectedAppId: configuredAppId })
+      recentWechatProviderKey = providerKey
+    }
+    codeProvider = recentWechatProvider
+  }
+  let response
+  try {
+    response = await codeProvider.getUnlimited({
+      scene,
+      page: 'packages/member/mip-events/detail/index',
+      width: 430,
+      checkPath: false,
+      envVersion: codeEnvironment(stage),
+    })
+  }
+  catch (error) {
+    throw posterDiagnostic(error, 'wxacode.getUnlimited')
+  }
   const content = binaryBuffer(response) || binaryBuffer(response?.buffer)
   const format = content && content.length <= 2 * 1024 * 1024 ? imageContent(content) : null
   if (!content || !format || content.length < 3) {
-    throw new Error('CHECKIN_POSTER_UNAVAILABLE')
+    throw posterDiagnostic(new Error('CHECKIN_POSTER_UNAVAILABLE'), 'wxacode.response', responseErrorCode(response, content))
   }
   const objectKey = buildEventCodeKey({ appId, eventId, referenceId, purpose, extension: format.extension, env })
-  const uploaded = await cloud.uploadFile({ cloudPath: objectKey, fileContent: content })
+  let uploaded
+  try {
+    uploaded = await cloud.uploadFile({ cloudPath: objectKey, fileContent: content })
+  }
+  catch (error) {
+    throw posterDiagnostic(error, 'storage.uploadFile')
+  }
   const codeUrl = typeof uploaded?.fileID === 'string' ? uploaded.fileID.trim() : ''
-  assertUploadedObject(codeUrl, objectKey)
+  try {
+    assertUploadedObject(codeUrl, objectKey)
+  }
+  catch (error) {
+    throw posterDiagnostic(error, 'storage.uploadFile.response')
+  }
   const assetId = createId()
   let tombstoneRegistered = false
   const registerTombstone = async () => {
-    const pending = await database.query(
+    let pending
+    try {
+      pending = await database.query(
       `INSERT INTO mip_media_assets (
         id, app_id, owner_user_id, purpose, object_key, cloud_file_id,
         content_sha256, content_type, content_bytes, width_px, height_px, status
@@ -173,13 +237,18 @@ async function createEventCodeAsset({
         format.contentType,
         content.length,
       ],
-    )
-    if (Number(pending?.affectedRows) !== 1) throw new Error('CHECKIN_POSTER_UNAVAILABLE')
+      )
+    }
+    catch (error) {
+      throw posterDiagnostic(error, 'media_assets.insert')
+    }
+    if (Number(pending?.affectedRows) !== 1) throw posterDiagnostic(new Error('CHECKIN_POSTER_UNAVAILABLE'), 'media_assets.insert')
     tombstoneRegistered = true
   }
   try {
     await registerTombstone()
-    await database.transaction(async (tx) => {
+    try {
+      await database.transaction(async (tx) => {
       const owner = await tx.one(
         `SELECT id, status FROM mip_users
          WHERE app_id = ? AND id = ? FOR UPDATE`,
@@ -196,9 +265,14 @@ async function createEventCodeAsset({
         [ownerUserId, appId, assetId, purpose],
       )
       if (Number(result?.affectedRows) !== 1) {
-        throw new Error('CHECKIN_POSTER_UNAVAILABLE')
+        throw posterDiagnostic(new Error('CHECKIN_POSTER_UNAVAILABLE'), 'media_assets.bind')
       }
-    })
+      })
+    }
+    catch (error) {
+      if (error instanceof DomainError) throw error
+      throw posterDiagnostic(error, 'media_assets.bind')
+    }
   }
   catch (error) {
     let uploadState

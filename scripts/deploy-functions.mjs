@@ -509,8 +509,8 @@ try {
         console.log(`[mip-cloud-deploy] configuration already current ${spec.name}`)
       }
     }
-    if (spec.role === 'admin') {
-      await ensureAdminWebPublicNetwork(spec.name)
+    if (['admin', 'events'].includes(spec.role)) {
+      await ensureWechatApiPublicNetwork(spec.name)
     }
     const codeUpdate = {
       action: 'updateFunctionCode',
@@ -948,6 +948,8 @@ function environmentForRole(role, options) {
     },
     events: {
       ...agreementEnvironment,
+      MIP_WECHAT_APP_ID: options.appId,
+      MIP_WECHAT_APP_SECRET: options.wechatAppSecret,
       MIP_EVENT_TOKEN_SECRET: options.secrets.eventToken,
       MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,
       MIP_PAYMENT_MODE: options.paymentMode,
@@ -1166,7 +1168,7 @@ async function waitForExistingFunctionConvergence({ baselineSha256 = '', before,
   throw new Error(`${functionName} ${phase} readback did not converge`)
 }
 
-async function ensureAdminWebPublicNetwork(functionName) {
+async function ensureWechatApiPublicNetwork(functionName) {
   const beforeDetail = existingFunctionDetail(functionName)
   const before = functionConfigurationSnapshot(beforeDetail)
   if (functionDetail(beforeDetail)?.PublicNetConfig?.PublicNetStatus === 'ENABLE') {
