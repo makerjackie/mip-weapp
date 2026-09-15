@@ -3,6 +3,7 @@ import type { AdminDetailPager, AdminDetailRoute, AdminDetailView } from '../../
 import type { AdminOperationRow, AdminRowOperation } from '../../modules/admin-row-operations'
 import { ErrorState, LoadingState } from './feedback-states'
 import { StatusTag } from './status-tag'
+import { OVERLAY_Z_INDEX } from './overlay-z-index'
 
 export function DetailDrawer({ open, view, loading, error, onClose, actions, onRowAction, onNestedView, onPagerChange }: {
   open: boolean
@@ -18,6 +19,7 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
   return (
     <Drawer
       className="detail-drawer"
+      zIndex={OVERLAY_Z_INDEX.drawer}
       size={820}
       open={open}
       onClose={onClose}

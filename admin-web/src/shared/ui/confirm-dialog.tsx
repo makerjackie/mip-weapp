@@ -1,4 +1,5 @@
 import { Modal } from 'antd'
+import { OVERLAY_Z_INDEX } from './overlay-z-index'
 
 export function ConfirmDialog({ open, title, description, confirmText = '确认', danger, loading, onConfirm, onCancel }: {
   open: boolean
@@ -12,6 +13,7 @@ export function ConfirmDialog({ open, title, description, confirmText = '确认'
 }) {
   return (
     <Modal
+      zIndex={OVERLAY_Z_INDEX.confirmation}
       open={open}
       title={title}
       okText={confirmText}

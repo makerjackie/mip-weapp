@@ -172,6 +172,14 @@ button, input, select, textarea { font: inherit; }
   .detail-fields, .detail-metrics, .mutation-grid { grid-template-columns: minmax(0, 1fr); }
   .mutation-field--wide, .mutation-fieldset { grid-column: auto; }
   .mutation-dialog { max-width: calc(100vw - 28px); margin: 14px auto; }
+  .ant-picker-dropdown { position: fixed !important; inset: 24px auto auto 24px !important; width: calc(100vw - 48px) !important; min-width: 0 !important; max-width: calc(100vw - 48px) !important; }
+  .ant-picker-dropdown .ant-picker-panel-container { width: 100% !important; max-width: 100% !important; max-height: calc(100dvh - 48px); overflow-y: auto; }
+  .ant-picker-dropdown .ant-picker-panel-container.ant-picker-datetime-panel-container > .ant-picker-panel-layout { width: 100% !important; max-width: 100% !important; flex-direction: column !important; }
+  .ant-picker-dropdown .ant-picker-datetime-panel-container .ant-picker-panel { width: 100% !important; max-width: 100% !important; }
+  .ant-picker-dropdown .ant-picker-datetime-panel-container .ant-picker-datetime-panel { width: 100% !important; max-width: 100% !important; flex-direction: column !important; }
+  .ant-picker-dropdown .ant-picker-panel-container.ant-picker-datetime-panel-container .ant-picker-time-panel { width: 100% !important; border-inline-start: 0; border-top: 1px solid var(--mip-line); }
+  .ant-picker-dropdown .ant-picker-panel-container.ant-picker-datetime-panel-container .ant-picker-time-panel-column { width: 33.333% !important; }
+  .ant-picker-dropdown .ant-picker-footer { display: flex; flex-wrap: wrap; gap: 8px; }
   .login-challenge strong { font-size: 28px; }
 }
 

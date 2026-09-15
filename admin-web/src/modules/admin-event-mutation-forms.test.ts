@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
 import { describe, it } from 'node:test'
 import {
   EVENT_MUTATION_ACTIONS,
@@ -18,6 +19,31 @@ const baseEvent = {
 }
 
 describe('event mutation form contracts', () => {
+  it('produces registration schemas accepted unchanged by the actual server validator', () => {
+    const require = createRequire(import.meta.url)
+    const { normalizeRegistrationSchema } = require('../../../cloudfunctions/mip-admin-api/domain/registration-schema.js')
+    const schema = [
+      { key: 'field_0123456789abcdef', label: '姓名', type: 'TEXT', required: true },
+      { key: 'intro', label: '介绍', type: 'TEXTAREA', required: false, maxLength: 1000 },
+      { key: 'role', label: '身份', type: 'SELECT', required: true, options: ['成员', '嘉宾'] },
+      { key: 'consent', label: '参与交流', type: 'BOOLEAN', required: false },
+    ]
+    const result = buildEventMutationInput('mip.admin.events.save', { ...baseEvent, registrationSchema: schema })
+    assert.ok(result && 'draft' in result)
+    const draft = result.draft as { registrationSchema: unknown }
+    assert.deepEqual(normalizeRegistrationSchema(draft.registrationSchema), draft.registrationSchema)
+    for (const invalid of [
+      [{ ...schema[0], key: 'field-1' }],
+      [schema[0], schema[0]],
+      [{ ...schema[0], maxLength: 201 }],
+      [{ ...schema[1], maxLength: 1001 }],
+      [{ ...schema[0], label: '字'.repeat(61) }],
+      [{ ...schema[2], options: Array.from({ length: 21 }, (_, i) => String(i)) }],
+      Array.from({ length: 13 }, (_, i) => ({ ...schema[0], key: `field_${i}` })),
+    ]) {
+      assert.equal(buildEventMutationInput('mip.admin.events.save', { ...baseEvent, registrationSchema: invalid }), null)
+    }
+  })
   it('declares every requested action with a capability and typed fields', () => {
     assert.equal(EVENT_MUTATION_ACTIONS.length, 10)
     for (const action of EVENT_MUTATION_ACTIONS) {
@@ -71,6 +97,8 @@ describe('event mutation form contracts', () => {
     const result = validateEventMutationInput('mip.admin.events.tags.replace', { eventId: 'event-1', expectedVersion: '1', tagIds: ['tag-1', 'tag-1'] })
     assert.equal(result.ok, false)
     if (!result.ok) assert.equal(result.errors[0]?.field, 'tagIds')
+    assert.equal(buildEventMutationInput('mip.admin.events.save', { ...baseEvent, registrationSchema: [{ key: 'role', label: '身份', type: 'SELECT', required: true }] }), null)
+    assert.deepEqual((buildEventMutationInput('mip.admin.events.save', { ...baseEvent, registrationSchema: [{ key: 'role', label: '身份', type: 'SELECT', required: true, options: ['成员', '嘉宾'] }] }) as { draft: { registrationSchema: unknown } }).draft.registrationSchema, [{ key: 'role', label: '身份', type: 'SELECT', required: true, options: ['成员', '嘉宾'] }])
   })
 
   it('supports the shared definition adapter without trusting submitted ids or versions', () => {

@@ -30,6 +30,7 @@ export type EventMutationFieldKind =
   | 'asset-list'
   | 'tags'
   | 'json'
+  | 'registration-schema'
 
 export interface EventMutationFieldOption {
   value: string
@@ -44,6 +45,7 @@ export interface EventMutationFieldConfig {
   kind: EventMutationFieldKind
   required?: boolean
   hidden?: boolean
+  wide?: boolean
   maxLength?: number
   options?: readonly EventMutationFieldOption[]
 }
@@ -97,9 +99,9 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'capacity', label: '活动名额', kind: 'number' },
   { key: 'waitlistEnabled', label: '候补报名', kind: 'checkbox' },
   { key: 'priceCents', label: '金额（分）', kind: 'number' },
-  // The service accepts this opaque array. It is kept as a hidden value so an edit
-  // does not accidentally erase registration fields that the web form does not edit.
-  { key: 'registrationSchema', label: '报名字段配置', kind: 'json', hidden: true },
+  // The service accepts this typed array; the shared dialog renders a small editor
+  // so edits preserve fields without asking operators to edit raw JSON.
+  { key: 'registrationSchema', label: '报名字段', kind: 'registration-schema', wide: true },
 ]
 
 const EVENT_MUTATION_CONFIGS = {
@@ -346,6 +348,36 @@ function tagIds(value: unknown) {
   return [...ids].sort()
 }
 
+function registrationSchema(value: unknown) {
+  if (!Array.isArray(value) || value.length > 12) throw new FormValidationError('registrationSchema', '最多添加 12 个报名字段')
+  const keys = new Set<string>()
+  const result = value.map((item, index) => {
+    const errorKey = `registrationSchema.${index}`
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new FormValidationError(errorKey, '报名字段配置无效')
+    const field = item as Record<string, unknown>
+    const key = text(field.key, errorKey, 48, true)
+    const label = text(field.label, errorKey, 60, true)
+    if (!/^[a-z][a-z0-9_]{0,47}$/.test(key) || keys.has(key)) throw new FormValidationError(errorKey, '报名字段标识无效或重复')
+    if (/[\r\n]/.test(label)) throw new FormValidationError(errorKey, '报名字段名称不能换行')
+    keys.add(key)
+    const type = enumValue(field.type, errorKey, ['TEXT', 'TEXTAREA', 'SELECT', 'BOOLEAN'] as const)
+    if (field.required !== undefined && typeof field.required !== 'boolean') throw new FormValidationError(errorKey, '报名字段必填设置无效')
+    const normalized: Record<string, unknown> = { key, label, type, required: field.required === true }
+    if (type === 'TEXT' || type === 'TEXTAREA') {
+      normalized.maxLength = integer(field.maxLength ?? (type === 'TEXT' ? 120 : 500), errorKey, 1, type === 'TEXT' ? 200 : 1000)
+    }
+    if (type === 'SELECT') {
+      if (!Array.isArray(field.options) || !field.options.length || field.options.length > 20) throw new FormValidationError(errorKey, '单选字段需要 1–20 个选项')
+      const options = field.options.map(option => text(option, errorKey, 60, true))
+      if (options.some(option => /[\r\n]/.test(option)) || new Set(options).size !== options.length) throw new FormValidationError(errorKey, '报名选项不能换行或重复')
+      normalized.options = options
+    }
+    return normalized
+  })
+  if (new TextEncoder().encode(JSON.stringify(result)).length > 16 * 1024) throw new FormValidationError('registrationSchema', '报名字段内容过多')
+  return result
+}
+
 function eventDraft(values: EventMutationValues) {
   const startsAt = requiredDate(values.startsAt, '开始时间')
   const endsAt = requiredDate(values.endsAt, '结束时间')
@@ -378,8 +410,8 @@ function eventDraft(values: EventMutationValues) {
   const cancellationDeadline = optionalDate(values.cancellationDeadline, '取消截止时间')
   if (registrationDeadline && new Date(registrationDeadline).getTime() > new Date(startsAt).getTime()) throw new FormValidationError('registrationDeadline', '报名截止时间不能晚于活动开始时间')
   if (cancellationDeadline && new Date(cancellationDeadline).getTime() > new Date(startsAt).getTime()) throw new FormValidationError('cancellationDeadline', '取消截止时间不能晚于活动开始时间')
-  const registrationSchema = values.registrationSchema === undefined || values.registrationSchema === '' ? [] : values.registrationSchema
-  if (!Array.isArray(registrationSchema)) throw new FormValidationError('registrationSchema', '报名字段配置无效')
+  const registrationSchemaValue = values.registrationSchema === undefined || values.registrationSchema === '' ? [] : values.registrationSchema
+  const registrationSchemaResult = registrationSchema(registrationSchemaValue)
   return {
     scopeType,
     branchId,
@@ -412,7 +444,7 @@ function eventDraft(values: EventMutationValues) {
     capacity,
     waitlistEnabled,
     priceCents,
-    registrationSchema: [...registrationSchema],
+    registrationSchema: registrationSchemaResult,
   }
 }
 

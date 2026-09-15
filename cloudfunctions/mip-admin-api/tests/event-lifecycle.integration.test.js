@@ -8,7 +8,6 @@ const { createRegistration, getMyRegistration } = require('../../mip-events-api/
 const APP_ID = 'wx-event-lifecycle'
 const ADMIN_ID = '11111111-1111-4111-8111-111111111111'
 const USER_ID = '22222222-2222-4222-8222-222222222222'
-const EVENT_ID = '33333333-3333-4333-8333-333333333333'
 const NOW = new Date('2030-08-25T00:00:00.000Z')
 
 function lifecycleDatabase() {
@@ -124,6 +123,7 @@ function lifecycleDatabase() {
 }
 
 function repository(database) {
+  let idSequence = 0
   return createAdminEventRepository(database, {
     assertAuthorizedScope() {},
     assertMutationScope() {},
@@ -133,7 +133,10 @@ function repository(database) {
     eventScopeFromRow(row, eventId = row.id) {
       return { scopeType: 'EVENT', scopeId: eventId, branchId: row.branch_id || null }
     },
-    createId: () => EVENT_ID,
+    createId: () => {
+      idSequence += 1
+      return `66666666-6666-4666-8666-${String(idSequence).padStart(12, '0')}`
+    },
     now: () => NOW,
     repositorySupport: {
       codeError: code => Object.assign(new Error(code), { code }),
@@ -185,6 +188,8 @@ describe('event lifecycle integration', () => {
     assert.deepEqual({ id: roster.items[0].id, nickname: roster.items[0].nickname, status: roster.items[0].status, version: roster.items[0].version }, { id: state.registration.id, nickname: '测试参与者', status: 'REGISTERED', version: 1 })
     const checkedIn = await events.checkIn({ appId: APP_ID, actorUserId: ADMIN_ID, eventId: created.id, registrationId: registration.registrationId, expectedVersion: 1, authorizedScope: { scopeType: 'EVENT', scopeId: created.id, branchId: null }, audit: {} })
     assert.equal(checkedIn.status, 'ATTENDED')
+    assert.ok(state.checkin.id)
+    assert.notEqual(state.checkin.id, created.id)
     const repeated = await events.checkIn({ appId: APP_ID, actorUserId: ADMIN_ID, eventId: created.id, registrationId: registration.registrationId, expectedVersion: 2, authorizedScope: { scopeType: 'EVENT', scopeId: created.id, branchId: null }, audit: {} })
     assert.equal(repeated.idempotent, true)
     const undone = await events.undoCheckIn({ appId: APP_ID, actorUserId: ADMIN_ID, eventId: created.id, registrationId: registration.registrationId, expectedVersion: 2, reason: '测试撤销', authorizedScope: { scopeType: 'EVENT', scopeId: created.id, branchId: null }, audit: {} })
