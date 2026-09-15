@@ -171,6 +171,11 @@ describe('profile visits', () => {
       },
       async query(sql, params) {
         if (sql.includes('INSERT INTO mip_idempotency_keys')) idempotency = { request_hash: params[5], status: 'RUNNING' }
+        if (sql.includes('INSERT INTO mip_audit_logs')) {
+          assert.equal(params[7], visitorId)
+          assert.ok(params[7].length <= 36, 'audit resource_id must fit the database column')
+          assert.equal(JSON.parse(params[9]).profileRef, visitorRef)
+        }
         if (sql.includes('UPDATE mip_profile_visits')) updated += 1
         if (sql.includes('UPDATE mip_idempotency_keys')) idempotency.status = 'COMPLETED'
         return { affectedRows: 1 }

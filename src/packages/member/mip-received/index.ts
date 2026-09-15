@@ -199,6 +199,7 @@ Page({
     totalViewState: 'loading' as 'loading' | 'ready' | 'error',
     nextCursor: '',
     loadingMore: false,
+    refreshing: false,
     openingKey: '',
     accessToken: '',
     message: '',
@@ -321,6 +322,7 @@ Page({
       return
     }
     this.markingVisitorsRead = true
+    this.setData({ refreshing: true })
     let failed = false
     try {
       for (const item of displayed) {
@@ -351,6 +353,7 @@ Page({
     }
     finally {
       this.markingVisitorsRead = false
+      this.setData({ refreshing: false })
     }
   },
 
@@ -421,12 +424,21 @@ Page({
   },
 
   retry() {
+    if (this.data.refreshing) {
+      return
+    }
     if (this.data.state !== 'error' && !(this.data.state === 'ready' && this.data.message)) {
       return
     }
-    return this.accessReady
+    this.setData({ refreshing: true })
+    const refresh = this.accessReady
       ? this.loadCategory(this.data.category, true)
       : this.checkAccess()
+    return refresh.finally(() => {
+      if (!this.markingVisitorsRead) {
+        this.setData({ refreshing: false })
+      }
+    })
   },
 
   copyLoadingDiagnostics() {

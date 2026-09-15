@@ -165,7 +165,7 @@ Page({
 
   async toggleInterest() {
     const item = this.data.item
-    if (!item || item.mine || this.data.acting || this.data.interestPending) {
+    if (!item || item.mine || this.data.acting) {
       return
     }
     if (this.hasCachedInterestAccess()) {
@@ -226,7 +226,7 @@ Page({
 
   performToggleInterest() {
     const item = this.data.item
-    if (!item || item.mine || this.data.interestPending) {
+    if (!item || item.mine) {
       return
     }
     const interest = profileInterestMutations.mutate({

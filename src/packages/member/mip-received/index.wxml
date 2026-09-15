@@ -137,7 +137,7 @@
       </view>
     </view>
     <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}<t-button wx:if="{{category === 'VISITOR'}}" variant="text" bind:tap="retry">刷新重试</t-button></view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}<t-button wx:if="{{category === 'VISITOR'}}" variant="text" loading="{{refreshing}}" disabled="{{refreshing}}" bind:tap="retry">{{refreshing ? '正在刷新' : '刷新重试'}}</t-button></view>
     </block>
     <app-page-exit />
   </block>

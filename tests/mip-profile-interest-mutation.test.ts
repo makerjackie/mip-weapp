@@ -152,7 +152,7 @@ describe('profile interest optimistic mutation', () => {
     })
     unknown.mutate(mutation(true))
     await unknown.flush()
-    expect(unknown.get(targetProfileRef)).toEqual({ active: true, pending: true })
+    expect(unknown.get(targetProfileRef)).toEqual({ active: true, pending: true, error: { code: 'RESULT_UNKNOWN', message: '网络连接中断，操作尚未确认，请重新进入页面重试' } })
   })
 
   it('serializes a fast second tap and sends only the final follow-up state', async () => {

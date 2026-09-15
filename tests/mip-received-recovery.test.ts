@@ -103,6 +103,29 @@ describe('received interactions failure recovery', () => {
     expect(p.data.items).toEqual([expect.objectContaining({ actorName: '访客甲', unread: false })])
   })
 
+  it('shows refresh progress and prevents duplicate retry while retaining the visitor list', async () => {
+    const p = page()
+    p.accessReady = true
+    const visitors = parseReceivedVisitors({ items: [{ profileRef: 'public-ref', nickname: '访客甲', visitCount: 1, lastVisitedAt: '2026-09-12T03:00:00Z', unread: true }], unreadCount: 1 })
+    mocks.list.mockResolvedValue(visitors)
+    mocks.markRead.mockRejectedValueOnce(new Error('offline'))
+    await p.loadCategory('VISITOR', true)
+    await vi.waitFor(() => expect(p.data.message).toContain('刷新重试'))
+    let finish!: (value: unknown) => void
+    mocks.list.mockImplementationOnce(() => new Promise((resolve) => {
+      finish = resolve
+    }))
+    const retry = p.retry()
+    expect(p.data.refreshing).toBe(true)
+    expect(p.data.state).toBe('ready')
+    expect(p.retry()).toBeUndefined()
+    expect(mocks.list).toHaveBeenCalledTimes(2)
+    finish(visitors)
+    await retry
+    await vi.waitFor(() => expect(p.data.refreshing).toBe(false))
+    expect(p.data.message).toBe('')
+  })
+
   it('refreshes expired identity before retrying unread synchronization', async () => {
     const p = page()
     p.accessReady = true

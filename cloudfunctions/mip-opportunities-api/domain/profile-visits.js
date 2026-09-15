@@ -251,7 +251,7 @@ async function markProfileVisitorRead(database, caller, rawInput = {}) {
       actorUserId: caller.userId,
       action: 'PROFILE_VISITOR_READ',
       resourceType: 'PROFILE_VISIT_GROUP',
-      resourceId: profileRef,
+      resourceId: visitorUserId,
       metadata: { profileRef },
     })
     return { messageId: profileRef, profileRef, readAt: iso(readAt?.read_at) }

@@ -277,6 +277,7 @@ export function createProfileInterestMutationStore(options: ProfileInterestMutat
           return
         }
         if (!(error instanceof MipOpportunityError) || error.resultUnknown) {
+          current.error = { code: 'RESULT_UNKNOWN', message: '网络连接中断，操作尚未确认，请重新进入页面重试' }
           persist()
           emit(current)
           return

@@ -156,7 +156,7 @@ Page({
   },
 
   async toggleInterest() {
-    if (this.data.interestPending) {
+    if (this.data.acting) {
       return
     }
     if (this.hasCachedInterestAccess()) {
@@ -225,7 +225,7 @@ Page({
 
   async performInteraction(interaction: Interaction) {
     const item = this.data.item
-    if (!item || (interaction === 'interest' ? this.data.interestPending : this.data.acting)) {
+    if (!item || this.data.acting) {
       return
     }
     if (interaction === 'interest') {

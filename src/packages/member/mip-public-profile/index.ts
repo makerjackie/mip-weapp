@@ -287,7 +287,7 @@ Page({
   },
 
   toggleInterest() {
-    if (this.data.isSelf || ['loading', 'syncing'].includes(this.data.interestState)) {
+    if (this.data.isSelf || this.data.interestState === 'loading') {
       return
     }
     void this.runProfileAction('interest')
