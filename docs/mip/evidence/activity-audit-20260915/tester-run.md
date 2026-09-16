@@ -77,9 +77,18 @@
 
 - 最终 Web 部署 `cc9b26bc`；390×844 实际截图确认标题完整、按钮独占下一行，随后恢复默认视口。
 - `mip-events-api` 更新代码后，通过同一小程序、同一活动重新打开报名页：`state=blocked`、`registration.canEdit=false`、`editing=false`，显示“当前报名状态或活动时间不支持修改”；答案与报名版本仍保留。
-- **云管理验收未通过**：部署脚本在代码更新后的健康调用处退出 1；单独 `cloud:verify` 也未取得健康响应。进一步只读调用定位为 `[Invoke] Cam authentication failed`，本地 Device Flow 与 API Key 通道均相同。没有绕过验收或扩大账号权限。实际小程序业务回读已证明修复生效，但不能据此宣称完整云管理验收通过。
+- **云管理验收首次未通过（后续已恢复，见下）**：部署脚本在代码更新后的健康调用处退出 1；单独 `cloud:verify` 也未取得健康响应。进一步只读调用定位为 `[Invoke] Cam authentication failed`，本地 Device Flow 与 API Key 通道均相同。没有绕过验收或扩大账号权限。实际小程序业务回读已证明修复生效，但不能据此宣称完整云管理验收通过。
 - `pnpm docs:check` 与 `git diff --check` 通过。
 
 ### 仍需独立验收
 
 第二身份的候补/审核、真实并发与重复扫码、真机扫码、相册保存、手机号、订阅消息、支付与退款仍未在本轮完成。手动结束已实测，按自然时间结束未等待到实际结束时刻。本轮未上传新的微信版本。
+
+
+## 2026-09-16 云管理健康检查恢复
+
+针对 `[Invoke] Cam authentication failed`，使用既有、已授权的 `CLOUDBASE_AUTH_MODE=local` 重启 canonical MCP 常驻进程，没有重新扫码、扩大权限或修改函数代码。重启后同一 `mip-events-api` 健康请求返回 `ok=true`、`persistence=cloudbase-mysql`，证据指向常驻进程缓存的授权状态。
+
+随后完整 `cloud:verify` 退出码 0，2026-09-16 11:46（北京时间）完成 19 个函数验收；数据库结构、最小权限、函数健康、受保护调用规则及禁止高频 timer 检查通过。上节云管理验收阻塞已解除；真机与支付等尚未覆盖的业务场景仍按原记录保留。
+
+恢复步骤已写入 [故障排查](../../../TROUBLESHOOTING.md)。
