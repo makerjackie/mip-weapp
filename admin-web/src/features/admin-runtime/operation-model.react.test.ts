@@ -238,6 +238,14 @@ describe('admin operation model', () => {
     expect((input?.draft as Record<string, unknown>).startedOn).toBe('2030-01-02')
     expect(Object.hasOwn(input?.draft as object, 'roleKey')).toBe(false)
   })
+
+  it('builds the versioned end-event payload and end confirmation copy', async () => {
+    const model = await createOperationModel('mip.admin.events.changeStatus', 'event-1', basicDetail,
+      { targetStatus: 'ENDED' }, async <T>() => ({} as T))
+    expect(model.title).toBe('结束活动')
+    expect(model.description).toContain('停止报名')
+    expect(model.buildInput(model.values)).toEqual({ eventId: 'event-1', expectedVersion: 4, status: 'ENDED' })
+  })
   it('submits local calendar dates from the picker for weekly matches and super cases', async () => {
     const date = dayjs.utc('2026-09-13T16:00:00Z').utcOffset(480)
     const seasonId = '11111111-1111-4111-8111-111111111111'

@@ -54,7 +54,7 @@ const BASIC_OPERATION_ACTIONS = [
 
 type BasicOperationAction = typeof BASIC_OPERATION_ACTIONS[number]
 type OperationLaunchContext = AdminOperationLaunchContext & {
-  targetStatus?: 'PUBLISHED' | 'UNPUBLISHED'
+  targetStatus?: 'PUBLISHED' | 'UNPUBLISHED' | 'ENDED'
 }
 
 export type ReviewedOperationAction = BasicOperationAction
@@ -203,7 +203,7 @@ function createBasicOperationModel(
   action: BasicOperationAction,
   targetId: string,
   readField: (sectionTitle: string, label: string) => string,
-  targetStatus: 'PUBLISHED' | 'UNPUBLISHED' | undefined,
+  targetStatus: 'PUBLISHED' | 'UNPUBLISHED' | 'ENDED' | undefined,
   idempotencyKey: string,
 ): OperationModel {
   // A version is a server fact. Never invent version 1 when the detail is
@@ -255,14 +255,16 @@ function createBasicOperationModel(
     return model({
       action,
       capability,
-      title: status === 'PUBLISHED' ? '发布活动' : '下架活动',
+      title: status === 'PUBLISHED' ? '发布活动' : status === 'ENDED' ? '结束活动' : '下架活动',
       description: status === 'PUBLISHED'
         ? '发布前由服务端校验内容安全、活动时间和当前版本。'
-        : '下架后活动不再接受新的公开报名，历史报名和订单事实会保留。',
+        : status === 'ENDED'
+          ? '结束后停止报名，无法重新发布；历史报名、签到和订单记录会保留。'
+          : '下架后活动不再接受新的公开报名，历史报名和订单事实会保留。',
     }, versionField(), values, idempotencyKey, (next) => {
       const version = positiveInteger(next.expectedVersion)
       const nextStatus = String(next.status)
-      return version !== undefined && ['PUBLISHED', 'UNPUBLISHED'].includes(nextStatus)
+      return version !== undefined && ['PUBLISHED', 'UNPUBLISHED', 'ENDED'].includes(nextStatus)
         ? { eventId: targetId, expectedVersion: version, status: nextStatus }
         : null
     })

@@ -112,6 +112,12 @@ describe('MIP registration edit eligibility', () => {
     assert.equal(canEditRegistration(fallback, 'REGISTERED', new Date('2026-08-26T00:00:00.000Z')), false)
   })
 
+  it('does not allow confirmed registrations to be edited after an event is ended or cancelled', () => {
+    assert.equal(canEditRegistration(eventRow({ status: 'ENDED' }), 'REGISTERED', now), false)
+    assert.equal(canEditRegistration(eventRow({ status: 'CANCELLED' }), 'REGISTERED', now), false)
+    assert.equal(canEditRegistration(eventRow({ status: 'UNPUBLISHED' }), 'REGISTERED', now), true)
+  })
+
   it('requires pending and waitlisted registrations to remain published and before activity start', () => {
     assert.equal(canEditRegistration(eventRow({ status: 'UNPUBLISHED' }), 'PENDING_REVIEW', now), false)
     assert.equal(canEditRegistration(eventRow({ status: 'CANCELLED' }), 'WAITLISTED', now), false)
@@ -216,6 +222,16 @@ describe('MIP registration mutation', () => {
         participationAccessPolicy: { requireAccess: async () => ({}) },
         input: updateInput({ idempotencyKey: `status-${status}` }),
         now,
+      }), 'CONFLICT')
+    }
+  })
+
+  it('rejects confirmed registration edits after the event is ended or cancelled', async () => {
+    for (const eventStatus of ['ENDED', 'CANCELLED']) {
+      const { database } = updateDatabase({ event: eventRow({ status: eventStatus }) })
+      await rejectCode(() => updateRegistration(database, {
+        appId: 'wx-app', userId: 'user-1', input: updateInput({ idempotencyKey: `event-status-${eventStatus}` }), now,
+        participationAccessPolicy: { requireAccess: async () => ({}) },
       }), 'CONFLICT')
     }
   })

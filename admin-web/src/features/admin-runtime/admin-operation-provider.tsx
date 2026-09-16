@@ -13,7 +13,7 @@ import {
 } from './operation-model'
 
 type LaunchOptions = AdminOperationLaunchContext & {
-  targetStatus?: 'PUBLISHED' | 'UNPUBLISHED'
+  targetStatus?: 'PUBLISHED' | 'UNPUBLISHED' | 'ENDED'
 }
 
 interface DialogModel {
@@ -163,7 +163,9 @@ export function AdminOperationProvider({ children }: { children: ReactNode }) {
       <ConfirmDialog
         open={Boolean(model && pendingValues)}
         title={model?.title || '确认操作'}
-        description="服务端会再次校验权限、作用范围、资源状态和当前版本。"
+        description={model?.action === 'mip.admin.events.changeStatus' && model.values.status === 'ENDED'
+          ? '结束后停止报名，无法重新发布；历史报名、签到和订单记录会保留。'
+          : '服务端会再次校验权限、作用范围、资源状态和当前版本。'}
         confirmText="确认提交"
         danger={Boolean(model?.action.includes('delete') || model?.action.includes('archive') || model?.action.includes('refund'))}
         loading={loading}

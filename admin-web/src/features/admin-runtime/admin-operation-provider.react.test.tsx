@@ -70,6 +70,11 @@ describe('event detail editing availability', () => {
     </AdminOperationProvider></App></QueryClientProvider>)
     expect(Boolean(screen.queryByRole('button', { name: '编辑活动' }))).toBe(['DRAFT', 'UNPUBLISHED'].includes(status))
     expect(screen.getByRole('button', { name: '克隆活动' })).toBeInTheDocument()
-    if (status === 'PUBLISHED') expect(screen.getByRole('button', { name: '下架活动' })).toBeInTheDocument()
+    if (status === 'PUBLISHED') {
+      expect(screen.getByRole('button', { name: '下架活动' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '结束活动' })).toBeInTheDocument()
+    } else {
+      expect(screen.queryByRole('button', { name: '结束活动' })).not.toBeInTheDocument()
+    }
   })
 })
