@@ -37,7 +37,45 @@ const pageRoutes = adminNavigation.map(item => createRoute({
   component: routeComponents[item.path],
 }))
 
-const routeTree = rootRoute.addChildren([indexRoute, ...pageRoutes])
+const eventEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/events/$eventId/edit',
+  component: routeComponents['/events/$eventId/edit'],
+})
+
+const taskEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/tasks/$taskId/edit',
+  component: routeComponents['/tasks/$taskId/edit'],
+})
+
+const opportunityEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/opportunities/$opportunityId/edit',
+  component: routeComponents['/opportunities/$opportunityId/edit'],
+})
+
+const knowledgeEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/knowledge/$contentId/edit',
+  component: routeComponents['/knowledge/$contentId/edit'],
+})
+
+const userContentEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/userContent/$contentId/edit',
+  component: routeComponents['/userContent/$contentId/edit'],
+})
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  ...pageRoutes,
+  eventEditRoute,
+  taskEditRoute,
+  opportunityEditRoute,
+  knowledgeEditRoute,
+  userContentEditRoute,
+])
 
 export const router = createRouter({
   routeTree,
