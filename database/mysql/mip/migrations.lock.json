@@ -966,11 +966,13 @@
       "version": "20260904800000",
       "name": "event_feedback_export",
       "sql": "database/mysql/mip/072_event_feedback_export.sql",
-      "sqlSha256": "25909262413a00232032141e09fe6e8b9835a4416c178e3c74fcad74c2fdb9d5",
+      "sqlSha256": "e5ba2cab70fda0cb89b0df665f480893784428577d995a99cf2b95ae8556fcaa",
       "rollback": "database/mysql/mip/rollback/072_event_feedback_export.sql",
-      "rollbackSha256": "41c6f44f73bdcff3536e660d62f78ae5de84a449b462ba6dc3bd1c313cdbfdd3",
+      "rollbackSha256": "d16ac7d1232ccfe126cf23f8ee028f48e8e02b9d7db5c9273284594e747b34ec",
       "createsTables": [],
-      "altersTables": []
+      "altersTables": [
+        "mip_event_feedback"
+      ]
     },
     {
       "version": "20260904900000",

@@ -1,4 +1,2 @@
--- M03: Event feedback export — no DDL to roll back.
---
--- The forward migration 072 made no schema changes. Feedback data continues
--- to be stored in mip_event_feedback.answers_json. Nothing to undo.
+ALTER TABLE mip_event_feedback
+  DROP INDEX idx_event_submitted;

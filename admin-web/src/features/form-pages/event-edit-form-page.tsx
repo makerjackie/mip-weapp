@@ -5,6 +5,7 @@ import type { AdminRequestInput, AdminOperationAction } from '../../domain/contr
 import type { OperationValues } from '../../modules/admin-operation-ui'
 import { createAdminEventMutationDefinition, buildAdminEventMutationInput, EVENT_MUTATION_CONFIGS } from '../../modules/admin-event-mutation-forms'
 import { loadEventDetailForForm } from './event-form-loader'
+import { EventMobilePreview } from './event-mobile-preview'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 
 type AdminRequest = <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
@@ -38,6 +39,10 @@ export function EventEditFormPage() {
       { ...definition, values: { ...definition.values, ...values } },
       values,
     ),
+    preview: {
+      render: (values) => <EventMobilePreview values={values} />,
+      capability: config.capability,
+    },
   }
 
   const loadDetail = eventId

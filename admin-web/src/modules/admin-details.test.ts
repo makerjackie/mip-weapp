@@ -100,6 +100,12 @@ describe('admin detail views', () => {
     assert.deepEqual(registration?.rowActions, [{
       action: 'mip.admin.events.checkIn', label: '签到', targetId: 'event-1',
       values: { eventId: 'event-1', registrationId: 'registration-1', expectedVersion: 2 },
+    }, {
+      action: 'mip.admin.events.participants.cancel', label: '取消报名', targetId: 'event-1',
+      values: { eventId: 'event-1', registrationId: 'registration-1', expectedVersion: 2, reason: '' },
+    }, {
+      action: 'mip.admin.events.participants.markAbnormal', label: '标记异常', targetId: 'event-1',
+      values: { eventId: 'event-1', registrationId: 'registration-1', expectedVersion: 2, reason: '' },
     }])
     assert.deepEqual(detail.sections.find(section => section.title === '报名名单')?.pager, {
       key: 'eventRoster', query: '', currentCursor: 'roster-cursor-2', nextCursor: 'roster-cursor-3', placeholder: '报名名单',

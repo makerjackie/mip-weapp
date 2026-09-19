@@ -1,5 +1,5 @@
-import { ArrowLeftOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Card, Checkbox, DatePicker, Form, Input, InputNumber, Select, Space, type FormInstance } from 'antd'
+import { ArrowLeftOutlined, EyeOutlined } from '@ant-design/icons'
+import { Alert, App, Button, Card, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Select, Space, type FormInstance } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
@@ -94,6 +94,10 @@ export interface IndependentFormPageConfig {
   action: AdminOperationAction
   idempotencyKey: string
   capability: string
+  preview?: {
+    render: (values: OperationValues) => React.ReactNode
+    capability?: string
+  }
 }
 
 export function IndependentFormPage({ config, loadDetail }: {
@@ -106,6 +110,7 @@ export function IndependentFormPage({ config, loadDetail }: {
   const [form] = Form.useForm<OperationValues>()
   const [loading, setLoading] = useState(false)
   const [detailLoading, setDetailLoading] = useState(Boolean(loadDetail))
+  const [previewOpen, setPreviewOpen] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState('')
 
@@ -166,9 +171,14 @@ export function IndependentFormPage({ config, loadDetail }: {
         title={config.title}
         description={config.description}
         actions={
-          <Button icon={<ArrowLeftOutlined />} onClick={() => void navigate({ to: config.backTarget })}>
-            返回列表
-          </Button>
+          <>
+            {config.preview && (!config.preview.capability || hasCapability(config.preview.capability)) ? (
+              <Button icon={<EyeOutlined />} onClick={() => setPreviewOpen(true)}>预览</Button>
+            ) : null}
+            <Button icon={<ArrowLeftOutlined />} onClick={() => void navigate({ to: config.backTarget })}>
+              返回列表
+            </Button>
+          </>
         }
       />
       <Card className="independent-form-card">
@@ -187,6 +197,17 @@ export function IndependentFormPage({ config, loadDetail }: {
           <Button disabled={loading} onClick={() => void navigate({ to: config.backTarget })}>取消</Button>
         </Space>
       </Card>
+      {config.preview ? (
+        <Modal
+          title="手机端预览"
+          open={previewOpen}
+          onCancel={() => setPreviewOpen(false)}
+          footer={null}
+          width={420}
+        >
+          {config.preview.render(form.getFieldsValue())}
+        </Modal>
+      ) : null}
     </>
   )
 }

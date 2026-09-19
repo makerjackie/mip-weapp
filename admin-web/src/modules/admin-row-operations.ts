@@ -37,6 +37,10 @@ export type AdminRowOperationAction
     | 'mip.admin.tasks.submissions.reject'
     | 'mip.admin.tasks.submissions.retryReward'
     | 'mip.admin.tasks.assign'
+    | 'mip.admin.events.checkinQrcode.get'
+    | 'mip.admin.events.participants.import'
+    | 'mip.admin.events.participants.cancel'
+    | 'mip.admin.events.participants.markAbnormal'
 
 export interface AdminRowOperation {
   action: AdminRowOperationAction
@@ -70,12 +74,27 @@ export function eventRegistrationRowActions(
     return [{ action: 'mip.admin.events.registrations.review', label: '审核', targetId: eventId, values }]
   }
   if (status === 'REGISTERED') {
-    return [{ action: 'mip.admin.events.checkIn', label: '签到', targetId: eventId, values }]
+    return [
+      { action: 'mip.admin.events.checkIn', label: '签到', targetId: eventId, values },
+      { action: 'mip.admin.events.participants.cancel', label: '取消报名', targetId: eventId, values: { ...values, reason: '' } },
+      { action: 'mip.admin.events.participants.markAbnormal', label: '标记异常', targetId: eventId, values: { ...values, reason: '' } },
+    ]
   }
   if (status === 'ATTENDED') {
-    return [{ action: 'mip.admin.events.undoCheckIn', label: '撤销签到', targetId: eventId, values }]
+    return [
+      { action: 'mip.admin.events.undoCheckIn', label: '撤销签到', targetId: eventId, values },
+      { action: 'mip.admin.events.participants.markAbnormal', label: '标记异常', targetId: eventId, values: { ...values, reason: '' } },
+    ]
   }
   return []
+}
+
+export function eventRowActions(eventIdValue: unknown): AdminRowOperation[] {
+  const eventId = identifier(eventIdValue)
+  if (!eventId) return []
+  return [
+    { action: 'mip.admin.events.checkinQrcode.get', label: '签到码', targetId: eventId, values: { eventId } },
+  ]
 }
 
 export function eventAlbumRowActions(
