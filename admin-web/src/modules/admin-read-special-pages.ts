@@ -76,6 +76,29 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
   const matching = record(matchingPayload)
   const settings = record(matching.settings)
   const requests = Array.isArray(matching.requests) ? matching.requests : []
+  const entitlementRows = filterRows(pageValue(entitlementsPayload).items.map(item => ({
+    entitlementNo: valueOf(item, 'entitlementNo', 'id'),
+    user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'),
+    type: label(valueOf(item, 'entitlementType')),
+    source: label(valueOf(item, 'source')),
+    grantedAt: formatDateTime(item.grantedAt),
+  })), query)
+  const contributionRuleRows = filterRows(pageValue(contributionRulesPayload).items.map(item => ({
+    behavior: valueOf(item, 'behavior'),
+    rewardExp: numberLabel(item.rewardExp),
+    rewardLimit: numberLabel(item.rewardLimit),
+    scope: valueOf(item, 'scopeServers') || '—',
+    effective: dateRange(item.effectiveFrom, item.effectiveTo),
+    state: label(valueOf(item, 'status')),
+  })), { ...query, status: '' })
+  const contributionTxnRows = filterRows(pageValue(contributionTxnsPayload).items.map(item => ({
+    txnNo: valueOf(item, 'txnNo', 'id'),
+    user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'),
+    behavior: valueOf(item, 'behavior'),
+    delta: numberLabel(item.deltaValue),
+    createdAt: formatDateTime(item.createdAt),
+  })), { ...query, status: '' })
+
   return {
     sections: [
       { title: '机会', rows: opportunityRows, columns: columns([['title', '标题'], ['owner', '发布人'], ['location', '城市与服务器'], ['target', '目标'], ['roles', '合作角色'], ['referrals', '引荐数'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) },
