@@ -1,11 +1,13 @@
 import { Button } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
+import { useNavigate } from '@tanstack/react-router'
 import { getAdminReadRouteDefinition } from '../../modules/admin-read-pages'
 import { OperationsReadPage } from './operations-read-page'
 import type { OperationsPageState } from './types'
 
 export function TaskManagementPage(props: OperationsPageState) {
   const definition = getAdminReadRouteDefinition('tasks')
+  const navigate = useNavigate()
   return (
     <OperationsReadPage
       {...props}
@@ -16,7 +18,7 @@ export function TaskManagementPage(props: OperationsPageState) {
       paginated={definition.paginated}
       detailRouteForSection={(_, index) => index === 0 ? 'tasks' : 'taskCompletions'}
       actions={props.onWrite ? (
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => props.onWrite?.({ action: 'mip.admin.tasks.save' })}>创建任务</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => void navigate({ to: '/tasks/$taskId/edit' as never, params: { taskId: 'new' } as never })}>创建任务</Button>
       ) : null}
     />
   )

@@ -10,6 +10,14 @@ import { OpportunitiesContentPage } from './opportunities-content-page'
 import { TaskManagementPage } from './task-management-page'
 import type { OperationsPageState } from './types'
 
+const mockNavigate = vi.fn()
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => mockNavigate,
+  useParams: () => ({} as Record<string, string>),
+  useSearch: () => ({} as Record<string, unknown>),
+  useRouterState: () => ({ location: { search: {} } }),
+}))
+
 vi.mock('../../shared/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../shared/ui')>()
   return {
@@ -60,7 +68,7 @@ describe('second-batch operations pages', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: /创建任务/ }))
-    expect(onWrite).toHaveBeenCalledWith({ action: 'mip.admin.tasks.save' })
+    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: '/tasks/$taskId/edit' }))
     fireEvent.click(screen.getAllByRole('button', { name: '查看' })[0])
     expect(onOpenDetail).toHaveBeenCalledWith(expect.objectContaining({ route: 'tasks', id: 'task-1' }))
     fireEvent.click(screen.getByRole('button', { name: /下一页/ }))
@@ -104,11 +112,11 @@ describe('second-batch operations pages', () => {
       <OpportunitiesContentPage {...pageState({ sections: [], nextCursor: null }, { onWrite: opportunityWrite })} />,
     )
     fireEvent.click(screen.getByRole('button', { name: /创建机会/ }))
-    expect(opportunityWrite).toHaveBeenCalledWith({ action: 'mip.admin.opportunities.save' })
+    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: '/opportunities/$opportunityId/edit' }))
     fireEvent.click(screen.getByRole('button', { name: /创建合作卡/ }))
-    expect(opportunityWrite).toHaveBeenCalledWith({ action: 'mip.admin.userContent.save', values: { kind: 'COOPERATION_CARD' } })
+    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: '/userContent/$contentId/edit', search: { kind: 'COOPERATION_CARD' } }))
     fireEvent.click(screen.getByRole('button', { name: /创建超级案例/ }))
-    expect(opportunityWrite).toHaveBeenCalledWith({ action: 'mip.admin.userContent.save', values: { kind: 'SUPER_CASE' } })
+    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: '/userContent/$contentId/edit', search: { kind: 'SUPER_CASE' } }))
     unmount()
 
     const growthWrite = vi.fn()
