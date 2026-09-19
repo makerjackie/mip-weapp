@@ -1,5 +1,6 @@
 import { Button, Space } from 'antd'
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminDetailRoute, AdminDetailView } from '../../modules/admin-details'
 import type { AdminOperationLaunchContext, AdminRowOperation } from '../../modules/admin-row-operations'
@@ -15,6 +16,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
 }) {
   const { hasCapability } = useAdminSession()
   const { launch } = useAdminOperations()
+  const navigate = useNavigate()
   const [taskExporting, setTaskExporting] = useState(false)
   const button = (
     action: string,
@@ -25,6 +27,17 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
   ) => !capability || hasCapability(capability)
     ? <Button key={`${action}-${label}`} onClick={() => void launch(action, targetId, view, options)}>{label}</Button>
     : null
+
+  const formPageButton = (
+    label: string,
+    path: string,
+    entityId: string,
+    capability?: string,
+  ) => {
+    if (capability && !hasCapability(capability)) return null
+    const paramName = path.match(/\$(\w+)/)?.[1] || 'entityId'
+    return <Button key={`form-${path}`} onClick={() => void navigate({ to: path as never, params: { [paramName]: entityId } as never })}>{label}</Button>
+  }
 
   const actions: React.ReactNode[] = []
   if (route === 'users') {
@@ -44,7 +57,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     const targetStatus = eventStatus === 'PUBLISHED' ? 'UNPUBLISHED'
       : ['DRAFT', 'UNPUBLISHED'].includes(eventStatus) ? 'PUBLISHED' : null
     if (['DRAFT', 'UNPUBLISHED'].includes(eventStatus)) {
-      actions.push(button('mip.admin.events.save', '编辑活动', id, 'events.write'))
+      actions.push(formPageButton('编辑活动', '/events/$eventId/edit', id, 'events.write'))
     }
     if (targetStatus) actions.push(button(
       'mip.admin.events.changeStatus',
@@ -65,7 +78,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     const task = record(view.source?.task)
     const status = String(task.status || '')
     const selected = String(task.assignmentMode || '') === 'SELECTED'
-    actions.push(button('mip.admin.tasks.save', '编辑任务', id, 'tasks.manage'))
+    actions.push(formPageButton('编辑任务', '/tasks/$taskId/edit', id, 'tasks.manage'))
     if (['DRAFT', 'UNPUBLISHED'].includes(status)) actions.push(button('mip.admin.tasks.publish', '发布任务', id, 'tasks.manage'))
     if (status === 'PUBLISHED') actions.push(button('mip.admin.tasks.unpublish', '下架任务', id, 'tasks.manage'))
     if (selected) actions.push(
@@ -161,11 +174,11 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     )
   }
   else if (route === 'knowledge') actions.push(
-    button('mip.admin.knowledge.contents.save', '编辑内容', id, 'knowledge.manage'),
+    formPageButton('编辑内容', '/knowledge/$contentId/edit', id, 'knowledge.manage'),
     button('mip.admin.knowledge.contents.review', '审核内容', id, 'knowledge.manage'),
   )
   else if (route === 'opportunities') actions.push(
-    button('mip.admin.opportunities.save', '编辑机会', id, 'opportunities.moderate'),
+    formPageButton('编辑机会', '/opportunities/$opportunityId/edit', id, 'opportunities.moderate'),
     button('mip.admin.opportunities.publish', '发布机会', id, 'opportunities.moderate'),
     button('mip.admin.opportunities.end', '结束机会', id, 'opportunities.moderate'),
     button('mip.admin.opportunities.unpublish', '下架机会', id, 'opportunities.moderate'),
@@ -180,7 +193,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     const values = expectedVersion && contentId && ['COOPERATION_CARD', 'SUPER_CASE'].includes(kind)
       ? { kind, contentId, expectedVersion }
       : null
-    actions.push(button('mip.admin.userContent.save', '编辑内容', contentId, 'userContent.moderate'))
+    actions.push(formPageButton('编辑内容', '/userContent/$contentId/edit', `${kind}:${contentId}`, 'userContent.moderate'))
     if (values && status === 'PUBLISHED') actions.push(button(
       'mip.admin.userContent.unpublish', '下架内容', contentId, 'userContent.moderate', { values },
     ))

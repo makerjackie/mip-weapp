@@ -46,6 +46,11 @@ import {
 import { getAdminReadRouteDefinition, type AdminListQuery } from '../modules/admin-read-pages'
 import { downloadTaskCompletionExport, exportTaskCompletions } from '../modules/admin-task-management'
 import { DetailDrawer, PermissionGuard } from '../shared/ui'
+import { EventEditFormPage } from '../features/form-pages/event-edit-form-page'
+import { TaskEditFormPage } from '../features/form-pages/task-edit-form-page'
+import { OpportunityEditFormPage } from '../features/form-pages/opportunity-edit-form-page'
+import { KnowledgeEditFormPage } from '../features/form-pages/knowledge-edit-form-page'
+import { UserContentEditFormPage } from '../features/form-pages/user-content-edit-form-page'
 
 type CoreRoute = 'users' | 'events' | 'orders'
 type OperationsRoute = 'tasks' | 'banners' | 'game' | 'opportunities' | 'growth'
@@ -361,4 +366,9 @@ export const routeComponents = {
   '/messages': MessagesRoutePage,
   '/knowledge': KnowledgeRoutePage,
   '/operations': OperationsLogRoutePage,
+  '/events/$eventId/edit': EventEditFormPage,
+  '/tasks/$taskId/edit': TaskEditFormPage,
+  '/opportunities/$opportunityId/edit': OpportunityEditFormPage,
+  '/knowledge/$contentId/edit': KnowledgeEditFormPage,
+  '/userContent/$contentId/edit': UserContentEditFormPage,
 } as const
