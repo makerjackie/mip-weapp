@@ -1,3 +1,4 @@
+export * from './asset-uploader'
 export * from './confirm-dialog'
 export * from './data-table'
 export * from './detail-drawer'

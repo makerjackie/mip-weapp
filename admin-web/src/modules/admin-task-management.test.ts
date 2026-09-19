@@ -150,7 +150,7 @@ describe('admin task management', () => {
       options: [{ value: LEVEL_ID, label: '成长会员 · 100 经验' }],
       wide: true,
     })
-    assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.label, '任务模板素材 ID')
+    assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.label, '任务模板图片')
     assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.hidden, undefined)
     assert.deepEqual(buildTaskMutationInput(save, save.values), {
       task: {

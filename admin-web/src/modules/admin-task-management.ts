@@ -326,7 +326,7 @@ export function createTaskMutationDefinition(
       ] },
       { name: 'attachmentRequired', label: '完成时必须上传附件', kind: 'checkbox', wide: true },
       { name: 'endsAt', label: '截止时间', kind: 'datetime' },
-      { name: 'templateAssetId', label: '任务模板素材 ID', kind: 'text', wide: true },
+      { name: 'templateAssetId', label: '任务模板图片', kind: 'text', wide: true, assetPurpose: 'TASK_TEMPLATE' },
       { name: 'eligibleLevelIds', label: '可参与等级（不选择表示不限）', kind: 'multi-select', options: levelOptions, wide: true },
     ], {
       taskId: targetId,

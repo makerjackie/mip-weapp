@@ -48,6 +48,8 @@ export interface EventMutationFieldConfig {
   wide?: boolean
   maxLength?: number
   options?: readonly EventMutationFieldOption[]
+  /** Upload purpose for asset/asset-list fields. */
+  assetPurpose?: string
 }
 
 export interface EventMutationActionConfig {
@@ -77,9 +79,9 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'title', label: '活动名称', kind: 'text', required: true, maxLength: 120 },
   { key: 'summary', label: '活动摘要', kind: 'textarea', required: true, maxLength: 300 },
   { key: 'description', label: '活动介绍', kind: 'textarea', required: true, maxLength: 20_000 },
-  { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list' },
+  { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list', assetPurpose: 'EVENT_CONTENT' },
   { key: 'notices', label: '活动说明', kind: 'textarea', maxLength: 5_000 },
-  { key: 'coverAssetId', label: '活动封面素材 ID', kind: 'asset' },
+  { key: 'coverAssetId', label: '活动封面', kind: 'asset', assetPurpose: 'EVENT_COVER' },
   { key: 'eventTypeKey', label: '活动类型标识', kind: 'text', maxLength: 64 },
   { key: 'eventMode', label: '活动方式', kind: 'select', options: [option('OFFLINE', '线下'), option('ONLINE', '线上'), option('HYBRID', '混合')] },
   { key: 'accessType', label: '收费类型', kind: 'select', options: [option('FREE', '免费'), option('MEMBER_INCLUDED', '会员权益'), option('PAID', '付费')] },

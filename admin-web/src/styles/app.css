@@ -141,6 +141,12 @@ button, input, select, textarea { font: inherit; }
 .login-challenge strong { color: var(--mip-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 32px; letter-spacing: .18em; }
 .independent-form-card { max-width: 960px; margin: 0 auto; }
 .independent-form-card .ant-form { padding: 8px 0; }
+.asset-uploader { display: flex; flex-direction: column; gap: 8px; }
+.asset-uploader__preview { display: flex; gap: 8px; align-items: center; }
+.asset-uploader__grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.asset-uploader__thumb { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.asset-uploader__thumb img { width: 100px; height: 75px; object-fit: cover; border-radius: 8px; border: 1px solid var(--mip-line); }
+.asset-uploader__full { color: var(--mip-muted); font-size: 12px; }
 
 .mobile-navigation .ant-drawer-header { background: linear-gradient(135deg, #347ce9, #1d4eb8); border-bottom: 0; }
 .mobile-navigation .ant-drawer-title { min-width: 0; }

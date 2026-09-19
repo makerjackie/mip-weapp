@@ -76,6 +76,7 @@ export interface ContentMutationField {
     readonly path: string
     readonly value: string
   }
+  readonly assetPurpose?: string
 }
 
 export interface ContentMutationFormDefinition {
@@ -343,8 +344,7 @@ const USER_CONTENT_FIELDS: ContentMutationField[] = [
     { ...idField('industryTagId', '行业标签', false), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
     { ...textField('caseType', '案例类型', 80, false), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
     { ...areaField('description', '案例说明', 8_000), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
-    { ...idField('coverAssetId', '封面素材', false), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
-    { key: 'mediaAssetIds', label: '案例素材', kind: 'id-list', required: false, visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { ...idField('coverAssetId', '封面图片', false), assetPurpose: 'SUPER_CASE_COVER' } as ContentMutationField, { key: 'mediaAssetIds', label: '案例图片', kind: 'id-list', required: false, assetPurpose: 'SUPER_CASE_MEDIA', visibleWhen: { path: 'kind', value: 'SUPER_CASE' } } as ContentMutationField,
     selectField('status', '内容状态', ['DRAFT', 'PUBLISHED', 'UNPUBLISHED'], false),
   ]),
 ]
@@ -398,7 +398,7 @@ const CONTENT_MUTATION_FORMS: readonly ContentMutationFormDefinition[] = [
   { action: 'mip.admin.userContent.archive', capability: 'userContent.moderate', resource: '用户内容', inputKeys: ['kind', 'contentId', 'expectedVersion', 'reason'], idempotencyRequired: false, fields: [selectField('kind', '内容类型', ['COOPERATION_CARD', 'SUPER_CASE']), idField('contentId', '用户内容'), versionField(), reasonField('归档原因')] },
   {
     action: 'mip.admin.knowledge.contents.save', capability: 'knowledge.manage', resource: '知识内容', inputKeys: ['contentId', 'expectedVersion', 'sourceId', 'categoryId', 'contentType', 'title', 'summary', 'bodyText', 'externalUrl', 'channelFinderUserName', 'channelFeedId', 'coverAssetId', 'authorName', 'accessType', 'commentsEnabled', 'moderationMode'], idempotencyRequired: false,
-    fields: [idField('contentId', '知识内容', false), { ...versionField(), required: false }, idField('sourceId', '信息源', false), idField('categoryId', '分类'), selectField('contentType', '内容类型', ['HOT_NEWS', 'ARTICLE', 'WEB', 'VIDEO', 'PRIVATE_CHANNEL', 'EXPERT_SHARE']), textField('title', '标题', 160), areaField('summary', '摘要', 500), areaField('bodyText', '正文', 100_000, false), { key: 'externalUrl', label: '外部地址', kind: 'url', required: false }, textField('channelFinderUserName', '视频号用户名', 64, false), textField('channelFeedId', '视频号 Feed ID', 128, false), idField('coverAssetId', '封面素材', false), textField('authorName', '作者', 100, false), selectField('accessType', '访问范围', ['FREE', 'MEMBER', 'MEMBER_OR_PAID']), { key: 'commentsEnabled', label: '允许评论', kind: 'checkbox', required: true }, selectField('moderationMode', '评论审核方式', ['AUTO', 'REVIEW'])],
+    fields: [idField('contentId', '知识内容', false), { ...versionField(), required: false }, idField('sourceId', '信息源', false), idField('categoryId', '分类'), selectField('contentType', '内容类型', ['HOT_NEWS', 'ARTICLE', 'WEB', 'VIDEO', 'PRIVATE_CHANNEL', 'EXPERT_SHARE']), textField('title', '标题', 160), areaField('summary', '摘要', 500), areaField('bodyText', '正文', 100_000, false), { key: 'externalUrl', label: '外部地址', kind: 'url', required: false }, textField('channelFinderUserName', '视频号用户名', 64, false), textField('channelFeedId', '视频号 Feed ID', 128, false), { ...idField('coverAssetId', '封面图片', false), assetPurpose: 'SUPER_CASE_COVER' } as ContentMutationField, textField('authorName', '作者', 100, false), selectField('accessType', '访问范围', ['FREE', 'MEMBER', 'MEMBER_OR_PAID']), { key: 'commentsEnabled', label: '允许评论', kind: 'checkbox', required: true }, selectField('moderationMode', '评论审核方式', ['AUTO', 'REVIEW'])],
   },
   { action: 'mip.admin.knowledge.contents.review', capability: 'knowledge.manage', resource: '知识内容', inputKeys: ['contentId', 'expectedVersion', 'decision', 'reason'], idempotencyRequired: false, fields: [idField('contentId', '知识内容'), versionField(), selectField('decision', '审核操作', ['SUBMIT', 'APPROVE', 'REJECT', 'PUBLISH', 'WITHDRAW']), reasonField('审核原因')] },
   { action: 'mip.admin.knowledge.schedules.save', capability: 'knowledge.manage', resource: '知识采集计划', inputKeys: ['scheduleId', 'expectedVersion', 'sourceId', 'categoryId', 'dailyTime', 'timeZone', 'status', 'idempotencyKey'], idempotencyRequired: true, fields: [idField('scheduleId', '采集计划', false), { ...versionField(), required: false }, idField('sourceId', '信息源'), idField('categoryId', '分类'), { key: 'dailyTime', label: '每日时间', kind: 'time', required: true }, textField('timeZone', '时区', 64), selectField('status', '计划状态', ['ACTIVE', 'PAUSED'], false)] },

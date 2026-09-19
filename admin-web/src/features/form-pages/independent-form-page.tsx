@@ -6,8 +6,9 @@ import { useNavigate } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminRequestInput, AdminOperationAction } from '../../domain/contracts'
 import { normalizeOperationValues, operationFieldVisible, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
+import type { AdminMediaPurpose } from '../../modules/admin-media-upload'
 import { RegistrationSchemaEditor } from '../shared/registration-schema-editor'
-import { ErrorState, LoadingState, PageHeader, humanizeError } from '../../shared/ui'
+import { AssetUploader, AssetListUploader, ErrorState, LoadingState, PageHeader, humanizeError } from '../../shared/ui'
 
 function fieldName(field: OperationField) { return String(field.name || field.key || '') }
 
@@ -16,6 +17,11 @@ function controlFor(field: OperationField) {
   if (field.kind === 'checkbox' || field.kind === 'boolean') return <Checkbox>{field.label}</Checkbox>
   if (field.kind === 'select') return <Select options={options} allowClear={!field.required} />
   if (field.kind === 'multi-select') return <Select mode="multiple" options={options} />
+  if (field.assetPurpose) {
+    const purpose = field.assetPurpose as AdminMediaPurpose
+    if (field.kind === 'asset-list' || field.kind === 'id-list') return <AssetListUploader purpose={purpose} maxCount={12} />
+    return <AssetUploader purpose={purpose} />
+  }
   if (field.kind === 'textarea' || ['asset-list', 'id-list', 'profile-ref-list', 'tags'].includes(field.kind)) {
     return <Input.TextArea rows={4} maxLength={field.maxLength} showCount={Boolean(field.maxLength)} />
   }

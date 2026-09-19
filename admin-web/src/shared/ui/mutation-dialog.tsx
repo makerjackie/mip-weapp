@@ -1,7 +1,9 @@
 import { Alert, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Select, type FormInstance } from 'antd'
 import dayjs from 'dayjs'
 import { operationFieldVisible, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
+import type { AdminMediaPurpose } from '../../modules/admin-media-upload'
 import { RegistrationSchemaEditor } from '../../features/shared/registration-schema-editor'
+import { AssetUploader, AssetListUploader } from './asset-uploader'
 import { OVERLAY_Z_INDEX } from './overlay-z-index'
 
 function fieldName(field: OperationField) { return String(field.name || field.key || '') }
@@ -11,6 +13,11 @@ function controlFor(field: OperationField) {
   if (field.kind === 'checkbox' || field.kind === 'boolean') return <Checkbox />
   if (field.kind === 'select') return <Select options={options} allowClear={!field.required} />
   if (field.kind === 'multi-select') return <Select mode="multiple" options={options} />
+  if (field.assetPurpose) {
+    const purpose = field.assetPurpose as AdminMediaPurpose
+    if (field.kind === 'asset-list' || field.kind === 'id-list') return <AssetListUploader purpose={purpose} maxCount={12} />
+    return <AssetUploader purpose={purpose} />
+  }
   if (field.kind === 'textarea' || ['asset-list', 'id-list', 'profile-ref-list', 'tags'].includes(field.kind)) {
     return <Input.TextArea rows={4} maxLength={field.maxLength} showCount={Boolean(field.maxLength)} />
   }
