@@ -1,6 +1,7 @@
 import { DownloadOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Space, Typography } from 'antd'
 import { useMemo } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
 import {
   EVENT_MUTATION_ACTIONS,
@@ -77,6 +78,7 @@ export function OrdersPage(props: CoreListPageProps) {
 
 function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreListRoute }) {
   const { hasCapability, hasCapabilityAtScope } = useAdminSession()
+  const navigate = useNavigate()
   const query = useCoreReadPage(route, props.search)
   const definition = pageDefinitions[route]
   return (
@@ -91,6 +93,10 @@ function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreList
         canWriteEvents={hasCapability(EVENT_MUTATION_CONFIGS['mip.admin.events.save'].capability)}
         canWriteEventPolicy={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.policy.save'].capability, 'PLATFORM')}
         canManageEventCatalog={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.catalog.save'].capability, 'PLATFORM')}
+        onNavigateToForm={(path, entityId) => {
+          const paramName = path.match(/\$(\w+)/)?.[1] || 'entityId'
+          void navigate({ to: path as never, params: { [paramName]: entityId } as never })
+        }}
         onRetry={() => void query.refetch()}
       />
     </PermissionGuard>
@@ -107,6 +113,7 @@ export function CoreListPageView({
   canWriteEvents,
   canWriteEventPolicy,
   canManageEventCatalog,
+  onNavigateToForm,
   onRetry,
   onSearchChange,
   onOpenDetail,
@@ -123,20 +130,21 @@ export function CoreListPageView({
   canWriteEvents?: boolean
   canWriteEventPolicy?: boolean
   canManageEventCatalog?: boolean
+  onNavigateToForm?: (path: string, entityId: string) => void
   onRetry?: () => void
 }) {
   const pageDefinition = pageDefinitions[route]
   const readDefinition = getAdminReadRouteDefinition(route)
   const pageNumber = search.page && search.page > 1 ? search.page : 1
   const headerActions = useMemo(() => {
-    if (route === 'events' && onMutation && (canWriteEvents || canManageEventCatalog)) {
+    if (route === 'events' && (canWriteEvents || canManageEventCatalog)) {
       return (
         <Space wrap>
-          {canWriteEvents ? (
+          {canWriteEvents && onNavigateToForm ? (
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => onMutation({ action: 'mip.admin.events.save', targetId: '' })}
+              onClick={() => onNavigateToForm?.('/events/$eventId/edit', 'new')}
             >
               新建活动
             </Button>
@@ -144,7 +152,7 @@ export function CoreListPageView({
           {canManageEventCatalog ? (
             <Button
               icon={<PlusOutlined />}
-              onClick={() => onMutation({ action: 'mip.admin.events.catalog.save', targetId: '' })}
+              onClick={() => onMutation?.({ action: 'mip.admin.events.catalog.save', targetId: '' })}
             >
               新建活动目录
             </Button>
@@ -167,7 +175,7 @@ export function CoreListPageView({
       )
     }
     return null
-  }, [canExport, canManageEventCatalog, canWriteEvents, onMutation, onSensitiveExport, route, search.q, search.status])
+  }, [canExport, canManageEventCatalog, canWriteEvents, onMutation, onNavigateToForm, onSensitiveExport, route, search.q, search.status])
 
   function openDetail(row: AdminTableRow) {
     const id = String(row.detailId || '')
