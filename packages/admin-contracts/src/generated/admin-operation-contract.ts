@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 231,
+  "operationCount": 233,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -1726,6 +1726,22 @@ export const ADMIN_OPERATION_CONTRACT = {
       "idempotencyKeyRequired": null
     },
     {
+      "action": "mip.admin.adminAccounts.loginRecords",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.adminAccounts.passwordLogin",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
       "action": "mip.admin.cooperationCards.get",
       "kind": "QUERY",
       "authentication": "REQUIRED",
@@ -1858,7 +1874,7 @@ export const ADMIN_OPERATION_CONTRACT = {
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 231,
+  "operationCount": 233,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -4469,6 +4485,29 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "optionalInputKeys": [
         "reason"
       ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.adminAccounts.loginRecords",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.adminAccounts.passwordLogin",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "phone",
+        "password"
+      ],
+      "optionalInputKeys": [],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
     },

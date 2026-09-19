@@ -15,6 +15,8 @@ function createAdminAccounts() {
     updateAdminAccount: notImplemented('编辑后台账号功能尚未实现'),
     changeAdminAccountStatus: notImplemented('启用/停用后台账号功能尚未实现'),
     resetAdminCredential: notImplemented('重置后台账号凭证功能尚未实现'),
+    listLoginRecords: async () => ({ items: [], cursor: null }),
+    passwordLogin: notImplemented('密码登录功能尚未实现'),
   }
 }
 

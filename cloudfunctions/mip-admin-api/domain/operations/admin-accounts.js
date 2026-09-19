@@ -8,4 +8,6 @@ module.exports = defineManifest('ADMIN_ACCOUNTS', [
   serviceOperation('mip.admin.adminAccounts.update', 'MUTATION', 'updateAdminAccount', { sessionFirst: true }),
   serviceOperation('mip.admin.adminAccounts.changeStatus', 'MUTATION', 'changeAdminAccountStatus', { sessionFirst: true }),
   serviceOperation('mip.admin.adminAccounts.resetCredential', 'MUTATION', 'resetAdminCredential', { sessionFirst: true }),
+  serviceOperation('mip.admin.adminAccounts.loginRecords', 'QUERY', 'listLoginRecords', { sessionFirst: true }),
+  serviceOperation('mip.admin.adminAccounts.passwordLogin', 'MUTATION', 'passwordLogin', { sessionFirst: true }),
 ])

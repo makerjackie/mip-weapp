@@ -65,8 +65,8 @@ describe('Web BFF trusted query adapter', () => {
     const expectedMutations = adminWebOperationContract.operations
       .filter(operation => operation.webAllowed && operation.kind === 'MUTATION')
 
-    assert.equal(expectedQueries.length, 99)
-    assert.equal(expectedMutations.length, 105)
+    assert.equal(expectedQueries.length, 100)
+    assert.equal(expectedMutations.length, 106)
     assert.deepEqual([...WEB_BFF_QUERY_ACTIONS], expectedQueries.map(operation => operation.action))
     assert.deepEqual([...WEB_BFF_MUTATION_ACTIONS], expectedMutations.map(operation => operation.action))
     assert.deepEqual(
@@ -196,7 +196,7 @@ describe('Web BFF trusted query adapter', () => {
       }))
       assert.equal(result.ok, true, mutation.action)
     }
-    assert.equal(accepted.calls.length, 105)
+    assert.equal(accepted.calls.length, 106)
 
     const rejected = fixture()
     for (const mutation of WEB_BFF_REVIEWED_MUTATION_MANIFEST) {
@@ -227,7 +227,7 @@ describe('Web BFF trusted query adapter', () => {
       assert.equal(result.ok, true, mutation.action)
     }
 
-    assert.equal(calls.length, 105)
+    assert.equal(calls.length, 106)
     for (let index = 0; index < WEB_BFF_REVIEWED_MUTATION_MANIFEST.length; index += 1) {
       const mutation = WEB_BFF_REVIEWED_MUTATION_MANIFEST[index]
       assert.equal(
@@ -280,6 +280,7 @@ describe('Web BFF trusted query adapter', () => {
         'mip.admin.exports.create',
         'mip.admin.adminAccounts.create',
         'mip.admin.adminAccounts.resetCredential',
+        'mip.admin.adminAccounts.passwordLogin',
         'mip.admin.cooperationCards.save',
         'mip.admin.contribution.rules.save',
         'mip.admin.contribution.transactions.reverse',

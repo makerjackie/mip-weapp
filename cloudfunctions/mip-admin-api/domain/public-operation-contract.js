@@ -124,6 +124,9 @@ const adminWebQueryActions = Object.freeze([
   'mip.admin.cards.list',
   'mip.admin.cards.history',
   'mip.admin.events.drafts.get',
+
+  // P2 new query actions
+  'mip.admin.adminAccounts.loginRecords',
 ])
 
 const adminWebMutationPolicies = Object.freeze([
@@ -244,6 +247,7 @@ const adminWebMutationPolicies = Object.freeze([
   webMutation('mip.admin.cards.changeStatus', ['cardId', 'expectedVersion', 'status']),
   domainIdempotentWebMutation('mip.admin.cards.takedown', ['cardId', 'reason']),
   domainIdempotentWebMutation('mip.admin.events.drafts.save', ['draftData'], ['eventId', 'draftId']),
+  domainIdempotentWebMutation('mip.admin.adminAccounts.passwordLogin', ['phone', 'password']),
 ])
 
 function createPublicOperationContract(operations = operationCatalog) {
