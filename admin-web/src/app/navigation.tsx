@@ -26,6 +26,8 @@ export type AdminRoutePath =
   | '/opportunities'
   | '/growth'
   | '/permissions'
+  | '/admin-accounts'
+  | '/audit-logs'
   | '/messages'
   | '/knowledge'
   | '/operations'
@@ -53,6 +55,8 @@ export const adminNavigation: AdminNavigationItem[] = [
   { path: '/opportunities', label: '机会与内容', description: '管理机会、合作内容和治理记录', group: '业务管理', icon: <BulbOutlined />, capabilities: ['opportunities.moderate', 'userContent.moderate'], requireAny: true },
   { path: '/growth', label: '成长与勋章', description: '查看等级、权益、流水和勋章', group: '会员运营', icon: <RiseOutlined />, capabilities: ['growth.read', 'growth.adjust', 'badges.manage'], requireAny: true },
   { path: '/permissions', label: '权限管理', description: '管理运营成员、角色策略和服务器', group: '平台设置', icon: <SafetyCertificateOutlined />, capabilities: ['roles.change', 'branches.manage', 'audit.read'], requireAny: true },
+  { path: '/admin-accounts', label: '后台账号', description: '管理后台运营账号、角色和状态', group: '平台设置', icon: <UserOutlined />, capabilities: ['roles.change'] },
+  { path: '/audit-logs', label: '审计日志', description: '查询完整操作审计记录', group: '平台设置', icon: <FileSearchOutlined />, capabilities: ['audit.read'] },
   { path: '/messages', label: '消息管理', description: '管理站内消息、模板和发送计划', group: '平台设置', icon: <MessageOutlined />, capabilities: ['messages.manage'] },
   // { path: '/knowledge', label: '知识库', description: '管理内容、来源、审核和采集计划', group: '平台设置', icon: <BookOutlined />, capabilities: ['knowledge.manage'] },
   { path: '/operations', label: '运营记录', description: '查看公告、举报、异常和运营待办', group: '平台设置', icon: <FileSearchOutlined />, capabilities: ['announcements.manage', 'community.reports.manage', 'operations.exceptions.read', 'messages.delivery.review'], requireAny: true },

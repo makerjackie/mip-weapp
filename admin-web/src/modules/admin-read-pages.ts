@@ -118,6 +118,16 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
     statusOptions: [...commonStatus, ...options(['PENDING', 'REVIEWING', 'RESOLVED', 'DISMISSED', 'FAILED', 'STALLED', 'REJECTED', 'EXPIRED', 'CLEANUP_PENDING', 'PROCESSING', 'MANUAL_REVIEW', 'DRAFT', 'PUBLISHED', 'WITHDRAWN'])],
     paginated: false,
   },
+  adminAccounts: {
+    searchPlaceholder: '搜索姓名、登录账号或手机号',
+    statusOptions: [...commonStatus, ...options(['ACTIVE', 'INACTIVE'])],
+    paginated: true,
+  },
+  auditLogs: {
+    searchPlaceholder: '搜索操作者或业务对象',
+    statusOptions: [...commonStatus],
+    paginated: true,
+  },
 }
 
 export function getAdminReadRouteDefinition(route: AdminListRoute) {
@@ -143,6 +153,8 @@ export async function loadAdminReadPage(
     case 'opportunities': return loadOpportunities(query, request, access)
     case 'growth': return loadGrowth(query, request, access)
     case 'operations': return loadOperations(query, request, access)
+    case 'adminAccounts': return loadAdminAccounts(query, request)
+    case 'auditLogs': return loadAuditLogs(query, request)
   }
 }
 
@@ -414,6 +426,44 @@ async function loadKnowledge(query: AdminListQuery, request: AdminRequest): Prom
     sections: [{
       rows,
       columns: columns([['title', '文档标题'], ['type', '内容类型'], ['category', '分类'], ['author', '作者'], ['access', '访问范围'], ['updatedAt', '更新时间'], ['state', '状态']]),
+    }],
+    nextCursor: payload.nextCursor,
+  }
+}
+
+async function loadAdminAccounts(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
+  const payload = pageValue(await request('mip.admin.adminAccounts.list', listInput(query)))
+  return {
+    sections: [{
+      rows: payload.items.map(item => ({
+        detailId: valueOf(item, 'accountId', 'id'),
+        name: valueOf(item, 'name'),
+        loginAccount: valueOf(item, 'loginAccount'),
+        role: label(valueOf(item, 'roleKey')),
+        branch: valueOf(item, 'branchName') || '—',
+        state: label(valueOf(item, 'status')),
+        version: numberLabel(item.version),
+      })),
+      columns: columns([['name', '姓名'], ['loginAccount', '登录账号'], ['role', '角色'], ['branch', '服务器'], ['state', '状态']]),
+    }],
+    nextCursor: payload.nextCursor,
+  }
+}
+
+async function loadAuditLogs(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
+  const payload = pageValue(await request('mip.admin.audit.list', listInput(query)))
+  return {
+    sections: [{
+      rows: payload.items.map(item => ({
+        actor: valueOf(item, 'actorNickname', 'actorName') || '—',
+        role: label(valueOf(item, 'actorRoleKey')) || '—',
+        scope: valueOf(item, 'scopeName') || label(valueOf(item, 'scopeType')) || '—',
+        action: valueOf(item, 'action'),
+        resource: label(valueOf(item, 'resourceType')),
+        resourceId: valueOf(item, 'resourceId') || '—',
+        createdAt: formatDateTime(item.createdAt),
+      })),
+      columns: columns([['actor', '操作者'], ['role', '角色'], ['scope', '服务器'], ['action', '操作'], ['resource', '模块'], ['resourceId', '业务对象'], ['createdAt', '时间']]),
     }],
     nextCursor: payload.nextCursor,
   }

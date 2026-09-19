@@ -85,6 +85,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
       button('mip.admin.tasks.assignMembers', '分配成员', id, 'tasks.manage'),
       button('mip.admin.tasks.revokeMembers', '撤销成员', id, 'tasks.manage'),
     )
+    actions.push(button('mip.admin.tasks.assign', '派发任务', id, 'tasks.manage'))
     actions.push(button('mip.admin.tasks.delete', '删除任务', id, 'tasks.manage'))
     if (hasCapability('tasks.manage') && onTaskExport) actions.push(
       <Button
@@ -103,6 +104,20 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
         导出完成记录
       </Button>,
     )
+  }
+  else if (route === 'taskCompletions') {
+    const completion = record(view.source?.completion)
+    const submissionId = String(completion.id || completion.submissionId || id)
+    const submissionStatus = String(completion.submissionStatus || '')
+    if (submissionStatus === 'pending') {
+      actions.push(
+        button('mip.admin.tasks.submissions.approve', '通过', submissionId, 'tasks.review'),
+        button('mip.admin.tasks.submissions.reject', '退回', submissionId, 'tasks.review'),
+      )
+    }
+    else if (submissionStatus === 'approved') {
+      actions.push(button('mip.admin.tasks.submissions.retryReward', '重试奖励', submissionId, 'tasks.review'))
+    }
   }
   else if (route === 'banners') {
     const banner = record(view.source?.banner)

@@ -2,7 +2,7 @@ import type { AdminOperationAction, AdminRequestInput } from '../domain/contract
 import type { AdminDetailRoute } from './admin-details.ts'
 import type { AdminOperationRow } from './admin-row-operations.ts'
 
-export type AdminListRoute = 'users' | 'events' | 'orders' | 'tasks' | 'banners' | 'game' | 'permissions' | 'messages' | 'knowledge' | 'opportunities' | 'growth' | 'operations'
+export type AdminListRoute = 'users' | 'events' | 'orders' | 'tasks' | 'banners' | 'game' | 'permissions' | 'messages' | 'knowledge' | 'opportunities' | 'growth' | 'operations' | 'adminAccounts' | 'auditLogs'
 export type AdminTableRow = AdminOperationRow
 
 export interface AdminTableColumn {

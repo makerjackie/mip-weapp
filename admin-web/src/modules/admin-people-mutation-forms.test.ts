@@ -21,6 +21,10 @@ describe('admin people mutation forms', () => {
       'mip.admin.branches.create',
       'mip.admin.branches.update',
       'mip.admin.branches.changeStatus',
+      'mip.admin.adminAccounts.create',
+      'mip.admin.adminAccounts.update',
+      'mip.admin.adminAccounts.changeStatus',
+      'mip.admin.adminAccounts.resetCredential',
     ])
     const definition = createAdminPeopleMutationDefinition(
       'mip.admin.branches.create', '', detailReader({}),

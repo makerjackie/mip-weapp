@@ -126,8 +126,8 @@ describe('admin task management', () => {
     ])
   })
 
-  it('provides typed forms and exact business inputs for all six task mutations', () => {
-    assert.equal(ADMIN_TASK_MUTATION_ACTIONS.length, 6)
+  it('provides typed forms and exact business inputs for all task mutations', () => {
+    assert.equal(ADMIN_TASK_MUTATION_ACTIONS.length, 10)
     const source = {
       task: {
         id: TASK_ID, name: '早会复盘', content: '提交本周复盘', rewardExperience: 30,
@@ -157,6 +157,9 @@ describe('admin task management', () => {
         name: '早会复盘', content: '提交本周复盘', rewardExperience: 30,
         attachmentRequired: true, assignmentMode: 'SELECTED', endsAt: '',
         templateAssetId: ASSET_ID, eligibleLevelIds: [LEVEL_ID],
+        starLevel: 1, purpose: '', completionCriteria: '',
+        periodStartAt: '', periodEndAt: '', weeklyDeliverAt: '',
+        assignedOwner: '', rewardConfigJson: '{"rewardExperience":30}',
       },
       taskId: TASK_ID,
       expectedVersion: 3,

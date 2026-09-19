@@ -33,6 +33,10 @@ export type AdminRowOperationAction
     | 'mip.admin.game.blindBoxes.catalogs.changeStatus'
     | 'mip.admin.game.blindBoxes.cards.save'
     | 'mip.admin.game.blindBoxes.cards.changeStatus'
+    | 'mip.admin.tasks.submissions.approve'
+    | 'mip.admin.tasks.submissions.reject'
+    | 'mip.admin.tasks.submissions.retryReward'
+    | 'mip.admin.tasks.assign'
 
 export interface AdminRowOperation {
   action: AdminRowOperationAction
@@ -88,6 +92,22 @@ export function eventAlbumRowActions(
     targetId: eventId,
     values: { eventId, photoId, expectedVersion },
   }]
+}
+
+export function taskCompletionRowActions(completion: Record<string, unknown>): AdminRowOperation[] {
+  const submissionId = identifier(completion.id || completion.submissionId || completion.completionId)
+  if (!submissionId) return []
+  const status = String(completion.submissionStatus || '')
+  if (status === 'pending') {
+    return [
+      { action: 'mip.admin.tasks.submissions.approve', label: '通过', targetId: submissionId, values: { submissionId } },
+      { action: 'mip.admin.tasks.submissions.reject', label: '退回', targetId: submissionId, values: { submissionId } },
+    ]
+  }
+  if (status === 'approved') {
+    return [{ action: 'mip.admin.tasks.submissions.retryReward', label: '重试奖励', targetId: submissionId, values: { submissionId } }]
+  }
+  return []
 }
 
 export function eventPolicyRowActions(policy: Record<string, unknown>): AdminRowOperation[] {

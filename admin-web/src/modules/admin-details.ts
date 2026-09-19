@@ -17,7 +17,7 @@ import {
   type AdminOperationRow,
 } from './admin-row-operations.ts'
 
-export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'tasks' | 'taskCompletions' | 'banners' | 'gameSeasons' | 'gameTeams' | 'gameCatalogs' | 'messages' | 'knowledge' | 'opportunities' | 'userContent'
+export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'tasks' | 'taskCompletions' | 'taskApprovals' | 'banners' | 'gameSeasons' | 'gameTeams' | 'gameCatalogs' | 'messages' | 'knowledge' | 'opportunities' | 'userContent'
 export type AdminDetailRow = AdminOperationRow
 
 export interface AdminEventRosterPageQuery {
@@ -83,6 +83,7 @@ export async function loadAdminDetail(
   if (route === 'orders') return loadOrderDetail(id, request)
   if (route === 'tasks') return loadTaskDetail(id, request, options.task)
   if (route === 'taskCompletions') return loadTaskCompletionDetail(id, request)
+  if (route === 'taskApprovals') return loadTaskCompletionDetail(id, request)
   if (route === 'banners') return loadBannerDetail(id, request)
   if (route === 'gameSeasons') return loadGameSeasonDetail(id, request)
   if (route === 'gameTeams') return loadGameTeamDetail(id, request, options.gameMembers)
