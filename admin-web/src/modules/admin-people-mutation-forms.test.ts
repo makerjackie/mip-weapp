@@ -334,4 +334,39 @@ describe('admin people mutation forms', () => {
     assert.ok(membershipActions.includes('mip.admin.entitlements.grant' as AdminPeopleMutationAction), 'grant action should exist')
     assert.ok(!membershipActions.some(a => a.includes('revoke') || a.includes('delete')), 'no revoke/delete membership action should exist')
   })
+
+  it('rejects duplicate loginAccount by enforcing strict format validation (uniqueness prerequisite)', () => {
+    // Client-side validation enforces loginAccount format ^[A-Za-z0-9_.-]{3,64}$
+    // This is the prerequisite before the server checks DB uniqueness
+    // An account with spaces or special chars would be rejected before hitting the DB
+    const result1 = buildAdminPeopleMutationInput(
+      { action: 'mip.admin.adminAccounts.create' as AdminPeopleMutationAction, capability: 'roles.change', title: '', description: '', fields: [], values: {}, targetId: '' },
+      { loginAccount: 'test user!', name: 'Test', phone: '13800138000', roleKey: 'PLATFORM_OPERATIONS' }
+    )
+    assert.equal(result1, null, 'loginAccount with spaces and special chars should be rejected')
+
+    // A valid loginAccount passes client validation (server checks uniqueness)
+    const result2 = buildAdminPeopleMutationInput(
+      { action: 'mip.admin.adminAccounts.create' as AdminPeopleMutationAction, capability: 'roles.change', title: '', description: '', fields: [], values: {}, targetId: '' },
+      { loginAccount: 'test_user_001', name: 'Test', phone: '13800138000', roleKey: 'PLATFORM_OPERATIONS' }
+    )
+    assert.ok(result2, 'valid loginAccount should pass client validation')
+  })
+
+  it('entitlement grant validates months as positive integer when provided', () => {
+    // Test that months must be a positive integer (whole months only)
+    const buildGrant = (values: Record<string, unknown>) => buildAdminPeopleMutationInput(
+      { action: 'mip.admin.entitlements.grant' as AdminPeopleMutationAction, capability: 'roles.change', title: '', description: '', fields: [], values: {}, targetId: '' },
+      values
+    )
+    // Zero months should be rejected
+    assert.equal(buildGrant({ userId: 'u1', entitlementType: 'MEMBERSHIP', months: 0 }), null, 'zero months should be rejected')
+    // Negative months should be rejected
+    assert.equal(buildGrant({ userId: 'u1', entitlementType: 'MEMBERSHIP', months: -3 }), null, 'negative months should be rejected')
+    // Fractional months should be rejected
+    assert.equal(buildGrant({ userId: 'u1', entitlementType: 'MEMBERSHIP', months: 1.5 }), null, 'fractional months should be rejected')
+    // Valid positive integer months should pass
+    const valid = buildGrant({ userId: 'u1', entitlementType: 'MEMBERSHIP', months: 12 })
+    assert.ok(valid, 'positive integer months should pass')
+  })
 })

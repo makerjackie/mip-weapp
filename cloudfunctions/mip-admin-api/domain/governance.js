@@ -304,9 +304,16 @@ function createAdminGovernance({ repository, access, now = () => new Date() }) {
     return { items, nextCursor: null, availableTypes }
   }
 
+  async function createRole(caller, input = {}) {
+    const context = await access.session(caller)
+    const grant = platformGrant(context, CAPABILITIES.ROLES_CHANGE)
+    throw new AdminError('NOT_IMPLEMENTED', '角色创建功能尚未实现', true)
+  }
+
   return {
     changeBranchStatus,
     createBranch,
+    createRole,
     listAudit,
     listBranches,
     listOperationalExceptions,

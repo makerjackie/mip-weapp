@@ -456,8 +456,9 @@ function createAdminService({
       createBranch,
       updateBranch,
       changeBranchStatus,
-      setRole,
-      updateRoleCapabilityPolicy,
+    setRole,
+    createRole,
+    updateRoleCapabilityPolicy,
     }),
     USERS: freezeModule({
       listUsers,

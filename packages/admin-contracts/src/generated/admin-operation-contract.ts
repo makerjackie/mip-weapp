@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 233,
+  "operationCount": 234,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -87,6 +87,14 @@ export const ADMIN_OPERATION_CONTRACT = {
     },
     {
       "action": "mip.admin.roles.set",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.roles.create",
       "kind": "MUTATION",
       "authentication": "REQUIRED",
       "session": "REQUIRED",
@@ -1874,7 +1882,7 @@ export const ADMIN_OPERATION_CONTRACT = {
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 233,
+  "operationCount": 234,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -2007,6 +2015,16 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.roles.create",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
     },
     {
       "action": "mip.admin.rolePolicies.update",

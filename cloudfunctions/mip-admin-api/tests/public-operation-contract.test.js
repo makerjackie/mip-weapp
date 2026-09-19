@@ -21,11 +21,11 @@ const operationKeys = [
 ]
 
 describe('public admin operation contract', () => {
-  it('projects all 233 business operations without exposing execution details', () => {
+  it('projects all 234 business operations without exposing execution details', () => {
     assert.equal(PUBLIC_OPERATION_CONTRACT_VERSION, 1)
     assert.equal(publicOperationContract.version, 1)
-    assert.equal(publicOperationContract.operationCount, 233)
-    assert.equal(publicOperationContract.operations.length, 233)
+    assert.equal(publicOperationContract.operationCount, 234)
+    assert.equal(publicOperationContract.operations.length, 234)
     assert.equal(Object.isFrozen(publicOperationContract), true)
     assert.equal(Object.isFrozen(publicOperationContract.operations), true)
 
@@ -70,8 +70,8 @@ describe('public admin operation contract', () => {
   it('owns the complete Web exposure, input-key, route, and idempotency policy', () => {
     assert.equal(ADMIN_WEB_OPERATION_CONTRACT_VERSION, 1)
     assert.equal(adminWebOperationContract.version, 1)
-    assert.equal(adminWebOperationContract.operationCount, 233)
-    assert.equal(adminWebOperationContract.operations.length, 233)
+    assert.equal(adminWebOperationContract.operationCount, 234)
+    assert.equal(adminWebOperationContract.operations.length, 234)
     assert.equal(Object.isFrozen(adminWebOperationContract), true)
     assert.equal(Object.isFrozen(adminWebOperationContract.operations), true)
 
@@ -110,7 +110,7 @@ describe('public admin operation contract', () => {
 
     assert.equal(queries.length, 100)
     assert.equal(mutations.length, 106)
-    assert.equal(blocked.length, 27)
+    assert.equal(blocked.length, 28)
     assert.deepEqual(
       mutations.find(operation => operation.action === 'mip.admin.exports.create'),
       {
