@@ -69,13 +69,20 @@ export function valueOf(row: AdminTableRow, ...keys: string[]) {
   return '—'
 }
 
-export function filterRows(rows: AdminTableRow[], query: Pick<AdminListQuery, 'query' | 'status'>) {
+export function filterRows(rows: AdminTableRow[], query: Pick<AdminListQuery, 'query' | 'status' | 'filters'>) {
   const keyword = query.query.trim().toLocaleLowerCase('zh-CN')
   const expectedStatus = query.status ? label(query.status) : ''
+  const extraFilters = query.filters
+    ? Object.entries(query.filters).filter(([, v]) => typeof v === 'string' && v.length > 0)
+    : []
   return rows.filter((row) => {
     const values = Object.values(row).map(value => String(value))
     return (!keyword || values.some(value => value.toLocaleLowerCase('zh-CN').includes(keyword)))
       && (!expectedStatus || values.includes(expectedStatus))
+      && extraFilters.every(([key, expected]) => {
+        const rowValue = row[key]
+        return rowValue !== undefined && String(rowValue) === expected
+      })
   })
 }
 

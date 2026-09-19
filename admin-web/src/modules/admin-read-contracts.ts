@@ -29,12 +29,20 @@ export interface AdminListQuery {
   status: string
   cursor: string | null
   limit: number
+  filters?: Record<string, string>
+}
+
+export interface FilterDimensionSpec {
+  key: string
+  urlParam: string
+  multi?: boolean
 }
 
 export interface AdminReadRouteDefinition {
   searchPlaceholder: string
   statusOptions: Array<{ value: string; label: string }>
   paginated: boolean
+  filterDimensions?: readonly FilterDimensionSpec[]
 }
 
 export interface AdminReadAccess {

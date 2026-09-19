@@ -9,6 +9,7 @@ export interface CorePageSearchState {
   status?: string
   cursor?: string
   page?: number
+  filters?: Record<string, string>
 }
 
 export interface CorePageDetailIntent {
@@ -27,6 +28,7 @@ export interface CorePageExportIntent {
   filters: {
     query: string
     status: string
+    filters?: Record<string, string>
   }
 }
 

@@ -345,11 +345,13 @@ async function loadMessages(query: AdminListQuery, request: AdminRequest): Promi
     query: query.query,
     status: ['DRAFT', 'READY', 'PUBLISHED', 'WITHDRAWN'].includes(query.status) ? query.status : '',
     limit: query.limit,
+    ...(query.filters ?? {}),
   }
   const templateFilter = {
     query: query.query,
     status: ['DRAFT', 'ACTIVE', 'ARCHIVED'].includes(query.status) ? query.status : '',
     limit: query.limit,
+    ...(query.filters ?? {}),
   }
   const [campaignPayload, templatePayload] = await Promise.all([
     request('mip.admin.messageCampaigns.list', campaignFilter),
@@ -393,6 +395,7 @@ async function loadKnowledge(query: AdminListQuery, request: AdminRequest): Prom
     status: query.status,
     query: query.query || undefined,
     limit: query.limit,
+    ...(query.filters ?? {}),
   }))
   const rows = filterRows(payload.items.map(item => {
     const category = record(item.category)
@@ -417,8 +420,14 @@ async function loadKnowledge(query: AdminListQuery, request: AdminRequest): Prom
 }
 
 function listInput(query: AdminListQuery, extra: AdminRequestInput = {}): AdminRequestInput {
+  const extraFilters = query.filters
+    ? Object.fromEntries(
+        Object.entries(query.filters)
+          .filter(([, v]) => typeof v === 'string' && v.length > 0),
+      )
+    : {}
   return {
-    filters: { query: query.query, status: query.status },
+    filters: { query: query.query, status: query.status, ...extraFilters },
     cursor: query.cursor || undefined,
     limit: query.limit,
     ...extra,

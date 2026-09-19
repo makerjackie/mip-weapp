@@ -167,7 +167,7 @@ export function CoreListPageView({
           icon={<DownloadOutlined />}
           onClick={() => onSensitiveExport({
             kind: route,
-            filters: { query: search.q || '', status: search.status || '' },
+            filters: { query: search.q || '', status: search.status || '', filters: search.filters },
           })}
         >
           {route === 'users' ? '导出用户' : '导出订单'}
@@ -175,7 +175,7 @@ export function CoreListPageView({
       )
     }
     return null
-  }, [canExport, canManageEventCatalog, canWriteEvents, onMutation, onNavigateToForm, onSensitiveExport, route, search.q, search.status])
+  }, [canExport, canManageEventCatalog, canWriteEvents, onMutation, onNavigateToForm, onSensitiveExport, route, search.q, search.status, search.filters])
 
   function openDetail(row: AdminTableRow) {
     const id = String(row.detailId || '')
@@ -187,7 +187,7 @@ export function CoreListPageView({
     <>
       <PageHeader title={pageDefinition.title} description={pageDefinition.description} actions={headerActions} />
       <FilterBar
-        value={{ q: search.q || '', status: search.status || '' }}
+        value={{ q: search.q || '', status: search.status || '', filters: search.filters }}
         placeholder={readDefinition.searchPlaceholder}
         statusOptions={readDefinition.statusOptions}
         loading={loading}
@@ -195,6 +195,7 @@ export function CoreListPageView({
           ...search,
           q: value.q || undefined,
           status: value.status || undefined,
+          filters: value.filters && Object.keys(value.filters).length > 0 ? value.filters as Record<string, string> : undefined,
           cursor: undefined,
           page: undefined,
         })}
