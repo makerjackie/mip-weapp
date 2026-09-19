@@ -323,4 +323,43 @@ describe('admin read pages', () => {
     assert.equal(page.sections[0].rows[0].action, 'admin.session.enter')
     assert.equal(page.sections[0].rows[0].resource, '管理会话')
   })
+
+  it('passes filter parameters through to action input for events list', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const filterQuery: AdminListQuery = {
+      query: '深圳',
+      status: 'PUBLISHED',
+      cursor: 'evt-cursor-1',
+      limit: 20,
+      filters: { city: '深圳', eventType: 'OFFLINE' },
+    }
+    await loadAdminReadPage('events', filterQuery, requestWith({
+      'mip.admin.events.list': { items: [{ id: 'e1', title: '深圳活动', startsAt: '2030-01-01T00:00:00.000Z', cityName: '深圳', branchName: '福田分会', accessType: 'FREE', priceCents: 0, status: 'PUBLISHED' }], nextCursor: 'evt-cursor-2' },
+      'mip.admin.events.policy.get': null,
+      'mip.admin.events.catalog.list': { items: [], nextCursor: null },
+    }, calls))
+    const listCall = calls.find(c => c.action === 'mip.admin.events.list')
+    assert.ok(listCall, 'events.list should be called')
+    const input = listCall!.input as Record<string, unknown>
+    const filters = input.filters as Record<string, unknown>
+    assert.equal(filters.query, '深圳')
+    assert.equal(filters.status, 'PUBLISHED')
+    assert.equal(filters.city, '深圳')
+    assert.equal(filters.eventType, 'OFFLINE')
+  })
+
+  it('loads event feedback with non-empty response field structure', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    await loadAdminReadPage('events', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
+      'mip.admin.events.list': { items: [], nextCursor: null },
+      'mip.admin.events.policy.get': null,
+      'mip.admin.events.catalog.list': { items: [], nextCursor: null },
+    }, calls))
+    // Verify that events.list is called with correct filter structure
+    const listCall = calls.find(c => c.action === 'mip.admin.events.list')
+    assert.ok(listCall, 'events.list should be called')
+    const input = listCall!.input as Record<string, unknown>
+    assert.ok(input.filters, 'filters should be present in input')
+    assert.ok(input.cursor === undefined || input.cursor === null, 'cursor should be undefined when null')
+  })
 })

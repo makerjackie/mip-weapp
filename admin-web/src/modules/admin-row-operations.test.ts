@@ -176,4 +176,42 @@ describe('admin row operations', () => {
     assert.deepEqual(actions, [])
   })
 
+  it('returns approve and reject for submitted state', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'submitted',
+    })
+    assert.equal(actions.length, 2)
+    assert.equal(actions[0]?.label, '通过')
+  })
+
+  it('returns approve and reject for pending_review state', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'pending_review',
+    })
+    assert.equal(actions.length, 2)
+  })
+
+  it('returns retryReward for reward_failed state', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'reward_failed',
+    })
+    assert.equal(actions.length, 1)
+    assert.equal(actions[0]?.action, 'mip.admin.tasks.submissions.retryReward')
+  })
+
+  it('returns retryReward for retrying state', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'retrying',
+    })
+    assert.equal(actions.length, 1)
+    assert.equal(actions[0]?.action, 'mip.admin.tasks.submissions.retryReward')
+  })
+
+  it('returns no actions for reward_pending state', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'reward_pending',
+    })
+    assert.deepEqual(actions, [])
+  })
+
 })

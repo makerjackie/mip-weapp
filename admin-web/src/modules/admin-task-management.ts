@@ -88,9 +88,13 @@ const resultStatusLabels: Record<string, string> = {
 }
 
 const submissionStatusLabels: Record<string, string> = {
-  pending: '待审批',
+  submitted: '已提交',
+  pending_review: '待审批',
   approved: '已通过',
   rejected: '已退回',
+  reward_pending: '奖励发放中',
+  reward_succeeded: '奖励已发放',
+  reward_failed: '奖励发放失败',
   retrying: '重试中',
 }
 

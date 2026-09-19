@@ -117,13 +117,16 @@ export function taskCompletionRowActions(completion: Record<string, unknown>): A
   const submissionId = identifier(completion.id || completion.submissionId || completion.completionId)
   if (!submissionId) return []
   const status = String(completion.submissionStatus || '')
-  if (status === 'pending') {
+  if (status === 'submitted' || status === 'pending_review' || status === 'pending') {
     return [
       { action: 'mip.admin.tasks.submissions.approve', label: '通过', targetId: submissionId, values: { submissionId } },
       { action: 'mip.admin.tasks.submissions.reject', label: '退回', targetId: submissionId, values: { submissionId } },
     ]
   }
-  if (status === 'approved') {
+  if (status === 'approved' || status === 'reward_succeeded') {
+    return [{ action: 'mip.admin.tasks.submissions.retryReward', label: '重试奖励', targetId: submissionId, values: { submissionId } }]
+  }
+  if (status === 'reward_failed' || status === 'retrying') {
     return [{ action: 'mip.admin.tasks.submissions.retryReward', label: '重试奖励', targetId: submissionId, values: { submissionId } }]
   }
   return []
