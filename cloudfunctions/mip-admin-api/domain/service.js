@@ -293,6 +293,7 @@ function createAdminService({
     listRoles,
     searchRoleCandidates,
     setRole,
+    createRole,
     updateBranch,
     updateRoleCapabilityPolicy,
   } = createAdminGovernance({ access, now, repository })
