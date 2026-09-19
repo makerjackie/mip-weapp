@@ -20,6 +20,7 @@ export function FilterBar({ value, placeholder, statusOptions, loading, onChange
     syncedValue.current = signature
     form.setFieldsValue(value)
   }, [form, value])
+  const hasFilter = Boolean(value.q || value.status)
   return (
     <Form
       form={form}
@@ -30,13 +31,24 @@ export function FilterBar({ value, placeholder, statusOptions, loading, onChange
       aria-label="列表筛选"
     >
       <Form.Item name="q" className="filter-bar__search">
-        <Input allowClear prefix={<SearchOutlined />} placeholder={placeholder} maxLength={80} />
+        <Input
+          allowClear
+          prefix={<SearchOutlined />}
+          placeholder={placeholder}
+          maxLength={80}
+          onPressEnter={() => form.validateFields().then(onChange, () => {})}
+        />
       </Form.Item>
       <Form.Item name="status" className="filter-bar__status">
-        <Select options={statusOptions} />
+        <Select
+          options={statusOptions}
+          onChange={() => form.validateFields().then(onChange, () => {})}
+        />
       </Form.Item>
       <Button type="primary" htmlType="submit" loading={loading}>筛选</Button>
-      <Button htmlType="button" onClick={() => { form.resetFields(); onChange({ q: '', status: '' }) }}>清除</Button>
+      {hasFilter ? (
+        <Button htmlType="button" onClick={() => { form.resetFields(); onChange({ q: '', status: '' }) }}>清除</Button>
+      ) : null}
       {onRefresh ? <Button aria-label="刷新数据" icon={<ReloadOutlined />} onClick={onRefresh} /> : null}
     </Form>
   )

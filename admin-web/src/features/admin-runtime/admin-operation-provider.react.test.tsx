@@ -5,6 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminOperationProvider, useAdminOperations } from './admin-operation-provider'
 import { AdminDetailActions } from './admin-detail-actions'
 
+const mockNavigate = vi.fn()
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => mockNavigate,
+  useParams: () => ({} as Record<string, string>),
+  useSearch: () => ({} as Record<string, unknown>),
+  useRouterState: () => ({ location: { search: {} } }),
+}))
+
 afterEach(cleanup)
 
 const { request } = vi.hoisted(() => ({ request: vi.fn() }))
