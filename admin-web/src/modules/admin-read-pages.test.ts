@@ -167,10 +167,13 @@ describe('admin read pages', () => {
       'mip.admin.growth.levelTransitions': { items: [{ nickname: '林晓', fromLevel: null, toLevel: { name: '成长会员' }, experienceBefore: 90, experienceAfter: 100, sourceEventType: 'event.checked_in', createdAt: '2030-03-01T00:00:00.000Z' }] },
       'mip.admin.badges.list': { items: [{ name: '资料完善', key: 'profile-complete', description: '完成资料', placeholderShape: 'HEXAGON', version: 1, updatedAt: '2030-03-01T00:00:00.000Z', status: 'ACTIVE' }] },
       'mip.admin.badges.awards': { items: [{ nickname: '林晓', badgeName: '资料完善', awardReason: '完成个人资料', awardedAt: '2030-03-01T00:00:00.000Z', equipped: true, status: 'ACTIVE' }] },
+      'mip.admin.entitlements.transactions.list': { items: [], nextCursor: null },
+      'mip.admin.contribution.rules.list': { items: [], nextCursor: null },
+      'mip.admin.contribution.transactions.list': { items: [], nextCursor: null },
     }, calls))
 
-    assert.deepEqual(calls.map(call => call.action), ['mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules', 'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions', 'mip.admin.badges.list', 'mip.admin.badges.awards'])
-    assert.equal(page.sections.length, 7)
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules', 'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions', 'mip.admin.badges.list', 'mip.admin.badges.awards', 'mip.admin.entitlements.transactions.list', 'mip.admin.contribution.rules.list', 'mip.admin.contribution.transactions.list'])
+    assert.equal(page.sections.length, 10)
     assert.equal(page.sections[0].rows[0].benefits, '活动优先报名')
     assert.equal(page.sections[3].rows[0].balance, '20 → 30')
     assert.equal(page.sections[3].rows[0].source, '活动签到')
@@ -186,6 +189,9 @@ describe('admin read pages', () => {
       'mip.admin.growth.rules': { items: [] },
       'mip.admin.growth.entries': { items: [] },
       'mip.admin.growth.levelTransitions': { items: [] },
+      'mip.admin.entitlements.transactions.list': { items: [], nextCursor: null },
+      'mip.admin.contribution.rules.list': { items: [], nextCursor: null },
+      'mip.admin.contribution.transactions.list': { items: [], nextCursor: null },
     }, calls), {
       hasCapability: capability => capability === 'growth.read',
     })
@@ -193,8 +199,10 @@ describe('admin read pages', () => {
     assert.deepEqual(calls.map(call => call.action), [
       'mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules',
       'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions',
+      'mip.admin.entitlements.transactions.list', 'mip.admin.contribution.rules.list',
+      'mip.admin.contribution.transactions.list',
     ])
-    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '成长流水', '等级变更'])
+    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '成长流水', '等级变更', '权益流水', '贡献值规则', '贡献值流水'])
   })
 
   it('loads operations records without deriving queue or moderation state in the browser', async () => {
