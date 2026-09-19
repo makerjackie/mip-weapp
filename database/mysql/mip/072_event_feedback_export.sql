@@ -1,0 +1,10 @@
+-- M03: Event feedback export — no DDL required.
+--
+-- Structured event feedback data is already persisted in
+-- mip_event_feedback.answers_json (added in migration 060). The admin-web
+-- feedback export action reads answers_json directly and projects the
+-- structured questionnaire fields at query time. No new table or column
+-- is needed; this migration exists solely to document that decision in
+-- the migration sequence.
+--
+-- No schema changes are made by this file.

@@ -12,4 +12,7 @@ module.exports = defineManifest('USERS', [
   serviceOperation('mip.admin.users.setControl', 'MUTATION', 'setUserControl'),
   serviceOperation('mip.admin.communityReports.claim', 'MUTATION', 'claimCommunityReport'),
   serviceOperation('mip.admin.communityReports.close', 'MUTATION', 'closeCommunityReport'),
+  serviceOperation('mip.admin.users.invitedGuests.list', 'QUERY', 'listInvitedGuests', { sessionFirst: true }),
+  serviceOperation('mip.admin.users.likeRelations.list', 'QUERY', 'listLikeRelations', { sessionFirst: true }),
+  serviceOperation('mip.admin.users.operationLogs.list', 'QUERY', 'listUserOperationLogs', { sessionFirst: true }),
 ])

@@ -18,4 +18,7 @@ module.exports = defineManifest('GROWTH', [
   serviceOperation('mip.admin.badges.save', 'MUTATION', 'saveBadge'),
   serviceOperation('mip.admin.badges.grant', 'MUTATION', 'grantBadge'),
   serviceOperation('mip.admin.badges.revoke', 'MUTATION', 'revokeBadge'),
+  serviceOperation('mip.admin.growth.levels.changeStatus', 'MUTATION', 'changeLevelStatus', { sessionFirst: true }),
+  serviceOperation('mip.admin.growth.benefits.changeStatus', 'MUTATION', 'changeBenefitStatus', { sessionFirst: true }),
+  serviceOperation('mip.admin.growth.levelTransitions.list', 'QUERY', 'listLevelTransitions', { sessionFirst: true }),
 ])

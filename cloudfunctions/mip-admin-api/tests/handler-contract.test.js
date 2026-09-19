@@ -251,7 +251,7 @@ describe('admin handler and isolation contract', () => {
     assert.equal(issues, 0)
   })
 
-  it('keeps all 187 business actions compatible with the handler configuration', async () => {
+  it('keeps all 231 business actions compatible with the handler configuration', async () => {
     const caller = { appId: 'wx', identityKey: 'key' }
     const calls = []
     const service = createServiceDouble({}, operation => async (...args) => {
@@ -265,7 +265,7 @@ describe('admin handler and isolation contract', () => {
     })
     const businessActions = operationRegistry.operationCatalog.map(operation => operation.action)
 
-    assert.equal(businessActions.length, 187)
+    assert.equal(businessActions.length, 231)
     for (const action of businessActions) {
       const before = calls.length
       const response = await handler({ contractVersion: 1, action, input: { marker: action } })

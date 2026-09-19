@@ -1,0 +1,12 @@
+ALTER TABLE mip_task_cards
+  DROP CHECK mip_task_cards_star_level_ck,
+  DROP KEY mip_task_cards_owner_idx,
+  DROP KEY mip_task_cards_star_level_idx,
+  DROP COLUMN attachment_template_asset_id,
+  DROP COLUMN assigned_owner_id,
+  DROP COLUMN weekly_deliver_at,
+  DROP COLUMN period_start_at,
+  DROP COLUMN completion_criteria,
+  DROP COLUMN purpose,
+  DROP COLUMN reward_config_json,
+  DROP COLUMN star_level;

@@ -15,4 +15,10 @@ module.exports = Object.freeze([
   require('./game'),
   require('./media'),
   require('./application-workflow'),
+  require('./admin-accounts'),
+  require('./cooperation-cards'),
+  require('./contribution'),
+  require('./videos'),
+  require('./cards'),
+  require('./event-drafts'),
 ])

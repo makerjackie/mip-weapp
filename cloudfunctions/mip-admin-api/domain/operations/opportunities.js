@@ -23,4 +23,7 @@ module.exports = defineManifest('OPPORTUNITIES', [
   serviceOperation('mip.admin.opportunityComments.settings.save', 'MUTATION', 'saveOpportunityCommentSettings'),
   serviceOperation('mip.admin.opportunityComments.moderate', 'MUTATION', 'moderateOpportunityComment', { wakesOutbox: true }),
   serviceOperation('mip.admin.opportunityComments.reports.close', 'MUTATION', 'closeOpportunityCommentReport'),
+  serviceOperation('mip.admin.opportunities.operationLogs', 'QUERY', 'listOpportunityOperationLogs', { sessionFirst: true }),
+  serviceOperation('mip.admin.opportunities.delete', 'MUTATION', 'deleteOpportunity', { sessionFirst: true }),
+  serviceOperation('mip.admin.opportunities.referrals', 'QUERY', 'listOpportunityReferrals', { sessionFirst: true }),
 ])

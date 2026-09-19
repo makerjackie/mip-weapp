@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 187,
+  "operationCount": 231,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -174,6 +174,30 @@ export const ADMIN_OPERATION_CONTRACT = {
       "idempotencyKeyRequired": null
     },
     {
+      "action": "mip.admin.users.invitedGuests.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.users.likeRelations.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.users.operationLogs.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
       "action": "mip.admin.memberships.get",
       "kind": "QUERY",
       "authentication": "REQUIRED",
@@ -191,6 +215,22 @@ export const ADMIN_OPERATION_CONTRACT = {
     },
     {
       "action": "mip.admin.memberships.grant",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.entitlements.transactions.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.entitlements.grant",
       "kind": "MUTATION",
       "authentication": "REQUIRED",
       "session": "REQUIRED",
@@ -462,6 +502,62 @@ export const ADMIN_OPERATION_CONTRACT = {
       "idempotencyKeyRequired": null
     },
     {
+      "action": "mip.admin.events.feedbacks.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.events.feedbacks.export",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.events.checkinQrcode.get",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.events.participants.import",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.events.participants.cancel",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.events.participants.markAbnormal",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.events.hearts.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
       "action": "mip.admin.orders.list",
       "kind": "QUERY",
       "authentication": "REQUIRED",
@@ -499,6 +595,14 @@ export const ADMIN_OPERATION_CONTRACT = {
       "authentication": "REQUIRED",
       "session": "REQUIRED",
       "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.refunds.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
       "idempotencyKeyRequired": null
     },
     {
@@ -982,6 +1086,30 @@ export const ADMIN_OPERATION_CONTRACT = {
       "idempotencyKeyRequired": null
     },
     {
+      "action": "mip.admin.opportunities.operationLogs",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.opportunities.delete",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.opportunities.referrals",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
       "action": "mip.admin.growth.levels",
       "kind": "QUERY",
       "authentication": "REQUIRED",
@@ -1102,6 +1230,30 @@ export const ADMIN_OPERATION_CONTRACT = {
       "idempotencyKeyRequired": null
     },
     {
+      "action": "mip.admin.growth.levels.changeStatus",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.growth.benefits.changeStatus",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.growth.levelTransitions.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
       "action": "mip.admin.tasks.list",
       "kind": "QUERY",
       "authentication": "REQUIRED",
@@ -1203,6 +1355,38 @@ export const ADMIN_OPERATION_CONTRACT = {
       "authentication": "REQUIRED",
       "session": "REQUIRED",
       "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.submissions.approve",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.submissions.reject",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.submissions.retryReward",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.assign",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
       "idempotencyKeyRequired": null
     },
     {
@@ -1500,13 +1684,181 @@ export const ADMIN_OPERATION_CONTRACT = {
       "session": "REQUIRED",
       "safeToRetry": false,
       "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.adminAccounts.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.adminAccounts.create",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.adminAccounts.update",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.adminAccounts.changeStatus",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.adminAccounts.resetCredential",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.cooperationCards.get",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.cooperationCards.save",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.contribution.rules.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.contribution.rules.save",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.contribution.transactions.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.contribution.transactions.reverse",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.videos.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.videos.save",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.videos.changeStatus",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.cards.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.cards.save",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.cards.changeStatus",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.cards.takedown",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.cards.history",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.events.drafts.save",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.events.drafts.get",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
     }
   ]
 } as const
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 187,
+  "operationCount": 231,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -1770,6 +2122,36 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "forwardIdempotencyKey": false
     },
     {
+      "action": "mip.admin.users.invitedGuests.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.users.likeRelations.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.users.operationLogs.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
       "action": "mip.admin.memberships.get",
       "kind": "QUERY",
       "webAllowed": true,
@@ -1801,6 +2183,32 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
         "userId"
       ],
       "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.entitlements.transactions.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.entitlements.grant",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "userId",
+        "entitlementType"
+      ],
+      "optionalInputKeys": [
+        "amount",
+        "months"
+      ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
     },
@@ -2203,6 +2611,94 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "forwardIdempotencyKey": false
     },
     {
+      "action": "mip.admin.events.feedbacks.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.feedbacks.export",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.checkinQrcode.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.participants.import",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "userId"
+      ],
+      "optionalInputKeys": [
+        "roleMark",
+        "reason"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.events.participants.cancel",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "registrationId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.participants.markAbnormal",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "registrationId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.hearts.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
       "action": "mip.admin.orders.list",
       "kind": "QUERY",
       "webAllowed": true,
@@ -2254,6 +2750,16 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "optionalInputKeys": [],
       "idempotencyKeyRequired": null,
       "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.refunds.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.announcements.scopes",
@@ -2996,6 +3502,40 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "forwardIdempotencyKey": null
     },
     {
+      "action": "mip.admin.opportunities.operationLogs",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.opportunities.delete",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "opportunityId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.opportunities.referrals",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
       "action": "mip.admin.growth.levels",
       "kind": "QUERY",
       "webAllowed": true,
@@ -3159,6 +3699,44 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "forwardIdempotencyKey": false
     },
     {
+      "action": "mip.admin.growth.levels.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "levelId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.growth.benefits.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "benefitId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.growth.levelTransitions.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
       "action": "mip.admin.tasks.list",
       "kind": "QUERY",
       "webAllowed": true,
@@ -3309,6 +3887,63 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "optionalInputKeys": [],
       "idempotencyKeyRequired": false,
       "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.tasks.submissions.approve",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "submissionId"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.tasks.submissions.reject",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "submissionId"
+      ],
+      "optionalInputKeys": [
+        "remark"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.tasks.submissions.retryReward",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "submissionId"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.tasks.assign",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "taskId",
+        "recipients",
+        "assignMode"
+      ],
+      "optionalInputKeys": [
+        "expectedVersion",
+        "weeklyDeliverAt",
+        "weeklyStartAt",
+        "weeklyEndAt"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.banners.session",
@@ -3760,6 +4395,303 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       ],
       "optionalInputKeys": [],
       "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.adminAccounts.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.adminAccounts.create",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "name",
+        "loginAccount",
+        "phone",
+        "roleKey"
+      ],
+      "optionalInputKeys": [
+        "branchId"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.adminAccounts.update",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "accountId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [
+        "name",
+        "phone",
+        "roleKey",
+        "branchId"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.adminAccounts.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "accountId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [
+        "reason"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.adminAccounts.resetCredential",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "accountId"
+      ],
+      "optionalInputKeys": [
+        "reason"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.cooperationCards.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.cooperationCards.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "userId",
+        "cardType",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [
+        "realName",
+        "gameName",
+        "cardSummary",
+        "targetSummary",
+        "referralNeeded",
+        "quirks",
+        "rootCause",
+        "prevention",
+        "cooperationValue",
+        "abilityScores",
+        "menuFields",
+        "status"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.contribution.rules.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.contribution.rules.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "behavior",
+        "rewardExp",
+        "rewardLimit",
+        "scopeServers",
+        "effectiveFrom",
+        "status"
+      ],
+      "optionalInputKeys": [
+        "ruleId",
+        "expectedVersion",
+        "effectiveTo"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.contribution.transactions.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.contribution.transactions.reverse",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "originalTransactionNo",
+        "reversalValue",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.videos.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.videos.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "coverAssetId",
+        "jumpUrl",
+        "title"
+      ],
+      "optionalInputKeys": [
+        "videoId",
+        "expectedVersion",
+        "status"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.videos.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "videoId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.cards.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.cards.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "cardType",
+        "fields"
+      ],
+      "optionalInputKeys": [
+        "cardId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.cards.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "cardId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.cards.takedown",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "cardId",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.cards.history",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.drafts.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "draftData"
+      ],
+      "optionalInputKeys": [
+        "eventId",
+        "draftId"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.events.drafts.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
       "forwardIdempotencyKey": false
     }
   ]
