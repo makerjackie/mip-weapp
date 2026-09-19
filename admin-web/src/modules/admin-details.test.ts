@@ -331,4 +331,38 @@ describe('admin detail views', () => {
     assert.equal(detail.sections.find(section => section.title === '内容信息')?.fields?.find(item => item.label === '正文')?.value, '正文')
     assert.equal(detail.sections.find(section => section.title.startsWith('知识库同步'))?.rows?.[0].source, '行业资讯')
   })
+
+  it('loads event feedback detail section with non-empty response', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('events', 'event-1', requestWith({
+      'mip.admin.events.get': {
+        id: 'event-1', title: 'MIP 早会', status: 'PUBLISHED',
+        startsAt: '2030-03-14T02:00:00.000Z', endsAt: '2030-03-14T04:00:00.000Z',
+      },
+      'mip.admin.events.insights.get': {
+        eventId: 'event-1',
+        participation: {}, invitations: {}, composition: {},
+        hearts: {}, feedback: { access: 'GRANTED' }, financials: { access: 'RESTRICTED' },
+      },
+      'mip.admin.events.roster': { items: [], nextCursor: null },
+      'mip.admin.events.feedbacks.list': {
+        items: [{
+          feedbackId: 'fb-001', nickname: '李四',
+          submittedAt: '2030-03-01T00:00:00.000Z', rating: 5,
+          wouldRecommend: true, capabilityRoles: ['主持', '摄影'], joinMipIntent: 'YES',
+        }],
+        nextCursor: 'fb-cursor-2',
+      },
+    }, calls), { includeEventFeedback: true })
+
+    assert.deepEqual(calls.map(call => call.action), [
+      'mip.admin.events.get', 'mip.admin.events.insights.get',
+      'mip.admin.events.roster', 'mip.admin.events.feedbacks.list',
+    ])
+    const section = detail.sections.find(item => item.title === '活动反馈明细')
+    assert.equal(section?.rows?.[0].nickname, '李四')
+    assert.equal(section?.rows?.[0].rating, '5')
+    assert.equal(section?.rows?.[0].wouldRecommend, '是')
+    assert.equal(section?.pager?.nextCursor, 'fb-cursor-2')
+  })
 })

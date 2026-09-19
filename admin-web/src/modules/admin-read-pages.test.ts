@@ -281,4 +281,46 @@ describe('admin read pages', () => {
     assert.equal(page.sections[0].rows[0].access, '会员可见')
     assert.equal(page.sections[0].rows[0].detailId, 'content-1')
   })
+
+  it('loads admin accounts with non-empty response field structure', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('adminAccounts', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
+      'mip.admin.adminAccounts.list': {
+        items: [{
+          accountId: 'acc-001', name: '张三', loginAccount: 'zhangsan',
+          roleKey: 'PLATFORM_OPERATIONS', branchName: '上海分会',
+          status: 'ACTIVE', version: 1,
+        }],
+        nextCursor: 'cursor-2',
+      },
+    }, calls))
+
+    assert.equal(calls[0].action, 'mip.admin.adminAccounts.list')
+    assert.equal(page.sections.length, 1)
+    assert.equal(page.sections[0].rows[0].name, '张三')
+    assert.equal(page.sections[0].rows[0].loginAccount, 'zhangsan')
+    assert.equal(page.sections[0].rows[0].role, '平台运营')
+    assert.equal(page.sections[0].rows[0].state, '启用')
+    assert.equal(page.nextCursor, 'cursor-2')
+  })
+
+  it('loads audit logs with non-empty response field structure', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('auditLogs', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
+      'mip.admin.audit.list': {
+        items: [{
+          actorNickname: '管理员', actorRoleKey: 'PLATFORM_OWNER', scopeName: '平台',
+          action: 'admin.session.enter', resourceType: 'ADMIN_SESSION',
+          resourceId: 'sess-001', createdAt: '2030-01-01T00:00:00.000Z',
+        }],
+        nextCursor: null,
+      },
+    }, calls))
+
+    assert.equal(calls[0].action, 'mip.admin.audit.list')
+    assert.equal(page.sections.length, 1)
+    assert.equal(page.sections[0].rows[0].actor, '管理员')
+    assert.equal(page.sections[0].rows[0].action, 'admin.session.enter')
+    assert.equal(page.sections[0].rows[0].resource, '管理会话')
+  })
 })

@@ -14,6 +14,7 @@ export const labels: Record<string, string> = {
   PLATFORM_OWNER: '平台负责人', PLATFORM_OPERATIONS: '平台运营', PLATFORM_FINANCE: '平台财务',
   BRANCH_ADMIN: '服务器管理员', EVENT_OWNER: '活动负责人', EVENT_MANAGER: '活动管理员', EVENT_STAFF: '活动工作人员',
   RESOURCE: '资源', ROLE: '角色', USER: '用户', ORDER: '订单', REFUND: '退款', MESSAGE: '消息', KNOWLEDGE: '知识内容',
+  ADMIN_SESSION: '管理会话',
   DEFAULT: '默认策略', CUSTOM: '自定义策略',
   COOPERATION_CARD: '合作卡', SUPER_CASE: '超级案例',
   PENDING: '待处理', PASSED: '已通过', ERROR: '处理异常', APPROVED: '已通过',

@@ -12,6 +12,7 @@ describe('admin detail pagination state', () => {
     let options = {}
     for (const [key, expected] of [
       ['eventRoster', 'event-cursor'],
+      ['eventFeedback', 'feedback-cursor'],
       ['taskMembers', 'member-cursor'],
       ['taskCompletions', 'completion-cursor'],
       ['gameMembers', 'game-cursor'],
@@ -24,6 +25,7 @@ describe('admin detail pagination state', () => {
 
     expect(options).toMatchObject({
       eventRoster: { cursor: 'event-cursor' },
+      eventFeedback: { cursor: 'feedback-cursor' },
       task: {
         members: { query: 'taskMembers-query', cursor: 'member-cursor' },
         completions: { query: 'taskCompletions-query', cursor: 'completion-cursor' },
@@ -31,7 +33,7 @@ describe('admin detail pagination state', () => {
       gameMembers: { query: 'gameMembers-query', cursor: 'game-cursor' },
     })
     expect(history).toEqual({
-      eventRoster: [null], taskMembers: [null], taskCompletions: [null], gameMembers: [null],
+      eventRoster: [null], eventFeedback: [null], taskMembers: [null], taskCompletions: [null], gameMembers: [null],
     })
 
     const previousMemberPage = transitionDetailPage(
@@ -43,6 +45,7 @@ describe('admin detail pagination state', () => {
     expect(previousMemberPage.options.task?.members?.cursor).toBeNull()
     expect(previousMemberPage.history.taskMembers).toEqual([])
     expect(previousMemberPage.history.eventRoster).toEqual([null])
+    expect(previousMemberPage.history.eventFeedback).toEqual([null])
     expect(previousMemberPage.history.taskCompletions).toEqual([null])
     expect(previousMemberPage.history.gameMembers).toEqual([null])
   })

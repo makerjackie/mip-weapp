@@ -25,6 +25,7 @@ describe('admin people mutation forms', () => {
       'mip.admin.adminAccounts.update',
       'mip.admin.adminAccounts.changeStatus',
       'mip.admin.adminAccounts.resetCredential',
+      'mip.admin.entitlements.grant',
     ])
     const definition = createAdminPeopleMutationDefinition(
       'mip.admin.branches.create', '', detailReader({}),
@@ -206,5 +207,99 @@ describe('admin people mutation forms', () => {
     assert.deepEqual(buildAdminPeopleMutationInput(status, { status: 'INACTIVE', name: 'ignored' }), {
       branchId: 'branch-a', expectedVersion: 4, status: 'INACTIVE',
     })
+  })
+
+  it('rejects invalid loginAccount format for admin account create', () => {
+    const definition = createAdminPeopleMutationDefinition(
+      'mip.admin.adminAccounts.create', '', detailReader({}),
+    )
+    assert.equal(buildAdminPeopleMutationInput(definition, {
+      loginAccount: 'ab', name: 'Test', phone: '13800138000', roleKey: 'PLATFORM_OPERATIONS',
+    }), null)
+  })
+
+  it('rejects missing required fields for admin account create', () => {
+    const definition = createAdminPeopleMutationDefinition(
+      'mip.admin.adminAccounts.create', '', detailReader({}),
+    )
+    assert.equal(buildAdminPeopleMutationInput(definition, {
+      loginAccount: 'test_user', name: '', phone: '13800138000', roleKey: 'PLATFORM_OPERATIONS',
+    }), null)
+  })
+
+  it('rejects invalid roleKey for admin account create', () => {
+    const definition = createAdminPeopleMutationDefinition(
+      'mip.admin.adminAccounts.create', '', detailReader({}),
+    )
+    assert.equal(buildAdminPeopleMutationInput(definition, {
+      loginAccount: 'test_user', name: 'Test', phone: '13800138000', roleKey: 'INVALID_ROLE',
+    }), null)
+  })
+
+  it('accepts valid create input and returns the server schema', () => {
+    const definition = createAdminPeopleMutationDefinition(
+      'mip.admin.adminAccounts.create', '', detailReader({}),
+    )
+    const input = buildAdminPeopleMutationInput(definition, {
+      loginAccount: 'test_user', name: 'Test', phone: '13800138000', roleKey: 'PLATFORM_OPERATIONS',
+    })
+    assert.equal(input?.loginAccount, 'test_user')
+    assert.equal(input?.name, 'Test')
+    assert.equal(input?.phone, '13800138000')
+    assert.equal(input?.roleKey, 'PLATFORM_OPERATIONS')
+  })
+
+  it('requires a reason when changing admin account status', () => {
+    const definition = createAdminPeopleMutationDefinition(
+      'mip.admin.adminAccounts.changeStatus', 'acc-001', detailReader({}),
+      { expectedVersion: 2 },
+    )
+    assert.equal(buildAdminPeopleMutationInput(definition, {
+      status: 'INACTIVE', reason: '',
+    }), null)
+  })
+
+  it('accepts a valid status change with reason and expected version', () => {
+    const definition = createAdminPeopleMutationDefinition(
+      'mip.admin.adminAccounts.changeStatus', 'acc-001', detailReader({}),
+      { expectedVersion: 2 },
+    )
+    const input = buildAdminPeopleMutationInput(definition, {
+      status: 'INACTIVE', reason: '停用原因',
+    })
+    assert.equal(input?.status, 'INACTIVE')
+    assert.equal(input?.reason, '停用原因')
+    assert.equal(input?.accountId, 'acc-001')
+    assert.equal(input?.expectedVersion, 2)
+  })
+
+  it('rejects zero amount for entitlement grant', () => {
+    const definition = createAdminPeopleMutationDefinition(
+      'mip.admin.entitlements.grant', '', detailReader({}),
+    )
+    assert.equal(buildAdminPeopleMutationInput(definition, {
+      userId: 'user-1', entitlementType: 'EVENT_PASS', amount: 0,
+    }), null)
+  })
+
+  it('rejects negative amount for entitlement grant', () => {
+    const definition = createAdminPeopleMutationDefinition(
+      'mip.admin.entitlements.grant', '', detailReader({}),
+    )
+    assert.equal(buildAdminPeopleMutationInput(definition, {
+      userId: 'user-1', entitlementType: 'EVENT_PASS', amount: -5,
+    }), null)
+  })
+
+  it('accepts a valid positive integer amount for entitlement grant', () => {
+    const definition = createAdminPeopleMutationDefinition(
+      'mip.admin.entitlements.grant', '', detailReader({}),
+    )
+    const input = buildAdminPeopleMutationInput(definition, {
+      userId: 'user-1', entitlementType: 'EVENT_PASS', amount: 100,
+    })
+    assert.equal(input?.userId, 'user-1')
+    assert.equal(input?.entitlementType, 'EVENT_PASS')
+    assert.equal(input?.amount, 100)
   })
 })

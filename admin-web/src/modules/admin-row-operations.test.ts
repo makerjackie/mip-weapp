@@ -11,6 +11,7 @@ import {
   messageScheduleCancelAction,
   messageTemplateRowActions,
   rolePolicyRowActions,
+  taskCompletionRowActions,
 } from './admin-row-operations.ts'
 
 describe('admin row operations', () => {
@@ -147,6 +148,32 @@ describe('admin row operations', () => {
     assert.deepEqual(eventCatalogRowActions({
       id: 'catalog-1', kind: 'TYPE', sortOrder: 10, version: 2, status: 'ARCHIVED',
     }), [])
+  })
+
+  it('returns approve and reject for pending submission', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'pending',
+    })
+    assert.equal(actions.length, 2)
+    assert.equal(actions[0]?.label, '通过')
+    assert.equal(actions[1]?.label, '退回')
+    assert.deepEqual(actions[0]?.values, { submissionId: 'sub-001' })
+  })
+
+  it('returns retryReward for approved submission', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'approved',
+    })
+    assert.equal(actions.length, 1)
+    assert.equal(actions[0]?.label, '重试奖励')
+    assert.equal(actions[0]?.action, 'mip.admin.tasks.submissions.retryReward')
+  })
+
+  it('returns no actions for rejected submission', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'rejected',
+    })
+    assert.deepEqual(actions, [])
   })
 
 })

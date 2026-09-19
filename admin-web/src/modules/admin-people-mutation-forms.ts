@@ -14,6 +14,7 @@ export const ADMIN_PEOPLE_MUTATION_ACTIONS = [
   'mip.admin.adminAccounts.update',
   'mip.admin.adminAccounts.changeStatus',
   'mip.admin.adminAccounts.resetCredential',
+  'mip.admin.entitlements.grant',
 ] as const
 
 export type AdminPeopleMutationAction = typeof ADMIN_PEOPLE_MUTATION_ACTIONS[number]
@@ -288,6 +289,19 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     ],
     values: { reason: '' },
   },
+  'mip.admin.entitlements.grant': {
+    action: 'mip.admin.entitlements.grant',
+    capability: 'memberships.adjust',
+    title: '授予权益',
+    description: '为用户手动授予权益，可附带数量和月数。金额和月数为正整数。',
+    fields: [
+      { name: 'userId', label: '用户', kind: 'text', required: true, maxLength: 36 },
+      { name: 'entitlementType', label: '权益类型', kind: 'text', required: true, maxLength: 64 },
+      { name: 'amount', label: '数量', kind: 'text' },
+      { name: 'months', label: '月数', kind: 'text' },
+    ],
+    values: { userId: '', entitlementType: '', amount: '', months: '' },
+  },
 } as const
 
 export const ADMIN_PEOPLE_MUTATION_CONFIGS = ADMIN_PEOPLE_MUTATION_CONFIG
@@ -365,6 +379,7 @@ export function buildAdminPeopleMutationInput(
     case 'mip.admin.adminAccounts.update': return buildAdminAccountUpdate(definition, values)
     case 'mip.admin.adminAccounts.changeStatus': return buildAdminAccountChangeStatus(definition, values)
     case 'mip.admin.adminAccounts.resetCredential': return buildAdminAccountResetCredential(definition, values)
+    case 'mip.admin.entitlements.grant': return buildEntitlementGrant(values)
   }
 }
 
@@ -537,6 +552,24 @@ function buildAdminAccountResetCredential(definition: AdminPeopleMutationDefinit
   const reason = boundedText(values.reason, 300)
   if (!definition.targetId || !reason) return null
   return { accountId: definition.targetId, reason }
+}
+
+function buildEntitlementGrant(values: AdminPeopleMutationValues) {
+  const userId = boundedId(values.userId)
+  const entitlementType = boundedText(values.entitlementType, 64)
+  if (!userId || !entitlementType) return null
+  const result: Record<string, unknown> = { userId, entitlementType }
+  if (values.amount !== undefined && values.amount !== null && values.amount !== '') {
+    const amount = Number(values.amount)
+    if (!Number.isSafeInteger(amount) || amount <= 0) return null
+    result.amount = amount
+  }
+  if (values.months !== undefined && values.months !== null && values.months !== '') {
+    const months = Number(values.months)
+    if (!Number.isSafeInteger(months) || months <= 0) return null
+    result.months = months
+  }
+  return result
 }
 
 function readVersionSource(
