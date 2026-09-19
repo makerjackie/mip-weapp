@@ -8,7 +8,7 @@
 
 当前产品形态为“小程序用户端 + 四路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 66 条小程序路由、80 个锁定迁移、234 个渠道中立管理 operation（101 查询、133 写）和 16 个数据库核心函数。Web 使用其中 101 个查询与 107 个受审 mutation。以上数字只描述当前代码合同，不自动证明运行时、云端或生产通过。
+仓库清单当前为 66 条小程序路由、80 个锁定迁移、234 个渠道中立管理 operation（100 查询、134 写）和 16 个数据库核心函数。Web 使用其中 100 个查询与 106 个受审 mutation。以上数字只描述当前代码合同，不自动证明运行时、云端或生产通过。
 
 ## 仓库事实
 
@@ -16,8 +16,8 @@
 | --- | --- | --- |
 | 小程序路由 | 66 条：5 条主包、56 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
 | 数据库 | 80 个追加迁移；目标 runtime 表清单为 143 张 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
-| 管理合同 | 234 个 operation：101 查询、133 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
-| Web 开放范围 | 101 查询、107 个受审 mutation | `cloudfunctions/mip-admin-api/lib/web-bff-auth.js` |
+| 管理合同 | 234 个 operation：100 查询、134 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| Web 开放范围 | 100 查询、106 个受审 mutation | `cloudfunctions/mip-admin-api/lib/web-bff-auth.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
 | 调度 | 消息和知识采集各有独立 scheduler；均不属于数据库核心函数 | `mip-message-scheduler`、`mip-knowledge-scheduler` 及部署脚本 |
 | Web 页面 | 14 个一级页面、13 类详情 | `admin-web/src/` 的路由与页面合同 |
