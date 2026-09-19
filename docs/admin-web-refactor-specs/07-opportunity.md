@@ -238,8 +238,8 @@ pnpm verify             # 涉及服务端契约变更
 - 删除机会为不可逆操作，需在 staging 环境验证小程序端与后台同步删除效果。
 - 操作记录与想推荐名单的合同测试必须包含非空服务端响应到页面展示的校验（按 AGENTS.md 第 11 节要求）。
 
-## 10. 待确认
+## 10. 已确认决策
 
-- [ ] `scopeType/branchId`（作用范围）与新增 `visibility`（可见范围）是否在服务端合并为同一字段 —— 需服务端契约确认。
-- [ ] 「想推荐」数据源是否已存在服务端明细表，还是需新建 —— 需服务端确认。
-- [ ] 删除机会的 capability 是复用 `opportunities.archive` 还是新增 `opportunities.delete` —— 需权限模型确认。
+- [x] `scopeType/branchId`（作用范围）与新增 `visibility`（可见范围）是两个独立维度 — 新增 visibility 字段（PLATFORM_PUBLIC/MIP_INTERNAL），不合并
+- [x] 「想推荐」数据源复用现有 `mip_referral_intents` 表 — 字段名映射 actor_user_id→user_id
+- [x] 删除机会用 archive 软删除 — 扩展 archive 支持非 DRAFT 状态，不做物理删除，操作记录永久保留

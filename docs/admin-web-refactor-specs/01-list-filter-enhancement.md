@@ -192,7 +192,7 @@ export interface AdminListQuery {
 - [ ] 通过 `pnpm admin:web:verify`（类型检查 + 契约测试 + 组件测试 + 构建）
 - [ ] 通过 `pnpm verify:all`
 
-## 待确认问题
+## 已确认决策
 
-- [ ] 活动列表"费用金额"筛选是按范围输入还是按免费/付费分类切换 — 建议范围输入，与机会金额范围一致
-- [ ] 机会发布人 datalist 的昵称搜索数据源是否复用现有 `roles.candidates` action — 需确认是否有更合适的用户搜索 action
+- [x] 活动列表"费用金额"筛选用范围输入，与机会金额范围一致
+- [x] 机会发布人 datalist 的昵称搜索不复用 `roles.candidates`（权限模型不匹配），新增独立搜索 action

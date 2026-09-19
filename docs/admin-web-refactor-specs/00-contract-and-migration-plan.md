@@ -335,9 +335,14 @@ pnpm verify:all       # 全量
 
 ---
 
-## 八、待确认问题
+## 八、已确认决策
 
-- [ ] `mip_referral_intents` 表（迁移 003）是否可复用为机会想推荐名单？需核对字段
-- [ ] 合作卡 `role_key→card_type` 映射: connector→PIMP, business_builder→BUSINESS, capital_operator→RICH, strategist→PLANNER, visual_designer→DESIGNER, delivery_lead→NANNY — 需确认
-- [ ] `mip_event_video_recaps` 是否保留（活动绑定的视频回顾）还是统一迁移到 `mip_videos` — 需确认
-- [ ] P2 Wave 2 的 roles CRUD（6 个 action）是否在本期声明，还是等阶段 2 再追加 — 建议等阶段 2
+- [x] `mip_referral_intents` 表可复用为机会想推荐名单 — 表有 opportunity_id + actor_user_id + created_at，字段名映射 actor_user_id→user_id
+- [x] 合作卡 `role_key→card_type` 映射确认: connector→PIMP, business_builder→BUSINESS, capital_operator→RICH, strategist→PLANNER, visual_designer→DESIGNER, delivery_lead→NANNY — 数据库存 snake_case 英文 key，应用层做 key↔短码转换
+- [x] `mip_event_video_recaps` 保留（活动绑定的视频回顾），新建独立 `mip_videos` 表 — 两者语义不同，不强合并
+- [x] P2 Wave 2 的 roles CRUD（6 个 action）等阶段 2 再追加
+- [x] 机会可见范围：新增 visibility 字段（PLATFORM_PUBLIC/MIP_INTERNAL），与 scopeType 独立
+- [x] 机会删除：用 archive 软删除，扩展支持非 DRAFT 状态，不做物理删除
+- [x] 贡献值是经验值的来源分类 — 不新建独立贡献值表，用 growth_entries.metric=CONTRIBUTION 标记来源
+- [x] 消息失败重试：新增 mip.admin.messageCampaigns.retry action（单条手动重试）
+- [x] roles.candidates 不复用为机会发布人搜索（权限模型不匹配），新增独立搜索 action
