@@ -229,6 +229,7 @@ describe('admin governance deep module', () => {
     assert.deepEqual(Object.keys(api).sort(), [
       'changeBranchStatus',
       'createBranch',
+      'createRole',
       'listAudit',
       'listBranches',
       'listOperationalExceptions',
