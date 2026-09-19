@@ -4,6 +4,7 @@ import {
   ADMIN_PEOPLE_MUTATION_ACTIONS,
   buildAdminPeopleMutationInput,
   createAdminPeopleMutationDefinition,
+  type AdminPeopleMutationAction,
 } from './admin-people-mutation-forms.ts'
 
 function detailReader(values: Record<string, string>) {
@@ -301,5 +302,36 @@ describe('admin people mutation forms', () => {
     assert.equal(input?.userId, 'user-1')
     assert.equal(input?.entitlementType, 'EVENT_PASS')
     assert.equal(input?.amount, 100)
+  })
+
+  it('rejects changeStatus without reason (self-deactivation prevention prerequisite)', () => {
+    const definition = {
+      action: 'mip.admin.adminAccounts.changeStatus' as const,
+      capability: 'roles.change',
+      title: '启用/停用账号',
+      description: '',
+      fields: [],
+      values: {},
+      targetId: 'acc-001',
+      expectedVersion: 1,
+    }
+    // Without reason, the change status should be rejected
+    const result = buildAdminPeopleMutationInput(definition, { status: 'INACTIVE', reason: '' })
+    assert.equal(result, null, 'changeStatus without reason should return null')
+    // With reason, it should return a valid object
+    const validResult = buildAdminPeopleMutationInput(definition, { status: 'INACTIVE', reason: '停用原因' })
+    assert.ok(validResult, 'changeStatus with reason should return a valid object')
+    assert.equal((validResult as Record<string, unknown>).status, 'INACTIVE')
+    assert.equal((validResult as Record<string, unknown>).reason, '停用原因')
+  })
+
+  it('membership grant is append-only with no revoke action available', () => {
+    // Verify that ADMIN_PEOPLE_MUTATION_ACTIONS does not contain a revoke/delete membership action
+    const membershipActions = ADMIN_PEOPLE_MUTATION_ACTIONS.filter(
+      action => action.includes('entitlements') || action.includes('memberships')
+    )
+    // Only grant should exist, no revoke/delete
+    assert.ok(membershipActions.includes('mip.admin.entitlements.grant' as AdminPeopleMutationAction), 'grant action should exist')
+    assert.ok(!membershipActions.some(a => a.includes('revoke') || a.includes('delete')), 'no revoke/delete membership action should exist')
   })
 })
