@@ -165,6 +165,10 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
     },
     onOpenDetail: intent => detail.openDetail(intent.route, intent.id),
     onWrite,
+    onPageSizeChange: size => {
+      setCursorStack([])
+      void updateSearch({ ...search, limit: size, cursor: undefined, page: undefined })
+    },
   }
   const page = route === 'tasks' ? <TaskManagementPage {...state} />
     : route === 'banners' ? <BannerManagementPage {...state} onOpenMedia={purpose => void navigate({ to: '/media', search: { tab: purpose } })} />
@@ -327,7 +331,7 @@ function useUpdateSearch() {
 }
 
 function listQuery(search: AdminListSearch): AdminListQuery {
-  return { query: search.q?.trim() || '', status: search.status || '', cursor: search.cursor || null, limit: 20 }
+  return { query: search.q?.trim() || '', status: search.status || '', cursor: search.cursor || null, limit: search.limit ?? 20 }
 }
 
 const operationRouteCapabilities: Record<OperationsRoute, string[]> = {

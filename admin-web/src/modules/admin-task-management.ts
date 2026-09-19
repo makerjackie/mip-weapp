@@ -90,6 +90,7 @@ const resultStatusLabels: Record<string, string> = {
 const submissionStatusLabels: Record<string, string> = {
   submitted: '已提交',
   pending_review: '待审批',
+  boss_approved: '笨笨老大已审批',
   approved: '已通过',
   rejected: '已退回',
   reward_pending: '奖励发放中',
@@ -424,9 +425,11 @@ export function createTaskSubmissionMutationDefinition(
   const submission = record(source.submission)
   const submissionId = targetId || identifier(submission.id || submission.submissionId)
   if (action === 'mip.admin.tasks.submissions.approve') {
-    return reviewDefinition(action, '审批通过', '确认该任务提交符合完成标准，通过后奖励将按服务端规则发放。', [
+    const requiresBossApproval = source.requiresBossApproval === true || submission.requiresBossApproval === true
+    return reviewDefinition(action, '审批通过', '确认该任务提交符合完成标准，通过后奖励将按服务端规则发放。' + (requiresBossApproval ? '该任务需要笨笨老大审批。' : ''), [
       { name: 'remark', label: '审批说明', kind: 'textarea', maxLength: 500, wide: true },
-    ], { submissionId, remark: String(submission.reviewRemark || '') })
+      { name: 'bossApproved', label: '笨笨老大已审批', kind: 'checkbox', wide: true },
+    ], { submissionId, remark: String(submission.reviewRemark || ''), bossApproved: requiresBossApproval })
   }
   if (action === 'mip.admin.tasks.submissions.reject') {
     return reviewDefinition(action, '退回提交', '退回该任务提交，提交人需修改后重新提交。请填写退回原因。', [
@@ -559,6 +562,9 @@ export function buildTaskSubmissionInput(
   if (action === 'mip.admin.tasks.submissions.reject' && !remark) return null
   const input: AdminRequestInput = { submissionId }
   if (remark) input.remark = remark
+  if (action === 'mip.admin.tasks.submissions.approve' && values.bossApproved === true) {
+    input.bossApproved = true
+  }
   return input
 }
 

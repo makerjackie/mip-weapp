@@ -47,6 +47,7 @@ export function OperationsReadPage({
   onNextPage,
   onOpenDetail,
   onWrite,
+  onPageSizeChange,
 }: OperationsReadPageProps) {
   const filterValue = { q: query.query, status: query.status, filters: query.filters }
   const showPagination = Boolean(paginated && (hasPreviousPage || page?.nextCursor))
@@ -64,6 +65,10 @@ export function OperationsReadPage({
         placeholder={searchPlaceholder}
         statusOptions={statusOptions}
         loading={loading}
+        showTimeRange
+        showPageSize
+        pageSize={query.limit ?? 20}
+        onPageSizeChange={onPageSizeChange}
         onChange={value => onFilterChange({
           query: value.q.trim(),
           status: value.status,

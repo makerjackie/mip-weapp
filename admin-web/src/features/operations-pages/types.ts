@@ -39,11 +39,12 @@ export interface OperationsPageCallbacks {
   onNextPage?: (cursor: string) => void
   onOpenDetail?: (intent: OperationsDetailIntent) => void
   onWrite?: (intent: OperationsWriteIntent) => void
+  onPageSizeChange?: (size: number) => void
 }
 
 export interface OperationsPageState extends OperationsPageCallbacks {
   page: AdminReadPage | null
-  query: Pick<AdminListQuery, 'query' | 'status' | 'filters'>
+  query: Pick<AdminListQuery, 'query' | 'status' | 'filters'> & { limit?: number }
   loading?: boolean
   error?: string
   demoMode?: boolean

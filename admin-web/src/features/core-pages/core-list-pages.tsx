@@ -191,6 +191,16 @@ export function CoreListPageView({
         placeholder={readDefinition.searchPlaceholder}
         statusOptions={readDefinition.statusOptions}
         loading={loading}
+        showTimeRange
+        showAmountRange={route === 'orders'}
+        showPageSize
+        pageSize={search.limit ?? 20}
+        onPageSizeChange={size => onSearchChange({
+          ...search,
+          limit: size,
+          cursor: undefined,
+          page: undefined,
+        })}
         onChange={value => onSearchChange({
           ...search,
           q: value.q || undefined,

@@ -94,7 +94,7 @@ export function normalizeListQuery(search: CorePageSearchState, route?: string):
     query: search.q?.trim() || '',
     status: search.status || '',
     cursor: search.cursor || null,
-    limit: 20,
+    limit: search.limit ?? 20,
     filters: filters && Object.keys(filters).length > 0 ? filters : undefined,
   }
 }

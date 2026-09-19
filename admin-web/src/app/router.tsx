@@ -8,6 +8,7 @@ export interface AdminListSearch {
   status?: string
   cursor?: string
   page?: number
+  limit?: number
   tab?: string
   filters?: Record<string, string>
 }
@@ -15,6 +16,8 @@ export interface AdminListSearch {
 function validateSearch(search: Record<string, unknown>): AdminListSearch {
   const text = (key: string, maximum = 120) => typeof search[key] === 'string' ? String(search[key]).slice(0, maximum) : undefined
   const page = Number(search.page)
+  const rawLimit = Number(search.limit)
+  const limit = Number.isSafeInteger(rawLimit) && [10, 20, 50, 100].includes(rawLimit) ? rawLimit : undefined
   const rawFilters = search.filters
   const filters = rawFilters && typeof rawFilters === 'object' && !Array.isArray(rawFilters)
     ? Object.fromEntries(
@@ -28,6 +31,7 @@ function validateSearch(search: Record<string, unknown>): AdminListSearch {
     status: text('status', 64),
     cursor: text('cursor', 512),
     page: Number.isSafeInteger(page) && page > 1 ? page : undefined,
+    limit,
     tab: text('tab', 64),
     filters: filters && Object.keys(filters).length > 0 ? filters : undefined,
   }

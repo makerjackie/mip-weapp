@@ -369,4 +369,19 @@ describe('admin people mutation forms', () => {
     const valid = buildGrant({ userId: 'u1', entitlementType: 'MEMBERSHIP', months: 12 })
     assert.ok(valid, 'positive integer months should pass')
   })
+
+  it('self-deactivation is blocked by requiring reason and server-side identity check', () => {
+    // The client validates reason is required (already tested)
+    // The server checks caller.userId === input.accountId
+    // Here we verify the mutation input includes accountId for server comparison
+    const definition = {
+      action: 'mip.admin.adminAccounts.changeStatus' as AdminPeopleMutationAction,
+      capability: 'roles.change', title: '', description: '', fields: [], values: {},
+      targetId: 'acc-001', expectedVersion: 1,
+    }
+    const result = buildAdminPeopleMutationInput(definition, { status: 'INACTIVE', reason: '停用' })
+    assert.ok(result, 'valid input should produce result')
+    assert.equal((result as Record<string, unknown>).accountId, 'acc-001', 'accountId must be in output for server self-check')
+    assert.equal((result as Record<string, unknown>).status, 'INACTIVE')
+  })
 })

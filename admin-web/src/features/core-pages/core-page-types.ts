@@ -9,6 +9,7 @@ export interface CorePageSearchState {
   status?: string
   cursor?: string
   page?: number
+  limit?: number
   filters?: Record<string, string>
 }
 

@@ -117,11 +117,22 @@ export function taskCompletionRowActions(completion: Record<string, unknown>): A
   const submissionId = identifier(completion.id || completion.submissionId || completion.completionId)
   if (!submissionId) return []
   const status = String(completion.submissionStatus || '')
+  const requiresBossApproval = completion.requiresBossApproval === true
   if (status === 'submitted' || status === 'pending_review' || status === 'pending') {
-    return [
+    const actions: AdminRowOperation[] = []
+    if (status === 'pending_review' && requiresBossApproval) {
+      actions.push({
+        action: 'mip.admin.tasks.submissions.approve',
+        label: '笨笨老大审批',
+        targetId: submissionId,
+        values: { submissionId, bossApproved: true },
+      })
+    }
+    actions.push(
       { action: 'mip.admin.tasks.submissions.approve', label: '通过', targetId: submissionId, values: { submissionId } },
       { action: 'mip.admin.tasks.submissions.reject', label: '退回', targetId: submissionId, values: { submissionId } },
-    ]
+    )
+    return actions
   }
   if (status === 'approved' || status === 'reward_succeeded') {
     return [{ action: 'mip.admin.tasks.submissions.retryReward', label: '重试奖励', targetId: submissionId, values: { submissionId } }]
