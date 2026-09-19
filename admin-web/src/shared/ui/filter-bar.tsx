@@ -29,6 +29,7 @@ export function FilterBar({
   showPageSize,
   pageSize,
   onPageSizeChange,
+  dimensionOptions,
 }: {
   value: FilterBarValue
   placeholder: string
@@ -42,6 +43,7 @@ export function FilterBar({
   showPageSize?: boolean
   pageSize?: number
   onPageSizeChange?: (size: number) => void
+  dimensionOptions?: Array<{ value: string; label: string }>
 }) {
   const [form] = Form.useForm<FilterBarValue>()
   const syncedValue = useRef('')
@@ -102,13 +104,42 @@ export function FilterBar({
     commit(nextFilters)
   }
 
+  function handleDimensionsChange(values: string[]) {
+    const nextFilters = { ...filters }
+    if (values && values.length) {
+      nextFilters.dimensions = values.join(',')
+    } else {
+      delete nextFilters.dimensions
+    }
+    commit(nextFilters)
+  }
+
+  function parseDimensions(): string[] {
+    const raw = typeof filters.dimensions === 'string' ? filters.dimensions : ''
+    return raw ? raw.split(',').filter(Boolean) : []
+  }
+
+  function handleSubmit(formValues: FilterBarValue) {
+    const activeFilters: Record<string, string> = {}
+    for (const [key, val] of Object.entries(filters)) {
+      if (typeof val === 'string' && val.length > 0) {
+        activeFilters[key] = val
+      }
+    }
+    onChange({
+      q: formValues.q || '',
+      status: formValues.status || '',
+      ...(Object.keys(activeFilters).length > 0 ? { filters: activeFilters } : {}),
+    })
+  }
+
   return (
     <Form
       form={form}
       className="filter-bar"
       layout="inline"
       initialValues={value}
-      onFinish={onChange}
+      onFinish={handleSubmit}
       aria-label="列表筛选"
     >
       <Form.Item name="q" className="filter-bar__search">
@@ -126,6 +157,19 @@ export function FilterBar({
           onChange={() => form.validateFields().then(onChange, () => {})}
         />
       </Form.Item>
+      {dimensionOptions && dimensionOptions.length ? (
+        <Form.Item className="filter-bar__dimensions" label="多维度">
+          <Select
+            mode="multiple"
+            placeholder="多维度筛选"
+            options={dimensionOptions}
+            value={parseDimensions()}
+            onChange={handleDimensionsChange}
+            allowClear
+            style={{ minWidth: 180 }}
+          />
+        </Form.Item>
+      ) : null}
       {showTimeRange ? (
         <Form.Item className="filter-bar__date-range" label="时间范围">
           <DatePicker.RangePicker

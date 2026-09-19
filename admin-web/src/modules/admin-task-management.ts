@@ -122,9 +122,10 @@ export async function loadTaskManagementPage(
         title: '任务',
         rows: taskPage.items.map(taskListRow),
         columns: columns([
-          ['name', '任务名称'], ['reward', '经验奖励'], ['assignment', '分配范围'],
-          ['assigned', '已分配'], ['completed', '已完成'], ['endsAt', '截止时间'],
-          ['updatedAt', '更新时间'], ['state', '状态'],
+          ['name', '任务名称'], ['reward', '经验奖励'], ['starLevel', '星级'],
+          ['period', '周期'], ['assignedOwner', '笨笨老大'], ['rewardConfig', '奖励分项'],
+          ['assignment', '分配范围'], ['assigned', '已分配'], ['completed', '已完成'],
+          ['endsAt', '截止时间'], ['updatedAt', '更新时间'], ['state', '状态'],
         ]),
       },
       {
@@ -699,6 +700,12 @@ function taskListRow(item: AdminTableRow) {
     detailId: valueOf(item, 'id', 'taskId'),
     name: valueOf(item, 'name'),
     reward: numberLabel(item.rewardExperience),
+    starLevel: item.starLevel !== undefined && item.starLevel !== null && item.starLevel !== ''
+      ? numberLabel(item.starLevel)
+      : '—',
+    period: formatDateTime(item.periodStartAt),
+    assignedOwner: valueOf(item, 'assignedOwner'),
+    rewardConfig: rewardConfigDisplay(item.rewardConfig),
     assignment: assignmentModeLabel(item.assignmentMode),
     assigned: numberLabel(item.assignmentCount),
     completed: numberLabel(item.completionCount),

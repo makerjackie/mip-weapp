@@ -23,6 +23,10 @@ export function GrowthBadgesPage(props: OperationsPageState) {
       description="查看等级、权益、成长流水和勋章事实"
       searchPlaceholder={definition.searchPlaceholder}
       statusOptions={definition.statusOptions}
+      dimensionOptions={[
+        { value: 'EXPERIENCE', label: '经验值' },
+        { value: 'CONTRIBUTION', label: '贡献值' },
+      ]}
       paginated={definition.paginated}
       actions={props.onWrite ? (
         <Dropdown menu={menu} placement="bottomRight">

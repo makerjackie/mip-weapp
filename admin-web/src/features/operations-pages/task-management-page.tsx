@@ -15,6 +15,10 @@ export function TaskManagementPage(props: OperationsPageState) {
       description="管理任务内容、成员分配和完成记录"
       searchPlaceholder={definition.searchPlaceholder}
       statusOptions={definition.statusOptions}
+      dimensionOptions={[
+        { value: 'DAILY', label: '日常任务' },
+        { value: 'WEEKLY', label: '周常任务' },
+      ]}
       paginated={definition.paginated}
       detailRouteForSection={(_, index) => index === 0 ? 'tasks' : 'taskCompletions'}
       actions={props.onWrite ? (

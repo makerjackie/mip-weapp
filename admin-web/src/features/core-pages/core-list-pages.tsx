@@ -34,6 +34,21 @@ import './core-pages.css'
 
 type CoreListRoute = Extract<AdminListRoute, 'users' | 'events' | 'orders'>
 
+const dimensionOptionsByRoute: Record<CoreListRoute, Array<{ value: string; label: string }>> = {
+  users: [
+    { value: 'ACTIVE', label: '活跃' },
+    { value: 'BLOCKED', label: '封禁' },
+  ],
+  events: [
+    { value: 'OFFLINE', label: '线下' },
+    { value: 'ONLINE', label: '线上' },
+  ],
+  orders: [
+    { value: 'PAID', label: '已支付' },
+    { value: 'REFUNDED', label: '已退款' },
+  ],
+}
+
 const pageDefinitions: Record<CoreListRoute, {
   title: string
   description: string
@@ -191,6 +206,7 @@ export function CoreListPageView({
         placeholder={readDefinition.searchPlaceholder}
         statusOptions={readDefinition.statusOptions}
         loading={loading}
+        dimensionOptions={dimensionOptionsByRoute[route]}
         showTimeRange
         showAmountRange={route === 'orders'}
         showPageSize
