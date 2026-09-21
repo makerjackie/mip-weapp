@@ -97,6 +97,9 @@ function presentGuest(item: Extract<ReceivedInteraction, { kind: 'GUEST' }>, ind
 }
 
 // journey-review J3-06：同场多次 ×N 由已加载的同人事实条数合并得到（服务端逐条返回）。
+// 邀请人标注（「邀请人Bear」口径）待服务端 listInfluenceInteractions 补 inviter 字段
+// （mip-opportunities-api），DTO 扩展归 WS-OPPORTUNITIES/服务端；noteText 渲染链保留，
+// 字段到位即显示（依赖记 .tmp/shared-change-requests.md）。
 function presentInteraction(person: ReceivedInteractionActor, factCount: number): InteractionView {
   return {
     viewKey: `interaction-${person.profileRef}`,
@@ -127,6 +130,10 @@ function present(item: ReceivedInteraction, index: number, viewerName = ''): Int
     }
   }
   if (item.kind === 'ACTIVE_INTEREST') {
+    // journey-review J3-07：「对我心动」红点暂无服务端事实——listActiveInfluenceInterests
+    // 硬编码 unread:false / unreadCount:0，且行无 messageId（markReceivedRead 清除路径无接线对象）。
+    // 红点死 UI 已移除（presenter 字段保留），待服务端补 unread 口径后客户端再接进入清除；
+    // 依赖记 .tmp/shared-change-requests.md（我的页入口红点由 WS-MEMBERSHIP 消费 unreadCount，另行联动）。
     return {
       viewKey: `active-interest-${item.actor.profileRef}-${index}`,
       kind: item.kind,

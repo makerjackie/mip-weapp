@@ -89,7 +89,7 @@
       <mip-empty-state wx:if="{{state === 'empty' || (category === 'INTERACTION' && !displayItems.length)}}" title="{{category === 'GUEST' ? '暂无嘉宾' : category === 'INTERACTION' ? '暂无互动' : category === 'ACTIVE_INTEREST' ? '暂无心动' : '暂无访客记录'}}" description="{{category === 'GUEST' ? '通过你的邀请参加活动且公开资料的嘉宾会显示在这里。' : category === 'INTERACTION' ? '活动中收到的有效心动会显示在这里。' : category === 'ACTIVE_INTEREST' ? '当前对你标记感兴趣的用户会显示在这里。' : '公开档案的访客会显示在这里。'}}" />
       <view wx:else class="mt-4 grid grid-cols-2 gap-[16rpx]">
         <view wx:for="{{displayItems}}" wx:key="viewKey" class="relative min-h-[374rpx] overflow-hidden rounded-[16rpx] bg-panel px-[20rpx] pt-[32rpx] text-center active:bg-panel-raised" aria-role="button" aria-label="查看{{item.actorName}}的公开档案" data-key="{{item.viewKey}}" bind:tap="openInteraction">
-          <view wx:if="{{item.countBadge}}" class="absolute right-[20rpx] top-[16rpx] text-[length:24rpx] font-medium leading-[33.6rpx] text-muted">{{item.countBadge}}</view>
+          <view wx:if="{{item.countBadge}}" class="absolute right-[20rpx] top-[16rpx] text-[length:20rpx] font-medium leading-[28rpx] text-muted">{{item.countBadge}}</view>
           <view wx:if="{{item.unread}}" class="absolute left-[20rpx] top-[20rpx] h-[16rpx] w-[16rpx] rounded-full bg-danger" aria-label="未读" />
           <view class="flex justify-center">
             <image wx:if="{{item.actorAvatarUrl}}" class="h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.actorAvatarUrl}}" />
@@ -102,7 +102,6 @@
       </view>
       <view wx:if="{{nextCursor && !(category === 'INTERACTION' && searchInput)}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
       <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}<t-button wx:if="{{category === 'VISITOR'}}" variant="text" loading="{{refreshing}}" disabled="{{refreshing}}" bind:tap="retry">{{refreshing ? '正在刷新' : '刷新重试'}}</t-button></view>
-      <app-page-exit />
     </block>
 
     <!-- journey-review J3-07 心动值（D-01 定稿 tabs：我的心动 / 对我心动）：
@@ -118,9 +117,11 @@
       </view>
       <view class="my-3 flex min-h-[88rpx] items-center justify-between rounded-[16rpx] bg-panel px-4" bind:tap="openEventHearts"><text class="text-[length:24rpx]">活动心动记录</text><mip-icon name="chevron-down-1" size="{{16}}" /></view>
       <mip-empty-state wx:if="{{state === 'empty'}}" title="{{category === 'OUTBOUND_INTEREST' ? '暂无我的心动' : '暂无对我心动'}}" description="{{category === 'OUTBOUND_INTEREST' ? '你标记感兴趣的用户会显示在这里。' : '当前对你标记感兴趣的用户会显示在这里。'}}" />
+      <!-- journey-review J3-07：「对我心动」行红点为死 UI 已移除（listActiveInfluenceInterests
+           硬编码 unread:false 且无 messageId，无服务端未读事实可清）；presenter unread 字段保留，
+           服务端补口径后再恢复节点（.tmp/shared-change-requests.md）。 -->
       <view wx:else class="grid grid-cols-2 gap-[16rpx]">
         <view wx:for="{{displayItems}}" wx:key="viewKey" class="relative min-h-[374rpx] overflow-hidden rounded-[16rpx] bg-panel px-[20rpx] pt-[32rpx] text-center active:bg-panel-raised" aria-role="button" aria-label="查看{{item.actorName}}的公开档案" data-key="{{item.viewKey}}" bind:tap="openInteraction">
-          <view wx:if="{{item.unread}}" class="absolute left-[20rpx] top-[20rpx] h-[16rpx] w-[16rpx] rounded-full bg-danger" aria-label="未读" />
           <view class="flex justify-center">
             <image wx:if="{{item.actorAvatarUrl}}" class="h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.actorAvatarUrl}}" />
             <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[length:32rpx] font-semibold text-brand">{{item.actorInitial}}</view>
@@ -131,7 +132,6 @@
       </view>
       <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
       <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
-      <app-page-exit />
     </block>
 
     <block wx:else>
@@ -176,5 +176,8 @@
     <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
     <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}<t-button wx:if="{{category === 'VISITOR'}}" variant="text" loading="{{refreshing}}" disabled="{{refreshing}}" bind:tap="retry">{{refreshing ? '正在刷新' : '刷新重试'}}</t-button></view>
     </block>
+    <!-- 基线语义：页面出口按钮放在 wx:else 块尾，对 figmaLayout / 影响力 / 心动值 / 默认
+         四种渲染模式统一生效（不做分块重复渲染）。 -->
+    <app-page-exit />
   </block>
 </view>

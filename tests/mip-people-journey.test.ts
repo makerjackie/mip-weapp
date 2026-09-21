@@ -51,7 +51,10 @@ describe('journey-review WS-PEOPLE · 档案互动条角色门禁（C1 终审 + 
     expect(page).toContain(`import { showIdentityUnlockModal } from '../../../shared/identity-unlock'`)
     // 四个入口（我感兴趣按钮 + 感兴趣名单入口）+ access 兜底路径统一走共享 helper。
     expect(page.match(/showIdentityUnlockModal\(\)/g)?.length).toBeGreaterThanOrEqual(3)
-    expect(view).toContain(`wx:if="{{!isSelf && interactionBar !== 'hidden'}}"`)
+    // pending 未定态不渲染：身份快照 resolve 前嘉宾看不到互动条，避免先见条后消失（review 修复）。
+    expect(page).toContain(`type InteractionBarMode = 'pending' | 'active' | 'hidden' | 'locked'`)
+    expect(page).toContain(`interactionBar: 'pending' as InteractionBarMode`)
+    expect(view).toContain(`wx:if="{{!isSelf && (interactionBar === 'active' || interactionBar === 'locked')}}"`)
     expect(view).toContain('bind:tap="toggleInterest"')
     expect(view).toContain('bind:tap="openInterestList"')
     expect(view).toContain(`{{interestActive ? '取消感兴趣' : '我感兴趣'}}`)
@@ -194,8 +197,11 @@ describe('journey-review WS-PEOPLE · 站内信（J3-04b QI 自拟承接）', ()
         { id: 'm1', messageType: 'PROFILE_INTEREST', title: '心动', body: '大鹅飞飞 对你心动了，快去看看', createdAt: new Date(now - 3 * 60000).toISOString() },
         { id: 'm2', messageType: 'EVENT', title: '活动', body: '你报名的活动「设计户外过两天再说露营地」即将开始', createdAt: new Date(now - 26 * 3600000).toISOString() },
         { id: 'm3', messageType: 'OPERATIONS', title: '系统', body: '欢迎加入 MIP，完善名片让更多伙伴认识你', createdAt: new Date(now - 3 * 86400000).toISOString() },
+        // review 补强：相对时间边界——<1 分钟归「刚刚」，无效日期静默为空串（不渲染时间行）。
+        { id: 'm4', messageType: 'SYSTEM', title: '系统', body: '刚刚的边界', createdAt: new Date(now - 30 * 1000).toISOString() },
+        { id: 'm5', messageType: 'SYSTEM', title: '系统', body: '脏数据', createdAt: 'not-a-date' },
       ],
-      unreadCount: 3,
+      unreadCount: 5,
       nextCursor: '',
     })
     inbox.markAllRead.mockResolvedValue({ readAt: '2026-09-22T00:00:00.000Z' })
@@ -207,8 +213,8 @@ describe('journey-review WS-PEOPLE · 站内信（J3-04b QI 自拟承接）', ()
     }
     await instance.enterInbox()
 
-    expect(instance.data.items.map(item => item.rowType.label)).toEqual(['心动通知', '活动提醒', '系统通知'])
-    expect(instance.data.items.map(item => item.createdText)).toEqual(['3分钟前', '昨天', '3天前'])
+    expect(instance.data.items.map(item => item.rowType.label)).toEqual(['心动通知', '活动提醒', '系统通知', '系统通知', '系统通知'])
+    expect(instance.data.items.map(item => item.createdText)).toEqual(['3分钟前', '昨天', '3天前', '刚刚', ''])
     // 进入即清除未读（QI 拍板），行内红点随 readAt 消失。
     expect(inbox.markAllRead).toHaveBeenCalledTimes(1)
     expect(instance.data.unreadCount).toBe(0)
@@ -217,6 +223,50 @@ describe('journey-review WS-PEOPLE · 站内信（J3-04b QI 自拟承接）', ()
 })
 
 describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/07/08）', () => {
+  type ReceivedPage = Record<string, unknown> & {
+    data: Record<string, unknown>
+    setData: (patch: Record<string, unknown>, callback?: () => void) => void
+    onLoad: (query: Record<string, string | undefined>) => void
+    changeCategory: (event: { currentTarget: { dataset: Record<string, string> } }) => void
+    loadCategory: (category: string, reset: boolean) => Promise<void>
+    applySearch: (keyword: string) => void
+    checkAccess: () => Promise<void>
+    categoryCache: Record<string, { items: Array<Record<string, unknown>>, loaded: boolean }>
+  }
+  let definition: ReceivedPage
+  let receivedModule: { listReceived: ReturnType<typeof vi.fn>, markReceivedRead: ReturnType<typeof vi.fn> }
+  let identityModule: { beginProtectedAction: ReturnType<typeof vi.fn>, peekSnapshot: ReturnType<typeof vi.fn> }
+  const titleStub = vi.fn()
+
+  beforeAll(async () => {
+    vi.stubGlobal('Page', (value: ReceivedPage) => {
+      definition = value
+    })
+    vi.stubGlobal('wx', { setNavigationBarTitle: titleStub, setClipboardData: vi.fn(), showToast: vi.fn() })
+    await import('../src/packages/member/mip-received/index')
+    const opportunities = await import('../src/modules/mip-opportunities')
+    receivedModule = opportunities.opportunityModule as unknown as typeof receivedModule
+    const identity = await import('../src/modules/mip-identity/client')
+    identityModule = identity.mipIdentityModule as unknown as typeof identityModule
+  })
+
+  afterAll(() => {
+    vi.unstubAllGlobals()
+  })
+
+  function receivedPage(overrides: Record<string, unknown> = {}) {
+    const instance = Object.create(definition!) as ReceivedPage
+    instance.data = { ...structuredClone(definition!.data), ...overrides }
+    instance.setData = (patch: Record<string, unknown>, callback?: () => void) => {
+      Object.assign(instance.data, patch)
+      callback?.()
+    }
+    instance.categoryCache = structuredClone(definition!.categoryCache)
+    return instance
+  }
+
+  const flushAsync = () => new Promise(resolve => setTimeout(resolve, 0))
+
   it('declares the journey navigation titles and D-01 tab names', () => {
     const page = read('src/packages/member/mip-received/index.ts')
     const view = read('src/packages/member/mip-received/index.wxml')
@@ -242,37 +292,7 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
   })
 
   it('maps non-empty server responses onto the journey card contract (×N, 邀请人, 无时间访客卡)', async () => {
-    const opportunities = await import('../src/modules/mip-opportunities')
-    const receivedModule = opportunities.opportunityModule as unknown as {
-      listReceived: ReturnType<typeof vi.fn>
-      markReceivedRead: ReturnType<typeof vi.fn>
-    }
-    const identity = await import('../src/modules/mip-identity/client')
-    const identityModule = identity.mipIdentityModule as unknown as {
-      beginProtectedAction: ReturnType<typeof vi.fn>
-      peekSnapshot: ReturnType<typeof vi.fn>
-    }
-    let definition: Record<string, unknown> & {
-      data: Record<string, unknown>
-      setData: (patch: Record<string, unknown>, callback?: () => void) => void
-      loadCategory: (category: string, reset: boolean) => Promise<void>
-      applySearch: (keyword: string) => void
-      categoryCache: Record<string, { items: Array<Record<string, unknown>>, loaded: boolean }>
-    }
-    vi.stubGlobal('Page', (value: typeof definition) => {
-      definition = value
-    })
-    vi.stubGlobal('wx', { setNavigationBarTitle: vi.fn(), setClipboardData: vi.fn(), showToast: vi.fn() })
-    await import('../src/packages/member/mip-received/index')
-    vi.unstubAllGlobals()
-
-    const instance = Object.create(definition!) as typeof definition
-    instance.data = { ...structuredClone(definition!.data), influenceMode: true, category: 'GUEST' }
-    instance.setData = (patch: Record<string, unknown>, callback?: () => void) => {
-      Object.assign(instance.data, patch)
-      callback?.()
-    }
-    instance.categoryCache = structuredClone(definition!.categoryCache)
+    const instance = receivedPage({ influenceMode: true, category: 'GUEST' })
     identityModule.beginProtectedAction.mockResolvedValue({ decision: { ready: true } })
     identityModule.peekSnapshot.mockReturnValue({ profile: { nickname: 'Bear' } })
 
@@ -334,5 +354,72 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
     const influenceGrid = visitorView.slice(visitorView.indexOf('journey-review J3-05/06/08'), visitorView.indexOf('journey-review J3-07'))
     expect(influenceGrid).not.toContain('updatedText')
     expect(instance.categoryCache.VISITOR.items[0]).toMatchObject({ actorName: '菠萝大凤梨', messageId: 'v1', countBadge: '' })
+  })
+
+  // review 补强：心动值页两 tab 切换与默认落点行为。
+  it('keeps the hearts-mode tabs on the two journey lists with the default landing and lazy switching', async () => {
+    titleStub.mockClear()
+    receivedModule.listReceived.mockReset()
+    receivedModule.listReceived.mockResolvedValue({ items: [], unreadCount: 0 })
+
+    const instance = receivedPage()
+    instance.onLoad({ scope: 'hearts' })
+    expect(instance.data.heartsMode).toBe(true)
+    expect(instance.data.category).toBe('ACTIVE_INTEREST')
+    expect(titleStub).toHaveBeenCalledExactlyOnceWith({ title: '心动值' })
+
+    // 显式 category 落点被尊重（我的心动 tab）。
+    instance.onLoad({ scope: 'hearts', category: 'OUTBOUND_INTEREST' })
+    expect(instance.data.category).toBe('OUTBOUND_INTEREST')
+
+    // tabs 白名单：心动值页不接受默认模式的类目（引荐/访客等）。
+    instance.changeCategory({ currentTarget: { dataset: { category: 'REFERRAL' } } })
+    instance.changeCategory({ currentTarget: { dataset: { category: 'VISITOR' } } })
+    expect(instance.data.category).toBe('OUTBOUND_INTEREST')
+    expect(receivedModule.listReceived).not.toHaveBeenCalled()
+
+    // 首切「对我心动」按需拉取一次；回切未加载 tab 再拉；已加载 tab 不重复拉。
+    instance.changeCategory({ currentTarget: { dataset: { category: 'ACTIVE_INTEREST' } } })
+    expect(instance.data.category).toBe('ACTIVE_INTEREST')
+    await flushAsync()
+    expect(receivedModule.listReceived).toHaveBeenCalledExactlyOnceWith('ACTIVE_INTEREST', undefined)
+    expect(instance.categoryCache.ACTIVE_INTEREST.loaded).toBe(true)
+
+    receivedModule.listReceived.mockClear()
+    instance.changeCategory({ currentTarget: { dataset: { category: 'OUTBOUND_INTEREST' } } })
+    await flushAsync()
+    expect(receivedModule.listReceived).toHaveBeenCalledExactlyOnceWith('OUTBOUND_INTEREST', undefined)
+
+    receivedModule.listReceived.mockClear()
+    instance.changeCategory({ currentTarget: { dataset: { category: 'ACTIVE_INTEREST' } } })
+    await flushAsync()
+    expect(receivedModule.listReceived).not.toHaveBeenCalled()
+    expect(instance.data.category).toBe('ACTIVE_INTEREST')
+  })
+
+  // review 补强：基线 app-page-exit 语义 + 心动值红点死 UI 移除的结构 pin。
+  it('restores the baseline tail app-page-exit for every mode and drops the dead hearts unread dot', () => {
+    const view = read('src/packages/member/mip-received/index.wxml')
+
+    // 基线语义：ready 分支出口按钮只在 wx:else 块尾出现一次，
+    // 对 figmaLayout / 影响力 / 心动值 / 默认四种渲染模式统一生效（默认模式含 app-page-exit 的 pin）。
+    const readyBranch = view.slice(view.indexOf('<block wx:else>'))
+    const exits = readyBranch.match(/<app-page-exit \/>/g) || []
+    expect(exits).toHaveLength(1)
+    expect(readyBranch.trimEnd().endsWith('<app-page-exit />\n  </block>\n</view>')).toBe(true)
+    // 全页出口按钮共 3 处：access / error / ready 块尾。
+    expect(view.match(/<app-page-exit \/>/g)).toHaveLength(3)
+
+    // 心动值网格无红点死节点（ACTIVE_INTEREST 无服务端未读事实与 messageId，待口径后恢复；
+    // presenter unread 字段保留）。从 hearts 块头搜下一个块级 wx:else（默认模式块）。
+    const heartsStart = view.indexOf('journey-review J3-07')
+    const heartsBlock = view.slice(heartsStart, view.indexOf('<block wx:else>', heartsStart))
+    expect(heartsBlock).not.toBe('')
+    expect(heartsBlock).not.toContain('item.unread')
+
+    // 影响力网格保留 VISITOR 活红点；×N 徽标 20rpx text-muted（规格 token 10px）。
+    const influenceBlock = view.slice(view.indexOf('journey-review J3-05/06/08'), view.indexOf('journey-review J3-07'))
+    expect(influenceBlock).toContain('wx:if="{{item.unread}}"')
+    expect(influenceBlock).toContain('text-[length:20rpx] font-medium leading-[28rpx] text-muted">{{item.countBadge}}')
   })
 })

@@ -318,9 +318,10 @@
     <app-page-exit />
     <view wx:if="{{interestMessage}}" class="fixed inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+132rpx)] z-20 rounded-[8rpx] border border-danger bg-panel px-3 py-2 text-center text-[length:22rpx] text-danger">{{interestMessage}}</view>
     <!-- journey-review 1769:38198 底部互动条（C1 终审角色门禁）：
-         玩家=功能态；普通用户=可见、点击弹原生解锁（J2-04）；嘉宾=整条不渲染（interactionBar === 'hidden'）。
+         玩家=功能态；普通用户=可见、点击弹原生解锁（J2-04）；嘉宾=整条不渲染（interactionBar === 'hidden'）；
+         pending=身份未定（resolveInteractionBar 完成前不渲染，防嘉宾态先见条后消失）。
          左胶囊 = 感兴趣名单入口（他人档案不开放名单详情，服务端只回聚合数）。 -->
-    <mip-sticky-actions wx:if="{{!isSelf && interactionBar !== 'hidden'}}">
+    <mip-sticky-actions wx:if="{{!isSelf && (interactionBar === 'active' || interactionBar === 'locked')}}">
       <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[16rpx]">
       <view class="flex h-[80rpx] shrink-0 items-center gap-[4rpx] rounded-full bg-panel px-[24rpx]" aria-role="button" aria-label="查看感兴趣名单" bind:tap="openInterestList">
         <text class="text-[length:24rpx] font-semibold text-brand">+</text>

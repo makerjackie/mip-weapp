@@ -27,8 +27,9 @@ type ProfileAction = 'interest' | 'block' | 'report'
 type AccessActionState = 'loading' | 'ready' | 'access' | 'error'
 type ProfileSection = 'cooperation' | 'cases' | 'opportunities'
 // journey-review C1 终审（2026-09-21）档案互动条角色门禁：
-// active = 玩家（功能态）；hidden = 嘉宾（整条不渲染）；locked = 普通用户（可见，点击弹解锁）。
-type InteractionBarMode = 'active' | 'hidden' | 'locked'
+// active = 玩家（功能态）；hidden = 嘉宾（整条不渲染）；locked = 普通用户（可见，点击弹解锁）；
+// pending = 初始未定态（身份快照未 resolve 前整条不渲染，避免嘉宾先见条后消失的闪烁）。
+type InteractionBarMode = 'pending' | 'active' | 'hidden' | 'locked'
 
 interface PublicProfileView extends PublicPerson {
   displayName: string
@@ -99,7 +100,7 @@ Page({
     // figma 1769_38059/2058_12247/2704_13454 合作卡档案还原态开关，fixture 专用；
     // 生产保持 stats+tabs+列表布局（mip-public-profile 测试 pin）。
     figmaLayout: false,
-    interactionBar: 'locked' as InteractionBarMode,
+    interactionBar: 'pending' as InteractionBarMode,
   },
   pendingAction: '' as ProfileAction | '',
   reportIntent: null as CommunityReportIntent | null,
