@@ -126,6 +126,30 @@ describe('MIP event participant visual hierarchy', () => {
     expect(template).not.toContain('name="check"')
   })
 
+  it('keeps the on-card heart hit target at the page 88rpx standard without negative-offset clipping', () => {
+    // review fix：热区用 padding 撑开（图标钉在内容区右上角，18px 视觉尺寸不变），
+    // 零偏移锚定，不再用负偏移 + 固定小尺寸被卡片 overflow:hidden 裁掉命中面积。
+    const heart = declarations(rule(stylesheet, '.participant-card__heart', true))
+    expect(heart).toMatchObject({
+      'position': 'absolute',
+      'top': '0',
+      'right': '0',
+      'box-sizing': 'border-box',
+      'min-width': '88rpx',
+      'min-height': '88rpx',
+    })
+    expect(heart['padding']).toBe('8rpx 8rpx 44rpx 44rpx')
+    expect(heart['width']).toBeUndefined()
+    expect(heart['height']).toBeUndefined()
+    // 桌面断点对齐本页 48px 触控标准。
+    for (const params of ['(min-width: 600px) and (max-width: 959px)', '(min-width: 960px)']) {
+      expect(declarations(rule(media(stylesheet, params), '.participant-card__heart'))).toMatchObject({
+        'min-width': '48px',
+        'min-height': '48px',
+      })
+    }
+  })
+
   it('scales the participant grid from two to three to four columns', () => {
     expect(declarations(rule(stylesheet, '.participants-grid', true))).toMatchObject({
       'display': 'grid',

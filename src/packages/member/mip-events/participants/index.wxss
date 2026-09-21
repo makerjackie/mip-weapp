@@ -141,16 +141,20 @@
   border-radius: 8rpx;
 }
 
-/* figma 1818_17230：卡片右上角 18x16 心形票位——灰描边未投可点 / 红实心已投。 */
+/* figma 1818_17230：卡片右上角 18x16 心形票位——灰描边未投可点 / 红实心已投。
+   热区按本页 88rpx 触控标准用 padding 撑开（图标钉在内容区右上角，视觉尺寸不变），
+   不用负偏移溢出，避免被卡片 overflow:hidden 裁掉实际命中面积。 */
 .participant-card__heart {
   position: absolute;
-  top: -8rpx;
-  right: -12rpx;
+  top: 0;
+  right: 0;
+  box-sizing: border-box;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 64rpx;
-  height: 64rpx;
+  align-items: flex-start;
+  justify-content: flex-end;
+  min-width: 88rpx;
+  min-height: 88rpx;
+  padding: 8rpx 8rpx 44rpx 44rpx;
 }
 
 .participant-card__avatar {
@@ -312,6 +316,12 @@
     font-size: 12px;
   }
 
+  .participant-card__heart {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 4px 4px 22px 22px;
+  }
+
   .participant-card__name {
     margin-top: 8px;
     font-size: 18px;
@@ -395,6 +405,12 @@
   .participant-card__kind {
     padding: 2px 6px;
     font-size: 12px;
+  }
+
+  .participant-card__heart {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 4px 4px 22px 22px;
   }
 
   .participant-card__name {
