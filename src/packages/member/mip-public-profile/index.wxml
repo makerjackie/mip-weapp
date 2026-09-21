@@ -317,11 +317,16 @@
 
     <app-page-exit />
     <view wx:if="{{interestMessage}}" class="fixed inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+132rpx)] z-20 rounded-[8rpx] border border-danger bg-panel px-3 py-2 text-center text-[length:22rpx] text-danger">{{interestMessage}}</view>
-    <mip-sticky-actions wx:if="{{!isSelf}}">
-      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-2">
-      <view class="flex h-[80rpx] min-w-0 flex-1 items-center px-3"><view class="min-w-0"><view class="truncate text-[length:22rpx] font-medium">{{profile.displayName}}</view><view class="mt-1 text-[length:22rpx] text-muted">{{interestActive ? '已标记感兴趣' : '公开档案'}}</view></view></view>
-      <view wx:if="{{interestState === 'access'}}" class="flex min-h-[88rpx] w-[336rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-center text-[length:24rpx] font-medium text-on-brand" aria-role="button" bind:tap="openAccess">完成身份信息后继续</view>
-      <view wx:else class="flex min-h-[88rpx] w-[336rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-[length:28rpx] font-medium text-on-brand active:bg-brand-active {{interestState === 'loading' ? 'opacity-50' : ''}}" aria-role="button" aria-disabled="{{interestState === 'loading'}}" bind:tap="toggleInterest">{{interestActive ? '取消感兴趣' : '我感兴趣'}}</view>
+    <!-- journey-review 1769:38198 底部互动条（C1 终审角色门禁）：
+         玩家=功能态；普通用户=可见、点击弹原生解锁（J2-04）；嘉宾=整条不渲染（interactionBar === 'hidden'）。
+         左胶囊 = 感兴趣名单入口（他人档案不开放名单详情，服务端只回聚合数）。 -->
+    <mip-sticky-actions wx:if="{{!isSelf && interactionBar !== 'hidden'}}">
+      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[16rpx]">
+      <view class="flex h-[80rpx] shrink-0 items-center gap-[4rpx] rounded-full bg-panel px-[24rpx]" aria-role="button" aria-label="查看感兴趣名单" bind:tap="openInterestList">
+        <text class="text-[length:24rpx] font-semibold text-brand">+</text>
+        <text class="text-[length:24rpx] font-medium leading-[33.6rpx] text-brand">{{influence ? influence.interestCount + '感兴趣' : '感兴趣'}}</text>
+      </view>
+      <view class="flex min-h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-3 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active {{interestState === 'loading' ? 'opacity-50' : ''}}" aria-role="button" aria-disabled="{{interestState === 'loading'}}" bind:tap="toggleInterest">{{interestActive ? '取消感兴趣' : '我感兴趣'}}</view>
       </view>
     </mip-sticky-actions>
   </block>
