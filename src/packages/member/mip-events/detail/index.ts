@@ -2,7 +2,7 @@ import type { EventId, OrderId } from '../../../../modules/mip'
 import type { MipEventDetail } from '../../../../modules/mip-events'
 import { brand } from '../../../../config/brand'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
-import { decodeInvitationToken, eventInvitationPath, eventRichTextNodes, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
+import { decodeInvitationToken, eventInvitationPath, eventRichTextNodes, isEventAccessRequirementError, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
@@ -17,8 +17,8 @@ const POSTER_HEIGHT = 560
 
 const DETAIL_ROUTE = 'packages/member/mip-events/detail/index'
 
-/** journey-review J1-01：游客触发分享 / 参与人数 / 立刻报名后要恢复的原意图。 */
-type AuthIntent = 'register' | 'share' | 'participants'
+/** journey-review J1-01：游客触发分享 / 参与人数 / 立刻报名后要恢复的原意图；checkin 为 J0-02 扫码自动签到授权。 */
+type AuthIntent = 'register' | 'share' | 'participants' | 'checkin'
 
 interface Canvas2dNode {
   width: number
@@ -98,6 +98,16 @@ function interactionLabels(event: MipEventDetail) {
     heartMineLabel: summary ? `我的心动 ${summary.myInterestCount}` : '我的心动',
     heartReceivedLabel: summary ? `对我心动 ${summary.receivedInterestCount}` : '对我心动',
   }
+}
+
+/**
+ * journey-review J0-01（设计师批注 2133:3831）：「与你互动」卡仅在本场有人发出或
+ * 被点心动时展示，无互动数据时整卡隐藏。
+ */
+function interactionVisible(event: MipEventDetail) {
+  const summary = event.interactionSummary
+  return event.registrationStatus === 'ATTENDED'
+    && Boolean(summary && (summary.myInterestCount > 0 || summary.receivedInterestCount > 0))
 }
 
 function compactEventTime(startsAt: string, endsAt: string) {
@@ -245,12 +255,52 @@ Page({
         hasCheckInIntent: Boolean(intent),
       })
       await this.loadEvent({ force: true })
+      // journey-review J0-01：扫码直达已定位详情页，紧接着自动完成签到校验。
+      if (intent && this.data.state === 'ready') {
+        void this.attemptAutoCheckIn()
+      }
     }
     catch {
       this.setData({
         state: 'error',
         message: '未识别到有效活动码，请打开微信扫一扫重新扫码。',
       })
+    }
+  },
+
+  /**
+   * journey-review J0-01（M1 00:46:24）：扫码进入详情页后自动发起签到，成功即弹
+   * 微信原生「签到成功」toast 并转入已签到态（与你互动 / 活动反馈出现）。服务端
+   * 要求人工处理（未报名、非现场、时间不符等）时保留「确认现场签到」按钮兜底；
+   * 未登录（J0-02）先走手机号授权，回本页后重试签到并提示结果。
+   */
+  async attemptAutoCheckIn() {
+    const eventId = String(this.data.eventId || '')
+    const intent = mipCheckInResumeStore.peek(eventId)
+    if (!intent || intent.eventId !== eventId || this.data.busy) {
+      return
+    }
+    this.setData({ busy: true, message: '' })
+    try {
+      const outcome = await mipEventsModule.checkIn(intent.resumeToken)
+      mipCheckInResumeStore.clear(String(outcome.eventId))
+      this.setData({ hasCheckInIntent: false })
+      wx.showToast({ title: '签到成功', icon: 'success' })
+      await this.loadEvent({ force: true })
+    }
+    catch (error) {
+      if (isEventAccessRequirementError(error)) {
+        void this.requireAuthIntent('checkin').then((allowed: boolean) => {
+          if (allowed) {
+            void this.attemptAutoCheckIn()
+          }
+        })
+        return
+      }
+      // 其余校验失败不打断浏览：签到意图保留，主按钮仍提供「确认现场签到」兜底。
+    }
+    finally {
+      this.setData({ busy: false })
     }
   },
 
@@ -352,8 +402,8 @@ Page({
       accessLabel: accessLabel(event),
       priceText: priceText(event),
       // figma 1818_17142: the checked-in state fuses a 与你互动 card under the
-      // participant card; ATTENDED is the same gate the API uses for canInteract.
-      interactionVisible: event.registrationStatus === 'ATTENDED',
+      // participant card; J0-01 narrows it to events that actually have interest data.
+      interactionVisible: interactionVisible(event),
       ...interactionLabels(event),
       locationText: [event.cityName, event.venueName, event.address].filter(Boolean).join(' · ')
         || (event.mode === 'ONLINE' ? '线上活动' : '地点待公布'),
@@ -590,7 +640,8 @@ Page({
       return
     }
     if (this.data.primaryAction === 'interact') {
-      caseNavigateTo({ url: `/packages/member/mip-events/interaction/index?eventId=${encodeURIComponent(this.data.eventId)}` })
+      // journey-review J0-01：已签到态主按钮进入参与人列表「我的心动」tab（互动页已并入 participants）。
+      caseNavigateTo({ url: `/packages/member/mip-events/participants/index?eventId=${encodeURIComponent(this.data.eventId)}&view=SENT` })
       return
     }
     if (this.data.primaryAction === 'order') {
@@ -672,7 +723,23 @@ Page({
   },
 
   openParticipantsNow() {
-    caseNavigateTo({ url: `/packages/member/mip-events/participants/index?eventId=${encodeURIComponent(this.data.eventId)}` })
+    // journey-review J0-01：参与人数入口直达参与人列表默认「玩家」tab。
+    caseNavigateTo({ url: `/packages/member/mip-events/participants/index?eventId=${encodeURIComponent(this.data.eventId)}&view=PUBLIC&kind=PLAYER` })
+  },
+
+  /**
+   * journey-review J0-01：与你互动胶囊直达 participants 对应 tab（我的心动/对我心动），
+   * 互动卡其余区域按参与人数同口径进默认「玩家」tab；互动页已并入 participants。
+   */
+  openInteractionView(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.event?.canInteract) {
+      return
+    }
+    const view = String(event.currentTarget.dataset.view || 'PUBLIC')
+    const suffix = view === 'SENT' || view === 'RECEIVED'
+      ? `&view=${view}`
+      : '&view=PUBLIC&kind=PLAYER'
+    caseNavigateTo({ url: `/packages/member/mip-events/participants/index?eventId=${encodeURIComponent(this.data.eventId)}${suffix}` })
   },
 
   /**
@@ -782,6 +849,10 @@ Page({
       this.openParticipantsNow()
       return
     }
+    if (intent === 'checkin') {
+      void this.attemptAutoCheckIn()
+      return
+    }
     this.openRegistration()
   },
 
@@ -793,7 +864,7 @@ Page({
       if (resume.action === 'REGISTER_EVENT') {
         this.runAuthIntent('register')
       }
-      else if (intent === 'share' || intent === 'participants') {
+      else if (intent === 'share' || intent === 'participants' || intent === 'checkin') {
         this.runAuthIntent(intent)
       }
       return
@@ -831,13 +902,6 @@ Page({
 
   openComments() {
     caseNavigateTo({ url: `/packages/member/mip-events/comments/index?eventId=${encodeURIComponent(this.data.eventId)}` })
-  },
-
-  openInteraction() {
-    if (!this.data.event?.canInteract) {
-      return
-    }
-    caseNavigateTo({ url: `/packages/member/mip-events/interaction/index?eventId=${encodeURIComponent(this.data.eventId)}` })
   },
 
   openFeedback() {

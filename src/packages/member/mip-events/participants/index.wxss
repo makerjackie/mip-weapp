@@ -85,13 +85,6 @@
   color: var(--color-muted);
 }
 
-.participants-heart-action {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
-  margin-top: 24rpx;
-}
-
 .participants-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -134,30 +127,41 @@
   position: absolute;
   top: 0;
   left: 0;
-  padding: 4rpx 10rpx;
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 2rpx 8rpx;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 22rpx;
+  font-size: 20rpx;
   font-weight: 600;
   line-height: 1.4;
   color: var(--color-brand);
   white-space: nowrap;
   background: var(--color-panel-raised);
-  border: 1rpx solid var(--color-line);
   border-radius: 8rpx;
 }
 
-.participant-card__chevron {
+/* figma 1818_17230：卡片右上角 18x16 心形票位——灰描边未投可点 / 红实心已投。 */
+.participant-card__heart {
   position: absolute;
-  top: 2rpx;
-  right: 0;
+  top: -8rpx;
+  right: -12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
 }
 
 .participant-card__avatar {
+  box-sizing: border-box;
   display: block;
   width: 112rpx;
   height: 112rpx;
   background: var(--color-panel-raised);
+
+  /* figma 1818_17230：56px 头像带白色描边环。 */
+  border: 3rpx solid var(--color-ink);
   border-radius: 50%;
 }
 
@@ -182,9 +186,11 @@
 .participant-card__name {
   margin-top: 12rpx;
   -webkit-line-clamp: 1;
-  font-size: 30rpx;
-  font-weight: 600;
-  line-height: 1.35;
+
+  /* figma 1818_17230：16px medium 白色名字。 */
+  font-size: 32rpx;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .participant-card__relations {
@@ -218,7 +224,9 @@
 .participant-card__meta {
   margin-top: 12rpx;
   -webkit-line-clamp: 2;
-  font-size: 22rpx;
+
+  /* figma 1818_17230：meta 行 10px #f7f7f7。 */
+  font-size: 20rpx;
   line-height: 1.5;
   color: var(--color-ink);
   text-align: left;
@@ -227,7 +235,9 @@
 .participant-card__summary {
   margin-top: 8rpx;
   -webkit-line-clamp: 2;
-  font-size: 22rpx;
+
+  /* figma 1818_17230：简介两行 10px #b3b3b3。 */
+  font-size: 20rpx;
   line-height: 1.5;
   color: var(--color-muted);
   text-align: left;

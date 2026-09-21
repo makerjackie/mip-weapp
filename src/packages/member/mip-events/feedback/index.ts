@@ -100,8 +100,9 @@ function starOptions(rating = 0): SelectableStar[] {
 }
 
 function explorationOptions(selected: readonly ExplorationMethod[] = []): SelectableExplorationMethod[] {
-  const selectedKeys = new Set(selected)
-  return explorationDefinitions.map(item => ({ ...item, selected: selectedKeys.has(item.key) }))
+  // journey-review J0-03：题 6 为单选行卡；历史多值数据只呈现首个，新提交收敛为单值。
+  const selectedKey = selected.length ? selected[0] : undefined
+  return explorationDefinitions.map(item => ({ ...item, selected: item.key === selectedKey }))
 }
 
 function isForbidden(error: unknown) {
@@ -335,15 +336,17 @@ Page({
     this.clearValidationError('joinIntent')
   },
 
-  toggleExplorationMethod(event: WechatMiniprogram.TouchEvent) {
+  /** journey-review J0-03：题 6 单选行卡——点击未选项选中并清除其他，点击已选项取消（选填）。 */
+  selectExplorationMethod(event: WechatMiniprogram.TouchEvent) {
     const key = String(event.currentTarget.dataset.key || '') as ExplorationMethod
     if (!explorationDefinitions.some(item => item.key === key) || this.data.saving) {
       return
     }
     this.setData({
-      explorationOptions: this.data.explorationOptions.map(item => item.key === key
-        ? { ...item, selected: !item.selected }
-        : item),
+      explorationOptions: this.data.explorationOptions.map(item => ({
+        ...item,
+        selected: item.key === key ? !item.selected : false,
+      })),
       message: '',
     })
   },

@@ -60,6 +60,10 @@ describe('MIP event feedback page', () => {
     expect(view).toContain('\u82B1\u540D\u518C\u4FE1\u606F\u4F7F\u7528\u65B9\u5F0F')
     expect(view).toContain('id="mip-event-feedback-save"')
     expect(page).toContain('\'connector\',\n  \'strategist\',\n  \'capital_operator\',\n  \'visual_designer\',\n  \'business_builder\',\n  \'delivery_lead\'')
+    // journey-review J0-03：题 6 深入了解方式为单选行卡（radiogroup），不再多选。
+    expect(view).toContain('aria-label="\u6DF1\u5165\u4E86\u89E3 MIP \u7684\u65B9\u5F0F\uFF0C\u9009\u586B"')
+    expect(view).toContain('bind:tap="selectExplorationMethod"')
+    expect(view).not.toContain('toggleExplorationMethod')
   })
 
   it('loads only for an authenticated attendee and keeps all recoverable states visible', () => {

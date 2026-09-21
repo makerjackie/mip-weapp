@@ -53,13 +53,17 @@ describe('MIP event participant visual hierarchy', () => {
     expect(page).toContain('mipEventsModule.listPublicParticipants')
     expect(page).toContain('mipEventsModule.listHeartCandidates')
     expect(page).toContain('mipEventsModule.getHeart')
+    expect(page).toContain('mipEventsModule.setHeart')
     expect(page).toContain('caseNavigateTo')
     expect(page).toContain('/packages/member/mip-public-profile/index?profileRef=')
     expect(page).toContain('displayName: participant.nickname || \'未公开姓名\'')
-    expect(page).toContain('viewMode=SENT')
     expect(page).not.toMatch(/wx\.cloud|openid|phoneNumber/)
+    // journey-review J2-02：互动页已并入参与人列表，不再跳独立 interaction 页。
+    expect(page).not.toContain('mip-events/interaction')
 
     expect(template).toContain('bindconfirm="onSearchConfirm"')
+    // journey-review J2-02（figma 1818_17230）：搜索占位逐字「搜索姓名，行业，简介等」。
+    expect(template).toContain('placeholder="搜索姓名，行业，简介等"')
     expect(template).toContain('data-kind="GUEST"')
     expect(template).toContain('data-kind="PLAYER"')
     expect(template).toContain('data-view="SENT"')
@@ -84,10 +88,15 @@ describe('MIP event participant visual hierarchy', () => {
     expect(template).toContain('<app-page-exit />')
   })
 
-  it('shows private counts and explicit caller-relative heart relations on cards', () => {
+  it('shows private counts and on-card heart voting with a single red heart per event', () => {
     expect(template).toContain('{{sentItems.length}}')
     expect(template).toContain('{{receivedItems.length}}')
-    expect(template).toContain('{{sentItems.length ? \'修改或取消心动\' : \'选择心动\'}}')
+    // journey-review J2-02：心动票落在卡片右上角，灰描边未投 / 红实心已投，点卡其余区域进档案。
+    expect(template).toContain('participant-card__heart')
+    expect(template).toContain('catch:tap="toggleHeartVote"')
+    expect(template).toContain('heart.target && heart.target.profileRef === item.profileRef')
+    expect(template).toContain('name="heart-filled" size="18px" color="var(--color-danger)"')
+    expect(template).toContain('name="heart" size="18px" color="var(--color-muted)"')
     expect(template).toContain('item.heartRelation === \'SENT\' || item.heartRelation === \'MUTUAL\'')
     expect(template).toContain('item.heartRelation === \'RECEIVED\' || item.heartRelation === \'MUTUAL\'')
     expect(template).toContain('心动信息仅本人可见')
@@ -95,6 +104,12 @@ describe('MIP event participant visual hierarchy', () => {
       'display': 'flex',
       'flex-wrap': 'wrap',
     })
+    expect(declarations(rule(stylesheet, '.participant-card__heart', true))).toMatchObject({
+      position: 'absolute',
+    })
+    // figma 1818_17230：56px 头像带白色描边环。
+    const avatar = declarations(rule(stylesheet, '.participant-card__avatar', true))
+    expect(String(avatar['border'] || '')).toContain('var(--color-ink)')
   })
 
   it('uses compact visual pills without shrinking their phone hit targets', () => {
@@ -107,7 +122,8 @@ describe('MIP event participant visual hierarchy', () => {
       'border-radius': '8rpx',
     })
     expect(template).toContain('participants-filter-pill--active')
-    expect(template).toContain('name="check"')
+    // journey-review J2-02：tab 高亮为黄底黑字（figma 1818_17230），不再叠加 check 图标。
+    expect(template).not.toContain('name="check"')
   })
 
   it('scales the participant grid from two to three to four columns', () => {

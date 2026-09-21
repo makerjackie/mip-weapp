@@ -206,4 +206,34 @@ describe('MIP event feedback UI state', () => {
     expect(page.data.state).toBe('blocked')
     expect(page.data.message).toBe('完成签到后可填写本场活动反馈。')
   })
+
+  it('keeps question 6 single-choice: re-tapping switches or clears, legacy multi answers collapse', () => {
+    // journey-review J0-03：题 6 深入了解方式为单选行卡；历史多值只呈现首个，新提交单值。
+    const page = createPage({ eventId, event: eventDetail, state: 'ready' })
+
+    callPage(page, 'selectExplorationMethod', { currentTarget: { dataset: { key: 'ATTEND_EVENT' } } })
+    callPage(page, 'selectExplorationMethod', { currentTarget: { dataset: { key: 'COMMUNITY_CHAT' } } })
+    expect(page.data.explorationOptions.map((item: { key: string, selected: boolean }) => item.selected))
+      .toEqual([false, true])
+
+    // 再点已选项：取消（选填允许清空）。
+    callPage(page, 'selectExplorationMethod', { currentTarget: { dataset: { key: 'COMMUNITY_CHAT' } } })
+    expect(page.data.explorationOptions.every((item: { selected: boolean }) => !item.selected)).toBe(true)
+
+    // 旧数据含多值时，加载后仅第一个呈现为选中。
+    const legacy = createPage({ eventId, event: eventDetail, state: 'ready' })
+    eventsModule.getEvent.mockResolvedValue(eventDetail)
+    eventsModule.getFeedback.mockResolvedValue({
+      id: 'feedback-legacy',
+      rating: 5,
+      answers: { ...answers, explorationMethods: ['ATTEND_EVENT', 'COMMUNITY_CHAT'] },
+      version: 1,
+    })
+    legacy.accessReady = true
+    void callPage(legacy, 'loadFeedback')
+    return Promise.resolve().then(() => Promise.resolve()).then(() => Promise.resolve()).then(() => {
+      expect((legacy.data.explorationOptions as Array<{ key: string, selected: boolean }>)
+        .filter(item => item.selected).map(item => item.key)).toEqual(['ATTEND_EVENT'])
+    })
+  })
 })
