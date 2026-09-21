@@ -311,6 +311,12 @@ Page({
       wx.showToast({ title: '完成签到后可参与心动互动。', icon: 'none' })
       return
     }
+    if (this.data.heartState === 'error') {
+      // error 态灰心仍按兜底渲染可见，点击不再静默：提示并就地重试心动状态。
+      wx.showToast({ title: '心动信息暂时不可用，正在重试。', icon: 'none' })
+      void this.loadHeartState()
+      return
+    }
     if (this.data.heartState !== 'ready' || this.data.savingHeart) {
       return
     }

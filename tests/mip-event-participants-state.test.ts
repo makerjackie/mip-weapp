@@ -211,6 +211,30 @@ describe('MIP event participant private heart state', () => {
     expect(eventsModule.setHeart).not.toHaveBeenCalled()
     expect(showToast).toHaveBeenCalledWith({ title: '完成签到后可参与心动互动。', icon: 'none' })
 
+    // review fix：error 态灰心仍可见，点击不再静默 no-op——提示并触发心动状态重试。
+    const errorPage = createPage({
+      eventId: '60000000-0000-4000-8000-000000000001',
+      state: 'ready',
+      heartState: 'error',
+      heart: null,
+      heartMessage: '活动服务暂时不可用，请稍后重试',
+      candidates: [],
+      items: [{ profileRef: 'p1.alice', displayName: 'alice', kindLabel: '', metaText: '', introductionText: '' }],
+      displayItems: [{ profileRef: 'p1.alice', displayName: 'alice', kindLabel: '', metaText: '', introductionText: '' }],
+    })
+    eventsModule.listHeartCandidates.mockResolvedValueOnce([candidate('alice')])
+    eventsModule.getHeart.mockResolvedValueOnce(heartState())
+    await callPage(errorPage, 'toggleHeartVote', { currentTarget: { dataset: { profileRef: 'p1.alice' } } })
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(eventsModule.setHeart).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalledWith({ title: '心动信息暂时不可用，正在重试。', icon: 'none' })
+    expect(eventsModule.listHeartCandidates).toHaveBeenCalledOnce()
+    expect(eventsModule.getHeart).toHaveBeenCalledOnce()
+    expect(errorPage.data.heartState).toBe('ready')
+
     const conflictPage = createPage({
       eventId: '60000000-0000-4000-8000-000000000001',
       state: 'ready',
