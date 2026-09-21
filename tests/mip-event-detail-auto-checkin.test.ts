@@ -230,6 +230,35 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
     expect(checkInStore.clear).not.toHaveBeenCalled()
   })
 
+  it('caps the auth-driven auto check-in retry at one attempt when identity and event states split', async () => {
+    const page = createPage()
+    eventsModule.resolveCheckInScene.mockResolvedValueOnce({
+      eventId: EVENT_ID,
+      resumeToken: RESUME_TOKEN,
+      validFrom: '2026-12-12T09:30:00+08:00',
+      validUntil: CHECK_IN_INTENT.validUntil,
+    })
+    checkInStore.save.mockReturnValueOnce(CHECK_IN_INTENT)
+    eventsModule.getEvent.mockResolvedValue(attendedEvent({ registrationStatus: 'REGISTERED' }))
+    // 状态分裂：身份会话始终 ready（requireAuthIntent 直接放行），活动服务始终要求授权。
+    eventsModule.checkIn.mockRejectedValue(new MipEventsError('AUTH_REQUIRED', '请先完成登录'))
+    identityModule.beginProtectedAction.mockResolvedValue({
+      token: 'identity-token',
+      decision: { ready: true },
+      snapshot: { authenticated: true, phoneBound: true },
+    })
+
+    await callPage(page, 'loadCheckInScene', SCAN_SCENE)
+    await flushAsync()
+
+    // 授权驱动的自动重试仅一次（首试 + 单次重试），不形成无界循环。
+    expect(eventsModule.checkIn).toHaveBeenCalledTimes(2)
+    expect(showToast).not.toHaveBeenCalledWith({ title: '签到成功', icon: 'success' })
+    expect(page.data.hasCheckInIntent).toBe(true)
+    expect(checkInStore.clear).not.toHaveBeenCalled()
+    expect(page.data.message).toContain('确认现场签到')
+  })
+
   it('hides the 与你互动 card when the attended event has no interest data', async () => {
     const page = createPage({ eventId: EVENT_ID })
     eventsModule.getEvent.mockResolvedValueOnce(attendedEvent({

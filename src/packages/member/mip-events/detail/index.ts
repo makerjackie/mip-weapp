@@ -198,6 +198,7 @@ Page({
   entryScene: '',
   authToken: '' as string,
   authIntent: '' as AuthIntent | '',
+  checkInAuthRetryAttempted: false,
 
   onLoad(query: Record<string, string>) {
     this.onlineRequested = query.online === '1'
@@ -290,8 +291,16 @@ Page({
     }
     catch (error) {
       if (isEventAccessRequirementError(error)) {
+        // 对齐 feedback 页 recoverAccess 的单次重试上限：身份会话 ready 而活动服务仍
+        // 要求授权（状态分裂）时，requireAuthIntent 会直接放行并立刻重试，无上限即
+        // 无界循环；重试一次后停在手动脉冲兜底。
+        if (this.checkInAuthRetryAttempted) {
+          this.setData({ message: '自动签到暂时未能完成，请稍后点击「确认现场签到」重试。' })
+          return
+        }
         void this.requireAuthIntent('checkin').then((allowed: boolean) => {
           if (allowed) {
+            this.checkInAuthRetryAttempted = true
             void this.attemptAutoCheckIn()
           }
         })
