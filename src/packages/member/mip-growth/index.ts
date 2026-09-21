@@ -5,6 +5,7 @@ import { mipGrowthModule } from '../../../modules/mip-growth/client'
 import { mipTasksModule } from '../../../modules/mip-tasks/client'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatLocalDate, formatLocalDateTime } from '../../../utils/date'
+import { withinRenewalWindow } from './renewal-window'
 
 const metricLabels = {
   EXPERIENCE: '经验值',
@@ -18,20 +19,6 @@ const MEMBERSHIP_ORDER_PAGE = '/packages/member/membership-order/index'
 /** 到期时间展示为 2026.08.08（figma 1948:14079 / 3296:5808）。 */
 function formatDottedDate(value: string) {
   return formatLocalDate(value).replaceAll('-', '.')
-}
-
-/**
- * 「立即续费」仅到期前 3 个月展示（figma 2165:17142 标注，J4-03）。
- * 到期时间本身是服务端会员事实（mip-commerce membershipEndsAt），这里只做展示窗口换算。
- */
-function withinRenewalWindow(endsAt: string, now = new Date()) {
-  const end = new Date(endsAt)
-  if (Number.isNaN(end.getTime())) {
-    return false
-  }
-  const opensAt = new Date(end)
-  opensAt.setMonth(opensAt.getMonth() - 3)
-  return now >= opensAt && now <= end
 }
 
 interface GrowthEntryView extends GrowthEntry {
@@ -157,7 +144,6 @@ Page({
     tasksMessage: '',
     isPlayer: false,
     membershipState: 'loading' as 'loading' | 'player' | 'guest' | 'error',
-    membershipEndsText: '',
     membershipValidityText: '',
     renewWindowOpen: false,
     invitationReady: false,
@@ -189,7 +175,6 @@ Page({
       this.setData({
         isPlayer: false,
         membershipState: 'error',
-        membershipEndsText: '',
         membershipValidityText: '',
         renewWindowOpen: false,
         invitationReady: false,
@@ -202,7 +187,6 @@ Page({
       this.setData({
         isPlayer: false,
         membershipState: 'guest',
-        membershipEndsText: '',
         // J1-06 开通态：新玩家加入页固定展示「有效期一年」（M1 00:45:19）。
         membershipValidityText: '有效期一年',
         renewWindowOpen: false,
@@ -214,7 +198,6 @@ Page({
     this.setData({
       isPlayer: true,
       membershipState: 'player',
-      membershipEndsText: formatDottedDate(membership.membershipEndsAt),
       // J4-03 续费态：有效期至:2026.08.08（figma 1948:14079）。
       membershipValidityText: `有效期至:${formatDottedDate(membership.membershipEndsAt)}`,
       renewWindowOpen: withinRenewalWindow(membership.membershipEndsAt),

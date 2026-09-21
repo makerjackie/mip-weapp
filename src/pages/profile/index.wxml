@@ -148,7 +148,7 @@
       stats="{{[
         {value: guestCount === null ? '—' : guestCount, label: '嘉宾', category: 'GUEST', target: 'influence'},
         {value: interactionCount === null ? '—' : interactionCount, label: '互动过', category: 'INTERACTION', target: 'influence'},
-        {value: interestCount === null ? '—' : interestCount, label: '心动值', category: 'ACTIVE_INTEREST', target: 'influence', badge: interestUnreadCount > 0},
+        {value: interestCount === null ? '—' : interestCount, label: '心动值', category: 'ACTIVE_INTEREST', target: 'influence', badge: interestUnreadCount > 0, badgeLabel: '有新的心动'},
         {value: visitorCount === null ? '—' : visitorCount, label: '访客', target: 'visitor', badge: visitorUnreadCount > 0}
       ]}}"
       bind:select="openStat"

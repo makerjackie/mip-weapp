@@ -38,9 +38,10 @@ Page({
     totalSymbol: '¥',
     totalAmount: '',
     orderNumberText: '支付后生成',
-    orderIdText: '',
     noticesText: MEMBERSHIP_PURCHASE_NOTICES,
     paymentEnabled: runtimeConfig.paymentMode !== 'disabled',
+    // 缓存方案只用来先出内容；金额能否支付以一次成功的服务端刷新为准（对齐旧会员页 plansVerified 守卫）。
+    plansVerified: false,
     paying: false,
     accessing: false,
     message: '',
@@ -54,8 +55,9 @@ Page({
   },
 
   onShow() {
+    // 对齐旧会员页：恢复购买意图不依赖当前 state，planId 已在 pay() 时捕获。
     const resume = mipIdentityModule.consumePendingResume('packages/member/membership-order/index')
-    if (resume?.action === 'PURCHASE_MEMBERSHIP' && this.resumePlanId && this.data.state === 'ready') {
+    if (resume?.action === 'PURCHASE_MEMBERSHIP' && this.resumePlanId) {
       const planId = this.resumePlanId
       this.resumePlanId = '' as MembershipPlanId | ''
       void this.performPurchase(planId)
@@ -67,34 +69,35 @@ Page({
   async loadPlan() {
     const cached = mipCommerceModule.peekPlans()
     if (cached?.length) {
-      this.applyPlans(cached)
+      this.applyPlans(cached, false)
     }
     else {
       this.setData({ state: 'loading', message: '' })
     }
     try {
       const plans = await mipCommerceModule.listPlans({ force: cached !== undefined })
-      this.applyPlans(plans)
+      this.applyPlans(plans, true)
     }
     catch {
       if (!mipCommerceModule.peekPlans()?.length) {
         this.setData({ state: 'error', message: '会员方案暂时无法加载。' })
       }
       else {
-        this.setData({ message: '会员方案更新失败，暂时无法支付。' })
+        this.setData({ plansVerified: false, message: '会员方案更新失败，暂时无法支付。' })
       }
     }
   },
 
-  applyPlans(plans: readonly MembershipPlan[]) {
-    if (!plans.length) {
+  applyPlans(source: readonly MembershipPlan[], plansVerified: boolean) {
+    if (!source.length) {
       this.setData({ state: 'error', message: '当前没有可用会员方案。' })
       return
     }
-    const plan = plans.find(item => item.id === this.planId) || plans[0]
+    const plan = source.find(item => item.id === this.planId) || source[0]
     this.planId = plan.id
     this.setData({
       state: 'ready',
+      plansVerified,
       planTitle: plan.name || MEMBERSHIP_PLAN_FALLBACK_TITLE,
       validityText: planValidityText(plan),
       feeText: `¥${amountText(plan.priceCents)}`,
@@ -105,7 +108,7 @@ Page({
 
   async pay() {
     const planId = this.planId
-    if (!planId || this.data.state !== 'ready' || this.data.paying || this.data.accessing) {
+    if (!planId || !this.data.plansVerified || this.data.state !== 'ready' || this.data.paying || this.data.accessing) {
       return
     }
     if (!this.data.paymentEnabled) {
@@ -164,16 +167,5 @@ Page({
     finally {
       this.setData({ paying: false })
     }
-  },
-
-  copyOrderId() {
-    const orderId = this.data.orderIdText
-    if (!orderId) {
-      return
-    }
-    wx.setClipboardData({
-      data: orderId,
-      success: () => wx.showToast({ title: '订单号已复制', icon: 'success' }),
-    })
   },
 })

@@ -9,6 +9,6 @@
     <view class="mip-stat-header__value-wrap">
       <text class="mip-stat-header__value">{{item.value}}</text>
     </view>
-    <view class="mip-stat-header__label-wrap"><text class="mip-stat-header__label">{{item.label}}</text><view wx:if="{{item.badge}}" class="mip-stat-header__badge" aria-label="有新访客" /></view>
+    <view class="mip-stat-header__label-wrap"><text class="mip-stat-header__label">{{item.label}}</text><!-- badgeLabel 可选：未传时保持「有新访客」默认（向后兼容既有访客卡）。 --><view wx:if="{{item.badge}}" class="mip-stat-header__badge" aria-label="{{item.badgeLabel || '有新访客'}}" /></view>
   </view>
 </view>

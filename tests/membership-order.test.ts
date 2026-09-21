@@ -52,7 +52,7 @@ describe('MIP membership order confirmation page (journey-review J1-07 join-orde
     expect(template).toContain('立即支付')
     expect(template).toContain('mip-liquid-glass')
     // 订单确认页无补充填写项（2026-09-21 终审 QO）
-    expect(template).not.toMatch(/<(input|textarea|picker|t-switch|checkbox|radio)\b/)
+    expect(template).not.toMatch(/<(input|textarea|picker|picker-view|switch|slider|checkbox|radio|form|t-input|t-textarea|t-picker|t-switch|t-slider|t-radio-group|t-checkbox-group)\b/)
   })
 
   it('keeps the amount server-decided and pays through the commerce module only', () => {
@@ -81,5 +81,40 @@ describe('MIP membership order confirmation page (journey-review J1-07 join-orde
     expect(script).toContain('caseSwitchPrimary(\'/pages/profile/index\')')
     expect(script).toContain('outcome.kind === \'CANCELLED\'')
     expect(script).toContain('支付已取消，会员权益未发生变化。')
+  })
+
+  it('blocks payment when a cached plan render is not verified by a fresh fetch (P1)', () => {
+    const script = readSource('src/packages/member/membership-order/index.ts')
+    const template = readSource('src/packages/member/membership-order/index.wxml')
+
+    // 对齐旧会员页 plansVerified 守卫：缓存只用来先出内容，未经服务端刷新确认不得支付。
+    expect(script).toContain('plansVerified: false')
+    expect(script).toContain('this.applyPlans(cached, false)')
+    expect(script).toContain('this.applyPlans(plans, true)')
+    expect(script).toMatch(/catch \{[\s\S]*?plansVerified: false[\s\S]*?会员方案更新失败，暂时无法支付。/)
+    expect(script).toMatch(/if \(!planId \|\| !this\.data\.plansVerified \|\| this\.data\.state !== 'ready'/)
+    // 按钮禁用与文案一致（刷新失败时不可发起购买）。
+    expect(template).toContain('disabled="{{paying || !plansVerified}}"')
+    expect(template).toContain('aria-disabled="{{paying || !plansVerified}}"')
+  })
+
+  it('resumes the purchase intent on show regardless of the current render state', () => {
+    const script = readSource('src/packages/member/membership-order/index.ts')
+
+    // 对齐旧会员页：慢网络下缓存渲染尚未 ready 也不丢续购意图（planId 已在 pay() 时捕获）。
+    expect(script).toContain('if (resume?.action === \'PURCHASE_MEMBERSHIP\' && this.resumePlanId) {')
+    expect(script).not.toContain('resume?.action === \'PURCHASE_MEMBERSHIP\' && this.resumePlanId && this.data.state')
+  })
+
+  it('keeps no dead order-id copy affordance (order id renders after payment only)', () => {
+    const script = readSource('src/packages/member/membership-order/index.ts')
+    const template = readSource('src/packages/member/membership-order/index.wxml')
+
+    // 订单号支付后由订单列表展示，本页无复制入口（删除 copyOrderId 死代码）。
+    expect(script).not.toContain('copyOrderId')
+    expect(script).not.toContain('orderIdText')
+    expect(template).not.toContain('copyOrderId')
+    expect(template).not.toContain('orderIdText')
+    expect(template).toContain('{{orderNumberText}}')
   })
 })

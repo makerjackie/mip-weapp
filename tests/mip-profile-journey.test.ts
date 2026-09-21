@@ -65,20 +65,28 @@ describe('MIP profile membership journey frames', () => {
     expect(template).toContain('notificationUnreadCount > 99')
     expect(styles).toMatch(/\.profile-inbox-entry\s*\{[\s\S]*?position: absolute;/)
     expect(styles).toMatch(/\.profile-inbox-entry\s*\{[\s\S]*?right: 24rpx;/)
+    // 站内信 72rpx 命中区叠在 summary 右端之上：档案编辑区留出右侧 padding，命中不被截走。
+    expect(styles).toMatch(/\.profile-summary\s*\{[\s\S]*?padding-right: 88rpx;/)
+    // 红点中心对齐图标右上角（图标 40rpx 居中于 72rpx 命中区），修正原 16rpx 错位。
+    expect(styles).toMatch(/\.profile-inbox-unread\s*\{[\s\S]*?top: -2rpx;/)
+    expect(styles).toMatch(/\.profile-inbox-unread\s*\{[\s\S]*?right: -2rpx;/)
   })
 
   it('badges both hearts and visitors from their received-list unread counts', () => {
     const script = readSource('src/pages/profile/index.ts')
     const template = readSource('src/pages/profile/index.wxml')
+    const statHeader = readSource('src/components/mip-stat-header/index.wxml')
 
     // M1 00:35:58：心动值 / 访客有红点，嘉宾 / 互动过无。
     expect(script).toContain('opportunityModule.listReceived(\'ACTIVE_INTEREST\')')
     expect(script).toContain('updates.interestUnreadCount = interestResult.value.unreadCount')
     expect(script).toContain('interestUnreadCount: 0')
-    expect(template).toContain('label: \'心动值\', category: \'ACTIVE_INTEREST\', target: \'influence\', badge: interestUnreadCount > 0')
+    expect(template).toContain('label: \'心动值\', category: \'ACTIVE_INTEREST\', target: \'influence\', badge: interestUnreadCount > 0, badgeLabel: \'有新的心动\'')
     expect(template).toContain('label: \'访客\', target: \'visitor\', badge: visitorUnreadCount > 0')
     expect(template).not.toContain('label: \'嘉宾\', category: \'GUEST\', target: \'influence\', badge')
     expect(template).not.toContain('label: \'互动过\', category: \'INTERACTION\', target: \'influence\', badge')
+    // badge aria-label 由 item 传入；未传时保持「有新访客」默认（共享组件向后兼容）。
+    expect(statHeader).toContain('aria-label="{{item.badgeLabel || \'有新访客\'}}"')
   })
 
   it('keeps the four stat cards on the agreed WS-PEOPLE routes', () => {
