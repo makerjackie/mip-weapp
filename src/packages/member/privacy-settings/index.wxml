@@ -1,0 +1,27 @@
+<view id="mip-privacy-settings-page" class="mip-member-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <!-- journey-review J5-03 隐私设置（figma 1861_18278）：两行开关。
+       默认值按帧绘为开（待产品确认）；开关状态当前持久化到本机存储，
+       服务端偏好字段与人才/机会列表的联动见 .tmp/shared-change-requests.md。 -->
+  <view class="mt-[24rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel pl-[24rpx] pr-[20rpx]">
+    <view class="min-w-0 flex-1 text-[length:28rpx] font-medium leading-[40rpx]">不让他人在搜索人才时找到我</view>
+    <t-switch
+      class="ml-[16rpx] shrink-0"
+      aria-label="不让他人在搜索人才时找到我"
+      value="{{hideFromTalentSearch}}"
+      data-key="hideFromTalentSearch"
+      bind:change="onToggle"
+    />
+  </view>
+  <view class="mt-[24rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel pl-[24rpx] pr-[20rpx]">
+    <view class="min-w-0 flex-1 text-[length:28rpx] font-medium leading-[40rpx]">不让非MIP玩家看到我发布的机会</view>
+    <t-switch
+      class="ml-[16rpx] shrink-0"
+      aria-label="不让非MIP玩家看到我发布的机会"
+      value="{{hideOpportunitiesFromNonPlayers}}"
+      data-key="hideOpportunitiesFromNonPlayers"
+      bind:change="onToggle"
+    />
+  </view>
+  <view class="mt-4 px-1 text-[length:22rpx] leading-6 text-muted">关闭后，人才合作搜索与机会列表将按开关隐藏你的对应内容。</view>
+  <app-page-exit label="返回账号设置" tab-url="/pages/profile/index" />
+</view>
