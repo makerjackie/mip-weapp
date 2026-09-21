@@ -268,8 +268,10 @@
     </view>
 
     <view wx:if="{{activeSection === 'cooperation'}}" class="pt-3">
+      <!-- journey-review C5（2026-09-21 拍板）：本人态长按卡片 500ms 删除（原生弹窗 + toast「已删除」）。
+           相关机会 tab 的长按删除随 J6-03 由机会域模块能力补齐（见 shared-change-requests）。 -->
       <view wx:if="{{cooperationCards.length}}" class="flex flex-col gap-3">
-        <view wx:for="{{cooperationCards}}" wx:key="id" class="overflow-hidden rounded-[32rpx] bg-panel active:bg-panel-raised" aria-role="button" data-id="{{item.id}}" bind:tap="openCooperationCard">
+        <view wx:for="{{cooperationCards}}" wx:key="id" class="overflow-hidden rounded-[32rpx] bg-panel active:bg-panel-raised {{deletingId === item.id ? 'opacity-60' : ''}}" aria-role="button" data-id="{{item.id}}" bind:tap="openCooperationCard" bind:longpress="deleteOwnCooperationCard">
           <mip-cooperation-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
         </view>
       </view>
@@ -279,7 +281,7 @@
     <view wx:elif="{{activeSection === 'cases'}}" class="pt-3">
       <view wx:if="{{superCases.length}}" class="relative pl-[100rpx]">
         <view class="absolute bottom-6 left-[36rpx] top-3 w-[2rpx] bg-brand" />
-        <view wx:for="{{superCases}}" wx:key="id" class="relative pb-6" aria-role="button" data-id="{{item.id}}" bind:tap="openSuperCase">
+        <view wx:for="{{superCases}}" wx:key="id" class="relative pb-6 {{deletingId === item.id ? 'opacity-60' : ''}}" aria-role="button" data-id="{{item.id}}" bind:tap="openSuperCase" bind:longpress="deleteOwnSuperCase">
           <view class="absolute left-[-76rpx] top-[12rpx] h-[24rpx] w-[24rpx] rounded-full border-[2rpx] border-white bg-brand" />
           <view wx:if="{{item.publishedText}}" class="mb-3 text-[length:22rpx] font-medium text-brand">{{item.publishedText}}</view>
           <view class="overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised">

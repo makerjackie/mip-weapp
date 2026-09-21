@@ -30,12 +30,14 @@ describe('MIP cooperation card and super case archives', () => {
     const caseList = source('src/packages/member/mip-cases/list/index.ts')
     const caseDetail = source('src/packages/member/mip-cases/detail/index.ts')
 
-    expect(cooperationList).toContain('title: \'删除合作卡\'')
+    // journey-review C5（2026-09-21 拍板）：列表删除入口收敛为长按卡片 + 统一原生确认弹窗
+    // 「删除提示 / 删除后将无法恢复，是否删除？」；详情页保留各自命名的删除入口。
+    expect(cooperationList).toContain('title: \'删除提示\'')
     expect(cooperationList).toContain('cooperationModule.archive(item.id, expectedVersion)')
     expect(cooperationList).toContain('await this.load(true)')
     expect(cooperationDetail).toContain('cooperationModule.archive(item.id, item.version)')
     expect(cooperationDetail).toContain('leaveSecondaryPage(\'/pages/opportunities/index\')')
-    expect(caseList).toContain('title: \'删除案例\'')
+    expect(caseList).toContain('title: \'删除提示\'')
     expect(caseList).toContain('superCaseModule.archive(item.id, expectedVersion)')
     expect(caseList).toContain('await this.load(true)')
     expect(caseDetail).toContain('superCaseModule.archive(item.id, item.version)')

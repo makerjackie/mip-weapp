@@ -350,6 +350,8 @@ Page({
     caseNavigateTo({ url: '/packages/member/mip-cases/list/index' })
   },
 
+  // journey-review C5（2026-09-21 拍板）：长按卡片 500ms 触发，微信原生确认弹窗
+  // 「删除后将无法恢复，是否删除？」（删除警示红），确认后移除卡片 + toast「已删除」（1.8s）。
   async deleteCard(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
     const item = this.data.cards.find(card => card.id === id)
@@ -358,10 +360,10 @@ Page({
       return
     }
     const confirmation = await wx.showModal({
-      title: '删除合作卡',
-      content: '删除后，这张合作卡将不再显示，且无法恢复。',
+      title: '删除提示',
+      content: '删除后将无法恢复，是否删除？',
       confirmText: '删除',
-      confirmColor: '#B30516',
+      confirmColor: '#FF4D5E',
     })
     if (!confirmation.confirm) {
       return
@@ -370,7 +372,7 @@ Page({
     try {
       await cooperationModule.archive(item.id, expectedVersion)
       await this.load(true)
-      wx.showToast({ title: '已删除', icon: 'success' })
+      wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
     }
     catch (error) {
       const message = error instanceof Error ? error.message : '合作卡删除失败'

@@ -87,8 +87,10 @@ describe('MIP Design System native primitives', () => {
   it('renders components instead of repeated page-owned primitive markup', () => {
     const privacy = read('src/packages/member/privacy/index.wxml')
     expect(privacy).toContain('<mip-section-header title="账号与安全" />')
+    expect(privacy).toContain('<mip-section-header class="mt-[48rpx]" title="协议" />')
     expect(privacy).toContain('<mip-detail-row-group')
-    expect(privacy).toContain('<mip-detail-row label="绑定手机" />')
+    expect(privacy).toContain('<mip-detail-row label="绑定手机" actionable="{{true}}" bind:tap="openBindPhone" />')
+    expect(privacy).toContain('<mip-detail-row label="隐私设置" actionable="{{true}}" bind:tap="openPrivacySettings" />')
 
     const hearts = read('src/packages/member/mip-hearts/index.wxml')
     expect(hearts).toContain('<mip-search-bar')
