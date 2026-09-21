@@ -22,6 +22,6 @@
       bind:change="onToggle"
     />
   </view>
-  <view class="mt-4 px-1 text-[length:22rpx] leading-6 text-muted">关闭后，人才合作搜索与机会列表将按开关隐藏你的对应内容。</view>
+  <view class="mt-4 px-1 text-[length:22rpx] leading-6 text-muted">开关状态已保存，将在后续版本对他人可见范围生效。</view>
   <app-page-exit label="返回账号设置" tab-url="/pages/profile/index" />
 </view>

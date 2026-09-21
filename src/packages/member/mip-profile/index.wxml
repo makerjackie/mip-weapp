@@ -222,14 +222,6 @@
         <view class="text-right text-[length:22rpx] text-muted">{{introduction.length}}/300</view>
       </view>
     </view>
-
-    <view class="mx-3 mt-4 rounded-[16rpx] bg-panel px-4 py-5">
-      <view class="text-[length:30rpx] font-semibold">联系方式</view>
-      <view class="mt-2 text-[length:22rpx] leading-6 text-muted">{{phoneBound ? '已绑定，可重新授权本人微信手机号。' : '用于活动联系、订单与售后，不会公开展示。'}}</view>
-      <button open-type="getPhoneNumber" disabled="{{phoneBinding || saving}}" class="mt-4 flex h-[84rpx] w-full max-w-full box-border items-center justify-center rounded-[16rpx] border border-line bg-panel-raised text-[length:24rpx] font-semibold text-ink disabled:opacity-60" bind:getphonenumber="bindPhone">
-        {{phoneBinding ? '正在更新' : phoneBound ? '更换绑定手机号' : '绑定微信手机号'}}
-      </button>
-    </view>
     </block>
 
     <mip-sticky-actions>

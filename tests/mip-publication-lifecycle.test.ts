@@ -45,7 +45,7 @@ describe('MIP member publication lifecycle', () => {
     expect(detailTemplates).toContain('下架案例')
     expect(detailTemplates).toContain('删除合作卡')
     expect(detailTemplates).toContain('删除案例')
-    // journey-review C5（2026-09-21 拍板）：列表删除入口收敛为长按卡片 500ms +
+    // journey-review C5（2026-09-21 拍板）：列表删除入口收敛为长按卡片（原生 longpress 手势）+
     // 微信原生确认弹窗（删除警示红）→ 卡片移除 + toast「已删除」（1.8s），按钮行移除。
     expect(listTemplates).toContain('bind:longpress="deleteCard"')
     expect(listTemplates).toContain('bind:longpress="deleteCase"')

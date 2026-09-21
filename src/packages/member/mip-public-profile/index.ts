@@ -468,7 +468,7 @@ Page({
     }
   },
 
-  // journey-review C5（2026-09-21 拍板）：本人档案合作卡/超级案例 tab 长按卡片 500ms 删除——
+  // journey-review C5（2026-09-21 拍板）：本人档案合作卡/超级案例 tab 长按卡片（原生 longpress 手势）删除——
   // 微信原生确认弹窗「删除后将无法恢复，是否删除？」（删除警示红），确认后卡片移除 +
   // toast「已删除」（1.8s）；取消停留原页。列表摘要不带 version，先取详情再按乐观锁归档。
   async deleteOwnCooperationCard(event: WechatMiniprogram.TouchEvent) {

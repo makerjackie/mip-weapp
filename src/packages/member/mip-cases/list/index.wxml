@@ -24,7 +24,7 @@
     <view wx:for="{{items}}" wx:key="id" class="relative pb-6">
       <view class="absolute left-[-76rpx] top-[10rpx] h-[24rpx] w-[24rpx] rounded-full border-[2rpx] border-white bg-brand" />
       <view class="mb-3 flex min-h-[36rpx] items-center justify-between gap-2 text-[length:22rpx] font-medium text-brand"><text>{{item.publishedText || item.statusText}}</text><text wx:if="{{mine && item.publishedText}}" class="shrink-0 text-[length:22rpx] font-normal text-muted">{{item.statusText}}</text></view>
-      <!-- journey-review C5（2026-09-21 拍板）：删除入口收敛为长按卡片 500ms →
+      <!-- journey-review C5（2026-09-21 拍板）：删除入口收敛为长按卡片（原生 longpress 手势）→
            微信原生确认弹窗（删除警示红）→ toast「已删除」；按钮行移除。 -->
       <view class="overflow-hidden rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised {{archivingId === item.id ? 'opacity-60' : ''}}" aria-role="button" data-id="{{item.id}}" bind:tap="open" bind:longpress="deleteCase">
         <view class="flex min-h-[44rpx] items-center gap-2"><t-icon name="folder" size="30rpx" color="var(--color-ink)" /><view class="min-w-0 flex-1 line-clamp-2 text-[length:28rpx] font-medium leading-6">{{item.projectName}}</view></view>

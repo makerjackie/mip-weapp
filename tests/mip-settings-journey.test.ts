@@ -70,12 +70,23 @@ describe('journey-review WS-SETTINGS', () => {
     expect(page).toContain('const PHONE_PATTERN = /^1\\d{10}$/')
     expect(page).toContain('const SMS_CODE_PATTERN = /^\\d{6}$/')
     expect(page).toContain('短信验证码暂未开通')
+    // review 清理：短信通道未接通前不存在换绑中的异步流，rebinding 死状态（含 UI disabled/
+    // 「正在换绑」文案）已删除，busy 守卫待通道接入时在 confirmRebind 补。
+    expect(page).not.toContain('rebinding')
+    expect(template).not.toContain('rebinding')
+    expect(template).not.toContain('正在换绑')
+    expect(page).toContain('通道接入时在此补 busy 守卫')
     // 错误态保留已输入内容：catch 分支只关弹层与提示，不清空 newPhone / smsCode。
     const catchBlock = page.slice(page.indexOf('mipIdentityModule.rebindWechatPhone(code)'), page.indexOf('startCountdown'))
     const rebindErrorTail = catchBlock.slice(catchBlock.indexOf('catch (error)'))
     expect(rebindErrorTail).not.toContain('newPhone: \'\'')
     expect(rebindErrorTail).not.toContain('smsCode: \'\'')
     expect(rebindErrorTail).toContain('换绑失败，请重试。')
+    // 终审拍板（WS-EVENTS 台单 1）：换绑/绑定统一走账号设置入口（本页），
+    // mip-profile 编辑页不再保留 getPhoneNumber 授权按钮区块。
+    const profileTemplate = read('src/packages/member/mip-profile/index.wxml')
+    expect(profileTemplate).not.toContain('getPhoneNumber')
+    expect(profileTemplate).not.toContain('联系方式')
   })
 
   it('J5-03 keeps both privacy switches independent, persisted, and rollback-safe', () => {
@@ -94,9 +105,17 @@ describe('journey-review WS-SETTINGS', () => {
     // 帧内均绘为开：默认开（待产品确认）。
     expect(page).toContain('hideFromTalentSearch: true')
     expect(page).toContain('hideOpportunitiesFromNonPlayers: true')
+    // review P1：注册期 data 只放默认值，持久化值在 onLoad 重读（行为级测试见
+    // privacy-settings-lifecycle.test.ts），否则页面重进回显过期快照。
+    expect(page).toContain('onLoad() {\n    this.setData(readPrivacySettings())')
+    const dataBlock = page.slice(page.indexOf('data: {'), page.indexOf('onLoad()'))
+    expect(dataBlock).not.toContain('readPrivacySettings')
     // 保存失败回滚开关并提示。
     expect(page).toContain('this.setData({ [key]: previous })')
     expect(page).toContain('设置暂未保存，请重试。')
+    // 一期无服务端消费方：底部文案只承诺已保存，不承诺列表隐藏效果。
+    expect(template).toContain('开关状态已保存，将在后续版本对他人可见范围生效。')
+    expect(template).not.toContain('将按开关隐藏你的对应内容')
   })
 
   it('J5-04 keeps the user agreement reachable under its full title', () => {

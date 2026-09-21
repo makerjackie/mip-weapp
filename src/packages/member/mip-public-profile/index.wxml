@@ -268,7 +268,7 @@
     </view>
 
     <view wx:if="{{activeSection === 'cooperation'}}" class="pt-3">
-      <!-- journey-review C5（2026-09-21 拍板）：本人态长按卡片 500ms 删除（原生弹窗 + toast「已删除」）。
+      <!-- journey-review C5（2026-09-21 拍板）：本人态长按卡片（原生 longpress 手势）删除（原生弹窗 + toast「已删除」）。
            相关机会 tab 的长按删除随 J6-03 由机会域模块能力补齐（见 shared-change-requests）。 -->
       <view wx:if="{{cooperationCards.length}}" class="flex flex-col gap-3">
         <view wx:for="{{cooperationCards}}" wx:key="id" class="overflow-hidden rounded-[32rpx] bg-panel active:bg-panel-raised {{deletingId === item.id ? 'opacity-60' : ''}}" aria-role="button" data-id="{{item.id}}" bind:tap="openCooperationCard" bind:longpress="deleteOwnCooperationCard">

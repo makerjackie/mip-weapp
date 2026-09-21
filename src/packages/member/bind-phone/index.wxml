@@ -24,7 +24,6 @@
           value="{{newPhone}}"
           placeholder="请输入新的手机号"
           placeholder-class="mip-bind-phone__placeholder"
-          disabled="{{rebinding}}"
           bindinput="onNewPhoneInput"
         />
         <view class="mx-[20rpx] h-[32rpx] w-[1rpx] shrink-0 bg-line"></view>
@@ -45,7 +44,6 @@
           value="{{smsCode}}"
           placeholder="请输入短信验证码"
           placeholder-class="mip-bind-phone__placeholder"
-          disabled="{{rebinding}}"
           bindinput="onSmsCodeInput"
         />
         <view class="mx-[20rpx] h-[32rpx] w-[1rpx] shrink-0 bg-line"></view>
@@ -60,11 +58,10 @@
       <view wx:if="{{message}}" class="mt-[24rpx] px-[8rpx] text-[length:22rpx] leading-[33.6rpx] text-muted">{{message}}</view>
 
       <view
-        class="mt-[56rpx] flex h-[80rpx] items-center justify-center rounded-[100rpx] border-[2rpx] border-canvas bg-brand text-[length:32rpx] font-medium text-on-brand active:bg-brand-active {{rebinding ? 'opacity-60' : ''}}"
+        class="mt-[56rpx] flex h-[80rpx] items-center justify-center rounded-[100rpx] border-[2rpx] border-canvas bg-brand text-[length:32rpx] font-medium text-on-brand active:bg-brand-active"
         aria-role="button"
-        aria-disabled="{{rebinding}}"
         bind:tap="confirmRebind"
-      >{{rebinding ? '正在换绑' : '确认换绑'}}</view>
+      >确认换绑</view>
 
       <view class="mt-[24rpx] px-[8rpx] text-[length:22rpx] leading-[33.6rpx] text-muted">手机号用于登录与接收活动通知。</view>
     </view>

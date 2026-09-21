@@ -47,9 +47,16 @@ function readPrivacySettings(): PrivacySettings {
 }
 
 Page({
+  // 注册期 data 只放默认值：Page() 求值只有一次，微信实例化深拷贝的是该快照；
+  // 真实持久化值必须在 onLoad 重读，否则页面重进会回显过期状态。
   data: {
     state: 'ready' as const,
-    ...readPrivacySettings(),
+    hideFromTalentSearch: DEFAULT_PRIVACY_SETTINGS.hideFromTalentSearch,
+    hideOpportunitiesFromNonPlayers: DEFAULT_PRIVACY_SETTINGS.hideOpportunitiesFromNonPlayers,
+  },
+
+  onLoad() {
+    this.setData(readPrivacySettings())
   },
 
   onToggle(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {

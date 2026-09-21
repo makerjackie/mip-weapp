@@ -350,7 +350,7 @@ Page({
     caseNavigateTo({ url: '/packages/member/mip-cases/list/index' })
   },
 
-  // journey-review C5（2026-09-21 拍板）：长按卡片 500ms 触发，微信原生确认弹窗
+  // journey-review C5（2026-09-21 拍板）：长按卡片（原生 longpress 手势）触发，微信原生确认弹窗
   // 「删除后将无法恢复，是否删除？」（删除警示红），确认后移除卡片 + toast「已删除」（1.8s）。
   async deleteCard(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')

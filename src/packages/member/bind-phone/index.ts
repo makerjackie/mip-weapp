@@ -22,7 +22,6 @@ Page({
     newPhone: '',
     smsCode: '',
     sendCountdown: 0,
-    rebinding: false,
     message: '',
     loginSheetOpen: false,
     loginSheetBusy: false,
@@ -74,7 +73,7 @@ Page({
 
   // 路径 A：弹 mip-login-sheet（subtitle 换绑变体），授权由组件内 getPhoneNumber 完成。
   openWechatBind() {
-    if (this.data.rebinding || this.data.loginSheetOpen) {
+    if (this.data.loginSheetOpen) {
       return
     }
     this.setData({ loginSheetOpen: true, message: '' })
@@ -128,7 +127,7 @@ Page({
   // 路径 B：短信通道一期未接通（QS）。校验与 60s 防重发口径已就位，
   // 通道落地后在此接入发送接口并调用 startCountdown()。
   requestSmsCode() {
-    if (this.data.rebinding || this.data.sendCountdown > 0) {
+    if (this.data.sendCountdown > 0) {
       return
     }
     if (!PHONE_PATTERN.test(this.data.newPhone)) {
@@ -162,9 +161,7 @@ Page({
   },
 
   async confirmRebind() {
-    if (this.data.rebinding) {
-      return
-    }
+    // 短信验证码换绑接口待身份域提供（QS）；通道接入时在此补 busy 守卫（提交中禁用重复提交）。
     if (!PHONE_PATTERN.test(this.data.newPhone)) {
       this.setData({ message: '请输入 11 位新手机号。' })
       return
@@ -173,7 +170,6 @@ Page({
       this.setData({ message: '请输入 6 位短信验证码。' })
       return
     }
-    // 短信验证码换绑接口待身份域提供（QS）；错误态保留输入，仅提示。
     this.setData({ message: '短信验证码暂未开通，可使用「微信一键获取」完成换绑。' })
   },
 })

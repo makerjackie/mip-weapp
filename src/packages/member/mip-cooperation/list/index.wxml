@@ -90,7 +90,7 @@
   </view>
 
   <view wx:elif="{{mine}}" class="mt-5 flex flex-col gap-4">
-    <!-- journey-review C5（2026-09-21 拍板）：删除入口收敛为长按卡片 500ms →
+    <!-- journey-review C5（2026-09-21 拍板）：删除入口收敛为长按卡片（原生 longpress 手势）→
          微信原生确认弹窗（删除警示红）→ toast「已删除」；按钮行移除。 -->
     <view wx:for="{{cards}}" wx:key="id" class="overflow-hidden rounded-[32rpx] bg-panel active:opacity-90 {{archivingId === item.id ? 'opacity-60' : ''}}" data-id="{{item.id}}" bind:tap="openCard" bind:longpress="deleteCard">
       <mip-cooperation-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
