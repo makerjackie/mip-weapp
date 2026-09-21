@@ -4,7 +4,20 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('../src/modules/mip-ai/client', () => ({ mipAiModule: {} }))
 vi.mock('../src/modules/mip-ai/editor-loader', () => ({ loadAiEditorDraft: vi.fn() }))
 vi.mock('../src/modules/mip-media/client', () => ({ mipMediaModule: {} }))
-vi.mock('../src/modules/mip-opportunities', () => ({ opportunityModule: {} }))
+vi.mock('../src/modules/mip-opportunities', () => ({
+  opportunityModule: {},
+  journeyStatusOf: (item: { status: string }) => item.status,
+  opportunityTypeOptions: [
+    { key: 'COMPANY', label: '找企业' },
+    { key: 'RESOURCE', label: '找资源' },
+    { key: 'PARTNER', label: '找伙伴' },
+  ],
+  opportunityProjectStatusOptions: [
+    { key: 'RECRUITING', label: '招募中', description: '想合作的人将通知你' },
+    { key: 'ENDED', label: '结束项目', description: '不再招募' },
+    { key: 'UNPUBLISHED', label: '下架项目', description: '仅自己可见' },
+  ],
+}))
 vi.mock('../src/platform/wechat/image-upload', () => ({ chooseSingleImage: vi.fn() }))
 
 type PageData = Record<string, any>
@@ -56,7 +69,8 @@ describe('MIP opportunity editor required fields', () => {
       expect(view).toContain(`id="${id}"`)
       expect(view.indexOf(`id="${id}"`)).toBeLessThan(advancedTrigger)
     }
-    expect(view).not.toContain('展开讲讲（选填）')
+    // journey-review J4-04 ⑤：字段命名对齐设计稿，「展开讲讲（选填）」进入基础区。
+    expect(view).toContain('展开讲讲（选填）')
     expect(view).toContain('必填，至少选择一种')
     expect(view).toContain('aria-role="checkbox"')
     expect(view).toContain('aria-checked="{{item.selected}}"')
@@ -67,7 +81,7 @@ describe('MIP opportunity editor required fields', () => {
 
     expect(Reflect.apply(page.validateRequiredFields, page, [])).toBe(false)
     expect(page.data.titleError).toBe('请输入项目名称。')
-    expect(page.data.descriptionError).toBe('请输入项目说明。')
+    expect(page.data.descriptionError).toBe('请展开讲讲你的项目情况。')
     expect(page.data.roleError).toBe('请至少选择一种合作角色。')
     expect(showToast).toHaveBeenCalledWith({ title: '请输入项目名称。', icon: 'none' })
     expect(pageScrollTo).toHaveBeenCalledWith({ selector: '#opportunity-field-title', duration: 200 })

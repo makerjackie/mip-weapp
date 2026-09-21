@@ -50,7 +50,7 @@
     </view>
   </block>
   <block wx:elif="{{item}}">
-    <mip-opportunity-card title="{{item.title}}" cover-url="{{item.coverUrl || ''}}" value-text="{{item.commercialTerms.amountDisplay || item.valueSummary}}" location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}" target-text="{{item.targetSummary}}" referral-count="{{item.referralCount}}" published-text="{{publishedText}}" />
+    <mip-opportunity-card title="{{item.title}}" cover-url="{{item.coverUrl || ''}}" value-text="{{item.commercialTerms.amountDisplay || item.valueSummary}}" city-text="{{item.city.label || ''}}" location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}" target-text="{{item.targetSummary}}" referral-count="{{item.referralCount}}" published-text="{{publishedText}}" published-prefix="发表于：" type-tags="{{typeTagViews}}" pill-label="想合作" avatars="{{referralAvatars}}" />
     <view class="mt-3 rounded-[16rpx] bg-panel px-3 py-3">
       <view class="flex items-center gap-1 text-[length:32rpx] font-medium"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/packages/member/assets/figma/opportunities/project-introduction.svg" mode="aspectFit" /><text>项目介绍</text></view>
       <view wx:if="{{item.description}}" class="mt-3 whitespace-pre-wrap text-[length:24rpx] leading-[40rpx] text-muted">{{item.description}}</view>
@@ -113,15 +113,31 @@
       </view>
       <view wx:if="{{commentsMessage && commentsState === 'ready'}}" class="mt-3 text-[length:22rpx] text-danger">{{commentsMessage}}</view>
     </view>
-    <view wx:if="{{item.canEdit}}" id="opportunity-owner-actions" class="mip-liquid-glass mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
-      <view class="flex h-[88rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[length:32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>{{item.status === 'DRAFT' ? '编辑草稿' : '编辑'}}</text></view>
-      <view wx:if="{{item.status === 'PUBLISHED'}}" class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-center text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="end">已完成招募，结束机会</view>
-      <view wx:else class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-center text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="edit">发布机会</view>
+    <!-- journey-review J4-05/J4-06：发布人底部条=编辑 + 分享机会。
+         招募中/已结束均可分享；已下架置灰不可点；未发布过的草稿保持「发布机会」主按钮。 -->
+    <view wx:if="{{ownerBar}}" id="opportunity-owner-actions" class="mip-liquid-glass mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
+      <view wx:if="{{ownerBar === 'draft'}}" class="flex h-[88rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[length:32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑草稿</text></view>
+      <view wx:else class="flex h-[88rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[length:32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑</text></view>
+      <view wx:if="{{ownerBar === 'draft'}}" class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-center text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="edit">发布机会</view>
+      <button wx:elif="{{ownerBar === 'unpublished'}}" class="opportunity-share-button flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full px-4 text-center text-[length:32rpx] font-medium" aria-disabled="true" disabled>分享机会</button>
+      <button wx:else class="opportunity-share-button flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-center text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" open-type="share" aria-role="button">分享机会</button>
     </view>
+    <!-- journey-review J3-09：非发布人底部条=「+N想合作」头像组胶囊 + 我想合作。
+         合作流程未入包，一期点击 toast 占位；已结束的项目合作按钮不可点（文案「项目已结束」）。 -->
     <view wx:elif="{{!item.mine && item.status === 'PUBLISHED'}}" id="opportunity-referral-actions" class="mip-liquid-glass mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
-      <view class="flex h-[80rpx] min-w-[176rpx] shrink-0 items-center justify-center rounded-full bg-panel px-3 text-[length:26rpx] font-medium text-brand">+{{item.referralCount}}引荐</view>
-      <view wx:if="{{item.referralActive}}" class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="changeReferralTarget">更换被引荐人</view>
-      <view wx:else class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="toggleReferral">我想引荐</view>
+      <view class="flex h-[80rpx] w-[258rpx] shrink-0 items-center justify-center gap-[8rpx] rounded-full bg-panel px-3">
+        <view wx:for="{{referralAvatars}}" wx:for-item="avatar" wx:key="*this" class="h-[48rpx] w-[48rpx] overflow-hidden rounded-full border-[2rpx] border-solid border-panel-raised" style="margin-left:{{index === 0 ? 0 : -30}}rpx"><image class="h-full w-full" src="{{avatar}}" mode="aspectFill" /></view>
+        <text class="text-[length:20rpx] font-semibold leading-[28rpx] text-brand">+</text>
+        <text class="text-[length:26rpx] font-medium leading-[36rpx] text-brand">{{item.referralCount}}想合作</text>
+      </view>
+      <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="cooperationIntent">我想合作</view>
+    </view>
+    <view wx:elif="{{!item.mine && item.status === 'ENDED'}}" id="opportunity-referral-actions" class="mip-liquid-glass mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
+      <view class="flex h-[80rpx] w-[258rpx] shrink-0 items-center justify-center gap-[8rpx] rounded-full bg-panel px-3">
+        <text class="text-[length:20rpx] font-semibold leading-[28rpx] text-brand">+</text>
+        <text class="text-[length:26rpx] font-medium leading-[36rpx] text-brand">{{item.referralCount}}想合作</text>
+      </view>
+      <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand opacity-40" aria-disabled="true">项目已结束</view>
     </view>
     <app-page-exit label="返回机会" />
     <t-popup visible="{{referralPickerVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleReferralPickerVisibility">

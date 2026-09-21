@@ -3,6 +3,11 @@ import type { AiDraftSourceConfirmation } from '../mip-ai/types'
 
 export type OpportunityStatus = 'DRAFT' | 'PUBLISHED' | 'ENDED' | 'UNPUBLISHED'
 export type OpportunityStatusFilter = 'RECRUITING' | 'COMPLETED'
+/**
+ * journey-review QZ1（2026-09-21 终审）：机会类型固定三件套
+ * 找企业 / 找资源 / 找伙伴，发布者在编辑页多选。
+ */
+export type OpportunityTypeKey = 'COMPANY' | 'RESOURCE' | 'PARTNER'
 
 export interface OpportunityTag {
   id: string
@@ -55,10 +60,13 @@ export interface OpportunitySummary {
   branchName?: string
   coverUrl?: string
   roles: CooperationRoleKey[]
+  typeKeys?: OpportunityTypeKey[]
   industryTags: OpportunityTag[]
   abilityTags: OpportunityTag[]
   teamMembers: OpportunityTeamMember[]
   referralCount: number
+  /** 想合作/引荐聚合头像（最近表态者，最多 3 枚）。服务端补充该字段前为空。 */
+  avatars?: string[]
   status: OpportunityStatus
   publishedAt: string
   author: OpportunityAuthor
@@ -67,6 +75,8 @@ export interface OpportunitySummary {
 
 export interface OpportunityDetail extends OpportunitySummary {
   description: string
+  /** 主营地区（选填）自由文本；服务端补充持久化前可能缺失。 */
+  regionText?: string
   coverAssetId?: string
   version: number
   referralActive: boolean
@@ -283,9 +293,12 @@ export interface OpportunityDraft {
   scopeType: 'PLATFORM' | 'BRANCH'
   branchId?: BranchId
   cityTagId?: string
+  /** 主营地区（选填）：示例「南山十亩地」。服务端尚未持久化该字段时按选填透传。 */
+  regionText?: string
   commercialTerms?: OpportunityCommercialTerms | null
   coverAssetId?: string
   roleKeys: CooperationRoleKey[]
+  typeKeys?: OpportunityTypeKey[]
   industryTagIds: string[]
   abilityTagIds: string[]
   teamProfileRefs?: string[]

@@ -105,9 +105,12 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(opportunityCardStyles).toContain('width: 240rpx;')
     expect(opportunityCardStyles).toContain('height: 320rpx;')
     // AttendPill (skill contract business.jsx): the opportunity card delegates the
-    // fixed 116x28 yellow pill to the shared design-system component.
+    // fixed 116x28 yellow pill to the shared design-system component. journey-review
+    // D-05 renames the aggregate to 想合作 via the optional pillLabel prop.
     expect(opportunityCard).toContain('<mip-attend-pill')
-    expect(opportunityCard).toContain('label="引荐"')
+    expect(opportunityCard).toContain('label="{{pillLabel}}"')
+    expect(source('src/components/mip-opportunity-card/index.ts')).toContain(`pillLabel: { type: String, value: '引荐' }`)
+    expect(discovery).toContain('pill-label="想合作"')
     expect(source('src/components/mip-attend-pill/index.wxss')).toContain('width: 232rpx;')
     expect(source('src/components/mip-attend-pill/index.wxss')).toContain('height: 56rpx;')
   })
@@ -126,10 +129,9 @@ describe('MIP opportunity Figma surfaces', () => {
   })
 
   it('keeps one Figma-aligned primary referral action and a separate interest state', () => {
-    expect(detail.match(/bind:tap="toggleReferral"/g)).toHaveLength(1)
+    expect(detail).toContain('bind:tap="cooperationIntent"')
     expect(detail).toContain('id="opportunity-referral-actions"')
     expect(detail).toContain('id="opportunity-owner-actions"')
-    expect(detail).toContain('bind:tap="changeReferralTarget"')
     expect(detail).toContain('bind:tap="cancelReferral"')
     expect(detail).toContain('bind:tap="toggleInterest"')
     expect(detail).toContain('aria-pressed="{{item.interestActive}}"')
@@ -148,16 +150,19 @@ describe('MIP opportunity Figma surfaces', () => {
 
   it('keeps the editor sequence and uses one standard primary bottom action', () => {
     expect(editor).toContain('准确的描述可以更容易帮你找到合作机会')
-    expect(editor.indexOf('未选择时为全国')).toBeLessThan(editor.indexOf('cityGridOptions'))
-    expect(editor.indexOf('机会封面')).toBeLessThan(editor.indexOf('更多设置'))
+    expect(editor.indexOf('未选择时为全国')).toBe(-1)
+    expect(editor.indexOf('请选择主营城市')).toBeGreaterThan(0)
+    expect(editor.indexOf('主营地区（选填）')).toBeGreaterThan(0)
+    expect(editor.indexOf('项目封面（选填）')).toBeLessThan(editor.indexOf('更多设置'))
     expect(editor).toContain('wx:if="{{advancedOpen}}"')
     expect(editor).toContain('id="opportunity-editor-fixed-actions"')
     expect(editor).toContain('bottom-[calc(env(safe-area-inset-bottom)+16rpx)]')
-    expect(editor).toContain('<t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{saving || coverUploading}}" bind:tap="publish">')
-    expect(editor).not.toContain('id="opportunity-editor-fixed-actions" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center rounded-full border border-brand bg-brand-soft p-2"')
+    // journey-review J4-04 ③：液态玻璃底部条 + 黄芯胶囊主按钮。
+    expect(editor).toContain('mip-liquid-glass')
+    expect(editor).toContain(`bind:tap="publish">{{editorMode === 'PUBLISHED' ? '保存修改' : '确认发布'}}</view>`)
     expect(editor).toContain('bind:tap="saveDraft"')
     expect(editor).toContain('bind:tap="publish"')
-    expect(editor).toContain('bind:tap="pasteAndRecognize"')
+    expect(editor).toContain('bind:tap="readClipboardIntoPaste"')
     expect(editor).toContain('bind:tap="openTeamPicker"')
   })
 
@@ -166,10 +171,10 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(editorScript).toContain(`type OpportunityEditorMode = 'CREATE' | 'DRAFT' | 'PUBLISHED'`)
     expect(editorScript).toContain(`editorMode === 'CREATE' ? '发布机会' : editorMode === 'DRAFT' ? '编辑草稿' : '编辑机会'`)
     expect(editor).toContain(`editorMode !== 'PUBLISHED'`)
-    expect(editor).toContain(`editorMode === 'PUBLISHED' ? '保存修改' : '发布机会'`)
+    expect(editor).toContain(`editorMode === 'PUBLISHED' ? '保存修改' : '确认发布'`)
   })
 
-  it('uses AI recognition with a bounded local fallback and explicit confirmation', () => {
+  it('uses AI recognition with a bounded local fallback and inline confirmation', () => {
     expect(editorScript).toContain('purpose: \'OPPORTUNITY\'')
     expect(editorScript).toContain('mipAiModule.createTextDraft')
     expect(editorScript).toContain('loadAiEditorDraft(this.data.aiDraftId, \'OPPORTUNITY\')')
@@ -177,11 +182,14 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(editorScript).toContain('parseOpportunityAiDraft')
     expect(editorScript).toContain('parseOpportunityText(source, this.data.cityOptions)')
     expect(editorScript).toContain('aiConfirmation: {')
-    expect(editorScript).toContain('confirmedAiDraftId: this.data.pasteAiDraftId')
-    expect(editor).toContain('pasteRecognizing ? \'正在智能识别\' : \'粘贴整段文字，自动识别\'')
     expect(editorScript).toContain('已使用智能识别，请核对结果。')
     expect(editorScript).toContain('智能识别暂时不可用，已使用基础识别，请重点核对。')
-    expect(editor).toContain('bind:tap="confirmPasteDraft"')
+    // journey-review J4-04 ④：确认为输入区内嵌按钮，识别后就地填入不跳页、不再弹预览层。
+    expect(editor).toContain('pasteRecognizing ? \'正在智能识别\' : \'粘贴整段文字，自动识别\'')
+    expect(editor).toContain('bindinput="updatePasteText"')
+    expect(editor).toContain('bind:tap="recognizePastedText">确认')
+    expect(editorScript).toContain('applyPastedDraft(parsed.draft)')
+    expect(editor).not.toContain('确认识别结果')
   })
 
   it('keeps media errors with the optional cover and save errors above the actions', () => {
@@ -194,10 +202,14 @@ describe('MIP opportunity Figma surfaces', () => {
   })
 
   it('opens new saves on detail and refreshes detail after returning from an edit', () => {
-    expect(editorScript).toContain(`const wasExisting = Boolean(this.data.id)`)
+    expect(editorScript).toContain(`const detailRoute = 'packages/member/mip-opportunities/detail/index'`)
     expect(editorScript).toContain(`previousPage?.route === detailRoute`)
     expect(editorScript).toContain('wx.redirectTo({')
     expect(editorScript).toContain('/packages/member/mip-opportunities/detail/index?id=')
+    // journey-review J4-04：确认发布回机会列表（navigateBack 优先）；
+    // 切「下架项目」则落到下架后的机会详情（J4-06）。
+    expect(editorScript).toMatch(/if \(unpublished\) \{[\s\S]*wx\.navigateBack\(\)/)
+    expect(editorScript).toMatch(/if \(pages\.length > 1\) \{\n {10}wx\.navigateBack\(\)/)
     expect(detailScript).toContain('if (this.data.item) {\n      void this.load()')
   })
 

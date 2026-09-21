@@ -13,7 +13,9 @@ import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { evaluateAccess, mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import {
+  journeyStatusOf,
   opportunityModule,
+  opportunityTypeLabel,
   profileInterestMutations,
   retainOpportunityCommentReportIntent,
   retainOpportunityCommentSubmissionIntent,
@@ -22,6 +24,11 @@ import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { formatLocalDateTime } from '../../../../utils/date'
 
 type Interaction = 'referral' | 'referral-cancel' | 'interest' | 'comment'
+/**
+ * journey-review J4-05/J4-06：发布人底部条形态。
+ * draft=草稿（未发布过）、unpublished=已下架（分享置灰）、active=招募中、ended=已结束。
+ */
+type OwnerBarMode = 'draft' | 'unpublished' | 'active' | 'ended'
 
 interface PresentedComment extends OpportunityComment {
   createdText: string
@@ -52,6 +59,11 @@ Page({
     state: 'loading' as 'loading' | 'ready' | 'error',
     item: null as OpportunityDetail | null,
     publishedText: '',
+    typeTagViews: [] as Array<{ key: string, label: string }>,
+    /** journey-review J4-06：已下架态（服务端 DRAFT+publishedAt 的呈现）。 */
+    journeyStatus: 'DRAFT' as ReturnType<typeof journeyStatusOf>,
+    ownerBar: '' as '' | OwnerBarMode,
+    referralAvatars: [] as string[],
     roleNames: [] as string[],
     message: '',
     acting: false,
@@ -82,7 +94,6 @@ Page({
   resumeInteraction: '' as '' | Interaction,
   commentSubmissionIntent: null as OpportunityCommentSubmissionIntent | null,
   commentReportIntent: null as OpportunityCommentReportIntent | null,
-  endConfirmationBusy: false,
   stopInterestSubscription: null as (() => void) | null,
 
   onLoad(options: Record<string, string | undefined>) {
@@ -125,11 +136,21 @@ Page({
       const item = await opportunityModule.get(this.data.id)
       const interest = profileInterestMutations.mergeServer(item.author.profileRef, item.interestActive)
       this.observeInterest(item.author.profileRef)
+      const journeyStatus = journeyStatusOf(item)
+      const ownerBar: '' | OwnerBarMode = !item.mine
+        ? ''
+        : journeyStatus === 'UNPUBLISHED'
+          ? 'unpublished'
+          : journeyStatus === 'ENDED' ? 'ended' : journeyStatus === 'DRAFT' ? 'draft' : 'active'
       this.setData({
         state: 'ready',
         item: { ...item, interestActive: interest.active },
         interestPending: interest.pending,
         publishedText: formatLocalDateTime(item.publishedAt),
+        typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
+        journeyStatus,
+        ownerBar,
+        referralAvatars: item.avatars || [],
         roleNames: item.roles.map(key => cooperationRoles.find(role => role.key === key)?.name || key),
         message: '',
       })
@@ -676,49 +697,17 @@ Page({
   },
 
   edit() {
-    if (this.data.item?.canEdit) {
+    if (this.data.item?.canEdit || this.data.item?.mine) {
       caseNavigateTo({ url: `/packages/member/mip-opportunities/editor/index?id=${encodeURIComponent(this.data.id)}` })
     }
   },
 
-  async end() {
-    const item = this.data.item
-    if (!item || !item.canEdit || item.status !== 'PUBLISHED'
-      || this.data.acting || this.endConfirmationBusy) {
-      return
-    }
-    this.endConfirmationBusy = true
-    try {
-      const result = await wx.showModal({
-        title: '结束机会',
-        content: '结束后会显示在“已完成”，已有引荐记录会保留。',
-        confirmText: '确认结束',
-      }).catch(() => null)
-      if (result?.confirm) {
-        await this.confirmEnd(item)
-      }
-    }
-    finally {
-      this.endConfirmationBusy = false
-    }
-  },
-
-  async confirmEnd(item: OpportunityDetail) {
-    if (this.data.acting) {
-      return
-    }
-    this.setData({ acting: true })
-    try {
-      await opportunityModule.end(item.id, item.version)
-      await this.load()
-      wx.showToast({ title: '机会已结束', icon: 'success' })
-    }
-    catch (error) {
-      wx.showToast({ title: error instanceof Error ? error.message : '操作失败', icon: 'none' })
-    }
-    finally {
-      this.setData({ acting: false })
-    }
+  /**
+   * journey-review J3-09（2026-09-20 口径更名）：访客主 CTA「我想合作」。
+   * 合作流程未入包，一期点击 toast 占位（嘉宾可用，按钮展示）。
+   */
+  cooperationIntent() {
+    wx.showToast({ title: '功能建设中', icon: 'none' })
   },
 
   onShareAppMessage() {

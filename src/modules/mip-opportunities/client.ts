@@ -142,6 +142,18 @@ export const opportunityModule = {
     })
   },
 
+  /**
+   * journey-review C5/J6-03：我的项目长按删除。机会域与合作卡/超级案例同走
+   * archive 契约（服务端下架为 ARCHIVED，仅本人可见移出列表）。
+   */
+  remove(id: OpportunityId, expectedVersion: number, idempotencyKey = createMutationKey('opportunity-archive')) {
+    return callOpportunityApi<OpportunityMutationResult>('archiveOpportunity', {
+      id,
+      expectedVersion,
+      idempotencyKey,
+    })
+  },
+
   setReferral(
     id: OpportunityId,
     active: boolean,

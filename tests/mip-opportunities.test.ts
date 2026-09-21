@@ -106,8 +106,12 @@ describe('MIP opportunity contracts', () => {
     const page = readFileSync(new URL('../src/packages/member/mip-opportunities/detail/index.ts', import.meta.url), 'utf8')
     const view = readFileSync(new URL('../src/packages/member/mip-opportunities/detail/index.wxml', import.meta.url), 'utf8')
     const card = readFileSync(new URL('../src/components/mip-opportunity-card/index.wxml', import.meta.url), 'utf8')
+    const cardComponent = readFileSync(new URL('../src/components/mip-opportunity-card/index.ts', import.meta.url), 'utf8')
     expect(page).toContain('formatLocalDateTime(item.publishedAt)')
     expect(view).toContain('published-text="{{publishedText}}"')
-    expect(card).toContain('发布于 {{publishedText}}')
+    // journey-review J3-09：详情页发表时间前缀为「发表于：」，组件默认仍为「发布于 」保持旧调用方不变。
+    expect(view).toContain('published-prefix="发表于："')
+    expect(card).toContain('{{publishedPrefix}}{{publishedText}}')
+    expect(cardComponent).toContain(`publishedPrefix: { type: String, value: '发布于 ' }`)
   })
 })

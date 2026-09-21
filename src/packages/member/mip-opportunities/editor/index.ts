@@ -1,12 +1,12 @@
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../../../modules/mip'
 import type { AiDraftId } from '../../../../modules/mip-ai'
-import type { OpportunityCatalog, OpportunityDetail, OpportunityLocationType, PublicPerson } from '../../../../modules/mip-opportunities'
+import type { OpportunityCatalog, OpportunityDetail, OpportunityLocationType, OpportunityProjectStatus, OpportunityTypeKey, PublicPerson } from '../../../../modules/mip-opportunities'
 import type { OpportunityTextDraft } from '../../../../modules/mip-opportunities/text-parser'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { mipAiModule } from '../../../../modules/mip-ai/client'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
-import { opportunityModule } from '../../../../modules/mip-opportunities'
+import { journeyStatusOf, opportunityModule, opportunityProjectStatusOptions, opportunityTypeOptions } from '../../../../modules/mip-opportunities'
 import { parseOpportunityAiDraft } from '../../../../modules/mip-opportunities/ai-draft'
 import { parseOpportunityText } from '../../../../modules/mip-opportunities/text-parser'
 import { chooseSingleImage } from '../../../../platform/wechat/image-upload'
@@ -14,11 +14,13 @@ import { chooseSingleImage } from '../../../../platform/wechat/image-upload'
 interface SelectOption { id: string, label: string, selected: boolean }
 interface IndustryGroupOption { id: string, label: string, options: SelectOption[] }
 interface RoleOption { key: CooperationRoleKey, name: string, selected: boolean }
+interface TypeOption { key: OpportunityTypeKey, label: string, selected: boolean }
 interface TeamSelection { profileRef: string, nickname: string, avatarUrl?: string, headline?: string }
 interface TeamCandidate extends PublicPerson { selected: boolean }
 interface CityOption { id: string, label: string }
-interface PastePreviewRow { key: string, label: string, value: string }
 type OpportunityEditorMode = 'CREATE' | 'DRAFT' | 'PUBLISHED'
+/** journey-review J4-04 ⑥：顶层可见范围两选项（分会发布保留在更多设置里）。 */
+type VisibilityChoice = 'PLATFORM' | 'INTERNAL'
 
 const cityPriority = ['深圳', '北京', '上海', '成都', '广州', '中国香港', '中国澳门', '海外']
 
@@ -35,16 +37,6 @@ function cityGridOptions(options: CityOption[], selectedId = '') {
     visible[visible.length - 1] = selected
   }
   return visible
-}
-
-function pastePreviewRows(draft: OpportunityTextDraft): PastePreviewRow[] {
-  return [
-    { key: 'title', label: '项目名称', value: draft.title || '' },
-    { key: 'valueSummary', label: '价值金额', value: draft.valueSummary || '' },
-    { key: 'cityTagId', label: '主营城市', value: draft.cityLabel || '' },
-    { key: 'targetSummary', label: '寻找合作方', value: draft.targetSummary || '' },
-    { key: 'description', label: '展开讲讲', value: draft.description || '' },
-  ].filter(item => item.value)
 }
 
 function isCancelledImageSelection(error: unknown) {
@@ -69,6 +61,8 @@ Page({
     valueSummary: '',
     targetSummary: '',
     description: '',
+    /** journey-review J4-04 ⑤：主营地区（选填），示例「南山十亩地」。 */
+    regionText: '',
     titleError: '',
     valueSummaryError: '',
     targetSummaryError: '',
@@ -90,18 +84,23 @@ Page({
     branchOptions: [{ id: '', name: 'MIP 平台', cityName: '全国' }],
     cityOptions: [{ id: '', label: '全国' }],
     cityGridOptions: [] as CityOption[],
-    pastePreviewVisible: false,
+    /** journey-review J4-04 ④：粘贴识别改为输入区内嵌确认，不再弹预览层。 */
+    pasteText: '',
+    pasteNotice: '',
     pasteRecognizing: false,
     aiDraftId: '',
     pasteAiDraftId: '' as AiDraftId | '',
     pasteAiDraftVersion: 0,
     confirmedAiDraftId: '' as AiDraftId | '',
     confirmedAiDraftVersion: 0,
-    pasteRecognitionNotice: '',
-    pasteDraft: {} as OpportunityTextDraft,
-    pastePreview: [] as PastePreviewRow[],
     advancedOpen: false,
     roleOptions: cooperationRoles.map(item => ({ key: item.key, name: item.name, selected: false })) as RoleOption[],
+    /** journey-review QZ1：机会类型三件套（找企业/找资源/找伙伴），多选。 */
+    typeOptions: opportunityTypeOptions.map(item => ({ ...item, selected: false })) as TypeOption[],
+    /** journey-review QZ2：项目状态三态半屏。 */
+    projectStatus: 'RECRUITING' as OpportunityProjectStatus,
+    projectStatusOptions: opportunityProjectStatusOptions,
+    statusSheetVisible: false,
     industryGroups: [] as IndustryGroupOption[],
     abilityOptions: [] as SelectOption[],
     teamMembers: [] as TeamSelection[],
@@ -202,6 +201,13 @@ Page({
     const terms = detail?.commercialTerms
     const locationTypes = terms?.locations.filter(item => item.type !== 'CITY').map(item => item.type) || []
     const locationCityTagIds = terms?.locations.filter(item => item.type === 'CITY').map(item => item.city?.id || item.cityTagId || '').filter(Boolean) || []
+    // journey-review QZ2：编辑已有机会时按服务端状态回填项目状态
+    // （服务端 DRAFT+publishedAt 的「已下架」呈现为下架项目）。
+    const journeyStatus = detail ? journeyStatusOf(detail) : 'DRAFT'
+    const projectStatus: OpportunityProjectStatus = journeyStatus === 'ENDED'
+      ? 'ENDED'
+      : journeyStatus === 'UNPUBLISHED' ? 'UNPUBLISHED' : 'RECRUITING'
+    const typeKeys = new Set(detail?.typeKeys || [])
     this.setData({
       catalog,
       branchOptions,
@@ -213,6 +219,7 @@ Page({
       valueSummary: detail?.valueSummary || '',
       targetSummary: detail?.targetSummary || '',
       description: detail?.description || '',
+      regionText: detail?.regionText || '',
       titleError: '',
       valueSummaryError: '',
       targetSummaryError: '',
@@ -229,6 +236,8 @@ Page({
       coverUrl: detail?.coverUrl || '',
       version: detail?.version || 0,
       roleOptions: cooperationRoles.map(item => ({ key: item.key, name: item.name, selected: roleKeys.has(item.key) })),
+      typeOptions: opportunityTypeOptions.map(item => ({ ...item, selected: typeKeys.has(item.key) })),
+      projectStatus,
       industryGroups: catalog.industryGroups.map(group => ({
         id: group.id,
         label: group.label,
@@ -246,10 +255,97 @@ Page({
 
   updateText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
-    if (!['title', 'valueSummary', 'targetSummary', 'description'].includes(field)) {
+    if (!['title', 'valueSummary', 'targetSummary', 'description', 'regionText'].includes(field)) {
       return
     }
     this.setData({ [field]: event.detail.value, [`${field}Error`]: '' })
+  },
+
+  /**
+   * journey-review J4-04 ④：粘贴整段文字后输入区内出现「确认」小按钮，
+   * 点确认就地识别填入，不跳页、不再弹预览层（M1 00:49:25）。
+   */
+  updatePasteText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ pasteText: event.detail.value })
+  },
+
+  async readClipboardIntoPaste() {
+    if (this.data.pasteRecognizing) {
+      return
+    }
+    try {
+      const clipboard = await wx.getClipboardData()
+      const source = typeof clipboard.data === 'string' ? clipboard.data.trim() : ''
+      if (source) {
+        this.setData({ pasteText: source })
+        return
+      }
+      wx.showToast({ title: '剪贴板中没有文字', icon: 'none' })
+    }
+    catch {
+      this.setData({ message: '暂时无法读取剪贴板，可直接在输入框内粘贴。' })
+    }
+  },
+
+  async recognizePastedText() {
+    const source = this.data.pasteText.trim()
+    if (!source || this.data.pasteRecognizing) {
+      return
+    }
+    this.setData({ pasteRecognizing: true, message: '', pasteNotice: '' })
+    try {
+      const aiDraft = await mipAiModule.createTextDraft({
+        purpose: 'OPPORTUNITY',
+        transcriptText: source,
+      })
+      const parsed = parseOpportunityAiDraft(aiDraft.structuredDraft, this.data.cityOptions)
+      if (aiDraft.status !== 'DRAFT_READY' || !parsed.recognizedFields.length) {
+        throw new Error('智能识别未返回可用内容')
+      }
+      this.applyPastedDraft(parsed.draft)
+      this.setData({
+        pasteAiDraftId: aiDraft.id,
+        pasteAiDraftVersion: aiDraft.version,
+        confirmedAiDraftId: aiDraft.id,
+        confirmedAiDraftVersion: aiDraft.version,
+        pasteText: '',
+        pasteNotice: '已使用智能识别，请核对结果。',
+      })
+    }
+    catch {
+      const parsed = parseOpportunityText(source, this.data.cityOptions)
+      if (!parsed.recognizedFields.length) {
+        this.setData({ pasteNotice: '', message: '暂时无法识别这段内容，请手动填写。' })
+        return
+      }
+      this.applyPastedDraft(parsed.draft)
+      this.setData({
+        pasteAiDraftId: '',
+        pasteAiDraftVersion: 0,
+        confirmedAiDraftId: '',
+        confirmedAiDraftVersion: 0,
+        pasteText: '',
+        pasteNotice: '智能识别暂时不可用，已使用基础识别，请重点核对。',
+      })
+    }
+    finally {
+      this.setData({ pasteRecognizing: false })
+    }
+  },
+
+  applyPastedDraft(draft: OpportunityTextDraft) {
+    const cityIndex = draft.cityTagId
+      ? this.data.cityOptions.findIndex(item => item.id === draft.cityTagId)
+      : -1
+    this.setData({
+      ...(draft.title ? { title: draft.title, titleError: '' } : {}),
+      ...(draft.valueSummary ? { valueSummary: draft.valueSummary, valueSummaryError: '' } : {}),
+      ...(draft.targetSummary ? { targetSummary: draft.targetSummary, targetSummaryError: '' } : {}),
+      ...(draft.description ? { description: draft.description, descriptionError: '' } : {}),
+      ...(cityIndex >= 0 ? { cityTagId: draft.cityTagId, cityIndex } : {}),
+      message: '',
+    })
+    wx.showToast({ title: '已填入，请确认内容', icon: 'none' })
   },
 
   chooseScope(event: WechatMiniprogram.TouchEvent) {
@@ -325,108 +421,62 @@ Page({
     this.setData({ locationCityTagIds: [...selected] })
   },
 
-  async pasteAndRecognize() {
-    if (this.data.pasteRecognizing) {
-      return
-    }
-
-    let source = ''
-    try {
-      const clipboard = await wx.getClipboardData()
-      source = typeof clipboard.data === 'string' ? clipboard.data.trim() : ''
-      if (!source) {
-        wx.showToast({ title: '剪贴板中没有文字', icon: 'none' })
-        return
-      }
-    }
-    catch {
-      this.setData({ message: '暂时无法读取剪贴板，请手动填写。' })
-      return
-    }
-
-    this.setData({ pasteRecognizing: true, message: '', pasteRecognitionNotice: '' })
-    try {
-      const aiDraft = await mipAiModule.createTextDraft({
-        purpose: 'OPPORTUNITY',
-        transcriptText: source,
-      })
-      const parsed = parseOpportunityAiDraft(aiDraft.structuredDraft, this.data.cityOptions)
-      if (aiDraft.status !== 'DRAFT_READY' || !parsed.recognizedFields.length) {
-        throw new Error('智能识别未返回可用内容')
-      }
-      this.setData({
-        pasteDraft: parsed.draft,
-        pastePreview: pastePreviewRows(parsed.draft),
-        pastePreviewVisible: true,
-        pasteAiDraftId: aiDraft.id,
-        pasteAiDraftVersion: aiDraft.version,
-        pasteRecognitionNotice: '已使用智能识别，请核对结果。',
-        message: '',
-      })
-    }
-    catch {
-      const parsed = parseOpportunityText(source, this.data.cityOptions)
-      if (!parsed.recognizedFields.length) {
-        this.setData({ message: '暂时无法识别这段内容，请手动填写。' })
-        return
-      }
-      this.setData({
-        pasteDraft: parsed.draft,
-        pastePreview: pastePreviewRows(parsed.draft),
-        pastePreviewVisible: true,
-        pasteAiDraftId: '',
-        pasteAiDraftVersion: 0,
-        pasteRecognitionNotice: '智能识别暂时不可用，已使用基础识别，请重点核对。',
-        message: '',
-      })
-    }
-    finally {
-      this.setData({ pasteRecognizing: false })
-    }
-  },
-
-  closePastePreview() {
-    this.setData({
-      pastePreviewVisible: false,
-      pasteAiDraftId: '',
-      pasteAiDraftVersion: 0,
-      pasteRecognitionNotice: '',
-    })
-  },
-
   toggleAdvancedSettings() {
     this.setData({ advancedOpen: !this.data.advancedOpen })
   },
 
-  handlePastePreviewVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
+  /** journey-review QZ1：机会类型三件套多选。 */
+  toggleTypeOption(event: WechatMiniprogram.TouchEvent) {
+    const key = String(event.currentTarget.dataset.key || '')
+    const typeOptions = this.data.typeOptions.map(item => (
+      item.key === key ? { ...item, selected: !item.selected } : item
+    ))
+    this.setData({ typeOptions })
+  },
+
+  /** journey-review QZ2：项目状态半屏选择。 */
+  openStatusSheet() {
+    this.setData({ statusSheetVisible: true })
+  },
+
+  closeStatusSheet() {
+    this.setData({ statusSheetVisible: false })
+  },
+
+  handleStatusSheetVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
     if (!event.detail.visible) {
-      this.closePastePreview()
+      this.closeStatusSheet()
     }
   },
 
-  confirmPasteDraft() {
-    const draft = this.data.pasteDraft
-    const cityIndex = draft.cityTagId
-      ? this.data.cityOptions.findIndex(item => item.id === draft.cityTagId)
-      : -1
+  chooseProjectStatus(event: WechatMiniprogram.TouchEvent) {
+    const key = String(event.currentTarget.dataset.key || '') as OpportunityProjectStatus
+    if (!opportunityProjectStatusOptions.some(item => item.key === key)) {
+      return
+    }
+    this.setData({ projectStatus: key, statusSheetVisible: false })
+  },
+
+  /** journey-review J4-04 ⑥：顶层可见范围两选项；分会发布保留在更多设置。 */
+  chooseVisibility(event: WechatMiniprogram.TouchEvent) {
+    const choice = String(event.currentTarget.dataset.visibility || '') as VisibilityChoice
+    if (choice === 'PLATFORM') {
+      this.setData({ scopeType: 'PLATFORM', branchId: '', branchIndex: 0 })
+      return
+    }
+    if (choice !== 'INTERNAL') {
+      return
+    }
+    // 「仅希望 MIP 内部玩家看到」落到分会被看到：未选分会时默认第一个分会。
+    const fallbackBranch = this.data.branchOptions.find(item => item.id)
+    const branchIndex = this.data.branchId
+      ? Math.max(0, this.data.branchOptions.findIndex(item => item.id === this.data.branchId))
+      : Math.max(0, this.data.branchOptions.findIndex(item => item.id === fallbackBranch?.id))
     this.setData({
-      ...(draft.title ? { title: draft.title } : {}),
-      ...(draft.valueSummary ? { valueSummary: draft.valueSummary } : {}),
-      ...(draft.targetSummary ? { targetSummary: draft.targetSummary } : {}),
-      ...(draft.description ? { description: draft.description } : {}),
-      ...(draft.title ? { titleError: '' } : {}),
-      ...(draft.valueSummary ? { valueSummaryError: '' } : {}),
-      ...(draft.targetSummary ? { targetSummaryError: '' } : {}),
-      ...(draft.description ? { descriptionError: '' } : {}),
-      ...(cityIndex >= 0 ? { cityTagId: draft.cityTagId, cityIndex } : {}),
-      pastePreviewVisible: false,
-      confirmedAiDraftId: this.data.pasteAiDraftId,
-      confirmedAiDraftVersion: this.data.pasteAiDraftVersion,
-      pasteAiDraftId: '',
-      pasteAiDraftVersion: 0,
-      pasteRecognitionNotice: '',
+      scopeType: 'BRANCH',
+      branchId: (this.data.branchId || fallbackBranch?.id || '') as BranchId | '',
+      branchIndex,
     })
-    wx.showToast({ title: '已填入，请确认内容', icon: 'none' })
   },
 
   toggleRole(event: WechatMiniprogram.TouchEvent) {
@@ -569,7 +619,7 @@ Page({
     const titleError = this.data.title.trim() ? '' : '请输入项目名称。'
     const valueSummaryError = this.data.valueSummary.trim() ? '' : '请输入价值金额或价值说明。'
     const targetSummaryError = this.data.targetSummary.trim() ? '' : '请输入寻找合作方的说明。'
-    const descriptionError = this.data.description.trim() ? '' : '请输入项目说明。'
+    const descriptionError = this.data.description.trim() ? '' : '请展开讲讲你的项目情况。'
     const roleError = this.data.roleOptions.some(item => item.selected) ? '' : '请至少选择一种合作角色。'
     const firstIssue = [
       { message: titleError, selector: '#opportunity-field-title' },
@@ -602,7 +652,9 @@ Page({
     if (!this.validateRequiredFields()) {
       return
     }
-    const wasExisting = Boolean(this.data.id)
+    // journey-review QZ2：招募中=发布；结束项目=发布后落 ENDED；下架项目=仅自己可见（草稿态）。
+    const endAfterSave = publish && this.data.projectStatus === 'ENDED' && this.data.editorMode !== 'CREATE'
+    const finalPublish = publish && this.data.projectStatus !== 'UNPUBLISHED'
     this.setData({ saving: true, message: '' })
     try {
       const minAmountCents = this.data.minAmountYuan.trim() ? Math.round(Number(this.data.minAmountYuan) * 100) : undefined
@@ -619,6 +671,7 @@ Page({
         valueSummary: this.data.valueSummary,
         targetSummary: this.data.targetSummary,
         description: this.data.description,
+        regionText: this.data.regionText || undefined,
         scopeType: this.data.scopeType,
         branchId: this.data.branchId || undefined,
         cityTagId: this.data.cityTagId || undefined,
@@ -629,13 +682,14 @@ Page({
           : {}),
         coverAssetId: this.data.coverAssetId || undefined,
         roleKeys: this.data.roleOptions.filter(item => item.selected).map(item => item.key),
+        typeKeys: this.data.typeOptions.filter(item => item.selected).map(item => item.key),
         industryTagIds: this.data.industryGroups
           .flatMap(group => group.options)
           .filter(item => item.selected)
           .map(item => item.id),
         abilityTagIds: this.data.abilityOptions.filter(item => item.selected).map(item => item.id),
         teamProfileRefs: this.data.teamMembers.map(item => item.profileRef),
-        publish,
+        publish: finalPublish,
         ...(this.data.confirmedAiDraftId
           ? {
               aiConfirmation: {
@@ -645,20 +699,47 @@ Page({
             }
           : {}),
       })
+      let savedVersion = result.version
+      if (endAfterSave && result.status === 'PUBLISHED') {
+        try {
+          const ended = await opportunityModule.end(result.id, result.version)
+          savedVersion = ended.version
+        }
+        catch (error) {
+          wx.showToast({ title: error instanceof Error ? error.message : '结束项目失败，可稍后在详情页处理。', icon: 'none' })
+        }
+      }
       this.setData({
         id: result.id,
-        version: result.version,
+        version: savedVersion,
         confirmedAiDraftId: '',
         confirmedAiDraftVersion: 0,
       })
-      wx.showToast({ title: result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存', icon: 'success' })
+      const unpublished = this.data.projectStatus === 'UNPUBLISHED' && publish
+      wx.showToast({
+        title: unpublished
+          ? '项目已下架'
+          : result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存',
+        icon: 'success',
+      })
       this.clearNavigationTimer()
       this.navigationTimer = setTimeout(() => {
         this.navigationTimer = undefined
         const detailRoute = 'packages/member/mip-opportunities/detail/index'
         const pages = getCurrentPages()
         const previousPage = pages.length > 1 ? pages[pages.length - 2] : undefined
-        if (wasExisting && previousPage?.route === detailRoute) {
+        // journey-review J4-04：确认发布回机会列表；切「下架项目」落到下架后的机会详情（J4-06）。
+        if (unpublished) {
+          if (previousPage?.route === detailRoute) {
+            wx.navigateBack()
+            return
+          }
+          wx.redirectTo({
+            url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(result.id)}`,
+          })
+          return
+        }
+        if (pages.length > 1) {
           wx.navigateBack()
           return
         }
