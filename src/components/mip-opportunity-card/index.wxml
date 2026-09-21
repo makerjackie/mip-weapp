@@ -8,7 +8,7 @@
     <view class="mip-opportunity-card__facts">
       <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/money-cny-circle.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">价值：{{valueText}}</text></view>
       <view wx:if="{{cityText}}" class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/location.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">城市：{{cityText}}</text></view>
-      <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/location.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">地区：{{locationText}}</text></view>
+      <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/location.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">地区：{{regionText || locationText || cityText}}</text></view>
       <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/service-target.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">寻找：{{targetText}}</text></view>
     </view>
     <view wx:if="{{publishedText}}" class="mip-opportunity-card__published">{{publishedPrefix}}{{publishedText}}</view>

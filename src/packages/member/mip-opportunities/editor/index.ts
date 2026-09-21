@@ -48,6 +48,23 @@ function isCancelledImageSelection(error: unknown) {
   return /cancel/i.test(message)
 }
 
+/**
+ * journey-review QZ2 复审：服务端尚无 UNPUBLISHED 一等状态（已发布机会 publish:false
+ * 仍落 PUBLISHED，见 .tmp/shared-change-requests），半屏保留「下架项目」文案但置灰并标
+ * 「即将支持」；新建流程也不能一步选「结束项目」（发布后再结束）。
+ */
+function projectStatusOptionViews(editorMode: OpportunityEditorMode) {
+  return opportunityProjectStatusOptions.map((item) => {
+    if (item.key === 'UNPUBLISHED') {
+      return { ...item, disabled: true, disabledNote: '即将支持' }
+    }
+    if (item.key === 'ENDED' && editorMode === 'CREATE') {
+      return { ...item, disabled: true, disabledNote: '发布后可结束项目' }
+    }
+    return { ...item, disabled: false, disabledNote: '' }
+  })
+}
+
 Page({
   data: {
     id: '' as OpportunityId | '',
@@ -97,9 +114,9 @@ Page({
     roleOptions: cooperationRoles.map(item => ({ key: item.key, name: item.name, selected: false })) as RoleOption[],
     /** journey-review QZ1：机会类型三件套（找企业/找资源/找伙伴），多选。 */
     typeOptions: opportunityTypeOptions.map(item => ({ ...item, selected: false })) as TypeOption[],
-    /** journey-review QZ2：项目状态三态半屏。 */
+    /** journey-review QZ2：项目状态三态半屏（「下架项目」暂置灰，见 projectStatusOptionViews）。 */
     projectStatus: 'RECRUITING' as OpportunityProjectStatus,
-    projectStatusOptions: opportunityProjectStatusOptions,
+    projectStatusOptions: projectStatusOptionViews('CREATE'),
     statusSheetVisible: false,
     industryGroups: [] as IndustryGroupOption[],
     abilityOptions: [] as SelectOption[],
@@ -162,7 +179,7 @@ Page({
       wx.setNavigationBarTitle({
         title: editorMode === 'CREATE' ? '发布机会' : editorMode === 'DRAFT' ? '编辑草稿' : '编辑机会',
       })
-      this.setData({ editorMode })
+      this.setData({ editorMode, projectStatusOptions: projectStatusOptionViews(editorMode) })
       this.applyCatalog(catalog, detail)
       if (aiSource) {
         const parsed = parseOpportunityAiDraft(aiSource.fields, this.data.cityOptions)
@@ -201,12 +218,11 @@ Page({
     const terms = detail?.commercialTerms
     const locationTypes = terms?.locations.filter(item => item.type !== 'CITY').map(item => item.type) || []
     const locationCityTagIds = terms?.locations.filter(item => item.type === 'CITY').map(item => item.city?.id || item.cityTagId || '').filter(Boolean) || []
-    // journey-review QZ2：编辑已有机会时按服务端状态回填项目状态
-    // （服务端 DRAFT+publishedAt 的「已下架」呈现为下架项目）。
+    // journey-review QZ2：编辑已有机会时按服务端状态回填项目状态。
+    // 「已下架」（DRAFT+publishedAt）在服务端补 UNPUBLISHED 前不可达（保存不落该态），
+    // 数据就绪前按招募中回填，重新保存即重新上架；见 .tmp/shared-change-requests。
     const journeyStatus = detail ? journeyStatusOf(detail) : 'DRAFT'
-    const projectStatus: OpportunityProjectStatus = journeyStatus === 'ENDED'
-      ? 'ENDED'
-      : journeyStatus === 'UNPUBLISHED' ? 'UNPUBLISHED' : 'RECRUITING'
+    const projectStatus: OpportunityProjectStatus = journeyStatus === 'ENDED' ? 'ENDED' : 'RECRUITING'
     const typeKeys = new Set(detail?.typeKeys || [])
     this.setData({
       catalog,
@@ -449,9 +465,11 @@ Page({
     }
   },
 
+  /** journey-review QZ2：项目状态半屏选择；置灰项（下架/新建即结束）不响应。 */
   chooseProjectStatus(event: WechatMiniprogram.TouchEvent) {
     const key = String(event.currentTarget.dataset.key || '') as OpportunityProjectStatus
-    if (!opportunityProjectStatusOptions.some(item => item.key === key)) {
+    const option = this.data.projectStatusOptions.find(item => item.key === key)
+    if (!option || option.disabled) {
       return
     }
     this.setData({ projectStatus: key, statusSheetVisible: false })
@@ -652,9 +670,10 @@ Page({
     if (!this.validateRequiredFields()) {
       return
     }
-    // journey-review QZ2：招募中=发布；结束项目=发布后落 ENDED；下架项目=仅自己可见（草稿态）。
+    // journey-review QZ2 复审：招募中=发布；结束项目=发布后落 ENDED（新建流程该项已置灰，守卫兜底）。
+    // 「下架项目」暂不可选（服务端无 UNPUBLISHED，见 .tmp/shared-change-requests），
+    // 保存不再接受 UNPUBLISHED，反馈与跳转只按服务端真实返回状态决定。
     const endAfterSave = publish && this.data.projectStatus === 'ENDED' && this.data.editorMode !== 'CREATE'
-    const finalPublish = publish && this.data.projectStatus !== 'UNPUBLISHED'
     this.setData({ saving: true, message: '' })
     try {
       const minAmountCents = this.data.minAmountYuan.trim() ? Math.round(Number(this.data.minAmountYuan) * 100) : undefined
@@ -689,7 +708,7 @@ Page({
           .map(item => item.id),
         abilityTagIds: this.data.abilityOptions.filter(item => item.selected).map(item => item.id),
         teamProfileRefs: this.data.teamMembers.map(item => item.profileRef),
-        publish: finalPublish,
+        publish,
         ...(this.data.confirmedAiDraftId
           ? {
               aiConfirmation: {
@@ -715,30 +734,15 @@ Page({
         confirmedAiDraftId: '',
         confirmedAiDraftVersion: 0,
       })
-      const unpublished = this.data.projectStatus === 'UNPUBLISHED' && publish
       wx.showToast({
-        title: unpublished
-          ? '项目已下架'
-          : result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存',
+        title: result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存',
         icon: 'success',
       })
       this.clearNavigationTimer()
       this.navigationTimer = setTimeout(() => {
         this.navigationTimer = undefined
-        const detailRoute = 'packages/member/mip-opportunities/detail/index'
         const pages = getCurrentPages()
-        const previousPage = pages.length > 1 ? pages[pages.length - 2] : undefined
-        // journey-review J4-04：确认发布回机会列表；切「下架项目」落到下架后的机会详情（J4-06）。
-        if (unpublished) {
-          if (previousPage?.route === detailRoute) {
-            wx.navigateBack()
-            return
-          }
-          wx.redirectTo({
-            url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(result.id)}`,
-          })
-          return
-        }
+        // journey-review J4-04：确认发布回机会列表；无上级页面时落机会详情。
         if (pages.length > 1) {
           wx.navigateBack()
           return

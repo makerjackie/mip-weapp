@@ -61,6 +61,8 @@ export interface OpportunitySummary {
   coverUrl?: string
   roles: CooperationRoleKey[]
   typeKeys?: OpportunityTypeKey[]
+  /** 主营地区（选填）自由文本；服务端补充持久化前缺失，展示按 regionText 优先回退。 */
+  regionText?: string
   industryTags: OpportunityTag[]
   abilityTags: OpportunityTag[]
   teamMembers: OpportunityTeamMember[]

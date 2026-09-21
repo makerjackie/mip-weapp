@@ -29,6 +29,8 @@ Component({
     valueText: { type: String, value: '' },
     cityText: { type: String, value: '' },
     locationText: { type: String, value: '' },
+    /** 主营地区自由文本（选传）：有值时地区行优先展示，服务端回传即生效。 */
+    regionText: { type: String, value: '' },
     targetText: { type: String, value: '' },
     referralCount: { type: Number, value: 0 },
     avatars: { type: Array, value: [] },

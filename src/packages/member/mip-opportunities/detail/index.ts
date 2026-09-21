@@ -164,6 +164,11 @@ Page({
     }
   },
 
+  /**
+   * 引荐（想合作）创建入口：J3-09 复审确认合作流程未入包，「+N想合作」一期点击
+   * 走 cooperationIntent 占位，referralPicker 弹层当前没有入口（死代码保留，
+   * 入口随合作流程入包后接回，见 .tmp/shared-change-requests）。
+   */
   async toggleReferral() {
     await this.authorizeInteraction('referral')
   },
@@ -697,7 +702,9 @@ Page({
   },
 
   edit() {
-    if (this.data.item?.canEdit || this.data.item?.mine) {
+    const item = this.data.item
+    // 服务端 OWNER_EDITABLE 只含 DRAFT/PUBLISHED：已结束机会的「编辑」置灰，这里兜底不跳转。
+    if (item && item.status !== 'ENDED' && (item.canEdit || item.mine)) {
       caseNavigateTo({ url: `/packages/member/mip-opportunities/editor/index?id=${encodeURIComponent(this.data.id)}` })
     }
   },

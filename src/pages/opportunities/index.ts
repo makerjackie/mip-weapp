@@ -248,6 +248,9 @@ Page({
       const destination = this.resumeDestination
       this.resumeDestination = ''
       this.abandonLoginSheet()
+      // journey-review J1-04 复审：授权返回先刷新登录态再恢复原意图（否则 authenticated
+      // 仍为 false，落在游客占位屏），与 onLoginSheetPhone / resumeLoginSheetIntent 对齐。
+      void this.refreshAuthState()
       this.runResumeDestination(destination)
       return
     }

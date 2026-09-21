@@ -202,13 +202,12 @@ describe('MIP opportunity Figma surfaces', () => {
   })
 
   it('opens new saves on detail and refreshes detail after returning from an edit', () => {
-    expect(editorScript).toContain(`const detailRoute = 'packages/member/mip-opportunities/detail/index'`)
-    expect(editorScript).toContain(`previousPage?.route === detailRoute`)
     expect(editorScript).toContain('wx.redirectTo({')
     expect(editorScript).toContain('/packages/member/mip-opportunities/detail/index?id=')
-    // journey-review J4-04：确认发布回机会列表（navigateBack 优先）；
-    // 切「下架项目」则落到下架后的机会详情（J4-06）。
-    expect(editorScript).toMatch(/if \(unpublished\) \{[\s\S]*wx\.navigateBack\(\)/)
+    // journey-review J4-04 + QZ2 复审：确认发布回机会列表（navigateBack 优先）；
+    // 「下架项目」保存路径已移除（服务端无 UNPUBLISHED，不再宣称已下架）。
+    expect(editorScript).not.toContain('unpublished')
+    expect(editorScript).not.toContain('项目已下架')
     expect(editorScript).toMatch(/if \(pages\.length > 1\) \{\n {10}wx\.navigateBack\(\)/)
     expect(detailScript).toContain('if (this.data.item) {\n      void this.load()')
   })

@@ -233,22 +233,28 @@ function parseOpportunityCommercialTerms(value: unknown): OpportunityCommercialT
   }
 }
 
-/** 机会类型（QZ1 三件套）为可选增强字段：过滤非法值，不让旧服务端响应整体失败。 */
+/**
+ * 机会类型（QZ1 三件套）为可选增强字段：过滤非法值，不让旧服务端响应整体失败。
+ * 数组内全非法时返回空数组并由调用方覆盖原值，不得把非法串当黄标渲染。
+ */
 function parseOpportunityTypeKeys(value: unknown): OpportunityTypeKey[] | undefined {
   if (!Array.isArray(value)) {
     return undefined
   }
-  const keys = [...new Set(value.filter(isOpportunityTypeKey))]
-  return keys.length ? keys : undefined
+  return [...new Set(value.filter(isOpportunityTypeKey))]
 }
 
 function parseOpportunityResponse(value: unknown) {
   const source = record(value)
   const typeKeys = parseOpportunityTypeKeys(source.typeKeys)
   if (source.commercialTerms !== undefined && source.commercialTerms !== null) {
-    return { ...source, commercialTerms: parseOpportunityCommercialTerms(source.commercialTerms), ...(typeKeys ? { typeKeys } : {}) }
+    return {
+      ...source,
+      commercialTerms: parseOpportunityCommercialTerms(source.commercialTerms),
+      ...(typeKeys === undefined ? {} : { typeKeys }),
+    }
   }
-  return typeKeys ? { ...source, typeKeys } : source
+  return typeKeys === undefined ? source : { ...source, typeKeys }
 }
 
 export function parseOpportunityPage(value: unknown): OpportunityPage {

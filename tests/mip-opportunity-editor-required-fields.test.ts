@@ -69,8 +69,16 @@ describe('MIP opportunity editor required fields', () => {
       expect(view).toContain(`id="${id}"`)
       expect(view.indexOf(`id="${id}"`)).toBeLessThan(advancedTrigger)
     }
-    // journey-review J4-04 ⑤：字段命名对齐设计稿，「展开讲讲（选填）」进入基础区。
-    expect(view).toContain('展开讲讲（选填）')
+    // journey-review 复审：服务端强制 description 必填（VALIDATION_FAILED），
+    // 恢复必填呈现：标签去「（选填）」、带必填徽记。
+    const descriptionBlock = view.slice(
+      view.indexOf('id="opportunity-field-description"'),
+      view.indexOf('id="opportunity-field-roles"'),
+    )
+    expect(descriptionBlock).toContain('<text>展开讲讲</text>')
+    expect(descriptionBlock).not.toContain('（选填）')
+    expect(descriptionBlock).toContain('>必填</text>')
+    expect(descriptionBlock).toContain('aria-label="展开讲讲，必填"')
     expect(view).toContain('必填，至少选择一种')
     expect(view).toContain('aria-role="checkbox"')
     expect(view).toContain('aria-checked="{{item.selected}}"')
@@ -108,5 +116,39 @@ describe('MIP opportunity editor required fields', () => {
     expect(Reflect.apply(page.validateRequiredFields, page, [])).toBe(true)
     expect(page.data.descriptionError).toBe('')
     expect(page.data.roleError).toBe('')
+  })
+
+  it('greys out unpublish and create-mode end in the status sheet (QZ2 review)', () => {
+    // CREATE 模式：下架项目置灰（服务端无 UNPUBLISHED）、结束项目置灰（发布后再结束）。
+    const createViews = definition.data.projectStatusOptions
+    expect(createViews.find((item: { key: string }) => item.key === 'RECRUITING')).toMatchObject({ disabled: false })
+    expect(createViews.find((item: { key: string }) => item.key === 'UNPUBLISHED')).toMatchObject({
+      disabled: true,
+      disabledNote: '即将支持',
+    })
+    expect(createViews.find((item: { key: string }) => item.key === 'ENDED')).toMatchObject({ disabled: true })
+
+    const page = createPage({ statusSheetVisible: true })
+    Reflect.apply(page.chooseProjectStatus, page, [
+      { currentTarget: { dataset: { key: 'UNPUBLISHED' } } },
+    ])
+    expect(page.data.projectStatus).toBe('RECRUITING')
+    expect(page.data.statusSheetVisible).toBe(true)
+
+    Reflect.apply(page.chooseProjectStatus, page, [
+      { currentTarget: { dataset: { key: 'ENDED' } } },
+    ])
+    expect(page.data.projectStatus).toBe('RECRUITING')
+    expect(page.data.statusSheetVisible).toBe(true)
+
+    Reflect.apply(page.chooseProjectStatus, page, [
+      { currentTarget: { dataset: { key: 'RECRUITING' } } },
+    ])
+    expect(page.data.projectStatus).toBe('RECRUITING')
+    expect(page.data.statusSheetVisible).toBe(false)
+
+    // 编辑已有机会（DRAFT/PUBLISHED）时按 editorMode 重算：结束项目恢复可选。
+    const script = source('src/packages/member/mip-opportunities/editor/index.ts')
+    expect(script).toContain('projectStatusOptions: projectStatusOptionViews(editorMode)')
   })
 })
