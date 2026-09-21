@@ -169,6 +169,10 @@ button, input, select, textarea { font: inherit; }
   .filter-bar > .ant-btn { width: 100%; }
   .state-panel { padding: 26px 16px; }
   .detail-drawer .ant-drawer-content-wrapper { width: 100% !important; max-width: 100vw; }
+  .detail-drawer .ant-drawer-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .detail-drawer .ant-drawer-header-title, .detail-drawer .ant-drawer-title { min-width: 0; }
+  .detail-drawer .ant-drawer-extra { margin-inline-start: 0; }
+  .detail-drawer .ant-drawer-extra .ant-space { max-width: 100%; }
   .detail-fields, .detail-metrics, .mutation-grid { grid-template-columns: minmax(0, 1fr); }
   .mutation-field--wide, .mutation-fieldset { grid-column: auto; }
   .mutation-dialog { max-width: calc(100vw - 28px); margin: 14px auto; }

@@ -1759,6 +1759,9 @@ function canEditRegistration(event, registrationStatus, now = new Date()) {
     return false
   }
   if (registrationStatus === 'REGISTERED') {
+    if (['ENDED', 'CANCELLED'].includes(event.status)) {
+      return false
+    }
     const deadline = new Date(event.registration_deadline || event.starts_at).getTime()
     return Number.isFinite(deadline) && timestamp < deadline
   }

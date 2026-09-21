@@ -21,7 +21,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     label: string,
     targetId = id,
     capability?: string,
-    options: AdminOperationLaunchContext & { targetStatus?: 'PUBLISHED' | 'UNPUBLISHED' } = {},
+    options: AdminOperationLaunchContext & { targetStatus?: 'PUBLISHED' | 'UNPUBLISHED' | 'ENDED' } = {},
   ) => !capability || hasCapability(capability)
     ? <Button key={`${action}-${label}`} onClick={() => void launch(action, targetId, view, options)}>{label}</Button>
     : null
@@ -52,6 +52,9 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
       id,
       'events.write',
       { targetStatus },
+    ))
+    if (eventStatus === 'PUBLISHED') actions.push(button(
+      'mip.admin.events.changeStatus', '结束活动', id, 'events.write', { targetStatus: 'ENDED' },
     ))
     if (eventStatus === 'DRAFT') actions.push(button('mip.admin.events.archive', '归档活动', id, 'events.write'))
     actions.push(
