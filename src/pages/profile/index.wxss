@@ -629,3 +629,27 @@
   top: 0;
   right: 8rpx;
 }
+
+/* journey-review J3-04：站内信右上角入口（登录态头部，native 导航栏约束下的页面右上角位置）。 */
+.profile-hero {
+  position: relative;
+}
+
+.profile-inbox-entry {
+  position: absolute;
+  top: 8rpx;
+  right: 24rpx;
+  z-index: 2;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+}
+
+.profile-inbox-unread {
+  position: absolute;
+  top: 0;
+  right: 0;
+}

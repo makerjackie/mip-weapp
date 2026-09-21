@@ -12,6 +12,28 @@ const metricLabels = {
   COIN: '游戏币',
 } as const
 
+/** journey-review J1-07：会员订单确认页（开通与续费共用）。 */
+const MEMBERSHIP_ORDER_PAGE = '/packages/member/membership-order/index'
+
+/** 到期时间展示为 2026.08.08（figma 1948:14079 / 3296:5808）。 */
+function formatDottedDate(value: string) {
+  return formatLocalDate(value).replaceAll('-', '.')
+}
+
+/**
+ * 「立即续费」仅到期前 3 个月展示（figma 2165:17142 标注，J4-03）。
+ * 到期时间本身是服务端会员事实（mip-commerce membershipEndsAt），这里只做展示窗口换算。
+ */
+function withinRenewalWindow(endsAt: string, now = new Date()) {
+  const end = new Date(endsAt)
+  if (Number.isNaN(end.getTime())) {
+    return false
+  }
+  const opensAt = new Date(end)
+  opensAt.setMonth(opensAt.getMonth() - 3)
+  return now >= opensAt && now <= end
+}
+
 interface GrowthEntryView extends GrowthEntry {
   metricLabel: string
   deltaText: string
@@ -136,6 +158,8 @@ Page({
     isPlayer: false,
     membershipState: 'loading' as 'loading' | 'player' | 'guest' | 'error',
     membershipEndsText: '',
+    membershipValidityText: '',
+    renewWindowOpen: false,
     invitationReady: false,
     invitationMessage: '',
     message: '',
@@ -166,6 +190,8 @@ Page({
         isPlayer: false,
         membershipState: 'error',
         membershipEndsText: '',
+        membershipValidityText: '',
+        renewWindowOpen: false,
         invitationReady: false,
         invitationMessage: '',
       })
@@ -177,6 +203,9 @@ Page({
         isPlayer: false,
         membershipState: 'guest',
         membershipEndsText: '',
+        // J1-06 开通态：新玩家加入页固定展示「有效期一年」（M1 00:45:19）。
+        membershipValidityText: '有效期一年',
+        renewWindowOpen: false,
         invitationReady: false,
         invitationMessage: '',
       })
@@ -185,7 +214,10 @@ Page({
     this.setData({
       isPlayer: true,
       membershipState: 'player',
-      membershipEndsText: formatLocalDate(membership.membershipEndsAt),
+      membershipEndsText: formatDottedDate(membership.membershipEndsAt),
+      // J4-03 续费态：有效期至:2026.08.08（figma 1948:14079）。
+      membershipValidityText: `有效期至:${formatDottedDate(membership.membershipEndsAt)}`,
+      renewWindowOpen: withinRenewalWindow(membership.membershipEndsAt),
       invitationReady: false,
       invitationMessage: '',
     })
@@ -305,8 +337,19 @@ Page({
     void wx.navigateTo({ url: '/packages/member/benefits/index' })
   },
 
+  /** J1-06 经验值详情：等级卡右上角小入口，定位到本页等级与权益区块。 */
+  openExperienceDetails() {
+    void wx.pageScrollTo({ selector: '#growth-levels-section', duration: 200 })
+  },
+
+  /** J1-06 开通态「立即加入」→ 会员订单确认页（J1-07）。 */
+  openMembershipOrder() {
+    caseNavigateTo({ url: `${MEMBERSHIP_ORDER_PAGE}?source=growth-join` })
+  },
+
+  /** J4-03「立即续费」→ 同一会员订单确认页（J1-07）。 */
   renewMembership() {
-    caseNavigateTo({ url: '/pages/membership/index?source=growth-renew' })
+    caseNavigateTo({ url: `${MEMBERSHIP_ORDER_PAGE}?source=growth-renew` })
   },
 
   onShareAppMessage() {

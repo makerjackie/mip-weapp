@@ -213,6 +213,10 @@
       "pathName": "packages/member/payment-result/index"
     },
     {
+      "name": "会员订单确认",
+      "pathName": "packages/member/membership-order/index"
+    },
+    {
       "name": "会员权益说明",
       "pathName": "packages/member/benefits/index"
     },
