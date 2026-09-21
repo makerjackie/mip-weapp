@@ -7,7 +7,7 @@ import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { showErrorFeedback } from '../../../../platform/feedback/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
-import { formatChineseDateTime } from '../../../../utils/date'
+import { formatChineseDateTime, formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
 
 interface RegistrationFieldView extends RegistrationField {
   value: string
@@ -54,10 +54,10 @@ function requestKey(prefix: string) {
 
 function registrationAccessText(event: MipEventDetail) {
   if (event.accessType === 'MEMBER_INCLUDED') {
-    return '仅玩家'
+    return '玩家活动'
   }
   if (event.accessType === 'PAID') {
-    return '付费活动'
+    return '仅玩家'
   }
   return '免费活动'
 }
@@ -68,11 +68,76 @@ function registrationPriceText(event: MipEventDetail) {
     : '免费'
 }
 
+/** Whole yuan prices drop the decimals (figma 1821_19274: ¥589). */
+function priceAmountText(event: MipEventDetail) {
+  const value = event.priceCents / 100
+  return Number.isInteger(value) ? String(value) : value.toFixed(2)
+}
+
 /* Bottom-bar price follows the Figma frame: small currency symbol, large amount. */
 function registrationPriceParts(event: MipEventDetail) {
   return {
     priceSymbol: event.accessType === 'PAID' ? '¥' : '',
-    priceAmount: event.accessType === 'PAID' ? (event.priceCents / 100).toFixed(2) : '免费',
+    priceAmount: event.accessType === 'PAID' ? priceAmountText(event) : '免费',
+  }
+}
+
+function compactEventTime(startsAt: string, endsAt: string) {
+  const startsDay = formatChineseMonthDay(startsAt)
+  const endsDay = formatChineseMonthDay(endsAt)
+  if (!startsDay || !endsDay) {
+    return ''
+  }
+  return startsDay === endsDay
+    ? `${startsDay} ${formatLocalTime(startsAt)}-${formatLocalTime(endsAt)}`
+    : `${formatChineseMonthDayTime(startsAt)} 至 ${formatChineseMonthDayTime(endsAt)}`
+}
+
+/** journey-review J2-08（figma 1821_19274）：订单确认页价格明细行。 */
+function orderPriceTexts(event: MipEventDetail) {
+  if (event.accessType === 'PAID') {
+    return {
+      ticketPriceText: `¥${priceAmountText(event)}`,
+      totalSymbol: '¥',
+      totalAmount: priceAmountText(event),
+    }
+  }
+  const label = event.accessType === 'MEMBER_INCLUDED' ? '会员已含' : '免费'
+  return { ticketPriceText: label, totalSymbol: '', totalAmount: label }
+}
+
+const DEFAULT_PURCHASE_NOTICES = [
+  '一、订单确认与支付',
+  '提交订单并成功支付后报名才会生效；未完成支付的订单不会保留名额，重新发起即重新创建。',
+  '二、支付方式',
+  '微信支付。',
+  '三、订单修改与退款',
+  '支付前可返回放弃本次报名；支付后如需退款，请按活动取消政策在「我的活动」中申请。',
+].join('\n')
+
+interface OrderDerived {
+  startsText: string
+  locationText: string
+  orderNumberText: string
+  orderIdText: string
+  ticketPriceText: string
+  totalSymbol: string
+  totalAmount: string
+  noticesText: string
+  payLabel: string
+}
+
+function orderDerived(event: MipEventDetail, registration: MyEventRegistration | null, editing: boolean): OrderDerived {
+  const orderIdText = registration?.orderId || ''
+  return {
+    startsText: compactEventTime(event.startsAt, event.endsAt) || formatChineseDateTime(event.startsAt),
+    locationText: [event.cityName, event.venueName, event.address].filter(Boolean).join(' · ')
+      || (event.mode === 'ONLINE' ? '线上活动' : '地点待公布'),
+    orderNumberText: orderIdText || '支付后生成',
+    orderIdText,
+    ...orderPriceTexts(event),
+    noticesText: event.notices || DEFAULT_PURCHASE_NOTICES,
+    payLabel: editing ? '保存修改' : event.accessType === 'PAID' ? '立即支付' : '提交报名',
   }
 }
 
@@ -105,6 +170,15 @@ Page({
     cancellationText: '',
     accessText: '',
     priceText: '',
+    startsText: '',
+    locationText: '',
+    orderNumberText: '',
+    orderIdText: '',
+    ticketPriceText: '',
+    totalSymbol: '',
+    totalAmount: '',
+    noticesText: '',
+    payLabel: '',
     figmaLayout: false,
   },
   submissionIdempotencyKey: '',
@@ -225,6 +299,7 @@ Page({
         accessText: registrationAccessText(event),
         priceText: registrationPriceText(event),
         ...registrationPriceParts(event),
+        ...orderDerived(event, editing || resumingPayment ? registration : null, editing),
       })
       if (this.pendingAccessResume) {
         this.pendingAccessResume = false
@@ -496,8 +571,15 @@ Page({
     catch {}
   },
 
-  openProfile() {
-    caseNavigateTo({ url: '/packages/member/mip-profile/index' })
+  copyOrderId() {
+    const orderId = this.data.orderIdText
+    if (!orderId) {
+      return
+    }
+    wx.setClipboardData({
+      data: orderId,
+      success: () => wx.showToast({ title: '订单号已复制', icon: 'success' }),
+    })
   },
 
   openAgreement() {
@@ -535,6 +617,10 @@ Page({
         fields: fieldsFromAnswers(event, { ...(registration?.answers || {}), ...draftAnswers }),
         shareProfile: draftShareProfile,
         editing,
+        accessText: registrationAccessText(event),
+        priceText: registrationPriceText(event),
+        ...registrationPriceParts(event),
+        ...orderDerived(event, editing || resumingPayment ? registration : null, editing),
         message: '报名信息已更新，当前填写内容已保留，请确认后重新保存。',
       })
       this.persistDraft()

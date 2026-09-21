@@ -1,0 +1,21 @@
+<!-- journey-review login-sheet（2026-09-21 终审）：游客触发需身份操作时的手机号授权弹层。
+     手机号是唯一弹窗授权项；昵称/头像由用户在「编辑信息」主动填写。 -->
+<view wx:if="{{visible}}" class="mip-login-sheet__scrim" bind:tap="onDismiss"></view>
+<view wx:if="{{visible}}" class="mip-login-sheet" aria-role="dialog" aria-modal="{{true}}" aria-label="授权手机号">
+  <view class="mip-login-sheet__grab"></view>
+  <view class="mip-login-sheet__brand">
+    <image class="mip-login-sheet__logo" mode="aspectFit" src="{{logoPath}}" />
+    <text class="mip-login-sheet__brand-name">{{brandName}}</text>
+  </view>
+  <view class="mip-login-sheet__title">授权手机号</view>
+  <view class="mip-login-sheet__sub">将获取你微信绑定的手机号，用于确认身份
+昵称与头像无需授权，在「编辑信息」中由你主动填写</view>
+  <button
+    id="mip-login-sheet-auth"
+    open-type="getPhoneNumber"
+    disabled="{{busy}}"
+    class="mip-login-sheet__btn"
+    bind:getphonenumber="onPhone"
+  >{{busy ? '正在授权' : '微信手机号授权'}}</button>
+  <view id="mip-login-sheet-dismiss" class="mip-login-sheet__ghost" bind:tap="onDismiss">暂不授权，返回原页面</view>
+</view>

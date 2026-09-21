@@ -42,11 +42,10 @@ describe('event registration experience', () => {
 
     expect(registration).toContain('shareProfile: false')
     expect(registration).toContain('shareProfile: this.data.shareProfile')
-    expect(registrationView).toContain('仅影响本场活动的参与者列表')
     expect(registrationView).toContain('wx:for="{{fields}}"')
     expect(registrationView).toContain('event.coverUrl')
     expect(registrationView).not.toContain('event.address')
-    expect(registrationView).not.toContain('event.notices')
+    expect(registrationView).not.toContain('报名资料')
   })
 
   it('shows registration failures in the current viewport and keeps the message near the form start', () => {
@@ -55,8 +54,9 @@ describe('event registration experience', () => {
 
     expect(registration).toContain('showErrorFeedback(error, \'报名提交失败，请稍后重试。\')')
     expect(registrationView).toContain('id="event-registration-feedback"')
+    // 生产布局里反馈条位于活动信息卡之后、订单ID 行之前（fixture 像素块不含该 id）。
     expect(registrationView.indexOf('id="event-registration-feedback"'))
-      .toBeLessThan(registrationView.indexOf('报名资料'))
+      .toBeLessThan(registrationView.indexOf('{{orderNumberText}}'))
   })
 
   it('prefills editable registrations by field key without selecting the first option', () => {
@@ -69,8 +69,8 @@ describe('event registration experience', () => {
     expect(registration).toContain('mipEventsModule.getMyRegistration(this.data.eventId)')
     expect(registration).toContain('fieldsFromAnswers(event, editing || resumingPayment ? registration?.answers : undefined)')
     expect(registration).toContain('shareProfile: editing || resumingPayment ? registration?.shareProfile === true : false')
-    expect(registrationView).toContain('{{editing ? \'修改报名\' : \'确认报名\'}}')
-    expect(registrationView).toContain('{{editing ? \'保存修改\' : \'提交报名\'}}')
+    expect(registrationView).toContain('{{editing ? \'修改报名信息\' : \'报名信息\'}}')
+    expect(registration).toContain('payLabel: editing ? \'保存修改\' : event.accessType === \'PAID\' ? \'立即支付\' : \'提交报名\'')
     expect(registrationView).toContain('{{item.selectedLabel}}')
     expect(registration).toContain('selectedIndex >= 0 ? field.options?.[selectedIndex] || \'请选择\' : \'请选择\'')
   })
@@ -288,7 +288,8 @@ describe('event registration experience', () => {
     const detail = read('src/packages/member/mip-events/detail/index.ts')
     const registration = read('src/packages/member/mip-events/registration/index.ts')
 
-    expect(detail).toContain('event.accessType === \'PAID\' ? \'提交付费报名\'')
+    expect(detail).toContain('{ key: \'register\', label: \'立刻报名\' }')
+    expect(registration).toContain('result.kind === \'PAYMENT_REQUIRED\'')
     expect(registration).toContain('result.kind === \'PAYMENT_REQUIRED\'')
     expect(events).not.toContain('活动支付暂未开放')
     expect(detail).not.toContain('活动支付暂未开放')
@@ -301,7 +302,7 @@ describe('event registration experience', () => {
     const detailView = read('src/packages/member/mip-events/detail/index.wxml')
     const primaryActionButton = detailView.match(/<button[^>]*id="mip-event-primary-action"[^>]*>/)?.[0] || ''
 
-    expect(detailLogic).toContain('event.accessType === \'PAID\' ? \'提交付费报名\' : \'立即报名\'')
+    expect(detailLogic).toContain('{ key: \'register\', label: \'立刻报名\' }')
     expect(detailLogic).toContain('return { key: \'disabled\', label: \'活动已结束\' }')
     expect(detailLogic).toContain('if (this.data.busy || this.data.primaryAction === \'disabled\')')
     expect(detailLogic).toContain('imageUrl: this.data.event?.coverUrl || brand.logoPath')
@@ -358,5 +359,54 @@ describe('event registration experience', () => {
     expect(detailLogic).toContain('downloadInvitationCode()')
     expect(detailLogic).toContain('shareTimeText: compactEventTime(event.startsAt, event.endsAt)')
     expect(detailLogic).toContain('wx.showToast({ title: \'二维码已保存\', icon: \'success\' })')
+  })
+
+  it('gates guest share/participants/signup behind the phone-auth login sheet (journey-review J1-01/J1-02)', () => {
+    const detailConfig = JSON.parse(read('src/packages/member/mip-events/detail/index.json')) as Record<string, unknown>
+    const detail = read('src/packages/member/mip-events/detail/index.ts')
+    const detailView = read('src/packages/member/mip-events/detail/index.wxml')
+    const sheetView = read('src/components/mip-login-sheet/index.wxml')
+    const sheetLogic = read('src/components/mip-login-sheet/index.ts')
+
+    expect(detailConfig.usingComponents).toHaveProperty('mip-login-sheet')
+    expect(detailView).toContain('visible="{{loginSheetOpen}}"')
+    expect(sheetView).toContain('open-type="getPhoneNumber"')
+    expect(sheetView).toContain('授权手机号')
+    expect(sheetView).toContain('将获取你微信绑定的手机号，用于确认身份')
+    expect(sheetView).toContain('微信手机号授权')
+    expect(sheetView).toContain('暂不授权，返回原页面')
+    expect(sheetLogic).toContain('triggerEvent(\'phone\', event.detail)')
+    expect(sheetLogic).toContain('triggerEvent(\'dismiss\')')
+
+    // 三个游客触发点统一走 beginProtectedAction，手机号未绑定先弹层。
+    expect(detail).toContain('async requireAuthIntent(intent: AuthIntent): Promise<boolean>')
+    expect(detail).toContain('intent === \'register\' ? \'REGISTER_EVENT\' : \'INTERACT\'')
+    expect(detail).toContain('session.snapshot.authenticated && !session.snapshot.phoneBound')
+    expect(detail).toContain('mipIdentityModule.bindWechatPhone(token, code)')
+    // 新账号走「填写信息」（mip-profile），完成或关闭都回本页并恢复原意图。
+    expect(detail).toContain('mip-profile/index?token=')
+    expect(detail).toContain('mipIdentityModule.consumePendingResume(DETAIL_ROUTE)')
+    expect(detail).toContain('this.resumeAuthIntent()')
+  })
+
+  it('presents signup as the order-confirm page from journey-review J2-08 (figma 1821_19274)', () => {
+    const registration = read('src/packages/member/mip-events/registration/index.ts')
+    const registrationView = read('src/packages/member/mip-events/registration/index.wxml')
+
+    expect(registrationView).toContain('订单ID')
+    expect(registrationView).toContain('{{orderNumberText}}')
+    expect(registrationView).toContain('bind:tap="copyOrderId"')
+    expect(registrationView).toContain('价格明细')
+    expect(registrationView).toContain('活动门票')
+    expect(registrationView).toContain('总计')
+    expect(registrationView).toContain('购买须知')
+    expect(registrationView).toContain('{{noticesText}}')
+    expect(registrationView).toContain('id="event-registration-submit"')
+    expect(registrationView).toContain('{{payLabel}}')
+    // 终审 QO：订单确认页无补充填写项；仅当活动配置报名问题时才出现字段区。
+    expect(registrationView).toContain('wx:if="{{fields.length > 0}}"')
+    expect(registrationView).not.toContain('本场活动没有额外报名问题')
+    expect(registration).toContain('orderNumberText: orderIdText || \'支付后生成\'')
+    expect(registration).toContain('noticesText: event.notices || DEFAULT_PURCHASE_NOTICES')
   })
 })

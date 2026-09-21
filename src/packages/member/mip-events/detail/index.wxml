@@ -206,6 +206,8 @@
         </view>
       </block>
       <canvas id="mip-event-invitation-poster-canvas" type="2d" class="fixed left-[-9999px] top-0 h-[560px] w-[375px]"></canvas>
+      <!-- journey-review J1-01/J1-02：游客点分享 / 参与人数 / 立刻报名先弹手机号授权弹层 -->
+      <mip-login-sheet visible="{{loginSheetOpen}}" busy="{{loginSheetBusy}}" brand-name="{{brandName}}" logo-path="{{logoPath}}" bind:phone="onLoginSheetPhone" bind:dismiss="onLoginSheetDismiss" />
     </block>
     <app-page-exit wx:if="{{state !== 'ready'}}" />
   </block>

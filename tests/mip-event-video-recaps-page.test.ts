@@ -17,6 +17,16 @@ vi.mock('../src/modules/mip-events/client', () => ({
     createInvitation: vi.fn(),
   },
 }))
+vi.mock('../src/modules/mip-identity/client', () => ({
+  mipIdentityModule: {
+    beginProtectedAction: vi.fn(),
+    loadAccess: vi.fn(),
+    bindWechatPhone: vi.fn(),
+    complete: vi.fn(),
+    cancel: vi.fn(),
+    consumePendingResume: vi.fn(() => null),
+  },
+}))
 vi.mock('../src/modules/mip-messaging/client', () => ({
   mipMessagingModule: {
     subscriptionCapability: vi.fn(() => ({ available: false })),
@@ -80,6 +90,7 @@ describe('MIP event video recap page', () => {
       loadingEvent: true,
       refreshCheckInIntent: vi.fn(),
       loadEvent: vi.fn(),
+      resumeAuthIntent: vi.fn(),
     }
     definition.onShow.call(instance)
     expect(instance.loadEvent).not.toHaveBeenCalled()

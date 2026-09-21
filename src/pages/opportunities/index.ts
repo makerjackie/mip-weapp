@@ -9,6 +9,7 @@ import type {
   OpportunitySummary,
 } from '../../modules/mip-opportunities'
 import { catalogSelectorView } from '../../components/catalog-selector/model'
+import { brand } from '../../config/brand'
 import { cooperationRoles } from '../../config/mip-catalogs'
 import { cooperationModule } from '../../modules/mip-cooperation'
 import { mergeCooperationTalents } from '../../modules/mip-cooperation/validation'
@@ -33,6 +34,8 @@ type LocationPreset = 'ALL' | OpportunityLocationType
 const allRoleOptions = [{ key: '', name: '全部角色' }, ...cooperationRoles]
 const nationwideOption: CityOption = { id: '', label: '全国' }
 const OPPORTUNITY_REFRESH_INTERVAL_MS = 30_000
+/** journey-review J1-05：游客点筛选先完成身份确认，授权回来后重开筛选面板。 */
+const FILTER_AUTH_RESUME = 'auth-intent:open-filters'
 
 function locationPreset(types: OpportunityLocationType[]): LocationPreset {
   if (types.includes('CITY')) {
@@ -209,11 +212,16 @@ Page({
     nextCursor: '',
     loadingMore: false,
     message: '',
+    loginSheetOpen: false,
+    loginSheetBusy: false,
+    brandName: brand.productName,
+    logoPath: brand.logoPath,
   },
   requestSequence: 0,
   resumeDestination: '',
   lastSuccessfulRefreshAt: 0,
   refreshOnReturn: false,
+  authToken: '',
 
   onShow() {
     syncCaseNavigation(this, 'pages/opportunities/index')
@@ -221,10 +229,12 @@ Page({
     if (resume && this.resumeDestination) {
       const destination = this.resumeDestination
       this.resumeDestination = ''
-      caseNavigateTo({ url: destination })
+      this.abandonLoginSheet()
+      this.runResumeDestination(destination)
       return
     }
     this.resumeDestination = ''
+    void this.resumeLoginSheetIntent()
     if (!this.data.catalog.cityTags.length) {
       void this.loadCatalogs()
     }
@@ -505,6 +515,10 @@ Page({
   },
 
   toggleFilters() {
+    if (!this.data.filterOpen && !this.data.authenticated) {
+      void this.openProtected(FILTER_AUTH_RESUME, 'INTERACT')
+      return
+    }
     if (!this.data.filterOpen) {
       const cityId = this.data.mode === 'cooperation'
         ? this.data.selectedCooperationBranchId
@@ -850,12 +864,126 @@ Page({
         caseNavigateTo({ url: destination })
         return
       }
+      // journey-review J1-04/J1-05（2026-09-21 终审）：已登录未绑手机的会话就地弹
+      // 手机号授权弹层，授权成功后继续原意图；其余未完成项交给 access 页。
+      if (
+        session.decision.nextRequirement === 'PHONE'
+        && session.snapshot.authenticated
+        && !session.snapshot.phoneBound
+      ) {
+        this.authToken = session.token
+        this.setData({ loginSheetOpen: true })
+        return
+      }
+      this.authToken = ''
       caseNavigateTo({ url: mipAccessPageUrl(session.token) })
     }
     catch {
       this.resumeDestination = ''
       this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
     }
+  },
+
+  async onLoginSheetPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
+    const token = this.authToken
+    if (!token || this.data.loginSheetBusy) {
+      return
+    }
+    const code = String(event.detail.code || '')
+    if (!code) {
+      const cancelled = /cancel|deny|denied/i.test(String(event.detail.errMsg || ''))
+      wx.showToast({
+        title: cancelled ? '你已取消手机号授权，可以稍后再完成。' : '手机号授权必须在微信真机完成。',
+        icon: 'none',
+      })
+      return
+    }
+    this.setData({ loginSheetBusy: true })
+    try {
+      const session = await mipIdentityModule.bindWechatPhone(token, code)
+      this.setData({ loginSheetOpen: false })
+      const destination = this.resumeDestination
+      if (session.decision.ready) {
+        this.resumeDestination = ''
+        this.authToken = ''
+        try {
+          await mipIdentityModule.complete(token)
+        }
+        catch {
+          // complete 失败不阻断原意图，授权状态已生效。
+        }
+        mipIdentityModule.consumePendingResume('pages/opportunities/index')
+        this.setData({ authenticated: true })
+        void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
+        if (destination) {
+          this.runResumeDestination(destination)
+        }
+        return
+      }
+      this.authToken = ''
+      if (session.decision.nextRequirement === 'PROFILE') {
+        // journey-review J1-03：新账号完善资料，完成或关闭都回本页并恢复意图。
+        caseNavigateTo({ url: `/packages/member/mip-profile/index?token=${encodeURIComponent(token)}` })
+        return
+      }
+      caseNavigateTo({ url: mipAccessPageUrl(token) })
+    }
+    catch (error) {
+      wx.showToast({ title: error instanceof Error ? error.message : '手机号绑定失败，请重试。', icon: 'none' })
+    }
+    finally {
+      this.setData({ loginSheetBusy: false })
+    }
+  },
+
+  onLoginSheetDismiss() {
+    this.abandonLoginSheet()
+  },
+
+  abandonLoginSheet() {
+    if (this.authToken) {
+      mipIdentityModule.cancel(this.authToken)
+    }
+    this.authToken = ''
+    this.resumeDestination = ''
+    this.setData({ loginSheetOpen: false, loginSheetBusy: false })
+  },
+
+  /** 从「填写信息」或 access 页返回后，若身份已就绪则继续弹层前的原意图。 */
+  async resumeLoginSheetIntent() {
+    if (!this.authToken) {
+      return
+    }
+    try {
+      const session = await mipIdentityModule.loadAccess(this.authToken)
+      if (session.decision.ready) {
+        const token = this.authToken
+        const destination = this.resumeDestination
+        this.authToken = ''
+        this.resumeDestination = ''
+        await mipIdentityModule.complete(token)
+        mipIdentityModule.consumePendingResume('pages/opportunities/index')
+        this.setData({ authenticated: true })
+        void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
+        if (destination) {
+          this.runResumeDestination(destination)
+        }
+        return
+      }
+    }
+    catch {
+      // 身份确认失败时按「暂不授权」处理，留在本页。
+    }
+    this.abandonLoginSheet()
+  },
+
+  /** 恢复弹层前的原意图：普通目的地直接跳转，筛选哨兵则重开筛选面板。 */
+  runResumeDestination(destination: string) {
+    if (destination === FILTER_AUTH_RESUME) {
+      this.toggleFilters()
+      return
+    }
+    caseNavigateTo({ url: destination })
   },
 
   publish() {

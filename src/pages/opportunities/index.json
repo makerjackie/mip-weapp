@@ -16,6 +16,7 @@
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "mip-icon": "/components/mip-icon/index"
+    "mip-icon": "/components/mip-icon/index",
+    "mip-login-sheet": "/components/mip-login-sheet/index"
   }
 }
