@@ -32,6 +32,11 @@ interface CooperationCardView extends CooperationCardSummary {
   roleName: string
 }
 
+interface OpportunityCardView extends OpportunitySummary {
+  /** 运行时验收（2026-09-22）：服务端 avatars 形状不可信，presenter 保底数组后才绑给卡片 type: Array 属性。 */
+  avatarViews: string[]
+}
+
 Page({
   copyLoadingDiagnostics() {
     wx.setClipboardData({
@@ -71,6 +76,7 @@ Page({
     guestCount: null as number | null,
     interactionCount: null as number | null,
     interestCount: null as number | null,
+    interestUnreadCount: 0,
     visitorUnreadCount: 0,
     visitorCount: null as number | null,
     notificationUnreadCount: 0,
@@ -82,7 +88,7 @@ Page({
     caseState: 'loading' as SectionState,
     cases: [] as SuperCaseSummary[],
     opportunityState: 'loading' as SectionState,
-    opportunities: [] as OpportunitySummary[],
+    opportunities: [] as OpportunityCardView[],
     openingAction: '' as OpeningAction,
     message: '',
   },
@@ -208,13 +214,16 @@ Page({
         interactionCount: null,
         interestCount: null,
         visitorCount: null,
+        interestUnreadCount: 0,
         visitorUnreadCount: 0,
       })
       return
     }
-    const [summaryResult, visitorResult] = await Promise.allSettled([
+    const [summaryResult, visitorResult, interestResult] = await Promise.allSettled([
       opportunityModule.getProfileInfluence(),
       opportunityModule.listReceived('VISITOR'),
+      // journey-review J3-04：心动值与访客两卡都有未读红点（M1 00:35:58），进入列表后清除。
+      opportunityModule.listReceived('ACTIVE_INTEREST'),
     ])
     const updates: Partial<typeof this.data> = {}
     if (summaryResult.status === 'fulfilled') {
@@ -229,7 +238,10 @@ Page({
     if (visitorResult.status === 'fulfilled') {
       updates.visitorUnreadCount = visitorResult.value.unreadCount
     }
-    if (summaryResult.status === 'rejected' || visitorResult.status === 'rejected') {
+    if (interestResult.status === 'fulfilled') {
+      updates.interestUnreadCount = interestResult.value.unreadCount
+    }
+    if (summaryResult.status === 'rejected' || visitorResult.status === 'rejected' || interestResult.status === 'rejected') {
       updates.message = this.data.message || '部分影响力数据暂时无法加载，请稍后重试。'
     }
     if (Object.keys(updates).length) {
@@ -425,7 +437,12 @@ Page({
     }
     try {
       const page = await opportunityModule.listMine()
-      this.setData({ opportunityState: 'ready', opportunities: page.items.slice(0, 3) })
+      // 保底数组：非数组（含 null/对象/字符串）与非法元素一律丢弃，杜绝卡片属性收到 non-array 告警。
+      const opportunities: OpportunityCardView[] = page.items.slice(0, 3).map(item => ({
+        ...item,
+        avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
+      }))
+      this.setData({ opportunityState: 'ready', opportunities })
     }
     catch {
       if (!this.data.opportunities.length) {
@@ -551,7 +568,8 @@ Page({
   openCaseList() { void this.openProtected('/packages/member/mip-cases/list/index?mine=1', 'INTERACT') },
   openOpportunityList() { void this.openProtected('/packages/member/mip-opportunities/mine/index', 'INTERACT') },
   openReferredOpportunities() { void this.openProtected('/packages/member/mip-opportunities/mine/index?tab=REFERRED', 'INTERACT') },
-  openSettings() { caseNavigateTo({ url: '/packages/member/privacy/index' }) },
+  /** J5-01/J1-08：设置入口（账号设置口径，WS-SETTINGS 承接页面内容）；游客点击先过登录门禁（六入口口径）。 */
+  openSettings() { void this.openProtected('/packages/member/privacy/index', 'EDIT_PROFILE') },
   openNotifications() { void this.openProtected('/packages/member/mip-notifications/index', 'INTERACT') },
   openGame() { void this.openProtected('/packages/member/mip-game/index', 'VIEW_RESTRICTED_PROFILE') },
   openBranches() { caseNavigateTo({ url: '/packages/member/mip-branches/index' }) },

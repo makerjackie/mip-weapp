@@ -24,11 +24,12 @@
     <view wx:for="{{items}}" wx:key="id" class="relative pb-6">
       <view class="absolute left-[-76rpx] top-[10rpx] h-[24rpx] w-[24rpx] rounded-full border-[2rpx] border-white bg-brand" />
       <view class="mb-3 flex min-h-[36rpx] items-center justify-between gap-2 text-[length:22rpx] font-medium text-brand"><text>{{item.publishedText || item.statusText}}</text><text wx:if="{{mine && item.publishedText}}" class="shrink-0 text-[length:22rpx] font-normal text-muted">{{item.statusText}}</text></view>
-      <view class="overflow-hidden rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" aria-role="button" data-id="{{item.id}}" bind:tap="open">
+      <!-- journey-review C5（2026-09-21 拍板）：删除入口收敛为长按卡片（原生 longpress 手势）→
+           微信原生确认弹窗（删除警示红）→ toast「已删除」；按钮行移除。 -->
+      <view class="overflow-hidden rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised {{archivingId === item.id ? 'opacity-60' : ''}}" aria-role="button" data-id="{{item.id}}" bind:tap="open" bind:longpress="deleteCase">
         <view class="flex min-h-[44rpx] items-center gap-2"><t-icon name="folder" size="30rpx" color="var(--color-ink)" /><view class="min-w-0 flex-1 line-clamp-2 text-[length:28rpx] font-medium leading-6">{{item.projectName}}</view></view>
         <view class="mt-2 line-clamp-2 text-[length:22rpx] leading-6 text-muted">{{item.summary}}</view>
         <view class="mt-3 flex min-h-[40rpx] items-center justify-between gap-2 border-t border-line pt-3 text-[length:22rpx] text-muted"><text class="min-w-0 flex-1 truncate">{{item.author.nickname}}</text><text wx:if="{{item.classificationText}}" class="max-w-[240rpx] truncate">{{item.classificationText}}</text></view>
-        <view wx:if="{{mine}}" class="mt-2 flex min-h-[88rpx] items-center justify-between border-t border-line pt-2"><text class="text-[length:22rpx] text-muted">管理案例</text><view class="flex min-h-[88rpx] items-center px-3 text-[length:22rpx] text-danger" aria-role="button" data-id="{{item.id}}" catch:tap="deleteCase">{{archivingId === item.id ? '正在删除' : '删除案例'}}</view></view>
       </view>
     </view>
   </view>

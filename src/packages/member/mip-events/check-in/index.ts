@@ -262,7 +262,8 @@ Page({
 
   openInteraction() {
     if (this.data.eventId) {
-      caseNavigateTo({ url: `/packages/member/mip-events/interaction/index?eventId=${encodeURIComponent(this.data.eventId)}` })
+      // journey-review J2-02：互动页并入参与人列表，直达「我的心动」tab。
+      caseNavigateTo({ url: `/packages/member/mip-events/participants/index?eventId=${encodeURIComponent(this.data.eventId)}&view=SENT` })
     }
   },
 })

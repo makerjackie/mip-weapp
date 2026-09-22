@@ -7,8 +7,8 @@
   <block wx:if="{{figmaLayout && figma.cards}}">
     <view class="-mx-4 -mt-4 relative min-h-[1400rpx]">
       <view wx:if="{{figma.tabs}}" class="absolute left-0 top-0 h-[80rpx] w-full">
-        <view class="absolute top-[20rpx] text-[length:28rpx] font-medium leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-brand' : 'text-muted'}}" style="left:132rpx">你的心动</view>
-        <view class="absolute top-[20rpx] text-[length:28rpx] font-normal leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-muted' : 'text-brand'}}" style="left:506rpx">对你心动</view>
+        <view class="absolute top-[20rpx] text-[length:28rpx] font-medium leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-brand' : 'text-muted'}}" style="left:132rpx">我的心动</view>
+        <view class="absolute top-[20rpx] text-[length:28rpx] font-normal leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-muted' : 'text-brand'}}" style="left:506rpx">对我心动</view>
         <view class="absolute left-0 top-[78rpx] h-[2rpx] w-full bg-panel"></view>
         <view class="absolute top-[76rpx] h-[4rpx] w-[376rpx] bg-brand" style="left:{{figma.tabs.leftActive ? 0 : 376}}rpx"></view>
       </view>
@@ -45,10 +45,10 @@
     </view>
   </block>
   <view class="grid grid-cols-2 border-b border-line text-center text-[length:24rpx]">
-    <view wx:if="{{kind === 'SENT'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-kind="SENT" bind:tap="changeKind">我点过的人</view>
-    <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-kind="SENT" bind:tap="changeKind">我点过的人</view>
-    <view wx:if="{{kind === 'RECEIVED'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-kind="RECEIVED" bind:tap="changeKind">对我心动的人</view>
-    <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-kind="RECEIVED" bind:tap="changeKind">对我心动的人</view>
+    <view wx:if="{{kind === 'SENT'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-kind="SENT" bind:tap="changeKind">我的心动</view>
+    <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-kind="SENT" bind:tap="changeKind">我的心动</view>
+    <view wx:if="{{kind === 'RECEIVED'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-kind="RECEIVED" bind:tap="changeKind">对我心动</view>
+    <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-kind="RECEIVED" bind:tap="changeKind">对我心动</view>
   </view>
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3">
@@ -57,7 +57,7 @@
   </view>
   <view wx:elif="{{state === 'access'}}"><mip-empty-state title="需要完成身份信息" description="完成身份信息后可以查看心动记录。" action-text="继续" bind:action="openAccess" /></view>
   <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法加载心动记录" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="retry" /></view>
-  <mip-empty-state wx:elif="{{state === 'empty'}}" title="{{kind === 'SENT' ? '暂无我点过的人' : '暂无对我心动的人'}}" description="活动签到后的心动记录会显示在这里。" />
+  <mip-empty-state wx:elif="{{state === 'empty'}}" title="{{kind === 'SENT' ? '暂无我的心动' : '暂无对我心动'}}" description="活动签到后的心动记录会显示在这里。" />
   <view wx:else class="mt-4 flex flex-col gap-3">
     <view wx:for="{{items}}" wx:key="viewKey" class="rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-event-id="{{item.event.id}}" bind:tap="openEvent">
       <view class="flex items-center gap-3" data-profile-ref="{{item.person.profileRef}}" catch:tap="openProfile">

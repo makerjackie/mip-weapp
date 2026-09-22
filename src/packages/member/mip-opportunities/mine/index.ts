@@ -1,11 +1,17 @@
 import type { OpportunitySummary, ReceivedReferral } from '../../../../modules/mip-opportunities'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
-import { opportunityModule } from '../../../../modules/mip-opportunities'
+import { opportunityModule, opportunityStatusLabel } from '../../../../modules/mip-opportunities'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { formatLocalDateTime } from '../../../../utils/date'
 
 type OpportunityTab = 'PUBLISHED' | 'REFERRED'
 type SectionState = 'loading' | 'ready' | 'error'
+
+interface PublishedView extends OpportunitySummary {
+  statusLabel: string
+  /** journey-review J6-03：已下架机会卡片置灰（招募中列表也不再展示）。 */
+  dimmed: boolean
+}
 
 interface ReferralView extends ReceivedReferral {
   viewKey: string
@@ -13,6 +19,15 @@ interface ReferralView extends ReceivedReferral {
   actorInitial: string
   statusText: string
   updatedText: string
+}
+
+function presentPublished(item: OpportunitySummary): PublishedView {
+  const label = opportunityStatusLabel(item)
+  return {
+    ...item,
+    statusLabel: label,
+    dimmed: label === '已下架',
+  }
 }
 
 function presentReferral(item: ReceivedReferral, index: number): ReferralView {
@@ -32,7 +47,7 @@ Page({
     state: 'loading' as SectionState,
     tab: 'PUBLISHED' as OpportunityTab,
     publishedState: 'loading' as SectionState,
-    publishedItems: [] as OpportunitySummary[],
+    publishedItems: [] as PublishedView[],
     publishedNextCursor: '',
     referredState: 'loading' as SectionState,
     referredItems: [] as ReferralView[],
@@ -40,6 +55,7 @@ Page({
     referredUnreadCount: 0,
     loadingMore: false,
     openingKey: '',
+    removingId: '',
     message: '',
   },
   publishedRequestSeq: 0,
@@ -103,7 +119,9 @@ Page({
       this.setData({
         publishedState: 'ready',
         ...(this.data.tab === 'PUBLISHED' ? { state: 'ready' as SectionState } : {}),
-        publishedItems: reset ? page.items : [...this.data.publishedItems, ...page.items],
+        publishedItems: reset
+          ? page.items.map(presentPublished)
+          : [...this.data.publishedItems, ...page.items.map(presentPublished)],
         publishedNextCursor: page.nextCursor || '',
       })
     }
@@ -201,6 +219,48 @@ Page({
 
   create() {
     caseNavigateTo({ url: '/packages/member/mip-opportunities/editor/index' })
+  },
+
+  /** journey-review J6-03（C5 拍板）：长按卡片删除 + 微信原生确认弹窗 + 系统 toast。 */
+  confirmDeletePublished(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.publishedItems.find(entry => entry.id === id)
+    if (!item || this.data.removingId) {
+      return
+    }
+    wx.showModal({
+      title: '删除提示',
+      content: '删除后将无法恢复，是否删除？',
+      confirmText: '删除',
+      confirmColor: '#FF4D5E',
+      success: (result) => {
+        if (result.confirm) {
+          void this.deletePublished(item)
+        }
+      },
+    })
+  },
+
+  async deletePublished(item: PublishedView) {
+    if (this.data.removingId) {
+      return
+    }
+    this.setData({ removingId: item.id, message: '' })
+    try {
+      // 列表 DTO 不带 version，先取详情拿并发版本再归档。
+      const detail = await opportunityModule.get(item.id)
+      await opportunityModule.remove(item.id, detail.version)
+      this.setData({
+        publishedItems: this.data.publishedItems.filter(entry => entry.id !== item.id),
+      })
+      wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
+    }
+    catch (error) {
+      wx.showToast({ title: error instanceof Error ? error.message : '删除失败，请稍后重试', icon: 'none' })
+    }
+    finally {
+      this.setData({ removingId: '' })
+    }
   },
 
   openPublished(event: WechatMiniprogram.TouchEvent) {

@@ -1,0 +1,5 @@
+/* journey-review J5-02 绑定手机（自拟承接稿）：输入占位与全局 muted 同色。 */
+.mip-bind-phone__placeholder {
+  font-weight: 400;
+  color: var(--color-muted, #b3b3b3);
+}

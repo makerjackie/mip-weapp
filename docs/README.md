@@ -10,6 +10,7 @@
 | 协作规则 | [AGENTS.md](../AGENTS.md) | 技术边界、开发规则、完成门禁 |
 | 业务语言 | [CONTEXT.md](../CONTEXT.md) | 统一术语和领域含义 |
 | 产品与视觉 | [DESIGN.md](../DESIGN.md) | 小程序设计规则与品牌入口 |
+| 组件画布 | [design-system/canvas.html](design-system/canvas.html) | 设计系统全量组件的可视化预览、属性与变种（浏览用快照，事实来源为 `.agents/skills/mip-design-system`） |
 | 当前架构 | [ARCHITECTURE.md](ARCHITECTURE.md) | 小程序、Web、服务端和共享契约边界 |
 | 产品要求 | [mip/REQUIREMENTS.md](mip/REQUIREMENTS.md) | 业务规则和已确认范围 |
 | 当前状态 | [mip/PROJECT_STATUS.md](mip/PROJECT_STATUS.md) | 当前数量、部署状态、阻塞和下一步 |

@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<!--
+  MIP 设计系统组件画布 - 可编辑源模板。
+  产物 canvas.html = 本模板把 script 内的 ICONS 注入占位行替换为
+  .agents/skills/mip-design-system/assets/react-source/icons.js 内容(export const ICONS 改 const ICONS)。
+  改组件/属性请改本模板后重新注入;若 skill 快照更新,需同步重生成。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MIP 设计系统 · 组件画布</title>
+<style>
+  :root{
+    --page:#080808; --surface:#202020; --s2:#333333; --s3:#242424;
+    --brand:#fcdf03; --t1:#ffffff; --t2:#b3b3b3;
+    --panel:#111111; --line:#242424; --code-bg:#0a0a0a;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--page); color:var(--t1);
+    font-family:-apple-system,'SF Pro Text','PingFang SC','Microsoft YaHei',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:radial-gradient(rgba(255,255,255,.045) 1px, transparent 1.4px);
+    background-size:26px 26px;
+  }
+  /* ---------- 顶栏 ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:30;
+    background:rgba(8,8,8,.88); backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+    padding:14px 24px 12px;
+  }
+  .topbar-row{display:flex; align-items:center; gap:16px; flex-wrap:wrap}
+  .brandline{display:flex; align-items:center; gap:10px}
+  .brand-dot{width:22px;height:22px;border-radius:7px;background:var(--brand);display:flex;align-items:center;justify-content:center;color:#080808;font-weight:700;font-size:12px}
+  h1{font-size:17px;font-weight:600;margin:0;letter-spacing:.2px}
+  .sub{font-size:11px;color:var(--t2);margin-top:2px}
+  .navlinks{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+  .navlinks a{
+    color:#d9d9d9;text-decoration:none;font-size:12px;padding:5px 10px;border-radius:100px;
+    border:1px solid var(--line);background:#161616;
+  }
+  .navlinks a:hover{border-color:#3a3a3a;color:var(--brand)}
+  .searchbox{
+    margin-top:10px;display:flex;align-items:center;gap:8px;
+    background:#141414;border:1px solid var(--line);border-radius:10px;padding:7px 12px;max-width:460px;
+  }
+  .searchbox input{
+    flex:1;background:transparent;border:0;outline:0;color:#fff;font-size:13px;
+  }
+  .searchbox input::placeholder{color:#6b6b6b}
+  .statline{margin-top:8px;font-size:11px;color:#8a8a8a}
+  .statline b{color:var(--brand);font-weight:600}
+  /* ---------- 区块 ---------- */
+  main{position:relative;z-index:1}
+  section{padding-top:26px}
+  .sec-head{display:flex;align-items:baseline;gap:12px;padding:0 24px 12px;flex-wrap:wrap}
+  .sec-head h2{font-size:15px;font-weight:600;margin:0}
+  .sec-head h2::before{content:"§ ";color:var(--brand)}
+  .sec-head .src{font-size:11px;color:#7a7a7a}
+  .sec-head .cnt{font-size:11px;color:#080808;background:var(--brand);border-radius:100px;padding:2px 9px;font-weight:600}
+  .sec-note{padding:0 24px 14px;font-size:12px;color:#9a9a9a;max-width:900px;line-height:1.7}
+  /* ---------- Tokens ---------- */
+  .tokens{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:0 24px}
+  .token-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .token-card h3{margin:0 0 10px;font-size:12px;color:var(--brand);font-weight:600}
+  .swatches{display:flex;flex-wrap:wrap;gap:8px}
+  .sw{display:flex;align-items:center;gap:6px;font-size:10px;color:#cfcfcf;background:#181818;border:1px solid #222;border-radius:8px;padding:4px 8px 4px 4px}
+  .sw i{width:18px;height:18px;border-radius:5px;display:block;border:1px solid rgba(255,255,255,.12)}
+  .kv{display:flex;flex-wrap:wrap;gap:6px}
+  .kv span{font-size:10px;color:#cfcfcf;background:#181818;border:1px solid #222;border-radius:8px;padding:4px 8px}
+  .kv b{color:var(--brand);font-weight:600}
+  /* ---------- 画布网格 ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:16px;padding:0 24px 40px}
+  @media (max-width:520px){.grid{grid-template-columns:1fr}}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+  .tile-head{display:flex;align-items:flex-start;gap:10px;padding:13px 16px 0}
+  .tile-name{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:14px;font-weight:600;color:var(--brand)}
+  .tile-cn{font-size:12px;color:#e0e0e0;font-weight:500;margin-left:8px}
+  .tile-badge{
+    margin-left:auto;flex:none;font-family:ui-monospace,Menlo,monospace;font-size:10px;
+    border-radius:100px;padding:3px 9px;border:1px solid #2c2c2c;color:#9a9a9a;background:#161616;
+  }
+  .tile-badge.ok{color:#080808;background:var(--brand);border-color:var(--brand);font-weight:600}
+  .tile-desc{padding:6px 16px 0;font-size:11.5px;color:#9a9a9a;line-height:1.65}
+  /* 预览舞台 */
+  .stage{
+    margin:12px 16px 0;min-height:96px;position:relative;
+    background:#080808;border:1px solid #1d1d1d;border-radius:10px;
+    background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.4px);
+    background-size:22px 22px;
+    display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:center;
+    padding:22px 16px;overflow:auto;
+  }
+  .stage .demo-tag{
+    position:absolute;top:6px;left:10px;font-size:9px;color:#5c5c5c;letter-spacing:.4px;
+    font-family:ui-monospace,Menlo,monospace;
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px 0}
+  .vchip{
+    cursor:pointer;user-select:none;font-size:11px;font-weight:500;
+    height:26px;display:inline-flex;align-items:center;padding:0 11px;border-radius:100px;
+    background:#1a1a1a;color:#b9b9b9;border:1px solid #2a2a2a;
+  }
+  .vchip:hover{color:#fff}
+  .vchip.on{background:var(--brand);color:#080808;border-color:#080808;font-weight:600}
+  /* 属性表 */
+  table.props{width:calc(100% - 32px);margin:12px 16px 0;border-collapse:collapse;font-size:11px}
+  table.props caption{text-align:left;font-size:10px;color:#6f6f6f;padding-bottom:6px;letter-spacing:.5px}
+  table.props th{color:#7d7d7d;font-weight:500;text-align:left;padding:4px 8px;border-bottom:1px solid #242424;font-size:10px}
+  table.props td{padding:5px 8px;border-bottom:1px solid #1b1b1b;color:#cfcfcf;vertical-align:top;line-height:1.5}
+  table.props td:first-child{font-family:ui-monospace,Menlo,monospace;color:#e8e8e8;white-space:nowrap}
+  table.props td.ty{font-family:ui-monospace,Menlo,monospace;color:#8fb8ff;white-space:nowrap}
+  table.props td.df{font-family:ui-monospace,Menlo,monospace;color:#d0a94a;white-space:nowrap}
+  .usage{
+    margin:12px 16px 16px;background:var(--code-bg);border:1px solid #1d1d1d;border-radius:8px;
+    padding:10px 12px;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px;line-height:1.7;
+    color:#cfcfcf;overflow:auto;white-space:pre;
+  }
+  .usage .cm{color:#5f5f5f}
+  /* ---------- 通用 MIP 组件视觉(演示用,值与源码一一对应) ---------- */
+  .ic{display:block}
+  .ic-missing{font-size:9px;color:#ff6b6b;border:1px dashed #ff6b6b;border-radius:4px;padding:1px 4px}
+  .m-row{width:351px;height:46px;background:#202020;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 12px}
+  .m-row .lb{font-size:14px;font-weight:500;color:#fff}
+  .m-row .rv{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:#b3b3b3;text-align:right}
+  .m-group{width:351px;display:flex;flex-direction:column;gap:1px}
+  .m-group>*:first-child{border-radius:8px 8px 0 0}
+  .m-group>*:last-child{border-radius:0 0 8px 8px}
+  .m-sec{display:flex;align-items:center;gap:4px;padding:0 12px;font-size:16px;font-weight:500;color:#fff;width:351px}
+  .m-sec .extra{margin-left:auto;font-size:12px;color:#b3b3b3;font-weight:400}
+  .m-chip{height:28px;display:inline-flex;align-items:center;border-radius:8px;border:1px solid #000;padding:0 8px;font-size:12px;font-weight:500;line-height:17px}
+  .m-chip.on{background:#fcdf03;color:#080808}
+  .m-chip.off{background:#202020;color:#b3b3b3}
+  .m-city{width:101px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;font-weight:500;line-height:20px}
+  .m-city.on{background:#fcdf03;color:#080808}
+  .m-city.off{background:#333;color:#f7f7f7}
+  .m-search{width:351px;height:40px;border-radius:8px;background:#202020;display:flex;align-items:center;padding:0 12px 0 8px}
+  .m-search .ph{margin-left:4px;font-size:14px;color:#b3b3b3}
+  .m-pbtn{width:351px;height:56px;border-radius:100px;background:rgba(255,221,2,0.1);display:flex;align-items:center;justify-content:center;
+    background-image:linear-gradient(rgba(255,255,255,.12),rgba(255,255,255,.12));
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.07), inset 0 1px 1.5px rgba(255,255,255,.10)}
+  .m-pbtn>button{width:327px;height:40px;border-radius:100px;border:1px solid #080808;background:#fcdf03;color:#080808;font-size:16px;font-weight:500;cursor:pointer}
+  .m-pbtn>button:disabled{opacity:.4}
+  .m-pillbtn{height:40px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:100px;border:1px solid #080808;padding:0 16px;font-size:16px;font-weight:500;cursor:pointer}
+  .m-pillbtn.pri{background:#fcdf03;color:#080808}
+  .m-pillbtn.sec{background:#202020;color:#fcdf03}
+  .m-addbtn{width:351px;height:100px;border-radius:8px;background:#202020;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fcdf03}
+  .m-addbtn svg.frame{position:absolute;inset:0;width:100%;height:100%}
+  .m-addbtn .inner{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:500}
+  .m-switch{width:51px;height:31px;border-radius:100px;position:relative;cursor:pointer;display:inline-block;transition:background .15s}
+  .m-switch.off{background:#39393d}
+  .m-switch.on{background:#07c160}
+  .m-switch i{position:absolute;top:2px;width:27px;height:27px;border-radius:100px;background:#fff;transition:left .15s;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.04), 0 3px 1px rgba(0,0,0,.06), 0 3px 8px rgba(0,0,0,.15)}
+  .m-switch.off i{left:2px}
+  .m-switch.on i{left:22px}
+  .m-iconbadge{display:flex;align-items:center;gap:4px}
+  .m-iconbadge .ball{width:16px;height:16px;border-radius:100px;background:#fcdf03;display:flex;align-items:center;justify-content:center;flex:none;color:#202020}
+  .m-iconbadge .lb{font-size:10px;line-height:14px;color:#fff}
+  .m-stars{display:flex;gap:2px;cursor:pointer}
+  .m-score{width:170px;height:68px;border-radius:8px;background:#202020;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+  .m-score .tt{font-size:12px;font-weight:500;color:#fff}
+  .m-tip{width:375px;height:32px;background:#fcdf03;color:#080808;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500}
+  .m-ai{width:351px;height:100px;border-radius:8px;border:1px solid #fcdf03;background:#202020;display:flex;align-items:center;justify-content:center;gap:4px;color:#fcdf03;font-size:14px;font-weight:500}
+  .m-lv{width:34px;height:16px;border-radius:4px;border:.5px solid #080808;background:#242424;color:#fcdf03;font-size:10px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;line-height:14px}
+  .m-prohead{width:351px;height:80px;position:relative}
+  .m-prohead img.av{position:absolute;left:12px;top:0;width:80px;height:80px;border-radius:100px;object-fit:cover}
+  .m-prohead .ring{position:absolute;left:12px;top:0;width:80px;height:80px;border-radius:100px;border:2px solid #080808;pointer-events:none}
+  .m-prohead .nm{position:absolute;left:104px;top:9px;font-size:16px;font-weight:500;color:#fff}
+  .m-prohead .lv{position:absolute;left:142px;top:12px}
+  .m-prohead .mt{position:absolute;left:104px;top:37px;font-size:10px;font-weight:500;color:#fff}
+  .m-prohead .it{position:absolute;left:104px;top:57px;font-size:10px;color:#b3b3b3}
+  .m-stat{width:351px;height:68px;border-radius:8px;background:#202020;position:relative}
+  .m-stat .col{position:absolute;top:12px;width:48px;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .m-stat .v{position:relative;font-size:20px;font-weight:500;line-height:28px;color:#fff}
+  .m-stat .v em{position:absolute;right:-1px;top:-4px;min-width:14px;height:14px;border-radius:100px;background:#ff2238;color:#fff;font-style:normal;font-size:10px;font-weight:500;line-height:13px;display:inline-flex;align-items:center;justify-content:center;padding:0 2px}
+  .m-stat .l{font-size:10px;line-height:14px;color:#fff}
+  .m-wordmark{position:relative;display:inline-block;width:47px;height:15px}
+  .m-coop{width:351px;height:200px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer}
+  .m-coop img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .m-coop .nm{position:absolute;left:12px;top:96px;font-size:12px;font-weight:600;line-height:16.8px;text-transform:uppercase}
+  .m-coop .strip{position:absolute;left:0;width:100%;height:40px;background:#202020;display:flex;align-items:center;justify-content:space-between;padding:0 12px}
+  .m-coop .strip .v{font-size:12px;font-weight:500;color:#fff}
+  .m-otag{height:16px;display:inline-flex;align-items:center;border-radius:4px;border:.5px solid transparent;padding:0 6px;font-size:10px;font-weight:500;line-height:14px}
+  .m-ocard{width:351px;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;gap:1px}
+  .m-ocard .body{background:#202020;border-radius:8px 8px 0 0;overflow:hidden}
+  .m-ocard img.cover{display:block;width:100%;height:149px;object-fit:cover;border-radius:8px;position:relative}
+  .m-ocard .coverbox{position:relative}
+  .m-ocard .tagrow{position:absolute;right:8px;bottom:8px;display:flex;gap:4px}
+  .m-ocard .ppl{position:absolute;left:8px;bottom:8px;height:28px;display:flex;align-items:center;border-radius:100px;background:#242424;padding:0 10px 0 2px}
+  .m-ocard .ppl img{width:24px;height:24px;border-radius:100px;object-fit:cover;position:relative}
+  .m-ocard .ppl .pl{margin-left:6px;font-size:10px;font-weight:600;color:#fff;position:relative;z-index:4}
+  .m-ocard .ppl .pc{font-size:12px;font-weight:600;color:#fff;position:relative;z-index:4}
+  .m-ocard .tt{padding:8px 12px 0;font-size:16px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .m-ocard .rows{display:flex;flex-direction:column;gap:4px;padding:8px 12px 11px}
+  .m-ocard .rw{display:flex;align-items:center;gap:4px;font-size:12px;color:#fff}
+  .m-ocard .rw .ib{width:16px;height:16px;position:relative;flex:none;display:flex;align-items:center;justify-content:center}
+  .m-ocard .foot{height:40px;background:#202020;border-radius:0 0 8px 8px;display:flex;align-items:center;padding:0 12px}
+  .m-ocard .st{height:16px;display:inline-flex;align-items:center;border-radius:4px;border:.5px solid #080808;background:#080808;padding:0 6px;font-size:10px;font-weight:500;color:#b3b3b3}
+  .m-ocard .pay{margin-left:auto;color:#fcdf03;font-weight:500;white-space:nowrap}
+  .m-ocard .pay small{font-size:12px}
+  .m-ocard .pay b{font-size:20px;font-weight:500}
+  .m-price{width:351px;display:flex;flex-direction:column;gap:1px}
+  .m-price>*:first-child{border-radius:8px 8px 0 0}
+  .m-price>*:last-child{border-radius:0 0 8px 8px}
+  .m-prow{height:40px;background:#202020;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:12px;color:#fff}
+  .m-prow .v{font-weight:500}
+  .m-prow .v small{font-size:12px}
+  .m-prow .v b{font-size:20px;font-weight:500;color:#fcdf03}
+  .m-guest{width:170px;height:187px;border-radius:8px;background:#202020;position:relative}
+  .m-guest .lv{position:absolute;left:8px;top:8px}
+  .m-guest img.av{position:absolute;left:57px;top:8px;width:56px;height:56px;border-radius:100px;object-fit:cover}
+  .m-guest .nm{position:absolute;left:0;top:72px;width:100%;text-align:center;font-size:16px;font-weight:500;color:#fff}
+  .m-guest .mt{position:absolute;left:0;top:98px;width:100%;text-align:center;font-size:10px;font-weight:500;color:#f7f7f7}
+  .m-guest .it{position:absolute;left:12px;top:119px;width:144px;font-size:10px;line-height:14px;color:#b3b3b3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .m-guest img.bd{position:absolute;left:8px;top:159px;width:20px;height:20px}
+  .m-guest .iv{position:absolute;left:86px;top:162px;font-size:10px;color:#b3b3b3}
+  .m-guest img.ivav{position:absolute;left:142px;top:159px;width:20px;height:20px;border-radius:100px;object-fit:cover}
+  .m-task{width:351px;height:67px;border-radius:8px;background:#202020;display:flex;align-items:center;padding:0 12px;gap:8px}
+  .m-task .tx{flex:1;min-width:0}
+  .m-task .t1{font-size:12px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .m-task .t2{margin-top:1px;font-size:10px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .m-task .exp{white-space:nowrap;font-size:16px;font-weight:500;color:#fcdf03}
+  .m-task .exp small{font-size:12px}
+  .m-task button{flex:none;width:64px;height:25px;border-radius:100px;font-size:12px;font-weight:500;border:0;cursor:pointer}
+  .m-task button.todo{background:#fcdf03;color:#000}
+  .m-task button.done{background:#080808;color:#fcdf03}
+  .m-empty{display:flex;flex-direction:column;align-items:center;padding:26px 0}
+  .m-empty .tx{margin-top:3px;font-size:16px;font-weight:500;color:#fff}
+  .m-dialog{width:320px;border-radius:8px;background:#333;overflow:hidden}
+  .m-dialog .bd{position:relative;height:176px}
+  .m-dialog .tt{position:absolute;left:24px;top:32px;width:272px;text-align:center;font-size:17px;font-weight:500;line-height:22px;color:rgba(255,255,255,.9)}
+  .m-dialog .ct{position:absolute;left:24px;top:72px;width:272px;text-align:center;font-size:17px;line-height:24px;color:#fff}
+  .m-dialog .btns{display:flex;border-top:1px solid rgba(255,255,255,.1)}
+  .m-dialog .btns button{height:56px;flex:1;background:transparent;border:0;font-size:17px;font-weight:500;color:#7d90a9;cursor:pointer}
+  .m-dialog .btns button+button{border-left:1px solid rgba(255,255,255,.1)}
+  .m-dialog .btns button:disabled{opacity:.6}
+  .m-pulse{width:88px;height:88px;border-radius:100px;background:#fff7b8;display:flex;align-items:center;justify-content:center}
+  .m-pulse .r2{width:76px;height:76px;border-radius:100px;background:#feeb5d;display:flex;align-items:center;justify-content:center}
+  .m-pulse .r3{width:64px;height:64px;border-radius:100px;background:#fcdf03;display:flex;align-items:center;justify-content:center;color:#080808}
+  .m-ricon{width:40px;height:40px;border-radius:100px;display:inline-flex;align-items:center;justify-content:center;color:#fff;border:0;cursor:pointer}
+  .m-ricon.check{background:#18e779}
+  .m-ricon.close{background:#ff4d5e}
+  .m-timer{font-size:48px;font-weight:700;line-height:57px;color:#fcdf03;font-variant-numeric:tabular-nums;font-family:'SF Pro Text',-apple-system,sans-serif}
+  .m-apill{width:116px;height:28px;border-radius:100px;position:relative;display:inline-block;border:0;cursor:pointer}
+  .m-apill.dark{background:#242424}
+  .m-apill.yellow{background:#fcdf03}
+  .m-apill .avs{position:absolute;left:2px;top:2px;width:56px;height:24px}
+  .m-apill .avs img{position:absolute;top:0;width:24px;height:24px;border-radius:100px;object-fit:cover;box-shadow:0 0 0 1px #fff}
+  .m-apill .pl{position:absolute;left:62px;top:5px;font-size:10px;font-weight:600;line-height:14px}
+  .m-apill .ct{position:absolute;right:8px;top:5px;font-size:12px;font-weight:600;line-height:17px;white-space:nowrap}
+  .m-apill.dark .pl,.m-apill.dark .ct{color:#fff}
+  .m-apill.yellow .pl,.m-apill.yellow .ct{color:#080808}
+  .m-acard{width:351px;height:238px;border-radius:8px;background:#202020;position:relative;overflow:hidden}
+  .m-acard img.cover{position:absolute;left:0;top:0;width:100%;height:149px;object-fit:cover;border-radius:8px 8px 0 0}
+  .m-acard .tagrow{position:absolute;left:265px;top:125px;display:flex;gap:4px}
+  .m-acard .tg{height:16px;display:inline-flex;align-items:center;border-radius:4px;border:1px solid #d0b801;background:#fde530;padding:0 6px;font-size:10px;font-weight:500;color:#080808;line-height:14px}
+  .m-acard .ap{position:absolute;left:8px;top:113px}
+  .m-acard .tt{position:absolute;left:12px;top:157px;width:327px;font-size:16px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .m-acard .meta{position:absolute;left:12px;display:flex;align-items:center;gap:4px;font-size:12px;line-height:18px;color:#fff}
+  .m-acard .share{position:absolute;left:319px;top:206px;width:24px;height:24px;border-radius:100px;background:#fde530;border:0;display:flex;align-items:center;justify-content:center;color:#080808;cursor:pointer}
+  .m-ocard2{width:351px;height:176px;border-radius:8px;background:#202020;position:relative;cursor:pointer}
+  .m-ocard2 img.th{position:absolute;left:8px;top:8px;width:120px;height:160px;border-radius:4px;object-fit:cover}
+  .m-ocard2 .tt{position:absolute;left:136px;top:12px;width:192px;font-size:16px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .m-ocard2 .meta{position:absolute;left:136px;display:flex;align-items:center;gap:4px;font-size:12px;line-height:18px;color:#fff}
+  .m-ocard2 .ap{position:absolute;left:227px;top:140px}
+  .m-sheet{position:fixed;left:0;right:0;bottom:0;z-index:90;background:rgba(51,51,51,.95);backdrop-filter:blur(24px)}
+  .m-sheet .ttbar{height:56px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(255,255,255,.1);font-size:15px;font-weight:500;color:rgba(255,255,255,.9)}
+  .m-sheet .opt{height:56px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(255,255,255,.1);font-size:17px;color:rgba(255,255,255,.9)}
+  .m-sheet .opt.on{font-weight:500;color:#fcdf03}
+  .m-sheet .btns{display:flex;align-items:center;justify-content:center;gap:16px;padding:32px 0 44px}
+  .m-sheet .btns button{width:108px;height:40px;border-radius:4px;border:0;font-size:17px;font-weight:500;color:#fff;cursor:pointer}
+  .m-sheet .btns .cancel{background:rgba(255,255,255,.1)}
+  .m-sheet .btns .ok{background:#07c160}
+  .ovl-bg{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6)}
+  .ovl-center{position:fixed;inset:0;z-index:85;display:flex;align-items:center;justify-content:center}
+  .phone{width:375px;background:#080808;position:relative;overflow:hidden}
+  .tabbar-demo{width:100%;background:#080808}
+  .tabbar-demo .tabs{position:relative;height:56px;width:100%}
+  .tabbar-demo .tab{position:absolute;top:0;height:100%;width:25%;background:transparent;border:0;cursor:pointer;padding:0}
+  .tabbar-demo .tab .icobox{position:absolute;left:50%;top:8px;margin-left:-14px;width:28px;height:28px}
+  .tabbar-demo .tab .icobox .ic{position:absolute}
+  .tabbar-demo .tab .tlabel{position:absolute;left:50%;top:38px;margin-left:-28px;width:56px;text-align:center;font-size:10px;font-weight:500;line-height:14px}
+  .statusbar-demo{position:relative;width:375px;height:47px}
+  .statusbar-demo .time{position:absolute;left:26px;top:14px;width:54px;text-align:center;font-size:17px;font-weight:600;line-height:22px;letter-spacing:-.4px;color:#fff;font-family:'SF Pro Text',-apple-system,sans-serif}
+  .statusbar-demo .ic{position:absolute}
+  .navbar-demo{position:relative;width:375px;z-index:5}
+  .navbar-demo .bar{position:relative;height:41px}
+  .navbar-demo .back{position:absolute;left:14px;top:9px;width:20px;height:20px;background:transparent;border:0;padding:0;cursor:pointer}
+  .navbar-demo .back .ic{position:absolute;left:3.5px;top:2.5px;color:#fff}
+  .navbar-demo .tt{position:absolute;left:98px;top:8px;width:179px;text-align:center;font-size:16px;font-weight:600;line-height:22px;color:#fff}
+  .capsule{position:absolute;width:83px;height:30px}
+  .capsule .bg{position:absolute;inset:0;border-radius:15px;background:#000;opacity:.15}
+  .capsule .bd{position:absolute;inset:0;border-radius:15px;border:.3px solid #fff;opacity:.25}
+  .capsule .ic{position:absolute;color:#fff}
+  .homeind{width:375px;height:34px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px}
+  .homeind i{width:134px;height:5px;border-radius:100px;background:#fff;display:block}
+  .alphabox{width:351px;height:300px;position:relative;background:#141414;border-radius:8px}
+  .alpha-slider{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:.8px}
+  .alpha-slider span{font-size:11px;font-weight:600;line-height:13px;color:#fcdf03}
+  .icon-cell{display:flex;flex-direction:column;align-items:center;gap:6px;width:78px;padding:10px 4px;border-radius:8px;background:#161616;border:1px solid #222}
+  .icon-cell code{font-size:8.5px;color:#9a9a9a;font-family:ui-monospace,Menlo,monospace;text-align:center;word-break:break-all;line-height:1.3}
+  /* 弹层 */
+  #overlay-host.on{display:block}
+  #overlay-host{display:none}
+  .hint{padding:0 24px 8px;font-size:11px;color:#6f6f6f}
+  footer{padding:30px 24px 60px;font-size:11px;color:#6f6f6f;line-height:2}
+  footer code{color:#9a9a9a}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-row">
+    <div class="brandline">
+      <span class="brand-dot">M</span>
+      <div>
+        <h1>MIP 设计系统 · 组件画布</h1>
+        <div class="sub">事实来源:.agents/skills/mip-design-system(DESIGN.md + react-source + wechat-component-contracts.md)· 快照 2026-09-09.2</div>
+      </div>
+    </div>
+    <nav class="navlinks">
+      <a href="#tokens">设计 Tokens</a>
+      <a href="#sec-chrome">系统层</a>
+      <a href="#sec-primitive">基础组件</a>
+      <a href="#sec-business">业务组件</a>
+      <a href="#sec-weapp">小程序专属</a>
+      <a href="#sec-icons">图标库</a>
+    </nav>
+  </div>
+  <div class="searchbox">
+    <svg class="ic" viewBox="0 0 14 14" fill="currentColor" style="width:12px;height:12px;color:#6b6b6b"><path fill="none" d="M0.75 6.79167C0.75 7.9866 1.10434 9.15469 1.7682 10.1482C2.43207 11.1418 3.37565 11.9162 4.47962 12.3734C5.58359 12.8307 6.79837 12.9504 7.97034 12.7172C9.14231 12.4841 10.2188 11.9087 11.0638 11.0638C11.9087 10.2188 12.4841 9.14231 12.7172 7.97034C12.9504 6.79837 12.8307 5.58359 12.3734 4.47962C11.9162 3.37565 11.1418 2.43207 10.1482 1.7682C9.15469 1.10434 7.9866 0.75 6.79167 0.75C5.18935 0.750117 3.6527 1.38669 2.51969 2.51969C1.38669 3.6527 0.750117 5.18935 0.75 6.79167Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <input id="search" type="search" placeholder="搜索组件:英文名 / 中文名 / 用途,如 tag chip、弹窗、合作卡…" />
+  </div>
+  <div class="statline" id="statline"></div>
+</header>
+
+<main>
+  <section id="tokens">
+    <div class="sec-head"><h2>设计 Tokens</h2><span class="src">来源:references/DESIGN.md · 所有取值必须解析到这里的 token</span></div>
+    <div class="sec-note">规则速记:页面底 <b style="color:#fcdf03">#080808</b>,卡片/行 <b style="color:#fcdf03">#202020</b>,品牌黄 <b style="color:#fcdf03">#fcdf03</b>;黄色元素一律加 <code>#080808</code> 1px 内描边;375 画板、页边距 12(内容 351);小程序实现按 <code>1px = 2rpx</code>,发丝线用 <code>1rpx</code>。</div>
+    <div class="tokens">
+      <div class="token-card">
+        <h3>色彩</h3>
+        <div class="swatches" id="tk-colors"></div>
+      </div>
+      <div class="token-card">
+        <h3>圆角(radius)</h3>
+        <div class="kv" id="tk-radius"></div>
+        <h3 style="margin-top:12px">布局</h3>
+        <div class="kv" id="tk-layout"></div>
+      </div>
+      <div class="token-card">
+        <h3>字体(中文 PingFang SC · 数字 SF Pro Text tabular-nums · 活动大数字 D-DIN Exp)</h3>
+        <div class="kv" id="tk-font"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sec-chrome">
+    <div class="sec-head"><h2>系统层组件</h2><span class="cnt" id="cnt-chrome"></span><span class="src">chrome.jsx · iOS UI Kit 实例</span></div>
+    <div class="sec-note">页面骨架:StatusBar(47px)→ 内容 → TabBar(56px)+ HomeIndicator(34px 独立叠加)。NavBar 含状态栏共 88px。小程序侧已落地 <code>mip-nav-bar</code>、<code>top-safe-area</code>。</div>
+    <div class="grid" id="grid-chrome"></div>
+  </section>
+
+  <section id="sec-primitive">
+    <div class="sec-head"><h2>基础组件</h2><span class="cnt" id="cnt-primitive"></span><span class="src">primitives.jsx</span></div>
+    <div class="sec-note">行、表单、选择器、按钮、开关、评分等最小单元。分组行(DetailRowGroup / PriceRowGroup)共享一个圆角外壳:首行上圆角、末行下圆角。</div>
+    <div class="grid" id="grid-primitive"></div>
+  </section>
+
+  <section id="sec-business">
+    <div class="sec-head"><h2>业务组件</h2><span class="cnt" id="cnt-business"></span><span class="src">business.jsx</span></div>
+    <div class="sec-note">卡片、横幅、弹窗、录音等业务形态。<code>CooperationCard</code> 有且只有 6 个角色变种(装饰层已烘焙为单张底图,动态文字/条层在代码层);<code>LevelBanner</code> 无装饰属性,装饰固定用 <code>level-banner-deco@3x.png</code>。</div>
+    <div class="grid" id="grid-business"></div>
+  </section>
+
+  <section id="sec-weapp">
+    <div class="sec-head"><h2>小程序专属组件</h2><span class="cnt" id="cnt-weapp"></span><span class="src">src/components/*(weapp 运行时,不在 Figma SOT 内)</span></div>
+    <div class="sec-note">只在小程序工程存在的工程/工具组件,视觉为近似示意。</div>
+    <div class="grid" id="grid-weapp"></div>
+  </section>
+
+  <section id="sec-icons">
+    <div class="sec-head"><h2>图标库 mip-icon</h2><span class="cnt" id="cnt-icons"></span><span class="src">assets/wechat/mip-icon · 451 个矢量,内容去重</span></div>
+    <div class="sec-note">小程序用法 <code>&lt;mip-icon name="calendar-schedule" size="{{14}}" color="#fcdf03" /&gt;</code>;name 必须在注册表内,未知名开发态告警、渲染为空;mono 图标颜色随 <code>color</code>,多彩图标忽略 color。下面是组件高频使用的图标(完整注册表见 <code>icons.js</code>)。</div>
+    <div class="grid" id="grid-icons" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))"></div>
+  </section>
+</main>
+
+<footer>
+  事实来源(改设计先改这里):<br />
+  · Tokens / 规则:<code>.agents/skills/mip-design-system/references/DESIGN.md</code>(上游快照:根 <code>DESIGN.md</code>)<br />
+  · 组件可执行视觉源:<code>.agents/skills/mip-design-system/assets/react-source/*.jsx</code><br />
+  · 小程序转换契约:<code>.agents/skills/mip-design-system/references/wechat-component-contracts.md</code>(1px=2rpx;onClick→bind:tap;onChange 等→triggerEvent;节点→slot;本地 PNG 用 &lt;image&gt; 不用 background-image)<br />
+  · 本页面仅为浏览用快照;若与上述源冲突,以源为准并重新生成本页。
+</footer>
+
+<div id="overlay-host"></div>
+
+<script>
+//__ICONS_INJECT__
+</script>
+<script>
+/* ================= 帮助函数 ================= */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function icon(name, o={}){
+  const ic = ICONS[name];
+  if(!ic) return `<span class="ic-missing" title="unknown icon: ${esc(name)}">${esc(name)}</span>`;
+  const w = o.w ?? ic.w, h = o.h ?? ic.h;
+  const root = ic.mono === false ? 'none' : 'currentColor';
+  return `<svg class="ic" viewBox="${ic.vb}" fill="${root}" style="width:${w}px;height:${h}px;color:${o.color||'inherit'};${o.style||''}">${ic.body}</svg>`;
+}
+const AV_COLORS = ['#7b6cff','#3fa7ff','#ff8a5c','#39c690','#f2c94c','#e56399','#5ad0f0'];
+function avatar(i){
+  const c = AV_COLORS[i % AV_COLORS.length];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="${c}"/><circle cx="48" cy="36" r="15" fill="rgba(255,255,255,.85)"/><path d="M14 96c3-19 17-28 34-28s31 9 34 28z" fill="rgba(255,255,255,.85)"/></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+function coverImg(w, h, from, to, label='COVER'){
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs><rect width="${w}" height="${h}" fill="url(#g)"/><circle cx="${w*0.78}" cy="${h*0.3}" r="${h*0.34}" fill="rgba(252,223,3,.16)"/><rect x="${w*0.08}" y="${h-26}" width="${w*0.3}" height="6" rx="3" fill="rgba(255,255,255,.25)"/><text x="${w*0.08}" y="${h-38}" font-family="sans-serif" font-size="11" fill="rgba(255,255,255,.5)" letter-spacing="3">${label}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+const BAKED = '../../.agents/skills/mip-design-system/assets/wechat/baked/';
+/* 兼容 image 加载失败的兜底:容器已有同色底,这里静默隐藏 */
+const IMG_FALLBACK = `onerror="this.style.display='none'"`;
+
+/* ================= 设计 Tokens ================= */
+const COLOR_TOKENS = [
+  ['page','#080808','页面底'],['surface','#202020','卡片/行底'],['surface-2','#333333','Dialog/次级面板'],
+  ['surface-3','#242424','小徽章底'],['brand','#fcdf03','品牌黄'],['brand-stroke','#d0b801','黄元素描边'],
+  ['bright','#fde530','活动高亮黄'],['wechat-green','#07c160','ActionSheet 完成/开关 ON'],
+  ['ok','#18e779','确认'],['danger','#ff4d5e','取消'],['record','#ff2238','红点角标'],
+  ['text-2','#b3b3b3','次要文字'],['dialog-act','#7d90a9','Dialog 操作文字'],['cell','#f7f7f7','格子文字'],
+];
+const RADIUS_TOKENS = [['2','微型徽章'],['4','Lv 徽章/小标签'],['8','行卡/输入/Chip/Dialog'],['15','导航胶囊'],['16','合作卡/横幅'],['100','按钮/头像/圆']];
+const LAYOUT_TOKENS = [['375px','画板宽'],['12px','页边距 → 内容 351'],['46px','行高'],['28px','Chip 高'],['40px','城市格/按钮内芯'],['56px','TabBar 高'],['47px','状态栏'],['34px','HomeIndicator']];
+const FONT_TOKENS = [['caption','10px 徽章/小字'],['body-sm','12px 行值/Chip'],['body','14px 表单标签'],['title','16px 标题'],['ios','17px iOS 层'],['subtitle','20px 大数字'],['display','48px 计时器(tnum)']];
+
+/* ================= demo 渲染器(必须先于组件定义;TAB_NODES 等不能出现 TDZ) ================= */
+function statusbarDemo(time){
+  return `<div class="statusbar-demo" style="background:#111;border-radius:8px">
+    <span class="time">${esc(time)}</span>
+    ${icon('mobile-signal-2',{w:18,h:12,style:'position:absolute;left:273px;top:19px;color:#fff'})}
+    ${icon('wifi',{w:17,h:12,style:'position:absolute;left:299px;top:19px;color:#fff'})}
+    <span style="position:absolute;left:323px;top:18px;width:27.4px;height:13px;display:block">
+      ${icon('statusbar-battery-outline',{w:25,h:13,style:'position:absolute;left:0;top:0;opacity:.35;color:#fff'})}
+      ${icon('battery-end',{w:1.4,h:4.2,style:'position:absolute;left:26px;top:5px;opacity:.4;color:#fff'})}
+      ${icon('statusbar-battery-fill',{w:21,h:9,style:'position:absolute;left:2px;top:2px;color:#fff'})}
+    </span></div>`;
+}
+function navbarDemo({title, back}){
+  return `<div class="navbar-demo" style="background:#111;border-radius:8px">
+    <div class="statusbar-demo">${statusbarDemo('9:41').replace('class="statusbar-demo"','class="statusbar-demo" style="background:transparent"').replace(/^<div class="statusbar-demo"[^>]*>/,'').replace(/<\/div>$/,'')}
+    </div>
+    <div class="bar">
+      ${back?`<button class="back">${icon('nav-back',{w:7.5,h:15,color:'#fff'})}</button>`:''}
+      <span class="tt">${esc(title)}</span>
+      <span class="capsule" style="left:285px;top:4px"><span class="bg"></span><span class="bd"></span>${icon('statusbar-island',{w:18.5,h:6.5,style:'position:absolute;left:12.8px;top:11.8px'})}${icon('nav-divider',{w:0.3,h:17,style:'position:absolute;left:41.3px;top:6.5px;opacity:.25'})}${icon('nav-home-ring',{w:17,h:17,style:'position:absolute;left:53.5px;top:6.5px'})}</span>
+    </div></div>`;
+}
+const TAB_NODES = {
+  '发现':{off:[['smileys-13-12',3,3,22,22],['smileys-13-12-2',10,10,8.2,8.2]],on:[['smileys-13-2-2',3,3,22,22],['smileys-13-12-2',10,10,8.2,8.2]]},
+  '活动':{off:[['tab-note-outline',3.5,3.5,21,21],['tab-note-fold',17.5,17.5,7,7],['tab-note-line',8.3,8.3,11.3,2],['tab-note-line',8.3,13,11.3,2]],on:[['document-note-paper-angle-right-3',3.5,3.5,21,21],['tab-note-fold',17.5,17.5,7,7],['tab-note-line',8.3,8.3,11.3,2],['tab-note-line',8.3,13,11.3,2]]},
+  '机会':{off:[['tab-bag-body',3.5,8.2,21,16.3],['tab-bag-band',3.5,12.8,21,2.3],['tab-bag-handle',9.3,3.5,9.3,7],['tab-bag-dash',11.3,18.8,5.5,2]],on:[['satchel-bag-3',3.5,8.2,21,16.3],['tab-bag-band',3.5,12.8,21,2.3],['tab-bag-handle',9.3,3.5,9.3,7],['tab-bag-dash',11.3,18.8,5.5,2]]},
+  '我的':{off:[['smileys-13-11-2',3,3,22,22],['smileys-13-11',6,10,16,8]],on:[['smileys-13-11-2',3,3,22,22],['smileys-13-11',6,10,16,8]]},
+};
+function tabbarDemo(active){
+  const labels=['发现','活动','机会','我的'];
+  return `<div class="phone" style="border:1px solid #262626;border-radius:8px"><div class="tabbar-demo"><div class="tabs">
+    ${labels.map((lb,i)=>{const on=i===active;const nodes=(on?TAB_NODES[lb].on:TAB_NODES[lb].off);const color=on?'#fcdf03':'#b3b3b3';
+      return `<button class="tab" style="left:${i*25}%" data-act="tab" data-tab="${i}">
+        <span class="icobox" style="color:${color}">${nodes.map(([n,x,y,w,h])=>icon(n,{w,h,style:`position:absolute;left:${x}px;top:${y}px`})).join('')}</span>
+        <span class="tlabel" style="color:${color}">${lb}</span></button>`;}).join('')}
+  </div></div></div>`;
+}
+function starsDemo(v){
+  const star='M12 2l2.94 6.36 6.96.6-5.28 4.58 1.58 6.82L12 16.9l-6.2 3.46 1.58-6.82L2.1 8.96l6.96-.6L12 2z';
+  return `<span class="m-stars" data-act="stars">${[0,1,2,3,4].map(i=> i<v
+    ? icon('star-favorite-3',{w:20,h:19,color:'#fcdf03'})
+    : `<svg viewBox="0 0 24 24" width="20" height="20" fill="#4d4d4d"><path d="${star}"/></svg>`).join('')}</span>`;
+}
+function levelBannerDemo(level, current, target){
+  const pct = Math.min(1, current/target);
+  const fill = 4 + 292*pct; /* 设计 px(351 基),预览按 351px 宽直读 */
+  return `<div style="width:351px;height:80px;border-radius:16px 16px 0 0;background:#fcdf03;position:relative;overflow:hidden">
+    <img src="${BAKED}level-banner-deco@3x.png" ${IMG_FALLBACK} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"/>
+    <span style="position:absolute;left:14px;top:9px;font-size:16px;font-weight:600;color:#080808">${esc(level)}</span>
+    <span style="position:absolute;left:14px;top:44px;font-size:10px;font-weight:600;color:#080808">${current} I ${target}</span>
+    <span style="position:absolute;left:291px;top:12px;font-size:10px;color:#080808">玩家等级 ›</span>
+    <span style="position:absolute;left:12px;top:60px;width:150px;height:6px;border-radius:100px;background:#4d4400"></span>
+    <span style="position:absolute;left:14px;top:62px;height:2px;border-radius:100px;background:#fcdf03;width:${fill.toFixed(1)}px"></span></div>`;
+}
+const COOP = {
+  'dogplaner':   {name:'狗策划 DOGPLANER',   bg:'#7b00ff', light:'#f2e5ff'},
+  'upstart':     {name:'暴发户 UPSTART',     bg:'#7a2900', light:'#fadab3'},
+  'design-slave':{name:'死美工 Design Slave', bg:'#04a44f', light:'#e5fff1'},
+  'pimp':        {name:'皮条客 pimp',        bg:'#df07a9', light:'#ffe5f9'},
+  'business-man':{name:'生意佬 business man', bg:'#ff5500', light:'#ffeee5'},
+  'old-nanny':   {name:'老保姆 old nanny',   bg:'#1a71ff', light:'#e5efff'},
+};
+function coopStrip(top, roundCls, iconName, label, value){
+  return `<div class="strip ${roundCls}" style="top:${top}px"><span class="m-iconbadge"><span class="ball">${icon(iconName,{w:10,h:10})}</span><span class="lb">${label}</span></span><span class="v">${esc(value)}</span></div>`;
+}
+function coopDemo(variant){
+  const v = COOP[variant];
+  return `<div class="m-coop" style="background:${v.bg}">
+    <img class="bg" src="${BAKED}coop-card-${variant}@3x.png" ${IMG_FALLBACK}/>
+    <span class="nm" style="color:${v.light}">${esc(v.name)}</span>
+    ${coopStrip(120,'','target','我的目标','3 场/月')}
+    ${coopStrip(160,'','cup','需要引荐','12')}</div>`;
+}
+function attendDemo(variant, count, label){
+  return `<button class="m-apill ${variant}">
+    <span class="avs">${[0,1,2].map(i=>`<img src="${avatar(i)}" style="left:${i*15}px;z-index:${3-i}"/>`).join('')}</span>
+    <span class="pl">+</span><span class="ct">${count}${label}</span></button>`;
+}
+
+/* ================= 组件定义 ================= */
+/* demo: {label, html} 或 {label, html, note}
+   props 行: [名称, 类型, 默认, 说明]                                   */
+
+const TILES = [];
+
+/* ---------- 系统层 ---------- */
+TILES.push(
+{ group:'chrome', name:'Screen', cn:'页面壳', weapp:null,
+  desc:'375 宽、#080808 底、中文字体栈的页面根容器;内容超出可裁切。',
+  demos:[{label:'页面壳', html:`<div class="phone" style="height:120px;border:1px solid #262626"></div>`}],
+  props:[['children','slot','—','页面内容'],['minHeight','number','812','最小高度']],
+  usage:`<Screen> …页面内容… </Screen>` },
+
+{ group:'chrome', name:'StatusBar', cn:'iOS 状态栏', weapp:null,
+  desc:'375×47;时间 + 信号 + Wi-Fi + 电池,坐标取自 iOS 16 UI Kit 实例。',
+  demos:[{label:'9:41', html:statusbarDemo('9:41')},{label:'自定义时间', html:statusbarDemo('12:30')}],
+  props:[['time','string','"9:41"','左侧时间']],
+  usage:`<StatusBar time="9:41" />` },
+
+{ group:'chrome', name:'HomeIndicator', cn:'底部横条', weapp:null,
+  desc:'375×34 独立系统组件,页面自行叠加;TabBar 不包含它。',
+  demos:[{label:'默认', html:`<div class="homeind" style="background:#111"><i></i></div>`}],
+  props:[],
+  usage:`<HomeIndicator className="absolute bottom-0" />` },
+
+{ group:'chrome', name:'Capsule', cn:'系统胶囊(灵动岛区)', weapp:null,
+  desc:'83×30 r15,黑 15% 底 + 白 25% 细描边;「···」+ 分隔线 + 圆环。小程序真机上由系统提供。',
+  demos:[{label:'默认', html:`<div style="position:relative;width:375px;height:34px;background:#111"><span class="capsule" style="left:285px;top:2px"><span class="bg"></span><span class="bd"></span>${icon('statusbar-island',{w:18.5,h:6.5,style:'position:absolute;left:12.8px;top:11.8px;'})}${icon('nav-divider',{w:0.3,h:17,style:'position:absolute;left:41.3px;top:6.5px;opacity:.25'})}${icon('nav-home-ring',{w:17,h:17,style:'position:absolute;left:53.5px;top:6.5px;'})}</span></div>`}],
+  props:[], usage:`NavBar 内部已含 Capsule;一般不单独使用。` },
+
+{ group:'chrome', name:'NavBar', cn:'导航栏', weapp:'mip-nav-bar',
+  desc:'含状态栏共 88px:返回钮(20×20 @14,56)+ 居中标题 16/600 + 右侧胶囊 @285,51;Tab 页 back=false。',
+  demos:[
+    {label:'标准(返回+胶囊)', html:navbarDemo({title:'账号设置', back:true})},
+    {label:'无返回(Tab 页)', html:navbarDemo({title:'我的', back:false})},
+  ],
+  props:[['title','string',"''",'居中标题,32rpx/600'],['back','boolean','true','返回钮,触发 onBack/back 事件'],['capsule','boolean','true','右侧系统胶囊'],['time','string','"9:41"','状态栏时间'],['showStatusBar','boolean','false','(mip-nav-bar)渲染状态栏'],['showCapsule','boolean','false','(mip-nav-bar)渲染胶囊'],['absolute','boolean','false','(mip-nav-bar)绝对定位悬浮'],['back 事件','event','—','bind:back']],
+  usage:`<mip-nav-bar title="账号设置" bind:back="goBack" />` },
+
+{ group:'chrome', name:'TabBar', cn:'底部 Tab 栏', weapp:null,
+  desc:'375×56 仅 Tab 行;items 默认 发现/活动/机会/我的,图标 28 盒、标签 10/500;激活品牌黄、未激活 #b3b3b3。点击下方预览可切换激活项。',
+  demos:[
+    {label:'activeIndex=0 发现', html:tabbarDemo(0)},
+    {label:'activeIndex=1 活动', html:tabbarDemo(1)},
+    {label:'activeIndex=3 我的', html:tabbarDemo(3)},
+  ],
+  props:[['items','array','发现/活动/机会/我的','Tab 项(含 off/on 图标部件)'],['activeIndex','number','3','激活下标'],['onSelect','event','—','bind:select(index)']],
+  usage:`<TabBar activeIndex={3} onSelect={go} />` },
+);
+
+/* ---------- 基础组件 ---------- */
+function rowDemo(value, chevron){
+  return `<div class="m-row"><span class="lb">手机号</span><span class="rv">${esc(value)}${chevron?`<span style="position:relative;width:16px;height:16px;display:inline-block;transform:rotate(1.6deg)">${icon('chevron-down-1-6',{w:4,h:8,color:'#979797',style:'position:absolute;left:6px;top:4px'})}</span>`:''}</span></div>`;
+}
+TILES.push(
+{ group:'primitive', name:'DetailRow', cn:'详情行', weapp:'mip-detail-row',
+  desc:'351×46 信息行:左侧 14/500 白标签,右侧 12/500 次要值 + 可选箭头。',
+  demos:[
+    {label:'带箭头', html:rowDemo('138****8000', true)},
+    {label:'无箭头', html:rowDemo('138****8000', false)},
+  ],
+  props:[['label','string',"''",'左侧标签'],['value','string',"''",'右侧值'],['chevron','boolean','true','右侧箭头'],['actionable','boolean','false','(mip-detail-row)可点击样式'],['tap 事件','event','—','bind:tap({label})']],
+  usage:`<mip-detail-row label="手机号" value="138****8000" bind:tap="onRow" />` },
+
+{ group:'primitive', name:'DetailRowGroup', cn:'详情行分组', weapp:'mip-detail-row-group',
+  desc:'8px 圆角外壳:首行上圆角、末行下圆角,行间 1px 缝;直接把 DetailRow 放进去。',
+  demos:[{label:'三行分组', html:`<div class="m-group">
+    ${rowDemo('猫策划', false)}${rowDemo('沙龙主理人', false)}${rowDemo('138****8000', true)}</div>`}],
+  props:[['children','slot','—','DetailRow 列表']],
+  usage:`<mip-detail-row-group>\n  <mip-detail-row label="昵称" value="MIP 玩家" />\n  <mip-detail-row label="手机号" value="138****8000" />\n</mip-detail-row-group>` },
+
+{ group:'primitive', name:'FormFieldRow', cn:'表单行', weapp:'mip-form-field-row',
+  desc:'351×46 可编辑行;trailing 控制尾部控件:calendar(日期)/chevron(下拉),值为空时显示占位色。',
+  demos:[
+    {label:'calendar', html:`<div class="m-row"><span class="lb">开始时间</span><span class="rv" style="color:#b3b3b3;font-weight:400">请选择${icon('calendar-schedule',{w:14,h:14,color:'#b3b3b3'})}</span></div>`},
+    {label:'chevron', html:`<div class="m-row"><span class="lb">主营城市</span><span class="rv" style="color:#b3b3b3;font-weight:400">请选择<span style="position:relative;width:16px;height:16px;display:inline-block">${icon('chevron-down-1',{w:3,h:6,color:'#b3b3b3',style:'position:absolute;left:6.5px;top:5px'})}</span></span></div>`},
+    {label:'已填值', html:`<div class="m-row"><span class="lb">开始时间</span><span class="rv" style="color:#fff;font-weight:400">2026-09-20 19:00${icon('calendar-schedule',{w:14,h:14,color:'#b3b3b3'})}</span></div>`},
+  ],
+  props:[['label','string',"''",'左侧标签'],['value','string',"''",'已填值'],['placeholder','string',"''",'空值占位'],['trailing','string',"''",'calendar / chevron'],['disabled','boolean','false','禁用点击'],['tap 事件','event','—','bind:tap({label})']],
+  usage:`<mip-form-field-row label="开始时间" value="{{form.start}}" trailing="calendar" bind:tap="pickStart" />` },
+
+{ group:'primitive', name:'SectionHeader', cn:'区块标题', weapp:'mip-section-header',
+  desc:'16px 黄图标 + 16/500 标题(间距 4)+ 可选右侧附加文字。',
+  demos:[{label:'带 extra', html:`<div class="m-sec">${icon('lifebuoy',{w:16,h:16,color:'#fcdf03'})}我的圈子<span class="extra">查看全部</span></div>`},
+         {label:'无 extra', html:`<div class="m-sec">${icon('virus',{w:16,h:16,color:'#fcdf03'})}需要被理解的臭毛病</div>`}],
+  props:[['icon','string',"''",'注册表图标名'],['title','string',"''",'标题'],['extra','string',"''",'右侧附加文字']],
+  usage:`<mip-section-header icon="lifebuoy" title="我的圈子" extra="查看全部" />` },
+
+{ group:'primitive', name:'TagChip', cn:'标签 Chip', weapp:'mip-tag-chip',
+  desc:'h28 r8 + 1px 黑描边(黄元素规则);激活黄底黑字,默认 #202020 灰字。',
+  demos:[
+    {label:'两种状态', html:`<span class="m-chip on">仅玩家</span><span class="m-chip off">沙龙</span>`},
+    {label:'激活', html:`<span class="m-chip on">剧本杀</span>`},
+    {label:'默认', html:`<span class="m-chip off">剧本杀</span>`},
+  ],
+  props:[['label','string',"''",'文案'],['active','boolean','false','激活态'],['disabled','boolean','false','禁用'],['block','boolean','false','(mip-tag-chip)撑满整行'],['tap 事件','event','—','bind:tap({label,active})']],
+  usage:`<mip-tag-chip label="仅玩家" active="{{tagOn}}" bind:tap="onTag" />` },
+
+{ group:'primitive', name:'CityCell', cn:'城市格', weapp:null,
+  desc:'101×40 r8;激活黄底黑字,默认 #333/#f7f7f7。城市多选网格用。',
+  demos:[{label:'两种状态', html:`<span class="m-city on">深圳</span><span class="m-city off">广州</span>`}],
+  props:[['active','boolean','false','激活态'],['children','slot','—','城市名'],['onClick','event','—','点击']],
+  usage:`<CityCell active={true} onClick={pick}>深圳</CityCell>` },
+
+{ group:'primitive', name:'SearchBar', cn:'搜索框', weapp:'mip-search-bar',
+  desc:'351×40 r8 #202020;左 12px 搜索镜,#b3b3b3 占位,输入 14px 白字。',
+  demos:[{label:'占位', html:`<div class="m-search">${icon('search-big-left-1',{w:12,h:12,color:'#b3b3b3'})}<span class="ph">搜索</span></div>`},
+         {label:'有值', html:`<div class="m-search">${icon('search-big-left-1',{w:12,h:12,color:'#b3b3b3'})}<span class="ph" style="color:#fff">沙龙</span></div>`}],
+  props:[['value','string',"''",'受控值'],['placeholder','string','"搜索"','占位文案'],['disabled','boolean','false','禁用'],['change 事件','event','—','bind:change({value})'],['confirm 事件','event','—','bind:confirm({value})']],
+  usage:`<mip-search-bar placeholder="搜索活动" bind:change="onSearch" bind:confirm="onSearchGo" />` },
+
+{ group:'primitive', name:'AlphabetSlider', cn:'字母滑条', weapp:null,
+  desc:'A–Z# 竖排 11/600 品牌黄;父容器需提供高度并自己处理触摸换页。',
+  demos:[{label:'右侧滑条', html:`<div class="alphabox"><div class="alpha-slider">${'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').map(l=>`<span>${l}</span>`).join('')}</div></div>`}],
+  props:[['letters','string','"A–Z#"','字母序列']],
+  usage:`<AlphabetSlider /> <!-- 放入 relative 容器,父级处理 tap/move -->` },
+
+{ group:'primitive', name:'PrimaryButton', cn:'主按钮', weapp:'mip-primary-button',
+  desc:'351×56 液态玻璃外圈 + 327×40 品牌黄内芯(1px #080808 描边),文字 16/500 黑;禁用 40% 透明。',
+  demos:[
+    {label:'默认', html:`<div class="m-pbtn"><button>保存</button></div>`},
+    {label:'disabled', html:`<div class="m-pbtn"><button disabled>保存</button></div>`},
+    {label:'loading(mip)', html:`<div class="m-pbtn"><button disabled>保存中…</button></div>`},
+  ],
+  props:[['label','string','"保存"','按钮文案'],['disabled','boolean','false','禁用'],['loading','boolean','false','(mip-primary-button)加载态'],['tap 事件','event','—','bind:tap']],
+  usage:`<mip-primary-button label="提交报名" disabled="{{!canSubmit}}" bind:tap="submit" />` },
+
+{ group:'primitive', name:'PillButton', cn:'胶囊按钮', weapp:'mip-pill-button',
+  desc:'h40 r100 + 1px 黑描边 + 可选 20px 图标;primary 黄底黑字,secondary #202020 底黄字。',
+  demos:[
+    {label:'primary', html:`<button class="m-pillbtn pri">${icon('wechat-2-2',{w:16,h:15,color:'#080808'})}立即续费</button>`},
+    {label:'secondary', html:`<button class="m-pillbtn sec">${icon('icon-plus-fill',{w:14,h:14,color:'#fcdf03'})}邀请加入</button>`},
+  ],
+  props:[['label','string',"''",'文案'],['variant','string','"primary"','primary / secondary'],['withIcon','boolean','false','(mip-pill-button)带左侧图标'],['disabled','boolean','false','禁用'],['loading','boolean','false','加载态'],['tap 事件','event','—','bind:tap']],
+  usage:`<mip-pill-button label="邀请加入" variant="secondary" withIcon bind:tap="invite" />` },
+
+{ group:'primitive', name:'AddButton', cn:'添加卡', weapp:null,
+  desc:'351×100 r8 #202020 + 0.5px 品牌黄虚线(4:4 段长,需 SVG 直译);内容「＋添加」居中。',
+  demos:[{label:'默认', html:`<button class="m-addbtn" style="border:0;cursor:pointer">
+    <svg class="frame" viewBox="0 0 351 100" preserveAspectRatio="none"><rect x="0.25" y="0.25" width="350.5" height="99.5" rx="7.75" fill="none" stroke="#fcdf03" stroke-width="1" stroke-dasharray="8 8"/></svg>
+    <span class="inner">${icon('icon-plus-fill',{w:14,h:14,color:'#fcdf03'})}添加</span></button>`}],
+  props:[['children','string','"添加"','文案'],['onClick','event','—','点击']],
+  usage:`<AddButton onClick={add}>添加项目</AddButton>` },
+
+{ group:'primitive', name:'Switch', cn:'iOS 开关', weapp:null,
+  desc:'51×31;ON #07c160 / OFF #39393d,27px 白旋钮带投影。点击预览可切换。',
+  demos:[
+    {label:'OFF', html:`<span class="m-switch off" data-act="switch"><i></i></span>`},
+    {label:'ON', html:`<span class="m-switch on" data-act="switch"><i></i></span>`},
+  ],
+  props:[['checked','boolean','false','开态'],['onChange','event','—','切换回调']],
+  usage:`<Switch checked={on} onChange={setOn} />` },
+
+{ group:'primitive', name:'IconBadge', cn:'图标徽章', weapp:null,
+  desc:'16px 品牌黄圆 + 内缩 2px 深色图标 + 10px 白标签;合作卡/价格头的「条内图标+标签」都由它构成。',
+  demos:[{label:'靶心·我的目标', html:`<span class="m-iconbadge"><span class="ball">${icon('target',{w:10,h:10})}</span><span class="lb">我的目标</span></span>`},
+         {label:'奖杯·需要引荐', html:`<span class="m-iconbadge"><span class="ball">${icon('cup',{w:10,h:9})}</span><span class="lb">需要引荐</span></span>`}],
+  props:[['icon','string','必填','注册表图标名'],['label','string',"''",'右侧标签'],['color','string','"#202020"','圆内图标颜色']],
+  usage:`<IconBadge icon="target" label="我的目标" />` },
+
+{ group:'primitive', name:'StarRating', cn:'星级评分', weapp:null,
+  desc:'5×20px 星,间距 2px;满星品牌黄,空星 #4d4d4d。点击预览可打分。',
+  demos:[
+    {label:'3 星', html:starsDemo(3)},
+    {label:'5 星', html:starsDemo(5)},
+    {label:'0 星', html:starsDemo(0)},
+  ],
+  props:[['value','number','0','当前分'],['max','number','5','总分'],['size','number','20','星尺寸']],
+  usage:`<StarRating value={score} onChange={setScore} />` },
+
+{ group:'primitive', name:'ScoreCard', cn:'打分卡', weapp:null,
+  desc:'170×68 r8 #202020:维度名 12/500 + StarRating;特征打分网格用。',
+  demos:[{label:'会玩', html:`<div class="m-score"><span class="tt">会玩程度</span>${starsDemo(4)}</div>`}],
+  props:[['title','string','必填','维度名'],['value','number','0','当前分'],['onChange','event','—','打分回调']],
+  usage:`<ScoreCard title="会玩程度" value={v} onChange={setV} />` },
+);
+
+/* ---------- 业务组件 ---------- */
+TILES.push(
+{ group:'business', name:'TipBanner', cn:'通栏提示', weapp:null,
+  desc:'375×32 品牌黄通栏,#080808 14/500 文案。',
+  demos:[{label:'默认', html:`<div class="m-tip">9 月 20 日沙龙报名截止</div>`}],
+  props:[['children','slot','—','文案']],
+  usage:`<TipBanner>9 月 20 日沙龙报名截止</TipBanner>` },
+
+{ group:'business', name:'AiAssistCard', cn:'AI 助手入口卡', weapp:null,
+  desc:'351×100 r8 #202020 + 1px 品牌黄描边;AI 图标 + 14/500 黄字居中。',
+  demos:[{label:'默认', html:`<button class="m-ai" style="cursor:pointer"><span style="position:relative;width:24px;height:24px;display:inline-block">${icon('chat-smile-ai-3-2',{w:22,h:21,color:'#fcdf03',style:'position:absolute;left:2px;top:1px'})}${icon('chat-smile-ai-3',{w:12,h:6,color:'#fcdf03',style:'position:absolute;left:6px;top:9px'})}</span>AI助手</button>`}],
+  props:[['title','string','"AI助手"','文案'],['onClick','event','—','点击']],
+  usage:`<AiAssistCard onClick={openAi} />` },
+
+{ group:'business', name:'LevelBadge', cn:'Lv 徽章', weapp:null,
+  desc:'34×16 r4 #242424 + 0.5px 黑描边,10/600 品牌黄;ProfileHeader/GuestCard 内用。',
+  demos:[{label:'默认', html:`<span class="m-lv">Lv.23</span>`},{label:'其他等级', html:`<span class="m-lv">Lv.7</span>`}],
+  props:[['children','string','"Lv.23"','等级文案']],
+  usage:`<LevelBadge>Lv.23</LevelBadge>` },
+
+{ group:'business', name:'ProfileHeader', cn:'个人信息头', weapp:null,
+  desc:'80px 头像(2px 页面底色圆环)+ 名字 16/500 + Lv 徽章 + 勋章 20px + meta + 一行简介。',
+  demos:[{label:'完整', html:`<div class="m-prohead">
+    <img class="av" src="${avatar(0)}" /><span class="ring"></span>
+    <span class="nm">猫策划</span><span class="lv"><span class="m-lv">Lv.23</span></span>
+    ${icon('copper-diamond',{w:20,h:18,color:'#fcdf03',style:'position:absolute;left:180px;top:10px'})}
+    <span class="mt">深圳 · 沙龙主理人</span><span class="it">把不可能变成可能。</span></div>`}],
+  props:[['avatar','string','—','头像 URL'],['name','string','—','名字'],['level','string','—','Lv 文案'],['meta','string','—','元信息'],['intro','string','—','一行简介'],['badge','string','—','勋章图 URL']],
+  usage:`<ProfileHeader avatar={u.avatar} name={u.name} level="Lv.23" meta="深圳 · 沙龙主理人" intro={u.bio} />` },
+
+{ group:'business', name:'StatHeader', cn:'四列统计头', weapp:'mip-stat-header',
+  desc:'351×68 r8 #202020 四等列:数值 20/500 + 标签 10/400,可选红色角标。',
+  demos:[{label:'带角标', html:`<div class="m-stat">
+    ${[["128","嘉宾",""],["56","互动过",""],["9.9k","魅力值","6"],["421","访客",""]].map((s,i)=>`<div class="col" style="left:${31.5+i*80}px"><span class="v">${s[0]}${s[2]?`<em>${s[2]}</em>`:''}</span><span class="l">${s[1]}</span></div>`).join('')}</div>`}],
+  props:[['stats','array','[]','[{value,label,badge?}]'],['select 事件','event','—','(mip-stat-header)bind:select({index,label})']],
+  usage:`<mip-stat-header stats="{{[{value:'128',label:'嘉宾'},{value:'9.9k',label:'魅力值',badge:'6'}]}}" bind:select="onStat" />` },
+
+{ group:'business', name:'LevelBanner', cn:'玩家等级横幅', weapp:'mip-level-banner',
+  desc:'702×160rpx 品牌黄卡:装饰固定用 level-banner-deco@3x.png(无 deco 属性!);文字与进度条是代码层,进度按 current/target 推导,fillPx 可覆盖。',
+  demos:[
+    {label:'Lv.23 · 3000/40000', html:levelBannerDemo('Lv.23',3000,40000)},
+    {label:'Lv.8 · 900/1000', html:levelBannerDemo('Lv.8',900,1000)},
+    {label:'Lv.30 · 满', html:levelBannerDemo('Lv.30',9999,10000)},
+  ],
+  props:[['level','string','"Lv.23"','左侧等级'],['current','number','3000','当前经验'],['target','number','40000','目标经验'],['fillPx','number','0','进度条宽覆盖(设计 px,0=自动)']],
+  usage:`<mip-level-banner level="Lv.23" current="{{3000}}" target="{{40000}}" />` },
+
+{ group:'business', name:'MipWordmark', cn:'MIP 字标', weapp:null,
+  desc:'47×15 的 M-I-P 组合,用注册表字母图标拼装;默认 #F2E6FF(合作卡左上角)。',
+  demos:[{label:'默认', html:`<span class="m-wordmark" style="color:#F2E6FF">${icon('letter-m-display-8',{w:17.1,h:15,style:'position:absolute;left:0'})}${icon('letter-i-display-6',{w:4.3,h:15,style:'position:absolute;left:21.4px'})}${icon('letter-p-display-13',{w:17.1,h:15,style:'position:absolute;left:30px'})}</span>`},
+         {label:'品牌黄', html:`<span class="m-wordmark" style="color:#fcdf03">${icon('letter-m-display-8',{w:17.1,h:15,style:'position:absolute;left:0'})}${icon('letter-i-display-6',{w:4.3,h:15,style:'position:absolute;left:21.4px'})}${icon('letter-p-display-13',{w:17.1,h:15,style:'position:absolute;left:30px'})}</span>`}],
+  props:[['color','string','"#F2E6FF"','字标颜色']],
+  usage:`<MipWordmark color="#F2E6FF" />` },
+
+{ group:'business', name:'CooperationCard', cn:'合作卡(6 角色变种)', weapp:'mip-cooperation-card',
+  desc:'351×200 r16:装饰层 = 单张烘焙底图(角色插画/印章/MIP 字标全在图里);代码层只叠人名 + 目标/引荐两条。变种即选底图,有且只有 6 个。',
+  demos:[
+    {label:'dogplaner 狗策划', html:coopDemo('dogplaner')},
+    {label:'upstart 暴发户', html:coopDemo('upstart')},
+    {label:'design-slave 死美工', html:coopDemo('design-slave')},
+    {label:'pimp 皮条客', html:coopDemo('pimp')},
+    {label:'business-man 生意佬', html:coopDemo('business-man')},
+    {label:'old-nanny 老保姆', html:coopDemo('old-nanny')},
+  ],
+  props:[['variant','string','"dogplaner"','六选一:dogplaner/upstart/design-slave/pimp/business-man/old-nanny'],['name','string','角色默认名','人名(CJK PingFang 600 + 拉丁 Baloo 400,全大写)'],['goal','string','—','我的目标值(缺省隐藏该条)'],['referral','string','—','需要引荐值'],['goalLabel','string','"我的目标"','目标条标签'],['referralLabel','string','"需要引荐"','引荐条标签'],['roleKey','string',"''",'(mip-cooperation-card)角色 key'],['positioning','string',"''",'(mip-cooperation-card)定位文案'],['compact / showDetails','boolean','false / true','(mip-cooperation-card)紧凑/详情条开关']],
+  usage:`<mip-cooperation-card role-key="dogplaner" name="狗策划" positioning="让活动不掉链子" target-summary="3 场/月" />` },
+
+{ group:'business', name:'OrderTag', cn:'订单角标', weapp:'mip-order-tag',
+  desc:'h16 r4 + 0.5px 描边,10/500;按 label 命中预设配色(仅玩家/沙龙),也可 bg/border/color 全自定义。',
+  demos:[
+    {label:'预设:仅玩家/沙龙', html:`<span class="m-otag" style="background:#fde530;border-color:#d0b801;color:#000">仅玩家</span><span class="m-otag" style="background:#428bff;border-color:#075adf;color:#f7f7f7">沙龙</span>`},
+    {label:'自定义', html:`<span class="m-otag" style="background:#ff5500;border-color:#b53c00;color:#fff">新品</span>`},
+  ],
+  props:[['label','string','必填','文案(命中预设即用预设色)'],['bg / border / color','string',"''",'覆盖预设配色']],
+  usage:`<mip-order-tag label="仅玩家" />` },
+
+{ group:'business', name:'OrderCard', cn:'订单卡', weapp:'mip-order-card',
+  desc:'351 宽 r8:头图 149 高(右下角标组、左下参与 pill)+ 标题 + 图标信息行 + 底条(状态角标 + 实付款黄色金额)。',
+  demos:[{label:'典型订单', html:`<div class="m-ocard">
+    <div class="body"><div class="coverbox">
+      <img class="cover" src="${coverImg(351,149,'#4a3a00','#151515','EVENT')}" ${IMG_FALLBACK} />
+      <div class="tagrow"><span class="m-otag" style="background:#fde530;border-color:#d0b801;color:#000">仅玩家</span></div>
+      <div class="ppl"><img src="${avatar(1)}" style="z-index:3"/><img src="${avatar(2)}" style="margin-left:-9px;z-index:2"/><span class="pl">+</span><span class="pc">45参加</span></div>
+    </div>
+    <div class="tt">城中村夜游·在地文化沙龙 第 4 期</div>
+    <div class="rows">
+      <div class="rw"><span class="ib">${icon('calendar-schedule',{w:14,h:14,color:'#fcdf03'})}</span>09-20 周六 19:00</div>
+      <div class="rw"><span class="ib">${icon('icon-map-pin-line',{w:12,h:14,color:'#fcdf03'})}</span>南头古城 if 工厂 3F</div>
+    </div></div>
+    <div class="foot"><span class="st">待使用</span><span class="pay"><small>实付款:¥</small><b>68</b></span></div></div>`}],
+  props:[['image','string',"''",'头图'],['title','string',"''",'标题'],['rows','array','[]','[{icon,text}] 信息行'],['status','string',"''",'状态角标文案'],['statusBrand','boolean','false','(mip-order-card)状态角标品牌色'],['payment','number|string',"''",'实付金额'],['paymentLabel','string',"''",'(mip-order-card)金额前缀'],['radius','string','"16rpx"','(mip-order-card)圆角'],['tap 事件','event','—','bind:tap']],
+  usage:`<mip-order-card image="{{o.cover}}" title="{{o.title}}" rows="{{o.rows}}" status="待使用" payment="{{o.paid}}" bind:tap="openOrder" />` },
+
+{ group:'business', name:'PriceHeader + PriceRow + PriceRowGroup', cn:'价格明细组', weapp:null,
+  desc:'价格明细三件套:头行(黄圆图标+标题)、行(label + ¥值,highlight 总计黄色大数字)、分组共享 8px 圆角壳。',
+  demos:[{label:'订单详情价格区', html:`<div class="m-price">
+    <div class="m-prow" style="justify-content:flex-start;gap:4px"><span class="m-iconbadge"><span class="ball">${icon('money-cny-box',{w:10,h:10})}</span></span>价格明细</div>
+    <div class="m-prow"><span>门票</span><span class="v">¥<b style="font-size:12px;font-weight:500;color:#fff">68</b></span></div>
+    <div class="m-prow"><span>新人优惠</span><span class="v">¥-8</span></div>
+    <div class="m-prow"><span style="font-weight:500">总计</span><span class="v"><small>¥</small><b>60</b></span></div></div>`}],
+  props:[['PriceHeader: icon / title','string','money-cny-box / 价格明细','头行图标与标题'],['PriceRow: label / value / highlight','string / string / boolean','—','行内容;highlight=总计'],['PriceRowGroup','slot','—','包住行,提供圆角壳']],
+  usage:`<PriceRowGroup>\n  <PriceRow label="门票" value="68" />\n  <PriceRow label="总计" value="60" highlight />\n</PriceRowGroup>` },
+
+{ group:'business', name:'GuestCard / talent-card', cn:'嘉宾卡', weapp:'talent-card',
+  desc:'170×187 r8 #202020:Lv 徽章 + 56px 头像 + 名字 + meta + 两行简介 + 底部勋章/邀请人行。小程序侧由 talent-card 承接(视觉近似示意)。',
+  demos:[{label:'完整', html:`<div class="m-guest">
+    <span class="lv m-lv">Lv.23</span><img class="av" src="${avatar(3)}" ${IMG_FALLBACK}/>
+    <span class="nm">桃桃</span><span class="mt">深圳 · 即兴玩家</span>
+    <p class="it">喜欢把冷场变成梗,欢迎来玩。</p>
+    ${icon('copper-diamond',{w:20,h:18,color:'#fcdf03',style:'position:absolute;left:8px;top:159px'})}
+    <span class="iv">邀请人:老K</span><img class="ivav" src="${avatar(4)}" ${IMG_FALLBACK}/></div>`}],
+  props:[['displayName','string','"MIP 用户"','(talent-card)名字'],['avatarUrl / badgeImageUrl','string',"''",'头像/勋章'],['levelText / kindLabel / metaText','string',"''",'Lv / 身份 / 元信息'],['supportingText','string',"''",'简介'],['roleNames / roleTags','array','[]','角色标签'],['inviterName / inviterAvatarUrl','string',"''",'邀请人'],['targetText','string',"''",'目标文案']],
+  usage:`<talent-card display-name="桃桃" level-text="Lv.23" meta-text="深圳 · 即兴玩家" supporting-text="{{g.intro}}" inviter-name="老K" />` },
+
+{ group:'business', name:'TaskCard', cn:'NPC 任务卡', weapp:null,
+  desc:'351×67 r8 #202020:标题 + 描述 + +EXP 黄字 + 胶囊按钮(去完成=黄底/已完成=黑底黄字,完成后无 EXP)。',
+  demos:[
+    {label:'去完成', html:`<div class="m-task"><div class="tx"><div class="t1">发布 1 条超级案例</div><div class="t2">带话题 #把不可能变成可能</div></div><span class="exp">+ <small>EXP</small> 200</span><button class="todo">去完成</button></div>`},
+    {label:'已完成', html:`<div class="m-task"><div class="tx"><div class="t1">完善个人名片</div></div><button class="done">已完成</button></div>`},
+  ],
+  props:[['title / desc','string','必填 / 可选','标题与描述'],['exp','number','—','奖励 EXP(无则不显示)'],['done','boolean','false','完成态'],['actionText','string','"去完成"','按钮文案'],['onAction','event','—','按钮点击']],
+  usage:`<TaskCard title="发布 1 条超级案例" desc="带话题" exp={200} onAction={go} />` },
+
+{ group:'business', name:'EmptyState', cn:'空状态', weapp:'mip-empty-state',
+  desc:'居中插画 180×180 + 16/500 白文案;插画用页面已导出资产(不在烘焙包内)。',
+  demos:[{label:'默认文案', html:`<div class="m-empty"><div style="width:120px;height:120px;border-radius:24px;background:linear-gradient(135deg,#2a2410,#151515);display:flex;align-items:center;justify-content:center">${icon('copper-diamond',{w:44,h:40,color:'#fcdf03'})}</div><span class="tx">页面不在MIP星球</span></div>`}],
+  props:[['title','string',"''",'(mip-empty-state)主文案'],['description','string',"''",'(mip-empty-state)副文案'],['actionText','string',"''",'(mip-empty-state)操作按钮,有值才渲染'],['action 事件','event','—','bind:action'],['image / text','string','— / "页面不在MIP星球"','(SOT)插画与默认文案']],
+  usage:`<mip-empty-state title="暂无活动" description="去发现页看看" action-text="去发现" bind:action="goDiscover" />` },
+
+{ group:'business', name:'Dialog', cn:'iOS 弹窗', weapp:'mip-dialog',
+  desc:'320 宽 r8 #333 + 60% 黑遮罩:标题/正文 17px 居中 + 发丝线分隔按钮行(#7d90a9);single=单按钮「我知道了」变体,confirmDisabled 置灰。点预览按钮体验真弹窗。',
+  demos:[
+    {label:'双按钮', html:`<button class="vchip" data-act="dialog2">打开双按钮弹窗</button>`},
+    {label:'单按钮', html:`<button class="vchip" data-act="dialog1">打开单按钮弹窗</button>`},
+    {label:'confirmDisabled', html:`<button class="vchip" data-act="dialogd">打开禁用确认弹窗</button>`},
+  ],
+  props:[['open','boolean','false','显示开关'],['title','string',"''",'标题'],['children','slot','—','正文'],['cancelText / confirmText','string','取消 / 确定','按钮文案'],['single','boolean','false','单按钮变体'],['button','string',"''",'(mip-dialog)单按钮文案'],['frameOnly','boolean','false','(mip-dialog)只渲染框体'],['confirmDisabled','boolean','false','确认禁用'],['cancel / confirm 事件','event','—','bind:cancel / bind:confirm']],
+  usage:`<mip-dialog open="{{show}}" title="删除提示" confirm-text="删除" bind:confirm="doDelete" bind:cancel="close" />` },
+
+{ group:'business', name:'RecordPulse', cn:'录音按钮', weapp:null,
+  desc:'三层光晕:#fff7b8 88 → #feeb5d 76 → 品牌黄 64 + 32px 麦克风。',
+  demos:[{label:'默认', html:`<button class="m-pulse" style="border:0;cursor:pointer"><span class="r2"><span class="r3">${icon('mic-ai-fill-1',{w:32,h:32,color:'#080808'})}</span></span></button>`}],
+  props:[['onClick','event','—','按住/点击']],
+  usage:`<RecordPulse onClick={start} />` },
+
+{ group:'business', name:'RoundIconButton', cn:'圆形图标按钮', weapp:null,
+  desc:'40×40 圆:check #18e779 勾 / close #ff4d5e 叉,32px 白色线稿。',
+  demos:[{label:'两种', html:`<button class="m-ricon check"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg></button><button class="m-ricon close"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg></button>`}],
+  props:[['type','string','"check"','check / close'],['onClick','event','—','点击']],
+  usage:`<RoundIconButton type="check" onClick={ok} />` },
+
+{ group:'business', name:'TimerText', cn:'录音计时', weapp:null,
+  desc:'48/700 SF Pro Text 品牌黄,tabular-nums 等宽数字。',
+  demos:[{label:'00:00:00', html:`<span class="m-timer">00:00:00</span>`},{label:'计时中', html:`<span class="m-timer">00:04:36</span>`}],
+  props:[['value','string','"00:00:00"','HH:MM:SS']],
+  usage:`<TimerText value={clock} />` },
+
+{ group:'business', name:'AttendPill', cn:'参加/引荐人数胶囊', weapp:'mip-attend-pill',
+  desc:'116×28 r100:最多 3 个 24px 头像(步进 15,白描边)+「+」+ 计数;dark=#242424 白字(活动卡),yellow=品牌黄黑字(机会卡)。',
+  demos:[
+    {label:'dark 参加', html:attendDemo('dark',45,'参加')},
+    {label:'yellow 引荐', html:attendDemo('yellow',45,'引荐')},
+  ],
+  props:[['count','number','45','人数'],['label','string','"参加"','计数后缀'],['avatars','array','[]','头像 URL,最多取 3'],['variant','string','"dark"','dark / yellow'],['disabled','boolean','false','(mip-attend-pill)禁用'],['tap 事件','event','—','bind:tap({count})']],
+  usage:`<mip-attend-pill count="{{45}}" label="参加" avatars="{{avs}}" variant="dark" />` },
+
+{ group:'business', name:'ActivityCard', cn:'活动卡', weapp:'mip-activity-card',
+  desc:'351×238 r8 #202020:封面 149 高 + 右下黄标签 chips + AttendPill(dark) + 标题 + 日历/地点行 + 右下分享圆。',
+  demos:[{label:'典型活动', html:`<div class="m-acard">
+    <img class="cover" src="${coverImg(351,149,'#3a2f00','#141414','ACTIVITY')}" ${IMG_FALLBACK}/>
+    <div class="tagrow"><span class="tg">仅玩家</span></div>
+    <span class="ap">${attendDemo('dark',45,'参加')}</span>
+    <span class="tt">城中村夜游·在地文化沙龙 第 4 期</span>
+    <span class="meta" style="top:187px">${icon('calendar-schedule',{w:16,h:16,color:'#fff'})}09-20 周六 19:00</span>
+    <span class="meta" style="top:209px">${icon('icon-map-pin-line',{w:12,h:14,color:'#fff'})}南头古城 if 工厂 3F</span>
+    <button class="share">${icon('share-circle',{w:13,h:13,color:'#080808'})}</button></div>`}],
+  props:[['event','object','{}','(mip-activity-card)活动数据对象'],['variant / compact','string / boolean','default / false','(mip-activity-card)形态'],['showAction / showShare / actionLoading','boolean','false','操作按钮与分享开关'],['select / action 事件','event','—','bind:select({id,status}) / bind:action({id,action})'],['cover / tags / date / location / attendees / avatars / onShare','—','—','(SOT)封面、标签、时间地点、人数、分享']],
+  usage:`<mip-activity-card event="{{item}}" show-share bind:select="openEvent" />` },
+
+{ group:'business', name:'OpportunityCard', cn:'机会卡', weapp:'mip-opportunity-card',
+  desc:'351×176 r8 #202020:左 120×160 r4 缩略图 + 标题 + 三行黄图标信息(价值/地区/寻找)+ AttendPill(yellow 引荐)。',
+  demos:[{label:'典型机会', html:`<div class="m-ocard2">
+    <img class="th" src="${coverImg(120,160,'#12324a','#101418','TALENT')}" ${IMG_FALLBACK}/>
+    <span class="tt">找桌游主理人合作周常局</span>
+    <span class="meta" style="top:42px">${icon('remix-icons-finance-money-cny-circle',{w:13,h:13,color:'#fcdf03'})}单场 ¥800</span>
+    <span class="meta" style="top:65px">${icon('icon-map-pin-line',{w:12,h:14,color:'#fcdf03'})}深圳·南山</span>
+    <span class="meta" style="top:88px">${icon('service',{w:14,h:13,color:'#fcdf03'})}需要懂规则讲解</span>
+    <span class="ap">${attendDemo('yellow',45,'引荐')}</span></div>`}],
+  props:[['title','string',"''",'标题'],['coverUrl','string',"''",'左侧缩略图'],['valueText / locationText / targetText','string',"''",'价值/地区/寻找三行'],['referralCount','number','0','引荐人数'],['avatars','array','[]','头像'],['publishedText','string',"''",'发布时间'],['select 事件','event','—','整卡点击(mip 侧 view 内处理)']],
+  usage:`<mip-opportunity-card title="{{o.title}}" cover-url="{{o.cover}}" value-text="{{o.value}}" location-text="{{o.region}}" target-text="{{o.seeking}}" referral-count="{{o.referrals}}" />` },
+
+{ group:'business', name:'ActionSheet', cn:'半屏选择面板', weapp:null,
+  desc:'全宽底栏 #333/95 + 24px 背景模糊:标题栏 56 + 选项行 56(发丝线,选中项品牌黄)+ 取消(白 10%)/完成(#07c160) 108×40 + HomeIndicator。点预览体验。',
+  demos:[{label:'打开面板', html:`<button class="vchip" data-act="sheet">打开 ActionSheet</button>`}],
+  props:[['open','boolean','false','显示开关'],['title','string',"''",'标题栏'],['options','array','[]','选项文案数组'],['activeIndex','number','-1','选中项(品牌黄)'],['cancelText / confirmText','string','取消 / 完成','按钮文案'],['children','slot','—','自定义主体(如日期轮盘)'],['cancel / confirm 事件','event','—','bind:cancel / bind:confirm']],
+  usage:`<ActionSheet open={open} title="选择日期" options={days} activeIndex={idx} onConfirm={ok} />` },
+);
+
+/* ---------- 小程序专属 ---------- */
+TILES.push(
+{ group:'weapp', name:'catalog-selector', cn:'目录多选器', weapp:'catalog-selector',
+  desc:'分组多选目录(标签/行业等),含热门项与「不限」清除,超上限提示。',
+  demos:[{label:'近似示意', html:`<div style="width:351px;border-radius:8px;background:#202020;padding:12px;display:flex;flex-wrap:wrap;gap:8px">
+    <span class="m-chip on">剧本杀</span><span class="m-chip on">桌游</span><span class="m-chip off">露营</span><span class="m-chip off">City Walk</span><span class="m-chip off">观展</span></div>`}],
+  props:[['title','string',"''",'标题'],['groups','array','[]','[{id,name,options:[{id,name}]}]'],['selectedIds','array','[]','已选 id'],['multiple','boolean','true','多选'],['maxSelections','number','8','上限'],['clearLabel','string','"不限"','清除按钮文案']],
+  usage:`<catalog-selector groups="{{catalog.groups}}" selected-ids="{{form.ids}}" max-selections="{{8}}" />` },
+
+{ group:'weapp', name:'event-participant-preview', cn:'参与人头像堆', weapp:'event-participant-preview',
+  desc:'活动详情里的参与人头像堆叠 + 计数文案(AttendPill 的数据驱动版)。',
+  demos:[{label:'近似示意', html:`<div style="display:flex;align-items:center;height:28px;border-radius:100px;background:#242424;padding:0 10px 0 2px">
+    <img src="${avatar(0)}" style="width:24px;height:24px;border-radius:100px;position:relative;z-index:3"/><img src="${avatar(1)}" style="width:24px;height:24px;border-radius:100px;margin-left:-9px;position:relative;z-index:2"/><img src="${avatar(2)}" style="width:24px;height:24px;border-radius:100px;margin-left:-9px;position:relative;z-index:1"/><span style="margin-left:6px;font-size:10px;font-weight:600;color:#fff">+</span><span style="margin-left:2px;font-size:12px;font-weight:600;color:#fff">45人参加</span></div>`}],
+  props:[['participants','array','[]','[{avatarUrl}]'],['count','number','0','总人数'],['countText / plusLabel / remainText','string',"''",'计数/加号/余位文案']],
+  usage:`<event-participant-preview participants="{{ev.participants}}" count="{{ev.count}}" />` },
+
+{ group:'weapp', name:'mip-subscription-prompt', cn:'订阅消息提示', weapp:'mip-subscription-prompt',
+  desc:'微信订阅消息授权行:说明文案 + 申请按钮;按 templateKey 查询能力,未授权不影响流程。',
+  demos:[{label:'近似示意', html:`<div style="width:351px;border-radius:8px;background:#202020;padding:12px;display:flex;align-items:center;gap:10px">
+    <div style="flex:1"><div style="font-size:13px;color:#fff">接收活动提醒</div><div style="font-size:10px;color:#b3b3b3;margin-top:2px">通过微信接收活动提醒,可自愿开启。</div></div>
+    <button class="m-pillbtn pri" style="height:30px;font-size:12px;padding:0 12px">开启</button></div>`}],
+  props:[['templateKey','string','"EVENT_REMINDER"','订阅模板 key'],['label','string','"接收活动提醒"','主文案'],['description','string','见源码','说明文案']],
+  usage:`<mip-subscription-prompt template-key="EVENT_REMINDER" />` },
+
+{ group:'weapp', name:'sticky-actions', cn:'底部吸附操作条', weapp:'sticky-actions',
+  desc:'液态玻璃外壳 + 具名插槽 actions + 自动安全区垫片;页面底部主操作统一放这里。',
+  demos:[{label:'近似示意', html:`<div style="width:375px;background:rgba(32,32,32,.9);border:1px solid #2a2a2a;border-radius:14px;padding:10px 12px 6px;backdrop-filter:blur(20px)"><div class="m-pbtn" style="width:100%;height:48px"><button style="width:100%">提交报名</button></div><div style="height:14px;display:flex;justify-content:center;align-items:flex-end;padding-bottom:2px"><i style="width:100px;height:4px;border-radius:100px;background:#fff;display:block;opacity:.7"></i></div></div>`}],
+  props:[['slot "actions"','slot','—','操作内容(放 mip-primary-button 等)']],
+  usage:`<sticky-actions>\n  <mip-primary-button slot="actions" label="提交报名" bind:tap="submit" />\n</sticky-actions>` },
+
+{ group:'weapp', name:'page-exit', cn:'二级页返回', weapp:'page-exit',
+  desc:'二级页底部返回按钮:按 managed/always 决定返回 tab 还是出栈;触发 exit。',
+  demos:[{label:'近似示意', html:`<button class="m-pillbtn sec" style="width:351px;justify-content:center">返回</button>`}],
+  props:[['label','string','"返回"','按钮文案'],['tabUrl','string','"/pages/index/index"','回退 tab'],['primary','boolean','false','实心样式'],['managed / always','boolean','false','受管返回/总是退出'],['exit 事件','event','—','bind:exit']],
+  usage:`<page-exit label="返回机会页" primary />` },
+
+{ group:'weapp', name:'top-safe-area', cn:'顶部安全区占位', weapp:'top-safe-area',
+  desc:'自定义导航页的状态栏高度占位,高度来自平台导航配置,无需传参。',
+  demos:[{label:'示意', html:`<div style="width:375px;height:47px;background:repeating-linear-gradient(45deg,#141414,#141414 8px,#1b1b1b 8px,#1b1b1b 16px);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6f6f6f">状态栏高度占位(自动)</div>`}],
+  props:[['(无属性)','—','—','高度自动同步']],
+  usage:`<top-safe-area />` },
+);
+
+/* ================= 弹层 ================= */
+const host = document.getElementById('overlay-host');
+function openDialog({title, body, cancel, confirm, single, disabled}){
+  host.innerHTML = `<div class="ovl-bg" data-act="ovl-close"></div>
+    <div class="ovl-center"><div class="m-dialog">
+      <div class="bd"><div class="tt">${esc(title)}</div>${body?`<div class="ct">${esc(body)}</div>`:''}</div>
+      <div class="btns">${ single
+        ? `<button ${disabled?'disabled':''}>${esc(confirm)}</button>`
+        : `<button>${esc(cancel)}</button><button ${disabled?'disabled':''}>${esc(confirm)}</button>` }</div>
+    </div></div>`;
+  host.classList.add('on');
+}
+function openSheet(){
+  host.innerHTML = `<div class="ovl-bg" data-act="ovl-close"></div>
+    <div class="m-sheet">
+      <div class="ttbar">选择日期</div>
+      <div class="opt on">09-20 周六</div>
+      <div class="opt">09-21 周日</div>
+      <div class="opt">09-27 周六</div>
+      <div class="btns"><button class="cancel">取消</button><button class="ok">完成</button></div>
+      <div style="position:absolute;inset:auto 0 0 0;height:34px;display:flex;justify-content:center;align-items:flex-start;padding-top:9px"><span style="width:134px;height:5px;border-radius:100px;background:#fff;display:block"></span></div>
+    </div>`;
+  host.classList.add('on');
+}
+host.addEventListener('click', e=>{ if(e.target.closest('[data-act="ovl-close"]') || e.target.classList.contains('m-dialog') || e.target.closest('.m-sheet')) host.classList.remove('on'); });
+
+/* ================= 状态交互(TabBar/Switch/Star) ================= */
+document.addEventListener('click', e=>{
+  const el = e.target.closest('[data-act]');
+  if(!el) return;
+  const act = el.dataset.act;
+  if(act==='tab'){
+    const stage = el.closest('.stage'); if(!stage) return;
+    stage.innerHTML = tabbarDemo(Number(el.dataset.tab));
+  } else if(act==='switch'){
+    el.classList.toggle('on'); el.classList.toggle('off');
+  } else if(act==='stars'){
+    const box = el.closest('.stage'); if(!box) return;
+    const rects = [...el.querySelectorAll('svg')];
+    const idx = rects.indexOf(e.target.closest('svg'));
+    if(idx<0) return;
+    const v = idx+1;
+    el.outerHTML = starsDemo(v);
+  } else if(act==='dialog2'){
+    openDialog({title:'删除这条超级案例?', body:'删除后不可恢复', cancel:'取消', confirm:'删除'});
+  } else if(act==='dialog1'){
+    openDialog({title:'报名成功', body:'开始前 2 小时会提醒你', single:true, confirm:'我知道了'});
+  } else if(act==='dialogd'){
+    openDialog({title:'确认提交?', body:'提交后信息将进入审核', cancel:'取消', confirm:'提交', disabled:true});
+  } else if(act==='sheet'){
+    openSheet();
+  }
+});
+
+/* ================= Tokens 渲染 ================= */
+document.getElementById('tk-colors').innerHTML = COLOR_TOKENS.map(([n,v,u])=>`<span class="sw"><i style="background:${v}"></i>${n} ${v}</span>`).join('');
+document.getElementById('tk-radius').innerHTML = RADIUS_TOKENS.map(([v,u])=>`<span><b>r${v}</b> ${u}</span>`).join('');
+document.getElementById('tk-layout').innerHTML = LAYOUT_TOKENS.map(([v,u])=>`<span><b>${v}</b> ${u}</span>`).join('');
+document.getElementById('tk-font').innerHTML = FONT_TOKENS.map(([n,s])=>`<span><b>${n}</b> ${s}</span>`).join('');
+
+/* ================= Tile 渲染 ================= */
+const GROUP_SEC = { chrome:'#grid-chrome', primitive:'#grid-primitive', business:'#grid-business', weapp:'#grid-weapp' };
+let rendered = 0;
+TILES.forEach((t, ti)=>{
+  const grid = document.querySelector(GROUP_SEC[t.group]); if(!grid) return;
+  const art = document.createElement('article');
+  art.className = 'tile';
+  const searchKey = esc(`${t.name} ${t.cn} ${t.desc} ${t.weapp||''}`.toLowerCase());
+  art.dataset.search = searchKey;
+  const badge = t.weapp
+    ? `<span class="tile-badge ok">${esc(t.weapp)}</span>`
+    : `<span class="tile-badge" title="未在小程序落地;按 wechat-component-contracts.md 转换">未落地 · 按契约转换</span>`;
+  const demos = t.demos.map((d,i)=>`<button class="vchip ${i===0?'on':''}" data-vbtn="${ti}:${i}">${esc(d.label)}</button>`).join('');
+  const propsRows = (t.props||[]).map(p=>`<tr><td>${esc(p[0])}</td><td class="ty">${esc(p[1])}</td><td class="df">${esc(p[2])}</td><td>${esc(p[3])}</td></tr>`).join('');
+  const propsTable = propsRows ? `<table class="props"><caption>可编辑属性(PROPS / EVENTS)</caption>
+    <tr><th>属性</th><th>类型</th><th>默认</th><th>说明</th></tr>${propsRows}</table>` : '';
+  art.innerHTML = `
+    <div class="tile-head"><div><span class="tile-name">${esc(t.name)}</span><span class="tile-cn">${esc(t.cn)}</span></div>${badge}</div>
+    <p class="tile-desc">${esc(t.desc)}</p>
+    <div class="stage" data-tile="${ti}"><span class="demo-tag">${esc(t.demos[0].label)}</span>${t.demos[0].html}</div>
+    ${t.demos.length>1?`<div class="chips">${demos}</div>`:''}
+    ${propsTable}
+    <div class="usage">${esc(t.usage)}</div>`;
+  grid.appendChild(art);
+  rendered++;
+  // 变种切换
+  art.querySelectorAll('[data-vbtn]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      art.querySelectorAll('[data-vbtn]').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      const [ , di ] = btn.dataset.vbtn.split(':').map(Number);
+      const demo = t.demos[di];
+      const stage = art.querySelector('.stage');
+      stage.innerHTML = `<span class="demo-tag">${esc(demo.label)}</span>${demo.html}`;
+    });
+  });
+});
+
+/* 各区块数量(业务 SOT 24 个:价格三件套合并为 1 块卡,故 21 块业务卡) */
+const countBy = g => TILES.filter(t=>t.group===g).length;
+document.getElementById('cnt-chrome').textContent = countBy('chrome');
+document.getElementById('cnt-primitive').textContent = countBy('primitive');
+document.getElementById('cnt-business').textContent = '24 个 / ' + countBy('business') + ' 块';
+document.getElementById('cnt-weapp').textContent = countBy('weapp');
+const implemented = TILES.filter(t=>t.weapp).length;
+document.getElementById('statline').innerHTML =
+  `共 <b>45</b> 个设计系统组件(系统层 ${countBy('chrome')} · 基础 ${countBy('primitive')} · 业务 24,价格三件套合并展示),` +
+  `其中 <b>${implemented}</b> 块已有对应小程序组件;另有 <b>${countBy('weapp')}</b> 个小程序专属工程组件,图标注册表 <b>451</b> 个。` +
+  `变种切换、开关/星级/TabBar/弹窗可直接点击体验。`;
+
+/* ================= 图标库 ================= */
+const COMMON_ICONS = [
+ 'nav-back','chevron-down-1','calendar-schedule','search-big-left-1','icon-plus-fill',
+ 'star-favorite-3','mic-ai-fill-1','money-cny-box','remix-icons-finance-money-cny-circle',
+ 'icon-map-pin-line','icon-map-pin-fill','service','target','cup','lifebuoy','virus','copper-diamond',
+ 'share-circle','chat-smile-ai-3-2','check','close','settings','file-text',
+ 'remix-icons-fill-system-checkbox-circle-fill','remix-icons-fill-system-close-circle-fill',
+ 'remix-icons-document-survey','icon-heart-fill','copper-diamond','nav-home-ring','statusbar-island',
+ 'wifi','mobile-signal-2','statusbar-battery-fill','letter-m-display-8','letter-i-display-6','letter-p-display-13',
+ 'smileys-13-12','tab-note-outline','tab-bag-body','satchel-bag-3',
+];
+const iconGrid = document.getElementById('grid-icons');
+iconGrid.innerHTML = COMMON_ICONS.filter((v,i,a)=>a.indexOf(v)===i).map(n=>{
+  return `<div class="icon-cell"><span style="color:#fcdf03">${icon(n,{color:'#fcdf03'})}</span><code>${esc(n)}</code></div>`;
+}).join('');
+document.getElementById('cnt-icons').textContent = `${COMMON_ICONS.filter((v,i,a)=>a.indexOf(v)===i).length} 个高频图标 · 注册表共 ${Object.keys(ICONS).length}`;
+
+/* ================= 搜索过滤 ================= */
+document.getElementById('search').addEventListener('input', e=>{
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('.tile').forEach(t=>{
+    t.style.display = !q || t.dataset.search.includes(q) ? '' : 'none';
+  });
+  document.querySelectorAll('main > section').forEach(sec=>{
+    const tiles = sec.querySelectorAll('.tile');
+    if(!tiles.length) return;
+    const any = [...tiles].some(t=>t.style.display !== 'none');
+    sec.style.display = any ? '' : 'none';
+  });
+});
+</script>
+</body>
+</html>

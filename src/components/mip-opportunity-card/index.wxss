@@ -92,6 +92,33 @@
   margin-top: auto;
 }
 
+/* journey-review J3-01：机会类型黄标占左下、想合作聚合胶囊退到右下。 */
+.mip-opportunity-card__footer--split {
+  justify-content: space-between;
+}
+
+.mip-opportunity-card__type-tags {
+  display: flex;
+  gap: 8rpx;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* 46x20 设计像素黄标：#fcdf03 底、10px 黑字、r4 圆角。 */
+.mip-opportunity-card__type-tag {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: 40rpx;
+  padding: 0 12rpx;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  color: var(--color-on-brand);
+  white-space: nowrap;
+  background: var(--color-brand);
+  border-radius: 8rpx;
+}
+
 .mip-opportunity-card__published {
   margin-top: auto;
   overflow: hidden;

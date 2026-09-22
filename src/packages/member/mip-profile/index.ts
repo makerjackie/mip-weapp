@@ -29,8 +29,6 @@ Page({
     aiOrganizationDraftLoaded: false,
     profileVersion: 0,
     userVersion: 0,
-    phoneBound: false,
-    phoneBinding: false,
     nickname: '',
     realName: '',
     gender: 'UNKNOWN' as 'UNKNOWN' | 'MALE' | 'FEMALE',
@@ -141,7 +139,6 @@ Page({
         aiOrganizationDraftLoaded: Boolean(companies.length || organizations.length),
         profileVersion: snapshot.profile.version,
         userVersion: snapshot.userVersion,
-        phoneBound: snapshot.phoneBound,
         nickname: aiText(aiFields, 'nickname', 64) || snapshot.profile.nickname,
         realName: snapshot.profile.realName || '',
         gender: snapshot.profile.gender || 'UNKNOWN',
@@ -275,35 +272,8 @@ Page({
     })
   },
 
-  async bindPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
-    if (this.data.phoneBinding || this.data.saving) {
-      return
-    }
-    const code = String(event.detail.code || '')
-    if (!code) {
-      this.setData({
-        message: /cancel|deny/i.test(String(event.detail.errMsg || ''))
-          ? '你已取消手机号授权，绑定状态未变更。'
-          : '手机号授权必须在微信真机完成。',
-      })
-      return
-    }
-    this.setData({ phoneBinding: true, message: '' })
-    try {
-      const snapshot = await mipIdentityModule.rebindWechatPhone(code)
-      this.setData({ phoneBound: snapshot.phoneBound })
-      wx.showToast({ title: '手机号已更新', icon: 'success' })
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '手机号更新失败，请重试。' })
-    }
-    finally {
-      this.setData({ phoneBinding: false })
-    }
-  },
-
   async saveProfile() {
-    if (this.data.saving || this.data.avatarUploading || this.data.phoneBinding) {
+    if (this.data.saving || this.data.avatarUploading) {
       return
     }
     const nickname = this.data.nickname.trim()
@@ -352,7 +322,6 @@ Page({
         profileVersion: snapshot.profile.version,
         userVersion: snapshot.userVersion,
         savedPrimaryBranchId: snapshot.primaryBranchId || '',
-        phoneBound: snapshot.phoneBound,
         avatarAssetId: snapshot.profile.avatarAssetId || '',
         avatarUrl: snapshot.profile.avatarUrl || '',
         avatarPending: false,

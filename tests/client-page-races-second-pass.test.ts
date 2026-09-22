@@ -149,11 +149,15 @@ describe('second-pass client source guards', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
   const source = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8')
 
-  it('locks opportunity completion before opening its confirmation', () => {
+  it('locks opportunity saves and the follow-up end mutation behind one in-flight guard', () => {
     const detail = source('src/packages/member/mip-opportunities/detail/index.ts')
-    expect(detail).toContain('endConfirmationBusy: false')
-    expect(detail).toMatch(/this\.data\.acting \|\| this\.endConfirmationBusy/)
-    expect(detail).toMatch(/this\.endConfirmationBusy = true[\s\S]*await wx\.showModal/)
-    expect(detail).toMatch(/finally \{[\s\S]{0,100}this\.endConfirmationBusy = false/)
+    const editor = source('src/packages/member/mip-opportunities/editor/index.ts')
+    // journey-review QZ2：结束项目改为编辑页「项目状态=结束项目」→ 保存成功后追加 end；
+    // 保存入口先过 in-flight 守卫，end 失败只提示、不回滚已保存内容。
+    expect(detail).not.toContain('endConfirmationBusy')
+    expect(editor).toContain('if (this.data.saving || this.data.coverUploading) {')
+    expect(editor).toContain(`const endAfterSave = publish && this.data.projectStatus === 'ENDED'`)
+    expect(editor).toContain(`if (endAfterSave && result.status === 'PUBLISHED') {`)
+    expect(editor).toMatch(/finally \{\n {6}this\.setData\(\{ saving: false \}\)\n {4}\}/)
   })
 })

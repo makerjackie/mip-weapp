@@ -9,7 +9,7 @@ import { isEventAccessRequirementError, MipEventsError } from '../../../../modul
 import { mipEventsModule } from '../../../../modules/mip-events/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 
-type ParticipantKindFilter = 'ALL' | 'PLAYER' | 'GUEST'
+type ParticipantKindFilter = 'PLAYER' | 'GUEST'
 type ParticipantViewMode = 'PUBLIC' | 'SENT' | 'RECEIVED'
 type HeartAccessState = 'loading' | 'ready' | 'restricted' | 'error'
 type ParticipantHeartRelation = 'SENT' | 'RECEIVED' | 'MUTUAL'
@@ -22,9 +22,11 @@ interface ParticipantView {
   metaText: string
   introductionText: string
   heartRelation?: ParticipantHeartRelation
+  /** 心动票凭证（仅签到参与人持有）：卡片右上角心形可投的依据，undefined 表示不可投。 */
+  heartTicket?: string
 }
 
-function presentParticipant(participant: PublicEventParticipant): ParticipantView {
+function presentParticipant(participant: PublicEventParticipant, candidates: HeartCandidate[]): ParticipantView {
   const branchText = participant.primaryBranch
     ? [participant.primaryBranch.cityName, participant.primaryBranch.name].filter(Boolean).join(' · ')
     : ''
@@ -35,6 +37,7 @@ function presentParticipant(participant: PublicEventParticipant): ParticipantVie
     metaText: [branchText, participant.primaryIndustry?.label, participant.identityStatus].filter(Boolean).join(' · '),
     introductionText: participant.introduction || participant.headline || '',
     heartRelation: participant.heartRelation,
+    heartTicket: candidates.find(candidate => candidate.profileRef === participant.profileRef)?.participantRef,
   }
 }
 
@@ -50,6 +53,7 @@ function presentHeartCandidate(
     metaText: '',
     introductionText: candidate.headline || '',
     heartRelation,
+    heartTicket: candidate.participantRef,
   }
 }
 
@@ -91,15 +95,17 @@ Page({
     displayItems: [] as ParticipantView[],
     sentItems: [] as ParticipantView[],
     receivedItems: [] as ParticipantView[],
+    candidates: [] as HeartCandidate[],
     heart: null as HeartState | null,
     activeView: 'PUBLIC' as ParticipantViewMode,
     emptyTitle: '暂无公开参与人',
     emptyDescription: '符合当前条件的公开资料会显示在这里。',
-    kind: 'ALL' as ParticipantKindFilter,
+    kind: 'PLAYER' as ParticipantKindFilter,
     searchInput: '',
     activeKeyword: '',
     nextCursor: '',
     loadingMore: false,
+    savingHeart: false,
     message: '',
     heartMessage: '',
   },
@@ -108,7 +114,21 @@ Page({
   hasShown: false,
 
   onLoad(query: Record<string, string | undefined>) {
-    this.setData({ eventId: String(query.eventId || '') as EventId })
+    // journey-review J2-02：四 tab（嘉宾/玩家/我的心动/对我心动），默认 tab 由入口决定
+    // ——参与人数/详情进「玩家」，与你互动胶囊直达对应心动 tab。
+    const requestedView = String(query.view || '')
+    const activeView = (['PUBLIC', 'SENT', 'RECEIVED'].includes(requestedView)
+      ? requestedView
+      : 'PUBLIC') as ParticipantViewMode
+    const kind = (activeView === 'PUBLIC' && query.kind === 'GUEST' ? 'GUEST' : 'PLAYER') as ParticipantKindFilter
+    this.setData({
+      eventId: String(query.eventId || '') as EventId,
+      activeView,
+      kind,
+    })
+    if (activeView !== 'PUBLIC') {
+      this.setData(privateViewData(activeView, [], [], ''))
+    }
     void this.loadPage()
   },
 
@@ -130,7 +150,7 @@ Page({
   currentQuery(cursor?: string): PublicEventParticipantQuery {
     return {
       keyword: this.data.activeKeyword || undefined,
-      userKind: this.data.kind === 'ALL' ? undefined : this.data.kind,
+      userKind: this.data.kind,
       cursor,
       limit: 24,
     }
@@ -158,9 +178,10 @@ Page({
       if (requestSeq !== this.requestSeq) {
         return
       }
+      const candidates = this.data.candidates
       const items = append
-        ? [...this.data.items, ...page.items.map(presentParticipant)]
-        : page.items.map(presentParticipant)
+        ? [...this.data.items, ...page.items.map(item => presentParticipant(item, candidates))]
+        : page.items.map(item => presentParticipant(item, candidates))
       const uniqueItems = [...new Map(items.map(item => [item.profileRef, item])).values()]
       const patch: Record<string, unknown> = {
         state: 'ready',
@@ -211,28 +232,7 @@ Page({
       if (requestSeq !== this.heartRequestSeq) {
         return
       }
-      const sentItems = candidates
-        .filter(candidate => candidate.selected)
-        .slice(0, 1)
-        .map(candidate => presentHeartCandidate(candidate, 'SENT'))
-      const receivedItems = heart.received
-        .map(candidate => presentHeartCandidate(candidate, 'RECEIVED'))
-      const patch: Record<string, unknown> = {
-        heartState: 'ready',
-        heart,
-        sentItems,
-        receivedItems,
-        heartMessage: '',
-      }
-      if (this.data.activeView !== 'PUBLIC') {
-        Object.assign(patch, privateViewData(
-          this.data.activeView,
-          sentItems,
-          receivedItems,
-          this.data.activeKeyword,
-        ))
-      }
-      this.setData(patch)
+      this.applyHeartState(heart, candidates, requestSeq)
     }
     catch (error) {
       if (requestSeq !== this.heartRequestSeq) {
@@ -243,6 +243,7 @@ Page({
         this.setData({
           heartState: 'restricted',
           heart: null,
+          candidates: [],
           sentItems: [],
           receivedItems: [],
           displayItems: this.data.activeView === 'PUBLIC' ? this.data.displayItems : [],
@@ -255,6 +256,102 @@ Page({
         heartMessage: error instanceof Error ? error.message : '心动信息加载失败。',
         displayItems: this.data.activeView === 'PUBLIC' ? this.data.displayItems : [],
       })
+    }
+  },
+
+  /** 以服务端心动事实刷新本地：sent/received 列表、候选选中态与「我的心动」计数。 */
+  applyHeartState(heart: HeartState, candidates: HeartCandidate[], requestSeq?: number) {
+    if (requestSeq !== undefined && requestSeq !== this.heartRequestSeq) {
+      return
+    }
+    const markedCandidates = candidates.map(candidate => ({
+      ...candidate,
+      selected: Boolean(heart.targetRef) && heart.target?.profileRef === candidate.profileRef,
+    }))
+    const sentItems = heart.target
+      ? [presentHeartCandidate(heart.target, 'SENT')]
+      : []
+    const receivedItems = heart.received
+      .map(candidate => presentHeartCandidate(candidate, 'RECEIVED'))
+    const patch: Record<string, unknown> = {
+      heartState: 'ready',
+      heart,
+      candidates: markedCandidates,
+      sentItems,
+      receivedItems,
+      heartMessage: '',
+    }
+    if (this.data.activeView !== 'PUBLIC') {
+      Object.assign(patch, privateViewData(
+        this.data.activeView,
+        sentItems,
+        receivedItems,
+        this.data.activeKeyword,
+      ))
+    }
+    else {
+      // 公开列表的心动票凭证随候选集刷新，保持卡片红心与可投状态同步。
+      const items = this.data.items.map(item => ({
+        ...item,
+        heartTicket: markedCandidates.find(candidate => candidate.profileRef === item.profileRef)?.participantRef,
+      }))
+      patch.items = items
+      patch.displayItems = items
+    }
+    this.setData(patch)
+  },
+
+  /**
+   * journey-review J2-02：心动票直接落在参与人卡右上角——灰描边未投可点、点中变红
+   * 实心、再点取消；每场仅 1 票，切换目标由服务端改选（单行 UPDATE）。
+   * 未签到会话（restricted）灰心不可点，仅提示。
+   */
+  async toggleHeartVote(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.heartState === 'restricted') {
+      wx.showToast({ title: '完成签到后可参与心动互动。', icon: 'none' })
+      return
+    }
+    if (this.data.heartState === 'error') {
+      // error 态灰心仍按兜底渲染可见，点击不再静默：提示并就地重试心动状态。
+      wx.showToast({ title: '心动信息暂时不可用，正在重试。', icon: 'none' })
+      void this.loadHeartState()
+      return
+    }
+    if (this.data.heartState !== 'ready' || this.data.savingHeart) {
+      return
+    }
+    const profileRef = String(event.currentTarget.dataset.profileRef || '')
+    const ticket = this.data.displayItems.find(item => item.profileRef === profileRef)?.heartTicket
+      || this.data.candidates.find(candidate => candidate.profileRef === profileRef)?.participantRef
+    if (!ticket) {
+      return
+    }
+    const voted = this.data.heart?.target?.profileRef === profileRef
+    this.setData({ savingHeart: true })
+    try {
+      const heart = await mipEventsModule.setHeart(
+        this.data.eventId,
+        voted ? null : ticket,
+        this.data.heart?.version,
+      )
+      this.applyHeartState(heart, this.data.candidates)
+      wx.showToast({ title: voted ? '已取消心动' : '已心动', icon: 'success' })
+    }
+    catch (error) {
+      if (error instanceof MipEventsError && error.code === 'CONFLICT') {
+        await this.loadHeartState()
+        return
+      }
+      if (isEventAccessRequirementError(error)
+        || (error instanceof MipEventsError && error.code === 'FORBIDDEN')) {
+        this.setData({ heartState: 'restricted' })
+        wx.showToast({ title: '完成签到后可参与心动互动。', icon: 'none' })
+        return
+      }
+      wx.showToast({ title: error instanceof Error && error.message ? error.message : '心动状态保存失败，请稍后重试。', icon: 'none' })
+    }
+    finally {
+      this.setData({ savingHeart: false })
     }
   },
 
@@ -299,7 +396,7 @@ Page({
 
   changeKind(event: WechatMiniprogram.TouchEvent) {
     const kind = String(event.currentTarget.dataset.kind || '') as ParticipantKindFilter
-    if (!['ALL', 'PLAYER', 'GUEST'].includes(kind)
+    if (!['PLAYER', 'GUEST'].includes(kind)
       || (kind === this.data.kind && this.data.activeView === 'PUBLIC')) {
       return
     }
@@ -335,6 +432,8 @@ Page({
   showPublicParticipants() {
     this.setData({
       activeView: 'PUBLIC',
+      kind: 'PLAYER',
+      nextCursor: '',
       displayItems: this.data.items,
       emptyTitle: '暂无公开参与人',
       emptyDescription: '符合当前条件的公开资料会显示在这里。',
@@ -343,12 +442,6 @@ Page({
 
   retryHeartState() {
     void this.loadHeartState()
-  },
-
-  openInteraction() {
-    caseNavigateTo({
-      url: `/packages/member/mip-events/interaction/index?eventId=${encodeURIComponent(this.data.eventId)}&viewMode=SENT`,
-    })
   },
 
   loadMore() {

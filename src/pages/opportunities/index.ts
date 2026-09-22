@@ -1,5 +1,6 @@
 import type { CatalogSelectorGroup } from '../../components/catalog-selector/model'
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../modules/mip'
+import type { MipPublicBanner } from '../../modules/mip-banners'
 import type { CooperationTalentSummary } from '../../modules/mip-cooperation'
 import type { ProtectedActionKey } from '../../modules/mip-identity'
 import type {
@@ -9,15 +10,24 @@ import type {
   OpportunitySummary,
 } from '../../modules/mip-opportunities'
 import { catalogSelectorView } from '../../components/catalog-selector/model'
+import { brand } from '../../config/brand'
 import { cooperationRoles } from '../../config/mip-catalogs'
+import { mipBannerModule } from '../../modules/mip-banners'
 import { cooperationModule } from '../../modules/mip-cooperation'
 import { mergeCooperationTalents } from '../../modules/mip-cooperation/validation'
 import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipIdentityModule } from '../../modules/mip-identity/client'
-import { groupedCityBranches, opportunityModule } from '../../modules/mip-opportunities'
+import { groupedCityBranches, opportunityModule, opportunityTypeLabel } from '../../modules/mip-opportunities'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
 
 type PageMode = 'opportunities' | 'cooperation'
+/** journey-review J2-06：「我的项目」是机会 Tab 内的第三个 pill 态（列表只看自己发布的机会）。 */
+type StatusPill = OpportunityFilter['status'] | 'MINE'
+interface OpportunityCardView extends OpportunitySummary {
+  typeTagViews: Array<{ key: string, label: string }>
+  /** 运行时验收（2026-09-22）：服务端 avatars 形状不可信，presenter 保底数组后才绑给卡片 type: Array 属性。 */
+  avatarViews: string[]
+}
 interface CooperationTalentView extends Omit<CooperationTalentSummary, 'cards'> {
   cards: Array<CooperationTalentSummary['cards'][number] & { roleName: string }>
   roleNames: string[]
@@ -33,6 +43,23 @@ type LocationPreset = 'ALL' | OpportunityLocationType
 const allRoleOptions = [{ key: '', name: '全部角色' }, ...cooperationRoles]
 const nationwideOption: CityOption = { id: '', label: '全国' }
 const OPPORTUNITY_REFRESH_INTERVAL_MS = 30_000
+/** journey-review J1-05：游客点筛选先完成身份确认，授权回来后重开筛选面板。 */
+const FILTER_AUTH_RESUME = 'auth-intent:open-filters'
+/** journey-review J1-04：游客点「我的项目」先完成身份确认，授权回来后切到我的项目 pill。 */
+const MINE_AUTH_RESUME = 'auth-intent:open-mine'
+
+function withTypeTagViews(items: OpportunitySummary[]): OpportunityCardView[] {
+  return items.map(item => ({
+    ...item,
+    typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
+    avatarViews: avatarViewsOf(item.avatars),
+  }))
+}
+
+/** 保底数组：非数组（含 null/对象/字符串）与非法元素一律丢弃，杜绝卡片属性收到 non-array 告警。 */
+function avatarViewsOf(avatars: OpportunitySummary['avatars']): string[] {
+  return Array.isArray(avatars) ? avatars.filter(v => typeof v === 'string' && v) : []
+}
 
 function locationPreset(types: OpportunityLocationType[]): LocationPreset {
   if (types.includes('CITY')) {
@@ -167,13 +194,15 @@ Page({
     state: 'loading' as 'loading' | 'ready' | 'error',
     authenticated: false,
     mode: 'opportunities' as PageMode,
-    status: 'RECRUITING' as OpportunityFilter['status'],
+    status: 'RECRUITING' as StatusPill,
     keywordInput: '',
     keyword: '',
     filterOpen: false,
     industryPickerOpen: false,
     expandedIndustryGroupId: '',
     moreFiltersOpen: false,
+    /** journey-review J3-01：导航栏下方的运营 Banner 位（后台可配置，未配置不占位）。 */
+    banners: [] as MipPublicBanner[],
     catalog: { branches: [], cityTags: [], industryGroups: [], industryTags: [], abilityTags: [] } as OpportunityCatalog,
     cityOptions: [nationwideOption] as CityOption[],
     cityGroups: [] as CatalogSelectorGroup[],
@@ -204,36 +233,75 @@ Page({
     locationFilterLabel: '不限',
     appliedFilterCount: 0,
     appliedFilterChips: [] as AppliedFilterChip[],
-    opportunities: [] as OpportunitySummary[],
+    opportunities: [] as OpportunityCardView[],
     cooperationTalents: [] as CooperationTalentView[],
     nextCursor: '',
     loadingMore: false,
     message: '',
+    loginSheetOpen: false,
+    loginSheetBusy: false,
+    brandName: brand.productName,
+    logoPath: brand.logoPath,
   },
   requestSequence: 0,
   resumeDestination: '',
   lastSuccessfulRefreshAt: 0,
   refreshOnReturn: false,
+  authToken: '',
 
-  onShow() {
+  async onShow() {
     syncCaseNavigation(this, 'pages/opportunities/index')
     const resume = mipIdentityModule.consumePendingResume('pages/opportunities/index')
     if (resume && this.resumeDestination) {
       const destination = this.resumeDestination
       this.resumeDestination = ''
-      caseNavigateTo({ url: destination })
+      this.abandonLoginSheet()
+      // journey-review J1-04 复审（B1）：必须等登录态刷新完成后再恢复原意图，否则
+      // authenticated 仍是过期 false：FILTER 哨兵会再次触发身份确认并被当成页面
+      // 路径静默跳转失败，MINE 哨兵则停在游客占位屏。onShow 其余逻辑不在本分支。
+      await this.refreshAuthState()
+      this.runResumeDestination(destination)
       return
     }
     this.resumeDestination = ''
+    void this.resumeLoginSheetIntent()
     if (!this.data.catalog.cityTags.length) {
       void this.loadCatalogs()
     }
     void this.refreshAuthState()
+    void this.loadBanners()
     const refreshIsDue = Date.now() - this.lastSuccessfulRefreshAt >= OPPORTUNITY_REFRESH_INTERVAL_MS
     const refreshOnReturn = this.refreshOnReturn
     this.refreshOnReturn = false
     if (this.data.state !== 'ready' || refreshIsDue || refreshOnReturn) {
       void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
+    }
+  },
+
+  /** journey-review J3-01：Banner 位与活动页共用 mip-banners 模块，失败不阻塞列表。 */
+  async loadBanners(force = false) {
+    try {
+      const banners = await mipBannerModule.listActive(force)
+      this.setData({ banners })
+    }
+    catch {}
+  },
+
+  openBanner(event: WechatMiniprogram.TouchEvent) {
+    const bannerId = String(event.currentTarget.dataset.bannerId || '')
+    const banner = this.data.banners.find(item => item.id === bannerId)
+    if (!banner) {
+      return
+    }
+    if (banner.targetType === 'ARTICLE_URL') {
+      wx.openOfficialAccountArticle({
+        url: banner.targetValue,
+        fail: () => wx.showToast({ title: '文章暂未配置', icon: 'none' }),
+      })
+      return
+    }
+    if (banner.targetValue && banner.targetValue !== '/pages/opportunities/index') {
+      caseNavigateTo({ url: banner.targetValue })
     }
   },
 
@@ -278,9 +346,24 @@ Page({
       this.setData({ loadingMore: true, message: '' })
     }
     try {
-      if (this.data.mode === 'opportunities') {
+      if (this.data.mode === 'opportunities' && this.data.status === 'MINE') {
+        // journey-review J2-06：「我的项目」pill 内联态，仅拉自己发布的机会。
+        const page = await opportunityModule.listMine(reset ? undefined : this.data.nextCursor || undefined)
+        if (sequence !== this.requestSequence || this.data.mode !== 'opportunities' || this.data.status !== 'MINE') {
+          return
+        }
+        this.setData({
+          state: 'ready',
+          opportunities: reset
+            ? withTypeTagViews(page.items)
+            : [...this.data.opportunities, ...withTypeTagViews(page.items)],
+          nextCursor: page.nextCursor || '',
+        })
+        this.lastSuccessfulRefreshAt = Date.now()
+      }
+      else if (this.data.mode === 'opportunities') {
         const page = await opportunityModule.list({
-          status: this.data.status,
+          status: this.data.status as OpportunityFilter['status'],
           keyword: this.data.keyword,
           cityTagId: this.data.selectedCityTagId || undefined,
           locationTypes: this.data.selectedLocationTypes,
@@ -297,7 +380,9 @@ Page({
         }
         this.setData({
           state: 'ready',
-          opportunities: reset ? page.items : [...this.data.opportunities, ...page.items],
+          opportunities: reset
+            ? withTypeTagViews(page.items)
+            : [...this.data.opportunities, ...withTypeTagViews(page.items)],
           nextCursor: page.nextCursor || '',
         })
         this.lastSuccessfulRefreshAt = Date.now()
@@ -372,7 +457,11 @@ Page({
       return
     }
     try {
-      await Promise.all([this.loadCatalogs(), this.loadContent(true, { preserveContent: this.data.state === 'ready' })])
+      await Promise.all([
+        this.loadCatalogs(),
+        this.loadContent(true, { preserveContent: this.data.state === 'ready' }),
+        this.loadBanners(true),
+      ])
     }
     finally {
       wx.stopPullDownRefresh()
@@ -438,8 +527,13 @@ Page({
   },
 
   changeStatus(event: WechatMiniprogram.TouchEvent) {
-    const status = String(event.currentTarget.dataset.status || '') as OpportunityFilter['status']
-    if (!['RECRUITING', 'COMPLETED'].includes(status) || status === this.data.status) {
+    const status = String(event.currentTarget.dataset.status || '') as StatusPill
+    if (!['RECRUITING', 'COMPLETED', 'MINE'].includes(status) || status === this.data.status) {
+      return
+    }
+    // journey-review J1-04：游客点「我的项目」先走身份确认，授权回来后落在我的项目 pill。
+    if (status === 'MINE' && !this.data.authenticated) {
+      void this.openProtected(MINE_AUTH_RESUME, 'INTERACT')
       return
     }
     this.setData({ status })
@@ -505,6 +599,10 @@ Page({
   },
 
   toggleFilters() {
+    if (!this.data.filterOpen && !this.data.authenticated) {
+      void this.openProtected(FILTER_AUTH_RESUME, 'INTERACT')
+      return
+    }
     if (!this.data.filterOpen) {
       const cityId = this.data.mode === 'cooperation'
         ? this.data.selectedCooperationBranchId
@@ -847,15 +945,141 @@ Page({
       })
       if (session.decision.ready) {
         this.resumeDestination = ''
+        // B1 双保险：auth-intent:* 哨兵不是页面路径，ready 时按恢复语义执行并同步
+        // 登录态（decision.ready 蕴含 snapshot.authenticated），避免跳非法页面静默
+        // 失败或落回游客占位屏。
+        if (destination.startsWith('auth-intent:')) {
+          this.setData({ authenticated: session.snapshot.authenticated })
+          this.runResumeDestination(destination)
+          return
+        }
         caseNavigateTo({ url: destination })
         return
       }
+      // journey-review J1-04/J1-05（2026-09-21 终审）：已登录未绑手机的会话就地弹
+      // 手机号授权弹层，授权成功后继续原意图；其余未完成项交给 access 页。
+      if (
+        session.decision.nextRequirement === 'PHONE'
+        && session.snapshot.authenticated
+        && !session.snapshot.phoneBound
+      ) {
+        this.authToken = session.token
+        this.setData({ loginSheetOpen: true })
+        return
+      }
+      this.authToken = ''
       caseNavigateTo({ url: mipAccessPageUrl(session.token) })
     }
     catch {
       this.resumeDestination = ''
       this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
     }
+  },
+
+  async onLoginSheetPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
+    const token = this.authToken
+    if (!token || this.data.loginSheetBusy) {
+      return
+    }
+    const code = String(event.detail.code || '')
+    if (!code) {
+      const cancelled = /cancel|deny|denied/i.test(String(event.detail.errMsg || ''))
+      wx.showToast({
+        title: cancelled ? '你已取消手机号授权，可以稍后再完成。' : '手机号授权必须在微信真机完成。',
+        icon: 'none',
+      })
+      return
+    }
+    this.setData({ loginSheetBusy: true })
+    try {
+      const session = await mipIdentityModule.bindWechatPhone(token, code)
+      this.setData({ loginSheetOpen: false })
+      const destination = this.resumeDestination
+      if (session.decision.ready) {
+        this.resumeDestination = ''
+        this.authToken = ''
+        try {
+          await mipIdentityModule.complete(token)
+        }
+        catch {
+          // complete 失败不阻断原意图，授权状态已生效。
+        }
+        mipIdentityModule.consumePendingResume('pages/opportunities/index')
+        this.setData({ authenticated: true })
+        void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
+        if (destination) {
+          this.runResumeDestination(destination)
+        }
+        return
+      }
+      this.authToken = ''
+      if (session.decision.nextRequirement === 'PROFILE') {
+        // journey-review J1-03：新账号完善资料，完成或关闭都回本页并恢复意图。
+        caseNavigateTo({ url: `/packages/member/mip-profile/index?token=${encodeURIComponent(token)}` })
+        return
+      }
+      caseNavigateTo({ url: mipAccessPageUrl(token) })
+    }
+    catch (error) {
+      wx.showToast({ title: error instanceof Error ? error.message : '手机号绑定失败，请重试。', icon: 'none' })
+    }
+    finally {
+      this.setData({ loginSheetBusy: false })
+    }
+  },
+
+  onLoginSheetDismiss() {
+    this.abandonLoginSheet()
+  },
+
+  abandonLoginSheet() {
+    if (this.authToken) {
+      mipIdentityModule.cancel(this.authToken)
+    }
+    this.authToken = ''
+    this.resumeDestination = ''
+    this.setData({ loginSheetOpen: false, loginSheetBusy: false })
+  },
+
+  /** 从「填写信息」或 access 页返回后，若身份已就绪则继续弹层前的原意图。 */
+  async resumeLoginSheetIntent() {
+    if (!this.authToken) {
+      return
+    }
+    try {
+      const session = await mipIdentityModule.loadAccess(this.authToken)
+      if (session.decision.ready) {
+        const token = this.authToken
+        const destination = this.resumeDestination
+        this.authToken = ''
+        this.resumeDestination = ''
+        await mipIdentityModule.complete(token)
+        mipIdentityModule.consumePendingResume('pages/opportunities/index')
+        this.setData({ authenticated: true })
+        void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
+        if (destination) {
+          this.runResumeDestination(destination)
+        }
+        return
+      }
+    }
+    catch {
+      // 身份确认失败时按「暂不授权」处理，留在本页。
+    }
+    this.abandonLoginSheet()
+  },
+
+  /** 恢复弹层前的原意图：普通目的地直接跳转，筛选/我的项目哨兵则回到对应 pill 态。 */
+  runResumeDestination(destination: string) {
+    if (destination === FILTER_AUTH_RESUME) {
+      this.toggleFilters()
+      return
+    }
+    if (destination === MINE_AUTH_RESUME) {
+      this.setData({ mode: 'opportunities', status: 'MINE' }, () => void this.loadContent(true))
+      return
+    }
+    caseNavigateTo({ url: destination })
   },
 
   publish() {
@@ -892,6 +1116,15 @@ Page({
     catch {
       this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
     }
+  },
+
+  /**
+   * journey-review J1-06→J1-07：游客点「去成为玩家解锁权限」先完成身份确认，
+   * 授权回来后进玩家等级页（真实路由走 openProtected 的 ready/恢复分支，
+   * 已登录用户点击则直接进等级页）。
+   */
+  openBecomePlayerUnlock() {
+    void this.openProtected('/packages/member/mip-growth/index', 'ENTER_APP')
   },
 
   openDiscoveryMenu() {

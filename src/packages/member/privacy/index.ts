@@ -18,10 +18,6 @@ Page({
     userVersion: 0,
     closedAt: '',
     message: '',
-    // figma 1728_19083 / 1861_18278 设计还原态（打分 fixture 专用）：设计稿的账号设置
-    // 行组与两行隐私开关没有落地路由，先以页面内分支还原，缺口记录在 manifest notes。
-    figmaLayout: false,
-    figmaPanel: '' as '' | 'privacy-settings',
   },
   closureRequest: null as ReturnType<typeof createAccountClosureRequestTracker> | null,
 
@@ -76,10 +72,24 @@ Page({
     caseNavigateTo({ url: '/packages/member/mip-visibility-settings/index' })
   },
 
-  // figma 1728_19083 的「隐私设置」行：设计稿对应 1861_18278 独立页，但该页暂无落地
-  // 路由，设计还原态先在页内切换到两行开关分支（见 index.wxml figmaPanel 注释）。
+  // journey-review J5-01：绑定手机是唯一改绑入口（三级页 bind-phone，双路径换绑）。
+  openBindPhone() {
+    caseNavigateTo({ url: '/packages/member/bind-phone/index' })
+  },
+
+  // 三级页设计稿未出（QS）：一期保留行 + 占位提示，待稿落地后替换。
+  openBindWechat() {
+    wx.showToast({ title: '功能建设中', icon: 'none' })
+  },
+
+  // journey-review J5-03：隐私设置独立成页（两行开关），不再页内分支还原。
   openPrivacySettings() {
-    this.setData({ figmaPanel: 'privacy-settings' })
+    caseNavigateTo({ url: '/packages/member/privacy-settings/index' })
+  },
+
+  // 会员服务协议无独立页（QS）：与绑定微信同口径占位提示。
+  openMembershipAgreement() {
+    wx.showToast({ title: '功能建设中', icon: 'none' })
   },
 
   openBlockedProfiles() {

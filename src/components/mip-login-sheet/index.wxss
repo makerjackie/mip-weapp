@@ -1,0 +1,100 @@
+/* journey-review login-sheet：#202020 底部弹层，16px 顶角，10/24/40 padding，
+   44px 品牌行 + 16px 标题 + 12px 说明 + 40px 黄色胶囊按钮 + 12px 幽灵取消。 */
+.mip-login-sheet__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(8 8 8 / 60%);
+}
+
+.mip-login-sheet {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 61;
+  box-sizing: border-box;
+  padding: 20rpx 48rpx calc(env(safe-area-inset-bottom) + 80rpx);
+  text-align: center;
+  background: var(--color-panel, #202020);
+  border-radius: 32rpx 32rpx 0 0;
+}
+
+.mip-login-sheet__grab {
+  width: 72rpx;
+  height: 8rpx;
+  margin: 0 auto 28rpx;
+  background: #333;
+  border-radius: 100rpx;
+}
+
+.mip-login-sheet__brand {
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
+  justify-content: center;
+  margin: 4rpx 0 28rpx;
+}
+
+.mip-login-sheet__logo {
+  width: 88rpx;
+  height: 88rpx;
+  background: var(--color-brand-soft, #4d4400);
+  border-radius: 24rpx;
+}
+
+.mip-login-sheet__brand-name {
+  font-size: 36rpx;
+  font-weight: 600;
+  line-height: 50.4rpx;
+  color: var(--color-ink, #fff);
+}
+
+.mip-login-sheet__title {
+  font-size: 32rpx;
+  font-weight: 600;
+  line-height: 44.8rpx;
+  color: var(--color-ink, #fff);
+}
+
+.mip-login-sheet__sub {
+  margin: 12rpx 0 32rpx;
+  font-size: 24rpx;
+  line-height: 33.6rpx;
+  color: var(--color-muted, #b3b3b3);
+  white-space: pre-line;
+}
+
+.mip-login-sheet__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 80rpx;
+  padding: 0;
+  margin: 0;
+  font-size: 32rpx;
+  font-weight: 500;
+  line-height: 44.8rpx;
+  color: var(--color-on-brand, #080808);
+  background: var(--color-brand, #fcdf03);
+  border: 2rpx solid #080808;
+  border-radius: 100rpx;
+}
+
+.mip-login-sheet__btn::after {
+  border: 0;
+}
+
+.mip-login-sheet__btn[disabled] {
+  color: var(--color-on-brand, #080808);
+  background: var(--color-brand, #fcdf03);
+  opacity: 0.6;
+}
+
+.mip-login-sheet__ghost {
+  margin-top: 28rpx;
+  font-size: 24rpx;
+  line-height: 33.6rpx;
+  color: var(--color-muted, #b3b3b3);
+}

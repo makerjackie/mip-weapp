@@ -213,12 +213,24 @@
       "pathName": "packages/member/payment-result/index"
     },
     {
+      "name": "会员订单确认",
+      "pathName": "packages/member/membership-order/index"
+    },
+    {
       "name": "会员权益说明",
       "pathName": "packages/member/benefits/index"
     },
     {
       "name": "账号设置",
       "pathName": "packages/member/privacy/index"
+    },
+    {
+      "name": "绑定手机",
+      "pathName": "packages/member/bind-phone/index"
+    },
+    {
+      "name": "隐私设置",
+      "pathName": "packages/member/privacy-settings/index"
     },
     {
       "name": "隐私政策",

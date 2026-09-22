@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "隐私设置",
+  "backgroundColor": "#080808",
+  "usingComponents": {
+    "app-page-exit": "/components/page-exit/index",
+    "t-switch": "tdesign-miniprogram/switch/switch"
+  }
+}

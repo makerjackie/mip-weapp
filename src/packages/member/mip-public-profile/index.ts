@@ -1,4 +1,6 @@
+import type { CooperationCardId, SuperCaseId } from '../../../modules/mip'
 import type { CommunityReportIntent, ReportCategory } from '../../../modules/mip-community'
+import type { IdentityAccessSnapshot } from '../../../modules/mip-identity'
 import type {
   ProfileInfluenceSummary,
   ProfileInterestMutationSnapshot,
@@ -9,21 +11,28 @@ import type {
 } from '../../../modules/mip-opportunities'
 import { badgeArtUrl } from '../../../config/mip-badge-art'
 import { cooperationRoles } from '../../../config/mip-catalogs'
+import { superCaseModule } from '../../../modules/mip-cases'
 import {
   createCommunityReportIntent,
   mipCommunityModule,
   reportCategoryOptions,
 } from '../../../modules/mip-community'
+import { cooperationModule } from '../../../modules/mip-cooperation'
 import { evaluateAccess, mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { careerIdentityOptions } from '../../../modules/mip-identity/profile-options'
 import { opportunityModule, profileInterestMutations } from '../../../modules/mip-opportunities'
 import { createMutationKey } from '../../../modules/mip-opportunities/validation'
 import { caseNavigateTo } from '../../../platform/navigation/client'
+import { showIdentityUnlockModal } from '../../../shared/identity-unlock'
 
 type ProfileAction = 'interest' | 'block' | 'report'
 type AccessActionState = 'loading' | 'ready' | 'access' | 'error'
 type ProfileSection = 'cooperation' | 'cases' | 'opportunities'
+// journey-review C1 终审（2026-09-21）档案互动条角色门禁：
+// active = 玩家（功能态）；hidden = 嘉宾（整条不渲染）；locked = 普通用户（可见，点击弹解锁）；
+// pending = 初始未定态（身份快照未 resolve 前整条不渲染，避免嘉宾先见条后消失的闪烁）。
+type InteractionBarMode = 'pending' | 'active' | 'hidden' | 'locked'
 
 interface PublicProfileView extends PublicPerson {
   displayName: string
@@ -90,10 +99,12 @@ Page({
     accessToken: '',
     isSelf: false,
     activeSection: 'cooperation' as ProfileSection,
+    deletingId: '',
     message: '',
     // figma 1769_38059/2058_12247/2704_13454 合作卡档案还原态开关，fixture 专用；
     // 生产保持 stats+tabs+列表布局（mip-public-profile 测试 pin）。
     figmaLayout: false,
+    interactionBar: 'pending' as InteractionBarMode,
   },
   pendingAction: '' as ProfileAction | '',
   reportIntent: null as CommunityReportIntent | null,
@@ -176,6 +187,7 @@ Page({
       if (!aggregate.profile.isSelf) {
         void opportunityModule.recordProfileVisit(this.data.profileRef, this.visitKey).catch(() => undefined)
       }
+      await this.resolveInteractionBar()
     }
     catch (error) {
       this.setData({
@@ -183,6 +195,25 @@ Page({
         message: error instanceof Error ? error.message : '公开档案加载失败。',
       })
     }
+  },
+
+  // C1 终审矩阵：普通用户（INTERACT 未就绪）可见可点但弹解锁；嘉宾（就绪且无有效会员权益）
+  // 整条隐藏；玩家功能态。快照不可得时按普通用户处理，点击路径会再次核对。
+  async resolveInteractionBar() {
+    const snapshot = mipIdentityModule.peekSnapshot()
+      || await mipIdentityModule.loadSnapshot().catch(() => null)
+    this.applyInteractionBarMode(snapshot)
+  },
+
+  applyInteractionBarMode(snapshot: IdentityAccessSnapshot | null | undefined) {
+    if (!snapshot || !evaluateAccess(snapshot, {
+      action: 'INTERACT',
+      source: { navigation: 'navigateBack' },
+    }).ready) {
+      this.setData({ interactionBar: 'locked' })
+      return
+    }
+    this.setData({ interactionBar: snapshot.membership.kind === 'PLAYER' ? 'active' : 'hidden' })
   },
 
   observeInterest(profileRef: string) {
@@ -243,12 +274,22 @@ Page({
         source: { navigation: 'navigateBack' },
       })
       if (!session.decision.ready) {
+        // J2-04（C1 终审）：普通用户点击档案互动条一律弹原生解锁提示，
+        // 确定取消均停留，不再进入身份资料流程（资料型入口保留给举报/屏蔽）。
+        if (action === 'interest') {
+          this.pendingAction = ''
+          this.applyInteractionBarMode(session.snapshot)
+          this.setActionState(action, 'ready')
+          await showIdentityUnlockModal().catch(() => undefined)
+          return false
+        }
         this.pendingAction = action
         this.setData({ accessToken: session.token })
         this.setActionState(action, 'access')
         return false
       }
       if (action === 'interest') {
+        this.applyInteractionBarMode(session.snapshot)
         this.setData({ accessToken: '' })
         this.setActionState(action, 'ready')
         return !this.data.isSelf
@@ -290,7 +331,24 @@ Page({
     if (this.data.isSelf || this.data.interestState === 'loading') {
       return
     }
+    // C1 终审：普通用户点击「我感兴趣」弹原生解锁窗，确定取消均停留（J2-03 → J2-04）。
+    if (this.data.interactionBar === 'locked') {
+      void showIdentityUnlockModal().catch(() => undefined)
+      return
+    }
     void this.runProfileAction('interest')
+  },
+
+  // 「N感兴趣」名单入口：玩家一期占位（他人档案名单详情未开放），普通用户弹解锁。
+  openInterestList() {
+    if (this.data.isSelf) {
+      return
+    }
+    if (this.data.interactionBar === 'locked') {
+      void showIdentityUnlockModal().catch(() => undefined)
+      return
+    }
+    wx.showToast({ title: '感兴趣名单即将开放', icon: 'none' })
   },
 
   async openProfileMore() {
@@ -464,6 +522,80 @@ Page({
     }
   },
 
+  // journey-review C5（2026-09-21 拍板）：本人档案合作卡/超级案例 tab 长按卡片（原生 longpress 手势）删除——
+  // 微信原生确认弹窗「删除后将无法恢复，是否删除？」（删除警示红），确认后卡片移除 +
+  // toast「已删除」（1.8s）；取消停留原页。列表摘要不带 version，先取详情再按乐观锁归档。
+  async deleteOwnCooperationCard(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.isSelf || this.data.deletingId) {
+      return
+    }
+    const id = String(event.currentTarget.dataset.id || '')
+    const card = this.data.cooperationCards.find(item => item.id === id)
+    if (!card) {
+      return
+    }
+    const cardId = card.id as CooperationCardId
+    const confirmation = await wx.showModal({
+      title: '删除提示',
+      content: '删除后将无法恢复，是否删除？',
+      confirmText: '删除',
+      confirmColor: '#FF4D5E',
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      return
+    }
+    this.setData({ deletingId: id })
+    try {
+      const detail = await cooperationModule.get(cardId)
+      await cooperationModule.archive(cardId, detail.version)
+      this.setData({
+        cooperationCards: this.data.cooperationCards.filter(item => item.id !== id),
+        deletingId: '',
+      })
+      wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
+    }
+    catch (error) {
+      this.setData({ deletingId: '' })
+      wx.showToast({ title: error instanceof Error ? error.message : '合作卡删除失败，请重试。', icon: 'none' })
+    }
+  },
+
+  async deleteOwnSuperCase(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.isSelf || this.data.deletingId) {
+      return
+    }
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.superCases.find(entry => entry.id === id)
+    if (!item) {
+      return
+    }
+    const caseId = item.id as SuperCaseId
+    const confirmation = await wx.showModal({
+      title: '删除提示',
+      content: '删除后将无法恢复，是否删除？',
+      confirmText: '删除',
+      confirmColor: '#FF4D5E',
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      return
+    }
+    this.setData({ deletingId: id })
+    try {
+      const detail = await superCaseModule.get(caseId)
+      await superCaseModule.archive(caseId, detail.version)
+      // 时间轴节点/月份标签是展示层，随数据收缩自然消失，无需特判。
+      this.setData({
+        superCases: this.data.superCases.filter(entry => entry.id !== id),
+        deletingId: '',
+      })
+      wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
+    }
+    catch (error) {
+      this.setData({ deletingId: '' })
+      wx.showToast({ title: error instanceof Error ? error.message : '案例删除失败，请重试。', icon: 'none' })
+    }
+  },
+
   openSuperCase(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
     if (id) {
@@ -475,6 +607,42 @@ Page({
     const id = String(event.currentTarget.dataset.id || '')
     if (id) {
       caseNavigateTo({ url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(id)}` })
+    }
+  },
+
+  // journey-review J6-03 落点①：相关机会 tab 长按删除，与同页合作卡/超级案例 C5 流同口径
+  // （原生弹窗 + 乐观锁归档 + toast「已删除」1.8s）；服务端 action 未上线前失败走 toast 兜底。
+  async deleteOwnOpportunity(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.isSelf || this.data.deletingId) {
+      return
+    }
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.opportunities.find(entry => entry.id === id)
+    if (!item) {
+      return
+    }
+    const confirmation = await wx.showModal({
+      title: '删除提示',
+      content: '删除后将无法恢复，是否删除？',
+      confirmText: '删除',
+      confirmColor: '#FF4D5E',
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      return
+    }
+    this.setData({ deletingId: id })
+    try {
+      const detail = await opportunityModule.get(item.id)
+      await opportunityModule.remove(item.id, detail.version)
+      this.setData({
+        opportunities: this.data.opportunities.filter(entry => entry.id !== id),
+        deletingId: '',
+      })
+      wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
+    }
+    catch (error) {
+      this.setData({ deletingId: '' })
+      wx.showToast({ title: error instanceof Error ? error.message : '机会删除失败，请重试。', icon: 'none' })
     }
   },
 
