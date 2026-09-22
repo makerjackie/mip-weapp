@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+
+/* MIP 设计系统 token（--mip-*）：设计系统组件（mip-attend-pill 等 17 处）引用，
+   必须随全局样式入口下发，否则 var(--mip-*) 运行时未定义、样式静默失效。 */
+@import './styles/mip-tokens.wxss';
 @source "./**/*.{wxml,js,ts}";
 @source not "../dist/**";
 @source not "../node_modules/**";
