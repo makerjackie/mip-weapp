@@ -61,6 +61,7 @@
         "orders/index",
         "order-detail/index",
         "payment-result/index",
+        "membership-order/index",
         "benefits/index",
         "privacy/index",
         "privacy-policy/index",

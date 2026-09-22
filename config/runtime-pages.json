@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 66,
+  "routeCount": 67,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
@@ -30,6 +30,7 @@
         "packages/member/mip-events/registration/index",
         "packages/member/mip-events/detail/index",
         "packages/member/payment-result/index",
+        "packages/member/membership-order/index",
         "packages/member/order-detail/index",
         "packages/member/mip-knowledge/detail/index"
       ],
@@ -609,6 +610,17 @@
           "orderId": "id"
         }
       },
+      "deviceRequired": ["wechat-pay"]
+    },
+    {
+      "id": "U29",
+      "name": "会员订单确认",
+      "path": "packages/member/membership-order/index",
+      "selector": "#mip-membership-order-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
       "deviceRequired": ["wechat-pay"]
     },
     {

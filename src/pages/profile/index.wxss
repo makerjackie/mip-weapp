@@ -35,10 +35,12 @@
   margin-top: 24rpx;
 }
 
+/* 右侧 72rpx 为站内信命中区（J3-04），加 16rpx 间隔，避免档案内容滑入其点击范围。 */
 .profile-summary {
   display: flex;
   align-items: center;
   min-height: 160rpx;
+  padding-right: 88rpx;
 }
 
 .profile-avatar {
@@ -628,4 +630,30 @@
   position: absolute;
   top: 0;
   right: 8rpx;
+}
+
+/* journey-review J3-04：站内信右上角入口（登录态头部，native 导航栏约束下的页面右上角位置）。 */
+.profile-hero {
+  position: relative;
+}
+
+.profile-inbox-entry {
+  position: absolute;
+  top: 8rpx;
+  right: 24rpx;
+  z-index: 2;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+}
+
+/* 站内信命中区（72rpx）叠在 summary 右端之上，为档案编辑点击留出右侧空间，避免命中被截走；
+   图标 40rpx 居中于 72rpx 命中区（四周各 16rpx），红点中心对齐图标右上角 (56,16)，修正原 16rpx 错位。 */
+.profile-inbox-unread {
+  position: absolute;
+  top: -2rpx;
+  right: -2rpx;
 }

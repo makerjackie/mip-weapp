@@ -9,6 +9,9 @@
     <view class="growth-hero relative h-[284rpx] overflow-hidden bg-brand px-5 py-6 text-on-brand">
       <image class="pointer-events-none absolute inset-0 h-full w-full" mode="scaleToFill" src="/packages/member/assets/figma/growth/hero-bg.webp" />
       <image wx:if="{{legacyLevelArtVisible}}" class="growth-level-art pointer-events-none absolute -bottom-[4rpx] -right-[300rpx] h-[240rpx] w-[1052rpx]" mode="aspectFit" src="/packages/member/assets/figma/profile/level-art.webp" />
+      <!-- figma 3296:5808：等级卡右上角「经验值详情」小入口已烘焙在 hero-bg.webp 内，
+           这里叠一个透明命中区承接点击（等级与权益区块在本页下方）。 -->
+      <view class="absolute right-[8rpx] top-[16rpx] z-20 h-[56rpx] w-[180rpx]" aria-role="button" aria-label="经验值详情" bind:tap="openExperienceDetails" />
       <view class="relative z-10 ml-[8rpx] mt-[16rpx]">
         <view class="text-[length:96rpx] font-bold leading-[104.2rpx]">Lv.{{currentLevelNumber}}</view>
         <view class="text-[length:20rpx] font-semibold leading-[28rpx]">EXP: {{snapshot.account.experienceBalance}}<text wx:if="{{nextLevelThreshold}}"> I {{nextLevelThreshold}}</text></view>
@@ -16,8 +19,7 @@
           <view class="absolute left-[4rpx] top-[4rpx] h-[4rpx] rounded-full bg-brand" style="width:{{snapshot.levelProgressPercent}}%;max-width:calc(100% - 8rpx)" />
         </view>
         <view wx:else class="mt-[7.8rpx] text-[length:20rpx] leading-[28rpx] opacity-70">已达到当前最高等级</view>
-        <view wx:if="{{membershipEndsText}}" class="mt-[8rpx] text-[length:20rpx] font-medium leading-[28rpx]">会员有效期至 {{membershipEndsText}}</view>
-        <view wx:elif="{{membershipState === 'guest'}}" class="mt-[8rpx] text-[length:20rpx] font-medium leading-[28rpx]">当前没有有效会员权益</view>
+        <view wx:if="{{membershipValidityText}}" class="mt-[8rpx] text-[length:20rpx] font-medium leading-[28rpx]">{{membershipValidityText}}</view>
         <view wx:elif="{{membershipState === 'error'}}" class="mt-[8rpx] text-[length:20rpx] font-medium leading-[28rpx]">会员有效期暂时无法加载</view>
       </view>
     </view>
@@ -50,9 +52,13 @@
     <view wx:elif="{{tasksState === 'error'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:24rpx]">成长任务暂时无法加载</view><view class="mt-2 text-[length:22rpx] text-muted">{{tasksMessage}}</view><view class="mt-3 flex min-h-[88rpx] items-center text-[length:22rpx] text-brand" aria-role="button" bind:tap="loadTasks">重新加载</view></view>
     <view wx:elif="{{tasksState === 'empty'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5 text-[length:22rpx] text-muted">暂无可完成的成长任务。</view>
     <view wx:else class="mx-3 mt-[24rpx] flex flex-col gap-[24rpx]">
-      <view wx:for="{{tasks}}" wx:key="id" class="flex min-h-[104rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3 py-3 active:bg-panel-muted" aria-role="button" aria-label="{{item.name}}，奖励 {{item.rewardExperience}} 经验" data-id="{{item.id}}" bind:tap="openTask">
-        <view class="min-w-0 flex-1 truncate text-[length:26rpx] font-medium">{{item.name}}</view>
-        <view class="shrink-0 whitespace-nowrap text-[length:24rpx] font-medium text-brand">+{{item.rewardExperience}} 经验</view>
+      <!-- figma 3296:5808 经验任务卡：任务名 12px + 说明 10px + 「+ EXP N」黄字 + 右侧胶囊。 -->
+      <view wx:for="{{tasks}}" wx:key="id" class="flex min-h-[134rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3 py-3 active:bg-panel-muted" aria-role="button" aria-label="{{item.name}}，奖励 {{item.rewardExperience}} 经验" data-id="{{item.id}}" bind:tap="openTask">
+        <view class="min-w-0 flex-1">
+          <view class="truncate text-[length:24rpx] font-medium leading-[33.6rpx]">{{item.name}}</view>
+          <view wx:if="{{item.content}}" class="mt-[6rpx] truncate text-[length:20rpx] leading-[28rpx] text-muted">{{item.content}}</view>
+        </view>
+        <view class="shrink-0 whitespace-nowrap text-[length:32rpx] font-medium leading-[44.8rpx] text-brand">+ EXP {{item.rewardExperience}}</view>
         <view wx:if="{{item.status === 'AVAILABLE'}}" class="flex h-[52rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-[length:24rpx] font-medium text-on-brand">{{item.actionText}}</view>
         <view wx:else class="flex h-[52rpx] shrink-0 items-center justify-center rounded-full bg-canvas px-3 text-[length:24rpx] font-medium text-brand">{{item.actionText}}</view>
       </view>
@@ -65,7 +71,7 @@
       <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:32rpx] font-bold">{{snapshot.account.coinBalance}}</view><view class="mt-1 text-[length:22rpx] text-muted">游戏币</view></view>
     </view>
 
-    <view class="mx-3 mt-6 text-[length:30rpx] font-bold">等级与权益</view>
+    <view id="growth-levels-section" class="mx-3 mt-6 text-[length:30rpx] font-bold">等级与权益</view>
     <view class="mx-3 mt-3 flex flex-col gap-3">
       <view wx:for="{{levels}}" wx:key="id" class="rounded-[16rpx] border border-line bg-panel px-4 py-4">
         <view class="flex items-center justify-between gap-3"><view class="text-[length:24rpx] font-semibold">{{item.name}}</view><view wx:if="{{item.current}}" class="rounded-full bg-brand-soft px-3 py-1 text-[length:22rpx] text-brand">当前等级</view></view>
@@ -94,10 +100,18 @@
     <view class="mx-3"><app-page-exit /></view>
   </block>
 
+  <!-- J1-06 开通态：无有效会员时底部仅「立即加入」→ 会员订单确认页（J1-07）；本页不展示金额。 -->
+  <mip-sticky-actions wx:if="{{!isPlayer && membershipState !== 'loading'}}">
+    <view id="growth-join-actions" slot="actions" class="flex h-[112rpx] w-full items-center px-2">
+      <button class="m-0 flex h-[80rpx] w-full items-center justify-center gap-2 rounded-full border border-black bg-brand p-0 text-[length:32rpx] font-medium leading-[80rpx] text-on-brand active:bg-brand-active" aria-label="立即加入玩家" bind:tap="openMembershipOrder"><mip-icon name="share-circle" size="{{15}}" color="var(--color-on-brand)" /><text>立即加入</text></button>
+    </view>
+  </mip-sticky-actions>
+
+  <!-- J4-03 续费态：「邀请加入」常驻；「立即续费」仅到期前 3 个月展示（figma 2165:17142）→ 同一会员订单页。 -->
   <mip-sticky-actions wx:if="{{isPlayer}}">
     <view id="growth-member-actions" slot="actions" class="flex h-[112rpx] w-full items-center gap-2">
       <button open-type="share" disabled="{{!invitationReady}}" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-line bg-panel p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-brand disabled:opacity-50" aria-label="邀请加入 MIP"><mip-icon name="share-circle" size="{{15}}" color="var(--color-brand)" /><text>邀请加入</text></button>
-      <button class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-on-brand active:bg-brand-active" aria-label="进入会员方案续费" bind:tap="renewMembership"><t-icon name="card" size="30rpx" color="var(--color-on-brand)" /><text>立即续费</text></button>
+      <button wx:if="{{renewWindowOpen}}" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-on-brand active:bg-brand-active" aria-label="进入会员订单续费" bind:tap="renewMembership"><t-icon name="card" size="30rpx" color="var(--color-on-brand)" /><text>立即续费</text></button>
     </view>
   </mip-sticky-actions>
   <view wx:if="{{invitationMessage && isPlayer}}" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+132rpx)] z-20 rounded-[8rpx] border border-danger bg-panel px-4 py-3 text-center text-[length:22rpx] text-danger">{{invitationMessage}}</view>
