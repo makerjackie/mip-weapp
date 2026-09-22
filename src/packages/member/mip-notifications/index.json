@@ -1,11 +1,12 @@
 {
-  "navigationBarTitleText": "消息",
+  "navigationBarTitleText": "站内信",
   "enablePullDownRefresh": true,
   "backgroundColor": "#080808",
   "usingComponents": {
     "mip-empty-state": "/components/mip-empty-state/index",
     "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-icon": "/components/mip-icon/index"
   }

@@ -1,4 +1,5 @@
 import type { CommunityReportIntent, ReportCategory } from '../../../modules/mip-community'
+import type { IdentityAccessSnapshot } from '../../../modules/mip-identity'
 import type {
   ProfileInfluenceSummary,
   ProfileInterestMutationSnapshot,
@@ -20,10 +21,15 @@ import { careerIdentityOptions } from '../../../modules/mip-identity/profile-opt
 import { opportunityModule, profileInterestMutations } from '../../../modules/mip-opportunities'
 import { createMutationKey } from '../../../modules/mip-opportunities/validation'
 import { caseNavigateTo } from '../../../platform/navigation/client'
+import { showIdentityUnlockModal } from '../../../shared/identity-unlock'
 
 type ProfileAction = 'interest' | 'block' | 'report'
 type AccessActionState = 'loading' | 'ready' | 'access' | 'error'
 type ProfileSection = 'cooperation' | 'cases' | 'opportunities'
+// journey-review C1 终审（2026-09-21）档案互动条角色门禁：
+// active = 玩家（功能态）；hidden = 嘉宾（整条不渲染）；locked = 普通用户（可见，点击弹解锁）；
+// pending = 初始未定态（身份快照未 resolve 前整条不渲染，避免嘉宾先见条后消失的闪烁）。
+type InteractionBarMode = 'pending' | 'active' | 'hidden' | 'locked'
 
 interface PublicProfileView extends PublicPerson {
   displayName: string
@@ -94,6 +100,7 @@ Page({
     // figma 1769_38059/2058_12247/2704_13454 合作卡档案还原态开关，fixture 专用；
     // 生产保持 stats+tabs+列表布局（mip-public-profile 测试 pin）。
     figmaLayout: false,
+    interactionBar: 'pending' as InteractionBarMode,
   },
   pendingAction: '' as ProfileAction | '',
   reportIntent: null as CommunityReportIntent | null,
@@ -176,6 +183,7 @@ Page({
       if (!aggregate.profile.isSelf) {
         void opportunityModule.recordProfileVisit(this.data.profileRef, this.visitKey).catch(() => undefined)
       }
+      await this.resolveInteractionBar()
     }
     catch (error) {
       this.setData({
@@ -183,6 +191,25 @@ Page({
         message: error instanceof Error ? error.message : '公开档案加载失败。',
       })
     }
+  },
+
+  // C1 终审矩阵：普通用户（INTERACT 未就绪）可见可点但弹解锁；嘉宾（就绪且无有效会员权益）
+  // 整条隐藏；玩家功能态。快照不可得时按普通用户处理，点击路径会再次核对。
+  async resolveInteractionBar() {
+    const snapshot = mipIdentityModule.peekSnapshot()
+      || await mipIdentityModule.loadSnapshot().catch(() => null)
+    this.applyInteractionBarMode(snapshot)
+  },
+
+  applyInteractionBarMode(snapshot: IdentityAccessSnapshot | null | undefined) {
+    if (!snapshot || !evaluateAccess(snapshot, {
+      action: 'INTERACT',
+      source: { navigation: 'navigateBack' },
+    }).ready) {
+      this.setData({ interactionBar: 'locked' })
+      return
+    }
+    this.setData({ interactionBar: snapshot.membership.kind === 'PLAYER' ? 'active' : 'hidden' })
   },
 
   observeInterest(profileRef: string) {
@@ -243,12 +270,22 @@ Page({
         source: { navigation: 'navigateBack' },
       })
       if (!session.decision.ready) {
+        // J2-04（C1 终审）：普通用户点击档案互动条一律弹原生解锁提示，
+        // 确定取消均停留，不再进入身份资料流程（资料型入口保留给举报/屏蔽）。
+        if (action === 'interest') {
+          this.pendingAction = ''
+          this.applyInteractionBarMode(session.snapshot)
+          this.setActionState(action, 'ready')
+          await showIdentityUnlockModal().catch(() => undefined)
+          return false
+        }
         this.pendingAction = action
         this.setData({ accessToken: session.token })
         this.setActionState(action, 'access')
         return false
       }
       if (action === 'interest') {
+        this.applyInteractionBarMode(session.snapshot)
         this.setData({ accessToken: '' })
         this.setActionState(action, 'ready')
         return !this.data.isSelf
@@ -290,7 +327,24 @@ Page({
     if (this.data.isSelf || this.data.interestState === 'loading') {
       return
     }
+    // C1 终审：普通用户点击「我感兴趣」弹原生解锁窗，确定取消均停留（J2-03 → J2-04）。
+    if (this.data.interactionBar === 'locked') {
+      void showIdentityUnlockModal().catch(() => undefined)
+      return
+    }
     void this.runProfileAction('interest')
+  },
+
+  // 「N感兴趣」名单入口：玩家一期占位（他人档案名单详情未开放），普通用户弹解锁。
+  openInterestList() {
+    if (this.data.isSelf) {
+      return
+    }
+    if (this.data.interactionBar === 'locked') {
+      void showIdentityUnlockModal().catch(() => undefined)
+      return
+    }
+    wx.showToast({ title: '感兴趣名单即将开放', icon: 'none' })
   },
 
   async openProfileMore() {

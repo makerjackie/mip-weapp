@@ -2,9 +2,9 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { parseReceivedVisitors } from '../src/modules/mip-opportunities/received-visitors'
 import { clearLoadingDiagnostics, getLoadingDiagnostics } from '../src/platform/cloudbase/loading-diagnostics'
 
-const mocks = vi.hoisted(() => ({ access: vi.fn(), list: vi.fn(), markRead: vi.fn(), invalidate: vi.fn() }))
+const mocks = vi.hoisted(() => ({ access: vi.fn(), peekSnapshot: vi.fn(), list: vi.fn(), markRead: vi.fn(), invalidate: vi.fn() }))
 vi.mock('../src/modules/mip-identity', () => ({ mipAccessPageUrl: vi.fn() }))
-vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: { beginProtectedAction: mocks.access } }))
+vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: { beginProtectedAction: mocks.access, peekSnapshot: mocks.peekSnapshot } }))
 vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: { invalidate: mocks.invalidate } }))
 vi.mock('../src/modules/mip-opportunities', () => ({ opportunityModule: { listReceived: mocks.list, markReceivedRead: mocks.markRead } }))
 vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn() }))
@@ -45,6 +45,7 @@ beforeEach(() => {
   vi.resetAllMocks()
   clearLoadingDiagnostics()
   mocks.access.mockResolvedValue({ decision: { ready: true } })
+  mocks.peekSnapshot.mockReturnValue(undefined)
   mocks.list.mockResolvedValue({ items: [], unreadCount: 0 })
 })
 
