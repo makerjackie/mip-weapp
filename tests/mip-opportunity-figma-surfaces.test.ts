@@ -100,7 +100,8 @@ describe('MIP opportunity Figma surfaces', () => {
 
   it('matches the 351 by 176 opportunity-card silhouette with the AttendPill referral contract', () => {
     expect(discovery).toContain('<mip-opportunity-card')
-    expect(discovery).toContain('avatars="{{item.avatars}}"')
+    // 运行时验收（2026-09-22）：卡片 avatars 绑 presenter 保底数组 avatarViews，不再透传服务端原值。
+    expect(discovery).toContain('avatars="{{item.avatarViews}}"')
     expect(opportunityCardStyles).toContain('height: 352rpx;')
     expect(opportunityCardStyles).toContain('width: 240rpx;')
     expect(opportunityCardStyles).toContain('height: 320rpx;')

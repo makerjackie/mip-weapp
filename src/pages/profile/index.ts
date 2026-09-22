@@ -32,6 +32,11 @@ interface CooperationCardView extends CooperationCardSummary {
   roleName: string
 }
 
+interface OpportunityCardView extends OpportunitySummary {
+  /** 运行时验收（2026-09-22）：服务端 avatars 形状不可信，presenter 保底数组后才绑给卡片 type: Array 属性。 */
+  avatarViews: string[]
+}
+
 Page({
   copyLoadingDiagnostics() {
     wx.setClipboardData({
@@ -83,7 +88,7 @@ Page({
     caseState: 'loading' as SectionState,
     cases: [] as SuperCaseSummary[],
     opportunityState: 'loading' as SectionState,
-    opportunities: [] as OpportunitySummary[],
+    opportunities: [] as OpportunityCardView[],
     openingAction: '' as OpeningAction,
     message: '',
   },
@@ -432,7 +437,12 @@ Page({
     }
     try {
       const page = await opportunityModule.listMine()
-      this.setData({ opportunityState: 'ready', opportunities: page.items.slice(0, 3) })
+      // 保底数组：非数组（含 null/对象/字符串）与非法元素一律丢弃，杜绝卡片属性收到 non-array 告警。
+      const opportunities: OpportunityCardView[] = page.items.slice(0, 3).map(item => ({
+        ...item,
+        avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
+      }))
+      this.setData({ opportunityState: 'ready', opportunities })
     }
     catch {
       if (!this.data.opportunities.length) {

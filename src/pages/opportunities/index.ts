@@ -25,6 +25,8 @@ type PageMode = 'opportunities' | 'cooperation'
 type StatusPill = OpportunityFilter['status'] | 'MINE'
 interface OpportunityCardView extends OpportunitySummary {
   typeTagViews: Array<{ key: string, label: string }>
+  /** 运行时验收（2026-09-22）：服务端 avatars 形状不可信，presenter 保底数组后才绑给卡片 type: Array 属性。 */
+  avatarViews: string[]
 }
 interface CooperationTalentView extends Omit<CooperationTalentSummary, 'cards'> {
   cards: Array<CooperationTalentSummary['cards'][number] & { roleName: string }>
@@ -50,7 +52,13 @@ function withTypeTagViews(items: OpportunitySummary[]): OpportunityCardView[] {
   return items.map(item => ({
     ...item,
     typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
+    avatarViews: avatarViewsOf(item.avatars),
   }))
+}
+
+/** 保底数组：非数组（含 null/对象/字符串）与非法元素一律丢弃，杜绝卡片属性收到 non-array 告警。 */
+function avatarViewsOf(avatars: OpportunitySummary['avatars']): string[] {
+  return Array.isArray(avatars) ? avatars.filter(v => typeof v === 'string' && v) : []
 }
 
 function locationPreset(types: OpportunityLocationType[]): LocationPreset {

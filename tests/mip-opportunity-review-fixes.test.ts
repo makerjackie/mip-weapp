@@ -196,6 +196,35 @@ describe('MIP opportunity review fixes', () => {
     expect(absent.items[0]?.typeKeys).toBeUndefined()
   })
 
+  it('guarantees the card avatars prop always receives an array (runtime console warning fix)', async () => {
+    // 行为级：presenter 对非数组 / 脏元素 / null / 缺失 avatars 一律产出保底数组，
+    // 不再触发「expected <Array> but got non-array」的组件属性告警。
+    mocks.listOpportunities.mockResolvedValue({
+      items: [
+        { id: 'a', avatars: 'https://example.com/not-an-array.png' },
+        { id: 'b', avatars: ['u1', '', 3, 'u2'] },
+        { id: 'c', avatars: null },
+        { id: 'd' },
+      ],
+      nextCursor: '',
+    })
+    const instance = discoveryPage()
+    await instance.loadContent(true)
+    expect(
+      (instance.data.opportunities as Array<Record<string, unknown>>).map(item => item.avatarViews),
+    ).toEqual([[], ['u1', 'u2'], [], []])
+    // 源码级：机会 Tab / 我的页改绑保底字段，详情页 referralAvatars 同口径加固；
+    // 首页信息流不传 avatars（组件默认 []）；组件契约保持 type: Array 不动。
+    expect(discovery).toContain('avatars="{{item.avatarViews}}"')
+    expect(discovery).not.toContain('avatars="{{item.avatars}}"')
+    expect(profile).toContain('avatars="{{item.avatarViews}}"')
+    expect(profile).not.toContain('avatars="{{item.avatars}}"')
+    expect(home).not.toContain('avatars="{{item.avatars}}"')
+    expect(detailScript).toContain('referralAvatars: Array.isArray(item.avatars)')
+    expect(detail).toContain('avatars="{{referralAvatars}}"')
+    expect(cardScript).toContain(`avatars: { type: Array, value: [] }`)
+  })
+
   it('disables the ended edit entry and keeps the aggregate avatars on a white ring (#5/#7)', () => {
     // ENDED 详情「编辑」置灰不可点（服务端 OWNER_EDITABLE 不含 ENDED）。
     expect(detail).toContain(`wx:elif="{{ownerBar === 'ended'}}"`)
