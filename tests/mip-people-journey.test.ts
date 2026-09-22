@@ -37,6 +37,10 @@ vi.mock('../src/modules/mip-opportunities', () => ({
   },
   profileInterestMutations: { mergeServer: vi.fn(), subscribe: vi.fn(), mutate: vi.fn() },
 }))
+// 合并 ws-settings 后档案页引入卡片归档链（mip-cases/mip-cooperation → transport → 运行时配置），
+// 测试环境无 weapp-vite 构建常量，按仓库惯例 mock 两个 facade（仅在长按删除 handler 中调用）。
+vi.mock('../src/modules/mip-cases', () => ({ superCaseModule: { get: vi.fn(), archive: vi.fn() } }))
+vi.mock('../src/modules/mip-cooperation', () => ({ cooperationModule: { get: vi.fn(), archive: vi.fn() } }))
 vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: profileMocks.navigate }))
 vi.mock('../src/modules/mip-messaging/client', () => ({
   mipMessagingModule: { listInbox: vi.fn(), markAllRead: vi.fn(), markRead: vi.fn(), peekInbox: vi.fn(), invalidate: vi.fn() },
