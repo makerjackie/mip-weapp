@@ -241,16 +241,17 @@ Page({
   refreshOnReturn: false,
   authToken: '',
 
-  onShow() {
+  async onShow() {
     syncCaseNavigation(this, 'pages/opportunities/index')
     const resume = mipIdentityModule.consumePendingResume('pages/opportunities/index')
     if (resume && this.resumeDestination) {
       const destination = this.resumeDestination
       this.resumeDestination = ''
       this.abandonLoginSheet()
-      // journey-review J1-04 复审：授权返回先刷新登录态再恢复原意图（否则 authenticated
-      // 仍为 false，落在游客占位屏），与 onLoginSheetPhone / resumeLoginSheetIntent 对齐。
-      void this.refreshAuthState()
+      // journey-review J1-04 复审（B1）：必须等登录态刷新完成后再恢复原意图，否则
+      // authenticated 仍是过期 false：FILTER 哨兵会再次触发身份确认并被当成页面
+      // 路径静默跳转失败，MINE 哨兵则停在游客占位屏。onShow 其余逻辑不在本分支。
+      await this.refreshAuthState()
       this.runResumeDestination(destination)
       return
     }
@@ -936,6 +937,14 @@ Page({
       })
       if (session.decision.ready) {
         this.resumeDestination = ''
+        // B1 双保险：auth-intent:* 哨兵不是页面路径，ready 时按恢复语义执行并同步
+        // 登录态（decision.ready 蕴含 snapshot.authenticated），避免跳非法页面静默
+        // 失败或落回游客占位屏。
+        if (destination.startsWith('auth-intent:')) {
+          this.setData({ authenticated: session.snapshot.authenticated })
+          this.runResumeDestination(destination)
+          return
+        }
         caseNavigateTo({ url: destination })
         return
       }

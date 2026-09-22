@@ -235,11 +235,15 @@ function parseOpportunityCommercialTerms(value: unknown): OpportunityCommercialT
 
 /**
  * 机会类型（QZ1 三件套）为可选增强字段：过滤非法值，不让旧服务端响应整体失败。
- * 数组内全非法时返回空数组并由调用方覆盖原值，不得把非法串当黄标渲染。
+ * 非空非数组（如服务端误回字符串）或数组内全非法时返回空数组并由调用方覆盖原值，
+ * 不得把非法串当黄标渲染、也不能留原值让消费方 `.map` 抛错；字段缺省才保持缺省。
  */
 function parseOpportunityTypeKeys(value: unknown): OpportunityTypeKey[] | undefined {
-  if (!Array.isArray(value)) {
+  if (value === undefined || value === null) {
     return undefined
+  }
+  if (!Array.isArray(value)) {
+    return []
   }
   return [...new Set(value.filter(isOpportunityTypeKey))]
 }

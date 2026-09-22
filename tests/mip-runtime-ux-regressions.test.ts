@@ -8,7 +8,7 @@ function source(relativePath: string) {
 describe('MIP runtime UX regressions', () => {
   it('keeps opportunity results visible while an ordinary tab return revalidates', () => {
     const script = source('src/pages/opportunities/index.ts')
-    const showStart = script.indexOf('  onShow()')
+    const showStart = script.indexOf('  async onShow()')
     const showEnd = script.indexOf('\n  async loadCatalogs()', showStart)
     const loadStart = script.indexOf('  async loadContent(')
     const loadEnd = script.indexOf('\n  onReachBottom()', loadStart)

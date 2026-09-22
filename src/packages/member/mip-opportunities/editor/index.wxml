@@ -92,7 +92,7 @@
       <view id="opportunity-field-status">
         <view class="mb-2 flex items-center gap-2 text-[length:28rpx] font-medium"><mip-icon name="signpost-fill" size="{{16}}" color="var(--color-brand)" /><text>项目状态</text></view>
         <view class="flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-4" aria-role="button" aria-expanded="{{statusSheetVisible}}" bind:tap="openStatusSheet">
-          <text class="text-[length:28rpx] text-brand">{{projectStatus === 'RECRUITING' ? '招募中' : projectStatus === 'ENDED' ? '结束项目' : '下架项目'}}</text>
+          <text class="text-[length:28rpx] text-brand">{{projectStatus === 'RECRUITING' ? '招募中' : '结束项目'}}</text>
           <mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-muted)" />
         </view>
       </view>
