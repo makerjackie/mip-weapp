@@ -70,6 +70,8 @@ Page({
     const cached = mipCommerceModule.peekPlans()
     if (cached?.length) {
       this.applyPlans(cached, false)
+      // 缓存渲染期间按钮禁用是静默的，先给出可见提示；网络确认成功后 applyPlans 会清空。
+      this.setData({ message: '正在确认最新会员方案。' })
     }
     else {
       this.setData({ state: 'loading', message: '' })
@@ -104,6 +106,16 @@ Page({
       totalAmount: amountText(plan.priceCents),
       message: '',
     })
+  },
+
+  // 刷新失败后页内可重试（对齐旧会员页 onPullDownRefresh 模式）：loadPlan 成功会清空 message 并恢复 plansVerified。
+  async onPullDownRefresh() {
+    try {
+      await this.loadPlan()
+    }
+    finally {
+      wx.stopPullDownRefresh()
+    }
   },
 
   async pay() {

@@ -98,6 +98,18 @@ describe('MIP membership order confirmation page (journey-review J1-07 join-orde
     expect(template).toContain('aria-disabled="{{paying || !plansVerified}}"')
   })
 
+  it('offers pull-down retry and a visible hint while cached plans await verification (P2)', () => {
+    const script = readSource('src/packages/member/membership-order/index.ts')
+    const pageConfig = readSource('src/packages/member/membership-order/index.json')
+
+    // 刷新失败后页内可重试：下拉刷新重新走 loadPlan，完成后停止下拉动画。
+    expect(pageConfig).toContain('"enablePullDownRefresh": true')
+    expect(script).toContain('async onPullDownRefresh()')
+    expect(script).toMatch(/onPullDownRefresh\(\) \{[\s\S]*?await this\.loadPlan\(\)[\s\S]*?wx\.stopPullDownRefresh\(\)/)
+    // 缓存渲染待验证期间按钮禁用不是静默的（对齐旧会员页文案），网络确认成功后由 applyPlans 清空。
+    expect(script).toMatch(/this\.applyPlans\(cached, false\)[\s\S]*?正在确认最新会员方案。/)
+  })
+
   it('resumes the purchase intent on show regardless of the current render state', () => {
     const script = readSource('src/packages/member/membership-order/index.ts')
 
