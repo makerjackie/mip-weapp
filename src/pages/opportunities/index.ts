@@ -1110,6 +1110,15 @@ Page({
     }
   },
 
+  /**
+   * journey-review J1-06→J1-07：游客点「去成为玩家解锁权限」先完成身份确认，
+   * 授权回来后进玩家等级页（真实路由走 openProtected 的 ready/恢复分支，
+   * 已登录用户点击则直接进等级页）。
+   */
+  openBecomePlayerUnlock() {
+    void this.openProtected('/packages/member/mip-growth/index', 'ENTER_APP')
+  },
+
   openDiscoveryMenu() {
     const entries: Array<{
       label: string

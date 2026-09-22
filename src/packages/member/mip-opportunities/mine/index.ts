@@ -229,7 +229,7 @@ Page({
       return
     }
     wx.showModal({
-      title: '删除机会',
+      title: '删除提示',
       content: '删除后将无法恢复，是否删除？',
       confirmText: '删除',
       confirmColor: '#FF4D5E',
@@ -253,7 +253,7 @@ Page({
       this.setData({
         publishedItems: this.data.publishedItems.filter(entry => entry.id !== item.id),
       })
-      wx.showToast({ title: '已删除', icon: 'none', duration: 1800 })
+      wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
     }
     catch (error) {
       wx.showToast({ title: error instanceof Error ? error.message : '删除失败，请稍后重试', icon: 'none' })

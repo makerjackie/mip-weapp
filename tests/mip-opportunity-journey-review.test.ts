@@ -40,7 +40,9 @@ describe('MIP opportunity journey review', () => {
     // 玩家登录 / 去成为玩家解锁权限 仅游客态（!authenticated）渲染。
     expect(discovery).toContain(`wx:elif="{{!authenticated}}"`)
     expect(discovery).toContain('bind:tap="openLogin">玩家登录')
-    expect(discovery).toContain('bind:tap="openLogin">去成为玩家解锁权限>')
+    // J1-06→J1-07：解锁入口走 openProtected 门禁，授权后落玩家等级页（不再原地刷新）。
+    expect(discovery).toContain('bind:tap="openBecomePlayerUnlock">去成为玩家解锁权限>')
+    expect(discoveryScript).toContain(`void this.openProtected('/packages/member/mip-growth/index', 'ENTER_APP')`)
     // 发布机会 / 筛选走 openProtected；游客点「我的项目」先身份确认，回来后落在我的项目 pill。
     expect(discoveryScript).toContain(`void this.openProtected(url, 'PUBLISH_OPPORTUNITY')`)
     expect(discoveryScript).toContain(`void this.openProtected(FILTER_AUTH_RESUME, 'INTERACT')`)
@@ -158,7 +160,10 @@ describe('MIP opportunity journey review', () => {
     expect(mine).toContain('bindlongpress="confirmDeletePublished"')
     expect(mineScript).toContain('删除后将无法恢复，是否删除？')
     expect(mineScript).toContain(`confirmColor: '#FF4D5E'`)
-    expect(mineScript).toContain(`title: '已删除', icon: 'none', duration: 1800`)
+    // C5 口径与其余四处一致：弹窗标题「删除提示」、toast success 1.8s。
+    expect(mineScript).toContain(`title: '删除提示'`)
+    expect(mineScript).not.toContain(`title: '删除机会'`)
+    expect(mineScript).toContain(`title: '已删除', icon: 'success', duration: 1800`)
     expect(mineScript).toContain(`dimmed: label === '已下架'`)
     expect(mine).toContain(`{{item.dimmed ? 'opacity-50 grayscale' : ''}}`)
     // mine 列表卡片保持现行样式：不传机会类型黄标新属性。

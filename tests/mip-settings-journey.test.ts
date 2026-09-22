@@ -139,8 +139,9 @@ describe('journey-review WS-SETTINGS', () => {
     expect(profilePage).toContain('if (!this.data.isSelf || this.data.deletingId)')
     expect(profilePage).toContain('cooperationModule.archive(cardId, detail.version)')
     expect(profilePage).toContain('superCaseModule.archive(caseId, detail.version)')
-    // 相关机会 tab 的长按删除随 J6-03（机会域模块 delete 能力）补齐，先不绑定误删入口。
-    expect(profileView).not.toContain('bind:longpress="deleteOwnOpportunity"')
+    // 相关机会 tab 的长按删除已随 J6-03 补齐：与另两 tab 同口径，走机会域 archive 契约。
+    expect(profileView).toContain('bind:tap="openOpportunity" bind:longpress="deleteOwnOpportunity"')
+    expect(profilePage).toContain('await opportunityModule.remove(item.id, detail.version)')
     // 两个管理页同口径：长按 + 原生弹窗 + toast（1.8s），删除按钮行移除。
     for (const [template, handler] of [
       [coopList, 'deleteCard'],

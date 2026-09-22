@@ -222,7 +222,7 @@
     <view wx:elif="{{!authenticated}}" class="mt-[84rpx] flex translate-x-[1rpx] flex-col items-center">
       <image class="h-[360rpx] w-[360rpx]" src="/assets/figma/opportunities/guest-mystery-box.png" mode="aspectFill" />
       <view class="mt-4 flex h-[80rpx] w-[372rpx] items-center justify-center rounded-full border border-canvas bg-brand text-[length:32rpx] font-medium text-on-brand" aria-role="button" bind:tap="openLogin">玩家登录</view>
-      <view class="mt-[78rpx] text-[length:32rpx] font-medium leading-[44rpx] text-ink" aria-role="button" bind:tap="openLogin">去成为玩家解锁权限></view>
+      <view class="mt-[78rpx] text-[length:32rpx] font-medium leading-[44rpx] text-ink" aria-role="button" bind:tap="openBecomePlayerUnlock">去成为玩家解锁权限></view>
     </view>
     <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><mip-empty-state title="暂时无法加载内容" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
     <!-- journey-review J2-06：「我的项目」空态：Mystery Box + 发布引导文案。 -->

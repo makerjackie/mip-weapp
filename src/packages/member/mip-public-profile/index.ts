@@ -610,6 +610,42 @@ Page({
     }
   },
 
+  // journey-review J6-03 落点①：相关机会 tab 长按删除，与同页合作卡/超级案例 C5 流同口径
+  // （原生弹窗 + 乐观锁归档 + toast「已删除」1.8s）；服务端 action 未上线前失败走 toast 兜底。
+  async deleteOwnOpportunity(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.isSelf || this.data.deletingId) {
+      return
+    }
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.opportunities.find(entry => entry.id === id)
+    if (!item) {
+      return
+    }
+    const confirmation = await wx.showModal({
+      title: '删除提示',
+      content: '删除后将无法恢复，是否删除？',
+      confirmText: '删除',
+      confirmColor: '#FF4D5E',
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      return
+    }
+    this.setData({ deletingId: id })
+    try {
+      const detail = await opportunityModule.get(item.id)
+      await opportunityModule.remove(item.id, detail.version)
+      this.setData({
+        opportunities: this.data.opportunities.filter(entry => entry.id !== id),
+        deletingId: '',
+      })
+      wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
+    }
+    catch (error) {
+      this.setData({ deletingId: '' })
+      wx.showToast({ title: error instanceof Error ? error.message : '机会删除失败，请重试。', icon: 'none' })
+    }
+  },
+
   openBlockedList() {
     caseNavigateTo({ url: '/packages/member/mip-blocked/index' })
   },
