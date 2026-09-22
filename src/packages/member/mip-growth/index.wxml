@@ -59,8 +59,9 @@
           <view wx:if="{{item.content}}" class="mt-[6rpx] truncate text-[length:20rpx] leading-[28rpx] text-muted">{{item.content}}</view>
         </view>
         <view class="shrink-0 whitespace-nowrap text-[length:32rpx] font-medium leading-[44.8rpx] text-brand">+ EXP {{item.rewardExperience}}</view>
-        <view wx:if="{{item.status === 'AVAILABLE'}}" class="flex h-[52rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-[length:24rpx] font-medium text-on-brand">{{item.actionText}}</view>
-        <view wx:else class="flex h-[52rpx] shrink-0 items-center justify-center rounded-full bg-canvas px-3 text-[length:24rpx] font-medium text-brand">{{item.actionText}}</view>
+        <!-- WS-MEMBERSHIP §4 任务卡胶囊：「去完成」黄字描边、「已完成/已截止」灰字（bg-canvas+text-muted 同状态胶囊先例）。 -->
+        <view wx:if="{{item.status === 'AVAILABLE'}}" class="flex h-[52rpx] shrink-0 items-center justify-center rounded-full border border-brand px-3 text-[length:24rpx] font-medium text-brand">{{item.actionText}}</view>
+        <view wx:else class="flex h-[52rpx] shrink-0 items-center justify-center rounded-full bg-canvas px-3 text-[length:24rpx] font-medium text-muted">{{item.actionText}}</view>
       </view>
     </view>
 
