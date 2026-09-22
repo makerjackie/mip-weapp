@@ -7,6 +7,7 @@ import type {
   OpportunityLocationType,
   OpportunityPage,
   OpportunityTag,
+  OpportunityTypeKey,
   PeopleFilter,
   PeoplePage,
   PublicPerson,
@@ -17,6 +18,7 @@ import type {
   PublicProfileSuperCase,
 } from './types'
 import { isCooperationRoleKey } from '../mip'
+import { isOpportunityTypeKey } from './catalog'
 
 function text(value: unknown, maximum: number, field: string, required = true) {
   const result = typeof value === 'string' ? value.trim() : ''
@@ -139,9 +141,11 @@ export function normalizeOpportunityDraft(value: OpportunityDraft): OpportunityD
     scopeType,
     branchId: scopeType === 'BRANCH' ? value.branchId : undefined,
     cityTagId: text(value.cityTagId, 64, '城市', false) || undefined,
+    regionText: text(value.regionText, 60, '主营地区', false) || undefined,
     commercialTerms: normalizeOpportunityCommercialTerms(value.commercialTerms),
     coverAssetId: text(value.coverAssetId, 64, '封面', false) || undefined,
     roleKeys: roleKeys as CooperationRoleKey[],
+    typeKeys: value.typeKeys?.filter(isOpportunityTypeKey),
     industryTagIds: uniqueStrings(value.industryTagIds, 8, '行业标签'),
     abilityTagIds: uniqueStrings(value.abilityTagIds, 8, '能力标签'),
     teamProfileRefs: profileRefs(value.teamProfileRefs),
@@ -229,12 +233,32 @@ function parseOpportunityCommercialTerms(value: unknown): OpportunityCommercialT
   }
 }
 
+/**
+ * 机会类型（QZ1 三件套）为可选增强字段：过滤非法值，不让旧服务端响应整体失败。
+ * 非空非数组（如服务端误回字符串）或数组内全非法时返回空数组并由调用方覆盖原值，
+ * 不得把非法串当黄标渲染、也不能留原值让消费方 `.map` 抛错；字段缺省才保持缺省。
+ */
+function parseOpportunityTypeKeys(value: unknown): OpportunityTypeKey[] | undefined {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return [...new Set(value.filter(isOpportunityTypeKey))]
+}
+
 function parseOpportunityResponse(value: unknown) {
   const source = record(value)
+  const typeKeys = parseOpportunityTypeKeys(source.typeKeys)
   if (source.commercialTerms !== undefined && source.commercialTerms !== null) {
-    return { ...source, commercialTerms: parseOpportunityCommercialTerms(source.commercialTerms) }
+    return {
+      ...source,
+      commercialTerms: parseOpportunityCommercialTerms(source.commercialTerms),
+      ...(typeKeys === undefined ? {} : { typeKeys }),
+    }
   }
-  return source
+  return typeKeys === undefined ? source : { ...source, typeKeys }
 }
 
 export function parseOpportunityPage(value: unknown): OpportunityPage {

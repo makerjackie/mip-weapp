@@ -19,13 +19,18 @@ describe('MIP related opportunity flow', () => {
     expect(page).toContain('opportunityModule.markReceivedRead(item.messageId)')
     expect(page).toContain('item.actor.profileRef')
     expect(page).not.toContain('wx.cloud')
-    expect(view).toContain('我发布的')
-    expect(view).toContain('引荐给我的')
+    // journey-review J6-03：筛选 chip 带计数（发布机会 N / 引荐机会 N），卡片保持现行样式。
+    expect(view).toContain('发布机会 {{publishedItems.length}}')
+    expect(view).toContain('引荐机会 {{referredItems.length}}')
     expect(view).toContain('其他用户向你引荐机会后会显示在这里。')
     expect(view).toContain('向你引荐了这个机会')
     expect(view).toContain('catch:tap="editPublished"')
+    expect(view).toContain('bindlongpress="confirmDeletePublished"')
+    expect(view).toContain('{{item.dimmed ? \'opacity-50 grayscale\' : \'\'}}')
     expect(page).toContain('editPublished(event: WechatMiniprogram.TouchEvent)')
     expect(page).toContain('/packages/member/mip-opportunities/editor/index?id=')
+    expect(page).toContain('删除后将无法恢复，是否删除？')
+    expect(page).toContain('opportunityModule.remove(item.id, detail.version)')
   })
 
   it('requires an explicit visible profile target before activating a referral', () => {
@@ -38,8 +43,11 @@ describe('MIP related opportunity flow', () => {
     expect(detail).toContain('kind: \'ALL\'')
     expect(detail).toContain('item => !item.isSelf')
     expect(detail).toContain('setReferral(item.id, true, target.profileRef)')
+    // journey-review J3-09：访客主 CTA 更名「我想合作」（一期 toast 占位），
+    // 被引荐人选择弹层保留为底层数据面。
     expect(view).toContain('选择被引荐人')
-    expect(view).toContain('更换被引荐人')
+    expect(view).toContain('bind:tap="cooperationIntent">我想合作</view>')
+    expect(detail).toContain(`wx.showToast({ title: '功能建设中', icon: 'none' })`)
     expect(view).not.toContain('更换引荐人')
     expect(view).toContain('玩家和嘉宾均可选择')
     expect(view).toContain('确认引荐')

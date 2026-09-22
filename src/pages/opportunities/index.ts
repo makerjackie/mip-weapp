@@ -1,5 +1,6 @@
 import type { CatalogSelectorGroup } from '../../components/catalog-selector/model'
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../modules/mip'
+import type { MipPublicBanner } from '../../modules/mip-banners'
 import type { CooperationTalentSummary } from '../../modules/mip-cooperation'
 import type { ProtectedActionKey } from '../../modules/mip-identity'
 import type {
@@ -11,14 +12,20 @@ import type {
 import { catalogSelectorView } from '../../components/catalog-selector/model'
 import { brand } from '../../config/brand'
 import { cooperationRoles } from '../../config/mip-catalogs'
+import { mipBannerModule } from '../../modules/mip-banners'
 import { cooperationModule } from '../../modules/mip-cooperation'
 import { mergeCooperationTalents } from '../../modules/mip-cooperation/validation'
 import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipIdentityModule } from '../../modules/mip-identity/client'
-import { groupedCityBranches, opportunityModule } from '../../modules/mip-opportunities'
+import { groupedCityBranches, opportunityModule, opportunityTypeLabel } from '../../modules/mip-opportunities'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
 
 type PageMode = 'opportunities' | 'cooperation'
+/** journey-review J2-06：「我的项目」是机会 Tab 内的第三个 pill 态（列表只看自己发布的机会）。 */
+type StatusPill = OpportunityFilter['status'] | 'MINE'
+interface OpportunityCardView extends OpportunitySummary {
+  typeTagViews: Array<{ key: string, label: string }>
+}
 interface CooperationTalentView extends Omit<CooperationTalentSummary, 'cards'> {
   cards: Array<CooperationTalentSummary['cards'][number] & { roleName: string }>
   roleNames: string[]
@@ -36,6 +43,15 @@ const nationwideOption: CityOption = { id: '', label: '全国' }
 const OPPORTUNITY_REFRESH_INTERVAL_MS = 30_000
 /** journey-review J1-05：游客点筛选先完成身份确认，授权回来后重开筛选面板。 */
 const FILTER_AUTH_RESUME = 'auth-intent:open-filters'
+/** journey-review J1-04：游客点「我的项目」先完成身份确认，授权回来后切到我的项目 pill。 */
+const MINE_AUTH_RESUME = 'auth-intent:open-mine'
+
+function withTypeTagViews(items: OpportunitySummary[]): OpportunityCardView[] {
+  return items.map(item => ({
+    ...item,
+    typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
+  }))
+}
 
 function locationPreset(types: OpportunityLocationType[]): LocationPreset {
   if (types.includes('CITY')) {
@@ -170,13 +186,15 @@ Page({
     state: 'loading' as 'loading' | 'ready' | 'error',
     authenticated: false,
     mode: 'opportunities' as PageMode,
-    status: 'RECRUITING' as OpportunityFilter['status'],
+    status: 'RECRUITING' as StatusPill,
     keywordInput: '',
     keyword: '',
     filterOpen: false,
     industryPickerOpen: false,
     expandedIndustryGroupId: '',
     moreFiltersOpen: false,
+    /** journey-review J3-01：导航栏下方的运营 Banner 位（后台可配置，未配置不占位）。 */
+    banners: [] as MipPublicBanner[],
     catalog: { branches: [], cityTags: [], industryGroups: [], industryTags: [], abilityTags: [] } as OpportunityCatalog,
     cityOptions: [nationwideOption] as CityOption[],
     cityGroups: [] as CatalogSelectorGroup[],
@@ -207,7 +225,7 @@ Page({
     locationFilterLabel: '不限',
     appliedFilterCount: 0,
     appliedFilterChips: [] as AppliedFilterChip[],
-    opportunities: [] as OpportunitySummary[],
+    opportunities: [] as OpportunityCardView[],
     cooperationTalents: [] as CooperationTalentView[],
     nextCursor: '',
     loadingMore: false,
@@ -223,13 +241,17 @@ Page({
   refreshOnReturn: false,
   authToken: '',
 
-  onShow() {
+  async onShow() {
     syncCaseNavigation(this, 'pages/opportunities/index')
     const resume = mipIdentityModule.consumePendingResume('pages/opportunities/index')
     if (resume && this.resumeDestination) {
       const destination = this.resumeDestination
       this.resumeDestination = ''
       this.abandonLoginSheet()
+      // journey-review J1-04 复审（B1）：必须等登录态刷新完成后再恢复原意图，否则
+      // authenticated 仍是过期 false：FILTER 哨兵会再次触发身份确认并被当成页面
+      // 路径静默跳转失败，MINE 哨兵则停在游客占位屏。onShow 其余逻辑不在本分支。
+      await this.refreshAuthState()
       this.runResumeDestination(destination)
       return
     }
@@ -239,11 +261,39 @@ Page({
       void this.loadCatalogs()
     }
     void this.refreshAuthState()
+    void this.loadBanners()
     const refreshIsDue = Date.now() - this.lastSuccessfulRefreshAt >= OPPORTUNITY_REFRESH_INTERVAL_MS
     const refreshOnReturn = this.refreshOnReturn
     this.refreshOnReturn = false
     if (this.data.state !== 'ready' || refreshIsDue || refreshOnReturn) {
       void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
+    }
+  },
+
+  /** journey-review J3-01：Banner 位与活动页共用 mip-banners 模块，失败不阻塞列表。 */
+  async loadBanners(force = false) {
+    try {
+      const banners = await mipBannerModule.listActive(force)
+      this.setData({ banners })
+    }
+    catch {}
+  },
+
+  openBanner(event: WechatMiniprogram.TouchEvent) {
+    const bannerId = String(event.currentTarget.dataset.bannerId || '')
+    const banner = this.data.banners.find(item => item.id === bannerId)
+    if (!banner) {
+      return
+    }
+    if (banner.targetType === 'ARTICLE_URL') {
+      wx.openOfficialAccountArticle({
+        url: banner.targetValue,
+        fail: () => wx.showToast({ title: '文章暂未配置', icon: 'none' }),
+      })
+      return
+    }
+    if (banner.targetValue && banner.targetValue !== '/pages/opportunities/index') {
+      caseNavigateTo({ url: banner.targetValue })
     }
   },
 
@@ -288,9 +338,24 @@ Page({
       this.setData({ loadingMore: true, message: '' })
     }
     try {
-      if (this.data.mode === 'opportunities') {
+      if (this.data.mode === 'opportunities' && this.data.status === 'MINE') {
+        // journey-review J2-06：「我的项目」pill 内联态，仅拉自己发布的机会。
+        const page = await opportunityModule.listMine(reset ? undefined : this.data.nextCursor || undefined)
+        if (sequence !== this.requestSequence || this.data.mode !== 'opportunities' || this.data.status !== 'MINE') {
+          return
+        }
+        this.setData({
+          state: 'ready',
+          opportunities: reset
+            ? withTypeTagViews(page.items)
+            : [...this.data.opportunities, ...withTypeTagViews(page.items)],
+          nextCursor: page.nextCursor || '',
+        })
+        this.lastSuccessfulRefreshAt = Date.now()
+      }
+      else if (this.data.mode === 'opportunities') {
         const page = await opportunityModule.list({
-          status: this.data.status,
+          status: this.data.status as OpportunityFilter['status'],
           keyword: this.data.keyword,
           cityTagId: this.data.selectedCityTagId || undefined,
           locationTypes: this.data.selectedLocationTypes,
@@ -307,7 +372,9 @@ Page({
         }
         this.setData({
           state: 'ready',
-          opportunities: reset ? page.items : [...this.data.opportunities, ...page.items],
+          opportunities: reset
+            ? withTypeTagViews(page.items)
+            : [...this.data.opportunities, ...withTypeTagViews(page.items)],
           nextCursor: page.nextCursor || '',
         })
         this.lastSuccessfulRefreshAt = Date.now()
@@ -382,7 +449,11 @@ Page({
       return
     }
     try {
-      await Promise.all([this.loadCatalogs(), this.loadContent(true, { preserveContent: this.data.state === 'ready' })])
+      await Promise.all([
+        this.loadCatalogs(),
+        this.loadContent(true, { preserveContent: this.data.state === 'ready' }),
+        this.loadBanners(true),
+      ])
     }
     finally {
       wx.stopPullDownRefresh()
@@ -448,8 +519,13 @@ Page({
   },
 
   changeStatus(event: WechatMiniprogram.TouchEvent) {
-    const status = String(event.currentTarget.dataset.status || '') as OpportunityFilter['status']
-    if (!['RECRUITING', 'COMPLETED'].includes(status) || status === this.data.status) {
+    const status = String(event.currentTarget.dataset.status || '') as StatusPill
+    if (!['RECRUITING', 'COMPLETED', 'MINE'].includes(status) || status === this.data.status) {
+      return
+    }
+    // journey-review J1-04：游客点「我的项目」先走身份确认，授权回来后落在我的项目 pill。
+    if (status === 'MINE' && !this.data.authenticated) {
+      void this.openProtected(MINE_AUTH_RESUME, 'INTERACT')
       return
     }
     this.setData({ status })
@@ -861,6 +937,14 @@ Page({
       })
       if (session.decision.ready) {
         this.resumeDestination = ''
+        // B1 双保险：auth-intent:* 哨兵不是页面路径，ready 时按恢复语义执行并同步
+        // 登录态（decision.ready 蕴含 snapshot.authenticated），避免跳非法页面静默
+        // 失败或落回游客占位屏。
+        if (destination.startsWith('auth-intent:')) {
+          this.setData({ authenticated: session.snapshot.authenticated })
+          this.runResumeDestination(destination)
+          return
+        }
         caseNavigateTo({ url: destination })
         return
       }
@@ -977,10 +1061,14 @@ Page({
     this.abandonLoginSheet()
   },
 
-  /** 恢复弹层前的原意图：普通目的地直接跳转，筛选哨兵则重开筛选面板。 */
+  /** 恢复弹层前的原意图：普通目的地直接跳转，筛选/我的项目哨兵则回到对应 pill 态。 */
   runResumeDestination(destination: string) {
     if (destination === FILTER_AUTH_RESUME) {
       this.toggleFilters()
+      return
+    }
+    if (destination === MINE_AUTH_RESUME) {
+      this.setData({ mode: 'opportunities', status: 'MINE' }, () => void this.loadContent(true))
       return
     }
     caseNavigateTo({ url: destination })
