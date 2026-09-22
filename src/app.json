@@ -64,6 +64,8 @@
         "membership-order/index",
         "benefits/index",
         "privacy/index",
+        "bind-phone/index",
+        "privacy-settings/index",
         "privacy-policy/index",
         "user-agreement/index",
         "help/index",

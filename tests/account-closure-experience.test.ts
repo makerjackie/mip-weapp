@@ -38,7 +38,8 @@ describe('account closure experience', () => {
     const template = read('src/packages/member/privacy/index.wxml')
     const config = JSON.parse(read('src/packages/member/privacy/index.json'))
 
-    expect(config.navigationBarTitleText).toBe('设置')
+    // journey-review J5-01：账号设置页导航标题对齐设计帧 1728_19083「账号设置」。
+    expect(config.navigationBarTitleText).toBe('账号设置')
     expect(template).toContain('>资料与隐私</view>')
     expect(template).toContain('bind:tap="openVisibilitySettings"')
     expect(template).toContain('bind:tap="openBlockedProfiles"')

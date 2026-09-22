@@ -1,3 +1,4 @@
+import type { CooperationCardId, SuperCaseId } from '../../../modules/mip'
 import type { CommunityReportIntent, ReportCategory } from '../../../modules/mip-community'
 import type { IdentityAccessSnapshot } from '../../../modules/mip-identity'
 import type {
@@ -10,11 +11,13 @@ import type {
 } from '../../../modules/mip-opportunities'
 import { badgeArtUrl } from '../../../config/mip-badge-art'
 import { cooperationRoles } from '../../../config/mip-catalogs'
+import { superCaseModule } from '../../../modules/mip-cases'
 import {
   createCommunityReportIntent,
   mipCommunityModule,
   reportCategoryOptions,
 } from '../../../modules/mip-community'
+import { cooperationModule } from '../../../modules/mip-cooperation'
 import { evaluateAccess, mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { careerIdentityOptions } from '../../../modules/mip-identity/profile-options'
@@ -96,6 +99,7 @@ Page({
     accessToken: '',
     isSelf: false,
     activeSection: 'cooperation' as ProfileSection,
+    deletingId: '',
     message: '',
     // figma 1769_38059/2058_12247/2704_13454 合作卡档案还原态开关，fixture 专用；
     // 生产保持 stats+tabs+列表布局（mip-public-profile 测试 pin）。
@@ -515,6 +519,80 @@ Page({
     const id = String(event.currentTarget.dataset.id || '')
     if (id) {
       caseNavigateTo({ url: `/packages/member/mip-cooperation/detail/index?id=${encodeURIComponent(id)}` })
+    }
+  },
+
+  // journey-review C5（2026-09-21 拍板）：本人档案合作卡/超级案例 tab 长按卡片（原生 longpress 手势）删除——
+  // 微信原生确认弹窗「删除后将无法恢复，是否删除？」（删除警示红），确认后卡片移除 +
+  // toast「已删除」（1.8s）；取消停留原页。列表摘要不带 version，先取详情再按乐观锁归档。
+  async deleteOwnCooperationCard(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.isSelf || this.data.deletingId) {
+      return
+    }
+    const id = String(event.currentTarget.dataset.id || '')
+    const card = this.data.cooperationCards.find(item => item.id === id)
+    if (!card) {
+      return
+    }
+    const cardId = card.id as CooperationCardId
+    const confirmation = await wx.showModal({
+      title: '删除提示',
+      content: '删除后将无法恢复，是否删除？',
+      confirmText: '删除',
+      confirmColor: '#FF4D5E',
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      return
+    }
+    this.setData({ deletingId: id })
+    try {
+      const detail = await cooperationModule.get(cardId)
+      await cooperationModule.archive(cardId, detail.version)
+      this.setData({
+        cooperationCards: this.data.cooperationCards.filter(item => item.id !== id),
+        deletingId: '',
+      })
+      wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
+    }
+    catch (error) {
+      this.setData({ deletingId: '' })
+      wx.showToast({ title: error instanceof Error ? error.message : '合作卡删除失败，请重试。', icon: 'none' })
+    }
+  },
+
+  async deleteOwnSuperCase(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.isSelf || this.data.deletingId) {
+      return
+    }
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.superCases.find(entry => entry.id === id)
+    if (!item) {
+      return
+    }
+    const caseId = item.id as SuperCaseId
+    const confirmation = await wx.showModal({
+      title: '删除提示',
+      content: '删除后将无法恢复，是否删除？',
+      confirmText: '删除',
+      confirmColor: '#FF4D5E',
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      return
+    }
+    this.setData({ deletingId: id })
+    try {
+      const detail = await superCaseModule.get(caseId)
+      await superCaseModule.archive(caseId, detail.version)
+      // 时间轴节点/月份标签是展示层，随数据收缩自然消失，无需特判。
+      this.setData({
+        superCases: this.data.superCases.filter(entry => entry.id !== id),
+        deletingId: '',
+      })
+      wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
+    }
+    catch (error) {
+      this.setData({ deletingId: '' })
+      wx.showToast({ title: error instanceof Error ? error.message : '案例删除失败，请重试。', icon: 'none' })
     }
   },
 

@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 67,
+  "routeCount": 69,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 66 paths.",
+    "config/project.json routes must list the same 69 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -15,6 +15,7 @@
       "label": "微信手机号授权",
       "routes": [
         "packages/member/mip-access/index",
+        "packages/member/bind-phone/index",
         "packages/member/mip-card-edit/index",
         "packages/member/mip-events/registration/index",
         "packages/member/mip-profile/index",
@@ -651,6 +652,27 @@
       ],
       "acceptStates": ["ready", "success", "blocked"],
       "readyAssertion": "state === 'ready' || state === 'success' || state === 'blocked'"
+    },
+    {
+      "id": "U31",
+      "name": "绑定手机",
+      "path": "packages/member/bind-phone/index",
+      "selector": "#mip-bind-phone-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": ["phone-auth"]
+    },
+    {
+      "id": "U30",
+      "name": "隐私设置",
+      "path": "packages/member/privacy-settings/index",
+      "selector": "#mip-privacy-settings-page",
+      "group": "member",
+      "kind": "static",
+      "states": ["ready"],
+      "readyAssertion": "state === 'ready'"
     },
     {
       "id": "U28",

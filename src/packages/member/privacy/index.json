@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "设置",
+  "navigationBarTitleText": "账号设置",
   "usingComponents": {
     "mip-empty-state": "/components/mip-empty-state/index",
     "mip-section-header": "/components/mip-section-header/index",

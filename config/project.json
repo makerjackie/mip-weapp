@@ -225,6 +225,14 @@
       "pathName": "packages/member/privacy/index"
     },
     {
+      "name": "绑定手机",
+      "pathName": "packages/member/bind-phone/index"
+    },
+    {
+      "name": "隐私设置",
+      "pathName": "packages/member/privacy-settings/index"
+    },
+    {
       "name": "隐私政策",
       "pathName": "packages/member/privacy-policy/index"
     },
