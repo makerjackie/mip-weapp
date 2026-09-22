@@ -34,6 +34,9 @@ describe('MIP received interaction client flow', () => {
     expect(view).toContain('state === \'loading\'')
     expect(view).toContain('state === \'empty\'')
     expect(view).toContain('state === \'error\'')
+    // J3-06 互动过口径 = 同场签到（双方都签到，只报名不算），空态文案不得回到心动语义。
+    expect(view).toContain('与你同场签到过活动的用户会显示在这里。')
+    expect(view).not.toContain('有效心动会显示在这里')
     expect(pageConfig.navigationBarTitleText).toBe('影响力数据')
     expect(profile).toContain('bind:select="openStat"')
     expect(profile).toContain('target: \'visitor\'')
