@@ -12,6 +12,9 @@ export const EVENT_MUTATION_ACTIONS = [
   'mip.admin.events.catalog.save',
   'mip.admin.events.catalog.changeStatus',
   'mip.admin.events.catalog.archive',
+  'mip.admin.events.participants.import',
+  'mip.admin.events.participants.cancel',
+  'mip.admin.events.participants.markAbnormal',
 ] as const
 
 export type EventMutationAction = typeof EVENT_MUTATION_ACTIONS[number]
@@ -48,6 +51,8 @@ export interface EventMutationFieldConfig {
   wide?: boolean
   maxLength?: number
   options?: readonly EventMutationFieldOption[]
+  /** Upload purpose for asset/asset-list fields. */
+  assetPurpose?: string
 }
 
 export interface EventMutationActionConfig {
@@ -77,9 +82,9 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'title', label: '活动名称', kind: 'text', required: true, maxLength: 120 },
   { key: 'summary', label: '活动摘要', kind: 'textarea', required: true, maxLength: 300 },
   { key: 'description', label: '活动介绍', kind: 'textarea', required: true, maxLength: 20_000 },
-  { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list' },
+  { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list', assetPurpose: 'EVENT_CONTENT' },
   { key: 'notices', label: '活动说明', kind: 'textarea', maxLength: 5_000 },
-  { key: 'coverAssetId', label: '活动封面素材 ID', kind: 'asset' },
+  { key: 'coverAssetId', label: '活动封面', kind: 'asset', assetPurpose: 'EVENT_COVER' },
   { key: 'eventTypeKey', label: '活动类型标识', kind: 'text', maxLength: 64 },
   { key: 'eventMode', label: '活动方式', kind: 'select', options: [option('OFFLINE', '线下'), option('ONLINE', '线上'), option('HYBRID', '混合')] },
   { key: 'accessType', label: '收费类型', kind: 'select', options: [option('FREE', '免费'), option('MEMBER_INCLUDED', '会员权益'), option('PAID', '付费')] },
@@ -218,6 +223,42 @@ const EVENT_MUTATION_CONFIGS = {
       { key: 'catalogId', label: '目录项标识', kind: 'text', required: true },
       { key: 'expectedVersion', label: '记录版本', kind: 'number', required: true },
       { key: 'reason', label: '归档原因', kind: 'textarea', required: true, maxLength: 300 },
+    ],
+  },
+  'mip.admin.events.participants.import': {
+    action: 'mip.admin.events.participants.import',
+    capability: 'events.registrations.manage',
+    title: '补录报名',
+    description: '为活动补录参与者，不触发支付流程。',
+    fields: [
+      { key: 'eventId', label: '活动标识', kind: 'text', hidden: true },
+      { key: 'userId', label: '用户 ID', kind: 'text', required: true },
+      { key: 'roleMark', label: '角色标记', kind: 'select', options: [option('MEMBER', '成员'), option('GUEST', '嘉宾'), option('PLAYER', '玩家')] },
+      { key: 'reason', label: '补录原因', kind: 'textarea', maxLength: 120 },
+    ],
+  },
+  'mip.admin.events.participants.cancel': {
+    action: 'mip.admin.events.participants.cancel',
+    capability: 'events.registrations.manage',
+    title: '取消报名',
+    description: '取消指定参与者的报名记录。',
+    fields: [
+      { key: 'eventId', label: '活动标识', kind: 'text', hidden: true },
+      { key: 'registrationId', label: '报名记录 ID', kind: 'text', hidden: true },
+      { key: 'expectedVersion', label: '记录版本', kind: 'number', hidden: true },
+      { key: 'reason', label: '取消原因', kind: 'textarea', required: true, maxLength: 120 },
+    ],
+  },
+  'mip.admin.events.participants.markAbnormal': {
+    action: 'mip.admin.events.participants.markAbnormal',
+    capability: 'events.registrations.manage',
+    title: '标记异常',
+    description: '将指定参与者标记为异常状态。',
+    fields: [
+      { key: 'eventId', label: '活动标识', kind: 'text', hidden: true },
+      { key: 'registrationId', label: '报名记录 ID', kind: 'text', hidden: true },
+      { key: 'expectedVersion', label: '记录版本', kind: 'number', hidden: true },
+      { key: 'reason', label: '异常原因', kind: 'textarea', required: true, maxLength: 120 },
     ],
   },
 } as const satisfies Record<EventMutationAction, EventMutationActionConfig>
@@ -499,9 +540,27 @@ function build(action: EventMutationAction, values: EventMutationValues): AdminR
     kind: enumValue(values.kind, '目录类型', ['TYPE', 'TAG'] as const), catalogId: id(values.catalogId, '目录项'), expectedVersion: version(values.expectedVersion),
     status: enumValue(values.status, '目录状态', ['ACTIVE', 'INACTIVE'] as const),
   }
-  return {
+  if (action === 'mip.admin.events.catalog.archive') return {
     kind: enumValue(values.kind, '目录类型', ['TYPE', 'TAG'] as const), catalogId: id(values.catalogId, '目录项'), expectedVersion: version(values.expectedVersion),
     reason: text(values.reason, '归档原因', 300, true),
+  }
+  if (action === 'mip.admin.events.participants.import') {
+    const roleMark = values.roleMark === undefined || values.roleMark === ''
+      ? null
+      : enumValue(values.roleMark, '角色标记', ['MEMBER', 'GUEST', 'PLAYER'] as const)
+    return {
+      eventId: id(values.eventId, '活动'), userId: id(values.userId, '用户'),
+      ...(roleMark ? { roleMark } : {}),
+      reason: optionalText(values.reason, '补录原因', 120),
+    }
+  }
+  if (action === 'mip.admin.events.participants.cancel') return {
+    eventId: id(values.eventId, '活动'), registrationId: id(values.registrationId, '报名'), expectedVersion: version(values.expectedVersion),
+    reason: text(values.reason, '取消原因', 120, true),
+  }
+  return {
+    eventId: id(values.eventId, '活动'), registrationId: id(values.registrationId, '报名'), expectedVersion: version(values.expectedVersion),
+    reason: text(values.reason, '异常原因', 120, true),
   }
 }
 

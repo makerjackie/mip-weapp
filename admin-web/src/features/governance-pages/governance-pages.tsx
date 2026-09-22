@@ -1,5 +1,6 @@
 import { PlusOutlined } from '@ant-design/icons'
 import { Button, Space, Tabs, Tag } from 'antd'
+import { useNavigate } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import {
   ADMIN_PEOPLE_MUTATION_ACTIONS,
@@ -166,24 +167,34 @@ export function GovernancePage({
   onMutationRequest,
 }: GovernancePageProps & { route: GovernanceRoute }) {
   const spec = pageSpecs[route]
+  const navigate = useNavigate()
   const actions = onMutationRequest
     ? spec.actions.filter(action => canCapability(action.capability))
     : []
   const headerActions = demoMode || actions.length ? (
     <Space wrap>
       {demoMode ? <Tag color="gold">演示数据</Tag> : null}
-      {actions.map(action => (
-        <Button
-          key={action.action}
-          type={action === actions[0] ? 'primary' : 'default'}
-          icon={<PlusOutlined />}
-          disabled={demoMode}
-          aria-label={action.label}
-          onClick={() => onMutationRequest?.({ action: action.action, capability: action.capability })}
-        >
-          {action.label}
-        </Button>
-      ))}
+      {actions.map(action => {
+        const isFormPageAction = action.action === 'mip.admin.knowledge.contents.save'
+        return (
+          <Button
+            key={action.action}
+            type={action === actions[0] ? 'primary' : 'default'}
+            icon={<PlusOutlined />}
+            disabled={demoMode}
+            aria-label={action.label}
+            onClick={() => {
+              if (isFormPageAction) {
+                void navigate({ to: '/knowledge/$contentId/edit' as never, params: { contentId: 'new' } as never })
+                return
+              }
+              onMutationRequest?.({ action: action.action, capability: action.capability })
+            }}
+          >
+            {action.label}
+          </Button>
+        )
+      })}
     </Space>
   ) : undefined
   const tabItems = createTabItems({

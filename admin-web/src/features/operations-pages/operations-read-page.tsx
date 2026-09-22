@@ -20,6 +20,7 @@ interface OperationsReadPageProps extends OperationsPageState {
   description: string
   searchPlaceholder: string
   statusOptions: Array<{ value: string; label: string }>
+  dimensionOptions?: Array<{ value: string; label: string }>
   actions?: ReactNode
   paginated?: boolean
   detailRouteForSection?: (section: AdminTableSection, index: number) => AdminDetailRoute | null
@@ -31,6 +32,7 @@ export function OperationsReadPage({
   description,
   searchPlaceholder,
   statusOptions,
+  dimensionOptions,
   actions,
   paginated,
   detailRouteForSection,
@@ -47,8 +49,9 @@ export function OperationsReadPage({
   onNextPage,
   onOpenDetail,
   onWrite,
+  onPageSizeChange,
 }: OperationsReadPageProps) {
-  const filterValue = { q: query.query, status: query.status }
+  const filterValue = { q: query.query, status: query.status, filters: query.filters }
   const showPagination = Boolean(paginated && (hasPreviousPage || page?.nextCursor))
 
   return (
@@ -64,7 +67,22 @@ export function OperationsReadPage({
         placeholder={searchPlaceholder}
         statusOptions={statusOptions}
         loading={loading}
-        onChange={value => onFilterChange({ query: value.q.trim(), status: value.status })}
+        dimensionOptions={dimensionOptions}
+        showTimeRange
+        showPageSize
+        pageSize={query.limit ?? 20}
+        onPageSizeChange={onPageSizeChange}
+        onChange={value => onFilterChange({
+          query: value.q.trim(),
+          status: value.status,
+          filters: value.filters && Object.keys(value.filters).length > 0
+            ? Object.fromEntries(
+                Object.entries(value.filters)
+                  .filter(([, v]) => typeof v === 'string' && v.length > 0)
+                  .map(([k, v]) => [k, String(v)]),
+              )
+            : undefined,
+        })}
         onRefresh={onRefresh}
       />
       {loading && !page ? <LoadingState /> : null}

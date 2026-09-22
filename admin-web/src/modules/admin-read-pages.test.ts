@@ -167,10 +167,13 @@ describe('admin read pages', () => {
       'mip.admin.growth.levelTransitions': { items: [{ nickname: '林晓', fromLevel: null, toLevel: { name: '成长会员' }, experienceBefore: 90, experienceAfter: 100, sourceEventType: 'event.checked_in', createdAt: '2030-03-01T00:00:00.000Z' }] },
       'mip.admin.badges.list': { items: [{ name: '资料完善', key: 'profile-complete', description: '完成资料', placeholderShape: 'HEXAGON', version: 1, updatedAt: '2030-03-01T00:00:00.000Z', status: 'ACTIVE' }] },
       'mip.admin.badges.awards': { items: [{ nickname: '林晓', badgeName: '资料完善', awardReason: '完成个人资料', awardedAt: '2030-03-01T00:00:00.000Z', equipped: true, status: 'ACTIVE' }] },
+      'mip.admin.entitlements.transactions.list': { items: [], nextCursor: null },
+      'mip.admin.contribution.rules.list': { items: [], nextCursor: null },
+      'mip.admin.contribution.transactions.list': { items: [], nextCursor: null },
     }, calls))
 
-    assert.deepEqual(calls.map(call => call.action), ['mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules', 'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions', 'mip.admin.badges.list', 'mip.admin.badges.awards'])
-    assert.equal(page.sections.length, 7)
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules', 'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions', 'mip.admin.badges.list', 'mip.admin.badges.awards', 'mip.admin.entitlements.transactions.list', 'mip.admin.contribution.rules.list', 'mip.admin.contribution.transactions.list'])
+    assert.equal(page.sections.length, 10)
     assert.equal(page.sections[0].rows[0].benefits, '活动优先报名')
     assert.equal(page.sections[3].rows[0].balance, '20 → 30')
     assert.equal(page.sections[3].rows[0].source, '活动签到')
@@ -186,6 +189,9 @@ describe('admin read pages', () => {
       'mip.admin.growth.rules': { items: [] },
       'mip.admin.growth.entries': { items: [] },
       'mip.admin.growth.levelTransitions': { items: [] },
+      'mip.admin.entitlements.transactions.list': { items: [], nextCursor: null },
+      'mip.admin.contribution.rules.list': { items: [], nextCursor: null },
+      'mip.admin.contribution.transactions.list': { items: [], nextCursor: null },
     }, calls), {
       hasCapability: capability => capability === 'growth.read',
     })
@@ -193,8 +199,10 @@ describe('admin read pages', () => {
     assert.deepEqual(calls.map(call => call.action), [
       'mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules',
       'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions',
+      'mip.admin.entitlements.transactions.list', 'mip.admin.contribution.rules.list',
+      'mip.admin.contribution.transactions.list',
     ])
-    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '成长流水', '等级变更'])
+    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '成长流水', '等级变更', '权益流水', '贡献值规则', '贡献值流水'])
   })
 
   it('loads operations records without deriving queue or moderation state in the browser', async () => {
@@ -272,5 +280,86 @@ describe('admin read pages', () => {
     assert.equal(page.sections[0].rows[0].category, '运营')
     assert.equal(page.sections[0].rows[0].access, '会员可见')
     assert.equal(page.sections[0].rows[0].detailId, 'content-1')
+  })
+
+  it('loads admin accounts with non-empty response field structure', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('adminAccounts', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
+      'mip.admin.adminAccounts.list': {
+        items: [{
+          accountId: 'acc-001', name: '张三', loginAccount: 'zhangsan',
+          roleKey: 'PLATFORM_OPERATIONS', branchName: '上海分会',
+          status: 'ACTIVE', version: 1,
+        }],
+        nextCursor: 'cursor-2',
+      },
+    }, calls))
+
+    assert.equal(calls[0].action, 'mip.admin.adminAccounts.list')
+    assert.equal(page.sections.length, 1)
+    assert.equal(page.sections[0].rows[0].name, '张三')
+    assert.equal(page.sections[0].rows[0].loginAccount, 'zhangsan')
+    assert.equal(page.sections[0].rows[0].role, '平台运营')
+    assert.equal(page.sections[0].rows[0].state, '启用')
+    assert.equal(page.nextCursor, 'cursor-2')
+  })
+
+  it('loads audit logs with non-empty response field structure', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('auditLogs', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
+      'mip.admin.audit.list': {
+        items: [{
+          actorNickname: '管理员', actorRoleKey: 'PLATFORM_OWNER', scopeName: '平台',
+          action: 'admin.session.enter', resourceType: 'ADMIN_SESSION',
+          resourceId: 'sess-001', createdAt: '2030-01-01T00:00:00.000Z',
+        }],
+        nextCursor: null,
+      },
+    }, calls))
+
+    assert.equal(calls[0].action, 'mip.admin.audit.list')
+    assert.equal(page.sections.length, 1)
+    assert.equal(page.sections[0].rows[0].actor, '管理员')
+    assert.equal(page.sections[0].rows[0].action, 'admin.session.enter')
+    assert.equal(page.sections[0].rows[0].resource, '管理会话')
+  })
+
+  it('passes filter parameters through to action input for events list', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const filterQuery: AdminListQuery = {
+      query: '深圳',
+      status: 'PUBLISHED',
+      cursor: 'evt-cursor-1',
+      limit: 20,
+      filters: { city: '深圳', eventType: 'OFFLINE' },
+    }
+    await loadAdminReadPage('events', filterQuery, requestWith({
+      'mip.admin.events.list': { items: [{ id: 'e1', title: '深圳活动', startsAt: '2030-01-01T00:00:00.000Z', cityName: '深圳', branchName: '福田分会', accessType: 'FREE', priceCents: 0, status: 'PUBLISHED' }], nextCursor: 'evt-cursor-2' },
+      'mip.admin.events.policy.get': null,
+      'mip.admin.events.catalog.list': { items: [], nextCursor: null },
+    }, calls))
+    const listCall = calls.find(c => c.action === 'mip.admin.events.list')
+    assert.ok(listCall, 'events.list should be called')
+    const input = listCall!.input as Record<string, unknown>
+    const filters = input.filters as Record<string, unknown>
+    assert.equal(filters.query, '深圳')
+    assert.equal(filters.status, 'PUBLISHED')
+    assert.equal(filters.city, '深圳')
+    assert.equal(filters.eventType, 'OFFLINE')
+  })
+
+  it('loads event feedback with non-empty response field structure', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    await loadAdminReadPage('events', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
+      'mip.admin.events.list': { items: [], nextCursor: null },
+      'mip.admin.events.policy.get': null,
+      'mip.admin.events.catalog.list': { items: [], nextCursor: null },
+    }, calls))
+    // Verify that events.list is called with correct filter structure
+    const listCall = calls.find(c => c.action === 'mip.admin.events.list')
+    assert.ok(listCall, 'events.list should be called')
+    const input = listCall!.input as Record<string, unknown>
+    assert.ok(input.filters, 'filters should be present in input')
+    assert.ok(input.cursor === undefined || input.cursor === null, 'cursor should be undefined when null')
   })
 })

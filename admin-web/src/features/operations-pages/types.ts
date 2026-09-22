@@ -33,17 +33,18 @@ export interface OperationsDetailIntent {
 }
 
 export interface OperationsPageCallbacks {
-  onFilterChange: (query: Pick<AdminListQuery, 'query' | 'status'>) => void
+  onFilterChange: (query: Pick<AdminListQuery, 'query' | 'status' | 'filters'>) => void
   onRefresh: () => void
   onPreviousPage?: () => void
   onNextPage?: (cursor: string) => void
   onOpenDetail?: (intent: OperationsDetailIntent) => void
   onWrite?: (intent: OperationsWriteIntent) => void
+  onPageSizeChange?: (size: number) => void
 }
 
 export interface OperationsPageState extends OperationsPageCallbacks {
   page: AdminReadPage | null
-  query: Pick<AdminListQuery, 'query' | 'status'>
+  query: Pick<AdminListQuery, 'query' | 'status' | 'filters'> & { limit?: number }
   loading?: boolean
   error?: string
   demoMode?: boolean

@@ -9,6 +9,14 @@ import {
   type GovernancePageProps,
 } from './governance-pages'
 
+const mockNavigate = vi.fn()
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => mockNavigate,
+  useParams: () => ({} as Record<string, string>),
+  useSearch: () => ({} as Record<string, unknown>),
+  useRouterState: () => ({ location: { search: {} } }),
+}))
+
 const commonProps = {
   filter: { q: '', status: '' },
   activeTab: '',

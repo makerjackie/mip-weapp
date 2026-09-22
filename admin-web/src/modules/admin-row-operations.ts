@@ -33,6 +33,14 @@ export type AdminRowOperationAction
     | 'mip.admin.game.blindBoxes.catalogs.changeStatus'
     | 'mip.admin.game.blindBoxes.cards.save'
     | 'mip.admin.game.blindBoxes.cards.changeStatus'
+    | 'mip.admin.tasks.submissions.approve'
+    | 'mip.admin.tasks.submissions.reject'
+    | 'mip.admin.tasks.submissions.retryReward'
+    | 'mip.admin.tasks.assign'
+    | 'mip.admin.events.checkinQrcode.get'
+    | 'mip.admin.events.participants.import'
+    | 'mip.admin.events.participants.cancel'
+    | 'mip.admin.events.participants.markAbnormal'
 
 export interface AdminRowOperation {
   action: AdminRowOperationAction
@@ -66,12 +74,27 @@ export function eventRegistrationRowActions(
     return [{ action: 'mip.admin.events.registrations.review', label: '审核', targetId: eventId, values }]
   }
   if (status === 'REGISTERED') {
-    return [{ action: 'mip.admin.events.checkIn', label: '签到', targetId: eventId, values }]
+    return [
+      { action: 'mip.admin.events.checkIn', label: '签到', targetId: eventId, values },
+      { action: 'mip.admin.events.participants.cancel', label: '取消报名', targetId: eventId, values: { ...values, reason: '' } },
+      { action: 'mip.admin.events.participants.markAbnormal', label: '标记异常', targetId: eventId, values: { ...values, reason: '' } },
+    ]
   }
   if (status === 'ATTENDED') {
-    return [{ action: 'mip.admin.events.undoCheckIn', label: '撤销签到', targetId: eventId, values }]
+    return [
+      { action: 'mip.admin.events.undoCheckIn', label: '撤销签到', targetId: eventId, values },
+      { action: 'mip.admin.events.participants.markAbnormal', label: '标记异常', targetId: eventId, values: { ...values, reason: '' } },
+    ]
   }
   return []
+}
+
+export function eventRowActions(eventIdValue: unknown): AdminRowOperation[] {
+  const eventId = identifier(eventIdValue)
+  if (!eventId) return []
+  return [
+    { action: 'mip.admin.events.checkinQrcode.get', label: '签到码', targetId: eventId, values: { eventId } },
+  ]
 }
 
 export function eventAlbumRowActions(
@@ -88,6 +111,36 @@ export function eventAlbumRowActions(
     targetId: eventId,
     values: { eventId, photoId, expectedVersion },
   }]
+}
+
+export function taskCompletionRowActions(completion: Record<string, unknown>): AdminRowOperation[] {
+  const submissionId = identifier(completion.id || completion.submissionId || completion.completionId)
+  if (!submissionId) return []
+  const status = String(completion.submissionStatus || '')
+  const requiresBossApproval = completion.requiresBossApproval === true
+  if (status === 'submitted' || status === 'pending_review' || status === 'pending') {
+    const actions: AdminRowOperation[] = []
+    if (status === 'pending_review' && requiresBossApproval) {
+      actions.push({
+        action: 'mip.admin.tasks.submissions.approve',
+        label: '笨笨老大审批',
+        targetId: submissionId,
+        values: { submissionId, bossApproved: true },
+      })
+    }
+    actions.push(
+      { action: 'mip.admin.tasks.submissions.approve', label: '通过', targetId: submissionId, values: { submissionId } },
+      { action: 'mip.admin.tasks.submissions.reject', label: '退回', targetId: submissionId, values: { submissionId } },
+    )
+    return actions
+  }
+  if (status === 'approved' || status === 'reward_succeeded') {
+    return [{ action: 'mip.admin.tasks.submissions.retryReward', label: '重试奖励', targetId: submissionId, values: { submissionId } }]
+  }
+  if (status === 'reward_failed' || status === 'retrying') {
+    return [{ action: 'mip.admin.tasks.submissions.retryReward', label: '重试奖励', targetId: submissionId, values: { submissionId } }]
+  }
+  return []
 }
 
 export function eventPolicyRowActions(policy: Record<string, unknown>): AdminRowOperation[] {

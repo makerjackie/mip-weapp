@@ -2,7 +2,7 @@
 
 const operationManifests = require('./operations')
 
-const EXPECTED_OPERATION_COUNT = 187
+const EXPECTED_OPERATION_COUNT = 234
 const OPERATION_KINDS = Object.freeze(['QUERY', 'MUTATION'])
 const OPERATION_OWNERS = Object.freeze([
   'ACCESS',
@@ -19,6 +19,12 @@ const OPERATION_OWNERS = Object.freeze([
   'GAME',
   'MEDIA',
   'APPLICATION_WORKFLOW',
+  'ADMIN_ACCOUNTS',
+  'COOPERATION_CARDS',
+  'CONTRIBUTION',
+  'VIDEOS',
+  'CARDS',
+  'EVENT_DRAFTS',
 ])
 const manifestKeys = new Set(['owner', 'operations'])
 const operationKeys = new Set(['action', 'kind', 'method', 'sessionFirst', 'usesInput', 'wakesOutbox'])

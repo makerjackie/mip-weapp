@@ -15,6 +15,8 @@ export interface OperationField {
     path: string
     value: string
   }
+  /** Upload purpose for asset/asset-list fields, used by AssetUploader. */
+  assetPurpose?: string
 }
 
 export type OperationValues = Record<string, unknown>

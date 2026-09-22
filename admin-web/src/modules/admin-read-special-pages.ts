@@ -76,6 +76,7 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
   const matching = record(matchingPayload)
   const settings = record(matching.settings)
   const requests = Array.isArray(matching.requests) ? matching.requests : []
+
   return {
     sections: [
       { title: '机会', rows: opportunityRows, columns: columns([['title', '标题'], ['owner', '发布人'], ['location', '城市与服务器'], ['target', '目标'], ['roles', '合作角色'], ['referrals', '引荐数'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) },
@@ -100,7 +101,7 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
 export async function loadGrowth(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
   const canReadGrowth = canRead(access, 'growth.read')
   const canReadBadges = canRead(access, 'badges.manage', 'PLATFORM')
-  const [levelsPayload, benefitsPayload, rulesPayload, entriesPayload, transitionsPayload, badgesPayload, awardsPayload] = await Promise.all([
+  const [levelsPayload, benefitsPayload, rulesPayload, entriesPayload, transitionsPayload, badgesPayload, awardsPayload, entitlementsPayload, contributionRulesPayload, contributionTxnsPayload] = await Promise.all([
     canReadGrowth ? request('mip.admin.growth.levels') : null,
     canReadGrowth ? request('mip.admin.growth.benefits') : null,
     canReadGrowth ? request('mip.admin.growth.rules') : null,
@@ -111,6 +112,9 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
       query: query.query,
       status: ['ACTIVE', 'REVOKED'].includes(query.status) ? query.status : '',
     }) : null,
+    canReadGrowth ? request('mip.admin.entitlements.transactions.list', { filters: { query: query.query }, limit: query.limit }).catch(() => ({ items: [], nextCursor: null })) : null,
+    canReadGrowth ? request('mip.admin.contribution.rules.list', { filters: { query: query.query }, limit: query.limit }).catch(() => ({ items: [], nextCursor: null })) : null,
+    canReadGrowth ? request('mip.admin.contribution.transactions.list', { filters: { query: query.query }, limit: query.limit }).catch(() => ({ items: [], nextCursor: null })) : null,
   ])
   const levels = filterRows(pageValue(levelsPayload).items.map(item => ({
     name: valueOf(item, 'name'), threshold: numberLabel(item.minimumExperience), badge: valueOf(item, 'displayBadge'), benefits: nestedNames(item.benefits).concat(arrayLabel(item.legacyBenefits) === '—' ? [] : [arrayLabel(item.legacyBenefits)]).join('、') || '—', users: numberLabel(item.currentUserCount), share: `${numberLabel(item.currentUserPercentage)}%`, state: label(valueOf(item, 'status')),
@@ -121,6 +125,28 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
   const transitions = filterRows(pageValue(transitionsPayload).items.map(item => { const from = record(item.fromLevel); const to = record(item.toLevel); return { user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'), direction: `${valueOf(from, 'name')} → ${valueOf(to, 'name')}`, experience: `${numberLabel(item.experienceBefore)} → ${numberLabel(item.experienceAfter)}`, source: sourceEventLabel(item.sourceEventType), createdAt: formatDateTime(item.createdAt) } }), { ...query, status: '' })
   const badges = filterRows(pageValue(badgesPayload).items.map(item => ({ name: valueOf(item, 'name'), description: valueOf(item, 'description'), shape: label(valueOf(item, 'placeholderShape')), updatedAt: formatDateTime(item.updatedAt), state: label(valueOf(item, 'status')) })), query)
   const awards = filterRows(pageValue(awardsPayload).items.map(item => ({ user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'), badge: valueOf(item, 'badgeName'), reason: reasonLabel(item.awardReason), awardedAt: formatDateTime(item.awardedAt), equipped: booleanLabel(item.equipped), state: label(valueOf(item, 'status')) })), query)
+  const entitlementRows = filterRows(pageValue(entitlementsPayload).items.map(item => ({
+    entitlementNo: valueOf(item, 'entitlementNo', 'id'),
+    user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'),
+    type: label(valueOf(item, 'entitlementType')),
+    source: label(valueOf(item, 'source')),
+    grantedAt: formatDateTime(item.grantedAt),
+  })), query)
+  const contributionRuleRows = filterRows(pageValue(contributionRulesPayload).items.map(item => ({
+    behavior: valueOf(item, 'behavior'),
+    rewardExp: numberLabel(item.rewardExp),
+    rewardLimit: numberLabel(item.rewardLimit),
+    scope: valueOf(item, 'scopeServers') || '—',
+    effective: dateRange(item.effectiveFrom, item.effectiveTo),
+    state: label(valueOf(item, 'status')),
+  })), { ...query, status: '' })
+  const contributionTxnRows = filterRows(pageValue(contributionTxnsPayload).items.map(item => ({
+    txnNo: valueOf(item, 'txnNo', 'id'),
+    user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'),
+    behavior: valueOf(item, 'behavior'),
+    delta: numberLabel(item.deltaValue),
+    createdAt: formatDateTime(item.createdAt),
+  })), { ...query, status: '' })
   return { sections: [
     levelsPayload ? { title: '等级', rows: levels, columns: columns([['name', '等级'], ['threshold', '最低经验'], ['badge', '展示徽章'], ['benefits', '权益'], ['users', '用户数'], ['share', '用户占比'], ['state', '状态']]) } : null,
     benefitsPayload ? { title: '等级权益', rows: benefits, columns: columns([['name', '权益'], ['description', '说明'], ['sort', '排序'], ['state', '状态']]) } : null,
@@ -129,6 +155,9 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
     transitionsPayload ? { title: '等级变更', rows: transitions, columns: columns([['user', '用户'], ['direction', '等级变化'], ['experience', '经验变化'], ['source', '来源事件'], ['createdAt', '时间']]) } : null,
     badgesPayload ? { title: '徽章', rows: badges, columns: columns([['name', '徽章'], ['description', '说明'], ['shape', '图形'], ['updatedAt', '更新时间'], ['state', '状态']]) } : null,
     awardsPayload ? { title: '徽章获得记录', rows: awards, columns: columns([['user', '用户'], ['badge', '徽章'], ['reason', '原因'], ['awardedAt', '获得时间'], ['equipped', '佩戴'], ['state', '状态']]) } : null,
+    entitlementsPayload ? { title: '权益流水', rows: entitlementRows, columns: columns([['entitlementNo', '权益号'], ['user', '用户'], ['type', '类型'], ['source', '来源'], ['grantedAt', '发放时间']]) } : null,
+    contributionRulesPayload ? { title: '贡献值规则', rows: contributionRuleRows, columns: columns([['behavior', '行为'], ['rewardExp', '经验奖励'], ['rewardLimit', '上限'], ['scope', '范围'], ['effective', '生效期'], ['state', '状态']]) } : null,
+    contributionTxnsPayload ? { title: '贡献值流水', rows: contributionTxnRows, columns: columns([['txnNo', '流水号'], ['user', '用户'], ['behavior', '行为'], ['delta', '变化值'], ['createdAt', '时间']]) } : null,
   ].filter(isSection), nextCursor: null }
 }
 

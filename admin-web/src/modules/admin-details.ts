@@ -17,7 +17,7 @@ import {
   type AdminOperationRow,
 } from './admin-row-operations.ts'
 
-export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'tasks' | 'taskCompletions' | 'banners' | 'gameSeasons' | 'gameTeams' | 'gameCatalogs' | 'messages' | 'knowledge' | 'opportunities' | 'userContent'
+export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'tasks' | 'taskCompletions' | 'taskApprovals' | 'banners' | 'gameSeasons' | 'gameTeams' | 'gameCatalogs' | 'messages' | 'knowledge' | 'opportunities' | 'userContent'
 export type AdminDetailRow = AdminOperationRow
 
 export interface AdminEventRosterPageQuery {
@@ -29,14 +29,16 @@ export interface AdminDetailOptions {
   includeUserMembership?: boolean
   includeEventRoster?: boolean
   includeEventAlbum?: boolean
+  includeEventFeedback?: boolean
   includeMessageDeliveryReviews?: boolean
   includeOpportunityComments?: boolean
   eventRoster?: AdminEventRosterPageQuery
+  eventFeedback?: AdminEventRosterPageQuery
   task?: TaskDetailLoadOptions
   gameMembers?: GameMemberPageQuery
 }
 
-export type AdminDetailPagerKey = 'eventRoster' | 'taskMembers' | 'taskCompletions' | 'gameMembers'
+export type AdminDetailPagerKey = 'eventRoster' | 'eventFeedback' | 'taskMembers' | 'taskCompletions' | 'gameMembers'
 
 export interface AdminDetailPager {
   key: AdminDetailPagerKey
@@ -83,6 +85,7 @@ export async function loadAdminDetail(
   if (route === 'orders') return loadOrderDetail(id, request)
   if (route === 'tasks') return loadTaskDetail(id, request, options.task)
   if (route === 'taskCompletions') return loadTaskCompletionDetail(id, request)
+  if (route === 'taskApprovals') return loadTaskCompletionDetail(id, request)
   if (route === 'banners') return loadBannerDetail(id, request)
   if (route === 'gameSeasons') return loadGameSeasonDetail(id, request)
   if (route === 'gameTeams') return loadGameTeamDetail(id, request, options.gameMembers)
@@ -219,7 +222,11 @@ async function loadEventDetail(
   const rosterLimit = Number.isSafeInteger(options.eventRoster?.limit)
     ? Math.max(1, Math.min(Number(options.eventRoster?.limit), 100))
     : 20
-  const [eventValue, insightsValue, rosterValue, albumValue] = await Promise.all([
+  const feedbackCursor = typeof options.eventFeedback?.cursor === 'string'
+    && options.eventFeedback.cursor.length <= 512
+    ? options.eventFeedback.cursor
+    : null
+  const [eventValue, insightsValue, rosterValue, albumValue, feedbackValue] = await Promise.all([
     request('mip.admin.events.get', { eventId }),
     request('mip.admin.events.insights.get', { eventId }),
     options.includeEventRoster === false
@@ -233,6 +240,13 @@ async function loadEventDetail(
     options.includeEventAlbum
       ? request('mip.admin.events.album.list', { eventId, status: 'PENDING', limit: 20 })
       : Promise.resolve({ items: [], nextCursor: null }),
+    options.includeEventFeedback
+      ? request('mip.admin.events.feedbacks.list', {
+          eventId,
+          limit: 20,
+          ...(feedbackCursor ? { cursor: feedbackCursor } : {}),
+        })
+      : Promise.resolve({ items: [], nextCursor: null }),
   ])
   const event = record(eventValue)
   const insights = record(insightsValue)
@@ -245,6 +259,8 @@ async function loadEventDetail(
   const roster = pageRecords(rosterValue)
   const rosterPage = record(rosterValue)
   const pendingAlbum = pageRecords(albumValue)
+  const feedbackPage = record(feedbackValue)
+  const feedbackRows = pageRecords(feedbackValue)
   const sections: AdminDetailSection[] = [
     {
       title: '活动信息',
@@ -331,13 +347,39 @@ async function loadEventDetail(
       ]),
     })
   }
+  if (options.includeEventFeedback) {
+    sections.push({
+      title: '活动反馈明细',
+      rows: feedbackRows.map(item => ({
+        nickname: text(item.nickname),
+        submittedAt: dateTime(item.submittedAt),
+        rating: numberText(item.rating),
+        wouldRecommend: item.wouldRecommend === true ? '是' : item.wouldRecommend === false ? '否' : '—',
+        capabilityRoles: arrayText(item.capabilityRoles),
+        joinMipIntent: codeLabel(item.joinMipIntent),
+      })),
+      columns: columns([
+        ['nickname', '提交人'], ['submittedAt', '提交时间'], ['rating', '评分'],
+        ['wouldRecommend', '推荐意向'], ['capabilityRoles', '能力角色'], ['joinMipIntent', '加入意向'],
+      ]),
+      pager: {
+        key: 'eventFeedback',
+        query: '',
+        currentCursor: feedbackCursor,
+        nextCursor: typeof feedbackPage.nextCursor === 'string' && feedbackPage.nextCursor
+          ? feedbackPage.nextCursor
+          : null,
+        placeholder: '活动反馈',
+      },
+    })
+  }
   return {
     route: 'events',
     title: text(event.title, '活动详情'),
     subtitle: [text(event.cityName, ''), text(event.venueName, '')].filter(Boolean).join(' · '),
     status: codeLabel(event.status),
     sections,
-    source: { event, roster, rosterPage, pendingAlbum },
+    source: { event, roster, rosterPage, pendingAlbum, feedbackRows, feedbackPage },
   }
 }
 

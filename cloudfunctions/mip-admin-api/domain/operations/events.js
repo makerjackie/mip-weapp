@@ -36,4 +36,11 @@ module.exports = defineManifest('EVENTS', [
   serviceOperation('mip.admin.events.registrations.review', 'MUTATION', 'reviewRegistration', { wakesOutbox: true }),
   serviceOperation('mip.admin.events.checkIn', 'MUTATION', 'checkIn', { wakesOutbox: true }),
   serviceOperation('mip.admin.events.undoCheckIn', 'MUTATION', 'undoCheckIn', { wakesOutbox: true }),
+  serviceOperation('mip.admin.events.feedbacks.list', 'QUERY', 'listEventFeedbacks', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.feedbacks.export', 'MUTATION', 'exportEventFeedbacks', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.checkinQrcode.get', 'QUERY', 'getCheckinQrcode', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.participants.import', 'MUTATION', 'importParticipant', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.participants.cancel', 'MUTATION', 'cancelParticipant', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.participants.markAbnormal', 'MUTATION', 'markAbnormalParticipant', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.hearts.list', 'QUERY', 'listEventHearts', { sessionFirst: true }),
 ])

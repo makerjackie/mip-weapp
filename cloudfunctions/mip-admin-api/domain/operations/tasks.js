@@ -16,4 +16,8 @@ module.exports = defineManifest('TASKS', [
   serviceOperation('mip.admin.tasks.completions.list', 'QUERY', 'listCompletions'),
   serviceOperation('mip.admin.tasks.completions.get', 'QUERY', 'getCompletion'),
   serviceOperation('mip.admin.tasks.completions.export', 'QUERY', 'exportCompletions'),
+  serviceOperation('mip.admin.tasks.submissions.approve', 'MUTATION', 'approveSubmission', { sessionFirst: true }),
+  serviceOperation('mip.admin.tasks.submissions.reject', 'MUTATION', 'rejectSubmission', { sessionFirst: true }),
+  serviceOperation('mip.admin.tasks.submissions.retryReward', 'MUTATION', 'retrySubmissionReward', { sessionFirst: true }),
+  serviceOperation('mip.admin.tasks.assign', 'MUTATION', 'assignTask', { sessionFirst: true }),
 ])

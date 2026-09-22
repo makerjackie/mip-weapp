@@ -6,7 +6,7 @@ import type { AdminOperationAction, AdminRequestInput } from '../../domain/contr
 import type { AdminDetailView } from '../../modules/admin-details'
 import { normalizeOperationValues, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
 import type { AdminOperationLaunchContext } from '../../modules/admin-row-operations'
-import { ConfirmDialog, MutationDialog } from '../../shared/ui'
+import { ConfirmDialog, MutationDialog, humanizeError } from '../../shared/ui'
 import {
   createOperationModel,
   isReviewedOperationAction,
@@ -84,7 +84,7 @@ export function AdminOperationProvider({ children }: { children: ReactNode }) {
       setModel({ ...next, draftKey, values })
     }
     catch (reason) {
-      void message.error(reason instanceof Error ? reason.message : '操作表单暂时无法加载')
+      void message.error(humanizeError(reason))
     }
   }, [hasCapability, message, request, sessionBoundary])
 
@@ -140,7 +140,7 @@ export function AdminOperationProvider({ children }: { children: ReactNode }) {
         await queryClient.invalidateQueries()
         setError('记录已更新，列表已刷新。填写内容已保留，请重新打开操作后核对。')
       }
-      else setError(reason instanceof Error ? reason.message : '请求结果暂时无法确认')
+      else setError(humanizeError(reason))
     }
     finally { setLoading(false) }
   }, [demoMode, loading, message, model, pendingValues, queryClient, request])

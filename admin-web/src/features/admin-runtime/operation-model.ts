@@ -32,6 +32,10 @@ import {
   ADMIN_TASK_MUTATION_ACTIONS,
   buildTaskMutationInput,
   createTaskMutationDefinition,
+  createTaskAssignmentMutationDefinition,
+  createTaskSubmissionMutationDefinition,
+  buildTaskAssignmentInput,
+  buildTaskSubmissionInput,
   loadTaskEligibleLevels,
   type AdminTaskMutationAction,
 } from '../../modules/admin-task-management'
@@ -93,7 +97,13 @@ export function operationCapability(action: ReviewedOperationAction) {
   if (basicActions.has(action)) return basicOperationCapability(action as BasicOperationAction)
   if (peopleActions.has(action)) return ADMIN_PEOPLE_MUTATION_CONFIGS[action as AdminPeopleMutationAction].capability
   if (eventActions.has(action)) return eventMutationConfig(action as AdminEventMutationAction).capability
-  if (taskActions.has(action)) return 'tasks.manage'
+  if (taskActions.has(action)) {
+    const taskAction = action as AdminTaskMutationAction
+    if (taskAction === 'mip.admin.tasks.submissions.approve'
+      || taskAction === 'mip.admin.tasks.submissions.reject'
+      || taskAction === 'mip.admin.tasks.submissions.retryReward') return 'tasks.review'
+    return 'tasks.manage'
+  }
   if (bannerActions.has(action)) return 'banners.manage'
   if (gameActions.has(action)) return 'game.manage'
   return getContentMutationForm(action as ContentMutationAction).capability
@@ -142,6 +152,22 @@ export async function createOperationModel(
   }
   if (taskActions.has(action)) {
     const typedAction = action as AdminTaskMutationAction
+    if (typedAction === 'mip.admin.tasks.submissions.approve'
+      || typedAction === 'mip.admin.tasks.submissions.reject'
+      || typedAction === 'mip.admin.tasks.submissions.retryReward') {
+      const submissionSource = record(detail?.source?.completion)
+      const definition = createTaskSubmissionMutationDefinition(typedAction, targetId, { submission: submissionSource })
+      return model(definition, definition.fields, definition.values, idempotencyKey, next => buildTaskSubmissionInput(typedAction, next))
+    }
+    if (typedAction === 'mip.admin.tasks.assign') {
+      const taskSource = record(detail?.source?.task)
+      const assignableMembers = Array.isArray(detail?.source?.assignableMembers)
+        ? detail!.source!.assignableMembers
+        : []
+      const definition = createTaskAssignmentMutationDefinition(typedAction, targetId, { task: taskSource, assignableMembers })
+      const values = { ...definition.values, ...launch.values }
+      return model(definition, definition.fields, values, idempotencyKey, next => buildTaskAssignmentInput(typedAction, next))
+    }
     let source = detail?.source || {}
     if (typedAction === 'mip.admin.tasks.save' && !Array.isArray(source.eligibleLevelCatalog)) {
       source = { ...source, eligibleLevelCatalog: await loadTaskEligibleLevels(request) }

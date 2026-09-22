@@ -1,6 +1,8 @@
-import { Button, Space } from 'antd'
+import { App, Button, Space } from 'antd'
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
+import type { AdminOperationAction, AdminRequestInput } from '../../domain/contracts'
 import type { AdminDetailRoute, AdminDetailView } from '../../modules/admin-details'
 import type { AdminOperationLaunchContext, AdminRowOperation } from '../../modules/admin-row-operations'
 import { messageScheduleCancelAction } from '../../modules/admin-row-operations'
@@ -13,8 +15,9 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
   onTaskExport?: (taskId: string) => void | Promise<void>
   onMediaUpload?: () => void
 }) {
-  const { hasCapability } = useAdminSession()
+  const { hasCapability, request } = useAdminSession()
   const { launch } = useAdminOperations()
+  const navigate = useNavigate()
   const [taskExporting, setTaskExporting] = useState(false)
   const button = (
     action: string,
@@ -25,6 +28,17 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
   ) => !capability || hasCapability(capability)
     ? <Button key={`${action}-${label}`} onClick={() => void launch(action, targetId, view, options)}>{label}</Button>
     : null
+
+  const formPageButton = (
+    label: string,
+    path: string,
+    entityId: string,
+    capability?: string,
+  ) => {
+    if (capability && !hasCapability(capability)) return null
+    const paramName = path.match(/\$(\w+)/)?.[1] || 'entityId'
+    return <Button key={`form-${path}`} onClick={() => void navigate({ to: path as never, params: { [paramName]: entityId } as never })}>{label}</Button>
+  }
 
   const actions: React.ReactNode[] = []
   if (route === 'users') {
@@ -44,7 +58,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     const targetStatus = eventStatus === 'PUBLISHED' ? 'UNPUBLISHED'
       : ['DRAFT', 'UNPUBLISHED'].includes(eventStatus) ? 'PUBLISHED' : null
     if (['DRAFT', 'UNPUBLISHED'].includes(eventStatus)) {
-      actions.push(button('mip.admin.events.save', '编辑活动', id, 'events.write'))
+      actions.push(formPageButton('编辑活动', '/events/$eventId/edit', id, 'events.write'))
     }
     if (targetStatus) actions.push(button(
       'mip.admin.events.changeStatus',
@@ -61,6 +75,8 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
       button('mip.admin.events.clone', '克隆活动', id, 'events.write'),
       button('mip.admin.events.tags.replace', '活动标签', id, 'events.write'),
       button('mip.admin.communications.publishEventReminder', '发布提醒', id, 'communications.publish'),
+      button('mip.admin.events.participants.import', '补录报名', id, 'events.registrations.manage'),
+      <CheckinQrcodeButton key="checkin-qrcode" eventId={id} request={request} hasCapability={hasCapability} />,
     )
   }
   else if (route === 'orders') actions.push(button('mip.admin.refunds.submit', '提交退款', id, 'refunds.submit'))
@@ -68,13 +84,14 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     const task = record(view.source?.task)
     const status = String(task.status || '')
     const selected = String(task.assignmentMode || '') === 'SELECTED'
-    actions.push(button('mip.admin.tasks.save', '编辑任务', id, 'tasks.manage'))
+    actions.push(formPageButton('编辑任务', '/tasks/$taskId/edit', id, 'tasks.manage'))
     if (['DRAFT', 'UNPUBLISHED'].includes(status)) actions.push(button('mip.admin.tasks.publish', '发布任务', id, 'tasks.manage'))
     if (status === 'PUBLISHED') actions.push(button('mip.admin.tasks.unpublish', '下架任务', id, 'tasks.manage'))
     if (selected) actions.push(
       button('mip.admin.tasks.assignMembers', '分配成员', id, 'tasks.manage'),
       button('mip.admin.tasks.revokeMembers', '撤销成员', id, 'tasks.manage'),
     )
+    actions.push(button('mip.admin.tasks.assign', '派发任务', id, 'tasks.manage'))
     actions.push(button('mip.admin.tasks.delete', '删除任务', id, 'tasks.manage'))
     if (hasCapability('tasks.manage') && onTaskExport) actions.push(
       <Button
@@ -93,6 +110,20 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
         导出完成记录
       </Button>,
     )
+  }
+  else if (route === 'taskCompletions') {
+    const completion = record(view.source?.completion)
+    const submissionId = String(completion.id || completion.submissionId || id)
+    const submissionStatus = String(completion.submissionStatus || '')
+    if (submissionStatus === 'pending') {
+      actions.push(
+        button('mip.admin.tasks.submissions.approve', '通过', submissionId, 'tasks.review'),
+        button('mip.admin.tasks.submissions.reject', '退回', submissionId, 'tasks.review'),
+      )
+    }
+    else if (submissionStatus === 'approved') {
+      actions.push(button('mip.admin.tasks.submissions.retryReward', '重试奖励', submissionId, 'tasks.review'))
+    }
   }
   else if (route === 'banners') {
     const banner = record(view.source?.banner)
@@ -164,11 +195,11 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     )
   }
   else if (route === 'knowledge') actions.push(
-    button('mip.admin.knowledge.contents.save', '编辑内容', id, 'knowledge.manage'),
+    formPageButton('编辑内容', '/knowledge/$contentId/edit', id, 'knowledge.manage'),
     button('mip.admin.knowledge.contents.review', '审核内容', id, 'knowledge.manage'),
   )
   else if (route === 'opportunities') actions.push(
-    button('mip.admin.opportunities.save', '编辑机会', id, 'opportunities.moderate'),
+    formPageButton('编辑机会', '/opportunities/$opportunityId/edit', id, 'opportunities.moderate'),
     button('mip.admin.opportunities.publish', '发布机会', id, 'opportunities.moderate'),
     button('mip.admin.opportunities.end', '结束机会', id, 'opportunities.moderate'),
     button('mip.admin.opportunities.unpublish', '下架机会', id, 'opportunities.moderate'),
@@ -183,7 +214,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     const values = expectedVersion && contentId && ['COOPERATION_CARD', 'SUPER_CASE'].includes(kind)
       ? { kind, contentId, expectedVersion }
       : null
-    actions.push(button('mip.admin.userContent.save', '编辑内容', contentId, 'userContent.moderate'))
+    actions.push(formPageButton('编辑内容', '/userContent/$contentId/edit', `${kind}:${contentId}`, 'userContent.moderate'))
     if (values && status === 'PUBLISHED') actions.push(button(
       'mip.admin.userContent.unpublish', '下架内容', contentId, 'userContent.moderate', { values },
     ))
@@ -212,4 +243,36 @@ function record(value: unknown): Record<string, unknown> {
 function positiveVersion(value: unknown) {
   const version = Number(value)
   return Number.isSafeInteger(version) && version >= 1 ? version : null
+}
+
+interface CheckinQrcodeResult {
+  qrCodeUrl?: string
+  qrCodeDataUrl?: string
+  url?: string
+}
+
+function CheckinQrcodeButton({ eventId, request, hasCapability }: {
+  eventId: string
+  request: <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
+  hasCapability: (capability: string) => boolean
+}) {
+  const { message } = App.useApp()
+  const [loading, setLoading] = useState(false)
+  if (!hasCapability('events.write')) return null
+  const onClick = async () => {
+    setLoading(true)
+    try {
+      const result = await request<CheckinQrcodeResult>('mip.admin.events.checkinQrcode.get', { eventId })
+      const url = result?.qrCodeUrl || result?.qrCodeDataUrl || result?.url || ''
+      if (url) window.open(url, '_blank', 'noopener')
+      else void message.info('签到二维码暂不可用')
+    }
+    catch (reason) {
+      void message.error(reason instanceof Error ? reason.message : '签到二维码获取失败')
+    }
+    finally {
+      setLoading(false)
+    }
+  }
+  return <Button key="checkin-qrcode" loading={loading} onClick={() => void onClick()}>签到二维码</Button>
 }

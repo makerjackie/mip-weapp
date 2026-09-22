@@ -45,7 +45,7 @@ describe('event mutation form contracts', () => {
     }
   })
   it('declares every requested action with a capability and typed fields', () => {
-    assert.equal(EVENT_MUTATION_ACTIONS.length, 10)
+    assert.equal(EVENT_MUTATION_ACTIONS.length, 13)
     for (const action of EVENT_MUTATION_ACTIONS) {
       const config = EVENT_MUTATION_CONFIGS[action]
       assert.equal(config.action, action)

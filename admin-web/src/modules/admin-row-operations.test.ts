@@ -11,6 +11,7 @@ import {
   messageScheduleCancelAction,
   messageTemplateRowActions,
   rolePolicyRowActions,
+  taskCompletionRowActions,
 } from './admin-row-operations.ts'
 
 describe('admin row operations', () => {
@@ -147,6 +148,90 @@ describe('admin row operations', () => {
     assert.deepEqual(eventCatalogRowActions({
       id: 'catalog-1', kind: 'TYPE', sortOrder: 10, version: 2, status: 'ARCHIVED',
     }), [])
+  })
+
+  it('returns approve and reject for pending submission', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'pending',
+    })
+    assert.equal(actions.length, 2)
+    assert.equal(actions[0]?.label, '通过')
+    assert.equal(actions[1]?.label, '退回')
+    assert.deepEqual(actions[0]?.values, { submissionId: 'sub-001' })
+  })
+
+  it('returns retryReward for approved submission', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'approved',
+    })
+    assert.equal(actions.length, 1)
+    assert.equal(actions[0]?.label, '重试奖励')
+    assert.equal(actions[0]?.action, 'mip.admin.tasks.submissions.retryReward')
+  })
+
+  it('returns no actions for rejected submission', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'rejected',
+    })
+    assert.deepEqual(actions, [])
+  })
+
+  it('returns approve and reject for submitted state', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'submitted',
+    })
+    assert.equal(actions.length, 2)
+    assert.equal(actions[0]?.label, '通过')
+  })
+
+  it('returns approve and reject for pending_review state', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'pending_review',
+    })
+    assert.equal(actions.length, 2)
+  })
+
+  it('returns a boss approval button when requiresBossApproval is true and pending_review', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'pending_review', requiresBossApproval: true,
+    })
+    assert.equal(actions.length, 3)
+    assert.equal(actions[0]?.label, '笨笨老大审批')
+    assert.equal(actions[0]?.action, 'mip.admin.tasks.submissions.approve')
+    assert.deepEqual(actions[0]?.values, { submissionId: 'sub-001', bossApproved: true })
+    assert.equal(actions[1]?.label, '通过')
+    assert.equal(actions[2]?.label, '退回')
+  })
+
+  it('does not return boss approval button when requiresBossApproval is false', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'pending_review', requiresBossApproval: false,
+    })
+    assert.equal(actions.length, 2)
+    assert.equal(actions[0]?.label, '通过')
+  })
+
+  it('returns retryReward for reward_failed state', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'reward_failed',
+    })
+    assert.equal(actions.length, 1)
+    assert.equal(actions[0]?.action, 'mip.admin.tasks.submissions.retryReward')
+  })
+
+  it('returns retryReward for retrying state', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'retrying',
+    })
+    assert.equal(actions.length, 1)
+    assert.equal(actions[0]?.action, 'mip.admin.tasks.submissions.retryReward')
+  })
+
+  it('returns no actions for reward_pending state', () => {
+    const actions = taskCompletionRowActions({
+      id: 'sub-001', submissionStatus: 'reward_pending',
+    })
+    assert.deepEqual(actions, [])
   })
 
 })

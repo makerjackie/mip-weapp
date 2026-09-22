@@ -103,6 +103,30 @@ const adminWebQueryActions = Object.freeze([
   'mip.admin.exports.status',
   'mip.admin.exceptions.list',
   'mip.admin.operations.queue.list',
+
+  // P0/P1 new query actions
+  'mip.admin.events.feedbacks.list',
+  'mip.admin.events.checkinQrcode.get',
+  'mip.admin.events.hearts.list',
+  'mip.admin.users.invitedGuests.list',
+  'mip.admin.users.likeRelations.list',
+  'mip.admin.users.operationLogs.list',
+  'mip.admin.adminAccounts.list',
+  'mip.admin.cooperationCards.get',
+  'mip.admin.entitlements.transactions.list',
+  'mip.admin.contribution.rules.list',
+  'mip.admin.contribution.transactions.list',
+  'mip.admin.growth.levelTransitions.list',
+  'mip.admin.opportunities.operationLogs',
+  'mip.admin.opportunities.referrals',
+  'mip.admin.refunds.list',
+  'mip.admin.videos.list',
+  'mip.admin.cards.list',
+  'mip.admin.cards.history',
+  'mip.admin.events.drafts.get',
+
+  // P2 new query actions
+  'mip.admin.adminAccounts.loginRecords',
 ])
 
 const adminWebMutationPolicies = Object.freeze([
@@ -196,6 +220,34 @@ const adminWebMutationPolicies = Object.freeze([
   webMutation('mip.admin.exports.prepare', ['ticketId', 'token']),
   webMutation('mip.admin.exports.reserve', ['ticketId', 'token']),
   webMutation('mip.admin.exports.complete', ['ticketId', 'token']),
+
+  // P0/P1 new mutation policies
+  domainIdempotentWebMutation('mip.admin.tasks.submissions.approve', ['submissionId']),
+  domainIdempotentWebMutation('mip.admin.tasks.submissions.reject', ['submissionId'], ['remark']),
+  domainIdempotentWebMutation('mip.admin.tasks.submissions.retryReward', ['submissionId']),
+  domainIdempotentWebMutation('mip.admin.tasks.assign', ['taskId', 'recipients', 'assignMode'], ['expectedVersion', 'weeklyDeliverAt', 'weeklyStartAt', 'weeklyEndAt']),
+  webMutation('mip.admin.events.feedbacks.export', ['eventId']),
+  domainIdempotentWebMutation('mip.admin.events.participants.import', ['eventId', 'userId'], ['roleMark', 'reason']),
+  webMutation('mip.admin.events.participants.cancel', ['eventId', 'registrationId', 'expectedVersion', 'reason']),
+  webMutation('mip.admin.events.participants.markAbnormal', ['eventId', 'registrationId', 'expectedVersion', 'reason']),
+  domainIdempotentWebMutation('mip.admin.adminAccounts.create', ['name', 'loginAccount', 'phone', 'roleKey'], ['branchId']),
+  webMutation('mip.admin.adminAccounts.update', ['accountId', 'expectedVersion'], ['name', 'phone', 'roleKey', 'branchId']),
+  webMutation('mip.admin.adminAccounts.changeStatus', ['accountId', 'expectedVersion', 'status'], ['reason']),
+  domainIdempotentWebMutation('mip.admin.adminAccounts.resetCredential', ['accountId'], ['reason']),
+  domainIdempotentWebMutation('mip.admin.cooperationCards.save', ['userId', 'cardType', 'expectedVersion'], ['realName', 'gameName', 'cardSummary', 'targetSummary', 'referralNeeded', 'quirks', 'rootCause', 'prevention', 'cooperationValue', 'abilityScores', 'menuFields', 'status']),
+  domainIdempotentWebMutation('mip.admin.entitlements.grant', ['userId', 'entitlementType'], ['amount', 'months']),
+  domainIdempotentWebMutation('mip.admin.contribution.rules.save', ['behavior', 'rewardExp', 'rewardLimit', 'scopeServers', 'effectiveFrom', 'status'], ['ruleId', 'expectedVersion', 'effectiveTo']),
+  domainIdempotentWebMutation('mip.admin.contribution.transactions.reverse', ['originalTransactionNo', 'reversalValue', 'reason']),
+  webMutation('mip.admin.growth.levels.changeStatus', ['levelId', 'expectedVersion', 'status']),
+  webMutation('mip.admin.growth.benefits.changeStatus', ['benefitId', 'expectedVersion', 'status']),
+  webMutation('mip.admin.opportunities.delete', ['opportunityId', 'expectedVersion', 'reason']),
+  domainIdempotentWebMutation('mip.admin.videos.save', ['coverAssetId', 'jumpUrl', 'title'], ['videoId', 'expectedVersion', 'status']),
+  webMutation('mip.admin.videos.changeStatus', ['videoId', 'expectedVersion', 'status']),
+  domainIdempotentWebMutation('mip.admin.cards.save', ['cardType', 'fields'], ['cardId', 'expectedVersion']),
+  webMutation('mip.admin.cards.changeStatus', ['cardId', 'expectedVersion', 'status']),
+  domainIdempotentWebMutation('mip.admin.cards.takedown', ['cardId', 'reason']),
+  domainIdempotentWebMutation('mip.admin.events.drafts.save', ['draftData'], ['eventId', 'draftId']),
+  domainIdempotentWebMutation('mip.admin.adminAccounts.passwordLogin', ['phone', 'password']),
 ])
 
 function createPublicOperationContract(operations = operationCatalog) {

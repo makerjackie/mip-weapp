@@ -1,6 +1,7 @@
 import { DownloadOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Space, Typography } from 'antd'
 import { useMemo } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
 import {
   EVENT_MUTATION_ACTIONS,
@@ -32,6 +33,21 @@ import { useCoreReadPage } from './use-core-page-query'
 import './core-pages.css'
 
 type CoreListRoute = Extract<AdminListRoute, 'users' | 'events' | 'orders'>
+
+const dimensionOptionsByRoute: Record<CoreListRoute, Array<{ value: string; label: string }>> = {
+  users: [
+    { value: 'ACTIVE', label: '活跃' },
+    { value: 'BLOCKED', label: '封禁' },
+  ],
+  events: [
+    { value: 'OFFLINE', label: '线下' },
+    { value: 'ONLINE', label: '线上' },
+  ],
+  orders: [
+    { value: 'PAID', label: '已支付' },
+    { value: 'REFUNDED', label: '已退款' },
+  ],
+}
 
 const pageDefinitions: Record<CoreListRoute, {
   title: string
@@ -77,6 +93,7 @@ export function OrdersPage(props: CoreListPageProps) {
 
 function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreListRoute }) {
   const { hasCapability, hasCapabilityAtScope } = useAdminSession()
+  const navigate = useNavigate()
   const query = useCoreReadPage(route, props.search)
   const definition = pageDefinitions[route]
   return (
@@ -91,6 +108,10 @@ function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreList
         canWriteEvents={hasCapability(EVENT_MUTATION_CONFIGS['mip.admin.events.save'].capability)}
         canWriteEventPolicy={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.policy.save'].capability, 'PLATFORM')}
         canManageEventCatalog={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.catalog.save'].capability, 'PLATFORM')}
+        onNavigateToForm={(path, entityId) => {
+          const paramName = path.match(/\$(\w+)/)?.[1] || 'entityId'
+          void navigate({ to: path as never, params: { [paramName]: entityId } as never })
+        }}
         onRetry={() => void query.refetch()}
       />
     </PermissionGuard>
@@ -107,6 +128,7 @@ export function CoreListPageView({
   canWriteEvents,
   canWriteEventPolicy,
   canManageEventCatalog,
+  onNavigateToForm,
   onRetry,
   onSearchChange,
   onOpenDetail,
@@ -123,20 +145,21 @@ export function CoreListPageView({
   canWriteEvents?: boolean
   canWriteEventPolicy?: boolean
   canManageEventCatalog?: boolean
+  onNavigateToForm?: (path: string, entityId: string) => void
   onRetry?: () => void
 }) {
   const pageDefinition = pageDefinitions[route]
   const readDefinition = getAdminReadRouteDefinition(route)
   const pageNumber = search.page && search.page > 1 ? search.page : 1
   const headerActions = useMemo(() => {
-    if (route === 'events' && onMutation && (canWriteEvents || canManageEventCatalog)) {
+    if (route === 'events' && (canWriteEvents || canManageEventCatalog)) {
       return (
         <Space wrap>
-          {canWriteEvents ? (
+          {canWriteEvents && onNavigateToForm ? (
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => onMutation({ action: 'mip.admin.events.save', targetId: '' })}
+              onClick={() => onNavigateToForm?.('/events/$eventId/edit', 'new')}
             >
               新建活动
             </Button>
@@ -144,7 +167,7 @@ export function CoreListPageView({
           {canManageEventCatalog ? (
             <Button
               icon={<PlusOutlined />}
-              onClick={() => onMutation({ action: 'mip.admin.events.catalog.save', targetId: '' })}
+              onClick={() => onMutation?.({ action: 'mip.admin.events.catalog.save', targetId: '' })}
             >
               新建活动目录
             </Button>
@@ -159,7 +182,7 @@ export function CoreListPageView({
           icon={<DownloadOutlined />}
           onClick={() => onSensitiveExport({
             kind: route,
-            filters: { query: search.q || '', status: search.status || '' },
+            filters: { query: search.q || '', status: search.status || '', filters: search.filters },
           })}
         >
           {route === 'users' ? '导出用户' : '导出订单'}
@@ -167,7 +190,7 @@ export function CoreListPageView({
       )
     }
     return null
-  }, [canExport, canManageEventCatalog, canWriteEvents, onMutation, onSensitiveExport, route, search.q, search.status])
+  }, [canExport, canManageEventCatalog, canWriteEvents, onMutation, onNavigateToForm, onSensitiveExport, route, search.q, search.status, search.filters])
 
   function openDetail(row: AdminTableRow) {
     const id = String(row.detailId || '')
@@ -179,14 +202,26 @@ export function CoreListPageView({
     <>
       <PageHeader title={pageDefinition.title} description={pageDefinition.description} actions={headerActions} />
       <FilterBar
-        value={{ q: search.q || '', status: search.status || '' }}
+        value={{ q: search.q || '', status: search.status || '', filters: search.filters }}
         placeholder={readDefinition.searchPlaceholder}
         statusOptions={readDefinition.statusOptions}
         loading={loading}
+        dimensionOptions={dimensionOptionsByRoute[route]}
+        showTimeRange
+        showAmountRange={route === 'orders'}
+        showPageSize
+        pageSize={search.limit ?? 20}
+        onPageSizeChange={size => onSearchChange({
+          ...search,
+          limit: size,
+          cursor: undefined,
+          page: undefined,
+        })}
         onChange={value => onSearchChange({
           ...search,
           q: value.q || undefined,
           status: value.status || undefined,
+          filters: value.filters && Object.keys(value.filters).length > 0 ? value.filters as Record<string, string> : undefined,
           cursor: undefined,
           page: undefined,
         })}

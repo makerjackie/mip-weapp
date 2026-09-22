@@ -1,11 +1,13 @@
 import { Button, Space } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
+import { useNavigate } from '@tanstack/react-router'
 import { getAdminReadRouteDefinition } from '../../modules/admin-read-pages'
 import { OperationsReadPage } from './operations-read-page'
 import type { OperationsPageState } from './types'
 
 export function OpportunitiesContentPage(props: OperationsPageState) {
   const definition = getAdminReadRouteDefinition('opportunities')
+  const navigate = useNavigate()
   return (
     <OperationsReadPage
       {...props}
@@ -19,9 +21,9 @@ export function OpportunitiesContentPage(props: OperationsPageState) {
         : section.title === '用户内容' ? 'userContent' : null}
       actions={props.onWrite ? (
         <Space wrap>
-          <Button icon={<PlusOutlined />} onClick={() => props.onWrite?.({ action: 'mip.admin.userContent.save', values: { kind: 'COOPERATION_CARD' } })}>创建合作卡</Button>
-          <Button icon={<PlusOutlined />} onClick={() => props.onWrite?.({ action: 'mip.admin.userContent.save', values: { kind: 'SUPER_CASE' } })}>创建超级案例</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => props.onWrite?.({ action: 'mip.admin.opportunities.save' })}>创建机会</Button>
+          <Button icon={<PlusOutlined />} onClick={() => void navigate({ to: '/userContent/$contentId/edit' as never, params: { contentId: 'new' } as never, search: { kind: 'COOPERATION_CARD' } as never })}>创建合作卡</Button>
+          <Button icon={<PlusOutlined />} onClick={() => void navigate({ to: '/userContent/$contentId/edit' as never, params: { contentId: 'new' } as never, search: { kind: 'SUPER_CASE' } as never })}>创建超级案例</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => void navigate({ to: '/opportunities/$opportunityId/edit' as never, params: { opportunityId: 'new' } as never })}>创建机会</Button>
         </Space>
       ) : null}
     />

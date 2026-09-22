@@ -46,9 +46,14 @@ import {
 import { getAdminReadRouteDefinition, type AdminListQuery } from '../modules/admin-read-pages'
 import { downloadTaskCompletionExport, exportTaskCompletions } from '../modules/admin-task-management'
 import { DetailDrawer, PermissionGuard } from '../shared/ui'
+import { EventEditFormPage } from '../features/form-pages/event-edit-form-page'
+import { TaskEditFormPage } from '../features/form-pages/task-edit-form-page'
+import { OpportunityEditFormPage } from '../features/form-pages/opportunity-edit-form-page'
+import { KnowledgeEditFormPage } from '../features/form-pages/knowledge-edit-form-page'
+import { UserContentEditFormPage } from '../features/form-pages/user-content-edit-form-page'
 
 type CoreRoute = 'users' | 'events' | 'orders'
-type OperationsRoute = 'tasks' | 'banners' | 'game' | 'opportunities' | 'growth'
+type OperationsRoute = 'tasks' | 'banners' | 'game' | 'opportunities' | 'growth' | 'adminAccounts' | 'auditLogs'
 
 export function OverviewRoutePage() {
   const navigate = useNavigate()
@@ -116,6 +121,8 @@ export function BannersRoutePage() { return <OperationsRoutePage route="banners"
 export function GameRoutePage() { return <OperationsRoutePage route="game" /> }
 export function OpportunitiesRoutePage() { return <OperationsRoutePage route="opportunities" /> }
 export function GrowthRoutePage() { return <OperationsRoutePage route="growth" /> }
+export function AdminAccountsRoutePage() { return <OperationsRoutePage route="adminAccounts" /> }
+export function AuditLogsRoutePage() { return <OperationsRoutePage route="auditLogs" /> }
 
 function OperationsRoutePage({ route }: { route: OperationsRoute }) {
   const { demoMode, hasCapability } = useAdminSession()
@@ -158,6 +165,10 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
     },
     onOpenDetail: intent => detail.openDetail(intent.route, intent.id),
     onWrite,
+    onPageSizeChange: size => {
+      setCursorStack([])
+      void updateSearch({ ...search, limit: size, cursor: undefined, page: undefined })
+    },
   }
   const page = route === 'tasks' ? <TaskManagementPage {...state} />
     : route === 'banners' ? <BannerManagementPage {...state} onOpenMedia={purpose => void navigate({ to: '/media', search: { tab: purpose } })} />
@@ -320,7 +331,7 @@ function useUpdateSearch() {
 }
 
 function listQuery(search: AdminListSearch): AdminListQuery {
-  return { query: search.q?.trim() || '', status: search.status || '', cursor: search.cursor || null, limit: 20 }
+  return { query: search.q?.trim() || '', status: search.status || '', cursor: search.cursor || null, limit: search.limit ?? 20 }
 }
 
 const operationRouteCapabilities: Record<OperationsRoute, string[]> = {
@@ -329,6 +340,8 @@ const operationRouteCapabilities: Record<OperationsRoute, string[]> = {
   game: ['game.manage'],
   opportunities: ['opportunities.moderate', 'userContent.moderate'],
   growth: ['growth.read', 'growth.adjust', 'badges.manage'],
+  adminAccounts: ['roles.change'],
+  auditLogs: ['audit.read'],
 }
 
 const operationRouteWriteCapabilities: Record<OperationsRoute, string[]> = {
@@ -337,6 +350,8 @@ const operationRouteWriteCapabilities: Record<OperationsRoute, string[]> = {
   game: ['game.manage'],
   opportunities: ['opportunities.moderate', 'userContent.moderate'],
   growth: ['growth.adjust', 'badges.manage'],
+  adminAccounts: ['roles.change'],
+  auditLogs: [],
 }
 
 const governanceRouteCapabilities: Record<GovernanceRoute, string[]> = {
@@ -358,7 +373,14 @@ export const routeComponents = {
   '/opportunities': OpportunitiesRoutePage,
   '/growth': GrowthRoutePage,
   '/permissions': PermissionsRoutePage,
+  '/admin-accounts': AdminAccountsRoutePage,
+  '/audit-logs': AuditLogsRoutePage,
   '/messages': MessagesRoutePage,
   '/knowledge': KnowledgeRoutePage,
   '/operations': OperationsLogRoutePage,
+  '/events/$eventId/edit': EventEditFormPage,
+  '/tasks/$taskId/edit': TaskEditFormPage,
+  '/opportunities/$opportunityId/edit': OpportunityEditFormPage,
+  '/knowledge/$contentId/edit': KnowledgeEditFormPage,
+  '/userContent/$contentId/edit': UserContentEditFormPage,
 } as const

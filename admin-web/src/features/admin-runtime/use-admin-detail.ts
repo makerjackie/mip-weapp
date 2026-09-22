@@ -26,6 +26,7 @@ export function useAdminDetail() {
     includeUserMembership: selection?.route === 'users' && hasCapabilityAtScope('memberships.read', 'PLATFORM'),
     includeEventRoster: selection?.route === 'events' && hasCapability('events.roster.read'),
     includeEventAlbum: selection?.route === 'events' && hasCapability('events.album.manage'),
+    includeEventFeedback: selection?.route === 'events' && hasCapability('events.feedback.read'),
     includeMessageDeliveryReviews: selection?.route === 'messages' && hasCapabilityAtScope('messages.delivery.review', 'PLATFORM'),
     includeOpportunityComments: selection?.route === 'opportunities' && hasCapability('messages.manage'),
   }), [hasCapability, hasCapabilityAtScope, selection])
@@ -71,7 +72,7 @@ export function useAdminDetail() {
 }
 
 export function createDetailPageHistory(): DetailPageHistory {
-  return { eventRoster: [], taskMembers: [], taskCompletions: [], gameMembers: [] }
+  return { eventRoster: [], eventFeedback: [], taskMembers: [], taskCompletions: [], gameMembers: [] }
 }
 
 export function transitionDetailPage(
@@ -104,6 +105,9 @@ function detailOptionsWithCursor(
 ): AdminDetailOptions {
   if (pager.key === 'eventRoster') {
     return { ...options, eventRoster: { ...options?.eventRoster, cursor } }
+  }
+  if (pager.key === 'eventFeedback') {
+    return { ...options, eventFeedback: { ...options?.eventFeedback, cursor } }
   }
   if (pager.key === 'taskMembers') {
     return {

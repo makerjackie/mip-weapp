@@ -1,0 +1,9 @@
+ALTER TABLE mip_task_assignments
+  DROP CHECK mip_task_assignments_assign_mode_ck,
+  DROP KEY mip_task_assignments_mode_idx,
+  DROP COLUMN task_version,
+  DROP COLUMN weekly_end_at,
+  DROP COLUMN weekly_start_at,
+  DROP COLUMN weekly_deliver_at,
+  DROP COLUMN recipients_json,
+  DROP COLUMN assign_mode;

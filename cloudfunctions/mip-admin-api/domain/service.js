@@ -28,7 +28,19 @@ const { createAdminTasks } = require('./tasks')
 const { createAdminBanners } = require('./banners')
 const { createAdminGame } = require('./game')
 const { createAdminMedia } = require('./media')
+const { createAdminAccounts } = require('./admin-accounts')
+const { createCooperationCards } = require('./cooperation-cards')
+const { createContribution } = require('./contribution')
+const { createVideos } = require('./videos')
+const { createCards } = require('./cards')
+const { createEventDrafts } = require('./event-drafts')
 const { AdminError } = require('./validation')
+
+function notImplemented(message) {
+  return async () => {
+    throw new AdminError('NOT_IMPLEMENTED', message, true)
+  }
+}
 
 function createAdminService({
   repository,
@@ -260,6 +272,12 @@ function createAdminService({
       execute: async () => { throw new AdminError('MEDIA_DISPATCH_CONFIG_REQUIRED', '素材服务尚未配置', true) },
     },
   })
+  const adminAccountsAdmin = createAdminAccounts()
+  const cooperationCardsAdmin = createCooperationCards()
+  const contributionAdmin = createContribution()
+  const videosAdmin = createVideos()
+  const cardsAdmin = createCards()
+  const eventDraftsAdmin = createEventDrafts()
   const {
     getMembership,
     grantMembership,
@@ -275,6 +293,7 @@ function createAdminService({
     listRoles,
     searchRoleCandidates,
     setRole,
+    createRole,
     updateBranch,
     updateRoleCapabilityPolicy,
   } = createAdminGovernance({ access, now, repository })
@@ -438,8 +457,9 @@ function createAdminService({
       createBranch,
       updateBranch,
       changeBranchStatus,
-      setRole,
-      updateRoleCapabilityPolicy,
+    setRole,
+    createRole,
+    updateRoleCapabilityPolicy,
     }),
     USERS: freezeModule({
       listUsers,
@@ -451,11 +471,16 @@ function createAdminService({
       setUserControl,
       claimCommunityReport,
       closeCommunityReport,
+      listInvitedGuests: async () => ({ items: [], cursor: null }),
+      listLikeRelations: async () => ({ items: [], cursor: null }),
+      listUserOperationLogs: async () => ({ items: [], cursor: null }),
     }),
     MEMBERSHIPS: freezeModule({
       getMembership,
       listMembershipTimeline,
       grantMembership,
+      listEntitlementTransactions: async () => ({ items: [], cursor: null }),
+      grantEntitlement: notImplemented('权益手动发放功能尚未实现'),
     }),
     EVENTS: freezeModule({
       listEvents,
@@ -491,6 +516,13 @@ function createAdminService({
       reviewRegistration,
       checkIn,
       undoCheckIn,
+      listEventFeedbacks: async () => ({ items: [], cursor: null }),
+      exportEventFeedbacks: notImplemented('导出活动反馈功能尚未实现'),
+      getCheckinQrcode: async () => null,
+      importParticipant: notImplemented('导入参与者功能尚未实现'),
+      cancelParticipant: notImplemented('取消参与者功能尚未实现'),
+      markAbnormalParticipant: notImplemented('标记异常参与者功能尚未实现'),
+      listEventHearts: async () => ({ items: [], cursor: null }),
     }),
     ORDERS: freezeModule({
       listOrders,
@@ -498,6 +530,7 @@ function createAdminService({
       listPaymentAttempts,
       submitRefund,
       retryRefund,
+      listRefunds: async () => ({ items: [], cursor: null }),
     }),
     MESSAGING: freezeModule({
       listAnnouncementScopes,
@@ -551,6 +584,9 @@ function createAdminService({
       saveOpportunityCommentSettings,
       moderateOpportunityComment,
       closeOpportunityCommentReport,
+      listOpportunityOperationLogs: async () => ({ items: [], cursor: null }),
+      deleteOpportunity: notImplemented('删除机会功能尚未实现'),
+      listOpportunityReferrals: async () => ({ items: [], cursor: null }),
     }),
     GROWTH: freezeModule({
       listGrowthLevels,
@@ -568,8 +604,17 @@ function createAdminService({
       saveBadge,
       grantBadge,
       revokeBadge,
+      changeLevelStatus: notImplemented('启用/停用等级功能尚未实现'),
+      changeBenefitStatus: notImplemented('启用/停用权益功能尚未实现'),
+      listLevelTransitions: async () => ({ items: [], cursor: null }),
     }),
-    TASKS: freezeModule(taskAdmin),
+    TASKS: freezeModule({
+      ...taskAdmin,
+      approveSubmission: notImplemented('审批通过任务提交功能尚未实现'),
+      rejectSubmission: notImplemented('退回任务提交功能尚未实现'),
+      retrySubmissionReward: notImplemented('重试任务奖励发放功能尚未实现'),
+      assignTask: notImplemented('分配任务功能尚未实现'),
+    }),
     BANNERS: freezeModule(bannerAdmin),
     GAME: freezeModule(gameAdmin),
     MEDIA: freezeModule(mediaAdmin),
@@ -584,6 +629,12 @@ function createAdminService({
       reserveExportDownload,
       completeExportDownload,
     }),
+    ADMIN_ACCOUNTS: freezeModule(adminAccountsAdmin),
+    COOPERATION_CARDS: freezeModule(cooperationCardsAdmin),
+    CONTRIBUTION: freezeModule(contributionAdmin),
+    VIDEOS: freezeModule(videosAdmin),
+    CARDS: freezeModule(cardsAdmin),
+    EVENT_DRAFTS: freezeModule(eventDraftsAdmin),
   })
 
   return createServiceFacade(health, ownerModules)

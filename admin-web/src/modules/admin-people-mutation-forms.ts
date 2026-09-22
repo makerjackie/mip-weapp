@@ -10,6 +10,11 @@ export const ADMIN_PEOPLE_MUTATION_ACTIONS = [
   'mip.admin.branches.create',
   'mip.admin.branches.update',
   'mip.admin.branches.changeStatus',
+  'mip.admin.adminAccounts.create',
+  'mip.admin.adminAccounts.update',
+  'mip.admin.adminAccounts.changeStatus',
+  'mip.admin.adminAccounts.resetCredential',
+  'mip.admin.entitlements.grant',
 ] as const
 
 export type AdminPeopleMutationAction = typeof ADMIN_PEOPLE_MUTATION_ACTIONS[number]
@@ -122,6 +127,10 @@ const VERSION_FIELDS = {
     ['角色策略', '版本'],
     ['角色策略摘要', '版本'],
   ],
+  adminAccount: [
+    ['基本信息', '版本'],
+    ['账号信息', '版本'],
+  ],
 } as const
 
 export const ADMIN_PEOPLE_MUTATION_CONFIG = {
@@ -226,6 +235,73 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     values: { status: 'ACTIVE' },
     versionKind: 'branch',
   },
+  'mip.admin.adminAccounts.create': {
+    action: 'mip.admin.adminAccounts.create',
+    capability: 'roles.change',
+    title: '新增后台账号',
+    description: '创建后台运营账号。登录账号和手机号需系统内唯一。',
+    fields: [
+      { name: 'loginAccount', label: '登录账号', kind: 'text', required: true, maxLength: 64 },
+      { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
+      { name: 'phone', label: '手机号', kind: 'text', required: true, maxLength: 20 },
+      { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
+      { name: 'scopeId', label: '作用范围 ID', kind: 'text' },
+      { name: 'branchId', label: '服务器归属', kind: 'text' },
+      { name: 'reason', label: '创建原因', kind: 'textarea', maxLength: 300, wide: true },
+    ],
+    values: { loginAccount: '', name: '', phone: '', roleKey: '', scopeId: '', branchId: '', reason: '' },
+  },
+  'mip.admin.adminAccounts.update': {
+    action: 'mip.admin.adminAccounts.update',
+    capability: 'roles.change',
+    title: '编辑后台账号',
+    description: '更新后台账号信息。登录账号不可修改。',
+    fields: [
+      { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
+      { name: 'phone', label: '手机号', kind: 'text', required: true, maxLength: 20 },
+      { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
+      { name: 'scopeId', label: '作用范围 ID', kind: 'text' },
+      { name: 'branchId', label: '服务器归属', kind: 'text' },
+    ],
+    values: { name: '', phone: '', roleKey: '', scopeId: '', branchId: '' },
+    versionKind: 'adminAccount',
+  },
+  'mip.admin.adminAccounts.changeStatus': {
+    action: 'mip.admin.adminAccounts.changeStatus',
+    capability: 'roles.change',
+    title: '启用/停用账号',
+    description: '更新后台账号状态。停用自身或最后一个超级管理员将被服务端拒绝。',
+    fields: [
+      { name: 'status', label: '状态', kind: 'select', required: true,
+        options: [{ value: 'ACTIVE', label: '启用' }, { value: 'INACTIVE', label: '停用' }] },
+      { name: 'reason', label: '原因', kind: 'textarea', required: true, maxLength: 300, wide: true },
+    ],
+    values: { status: 'ACTIVE', reason: '' },
+    versionKind: 'adminAccount',
+  },
+  'mip.admin.adminAccounts.resetCredential': {
+    action: 'mip.admin.adminAccounts.resetCredential',
+    capability: 'roles.change',
+    title: '重置登录凭证',
+    description: '重置后台账号的登录凭证令牌。',
+    fields: [
+      { name: 'reason', label: '原因', kind: 'textarea', required: true, maxLength: 300, wide: true },
+    ],
+    values: { reason: '' },
+  },
+  'mip.admin.entitlements.grant': {
+    action: 'mip.admin.entitlements.grant',
+    capability: 'memberships.adjust',
+    title: '授予权益',
+    description: '为用户手动授予权益，可附带数量和月数。金额和月数为正整数。',
+    fields: [
+      { name: 'userId', label: '用户', kind: 'text', required: true, maxLength: 36 },
+      { name: 'entitlementType', label: '权益类型', kind: 'text', required: true, maxLength: 64 },
+      { name: 'amount', label: '数量', kind: 'text' },
+      { name: 'months', label: '月数', kind: 'text' },
+    ],
+    values: { userId: '', entitlementType: '', amount: '', months: '' },
+  },
 } as const
 
 export const ADMIN_PEOPLE_MUTATION_CONFIGS = ADMIN_PEOPLE_MUTATION_CONFIG
@@ -237,6 +313,7 @@ const VERSION_MINIMUMS: Record<VersionKind, number> = {
   userAccount: 1,
   branch: 1,
   policy: 0,
+  adminAccount: 1,
 }
 
 export interface CreateAdminPeopleMutationOptions {
@@ -298,6 +375,11 @@ export function buildAdminPeopleMutationInput(
     case 'mip.admin.branches.create': return buildBranchCreate(values)
     case 'mip.admin.branches.update': return buildBranchUpdate(definition, values)
     case 'mip.admin.branches.changeStatus': return buildBranchStatus(definition, values)
+    case 'mip.admin.adminAccounts.create': return buildAdminAccountCreate(values)
+    case 'mip.admin.adminAccounts.update': return buildAdminAccountUpdate(definition, values)
+    case 'mip.admin.adminAccounts.changeStatus': return buildAdminAccountChangeStatus(definition, values)
+    case 'mip.admin.adminAccounts.resetCredential': return buildAdminAccountResetCredential(definition, values)
+    case 'mip.admin.entitlements.grant': return buildEntitlementGrant(values)
   }
 }
 
@@ -404,6 +486,90 @@ function buildBranchStatus(definition: AdminPeopleMutationDefinition, values: Ad
   const status = oneOf(values.status, ['ACTIVE', 'INACTIVE'] as const)
   if (!definition.targetId || expectedVersion === null || !status) return null
   return { branchId: definition.targetId, expectedVersion, status }
+}
+
+function buildAdminAccountCreate(values: AdminPeopleMutationValues) {
+  const loginAccount = boundedText(values.loginAccount, 64)
+  const name = boundedText(values.name, 64)
+  const phone = boundedText(values.phone, 20)
+  const roleKey = oneOf(values.roleKey, [
+    'PLATFORM_OWNER', 'PLATFORM_OPERATIONS', 'PLATFORM_FINANCE', 'BRANCH_ADMIN',
+    'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF',
+  ] as const)
+  if (!loginAccount || !name || !phone || !roleKey) return null
+  if (!/^[A-Za-z0-9_.-]{3,64}$/.test(loginAccount)) return null
+  const result: Record<string, unknown> = { loginAccount, name, phone, roleKey }
+  if (values.scopeId !== undefined && values.scopeId !== '') {
+    const scopeId = boundedId(values.scopeId)
+    if (!scopeId) return null
+    result.scopeId = scopeId
+  }
+  if (values.branchId !== undefined && values.branchId !== '') {
+    const branchId = boundedId(values.branchId)
+    if (!branchId) return null
+    result.branchId = branchId
+  }
+  if (values.reason !== undefined && values.reason !== '') {
+    const reason = boundedText(values.reason, 300)
+    if (!reason) return null
+    result.reason = reason
+  }
+  return result
+}
+
+function buildAdminAccountUpdate(definition: AdminPeopleMutationDefinition, values: AdminPeopleMutationValues) {
+  const expectedVersion = versionValue(definition, 1)
+  const name = boundedText(values.name, 64)
+  const phone = boundedText(values.phone, 20)
+  const roleKey = oneOf(values.roleKey, [
+    'PLATFORM_OWNER', 'PLATFORM_OPERATIONS', 'PLATFORM_FINANCE', 'BRANCH_ADMIN',
+    'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF',
+  ] as const)
+  if (!definition.targetId || expectedVersion === null || !name || !phone || !roleKey) return null
+  const result: Record<string, unknown> = { accountId: definition.targetId, expectedVersion, name, phone, roleKey }
+  if (values.scopeId !== undefined && values.scopeId !== '') {
+    const scopeId = boundedId(values.scopeId)
+    if (!scopeId) return null
+    result.scopeId = scopeId
+  }
+  if (values.branchId !== undefined && values.branchId !== '') {
+    const branchId = boundedId(values.branchId)
+    if (!branchId) return null
+    result.branchId = branchId
+  }
+  return result
+}
+
+function buildAdminAccountChangeStatus(definition: AdminPeopleMutationDefinition, values: AdminPeopleMutationValues) {
+  const expectedVersion = versionValue(definition, 1)
+  const status = oneOf(values.status, ['ACTIVE', 'INACTIVE'] as const)
+  const reason = boundedText(values.reason, 300)
+  if (!definition.targetId || expectedVersion === null || !status || !reason) return null
+  return { accountId: definition.targetId, expectedVersion, status, reason }
+}
+
+function buildAdminAccountResetCredential(definition: AdminPeopleMutationDefinition, values: AdminPeopleMutationValues) {
+  const reason = boundedText(values.reason, 300)
+  if (!definition.targetId || !reason) return null
+  return { accountId: definition.targetId, reason }
+}
+
+function buildEntitlementGrant(values: AdminPeopleMutationValues) {
+  const userId = boundedId(values.userId)
+  const entitlementType = boundedText(values.entitlementType, 64)
+  if (!userId || !entitlementType) return null
+  const result: Record<string, unknown> = { userId, entitlementType }
+  if (values.amount !== undefined && values.amount !== null && values.amount !== '') {
+    const amount = Number(values.amount)
+    if (!Number.isSafeInteger(amount) || amount <= 0) return null
+    result.amount = amount
+  }
+  if (values.months !== undefined && values.months !== null && values.months !== '') {
+    const months = Number(values.months)
+    if (!Number.isSafeInteger(months) || months <= 0) return null
+    result.months = months
+  }
+  return result
 }
 
 function readVersionSource(

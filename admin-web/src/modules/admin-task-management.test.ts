@@ -126,8 +126,8 @@ describe('admin task management', () => {
     ])
   })
 
-  it('provides typed forms and exact business inputs for all six task mutations', () => {
-    assert.equal(ADMIN_TASK_MUTATION_ACTIONS.length, 6)
+  it('provides typed forms and exact business inputs for all task mutations', () => {
+    assert.equal(ADMIN_TASK_MUTATION_ACTIONS.length, 10)
     const source = {
       task: {
         id: TASK_ID, name: '早会复盘', content: '提交本周复盘', rewardExperience: 30,
@@ -150,13 +150,16 @@ describe('admin task management', () => {
       options: [{ value: LEVEL_ID, label: '成长会员 · 100 经验' }],
       wide: true,
     })
-    assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.label, '任务模板素材 ID')
+    assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.label, '任务模板图片')
     assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.hidden, undefined)
     assert.deepEqual(buildTaskMutationInput(save, save.values), {
       task: {
         name: '早会复盘', content: '提交本周复盘', rewardExperience: 30,
         attachmentRequired: true, assignmentMode: 'SELECTED', endsAt: '',
         templateAssetId: ASSET_ID, eligibleLevelIds: [LEVEL_ID],
+        starLevel: 1, purpose: '', completionCriteria: '',
+        periodStartAt: '', periodEndAt: '', weeklyDeliverAt: '',
+        assignedOwner: '', rewardConfigJson: '{"rewardExperience":30}',
       },
       taskId: TASK_ID,
       expectedVersion: 3,
@@ -187,5 +190,25 @@ describe('admin task management', () => {
     }, calls))
     assert.deepEqual(calls, [{ action: 'mip.admin.tasks.eligibleLevels.list', input: {} }])
     assert.deepEqual(levels, [{ id: LEVEL_ID, name: '成长会员', minimumExperience: 100, status: 'ACTIVE' }])
+  })
+
+  it('includes a boss approval checkbox in the approve form when the task requires boss approval', () => {
+    const source = { submission: { id: COMPLETION_ID, reviewRemark: '' }, requiresBossApproval: true }
+    const approve = createTaskMutationDefinition('mip.admin.tasks.submissions.approve', COMPLETION_ID, source)
+    const bossField = approve.fields.find(field => field.name === 'bossApproved')
+    assert.equal(bossField?.kind, 'checkbox')
+    assert.equal(bossField?.label, '笨笨老大已审批')
+    assert.equal(approve.values.bossApproved, true)
+    const input = buildTaskMutationInput(approve, { ...approve.values, bossApproved: true, remark: '符合标准' })
+    assert.equal((input as Record<string, unknown>)?.bossApproved, true)
+    assert.equal((input as Record<string, unknown>)?.remark, '符合标准')
+  })
+
+  it('does not include bossApproved in approve output when checkbox is unchecked', () => {
+    const source = { submission: { id: COMPLETION_ID, reviewRemark: '' } }
+    const approve = createTaskMutationDefinition('mip.admin.tasks.submissions.approve', COMPLETION_ID, source)
+    const input = buildTaskMutationInput(approve, { ...approve.values, bossApproved: false, remark: '通过' })
+    assert.equal((input as Record<string, unknown>)?.bossApproved, undefined)
+    assert.equal((input as Record<string, unknown>)?.remark, '通过')
   })
 })
