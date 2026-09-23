@@ -127,6 +127,28 @@ function createAdminOrderRepository(database, options = {}) {
     return pageRows(items, pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
   }
 
+  async function listRefunds(appId, visibility, filters, pageLimit, cursor = null) {
+    const scope = orderVisibilityWhere(visibility)
+    const clauses = ['r.app_id = ?', scope.sql]
+    const params = [appId, ...scope.params]
+    if (filters.orderId) { clauses.push('r.order_id = ?'); params.push(filters.orderId) }
+    if (filters.status) { clauses.push('r.status = ?'); params.push(filters.status) }
+    if (filters.createdFrom) { clauses.push('r.created_at >= ?'); params.push(filters.createdFrom) }
+    if (filters.createdTo) { clauses.push('r.created_at <= ?'); params.push(filters.createdTo) }
+    const paging = cursorPredicateFor('r.created_at', cursor, 'createdAt', 'r.id')
+    const rows = await database.query(
+      `SELECT r.*, o.order_type, p.nickname FROM mip_refunds r
+       JOIN mip_orders o ON o.app_id = r.app_id AND o.id = r.order_id
+       LEFT JOIN mip_profiles p ON p.app_id = o.app_id AND p.user_id = o.user_id
+       WHERE ${clauses.join(' AND ')} ${paging.sql}
+       ORDER BY r.created_at DESC, r.id DESC LIMIT ?`,
+      [...params, ...paging.params, pageLimit + 1],
+    )
+    return pageRows(rows.map(row => ({ ...refundFromRow(row), orderId: row.order_id,
+      orderType: row.order_type, nickname: row.nickname || '未填写昵称' })), pageLimit,
+    item => ({ createdAt: item.createdAt, id: item.id }))
+  }
+
   async function getOrderDetail(appId, visibility, orderId) {
     const scope = orderVisibilityWhere(visibility)
     const row = await database.one(
@@ -574,6 +596,7 @@ function createAdminOrderRepository(database, options = {}) {
   }
 
   return {
+    listRefunds,
     authorizeRefundRetry,
     getOrderDetail,
     getOrderScope,

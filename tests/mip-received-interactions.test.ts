@@ -62,14 +62,16 @@ describe('MIP received interaction client flow', () => {
     expect(profilePage).toContain('opportunityModule.getProfileInfluence()')
     expect(profilePage).toContain('?scope=influence&category=')
     expect(publicPage).toContain('?scope=influence&category=')
-    for (const label of ['嘉宾', '互动过', '心动值', '访客']) {
+    for (const label of ['嘉宾', '互动过', '访客']) {
       expect(profileView).toContain(label)
       expect(publicView).toContain(label)
     }
+    expect(profileView).toContain('心动值')
+    expect(publicView).toContain('感兴趣')
     expect(publicView).toContain('influence ? influence.guestCount : \'—\'')
     expect(visibilitySettings).toContain('visibilityInfluence')
     expect(server).toContain('FROM mip_event_invitation_attributions')
-    expect(server).toContain('FROM mip_event_hearts')
+    expect(read('cloudfunctions/mip-events-api/domain/event-service.js')).toContain('FROM mip_event_hearts')
     expect(server).toContain('FROM mip_profile_interests')
     expect(server).toContain('FROM mip_profile_visits')
     expect(server).toContain('guest.status = \'ACTIVE\'')

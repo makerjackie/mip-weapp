@@ -26,6 +26,7 @@ const {
 } = require('./registration-lifecycle')
 const { createSignedToken, readSignedToken } = require('../lib/tokens')
 const { createProfileRef } = require('../lib/profile-ref')
+const { createHeartHistory } = require('./heart-history')
 
 function parseJson(value, fallback) {
   if (value === null || value === undefined) {
@@ -376,28 +377,6 @@ function decodeParticipantCursor(value) {
     const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
     if (typeof parsed.registeredAt === 'string'
       && Number.isFinite(Date.parse(parsed.registeredAt))
-      && typeof parsed.id === 'string'
-      && /^[0-9a-f-]{36}$/i.test(parsed.id)) {
-      return parsed
-    }
-  }
-  catch {}
-  throw new DomainError('VALIDATION_FAILED', '分页参数无效')
-}
-
-function encodeHeartCursor(row) {
-  return Buffer.from(JSON.stringify({
-    updatedAt: iso(row.updated_at),
-    id: row.id,
-  })).toString('base64url')
-}
-
-function decodeHeartCursor(value) {
-  if (!value) return null
-  try {
-    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
-    if (typeof parsed.updatedAt === 'string'
-      && Number.isFinite(Date.parse(parsed.updatedAt))
       && typeof parsed.id === 'string'
       && /^[0-9a-f-]{36}$/i.test(parsed.id)) {
       return parsed
@@ -2947,69 +2926,6 @@ async function getHeart(db, { appId, eventId, userId, tokenSecret, profileRefSec
   }
 }
 
-async function listHeartHistory(db, {
-  appId,
-  userId,
-  kind = 'SENT',
-  cursor,
-  limit = 20,
-  profileRefSecret,
-}) {
-  if (!['SENT', 'RECEIVED'].includes(kind)) {
-    throw new DomainError('VALIDATION_FAILED', '心动记录类型无效')
-  }
-  const pageLimit = limitOf(limit)
-  const decoded = decodeHeartCursor(cursor)
-  const personSql = kind === 'SENT' ? 'h.target_user_id' : 'h.voter_user_id'
-  const ownerSql = kind === 'SENT' ? 'h.voter_user_id' : 'h.target_user_id'
-  const blockFilter = mutualBlockFilter(userId, personSql, 'h.app_id')
-  const cursorClause = decoded
-    ? 'AND (h.updated_at < ? OR (h.updated_at = ? AND h.id < ?))'
-    : ''
-  const params = [appId, userId, ...blockFilter.params]
-  if (decoded) {
-    params.push(decoded.updatedAt, decoded.updatedAt, decoded.id)
-  }
-  params.push(pageLimit + 1)
-  const rows = await db.query(
-    `SELECT h.id, h.updated_at, e.id AS event_id, e.title AS event_title,
-       e.starts_at, e.ends_at, p.user_id AS person_user_id, p.nickname, p.headline,
-       a.cloud_file_id AS avatar_file_id
-     FROM mip_event_hearts h
-     JOIN mip_events e ON e.app_id = h.app_id AND e.id = h.event_id
-     JOIN mip_profiles p ON p.app_id = h.app_id AND p.user_id = ${personSql}
-     LEFT JOIN mip_media_assets a
-       ON a.app_id = p.app_id AND a.id = p.avatar_asset_id AND a.status = 'READY'
-     WHERE h.app_id = ? AND ${ownerSql} = ? AND h.status = 'ACTIVE'
-       AND ${blockFilter.sql} ${cursorClause}
-     ORDER BY h.updated_at DESC, h.id DESC LIMIT ?`,
-    params,
-  )
-  const hasMore = rows.length > pageLimit
-  const pageRows = rows.slice(0, pageLimit)
-  return {
-    kind,
-    items: pageRows.map(row => ({
-      event: {
-        id: row.event_id,
-        title: row.event_title,
-        startsAt: iso(row.starts_at),
-        endsAt: iso(row.ends_at),
-      },
-      person: {
-        profileRef: createProfileRef({ appId, userId: row.person_user_id }, profileRefSecret),
-        nickname: row.nickname || 'MIP 用户',
-        avatarUrl: row.avatar_file_id || undefined,
-        headline: row.headline || undefined,
-      },
-      updatedAt: iso(row.updated_at),
-    })),
-    nextCursor: hasMore && pageRows.length
-      ? encodeHeartCursor(pageRows[pageRows.length - 1])
-      : undefined,
-  }
-}
-
 async function setHeart(db, {
   appId,
   eventId,
@@ -3057,7 +2973,7 @@ async function setHeart(db, {
     const heartId = existing?.id || randomUUID()
     if (existing) {
       await tx.query(
-        `UPDATE mip_event_hearts SET target_user_id = ?, status = ?, cancelled_at = ?, version = version + 1
+        `UPDATE mip_event_hearts SET target_user_id = ?, status = ?, cancelled_at = ?, received_read_at = NULL, version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
         [target?.user_id || null, target ? 'ACTIVE' : 'CANCELLED', target ? null : now, appId, existing.id, existing.version],
       )
@@ -3072,6 +2988,22 @@ async function setHeart(db, {
     }
     else {
       return null
+    }
+    if (existing?.target_user_id && existing.status === 'ACTIVE' && existing.target_user_id !== target?.user_id) {
+      await tx.query(
+        `INSERT INTO mip_event_heart_history
+         (id, app_id, heart_id, event_id, voter_user_id, target_user_id, status, source_version)
+         VALUES (?, ?, ?, ?, ?, ?, 'CANCELLED', ?)`,
+        [randomUUID(), appId, heartId, eventId, userId, existing.target_user_id, nextVersion],
+      )
+    }
+    if (target) {
+      await tx.query(
+        `INSERT INTO mip_event_heart_history
+         (id, app_id, heart_id, event_id, voter_user_id, target_user_id, status, source_version)
+         VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?)`,
+        [randomUUID(), appId, heartId, eventId, userId, target.user_id, nextVersion],
+      )
     }
     await writeAudit(tx, {
       appId,
@@ -3357,6 +3289,8 @@ async function adminListFeedback(db, { appId, userId, eventId, cursor, limit = 3
   }
 }
 
+const { listHeartHistory, markHeartHistoryRead } = createHeartHistory({ iso, limitOf, mutualBlockFilter, parseJson })
+
 module.exports = {
   adminIssueCheckInCredential,
   adminListFeedback,
@@ -3379,6 +3313,7 @@ module.exports = {
   listEvents,
   listHeartCandidates,
   listHeartHistory,
+  markHeartHistoryRead,
   listMyEventAlbumSubmissions,
   listMyRegistrations,
   listPublicParticipants,

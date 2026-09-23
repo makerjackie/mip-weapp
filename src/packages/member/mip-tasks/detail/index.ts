@@ -57,10 +57,12 @@ Page({
       this.setData({
         state: 'ready',
         task,
-        starIndexes: rewardExperienceStarIndexes(task.rewardExperience),
-        periodText: task.endsAt
-          ? new Date(task.endsAt).toLocaleString('zh-CN', { hour12: false })
-          : '不限',
+        starIndexes: task.starLevel ? Array.from({ length: task.starLevel }, (_, index) => index) : rewardExperienceStarIndexes(task.rewardExperience),
+        periodText: task.weeklyDeliverAt
+          ? `每周 ${task.weeklyDeliverAt}`
+          : (task.periodEndAt || task.endsAt)
+              ? new Date(task.periodEndAt || task.endsAt).toLocaleString('zh-CN', { hour12: false })
+              : '不限',
         conditionText: task.attachmentRequired ? '需上传附件' : '无需附件',
         purposeBlocks: toBlocks(task.purpose || ''),
         contentBlocks: toBlocks(task.content),
@@ -106,8 +108,8 @@ Page({
     }
     this.setData({ submitting: true, message: '' })
     try {
-      await mipTasksModule.mutation.completeTask(task.id, this.data.attachmentAssetId || undefined)
-      wx.showToast({ title: '任务已完成', icon: 'success' })
+      const result = await mipTasksModule.mutation.completeTask(task.id, this.data.attachmentAssetId || undefined)
+      wx.showToast({ title: result.submissionStatus === 'pending_review' ? '已提交，等待审批' : '任务已完成', icon: 'success' })
       await this.loadTask()
     }
     catch (error) {

@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 234,
+  "operationCount": 237,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -1262,6 +1262,30 @@ export const ADMIN_OPERATION_CONTRACT = {
       "idempotencyKeyRequired": null
     },
     {
+      "action": "mip.admin.tasks.submissions.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.assignments.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.editorOptions",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
       "action": "mip.admin.tasks.list",
       "kind": "QUERY",
       "authentication": "REQUIRED",
@@ -1882,7 +1906,7 @@ export const ADMIN_OPERATION_CONTRACT = {
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 234,
+  "operationCount": 237,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -3771,6 +3795,36 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "forwardIdempotencyKey": false
     },
     {
+      "action": "mip.admin.tasks.submissions.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.tasks.assignments.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.tasks.editorOptions",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
       "action": "mip.admin.tasks.list",
       "kind": "QUERY",
       "webAllowed": true,
@@ -3930,7 +3984,9 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "requiredInputKeys": [
         "submissionId"
       ],
-      "optionalInputKeys": [],
+      "optionalInputKeys": [
+        "remark"
+      ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
     },
@@ -3956,7 +4012,9 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "requiredInputKeys": [
         "submissionId"
       ],
-      "optionalInputKeys": [],
+      "optionalInputKeys": [
+        "remark"
+      ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
     },
@@ -4449,11 +4507,12 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "requiredInputKeys": [
         "name",
         "loginAccount",
-        "phone",
+        "userId",
         "roleKey"
       ],
       "optionalInputKeys": [
-        "branchId"
+        "scopeId",
+        "reason"
       ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
@@ -4469,9 +4528,8 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       ],
       "optionalInputKeys": [
         "name",
-        "phone",
         "roleKey",
-        "branchId"
+        "scopeId"
       ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": false

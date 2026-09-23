@@ -12,6 +12,7 @@ import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
 import { caseNavigateTo, caseSwitchPrimary, syncCaseNavigation } from '../../platform/navigation/client'
+import { clearPageMedia, updatePageMedia } from '../../platform/storage/component-media'
 
 Page({
   data: {
@@ -42,6 +43,7 @@ Page({
 
   onUnload() {
     this.announcementRequestSeq += 1
+    clearPageMedia(this)
   },
 
   async loadDiscover(options: { force?: boolean } = {}) {
@@ -71,7 +73,8 @@ Page({
     const query = { view: 'UPCOMING' as const, dateFilter: 'RECENT' as const, limit: 3 }
     const events = mipEventsModule.peekEvents(query)
     if (events) {
-      this.setData({ eventState: 'ready', events: events.items.slice(0, 3).map(presentEventCard) })
+      updatePageMedia(this, 'events', events.items.slice(0, 3).map(presentEventCard))
+      this.setData({ eventState: 'ready' })
     }
   },
 
@@ -142,13 +145,15 @@ Page({
     const query = { view: 'UPCOMING' as const, dateFilter: 'RECENT' as const, limit: 3 }
     const cached = mipEventsModule.peekEvents(query)
     if (cached) {
-      this.setData({ eventState: 'ready', events: cached.items.slice(0, 3).map(presentEventCard) })
+      updatePageMedia(this, 'events', cached.items.slice(0, 3).map(presentEventCard))
+      this.setData({ eventState: 'ready' })
     }
     try {
       const feed = await mipEventsModule.listEvents(query, {
         force: options.force === true || Boolean(cached),
       })
-      this.setData({ eventState: 'ready', events: feed.items.slice(0, 3).map(presentEventCard) })
+      updatePageMedia(this, 'events', feed.items.slice(0, 3).map(presentEventCard))
+      this.setData({ eventState: 'ready' })
     }
     catch {
       if (!cached) {
@@ -160,10 +165,8 @@ Page({
   async loadOpportunities() {
     try {
       const result = await opportunityModule.list({ status: 'RECRUITING', limit: 3 })
-      this.setData({
-        opportunityState: 'ready',
-        opportunities: result.items.slice(0, 3),
-      })
+      updatePageMedia(this, 'opportunities', result.items.slice(0, 3))
+      this.setData({ opportunityState: 'ready' })
     }
     catch {
       if (!this.data.opportunities.length) {

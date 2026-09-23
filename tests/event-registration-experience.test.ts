@@ -182,7 +182,7 @@ describe('event registration experience', () => {
     expect(home).toContain('cover-url="{{item.coverUrl || \'\'}}"')
     expect(eventCard).toContain('src="{{displayCoverUrl}}"')
     expect(read('src/components/mip-activity-card/index.ts')).toContain('value?.coverUrl')
-    expect(eventCard).toContain('count-text="{{event.countText}}"')
+    expect(eventCard).toContain('count-text="{{event.countText || \'\'}}"')
     expect(homePage).toContain('mipEventsModule.listEvents')
     expect(homePage).toContain('items.slice(0, 3).map(presentEventCard)')
     expect(eventsPage).toContain('feed.items.map(presentEventCard)')

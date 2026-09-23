@@ -18,10 +18,17 @@ const { createMatchingAdminRepository } = require('./matching-admin')
 const { createOpportunityArchiveRepository } = require('./opportunity-archive')
 const { createOpportunityCommentAdminRepository } = require('./opportunity-comments')
 const { createAdminAccessRepository } = require('./repositories/access')
+const { createAdminAccountRepository } = require('./repositories/admin-accounts')
+const { createAdminEventRuntimeRepository } = require('./repositories/event-runtime')
+const { createEventDraftRepository } = require('./repositories/event-drafts')
+const { createProfileRecordsRepository } = require('./repositories/profile-records')
+const { createCooperationCardRepository } = require('./repositories/cooperation-cards')
+const { createVideoRepository } = require('./repositories/videos')
 const { createDashboardOverviewRepository } = require('./repositories/dashboard-overview')
 const { createEventCatalogRepository } = require('./repositories/event-catalogs')
 const { createAdminEventRepository } = require('./repositories/events')
 const { createMembershipRepository } = require('./repositories/memberships')
+const { createGrowthOperationsRepository } = require('./repositories/growth-operations')
 const { createAdminOrderRepository } = require('./repositories/orders')
 const { createAdminPaymentAttemptRepository } = require('./repositories/payment-attempts')
 const { createAdminUserRepository } = require('./repositories/users')
@@ -216,6 +223,7 @@ function createAdminRepository(database, options = {}) {
     now,
   })
   const badgeAdminRepository = createBadgeAdminRepository(database, { createId: id })
+  const growthOperationsRepository = createGrowthOperationsRepository(database, { id, lockMutation, assertScope, writeAudit, writeOutbox })
   const eventCommentAdminRepository = createEventCommentAdminRepository(database, {
     assertMutationScope: assertScope,
     lockMutationAuthorization: lockMutation,
@@ -226,6 +234,7 @@ function createAdminRepository(database, options = {}) {
     assertScope,
     lockMutation,
     now,
+    writeAudit,
   })
   const opportunityCommentAdminRepository = createOpportunityCommentAdminRepository(database, {
     assertMutationScope: assertScope,
@@ -244,6 +253,7 @@ function createAdminRepository(database, options = {}) {
     lockMutationAuthorization: lockMutation,
     writeAudit,
   })
+  const adminAccountRepository = createAdminAccountRepository(database, { writeAudit })
   const adminPrdExtensions = createAdminPrdExtensions(database, {
     assertMutationScope: assertScope,
     id,
@@ -273,6 +283,32 @@ function createAdminRepository(database, options = {}) {
     writeAudit,
     writeOutbox,
   })
+  const eventRuntimeRepository = createAdminEventRuntimeRepository(database, {
+    lockMutationAuthorization: lockMutation,
+    assertMutationScope: assertScope,
+    assertAuthorizedScope,
+    eventScopeFromRow,
+    writeAudit,
+    writeOutbox,
+    fullAccessPolicy: fullAccess,
+    cancelEventRegistrations: eventRepository.cancelEventRegistrations,
+    createId: id,
+    randomBytes: bytes,
+    now,
+    repositorySupport: { codeError, iso, json },
+  })
+  const eventDraftRepository = createEventDraftRepository(database, {
+    lockMutationAuthorization: lockMutation,
+    assertMutationScope: assertScope,
+    assertAuthorizedScope,
+    eventScopeFromRow,
+    writeAudit,
+    createId: id,
+    repositorySupport: { codeError, iso, json },
+  })
+  const profileRecordsRepository = createProfileRecordsRepository(database)
+  const cooperationCardRepository = createCooperationCardRepository(database, { lockMutationAuthorization: lockMutation, assertMutationScope: assertScope, writeAudit })
+  const videoRepository = createVideoRepository(database, { lockMutationAuthorization: lockMutation, assertMutationScope: assertScope, writeAudit })
   const eventCatalogRepository = createEventCatalogRepository(database, {
     assertMutationScope: assertScope,
     createId: id,
@@ -885,6 +921,10 @@ function createAdminRepository(database, options = {}) {
         maximumRows,
       )).items
     }
+    if (ticket.exportType === 'EVENT_FEEDBACK') {
+      return (await eventRuntimeRepository.listEventFeedbacks(ticket.appId, ticket.scopeId,
+        { limit: maximumRows, cursor: null, rating: null })).items
+    }
     if (ticket.exportType === 'EVENT_ORDERS' || ticket.exportType === 'ORDERS') {
       return (await listOrders(ticket.appId, visibility, {
         ...ticket.filters,
@@ -1339,17 +1379,24 @@ function createAdminRepository(database, options = {}) {
   return {
     ...announcementRepository,
     ...adminPrdExtensions,
+    ...adminAccountRepository,
     ...badgeAdminRepository,
     ...eventCommentAdminRepository,
     ...eventCatalogRepository,
     ...eventInsightsRepository,
     ...eventRepository,
+    ...eventRuntimeRepository,
+    ...eventDraftRepository,
+    ...profileRecordsRepository,
+    ...cooperationCardRepository,
+    ...videoRepository,
     ...dashboardOverviewRepository,
     ...messageCampaignRepository,
     ...messageDeliveryReviewRepository,
     ...messageDeliveryRecordRepository,
     ...messageTemplateRepository,
     ...membershipRepository,
+    ...growthOperationsRepository,
     ...opportunityArchiveRepository,
     ...opportunityCommentAdminRepository,
     ...matchingAdminRepository,

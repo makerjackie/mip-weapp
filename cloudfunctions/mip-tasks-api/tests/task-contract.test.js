@@ -355,7 +355,7 @@ test('selected tasks require an active app-scoped assignment', async () => {
     async query(sql) { listSql = sql; return [] },
   })
   await repository.listTasks({ appId, userId, profileRefSecret }, {})
-  assert.match(listSql, /assignment\.user_id = \? AND assignment\.status = 'ACTIVE'/)
+  assert.match(listSql, /recipient_assignment\.user_id = \? AND recipient_assignment\.status = 'ACTIVE'/)
   assert.match(listSql, /task\.assignment_mode = 'ALL'/)
   assert.match(listSql, /mip_task_level_rules/)
   assert.match(listSql, /mip_growth_accounts/)
@@ -783,7 +783,7 @@ test('handler dispatches the nested v1 input and keeps legacy flat requests comp
   assert.deepEqual(v1, { ok: true, data: { id: taskId } })
   assert.deepEqual(legacy, v1)
   assert.deepEqual(calls, [{ taskId }, { taskId }])
-  assert.equal(Object.keys(actions).length, 17)
+  assert.equal(Object.keys(actions).length, 24)
 })
 
 test('handler accepts trusted CloudBase metadata outside the neutral task envelope', async () => {

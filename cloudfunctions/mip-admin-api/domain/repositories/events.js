@@ -954,8 +954,9 @@ function createAdminEventRepository(database, dependencies) {
         AND active_checkin.status = 'ACTIVE'
        WHERE r.app_id = ? AND r.event_id = ?
          AND r.status IN ('PENDING_REVIEW', 'WAITLISTED', 'PAYMENT_PENDING', 'REGISTERED', 'CANCELLATION_PENDING')
+         ${input.registrationId ? 'AND r.id = ?' : ''}
        FOR UPDATE`,
-      [input.appId, input.eventId],
+      [input.appId, input.eventId, ...(input.registrationId ? [input.registrationId] : [])],
     )
     const refundIds = []
     for (const registration of registrations) {
@@ -970,9 +971,9 @@ function createAdminEventRepository(database, dependencies) {
       const registrationStatus = refundPending ? 'CANCELLATION_PENDING' : 'CANCELLED'
       const registrationUpdated = await tx.query(
         `UPDATE mip_event_registrations SET status = ?, cancelled_at = ?,
-          cancelled_by_type = 'EVENT', cancellation_reason = ?, version = version + 1
+          cancelled_by_type = ?, cancellation_reason = ?, version = version + 1
          WHERE app_id = ? AND id = ? AND version = ? AND status = ?`,
-        [registrationStatus, cancelledAt, input.reason, input.appId,
+        [registrationStatus, cancelledAt, input.registrationId ? 'ADMIN' : 'EVENT', input.reason, input.appId,
           registration.id, registration.version, registration.status],
       )
       if (Number(registrationUpdated.affectedRows) !== 1) throw codeError('CONFLICT')
@@ -1038,7 +1039,7 @@ function createAdminEventRepository(database, dependencies) {
           userId: registration.user_id,
           status: registrationStatus,
           refundId,
-          eventCancelled: true,
+          eventCancelled: !input.registrationId,
         },
       })
     }
@@ -1049,8 +1050,11 @@ function createAdminEventRepository(database, dependencies) {
     const clauses = ['r.app_id = ?', 'r.event_id = ?']
     const params = [appId, eventId]
     if (filters.status) {
-      clauses.push('r.status = ?')
-      params.push(filters.status)
+      if (filters.status === 'ABNORMAL') clauses.push('r.abnormal_reason IS NOT NULL')
+      else {
+        clauses.push('r.status = ? AND r.abnormal_reason IS NULL')
+        params.push(filters.status)
+      }
     }
     if (filters.query) {
       clauses.push('p.nickname LIKE ? ESCAPE \'\\\\\'')
@@ -1061,6 +1065,7 @@ function createAdminEventRepository(database, dependencies) {
     const cursorWhere = cursorPredicateFor('r.created_at', cursor, 'submittedAt', 'r.id')
     const rows = await database.query(
       `SELECT r.id, r.user_id, r.status, r.answers_json, r.created_at, r.registered_at, r.version,
+        r.registration_source, r.role_mark, r.imported_at, r.abnormal_reason, r.abnormal_marked_at,
         p.nickname, b.city_name, pp.phone_ciphertext, pp.phone_verified_at,
         c.checked_in_at, e.registration_schema_json
        FROM mip_event_registrations r
@@ -1078,7 +1083,13 @@ function createAdminEventRepository(database, dependencies) {
       userId: row.user_id,
       nickname: row.nickname || '未填写昵称',
       cityName: row.city_name || '',
-      status: row.status,
+      status: row.abnormal_reason ? 'ABNORMAL' : row.status,
+      registrationStatus: row.status,
+      source: row.registration_source || 'USER',
+      roleMark: row.role_mark || null,
+      importedAt: row.imported_at ? iso(row.imported_at) : null,
+      abnormalReason: row.abnormal_reason || '',
+      abnormalMarkedAt: row.abnormal_marked_at ? iso(row.abnormal_marked_at) : null,
       answers: json(row.answers_json, {}),
       answerItems: registrationAnswerItems(row.registration_schema_json, row.answers_json),
       phoneBound: Boolean(row.phone_verified_at),
@@ -1386,6 +1397,7 @@ function createAdminEventRepository(database, dependencies) {
   }
 
   return {
+    cancelEventRegistrations,
     changeEventStatus,
     checkIn,
     cloneEvent,

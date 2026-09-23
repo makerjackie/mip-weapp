@@ -124,6 +124,9 @@ export function normalizeOpportunityCommercialTerms(value: unknown): Opportunity
 }
 
 export function normalizeOpportunityDraft(value: OpportunityDraft): OpportunityDraft {
+  if (value.publicationStatus !== undefined && !['PUBLISHED', 'ENDED', 'UNPUBLISHED'].includes(value.publicationStatus)) {
+    throw new Error('项目状态不正确')
+  }
   const roleKeys = uniqueStrings(value.roleKeys, 6, '合作角色')
   if (!roleKeys.length || !roleKeys.every(isCooperationRoleKey)) {
     throw new Error('请选择至少一种合作角色')

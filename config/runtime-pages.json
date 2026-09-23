@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 69,
+  "routeCount": 70,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 69 paths.",
+    "config/project.json routes must list the same 70 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -48,11 +48,12 @@
     },
     {
       "id": "subscription-message",
-      "label": "活动订阅消息",
+      "label": "微信订阅消息",
       "routes": [
         "packages/member/mip-events/registration/index",
         "packages/member/mip-events/detail/index",
-        "packages/member/mip-hearts/index"
+        "packages/member/mip-hearts/index",
+        "packages/member/mip-public-profile/index"
       ],
       "reason": "订阅授权必须由用户手势触发，授权结果和微信送达都需要真机验证"
     },
@@ -268,6 +269,7 @@
     {
       "id": "disabled",
       "route": "packages/member/privacy/index",
+      "scrollIntoView": "#privacy-closure-card",
       "patch": {
         "state": "ready",
         "closureState": "processing",
@@ -281,7 +283,7 @@
         }
       ],
       "visibleAssertion": {
-        "selector": "#privacy-account-page #privacy-sign-out"
+        "selector": "#privacy-account-page #privacy-closure-processing"
       }
     }
   ],
@@ -294,6 +296,15 @@
       "requireRenderedAction": true,
       "requireScreenshotDiff": true,
       "steps": [
+        {
+          "id": "open-talent-tab",
+          "type": "tap",
+          "selector": "#opportunities-talent-tab",
+          "handler": "changeMode",
+          "scrollIntoView": true,
+          "dataAssertions": [{ "path": "mode", "equals": "cooperation" }],
+          "visibleAssertion": { "selector": "#opportunities-search-input" }
+        },
         {
           "id": "enter-keyword",
           "type": "input",
@@ -1365,10 +1376,28 @@
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
+      "id": "M55",
+      "name": "对TA感兴趣",
+      "path": "packages/member/mip-profile-interests/index",
+      "selector": "#mip-profile-interests-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "blocked", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'",
+      "query": ["profileRef"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-people/index",
+        "dataPath": "people",
+        "values": { "profileRef": "profileRef" }
+      }
+    },
+    {
       "id": "M22",
       "name": "公开档案",
       "path": "packages/member/mip-public-profile/index",
       "selector": "#mip-public-profile-page",
+      "deviceRequired": ["subscription-message"],
       "group": "public",
       "kind": "data",
       "states": ["loading", "ready", "error", "blocked"],

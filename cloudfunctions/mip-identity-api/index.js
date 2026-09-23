@@ -14,6 +14,8 @@ const {
 } = require('./lib/profile-card-code')
 const { createProfileRef, readProfileRef } = require('./lib/profile-ref')
 const { createWechatPhoneResolver } = require('./lib/wechat-phone')
+const { createTencentSmsProvider } = require('./lib/tencent-sms')
+const { createPhoneSmsService } = require('./domain/phone-sms')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -26,6 +28,7 @@ const allowedAppIds = new Set(
 const outboxMutationActions = new Set([
   'acceptAgreements',
   'bindWechatPhone',
+  'bindSmsPhone',
   'closeAccount',
   'setPrimaryBranch',
   'updateProfile',
@@ -73,6 +76,13 @@ const repository = createIdentityRepository(mysqlDatabase(), {
 const service = createIdentityService({
   repository,
   agreements: configuredAgreements(),
+  phoneSms: createPhoneSmsService({
+    database: mysqlDatabase(),
+    provider: createTencentSmsProvider(),
+    secret: process.env.MIP_PHONE_ENCRYPTION_KEY,
+    protectPhone: (phoneInfo, context) => protectPhone(phoneInfo, process.env.MIP_PHONE_ENCRYPTION_KEY, context),
+    bindPhone: repository.bindPhone,
+  }),
   phoneResolver: createWechatPhoneResolver(
     input => cloud.openapi.phonenumber.getPhoneNumber(input),
   ),

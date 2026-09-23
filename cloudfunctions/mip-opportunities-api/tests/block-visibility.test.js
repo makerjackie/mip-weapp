@@ -81,7 +81,8 @@ describe('public opportunity visibility', () => {
     assertMutualBlock(calls[0].sql, 'o.owner_user_id', 'o.app_id')
     assertMutualBlock(calls[1].sql, 'c.owner_user_id', 'c.app_id')
     assertMutualBlock(calls[2].sql, 'c.owner_user_id', 'c.app_id')
-    for (const call of calls) {
+    assert.deepEqual(calls[0].params, [appId, resourceId, viewerUserId, viewerUserId, viewerUserId, viewerUserId])
+    for (const call of calls.slice(1)) {
       assert.deepEqual(call.params, [appId, resourceId, viewerUserId, viewerUserId])
     }
   })

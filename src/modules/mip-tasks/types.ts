@@ -1,5 +1,5 @@
-export type UserTaskStatus = 'AVAILABLE' | 'COMPLETED' | 'ENDED'
-export type TaskCompletionResult = 'SUCCESS' | 'FAILED'
+export type UserTaskStatus = 'AVAILABLE' | 'COMPLETED' | 'ENDED' | 'PENDING_REVIEW' | 'NOT_STARTED'
+export type TaskCompletionResult = 'SUCCESS' | 'FAILED' | 'PENDING'
 
 export interface UserTaskCard {
   id: string
@@ -11,15 +11,18 @@ export interface UserTaskCard {
   hasTemplate: boolean
   version: number
   status: UserTaskStatus
+  submissionStatus?: string
+  reviewRemark?: string
+  starLevel?: number
+  periodStartAt?: string
+  periodEndAt?: string
+  weeklyDeliverAt?: string
   completion?: {
     id: string
     completedAt: string
     rewardExperience: number
   }
   template?: TaskTemplateMedia
-  // ---- 设计先行字段（figma-restored NPC任务 1725_18357…18577）----
-  // 后端契约（cloudfunctions/mip-tasks-api）暂无这些列；DTO 仍按 11 个契约字段严格校验，
-  // 因此它们只存在于类型层与 UI fixture，生产环境在后端补齐前始终为 undefined，页面按 wx:if 优雅降级。
   /** 任务目的面板正文（figma: 任务目的 Frame 3770） */
   purpose?: string
   /** 完成标准面板正文（figma: 完成标准 Frame 3771） */
@@ -46,6 +49,7 @@ export interface TaskCompletion {
   taskName: string
   rewardExperience: number
   resultStatus: TaskCompletionResult
+  submissionStatus?: string
   completedAt: string
   alreadyCompleted: boolean
   balanceAfter?: number | null

@@ -61,7 +61,7 @@ describe('journey-review WS-PEOPLE · 档案互动条角色门禁（C1 终审 + 
     expect(view).toContain(`wx:if="{{!isSelf && (interactionBar === 'active' || interactionBar === 'locked')}}"`)
     expect(view).toContain('bind:tap="toggleInterest"')
     expect(view).toContain('bind:tap="openInterestList"')
-    expect(view).toContain(`{{interestActive ? '取消感兴趣' : '我感兴趣'}}`)
+    expect(view).toContain(`{{interestActive ? '已感兴趣' : '我感兴趣'}}`)
     // 底部互动条不再走资料补全跳转（改弹解锁窗）；举报/屏蔽安全流不受影响。
     const stickyBar = view.slice(view.indexOf('<mip-sticky-actions'))
     expect(stickyBar).not.toContain('完成身份信息后继续')
@@ -329,8 +329,8 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
     instance.data.category = 'INTERACTION'
     receivedModule.listReceived.mockResolvedValueOnce({
       items: [
-        { kind: 'INTERACTION', status: 'ACTIVE', actor: { profileRef: 'p1', nickname: '小玫瑰', headline: '金融行业 I 专业投资人' }, event: { id: 'e1', title: 'A场' }, unread: false, updatedAt: '2026-09-20T10:00:00.000Z' },
-        { kind: 'INTERACTION', status: 'ACTIVE', actor: { profileRef: 'p1', nickname: '小玫瑰', headline: '金融行业 I 专业投资人' }, event: { id: 'e2', title: 'B场' }, unread: false, updatedAt: '2026-09-19T10:00:00.000Z' },
+        { kind: 'INTERACTION', interactionCount: 2, status: 'ACTIVE', actor: { profileRef: 'p1', nickname: '小玫瑰', headline: '金融行业 I 专业投资人' }, event: { id: 'e1', title: 'A场' }, unread: false, updatedAt: '2026-09-20T10:00:00.000Z' },
+        { kind: 'INTERACTION', interactionCount: 2, status: 'ACTIVE', actor: { profileRef: 'p1', nickname: '小玫瑰', headline: '金融行业 I 专业投资人' }, event: { id: 'e2', title: 'B场' }, unread: false, updatedAt: '2026-09-19T10:00:00.000Z' },
         { kind: 'INTERACTION', status: 'ACTIVE', actor: { profileRef: 'p2', nickname: 'Nehz', headline: '激情创业者' }, event: { id: 'e1', title: 'A场' }, unread: false, updatedAt: '2026-09-18T10:00:00.000Z' },
       ],
       unreadCount: 0,
@@ -345,7 +345,7 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
     instance.applySearch('不存在的名字')
     expect(instance.data.displayItems).toHaveLength(0)
 
-    // J3-08 访客：卡片不显示访问时间（QT 终审），逐用户一条，无 ×N。
+    // J3-08 访客：卡片不显示访问时间（QT 终审），每次访问一条，无 ×N。
     instance.data.category = 'VISITOR'
     instance.data.searchInput = ''
     receivedModule.listReceived.mockResolvedValueOnce({

@@ -592,6 +592,7 @@ function createCommerceRepository(database, options = {}) {
         AND event_cover.status = 'READY'
        ${ORDER_SERVICE_FACT_JOINS_SQL}
        WHERE o.app_id = ?
+         AND o.status NOT IN ('CREATED', 'PAYMENT_CREATED')
          ${serviceStatus ? `AND (${ORDER_SERVICE_STATUS_SQL}) = ?` : ''}
          ${cursor ? 'AND (o.created_at < ? OR (o.created_at = ? AND o.id < ?))' : ''}
        ORDER BY o.created_at DESC, o.id DESC

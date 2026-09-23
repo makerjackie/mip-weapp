@@ -118,13 +118,13 @@ describe('MIP opportunity editor required fields', () => {
     expect(page.data.roleError).toBe('')
   })
 
-  it('greys out unpublish and create-mode end in the status sheet (QZ2 review)', () => {
-    // CREATE 模式：下架项目置灰（服务端无 UNPUBLISHED）、结束项目置灰（发布后再结束）。
+  it('greys out unpublish and create-mode end in the status sheet', () => {
+    // CREATE 模式不可直接下架或结束；发布后两种状态均可在同一次保存中提交。
     const createViews = definition.data.projectStatusOptions
     expect(createViews.find((item: { key: string }) => item.key === 'RECRUITING')).toMatchObject({ disabled: false })
     expect(createViews.find((item: { key: string }) => item.key === 'UNPUBLISHED')).toMatchObject({
       disabled: true,
-      disabledNote: '即将支持',
+      disabledNote: '发布后可调整状态',
     })
     expect(createViews.find((item: { key: string }) => item.key === 'ENDED')).toMatchObject({ disabled: true })
 

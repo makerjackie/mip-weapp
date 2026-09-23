@@ -512,10 +512,10 @@ describe('shared CloudBase safety', () => {
       )).toEqual([])
     }
     expect(findLockingReadPrivilegeViolations(
-      'SELECT user.id FROM mip_users user JOIN mip_task_completions completion ON completion.user_id = user.id FOR UPDATE',
+      'SELECT user.id FROM mip_users user JOIN mip_growth_entries entry ON entry.user_id = user.id FOR UPDATE',
       RUNTIME_TABLE_PRIVILEGES,
       { sqlDocument: true },
-    ).map(item => item.relation)).toEqual(['mip_task_completions'])
+    ).map(item => item.relation)).toEqual(['mip_growth_entries'])
     expect(findLockingReadPrivilegeViolations(
       'SELECT id FROM mip_synthetic_lock FOR SHARE',
       { mip_synthetic_lock: ['SELECT'] },
@@ -541,14 +541,14 @@ describe('shared CloudBase safety', () => {
       .toEqual(['SELECT', 'INSERT'])
 
     const nestedDynamicTemplate = [
-      'const sql = `SELECT id FROM mip_task_completions WHERE $',
+      'const sql = `SELECT id FROM mip_growth_entries WHERE $',
       '{condition ? `id = $',
       '{value}` : \'1 = 1\'} FOR UPDATE`',
     ].join('')
     expect(findLockingReadPrivilegeViolations(
       nestedDynamicTemplate,
       RUNTIME_TABLE_PRIVILEGES,
-    ).map(item => item.relation)).toEqual(['mip_task_completions'])
+    ).map(item => item.relation)).toEqual(['mip_growth_entries'])
   })
 
   it('fails closed on detached, concatenated, and escaped locking clauses without treating SQL data as a lock', () => {
@@ -751,7 +751,7 @@ describe('shared CloudBase safety', () => {
       { sqlDocument: true },
     )).toEqual([])
 
-    const nestedLock = mediaShape.replace(
+    const nestedLock = mediaShape.replace('FROM mip_task_completions completion', 'FROM mip_growth_entries completion').replace(
       'WHERE completion.app_id = asset.app_id',
       'WHERE completion.app_id = asset.app_id FOR UPDATE',
     )
@@ -759,7 +759,7 @@ describe('shared CloudBase safety', () => {
       nestedLock,
       RUNTIME_TABLE_PRIVILEGES,
       { sqlDocument: true },
-    ).map(item => item.relation)).toEqual(['mip_task_completions'])
+    ).map(item => item.relation)).toEqual(['mip_growth_entries'])
   })
 
   it('expands direct dynamic locking-read relations through file-scoped allowlists', () => {

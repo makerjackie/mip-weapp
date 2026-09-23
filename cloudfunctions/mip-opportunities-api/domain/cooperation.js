@@ -256,7 +256,7 @@ async function listCooperationCards(database, caller, rawFilter = {}) {
     )
     if (!branch) throw new Error('VALIDATION_FAILED')
   }
-  const where = ["c.app_id = ?", "c.status = 'PUBLISHED'"]
+  const where = ["c.app_id = ?", "c.status = 'PUBLISHED'", "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.talentSearch')), 'true') <> 'false'"]
   const params = [caller.appId]
   const blockFilter = mutualBlockFilter(caller.userId, 'c.owner_user_id', 'c.app_id')
   if (blockFilter.sql) {
@@ -350,6 +350,7 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
     "u.status = 'ACTIVE'",
     'u.created_at <= snapshot.snapshot_at',
     'c.published_at <= snapshot.snapshot_at',
+    "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.talentSearch')), 'true') <> 'false'",
   ]
   const params = [caller.appId]
   const blockFilter = mutualBlockFilter(caller.userId, 'c.owner_user_id', 'c.app_id')
@@ -363,6 +364,7 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
     "u.status = 'ACTIVE'",
     'u.created_at <= talent_page.snapshot_at',
     'c.published_at <= talent_page.snapshot_at',
+    "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.talentSearch')), 'true') <> 'false'",
   ]
   const visibleParams = [caller.appId]
   if (blockFilter.sql) {

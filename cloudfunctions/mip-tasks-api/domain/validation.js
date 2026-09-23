@@ -18,7 +18,7 @@ function normalizeTask(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('VALIDATION_FAILED')
   const name = boundedText(value.name, 100, true)
   const content = boundedText(value.content, 5000, true)
-  const rewardExperience = Number(value.rewardExperience)
+  const rewardExperience = Number(value.rewardExperience ?? (value.rewardConfig?.experience?.enabled ? value.rewardConfig.experience.amount : 0))
   if (!Number.isSafeInteger(rewardExperience) || rewardExperience < 0 || rewardExperience > 1_000_000) {
     throw new Error('VALIDATION_FAILED')
   }
@@ -27,7 +27,9 @@ function normalizeTask(value) {
   const eligibleLevelIds = Object.prototype.hasOwnProperty.call(value, 'eligibleLevelIds')
     ? normalizeEligibleLevelIds(value.eligibleLevelIds)
     : undefined
+  const extensions = normalizeTaskExtensions(value)
   return {
+    ...extensions,
     name,
     content,
     rewardExperience,
@@ -78,6 +80,7 @@ function normalizeCompletionFilters(value = {}) {
     taskId: value.taskId ? requiredId(value.taskId) : '',
     query: boundedText(value.query, 80),
     resultStatus,
+    submissionStatus: boundedText(value.submissionStatus, 32),
     completedFrom: optionalDate(value.completedFrom),
     completedUntil: optionalDate(value.completedUntil),
   }
@@ -119,7 +122,49 @@ function decodeCursor(value) {
   }
 }
 
+function normalizeTaskExtensions(value) {
+  const keys = ['starLevel', 'purpose', 'completionCriteria', 'periodStartAt', 'periodEndAt', 'weeklyDeliverAt', 'assignedOwnerId', 'applicableServers', 'rewardConfig']
+  if (!keys.some(key => Object.hasOwn(value, key))) return {}
+  const starLevel = Number(value.starLevel || 1)
+  if (!Number.isInteger(starLevel) || starLevel < 1 || starLevel > 5) throw new Error('VALIDATION_FAILED')
+  const periodStartAt = optionalDate(value.periodStartAt)
+  const periodEndAt = optionalDate(value.periodEndAt || value.endsAt)
+  if (periodStartAt && periodEndAt && periodStartAt > periodEndAt) throw new Error('VALIDATION_FAILED')
+  const weeklyDeliverAt = boundedText(value.weeklyDeliverAt, 5)
+  if (weeklyDeliverAt && !/^([01]\d|2[0-3]):[0-5]\d$/.test(weeklyDeliverAt)) throw new Error('VALIDATION_FAILED')
+  return {
+    starLevel,
+    purpose: boundedText(value.purpose, 500, true),
+    completionCriteria: boundedText(value.completionCriteria, 1000, true),
+    periodStartAt,
+    periodEndAt,
+    weeklyDeliverAt: weeklyDeliverAt || null,
+    assignedOwnerId: requiredId(value.assignedOwnerId),
+    applicableServers: normalizeEligibleLevelIds(value.applicableServers || []),
+    rewardConfig: normalizeRewardConfig(value.rewardConfig),
+  }
+}
+
+function normalizeRewardConfig(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('VALIDATION_FAILED')
+  const result = {}
+  for (const key of ['experience', 'contribution', 'bonus']) {
+    const entry = value[key] || {}
+    const enabled = entry.enabled === true
+    const amount = enabled ? Number(entry.amount) : 0
+    if (!Number.isFinite(amount) || amount < 0 || amount > 1000000
+      || (enabled && key !== 'bonus' && (!Number.isSafeInteger(amount) || amount < 1))
+      || (key === 'bonus' && Math.abs(amount * 100 - Math.round(amount * 100)) > 0.00001)) throw new Error('VALIDATION_FAILED')
+    result[key] = { enabled, amount }
+  }
+  if (!Object.values(result).some(entry => entry.enabled)) throw new Error('VALIDATION_FAILED')
+  return result
+}
+
 module.exports = {
+  boundedText,
+  optionalDate,
+  normalizeRewardConfig,
   decodeCursor,
   encodeCursor,
   expectedVersion,

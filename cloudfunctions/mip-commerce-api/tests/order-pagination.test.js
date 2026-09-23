@@ -13,7 +13,7 @@ const rows = Array.from({ length: 31 }, (_, index) => ({
   status: 'PAID', service_status: index === 30 ? 'PENDING_USE' : 'COMPLETED', version: 1,
 }))
 
-function fixture() {
+function fixture(sourceRows = rows) {
   const queries = []
   const repository = createCommerceRepository({
     async query(sql, params) {
@@ -21,7 +21,8 @@ function fixture() {
       assert.match(sql, /i.identity_key = \?/)
       assert.match(sql, /WHERE o.app_id = \?/)
       assert.deepEqual(params.slice(0, 2), [caller.identityKey, caller.appId])
-      let result = rows
+      assert.match(sql, /o.status NOT IN \('CREATED', 'PAYMENT_CREATED'\)/)
+      let result = sourceRows.filter(row => !['CREATED', 'PAYMENT_CREATED'].includes(row.status))
       const filtered = sql.includes('END) = ?')
       if (filtered) result = result.filter(row => row.service_status === params[2])
       if (sql.includes('o.created_at < ?')) {
@@ -63,4 +64,12 @@ it('rejects malformed cursors and filters before querying', () => {
   }
   assert.throws(() => service.listOrderPage(caller, { serviceStatus: 'PAID' }), /VALIDATION_FAILED/)
   assert.equal(queries.length, 0)
+})
+
+it('hides unpaid orders before pagination while retaining paid and refund history', async () => {
+  const pending = ['CREATED', 'PAYMENT_CREATED'].map((status, index) => ({ ...rows[0], id: `pending-${index}`, status }))
+  const history = ['PAID', 'REFUND_PENDING', 'REFUNDED'].map((status, index) => ({ ...rows[index], status }))
+  const { service } = fixture([...pending, ...history])
+  assert.deepEqual((await service.listOrderPage(caller, {})).items.map(row => row.status), history.map(row => row.status))
+  assert.deepEqual((await service.listOrders(caller, {})).map(row => row.status), history.map(row => row.status))
 })

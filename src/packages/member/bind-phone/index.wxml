@@ -7,7 +7,7 @@
     <view class="mt-[24rpx] -mx-3">
       <!-- journey-review J5-02 绑定手机（QS 三级页自拟承接，2026-09-21 走查拍板）：
            单表单双路径——微信一键获取（手机号快速验证，免短信直接换绑）+
-           手动输入其他手机号 + 短信验证码（短信通道一期未接通，先交付 UI 骨架）。 -->
+           手动输入其他手机号 + 短信验证码（发送与验证均由身份域校验）。 -->
       <view class="flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel pl-[24rpx] pr-[24rpx]">
         <view class="text-[length:28rpx] font-medium leading-[40rpx]">当前手机号</view>
         <view class="text-[length:28rpx] leading-[40rpx] text-muted">{{currentPhoneMasked || '未绑定'}}</view>
@@ -22,6 +22,7 @@
           type="tel"
           maxlength="11"
           value="{{newPhone}}"
+          disabled="{{rebinding || loginSheetBusy}}"
           placeholder="请输入新的手机号"
           placeholder-class="mip-bind-phone__placeholder"
           bindinput="onNewPhoneInput"
@@ -42,17 +43,18 @@
           type="tel"
           maxlength="6"
           value="{{smsCode}}"
+          disabled="{{rebinding || loginSheetBusy}}"
           placeholder="请输入短信验证码"
           placeholder-class="mip-bind-phone__placeholder"
           bindinput="onSmsCodeInput"
         />
         <view class="mx-[20rpx] h-[32rpx] w-[1rpx] shrink-0 bg-line"></view>
         <view
-          class="flex h-[92rpx] w-[184rpx] shrink-0 items-center justify-center text-[length:28rpx] font-medium {{sendCountdown > 0 ? 'text-muted' : 'text-brand'}} active:opacity-70"
+          class="flex h-[92rpx] w-[184rpx] shrink-0 items-center justify-center text-[length:28rpx] font-medium {{sendCountdown > 0 || sendingSms ? 'text-muted' : 'text-brand'}} active:opacity-70"
           aria-role="button"
           aria-label="获取验证码"
           bind:tap="requestSmsCode"
-        >{{sendCountdown > 0 ? sendCountdown + 's后重发' : '获取验证码'}}</view>
+        >{{sendingSms ? '正在发送' : sendCountdown > 0 ? sendCountdown + 's后重发' : '获取验证码'}}</view>
       </view>
 
       <view wx:if="{{message}}" class="mt-[24rpx] px-[8rpx] text-[length:22rpx] leading-[33.6rpx] text-muted">{{message}}</view>
@@ -61,7 +63,7 @@
         class="mt-[56rpx] flex h-[80rpx] items-center justify-center rounded-[100rpx] border-[2rpx] border-canvas bg-brand text-[length:32rpx] font-medium text-on-brand active:bg-brand-active"
         aria-role="button"
         bind:tap="confirmRebind"
-      >确认换绑</view>
+      >{{rebinding ? '正在换绑' : '确认换绑'}}</view>
 
       <view class="mt-[24rpx] px-[8rpx] text-[length:22rpx] leading-[33.6rpx] text-muted">手机号用于登录与接收活动通知。</view>
     </view>

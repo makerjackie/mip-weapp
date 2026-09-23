@@ -1,67 +1,43 @@
-/**
- * journey-review J5-03 隐私设置（figma 1861_18278）：
- * 「不让他人在搜索人才时找到我」「不让非MIP玩家看到我发布的机会」两行开关。
- *
- * 服务端目前没有这两个偏好字段（身份域合同缺口已登记 shared-change-requests，
- * 落库需追加迁移），一期按规格 §8 允许先走本机存储持久化 + TODO；
- * 开关只表达用户意图，人才搜索 / 机会列表的实际可见性仍由服务端决定。
- */
-const PRIVACY_SETTINGS_STORAGE_KEY = 'mip.settings.privacy.v1'
+import type { IdentityAccessSnapshot } from '../../../modules/mip-identity'
+import { mipIdentityModule } from '../../../modules/mip-identity/client'
 
-interface PrivacySettings {
-  hideFromTalentSearch: boolean
-  hideOpportunitiesFromNonPlayers: boolean
-}
-
-/** 帧内两开关均绘为开：默认开（默认值待产品确认）。 */
-const DEFAULT_PRIVACY_SETTINGS: PrivacySettings = {
-  hideFromTalentSearch: true,
-  hideOpportunitiesFromNonPlayers: true,
-}
-
-type PrivacySettingsKey = keyof PrivacySettings
-
-const privacySettingKeys = new Set<PrivacySettingsKey>([
-  'hideFromTalentSearch',
-  'hideOpportunitiesFromNonPlayers',
-])
-
-function readPrivacySettings(): PrivacySettings {
-  try {
-    const stored = wx.getStorageSync(PRIVACY_SETTINGS_STORAGE_KEY) as Partial<PrivacySettings> | undefined
-    if (!stored) {
-      return { ...DEFAULT_PRIVACY_SETTINGS }
-    }
-    return {
-      hideFromTalentSearch: typeof stored.hideFromTalentSearch === 'boolean'
-        ? stored.hideFromTalentSearch
-        : DEFAULT_PRIVACY_SETTINGS.hideFromTalentSearch,
-      hideOpportunitiesFromNonPlayers: typeof stored.hideOpportunitiesFromNonPlayers === 'boolean'
-        ? stored.hideOpportunitiesFromNonPlayers
-        : DEFAULT_PRIVACY_SETTINGS.hideOpportunitiesFromNonPlayers,
-    }
-  }
-  catch {
-    return { ...DEFAULT_PRIVACY_SETTINGS }
-  }
-}
+type PrivacyKey = 'hideFromTalentSearch' | 'hideOpportunitiesFromNonPlayers'
+const privacyKeys = new Set<PrivacyKey>(['hideFromTalentSearch', 'hideOpportunitiesFromNonPlayers'])
 
 Page({
-  // 注册期 data 只放默认值：Page() 求值只有一次，微信实例化深拷贝的是该快照；
-  // 真实持久化值必须在 onLoad 重读，否则页面重进会回显过期状态。
   data: {
-    state: 'ready' as const,
-    hideFromTalentSearch: DEFAULT_PRIVACY_SETTINGS.hideFromTalentSearch,
-    hideOpportunitiesFromNonPlayers: DEFAULT_PRIVACY_SETTINGS.hideOpportunitiesFromNonPlayers,
+    state: 'loading' as 'loading' | 'ready' | 'error',
+    saving: false,
+    message: '',
+    hideFromTalentSearch: false,
+    hideOpportunitiesFromNonPlayers: false,
   },
-
-  onLoad() {
-    this.setData(readPrivacySettings())
+  snapshot: null as IdentityAccessSnapshot | null,
+  onLoad() { void this.load() },
+  async load() {
+    this.setData({ state: 'loading', message: '' })
+    try {
+      const snapshot = await mipIdentityModule.loadSnapshot()
+      if (!snapshot.authenticated || !snapshot.profile.exists) {
+        throw new Error('请先登录并完善资料。')
+      }
+      this.applySnapshot(snapshot)
+    }
+    catch (error) {
+      this.setData({ state: 'error', message: error instanceof Error ? error.message : '隐私设置暂时无法加载。' })
+    }
   },
-
-  onToggle(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
-    const key = String(event.currentTarget.dataset.key || '') as PrivacySettingsKey
-    if (!privacySettingKeys.has(key)) {
+  applySnapshot(snapshot: IdentityAccessSnapshot) {
+    this.snapshot = snapshot
+    this.setData({
+      state: 'ready',
+      hideFromTalentSearch: snapshot.profile.visibility.talentSearch === false,
+      hideOpportunitiesFromNonPlayers: snapshot.profile.visibility.opportunitiesForNonPlayers === false,
+    })
+  },
+  async onToggle(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    const key = String(event.currentTarget.dataset.key || '') as PrivacyKey
+    if (!privacyKeys.has(key) || !this.snapshot || this.data.state !== 'ready' || this.data.saving) {
       return
     }
     const next = Boolean(event.detail.value)
@@ -69,17 +45,36 @@ Page({
     if (next === previous) {
       return
     }
-    // 即时保存：失败回滚开关并提示，避免界面与持久化状态不一致。
-    this.setData({ [key]: next })
+    const profile = this.snapshot.profile
+    const field = key === 'hideFromTalentSearch' ? 'talentSearch' : 'opportunitiesForNonPlayers'
+    this.setData({ [key]: next, saving: true, message: '' })
     try {
-      wx.setStorageSync(PRIVACY_SETTINGS_STORAGE_KEY, {
-        ...readPrivacySettings(),
-        [key]: next,
+      const snapshot = await mipIdentityModule.saveProfile({
+        expectedVersion: profile.version,
+        avatarAssetId: profile.avatarAssetId,
+        nickname: profile.nickname,
+        realName: profile.realName,
+        gender: profile.gender,
+        careerIdentityKey: profile.careerIdentityKey,
+        identityStatus: profile.identityStatus,
+        headline: profile.headline,
+        introduction: profile.introduction,
+        companies: profile.companies,
+        organizations: profile.organizations,
+        primaryIndustryTagId: profile.primaryIndustryTagId,
+        abilityTagIds: profile.abilityTagIds,
+        visibility: { ...profile.visibility, [field]: !next },
       })
+      this.applySnapshot(snapshot)
     }
-    catch {
-      this.setData({ [key]: previous })
-      wx.showToast({ title: '设置暂未保存，请重试。', icon: 'none' })
+    catch (error) {
+      this.setData({ [key]: previous, message: error instanceof Error ? error.message : '设置暂未保存，请重试。' })
+      // A conflicting edit refreshes the entire versioned profile before another attempt.
+      try {
+        this.applySnapshot(await mipIdentityModule.loadSnapshot())
+      }
+      catch { this.setData({ state: 'error' }) }
     }
+    finally { this.setData({ saving: false }) }
   },
 })

@@ -87,6 +87,7 @@ describe('admin order persistence adapter', () => {
       'getRefundScope',
       'listOrderSummary',
       'listOrders',
+      'listRefunds',
       'submitRefund',
       'summarizeOrders',
     ])

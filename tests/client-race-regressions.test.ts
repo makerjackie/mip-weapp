@@ -73,6 +73,7 @@ vi.mock('../src/platform/navigation/client', () => ({
   caseSwitchPrimary: vi.fn(),
   syncCaseNavigation: vi.fn(),
 }))
+vi.mock('../src/platform/cloudbase/client', () => ({ requireCloudClient: vi.fn() }))
 
 interface PageDefinition {
   data: Record<string, unknown>

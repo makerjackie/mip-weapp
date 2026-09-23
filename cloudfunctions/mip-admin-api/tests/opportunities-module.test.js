@@ -258,6 +258,7 @@ describe('admin opportunities deep module', () => {
     assert.deepEqual(Object.keys(api).sort(), [
       'archiveOpportunity',
       'closeOpportunityCommentReport',
+      'deleteOpportunity',
       'endOpportunity',
       'getMatchingAdminState',
       'getOpportunity',

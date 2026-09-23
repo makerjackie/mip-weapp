@@ -17,6 +17,7 @@ const {
 } = require('./lib/web-bff-http')
 const { createWebLoginConfirmationClient } = require('./lib/web-login-client')
 const {
+  createEventCheckinImage,
   createWebLoginQrCodeRoute,
   isWebLoginQrCodeEvent,
 } = require('./lib/web-login-qr-code')
@@ -173,6 +174,13 @@ const knowledgeModule = createKnowledgeAdminService(mysqlDatabase(), {
 })
 const service = createAdminService({
   repository,
+  createCheckinImage: createEventCheckinImage({
+    cloud,
+    stage: process.env.MIP_DEPLOYMENT_STAGE,
+    envVersion: process.env.MIP_ADMIN_WEB_LOGIN_QR_ENV_VERSION,
+    wechatAppId: process.env.MIP_WECHAT_APP_ID,
+    wechatAppSecret: process.env.MIP_WECHAT_APP_SECRET,
+  }),
   phoneEncryptionKey: process.env.MIP_PHONE_ENCRYPTION_KEY,
   contentSafety,
   confirmWebLogin: input => webLoginConfirmationClient.confirm(input),

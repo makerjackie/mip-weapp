@@ -63,6 +63,8 @@ function gateway(initial = accessSnapshot()) {
   let snapshot = initial
   const source = {
     getAccessSnapshot: vi.fn(async () => snapshot),
+    requestPhoneSms: vi.fn(async () => ({ challengeId: '10000000-0000-4000-8000-000000000002', status: 'ACCEPTED' as const, retryAfterSeconds: 60, expiresAt: '2026-09-22T08:05:00Z' })),
+    bindSmsPhone: vi.fn(async () => snapshot),
     acceptAgreements: vi.fn(async () => {
       snapshot = {
         ...snapshot,

@@ -234,6 +234,8 @@ describe('admin growth deep module', () => {
     const api = createAdminGrowth({ repository: {}, access: {} })
     assert.deepEqual(Object.keys(api).sort(), [
       'adjustGrowth',
+      'changeBenefitStatus',
+      'changeLevelStatus',
       'grantBadge',
       'listBadgeAwards',
       'listBadges',
@@ -273,6 +275,25 @@ describe('admin growth deep module', () => {
 
     assert.equal(repo.resolveReads, 3)
     assert.equal(repo.calls.filter(call => call.type === 'listGrowthLevels').length, 1)
+  })
+
+  it('changes catalog status without dropping level benefits or stale version protection', async () => {
+    const repo = repository({
+      async listGrowthLevelsV2() {
+        return [{ id: LEVEL_ID, levelKey: 'level-1', name: '基础会员', displayBadge: '',
+          minimumExperience: 0, sortOrder: 0, benefits: [{ id: BENEFIT_ID }], version: 3 }]
+      },
+      async listGrowthBenefits() {
+        return [{ id: BENEFIT_ID, name: '活动权益', description: '', sortOrder: 1, version: 2 }]
+      },
+    })
+    const service = growth(repo)
+    await service.changeLevelStatus(caller, { levelId: LEVEL_ID, expectedVersion: 3, status: 'ACTIVE' })
+    assert.deepEqual(lastCall(repo, 'saveGrowthLevel').input.draft.benefitIds, [BENEFIT_ID])
+    await service.changeBenefitStatus(caller, { benefitId: BENEFIT_ID, expectedVersion: 2, status: 'INACTIVE' })
+    assert.equal(lastCall(repo, 'saveGrowthBenefit').input.draft.status, 'INACTIVE')
+    await assert.rejects(service.changeLevelStatus(caller,
+      { levelId: LEVEL_ID, expectedVersion: 2, status: 'ACTIVE' }), error => error.code === 'CONFLICT')
   })
 
   it('normalizes filters and cursor once for scoped lists and exports', async () => {

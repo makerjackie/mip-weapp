@@ -28,6 +28,7 @@ import {
   createProfileInterestMutationStore,
   PROFILE_INTEREST_MUTATION_STORAGE_KEY,
 } from './profile-interest-mutation'
+import { parseProfileInterests } from './profile-interests'
 import { parseReceivedVisitors } from './received-visitors'
 import { callOpportunityApi } from './transport'
 import {
@@ -90,6 +91,14 @@ export const opportunityModule = {
     return parseProfileInfluence(await callOpportunityApi<ProfileInfluenceSummary>('getProfileInfluence'))
   },
 
+  async listProfileInterests(profileRef: string, cursor?: string) {
+    return parseProfileInterests(await callOpportunityApi('listPublicProfileInterests', {
+      profileRef: profileRef.trim(),
+      cursor,
+      limit: 20,
+    }))
+  },
+
   recordProfileVisit(
     profileRef: string,
     visitKey = createMutationKey('profile-visit'),
@@ -104,12 +113,21 @@ export const opportunityModule = {
     return callOpportunityApi<OpportunityPage>('listMine', { cursor, limit: 20 }).then(parseOpportunityPage)
   },
 
-  listReceived(category: ReceivedInteractionCategory, cursor?: string) {
+  listReceived(category: ReceivedInteractionCategory, cursor?: string, keyword?: string) {
     return callOpportunityApi<ReceivedInteractionPage>('listReceivedInteractions', {
       category,
       cursor,
+      ...(category === 'INTERACTION' && keyword ? { keyword: keyword.trim() } : {}),
       limit: 20,
     }).then(page => category === 'VISITOR' ? parseReceivedVisitors(page) : page)
+  },
+
+  markVisitorsRead(readThroughAt: string, idempotencyKey = createMutationKey('profile-visitors-read')) {
+    return callOpportunityApi<{ messageId: string, readAt: string }>('markReceivedInteractionRead', {
+      category: 'VISITOR',
+      readThroughAt,
+      idempotencyKey,
+    })
   },
 
   markReceivedRead(
@@ -147,7 +165,7 @@ export const opportunityModule = {
    * archive 契约（服务端下架为 ARCHIVED，仅本人可见移出列表）。
    */
   remove(id: OpportunityId, expectedVersion: number, idempotencyKey = createMutationKey('opportunity-archive')) {
-    return callOpportunityApi<OpportunityMutationResult>('archiveOpportunity', {
+    return callOpportunityApi<{ id: OpportunityId, status: 'ARCHIVED', version: number }>('archiveOpportunity', {
       id,
       expectedVersion,
       idempotencyKey,

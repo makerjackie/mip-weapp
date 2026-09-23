@@ -1,10 +1,14 @@
 import type { MipTasksGateway, MipTasksRequest } from '../src/modules/mip-tasks/types'
+import { createRequire } from 'node:module'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMipTasksCloudbaseGateway } from '../src/modules/mip-tasks/cloudbase-gateway'
 import { createMipTasksGateway } from '../src/modules/mip-tasks/gateway'
 import { createMipTasksModule } from '../src/modules/mip-tasks/module'
 import { rewardExperienceStarIndexes } from '../src/modules/mip-tasks/presentation'
 import { MipTasksError } from '../src/modules/mip-tasks/types'
+
+const require = createRequire(import.meta.url)
+const { userTaskDto } = require('../cloudfunctions/mip-tasks-api/domain/repository.js')
 
 const cloudHarness = vi.hoisted(() => ({
   callFunction: vi.fn(),
@@ -108,6 +112,46 @@ describe('MIP tasks public client', () => {
     ])
     expect(calls[2]?.input).not.toHaveProperty('rewardExperience')
     expect(calls[2]?.input).not.toHaveProperty('resultStatus')
+  })
+
+  it('renders real server DTOs for pending review, rejected resubmission and weekly windows', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-22T08:00:00.000Z'))
+    const row = {
+      id: task.id,
+      name: task.name,
+      content: task.content,
+      reward_experience: 20,
+      attachment_required: 1,
+      version: 2,
+      star_level: 4,
+      assignment_mode: 'SELECTED',
+      recipient_assign_mode: 'weekly',
+      recipient_deliver_at: '10:30',
+      recipient_start_at: '2026-09-21T02:30:00.000Z',
+      recipient_end_at: '2026-10-21T02:30:00.000Z',
+      completion_id: completion.id,
+      completed_at: completion.completedAt,
+      awarded_experience: 0,
+      submission_status: 'pending_review',
+      purpose: '提交成果',
+      completion_criteria: '真实照片',
+    }
+    let response = userTaskDto(row, true)
+    const gateway = createMipTasksGateway({ invoke: async request => ({ ok: true, data: request.action === 'listTasks' ? { items: [response] } : response }) })
+    await expect(gateway.listTasks()).resolves.toMatchObject({ items: [{
+      status: 'PENDING_REVIEW',
+      submissionStatus: 'pending_review',
+      starLevel: 4,
+      weeklyDeliverAt: '10:30',
+      completion: { rewardExperience: 0 },
+    }] })
+    response = userTaskDto({ ...row, submission_status: 'rejected', review_remark: '请补充证明' }, true)
+    await expect(gateway.getTask(task.id)).resolves.toMatchObject({ status: 'AVAILABLE', reviewRemark: '请补充证明' })
+    response = userTaskDto({ ...row, completion_id: null, submission_status: null, recipient_start_at: '2026-09-25T02:30:00.000Z' }, true)
+    await expect(gateway.getTask(task.id)).resolves.toMatchObject({ status: 'NOT_STARTED', periodStartAt: '2026-09-25T02:30:00.000Z' })
+    response = userTaskDto({ ...row, completion_id: null, submission_status: null, recipient_end_at: '2026-09-21T02:30:00.000Z' }, true)
+    await expect(gateway.getTask(task.id)).resolves.toMatchObject({ status: 'ENDED', periodEndAt: '2026-09-21T02:30:00.000Z' })
   })
 
   it('preserves business errors and rejects malformed service data', async () => {

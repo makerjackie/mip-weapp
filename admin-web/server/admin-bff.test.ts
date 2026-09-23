@@ -855,7 +855,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('forwards every explicitly reviewed query action', async () => {
-    assert.equal(REVIEWED_QUERY_ACTIONS.length, 100)
+    assert.equal(REVIEWED_QUERY_ACTIONS.length, 103)
     const fetchMock = fetchQueue(...REVIEWED_QUERY_ACTIONS.map(action => new Response(JSON.stringify({
       ok: true,
       data: { action },

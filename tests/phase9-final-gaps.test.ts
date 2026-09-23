@@ -122,7 +122,8 @@ describe('phase9 final gap contracts', () => {
     )
 
     expect(roster).toContain('const clauses = [\'r.app_id = ?\', \'r.event_id = ?\']')
-    expect(roster).toContain('clauses.push(\'r.status = ?\')')
+    expect(roster).toContain('clauses.push(\'r.status = ? AND r.abnormal_reason IS NULL\')')
+    expect(roster).toContain('clauses.push(\'r.abnormal_reason IS NOT NULL\')')
     expect(roster).toContain('clauses.push(\'p.nickname LIKE ? ESCAPE')
     expect(roster).toContain('ORDER BY r.created_at DESC, r.id DESC LIMIT ?')
     expect(roster).not.toMatch(/ORDER BY\s+\$\{/)

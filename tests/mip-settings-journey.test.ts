@@ -18,15 +18,17 @@ describe('journey-review WS-SETTINGS', () => {
     expect(config.navigationBarTitleText).toBe('账号设置')
     expect(template).toContain('<mip-section-header title="账号与安全" />')
     expect(template).toContain('<mip-section-header class="mt-[48rpx]" title="协议" />')
-    for (const row of ['绑定手机', '绑定微信', '隐私设置', '用户使用协议', '隐私政策', '会员服务协议']) {
+    for (const row of ['绑定手机', '隐私设置', '用户使用协议', '隐私政策', '会员服务协议']) {
       expect(template).toContain(`<mip-detail-row label="${row}"`)
     }
     expect(page).toContain('\'/packages/member/bind-phone/index\'')
     expect(page).toContain('\'/packages/member/privacy-settings/index\'')
     expect(page).toContain('\'/packages/member/user-agreement/index\'')
     expect(page).toContain('\'/packages/member/privacy-policy/index\'')
-    // 绑定微信 / 会员服务协议三级页设计未出（QS）：保留行 + 占位提示。
-    expect(page.match(/功能建设中/g)).toHaveLength(2)
+    // 9/22：绑定微信仅 APP 使用，小程序移除；会员协议内容仍待补齐。
+    expect(template).not.toContain('label="绑定微信"')
+    expect(page).not.toContain('openBindWechat')
+    expect(page.match(/功能建设中/g)).toHaveLength(1)
     // 既有区块保留在协议组之下，且设计还原 fixture 分支已被真实路由取代。
     expect(template).toContain('bind:tap="openVisibilitySettings"')
     expect(template).toContain('bind:tap="openBlockedProfiles"')
@@ -65,23 +67,15 @@ describe('journey-review WS-SETTINGS', () => {
     expect(page).toContain('mipIdentityModule.rebindWechatPhone(code)')
     expect(page).toContain('title: \'换绑成功\', icon: \'success\'')
     expect(page).toContain('leaveSecondaryPage(\'/pages/profile/index\')')
-    // 路径 B：60s 防重发倒计时与输入校验骨架；短信通道未接通前降级提示。
-    expect(page).toContain('const SMS_COUNTDOWN_SECONDS = 60')
+    // 路径 B：服务端短信发送和一次性校验，提交中阻止重复请求。
+    expect(page).toContain('mipIdentityModule.requestPhoneSms(phone)')
+    expect(page).toContain('mipIdentityModule.rebindSmsPhone(')
+    expect(page).toContain('this.startCountdown(result.retryAfterSeconds)')
     expect(page).toContain('const PHONE_PATTERN = /^1\\d{10}$/')
     expect(page).toContain('const SMS_CODE_PATTERN = /^\\d{6}$/')
-    expect(page).toContain('短信验证码暂未开通')
-    // review 清理：短信通道未接通前不存在换绑中的异步流，rebinding 死状态（含 UI disabled/
-    // 「正在换绑」文案）已删除，busy 守卫待通道接入时在 confirmRebind 补。
-    expect(page).not.toContain('rebinding')
-    expect(template).not.toContain('rebinding')
-    expect(template).not.toContain('正在换绑')
-    expect(page).toContain('通道接入时在此补 busy 守卫')
-    // 错误态保留已输入内容：catch 分支只关弹层与提示，不清空 newPhone / smsCode。
-    const catchBlock = page.slice(page.indexOf('mipIdentityModule.rebindWechatPhone(code)'), page.indexOf('startCountdown'))
-    const rebindErrorTail = catchBlock.slice(catchBlock.indexOf('catch (error)'))
-    expect(rebindErrorTail).not.toContain('newPhone: \'\'')
-    expect(rebindErrorTail).not.toContain('smsCode: \'\'')
-    expect(rebindErrorTail).toContain('换绑失败，请重试。')
+    expect(page).not.toContain('短信验证码暂未开通')
+    expect(template).toContain('正在换绑')
+    expect(template).toContain('disabled="{{rebinding || loginSheetBusy}}"')
     // 终审拍板（WS-EVENTS 台单 1）：换绑/绑定统一走账号设置入口（本页），
     // mip-profile 编辑页不再保留 getPhoneNumber 授权按钮区块。
     const profileTemplate = read('src/packages/member/mip-profile/index.wxml')
@@ -99,23 +93,12 @@ describe('journey-review WS-SETTINGS', () => {
     expect(template).toContain('不让非MIP玩家看到我发布的机会')
     expect(template.match(/<t-switch/g)?.length).toBe(2)
     expect(template).toContain('bind:change="onToggle"')
-    // 一期持久化走本机存储（服务端偏好字段缺口见 shared-change-requests）。
-    expect(page).toContain('PRIVACY_SETTINGS_STORAGE_KEY')
-    expect(page).toContain('wx.setStorageSync(PRIVACY_SETTINGS_STORAGE_KEY')
-    // 帧内均绘为开：默认开（待产品确认）。
-    expect(page).toContain('hideFromTalentSearch: true')
-    expect(page).toContain('hideOpportunitiesFromNonPlayers: true')
-    // review P1：注册期 data 只放默认值，持久化值在 onLoad 重读（行为级测试见
-    // privacy-settings-lifecycle.test.ts），否则页面重进回显过期快照。
-    expect(page).toContain('onLoad() {\n    this.setData(readPrivacySettings())')
-    const dataBlock = page.slice(page.indexOf('data: {'), page.indexOf('onLoad()'))
-    expect(dataBlock).not.toContain('readPrivacySettings')
-    // 保存失败回滚开关并提示。
-    expect(page).toContain('this.setData({ [key]: previous })')
-    expect(page).toContain('设置暂未保存，请重试。')
-    // 一期无服务端消费方：底部文案只承诺已保存，不承诺列表隐藏效果。
-    expect(template).toContain('开关状态已保存，将在后续版本对他人可见范围生效。')
-    expect(template).not.toContain('将按开关隐藏你的对应内容')
+    expect(page).toContain('mipIdentityModule.saveProfile')
+    expect(page).toContain('expectedVersion: profile.version')
+    expect(page).not.toContain('wx.setStorageSync')
+    expect(page).toContain('visibility: { ...profile.visibility, [field]: !next }')
+    expect(template).toContain('disabled="{{saving}}"')
+    expect(template).not.toContain('将在后续版本')
   })
 
   it('J5-04 keeps the user agreement reachable under its full title', () => {

@@ -51,6 +51,7 @@ vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: mocks.navigateTo,
   syncCaseNavigation: mocks.syncCaseNavigation,
 }))
+vi.mock('../src/platform/cloudbase/client', () => ({ requireCloudClient: vi.fn() }))
 
 let definition: Record<string, any>
 beforeAll(async () => {
@@ -97,24 +98,16 @@ describe('MIP opportunity review fixes', () => {
   const cardScript = source('src/components/mip-opportunity-card/index.ts')
   const catalogSource = source('src/modules/mip-opportunities/catalog.ts')
 
-  it('keeps journeyStatusOf boundaries with the unreachable unpublish fallback annotated (#1)', () => {
-    // 行为边界：DRAFT+publishedAt 保留「已下架」回退；其余状态原样返回。
-    expect(journeyStatusOf({ status: 'DRAFT', publishedAt: '2026-01-01T00:00:00.000Z' })).toBe('UNPUBLISHED')
+  it('preserves explicit unpublished state and saves status atomically', () => {
+    expect(journeyStatusOf({ status: 'UNPUBLISHED' })).toBe('UNPUBLISHED')
     expect(journeyStatusOf({ status: 'DRAFT' })).toBe('DRAFT')
-    expect(journeyStatusOf({ status: 'DRAFT', publishedAt: '' })).toBe('DRAFT')
-    expect(journeyStatusOf({ status: 'PUBLISHED', publishedAt: '2026-01-01T00:00:00.000Z' })).toBe('PUBLISHED')
     expect(journeyStatusOf({ status: 'ENDED' })).toBe('ENDED')
-    // 注释必须声明该分支当前服务端不可达（保存对已发布机会 publish:false 仍落 PUBLISHED）。
-    expect(catalogSource).toContain('不可达')
-    // 保存路径不再接受 UNPUBLISHED、不再宣称「已下架」；反馈按服务端真实返回状态决定。
-    expect(editorScript).not.toContain(`projectStatus !== 'UNPUBLISHED'`)
-    expect(editorScript).not.toContain('项目已下架')
-    expect(editorScript).toContain(`title: result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存'`)
-    // J4-06 详情置灰渲染分支保留（数据就绪即生效）。
-    expect(detailScript).toContain(`? 'unpublished'`)
-    // 二轮终修：收起行只剩两态（UNPUBLISHED 在半屏置灰不可选，「下架项目」分支不可达）。
-    expect(editorView).toContain(`{{projectStatus === 'RECRUITING' ? '招募中' : '结束项目'}}`)
-    expect(editorView).not.toContain(`'下架项目'}}`)
+    expect(editorScript).toContain('publicationStatus:')
+    expect(editorScript).not.toContain('opportunityModule.end(')
+    expect(editorScript).toContain('result.status === \'UNPUBLISHED\' ? \'项目已下架\'')
+    expect(editorView).toContain('\'下架项目\'}}')
+    expect(catalogSource).not.toContain('即将支持')
+    expect(detailScript).toContain('? \'unpublished\'')
   })
 
   it('waits for the refreshed auth snapshot before resuming the pending destination (#2/B1)', async () => {

@@ -1,9 +1,9 @@
 import { useParams } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminRequestInput, AdminOperationAction } from '../../domain/contracts'
 import type { OperationValues } from '../../modules/admin-operation-ui'
-import { createTaskMutationDefinition, buildTaskMutationInput, loadTaskEligibleLevels } from '../../modules/admin-task-management'
+import { createTaskMutationDefinition, buildTaskMutationInput, loadTaskEligibleLevels, loadTaskEditorOptions } from '../../modules/admin-task-management'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 
 type AdminRequest = <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
@@ -17,9 +17,8 @@ export function TaskEditFormPage() {
     [],
   )
 
-  const baseDefinition = useMemo(
+  const [baseDefinition, setDefinition] = useState(
     () => createTaskMutationDefinition('mip.admin.tasks.save', taskId, {}),
-    [taskId],
   )
 
   const formConfig: IndependentFormPageConfig = {
@@ -38,12 +37,13 @@ export function TaskEditFormPage() {
   }
 
   const loadDetail = async (): Promise<OperationValues | null> => {
-    const eligibleLevelCatalog = await loadTaskEligibleLevels(request as AdminRequest)
-    if (!taskId) return { eligibleLevelCatalog } as OperationValues
-    const taskValue = await request<Record<string, unknown>>('mip.admin.tasks.get', { taskId })
-    const task = taskValue && typeof taskValue === 'object' ? taskValue : {}
-    const definition = createTaskMutationDefinition('mip.admin.tasks.save', taskId, { task, eligibleLevelCatalog })
-    return { ...definition.values, eligibleLevelCatalog } as OperationValues
+    const [eligibleLevelCatalog, editorOptions] = await Promise.all([
+      loadTaskEligibleLevels(request as AdminRequest), loadTaskEditorOptions(request as AdminRequest),
+    ])
+    const task = taskId ? await request<Record<string, unknown>>('mip.admin.tasks.get', { taskId }) : {}
+    const definition = createTaskMutationDefinition('mip.admin.tasks.save', taskId, { task, eligibleLevelCatalog, editorOptions })
+    setDefinition(definition)
+    return definition.values
   }
 
   return <IndependentFormPage config={formConfig} loadDetail={loadDetail} />

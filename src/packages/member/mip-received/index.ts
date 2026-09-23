@@ -30,7 +30,7 @@ interface InteractionView {
   updatedText: string
   navigationUrl: string
   // journey-review J3-05/06/07/08 四列表卡片网格（participants 卡族同构）：
-  // metaText = meta 行；countBadge = 右上角 ×N（GUEST=有效邀请次数，INTERACTION=已加载同场事实次数）；
+  // metaText = meta 行；countBadge = 右上角 ×N（邀请与同场次数均取服务端已签到事实）；
   // noteText = 邀请人标注（数据=邀请人是我本人，服务端只回该口径）。
   metaText: string
   countBadge: string
@@ -41,10 +41,13 @@ interface CategoryCache {
   loaded: boolean
   state: PageState
   items: InteractionView[]
-  // INTERACTION 逐条事实（同场心动一次一条），用于客户端按人合并 ×N。
+  // 服务端按人聚合全部同场签到次数；翻页只去重，不累计本地页长。
   rawItems: ReceivedInteraction[]
   nextCursor: string
   unreadCount: number
+  readThroughAt: string
+  keyword: string
+  requestSeq: number
 }
 
 function createCategoryCache(): CategoryCache {
@@ -55,6 +58,9 @@ function createCategoryCache(): CategoryCache {
     rawItems: [],
     nextCursor: '',
     unreadCount: 0,
+    readThroughAt: '',
+    keyword: '',
+    requestSeq: 0,
   }
 }
 
@@ -96,7 +102,7 @@ function presentGuest(item: Extract<ReceivedInteraction, { kind: 'GUEST' }>, ind
   }
 }
 
-// journey-review J3-06：同场多次 ×N 由已加载的同人事实条数合并得到（服务端逐条返回）。
+// journey-review J3-06：同场多次 ×N 来自服务端全部有效签到的聚合，与翻页无关。
 // 邀请人标注（「邀请人Bear」口径）待服务端 listInfluenceInteractions 补 inviter 字段
 // （mip-opportunities-api），DTO 扩展归 WS-OPPORTUNITIES/服务端；noteText 渲染链保留，
 // 字段到位即显示（依赖记 .tmp/shared-change-requests.md）。
@@ -123,7 +129,7 @@ function present(item: ReceivedInteraction, index: number, viewerName = ''): Int
   }
   if (item.kind === 'INTERACTION') {
     return {
-      ...presentInteraction(item.actor, 1),
+      ...presentInteraction(item.actor, item.interactionCount || 1),
       viewKey: `interaction-${item.actor.profileRef}-${item.event.id}-${index}`,
       sourceText: item.event.title,
       updatedText: formatChineseMonthDayTime(item.updatedAt),
@@ -151,7 +157,7 @@ function present(item: ReceivedInteraction, index: number, viewerName = ''): Int
   if (item.kind === 'VISITOR') {
     // journey-review J3-08（QT 终审）：访客卡不显示访问时间。
     return {
-      viewKey: `visitor-${item.actor.profileRef}-${index}`,
+      viewKey: `visitor-${item.visitId || `${item.actor.profileRef}-${index}`}`,
       kind: item.kind,
       messageId: item.actor.profileRef,
       unread: item.unread,
@@ -215,7 +221,7 @@ function present(item: ReceivedInteraction, index: number, viewerName = ''): Int
   }
 }
 
-// INTERACTION：按人合并已加载的同场事实（保持最近一次在前的服务端顺序）。
+// INTERACTION：翻页去重，保留服务端最新签到排序和完整次数。
 function mergeInteractionViews(rawItems: ReceivedInteraction[]): InteractionView[] {
   const counts = new Map<string, number>()
   const ordered: ReceivedInteractionActor[] = []
@@ -224,7 +230,7 @@ function mergeInteractionViews(rawItems: ReceivedInteraction[]): InteractionView
       continue
     }
     const count = counts.get(item.actor.profileRef) || 0
-    counts.set(item.actor.profileRef, count + 1)
+    counts.set(item.actor.profileRef, Math.max(count, item.interactionCount || 1))
     if (count === 0) {
       ordered.push(item.actor)
     }
@@ -281,6 +287,7 @@ Page({
   pageHidden: false,
   accessReady: false,
   checkingAccess: false,
+  searchTimer: undefined as ReturnType<typeof setTimeout> | undefined,
   categoryCache: {
     REFERRAL: createCategoryCache(),
     PROFILE_INTEREST: createCategoryCache(),
@@ -318,7 +325,12 @@ Page({
   },
 
   onHide() { this.pageHidden = true },
-  onUnload() { this.pageHidden = true },
+  onUnload() {
+    this.pageHidden = true
+    if (this.searchTimer !== undefined) {
+      clearTimeout(this.searchTimer)
+    }
+  },
 
   onShow() {
     this.pageHidden = false
@@ -387,10 +399,24 @@ Page({
 
   applySearch(keyword: string) {
     this.setData({ searchInput: keyword, displayItems: this.filterDisplayed(this.data.items, keyword) })
+    if (this.data.category !== 'INTERACTION' || !this.data.influenceMode) {
+      return
+    }
+    if (this.searchTimer !== undefined) {
+      clearTimeout(this.searchTimer)
+    }
+    this.categoryCache.INTERACTION.requestSeq += 1
+    this.searchTimer = setTimeout(() => {
+      this.searchTimer = undefined
+      void this.loadCategory('INTERACTION', true)
+    }, 250)
   },
 
   filterDisplayed(items: InteractionView[], keyword: string) {
     if (this.data.category !== 'INTERACTION' || !this.data.influenceMode) {
+      return items
+    }
+    if (this.categoryCache.INTERACTION.keyword === keyword.trim()) {
       return items
     }
     return items.filter(item => matchesInteractionSearch(item, keyword))
@@ -419,29 +445,39 @@ Page({
     }
     const cache = this.categoryCache.VISITOR
     const displayed = cache.items.filter(item => item.unread && item.messageId)
-    if (!displayed.length) {
+    if (!displayed.length && !(cache.readThroughAt && cache.unreadCount > 0)) {
       return
     }
     this.markingVisitorsRead = true
     this.setData({ refreshing: true })
     let failed = false
     try {
-      for (const item of displayed) {
-        if (this.pageHidden || this.data.category !== 'VISITOR') {
-          break
-        }
-        try {
-          await opportunityModule.markReceivedRead(item.messageId, 'VISITOR')
+      if (cache.readThroughAt) {
+        await opportunityModule.markVisitorsRead(cache.readThroughAt)
+        for (const item of cache.items) {
           item.unread = false
-          cache.unreadCount = Math.max(0, cache.unreadCount - 1)
-          mipMessagingModule.invalidate()
         }
-        catch (error) {
-          recordLoadingFailure('opportunities.response', error)
-          if (requiresIdentityRefresh(error)) {
-            this.accessReady = false
+        cache.unreadCount = 0
+        mipMessagingModule.invalidate()
+      }
+      else {
+        for (const item of displayed) {
+          if (this.pageHidden || this.data.category !== 'VISITOR') {
+            break
           }
-          failed = true
+          try {
+            await opportunityModule.markReceivedRead(item.messageId, 'VISITOR')
+            item.unread = false
+            cache.unreadCount = Math.max(0, cache.unreadCount - 1)
+            mipMessagingModule.invalidate()
+          }
+          catch (error) {
+            recordLoadingFailure('opportunities.response', error)
+            if (requiresIdentityRefresh(error)) {
+              this.accessReady = false
+            }
+            failed = true
+          }
         }
       }
       if (!this.pageHidden && this.data.category === 'VISITOR') {
@@ -452,6 +488,13 @@ Page({
           message: failed ? '访客已显示，未读标记暂未更新，请刷新重试。' : '',
         })
       }
+    }
+    catch (error) {
+      recordLoadingFailure('opportunities.response', error)
+      if (requiresIdentityRefresh(error)) {
+        this.accessReady = false
+      }
+      this.setData({ message: '访客已显示，未读标记暂未更新，请刷新重试。' })
     }
     finally {
       this.markingVisitorsRead = false
@@ -467,6 +510,8 @@ Page({
     if (!reset && (!cache.nextCursor || this.data.loadingMore)) {
       return
     }
+    const requestSeq = ++cache.requestSeq
+    const keyword = category === 'INTERACTION' ? this.data.searchInput.trim() : ''
     if (reset && !cache.items.length && category === this.data.category) {
       this.setData({ state: 'loading', message: '' })
     }
@@ -474,13 +519,17 @@ Page({
       this.setData({ loadingMore: true, message: '' })
     }
     try {
-      const page = await opportunityModule.listReceived(
-        category,
-        reset ? undefined : cache.nextCursor || undefined,
-      )
+      const cursor = reset ? undefined : cache.nextCursor || undefined
+      const page = keyword
+        ? await opportunityModule.listReceived(category, cursor, keyword)
+        : await opportunityModule.listReceived(category, cursor)
+      if (requestSeq !== cache.requestSeq) {
+        return
+      }
       cache.loaded = true
+      cache.keyword = keyword
       if (category === 'INTERACTION') {
-        // 逐条同场事实按人合并成 ×N 卡片；翻页累计。
+        // 服务端已按人聚合完整次数，客户端只去重翻页记录。
         cache.rawItems = reset ? page.items : [...cache.rawItems, ...page.items]
         cache.items = mergeInteractionViews(cache.rawItems)
       }
@@ -491,6 +540,7 @@ Page({
       }
       cache.nextCursor = page.nextCursor || ''
       cache.unreadCount = page.unreadCount
+      cache.readThroughAt = page.readThroughAt || ''
       cache.state = cache.items.length ? 'ready' : 'empty'
       if (category === 'VISITOR') {
         this.setData({
@@ -510,6 +560,9 @@ Page({
       }
     }
     catch (error) {
+      if (requestSeq !== cache.requestSeq) {
+        return
+      }
       recordLoadingFailure('opportunities.response', error)
       if (requiresIdentityRefresh(error)) {
         this.accessReady = false
@@ -528,7 +581,9 @@ Page({
       }
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (requestSeq === cache.requestSeq) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
 

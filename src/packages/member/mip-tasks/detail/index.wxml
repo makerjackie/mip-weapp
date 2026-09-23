@@ -76,7 +76,10 @@
 
     <image wx:if="{{attachmentUrl}}" class="mt-[24rpx] h-[360rpx] w-full rounded-[8rpx] bg-panel-raised" mode="aspectFill" src="{{attachmentUrl}}" />
 
-    <view wx:if="{{task.status === 'COMPLETED'}}" class="mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5"><view class="flex items-center gap-2 text-[length:28rpx] font-semibold text-success"><t-icon name="check-circle" size="34rpx" color="var(--color-success)" /><text>任务已完成</text></view><view class="mt-2 text-[length:22rpx] text-muted">奖励经验值已按任务配置写入成长流水。</view></view>
+    <view wx:if="{{task.status === 'NOT_STARTED'}}" class="mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:28rpx] font-semibold">任务尚未开始</view><view class="mt-2 text-[length:22rpx] text-muted">请在任务开始后提交。</view></view>
+    <view wx:if="{{task.status === 'PENDING_REVIEW'}}" class="mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:28rpx] font-semibold text-brand">{{task.submissionStatus === 'reward_failed' ? '审批奖励处理中' : '已提交，等待审批'}}</view><view class="mt-2 text-[length:22rpx] text-muted">负责人审批后发放奖励，请勿重复提交。</view></view>
+    <view wx:if="{{task.submissionStatus === 'rejected'}}" class="mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:28rpx] font-semibold">请补充后重新提交</view><view class="mt-2 text-[length:24rpx] text-muted">{{task.reviewRemark}}</view></view>
+    <view wx:if="{{task.status === 'COMPLETED'}}" class="mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5"><view class="flex items-center gap-2 text-[length:28rpx] font-semibold text-success"><t-icon name="check-circle" size="34rpx" color="var(--color-success)" /><text>任务已完成</text></view><view class="mt-2 text-[length:22rpx] text-muted">奖励已按任务配置处理；奖金由负责人线下发放。</view></view>
     <view wx:elif="{{task.status === 'ENDED'}}" class="mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:28rpx] font-semibold">任务已截止</view><view class="mt-2 text-[length:22rpx] text-muted">截止后不能再提交完成记录。</view></view>
     <view wx:if="{{message}}" class="mt-[24rpx] rounded-[8rpx] bg-panel px-4 py-3 text-[length:24rpx] text-danger">{{message}}</view>
 
@@ -88,7 +91,7 @@
           <view class="flex h-[40rpx] w-[40rpx] items-center justify-center"><mip-icon name="file-download-line" size="{{17}}" color="var(--color-brand)" /></view>
           <text class="whitespace-nowrap text-[length:32rpx] font-medium leading-[44.8rpx] text-brand">下载模板</text>
         </view>
-        <view wx:if="{{attachmentAssetId}}" class="flex h-[80rpx] flex-1 items-center justify-center rounded-full bg-brand active:bg-brand-active" aria-role="button" bind:tap="submitTask">
+        <view wx:if="{{attachmentAssetId || !task.attachmentRequired}}" class="flex h-[80rpx] flex-1 items-center justify-center rounded-full bg-brand active:bg-brand-active" aria-role="button" bind:tap="submitTask">
           <text class="whitespace-nowrap text-[length:32rpx] font-medium leading-[44.8rpx] text-on-brand">{{submitting ? '提交中…' : '提交完成'}}</text>
         </view>
         <view wx:else class="flex h-[80rpx] flex-1 items-center justify-center gap-[16rpx] rounded-full bg-brand active:bg-brand-active" aria-role="button" bind:tap="chooseAttachment">

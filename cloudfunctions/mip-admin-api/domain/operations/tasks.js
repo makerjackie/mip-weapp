@@ -3,6 +3,9 @@
 const { defineManifest, serviceOperation } = require('./manifest')
 
 module.exports = defineManifest('TASKS', [
+  serviceOperation('mip.admin.tasks.submissions.list', 'QUERY', 'listTaskSubmissions'),
+  serviceOperation('mip.admin.tasks.assignments.list', 'QUERY', 'listAssignments'),
+  serviceOperation('mip.admin.tasks.editorOptions', 'QUERY', 'getTaskEditorOptions'),
   serviceOperation('mip.admin.tasks.list', 'QUERY', 'listTasks'),
   serviceOperation('mip.admin.tasks.get', 'QUERY', 'getTask'),
   serviceOperation('mip.admin.tasks.eligibleLevels.list', 'QUERY', 'listEligibleLevels'),

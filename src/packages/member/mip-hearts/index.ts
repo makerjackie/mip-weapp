@@ -20,10 +20,13 @@ interface HeartCache {
   state: PageState
   items: HeartView[]
   nextCursor: string
+  readThroughAt: string
+  unreadCount: number
+  requestSeq: number
 }
 
 function createCache(): HeartCache {
-  return { loaded: false, state: 'loading', items: [], nextCursor: '' }
+  return { loaded: false, state: 'loading', items: [], nextCursor: '', readThroughAt: '', unreadCount: 0, requestSeq: 0 }
 }
 
 function present(item: HeartHistoryItem, index: number): HeartView {
@@ -45,12 +48,15 @@ Page({
     loadingMore: false,
     accessToken: '',
     message: '',
+    receivedUnreadCount: 0,
     // figma 心动值三稿（1732_19460/2202_44989/2202_44878）的还原态开关，fixture 专用；
     // 生产保持 tabs+列表（被 mip-heart-history 测试 pin）。
     figmaLayout: false,
   },
   accessReady: false,
   checkingAccess: false,
+  pageHidden: false,
+  markingRead: false,
   cache: {
     SENT: createCache(),
     RECEIVED: createCache(),
@@ -63,12 +69,22 @@ Page({
   },
 
   onShow() {
+    this.pageHidden = false
     const resumed = mipIdentityModule.consumePendingResume()
     if (!this.accessReady || resumed) {
       void this.checkAccess()
       return
     }
-    void this.load(this.data.kind, true)
+    void Promise.all([this.load(this.data.kind, true), this.loadOtherKind()])
+  },
+
+  onHide() { this.pageHidden = true },
+  onUnload() { this.pageHidden = true },
+
+  async loadOtherKind() {
+    if (this.data.kind === 'SENT') {
+      await this.load('RECEIVED', true)
+    }
   },
 
   async checkAccess() {
@@ -79,7 +95,7 @@ Page({
     if (!ready) {
       return
     }
-    await this.load(this.data.kind, true)
+    await Promise.all([this.load(this.data.kind, true), this.loadOtherKind()])
   },
 
   openAccess() {
@@ -106,7 +122,40 @@ Page({
       state: current.state,
       items: current.items,
       nextCursor: current.nextCursor,
+    }, () => {
+      if (['ready', 'empty'].includes(current.state)) {
+        void this.markReceivedRead()
+      }
     })
+  },
+
+  async markReceivedRead() {
+    const current = this.cache.RECEIVED
+    if (this.pageHidden || !['ready', 'empty'].includes(this.data.state) || !current.loaded || this.markingRead || !current.readThroughAt || !current.unreadCount) {
+      return
+    }
+    this.markingRead = true
+    const readThroughAt = current.readThroughAt
+    const requestSeq = current.requestSeq
+    try {
+      await mipEventsModule.markHeartHistoryRead(readThroughAt)
+      if (current.requestSeq === requestSeq && current.readThroughAt === readThroughAt) {
+        current.unreadCount = 0
+        this.setData({ receivedUnreadCount: 0 })
+      }
+    }
+    catch (error) {
+      if (requiresIdentityRefresh(error)) {
+        this.accessReady = false
+      }
+      this.setData({ message: '心动记录已显示，未读标记暂未更新，请重试。' })
+    }
+    finally {
+      this.markingRead = false
+      if (current.requestSeq !== requestSeq && current.readThroughAt !== readThroughAt) {
+        void this.markReceivedRead()
+      }
+    }
   },
 
   async load(kind: HeartHistoryKind, reset: boolean) {
@@ -114,7 +163,8 @@ Page({
     if (!reset && (!current.nextCursor || this.data.loadingMore)) {
       return
     }
-    if (reset && !current.items.length) {
+    const requestSeq = ++current.requestSeq
+    if (reset && !current.items.length && kind === this.data.kind) {
       this.setData({ state: 'loading', message: '' })
     }
     else if (!reset) {
@@ -125,17 +175,30 @@ Page({
         kind,
         reset ? undefined : current.nextCursor,
       )
+      if (requestSeq !== current.requestSeq) {
+        return
+      }
       current.loaded = true
       current.items = reset
         ? response.items.map(present)
         : current.items.concat(response.items.map((item, index) => present(item, current.items.length + index)))
       current.nextCursor = response.nextCursor || ''
+      current.readThroughAt = response.readThroughAt || ''
+      current.unreadCount = response.unreadCount || 0
+      if (kind === 'RECEIVED') {
+        this.setData({ receivedUnreadCount: current.unreadCount }, () => {
+          void this.markReceivedRead()
+        })
+      }
       current.state = current.items.length ? 'ready' : 'empty'
       if (kind === this.data.kind) {
         this.apply(kind)
       }
     }
     catch (error) {
+      if (requestSeq !== current.requestSeq) {
+        return
+      }
       if (requiresIdentityRefresh(error)) {
         this.accessReady = false
       }
@@ -150,7 +213,9 @@ Page({
       }
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (requestSeq === current.requestSeq) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
 

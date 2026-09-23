@@ -2,6 +2,7 @@ export const brand = {
   productName: 'MIP',
   tagline: '会员、活动与合作',
   logoPath: '/assets/brand/mip-logo-yellow.png',
+  opportunityDefaultCoverPath: '/assets/brand/mip-opportunity-default.jpg',
   markText: 'MIP',
   operatorName: '深圳市奇点聚合科技有限公司',
   websiteDomain: 'mip.cool',

@@ -148,7 +148,7 @@ test('opportunity industry filters accept multiple child tags with any-match SQL
   }), { items: [], nextCursor: undefined })
   const listCall = calls.find(call => call.sql.includes('FROM mip_opportunities o'))
   assert.match(listCall.sql, /f\.tag_id IN \(\?, \?\)/)
-  assert.deepEqual(listCall.params.slice(2), ['INDUSTRY', ...industryIds])
+  assert.deepEqual(listCall.params.slice(4), ['INDUSTRY', ...industryIds])
 })
 
 test('opportunity role filter produces one app-scoped EXISTS clause', async () => {
@@ -165,7 +165,7 @@ test('opportunity role filter produces one app-scoped EXISTS clause', async () =
   assert.equal(calls.length, 1)
   assert.match(calls[0].sql, /EXISTS \([\s\S]*FROM mip_opportunity_roles r[\s\S]*r\.role_key = \?[\s\S]*\)/)
   assert.equal((calls[0].sql.match(/r\.role_key = \?/g) || []).length, 1)
-  assert.deepEqual(calls[0].params, ['trusted-app', 'PUBLISHED', 'strategist'])
+  assert.deepEqual(calls[0].params, ['trusted-app', 'PUBLISHED', null, null, 'strategist'])
 })
 
 test('archived opportunity drafts stay outside owner and detail APIs', async () => {

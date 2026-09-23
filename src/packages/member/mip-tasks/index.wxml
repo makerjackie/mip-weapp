@@ -41,6 +41,9 @@
         <view class="absolute left-[180rpx] top-[206rpx] whitespace-nowrap text-[length:24rpx] font-medium leading-[33.6rpx]">{{item.conditionText}}</view>
       </view>
 
+      <view wx:if="{{item.status === 'NOT_STARTED'}}" class="mt-[2rpx] rounded-b-[16rpx] bg-panel px-[24rpx] py-[20rpx] text-[length:24rpx] text-muted">任务尚未开始</view>
+      <view wx:if="{{item.status === 'PENDING_REVIEW'}}" class="mt-[2rpx] rounded-b-[16rpx] bg-panel px-[24rpx] py-[20rpx] text-[length:24rpx] text-brand">{{item.submissionStatus === 'reward_failed' ? '审批奖励处理中' : '等待负责人审批'}}</view>
+      <view wx:if="{{item.submissionStatus === 'rejected'}}" class="bg-panel px-[24rpx] py-[16rpx] text-[length:24rpx] text-muted">请补充后重新提交：{{item.reviewRemark}}</view>
       <!-- 附件卡（设计先行：attachment 字段有值才渲染；列表变体直角/收尾时底部圆角） -->
       <view wx:if="{{item.showAttachment}}" class="relative mt-[2rpx] h-[144rpx] bg-panel {{item.attachmentRoundedB ? 'rounded-b-[16rpx]' : ''}}">
         <view class="absolute left-[24rpx] top-[24rpx] flex h-[96rpx] w-[96rpx] items-center justify-center rounded-[8rpx] bg-canvas"><mip-icon name="folder-5-line" size="{{20}}" color="var(--color-brand)" /></view>

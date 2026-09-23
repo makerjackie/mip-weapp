@@ -1074,7 +1074,7 @@ async function projectReferral(database, event) {
 async function projectInterest(database, event) {
   assertAggregate(event, 'PROFILE_INTEREST')
   const row = await database.one(
-    `SELECT i.status, i.version, i.actor_user_id, i.target_user_id, i.source_type, i.source_id
+    `SELECT i.status, i.version, i.actor_user_id, i.target_user_id, i.source_type, i.source_id, i.updated_at
      FROM mip_profile_interests i
      INNER JOIN mip_users actor
        ON actor.app_id = i.app_id AND actor.id = i.actor_user_id AND actor.status = 'ACTIVE'
@@ -1126,7 +1126,7 @@ async function projectInterest(database, event) {
     OPPORTUNITY: ['opportunity-interest', '机会收到新的关注', '你的机会收到新的感兴趣标记。'],
     COOPERATION_CARD: ['cooperation-interest', '合作卡收到新的关注', '你的合作卡收到新的感兴趣标记。'],
     SUPER_CASE: ['case-interest', '超级案例收到新的关注', '你的超级案例收到新的感兴趣标记。'],
-    PROFILE: ['profile-interest', '公开档案收到新的关注', '有人对你的公开档案标记感兴趣。'],
+    PROFILE: ['profile-interest', '有人对你感兴趣', '有人对你感兴趣，打开小程序查看。'],
   }
   const label = labels[row.source_type]
   if (!label) return projection([], [], 'FACT_NO_LONGER_CURRENT')
@@ -1139,7 +1139,11 @@ async function projectInterest(database, event) {
       title: label[1],
       body: label[2],
       ...target,
-      external: {
+      external: row.source_type === 'PROFILE' ? {
+        channel: 'WECHAT_SUBSCRIPTION',
+        templateKey: 'PROFILE_INTEREST',
+        fields: { title: label[1], status: '有人对你感兴趣', receivedAt: notificationDateTime(row.updated_at) },
+      } : {
         channel: 'WECHAT_CUSTOMER_SERVICE',
         templateKey: 'CUSTOMER_SERVICE_TEXT',
         fields: { content: `${label[1]}，请在小程序内查看。` },

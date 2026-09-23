@@ -16,6 +16,7 @@ import { publicEventTypeLabel, resolvePrimaryBranchCity } from '../../modules/mi
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
+import { clearPageMedia, updatePageMedia } from '../../platform/storage/component-media'
 import { formatChineseMonthDay, formatLocalDate } from '../../utils/date'
 
 interface EventFilterOptionView extends EventDiscoveryOption {
@@ -95,6 +96,7 @@ Page({
   },
 
   onUnload() {
+    clearPageMedia(this)
     if (this.searchTimer) {
       clearTimeout(this.searchTimer)
     }
@@ -263,9 +265,9 @@ Page({
     const merged = append
       ? [...this.data.events, ...events.filter(item => !this.data.events.some(current => current.id === item.id))]
       : events
+    updatePageMedia(this, 'events', merged)
     this.setData({
       state: 'ready',
-      events: merged,
       cities: feed.cities || [],
       nextCursor: feed.nextCursor || '',
       loadingMore: false,

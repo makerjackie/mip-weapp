@@ -7,6 +7,7 @@ import type { AdminDetailRoute, AdminDetailView } from '../../modules/admin-deta
 import type { AdminOperationLaunchContext, AdminRowOperation } from '../../modules/admin-row-operations'
 import { messageScheduleCancelAction } from '../../modules/admin-row-operations'
 import { useAdminOperations } from './admin-operation-provider'
+import { SensitiveExportButton } from './sensitive-export-button'
 
 export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUpload }: {
   route: AdminDetailRoute
@@ -78,11 +79,16 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
       button('mip.admin.events.participants.import', '补录报名', id, 'events.registrations.manage'),
       <CheckinQrcodeButton key="checkin-qrcode" eventId={id} request={request} hasCapability={hasCapability} />,
     )
+    if (hasCapability('exports.create') && hasCapability('events.feedback.read')) actions.push(
+      <SensitiveExportButton key="event-feedback-export" kind="eventFeedback" eventId={id} query="" status="" />,
+    )
   }
   else if (route === 'orders') actions.push(button('mip.admin.refunds.submit', '提交退款', id, 'refunds.submit'))
   else if (route === 'tasks') {
     const task = record(view.source?.task)
     const status = String(task.status || '')
+    const templateUrl = safeMediaUrl(record(task.template).url)
+    if (templateUrl) actions.push(<Button key="task-template" href={templateUrl} target="_blank" rel="noopener noreferrer">查看 / 下载模板</Button>)
     const selected = String(task.assignmentMode || '') === 'SELECTED'
     actions.push(formPageButton('编辑任务', '/tasks/$taskId/edit', id, 'tasks.manage'))
     if (['DRAFT', 'UNPUBLISHED'].includes(status)) actions.push(button('mip.admin.tasks.publish', '发布任务', id, 'tasks.manage'))
@@ -91,7 +97,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
       button('mip.admin.tasks.assignMembers', '分配成员', id, 'tasks.manage'),
       button('mip.admin.tasks.revokeMembers', '撤销成员', id, 'tasks.manage'),
     )
-    actions.push(button('mip.admin.tasks.assign', '派发任务', id, 'tasks.manage'))
+    if (selected) actions.push(button('mip.admin.tasks.assign', '派发任务', id, 'tasks.manage'))
     actions.push(button('mip.admin.tasks.delete', '删除任务', id, 'tasks.manage'))
     if (hasCapability('tasks.manage') && onTaskExport) actions.push(
       <Button
@@ -115,14 +121,16 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     const completion = record(view.source?.completion)
     const submissionId = String(completion.id || completion.submissionId || id)
     const submissionStatus = String(completion.submissionStatus || '')
-    if (submissionStatus === 'pending') {
+    const attachmentUrl = safeMediaUrl(record(completion.attachment).url)
+    if (attachmentUrl) actions.push(<Button key="task-attachment" href={attachmentUrl} target="_blank" rel="noopener noreferrer">查看 / 下载附件</Button>)
+    if (completion.canReview === true && submissionStatus === 'pending_review') {
       actions.push(
-        button('mip.admin.tasks.submissions.approve', '通过', submissionId, 'tasks.review'),
-        button('mip.admin.tasks.submissions.reject', '退回', submissionId, 'tasks.review'),
+        button('mip.admin.tasks.submissions.approve', '通过', submissionId, 'tasks.manage'),
+        button('mip.admin.tasks.submissions.reject', '退回', submissionId, 'tasks.manage'),
       )
     }
-    else if (submissionStatus === 'approved') {
-      actions.push(button('mip.admin.tasks.submissions.retryReward', '重试奖励', submissionId, 'tasks.review'))
+    else if (completion.canReview === true && submissionStatus === 'reward_failed') {
+      actions.push(button('mip.admin.tasks.submissions.retryReward', '重试奖励', submissionId, 'tasks.manage'))
     }
   }
   else if (route === 'banners') {
@@ -198,13 +206,17 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     formPageButton('编辑内容', '/knowledge/$contentId/edit', id, 'knowledge.manage'),
     button('mip.admin.knowledge.contents.review', '审核内容', id, 'knowledge.manage'),
   )
-  else if (route === 'opportunities') actions.push(
-    formPageButton('编辑机会', '/opportunities/$opportunityId/edit', id, 'opportunities.moderate'),
-    button('mip.admin.opportunities.publish', '发布机会', id, 'opportunities.moderate'),
-    button('mip.admin.opportunities.end', '结束机会', id, 'opportunities.moderate'),
-    button('mip.admin.opportunities.unpublish', '下架机会', id, 'opportunities.moderate'),
-    button('mip.admin.opportunities.archive', '归档机会', id, 'opportunities.archive'),
-  )
+  else if (route === 'opportunities') {
+    const opportunity = record(view.source?.opportunity)
+    if (!opportunity.deleted && opportunity.status !== 'ARCHIVED') actions.push(
+      formPageButton('编辑机会', '/opportunities/$opportunityId/edit', id, 'opportunities.moderate'),
+      button('mip.admin.opportunities.publish', '发布机会', id, 'opportunities.moderate'),
+      button('mip.admin.opportunities.end', '结束机会', id, 'opportunities.moderate'),
+      button('mip.admin.opportunities.unpublish', '下架机会', id, 'opportunities.moderate'),
+      button('mip.admin.opportunities.archive', '归档机会', id, 'opportunities.archive'),
+      button('mip.admin.opportunities.delete', '删除机会', id, 'opportunities.archive'),
+    )
+  }
   else if (route === 'userContent') {
     const item = record(view.source?.userContent)
     const contentId = String(item.id || '')
@@ -234,6 +246,14 @@ export function useDetailRowAction(view: AdminDetailView | null) {
     view,
     operation,
   )
+}
+
+function safeMediaUrl(value: unknown) {
+  try {
+    const url = new URL(String(value || ''))
+    return url.protocol === 'https:' && !url.username && !url.password ? url.href : ''
+  }
+  catch { return '' }
 }
 
 function record(value: unknown): Record<string, unknown> {

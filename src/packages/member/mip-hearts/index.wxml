@@ -47,8 +47,7 @@
   <view class="grid grid-cols-2 border-b border-line text-center text-[length:24rpx]">
     <view wx:if="{{kind === 'SENT'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-kind="SENT" bind:tap="changeKind">我的心动</view>
     <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-kind="SENT" bind:tap="changeKind">我的心动</view>
-    <view wx:if="{{kind === 'RECEIVED'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-kind="RECEIVED" bind:tap="changeKind">对我心动</view>
-    <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-kind="RECEIVED" bind:tap="changeKind">对我心动</view>
+    <view class="flex min-h-[88rpx] items-center justify-center gap-2 border-b-[4rpx] py-4 {{kind === 'RECEIVED' ? 'border-brand text-brand' : 'border-transparent text-muted'}}" data-kind="RECEIVED" bind:tap="changeKind"><text>对我心动</text><view wx:if="{{receivedUnreadCount > 0}}" class="h-[16rpx] w-[16rpx] rounded-full bg-danger" aria-label="有新的心动" /></view>
   </view>
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3">
@@ -58,15 +57,17 @@
   <view wx:elif="{{state === 'access'}}"><mip-empty-state title="需要完成身份信息" description="完成身份信息后可以查看心动记录。" action-text="继续" bind:action="openAccess" /></view>
   <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法加载心动记录" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="retry" /></view>
   <mip-empty-state wx:elif="{{state === 'empty'}}" title="{{kind === 'SENT' ? '暂无我的心动' : '暂无对我心动'}}" description="活动签到后的心动记录会显示在这里。" />
-  <view wx:else class="mt-4 flex flex-col gap-3">
-    <view wx:for="{{items}}" wx:key="viewKey" class="rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-event-id="{{item.event.id}}" bind:tap="openEvent">
-      <view class="flex items-center gap-3" data-profile-ref="{{item.person.profileRef}}" catch:tap="openProfile">
-        <image wx:if="{{item.person.avatarUrl}}" class="h-[76rpx] w-[76rpx] shrink-0 rounded-full bg-brand-soft" mode="aspectFill" src="{{item.person.avatarUrl}}" />
-        <view wx:else class="flex h-[76rpx] w-[76rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:24rpx] font-semibold text-brand">{{item.personInitial}}</view>
-        <view class="min-w-0 flex-1"><view class="truncate text-[length:28rpx] font-semibold">{{item.person.nickname}}</view><view wx:if="{{item.person.headline}}" class="mt-1 line-clamp-1 text-[length:22rpx] text-muted">{{item.person.headline}}</view></view>
-        <mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" />
+  <view wx:else class="mt-4">
+    <view class="grid grid-cols-2 gap-[16rpx]">
+      <view wx:for="{{items}}" wx:key="viewKey" class="min-h-[374rpx] rounded-[16rpx] bg-panel px-[20rpx] pt-[32rpx] text-center active:bg-panel-raised" data-profile-ref="{{item.person.profileRef}}" bind:tap="openProfile" aria-role="button" aria-label="查看{{item.person.nickname}}的公开档案">
+        <view class="flex justify-center">
+          <image wx:if="{{item.person.avatarUrl}}" class="h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.person.avatarUrl}}" />
+          <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[length:32rpx] font-semibold text-brand">{{item.personInitial}}</view>
+        </view>
+        <view class="mt-[16rpx] truncate text-[length:32rpx] font-medium leading-[44.8rpx]">{{item.person.nickname}}</view>
+        <view wx:if="{{item.person.headline}}" class="mt-[8rpx] line-clamp-3 text-[length:20rpx] leading-[28rpx] text-muted">{{item.person.headline}}</view>
+        <view class="mt-[16rpx] min-h-[64rpx] border-t border-line py-[16rpx] text-[length:20rpx] text-brand" data-event-id="{{item.event.id}}" catch:tap="openEvent" aria-role="button" aria-label="查看活动{{item.event.title}}">{{item.event.title}}</view>
       </view>
-      <view class="mt-4 border-t border-line pt-3"><view class="line-clamp-1 text-[length:24rpx]">{{item.event.title}}</view><view class="mt-2 flex items-center justify-between gap-3 text-[length:22rpx] text-muted"><text>{{item.eventTimeText}}</text><text>{{item.updatedText}}</text></view></view>
     </view>
     <view wx:if="{{nextCursor}}" class="mt-1"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
   </view>

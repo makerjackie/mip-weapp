@@ -189,6 +189,10 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
     return callEvents<HeartHistoryPage>('mip.events.hearts.mine', { kind, cursor, limit })
   },
 
+  markHeartHistoryRead(readThroughAt: string) {
+    return callEvents<{ readAt: string }>('mip.events.hearts.markRead', { readThroughAt })
+  },
+
   getHeart(eventId: EventId) {
     return callEvents<HeartState>('mip.events.heart', { eventId })
   },

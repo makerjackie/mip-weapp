@@ -40,6 +40,7 @@ function createAdminExports({
       'USERS',
       'EVENT_ROSTER',
       'EVENT_ROSTER_ALL',
+      'EVENT_FEEDBACK',
       'EVENT_ORDERS',
       'ORDERS',
       'GROWTH_ENTRIES',
@@ -364,7 +365,7 @@ function createAdminExports({
   }
 
   async function exportScope(context, exportType, input) {
-    if (exportType === 'EVENT_ROSTER' || exportType === 'EVENT_ORDERS') {
+    if (exportType === 'EVENT_ROSTER' || exportType === 'EVENT_ORDERS' || exportType === 'EVENT_FEEDBACK') {
       return (await access.eventAuthorization(
         context,
         input.eventId,
@@ -524,6 +525,9 @@ function normalizeExportFilters(exportType, value, scope, normalizers) {
   }
   else if (exportType === 'EVENT_ROSTER_ALL') {
     Object.assign(normalized, normalizers.events(exportType, filters))
+  }
+  else if (exportType === 'EVENT_FEEDBACK') {
+    normalized.eventId = scope.scopeId
   }
   else if (exportType === 'EVENT_ORDERS') {
     Object.assign(normalized, normalizers.orders({ ...filters, eventId: scope.scopeId }))

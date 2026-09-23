@@ -23,6 +23,8 @@ const database = mysqlDatabase()
 const service = createTaskService(createTaskRepository(database), createContentSafety(cloud))
 const outboxMutationActions = new Set([
   'completeTask',
+  'admin.approveSubmission',
+  'admin.retrySubmissionReward',
   'admin.publishTask',
   'admin.unpublishTask',
   'admin.deleteTask',

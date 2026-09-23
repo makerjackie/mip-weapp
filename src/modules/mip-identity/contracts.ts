@@ -61,6 +61,8 @@ export interface ProfileOrganization {
 }
 
 export interface ProfileVisibility {
+  talentSearch?: boolean
+  opportunitiesForNonPlayers?: boolean
   realName?: boolean
   gender?: boolean
   careerIdentity?: boolean
@@ -250,11 +252,26 @@ export interface ProfileCardSceneResolution {
 
 export const MIP_IDENTITY_CONTRACT_VERSION = 1 as const
 
+export interface PhoneSmsRequestResult {
+  challengeId: string
+  retryAfterSeconds: number
+  expiresAt: string
+  status: 'ACCEPTED'
+}
+
+export interface BindSmsPhoneInput {
+  phone: string
+  code: string
+  challengeId: string
+}
+
 export interface MipIdentityActionInputMap {
   signIn: Record<string, never>
   getAccessSnapshot: Record<string, never>
   acceptAgreements: AgreementAcceptanceInput
   bindWechatPhone: { code: string }
+  requestPhoneSms: { phone: string }
+  bindSmsPhone: BindSmsPhoneInput
   closeAccount: AccountClosureInput
   getProfile: Record<string, never>
   getMyProfileCardCode: Record<string, never>
@@ -272,6 +289,8 @@ export interface MipIdentityActionResultMap {
   getAccessSnapshot: IdentityAccessSnapshot
   acceptAgreements: IdentityAccessSnapshot
   bindWechatPhone: IdentityAccessSnapshot
+  requestPhoneSms: PhoneSmsRequestResult
+  bindSmsPhone: IdentityAccessSnapshot
   closeAccount: AccountClosureResult
   getProfile: MipProfileSnapshot
   getMyProfileCardCode: ProfileCardCode
@@ -297,6 +316,8 @@ export interface MipIdentityGateway {
   getAccessSnapshot: () => Promise<IdentityAccessSnapshot>
   acceptAgreements: (input: AgreementAcceptanceInput) => Promise<IdentityAccessSnapshot>
   bindWechatPhone: (code: string) => Promise<IdentityAccessSnapshot>
+  requestPhoneSms: (phone: string) => Promise<PhoneSmsRequestResult>
+  bindSmsPhone: (input: BindSmsPhoneInput) => Promise<IdentityAccessSnapshot>
   closeAccount: (input: AccountClosureInput) => Promise<AccountClosureResult>
   getProfile: () => Promise<MipProfileSnapshot>
   getMyProfileCardCode: () => Promise<ProfileCardCode>

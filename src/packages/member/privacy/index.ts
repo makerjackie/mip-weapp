@@ -77,17 +77,12 @@ Page({
     caseNavigateTo({ url: '/packages/member/bind-phone/index' })
   },
 
-  // 三级页设计稿未出（QS）：一期保留行 + 占位提示，待稿落地后替换。
-  openBindWechat() {
-    wx.showToast({ title: '功能建设中', icon: 'none' })
-  },
-
   // journey-review J5-03：隐私设置独立成页（两行开关），不再页内分支还原。
   openPrivacySettings() {
     caseNavigateTo({ url: '/packages/member/privacy-settings/index' })
   },
 
-  // 会员服务协议无独立页（QS）：与绑定微信同口径占位提示。
+  // 会员服务协议正式内容待产品补充（QS）。
   openMembershipAgreement() {
     wx.showToast({ title: '功能建设中', icon: 'none' })
   },

@@ -110,6 +110,7 @@ Page({
   reportIntent: null as CommunityReportIntent | null,
   visitKey: '',
   safetyActionBusy: false,
+  influenceRequest: 0,
   stopInterestSubscription: null as (() => void) | null,
 
   onLoad(query: Record<string, string | undefined>) {
@@ -137,6 +138,9 @@ Page({
   },
 
   onShow() {
+    if (this.data.profile) {
+      void this.loadProfile()
+    }
     const resumed = mipIdentityModule.consumePendingResume()
     if (resumed?.action === 'INTERACT' && this.pendingAction) {
       const action = this.pendingAction
@@ -222,11 +226,26 @@ Page({
       if (profileRef !== this.data.profileRef) {
         return
       }
+      const wasPending = this.data.interestState === 'syncing'
       this.applyInterest(interest)
+      if (wasPending && !interest.pending && !interest.error) {
+        void this.refreshInfluence()
+      }
       if (interest.error) {
         wx.showToast({ title: interest.error.message, icon: 'none' })
       }
     })
+  },
+
+  async refreshInfluence() {
+    const request = ++this.influenceRequest
+    try {
+      const aggregate = await opportunityModule.getPublicProfile(this.data.profileRef)
+      if (request === this.influenceRequest && this.data.interestState !== 'syncing') {
+        this.setData({ influence: aggregate.influence || null })
+      }
+    }
+    catch { /* An optional counter refresh must not hide the loaded profile. */ }
   },
 
   applyInterest(interest: ProfileInterestMutationSnapshot) {
@@ -251,6 +270,10 @@ Page({
     }
     const category = String(event.currentTarget.dataset.category || '')
     if (!['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR'].includes(category)) {
+      return
+    }
+    if (category === 'ACTIVE_INTEREST') {
+      caseNavigateTo({ url: `/packages/member/mip-profile-interests/index?profileRef=${encodeURIComponent(this.data.profileRef)}` })
       return
     }
     caseNavigateTo({
@@ -339,7 +362,7 @@ Page({
     void this.runProfileAction('interest')
   },
 
-  // 「N感兴趣」名单入口：玩家一期占位（他人档案名单详情未开放），普通用户弹解锁。
+  // J4-02b：玩家查看公开的感兴趣名单，普通用户保留原生解锁提示。
   openInterestList() {
     if (this.data.isSelf) {
       return
@@ -348,7 +371,10 @@ Page({
       void showIdentityUnlockModal().catch(() => undefined)
       return
     }
-    wx.showToast({ title: '感兴趣名单即将开放', icon: 'none' })
+    if (this.data.interactionBar !== 'active' || !this.data.influence) {
+      return
+    }
+    caseNavigateTo({ url: `/packages/member/mip-profile-interests/index?profileRef=${encodeURIComponent(this.data.profileRef)}` })
   },
 
   async openProfileMore() {

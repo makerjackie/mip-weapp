@@ -10,12 +10,11 @@
   <block wx:else>
     <!-- journey-review J5-01 账号设置（figma 1728_19083）：
          「账号与安全」+「协议」两组行卡直达三级页。第二组组名帧内残留「账号与安全」，
-         按语义实现为「协议」；绑定微信 / 会员服务协议三级页设计未出（QS），先占位提示。 -->
+         按语义实现为「协议」；会员服务协议三级页设计未出（QS），先占位提示。 -->
     <view class="mt-[15rpx] -mx-3">
       <mip-section-header title="账号与安全" />
       <mip-detail-row-group class="mt-[23.2rpx]">
         <mip-detail-row label="绑定手机" actionable="{{true}}" bind:tap="openBindPhone" />
-        <mip-detail-row label="绑定微信" actionable="{{true}}" bind:tap="openBindWechat" />
         <mip-detail-row label="隐私设置" actionable="{{true}}" bind:tap="openPrivacySettings" />
       </mip-detail-row-group>
       <mip-section-header class="mt-[48rpx]" title="协议" />
@@ -49,11 +48,11 @@
         <t-button block variant="outline" theme="danger" loading="{{localLogoutState === 'processing'}}" disabled="{{closureState === 'processing'}}">退出登录</t-button>
       </view>
     </view>
-    <view class="mt-5 rounded-[24rpx] border border-line bg-panel px-5 py-5">
+    <view id="privacy-closure-card" class="mt-5 rounded-[24rpx] border border-line bg-panel px-5 py-5">
       <view class="text-[length:28rpx] font-semibold">账号注销</view>
       <view class="mt-2 text-[length:22rpx] leading-6 text-muted">注销后无法恢复。注销前请确认没有待处理的订单或退款。</view>
       <view wx:if="{{closureState === 'idle'}}" class="mt-5"><t-button block variant="outline" theme="danger" bind:tap="startAccountClosure">注销账号</t-button></view>
-      <view wx:else class="mt-5 rounded-[16rpx] bg-panel-raised px-4 py-4">
+      <view wx:else id="privacy-closure-processing" class="mt-5 rounded-[16rpx] bg-panel-raised px-4 py-4">
         <view class="text-[length:24rpx] font-semibold">输入“{{requiredConfirmationPhrase}}”</view>
         <input class="mt-3 block h-[88rpx] w-full max-w-full box-border rounded-[16rpx] bg-panel px-3 text-[length:24rpx]" aria-label="账号注销确认短语" value="{{confirmationPhrase}}" maxlength="20" disabled="{{closureState === 'processing'}}" bindinput="updateConfirmationPhrase" placeholder="输入确认短语" placeholder-style="color:#B3B3B3" />
         <view wx:if="{{message}}" class="mt-3 text-[length:22rpx] leading-6 text-danger">{{message}}</view>

@@ -215,7 +215,7 @@ describe('admin people mutation forms', () => {
       'mip.admin.adminAccounts.create', '', detailReader({}),
     )
     assert.equal(buildAdminPeopleMutationInput(definition, {
-      loginAccount: 'ab', name: 'Test', phone: '13800138000', roleKey: 'PLATFORM_OPERATIONS',
+      loginAccount: 'ab', name: 'Test', userId: '30000000-0000-4000-8000-000000000003', roleKey: 'PLATFORM_OPERATIONS',
     }), null)
   })
 
@@ -224,7 +224,7 @@ describe('admin people mutation forms', () => {
       'mip.admin.adminAccounts.create', '', detailReader({}),
     )
     assert.equal(buildAdminPeopleMutationInput(definition, {
-      loginAccount: 'test_user', name: '', phone: '13800138000', roleKey: 'PLATFORM_OPERATIONS',
+      loginAccount: 'test_user', name: '', userId: '30000000-0000-4000-8000-000000000003', roleKey: 'PLATFORM_OPERATIONS',
     }), null)
   })
 
@@ -233,7 +233,7 @@ describe('admin people mutation forms', () => {
       'mip.admin.adminAccounts.create', '', detailReader({}),
     )
     assert.equal(buildAdminPeopleMutationInput(definition, {
-      loginAccount: 'test_user', name: 'Test', phone: '13800138000', roleKey: 'INVALID_ROLE',
+      loginAccount: 'test_user', name: 'Test', userId: '30000000-0000-4000-8000-000000000003', roleKey: 'INVALID_ROLE',
     }), null)
   })
 
@@ -242,11 +242,11 @@ describe('admin people mutation forms', () => {
       'mip.admin.adminAccounts.create', '', detailReader({}),
     )
     const input = buildAdminPeopleMutationInput(definition, {
-      loginAccount: 'test_user', name: 'Test', phone: '13800138000', roleKey: 'PLATFORM_OPERATIONS',
+      loginAccount: 'test_user', name: 'Test', userId: '30000000-0000-4000-8000-000000000003', roleKey: 'PLATFORM_OPERATIONS',
     })
     assert.equal(input?.loginAccount, 'test_user')
     assert.equal(input?.name, 'Test')
-    assert.equal(input?.phone, '13800138000')
+    assert.equal(input?.userId, '30000000-0000-4000-8000-000000000003')
     assert.equal(input?.roleKey, 'PLATFORM_OPERATIONS')
   })
 
@@ -279,7 +279,7 @@ describe('admin people mutation forms', () => {
       'mip.admin.entitlements.grant', '', detailReader({}),
     )
     assert.equal(buildAdminPeopleMutationInput(definition, {
-      userId: 'user-1', entitlementType: 'EVENT_PASS', amount: 0,
+      userId: 'user-1', entitlementType: 'EXP', amount: 0,
     }), null)
   })
 
@@ -288,7 +288,7 @@ describe('admin people mutation forms', () => {
       'mip.admin.entitlements.grant', '', detailReader({}),
     )
     assert.equal(buildAdminPeopleMutationInput(definition, {
-      userId: 'user-1', entitlementType: 'EVENT_PASS', amount: -5,
+      userId: 'user-1', entitlementType: 'EXP', amount: -5,
     }), null)
   })
 
@@ -297,10 +297,10 @@ describe('admin people mutation forms', () => {
       'mip.admin.entitlements.grant', '', detailReader({}),
     )
     const input = buildAdminPeopleMutationInput(definition, {
-      userId: 'user-1', entitlementType: 'EVENT_PASS', amount: 100,
+      userId: 'user-1', entitlementType: 'EXP', amount: 100,
     })
     assert.equal(input?.userId, 'user-1')
-    assert.equal(input?.entitlementType, 'EVENT_PASS')
+    assert.equal(input?.entitlementType, 'EXP')
     assert.equal(input?.amount, 100)
   })
 
@@ -341,14 +341,14 @@ describe('admin people mutation forms', () => {
     // An account with spaces or special chars would be rejected before hitting the DB
     const result1 = buildAdminPeopleMutationInput(
       { action: 'mip.admin.adminAccounts.create' as AdminPeopleMutationAction, capability: 'roles.change', title: '', description: '', fields: [], values: {}, targetId: '' },
-      { loginAccount: 'test user!', name: 'Test', phone: '13800138000', roleKey: 'PLATFORM_OPERATIONS' }
+      { loginAccount: 'test user!', name: 'Test', userId: '30000000-0000-4000-8000-000000000003', roleKey: 'PLATFORM_OPERATIONS' }
     )
     assert.equal(result1, null, 'loginAccount with spaces and special chars should be rejected')
 
     // A valid loginAccount passes client validation (server checks uniqueness)
     const result2 = buildAdminPeopleMutationInput(
       { action: 'mip.admin.adminAccounts.create' as AdminPeopleMutationAction, capability: 'roles.change', title: '', description: '', fields: [], values: {}, targetId: '' },
-      { loginAccount: 'test_user_001', name: 'Test', phone: '13800138000', roleKey: 'PLATFORM_OPERATIONS' }
+      { loginAccount: 'test_user_001', name: 'Test', userId: '30000000-0000-4000-8000-000000000003', roleKey: 'PLATFORM_OPERATIONS' }
     )
     assert.ok(result2, 'valid loginAccount should pass client validation')
   })

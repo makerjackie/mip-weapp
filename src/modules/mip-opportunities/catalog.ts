@@ -33,12 +33,7 @@ export function isOpportunityTypeKey(value: unknown): value is OpportunityTypeKe
   return typeof value === 'string' && opportunityTypeLabels.has(value as OpportunityTypeKey)
 }
 
-/**
- * journey-review QZ2 项目状态三态（招募中/结束项目/下架项目）对应的编辑页选择值。
- * 服务端当前以 PUBLISHED / ENDED 承载「招募中 / 结束项目」。
- * 「下架项目」编辑页半屏置灰标「即将支持」：服务端补 UNPUBLISHED 前保存不落该态
- * （此前映射 DRAFT 的方案会让客户端对下架结果撒谎，已按 review 改为不承诺）。
- */
+/** 发布时由服务端原子保存招募、结束或下架状态。 */
 export type OpportunityProjectStatus = 'RECRUITING' | 'ENDED' | 'UNPUBLISHED'
 
 export const opportunityProjectStatusOptions: Array<{
@@ -55,13 +50,7 @@ export function opportunityProjectStatusLabel(key: OpportunityProjectStatus) {
   return opportunityProjectStatusOptions.find(item => item.key === key)?.label || key
 }
 
-/**
- * 旅程口径的列表状态：DRAFT 且带 publishedAt 视为「已下架」
- * （此前公开发布过、现仅自己可见），未发布过的 DRAFT 仍是「草稿」。
- * 注意：该「已下架」分支当前服务端不可达——保存逻辑对已发布机会 publish:false
- * 仍落 PUBLISHED，不会产生 DRAFT+publishedAt；保留此回退是为了服务端补
- * UNPUBLISHED 一等状态后数据就绪即生效（见 .tmp/shared-change-requests）。
- */
+/** 兼容早期来源中的 DRAFT + publishedAt，正式下架使用 UNPUBLISHED。 */
 export function journeyStatusOf(item: { status: OpportunityStatus, publishedAt?: string }): OpportunityStatus {
   if (item.status === 'DRAFT' && item.publishedAt) {
     return 'UNPUBLISHED'

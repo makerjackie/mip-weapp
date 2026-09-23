@@ -62,14 +62,15 @@ describe('MIP profile membership journey frames', () => {
     expect(template).toContain('class="profile-inbox-entry"')
     expect(template).toContain('bind:tap="openNotifications"')
     expect(template).toContain('profile-inbox-unread')
-    expect(template).toContain('notificationUnreadCount > 99')
+    expect(template).toContain('name="bell-notification" size="{{24}}"')
+    expect(template).not.toContain('notificationUnreadCount > 99')
     expect(styles).toMatch(/\.profile-inbox-entry\s*\{[\s\S]*?position: absolute;/)
-    expect(styles).toMatch(/\.profile-inbox-entry\s*\{[\s\S]*?right: 24rpx;/)
+    expect(styles).toMatch(/\.profile-inbox-entry\s*\{[\s\S]*?right: 36rpx;/)
     // 站内信 72rpx 命中区叠在 summary 右端之上：档案编辑区留出右侧 padding，命中不被截走。
     expect(styles).toMatch(/\.profile-summary\s*\{[\s\S]*?padding-right: 88rpx;/)
     // 红点中心对齐图标右上角（图标 40rpx 居中于 72rpx 命中区），修正原 16rpx 错位。
-    expect(styles).toMatch(/\.profile-inbox-unread\s*\{[\s\S]*?top: -2rpx;/)
-    expect(styles).toMatch(/\.profile-inbox-unread\s*\{[\s\S]*?right: -2rpx;/)
+    expect(styles).toMatch(/\.profile-inbox-unread\s*\{[\s\S]*?top: 12rpx;/)
+    expect(styles).toMatch(/\.profile-inbox-unread\s*\{[\s\S]*?left: 44rpx;/)
   })
 
   it('badges both hearts and visitors from their received-list unread counts', () => {
@@ -78,8 +79,8 @@ describe('MIP profile membership journey frames', () => {
     const statHeader = readSource('src/components/mip-stat-header/index.wxml')
 
     // M1 00:35:58：心动值 / 访客有红点，嘉宾 / 互动过无。
-    expect(script).toContain('opportunityModule.listReceived(\'ACTIVE_INTEREST\')')
-    expect(script).toContain('updates.interestUnreadCount = interestResult.value.unreadCount')
+    expect(script).toContain('mipEventsModule.listHeartHistory(\'RECEIVED\')')
+    expect(script).toContain('updates.interestUnreadCount = interestResult.value.unreadCount || 0')
     expect(script).toContain('interestUnreadCount: 0')
     expect(template).toContain('label: \'心动值\', category: \'ACTIVE_INTEREST\', target: \'influence\', badge: interestUnreadCount > 0, badgeLabel: \'有新的心动\'')
     expect(template).toContain('label: \'访客\', target: \'visitor\', badge: visitorUnreadCount > 0')
@@ -96,7 +97,7 @@ describe('MIP profile membership journey frames', () => {
     expect(script).toMatch(/scope=influence&category=\$\{category\}/)
     expect(script).toContain('[\'GUEST\', \'INTERACTION\', \'ACTIVE_INTEREST\'].includes(category)')
     expect(script).toContain('({ 嘉宾: \'GUEST\', 互动过: \'INTERACTION\', 心动值: \'ACTIVE_INTEREST\' }')
-    expect(script).toContain('\'/packages/member/mip-received/index?scope=hearts&category=ACTIVE_INTEREST\'')
+    expect(script).toContain('\'/packages/member/mip-hearts/index\'')
     expect(script).toContain('\'/packages/member/mip-received/index?scope=influence&category=VISITOR\'')
     expect(script).toContain('\'/packages/member/mip-notifications/index\'')
   })

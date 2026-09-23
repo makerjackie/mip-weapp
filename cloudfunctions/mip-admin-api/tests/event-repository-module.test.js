@@ -125,6 +125,7 @@ describe('admin event repository module', () => {
       async transaction(work) { return work(this) },
     })
     assert.deepEqual(Object.keys(adapter).sort(), [
+      'cancelEventRegistrations',
       'changeEventStatus',
       'checkIn',
       'cloneEvent',

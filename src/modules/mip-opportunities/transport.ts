@@ -18,6 +18,7 @@ const readActions = new Set([
   'listPeople',
   'getPublicProfileAggregate',
   'getProfileInfluence',
+  'listPublicProfileInterests',
   'listMine',
   'listReceivedInteractions',
   'getOpportunityCommentSettings',

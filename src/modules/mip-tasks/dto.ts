@@ -2,8 +2,8 @@ import type { TaskCompletion, TaskPage, TaskTemplateMedia, UserTaskCard } from '
 import { MipTasksError } from './types'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const USER_TASK_STATUSES = new Set(['AVAILABLE', 'COMPLETED', 'ENDED'])
-const COMPLETION_RESULTS = new Set(['SUCCESS', 'FAILED'])
+const USER_TASK_STATUSES = new Set(['AVAILABLE', 'COMPLETED', 'ENDED', 'PENDING_REVIEW', 'NOT_STARTED'])
+const COMPLETION_RESULTS = new Set(['SUCCESS', 'FAILED', 'PENDING'])
 const IMAGE_CONTENT_TYPES = new Set(['image/jpeg', 'image/png'])
 
 function invalidResponse(): never {
@@ -113,6 +113,14 @@ function parseUserTaskCard(value: unknown, detail: boolean): UserTaskCard {
     'status',
     'completion',
     'template',
+    'submissionStatus',
+    'reviewRemark',
+    'purpose',
+    'completionStandard',
+    'starLevel',
+    'periodStartAt',
+    'periodEndAt',
+    'weeklyDeliverAt',
   ], [
     'id',
     'name',
@@ -128,7 +136,7 @@ function parseUserTaskCard(value: unknown, detail: boolean): UserTaskCard {
   const hasTemplate = booleanValue(item.hasTemplate)
   const completion = item.completion === undefined ? undefined : parseCompletionSummary(item.completion)
   const template = item.template === undefined ? undefined : parseTemplate(item.template)
-  if ((status === 'COMPLETED') !== Boolean(completion)
+  if ((['COMPLETED', 'PENDING_REVIEW'].includes(status) || item.submissionStatus === 'rejected') !== Boolean(completion)
     || (!hasTemplate && template)
     || (detail && hasTemplate && !template)) {
     invalidResponse()
@@ -143,6 +151,14 @@ function parseUserTaskCard(value: unknown, detail: boolean): UserTaskCard {
     hasTemplate,
     version: safeInteger(item.version, 1, Number.MAX_SAFE_INTEGER),
     status,
+    ...(item.submissionStatus !== undefined ? { submissionStatus: boundedString(item.submissionStatus, 32) } : {}),
+    ...(item.reviewRemark !== undefined ? { reviewRemark: boundedString(item.reviewRemark, 500) } : {}),
+    ...(item.purpose !== undefined ? { purpose: boundedString(item.purpose, 500) } : {}),
+    ...(item.completionStandard !== undefined ? { completionStandard: boundedString(item.completionStandard, 1000) } : {}),
+    ...(item.starLevel !== undefined ? { starLevel: safeInteger(item.starLevel, 0, 5) } : {}),
+    ...(item.periodStartAt !== undefined ? { periodStartAt: isoString(item.periodStartAt, true) } : {}),
+    ...(item.periodEndAt !== undefined ? { periodEndAt: isoString(item.periodEndAt, true) } : {}),
+    ...(item.weeklyDeliverAt !== undefined ? { weeklyDeliverAt: boundedString(item.weeklyDeliverAt, 5) } : {}),
     ...(completion ? { completion } : {}),
     ...(template ? { template } : {}),
   }
@@ -181,6 +197,7 @@ export function parseTaskCompletion(value: unknown): TaskCompletion {
     'completedAt',
     'alreadyCompleted',
     'balanceAfter',
+    'submissionStatus',
   ], [
     'id',
     'taskId',
@@ -202,6 +219,7 @@ export function parseTaskCompletion(value: unknown): TaskCompletion {
     resultStatus: resultStatus as TaskCompletion['resultStatus'],
     completedAt: isoString(item.completedAt, false),
     alreadyCompleted: booleanValue(item.alreadyCompleted),
+    ...(item.submissionStatus !== undefined ? { submissionStatus: boundedString(item.submissionStatus, 32) } : {}),
     ...(item.balanceAfter !== undefined ? { balanceAfter } : {}),
   }
 }

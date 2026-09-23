@@ -387,6 +387,9 @@ export interface HeartHistoryItem {
 export interface HeartHistoryPage {
   kind: HeartHistoryKind
   items: HeartHistoryItem[]
+  totalCount?: number
+  unreadCount?: number
+  readThroughAt?: string
   nextCursor?: string
 }
 
@@ -458,6 +461,7 @@ export interface MipEventsGateway {
   createInvitationCode: (eventId: EventId) => Promise<EventInvitationCode>
   listHeartCandidates: (eventId: EventId) => Promise<HeartCandidate[]>
   listHeartHistory: (kind: HeartHistoryKind, cursor?: string, limit?: number) => Promise<HeartHistoryPage>
+  markHeartHistoryRead: (readThroughAt: string) => Promise<{ readAt: string }>
   getHeart: (eventId: EventId) => Promise<HeartState>
   setHeart: (eventId: EventId, targetRef: string | null, expectedVersion?: number) => Promise<HeartState>
   getFeedback: (eventId: EventId) => Promise<EventFeedback | null>

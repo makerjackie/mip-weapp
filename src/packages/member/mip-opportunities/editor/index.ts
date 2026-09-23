@@ -2,6 +2,7 @@ import type { BranchId, CooperationRoleKey, OpportunityId } from '../../../../mo
 import type { AiDraftId } from '../../../../modules/mip-ai'
 import type { OpportunityCatalog, OpportunityDetail, OpportunityLocationType, OpportunityProjectStatus, OpportunityTypeKey, PublicPerson } from '../../../../modules/mip-opportunities'
 import type { OpportunityTextDraft } from '../../../../modules/mip-opportunities/text-parser'
+import { brand } from '../../../../config/brand'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { mipAiModule } from '../../../../modules/mip-ai/client'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
@@ -48,18 +49,11 @@ function isCancelledImageSelection(error: unknown) {
   return /cancel/i.test(message)
 }
 
-/**
- * journey-review QZ2 复审：服务端尚无 UNPUBLISHED 一等状态（已发布机会 publish:false
- * 仍落 PUBLISHED，见 .tmp/shared-change-requests），半屏保留「下架项目」文案但置灰并标
- * 「即将支持」；新建流程也不能一步选「结束项目」（发布后再结束）。
- */
+/** 只有已发布的项目可结束或下架。 */
 function projectStatusOptionViews(editorMode: OpportunityEditorMode) {
   return opportunityProjectStatusOptions.map((item) => {
-    if (item.key === 'UNPUBLISHED') {
-      return { ...item, disabled: true, disabledNote: '即将支持' }
-    }
-    if (item.key === 'ENDED' && editorMode === 'CREATE') {
-      return { ...item, disabled: true, disabledNote: '发布后可结束项目' }
+    if (item.key !== 'RECRUITING' && editorMode !== 'PUBLISHED') {
+      return { ...item, disabled: true, disabledNote: '发布后可调整状态' }
     }
     return { ...item, disabled: false, disabledNote: '' }
   })
@@ -85,6 +79,7 @@ Page({
     targetSummaryError: '',
     descriptionError: '',
     roleError: '',
+    playersOnly: false,
     scopeType: 'PLATFORM' as 'PLATFORM' | 'BRANCH',
     branchId: '' as BranchId | '',
     branchIndex: 0,
@@ -96,6 +91,7 @@ Page({
     locationCityTagIds: [] as string[],
     coverAssetId: '',
     coverUrl: '',
+    defaultCoverUrl: brand.opportunityDefaultCoverPath,
     coverUploading: false,
     catalog: { branches: [], cityTags: [], industryGroups: [], industryTags: [], abilityTags: [] } as OpportunityCatalog,
     branchOptions: [{ id: '', name: 'MIP 平台', cityName: '全国' }],
@@ -218,11 +214,10 @@ Page({
     const terms = detail?.commercialTerms
     const locationTypes = terms?.locations.filter(item => item.type !== 'CITY').map(item => item.type) || []
     const locationCityTagIds = terms?.locations.filter(item => item.type === 'CITY').map(item => item.city?.id || item.cityTagId || '').filter(Boolean) || []
-    // journey-review QZ2：编辑已有机会时按服务端状态回填项目状态。
-    // 「已下架」（DRAFT+publishedAt）在服务端补 UNPUBLISHED 前不可达（保存不落该态），
-    // 数据就绪前按招募中回填，重新保存即重新上架；见 .tmp/shared-change-requests。
     const journeyStatus = detail ? journeyStatusOf(detail) : 'DRAFT'
-    const projectStatus: OpportunityProjectStatus = journeyStatus === 'ENDED' ? 'ENDED' : 'RECRUITING'
+    const projectStatus: OpportunityProjectStatus = journeyStatus === 'UNPUBLISHED'
+      ? 'UNPUBLISHED'
+      : journeyStatus === 'ENDED' ? 'ENDED' : 'RECRUITING'
     const typeKeys = new Set(detail?.typeKeys || [])
     this.setData({
       catalog,
@@ -241,6 +236,7 @@ Page({
       targetSummaryError: '',
       descriptionError: '',
       roleError: '',
+      playersOnly: detail?.playersOnly === true,
       scopeType: detail?.branchId ? 'BRANCH' : 'PLATFORM',
       branchId: detail?.branchId || '',
       cityTagId: detail?.city?.id || '',
@@ -465,7 +461,7 @@ Page({
     }
   },
 
-  /** journey-review QZ2：项目状态半屏选择；置灰项（下架/新建即结束）不响应。 */
+  /** journey-review QZ2：项目状态半屏选择；新建项目只能选择招募中。 */
   chooseProjectStatus(event: WechatMiniprogram.TouchEvent) {
     const key = String(event.currentTarget.dataset.key || '') as OpportunityProjectStatus
     const option = this.data.projectStatusOptions.find(item => item.key === key)
@@ -478,23 +474,9 @@ Page({
   /** journey-review J4-04 ⑥：顶层可见范围两选项；分会发布保留在更多设置。 */
   chooseVisibility(event: WechatMiniprogram.TouchEvent) {
     const choice = String(event.currentTarget.dataset.visibility || '') as VisibilityChoice
-    if (choice === 'PLATFORM') {
-      this.setData({ scopeType: 'PLATFORM', branchId: '', branchIndex: 0 })
-      return
+    if (choice === 'PLATFORM' || choice === 'INTERNAL') {
+      this.setData({ playersOnly: choice === 'INTERNAL' })
     }
-    if (choice !== 'INTERNAL') {
-      return
-    }
-    // 「仅希望 MIP 内部玩家看到」落到分会被看到：未选分会时默认第一个分会。
-    const fallbackBranch = this.data.branchOptions.find(item => item.id)
-    const branchIndex = this.data.branchId
-      ? Math.max(0, this.data.branchOptions.findIndex(item => item.id === this.data.branchId))
-      : Math.max(0, this.data.branchOptions.findIndex(item => item.id === fallbackBranch?.id))
-    this.setData({
-      scopeType: 'BRANCH',
-      branchId: (this.data.branchId || fallbackBranch?.id || '') as BranchId | '',
-      branchIndex,
-    })
   },
 
   toggleRole(event: WechatMiniprogram.TouchEvent) {
@@ -670,10 +652,6 @@ Page({
     if (!this.validateRequiredFields()) {
       return
     }
-    // journey-review QZ2 复审：招募中=发布；结束项目=发布后落 ENDED（新建流程该项已置灰，守卫兜底）。
-    // 「下架项目」暂不可选（服务端无 UNPUBLISHED，见 .tmp/shared-change-requests），
-    // 保存不再接受 UNPUBLISHED，反馈与跳转只按服务端真实返回状态决定。
-    const endAfterSave = publish && this.data.projectStatus === 'ENDED' && this.data.editorMode !== 'CREATE'
     this.setData({ saving: true, message: '' })
     try {
       const minAmountCents = this.data.minAmountYuan.trim() ? Math.round(Number(this.data.minAmountYuan) * 100) : undefined
@@ -691,6 +669,7 @@ Page({
         targetSummary: this.data.targetSummary,
         description: this.data.description,
         regionText: this.data.regionText || undefined,
+        playersOnly: this.data.playersOnly,
         scopeType: this.data.scopeType,
         branchId: this.data.branchId || undefined,
         cityTagId: this.data.cityTagId || undefined,
@@ -709,6 +688,7 @@ Page({
         abilityTagIds: this.data.abilityOptions.filter(item => item.selected).map(item => item.id),
         teamProfileRefs: this.data.teamMembers.map(item => item.profileRef),
         publish,
+        ...(publish ? { publicationStatus: this.data.projectStatus === 'RECRUITING' ? 'PUBLISHED' as const : this.data.projectStatus } : {}),
         ...(this.data.confirmedAiDraftId
           ? {
               aiConfirmation: {
@@ -718,24 +698,14 @@ Page({
             }
           : {}),
       })
-      let savedVersion = result.version
-      if (endAfterSave && result.status === 'PUBLISHED') {
-        try {
-          const ended = await opportunityModule.end(result.id, result.version)
-          savedVersion = ended.version
-        }
-        catch (error) {
-          wx.showToast({ title: error instanceof Error ? error.message : '结束项目失败，可稍后在详情页处理。', icon: 'none' })
-        }
-      }
       this.setData({
         id: result.id,
-        version: savedVersion,
+        version: result.version,
         confirmedAiDraftId: '',
         confirmedAiDraftVersion: 0,
       })
       wx.showToast({
-        title: result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存',
+        title: result.status === 'UNPUBLISHED' ? '项目已下架' : result.status === 'ENDED' ? '项目已结束' : result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存',
         icon: 'success',
       })
       this.clearNavigationTimer()

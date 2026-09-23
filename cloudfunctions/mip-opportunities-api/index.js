@@ -12,6 +12,7 @@ const { mysqlDatabase } = require('./lib/mysql')
 const { createOutboxWakeup } = require('./lib/outbox-wakeup')
 const { authorizeInternalMatching, verifyInternalMatching } = require('./lib/internal-matching')
 const { createContentSafety } = require('./domain/content-safety')
+const { canBrowsePlatformOpportunities, canBrowseTalents } = require('./domain/journey-access')
 const { createMatchingProvider } = require('./domain/matching-provider')
 const {
   createMatchingRequest,
@@ -22,6 +23,7 @@ const {
   saveMatchingPreferences,
 } = require('./domain/matching')
 const {
+  archiveOpportunity,
   endOpportunity,
   getCatalogs,
   getOpportunity,
@@ -53,7 +55,7 @@ const {
   markReceivedInteractionRead,
 } = require('./domain/received-interactions')
 const { recordProfileVisit } = require('./domain/profile-visits')
-const { getOwnProfileInfluence } = require('./domain/profile-influence')
+const { getOwnProfileInfluence, listPublicProfileInterests } = require('./domain/profile-influence')
 const {
   deleteOpportunityComment,
   getOpportunityCommentSettings,
@@ -151,10 +153,12 @@ function failure(error) {
 async function dispatch(database, caller, event) {
   switch (event.action) {
     case 'getCatalogs': return getCatalogs(database, caller)
-    case 'listOpportunities': return listOpportunities(database, caller, event.filter)
+    case 'listOpportunities': return await canBrowsePlatformOpportunities(database, caller)
+      ? listOpportunities(database, caller, event.filter) : { items: [] }
     case 'getOpportunity': return getOpportunity(database, caller, event.id)
     case 'listMine': return listMine(database, caller, event)
     case 'saveOpportunity': return saveOpportunity(database, contentSafety, caller, event)
+    case 'archiveOpportunity': return archiveOpportunity(database, caller, event)
     case 'endOpportunity': return endOpportunity(database, caller, event)
     case 'setReferral': return setReferral(database, caller, event)
     case 'setProfileInterest': return setProfileInterest(database, caller, event)
@@ -162,6 +166,7 @@ async function dispatch(database, caller, event) {
     case 'getPublicProfileAggregate': return getPublicProfileAggregate(database, caller, event)
     case 'recordProfileVisit': return recordProfileVisit(database, caller, event)
     case 'getProfileInfluence': return getOwnProfileInfluence(database, caller)
+    case 'listPublicProfileInterests': return listPublicProfileInterests(database, caller, event)
     case 'listReceivedInteractions': return listReceivedInteractions(database, caller, event)
     case 'markReceivedInteractionRead': return markReceivedInteractionRead(database, caller, event)
     case 'getOpportunityCommentSettings': return getOpportunityCommentSettings(database, caller, event)
@@ -176,8 +181,10 @@ async function dispatch(database, caller, event) {
     case 'listMatchingRequests': return listMatchingRequests(database, caller, event)
     case 'listMatchingResults': return listMatchingResults(database, caller, event)
     case 'saveMatchingFeedback': return saveMatchingFeedback(database, caller, event)
-    case 'listCooperationCards': return listCooperationCards(database, caller, event.filter)
-    case 'listCooperationTalents': return listCooperationTalents(database, caller, event.filter)
+    case 'listCooperationCards': return await canBrowseTalents(database, caller)
+      ? listCooperationCards(database, caller, event.filter) : { items: [] }
+    case 'listCooperationTalents': return await canBrowseTalents(database, caller)
+      ? listCooperationTalents(database, caller, event.filter) : { items: [] }
     case 'listMyCooperationCards': return listMyCooperationCards(database, caller, event)
     case 'getCooperationCard': return getCooperationCard(database, caller, event.id)
     case 'saveCooperationCard': return saveCooperationCard(database, contentSafety, caller, event)

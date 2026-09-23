@@ -25,11 +25,11 @@ function taskView(task: UserTaskCard): TaskView {
   const showAttachment = attachmentName !== ''
   return {
     ...task,
-    periodText: task.endsAt ? new Date(task.endsAt).toLocaleString('zh-CN', { hour12: false }) : '不限',
+    periodText: task.weeklyDeliverAt ? `每周 ${task.weeklyDeliverAt}` : (task.periodEndAt || task.endsAt) ? new Date(task.periodEndAt || task.endsAt).toLocaleString('zh-CN', { hour12: false }) : '不限',
     conditionText: task.attachmentRequired ? '需上传附件' : '无需附件',
     attachmentName,
     attachmentTime: task.attachment?.uploadedAt || '',
-    starIndexes: rewardExperienceStarIndexes(task.rewardExperience),
+    starIndexes: task.starLevel ? Array.from({ length: task.starLevel }, (_, index) => index) : rewardExperienceStarIndexes(task.rewardExperience),
     showBar,
     showAttachment,
     cardRoundedAll: !showBar && !showAttachment,
@@ -38,7 +38,7 @@ function taskView(task: UserTaskCard): TaskView {
 }
 
 function visibleTasks(tasks: TaskView[], filter: 'pending' | 'ended') {
-  return tasks.filter(task => filter === 'ended' ? task.status !== 'AVAILABLE' : task.status === 'AVAILABLE')
+  return tasks.filter(task => filter === 'ended' ? ['ENDED', 'COMPLETED'].includes(task.status) : ['AVAILABLE', 'PENDING_REVIEW', 'NOT_STARTED'].includes(task.status))
 }
 
 Page({
@@ -156,7 +156,7 @@ Page({
 
   /** figma 1725_18357 右侧页签：派发任务暂无对应路由（NPC 派发参考页 18634/18676/18736 为路由缺口）。 */
   openDispatch() {
-    wx.showToast({ title: '派发功能筹备中', icon: 'none' })
+    wx.showModal({ title: '派发任务', content: '请在电脑端管理后台的任务管理中派发任务。', showCancel: false })
   },
 
   /** 列表操作条「完成」：直接走 completeTask 变更（附件校验失败时后端报错 → message 展示）。 */
@@ -167,8 +167,8 @@ Page({
     }
     this.setData({ message: '' })
     try {
-      await mipTasksModule.mutation.completeTask(taskId)
-      wx.showToast({ title: '任务已完成', icon: 'success' })
+      const result = await mipTasksModule.mutation.completeTask(taskId)
+      wx.showToast({ title: result.submissionStatus === 'pending_review' ? '已提交，等待审批' : '任务已完成', icon: 'success' })
       await this.loadTasks(true)
     }
     catch (error) {

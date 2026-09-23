@@ -1073,6 +1073,146 @@
         "mip_admin_roles"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260922010000",
+      "name": "opportunity_journey_fields",
+      "sql": "database/mysql/mip/081_opportunity_journey_fields.sql",
+      "sqlSha256": "233fec2be0e70a453a642a2476b196744538176ca8ff2ea20cff3fef531e6208",
+      "rollback": "database/mysql/mip/rollback/081_opportunity_journey_fields.sql",
+      "rollbackSha256": "08f82c843bb5858e2846adde0d449be86d0ea40ce958033442c537a0fec02cbe",
+      "createsTables": [],
+      "altersTables": [
+        "mip_opportunities"
+      ]
+    },
+    {
+      "version": "20260922082000",
+      "name": "task_workflow_runtime",
+      "sql": "database/mysql/mip/082_task_workflow_runtime.sql",
+      "sqlSha256": "633c230a8a136879a056f9140fb79eb2edc11c1c4688a95275b3c3b6c63dd167",
+      "rollback": "database/mysql/mip/rollback/082_task_workflow_runtime.sql",
+      "rollbackSha256": "eba89a1ff5af5c6c04058998cd55fb5f9ff805cb8865b2f4b3dc630bbe0e77b3",
+      "createsTables": [],
+      "altersTables": [
+        "mip_task_cards",
+        "mip_task_completions",
+        "mip_task_submission_reviews",
+        "mip_task_assignments"
+      ]
+    },
+    {
+      "version": "20260922083000",
+      "name": "event_heart_read_state",
+      "sql": "database/mysql/mip/083_event_heart_read_state.sql",
+      "sqlSha256": "4d3c47f4e17f9c7126c1d46d4e769812ba6fc7367ee783019208eaba6d77c53f",
+      "rollback": "database/mysql/mip/rollback/083_event_heart_read_state.sql",
+      "rollbackSha256": "c72736e7a5bb577fc0d7c73e3e4fec08fa3aedb3c24f7d470202434513ed2aa5",
+      "createsTables": [],
+      "altersTables": [
+        "mip_event_hearts",
+        "mip_event_checkins"
+      ]
+    },
+    {
+      "version": "20260922084000",
+      "name": "phone_sms_verification",
+      "sql": "database/mysql/mip/084_phone_sms_verification.sql",
+      "sqlSha256": "ce23d287bd55042fbf1b65a8938268796d417ece737fa160ee75a212b1de66b2",
+      "rollback": "database/mysql/mip/rollback/084_phone_sms_verification.sql",
+      "rollbackSha256": "1828a7094a45defd4e5e98cfa96422c06a5d89a04970660296c450e5631a5490",
+      "createsTables": [
+        "mip_phone_sms_challenges",
+        "mip_phone_sms_rate_limits"
+      ]
+    },
+    {
+      "version": "20260922085000",
+      "name": "growth_operations_runtime",
+      "sql": "database/mysql/mip/085_growth_operations_runtime.sql",
+      "rollback": "database/mysql/mip/rollback/085_growth_operations_runtime.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_contribution_rules",
+        "mip_contribution_reversals"
+      ],
+      "sqlSha256": "24b6c33541decf155fe4ee30ce70a5bcc997e5204eec26ddf7820260a678fbb1",
+      "rollbackSha256": "519b1025bb8321205c76f8162eecc498a97ad080dfac93ca378045f4096f4705"
+    },
+    {
+      "version": "20260922086000",
+      "name": "admin_profile_video_runtime",
+      "sql": "database/mysql/mip/086_admin_profile_video_runtime.sql",
+      "sqlSha256": "f19253927921f42720834b53dce0c8c6a5b15dad0417112844bfa43d3b30a2eb",
+      "rollback": "database/mysql/mip/rollback/086_admin_profile_video_runtime.sql",
+      "rollbackSha256": "e7be3929e527d255a56972974fef369855e47799cd42b6b41d9b6926cb29f1ca",
+      "createsTables": [
+        "mip_event_heart_history"
+      ],
+      "altersTables": [
+        "mip_videos",
+        "mip_cooperation_cards"
+      ]
+    },
+    {
+      "version": "20260922087000",
+      "name": "event_draft_runtime",
+      "sql": "database/mysql/mip/087_event_draft_runtime.sql",
+      "sqlSha256": "c1f839cacc7a635a059865ee542c92cb9626a1b562680459274427cfb6bfe58a",
+      "rollback": "database/mysql/mip/rollback/087_event_draft_runtime.sql",
+      "rollbackSha256": "d0818e7c6577a598f0295dbc403970c5b9a149bf6d7f9ad856023c1be85fff12",
+      "createsTables": [],
+      "altersTables": [
+        "mip_event_drafts"
+      ]
+    },
+    {
+      "version": "20260922088000",
+      "name": "admin_account_runtime",
+      "sql": "database/mysql/mip/088_admin_account_runtime.sql",
+      "rollback": "database/mysql/mip/rollback/088_admin_account_runtime.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_admin_accounts"
+      ],
+      "sqlSha256": "9f7dea15313bfb43fb986d77b68f25e3bcbeb6b32a9dfdd71fdd3e47ec2a10f1",
+      "rollbackSha256": "83df2f352a07e4b03902f1cbcbd8641c4dcae51dd64de5ecf7bb86b27a188dba"
+    },
+    {
+      "version": "20260922089000",
+      "name": "opportunity_delete_snapshot_scope",
+      "sql": "database/mysql/mip/089_opportunity_delete_snapshot_scope.sql",
+      "sqlSha256": "4be02a8d105963ef3a708138a31ef55d3d0bb072b2830b1103f943c33a33497a",
+      "rollback": "database/mysql/mip/rollback/089_opportunity_delete_snapshot_scope.sql",
+      "rollbackSha256": "48af17ca2c5023ce57f002bb16e9ad050f0c07b9d368563fab1e0fea474ff060",
+      "createsTables": [],
+      "altersTables": [
+        "mip_opportunity_delete_snapshots"
+      ]
+    },
+    {
+      "version": "20260922090000",
+      "name": "event_feedback_export_type",
+      "sql": "database/mysql/mip/090_event_feedback_export_type.sql",
+      "sqlSha256": "1349e1f6af60e52627dc8d5e12aabdd2654f4acee425f42b73e3ea7718318045",
+      "rollback": "database/mysql/mip/rollback/090_event_feedback_export_type.sql",
+      "rollbackSha256": "8a98048ef05968b12b5e1f133d8b77f82c78c1a6ab535187b21fd9270b4ad9ce",
+      "createsTables": [],
+      "altersTables": [
+        "mip_admin_export_tickets"
+      ]
+    },
+    {
+      "version": "20260922091000",
+      "name": "admin_registration_markers",
+      "sql": "database/mysql/mip/091_admin_registration_markers.sql",
+      "sqlSha256": "4e19cc0ad360c8d50b0e7e8bbdcc854ee116845b7a833aed1a13a765a51761c7",
+      "rollback": "database/mysql/mip/rollback/091_admin_registration_markers.sql",
+      "rollbackSha256": "4e8f3a9f2a542ea9d2b8db550df437e17a804171a3c603d08ccbbbb3bb0d5c3d",
+      "createsTables": [],
+      "altersTables": [
+        "mip_event_registrations"
+      ]
     }
   ]
 }

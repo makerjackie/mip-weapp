@@ -32,6 +32,7 @@ function currentRelationship(overrides = {}) {
   return {
     status: 'ACTIVE',
     version: 2,
+    updated_at: '2026-09-22T02:30:00.000Z',
     actor_user_id: ACTOR_ID,
     target_user_id: TARGET_ID,
     source_type: 'OPPORTUNITY',
@@ -104,7 +105,11 @@ describe('profile interest outbox projection', () => {
     assert.equal(result.reason, 'PROJECTED')
     assert.equal(result.notifications.length, 1)
     assert.equal(result.notifications[0].recipientUserId, TARGET_ID)
-    assert.equal(result.notifications[0].title, '公开档案收到新的关注')
+    assert.equal(result.notifications[0].title, '有人对你感兴趣')
+    assert.deepEqual(result.notifications[0].external, {
+      channel: 'WECHAT_SUBSCRIPTION', templateKey: 'PROFILE_INTEREST',
+      fields: { title: '有人对你感兴趣', status: '有人对你感兴趣', receivedAt: '2026-09-22 10:30' },
+    })
     assert.equal(result.notifications[0].dedupeKey, `outbox:${OUTBOX_ID}:profile-interest`)
     assert.equal(JSON.stringify(result).includes('attacker-controlled'), false)
   })

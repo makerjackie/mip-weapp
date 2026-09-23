@@ -10,10 +10,11 @@ const {
 } = require('../domain/handler')
 
 describe('MIP identity handler', () => {
-  it('fixes the public contract at fourteen business actions plus health', async () => {
+  it('fixes the public contract at sixteen business actions plus health', async () => {
     assert.equal(CONTRACT_VERSION, 1)
     assert.deepEqual(Object.keys(actions).sort(), [
       'acceptAgreements',
+      'bindSmsPhone',
       'bindWechatPhone',
       'closeAccount',
       'getAccessSnapshot',
@@ -22,6 +23,7 @@ describe('MIP identity handler', () => {
       'getPublicProfile',
       'listBranches',
       'listProfileTags',
+      'requestPhoneSms',
       'resolveProfileCardScene',
       'setPrimaryBranch',
       'signIn',

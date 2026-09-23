@@ -19,6 +19,13 @@ function createAdminTasks({ access, client } = {}) {
   }
 
   return Object.freeze({
+    approveSubmission: (caller, input) => execute(caller, 'mip.admin.tasks.submissions.approve', input),
+    rejectSubmission: (caller, input) => execute(caller, 'mip.admin.tasks.submissions.reject', input),
+    retrySubmissionReward: (caller, input) => execute(caller, 'mip.admin.tasks.submissions.retryReward', input),
+    assignTask: (caller, input) => execute(caller, 'mip.admin.tasks.assign', input),
+    listTaskSubmissions: (caller, input) => execute(caller, 'mip.admin.tasks.submissions.list', input),
+    listAssignments: (caller, input) => execute(caller, 'mip.admin.tasks.assignments.list', input),
+    getTaskEditorOptions: (caller, input) => execute(caller, 'mip.admin.tasks.editorOptions', input),
     listTasks: (caller, input) => execute(caller, 'mip.admin.tasks.list', input),
     getTask: (caller, input) => execute(caller, 'mip.admin.tasks.get', input),
     listEligibleLevels: (caller, input) => execute(caller, 'mip.admin.tasks.eligibleLevels.list', input),

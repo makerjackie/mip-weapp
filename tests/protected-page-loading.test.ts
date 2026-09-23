@@ -48,7 +48,7 @@ describe.each([['heart history', 0], ['blocked users', 1]] as const)('%s loading
       finish = resolve
     }))
     const loading = p.checkAccess()
-    await vi.waitFor(() => expect(read).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(index === 0 ? 2 : 1))
     expect(p.checkingAccess).toBe(false)
     finish({ items: [] })
     await loading

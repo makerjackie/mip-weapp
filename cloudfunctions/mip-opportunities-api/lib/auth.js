@@ -10,6 +10,7 @@ const defaultAgreementRequirements = Object.freeze([
 const fullAccessActions = new Set([
   'saveOpportunity',
   'endOpportunity',
+  'archiveOpportunity',
   'setReferral',
   'setProfileInterest',
   'saveCooperationCard',

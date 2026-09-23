@@ -181,8 +181,8 @@
     <view class="box-border flex h-[80rpx] border-b border-line">
       <view wx:if="{{mode === 'opportunities'}}" class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] font-medium text-brand" data-mode="opportunities" aria-role="tab" aria-selected="true" bind:tap="changeMode">项目机会<view class="absolute inset-x-0 bottom-[4rpx] h-[4rpx] bg-brand" /></view>
       <view wx:else class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] text-muted" data-mode="opportunities" aria-role="tab" aria-selected="false" bind:tap="changeMode">项目机会</view>
-      <view wx:if="{{mode === 'cooperation'}}" class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] font-medium text-brand" data-mode="cooperation" aria-role="tab" aria-selected="true" bind:tap="changeMode">人才合作<view class="absolute inset-x-0 bottom-[4rpx] h-[4rpx] bg-brand" /></view>
-      <view wx:else class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] text-muted" data-mode="cooperation" aria-role="tab" aria-selected="false" bind:tap="changeMode">人才合作</view>
+      <view wx:if="{{mode === 'cooperation'}}" id="opportunities-talent-tab" class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] font-medium text-brand" data-mode="cooperation" aria-role="tab" aria-selected="true" bind:tap="changeMode">人才合作<view class="absolute inset-x-0 bottom-[4rpx] h-[4rpx] bg-brand" /></view>
+      <view wx:else id="opportunities-talent-tab" class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] text-muted" data-mode="cooperation" aria-role="tab" aria-selected="false" bind:tap="changeMode">人才合作</view>
     </view>
 
     <view wx:if="{{mode === 'cooperation'}}" class="relative mx-3 mt-3 flex h-[80rpx] items-center gap-3">
@@ -241,7 +241,8 @@
     <!-- journey-review J2-07/J3-02：非玩家不拦截，人才数据为空时的默认空态；带筛选时保留可操作的清筛选空态。 -->
     <view wx:elif="{{mode === 'cooperation' && !cooperationTalents.length && !hasAppliedFilters && authenticated}}" class="mt-[84rpx] flex flex-col items-center">
       <image class="h-[360rpx] w-[360rpx]" src="/assets/figma/opportunities/guest-mystery-box.png" mode="aspectFill" />
-      <view class="mt-4 text-[length:32rpx] font-medium leading-[44rpx] text-ink">暂无人才数据</view>
+      <view wx:if="{{!player}}" class="mt-4 flex min-h-[88rpx] items-center justify-center rounded-full border border-canvas bg-brand px-6 text-[length:32rpx] font-medium text-on-brand" aria-role="button" bind:tap="openBecomePlayerUnlock">去成为玩家解锁权限 &gt;</view>
+      <view wx:else class="mt-4 text-[length:32rpx] font-medium leading-[44rpx] text-ink">暂无人才数据</view>
     </view>
     <view wx:elif="{{mode === 'cooperation' && !cooperationTalents.length}}" class="mx-3 mt-5"><mip-empty-state title="没有找到人才" description="调整筛选条件后重试。" action-text="清除筛选" bind:action="clearAppliedFilters" /></view>
 
@@ -252,7 +253,7 @@
     </view>
 
     <view wx:if="{{state === 'ready' && mode === 'cooperation' && authenticated}}" class="mx-3 mt-3 flex flex-col gap-3">
-      <view wx:for="{{cooperationTalents}}" wx:key="talentKey" class="active:bg-panel-raised" aria-role="button" data-profile-ref="{{item.profileRef}}" bind:tap="openTalent"><mip-talent-card display-name="{{item.author.nickname}}" avatar-url="{{item.author.avatarUrl || ''}}" meta-text="{{item.author.cityName || '城市未公开'}}{{item.author.primaryIndustry ? ' I ' + item.author.primaryIndustry.label : ''}}{{item.author.headline ? ' I ' + item.author.headline : ''}}" supporting-text="{{item.primaryPositioning}}" level-text="{{item.author.levelText}}" badge-image-url="{{item.badgeImageUrl}}" role-names="{{item.roleNames}}" role-tags="{{item.roleTags}}" inviter-name="{{item.inviterName}}" inviter-avatar-url="{{item.inviterAvatarUrl}}" target-text="{{item.primaryTargetSummary}}" /></view>
+      <view wx:for="{{cooperationTalents}}" wx:key="talentKey" class="active:bg-panel-raised" aria-role="button" data-profile-ref="{{item.profileRef}}" bind:tap="openTalent"><mip-talent-card display-name="{{item.author.nickname}}" avatar-url="{{item.author.avatarUrl || ''}}" meta-text="{{item.author.cityName || '城市未公开'}}{{item.author.primaryIndustry ? ' I ' + item.author.primaryIndustry.label : ''}}{{item.author.headline ? ' I ' + item.author.headline : ''}}" supporting-text="{{item.primaryPositioning}}" role-names="{{item.roleNames}}" target-text="{{item.primaryTargetSummary}}" /></view>
     </view>
     <view wx:if="{{loadingMore}}" class="py-5 text-center text-[length:24rpx] text-muted">正在加载</view>
     <view wx:if="{{message && state === 'ready'}}" class="mx-3 mt-4 rounded-[8rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] text-muted">{{message}}</view>

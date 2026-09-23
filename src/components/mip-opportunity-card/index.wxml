@@ -1,7 +1,7 @@
 <view class="mip-opportunity-card" aria-label="{{title}}">
   <view class="mip-opportunity-card__cover">
     <image wx:if="{{displayCoverUrl}}" class="mip-opportunity-card__cover-image" src="{{displayCoverUrl}}" mode="aspectFill" />
-    <view wx:else class="mip-opportunity-card__cover-placeholder"><image class="mip-opportunity-card__cover-placeholder-image" src="{{fallbackCoverUrl}}" mode="aspectFit" /></view>
+    <view wx:else class="mip-opportunity-card__cover-placeholder"><image class="mip-opportunity-card__cover-placeholder-image" src="{{fallbackCoverUrl}}" mode="aspectFill" /></view>
   </view>
   <view class="mip-opportunity-card__content">
     <view class="mip-opportunity-card__title">{{title}}</view>

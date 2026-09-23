@@ -38,7 +38,7 @@ describe('profile influence summary', () => {
       async one(sql, params) {
         calls.push({ sql, params })
         if (sql.includes('mip_event_invitation_attributions')) return { count: 2 }
-        if (sql.includes('mip_event_hearts')) return { count: 3 }
+        if (sql.includes('mip_event_checkins own_checkin')) return { count: 3 }
         if (sql.includes('mip_profile_interests')) return { count: 4 }
         if (sql.includes('mip_profile_visits')) return { count: 5 }
         throw new Error(`unexpected query: ${sql}`)
@@ -54,17 +54,21 @@ describe('profile influence summary', () => {
     const guest = calls.find(call => call.sql.includes('mip_event_invitation_attributions'))
     assert.match(guest.sql, /source_type = 'USER'/)
     assert.match(guest.sql, /registration\.share_profile = 1/)
-    assert.match(guest.sql, /registration\.status IN \('REGISTERED', 'ATTENDED'\)/)
+    assert.match(guest.sql, /registration\.status = 'ATTENDED'/)
+    assert.match(guest.sql, /checkin\.status = 'ACTIVE'/)
     assert.match(guest.sql, /NOT EXISTS \([\s\S]*mip_membership_entitlements/)
     assert.match(guest.sql, /guest\.status = 'ACTIVE'/)
     assert.match(guest.sql, /FROM mip_user_blocks visibility_block/)
     assert.deepEqual(guest.params, [appId, profileUserId, profileUserId, profileUserId])
-    assert.match(calls.find(call => call.sql.includes('mip_event_hearts')).sql,
-      /target_user_id = \? AND heart\.status = 'ACTIVE'/)
+    const interaction = calls.find(call => call.sql.includes('mip_event_checkins own_checkin'))
+    assert.match(interaction.sql, /COUNT\(DISTINCT peer_checkin\.user_id\)/)
+    assert.match(interaction.sql, /own_checkin\.status = 'ACTIVE'/)
+    assert.match(interaction.sql, /peer_checkin\.status = 'ACTIVE'/)
+    assert.match(interaction.sql, /peer_registration\.share_profile = 1/)
     assert.match(calls.find(call => call.sql.includes('mip_profile_interests')).sql,
       /target_user_id = \? AND interest\.status = 'ACTIVE'/)
     const visitors = calls.find(call => call.sql.includes('mip_profile_visits'))
-    assert.match(visitors.sql, /COUNT\(DISTINCT visit\.visitor_user_id\)/)
+    assert.match(visitors.sql, /COUNT\(\*\)/)
     assert.match(visitors.sql, /visitor\.status = 'ACTIVE'/)
   })
 })
@@ -98,12 +102,13 @@ describe('profile influence lists', () => {
     assert.match(query.sql, /FROM mip_user_blocks visibility_block/)
   })
 
-  it('lists active heart and interest facts without exposing internal user ids', async () => {
+  it('lists co-attendance and active interest facts without exposing internal user ids', async () => {
     const database = {
       async query(sql) {
-        if (sql.includes('FROM mip_event_hearts heart')) {
+        if (sql.includes('WITH co_attendance AS')) {
           return [actorRow({
             relation_id: relationId,
+            interaction_count: 4,
             event_id: eventId,
             event_title: '城市交流会',
           })]
@@ -121,6 +126,7 @@ describe('profile influence lists', () => {
     const interactions = await listInfluenceInteractions(database, caller, { limit: 20 })
     const interests = await listActiveInfluenceInterests(database, caller, { limit: 20 })
     assert.equal(interactions.items[0].kind, 'INTERACTION')
+    assert.equal(interactions.items[0].interactionCount, 4)
     assert.equal(interactions.items[0].event.title, '城市交流会')
     assert.equal(interests.items[0].kind, 'ACTIVE_INTEREST')
     assert.equal(interests.items[0].source.label, '公开档案')
@@ -146,5 +152,28 @@ describe('profile influence lists', () => {
       timestamp: '2026-08-25T01:00:00.000Z',
       userId: actorUserId,
     })
+  })
+
+  it('searches all co-attendees before pagination and returns full server counts', async () => {
+    const calls = []
+    const database = { async query(sql, params) {
+      calls.push({ sql, params })
+      return [actorRow({ interaction_count: 12, event_id: eventId, event_title: '最近同场' }),
+        actorRow({ actor_user_id: '20000000-0000-4000-8000-000000000002' })]
+    } }
+    const first = await listInfluenceInteractions(database, caller, { keyword: '金融_50%', limit: 1 })
+    assert.equal(first.items.length, 1)
+    assert.equal(first.items[0].interactionCount, 12)
+    assert.deepEqual(decodePersonCursor(first.nextCursor, caller), {
+      timestamp: '2026-08-25T01:00:00.000Z', userId: actorUserId,
+    })
+    assert.match(calls[0].sql, /COUNT\(\*\) OVER \(PARTITION BY peer_checkin.user_id\)/)
+    assert.match(calls[0].sql, /peer_checkin\.user_id <> own_checkin\.user_id/)
+    assert.match(calls[0].sql, /peer_registration\.status = 'ATTENDED' AND peer_registration\.share_profile = 1/)
+    assert.match(calls[0].sql, /visibility_json, '\$\.industry'/)
+    assert.match(calls[0].sql, /industry\.label LIKE \? ESCAPE '='/)
+    assert.equal(calls[0].params.filter(value => value === '%金融=_50=%%').length, 4)
+    await listInfluenceInteractions(database, caller, { keyword: '金融_50%', cursor: first.nextCursor, limit: 1 })
+    assert.deepEqual(calls[1].params.slice(-3), ['2026-08-25T01:00:00.000Z', '2026-08-25T01:00:00.000Z', actorUserId])
   })
 })

@@ -112,6 +112,8 @@ function opportunityDto(row, { history = [], teamMembers = [], commercialTerms }
     tagIds: row.tag_ids ? String(row.tag_ids).split(',').filter(Boolean) : [],
     tags: row.tag_labels ? String(row.tag_labels).split(',').filter(Boolean) : [],
     status: row.status,
+    deleted: Boolean(row.deleted_snapshot_ref),
+    deletedSnapshotRef: row.deleted_snapshot_ref ? String(row.deleted_snapshot_ref) : null,
     contentSafetyStatus: row.content_safety_status,
     referralCount: Number(row.referral_count || 0),
     deadlineAt: iso(row.deadline_at),
@@ -136,6 +138,8 @@ function opportunitySelect(where, suffix = '') {
       o.status, o.content_safety_status, o.referral_count, o.deadline_at, o.version,
       o.published_at, o.ended_at, o.updated_at, o.moderated_at, o.moderation_reason,
       o.archived_at, o.archive_reason,
+      (SELECT snapshot.snapshot_id FROM mip_opportunity_delete_snapshots snapshot
+       WHERE snapshot.app_id = o.app_id AND snapshot.opportunity_uid = o.id LIMIT 1) AS deleted_snapshot_ref,
       cover.cloud_file_id AS cover_file_id,
       (SELECT GROUP_CONCAT(role.role_key ORDER BY role.role_key SEPARATOR ',')
        FROM mip_opportunity_roles role
@@ -165,7 +169,9 @@ function createAdminPrdExtensions(database, options = {}) {
 
   async function listOpportunitiesV2(appId, visibility, filters, pageLimit, cursor = null) {
     const access = visibilityWhere(visibility, 'o')
-    const clauses = ['o.app_id = ?', access.sql]
+    const clauses = ['o.app_id = ?', access.sql,
+      `NOT EXISTS (SELECT 1 FROM mip_opportunity_delete_snapshots deleted
+       WHERE deleted.app_id = o.app_id AND deleted.opportunity_uid = o.id)`]
     const params = [appId, ...access.params]
     if (filters.status) { clauses.push('o.status = ?'); params.push(filters.status) }
     if (filters.query) {
@@ -708,7 +714,8 @@ function createAdminPrdExtensions(database, options = {}) {
     const params = [appId, ...access.params]
     if (filters.eventId) { clauses.push('r.event_id = ?'); params.push(filters.eventId) }
     if (filters.branchId) { clauses.push('e.branch_id = ?'); params.push(filters.branchId) }
-    if (filters.status) { clauses.push('r.status = ?'); params.push(filters.status) }
+    if (filters.status === 'ABNORMAL') clauses.push('r.abnormal_reason IS NOT NULL')
+    else if (filters.status) { clauses.push('r.status = ? AND r.abnormal_reason IS NULL'); params.push(filters.status) }
     if (filters.query) { clauses.push("(p.nickname LIKE ? ESCAPE '\\\\' OR e.title LIKE ? ESCAPE '\\\\')"); const query = `%${escapeLike(filters.query)}%`; params.push(query, query) }
     if (filters.createdFrom) { clauses.push('r.created_at >= ?'); params.push(filters.createdFrom) }
     if (filters.createdTo) { clauses.push('r.created_at <= ?'); params.push(filters.createdTo) }
@@ -716,6 +723,7 @@ function createAdminPrdExtensions(database, options = {}) {
     const rows = await database.query(
       `SELECT r.id, r.event_id, e.title AS event_title, e.branch_id, b.name AS branch_name,
         r.user_id, r.status, r.answers_json, r.created_at, r.registered_at, r.version,
+        r.registration_source, r.role_mark, r.imported_at, r.abnormal_reason, r.abnormal_marked_at,
         e.registration_schema_json,
         p.nickname, b.city_name, pp.phone_ciphertext, pp.phone_verified_at, c.checked_in_at
        FROM mip_event_registrations r
@@ -737,7 +745,13 @@ function createAdminPrdExtensions(database, options = {}) {
       userId: row.user_id,
       nickname: row.nickname || '未填写昵称',
       cityName: row.city_name || '',
-      status: row.status,
+      status: row.abnormal_reason ? 'ABNORMAL' : row.status,
+      registrationStatus: row.status,
+      source: row.registration_source || 'USER',
+      roleMark: row.role_mark || null,
+      importedAt: row.imported_at ? iso(row.imported_at) : null,
+      abnormalReason: row.abnormal_reason || '',
+      abnormalMarkedAt: row.abnormal_marked_at ? iso(row.abnormal_marked_at) : null,
       answers: json(row.answers_json, {}),
       answerItems: registrationAnswerItems(row.registration_schema_json, row.answers_json),
       phoneBound: Boolean(row.phone_verified_at),
@@ -759,7 +773,10 @@ function createAdminPrdExtensions(database, options = {}) {
       ),
       database.query(
         `SELECT id, title, status, updated_at FROM mip_opportunities
-         WHERE app_id = ? AND owner_user_id = ? ORDER BY updated_at DESC, id DESC LIMIT 50`,
+         WHERE app_id = ? AND owner_user_id = ? AND NOT EXISTS (
+           SELECT 1 FROM mip_opportunity_delete_snapshots deleted
+           WHERE deleted.app_id = mip_opportunities.app_id AND deleted.opportunity_uid = mip_opportunities.id
+         ) ORDER BY updated_at DESC, id DESC LIMIT 50`,
         [appId, userId],
       ),
       database.query(

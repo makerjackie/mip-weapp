@@ -6,6 +6,7 @@ const { canonicalJson } = require('./web-bff-auth')
 const WEB_LOGIN_QR_TRANSPORT = 'MIP_WEB_LOGIN_QR_V1'
 const WEB_LOGIN_QR_MAX_CLOCK_SKEW_MS = 60_000
 const WEB_LOGIN_QR_PAGE = 'packages/admin/web-login-confirm/index'
+const EVENT_CHECKIN_QR_PAGE = 'packages/member/mip-events/detail/index'
 const MAX_QR_CODE_BYTES = 512 * 1024
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff])
@@ -36,6 +37,7 @@ function createWebLoginQrCodeRoute({
         accessTokenCache,
         appId: verified.appId,
         challengeToken: verified.challengeToken,
+        page: WEB_LOGIN_QR_PAGE,
         cloud,
         fetchImpl,
         now,
@@ -117,6 +119,7 @@ async function generateQrCode({
   accessTokenCache,
   appId,
   challengeToken,
+  page = WEB_LOGIN_QR_PAGE,
   cloud,
   fetchImpl,
   now,
@@ -130,6 +133,7 @@ async function generateQrCode({
       accessTokenCache,
       appId,
       challengeToken,
+      page,
       fetchImpl,
       now,
       stage,
@@ -143,7 +147,7 @@ async function generateQrCode({
   const environment = codeEnvironment(stage, envVersion)
   const response = await cloud.openapi.wxacode.getUnlimited({
     scene: challengeToken,
-    page: WEB_LOGIN_QR_PAGE,
+    page,
     width: 430,
     checkPath: environment === 'release',
     envVersion: environment,
@@ -166,6 +170,7 @@ async function generateQrCodeWithWechatApi({
   accessTokenCache,
   appId,
   challengeToken,
+  page,
   fetchImpl,
   now,
   stage,
@@ -188,7 +193,7 @@ async function generateQrCodeWithWechatApi({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           scene: challengeToken,
-          page: WEB_LOGIN_QR_PAGE,
+          page,
           width: 430,
           check_path: environment === 'release',
           env_version: environment,
@@ -344,6 +349,18 @@ function isPlainRecord(value) {
   return prototype === Object.prototype || prototype === null
 }
 
+function createEventCheckinImage({ cloud, stage, envVersion, wechatAppId, wechatAppSecret,
+  fetchImpl = globalThis.fetch, now = Date.now } = {}) {
+  const accessTokenCache = { value: '', expiresAt: 0 }
+  return async ({ appId, scene }) => {
+    if (typeof scene !== 'string' || !/^s1\.[A-Za-z0-9_-]{11}\.[A-Za-z0-9_-]{11}$/.test(scene)
+      || scene.length > 32) throw new Error('CHECKIN_CODE_INVALID_SCENE')
+    const image = await generateQrCode({ accessTokenCache, appId, challengeToken: scene,
+      page: EVENT_CHECKIN_QR_PAGE, cloud, fetchImpl, now, stage, envVersion, wechatAppId, wechatAppSecret })
+    return { qrCodeDataUrl: `data:${image.contentType};base64,${image.imageBase64}` }
+  }
+}
+
 function hasExactKeys(value, expected) {
   const keys = Reflect.ownKeys(value)
   return keys.length === expected.size
@@ -351,9 +368,11 @@ function hasExactKeys(value, expected) {
 }
 
 module.exports = {
+  EVENT_CHECKIN_QR_PAGE,
   WEB_LOGIN_QR_PAGE,
   WEB_LOGIN_QR_TRANSPORT,
   codeEnvironment,
+  createEventCheckinImage,
   createWebLoginQrCodeRoute,
   isWebLoginQrCodeEvent,
 }

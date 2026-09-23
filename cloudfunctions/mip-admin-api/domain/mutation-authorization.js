@@ -40,7 +40,10 @@ async function lockMutationAuthorization(tx, input) {
      LEFT JOIN mip_role_capability_policies p
        ON p.app_id = r.app_id AND p.role_key = r.role_key
      WHERE r.app_id = ? AND r.user_id = ? AND r.scope_type = ? AND r.scope_id = ?
-       AND r.role_key = ? FOR UPDATE`,
+       AND r.role_key = ?
+       AND NOT EXISTS (SELECT 1 FROM mip_admin_accounts account
+         WHERE account.app_id = r.app_id AND account.linked_user_id = r.user_id AND account.status <> 'ACTIVE')
+     FOR UPDATE`,
     [input.appId, input.actorUserId, grant.scopeType, storedScopeId, grant.roleKey],
   )
   if (!binding || binding.status !== 'ACTIVE') throw codeError('FORBIDDEN')

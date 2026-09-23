@@ -7,6 +7,10 @@ const TASK_ADMIN_PROTOCOL = 'mip-tasks-admin/v1'
 const DEFAULT_TIMEOUT_MS = 45_000
 const MAX_TIMEOUT_MS = 50_000
 const TASK_ADMIN_MUTATION_ACTIONS = Object.freeze(new Set([
+  'mip.admin.tasks.submissions.approve',
+  'mip.admin.tasks.submissions.reject',
+  'mip.admin.tasks.submissions.retryReward',
+  'mip.admin.tasks.assign',
   'mip.admin.tasks.save',
   'mip.admin.tasks.publish',
   'mip.admin.tasks.unpublish',
@@ -17,11 +21,18 @@ const TASK_ADMIN_MUTATION_ACTIONS = Object.freeze(new Set([
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 
 const OPERATION_SPECS = Object.freeze({
+  'mip.admin.tasks.submissions.list': spec('admin.listTaskSubmissions', ['filters', 'limit', 'cursor'], { filters: ['taskId', 'query', 'resultStatus', 'submissionStatus', 'completedFrom', 'completedUntil'] }),
+  'mip.admin.tasks.assignments.list': spec('admin.listAssignments', ['taskId', 'limit', 'cursor']),
+  'mip.admin.tasks.submissions.approve': spec('admin.approveSubmission', ['submissionId', 'remark', 'idempotencyKey']),
+  'mip.admin.tasks.submissions.reject': spec('admin.rejectSubmission', ['submissionId', 'remark', 'idempotencyKey']),
+  'mip.admin.tasks.submissions.retryReward': spec('admin.retrySubmissionReward', ['submissionId', 'remark', 'idempotencyKey']),
+  'mip.admin.tasks.assign': spec('admin.assignTask', ['taskId', 'expectedVersion', 'recipients', 'assignMode', 'weeklyDeliverAt', 'weeklyStartAt', 'weeklyEndAt', 'idempotencyKey']),
+  'mip.admin.tasks.editorOptions': spec('admin.getEditorOptions', []),
   'mip.admin.tasks.list': spec('admin.listTasks', ['filters', 'limit', 'cursor'], { filters: ['status', 'query'] }),
   'mip.admin.tasks.get': spec('admin.getTask', ['taskId']),
   'mip.admin.tasks.eligibleLevels.list': spec('admin.listEligibleLevels', []),
   'mip.admin.tasks.save': spec('admin.saveTask', ['taskId', 'expectedVersion', 'task', 'idempotencyKey'], {
-    task: ['name', 'content', 'rewardExperience', 'attachmentRequired', 'assignmentMode', 'endsAt', 'templateAssetId', 'eligibleLevelIds'],
+    task: ['name', 'content', 'rewardExperience', 'attachmentRequired', 'assignmentMode', 'endsAt', 'templateAssetId', 'eligibleLevelIds', 'starLevel', 'purpose', 'completionCriteria', 'periodStartAt', 'periodEndAt', 'weeklyDeliverAt', 'assignedOwnerId', 'applicableServers', 'rewardConfig'],
   }),
   'mip.admin.tasks.publish': spec('admin.publishTask', ['taskId', 'expectedVersion', 'idempotencyKey']),
   'mip.admin.tasks.unpublish': spec('admin.unpublishTask', ['taskId', 'expectedVersion', 'idempotencyKey']),
@@ -29,9 +40,9 @@ const OPERATION_SPECS = Object.freeze({
   'mip.admin.tasks.assignableMembers.list': spec('admin.listAssignableMembers', ['filters', 'limit', 'cursor'], { filters: ['taskId', 'query'] }),
   'mip.admin.tasks.assignMembers': spec('admin.assignMembers', ['taskId', 'memberRefs', 'expectedVersion', 'idempotencyKey']),
   'mip.admin.tasks.revokeMembers': spec('admin.revokeMembers', ['taskId', 'memberRefs', 'expectedVersion', 'idempotencyKey']),
-  'mip.admin.tasks.completions.list': spec('admin.listCompletions', ['filters', 'limit', 'cursor'], { filters: ['taskId', 'query', 'resultStatus', 'completedFrom', 'completedUntil'] }),
+  'mip.admin.tasks.completions.list': spec('admin.listCompletions', ['filters', 'limit', 'cursor'], { filters: ['taskId', 'query', 'resultStatus', 'submissionStatus', 'completedFrom', 'completedUntil'] }),
   'mip.admin.tasks.completions.get': spec('admin.getCompletion', ['completionId']),
-  'mip.admin.tasks.completions.export': spec('admin.exportCompletions', ['filters'], { filters: ['taskId', 'query', 'resultStatus', 'completedFrom', 'completedUntil'] }),
+  'mip.admin.tasks.completions.export': spec('admin.exportCompletions', ['filters'], { filters: ['taskId', 'query', 'resultStatus', 'submissionStatus', 'completedFrom', 'completedUntil'] }),
 })
 
 function spec(internalAction, inputKeys, nestedKeys = {}) {
@@ -106,9 +117,25 @@ function createTaskAdminClient(options = {}) {
       if (response?.result?.ok !== true) {
         throw codedError(publicErrorCode(response?.result?.error?.code))
       }
-      return response.result.data
+      return resolveTaskMedia(response.result.data, action, options.cloud)
     },
   })
+}
+
+async function resolveTaskMedia(data, action, cloud) {
+  if (!['mip.admin.tasks.get', 'mip.admin.tasks.completions.get'].includes(action)
+    || !data || typeof data !== 'object' || typeof cloud.getTempFileURL !== 'function') return data
+  const mediaKey = action === 'mip.admin.tasks.get' ? 'template' : 'attachment'
+  const media = data[mediaKey]
+  if (!media || typeof media.url !== 'string' || !media.url.startsWith('cloud://')) return data
+  try {
+    const response = await cloud.getTempFileURL({ fileList: [media.url], maxAge: 600 })
+    const file = response?.fileList?.find(item => item.fileID === media.url)
+    const url = new URL(file?.tempFileURL || '')
+    if (url.protocol !== 'https:' || url.username || url.password) return data
+    return { ...data, [mediaKey]: { ...media, url: url.href } }
+  }
+  catch { return data }
 }
 
 function assertInput(operation, input) {

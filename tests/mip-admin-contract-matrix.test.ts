@@ -34,8 +34,8 @@ describe('MIP admin client/server operation contract', () => {
   it('consumes the exact generated platform-neutral contract', () => {
     expect(adminOperationContract).toBe(ADMIN_OPERATION_CONTRACT)
     expect(adminOperationContract).toEqual(publicOperationContract)
-    expect(adminOperationContract.operationCount).toBe(234)
-    expect(adminOperationContract.operations).toHaveLength(234)
+    expect(adminOperationContract.operationCount).toBe(237)
+    expect(adminOperationContract.operations).toHaveLength(237)
     expect(Object.isFrozen(adminOperationContract)).toBe(true)
     expect(Object.isFrozen(adminOperationContract.operations)).toBe(true)
     expect(adminOperationContract.operations.every(Object.isFrozen)).toBe(true)

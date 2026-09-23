@@ -1,3 +1,4 @@
+import { taskCompletionRowActions } from './admin-row-operations.ts'
 import type { AdminRequestInput } from '../domain/contracts'
 import type {
   AdminDetailRequest,
@@ -37,7 +38,7 @@ export type AdminTaskMutationAction = typeof ADMIN_TASK_MUTATION_ACTIONS[number]
 
 export interface AdminTaskMutationDefinition {
   action: AdminTaskMutationAction
-  capability: 'tasks.manage' | 'tasks.review'
+  capability: 'tasks.manage'
   title: string
   description: string
   fields: readonly OperationField[]
@@ -83,11 +84,16 @@ const assignmentStatusLabels: Record<string, string> = {
 }
 
 const resultStatusLabels: Record<string, string> = {
+  PENDING: '待审批',
   SUCCESS: '成功',
   FAILED: '失败',
 }
 
 const submissionStatusLabels: Record<string, string> = {
+  pending: '待开始',
+  in_progress: '进行中',
+  pending_submit: '待提交',
+  expired: '已过期',
   submitted: '已提交',
   pending_review: '待审批',
   boss_approved: '笨笨老大已审批',
@@ -140,6 +146,14 @@ export async function loadTaskManagementPage(
     ],
     nextCursor: taskPage.nextCursor,
   }
+}
+
+export async function loadTaskEditorOptions(request: AdminRequest): Promise<Record<string, unknown>> {
+  return record(await request('mip.admin.tasks.editorOptions'))
+}
+
+function catalogOptions(value: unknown) {
+  return Array.isArray(value) ? value.map(record).filter(item => identifier(item.id)).map(item => ({ value: String(item.id), label: String(item.name || item.id) })) : []
 }
 
 export async function loadTaskEligibleLevels(request: AdminRequest): Promise<TaskEligibleLevel[]> {
@@ -204,11 +218,11 @@ export async function loadTaskDetail(
         ['完成标准', task.completionCriteria],
         ['周期开始', formatDateTime(task.periodStartAt)],
         ['周期结束', formatDateTime(task.periodEndAt)],
-        ['周送达时间', formatDateTime(task.weeklyDeliverAt)],
-        ['指派负责人', task.assignedOwner],
+        ['周送达时间', task.weeklyDeliverAt],
+        ['指派负责人', task.assignedOwnerName || task.assignedOwnerId],
         ['奖励配置', rewardConfigDisplay(task.rewardConfig)],
         ['模板文件', taskTemplateStatus(template)],
-        ['模板管理', '上传与替换功能暂不可用'],
+        ['模板管理', '编辑任务时可上传与替换模板'],
         ['版本', numberLabel(task.version)],
         ['发布时间', formatDateTime(task.publishedAt)],
         ['更新时间', formatDateTime(task.updatedAt)],
@@ -263,7 +277,7 @@ export async function loadTaskDetail(
       member: valueOf(item, 'nickname'),
       reward: numberLabel(item.rewardExperience),
       completedAt: formatDateTime(item.completedAt),
-      state: resultStatusLabel(item.resultStatus),
+      state: item.submissionStatus ? submissionStatusLabel(item.submissionStatus) : resultStatusLabel(item.resultStatus),
     })),
     columns: columns([
       ['task', '任务'], ['member', '成员'], ['reward', '经验奖励'],
@@ -317,7 +331,10 @@ export async function loadTaskCompletionDetail(
         ['完成时间', formatDateTime(completion.completedAt)],
         ['审批状态', submissionStatusLabel(completion.submissionStatus)],
         ['审批说明', completion.reviewRemark],
-        ['奖励结果', completion.rewardResult],
+        ['奖励结果', rewardResultDisplay(completion.rewardResult)],
+        ['审核人', completion.reviewedBy],
+        ['审核时间', formatDateTime(completion.reviewedAt)],
+        ['奖励重试次数', Array.isArray(completion.retryLog) ? String(completion.retryLog.length) : '0'],
         ['附件', completionAttachmentStatus(attachment)],
         ['附件查看', validWebMediaUrl(attachment.url) ? '可用' : '当前不可用'],
         ['附件类型', attachment.contentType],
@@ -348,7 +365,7 @@ export function createTaskMutationDefinition(
     return definition(action, targetId ? '编辑任务' : '创建任务', '填写任务内容、经验奖励、参与范围和截止时间。任务模板图片可使用素材上传页返回的素材 ID。', [
       { name: 'name', label: '任务名称', kind: 'text', required: true, maxLength: 100 },
       { name: 'content', label: '任务内容', kind: 'textarea', required: true, maxLength: 5000, wide: true },
-      { name: 'rewardExperience', label: '经验奖励', kind: 'integer', required: true },
+
       { name: 'assignmentMode', label: '分配范围', kind: 'select', required: true, options: [
         { value: 'ALL', label: '全部成员' }, { value: 'SELECTED', label: '指定成员' },
       ] },
@@ -356,14 +373,15 @@ export function createTaskMutationDefinition(
       { name: 'endsAt', label: '截止时间', kind: 'datetime' },
       { name: 'templateAssetId', label: '任务模板图片', kind: 'text', wide: true, assetPurpose: 'TASK_TEMPLATE' },
       { name: 'eligibleLevelIds', label: '可参与等级（不选择表示不限）', kind: 'multi-select', options: levelOptions, wide: true },
-      { name: 'starLevel', label: '星级', kind: 'integer' },
-      { name: 'purpose', label: '用途', kind: 'textarea', maxLength: 500, wide: true },
-      { name: 'completionCriteria', label: '完成标准', kind: 'textarea', maxLength: 1000, wide: true },
+      { name: 'starLevel', label: '星级', kind: 'select', required: true, options: [1, 2, 3, 4, 5].map(level => ({ value: String(level), label: `${level} 星` })) },
+      { name: 'purpose', label: '任务目的', kind: 'textarea', required: true, maxLength: 500, wide: true },
+      { name: 'completionCriteria', label: '完成标准', kind: 'textarea', required: true, maxLength: 1000, wide: true },
       { name: 'periodStartAt', label: '周期开始', kind: 'datetime' },
       { name: 'periodEndAt', label: '周期结束', kind: 'datetime' },
-      { name: 'weeklyDeliverAt', label: '周送达时间', kind: 'datetime' },
-      { name: 'assignedOwner', label: '指派负责人', kind: 'text' },
-      { name: 'rewardConfig', label: '奖励配置', kind: 'group', fields: [{ name: 'rewardExperience', label: '经验奖励', kind: 'integer' }], wide: true },
+      { name: 'weeklyDeliverAt', label: '周送达时间（HH:mm，北京时间）', kind: 'text', maxLength: 5 },
+      { name: 'assignedOwnerId', label: '任务负责人', kind: 'select', required: true, options: catalogOptions(record(source.editorOptions).owners) },
+      { name: 'applicableServers', label: '适用服务器', kind: 'multi-select', options: catalogOptions(record(source.editorOptions).servers), wide: true },
+      { name: 'rewardConfig', label: '奖励配置（奖金线下发放）', kind: 'group', fields: rewardFields(), wide: true },
     ], {
       taskId: targetId,
       expectedVersion: version,
@@ -375,14 +393,15 @@ export function createTaskMutationDefinition(
       endsAt: String(task.endsAt || ''),
       templateAssetId: String(record(task.template).assetId || ''),
       eligibleLevelIds,
-      starLevel: integer(task.starLevel) || 1,
+      starLevel: String(integer(task.starLevel) || 1),
       purpose: String(task.purpose || ''),
       completionCriteria: String(task.completionCriteria || ''),
       periodStartAt: String(task.periodStartAt || ''),
       periodEndAt: String(task.periodEndAt || ''),
       weeklyDeliverAt: String(task.weeklyDeliverAt || ''),
-      assignedOwner: String(task.assignedOwner || ''),
-      rewardConfig: { rewardExperience: integer(task.rewardExperience) },
+      assignedOwnerId: String(task.assignedOwnerId || ''),
+      applicableServers: Array.isArray(task.applicableServers) ? task.applicableServers : [],
+      rewardConfig: task.rewardConfig || { experience: { enabled: true, amount: integer(task.rewardExperience) || 1 }, contribution: { enabled: false, amount: 0 }, bonus: { enabled: false, amount: 0 } },
     })
   }
   if (action === 'mip.admin.tasks.assignMembers' || action === 'mip.admin.tasks.revokeMembers') {
@@ -426,11 +445,9 @@ export function createTaskSubmissionMutationDefinition(
   const submission = record(source.submission)
   const submissionId = targetId || identifier(submission.id || submission.submissionId)
   if (action === 'mip.admin.tasks.submissions.approve') {
-    const requiresBossApproval = source.requiresBossApproval === true || submission.requiresBossApproval === true
-    return reviewDefinition(action, '审批通过', '确认该任务提交符合完成标准，通过后奖励将按服务端规则发放。' + (requiresBossApproval ? '该任务需要笨笨老大审批。' : ''), [
+    return reviewDefinition(action, '审批通过', '确认该任务提交符合完成标准，通过后奖励将按服务端规则发放。', [
       { name: 'remark', label: '审批说明', kind: 'textarea', maxLength: 500, wide: true },
-      { name: 'bossApproved', label: '笨笨老大已审批', kind: 'checkbox', wide: true },
-    ], { submissionId, remark: String(submission.reviewRemark || ''), bossApproved: requiresBossApproval })
+    ], { submissionId, remark: String(submission.reviewRemark || '') })
   }
   if (action === 'mip.admin.tasks.submissions.reject') {
     return reviewDefinition(action, '退回提交', '退回该任务提交，提交人需修改后重新提交。请填写退回原因。', [
@@ -460,16 +477,20 @@ export function createTaskAssignmentMutationDefinition(
     .filter(item => item.value)
   return definition(action, '派发任务', '选择派发模式与接收成员。周派发会在设定周期内按周送达时间自动分配。', [
     { name: 'assignMode', label: '派发模式', kind: 'select', required: true, options: [
-      { value: 'manual', label: '手动派发' }, { value: 'weekly', label: '周派发' },
+      { value: 'single', label: '单次派发' }, { value: 'batch', label: '批量派发' }, { value: 'weekly', label: '每周派发' },
     ] },
-    { name: 'recipients', label: '接收成员', kind: 'multi-select', required: true, options, wide: true },
-    { name: 'weeklyDeliverAt', label: '周送达时间', kind: 'datetime', visibleWhen: { path: 'assignMode', value: 'weekly' } },
+    { name: 'recipients', label: '接收成员', kind: 'multi-select', options, wide: true },
+    { name: 'roleIds', label: '接收角色', kind: 'multi-select', options: Array.isArray(record(source.editorOptions).roles) ? (record(source.editorOptions).roles as unknown[]).map(record).map(role => ({ value: String(role.id), label: String(role.name) })) : [] },
+    { name: 'serverIds', label: '接收服务器', kind: 'multi-select', options: catalogOptions(record(source.editorOptions).servers) },
+    { name: 'tagIds', label: '接收标签', kind: 'multi-select', options: catalogOptions(record(source.editorOptions).tags) },
+    { name: 'weeklyDeliverAt', label: '周送达时间（HH:mm，北京时间）', kind: 'text', maxLength: 5, visibleWhen: { path: 'assignMode', value: 'weekly' } },
     { name: 'weeklyStartAt', label: '周派发开始', kind: 'datetime', visibleWhen: { path: 'assignMode', value: 'weekly' } },
     { name: 'weeklyEndAt', label: '周派发结束', kind: 'datetime', visibleWhen: { path: 'assignMode', value: 'weekly' } },
   ], {
     taskId: targetId,
     expectedVersion: version,
-    assignMode: 'manual',
+    assignMode: 'batch',
+    roleIds: [], serverIds: [], tagIds: [],
     recipients: [],
     weeklyDeliverAt: String(task.weeklyDeliverAt || ''),
     weeklyStartAt: String(task.periodStartAt || ''),
@@ -487,7 +508,9 @@ export function buildTaskMutationInput(
   if (action === 'mip.admin.tasks.save') {
     const name = text(values.name, 100)
     const content = text(values.content, 5000)
-    const rewardExperience = nonNegativeInteger(values.rewardExperience)
+    const rewardConfig = normalizeRewardValues(values.rewardConfig)
+    if (!rewardConfig) return null
+    const rewardExperience = rewardConfig.experience.enabled ? rewardConfig.experience.amount : 0
     const assignmentMode = ['ALL', 'SELECTED'].includes(String(values.assignmentMode))
       ? String(values.assignmentMode)
       : ''
@@ -506,12 +529,11 @@ export function buildTaskMutationInput(
     const periodEndAt = isoDate(values.periodEndAt)
     if (periodEndAt === null) return null
     if (periodStartAt && periodEndAt && new Date(periodStartAt) > new Date(periodEndAt)) return null
-    const weeklyDeliverAt = isoDate(values.weeklyDeliverAt)
-    if (weeklyDeliverAt === null) return null
-    const assignedOwner = text(values.assignedOwner, 100)
-    const rewardConfig = record(values.rewardConfig)
-    const rewardConfigExperience = nonNegativeInteger(rewardConfig.rewardExperience)
-    if (rewardConfigExperience === null) return null
+    const weeklyDeliverAt = text(values.weeklyDeliverAt, 5)
+    if (weeklyDeliverAt && !/^([01]\d|2[0-3]):[0-5]\d$/.test(weeklyDeliverAt)) return null
+    const assignedOwnerId = identifier(values.assignedOwnerId)
+    const applicableServers = identifiers(values.applicableServers || [], true)
+    if (!purpose || !completionCriteria || !assignedOwnerId || !applicableServers) return null
     const input: AdminRequestInput = {
       task: {
         name,
@@ -528,8 +550,9 @@ export function buildTaskMutationInput(
         periodStartAt,
         periodEndAt,
         weeklyDeliverAt,
-        assignedOwner,
-        rewardConfigJson: JSON.stringify({ rewardExperience: rewardConfigExperience }),
+        assignedOwnerId,
+        applicableServers,
+        rewardConfig,
       },
     }
     if (taskId) {
@@ -563,9 +586,6 @@ export function buildTaskSubmissionInput(
   if (action === 'mip.admin.tasks.submissions.reject' && !remark) return null
   const input: AdminRequestInput = { submissionId }
   if (remark) input.remark = remark
-  if (action === 'mip.admin.tasks.submissions.approve' && values.bossApproved === true) {
-    input.bossApproved = true
-  }
   return input
 }
 
@@ -576,17 +596,21 @@ export function buildTaskAssignmentInput(
   const taskId = identifier(values.taskId)
   if (!taskId) return null
   const assignMode = String(values.assignMode || '')
-  if (!['manual', 'weekly'].includes(assignMode)) return null
-  const recipients = profileRefs(values.recipients)
-  if (!recipients?.length) return null
+  if (!['single', 'batch', 'weekly'].includes(assignMode)) return null
+  const memberRefs = profileRefs(values.recipients || []) || []
+  const roleIds = Array.isArray(values.roleIds) ? values.roleIds.map(String) : []
+  const serverIds = identifiers(values.serverIds || [], true)
+  const tagIds = identifiers(values.tagIds || [], true)
+  if (!serverIds || !tagIds || ![memberRefs, roleIds, serverIds, tagIds].some(items => items.length)) return null
+  const recipients = { memberRefs, roleIds, serverIds, tagIds }
   const expectedVersion = positiveInteger(values.expectedVersion)
-  const weeklyDeliverAt = isoDate(values.weeklyDeliverAt)
-  if (weeklyDeliverAt === null) return null
+  const weeklyDeliverAt = text(values.weeklyDeliverAt, 5)
+  if (weeklyDeliverAt && !/^([01]\d|2[0-3]):[0-5]\d$/.test(weeklyDeliverAt)) return null
   const weeklyStartAt = isoDate(values.weeklyStartAt)
   if (weeklyStartAt === null) return null
   const weeklyEndAt = isoDate(values.weeklyEndAt)
   if (weeklyEndAt === null) return null
-  if (assignMode === 'weekly' && !weeklyDeliverAt) return null
+  if (!expectedVersion || (assignMode === 'weekly' && (!weeklyDeliverAt || !weeklyStartAt || !weeklyEndAt || weeklyEndAt <= weeklyStartAt))) return null
   const input: AdminRequestInput = { taskId, recipients, assignMode }
   if (expectedVersion) input.expectedVersion = expectedVersion
   if (weeklyDeliverAt) input.weeklyDeliverAt = weeklyDeliverAt
@@ -674,10 +698,43 @@ function taskTemplateStatus(template: AdminTableRow) {
   return validWebMediaUrl(template.url) ? '已配置' : '已配置，当前无法在 Web 查看'
 }
 
+function rewardFields(): OperationField[] {
+  return [['experience', '经验值'], ['contribution', '贡献值'], ['bonus', '奖金（元，线下发放）']].map(([name, label]) => ({
+    name, label, kind: 'group', fields: [
+      { name: 'enabled', label: `启用${label}`, kind: 'checkbox' },
+      { name: 'amount', label: '数额', kind: name === 'bonus' ? 'number' : 'integer' },
+    ],
+  }))
+}
+
+function normalizeRewardValues(value: unknown) {
+  const source = record(value)
+  const result = {} as Record<'experience' | 'contribution' | 'bonus', { enabled: boolean; amount: number }>
+  for (const key of ['experience', 'contribution', 'bonus'] as const) {
+    const entry = record(source[key])
+    const enabled = entry.enabled === true
+    const amount = enabled ? Number(entry.amount) : 0
+    if (!Number.isFinite(amount) || amount < 0 || amount > 1000000
+      || (enabled && key !== 'bonus' && (!Number.isSafeInteger(amount) || amount < 1))
+      || (key === 'bonus' && Math.abs(amount * 100 - Math.round(amount * 100)) > 0.00001)) return null
+    result[key] = { enabled, amount }
+  }
+  return Object.values(result).some(item => item.enabled) ? result : null
+}
+
 function rewardConfigDisplay(value: unknown) {
   const config = record(value)
-  const experience = numberLabel(config.rewardExperience)
-  return experience === '—' ? '—' : `经验奖励 ${experience}`
+  return [['experience', '经验值'], ['contribution', '贡献值'], ['bonus', '奖金（线下）']]
+    .flatMap(([key, label]) => record(config[key]).enabled ? [`${label} ${numberLabel(record(config[key]).amount)}`] : []).join(' / ') || '—'
+}
+
+function rewardResultDisplay(value: unknown) {
+  const result = record(value)
+  if (result.error) return String(result.error)
+  return [['experience', '经验值'], ['contribution', '贡献值'], ['bonus', '奖金']].flatMap(([key, label]) => {
+    const item = record(result[key])
+    return item.amount !== undefined ? [`${label} ${numberLabel(item.amount)}${item.status === 'OFFLINE_PENDING' ? '（待线下发放）' : ''}`] : []
+  }).join(' / ') || '—'
 }
 
 function completionAttachmentStatus(attachment: AdminTableRow) {
@@ -704,7 +761,7 @@ function taskListRow(item: AdminTableRow) {
       ? numberLabel(item.starLevel)
       : '—',
     period: formatDateTime(item.periodStartAt),
-    assignedOwner: valueOf(item, 'assignedOwner'),
+    assignedOwner: valueOf(item, 'assignedOwnerName') !== '—' ? valueOf(item, 'assignedOwnerName') : valueOf(item, 'assignedOwnerId'),
     rewardConfig: rewardConfigDisplay(item.rewardConfig),
     assignment: assignmentModeLabel(item.assignmentMode),
     assigned: numberLabel(item.assignmentCount),
@@ -718,11 +775,12 @@ function taskListRow(item: AdminTableRow) {
 function completionListRow(item: AdminTableRow) {
   return {
     detailId: valueOf(item, 'id', 'completionId'),
+    rowActions: taskCompletionRowActions(item),
     task: valueOf(item, 'taskName'),
     member: valueOf(item, 'nickname'),
     reward: numberLabel(item.rewardExperience),
     completedAt: formatDateTime(item.completedAt),
-    state: resultStatusLabel(item.resultStatus),
+    state: item.submissionStatus ? submissionStatusLabel(item.submissionStatus) : resultStatusLabel(item.resultStatus),
   }
 }
 
@@ -751,7 +809,7 @@ function reviewDefinition(
   fields: readonly OperationField[],
   values: OperationValues,
 ): AdminTaskMutationDefinition {
-  return { action, capability: 'tasks.review', title, description, fields, values }
+  return { action, capability: 'tasks.manage', title, description, fields, values }
 }
 
 function integer(value: unknown) {
@@ -762,11 +820,6 @@ function integer(value: unknown) {
 function positiveInteger(value: unknown) {
   const number = Number(value)
   return Number.isSafeInteger(number) && number > 0 ? number : null
-}
-
-function nonNegativeInteger(value: unknown) {
-  const number = Number(value)
-  return Number.isSafeInteger(number) && number >= 0 && number <= 1_000_000 ? number : null
 }
 
 function safeNonNegativeInteger(value: unknown) {

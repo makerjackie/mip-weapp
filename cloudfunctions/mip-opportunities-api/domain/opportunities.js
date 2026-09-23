@@ -2,6 +2,7 @@
 
 const { randomUUID } = require('node:crypto')
 const { lockActiveContributor } = require('../lib/auth')
+const { opportunityVisibility } = require('./journey-access')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const { confirmAiDraft, normalizeAiConfirmation } = require('./ai-confirmation')
 const {
@@ -26,10 +27,21 @@ const {
   uuid,
 } = require('./common')
 
-const OWNER_EDITABLE_OPPORTUNITY_STATUSES = new Set(['DRAFT', 'PUBLISHED'])
+const OWNER_EDITABLE_OPPORTUNITY_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'UNPUBLISHED'])
+const OPPORTUNITY_TYPES = new Set(['COMPANY', 'RESOURCE', 'PARTNER'])
 
-function canOwnerEditOpportunity(status) {
+function canOwnerEditOpportunity(status, moderatedByUserId) {
   return OWNER_EDITABLE_OPPORTUNITY_STATUSES.has(status)
+    && !(status === 'UNPUBLISHED' && moderatedByUserId)
+}
+
+function readOpportunityTypes(value) {
+  let parsed = value
+  if (typeof value === 'string') {
+    try { parsed = JSON.parse(value) }
+    catch { return [] }
+  }
+  return Array.isArray(parsed) ? [...new Set(parsed.filter(key => OPPORTUNITY_TYPES.has(key)))] : []
 }
 
 function limit(value, fallback = 12) {
@@ -82,6 +94,11 @@ function normalizeFilter(value = {}) {
 }
 
 function normalizeDraft(value = {}) {
+  if (value.publicationStatus !== undefined
+    && !['PUBLISHED', 'ENDED', 'UNPUBLISHED'].includes(value.publicationStatus)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  if (value.typeKeys !== undefined && !Array.isArray(value.typeKeys)) throw new Error('VALIDATION_FAILED')
   const roleKeys = stringList(value.roleKeys, 6, 'VALIDATION_FAILED', key => ROLE_KEYS.has(key))
   if (!roleKeys.length) throw new Error('VALIDATION_FAILED')
   const scopeType = value.scopeType === 'BRANCH' ? 'BRANCH' : 'PLATFORM'
@@ -99,6 +116,10 @@ function normalizeDraft(value = {}) {
     valueSummary: stringValue(value.valueSummary, 240, 'VALIDATION_FAILED'),
     targetSummary: stringValue(value.targetSummary, 500, 'VALIDATION_FAILED'),
     description: stringValue(value.description, 6000, 'VALIDATION_FAILED'),
+    regionText: stringValue(value.regionText, 60, 'VALIDATION_FAILED', false),
+    typeKeys: stringList(value.typeKeys, 3, 'VALIDATION_FAILED', key => OPPORTUNITY_TYPES.has(key)),
+    publicationStatus: value.publish ? value.publicationStatus : undefined,
+    playersOnly: value.playersOnly === true,
     scopeType,
     branchId,
     cityTagId,
@@ -263,6 +284,9 @@ function opportunitySummary(row, related, caller) {
     title: row.title,
     valueSummary: row.value_summary,
     targetSummary: row.target_summary,
+    regionText: row.region_text || undefined,
+    typeKeys: readOpportunityTypes(row.type_keys_json),
+    playersOnly: Boolean(row.players_only),
     city: row.city_tag_id ? { id: row.city_tag_id, key: row.city_key, label: row.city_label } : undefined,
     ...(commercialTerms ? { commercialTerms } : {}),
     branchId: row.branch_id || undefined,
@@ -288,6 +312,7 @@ function opportunitySummary(row, related, caller) {
 const opportunitySelect = `
   SELECT o.id, o.owner_user_id, o.branch_id, o.title, o.value_summary,
          o.target_summary, o.description, o.city_tag_id, o.status,
+         o.region_text, o.type_keys_json, o.players_only, o.moderated_by_user_id,
          o.cover_asset_id, o.referral_count, o.version, o.published_at, o.updated_at,
          b.name AS branch_name,
          city.tag_key AS city_key, city.label AS city_label,
@@ -312,6 +337,9 @@ async function listOpportunities(database, caller, rawFilter) {
   await assertSelectableTags(database, caller.appId, expectedTags)
   const where = ['o.app_id = ?', 'o.status = ?']
   const params = [caller.appId, filter.status]
+  const privacy = opportunityVisibility(caller)
+  where.push(privacy.sql)
+  params.push(...privacy.params)
   const blockFilter = mutualBlockFilter(caller.userId, 'o.owner_user_id', 'o.app_id')
   if (blockFilter.sql) {
     where.push(blockFilter.sql)
@@ -437,12 +465,13 @@ async function listMine(database, caller, input = {}) {
 
 async function getOpportunity(database, caller, id) {
   if (!uuid(id)) throw new Error('NOT_FOUND')
+  const privacy = opportunityVisibility(caller)
   const blockFilter = mutualBlockFilter(caller.userId, 'o.owner_user_id', 'o.app_id')
   const row = await database.one(
     `${opportunitySelect}
-     WHERE o.app_id = ? AND o.id = ?
+     WHERE o.app_id = ? AND o.id = ? AND ${privacy.sql}
        ${blockFilter.sql ? `AND ${blockFilter.sql}` : ''}`,
-    [caller.appId, id, ...blockFilter.params],
+    [caller.appId, id, ...privacy.params, ...blockFilter.params],
   )
   if (!row) throw new Error('NOT_FOUND')
   if (row.status === 'ARCHIVED') throw new Error('NOT_FOUND')
@@ -503,7 +532,7 @@ async function getOpportunity(database, caller, id) {
     referralActive,
     referralTarget,
     interestActive,
-    canEdit: mine && canOwnerEditOpportunity(row.status),
+    canEdit: mine && canOwnerEditOpportunity(row.status, row.moderated_by_user_id),
   }
 }
 
@@ -669,6 +698,7 @@ async function saveOpportunity(database, contentSafety, caller, input) {
     draft.valueSummary,
     draft.targetSummary,
     draft.description,
+    draft.regionText,
   ])
   return idempotentTransaction(database, {
     appId: caller.appId,
@@ -684,19 +714,23 @@ async function saveOpportunity(database, contentSafety, caller, input) {
     let existing = null
     if (draft.id) {
       existing = await tx.one(
-        `SELECT owner_user_id, branch_id, status, version
+        `SELECT owner_user_id, branch_id, status, version, moderated_by_user_id
          FROM mip_opportunities
          WHERE app_id = ? AND id = ? FOR UPDATE`,
         [caller.appId, draft.id],
       )
       if (!existing) throw new Error('NOT_FOUND')
       if (existing.owner_user_id !== caller.userId) throw new Error('FORBIDDEN')
-      if (!canOwnerEditOpportunity(existing.status)) throw new Error('FORBIDDEN')
+      if (!canOwnerEditOpportunity(existing.status, existing.moderated_by_user_id)) throw new Error('FORBIDDEN')
       if (!Number.isInteger(draft.expectedVersion) || draft.expectedVersion !== Number(existing.version)) {
         throw new Error('CONFLICT')
       }
     }
-    const status = draft.publish ? 'PUBLISHED' : (existing?.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT')
+    const status = draft.publish
+      ? (draft.publicationStatus || 'PUBLISHED')
+      : (existing && existing.status !== 'DRAFT' ? existing.status : 'DRAFT')
+    if (['ENDED', 'UNPUBLISHED'].includes(status)
+      && (!existing || existing.status === 'DRAFT')) throw new Error('CONFLICT')
     const published = status === 'PUBLISHED'
     const legacyCityTagId = draft.commercialTerms
       ? (draft.commercialTerms.locations.find(location => location.type === 'CITY')?.cityTagId || null)
@@ -706,14 +740,17 @@ async function saveOpportunity(database, contentSafety, caller, input) {
         `UPDATE mip_opportunities
          SET scope_type = ?, branch_id = ?, title = ?, value_summary = ?,
              target_summary = ?, description = ?, city_tag_id = ?, cover_asset_id = ?,
+             region_text = ?, type_keys_json = ?, players_only = ?,
              status = ?, content_safety_status = 'APPROVED',
              published_at = CASE WHEN ? = 1 THEN UTC_TIMESTAMP(3) ELSE published_at END,
-             ended_at = NULL, version = version + 1
+             ended_at = CASE WHEN ? = 'ENDED' THEN UTC_TIMESTAMP(3) ELSE NULL END,
+             version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
         [
           draft.scopeType, draft.branchId, draft.title, draft.valueSummary,
           draft.targetSummary, draft.description, legacyCityTagId, draft.coverAssetId,
-          status, published ? 1 : 0, caller.appId, id, draft.expectedVersion,
+          draft.regionText || null, JSON.stringify(draft.typeKeys), draft.playersOnly ? 1 : 0,
+          status, published ? 1 : 0, status, caller.appId, id, draft.expectedVersion,
         ],
       )
     }
@@ -722,13 +759,14 @@ async function saveOpportunity(database, contentSafety, caller, input) {
         `INSERT INTO mip_opportunities (
            id, app_id, owner_user_id, scope_type, branch_id, title,
            value_summary, target_summary, description, city_tag_id, cover_asset_id,
-           status, content_safety_status, published_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'APPROVED',
+           region_text, type_keys_json, players_only, status, content_safety_status, published_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'APPROVED',
            CASE WHEN ? = 1 THEN UTC_TIMESTAMP(3) ELSE NULL END)`,
         [
           id, caller.appId, caller.userId, draft.scopeType, draft.branchId,
           draft.title, draft.valueSummary, draft.targetSummary, draft.description,
-          legacyCityTagId, draft.coverAssetId, status, published ? 1 : 0,
+          legacyCityTagId, draft.coverAssetId, draft.regionText || null,
+          JSON.stringify(draft.typeKeys), draft.playersOnly ? 1 : 0, status, published ? 1 : 0,
         ],
       )
     }
@@ -798,6 +836,42 @@ async function saveOpportunity(database, contentSafety, caller, input) {
       },
     })
     return { id, status, version }
+  })
+}
+
+async function archiveOpportunity(database, caller, input = {}) {
+  const id = stringValue(input.id, 36, 'VALIDATION_FAILED')
+  const expectedVersion = Number(input.expectedVersion)
+  if (!uuid(id) || !Number.isInteger(expectedVersion) || expectedVersion < 1) throw new Error('VALIDATION_FAILED')
+  return idempotentTransaction(database, {
+    appId: caller.appId, userId: caller.userId, operation: 'opportunity.archive',
+    idempotencyKey: input.idempotencyKey, request: { id, expectedVersion },
+  }, async (tx) => {
+    await lockActiveContributor(tx, caller)
+    const row = await tx.one(
+      `SELECT owner_user_id, status, version, branch_id FROM mip_opportunities
+       WHERE app_id = ? AND id = ? FOR UPDATE`,
+      [caller.appId, id],
+    )
+    if (!row) throw new Error('NOT_FOUND')
+    if (row.owner_user_id !== caller.userId) throw new Error('FORBIDDEN')
+    if (Number(row.version) !== expectedVersion || row.status === 'ARCHIVED') throw new Error('CONFLICT')
+    const result = await tx.query(
+      `UPDATE mip_opportunities
+       SET status = 'ARCHIVED', archived_at = UTC_TIMESTAMP(3), archived_by_user_id = ?,
+           archive_reason = 'OWNER_DELETED', version = version + 1
+       WHERE app_id = ? AND id = ? AND version = ? AND status <> 'ARCHIVED'`,
+      [caller.userId, caller.appId, id, expectedVersion],
+    )
+    if (result.affectedRows !== 1) throw new Error('CONFLICT')
+    const version = expectedVersion + 1
+    await appendAudit(tx, {
+      appId: caller.appId, actorUserId: caller.userId,
+      scopeType: row.branch_id ? 'BRANCH' : 'PLATFORM', scopeId: row.branch_id,
+      action: 'OPPORTUNITY_ARCHIVED', resourceType: 'OPPORTUNITY', resourceId: id,
+      metadata: { version, previousStatus: row.status },
+    })
+    return { id, status: 'ARCHIVED', version }
   })
 }
 
@@ -1006,6 +1080,16 @@ async function setProfileInterest(database, caller, input) {
     request,
   }, async (tx) => {
     await lockActiveContributor(tx, caller)
+    if (sourceType === 'PROFILE' && active) {
+      const membership = await tx.one(
+        `SELECT id FROM mip_membership_entitlements
+         WHERE app_id = ? AND user_id = ? AND status = 'ACTIVE'
+           AND starts_at <= UTC_TIMESTAMP(3) AND ends_at > UTC_TIMESTAMP(3)
+         LIMIT 1 FOR UPDATE`,
+        [caller.appId, caller.userId],
+      )
+      if (!membership) throw new Error('FORBIDDEN')
+    }
     const resolved = await resolveInterestTarget(tx, caller, sourceType, sourceId, profileRef)
     const targetUserId = resolved.targetUserId
     const storedSourceId = resolved.sourceId
@@ -1059,6 +1143,7 @@ async function setProfileInterest(database, caller, input) {
 }
 
 module.exports = {
+  archiveOpportunity,
   assertReferences,
   assertSelectableTags,
   canOwnerEditOpportunity,

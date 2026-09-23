@@ -24,3 +24,9 @@ minimumReleaseAgeExclude:
   - weapp-tailwindcss@5.4.1
   - weapp-vite@6.25.0
   - wevu@6.25.0
+  - '@weapp-core/logger@3.1.6'
+  - '@weapp-core/shared@3.2.5'
+  - '@weapp-vite/devtools-runtime@0.4.22'
+  - '@weapp-vite/miniprogram-automator@1.2.21'
+  - '@weapp-vite/qr@1.1.6'
+  - weapp-ide-cli@6.1.7

@@ -33,7 +33,8 @@ test('ENDED is outside the owner-editable opportunity state set', () => {
   assert.equal(canOwnerEditOpportunity('DRAFT'), true)
   assert.equal(canOwnerEditOpportunity('PUBLISHED'), true)
   assert.equal(canOwnerEditOpportunity('ENDED'), false)
-  assert.equal(canOwnerEditOpportunity('UNPUBLISHED'), false)
+  assert.equal(canOwnerEditOpportunity('UNPUBLISHED'), true)
+  assert.equal(canOwnerEditOpportunity('UNPUBLISHED', 'moderator'), false)
   assert.equal(canOwnerEditOpportunity('ARCHIVED'), false)
 })
 

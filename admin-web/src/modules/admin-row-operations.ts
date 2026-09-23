@@ -1,5 +1,8 @@
 export type AdminRowOperationAction
-  = | 'mip.admin.events.registrations.review'
+  = | 'mip.admin.adminAccounts.create'
+    | 'mip.admin.adminAccounts.update'
+    | 'mip.admin.adminAccounts.changeStatus'
+    | 'mip.admin.events.registrations.review'
     | 'mip.admin.events.checkIn'
     | 'mip.admin.events.undoCheckIn'
     | 'mip.admin.events.album.review'
@@ -117,29 +120,14 @@ export function taskCompletionRowActions(completion: Record<string, unknown>): A
   const submissionId = identifier(completion.id || completion.submissionId || completion.completionId)
   if (!submissionId) return []
   const status = String(completion.submissionStatus || '')
-  const requiresBossApproval = completion.requiresBossApproval === true
-  if (status === 'submitted' || status === 'pending_review' || status === 'pending') {
-    const actions: AdminRowOperation[] = []
-    if (status === 'pending_review' && requiresBossApproval) {
-      actions.push({
-        action: 'mip.admin.tasks.submissions.approve',
-        label: '笨笨老大审批',
-        targetId: submissionId,
-        values: { submissionId, bossApproved: true },
-      })
-    }
-    actions.push(
-      { action: 'mip.admin.tasks.submissions.approve', label: '通过', targetId: submissionId, values: { submissionId } },
-      { action: 'mip.admin.tasks.submissions.reject', label: '退回', targetId: submissionId, values: { submissionId } },
-    )
-    return actions
-  }
-  if (status === 'approved' || status === 'reward_succeeded') {
-    return [{ action: 'mip.admin.tasks.submissions.retryReward', label: '重试奖励', targetId: submissionId, values: { submissionId } }]
-  }
-  if (status === 'reward_failed' || status === 'retrying') {
-    return [{ action: 'mip.admin.tasks.submissions.retryReward', label: '重试奖励', targetId: submissionId, values: { submissionId } }]
-  }
+  if (completion.canReview !== true) return []
+  if (status === 'pending_review') return [
+    { action: 'mip.admin.tasks.submissions.approve', label: '通过', targetId: submissionId, values: { submissionId } },
+    { action: 'mip.admin.tasks.submissions.reject', label: '退回', targetId: submissionId, values: { submissionId } },
+  ]
+  if (status === 'reward_failed') return [
+    { action: 'mip.admin.tasks.submissions.retryReward', label: '重试奖励', targetId: submissionId, values: { submissionId } },
+  ]
   return []
 }
 
@@ -365,4 +353,17 @@ function stringList(value: unknown) {
   return Array.isArray(value)
     ? [...new Set(value.filter(item => typeof item === 'string' && item.trim()).map(String))]
     : []
+}
+
+export function adminAccountRowActions(account: Record<string, unknown>): AdminRowOperation[] {
+  const targetId = identifier(account.accountId)
+  const expectedVersion = positiveVersion(account.version)
+  if (!targetId || expectedVersion === null || account.roleKey === 'PLATFORM_OWNER') return []
+  return [
+    { action: 'mip.admin.adminAccounts.update', label: '编辑', targetId, expectedVersion, values: {
+      name: account.name, roleKey: account.roleKey, scopeId: account.scopeId || '',
+    } },
+    { action: 'mip.admin.adminAccounts.changeStatus', label: account.status === 'ACTIVE' ? '停用' : '启用', targetId,
+      expectedVersion, values: { status: account.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE', reason: '' } },
+  ]
 }

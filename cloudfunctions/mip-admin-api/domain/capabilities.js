@@ -34,6 +34,8 @@ const CAPABILITIES = Object.freeze({
   GROWTH_CONFIGURE: 'growth.configure',
   GROWTH_ADJUST: 'growth.adjust',
   TASKS_MANAGE: 'tasks.manage',
+  TASKS_REVIEW_ANY: 'tasks.review.any',
+  TASKS_ASSIGN_ANY: 'tasks.assign.any',
   BANNERS_MANAGE: 'banners.manage',
   BADGES_MANAGE: 'badges.manage',
   GAME_MANAGE: 'game.manage',

@@ -450,6 +450,10 @@ function validateRuntimeContract(runtimePages) {
     const visible = scenario.visibleAssertion
     assert(typeof visible?.selector === 'string' && visible.selector.startsWith(route.selector), `Representative ${scenario.id} visible selector must be scoped to ${route.selector}`)
     const wxml = fs.readFileSync(path.join(root, 'src', `${route.path}.wxml`), 'utf8')
+    if (scenario.scrollIntoView !== undefined) {
+      assert(typeof scenario.scrollIntoView === 'string' && /^#[\w-]+$/.test(scenario.scrollIntoView), `Representative ${scenario.id} scrollIntoView must be an id selector`)
+      assert(wxml.includes(`id="${scenario.scrollIntoView.slice(1)}"`), `Representative ${scenario.id} scroll target is missing from ${route.path}`)
+    }
     for (const id of visible.selector.matchAll(/#([\w-]+)/g)) {
       assert(wxml.includes(`id="${id[1]}"`), `Representative ${scenario.id} selector #${id[1]} is missing from ${route.path}`)
     }
@@ -1001,6 +1005,10 @@ async function verifyRepresentativeStates(miniProgram, runtimePages, report, sen
       () => miniProgram.reLaunch(`/${scenario.route}`),
     )
     await waitForRepresentativeLifecycle(page)
+    if (scenario.scrollIntoView) {
+      await miniProgram.callWxMethod('pageScrollTo', { selector: scenario.scrollIntoView, duration: 0 })
+      await new Promise(resolve => setTimeout(resolve, 180))
+    }
     const beforeData = await retry(
       `read representative ${scenario.id} before state`,
       () => page.data(undefined, { routeOnly: true }),
@@ -1015,12 +1023,24 @@ async function verifyRepresentativeStates(miniProgram, runtimePages, report, sen
     const screenshotPath = path.join(outputDir, `state-${scenario.id}.png`)
     await captureScreenshot(`state-${scenario.id}`, miniProgram, screenshotPath)
     const visibleAfterCapture = await assertRepresentativeVisible(page, scenario)
-    const sizeBytes = fs.statSync(screenshotPath).size
-    assert(sizeBytes >= 4 * 1024, `Representative ${scenario.id} screenshot is suspiciously small`)
-    const injectedDiffRatio = comparePngBuffers(
+    let injectedDiffRatio = comparePngBuffers(
       fs.readFileSync(beforePath),
       fs.readFileSync(screenshotPath),
     ).diffRatio
+    // The DevTools renderer can paint one frame after SelectorQuery reports the
+    // new node. Keep the screenshot-diff gate, but allow that frame to arrive.
+    if (!wasAlreadyTargetState) {
+      for (let frame = 0; frame < 3 && injectedDiffRatio < 0.001; frame += 1) {
+        await new Promise(resolve => setTimeout(resolve, 180))
+        await captureScreenshot(`state-${scenario.id}-paint-${frame + 1}`, miniProgram, screenshotPath)
+        injectedDiffRatio = comparePngBuffers(
+          fs.readFileSync(beforePath),
+          fs.readFileSync(screenshotPath),
+        ).diffRatio
+      }
+    }
+    const sizeBytes = fs.statSync(screenshotPath).size
+    assert(sizeBytes >= 4 * 1024, `Representative ${scenario.id} screenshot is suspiciously small`)
     const visibleAssertionMode = wasAlreadyTargetState
       ? 'natural-route-data-render-query'
       : 'route-data-render-query'

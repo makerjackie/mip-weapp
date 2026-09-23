@@ -36,6 +36,7 @@ import { loadTaskManagementPage } from './admin-task-management.ts'
 import { loadBannerManagementPage } from './admin-banner-management.ts'
 import { loadGameManagementPage } from './admin-game-management.ts'
 import {
+  adminAccountRowActions,
   branchRowActions,
   eventCatalogRowActions,
   eventPolicyRowActions,
@@ -439,6 +440,7 @@ async function loadAdminAccounts(query: AdminListQuery, request: AdminRequest): 
         detailId: valueOf(item, 'accountId', 'id'),
         name: valueOf(item, 'name'),
         loginAccount: valueOf(item, 'loginAccount'),
+        rowActions: adminAccountRowActions(item),
         role: label(valueOf(item, 'roleKey')),
         branch: valueOf(item, 'branchName') || '—',
         state: label(valueOf(item, 'status')),

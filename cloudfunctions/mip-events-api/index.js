@@ -48,6 +48,7 @@ const userActions = new Set([
   'mip.events.checkIn',
   'mip.events.heartCandidates',
   'mip.events.hearts.mine',
+  'mip.events.hearts.markRead',
   'mip.events.heart',
   'mip.events.setHeart',
   'mip.events.feedback',
@@ -205,6 +206,8 @@ async function dispatch(event) {
       })
     case 'mip.events.heart':
       return service.getHeart(mysqlDatabase(), { ...shared, eventId: event.eventId })
+    case 'mip.events.hearts.markRead':
+      return service.markHeartHistoryRead(mysqlDatabase(), { ...shared, readThroughAt: event.readThroughAt })
     case 'mip.events.setHeart':
       return service.setHeart(mysqlDatabase(), {
         ...shared,

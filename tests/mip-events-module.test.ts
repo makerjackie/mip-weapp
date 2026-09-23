@@ -133,6 +133,7 @@ function createGateway() {
     })),
     listHeartCandidates: vi.fn(async () => []),
     listHeartHistory: vi.fn(async kind => ({ kind, items: [] })),
+    markHeartHistoryRead: vi.fn(async readThroughAt => ({ readAt: readThroughAt })),
     getHeart: vi.fn(async () => ({ received: [], version: 0 })),
     setHeart: vi.fn(async () => ({ received: [], version: 1 })),
     getFeedback: vi.fn(async () => null),

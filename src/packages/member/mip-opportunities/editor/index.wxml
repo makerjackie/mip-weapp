@@ -66,16 +66,15 @@
       <view id="opportunity-field-visibility">
         <view class="mb-2 flex items-center gap-2 text-[length:28rpx] font-medium"><mip-icon name="contacts-1-1" size="{{16}}" color="var(--color-brand)" /><text>你希望项目被谁看到</text></view>
         <view class="overflow-hidden rounded-[16rpx] bg-panel">
-          <view class="flex min-h-[104rpx] items-center gap-3 px-4" aria-role="radio" aria-checked="{{scopeType === 'PLATFORM'}}" data-visibility="PLATFORM" bind:tap="chooseVisibility"><view class="flex h-[48rpx] w-[48rpx] shrink-0 items-center justify-center rounded-full border-[4rpx] border-solid {{scopeType === 'PLATFORM' ? 'border-brand' : 'border-panel-raised'}}"><view wx:if="{{scopeType === 'PLATFORM'}}" class="h-[20rpx] w-[20rpx] rounded-full bg-brand" /></view><text class="text-[length:28rpx]">发布到平台，让更多人看到</text></view>
+          <view class="flex min-h-[104rpx] items-center gap-3 px-4" aria-role="radio" aria-checked="{{!playersOnly}}" data-visibility="PLATFORM" bind:tap="chooseVisibility"><view class="flex h-[48rpx] w-[48rpx] shrink-0 items-center justify-center rounded-full border-[4rpx] border-solid {{!playersOnly ? 'border-brand' : 'border-panel-raised'}}"><view wx:if="{{!playersOnly}}" class="h-[20rpx] w-[20rpx] rounded-full bg-brand" /></view><text class="text-[length:28rpx]">发布到平台，让更多人看到</text></view>
           <view class="border-t border-line" />
-          <view class="flex min-h-[104rpx] items-center gap-3 px-4" aria-role="radio" aria-checked="{{scopeType === 'BRANCH'}}" data-visibility="INTERNAL" bind:tap="chooseVisibility"><view class="flex h-[48rpx] w-[48rpx] shrink-0 items-center justify-center rounded-full border-[4rpx] border-solid {{scopeType === 'BRANCH' ? 'border-brand' : 'border-panel-raised'}}"><view wx:if="{{scopeType === 'BRANCH'}}" class="h-[20rpx] w-[20rpx] rounded-full bg-brand" /></view><text class="text-[length:28rpx]">仅希望 MIP 内部玩家看到</text></view>
+          <view class="flex min-h-[104rpx] items-center gap-3 px-4" aria-role="radio" aria-checked="{{playersOnly}}" data-visibility="INTERNAL" bind:tap="chooseVisibility"><view class="flex h-[48rpx] w-[48rpx] shrink-0 items-center justify-center rounded-full border-[4rpx] border-solid {{playersOnly ? 'border-brand' : 'border-panel-raised'}}"><view wx:if="{{playersOnly}}" class="h-[20rpx] w-[20rpx] rounded-full bg-brand" /></view><text class="text-[length:28rpx]">仅希望 MIP 内部玩家看到</text></view>
         </view>
       </view>
       <view>
         <view class="mb-2 flex items-center gap-2 text-[length:28rpx] font-medium"><mip-icon name="image" size="{{16}}" color="var(--color-brand)" /><text>项目封面（选填）</text></view>
         <view class="flex items-end gap-3">
-          <image wx:if="{{coverUrl}}" class="h-[240rpx] w-[180rpx] rounded-[8rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl}}" aria-role="button" bind:tap="chooseCover" />
-          <view wx:else class="flex h-[240rpx] w-[180rpx] items-center justify-center rounded-[8rpx] border border-dashed border-brand bg-panel-raised text-[length:28rpx] text-brand active:bg-panel" aria-role="button" bind:tap="chooseCover"><mip-icon name="icon-plus-fill" size="{{16}}" color="var(--color-brand)" /><text class="ml-1">添加</text></view>
+          <image class="h-[240rpx] w-[180rpx] rounded-[8rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl || defaultCoverUrl}}" aria-role="button" bind:tap="chooseCover" />
           <view class="flex min-w-0 flex-1 flex-col gap-2"><t-button block variant="outline" loading="{{coverUploading}}" disabled="{{saving}}" bind:tap="chooseCover">{{coverUrl ? '更换封面' : '上传封面'}}</t-button><text class="text-[length:22rpx] text-muted">未上传时使用系统默认封面</text></view>
         </view>
         <view wx:if="{{coverMessage}}" class="mt-3 rounded-[8rpx] border border-danger px-3 py-3 text-[length:22rpx] text-danger" aria-live="polite">{{coverMessage}}</view>
@@ -92,7 +91,7 @@
       <view id="opportunity-field-status">
         <view class="mb-2 flex items-center gap-2 text-[length:28rpx] font-medium"><mip-icon name="signpost-fill" size="{{16}}" color="var(--color-brand)" /><text>项目状态</text></view>
         <view class="flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-4" aria-role="button" aria-expanded="{{statusSheetVisible}}" bind:tap="openStatusSheet">
-          <text class="text-[length:28rpx] text-brand">{{projectStatus === 'RECRUITING' ? '招募中' : '结束项目'}}</text>
+          <text class="text-[length:28rpx] text-brand">{{projectStatus === 'RECRUITING' ? '招募中' : projectStatus === 'ENDED' ? '结束项目' : '下架项目'}}</text>
           <mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-muted)" />
         </view>
       </view>
@@ -123,7 +122,7 @@
     </view>
     <app-page-exit always label="取消" />
     <!-- journey-review QZ2：项目状态半屏三选项（说明文案逐字取自终审稿）+ 取消胶囊。
-         「下架项目」置灰标「即将支持」（服务端无 UNPUBLISHED）；新建流程「结束项目」置灰。 -->
+         新建流程先发布，已发布机会支持结束和下架。 -->
     <t-popup visible="{{statusSheetVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleStatusSheetVisibility">
       <view class="box-border rounded-t-[32rpx] bg-panel px-3 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-5 text-ink">
         <view class="px-2 text-[length:32rpx] font-semibold">项目状态</view>

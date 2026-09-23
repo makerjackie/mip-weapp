@@ -396,6 +396,7 @@ Page({
       tags: event.tags || [],
       videoRecaps: event.videoRecaps || [],
       participantPreview: peekCloudFileUrls(event.participantPreview || []),
+      organizer: peekCloudFileUrls(event.organizer),
       changes: event.changes || [],
     }
     this.setData({
@@ -427,6 +428,7 @@ Page({
     updateComponentMedia(this, 'event.coverUrl', event.coverUrl || '')
     updateComponentMedia(this, 'event.participantPreview', event.participantPreview || [])
     updateComponentMedia(this, 'event.contentMedia', contentMedia)
+    updateComponentMedia(this, 'event.organizer', event.organizer)
   },
 
   refreshCheckInIntent() {

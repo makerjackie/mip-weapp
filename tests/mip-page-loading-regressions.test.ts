@@ -8,8 +8,9 @@ vi.mock('../src/modules/mip-cooperation', () => ({ cooperationModule: {} }))
 vi.mock('../src/modules/mip-growth/client', () => ({ mipGrowthModule: {} }))
 vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: identity, mipBranchesModule: {} }))
 vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: {} }))
-vi.mock('../src/modules/mip-events/client', () => ({ mipEventsModule: {} }))
+vi.mock('../src/modules/mip-events/client', () => ({ mipEventsModule: { listHeartHistory: vi.fn() } }))
 vi.mock('../src/modules/mip-banners', () => ({ mipBannerModule: {} }))
+vi.mock('../src/platform/cloudbase/client', () => ({ requireCloudClient: vi.fn() }))
 
 type Definition = { data: Record<string, unknown> } & Record<string, unknown>
 let profile: Definition
@@ -53,6 +54,8 @@ describe('page loading and profile interaction regressions', () => {
   it('renders freshly returned statistics and unread badge on the first response', async () => {
     opportunities.getProfileInfluence.mockResolvedValue({ guestCount: 3, interactionCount: 4, interestCount: 5, visitorCount: 6 })
     opportunities.listReceived.mockResolvedValue({ unreadCount: 2 })
+    const { mipEventsModule } = await import('../src/modules/mip-events/client')
+    vi.mocked(mipEventsModule.listHeartHistory).mockResolvedValue({ totalCount: 5, unreadCount: 1, items: [], nextCursor: '' } as never)
     const instance = page(profile)
     await instance.loadInfluenceSummary({ authenticated: true })
     expect([instance.data.guestCount, instance.data.interactionCount, instance.data.interestCount, instance.data.visitorCount]).toEqual([3, 4, 5, 6])
@@ -68,7 +71,7 @@ describe('page loading and profile interaction regressions', () => {
     const instance = page(profile)
     instance.openProtected = vi.fn()
     instance.openStat({ detail: { label: '心动值' } })
-    expect(instance.openProtected).toHaveBeenCalledWith('/packages/member/mip-received/index?scope=hearts&category=ACTIVE_INTEREST', 'INTERACT')
+    expect(instance.openProtected).toHaveBeenCalledWith('/packages/member/mip-hearts/index', 'INTERACT')
   })
 
   it.each([['嘉宾', 'GUEST'], ['互动过', 'INTERACTION']])('opens the %s statistic', (label, category) => {

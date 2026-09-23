@@ -32,6 +32,8 @@ MIP 使用 `mip-cloudpay`、`mip-cloudpay-callback`、`mip-refund-worker` 和 `m
 
 支付适配器与 ledger 的 HMAC 字段必须一致：`getPayableOrder.forSync` 和 `applyPaymentCallback.providerPaidAt` 都参与签名。增加内部请求字段时，必须同步 ledger 的签名字段清单，并用真实适配器客户端对接 ledger 验签器测试正常请求与字段篡改，不能只分别模拟两端成功响应。
 
+用户订单历史列表在服务端分页前排除 `CREATED` / `PAYMENT_CREATED`，对应最新原型“前台隐藏待支付”。订单记录、按 ID 查询、幂等重试与支付恢复路径保留；隐藏列表不取消订单，也不改变支付、退款或权益事实。
+
 ## 退款
 
 退款请求先在同一事务写入 `mip_refunds` 并把订单锁定为 `REFUND_PENDING`。用户退款可由 `mip-cloudpay` 提交；管理端单笔退款和活动取消产生的退款由 `mip-refund-worker` 提交。两个适配器都只向 ledger 提交退款 ID，商户订单号、退款单号、金额、货币和权益全部由 ledger 回查，不能采用客户端或管理页面传入的金额。

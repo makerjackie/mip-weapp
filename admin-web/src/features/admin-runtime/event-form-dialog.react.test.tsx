@@ -44,7 +44,7 @@ describe('event form submission through the actual dialog', () => {
     fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
     await screen.findByText('请填写活动名称')
     expect(submitted).not.toHaveBeenCalled()
-  }, 15000)
+  })
   it('submits entered event content and converts the date controls into the server draft', async () => {
     const definition = createAdminEventMutationDefinition('mip.admin.events.save', '')
     const values = {
@@ -74,7 +74,7 @@ describe('event form submission through the actual dialog', () => {
       startsAt: '2030-09-20T02:00:00.000Z', endsAt: '2030-09-20T04:00:00.000Z',
       registrationSchema: [{ ...values.registrationSchema[0], maxLength: 120 }],
     } })
-  }, 15000)
+  })
 
   it('edits registration fields without exposing raw JSON', async () => {
     const definition = createAdminEventMutationDefinition('mip.admin.events.save', '')
@@ -93,5 +93,5 @@ describe('event form submission through the actual dialog', () => {
     expect(submitted.mock.calls[0]?.[0].registrationSchema).toEqual([
       { key: expect.stringMatching(/^field_[a-f0-9]{32}$/), label: '参与身份', type: 'SELECT', required: true, options: ['成员', '嘉宾'] },
     ])
-  }, 15000)
+  })
 })

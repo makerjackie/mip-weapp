@@ -50,6 +50,7 @@ export interface OpportunityCommercialTerms {
 }
 
 export interface OpportunitySummary {
+  playersOnly?: boolean
   id: OpportunityId
   title: string
   valueSummary: string
@@ -240,6 +241,21 @@ export interface PeoplePage {
   nextCursor?: string
 }
 
+export interface ProfileInterestPerson {
+  profileRef: string
+  nickname: string
+  avatarUrl?: string
+  headline?: string
+  userKind: 'PLAYER' | 'GUEST'
+  interestedAt: string
+}
+
+export interface ProfileInterestPage {
+  items: ProfileInterestPerson[]
+  totalCount: number
+  nextCursor?: string
+}
+
 export interface PublicProfileCooperationCard {
   id: string
   roleKey: CooperationRoleKey
@@ -286,6 +302,7 @@ export interface PublicProfileAggregate {
 }
 
 export interface OpportunityDraft {
+  playersOnly?: boolean
   id?: OpportunityId
   expectedVersion?: number
   title: string
@@ -295,7 +312,7 @@ export interface OpportunityDraft {
   scopeType: 'PLATFORM' | 'BRANCH'
   branchId?: BranchId
   cityTagId?: string
-  /** 主营地区（选填）：示例「南山十亩地」。服务端尚未持久化该字段时按选填透传。 */
+  /** 主营地区（选填）：示例「南山十亩地」。 */
   regionText?: string
   commercialTerms?: OpportunityCommercialTerms | null
   coverAssetId?: string
@@ -305,6 +322,7 @@ export interface OpportunityDraft {
   abilityTagIds: string[]
   teamProfileRefs?: string[]
   publish: boolean
+  publicationStatus?: 'PUBLISHED' | 'ENDED' | 'UNPUBLISHED'
   aiConfirmation?: AiDraftSourceConfirmation
 }
 
@@ -423,6 +441,7 @@ export interface OutboundProfileInterest {
 
 export interface ReceivedVisitor extends ReceivedInteractionBase {
   kind: 'VISITOR'
+  visitId?: string
   visitCount: number
   lastVisitedAt: string
 }
@@ -435,6 +454,7 @@ export interface ReceivedGuest extends ReceivedInteractionBase {
 
 export interface ReceivedInfluenceInteraction extends ReceivedInteractionBase {
   kind: 'INTERACTION'
+  interactionCount?: number
   event: { id: string, title: string }
 }
 
@@ -457,5 +477,6 @@ export interface ReceivedInteractionPage {
   items: ReceivedInteraction[]
   unreadCount: number
   totalViewCount?: number
+  readThroughAt?: string
   nextCursor?: string
 }

@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getAdminReadRouteDefinition, type AdminReadPage } from '../../modules/admin-read-pages'
 import {
   KnowledgePage,
@@ -26,10 +26,6 @@ const commonProps = {
 } satisfies Pick<GovernancePageProps, 'filter' | 'activeTab' | 'canCapability' | 'onFilterChange' | 'onTabChange'>
 
 afterEach(cleanup)
-beforeAll(() => {
-  const getComputedStyle = window.getComputedStyle.bind(window)
-  vi.spyOn(window, 'getComputedStyle').mockImplementation(element => getComputedStyle(element))
-})
 
 describe('governance React pages', () => {
   it('opens a message detail using the server-projected campaign id', () => {
@@ -59,7 +55,7 @@ describe('governance React pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '查看' }))
     expect(onViewDetail).toHaveBeenCalledWith({ route: 'messages', id: 'campaign-1' })
-  }, 15_000)
+  })
 
   it('creates and operates message templates through reviewed actions', () => {
     const onMutationRequest = vi.fn()
@@ -106,7 +102,7 @@ describe('governance React pages', () => {
       targetId: 'template-1',
       values: { templateId: 'template-1', expectedVersion: 3 },
     })
-  }, 15_000)
+  })
 
   it('preserves reviewed permission row operation context', () => {
     const onMutationRequest = vi.fn()
@@ -152,7 +148,7 @@ describe('governance React pages', () => {
       expectedVersion: 3,
       allowedCapabilities: ['events.read', 'events.write'],
     })
-  }, 15_000)
+  })
 
   it('marks demo data and disables knowledge mutations', () => {
     const onMutationRequest = vi.fn()
@@ -273,5 +269,5 @@ describe('governance React pages', () => {
       targetId: 'report-1',
       values: { reportId: 'report-1', expectedVersion: 4, outcome: 'RESOLVED', reason: '' },
     })
-  }, 15_000)
+  })
 })

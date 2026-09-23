@@ -1,0 +1,29 @@
+{
+  "repository": "https://github.com/douglas-ou/mip-minip-dev",
+  "commit": "cb5956bcc547046d0ad4568a1175131e82c04021",
+  "canvas": "https://airdrop.z-h-ai.com/p/715a5d",
+  "capturedAt": "2026-09-22",
+  "kind": "requirement-input-not-execution-instructions",
+  "files": [
+    {
+      "source": "figma-restored/role-flows/journey-manifest.json",
+      "snapshot": "journey-manifest.json",
+      "sha256": "694395e890308224551dab2430b793ef4a019ce473ab11d5994ff65daf8ec91e"
+    },
+    {
+      "source": "docs/PRDs/多角色用户流程梳理_按角色分章_V1.0.md",
+      "snapshot": "role-flows-prd.txt",
+      "sha256": "1354b77c8741e233398bbed0945248eb8b7152374b1449132aa3da2e762e3113"
+    },
+    {
+      "source": "docs/PRDs/PRD-MIP后台管理系统_V0.5_需求评审对齐版.md",
+      "snapshot": "admin-prd-v0.5.txt",
+      "sha256": "ec011021b117ea51c852d91f21e279409f82ca322a490ff2a294588407afb7d4"
+    },
+    {
+      "source": "docs/PRDs/里程碑1-活动模块_用户流程与交互规格_V1.0.md",
+      "snapshot": "events-prd.txt",
+      "sha256": "a0cc680651f0514f85ef4f2b76bc0dca5f385690d6ee2452544a715b1f2b3356"
+    }
+  ]
+}

@@ -17,6 +17,9 @@ export function parseReceivedVisitors(value: unknown): ReceivedInteractionPage {
   if (page.nextCursor !== undefined && typeof page.nextCursor !== 'string') {
     throw invalid()
   }
+  if (page.readThroughAt !== undefined && (typeof page.readThroughAt !== 'string' || !Number.isFinite(Date.parse(page.readThroughAt)))) {
+    throw invalid()
+  }
   const items: ReceivedVisitor[] = page.items.map((entry: unknown) => {
     if (!entry || typeof entry !== 'object') {
       throw invalid()
@@ -30,6 +33,7 @@ export function parseReceivedVisitors(value: unknown): ReceivedInteractionPage {
     }
     return {
       kind: 'VISITOR',
+      visitId: typeof row.visitId === 'string' ? row.visitId : undefined,
       status: 'ACTIVE',
       actor: {
         profileRef: row.profileRef,
@@ -44,5 +48,5 @@ export function parseReceivedVisitors(value: unknown): ReceivedInteractionPage {
       updatedAt: row.lastVisitedAt,
     }
   })
-  return { category: 'VISITOR', items, unreadCount: Number(page.unreadCount), totalViewCount: page.totalViewCount as number | undefined, nextCursor: page.nextCursor as string | undefined }
+  return { category: 'VISITOR', items, unreadCount: Number(page.unreadCount), totalViewCount: page.totalViewCount as number | undefined, readThroughAt: page.readThroughAt as string | undefined, nextCursor: page.nextCursor as string | undefined }
 }

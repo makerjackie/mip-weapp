@@ -236,7 +236,7 @@ describe('public profile aggregate', () => {
           })
         }
         if (sql.includes('mip_event_invitation_attributions')) return { count: 2 }
-        if (sql.includes('mip_event_hearts')) return { count: 3 }
+        if (sql.includes('mip_event_checkins own_checkin')) return { count: 3 }
         if (sql.includes('SELECT COUNT(*) AS count') && sql.includes('mip_profile_interests')) return { count: 4 }
         if (sql.includes('mip_profile_visits')) return { count: 5 }
         if (sql.includes('FROM mip_profile_interests')) return { status: 'ACTIVE' }
@@ -375,6 +375,7 @@ describe('direct profile interest', () => {
     const tx = {
       async one(sql) {
         if (sql.includes('FROM mip_idempotency_keys')) return null
+        if (sql.includes('FROM mip_membership_entitlements')) return { id: 'membership' }
         if (sql.includes('SELECT id, status FROM mip_users')) {
           return { id: viewerUserId, status: 'ACTIVE' }
         }

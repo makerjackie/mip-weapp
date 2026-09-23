@@ -674,14 +674,20 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
   }
   sections.push({
     title: '操作记录',
-    rows: records(opportunity.history).map(item => ({ action: codeLabel(item.action), actor: text(item.actorNickname), createdAt: dateTime(item.createdAt) })),
-    columns: columns([['action', '操作'], ['actor', '操作人'], ['createdAt', '时间']]),
+    rows: records(opportunity.history).map(item => {
+      const metadata = record(item.metadata)
+      return { action: codeLabel(item.action), actor: text(item.actorNickname), createdAt: dateTime(item.createdAt),
+        fromStatus: codeLabel(metadata.fromStatus), toStatus: codeLabel(metadata.toStatus),
+        summary: text(metadata.summary) }
+    }),
+    columns: columns([['action', '操作'], ['actor', '操作人'], ['createdAt', '时间'],
+      ['fromStatus', '变更前'], ['toStatus', '变更后'], ['summary', '摘要']]),
   })
   return {
     route: 'opportunities',
-    title: text(opportunity.title, '机会详情'),
+    title: `${text(opportunity.title, '机会详情')}${opportunity.deleted ? '（已删除）' : ''}`,
     subtitle: [text(opportunity.ownerNickname, ''), text(opportunity.cityName, '')].filter(Boolean).join(' · '),
-    status: codeLabel(opportunity.status),
+    status: opportunity.deleted ? '已删除' : codeLabel(opportunity.status),
     sections,
     source: { opportunity, commentState: commentState || {} },
   }
@@ -955,13 +961,14 @@ const codeLabels: Record<string, string> = {
   BEFORE_ACCESS: '访问前可退款', NON_REFUNDABLE: '不可退款', ADMIN_ADJUSTMENT: '人工开通', ORDER: '购买',
   PLATFORM_OWNER: '平台负责人', PLATFORM_OPERATIONS: '平台运营', PLATFORM_FINANCE: '平台财务',
   BRANCH_ADMIN: '服务器管理员', EVENT_OWNER: '活动负责人', EVENT_MANAGER: '活动管理员', EVENT_STAFF: '活动工作人员',
-  PENDING_REVIEW: '待审核', WAITLISTED: '候补', PAYMENT_PENDING: '待支付', REGISTERED: '已报名', CANCELLATION_PENDING: '取消处理中', REJECTED: '已拒绝', ATTENDED: '已签到',
+  PENDING_REVIEW: '待审核', WAITLISTED: '候补', PAYMENT_PENDING: '待支付', REGISTERED: '已报名', CANCELLATION_PENDING: '取消处理中', REJECTED: '已拒绝', ATTENDED: '已签到', ABNORMAL: '异常',
   ORDER_CREATED: '订单创建', PAYMENT_CONFIRMED: '支付确认', ORDER_CLOSED: '订单关闭', REFUND_CREATED: '退款创建', REFUND_COMPLETED: '退款完成',
   connector: '皮条客', business_builder: '生意佬', capital_operator: '暴发户', strategist: '狗策划', visual_designer: '死美工', delivery_lead: '老保姆',
   COMMENT: '评论', REVIEW: '项目评价', HIDDEN: '已隐藏', APPROVED: '已通过',
   SPAM: '垃圾信息', HARASSMENT: '骚扰行为', FRAUD: '欺诈风险', INAPPROPRIATE_CONTENT: '不当内容', IMPERSONATION: '冒充他人', OTHER: '其他问题',
   'admin.opportunities.create': '创建机会', 'admin.opportunities.update': '更新机会', 'admin.opportunities.publish': '发布机会',
-  'admin.opportunities.end': '结束机会', 'admin.opportunities.unpublish': '下架机会', 'admin.opportunities.archive': '归档机会',
+  'admin.opportunities.end': '结束机会', 'admin.opportunities.unpublish': '下架机会',
+  'admin.opportunities.archive': '归档机会', 'admin.opportunities.delete': '删除机会',
 }
 
 function codeLabel(value: unknown) {

@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { createProfileRef } = require('../lib/profile-ref')
+const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const {
   encodeVisitorCursor,
   listProfileVisitors,
@@ -13,6 +13,7 @@ const {
 const pepper = 'profile-visits-test-pepper-more-than-32-characters'
 const appId = 'wx-app'
 const ownerId = '10000000-0000-4000-8000-000000000001'
+const visitId = '30000000-0000-4000-8000-000000000001'
 const visitorId = '20000000-0000-4000-8000-000000000001'
 const owner = { appId, userId: ownerId, profileRefSecret: pepper }
 const visitorRef = createProfileRef({ appId, userId: visitorId }, pepper)
@@ -89,16 +90,17 @@ describe('profile visits', () => {
     assert.equal(writes.some(call => call.sql.includes('INSERT INTO mip_profile_visits')), false)
   })
 
-  it('groups visits by visitor, filters inactive visitors and returns opaque profile refs', async () => {
+  it('returns each visit separately, filters inactive visitors and returns opaque profile refs', async () => {
     const calls = []
     const oneCalls = []
     const database = {
       async query(sql, params) {
         calls.push({ sql, params })
         assert.match(sql, /FROM mip_profile_visits/)
-        assert.match(sql, /GROUP BY visitor_user_id/)
+        assert.doesNotMatch(sql, /GROUP BY visitor_user_id/)
         assert.match(sql, /visitor\.status = 'ACTIVE'/)
         return [{
+          visit_id: visitId,
           visitor_id: visitorId,
           visit_count: 3,
           last_visited_at: '2026-08-24T03:00:00.000Z',
@@ -111,20 +113,21 @@ describe('profile visits', () => {
       },
       async one(sql, params) {
         oneCalls.push({ sql, params })
-        return { count: sql.includes('unread_groups') ? 1 : 7 }
+        return { count: sql.includes('visit.read_at IS NULL') ? 1 : 7 }
       },
     }
     const result = await listProfileVisitors(database, owner, { limit: 20 })
     assert.equal(result.unreadCount, 1)
     assert.equal(result.totalViewCount, 7)
-    assert.equal(result.items[0].visitCount, 3)
+    assert.equal(result.items[0].visitCount, 1)
+    assert.equal(result.items[0].visitId, visitId)
     assert.equal(result.items[0].nickname, '访客甲')
     assert.match(result.items[0].profileRef, /^p1\./)
     assert.equal(JSON.stringify(result).includes(visitorId), false)
-    assert.deepEqual(calls[0].params, [appId, ownerId, appId, ownerId, ownerId])
+    assert.deepEqual(calls[0].params, [appId, ownerId, ownerId, ownerId])
     assert.equal(calls.length, 1)
-    assert.deepEqual(oneCalls[0].params, [appId, ownerId, appId, ownerId, ownerId])
-    assert.match(oneCalls[0].sql, /unread_groups/)
+    assert.deepEqual(oneCalls[0].params, [appId, ownerId, ownerId, ownerId])
+    assert.match(oneCalls[0].sql, /visit\.read_at IS NULL/)
     assert.match(oneCalls[0].sql, /INNER JOIN mip_profiles visitor_profile/)
     assert.deepEqual(oneCalls[1].params, [appId, ownerId, ownerId, ownerId])
     assert.match(oneCalls[1].sql, /FROM mip_profile_visits/)
@@ -132,26 +135,69 @@ describe('profile visits', () => {
     assert.match(oneCalls[1].sql, /INNER JOIN mip_profiles visitor_profile/)
     assert.match(oneCalls[1].sql, /FROM mip_user_blocks visibility_block/)
 
-    const cursor = encodeVisitorCursor('2026-08-24T03:00:00.000Z', visitorId, owner)
+    const cursor = encodeVisitorCursor('2026-08-24T03:00:00.000Z', visitId)
     await listProfileVisitors(database, owner, { cursor, limit: 20 })
     assert.deepEqual(calls[1].params, [
       appId,
       ownerId,
-      appId,
       ownerId,
       ownerId,
       '2026-08-24T03:00:00.000Z',
       '2026-08-24T03:00:00.000Z',
-      visitorId,
+      visitId,
     ])
-    assert.deepEqual(oneCalls[2].params, [appId, ownerId, appId, ownerId, ownerId])
+    assert.deepEqual(oneCalls[2].params, [appId, ownerId, ownerId, ownerId])
     assert.deepEqual(oneCalls[3].params, [appId, ownerId, ownerId, ownerId])
   })
 
   it('round-trips a visitor cursor without placing a raw id in the cursor', () => {
-    const cursor = encodeVisitorCursor('2026-08-24T03:00:00.000Z', visitorId, owner)
+    const cursor = encodeVisitorCursor('2026-08-24T03:00:00.000Z', visitId)
     assert.equal(cursor.includes(visitorId), false)
     assert.equal(Buffer.from(cursor, 'base64url').toString('utf8').includes(visitorId), false)
+  })
+
+  it('keeps repeated visits by the same user as separate ordered records', async () => {
+    const rows = [
+      { visit_id: visitId, visitor_id: visitorId, last_visited_at: '2026-09-22T09:00:00.000Z', visitor_nickname: '访客甲', has_unread: 1 },
+      { visit_id: '30000000-0000-4000-8000-000000000002', visitor_id: visitorId, last_visited_at: '2026-09-22T08:00:00.000Z', visitor_nickname: '访客甲', has_unread: 1 },
+    ]
+    const database = {
+      async query() { return rows },
+      async one() { return { count: 2, read_through_at: '2026-09-22T10:00:00.000Z' } },
+    }
+    const page = await listProfileVisitors(database, owner)
+    assert.equal(page.items.length, 2)
+    assert.equal(readProfileRef(page.items[0].profileRef, appId, pepper), visitorId)
+    assert.equal(readProfileRef(page.items[1].profileRef, appId, pepper), visitorId)
+    assert.notEqual(page.items[0].visitId, page.items[1].visitId)
+    assert.equal(page.totalViewCount, 2)
+    assert.equal(page.readThroughAt, '2026-09-22T10:00:00.000Z')
+  })
+
+  it('acknowledges only owner visits through the loaded watermark, preserving later arrivals', async () => {
+    let idempotency
+    const writes = []
+    const tx = {
+      async one(sql) {
+        if (sql.includes('FROM mip_idempotency_keys')) return idempotency
+        if (sql.includes('FROM mip_users') && sql.includes('FOR UPDATE')) return { id: ownerId, status: 'ACTIVE' }
+        throw new Error(`unexpected query: ${sql}`)
+      },
+      async query(sql, params) {
+        writes.push({ sql, params })
+        if (sql.includes('INSERT INTO mip_idempotency_keys')) idempotency = { request_hash: params[5], status: 'RUNNING' }
+        if (sql.includes('UPDATE mip_idempotency_keys')) idempotency.status = 'COMPLETED'
+        return { affectedRows: 2 }
+      },
+    }
+    await markProfileVisitorRead({ transaction: work => work(tx) }, owner, {
+      readThroughAt: '2026-09-22T10:00:00.000Z', idempotencyKey: 'all-visitors-read-0001',
+    })
+    const update = writes.find(call => call.sql.includes('UPDATE mip_profile_visits'))
+    assert.match(update.sql, /profile_user_id = \? AND read_at IS NULL/)
+    assert.match(update.sql, /visited_at <= LEAST\(\?, UTC_TIMESTAMP\(3\)\)/)
+    assert.deepEqual(update.params.slice(0, 2), [appId, ownerId])
+    assert.equal(update.params[2].toISOString(), '2026-09-22T10:00:00.000Z')
   })
 
   it('marks the whole visitor group read with the owner boundary', async () => {

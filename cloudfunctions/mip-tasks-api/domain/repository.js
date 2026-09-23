@@ -18,6 +18,7 @@ const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const { createUserTaskCursor, readUserTaskCursor } = require('../lib/user-task-cursor')
 const { appendLevelTransition } = require('./level-transitions')
 const { idempotentMutation } = require('./idempotency')
+const { createTaskWorkflow, workflowDto } = require('./workflow')
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 const TASKS_CAPABILITY = 'tasks.manage'
@@ -25,6 +26,22 @@ const TASK_ADMIN_ROLES = new Set(['PLATFORM_OWNER', 'PLATFORM_OPERATIONS'])
 
 function createTaskRepository(database, options = {}) {
   const createId = options.createId || randomUUID
+  const workflow = createTaskWorkflow({ database, createId, assertTasksAdmin, writeAudit })
+
+  async function getEditorOptions(caller) {
+    await assertTasksAdmin(database, caller)
+    const [owners, servers, tags] = await Promise.all([
+      database.query(`SELECT DISTINCT member.id, COALESCE(NULLIF(profile.nickname, ''), '未设置昵称') AS name
+        FROM mip_users member JOIN mip_admin_role_bindings binding ON binding.app_id = member.app_id AND binding.user_id = member.id
+        LEFT JOIN mip_profiles profile ON profile.app_id = member.app_id AND profile.user_id = member.id
+        WHERE member.app_id = ? AND member.status = 'ACTIVE' AND binding.status = 'ACTIVE'
+          AND binding.scope_type = 'PLATFORM' AND binding.role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
+        ORDER BY name, member.id LIMIT 200`, [caller.appId]),
+      database.query(`SELECT id, name FROM mip_city_branches WHERE app_id = ? AND status = 'ACTIVE' ORDER BY name LIMIT 200`, [caller.appId]),
+      database.query(`SELECT id, label AS name FROM mip_tags WHERE app_id = ? AND enabled = 1 ORDER BY sort_order, id LIMIT 200`, [caller.appId]),
+    ])
+    return { owners, servers, tags, roles: [...TASK_ADMIN_ROLES].map(id => ({ id, name: id === 'PLATFORM_OWNER' ? '平台负责人' : '平台运营' })) }
+  }
 
   async function getAdminSession(caller) {
     const roleKey = await assertTasksAdmin(database, caller)
@@ -37,7 +54,7 @@ function createTaskRepository(database, options = {}) {
       ? readUserTaskCursor(event.cursor, caller, caller.profileRefSecret)
       : null
     const snapshotAt = cursor?.snapshotAt || await currentTimestamp(database)
-    const params = [caller.userId, caller.appId, caller.userId, caller.userId]
+    const params = [caller.userId, caller.userId, caller.appId, caller.userId, caller.userId]
     let cursorSql = ''
     if (cursor) {
       cursorSql = 'AND (task.published_at < ? OR (task.published_at = ? AND task.id < ?))'
@@ -48,17 +65,22 @@ function createTaskRepository(database, options = {}) {
     params.push(limit + 1)
     const rows = await database.query(
       `SELECT task.*, completion.id AS completion_id, completion.completed_at,
-              completion.reward_experience AS awarded_experience
+              recipient_assignment.assign_mode AS recipient_assign_mode, recipient_assignment.weekly_start_at AS recipient_start_at,
+              recipient_assignment.weekly_end_at AS recipient_end_at, recipient_assignment.weekly_deliver_at AS recipient_deliver_at,
+              completion.review_remark, completion.submission_status, completion.reward_experience AS awarded_experience
        FROM mip_task_cards task
+       LEFT JOIN mip_task_assignments recipient_assignment
+         ON recipient_assignment.app_id = task.app_id AND recipient_assignment.task_id = task.id
+        AND recipient_assignment.user_id = ? AND recipient_assignment.status = 'ACTIVE'
        LEFT JOIN mip_task_completions completion
          ON completion.app_id = task.app_id AND completion.task_id = task.id
         AND completion.user_id = ?
+        AND completion.occurrence_key = ${taskOccurrenceSql()}
        WHERE task.app_id = ? AND task.status = 'PUBLISHED'
-         AND (task.assignment_mode = 'ALL' OR EXISTS (
-           SELECT 1 FROM mip_task_assignments assignment
-           WHERE assignment.app_id = task.app_id AND assignment.task_id = task.id
-             AND assignment.user_id = ? AND assignment.status = 'ACTIVE'
-         ))
+         AND (task.assignment_mode = 'ALL' OR recipient_assignment.id IS NOT NULL)
+         AND (task.applicable_servers_json IS NULL OR JSON_LENGTH(task.applicable_servers_json) = 0
+           OR JSON_CONTAINS(task.applicable_servers_json, JSON_QUOTE((SELECT member.primary_branch_id
+             FROM mip_users member WHERE member.app_id = task.app_id AND member.id = ?))))
          AND ${taskLevelEligibilitySql()} ${cursorSql}
          AND task.published_at <= ?
        ORDER BY task.published_at DESC, task.id DESC LIMIT ?`,
@@ -79,25 +101,30 @@ function createTaskRepository(database, options = {}) {
     const taskId = requiredId(value.taskId)
     const row = await database.one(
       `SELECT task.*, completion.id AS completion_id, completion.completed_at,
-              completion.reward_experience AS awarded_experience,
+              recipient_assignment.assign_mode AS recipient_assign_mode, recipient_assignment.weekly_start_at AS recipient_start_at,
+              recipient_assignment.weekly_end_at AS recipient_end_at, recipient_assignment.weekly_deliver_at AS recipient_deliver_at,
+              completion.review_remark, completion.submission_status, completion.reward_experience AS awarded_experience,
               template.cloud_file_id AS template_url,
               template.content_type AS template_content_type,
               template.content_bytes AS template_bytes
        FROM mip_task_cards task
+       LEFT JOIN mip_task_assignments recipient_assignment
+         ON recipient_assignment.app_id = task.app_id AND recipient_assignment.task_id = task.id
+        AND recipient_assignment.user_id = ? AND recipient_assignment.status = 'ACTIVE'
        LEFT JOIN mip_task_completions completion
          ON completion.app_id = task.app_id AND completion.task_id = task.id
         AND completion.user_id = ?
+        AND completion.occurrence_key = ${taskOccurrenceSql()}
        LEFT JOIN mip_media_assets template
          ON template.app_id = task.app_id AND template.id = task.template_asset_id
         AND template.status = 'READY' AND template.purpose = 'TASK_TEMPLATE'
        WHERE task.app_id = ? AND task.id = ? AND task.status = 'PUBLISHED'
-         AND (task.assignment_mode = 'ALL' OR EXISTS (
-           SELECT 1 FROM mip_task_assignments assignment
-           WHERE assignment.app_id = task.app_id AND assignment.task_id = task.id
-             AND assignment.user_id = ? AND assignment.status = 'ACTIVE'
-         ))
+         AND (task.assignment_mode = 'ALL' OR recipient_assignment.id IS NOT NULL)
+         AND (task.applicable_servers_json IS NULL OR JSON_LENGTH(task.applicable_servers_json) = 0
+           OR JSON_CONTAINS(task.applicable_servers_json, JSON_QUOTE((SELECT member.primary_branch_id
+             FROM mip_users member WHERE member.app_id = task.app_id AND member.id = ?))))
          AND ${taskLevelEligibilitySql()}`,
-      [caller.userId, caller.appId, taskId, caller.userId, caller.userId],
+      [caller.userId, caller.userId, caller.appId, taskId, caller.userId, caller.userId],
     )
     if (!row) throw new Error('NOT_FOUND')
     return userTaskDto(row, true)
@@ -108,29 +135,36 @@ function createTaskRepository(database, options = {}) {
     const attachmentAssetId = value.attachmentAssetId ? requiredId(value.attachmentAssetId) : null
     return database.transaction(async (tx) => {
       const user = await tx.one(
-        `SELECT status FROM mip_users WHERE app_id = ? AND id = ? FOR UPDATE`,
+        `SELECT status, primary_branch_id FROM mip_users WHERE app_id = ? AND id = ? FOR UPDATE`,
         [caller.appId, caller.userId],
       )
       if (!user || user.status !== 'ACTIVE') throw new Error('FORBIDDEN')
       const task = await tx.one(
         `SELECT id, name, content, reward_experience, attachment_required, assignment_mode,
+                assigned_owner_id, reward_config_json, star_level, period_start_at, period_end_at, applicable_servers_json,
                 ends_at, status, version,
                 CASE WHEN ends_at IS NOT NULL AND ends_at <= UTC_TIMESTAMP(3) THEN 1 ELSE 0 END AS is_ended
          FROM mip_task_cards WHERE app_id = ? AND id = ? FOR UPDATE`,
         [caller.appId, taskId],
       )
       if (!task || task.status !== 'PUBLISHED') throw new Error('NOT_FOUND')
-      const prior = await completionRow(tx, caller.appId, caller.userId, taskId)
-      if (prior) return completionDto(prior, true)
-      if (Boolean(task.is_ended)) throw new Error('TASK_ENDED')
-      if (task.assignment_mode === 'SELECTED') {
-        const assignment = await tx.one(
-          `SELECT status FROM mip_task_assignments
-           WHERE app_id = ? AND task_id = ? AND user_id = ? FOR UPDATE`,
-          [caller.appId, taskId, caller.userId],
-        )
-        if (!assignment || assignment.status !== 'ACTIVE') throw new Error('FORBIDDEN')
+      const applicableServers = parseJson(task.applicable_servers_json, [])
+      if (applicableServers.length && !applicableServers.includes(user.primary_branch_id)) throw new Error('MEMBER_NOT_ELIGIBLE')
+      const cycleAssignment = task.assignment_mode === 'SELECTED' ? await tx.one(`SELECT status, assign_mode, weekly_start_at, weekly_end_at FROM mip_task_assignments
+        WHERE app_id = ? AND task_id = ? AND user_id = ? FOR UPDATE`, [caller.appId, taskId, caller.userId]) : null
+      let occurrenceKey = 'once'
+      if (cycleAssignment?.assign_mode === 'weekly') {
+        const startsAt = new Date(cycleAssignment.weekly_start_at).getTime()
+        if (startsAt > Date.now()) throw new Error('TASK_NOT_STARTED')
+        if (new Date(cycleAssignment.weekly_end_at).getTime() <= Date.now()) throw new Error('TASK_ENDED')
+        occurrenceKey = `week:${new Date(startsAt + Math.floor((Date.now() - startsAt) / 604800000) * 604800000).toISOString().slice(0, 10)}`
       }
+      const prior = await completionRow(tx, caller.appId, caller.userId, taskId, occurrenceKey)
+      if (prior && prior.submission_status !== 'rejected') return completionDto(prior, true)
+      if (task.period_start_at && new Date(task.period_start_at) > new Date()) throw new Error('TASK_NOT_STARTED')
+      if (task.period_end_at && new Date(task.period_end_at) <= new Date()) throw new Error('TASK_ENDED')
+      if (Boolean(task.is_ended)) throw new Error('TASK_ENDED')
+      if (task.assignment_mode === 'SELECTED' && cycleAssignment?.status !== 'ACTIVE') throw new Error('FORBIDDEN')
       const growthAccount = await assertTaskLevelEligible(
         tx,
         caller.appId,
@@ -160,6 +194,10 @@ function createTaskRepository(database, options = {}) {
           || !Number.isSafeInteger(Number(attachment.height_px)) || Number(attachment.height_px) < 1) {
           throw new Error('ATTACHMENT_INVALID')
         }
+      }
+      if (task.reward_config_json) {
+        await workflow.submit(tx, caller, task, attachmentAssetId, prior, occurrenceKey)
+        return completionDto(await completionRow(tx, caller.appId, caller.userId, taskId, occurrenceKey), false)
       }
       const completionId = createId()
       const rewardExperience = Number(task.reward_experience)
@@ -370,6 +408,22 @@ function createTaskRepository(database, options = {}) {
             draft.assignmentMode, draft.endsAt, draft.templateAssetId, caller.appId, taskId, version],
         )
         if (Number(result.affectedRows) !== 1) throw new Error('CONFLICT')
+      }
+      if (draft.rewardConfig) {
+        const owner = await tx.one(`SELECT id FROM mip_users WHERE app_id = ? AND id = ? AND status = 'ACTIVE' FOR UPDATE`, [caller.appId, draft.assignedOwnerId])
+        if (!owner) throw new Error('TASK_OWNER_REQUIRED')
+        await assertTasksAdmin(tx, { ...caller, userId: draft.assignedOwnerId }, true)
+        if (draft.applicableServers.length) {
+          const servers = await tx.query(`SELECT id FROM mip_city_branches WHERE app_id = ? AND id IN (${draft.applicableServers.map(() => '?').join(',')})`, [caller.appId, ...draft.applicableServers])
+          if (servers.length !== draft.applicableServers.length) throw new Error('VALIDATION_FAILED')
+        }
+        await tx.query(`UPDATE mip_task_cards SET star_level = ?, purpose = ?, completion_criteria = ?,
+          period_start_at = ?, period_end_at = ?, weekly_deliver_at = ?, assigned_owner_id = ?,
+          applicable_servers_json = ?, reward_config_json = ?, reward_experience = ?
+          WHERE app_id = ? AND id = ?`, [draft.starLevel, draft.purpose, draft.completionCriteria,
+          draft.periodStartAt, draft.periodEndAt, draft.weeklyDeliverAt, draft.assignedOwnerId,
+          JSON.stringify(draft.applicableServers), JSON.stringify(draft.rewardConfig),
+          draft.rewardConfig.experience.enabled ? draft.rewardConfig.experience.amount : 0, caller.appId, taskId])
       }
       let previousEligibleLevelIds
       let eligibleLevelIds
@@ -605,6 +659,7 @@ function createTaskRepository(database, options = {}) {
 
   async function listCompletions(caller, event = {}) {
     await assertTasksAdmin(database, caller)
+    const canReview = await workflow.reviewPermissions(caller)
     const limit = pageLimit(event.limit)
     const cursor = decodeCursor(event.cursor)
     const { sql, params } = completionWhere(caller.appId, normalizeCompletionFilters(event.filters), cursor)
@@ -613,7 +668,7 @@ function createTaskRepository(database, options = {}) {
       ORDER BY completion.completed_at DESC, completion.id DESC LIMIT ?`, params)
     const page = rows.slice(0, limit)
     return {
-      items: page.map(row => adminCompletionDto(row, false)),
+      items: page.map(row => ({ ...adminCompletionDto(row, false), canReview: canReview(row) })),
       nextCursor: rows.length > limit ? encodeCursor(page.at(-1)) : undefined,
     }
   }
@@ -624,7 +679,8 @@ function createTaskRepository(database, options = {}) {
     const row = await database.one(`${completionSelect()}
       WHERE completion.app_id = ? AND completion.id = ?`, [caller.appId, completionId])
     if (!row) throw new Error('NOT_FOUND')
-    return adminCompletionDto(row, true)
+    const canReview = await workflow.reviewPermissions(caller)
+    return { ...adminCompletionDto(row, true), canReview: canReview(row) }
   }
 
   async function exportCompletions(caller, event = {}) {
@@ -643,6 +699,9 @@ function createTaskRepository(database, options = {}) {
   }
 
   return {
+    ...workflow,
+    listTaskSubmissions: listCompletions,
+    getEditorOptions,
     completeTask,
     exportCompletions,
     getAdminTask,
@@ -857,6 +916,10 @@ function completionWhere(appId, filters, cursor) {
     clauses.push('(profile.nickname LIKE ? OR completion.task_name_snapshot LIKE ?)')
     params.push(`%${filters.query}%`, `%${filters.query}%`)
   }
+  if (filters.submissionStatus) {
+    clauses.push('completion.submission_status = ?')
+    params.push(filters.submissionStatus)
+  }
   if (filters.resultStatus) {
     clauses.push('completion.result_status = ?')
     params.push(filters.resultStatus)
@@ -889,11 +952,18 @@ function completionSelect() {
             ON asset.app_id = completion.app_id AND asset.id = completion.attachment_asset_id`
 }
 
-async function completionRow(adapter, appId, userId, taskId) {
+function taskOccurrenceSql() {
+  return `CASE WHEN task.assignment_mode = 'SELECTED' AND recipient_assignment.assign_mode = 'weekly'
+    THEN CONCAT('week:', DATE_FORMAT(TIMESTAMPADD(DAY,
+      FLOOR(TIMESTAMPDIFF(SECOND, recipient_assignment.weekly_start_at, UTC_TIMESTAMP(3)) / 604800) * 7,
+      recipient_assignment.weekly_start_at), '%Y-%m-%d')) ELSE 'once' END`
+}
+
+async function completionRow(adapter, appId, userId, taskId, occurrenceKey = 'once') {
   return adapter.one(
     `SELECT completion.* FROM mip_task_completions completion
-     WHERE completion.app_id = ? AND completion.user_id = ? AND completion.task_id = ?`,
-    [appId, userId, taskId],
+     WHERE completion.app_id = ? AND completion.user_id = ? AND completion.task_id = ? AND completion.occurrence_key = ?`,
+    [appId, userId, taskId, occurrenceKey],
   )
 }
 
@@ -908,8 +978,15 @@ async function writeAudit(tx, caller, roleKey, action, resourceId, metadata) {
 }
 
 function userTaskDto(row, includeTemplateUrl = false) {
-  const completed = Boolean(row.completion_id)
-  const ended = !completed && row.ends_at && new Date(row.ends_at).getTime() <= Date.now()
+  const completed = Boolean(row.completion_id) && row.submission_status !== 'rejected'
+  const submissionStatus = String(row.submission_status || '').toLowerCase()
+  const weekly = row.assignment_mode === 'SELECTED' && row.recipient_assign_mode === 'weekly'
+  const startDates = [row.period_start_at, weekly && row.recipient_start_at].filter(Boolean).map(value => new Date(value).getTime())
+  const endDates = [row.period_end_at, row.ends_at, weekly && row.recipient_end_at].filter(Boolean).map(value => new Date(value).getTime())
+  const effectiveStartAt = startDates.length ? new Date(Math.max(...startDates)) : null
+  const effectiveEndAt = endDates.length ? new Date(Math.min(...endDates)) : null
+  const ended = !completed && effectiveEndAt && new Date(effectiveEndAt).getTime() <= Date.now()
+  const notStarted = !completed && effectiveStartAt && effectiveStartAt.getTime() > Date.now()
   return {
     id: row.id,
     name: row.name,
@@ -918,8 +995,16 @@ function userTaskDto(row, includeTemplateUrl = false) {
     attachmentRequired: Boolean(row.attachment_required),
     endsAt: iso(row.ends_at),
     hasTemplate: Boolean(row.template_asset_id),
+    purpose: row.purpose || '',
+    completionStandard: row.completion_criteria || '',
+    starLevel: Number(row.star_level || 0),
+    periodStartAt: iso(effectiveStartAt),
+    periodEndAt: iso(effectiveEndAt),
+    weeklyDeliverAt: (weekly ? row.recipient_deliver_at : row.weekly_deliver_at) || '',
+    reviewRemark: row.review_remark || '',
     version: Number(row.version),
-    status: completed ? 'COMPLETED' : ended ? 'ENDED' : 'AVAILABLE',
+    status: completed ? (['pending_review', 'reward_failed'].includes(submissionStatus) ? 'PENDING_REVIEW' : 'COMPLETED') : ended ? 'ENDED' : notStarted ? 'NOT_STARTED' : 'AVAILABLE',
+    submissionStatus,
     completion: row.completion_id ? {
       id: row.completion_id,
       completedAt: iso(row.completed_at),
@@ -941,6 +1026,15 @@ function adminTaskDto(row, includeTemplateUrl = false, eligibleLevels = []) {
     content: row.content,
     rewardExperience: Number(row.reward_experience),
     attachmentRequired: Boolean(row.attachment_required),
+    starLevel: Number(row.star_level || 0),
+    purpose: row.purpose || '',
+    completionCriteria: row.completion_criteria || '',
+    periodStartAt: iso(row.period_start_at),
+    periodEndAt: iso(row.period_end_at),
+    weeklyDeliverAt: row.weekly_deliver_at || '',
+    assignedOwnerId: row.assigned_owner_id || '',
+    applicableServers: parseJson(row.applicable_servers_json, []),
+    rewardConfig: parseJson(row.reward_config_json, null),
     assignmentMode: row.assignment_mode || 'ALL',
     assignmentCount: Number(row.assignment_count || 0),
     eligibleLevels,
@@ -972,6 +1066,7 @@ function assignmentMemberDto(row, caller) {
 
 function completionDto(row, alreadyCompleted) {
   return {
+    submissionStatus: workflowDto(row).submissionStatus,
     id: row.id,
     taskId: row.task_id,
     taskName: row.task_name_snapshot,
@@ -984,6 +1079,7 @@ function completionDto(row, alreadyCompleted) {
 
 function adminCompletionDto(row, includeAttachmentUrl = true) {
   return {
+    ...workflowDto(row),
     id: row.id,
     taskId: row.task_id,
     taskName: row.task_name_snapshot,
@@ -999,6 +1095,12 @@ function adminCompletionDto(row, includeAttachmentUrl = true) {
       bytes: Number(row.attachment_bytes || 0),
     } : undefined,
   }
+}
+
+function parseJson(value, fallback) {
+  if (value && typeof value === 'object') return value
+  try { return JSON.parse(value) ?? fallback }
+  catch { return fallback }
 }
 
 function iso(value) {

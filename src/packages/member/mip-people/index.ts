@@ -36,8 +36,13 @@ function dateText(value: string) {
 
 function presentPerson(person: PublicPerson): PersonView {
   const kindLabel = person.userKind === 'PLAYER' ? '玩家' : '嘉宾'
+  // An upstream media URL may embed a phone-like filename. Never bind it to Page.data.
+  const avatarUrl = person.avatarUrl && /(?:^|\D)1[3-9]\d{9}(?:\D|$)/.test(person.avatarUrl)
+    ? ''
+    : (person.avatarUrl || '')
   return {
     ...person,
+    avatarUrl,
     displayName: person.nickname || 'MIP 用户',
     kindLabel,
     branchText: person.primaryBranch

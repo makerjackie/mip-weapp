@@ -99,10 +99,10 @@
       </view>
     </view>
     <view wx:else class="profile-hero">
-      <!-- journey-review J3-04（mine a1/QI）：站内信入口迁至我的页右上角，带未读数字红点。 -->
+      <!-- 2026-09-22 正式帧 3364:17173：24px 铃铛、8px 无数字红点。 -->
       <view class="profile-inbox-entry" bind:tap="openNotifications" aria-role="button" aria-label="站内信">
-        <t-icon name="notification" size="40rpx" color="var(--color-ink)" />
-        <view wx:if="{{notificationUnreadCount > 0}}" class="profile-unread-badge profile-inbox-unread">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view>
+        <mip-icon name="bell-notification" size="{{24}}" color="var(--color-ink)" />
+        <view wx:if="{{notificationUnreadCount > 0}}" class="profile-inbox-unread" aria-label="有未读站内信" />
       </view>
       <view class="profile-summary" bind:tap="openProfileEdit">
         <image wx:if="{{avatarUrl}}" class="profile-avatar" mode="aspectFill" fade-show="{{false}}" src="{{avatarUrl}}" />

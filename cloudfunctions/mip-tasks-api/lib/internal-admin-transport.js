@@ -11,8 +11,14 @@ const ACTIONS = Object.freeze(new Set([
   'admin.unpublishTask', 'admin.deleteTask', 'admin.listEligibleLevels', 'admin.listAssignableMembers',
   'admin.assignMembers', 'admin.revokeMembers', 'admin.listCompletions',
   'admin.getCompletion', 'admin.exportCompletions',
+  'admin.approveSubmission', 'admin.rejectSubmission', 'admin.retrySubmissionReward',
+  'admin.assignTask', 'admin.listAssignments', 'admin.listTaskSubmissions', 'admin.getEditorOptions',
 ]))
 const MUTATION_INPUT_KEYS = Object.freeze({
+  'admin.approveSubmission': Object.freeze(new Set(['submissionId', 'remark', 'idempotencyKey'])),
+  'admin.rejectSubmission': Object.freeze(new Set(['submissionId', 'remark', 'idempotencyKey'])),
+  'admin.retrySubmissionReward': Object.freeze(new Set(['submissionId', 'remark', 'idempotencyKey'])),
+  'admin.assignTask': Object.freeze(new Set(['taskId', 'expectedVersion', 'recipients', 'assignMode', 'weeklyDeliverAt', 'weeklyStartAt', 'weeklyEndAt', 'idempotencyKey'])),
   'admin.saveTask': Object.freeze(new Set(['taskId', 'expectedVersion', 'task', 'idempotencyKey'])),
   'admin.publishTask': Object.freeze(new Set(['taskId', 'expectedVersion', 'idempotencyKey'])),
   'admin.unpublishTask': Object.freeze(new Set(['taskId', 'expectedVersion', 'idempotencyKey'])),
@@ -22,7 +28,7 @@ const MUTATION_INPUT_KEYS = Object.freeze({
 })
 const TASK_INPUT_KEYS = Object.freeze(new Set([
   'name', 'content', 'rewardExperience', 'attachmentRequired', 'assignmentMode',
-  'endsAt', 'templateAssetId', 'eligibleLevelIds',
+  'endsAt', 'templateAssetId', 'eligibleLevelIds', 'starLevel', 'purpose', 'completionCriteria', 'periodStartAt', 'periodEndAt', 'weeklyDeliverAt', 'assignedOwnerId', 'applicableServers', 'rewardConfig',
 ]))
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 const SIGNED_KEYS = new Set([
@@ -98,6 +104,13 @@ function createInternalTaskHandler({
 } = {}) {
   if (!service || typeof assertAdminReady !== 'function') throw new Error('TASKS_INTERNAL_HANDLER_CONFIG_INVALID')
   const dispatch = Object.freeze({
+    'admin.approveSubmission': (caller, input) => service.approveSubmission(caller, input),
+    'admin.rejectSubmission': (caller, input) => service.rejectSubmission(caller, input),
+    'admin.retrySubmissionReward': (caller, input) => service.retrySubmissionReward(caller, input),
+    'admin.assignTask': (caller, input) => service.assignTask(caller, input),
+    'admin.listAssignments': (caller, input) => service.listAssignments(caller, input),
+    'admin.listTaskSubmissions': (caller, input) => service.listTaskSubmissions(caller, input),
+    'admin.getEditorOptions': caller => service.getEditorOptions(caller),
     'admin.listTasks': (caller, input) => service.listAdminTasks(caller, input),
     'admin.getTask': (caller, input) => service.getAdminTask(caller, input),
     'admin.listEligibleLevels': caller => service.listEligibleLevels(caller),

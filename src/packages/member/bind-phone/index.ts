@@ -1,20 +1,11 @@
+import type { IdentityAccessSnapshot } from '../../../modules/mip-identity/contracts'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipGlobalAccessGuard } from '../../../modules/mip-identity/runtime'
 import { leaveSecondaryPage } from '../../../platform/navigation/client'
 
 const PHONE_PATTERN = /^1\d{10}$/
 const SMS_CODE_PATTERN = /^\d{6}$/
-const SMS_COUNTDOWN_SECONDS = 60
-
-/**
- * journey-review J5-02 绑定手机 / 更换手机号（QS 三级页自拟承接）：
- * 单表单双路径——
- * A「微信一键获取」：mip-login-sheet（subtitle 换绑变体）+ 手机号快速验证 code，
- *   走 mipIdentityModule.rebindWechatPhone 免短信直接换绑，结果由服务端决定；
- * B 手动输入其他手机号 + 短信验证码：短信通道一期未接通（QS），
- *   先交付 UI 骨架（60s 倒计时防重发文案已按口径实现，发送与校验待通道落地，
- *   见 .tmp/shared-change-requests.md）。
- */
+// Both verification paths commit through the identity domain; the server owns phone conflicts.
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
@@ -22,6 +13,8 @@ Page({
     newPhone: '',
     smsCode: '',
     sendCountdown: 0,
+    sendingSms: false,
+    rebinding: false,
     message: '',
     loginSheetOpen: false,
     loginSheetBusy: false,
@@ -30,11 +23,21 @@ Page({
   countdownTimer: undefined as ReturnType<typeof setInterval> | undefined,
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
+  active: true,
+  smsChallenge: undefined as { id: string, phone: string, expiresAt: number } | undefined,
+  countdownDeadline: 0,
+
   onLoad() {
+    this.active = true
     void this.loadAccountState()
   },
 
+  onShow() {
+    this.updateCountdown()
+  },
+
   onUnload() {
+    this.active = false
     this.stopCountdown()
     if (this.navigationTimer !== undefined) {
       clearTimeout(this.navigationTimer)
@@ -46,6 +49,9 @@ Page({
     this.setData({ state: 'loading', message: '' })
     try {
       const snapshot = await mipIdentityModule.loadSnapshot()
+      if (!this.active) {
+        return
+      }
       if (!snapshot.authenticated) {
         mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
         return
@@ -56,6 +62,9 @@ Page({
       })
     }
     catch (error) {
+      if (!this.active) {
+        return
+      }
       this.setData({
         state: 'error',
         message: error instanceof Error ? error.message : '账号状态加载失败。',
@@ -64,7 +73,13 @@ Page({
   },
 
   onNewPhoneInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ newPhone: event.detail.value, message: '' })
+    if (this.data.rebinding || this.data.loginSheetBusy) {
+      return
+    }
+    if (event.detail.value !== this.data.newPhone) {
+      this.smsChallenge = undefined
+    }
+    this.setData({ newPhone: event.detail.value, smsCode: '', message: '' })
   },
 
   onSmsCodeInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -73,7 +88,7 @@ Page({
 
   // 路径 A：弹 mip-login-sheet（subtitle 换绑变体），授权由组件内 getPhoneNumber 完成。
   openWechatBind() {
-    if (this.data.loginSheetOpen) {
+    if (this.data.loginSheetOpen || this.data.sendingSms || this.data.rebinding) {
       return
     }
     this.setData({ loginSheetOpen: true, message: '' })
@@ -84,7 +99,7 @@ Page({
   },
 
   async onLoginSheetPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
-    if (this.data.loginSheetBusy) {
+    if (this.data.loginSheetBusy || this.data.sendingSms || this.data.rebinding) {
       return
     }
     const code = String(event.detail.code || '')
@@ -100,22 +115,15 @@ Page({
     this.setData({ loginSheetBusy: true, message: '' })
     try {
       const snapshot = await mipIdentityModule.rebindWechatPhone(code)
-      this.setData({
-        loginSheetOpen: false,
-        loginSheetBusy: false,
-        currentPhoneMasked: snapshot.profile.privateContact?.phoneMasked || this.data.currentPhoneMasked,
-        newPhone: '',
-        smsCode: '',
-      })
-      wx.showToast({ title: '换绑成功', icon: 'success' })
-      // 换绑完成 → 账号设置（J5-01）；延迟返回让 toast 可见。
-      this.navigationTimer = setTimeout(() => {
-        this.navigationTimer = undefined
-        leaveSecondaryPage('/pages/profile/index')
-      }, 700)
+      if (this.active) {
+        this.finishRebind(snapshot)
+      }
     }
     catch (error) {
       // 号码已被占用等错误：保留已输入内容，行内克制提示。
+      if (!this.active) {
+        return
+      }
       this.setData({
         loginSheetOpen: false,
         loginSheetBusy: false,
@@ -124,30 +132,56 @@ Page({
     }
   },
 
-  // 路径 B：短信通道一期未接通（QS）。校验与 60s 防重发口径已就位，
-  // 通道落地后在此接入发送接口并调用 startCountdown()。
-  requestSmsCode() {
-    if (this.data.sendCountdown > 0) {
+  async requestSmsCode() {
+    this.updateCountdown()
+    if (this.data.sendCountdown > 0 || this.data.sendingSms || this.data.rebinding || this.data.loginSheetBusy) {
       return
     }
-    if (!PHONE_PATTERN.test(this.data.newPhone)) {
+    const phone = this.data.newPhone.trim()
+    if (!PHONE_PATTERN.test(phone)) {
       this.setData({ message: '请先输入 11 位新手机号。' })
       return
     }
-    this.setData({ message: '短信验证码暂未开通，可使用「微信一键获取」完成换绑。' })
-  },
-
-  startCountdown() {
-    this.stopCountdown()
-    this.setData({ sendCountdown: SMS_COUNTDOWN_SECONDS })
-    this.countdownTimer = setInterval(() => {
-      const next = this.data.sendCountdown - 1
-      if (next <= 0) {
-        this.stopCountdown()
+    this.smsChallenge = undefined
+    this.setData({ sendingSms: true, message: '' })
+    try {
+      const result = await mipIdentityModule.requestPhoneSms(phone)
+      if (!this.active) {
         return
       }
-      this.setData({ sendCountdown: next })
-    }, 1000)
+      this.startCountdown(result.retryAfterSeconds)
+      if (this.data.newPhone.trim() === phone) {
+        this.smsChallenge = { id: result.challengeId, phone, expiresAt: Date.parse(result.expiresAt) }
+        this.setData({ smsCode: '', message: '验证码请求已受理，请查看手机短信。' })
+      }
+    }
+    catch (error) {
+      if (this.active) {
+        this.setData({ message: error instanceof Error ? error.message : '验证码发送失败，请稍后重试。' })
+      }
+    }
+    finally {
+      if (this.active) {
+        this.setData({ sendingSms: false })
+      }
+    }
+  },
+
+  startCountdown(seconds: number) {
+    this.stopCountdown()
+    this.countdownDeadline = Date.now() + seconds * 1000
+    this.updateCountdown()
+    this.countdownTimer = setInterval(() => this.updateCountdown(), 1000)
+  },
+
+  updateCountdown() {
+    const remaining = Math.max(0, Math.ceil((this.countdownDeadline - Date.now()) / 1000))
+    if (this.active) {
+      this.setData({ sendCountdown: remaining })
+    }
+    if (remaining === 0) {
+      this.stopCountdown()
+    }
   },
 
   stopCountdown() {
@@ -155,21 +189,62 @@ Page({
       clearInterval(this.countdownTimer)
       this.countdownTimer = undefined
     }
-    if (this.data.sendCountdown > 0) {
-      this.setData({ sendCountdown: 0 })
-    }
   },
 
   async confirmRebind() {
-    // 短信验证码换绑接口待身份域提供（QS）；通道接入时在此补 busy 守卫（提交中禁用重复提交）。
-    if (!PHONE_PATTERN.test(this.data.newPhone)) {
+    if (this.data.rebinding || this.data.sendingSms || this.data.loginSheetBusy) {
+      return
+    }
+    const phone = this.data.newPhone.trim()
+    const code = this.data.smsCode.trim()
+    if (!PHONE_PATTERN.test(phone)) {
       this.setData({ message: '请输入 11 位新手机号。' })
       return
     }
-    if (!SMS_CODE_PATTERN.test(this.data.smsCode)) {
+    if (!SMS_CODE_PATTERN.test(code)) {
       this.setData({ message: '请输入 6 位短信验证码。' })
       return
     }
-    this.setData({ message: '短信验证码暂未开通，可使用「微信一键获取」完成换绑。' })
+    const challenge = this.smsChallenge
+    if (!challenge || challenge.phone !== phone || challenge.expiresAt <= Date.now()) {
+      this.setData({ message: '请重新获取短信验证码。' })
+      return
+    }
+    this.setData({ rebinding: true, message: '' })
+    try {
+      const snapshot = await mipIdentityModule.rebindSmsPhone({ phone, code, challengeId: challenge.id })
+      if (this.active) {
+        this.finishRebind(snapshot)
+      }
+    }
+    catch (error) {
+      if (this.active) {
+        this.setData({ message: error instanceof Error ? error.message : '换绑失败，请重试。' })
+      }
+    }
+    finally {
+      if (this.active) {
+        this.setData({ rebinding: false })
+      }
+    }
+  },
+
+  finishRebind(snapshot: IdentityAccessSnapshot) {
+    this.smsChallenge = undefined
+    this.countdownDeadline = 0
+    this.stopCountdown()
+    this.setData({
+      loginSheetOpen: false,
+      loginSheetBusy: false,
+      currentPhoneMasked: snapshot.profile.privateContact?.phoneMasked || this.data.currentPhoneMasked,
+      newPhone: '',
+      smsCode: '',
+      sendCountdown: 0,
+    })
+    wx.showToast({ title: '换绑成功', icon: 'success' })
+    this.navigationTimer = setTimeout(() => {
+      this.navigationTimer = undefined
+      leaveSecondaryPage('/pages/profile/index')
+    }, 700)
   },
 })

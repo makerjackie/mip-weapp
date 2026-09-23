@@ -25,7 +25,7 @@ export interface CorePageMutationIntent extends AdminOperationLaunchContext {
 }
 
 export interface CorePageExportIntent {
-  kind: SensitiveExportKind
+  kind: Extract<SensitiveExportKind, 'users' | 'orders'>
   filters: {
     query: string
     status: string

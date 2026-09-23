@@ -61,6 +61,10 @@
       "pathName": "packages/member/mip-public-profile/index"
     },
     {
+      "name": "对TA感兴趣",
+      "pathName": "packages/member/mip-profile-interests/index"
+    },
+    {
       "name": "屏蔽列表",
       "pathName": "packages/member/mip-blocked/index"
     },

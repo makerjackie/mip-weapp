@@ -288,12 +288,18 @@ function createIdentityRepository(database, options = {}) {
     })
   }
 
-  async function bindPhone(caller, userId, protectedPhone) {
+  async function bindPhone(caller, userId, protectedPhone, authorize) {
     const appId = caller.appId
-    await database.transaction(async (tx) => {
+    const result = await database.transaction(async (tx) => {
       await requireActiveUserForUpdate(tx, appId, userId)
+      // Returning a verification error commits its failed-attempt count. Successful
+      // challenge consumption and the existing phone uniqueness check are atomic.
+      const authorization = authorize ? await authorize(tx) : null
+      if (authorization?.error) return authorization
       await updatePhone(tx, appId, userId, protectedPhone)
+      return null
     })
+    if (result?.error) throw new Error(result.error)
   }
 
   async function updateProfile(appId, userId, input) {

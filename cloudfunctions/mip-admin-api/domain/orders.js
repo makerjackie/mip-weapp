@@ -89,6 +89,26 @@ function createAdminOrders({
     }
   }
 
+  async function listRefunds(caller, input = {}) {
+    const context = await access.session(caller)
+    const grant = firstGrant(context.bindings, CAPABILITIES.ORDERS_READ)
+    const filters = input.filters || input
+    const status = enumFilter(filters.status, REFUND_STATUSES.filter(value => value !== 'NONE'), '退款状态')
+    const normalized = { status, orderId: filters.orderId ? requiredId(filters.orderId, '订单') : '',
+      createdFrom: dateTimeFilter(filters.createdFrom, '开始时间'), createdTo: dateTimeFilter(filters.createdTo, '结束时间') }
+    if (normalized.createdFrom && normalized.createdTo && normalized.createdFrom > normalized.createdTo) {
+      throw new AdminError('VALIDATION_FAILED', '开始时间不能晚于结束时间')
+    }
+    const page = await repository.listRefunds(context.caller.appId,
+      visibilityForCapability(context.bindings, CAPABILITIES.ORDERS_READ), normalized,
+      limit(input.limit, 100), decodeCursor(input.cursor, ['createdAt', 'id']))
+    await repository.recordAudit(access.audit(context, grant, {
+      scopeType: grant.scopeType, scopeId: grant.scopeId, action: 'admin.refunds.view',
+      resourceType: 'REFUND_LIST', metadata: { count: page.items.length },
+    }))
+    return page
+  }
+
   async function submitRefund(caller, input) {
     const context = await access.session(caller)
     const orderId = requiredId(input.orderId, '订单')
@@ -160,6 +180,7 @@ function createAdminOrders({
   }
 
   return {
+    listRefunds,
     getOrder,
     listOrders,
     normalizeExportFilters: normalizeOrderFilters,

@@ -1,23 +1,23 @@
 # MIP 当前状态
 
-更新日期：2026-09-03。
+更新日期：2026-09-23（仓库清单；环境证据仍保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
 
 ## 结论
 
-当前产品形态为“小程序用户端 + 四路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
+当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 69 条小程序路由、80 个锁定迁移、234 个渠道中立管理 operation（100 查询、134 写）和 16 个数据库核心函数。Web 使用其中 100 个查询与 106 个受审 mutation。以上数字只描述当前代码合同，不自动证明运行时、云端或生产通过。
+仓库清单当前为 70 条小程序路由、91 个锁定迁移、237 个渠道中立管理 operation（103 查询、134 写）和 16 个数据库核心函数。Web 合同允许其中 103 个查询与 134 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；名片管理和旧角色创建等缺口见下文。
 
 ## 仓库事实
 
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
-| 小程序路由 | 69 条：5 条主包、59 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
-| 数据库 | 80 个追加迁移；目标 runtime 表清单为 143 张 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
-| 管理合同 | 234 个 operation：100 查询、134 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
-| Web 开放范围 | 100 查询、106 个受审 mutation | `cloudfunctions/mip-admin-api/lib/web-bff-auth.js` |
+| 小程序路由 | 70 条：5 条主包、60 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
+| 数据库 | 91 个追加迁移；目标清单为 146 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
+| 管理合同 | 237 个 operation：103 查询、134 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| Web 开放范围 | 103 查询、134 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
 | 调度 | 消息和知识采集各有独立 scheduler；均不属于数据库核心函数 | `mip-message-scheduler`、`mip-knowledge-scheduler` 及部署脚本 |
 | Web 页面 | 14 个一级页面、13 类详情 | `admin-web/src/` 的路由与页面合同 |
@@ -27,9 +27,9 @@
 
 | 环境 | 当前已核实状态 | 不能外推 |
 | --- | --- | --- |
-| MIP staging | 80 个迁移已应用，143 张 runtime 表完成隔离和最小权限读回；核心函数读回通过；活动反馈结构化答案迁移与 `mip-events-api` 已部署并回读验证 | 不代表正式生产环境、正式 AppID 或真实支付通过 |
+| MIP staging | 2026-09-03 的旧证据：当时 80 个迁移已应用、143 张 runtime 表完成隔离和最小权限读回；核心函数读回通过 | 不证明当前 91 个迁移和新增代码已部署，也不代表正式生产环境或真实支付通过 |
 | React Web 生产 | `https://mipmini.01mvp.com/` 已有 14/14 一级页面登录态读取证据；Banner JPEG 上传后以 `INACTIVE` 保存并软删除；无手机号、零行用户导出完成文件完整性与一次性消费验证 | 不代表全部 mutation、全部媒体用途、非空/含手机号导出、支付或外部消息通过 |
-| 小程序运行时 | 活动反馈页已在本地开发者工具对 staging 完成一次 `ATTENDED` 用户保存与重新进入回显；返回版本为 1，页面运行时异常为 0。旧完整路由报告位于被 Git 忽略的 `.tmp/`，不作为当前 69 路由权威证据 | 聚焦反馈验收不能代替 69 路由完整运行报告或现场真机验收 |
+| 小程序运行时 | 2026-09-23 的 Node 22 开发者工具尝试覆盖 70 条路由，其中 69 条进入接受态、新增感兴趣名单页为 `blocked`；6 个代表性状态通过，严格原生输入交互未完成。后续复跑又遇工具截屏/重连超时，详见[本地验收证据](evidence/latest-requirements-2026-09-23/README.md) | 不构成 70/70 路由通过、完整交互、云端部署或真机验收 |
 | 正式小程序 | 正式 AppID、商户、回调、通知、AI/provider 和真机能力仍待验收 | 不能用 staging、浏览器或开发者工具结果代替 |
 
 ## 已形成稳定底座
@@ -47,9 +47,10 @@
 
 ### 证据与运行环境
 
-- 当前 checkout 缺少可提交的 69 路由完整运行报告；下一次完整运行验收应把摘要、环境、提交号和必要截图整理到 `docs/mip/evidence/`，不再只引用 `.tmp/`。
+- 已保存本轮运行时摘要与无个人信息的状态截图，但仍缺少 70/70 路由和全部严格交互通过的完整报告；本地 `.tmp/` 报告不可替代部署与真机证据。
 - 小程序现场工作台仍需真实设备完成 Web 登录确认、签到码、扫码、海报保存、手工签到和受控撤销验收；React Web 继续按浏览器桌面和手机视口验收。
-- 活动反馈 frame `1818:17374` 已完成结构、字段和顺序对照；其余 Figma 代表 frame 仍需与当前实现做同尺寸、逐屏差异验收。
+- 最新流程画布与需求仓库 `role-flows` 是本轮界面依据；旧原型已从需求仓库删除。70 路由运行尝试还有 1 条受限页和严格交互未通过，差异记录见 [需求与实现差异](REQUIREMENTS_DIFF_20260922.md)。
+- 通用名片管理 `mip.admin.cards.*` 仍是占位：小程序名片来自用户档案，旧 `mip_business_cards` 表缺少 AppID 和所有者，不能把管理端空列表视为已完成。`mip.admin.roles.create` 是 Web 未开放的旧占位；固定七类管理角色通过 `roles.set` 与权限模板管理。详见 [差异记录](REQUIREMENTS_DIFF_20260922.md)。
 - staging 的 60/124 读回只证明 2026-09-03 的目标环境状态；后续环境变更时必须重新生成。
 
 ### 真机与正式配置
@@ -61,6 +62,8 @@
 
 ## 证据入口
 
+- [2026-09-23 最新需求本地验收](evidence/latest-requirements-2026-09-23/README.md)（静态门禁通过；小程序运行时和外部能力尚未全过）
+
 - [2026-09-14 消息分页与已读修复发布](evidence/2026-09-14-inbox-release.md)（消息函数已更新，小程序实际调用验证未读数为 0，开发版本已上传；全量云端管理验收仍受 CAM 鉴权阻塞）
 
 - [2026-09-15 访客已读与感兴趣交互修复](evidence/2026-09-15-visitors-interest-fix.md)（机会服务已更新并通过健康回读；真机复测待完成）
@@ -68,6 +71,6 @@
 - [当前 React Web 线上验收](evidence/admin-web-live-2026-08-28-react/README.md)
 - [早期 React Web 线上证据](evidence/admin-web-live-2026-08-28/README.md)（只作历史追溯）
 - [旧小程序完整管理端响应式密度验收](evidence/admin-density-2026-08-26/README.md)（只作历史追溯，不证明当前现场工作台）
-- [Figma 固定证据](evidence/figma-2026-08-25/README.md)
+- [历史设计固定证据](evidence/figma-2026-08-25/README.md)（只作历史追溯，不作为本轮设计依据）
 
 证据的适用层级和外推限制以 [ACCEPTANCE.md](ACCEPTANCE.md) 为准。

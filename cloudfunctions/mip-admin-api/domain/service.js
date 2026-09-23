@@ -15,6 +15,7 @@ const { createAdminExports } = require('./exports')
 const { createAdminGovernance, PLATFORM_SCOPE_ID } = require('./governance')
 const { createAdminGrowth } = require('./growth')
 const { createAdminBenefitLedger } = require('./benefit-ledger')
+const { createAdminEntitlements } = require('./entitlements')
 const { createAdminMessaging } = require('./messaging')
 const { createAdminMemberships } = require('./memberships')
 const { createAdminMessageDeliveryReviews } = require('./message-delivery-review-service')
@@ -29,6 +30,8 @@ const { createAdminBanners } = require('./banners')
 const { createAdminGame } = require('./game')
 const { createAdminMedia } = require('./media')
 const { createAdminAccounts } = require('./admin-accounts')
+const { createAdminEventRuntime } = require('./event-runtime')
+const { createProfileRecords } = require('./profile-records')
 const { createCooperationCards } = require('./cooperation-cards')
 const { createContribution } = require('./contribution')
 const { createVideos } = require('./videos')
@@ -36,15 +39,10 @@ const { createCards } = require('./cards')
 const { createEventDrafts } = require('./event-drafts')
 const { AdminError } = require('./validation')
 
-function notImplemented(message) {
-  return async () => {
-    throw new AdminError('NOT_IMPLEMENTED', message, true)
-  }
-}
-
 function createAdminService({
   repository,
   phoneEncryptionKey,
+  createCheckinImage,
   now = () => new Date(),
   contentSafety = async () => 'ERROR',
   confirmWebLogin: dispatchWebLoginConfirmation = async () => {
@@ -153,6 +151,7 @@ function createAdminService({
   } = createAdminEventComments({ access, repository })
   const {
     getOrder,
+    listRefunds,
     listOrders,
     normalizeExportFilters: normalizeOrderFilters,
     retryRefund,
@@ -208,6 +207,7 @@ function createAdminService({
   const { listOperationsQueue } = createAdminOperationsQueue({ access, now, repository })
   const {
     archiveOpportunity,
+    deleteOpportunity,
     closeOpportunityCommentReport,
     endOpportunity,
     getMatchingAdminState,
@@ -232,6 +232,8 @@ function createAdminService({
   })
   const {
     adjustGrowth,
+    changeBenefitStatus,
+    changeLevelStatus,
     grantBadge,
     listBadgeAwards,
     listBadges,
@@ -272,17 +274,23 @@ function createAdminService({
       execute: async () => { throw new AdminError('MEDIA_DISPATCH_CONFIG_REQUIRED', '素材服务尚未配置', true) },
     },
   })
-  const adminAccountsAdmin = createAdminAccounts()
-  const cooperationCardsAdmin = createCooperationCards()
-  const contributionAdmin = createContribution()
-  const videosAdmin = createVideos()
+  const profileRecords = createProfileRecords({ access, repository })
+  const eventRuntime = createAdminEventRuntime({ access, repository, createCheckinImage,
+    dispatchRefunds: dispatchRefundBatchSafely })
+  const adminAccountsAdmin = createAdminAccounts({ access, repository })
+  const cooperationCardsAdmin = createCooperationCards({ access, repository, contentSafety })
+  const contributionAdmin = createContribution({ access, repository })
+  const videosAdmin = createVideos({ access, repository, contentSafety })
   const cardsAdmin = createCards()
-  const eventDraftsAdmin = createEventDrafts()
+  const eventDraftsAdmin = createEventDrafts({ access, repository })
   const {
     getMembership,
     grantMembership,
     listMembershipTimeline,
   } = createAdminMemberships({ access, repository })
+  const { listEntitlementTransactions, grantEntitlement } = createAdminEntitlements({
+    access, repository, memberships: { getMembership, grantMembership },
+  })
   const {
     changeBranchStatus,
     createBranch,
@@ -471,16 +479,16 @@ function createAdminService({
       setUserControl,
       claimCommunityReport,
       closeCommunityReport,
-      listInvitedGuests: async () => ({ items: [], cursor: null }),
-      listLikeRelations: async () => ({ items: [], cursor: null }),
-      listUserOperationLogs: async () => ({ items: [], cursor: null }),
+      listInvitedGuests: profileRecords.listInvitedGuests,
+      listLikeRelations: profileRecords.listLikeRelations,
+      listUserOperationLogs: profileRecords.listUserOperationLogs,
     }),
     MEMBERSHIPS: freezeModule({
       getMembership,
       listMembershipTimeline,
       grantMembership,
-      listEntitlementTransactions: async () => ({ items: [], cursor: null }),
-      grantEntitlement: notImplemented('权益手动发放功能尚未实现'),
+      listEntitlementTransactions,
+      grantEntitlement,
     }),
     EVENTS: freezeModule({
       listEvents,
@@ -516,13 +524,15 @@ function createAdminService({
       reviewRegistration,
       checkIn,
       undoCheckIn,
-      listEventFeedbacks: async () => ({ items: [], cursor: null }),
-      exportEventFeedbacks: notImplemented('导出活动反馈功能尚未实现'),
-      getCheckinQrcode: async () => null,
-      importParticipant: notImplemented('导入参与者功能尚未实现'),
-      cancelParticipant: notImplemented('取消参与者功能尚未实现'),
-      markAbnormalParticipant: notImplemented('标记异常参与者功能尚未实现'),
-      listEventHearts: async () => ({ items: [], cursor: null }),
+      listEventFeedbacks: eventRuntime.listEventFeedbacks,
+      exportEventFeedbacks: (caller, input = {}) => createExport(caller, {
+        exportType: 'EVENT_FEEDBACK', eventId: input.eventId, idempotencyKey: input.idempotencyKey,
+      }),
+      getCheckinQrcode: eventRuntime.getCheckinQrcode,
+      importParticipant: eventRuntime.importParticipant,
+      cancelParticipant: eventRuntime.cancelParticipant,
+      markAbnormalParticipant: eventRuntime.markAbnormalParticipant,
+      listEventHearts: eventRuntime.listEventHearts,
     }),
     ORDERS: freezeModule({
       listOrders,
@@ -530,7 +540,7 @@ function createAdminService({
       listPaymentAttempts,
       submitRefund,
       retryRefund,
-      listRefunds: async () => ({ items: [], cursor: null }),
+      listRefunds,
     }),
     MESSAGING: freezeModule({
       listAnnouncementScopes,
@@ -584,9 +594,9 @@ function createAdminService({
       saveOpportunityCommentSettings,
       moderateOpportunityComment,
       closeOpportunityCommentReport,
-      listOpportunityOperationLogs: async () => ({ items: [], cursor: null }),
-      deleteOpportunity: notImplemented('删除机会功能尚未实现'),
-      listOpportunityReferrals: async () => ({ items: [], cursor: null }),
+      listOpportunityOperationLogs: profileRecords.listOpportunityOperationLogs,
+      deleteOpportunity,
+      listOpportunityReferrals: profileRecords.listOpportunityReferrals,
     }),
     GROWTH: freezeModule({
       listGrowthLevels,
@@ -604,16 +614,12 @@ function createAdminService({
       saveBadge,
       grantBadge,
       revokeBadge,
-      changeLevelStatus: notImplemented('启用/停用等级功能尚未实现'),
-      changeBenefitStatus: notImplemented('启用/停用权益功能尚未实现'),
-      listLevelTransitions: async () => ({ items: [], cursor: null }),
+      changeLevelStatus,
+      changeBenefitStatus,
+      listLevelTransitions: listGrowthLevelTransitions,
     }),
     TASKS: freezeModule({
       ...taskAdmin,
-      approveSubmission: notImplemented('审批通过任务提交功能尚未实现'),
-      rejectSubmission: notImplemented('退回任务提交功能尚未实现'),
-      retrySubmissionReward: notImplemented('重试任务奖励发放功能尚未实现'),
-      assignTask: notImplemented('分配任务功能尚未实现'),
     }),
     BANNERS: freezeModule(bannerAdmin),
     GAME: freezeModule(gameAdmin),

@@ -5,6 +5,8 @@ const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const { lockActiveContributor } = require('../lib/auth')
 const {
   appendAudit,
+  decodeCursor,
+  encodeCursor,
   idempotentTransaction,
   iso,
   jsonObject,
@@ -21,32 +23,18 @@ function normalizeVisitInput(value = {}, caller) {
   return { profileRef, profileUserId, visitKey }
 }
 
-function decodeVisitorCursor(value, caller) {
-  if (!value) return null
-  try {
-    const parsed = jsonObject(Buffer.from(String(value), 'base64url').toString('utf8'))
-    const profileRef = stringValue(parsed.profileRef, 200, 'VALIDATION_FAILED')
-    const timestamp = iso(parsed.timestamp)
-    if (!timestamp) throw new Error('INVALID_CURSOR')
-    return { timestamp, profileUserId: readProfileRef(profileRef, caller.appId, caller.profileRefSecret) }
-  }
-  catch (error) {
-    if (error?.message === 'IDENTITY_CONFIG_REQUIRED') throw error
-    throw new Error('VALIDATION_FAILED')
-  }
+function decodeVisitorCursor(value) {
+  return decodeCursor(value)
 }
 
-function encodeVisitorCursor(timestamp, userId, caller) {
-  const profileRef = createProfileRef(
-    { appId: caller.appId, userId },
-    caller.profileRefSecret,
-  )
-  return Buffer.from(JSON.stringify({ timestamp: iso(timestamp), profileRef }), 'utf8').toString('base64url')
+function encodeVisitorCursor(timestamp, visitId) {
+  return encodeCursor(timestamp, visitId)
 }
 
 function visitorDto(row, caller) {
   const allowed = jsonObject(row.visibility_json)
   return {
+    visitId: row.visit_id,
     profileRef: createProfileRef(
       { appId: caller.appId, userId: row.visitor_user_id },
       caller.profileRefSecret,
@@ -55,7 +43,7 @@ function visitorDto(row, caller) {
     avatarUrl: allowed.avatar === false ? undefined : (row.visitor_avatar_file_id || undefined),
     headline: allowed.headline === false ? undefined : (row.visitor_headline || undefined),
     userKind: Number(row.is_player) === 1 ? 'PLAYER' : 'GUEST',
-    visitCount: Number(row.visit_count || 0),
+    visitCount: 1,
     lastVisitedAt: iso(row.last_visited_at),
     unread: Boolean(row.has_unread),
   }
@@ -125,16 +113,16 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
   if (!caller.userId) throw new Error('AUTH_REQUIRED')
   const limitValue = Number(rawInput.limit)
   const limit = Math.min(30, Math.max(1, Number.isInteger(limitValue) ? limitValue : 20))
-  const cursor = decodeVisitorCursor(rawInput.cursor, caller)
+  const cursor = decodeVisitorCursor(rawInput.cursor)
   const blockFilter = mutualBlockFilter(caller.userId, 'visitor.id', 'visitor.app_id')
   const params = [caller.appId, caller.userId, ...blockFilter.params]
   const cursorSql = cursor
-    ? 'AND (grouped.last_visited_at < ? OR (grouped.last_visited_at = ? AND grouped.visitor_user_id < ?))'
+    ? 'AND (visit.visited_at < ? OR (visit.visited_at = ? AND visit.id < ?))'
     : ''
-  if (cursor) params.push(cursor.timestamp, cursor.timestamp, cursor.profileUserId)
+  if (cursor) params.push(cursor.timestamp, cursor.timestamp, cursor.id)
   const rows = await database.query(
-    `SELECT grouped.visitor_user_id, grouped.visit_count, grouped.last_visited_at,
-            grouped.has_unread, visitor.id AS visitor_id,
+    `SELECT visit.id AS visit_id, visit.visited_at AS last_visited_at,
+            (visit.read_at IS NULL) AS has_unread, visitor.id AS visitor_id,
             visitor_profile.nickname AS visitor_nickname,
             visitor_profile.headline AS visitor_headline,
             visitor_profile.visibility_json,
@@ -146,47 +134,36 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
                 AND entitlement.starts_at <= UTC_TIMESTAMP(3)
                 AND entitlement.ends_at > UTC_TIMESTAMP(3)
             )`} AS is_player
-     FROM (
-       SELECT visitor_user_id,
-              COUNT(*) AS visit_count,
-              MAX(visited_at) AS last_visited_at,
-              MAX(CASE WHEN read_at IS NULL THEN 1 ELSE 0 END) AS has_unread
-       FROM mip_profile_visits
-       WHERE app_id = ? AND profile_user_id = ?
-       GROUP BY visitor_user_id
-     ) grouped
+     FROM mip_profile_visits visit
      INNER JOIN mip_users visitor
-       ON visitor.app_id = ? AND visitor.id = grouped.visitor_user_id
+       ON visitor.app_id = visit.app_id AND visitor.id = visit.visitor_user_id
        AND visitor.status = 'ACTIVE'
      INNER JOIN mip_profiles visitor_profile
        ON visitor_profile.app_id = visitor.app_id AND visitor_profile.user_id = visitor.id
      LEFT JOIN mip_media_assets visitor_avatar
        ON visitor_avatar.app_id = visitor.app_id
        AND visitor_avatar.id = visitor_profile.avatar_asset_id AND visitor_avatar.status = 'READY'
-     WHERE ${blockFilter.sql || '1 = 1'} ${cursorSql}
-     ORDER BY grouped.last_visited_at DESC, grouped.visitor_user_id DESC
+     WHERE visit.app_id = ? AND visit.profile_user_id = ?
+       AND ${blockFilter.sql || '1 = 1'} ${cursorSql}
+     ORDER BY visit.visited_at DESC, visit.id DESC
      LIMIT ${limit + 1}`,
-    [caller.appId, caller.userId, caller.appId, ...blockFilter.params, ...params.slice(2 + blockFilter.params.length)],
+    params,
   )
   const page = rows.slice(0, limit)
   const [unread, total] = await Promise.all([
     database.one(
       `SELECT COUNT(*) AS count
-       FROM (
-         SELECT visitor_user_id
-         FROM mip_profile_visits
-         WHERE app_id = ? AND profile_user_id = ? AND read_at IS NULL
-         GROUP BY visitor_user_id
-       ) unread_groups
+       FROM mip_profile_visits visit
        INNER JOIN mip_users visitor
-         ON visitor.app_id = ? AND visitor.id = unread_groups.visitor_user_id AND visitor.status = 'ACTIVE'
+         ON visitor.app_id = visit.app_id AND visitor.id = visit.visitor_user_id AND visitor.status = 'ACTIVE'
        INNER JOIN mip_profiles visitor_profile
          ON visitor_profile.app_id = visitor.app_id AND visitor_profile.user_id = visitor.id
-       WHERE ${blockFilter.sql || '1 = 1'}`,
-      [caller.appId, caller.userId, caller.appId, ...blockFilter.params],
+       WHERE visit.app_id = ? AND visit.profile_user_id = ? AND visit.read_at IS NULL
+         AND ${blockFilter.sql || '1 = 1'}`,
+      [caller.appId, caller.userId, ...blockFilter.params],
     ),
     database.one(
-      `SELECT COUNT(*) AS count
+      `SELECT COUNT(*) AS count, UTC_TIMESTAMP(3) AS read_through_at
        FROM mip_profile_visits visit
        INNER JOIN mip_users visitor
          ON visitor.app_id = visit.app_id AND visitor.id = visit.visitor_user_id
@@ -202,14 +179,38 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
     items: page.map(row => visitorDto({ ...row, visitor_user_id: row.visitor_id }, caller)),
     unreadCount: Number(unread?.count || 0),
     totalViewCount: Number(total?.count || 0),
+    readThroughAt: iso(total?.read_through_at) || undefined,
     nextCursor: rows.length > limit && page.length
-      ? encodeVisitorCursor(page.at(-1).last_visited_at, page.at(-1).visitor_id, caller)
+      ? encodeVisitorCursor(page.at(-1).last_visited_at, page.at(-1).visit_id)
       : undefined,
   }
 }
 
 async function markProfileVisitorRead(database, caller, rawInput = {}) {
   if (!caller.userId) throw new Error('AUTH_REQUIRED')
+  if (rawInput.readThroughAt !== undefined) {
+    const readThroughAt = iso(rawInput.readThroughAt)
+    if (!readThroughAt) throw new Error('VALIDATION_FAILED')
+    return idempotentTransaction(database, {
+      appId: caller.appId, userId: caller.userId, operation: 'profile-visit.mark-all-read',
+      idempotencyKey: rawInput.idempotencyKey, request: { readThroughAt },
+    }, async (tx) => {
+      await lockActiveContributor(tx, caller)
+      // Opening the visible list acknowledges all visits known at that load, including
+      // later pages. A visit arriving after the watermark remains unread.
+      await tx.query(
+        `UPDATE mip_profile_visits SET read_at = UTC_TIMESTAMP(3)
+         WHERE app_id = ? AND profile_user_id = ? AND read_at IS NULL
+           AND visited_at <= LEAST(?, UTC_TIMESTAMP(3))`,
+        [caller.appId, caller.userId, new Date(readThroughAt)],
+      )
+      await appendAudit(tx, {
+        appId: caller.appId, actorUserId: caller.userId, action: 'PROFILE_VISITORS_READ',
+        resourceType: 'PROFILE', resourceId: caller.userId, metadata: { readThroughAt },
+      })
+      return { messageId: 'visitors', readAt: readThroughAt }
+    })
+  }
   const profileRef = stringValue(rawInput.profileRef, 200, 'VALIDATION_FAILED')
   const visitorUserId = readProfileRef(profileRef, caller.appId, caller.profileRefSecret)
   if (visitorUserId === caller.userId) throw new Error('VALIDATION_FAILED')

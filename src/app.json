@@ -18,6 +18,7 @@
         "mip-card-edit/index",
         "mip-people/index",
         "mip-public-profile/index",
+        "mip-profile-interests/index",
         "mip-blocked/index",
         "mip-branches/index",
         "mip-events/detail/index",

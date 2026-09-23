@@ -22,6 +22,7 @@ export const CONTENT_MUTATION_ACTIONS = [
   'mip.admin.opportunities.end',
   'mip.admin.opportunities.unpublish',
   'mip.admin.opportunities.archive',
+  'mip.admin.opportunities.delete',
   'mip.admin.userContent.save',
   'mip.admin.userContent.unpublish',
   'mip.admin.userContent.archive',
@@ -393,6 +394,7 @@ const CONTENT_MUTATION_FORMS: readonly ContentMutationFormDefinition[] = [
   { action: 'mip.admin.opportunities.end', capability: 'opportunities.moderate', resource: '机会', inputKeys: ['opportunityId', 'expectedVersion'], idempotencyRequired: false, fields: [idField('opportunityId', '机会'), versionField()] },
   { action: 'mip.admin.opportunities.unpublish', capability: 'opportunities.moderate', resource: '机会', inputKeys: ['opportunityId', 'expectedVersion', 'reason'], idempotencyRequired: false, fields: [idField('opportunityId', '机会'), versionField(), reasonField('下架原因')] },
   { action: 'mip.admin.opportunities.archive', capability: 'opportunities.archive', resource: '机会', inputKeys: ['opportunityId', 'expectedVersion', 'reason'], idempotencyRequired: false, fields: [idField('opportunityId', '机会'), versionField(), reasonField('归档原因')] },
+  { action: 'mip.admin.opportunities.delete', capability: 'opportunities.archive', resource: '机会', inputKeys: ['opportunityId', 'expectedVersion', 'reason'], idempotencyRequired: false, fields: [idField('opportunityId', '机会'), versionField(), reasonField('删除原因')] },
   { action: 'mip.admin.userContent.save', capability: 'userContent.moderate', resource: '用户内容', inputKeys: ['kind', 'contentId', 'expectedVersion', 'ownerUserId', 'draft'], idempotencyRequired: false, fields: USER_CONTENT_FIELDS },
   { action: 'mip.admin.userContent.unpublish', capability: 'userContent.moderate', resource: '用户内容', inputKeys: ['kind', 'contentId', 'expectedVersion', 'reason'], idempotencyRequired: false, fields: [selectField('kind', '内容类型', ['COOPERATION_CARD', 'SUPER_CASE']), idField('contentId', '用户内容'), versionField(), reasonField('下架原因')] },
   { action: 'mip.admin.userContent.archive', capability: 'userContent.moderate', resource: '用户内容', inputKeys: ['kind', 'contentId', 'expectedVersion', 'reason'], idempotencyRequired: false, fields: [selectField('kind', '内容类型', ['COOPERATION_CARD', 'SUPER_CASE']), idField('contentId', '用户内容'), versionField(), reasonField('归档原因')] },
@@ -483,6 +485,7 @@ function validateInput(action: ContentMutationAction, value: unknown): unknown {
     case 'mip.admin.opportunities.end': return validateVersionAction(input, 'opportunityId', '机会')
     case 'mip.admin.opportunities.unpublish': return { ...validateVersionAction(input, 'opportunityId', '机会'), reason: requiredText(input.reason, 240, '下架原因') }
     case 'mip.admin.opportunities.archive': return { ...validateVersionAction(input, 'opportunityId', '机会'), reason: requiredText(input.reason, 240, '归档原因') }
+    case 'mip.admin.opportunities.delete': return { ...validateVersionAction(input, 'opportunityId', '机会'), reason: requiredText(input.reason, 240, '删除原因') }
     case 'mip.admin.userContent.save': return validateUserContent(input)
     case 'mip.admin.userContent.unpublish': return validateContentReason(input, '下架原因')
     case 'mip.admin.userContent.archive': return validateContentReason(input, '归档原因')

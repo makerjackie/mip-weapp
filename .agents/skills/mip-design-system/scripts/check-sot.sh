@@ -78,8 +78,8 @@ if command -v node >/dev/null 2>&1; then
   node - <<'NODE'
 const { ICONS } = require("./assets/wechat/mip-icon/icons.js");
 const count = Object.keys(ICONS).length;
-if (count !== 451) {
-  throw new Error(`expected 451 icons, found ${count}`);
+if (count !== 452) {
+  throw new Error(`expected 452 icons, found ${count}`);
 }
 for (const name of ["search-big-left-1", "star-favorite-3", "target", "cup"]) {
   if (!ICONS[name]) {

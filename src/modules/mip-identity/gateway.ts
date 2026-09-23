@@ -4,12 +4,14 @@ import type {
   AccountClosureInput,
   AccountClosureResult,
   AgreementAcceptanceInput,
+  BindSmsPhoneInput,
   IdentityAccessSnapshot,
   MipIdentityAction,
   MipIdentityActionInputMap,
   MipIdentityGateway,
   MipIdentityRequest,
   MipProfileSnapshot,
+  PhoneSmsRequestResult,
   ProfileCardUpdateInput,
   ProfileOrganization,
   ProfileTagOption,
@@ -217,6 +219,22 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
 
     async bindWechatPhone(code: string) {
       return snapshot(await call(transport, 'bindWechatPhone', { code }))
+    },
+
+    async requestPhoneSms(phone: string): Promise<PhoneSmsRequestResult> {
+      const value = await call(transport, 'requestPhoneSms', { phone })
+      if (!isRecord(value) || typeof value.challengeId !== 'string'
+        || !/^[0-9a-f-]{36}$/i.test(value.challengeId)
+        || value.status !== 'ACCEPTED' || !Number.isInteger(value.retryAfterSeconds)
+        || Number(value.retryAfterSeconds) < 1 || Number(value.retryAfterSeconds) > 3600
+        || typeof value.expiresAt !== 'string' || !Number.isFinite(Date.parse(value.expiresAt))) {
+        throw new MipIdentityGatewayError('INVALID_RESPONSE', '验证码服务返回的数据格式不正确')
+      }
+      return { challengeId: value.challengeId, status: 'ACCEPTED', retryAfterSeconds: Number(value.retryAfterSeconds), expiresAt: value.expiresAt }
+    },
+
+    async bindSmsPhone(input: BindSmsPhoneInput) {
+      return snapshot(await call(transport, 'bindSmsPhone', input))
     },
 
     async closeAccount(input: AccountClosureInput) {

@@ -11,6 +11,7 @@ const {
   uuid,
 } = require('./common')
 const { assertSelectableTags } = require('./opportunities')
+const { opportunityVisibility } = require('./journey-access')
 const { loadProfileInfluenceSummary } = require('./profile-influence')
 
 const PEOPLE_KINDS = new Set(['ALL', 'PLAYER', 'GUEST'])
@@ -271,7 +272,7 @@ async function listPeople(database, caller, rawFilter = {}) {
     ...filter.industryTagIds.map(id => [id, 'INDUSTRY']),
     ...filter.abilityTagIds.map(id => [id, 'ABILITY']),
   ])
-  const where = ["u.app_id = ?", "u.status = 'ACTIVE'"]
+  const where = ["u.app_id = ?", "u.status = 'ACTIVE'", "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.talentSearch')), 'true') <> 'false'"]
   const params = [caller.appId]
   const blockFilter = mutualBlockFilter(caller.userId, 'u.id', 'u.app_id')
   if (blockFilter.sql) {
@@ -406,6 +407,7 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
   if (!row) throw new Error('NOT_FOUND')
 
   const profileVisibility = visibleFields(row.visibility_json)
+  const opportunityPrivacy = opportunityVisibility(caller, 'o', 'owner_profile')
   const [tags, badges, cooperationCards, superCases, opportunities, interest, influence] = await Promise.all([
     loadProfileTags(database, caller.appId, [targetUserId]),
     loadPublicBadges(database, caller.appId, [targetUserId]),
@@ -434,14 +436,16 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
               o.published_at, branch.name AS branch_name, city.label AS city_label,
               cover.cloud_file_id AS cover_file_id
        FROM mip_opportunities o
+       INNER JOIN mip_profiles owner_profile ON owner_profile.app_id = o.app_id AND owner_profile.user_id = o.owner_user_id
        LEFT JOIN mip_city_branches branch
          ON branch.app_id = o.app_id AND branch.id = o.branch_id AND branch.status = 'ACTIVE'
        LEFT JOIN mip_tags city ON city.app_id = o.app_id AND city.id = o.city_tag_id AND city.enabled = 1
        LEFT JOIN mip_media_assets cover
          ON cover.app_id = o.app_id AND cover.id = o.cover_asset_id AND cover.status = 'READY'
        WHERE o.app_id = ? AND o.owner_user_id = ? AND o.status = 'PUBLISHED'
+         AND ${opportunityPrivacy.sql}
        ORDER BY o.published_at DESC, o.id DESC`,
-      [caller.appId, targetUserId],
+      [caller.appId, targetUserId, ...opportunityPrivacy.params],
     ),
     caller.userId && caller.userId !== targetUserId
       ? database.one(
@@ -451,7 +455,7 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
         )
       : Promise.resolve(null),
     profileVisibility.influence
-      ? loadProfileInfluenceSummary(database, { appId: caller.appId, profileUserId: targetUserId })
+      ? loadProfileInfluenceSummary(database, { appId: caller.appId, profileUserId: targetUserId, viewerUserId: caller.userId })
       : Promise.resolve(undefined),
   ])
 

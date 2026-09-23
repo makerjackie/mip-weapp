@@ -173,6 +173,7 @@ describe('admin orders deep module', () => {
     assert.deepEqual(Object.keys(api).sort(), [
       'getOrder',
       'listOrders',
+      'listRefunds',
       'normalizeExportFilters',
       'retryRefund',
       'submitRefund',

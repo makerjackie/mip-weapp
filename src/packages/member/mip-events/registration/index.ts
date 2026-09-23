@@ -184,7 +184,7 @@ Page({
   submissionIdempotencyKey: '',
   pendingAccessResume: false,
   draftUserId: '',
-  invitationResolution: Promise.resolve(),
+  invitationResolution: null as Promise<void> | null,
 
   onLoad(query: Record<string, string>) {
     const eventId = String(query.eventId || '') as EventId

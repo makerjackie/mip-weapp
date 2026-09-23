@@ -639,8 +639,8 @@
 
 .profile-inbox-entry {
   position: absolute;
-  top: 8rpx;
-  right: 24rpx;
+  top: 30rpx;
+  right: 36rpx;
   z-index: 2;
   box-sizing: border-box;
   display: flex;
@@ -650,10 +650,14 @@
   height: 72rpx;
 }
 
-/* 站内信命中区（72rpx）叠在 summary 右端之上，为档案编辑点击留出右侧空间，避免命中被截走；
-   图标 40rpx 居中于 72rpx 命中区（四周各 16rpx），红点中心对齐图标右上角 (56,16)，修正原 16rpx 错位。 */
+/* 375px 稿的铃铛位于 (327,109)，扣除 88px 原生导航后为 (327,21)。
+   48rpx 图标居中于 72rpx 触控区；红点位于图标内 left:32/top:0。 */
 .profile-inbox-unread {
   position: absolute;
-  top: -2rpx;
-  right: -2rpx;
+  top: 12rpx;
+  left: 44rpx;
+  width: 16rpx;
+  height: 16rpx;
+  background: #ff1313;
+  border-radius: 50%;
 }

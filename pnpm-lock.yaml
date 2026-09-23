@@ -70,8 +70,8 @@ importers:
         specifier: ^4.1.10
         version: 4.1.11(@types/node@22.20.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(less@4.5.1)(sass@1.103.1)(yaml@2.9.0))
       weapp-ide-cli:
-        specifier: 6.1.0
-        version: 6.1.0(@types/node@22.20.1)
+        specifier: 6.1.7
+        version: 6.1.7(@types/node@22.20.1)
       weapp-vite:
         specifier: ^6.25.0
         version: 6.25.0(@babel/core@8.0.1)(@oxc-project/types@0.147.0)(@types/node@22.20.1)(esbuild@0.28.2)(eslint@10.8.1(jiti@2.7.0))(hono@4.13.3)(jiti@2.7.0)(less@4.5.1)(miniprogram-api-typings@5.2.3)(sass@1.103.1)(tailwindcss@4.3.3)(vitest@4.1.11(@types/node@22.20.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(less@4.5.1)(sass@1.103.1)(yaml@2.9.0)))(yaml@2.9.0)
@@ -4351,12 +4351,20 @@ packages:
     resolution: {integrity: sha512-MDnvDafxs0oTxGggCPCclmIPlKZk2xHvxKAFq+2q7EjBFeT0nTa2ZLiJUxuxziXNQUihW8zop6gMR01j95IjEg==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
+  '@weapp-core/logger@3.1.6':
+    resolution: {integrity: sha512-nvh7eo5R53LbD8TCyBb2gGxKGZUg61YxhKUsOoCyPNgkNs+9PeWOy2PRlBPhDjeXJcsSM7t7+a3amWsEt3Z1Hw==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+
   '@weapp-core/schematics@6.2.1':
     resolution: {integrity: sha512-1a5hDLlwaVu8ybkGGpTICKqKgRvzkaWroUitj8RqinW7ql6ZZWN7CDyITSkVfBh7RU61NEGz8t/SDzI+HWjVmw==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   '@weapp-core/shared@3.2.0':
     resolution: {integrity: sha512-Nvo+x1FIqnxmpUg0NvNLqhMREiEe6S9OkOGns8jxhZeMGpTY4y7oSHEe2rcXbn2YHx6EPxsASrF32NODE8FMwg==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+
+  '@weapp-core/shared@3.2.5':
+    resolution: {integrity: sha512-042qiBtKUSzf9HamKUGD/YtBYYyRpdC5sXiOiAHzlc8f1UC3IY65M6h3eMcY3rJsFVRRGKUm1wWTjzOFr8Z/uA==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   '@weapp-tailwindcss/logger@2.0.3':
@@ -4391,6 +4399,10 @@ packages:
     resolution: {integrity: sha512-doCUnltI48tA4Od06HSSm+wd2iXNDwigOzim3/nUBpD5dUEhHYo6Bm2YZsBqcDYABi3smBMiJv8gVkM3X9FzjA==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
+  '@weapp-vite/devtools-runtime@0.4.22':
+    resolution: {integrity: sha512-mcqMSxxIy3uJJUYnzsFoltOgl6H5SlTVRv5rMNIDk0Mloz4SzsOhmHY40faIwiHfccWWa76MuYVROnAZQwNY2g==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+
   '@weapp-vite/eslint@0.2.2':
     resolution: {integrity: sha512-qVtkKahk6gDE+nAXCtcDEKGLagarTf40JP8UAnT6Qiqr77p1xIIhlFNAxfMpsJKfX4qExDwL12gA0vgKbyoBiw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -4418,8 +4430,16 @@ packages:
     resolution: {integrity: sha512-zEwZ0xvZb9YXsh7cSvlRVUTT8uq0Bvx365PRfiDIOD2kH4PlRffA3PBpFh09W4A/s3qnr14w2BO3s6rZACN8tQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
+  '@weapp-vite/miniprogram-automator@1.2.21':
+    resolution: {integrity: sha512-cqF67tbzvj+nUVvL1h6kcGNiEeAzCQxOHGC1USF6Cj+HKbLySyR0elhZE1Z/oTyGtHZNzObZ5YT8GtAFvqs0QQ==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+
   '@weapp-vite/qr@1.1.2':
     resolution: {integrity: sha512-L7jM5SJPKr7Sw2bjsd5QwD3NWzZah1A+u/OTZhLtJbOBBEOXl92XgmqQbFbGbXHwfjzhJn8EMl2qhsAbmaMovw==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+
+  '@weapp-vite/qr@1.1.6':
+    resolution: {integrity: sha512-ga+GyAHl4JcRgRYfA9dgNH4DTb5pkCrGWGyM4ihCa3HUu8Eiq63fiKgY1GXgg6l5e9L9D5ou3g2rSB3PjPjeTQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   '@weapp-vite/volar@2.1.5':
@@ -7981,6 +8001,10 @@ packages:
     resolution: {integrity: sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==}
     engines: {node: '>=12.20.0'}
 
+  obug@3.0.0:
+    resolution: {integrity: sha512-5vvB5+W7ePv+p3uqxi+RcW1XAzLW0/hxt3/4X4Lc4qHudzOhmBiBwOY6DRob4WnanAEGvNcLjF+KNOufrUoEQw==}
+    engines: {node: '>=12.20.0'}
+
   ohash@2.0.12:
     resolution: {integrity: sha512-65S/5gk9YSsaRjcyf7Nfa6h/d3E8/1gslpXfI4W7Dxn/oap8IKRuNT5VXkLQ1YFKIEg4apRY4Pj6aiwFzrDdmw==}
 
@@ -10031,6 +10055,11 @@ packages:
     engines: {node: '>=22'}
     hasBin: true
 
+  weapp-ide-cli@6.1.7:
+    resolution: {integrity: sha512-CFDFOOMcanWLWw1Z75cg5McPBB6nJ9XC0FKM7A1OFVmkaDAlWBTlopZYV2p6aKmGsHXTexSDpMN88Zi+ddA+LQ==}
+    engines: {node: '>=22'}
+    hasBin: true
+
   weapp-style-injector@1.0.4:
     resolution: {integrity: sha512-QR1VGXjd9NRtP89fOvqWnz903tppM9Tw+rhGEsjYkbn4+wi7gezA1J36BgiRptJCz3V7LMmj7TaJB80IdNHeAA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -10244,6 +10273,9 @@ packages:
 
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -14664,11 +14696,18 @@ snapshots:
       consola: 3.4.2
       picocolors: 1.1.1
 
+  '@weapp-core/logger@3.1.6':
+    dependencies:
+      consola: 3.4.2
+      picocolors: 1.1.1
+
   '@weapp-core/schematics@6.2.1':
     dependencies:
       zod: 4.4.3
 
   '@weapp-core/shared@3.2.0': {}
+
+  '@weapp-core/shared@3.2.5': {}
 
   '@weapp-tailwindcss/logger@2.0.3':
     dependencies:
@@ -14743,6 +14782,14 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  '@weapp-vite/devtools-runtime@0.4.22(@types/node@22.20.1)':
+    dependencies:
+      '@weapp-vite/miniprogram-automator': 1.2.21(@types/node@22.20.1)
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - utf-8-validate
+
   '@weapp-vite/eslint@0.2.2(eslint@10.8.1(jiti@2.7.0))':
     optionalDependencies:
       eslint: 10.8.1(jiti@2.7.0)
@@ -14775,7 +14822,23 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  '@weapp-vite/miniprogram-automator@1.2.21(@types/node@22.20.1)':
+    dependencies:
+      '@weapp-vite/qr': 1.1.6(@types/node@22.20.1)
+      obug: 3.0.0
+      ws: 8.21.3
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - utf-8-validate
+
   '@weapp-vite/qr@1.1.2(@types/node@22.20.1)':
+    dependencies:
+      sharp: 0.35.4(@types/node@22.20.1)
+    transitivePeerDependencies:
+      - '@types/node'
+
+  '@weapp-vite/qr@1.1.6(@types/node@22.20.1)':
     dependencies:
       sharp: 0.35.4(@types/node@22.20.1)
     transitivePeerDependencies:
@@ -19191,6 +19254,8 @@ snapshots:
 
   obug@2.1.4: {}
 
+  obug@3.0.0: {}
+
   ohash@2.0.12: {}
 
   omggif@1.0.10: {}
@@ -21395,6 +21460,24 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  weapp-ide-cli@6.1.7(@types/node@22.20.1):
+    dependencies:
+      '@modelcontextprotocol/server': 2.0.0
+      '@weapp-core/logger': 3.1.6
+      '@weapp-core/shared': 3.2.5
+      '@weapp-vite/devtools-runtime': 0.4.22(@types/node@22.20.1)
+      '@weapp-vite/miniprogram-automator': 1.2.21(@types/node@22.20.1)
+      cac: 7.0.0
+      execa: 10.0.1
+      pathe: 2.0.3
+      pixelmatch: 7.2.0
+      pngjs: 7.0.0
+      zod: 4.6.5
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - utf-8-validate
+
   weapp-style-injector@1.0.4:
     dependencies:
       '@weapp-tailwindcss/shared': 2.0.3
@@ -21746,5 +21829,7 @@ snapshots:
       zod: 4.4.3
 
   zod@4.4.3: {}
+
+  zod@4.6.5: {}
 
   zwitch@2.0.4: {}

@@ -65,7 +65,7 @@ describe('Web BFF trusted query adapter', () => {
     const expectedMutations = adminWebOperationContract.operations
       .filter(operation => operation.webAllowed && operation.kind === 'MUTATION')
 
-    assert.equal(expectedQueries.length, 100)
+    assert.equal(expectedQueries.length, 103)
     assert.equal(expectedMutations.length, 106)
     assert.deepEqual([...WEB_BFF_QUERY_ACTIONS], expectedQueries.map(operation => operation.action))
     assert.deepEqual([...WEB_BFF_MUTATION_ACTIONS], expectedMutations.map(operation => operation.action))

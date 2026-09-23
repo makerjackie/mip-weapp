@@ -19,6 +19,7 @@ import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipIdentityModule } from '../../modules/mip-identity/client'
 import { groupedCityBranches, opportunityModule, opportunityTypeLabel } from '../../modules/mip-opportunities'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
+import { clearPageMedia, updatePageMedia } from '../../platform/storage/component-media'
 
 type PageMode = 'opportunities' | 'cooperation'
 /** journey-review J2-06：「我的项目」是机会 Tab 内的第三个 pill 态（列表只看自己发布的机会）。 */
@@ -48,17 +49,17 @@ const FILTER_AUTH_RESUME = 'auth-intent:open-filters'
 /** journey-review J1-04：游客点「我的项目」先完成身份确认，授权回来后切到我的项目 pill。 */
 const MINE_AUTH_RESUME = 'auth-intent:open-mine'
 
+/** 保底数组：非数组（含 null/对象/字符串）与非法元素一律丢弃，杜绝卡片属性收到 non-array 告警。 */
+function avatarViewsOf(avatars: OpportunitySummary['avatars']): string[] {
+  return Array.isArray(avatars) ? avatars.filter(v => typeof v === 'string' && v) : []
+}
+
 function withTypeTagViews(items: OpportunitySummary[]): OpportunityCardView[] {
   return items.map(item => ({
     ...item,
     typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
     avatarViews: avatarViewsOf(item.avatars),
   }))
-}
-
-/** 保底数组：非数组（含 null/对象/字符串）与非法元素一律丢弃，杜绝卡片属性收到 non-array 告警。 */
-function avatarViewsOf(avatars: OpportunitySummary['avatars']): string[] {
-  return Array.isArray(avatars) ? avatars.filter(v => typeof v === 'string' && v) : []
 }
 
 function locationPreset(types: OpportunityLocationType[]): LocationPreset {
@@ -193,6 +194,7 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     authenticated: false,
+    player: false,
     mode: 'opportunities' as PageMode,
     status: 'RECRUITING' as StatusPill,
     keywordInput: '',
@@ -278,6 +280,10 @@ Page({
     }
   },
 
+  onUnload() {
+    clearPageMedia(this)
+  },
+
   /** journey-review J3-01：Banner 位与活动页共用 mip-banners 模块，失败不阻塞列表。 */
   async loadBanners(force = false) {
     try {
@@ -352,11 +358,11 @@ Page({
         if (sequence !== this.requestSequence || this.data.mode !== 'opportunities' || this.data.status !== 'MINE') {
           return
         }
+        updatePageMedia(this, 'opportunities', reset
+          ? withTypeTagViews(page.items)
+          : [...this.data.opportunities, ...withTypeTagViews(page.items)])
         this.setData({
           state: 'ready',
-          opportunities: reset
-            ? withTypeTagViews(page.items)
-            : [...this.data.opportunities, ...withTypeTagViews(page.items)],
           nextCursor: page.nextCursor || '',
         })
         this.lastSuccessfulRefreshAt = Date.now()
@@ -378,11 +384,11 @@ Page({
         if (sequence !== this.requestSequence || this.data.mode !== 'opportunities') {
           return
         }
+        updatePageMedia(this, 'opportunities', reset
+          ? withTypeTagViews(page.items)
+          : [...this.data.opportunities, ...withTypeTagViews(page.items)])
         this.setData({
           state: 'ready',
-          opportunities: reset
-            ? withTypeTagViews(page.items)
-            : [...this.data.opportunities, ...withTypeTagViews(page.items)],
           nextCursor: page.nextCursor || '',
         })
         this.lastSuccessfulRefreshAt = Date.now()
@@ -414,11 +420,11 @@ Page({
             primaryTargetSummary: cards[0]?.targetSummary || '',
           }
         })
+        updatePageMedia(this, 'cooperationTalents', reset
+          ? talents
+          : mergeCooperationTalents(this.data.cooperationTalents, talents))
         this.setData({
           state: 'ready',
-          cooperationTalents: reset
-            ? talents
-            : mergeCooperationTalents(this.data.cooperationTalents, talents),
           nextCursor: page.nextCursor || '',
         })
         this.lastSuccessfulRefreshAt = Date.now()
@@ -1096,7 +1102,7 @@ Page({
   async refreshAuthState() {
     const snapshot = await mipIdentityModule.loadSnapshot().catch(() => null)
     if (snapshot) {
-      this.setData({ authenticated: snapshot.authenticated })
+      this.setData({ authenticated: snapshot.authenticated, player: snapshot.membership?.kind === 'PLAYER' })
     }
   },
 

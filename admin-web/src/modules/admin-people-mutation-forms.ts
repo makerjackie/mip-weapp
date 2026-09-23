@@ -239,17 +239,16 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     action: 'mip.admin.adminAccounts.create',
     capability: 'roles.change',
     title: '新增后台账号',
-    description: '创建后台运营账号。登录账号和手机号需系统内唯一。',
+    description: '为已注册的小程序用户开通后台权限，登录使用小程序确认。',
     fields: [
       { name: 'loginAccount', label: '登录账号', kind: 'text', required: true, maxLength: 64 },
       { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
-      { name: 'phone', label: '手机号', kind: 'text', required: true, maxLength: 20 },
+      { name: 'userId', label: '已注册用户', kind: 'select', required: true },
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
       { name: 'scopeId', label: '作用范围 ID', kind: 'text' },
-      { name: 'branchId', label: '服务器归属', kind: 'text' },
       { name: 'reason', label: '创建原因', kind: 'textarea', maxLength: 300, wide: true },
     ],
-    values: { loginAccount: '', name: '', phone: '', roleKey: '', scopeId: '', branchId: '', reason: '' },
+    values: { loginAccount: '', name: '', userId: '', roleKey: '', scopeId: '', branchId: '', reason: '' },
   },
   'mip.admin.adminAccounts.update': {
     action: 'mip.admin.adminAccounts.update',
@@ -258,12 +257,10 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     description: '更新后台账号信息。登录账号不可修改。',
     fields: [
       { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
-      { name: 'phone', label: '手机号', kind: 'text', required: true, maxLength: 20 },
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
       { name: 'scopeId', label: '作用范围 ID', kind: 'text' },
-      { name: 'branchId', label: '服务器归属', kind: 'text' },
     ],
-    values: { name: '', phone: '', roleKey: '', scopeId: '', branchId: '' },
+    values: { name: '', roleKey: '', scopeId: '', branchId: '' },
     versionKind: 'adminAccount',
   },
   'mip.admin.adminAccounts.changeStatus': {
@@ -293,10 +290,12 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     action: 'mip.admin.entitlements.grant',
     capability: 'memberships.adjust',
     title: '授予权益',
-    description: '为用户手动授予权益，可附带数量和月数。金额和月数为正整数。',
+    description: '单用户发放经验值、贡献值或玩家会籍。会籍只能追加 1、3、6、12 个月。',
     fields: [
       { name: 'userId', label: '用户', kind: 'text', required: true, maxLength: 36 },
-      { name: 'entitlementType', label: '权益类型', kind: 'text', required: true, maxLength: 64 },
+      { name: 'entitlementType', label: '权益类型', kind: 'select', required: true,
+        options: [{ value: 'EXP', label: '经验值' }, { value: 'CONTRIBUTION', label: '贡献值' },
+          { value: 'MEMBERSHIP', label: '玩家会籍' }] },
       { name: 'amount', label: '数量', kind: 'text' },
       { name: 'months', label: '月数', kind: 'text' },
     ],
@@ -491,24 +490,20 @@ function buildBranchStatus(definition: AdminPeopleMutationDefinition, values: Ad
 function buildAdminAccountCreate(values: AdminPeopleMutationValues) {
   const loginAccount = boundedText(values.loginAccount, 64)
   const name = boundedText(values.name, 64)
-  const phone = boundedText(values.phone, 20)
+  const userId = boundedId(values.userId)
   const roleKey = oneOf(values.roleKey, [
     'PLATFORM_OWNER', 'PLATFORM_OPERATIONS', 'PLATFORM_FINANCE', 'BRANCH_ADMIN',
     'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF',
   ] as const)
-  if (!loginAccount || !name || !phone || !roleKey) return null
+  if (!loginAccount || !name || !userId || !roleKey) return null
   if (!/^[A-Za-z0-9_.-]{3,64}$/.test(loginAccount)) return null
-  const result: Record<string, unknown> = { loginAccount, name, phone, roleKey }
+  const result: Record<string, unknown> = { loginAccount, name, userId, roleKey }
   if (values.scopeId !== undefined && values.scopeId !== '') {
     const scopeId = boundedId(values.scopeId)
     if (!scopeId) return null
     result.scopeId = scopeId
   }
-  if (values.branchId !== undefined && values.branchId !== '') {
-    const branchId = boundedId(values.branchId)
-    if (!branchId) return null
-    result.branchId = branchId
-  }
+
   if (values.reason !== undefined && values.reason !== '') {
     const reason = boundedText(values.reason, 300)
     if (!reason) return null
@@ -520,23 +515,18 @@ function buildAdminAccountCreate(values: AdminPeopleMutationValues) {
 function buildAdminAccountUpdate(definition: AdminPeopleMutationDefinition, values: AdminPeopleMutationValues) {
   const expectedVersion = versionValue(definition, 1)
   const name = boundedText(values.name, 64)
-  const phone = boundedText(values.phone, 20)
   const roleKey = oneOf(values.roleKey, [
     'PLATFORM_OWNER', 'PLATFORM_OPERATIONS', 'PLATFORM_FINANCE', 'BRANCH_ADMIN',
     'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF',
   ] as const)
-  if (!definition.targetId || expectedVersion === null || !name || !phone || !roleKey) return null
-  const result: Record<string, unknown> = { accountId: definition.targetId, expectedVersion, name, phone, roleKey }
+  if (!definition.targetId || expectedVersion === null || !name || !roleKey) return null
+  const result: Record<string, unknown> = { accountId: definition.targetId, expectedVersion, name, roleKey }
   if (values.scopeId !== undefined && values.scopeId !== '') {
     const scopeId = boundedId(values.scopeId)
     if (!scopeId) return null
     result.scopeId = scopeId
   }
-  if (values.branchId !== undefined && values.branchId !== '') {
-    const branchId = boundedId(values.branchId)
-    if (!branchId) return null
-    result.branchId = branchId
-  }
+
   return result
 }
 
@@ -557,18 +547,22 @@ function buildAdminAccountResetCredential(definition: AdminPeopleMutationDefinit
 function buildEntitlementGrant(values: AdminPeopleMutationValues) {
   const userId = boundedId(values.userId)
   const entitlementType = boundedText(values.entitlementType, 64)
-  if (!userId || !entitlementType) return null
+  if (!userId || !entitlementType || !['EXP', 'CONTRIBUTION', 'MEMBERSHIP'].includes(entitlementType)) return null
   const result: Record<string, unknown> = { userId, entitlementType }
+  if (entitlementType === 'MEMBERSHIP') {
+    if (values.amount !== undefined && values.amount !== null && values.amount !== '') return null
+    const months = values.months === undefined || values.months === null || values.months === '' ? 12 : Number(values.months)
+    if (![1, 3, 6, 12].includes(months)) return null
+    result.months = months
+    return result
+  }
+  if (values.months !== undefined && values.months !== null && values.months !== '') return null
   if (values.amount !== undefined && values.amount !== null && values.amount !== '') {
     const amount = Number(values.amount)
     if (!Number.isSafeInteger(amount) || amount <= 0) return null
     result.amount = amount
   }
-  if (values.months !== undefined && values.months !== null && values.months !== '') {
-    const months = Number(values.months)
-    if (!Number.isSafeInteger(months) || months <= 0) return null
-    result.months = months
-  }
+  if (!result.amount) return null
   return result
 }
 

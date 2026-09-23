@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { sanitizedDiagnostic } from '../scripts/lib/example-cloudbase.mjs'
 import {
   MIP_DEPLOYMENT_STAGES,
   resolveMipDeploymentStage,
@@ -63,6 +64,19 @@ describe('MIP deployment safety guards', () => {
       expect(read(document), document).toContain('--confirm-production')
     }
     expect(read('README.md')).toContain('(docs/DEPLOYMENT.md)')
+  })
+
+  it('keeps SMS provider credentials server-only and redacts control-plane errors', () => {
+    const deployment = read('scripts/deploy-functions.mjs')
+    expect(deployment).toContain('identity: {\n      ...options.phoneSmsEnvironment,')
+    expect(deployment.match(/\.\.\.options.phoneSmsEnvironment/g)).toHaveLength(1)
+    const error = sanitizedDiagnostic(JSON.stringify({ MIP_SMS_SECRET_ID: 'test-secret-id', MIP_SMS_SECRET_KEY: 'test-secret-key' }))
+    expect(error).not.toContain('test-secret-id')
+    expect(error).not.toContain('test-secret-key')
+    const secrets = read('scripts/lib/mip-local-secrets.mjs')
+    expect(secrets).toContain('\'MIP_SMS_SECRET_ID\'')
+    expect(secrets).toContain('\'MIP_SMS_SECRET_KEY\'')
+    expect(read('.env.example')).toContain('MIP_SMS_ENABLED=false')
   })
 
   it('limits a requested single-function deployment to one known core manifest entry', () => {

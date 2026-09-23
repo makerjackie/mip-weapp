@@ -1,4 +1,5 @@
-import { App } from 'antd'
+import { App, Button } from 'antd'
+import { OperationsReadPage } from '../features/operations-pages/operations-read-page'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { useAdminSession } from './session-provider'
@@ -174,7 +175,12 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
     : route === 'banners' ? <BannerManagementPage {...state} onOpenMedia={purpose => void navigate({ to: '/media', search: { tab: purpose } })} />
       : route === 'game' ? <GameManagementPage {...state} />
         : route === 'opportunities' ? <OpportunitiesContentPage {...state} />
-          : <GrowthBadgesPage {...state} />
+          : route === 'adminAccounts' ? <OperationsReadPage {...state} title="后台账号" description="管理已注册用户的后台权限" searchPlaceholder="搜索姓名或账号标识"
+              statusOptions={getAdminReadRouteDefinition(route).statusOptions} paginated
+              actions={canWrite ? <Button type="primary" onClick={() => onWrite?.({ action: 'mip.admin.adminAccounts.create' })}>新增后台账号</Button> : null} />
+            : route === 'auditLogs' ? <OperationsReadPage {...state} title="操作审计" description="查看后台操作记录" searchPlaceholder="搜索操作或资源"
+                statusOptions={getAdminReadRouteDefinition(route).statusOptions} paginated />
+              : <GrowthBadgesPage {...state} />
   return (
     <PermissionGuard capabilities={operationRouteCapabilities[route]} requireAny={operationRouteCapabilities[route].length > 1}>
       {page}

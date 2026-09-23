@@ -29,3 +29,7 @@ export function updateComponentMedia(target: MediaTarget, field: string, value: 
 export function clearComponentMedia(target: MediaTarget) {
   bindings.delete(target)
 }
+
+/** Pages use the same guarded hydration without binding CloudBase file IDs into Page.data. */
+export const updatePageMedia = updateComponentMedia
+export const clearPageMedia = clearComponentMedia

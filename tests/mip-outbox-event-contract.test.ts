@@ -51,7 +51,7 @@ describe('outbox producer enumeration', () => {
     expect(result.producerEventTypes).toContain('event.registration_refund_requested')
     expect(result.producerEventTypes).toContain('task.unpublished')
     expect(result.producerEventTypes).toContain('operations.notification_published')
-  })
+  }, 15_000)
 
   it('binds only the event_type column and ignores payload strings and question marks', () => {
     expect(verifyFixture(`

@@ -218,6 +218,26 @@ function createAdminOpportunities({
     }).archiveOpportunity(context, input)
   }
 
+  async function deleteOpportunity(caller, input = {}) {
+    const context = await access.session(caller)
+    const opportunityId = requiredId(input.opportunityId, '机会')
+    const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
+    if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
+    const grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_ARCHIVE,
+      { scopeType: 'PLATFORM', scopeId: null })
+    const version = expectedVersion(input.expectedVersion)
+    const reason = text(input.reason, 240, { required: true, label: '删除原因' })
+    return repository.deleteOpportunity({ appId: context.caller.appId, actorUserId: context.caller.userId,
+      opportunityId, expectedVersion: version, reason, authorizedScope: scope,
+      authorization: access.mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_ARCHIVE),
+      audit: (snapshotRef, fromStatus) => access.audit(context, grant, {
+        scopeType: scope.scopeType, scopeId: scope.scopeId,
+        action: 'admin.opportunities.delete', resourceType: 'OPPORTUNITY', resourceId: opportunityId,
+        metadata: { fromStatus, toStatus: 'ARCHIVED', snapshotRef, summary: `软删除机会；原因：${reason}` },
+      }),
+    })
+  }
+
   async function getMatchingAdminState(caller, input = {}) {
     const context = await access.session(caller)
     const branchId = input.branchId ? requiredId(input.branchId, '城市分会') : null
@@ -454,6 +474,7 @@ function createAdminOpportunities({
 
   return {
     archiveOpportunity,
+    deleteOpportunity,
     closeOpportunityCommentReport,
     endOpportunity,
     getMatchingAdminState,

@@ -77,6 +77,32 @@ function createAdminGrowth({ repository, access }) {
     })
   }
 
+  async function changeLevelStatus(caller, input = {}) {
+    const levelId = requiredId(input.levelId, '等级')
+    const version = expectedVersion(input.expectedVersion)
+    if (!['ACTIVE', 'INACTIVE'].includes(input.status)) throw new AdminError('VALIDATION_FAILED', '等级状态无效')
+    const current = (await listGrowthLevels(caller)).items.find(level => level.id === levelId)
+    if (!current) throw new AdminError('NOT_FOUND', '等级不存在')
+    if (current.version !== version) throw new AdminError('CONFLICT', '等级已被修改')
+    return saveGrowthLevel(caller, { levelId, expectedVersion: version, draft: {
+      levelKey: current.levelKey, name: current.name, minimumExperience: current.minimumExperience,
+      displayBadge: current.displayBadge, sortOrder: current.sortOrder,
+      benefitIds: current.benefits.map(benefit => benefit.id), status: input.status,
+    } })
+  }
+
+  async function changeBenefitStatus(caller, input = {}) {
+    const benefitId = requiredId(input.benefitId, '权益')
+    const version = expectedVersion(input.expectedVersion)
+    if (!['ACTIVE', 'INACTIVE'].includes(input.status)) throw new AdminError('VALIDATION_FAILED', '权益状态无效')
+    const current = (await listGrowthBenefits(caller)).items.find(benefit => benefit.id === benefitId)
+    if (!current) throw new AdminError('NOT_FOUND', '权益不存在')
+    if (current.version !== version) throw new AdminError('CONFLICT', '权益已被修改')
+    return saveGrowthBenefit(caller, { benefitId, expectedVersion: version, draft: {
+      name: current.name, description: current.description, sortOrder: current.sortOrder, status: input.status,
+    } })
+  }
+
   async function listGrowthRules(caller) {
     const context = await access.session(caller)
     firstGrant(context.bindings, CAPABILITIES.GROWTH_READ)
@@ -263,6 +289,8 @@ function createAdminGrowth({ repository, access }) {
 
   const api = {
     adjustGrowth,
+    changeBenefitStatus,
+    changeLevelStatus,
     grantBadge,
     listBadgeAwards,
     listBadges,

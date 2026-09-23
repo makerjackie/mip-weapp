@@ -4,6 +4,7 @@ import type {
   AccessSession,
   AccountClosureInput,
   AgreementAcceptanceInput,
+  BindSmsPhoneInput,
   IdentityAccessSnapshot,
   MipIdentityGateway,
   PendingAccessResume,
@@ -475,6 +476,20 @@ export function createMipIdentityModule(
         notifyIdentityBoundary()
       }
       return result
+    },
+
+    requestPhoneSms(phone: string) {
+      return gateway.requestPhoneSms(phone)
+    },
+
+    async rebindSmsPhone(input: BindSmsPhoneInput) {
+      const requestGeneration = beginSnapshotMutation()
+      const snapshot = await gateway.bindSmsPhone(input)
+      const applied = commitMutationSnapshot(requestGeneration, snapshot)
+      if (applied) {
+        notifyIdentityBoundary()
+      }
+      return applied ? snapshot : currentLocalSnapshot()
     },
 
     async rebindWechatPhone(code: string) {

@@ -3,6 +3,7 @@
 const { randomUUID } = require('node:crypto')
 const { createProfileRef } = require('../lib/profile-ref')
 const { lockActiveContributor } = require('../lib/auth')
+const { opportunityVisibility } = require('./journey-access')
 const {
   decodeCursor,
   encodeCursor,
@@ -88,6 +89,7 @@ function commentDto(row, caller) {
 async function getOpportunityCommentSettings(database, caller, input = {}) {
   if (!uuid(input.opportunityId)) throw new Error('NOT_FOUND')
   const ownerVisibility = mutualBlockFilter(caller.userId, 'o.owner_user_id', 'o.app_id')
+  const privacy = opportunityVisibility(caller)
   const opportunity = await database.one(
     `SELECT o.id, o.status,
             (
@@ -98,9 +100,11 @@ async function getOpportunityCommentSettings(database, caller, input = {}) {
               )
             ) AS caller_can_call
      FROM mip_opportunities o
+     INNER JOIN mip_profiles p ON p.app_id = o.app_id AND p.user_id = o.owner_user_id
      WHERE o.app_id = ? AND o.id = ? AND o.status IN ('PUBLISHED', 'ENDED')
+       AND ${privacy.sql}
        ${ownerVisibility.sql ? `AND ${ownerVisibility.sql}` : ''}`,
-    [caller.userId, caller.userId, caller.appId, input.opportunityId, ...ownerVisibility.params],
+    [caller.userId, caller.userId, caller.appId, input.opportunityId, ...privacy.params, ...ownerVisibility.params],
   )
   if (!opportunity) throw new Error('NOT_FOUND')
   const row = await database.one(
@@ -182,6 +186,7 @@ async function listOpportunityComments(database, caller, input = {}) {
 
 async function opportunityFacts(tx, caller, opportunityId) {
   const ownerVisibility = mutualBlockFilter(caller.userId, 'o.owner_user_id', 'o.app_id')
+  const privacy = opportunityVisibility(caller)
   const row = await tx.one(
     `SELECT o.id, o.owner_user_id, o.status,
             COALESCE(settings.comments_enabled, 1) AS comments_enabled,
@@ -196,12 +201,14 @@ async function opportunityFacts(tx, caller, opportunityId) {
               )
             ) AS caller_is_participant
      FROM mip_opportunities o
+     INNER JOIN mip_profiles p ON p.app_id = o.app_id AND p.user_id = o.owner_user_id
      LEFT JOIN mip_opportunity_comment_settings settings
        ON settings.app_id = o.app_id AND settings.opportunity_id = o.id
      WHERE o.app_id = ? AND o.id = ?
+       AND ${privacy.sql}
        ${ownerVisibility.sql ? `AND ${ownerVisibility.sql}` : ''}
      FOR UPDATE`,
-    [caller.userId, caller.userId, caller.appId, opportunityId, ...ownerVisibility.params],
+    [caller.userId, caller.userId, caller.appId, opportunityId, ...privacy.params, ...ownerVisibility.params],
   )
   if (!row || !['PUBLISHED', 'ENDED'].includes(row.status)) throw new Error('NOT_FOUND')
   return row

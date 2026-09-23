@@ -104,6 +104,23 @@ function createIdentityService(options) {
     return getAccessSnapshot(caller)
   }
 
+  async function requestPhoneSms(caller, input) {
+    const user = await repository.findUserByIdentity(caller)
+    if (!user) throw new Error('AUTH_REQUIRED')
+    assertActiveUser(user)
+    if (!options.phoneSms) throw new Error('SMS_DISABLED')
+    return options.phoneSms.request(caller, user.id, input)
+  }
+
+  async function bindSmsPhone(caller, input) {
+    const user = await repository.findUserByIdentity(caller)
+    if (!user) throw new Error('AUTH_REQUIRED')
+    assertActiveUser(user)
+    if (!options.phoneSms) throw new Error('SMS_DISABLED')
+    await options.phoneSms.verify(caller, user.id, input)
+    return getAccessSnapshot(caller)
+  }
+
   async function closeAccount(caller, value) {
     const input = normalizeAccountClosureInput(value?.input)
     const user = await repository.ensureUser(caller)
@@ -220,6 +237,8 @@ function createIdentityService(options) {
   return {
     acceptAgreements,
     bindWechatPhone,
+    requestPhoneSms,
+    bindSmsPhone,
     closeAccount,
     getAccessSnapshot,
     signIn,
@@ -542,6 +561,8 @@ function boundedText(value, minimum, maximum) {
 function visibility(value) {
   const input = parseJson(value)
   const result = {
+    talentSearch: input.talentSearch !== false,
+    opportunitiesForNonPlayers: input.opportunitiesForNonPlayers !== false,
     nickname: input.nickname !== false,
     realName: input.realName === true,
     gender: input.gender === true,

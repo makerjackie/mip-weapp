@@ -32,6 +32,14 @@ const definitions = Object.freeze({
       ['answers', '报名信息'], ['registeredAt', '报名时间'], ['checkedInAt', '签到时间'],
     ],
   },
+  EVENT_FEEDBACK: {
+    filePrefix: 'mip-event-feedback',
+    sheetName: '活动反馈',
+    columns: [
+      ['id', '反馈编号'], ['nickname', '昵称'], ['rating', '评分'],
+      ['body', '反馈内容'], ['answers', '结构化答案'], ['submittedAt', '提交时间'],
+    ],
+  },
   EVENT_ORDERS: {
     filePrefix: 'mip-event-orders',
     sheetName: '活动订单',

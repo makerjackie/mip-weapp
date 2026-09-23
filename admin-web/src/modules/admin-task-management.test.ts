@@ -88,7 +88,7 @@ describe('admin task management', () => {
     })
     assert.equal(detail.route, 'tasks')
     assert.equal(detail.sections.find(section => section.title === '任务信息')?.fields?.find(field => field.label === '模板文件')?.value, '已配置，当前无法在 Web 查看')
-    assert.equal(detail.sections.find(section => section.title === '任务信息')?.fields?.find(field => field.label === '模板管理')?.value, '上传与替换功能暂不可用')
+    assert.equal(detail.sections.find(section => section.title === '任务信息')?.fields?.find(field => field.label === '模板管理')?.value, '编辑任务时可上传与替换模板')
     const members = detail.sections.find(section => section.title === '成员候选')
     const completions = detail.sections.find(section => section.title === '完成记录')
     assert.equal(members?.rows?.[0].state, '已分配')
@@ -133,6 +133,7 @@ describe('admin task management', () => {
         id: TASK_ID, name: '早会复盘', content: '提交本周复盘', rewardExperience: 30,
         assignmentMode: 'SELECTED', attachmentRequired: true, version: 3,
         template: { assetId: ASSET_ID }, eligibleLevels: [{ id: LEVEL_ID }],
+        purpose: '交付复盘', completionCriteria: '提交截图', assignedOwnerId: TASK_ID,
       },
       assignableMembers: [
         { memberRef: 'member-ref-new', nickname: '陈默', assignmentStatus: 'NONE' },
@@ -157,9 +158,10 @@ describe('admin task management', () => {
         name: '早会复盘', content: '提交本周复盘', rewardExperience: 30,
         attachmentRequired: true, assignmentMode: 'SELECTED', endsAt: '',
         templateAssetId: ASSET_ID, eligibleLevelIds: [LEVEL_ID],
-        starLevel: 1, purpose: '', completionCriteria: '',
+        starLevel: 1, purpose: '交付复盘', completionCriteria: '提交截图',
         periodStartAt: '', periodEndAt: '', weeklyDeliverAt: '',
-        assignedOwner: '', rewardConfigJson: '{"rewardExperience":30}',
+        assignedOwnerId: TASK_ID, applicableServers: [],
+        rewardConfig: { experience: { enabled: true, amount: 30 }, contribution: { enabled: false, amount: 0 }, bonus: { enabled: false, amount: 0 } },
       },
       taskId: TASK_ID,
       expectedVersion: 3,
@@ -192,15 +194,14 @@ describe('admin task management', () => {
     assert.deepEqual(levels, [{ id: LEVEL_ID, name: '成长会员', minimumExperience: 100, status: 'ACTIVE' }])
   })
 
-  it('includes a boss approval checkbox in the approve form when the task requires boss approval', () => {
+  it('keeps reviewer authority server-owned even when a client sends bossApproved', () => {
     const source = { submission: { id: COMPLETION_ID, reviewRemark: '' }, requiresBossApproval: true }
     const approve = createTaskMutationDefinition('mip.admin.tasks.submissions.approve', COMPLETION_ID, source)
     const bossField = approve.fields.find(field => field.name === 'bossApproved')
-    assert.equal(bossField?.kind, 'checkbox')
-    assert.equal(bossField?.label, '笨笨老大已审批')
-    assert.equal(approve.values.bossApproved, true)
+    assert.equal(bossField, undefined)
+    assert.equal(approve.values.bossApproved, undefined)
     const input = buildTaskMutationInput(approve, { ...approve.values, bossApproved: true, remark: '符合标准' })
-    assert.equal((input as Record<string, unknown>)?.bossApproved, true)
+    assert.equal((input as Record<string, unknown>)?.bossApproved, undefined)
     assert.equal((input as Record<string, unknown>)?.remark, '符合标准')
   })
 

@@ -29,10 +29,11 @@ const progressPercent: Record<SensitiveExportProgress, number> = {
   saving: 96,
 }
 
-export function SensitiveExportButton({ kind, query, status, open: controlledOpen, hideTrigger = false, onOpenChange }: {
+export function SensitiveExportButton({ kind, query, status, eventId, open: controlledOpen, hideTrigger = false, onOpenChange }: {
   kind: SensitiveExportKind
   query: string
   status: string
+  eventId?: string
   open?: boolean
   hideTrigger?: boolean
   onOpenChange?: (open: boolean) => void
@@ -70,6 +71,7 @@ export function SensitiveExportButton({ kind, query, status, open: controlledOpe
       kind,
       filters: { query: query || undefined, status: status || undefined },
       includesPhone: kind === 'users' && includesPhone,
+      eventId,
     })
     setWorkflow(next)
     setError('')
@@ -89,7 +91,7 @@ export function SensitiveExportButton({ kind, query, status, open: controlledOpe
     <>
       {!hideTrigger ? (
         <Button type="primary" icon={<DownloadOutlined />} onClick={() => { setInternalOpen(true); onOpenChange?.(true) }}>
-          {kind === 'users' ? '导出用户' : '导出订单'}
+          {kind === 'users' ? '导出用户' : kind === 'eventFeedback' ? '导出活动反馈' : '导出订单'}
         </Button>
       ) : null}
       <Modal
@@ -105,12 +107,14 @@ export function SensitiveExportButton({ kind, query, status, open: controlledOpe
       >
         <Space orientation="vertical" size={16} className="field-full-width">
           <Typography.Paragraph type="secondary">
-            导出范围与当前列表筛选一致，服务端会再次校验运营权限和数据范围。
+            {kind === 'eventFeedback'
+              ? '导出当前活动的反馈，服务端会再次校验运营权限和活动范围。'
+              : '导出范围与当前列表筛选一致，服务端会再次校验运营权限和数据范围。'}
           </Typography.Paragraph>
-          <Descriptions size="small" column={1} bordered items={[
-            { key: 'query', label: '筛选关键词', children: query || '全部' },
-            { key: 'status', label: '状态', children: status || '全部' },
-          ]} />
+          {kind !== 'eventFeedback' ? <Descriptions size="small" column={1} bordered items={[
+                { key: 'query', label: '筛选关键词', children: query || '全部' },
+                { key: 'status', label: '状态', children: status || '全部' },
+              ]} /> : null}
           {kind === 'users' ? (
             <Checkbox checked={includesPhone} disabled={Boolean(workflow)} onChange={event => setIncludesPhone(event.target.checked)}>
               包含手机号（仅导出当前账号有权查看的手机号）

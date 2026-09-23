@@ -8,7 +8,7 @@ export interface OpportunityTypeTagView {
 
 Component({
   data: {
-    fallbackCoverUrl: brand.logoPath,
+    fallbackCoverUrl: brand.opportunityDefaultCoverPath,
     displayCoverUrl: '',
     displayAvatars: [],
   },

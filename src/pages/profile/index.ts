@@ -12,6 +12,7 @@ import { badgeArtUrl } from '../../config/mip-badge-art'
 import { cooperationRoles } from '../../config/mip-catalogs'
 import { superCaseModule } from '../../modules/mip-cases'
 import { cooperationModule } from '../../modules/mip-cooperation'
+import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipGrowthModule } from '../../modules/mip-growth/client'
 import { evaluateAccess, mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
@@ -223,7 +224,7 @@ Page({
       opportunityModule.getProfileInfluence(),
       opportunityModule.listReceived('VISITOR'),
       // journey-review J3-04：心动值与访客两卡都有未读红点（M1 00:35:58），进入列表后清除。
-      opportunityModule.listReceived('ACTIVE_INTEREST'),
+      mipEventsModule.listHeartHistory('RECEIVED'),
     ])
     const updates: Partial<typeof this.data> = {}
     if (summaryResult.status === 'fulfilled') {
@@ -231,7 +232,6 @@ Page({
       Object.assign(updates, {
         guestCount: summary.guestCount,
         interactionCount: summary.interactionCount,
-        interestCount: summary.interestCount,
         visitorCount: summary.visitorCount,
       })
     }
@@ -239,7 +239,8 @@ Page({
       updates.visitorUnreadCount = visitorResult.value.unreadCount
     }
     if (interestResult.status === 'fulfilled') {
-      updates.interestUnreadCount = interestResult.value.unreadCount
+      updates.interestCount = interestResult.value.totalCount ?? null
+      updates.interestUnreadCount = interestResult.value.unreadCount || 0
     }
     if (summaryResult.status === 'rejected' || visitorResult.status === 'rejected' || interestResult.status === 'rejected') {
       updates.message = this.data.message || '部分影响力数据暂时无法加载，请稍后重试。'
@@ -524,6 +525,10 @@ Page({
   openOrders() { void this.openProtected('/packages/member/orders/index', 'VIEW_RESTRICTED_PROFILE') },
   openInfluenceList(event: WechatMiniprogram.TouchEvent) {
     const category = String(event.currentTarget.dataset.category || '')
+    if (category === 'ACTIVE_INTEREST') {
+      void this.openProtected('/packages/member/mip-hearts/index', 'INTERACT')
+      return
+    }
     if (!['GUEST', 'INTERACTION', 'ACTIVE_INTEREST'].includes(category)) {
       return
     }
@@ -541,7 +546,7 @@ Page({
   openStat(event: WechatMiniprogram.CustomEvent<{ label: string }>) {
     const label = String(event.detail.label || '')
     if (label === '心动值') {
-      void this.openProtected('/packages/member/mip-received/index?scope=hearts&category=ACTIVE_INTEREST', 'INTERACT')
+      void this.openProtected('/packages/member/mip-hearts/index', 'INTERACT')
       return
     }
     if (label === '访客') {

@@ -351,6 +351,18 @@ describe('admin exports deep module', () => {
     ])
   })
 
+  it('creates an event-scoped feedback export ticket without trusting client filters', async () => {
+    const repo = repository()
+    const module = exportsModule(repo, { filterNormalizers: filterNormalizers() })
+    await module.createExport(caller, { exportType: 'EVENT_FEEDBACK', eventId: EVENT_ID,
+      filters: { eventId: 'forged-event' }, idempotencyKey: 'feedback-export-1' })
+    const input = lastCall(repo, 'createExportTicket').input
+    assert.equal(input.exportType, 'EVENT_FEEDBACK')
+    assert.equal(input.scope.scopeId, EVENT_ID)
+    assert.deepEqual(input.filters, { eventId: EVENT_ID })
+    assert.equal(input.includesPhone, false)
+  })
+
   it('keeps finance and phone capabilities independent and resolves missing event scope first', async () => {
     const financeRepo = repository({
       roleBindings: [{ roleKey: 'PLATFORM_FINANCE', scopeType: 'PLATFORM', scopeId: null }],

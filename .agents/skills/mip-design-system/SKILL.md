@@ -2,7 +2,7 @@
 name: mip-design-system
 description: Apply the MIP WeChat miniprogram design system when implementing, restoring, or reviewing MIP UI, components, pages, colors, typography, spacing, icons, or baked card assets.
 metadata:
-  version: "2026-09-09.2"
+  version: "2026-09-22.1"
   source_snapshot: "2026-09-09 15:16 worktree; base commit 889464a"
 ---
 
@@ -83,3 +83,9 @@ When design or component source changes, update the skill copy first, bump the
 `metadata.version`, refresh `assets/MANIFEST.md` and `assets/MANIFEST.sha256`,
 and run `./scripts/check-sot.sh`. Skill changes are advisory controls; if a rule
 must be enforced in CI, call the same check script from the repository pipeline.
+
+## 2026-09-22 notification icon increment
+
+`bell-notification` is the exact 24px SVG from upstream `cb5956b` (introduced by `6086f3e`), frame
+`3364:17173`, node `3364:16248`. The unread dot is 8px, `#ff1313`,
+without a number. This supplements the original 451-icon snapshot.

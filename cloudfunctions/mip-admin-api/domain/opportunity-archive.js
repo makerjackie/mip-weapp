@@ -75,6 +75,7 @@ function sameScope(left, right) {
 function createOpportunityArchiveRepository(database, {
   assertScope,
   lockMutation,
+  writeAudit,
   now = () => new Date(),
 } = {}) {
   if (!database || typeof database.transaction !== 'function') {
@@ -183,7 +184,37 @@ function createOpportunityArchiveRepository(database, {
     })
   }
 
-  return { archiveOpportunity, getOpportunityArchiveScope }
+  async function deleteOpportunity(input) {
+    return database.transaction(async tx => {
+      const authorization = await lockMutation(tx, input)
+      const row = await tx.one('SELECT * FROM mip_opportunities WHERE app_id = ? AND id = ? FOR UPDATE',
+        [input.appId, input.opportunityId])
+      if (!row) throw codeError('NOT_FOUND')
+      if (Number(row.version) !== input.expectedVersion) throw codeError('CONFLICT')
+      if (row.status === 'ARCHIVED') throw codeError('INVALID_STATE')
+      const lockedScope = scopeFromRow(row)
+      assertScope(authorization, lockedScope)
+      if (!sameScope(lockedScope, input.authorizedScope)) throw codeError('CONFLICT')
+      const deletedAt = now()
+      if (!(deletedAt instanceof Date) || !Number.isFinite(deletedAt.getTime())) throw codeError('SERVICE_UNAVAILABLE')
+      const snapshot = JSON.stringify(row, (_, value) => typeof value === 'bigint' ? value.toString() : value)
+      const inserted = await tx.query(`INSERT INTO mip_opportunity_delete_snapshots
+        (opportunity_id, snapshot_json, deleted_by, app_id, opportunity_uid, deleted_by_user_id, source_version, deleted_at)
+        VALUES (0, ?, 0, ?, ?, ?, ?, ?)`,
+      [snapshot, input.appId, input.opportunityId, input.actorUserId, input.expectedVersion, deletedAt])
+      const snapshotRef = String(inserted.insertId)
+      const updated = await tx.query(`UPDATE mip_opportunities
+        SET status = 'ARCHIVED', archived_at = ?, archived_by_user_id = ?, archive_reason = ?, version = version + 1
+        WHERE app_id = ? AND id = ? AND version = ? AND status <> 'ARCHIVED'`,
+      [deletedAt, input.actorUserId, input.reason, input.appId, input.opportunityId, input.expectedVersion])
+      if (Number(updated.affectedRows) !== 1) throw codeError('CONFLICT')
+      await writeAudit(tx, input.audit(snapshotRef, row.status))
+      return { id: input.opportunityId, status: 'ARCHIVED', deleted: true,
+        version: input.expectedVersion + 1, snapshotRef, archivedAt: deletedAt.toISOString() }
+    })
+  }
+
+  return { archiveOpportunity, deleteOpportunity, getOpportunityArchiveScope }
 }
 
 function createOpportunityArchiveService({ repository, authorize }) {

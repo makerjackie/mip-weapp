@@ -434,6 +434,15 @@ try {
       serviceAccountAdapterJson,
       serviceAccountAdapterSecret,
       subscribeTemplatesJson,
+      phoneSmsEnvironment: Object.fromEntries([
+        'MIP_SMS_ENABLED',
+        'MIP_SMS_SECRET_ID',
+        'MIP_SMS_SECRET_KEY',
+        'MIP_SMS_SDK_APP_ID',
+        'MIP_SMS_SIGN_NAME',
+        'MIP_SMS_TEMPLATE_ID',
+        'MIP_SMS_REGION',
+      ].map(key => [key, env[key] || (key === 'MIP_SMS_ENABLED' ? 'false' : '')])),
       unionIdRebindEnabled,
       wechatAppSecret,
     })
@@ -713,7 +722,7 @@ function sanitizedManagementMessage(value) {
   let result = String(value || '').slice(0, 1000)
   result = result.replace(/mysql:\/\/[^\s"']+/gi, 'mysql://[redacted]')
   result = result.replace(/wx[0-9a-f]{16}/gi, '[redacted-appid]')
-  for (const sensitive of [envId, appId, vpcId, subnetId, databaseRuntimeUser].filter(Boolean)) {
+  for (const sensitive of [envId, appId, vpcId, subnetId, databaseRuntimeUser, env.MIP_SMS_SECRET_ID, env.MIP_SMS_SECRET_KEY].filter(Boolean)) {
     result = result.replaceAll(sensitive, '[redacted-id]')
   }
   return result
@@ -935,6 +944,7 @@ function environmentForRole(role, options) {
     : {}
   const extra = {
     identity: {
+      ...options.phoneSmsEnvironment,
       MIP_PHONE_ENCRYPTION_KEY: options.secrets.phoneEncryption,
       MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,
       ...agreementEnvironment,

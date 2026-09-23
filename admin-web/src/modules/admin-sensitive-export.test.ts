@@ -58,6 +58,30 @@ function runtime(saveCalls: Array<{ fileName: string; bytes: number[] }>, fetchC
 }
 
 describe('sensitive admin export workflow', () => {
+  it('exports only the selected event feedback through the scoped ticket flow', async () => {
+    const eventId = '11111111-1111-4111-8111-111111111111'
+    const fileName = 'mip-event-feedback-20300101T000000Z.xlsx'
+    const responses = requestQueue({
+      'mip.admin.exports.create': { ticketId: 'ticket-feedback', token: TOKEN, status: 'PENDING', expiresAt: EXPIRES_AT },
+      'mip.admin.exports.prepare': ready(fileName),
+      'mip.admin.exports.reserve': reservation(fileName),
+      'mip.admin.exports.complete': { status: 'CONSUMED', consumedAt: '2030-01-01T00:00:10.000Z' },
+    })
+    const saves: Array<{ fileName: string; bytes: number[] }> = []
+    const workflow = createSensitiveExportWorkflow({
+      kind: 'eventFeedback', eventId, filters: { query: 'ignored', status: 'ignored' },
+    }, step => `web-export-${step}-fixture`)
+
+    const result = await continueSensitiveExport(workflow, responses.request, runtime(saves))
+
+    assert.deepEqual(responses.calls[0].input, {
+      exportType: 'EVENT_FEEDBACK', eventId, includesPhone: false, filters: {}, idempotencyKey: 'web-export-create-fixture',
+    })
+    assert.equal(result.rowCount, 2)
+    assert.deepEqual(saves, [{ fileName, bytes: [...BYTES] }])
+    assert.equal(workflow.ticket?.token, '')
+  })
+
   it('exports filtered users with an optional phone column and clears secrets after saving', async () => {
     const responses = requestQueue({
       'mip.admin.exports.create': { ticketId: 'ticket-a', token: TOKEN, status: 'PENDING', expiresAt: EXPIRES_AT },

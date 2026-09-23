@@ -16,6 +16,7 @@ const {
   iso,
   jsonObject,
   mutualBlockFilter,
+  stringValue,
   uuid,
 } = require('./common')
 
@@ -35,7 +36,8 @@ function normalizeListInput(value = {}) {
   const parsedLimit = Number(value.limit)
   return {
     category,
-    cursor: ['VISITOR', 'GUEST'].includes(category) ? value.cursor : decodeCursor(value.cursor),
+    cursor: ['VISITOR', 'GUEST', 'INTERACTION'].includes(category) ? value.cursor : decodeCursor(value.cursor),
+    keyword: category === 'INTERACTION' ? stringValue(value.keyword, 120, 'VALIDATION_FAILED', false) : '',
     limit: Math.min(30, Math.max(1, Number.isInteger(parsedLimit) ? parsedLimit : 20)),
   }
 }

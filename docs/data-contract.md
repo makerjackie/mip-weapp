@@ -120,7 +120,7 @@
 
 - 普通 DTO 永不返回数据库连接串、内部 HMAC、商户密钥、他人 OpenID、完整票据或 provider 原始错误。
 - 引荐的 `actor_user_id` 和 `target_user_id` 只用于服务端关系事实。选择目标、引荐列表和详情均使用 AppID 绑定的 opaque `profileRef`，普通 DTO 不返回内部用户 ID。
-- 档案影响力只聚合当前可证明的邀请嘉宾、活动心动、档案兴趣和访客事实。本人可读取对应身份列表；他人公开档案只在 `visibility.influence` 允许时返回聚合数，且不返回列表身份。四项精确定义见 [PROFILE_INFLUENCE.md](PROFILE_INFLUENCE.md)。
+- 档案影响力只聚合当前可证明的已签到邀请嘉宾、双方同场签到、档案兴趣和逐次访客事实。本人可读取对应身份列表；他人公开档案只在 `visibility.influence` 允许时返回聚合数；其中感兴趣名单按 2026-09-22 J4-02b 仅向当前有效玩家开放，并继续执行字段可见性和双向屏蔽过滤，其他三类身份列表仅本人可读。四项精确定义见 [PROFILE_INFLUENCE.md](PROFILE_INFLUENCE.md)。
 - 机会评论作者和评论举报人仅以 AppID 绑定的 opaque `profileRef` 返回。参与人标识由机会发布人或团队历史关系生成；打 call 总数由关系事实的状态迁移维护，不接受客户端计数。
 - 社区安全客户端只提交 AppID 绑定的 `profileRef`；不接收或返回目标用户 ID、OpenID。任一方向存在 `ACTIVE` 屏蔽时，已识别用户不能读取对方公开档案或在受支持的公共列表中看到对方；举报不通知目标，也不自动处罚。
 - 账号注销以确认短语、`mip_users.version` 和幂等请求为边界；未结支付/退款/活动退款会阻塞。成功后关闭账号、撤销活动外公开/互动状态并最小化直接资料，但保留订单、支付、退款、权益、活动、成长流水与审计事实。完整表清单见 [ACCOUNT_CLOSURE.md](ACCOUNT_CLOSURE.md)。

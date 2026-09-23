@@ -365,6 +365,10 @@ export function createMipEventsModule(
       return gateway.listHeartHistory(kind, cursor, 20)
     },
 
+    markHeartHistoryRead(readThroughAt: string) {
+      return gateway.markHeartHistoryRead(readThroughAt)
+    },
+
     getHeart(eventId: EventId) {
       return gateway.getHeart(eventId)
     },

@@ -5,8 +5,10 @@ const { createHmac } = require('node:crypto')
 const { describe, it } = require('node:test')
 const { canonicalJson } = require('../lib/web-bff-auth')
 const {
+  EVENT_CHECKIN_QR_PAGE,
   WEB_LOGIN_QR_PAGE,
   codeEnvironment,
+  createEventCheckinImage,
   createWebLoginQrCodeRoute,
 } = require('../lib/web-login-qr-code')
 
@@ -37,6 +39,32 @@ function envelope(overrides = {}) {
     signature: createHmac('sha256', SECRET).update(canonicalJson(unsigned)).digest('hex'),
   }
 }
+
+describe('Event check-in mini-program code', () => {
+  it('encodes the issued scene for the existing event detail scan route', async () => {
+    let request
+    const createImage = createEventCheckinImage({
+      cloud: { openapi: { wxacode: { getUnlimited: async value => { request = value; return { buffer: png() } } } } },
+      stage: 'staging',
+    })
+    const scene = 's1.abcdefghijk.0123456789A'
+    assert.deepEqual(await createImage({ appId: APP_ID, scene }), {
+      qrCodeDataUrl: `data:image/png;base64,${png().toString('base64')}`,
+    })
+    assert.deepEqual(request, { scene, page: EVENT_CHECKIN_QR_PAGE, width: 430,
+      checkPath: false, envVersion: 'trial' })
+  })
+
+  it('rejects an invalid scene before calling the provider', async () => {
+    let calls = 0
+    const createImage = createEventCheckinImage({
+      cloud: { openapi: { wxacode: { getUnlimited: async () => { calls += 1; return png() } } } },
+      stage: 'staging',
+    })
+    await assert.rejects(createImage({ appId: APP_ID, scene: '../bad' }), /CHECKIN_CODE_INVALID_SCENE/)
+    assert.equal(calls, 0)
+  })
+})
 
 describe('Web login mini-program code route', () => {
   it('generates a no-identity mini-program code for the fixed confirmation page', async () => {

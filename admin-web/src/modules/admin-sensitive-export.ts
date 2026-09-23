@@ -8,7 +8,7 @@ const fileNamePattern = /^mip-[a-z-]+-[0-9TZ]+\.xlsx$/
 const sha256Pattern = /^[a-f0-9]{64}$/
 const terminalStatuses = new Set(['CONSUMED', 'EXPIRED', 'REVOKED', 'FAILED'])
 
-export type SensitiveExportKind = 'users' | 'orders'
+export type SensitiveExportKind = 'users' | 'orders' | 'eventFeedback'
 export type SensitiveExportProgress = 'creating' | 'preparing' | 'checking' | 'downloading' | 'completing' | 'saving'
 export type SensitiveExportRequest = <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
 
@@ -16,6 +16,7 @@ export interface SensitiveExportInput {
   kind: SensitiveExportKind
   filters: { query?: string; status?: string }
   includesPhone?: boolean
+  eventId?: string
 }
 
 export interface SensitiveExportResult {
@@ -120,9 +121,10 @@ export async function continueSensitiveExport(
   if (!workflow.ticket) {
     runtime.onProgress?.('creating')
     workflow.ticket = parseTicket(await request('mip.admin.exports.create', {
-      exportType: workflow.input.kind === 'users' ? 'USERS' : 'ORDERS',
+      exportType: workflow.input.kind === 'users' ? 'USERS' : workflow.input.kind === 'eventFeedback' ? 'EVENT_FEEDBACK' : 'ORDERS',
       includesPhone: workflow.input.kind === 'users' && workflow.input.includesPhone === true,
       filters: compactFilters(workflow.input.filters),
+      ...(workflow.input.kind === 'eventFeedback' ? { eventId: workflow.input.eventId } : {}),
       idempotencyKey: workflow.keys.create,
     }))
   }
@@ -334,15 +336,20 @@ function parseCompletion(value: unknown) {
 }
 
 function normalizeInput(value: SensitiveExportInput): SensitiveExportInput {
-  if (!value || !['users', 'orders'].includes(value.kind)) {
+  if (!value || !['users', 'orders', 'eventFeedback'].includes(value.kind)) {
     throw new SensitiveExportError('VALIDATION_FAILED', '导出类型无效')
+  }
+  const eventId = value.kind === 'eventFeedback' ? String(value.eventId || '') : ''
+  if (value.kind === 'eventFeedback' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventId)) {
+    throw new SensitiveExportError('VALIDATION_FAILED', '活动无效')
   }
   const query = textFilter(value.filters?.query, 80)
   const status = textFilter(value.filters?.status, 40)
   return {
     kind: value.kind,
-    filters: { ...(query ? { query } : {}), ...(status ? { status } : {}) },
+    filters: value.kind === 'eventFeedback' ? {} : { ...(query ? { query } : {}), ...(status ? { status } : {}) },
     includesPhone: value.kind === 'users' && value.includesPhone === true,
+    ...(eventId ? { eventId } : {}),
   }
 }
 
