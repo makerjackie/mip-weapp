@@ -15,4 +15,12 @@
 - 本机 Device Flow 登录态恢复后，按部署清单更新并健康回读 16 个核心函数。整批执行在游戏函数的 SCF TLS 连接中断时停止；只读核对函数仍为 `Active/Available` 且 MySQL 健康后，使用单函数模式完成游戏及后续 7 个函数。
 - 独立 `cloud:verify` 通过：schema、最小权限、16 个函数的 MySQL 健康检查及受保护调用规则均通过。
 
-这些证据只证明当前 TEST staging 的数据库与核心函数状态。尚未执行微信体验版或正式版上传、生产部署、真机支付/手机号/扫码，以及备份恢复演练。小程序页面运行时结论另见本目录 [README](README.md)。
+## 本轮代码交付复核
+
+- 2026-09-23 从已推送的 `codex/mip-latest-prd-20260923` 再次执行 `pnpm verify:all`，小程序、服务端、Web 测试与两端构建通过。数据库迁移预览没有执行 DDL；92/92 迁移记录沿用本页前述读回，随后云端验证重新核对目标 schema 和精确表权限。
+- 使用现有本机 Device Flow 授权重新部署并逐个健康验证 16 个核心函数。首轮调用曾返回 `Cam authentication failed`；重建本机管理通道后，整批部署退出 0。独立 `cloud:verify` 首轮在支付退款函数出现一次无调用证据的瞬时失败；单函数健康读回通过，重建通道后完整重跑退出 0，覆盖 schema、最小权限、核心与支付函数健康和受保护调用规则。
+- 经完整质量门禁后，使用已登录微信开发者工具上传小程序开发版本 `0.2.0.20260923.1`，CLI 返回 `✔ upload` 且退出 0；上传包 3,671,041 字节。此证据不代表已切换体验版、提审或正式发布。
+- React Web 通过 Cloudflare Pages 发布到现有 `mip-admin-web` 生产项目，最终部署为 [`127adb3d.mip-admin-web.pages.dev`](https://127adb3d.mip-admin-web.pages.dev/)，源码提交标识 `72ca47aa`。远端 D1 无待应用迁移；[正式域名](https://mipmini.01mvp.com/)引用了本轮构建的 `index-DyOQLkNL.js`，未登录同源 `POST /api/admin` 返回 `401 AUTH_REQUIRED`。本轮没有取得登录后页面或写操作的真实验收。
+- 同一构建也发布过 [Pages 预览分支](https://411c25dc.mip-admin-web.pages.dev/)；预览环境缺少运营数据服务配置，浏览器显示“运营数据服务尚未配置”，不能把预览部署记为可用的后台验收。
+
+这些证据证明当前 TEST staging 云函数、微信开发版上传与 Web 静态/BFF 基础门禁状态。尚未执行微信体验版切换、提审或正式小程序发布；真机支付、手机号、扫码和备份恢复演练仍未完成。小程序页面运行时结论另见本目录 [README](README.md)。
