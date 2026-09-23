@@ -195,7 +195,15 @@
       <view wx:if="{{caseState === 'loading'}}" class="profile-portfolio-loading"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
       <view wx:elif="{{caseState === 'error'}}" class="profile-state"><mip-empty-state title="超级案例暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadCases" /></view>
       <view wx:else class="profile-portfolio-list">
-        <view wx:for="{{cases}}" wx:key="id" class="profile-content-card {{removingPortfolioId === item.id ? 'opacity-50' : ''}}" data-id="{{item.id}}" aria-label="{{item.projectName}}，长按删除" bind:tap="openCase" bind:longpress="deleteCase"><view class="profile-content-title">{{item.projectName}}</view><view class="profile-content-summary">{{item.summary}}</view></view>
+        <view wx:if="{{cases.length}}" class="profile-case-timeline">
+          <view wx:for="{{cases}}" wx:key="id" class="profile-case-entry">
+            <view class="profile-case-month">{{item.monthLabel}}</view>
+            <view class="profile-case-card {{removingPortfolioId === item.id ? 'opacity-50' : ''}}" data-id="{{item.id}}" aria-label="{{item.projectName}}，长按删除" bind:tap="openCase" bind:longpress="deleteCase">
+              <view class="profile-case-title-row"><image src="/assets/figma/profile/icon-folder.png" mode="aspectFit" /><text class="profile-content-title">{{item.projectName}}</text></view>
+              <view class="profile-content-summary">{{item.summary}}</view>
+            </view>
+          </view>
+        </view>
         <view wx:if="{{cases.length === 0}}" class="profile-portfolio-empty">暂无超级案例，添加后会显示在这里。</view>
         <view wx:if="{{caseCursor}}" class="profile-portfolio-more" aria-role="button" bind:tap="loadMorePortfolio">{{loadingMorePortfolio ? '正在加载' : '加载更多超级案例'}}</view>
         <view class="profile-add-card" aria-role="button" aria-label="添加超级案例" bind:tap="openCaseEditor"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" /><text>添加</text></view></view>

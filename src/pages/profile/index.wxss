@@ -407,6 +407,66 @@
   border-radius: var(--mip-radius-card-medium);
 }
 
+.profile-case-timeline {
+  position: relative;
+}
+
+.profile-case-timeline::before {
+  position: absolute;
+  top: 12rpx;
+  bottom: 48rpx;
+  left: 17rpx;
+  width: 2rpx;
+  content: '';
+  background: var(--color-brand);
+}
+
+.profile-case-entry {
+  position: relative;
+  padding-bottom: 24rpx;
+}
+
+.profile-case-entry::before {
+  position: absolute;
+  top: 8rpx;
+  left: 6rpx;
+  width: 24rpx;
+  height: 24rpx;
+  content: '';
+  background: var(--color-brand);
+  border-radius: 50%;
+}
+
+.profile-case-month {
+  min-height: 40rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+  color: var(--color-brand);
+  text-align: center;
+}
+
+.profile-case-card {
+  box-sizing: border-box;
+  min-height: 126rpx;
+  padding: 18rpx 22rpx;
+  margin: 16rpx 0 0 60rpx;
+  background: var(--color-panel);
+  border-radius: var(--mip-radius-card-medium);
+}
+
+.profile-case-title-row {
+  display: flex;
+  gap: 8rpx;
+  align-items: center;
+}
+
+.profile-case-title-row image {
+  flex: 0 0 auto;
+  width: 28rpx;
+  height: 28rpx;
+}
+
 .profile-content-heading {
   display: flex;
   gap: 20rpx;

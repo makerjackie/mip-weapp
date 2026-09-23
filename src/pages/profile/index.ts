@@ -33,6 +33,19 @@ interface CooperationCardView extends CooperationCardSummary {
   roleName: string
 }
 
+interface CaseView extends SuperCaseSummary {
+  monthLabel: string
+}
+
+function presentCase(item: SuperCaseSummary): CaseView {
+  const date = formatLocalDate(item.publishedAt)
+  const [year, month] = date.split('-')
+  return {
+    ...item,
+    monthLabel: year && month ? `${year}年 ${Number(month)}月` : '未发布',
+  }
+}
+
 interface OpportunityCardView extends OpportunitySummary {
   /** 运行时验收（2026-09-22）：服务端 avatars 形状不可信，presenter 保底数组后才绑给卡片 type: Array 属性。 */
   avatarViews: string[]
@@ -88,7 +101,7 @@ Page({
     cooperationCards: [] as CooperationCardView[],
     cooperationCursor: '',
     caseState: 'loading' as SectionState,
-    cases: [] as SuperCaseSummary[],
+    cases: [] as CaseView[],
     caseCursor: '',
     opportunityState: 'loading' as SectionState,
     opportunities: [] as OpportunityCardView[],
@@ -425,7 +438,7 @@ Page({
     }
     try {
       const page = await superCaseModule.listMine()
-      this.setData({ caseState: 'ready', cases: page.items, caseCursor: page.nextCursor || '' })
+      this.setData({ caseState: 'ready', cases: page.items.map(presentCase), caseCursor: page.nextCursor || '' })
     }
     catch {
       if (!this.data.cases.length) {
@@ -502,7 +515,7 @@ Page({
       else if (tab === 'cases') {
         const page = await superCaseModule.listMine(cursor)
         const ids = new Set(this.data.cases.map(item => item.id))
-        this.setData({ cases: [...this.data.cases, ...page.items.filter(item => !ids.has(item.id))], caseCursor: page.nextCursor || '' })
+        this.setData({ cases: [...this.data.cases, ...page.items.filter(item => !ids.has(item.id)).map(presentCase)], caseCursor: page.nextCursor || '' })
       }
       else {
         const page = await opportunityModule.listMine(cursor)

@@ -37,7 +37,7 @@
 | J3-09 `opp-detail-visitor` | `mip-opportunities/detail` | 类型标签、四行信息和“我想合作”按钮可见；**按钮当前仍是占位提示**。原型也未定义可执行的合作流程，不能将档案感兴趣或指定对象引荐偷换为合作意向。 |
 | J4-01 `talent-player` | `pages/opportunities` 人才 tab | 玩家搜索、能力/行业筛选与档案跳转已接线。 |
 | J4-02 `profile-player` | `mip-public-profile` | 玩家“我感兴趣”表态与名单入口已接线；服务通知需模板授权和真实送达证据。 |
-| J4-02b `interested-list` | `mip-profile-interests` | 已实现名单、分页与隐私过滤；此前 staging 因旧函数/迁移停在 blocked，部署后重验。 |
+| J4-02b `interested-list` | `mip-profile-interests` | 已实现名单、分页与隐私过滤；此前 staging 因旧函数/迁移停在 blocked，本轮云端部署通过，页面运行时仍待重验。 |
 | J4-03 `member-renew` | `mip-growth` | 开通/续费同页，续费按钮仅到期前三个月出现。 |
 | J4-04 `opp-edit` | `mip-opportunities/editor` | 三种机会类型、三态状态、默认封面及多行描述已接线；真实保存/回读需部署后验。 |
 | J4-05 `opp-detail-publisher` | `mip-opportunities/detail` | 发布人编辑、分享和类型标签已接线；微信分享面板待真机。 |
@@ -47,11 +47,12 @@
 | J5-03 `privacy-settings` | `privacy-settings` | 两个开关持久化到服务端并约束人才/机会展示。 |
 | J5-04 `user-agreement` | `user-agreement` | 页面层级已接线；正式协议内容应由权威协议替换原型占位文案。 |
 | J6-01 `mine-coop-list` | `pages/profile` 合作卡 tab | 本轮补齐本页长按删除、原生确认、成功 toast、整块添加卡和分页。 |
-| J6-02 `mine-case-list` | `pages/profile` 超级案例 tab | 本轮补齐本页长按删除、原生确认、成功 toast、整块添加卡和分页。 |
-| J6-03 `mine-opp-list` | `pages/profile` 相关机会 tab | 本轮补齐本页长按删除、原生确认、成功 toast、整块添加卡和分页；卡片点按仍进本人详情。 |
+| J6-02 `mine-case-list` | `pages/profile` 超级案例 tab | 本轮补齐月份时间轴与黄色节点、本页长按删除、原生确认、成功 toast、整块添加卡和分页；未发布草稿以“未发布”代替月份。 |
+| J6-03 `mine-opp-list` | `pages/profile` 相关机会 tab、`mip-opportunities/mine` | 本轮补齐本页长按删除、原生确认、成功 toast、整块添加卡和分页；卡片点按仍进本人详情。**仍有差异**：原型在档案页内用带数量的“发布机会 / 引荐机会”切换，实际档案页的两枚 chip 导航到独立列表，且无数量；“引荐给我的”按权威需求指收到的引荐。 |
 
 ## 未闭合的设计/验收项
 
 1. **视觉逐帧**：仍需使用已部署环境与可复现的游客、普通用户、嘉宾、玩家数据，逐步截取 375px 真正渲染态，与线上原型同场景比对。现有 `figmaLayout` 是测试夹具，不代表生产页面；不能拿夹具截图冒充已还原。
 2. **机会合作按钮**：J3-09 的原型只给出按钮和演示反馈，缺少合作意向的数据、撤销、通知及列表口径。现有 `setReferral` 是“引荐指定对象”，`setProfileInterest` 是“对档案感兴趣”，两者都不是可直接复用的“我想合作”。在产品定义与服务端契约补齐前保留明确缺口。
 3. **真机与外部能力**：手机号、短信、微信支付、扫码签到、分享及微信服务通知不能用开发者工具或本地测试代替。
+4. **相关机会子列表**：J6-03 的档案内切换与计数尚未还原。现有独立页具备两类列表、未读和分页；在服务端未提供精确总数前不以首屏条数冒充原型计数。需将现有列表能力嵌入档案页，并补齐总数合同后再签此步视觉与交互通过。

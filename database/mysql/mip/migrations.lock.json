@@ -1140,6 +1140,18 @@
       "rollbackSha256": "519b1025bb8321205c76f8162eecc498a97ad080dfac93ca378045f4096f4705"
     },
     {
+      "version": "20260922085500",
+      "name": "event_heart_parent_key",
+      "sql": "database/mysql/mip/085a_event_heart_parent_key.sql",
+      "sqlSha256": "f40aaad323ec37a4ba2f200abc4eb0b0215c53271f8ab299795764b59b9fcde8",
+      "rollback": "database/mysql/mip/rollback/085a_event_heart_parent_key.sql",
+      "rollbackSha256": "1ce9a6c22609472a7ab250b8c0c94b194ac30e89a628f1edf6e60a3bf4fa3c59",
+      "createsTables": [],
+      "altersTables": [
+        "mip_event_hearts"
+      ]
+    },
+    {
       "version": "20260922086000",
       "name": "admin_profile_video_runtime",
       "sql": "database/mysql/mip/086_admin_profile_video_runtime.sql",
