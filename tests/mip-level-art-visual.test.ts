@@ -26,14 +26,12 @@ describe('MIP level artwork presentation', () => {
     expect(bannerStyles).toContain('.mip-level-banner__base {')
   })
 
-  it('reuses the artwork with screen blending on the growth brand hero', () => {
+  it('uses the current baked growth hero without layering obsolete artwork', () => {
     const markup = read('src/packages/member/mip-growth/index.wxml')
-    const styles = read('src/packages/member/mip-growth/index.wxss')
 
-    expect(markup).toContain('class="growth-level-art ')
-    expect(markup).toContain('src="/packages/member/assets/figma/profile/level-art.webp"')
+    expect(markup).toContain('src="/packages/member/assets/figma/growth/hero-bg.webp"')
+    expect(markup).not.toContain('growth-level-art')
     expect(markup).toContain('bg-brand px-5 py-6 text-on-brand')
     expect(markup).toContain('relative z-10')
-    expect(styles).toContain('.growth-level-art {\n  mix-blend-mode: screen;\n}')
   })
 })

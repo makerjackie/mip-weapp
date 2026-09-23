@@ -123,11 +123,27 @@ describe('page loading and profile interaction regressions', () => {
     expect(instance.data.tab).toBe('REFERRED')
   })
 
-  it('opens the referred-to-me list from the profile shortcut', () => {
+  it('switches related opportunities in place and loads received referrals', async () => {
+    opportunities.listReceived.mockResolvedValueOnce({
+      items: [{
+        kind: 'REFERRAL',
+        status: 'ACTIVE',
+        unread: true,
+        updatedAt: '2026-09-23T00:00:00.000Z',
+        actor: { profileRef: 'profile-1', nickname: 'Ame' },
+        opportunity: { id: 'opp-1', title: '合作机会', status: 'PUBLISHED' },
+      }],
+      nextCursor: '',
+    })
     const instance = page(profile)
-    instance.openProtected = vi.fn()
-    instance.openReferredOpportunities()
-    expect(instance.openProtected).toHaveBeenCalledWith('/packages/member/mip-opportunities/mine/index?tab=REFERRED', 'INTERACT')
+    instance.data.authenticated = true
+    instance.changeOpportunitySubTab({ currentTarget: { dataset: { tab: 'REFERRED' } } })
+    await vi.waitFor(() => expect(instance.data.referredOpportunityState).toBe('ready'))
+    expect(instance.data.opportunitySubTab).toBe('REFERRED')
+    expect(instance.data.referredOpportunities).toMatchObject([{ actorName: 'Ame', opportunity: { id: 'opp-1' } }])
+    expect(opportunities.listReceived).toHaveBeenCalledWith('REFERRAL')
+    instance.changeOpportunitySubTab({ currentTarget: { dataset: { tab: 'unknown' } } })
+    expect(instance.data.opportunitySubTab).toBe('REFERRED')
   })
 
   it('starts the activity feed and banner while optional filters are still pending', async () => {

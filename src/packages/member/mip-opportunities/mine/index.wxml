@@ -1,11 +1,11 @@
 <view id="mip-opportunity-mine-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="flex items-center justify-between"><view class="text-[length:34rpx] font-bold">相关机会</view><view class="rounded-[8rpx] bg-brand px-4 py-3 text-[length:22rpx] font-semibold text-on-brand" bind:tap="create">发布机会</view></view>
-  <!-- journey-review J6-03：筛选 chip 带计数（发布机会 N / 引荐机会 N），样式按 mine-opp-list 稿 86x28 r8。 -->
+  <!-- 两类列表均为游标分页；服务端未返回精确总数前不把当前已加载条数当作总数。 -->
   <view class="mt-4 flex gap-3">
-    <view wx:if="{{tab === 'PUBLISHED'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:24rpx] font-medium text-on-brand" data-tab="PUBLISHED" aria-role="tab" aria-selected="true" bind:tap="changeTab">发布机会 {{publishedItems.length}}</view>
-    <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-tab="PUBLISHED" aria-role="tab" aria-selected="false" bind:tap="changeTab">发布机会 {{publishedItems.length}}</view>
-    <view wx:if="{{tab === 'REFERRED'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:24rpx] font-medium text-on-brand" data-tab="REFERRED" aria-role="tab" aria-selected="true" bind:tap="changeTab">引荐机会 {{referredItems.length}}</view>
-    <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-tab="REFERRED" aria-role="tab" aria-selected="false" bind:tap="changeTab">引荐机会 {{referredItems.length}}</view>
+    <view wx:if="{{tab === 'PUBLISHED'}}" class="flex h-[56rpx] items-center rounded-[16rpx] border border-canvas bg-brand px-3 text-[length:24rpx] font-medium text-on-brand" data-tab="PUBLISHED" aria-role="tab" aria-selected="true" bind:tap="changeTab">发布机会</view>
+    <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-tab="PUBLISHED" aria-role="tab" aria-selected="false" bind:tap="changeTab">发布机会</view>
+    <view wx:if="{{tab === 'REFERRED'}}" class="flex h-[56rpx] items-center rounded-[16rpx] border border-canvas bg-brand px-3 text-[length:24rpx] font-medium text-on-brand" data-tab="REFERRED" aria-role="tab" aria-selected="true" bind:tap="changeTab">引荐机会</view>
+    <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-tab="REFERRED" aria-role="tab" aria-selected="false" bind:tap="changeTab">引荐机会</view>
   </view>
 
   <block wx:if="{{tab === 'PUBLISHED'}}">

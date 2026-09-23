@@ -361,12 +361,35 @@
   line-height: 39.2rpx;
   color: var(--color-ink);
   background: var(--color-panel);
+  border: 1rpx solid transparent;
   border-radius: 16rpx;
 }
 
 .profile-opportunity-chip--active {
   color: var(--color-on-brand);
   background: var(--color-brand);
+  border-color: var(--color-canvas);
+}
+
+.profile-referral-card {
+  box-sizing: border-box;
+  min-height: 156rpx;
+  padding: 24rpx;
+  background: var(--color-panel);
+  border-radius: 16rpx;
+}
+
+.profile-referral-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+  font-size: 22rpx;
+  color: var(--color-muted);
+}
+
+.profile-referral-unread {
+  color: var(--color-brand);
 }
 
 .profile-portfolio-loading,

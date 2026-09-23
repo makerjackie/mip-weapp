@@ -19,9 +19,11 @@ describe('MIP related opportunity flow', () => {
     expect(page).toContain('opportunityModule.markReceivedRead(item.messageId)')
     expect(page).toContain('item.actor.profileRef')
     expect(page).not.toContain('wx.cloud')
-    // journey-review J6-03：筛选 chip 带计数（发布机会 N / 引荐机会 N），卡片保持现行样式。
-    expect(view).toContain('发布机会 {{publishedItems.length}}')
-    expect(view).toContain('引荐机会 {{referredItems.length}}')
+    // 服务端只给游标分页；不能把已加载条数冒充总数。
+    expect(view).toContain('发布机会')
+    expect(view).toContain('引荐机会')
+    expect(view).not.toContain('发布机会 {{publishedItems.length}}')
+    expect(view).not.toContain('引荐机会 {{referredItems.length}}')
     expect(view).toContain('其他用户向你引荐机会后会显示在这里。')
     expect(view).toContain('向你引荐了这个机会')
     expect(view).toContain('catch:tap="editPublished"')

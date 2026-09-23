@@ -7,7 +7,7 @@ import type {
   ProtectedActionIntent,
   ProtectedActionKey,
 } from '../../modules/mip-identity'
-import type { OpportunitySummary } from '../../modules/mip-opportunities'
+import type { OpportunitySummary, ReceivedReferral } from '../../modules/mip-opportunities'
 import { badgeArtUrl } from '../../config/mip-badge-art'
 import { cooperationRoles } from '../../config/mip-catalogs'
 import { superCaseModule } from '../../modules/mip-cases'
@@ -24,6 +24,7 @@ import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/cl
 import { formatLocalDate } from '../../utils/date'
 
 type PortfolioTab = 'cooperation' | 'cases' | 'opportunities'
+type OpportunitySubTab = 'PUBLISHED' | 'REFERRED'
 type SectionState = 'loading' | 'ready' | 'error'
 type OpeningAction = '' | 'cooperation-editor' | 'other'
 
@@ -49,6 +50,21 @@ function presentCase(item: SuperCaseSummary): CaseView {
 interface OpportunityCardView extends OpportunitySummary {
   /** 运行时验收（2026-09-22）：服务端 avatars 形状不可信，presenter 保底数组后才绑给卡片 type: Array 属性。 */
   avatarViews: string[]
+}
+
+interface ReferredOpportunityView extends ReceivedReferral {
+  viewKey: string
+  actorName: string
+  updatedText: string
+}
+
+function presentReferredOpportunity(item: ReceivedReferral, index: number): ReferredOpportunityView {
+  return {
+    ...item,
+    viewKey: item.messageId || `${item.opportunity.id}-${item.actor.profileRef}-${index}`,
+    actorName: item.actor.nickname || 'MIP 用户',
+    updatedText: formatLocalDate(item.updatedAt),
+  }
 }
 
 Page({
@@ -106,6 +122,11 @@ Page({
     opportunityState: 'loading' as SectionState,
     opportunities: [] as OpportunityCardView[],
     opportunityCursor: '',
+    opportunitySubTab: 'PUBLISHED' as OpportunitySubTab,
+    referredOpportunityState: 'loading' as SectionState,
+    referredOpportunities: [] as ReferredOpportunityView[],
+    referredOpportunityCursor: '',
+    openingReferredKey: '',
     loadingMorePortfolio: false,
     removingPortfolioId: '',
     openingAction: '' as OpeningAction,
@@ -206,6 +227,9 @@ Page({
       this.setData({ identityState: 'error', message: '资料更新失败，已保留上次结果。' })
     }
     this.setData({ state: 'ready', initialSectionsState: 'loading' })
+    const referredOpportunitiesRequest = this.data.opportunitySubTab === 'REFERRED'
+      ? this.loadReferredOpportunities()
+      : Promise.resolve()
     const sectionResults = await Promise.allSettled([
       this.loadBranch(snapshot, options),
       this.loadIndustry(snapshot),
@@ -214,6 +238,7 @@ Page({
       this.loadCooperation(),
       this.loadCases(),
       this.loadOpportunities(),
+      referredOpportunitiesRequest,
       this.loadInfluenceSummary(snapshot),
       this.loadNotificationUnread(snapshot, options),
     ])
@@ -474,6 +499,27 @@ Page({
     }
   },
 
+  async loadReferredOpportunities() {
+    if (!this.data.authenticated) {
+      this.setData({ referredOpportunityState: 'ready', referredOpportunities: [], referredOpportunityCursor: '' })
+      return
+    }
+    try {
+      const page = await opportunityModule.listReceived('REFERRAL')
+      const referrals = page.items.filter((item): item is ReceivedReferral => item.kind === 'REFERRAL')
+      this.setData({
+        referredOpportunityState: 'ready',
+        referredOpportunities: referrals.map(presentReferredOpportunity),
+        referredOpportunityCursor: page.nextCursor || '',
+      })
+    }
+    catch {
+      this.setData(this.data.referredOpportunities.length
+        ? { message: '引荐机会更新失败，已保留上次结果。' }
+        : { referredOpportunityState: 'error' })
+    }
+  },
+
   async onPullDownRefresh() {
     try {
       await this.loadProfile({ force: true })
@@ -490,12 +536,29 @@ Page({
     }
   },
 
+  changeOpportunitySubTab(event: WechatMiniprogram.TouchEvent) {
+    const tab = String(event.currentTarget.dataset.tab || '') as OpportunitySubTab
+    if (tab !== 'PUBLISHED' && tab !== 'REFERRED') {
+      return
+    }
+    this.setData({ opportunitySubTab: tab })
+    if (tab === 'REFERRED' && this.data.referredOpportunityState === 'loading') {
+      void this.loadReferredOpportunities()
+    }
+  },
+
   async loadMorePortfolio() {
     if (this.data.loadingMorePortfolio) {
       return
     }
     const tab = this.data.portfolioTab
-    const cursor = tab === 'cooperation' ? this.data.cooperationCursor : tab === 'cases' ? this.data.caseCursor : this.data.opportunityCursor
+    const cursor = tab === 'cooperation'
+      ? this.data.cooperationCursor
+      : tab === 'cases'
+        ? this.data.caseCursor
+        : this.data.opportunitySubTab === 'REFERRED'
+          ? this.data.referredOpportunityCursor
+          : this.data.opportunityCursor
     if (!cursor) {
       return
     }
@@ -516,6 +579,19 @@ Page({
         const page = await superCaseModule.listMine(cursor)
         const ids = new Set(this.data.cases.map(item => item.id))
         this.setData({ cases: [...this.data.cases, ...page.items.filter(item => !ids.has(item.id)).map(presentCase)], caseCursor: page.nextCursor || '' })
+      }
+      else if (this.data.opportunitySubTab === 'REFERRED') {
+        const page = await opportunityModule.listReceived('REFERRAL', cursor)
+        const referrals = page.items.filter((item): item is ReceivedReferral => item.kind === 'REFERRAL')
+        const offset = this.data.referredOpportunities.length
+        const ids = new Set(this.data.referredOpportunities.map(item => item.viewKey))
+        this.setData({
+          referredOpportunities: [
+            ...this.data.referredOpportunities,
+            ...referrals.map((item, index) => presentReferredOpportunity(item, offset + index)).filter(item => !ids.has(item.viewKey)),
+          ],
+          referredOpportunityCursor: page.nextCursor || '',
+        })
       }
       else {
         const page = await opportunityModule.listMine(cursor)
@@ -637,8 +713,6 @@ Page({
     )
   },
   openCaseList() { void this.openProtected('/packages/member/mip-cases/list/index?mine=1', 'INTERACT') },
-  openOpportunityList() { void this.openProtected('/packages/member/mip-opportunities/mine/index', 'INTERACT') },
-  openReferredOpportunities() { void this.openProtected('/packages/member/mip-opportunities/mine/index?tab=REFERRED', 'INTERACT') },
   openCaseEditor() { void this.openProtected('/packages/member/mip-cases/editor/index', 'INTERACT') },
   openOpportunityEditor() { void this.openProtected('/packages/member/mip-opportunities/editor/index', 'INTERACT') },
   /** J5-01/J1-08：设置入口（账号设置口径，WS-SETTINGS 承接页面内容）；游客点击先过登录门禁（六入口口径）。 */
@@ -667,6 +741,31 @@ Page({
     if (id) {
       caseNavigateTo({ url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(id)}` })
     }
+  },
+
+  async openReferredOpportunity(event: WechatMiniprogram.TouchEvent) {
+    const viewKey = String(event.currentTarget.dataset.key || '')
+    const item = this.data.referredOpportunities.find(entry => entry.viewKey === viewKey)
+    if (!item || this.data.openingReferredKey) {
+      return
+    }
+    this.setData({ openingReferredKey: viewKey })
+    if (item.unread && item.messageId) {
+      try {
+        await opportunityModule.markReceivedRead(item.messageId)
+        this.setData({
+          referredOpportunities: this.data.referredOpportunities.map(entry => (
+            entry.viewKey === viewKey ? { ...entry, unread: false } : entry
+          )),
+        })
+        mipMessagingModule.invalidate()
+      }
+      catch {
+        wx.showToast({ title: '未读状态更新失败', icon: 'none' })
+      }
+    }
+    this.setData({ openingReferredKey: '' })
+    caseNavigateTo({ url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(item.opportunity.id)}` })
   },
 
   deleteCooperationCard(event: WechatMiniprogram.TouchEvent) {

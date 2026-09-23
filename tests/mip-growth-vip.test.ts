@@ -33,9 +33,9 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('立即加入')
     expect(template).toContain('{{membershipValidityText}}')
     expect(template).toContain('wx:for="{{tasks}}"')
-    // WS-MEMBERSHIP §4 任务卡胶囊：「去完成」黄字描边（text-brand + border-brand），非黄底实心。
-    expect(template).toContain('rounded-full border border-brand px-3 text-[length:24rpx] font-medium text-brand')
-    expect(template).not.toContain('rounded-full bg-brand px-3 text-[length:24rpx] font-medium text-on-brand')
+    // 最新 J1-06 原型：可执行任务使用黄底胶囊，完成态与未开放态保持区分。
+    expect(template).toContain('wx:if="{{item.status === \'AVAILABLE\'}}"')
+    expect(template).toContain('rounded-full border border-black bg-brand px-2 text-[length:24rpx] font-medium text-on-brand')
     expect(template).toContain('id="growth-member-actions"')
     expect(template).toContain('id="growth-join-actions"')
     expect(template).toContain('<mip-sticky-actions')

@@ -8,7 +8,6 @@
          bar with 2px inset fill, (24,112) 10px. -->
     <view class="growth-hero relative h-[284rpx] overflow-hidden bg-brand px-5 py-6 text-on-brand">
       <image class="pointer-events-none absolute inset-0 h-full w-full" mode="scaleToFill" src="/packages/member/assets/figma/growth/hero-bg.webp" />
-      <image wx:if="{{legacyLevelArtVisible}}" class="growth-level-art pointer-events-none absolute -bottom-[4rpx] -right-[300rpx] h-[240rpx] w-[1052rpx]" mode="aspectFit" src="/packages/member/assets/figma/profile/level-art.webp" />
       <!-- figma 3296:5808：等级卡右上角「经验值详情」小入口已烘焙在 hero-bg.webp 内，
            这里叠一个透明命中区承接点击（等级与权益区块在本页下方）。 -->
       <view class="absolute right-[8rpx] top-[16rpx] z-20 h-[56rpx] w-[180rpx]" aria-role="button" aria-label="经验值详情" bind:tap="openExperienceDetails" />
@@ -37,15 +36,15 @@
 
     <!-- figma 1948_14079: benefits panel (12,199) 351×119 — title 16px semibold at panel
          (12,12); four 40px gift circles on an 88px pitch at panel y46, labels 12px at y44. -->
-    <view class="mx-3 mt-[24rpx] h-[238rpx] overflow-hidden rounded-[16rpx] bg-panel px-3 pt-3">
+    <view class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-3 pb-3 pt-3">
       <view class="whitespace-nowrap text-[length:32rpx] font-semibold leading-[44.8rpx]">可享 {{snapshot.currentLevel.benefits.length}} 项权益</view>
-      <view wx:if="{{snapshot.currentLevel.benefits.length}}" class="mt-[23rpx] flex justify-between pl-[16rpx] pr-[14rpx]">
-        <view wx:for="{{snapshot.currentLevel.benefits}}" wx:key="*this" class="w-[96rpx]">
+      <view wx:if="{{snapshot.currentLevel.benefits.length}}" class="mt-[23rpx] grid grid-cols-4 gap-x-2 gap-y-4">
+        <view wx:for="{{snapshot.currentLevel.benefits}}" wx:key="*this" class="min-w-0">
           <view class="mx-auto flex h-[80rpx] w-[80rpx] items-center justify-center rounded-full bg-brand"><view class="mt-[-2rpx]"><mip-icon name="gift" color="var(--color-on-brand)" /></view></view>
-          <view class="mt-[8rpx] text-center text-[length:24rpx] font-medium leading-[33.6rpx]">{{item}}</view>
+          <view class="mt-[8rpx] break-words text-center text-[length:24rpx] font-medium leading-[33.6rpx]">{{item}}</view>
         </view>
       </view>
-      <view wx:else class="mt-2 text-[length:22rpx] text-muted">当前等级暂未配置权益。</view>
+      <view wx:else class="mt-2 text-[length:24rpx] leading-[34rpx] text-muted">当前等级暂未配置权益。</view>
     </view>
 
     <view aria-label="正在加载" aria-busy="true" wx:if="{{tasksState === 'loading'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
@@ -58,14 +57,15 @@
           <view class="truncate text-[length:24rpx] font-medium leading-[33.6rpx]">{{item.name}}</view>
           <view wx:if="{{item.content}}" class="mt-[6rpx] truncate text-[length:20rpx] leading-[28rpx] text-muted">{{item.content}}</view>
         </view>
-        <view class="shrink-0 whitespace-nowrap text-[length:32rpx] font-medium leading-[44.8rpx] text-brand">+ EXP {{item.rewardExperience}}</view>
-        <!-- WS-MEMBERSHIP §4 任务卡胶囊：「去完成」黄字描边、「已完成/已截止」灰字（bg-canvas+text-muted 同状态胶囊先例）。 -->
-        <view wx:if="{{item.status === 'AVAILABLE'}}" class="flex h-[52rpx] shrink-0 items-center justify-center rounded-full border border-brand px-3 text-[length:24rpx] font-medium text-brand">{{item.actionText}}</view>
-        <view wx:else class="flex h-[52rpx] shrink-0 items-center justify-center rounded-full bg-canvas px-3 text-[length:24rpx] font-medium text-muted">{{item.actionText}}</view>
+        <view class="shrink-0 whitespace-nowrap text-[length:28rpx] font-medium leading-[40rpx] text-brand">+ EXP {{item.rewardExperience}}</view>
+        <view wx:if="{{item.status === 'AVAILABLE'}}" class="flex h-[52rpx] min-w-[88rpx] shrink-0 items-center justify-center rounded-full border border-black bg-brand px-2 text-[length:24rpx] font-medium text-on-brand">{{item.actionText}}</view>
+        <view wx:elif="{{item.status === 'COMPLETED'}}" class="flex h-[52rpx] min-w-[88rpx] shrink-0 items-center justify-center rounded-full bg-canvas px-2 text-[length:24rpx] font-medium text-brand">{{item.actionText}}</view>
+        <view wx:else class="flex h-[52rpx] min-w-[88rpx] shrink-0 items-center justify-center rounded-full bg-canvas px-2 text-[length:24rpx] font-medium text-muted">{{item.actionText}}</view>
       </view>
     </view>
 
-    <view class="mx-3 mt-6 flex min-h-[88rpx] items-center justify-between gap-3"><view class="text-[length:30rpx] font-bold">成长任务</view><view class="flex min-h-[88rpx] items-center text-[length:22rpx] text-muted" aria-role="button" aria-label="查看全部成长任务" bind:tap="openTasks">全部任务<mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></view>
+    <view class="mx-3 flex min-h-[88rpx] items-center justify-end"><view class="flex min-h-[88rpx] items-center text-[length:24rpx] text-muted" aria-role="button" aria-label="查看全部成长任务" bind:tap="openTasks">全部任务<mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></view>
+    <view class="mx-3 mt-4 text-[length:30rpx] font-bold">成长数据</view>
     <view class="mx-3 mt-4 grid grid-cols-3 gap-3">
       <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:32rpx] font-bold">{{snapshot.account.experienceBalance}}</view><view class="mt-1 text-[length:22rpx] text-muted">经验值</view></view>
       <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:32rpx] font-bold">{{snapshot.account.contributionBalance}}</view><view class="mt-1 text-[length:22rpx] text-muted">贡献值</view></view>

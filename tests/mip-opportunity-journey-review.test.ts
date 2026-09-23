@@ -153,8 +153,10 @@ describe('MIP opportunity journey review', () => {
   })
 
   it('supports long-press delete with the native modal and greyed-out unpublished cards (J6-03)', () => {
-    expect(mine).toContain('发布机会 {{publishedItems.length}}')
-    expect(mine).toContain('引荐机会 {{referredItems.length}}')
+    expect(mine).toContain('发布机会')
+    expect(mine).toContain('引荐机会')
+    expect(mine).not.toContain('发布机会 {{publishedItems.length}}')
+    expect(mine).not.toContain('引荐机会 {{referredItems.length}}')
     expect(mine).toContain('bindlongpress="confirmDeletePublished"')
     expect(mineScript).toContain('删除后将无法恢复，是否删除？')
     expect(mineScript).toContain(`confirmColor: '#FF4D5E'`)

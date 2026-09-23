@@ -133,8 +133,6 @@ Page({
     nextLevelThreshold: 0,
     levels: [] as GrowthLevelView[],
     levelScale: null as LevelScaleView | null,
-    // Legacy screen-blend level art; the baked figma hero background (hero-bg.webp) supersedes it.
-    legacyLevelArtVisible: false,
     earningRules: [] as GrowthRuleView[],
     entries: [] as GrowthEntryView[],
     nextCursor: '',
