@@ -86,10 +86,15 @@ Page({
     figmaLayout: false,
     cooperationState: 'loading' as SectionState,
     cooperationCards: [] as CooperationCardView[],
+    cooperationCursor: '',
     caseState: 'loading' as SectionState,
     cases: [] as SuperCaseSummary[],
+    caseCursor: '',
     opportunityState: 'loading' as SectionState,
     opportunities: [] as OpportunityCardView[],
+    opportunityCursor: '',
+    loadingMorePortfolio: false,
+    removingPortfolioId: '',
     openingAction: '' as OpeningAction,
     message: '',
   },
@@ -396,10 +401,11 @@ Page({
       const page = await cooperationModule.listMine()
       this.setData({
         cooperationState: 'ready',
-        cooperationCards: page.items.slice(0, 3).map(item => ({
+        cooperationCards: page.items.map(item => ({
           ...item,
           roleName: cooperationRoles.find(role => role.key === item.roleKey)?.name || item.roleKey,
         })),
+        cooperationCursor: page.nextCursor || '',
       })
     }
     catch {
@@ -419,7 +425,7 @@ Page({
     }
     try {
       const page = await superCaseModule.listMine()
-      this.setData({ caseState: 'ready', cases: page.items.slice(0, 3) })
+      this.setData({ caseState: 'ready', cases: page.items, caseCursor: page.nextCursor || '' })
     }
     catch {
       if (!this.data.cases.length) {
@@ -439,11 +445,11 @@ Page({
     try {
       const page = await opportunityModule.listMine()
       // 保底数组：非数组（含 null/对象/字符串）与非法元素一律丢弃，杜绝卡片属性收到 non-array 告警。
-      const opportunities: OpportunityCardView[] = page.items.slice(0, 3).map(item => ({
+      const opportunities: OpportunityCardView[] = page.items.map(item => ({
         ...item,
         avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
       }))
-      this.setData({ opportunityState: 'ready', opportunities })
+      this.setData({ opportunityState: 'ready', opportunities, opportunityCursor: page.nextCursor || '' })
     }
     catch {
       if (!this.data.opportunities.length) {
@@ -468,6 +474,53 @@ Page({
     const tab = String(event.currentTarget.dataset.tab || '') as PortfolioTab
     if (['cooperation', 'cases', 'opportunities'].includes(tab)) {
       this.setData({ portfolioTab: tab })
+    }
+  },
+
+  async loadMorePortfolio() {
+    if (this.data.loadingMorePortfolio) {
+      return
+    }
+    const tab = this.data.portfolioTab
+    const cursor = tab === 'cooperation' ? this.data.cooperationCursor : tab === 'cases' ? this.data.caseCursor : this.data.opportunityCursor
+    if (!cursor) {
+      return
+    }
+    this.setData({ loadingMorePortfolio: true })
+    try {
+      if (tab === 'cooperation') {
+        const page = await cooperationModule.listMine(cursor)
+        const ids = new Set(this.data.cooperationCards.map(item => item.id))
+        this.setData({
+          cooperationCards: [...this.data.cooperationCards, ...page.items.filter(item => !ids.has(item.id)).map(item => ({
+            ...item,
+            roleName: cooperationRoles.find(role => role.key === item.roleKey)?.name || item.roleKey,
+          }))],
+          cooperationCursor: page.nextCursor || '',
+        })
+      }
+      else if (tab === 'cases') {
+        const page = await superCaseModule.listMine(cursor)
+        const ids = new Set(this.data.cases.map(item => item.id))
+        this.setData({ cases: [...this.data.cases, ...page.items.filter(item => !ids.has(item.id))], caseCursor: page.nextCursor || '' })
+      }
+      else {
+        const page = await opportunityModule.listMine(cursor)
+        const ids = new Set(this.data.opportunities.map(item => item.id))
+        this.setData({
+          opportunities: [...this.data.opportunities, ...page.items.filter(item => !ids.has(item.id)).map(item => ({
+            ...item,
+            avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
+          }))],
+          opportunityCursor: page.nextCursor || '',
+        })
+      }
+    }
+    catch {
+      wx.showToast({ title: '加载更多失败，请重试', icon: 'none' })
+    }
+    finally {
+      this.setData({ loadingMorePortfolio: false })
     }
   },
 
@@ -573,6 +626,8 @@ Page({
   openCaseList() { void this.openProtected('/packages/member/mip-cases/list/index?mine=1', 'INTERACT') },
   openOpportunityList() { void this.openProtected('/packages/member/mip-opportunities/mine/index', 'INTERACT') },
   openReferredOpportunities() { void this.openProtected('/packages/member/mip-opportunities/mine/index?tab=REFERRED', 'INTERACT') },
+  openCaseEditor() { void this.openProtected('/packages/member/mip-cases/editor/index', 'INTERACT') },
+  openOpportunityEditor() { void this.openProtected('/packages/member/mip-opportunities/editor/index', 'INTERACT') },
   /** J5-01/J1-08：设置入口（账号设置口径，WS-SETTINGS 承接页面内容）；游客点击先过登录门禁（六入口口径）。 */
   openSettings() { void this.openProtected('/packages/member/privacy/index', 'EDIT_PROFILE') },
   openNotifications() { void this.openProtected('/packages/member/mip-notifications/index', 'INTERACT') },
@@ -598,6 +653,80 @@ Page({
     const id = String(event.currentTarget.dataset.id || '')
     if (id) {
       caseNavigateTo({ url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(id)}` })
+    }
+  },
+
+  deleteCooperationCard(event: WechatMiniprogram.TouchEvent) {
+    void this.deletePortfolioItem('cooperation', String(event.currentTarget.dataset.id || ''))
+  },
+
+  deleteCase(event: WechatMiniprogram.TouchEvent) {
+    void this.deletePortfolioItem('cases', String(event.currentTarget.dataset.id || ''))
+  },
+
+  deleteOpportunity(event: WechatMiniprogram.TouchEvent) {
+    void this.deletePortfolioItem('opportunities', String(event.currentTarget.dataset.id || ''))
+  },
+
+  /** J6-01~03：三个本人档案 tab 在卡片原位长按删除，复用各域现有归档契约。 */
+  async deletePortfolioItem(tab: PortfolioTab, id: string) {
+    if (!id || this.data.removingPortfolioId) {
+      return
+    }
+    const item = tab === 'cooperation'
+      ? this.data.cooperationCards.find(card => card.id === id)
+      : tab === 'cases'
+        ? this.data.cases.find(card => card.id === id)
+        : this.data.opportunities.find(card => card.id === id)
+    if (!item?.mine) {
+      return
+    }
+    const confirmation = await wx.showModal({
+      title: '删除提示',
+      content: '删除后将无法恢复，是否删除？',
+      confirmText: '删除',
+      confirmColor: '#FF4D5E',
+    })
+    if (!confirmation.confirm || this.data.removingPortfolioId) {
+      return
+    }
+    this.setData({ removingPortfolioId: id })
+    try {
+      if (tab === 'cooperation') {
+        const card = this.data.cooperationCards.find(entry => entry.id === id)
+        if (!card) {
+          return
+        }
+        const version = Number.isInteger(card.version) ? Number(card.version) : (await cooperationModule.get(card.id)).version
+        await cooperationModule.archive(card.id, version)
+        this.setData({ cooperationCards: this.data.cooperationCards.filter(entry => entry.id !== id) })
+      }
+      else if (tab === 'cases') {
+        const card = this.data.cases.find(entry => entry.id === id)
+        if (!card) {
+          return
+        }
+        const version = Number.isInteger(card.version) ? Number(card.version) : (await superCaseModule.get(card.id)).version
+        await superCaseModule.archive(card.id, version)
+        this.setData({ cases: this.data.cases.filter(entry => entry.id !== id) })
+      }
+      else {
+        const card = this.data.opportunities.find(entry => entry.id === id)
+        if (!card) {
+          return
+        }
+        const version = (await opportunityModule.get(card.id)).version
+        await opportunityModule.remove(card.id, version)
+        this.setData({ opportunities: this.data.opportunities.filter(entry => entry.id !== id) })
+      }
+      this.refreshOnReturn = true
+      wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
+    }
+    catch (error) {
+      wx.showToast({ title: error instanceof Error ? error.message : '删除失败，请稍后重试', icon: 'none' })
+    }
+    finally {
+      this.setData({ removingPortfolioId: '' })
     }
   },
 

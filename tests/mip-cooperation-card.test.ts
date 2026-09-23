@@ -137,7 +137,7 @@ describe('MIP cooperation role visual component', () => {
       {
         config: 'src/pages/profile/index.json',
         template: 'src/pages/profile/index.wxml',
-        click: 'data-id="{{item.id}}" bind:tap="openCooperation"',
+        click: 'bind:tap="openCooperation" bind:longpress="deleteCooperationCard"',
       },
       {
         config: 'src/packages/member/mip-public-profile/index.json',
