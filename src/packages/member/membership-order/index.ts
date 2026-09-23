@@ -5,7 +5,7 @@ import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { createIntentKey } from '../../../modules/mip-shell'
-import { caseNavigateTo, caseSwitchPrimary } from '../../../platform/navigation/client'
+import { caseNavigateTo, caseRedirectTo } from '../../../platform/navigation/client'
 
 /** journey-review J1-07（join-order）：商品固定为 MIP 玩家会员 · 年卡。 */
 const MEMBERSHIP_PLAN_FALLBACK_TITLE = '玩家会员 · 年卡'
@@ -26,7 +26,7 @@ const MEMBERSHIP_PURCHASE_NOTICES = [
   '二、支付方式',
   '微信支付。',
   '三、订单修改',
-  '支付前可返回放弃本次开通；未完成支付的订单不会保留，重新发起即重新创建。',
+  '支付前可返回放弃本次开通；未支付订单不显示在订单列表。若支付状态待确认，请勿重复付款。',
 ].join('\n')
 
 Page({
@@ -48,6 +48,8 @@ Page({
   },
   planId: '' as MembershipPlanId | '',
   resumePlanId: '' as MembershipPlanId | '',
+  checkoutKey: '',
+  checkoutPlanId: '' as MembershipPlanId | '',
 
   onLoad(query: Record<string, string | undefined>) {
     this.planId = String(query.planId || '') as MembershipPlanId | ''
@@ -154,19 +156,26 @@ Page({
     if (this.data.paying) {
       return
     }
+    if (this.checkoutPlanId !== planId || !this.checkoutKey) {
+      this.checkoutPlanId = planId
+      this.checkoutKey = createIntentKey('membership-order')
+    }
     this.setData({ paying: true, message: '' })
     try {
       const outcome = await mipCommerceModule.purchase({
         planId,
-        // 待支付订单前端不显示、重新发起即重新创建（M1 00:20:04）：每次支付尝试使用新的幂等键。
-        idempotencyKey: createIntentKey('membership-order'),
+        idempotencyKey: this.checkoutKey,
       })
       if (outcome.kind === 'CANCELLED') {
+        // 明确取消后才开启新的购买尝试；未知错误要保留原订单幂等键以便恢复。
+        this.checkoutKey = ''
         this.setData({ message: '支付已取消，会员权益未发生变化。' })
         return
       }
-      // 支付成功（账本确认或确认中）→ 回到「我的」（J1-08）；权益是否生效由服务端账本决定。
-      void caseSwitchPrimary('/pages/profile/index')
+      // 账本确认和确认中都由已有结果页按订单 ID 回读，不能在未确认时直接呈现会员状态。
+      void caseRedirectTo({
+        url: `/packages/member/payment-result/index?orderId=${encodeURIComponent(outcome.order.id)}`,
+      })
     }
     catch (error) {
       const code = error instanceof MipCommerceError ? error.code : ''

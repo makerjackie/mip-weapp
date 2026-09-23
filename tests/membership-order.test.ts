@@ -65,20 +65,22 @@ describe('MIP membership order confirmation page (journey-review J1-07 join-orde
     expect(template).not.toContain('6600')
     expect(script).toContain('mipCommerceModule.listPlans')
     expect(script).toContain('mipCommerceModule.purchase')
-    expect(script).toContain('idempotencyKey: createIntentKey(\'membership-order\')')
+    expect(script).toContain('this.checkoutKey = createIntentKey(\'membership-order\')')
+    expect(script).toContain('idempotencyKey: this.checkoutKey')
     // 页面不得直接拉起支付（金额、发货、退款由 ledger 与回调决定）。
     expect(script).not.toContain('wx.requestPayment')
     expect(template).not.toContain('requestPayment')
   })
 
-  it('gates payment behind identity and lands on the mine tab after success', () => {
+  it('gates payment behind identity and opens the authoritative payment result', () => {
     const script = readSource('src/packages/member/membership-order/index.ts')
 
     expect(script).toContain('action: \'PURCHASE_MEMBERSHIP\'')
     expect(script).toContain('mipAccessPageUrl(session.token)')
     expect(script).toContain('consumePendingResume(\'packages/member/membership-order/index\')')
-    // 支付成功（含账本确认中）→ 我的页；取消停留本页且不改变权益。
-    expect(script).toContain('caseSwitchPrimary(\'/pages/profile/index\')')
+    // 支付已调起或账本确认中均交给结果页回读；取消仍停留本页。
+    expect(script).toContain('caseRedirectTo({')
+    expect(script).toContain('/packages/member/payment-result/index?orderId=')
     expect(script).toContain('outcome.kind === \'CANCELLED\'')
     expect(script).toContain('支付已取消，会员权益未发生变化。')
   })

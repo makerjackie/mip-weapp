@@ -15,7 +15,7 @@
 | J1-04 `opp-guest` | `pages/opportunities` | 发布、玩家登录、解锁、我的项目均有游客登录门禁。 |
 | J1-05 `talent-guest` | `pages/opportunities` 人才 tab | 游客列表隐藏，筛选/登录/成为玩家走登录门禁。 |
 | J1-06 `member-benefit` | `mip-growth` | 已按最新画布调整首屏：权益区自适应高度、成长任务直接衔接、可执行任务黄底按钮、成长数据后置；等级、经验、后台权益和开通入口仍用服务端事实。本轮开发者工具已重拍付费玩家 Lv.1，但原型为新玩家加入 Lv.2，**不能作为同状态视觉验收**；测试环境权益与任务配置尚不足以复现原型。会费由真实商品决定。 |
-| J1-07 `join-order` | `membership-order` | 独立会员订单与支付入口已接线；真实支付/权益以回调为准，待真机。 |
+| J1-07 `join-order` | `membership-order` | 独立会员订单与支付入口已接线；支付调起后先进入结果页回读账本状态，比原型直接回“我的”多一步安全反馈。真实支付/权益仍待真机。 |
 | J1-08 `mine-guest` | `pages/profile` | 游客仅登录头、黄卡、活动/名片/订单/设置；六入口先登录。 |
 | J2-01 `activity-detail` | `mip-events/detail` | 已登录详情直接进入参与人和报名；签到升级由服务端事实决定。 |
 | J2-02 `participants` | `mip-events/participants` | 嘉宾/玩家/我的心动/对我心动四 tab、单场单票与取消已接线。 |
