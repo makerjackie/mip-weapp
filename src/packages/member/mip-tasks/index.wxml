@@ -56,7 +56,7 @@
       <view wx:if="{{item.showBar}}" class="mt-[2rpx] flex h-[80rpx] rounded-b-[16rpx] bg-panel">
         <view class="flex flex-1 items-center justify-center whitespace-nowrap text-[length:28rpx] font-medium leading-[39.2rpx] text-ink">未完成</view>
         <view class="h-[48rpx] w-[2rpx] bg-canvas" />
-        <view class="flex flex-1 items-center justify-center whitespace-nowrap text-[length:28rpx] font-medium leading-[39.2rpx] text-brand" data-id="{{item.id}}" aria-role="button" bind:tap="completeTask">完成</view>
+        <view class="flex flex-1 items-center justify-center whitespace-nowrap text-[length:28rpx] font-medium leading-[39.2rpx] text-brand" data-id="{{item.id}}" aria-role="button" aria-label="{{item.attachmentRequired ? '上传附件并完成任务' : '完成任务'}}" bind:tap="completeTask">{{item.attachmentRequired ? '上传并完成' : '完成'}}</view>
       </view>
     </view>
   </view>

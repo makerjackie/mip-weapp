@@ -102,9 +102,14 @@
   </block>
 
   <!-- J1-06 开通态：无有效会员时底部仅「立即加入」→ 会员订单确认页（J1-07）；本页不展示金额。 -->
-  <mip-sticky-actions wx:if="{{!isPlayer && membershipState !== 'loading'}}">
+  <mip-sticky-actions wx:if="{{membershipState === 'guest'}}">
     <view id="growth-join-actions" slot="actions" class="flex h-[112rpx] w-full items-center px-2">
       <button class="m-0 flex h-[80rpx] w-full items-center justify-center gap-2 rounded-full border border-black bg-brand p-0 text-[length:32rpx] font-medium leading-[80rpx] text-on-brand active:bg-brand-active" aria-label="立即加入玩家" bind:tap="openMembershipOrder"><mip-icon name="share-circle" size="{{15}}" color="var(--color-on-brand)" /><text>立即加入</text></button>
+    </view>
+  </mip-sticky-actions>
+  <mip-sticky-actions wx:elif="{{membershipState === 'error'}}">
+    <view slot="actions" class="flex h-[112rpx] w-full items-center px-2">
+      <button class="m-0 flex h-[80rpx] w-full items-center justify-center rounded-full border border-line bg-panel p-0 text-[length:28rpx] font-medium text-brand" aria-label="重新加载会员状态" bind:tap="loadMembershipActions">重新加载会员状态</button>
     </view>
   </mip-sticky-actions>
 

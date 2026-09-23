@@ -149,18 +149,26 @@ Page({
     message: '',
   },
   shareInvitationToken: '',
+  growthRequestSeq: 0,
+  tasksRequestSeq: 0,
 
   onLoad() {
     const cached = mipGrowthModule.peekSnapshot()
     if (cached) {
       this.presentSnapshot(cached)
     }
-    void this.loadGrowth()
   },
 
   onShow() {
+    // Completing a task or drawing a blind box changes server-owned balances while this page is hidden.
+    void this.loadGrowth(true)
     void this.loadMembershipActions()
-    void this.loadTasks()
+    void this.loadTasks(true)
+  },
+
+  onHide() {
+    this.growthRequestSeq += 1
+    this.tasksRequestSeq += 1
   },
 
   async loadMembershipActions() {
@@ -227,14 +235,21 @@ Page({
   },
 
   async loadGrowth(force = false) {
+    const requestSeq = ++this.growthRequestSeq
     if (!this.data.snapshot) {
       this.setData({ state: 'loading', message: '' })
+    }
+    else {
+      this.setData({ loadingMore: false })
     }
     try {
       const [snapshot, page] = await Promise.all([
         mipGrowthModule.getSnapshot({ force }),
         mipGrowthModule.listEntries(undefined, 20),
       ])
+      if (requestSeq !== this.growthRequestSeq) {
+        return
+      }
       const presentation = growthPresentation(snapshot)
       this.setData({
         state: 'ready',
@@ -247,6 +262,9 @@ Page({
       })
     }
     catch (error) {
+      if (requestSeq !== this.growthRequestSeq) {
+        return
+      }
       this.setData(this.data.snapshot
         ? { message: '成长记录更新失败，已保留上次结果。' }
         : { state: 'error', message: error instanceof Error ? error.message : '成长记录加载失败' })
@@ -263,11 +281,15 @@ Page({
   },
 
   async loadTasks(force = false) {
+    const requestSeq = ++this.tasksRequestSeq
     if (!this.data.tasks.length) {
       this.setData({ tasksState: 'loading', tasksMessage: '' })
     }
     try {
       const page = await mipTasksModule.query.listTasks(undefined, 4, force)
+      if (requestSeq !== this.tasksRequestSeq) {
+        return
+      }
       const tasks = page.items.map(taskView)
       this.setData({
         tasksState: tasks.length ? 'ready' : 'empty',
@@ -276,6 +298,9 @@ Page({
       })
     }
     catch {
+      if (requestSeq !== this.tasksRequestSeq) {
+        return
+      }
       this.setData({
         tasksState: this.data.tasks.length ? 'ready' : 'error',
         tasksMessage: '请稍后重试。',
@@ -287,19 +312,27 @@ Page({
     if (!this.data.nextCursor || this.data.loadingMore) {
       return
     }
+    const requestSeq = this.growthRequestSeq
     this.setData({ loadingMore: true, message: '' })
     try {
       const page = await mipGrowthModule.listEntries(this.data.nextCursor, 20)
+      if (requestSeq !== this.growthRequestSeq) {
+        return
+      }
       this.setData({
         entries: [...this.data.entries, ...page.items.map(entryView)],
         nextCursor: page.nextCursor || '',
       })
     }
     catch {
-      this.setData({ message: '更多成长记录加载失败。' })
+      if (requestSeq === this.growthRequestSeq) {
+        this.setData({ message: '更多成长记录加载失败。' })
+      }
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (requestSeq === this.growthRequestSeq) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
 

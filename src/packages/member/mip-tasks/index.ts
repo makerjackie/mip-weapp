@@ -159,10 +159,18 @@ Page({
     wx.showModal({ title: '派发任务', content: '请在电脑端管理后台的任务管理中派发任务。', showCancel: false })
   },
 
-  /** 列表操作条「完成」：直接走 completeTask 变更（附件校验失败时后端报错 → message 展示）。 */
+  /** 需要附件的任务先进入详情上传；其余任务可在列表直接完成。 */
   async completeTask(event: WechatMiniprogram.TouchEvent) {
     const taskId = String(event.currentTarget.dataset.id || '')
     if (!taskId) {
+      return
+    }
+    const task = this.data.tasks.find(item => item.id === taskId)
+    if (!task || task.status !== 'AVAILABLE') {
+      return
+    }
+    if (task.attachmentRequired) {
+      this.openTask(event)
       return
     }
     this.setData({ message: '' })
