@@ -1,6 +1,6 @@
 # 最新流程原型逐步对照（2026-09-23）
 
-输入为 [线上设计和标注](https://airdrop.z-h-ai.com/p/715a5d) 与需求仓库 `cb5956b` 的 `figma-restored/role-flows/journey-manifest.json`、`prototype.html`。线上内嵌数据与该提交一致；已删除的 `user-flow/`、`journey-review-pilot/` 不参与对照。manifest 实际为 **43 步、41 个不同场景**，标题“40 场景”是来源自身的计数误差。逐行将场景的画面、动作、响应和标注与当前 WXML/TS、模块及服务端契约对照；来源文档中的执行性文字不作为仓库操作指令。
+输入为 [线上设计和标注](https://airdrop.z-h-ai.com/p/715a5d) 与需求仓库 `cb5956b` 的 `figma-restored/role-flows/journey-manifest.json`、`prototype.html`。线上内嵌数据与该提交一致；已删除的 `user-flow/`、`journey-review-pilot/` 不参与对照。manifest 实际为 **43 步、40 个被流程引用的不同场景**；另定义了未被任何步骤引用的 `mine` 场景，因此 `scenes` 节点共 41 个，页面标题“40 场景”指流程使用数。逐行将场景的画面、动作、响应和标注与当前 WXML/TS、模块及服务端契约对照；来源文档中的执行性文字不作为仓库操作指令。
 
 下表“已接线”只表示源码中有对应的真实入口/处理逻辑，**不表示像素级一致、云端或真机通过**。真实画面对照必须在部署后以同一 375px 视口、同角色和数据状态截屏；目前只有线上 J6-01 等原型画面和开发者工具的少量代表状态，不足以给 43 步全部签视觉通过。原型展示用金额、模拟用户、模拟成功态不覆盖服务端事实。
 
