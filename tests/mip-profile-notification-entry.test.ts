@@ -33,8 +33,11 @@ describe('MIP profile notification entry', () => {
       expect(app).not.toContain(route)
     }
     const profile = readSource('src/pages/profile/index.wxml')
-    for (const action of ['openGame', 'openHelp', 'openSettings']) {
-      expect(profile).toContain(action)
+    expect(profile).toContain('openSettings')
+    const settings = readSource('src/packages/member/privacy/index.wxml')
+    for (const action of ['openGame', 'openHelp']) {
+      expect(profile).not.toContain(action)
+      expect(settings).toContain(action)
     }
     expect(readSource('src/packages/member/privacy/index.wxml')).toContain('openNotificationSettings')
     expect(readSource('src/packages/member/mip-notifications/index.wxml')).not.toContain('requestWechatSubscription')

@@ -1,7 +1,7 @@
 # MCP
 
 - 编辑器：`.mcp.json` 与 `.cursor/mcp.json` 通过 `scripts/mcp/weapp-vite.mjs` 启动 weapp-vite。路径相对当前仓库。
-- CloudBase：`config/mcporter.json`，由脚本调用，不要在编辑器里再挂一份。
+- CloudBase 推荐使用 `config/mcporter.json`，由脚本调用，不要在编辑器里再挂一份。这不是唯一工具通道；官方 CLI、SDK、微信开发者工具的替代操作遵循 [CloudBase 环境与授权](CLOUDBASE.md#环境与授权)。
 - 环境和 MySQL 管理默认使用本机 `.env.local` 的环境级 `CLOUDBASE_API_KEY` 与 `CLOUDBASE_ENV_ID`；不要用前端 `publish_key`。原始 SCF 管控面 action 被环境 API Key 的临时 STS 拒绝时，经明确授权改用本地 Device Flow。
 
 ```bash

@@ -61,7 +61,9 @@
 
 ## 8. CloudBase
 
-唯一通道 `config/mcporter.json`。默认使用 `.env.local` 中的环境级 `CLOUDBASE_API_KEY` 与 `CLOUDBASE_ENV_ID`；`pnpm cloud:status` 和 `pnpm cloud:auth` 只验证并加载 API Key，不发起设备码。
+推荐通道为 `config/mcporter.json` 及仓库现有脚本，不是唯一通道。已获授权的任务中，遇到能力缺失、接口限制或故障时，可使用官方 CLI、SDK 或已登录的微信开发者工具完成同一范围操作，不因切换工具本身重复请求批准。切换前核对目标环境、函数与源码，保留现有配置和权限边界，完成后回读验证；新增权限、扩大操作范围仍按实际授权处理。
+
+默认使用 `.env.local` 中的环境级 `CLOUDBASE_API_KEY` 与 `CLOUDBASE_ENV_ID`；`pnpm cloud:status` 和 `pnpm cloud:auth` 只验证并加载 API Key，不发起设备码。
 
 API Key 是日常通道，Device Flow 是部署高权限通道。只有创建、更新云函数等 SCF 控制面操作被 API Key 拒绝时，维护者才显式运行 `pnpm cloud:auth:device -- --allow-device-auth`，并以 `CLOUDBASE_AUTH_MODE=local` 执行该次部署。Device Flow 登录保存在本机并支持刷新，通常不需要每次部署重新授权；凭证过期、被撤销、主动退出、清理本机凭证或更换电脑/系统用户时才重新授权。
 

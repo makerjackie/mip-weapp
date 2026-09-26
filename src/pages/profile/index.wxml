@@ -236,13 +236,6 @@
       </block>
     </block>
 
-    <!-- journey-review J1-08（1862:18360）：游客态只保留 头部登录注册 / 黄卡 / 四入口；
-         团队 PK、帮助与客服等服务组收进登录态分支。 -->
-    <view wx:if="{{authenticated}}" class="mt-6 overflow-hidden rounded-[24rpx] bg-panel">
-      <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" aria-role="button" bind:tap="openGame"><text class="text-[28rpx]">团队 PK</text><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" /></view>
-      <view class="flex min-h-[96rpx] items-center justify-between px-4" aria-role="button" bind:tap="openHelp"><text class="text-[28rpx]">帮助与客服</text><mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" /></view>
-    </view>
-
     <view wx:if="{{message}}" class="profile-message">{{message}}</view>
   </block>
 </view>

@@ -81,7 +81,7 @@ AI 语音 TTL 不使用定时触发器。无人访问的过期或终态草稿通
 
 ## 环境与授权
 
-EnvID 只写项目根目录 `.env.local` 的 `CLOUDBASE_ENV_ID`。同一文件必须配置环境级 `CLOUDBASE_API_KEY`，并明确配置 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`；核心函数部署会把 stage 注入存储和签到环境，不能自行改写。production 部署必须额外传入 `--confirm-production`。CloudBase MCP 统一从 `config/mcporter.json` 启动，不接受前端 `publish_key`。
+EnvID 只写项目根目录 `.env.local` 的 `CLOUDBASE_ENV_ID`。同一文件必须配置环境级 `CLOUDBASE_API_KEY`，并明确配置 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`；核心函数部署会把 stage 注入存储和签到环境，不能自行改写。production 部署必须额外传入 `--confirm-production`。推荐通过 `config/mcporter.json` 和仓库脚本操作；这不是排他的工具限制。能力不足时，可在已授权任务范围内使用官方 CLI、SDK 或已登录微信开发者工具，执行前核对环境和目标函数，保留运行配置与权限边界，执行后回读验证。切换工具本身不要求重复批准；扩大权限或范围另按实际授权处理。使用 MCP 时仍从该配置启动，不接受前端 `publish_key`。
 
 ```bash
 pnpm cloud:status

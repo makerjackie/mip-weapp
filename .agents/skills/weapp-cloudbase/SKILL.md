@@ -24,7 +24,7 @@ description: Use for CloudBase env, membership cloud functions, MySQL, or MCP au
 1. 没有 EnvID 时保持 disabled，UI 显示会员服务尚未配置。
 2. 环境和 MySQL 管理默认使用环境级 `CLOUDBASE_API_KEY`（不要用前端 publish_key），与 `CLOUDBASE_ENV_ID` 一起写进项目根目录 `.env.local`。原始 SCF 管控面被其临时 STS 拒绝时，经维护者明确授权改用 Device Flow。
 3. 先 `pnpm cloud:status`。`pnpm cloud:status` 与 `pnpm cloud:auth` 都只验证并加载 API Key；缺 Key 直接失败，不发起设备码。
-4. 部署使用本仓库脚本，不要手拼 MCP；Device Flow 部署必须显式设置 `CLOUDBASE_AUTH_MODE=local`。`MIP_DEPLOYMENT_STAGE` 必须是 development/test/staging/production，production 还需 `--confirm-production`。
+4. 部署优先使用本仓库脚本；能力不足时可在已授权范围内使用官方 CLI、SDK 或已登录微信开发者工具，核对目标并保留配置/权限边界，完成后回读。不因切换工具本身重复请求批准。使用 MCP 时不要手拼请求；Device Flow 部署必须显式设置 `CLOUDBASE_AUTH_MODE=local`。`MIP_DEPLOYMENT_STAGE` 必须是 development/test/staging/production，production 还需 `--confirm-production`。
 5. 业务数据走 MySQL，不要回退 `cloud.database()`。
 
 ## Scripts

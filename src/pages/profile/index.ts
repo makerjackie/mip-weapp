@@ -849,9 +849,7 @@ Page({
   /** J5-01/J1-08：设置入口（账号设置口径，WS-SETTINGS 承接页面内容）；游客点击先过登录门禁（六入口口径）。 */
   openSettings() { void this.openProtected('/packages/member/privacy/index', 'EDIT_PROFILE') },
   openNotifications() { void this.openProtected('/packages/member/mip-notifications/index', 'INTERACT') },
-  openGame() { void this.openProtected('/packages/member/mip-game/index', 'VIEW_RESTRICTED_PROFILE') },
   openBranches() { caseNavigateTo({ url: '/packages/member/mip-branches/index' }) },
-  openHelp() { caseNavigateTo({ url: '/packages/member/help/index' }) },
 
   openCooperation(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')

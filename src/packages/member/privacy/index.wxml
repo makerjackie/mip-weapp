@@ -41,6 +41,8 @@
 
     <view class="mt-[24rpx]">
       <mip-detail-row-group>
+        <mip-detail-row label="团队 PK" actionable="{{true}}" bind:tap="openGame" />
+        <mip-detail-row label="帮助与客服" actionable="{{true}}" bind:tap="openHelp" />
         <mip-detail-row label="互动通知" actionable="{{true}}" bind:tap="openNotificationSettings" />
         <mip-detail-row label="关于 MIP" actionable="{{true}}" bind:tap="openAbout" />
       </mip-detail-row-group>

@@ -41,7 +41,8 @@ describe('MIP profile membership journey frames', () => {
     expect(template).toMatch(/<mip-stat-header\s+wx:if="\{\{authenticated\}\}"[\s\S]*?class="profile-stats"/)
     expect(template).toContain('wx:if="{{authenticated}}" class="profile-feature-grid"')
     expect(template).toContain('wx:if="{{authenticated}}" class="profile-tabs"')
-    expect(template).toContain('wx:if="{{authenticated}}" class="mt-6 overflow-hidden rounded-[24rpx] bg-panel"')
+    expect(template).not.toContain('bind:tap="openGame"')
+    expect(template).not.toContain('bind:tap="openHelp"')
   })
 
   it('gates every guest entry behind the login flow, including settings', () => {
