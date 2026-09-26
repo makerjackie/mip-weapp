@@ -1,0 +1,81 @@
+{
+  "stage": "staging",
+  "benefits": [
+    {
+      "name": "演示·社群交流",
+      "status": "ACTIVE"
+    },
+    {
+      "name": "演示·活动优先",
+      "status": "ACTIVE"
+    },
+    {
+      "name": "演示·成长资料",
+      "status": "ACTIVE"
+    },
+    {
+      "name": "演示·合作展示",
+      "status": "ACTIVE"
+    }
+  ],
+  "levelBenefits": [
+    {
+      "active_benefits": 4,
+      "level_key": "active"
+    },
+    {
+      "active_benefits": 4,
+      "level_key": "contributor"
+    },
+    {
+      "active_benefits": 4,
+      "level_key": "starter"
+    }
+  ],
+  "tasks": [
+    {
+      "bonus_enabled": false,
+      "name": "演示·分享交流资料",
+      "requires_review": 1,
+      "reward_experience": 60,
+      "status": "PUBLISHED"
+    },
+    {
+      "bonus_enabled": false,
+      "name": "演示·补充合作案例",
+      "requires_review": 1,
+      "reward_experience": 80,
+      "status": "PUBLISHED"
+    },
+    {
+      "bonus_enabled": false,
+      "name": "演示·整理活动收获",
+      "requires_review": 1,
+      "reward_experience": 100,
+      "status": "PUBLISHED"
+    },
+    {
+      "bonus_enabled": false,
+      "name": "演示·完善个人资料",
+      "requires_review": 1,
+      "reward_experience": 50,
+      "status": "PUBLISHED"
+    }
+  ],
+  "agreements": [
+    {
+      "body_length": 248,
+      "is_demo": true,
+      "setting_key": "MEMBERSHIP_AGREEMENT",
+      "version": 1
+    },
+    {
+      "body_length": 406,
+      "is_demo": true,
+      "setting_key": "USER_AGREEMENT",
+      "version": 1
+    }
+  ],
+  "userMutations": 0,
+  "issuedRewards": 0
+}

@@ -58,6 +58,22 @@ test('opportunity server validation enforces trusted role keys and branch scope'
   assert.throws(() => normalizeOpportunity({ ...input, roleKeys: ['owner'] }), /VALIDATION_FAILED/)
 })
 
+test('opportunity descriptions are optional without weakening other required fields or historical length support', () => {
+  const draft = {
+    title: '项目', valueSummary: '资源互换', targetSummary: '寻找合作方',
+    scopeType: 'PLATFORM', roleKeys: ['strategist'], publish: true,
+  }
+  for (const description of ['', '  ', undefined]) {
+    assert.equal(normalizeOpportunity({ ...draft, description }).description, '')
+  }
+  assert.equal(normalizeOpportunity({ ...draft, description: '说'.repeat(6000) }).description.length, 6000)
+  assert.throws(() => normalizeOpportunity({ ...draft, description: '说'.repeat(6001) }), /VALIDATION_FAILED/)
+  for (const field of ['title', 'valueSummary', 'targetSummary']) {
+    assert.throws(() => normalizeOpportunity({ ...draft, description: '', [field]: ' ' }), /VALIDATION_FAILED/)
+  }
+  assert.throws(() => normalizeOpportunity({ ...draft, description: '', roleKeys: [] }), /VALIDATION_FAILED/)
+})
+
 test('opportunity catalog exposes non-selectable industry parents only as groups', async () => {
   const database = {
     async query(sql) {

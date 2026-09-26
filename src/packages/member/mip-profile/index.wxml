@@ -160,7 +160,7 @@
     </view>
     <view class="mx-3 mt-3 flex flex-wrap gap-2">
       <block wx:for="{{careerIdentityOptions}}" wx:key="value">
-        <view data-value="{{item.value}}" aria-role="radio" aria-checked="{{careerIdentityKey === item.value}}" class="flex items-center justify-center min-h-[88rpx] rounded-[8rpx] border px-3 py-1 text-[24rpx] {{careerIdentityKey === item.value ? 'border-brand bg-brand-soft text-brand' : 'border-transparent bg-panel text-muted'}}" bind:tap="chooseCareerIdentity">{{item.label}}</view>
+        <view data-value="{{item.value}}" aria-role="radio" aria-checked="{{careerIdentityKey === item.value}}" class="flex items-center justify-center min-h-[56rpx] rounded-[16rpx] border px-3 py-1 text-[24rpx] {{careerIdentityKey === item.value ? 'border-brand bg-brand-soft text-brand' : 'border-transparent bg-panel text-muted'}}" bind:tap="chooseCareerIdentity">{{item.label}}</view>
       </block>
     </view>
 
@@ -226,7 +226,7 @@
 
     <mip-sticky-actions>
       <view slot="actions" class="w-full">
-        <mip-primary-button
+        <mip-pill-button
           label="保存资料"
           loading="{{saving}}"
           disabled="{{avatarUploading}}"

@@ -1,0 +1,95 @@
+{
+  "deployedAt": "2026-09-26T11:52:28.335Z",
+  "project": "mip-admin-web",
+  "branch": "main",
+  "assetDirectory": "assets/release-parity-20260926",
+  "deploymentUrls": [
+    "https://7a562cf0.mip-admin-web.pages.dev"
+  ],
+  "liveUrl": "https://mipmini.01mvp.com",
+  "realSessionReadback": {
+    "status": "PASSED_SHARED_API_CONTENT_IN_MINI_PROGRAM",
+    "evidence": "session-readback.json",
+    "webUiReviewed": false
+  },
+  "httpReadback": {
+    "checkedAt": "2026-09-26T11:53:17.807Z",
+    "passed": true,
+    "checks": [
+      {
+        "origin": "https://7a562cf0.mip-admin-web.pages.dev",
+        "htmlSha256": "76d2df3633b19cdeb1eaaa351d7f79891ee4b768951f07de487baabb51c668d5",
+        "assets": [
+          {
+            "path": "/assets/release-parity-20260926/index-BD5a8V6s.js",
+            "sha256": "e20ee271ac896f7a0612974b3182a68fbc01c41686757d146b56457fa5475636",
+            "bytes": 333428
+          },
+          {
+            "path": "/assets/release-parity-20260926/rolldown-runtime-CbXtAM7H.js",
+            "sha256": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+            "bytes": 589
+          },
+          {
+            "path": "/assets/release-parity-20260926/react-DXf84zf0.js",
+            "sha256": "9e43591c1f2a1bfbb7f5b2823ec6b0e30ae953d92172a1d1422799d1ad08376c",
+            "bytes": 189647
+          },
+          {
+            "path": "/assets/release-parity-20260926/tanstack-8LAzoMjY.js",
+            "sha256": "0566f9e716326de723310adf3960808c3d98dd95e2c58b32d9bbe86e59dd3576",
+            "bytes": 110723
+          },
+          {
+            "path": "/assets/release-parity-20260926/ant-design-C7X15AGZ.js",
+            "sha256": "bc9ff5536d30e2305682fff810cf8f213725ec468061ad30fcc42ce9164ca2e3",
+            "bytes": 1103675
+          },
+          {
+            "path": "/assets/release-parity-20260926/index-TyQgWoXb.css",
+            "sha256": "b884e2a7483c02a42f697bf1914f766da9339c510b615c5328ce278dc4279615",
+            "bytes": 14534
+          }
+        ]
+      },
+      {
+        "origin": "https://mipmini.01mvp.com",
+        "htmlSha256": "76d2df3633b19cdeb1eaaa351d7f79891ee4b768951f07de487baabb51c668d5",
+        "assets": [
+          {
+            "path": "/assets/release-parity-20260926/index-BD5a8V6s.js",
+            "sha256": "e20ee271ac896f7a0612974b3182a68fbc01c41686757d146b56457fa5475636",
+            "bytes": 333428
+          },
+          {
+            "path": "/assets/release-parity-20260926/rolldown-runtime-CbXtAM7H.js",
+            "sha256": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+            "bytes": 589
+          },
+          {
+            "path": "/assets/release-parity-20260926/react-DXf84zf0.js",
+            "sha256": "9e43591c1f2a1bfbb7f5b2823ec6b0e30ae953d92172a1d1422799d1ad08376c",
+            "bytes": 189647
+          },
+          {
+            "path": "/assets/release-parity-20260926/tanstack-8LAzoMjY.js",
+            "sha256": "0566f9e716326de723310adf3960808c3d98dd95e2c58b32d9bbe86e59dd3576",
+            "bytes": 110723
+          },
+          {
+            "path": "/assets/release-parity-20260926/ant-design-C7X15AGZ.js",
+            "sha256": "bc9ff5536d30e2305682fff810cf8f213725ec468061ad30fcc42ce9164ca2e3",
+            "bytes": 1103675
+          },
+          {
+            "path": "/assets/release-parity-20260926/index-TyQgWoXb.css",
+            "sha256": "b884e2a7483c02a42f697bf1914f766da9339c510b615c5328ce278dc4279615",
+            "bytes": 14534
+          }
+        ]
+      }
+    ]
+  },
+  "sourceBaseCommit": "a572418dee8bebc1063568d4b931ca90afa8a6a7",
+  "sourceWorkingTreeDirty": true
+}

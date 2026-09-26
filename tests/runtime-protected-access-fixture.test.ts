@@ -369,12 +369,12 @@ describe('runtime protected access fixture', () => {
     const privacyWrapper = privacyMarkup.match(/<view[^>]*id="privacy-sign-out"[^>]*>[\s\S]*?<\/view>/)?.[0]
     const accessWrapper = accessMarkup.match(/<view[^>]*id="mip-access-sign-in"[^>]*>[\s\S]*?<\/view>/)?.[0]
 
-    expect(privacyWrapper).toContain('class="mt-5 flex min-h-[88rpx] items-center"')
-    expect(privacyWrapper).toContain('bind:tap="signOutLocally"')
-    expect(privacyWrapper).not.toMatch(/<t-button[^>]*bind:tap=/)
-    expect(accessWrapper).toContain('class="mt-7 flex min-h-[88rpx] items-center"')
-    expect(accessWrapper).toContain('bind:tap="signIn"')
-    expect(accessWrapper).not.toMatch(/<t-button[^>]*bind:tap=/)
+    // TDesign stops native tap propagation and emits a non-bubbling component tap.
+    // Bind the real buttons, while retaining wrappers as runtime tap targets.
+    expect(privacyWrapper).toMatch(/<t-button[^>]*bind:tap="signOutLocally"/)
+    expect(privacyWrapper).not.toMatch(/<view[^>]*bind:tap=/)
+    expect(accessWrapper).toMatch(/<t-button[^>]*bind:tap="signIn"/)
+    expect(accessWrapper).not.toMatch(/<view[^>]*bind:tap=/)
     expect(actionHelper).toContain('miniProgram.callWxMethod(\'pageScrollTo\', { selector, duration: 0 })')
     expect(actionHelper).toContain('page.renderedNodes(selector, { routeOnly: true })')
     expect(actionHelper).toContain('queryFreshRenderedActionElement(page, selector)')

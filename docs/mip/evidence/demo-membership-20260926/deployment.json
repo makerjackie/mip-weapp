@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-09-26T11:48:45.407Z",
+  "stage": "staging",
+  "functions": [
+    {
+      "role": "identity",
+      "status": "Active",
+      "availableStatus": "Available",
+      "runtime": "Nodejs20.19",
+      "modifiedAt": "2026-09-26 19:46:52",
+      "codeSha256": "b2a8f7a4f3fe7efd9b0f2ae0cf91c9987c1611600fa766357da3cb3923a8cce7",
+      "health": {
+        "ok": true,
+        "persistence": "cloudbase-mysql"
+      }
+    },
+    {
+      "role": "admin",
+      "status": "Active",
+      "availableStatus": "Available",
+      "runtime": "Nodejs20.19",
+      "modifiedAt": "2026-09-26 19:48:10",
+      "codeSha256": "1ae0c7610e2892e75c4a9a5acdd09e1e6faa10559cf91b57b14610bb3acad607",
+      "health": {
+        "ok": true,
+        "persistence": "cloudbase-mysql"
+      }
+    }
+  ],
+  "agreements": [
+    {
+      "document": "membership",
+      "title": "会员服务协议（演示）",
+      "version": 1,
+      "isDemo": true,
+      "bodyLength": 248,
+      "bodySha256": "7af8cd426a3bf427d451571f45660d992771db6b0e39fc68dcb0af1a5a076085"
+    },
+    {
+      "document": "user",
+      "title": "用户使用协议（演示）",
+      "version": 1,
+      "isDemo": true,
+      "bodyLength": 406,
+      "bodySha256": "dab4fbfc6419535fc451087fa74c77db0355d95c358cbc16ec9da4e23c25bf13"
+    }
+  ],
+  "businessApiReadback": "PASSED_REAL_MINI_PROGRAM_SESSION",
+  "cloudVerification": {
+    "passed": true,
+    "scope": "schema, least-privilege grants, core functions health, protected invocation rules",
+    "completedAt": "2026-09-26T11:52:28.201618+00:00"
+  },
+  "businessApiEvidence": "session-readback.json"
+}

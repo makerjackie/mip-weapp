@@ -101,4 +101,23 @@ describe('MIP public profiles', () => {
       expect(code).toContain('/packages/member/mip-public-profile/index?profileRef=')
     }
   })
+
+  it('keeps all public details and safety access after compacting the profile summary', () => {
+    const view = source('src/packages/member/mip-public-profile/index.wxml')
+    const production = view.slice(view.indexOf('<block wx:elif="{{profile}}">'))
+    const summary = production.slice(0, production.indexOf('data-category="GUEST"'))
+    const details = production.slice(production.indexOf('id="public-profile-details"'))
+    for (const field of ['identityDetailText', 'primaryCompanyLine', 'headline', 'introduction']) {
+      expect(details).toContain(`{{profile.${field}}}`)
+    }
+    for (const field of ['abilities', 'badges', 'companies', 'organizations']) {
+      expect(details).toContain(`wx:for="{{profile.${field}}}"`)
+    }
+    expect(summary).not.toContain('{{profile.identityDetailText}}')
+    expect(summary).not.toContain('{{profile.primaryCompanyLine}}')
+    expect(summary).not.toContain('wx:for="{{profile.abilities}}"')
+    expect(summary).toContain('bind:tap="openProfileMore"')
+    expect(production).toContain('bind:tap="openOwnInfluence"')
+    expect(production).toContain('bind:tap="openInterestList"')
+  })
 })

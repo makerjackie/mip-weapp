@@ -189,7 +189,7 @@ const adminWebMutationPolicies = Object.freeze([
   webMutation('mip.admin.knowledge.contents.save', ['categoryId', 'contentType', 'title', 'summary', 'accessType', 'commentsEnabled', 'moderationMode'], ['contentId', 'expectedVersion', 'sourceId', 'bodyText', 'externalUrl', 'channelFinderUserName', 'channelFeedId', 'coverAssetId', 'authorName']),
   webMutation('mip.admin.knowledge.contents.review', ['contentId', 'expectedVersion', 'decision'], ['reason']),
   domainIdempotentWebMutation('mip.admin.knowledge.schedules.save', ['sourceId', 'categoryId', 'dailyTime', 'timeZone'], ['scheduleId', 'expectedVersion', 'status']),
-  domainIdempotentWebMutation('mip.admin.membershipAgreement.save', ['expectedVersion', 'draft']),
+  domainIdempotentWebMutation('mip.admin.membershipAgreement.save', ['expectedVersion', 'draft'], ['document']),
   webMutation('mip.admin.growth.saveLevel', ['draft'], ['levelId', 'expectedVersion']),
   webMutation('mip.admin.growth.saveBenefit', ['draft'], ['benefitId', 'expectedVersion']),
   webMutation('mip.admin.growth.saveRule', ['ruleId', 'expectedVersion', 'draft']),

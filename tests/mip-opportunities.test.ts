@@ -90,6 +90,29 @@ describe('MIP opportunity contracts', () => {
     }).scopeType).toBe('BRANCH')
   })
 
+  it('allows an empty description without weakening other required fields or the legacy API length bound', () => {
+    const draft = {
+      title: '项目',
+      valueSummary: '资源互换',
+      targetSummary: '寻找合作方',
+      description: '',
+      scopeType: 'PLATFORM' as const,
+      roleKeys: ['strategist'] as CooperationRoleKey[],
+      industryTagIds: [],
+      abilityTagIds: [],
+      publish: true,
+    }
+    expect(normalizeOpportunityDraft(draft).description).toBe('')
+    expect(normalizeOpportunityDraft({ ...draft, description: '  ' }).description).toBe('')
+    // New typing is limited to 300 in the UI; previously saved long descriptions remain editable.
+    expect(normalizeOpportunityDraft({ ...draft, description: '说'.repeat(6000) }).description).toHaveLength(6000)
+    expect(() => normalizeOpportunityDraft({ ...draft, description: '说'.repeat(6001) })).toThrow('机会说明格式不正确')
+    for (const field of ['title', 'valueSummary', 'targetSummary']) {
+      expect(() => normalizeOpportunityDraft({ ...draft, [field]: ' ' })).toThrow()
+    }
+    expect(() => normalizeOpportunityDraft({ ...draft, roleKeys: [] })).toThrow('请选择至少一种合作角色')
+  })
+
   it('keeps the migration isolated and reversible', () => {
     const sql = readFileSync(new URL('../database/mysql/mip/003_opportunities.sql', import.meta.url), 'utf8')
     const rollback = readFileSync(new URL('../database/mysql/mip/rollback/003_opportunities.sql', import.meta.url), 'utf8')

@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
 import { getContentMutationForm, validateContentMutation } from '../../modules/content-mutation-forms'
+import { contentFormValues, normalizeContentFields } from '../../modules/content-form-values'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 import { defaultContentFormValues } from './content-form-helpers'
 
@@ -16,7 +17,7 @@ export function OpportunityEditFormPage() {
   )
 
   const formDef = getContentMutationForm('mip.admin.opportunities.save')
-  const fields = formDef.fields as readonly OperationField[]
+  const fields = useMemo(() => normalizeContentFields(formDef.fields as readonly OperationField[]), [formDef.fields])
   const values = useMemo(() => defaultContentFormValues(fields), [fields])
 
   const formConfig: IndependentFormPageConfig = {
@@ -30,7 +31,7 @@ export function OpportunityEditFormPage() {
     capability: 'opportunities.moderate',
     buildInput: (submitted: OperationValues) => {
       const merged = { ...values, ...submitted, opportunityId }
-      const result = validateContentMutation('mip.admin.opportunities.save', merged)
+      const result = validateContentMutation('mip.admin.opportunities.save', contentFormValues('mip.admin.opportunities.save', merged, idempotencyKey))
       return result.ok ? result.input : null
     },
   }

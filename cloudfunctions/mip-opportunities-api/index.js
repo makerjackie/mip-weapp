@@ -12,7 +12,7 @@ const {
 const { mysqlDatabase } = require('./lib/mysql')
 const { createOutboxWakeup } = require('./lib/outbox-wakeup')
 const { authorizeInternalMatching, verifyInternalMatching } = require('./lib/internal-matching')
-const { createContentSafety } = require('./domain/content-safety')
+const { createContentSafety, contentSafetyFailureDetails } = require('./domain/content-safety')
 const { canBrowsePlatformOpportunities, canBrowseTalents } = require('./domain/journey-access')
 const { createMatchingProvider } = require('./domain/matching-provider')
 const {
@@ -117,6 +117,7 @@ const messages = {
   AI_DRAFT_NOT_FOUND: 'AI 草稿不存在或已过期',
   AUTH_REQUIRED: '登录后可继续操作',
   CONTENT_REJECTED: '内容未通过安全检查，请修改后重试',
+  CONTENT_SAFETY_UNAVAILABLE: '内容检查暂不可用，请稍后重试',
   CALLS_DISABLED: '当前机会已关闭打 call',
   CALL_PARTICIPANT_REQUIRED: '只有当前机会参与人可以打 call',
   COMMENTS_DISABLED: '当前机会已关闭评论',
@@ -148,7 +149,8 @@ function failure(error) {
     error: {
       code,
       message: messages[code] || messages.SERVICE_UNAVAILABLE,
-      retryable: ['CONFLICT', 'SERVICE_UNAVAILABLE'].includes(code),
+      ...contentSafetyFailureDetails(error),
+      retryable: ['CONFLICT', 'SERVICE_UNAVAILABLE', 'CONTENT_SAFETY_UNAVAILABLE'].includes(code),
     },
   }
 }

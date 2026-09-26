@@ -253,7 +253,11 @@ function createIdentityService(options) {
     getAccessSnapshot,
     signIn,
     getMyProfileCardCode,
-    getMembershipAgreement: caller => repository.getMembershipAgreement(caller.appId),
+    getMembershipAgreement: (caller, input = {}) => {
+      const document = input.document || 'membership'
+      if (!['membership', 'user'].includes(document)) throw new Error('VALIDATION_FAILED')
+      return repository.getMembershipAgreement(caller.appId, document)
+    },
     getProfileCardSettings,
     getProfile,
     getPublicProfile,

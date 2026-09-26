@@ -1,0 +1,744 @@
+{
+  "date": "2026-09-26",
+  "source": {
+    "url": "https://airdrop.z-h-ai.com/p/715a5d/",
+    "repository": "douglas-ou/mip-minip-dev",
+    "commit": "cb5956b",
+    "manifestSha256": "694395e890308224551dab2430b793ef4a019ce473ab11d5994ff65daf8ec91e",
+    "prototypeSha256": "c7d92036c7fc193ab374059b7a12f969befcac8a09d227350b703889ed31a4d0",
+    "steps": 43,
+    "scenes": 40
+  },
+  "screenshotCount": 43,
+  "reviewedCount": 43,
+  "statusCounts": {
+    "pass": 15,
+    "accepted-difference": 2,
+    "data-mismatch": 25,
+    "blocked": 1
+  },
+  "meaning": "pass means AI visual review for matching account and content state, not all interactions or physical device acceptance",
+  "localArtifact": "http://127.0.0.1:18092/mip-parity-43-20260926.html",
+  "gates": {
+    "verify:all": "PASS after final UI failure feedback and cloud diagnostics changes",
+    "runtime:preflight": "PASS",
+    "git diff --check": "PASS"
+  },
+  "steps": [
+    {
+      "id": "J0-01",
+      "name": "扫码直达活动详情 · 签到成功",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T11:58:46.375Z",
+      "actualSha256": "711f31cca1b11d8fe57a08706abe04d0ec1ffc22de838c5c73a9a41629f82ac7",
+      "prototypeSha256": "124bacdf49d35f37784eb13176cc8e153aa36719924473f3db0e44151149d65d",
+      "reviewedAt": "2026-09-26T12:14:29.338Z",
+      "visualNotes": "当前是未报名活动详情，首屏与底部“立刻报名”正常显示，但不是扫码签到成功结果。",
+      "differences": [
+        "原型要求签到成功提示、已签到详情与互动入口；实际 hasCheckInIntent=false、interactionVisible=false、primaryAction=register。",
+        "只能作为普通详情布局参考，不能证明扫码或签到通过。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J0-02",
+      "name": "未登录扫码 · 先授权再签到",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:07:19.301Z",
+      "actualSha256": "557d39b69284597d53004d2272ffb62e800d9f9aa22360056ba34ca531679d1e",
+      "prototypeSha256": "4c3f5c7f79221c79846581e8a44cff585387d8e55da25927d025c840809528cc",
+      "reviewedAt": "2026-09-26T12:14:29.338Z",
+      "visualNotes": "真实退出后的微信登录门禁页面可见，按钮未重叠；不是原型的手机号授权弹层。",
+      "differences": [
+        "背景活动详情与原生手机号授权面板均未出现。",
+        "需全新/未绑定手机号测试账号与真机授权流程补证据；不能用重新登录页替代。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J0-03",
+      "name": "活动反馈 · 签到后开放",
+      "status": "blocked",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T11:58:55.110Z",
+      "actualSha256": "a11bbe76148f2c9db2e0559b1ca283ec5a7c207a49f60900c9981b1f79e2c72a",
+      "prototypeSha256": "e7e00dd033cfa7df6ad1b32d3137b4fde49c5db910bfb2b97abc6d1992cd0c88",
+      "reviewedAt": "2026-09-26T12:14:29.338Z",
+      "visualNotes": "实际清晰显示“完成签到后可填写本场活动反馈”，权限拦截正常呈现，反馈表单未到达。",
+      "differences": [
+        "实际 state=blocked；原型为已签到后七题表单。",
+        "需要已签到测试活动账号；还需表单全部问题与底部提交补图。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J1-01",
+      "name": "活动详情 · 游客视角",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:06:35.862Z",
+      "actualSha256": "711f31cca1b11d8fe57a08706abe04d0ec1ffc22de838c5c73a9a41629f82ac7",
+      "prototypeSha256": "176d77acd58bbd1c20103c33116f74a417c355bdeda9b120779c03f92794fd3e",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "游客活动详情首屏已逐图复核；封面、信息卡、参与人数、内容切换和底部报名条无明显重叠或裁切。",
+      "differences": [
+        "活动图片、标签与人数来自真实活动，因此与原型示例不同。",
+        "只通过当前首屏视觉；报名、分享和参与人入口的完整游客门禁仍待验。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J1-02",
+      "name": "手机号授权弹层",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:23:33.313Z",
+      "actualSha256": "dfb19ddc244a74a3b60584e94a3e9cc7de03bc48730e8823e767f2953dc08fa1",
+      "prototypeSha256": "4c3f5c7f79221c79846581e8a44cff585387d8e55da25927d025c840809528cc",
+      "reviewedAt": "2026-09-26T12:14:29.338Z",
+      "visualNotes": "真实游客状态已确认，当前为微信登录独立页。",
+      "differences": [
+        "原型要求活动背景上的手机号授权弹层；实际不是该场景。",
+        "“退出小程序”是当前栈根退出入口，不等同原型授权面板的取消。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J1-03",
+      "name": "补充个人资料（新账号）",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:17:40.610Z",
+      "actualSha256": "347b4213925865343129c3be02cdd1d17750e3c8cff5d09d48a548d61290e2c1",
+      "prototypeSha256": "304e64f901673c780dbad6229f0885a04be6795ff4af30feabe00f210cdefc06",
+      "reviewedAt": "2026-09-26T12:25:28.358979+00:00",
+      "visualNotes": "新图中身份选项已收紧为56rpx视觉高度，保存按钮只保留一层容器；头像、基础信息与行业输入未重叠。当前仍是现有玩家资料编辑，不能代表新账号引导完成。",
+      "differences": [
+        "实际是已有资料的玩家；原型要求首次授权后补充资料的新账号。",
+        "姓名与未设置性别为现有真实字段，未为匹配原型删除。身份目录8项，未选择行业所以无已选行业标签，均属于数据差异。",
+        "首屏底部保存条覆盖一部分滚动表单区域，需向下滚动和键盘弹起补证据，确认最后字段可见可操作；不能仅凭首屏判断整个表单通过。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J1-04",
+      "name": "机会 · 项目机会 · 游客视角",
+      "status": "accepted-difference",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:22:32.436Z",
+      "actualSha256": "ea1b5cecdf0b3dd85b7e1bd7bd0e8fe872b9dd3b320702a0121a3ad08e197a51",
+      "prototypeSha256": "1da836cec8215b8131eb04ecedaa15203b2cbf53fd9c055b7db1d4b489ee82d7",
+      "reviewedAt": "2026-09-26T12:27:08.886117+00:00",
+      "visualNotes": "真实游客项目页已清空筛选；Tab、招募中状态、品牌空图、登录与成为玩家入口无重叠，主代理另行确认底部四项TabBar完整。",
+      "differences": [
+        "后台真实配置了运营Banner，而原型游客项目页没有Banner，因此主体整体下移；保留正式配置能力并明确展示该差异。",
+        "早先以为TabBar裁切是工具显示问题，主代理已按原始图片逐项确认完整，撤回缺失问题。",
+        "对应private.json存在热同步后的旧缓存；本次清空状态以12:22:32新截图可见内容和主代理真实操作为准。",
+        "首屏已复核；登录与成为玩家入口的后续流程仍需独立交互证据。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J1-05",
+      "name": "机会 · 人才合作 · 游客视角",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:23:01.988Z",
+      "actualSha256": "3154f92f97a6d5597373fc1902332c86403af72a42d815d0563a9637b9daec6c",
+      "prototypeSha256": "fb95bc549fa5ec282e1451b20ef702188deeaabff60882b29ccb69df68a285bb",
+      "reviewedAt": "2026-09-26T12:26:29.434377+00:00",
+      "visualNotes": "清空筛选后的游客人才页搜索栏、品牌空图、登录按钮与解锁入口位置接近原型，底部四项TabBar完整，无多余筛选摘要。",
+      "differences": [
+        "已用original尺寸复核，早先以为底部TabBar缺失是工具显示裁剪，已撤回该问题。",
+        "搜索图标当前近似圆环，缺少明显斜柄；低影响图形细节已登记。",
+        "对应private.json仍记录旧“全国”筛选，本次清空状态以12:23:01新截图可见内容和主代理真实操作记录为准。",
+        "仅为首屏视觉通过，登录、成为玩家入口与搜索筛选交互仍需闭环证据。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J1-06",
+      "name": "玩家等级 · 新玩家加入",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:29:06.037Z",
+      "actualSha256": "316b1302e25b5b26569f39ab4bfc0b930e32b66f005e82dca2aeb827a7574067",
+      "prototypeSha256": "f8c015eca1926f2f5c08a1bc28857e2a250327b6eee4612f237f2a73cefaf249",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "背景按原始比例呈现，皇冠、等级线、权益和任务层次已复核；底部按钮只有一层容器。已真实展开/收起经验明细并点击去完成进入任务详情。",
+      "differences": [
+        "当前账号是长期有效玩家；原型是非玩家加入状态，因此加入按钮和首次购买路径尚未验证。",
+        "4 项演示权益、4 个演示任务来自后台配置；管理员可以修改。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J1-07",
+      "name": "加入玩家 · 订单确认页",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T11:59:21.384Z",
+      "actualSha256": "2308a542da7ad2da3a00659dcdf12c51cc3ed4f12bcbe226d354a007a496ac8a",
+      "prototypeSha256": "133ebbf79b1c62bcc02998dce1b81e901ca07b28cd46ace76c1026f2978501f5",
+      "reviewedAt": "2026-09-26T12:14:29.338Z",
+      "visualNotes": "会员订单确认的信息卡、价格明细和底部支付按钮可见，首屏没有明显挤压。",
+      "differences": [
+        "实际账号已是长期有效玩家；不能代表普通用户首次加入的资格流程。",
+        "价格与购买须知来自真实后台配置；协议区域未在本张中完整呈现。",
+        "未执行真实付款，截图不能作为支付验收。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J1-08",
+      "name": "我的 · 游客视角",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:18:22.705Z",
+      "actualSha256": "882f2d77a88edca810d65741d8f4de764ba43834f29398b7146b8107a88e3369",
+      "prototypeSha256": "fb09c8e681847d38c4f54af1d8f72966ba71fb6f0daaf147828a9672047b69ff",
+      "reviewedAt": "2026-09-26T12:25:28.358979+00:00",
+      "visualNotes": "真实退出后的游客我的页左右边距已与原型对齐：头像、黄卡、四项菜单均为约12px内容边距；底部TabBar完整，未残留玩家信息。",
+      "differences": [
+        "背景图、头像使用现有品牌资产，保持比例；未出现拉伸或双重左右内边距。",
+        "本结论限首屏视觉；登录、菜单门禁与微信真机能力仍需对应交互证据。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J2-01",
+      "name": "活动详情 · 普通用户视角",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T11:59:30.369Z",
+      "actualSha256": "711f31cca1b11d8fe57a08706abe04d0ec1ffc22de838c5c73a9a41629f82ac7",
+      "prototypeSha256": "176d77acd58bbd1c20103c33116f74a417c355bdeda9b120779c03f92794fd3e",
+      "reviewedAt": "2026-09-26T12:14:29.338Z",
+      "visualNotes": "未报名活动详情可见，主要结构与游客图一致，底部报名操作没有布局阻挡。",
+      "differences": [
+        "当前是玩家而非普通用户；尚未验证普通用户角色下的报名价格与交互限制。",
+        "活动内容与参与人数为真实数据差异。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J2-02",
+      "name": "参与人列表 · 普通用户",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T11:59:39.239Z",
+      "actualSha256": "ef2a2b3b87a01fe4c8e056e9149fdbcf7f064bce3b5c4074e0525da5b704e4cf",
+      "prototypeSha256": "959cdeeb9c48387faa4f70719f850447754bff75b54a93a7594b263bf9d3e403",
+      "reviewedAt": "2026-09-26T12:14:29.338Z",
+      "visualNotes": "有两张真实玩家卡，搜索、四类 Tab 与心形操作区可见，卡片没有溢出。",
+      "differences": [
+        "当前访问者是玩家，不能代替普通用户角色验收。",
+        "当前只拍玩家 Tab，嘉宾/我的心动/对我心动三个 Tab 缺截图与点击证据。",
+        "用户没有等级/勋章字段时采用真实身份标签，不能硬编码 Lv.23；卡片数量不同为数据差异。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J2-03",
+      "name": "玩家档案 · 普通用户",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:28:06.388Z",
+      "actualSha256": "dd1fc50f24fdcc1367d793f3e572abe8eb6a6405ac67a8e947241ba137a53f60",
+      "prototypeSha256": "f73e2bef56514b4b4ee47b09f1aae97f75fc13cb01d65f1eae4228740dde2575",
+      "reviewedAt": "2026-09-26T12:32:10.808590+00:00",
+      "visualNotes": "新构建头部已收紧；80px头像、姓名/玩家标记/真实勋章同行，地区/行业/身份与一句话介绍简洁，统计区及Tab回到接近原型的高度。",
+      "differences": [
+        "当前viewer是有效玩家，不是该步普通用户；底部实际为active互动条，不能证明目标角色限制。",
+        "扩展性别/公司/身份与完整介绍保留在合作卡下方个人资料区，没有为压缩首屏删除业务字段。",
+        "真实合作卡仅一张，示例人物、勋章和统计值不同均不算布局缺陷。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J2-04",
+      "name": "解锁提示弹窗",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:17:29.710Z",
+      "actualSha256": "96302f5759fce858f3eb028408262627efc054af33aa34fe8f722550a86ad22a",
+      "prototypeSha256": "6599fb85fff3f660b622dcc396123f76fd7e4a24f41cde5ed9f136b5fd4b81bd",
+      "reviewedAt": "2026-09-26T12:25:28.358979+00:00",
+      "visualNotes": "当前是紧凑版玩家档案页面，首屏版式已改善，但没有解锁提示弹窗。",
+      "differences": [
+        "实际玩家的interactionBar=active，当前截图未出现原生解锁弹窗；原型要求普通用户点击受限互动后出现弹窗。",
+        "不能通过给真实玩家降级或拼接弹窗补齐；需要独立普通用户账号的真实操作证据。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J2-05",
+      "name": "机会 · 项目机会 · 普通用户",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:46:30.553Z",
+      "actualSha256": "198469baaadec4fc92fb0d6a1828e4556a021a9ad774ae1a3a505ceed8082556",
+      "prototypeSha256": "414b55ae2a36ceb9cfdb1209b4e0c4f4110643c78d5aa83f033067f1db2eb8ce",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "重新清空筛选后实拍，项目列表、卡片、顶部 Tab 与完整底部 TabBar 已复核，未发现明显挤压。",
+      "differences": [
+        "当前为有效玩家；原型要求普通用户或嘉宾，角色门禁未按目标身份验证。",
+        "真实后台配置了运营 Banner，因此内容起点比原型低；封面保持比例，内容差异不伪装成原型数据。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J2-06",
+      "name": "我的项目空态",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:16:53.668Z",
+      "actualSha256": "ae1a9a6aa3ce798db09700cea0787dc8b4058cd666a676438b8143aff7fc1e97",
+      "prototypeSha256": "5a7e7d7069ef028025160262e9dba1fa2756218cd67336b9f3284ff83a0dfd85",
+      "reviewedAt": "2026-09-26T12:25:28.358979+00:00",
+      "visualNotes": "我的项目空态已展示品牌空图、提示、发布入口，Banner与Tab栏没有重叠，页面底部TabBar完整。",
+      "differences": [
+        "实际账号是有效玩家，不是该步普通用户；发布门禁需要普通用户账号另验。",
+        "实际有已配置运营Banner，素材与原型不同；页面下方额外提供“发布机会”快捷按钮，属于现有明确入口，未出现按钮叠框。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J2-07",
+      "name": "机会 · 人才合作 · 普通用户",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:48:15.111Z",
+      "actualSha256": "ca1f8f5503140fe5a31c6f382f907a2dc33a6ac5795da15ee5d2a2d9ba0da7f4",
+      "prototypeSha256": "03edb7bd6c52b3e8633148d6e66fa9721b5547e30d9bb939c06b8e317986a6b3",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "重新清空筛选后的真实非空人才列表已逐图复核；头像比例、角色标签和简介正常，没有残留筛选摘要。",
+      "differences": [
+        "原型要求非玩家解锁空态，当前有效玩家能读取非空人才列表；此图不能证明非玩家门禁。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J2-08",
+      "name": "活动报名 · 订单确认页",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T11:59:56.827Z",
+      "actualSha256": "015af992efb1b21d2ed81c810b44f454839cd21b151542116bb6dc61bdcd82f3",
+      "prototypeSha256": "252290eaf988e2c31eda73545a92ba5d2985cc713b78d1f1d8febed3df620347",
+      "reviewedAt": "2026-09-26T12:14:29.338Z",
+      "visualNotes": "活动订单页结构清晰，底部按钮可见。",
+      "differences": [
+        "实际玩家享“会员已含/免费/提交报名”，原型普通用户为收费订单；状态和价格路径不一致。",
+        "当前活动无额外报名表字段；不能证明动态表单与付费报名流程。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J3-01",
+      "name": "机会 · 项目机会 · 嘉宾",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:46:30.716Z",
+      "actualSha256": "198469baaadec4fc92fb0d6a1828e4556a021a9ad774ae1a3a505ceed8082556",
+      "prototypeSha256": "349cd49a9a15d333233284284115c92952b2fd12dc2efe8eb41c15e42050e68b",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "重新清空筛选后实拍，项目列表、卡片、顶部 Tab 与完整底部 TabBar 已复核，未发现明显挤压。",
+      "differences": [
+        "当前为有效玩家；原型要求普通用户或嘉宾，角色门禁未按目标身份验证。",
+        "真实后台配置了运营 Banner，因此内容起点比原型低；封面保持比例，内容差异不伪装成原型数据。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J3-02",
+      "name": "机会 · 人才合作 · 嘉宾",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:48:15.203Z",
+      "actualSha256": "ca1f8f5503140fe5a31c6f382f907a2dc33a6ac5795da15ee5d2a2d9ba0da7f4",
+      "prototypeSha256": "03edb7bd6c52b3e8633148d6e66fa9721b5547e30d9bb939c06b8e317986a6b3",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "重新清空筛选后的真实非空人才列表已逐图复核；头像比例、角色标签和简介正常，没有残留筛选摘要。",
+      "differences": [
+        "原型要求非玩家解锁空态，当前有效玩家能读取非空人才列表；此图不能证明非玩家门禁。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J3-03",
+      "name": "玩家档案 · 嘉宾视角",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:28:06.473Z",
+      "actualSha256": "dd1fc50f24fdcc1367d793f3e572abe8eb6a6405ac67a8e947241ba137a53f60",
+      "prototypeSha256": "f73e2bef56514b4b4ee47b09f1aae97f75fc13cb01d65f1eae4228740dde2575",
+      "reviewedAt": "2026-09-26T12:32:10.808590+00:00",
+      "visualNotes": "新构建头部已收紧；80px头像、姓名/玩家标记/真实勋章同行，地区/行业/身份与一句话介绍简洁，统计区及Tab回到接近原型的高度。",
+      "differences": [
+        "当前viewer是有效玩家，不是该步嘉宾；底部实际为active互动条，不能证明目标角色限制。",
+        "扩展性别/公司/身份与完整介绍保留在合作卡下方个人资料区，没有为压缩首屏删除业务字段。",
+        "真实合作卡仅一张，示例人物、勋章和统计值不同均不算布局缺陷。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J3-04",
+      "name": "我的 · 嘉宾",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:00:11.307Z",
+      "actualSha256": "ea9e1ec9b40f2d22835666a954a97bba40ef7995413566d99b09e8bcd75ee8d2",
+      "prototypeSha256": "da200c14093679082f9a758edde383b1082d1211abc50bf9a3d7d420cc4d2d59",
+      "reviewedAt": "2026-09-26T12:14:29.338Z",
+      "visualNotes": "我的页已显示等级、四项统计、NPC、勋章、四入口及合作卡空态，控件可辨。",
+      "differences": [
+        "当前是有运营权限的玩家，额外出现现场工作台；不是原型嘉宾态。",
+        "合作卡列表为空，不能验收原型非空卡片布局与长按入口。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J3-04b",
+      "name": "站内信列表",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:00:20.131Z",
+      "actualSha256": "0630a77098e46460d422878d079e0d45050a922a63c5ffc35e5b5c2462d661fc",
+      "prototypeSha256": "d95b412e7be8b1e6c3c07bfdc1f9e417d5425521543891d9eb5591215b30bed7",
+      "reviewedAt": "2026-09-26T12:14:29.338Z",
+      "visualNotes": "10 条真实站内信排列整齐，标题/摘要/日期/箭头没有相互覆盖。",
+      "differences": [
+        "当前玩家账号，未取得嘉宾身份截图。",
+        "本张主要是活动和系统通知，未覆盖新心动通知及未读红点；不能证明所有类型与进入清除行为。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J3-05",
+      "name": "邀请列表",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:15:12.995Z",
+      "actualSha256": "1e57869b78134db8c700cd087c23a0af8a5936ef8217865ed05265022541b00c",
+      "prototypeSha256": "3d4bb782836e2ffc9e90a1e324bcbfab6055431d7077e4a94223a7cc7d06798f",
+      "reviewedAt": "2026-09-26T12:18:01.768714+00:00",
+      "visualNotes": "新构建真实空态已复拍，页面边距稳定；尚无邀请数据，不能据此验收原型的非空嘉宾卡。",
+      "differences": [
+        "当前账号是玩家，原型该步骤为嘉宾。",
+        "items/displayItems均为0；真实×N、邀请人和非空布局仍缺运行时证据。",
+        "已完成角标与卡片源码修复，但空态不能替代其验收。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J3-06",
+      "name": "互动过列表",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:15:21.815Z",
+      "actualSha256": "945f3fb906d949436e81f4dc3ece78d92773ecc98425c49137db663c499ae60d",
+      "prototypeSha256": "f259e6435142c462fbb06947a87b9d62acd5030ff40dca264de0991a034de0f5",
+      "reviewedAt": "2026-09-26T12:18:01.768714+00:00",
+      "visualNotes": "新构建搜索与暂无互动空态已复拍，仍未出现原型要求的人物卡。",
+      "differences": [
+        "当前玩家账号，非嘉宾角色；互动列表为空。",
+        "真实非空搜索过滤与×N角标待有数据账号补验。",
+        "搜索框与空态卡靠得较近，为次要间距差异；本次未按空态宣称非空版式通过。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J3-07",
+      "name": "心动值（我的心动 / 对我心动）",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:15:30.679Z",
+      "actualSha256": "7b8f68bd701ea43e72f6892ffca54a802fa552c304cf772579cb9d3117802529",
+      "prototypeSha256": "59efe1cb30acf50e1e9d7e6ac912d3fa0990ee27a0e683045d2f3d603c6089dc",
+      "reviewedAt": "2026-09-26T12:18:01.768714+00:00",
+      "visualNotes": "新图已恢复紧凑的40px心动Tab和全宽指示线；列表仍为空，红心人物卡未能实拍。",
+      "differences": [
+        "当前玩家账号且SENT列表为空，不符合嘉宾非空心动原型。",
+        "红心资产和人物卡代码已进入新构建，但没有真实记录时不造心动数据。",
+        "对我心动Tab、清除未读与活动跳转仍需独立交互记录。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J3-08",
+      "name": "访客列表",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:15:39.482Z",
+      "actualSha256": "c7276d9a03422f0768be5b366a13f4502a37c4aee60f0aebd4da25eb83f0368e",
+      "prototypeSha256": "66d1c5c5c2a19f6e5fc46c8f6779975ebf8daa3f9e283a34b896b1a3b4053042",
+      "reviewedAt": "2026-09-26T12:18:01.768714+00:00",
+      "visualNotes": "新图有1张真实访客卡，头像位置、姓名和真实嘉宾身份排列正常，旧卡过大顶部留白已消除；布局问题已修复。",
+      "differences": [
+        "访问者账号仍是玩家，原型步骤要求嘉宾，故不标整步通过。",
+        "被查看的访客未填写简介且未返回等级/勋章；空白部分是真实资料缺省，不能虚构内容填充。",
+        "不显示访问时间符合最终批注；未读进入清除仍需操作记录。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J3-09",
+      "name": "机会详情 · 非发布人视角",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:28:15.388Z",
+      "actualSha256": "cb5f4e91995ecb5ecab1b21e7db7af84d2517f43b73c813fa698450cc0a3f6cf",
+      "prototypeSha256": "4d2361ec83d036dc6ba3dd859c0e6a3623dc7d41416bf7d8063d197d83c7b5f5",
+      "reviewedAt": "2026-09-26T12:32:10.808590+00:00",
+      "visualNotes": "新detail变种已完整呈现封面、标题、价值/城市/地区/寻找四行信息及右下发布时间，没有列表定高导致的挤压；底部补图覆盖合作人数、评论与固定操作条。",
+      "differences": [
+        "实际viewer为玩家，非原型嘉宾；可以复核非发布人版式，但该身份的权限与合作/取消反馈仍需独立验收。",
+        "当前机会没有typeKeys且cooperationAvatars为空，所以没有黄色类型标签或头像组，不为匹配示例造值。",
+        "实际项目介绍较短并有团队/评论，原型为很长示例介绍；长文与内容不同是数据差异。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J4-01",
+      "name": "机会 · 人才合作 · 玩家",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:48:15.017Z",
+      "actualSha256": "ca1f8f5503140fe5a31c6f382f907a2dc33a6ac5795da15ee5d2a2d9ba0da7f4",
+      "prototypeSha256": "f59f02c3699d2f9c69a69a16af4b5a1c2f084bab148d7640e993ce1f8e481700",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "有效玩家的非空人才列表已复拍并核对；搜索、Tab、头像、角色标签与目标文字层次清晰，完整 TabBar 无遮挡。",
+      "differences": [
+        "人物与合作卡来自真实后台数据，数量和文字长度与原型示例不同。",
+        "已实际切换项目/我的项目/人才 Tab；搜索和组合筛选仍未完成全组合交互验收。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J4-02",
+      "name": "人才档案 · 玩家视角",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:14:55.258Z",
+      "actualSha256": "f031a1c3c9136f35f5c8a91a9878aa9684984ae6442709feda1e70af5a1f8b75",
+      "prototypeSha256": "f73e2bef56514b4b4ee47b09f1aae97f75fc13cb01d65f1eae4228740dde2575",
+      "reviewedAt": "2026-09-26T12:18:01.768714+00:00",
+      "visualNotes": "新构建实拍已消除过高头部：头像比例正常，姓名/身份/首枚真实勋章与元信息紧凑排列，统计和合作卡恢复原型层次；本张同角色非空首屏视觉通过。",
+      "differences": [
+        "首屏头部约188px，与原型内容头约184px接近；此前约290px的堆叠已消除。",
+        "性别、职业、公司、能力与完整勋章移至下方个人资料区，真实字段仍可查看。",
+        "实际只有1张合作卡、统计和文案不同属于数据差异；底部聚合没有头像时不制造头像。",
+        "仅确认该首屏视觉；感兴趣/名单/举报等交互以及长页末尾仍需主代理记录。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J4-02b",
+      "name": "对TA感兴趣列表",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:15:04.135Z",
+      "actualSha256": "fa7878b076cd2720124689e1243d89979e3b3e760e1ea13e2957f60979d50f33",
+      "prototypeSha256": "3d31ca4409f2d5f44dafc27bb2286261442af389895fe234586899b1574be914",
+      "reviewedAt": "2026-09-26T12:18:01.768714+00:00",
+      "visualNotes": "新图人物卡头像上边距、姓名/身份层次与左对齐简介已恢复；真实玩家查看非空名单，卡片未见裁切或重叠，本张视觉通过。",
+      "differences": [
+        "当前仅1人且未返回等级、勋章，保留真实玩家身份，不填造原型的Lv.23。",
+        "实际额外显示真实总人数，原型没有该行；卡片操作区仍完整可见。",
+        "列表跳转与分页的交互通过与否应另据操作记录，不由截图推断。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J4-03",
+      "name": "玩家等级 · 续费态",
+      "status": "data-mismatch",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:29:05.945Z",
+      "actualSha256": "316b1302e25b5b26569f39ab4bfc0b930e32b66f005e82dca2aeb827a7574067",
+      "prototypeSha256": "9c67a87ac310d47fdb8d3407f95a7f1f78fa558604de774974223d69c8c964b6",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "背景按原始比例呈现，皇冠、等级线、权益和任务层次已复核；底部按钮只有一层容器。已真实展开/收起经验明细并点击去完成进入任务详情。",
+      "differences": [
+        "当前玩家会员有效期较长，不满足原型临期续费条件，未修改真实会员期限来凑截图。",
+        "经验明细与任务跳转已实际操作；续费按钮状态及购买流程仍需临期测试账号。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J4-04",
+      "name": "机会发布 / 编辑页",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:44:25.636Z",
+      "actualSha256": "5a27361782541e8d3d9db52281443f910251ed79575f94593ffaeca5e205d421",
+      "prototypeSha256": "55882f3e231a646b53d205b343150d8ee2cc39e3d4306981c657869e8fc5e7bf",
+      "reviewedAt": "2026-09-26T12:47:39.285830+00:00",
+      "visualNotes": "新构建的首屏、中段与底部已逐图核对；展开讲讲已改为选填，默认封面保持比例，类型、状态和发布控件可见，无明显重叠或内容裁切。",
+      "differences": [
+        "已撤回旧图“展开讲讲强制必填”的UI问题，新图明确为“选填”且保留300字限制。",
+        "实际表单保留合作角色、更多设置与草稿入口；城市快捷项点击高度大于原型，这些增加了页面长度，已用三张截图覆盖。",
+        "粘贴区为空时没有确认按钮；粘贴识别、空介绍发布与键盘下可操作性不能靠静态截图证明，交互仍待闭环。",
+        "真实小程序保存尚未通过：微信侧未同步内容检查权限（-604101）。代码已具备最小权限声明，需获准使用开发者工具同步后再次实际提交。"
+      ],
+      "interactionStatus": "failed"
+    },
+    {
+      "id": "J4-05",
+      "name": "机会详情 · 发布人视角（分享机会）",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:56:21.186Z",
+      "actualSha256": "b3ed5539f8a816c9b5931b1d1e338d4d2166b430f228cfc54bce21de12b056e3",
+      "prototypeSha256": "867ec6c046e1a36169ccf2c9e073583b0afb7c137615b1d69c45948f586f40cd",
+      "reviewedAt": "2026-09-26T12:56:21.186Z",
+      "visualNotes": "本人已发布演示机会详情已核对；默认封面比例正常，信息卡与底部编辑/分享栏单层呈现，无列表定高挤压。",
+      "differences": [
+        "Demo 未配置金额，所以信息卡只展示已填写的内容；不生成虚构金额。",
+        "分享发送、编辑保存和内容删除尚未完成小程序真机闭环。",
+        "最新复拍为本轮演示机会恢复发布后的真实状态。",
+        "真实小程序保存尚未通过：微信侧未同步内容检查权限（-604101）。代码已具备最小权限声明，需获准使用开发者工具同步后再次实际提交。"
+      ],
+      "interactionStatus": "failed"
+    },
+    {
+      "id": "J4-06",
+      "name": "机会详情 · 发布人视角 · 不可点击状态",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:52:01.621Z",
+      "actualSha256": "9cf6b528bbf66c1c26c8a11ee2ae68b8ef881b2e290e188af7607082997eaefa",
+      "prototypeSha256": "9a715b158b5d72416416aa075d86f2f409118c23628ad30772c9c3b35098269b",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "本人已下架演示机会已重新实拍；分享按钮为深灰禁用态，编辑入口保留。未发布内容不再出现评论或错误的身份提示。",
+      "differences": [
+        "本图记录真实 UNPUBLISHED 状态；完成截图后通过后台恢复 PUBLISHED。",
+        "未把后台发布成功当作小程序编辑、分享或删除验收。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J5-01",
+      "name": "账号设置",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:17:47.661Z",
+      "actualSha256": "8c69917bd1deb3c8b13fb4fc5a045ea77df9974fdc58e0194945aef1f8d7a423",
+      "prototypeSha256": "8d9eddc831138c43efcc15443099df05910ebff64da39c4cf8ccfddef24f0d09",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "账号设置首屏和下半部分已核对：统一左右及分组间距，只保留分组标题；退出与注销没有双重按钮边框。",
+      "differences": [
+        "注销说明按需展开；仅验证展开与取消，没有真正注销账号。",
+        "退出登录确认/取消、确认退出、游客状态与重新微信登录已实际操作。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J5-02",
+      "name": "绑定手机 / 更换手机号",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:28:57.013Z",
+      "actualSha256": "edd2057500ee81a9e7750ad0a9f3d9f3cbe3da6e4f93688894a6687dfe8a5e0d",
+      "prototypeSha256": "e0834624f48ce345fdf0fd6cae21ea10f4e2f113548d07c56aa1c90981d2efce",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "真实已绑定手机号现在以脱敏形式正确展示；分组留白、输入行、验证码与底部确认按钮已复拍，无双层按钮或挤压。",
+      "differences": [
+        "原先错误显示未绑定已修复：从本人资料读取脱敏号码。",
+        "短信发送、微信手机号授权和真正换绑未执行，须真机测试。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J5-03",
+      "name": "隐私设置",
+      "status": "accepted-difference",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:14:46.361Z",
+      "actualSha256": "6399ce408e452135bfc55afbedb4e5b23690cb70aa52a7b403d25160a56b4cf6",
+      "prototypeSha256": "ec5870442f400bab6b272725106522c2299c12cc83bd8837ffc52ff6f23dcde9",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "隐私设置标题、行距和开关尺寸已复核，白色开关圆点恢复正常比例。",
+      "differences": [
+        "原型开关为开，当前账号真实偏好为关；没有为了截图修改用户隐私设置。",
+        "保存、重进回读与恢复偏好的交互待专用测试账号验证。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J5-04",
+      "name": "用户使用协议",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:53:35.554Z",
+      "actualSha256": "e104612c6125fe20298abd7cf1af3c9f2d1e48fc95a4e660d809ebdc7b78c2e7",
+      "prototypeSha256": "f513a7492fb02a19e999cd2ef44a19ed7e27c801de4be5f16ddf4fda7c0c4284",
+      "reviewedAt": "2026-09-26T12:55:13.504309+00:00",
+      "visualNotes": "用户协议已从后台读取并完整显示；演示标识、版本、段落与返回入口已逐图核对。",
+      "differences": [
+        "内容按用户授权使用可编辑演示协议；不视为最终正式服务条款。",
+        "用户协议与会员协议分别配置；部署后小程序回读正文摘要与数据库一致。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J6-01",
+      "name": "本人档案 · 合作卡（长按删除）",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:44:33.982Z",
+      "actualSha256": "f2fbb5bc789c29b7ab967619e2c7d13c2fab9347bc12a053c6a42a3aa6bd76be",
+      "prototypeSha256": "37e91ce566e5b42ab8268f09bac46a92f8fb99338e718969f8b6a66d3433bb59",
+      "reviewedAt": "2026-09-26T12:47:39.285830+00:00",
+      "visualNotes": "本人合作卡首屏与下方补图已核对，完整品牌封面、目标与引荐两行信息、添加入口及底部菜单均正常，无拉伸、叠框或横向越界。",
+      "differences": [
+        "真实演示卡的说明较长，卡片单行省略展示；数量为一张，不为匹配示例制造数据。",
+        "本人具有现场工作台权限，额外入口使合作卡开始位置下移；保留真实权限入口。",
+        "长按后取消与确认删除只应对演示数据验证；本轮图片本身不证明这些操作完成。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J6-02",
+      "name": "本人档案 · 超级案例（长按删除）",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:46:08.843Z",
+      "actualSha256": "a8f33cdfff4684c0a9c654978b52197a1f4ae972899ccaab13dbf44e61fa0d0a",
+      "prototypeSha256": "c23682e18feda63f6537d5b49fa51a68f26198d8ff243d7b3106ffc4c317b99b",
+      "reviewedAt": "2026-09-26T12:47:39.285830+00:00",
+      "visualNotes": "新构建首屏与底部补图已确认文件夹图标正常，黄色月份节点、案例卡与添加入口排列清晰；原错误文字切片已消除。",
+      "differences": [
+        "已用运行截图确认folder-5-line真实字形，旧icon-folder.png误裁文字问题关闭。",
+        "当前真实演示案例只有2026年9月一条；该条卡片正常，不代表跨月分组与删除后空组处理已验证。",
+        "现场工作台与底部团队PK/帮助客服是现有真实入口，与示例原型内容数量不同。"
+      ],
+      "interactionStatus": "pending"
+    },
+    {
+      "id": "J6-03",
+      "name": "本人档案 · 相关机会（长按删除）",
+      "status": "pass",
+      "actualSource": "devtools",
+      "capturedAt": "2026-09-26T12:40:17.176Z",
+      "actualSha256": "104547452cb97931a5283e94e6ebfac43ddc3ef1572b3e911778411c4aeed8af",
+      "prototypeSha256": "34d3de24737df4c27dde185c6874a7e9315f1b26eb2410f2a4177814563f7cbf",
+      "reviewedAt": "2026-09-26T12:41:54.141932+00:00",
+      "visualNotes": "真实本人档案中相关机会Tab、发布机会/我想合作切换、完整演示机会卡和添加入口已在首屏及底部补图核对；默认封面比例正常，卡片三行信息与合作数位置清晰。",
+      "differences": [
+        "当前真实账号有现场工作台入口，顶部比原型多一行；底部团队PK/帮助客服保留既有功能。",
+        "真实演示机会只有一条、合作数为0，原型两条示例与非零人数不作为布局缺陷；没有伪造头像或人数。",
+        "标签按最新语义为“我想合作”，与原型旧“引荐机会”文案不同；长按删除、取消与切换列表尚未在本次静态截图中闭环。"
+      ],
+      "interactionStatus": "pending"
+    }
+  ],
+  "reportNavigation": {
+    "visited": 43,
+    "uniqueHashes": 43,
+    "unloadedImages": 0
+  }
+}

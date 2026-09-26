@@ -53,7 +53,7 @@ behavior; they do not require replacing existing native components with React.
 | `CityCell` | `active`, children, `onClick` | 202×80rpx, 16rpx radius. Active brand/on-brand; default `#333333/#f7f7f7`. |
 | `SearchBar` | `placeholder=搜索`, `value`, `onChange` | 80rpx tall, 16rpx radius, `#202020`; 24rpx brand-adjacent search glyph and 28rpx input text. |
 | `AlphabetSlider` | `letters=A–Z#` | Absolute vertical slider; 22rpx/600 brand text. Parent must provide height and tap/move handling. |
-| `PrimaryButton` | children=`保存`, `onClick`, `disabled` | Outer 702×112rpx brand halo; inner 654×80rpx brand core with black keyline and 32rpx/500 on-brand text. Disabled uses 40% opacity. |
+| `PrimaryButton` | children=`保存`, `onClick`, `disabled` | Compose the existing `sticky-actions` outer halo with one `mip-pill-button` action; do not nest another halo-bearing button. Outer 702×112rpx; inner 654×80rpx brand core with black keyline and 32rpx/500 on-brand text. Disabled uses 40% opacity. |
 | `PillButton` | `variant=primary/secondary`, `icon` slot, children, `onClick` | 80rpx tall pill, black keyline, 32rpx/500 text. Primary brand/on-brand; secondary `#202020`/brand. |
 | `AddButton` | children=`添加`, `onClick` | 200rpx tall card, 16rpx radius, `#202020`, 1rpx brand dashed border with 4:4 pattern. Center a 28rpx filled plus + 28rpx/500 brand text with 8rpx gap. |
 | `Switch` | `checked`, `onChange` | 102×62rpx; on `#07c160`, off `#39393d`; 54rpx white knob with source shadow stack. |

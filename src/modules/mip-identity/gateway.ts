@@ -247,12 +247,12 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
       return profile(await call(transport, 'getProfile', {}))
     },
 
-    async getMembershipAgreement(): Promise<MembershipAgreement> {
-      const value = await call(transport, 'getMembershipAgreement', {})
+    async getMembershipAgreement(document?: 'membership' | 'user'): Promise<MembershipAgreement> {
+      const value = await call(transport, 'getMembershipAgreement', document ? { document } : {})
       const item = value as MembershipAgreement
       if (!item || typeof item.title !== 'string' || typeof item.body !== 'string'
         || typeof item.isDemo !== 'boolean' || !Number.isSafeInteger(item.version) || item.version < 0 || typeof item.updatedAt !== 'string') {
-        throw new MipIdentityGatewayError('INVALID_RESPONSE', '会员协议响应无效')
+        throw new MipIdentityGatewayError('INVALID_RESPONSE', '协议响应无效')
       }
       return { title: item.title, body: item.body, isDemo: item.isDemo, version: item.version, updatedAt: item.updatedAt }
     },

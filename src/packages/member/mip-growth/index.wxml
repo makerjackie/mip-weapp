@@ -19,15 +19,14 @@
       </view>
     </view>
 
-    <!-- figma 1948_14079: static three-point level scale (Lv.1 left / locked middle milestone
-         centered on the page / Lv.N right), markers bottom-aligned at impl raw y187. -->
-    <view wx:if="{{levelScale}}" class="relative mt-[26rpx] h-[64rpx]">
-      <view class="absolute bottom-0 left-[36rpx] whitespace-nowrap text-[20rpx] font-semibold leading-[28rpx] text-brand">{{levelScale.leftText}}</view>
-      <view class="absolute left-1/2 top-[30rpx] flex -translate-x-1/2 items-start">
-        <view wx:if="{{levelScale.centerLocked}}" class="mr-[11rpx] mt-[8rpx]"><mip-icon name="lock-fill" color="var(--color-brand)" /></view>
-        <view class="whitespace-nowrap text-[24rpx] font-semibold leading-[33.6rpx] text-brand">{{levelScale.centerText}}</view>
+    <!-- Latest role-flows J1-06 / J4-03: level milestones share a baseline below the curved hero. -->
+    <view wx:if="{{levelScale}}" class="growth-level-scale">
+      <view class="growth-level-point growth-level-point--first">{{levelScale.leftText}}</view>
+      <view class="growth-level-point growth-level-point--middle">
+        <view wx:if="{{levelScale.centerLocked}}" class="growth-level-lock"><mip-icon name="lock-fill" size="{{10}}" color="var(--color-brand)" /></view>
+        <text>{{levelScale.centerText}}</text>
       </view>
-      <view class="absolute bottom-0 right-[36rpx] whitespace-nowrap text-[20rpx] font-semibold leading-[28rpx] text-brand">{{levelScale.rightText}}</view>
+      <view class="growth-level-point growth-level-point--last">{{levelScale.rightText}}</view>
     </view>
 
     <!-- figma 1948_14079: benefits panel (12,199) 351×119 — title 16px semibold at panel
@@ -48,70 +47,75 @@
     <view wx:elif="{{tasksState === 'empty'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5 text-[22rpx] text-muted">暂无可完成的成长任务。</view>
     <view wx:else class="mx-3 mt-[24rpx] flex flex-col gap-[24rpx]">
       <!-- figma 3296:5808 经验任务卡：任务名 12px + 说明 10px + 「+ EXP N」黄字 + 右侧胶囊。 -->
-      <view wx:for="{{tasks}}" wx:key="id" class="flex min-h-[134rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3 py-3 active:bg-panel-muted" aria-role="button" aria-label="{{item.name}}，奖励 {{item.rewardExperience}} 经验" data-id="{{item.id}}" bind:tap="openTask">
+      <view wx:for="{{tasks}}" wx:key="id" class="growth-task-card active:bg-panel-muted" aria-role="button" aria-label="{{item.name}}，奖励 {{item.rewardExperience}} 经验" data-id="{{item.id}}" bind:tap="openTask">
         <view class="min-w-0 flex-1">
           <view class="truncate text-[24rpx] font-medium leading-[33.6rpx]">{{item.name}}</view>
           <view wx:if="{{item.content}}" class="mt-[6rpx] truncate text-[20rpx] leading-[28rpx] text-muted">{{item.content}}</view>
         </view>
-        <view class="shrink-0 whitespace-nowrap text-[28rpx] font-medium leading-[40rpx] text-brand">+ EXP {{item.rewardExperience}}</view>
-        <view wx:if="{{item.status === 'AVAILABLE'}}" class="flex h-[52rpx] min-w-[88rpx] shrink-0 items-center justify-center rounded-full border border-black bg-brand px-2 text-[24rpx] font-medium text-on-brand">{{item.actionText}}</view>
-        <view wx:elif="{{item.status === 'COMPLETED'}}" class="flex h-[52rpx] min-w-[88rpx] shrink-0 items-center justify-center rounded-full bg-canvas px-2 text-[24rpx] font-medium text-brand">{{item.actionText}}</view>
-        <view wx:else class="flex h-[52rpx] min-w-[88rpx] shrink-0 items-center justify-center rounded-full bg-canvas px-2 text-[24rpx] font-medium text-muted">{{item.actionText}}</view>
+        <view class="growth-task-reward"><text>+ EXP</text><text class="growth-task-reward__amount">{{item.rewardExperience}}</text></view>
+        <view wx:if="{{item.status === 'AVAILABLE'}}" class="growth-task-action border border-black bg-brand text-on-brand">{{item.actionText}}</view>
+        <view wx:elif="{{item.status === 'COMPLETED'}}" class="growth-task-action bg-canvas text-brand">{{item.actionText}}</view>
+        <view wx:else class="growth-task-action bg-canvas text-muted">{{item.actionText}}</view>
       </view>
     </view>
 
     <view class="mx-3 flex min-h-[88rpx] items-center justify-end"><view class="flex min-h-[88rpx] items-center text-[24rpx] text-muted" aria-role="button" aria-label="查看全部成长任务" bind:tap="openTasks">全部任务<mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></view>
-    <view class="mx-3 mt-4 text-[30rpx] font-bold">成长数据</view>
-    <view class="mx-3 mt-4 grid grid-cols-3 gap-3">
-      <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[32rpx] font-bold">{{snapshot.account.experienceBalance}}</view><view class="mt-1 text-[22rpx] text-muted">经验值</view></view>
-      <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[32rpx] font-bold">{{snapshot.account.contributionBalance}}</view><view class="mt-1 text-[22rpx] text-muted">贡献值</view></view>
-      <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[32rpx] font-bold">{{snapshot.account.coinBalance}}</view><view class="mt-1 text-[22rpx] text-muted">游戏币</view></view>
-    </view>
-
-    <view id="growth-levels-section" class="mx-3 mt-6 text-[30rpx] font-bold">等级与权益</view>
-    <view class="mx-3 mt-3 flex flex-col gap-3">
-      <view wx:for="{{levels}}" wx:key="id" class="rounded-[16rpx] border border-line bg-panel px-4 py-4">
-        <view class="flex items-center justify-between gap-3"><view class="text-[24rpx] font-semibold">{{item.name}}</view><view wx:if="{{item.current}}" class="rounded-full bg-brand-soft px-3 py-1 text-[22rpx] text-brand">当前等级</view></view>
-        <view class="mt-2 text-[22rpx] text-muted">{{item.thresholdText}}</view>
-        <view wx:if="{{item.benefits.length}}" class="mt-3 flex flex-col gap-2"><view wx:for="{{item.benefits}}" wx:for-item="benefit" wx:key="*this" class="text-[22rpx] text-muted">{{benefit}}</view></view>
-        <view wx:else class="mt-3 text-[22rpx] text-muted">暂未配置等级权益。</view>
+    <view wx:if="{{experienceDetailsOpen}}">
+      <view id="growth-details-section" class="mx-3 mt-4 flex items-center justify-between gap-3">
+        <view class="text-[30rpx] font-bold">成长数据</view>
+        <view class="flex min-h-[88rpx] items-center text-[24rpx] text-brand" aria-role="button" bind:tap="closeExperienceDetails">收起详情</view>
       </view>
-    </view>
-
-    <view class="mx-3 mt-6 text-[30rpx] font-bold">成长规则</view>
-    <view wx:if="{{earningRules.length === 0}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-5 text-[22rpx] text-muted">暂无启用的成长规则。</view>
-    <view wx:else class="mx-3 mt-3 flex flex-col gap-3">
-      <view wx:for="{{earningRules}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-center justify-between gap-3"><view class="min-w-0 flex-1 text-[24rpx] font-semibold">{{item.name}}</view><view class="shrink-0 text-[24rpx] font-semibold text-brand">{{item.deltaText}}</view></view><view class="mt-2 text-[22rpx] text-muted">{{item.dailyLimitText}}</view></view>
-    </view>
-
-    <view class="mx-3 mt-6 text-[30rpx] font-bold">成长流水</view>
-    <view wx:if="{{entries.length === 0}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-7 text-center text-[24rpx] text-muted">暂无成长记录。</view>
-    <view wx:else class="mx-3 mt-3 flex flex-col gap-3">
-      <view wx:for="{{entries}}" wx:key="id" class="flex items-center justify-between gap-4 rounded-[16rpx] bg-panel px-4 py-4">
-        <view class="min-w-0 flex-1"><view class="line-clamp-1 text-[24rpx] font-semibold">{{item.ruleName || item.metricLabel}}</view><view class="mt-1 text-[22rpx] text-muted">{{item.createdText}}</view></view>
-        <view class="text-right"><view class="text-[28rpx] font-bold text-brand">{{item.deltaText}}</view><view class="mt-1 text-[22rpx] text-muted">余额 {{item.balanceAfter}}</view></view>
+      <view class="mx-3 mt-4 grid grid-cols-3 gap-3">
+        <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[32rpx] font-bold">{{snapshot.account.experienceBalance}}</view><view class="mt-1 text-[22rpx] text-muted">经验值</view></view>
+        <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[32rpx] font-bold">{{snapshot.account.contributionBalance}}</view><view class="mt-1 text-[22rpx] text-muted">贡献值</view></view>
+        <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[32rpx] font-bold">{{snapshot.account.coinBalance}}</view><view class="mt-1 text-[22rpx] text-muted">游戏币</view></view>
       </view>
+
+      <view id="growth-levels-section" class="mx-3 mt-6 text-[30rpx] font-bold">等级与权益</view>
+      <view class="mx-3 mt-3 flex flex-col gap-3">
+        <view wx:for="{{levels}}" wx:key="id" class="rounded-[16rpx] border border-line bg-panel px-4 py-4">
+          <view class="flex items-center justify-between gap-3"><view class="text-[24rpx] font-semibold">{{item.name}}</view><view wx:if="{{item.current}}" class="rounded-full bg-brand-soft px-3 py-1 text-[22rpx] text-brand">当前等级</view></view>
+          <view class="mt-2 text-[22rpx] text-muted">{{item.thresholdText}}</view>
+          <view wx:if="{{item.benefits.length}}" class="mt-3 flex flex-col gap-2"><view wx:for="{{item.benefits}}" wx:for-item="benefit" wx:key="*this" class="text-[22rpx] text-muted">{{benefit}}</view></view>
+          <view wx:else class="mt-3 text-[22rpx] text-muted">暂未配置等级权益。</view>
+        </view>
+      </view>
+
+      <view class="mx-3 mt-6 text-[30rpx] font-bold">成长规则</view>
+      <view wx:if="{{earningRules.length === 0}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-5 text-[22rpx] text-muted">暂无启用的成长规则。</view>
+      <view wx:else class="mx-3 mt-3 flex flex-col gap-3">
+        <view wx:for="{{earningRules}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-center justify-between gap-3"><view class="min-w-0 flex-1 text-[24rpx] font-semibold">{{item.name}}</view><view class="shrink-0 text-[24rpx] font-semibold text-brand">{{item.deltaText}}</view></view><view class="mt-2 text-[22rpx] text-muted">{{item.dailyLimitText}}</view></view>
+      </view>
+
+      <view class="mx-3 mt-6 text-[30rpx] font-bold">成长流水</view>
+      <view wx:if="{{entries.length === 0}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-7 text-center text-[24rpx] text-muted">暂无成长记录。</view>
+      <view wx:else class="mx-3 mt-3 flex flex-col gap-3">
+        <view wx:for="{{entries}}" wx:key="id" class="flex items-center justify-between gap-4 rounded-[16rpx] bg-panel px-4 py-4">
+          <view class="min-w-0 flex-1"><view class="line-clamp-1 text-[24rpx] font-semibold">{{item.ruleName || item.metricLabel}}</view><view class="mt-1 text-[22rpx] text-muted">{{item.createdText}}</view></view>
+          <view class="text-right"><view class="text-[28rpx] font-bold text-brand">{{item.deltaText}}</view><view class="mt-1 text-[22rpx] text-muted">余额 {{item.balanceAfter}}</view></view>
+        </view>
+      </view>
+      <view wx:if="{{nextCursor}}" class="mx-3 mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
     </view>
-    <view wx:if="{{nextCursor}}" class="mx-3 mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
     <view wx:if="{{message}}" class="mx-3 mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
     <view class="mx-3"><app-page-exit /></view>
   </block>
 
   <!-- J1-06 开通态：无有效会员时底部仅「立即加入」→ 会员订单确认页（J1-07）；本页不展示金额。 -->
   <mip-sticky-actions wx:if="{{membershipState === 'guest'}}">
-    <view id="growth-join-actions" slot="actions" class="flex h-[112rpx] w-full items-center px-2">
+    <view id="growth-join-actions" slot="actions" class="flex h-[80rpx] w-full items-center px-2">
       <button class="m-0 flex h-[80rpx] w-full items-center justify-center gap-2 rounded-full border border-black bg-brand p-0 text-[32rpx] font-medium leading-[80rpx] text-on-brand active:bg-brand-active" aria-label="立即加入玩家" bind:tap="openMembershipOrder"><mip-icon name="share-circle" size="{{15}}" color="var(--color-on-brand)" /><text>立即加入</text></button>
     </view>
   </mip-sticky-actions>
   <mip-sticky-actions wx:elif="{{membershipState === 'error'}}">
-    <view slot="actions" class="flex h-[112rpx] w-full items-center px-2">
+    <view slot="actions" class="flex h-[80rpx] w-full items-center px-2">
       <button class="m-0 flex h-[80rpx] w-full items-center justify-center rounded-full border border-line bg-panel p-0 text-[28rpx] font-medium text-brand" aria-label="重新加载会员状态" bind:tap="loadMembershipActions">重新加载会员状态</button>
     </view>
   </mip-sticky-actions>
 
   <!-- J4-03 续费态：「邀请加入」常驻；「立即续费」仅到期前 3 个月展示（figma 2165:17142）→ 同一会员订单页。 -->
   <mip-sticky-actions wx:if="{{isPlayer}}">
-    <view id="growth-member-actions" slot="actions" class="flex h-[112rpx] w-full items-center gap-2">
+    <view id="growth-member-actions" slot="actions" class="flex h-[80rpx] w-full items-center gap-2">
       <button open-type="share" disabled="{{!invitationReady}}" class="m-0 flex h-[80rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-panel p-0 text-[32rpx] font-medium leading-[80rpx] text-brand disabled:opacity-50" aria-label="邀请加入 MIP"><mip-icon name="share-circle" size="{{15}}" color="var(--color-brand)" /><text>邀请加入</text></button>
       <button wx:if="{{renewWindowOpen}}" class="m-0 flex h-[80rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand p-0 text-[32rpx] font-medium leading-[80rpx] text-on-brand active:bg-brand-active" aria-label="进入会员订单续费" bind:tap="renewMembership"><t-icon name="card" size="30rpx" color="var(--color-on-brand)" /><text>立即续费</text></button>
     </view>

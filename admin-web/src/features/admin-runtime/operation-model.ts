@@ -27,6 +27,7 @@ import {
   type AdminPeopleMutationAction,
 } from '../../modules/admin-people-mutation-forms'
 import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
+import { contentFormValues, normalizeContentFields } from '../../modules/content-form-values'
 import type { AdminOperationLaunchContext } from '../../modules/admin-row-operations'
 import {
   ADMIN_TASK_MUTATION_ACTIONS,
@@ -43,7 +44,6 @@ import {
 import {
   ADMIN_CONTENT_MUTATION_ACTIONS,
   getContentMutationForm,
-  USER_CONTENT_ROLE_FIELDS,
   validateContentMutation,
   type ContentMutationAction,
 } from '../../modules/content-mutation-forms'
@@ -224,7 +224,7 @@ export async function createOperationModel(
     values,
     idempotencyKey,
     buildInput: (next) => {
-      const normalized = contentValues(typedAction, next, idempotencyKey)
+      const normalized = contentFormValues(typedAction, next, idempotencyKey)
       if (trustedTarget) normalized[targetKey] = trustedTarget
       if (trustedVersion !== undefined) normalized.expectedVersion = trustedVersion
       const result = validateContentMutation(typedAction, normalized)
@@ -511,55 +511,6 @@ function defaultValues(fields: readonly OperationField[]): OperationValues {
   return values
 }
 
-function contentValues(action: ContentMutationAction, values: OperationValues, idempotencyKey: string) {
-  const next = pruneEmptyGroups({ ...values })
-  const form = getContentMutationForm(action)
-  if (form.idempotencyRequired) next.idempotencyKey = idempotencyKey
-  if (action === 'mip.admin.opportunities.save') {
-    const draft = record(next.draft)
-    const terms = record(draft.commercialTerms)
-    if (!terms.minAmountCents && !terms.maxAmountCents && !Array.isArray(terms.locations)) delete draft.commercialTerms
-    next.draft = draft
-  }
-  if (action === 'mip.admin.userContent.save') next.draft = userContentDraft(next)
-  return next
-}
-
-function userContentDraft(values: OperationValues) {
-  const kind = String(values.kind || '')
-  const draft = record(values.draft)
-  if (kind === 'COOPERATION_CARD') {
-    const roleKey = String(draft.roleKey || '') as keyof typeof USER_CONTENT_ROLE_FIELDS
-    const sourceRoleFields = record(draft.roleFields)
-    const roleFields = Object.fromEntries((USER_CONTENT_ROLE_FIELDS[roleKey] || [])
-      .flatMap(key => nonEmpty(sourceRoleFields[key]) ? [[key, sourceRoleFields[key]]] : []))
-    return {
-      kind,
-      roleKey,
-      positioning: draft.positioning,
-      targetSummary: draft.targetSummary,
-      roleFields,
-      abilityScores: record(draft.abilityScores),
-      status: draft.status,
-    }
-  }
-  const output: OperationValues = { kind }
-  for (const key of ['projectName', 'summary', 'startedOn', 'endedOn', 'responsibility', 'cityTagId', 'industryTagId', 'caseType', 'description', 'coverAssetId', 'mediaAssetIds', 'status']) {
-    const value = draft[key]
-    if (value !== undefined && (nonEmpty(value) || key === 'mediaAssetIds')) output[key] = dateOnly(key, value)
-  }
-  return output
-}
-
-function dateOnly(key: string, value: unknown) {
-  return ['startedOn', 'endedOn'].includes(key) && typeof value === 'string' && value.length >= 10
-    ? value.slice(0, 10)
-    : value
-}
-
-function nonEmpty(value: unknown) {
-  return Array.isArray(value) ? value.length > 0 : typeof value === 'string' ? Boolean(value.trim()) : value !== undefined && value !== null
-}
 
 function mergeValues(base: OperationValues, override: OperationValues): OperationValues {
   const output = { ...base }
@@ -567,26 +518,6 @@ function mergeValues(base: OperationValues, override: OperationValues): Operatio
     output[key] = value && typeof value === 'object' && !Array.isArray(value)
       ? mergeValues(record(output[key]), value as OperationValues)
       : value
-  }
-  return output
-}
-
-function normalizeContentFields(fields: readonly OperationField[]): readonly OperationField[] {
-  return fields.map(field => ({
-    ...field,
-    ...(String(field.key || field.name || '') === 'roleKeys' ? { kind: 'multi-select' } : {}),
-    ...(field.fields ? { fields: normalizeContentFields(field.fields) } : {}),
-  })) as readonly OperationField[]
-}
-
-function pruneEmptyGroups(value: OperationValues): OperationValues {
-  const output: OperationValues = {}
-  for (const [key, item] of Object.entries(value)) {
-    if (item && typeof item === 'object' && !Array.isArray(item)) {
-      const nested = pruneEmptyGroups(item as OperationValues)
-      if (Object.keys(nested).length) output[key] = nested
-    }
-    else output[key] = item
   }
   return output
 }

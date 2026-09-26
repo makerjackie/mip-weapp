@@ -1,4 +1,4 @@
-<view id="mip-received-interactions-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-received-interactions-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-3 text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="flex flex-col gap-3">
     <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
@@ -24,7 +24,7 @@
          头像/红心徽标/邀请人徽标 PNG 烘焙自参考稿；Lv、标签、简介、心动计数都是
          设计前瞻字段（listReceived DTO 暂无），记 ui-fidelity manifest notes。 -->
     <block wx:if="{{figmaLayout && figma.cards}}">
-      <view class="-mx-4 -mt-4 relative min-h-[1400rpx]">
+      <view class="-mx-3 -mt-3 relative min-h-[1400rpx]">
         <view wx:if="{{figma.search}}" class="absolute flex h-[80rpx] items-center gap-[16rpx] rounded-[16rpx] bg-panel px-[16rpx]" style="left:24rpx;top:{{figma.searchTopRpx}}rpx;width:702rpx">
           <view class="flex h-[40rpx] w-[40rpx] shrink-0 items-center justify-center"><mip-icon name="search-big-left-1" size="{{20}}" color="var(--color-muted)" /></view>
           <view class="text-[28rpx] leading-[40rpx] text-muted">{{figma.search}}</view>
@@ -87,17 +87,19 @@
         <view wx:if="{{searchInput}}" class="shrink-0 text-[22rpx] text-muted" aria-role="button" aria-label="清除搜索内容" bind:tap="clearSearch">清除</view>
       </view>
       <mip-empty-state wx:if="{{state === 'empty' || (category === 'INTERACTION' && !displayItems.length)}}" title="{{category === 'GUEST' ? '暂无嘉宾' : category === 'INTERACTION' ? '暂无互动' : category === 'ACTIVE_INTEREST' ? '暂无心动' : '暂无访客记录'}}" description="{{category === 'GUEST' ? '通过你的邀请参加活动且公开资料的嘉宾会显示在这里。' : category === 'INTERACTION' ? '与你同场签到过活动的用户会显示在这里。' : category === 'ACTIVE_INTEREST' ? '当前对你标记感兴趣的用户会显示在这里。' : '公开档案的访客会显示在这里。'}}" />
-      <view wx:else class="mt-4 grid grid-cols-2 gap-[16rpx]">
-        <view wx:for="{{displayItems}}" wx:key="viewKey" class="relative min-h-[374rpx] overflow-hidden rounded-[16rpx] bg-panel px-[20rpx] pt-[32rpx] text-center active:bg-panel-raised" aria-role="button" aria-label="查看{{item.actorName}}的公开档案" data-key="{{item.viewKey}}" bind:tap="openInteraction">
-          <view wx:if="{{item.countBadge}}" class="absolute right-[20rpx] top-[16rpx] text-[20rpx] font-medium leading-[28rpx] text-muted">{{item.countBadge}}</view>
+      <view wx:else class="grid grid-cols-2 gap-[24rpx] {{category === 'INTERACTION' ? 'mt-3' : ''}}">
+        <!-- GuestCard 的真实资料布局；未返回的等级、行业与勋章不生成占位数据。 -->
+        <view wx:for="{{displayItems}}" wx:key="viewKey" class="relative flex min-h-[374rpx] min-w-0 flex-col overflow-hidden rounded-[16rpx] bg-panel px-[24rpx] pb-[16rpx] pt-[16rpx] active:bg-panel-raised" aria-role="button" aria-label="查看{{item.actorName}}的公开档案" data-key="{{item.viewKey}}" bind:tap="openInteraction">
+          <view wx:if="{{item.countBadge}}" class="absolute right-[4rpx] top-[6rpx] flex min-w-[52rpx] items-center justify-center rounded-full border border-canvas bg-brand px-[8rpx] text-[20rpx] font-semibold leading-[28rpx] text-on-brand">{{item.countBadge}}</view>
           <view wx:if="{{item.unread}}" class="absolute left-[20rpx] top-[20rpx] h-[16rpx] w-[16rpx] rounded-full bg-danger" aria-label="未读" />
-          <view class="flex justify-center">
+          <view class="flex shrink-0 justify-center">
             <image wx:if="{{item.actorAvatarUrl}}" class="h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.actorAvatarUrl}}" />
             <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[32rpx] font-semibold text-brand">{{item.actorInitial}}</view>
           </view>
-          <view class="mt-[16rpx] truncate text-[32rpx] font-medium leading-[44.8rpx]">{{item.actorName}}</view>
-          <view wx:if="{{item.metaText}}" class="mt-[8rpx] truncate text-[20rpx] leading-[28rpx] text-muted">{{item.metaText}}</view>
-          <view wx:if="{{item.noteText}}" class="mt-[8rpx] truncate text-[20rpx] leading-[28rpx] text-muted">{{item.noteText}}</view>
+          <view class="mt-[16rpx] truncate text-center text-[32rpx] font-medium leading-[44.8rpx]">{{item.actorName}}</view>
+          <view wx:if="{{item.statusText}}" class="mt-[8rpx] truncate text-center text-[20rpx] font-medium leading-[34rpx] text-ink">{{item.statusText}}</view>
+          <view wx:if="{{item.actorHeadline}}" class="mt-[8rpx] line-clamp-2 text-[20rpx] leading-[28rpx] text-muted">{{item.actorHeadline}}</view>
+          <view wx:if="{{item.noteText}}" class="mt-auto pt-[24rpx] text-right"><view class="truncate text-[20rpx] leading-[40rpx] text-muted">{{item.noteText}}</view></view>
         </view>
       </view>
       <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
@@ -120,14 +122,16 @@
       <!-- journey-review J3-07：「对我心动」行红点为死 UI 已移除（listActiveInfluenceInterests
            硬编码 unread:false 且无 messageId，无服务端未读事实可清）；presenter unread 字段保留，
            服务端补口径后再恢复节点（.tmp/shared-change-requests.md）。 -->
-      <view wx:else class="grid grid-cols-2 gap-[16rpx]">
-        <view wx:for="{{displayItems}}" wx:key="viewKey" class="relative min-h-[374rpx] overflow-hidden rounded-[16rpx] bg-panel px-[20rpx] pt-[32rpx] text-center active:bg-panel-raised" aria-role="button" aria-label="查看{{item.actorName}}的公开档案" data-key="{{item.viewKey}}" bind:tap="openInteraction">
-          <view class="flex justify-center">
+      <view wx:else class="grid grid-cols-2 gap-[24rpx]">
+        <view wx:for="{{displayItems}}" wx:key="viewKey" class="relative flex min-h-[374rpx] min-w-0 flex-col overflow-hidden rounded-[16rpx] bg-panel px-[24rpx] pb-[16rpx] pt-[16rpx] active:bg-panel-raised" aria-role="button" aria-label="查看{{item.actorName}}的公开档案" data-key="{{item.viewKey}}" bind:tap="openInteraction">
+          <image class="absolute right-[16rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-heart-fill.png" mode="aspectFit" aria-label="{{category === 'OUTBOUND_INTEREST' ? '我已心动' : '对我心动'}}" />
+          <view class="flex shrink-0 justify-center">
             <image wx:if="{{item.actorAvatarUrl}}" class="h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.actorAvatarUrl}}" />
             <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[32rpx] font-semibold text-brand">{{item.actorInitial}}</view>
           </view>
-          <view class="mt-[16rpx] truncate text-[32rpx] font-medium leading-[44.8rpx]">{{item.actorName}}</view>
-          <view wx:if="{{item.metaText}}" class="mt-[8rpx] truncate text-[20rpx] leading-[28rpx] text-muted">{{item.metaText}}</view>
+          <view class="mt-[16rpx] truncate text-center text-[32rpx] font-medium leading-[44.8rpx]">{{item.actorName}}</view>
+          <view wx:if="{{item.statusText}}" class="mt-[8rpx] truncate text-center text-[20rpx] font-medium leading-[34rpx] text-ink">{{item.statusText}}</view>
+          <view wx:if="{{item.actorHeadline}}" class="mt-[8rpx] line-clamp-2 text-[20rpx] leading-[28rpx] text-muted">{{item.actorHeadline}}</view>
         </view>
       </view>
       <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>

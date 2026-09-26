@@ -56,9 +56,14 @@ Page({
         mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
         return
       }
+      // Access snapshots omit private contact data; only the caller's profile exposes its masked phone.
+      const profile = await mipIdentityModule.getProfile()
+      if (!this.active) {
+        return
+      }
       this.setData({
         state: 'ready',
-        currentPhoneMasked: snapshot.profile.privateContact?.phoneMasked || '',
+        currentPhoneMasked: profile.privateContact?.phoneMasked || (snapshot.phoneBound ? '已绑定手机号' : ''),
       })
     }
     catch (error) {
@@ -236,7 +241,7 @@ Page({
     this.setData({
       loginSheetOpen: false,
       loginSheetBusy: false,
-      currentPhoneMasked: snapshot.profile.privateContact?.phoneMasked || this.data.currentPhoneMasked,
+      currentPhoneMasked: snapshot.phoneBound ? '已绑定手机号' : '',
       newPhone: '',
       smsCode: '',
       sendCountdown: 0,

@@ -77,7 +77,7 @@
         </view>
         <view wx:for="{{figma.cases}}" wx:key="month" class="absolute left-[49rpx] h-[24rpx] w-[24rpx] rounded-full bg-brand" style="top:{{1021 + index * 224}}rpx" />
         <view wx:for="{{figma.cases}}" wx:key="month" class="absolute h-[126rpx] w-[578rpx] rounded-[16rpx] bg-panel" style="left:124rpx;top:{{1082 + index * 224}}rpx">
-          <image class="absolute left-[22rpx] top-[19rpx] h-[28rpx] w-[28rpx]" src="/assets/figma/profile/icon-folder.png" />
+          <view class="absolute left-[22rpx] top-[19rpx] h-[28rpx] w-[28rpx]"><mip-icon name="folder-5-line" size="{{14}}" color="var(--color-ink)" /></view>
           <text class="absolute left-[64rpx] top-[16rpx] text-[28rpx] font-medium leading-[40rpx] text-ink">{{item.title}}</text>
           <text class="absolute left-[24rpx] top-[62rpx] text-[24rpx] leading-[33.6rpx] text-muted">{{item.summary}}</text>
         </view>
@@ -199,7 +199,7 @@
           <view wx:for="{{cases}}" wx:key="id" class="profile-case-entry">
             <view class="profile-case-month">{{item.monthLabel}}</view>
             <view class="profile-case-card {{removingPortfolioId === item.id ? 'opacity-50' : ''}}" data-id="{{item.id}}" aria-label="{{item.projectName}}，长按删除" bind:tap="openCase" bind:longpress="deleteCase">
-              <view class="profile-case-title-row"><image src="/assets/figma/profile/icon-folder.png" mode="aspectFit" /><text class="profile-content-title">{{item.projectName}}</text></view>
+              <view class="profile-case-title-row"><view class="profile-case-icon"><mip-icon name="folder-5-line" size="{{14}}" color="var(--color-ink)" /></view><text class="profile-content-title">{{item.projectName}}</text></view>
               <view class="profile-content-summary">{{item.summary}}</view>
             </view>
           </view>

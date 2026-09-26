@@ -16,7 +16,7 @@ const primitives = [
   'mip-section-header',
   'mip-tag-chip',
   'mip-search-bar',
-  'mip-primary-button',
+  'sticky-actions',
   'mip-pill-button',
   'mip-nav-bar',
   'mip-order-card',
@@ -58,9 +58,10 @@ describe('MIP Design System native primitives', () => {
     const search = read('src/components/mip-search-bar/index.ts')
     expect(search).toContain('triggerEvent(\'change\', { value })')
 
-    const primary = read('src/components/mip-primary-button/index.wxml')
-    expect(primary).toContain('disabled="{{disabled || loading}}"')
-    expect(read('src/components/mip-primary-button/index.wxss')).toContain('opacity: 0.4')
+    const pill = read('src/components/mip-pill-button/index.wxml')
+    expect(pill).toContain('aria-disabled="{{disabled || loading}}"')
+    expect(read('src/components/mip-pill-button/index.wxss')).toContain('opacity: 0.4')
+    expect(read('src/components/sticky-actions/index.wxml')).toContain('<slot name="actions" />')
   })
 
   it('implements business primitives with reference geometry', () => {
@@ -87,7 +88,8 @@ describe('MIP Design System native primitives', () => {
   it('renders components instead of repeated page-owned primitive markup', () => {
     const privacy = read('src/packages/member/privacy/index.wxml')
     expect(privacy).toContain('<mip-section-header title="账号与安全" />')
-    expect(privacy).toContain('<mip-section-header class="mt-[48rpx]" title="协议" />')
+    // Spacing belongs to the native wrapper; the shared header still renders the title.
+    expect(privacy).toMatch(/<view class="mt-\[48rpx\]">\s*<mip-section-header title="协议" \/>/)
     expect(privacy).toContain('<mip-detail-row-group')
     expect(privacy).toContain('<mip-detail-row label="绑定手机" actionable="{{true}}" bind:tap="openBindPhone" />')
     expect(privacy).toContain('<mip-detail-row label="隐私设置" actionable="{{true}}" bind:tap="openPrivacySettings" />')

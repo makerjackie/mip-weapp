@@ -13,6 +13,10 @@ describe('MIP growth player actions', () => {
       path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxml'),
       'utf8',
     )
+    const styles = fs.readFileSync(
+      path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxss'),
+      'utf8',
+    )
 
     expect(script).toContain('mipCommerceModule.getMembershipBenefits()')
     expect(script).toContain('mipCommerceModule.createMembershipInvitation()')
@@ -35,7 +39,11 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('wx:for="{{tasks}}"')
     // 最新 J1-06 原型：可执行任务使用黄底胶囊，完成态与未开放态保持区分。
     expect(template).toContain('wx:if="{{item.status === \'AVAILABLE\'}}"')
-    expect(template).toContain('rounded-full border border-black bg-brand px-2 text-[24rpx] font-medium text-on-brand')
+    expect(template).toContain('growth-task-action border border-black bg-brand text-on-brand')
+    const taskAction = styles.match(/\.growth-task-action\s*\{([^}]+)\}/)?.[1]
+    expect(taskAction).toContain('height: 52rpx')
+    expect(taskAction).toContain('font-size: 24rpx')
+    expect(taskAction).toContain('border-radius: 9999rpx')
     expect(template).toContain('id="growth-member-actions"')
     expect(template).toContain('id="growth-join-actions"')
     expect(template).toContain('<mip-sticky-actions')

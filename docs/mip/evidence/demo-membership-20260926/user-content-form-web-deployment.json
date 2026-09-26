@@ -1,0 +1,128 @@
+{
+  "deployedAt": "2026-09-26T12:22:30.866Z",
+  "project": "mip-admin-web",
+  "branch": "main",
+  "assetDirectory": "assets/release-forms-20260926",
+  "deploymentUrls": [
+    "https://2cb32a54.mip-admin-web.pages.dev"
+  ],
+  "liveUrl": "https://mipmini.01mvp.com",
+  "realSessionReadback": {
+    "status": "PASSED_REAL_WEB_CREATE_AND_PUBLISH",
+    "recordedAt": "2026-09-26T12:34:33.758671+00:00",
+    "source": "Parent agent witnessed authorized logged-in Web creation of the three demo records and opportunity publication. Independently read exact owner-scoped demo title rows through project CloudBase MCP.",
+    "currentDatabaseStates": [
+      {
+        "kind": "COOPERATION_CARD",
+        "status": "PUBLISHED",
+        "count": 1
+      },
+      {
+        "kind": "SUPER_CASE",
+        "status": "PUBLISHED",
+        "count": 1
+      },
+      {
+        "kind": "OPPORTUNITY",
+        "status": "UNPUBLISHED",
+        "count": 1
+      }
+    ],
+    "note": "Parent agent confirmed the opportunity was temporarily UNPUBLISHED for the J4-06 acceptance screenshot and will restore publication. No content state was changed by the evidence check.",
+    "userFactWritesByEvidenceCheck": 0
+  },
+  "httpReadback": {
+    "checkedAt": "2026-09-26T12:22:48.133Z",
+    "passed": true,
+    "checks": [
+      {
+        "origin": "https://2cb32a54.mip-admin-web.pages.dev",
+        "htmlSha256": "9193cabcdcc26063d75f200709a941cebb7034540605826f5f1dfefdff227eb3",
+        "assets": [
+          {
+            "path": "/assets/release-forms-20260926/index-Cp7WLACe.js",
+            "sha256": "c0a22ee418b1b04aa2de1ca6d2665be93321fa8376df7678db7ce284d420898e",
+            "bytes": 333656
+          },
+          {
+            "path": "/assets/release-forms-20260926/rolldown-runtime-CbXtAM7H.js",
+            "sha256": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+            "bytes": 589
+          },
+          {
+            "path": "/assets/release-forms-20260926/react-DXf84zf0.js",
+            "sha256": "9e43591c1f2a1bfbb7f5b2823ec6b0e30ae953d92172a1d1422799d1ad08376c",
+            "bytes": 189647
+          },
+          {
+            "path": "/assets/release-forms-20260926/tanstack-8LAzoMjY.js",
+            "sha256": "0566f9e716326de723310adf3960808c3d98dd95e2c58b32d9bbe86e59dd3576",
+            "bytes": 110723
+          },
+          {
+            "path": "/assets/release-forms-20260926/ant-design-C7X15AGZ.js",
+            "sha256": "bc9ff5536d30e2305682fff810cf8f213725ec468061ad30fcc42ce9164ca2e3",
+            "bytes": 1103675
+          },
+          {
+            "path": "/assets/release-forms-20260926/index-TyQgWoXb.css",
+            "sha256": "b884e2a7483c02a42f697bf1914f766da9339c510b615c5328ce278dc4279615",
+            "bytes": 14534
+          }
+        ]
+      },
+      {
+        "origin": "https://mipmini.01mvp.com",
+        "htmlSha256": "9193cabcdcc26063d75f200709a941cebb7034540605826f5f1dfefdff227eb3",
+        "assets": [
+          {
+            "path": "/assets/release-forms-20260926/index-Cp7WLACe.js",
+            "sha256": "c0a22ee418b1b04aa2de1ca6d2665be93321fa8376df7678db7ce284d420898e",
+            "bytes": 333656
+          },
+          {
+            "path": "/assets/release-forms-20260926/rolldown-runtime-CbXtAM7H.js",
+            "sha256": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+            "bytes": 589
+          },
+          {
+            "path": "/assets/release-forms-20260926/react-DXf84zf0.js",
+            "sha256": "9e43591c1f2a1bfbb7f5b2823ec6b0e30ae953d92172a1d1422799d1ad08376c",
+            "bytes": 189647
+          },
+          {
+            "path": "/assets/release-forms-20260926/tanstack-8LAzoMjY.js",
+            "sha256": "0566f9e716326de723310adf3960808c3d98dd95e2c58b32d9bbe86e59dd3576",
+            "bytes": 110723
+          },
+          {
+            "path": "/assets/release-forms-20260926/ant-design-C7X15AGZ.js",
+            "sha256": "bc9ff5536d30e2305682fff810cf8f213725ec468061ad30fcc42ce9164ca2e3",
+            "bytes": 1103675
+          },
+          {
+            "path": "/assets/release-forms-20260926/index-TyQgWoXb.css",
+            "sha256": "b884e2a7483c02a42f697bf1914f766da9339c510b615c5328ce278dc4279615",
+            "bytes": 14534
+          }
+        ]
+      }
+    ]
+  },
+  "sourceBaseCommit": "a572418dee8bebc1063568d4b931ca90afa8a6a7",
+  "sourceWorkingTreeDirty": true,
+  "validation": {
+    "command": "pnpm admin:web:verify",
+    "status": "PASSED",
+    "contractTests": 150,
+    "reactTestFiles": 14,
+    "reactTests": 71,
+    "focusedTests": 18,
+    "realFormRegressionCases": [
+      "connector to strategist preserves only strategist draft fields",
+      "cooperation card to case omits optional empty media and tags",
+      "opportunity submits multiple role keys without incomplete commercial terms"
+    ],
+    "diffCheck": "PASSED"
+  }
+}

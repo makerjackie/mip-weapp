@@ -77,7 +77,6 @@ Page({
     titleError: '',
     valueSummaryError: '',
     targetSummaryError: '',
-    descriptionError: '',
     roleError: '',
     playersOnly: false,
     scopeType: 'PLATFORM' as 'PLATFORM' | 'BRANCH',
@@ -234,7 +233,6 @@ Page({
       titleError: '',
       valueSummaryError: '',
       targetSummaryError: '',
-      descriptionError: '',
       roleError: '',
       playersOnly: detail?.playersOnly === true,
       scopeType: detail?.branchId ? 'BRANCH' : 'PLATFORM',
@@ -270,7 +268,10 @@ Page({
     if (!['title', 'valueSummary', 'targetSummary', 'description', 'regionText'].includes(field)) {
       return
     }
-    this.setData({ [field]: event.detail.value, [`${field}Error`]: '' })
+    this.setData({
+      [field]: event.detail.value,
+      ...(['title', 'valueSummary', 'targetSummary'].includes(field) ? { [`${field}Error`]: '' } : {}),
+    })
   },
 
   /**
@@ -353,7 +354,7 @@ Page({
       ...(draft.title ? { title: draft.title, titleError: '' } : {}),
       ...(draft.valueSummary ? { valueSummary: draft.valueSummary, valueSummaryError: '' } : {}),
       ...(draft.targetSummary ? { targetSummary: draft.targetSummary, targetSummaryError: '' } : {}),
-      ...(draft.description ? { description: draft.description, descriptionError: '' } : {}),
+      ...(draft.description ? { description: draft.description } : {}),
       ...(cityIndex >= 0 ? { cityTagId: draft.cityTagId, cityIndex } : {}),
       message: '',
     })
@@ -619,13 +620,11 @@ Page({
     const titleError = this.data.title.trim() ? '' : '请输入项目名称。'
     const valueSummaryError = this.data.valueSummary.trim() ? '' : '请输入价值金额或价值说明。'
     const targetSummaryError = this.data.targetSummary.trim() ? '' : '请输入寻找合作方的说明。'
-    const descriptionError = this.data.description.trim() ? '' : '请展开讲讲你的项目情况。'
     const roleError = this.data.roleOptions.some(item => item.selected) ? '' : '请至少选择一种合作角色。'
     const firstIssue = [
       { message: titleError, selector: '#opportunity-field-title' },
       { message: valueSummaryError, selector: '#opportunity-field-value-summary' },
       { message: targetSummaryError, selector: '#opportunity-field-target-summary' },
-      { message: descriptionError, selector: '#opportunity-field-description' },
       { message: roleError, selector: '#opportunity-field-roles' },
     ].find(issue => issue.message)
 
@@ -633,7 +632,6 @@ Page({
       titleError,
       valueSummaryError,
       targetSummaryError,
-      descriptionError,
       roleError,
       message: '',
     })
@@ -724,6 +722,7 @@ Page({
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '保存失败' })
+      wx.showToast({ title: '保存失败，请重试', icon: 'none' })
     }
     finally {
       this.setData({ saving: false })

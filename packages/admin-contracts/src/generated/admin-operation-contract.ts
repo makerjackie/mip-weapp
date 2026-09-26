@@ -3628,7 +3628,9 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
         "expectedVersion",
         "draft"
       ],
-      "optionalInputKeys": [],
+      "optionalInputKeys": [
+        "document"
+      ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
     },

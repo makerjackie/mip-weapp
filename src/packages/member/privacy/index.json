@@ -7,7 +7,6 @@
     "mip-detail-row": "/components/mip-detail-row/index",
     "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
-    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "mip-icon": "/components/mip-icon/index"
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

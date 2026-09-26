@@ -1,10 +1,10 @@
-<view id="mip-bind-phone-page" class="mip-member-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-bind-phone-page" class="mip-member-page min-h-screen bg-canvas px-[24rpx] pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-[48rpx] text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <mip-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载账号状态" description="{{message}}" action-text="重新加载" bind:action="loadAccountState" />
   <block wx:else>
-    <view class="mt-[24rpx] -mx-3">
+    <view>
       <!-- journey-review J5-02 绑定手机（QS 三级页自拟承接，2026-09-21 走查拍板）：
            单表单双路径——微信一键获取（手机号快速验证，免短信直接换绑）+
            手动输入其他手机号 + 短信验证码（发送与验证均由身份域校验）。 -->
@@ -13,7 +13,7 @@
         <view class="text-[28rpx] leading-[40rpx] text-muted">{{currentPhoneMasked || '未绑定'}}</view>
       </view>
 
-      <view class="mt-[56rpx] px-[24rpx] text-[32rpx] font-medium leading-[44.8rpx]">换绑新手机号</view>
+      <view class="mt-[40rpx] px-[24rpx] text-[32rpx] font-medium leading-[44.8rpx]">换绑新手机号</view>
 
       <view class="mt-[23.2rpx] flex h-[92rpx] items-center rounded-[16rpx] bg-panel pl-[24rpx] pr-[24rpx]">
         <input
@@ -60,7 +60,7 @@
       <view wx:if="{{message}}" class="mt-[24rpx] px-[8rpx] text-[22rpx] leading-[33.6rpx] text-muted">{{message}}</view>
 
       <view
-        class="mt-[56rpx] flex h-[80rpx] items-center justify-center rounded-[100rpx] border-[2rpx] border-canvas bg-brand text-[32rpx] font-medium text-on-brand active:bg-brand-active"
+        class="mt-[24rpx] flex h-[108rpx] items-center justify-center rounded-[100rpx] border-[2rpx] border-canvas bg-brand text-[32rpx] font-medium text-on-brand active:bg-brand-active"
         aria-role="button"
         bind:tap="confirmRebind"
       >{{rebinding ? '正在换绑' : '确认换绑'}}</view>

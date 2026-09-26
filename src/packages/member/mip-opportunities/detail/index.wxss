@@ -15,7 +15,8 @@
   border: none;
 }
 
-.opportunity-share-button[disabled] {
+/* Override WeChat's button[disabled]:not([type]) default light background. */
+.opportunity-share-button.opportunity-share-button--disabled[disabled] {
   color: #666;
   background: #2c2c2c;
   border: 2rpx solid #333;

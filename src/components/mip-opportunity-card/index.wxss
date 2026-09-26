@@ -132,3 +132,31 @@
 .mip-opportunity-card__published + .mip-opportunity-card__footer {
   margin-top: 8rpx;
 }
+
+/* J3-09 / J4-05: detail has four fact rows and puts publication time beside
+   the type tags. Cooperation counts already have their own bottom action. */
+.mip-opportunity-card--detail {
+  height: auto;
+  min-height: 352rpx;
+}
+
+.mip-opportunity-card--detail .mip-opportunity-card__footer {
+  flex-wrap: wrap;
+  gap: 8rpx;
+  align-items: center;
+  padding-top: 8rpx;
+}
+
+.mip-opportunity-card--detail .mip-opportunity-card__type-tags {
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.mip-opportunity-card__detail-published {
+  flex: 1;
+  min-width: 240rpx;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  color: var(--color-muted);
+  text-align: right;
+}

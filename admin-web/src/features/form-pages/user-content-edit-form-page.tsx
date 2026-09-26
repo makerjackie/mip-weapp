@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
 import { getContentMutationForm, validateContentMutation } from '../../modules/content-mutation-forms'
+import { contentFormValues } from '../../modules/content-form-values'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 import { defaultContentFormValues } from './content-form-helpers'
 
@@ -39,7 +40,7 @@ export function UserContentEditFormPage() {
     capability: 'userContent.moderate',
     buildInput: (submitted: OperationValues) => {
       const merged = { ...values, ...submitted }
-      const result = validateContentMutation('mip.admin.userContent.save', merged)
+      const result = validateContentMutation('mip.admin.userContent.save', contentFormValues('mip.admin.userContent.save', merged, idempotencyKey))
       return result.ok ? result.input : null
     },
   }

@@ -43,13 +43,27 @@ describe('configurable membership agreement', () => {
     assert.deepEqual(calls, ['lock', 'scope'])
     calls.length = 0
     assert.deepEqual(await repo.saveMembershipAgreement({ appId: 'app', actorUserId: 'admin', expectedVersion: 2, draft }), { version: 3 })
-    assert.deepEqual(calls, ['lock', 'scope', ['app', JSON.stringify(draft), 'admin'], 'audit'])
+    assert.deepEqual(calls, ['lock', 'scope', ['app', 'MEMBERSHIP_AGREEMENT', JSON.stringify(draft), 'admin'], 'audit'])
   })
   it('projects only public agreement fields from app settings', async () => {
     const repo = createMembershipContentRepository({ one: async (_sql, params) => {
-      assert.deepEqual(params, ['app'])
+      assert.deepEqual(params, ['app', 'MEMBERSHIP_AGREEMENT'])
       return { value_json: JSON.stringify({ ...draft, secret: 'hidden' }), version: 2, updated_at: 'today' }
     } }, {})
     assert.deepEqual(await repo.getMembershipAgreement('app'), { ...draft, version: 2, updatedAt: 'today' })
   })
+  it('keeps user and membership documents isolated and rejects unknown document kinds', async () => {
+    const calls = []
+    await service([grant], calls).saveMembershipAgreement({}, { document: 'user', expectedVersion: 0, draft })
+    assert.equal(calls[0].document, 'user')
+    assert.equal(calls[0].audit.resourceId, 'USER_AGREEMENT')
+    await assert.rejects(() => service().getMembershipAgreement({}, { document: 'secret' }), { code: 'VALIDATION_FAILED' })
+    await assert.rejects(() => service().saveMembershipAgreement({}, { document: 'secret', expectedVersion: 0, draft }), { code: 'VALIDATION_FAILED' })
+    const repo = createMembershipContentRepository({ one: async (_sql, params) => {
+      assert.deepEqual(params, ['app', 'USER_AGREEMENT'])
+      return { value_json: draft, version: 1 }
+    } }, {})
+    assert.equal((await repo.getMembershipAgreement('app', 'user')).body, draft.body)
+  })
+
 })

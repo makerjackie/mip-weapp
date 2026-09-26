@@ -411,6 +411,7 @@
  * 命名不满意？在 tools/icon-names.json 加 "<文件名去svg>": "语义名" 后重新生成。
  */
 const ICONS = {
+  "bell-notification": { vb: "0 0 24 24", w: 24, h: 24, mono: true, body: "<path fill=\"none\" d=\"M17.5 17.359C18.0028 17.359 18.4852 17.1597 18.8414 16.8046C19.1975 16.4496 19.3984 15.9679 19.4 15.465C19.3996 15.2012 19.3473 14.9401 19.2459 14.6966C19.1444 14.4531 18.996 14.232 18.809 14.046L17.55 12.786V9.043C17.5498 8.31453 17.4061 7.59323 17.1271 6.92033C16.8481 6.24742 16.4391 5.63611 15.9237 5.12133C15.4083 4.60655 14.7964 4.19839 14.1232 3.9202C13.4499 3.642 12.7284 3.49921 12 3.5C10.5303 3.5008 9.12109 4.08511 8.08206 5.12451C7.04304 6.16391 6.45924 7.57334 6.45897 9.043V12.783L5.19997 14.043C5.01283 14.229 4.86421 14.45 4.76262 14.6935C4.66104 14.937 4.60848 15.1982 4.60797 15.462C4.60956 15.9649 4.81044 16.4466 5.16659 16.8016C5.52273 17.1567 6.0051 17.356 6.50797 17.356L17.5 17.359Z\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path fill=\"none\" d=\"M10.521 20.5H13.478\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>" },
   "battery-end-2": { vb: "0 0 2 5", w: 1, h: 4, mono: true, body: "<path opacity=\"0.4\" d=\"M0 0V4.22034C0.849061 3.86291 1.40119 3.0314 1.40119 2.11017C1.40119 1.18894 0.849061 0.357438 0 0Z\"/>" },
   "mobile-signal-2": { vb: "0 0 18 12", w: 18, h: 12, mono: true, body: "<path d=\"M10 3C10 2.44772 10.4477 2 11 2H12C12.5523 2 13 2.44772 13 3V11C13 11.5523 12.5523 12 12 12H11C10.4477 12 10 11.5523 10 11V3Z\"/> <path d=\"M15 1C15 0.447715 15.4477 0 16 0H17C17.5523 0 18 0.447715 18 1V11C18 11.5523 17.5523 12 17 12H16C15.4477 12 15 11.5523 15 11V1Z\"/> <path d=\"M5 6.5C5 5.94772 5.44772 5.5 6 5.5H7C7.55228 5.5 8 5.94772 8 6.5V11C8 11.5523 7.55228 12 7 12H6C5.44772 12 5 11.5523 5 11V6.5Z\"/> <path d=\"M0 9C0 8.44772 0.447715 8 1 8H2C2.55228 8 3 8.44772 3 9V11C3 11.5523 2.55228 12 2 12H1C0.447715 12 0 11.5523 0 11V9Z\"/>" },
   "nav-home-ring": { vb: "0 0 17 17", w: 17, h: 17, mono: true, body: "<path d=\"M8.5 0C13.1944 0 17 3.80558 17 8.5C17 13.1944 13.1944 17 8.5 17C3.80558 17 0 13.1944 0 8.5C0 3.80558 3.80558 0 8.5 0ZM8.5 2C4.91015 2 2 4.91015 2 8.5C2 12.0899 4.91015 15 8.5 15C12.0899 15 15 12.0899 15 8.5C15 4.91015 12.0899 2 8.5 2ZM8.5 5.5C10.1569 5.5 11.5 6.84315 11.5 8.5C11.5 10.1569 10.1569 11.5 8.5 11.5C6.84315 11.5 5.5 10.1569 5.5 8.5C5.5 6.84315 6.84315 5.5 8.5 5.5Z\"/>" },
@@ -1098,15 +1099,15 @@ TILES.push(
   props:[['letters','string','"A–Z#"','字母序列']],
   usage:`<AlphabetSlider /> <!-- 放入 relative 容器,父级处理 tap/move -->` },
 
-{ group:'primitive', name:'PrimaryButton', cn:'主按钮', weapp:'mip-primary-button',
-  desc:'351×56 液态玻璃外圈 + 327×40 品牌黄内芯(1px #080808 描边),文字 16/500 黑;禁用 40% 透明。',
+{ group:'primitive', name:'PrimaryButton', cn:'主按钮', weapp:'sticky-actions',
+  desc:'351×56 液态玻璃外圈 + 327×40 品牌黄内芯。小程序由 sticky-actions + mip-pill-button 组成,只保留一层外圈;文字 16/500 黑,禁用 40% 透明。',
   demos:[
     {label:'默认', html:`<div class="m-pbtn"><button>保存</button></div>`},
     {label:'disabled', html:`<div class="m-pbtn"><button disabled>保存</button></div>`},
     {label:'loading(mip)', html:`<div class="m-pbtn"><button disabled>保存中…</button></div>`},
   ],
-  props:[['label','string','"保存"','按钮文案'],['disabled','boolean','false','禁用'],['loading','boolean','false','(mip-primary-button)加载态'],['tap 事件','event','—','bind:tap']],
-  usage:`<mip-primary-button label="提交报名" disabled="{{!canSubmit}}" bind:tap="submit" />` },
+  props:[['label','string','"保存"','按钮文案'],['disabled','boolean','false','禁用'],['loading','boolean','false','(mip-pill-button)加载态'],['tap 事件','event','—','bind:tap']],
+  usage:`<sticky-actions>\n  <mip-pill-button slot="actions" label="提交报名" disabled="{{!canSubmit}}" bind:tap="submit" />\n</sticky-actions>` },
 
 { group:'primitive', name:'PillButton', cn:'胶囊按钮', weapp:'mip-pill-button',
   desc:'h40 r100 + 1px 黑描边 + 可选 20px 图标;primary 黄底黑字,secondary #202020 底黄字。',
@@ -1382,9 +1383,9 @@ TILES.push(
 
 { group:'weapp', name:'sticky-actions', cn:'底部吸附操作条', weapp:'sticky-actions',
   desc:'液态玻璃外壳 + 具名插槽 actions + 自动安全区垫片;页面底部主操作统一放这里。',
-  demos:[{label:'近似示意', html:`<div style="width:375px;background:rgba(32,32,32,.9);border:1px solid #2a2a2a;border-radius:14px;padding:10px 12px 6px;backdrop-filter:blur(20px)"><div class="m-pbtn" style="width:100%;height:48px"><button style="width:100%">提交报名</button></div><div style="height:14px;display:flex;justify-content:center;align-items:flex-end;padding-bottom:2px"><i style="width:100px;height:4px;border-radius:100px;background:#fff;display:block;opacity:.7"></i></div></div>`}],
-  props:[['slot "actions"','slot','—','操作内容(放 mip-primary-button 等)']],
-  usage:`<sticky-actions>\n  <mip-primary-button slot="actions" label="提交报名" bind:tap="submit" />\n</sticky-actions>` },
+  demos:[{label:'单层外圈 + 胶囊内芯', html:`<div class="m-pbtn"><button>提交报名</button></div>`}],
+  props:[['slot "actions"','slot','—','操作内容(放 mip-pill-button,不再叠加外圈)']],
+  usage:`<sticky-actions>\n  <mip-pill-button slot="actions" label="提交报名" bind:tap="submit" />\n</sticky-actions>` },
 
 { group:'weapp', name:'page-exit', cn:'二级页返回', weapp:'page-exit',
   desc:'二级页底部返回按钮:按 managed/always 决定返回 tab 还是出栈;触发 exit。',

@@ -99,7 +99,7 @@ function appliedFilterPresentation(input: {
   const cityId = input.mode === 'opportunities'
     ? input.selectedCityTagId
     : input.selectedCooperationBranchId
-  const cityLabel = input.cityOptions.find(item => item.id === cityId)?.label
+  const cityLabel = cityId ? input.cityOptions.find(item => item.id === cityId)?.label : undefined
   const selectedLocation = input.selectedLocationTypes[0]
   const locationFilterLabel = input.mode === 'cooperation'
     ? (cityLabel || '全国')

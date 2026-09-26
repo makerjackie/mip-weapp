@@ -484,7 +484,7 @@
   align-items: center;
 }
 
-.profile-case-title-row image {
+.profile-case-icon {
   flex: 0 0 auto;
   width: 28rpx;
   height: 28rpx;
@@ -652,7 +652,7 @@
   padding-top: 30rpx;
 
   /* Reference panel starts at the crop edge; cancel the page container inset. */
-  margin-top: -30rpx;
+  margin: -30rpx -24rpx 0;
   background: var(--color-panel);
 }
 

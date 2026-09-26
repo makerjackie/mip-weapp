@@ -1,8 +1,8 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMipIdentityGateway } from '../src/modules/mip-identity/gateway'
 
-const { request, bind, snapshot, leave, toast } = vi.hoisted(() => ({ request: vi.fn(), bind: vi.fn(), snapshot: vi.fn(), leave: vi.fn(), toast: vi.fn() }))
-vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: { requestPhoneSms: request, rebindSmsPhone: bind, loadSnapshot: snapshot } }))
+const { request, bind, snapshot, profile, leave, toast } = vi.hoisted(() => ({ request: vi.fn(), bind: vi.fn(), snapshot: vi.fn(), profile: vi.fn(), leave: vi.fn(), toast: vi.fn() }))
+vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: { requestPhoneSms: request, rebindSmsPhone: bind, loadSnapshot: snapshot, getProfile: profile } }))
 vi.mock('../src/modules/mip-identity/runtime', () => ({ mipGlobalAccessGuard: { enterTarget: vi.fn() } }))
 vi.mock('../src/platform/navigation/client', () => ({ leaveSecondaryPage: leave }))
 let definition: Record<string, any>
@@ -17,7 +17,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-09-22T08:00:00Z'))
-  for (const fn of [request, bind, snapshot, leave, toast]) {
+  for (const fn of [request, bind, snapshot, profile, leave, toast]) {
     fn.mockReset()
   }
   vi.stubGlobal('wx', { showToast: toast })
@@ -44,6 +44,38 @@ function deferred<T>() {
 }
 
 describe('SMS phone-rebinding contract and lifecycle', () => {
+  it('loads the masked phone from the authenticated caller profile instead of the access snapshot', async () => {
+    const publicProfile = { exists: true, version: 1, nickname: '玩家', complete: true, missingFields: [] }
+    const invoke = vi.fn(async ({ action }: { action: string }) => ({
+      ok: true,
+      data: action === 'getAccessSnapshot'
+        ? { authenticated: true, userVersion: 1, phoneBound: true, agreements: [], grants: [], membership: { kind: 'PLAYER' }, profile: publicProfile }
+        : { ...publicProfile, privateContact: { phoneBound: true, phone, phoneMasked: '138****0000' } },
+    }))
+    const gateway = createMipIdentityGateway({ invoke })
+    snapshot.mockImplementation(() => gateway.getAccessSnapshot())
+    profile.mockImplementation(() => gateway.getProfile())
+    const p = page()
+    await p.loadAccountState()
+    expect(invoke.mock.calls).toEqual([
+      [{ contractVersion: 1, action: 'getAccessSnapshot', input: {} }],
+      [{ contractVersion: 1, action: 'getProfile', input: {} }],
+    ])
+    expect(p.data.state).toBe('ready')
+    expect(p.data.currentPhoneMasked).toBe('138****0000')
+    expect(p.data).not.toHaveProperty('privateContact')
+    expect(p.data).not.toHaveProperty('phone')
+  })
+  it('does not request private contact before authentication and preserves bound state when the mask is unavailable', async () => {
+    const p = page()
+    snapshot.mockResolvedValueOnce({ authenticated: false })
+    await p.loadAccountState()
+    expect(profile).not.toHaveBeenCalled()
+    snapshot.mockResolvedValue({ authenticated: true, phoneBound: true })
+    profile.mockResolvedValue({ privateContact: { phoneBound: true } })
+    await p.loadAccountState()
+    expect(p.data.currentPhoneMasked).toBe('已绑定手机号')
+  })
   it('validates actual success envelope fields and submits the challenge returned by the server once', async () => {
     const invoke = vi.fn(async () => ({ ok: true, data: { ...dto, code: 'must-not-pass', phone: 'must-not-pass' } }))
     const gateway = createMipIdentityGateway({ invoke })
@@ -61,9 +93,10 @@ describe('SMS phone-rebinding contract and lifecycle', () => {
     expect(bind).toHaveBeenCalledTimes(1)
     expect(bind).toHaveBeenCalledWith({ phone, code: '123456', challengeId: dto.challengeId })
     expect(toast).not.toHaveBeenCalled()
-    pending.resolve({ profile: { privateContact: { phoneMasked: '138****0000' } } })
+    p.data.currentPhoneMasked = '139****0000'
+    pending.resolve({ phoneBound: true, profile: {} })
     await submission
-    expect(p.data.currentPhoneMasked).toBe('138****0000')
+    expect(p.data.currentPhoneMasked).toBe('已绑定手机号')
     expect(p.smsChallenge).toBeUndefined()
     expect(p.data.newPhone).toBe('')
     expect(toast).toHaveBeenCalledWith({ title: '换绑成功', icon: 'success' })

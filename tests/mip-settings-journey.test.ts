@@ -17,7 +17,7 @@ describe('journey-review WS-SETTINGS', () => {
 
     expect(config.navigationBarTitleText).toBe('账号设置')
     expect(template).toContain('<mip-section-header title="账号与安全" />')
-    expect(template).toContain('<mip-section-header class="mt-[48rpx]" title="协议" />')
+    expect(template).toContain('<mip-section-header title="协议" />')
     for (const row of ['绑定手机', '隐私设置', '用户使用协议', '隐私政策', '会员服务协议']) {
       expect(template).toContain(`<mip-detail-row label="${row}"`)
     }
@@ -107,8 +107,8 @@ describe('journey-review WS-SETTINGS', () => {
     const template = read('src/packages/member/user-agreement/index.wxml')
 
     expect(config.navigationBarTitleText).toBe('用户使用协议')
-    // 正文保留仓库正式条款（优于设计稿占位段落），生产不走 fixture 分支。
-    expect(template).toMatch(/wx:elif="\{\{figmaLayout\}\}"/)
+    expect(template).toContain('{{agreement.body}}')
+    expect(template).not.toContain('figmaLayout')
   })
 
   it('J6-01/J6-02 apply the C5 longpress deletion to the owner showcase and both management lists', () => {

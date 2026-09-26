@@ -1,4 +1,4 @@
-<view class="mip-opportunity-card" aria-label="{{title}}">
+<view class="mip-opportunity-card {{variant === 'detail' ? 'mip-opportunity-card--detail' : ''}}" aria-label="{{title}}">
   <view class="mip-opportunity-card__cover">
     <image wx:if="{{displayCoverUrl}}" class="mip-opportunity-card__cover-image" src="{{displayCoverUrl}}" mode="aspectFill" />
     <view wx:else class="mip-opportunity-card__cover-placeholder"><image class="mip-opportunity-card__cover-placeholder-image" src="{{fallbackCoverUrl}}" mode="aspectFill" /></view>
@@ -11,12 +11,14 @@
       <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/location.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">地区：{{regionText || locationText || cityText}}</text></view>
       <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/service-target.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">寻找：{{targetText}}</text></view>
     </view>
-    <view wx:if="{{publishedText}}" class="mip-opportunity-card__published">{{publishedPrefix}}{{publishedText}}</view>
+    <view wx:if="{{publishedText && variant !== 'detail'}}" class="mip-opportunity-card__published">{{publishedPrefix}}{{publishedText}}</view>
     <view class="mip-opportunity-card__footer {{typeTags.length ? 'mip-opportunity-card__footer--split' : ''}}">
       <view wx:if="{{typeTags.length}}" class="mip-opportunity-card__type-tags">
         <text wx:for="{{typeTags}}" wx:key="key" class="mip-opportunity-card__type-tag">{{item.label}}</text>
       </view>
+      <view wx:if="{{variant === 'detail' && publishedText}}" class="mip-opportunity-card__detail-published">{{publishedPrefix}}{{publishedText}}</view>
       <mip-attend-pill
+        wx:if="{{variant !== 'detail'}}"
         count="{{referralCount}}"
         label="{{pillLabel}}"
         avatars="{{displayAvatars}}"

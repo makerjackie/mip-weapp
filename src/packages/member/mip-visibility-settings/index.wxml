@@ -25,7 +25,6 @@
     </view>
 
     <view class="mt-5 px-1 text-[30rpx] font-semibold">名片联系方式</view>
-    <view class="mt-2 px-1 text-[22rpx] leading-6 text-muted">公开档案不会返回联系方式；以下设置只控制个人名片展示。</view>
     <view data-visibility-group="card-contacts" class="mt-3 overflow-hidden rounded-[16rpx] bg-panel">
       <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><view><view class="text-[24rpx]">手机号</view><view wx:if="{{!phoneBound}}" class="mt-1 text-[22rpx] text-muted">尚未绑定</view></view><t-switch value="{{visibilityPhone}}" disabled="{{!phoneBound}}" data-field="visibilityPhone" bind:change="updateVisibility" /></view>
       <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[24rpx]">微信号</text><t-switch value="{{visibilityWechat}}" data-field="visibilityWechat" bind:change="updateVisibility" /></view>

@@ -40,7 +40,7 @@ describe('account closure experience', () => {
 
     // journey-review J5-01：账号设置页导航标题对齐设计帧 1728_19083「账号设置」。
     expect(config.navigationBarTitleText).toBe('账号设置')
-    expect(template).toContain('>资料与隐私</view>')
+    expect(template).toContain('title="资料与隐私"')
     expect(template).toContain('bind:tap="openVisibilitySettings"')
     expect(template).toContain('bind:tap="openBlockedProfiles"')
     expect(template).toContain('bind:tap="openUserAgreement"')

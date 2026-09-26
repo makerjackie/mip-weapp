@@ -36,7 +36,10 @@ let tasksDefinition: PageDefinition
 function page(definition: PageDefinition) {
   return Object.assign(Object.create(definition) as PageDefinition, {
     data: structuredClone(definition.data),
-    setData(patch: Record<string, unknown>) { Object.assign(this.data, patch) },
+    setData(patch: Record<string, unknown>, callback?: () => void) {
+      Object.assign(this.data, patch)
+      callback?.()
+    },
   })
 }
 
@@ -68,7 +71,7 @@ function deferred<T>() {
 }
 
 beforeAll(async () => {
-  vi.stubGlobal('wx', { navigateTo: vi.fn(), showToast: vi.fn() })
+  vi.stubGlobal('wx', { navigateTo: vi.fn(), showToast: vi.fn(), pageScrollTo: vi.fn() })
   vi.stubGlobal('Page', (definition: PageDefinition) => {
     growthDefinition = definition
   })
@@ -89,6 +92,19 @@ beforeEach(() => {
 })
 
 describe('growth and task return flow', () => {
+  it('keeps full balances, rules and history behind the experience details entry', () => {
+    const instance = page(growthDefinition)
+    expect(instance.data.experienceDetailsOpen).toBe(false)
+
+    callPage(instance, 'openExperienceDetails')
+    expect(instance.data.experienceDetailsOpen).toBe(true)
+    expect(wx.pageScrollTo).toHaveBeenCalledWith({ selector: '#growth-details-section', duration: 200 })
+
+    callPage(instance, 'closeExperienceDetails')
+    expect(instance.data.experienceDetailsOpen).toBe(false)
+    expect(wx.pageScrollTo).toHaveBeenLastCalledWith({ scrollTop: 0, duration: 200 })
+  })
+
   it('refreshes server balances and tasks on every return to the growth page', async () => {
     const instance = page(growthDefinition)
     callPage(instance, 'onLoad')

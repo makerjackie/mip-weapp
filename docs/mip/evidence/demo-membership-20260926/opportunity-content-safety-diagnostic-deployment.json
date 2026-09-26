@@ -1,0 +1,49 @@
+{
+  "checkedAt": "2026-09-26T13:12:31.856Z",
+  "stage": "staging",
+  "function": "mip-opportunities-api",
+  "status": "Active",
+  "availableStatus": "Available",
+  "runtime": "Nodejs20.19",
+  "modifiedAt": "2026-09-26 21:11:44",
+  "codeSha256": "570015bf3f2fe81a7937c96506dc54192137fba76ebb0fc2da8c7719b02badc3",
+  "health": {
+    "ok": true,
+    "persistence": "cloudbase-mysql"
+  },
+  "scope": "Distinguish content safety provider unavailability using a friendly error and strictly allowlisted/numeric providerCode. Preserve content checking, network, VPC, and permissions. No other function deployed.",
+  "realSessionReadback": {
+    "status": "FAILED_CONTENT_SAFETY_PERMISSION",
+    "source": "Parent agent inspected the response of the real UI save in WeChat DevTools Network",
+    "errorCode": "CONTENT_SAFETY_UNAVAILABLE",
+    "providerCode": -604101,
+    "meaning": "The function has no permission to call this WeChat OpenAPI",
+    "rootCause": "The deployed function has not received its declared WeChat security.msgSecCheck cloud-call permission",
+    "officialReference": "https://docs.cloudbase.net/faq/knowledge/cloud-call-604101-permission-error"
+  },
+  "userDataWrites": 0,
+  "validation": {
+    "command": "node --test cloudfunctions/mip-opportunities-api/tests/*.test.js",
+    "passed": 142,
+    "failed": 0,
+    "focusedPassed": 16,
+    "syntaxCheck": "PASSED",
+    "diffCheck": "PASSED"
+  },
+  "readOnlyDiagnosis": {
+    "legacyFunctionLogs": "Provider reports GetFunctionLogs is retired",
+    "clsDefaultTopic": "topic not exist",
+    "networkComparison": {
+      "opportunities": "PublicNetStatus DISABLE; VPC and subnet configured",
+      "admin": "PublicNetStatus ENABLE; VPC and subnet configured"
+    },
+    "rootCause": "Confirmed by a real UI response: -604101 means missing WeChat cloud-call permission. Public network remains unchanged."
+  },
+  "finalRejectionFix": "Thrown provider code 87014 maps to CONTENT_REJECTED and remains fail-closed",
+  "deploymentHistory": [
+    {
+      "modifiedAt": "2026-09-26 21:05:52",
+      "codeSha256": "b499862bbfe1b322c0d2af18f0ddf13b0bd4e0d8714d47883be20294725661bb"
+    }
+  ]
+}

@@ -280,7 +280,7 @@ export interface MipIdentityActionInputMap {
   bindSmsPhone: BindSmsPhoneInput
   closeAccount: AccountClosureInput
   getProfile: Record<string, never>
-  getMembershipAgreement: Record<string, never>
+  getMembershipAgreement: { document?: 'membership' | 'user' }
   getProfileCardSettings: Record<string, never>
   getMyProfileCardCode: Record<string, never>
   getPublicProfile: { profileRef: string }
@@ -330,7 +330,7 @@ export interface MipIdentityGateway {
   bindSmsPhone: (input: BindSmsPhoneInput) => Promise<IdentityAccessSnapshot>
   closeAccount: (input: AccountClosureInput) => Promise<AccountClosureResult>
   getProfile: () => Promise<MipProfileSnapshot>
-  getMembershipAgreement: () => Promise<MembershipAgreement>
+  getMembershipAgreement: (document?: 'membership' | 'user') => Promise<MembershipAgreement>
   getProfileCardSettings: () => Promise<ProfileCardSettings>
   getMyProfileCardCode: () => Promise<ProfileCardCode>
   getPublicProfile: (profileRef: string) => Promise<PublicMipProfile>

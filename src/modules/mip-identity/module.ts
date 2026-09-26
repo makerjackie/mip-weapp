@@ -588,8 +588,8 @@ export function createMipIdentityModule(
       return gateway.getProfile()
     },
 
-    getMembershipAgreement() {
-      return gateway.getMembershipAgreement()
+    getMembershipAgreement(document?: 'membership' | 'user') {
+      return gateway.getMembershipAgreement(document)
     },
     getProfileCardSettings() {
       return gateway.getProfileCardSettings()

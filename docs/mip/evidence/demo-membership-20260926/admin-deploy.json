@@ -1,0 +1,13 @@
+{
+  "credentialSource": "configured",
+  "paymentMode": "test",
+  "catalogStage": "TEST",
+  "deploymentStage": "staging",
+  "deploymentScope": "single-function",
+  "deployed": [
+    "mip-admin-api"
+  ],
+  "functionTimersVerifiedAbsent": true,
+  "workerTimersVerifiedAbsent": true,
+  "deployedAt": "2026-09-26T11:48:27.719Z"
+}

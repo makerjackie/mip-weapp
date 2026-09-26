@@ -133,6 +133,7 @@ Page({
     nextLevelThreshold: 0,
     levels: [] as GrowthLevelView[],
     levelScale: null as LevelScaleView | null,
+    experienceDetailsOpen: false,
     earningRules: [] as GrowthRuleView[],
     entries: [] as GrowthEntryView[],
     nextCursor: '',
@@ -351,9 +352,16 @@ Page({
     void wx.navigateTo({ url: '/packages/member/benefits/index' })
   },
 
-  /** J1-06 经验值详情：等级卡右上角小入口，定位到本页等级与权益区块。 */
+  /** J1-06 / J4-03 keep secondary balances, level rules and history behind this entry. */
   openExperienceDetails() {
-    void wx.pageScrollTo({ selector: '#growth-levels-section', duration: 200 })
+    this.setData({ experienceDetailsOpen: true }, () => {
+      void wx.pageScrollTo({ selector: '#growth-details-section', duration: 200 })
+    })
+  },
+
+  closeExperienceDetails() {
+    this.setData({ experienceDetailsOpen: false })
+    void wx.pageScrollTo({ scrollTop: 0, duration: 200 })
   },
 
   /** J1-06 开通态「立即加入」→ 会员订单确认页（J1-07）。 */

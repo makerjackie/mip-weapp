@@ -1,0 +1,12 @@
+/* J5-03 uses the design system's 51 × 31px iOS switch, with a white knob. */
+.mip-privacy-settings-shell {
+  --td-switch-width: 102rpx;
+  --td-switch-height: 62rpx;
+  --td-switch-dot-size: 54rpx;
+  --td-switch-dot-horizontal-margin: 4rpx;
+  --td-switch-dot-plain-size: 54rpx;
+  --td-switch-dot-plain-horizontal-margin: 4rpx;
+  --td-switch-checked-color: var(--mip-wechat-green);
+  --td-switch-unchecked-color: #39393d;
+  --td-text-color-anti: var(--mip-text-primary);
+}

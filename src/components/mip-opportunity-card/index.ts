@@ -24,6 +24,8 @@ Component({
     detached() { clearComponentMedia(this) },
   },
   properties: {
+    /** 详情保留城市、地区四行信息，末行仅展示类型与发表时间。 */
+    variant: { type: String, value: 'list' },
     title: { type: String, value: '' },
     coverUrl: { type: String, value: '' },
     valueText: { type: String, value: '' },

@@ -345,7 +345,8 @@ const USER_CONTENT_FIELDS: ContentMutationField[] = [
     { ...idField('industryTagId', '行业标签', false), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
     { ...textField('caseType', '案例类型', 80, false), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
     { ...areaField('description', '案例说明', 8_000), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
-    { ...idField('coverAssetId', '封面图片', false), assetPurpose: 'SUPER_CASE_COVER' } as ContentMutationField, { key: 'mediaAssetIds', label: '案例图片', kind: 'id-list', required: false, assetPurpose: 'SUPER_CASE_MEDIA', visibleWhen: { path: 'kind', value: 'SUPER_CASE' } } as ContentMutationField,
+    { ...idField('coverAssetId', '封面图片', false), assetPurpose: 'SUPER_CASE_COVER', visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { key: 'mediaAssetIds', label: '案例图片', kind: 'id-list', required: false, assetPurpose: 'SUPER_CASE_MEDIA', visibleWhen: { path: 'kind', value: 'SUPER_CASE' } } as ContentMutationField,
     selectField('status', '内容状态', ['DRAFT', 'PUBLISHED', 'UNPUBLISHED'], false),
   ]),
 ]

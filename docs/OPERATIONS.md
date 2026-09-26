@@ -27,6 +27,15 @@ pnpm event:interaction:seed -- \
 
 支付模式为 `live` 时，支付部署命令还必须追加 `--confirm-live`。demo seed 默认只允许 development/test；MIP 专用 staging 环境还必须同时传入 `--confirm-staging-demo`，并继续满足 TEST catalog、非 live payment 和 exact EnvID 确认，production 永远禁止。它会以固定 ID 写入可重复执行的城市、标签、玩家/嘉宾、测试会员订单与权益、2030 活动、报名、机会、合作卡、案例、公告、知识、消息、任务、成长、赛季、排行和盲盒。种子附带 6 张虚拟人物头像、4 张活动封面和 2 张运营 Banner；执行时通过 CloudBase 存储上传或复用同一内容的对象，复核字节数与 ETag 后再写入 `READY` 媒体记录，数据库只保存永久 `cloud://` 文件 ID。执行前写入 `PENDING` 清单，完整验证后改为 `READY`，并保留版本化清单；Owner 初始化始终排除其中的演示用户。Banner 依赖真实云媒体素材，不写入无效文件引用。手机号未绑定、候选资料或协议不完整、命中不唯一，以及可选 user ID 不一致时都会停止且不授予权限。
 
+会员验收演示内容可单独初始化，不必重跑全量 seed：
+
+```bash
+node scripts/seed-membership-content-demo.mjs
+node scripts/seed-membership-content-demo.mjs --apply --confirm-env=<EnvID> --confirm-app-id=<AppID> --confirm-demo-content --confirm-staging-demo
+```
+
+首条命令只验证配置；第二条是 staging 写入示例，development/test 不需要 `--confirm-staging-demo`。它只接受 TEST catalog 和非 live payment，在已登记的演示等级上关联 4 项启用的演示权益，创建 4 项待管理员审核奖励的全员演示任务，并在缺失时填入后台用户协议。通过本机 Owner 手机号定位已有审核人，不新授予权限、不修改用户资格或发放奖励；会员协议与已有内容保留。首次完成后清单标记 READY，重复执行只读回，不覆盖管理员后来修改或移除的关联。演示目录见 `database/mysql/mip/demo-membership-content.json`。两份协议均可在 Web 成长管理的相应页签编辑；协议展示版本独立于登录必需的协议确认版本，正式条款切换仍按部署手册统一维护 `MIP_AGREEMENTS_JSON`。
+
 当前固定活动包含 4 场 2030 年周四、10:00–12:00 的深圳福田 MIP 早会，以及 1 场历史互动活动；5 场活动均有独立的演示封面，场地和地址均标注为演示数据。前 3 位演示用户具有测试订单和有效演示权益；它们不可用于推断或恢复真实会员缴费。
 
 `owner:showcase` 是另一条仅用于当前真实 Owner 验收的展示夹具通道。它通过 `MIP_OWNER_PHONE` 定位已完成手机号绑定、协议确认且非 Demo 的唯一用户，只补齐活动报名/TEST 活动订单、任务、勋章和资料展示事实，不创建或绕过会员权益。development/test 仍按原命令执行；MIP 专用 staging 还必须追加 `--confirm-staging-demo`，并继续确认 exact EnvID、exact AppID、TEST catalog 和非 live payment。production 永远禁止。`membership:test` 同样可用于 staging，但必须追加 `--confirm-staging-demo`，且 ledger 必须部署有效的独立 `MIP_TEST_MEMBERSHIP_HMAC_SECRET`；它始终通过内部签名调用受保护 ledger，由 ledger 重算订单与权益，并复核手机号绑定、协议、唯一 Owner 和非 Demo 身份，不能由脚本直接 SQL 写会员事实。没有有效专用 HMAC 时 staging 会员操作和云验收均停止。

@@ -27,4 +27,12 @@ describe('membership configuration contracts', () => {
     const draft = configurationDraft('levels', { id: 'level', name: '等级', version: 0, status: 'ACTIVE', benefits: [{ id: 'benefit' }] })
     assert.deepEqual(draft.benefitIds, ['benefit'])
   })
+  it('targets the user agreement without changing the membership document', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const api = membershipConfiguration(async (action, input) => { calls.push({ action, input }); return {} as never })
+    await api.agreement('user')
+    await api.saveAgreement(1, demoMembershipAgreement, 'user-retry', 'user')
+    assert.deepEqual(calls.map(call => (call.input as Record<string, unknown>).document), ['user', 'user'])
+  })
+
 })

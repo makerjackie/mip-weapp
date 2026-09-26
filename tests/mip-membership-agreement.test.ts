@@ -14,4 +14,11 @@ describe('membership agreement response contract', () => {
     const gateway = createMipIdentityGateway({ invoke: async () => ({ ok: true, data: { title: '协议', body: 123, version: -1 } }) })
     await expect(gateway.getMembershipAgreement()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
   })
+  it('requests the configured user document rather than the membership document', async () => {
+    const gateway = createMipIdentityGateway({ invoke: async (request) => {
+      expect(request.input).toEqual({ document: 'user' })
+      return { ok: true, data: { title: '用户使用协议（演示）', body: '后台正文', isDemo: true, version: 1, updatedAt: '' } }
+    } })
+    expect((await gateway.getMembershipAgreement('user')).body).toBe('后台正文')
+  })
 })

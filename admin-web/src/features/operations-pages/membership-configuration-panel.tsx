@@ -3,7 +3,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Checkbox, Form, Input, InputNumber, Modal, Select, Space, Spin, Tabs, Tag, Typography } from 'antd'
 import { useAdminSession } from '../../app/session-provider'
-import { configurationDraft, demoMembershipAgreement, membershipConfiguration, type ConfigurationItem, type ConfigurationKind } from '../../modules/membership-configuration'
+import { configurationDraft, demoMembershipAgreement, demoUserAgreement, membershipConfiguration, type ConfigurationItem, type ConfigurationKind } from '../../modules/membership-configuration'
 const labels: Record<ConfigurationKind, string> = { levels: '等级门槛', benefits: '等级权益', rules: '成长奖励规则', badges: '勋章定义' }
 const statuses = [{ value: 'DRAFT', label: '草稿' }, { value: 'ACTIVE', label: '启用' }, { value: 'INACTIVE', label: '停用' }]
 export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void }) {
@@ -13,7 +13,10 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
   const { message } = App.useApp()
   const navigate = useNavigate()
   const search = useRouterState({ select: state => state.location.search as Record<string, unknown> })
-  const tab = typeof search.tab === 'string' && (search.tab in labels || search.tab === 'agreement') ? search.tab : 'levels'
+  const tab = typeof search.tab === 'string' && (search.tab in labels || search.tab === 'agreement' || search.tab === 'user-agreement') ? search.tab : 'levels'
+  const isAgreement = tab === 'agreement' || tab === 'user-agreement'
+  const document = tab === 'user-agreement' ? 'user' : 'membership'
+  const demoAgreement = document === 'user' ? demoUserAgreement : demoMembershipAgreement
   const setTab = (tab: string) => void navigate({ to: '/growth', search: { ...search, tab } })
   const [editing, setEditing] = useState<{ kind: ConfigurationKind; item: ConfigurationItem | null; draft: Record<string, unknown> } | null>(null)
   const [form] = Form.useForm()
@@ -23,9 +26,9 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
   const configurable = readable && session.hasCapabilityAtScope('growth.configure', 'PLATFORM')
   const badgeWritable = readable && session.hasCapabilityAtScope('badges.manage', 'PLATFORM')
   const kind = tab in labels ? tab as ConfigurationKind : 'levels'
-  const items = useQuery({ queryKey: [...key, kind], enabled: readable && tab !== 'agreement' && (kind !== 'badges' || badgeWritable), queryFn: () => api.list(kind) })
+  const items = useQuery({ queryKey: [...key, kind], enabled: readable && !isAgreement && (kind !== 'badges' || badgeWritable), queryFn: () => api.list(kind) })
   const benefits = useQuery({ queryKey: [...key, 'benefit-options'], enabled: configurable && tab === 'levels', queryFn: () => api.list('benefits') })
-  const agreement = useQuery({ queryKey: [...key, 'agreement'], enabled: readable && tab === 'agreement', queryFn: api.agreement })
+  const agreement = useQuery({ queryKey: [...key, 'agreement', document], enabled: readable && isAgreement, queryFn: () => api.agreement(document) })
   const mutation = useMutation({ mutationFn: (operation: () => Promise<unknown>) => operation(), onSuccess: async () => {
     setEditing(null); await cache.invalidateQueries({ queryKey: key }); onSaved(); void message.success('已保存，用户端下次加载时生效')
   }, onError: error => { void message.error(error instanceof Error ? error.message : '保存失败') } })
@@ -37,17 +40,17 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
   if (!readable) return null
   return <Card style={{ marginBottom: 24 }} title="会员内容配置">
     <Typography.Paragraph type="secondary">等级、权益和勋章由管理员维护。任务的奖励金额、经验值和贡献值请在“任务管理”中编辑；下方“成长奖励规则”管理已有行为事件的奖励。修改不追溯改写已发放记录。</Typography.Paragraph>
-    <Tabs activeKey={tab} onChange={setTab} items={[...Object.entries(labels).filter(([key]) => key !== 'badges' || badgeWritable).map(([key, label]) => ({ key, label })), { key: 'agreement', label: '会员服务协议' }]} />
-    {tab === 'agreement' ? agreement.isPending ? <Spin /> : agreement.error ? <Alert type="error" title={agreement.error.message} action={<Button onClick={() => void agreement.refetch()}>重试</Button>} /> : <Form key={agreement.data?.version} form={agreementForm} layout="vertical" initialValues={agreement.data?.body ? agreement.data : demoMembershipAgreement} onFinish={values => {
+    <Tabs activeKey={tab} onChange={setTab} items={[...Object.entries(labels).filter(([key]) => key !== 'badges' || badgeWritable).map(([key, label]) => ({ key, label })), { key: 'agreement', label: '会员服务协议' }, { key: 'user-agreement', label: '用户使用协议' }]} />
+    {isAgreement ? agreement.isPending ? <Spin /> : agreement.error ? <Alert type="error" title={agreement.error.message} action={<Button onClick={() => void agreement.refetch()}>重试</Button>} /> : <Form key={`${document}-${agreement.data?.version}`} form={agreementForm} clearOnDestroy layout="vertical" initialValues={agreement.data?.body ? agreement.data : demoAgreement} onFinish={values => {
       const version = agreement.data?.version
       if (version === undefined || !configurable) return
-      mutation.mutate(() => api.saveAgreement(version, values, crypto.randomUUID()))
+      mutation.mutate(() => api.saveAgreement(version, values, crypto.randomUUID(), document))
     }}>
-      <Alert type="info" showIcon title="正文支持换行，按纯文本展示；取消演示标记前请替换为实际服务条款。保存后小程序设置中的会员服务协议同步读取。" style={{ marginBottom: 16 }} />
+      <Alert type="info" showIcon title="正文支持换行，按纯文本展示；取消演示标记前请替换为实际服务条款。保存后小程序设置中的对应协议同步读取。" style={{ marginBottom: 16 }} />
       <Form.Item name="title" label="标题" rules={[{ required: true, max: 100 }]}><Input disabled={!configurable} /></Form.Item>
       <Form.Item name="body" label="正文" rules={[{ required: true, max: 8000 }, { validator: (_, value) => new TextEncoder().encode(JSON.stringify(value || '')).length <= 27000 ? Promise.resolve() : Promise.reject(new Error('正文过长，请精简后重试')) }]}><Input.TextArea rows={12} disabled={!configurable} /></Form.Item>
       <Form.Item name="isDemo" valuePropName="checked"><Checkbox disabled={!configurable}>标记为演示内容</Checkbox></Form.Item>
-      {configurable && <Space wrap><Button type="primary" htmlType="submit" loading={mutation.isPending}>保存并生效</Button><Button onClick={() => agreementForm.setFieldsValue(demoMembershipAgreement)}>填入演示正文</Button></Space>}
+      {configurable && <Space wrap><Button type="primary" htmlType="submit" loading={mutation.isPending}>保存并生效</Button><Button onClick={() => agreementForm.setFieldsValue(demoAgreement)}>填入演示正文</Button></Space>}
     </Form> : <>
       {(kind === 'badges' ? badgeWritable : configurable) && kind !== 'rules' && <Space wrap style={{ marginBottom: 16 }}><Button type="primary" onClick={() => edit(null)}>新建{labels[kind]}</Button><Button onClick={() => edit(null, true)}>填写演示示例</Button></Space>}
       {items.error && <Alert type="error" title={items.error.message} action={<Button onClick={() => void items.refetch()}>重试</Button>} />}

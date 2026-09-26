@@ -636,10 +636,11 @@ function createIdentityRepository(database, options = {}) {
     listProfileTags,
     loadFacts,
     loadPublicProfile,
-    async getMembershipAgreement(appId) {
-      const row = await database.one("SELECT value_json, version, updated_at FROM mip_app_settings WHERE app_id = ? AND setting_key = 'MEMBERSHIP_AGREEMENT'", [appId])
+    async getMembershipAgreement(appId, document = 'membership') {
+      const settingKey = document === 'user' ? 'USER_AGREEMENT' : 'MEMBERSHIP_AGREEMENT'
+      const row = await database.one("SELECT value_json, version, updated_at FROM mip_app_settings WHERE app_id = ? AND setting_key = ?", [appId, settingKey])
       const value = row ? (typeof row.value_json === 'string' ? JSON.parse(row.value_json) : row.value_json) : {}
-      return { title: value.title || '会员服务协议', body: value.body || '', isDemo: value.isDemo !== false,
+      return { title: value.title || (document === 'user' ? '用户使用协议' : '会员服务协议'), body: value.body || '', isDemo: value.isDemo !== false,
         version: Number(row?.version || 0), updatedAt: row?.updated_at ? new Date(row.updated_at).toISOString() : '' }
     },
     getProfileCardSettings: (appId, userId) => loadProfileCardSettings(database, appId, userId),

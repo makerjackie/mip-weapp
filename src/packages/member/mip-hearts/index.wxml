@@ -1,11 +1,11 @@
-<view id="mip-heart-history-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-heart-history-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
   <!-- figma 1732_19460/2202_44989/2202_44878 心动值、1732_19538 访客、2168_17419 与你互动：
        设计稿是 你的心动/对你心动 tabs（或 搜索+筛选 chips 头部）+ 2 列玩家卡网格（5 张固定嘉宾卡）；
        生产保持下方 tabs+列表（被 mip-heart-history 测试 pin）。
        头像/红心徽标/邀请人徽标 PNG 烘焙自参考稿；Lv、标签、简介、心动计数都是
        设计前瞻字段（listHeartHistory DTO 暂无），记 ui-fidelity manifest notes。 -->
   <block wx:if="{{figmaLayout && figma.cards}}">
-    <view class="-mx-4 -mt-4 relative min-h-[1400rpx]">
+    <view class="-mx-3 relative min-h-[1400rpx]">
       <view wx:if="{{figma.tabs}}" class="absolute left-0 top-0 h-[80rpx] w-full">
         <view class="absolute top-[20rpx] text-[28rpx] font-medium leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-brand' : 'text-muted'}}" style="left:132rpx">我的心动</view>
         <view class="absolute top-[20rpx] text-[28rpx] font-normal leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-muted' : 'text-brand'}}" style="left:506rpx">对我心动</view>
@@ -44,10 +44,10 @@
       </view>
     </view>
   </block>
-  <view class="grid grid-cols-2 border-b border-line text-center text-[24rpx]">
-    <view wx:if="{{kind === 'SENT'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-kind="SENT" bind:tap="changeKind">我的心动</view>
-    <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-kind="SENT" bind:tap="changeKind">我的心动</view>
-    <view class="flex min-h-[88rpx] items-center justify-center gap-2 border-b-[4rpx] py-4 {{kind === 'RECEIVED' ? 'border-brand text-brand' : 'border-transparent text-muted'}}" data-kind="RECEIVED" bind:tap="changeKind"><text>对我心动</text><view wx:if="{{receivedUnreadCount > 0}}" class="h-[16rpx] w-[16rpx] rounded-full bg-danger" aria-label="有新的心动" /></view>
+  <view class="-mx-3 grid grid-cols-2 border-b border-line text-center text-[28rpx]">
+    <view wx:if="{{kind === 'SENT'}}" class="flex h-[80rpx] items-center justify-center border-b-[4rpx] border-brand text-brand" data-kind="SENT" bind:tap="changeKind">我的心动</view>
+    <view wx:else class="flex h-[80rpx] items-center justify-center border-b-[4rpx] border-transparent text-muted" data-kind="SENT" bind:tap="changeKind">我的心动</view>
+    <view class="flex h-[80rpx] items-center justify-center gap-2 border-b-[4rpx] {{kind === 'RECEIVED' ? 'border-brand text-brand' : 'border-transparent text-muted'}}" data-kind="RECEIVED" bind:tap="changeKind"><text>对我心动</text><view wx:if="{{receivedUnreadCount > 0}}" class="h-[16rpx] w-[16rpx] rounded-full bg-danger" aria-label="有新的心动" /></view>
   </view>
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3">
@@ -57,16 +57,18 @@
   <view wx:elif="{{state === 'access'}}"><mip-empty-state title="需要完成身份信息" description="完成身份信息后可以查看心动记录。" action-text="继续" bind:action="openAccess" /></view>
   <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法加载心动记录" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="retry" /></view>
   <mip-empty-state wx:elif="{{state === 'empty'}}" title="{{kind === 'SENT' ? '暂无我的心动' : '暂无对我心动'}}" description="活动签到后的心动记录会显示在这里。" />
-  <view wx:else class="mt-4">
-    <view class="grid grid-cols-2 gap-[16rpx]">
-      <view wx:for="{{items}}" wx:key="viewKey" class="min-h-[374rpx] rounded-[16rpx] bg-panel px-[20rpx] pt-[32rpx] text-center active:bg-panel-raised" data-profile-ref="{{item.person.profileRef}}" bind:tap="openProfile" aria-role="button" aria-label="查看{{item.person.nickname}}的公开档案">
-        <view class="flex justify-center">
+  <view wx:else class="mt-3">
+    <view class="grid grid-cols-2 gap-[24rpx]">
+      <!-- 每条服务端心动记录显示心标；DTO 未返回等级、勋章与聚合次数时不造值。 -->
+      <view wx:for="{{items}}" wx:key="viewKey" class="relative flex min-h-[374rpx] min-w-0 flex-col overflow-hidden rounded-[16rpx] bg-panel px-[24rpx] pb-[16rpx] pt-[16rpx] active:bg-panel-raised" data-profile-ref="{{item.person.profileRef}}" bind:tap="openProfile" aria-role="button" aria-label="查看{{item.person.nickname}}的公开档案">
+        <image class="absolute right-[16rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-heart-fill.png" mode="aspectFit" aria-label="{{kind === 'SENT' ? '我已心动' : '对我心动'}}" />
+        <view class="flex shrink-0 justify-center">
           <image wx:if="{{item.person.avatarUrl}}" class="h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.person.avatarUrl}}" />
           <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[32rpx] font-semibold text-brand">{{item.personInitial}}</view>
         </view>
-        <view class="mt-[16rpx] truncate text-[32rpx] font-medium leading-[44.8rpx]">{{item.person.nickname}}</view>
-        <view wx:if="{{item.person.headline}}" class="mt-[8rpx] line-clamp-3 text-[20rpx] leading-[28rpx] text-muted">{{item.person.headline}}</view>
-        <view class="mt-[16rpx] min-h-[64rpx] border-t border-line py-[16rpx] text-[20rpx] text-brand" data-event-id="{{item.event.id}}" catch:tap="openEvent" aria-role="button" aria-label="查看活动{{item.event.title}}">{{item.event.title}}</view>
+        <view class="mt-[16rpx] truncate text-center text-[32rpx] font-medium leading-[44.8rpx]">{{item.person.nickname}}</view>
+        <view wx:if="{{item.person.headline}}" class="mt-[8rpx] line-clamp-2 text-[20rpx] leading-[28rpx] text-muted">{{item.person.headline}}</view>
+        <view class="mt-auto flex min-h-[64rpx] items-center gap-[8rpx] pt-[16rpx] text-[20rpx] leading-[28rpx] text-brand" data-event-id="{{item.event.id}}" catch:tap="openEvent" aria-role="button" aria-label="查看活动{{item.event.title}}"><text class="min-w-0 flex-1 truncate">{{item.event.title}}</text><mip-icon name="chevron-right-1" size="{{12}}" /></view>
       </view>
     </view>
     <view wx:if="{{nextCursor}}" class="mt-1"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>

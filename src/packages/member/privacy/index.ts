@@ -12,7 +12,7 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'processing' | 'success' | 'blocked' | 'conflict' | 'error',
     closureState: 'idle' as 'idle' | 'confirming' | 'processing' | 'failed',
-    localLogoutState: 'idle' as 'idle' | 'processing',
+    localLogoutState: 'idle' as 'idle' | 'confirming' | 'processing',
     confirmationPhrase: '',
     requiredConfirmationPhrase: accountClosureConfirmationPhrase,
     userVersion: 0,
@@ -100,23 +100,32 @@ Page({
   },
 
   async signOutLocally() {
-    if (this.data.localLogoutState === 'processing'
+    if (this.data.localLogoutState !== 'idle'
       || this.data.closureState === 'processing') {
       return
     }
-    const confirmed = await wx.showModal({
-      title: '退出登录',
-      content: '退出后将清除本机登录状态和用户缓存。账号、订单、会员权益和活动记录不会删除。',
-      confirmText: '退出',
-      confirmColor: '#C43D3D',
-    }).catch(() => null)
-    if (!confirmed?.confirm) {
-      return
-    }
+    this.setData({ localLogoutState: 'confirming', message: '' })
+    try {
+      const confirmed = await wx.showModal({
+        title: '退出登录',
+        content: '退出后将清除本机登录状态和用户缓存，不会删除账号或业务记录。',
+        confirmText: '退出',
+      })
+      if (!confirmed?.confirm) {
+        return
+      }
 
-    this.setData({ localLogoutState: 'processing', message: '' })
-    mipLocalSession.signOut()
-    mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
+      this.setData({ localLogoutState: 'processing' })
+      mipLocalSession.signOut()
+      mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
+      wx.showToast({ title: '已退出登录', icon: 'success' })
+    }
+    catch {
+      this.setData({ message: '退出未完成，请重试。' })
+    }
+    finally {
+      this.setData({ localLogoutState: 'idle' })
+    }
   },
 
   startAccountClosure() {

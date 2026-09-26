@@ -116,7 +116,7 @@ function normalizeDraft(value = {}) {
     title: stringValue(value.title, 120, 'VALIDATION_FAILED'),
     valueSummary: stringValue(value.valueSummary, 240, 'VALIDATION_FAILED'),
     targetSummary: stringValue(value.targetSummary, 500, 'VALIDATION_FAILED'),
-    description: stringValue(value.description, 6000, 'VALIDATION_FAILED'),
+    description: stringValue(value.description, 6000, 'VALIDATION_FAILED', false),
     regionText: stringValue(value.regionText, 60, 'VALIDATION_FAILED', false),
     typeKeys: stringList(value.typeKeys, 3, 'VALIDATION_FAILED', key => OPPORTUNITY_TYPES.has(key)),
     publicationStatus: value.publish ? value.publicationStatus : undefined,

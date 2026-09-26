@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-09-26T12:35:50.292Z",
+  "stage": "staging",
+  "function": "mip-opportunities-api",
+  "status": "Active",
+  "availableStatus": "Available",
+  "runtime": "Nodejs20.19",
+  "modifiedAt": "2026-09-26 20:35:13",
+  "codeSha256": "05a4026111066079ebd9acc6e85a40d85ea27ff57a06289ea10f97f57f87ac4e",
+  "health": {
+    "ok": true,
+    "persistence": "cloudbase-mysql"
+  },
+  "scope": "Allow an empty opportunity description, keeping the existing 6000-character server limit for legacy content compatibility. No other cloud function deployed.",
+  "realSessionReadback": "PENDING_ROOT_RUNTIME_ACCEPTANCE",
+  "userDataWrites": 0,
+  "preDeploymentValidation": {
+    "reportedBy": "settings agent",
+    "serverTests": {
+      "command": "node --test cloudfunctions/mip-opportunities-api/tests/domain.test.js",
+      "passed": 13,
+      "failed": 0
+    },
+    "clientTests": {
+      "files": 4,
+      "passed": 29,
+      "failed": 0
+    },
+    "syntaxCheck": "PASSED",
+    "coveredRules": [
+      "empty, whitespace and omitted description accepted",
+      "required title, valueSummary, targetSummary and roles remain required",
+      "6000 characters accepted and 6001 rejected"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-09-26T13:06:40+00:00",
+  "source": "Real WeChat DevTools UI button and Network response panel",
+  "action": "saveOpportunity",
+  "demoOnly": true,
+  "initialResult": {
+    "ok": false,
+    "error": {
+      "code": "CONTENT_SAFETY_UNAVAILABLE",
+      "providerCode": -604101
+    }
+  },
+  "providerCodeMeaning": "WX_FUNCTIONS_SERVER_OPENAPI_NO_PERMISSION, verified against official wx-server-sdk 4.0.2 source",
+  "containsRequestPayloadOrIdentity": false,
+  "finalResult": "PENDING"
+}

@@ -59,6 +59,7 @@ Page({
     cooperatorsCursor: '',
     cooperatorsLoading: false,
     cooperatorsMessage: '',
+    commentsAvailable: false,
     commentsState: 'loading' as 'loading' | 'ready' | 'error',
     comments: [] as PresentedComment[],
     commentsCursor: '',
@@ -118,6 +119,8 @@ Page({
     try {
       const item = await opportunityModule.get(this.data.id)
       const journeyStatus = journeyStatusOf(item)
+      // Matches the comment API's public states; ended projects retain reviews.
+      const commentsAvailable = item.status === 'PUBLISHED' || item.status === 'ENDED'
       const ownerBar: '' | OwnerBarMode = !item.mine
         ? ''
         : journeyStatus === 'UNPUBLISHED'
@@ -130,12 +133,24 @@ Page({
         typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
         journeyStatus,
         ownerBar,
+        commentsAvailable,
+        ...(!commentsAvailable
+          ? {
+              comments: [],
+              commentsCursor: '',
+              commentsMessage: '',
+              commentSettings: null,
+              composerVisible: false,
+            }
+          : {}),
         // 运行时验收（2026-09-22）：服务端 avatars 形状不可信，保底数组后才绑给卡片 type: Array 属性。
         cooperationAvatars: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
         roleNames: item.roles.map(key => cooperationRoles.find(role => role.key === key)?.name || key),
         message: '',
       })
-      void this.loadComments(true)
+      if (commentsAvailable) {
+        void this.loadComments(true)
+      }
     }
     catch (error) {
       this.setData({
@@ -147,7 +162,7 @@ Page({
 
   async authorizeInteraction(interaction: Interaction) {
     const item = this.data.item
-    if (!item || this.data.acting) {
+    if (!item || this.data.acting || (interaction === 'comment' && !this.data.commentsAvailable)) {
       return
     }
     this.resumeInteraction = interaction
@@ -199,7 +214,7 @@ Page({
   },
 
   async loadComments(reset = false) {
-    if (this.data.commentsLoadingMore || (!reset && !this.data.commentsCursor)) {
+    if (!this.data.commentsAvailable || this.data.commentsLoadingMore || (!reset && !this.data.commentsCursor)) {
       return
     }
     this.setData({
@@ -211,6 +226,9 @@ Page({
         this.data.id,
         reset ? undefined : this.data.commentsCursor,
       )
+      if (!this.data.commentsAvailable) {
+        return
+      }
       this.setData({
         commentsState: 'ready',
         commentSettings: page.settings,
@@ -219,6 +237,9 @@ Page({
       })
     }
     catch (error) {
+      if (!this.data.commentsAvailable) {
+        return
+      }
       const commentsMessage = error instanceof Error ? error.message : '评论加载失败'
       this.setData({
         commentsState: reset || !this.data.comments.length ? 'error' : 'ready',
@@ -235,6 +256,9 @@ Page({
   },
 
   async openCommentComposer() {
+    if (!this.data.commentsAvailable) {
+      return
+    }
     if (!this.data.commentSettings) {
       await this.loadComments(true)
     }

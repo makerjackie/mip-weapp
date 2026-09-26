@@ -129,6 +129,21 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discovery).toContain('data-profile-ref="{{item.profileRef}}"')
   })
 
+  it('keeps four detail facts and publication time without duplicating the cooperation pill', () => {
+    const detailCard = detail.match(/<mip-opportunity-card\b[^>]*\/>/)?.[0]
+    expect(detailCard).toContain('variant="detail"')
+    expect(detailCard).toContain('city-text="{{item.city.label || \'\'}}"')
+    expect(detailCard).toContain('region-text="{{item.regionText || \'\'}}"')
+    expect(detailCard).toContain('published-text="{{publishedText}}"')
+    expect(detailCard).not.toContain('referral-count=')
+    expect(discovery).not.toContain('variant="detail"')
+    expect(opportunityCard).toMatch(/<mip-attend-pill\s+wx:if="\{\{variant !== 'detail'\}\}"/)
+    // Unlike a fixed-height list row, a detail can wrap multiple type tags
+    // and a complete publication date without cropping its bottom line.
+    expect(opportunityCardStyles).toMatch(/\.mip-opportunity-card--detail\s*\{[^}]*height: auto;[^}]*min-height: 352rpx;/)
+    expect(opportunityCardStyles).toMatch(/\.mip-opportunity-card--detail \.mip-opportunity-card__footer\s*\{[^}]*flex-wrap: wrap;/)
+  })
+
   it('keeps one cooperation action and a separate read-only participant list', () => {
     expect(detail).toContain('bind:tap="cooperationIntent"')
     expect(detail).toContain('id="opportunity-cooperation-actions"')

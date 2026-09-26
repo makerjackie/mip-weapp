@@ -639,15 +639,15 @@ TILES.push(
   props:[['letters','string','"A–Z#"','字母序列']],
   usage:`<AlphabetSlider /> <!-- 放入 relative 容器,父级处理 tap/move -->` },
 
-{ group:'primitive', name:'PrimaryButton', cn:'主按钮', weapp:'mip-primary-button',
-  desc:'351×56 液态玻璃外圈 + 327×40 品牌黄内芯(1px #080808 描边),文字 16/500 黑;禁用 40% 透明。',
+{ group:'primitive', name:'PrimaryButton', cn:'主按钮', weapp:'sticky-actions',
+  desc:'351×56 液态玻璃外圈 + 327×40 品牌黄内芯。小程序由 sticky-actions + mip-pill-button 组成,只保留一层外圈;文字 16/500 黑,禁用 40% 透明。',
   demos:[
     {label:'默认', html:`<div class="m-pbtn"><button>保存</button></div>`},
     {label:'disabled', html:`<div class="m-pbtn"><button disabled>保存</button></div>`},
     {label:'loading(mip)', html:`<div class="m-pbtn"><button disabled>保存中…</button></div>`},
   ],
-  props:[['label','string','"保存"','按钮文案'],['disabled','boolean','false','禁用'],['loading','boolean','false','(mip-primary-button)加载态'],['tap 事件','event','—','bind:tap']],
-  usage:`<mip-primary-button label="提交报名" disabled="{{!canSubmit}}" bind:tap="submit" />` },
+  props:[['label','string','"保存"','按钮文案'],['disabled','boolean','false','禁用'],['loading','boolean','false','(mip-pill-button)加载态'],['tap 事件','event','—','bind:tap']],
+  usage:`<sticky-actions>\n  <mip-pill-button slot="actions" label="提交报名" disabled="{{!canSubmit}}" bind:tap="submit" />\n</sticky-actions>` },
 
 { group:'primitive', name:'PillButton', cn:'胶囊按钮', weapp:'mip-pill-button',
   desc:'h40 r100 + 1px 黑描边 + 可选 20px 图标;primary 黄底黑字,secondary #202020 底黄字。',
@@ -923,9 +923,9 @@ TILES.push(
 
 { group:'weapp', name:'sticky-actions', cn:'底部吸附操作条', weapp:'sticky-actions',
   desc:'液态玻璃外壳 + 具名插槽 actions + 自动安全区垫片;页面底部主操作统一放这里。',
-  demos:[{label:'近似示意', html:`<div style="width:375px;background:rgba(32,32,32,.9);border:1px solid #2a2a2a;border-radius:14px;padding:10px 12px 6px;backdrop-filter:blur(20px)"><div class="m-pbtn" style="width:100%;height:48px"><button style="width:100%">提交报名</button></div><div style="height:14px;display:flex;justify-content:center;align-items:flex-end;padding-bottom:2px"><i style="width:100px;height:4px;border-radius:100px;background:#fff;display:block;opacity:.7"></i></div></div>`}],
-  props:[['slot "actions"','slot','—','操作内容(放 mip-primary-button 等)']],
-  usage:`<sticky-actions>\n  <mip-primary-button slot="actions" label="提交报名" bind:tap="submit" />\n</sticky-actions>` },
+  demos:[{label:'单层外圈 + 胶囊内芯', html:`<div class="m-pbtn"><button>提交报名</button></div>`}],
+  props:[['slot "actions"','slot','—','操作内容(放 mip-pill-button,不再叠加外圈)']],
+  usage:`<sticky-actions>\n  <mip-pill-button slot="actions" label="提交报名" bind:tap="submit" />\n</sticky-actions>` },
 
 { group:'weapp', name:'page-exit', cn:'二级页返回', weapp:'page-exit',
   desc:'二级页底部返回按钮:按 managed/always 决定返回 tab 还是出栈;触发 exit。',

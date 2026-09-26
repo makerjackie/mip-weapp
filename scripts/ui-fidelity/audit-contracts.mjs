@@ -57,7 +57,7 @@ const REQUIRED_COMPONENTS = [
   'mip-tab-bar',
   'mip-detail-row',
   'mip-tag-chip',
-  'mip-primary-button',
+  'sticky-actions',
   'mip-pill-button',
   'mip-level-banner',
   'mip-cooperation-card',

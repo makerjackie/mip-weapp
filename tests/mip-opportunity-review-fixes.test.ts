@@ -83,9 +83,22 @@ function discoveryPage() {
 /**
  * WS-OPPORTUNITIES review 修复回归（2026-09-22，二轮终修）。
  * 覆盖：#1 下架链路不再对服务端撒谎、#2/B1 恢复路径等登录态刷新（行为级断言）、
- * #3 展开讲讲必填呈现、#4 regionText 取值链（含首页/我的页透传）、#9 typeKeys 过滤。
+ * #3 展开讲讲选填呈现、#4 regionText 取值链（含首页/我的页透传）、#9 typeKeys 过滤。
  */
 describe('MIP opportunity review fixes', () => {
+  it('does not count the empty nationwide catalog option as an applied filter', () => {
+    const instance = discoveryPage()
+    instance.data.cityOptions = [{ id: '', label: '全国' }, { id: 'city-sz', label: '深圳' }]
+    for (const mode of ['opportunities', 'cooperation']) {
+      instance.data.mode = mode
+      instance.refreshAppliedFilterPresentation()
+      expect(instance.data.appliedFilterChips).toEqual([])
+      expect(instance.data.appliedFilterCount).toBe(0)
+    }
+    instance.data.selectedCooperationBranchId = 'city-sz'
+    instance.refreshAppliedFilterPresentation()
+    expect(instance.data.appliedFilterChips).toEqual([{ key: 'branch', label: '深圳' }])
+  })
   const discovery = source('src/pages/opportunities/index.wxml')
   const home = source('src/pages/index/index.wxml')
   const profile = source('src/pages/profile/index.wxml')
@@ -149,16 +162,16 @@ describe('MIP opportunity review fixes', () => {
     expect(instance.data.filterOpen).toBe(true)
   })
 
-  it('restores the required description presentation to match server validation (#3)', () => {
+  it('keeps description optional with the prototype input limit (#3)', () => {
     const view = source('src/packages/member/mip-opportunities/editor/index.wxml')
     const descriptionBlock = view.slice(
       view.indexOf('id="opportunity-field-description"'),
       view.indexOf('id="opportunity-field-roles"'),
     )
-    expect(descriptionBlock).toContain('<text>展开讲讲</text>')
-    expect(descriptionBlock).not.toContain('（选填）')
-    expect(descriptionBlock).toContain('>必填</text>')
-    expect(descriptionBlock).toContain('aria-label="展开讲讲，必填"')
+    expect(descriptionBlock).toContain('<text>展开讲讲（选填）</text>')
+    expect(descriptionBlock).not.toContain('>必填</text>')
+    expect(descriptionBlock).toContain('maxlength="300"')
+    expect(descriptionBlock).toContain('aria-label="展开讲讲，选填，最多300字"')
   })
 
   it('renders regionText first with the existing location fallbacks intact (#4)', () => {
@@ -206,7 +219,7 @@ describe('MIP opportunity review fixes', () => {
     expect(
       (instance.data.opportunities as Array<Record<string, unknown>>).map(item => item.avatarViews),
     ).toEqual([[], ['u1', 'u2'], [], []])
-    // 源码级：机会 Tab / 我的页改绑保底字段，详情页 cooperationAvatars 同口径加固；
+    // 源码级：机会 Tab / 我的页改绑保底字段，详情底部合作头像同口径加固；
     // 首页信息流不传 avatars（组件默认 []）；组件契约保持 type: Array 不动。
     expect(discovery).toContain('avatars="{{item.avatarViews}}"')
     expect(discovery).not.toContain('avatars="{{item.avatars}}"')
@@ -214,7 +227,11 @@ describe('MIP opportunity review fixes', () => {
     expect(profile).not.toContain('avatars="{{item.avatars}}"')
     expect(home).not.toContain('avatars="{{item.avatars}}"')
     expect(detailScript).toContain('cooperationAvatars: Array.isArray(item.avatars)')
-    expect(detail).toContain('avatars="{{cooperationAvatars}}"')
+    const cooperationActions = detail.slice(detail.indexOf('id="opportunity-cooperation-actions"'))
+    expect(cooperationActions).toContain('wx:for="{{cooperationAvatars}}"')
+    expect(cooperationActions).toContain('src="{{avatar}}"')
+    expect(cooperationActions).toContain('bind:tap="openCooperators"')
+    expect(cooperationActions).toContain('{{item.cooperationCount || 0}}想合作')
     expect(cardScript).toContain(`avatars: { type: Array, value: [] }`)
   })
 

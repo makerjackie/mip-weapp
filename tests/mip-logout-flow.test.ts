@@ -439,7 +439,7 @@ describe('MIP local logout flow', () => {
       privacy.indexOf('mipLocalSession.signOut()'),
     )
     expect(privacyTemplate).toContain('bind:tap="signOutLocally"')
-    expect(privacyTemplate).toContain('不会删除账号或业务记录')
+    expect(privacy).toContain('不会删除账号或业务记录')
     expect(profile).toContain('\'/packages/member/privacy/index\'')
     expect(access).toContain('mipIdentityModule.signIn(this.data.token)')
     expect(accessTemplate).toContain('id="mip-access-sign-in"')

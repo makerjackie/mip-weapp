@@ -140,7 +140,7 @@ export function normalizeOpportunityDraft(value: OpportunityDraft): OpportunityD
     title: text(value.title, 120, '机会标题'),
     valueSummary: text(value.valueSummary, 240, '机会价值'),
     targetSummary: text(value.targetSummary, 500, '寻找内容'),
-    description: text(value.description, 6000, '机会说明'),
+    description: text(value.description, 6000, '机会说明', false),
     scopeType,
     branchId: scopeType === 'BRANCH' ? value.branchId : undefined,
     cityTagId: text(value.cityTagId, 64, '城市', false) || undefined,

@@ -143,9 +143,8 @@ describe('MIP opportunity journey review', () => {
     expect(editor).toContain('示例：南山十亩地')
     expect(editor).toContain('{{targetSummary.length}}/300')
     expect(editor).toContain('{{description.length}}/300')
-    // 服务端强制必填，恢复必填呈现（不再标「选填」）。
-    expect(editor).toContain('<text>展开讲讲</text>')
-    expect(editor).not.toContain('展开讲讲（选填）')
+    // J4-04 原型明确为选填；输入框保留 300 字上限。
+    expect(editor).toContain('<text>展开讲讲（选填）</text>')
     // 项目状态行去重：区块标题保留一份，收起行只显示当前值。
     expect(editor.match(/项目状态<\/text>/g)?.length).toBe(1)
     // 编辑页不出现删除入口（C5：删除归我的项目长按）。
