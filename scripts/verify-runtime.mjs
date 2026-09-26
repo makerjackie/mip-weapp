@@ -591,7 +591,11 @@ export function assertNoSensitivePageData(data, route, sensitivePatterns, allowe
       for (const pattern of matchesSensitivePattern(value, sensitivePatterns)) {
         hits.push({ path: keyPath || '(root)', pattern })
       }
-      if (rawPhoneLikePattern.test(value)) {
+      // Public UUID identifiers can contain an eleven-digit decimal run. Only
+      // exempt a complete UUID in an ID field; phone fields and prose still fail.
+      const publicUuid = /(?:^|\.)(?:id|[a-zA-Z]+Id)$/.test(keyPath)
+        && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+      if (!publicUuid && rawPhoneLikePattern.test(value)) {
         hits.push({ path: keyPath || '(root)', pattern: 'raw-phone-like' })
       }
       return

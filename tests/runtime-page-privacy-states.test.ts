@@ -13,6 +13,14 @@ const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8')
 const contract = JSON.parse(read('config/runtime-pages.json'))
 
 describe('runtime page privacy and normal unavailable states', () => {
+  it('distinguishes public UUIDs from phone numbers without exempting arbitrary ID text', () => {
+    const uuid = 'abcdefab-abcd-5abc-a123-18819253403a'
+    expect(() => assertNoSensitivePageData({ catalog: { cityTags: [{ id: uuid }] } }, 'catalog', contract.sensitivePatterns)).not.toThrow()
+    for (const data of [{ id: '18819253403' }, { note: uuid }, { phoneNumber: uuid }, { id: `call ${uuid}` }]) {
+      expect(() => assertNoSensitivePageData(data, 'catalog', contract.sensitivePatterns)).toThrow('page data contains sensitive values')
+    }
+  })
+
   it('keeps phone originals out of onsite roster page data', () => {
     expect(() => assertNoSensitivePageData({
       items: [{ id: 'registration-1', phoneNumberMasked: '+86 188****3403' }],
