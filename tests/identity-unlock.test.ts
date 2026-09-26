@@ -67,4 +67,32 @@ describe('login sheet subtitle override (journey-review J5-02 variant)', () => {
     const view = read('src/components/mip-login-sheet/index.wxml')
     expect(view).toContain('<view wx:if="{{subtitle}}" class="mip-login-sheet__sub">{{subtitle}}</view>')
   })
+
+  it('keeps both the modal scrim and sheet above the custom TabBar', () => {
+    const styles = read('src/components/mip-login-sheet/index.wxss')
+    const tabBarStyles = read('src/custom-tab-bar/index.wxss')
+    const layer = (source: string, selector: string) => {
+      const rule = source.split(`${selector} {`)[1]?.split('}')[0] || ''
+      return Number(rule.match(/z-index:\s*(\d+)/)?.[1])
+    }
+    const scrim = layer(styles, '.mip-login-sheet__scrim')
+    const sheet = layer(styles, '.mip-login-sheet')
+    expect(scrim).toBeGreaterThan(layer(tabBarStyles, '.tab-bar'))
+    expect(sheet).toBeGreaterThan(scrim)
+  })
+
+  it('makes cancellation an accessible full-width touch target and keeps busy submissions protected', () => {
+    const view = read('src/components/mip-login-sheet/index.wxml')
+    const dismiss = view.match(/<view[^>]*id="mip-login-sheet-dismiss"[^>]*>/)?.[0]
+    expect(dismiss).toContain('aria-role="button"')
+    expect(dismiss).toContain('aria-disabled="{{busy}}"')
+    expect(dismiss).toContain('bind:tap="onDismiss"')
+    const rule = read('src/components/mip-login-sheet/index.wxss').split('.mip-login-sheet__ghost {')[1]?.split('}')[0]
+    expect(rule).toContain('min-height: 88rpx')
+    const triggerEvent = vi.fn()
+    definition.methods.onDismiss.call({ data: { busy: true }, triggerEvent })
+    expect(triggerEvent).not.toHaveBeenCalled()
+    definition.methods.onDismiss.call({ data: { busy: false }, triggerEvent })
+    expect(triggerEvent).toHaveBeenCalledExactlyOnceWith('dismiss')
+  })
 })

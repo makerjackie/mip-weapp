@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MIP · 逐页验收</title>
+    <style>
+      /*__STYLES__*/
+    </style>
+  </head>
+  <body>
+    <header class="toolbar">
+      <div class="brand">MIP <span>逐页验收</span></div>
+      <select id="jump" aria-label="跳转到页面"></select>
+      <span id="progress" class="muted"></span>
+      <button id="export" class="export">导出全部意见</button>
+    </header>
+    <main>
+      <section class="page-heading">
+        <div class="heading-line">
+          <h1 id="page-title"></h1>
+          <span id="ai-state" class="badge"></span>
+        </div>
+        <p id="scenario-warning" class="scenario-warning" role="status" hidden></p>
+        <p id="ai-note" class="ai-note"></p>
+      </section>
+      <div id="comparison" class="comparison"></div>
+      <details id="evidence" class="evidence">
+        <summary>查看核对细节与来源</summary>
+        <div id="evidence-content"></div>
+      </details>
+    </main>
+    <footer class="review-panel">
+      <div class="review-topline">
+        <strong>我的批注</strong>
+        <div id="verdicts" class="verdicts" aria-label="本页验收状态"></div>
+        <span class="navigation"
+          ><button id="previous" aria-label="上一页">← 上一页</button><span id="counter"></span
+          ><button id="next" aria-label="下一页">下一页 →</button></span
+        >
+      </div>
+      <div id="previous-feedback" class="previous-feedback" hidden></div>
+      <textarea id="note" aria-label="本页批注" placeholder="哪里需要调整？直接写在这里。" rows="2"></textarea>
+      <div class="review-bottomline">
+        <span id="save-state" role="status" aria-live="polite">意见自动保存在当前浏览器</span
+        ><span>输入时方向键不会翻页</span>
+      </div>
+    </footer>
+    <dialog id="zoom">
+      <div class="zoom-toolbar"><span id="zoom-label"></span><button id="close-zoom">关闭</button></div>
+      <img id="zoom-image" alt="截图大图" />
+    </dialog>
+    <script>
+      const report=/*__REPORT_DATA__*/;
+      /*__CLIENT__*/
+    </script>
+  </body>
+</html>

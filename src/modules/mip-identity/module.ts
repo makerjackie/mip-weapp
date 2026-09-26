@@ -379,6 +379,7 @@ export function createMipIdentityModule(
   async function mutateAccessSession(
     token: string,
     mutation: () => Promise<IdentityAccessSnapshot>,
+    authenticate = false,
   ): Promise<AccessSession> {
     const intent = getIntent(token)
     if (!intent) {
@@ -386,6 +387,11 @@ export function createMipIdentityModule(
     }
     const requestGeneration = beginSnapshotMutation()
     const next = await mutation()
+    // A native phone grant is an explicit login action. A later logout must still win.
+    if (authenticate && requestGeneration === localSessionGeneration) {
+      signedOut = false
+      persistAccessState()
+    }
     if (!commitMutationSnapshot(requestGeneration, next)) {
       const snapshot = currentLocalSnapshot()
       return {
@@ -471,7 +477,7 @@ export function createMipIdentityModule(
       if (!code.trim()) {
         throw new Error('PHONE_CODE_REQUIRED')
       }
-      const result = await mutateAccessSession(token, () => gateway.bindWechatPhone(code))
+      const result = await mutateAccessSession(token, () => gateway.bindWechatPhone(code), true)
       if (!signedOut) {
         notifyIdentityBoundary()
       }

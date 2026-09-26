@@ -1,0 +1,16 @@
+.privacy-closure-dialog {
+  --td-dialog-width: min(640rpx, calc(100vw - 48rpx));
+  --td-dialog-border-radius: 16rpx;
+  --td-dialog-title-color: var(--color-ink);
+  --td-dialog-close-color: var(--color-muted);
+  --td-button-danger-bg-color: var(--color-danger);
+  --td-button-danger-border-color: var(--color-danger);
+  --td-button-danger-color: var(--color-on-brand);
+  --td-button-danger-disabled-bg: var(--color-panel-raised);
+  --td-button-danger-disabled-border-color: var(--color-line);
+  --td-button-danger-disabled-color: var(--color-muted);
+}
+
+.privacy-closure-placeholder {
+  color: var(--color-muted);
+}

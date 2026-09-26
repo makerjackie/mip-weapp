@@ -616,6 +616,21 @@ describe('MIP global access guard', () => {
     expect(isMipGlobalAccessExemptRoute('/pages/index/index')).toBe(false)
   })
 
+  it('leaves the signed-out my page visible so its actions can show the phone sheet', async () => {
+    const module = createMipIdentityModule(gateway())
+    module.signOutLocally()
+    const reLaunch = vi.fn()
+    const guard = createMipGlobalAccessGuard(module, {
+      currentPage: () => ({ path: 'pages/profile/index' }),
+      reLaunch,
+      canNavigateBack: () => false,
+      navigateBack: vi.fn(),
+    })
+    await expect(guard.restore({ path: 'pages/profile/index' })).resolves.toBe('READY')
+    expect(reLaunch).not.toHaveBeenCalled()
+    expect(module.isSignedOut()).toBe(true)
+  })
+
   it('does not redirect while an agreement page is active', () => {
     const module = createMipIdentityModule(gateway())
     const reLaunch = vi.fn()

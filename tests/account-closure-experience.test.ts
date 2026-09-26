@@ -29,8 +29,12 @@ describe('account closure experience', () => {
     expect(page).toContain('closureRequest: null as ReturnType<typeof createAccountClosureRequestTracker> | null')
     expect(template).toContain('输入“{{requiredConfirmationPhrase}}”')
     expect(template).toContain('账号已注销')
-    expect(page).toContain('订单、支付、退款、活动和审计记录按规则保留')
-    expect(template).toContain('loading="{{closureState === \'processing\'}}"')
+    expect(template).toContain('订单、支付、退款、活动和审计记录按规则保留')
+    expect(template).toContain('loading: closureState === \'processing\'')
+    expect(template).toContain('<t-dialog')
+    expect(template).toContain('bind:close="cancelAccountClosure"')
+    expect(template).not.toContain('id="privacy-closure-processing"')
+    expect(page.slice(page.indexOf('async submitAccountClosure()'))).not.toContain('wx.showModal')
   })
 
   it('presents account actions as settings instead of data-category explanations', () => {

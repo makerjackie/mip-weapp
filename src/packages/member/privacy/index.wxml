@@ -48,24 +48,34 @@
 
     <view class="mt-[48rpx]">
       <view id="privacy-sign-out">
-        <t-button block size="large" theme="default" loading="{{localLogoutState === 'processing'}}" disabled="{{localLogoutState === 'confirming' || closureState === 'processing'}}" bind:tap="signOutLocally">退出登录</t-button>
+        <t-button block size="large" theme="default" loading="{{localLogoutState === 'processing'}}" disabled="{{localLogoutState === 'confirming' || closureState !== 'idle'}}" bind:tap="signOutLocally">退出登录</t-button>
       </view>
       <view wx:if="{{message && closureState === 'idle'}}" class="mt-[16rpx] px-[24rpx] text-[24rpx] leading-[36rpx] text-danger">{{message}}</view>
       <view id="privacy-closure-card" class="mt-[16rpx]">
-        <t-button wx:if="{{closureState === 'idle'}}" block size="large" variant="text" theme="danger" disabled="{{localLogoutState !== 'idle'}}" bind:tap="startAccountClosure">注销账号</t-button>
-        <view wx:else id="privacy-closure-processing" class="rounded-[16rpx] bg-panel px-[24rpx] py-[24rpx]">
-          <view class="text-[28rpx] font-medium">注销账号</view>
-          <view class="mt-[16rpx] text-[24rpx] leading-[36rpx] text-muted">注销后无法恢复。请确认没有待处理的订单或退款。</view>
-          <view class="mt-[24rpx] text-[24rpx]">输入“{{requiredConfirmationPhrase}}”</view>
-          <input class="mt-[16rpx] block h-[88rpx] w-full max-w-full box-border rounded-[16rpx] bg-panel-raised px-[24rpx] text-[28rpx]" aria-label="账号注销确认短语" value="{{confirmationPhrase}}" maxlength="20" disabled="{{closureState === 'processing'}}" bindinput="updateConfirmationPhrase" placeholder="输入确认短语" placeholder-style="color:#B3B3B3" />
-          <view wx:if="{{message}}" class="mt-[16rpx] text-[24rpx] leading-[36rpx] text-danger">{{message}}</view>
-          <view class="mt-[24rpx] flex gap-[16rpx]">
-            <view class="min-w-0 flex-1"><t-button block size="large" variant="outline" disabled="{{closureState === 'processing'}}" bind:tap="cancelAccountClosure">取消</t-button></view>
-            <view class="min-w-0 flex-1"><t-button block size="large" theme="danger" loading="{{closureState === 'processing'}}" disabled="{{confirmationPhrase !== requiredConfirmationPhrase}}" bind:tap="submitAccountClosure">继续</t-button></view>
-          </view>
-        </view>
+        <t-button block size="large" variant="text" theme="danger" disabled="{{localLogoutState !== 'idle' || closureState !== 'idle'}}" bind:tap="startAccountClosure">注销账号</t-button>
       </view>
     </view>
     <app-page-exit label="返回我的" tab-url="/pages/profile/index" />
+    <t-dialog
+      id="privacy-closure-dialog"
+      class="privacy-closure-dialog"
+      visible="{{closureState !== 'idle'}}"
+      title="注销账号"
+      close-btn="{{closureState !== 'processing'}}"
+      close-on-overlay-click="{{closureState !== 'processing'}}"
+      prevent-scroll-through
+      cancel-btn="{{ { content: '取消', variant: 'outline', theme: 'default', disabled: closureState === 'processing' } }}"
+      confirm-btn="{{ { content: closureState === 'processing' ? '正在注销' : '确认注销', variant: 'base', theme: 'danger', loading: closureState === 'processing', disabled: confirmationPhrase !== requiredConfirmationPhrase || closureState === 'processing' } }}"
+      bind:close="cancelAccountClosure"
+      bind:confirm="submitAccountClosure"
+    >
+      <view slot="content" class="mt-[24rpx]">
+        <view class="text-[28rpx] font-medium leading-[40rpx] text-danger">注销后无法恢复，请谨慎操作。</view>
+        <view class="mt-[16rpx] text-[24rpx] leading-[36rpx] text-muted">公开资料和可撤销状态将关闭；订单、支付、退款、活动和审计记录按规则保留。存在待处理订单或退款时无法注销。</view>
+        <view class="mt-[24rpx] text-[26rpx] leading-[40rpx] text-ink">输入“{{requiredConfirmationPhrase}}”</view>
+        <input class="mt-[16rpx] box-border block h-[88rpx] w-full max-w-full rounded-[16rpx] bg-canvas px-[24rpx] text-[28rpx] text-ink" aria-label="账号注销确认短语" value="{{confirmationPhrase}}" maxlength="20" disabled="{{closureState === 'processing'}}" bindinput="updateConfirmationPhrase" placeholder="输入确认短语" placeholder-class="privacy-closure-placeholder" />
+        <view wx:if="{{message}}" class="mt-[16rpx] text-[24rpx] leading-[36rpx] text-danger" aria-live="polite">{{message}}</view>
+      </view>
+    </t-dialog>
   </block>
 </view>

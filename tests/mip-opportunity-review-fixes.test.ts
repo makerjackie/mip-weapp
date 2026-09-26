@@ -11,6 +11,11 @@ const mocks = vi.hoisted(() => ({
   consumePendingResume: vi.fn(),
   loadSnapshot: vi.fn(),
   beginProtectedAction: vi.fn(),
+  isSignedOut: vi.fn(),
+  signIn: vi.fn(),
+  bindWechatPhone: vi.fn(),
+  loadAccess: vi.fn(),
+  complete: vi.fn(),
   cancel: vi.fn(),
   listActive: vi.fn(),
   getCatalogs: vi.fn(),
@@ -39,6 +44,11 @@ vi.mock('../src/modules/mip-identity/client', () => ({
     consumePendingResume: mocks.consumePendingResume,
     loadSnapshot: mocks.loadSnapshot,
     beginProtectedAction: mocks.beginProtectedAction,
+    isSignedOut: mocks.isSignedOut,
+    signIn: mocks.signIn,
+    bindWechatPhone: mocks.bindWechatPhone,
+    loadAccess: mocks.loadAccess,
+    complete: mocks.complete,
     cancel: mocks.cancel,
   },
 }))
@@ -64,6 +74,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.consumePendingResume.mockReturnValue(null)
+  mocks.isSignedOut.mockReturnValue(false)
   mocks.loadSnapshot.mockResolvedValue({ authenticated: false })
   mocks.beginProtectedAction.mockResolvedValue({
     token: 't0',
@@ -86,6 +97,53 @@ function discoveryPage() {
  * #3 展开讲讲选填呈现、#4 regionText 取值链（含首页/我的页透传）、#9 typeKeys 过滤。
  */
 describe('MIP opportunity review fixes', () => {
+  it('actually renders the native phone sheet and shows it for anonymous opportunity actions', async () => {
+    expect(source('src/pages/opportunities/index.wxml')).toContain('<mip-login-sheet visible="{{loginSheetOpen}}"')
+    const instance = discoveryPage()
+    await instance.openProtected('auth-intent:open-filters', 'INTERACT')
+    expect(instance.data.loginSheetOpen).toBe(true)
+    expect(mocks.navigateTo).not.toHaveBeenCalled()
+    expect(mocks.signIn).not.toHaveBeenCalled()
+  })
+
+  it('keeps opportunity login a local intent so later agreement cancellation returns here', async () => {
+    const instance = discoveryPage()
+    instance.openLogin()
+    await Promise.resolve()
+    expect(mocks.beginProtectedAction).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'EDIT_PROFILE',
+      source: expect.objectContaining({ navigation: 'navigateBack', route: '/pages/opportunities/index' }),
+    }))
+  })
+
+  it('returns from profile setup to the same opportunity action without discarding its intent', async () => {
+    const instance = discoveryPage()
+    instance.authToken = 't0'
+    instance.resumeDestination = 'auth-intent:open-filters'
+    instance.loadContent = vi.fn()
+    instance.runResumeDestination = vi.fn()
+    mocks.loadAccess.mockResolvedValue({ decision: { ready: true }, snapshot: { authenticated: true, membership: { kind: 'PLAYER' } } })
+    await instance.onShow()
+    expect(mocks.complete).toHaveBeenCalledWith('t0')
+    expect(instance.runResumeDestination).toHaveBeenCalledWith('auth-intent:open-filters')
+    expect(instance.data.authenticated).toBe(true)
+    expect(instance.data.player).toBe(true)
+  })
+
+  it('restores a previously bound account with explicit sign-in and no phone rebinding', async () => {
+    const instance = discoveryPage()
+    instance.authToken = 't0'
+    instance.resumeDestination = 'auth-intent:open-filters'
+    instance.loadContent = vi.fn()
+    instance.runResumeDestination = vi.fn()
+    mocks.signIn.mockResolvedValue({ token: 't0', snapshot: { authenticated: true, phoneBound: true, membership: { kind: 'PLAYER' } }, decision: { ready: true } })
+    await instance.onLoginSheetSignIn()
+    expect(mocks.bindWechatPhone).not.toHaveBeenCalled()
+    expect(instance.data.player).toBe(true)
+    expect(mocks.complete).toHaveBeenCalledWith('t0')
+    expect(instance.runResumeDestination).toHaveBeenCalledWith('auth-intent:open-filters')
+  })
+
   it('does not count the empty nationwide catalog option as an applied filter', () => {
     const instance = discoveryPage()
     instance.data.cityOptions = [{ id: '', label: '全国' }, { id: 'city-sz', label: '深圳' }]

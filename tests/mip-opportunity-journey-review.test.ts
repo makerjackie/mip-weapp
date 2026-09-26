@@ -42,7 +42,7 @@ describe('MIP opportunity journey review', () => {
     expect(discovery).toContain('bind:tap="openLogin">玩家登录')
     // J1-06→J1-07：解锁入口走 openProtected 门禁，授权后落玩家等级页（不再原地刷新）。
     expect(discovery).toContain('bind:tap="openBecomePlayerUnlock">去成为玩家解锁权限>')
-    expect(discoveryScript).toContain(`void this.openProtected('/packages/member/mip-growth/index', 'ENTER_APP')`)
+    expect(discoveryScript).toContain(`void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE')`)
     // 发布机会 / 筛选走 openProtected；游客点「我的项目」先身份确认，回来后落在我的项目 pill。
     expect(discoveryScript).toContain(`void this.openProtected(url, 'PUBLISH_OPPORTUNITY')`)
     expect(discoveryScript).toContain(`void this.openProtected(FILTER_AUTH_RESUME, 'INTERACT')`)

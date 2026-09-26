@@ -14,6 +14,7 @@ export const MIP_PUBLIC_ROUTES = [
   'packages/member/mip-events/detail/index',
   'packages/member/mip-events/participants/index',
   'pages/opportunities/index',
+  'pages/profile/index',
   'packages/member/mip-opportunities/detail/index',
   'packages/member/mip-public-profile/index',
 ] as const

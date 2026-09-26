@@ -115,7 +115,11 @@ Page({
     removingPortfolioId: '',
     openingAction: '' as OpeningAction,
     message: '',
+    loginSheetOpen: false,
+    loginSheetBusy: false,
+    loginSheetAllowSignIn: false,
   },
+  authToken: '',
   resumeDestination: '',
   loadPromise: null as Promise<void> | null,
   lastSuccessfulRefreshAt: 0,
@@ -128,9 +132,17 @@ Page({
     if (this.data.openingAction) {
       this.setData({ openingAction: '' })
     }
+    if (this.data.loginSheetOpen || this.data.loginSheetBusy) {
+      return
+    }
+    if (this.authToken) {
+      void this.resumeLogin()
+      return
+    }
     const resume = mipIdentityModule.consumePendingResume('pages/profile/index')
-    if (resume && this.resumeDestination) {
-      const destination = this.resumeDestination
+    const resumeDestination = resume?.source.query?.destination || this.resumeDestination
+    if (resume && resumeDestination) {
+      const destination = resumeDestination
       this.resumeDestination = ''
       caseNavigateTo({ url: destination })
       return
@@ -154,7 +166,11 @@ Page({
 
   async loadProfile(options: { force?: boolean } = {}) {
     if (this.loadPromise) {
-      return this.loadPromise
+      await this.loadPromise
+      if (!options.force) {
+        return
+      }
+      // Login may finish while anonymous sections are still loading. Force a fresh identity read.
     }
     const loadPromise = this.loadProfileOnce(options)
     this.loadPromise = loadPromise
@@ -609,8 +625,8 @@ Page({
       const intent: ProtectedActionIntent = {
         action,
         requiredCapability,
-        requirements,
-        source: { navigation: 'navigateBack' },
+        requirements: this.data.authenticated ? requirements : ['AUTHENTICATED', 'AGREEMENTS', 'PHONE', 'PROFILE'],
+        source: { navigation: 'navigateBack', route: '/pages/profile/index', query: { destination } },
       }
       const accessSnapshotFresh = this.lastSuccessfulRefreshAt > 0
         && Date.now() - this.lastSuccessfulRefreshAt < PROFILE_REFRESH_INTERVAL_MS
@@ -625,7 +641,21 @@ Page({
       const session = await mipIdentityModule.beginProtectedAction(intent)
       if (session.decision.ready) {
         this.resumeDestination = ''
-        caseNavigateTo({ url: destination })
+        this.openingActionLock = false
+        this.setData({ openingAction: '' })
+        if (destination) {
+          caseNavigateTo({ url: destination })
+        }
+        else {
+          await this.loadProfile({ force: true })
+        }
+        return
+      }
+      if (session.decision.block !== 'FORBIDDEN'
+        && (!session.snapshot.authenticated || !session.snapshot.phoneBound)) {
+        this.authToken = session.token
+        this.openingActionLock = false
+        this.setData({ openingAction: '', loginSheetOpen: true, loginSheetAllowSignIn: mipIdentityModule.isSignedOut() })
         return
       }
       caseNavigateTo({ url: mipAccessPageUrl(session.token) })
@@ -637,8 +667,95 @@ Page({
     }
   },
 
+  async onLoginSheetPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
+    if (!this.authToken || this.data.loginSheetBusy) {
+      return
+    }
+    const code = String(event.detail.code || '')
+    if (!code) {
+      wx.showToast({
+        title: /cancel|deny|denied/i.test(String(event.detail.errMsg || ''))
+          ? '你已取消手机号授权，可以稍后再完成。'
+          : '手机号授权必须在微信真机完成。',
+        icon: 'none',
+      })
+      return
+    }
+    await this.submitLogin(() => mipIdentityModule.bindWechatPhone(this.authToken, code))
+  },
+
+  async onLoginSheetSignIn() {
+    if (!this.authToken || this.data.loginSheetBusy) {
+      return
+    }
+    await this.submitLogin(() => mipIdentityModule.signIn(this.authToken))
+  },
+
+  async submitLogin(submit: () => ReturnType<typeof mipIdentityModule.loadAccess>) {
+    this.setData({ loginSheetBusy: true })
+    try {
+      const session = await submit()
+      if (session.snapshot.authenticated && !session.snapshot.phoneBound) {
+        this.setData({ loginSheetAllowSignIn: false })
+        return
+      }
+      this.setData({ loginSheetOpen: false, loginSheetBusy: false })
+      if (session.decision.ready) {
+        await this.resumeLogin()
+      }
+      else if (session.decision.nextRequirement === 'PROFILE') {
+        caseNavigateTo({ url: `/packages/member/mip-profile/index?token=${encodeURIComponent(session.token)}` })
+      }
+      else {
+        this.authToken = ''
+        caseNavigateTo({ url: mipAccessPageUrl(session.token) })
+      }
+    }
+    catch (error) {
+      wx.showToast({ title: error instanceof Error ? error.message : '登录失败，请稍后重试。', icon: 'none' })
+    }
+    finally {
+      this.setData({ loginSheetBusy: false })
+    }
+  },
+
+  async resumeLogin() {
+    try {
+      const session = await mipIdentityModule.loadAccess(this.authToken)
+      if (session.decision.ready) {
+        await mipIdentityModule.complete(this.authToken)
+        mipIdentityModule.consumePendingResume('pages/profile/index')
+        const destination = this.resumeDestination
+        this.authToken = ''
+        this.resumeDestination = ''
+        if (destination) {
+          caseNavigateTo({ url: destination })
+          return
+        }
+      }
+    }
+    catch {
+      wx.showToast({ title: '身份状态暂时无法确认，请稍后重试。', icon: 'none' })
+    }
+    this.onLoginSheetDismiss()
+    await this.loadProfile({ force: true })
+  },
+
+  onLoginSheetDismiss() {
+    if (this.data.loginSheetBusy) {
+      return
+    }
+    if (this.authToken) {
+      mipIdentityModule.cancel(this.authToken)
+    }
+    this.authToken = ''
+    this.resumeDestination = ''
+    this.openingActionLock = false
+    this.setData({ loginSheetOpen: false, openingAction: '' })
+  },
+
   openMembership() { caseNavigateTo({ url: '/pages/membership/index' }) },
-  openLogin() { void this.openProtected('/packages/member/mip-profile/index', 'EDIT_PROFILE') },
+  openLogin() { void this.openProtected('', 'EDIT_PROFILE') },
   openProfileEdit() { void this.openProtected('/packages/member/mip-profile/index', 'EDIT_PROFILE') },
   openMemberCard() { void this.openProtected('/packages/member/mip-card/index', 'VIEW_RESTRICTED_PROFILE') },
   openRegistrations() { void this.openProtected('/packages/member/mip-events/mine/index', 'INTERACT') },

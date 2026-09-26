@@ -8,6 +8,7 @@
   "backgroundColorBottom": "#080808",
   "enablePullDownRefresh": true,
   "usingComponents": {
+    "mip-login-sheet": "/components/mip-login-sheet/index",
     "mip-level-banner": "/components/mip-level-banner/index",
     "mip-cooperation-card": "/components/mip-cooperation-card/index",
     "mip-opportunity-card": "/components/mip-opportunity-card/index",

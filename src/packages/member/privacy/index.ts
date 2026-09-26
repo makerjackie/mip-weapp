@@ -101,7 +101,7 @@ Page({
 
   async signOutLocally() {
     if (this.data.localLogoutState !== 'idle'
-      || this.data.closureState === 'processing') {
+      || this.data.closureState !== 'idle') {
       return
     }
     this.setData({ localLogoutState: 'confirming', message: '' })
@@ -129,7 +129,9 @@ Page({
   },
 
   startAccountClosure() {
-    if (this.data.state !== 'ready' || this.data.closureState === 'processing') {
+    if (!['ready', 'blocked', 'conflict'].includes(this.data.state)
+      || this.data.closureState !== 'idle'
+      || this.data.localLogoutState !== 'idle') {
       return
     }
     this.accountClosureRequest().reset()
@@ -157,23 +159,13 @@ Page({
   },
 
   async submitAccountClosure() {
-    if (this.data.closureState === 'processing') {
+    if (!['confirming', 'failed'].includes(this.data.closureState)) {
       return
     }
     if (this.data.confirmationPhrase.trim() !== accountClosureConfirmationPhrase) {
       this.setData({ closureState: 'failed', message: `请输入“${accountClosureConfirmationPhrase}”` })
       return
     }
-    const confirmed = await wx.showModal({
-      title: '确认注销账号',
-      content: '注销后无法恢复。公开资料和可撤销状态将关闭；订单、支付、退款、活动和审计记录按规则保留。',
-      confirmText: '确认注销',
-      confirmColor: '#C43D3D',
-    }).catch(() => null)
-    if (!confirmed?.confirm) {
-      return
-    }
-
     this.setData({ state: 'processing', closureState: 'processing', message: '' })
     try {
       const result = await mipIdentityModule.closeAccount({

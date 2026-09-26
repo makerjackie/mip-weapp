@@ -1,0 +1,284 @@
+{
+  "generatedAt": "2026-09-26T14:12:55.837012+00:00",
+  "baseCommit": "483de387a92136876af8a5377b1a2bdf7e7edcbb",
+  "scope": "User feedback fixes and 43-step visual re-review",
+  "checks": {
+    "verify:all": {
+      "result": "passed",
+      "sha256": "d803db976389d4d9d8924e9a75e5d9cdc1251b54e718871285061c2fa3221ad4"
+    },
+    "runtime:preflight": {
+      "result": "passed",
+      "sha256": "cf7bc53ba5b970f543da273d460b93c08cc9eef4c20cba3e8cb1d4770e1b5174"
+    }
+  },
+  "prototypeCount": 43,
+  "actualCount": 43,
+  "independentlyReviewedPairs": 43,
+  "supplementalImagesReviewed": 15,
+  "reviewCounts": {
+    "data-mismatch": 24,
+    "blocked": 1,
+    "pass": 15,
+    "accepted-difference": 3
+  },
+  "runtime": {
+    "J1-08-cancelled": {
+      "authenticated": false,
+      "loginSheetOpen": false
+    },
+    "J1-02-cancelled": {
+      "authenticated": false,
+      "filterOpen": false,
+      "loginSheetOpen": false
+    },
+    "J1-02-signin": {
+      "authenticated": true,
+      "player": true,
+      "filterOpen": true,
+      "loginSheetOpen": false
+    },
+    "J0-02-cancelled": {
+      "loginSheetOpen": false
+    },
+    "profile-restored": {
+      "authenticated": true,
+      "isPlayer": true,
+      "loginSheetOpen": false
+    },
+    "J2-02-return": {
+      "kind": "PLAYER",
+      "activeView": "PUBLIC",
+      "displayCount": 0
+    },
+    "J2-02-return-fixed": {
+      "kind": "PLAYER",
+      "activeView": "PUBLIC",
+      "displayCount": 2
+    }
+  },
+  "screenshots": {
+    "J0-01": {
+      "sha256": "711f31cca1b11d8fe57a08706abe04d0ec1ffc22de838c5c73a9a41629f82ac7",
+      "capturedAt": "2026-09-26T11:58:46.375Z",
+      "status": "data-mismatch"
+    },
+    "J0-02": {
+      "sha256": "68f671daed8da14a451c3bf083b62c36a15efe9c8735a8a537592480b16b8b1d",
+      "capturedAt": "2026-09-26T14:09:59.100Z",
+      "status": "data-mismatch"
+    },
+    "J0-03": {
+      "sha256": "a11bbe76148f2c9db2e0559b1ca283ec5a7c207a49f60900c9981b1f79e2c72a",
+      "capturedAt": "2026-09-26T11:58:55.110Z",
+      "status": "blocked"
+    },
+    "J1-01": {
+      "sha256": "711f31cca1b11d8fe57a08706abe04d0ec1ffc22de838c5c73a9a41629f82ac7",
+      "capturedAt": "2026-09-26T12:06:35.862Z",
+      "status": "pass"
+    },
+    "J1-02": {
+      "sha256": "68f671daed8da14a451c3bf083b62c36a15efe9c8735a8a537592480b16b8b1d",
+      "capturedAt": "2026-09-26T14:09:59.100Z",
+      "status": "accepted-difference"
+    },
+    "J1-03": {
+      "sha256": "347b4213925865343129c3be02cdd1d17750e3c8cff5d09d48a548d61290e2c1",
+      "capturedAt": "2026-09-26T13:54:36.805Z",
+      "status": "data-mismatch"
+    },
+    "J1-04": {
+      "sha256": "ea1b5cecdf0b3dd85b7e1bd7bd0e8fe872b9dd3b320702a0121a3ad08e197a51",
+      "capturedAt": "2026-09-26T14:04:42.229Z",
+      "status": "accepted-difference"
+    },
+    "J1-05": {
+      "sha256": "f584a17404a99cf07f89398c27e3ce7832ec6eaaa6a68a6392ec722fead35c2e",
+      "capturedAt": "2026-09-26T14:04:58.357Z",
+      "status": "pass"
+    },
+    "J1-06": {
+      "sha256": "316b1302e25b5b26569f39ab4bfc0b930e32b66f005e82dca2aeb827a7574067",
+      "capturedAt": "2026-09-26T12:29:06.037Z",
+      "status": "data-mismatch"
+    },
+    "J1-07": {
+      "sha256": "2308a542da7ad2da3a00659dcdf12c51cc3ed4f12bcbe226d354a007a496ac8a",
+      "capturedAt": "2026-09-26T11:59:21.384Z",
+      "status": "data-mismatch"
+    },
+    "J1-08": {
+      "sha256": "882f2d77a88edca810d65741d8f4de764ba43834f29398b7146b8107a88e3369",
+      "capturedAt": "2026-09-26T14:03:49.984Z",
+      "status": "pass"
+    },
+    "J2-01": {
+      "sha256": "711f31cca1b11d8fe57a08706abe04d0ec1ffc22de838c5c73a9a41629f82ac7",
+      "capturedAt": "2026-09-26T11:59:30.369Z",
+      "status": "data-mismatch"
+    },
+    "J2-02": {
+      "sha256": "4921c8629948b90f29a258441598e5195fa5687627d9c6f4a398f57bc0b40495",
+      "capturedAt": "2026-09-26T13:53:32.325Z",
+      "status": "data-mismatch"
+    },
+    "J2-03": {
+      "sha256": "dd1fc50f24fdcc1367d793f3e572abe8eb6a6405ac67a8e947241ba137a53f60",
+      "capturedAt": "2026-09-26T12:28:06.388Z",
+      "status": "data-mismatch"
+    },
+    "J2-04": {
+      "sha256": "96302f5759fce858f3eb028408262627efc054af33aa34fe8f722550a86ad22a",
+      "capturedAt": "2026-09-26T12:17:29.710Z",
+      "status": "data-mismatch"
+    },
+    "J2-05": {
+      "sha256": "198469baaadec4fc92fb0d6a1828e4556a021a9ad774ae1a3a505ceed8082556",
+      "capturedAt": "2026-09-26T12:46:30.553Z",
+      "status": "data-mismatch"
+    },
+    "J2-06": {
+      "sha256": "ae1a9a6aa3ce798db09700cea0787dc8b4058cd666a676438b8143aff7fc1e97",
+      "capturedAt": "2026-09-26T12:16:53.668Z",
+      "status": "data-mismatch"
+    },
+    "J2-07": {
+      "sha256": "ca1f8f5503140fe5a31c6f382f907a2dc33a6ac5795da15ee5d2a2d9ba0da7f4",
+      "capturedAt": "2026-09-26T12:48:15.111Z",
+      "status": "data-mismatch"
+    },
+    "J2-08": {
+      "sha256": "015af992efb1b21d2ed81c810b44f454839cd21b151542116bb6dc61bdcd82f3",
+      "capturedAt": "2026-09-26T11:59:56.827Z",
+      "status": "data-mismatch"
+    },
+    "J3-01": {
+      "sha256": "198469baaadec4fc92fb0d6a1828e4556a021a9ad774ae1a3a505ceed8082556",
+      "capturedAt": "2026-09-26T12:46:30.716Z",
+      "status": "data-mismatch"
+    },
+    "J3-02": {
+      "sha256": "ca1f8f5503140fe5a31c6f382f907a2dc33a6ac5795da15ee5d2a2d9ba0da7f4",
+      "capturedAt": "2026-09-26T12:48:15.203Z",
+      "status": "data-mismatch"
+    },
+    "J3-03": {
+      "sha256": "dd1fc50f24fdcc1367d793f3e572abe8eb6a6405ac67a8e947241ba137a53f60",
+      "capturedAt": "2026-09-26T12:28:06.473Z",
+      "status": "data-mismatch"
+    },
+    "J3-04": {
+      "sha256": "ea9e1ec9b40f2d22835666a954a97bba40ef7995413566d99b09e8bcd75ee8d2",
+      "capturedAt": "2026-09-26T12:00:11.307Z",
+      "status": "data-mismatch"
+    },
+    "J3-04b": {
+      "sha256": "0630a77098e46460d422878d079e0d45050a922a63c5ffc35e5b5c2462d661fc",
+      "capturedAt": "2026-09-26T12:00:20.131Z",
+      "status": "data-mismatch"
+    },
+    "J3-05": {
+      "sha256": "1e57869b78134db8c700cd087c23a0af8a5936ef8217865ed05265022541b00c",
+      "capturedAt": "2026-09-26T14:07:08.290Z",
+      "status": "data-mismatch"
+    },
+    "J3-06": {
+      "sha256": "2e037e346315c417414a1976a8a495005c8d77fe34c42d7636db294208c2575e",
+      "capturedAt": "2026-09-26T14:07:17.887Z",
+      "status": "data-mismatch"
+    },
+    "J3-07": {
+      "sha256": "7b8f68bd701ea43e72f6892ffca54a802fa552c304cf772579cb9d3117802529",
+      "capturedAt": "2026-09-26T14:07:27.078Z",
+      "status": "data-mismatch"
+    },
+    "J3-08": {
+      "sha256": "c7276d9a03422f0768be5b366a13f4502a37c4aee60f0aebd4da25eb83f0368e",
+      "capturedAt": "2026-09-26T14:07:36.264Z",
+      "status": "data-mismatch"
+    },
+    "J3-09": {
+      "sha256": "cb5f4e91995ecb5ecab1b21e7db7af84d2517f43b73c813fa698450cc0a3f6cf",
+      "capturedAt": "2026-09-26T12:28:15.388Z",
+      "status": "data-mismatch"
+    },
+    "J4-01": {
+      "sha256": "57f434edd8ac9b54eccb9111d6250dbdf92160a871428bd2791b0f8d8197d551",
+      "capturedAt": "2026-09-26T14:06:58.431Z",
+      "status": "pass"
+    },
+    "J4-02": {
+      "sha256": "9a5798966de31ba92bfb1e4e3d24b673188b57559b71654e17a27d7e6d2e54cc",
+      "capturedAt": "2026-09-26T13:46:23.449Z",
+      "status": "pass"
+    },
+    "J4-02b": {
+      "sha256": "fa7878b076cd2720124689e1243d89979e3b3e760e1ea13e2957f60979d50f33",
+      "capturedAt": "2026-09-26T12:15:04.135Z",
+      "status": "pass"
+    },
+    "J4-03": {
+      "sha256": "316b1302e25b5b26569f39ab4bfc0b930e32b66f005e82dca2aeb827a7574067",
+      "capturedAt": "2026-09-26T12:29:05.945Z",
+      "status": "data-mismatch"
+    },
+    "J4-04": {
+      "sha256": "5a27361782541e8d3d9db52281443f910251ed79575f94593ffaeca5e205d421",
+      "capturedAt": "2026-09-26T12:44:25.636Z",
+      "status": "pass"
+    },
+    "J4-05": {
+      "sha256": "b3ed5539f8a816c9b5931b1d1e338d4d2166b430f228cfc54bce21de12b056e3",
+      "capturedAt": "2026-09-26T12:56:21.186Z",
+      "status": "pass"
+    },
+    "J4-06": {
+      "sha256": "9cf6b528bbf66c1c26c8a11ee2ae68b8ef881b2e290e188af7607082997eaefa",
+      "capturedAt": "2026-09-26T12:52:01.621Z",
+      "status": "pass"
+    },
+    "J5-01": {
+      "sha256": "8c69917bd1deb3c8b13fb4fc5a045ea77df9974fdc58e0194945aef1f8d7a423",
+      "capturedAt": "2026-09-26T14:08:19.108Z",
+      "status": "pass"
+    },
+    "J5-02": {
+      "sha256": "edd2057500ee81a9e7750ad0a9f3d9f3cbe3da6e4f93688894a6687dfe8a5e0d",
+      "capturedAt": "2026-09-26T12:28:57.013Z",
+      "status": "pass"
+    },
+    "J5-03": {
+      "sha256": "6399ce408e452135bfc55afbedb4e5b23690cb70aa52a7b403d25160a56b4cf6",
+      "capturedAt": "2026-09-26T12:14:46.361Z",
+      "status": "accepted-difference"
+    },
+    "J5-04": {
+      "sha256": "e104612c6125fe20298abd7cf1af3c9f2d1e48fc95a4e660d809ebdc7b78c2e7",
+      "capturedAt": "2026-09-26T12:53:35.554Z",
+      "status": "pass"
+    },
+    "J6-01": {
+      "sha256": "f2fbb5bc789c29b7ab967619e2c7d13c2fab9347bc12a053c6a42a3aa6bd76be",
+      "capturedAt": "2026-09-26T12:44:33.982Z",
+      "status": "pass"
+    },
+    "J6-02": {
+      "sha256": "a8f33cdfff4684c0a9c654978b52197a1f4ae972899ccaab13dbf44e61fa0d0a",
+      "capturedAt": "2026-09-26T12:46:08.843Z",
+      "status": "pass"
+    },
+    "J6-03": {
+      "sha256": "104547452cb97931a5283e94e6ebfac43ddc3ef1572b3e911778411c4aeed8af",
+      "capturedAt": "2026-09-26T12:40:17.176Z",
+      "status": "pass"
+    }
+  },
+  "limits": [
+    "No real account closure, agreement acceptance, phone binding, payment or check-in performed.",
+    "Unavailable role and business states remain explicitly unverified.",
+    "Existing content safety permission blocker -604101 remains; no permission change or server deployment this round."
+  ],
+  "backendChanged": false,
+  "previewUploaded": false
+}

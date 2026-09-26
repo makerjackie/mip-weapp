@@ -189,6 +189,7 @@ Page({
     contentSection: 'INTRO' as 'INTRO' | 'ORGANIZER' | 'NOTICE',
     loginSheetOpen: false,
     loginSheetBusy: false,
+    loginSheetAllowSignIn: false,
     brandName: brand.productName,
     logoPath: brand.logoPath,
   },
@@ -778,10 +779,11 @@ Page({
       if (session.decision.ready) {
         return true
       }
-      if (session.snapshot.authenticated && !session.snapshot.phoneBound) {
+      if (session.decision.block !== 'FORBIDDEN'
+        && (!session.snapshot.authenticated || !session.snapshot.phoneBound)) {
         this.authToken = session.token
         this.authIntent = intent
-        this.setData({ loginSheetOpen: true })
+        this.setData({ loginSheetOpen: true, loginSheetAllowSignIn: mipIdentityModule.isSignedOut() })
         return false
       }
       caseNavigateTo({ url: mipAccessPageUrl(session.token) })
@@ -810,20 +812,7 @@ Page({
     this.setData({ loginSheetBusy: true })
     try {
       const session = await mipIdentityModule.bindWechatPhone(token, code)
-      this.setData({ loginSheetOpen: false })
-      if (session.decision.ready) {
-        await this.finishAuthIntent(token, this.authIntent as AuthIntent)
-        return
-      }
-      if (session.decision.nextRequirement === 'PROFILE') {
-        // journey-review J1-03：新账号完善资料（填写信息），完成或关闭都回本页。
-        caseNavigateTo({ url: `/packages/member/mip-profile/index?token=${encodeURIComponent(token)}` })
-        return
-      }
-      // 协议等剩余项交给 access 页自完成，并经 pendingResume 回本页恢复意图。
-      this.authToken = ''
-      this.authIntent = ''
-      caseNavigateTo({ url: mipAccessPageUrl(token) })
+      await this.continueLoginSession(session)
     }
     catch (error) {
       wx.showToast({ title: error instanceof Error ? error.message : '手机号绑定失败，请重试。', icon: 'none' })
@@ -831,6 +820,46 @@ Page({
     finally {
       this.setData({ loginSheetBusy: false })
     }
+  },
+
+  async onLoginSheetSignIn() {
+    const token = this.authToken
+    if (!token || this.data.loginSheetBusy) {
+      return
+    }
+    this.setData({ loginSheetBusy: true })
+    try {
+      const session = await mipIdentityModule.signIn(token)
+      if (session.snapshot.authenticated && !session.snapshot.phoneBound) {
+        this.setData({ loginSheetAllowSignIn: false })
+        return
+      }
+      await this.continueLoginSession(session)
+    }
+    catch {
+      wx.showToast({ title: '登录失败，请稍后重试。', icon: 'none' })
+    }
+    finally {
+      this.setData({ loginSheetBusy: false })
+    }
+  },
+
+  async continueLoginSession(session: Awaited<ReturnType<typeof mipIdentityModule.loadAccess>>) {
+    const token = session.token
+    this.setData({ loginSheetOpen: false })
+    if (session.decision.ready) {
+      await this.finishAuthIntent(token, this.authIntent as AuthIntent)
+      return
+    }
+    if (session.decision.nextRequirement === 'PROFILE') {
+      // journey-review J1-03：新账号完善资料（填写信息），完成或关闭都回本页。
+      caseNavigateTo({ url: `/packages/member/mip-profile/index?token=${encodeURIComponent(token)}` })
+      return
+    }
+    // 协议等剩余项交给 access 页自完成，并经 pendingResume 回本页恢复意图。
+    this.authToken = ''
+    this.authIntent = ''
+    caseNavigateTo({ url: mipAccessPageUrl(token) })
   },
 
   onLoginSheetDismiss() {
@@ -869,6 +898,9 @@ Page({
 
   /** 返回本页时恢复授权前的原意图：access 页经 pendingResume 回来，或从「填写信息」回来。 */
   async resumeAuthIntent() {
+    if (this.data.loginSheetOpen || this.data.loginSheetBusy) {
+      return
+    }
     const resume = mipIdentityModule.consumePendingResume(DETAIL_ROUTE)
     if (resume) {
       const intent = String(resume.source.query?.intent || '') as AuthIntent | ''

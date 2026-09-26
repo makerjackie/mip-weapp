@@ -246,3 +246,5 @@
     <view wx:if="{{message}}" class="profile-message">{{message}}</view>
   </block>
 </view>
+
+<mip-login-sheet visible="{{loginSheetOpen}}" busy="{{loginSheetBusy}}" allow-sign-in="{{loginSheetAllowSignIn}}" bind:phone="onLoginSheetPhone" bind:signin="onLoginSheetSignIn" bind:dismiss="onLoginSheetDismiss" />

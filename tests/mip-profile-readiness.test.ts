@@ -42,6 +42,8 @@ describe('profile page readiness', () => {
     const loadBody = methodBody('async loadProfile', 'async loadProfileOnce')
     expect(showBody).toContain('if (this.loadPromise)')
     expect(loadBody).toContain('if (this.loadPromise)')
+    expect(loadBody).toContain('await this.loadPromise')
+    expect(loadBody).toContain('if (!options.force)')
     expect(loadBody).toContain('this.loadPromise = loadPromise')
     expect(loadBody).toContain('this.loadPromise = null')
   })

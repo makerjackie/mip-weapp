@@ -19,5 +19,6 @@
     class="mip-login-sheet__btn"
     bind:getphonenumber="onPhone"
   >{{busy ? '正在授权' : '微信手机号授权'}}</button>
-  <view id="mip-login-sheet-dismiss" class="mip-login-sheet__ghost" bind:tap="onDismiss">暂不授权，返回原页面</view>
+  <button wx:if="{{allowSignIn}}" disabled="{{busy}}" class="mip-login-sheet__signin" bind:tap="onSignIn">使用当前微信账号重新登录</button>
+  <view id="mip-login-sheet-dismiss" class="mip-login-sheet__ghost" aria-role="button" aria-disabled="{{busy}}" bind:tap="onDismiss">暂不授权，返回原页面</view>
 </view>

@@ -13,6 +13,8 @@ const eventsModule = vi.hoisted(() => ({
 }))
 const identityModule = vi.hoisted(() => ({
   beginProtectedAction: vi.fn(),
+  isSignedOut: vi.fn(() => false),
+  signIn: vi.fn(),
   loadAccess: vi.fn(),
   bindWechatPhone: vi.fn(),
   complete: vi.fn(),
@@ -139,6 +141,7 @@ beforeEach(() => {
     mock.mockReset()
   }
   identityModule.consumePendingResume.mockReturnValue(null)
+  identityModule.isSignedOut.mockReturnValue(false)
   navigateTo.mockReset()
   showToast.mockReset()
   checkInStore.peek.mockReturnValue(CHECK_IN_INTENT)
@@ -194,8 +197,8 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
     eventsModule.checkIn.mockRejectedValueOnce(new MipEventsError('AUTH_REQUIRED', '请先完成登录'))
     identityModule.beginProtectedAction.mockResolvedValueOnce({
       token: 'identity-token',
-      decision: { ready: false, nextRequirement: 'PHONE' },
-      snapshot: { authenticated: true, phoneBound: false },
+      decision: { ready: false, block: 'AUTH_REQUIRED', nextRequirement: 'AUTHENTICATED' },
+      snapshot: { authenticated: false, phoneBound: false },
     })
 
     await callPage(page, 'loadCheckInScene', SCAN_SCENE)
@@ -207,6 +210,50 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
     expect(page.data.loginSheetOpen).toBe(true)
     expect(showToast).not.toHaveBeenCalledWith({ title: '签到成功', icon: 'success' })
     expect(checkInStore.clear).not.toHaveBeenCalled()
+  })
+
+  it.each(['register', 'share', 'participants'])('opens the phone sheet over the original event for a first-time %s intent', async (intent) => {
+    const page = createPage({ eventId: EVENT_ID, inviteRef: 'public-invite-ref' })
+    identityModule.beginProtectedAction.mockResolvedValueOnce({
+      token: 'identity-token',
+      decision: { ready: false, block: 'AUTH_REQUIRED' },
+      snapshot: { authenticated: false, phoneBound: false },
+    })
+    expect(await callPage(page, 'requireAuthIntent', intent)).toBe(false)
+    expect(page.data.loginSheetOpen).toBe(true)
+    expect(navigateTo).not.toHaveBeenCalled()
+    expect(identityModule.beginProtectedAction).toHaveBeenCalledWith(expect.objectContaining({
+      source: expect.objectContaining({ query: { eventId: EVENT_ID, intent, inviteRef: 'public-invite-ref' } }),
+    }))
+  })
+
+  it.each([
+    { loginSheetOpen: true, loginSheetBusy: false },
+    { loginSheetOpen: false, loginSheetBusy: true },
+  ])('keeps an active native authorization intent when the event page returns to foreground (%j)', async (state) => {
+    const page = createPage(state)
+    page.authToken = 'identity-token'
+    page.authIntent = 'participants'
+    callPage(page, 'onShow')
+    await flushAsync()
+    expect(page.authToken).toBe('identity-token')
+    expect(identityModule.loadAccess).not.toHaveBeenCalled()
+    expect(identityModule.cancel).not.toHaveBeenCalled()
+  })
+
+  it('restores an already bound WeChat account and resumes the chosen event action without rebinding', async () => {
+    const page = createPage({ eventId: EVENT_ID, loginSheetOpen: true })
+    page.authToken = 'identity-token'
+    page.authIntent = 'participants'
+    identityModule.signIn.mockResolvedValue({
+      token: 'identity-token',
+      decision: { ready: true },
+      snapshot: { authenticated: true, phoneBound: true },
+    })
+    await callPage(page, 'onLoginSheetSignIn')
+    expect(identityModule.bindWechatPhone).not.toHaveBeenCalled()
+    expect(identityModule.complete).toHaveBeenCalledWith('identity-token')
+    expect(navigateTo).toHaveBeenCalledWith({ url: `/packages/member/mip-events/participants/index?eventId=${EVENT_ID}&view=PUBLIC&kind=PLAYER` })
   })
 
   it('keeps the manual check-in fallback when the server rejects the auto check-in', async () => {

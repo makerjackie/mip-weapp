@@ -259,3 +259,5 @@
     <view wx:if="{{message && state === 'ready'}}" class="mx-3 mt-4 rounded-[8rpx] border border-line bg-panel px-4 py-3 text-[22rpx] text-muted">{{message}}</view>
   </block>
 </view>
+
+<mip-login-sheet visible="{{loginSheetOpen}}" busy="{{loginSheetBusy}}" allow-sign-in="{{loginSheetAllowSignIn}}" brand-name="{{brandName}}" logo-path="{{logoPath}}" bind:phone="onLoginSheetPhone" bind:signin="onLoginSheetSignIn" bind:dismiss="onLoginSheetDismiss" />

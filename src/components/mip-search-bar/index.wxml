@@ -1,6 +1,6 @@
 <view class="mip-search-bar">
   <view class="mip-search-bar__icon">
-    <mip-icon name="search-big-left-1" size="{{12}}" color="var(--color-muted)" />
+    <mip-icon name="search-big-left-1" size="{{20}}" color="var(--color-muted)" />
   </view>
   <input
     class="mip-search-bar__input"

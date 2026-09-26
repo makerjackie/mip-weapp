@@ -43,6 +43,8 @@ Page({
     message: '',
   },
 
+  profileOpened: false,
+
   onLoad(query: Record<string, string>) {
     const token = String(query.token || '')
     const intent = token ? mipIdentityModule.peekIntent(token) : null
@@ -69,7 +71,7 @@ Page({
     try {
       const session = await mipIdentityModule.loadAccess(this.data.token)
       this.applySession(session)
-      await this.continueGlobalAccess(session)
+      await this.continueAccess(session)
     }
     catch (error) {
       const message = error instanceof Error ? error.message : ''
@@ -87,7 +89,7 @@ Page({
     try {
       const session = await mipIdentityModule.signIn(this.data.token)
       this.applySession(session)
-      await this.continueGlobalAccess(session)
+      await this.continueAccess(session)
     }
     catch (error) {
       const message = error instanceof Error ? error.message : ''
@@ -123,12 +125,20 @@ Page({
     })
   },
 
-  async continueGlobalAccess(session: AccessSession) {
-    if (session.intent.action !== 'ENTER_APP' || !session.decision.ready) {
-      return
+  async continueAccess(session: AccessSession) {
+    if (session.decision.ready) {
+      this.setData({ submitting: false })
+      await this.finish()
     }
-    this.setData({ submitting: false })
-    await this.finish()
+    else if (session.decision.nextRequirement === 'PROFILE' && session.intent.action !== 'ENTER_APP') {
+      // First-time setup is part of the original intent; closing it returns to that source.
+      if (this.profileOpened) {
+        this.cancel()
+      }
+      else {
+        this.openProfile()
+      }
+    }
   },
 
   toggleAgreements(event: WechatMiniprogram.CheckboxGroupChange) {
@@ -148,7 +158,7 @@ Page({
       }))
       const session = await mipIdentityModule.acceptAgreements(this.data.token, { agreements })
       this.applySession(session)
-      await this.continueGlobalAccess(session)
+      await this.continueAccess(session)
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '协议确认失败，请重试。' })
@@ -196,7 +206,9 @@ Page({
     }
     this.setData({ submitting: true, message: '' })
     try {
-      this.applySession(await mipIdentityModule.bindWechatPhone(this.data.token, code))
+      const session = await mipIdentityModule.bindWechatPhone(this.data.token, code)
+      this.applySession(session)
+      await this.continueAccess(session)
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '手机号绑定失败，请重试。' })
@@ -214,8 +226,10 @@ Page({
   },
 
   openProfile() {
+    this.profileOpened = true
     wx.navigateTo({
       url: `/packages/member/mip-profile/index?token=${encodeURIComponent(this.data.token)}`,
+      fail: () => { this.profileOpened = false },
     })
   },
 

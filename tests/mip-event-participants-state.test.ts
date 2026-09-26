@@ -145,6 +145,47 @@ describe('MIP event participant private heart state', () => {
     expect(defaultEntry.data.kind).toBe('PLAYER')
   })
 
+  it('reloads player results when returning from a restricted heart tab after browsing guests', async () => {
+    const page = createPage({
+      eventId: '60000000-0000-4000-8000-000000000001',
+      activeView: 'SENT',
+      kind: 'GUEST',
+      heartState: 'restricted',
+      items: [{ profileRef: 'p1.guest', displayName: '嘉宾' }],
+    })
+    eventsModule.listPublicParticipants.mockResolvedValueOnce({
+      items: [{ profileRef: 'p1.player', nickname: '玩家' }],
+      nextCursor: 'next-player',
+    })
+
+    await callPage(page, 'showPublicParticipants')
+
+    expect(eventsModule.listPublicParticipants).toHaveBeenCalledWith(
+      page.data.eventId,
+      expect.objectContaining({ userKind: 'PLAYER', cursor: undefined }),
+    )
+    expect(page.data.activeView).toBe('PUBLIC')
+    expect(page.data.kind).toBe('PLAYER')
+    expect(page.data.displayItems).toEqual([expect.objectContaining({ displayName: '玩家' })])
+    expect(page.data.nextCursor).toBe('next-player')
+  })
+
+  it('does not relabel cached guests as players when the new tab request fails', async () => {
+    const page = createPage({
+      eventId: '60000000-0000-4000-8000-000000000001',
+      activeView: 'PUBLIC',
+      kind: 'GUEST',
+      items: [{ profileRef: 'p1.guest', displayName: '嘉宾' }],
+    })
+    eventsModule.listPublicParticipants.mockRejectedValueOnce(new Error('暂时无法加载'))
+
+    await callPage(page, 'changeKind', { currentTarget: { dataset: { kind: 'PLAYER' } } })
+
+    expect(page.data.kind).toBe('PLAYER')
+    expect(page.data.state).toBe('error')
+    expect(page.data.displayItems).toEqual([])
+  })
+
   it('casts, re-targets and cancels the single per-event heart directly on the card', async () => {
     const alice = candidate('alice')
     const bob = candidate('bob')

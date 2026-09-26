@@ -404,6 +404,8 @@ Page({
       activeView: 'PUBLIC',
       kind,
       nextCursor: '',
+      items: [],
+      displayItems: [],
       message: '',
       emptyTitle: '暂无公开参与人',
       emptyDescription: '符合当前条件的公开资料会显示在这里。',
@@ -434,10 +436,13 @@ Page({
       activeView: 'PUBLIC',
       kind: 'PLAYER',
       nextCursor: '',
-      displayItems: this.data.items,
+      items: [],
+      displayItems: [],
       emptyTitle: '暂无公开参与人',
       emptyDescription: '符合当前条件的公开资料会显示在这里。',
     })
+    // The cached public list may belong to the guest tab; reload for PLAYER.
+    void this.loadParticipants()
   },
 
   retryHeartState() {

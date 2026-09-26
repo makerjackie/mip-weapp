@@ -157,6 +157,34 @@ describe('MIP local logout flow', () => {
     expect(gateway.signIn).toHaveBeenCalledOnce()
   })
 
+  it('treats an explicit native phone grant as login without losing the pending intent', async () => {
+    const gateway = identityGateway()
+    const memory = memoryStorage()
+    const identity = createMipIdentityModule(gateway, { storage: memory.storage, token: () => 'phone-login' })
+    identity.signOutLocally()
+    const token = identity.prepareProtectedAction({ action: 'INTERACT', source: { navigation: 'navigateBack' } })
+
+    await expect(identity.bindWechatPhone(token, 'native-one-use-code')).resolves.toMatchObject({
+      snapshot: { authenticated: true, phoneBound: true },
+      decision: { ready: true },
+    })
+    expect(identity.isSignedOut()).toBe(false)
+    expect(identity.peekIntent(token)).not.toBeNull()
+    expect(gateway.signIn).not.toHaveBeenCalled()
+    expect((memory.value() as { signedOut?: boolean }).signedOut).toBeUndefined()
+  })
+
+  it('keeps the signed-out boundary when phone authorization fails', async () => {
+    const gateway = identityGateway()
+    vi.mocked(gateway.bindWechatPhone).mockRejectedValue(new Error('PHONE_PERMISSION_REQUIRED'))
+    const identity = createMipIdentityModule(gateway, { token: () => 'phone-failure' })
+    identity.signOutLocally()
+    const token = identity.prepareProtectedAction({ action: 'INTERACT', source: { navigation: 'navigateBack' } })
+    await expect(identity.bindWechatPhone(token, 'expired-code')).rejects.toThrow('PHONE_PERMISSION_REQUIRED')
+    expect(identity.isSignedOut()).toBe(true)
+    await expect(identity.loadAccess(token)).resolves.toMatchObject({ snapshot: { authenticated: false } })
+  })
+
   it('clears revocable local session state while retaining durable recovery ids', () => {
     const keys = [
       'mip.identity.access-state.v1',
