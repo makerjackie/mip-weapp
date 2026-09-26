@@ -2,16 +2,19 @@
 name: mip-design-system
 description: Apply the MIP WeChat miniprogram design system when implementing, restoring, or reviewing MIP UI, components, pages, colors, typography, spacing, icons, or baked card assets.
 metadata:
-  version: "2026-09-22.1"
+  version: "2026-09-26.1"
   source_snapshot: "2026-09-09 15:16 worktree; base commit 889464a"
 ---
 
 # MIP Design System
 
-Source of truth: this skill directory. The copied `references/DESIGN.md`,
-React/Tailwind source, icon registry, and baked PNG assets are the canonical
-snapshot for MIP UI decisions. Upstream `figma-restored/` paths are provenance,
-not runtime dependencies.
+This directory is the component and asset reference, not the authority for
+business flows. Current user decisions, the repository `DESIGN.md`, and latest
+`role-flows` review annotations override conflicting older screen examples.
+The copied `references/DESIGN.md`, React/Tailwind source, icon registry, and
+baked PNG assets preserve the original visual snapshot. Native integration
+rules are in `references/wechat-component-contracts.md`. Upstream
+`figma-restored/` paths are provenance, not runtime dependencies.
 
 Owner: MIP repository maintainers.
 
@@ -43,16 +46,21 @@ Do not use this skill for a product that is not MIP or for generic design work.
    the project has a specific low-density fallback rule.
 7. Keep dynamic text, controls, progress bars, and interactive layers outside
    baked images. Baked images contain fixed decoration only.
-8. Validate all colors, sizes, variants, states, image paths, and event names
-   against the copied source. If a required SOT file is missing or corrupted,
-   stop and report the mismatch; do not guess.
+8. Validate colors, sizes, variants, states, image paths, and event names
+   against the copied source and native integration rules. If a required SOT
+   file is missing or corrupted, report the mismatch rather than inventing an
+   asset. Do not restore superseded navigation, business logic, or browser-only
+   compatibility code to match an older snapshot.
 
 ## Hard rules
 
 - Page background is `#080808`; normal card/row surface is `#202020`.
 - Brand yellow is `#fcdf03`; do not introduce an unregistered yellow.
 - Yellow actions and activated chips use a `#080808` keyline.
-- Content width is 702rpx with 24rpx side margins on a 750rpx page.
+- On a 750rpx page, standard content width is 702rpx with 24rpx side margins;
+  use available width in nested containers rather than clipping to that width.
+- Reference status bars, capsules, and Home Indicators are preview decoration;
+  native pages use platform chrome and measured safe areas.
 - Chinese text uses PingFang SC; timer/tabular numerals use SF Pro Text with
   `tabular-nums`; activity display numerals use D-DIN Exp with the documented
   fallback stack.

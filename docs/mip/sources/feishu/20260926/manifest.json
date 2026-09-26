@@ -1,0 +1,43 @@
+{
+  "retrievedOn": "2026-09-26",
+  "sourceUrl": "https://mcnb87a9myxx.feishu.cn/wiki/AhjxwoeCMiYsUzkhsR3cmD3unqg?table=tblXQLdZY0bfV49o&view=vewFztmrqb",
+  "baseTitle": "标签数据管理",
+  "completeTables": 3,
+  "tables": [
+    {
+      "file": "industries.json",
+      "tableName": "行业标签库",
+      "tableId": "tblKgp2qI3mHhTOk",
+      "revision": 62,
+      "recordCount": 122,
+      "duplicateRecordIds": 0,
+      "duplicateLabels": 0,
+      "blankLabels": 0,
+      "sha256": "6c33a8c86c63575ea2ee4802b1c9627b0e28f6381ea3cd09cdea33bbfcb698dd"
+    },
+    {
+      "file": "cities.json",
+      "tableName": "城市标签库",
+      "tableId": "tblGWtwThA92eM5m",
+      "revision": 51,
+      "recordCount": 375,
+      "duplicateRecordIds": 0,
+      "duplicateLabels": 0,
+      "blankLabels": 0,
+      "sha256": "529c6265b06d748e6d39b644f795fb04e5c0044261d5afe547c6ffa38abe8c36"
+    },
+    {
+      "file": "badges.json",
+      "tableName": "徽章管理",
+      "tableId": "tblXQLdZY0bfV49o",
+      "revision": 142,
+      "recordCount": 11,
+      "duplicateRecordIds": 0,
+      "duplicateLabels": 0,
+      "blankLabels": 0,
+      "sha256": "f703fa87a3ac310ecc0f7ef2065befa33d33be9cbebe412cb0b2d822f7e759a0"
+    }
+  ],
+  "readingMethod": "lark-cli base shortcuts, user identity; complete table reads after resolving the supplied wiki URL",
+  "operations": "read only; no Feishu writes, no database writes"
+}

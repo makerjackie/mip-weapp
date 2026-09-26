@@ -1,0 +1,321 @@
+{
+  "sourceUrl": "https://mcnb87a9myxx.feishu.cn/wiki/AhjxwoeCMiYsUzkhsR3cmD3unqg?table=tblXQLdZY0bfV49o&view=vewFztmrqb",
+  "tableId": "tblXQLdZY0bfV49o",
+  "tableName": "徽章管理",
+  "revision": 142,
+  "scope": "all_table_records",
+  "recordCount": 11,
+  "schema": [
+    {
+      "default_value": null,
+      "id": "fld7IQmZYm",
+      "multiple": false,
+      "name": "回收规则",
+      "options": [
+        {
+          "hue": "Blue",
+          "lightness": "Lighter",
+          "name": "后台配置"
+        }
+      ],
+      "type": "select"
+    },
+    {
+      "default_value": null,
+      "id": "fldAs7zaGX",
+      "name": "一句话简介（用户视角）",
+      "style": {
+        "type": "plain"
+      },
+      "type": "text"
+    },
+    {
+      "default_value": null,
+      "id": "fldayWTNEU",
+      "multiple": false,
+      "name": "发放规则",
+      "options": [
+        {
+          "hue": "Blue",
+          "lightness": "Lighter",
+          "name": "后台配置"
+        }
+      ],
+      "type": "select"
+    },
+    {
+      "id": "fldsWN0HyD",
+      "name": "是否上线",
+      "type": "checkbox"
+    },
+    {
+      "default_value": null,
+      "id": "fldKbDJXZc",
+      "name": "徽章名称",
+      "style": {
+        "type": "plain"
+      },
+      "type": "text"
+    },
+    {
+      "default_value": null,
+      "id": "fldqVF7EHb",
+      "multiple": false,
+      "name": "类型",
+      "options": [
+        {
+          "hue": "Purple",
+          "lightness": "Standard",
+          "name": "身份成就"
+        },
+        {
+          "hue": "Red",
+          "lightness": "Standard",
+          "name": "荣誉成就"
+        }
+      ],
+      "type": "select"
+    },
+    {
+      "default_value": null,
+      "id": "fldPIS70yV",
+      "multiple": false,
+      "name": "存续时长",
+      "options": [
+        {
+          "hue": "Green",
+          "lightness": "Lighter",
+          "name": "永久"
+        },
+        {
+          "hue": "Orange",
+          "lightness": "Lighter",
+          "name": "任期内"
+        }
+      ],
+      "type": "select"
+    }
+  ],
+  "records": [
+    {
+      "recordId": "recRJML8aY",
+      "values": {
+        "徽章名称": "黄笨笨",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "精神领袖 | MIP年度管理团队领袖，由上一年全体玩家选举产生",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "任期内"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    },
+    {
+      "recordId": "reca61PMI3",
+      "values": {
+        "徽章名称": "黑笨笨",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "执行官 | MIP年度管理团队领袖，由上一年全体玩家选举产生",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "任期内"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    },
+    {
+      "recordId": "recqNdYash",
+      "values": {
+        "徽章名称": "红笨笨",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "会议管 | MIP年度管理团队之一，由上一年全体玩家选举产生",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "任期内"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    },
+    {
+      "recordId": "recgTMtaGC",
+      "values": {
+        "徽章名称": "白笨笨",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "面试官 | MIP年度管理团队之一，由上一年全体玩家选举产生",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "任期内"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    },
+    {
+      "recordId": "recQDKLXSc",
+      "values": {
+        "徽章名称": "绿笨笨",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "书院官 | MIP年度管理团队之一，由上一年全体玩家选举产生",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "任期内"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    },
+    {
+      "recordId": "recvdat9uSMTJd",
+      "values": {
+        "徽章名称": "紫笨笨",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "外交官 | MIP年度管理团队之一，由上一年全体玩家选举产生",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "任期内"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    },
+    {
+      "recordId": "recvdauqTqnx0y",
+      "values": {
+        "徽章名称": "粉笨笨",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "任务官 | MIP年度管理团队之一，由上一年全体玩家选举产生",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "任期内"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    },
+    {
+      "recordId": "recvdaurZbrxZF",
+      "values": {
+        "徽章名称": "蓝笨笨",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "数据官 | MIP年度管理团队之一，由上一年全体玩家选举产生",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "任期内"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    },
+    {
+      "recordId": "recvdaut7HCwFX",
+      "values": {
+        "徽章名称": "灰笨笨",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "公会官 | MIP年度管理团队之一，由上一年全体玩家选举产生",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "任期内"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    },
+    {
+      "recordId": "recvdauHrnQlbV",
+      "values": {
+        "徽章名称": "城主",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "开荒者 | 成功在一座城市搭建MIP服务器可获得",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "永久"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    },
+    {
+      "recordId": "recvdav2XGMzF0",
+      "values": {
+        "徽章名称": "公会长",
+        "回收规则": [
+          "后台配置"
+        ],
+        "一句话简介（用户视角）": "公会负责人 | 成功完成公会搭建标准或扶持公会发展可获得",
+        "发放规则": [
+          "后台配置"
+        ],
+        "存续时长": [
+          "任期内"
+        ],
+        "类型": [
+          "身份成就"
+        ],
+        "是否上线": true
+      }
+    }
+  ]
+}

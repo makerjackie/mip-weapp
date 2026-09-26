@@ -1,6 +1,8 @@
-# Figma 页面映射
+# 历史 Figma 页面映射
 
-当前设计文件：[MIP Copy](https://www.figma.com/design/zo5RsWtzNWvhk6d5P53eCL/MIP--Copy-?node-id=69-4972)，file key 为 `zo5RsWtzNWvhk6d5P53eCL`。2026-08-25 已通过 Figma MCP 读取页面层级、代表子节点 design context 和原始 frame 截图；27 张 375px 对照图与 SHA-256 清单保存在 [evidence/figma-2026-08-25](evidence/figma-2026-08-25)。
+本页保留旧节点与资产溯源，不作为当前页面或业务流程的优先依据。最新设计入口是 [role-flows 原型对照](PROTOTYPE_PARITY_20260923.md)，业务规则以 [REQUIREMENTS.md](REQUIREMENTS.md) 为准。旧“指定第三人引荐”、AI 入口和旧页面截图不覆盖新的终审标注。
+
+历史设计文件：[MIP Copy](https://www.figma.com/design/zo5RsWtzNWvhk6d5P53eCL/MIP--Copy-?node-id=69-4972)，file key 为 `zo5RsWtzNWvhk6d5P53eCL`。2026-08-25 已通过 Figma MCP 读取页面层级、代表子节点 design context 和原始 frame 截图；27 张 375px 对照图与 SHA-256 清单保存在 [evidence/figma-2026-08-25](evidence/figma-2026-08-25)。
 
 ## 主导航
 
@@ -13,7 +15,7 @@
 
 选中态使用 MIP 黄，页面主体使用黑色背景和深灰面板。小程序现场工作台不进入主 Tab，继续放在“我的”内的受控入口；完整运营后台使用 React Web，不纳入本文件的小程序 frame 映射。
 
-当前 Figma 文件没有定义现场工作台 frame。现场工作台只按 [REQUIREMENTS.md](REQUIREMENTS.md) 的四路由白名单和 [DESIGN.md](../../DESIGN.md) 的移动端规则实现与验收，不据此扩展完整后台能力。
+历史 Figma 文件没有定义现场工作台 frame。现场工作台只按 [PROJECT_STATUS.md](PROJECT_STATUS.md) 的现行路由白名单和 [DESIGN.md](../../DESIGN.md) 的移动端规则实现与验收，不据此扩展完整后台能力。
 
 ## 设计节点
 

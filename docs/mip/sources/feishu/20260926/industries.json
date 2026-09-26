@@ -1,0 +1,1011 @@
+{
+  "sourceUrl": "https://mcnb87a9myxx.feishu.cn/wiki/AhjxwoeCMiYsUzkhsR3cmD3unqg?table=tblXQLdZY0bfV49o&view=vewFztmrqb",
+  "tableId": "tblKgp2qI3mHhTOk",
+  "tableName": "行业标签库",
+  "revision": 62,
+  "scope": "all_table_records",
+  "recordCount": 122,
+  "schema": [
+    {
+      "id": "fldIDvDMgN",
+      "name": "热门行业",
+      "type": "checkbox"
+    },
+    {
+      "default_value": null,
+      "id": "fldth7OYgi",
+      "name": "一级分类",
+      "style": {
+        "type": "plain"
+      },
+      "type": "text"
+    },
+    {
+      "default_value": null,
+      "id": "fld22SIQ3v",
+      "name": "二级分类",
+      "style": {
+        "type": "plain"
+      },
+      "type": "text"
+    }
+  ],
+  "records": [
+    {
+      "recordId": "recvd4wcZFNBPl",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "互联网",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4wwSHEcoi",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "电子商务",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSHdWsd",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "计算机软件",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSHlTvs",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "生活服务(O2O)",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSHlUxX",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "企业服务",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSHGL1G",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "医疗健康",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSHOGQR",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "游戏",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSHKccZ",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "社交网络与媒体",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4wwSHfpIx",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "人工智能",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4wwSHX7Ao",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "云计算",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSHcmPM",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "在线教育",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSH4UZu",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "计算机服务",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSHh7XQ",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "大数据",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSHtBlT",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "广告营销",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4wwSHESWv",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "物联网",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4wwSH6Ipx",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "新零售",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4y469MrXf",
+      "values": {
+        "一级分类": "互联网/AI",
+        "二级分类": "信息安全",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yFdAlYp4",
+      "values": {
+        "一级分类": "电子/通信/半导体",
+        "二级分类": "半导体/芯片",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohZQSN",
+      "values": {
+        "一级分类": "电子/通信/半导体",
+        "二级分类": "电子/硬件开发",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohLKBK",
+      "values": {
+        "一级分类": "电子/通信/半导体",
+        "二级分类": "通信/网络设备",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohBh1f",
+      "values": {
+        "一级分类": "电子/通信/半导体",
+        "二级分类": "智能硬件/消费电子",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohncGE",
+      "values": {
+        "一级分类": "电子/通信/半导体",
+        "二级分类": "运营商/增值服务",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohdMTx",
+      "values": {
+        "一级分类": "电子/通信/半导体",
+        "二级分类": "计算机硬件",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGoha52o",
+      "values": {
+        "一级分类": "电子/通信/半导体",
+        "二级分类": "电子/半导体/集成电路",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohMzjh",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "餐饮",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4yGohCFsu",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "美容",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohybLN",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "美发",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohvFFB",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "酒店/民宿",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGoh2jw9",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "休闲/娱乐",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4yGoh4DDI",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "运动/健身",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4yGohOY5y",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "保健/养生",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohlFuP",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "家政服务",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohVtgt",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "旅游/景区",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4yGohCGcM",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "婚庆/摄影",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohDEWg",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "宠物服务",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGoh2kQ4",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "回收/维修",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohTqSO",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "美容/美发",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yGohX0bm",
+      "values": {
+        "一级分类": "服务业",
+        "二级分类": "其他生活服务",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4yHI6r5KO",
+      "values": {
+        "一级分类": "消费品/批发/零售",
+        "二级分类": "批发/零售",
+        "热门行业": false
+      }
+    },
+    {
+      "recordId": "recvd4z9lxYgSF",
+      "values": {
+        "一级分类": "消费品/批发/零售",
+        "二级分类": "进出口贸易",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4z9lxly6J",
+      "values": {
+        "一级分类": "消费品/批发/零售",
+        "二级分类": "食品/饮料/烟酒",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxQb31",
+      "values": {
+        "一级分类": "消费品/批发/零售",
+        "二级分类": "服装/纺织",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxC9hr",
+      "values": {
+        "一级分类": "消费品/批发/零售",
+        "二级分类": "家具/家居",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxNxsE",
+      "values": {
+        "一级分类": "消费品/批发/零售",
+        "二级分类": "家用电器",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxn67B",
+      "values": {
+        "一级分类": "消费品/批发/零售",
+        "二级分类": "日化",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxNBXy",
+      "values": {
+        "一级分类": "消费品/批发/零售",
+        "二级分类": "珠宝/首饰",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxqoni",
+      "values": {
+        "一级分类": "消费品/批发/零售",
+        "二级分类": "家具/家电/家居",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxHvRb",
+      "values": {
+        "一级分类": "消费品/批发/零售",
+        "二级分类": "其他消费品",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxCaxp",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "装修装饰",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxTk1n",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "房屋建筑工程",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxiGQB",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "土木工程",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxQY72",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "机电工程",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxLA1J",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "物业管理",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxUQyx",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "房地产中介/租赁",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxagtn",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "建筑材料",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxw7B6",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "房地产开发经营",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxLFmG",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "建筑设计",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxrUzY",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "建筑工程咨询服务",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxnU32",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "土地与公共设施管理",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4z9lxk6VJ",
+      "values": {
+        "一级分类": "房地产/建筑",
+        "二级分类": "工程施工",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4za8L1cl0",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "通用设备",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUwAPe",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "专用设备",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqU8jck",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "电气机械/器材",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqU9lgz",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "金属制品",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUFG9B",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "非金属矿物制品",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUNrxA",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "橡胶/塑料制品",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUptPa",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "化学原料/化学制品",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUsYmO",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "仪器仪表",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUktKL",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "自动化设备",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqU01ar",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "印刷/包装/造纸",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqU2Izt",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "铁路/船舶/航空/航天制造",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUE2Og",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "计算机/通信/其他电子设备",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUL6YY",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "新材料",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUJ6DJ",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "机械设备/机电/重工",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUEMuc",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "仪器仪表/工业自动化",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUqcBC",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "原材料及加工/模具",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4AsqUKfnm",
+      "values": {
+        "一级分类": "制造业",
+        "二级分类": "其他制造业",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CltG2YtF",
+      "values": {
+        "一级分类": "汽车",
+        "二级分类": "新能源汽车",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyvbHZ",
+      "values": {
+        "一级分类": "汽车",
+        "二级分类": "汽车智能网联",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyfDDR",
+      "values": {
+        "一级分类": "汽车",
+        "二级分类": "汽车经销商",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyYDYz",
+      "values": {
+        "一级分类": "汽车",
+        "二级分类": "汽车后市场",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyeTAV",
+      "values": {
+        "一级分类": "汽车",
+        "二级分类": "汽车研发/制造",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyytKa",
+      "values": {
+        "一级分类": "汽车",
+        "二级分类": "汽车零部件",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyGkQc",
+      "values": {
+        "一级分类": "汽车",
+        "二级分类": "摩托车/自行车制造",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyxrnV",
+      "values": {
+        "一级分类": "汽车",
+        "二级分类": "4S店/后市场",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyYfEL",
+      "values": {
+        "一级分类": "交通运输/物流",
+        "二级分类": "即时配送",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4Cmmy8aE7",
+      "values": {
+        "一级分类": "交通运输/物流",
+        "二级分类": "快递",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4Cmmy3ATC",
+      "values": {
+        "一级分类": "交通运输/物流",
+        "二级分类": "公路物流",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyzhiX",
+      "values": {
+        "一级分类": "交通运输/物流",
+        "二级分类": "同城货运",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmywRia",
+      "values": {
+        "一级分类": "交通运输/物流",
+        "二级分类": "跨境物流",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyCUVJ",
+      "values": {
+        "一级分类": "交通运输/物流",
+        "二级分类": "装卸搬运和仓储业",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyVu0B",
+      "values": {
+        "一级分类": "交通运输/物流",
+        "二级分类": "客运服务",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyXeQw",
+      "values": {
+        "一级分类": "交通运输/物流",
+        "二级分类": "港口/铁路/公路/机场",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyOOm1",
+      "values": {
+        "一级分类": "交通运输/物流",
+        "二级分类": "交通/运输",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CmmyLMJz",
+      "values": {
+        "一级分类": "交通运输/物流",
+        "二级分类": "物流/仓储",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMe8fDU9",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "光伏",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlYxyc",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "储能",
+        "热门行业": false
+      }
+    },
+    {
+      "recordId": "recvd4CMOlLdSM",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "动力电池",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlzfh7",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "风电",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlWCtz",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "其他新能源",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlfhbC",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "环保",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlXale",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "化工",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlPhCL",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "电力/热力/燃气/水利",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlr9iz",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "石油/石化",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOli30J",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "矿产/地质",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlLWBj",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "采掘/冶炼",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOl6UiK",
+      "values": {
+        "一级分类": "能源/化工/环保",
+        "二级分类": "新能源",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4CMOlhskP",
+      "values": {
+        "一级分类": "金融",
+        "二级分类": "互联网金融",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlyrVm",
+      "values": {
+        "一级分类": "金融",
+        "二级分类": "银行",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOldE63",
+      "values": {
+        "一级分类": "金融",
+        "二级分类": "投资/融资",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4CMOlzFCf",
+      "values": {
+        "一级分类": "金融",
+        "二级分类": "证券/期货",
+        "热门行业": true
+      }
+    },
+    {
+      "recordId": "recvd4CMOlPllC",
+      "values": {
+        "一级分类": "金融",
+        "二级分类": "基金",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlX4UN",
+      "values": {
+        "一级分类": "金融",
+        "二级分类": "保险",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlfSXr",
+      "values": {
+        "一级分类": "金融",
+        "二级分类": "租赁/拍卖/典当/担保",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlY251",
+      "values": {
+        "一级分类": "金融",
+        "二级分类": "信托",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOl4QtJ",
+      "values": {
+        "一级分类": "金融",
+        "二级分类": "财富管理",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlndNJ",
+      "values": {
+        "一级分类": "金融",
+        "二级分类": "其他金融业",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlBKni",
+      "values": {
+        "一级分类": "政府/非盈利机构/其他",
+        "二级分类": "农/林/牧/渔",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlGFIy",
+      "values": {
+        "一级分类": "政府/非盈利机构/其他",
+        "二级分类": "非盈利机构",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOlQK9q",
+      "values": {
+        "一级分类": "政府/非盈利机构/其他",
+        "二级分类": "政府/公共事业",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvd4CMOltFlV",
+      "values": {
+        "一级分类": "政府/非盈利机构/其他",
+        "二级分类": "其他行业",
+        "热门行业": null
+      }
+    },
+    {
+      "recordId": "recvdasWZRtLMT",
+      "values": {
+        "一级分类": "不限",
+        "二级分类": "-",
+        "热门行业": true
+      }
+    }
+  ]
+}

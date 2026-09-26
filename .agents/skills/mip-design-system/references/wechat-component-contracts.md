@@ -1,14 +1,16 @@
 # MIP WeChat component contracts
 
-Snapshot: `2026-09-09.2`. The executable visual source is
-`assets/react-source/*.jsx`; this document is the native mini-program mapping.
-Where the two disagree, regenerate the skill from the source instead of
-customizing output.
+Visual snapshot: `2026-09-09.2`; native integration rules updated `2026-09-26`.
+`assets/react-source/*.jsx` preserves the browser reference. The following native
+rules and current repository design decisions take precedence over browser-only
+behavior; they do not require replacing existing native components with React.
 
 ## Native conversion rules
 
 - Produce WXML for structure, WXSS for visual values, and JavaScript for state
-  and events. Do not emit JSX or Tailwind classes.
+  and events. Static Tailwind classes are supported in source WXML by the
+  repository build; compiled WXSS must contain no Tailwind directives. Do not
+  emit JSX, browser Preflight, or React dependencies into the mini-program.
 - Convert design px to rpx at `1px = 2rpx`; 351px content is 702rpx and 12px
   page margin is 24rpx.
 - Use `1rpx` for a design hairline of `0.5px` or `1px` when it is meant to be a
@@ -24,16 +26,19 @@ customizing output.
   has the bottom radius, and middle rows are square.
 - Keep text/progress controls above images and never bake instance text into a
   reusable card asset.
+- Fixed action bars use the repository's unconditional dark background with
+  optional blur. The original translucent GLASS is a visual reference, not a
+  requirement to restore removed vendor prefixes or conditional fallbacks.
 
 ## System layer
 
 | Component | Native contract |
 |---|---|
-| `Screen` | Full-width `view`, min-height `100vh`, page background `#080808`, Chinese font stack, `overflow: hidden` when the source screen clips. |
-| `StatusBar` | 94rpx tall; `time` defaults to `9:41`; use status-bar icons from the registry. |
-| `HomeIndicator` | Independent 68rpx row with a 268×10rpx white bar. The page overlays it; `TabBar` does not include it. |
-| `Capsule` | iOS navigation capsule; preserve the source 174×48rpx footprint and translucent system look. |
-| `NavBar` | 176rpx total including status bar; `title`, `back=true`, `onBack`, `capsule=true`, and `time`; centered title 32rpx/600 primary text. |
+| `Screen` | Full-width `view`, min-height `100vh`, page background `#080808`, Chinese font stack. Clip decoration locally; keep long page content scrollable. |
+| `StatusBar` | Reference preview only: 94rpx, time `9:41`. Native pages use `app-top-safe-area`; do not draw fake system time, signal, or battery. |
+| `HomeIndicator` | Reference preview only: 68rpx row. Native pages reserve actual `safe-area-inset-bottom`; do not draw a second white system bar. |
+| `Capsule` | Reference preview only. Native pages use WeChat's own capsule and platform geometry when required. |
+| `NavBar` | Native title is 32rpx/600; default `showStatusBar=false` and `showCapsule=false`. The reference 176rpx total includes simulated system chrome; do not add it on top of native safe areas. |
 | `TabBar` | 112rpx tab row only. `items` defaults to 发现/活动/机会/我的; `activeIndex` defaults to 3; `onSelect(index)`. Icon box is 56rpx, label is 20rpx/500. Active color is brand; inactive is `#b3b3b3`. |
 
 ## Primitives

@@ -1,7 +1,7 @@
 # SOT manifest
 
 - Skill: `mip-design-system`
-- Version: `2026-09-22.1`
+- Version: `2026-09-26.1`
 - Snapshot: 2026-09-09 15:16 worktree
 - Base commit: `922e431f2731cbde2b70cd481fae805fba482716` (business context;
   component updates were staged but not committed at capture time)
@@ -43,3 +43,7 @@ pool and browser toolchain.
 
 The additional `bell-notification` SVG comes from upstream `cb5956b` (introduced by `6086f3e`),
 `figma-restored/role-flows-build/build_prototype.py`, Figma node `3364:16248`.
+
+2026-09-26 updates clarify native safe areas, supported Tailwind source syntax,
+current design precedence, and the accepted opaque action-bar treatment.
+Original React references, tokens, icons, and baked assets are unchanged.
