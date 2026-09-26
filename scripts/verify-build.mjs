@@ -2,6 +2,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import postcss from 'postcss'
 import {
   assertCompiledTDesignRegistrations,
   assertOfficialCustomTabBar,
@@ -81,6 +82,24 @@ const homeJson = JSON.parse(read('dist/pages/index/index.json'))
 const components = { ...membershipJson.usingComponents, ...homeJson.usingComponents }
 
 assertBuiltComponentTargets()
+// Compiler upgrades must retain the native WXSS compatibility layer on every consumer.
+for (const source of walk('src').filter(file => file.endsWith('.wxss') && /@import\s+['"][^'"]*styles\/liquid-glass\.wxss['"]/.test(read(file)))) {
+  const output = source.replace(/^src\//, 'dist/')
+  const css = postcss.parse(read(output))
+  let hasWebkitBlur = false
+  let hasOpaqueFallback = false
+  css.walkRules('.mip-liquid-glass', (rule) => {
+    rule.walkDecls('-webkit-backdrop-filter', (decl) => {
+      hasWebkitBlur ||= rule.parent.type === 'root' && /blur\(/.test(decl.value)
+    })
+    if (rule.parent.type === 'atrule' && rule.parent.name === 'supports' && /^not\s/.test(rule.parent.params)) {
+      rule.walkDecls('background', (decl) => {
+        hasOpaqueFallback ||= /^(?:rgb\(32 32 32 \/ 92%\)|rgba\(32,\s*32,\s*32,\s*0\.92\))$/.test(decl.value)
+      })
+    }
+  })
+  assert(hasWebkitBlur && hasOpaqueFallback, `Compiled liquid glass lost its iOS blur or opaque fallback: ${output}`)
+}
 assert(appWxss.includes('.bg-canvas'), 'MIP design tokens did not reach WXSS')
 assert(appWxss.includes('.grid-cols-2'), 'Tailwind grid utilities did not reach WXSS')
 for (const tab of appJson.tabBar?.list || []) {
