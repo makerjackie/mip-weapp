@@ -52,43 +52,43 @@
   <block wx:elif="{{item}}">
     <mip-opportunity-card title="{{item.title}}" cover-url="{{item.coverUrl || ''}}" value-text="{{item.commercialTerms.amountDisplay || item.valueSummary}}" city-text="{{item.city.label || ''}}" region-text="{{item.regionText || ''}}" location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}" target-text="{{item.targetSummary}}" referral-count="{{item.cooperationCount || 0}}" published-text="{{publishedText}}" published-prefix="发表于：" type-tags="{{typeTagViews}}" pill-label="想合作" avatars="{{cooperationAvatars}}" />
     <view class="mt-3 rounded-[16rpx] bg-panel px-3 py-3">
-      <view class="flex items-center gap-1 text-[length:32rpx] font-medium"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/packages/member/assets/figma/opportunities/project-introduction.svg" mode="aspectFit" /><text>项目介绍</text></view>
-      <view wx:if="{{item.description}}" class="mt-3 whitespace-pre-wrap text-[length:24rpx] leading-[40rpx] text-muted">{{item.description}}</view>
-      <view wx:else class="mt-3 rounded-[8rpx] bg-panel-raised px-4 py-4 text-[length:24rpx] text-muted">暂未填写项目介绍</view>
-      <view wx:if="{{roleNames.length}}" class="mt-4 flex flex-wrap gap-2"><view wx:for="{{roleNames}}" wx:key="*this" class="rounded-full border border-line px-3 py-1 text-[length:22rpx] text-muted">{{item}}</view></view>
-      <view wx:if="{{item.industryTags.length || item.abilityTags.length}}" class="mt-3 flex flex-wrap gap-2"><view wx:for="{{item.industryTags}}" wx:key="id" class="rounded-full bg-panel-raised px-3 py-1 text-[length:22rpx] text-muted">{{item.label}}</view><view wx:for="{{item.abilityTags}}" wx:key="id" class="rounded-full bg-panel-raised px-3 py-1 text-[length:22rpx] text-muted">{{item.label}}</view></view>
+      <view class="flex items-center gap-1 text-[32rpx] font-medium"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/packages/member/assets/figma/opportunities/project-introduction.svg" mode="aspectFit" /><text>项目介绍</text></view>
+      <view wx:if="{{item.description}}" class="mt-3 whitespace-pre-wrap text-[24rpx] leading-[40rpx] text-muted">{{item.description}}</view>
+      <view wx:else class="mt-3 rounded-[8rpx] bg-panel-raised px-4 py-4 text-[24rpx] text-muted">暂未填写项目介绍</view>
+      <view wx:if="{{roleNames.length}}" class="mt-4 flex flex-wrap gap-2"><view wx:for="{{roleNames}}" wx:key="*this" class="rounded-full border border-line px-3 py-1 text-[22rpx] text-muted">{{item}}</view></view>
+      <view wx:if="{{item.industryTags.length || item.abilityTags.length}}" class="mt-3 flex flex-wrap gap-2"><view wx:for="{{item.industryTags}}" wx:key="id" class="rounded-full bg-panel-raised px-3 py-1 text-[22rpx] text-muted">{{item.label}}</view><view wx:for="{{item.abilityTags}}" wx:key="id" class="rounded-full bg-panel-raised px-3 py-1 text-[22rpx] text-muted">{{item.label}}</view></view>
     </view>
     <view class="mt-4 flex min-h-[112rpx] items-center rounded-[16rpx] bg-panel px-5 py-4 active:bg-panel-raised" aria-role="button" bind:tap="openAuthor">
-      <view class="min-w-0 flex-1"><view class="text-[length:22rpx] text-muted">发布人</view><view class="mt-2 text-[length:28rpx] font-semibold">{{item.author.nickname}}</view><view wx:if="{{item.author.headline}}" class="mt-1 text-[length:22rpx] text-muted">{{item.author.headline}}</view></view><mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-brand)" />
+      <view class="min-w-0 flex-1"><view class="text-[22rpx] text-muted">发布人</view><view class="mt-2 text-[28rpx] font-semibold">{{item.author.nickname}}</view><view wx:if="{{item.author.headline}}" class="mt-1 text-[22rpx] text-muted">{{item.author.headline}}</view></view><mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-brand)" />
     </view>
     <view wx:if="{{item.teamMembers.length}}" class="mt-4 rounded-[16rpx] bg-panel px-5 py-5">
-      <view class="text-[length:28rpx] font-semibold">团队成员</view>
-      <view class="mt-3 flex flex-col gap-2"><view wx:for="{{item.teamMembers}}" wx:key="profileRef" class="flex items-center rounded-[8rpx] bg-panel-raised px-3 py-3" data-profile-ref="{{item.profileRef}}" bind:tap="openTeamMember"><image wx:if="{{item.avatarUrl}}" class="mr-3 h-[72rpx] w-[72rpx] rounded-full" src="{{item.avatarUrl}}" mode="aspectFill" /><view wx:else class="mr-3 flex h-[72rpx] w-[72rpx] items-center justify-center rounded-full bg-brand-soft text-[length:22rpx] text-brand">MIP</view><view class="min-w-0 flex-1"><view class="truncate text-[length:24rpx] font-semibold">{{item.nickname}}</view><view wx:if="{{item.headline}}" class="mt-1 truncate text-[length:22rpx] text-muted">{{item.headline}}</view></view><mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-brand)" /></view></view>
+      <view class="text-[28rpx] font-semibold">团队成员</view>
+      <view class="mt-3 flex flex-col gap-2"><view wx:for="{{item.teamMembers}}" wx:key="profileRef" class="flex items-center rounded-[8rpx] bg-panel-raised px-3 py-3" data-profile-ref="{{item.profileRef}}" bind:tap="openTeamMember"><image wx:if="{{item.avatarUrl}}" class="mr-3 h-[72rpx] w-[72rpx] rounded-full" src="{{item.avatarUrl}}" mode="aspectFill" /><view wx:else class="mr-3 flex h-[72rpx] w-[72rpx] items-center justify-center rounded-full bg-brand-soft text-[22rpx] text-brand">MIP</view><view class="min-w-0 flex-1"><view class="truncate text-[24rpx] font-semibold">{{item.nickname}}</view><view wx:if="{{item.headline}}" class="mt-1 truncate text-[22rpx] text-muted">{{item.headline}}</view></view><mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-brand)" /></view></view>
     </view>
     <view class="mt-4 flex min-h-[88rpx] items-center justify-between rounded-[16rpx] bg-panel px-4" aria-role="button" bind:tap="openCooperators">
       <text>{{item.cooperationCount || 0}} 人想合作</text><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" />
     </view>
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
       <view class="flex items-center justify-between gap-3">
-        <view><view class="text-[length:28rpx] font-semibold">评论与评价</view><view class="mt-1 text-[length:22rpx] text-muted">参与人的评价会显示身份标识</view></view>
+        <view><view class="text-[28rpx] font-semibold">评论与评价</view><view class="mt-1 text-[22rpx] text-muted">参与人的评价会显示身份标识</view></view>
         <t-button wx:if="{{commentSettings && (commentSettings.commentsEnabled || (commentSettings.reviewsEnabled && commentSettings.opportunityStatus === 'ENDED'))}}" size="small" theme="primary" bind:tap="startComment">发布</t-button>
       </view>
       <view aria-label="正在加载" aria-busy="true" wx:if="{{commentsState === 'loading'}}" class="mt-4"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
       <view wx:elif="{{commentsState === 'error'}}" class="mt-4 rounded-[8rpx] bg-panel-raised px-4 py-4" aria-live="polite">
-        <view class="text-[length:22rpx] text-muted">{{commentsMessage}}</view>
+        <view class="text-[22rpx] text-muted">{{commentsMessage}}</view>
         <view class="mt-3 grid grid-cols-2 gap-2"><t-button block size="small" variant="outline" theme="primary" bind:tap="retryComments">重新加载</t-button><t-button block size="small" theme="primary" bind:tap="startComment">完成身份信息</t-button></view>
       </view>
-      <view wx:elif="{{!comments.length}}" class="mt-4 rounded-[8rpx] bg-panel-raised px-4 py-5 text-center text-[length:24rpx] text-muted">暂无评论与评价</view>
+      <view wx:elif="{{!comments.length}}" class="mt-4 rounded-[8rpx] bg-panel-raised px-4 py-5 text-center text-[24rpx] text-muted">暂无评论与评价</view>
       <view wx:else class="mt-4 flex flex-col gap-3">
         <view wx:for="{{comments}}" wx:key="id" class="rounded-[8rpx] bg-panel-raised px-4 py-4">
           <view class="flex items-center gap-3" data-id="{{item.id}}" bind:tap="openCommentAuthor">
             <image wx:if="{{item.author.avatarUrl}}" class="h-[64rpx] w-[64rpx] shrink-0 rounded-full" src="{{item.author.avatarUrl}}" mode="aspectFill" />
-            <view wx:else class="flex h-[64rpx] w-[64rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:22rpx] text-brand">{{item.authorInitial}}</view>
-            <view class="min-w-0 flex-1"><view class="flex items-center gap-2"><text class="truncate text-[length:24rpx] font-semibold">{{item.author.nickname}}</text><text wx:if="{{item.author.participant}}" class="rounded-full bg-brand-soft px-2 py-1 text-[length:22rpx] text-brand">参与人</text><text wx:if="{{item.status === 'PENDING'}}" class="rounded-full border border-line px-2 py-1 text-[length:22rpx] text-muted">审核中</text></view><view class="mt-1 text-[length:22rpx] text-muted">{{item.createdText}}{{item.editedAt ? ' · 已编辑' : ''}}</view></view>
+            <view wx:else class="flex h-[64rpx] w-[64rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[22rpx] text-brand">{{item.authorInitial}}</view>
+            <view class="min-w-0 flex-1"><view class="flex items-center gap-2"><text class="truncate text-[24rpx] font-semibold">{{item.author.nickname}}</text><text wx:if="{{item.author.participant}}" class="rounded-full bg-brand-soft px-2 py-1 text-[22rpx] text-brand">参与人</text><text wx:if="{{item.status === 'PENDING'}}" class="rounded-full border border-line px-2 py-1 text-[22rpx] text-muted">审核中</text></view><view class="mt-1 text-[22rpx] text-muted">{{item.createdText}}{{item.editedAt ? ' · 已编辑' : ''}}</view></view>
           </view>
-          <view wx:if="{{item.type === 'REVIEW'}}" class="mt-3 text-[length:22rpx] text-brand">项目评价 · {{item.rating}} / 5</view>
-          <view class="mt-3 whitespace-pre-wrap text-[length:24rpx] leading-[40rpx]">{{item.body}}</view>
-          <view class="mt-3 flex items-center gap-4 text-[length:22rpx] text-muted">
+          <view wx:if="{{item.type === 'REVIEW'}}" class="mt-3 text-[22rpx] text-brand">项目评价 · {{item.rating}} / 5</view>
+          <view class="mt-3 whitespace-pre-wrap text-[24rpx] leading-[40rpx]">{{item.body}}</view>
+          <view class="mt-3 flex items-center gap-4 text-[22rpx] text-muted">
             <view wx:if="{{commentSettings.callsEnabled && commentSettings.canCall && !item.mine && item.status === 'PUBLISHED'}}" data-id="{{item.id}}" bind:tap="toggleCommentCall" class="flex min-h-[88rpx] items-center {{item.callActive ? 'text-brand' : ''}}">打 call {{item.callCount}}</view>
             <view wx:else>打 call {{item.callCount}}</view>
             <view wx:if="{{item.canEdit}}" data-id="{{item.id}}" bind:tap="editComment" class="flex min-h-[88rpx] items-center">编辑</view>
@@ -98,44 +98,44 @@
         </view>
         <t-button wx:if="{{commentsCursor}}" block variant="outline" theme="primary" loading="{{commentsLoadingMore}}" bind:tap="loadMoreComments">加载更多</t-button>
       </view>
-      <view wx:if="{{commentsMessage && commentsState === 'ready'}}" class="mt-3 text-[length:22rpx] text-danger">{{commentsMessage}}</view>
+      <view wx:if="{{commentsMessage && commentsState === 'ready'}}" class="mt-3 text-[22rpx] text-danger">{{commentsMessage}}</view>
     </view>
     <!-- journey-review J4-05/J4-06：发布人底部条=编辑 + 分享机会。
          招募中/已结束均可分享；已下架置灰不可点；未发布过的草稿保持「发布机会」主按钮。
          已结束（ENDED）服务端不可编辑，「编辑」置灰不可点（编辑入口仅 DRAFT/PUBLISHED）。 -->
     <view wx:if="{{ownerBar}}" id="opportunity-owner-actions" class="mip-liquid-glass mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
-      <view wx:if="{{ownerBar === 'draft'}}" class="flex h-[88rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[length:32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑草稿</text></view>
-      <view wx:elif="{{ownerBar === 'ended'}}" class="flex h-[88rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[length:32rpx] font-medium text-muted opacity-50" aria-disabled="true"><image class="h-[40rpx] w-[40rpx] opacity-50" src="/packages/member/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑</text></view>
-      <view wx:else class="flex h-[88rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[length:32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑</text></view>
-      <view wx:if="{{ownerBar === 'draft'}}" class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-center text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="edit">发布机会</view>
-      <button wx:elif="{{ownerBar === 'unpublished'}}" class="opportunity-share-button flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full px-4 text-center text-[length:32rpx] font-medium" aria-disabled="true" disabled>分享机会</button>
-      <button wx:else class="opportunity-share-button flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-center text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" open-type="share" aria-role="button">分享机会</button>
+      <view wx:if="{{ownerBar === 'draft'}}" class="flex h-[88rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑草稿</text></view>
+      <view wx:elif="{{ownerBar === 'ended'}}" class="flex h-[88rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[32rpx] font-medium text-muted opacity-50" aria-disabled="true"><image class="h-[40rpx] w-[40rpx] opacity-50" src="/packages/member/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑</text></view>
+      <view wx:else class="flex h-[88rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑</text></view>
+      <view wx:if="{{ownerBar === 'draft'}}" class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-center text-[32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="edit">发布机会</view>
+      <button wx:elif="{{ownerBar === 'unpublished'}}" class="opportunity-share-button flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full px-4 text-center text-[32rpx] font-medium" aria-disabled="true" disabled>分享机会</button>
+      <button wx:else class="opportunity-share-button flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-center text-[32rpx] font-medium text-on-brand active:bg-brand-active" open-type="share" aria-role="button">分享机会</button>
     </view>
     <!-- journey-review J3-09：非发布人底部条=「+N想合作」头像组胶囊 + 我想合作。
          合作意向支持取消；项目结束后只允许取消已有意向。 -->
     <view wx:elif="{{!item.mine && (item.status === 'PUBLISHED' || item.cooperationActive)}}" id="opportunity-cooperation-actions" class="mip-liquid-glass mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
       <view class="flex h-[80rpx] w-[258rpx] shrink-0 items-center justify-center gap-[8rpx] rounded-full bg-panel px-3" aria-role="button" bind:tap="openCooperators">
         <view wx:for="{{cooperationAvatars}}" wx:for-item="avatar" wx:key="*this" class="h-[48rpx] w-[48rpx] overflow-hidden rounded-full border-[2rpx] border-solid border-white" style="margin-left:{{index === 0 ? 0 : -30}}rpx"><image class="h-full w-full" src="{{avatar}}" mode="aspectFill" /></view>
-        <text class="text-[length:20rpx] font-semibold leading-[28rpx] text-brand">+</text>
-        <text class="text-[length:26rpx] font-medium leading-[36rpx] text-brand">{{item.cooperationCount || 0}}想合作</text>
+        <text class="text-[20rpx] font-semibold leading-[28rpx] text-brand">+</text>
+        <text class="text-[26rpx] font-medium leading-[36rpx] text-brand">{{item.cooperationCount || 0}}想合作</text>
       </view>
-      <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-pressed="{{item.cooperationActive}}" aria-disabled="{{acting}}" bind:tap="cooperationIntent">{{acting ? '处理中' : item.cooperationActive ? '取消合作意向' : '我想合作'}}</view>
+      <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-pressed="{{item.cooperationActive}}" aria-disabled="{{acting}}" bind:tap="cooperationIntent">{{acting ? '处理中' : item.cooperationActive ? '取消合作意向' : '我想合作'}}</view>
     </view>
     <view wx:elif="{{!item.mine && item.status === 'ENDED'}}" id="opportunity-cooperation-actions" class="mip-liquid-glass mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
       <view class="flex h-[80rpx] w-[258rpx] shrink-0 items-center justify-center gap-[8rpx] rounded-full bg-panel px-3" aria-role="button" bind:tap="openCooperators">
-        <text class="text-[length:20rpx] font-semibold leading-[28rpx] text-brand">+</text>
-        <text class="text-[length:26rpx] font-medium leading-[36rpx] text-brand">{{item.cooperationCount || 0}}想合作</text>
+        <text class="text-[20rpx] font-semibold leading-[28rpx] text-brand">+</text>
+        <text class="text-[26rpx] font-medium leading-[36rpx] text-brand">{{item.cooperationCount || 0}}想合作</text>
       </view>
-      <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand opacity-40" aria-disabled="true">项目已结束</view>
+      <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[32rpx] font-medium text-on-brand opacity-40" aria-disabled="true">项目已结束</view>
     </view>
     <app-page-exit label="返回机会" />
     <t-popup visible="{{cooperatorsVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleCooperatorsVisibility">
       <view class="rounded-t-[24rpx] bg-panel px-4 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-5 text-ink">
-        <view class="flex items-center justify-between"><text class="text-[length:30rpx] font-semibold">想合作的人</text><view class="flex min-h-[88rpx] items-center px-3" aria-role="button" bind:tap="closeCooperators">关闭</view></view>
+        <view class="flex items-center justify-between"><text class="text-[30rpx] font-semibold">想合作的人</text><view class="flex min-h-[88rpx] items-center px-3" aria-role="button" bind:tap="closeCooperators">关闭</view></view>
         <scroll-view scroll-y class="h-[600rpx]" bindscrolltolower="loadMoreCooperators">
           <view wx:for="{{cooperators}}" wx:key="profileRef" class="my-2 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel-raised px-3 py-3" data-profile-ref="{{item.profileRef}}" aria-role="button" bind:tap="openTeamMember">
             <image wx:if="{{item.avatarUrl}}" class="h-[72rpx] w-[72rpx] shrink-0 rounded-full" src="{{item.avatarUrl}}" mode="aspectFill" />
-            <view class="min-w-0 flex-1"><view class="truncate">{{item.nickname}}</view><view wx:if="{{item.headline}}" class="mt-1 truncate text-[length:22rpx] text-muted">{{item.headline}}</view></view>
+            <view class="min-w-0 flex-1"><view class="truncate">{{item.nickname}}</view><view wx:if="{{item.headline}}" class="mt-1 truncate text-[22rpx] text-muted">{{item.headline}}</view></view>
             <mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-muted)" />
           </view>
           <view wx:if="{{cooperatorsMessage}}" class="py-4 text-center text-muted" aria-role="button" bind:tap="retryCooperators">{{cooperatorsMessage}}，点击重试</view>
@@ -147,14 +147,14 @@
     </t-popup>
     <t-popup visible="{{composerVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleComposerVisibility">
       <view class="box-border rounded-t-[24rpx] bg-panel px-4 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-5 text-ink">
-        <view class="flex items-center justify-between"><view class="text-[length:30rpx] font-semibold">{{editingComment ? '编辑内容' : '发布内容'}}</view><view class="flex min-h-[88rpx] items-center px-3 text-[length:24rpx] text-muted" bind:tap="closeCommentComposer">取消</view></view>
+        <view class="flex items-center justify-between"><view class="text-[30rpx] font-semibold">{{editingComment ? '编辑内容' : '发布内容'}}</view><view class="flex min-h-[88rpx] items-center px-3 text-[24rpx] text-muted" bind:tap="closeCommentComposer">取消</view></view>
         <view wx:if="{{!editingComment}}" class="mt-4 flex gap-2">
-          <view wx:if="{{commentSettings.commentsEnabled}}" class="flex min-h-[88rpx] flex-1 items-center justify-center rounded-[8rpx] px-3 text-center text-[length:24rpx] {{commentType === 'COMMENT' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-type="COMMENT" bind:tap="chooseCommentType">评论</view>
-          <view wx:if="{{commentSettings.reviewsEnabled && commentSettings.opportunityStatus === 'ENDED'}}" class="flex min-h-[88rpx] flex-1 items-center justify-center rounded-[8rpx] px-3 text-center text-[length:24rpx] {{commentType === 'REVIEW' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-type="REVIEW" bind:tap="chooseCommentType">项目评价</view>
+          <view wx:if="{{commentSettings.commentsEnabled}}" class="flex min-h-[88rpx] flex-1 items-center justify-center rounded-[8rpx] px-3 text-center text-[24rpx] {{commentType === 'COMMENT' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-type="COMMENT" bind:tap="chooseCommentType">评论</view>
+          <view wx:if="{{commentSettings.reviewsEnabled && commentSettings.opportunityStatus === 'ENDED'}}" class="flex min-h-[88rpx] flex-1 items-center justify-center rounded-[8rpx] px-3 text-center text-[24rpx] {{commentType === 'REVIEW' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-type="REVIEW" bind:tap="chooseCommentType">项目评价</view>
         </view>
-        <view wx:if="{{commentType === 'REVIEW'}}" class="mt-4"><view class="text-[length:22rpx] text-muted">评分</view><view class="mt-2 flex gap-2"><view wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="flex h-[88rpx] w-[88rpx] items-center justify-center rounded-[8rpx] text-[length:24rpx] {{commentRating === item ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-rating="{{item}}" bind:tap="chooseCommentRating">{{item}}</view></view></view>
-        <textarea aria-label="评论内容" class="mt-4 box-border h-[240rpx] w-full rounded-[8rpx] bg-panel-raised px-4 py-4 text-[length:24rpx]" value="{{commentBody}}" maxlength="800" placeholder="请输入内容" bindinput="updateCommentBody" />
-        <view class="mt-2 text-right text-[length:22rpx] text-muted">{{commentBody.length}} / 800</view>
+        <view wx:if="{{commentType === 'REVIEW'}}" class="mt-4"><view class="text-[22rpx] text-muted">评分</view><view class="mt-2 flex gap-2"><view wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="flex h-[88rpx] w-[88rpx] items-center justify-center rounded-[8rpx] text-[24rpx] {{commentRating === item ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-rating="{{item}}" bind:tap="chooseCommentRating">{{item}}</view></view></view>
+        <textarea aria-label="评论内容" class="mt-4 box-border h-[240rpx] w-full rounded-[8rpx] bg-panel-raised px-4 py-4 text-[24rpx]" value="{{commentBody}}" maxlength="800" placeholder="请输入内容" bindinput="updateCommentBody" />
+        <view class="mt-2 text-right text-[22rpx] text-muted">{{commentBody.length}} / 800</view>
         <view class="mt-4"><t-button block size="large" theme="primary" loading="{{commentActingId}}" disabled="{{!commentBody}}" bind:tap="submitComment">提交</t-button></view>
       </view>
     </t-popup>

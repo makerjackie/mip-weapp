@@ -7,8 +7,8 @@
   <block wx:if="{{figmaLayout && figma.cards}}">
     <view class="-mx-4 -mt-4 relative min-h-[1400rpx]">
       <view wx:if="{{figma.tabs}}" class="absolute left-0 top-0 h-[80rpx] w-full">
-        <view class="absolute top-[20rpx] text-[length:28rpx] font-medium leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-brand' : 'text-muted'}}" style="left:132rpx">我的心动</view>
-        <view class="absolute top-[20rpx] text-[length:28rpx] font-normal leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-muted' : 'text-brand'}}" style="left:506rpx">对我心动</view>
+        <view class="absolute top-[20rpx] text-[28rpx] font-medium leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-brand' : 'text-muted'}}" style="left:132rpx">我的心动</view>
+        <view class="absolute top-[20rpx] text-[28rpx] font-normal leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-muted' : 'text-brand'}}" style="left:506rpx">对我心动</view>
         <view class="absolute left-0 top-[78rpx] h-[2rpx] w-full bg-panel"></view>
         <view class="absolute top-[76rpx] h-[4rpx] w-[376rpx] bg-brand" style="left:{{figma.tabs.leftActive ? 0 : 376}}rpx"></view>
       </view>
@@ -28,15 +28,15 @@
         block="{{true}}"
       />
       <view wx:for="{{figma.cards}}" wx:key="name" class="absolute h-[374rpx] w-[340rpx] overflow-hidden rounded-[16rpx] {{item.highlight ? 'bg-[#333333]' : 'bg-panel'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
-        <view wx:if="{{item.chipAt}}" class="absolute flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[length:20rpx] font-semibold leading-[28rpx] text-brand" style="left:{{item.chipAt.leftRpx}}rpx;top:{{item.chipAt.topRpx}}rpx">Lv.23</view>
-        <view wx:else class="absolute left-[16rpx] top-[16rpx] flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[length:20rpx] font-semibold leading-[28rpx] text-brand">Lv.23</view>
+        <view wx:if="{{item.chipAt}}" class="absolute flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[20rpx] font-semibold leading-[28rpx] text-brand" style="left:{{item.chipAt.leftRpx}}rpx;top:{{item.chipAt.topRpx}}rpx">Lv.23</view>
+        <view wx:else class="absolute left-[16rpx] top-[16rpx] flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[20rpx] font-semibold leading-[28rpx] text-brand">Lv.23</view>
         <image class="absolute left-[114rpx] top-[16rpx] h-[112rpx] w-[112rpx] rounded-full" src="/packages/member/assets/figma/guests/avatar-{{item.avatar}}.png" />
         <image wx:if="{{item.heartBadge}}" class="absolute left-[284rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-heart-fill.png" />
-        <view wx:if="{{item.heartCount}}" class="absolute left-[284rpx] top-[48rpx] w-[40rpx] text-center text-[length:20rpx] font-semibold leading-[28rpx] text-[#ff2238]">{{item.heartCount}}</view>
-        <view class="absolute left-0 top-[144rpx] w-full text-center text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">{{item.name}}</view>
-        <view wx:if="{{item.taglineMedium}}" class="absolute left-0 top-[196rpx] w-full text-center text-[length:20rpx] font-medium leading-[33.6rpx] text-ink">{{item.tagline}}</view>
-        <view wx:else class="absolute left-[20rpx] top-[196rpx] whitespace-nowrap text-[length:20rpx] leading-[33.6rpx] text-ink">{{item.tagline}}</view>
-        <view class="absolute left-[24rpx] top-[238rpx] w-[288rpx] text-[length:20rpx] leading-[28rpx] text-muted">{{item.intro}}</view>
+        <view wx:if="{{item.heartCount}}" class="absolute left-[284rpx] top-[48rpx] w-[40rpx] text-center text-[20rpx] font-semibold leading-[28rpx] text-[#ff2238]">{{item.heartCount}}</view>
+        <view class="absolute left-0 top-[144rpx] w-full text-center text-[32rpx] font-medium leading-[44.8rpx] text-ink">{{item.name}}</view>
+        <view wx:if="{{item.taglineMedium}}" class="absolute left-0 top-[196rpx] w-full text-center text-[20rpx] font-medium leading-[33.6rpx] text-ink">{{item.tagline}}</view>
+        <view wx:else class="absolute left-[20rpx] top-[196rpx] whitespace-nowrap text-[20rpx] leading-[33.6rpx] text-ink">{{item.tagline}}</view>
+        <view class="absolute left-[24rpx] top-[238rpx] w-[288rpx] text-[20rpx] leading-[28rpx] text-muted">{{item.intro}}</view>
         <image class="absolute left-[16rpx] top-[318rpx] h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/bear.png" />
         <image wx:if="{{item.inviter}}" class="absolute left-[172rpx] top-[312rpx] h-[52rpx] w-[152rpx]" src="/packages/member/assets/figma/guests/inviter-bear.webp" />
         <image wx:elif="{{item.inviterImg}}" class="absolute left-[184rpx] top-[312rpx] h-[48rpx] w-[144rpx]" src="/packages/member/assets/figma/guests/{{item.inviterImg}}.png" />
@@ -44,7 +44,7 @@
       </view>
     </view>
   </block>
-  <view class="grid grid-cols-2 border-b border-line text-center text-[length:24rpx]">
+  <view class="grid grid-cols-2 border-b border-line text-center text-[24rpx]">
     <view wx:if="{{kind === 'SENT'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-kind="SENT" bind:tap="changeKind">我的心动</view>
     <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-kind="SENT" bind:tap="changeKind">我的心动</view>
     <view class="flex min-h-[88rpx] items-center justify-center gap-2 border-b-[4rpx] py-4 {{kind === 'RECEIVED' ? 'border-brand text-brand' : 'border-transparent text-muted'}}" data-kind="RECEIVED" bind:tap="changeKind"><text>对我心动</text><view wx:if="{{receivedUnreadCount > 0}}" class="h-[16rpx] w-[16rpx] rounded-full bg-danger" aria-label="有新的心动" /></view>
@@ -62,16 +62,16 @@
       <view wx:for="{{items}}" wx:key="viewKey" class="min-h-[374rpx] rounded-[16rpx] bg-panel px-[20rpx] pt-[32rpx] text-center active:bg-panel-raised" data-profile-ref="{{item.person.profileRef}}" bind:tap="openProfile" aria-role="button" aria-label="查看{{item.person.nickname}}的公开档案">
         <view class="flex justify-center">
           <image wx:if="{{item.person.avatarUrl}}" class="h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.person.avatarUrl}}" />
-          <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[length:32rpx] font-semibold text-brand">{{item.personInitial}}</view>
+          <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[32rpx] font-semibold text-brand">{{item.personInitial}}</view>
         </view>
-        <view class="mt-[16rpx] truncate text-[length:32rpx] font-medium leading-[44.8rpx]">{{item.person.nickname}}</view>
-        <view wx:if="{{item.person.headline}}" class="mt-[8rpx] line-clamp-3 text-[length:20rpx] leading-[28rpx] text-muted">{{item.person.headline}}</view>
-        <view class="mt-[16rpx] min-h-[64rpx] border-t border-line py-[16rpx] text-[length:20rpx] text-brand" data-event-id="{{item.event.id}}" catch:tap="openEvent" aria-role="button" aria-label="查看活动{{item.event.title}}">{{item.event.title}}</view>
+        <view class="mt-[16rpx] truncate text-[32rpx] font-medium leading-[44.8rpx]">{{item.person.nickname}}</view>
+        <view wx:if="{{item.person.headline}}" class="mt-[8rpx] line-clamp-3 text-[20rpx] leading-[28rpx] text-muted">{{item.person.headline}}</view>
+        <view class="mt-[16rpx] min-h-[64rpx] border-t border-line py-[16rpx] text-[20rpx] text-brand" data-event-id="{{item.event.id}}" catch:tap="openEvent" aria-role="button" aria-label="查看活动{{item.event.title}}">{{item.event.title}}</view>
       </view>
     </view>
     <view wx:if="{{nextCursor}}" class="mt-1"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
   </view>
-  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
   <mip-subscription-prompt wx:if="{{state === 'ready' || state === 'empty'}}" template-key="HEART_RECEIVED" label="接收心动提醒" description="有人在活动中向你发送心动时，通过微信提醒你。" />
   <app-page-exit />
 </view>

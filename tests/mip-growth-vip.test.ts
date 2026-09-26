@@ -35,7 +35,7 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('wx:for="{{tasks}}"')
     // 最新 J1-06 原型：可执行任务使用黄底胶囊，完成态与未开放态保持区分。
     expect(template).toContain('wx:if="{{item.status === \'AVAILABLE\'}}"')
-    expect(template).toContain('rounded-full border border-black bg-brand px-2 text-[length:24rpx] font-medium text-on-brand')
+    expect(template).toContain('rounded-full border border-black bg-brand px-2 text-[24rpx] font-medium text-on-brand')
     expect(template).toContain('id="growth-member-actions"')
     expect(template).toContain('id="growth-join-actions"')
     expect(template).toContain('<mip-sticky-actions')

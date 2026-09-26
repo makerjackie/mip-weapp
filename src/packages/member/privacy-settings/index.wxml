@@ -1,10 +1,10 @@
 <view id="mip-privacy-settings-page" class="mip-member-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view wx:if="{{state === 'loading'}}" class="py-6 text-muted">正在加载隐私设置</view>
-  <view wx:if="{{message}}" class="py-3 text-[length:24rpx] text-muted">{{message}}</view>
+  <view wx:if="{{message}}" class="py-3 text-[24rpx] text-muted">{{message}}</view>
   <view wx:if="{{state === 'error'}}" class="flex min-h-[88rpx] items-center text-brand" aria-role="button" bind:tap="load">重新加载</view>
   <block wx:if="{{state === 'ready'}}">
   <view class="mt-[24rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel pl-[24rpx] pr-[20rpx]">
-    <view class="min-w-0 flex-1 text-[length:28rpx] font-medium leading-[40rpx]">不让他人在搜索人才时找到我</view>
+    <view class="min-w-0 flex-1 text-[28rpx] font-medium leading-[40rpx]">不让他人在搜索人才时找到我</view>
     <t-switch
       class="ml-[16rpx] shrink-0"
       disabled="{{saving}}"
@@ -15,7 +15,7 @@
     />
   </view>
   <view class="mt-[24rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel pl-[24rpx] pr-[20rpx]">
-    <view class="min-w-0 flex-1 text-[length:28rpx] font-medium leading-[40rpx]">不让非MIP玩家看到我发布的机会</view>
+    <view class="min-w-0 flex-1 text-[28rpx] font-medium leading-[40rpx]">不让非MIP玩家看到我发布的机会</view>
     <t-switch
       class="ml-[16rpx] shrink-0"
       disabled="{{saving}}"

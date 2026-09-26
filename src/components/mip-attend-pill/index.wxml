@@ -3,16 +3,16 @@
   aria-role="button"
   bind:tap="handleTap"
 >
-  <view class="mip-attend-pill__avatars">
+  <view wx:if="{{avatars.length}}" class="mip-attend-pill__avatars">
     <image
       wx:for="{{avatars}}"
       wx:key="*this"
       class="mip-attend-pill__avatar"
-      style="left:{{index * 30}}rpx;z-index:{{3 - index}}"
+      wx:if="{{index < 3}}"
+      style="z-index:{{3 - index}}"
       mode="aspectFill"
       src="{{item}}"
     />
   </view>
-  <text class="mip-attend-pill__plus">+</text>
-  <text class="mip-attend-pill__count">{{count}}{{label}}</text>
+  <text class="mip-attend-pill__count">+{{count}}{{label}}</text>
 </view>

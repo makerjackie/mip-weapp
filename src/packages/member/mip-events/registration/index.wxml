@@ -5,12 +5,12 @@
   <view wx:elif="{{state === 'submitted'}}" class="pt-10">
     <view class="rounded-[16rpx] bg-panel px-5 py-8 text-center">
       <view class="mx-auto flex h-[88rpx] w-[88rpx] items-center justify-center rounded-full bg-brand-soft"><mip-icon name="check" size="{{24}}" color="var(--color-brand)" /></view>
-      <view class="mt-5 text-[length:32rpx] font-bold">{{resultTitle}}</view>
-      <view class="mt-3 text-[length:24rpx] leading-6 text-muted">{{resultDescription}}</view>
+      <view class="mt-5 text-[32rpx] font-bold">{{resultTitle}}</view>
+      <view class="mt-3 text-[24rpx] leading-6 text-muted">{{resultDescription}}</view>
       <view wx:if="{{event.invitationAttribution}}" class="mt-5 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-brand-soft px-4 text-left">
         <image wx:if="{{event.invitationAttribution.avatarUrl}}" class="h-[64rpx] w-[64rpx] rounded-full" mode="aspectFill" src="{{event.invitationAttribution.avatarUrl}}" />
         <view wx:else class="flex h-[64rpx] w-[64rpx] items-center justify-center rounded-full bg-panel"><image class="h-[46rpx] w-[46rpx]" mode="aspectFit" src="/assets/brand/mip-logo-yellow.png" /></view>
-        <view><view class="text-[length:20rpx] text-muted">邀请来源</view><view class="mt-1 text-[length:24rpx] font-semibold">{{event.invitationAttribution.displayName}}</view></view>
+        <view><view class="text-[20rpx] text-muted">邀请来源</view><view class="mt-1 text-[24rpx] font-semibold">{{event.invitationAttribution.displayName}}</view></view>
       </view>
       <view wx:if="{{canContinueCheckIn}}" class="mt-6"><t-button block size="large" theme="primary" bind:tap="continueCheckIn">继续签到</t-button></view>
       <view wx:elif="{{resumeCheckIn && orderId}}" class="mt-6"><t-button block size="large" theme="primary" loading="{{checkingRegistration}}" bind:tap="retryRegistration">重新核对报名</t-button></view>
@@ -25,39 +25,39 @@
     <view class="relative -mx-3 -mt-3 min-h-[1400rpx]">
       <image class="absolute left-[24rpx] top-[24rpx] h-[298rpx] w-[702rpx] rounded-[16rpx]" mode="aspectFill" src="/packages/member/assets/figma/events/banner-connect-fitness.webp" />
       <view class="absolute left-[24rpx] top-[346rpx] h-[232rpx] w-[702rpx] rounded-[16rpx] bg-panel"></view>
-      <view class="absolute left-[49rpx] top-[370rpx] flex h-[31rpx] w-[62rpx] items-center justify-center rounded-[8rpx] bg-[#80ccff]"><text class="text-[length:20rpx] font-medium leading-none text-[#080808]">沙龙</text></view>
-      <view class="absolute left-[120rpx] top-[370rpx] flex h-[31rpx] w-[84rpx] items-center justify-center rounded-[8rpx] bg-brand"><text class="text-[length:20rpx] font-medium leading-none text-[#080808]">仅玩家</text></view>
-      <text class="absolute left-[48rpx] top-[416rpx] text-[length:32rpx] font-semibold leading-[44.8rpx] text-ink">MIP反人性早会第328场</text>
+      <view class="absolute left-[49rpx] top-[370rpx] flex h-[31rpx] w-[62rpx] items-center justify-center rounded-[8rpx] bg-[#80ccff]"><text class="text-[20rpx] font-medium leading-none text-[#080808]">沙龙</text></view>
+      <view class="absolute left-[120rpx] top-[370rpx] flex h-[31rpx] w-[84rpx] items-center justify-center rounded-[8rpx] bg-brand"><text class="text-[20rpx] font-medium leading-none text-[#080808]">仅玩家</text></view>
+      <text class="absolute left-[48rpx] top-[416rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">MIP反人性早会第328场</text>
       <mip-icon class="absolute left-[51rpx] top-[477rpx]" name="calendar-schedule" size="{{28}}" color="var(--color-brand)" />
-      <text class="absolute left-[116rpx] top-[470rpx] text-[length:28rpx] leading-[39.2rpx] text-ink">12月12日 10:00-12:00</text>
+      <text class="absolute left-[116rpx] top-[470rpx] text-[28rpx] leading-[39.2rpx] text-ink">12月12日 10:00-12:00</text>
       <mip-icon class="absolute left-[51rpx] top-[518rpx]" name="icon-map-pin-line" size="{{28}}" color="var(--color-brand)" />
-      <text class="absolute left-[116rpx] top-[512rpx] text-[length:28rpx] leading-[39.2rpx] text-ink">深圳 新洲二街海松大厦A座1706室</text>
+      <text class="absolute left-[116rpx] top-[512rpx] text-[28rpx] leading-[39.2rpx] text-ink">深圳 新洲二街海松大厦A座1706室</text>
       <view class="absolute left-[24rpx] top-[602rpx] h-[80rpx] w-[702rpx] rounded-[16rpx] bg-panel">
         <view class="absolute left-[24rpx] top-[25rpx] flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><mip-icon name="file-text" size="{{18}}" color="var(--color-on-brand)" /></view>
-        <text class="absolute left-[68rpx] top-[21rpx] text-[length:28rpx] font-semibold leading-[39.2rpx] text-ink">订单ID</text>
-        <text class="absolute left-[381rpx] top-[21rpx] text-[length:28rpx] font-semibold leading-[39.2rpx] text-ink">2020020013201031031</text>
+        <text class="absolute left-[68rpx] top-[21rpx] text-[28rpx] font-semibold leading-[39.2rpx] text-ink">订单ID</text>
+        <text class="absolute left-[381rpx] top-[21rpx] text-[28rpx] font-semibold leading-[39.2rpx] text-ink">2020020013201031031</text>
         <mip-icon class="absolute left-[658rpx] top-[26rpx]" name="file-copy" size="{{28}}" color="var(--color-brand)" />
       </view>
       <view class="absolute left-[24rpx] top-[706rpx] h-[320rpx] w-[702rpx] rounded-[16rpx] bg-panel">
-        <view class="absolute left-[24rpx] top-[25rpx] flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><text class="text-[length:20rpx] font-bold leading-none text-[#080808]">¥</text></view>
-        <text class="absolute left-[68rpx] top-[19rpx] text-[length:28rpx] font-semibold leading-[39.2rpx] text-ink">价格明细</text>
-        <text class="absolute left-[24rpx] top-[105rpx] text-[length:28rpx] leading-[39.2rpx] text-ink">活动门票</text>
-        <text class="absolute right-[27rpx] top-[105rpx] text-[length:28rpx] font-semibold leading-[39.2rpx] text-ink">¥498</text>
-        <text class="absolute left-[24rpx] top-[185rpx] text-[length:28rpx] leading-[39.2rpx] text-ink">活动周边</text>
-        <text class="absolute right-[27rpx] top-[185rpx] text-[length:28rpx] font-semibold leading-[39.2rpx] text-ink">¥98</text>
-        <text class="absolute left-[24rpx] top-[265rpx] text-[length:28rpx] font-semibold leading-[39.2rpx] text-ink">总计</text>
-        <text class="absolute right-[27rpx] top-[265rpx] text-[length:28rpx] font-semibold leading-[39.2rpx] text-brand">¥589</text>
+        <view class="absolute left-[24rpx] top-[25rpx] flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><text class="text-[20rpx] font-bold leading-none text-[#080808]">¥</text></view>
+        <text class="absolute left-[68rpx] top-[19rpx] text-[28rpx] font-semibold leading-[39.2rpx] text-ink">价格明细</text>
+        <text class="absolute left-[24rpx] top-[105rpx] text-[28rpx] leading-[39.2rpx] text-ink">活动门票</text>
+        <text class="absolute right-[27rpx] top-[105rpx] text-[28rpx] font-semibold leading-[39.2rpx] text-ink">¥498</text>
+        <text class="absolute left-[24rpx] top-[185rpx] text-[28rpx] leading-[39.2rpx] text-ink">活动周边</text>
+        <text class="absolute right-[27rpx] top-[185rpx] text-[28rpx] font-semibold leading-[39.2rpx] text-ink">¥98</text>
+        <text class="absolute left-[24rpx] top-[265rpx] text-[28rpx] font-semibold leading-[39.2rpx] text-ink">总计</text>
+        <text class="absolute right-[27rpx] top-[265rpx] text-[28rpx] font-semibold leading-[39.2rpx] text-brand">¥589</text>
       </view>
       <view class="absolute left-[24rpx] top-[1050rpx] h-[600rpx] w-[702rpx] rounded-[16rpx] bg-panel">
         <view class="absolute left-[24rpx] top-[25rpx] flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><mip-icon name="file-text" size="{{18}}" color="var(--color-on-brand)" /></view>
-        <text class="absolute left-[68rpx] top-[19rpx] text-[length:28rpx] font-semibold leading-[39.2rpx] text-ink">购买须知</text>
-        <text class="absolute left-[31rpx] top-[101rpx] text-[length:28rpx] whitespace-nowrap font-semibold leading-[39.2rpx] text-ink">一、订单确认与支付</text>
-        <text class="absolute left-[31rpx] top-[169rpx] text-[length:28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">1. 订单生效：提交订单并成功支付后，即视为交易合同成</text>
-        <text class="absolute left-[64rpx] top-[203rpx] text-[length:28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">立。</text>
-        <text class="absolute left-[31rpx] top-[240rpx] text-[length:28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">2. 支付方式：我们支持微信支付、支付宝、银行卡转账等线</text>
-        <text class="absolute left-[64rpx] top-[274rpx] text-[length:28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">上支付方式（请根据实际情况填写）。</text>
-        <text class="absolute left-[31rpx] top-[314rpx] text-[length:28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">3. 订单修改：支付前可修改或取消订单；支付后如需修改，</text>
-        <text class="absolute left-[64rpx] top-[348rpx] text-[length:28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">请及时联系客服处理。</text>
+        <text class="absolute left-[68rpx] top-[19rpx] text-[28rpx] font-semibold leading-[39.2rpx] text-ink">购买须知</text>
+        <text class="absolute left-[31rpx] top-[101rpx] text-[28rpx] whitespace-nowrap font-semibold leading-[39.2rpx] text-ink">一、订单确认与支付</text>
+        <text class="absolute left-[31rpx] top-[169rpx] text-[28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">1. 订单生效：提交订单并成功支付后，即视为交易合同成</text>
+        <text class="absolute left-[64rpx] top-[203rpx] text-[28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">立。</text>
+        <text class="absolute left-[31rpx] top-[240rpx] text-[28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">2. 支付方式：我们支持微信支付、支付宝、银行卡转账等线</text>
+        <text class="absolute left-[64rpx] top-[274rpx] text-[28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">上支付方式（请根据实际情况填写）。</text>
+        <text class="absolute left-[31rpx] top-[314rpx] text-[28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">3. 订单修改：支付前可修改或取消订单；支付后如需修改，</text>
+        <text class="absolute left-[64rpx] top-[348rpx] text-[28rpx] whitespace-nowrap leading-[39.2rpx] text-ink">请及时联系客服处理。</text>
       </view>
     </view>
   </block>
@@ -68,45 +68,45 @@
     <image wx:if="{{event.coverUrl}}" class="mb-3 h-[298rpx] w-full rounded-[16rpx] bg-panel" mode="aspectFill" src="{{event.coverUrl}}" />
     <view class="rounded-[16rpx] bg-panel px-3 py-3">
       <view class="flex flex-wrap items-center gap-1"><mip-order-tag label="{{event.eventTypeLabel}}" /><mip-order-tag label="{{accessText}}" /></view>
-      <view class="mt-[16rpx] text-[length:32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
-      <view class="mt-[24rpx] flex h-[36rpx] items-center gap-1.5"><mip-icon name="calendar-schedule" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[length:24rpx] leading-[33.6rpx]">{{startsText}}</text></view>
-      <view class="mt-[16rpx] flex h-[36rpx] items-center gap-1.5"><mip-icon name="icon-map-pin-line" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[length:24rpx] leading-[33.6rpx]">{{locationText}}</text></view>
+      <view class="mt-[16rpx] text-[32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
+      <view class="mt-[24rpx] flex h-[36rpx] items-center gap-1.5"><mip-icon name="calendar-schedule" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[24rpx] leading-[33.6rpx]">{{startsText}}</text></view>
+      <view class="mt-[16rpx] flex h-[36rpx] items-center gap-1.5"><mip-icon name="icon-map-pin-line" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[24rpx] leading-[33.6rpx]">{{locationText}}</text></view>
     </view>
-    <view id="event-registration-feedback" wx:if="{{message}}" class="mt-3 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] leading-5 text-ink">{{message}}</view>
+    <view id="event-registration-feedback" wx:if="{{message}}" class="mt-3 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[22rpx] leading-5 text-ink">{{message}}</view>
 
     <view wx:if="{{!editing}}" class="mt-3 flex h-[80rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3">
       <view class="flex h-[32rpx] w-[32rpx] shrink-0 items-center justify-center rounded-full bg-brand"><mip-icon name="file-text" size="{{16}}" color="var(--color-on-brand)" /></view>
-      <text class="shrink-0 text-[length:24rpx] leading-[33.6rpx]">订单ID</text>
-      <text class="min-w-0 flex-1 truncate text-right text-[length:24rpx] font-medium leading-[33.6rpx]">{{orderNumberText}}</text>
+      <text class="shrink-0 text-[24rpx] leading-[33.6rpx]">订单ID</text>
+      <text class="min-w-0 flex-1 truncate text-right text-[24rpx] font-medium leading-[33.6rpx]">{{orderNumberText}}</text>
       <view wx:if="{{orderIdText}}" class="flex h-[64rpx] w-[64rpx] shrink-0 items-center justify-center" bind:tap="copyOrderId"><mip-icon name="file-copy" size="{{16}}" color="var(--color-brand)" /></view>
     </view>
 
     <view wx:if="{{!editing}}" class="mt-3 overflow-hidden rounded-[16rpx] bg-panel">
       <view class="flex h-[80rpx] items-center gap-3 px-3">
-        <view class="flex h-[32rpx] w-[32rpx] shrink-0 items-center justify-center rounded-full bg-brand text-[length:20rpx] font-bold text-on-brand">¥</view>
-        <text class="text-[length:24rpx] leading-[33.6rpx]">价格明细</text>
+        <view class="flex h-[32rpx] w-[32rpx] shrink-0 items-center justify-center rounded-full bg-brand text-[20rpx] font-bold text-on-brand">¥</view>
+        <text class="text-[24rpx] leading-[33.6rpx]">价格明细</text>
       </view>
       <view class="flex h-[80rpx] items-center justify-between border-t border-line px-3">
-        <text class="text-[length:24rpx] leading-[33.6rpx]">活动门票</text>
-        <text class="text-[length:24rpx] font-medium leading-[33.6rpx]">{{ticketPriceText}}</text>
+        <text class="text-[24rpx] leading-[33.6rpx]">活动门票</text>
+        <text class="text-[24rpx] font-medium leading-[33.6rpx]">{{ticketPriceText}}</text>
       </view>
       <view class="flex h-[80rpx] items-center justify-between border-t border-line px-3">
-        <text class="text-[length:24rpx] font-medium leading-[33.6rpx]">总计</text>
-        <view class="flex items-baseline text-brand"><text class="text-[length:24rpx] font-medium">{{totalSymbol}}</text><text class="text-[length:40rpx] font-medium leading-[56rpx]">{{totalAmount}}</text></view>
+        <text class="text-[24rpx] font-medium leading-[33.6rpx]">总计</text>
+        <view class="flex items-baseline text-brand"><text class="text-[24rpx] font-medium">{{totalSymbol}}</text><text class="text-[40rpx] font-medium leading-[56rpx]">{{totalAmount}}</text></view>
       </view>
     </view>
 
     <block wx:if="{{fields.length > 0}}">
-      <view class="mt-5 text-[length:30rpx] font-bold">{{editing ? '修改报名信息' : '报名信息'}}</view>
+      <view class="mt-5 text-[30rpx] font-bold">{{editing ? '修改报名信息' : '报名信息'}}</view>
       <view class="mt-3 flex flex-col gap-3">
         <view wx:for="{{fields}}" wx:key="key" id="registration-field-{{index}}" class="rounded-[16rpx] bg-panel px-4 py-4">
-          <view class="text-[length:24rpx] font-semibold">{{item.label}}<text wx:if="{{item.required}}" class="ml-1 text-danger">*</text></view>
-          <textarea disabled="{{busy}}" aria-label="{{item.label}}" wx:if="{{item.type === 'TEXTAREA'}}" class="box-border mt-3 h-[180rpx] w-full max-w-full rounded-[8rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 500}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
-          <input disabled="{{busy}}" aria-label="{{item.label}}" wx:elif="{{item.type === 'TEXT'}}" class="box-border mt-3 h-[88rpx] w-full max-w-full rounded-[8rpx] bg-panel-raised px-3 text-[length:24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 120}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
-          <picker disabled="{{busy}}" wx:elif="{{item.type === 'SELECT'}}" range="{{item.options}}" value="{{item.selectedIndex}}" data-index="{{index}}" bindchange="onSelectChange"><view class="mt-3 flex min-h-[80rpx] items-center justify-between gap-2 rounded-[8rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]"><text class="min-w-0 flex-1 break-all">{{item.selectedLabel}}</text><mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></picker>
-          <view wx:else class="mt-3 flex min-h-[80rpx] items-center justify-between"><text class="text-[length:24rpx] text-muted">确认</text><t-switch disabled="{{busy}}" value="{{item.checked}}" data-index="{{index}}" bind:change="onBooleanChange" /></view>
-          <view wx:if="{{item.type === 'TEXT' || item.type === 'TEXTAREA'}}" class="mt-2 text-right text-[length:20rpx] text-muted">{{item.currentLength}}/{{item.maxLength || (item.type === 'TEXTAREA' ? 500 : 120)}}</view>
-          <view wx:if="{{item.error}}" class="mt-2 text-[length:20rpx] text-danger">{{item.error}}</view>
+          <view class="text-[24rpx] font-semibold">{{item.label}}<text wx:if="{{item.required}}" class="ml-1 text-danger">*</text></view>
+          <textarea disabled="{{busy}}" aria-label="{{item.label}}" wx:if="{{item.type === 'TEXTAREA'}}" class="box-border mt-3 h-[180rpx] w-full max-w-full rounded-[8rpx] bg-panel-raised px-3 py-3 text-[24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 500}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
+          <input disabled="{{busy}}" aria-label="{{item.label}}" wx:elif="{{item.type === 'TEXT'}}" class="box-border mt-3 h-[88rpx] w-full max-w-full rounded-[8rpx] bg-panel-raised px-3 text-[24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 120}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
+          <picker disabled="{{busy}}" wx:elif="{{item.type === 'SELECT'}}" range="{{item.options}}" value="{{item.selectedIndex}}" data-index="{{index}}" bindchange="onSelectChange"><view class="mt-3 flex min-h-[80rpx] items-center justify-between gap-2 rounded-[8rpx] bg-panel-raised px-3 py-3 text-[24rpx]"><text class="min-w-0 flex-1 break-all">{{item.selectedLabel}}</text><mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></picker>
+          <view wx:else class="mt-3 flex min-h-[80rpx] items-center justify-between"><text class="text-[24rpx] text-muted">确认</text><t-switch disabled="{{busy}}" value="{{item.checked}}" data-index="{{index}}" bind:change="onBooleanChange" /></view>
+          <view wx:if="{{item.type === 'TEXT' || item.type === 'TEXTAREA'}}" class="mt-2 text-right text-[20rpx] text-muted">{{item.currentLength}}/{{item.maxLength || (item.type === 'TEXTAREA' ? 500 : 120)}}</view>
+          <view wx:if="{{item.error}}" class="mt-2 text-[20rpx] text-danger">{{item.error}}</view>
         </view>
       </view>
     </block>
@@ -114,19 +114,19 @@
     <view wx:if="{{!editing}}" class="mt-3 rounded-[16rpx] bg-panel px-3 py-4">
       <view class="flex h-[44rpx] items-center gap-3">
         <view class="flex h-[32rpx] w-[32rpx] shrink-0 items-center justify-center rounded-full bg-brand"><mip-icon name="file-text" size="{{16}}" color="var(--color-on-brand)" /></view>
-        <text class="text-[length:24rpx] leading-[33.6rpx]">购买须知</text>
+        <text class="text-[24rpx] leading-[33.6rpx]">购买须知</text>
       </view>
-      <view class="mt-3 whitespace-pre-wrap text-[length:24rpx] leading-[38rpx] text-muted">{{noticesText}}</view>
+      <view class="mt-3 whitespace-pre-wrap text-[24rpx] leading-[38rpx] text-muted">{{noticesText}}</view>
     </view>
 
-    <view wx:if="{{!editing}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4 text-[length:20rpx] leading-6 text-muted">
+    <view wx:if="{{!editing}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4 text-[20rpx] leading-6 text-muted">
       <view>{{cancellationText}}</view>
       <view class="mt-2">提交{{event.accessType === 'PAID' ? '并支付' : '报名'}}表示已阅读并同意<text class="text-brand" bind:tap="openAgreement">《服务协议》</text>和<text class="text-brand" bind:tap="openPrivacy">《隐私政策》</text>。</view>
     </view>
     <app-page-exit />
     <view class="mip-liquid-glass mip-member-fixed-inset box-border fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
-      <view class="flex min-w-[152rpx] items-baseline justify-center leading-none text-brand" aria-label="{{priceText}}"><text wx:if="{{priceSymbol}}" class="text-[length:24rpx] font-medium leading-none">{{priceSymbol}}</text><text class="text-[length:40rpx] font-medium leading-none">{{priceAmount}}</text></view>
-      <button id="event-registration-submit" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" loading="{{busy}}" aria-disabled="{{busy}}" bind:tap="submit"><view class="box-border flex h-[80rpx] w-full items-center justify-center rounded-full border border-black bg-brand text-[length:32rpx] font-medium text-on-brand">{{payLabel}}</view></button>
+      <view class="flex min-w-[152rpx] items-baseline justify-center leading-none text-brand" aria-label="{{priceText}}"><text wx:if="{{priceSymbol}}" class="text-[24rpx] font-medium leading-none">{{priceSymbol}}</text><text class="text-[40rpx] font-medium leading-none">{{priceAmount}}</text></view>
+      <button id="event-registration-submit" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" loading="{{busy}}" aria-disabled="{{busy}}" bind:tap="submit"><view class="box-border flex h-[80rpx] w-full items-center justify-center rounded-full border border-black bg-brand text-[32rpx] font-medium text-on-brand">{{payLabel}}</view></button>
     </view>
   </block>
 </view>

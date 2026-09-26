@@ -15,7 +15,7 @@
     <app-page-exit />
   </block>
   <block wx:elif="{{figmaLayout}}">
-    <view class="-mt-4 -mx-1 rounded-[16rpx] bg-panel text-[length:24rpx] leading-[33.6rpx] {{figmaAgree ? 'h-[1162rpx] overflow-hidden pl-[24rpx] pr-[22rpx] pt-[28rpx]' : 'p-[24rpx] pt-[68rpx]'}}">
+    <view class="-mt-4 -mx-1 rounded-[16rpx] bg-panel text-[24rpx] leading-[33.6rpx] {{figmaAgree ? 'h-[1162rpx] overflow-hidden pl-[24rpx] pr-[22rpx] pt-[28rpx]' : 'p-[24rpx] pt-[68rpx]'}}">
       <view class="font-medium">一、订单确认与支付</view>
       <view class="h-[33.6rpx]"></view>
       <view class="mb-[8rpx] pl-[36rpx] indent-[-28rpx]">1. 订单生效：提交订单并成功支付后，即视为交易合同成立。</view>
@@ -44,22 +44,22 @@
     <block wx:if="{{figmaAgree}}">
       <view class="relative -mx-4 mt-[22rpx] h-[238rpx]">
         <view class="absolute left-[51rpx] top-[4rpx] flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><mip-icon name="check" size="{{18}}" color="var(--color-on-brand)" /></view>
-        <text class="absolute left-[95rpx] top-[2rpx] text-[length:24rpx] font-light leading-[40rpx] text-ink">我已阅读并同意<text class="text-[#4088fb]">《服务政策》</text>与<text class="text-[#4088fb]">《隐私政策》</text></text>
+        <text class="absolute left-[95rpx] top-[2rpx] text-[24rpx] font-light leading-[40rpx] text-ink">我已阅读并同意<text class="text-[#4088fb]">《服务政策》</text>与<text class="text-[#4088fb]">《隐私政策》</text></text>
         <view class="absolute left-[24rpx] top-[77rpx] h-[86rpx] w-[702rpx] rounded-full bg-[#3b3925]"></view>
-        <view class="absolute left-[48rpx] top-[79rpx] flex h-[76rpx] w-[654rpx] items-center justify-center rounded-full bg-brand"><text class="text-[length:28rpx] font-semibold leading-[40rpx] text-on-brand">确认发布</text></view>
+        <view class="absolute left-[48rpx] top-[79rpx] flex h-[76rpx] w-[654rpx] items-center justify-center rounded-full bg-brand"><text class="text-[28rpx] font-semibold leading-[40rpx] text-on-brand">确认发布</text></view>
       </view>
     </block>
   </block>
   <block wx:else>
-  <view class="text-[length:40rpx] font-bold">用户协议</view>
-  <view class="mt-2 text-[length:22rpx] text-muted">生效日期：{{effectiveDate}}</view>
+  <view class="text-[40rpx] font-bold">用户协议</view>
+  <view class="mt-2 text-[22rpx] text-muted">生效日期：{{effectiveDate}}</view>
   <view class="mt-5 flex flex-col gap-3">
-    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:28rpx] font-semibold">服务范围</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">MIP 提供会员、城市分会、活动、机会、合作档案、订单和消息等功能。具体服务以小程序当前可用功能为准。</view></view>
-    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:28rpx] font-semibold">账号与资料</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">用户应通过本人微信账号使用服务，并确保主动提交的资料真实、合法。手机号、头像和昵称仅在用户授权或提交后处理。</view></view>
-    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:28rpx] font-semibold">内容与互动</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">发布的活动、机会、合作卡、案例和反馈不得侵犯他人权益或违反适用规则。平台可以对违规内容采取下架、限制功能或保留审计记录等措施。</view></view>
-    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:28rpx] font-semibold">订单与权益</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">可在订单详情查看金额、支付和退款状态，在会员页查看已开通的权益。活动取消和退款按下单时展示的规则及实际处理结果执行。</view></view>
-    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:28rpx] font-semibold">服务调整</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">协议或服务发生重要变化时，小程序会展示更新版本并在需要时重新取得确认。继续使用前可以查看最新内容。</view></view>
-    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:28rpx] font-semibold">联系与请求</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">服务、订单、数据或账号相关请求可通过小程序客服提交。</view></view>
+    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[28rpx] font-semibold">服务范围</view><view class="mt-2 text-[22rpx] leading-6 text-muted">MIP 提供会员、城市分会、活动、机会、合作档案、订单和消息等功能。具体服务以小程序当前可用功能为准。</view></view>
+    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[28rpx] font-semibold">账号与资料</view><view class="mt-2 text-[22rpx] leading-6 text-muted">用户应通过本人微信账号使用服务，并确保主动提交的资料真实、合法。手机号、头像和昵称仅在用户授权或提交后处理。</view></view>
+    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[28rpx] font-semibold">内容与互动</view><view class="mt-2 text-[22rpx] leading-6 text-muted">发布的活动、机会、合作卡、案例和反馈不得侵犯他人权益或违反适用规则。平台可以对违规内容采取下架、限制功能或保留审计记录等措施。</view></view>
+    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[28rpx] font-semibold">订单与权益</view><view class="mt-2 text-[22rpx] leading-6 text-muted">可在订单详情查看金额、支付和退款状态，在会员页查看已开通的权益。活动取消和退款按下单时展示的规则及实际处理结果执行。</view></view>
+    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[28rpx] font-semibold">服务调整</view><view class="mt-2 text-[22rpx] leading-6 text-muted">协议或服务发生重要变化时，小程序会展示更新版本并在需要时重新取得确认。继续使用前可以查看最新内容。</view></view>
+    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[28rpx] font-semibold">联系与请求</view><view class="mt-2 text-[22rpx] leading-6 text-muted">服务、订单、数据或账号相关请求可通过小程序客服提交。</view></view>
   </view>
   </block>
   <app-page-exit managed bind:exit="leavePage" />

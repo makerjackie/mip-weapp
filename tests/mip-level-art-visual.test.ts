@@ -26,11 +26,13 @@ describe('MIP level artwork presentation', () => {
     expect(bannerStyles).toContain('.mip-level-banner__base {')
   })
 
-  it('uses the current baked growth hero without layering obsolete artwork', () => {
+  it('keeps the growth illustration proportional and the experience control accessible', () => {
     const markup = read('src/packages/member/mip-growth/index.wxml')
 
-    expect(markup).toContain('src="/packages/member/assets/figma/growth/hero-bg.webp"')
-    expect(markup).not.toContain('growth-level-art')
+    expect(markup).toContain('src="/packages/member/assets/figma/growth/hero-character.png"')
+    expect(markup).toContain('mode="aspectFit"')
+    expect(markup).toContain('aria-label="经验值详情"')
+    expect(markup).not.toContain('hero-bg.webp')
     expect(markup).toContain('bg-brand px-5 py-6 text-on-brand')
     expect(markup).toContain('relative z-10')
   })

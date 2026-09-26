@@ -5,7 +5,7 @@
     <!-- journey-review J3-04b 站内信（QI 自拟承接稿）：
          行 = 类型图标(40px 圆底 #333) + 类型名 + 预览一行 + 相对时间 + 行右上未读红点。
          进入页面即清除未读（onShow → enterInbox），无顶部「全部已读」按钮。 -->
-    <view wx:if="{{items.length === 0}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-8 text-center text-[length:24rpx] text-muted">暂无消息。</view>
+    <view wx:if="{{items.length === 0}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-8 text-center text-[24rpx] text-muted">暂无消息。</view>
     <view wx:else class="flex flex-col gap-[16rpx]">
       <view wx:for="{{items}}" wx:key="id" class="relative flex items-start gap-[24rpx] rounded-[16rpx] bg-panel px-[24rpx] py-[28rpx] active:bg-panel-raised" data-id="{{item.id}}" bind:tap="openMessage">
         <view class="relative flex h-[80rpx] w-[80rpx] shrink-0 items-center justify-center rounded-full bg-panel-raised">
@@ -14,16 +14,16 @@
         </view>
         <view class="min-w-0 flex-1">
           <view class="flex items-center justify-between gap-[16rpx]">
-            <text class="truncate text-[length:32rpx] font-medium leading-[44.8rpx]">{{item.rowType.label}}</text>
-            <text class="shrink-0 text-[length:20rpx] leading-[28rpx] text-muted">{{item.createdText}}</text>
+            <text class="truncate text-[32rpx] font-medium leading-[44.8rpx]">{{item.rowType.label}}</text>
+            <text class="shrink-0 text-[20rpx] leading-[28rpx] text-muted">{{item.createdText}}</text>
           </view>
-          <view class="mt-[6rpx] truncate text-[length:24rpx] leading-[33.6rpx] text-muted">{{item.body}}</view>
+          <view class="mt-[6rpx] truncate text-[24rpx] leading-[33.6rpx] text-muted">{{item.body}}</view>
         </view>
         <mip-icon wx:if="{{item.target}}" class="mt-[28rpx] shrink-0" name="chevron-down-1" size="{{14}}" color="var(--color-muted)" />
       </view>
     </view>
     <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" disabled="{{refreshing || markingAllRead || loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
     <app-page-exit />
   </block>
 </view>

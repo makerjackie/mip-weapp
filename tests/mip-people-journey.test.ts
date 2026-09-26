@@ -425,6 +425,6 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
     // 影响力网格保留 VISITOR 活红点；×N 徽标 20rpx text-muted（规格 token 10px）。
     const influenceBlock = view.slice(view.indexOf('journey-review J3-05/06/08'), view.indexOf('journey-review J3-07'))
     expect(influenceBlock).toContain('wx:if="{{item.unread}}"')
-    expect(influenceBlock).toContain('text-[length:20rpx] font-medium leading-[28rpx] text-muted">{{item.countBadge}}')
+    expect(influenceBlock).toContain('text-[20rpx] font-medium leading-[28rpx] text-muted">{{item.countBadge}}')
   })
 })

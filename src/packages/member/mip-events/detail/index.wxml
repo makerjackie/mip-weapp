@@ -18,14 +18,14 @@
               <mip-order-tag wx:if="{{event.branchName}}" label="{{event.branchName}}" bg="var(--color-panel-raised)" border="transparent" color="var(--color-muted)" />
               <mip-order-tag wx:for="{{event.tags}}" wx:for-item="tag" wx:key="*this" label="{{tag}}" bg="var(--color-panel-raised)" border="transparent" color="var(--color-muted)" />
             </view>
-            <view class="mt-[16rpx] truncate text-[length:32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
-            <view class="mt-[24rpx] flex h-[36rpx] items-center gap-1.5"><mip-icon name="calendar-schedule" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[length:24rpx] leading-[33.6rpx]">{{startsText}}<text wx:if="{{endsText}}" class="text-muted"> 至 {{endsText}}</text></text></view>
-            <view class="mt-[16rpx] flex h-[36rpx] items-center gap-1.5" bind:tap="openLocation"><mip-icon name="icon-map-pin-line" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[length:24rpx] leading-[33.6rpx]">{{locationText}}</text></view>
+            <view class="mt-[16rpx] truncate text-[32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
+            <view class="mt-[24rpx] flex h-[36rpx] items-center gap-1.5"><mip-icon name="calendar-schedule" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[24rpx] leading-[33.6rpx]">{{startsText}}<text wx:if="{{endsText}}" class="text-muted"> 至 {{endsText}}</text></text></view>
+            <view class="mt-[16rpx] flex h-[36rpx] items-center gap-1.5" bind:tap="openLocation"><mip-icon name="icon-map-pin-line" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[24rpx] leading-[33.6rpx]">{{locationText}}</text></view>
           </view>
           <view class="absolute right-3 top-3 flex w-[152rpx] flex-col items-end">
-            <view wx:if="{{event.canInteract}}" class="flex h-[42rpx] shrink-0 items-center rounded-full bg-brand px-[12rpx]" bind:tap="openFeedback"><mip-icon name="pencil-ai-line" size="{{16}}" color="var(--color-on-brand)" /><text class="text-[length:24rpx] font-medium leading-[33.6rpx] text-on-brand">活动反馈</text></view>
-            <view wx:if="{{locationText}}" class="mt-3 flex flex-col items-center" bind:tap="openLocation"><mip-icon name="signpost-fill" size="{{20}}" color="var(--color-brand)" /><text class="mt-[4rpx] text-[length:20rpx] leading-[28rpx] text-brand">指引</text></view>
-            <view wx:if="{{event.accessType === 'PAID'}}" class="mt-1.5 flex items-baseline text-brand"><text class="text-[length:24rpx] font-semibold leading-[33.6rpx]">¥</text><text class="text-[length:48rpx] font-semibold leading-[67.2rpx]">{{priceText}}</text></view>
+            <view wx:if="{{event.canInteract}}" class="flex h-[42rpx] shrink-0 items-center rounded-full bg-brand px-[12rpx]" bind:tap="openFeedback"><mip-icon name="pencil-ai-line" size="{{16}}" color="var(--color-on-brand)" /><text class="text-[24rpx] font-medium leading-[33.6rpx] text-on-brand">活动反馈</text></view>
+            <view wx:if="{{locationText}}" class="mt-3 flex flex-col items-center" bind:tap="openLocation"><mip-icon name="signpost-fill" size="{{20}}" color="var(--color-brand)" /><text class="mt-[4rpx] text-[20rpx] leading-[28rpx] text-brand">指引</text></view>
+            <view wx:if="{{event.accessType === 'PAID'}}" class="mt-1.5 flex items-baseline text-brand"><text class="text-[24rpx] font-semibold leading-[33.6rpx]">¥</text><text class="text-[48rpx] font-semibold leading-[67.2rpx]">{{priceText}}</text></view>
           </view>
         </view>
 
@@ -34,17 +34,17 @@
              surface (top corners here, bottom corners on the interaction card). -->
         <view class="mt-3 {{interactionVisible ? 'rounded-t-[16rpx]' : 'rounded-[16rpx]'}} bg-panel px-3 pb-3 pt-[14rpx]" bind:tap="openParticipants">
           <view class="flex h-[34rpx] items-center justify-between">
-            <text class="text-[length:24rpx] font-medium leading-[33.6rpx] text-brand-alt">参与人数{{event.registrationCount}}<text wx:if="{{event.capacity}}" class="text-[length:20rpx]">/{{event.capacity}}</text></text>
-            <view class="flex items-center gap-[8rpx]"><text class="text-[length:24rpx] leading-[33.6rpx] text-ios-gray">查看更多</text><mip-icon name="chevron-down-1" size="{{8}}" color="var(--color-ios-gray)" /></view>
+            <text class="text-[24rpx] font-medium leading-[33.6rpx] text-brand-alt">参与人数{{event.registrationCount}}<text wx:if="{{event.capacity}}" class="text-[20rpx]">/{{event.capacity}}</text></text>
+            <view class="flex items-center gap-[8rpx]"><text class="text-[24rpx] leading-[33.6rpx] text-ios-gray">查看更多</text><mip-icon name="chevron-down-1" size="{{8}}" color="var(--color-ios-gray)" /></view>
           </view>
           <view wx:if="{{event.participantPreview.length}}" class="mt-4 flex gap-[32rpx] px-1">
             <view wx:for="{{event.participantPreview}}" wx:key="participantRef" class="w-[80rpx] shrink-0">
               <image wx:if="{{item.avatarUrl}}" class="h-[80rpx] w-[80rpx] rounded-full bg-panel-raised" mode="aspectFill" src="{{item.avatarUrl}}" />
               <view wx:else class="flex h-[80rpx] w-[80rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="user-avatar" size="36rpx" color="var(--color-brand)" /></view>
-              <view class="mt-1 truncate text-center text-[length:20rpx] font-medium leading-[28rpx] text-muted">{{item.nickname}}</view>
+              <view class="mt-1 truncate text-center text-[20rpx] font-medium leading-[28rpx] text-muted">{{item.nickname}}</view>
             </view>
           </view>
-          <view wx:else class="mt-2 text-[length:22rpx] text-muted">暂无公开参与者资料</view>
+          <view wx:else class="mt-2 text-[22rpx] text-muted">暂无公开参与者资料</view>
         </view>
 
         <!-- figma 1818_17142: 351x78 checked-in interaction card fused under the
@@ -52,60 +52,60 @@
              journey-review J0-01: pills deep-link to the matching participants tab
              and the card hides entirely when the event has no interest data. -->
         <view wx:if="{{interactionVisible}}" class="box-border h-[156rpx] rounded-b-[16rpx] bg-panel px-3 pb-3 pt-3" data-view="PUBLIC" bind:tap="openInteractionView">
-          <view class="flex h-[34rpx] items-center text-[length:24rpx] font-medium leading-[33.6rpx] text-brand-alt">与你互动</view>
+          <view class="flex h-[34rpx] items-center text-[24rpx] font-medium leading-[33.6rpx] text-brand-alt">与你互动</view>
           <view class="mt-3 flex gap-3">
-            <view class="flex h-[50rpx] items-center rounded-full border border-brand px-4 text-[length:24rpx] font-medium leading-[33.6rpx] text-brand" data-view="SENT" catch:tap="openInteractionView">{{heartMineLabel}}</view>
-            <view class="flex h-[50rpx] items-center rounded-full border border-brand px-4 text-[length:24rpx] font-medium leading-[33.6rpx] text-brand" data-view="RECEIVED" catch:tap="openInteractionView">{{heartReceivedLabel}}</view>
+            <view class="flex h-[50rpx] items-center rounded-full border border-brand px-4 text-[24rpx] font-medium leading-[33.6rpx] text-brand" data-view="SENT" catch:tap="openInteractionView">{{heartMineLabel}}</view>
+            <view class="flex h-[50rpx] items-center rounded-full border border-brand px-4 text-[24rpx] font-medium leading-[33.6rpx] text-brand" data-view="RECEIVED" catch:tap="openInteractionView">{{heartReceivedLabel}}</view>
           </view>
         </view>
 
         <!-- figma 1861_17860: 28px chips, active brand-alt/on-brand, inactive ios-gray.
              figma 1818_17142 puts 9px (18rpx) between the fused card and the tabs. -->
         <view class="{{interactionVisible ? 'mt-[18rpx]' : 'mt-3'}} flex gap-2">
-          <view wx:if="{{contentSection === 'INTRO'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="INTRO" bind:tap="selectContentSection">活动介绍</view>
-          <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-ios-gray" data-section="INTRO" bind:tap="selectContentSection">活动介绍</view>
-          <view wx:if="{{contentSection === 'ORGANIZER'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="ORGANIZER" bind:tap="selectContentSection">主办方</view>
-          <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-ios-gray" data-section="ORGANIZER" bind:tap="selectContentSection">主办方</view>
-          <view wx:if="{{contentSection === 'NOTICE'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="NOTICE" bind:tap="selectContentSection">报名须知</view>
-          <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-ios-gray" data-section="NOTICE" bind:tap="selectContentSection">报名须知</view>
+          <view wx:if="{{contentSection === 'INTRO'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="INTRO" bind:tap="selectContentSection">活动介绍</view>
+          <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-[16rpx] text-[28rpx] font-medium leading-[39.2rpx] text-ios-gray" data-section="INTRO" bind:tap="selectContentSection">活动介绍</view>
+          <view wx:if="{{contentSection === 'ORGANIZER'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="ORGANIZER" bind:tap="selectContentSection">主办方</view>
+          <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-[16rpx] text-[28rpx] font-medium leading-[39.2rpx] text-ios-gray" data-section="ORGANIZER" bind:tap="selectContentSection">主办方</view>
+          <view wx:if="{{contentSection === 'NOTICE'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="NOTICE" bind:tap="selectContentSection">报名须知</view>
+          <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-[16rpx] text-[28rpx] font-medium leading-[39.2rpx] text-ios-gray" data-section="NOTICE" bind:tap="selectContentSection">报名须知</view>
         </view>
 
         <!-- figma 1861_17860: media sits at the card's top padding (12px), copy
              follows left-aligned 12px below; description rich-text leads only
              when the event actually has one. -->
         <view wx:if="{{contentSection === 'INTRO'}}" class="mt-3 rounded-[16rpx] bg-panel px-3 py-3">
-          <rich-text wx:if="{{descriptionNodes.length}}" class="mip-event-rich-content text-[length:24rpx] leading-7 text-muted" nodes="{{descriptionNodes}}" />
+          <rich-text wx:if="{{descriptionNodes.length}}" class="mip-event-rich-content text-[24rpx] leading-7 text-muted" nodes="{{descriptionNodes}}" />
           <view wx:if="{{event.contentMedia.length}}" class="{{descriptionNodes.length ? 'mt-3' : ''}} flex flex-col gap-3">
             <view wx:for="{{event.contentMedia}}" wx:key="renderKey">
               <image wx:if="{{item.imageUrl}}" class="w-full bg-panel-raised" mode="widthFix" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="previewContentImage" />
-              <view wx:if="{{item.caption}}" class="mt-3 text-[length:24rpx] leading-[33.6rpx] text-muted">{{item.caption}}</view>
+              <view wx:if="{{item.caption}}" class="mt-3 text-[24rpx] leading-[33.6rpx] text-muted">{{item.caption}}</view>
             </view>
           </view>
-          <view wx:if="{{!event.description && !event.contentMedia.length}}" class="py-4 text-[length:24rpx] text-muted">暂无活动介绍。</view>
+          <view wx:if="{{!event.description && !event.contentMedia.length}}" class="py-4 text-[24rpx] text-muted">暂无活动介绍。</view>
         </view>
 
         <view wx:elif="{{contentSection === 'ORGANIZER'}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4">
           <view wx:if="{{event.organizer}}" class="flex min-h-[104rpx] items-center gap-3" bind:tap="openOrganizer">
             <image wx:if="{{event.organizer.avatarUrl}}" class="h-[88rpx] w-[88rpx] shrink-0 rounded-full bg-panel-raised" mode="aspectFill" src="{{event.organizer.avatarUrl}}" />
             <view wx:else class="flex h-[88rpx] w-[88rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="user-avatar" size="40rpx" color="var(--color-brand)" /></view>
-            <view class="min-w-0 flex-1"><view class="text-[length:28rpx] font-semibold">{{event.organizer.nickname || 'MIP 用户'}}</view><view wx:if="{{event.organizer.headline}}" class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{event.organizer.headline}}</view></view>
+            <view class="min-w-0 flex-1"><view class="text-[28rpx] font-semibold">{{event.organizer.nickname || 'MIP 用户'}}</view><view wx:if="{{event.organizer.headline}}" class="mt-2 line-clamp-2 text-[22rpx] leading-5 text-muted">{{event.organizer.headline}}</view></view>
             <mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" />
           </view>
-          <view wx:else class="py-4 text-[length:24rpx] text-muted">主办方资料暂未公开。</view>
+          <view wx:else class="py-4 text-[24rpx] text-muted">主办方资料暂未公开。</view>
         </view>
 
         <view wx:else class="mt-3 rounded-[16rpx] bg-panel px-4 py-4">
-          <view wx:if="{{event.notices}}" class="whitespace-pre-wrap text-[length:24rpx] leading-7 text-muted">{{event.notices}}</view>
-          <view wx:else class="py-4 text-[length:24rpx] text-muted">暂无报名须知。</view>
+          <view wx:if="{{event.notices}}" class="whitespace-pre-wrap text-[24rpx] leading-7 text-muted">{{event.notices}}</view>
+          <view wx:else class="py-4 text-[24rpx] text-muted">暂无报名须知。</view>
         </view>
 
         <view wx:if="{{event.videoRecaps.length}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4">
-          <view class="text-[length:28rpx] font-bold">视频回顾</view>
+          <view class="text-[28rpx] font-bold">视频回顾</view>
           <view class="mt-3 flex flex-col gap-2">
             <view wx:for="{{event.videoRecaps}}" wx:key="id" class="flex min-h-[104rpx] items-center gap-3 rounded-[16rpx] bg-panel-raised px-3 py-3 {{videoRecapBusyId ? 'opacity-60' : ''}}" aria-role="button" aria-disabled="{{videoRecapBusyId !== ''}}" data-id="{{item.id}}" bind:tap="openVideoRecap">
               <view class="flex h-[64rpx] w-[64rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="play-circle-stroke" size="36rpx" color="var(--color-brand)" /></view>
-              <view class="min-w-0 flex-1"><view class="text-[length:24rpx] font-semibold">{{item.title}}</view><view wx:if="{{item.summary}}" class="mt-1 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{item.summary}}</view></view>
-              <view class="flex shrink-0 items-center gap-1 text-[length:22rpx] text-brand"><text>{{videoRecapBusyId === item.id ? '正在打开' : (item.destination.type === 'PROFILE' ? '视频号主页' : '查看回顾')}}</text><mip-icon name="chevron-down-1" size="{{13}}" color="var(--color-brand)" /></view>
+              <view class="min-w-0 flex-1"><view class="text-[24rpx] font-semibold">{{item.title}}</view><view wx:if="{{item.summary}}" class="mt-1 line-clamp-2 text-[22rpx] leading-5 text-muted">{{item.summary}}</view></view>
+              <view class="flex shrink-0 items-center gap-1 text-[22rpx] text-brand"><text>{{videoRecapBusyId === item.id ? '正在打开' : (item.destination.type === 'PROFILE' ? '视频号主页' : '查看回顾')}}</text><mip-icon name="chevron-down-1" size="{{13}}" color="var(--color-brand)" /></view>
             </view>
           </view>
         </view>
@@ -113,18 +113,18 @@
         <view wx:if="{{event.invitationAttribution}}" class="mt-3 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-brand-soft px-4 py-3">
           <image wx:if="{{event.invitationAttribution.avatarUrl}}" class="h-[64rpx] w-[64rpx] shrink-0 rounded-full bg-panel" mode="aspectFill" src="{{event.invitationAttribution.avatarUrl}}" />
           <view wx:else class="flex h-[64rpx] w-[64rpx] shrink-0 items-center justify-center rounded-full bg-panel"><image class="h-[46rpx] w-[46rpx]" mode="aspectFit" src="/assets/brand/mip-logo-yellow.png" /></view>
-          <view><view class="text-[length:22rpx] text-muted">邀请来源</view><view class="mt-1 text-[length:24rpx] font-semibold">{{event.invitationAttribution.displayName}}</view></view>
+          <view><view class="text-[22rpx] text-muted">邀请来源</view><view class="mt-1 text-[24rpx] font-semibold">{{event.invitationAttribution.displayName}}</view></view>
         </view>
 
-        <view class="mt-3 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4" bind:tap="openComments"><t-icon name="chat" size="34rpx" color="var(--color-brand)" /><view class="min-w-0 flex-1"><view class="text-[length:24rpx] font-semibold">活动评论</view><view class="mt-1 text-[length:22rpx] text-muted">查看和发布活动评论</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
-        <view wx:if="{{event.albumEnabled}}" class="mt-3 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4" bind:tap="openAlbum"><mip-icon name="image" size="{{17}}" color="var(--color-brand)" /><view class="min-w-0 flex-1"><view class="text-[length:24rpx] font-semibold">活动相册</view><view class="mt-1 text-[length:22rpx] text-muted">查看活动照片</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
-        <view wx:if="{{event.changes.length}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:28rpx] font-bold">活动变更</view><view wx:for="{{event.changes}}" wx:key="version" class="mt-3 border-l-[4rpx] border-brand pl-3"><view class="text-[length:24rpx]">{{item.summary}}</view><view class="mt-1 text-[length:22rpx] text-muted">{{item.createdAt}}</view></view></view>
+        <view class="mt-3 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4" bind:tap="openComments"><t-icon name="chat" size="34rpx" color="var(--color-brand)" /><view class="min-w-0 flex-1"><view class="text-[24rpx] font-semibold">活动评论</view><view class="mt-1 text-[22rpx] text-muted">查看和发布活动评论</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
+        <view wx:if="{{event.albumEnabled}}" class="mt-3 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4" bind:tap="openAlbum"><mip-icon name="image" size="{{17}}" color="var(--color-brand)" /><view class="min-w-0 flex-1"><view class="text-[24rpx] font-semibold">活动相册</view><view class="mt-1 text-[22rpx] text-muted">查看活动照片</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
+        <view wx:if="{{event.changes.length}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[28rpx] font-bold">活动变更</view><view wx:for="{{event.changes}}" wx:key="version" class="mt-3 border-l-[4rpx] border-brand pl-3"><view class="text-[24rpx]">{{item.summary}}</view><view class="mt-1 text-[22rpx] text-muted">{{item.createdAt}}</view></view></view>
         <view wx:if="{{event.onlineAccessAvailable && onlineUrl}}" class="mt-3"><t-button block variant="outline" bind:tap="openOnlineEvent">进入线上活动</t-button></view>
-        <view wx:if="{{event.canCheckIn}}" class="mt-3 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4" bind:tap="openCheckIn"><t-icon name="scan" size="34rpx" color="var(--color-brand)" /><view class="min-w-0 flex-1"><view class="text-[length:24rpx] font-semibold">活动签到</view><view class="mt-1 text-[length:22rpx] text-muted">扫描现场活动码完成签到验证</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
+        <view wx:if="{{event.canCheckIn}}" class="mt-3 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4" bind:tap="openCheckIn"><t-icon name="scan" size="34rpx" color="var(--color-brand)" /><view class="min-w-0 flex-1"><view class="text-[24rpx] font-semibold">活动签到</view><view class="mt-1 text-[22rpx] text-muted">扫描现场活动码完成签到验证</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
         <view wx:if="{{event.canRetryRefund}}" class="mt-3"><t-button block variant="outline" loading="{{busy}}" bind:tap="cancelRegistration">继续处理退款</t-button></view>
         <view wx:elif="{{event.canCancel}}" class="mt-3"><t-button block variant="outline" theme="danger" loading="{{busy}}" bind:tap="cancelRegistration">取消报名</t-button></view>
         <view id="mip-event-calendar-action" class="mt-3"><t-button block variant="outline" bind:tap="addToCalendar">加入系统日历</t-button></view>
-        <view wx:if="{{message}}" class="mt-3 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+        <view wx:if="{{message}}" class="mt-3 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
         <app-page-exit />
       </view>
 
@@ -132,7 +132,7 @@
         <view class="mip-liquid-glass box-border flex h-[112rpx] items-center gap-3 rounded-full px-3">
           <button id="mip-event-support-action" aria-label="联系客服" class="m-0 flex h-[88rpx] w-[120rpx] shrink-0 items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" bind:tap="callSupport"><view id="mip-event-support-surface" class="box-border flex h-[80rpx] w-[120rpx] items-center justify-center rounded-full border border-black bg-panel"><image class="h-[48rpx] w-[48rpx]" mode="aspectFit" src="/packages/member/assets/figma/events/customer-service.svg" /></view></button>
           <button id="mip-event-share-action" aria-label="分享活动" class="m-0 flex h-[88rpx] w-[120rpx] shrink-0 items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" bind:tap="openShare"><view id="mip-event-share-surface" class="box-border flex h-[80rpx] w-[120rpx] items-center justify-center rounded-full border border-black bg-panel"><image class="h-[48rpx] w-[48rpx]" mode="aspectFit" src="/packages/member/assets/figma/events/share-circle.svg" /></view></button>
-          <button id="mip-event-primary-action" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" loading="{{busy}}" aria-disabled="{{primaryAction === 'disabled' || busy}}" bind:tap="handlePrimary"><view id="mip-event-primary-surface" class="box-border flex h-[80rpx] w-full items-center justify-center rounded-full border border-black bg-brand text-[length:32rpx] font-semibold text-on-brand">{{primaryLabel}}</view></button>
+          <button id="mip-event-primary-action" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" loading="{{busy}}" aria-disabled="{{primaryAction === 'disabled' || busy}}" bind:tap="handlePrimary"><view id="mip-event-primary-surface" class="box-border flex h-[80rpx] w-full items-center justify-center rounded-full border border-black bg-brand text-[32rpx] font-semibold text-on-brand">{{primaryLabel}}</view></button>
         </view>
       </view>
 
@@ -147,18 +147,18 @@
       >
         <view id="mip-event-share-sheet" class="box-border h-[836rpx] w-full max-w-full rounded-t-[16rpx] bg-[#080808] px-3 pt-3 text-ink">
           <view id="mip-event-share-actions" class="box-border h-[496rpx] rounded-[16rpx] bg-panel px-3 py-3">
-            <view class="text-[length:28rpx] font-medium leading-[40rpx]">分享活动</view>
-            <view class="mt-2 truncate text-[length:32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
+            <view class="text-[28rpx] font-medium leading-[40rpx]">分享活动</view>
+            <view class="mt-2 truncate text-[32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
             <view class="mt-3 flex flex-col gap-3">
-              <button id="mip-event-wechat-share" open-type="share" disabled="{{invitationLoading}}" aria-label="微信分享" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-[#07c160] p-0 text-[length:28rpx] font-medium leading-[40rpx] text-white after:border-0">
+              <button id="mip-event-wechat-share" open-type="share" disabled="{{invitationLoading}}" aria-label="微信分享" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-[#07c160] p-0 text-[28rpx] font-medium leading-[40rpx] text-white after:border-0">
                 <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/packages/member/assets/figma/events/wechat.svg" />
                 <text>{{invitationLoading ? '正在准备分享' : '微信分享'}}</text>
               </button>
-              <button id="mip-event-copy-link" aria-label="复制链接" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-[#202020] p-0 text-[length:28rpx] font-medium leading-[40rpx] text-[#FCDF03] after:border-0" bind:tap="copyEventLink">
+              <button id="mip-event-copy-link" aria-label="复制链接" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-[#202020] p-0 text-[28rpx] font-medium leading-[40rpx] text-[#FCDF03] after:border-0" bind:tap="copyEventLink">
                 <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/packages/member/assets/figma/events/link.svg" />
                 <text>复制链接</text>
               </button>
-              <button id="mip-event-download-code" aria-label="下载活动二维码" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-brand p-0 text-[length:28rpx] font-medium leading-[40rpx] text-on-brand after:border-0" disabled="{{posterBusy}}" bind:tap="downloadInvitationCode">
+              <button id="mip-event-download-code" aria-label="下载活动二维码" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-brand p-0 text-[28rpx] font-medium leading-[40rpx] text-on-brand after:border-0" disabled="{{posterBusy}}" bind:tap="downloadInvitationCode">
                 <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/packages/member/assets/figma/events/qr-code.svg" />
                 <text>{{posterBusy ? '正在生成活动二维码' : '下载活动二维码'}}</text>
               </button>
@@ -166,14 +166,14 @@
           </view>
 
           <view id="mip-event-share-copy" class="relative mt-3 box-border h-[292rpx] rounded-[16rpx] bg-panel px-3 py-3">
-            <view class="text-[length:28rpx] font-medium leading-[40rpx]">分享文案</view>
+            <view class="text-[28rpx] font-medium leading-[40rpx]">分享文案</view>
             <button id="mip-event-copy-text" aria-label="复制分享文案" class="absolute right-[-4rpx] top-[-4rpx] m-0 flex h-[88rpx] w-[88rpx] items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" bind:tap="copyShareText">
               <image class="h-[32rpx] w-[32rpx]" mode="aspectFit" src="/packages/member/assets/figma/events/copy.svg" />
             </button>
-            <view class="mt-2 truncate text-[length:32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
-            <view class="mt-2 truncate text-[length:24rpx] leading-[34rpx]">时间：{{shareTimeText}}</view>
-            <view class="mt-[10rpx] truncate text-[length:24rpx] leading-[34rpx]">地址：{{locationText}}</view>
-            <view class="mt-2 flex min-w-0 items-center text-[length:24rpx] leading-[34rpx]"><text class="shrink-0">报名链接：</text><text class="min-w-0 flex-1 truncate text-[#428bff]">MIP 小程序活动详情</text></view>
+            <view class="mt-2 truncate text-[32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
+            <view class="mt-2 truncate text-[24rpx] leading-[34rpx]">时间：{{shareTimeText}}</view>
+            <view class="mt-[10rpx] truncate text-[24rpx] leading-[34rpx]">地址：{{locationText}}</view>
+            <view class="mt-2 flex min-w-0 items-center text-[24rpx] leading-[34rpx]"><text class="shrink-0">报名链接：</text><text class="min-w-0 flex-1 truncate text-[#428bff]">MIP 小程序活动详情</text></view>
           </view>
         </view>
       </t-popup>
@@ -184,27 +184,27 @@
           <view class="absolute inset-0 bg-[rgba(0,0,0,0.68)]"></view>
           <view class="absolute left-0 top-[564rpx] h-[836rpx] w-full rounded-t-[16rpx] bg-[#080808]"></view>
           <view class="absolute left-[24rpx] top-[576rpx] h-[496rpx] w-[702rpx] rounded-[16rpx] bg-panel"></view>
-          <text class="absolute left-[50rpx] top-[592rpx] text-[length:28rpx] font-medium leading-[40rpx] text-white">分享活动</text>
-          <text class="absolute left-[50rpx] top-[644rpx] text-[length:32rpx] font-semibold leading-[44rpx] text-white">MIP反人性早会第 328 场</text>
+          <text class="absolute left-[50rpx] top-[592rpx] text-[28rpx] font-medium leading-[40rpx] text-white">分享活动</text>
+          <text class="absolute left-[50rpx] top-[644rpx] text-[32rpx] font-semibold leading-[44rpx] text-white">MIP反人性早会第 328 场</text>
           <view class="absolute left-[48rpx] top-[716rpx] flex h-[92rpx] w-[654rpx] items-center justify-center gap-2 rounded-[16rpx] bg-[#07c160]">
             <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/packages/member/assets/figma/events/wechat.svg" />
-            <text class="text-[length:28rpx] font-medium leading-[40rpx] text-white">微信分享</text>
+            <text class="text-[28rpx] font-medium leading-[40rpx] text-white">微信分享</text>
           </view>
           <view class="absolute left-[48rpx] top-[832rpx] flex h-[92rpx] w-[654rpx] items-center justify-center gap-2 rounded-[16rpx] bg-[#1a71ff]">
             <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/packages/member/assets/figma/events/link.svg" />
-            <text class="text-[length:28rpx] font-medium leading-[40rpx] text-white">复制链接</text>
+            <text class="text-[28rpx] font-medium leading-[40rpx] text-white">复制链接</text>
           </view>
           <view class="absolute left-[48rpx] top-[948rpx] flex h-[92rpx] w-[654rpx] items-center justify-center gap-2 rounded-[16rpx] bg-brand">
             <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/packages/member/assets/figma/events/qr-code.svg" />
-            <text class="text-[length:28rpx] font-medium leading-[40rpx] text-ink">下载活动二维码</text>
+            <text class="text-[28rpx] font-medium leading-[40rpx] text-ink">下载活动二维码</text>
           </view>
           <view class="absolute left-[24rpx] top-[1086rpx] h-[292rpx] w-[702rpx] rounded-[16rpx] bg-panel"></view>
-          <text class="absolute left-[50rpx] top-[1108rpx] text-[length:28rpx] font-medium leading-[40rpx] text-white">分享文案</text>
+          <text class="absolute left-[50rpx] top-[1108rpx] text-[28rpx] font-medium leading-[40rpx] text-white">分享文案</text>
           <mip-icon class="absolute left-[652rpx] top-[1114rpx]" name="file-copy" size="{{32}}" color="var(--color-brand)" />
-          <text class="absolute left-[50rpx] top-[1164rpx] text-[length:32rpx] font-semibold leading-[44rpx] text-white">11.6 MIP反人性早会</text>
-          <text class="absolute left-[50rpx] top-[1224rpx] text-[length:24rpx] leading-[40rpx] text-white">时间: {{shareTimeText}}</text>
-          <text class="absolute left-[50rpx] top-[1272rpx] text-[length:24rpx] leading-[40rpx] text-white">地址: {{locationText}}</text>
-          <text class="absolute left-[50rpx] top-[1320rpx] text-[length:24rpx] leading-[40rpx] text-white">报名链接: <text class="text-[#428bff]">https://www.mipgame.com</text></text>
+          <text class="absolute left-[50rpx] top-[1164rpx] text-[32rpx] font-semibold leading-[44rpx] text-white">11.6 MIP反人性早会</text>
+          <text class="absolute left-[50rpx] top-[1224rpx] text-[24rpx] leading-[40rpx] text-white">时间: {{shareTimeText}}</text>
+          <text class="absolute left-[50rpx] top-[1272rpx] text-[24rpx] leading-[40rpx] text-white">地址: {{locationText}}</text>
+          <text class="absolute left-[50rpx] top-[1320rpx] text-[24rpx] leading-[40rpx] text-white">报名链接: <text class="text-[#428bff]">https://www.mipgame.com</text></text>
         </view>
       </block>
       <canvas id="mip-event-invitation-poster-canvas" type="2d" class="fixed left-[-9999px] top-0 h-[560px] w-[375px]"></canvas>

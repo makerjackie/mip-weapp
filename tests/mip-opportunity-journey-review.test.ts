@@ -129,7 +129,7 @@ describe('MIP opportunity journey review', () => {
   it('collects the QZ1 trio and QZ2 status in the editor (J4-04)', () => {
     expect(editor).toContain('机会类型')
     expect(editor).toContain('wx:for="{{typeOptions}}"')
-    expect(editor).toContain('border border-brand bg-panel text-[length:28rpx] text-brand')
+    expect(editor).toContain('border border-brand bg-panel text-[28rpx] text-brand')
     expect(editorScript).toContain('typeKeys: this.data.typeOptions.filter(item => item.selected).map(item => item.key)')
     expect(editorScript).toContain('publicationStatus:')
     expect(editorScript).toContain('项目已下架')

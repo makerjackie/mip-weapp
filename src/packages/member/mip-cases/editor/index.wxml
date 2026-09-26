@@ -55,7 +55,7 @@
     </view>
   </block>
   <block wx:else>
-    <view class="case-editor-guidance -mx-3 flex min-h-[64rpx] items-center justify-center bg-brand px-4 text-center text-[length:24rpx] font-medium text-on-brand">填写展现能力的超级案例</view>
+    <view class="case-editor-guidance -mx-3 flex min-h-[64rpx] items-center justify-center bg-brand px-4 text-center text-[24rpx] font-medium text-on-brand">填写展现能力的超级案例</view>
 
 
 
@@ -63,10 +63,10 @@
     <view class="case-editor-section-heading mt-4 flex min-h-[56rpx] items-center justify-between gap-3">
       <view class="flex min-w-0 items-center gap-2">
         <image class="case-editor-section-icon h-[32rpx] w-[32rpx] shrink-0" src="/packages/member/mip-cases/editor/assets/case-section.svg" mode="aspectFit" />
-        <view class="case-editor-section-title text-[length:32rpx] font-medium">我的案例</view>
+        <view class="case-editor-section-title text-[32rpx] font-medium">我的案例</view>
       </view>
-      <view wx:if="{{publicationStatus === 'PUBLISHED'}}" class="case-editor-status shrink-0 rounded-full bg-brand px-3 py-1 text-[length:22rpx] font-medium text-on-brand">{{publicationStatusText}}</view>
-      <view wx:else class="case-editor-status shrink-0 rounded-full border border-line bg-panel px-3 py-1 text-[length:22rpx] text-muted">{{publicationStatusText}}</view>
+      <view wx:if="{{publicationStatus === 'PUBLISHED'}}" class="case-editor-status shrink-0 rounded-full bg-brand px-3 py-1 text-[22rpx] font-medium text-on-brand">{{publicationStatusText}}</view>
+      <view wx:else class="case-editor-status shrink-0 rounded-full border border-line bg-panel px-3 py-1 text-[22rpx] text-muted">{{publicationStatusText}}</view>
     </view>
 
     <view class="case-editor-form-layout mt-2">
@@ -123,50 +123,50 @@
           <input aria-label="案例类型" class="case-editor-field__control" value="{{caseType}}" maxlength="80" placeholder="填写案例类型" placeholder-class="case-editor-field__placeholder" data-field="caseType" bindinput="updateText" />
         </view>
         <view class="case-editor-description">
-          <view class="text-[length:28rpx] font-medium">详细说明</view>
+          <view class="text-[28rpx] font-medium">详细说明</view>
           <textarea aria-label="项目说明" class="case-editor-description__control" value="{{description}}" maxlength="8000" placeholder="说明项目背景、过程和结果" placeholder-class="case-editor-field__placeholder" data-field="description" bindinput="updateText" />
-          <view class="text-right text-[length:22rpx] text-muted">{{description.length}}/8000</view>
+          <view class="text-right text-[22rpx] text-muted">{{description.length}}/8000</view>
         </view>
       </view>
     </view>
 
     <view class="case-editor-section-heading mt-6 flex min-h-[56rpx] items-center">
-      <view class="case-editor-section-title text-[length:32rpx] font-medium">案例素材</view>
+      <view class="case-editor-section-title text-[32rpx] font-medium">案例素材</view>
     </view>
     <view class="case-editor-media-layout mt-2">
       <view class="case-editor-media-panel rounded-[16rpx] bg-panel px-4 py-4">
         <view class="flex items-start justify-between gap-3">
           <view>
-            <view class="text-[length:28rpx] font-medium">案例封面</view>
-            <view class="mt-1 text-[length:22rpx] text-muted">用于案例列表和详情页</view>
+            <view class="text-[28rpx] font-medium">案例封面</view>
+            <view class="mt-1 text-[22rpx] text-muted">用于案例列表和详情页</view>
           </view>
-          <view wx:if="{{coverUploading}}" class="shrink-0 text-[length:22rpx] text-brand">上传中</view>
+          <view wx:if="{{coverUploading}}" class="shrink-0 text-[22rpx] text-brand">上传中</view>
         </view>
         <image wx:if="{{coverUrl}}" class="mt-3 h-[300rpx] w-full rounded-[8rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl}}" />
-        <view wx:else class="mt-3 flex h-[240rpx] items-center justify-center rounded-[8rpx] border border-dashed border-line bg-panel-raised text-[length:24rpx] text-muted">暂未上传封面</view>
+        <view wx:else class="mt-3 flex h-[240rpx] items-center justify-center rounded-[8rpx] border border-dashed border-line bg-panel-raised text-[24rpx] text-muted">暂未上传封面</view>
         <view class="mt-3"><t-button block variant="outline" loading="{{coverUploading}}" disabled="{{saving || mediaUploading}}" bind:tap="chooseCover">{{coverUrl ? '更换封面' : '上传封面'}}</t-button></view>
       </view>
 
       <view class="case-editor-media-panel rounded-[16rpx] bg-panel px-4 py-4">
         <view class="flex items-start justify-between gap-3">
           <view>
-            <view class="text-[length:28rpx] font-medium">展示素材</view>
-            <view class="mt-1 text-[length:22rpx] text-muted">最多上传 12 张图片</view>
+            <view class="text-[28rpx] font-medium">展示素材</view>
+            <view class="mt-1 text-[22rpx] text-muted">最多上传 12 张图片</view>
           </view>
-          <view class="shrink-0 text-[length:22rpx] text-muted">{{mediaAssets.length}} / 12</view>
+          <view class="shrink-0 text-[22rpx] text-muted">{{mediaAssets.length}} / 12</view>
         </view>
         <view wx:if="{{mediaAssets.length}}" class="case-editor-media-grid mt-3">
           <view wx:for="{{mediaAssets}}" wx:key="assetId" class="case-editor-media-item overflow-hidden rounded-[8rpx] bg-panel-raised">
             <image class="case-editor-media-item__image w-full" mode="aspectFill" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="previewMedia" />
-            <view class="flex min-h-[88rpx] items-center justify-center text-[length:22rpx] text-danger" aria-role="button" data-asset-id="{{item.assetId}}" bind:tap="removeMedia">移除</view>
+            <view class="flex min-h-[88rpx] items-center justify-center text-[22rpx] text-danger" aria-role="button" data-asset-id="{{item.assetId}}" bind:tap="removeMedia">移除</view>
           </view>
         </view>
-        <view wx:else class="mt-3 flex min-h-[240rpx] items-center justify-center rounded-[8rpx] border border-dashed border-line bg-panel-raised px-4 text-center text-[length:24rpx] text-muted">暂未上传展示素材</view>
+        <view wx:else class="mt-3 flex min-h-[240rpx] items-center justify-center rounded-[8rpx] border border-dashed border-line bg-panel-raised px-4 text-center text-[24rpx] text-muted">暂未上传展示素材</view>
         <view class="mt-3"><t-button block variant="outline" loading="{{mediaUploading}}" disabled="{{saving || coverUploading || mediaAssets.length >= 12}}" bind:tap="addMedia">添加展示素材</t-button></view>
       </view>
     </view>
 
-    <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] border border-danger px-4 py-3 text-[length:22rpx] leading-6 text-danger" aria-live="polite">{{message}}</view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] border border-danger px-4 py-3 text-[22rpx] leading-6 text-danger" aria-live="polite">{{message}}</view>
     <app-page-exit always label="取消" />
 
     <mip-sticky-actions>

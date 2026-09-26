@@ -5,6 +5,6 @@
       <view wx:else class="relative flex h-[48rpx] w-[48rpx] items-center justify-center rounded-full bg-brand-soft {{index ? '-ml-[18rpx]' : ''}}" style="z-index: {{10 - index}}"><t-icon name="user-avatar" size="28rpx" color="var(--color-brand)" /></view>
     </block>
   </view>
-  <text wx:if="{{plusLabel}}" class="relative ml-[12rpx] text-[length:20rpx] font-semibold leading-[28rpx] text-ink" style="z-index: 20">{{plusLabel}}</text>
-  <text class="relative text-[length:24rpx] font-semibold leading-[33.6rpx] text-ink" style="z-index: 20">{{remainText || countText || (count + '人参加')}}</text>
+  <text wx:if="{{plusLabel}}" class="relative ml-[12rpx] text-[20rpx] font-semibold leading-[28rpx] text-ink" style="z-index: 20">{{plusLabel}}</text>
+  <text class="relative text-[24rpx] font-semibold leading-[33.6rpx] text-ink" style="z-index: 20">{{remainText || countText || (count + '人参加')}}</text>
 </view>

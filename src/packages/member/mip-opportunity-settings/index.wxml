@@ -1,11 +1,11 @@
 <view id="mip-opportunity-settings-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view class="text-[length:34rpx] font-bold">互动通知</view><view class="mt-1 text-[length:22rpx] text-muted">选择希望收到的站内互动通知。</view>
+  <view class="text-[34rpx] font-bold">互动通知</view><view class="mt-1 text-[22rpx] text-muted">选择希望收到的站内互动通知。</view>
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mt-5"><mip-empty-state title="暂时无法加载权限设置" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
   <block wx:else>
-    <view class="mt-5 overflow-hidden rounded-[16rpx] bg-panel"><view class="px-4 py-4 text-[length:28rpx] font-semibold">消息通知</view><view class="flex min-h-[90rpx] items-center justify-between border-t border-line px-4"><text class="text-[length:24rpx]">评论通知</text><t-switch value="{{preferences.notifications.commentsEnabled}}" data-path="notifications.commentsEnabled" bind:change="toggle" /></view><view class="flex min-h-[90rpx] items-center justify-between border-t border-line px-4"><text class="text-[length:24rpx]">热点通知</text><t-switch value="{{preferences.notifications.hotspotsEnabled}}" data-path="notifications.hotspotsEnabled" bind:change="toggle" /></view></view>
+    <view class="mt-5 overflow-hidden rounded-[16rpx] bg-panel"><view class="px-4 py-4 text-[28rpx] font-semibold">消息通知</view><view class="flex min-h-[90rpx] items-center justify-between border-t border-line px-4"><text class="text-[24rpx]">评论通知</text><t-switch value="{{preferences.notifications.commentsEnabled}}" data-path="notifications.commentsEnabled" bind:change="toggle" /></view><view class="flex min-h-[90rpx] items-center justify-between border-t border-line px-4"><text class="text-[24rpx]">热点通知</text><t-switch value="{{preferences.notifications.hotspotsEnabled}}" data-path="notifications.hotspotsEnabled" bind:change="toggle" /></view></view>
     <view class="mt-5"><t-button block theme="primary" loading="{{saving}}" bind:tap="save">保存设置</t-button></view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
   </block>
   <app-page-exit label="返回我的" />
 </view>

@@ -4,20 +4,20 @@
   <mip-empty-state wx:elif="{{state === 'error'}}" title="名单暂时无法加载" description="{{message}}" action-text="重新加载" bind:action="load" />
   <mip-empty-state wx:elif="{{state === 'empty'}}" title="暂无感兴趣的人" description="对 TA 感兴趣的人会显示在这里。" />
   <block wx:else>
-    <view class="mb-4 text-[length:24rpx] text-muted">{{totalCount}} 人感兴趣</view>
+    <view class="mb-4 text-[24rpx] text-muted">{{totalCount}} 人感兴趣</view>
     <!-- J4-02b reuses the J3-08 visitor card dimensions, without dates or search. -->
     <view class="grid grid-cols-2 gap-[16rpx]">
       <view wx:for="{{people}}" wx:key="profileRef" class="relative min-h-[374rpx] overflow-hidden rounded-[16rpx] bg-panel px-[20rpx] pt-[32rpx] text-center active:bg-panel-raised" aria-role="button" aria-label="查看{{item.nickname}}的公开档案" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
         <view class="flex justify-center">
           <image wx:if="{{item.avatarUrl}}" class="h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.avatarUrl}}" />
-          <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[length:32rpx] font-semibold text-brand">{{item.nickname[0]}}</view>
+          <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[32rpx] font-semibold text-brand">{{item.nickname[0]}}</view>
         </view>
-        <view class="mt-[16rpx] truncate text-[length:32rpx] font-medium leading-[44.8rpx]">{{item.nickname}}</view>
-        <view class="mt-[8rpx] text-[length:20rpx] leading-[28rpx] text-muted">{{item.userKind === 'PLAYER' ? '玩家' : '嘉宾'}}</view>
-        <view wx:if="{{item.headline}}" class="mt-[8rpx] line-clamp-2 text-[length:20rpx] leading-[28rpx] text-muted">{{item.headline}}</view>
+        <view class="mt-[16rpx] truncate text-[32rpx] font-medium leading-[44.8rpx]">{{item.nickname}}</view>
+        <view class="mt-[8rpx] text-[20rpx] leading-[28rpx] text-muted">{{item.userKind === 'PLAYER' ? '玩家' : '嘉宾'}}</view>
+        <view wx:if="{{item.headline}}" class="mt-[8rpx] line-clamp-2 text-[20rpx] leading-[28rpx] text-muted">{{item.headline}}</view>
       </view>
     </view>
-    <view wx:if="{{message}}" class="mt-4 text-[length:24rpx] text-danger">{{message}}</view>
+    <view wx:if="{{message}}" class="mt-4 text-[24rpx] text-danger">{{message}}</view>
     <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
   </block>
   <app-page-exit />

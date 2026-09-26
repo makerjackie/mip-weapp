@@ -98,6 +98,18 @@ postcss.parse(appWxss).walkDecls('appearance', (decl) => {
 })
 assert(appWxss.includes('.bg-canvas'), 'MIP design tokens did not reach WXSS')
 assert(appWxss.includes('.grid-cols-2'), 'Tailwind grid utilities did not reach WXSS')
+// Font utilities must survive both Tailwind generation and WXML class escaping.
+// A missing size silently inherits the default and can overlap adjacent labels.
+for (const file of walk('src').filter(file => file.endsWith('.wxml'))) {
+  for (const [, size] of read(file).matchAll(/text-\[(\d+(?:\.\d+)?)rpx\]/g)) {
+    const selector = `.text-_b${size.replace('.', '_d')}rpx_B`
+    assert(appWxss.includes(selector), `Missing compiled font utility ${size}rpx used by ${file}`)
+  }
+}
+for (const file of walk('dist').filter(file => file.endsWith('.wxml') && !file.includes('miniprogram_npm'))) {
+  assert(!/text-\[(?:length:)?\d+(?:\.\d+)?rpx\]/.test(read(file)), `Untransformed font utility in ${file}`)
+}
+
 for (const tab of appJson.tabBar?.list || []) {
   const tabPageJson = JSON.parse(read(`dist/${tab.pagePath}.json`))
   assert(

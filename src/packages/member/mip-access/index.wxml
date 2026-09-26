@@ -5,17 +5,17 @@
   <mip-empty-state wx:elif="{{state === 'expired'}}" title="访问请求已失效" description="请重新确认身份后继续。" action-text="重新确认" bind:action="restartAccess" />
   <mip-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="loadAccess" />
   <block wx:else>
-    <view class="mt-[80rpx] text-[length:40rpx] font-bold">{{title}}</view>
-    <view class="mt-3 text-[length:24rpx] leading-6 text-muted">{{description}}</view>
-    <view wx:if="{{authenticated}}" class="mt-5 inline-flex rounded-full bg-brand-soft px-3 py-2 text-[length:22rpx] text-brand">当前身份：{{membershipLabel}}</view>
+    <view class="mt-[80rpx] text-[40rpx] font-bold">{{title}}</view>
+    <view class="mt-3 text-[24rpx] leading-6 text-muted">{{description}}</view>
+    <view wx:if="{{authenticated}}" class="mt-5 inline-flex rounded-full bg-brand-soft px-3 py-2 text-[22rpx] text-brand">当前身份：{{membershipLabel}}</view>
 
     <view wx:if="{{nextRequirement === 'AGREEMENTS'}}" class="mt-6 rounded-[16rpx] bg-panel px-4 py-5">
       <view wx:for="{{agreements}}" wx:key="key" class="flex min-h-[88rpx] items-center justify-between border-b border-line last:border-b-0" data-path="{{item.documentPath}}" bind:tap="openAgreement">
-        <text class="text-[length:24rpx]">{{item.label}}</text>
+        <text class="text-[24rpx]">{{item.label}}</text>
         <mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" />
       </view>
       <checkbox-group class="mt-4" bindchange="toggleAgreements">
-        <label class="flex items-start gap-3 text-[length:24rpx] leading-6 text-muted">
+        <label class="flex items-start gap-3 text-[24rpx] leading-6 text-muted">
           <checkbox value="accepted" color="#FCDF03" />
           <text>我已阅读并同意以上协议</text>
         </label>
@@ -23,7 +23,7 @@
       <view class="mt-5"><t-button block size="large" theme="primary" loading="{{submitting}}" bind:tap="acceptAgreements">确认并继续</t-button></view>
     </view>
 
-    <button wx:elif="{{nextRequirement === 'PHONE'}}" open-type="getPhoneNumber" disabled="{{submitting}}" class="mt-7 flex h-[92rpx] w-full max-w-full box-border items-center justify-center rounded-[16rpx] border-0 bg-brand text-[length:28rpx] font-semibold text-on-brand disabled:opacity-60" bind:getphonenumber="bindPhone">
+    <button wx:elif="{{nextRequirement === 'PHONE'}}" open-type="getPhoneNumber" disabled="{{submitting}}" class="mt-7 flex h-[92rpx] w-full max-w-full box-border items-center justify-center rounded-[16rpx] border-0 bg-brand text-[28rpx] font-semibold text-on-brand disabled:opacity-60" bind:getphonenumber="bindPhone">
       {{submitting ? '正在绑定' : '绑定微信手机号'}}
     </button>
 
@@ -39,7 +39,7 @@
       <t-button block size="large" theme="primary" loading="{{submitting}}" bind:tap="finish">返回继续</t-button>
     </view>
 
-    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:24rpx] leading-6 text-ink">{{message}}</view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[24rpx] leading-6 text-ink">{{message}}</view>
     <app-page-exit managed label="{{cancelLabel}}" bind:exit="cancel" />
   </block>
 </view>

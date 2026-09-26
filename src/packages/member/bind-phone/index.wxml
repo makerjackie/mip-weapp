@@ -9,15 +9,15 @@
            单表单双路径——微信一键获取（手机号快速验证，免短信直接换绑）+
            手动输入其他手机号 + 短信验证码（发送与验证均由身份域校验）。 -->
       <view class="flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel pl-[24rpx] pr-[24rpx]">
-        <view class="text-[length:28rpx] font-medium leading-[40rpx]">当前手机号</view>
-        <view class="text-[length:28rpx] leading-[40rpx] text-muted">{{currentPhoneMasked || '未绑定'}}</view>
+        <view class="text-[28rpx] font-medium leading-[40rpx]">当前手机号</view>
+        <view class="text-[28rpx] leading-[40rpx] text-muted">{{currentPhoneMasked || '未绑定'}}</view>
       </view>
 
-      <view class="mt-[56rpx] px-[24rpx] text-[length:32rpx] font-medium leading-[44.8rpx]">换绑新手机号</view>
+      <view class="mt-[56rpx] px-[24rpx] text-[32rpx] font-medium leading-[44.8rpx]">换绑新手机号</view>
 
       <view class="mt-[23.2rpx] flex h-[92rpx] items-center rounded-[16rpx] bg-panel pl-[24rpx] pr-[24rpx]">
         <input
-          class="min-w-0 flex-1 text-[length:28rpx] leading-[40rpx]"
+          class="min-w-0 flex-1 text-[28rpx] leading-[40rpx]"
           aria-label="请输入新的手机号"
           type="tel"
           maxlength="11"
@@ -29,7 +29,7 @@
         />
         <view class="mx-[20rpx] h-[32rpx] w-[1rpx] shrink-0 bg-line"></view>
         <view
-          class="flex h-[92rpx] w-[224rpx] shrink-0 items-center justify-center text-[length:28rpx] font-medium text-brand active:opacity-70"
+          class="flex h-[92rpx] w-[224rpx] shrink-0 items-center justify-center text-[28rpx] font-medium text-brand active:opacity-70"
           aria-role="button"
           aria-label="微信一键获取"
           bind:tap="openWechatBind"
@@ -38,7 +38,7 @@
 
       <view class="mt-[16rpx] flex h-[92rpx] items-center rounded-[16rpx] bg-panel pl-[24rpx] pr-[24rpx]">
         <input
-          class="min-w-0 flex-1 text-[length:28rpx] leading-[40rpx]"
+          class="min-w-0 flex-1 text-[28rpx] leading-[40rpx]"
           aria-label="请输入短信验证码"
           type="tel"
           maxlength="6"
@@ -50,22 +50,22 @@
         />
         <view class="mx-[20rpx] h-[32rpx] w-[1rpx] shrink-0 bg-line"></view>
         <view
-          class="flex h-[92rpx] w-[184rpx] shrink-0 items-center justify-center text-[length:28rpx] font-medium {{sendCountdown > 0 || sendingSms ? 'text-muted' : 'text-brand'}} active:opacity-70"
+          class="flex h-[92rpx] w-[184rpx] shrink-0 items-center justify-center text-[28rpx] font-medium {{sendCountdown > 0 || sendingSms ? 'text-muted' : 'text-brand'}} active:opacity-70"
           aria-role="button"
           aria-label="获取验证码"
           bind:tap="requestSmsCode"
         >{{sendingSms ? '正在发送' : sendCountdown > 0 ? sendCountdown + 's后重发' : '获取验证码'}}</view>
       </view>
 
-      <view wx:if="{{message}}" class="mt-[24rpx] px-[8rpx] text-[length:22rpx] leading-[33.6rpx] text-muted">{{message}}</view>
+      <view wx:if="{{message}}" class="mt-[24rpx] px-[8rpx] text-[22rpx] leading-[33.6rpx] text-muted">{{message}}</view>
 
       <view
-        class="mt-[56rpx] flex h-[80rpx] items-center justify-center rounded-[100rpx] border-[2rpx] border-canvas bg-brand text-[length:32rpx] font-medium text-on-brand active:bg-brand-active"
+        class="mt-[56rpx] flex h-[80rpx] items-center justify-center rounded-[100rpx] border-[2rpx] border-canvas bg-brand text-[32rpx] font-medium text-on-brand active:bg-brand-active"
         aria-role="button"
         bind:tap="confirmRebind"
       >{{rebinding ? '正在换绑' : '确认换绑'}}</view>
 
-      <view class="mt-[24rpx] px-[8rpx] text-[length:22rpx] leading-[33.6rpx] text-muted">手机号用于登录与接收活动通知。</view>
+      <view class="mt-[24rpx] px-[8rpx] text-[22rpx] leading-[33.6rpx] text-muted">手机号用于登录与接收活动通知。</view>
     </view>
 
     <mip-login-sheet

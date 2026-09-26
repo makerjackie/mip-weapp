@@ -1,0 +1,32 @@
+.growth-hero-art {
+  position: absolute;
+  right: 36rpx;
+  bottom: 0;
+  width: 350rpx;
+  height: 310rpx;
+  pointer-events: none;
+}
+
+.growth-hero-curve {
+  position: absolute;
+  right: -5%;
+  bottom: -16rpx;
+  left: -5%;
+  height: 32rpx;
+  background: var(--color-canvas);
+  border-radius: 50%;
+}
+
+.growth-experience-link {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
+  z-index: 20;
+  padding: 4rpx 12rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 28rpx;
+  background: var(--color-brand);
+  border: 2rpx solid var(--color-on-brand);
+  border-radius: 9999rpx;
+}

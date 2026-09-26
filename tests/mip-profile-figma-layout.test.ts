@@ -47,7 +47,7 @@ describe('MIP profile Figma structure', () => {
     for (const row of ['company', 'role', 'organization', 'organizationRole']) {
       expect(view).toMatch(new RegExp(`data-card-field-row="${row}"[^>]+h-\\[88rpx\\]`))
     }
-    expect(view).not.toContain('rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]')
+    expect(view).not.toContain('rounded-[14rpx] bg-panel-raised px-4 text-[25rpx]')
     expect(view).not.toContain('公开范围')
   })
 })
