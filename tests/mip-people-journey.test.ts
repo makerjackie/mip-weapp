@@ -80,7 +80,8 @@ describe('journey-review WS-PEOPLE · 档案互动条角色门禁（C1 终审 + 
   it('keeps 我感兴趣 off the production profile (2026-09-21 拍板：合作表态只在机会详情页)', () => {
     const view = read('src/packages/member/mip-public-profile/index.wxml')
     const production = view.slice(view.indexOf('<block wx:elif="{{profile}}">'))
-    expect(production).not.toContain('想合作')
+    expect(production).not.toContain('bind:tap="cooperationIntent"')
+    expect(production).toContain('{{item.cooperationCount || 0}} 人想合作')
   })
 })
 

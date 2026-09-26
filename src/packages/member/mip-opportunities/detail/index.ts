@@ -6,24 +6,21 @@ import type {
   OpportunityCommentSubmissionIntent,
   OpportunityCommentType,
   OpportunityDetail,
-  ProfileInterestMutationSnapshot,
-  PublicPerson,
 } from '../../../../modules/mip-opportunities'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
-import { evaluateAccess, mipAccessPageUrl } from '../../../../modules/mip-identity'
+import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import {
   journeyStatusOf,
   opportunityModule,
   opportunityTypeLabel,
-  profileInterestMutations,
   retainOpportunityCommentReportIntent,
   retainOpportunityCommentSubmissionIntent,
 } from '../../../../modules/mip-opportunities'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { formatLocalDateTime } from '../../../../utils/date'
 
-type Interaction = 'referral' | 'referral-cancel' | 'interest' | 'comment'
+type Interaction = 'cooperation' | 'comment'
 /**
  * journey-review J4-05/J4-06：发布人底部条形态。
  * draft=草稿（未发布过）、unpublished=已下架（分享置灰）、active=招募中、ended=已结束。
@@ -43,16 +40,6 @@ function presentComment(item: OpportunityComment): PresentedComment {
   }
 }
 
-interface ReferralCandidate extends PublicPerson {
-  displayName: string
-  displayInitial: string
-}
-
-function presentCandidate(item: PublicPerson): ReferralCandidate {
-  const displayName = item.nickname || 'MIP 用户'
-  return { ...item, displayName, displayInitial: displayName.slice(0, 1) }
-}
-
 Page({
   data: {
     id: '' as OpportunityId,
@@ -63,18 +50,15 @@ Page({
     /** journey-review J4-06：已下架态（服务端 DRAFT+publishedAt 的呈现）。 */
     journeyStatus: 'DRAFT' as ReturnType<typeof journeyStatusOf>,
     ownerBar: '' as '' | OwnerBarMode,
-    referralAvatars: [] as string[],
+    cooperationAvatars: [] as string[],
     roleNames: [] as string[],
     message: '',
     acting: false,
-    interestPending: false,
-    referralPickerVisible: false,
-    referralKeyword: '',
-    referralCandidates: [] as ReferralCandidate[],
-    referralCandidatesLoading: false,
-    referralCandidatesCursor: '',
-    referralPickerMessage: '',
-    selectedReferralTarget: null as ReferralCandidate | null,
+    cooperatorsVisible: false,
+    cooperators: [] as OpportunityDetail['author'][],
+    cooperatorsCursor: '',
+    cooperatorsLoading: false,
+    cooperatorsMessage: '',
     commentsState: 'loading' as 'loading' | 'ready' | 'error',
     comments: [] as PresentedComment[],
     commentsCursor: '',
@@ -94,7 +78,7 @@ Page({
   resumeInteraction: '' as '' | Interaction,
   commentSubmissionIntent: null as OpportunityCommentSubmissionIntent | null,
   commentReportIntent: null as OpportunityCommentReportIntent | null,
-  stopInterestSubscription: null as (() => void) | null,
+  cooperatorsRequestSeq: 0,
 
   onLoad(options: Record<string, string | undefined>) {
     this.commentSubmissionIntent = null
@@ -120,8 +104,7 @@ Page({
   },
 
   onUnload() {
-    this.stopInterestSubscription?.()
-    this.stopInterestSubscription = null
+    this.cooperatorsRequestSeq += 1
   },
 
   async load() {
@@ -134,8 +117,6 @@ Page({
     }
     try {
       const item = await opportunityModule.get(this.data.id)
-      const interest = profileInterestMutations.mergeServer(item.author.profileRef, item.interestActive)
-      this.observeInterest(item.author.profileRef)
       const journeyStatus = journeyStatusOf(item)
       const ownerBar: '' | OwnerBarMode = !item.mine
         ? ''
@@ -144,14 +125,13 @@ Page({
           : journeyStatus === 'ENDED' ? 'ended' : journeyStatus === 'DRAFT' ? 'draft' : 'active'
       this.setData({
         state: 'ready',
-        item: { ...item, interestActive: interest.active },
-        interestPending: interest.pending,
+        item,
         publishedText: formatLocalDateTime(item.publishedAt),
         typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
         journeyStatus,
         ownerBar,
         // 运行时验收（2026-09-22）：服务端 avatars 形状不可信，保底数组后才绑给卡片 type: Array 属性。
-        referralAvatars: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
+        cooperationAvatars: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
         roleNames: item.roles.map(key => cooperationRoles.find(role => role.key === key)?.name || key),
         message: '',
       })
@@ -163,62 +143,6 @@ Page({
         message: error instanceof Error ? error.message : '机会加载失败',
       })
     }
-  },
-
-  /**
-   * 引荐（想合作）创建入口：J3-09 复审确认合作流程未入包，「+N想合作」一期点击
-   * 走 cooperationIntent 占位，referralPicker 弹层当前没有入口（死代码保留，
-   * 入口随合作流程入包后接回，见 .tmp/shared-change-requests）。
-   */
-  async toggleReferral() {
-    await this.authorizeInteraction('referral')
-  },
-
-  async changeReferralTarget() {
-    await this.authorizeInteraction('referral')
-  },
-
-  async cancelReferral() {
-    await this.authorizeInteraction('referral-cancel')
-  },
-
-  async toggleInterest() {
-    if (this.data.acting) {
-      return
-    }
-    if (this.hasCachedInterestAccess()) {
-      this.performInteraction('interest')
-      return
-    }
-    await this.authorizeInteraction('interest')
-  },
-
-  observeInterest(profileRef: string) {
-    this.stopInterestSubscription?.()
-    this.stopInterestSubscription = profileInterestMutations.subscribe(profileRef, (interest) => {
-      if (this.data.item?.author.profileRef !== profileRef) {
-        return
-      }
-      this.applyInterest(interest)
-      if (interest.error) {
-        wx.showToast({ title: interest.error.message, icon: 'none' })
-      }
-    })
-  },
-
-  applyInterest(interest: ProfileInterestMutationSnapshot) {
-    this.setData({
-      'item.interestActive': interest.active,
-      'interestPending': interest.pending,
-    })
-  },
-
-  hasCachedInterestAccess() {
-    const snapshot = mipIdentityModule.peekSnapshot()
-    return Boolean(snapshot && evaluateAccess(snapshot, {
-      action: 'INTERACT',
-      source: { navigation: 'navigateBack' },
-    }).ready)
   },
 
   async authorizeInteraction(interaction: Interaction) {
@@ -255,35 +179,16 @@ Page({
     if (!item || this.data.acting) {
       return
     }
-    if (interaction === 'interest') {
-      const interest = profileInterestMutations.mutate({
-        targetProfileRef: item.author.profileRef,
-        active: !item.interestActive,
-        currentActive: item.interestActive,
-        source: { sourceType: 'OPPORTUNITY', sourceId: item.id },
-      })
-      this.applyInterest(interest)
-      return
-    }
     this.setData({ acting: true })
     try {
-      if (interaction === 'referral') {
-        this.openReferralPicker()
-        return
-      }
       if (interaction === 'comment') {
         await this.openCommentComposer()
         return
       }
-      if (interaction === 'referral-cancel') {
-        const result = await opportunityModule.setReferral(item.id, false)
-        this.setData({
-          'item.referralActive': result.active,
-          'item.referralTarget': undefined,
-          'item.referralCount': result.referralCount ?? item.referralCount,
-        })
-        wx.showToast({ title: '已取消引荐', icon: 'none' })
-      }
+      const result = await opportunityModule.setCooperation(item.id, !item.cooperationActive)
+      this.setData({ 'item.cooperationActive': result.active })
+      wx.showToast({ title: result.active ? '已表达合作意向' : '已取消合作意向', icon: 'none' })
+      await this.load()
     }
     catch (error) {
       wx.showToast({ title: error instanceof Error ? error.message : '操作失败', icon: 'none' })
@@ -559,137 +464,54 @@ Page({
     void this.loadComments(true)
   },
 
-  openReferralPicker() {
-    const current = this.data.item?.referralTarget
-    this.setData({
-      referralPickerVisible: true,
-      referralKeyword: '',
-      referralCandidates: [],
-      referralCandidatesCursor: '',
-      referralPickerMessage: '',
-      selectedReferralTarget: current
-        ? presentCandidate({
-            ...current,
-            isSelf: false,
-            userKind: 'GUEST',
-            joinedAt: '',
-          })
-        : null,
-    })
-    void this.loadReferralCandidates(true)
+  async openCooperators() {
+    this.setData({ cooperatorsVisible: true, cooperators: [], cooperatorsCursor: '', cooperatorsMessage: '' })
+    await this.loadCooperators(true)
   },
 
-  closeReferralPicker() {
-    if (!this.data.acting) {
-      this.setData({ referralPickerVisible: false })
-    }
+  closeCooperators() {
+    this.cooperatorsRequestSeq += 1
+    this.setData({ cooperatorsVisible: false, cooperatorsLoading: false })
   },
 
-  handleReferralPickerVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
+  handleCooperatorsVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
     if (!event.detail.visible) {
-      this.closeReferralPicker()
+      this.closeCooperators()
     }
   },
 
-  updateReferralKeyword(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ referralKeyword: event.detail.value })
-  },
-
-  searchReferralCandidates() {
-    void this.loadReferralCandidates(true)
-  },
-
-  loadMoreReferralCandidates() {
-    if (this.data.referralCandidatesCursor) {
-      void this.loadReferralCandidates(false)
-    }
-  },
-
-  async loadReferralCandidates(reset: boolean) {
-    if (this.data.referralCandidatesLoading || (!reset && !this.data.referralCandidatesCursor)) {
+  async loadCooperators(reset = false) {
+    if (!reset && (!this.data.cooperatorsCursor || this.data.cooperatorsLoading)) {
       return
     }
-    this.setData({
-      referralCandidatesLoading: true,
-      referralPickerMessage: '',
-      ...(reset ? { referralCandidates: [], referralCandidatesCursor: '' } : {}),
-    })
+    const seq = ++this.cooperatorsRequestSeq
+    this.setData({ cooperatorsLoading: true, cooperatorsMessage: '' })
     try {
-      const page = await opportunityModule.listPeople({
-        kind: 'ALL',
-        scope: 'GLOBAL',
-        keyword: this.data.referralKeyword.trim() || undefined,
-        cursor: reset ? undefined : this.data.referralCandidatesCursor,
-        limit: 20,
-      })
-      const incoming = page.items.filter(item => !item.isSelf).map(presentCandidate)
-      const existing = reset ? [] : this.data.referralCandidates
-      const profileRefs = new Set(existing.map(item => item.profileRef))
-      this.setData({
-        referralCandidates: [...existing, ...incoming.filter(item => !profileRefs.has(item.profileRef))],
-        referralCandidatesCursor: page.nextCursor || '',
-      })
-    }
-    catch (error) {
-      this.setData({
-        referralPickerMessage: error instanceof Error ? error.message : '候选人加载失败',
-      })
-    }
-    finally {
-      this.setData({ referralCandidatesLoading: false })
-    }
-  },
-
-  selectReferralTarget(event: WechatMiniprogram.TouchEvent) {
-    const profileRef = String(event.currentTarget.dataset.profileRef || '')
-    const target = this.data.referralCandidates.find(item => item.profileRef === profileRef)
-    if (target) {
-      this.setData({ selectedReferralTarget: target, referralPickerMessage: '' })
-    }
-  },
-
-  async confirmReferralTarget() {
-    const item = this.data.item
-    const target = this.data.selectedReferralTarget
-    if (!item || !target || this.data.acting) {
-      if (!target) {
-        this.setData({ referralPickerMessage: '请选择被引荐人' })
+      const page = await opportunityModule.listCooperators(this.data.id, reset ? undefined : this.data.cooperatorsCursor)
+      if (seq !== this.cooperatorsRequestSeq) {
+        return
       }
-      return
-    }
-    this.setData({ acting: true, referralPickerMessage: '' })
-    try {
-      const result = await opportunityModule.setReferral(item.id, true, target.profileRef)
-      this.setData({
-        'referralPickerVisible': false,
-        'item.referralActive': true,
-        'item.referralTarget': {
-          profileRef: target.profileRef,
-          nickname: target.displayName,
-          ...(target.avatarUrl ? { avatarUrl: target.avatarUrl } : {}),
-          ...(target.headline ? { headline: target.headline } : {}),
-        },
-        'item.referralCount': result.referralCount ?? item.referralCount,
-      })
-      wx.showToast({ title: item.referralActive ? '已更新引荐对象' : '已引荐', icon: 'none' })
+      const current = reset ? [] : this.data.cooperators
+      const ids = new Set(current.map(item => item.profileRef))
+      this.setData({ cooperators: [...current, ...page.items.filter(item => !ids.has(item.profileRef))], cooperatorsCursor: page.nextCursor || '' })
     }
     catch (error) {
-      this.setData({ referralPickerMessage: error instanceof Error ? error.message : '引荐失败' })
+      if (seq === this.cooperatorsRequestSeq) {
+        this.setData({ cooperatorsMessage: error instanceof Error ? error.message : '合作意向名单加载失败' })
+      }
     }
     finally {
-      this.setData({ acting: false })
+      if (seq === this.cooperatorsRequestSeq) {
+        this.setData({ cooperatorsLoading: false })
+      }
     }
   },
+
+  loadMoreCooperators() { void this.loadCooperators(false) },
+  retryCooperators() { void this.loadCooperators(true) },
 
   openAuthor() {
     const profileRef = this.data.item?.author.profileRef
-    if (profileRef) {
-      caseNavigateTo({ url: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}` })
-    }
-  },
-
-  openReferralTarget() {
-    const profileRef = this.data.item?.referralTarget?.profileRef
     if (profileRef) {
       caseNavigateTo({ url: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}` })
     }
@@ -710,12 +532,8 @@ Page({
     }
   },
 
-  /**
-   * journey-review J3-09（2026-09-20 口径更名）：访客主 CTA「我想合作」。
-   * 合作流程未入包，一期点击 toast 占位（嘉宾可用，按钮展示）。
-   */
-  cooperationIntent() {
-    wx.showToast({ title: '功能建设中', icon: 'none' })
+  async cooperationIntent() {
+    await this.authorizeInteraction('cooperation')
   },
 
   onShareAppMessage() {

@@ -111,6 +111,7 @@ Page({
     styleKey: 'PINK' as CardStyleKey,
     theme: themes.PINK,
     themeOptions: Object.values(themes),
+    templateRequirements: {} as Partial<Record<CardStyleKey, string[]>>,
     nickname: '',
     initial: 'M',
     avatarUrl: '',
@@ -176,6 +177,15 @@ Page({
       if (!snapshot.profileRef) {
         throw new Error('公开档案引用暂时不可用')
       }
+      const settings = await mipIdentityModule.getProfileCardSettings()
+      if (!settings.enabled) {
+        throw new Error(settings.reason ? `名片已下架：${settings.reason}` : '名片已下架，请联系管理员')
+      }
+      if (!settings.templates.length) {
+        throw new Error('暂无可用名片模板，请联系管理员')
+      }
+      const styleKey = settings.templates.some(item => item.key === this.data.styleKey) ? this.data.styleKey : settings.templates[0].key
+      this.setData({ styleKey, theme: themes[styleKey], themeOptions: settings.templates.map(item => ({ ...themes[item.key], label: item.name })), templateRequirements: Object.fromEntries(settings.templates.map(item => [item.key, item.requiredFields])) })
       const codePromise = this.data.codeUrl && !this.data.codeMessage
         ? Promise.resolve({ codeUrl: this.data.codeUrl })
         : mipIdentityModule.getMyProfileCardCode().catch(() => ({ codeUrl: '' }))
@@ -243,7 +253,7 @@ Page({
 
   chooseStyle(event: WechatMiniprogram.TouchEvent) {
     const key = String(event.currentTarget.dataset.key || '') as CardStyleKey
-    if (!themes[key] || key === this.data.styleKey || this.data.generating) {
+    if (!this.data.themeOptions.some(item => item.key === key) || key === this.data.styleKey || this.data.generating) {
       return
     }
     this.setData({ styleKey: key, theme: themes[key], posterPath: '', message: '' })
@@ -272,12 +282,28 @@ Page({
     }
     this.setData({ generating: true, message: '' })
     try {
+      const settings = await mipIdentityModule.getProfileCardSettings()
+      const template = settings.templates.find(item => item.key === this.data.styleKey)
+      if (!settings.enabled || !template) {
+        throw new Error('当前名片或模板已停用，请重新加载')
+      }
+      const fields: Record<string, { value: string, label: string }> = {
+        name: { value: this.data.nickname, label: '姓名' },
+        avatar: { value: this.data.avatarUrl, label: '头像' },
+        company: { value: this.data.companyName, label: '公司' },
+        position: { value: this.data.roleTitle, label: '职位' },
+        contact: { value: this.data.phone || this.data.wechat || this.data.email, label: '公开联系方式' },
+      }
+      const missing = template.requiredFields.filter(key => !fields[key]?.value).map(key => fields[key]?.label || key)
+      if (missing.length) {
+        throw new Error(`请先编辑名片，补充${missing.join('、')}`)
+      }
       const posterPath = await this.drawCard()
       this.setData({ posterPath })
       return posterPath
     }
-    catch {
-      this.setData({ message: '名片图片生成失败，请稍后重试。' })
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '名片图片生成失败，请稍后重试。' })
       return ''
     }
     finally {
@@ -402,7 +428,7 @@ Page({
     if (this.data.generating) {
       return
     }
-    const posterPath = this.data.posterPath || await this.createPoster()
+    const posterPath = await this.createPoster()
     if (!posterPath) {
       return
     }

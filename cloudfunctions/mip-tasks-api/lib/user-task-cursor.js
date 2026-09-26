@@ -63,7 +63,9 @@ function normalizeContext(value) {
   const appId = typeof value?.appId === 'string' ? value.appId.trim() : ''
   const userId = typeof value?.userId === 'string' ? value.userId : ''
   if (!appId || appId.length > 64 || !UUID_PATTERN.test(userId)) throw new Error('VALIDATION_FAILED')
-  return { appId, userId }
+  const filter = value?.filter
+  if (filter !== undefined && !['pending', 'ended'].includes(filter)) throw new Error('VALIDATION_FAILED')
+  return { appId, userId, filter }
 }
 
 function normalizePayload(value) {
@@ -88,7 +90,7 @@ function exactIso(value) {
 }
 
 function aad(context) {
-  return `${context.appId}\0${context.userId}`
+  return `${context.appId}\0${context.userId}${context.filter ? `\0${context.filter}` : ''}`
 }
 
 module.exports = { createUserTaskCursor, readUserTaskCursor }

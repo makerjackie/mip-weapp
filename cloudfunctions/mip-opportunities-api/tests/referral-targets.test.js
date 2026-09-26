@@ -120,6 +120,7 @@ describe('opportunity referral targets', () => {
             visibility_json: '{}',
           }
         }
+        if (sql.includes('FROM mip_opportunity_cooperations')) return null
         if (sql.includes('FROM mip_profile_interests')) return null
         throw new Error(`unexpected one: ${sql}`)
       },

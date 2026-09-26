@@ -286,6 +286,7 @@ describe('Web BFF trusted query adapter', () => {
         'mip.admin.contribution.transactions.reverse',
         'mip.admin.videos.save',
         'mip.admin.cards.save',
+        'mip.admin.cards.changeStatus',
         'mip.admin.cards.takedown',
         'mip.admin.events.drafts.save',
       ],

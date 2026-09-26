@@ -25,6 +25,7 @@ const statusLabels: Record<AdminRosterStatus, string> = {
   CANCELLED: '已取消',
   REJECTED: '已拒绝',
   ATTENDED: '已签到',
+  ABNORMAL: '异常',
 }
 
 const statusThemes: Record<AdminRosterStatus, RosterView['statusTheme']> = {
@@ -36,6 +37,7 @@ const statusThemes: Record<AdminRosterStatus, RosterView['statusTheme']> = {
   CANCELLED: 'default',
   REJECTED: 'danger',
   ATTENDED: 'success',
+  ABNORMAL: 'danger',
 }
 
 function rosterView(item: AdminRosterItem): RosterView {

@@ -426,6 +426,7 @@ describe('admin user repository module', () => {
       'one',
       'scope',
       'query',
+      'query',
       'audit',
     ])
     const write = calls.find(call => call.type === 'query')

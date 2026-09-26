@@ -865,3 +865,30 @@ test('workbook neutralizes formulas and builds an xlsx archive', () => {
   }])
   assert.equal(workbook.readUInt32LE(0), 0x04034b50)
 })
+
+test('task status filters run before pagination and cannot reuse another tabs cursor', async () => {
+  const queries = []
+  const repository = createTaskRepository({
+    async one() { return { snapshot_at: new Date('2026-08-26T08:00:00.000Z') } },
+    async query(sql) {
+      queries.push(sql)
+      return [taskId, '99999999-9999-4999-8999-999999999999'].map(id => ({
+        id, name: '待审核任务', content: '内容', version: 1,
+        completion_id: 'completion', submission_status: 'pending_review',
+        ends_at: new Date('2020-01-01'), published_at: new Date('2026-08-25T08:00:00.000Z'),
+      }))
+    },
+  })
+  const caller = { appId, userId, profileRefSecret }
+  const page = await repository.listTasks(caller, { filter: 'pending', limit: 1 })
+  assert.equal(page.items[0].status, 'PENDING_REVIEW')
+  assert.ok(page.nextCursor)
+  assert.match(queries[0], /AND \(CASE WHEN[\s\S]*pending_review[\s\S]*reward_failed[\s\S]*END\) = 0\s+ORDER BY[\s\S]*LIMIT \?/)
+  assert.match(queries[0], /recipient_assignment.weekly_end_at <= UTC_TIMESTAMP/)
+  await repository.listTasks(caller, { filter: 'pending', limit: 1, cursor: page.nextCursor })
+  await assert.rejects(repository.listTasks(caller, { filter: 'ended', cursor: page.nextCursor }), /VALIDATION_FAILED/)
+  await assert.rejects(repository.listTasks(caller, { cursor: page.nextCursor }), /VALIDATION_FAILED/)
+  await assert.rejects(repository.listTasks(caller, { filter: 'invalid' }), /VALIDATION_FAILED/)
+  await repository.listTasks(caller, { filter: 'ended' })
+  assert.match(queries.at(-1), /END\) = 1\s+ORDER BY/)
+})

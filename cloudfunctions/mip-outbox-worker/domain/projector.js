@@ -98,6 +98,8 @@ async function projectEvent(database, event) {
       return projectOperationsNotification(database, event)
     case 'event.heart_changed':
       return projectHeart(database, event)
+    case 'opportunity.cooperation_changed':
+      return projectCooperation(database, event)
     case 'opportunity.referral_changed':
       return projectReferral(database, event)
     case 'profile.interest_changed':
@@ -1022,6 +1024,29 @@ function parseObject(value) {
 function boundedText(value, limit) {
   const normalized = typeof value === 'string' ? value.trim() : ''
   return normalized.length <= limit ? normalized : ''
+}
+
+async function projectCooperation(database, event) {
+  assertAggregate(event, 'OPPORTUNITY_COOPERATION')
+  const row = await database.one(`SELECT intent.status, intent.version, intent.opportunity_id, o.owner_user_id
+    FROM mip_opportunity_cooperations intent
+    JOIN mip_opportunities o ON o.app_id = intent.app_id AND o.id = intent.opportunity_id AND o.status IN ('PUBLISHED', 'ENDED')
+    JOIN mip_users actor ON actor.app_id = intent.app_id AND actor.id = intent.user_id AND actor.status = 'ACTIVE'
+    JOIN mip_users owner ON owner.app_id = o.app_id AND owner.id = o.owner_user_id AND owner.status = 'ACTIVE'
+    WHERE intent.app_id = ? AND intent.id = ? AND NOT EXISTS (
+      SELECT 1 FROM mip_user_blocks block WHERE block.app_id = intent.app_id AND block.status = 'ACTIVE'
+        AND ((block.blocker_user_id = intent.user_id AND block.blocked_user_id = o.owner_user_id)
+          OR (block.blocker_user_id = o.owner_user_id AND block.blocked_user_id = intent.user_id)))`,
+  [event.app_id, event.aggregate_id])
+  if (!row || row.status !== 'ACTIVE' || Number(row.version) !== Number(event.source_version)) {
+    return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  }
+  return projection([message(event, row.owner_user_id, 'cooperation', {
+    messageType: 'OPPORTUNITY', title: '有人想与你合作', body: '你发布的机会收到新的合作意向。',
+    targetType: 'OPPORTUNITY', targetId: row.opportunity_id,
+    external: { channel: 'WECHAT_CUSTOMER_SERVICE', templateKey: 'CUSTOMER_SERVICE_TEXT',
+      fields: { content: '你发布的机会收到新的合作意向，请在小程序内查看。' } },
+  })], [], 'PROJECTED')
 }
 
 async function projectReferral(database, event) {

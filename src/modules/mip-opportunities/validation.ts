@@ -503,6 +503,7 @@ function profileOpportunity(value: unknown): PublicProfileOpportunity {
     valueSummary: responseText(source.valueSummary, 240, true),
     targetSummary: responseText(source.targetSummary, 500, true),
     referralCount: Number(source.referralCount),
+    cooperationCount: Number.isInteger(source.cooperationCount) && Number(source.cooperationCount) >= 0 ? Number(source.cooperationCount) : 0,
     ...(branchName ? { branchName } : {}),
     ...(cityLabel ? { cityLabel } : {}),
     ...(coverUrl ? { coverUrl } : {}),
@@ -554,4 +555,23 @@ export function parsePublicProfileAggregate(value: unknown): PublicProfileAggreg
 export function createMutationKey(prefix: string) {
   const random = Math.random().toString(36).slice(2, 12)
   return `${prefix}:${Date.now().toString(36)}:${random}`
+}
+
+export function parseOpportunityCooperators(value: unknown): { items: OpportunityDetail['author'][], nextCursor?: string } {
+  const source = record(value)
+  if (!Array.isArray(source.items) || !(source.nextCursor === undefined || typeof source.nextCursor === 'string')) {
+    throw new Error('合作意向名单返回了无效响应')
+  }
+  const items = source.items.map((value: unknown) => {
+    const item = record(value)
+    if (Object.keys(item).some(key => !['profileRef', 'nickname', 'headline', 'avatarUrl'].includes(key))
+      || typeof item.profileRef !== 'string' || !item.profileRef.startsWith('p1.') || item.profileRef.length > 200
+      || typeof item.nickname !== 'string' || !item.nickname || item.nickname.length > 100
+      || !(item.headline === undefined || typeof item.headline === 'string')
+      || !(item.avatarUrl === undefined || typeof item.avatarUrl === 'string')) {
+      throw new Error('合作意向名单返回了无效响应')
+    }
+    return { profileRef: item.profileRef, nickname: item.nickname, headline: item.headline, avatarUrl: item.avatarUrl }
+  })
+  return { items, nextCursor: source.nextCursor }
 }

@@ -50,8 +50,11 @@ function createTaskRepository(database, options = {}) {
 
   async function listTasks(caller, event = {}) {
     const limit = pageLimit(event.limit)
+    const filter = event.filter
+    if (filter !== undefined && !['pending', 'ended'].includes(filter)) throw new Error('VALIDATION_FAILED')
+    const cursorContext = { ...caller, filter }
     const cursor = event.cursor
-      ? readUserTaskCursor(event.cursor, caller, caller.profileRefSecret)
+      ? readUserTaskCursor(event.cursor, cursorContext, caller.profileRefSecret)
       : null
     const snapshotAt = cursor?.snapshotAt || await currentTimestamp(database)
     const params = [caller.userId, caller.userId, caller.appId, caller.userId, caller.userId]
@@ -83,13 +86,14 @@ function createTaskRepository(database, options = {}) {
              FROM mip_users member WHERE member.app_id = task.app_id AND member.id = ?))))
          AND ${taskLevelEligibilitySql()} ${cursorSql}
          AND task.published_at <= ?
+         ${filter ? `AND (${endedTaskSql()}) = ${filter === 'ended' ? '1' : '0'}` : ''}
        ORDER BY task.published_at DESC, task.id DESC LIMIT ?`,
       params,
     )
     const page = rows.slice(0, limit)
     return {
       items: page.map(row => userTaskDto(row)),
-      nextCursor: rows.length > limit ? createUserTaskCursor(caller, {
+      nextCursor: rows.length > limit ? createUserTaskCursor(cursorContext, {
         snapshotAt,
         publishedAt: iso(page.at(-1).published_at),
         taskId: page.at(-1).id,
@@ -950,6 +954,18 @@ function completionSelect() {
             ON profile.app_id = completion.app_id AND profile.user_id = completion.user_id
           LEFT JOIN mip_media_assets asset
             ON asset.app_id = completion.app_id AND asset.id = completion.attachment_asset_id`
+}
+
+
+// Match userTaskDto: pending review (including reward retries) stays pending even
+// past the deadline. Rejected submissions return to the task's date-based state.
+function endedTaskSql() {
+  return `CASE WHEN completion.id IS NOT NULL AND COALESCE(completion.submission_status, '') <> 'rejected'
+    THEN CASE WHEN LOWER(COALESCE(completion.submission_status, '')) IN ('pending_review', 'reward_failed') THEN 0 ELSE 1 END
+    WHEN task.period_end_at <= UTC_TIMESTAMP(3) OR task.ends_at <= UTC_TIMESTAMP(3)
+      OR (task.assignment_mode = 'SELECTED' AND recipient_assignment.assign_mode = 'weekly'
+        AND recipient_assignment.weekly_end_at <= UTC_TIMESTAMP(3)) THEN 1
+    ELSE 0 END`
 }
 
 function taskOccurrenceSql() {

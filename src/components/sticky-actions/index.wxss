@@ -19,7 +19,3 @@
   border-radius: 9999rpx;
   transform: translateX(-50%);
 }
-
-.mip-sticky-actions-shell > slot {
-  display: contents;
-}

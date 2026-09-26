@@ -12,6 +12,7 @@ const fullAccessActions = new Set([
   'endOpportunity',
   'archiveOpportunity',
   'setReferral',
+  'setOpportunityCooperation',
   'setProfileInterest',
   'saveCooperationCard',
   'unpublishCooperationCard',

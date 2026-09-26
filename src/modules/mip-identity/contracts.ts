@@ -242,6 +242,12 @@ export interface ProfileTagOption {
   popular?: boolean
 }
 
+export interface ProfileCardSettings {
+  enabled: boolean
+  reason: string
+  templates: Array<{ key: 'PINK' | 'BLUE' | 'WHITE' | 'YELLOW', name: string, requiredFields: string[] }>
+}
+
 export interface ProfileCardCode {
   codeUrl: string
 }
@@ -274,6 +280,7 @@ export interface MipIdentityActionInputMap {
   bindSmsPhone: BindSmsPhoneInput
   closeAccount: AccountClosureInput
   getProfile: Record<string, never>
+  getProfileCardSettings: Record<string, never>
   getMyProfileCardCode: Record<string, never>
   getPublicProfile: { profileRef: string }
   resolveProfileCardScene: { scene: string }
@@ -293,6 +300,7 @@ export interface MipIdentityActionResultMap {
   bindSmsPhone: IdentityAccessSnapshot
   closeAccount: AccountClosureResult
   getProfile: MipProfileSnapshot
+  getProfileCardSettings: ProfileCardSettings
   getMyProfileCardCode: ProfileCardCode
   getPublicProfile: PublicMipProfile
   resolveProfileCardScene: ProfileCardSceneResolution
@@ -320,6 +328,7 @@ export interface MipIdentityGateway {
   bindSmsPhone: (input: BindSmsPhoneInput) => Promise<IdentityAccessSnapshot>
   closeAccount: (input: AccountClosureInput) => Promise<AccountClosureResult>
   getProfile: () => Promise<MipProfileSnapshot>
+  getProfileCardSettings: () => Promise<ProfileCardSettings>
   getMyProfileCardCode: () => Promise<ProfileCardCode>
   getPublicProfile: (profileRef: string) => Promise<PublicMipProfile>
   resolveProfileCardScene: (scene: string) => Promise<ProfileCardSceneResolution>

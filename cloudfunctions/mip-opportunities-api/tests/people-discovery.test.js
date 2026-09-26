@@ -243,6 +243,7 @@ describe('public profile aggregate', () => {
         throw new Error(`unexpected one: ${sql}`)
       },
       async query(sql, params) {
+        if (sql.includes('FROM mip_opportunity_cooperations')) return []
         calls.push({ sql, params })
         if (sql.includes('FROM mip_profile_tags pt')) return []
         if (sql.includes('FROM mip_user_badge_equipment')) {

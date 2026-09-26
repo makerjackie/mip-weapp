@@ -17,6 +17,7 @@ import type { ReactNode } from 'react'
 export type AdminRoutePath =
   | '/overview'
   | '/users'
+  | '/cards'
   | '/events'
   | '/orders'
   | '/tasks'
@@ -45,6 +46,7 @@ export interface AdminNavigationItem {
 export const adminNavigation: AdminNavigationItem[] = [
   { path: '/overview', label: '网站概览', description: '查看会员、活动、订单和运营状态', group: '工作台', icon: <AppstoreOutlined />, capabilities: ['admin.dashboard'] },
   { path: '/users', label: '用户管理', description: '查看用户、会员、服务器和账号状态', group: '业务管理', icon: <UserOutlined />, capabilities: ['users.read'] },
+  { path: '/cards', label: '名片管理', description: '查看个人名片、模板和修改记录', group: '业务管理', icon: <UserOutlined />, capabilities: ['users.read'] },
   { path: '/events', label: '活动管理', description: '管理活动、报名、签到和活动内容', group: '业务管理', icon: <CalendarOutlined />, capabilities: ['events.read'] },
   { path: '/orders', label: '订单管理', description: '查看订单、支付和退款事实', group: '业务管理', icon: <ShoppingCartOutlined />, capabilities: ['orders.read'] },
   { path: '/tasks', label: '任务管理', description: '管理任务、成员分配和完成记录', group: '业务管理', icon: <CheckSquareOutlined />, capabilities: ['tasks.manage'] },

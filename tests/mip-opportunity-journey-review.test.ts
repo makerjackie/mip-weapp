@@ -91,7 +91,7 @@ describe('MIP opportunity journey review', () => {
     }
     // 黄标 46x20（92x40rpx）黄底黑字 r4；全部新属性可选、默认不渲染。
     expect(cardScript).toContain(`typeTags: { type: Array, value: [] as OpportunityTypeTagView[] }`)
-    expect(cardScript).toContain(`pillLabel: { type: String, value: '引荐' }`)
+    expect(cardScript).toContain(`pillLabel: { type: String, value: '想合作' }`)
     expect(cardScript).toContain(`cityText: { type: String, value: '' }`)
     expect(cardScript).toContain(`publishedPrefix: { type: String, value: '发布于 ' }`)
     expect(card).toContain('wx:if="{{typeTags.length}}"')
@@ -108,8 +108,8 @@ describe('MIP opportunity journey review', () => {
     expect(detail).toContain('published-prefix="发表于："')
     expect(detail).toContain('city-text="{{item.city.label || \'\'}}"')
     expect(detail).toContain('type-tags="{{typeTagViews}}"')
-    expect(detail).toContain('bind:tap="cooperationIntent">我想合作</view>')
-    expect(detail).toContain('{{item.referralCount}}想合作</text>')
+    expect(detail).toContain('bind:tap="cooperationIntent"')
+    expect(detail).toContain('{{item.cooperationCount || 0}}想合作</text>')
     // 招募结束的详情底部合作按钮不可点，文案「项目已结束」。
     expect(detail).toContain(`wx:elif="{{!item.mine && item.status === 'ENDED'}}"`)
     expect(detail).toContain('aria-disabled="true">项目已结束</view>')
@@ -154,9 +154,9 @@ describe('MIP opportunity journey review', () => {
 
   it('supports long-press delete with the native modal and greyed-out unpublished cards (J6-03)', () => {
     expect(mine).toContain('发布机会')
-    expect(mine).toContain('引荐机会')
+    expect(mine).toContain('我想合作')
     expect(mine).not.toContain('发布机会 {{publishedItems.length}}')
-    expect(mine).not.toContain('引荐机会 {{referredItems.length}}')
+    expect(mine).not.toContain('我想合作 {{cooperatingItems.length}}')
     expect(mine).toContain('bindlongpress="confirmDeletePublished"')
     expect(mineScript).toContain('删除后将无法恢复，是否删除？')
     expect(mineScript).toContain(`confirmColor: '#FF4D5E'`)

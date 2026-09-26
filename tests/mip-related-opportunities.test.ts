@@ -10,54 +10,30 @@ function read(relativePath: string) {
 }
 
 describe('MIP related opportunity flow', () => {
-  it('shows published and referred-to-me opportunities from separate server facts', () => {
-    const page = read('src/packages/member/mip-opportunities/mine/index.ts')
+  it('uses independent self-cooperation facts in both personal opportunity lists', () => {
+    for (const file of ['src/packages/member/mip-opportunities/mine/index.ts', 'src/pages/profile/index.ts']) {
+      const page = read(file)
+      expect(page).toContain('opportunityModule.listMine(')
+      expect(page).toContain('opportunityModule.listMyCooperations(')
+      expect(page).not.toContain('listReceived(\'REFERRAL\'')
+      expect(page).not.toContain('wx.cloud')
+    }
     const view = read('src/packages/member/mip-opportunities/mine/index.wxml')
-
-    expect(page).toContain('opportunityModule.listMine(')
-    expect(page).toContain('opportunityModule.listReceived(\n        \'REFERRAL\'')
-    expect(page).toContain('opportunityModule.markReceivedRead(item.messageId)')
-    expect(page).toContain('item.actor.profileRef')
-    expect(page).not.toContain('wx.cloud')
-    // 服务端只给游标分页；不能把已加载条数冒充总数。
-    expect(view).toContain('发布机会')
-    expect(view).toContain('引荐机会')
-    expect(view).not.toContain('发布机会 {{publishedItems.length}}')
-    expect(view).not.toContain('引荐机会 {{referredItems.length}}')
-    expect(view).toContain('其他用户向你引荐机会后会显示在这里。')
-    expect(view).toContain('向你引荐了这个机会')
+    expect(view).toContain('我想合作')
     expect(view).toContain('catch:tap="editPublished"')
     expect(view).toContain('bindlongpress="confirmDeletePublished"')
-    expect(view).toContain('{{item.dimmed ? \'opacity-50 grayscale\' : \'\'}}')
-    expect(page).toContain('editPublished(event: WechatMiniprogram.TouchEvent)')
-    expect(page).toContain('/packages/member/mip-opportunities/editor/index?id=')
-    expect(page).toContain('删除后将无法恢复，是否删除？')
-    expect(page).toContain('opportunityModule.remove(item.id, detail.version)')
   })
 
-  it('requires an explicit visible profile target before activating a referral', () => {
+  it('removes the third-person picker and activates only the callers cooperation intent', () => {
     const detail = read('src/packages/member/mip-opportunities/detail/index.ts')
     const view = read('src/packages/member/mip-opportunities/detail/index.wxml')
-    const client = read('src/modules/mip-opportunities/client.ts')
-    const server = read('cloudfunctions/mip-opportunities-api/domain/opportunities.js')
-
-    expect(detail).toContain('scope: \'GLOBAL\'')
-    expect(detail).toContain('kind: \'ALL\'')
-    expect(detail).toContain('item => !item.isSelf')
-    expect(detail).toContain('setReferral(item.id, true, target.profileRef)')
-    // journey-review J3-09：访客主 CTA 更名「我想合作」（一期 toast 占位），
-    // 被引荐人选择弹层保留为底层数据面。
-    expect(view).toContain('选择被引荐人')
-    expect(view).toContain('bind:tap="cooperationIntent">我想合作</view>')
-    expect(detail).toContain(`wx.showToast({ title: '功能建设中', icon: 'none' })`)
-    expect(view).not.toContain('更换引荐人')
-    expect(view).toContain('玩家和嘉宾均可选择')
-    expect(view).toContain('确认引荐')
-    expect(client).toContain('targetProfileRef: targetProfileRef.trim()')
-    expect(server).toContain('async function resolveReferralTarget')
-    expect(server).toContain('target.status = \'ACTIVE\'')
-    expect(server).toContain('if (targetUserId === caller.userId) throw new Error(\'CONFLICT\')')
-    expect(server).toContain('target_user_id = CASE WHEN ? = 1 THEN ? ELSE target_user_id END')
+    expect(detail).toContain('setCooperation(item.id, !item.cooperationActive)')
+    expect(detail).toContain('authorizeInteraction(\'cooperation\')')
+    expect(view).toContain('bind:tap="cooperationIntent"')
+    expect(view).toContain('取消合作意向')
+    expect(view).toContain('想合作的人')
+    expect(view).not.toContain('选择被引荐人')
+    expect(detail).not.toContain('功能建设中')
   })
 
   it('adds one append-only target migration without changing the actor uniqueness contract', () => {

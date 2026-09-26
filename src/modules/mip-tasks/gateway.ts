@@ -79,7 +79,7 @@ export function createMipTasksGateway(transport: MipTasksTransport): MipTasksGat
     return unwrap(response, parsers[action]!) as MipTasksActionResultMap[A]
   }
   return {
-    listTasks: (cursor, limit) => call('listTasks', { cursor, limit }),
+    listTasks: (cursor, limit, filter) => call('listTasks', { cursor, limit, ...(filter ? { filter } : {}) }),
     getTask: taskId => call('getTask', { taskId }),
     completeTask: (taskId, attachmentAssetId) => call('completeTask', { taskId, attachmentAssetId }),
   }

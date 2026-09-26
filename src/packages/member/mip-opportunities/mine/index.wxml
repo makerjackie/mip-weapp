@@ -4,8 +4,8 @@
   <view class="mt-4 flex gap-3">
     <view wx:if="{{tab === 'PUBLISHED'}}" class="flex h-[56rpx] items-center rounded-[16rpx] border border-canvas bg-brand px-3 text-[length:24rpx] font-medium text-on-brand" data-tab="PUBLISHED" aria-role="tab" aria-selected="true" bind:tap="changeTab">发布机会</view>
     <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-tab="PUBLISHED" aria-role="tab" aria-selected="false" bind:tap="changeTab">发布机会</view>
-    <view wx:if="{{tab === 'REFERRED'}}" class="flex h-[56rpx] items-center rounded-[16rpx] border border-canvas bg-brand px-3 text-[length:24rpx] font-medium text-on-brand" data-tab="REFERRED" aria-role="tab" aria-selected="true" bind:tap="changeTab">引荐机会</view>
-    <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-tab="REFERRED" aria-role="tab" aria-selected="false" bind:tap="changeTab">引荐机会</view>
+    <view wx:if="{{tab === 'COOPERATING'}}" class="flex h-[56rpx] items-center rounded-[16rpx] border border-canvas bg-brand px-3 text-[length:24rpx] font-medium text-on-brand" data-tab="COOPERATING" aria-role="tab" aria-selected="true" bind:tap="changeTab">我想合作</view>
+    <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-tab="COOPERATING" aria-role="tab" aria-selected="false" bind:tap="changeTab">我想合作</view>
   </view>
 
   <block wx:if="{{tab === 'PUBLISHED'}}">
@@ -20,22 +20,20 @@
         <view class="mt-3 text-[length:28rpx] font-semibold">{{item.title}}</view>
         <view wx:if="{{item.commercialTerms.amountDisplay}}" class="mt-2 text-[length:22rpx] text-muted">金额：{{item.commercialTerms.amountDisplay}}</view>
         <view class="mt-2 line-clamp-2 text-[length:22rpx] text-muted">{{item.targetSummary}}</view>
-        <view class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3"><view class="text-[length:22rpx] text-muted">{{item.referralCount}} 次引荐</view><view wx:if="{{item.status === 'DRAFT' || item.status === 'PUBLISHED'}}" class="flex min-h-[88rpx] items-center px-3 text-[length:24rpx] font-medium text-brand" aria-role="button" data-id="{{item.id}}" catch:tap="editPublished">编辑</view></view>
+        <view class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3"><view class="text-[length:22rpx] text-muted">{{item.cooperationCount || 0}} 人想合作</view><view wx:if="{{item.status === 'DRAFT' || item.status === 'PUBLISHED'}}" class="flex min-h-[88rpx] items-center px-3 text-[length:24rpx] font-medium text-brand" aria-role="button" data-id="{{item.id}}" catch:tap="editPublished">编辑</view></view>
       </view>
     </view>
   </block>
 
   <block wx:else>
-    <view aria-label="正在加载" aria-busy="true" wx:if="{{referredState === 'loading'}}" class="mt-5 flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
-    <view wx:elif="{{referredState === 'error'}}" class="mt-5"><mip-empty-state title="暂时无法加载被引荐机会" description="请检查网络后重试。" action-text="重新加载" bind:action="retry" /></view>
-    <view wx:elif="{{!referredItems.length}}" class="mt-5"><mip-empty-state title="暂无被引荐机会" description="其他用户向你引荐机会后会显示在这里。" /></view>
+    <view aria-label="正在加载" aria-busy="true" wx:if="{{cooperatingState === 'loading'}}" class="mt-5 flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
+    <view wx:elif="{{cooperatingState === 'error'}}" class="mt-5"><mip-empty-state title="暂时无法加载合作意向" description="请检查网络后重试。" action-text="重新加载" bind:action="retry" /></view>
+    <view wx:elif="{{!cooperatingItems.length}}" class="mt-5"><mip-empty-state title="暂无合作意向" description="在机会详情点击“我想合作”后，会显示在这里。" /></view>
     <view wx:else class="mt-5 flex flex-col gap-3">
-      <view wx:for="{{referredItems}}" wx:key="viewKey" class="relative rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-key="{{item.viewKey}}" bind:tap="openReferred">
-        <view wx:if="{{item.unread}}" class="mb-2 text-[length:22rpx] text-brand" aria-label="未读引荐">未读</view>
-        <view class="flex items-center gap-3 pr-5" data-profile-ref="{{item.actor.profileRef}}" catch:tap="openReferrer"><image wx:if="{{item.actor.avatarUrl}}" class="h-[64rpx] w-[64rpx] shrink-0 rounded-full bg-brand-soft" src="{{item.actor.avatarUrl}}" mode="aspectFill" /><view wx:else class="flex h-[64rpx] w-[64rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:24rpx] font-semibold text-brand">{{item.actorInitial}}</view><view class="min-w-0 flex-1"><view class="truncate text-[length:24rpx] font-semibold">{{item.actorName}}</view><view class="mt-1 text-[length:22rpx] text-muted">向你引荐了这个机会</view></view><view class="rounded-full bg-canvas px-2 py-1 text-[length:22rpx] text-muted">{{item.statusText}}</view></view>
-        <view class="mt-4 text-[length:28rpx] font-semibold">{{item.opportunity.title}}</view>
-        <view wx:if="{{item.note}}" class="mt-3 rounded-[8rpx] bg-panel-raised px-3 py-3 text-[length:22rpx] text-muted">备注：{{item.note}}</view>
-        <view class="mt-3 flex items-center justify-between text-[length:22rpx] text-muted"><text>{{item.updatedText}}</text><mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-muted)" /></view>
+      <view wx:for="{{cooperatingItems}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-id="{{item.id}}" bind:tap="openPublished">
+        <view class="text-[length:28rpx] font-semibold">{{item.title}}</view>
+        <view class="mt-2 line-clamp-2 text-[length:22rpx] text-muted">{{item.targetSummary}}</view>
+        <view class="mt-3 text-[length:22rpx] text-muted">{{item.statusLabel}} · {{item.cooperationCount || 0}} 人想合作</view>
       </view>
       <view class="min-h-[88rpx] py-3 text-center text-[length:22rpx] text-brand" bind:tap="openAllReceived">查看全部互动</view>
     </view>

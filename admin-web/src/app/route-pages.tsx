@@ -1,3 +1,4 @@
+import { ProfileCardsPage } from '../features/profile-cards/profile-cards-page'
 import { App, Button } from 'antd'
 import { OperationsReadPage } from '../features/operations-pages/operations-read-page'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
@@ -370,6 +371,7 @@ const governanceRouteCapabilities: Record<GovernanceRoute, string[]> = {
 export const routeComponents = {
   '/overview': OverviewRoutePage,
   '/users': UsersRoutePage,
+  '/cards': ProfileCardsPage,
   '/events': EventsRoutePage,
   '/orders': OrdersRoutePage,
   '/tasks': TasksRoutePage,

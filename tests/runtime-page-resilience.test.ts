@@ -10,9 +10,9 @@ describe('runtime page resilience', () => {
     const page = read('src/packages/member/mip-opportunities/mine/index.ts')
 
     expect(page).toContain('state: \'loading\' as SectionState')
-    expect(page).toContain('state: tab === \'PUBLISHED\' ? this.data.publishedState : this.data.referredState')
+    expect(page).toContain('state: tab === \'PUBLISHED\' ? this.data.publishedState : this.data.cooperatingState')
     expect(page).toContain('this.data.tab === \'PUBLISHED\' ? { state: \'ready\' as SectionState } : {}')
-    expect(page).toContain('this.data.tab === \'REFERRED\' ? { state: \'ready\' as SectionState } : {}')
+    expect(page).toContain('this.data.tab === \'COOPERATING\' ? { state: \'ready\' as SectionState } : {}')
   })
 
   it('re-resolves the original scene when event detail loading is retried', () => {

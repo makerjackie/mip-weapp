@@ -1,4 +1,5 @@
 'use strict'
+const { loadProfileCardSettings } = require('./profile-card-settings')
 
 const { randomUUID } = require('node:crypto')
 const { confirmProfileAiDraft } = require('./ai-confirmation')
@@ -448,6 +449,11 @@ function createIdentityRepository(database, options = {}) {
           [appId, userId, tagId],
         )
       }
+      await tx.query(`INSERT INTO mip_profile_card_history (app_id, user_id, profile_version, snapshot_json)
+        SELECT app_id, user_id, version, JSON_OBJECT('nickname', nickname, 'realName', real_name,
+          'headline', headline, 'companies', companies_json, 'organizations', organizations_json,
+          'identityStatus', identity_status, 'avatarAssetId', avatar_asset_id, 'visibility', visibility_json)
+        FROM mip_profiles WHERE app_id = ? AND user_id = ?`, [appId, userId])
       await recordProfileCompletion(tx, appId, userId, effectivePrimaryBranchId, id)
       await confirmProfileAiDraft(tx, {
         appId,
@@ -485,6 +491,11 @@ function createIdentityRepository(database, options = {}) {
           input.expectedVersion,
         ],
       )
+      await tx.query(`INSERT INTO mip_profile_card_history (app_id, user_id, profile_version, snapshot_json)
+        SELECT app_id, user_id, version, JSON_OBJECT('nickname', nickname, 'realName', real_name,
+          'headline', headline, 'companies', companies_json, 'organizations', organizations_json,
+          'identityStatus', identity_status, 'avatarAssetId', avatar_asset_id, 'visibility', visibility_json)
+        FROM mip_profiles WHERE app_id = ? AND user_id = ?`, [appId, userId])
       await tx.query(
         `INSERT INTO mip_private_profiles (app_id, user_id, wechat_ciphertext, email_ciphertext, address_ciphertext)
          VALUES (?, ?, ?, ?, ?)
@@ -625,6 +636,7 @@ function createIdentityRepository(database, options = {}) {
     listProfileTags,
     loadFacts,
     loadPublicProfile,
+    getProfileCardSettings: (appId, userId) => loadProfileCardSettings(database, appId, userId),
     setPrimaryBranch,
     updateProfile,
     updateCard,

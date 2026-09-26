@@ -10,6 +10,7 @@ import { createMipIdentityGateway } from './gateway'
 const retryableIdentityActions = new Set<MipIdentityAction>([
   'getAccessSnapshot',
   'getMyProfileCardCode',
+  'getProfileCardSettings',
   'getProfile',
   'getPublicProfile',
   'listBranches',

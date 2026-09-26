@@ -396,6 +396,11 @@ function createAdminUserRepository(database, options) {
           throw codeError('CONFLICT')
         }
       }
+      await tx.query(`INSERT INTO mip_profile_card_history (app_id, user_id, profile_version, snapshot_json)
+        SELECT app_id, user_id, version, JSON_OBJECT('nickname', nickname, 'realName', real_name,
+          'headline', headline, 'companies', companies_json, 'organizations', organizations_json,
+          'identityStatus', identity_status, 'avatarAssetId', avatar_asset_id, 'visibility', visibility_json)
+        FROM mip_profiles WHERE app_id = ? AND user_id = ?`, [input.appId, input.userId])
       await writeAudit(tx, input.audit)
       return { userId: input.userId, version: input.expectedVersion + 1 }
     })

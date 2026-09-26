@@ -92,6 +92,7 @@ describe('opportunity team draft', () => {
   it('projects active team members without exposing raw user ids', async () => {
     const database = {
       async query(sql) {
+        if (sql.includes('FROM mip_opportunity_cooperations')) return []
         if (sql.includes('FROM mip_opportunity_roles')) return []
         if (sql.includes('FROM mip_opportunity_tags')) return []
         if (sql.includes('FROM mip_opportunity_team_members')) {

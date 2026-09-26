@@ -49,6 +49,10 @@ export const RUNTIME_TABLE_PRIVILEGES = Object.freeze({
   mip_opportunity_team_members: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_opportunity_commercial_terms: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_opportunity_locations: Object.freeze(['SELECT', 'INSERT', 'DELETE']),
+  mip_profile_card_templates: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_profile_card_moderation: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_profile_card_history: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_opportunity_cooperations: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_referral_intents: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_profile_interests: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_profile_visits: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
@@ -542,30 +546,36 @@ export function buildRuntimeGrantStatements(schema, account) {
   return statements
 }
 
-export function buildRuntimeRevokeStatements(schema, account, rows) {
-  if (!schema || !/^[\w-]+$/.test(schema)) {
-    throw new Error('Invalid schema for runtime revokes')
-  }
-  if (!account || !/^[`'@\w.%-]+$/.test(account)) {
-    throw new Error('Invalid account for runtime revokes')
-  }
-  const byTable = new Map()
-  for (const row of rows || []) {
-    const table = String(row?.tableName || '')
-    const privilege = String(row?.privilegeType || '').toUpperCase()
-    if (!Object.hasOwn(RUNTIME_TABLE_PRIVILEGES, table)
-      || row?.tableSchema !== schema
-      || !/^[A-Z ]+$/.test(privilege)
-      || privilege === 'USAGE') {
-      continue
-    }
-    const privileges = byTable.get(table) || new Set()
-    privileges.add(privilege)
-    byTable.set(table, privileges)
-  }
-  return [...byTable.entries()].map(([table, privileges]) => (
-    `REVOKE ${[...privileges].sort().join(', ')} ON \`${schema}\`.\`${table}\` FROM ${account}`
-  ))
-}
-
 export { DEFAULT_PRIVILEGES }
+
+// Preserve correct grants while converging; revoking them first makes live readers fail.
+export function buildRuntimePrivilegeDeltaStatements(schema, account, rows) {
+  buildRuntimeGrantStatements(schema, account) // Reuse identifier and durable-table validation.
+  const current = new Map()
+  for (const row of rows || []) {
+    if (row.tableSchema !== schema || !Object.hasOwn(RUNTIME_TABLE_PRIVILEGES, row.tableName)) {
+      throw new Error('Unexpected table in runtime privilege delta')
+    }
+    const privileges = current.get(row.tableName) || new Set()
+    const privilege = String(row.privilegeType || '').toUpperCase()
+    if (!/^[A-Z ]+$/.test(privilege)) {
+      throw new Error('Invalid runtime privilege')
+    }
+    privileges.add(privilege)
+    current.set(row.tableName, privileges)
+  }
+  const revoke = []
+  const grant = []
+  for (const [table, expected] of Object.entries(RUNTIME_TABLE_PRIVILEGES)) {
+    const actual = current.get(table) || new Set()
+    const extra = [...actual].filter(value => !expected.includes(value) && value !== 'USAGE')
+    const missing = expected.filter(value => !actual.has(value))
+    if (extra.length) {
+      revoke.push(`REVOKE ${extra.sort().join(', ')} ON \`${schema}\`.\`${table}\` FROM ${account}`)
+    }
+    if (missing.length) {
+      grant.push(`GRANT ${missing.join(', ')} ON \`${schema}\`.\`${table}\` TO ${account}`)
+    }
+  }
+  return [...revoke, ...grant]
+}

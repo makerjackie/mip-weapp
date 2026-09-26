@@ -1,6 +1,7 @@
 'use strict'
 
 const { randomUUID } = require('node:crypto')
+const { cooperationSummaries } = require('./opportunity-cooperations')
 const { lockActiveContributor } = require('../lib/auth')
 const { opportunityVisibility } = require('./journey-access')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
@@ -208,7 +209,7 @@ async function relatedData(database, caller, ids) {
   if (!ids.length) return { roles: new Map(), industry: new Map(), ability: new Map(), team: new Map(), commercialTerms: new Map() }
   const placeholders = ids.map(() => '?').join(', ')
   const blockFilter = mutualBlockFilter(caller.userId, 'u.id', 'u.app_id')
-  const [roles, tags, team, commercialTerms] = await Promise.all([
+  const [roles, tags, team, commercialTerms, cooperations] = await Promise.all([
     database.query(
       `SELECT opportunity_id, role_key
        FROM mip_opportunity_roles
@@ -248,8 +249,9 @@ async function relatedData(database, caller, ids) {
       [caller.appId, ...ids, ...blockFilter.params],
     ),
     loadCommercialTerms(database, caller.appId, ids),
+    cooperationSummaries(database, caller, ids),
   ])
-  const result = { roles: new Map(), industry: new Map(), ability: new Map(), team: new Map(), commercialTerms }
+  const result = { roles: new Map(), industry: new Map(), ability: new Map(), team: new Map(), commercialTerms, cooperations }
   for (const row of roles) {
     const list = result.roles.get(row.opportunity_id) || []
     list.push(row.role_key)
@@ -297,6 +299,8 @@ function opportunitySummary(row, related, caller) {
     abilityTags: related.ability.get(row.id) || [],
     teamMembers: related.team.get(row.id) || [],
     referralCount: Number(row.referral_count || 0),
+    cooperationCount: related.cooperations?.get(row.id)?.count || 0,
+    avatars: related.cooperations?.get(row.id)?.avatars || [],
     status: row.status,
     publishedAt: iso(row.published_at),
     author: {
@@ -463,6 +467,27 @@ async function listMine(database, caller, input = {}) {
   }
 }
 
+async function listMyCooperations(database, caller, input = {}) {
+  if (!caller.userId) throw new Error('AUTH_REQUIRED')
+  const pageLimit = limit(input.limit, 20)
+  const cursor = decodeCursor(input.cursor)
+  const privacy = opportunityVisibility(caller)
+  const block = mutualBlockFilter(caller.userId, 'o.owner_user_id', 'o.app_id')
+  const rows = await database.query(`${opportunitySelect}
+    INNER JOIN mip_opportunity_cooperations intent ON intent.app_id = o.app_id AND intent.opportunity_id = o.id
+      AND intent.user_id = ? AND intent.status = 'ACTIVE'
+    WHERE o.app_id = ? AND o.status IN ('PUBLISHED', 'ENDED') AND ${privacy.sql} AND ${block.sql}
+      AND EXISTS (SELECT 1 FROM mip_users owner WHERE owner.app_id = o.app_id AND owner.id = o.owner_user_id AND owner.status = 'ACTIVE')
+      ${cursor ? 'AND (o.updated_at < ? OR (o.updated_at = ? AND o.id < ?))' : ''}
+    ORDER BY o.updated_at DESC, o.id DESC LIMIT ?`,
+  [caller.userId, caller.appId, ...privacy.params, ...block.params,
+    ...(cursor ? [new Date(cursor.timestamp), new Date(cursor.timestamp), cursor.id] : []), pageLimit + 1])
+  const page = rows.slice(0, pageLimit)
+  const related = await relatedData(database, caller, page.map(row => row.id))
+  return { items: page.map(row => opportunitySummary(row, related, caller)),
+    nextCursor: rows.length > pageLimit ? encodeCursor(page.at(-1).updated_at, page.at(-1).id) : undefined }
+}
+
 async function getOpportunity(database, caller, id) {
   if (!uuid(id)) throw new Error('NOT_FOUND')
   const privacy = opportunityVisibility(caller)
@@ -483,9 +508,10 @@ async function getOpportunity(database, caller, id) {
   let referralActive = false
   let referralTarget
   let interestActive = false
+  let cooperationActive = false
   if (caller.userId) {
     const targetBlock = mutualBlockFilter(caller.userId, 'target.id', 'target.app_id')
-    const [referral, interest] = await Promise.all([
+    const [referral, interest, cooperation] = await Promise.all([
       database.one(
         `SELECT referral.status, target.id AS visible_target_user_id,
                 profile.nickname, profile.headline, profile.visibility_json,
@@ -508,7 +534,10 @@ async function getOpportunity(database, caller, id) {
          WHERE app_id = ? AND actor_user_id = ? AND target_user_id = ?`,
         [caller.appId, caller.userId, row.owner_user_id],
       ),
+      database.one(`SELECT status FROM mip_opportunity_cooperations WHERE app_id = ? AND opportunity_id = ? AND user_id = ?`,
+        [caller.appId, row.id, caller.userId]),
     ])
+    cooperationActive = cooperation?.status === 'ACTIVE'
     referralActive = referral?.status === 'ACTIVE'
     if (referralActive && referral.visible_target_user_id) {
       const visibility = jsonObject(referral.visibility_json)
@@ -531,6 +560,7 @@ async function getOpportunity(database, caller, id) {
     version: Number(row.version),
     referralActive,
     referralTarget,
+    cooperationActive,
     interestActive,
     canEdit: mine && canOwnerEditOpportunity(row.status, row.moderated_by_user_id),
   }
@@ -1143,6 +1173,7 @@ async function setProfileInterest(database, caller, input) {
 }
 
 module.exports = {
+  listMyCooperations,
   archiveOpportunity,
   assertReferences,
   assertSelectableTags,

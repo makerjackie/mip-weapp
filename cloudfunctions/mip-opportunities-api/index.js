@@ -1,6 +1,7 @@
 'use strict'
 
 const cloud = require('wx-server-sdk')
+const { listOpportunityCooperators, setOpportunityCooperation } = require('./domain/opportunity-cooperations')
 const {
   assertFullAccessReady,
   configuredAgreementRequirements,
@@ -28,6 +29,7 @@ const {
   getCatalogs,
   getOpportunity,
   listMine,
+  listMyCooperations,
   listOpportunities,
   saveOpportunity,
   setProfileInterest,
@@ -79,6 +81,7 @@ const matchingProvider = createMatchingProvider(cloud, {
 const outboxMutationActions = new Set([
   'saveOpportunity',
   'setReferral',
+  'setOpportunityCooperation',
   'setProfileInterest',
   'saveSuperCase',
   'saveOpportunityComment',
@@ -160,6 +163,9 @@ async function dispatch(database, caller, event) {
     case 'saveOpportunity': return saveOpportunity(database, contentSafety, caller, event)
     case 'archiveOpportunity': return archiveOpportunity(database, caller, event)
     case 'endOpportunity': return endOpportunity(database, caller, event)
+    case 'listMyCooperations': return listMyCooperations(database, caller, event)
+    case 'listOpportunityCooperators': return listOpportunityCooperators(database, caller, event)
+    case 'setOpportunityCooperation': return setOpportunityCooperation(database, caller, event)
     case 'setReferral': return setReferral(database, caller, event)
     case 'setProfileInterest': return setProfileInterest(database, caller, event)
     case 'listPeople': return listPeople(database, caller, event.filter)

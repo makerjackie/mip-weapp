@@ -154,4 +154,24 @@ describe('growth and task return flow', () => {
     expect(tasks.completeTask).toHaveBeenCalledWith('task-2')
     expect(wx.navigateTo).not.toHaveBeenCalled()
   })
+  it('loads each status from the server and ignores a previous tabs late response', async () => {
+    const old = deferred<{ items: Array<{ id: string, status: string, name: string }> }>()
+    tasks.listTasks.mockReset().mockReturnValueOnce(old.promise).mockResolvedValueOnce({
+      items: [{ id: 'ended-1', status: 'COMPLETED', name: '已完成任务' }],
+      nextCursor: 'ended-next',
+    })
+    const instance = page(tasksDefinition)
+    const first = callPage(instance, 'loadTasks')
+    callPage(instance, 'chooseFilter', { currentTarget: { dataset: { filter: 'ended' } } })
+    await vi.waitFor(() => expect(instance.data.state).toBe('ready'))
+    expect(tasks.listTasks).toHaveBeenNthCalledWith(1, undefined, 20, false, 'pending')
+    expect(tasks.listTasks).toHaveBeenNthCalledWith(2, undefined, 20, false, 'ended')
+    old.resolve({ items: [{ id: 'pending-1', status: 'AVAILABLE', name: '待办任务' }] })
+    await first
+    expect((instance.data.visibleTasks as Array<{ id: string }>).map(item => item.id)).toEqual(['ended-1'])
+    tasks.listTasks.mockResolvedValueOnce({ items: [{ id: 'ended-2', status: 'ENDED', name: '过期任务' }] })
+    await callPage(instance, 'loadMore')
+    expect(tasks.listTasks).toHaveBeenLastCalledWith('ended-next', 20, false, 'ended')
+    expect((instance.data.visibleTasks as Array<{ id: string }>).map(item => item.id)).toEqual(['ended-1', 'ended-2'])
+  })
 })

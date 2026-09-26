@@ -1225,6 +1225,30 @@
       "altersTables": [
         "mip_event_registrations"
       ]
+    },
+    {
+      "version": "20260926010000",
+      "name": "mip_opportunity_cooperations",
+      "sql": "database/mysql/mip/092_opportunity_cooperations.sql",
+      "sqlSha256": "811f5bd2f7bf0b357bf760273920f55f4b29ebaf73b5a49b311df1e3e26c483b",
+      "rollback": "database/mysql/mip/rollback/092_opportunity_cooperations.sql",
+      "rollbackSha256": "5fd1d03ac472b28cf63cd0284d9f209f16b109963f2abce2613a36a1d03c4ab7",
+      "createsTables": [
+        "mip_opportunity_cooperations"
+      ]
+    },
+    {
+      "version": "20260926020000",
+      "name": "mip_profile_card_governance",
+      "sql": "database/mysql/mip/093_profile_card_governance.sql",
+      "sqlSha256": "eb0fd3e9ff61bdb638207a0d4547cf0342ea5966e36ab5593c597ae5c6cd9d9b",
+      "rollback": "database/mysql/mip/rollback/093_profile_card_governance.sql",
+      "rollbackSha256": "1acac1007838804c322c0802f7d7d21c7c6b7ab590d86b607e9899b2ebd51a39",
+      "createsTables": [
+        "mip_profile_card_templates",
+        "mip_profile_card_moderation",
+        "mip_profile_card_history"
+      ]
     }
   ]
 }

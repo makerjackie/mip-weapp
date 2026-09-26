@@ -36,6 +36,7 @@ import {
   normalizeOpportunityDraft,
   normalizeOpportunityFilter,
   normalizePeopleFilter,
+  parseOpportunityCooperators,
   parseOpportunityDetail,
   parseOpportunityPage,
   parsePeoplePage,
@@ -170,6 +171,18 @@ export const opportunityModule = {
       expectedVersion,
       idempotencyKey,
     })
+  },
+
+  setCooperation(id: OpportunityId, active: boolean, idempotencyKey = createMutationKey('opportunity-cooperation')) {
+    return callOpportunityApi<OpportunityInteractionResult>('setOpportunityCooperation', { id, active, idempotencyKey })
+  },
+
+  async listCooperators(id: OpportunityId, cursor?: string) {
+    return parseOpportunityCooperators(await callOpportunityApi('listOpportunityCooperators', { id, cursor, limit: 20 }))
+  },
+
+  async listMyCooperations(cursor?: string) {
+    return parseOpportunityPage(await callOpportunityApi<OpportunityPage>('listMyCooperations', { cursor, limit: 20 }))
   },
 
   setReferral(

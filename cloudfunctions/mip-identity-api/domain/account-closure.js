@@ -308,6 +308,7 @@ async function revokeAndMinimize(tx, input) {
      WHERE app_id = ? AND user_id = ?`,
     [JSON.stringify(CLOSED_PROFILE_VISIBILITY), appId, user.id],
   ))
+  await tx.query("UPDATE mip_profile_card_history SET snapshot_json = JSON_OBJECT('nickname', '已注销用户') WHERE app_id = ? AND user_id = ?", [appId, user.id])
   effects.privateProfile = affected(await tx.query(
     `UPDATE mip_private_profiles
      SET phone_hash = NULL, phone_ciphertext = NULL, phone_verified_at = NULL

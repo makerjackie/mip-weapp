@@ -110,7 +110,7 @@ describe('MIP opportunity Figma surfaces', () => {
     // D-05 renames the aggregate to 想合作 via the optional pillLabel prop.
     expect(opportunityCard).toContain('<mip-attend-pill')
     expect(opportunityCard).toContain('label="{{pillLabel}}"')
-    expect(source('src/components/mip-opportunity-card/index.ts')).toContain(`pillLabel: { type: String, value: '引荐' }`)
+    expect(source('src/components/mip-opportunity-card/index.ts')).toContain(`pillLabel: { type: String, value: '想合作' }`)
     expect(discovery).toContain('pill-label="想合作"')
     expect(source('src/components/mip-attend-pill/index.wxss')).toContain('width: 232rpx;')
     expect(source('src/components/mip-attend-pill/index.wxss')).toContain('height: 56rpx;')
@@ -129,13 +129,13 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discovery).toContain('data-profile-ref="{{item.profileRef}}"')
   })
 
-  it('keeps one Figma-aligned primary referral action and a separate interest state', () => {
+  it('keeps one cooperation action and a separate read-only participant list', () => {
     expect(detail).toContain('bind:tap="cooperationIntent"')
-    expect(detail).toContain('id="opportunity-referral-actions"')
+    expect(detail).toContain('id="opportunity-cooperation-actions"')
     expect(detail).toContain('id="opportunity-owner-actions"')
-    expect(detail).toContain('bind:tap="cancelReferral"')
-    expect(detail).toContain('bind:tap="toggleInterest"')
-    expect(detail).toContain('aria-pressed="{{item.interestActive}}"')
+    expect(detail).toContain('取消合作意向')
+    expect(detail).toContain('bind:tap="openCooperators"')
+    expect(detail).toContain('aria-pressed="{{item.cooperationActive}}"')
   })
 
   it('keeps detail content readable and every secondary state recoverable', () => {

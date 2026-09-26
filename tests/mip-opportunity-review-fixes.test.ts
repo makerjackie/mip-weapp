@@ -206,15 +206,15 @@ describe('MIP opportunity review fixes', () => {
     expect(
       (instance.data.opportunities as Array<Record<string, unknown>>).map(item => item.avatarViews),
     ).toEqual([[], ['u1', 'u2'], [], []])
-    // 源码级：机会 Tab / 我的页改绑保底字段，详情页 referralAvatars 同口径加固；
+    // 源码级：机会 Tab / 我的页改绑保底字段，详情页 cooperationAvatars 同口径加固；
     // 首页信息流不传 avatars（组件默认 []）；组件契约保持 type: Array 不动。
     expect(discovery).toContain('avatars="{{item.avatarViews}}"')
     expect(discovery).not.toContain('avatars="{{item.avatars}}"')
     expect(profile).toContain('avatars="{{item.avatarViews}}"')
     expect(profile).not.toContain('avatars="{{item.avatars}}"')
     expect(home).not.toContain('avatars="{{item.avatars}}"')
-    expect(detailScript).toContain('referralAvatars: Array.isArray(item.avatars)')
-    expect(detail).toContain('avatars="{{referralAvatars}}"')
+    expect(detailScript).toContain('cooperationAvatars: Array.isArray(item.avatars)')
+    expect(detail).toContain('avatars="{{cooperationAvatars}}"')
     expect(cardScript).toContain(`avatars: { type: Array, value: [] }`)
   })
 

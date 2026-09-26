@@ -7,6 +7,7 @@ export interface MipTasksQueryFacade {
     cursor?: string,
     limit?: number,
     force?: boolean,
+    filter?: 'pending' | 'ended',
   ) => ReturnType<MipTasksGateway['listTasks']>
   getTask: (taskId: string, force?: boolean) => ReturnType<MipTasksGateway['getTask']>
 }
@@ -75,9 +76,9 @@ export function createMipTasksModule(gateway: MipTasksGateway) {
   }
 
   const query: MipTasksQueryFacade = {
-    listTasks: (cursor, limit, force = false) => cache.query(
-      cacheKey('list', { cursor, limit }),
-      () => gateway.listTasks(cursor, limit),
+    listTasks: (cursor, limit, force = false, filter) => cache.query(
+      cacheKey('list', { cursor, limit, filter }),
+      () => gateway.listTasks(cursor, limit, filter),
       { force },
     ),
     getTask: (taskId, force = false) => cache.query(

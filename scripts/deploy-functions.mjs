@@ -38,8 +38,7 @@ import {
 import {
   assertRuntimeAccountClaimable,
   assertRuntimePrivilegesExact,
-  buildRuntimeGrantStatements,
-  buildRuntimeRevokeStatements,
+  buildRuntimePrivilegeDeltaStatements,
   parseGrantee,
   RUNTIME_TABLE_PRIVILEGES,
   runtimeUserForEnvironment,
@@ -290,10 +289,7 @@ if (accountClaim.exists) {
   catch {}
 }
 if (!existingRuntimeGrantsExact) {
-  runMysqlStatements([
-    ...buildRuntimeRevokeStatements(runtimeSchema, runtimeAccount, accountClaim.tableRows),
-    ...buildRuntimeGrantStatements(runtimeSchema, runtimeAccount),
-  ])
+  runMysqlStatements(buildRuntimePrivilegeDeltaStatements(runtimeSchema, runtimeAccount, accountClaim.tableRows))
   assertExactRuntimePrivileges(runtimeAccount)
 }
 console.log(`[mip-cloud-deploy] exact mip_* runtime grants verified (${existingRuntimeGrantsExact ? 'reused' : 'converged'})`)

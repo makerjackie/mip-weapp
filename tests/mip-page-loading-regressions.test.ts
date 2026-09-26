@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 const identity = vi.hoisted(() => ({ peekSnapshot: vi.fn(), loadSnapshot: vi.fn(), consumePendingResume: vi.fn() }))
-const opportunities = vi.hoisted(() => ({ getProfileInfluence: vi.fn(), listReceived: vi.fn() }))
+const opportunities = vi.hoisted(() => ({ getProfileInfluence: vi.fn(), listReceived: vi.fn(), listMyCooperations: vi.fn() }))
 vi.mock('../src/modules/mip-opportunities', () => ({ opportunityModule: opportunities }))
 vi.mock('../src/modules/mip-cases', () => ({ superCaseModule: {} }))
 vi.mock('../src/modules/mip-cooperation', () => ({ cooperationModule: {} }))
@@ -115,35 +115,29 @@ describe('page loading and profile interaction regressions', () => {
     expect(instance.refreshOnReturn).toBe(false)
   })
 
-  it('selects the referral list on arrival and ignores unknown tab values', () => {
+  it('selects the cooperation list on arrival and ignores unknown tab values', () => {
     const instance = page(mine)
     instance.onLoad({ tab: 'unknown' })
     expect(instance.data.tab).toBe('PUBLISHED')
-    instance.onLoad({ tab: 'REFERRED' })
-    expect(instance.data.tab).toBe('REFERRED')
+    instance.onLoad({ tab: 'COOPERATING' })
+    expect(instance.data.tab).toBe('COOPERATING')
   })
 
-  it('switches related opportunities in place and loads received referrals', async () => {
-    opportunities.listReceived.mockResolvedValueOnce({
-      items: [{
-        kind: 'REFERRAL',
-        status: 'ACTIVE',
-        unread: true,
-        updatedAt: '2026-09-23T00:00:00.000Z',
-        actor: { profileRef: 'profile-1', nickname: 'Ame' },
-        opportunity: { id: 'opp-1', title: '合作机会', status: 'PUBLISHED' },
-      }],
-      nextCursor: '',
+  it('switches related opportunities in place and renders the real cooperation response', async () => {
+    opportunities.listMyCooperations.mockResolvedValueOnce({
+      items: [{ id: 'opp-1', title: '合作机会', status: 'PUBLISHED', avatars: ['https://example.com/avatar.png'], cooperationCount: 2 }],
+      nextCursor: 'next',
     })
     const instance = page(profile)
     instance.data.authenticated = true
-    instance.changeOpportunitySubTab({ currentTarget: { dataset: { tab: 'REFERRED' } } })
-    await vi.waitFor(() => expect(instance.data.referredOpportunityState).toBe('ready'))
-    expect(instance.data.opportunitySubTab).toBe('REFERRED')
-    expect(instance.data.referredOpportunities).toMatchObject([{ actorName: 'Ame', opportunity: { id: 'opp-1' } }])
-    expect(opportunities.listReceived).toHaveBeenCalledWith('REFERRAL')
+    instance.changeOpportunitySubTab({ currentTarget: { dataset: { tab: 'COOPERATING' } } })
+    await vi.waitFor(() => expect(instance.data.collaborationOpportunityState).toBe('ready'))
+    expect(instance.data.opportunitySubTab).toBe('COOPERATING')
+    expect(instance.data.collaborationOpportunities).toMatchObject([{ id: 'opp-1', avatarViews: ['https://example.com/avatar.png'], cooperationCount: 2 }])
+    expect(instance.data.collaborationOpportunityCursor).toBe('next')
+    expect(opportunities.listMyCooperations).toHaveBeenCalled()
     instance.changeOpportunitySubTab({ currentTarget: { dataset: { tab: 'unknown' } } })
-    expect(instance.data.opportunitySubTab).toBe('REFERRED')
+    expect(instance.data.opportunitySubTab).toBe('COOPERATING')
   })
 
   it('starts the activity feed and banner while optional filters are still pending', async () => {

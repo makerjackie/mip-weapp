@@ -12,6 +12,7 @@ allowBuilds:
   protobufjs: true
   sharp: true
   weapp-tailwindcss: true
+  workerd: true
 
 minimumReleaseAgeExclude:
   - '@weapp-core/api@0.3.0'

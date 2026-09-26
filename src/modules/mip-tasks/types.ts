@@ -63,7 +63,7 @@ export interface TaskPage<T> {
 export const MIP_TASKS_CONTRACT_VERSION = 1 as const
 
 export interface MipTasksActionInputMap {
-  listTasks: { cursor?: string, limit?: number }
+  listTasks: { cursor?: string, limit?: number, filter?: 'pending' | 'ended' }
   getTask: { taskId: string }
   completeTask: { taskId: string, attachmentAssetId?: string }
 }
@@ -83,7 +83,7 @@ export interface MipTasksRequest<A extends MipTasksAction = MipTasksAction> {
 }
 
 export interface MipTasksGateway {
-  listTasks: (cursor?: string, limit?: number) => Promise<TaskPage<UserTaskCard>>
+  listTasks: (cursor?: string, limit?: number, filter?: 'pending' | 'ended') => Promise<TaskPage<UserTaskCard>>
   getTask: (taskId: string) => Promise<UserTaskCard>
   completeTask: (taskId: string, attachmentAssetId?: string) => Promise<TaskCompletion>
 }

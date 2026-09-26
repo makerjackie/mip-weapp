@@ -173,6 +173,16 @@ const knowledgeModule = createKnowledgeAdminService(mysqlDatabase(), {
   webviewAllowedHosts: knowledgeWebviewAllowedHosts,
 })
 const service = createAdminService({
+  resolveCardAvatars: async page => {
+    const fileList = [...new Set(page.items.map(item => item.avatarUrl).filter(url => url?.startsWith('cloud://')))]
+    if (!fileList.length) return page
+    try {
+      const response = await cloud.getTempFileURL({ fileList, maxAge: 600 })
+      const urls = new Map((response.fileList || []).filter(item => item.tempFileURL?.startsWith('https://')).map(item => [item.fileID, item.tempFileURL]))
+      return { ...page, items: page.items.map(item => ({ ...item, avatarUrl: urls.get(item.avatarUrl) || '' })) }
+    }
+    catch { return { ...page, items: page.items.map(item => ({ ...item, avatarUrl: '' })) } }
+  },
   repository,
   createCheckinImage: createEventCheckinImage({
     cloud,

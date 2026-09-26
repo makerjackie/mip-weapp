@@ -35,7 +35,14 @@ Page({
     message: '',
   },
 
+  loadSequence: 0,
+  rankingSequence: 0,
+
   onShow() { void this.load(true) },
+  onUnload() {
+    this.loadSequence += 1
+    this.rankingSequence += 1
+  },
 
   async onPullDownRefresh() {
     try {
@@ -47,9 +54,14 @@ Page({
   },
 
   async load(force = false) {
+    const sequence = ++this.loadSequence
+    this.rankingSequence += 1
     this.setData({ state: 'loading', message: '' })
     try {
       const overview = await mipGameModule.query.getOverview(undefined, force)
+      if (sequence !== this.loadSequence) {
+        return
+      }
       if (!overview.season) {
         this.setData({ state: 'empty', overview, matches: [], rankings: [] })
         return
@@ -59,7 +71,11 @@ Page({
         mipGameModule.query.listRankings(overview.season.id, rankingType, undefined, force),
         mipGameModule.query.listHistory(overview.season.id, force),
       ])
+      if (sequence !== this.loadSequence) {
+        return
+      }
       this.setData({
+        loadingRanking: false,
         state: 'ready',
         overview,
         matches: overview.matches.map(matchView),
@@ -72,6 +88,9 @@ Page({
       })
     }
     catch (error) {
+      if (sequence !== this.loadSequence) {
+        return
+      }
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '赛季信息加载失败' })
     }
   },
@@ -92,10 +111,11 @@ Page({
 
   async loadRanking(force = false) {
     const seasonId = this.data.overview?.season?.id
-    if (!seasonId || this.data.loadingRanking) {
+    if (!seasonId) {
       return
     }
-    this.setData({ loadingRanking: true, message: '' })
+    const sequence = ++this.rankingSequence
+    this.setData({ loadingRanking: true, rankings: [], message: '' })
     try {
       const ranking = await mipGameModule.query.listRankings(
         seasonId,
@@ -103,13 +123,21 @@ Page({
         this.data.branchId || undefined,
         force,
       )
+      if (sequence !== this.rankingSequence) {
+        return
+      }
       this.setData({ rankings: ranking.items, branches: ranking.branches })
     }
     catch (error) {
+      if (sequence !== this.rankingSequence) {
+        return
+      }
       this.setData({ message: error instanceof Error ? error.message : '排行榜加载失败' })
     }
     finally {
-      this.setData({ loadingRanking: false })
+      if (sequence === this.rankingSequence) {
+        this.setData({ loadingRanking: false })
+      }
     }
   },
 

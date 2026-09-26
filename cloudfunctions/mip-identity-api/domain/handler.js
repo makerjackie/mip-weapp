@@ -15,6 +15,7 @@ const errorMessages = {
   IDENTITY_CONFIG_REQUIRED: '身份服务尚未配置',
   IDENTITY_REBIND_FAILED: '账号迁移暂时未完成，请重试',
   IDENTITY_UNION_CONFLICT: '账号身份需要人工核验',
+  PROFILE_CARD_UNAVAILABLE: '名片已下架或暂无可用模板，请联系管理员',
   PROFILE_CARD_CODE_UNAVAILABLE: '个人名片码暂时不可用',
   PROFILE_CARD_OPENAPI_INVALID_RESPONSE: '个人名片码暂时不可用',
   PROFILE_CARD_OPENAPI_UNAVAILABLE: '个人名片码暂时不可用',
@@ -68,6 +69,7 @@ const actions = Object.freeze({
   closeAccount: (service, caller, input) => service.closeAccount(caller, { input }),
   getAccessSnapshot: (service, caller) => service.getAccessSnapshot(caller),
   getProfile: (service, caller) => service.getProfile(caller),
+  getProfileCardSettings: (service, caller) => service.getProfileCardSettings(caller),
   getMyProfileCardCode: (service, caller) => service.getMyProfileCardCode(caller),
   getPublicProfile: (service, caller, input) => service.getPublicProfile(caller, {
     profileRef: input.profileRef,

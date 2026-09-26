@@ -40,6 +40,7 @@ const { createEventDrafts } = require('./event-drafts')
 const { AdminError } = require('./validation')
 
 function createAdminService({
+  resolveCardAvatars,
   repository,
   phoneEncryptionKey,
   createCheckinImage,
@@ -281,7 +282,7 @@ function createAdminService({
   const cooperationCardsAdmin = createCooperationCards({ access, repository, contentSafety })
   const contributionAdmin = createContribution({ access, repository })
   const videosAdmin = createVideos({ access, repository, contentSafety })
-  const cardsAdmin = createCards()
+  const cardsAdmin = createCards({ access, repository, resolveCardAvatars })
   const eventDraftsAdmin = createEventDrafts({ access, repository })
   const {
     getMembership,

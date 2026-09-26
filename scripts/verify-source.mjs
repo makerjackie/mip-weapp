@@ -480,7 +480,7 @@ for (const [label, source] of [
   assert(!/(?:^|[^A-Z0-9_])MEMBERSHIP_[A-Z0-9_]+/.test(source), `${label} reads legacy MEMBERSHIP_* configuration`)
 }
 assert(cloudDeploy.includes('createMipCoreFunctionManifest')
-  && cloudDeploy.includes('buildRuntimeRevokeStatements')
+  && cloudDeploy.includes('buildRuntimePrivilegeDeltaStatements')
   && cloudDeploy.includes('assertRuntimeAccountClaimable')
   && cloudDeploy.includes('--confirm-runtime-user=')
   && !cloudDeploy.includes('REVOKE ALL PRIVILEGES')

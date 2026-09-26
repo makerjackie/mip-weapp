@@ -26,6 +26,7 @@ const rosterStatuses = new Set<AdminRosterStatus>([
   'CANCELLED',
   'REJECTED',
   'ATTENDED',
+  'ABNORMAL',
 ])
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -178,6 +179,12 @@ function parseRosterItem(value: unknown): AdminRosterItem {
       'entitlementStartsAt',
       'entitlementEndsAt',
       'entitlementStatus',
+      'registrationStatus',
+      'source',
+      'roleMark',
+      'importedAt',
+      'abnormalReason',
+      'abnormalMarkedAt',
     ])
     || typeof value.id !== 'string'
     || !uuidPattern.test(value.id)
@@ -215,7 +222,21 @@ function parseRosterItem(value: unknown): AdminRosterItem {
       throw invalidResponse('参与者名单')
     }
   }
-  return value as unknown as AdminRosterItem
+  // Web roster metadata is intentionally excluded from the onsite view model.
+  return {
+    id: value.id,
+    nickname: value.nickname,
+    cityName: value.cityName,
+    status: value.status as AdminRosterStatus,
+    answers: value.answers,
+    answerItems: value.answerItems as AdminRosterItem['answerItems'],
+    phoneBound: value.phoneBound,
+    phoneNumber: value.phoneNumber as string | null,
+    submittedAt: value.submittedAt as string,
+    registeredAt: value.registeredAt as string | null,
+    checkedInAt: value.checkedInAt as string | null,
+    version: Number(value.version),
+  }
 }
 
 function parseAdminRosterPage(value: unknown): AdminPage<AdminRosterItem> {

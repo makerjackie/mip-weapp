@@ -1,4 +1,5 @@
 'use strict'
+const { cooperationSummaries } = require('./opportunity-cooperations')
 
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const {
@@ -459,6 +460,7 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
       : Promise.resolve(undefined),
   ])
 
+  const cooperation = await cooperationSummaries(database, caller, opportunities.map(item => item.id))
   return {
     profile: publicProfileDto(
       row,
@@ -494,6 +496,7 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
       valueSummary: item.value_summary,
       targetSummary: item.target_summary,
       referralCount: Number(item.referral_count || 0),
+      cooperationCount: cooperation.get(item.id)?.count || 0,
       branchName: item.branch_name || undefined,
       cityLabel: item.city_label || undefined,
       coverUrl: item.cover_file_id || undefined,

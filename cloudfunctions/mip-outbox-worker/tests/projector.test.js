@@ -901,3 +901,25 @@ describe('actionable inbox policy', () => {
     }
   })
 })
+
+describe('self cooperation notifications', () => {
+  const event = { ...base, aggregate_type: 'OPPORTUNITY_COOPERATION', event_type: 'opportunity.cooperation_changed', source_version: 3 }
+  it('notifies only the relational publisher and does not grant an undefined reward', async () => {
+    const result = await projectEvent({ async one(sql, params) {
+      assert.match(sql, /mip_opportunity_cooperations/)
+      assert.match(sql, /mip_user_blocks/)
+      assert.deepEqual(params, [event.app_id, event.aggregate_id])
+      return { status: 'ACTIVE', version: 3, owner_user_id: 'publisher', opportunity_id: 'opportunity' }
+    } }, { ...event, payload_json: { recipientUserId: 'untrusted' } })
+    assert.equal(result.notifications[0].recipientUserId, 'publisher')
+    assert.equal(result.notifications[0].dedupeKey, `outbox:${event.id}:cooperation`)
+    assert.deepEqual(result.growth, [])
+  })
+  for (const row of [null, { status: 'CANCELLED', version: 3 }, { status: 'ACTIVE', version: 4 }]) {
+    it(`does not deliver cancelled, hidden or superseded intent: ${JSON.stringify(row)}`, async () => {
+      const result = await projectEvent({ async one() { return row } }, event)
+      assert.deepEqual(result.notifications, [])
+      assert.deepEqual(result.growth, [])
+    })
+  }
+})

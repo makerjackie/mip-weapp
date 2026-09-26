@@ -139,9 +139,9 @@ describe('client stability source contracts', () => {
     expect(tasks).toContain('requestSeq: 0')
     expect(tasks).toMatch(/if \(seq !== this\.requestSeq\)/)
     expect(opportunities).toContain('publishedRequestSeq: 0')
-    expect(opportunities).toContain('referredRequestSeq: 0')
+    expect(opportunities).toContain('cooperatingRequestSeq: 0')
     expect(opportunities).toMatch(/if \(sequence !== this\.publishedRequestSeq\)/)
-    expect(opportunities).toMatch(/if \(sequence !== this\.referredRequestSeq\)/)
+    expect(opportunities).toMatch(/if \(sequence !== this\.cooperatingRequestSeq\)/)
   })
 
   it('clears every delayed editor navigation on hide and unload', () => {

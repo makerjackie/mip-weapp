@@ -176,6 +176,7 @@ export type AdminRosterStatus
     | 'CANCELLED'
     | 'REJECTED'
     | 'ATTENDED'
+    | 'ABNORMAL'
 
 export interface AdminRosterFilters {
   query?: string

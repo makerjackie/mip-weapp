@@ -247,8 +247,8 @@ const adminWebMutationPolicies = Object.freeze([
   domainIdempotentWebMutation('mip.admin.videos.save', ['coverAssetId', 'jumpUrl', 'title'], ['videoId', 'expectedVersion', 'status']),
   webMutation('mip.admin.videos.changeStatus', ['videoId', 'expectedVersion', 'status']),
   domainIdempotentWebMutation('mip.admin.cards.save', ['cardType', 'fields'], ['cardId', 'expectedVersion']),
-  webMutation('mip.admin.cards.changeStatus', ['cardId', 'expectedVersion', 'status']),
-  domainIdempotentWebMutation('mip.admin.cards.takedown', ['cardId', 'reason']),
+  domainIdempotentWebMutation('mip.admin.cards.changeStatus', ['cardId', 'expectedVersion', 'status'], ['cardType']),
+  domainIdempotentWebMutation('mip.admin.cards.takedown', ['cardId', 'reason', 'expectedVersion']),
   domainIdempotentWebMutation('mip.admin.events.drafts.save', ['draftData'], ['eventId', 'draftId']),
   domainIdempotentWebMutation('mip.admin.adminAccounts.passwordLogin', ['phone', 'password']),
 ])

@@ -68,6 +68,7 @@ export interface OpportunitySummary {
   abilityTags: OpportunityTag[]
   teamMembers: OpportunityTeamMember[]
   referralCount: number
+  cooperationCount?: number
   /** 想合作/引荐聚合头像（最近表态者，最多 3 枚）。服务端补充该字段前为空。 */
   avatars?: string[]
   status: OpportunityStatus
@@ -77,6 +78,7 @@ export interface OpportunitySummary {
 }
 
 export interface OpportunityDetail extends OpportunitySummary {
+  cooperationActive?: boolean
   description: string
   /** 主营地区（选填）自由文本；服务端补充持久化前可能缺失。 */
   regionText?: string
@@ -285,6 +287,7 @@ export interface PublicProfileOpportunity {
   valueSummary: string
   targetSummary: string
   referralCount: number
+  cooperationCount?: number
   branchName?: string
   cityLabel?: string
   coverUrl?: string

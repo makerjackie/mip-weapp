@@ -10,8 +10,7 @@ import {
 import {
   assertRuntimeAccountClaimable,
   assertRuntimePrivilegesExact,
-  buildRuntimeGrantStatements,
-  buildRuntimeRevokeStatements,
+  buildRuntimePrivilegeDeltaStatements,
   parseGrantee,
   RUNTIME_TABLE_PRIVILEGES,
   runtimeUserForEnvironment,
@@ -70,16 +69,20 @@ try {
 }
 catch {}
 
-for (const sql of [
-  ...buildRuntimeRevokeStatements(schema, grantee, claim.tableRows),
-  ...buildRuntimeGrantStatements(schema, grantee),
-]) {
+const changes = buildRuntimePrivilegeDeltaStatements(schema, grantee, claim.tableRows)
+console.log(`[mip-db-grants] applying ${changes.length} privilege differences; preserving matching grants`)
+let completed = 0
+for (const sql of changes) {
   const result = callCloudbase(root, 'manageMysqlDatabase', {
     action: 'runStatement',
     sql,
   }, 300000)
   if (result?.success === false || result?.isError === true) {
     throw new Error('CloudBase MySQL rejected exact MIP runtime grant convergence')
+  }
+  completed += 1
+  if (completed % 10 === 0 || completed === changes.length) {
+    console.log(`[mip-db-grants] applied ${completed}/${changes.length} differences`)
   }
 }
 

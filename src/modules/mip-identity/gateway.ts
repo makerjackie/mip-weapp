@@ -12,6 +12,7 @@ import type {
   MipIdentityRequest,
   MipProfileSnapshot,
   PhoneSmsRequestResult,
+  ProfileCardSettings,
   ProfileCardUpdateInput,
   ProfileOrganization,
   ProfileTagOption,
@@ -243,6 +244,17 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
 
     async getProfile() {
       return profile(await call(transport, 'getProfile', {}))
+    },
+
+    async getProfileCardSettings(): Promise<ProfileCardSettings> {
+      const value = await call(transport, 'getProfileCardSettings', {})
+      if (!isRecord(value) || typeof value.enabled !== 'boolean' || typeof value.reason !== 'string'
+        || !Array.isArray(value.templates) || value.templates.some(item => !isRecord(item)
+          || !['PINK', 'BLUE', 'WHITE', 'YELLOW'].includes(String(item.key)) || typeof item.name !== 'string'
+          || !Array.isArray(item.requiredFields) || item.requiredFields.some(field => !['name', 'avatar', 'company', 'position', 'contact'].includes(String(field))))) {
+        throw new MipIdentityGatewayError('INVALID_RESPONSE', '名片模板数据无效')
+      }
+      return value as unknown as ProfileCardSettings
     },
 
     async getMyProfileCardCode() {

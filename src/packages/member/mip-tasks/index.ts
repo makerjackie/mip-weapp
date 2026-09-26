@@ -37,10 +37,6 @@ function taskView(task: UserTaskCard): TaskView {
   }
 }
 
-function visibleTasks(tasks: TaskView[], filter: 'pending' | 'ended') {
-  return tasks.filter(task => filter === 'ended' ? ['ENDED', 'COMPLETED'].includes(task.status) : ['AVAILABLE', 'PENDING_REVIEW', 'NOT_STARTED'].includes(task.status))
-}
-
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'empty' | 'error',
@@ -82,7 +78,7 @@ Page({
     }
     this.setData({ loadingMore: false })
     try {
-      const page = await mipTasksModule.query.listTasks(undefined, 20, force)
+      const page = await mipTasksModule.query.listTasks(undefined, 20, force, this.data.filter)
       if (seq !== this.requestSeq) {
         return
       }
@@ -90,7 +86,7 @@ Page({
       this.setData({
         state: tasks.length ? 'ready' : 'empty',
         tasks,
-        visibleTasks: visibleTasks(tasks, this.data.filter),
+        visibleTasks: tasks,
         nextCursor: page.nextCursor || '',
         message: '',
       })
@@ -114,7 +110,7 @@ Page({
     const cursor = this.data.nextCursor
     this.setData({ loadingMore: true, message: '' })
     try {
-      const page = await mipTasksModule.query.listTasks(cursor, 20)
+      const page = await mipTasksModule.query.listTasks(cursor, 20, false, this.data.filter)
       if (seq !== this.requestSeq) {
         return
       }
@@ -126,7 +122,7 @@ Page({
       this.setData({
         tasks,
         nextCursor: page.nextCursor || '',
-        visibleTasks: visibleTasks(tasks, this.data.filter),
+        visibleTasks: tasks,
       })
     }
     catch (error) {
@@ -151,7 +147,11 @@ Page({
 
   chooseFilter(event: WechatMiniprogram.TouchEvent) {
     const filter = String(event.currentTarget.dataset.filter || 'pending') as 'pending' | 'ended'
-    this.setData({ filter, visibleTasks: visibleTasks(this.data.tasks, filter) })
+    if (!['pending', 'ended'].includes(filter) || filter === this.data.filter) {
+      return
+    }
+    this.setData({ filter, tasks: [], visibleTasks: [], nextCursor: '', state: 'loading', message: '' })
+    void this.loadTasks()
   },
 
   /** figma 1725_18357 右侧页签：派发任务暂无对应路由（NPC 派发参考页 18634/18676/18736 为路由缺口）。 */

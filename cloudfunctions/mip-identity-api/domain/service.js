@@ -139,12 +139,20 @@ function createIdentityService(options) {
     })
   }
 
+  async function getProfileCardSettings(caller) {
+    const user = await repository.ensureUser(caller)
+    assertActiveUser(user)
+    return repository.getProfileCardSettings(caller.appId, user.id)
+  }
+
   async function getMyProfileCardCode(caller) {
     if (typeof profileCardCodeWriter !== 'function') {
       throw new Error('PROFILE_CARD_CODE_UNAVAILABLE')
     }
     const user = await repository.ensureUser(caller)
     assertActiveUser(user)
+    const settings = await repository.getProfileCardSettings(caller.appId, user.id)
+    if (!settings.enabled || !settings.templates.length) throw new Error('PROFILE_CARD_UNAVAILABLE')
     return profileCardCodeWriter({ appId: caller.appId, userId: user.id })
   }
 
@@ -168,6 +176,8 @@ function createIdentityService(options) {
       throw new Error('PUBLIC_PROFILE_NOT_FOUND')
     }
     const userId = profileCardSceneReader(scene, caller.appId)
+    const settings = await repository.getProfileCardSettings(caller.appId, userId)
+    if (!settings.enabled) throw new Error('PROFILE_CARD_UNAVAILABLE')
     const viewer = await repository.findUserByIdentity(caller)
     const facts = await repository.loadPublicProfile(caller.appId, userId, viewer?.id || null)
     if (!facts) {
@@ -243,6 +253,7 @@ function createIdentityService(options) {
     getAccessSnapshot,
     signIn,
     getMyProfileCardCode,
+    getProfileCardSettings,
     getProfile,
     getPublicProfile,
     listBranches,

@@ -4757,9 +4757,11 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
         "expectedVersion",
         "status"
       ],
-      "optionalInputKeys": [],
+      "optionalInputKeys": [
+        "cardType"
+      ],
       "idempotencyKeyRequired": true,
-      "forwardIdempotencyKey": false
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.cards.takedown",
@@ -4768,7 +4770,8 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "webRoute": "ADMIN",
       "requiredInputKeys": [
         "cardId",
-        "reason"
+        "reason",
+        "expectedVersion"
       ],
       "optionalInputKeys": [],
       "idempotencyKeyRequired": true,

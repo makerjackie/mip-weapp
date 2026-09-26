@@ -205,7 +205,6 @@ describe('profile interest optimistic mutation', () => {
   it('keeps every profile-interest surface on the shared optimistic path', () => {
     const surfaces = [
       ['../src/packages/member/mip-public-profile/index.ts', 'sourceType: \'PROFILE\''],
-      ['../src/packages/member/mip-opportunities/detail/index.ts', 'sourceType: \'OPPORTUNITY\''],
       ['../src/packages/member/mip-cooperation/detail/index.ts', 'sourceType: \'COOPERATION_CARD\''],
       ['../src/packages/member/mip-cases/detail/index.ts', 'sourceType: \'SUPER_CASE\''],
     ] as const

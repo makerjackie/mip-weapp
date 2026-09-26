@@ -43,7 +43,8 @@ test('owner detail projects an ended opportunity as read-only', async () => {
     async one(sql) {
       if (sql.includes('FROM mip_opportunities o')) return endedOpportunity()
       if (sql.includes('FROM mip_referral_intents')) return null
-      if (sql.includes('FROM mip_profile_interests')) return null
+      if (sql.includes('FROM mip_opportunity_cooperations')) return null
+        if (sql.includes('FROM mip_profile_interests')) return null
       throw new Error(`unexpected one: ${sql}`)
     },
     async query() { return [] },
