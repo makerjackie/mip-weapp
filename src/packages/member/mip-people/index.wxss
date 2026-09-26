@@ -1,4 +1,3 @@
-@import '../../../styles/liquid-glass.wxss';
 
 .people-filter-chip-hit {
   display: flex;

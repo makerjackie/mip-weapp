@@ -1,4 +1,3 @@
-@import '../../../../styles/liquid-glass.wxss';
 
 /* journey-review J4-05：分享机会用微信原生转发（button open-type=share），先抹平原生按钮样式。
    J4-06 已下架态的禁用色为 scene-specific 值（#2C2C2C/#333/#666，见 DESIGN.md 条款）。 */

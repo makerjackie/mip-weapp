@@ -1,0 +1,101 @@
+{
+  "date": "2026-09-26",
+  "baseline": "f0d13e1dab3c71dbea6936e4261f8c554beaa2b5",
+  "toolchain": {
+    "node": "22.23.1",
+    "pnpm": "11.14.0",
+    "weappVite": "7.3.0",
+    "weappIdeCli": "6.1.8"
+  },
+  "checks": {
+    "verifyAll": "passed",
+    "runtimePreflight": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "compiledComparison": {
+    "files": 1628,
+    "bytes": 4535487,
+    "changed": [
+      "app.wxss",
+      "components/mip-attend-pill/index.wxss",
+      "components/mip-cooperation-card/index.wxss",
+      "components/mip-detail-row/index.wxss",
+      "components/mip-dialog/index.wxss",
+      "components/mip-level-banner/index.wxss",
+      "components/mip-login-sheet/index.wxss",
+      "components/mip-nav-bar/index.wxss",
+      "components/mip-opportunity-card/index.wxss",
+      "components/mip-order-card/index.wxss",
+      "components/mip-primary-button/index.wxss",
+      "components/sticky-actions/index.wxss",
+      "packages/member/mip-badge-detail/index.wxss",
+      "packages/member/mip-badges/index.wxss",
+      "packages/member/mip-blind-box/detail/index.wxss",
+      "packages/member/mip-card-edit/index.wxss",
+      "packages/member/mip-cases/editor/index.wxss",
+      "packages/member/mip-events/participants/index.wxss",
+      "packages/member/mip-opportunities/detail/index.wxss",
+      "packages/member/mip-people/index.wxss",
+      "pages/events/index.wxss",
+      "pages/opportunities/index.wxss",
+      "pages/profile/index.wxss"
+    ],
+    "added": [],
+    "removed": [
+      "packages/member/membership-order/index.wxss",
+      "packages/member/mip-events/registration/index.wxss",
+      "packages/member/mip-events/feedback/index.wxss",
+      "packages/member/mip-events/detail/index.wxss"
+    ]
+  },
+  "runtimeAttempt": {
+    "version": "7.3.0 with dark background, BEFORE final browser Preflight removal",
+    "status": "failed",
+    "pageCounts": {
+      "passed": 65,
+      "failed": 4,
+      "external-wait": 1
+    },
+    "representativeStatesPassed": 6,
+    "failures": [
+      {
+        "route": "packages/admin/event-registrations/index",
+        "status": "failed",
+        "error": "packages/admin/event-registrations/index settled on error; error/forbidden/conflict/expired/disabled cannot count as runtime success"
+      },
+      {
+        "route": "packages/member/mip-growth/index",
+        "status": "failed",
+        "error": "packages/member/mip-growth/index did not settle before timeout"
+      },
+      {
+        "route": "packages/member/mip-game/index",
+        "status": "failed",
+        "error": "packages/member/mip-game/index did not settle before timeout"
+      },
+      {
+        "route": "packages/member/mip-game/team/index",
+        "status": "external-wait",
+        "error": "packages/member/mip-game/team/index fixture source packages/member/mip-game/index did not reach an accepted state"
+      },
+      {
+        "route": "packages/member/mip-profile-interests/index",
+        "status": "failed",
+        "error": "packages/member/mip-profile-interests/index settled on unaccepted state blocked; expected ready or empty"
+      }
+    ],
+    "cleanup": "closed"
+  },
+  "finalStyleCheck": {
+    "screenshot": "membership-order.png",
+    "observed": "Yellow capsule button and readable dark action bar; no white rectangular browser frame",
+    "scope": "Visual only, no payment initiated. Displayed 6000 is the current test plan, not the approved annual price of 6600.",
+    "strictInteraction": "blocked: App-Service route fallback cannot perform real Element.tap because page-frame protocol is unavailable",
+    "cleanup": "closed"
+  },
+  "delivery": {
+    "deviceAcceptance": "pending user test",
+    "upload": "not performed",
+    "cloudDeployment": "not performed"
+  }
+}

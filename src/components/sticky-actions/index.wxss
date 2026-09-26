@@ -1,4 +1,3 @@
-@import '../../styles/liquid-glass.wxss';
 
 .mip-sticky-actions-spacer {
   height: calc(128rpx + env(safe-area-inset-bottom));

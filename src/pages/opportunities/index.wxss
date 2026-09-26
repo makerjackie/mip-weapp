@@ -1,4 +1,3 @@
-@import '../../styles/liquid-glass.wxss';
 
 .opportunities-tab-hit {
   min-height: 88rpx;

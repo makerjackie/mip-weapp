@@ -110,8 +110,8 @@
     "tencentcloud-sdk-nodejs-scf": "4.1.168",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10",
-    "weapp-ide-cli": "6.1.7",
-    "weapp-vite": "^6.25.0",
+    "weapp-ide-cli": "6.1.8",
+    "weapp-vite": "^7.3.0",
     "wx-server-sdk": "4.0.2"
   }
 }
