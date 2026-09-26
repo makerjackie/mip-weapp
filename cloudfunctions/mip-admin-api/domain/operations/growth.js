@@ -3,6 +3,8 @@
 const { defineManifest, serviceOperation } = require('./manifest')
 
 module.exports = defineManifest('GROWTH', [
+  serviceOperation('mip.admin.membershipAgreement.get', 'QUERY', 'getMembershipAgreement'),
+  serviceOperation('mip.admin.membershipAgreement.save', 'MUTATION', 'saveMembershipAgreement'),
   serviceOperation('mip.admin.growth.levels', 'QUERY', 'listGrowthLevels'),
   serviceOperation('mip.admin.growth.benefits', 'QUERY', 'listGrowthBenefits'),
   serviceOperation('mip.admin.growth.rules', 'QUERY', 'listGrowthRules'),

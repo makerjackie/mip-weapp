@@ -6,6 +6,7 @@ import type {
   AgreementAcceptanceInput,
   BindSmsPhoneInput,
   IdentityAccessSnapshot,
+  MembershipAgreement,
   MipIdentityAction,
   MipIdentityActionInputMap,
   MipIdentityGateway,
@@ -246,6 +247,15 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
       return profile(await call(transport, 'getProfile', {}))
     },
 
+    async getMembershipAgreement(): Promise<MembershipAgreement> {
+      const value = await call(transport, 'getMembershipAgreement', {})
+      const item = value as MembershipAgreement
+      if (!item || typeof item.title !== 'string' || typeof item.body !== 'string'
+        || typeof item.isDemo !== 'boolean' || !Number.isSafeInteger(item.version) || item.version < 0 || typeof item.updatedAt !== 'string') {
+        throw new MipIdentityGatewayError('INVALID_RESPONSE', '会员协议响应无效')
+      }
+      return { title: item.title, body: item.body, isDemo: item.isDemo, version: item.version, updatedAt: item.updatedAt }
+    },
     async getProfileCardSettings(): Promise<ProfileCardSettings> {
       const value = await call(transport, 'getProfileCardSettings', {})
       if (!isRecord(value) || typeof value.enabled !== 'boolean' || typeof value.reason !== 'string'

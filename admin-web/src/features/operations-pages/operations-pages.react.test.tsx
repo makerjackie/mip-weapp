@@ -10,6 +10,8 @@ import { OpportunitiesContentPage } from './opportunities-content-page'
 import { TaskManagementPage } from './task-management-page'
 import type { OperationsPageState } from './types'
 
+vi.mock('./membership-configuration-panel', () => ({ MembershipConfigurationPanel: () => null }))
+
 const mockNavigate = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,

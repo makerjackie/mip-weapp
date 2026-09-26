@@ -280,6 +280,7 @@ export interface MipIdentityActionInputMap {
   bindSmsPhone: BindSmsPhoneInput
   closeAccount: AccountClosureInput
   getProfile: Record<string, never>
+  getMembershipAgreement: Record<string, never>
   getProfileCardSettings: Record<string, never>
   getMyProfileCardCode: Record<string, never>
   getPublicProfile: { profileRef: string }
@@ -300,6 +301,7 @@ export interface MipIdentityActionResultMap {
   bindSmsPhone: IdentityAccessSnapshot
   closeAccount: AccountClosureResult
   getProfile: MipProfileSnapshot
+  getMembershipAgreement: MembershipAgreement
   getProfileCardSettings: ProfileCardSettings
   getMyProfileCardCode: ProfileCardCode
   getPublicProfile: PublicMipProfile
@@ -328,6 +330,7 @@ export interface MipIdentityGateway {
   bindSmsPhone: (input: BindSmsPhoneInput) => Promise<IdentityAccessSnapshot>
   closeAccount: (input: AccountClosureInput) => Promise<AccountClosureResult>
   getProfile: () => Promise<MipProfileSnapshot>
+  getMembershipAgreement: () => Promise<MembershipAgreement>
   getProfileCardSettings: () => Promise<ProfileCardSettings>
   getMyProfileCardCode: () => Promise<ProfileCardCode>
   getPublicProfile: (profileRef: string) => Promise<PublicMipProfile>
@@ -338,3 +341,5 @@ export interface MipIdentityGateway {
   listBranches: () => Promise<CityBranchSummary[]>
   setPrimaryBranch: (input: SetPrimaryBranchInput) => Promise<BranchSelectionSnapshot>
 }
+
+export interface MembershipAgreement { title: string, body: string, isDemo: boolean, version: number, updatedAt: string }

@@ -1,3 +1,4 @@
+import { MembershipConfigurationPanel } from './membership-configuration-panel'
 import { Button, Dropdown, type MenuProps } from 'antd'
 import { DownOutlined } from '@ant-design/icons'
 import { getAdminReadRouteDefinition } from '../../modules/admin-read-pages'
@@ -17,6 +18,8 @@ export function GrowthBadgesPage(props: OperationsPageState) {
     onClick: ({ key }) => props.onWrite?.({ action: key as OperationsWriteAction }),
   }
   return (
+    <>
+    <MembershipConfigurationPanel onSaved={props.onRefresh} />
     <OperationsReadPage
       {...props}
       title="成长与勋章"
@@ -34,5 +37,6 @@ export function GrowthBadgesPage(props: OperationsPageState) {
         </Dropdown>
       ) : null}
     />
+    </>
   )
 }

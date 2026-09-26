@@ -620,9 +620,8 @@ function createAdminPrdExtensions(database, options = {}) {
         )
         if (new Set(benefits.map(item => item.id)).size !== input.draft.benefitIds.length) throw codeError('VALIDATION_FAILED')
       }
-      const legacyBenefits = input.draft.benefitIds.length
-        ? input.draft.benefitIds.map(benefitId => benefits.find(item => item.id === benefitId)?.name || '')
-        : json(current?.benefits_json, [])
+      // Explicitly saving an empty selection also clears the legacy display fallback.
+      const legacyBenefits = input.draft.benefitIds.map(benefitId => benefits.find(item => item.id === benefitId)?.name || '')
       if (input.levelId) {
         const result = await tx.query(
           `UPDATE mip_growth_levels SET name = ?, display_badge = ?, minimum_experience = ?,

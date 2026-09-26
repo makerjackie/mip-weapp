@@ -18,6 +18,7 @@ describe('MIP identity handler', () => {
       'bindWechatPhone',
       'closeAccount',
       'getAccessSnapshot',
+      'getMembershipAgreement',
       'getMyProfileCardCode',
       'getProfile',
       'getProfileCardSettings',

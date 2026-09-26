@@ -69,6 +69,7 @@ const actions = Object.freeze({
   closeAccount: (service, caller, input) => service.closeAccount(caller, { input }),
   getAccessSnapshot: (service, caller) => service.getAccessSnapshot(caller),
   getProfile: (service, caller) => service.getProfile(caller),
+  getMembershipAgreement: (service, caller) => service.getMembershipAgreement(caller),
   getProfileCardSettings: (service, caller) => service.getProfileCardSettings(caller),
   getMyProfileCardCode: (service, caller) => service.getMyProfileCardCode(caller),
   getPublicProfile: (service, caller, input) => service.getPublicProfile(caller, {

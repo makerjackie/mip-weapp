@@ -21,11 +21,11 @@ const operationKeys = [
 ]
 
 describe('public admin operation contract', () => {
-  it('projects all 237 business operations without exposing execution details', () => {
+  it('projects all 239 business operations without exposing execution details', () => {
     assert.equal(PUBLIC_OPERATION_CONTRACT_VERSION, 1)
     assert.equal(publicOperationContract.version, 1)
-    assert.equal(publicOperationContract.operationCount, 237)
-    assert.equal(publicOperationContract.operations.length, 237)
+    assert.equal(publicOperationContract.operationCount, 239)
+    assert.equal(publicOperationContract.operations.length, 239)
     assert.equal(Object.isFrozen(publicOperationContract), true)
     assert.equal(Object.isFrozen(publicOperationContract.operations), true)
 
@@ -54,7 +54,7 @@ describe('public admin operation contract', () => {
   it('marks every and only query operation as safe to retry', () => {
     const retryable = publicOperationContract.operations
       .filter(operation => operation.safeToRetry)
-    assert.equal(retryable.length, 103)
+    assert.equal(retryable.length, 104)
     assert.equal(retryable.every(operation => operation.kind === 'QUERY'), true)
     assert.equal(
       retryable.some(operation => operation.action === 'mip.admin.knowledge.schedules.list'),
@@ -70,8 +70,8 @@ describe('public admin operation contract', () => {
   it('owns the complete Web exposure, input-key, route, and idempotency policy', () => {
     assert.equal(ADMIN_WEB_OPERATION_CONTRACT_VERSION, 1)
     assert.equal(adminWebOperationContract.version, 1)
-    assert.equal(adminWebOperationContract.operationCount, 237)
-    assert.equal(adminWebOperationContract.operations.length, 237)
+    assert.equal(adminWebOperationContract.operationCount, 239)
+    assert.equal(adminWebOperationContract.operations.length, 239)
     assert.equal(Object.isFrozen(adminWebOperationContract), true)
     assert.equal(Object.isFrozen(adminWebOperationContract.operations), true)
 
@@ -108,9 +108,9 @@ describe('public admin operation contract', () => {
       }
     }
 
-    assert.equal(queries.length, 103)
-    assert.equal(mutations.length, 106)
-    assert.equal(blocked.length, 28)
+    assert.equal(queries.length, 104)
+    assert.equal(mutations.length, 111)
+    assert.equal(blocked.length, 24)
     assert.deepEqual(
       mutations.find(operation => operation.action === 'mip.admin.exports.create'),
       {

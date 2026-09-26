@@ -82,9 +82,9 @@ Page({
     caseNavigateTo({ url: '/packages/member/privacy-settings/index' })
   },
 
-  // 会员服务协议正式内容待产品补充（QS）。
+  // 会员协议由后台维护，复用文档阅读页面。
   openMembershipAgreement() {
-    wx.showToast({ title: '功能建设中', icon: 'none' })
+    caseNavigateTo({ url: '/packages/member/user-agreement/index?document=membership' })
   },
 
   openBlockedProfiles() {

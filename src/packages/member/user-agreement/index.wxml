@@ -2,7 +2,19 @@
   <!-- figma 1731_19189（文件名「账号安全」，稿内实为用户使用协议文档版式）：
        单张通栏文本卡 + 悬挂缩进编号条款。参考稿正文是占位文案（「订单确认与支付」×4），
        仅在 fixture figmaLayout 下按稿渲染；生产布局保持下方原样。 -->
-  <block wx:if="{{figmaLayout}}">
+  <block wx:if="{{membershipDocument}}">
+    <view wx:if="{{state === 'loading'}}" class="py-4 text-muted">正在加载协议…</view>
+    <view wx:elif="{{state === 'error'}}" class="py-4"><text>{{message}}</text><button bind:tap="loadMembershipAgreement">重试</button></view>
+    <view wx:else class="rounded-2xl bg-panel p-4">
+      <view class="mb-3 text-xl font-semibold">{{agreement.title}}</view>
+      <view wx:if="{{agreement.isDemo}}" class="mb-3 text-brand">演示内容，仅供测试，不作为正式会员服务承诺。</view>
+      <view wx:if="{{agreement.version}}" class="mb-3 text-sm text-muted">版本 {{agreement.version}}</view>
+      <text wx:if="{{agreement.body}}" selectable class="whitespace-pre-wrap leading-relaxed">{{agreement.body}}</text>
+      <view wx:else class="text-muted">会员协议暂未配置，请稍后查看。</view>
+    </view>
+    <app-page-exit />
+  </block>
+  <block wx:elif="{{figmaLayout}}">
     <view class="-mt-4 -mx-1 rounded-[16rpx] bg-panel text-[length:24rpx] leading-[33.6rpx] {{figmaAgree ? 'h-[1162rpx] overflow-hidden pl-[24rpx] pr-[22rpx] pt-[28rpx]' : 'p-[24rpx] pt-[68rpx]'}}">
       <view class="font-medium">一、订单确认与支付</view>
       <view class="h-[33.6rpx]"></view>

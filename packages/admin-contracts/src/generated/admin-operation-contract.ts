@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 237,
+  "operationCount": 239,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -1118,6 +1118,22 @@ export const ADMIN_OPERATION_CONTRACT = {
       "idempotencyKeyRequired": null
     },
     {
+      "action": "mip.admin.membershipAgreement.get",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.membershipAgreement.save",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
       "action": "mip.admin.growth.levels",
       "kind": "QUERY",
       "authentication": "REQUIRED",
@@ -1906,7 +1922,7 @@ export const ADMIN_OPERATION_CONTRACT = {
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 237,
+  "operationCount": 239,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -3594,6 +3610,29 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "forwardIdempotencyKey": false
     },
     {
+      "action": "mip.admin.membershipAgreement.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.membershipAgreement.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "expectedVersion",
+        "draft"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
       "action": "mip.admin.growth.levels",
       "kind": "QUERY",
       "webAllowed": true,
@@ -3676,32 +3715,46 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
     {
       "action": "mip.admin.growth.saveBenefit",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "draft"
+      ],
+      "optionalInputKeys": [
+        "benefitId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.growth.saveLevel",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "draft"
+      ],
+      "optionalInputKeys": [
+        "levelId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.growth.saveRule",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "ruleId",
+        "expectedVersion",
+        "draft"
+      ],
       "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.growth.adjust",
@@ -3721,12 +3774,17 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
     {
       "action": "mip.admin.badges.save",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "draft"
+      ],
+      "optionalInputKeys": [
+        "badgeId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.badges.grant",

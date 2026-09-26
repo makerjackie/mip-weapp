@@ -25,10 +25,11 @@ describe('journey-review WS-SETTINGS', () => {
     expect(page).toContain('\'/packages/member/privacy-settings/index\'')
     expect(page).toContain('\'/packages/member/user-agreement/index\'')
     expect(page).toContain('\'/packages/member/privacy-policy/index\'')
-    // 9/22：绑定微信仅 APP 使用，小程序移除；会员协议内容仍待补齐。
+    // 9/22：绑定微信仅 APP 使用，小程序移除；会员协议读取管理员配置。
     expect(template).not.toContain('label="绑定微信"')
     expect(page).not.toContain('openBindWechat')
-    expect(page.match(/功能建设中/g)).toHaveLength(1)
+    expect(page).not.toContain('功能建设中')
+    expect(page).toContain('/packages/member/user-agreement/index?document=membership')
     // 既有区块保留在协议组之下，且设计还原 fixture 分支已被真实路由取代。
     expect(template).toContain('bind:tap="openVisibilitySettings"')
     expect(template).toContain('bind:tap="openBlockedProfiles"')
@@ -107,7 +108,7 @@ describe('journey-review WS-SETTINGS', () => {
 
     expect(config.navigationBarTitleText).toBe('用户使用协议')
     // 正文保留仓库正式条款（优于设计稿占位段落），生产不走 fixture 分支。
-    expect(template).toMatch(/wx:if="\{\{figmaLayout\}\}"/)
+    expect(template).toMatch(/wx:elif="\{\{figmaLayout\}\}"/)
   })
 
   it('J6-01/J6-02 apply the C5 longpress deletion to the owner showcase and both management lists', () => {

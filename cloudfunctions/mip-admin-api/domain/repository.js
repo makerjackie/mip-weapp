@@ -31,6 +31,7 @@ const { createMembershipRepository } = require('./repositories/memberships')
 const { createGrowthOperationsRepository } = require('./repositories/growth-operations')
 const { createAdminOrderRepository } = require('./repositories/orders')
 const { createAdminPaymentAttemptRepository } = require('./repositories/payment-attempts')
+const { createMembershipContentRepository } = require('./repositories/membership-content')
 const { createProfileCardRepository } = require('./repositories/profile-cards')
 const { createAdminUserRepository } = require('./repositories/users')
 const { createAdminUserContentRepository } = require('./repositories/user-content')
@@ -1405,6 +1406,7 @@ function createAdminRepository(database, options = {}) {
     ...roleCapabilityPolicyRepository,
     ...userContentRepository,
     ...profileCardRepository,
+    ...createMembershipContentRepository(database, { lockMutation, assertScope, writeAudit }),
     adjustGrowth,
     authorizeRefundRetry,
     changeBranchStatus,

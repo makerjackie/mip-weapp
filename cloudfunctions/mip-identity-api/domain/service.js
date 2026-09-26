@@ -253,6 +253,7 @@ function createIdentityService(options) {
     getAccessSnapshot,
     signIn,
     getMyProfileCardCode,
+    getMembershipAgreement: caller => repository.getMembershipAgreement(caller.appId),
     getProfileCardSettings,
     getProfile,
     getPublicProfile,

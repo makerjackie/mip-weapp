@@ -770,7 +770,7 @@ describe('admin repository persistence contracts', () => {
         if (sql.includes('FROM mip_growth_levels')) {
           return [
             { id: 'level-base', minimum_experience: 0, status: 'ACTIVE', version: 1 },
-            { id: 'level-next', minimum_experience: 100, status: 'ACTIVE', version: 2 },
+            { id: 'level-next', minimum_experience: 100, status: 'ACTIVE', version: 2, benefits_json: '["旧权益"]' },
           ]
         }
         return { affectedRows: 1 }
@@ -796,7 +796,7 @@ describe('admin repository persistence contracts', () => {
         if (sql.includes('FROM mip_growth_levels')) {
           return [
             { id: 'level-base', minimum_experience: 0, status: 'ACTIVE', version: 1 },
-            { id: 'level-next', minimum_experience: 100, status: 'ACTIVE', version: 2 },
+            { id: 'level-next', minimum_experience: 100, status: 'ACTIVE', version: 2, benefits_json: '["旧权益"]' },
           ]
         }
         return { affectedRows: 1 }
@@ -817,6 +817,7 @@ describe('admin repository persistence contracts', () => {
     const updateIndex = calls.findIndex(call => call.sql.includes('UPDATE mip_growth_levels'))
     const auditIndex = calls.findIndex(call => call.sql.includes('INSERT INTO mip_audit_logs'))
     assert.ok(updateIndex >= 0 && auditIndex > updateIndex)
+    assert.equal(calls[updateIndex].params[4], '[]', 'clearing benefits must clear the legacy fallback too')
   })
 
   it('rejects creation of arbitrary growth rules without writing or auditing', async () => {

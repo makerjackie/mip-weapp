@@ -35,6 +35,7 @@ const { createProfileRecords } = require('./profile-records')
 const { createCooperationCards } = require('./cooperation-cards')
 const { createContribution } = require('./contribution')
 const { createVideos } = require('./videos')
+const { createMembershipContent } = require('./membership-content')
 const { createCards } = require('./cards')
 const { createEventDrafts } = require('./event-drafts')
 const { AdminError } = require('./validation')
@@ -600,6 +601,7 @@ function createAdminService({
       listOpportunityReferrals: profileRecords.listOpportunityReferrals,
     }),
     GROWTH: freezeModule({
+      ...createMembershipContent({ access, repository }),
       listGrowthLevels,
       listGrowthBenefits,
       listGrowthRules,
