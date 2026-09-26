@@ -1,7 +1,9 @@
 /* global report */
 const $ = id => document.getElementById(id)
 const steps = report.steps
-const statusLabels = { 'pending': '待复核', 'pass': 'AI 已核对', 'needs-fix': '需要调整', 'blocked': '场景待补', 'data-mismatch': '场景不符', 'accepted-difference': '差异已说明' }
+const visualLabels = { 'pending': '视觉：AI 待核对', 'pass': '视觉：已通过', 'needs-fix': '视觉：需调整', 'reviewed': '视觉：当前画面已核对', 'explained': '视觉：差异已说明' }
+const interactionLabels = { pending: '交互：AI 待补测', partial: '交互：部分已测', pass: '交互：已有验证记录', failed: '交互：有未解决问题' }
+const deviceLabels = { 'pending': '真机：待测', 'pass': '真机：已有验证记录', 'failed': '真机：有未解决问题', 'not-required': '真机：本项无专项', 'unscoped': '真机：范围未单列' }
 const feedbackLabels = { 'pass': '通过', 'needs-fix': '需调整', 'pending': '待确认' }
 const storageKey = `mip-review-v2-${report.source.commit}-${report.implementation.commit}-${report.captureSet}`
 let feedback = {}
@@ -114,17 +116,28 @@ function showVerdicts() {
   }
 }
 
+function showVerification(step) {
+  const v = step.verification
+  $('ai-state').textContent = visualLabels[v.visual.status]
+  $('ai-state').className = `badge ${v.visual.status}`
+  $('interaction-state').textContent = interactionLabels[v.interaction.status]
+  $('interaction-state').className = `badge ${v.interaction.status}`
+  $('scenario-state').textContent = v.scenario.status === 'matched' ? '场景：已对应' : '角色 / 数据：待补测'
+  $('scenario-state').className = `badge scenario-${v.scenario.status}`
+  $('device-state').textContent = v.deviceOnly ? '仅真机待测' : deviceLabels[v.device.status]
+  $('device-state').className = `badge ${v.device.status}`
+  $('scenario-warning').hidden = v.scenario.status === 'matched'
+  $('scenario-warning').textContent = step.actual.roleMatches === false
+    ? `目标为${roleName(step.expectedRole)}，当前截图为${roleName(step.actual.role)}。角色或数据覆盖待补，不等同于代码故障。`
+    : '目标场景或数据尚未完整复现，待 AI 补测；此状态不等同于代码故障。'
+  $('next-step').textContent = v.nextStep
+}
+
 function render() {
   const step = steps[selected]
   $('page-title').textContent = `${step.id} · ${step.name}`
-  $('ai-state').textContent = statusLabels[step.review.status]
-  $('ai-state').className = `badge ${step.review.status}`
-  const mismatched = step.actual.roleMatches === false || step.actual.stateMatches === false || ['blocked', 'data-mismatch'].includes(step.review.status)
-  $('scenario-warning').hidden = !mismatched
-  $('scenario-warning').textContent = step.actual.roleMatches === false
-    ? `场景不符：原型为${roleName(step.expectedRole)}，实际为${roleName(step.actual.role)}。本页不能判定场景通过。`
-    : '场景待补：当前截图未复现原型所要求的状态，不能判定场景通过。'
-  $('ai-note').textContent = step.review.visualNotes || '请先核对两侧截图，再留下你的意见。'
+  showVerification(step)
+  $('ai-note').textContent = step.review.visualNotes || 'AI 尚未完成本页视觉核对。你可以直接留下界面意见。'
   $('comparison').replaceChildren(pane(step, 'prototype'), pane(step, 'actual'))
   $('jump').value = step.id
   $('counter').textContent = `${selected + 1} / ${steps.length}`
@@ -139,12 +152,15 @@ function render() {
   showVerdicts()
   const detail = $('evidence-content')
   detail.replaceChildren()
+  detail.append(element('p', `视觉结论：${step.review.visualNotes || '待 AI 核对'}`))
   const differences = [...step.evidenceWarnings, ...(step.review.differences || [])]
   if (differences.length) {
     detail.append(element('p', differences.join('\n')))
   }
   detail.append(element('p', `原型角色：${roleName(step.expectedRole)} · 实际角色：${roleName(step.actual.role)}\n实际采集：${timestamp(step.actual.capturedAt)}\n实现版本：${report.implementation.commit}\n截图 SHA：${step.actual.image.sha256 || '无截图'}`))
-  detail.append(element('p', `交互：${step.review.interactionStatus === 'pass' ? '有通过记录' : '仍需操作验证'} · 真机：${step.review.deviceStatus === 'pass' ? '有通过记录' : '待验证'}\n视觉核对不替代手机号、支付、扫码等真机验收。`))
+  const interactionHeading = step.verification.interaction.status === 'pending' ? '交互记录（尚未据此通过）' : '交互证据'
+  detail.append(element('p', `${interactionHeading}：\n${step.verification.interaction.evidence.join('\n') || '尚未记录，AI 继续补测。'}`))
+  detail.append(element('p', `真机范围与记录：\n${step.verification.device.evidence.join('\n') || (step.verification.device.status === 'not-required' ? '本项未列专项真机要求。' : '尚未单列具体项目；不自动视为通过或转交人工。')}\n截图核对不替代手机号、支付、扫码等真机验证。`))
   if (/^https?:\/\//.test(step.prototype.sourceUrl || '')) {
     const link = element('a', '打开原型与标注')
     link.href = step.prototype.sourceUrl
@@ -183,6 +199,7 @@ for (const step of steps) {
   option.value = step.id
   $('jump').append(option)
 }
+$('report-summary').textContent = `已知问题 ${report.summary.knownIssues} 项 · 角色 / 数据待补 ${report.summary.scenarioPending} 项 · AI 继续补测 ${report.summary.aiPending} 项 · 仅真机待测 ${report.summary.deviceOnly} 项（分类可重叠）`
 $('jump').onchange = () => select(steps.findIndex(step => step.id === $('jump').value))
 $('previous').onclick = () => select(selected - 1)
 $('next').onclick = () => select(selected + 1)

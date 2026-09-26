@@ -79,7 +79,7 @@ Page({
       const snapshot = await mipIdentityModule.saveProfile(profileVisibilityUpdate(profile, this.data))
       this.profileSnapshot = snapshot.profile
       this.setData({
-        phoneBound: snapshot.profile.privateContact?.phoneBound === true,
+        phoneBound: snapshot.phoneBound,
         ...visibilitySelection(snapshot.profile.visibility),
       })
       wx.showToast({ title: '公开设置已保存', icon: 'success' })

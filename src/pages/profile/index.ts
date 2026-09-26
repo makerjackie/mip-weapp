@@ -125,6 +125,8 @@ Page({
   lastSuccessfulRefreshAt: 0,
   refreshOnReturn: false,
   openingActionLock: false,
+  // 删除成功后，丢弃此前开始的该类列表读取，防止已删内容重新出现。
+  portfolioVersions: { cooperation: 0, cases: 0, opportunities: 0 },
 
   onShow() {
     syncCaseNavigation(this, 'pages/profile/index')
@@ -435,8 +437,12 @@ Page({
       this.setData({ cooperationState: 'ready', cooperationCards: [] })
       return
     }
+    const version = this.portfolioVersions.cooperation
     try {
       const page = await cooperationModule.listMine()
+      if (version !== this.portfolioVersions.cooperation) {
+        return
+      }
       this.setData({
         cooperationState: 'ready',
         cooperationCards: page.items.map(item => ({
@@ -447,6 +453,9 @@ Page({
       })
     }
     catch {
+      if (version !== this.portfolioVersions.cooperation) {
+        return
+      }
       if (!this.data.cooperationCards.length) {
         this.setData({ cooperationState: 'error' })
       }
@@ -461,11 +470,18 @@ Page({
       this.setData({ caseState: 'ready', cases: [] })
       return
     }
+    const version = this.portfolioVersions.cases
     try {
       const page = await superCaseModule.listMine()
+      if (version !== this.portfolioVersions.cases) {
+        return
+      }
       this.setData({ caseState: 'ready', cases: page.items.map(presentCase), caseCursor: page.nextCursor || '' })
     }
     catch {
+      if (version !== this.portfolioVersions.cases) {
+        return
+      }
       if (!this.data.cases.length) {
         this.setData({ caseState: 'error' })
       }
@@ -480,8 +496,12 @@ Page({
       this.setData({ opportunityState: 'ready', opportunities: [] })
       return
     }
+    const version = this.portfolioVersions.opportunities
     try {
       const page = await opportunityModule.listMine()
+      if (version !== this.portfolioVersions.opportunities) {
+        return
+      }
       // 保底数组：非数组（含 null/对象/字符串）与非法元素一律丢弃，杜绝卡片属性收到 non-array 告警。
       const opportunities: OpportunityCardView[] = page.items.map(item => ({
         ...item,
@@ -490,6 +510,9 @@ Page({
       this.setData({ opportunityState: 'ready', opportunities, opportunityCursor: page.nextCursor || '' })
     }
     catch {
+      if (version !== this.portfolioVersions.opportunities) {
+        return
+      }
       if (!this.data.opportunities.length) {
         this.setData({ opportunityState: 'error' })
       }
@@ -551,6 +574,7 @@ Page({
       return
     }
     const tab = this.data.portfolioTab
+    const version = this.portfolioVersions[tab]
     const cursor = tab === 'cooperation'
       ? this.data.cooperationCursor
       : tab === 'cases'
@@ -565,6 +589,9 @@ Page({
     try {
       if (tab === 'cooperation') {
         const page = await cooperationModule.listMine(cursor)
+        if (version !== this.portfolioVersions[tab]) {
+          return
+        }
         const ids = new Set(this.data.cooperationCards.map(item => item.id))
         this.setData({
           cooperationCards: [...this.data.cooperationCards, ...page.items.filter(item => !ids.has(item.id)).map(item => ({
@@ -576,11 +603,17 @@ Page({
       }
       else if (tab === 'cases') {
         const page = await superCaseModule.listMine(cursor)
+        if (version !== this.portfolioVersions[tab]) {
+          return
+        }
         const ids = new Set(this.data.cases.map(item => item.id))
         this.setData({ cases: [...this.data.cases, ...page.items.filter(item => !ids.has(item.id)).map(presentCase)], caseCursor: page.nextCursor || '' })
       }
       else if (this.data.opportunitySubTab === 'COOPERATING') {
         const page = await opportunityModule.listMyCooperations(cursor)
+        if (version !== this.portfolioVersions[tab]) {
+          return
+        }
         const ids = new Set(this.data.collaborationOpportunities.map(item => item.id))
         this.setData({
           collaborationOpportunities: [...this.data.collaborationOpportunities, ...page.items.filter(item => !ids.has(item.id)).map(item => ({ ...item, avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(value => typeof value === 'string' && value) : [] }))],
@@ -589,6 +622,9 @@ Page({
       }
       else {
         const page = await opportunityModule.listMine(cursor)
+        if (version !== this.portfolioVersions[tab]) {
+          return
+        }
         const ids = new Set(this.data.opportunities.map(item => item.id))
         this.setData({
           opportunities: [...this.data.opportunities, ...page.items.filter(item => !ids.has(item.id)).map(item => ({
@@ -863,16 +899,17 @@ Page({
     if (!item?.mine) {
       return
     }
+    this.setData({ removingPortfolioId: id })
     const confirmation = await wx.showModal({
       title: '删除提示',
       content: '删除后将无法恢复，是否删除？',
       confirmText: '删除',
       confirmColor: '#FF4D5E',
-    })
-    if (!confirmation.confirm || this.data.removingPortfolioId) {
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      this.setData({ removingPortfolioId: '' })
       return
     }
-    this.setData({ removingPortfolioId: id })
     try {
       if (tab === 'cooperation') {
         const card = this.data.cooperationCards.find(entry => entry.id === id)
@@ -881,6 +918,7 @@ Page({
         }
         const version = Number.isInteger(card.version) ? Number(card.version) : (await cooperationModule.get(card.id)).version
         await cooperationModule.archive(card.id, version)
+        this.portfolioVersions[tab] += 1
         this.setData({ cooperationCards: this.data.cooperationCards.filter(entry => entry.id !== id) })
       }
       else if (tab === 'cases') {
@@ -890,6 +928,7 @@ Page({
         }
         const version = Number.isInteger(card.version) ? Number(card.version) : (await superCaseModule.get(card.id)).version
         await superCaseModule.archive(card.id, version)
+        this.portfolioVersions[tab] += 1
         this.setData({ cases: this.data.cases.filter(entry => entry.id !== id) })
       }
       else {
@@ -899,6 +938,7 @@ Page({
         }
         const version = (await opportunityModule.get(card.id)).version
         await opportunityModule.remove(card.id, version)
+        this.portfolioVersions[tab] += 1
         this.setData({ opportunities: this.data.opportunities.filter(entry => entry.id !== id) })
       }
       this.refreshOnReturn = true

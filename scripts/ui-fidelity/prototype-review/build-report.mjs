@@ -98,6 +98,79 @@ function previousFeedback(file, ids) {
   return { sourceCommit: input.sourceCommit, implementationCommit: input.implementationCommit, exportedAt: input.exportedAt, feedback }
 }
 
+function evidenceLines(value) {
+  return (Array.isArray(value) ? value : [value]).filter(item => typeof item === 'string' && item.trim())
+}
+
+// These dimensions describe evidence coverage, not a single product pass/fail score.
+function verificationOf(step) {
+  const { review, actual, prototype } = step
+  const current = prototype.image.available && actual.image.available
+    && prototype.capturedAt && actual.capturedAt
+    && ['devtools', 'device'].includes(actual.source)
+    && review.reviewedBy && review.reviewedAt && review.visualNotes
+    && review.reviewedImageSha256 === actual.image.sha256
+  const visualStates = { 'pass': 'pass', 'needs-fix': 'needs-fix', 'accepted-difference': 'explained', 'data-mismatch': 'reviewed', 'blocked': 'reviewed' }
+  const visualStatus = current ? visualStates[review.status] || 'pending' : 'pending'
+  const scenarioStatus = actual.roleMatches === true && actual.stateMatches === true
+    && !['blocked', 'data-mismatch'].includes(review.status)
+    ? 'matched'
+    : 'pending'
+  const interactions = [...evidenceLines(actual.interactionEvidence), ...evidenceLines(review.interactionNotes)]
+  let interactionStatus = 'pending'
+  if (review.interactionStatus === 'failed') {
+    interactionStatus = 'failed'
+  }
+  else if (current && interactions.length) {
+    interactionStatus = review.interactionStatus === 'pass' ? 'pass' : 'partial'
+  }
+  const deviceEvidence = evidenceLines(review.deviceNotes)
+  let deviceStatus = 'unscoped'
+  if (review.deviceStatus === 'failed') {
+    deviceStatus = 'failed'
+  }
+  else if (review.deviceStatus === 'pass' && current && (deviceEvidence.length || actual.source === 'device')) {
+    deviceStatus = 'pass'
+  }
+  else if (typeof review.deviceRequired === 'boolean') {
+    deviceStatus = review.deviceRequired ? 'pending' : 'not-required'
+  }
+  const visualComplete = ['pass', 'explained'].includes(visualStatus)
+  const hasIssue = visualStatus === 'needs-fix' || interactionStatus === 'failed' || deviceStatus === 'failed'
+  const deviceScopeMissing = deviceStatus === 'pending' && !deviceEvidence.length
+  const aiPending = hasIssue || !visualComplete || scenarioStatus !== 'matched' || interactionStatus !== 'pass' || deviceScopeMissing
+  const deviceOnly = !aiPending && deviceStatus === 'pending'
+  let nextStep = '当前场景的视觉与交互已有记录，可继续逐页批注。'
+  if (hasIssue) {
+    nextStep = 'AI 继续处理已记录的问题，并重新验证。'
+  }
+  else if (scenarioStatus !== 'matched') {
+    nextStep = 'AI 补齐对应角色或演示数据后复测；所需账号条件会单独说明。'
+  }
+  else if (deviceScopeMissing) {
+    nextStep = 'AI 补充具体真机测试范围；未单列前不转为人工验收任务。'
+  }
+  else if (aiPending) {
+    nextStep = 'AI 继续完成截图核对和可自行操作的测试。'
+  }
+  else if (deviceOnly) {
+    nextStep = '当前场景的视觉与交互已有记录；剩余仅为下方列出的真机项目。'
+  }
+  else if (deviceStatus === 'unscoped') {
+    nextStep = '当前场景的视觉与交互已有记录；真机范围尚未单列。'
+  }
+  return {
+    visual: { status: visualStatus },
+    interaction: { status: interactionStatus, evidence: interactions },
+    scenario: { status: scenarioStatus },
+    device: { status: deviceStatus, evidence: deviceEvidence },
+    hasIssue,
+    aiPending,
+    deviceOnly,
+    nextStep,
+  }
+}
+
 export function buildReportData({ manifestPath, evidencePath, feedbackPath }) {
   const manifest = readJson(manifestPath)
   const evidence = evidencePath ? readJson(evidencePath) : {}
@@ -124,7 +197,7 @@ export function buildReportData({ manifestPath, evidencePath, feedbackPath }) {
     const reviewedHash = step.review.reviewedImageSha256
     step.evidenceWarnings = []
     if (reviewedHash && reviewedHash !== step.actual.image.sha256) {
-      step.review = { status: 'pending', visualNotes: '截图已更新，等待重新核对。', differences: ['当前截图与上次复核的 SHA 不同，旧结论不沿用。'], interactionStatus: 'pending', deviceStatus: 'pending' }
+      step.review = { ...step.review, status: 'pending', visualNotes: '截图已更新，等待重新核对。', differences: ['当前截图与上次复核的 SHA 不同，旧结论不沿用。'], interactionStatus: 'pending', deviceStatus: 'pending' }
       step.actual.stateMatches = null
     }
     if (step.review.status === 'pass') {
@@ -148,6 +221,7 @@ export function buildReportData({ manifestPath, evidencePath, feedbackPath }) {
     if (step.actual.image.available && step.actual.stateMatches !== true) {
       step.evidenceWarnings.push('实际场景与原型尚未对齐。')
     }
+    step.verification = verificationOf(step)
     // 750×1624 contains custom navigation; 750×1448 omits native navigation.
     step.actual.chromeOmitted ??= step.actual.image.width === 750 && step.actual.image.height === 1448
     step.actual.referenceChromeInsetCssPx ??= step.actual.chromeOmitted ? 88 : 0
@@ -167,7 +241,16 @@ export function buildReportData({ manifestPath, evidencePath, feedbackPath }) {
     previousFeedback: previousFeedback(feedbackPath, ids),
     captureSet: sha256(steps.map(step => `${step.id}:${step.prototype.image.sha256}:${step.actual.image.sha256}`).join('|')).slice(0, 16),
     steps,
-    summary: { total: 43, prototype: steps.filter(s => s.prototype.image.available).length, actual: steps.filter(s => s.actual.image.available).length, passed: steps.filter(s => s.review.status === 'pass').length },
+    summary: {
+      total: 43,
+      prototype: steps.filter(s => s.prototype.image.available).length,
+      actual: steps.filter(s => s.actual.image.available).length,
+      passed: steps.filter(s => s.review.status === 'pass').length,
+      knownIssues: steps.filter(s => s.verification.hasIssue).length,
+      scenarioPending: steps.filter(s => s.verification.scenario.status === 'pending').length,
+      aiPending: steps.filter(s => s.verification.aiPending).length,
+      deviceOnly: steps.filter(s => s.verification.deviceOnly).length,
+    },
   }
 }
 

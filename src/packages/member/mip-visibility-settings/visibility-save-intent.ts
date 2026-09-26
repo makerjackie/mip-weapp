@@ -66,6 +66,7 @@ export function profileVisibilityUpdate(
     companies: profile.companies,
     organizations: profile.organizations,
     visibility: {
+      ...profile.visibility,
       nickname: selection.visibilityNickname,
       realName: selection.visibilityRealName,
       gender: selection.visibilityGender,

@@ -16,13 +16,20 @@
       <button id="export" class="export">导出全部意见</button>
     </header>
     <main>
+      <p id="report-summary" class="report-summary"></p>
       <section class="page-heading">
         <div class="heading-line">
           <h1 id="page-title"></h1>
+        </div>
+        <div class="verification-strip" aria-label="AI 分项验证记录">
           <span id="ai-state" class="badge"></span>
+          <span id="interaction-state" class="badge"></span>
+          <span id="scenario-state" class="badge"></span>
+          <span id="device-state" class="badge"></span>
         </div>
         <p id="scenario-warning" class="scenario-warning" role="status" hidden></p>
         <p id="ai-note" class="ai-note"></p>
+        <p id="next-step" class="next-step"></p>
       </section>
       <div id="comparison" class="comparison"></div>
       <details id="evidence" class="evidence">

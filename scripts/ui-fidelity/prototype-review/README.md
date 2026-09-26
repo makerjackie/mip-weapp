@@ -20,6 +20,16 @@ node scripts/ui-fidelity/prototype-review/build-report.mjs \
 - 旧用户反馈仅作只读参考，绝不转为 AI 通过，也不预选本轮按钮。当前意见按来源版本、实现版本、截图集合隔离存储；更换图集后重新验收。
 - 导出保持原有 `{report, sourceCommit, implementationCommit, exportedAt, feedback}` 格式，每步使用 `{status, note, at}`。浏览器保存失败会提醒，当前内存意见仍可导出。
 
+页面分别展示视觉、交互、角色/数据场景和真机记录。`data-mismatch` / `blocked` 是场景覆盖缺口，不计入“已知问题”；有最新图片复核记录时，仅显示“当前画面已核对”，不升级为目标场景通过。`interactionStatus: failed` 会独立显示，避免视觉通过掩盖交互问题。汇总分类允许重叠，AI 可自行完成的核对仍标为 AI 待补测。
+
+原有证据结构继续有效，可追加以下字段明确验证范围：
+
+- `actual.interactionEvidence: string[]` 或 `review.interactionNotes: string`：真实操作及结果；`interactionStatus: pass` 还需要这些记录，只有部分记录且状态仍是 `pending` 时显示“部分已测”。
+- `review.deviceRequired: boolean`：是否列有专项真机要求。旧数据普遍只有 `deviceStatus: pending`，未明确范围时显示“范围未单列”，不把所有页面自动变成用户真机任务。
+- `review.deviceNotes: string | string[]`：具体真机待测项目或已验证记录。仅当视觉/交互均有当前证据、场景一致，且唯一剩余项为明确列出的真机测试时，显示“仅真机待测”。
+
+这些展示字段不会回写输入 JSON，也不会改变用户批注；截图 SHA 变化会让旧视觉、交互和真机通过记录失效。详述记录保留在折叠区域，主界面仍以左右截图、翻页和批注为主。
+
 截图、用户反馈、生成的报告与本机路径只保留在 `.tmp/` 等本地目录，不提交进仓库。可提交的验收摘要遵循 [验收标准](../../../docs/mip/ACCEPTANCE.md)，不能用此网页的静态截图核对替代真机、授权、支付或部署证据。
 
 实现分别位于 `build-report.mjs`（校验和生成）、`template.html`（结构）、`review.css`（布局）、`review.js`（翻页和意见）。聚焦验证：

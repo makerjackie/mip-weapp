@@ -98,3 +98,92 @@ it('rejects missing frames and unknown override IDs', () => {
   f.write()
   assert.throws(() => buildReportData({ manifestPath: f.manifestPath }), /43/)
 })
+
+it('24 unmatched scenarios remain coverage gaps, not 24 product failures', () => {
+  const f = fixture()
+  for (const step of f.manifest.steps.slice(0, 24)) {
+    step.review = { ...passingReview(), status: 'data-mismatch' }
+    step.actual.roleMatches = false
+  }
+  f.write()
+  const result = buildReportData({ manifestPath: f.manifestPath })
+  assert.equal(result.summary.scenarioPending, 24)
+  assert.equal(result.summary.knownIssues, 0)
+  assert.equal(result.steps[0].verification.visual.status, 'reviewed')
+  assert.equal(result.steps[0].verification.aiPending, true)
+  assert.equal(result.steps[0].verification.device.status, 'unscoped')
+  assert.equal(result.steps[0].review.status, 'data-mismatch')
+})
+
+it('a visual pass never hides a failed interaction', () => {
+  const f = fixture()
+  Object.assign(f.manifest.steps[0].review, passingReview(), { interactionStatus: 'failed' })
+  f.write()
+  const result = buildReportData({ manifestPath: f.manifestPath })
+  assert.equal(result.steps[0].verification.visual.status, 'pass')
+  assert.equal(result.steps[0].verification.interaction.status, 'failed')
+  assert.equal(result.steps[0].verification.hasIssue, true)
+  assert.equal(result.summary.knownIssues, 1)
+})
+
+it('interaction pass requires a recorded operation and partial evidence stays partial', () => {
+  const f = fixture()
+  for (const step of f.manifest.steps.slice(0, 3)) {
+    Object.assign(step.review, passingReview(), { interactionStatus: 'pass' })
+  }
+  Object.assign(f.manifest.steps[1].actual, { interactionEvidence: ['Opened details and returned to list'] })
+  Object.assign(f.manifest.steps[1].review, { interactionStatus: 'pending' })
+  Object.assign(f.manifest.steps[2].review, { interactionNotes: 'Saved and reloaded the updated record' })
+  f.write()
+  const result = buildReportData({ manifestPath: f.manifestPath })
+  assert.deepEqual(result.steps.slice(0, 3).map(step => step.verification.interaction.status), ['pending', 'partial', 'pass'])
+})
+
+it('only-device-pending needs an explicit scope and completed independent checks', () => {
+  const f = fixture()
+  for (const step of f.manifest.steps.slice(0, 4)) {
+    Object.assign(step.review, passingReview(), { interactionStatus: 'pass', interactionNotes: 'Checked all relevant navigation', deviceStatus: 'pending' })
+  }
+  Object.assign(f.manifest.steps[0].review, { deviceRequired: true, deviceNotes: 'Verify native phone authorization on a real phone' })
+  Object.assign(f.manifest.steps[1].review, { deviceRequired: true })
+  Object.assign(f.manifest.steps[2].review, { deviceRequired: true, deviceNotes: 'Verify payment on a real phone', interactionStatus: 'pending' })
+  f.write()
+  const result = buildReportData({ manifestPath: f.manifestPath })
+  assert.equal(result.steps[0].verification.deviceOnly, true)
+  assert.equal(result.steps[0].verification.aiPending, false)
+  assert.equal(result.steps[1].verification.deviceOnly, false)
+  assert.equal(result.steps[2].verification.deviceOnly, false)
+  assert.equal(result.steps[3].verification.deviceOnly, false)
+  assert.equal(result.steps[3].verification.device.status, 'unscoped')
+  assert.equal(result.summary.deviceOnly, 1)
+})
+
+it('changed screenshots cannot retain current visual, interaction, or device verification', () => {
+  const f = fixture()
+  Object.assign(f.manifest.steps[0].review, passingReview(), {
+    reviewedImageSha256: 'previous-image',
+    interactionStatus: 'pass',
+    interactionNotes: 'Previous run passed',
+    deviceStatus: 'pass',
+    deviceRequired: true,
+    deviceNotes: 'Previous device authorization passed',
+  })
+  f.write()
+  const result = buildReportData({ manifestPath: f.manifestPath })
+  assert.equal(result.steps[0].verification.visual.status, 'pending')
+  assert.equal(result.steps[0].verification.interaction.status, 'pending')
+  assert.equal(result.steps[0].verification.device.status, 'pending')
+  assert.equal(result.steps[0].verification.deviceOnly, false)
+})
+
+it('device verification is never inferred from ordinary screenshots or a bare pass flag', () => {
+  const f = fixture()
+  for (const step of f.manifest.steps.slice(0, 3)) {
+    Object.assign(step.review, passingReview(), { deviceStatus: 'pass' })
+  }
+  Object.assign(f.manifest.steps[1].review, { deviceRequired: false, deviceStatus: 'pending' })
+  Object.assign(f.manifest.steps[2].review, { deviceNotes: 'Authorized phone access on an actual iPhone' })
+  f.write()
+  const result = buildReportData({ manifestPath: f.manifestPath })
+  assert.deepEqual(result.steps.slice(0, 3).map(step => step.verification.device.status), ['unscoped', 'not-required', 'pass'])
+})

@@ -111,6 +111,7 @@ Page({
   visitKey: '',
   safetyActionBusy: false,
   influenceRequest: 0,
+  profileRequest: 0,
   stopInterestSubscription: null as (() => void) | null,
 
   onLoad(query: Record<string, string | undefined>) {
@@ -150,6 +151,7 @@ Page({
   },
 
   onUnload() {
+    this.profileRequest += 1
     this.stopInterestSubscription?.()
     this.stopInterestSubscription = null
   },
@@ -162,8 +164,12 @@ Page({
     if (!this.data.profile) {
       this.setData({ state: 'loading', message: '' })
     }
+    const request = ++this.profileRequest
     try {
       const aggregate = await opportunityModule.getPublicProfile(this.data.profileRef)
+      if (request !== this.profileRequest) {
+        return
+      }
       const interest = profileInterestMutations.mergeServer(
         aggregate.profile.profileRef,
         aggregate.interestActive,
@@ -194,6 +200,9 @@ Page({
       await this.resolveInteractionBar()
     }
     catch (error) {
+      if (request !== this.profileRequest) {
+        return
+      }
       this.setData({
         state: 'error',
         message: error instanceof Error ? error.message : '公开档案加载失败。',
@@ -561,6 +570,7 @@ Page({
       return
     }
     const cardId = card.id as CooperationCardId
+    this.setData({ deletingId: id })
     const confirmation = await wx.showModal({
       title: '删除提示',
       content: '删除后将无法恢复，是否删除？',
@@ -568,12 +578,13 @@ Page({
       confirmColor: '#FF4D5E',
     }).catch(() => null)
     if (!confirmation?.confirm) {
+      this.setData({ deletingId: '' })
       return
     }
-    this.setData({ deletingId: id })
     try {
       const detail = await cooperationModule.get(cardId)
       await cooperationModule.archive(cardId, detail.version)
+      this.profileRequest += 1
       this.setData({
         cooperationCards: this.data.cooperationCards.filter(item => item.id !== id),
         deletingId: '',
@@ -596,6 +607,7 @@ Page({
       return
     }
     const caseId = item.id as SuperCaseId
+    this.setData({ deletingId: id })
     const confirmation = await wx.showModal({
       title: '删除提示',
       content: '删除后将无法恢复，是否删除？',
@@ -603,12 +615,13 @@ Page({
       confirmColor: '#FF4D5E',
     }).catch(() => null)
     if (!confirmation?.confirm) {
+      this.setData({ deletingId: '' })
       return
     }
-    this.setData({ deletingId: id })
     try {
       const detail = await superCaseModule.get(caseId)
       await superCaseModule.archive(caseId, detail.version)
+      this.profileRequest += 1
       // 时间轴节点/月份标签是展示层，随数据收缩自然消失，无需特判。
       this.setData({
         superCases: this.data.superCases.filter(entry => entry.id !== id),
@@ -647,6 +660,7 @@ Page({
     if (!item) {
       return
     }
+    this.setData({ deletingId: id })
     const confirmation = await wx.showModal({
       title: '删除提示',
       content: '删除后将无法恢复，是否删除？',
@@ -654,12 +668,13 @@ Page({
       confirmColor: '#FF4D5E',
     }).catch(() => null)
     if (!confirmation?.confirm) {
+      this.setData({ deletingId: '' })
       return
     }
-    this.setData({ deletingId: id })
     try {
       const detail = await opportunityModule.get(item.id)
       await opportunityModule.remove(item.id, detail.version)
+      this.profileRequest += 1
       this.setData({
         opportunities: this.data.opportunities.filter(entry => entry.id !== id),
         deletingId: '',

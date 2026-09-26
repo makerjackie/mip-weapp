@@ -359,18 +359,21 @@ Page({
     if (!item?.mine || !Number.isInteger(expectedVersion) || this.data.archivingId) {
       return
     }
+    this.setData({ archivingId: id, message: '' })
     const confirmation = await wx.showModal({
       title: '删除提示',
       content: '删除后将无法恢复，是否删除？',
       confirmText: '删除',
       confirmColor: '#FF4D5E',
-    })
-    if (!confirmation.confirm) {
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      this.setData({ archivingId: '' })
       return
     }
-    this.setData({ archivingId: id, message: '' })
     try {
       await cooperationModule.archive(item.id, expectedVersion)
+      this.requestSequence += 1
+      this.setData({ cards: this.data.cards.filter(entry => entry.id !== id) })
       await this.load(true)
       wx.showToast({ title: '已删除', icon: 'success', duration: 1800 })
     }

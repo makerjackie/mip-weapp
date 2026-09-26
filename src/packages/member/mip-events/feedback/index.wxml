@@ -1,4 +1,4 @@
-<view id="mip-event-feedback-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+144rpx)] pt-3 text-ink">
+<view id="mip-event-feedback-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-3 pt-3 text-ink">
   <view wx:if="{{state === 'loading'}}" id="mip-event-feedback-loading-state" class="flex flex-col gap-3">
     <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
@@ -87,8 +87,10 @@
     <view wx:elif="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] leading-5 text-brand">{{message}}</view>
     <app-page-exit />
 
-    <view class="mip-liquid-glass fixed bottom-[env(safe-area-inset-bottom)] left-0 right-0 z-50 box-border px-3 py-2">
-      <t-button id="mip-event-feedback-save" block size="large" theme="primary" loading="{{saving}}" disabled="{{saving}}" bind:tap="saveFeedback">保存</t-button>
-    </view>
+    <mip-sticky-actions>
+      <view slot="actions" class="w-full">
+        <mip-pill-button id="mip-event-feedback-save" label="{{saving ? '保存中…' : '保存'}}" loading="{{saving}}" disabled="{{saving}}" bind:tap="saveFeedback" />
+      </view>
+    </mip-sticky-actions>
   </block>
 </view>

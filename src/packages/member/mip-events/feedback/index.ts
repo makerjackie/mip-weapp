@@ -5,7 +5,7 @@ import { isEventAccessRequirementError, MipEventsError, publicEventTypeLabel } f
 import { mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { caseNavigateTo } from '../../../../platform/navigation/client'
+import { caseNavigateTo, caseRedirectTo } from '../../../../platform/navigation/client'
 import { formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
 
 type PageState = 'loading' | 'ready' | 'access' | 'blocked' | 'error' | 'conflict'
@@ -449,6 +449,7 @@ Page({
         validationErrorMessage: '',
       })
       wx.showToast({ title: '反馈已保存', icon: 'success' })
+      this.returnToEvent()
     }
     catch (error) {
       if (isEventAccessRequirementError(error)) {
@@ -467,6 +468,19 @@ Page({
     }
     finally {
       this.setData({ saving: false })
+    }
+  },
+
+  returnToEvent() {
+    const detailRoute = 'packages/member/mip-events/detail/index'
+    const redirect = () => caseRedirectTo({ url: `/${detailRoute}?eventId=${encodeURIComponent(this.data.eventId)}` })
+    const pages = getCurrentPages()
+    const previous = pages[pages.length - 2]
+    if (previous?.route === detailRoute && previous.options.eventId === this.data.eventId) {
+      wx.navigateBack({ fail: redirect })
+    }
+    else {
+      redirect()
     }
   },
 

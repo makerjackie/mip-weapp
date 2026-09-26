@@ -13,7 +13,7 @@ function source(file: string) {
 }
 
 describe('MIP profile visibility settings', () => {
-  it('preserves profile fields while replacing the complete visibility contract', () => {
+  it('preserves profile fields and both privacy preferences while updating public visibility', () => {
     const profile = {
       exists: true,
       version: 7,
@@ -30,6 +30,8 @@ describe('MIP profile visibility settings', () => {
       companies: [{ name: '示例公司', role: '负责人' }],
       organizations: [{ name: '示例组织', role: '成员' }],
       visibility: {
+        talentSearch: false,
+        opportunitiesForNonPlayers: false,
         headline: true,
         introduction: true,
         companies: true,
@@ -61,6 +63,8 @@ describe('MIP profile visibility settings', () => {
       companies: [{ name: '示例公司', role: '负责人' }],
       organizations: [{ name: '示例组织', role: '成员' }],
       visibility: {
+        talentSearch: false,
+        opportunitiesForNonPlayers: false,
         nickname: false,
         realName: false,
         gender: false,

@@ -98,6 +98,18 @@ main {
 .page-heading {
   margin-bottom: 17px;
 }
+.report-summary {
+  margin: 0 0 14px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.verification-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
 .heading-line {
   display: flex;
   align-items: center;
@@ -122,9 +134,14 @@ h1 {
   background: #193827;
   color: #a2e4b8;
 }
-.badge.needs-fix {
+.badge.needs-fix,
+.badge.failed {
   background: #442823;
   color: #ffb5a9;
+}
+.badge.scenario-pending {
+  background: #2a251c;
+  color: #edcf90;
 }
 .scenario-warning {
   margin: 10px 0 0;
@@ -140,6 +157,16 @@ h1 {
   font-size: 12px;
   line-height: 1.6;
   color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.next-step {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #c3cad5;
 }
 .comparison {
   display: grid;

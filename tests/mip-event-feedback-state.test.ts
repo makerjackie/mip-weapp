@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MipEventsError } from '../src/modules/mip-events'
+import { caseRedirectTo } from '../src/platform/navigation/client'
 
 const eventsModule = vi.hoisted(() => ({
   getEvent: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock('../src/modules/mip-identity/client', () => ({
 
 vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: vi.fn(),
+  caseRedirectTo: vi.fn(),
 }))
 
 type PageData = Record<string, any>
@@ -51,6 +53,8 @@ const answers = {
 let definition: PageDefinition
 const showToast = vi.fn()
 const pageScrollTo = vi.fn()
+const navigateBack = vi.fn()
+const currentPages = vi.fn(() => [] as Array<{ route: string, options: Record<string, string> }>)
 
 function createPage(overrides: PageData = {}) {
   const page = Object.create(definition) as PageDefinition
@@ -68,7 +72,8 @@ function callPage(page: PageDefinition, method: string, ...args: unknown[]) {
 }
 
 beforeAll(async () => {
-  vi.stubGlobal('wx', { showToast, pageScrollTo })
+  vi.stubGlobal('wx', { showToast, pageScrollTo, navigateBack })
+  vi.stubGlobal('getCurrentPages', currentPages)
   vi.stubGlobal('Page', (input: PageDefinition) => {
     definition = input
   })
@@ -81,6 +86,9 @@ beforeEach(() => {
   }
   showToast.mockClear()
   pageScrollTo.mockClear()
+  navigateBack.mockReset()
+  vi.mocked(caseRedirectTo).mockClear()
+  currentPages.mockReturnValue([])
 })
 
 describe('MIP event feedback UI state', () => {
@@ -159,6 +167,31 @@ describe('MIP event feedback UI state', () => {
     expect(page.data.roleOptions.find((role: { key: string }) => role.key === 'strategist').selected).toBe(true)
     expect(page.data.roleOptions.find((role: { key: string }) => role.key === 'connector').selected).toBe(false)
     expect(showToast).toHaveBeenCalledWith({ title: '反馈已保存', icon: 'success' })
+    expect(caseRedirectTo).toHaveBeenCalledWith({ url: `/packages/member/mip-events/detail/index?eventId=${eventId}` })
+  })
+
+  it('returns to the same event detail and falls back to that event if back navigation fails', () => {
+    const page = createPage({ eventId })
+    currentPages.mockReturnValue([
+      { route: 'packages/member/mip-events/detail/index', options: { eventId } },
+      { route: 'packages/member/mip-events/feedback/index', options: { eventId } },
+    ])
+    callPage(page, 'returnToEvent')
+    expect(navigateBack).toHaveBeenCalledOnce()
+    expect(caseRedirectTo).not.toHaveBeenCalled()
+    navigateBack.mock.calls[0][0].fail()
+    expect(caseRedirectTo).toHaveBeenCalledWith({ url: `/packages/member/mip-events/detail/index?eventId=${eventId}` })
+  })
+
+  it('does not return to a different event or an unrelated entry page', () => {
+    const page = createPage({ eventId })
+    currentPages.mockReturnValue([
+      { route: 'packages/member/mip-events/detail/index', options: { eventId: 'another-event' } },
+      { route: 'packages/member/mip-events/feedback/index', options: { eventId } },
+    ])
+    callPage(page, 'returnToEvent')
+    expect(navigateBack).not.toHaveBeenCalled()
+    expect(caseRedirectTo).toHaveBeenCalledWith({ url: `/packages/member/mip-events/detail/index?eventId=${eventId}` })
   })
 
   it('refreshes only the optimistic version after a conflict and preserves the draft', async () => {
@@ -193,6 +226,8 @@ describe('MIP event feedback UI state', () => {
     expect(page.data.feedback.version).toBe(4)
     expect(page.data.body).toBe('需要保留的草稿')
     expect(page.data.message).toContain('当前填写内容已保留')
+    expect(navigateBack).not.toHaveBeenCalled()
+    expect(caseRedirectTo).not.toHaveBeenCalled()
   })
 
   it('shows the attendee requirement without adding an event-end restriction', async () => {
