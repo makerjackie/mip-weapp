@@ -135,14 +135,15 @@ export function buildAdminReview({ checklistPath, capturesPath, outputPath, prot
   const reviewCssAsset = `review.${sha(reviewCss)}.css`
   const html = fs.readFileSync(new URL('./template.html', import.meta.url), 'utf8')
     .replace(/\/\*REPORT_JSON\*\/\s*null/, payload)
-    .replace('/*REVIEW_JS_ASSET*/', reviewJsAsset)
-    .replace('/*REVIEW_CSS_ASSET*/', reviewCssAsset)
+    // Keep the report shell atomic across CDN/browser caches during deployment.
+    .replace('<script src="/*REVIEW_JS_ASSET*/" defer></script>', () => `<script>${reviewJs.toString('utf8').replace(/<\/script/gi, '<\\/script')}</script>`)
+    .replace('<link rel="stylesheet" href="/*REVIEW_CSS_ASSET*/" />', () => `<style>${reviewCss.toString('utf8')}</style>`)
   fs.mkdirSync(path.join(destination, 'assets'), { recursive: true })
   fs.writeFileSync(path.join(destination, 'index.html'), html)
   fs.writeFileSync(path.join(destination, reviewJsAsset), reviewJs)
   fs.writeFileSync(path.join(destination, reviewCssAsset), reviewCss)
   for (const file of [reviewJsAsset, reviewCssAsset]) {
-    if (!html.includes(file) || !fs.existsSync(path.join(destination, file))) {
+    if (!fs.existsSync(path.join(destination, file))) {
       throw new Error(`验收页资源引用缺失: ${file}`)
     }
   }
