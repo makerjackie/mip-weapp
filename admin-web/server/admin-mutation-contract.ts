@@ -7,6 +7,7 @@ export interface ReviewedAdminMutation {
   action: AdminWebMutationAction
   required: readonly string[]
   optional: readonly string[]
+  forwardIdempotencyKey: boolean
 }
 
 export const WEB_ADMIN_QUERY_ACTIONS: ReadonlySet<string> = new Set(
@@ -26,7 +27,12 @@ export const REVIEWED_ADMIN_MUTATIONS: readonly ReviewedAdminMutation[] = Object
       action: operation.action as AdminWebMutationAction,
       required: operation.requiredInputKeys,
       optional: operation.optionalInputKeys,
+      forwardIdempotencyKey: operation.forwardIdempotencyKey === true,
     })),
+)
+
+export const REVIEWED_ADMIN_MUTATION_FORWARD_IDEMPOTENCY: ReadonlyMap<string, boolean> = new Map(
+  REVIEWED_ADMIN_MUTATIONS.map(item => [item.action, item.forwardIdempotencyKey]),
 )
 
 export const REVIEWED_ADMIN_MUTATION_ACTIONS: ReadonlySet<string> = new Set(

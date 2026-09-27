@@ -139,12 +139,6 @@ export async function createOperationModel(
     })
     const values = { ...prefillPeopleValues(typedAction, definition.values, detail), ...launch.values }
     const fields = peopleFields(typedAction, definition.fields, launch.allowedCapabilities, detail)
-    if (typedAction === 'mip.admin.adminAccounts.create') {
-      const payload = record(await request('mip.admin.users.list', { limit: 100 }))
-      const users = Array.isArray(payload.items) ? payload.items.map(record) : []
-      const field = fields.find(item => item.name === 'userId')
-      if (field) field.options = users.map(user => ({ value: String(user.id || user.userId || ''), label: String(user.nickname || user.name || '未设置昵称') }))
-    }
     return model(definition, fields, values, idempotencyKey, next => buildAdminPeopleMutationInput(definition, next))
   }
   if (eventActions.has(action)) {

@@ -41,7 +41,7 @@ export function UserContentEditFormPage() {
     buildInput: (submitted: OperationValues) => {
       const merged = { ...values, ...submitted }
       const result = validateContentMutation('mip.admin.userContent.save', contentFormValues('mip.admin.userContent.save', merged, idempotencyKey))
-      return result.ok ? result.input : null
+      return result.ok ? { ok: true, input: result.input } : { ok: false, errors: { ...result.errors } }
     },
   }
 

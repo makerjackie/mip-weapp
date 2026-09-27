@@ -21,6 +21,32 @@ import {
   valueOf,
 } from './admin-read-formatters.ts'
 
+const TASK_EXPORT_FILE_NAME = /^[A-Za-z0-9._-]+\.xlsx$/
+const TASK_EXPORT_MAX_BYTES = 8 * 1024 * 1024
+const TASK_EXPORT_MAX_ROWS = 5000
+const BASE64_PATTERN = /^[A-Za-z0-9+/]*={0,2}$/
+
+function canonicalBase64(value: string) {
+  return Boolean(value)
+    && value.length % 4 === 0
+    && value.length <= Math.ceil(TASK_EXPORT_MAX_BYTES / 3) * 4
+    && BASE64_PATTERN.test(value)
+}
+
+function decodeXlsxBase64(value: string) {
+  const binary = atob(value)
+  const bytes = Uint8Array.from(binary, character => character.charCodeAt(0))
+  if (bytes.length > TASK_EXPORT_MAX_BYTES
+    || bytes[0] !== 0x50 || bytes[1] !== 0x4b || bytes[2] !== 0x03 || bytes[3] !== 0x04) {
+    throw new Error('INVALID_TASK_EXPORT')
+  }
+  return bytes
+}
+
+function assertXlsxBase64(value: string) {
+  decodeXlsxBase64(value)
+}
+
 export const ADMIN_TASK_MUTATION_ACTIONS = [
   'mip.admin.tasks.save',
   'mip.admin.tasks.publish',
@@ -109,7 +135,7 @@ export async function loadTaskManagementPage(
   query: AdminListQuery,
   request: AdminRequest,
 ): Promise<AdminReadPage> {
-  const [taskPayload, completionPayload] = await Promise.all([
+  const [taskPayload, completionPayload, editorOptionsPayload] = await Promise.all([
     request('mip.admin.tasks.list', {
       filters: { query: query.query, status: query.status },
       limit: query.limit,
@@ -119,17 +145,19 @@ export async function loadTaskManagementPage(
       filters: { query: query.query },
       limit: query.limit,
     }),
+    request('mip.admin.tasks.editorOptions').catch(() => ({})),
   ])
   const taskPage = pageValue(taskPayload)
   const completionPage = pageValue(completionPayload)
+  const ownerNames = new Map(catalogOptions(record(editorOptionsPayload).owners).map(option => [option.value, option.label]))
   return {
     sections: [
       {
         title: '任务',
-        rows: taskPage.items.map(taskListRow),
+        rows: taskPage.items.map(item => taskListRow(item, ownerNames)),
         columns: columns([
           ['name', '任务名称'], ['reward', '经验奖励'], ['starLevel', '星级'],
-          ['period', '周期'], ['assignedOwner', '笨笨老大'], ['rewardConfig', '奖励分项'],
+          ['period', '周期'], ['assignedOwner', '负责人'], ['rewardConfig', '奖励分项'],
           ['assignment', '分配范围'], ['assigned', '已分配'], ['completed', '已完成'],
           ['endsAt', '截止时间'], ['updatedAt', '更新时间'], ['state', '状态'],
         ]),
@@ -176,11 +204,18 @@ export async function loadTaskDetail(
   request: AdminDetailRequest,
   options: TaskDetailLoadOptions = {},
 ): Promise<AdminDetailView> {
-  const [taskValue, eligibleLevelCatalog] = await Promise.all([
+  const [taskValue, eligibleLevelCatalog, editorOptionsPayload] = await Promise.all([
     request('mip.admin.tasks.get', { taskId }),
     loadTaskEligibleLevels(request),
+    request('mip.admin.tasks.editorOptions').catch(() => ({})),
   ])
   const task = record(taskValue)
+  const ownerNames = new Map(catalogOptions(record(editorOptionsPayload).owners).map(option => [option.value, option.label]))
+  const assignedOwnerLabel = task.assignedOwnerName
+    ? String(task.assignedOwnerName)
+    : task.assignedOwnerId && ownerNames.get(String(task.assignedOwnerId))
+      ? ownerNames.get(String(task.assignedOwnerId))!
+      : '—'
   const assignmentMode = String(task.assignmentMode || 'ALL')
   const memberQuery = taskDetailPageQuery(options.members, 20)
   const completionQuery = taskDetailPageQuery(options.completions, 20)
@@ -219,7 +254,7 @@ export async function loadTaskDetail(
         ['周期开始', formatDateTime(task.periodStartAt)],
         ['周期结束', formatDateTime(task.periodEndAt)],
         ['周送达时间', task.weeklyDeliverAt],
-        ['指派负责人', task.assignedOwnerName || task.assignedOwnerId],
+        ['指派负责人', assignedOwnerLabel],
         ['奖励配置', rewardConfigDisplay(task.rewardConfig)],
         ['模板文件', taskTemplateStatus(template)],
         ['模板管理', '编辑任务时可上传与替换模板'],
@@ -624,20 +659,23 @@ export async function exportTaskCompletions(
   request: AdminRequest,
 ): Promise<TaskCompletionExport> {
   const value = record(await request('mip.admin.tasks.completions.export', { filters: { taskId } }))
-  if (typeof value.fileName !== 'string'
-    || typeof value.contentBase64 !== 'string'
-    || !Number.isSafeInteger(Number(value.rowCount))) {
+  const fileName = typeof value.fileName === 'string' ? value.fileName : ''
+  const contentBase64 = typeof value.contentBase64 === 'string' ? value.contentBase64 : ''
+  const rowCount = Number(value.rowCount)
+  if (!TASK_EXPORT_FILE_NAME.test(fileName)
+    || !Number.isSafeInteger(rowCount) || rowCount < 0 || rowCount > TASK_EXPORT_MAX_ROWS
+    || !canonicalBase64(contentBase64)) {
     throw new Error('INVALID_TASK_EXPORT')
   }
-  return {
-    fileName: value.fileName,
-    contentBase64: value.contentBase64,
-    rowCount: Number(value.rowCount),
-  }
+  assertXlsxBase64(contentBase64)
+  return { fileName, contentBase64, rowCount }
 }
 
 export function downloadTaskCompletionExport(value: TaskCompletionExport) {
-  const bytes = Uint8Array.from(atob(value.contentBase64), character => character.charCodeAt(0))
+  if (!TASK_EXPORT_FILE_NAME.test(value.fileName) || !canonicalBase64(value.contentBase64)) {
+    throw new Error('INVALID_TASK_EXPORT')
+  }
+  const bytes = decodeXlsxBase64(value.contentBase64)
   const link = document.createElement('a')
   link.href = URL.createObjectURL(new Blob([bytes], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -752,7 +790,11 @@ function validWebMediaUrl(value: unknown) {
   }
 }
 
-function taskListRow(item: AdminTableRow) {
+function taskListRow(item: AdminTableRow, ownerNames: Map<string, string> = new Map()) {
+  const explicitName = String(valueOf(item, 'assignedOwnerName'))
+  const ownerId = String(valueOf(item, 'assignedOwnerId'))
+  const resolvedOwner = ownerId !== '—' ? ownerNames.get(ownerId) : undefined
+  const assignedOwner = explicitName !== '—' ? explicitName : resolvedOwner || '—'
   return {
     detailId: valueOf(item, 'id', 'taskId'),
     name: valueOf(item, 'name'),
@@ -761,7 +803,7 @@ function taskListRow(item: AdminTableRow) {
       ? numberLabel(item.starLevel)
       : '—',
     period: formatDateTime(item.periodStartAt),
-    assignedOwner: valueOf(item, 'assignedOwnerName') !== '—' ? valueOf(item, 'assignedOwnerName') : valueOf(item, 'assignedOwnerId'),
+    assignedOwner,
     rewardConfig: rewardConfigDisplay(item.rewardConfig),
     assignment: assignmentModeLabel(item.assignmentMode),
     assigned: numberLabel(item.assignmentCount),

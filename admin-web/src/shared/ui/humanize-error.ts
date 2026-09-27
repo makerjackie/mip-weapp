@@ -45,5 +45,7 @@ function humanizeMessage(message: string): string {
   for (const { pattern, message: humanized } of ERROR_PATTERN_MAP) {
     if (pattern.test(message)) return humanized
   }
+  // Avoid surfacing unmapped machine codes (e.g. SOMETHING_FAILED) to operators.
+  if (/^[A-Z][A-Z0-9_]{2,}$/.test(message)) return '操作未完成，请稍后重试'
   return message
 }

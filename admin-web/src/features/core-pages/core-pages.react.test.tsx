@@ -38,7 +38,7 @@ describe('core admin pages', () => {
     })
     expect(view.metrics.map(item => item.value)).toEqual(['1,284', '436', '12', '96'])
     expect(view.playerTrend).toEqual({ available: false, points: [] })
-    expect(view.attention.map(item => item.label)).toEqual(['30 日内到期会员', '待审核报名', '待审核任务'])
+    expect(view.attention.map(item => item.label)).toEqual(['30 日内到期会员', '待审核报名'])
     expect(view.activity[0]).toMatchObject({ title: 'MIP 早会', state: '活动报名' })
   })
 
@@ -56,7 +56,7 @@ describe('core admin pages', () => {
         onOpenDetail={onOpenDetail}
       />,
     )
-    await user.type(screen.getByPlaceholderText('搜索姓名、手机号或简介'), '林晓')
+    await user.type(screen.getByPlaceholderText('搜索姓名、简介或城市'), '林晓')
     await user.click(screen.getByRole('button', { name: /筛\s*选/ }))
     await waitFor(() => expect(onSearchChange).toHaveBeenCalledWith(expect.objectContaining({ q: '林晓', cursor: undefined, page: undefined })))
 

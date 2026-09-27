@@ -5,16 +5,17 @@ import { getAdminReadRouteDefinition } from '../../modules/admin-read-pages'
 import { OperationsReadPage } from './operations-read-page'
 import type { OperationsPageState, OperationsWriteAction } from './types'
 
-const actions: Array<{ key: OperationsWriteAction; label: string }> = [
-  { key: 'mip.admin.growth.adjust', label: '调整成长数据' },
-  { key: 'mip.admin.badges.grant', label: '授予勋章' },
-  { key: 'mip.admin.badges.revoke', label: '撤销勋章' },
+const actions: Array<{ key: OperationsWriteAction; label: string; capability: string }> = [
+  { key: 'mip.admin.growth.adjust', label: '调整成长数据', capability: 'growth.adjust' },
+  { key: 'mip.admin.badges.grant', label: '授予勋章', capability: 'badges.manage' },
+  { key: 'mip.admin.badges.revoke', label: '撤销勋章', capability: 'badges.manage' },
 ]
 
 export function GrowthBadgesPage(props: OperationsPageState) {
   const definition = getAdminReadRouteDefinition('growth')
+  const available = actions.filter(action => !props.canCapability || props.canCapability(action.capability))
   const menu: MenuProps = {
-    items: actions,
+    items: available,
     onClick: ({ key }) => props.onWrite?.({ action: key as OperationsWriteAction }),
   }
   return (
@@ -27,7 +28,7 @@ export function GrowthBadgesPage(props: OperationsPageState) {
       searchPlaceholder={definition.searchPlaceholder}
       statusOptions={definition.statusOptions}
       paginated={definition.paginated}
-      actions={props.onWrite ? (
+      actions={props.onWrite && available.length ? (
         <Dropdown menu={menu} placement="bottomRight">
           <Button type="primary">运营操作 <DownOutlined /></Button>
         </Dropdown>

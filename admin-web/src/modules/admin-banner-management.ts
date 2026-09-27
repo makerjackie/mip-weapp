@@ -80,7 +80,7 @@ export async function loadBannerManagementPage(
         state: bannerStatusLabel(item.status),
       })),
       columns: columns([
-        ['image', '图片'], ['title', '管理名称'], ['target', '跳转目标'],
+        ['image', '图片'], ['imageUrl', '预览'], ['title', '管理名称'], ['target', '跳转目标'],
         ['order', '顺序'], ['updatedAt', '更新时间'], ['state', '状态'],
       ]),
       detailTarget: 'banners',

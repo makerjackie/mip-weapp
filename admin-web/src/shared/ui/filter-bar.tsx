@@ -16,6 +16,18 @@ const PAGE_SIZE_OPTIONS = [
   { value: 100, label: '100 条/页' },
 ]
 
+export interface FilterFieldRange {
+  from: string
+  to: string
+  label?: string
+}
+
+export interface FilterFieldAmount {
+  min: string
+  max: string
+  label?: string
+}
+
 export function FilterBar({
   value,
   placeholder,
@@ -24,11 +36,13 @@ export function FilterBar({
   onChange,
   onRefresh,
   extraFilterSlots,
-  showTimeRange,
-  showAmountRange,
+  timeRangeFields,
+  amountRangeFields,
   showPageSize,
   pageSize,
   onPageSizeChange,
+  dimensionField,
+  dimensionLabel,
   dimensionOptions,
 }: {
   value: FilterBarValue
@@ -38,11 +52,13 @@ export function FilterBar({
   onChange: (value: FilterBarValue) => void
   onRefresh?: () => void
   extraFilterSlots?: React.ReactNode
-  showTimeRange?: boolean
-  showAmountRange?: boolean
+  timeRangeFields?: FilterFieldRange
+  amountRangeFields?: FilterFieldAmount
   showPageSize?: boolean
   pageSize?: number
   onPageSizeChange?: (size: number) => void
+  dimensionField?: string
+  dimensionLabel?: string
   dimensionOptions?: Array<{ value: string; label: string }>
 }) {
   const [form] = Form.useForm<FilterBarValue>()
@@ -56,81 +72,87 @@ export function FilterBar({
   }, [form, value])
   const hasFilter = Boolean(value.q || value.status || (value.filters && Object.values(value.filters).some(v => v)))
 
+  function activeFilters(source: Record<string, string | string[] | undefined>): Record<string, string> {
+    const active: Record<string, string> = {}
+    for (const [key, val] of Object.entries(source)) {
+      if (typeof val === 'string' && val.length > 0) active[key] = val
+    }
+    return active
+  }
+
   function commit(nextFilters: Record<string, string | string[] | undefined>) {
+    const active = activeFilters(nextFilters)
     onChange({
       q: form.getFieldValue('q') || '',
       status: form.getFieldValue('status') || '',
-      filters: nextFilters,
+      ...(Object.keys(active).length > 0 ? { filters: active } : {}),
     })
   }
 
+  function commitFromForm() {
+    commit(filters)
+  }
+
+  function submitNow() {
+    form.validateFields().then(commitFromForm, () => {})
+  }
+
   function handleDateRangeChange(dates: [Dayjs | null, Dayjs | null] | null) {
+    if (!timeRangeFields) return
     const nextFilters = { ...filters }
     if (dates && dates[0] && dates[1]) {
-      nextFilters.dateRange = `${dates[0].format('YYYY-MM-DD')},${dates[1].format('YYYY-MM-DD')}`
+      nextFilters[timeRangeFields.from] = dates[0].startOf('day').toISOString()
+      nextFilters[timeRangeFields.to] = dates[1].endOf('day').toISOString()
     } else {
-      delete nextFilters.dateRange
+      delete nextFilters[timeRangeFields.from]
+      delete nextFilters[timeRangeFields.to]
     }
     commit(nextFilters)
   }
 
   function parseDateRange(): [Dayjs, Dayjs] | undefined {
-    const raw = typeof filters.dateRange === 'string' ? filters.dateRange : ''
-    if (!raw) return undefined
-    const [start, end] = raw.split(',')
-    if (!start || !end) return undefined
-    const startDay = dayjs(start)
-    const endDay = dayjs(end)
+    if (!timeRangeFields) return undefined
+    const fromRaw = typeof filters[timeRangeFields.from] === 'string' ? filters[timeRangeFields.from] as string : ''
+    const toRaw = typeof filters[timeRangeFields.to] === 'string' ? filters[timeRangeFields.to] as string : ''
+    if (!fromRaw || !toRaw) return undefined
+    const startDay = dayjs(fromRaw)
+    const endDay = dayjs(toRaw)
     return startDay.isValid() && endDay.isValid() ? [startDay, endDay] : undefined
   }
 
-  function handleAmountMinChange(val: number | null) {
+  function amountToYuan(key: string): number | undefined {
+    const raw = typeof filters[key] === 'string' ? filters[key] as string : ''
+    if (!raw) return undefined
+    const cents = Number(raw)
+    return Number.isFinite(cents) ? cents / 100 : undefined
+  }
+
+  function handleAmountChange(key: string, val: number | null) {
+    if (!amountRangeFields) return
     const nextFilters = { ...filters }
     if (val !== null && val !== undefined) {
-      nextFilters.amountMin = String(val)
+      nextFilters[key] = String(Math.round(val * 100))
     } else {
-      delete nextFilters.amountMin
+      delete nextFilters[key]
     }
     commit(nextFilters)
   }
 
-  function handleAmountMaxChange(val: number | null) {
+  function handleDimensionsChange(value: string) {
+    if (!dimensionField) return
     const nextFilters = { ...filters }
-    if (val !== null && val !== undefined) {
-      nextFilters.amountMax = String(val)
-    } else {
-      delete nextFilters.amountMax
-    }
+    if (value) nextFilters[dimensionField] = value
+    else delete nextFilters[dimensionField]
     commit(nextFilters)
   }
 
-  function handleDimensionsChange(values: string[]) {
-    const nextFilters = { ...filters }
-    if (values && values.length) {
-      nextFilters.dimensions = values.join(',')
-    } else {
-      delete nextFilters.dimensions
-    }
-    commit(nextFilters)
+  function parseDimensions(): string {
+    if (!dimensionField) return ''
+    return typeof filters[dimensionField] === 'string' ? filters[dimensionField] as string : ''
   }
 
-  function parseDimensions(): string[] {
-    const raw = typeof filters.dimensions === 'string' ? filters.dimensions : ''
-    return raw ? raw.split(',').filter(Boolean) : []
-  }
-
-  function handleSubmit(formValues: FilterBarValue) {
-    const activeFilters: Record<string, string> = {}
-    for (const [key, val] of Object.entries(filters)) {
-      if (typeof val === 'string' && val.length > 0) {
-        activeFilters[key] = val
-      }
-    }
-    onChange({
-      q: formValues.q || '',
-      status: formValues.status || '',
-      ...(Object.keys(activeFilters).length > 0 ? { filters: activeFilters } : {}),
-    })
+  function handleSubmit() {
+    commitFromForm()
   }
 
   return (
@@ -148,30 +170,29 @@ export function FilterBar({
           prefix={<SearchOutlined />}
           placeholder={placeholder}
           maxLength={80}
-          onPressEnter={() => form.validateFields().then(onChange, () => {})}
+          onPressEnter={submitNow}
         />
       </Form.Item>
       <Form.Item name="status" className="filter-bar__status">
         <Select
           options={statusOptions}
-          onChange={() => form.validateFields().then(onChange, () => {})}
+          onChange={submitNow}
         />
       </Form.Item>
-      {dimensionOptions && dimensionOptions.length ? (
-        <Form.Item className="filter-bar__dimensions" label="多维度">
+      {dimensionField && dimensionOptions && dimensionOptions.length ? (
+        <Form.Item className="filter-bar__dimensions" label={dimensionLabel || '分类'}>
           <Select
-            mode="multiple"
-            placeholder="多维度筛选"
+            placeholder={dimensionLabel ? `选择${dimensionLabel}` : '分类筛选'}
             options={dimensionOptions}
-            value={parseDimensions()}
+            value={parseDimensions() || undefined}
             onChange={handleDimensionsChange}
             allowClear
             style={{ minWidth: 180 }}
           />
         </Form.Item>
       ) : null}
-      {showTimeRange ? (
-        <Form.Item className="filter-bar__date-range" label="时间范围">
+      {timeRangeFields ? (
+        <Form.Item className="filter-bar__date-range" label={timeRangeFields.label || '时间范围'}>
           <DatePicker.RangePicker
             value={parseDateRange()}
             onChange={handleDateRangeChange}
@@ -179,22 +200,22 @@ export function FilterBar({
           />
         </Form.Item>
       ) : null}
-      {showAmountRange ? (
-        <Form.Item className="filter-bar__amount-range" label="金额范围">
+      {amountRangeFields ? (
+        <Form.Item className="filter-bar__amount-range" label={amountRangeFields.label || '金额范围'}>
           <Space size={4}>
             <InputNumber
               placeholder="最小"
               min={0}
-              value={typeof filters.amountMin === 'string' ? Number(filters.amountMin) : undefined}
-              onChange={handleAmountMinChange}
+              value={amountToYuan(amountRangeFields.min)}
+              onChange={val => handleAmountChange(amountRangeFields.min, val)}
               style={{ width: 110 }}
             />
             <span>—</span>
             <InputNumber
               placeholder="最大"
               min={0}
-              value={typeof filters.amountMax === 'string' ? Number(filters.amountMax) : undefined}
-              onChange={handleAmountMaxChange}
+              value={amountToYuan(amountRangeFields.max)}
+              onChange={val => handleAmountChange(amountRangeFields.max, val)}
               style={{ width: 110 }}
             />
           </Space>

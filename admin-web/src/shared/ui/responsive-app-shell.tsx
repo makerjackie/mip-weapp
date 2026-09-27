@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Avatar, Badge, Breadcrumb, Button, Drawer, Dropdown, Grid, Layout, Menu, Result, Space, Tag, type MenuProps } from 'antd'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { adminNavigation, navigationByPath, type AdminRoutePath } from '../../app/navigation'
 import { useAdminSession } from '../../app/session-provider'
 import { ErrorState, LoadingState } from './feedback-states'
@@ -27,9 +27,27 @@ function Brand() {
   )
 }
 
+const MOBILE_QUERY = '(max-width: 767px)'
+
+function viewportIsMobile() {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia(MOBILE_QUERY).matches
+    : false
+}
+
 export function ResponsiveAppShell() {
   const screens = Grid.useBreakpoint()
-  const mobile = screens.md === false
+  const [viewportMobile, setViewportMobile] = useState(viewportIsMobile)
+  // Grid.useBreakpoint() returns {} on first render; fall back to the real
+  // viewport so the desktop sider never flashes on a 390px first paint.
+  const mobile = screens.md === undefined ? viewportMobile : screens.md === false
+  useEffect(() => {
+    const query = window.matchMedia(MOBILE_QUERY)
+    const handle = () => setViewportMobile(query.matches)
+    handle()
+    query.addEventListener('change', handle)
+    return () => query.removeEventListener('change', handle)
+  }, [])
   const [navigationOpen, setNavigationOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
   const [passwordOpen, setPasswordOpen] = useState(false)
@@ -42,6 +60,22 @@ export function ResponsiveAppShell() {
   } = useAdminSession()
 
   const loginVisible = loginOpen && !session?.enabled
+
+  // An expired/revoked session surfaces AUTH_REQUIRED; open the login entry
+  // once per error instead of leaving a passive "请先登录" result.
+  const handledAuthError = useRef<unknown>(null)
+  useEffect(() => {
+    if (!error || error.code !== 'AUTH_REQUIRED' || demoMode) {
+      handledAuthError.current = null
+      return
+    }
+    if (handledAuthError.current === error) return
+    handledAuthError.current = error
+    setLoginOpen(open => {
+      if (!open) setLoginNotice('登录状态已失效，请重新登录')
+      return true
+    })
+  }, [error, demoMode])
 
   // A confirmed web login must close the gate for good. Without this the flag stayed set and a later
   // AUTH_REQUIRED reopened the modal with no challenge, no polling and no retry action. Adjust the

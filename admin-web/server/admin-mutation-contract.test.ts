@@ -28,6 +28,7 @@ describe('reviewed Web admin mutation contract', () => {
         action: operation.action,
         required: operation.requiredInputKeys,
         optional: operation.optionalInputKeys,
+        forwardIdempotencyKey: operation.forwardIdempotencyKey === true,
       }))
 
     assert.deepEqual([...WEB_ADMIN_QUERY_ACTIONS], expectedQueries)
@@ -58,10 +59,10 @@ describe('reviewed Web admin mutation contract', () => {
   it('exposes only the reviewed export ticket lifecycle fields', () => {
     const exports = REVIEWED_ADMIN_MUTATIONS.filter(item => item.action.startsWith('mip.admin.exports.'))
     assert.deepEqual(exports, [
-      { action: 'mip.admin.exports.create', required: ['exportType', 'includesPhone', 'filters'], optional: [] },
-      { action: 'mip.admin.exports.prepare', required: ['ticketId', 'token'], optional: [] },
-      { action: 'mip.admin.exports.reserve', required: ['ticketId', 'token'], optional: [] },
-      { action: 'mip.admin.exports.complete', required: ['ticketId', 'token'], optional: [] },
+      { action: 'mip.admin.exports.create', required: ['exportType', 'includesPhone', 'filters'], optional: [], forwardIdempotencyKey: true },
+      { action: 'mip.admin.exports.prepare', required: ['ticketId', 'token'], optional: [], forwardIdempotencyKey: false },
+      { action: 'mip.admin.exports.reserve', required: ['ticketId', 'token'], optional: [], forwardIdempotencyKey: false },
+      { action: 'mip.admin.exports.complete', required: ['ticketId', 'token'], optional: [], forwardIdempotencyKey: false },
     ])
   })
 })

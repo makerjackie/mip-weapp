@@ -331,7 +331,12 @@ describe('admin read pages', () => {
       status: 'PUBLISHED',
       cursor: 'evt-cursor-1',
       limit: 20,
-      filters: { city: '深圳', eventType: 'OFFLINE' },
+      filters: {
+        startsFrom: '2030-01-01T00:00:00.000Z',
+        startsTo: '2030-01-31T23:59:59.999Z',
+        accessType: 'FREE',
+        priceMinCents: '1000',
+      },
     }
     await loadAdminReadPage('events', filterQuery, requestWith({
       'mip.admin.events.list': { items: [{ id: 'e1', title: '深圳活动', startsAt: '2030-01-01T00:00:00.000Z', cityName: '深圳', branchName: '福田分会', accessType: 'FREE', priceCents: 0, status: 'PUBLISHED' }], nextCursor: 'evt-cursor-2' },
@@ -344,8 +349,10 @@ describe('admin read pages', () => {
     const filters = input.filters as Record<string, unknown>
     assert.equal(filters.query, '深圳')
     assert.equal(filters.status, 'PUBLISHED')
-    assert.equal(filters.city, '深圳')
-    assert.equal(filters.eventType, 'OFFLINE')
+    assert.equal(filters.startsFrom, '2030-01-01T00:00:00.000Z')
+    assert.equal(filters.startsTo, '2030-01-31T23:59:59.999Z')
+    assert.equal(filters.accessType, 'FREE')
+    assert.equal(filters.priceMinCents, '1000')
   })
 
   it('loads event feedback with non-empty response field structure', async () => {

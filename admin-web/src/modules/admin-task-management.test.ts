@@ -37,11 +37,13 @@ describe('admin task management', () => {
       'mip.admin.tasks.completions.list': {
         items: [{ id: COMPLETION_ID, taskName: '早会复盘', nickname: '林晓', rewardExperience: 30, completedAt: '2030-03-02T00:00:00.000Z', resultStatus: 'SUCCESS' }],
       },
+      'mip.admin.tasks.editorOptions': { owners: [{ id: TASK_ID, name: '周宁' }] },
     }, calls))
 
     assert.deepEqual(calls, [
       { action: 'mip.admin.tasks.list', input: { filters: { query: '早会', status: 'PUBLISHED' }, limit: 20, cursor: 'task-cursor' } },
       { action: 'mip.admin.tasks.completions.list', input: { filters: { query: '早会' }, limit: 20 } },
+      { action: 'mip.admin.tasks.editorOptions', input: {} },
     ])
     assert.equal(page.nextCursor, 'next-task-cursor')
     assert.equal(page.sections[0].rows[0].detailId, TASK_ID)
@@ -71,19 +73,20 @@ describe('admin task management', () => {
         items: [{ id: COMPLETION_ID, taskName: '早会复盘', nickname: '周宁', rewardExperience: 30, resultStatus: 'SUCCESS' }],
         nextCursor: 'next-completion-cursor',
       },
+      'mip.admin.tasks.editorOptions': { owners: [{ id: TASK_ID, name: '周宁' }] },
     }, calls), {
       members: { query: '周', cursor: 'member-cursor', limit: 10 },
       completions: { query: '复盘', cursor: 'completion-cursor', limit: 15 },
     })
 
     assert.deepEqual(calls.map(call => call.action), [
-      'mip.admin.tasks.get', 'mip.admin.tasks.eligibleLevels.list',
+      'mip.admin.tasks.get', 'mip.admin.tasks.eligibleLevels.list', 'mip.admin.tasks.editorOptions',
       'mip.admin.tasks.completions.list', 'mip.admin.tasks.assignableMembers.list',
     ])
-    assert.deepEqual(calls[2].input, {
+    assert.deepEqual(calls[3].input, {
       filters: { taskId: TASK_ID, query: '复盘' }, limit: 15, cursor: 'completion-cursor',
     })
-    assert.deepEqual(calls[3].input, {
+    assert.deepEqual(calls[4].input, {
       filters: { taskId: TASK_ID, query: '周' }, limit: 10, cursor: 'member-cursor',
     })
     assert.equal(detail.route, 'tasks')
@@ -110,7 +113,7 @@ describe('admin task management', () => {
         rewardExperience: 30, resultStatus: 'SUCCESS', completedAt: '2030-03-02T00:00:00.000Z',
         attachment: { assetId: ASSET_ID, contentType: 'image/jpeg', bytes: 1200 },
       },
-      'mip.admin.tasks.completions.export': { fileName: 'tasks.xlsx', contentBase64: 'AA==', rowCount: 1 },
+      'mip.admin.tasks.completions.export': { fileName: 'tasks.xlsx', contentBase64: 'UEsDBA==', rowCount: 1 },
     }, calls)
 
     const detail = await loadTaskCompletionDetail(COMPLETION_ID, request)
@@ -119,7 +122,7 @@ describe('admin task management', () => {
     assert.equal(detail.status, '成功')
     assert.equal(detail.sections[0].fields?.find(field => field.label === '附件')?.value, '已上传，当前无法在 Web 查看')
     assert.equal(detail.sections[0].fields?.find(field => field.label === '附件查看')?.value, '当前不可用')
-    assert.deepEqual(workbook, { fileName: 'tasks.xlsx', contentBase64: 'AA==', rowCount: 1 })
+    assert.deepEqual(workbook, { fileName: 'tasks.xlsx', contentBase64: 'UEsDBA==', rowCount: 1 })
     assert.deepEqual(calls, [
       { action: 'mip.admin.tasks.completions.get', input: { completionId: COMPLETION_ID } },
       { action: 'mip.admin.tasks.completions.export', input: { filters: { taskId: TASK_ID } } },

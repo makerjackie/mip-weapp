@@ -49,4 +49,5 @@ export interface OperationsPageState extends OperationsPageCallbacks {
   error?: string
   demoMode?: boolean
   hasPreviousPage?: boolean
+  canCapability?: (capability: string) => boolean
 }

@@ -47,6 +47,7 @@ export function SensitiveExportButton({ kind, query, status, eventId, open: cont
   const [error, setError] = useState('')
   const loading = Boolean(progress)
   const open = controlledOpen ?? internalOpen
+  const canReadPhone = hasCapability('users.phone.read')
 
   useEffect(() => () => { if (workflow) disposeSensitiveExportSecrets(workflow) }, [workflow])
   if (!hasCapability('exports.create')) return null
@@ -109,15 +110,19 @@ export function SensitiveExportButton({ kind, query, status, eventId, open: cont
           <Typography.Paragraph type="secondary">
             {kind === 'eventFeedback'
               ? '导出当前活动的反馈，服务端会再次校验运营权限和活动范围。'
-              : '导出范围与当前列表筛选一致，服务端会再次校验运营权限和数据范围。'}
+              : '导出当前关键词与状态筛选范围，服务端会再次校验运营权限和数据范围。'}
           </Typography.Paragraph>
           {kind !== 'eventFeedback' ? <Descriptions size="small" column={1} bordered items={[
                 { key: 'query', label: '筛选关键词', children: query || '全部' },
                 { key: 'status', label: '状态', children: status || '全部' },
               ]} /> : null}
           {kind === 'users' ? (
-            <Checkbox checked={includesPhone} disabled={Boolean(workflow)} onChange={event => setIncludesPhone(event.target.checked)}>
-              包含手机号（仅导出当前账号有权查看的手机号）
+            <Checkbox
+              checked={includesPhone && canReadPhone}
+              disabled={Boolean(workflow) || !canReadPhone}
+              onChange={event => setIncludesPhone(event.target.checked)}
+            >
+              包含手机号{canReadPhone ? '（仅导出当前账号有权查看的手机号）' : '（当前账号无权查看手机号）'}
             </Checkbox>
           ) : null}
           {progress ? <Progress percent={progressPercent[progress]} status="active" format={() => progressText[progress]} /> : null}

@@ -1,6 +1,7 @@
 import { ArrowLeftOutlined, EyeOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Card, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Select, Space, type FormInstance } from 'antd'
 import dayjs from 'dayjs'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
@@ -8,13 +9,15 @@ import type { AdminRequestInput, AdminOperationAction } from '../../domain/contr
 import { normalizeOperationValues, operationFieldVisible, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
 import type { AdminMediaPurpose } from '../../modules/admin-media-upload'
 import { RegistrationSchemaEditor } from '../shared/registration-schema-editor'
-import { AssetUploader, AssetListUploader, ErrorState, LoadingState, PageHeader, humanizeError } from '../../shared/ui'
+import { AssetUploader, AssetListUploader, ErrorState, LoadingState, PageHeader, SessionUserSelect, RemoteCatalogSelect, humanizeError } from '../../shared/ui'
 
 function fieldName(field: OperationField) { return String(field.name || field.key || '') }
 
 function controlFor(field: OperationField) {
   const options = (field.options || []).map(option => typeof option === 'string' ? { value: option, label: option } : option)
   if (field.kind === 'checkbox' || field.kind === 'boolean') return <Checkbox>{field.label}</Checkbox>
+  if (field.remoteUserSearch) return <SessionUserSelect />
+  if (field.optionsAction) return <RemoteCatalogSelect action={field.optionsAction} />
   if (field.kind === 'select') return <Select options={options} allowClear={!field.required} />
   if (field.kind === 'multi-select') return <Select mode="multiple" options={options} />
   if (field.assetPurpose) {
@@ -84,13 +87,17 @@ function toFormValues(fields: readonly OperationField[], values: OperationValues
   return output
 }
 
+export type IndependentFormBuildResult =
+  | { ok: true; input: AdminRequestInput }
+  | { ok: false; errors: Record<string, string> }
+
 export interface IndependentFormPageConfig {
   title: string
   description: string
   fields: readonly OperationField[]
   values: OperationValues
   backTarget: string
-  buildInput: (values: OperationValues) => AdminRequestInput | null
+  buildInput: (values: OperationValues) => IndependentFormBuildResult
   action: AdminOperationAction
   idempotencyKey: string
   capability: string
@@ -100,12 +107,18 @@ export interface IndependentFormPageConfig {
   }
 }
 
+function isVersionConflict(reason: unknown): boolean {
+  return Boolean(reason && typeof reason === 'object' && 'code' in reason
+    && (reason.code === 'CONFLICT' || reason.code === 'VERSION_CONFLICT'))
+}
+
 export function IndependentFormPage({ config, loadDetail }: {
   config: IndependentFormPageConfig
   loadDetail?: () => Promise<OperationValues | null>
 }) {
   const navigate = useNavigate()
   const { message } = App.useApp()
+  const queryClient = useQueryClient()
   const { demoMode, hasCapability, request } = useAdminSession()
   const [form] = Form.useForm<OperationValues>()
   const [loading, setLoading] = useState(false)
@@ -163,6 +176,15 @@ export function IndependentFormPage({ config, loadDetail }: {
     return <ErrorState title="权限不足" description="当前运营账号不能执行此操作。" />
   }
 
+  const reloadDetail = async () => {
+    if (!loadDetail) return
+    const detailValues = await loadDetail()
+    if (!detailValues) return
+    const values = { ...config.values, ...detailValues }
+    setLoadedValues(values)
+    form.setFieldsValue(toFormValues(config.fields, values))
+  }
+
   const submit = async () => {
     if (submitting.current || detailLoading || detailFailed) return
     submitting.current = true
@@ -175,22 +197,34 @@ export function IndependentFormPage({ config, loadDetail }: {
         void message.info('演示模式不会提交写操作')
         return
       }
-      const input = config.buildInput(normalized)
-      if (!input) {
-        setFieldErrors('请检查必填项、标识、版本和字段格式')
+      const built = config.buildInput(normalized)
+      if (!built.ok) {
+        const fieldEntries = Object.entries(built.errors).filter(([name]) => name !== 'form')
+        if (fieldEntries.length) {
+          form.setFields(fieldEntries.map(([name, message]) => ({ name, errors: [message] })))
+        }
+        setFieldErrors(built.errors.form || '请检查表单中标出的字段')
         return
       }
+      const input = built.input
       setLoading(true)
       const payload = JSON.stringify(input)
       if (!submission.current || submission.current.payload !== payload) {
         submission.current = { payload, key: submission.current ? `web-form-${crypto.randomUUID()}` : config.idempotencyKey }
       }
       await request(config.action, { ...input, idempotencyKey: submission.current.key })
+      await queryClient.invalidateQueries()
       void message.success(`${config.title}已提交`)
       void navigate({ to: config.backTarget })
     }
     catch (reason) {
-      setError(humanizeError(reason))
+      if (isVersionConflict(reason)) {
+        submission.current = null
+        try { await reloadDetail() } catch { /* keep the conflict message even if reload fails */ }
+        await queryClient.invalidateQueries()
+        setError('记录已被其他人更新，已刷新最新版本，请核对后重新提交。')
+      }
+      else setError(humanizeError(reason))
     }
     finally {
       submitting.current = false
@@ -221,15 +255,17 @@ export function IndependentFormPage({ config, loadDetail }: {
         {fieldErrors ? <Alert type="error" showIcon message={fieldErrors} style={{ marginBottom: 16 }} /> : null}
         <Form
           form={form}
+          id="independent-form"
           layout="vertical"
           initialValues={initialValues}
           disabled={loading}
+          onFinish={() => void submit()}
         >
           <div className="mutation-grid"><OperationFields fields={config.fields} form={form} /></div>
         </Form>
         {error ? <Alert type="error" showIcon message={error} description="请求结果不确定时，请先刷新并核对服务端记录。" style={{ marginTop: 16 }} /> : null}
         <Space size={12} style={{ marginTop: 24 }}>
-          <Button type="primary" loading={loading} onClick={() => void submit()}>确认提交</Button>
+          <Button type="primary" htmlType="submit" form="independent-form" loading={loading}>确认提交</Button>
           <Button disabled={loading} onClick={() => void navigate({ to: config.backTarget })}>取消</Button>
         </Space>
       </Card>

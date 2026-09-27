@@ -1,5 +1,5 @@
-import { DownOutlined, UpOutlined } from '@ant-design/icons'
-import { Button, Space, Table, type TableColumnsType, type TableProps } from 'antd'
+import { CaretDownOutlined, CaretUpOutlined, SwapOutlined } from '@ant-design/icons'
+import { Button, Image, Space, Table, type TableColumnsType, type TableProps } from 'antd'
 import { useMemo, useState } from 'react'
 import type { AdminTableColumn, AdminTableRow } from '../../modules/admin-read-pages'
 import { EmptyState } from './feedback-states'
@@ -10,6 +10,32 @@ type SortDirection = 'ascend' | 'descend' | null
 interface SortState {
   columnKey: string
   direction: SortDirection
+}
+
+function numericValue(raw: string): number | null {
+  const normalized = raw.replace(/[¥$€£,%\s]/g, '')
+  if (!normalized) return null
+  const value = Number(normalized)
+  return Number.isFinite(value) ? value : null
+}
+
+function timeValue(raw: string): number | null {
+  if (!/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(raw)) return null
+  const value = Date.parse(raw.replace(/\//g, '-'))
+  return Number.isFinite(value) ? value : null
+}
+
+function compareCellValues(left: unknown, right: unknown): number {
+  const a = String(left ?? '')
+  const b = String(right ?? '')
+  if (a === b) return 0
+  const numberA = numericValue(a)
+  const numberB = numericValue(b)
+  if (numberA !== null && numberB !== null) return numberA - numberB
+  const timeA = timeValue(a)
+  const timeB = timeValue(b)
+  if (timeA !== null && timeB !== null) return timeA - timeB
+  return a.localeCompare(b, 'zh-Hans-CN')
 }
 
 export interface BatchAction {
@@ -29,6 +55,7 @@ export function DataTable({
   batchActions,
   onBatchAction,
   rowKey: rowKeyProp,
+  loading,
 }: {
   label: string
   rows: AdminTableRow[]
@@ -39,6 +66,7 @@ export function DataTable({
   batchActions?: readonly BatchAction[]
   onBatchAction?: (action: BatchAction, selectedRows: AdminTableRow[]) => void
   rowKey?: (row: AdminTableRow) => string
+  loading?: boolean
 }) {
   const [sortState, setSortState] = useState<SortState | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -46,14 +74,7 @@ export function DataTable({
   const sortedRows = useMemo(() => {
     if (!sortState) return rows
     const direction = sortState.direction === 'ascend' ? 1 : -1
-    return [...rows].sort((a, b) => {
-      const va = String(a[sortState.columnKey] ?? '')
-      const vb = String(b[sortState.columnKey] ?? '')
-      const na = Number(va)
-      const nb = Number(vb)
-      if (va !== '' && vb !== '' && !Number.isNaN(na) && !Number.isNaN(nb)) return (na - nb) * direction
-      return va.localeCompare(vb, 'zh-Hans-CN') * direction
-    })
+    return [...rows].sort((a, b) => compareCellValues(a[sortState.columnKey], b[sortState.columnKey]) * direction)
   }, [rows, sortState])
 
   const tableColumns: TableColumnsType<AdminTableRow> = columns.map(column => ({
@@ -63,11 +84,18 @@ export function DataTable({
     sorter: true,
     sortOrder: sortState?.columnKey === column.key ? (sortState.direction ?? undefined) : undefined,
     sortIcon: ({ sortOrder }: { sortOrder?: SortDirection }) => sortOrder === 'ascend'
-      ? <UpOutlined style={{ fontSize: 10 }} />
+      ? <CaretUpOutlined style={{ fontSize: 12 }} />
       : sortOrder === 'descend'
-        ? <DownOutlined style={{ fontSize: 10 }} />
-        : <span style={{ opacity: 0.3, fontSize: 10 }}>⇅</span>,
-    render: (value: unknown) => ['status', 'state'].includes(column.key) ? <StatusTag value={value} /> : String(value ?? '—'),
+        ? <CaretDownOutlined style={{ fontSize: 12 }} />
+        : <SwapOutlined style={{ opacity: 0.35, fontSize: 12 }} />,
+    render: (value: unknown) => {
+      if (['status', 'state'].includes(column.key)) return <StatusTag value={value} />
+      const url = typeof value === 'string' ? value : ''
+      if (/^(imageUrl|coverUrl|iconUrl|avatarUrl)$/.test(column.key) && /^https:\/\//.test(url)) {
+        return <Image src={url} alt="预览" width={72} height={48} style={{ objectFit: 'cover', borderRadius: 6 }} />
+      }
+      return String(value ?? '—')
+    },
   }))
   if (onView || renderActions) {
     tableColumns.push({
@@ -125,6 +153,7 @@ export function DataTable({
       <Table<AdminTableRow>
         size="middle"
         pagination={false}
+        loading={loading}
         rowKey={row => rowKeyProp ? rowKeyProp(row) : stableRowKey(row, label)}
         columns={tableColumns}
         dataSource={sortedRows}

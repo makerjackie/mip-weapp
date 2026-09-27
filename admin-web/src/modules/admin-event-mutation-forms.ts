@@ -53,6 +53,10 @@ export interface EventMutationFieldConfig {
   options?: readonly EventMutationFieldOption[]
   /** Upload purpose for asset/asset-list fields. */
   assetPurpose?: string
+  /** Renders a session-backed searchable user picker. */
+  remoteUserSearch?: boolean
+  /** Renders a session-backed catalog select loaded from this query action. */
+  optionsAction?: string
 }
 
 export interface EventMutationActionConfig {
@@ -232,7 +236,7 @@ const EVENT_MUTATION_CONFIGS = {
     description: '为活动补录参与者，不触发支付流程。',
     fields: [
       { key: 'eventId', label: '活动标识', kind: 'text', hidden: true },
-      { key: 'userId', label: '用户 ID', kind: 'text', required: true },
+      { key: 'userId', label: '用户', kind: 'text', required: true, remoteUserSearch: true },
       { key: 'roleMark', label: '角色标记', kind: 'select', options: [option('MEMBER', '成员'), option('GUEST', '嘉宾'), option('PLAYER', '玩家')] },
       { key: 'reason', label: '补录原因', kind: 'textarea', maxLength: 120 },
     ],
@@ -656,7 +660,18 @@ export function buildAdminEventMutationInput(
   definition: AdminEventMutationDefinition,
   submittedValues: EventMutationValues,
 ): AdminRequestInput | null {
-  if (!definition || !eventMutationActionSet.has(definition.action)) return null
+  const result = validateAdminEventMutationInput(definition, submittedValues)
+  return result.ok ? result.input : null
+}
+
+/** Same merge rules as the builder, but preserves field-level validation errors for forms. */
+export function validateAdminEventMutationInput(
+  definition: AdminEventMutationDefinition,
+  submittedValues: EventMutationValues,
+): EventMutationValidation {
+  if (!definition || !eventMutationActionSet.has(definition.action)) {
+    return { ok: false, errors: [{ field: 'action', message: '活动操作无效' }] }
+  }
   const values = { ...definition.values }
   const configured = new Set(definition.fields.map(field => field.key))
   if (submittedValues && typeof submittedValues === 'object' && !Array.isArray(submittedValues)) {
@@ -673,5 +688,5 @@ export function buildAdminEventMutationInput(
   if (definition.action === 'mip.admin.events.catalog.save' && definition.targetId) delete values.key
   if (definition.expectedVersion !== undefined) values.expectedVersion = definition.expectedVersion
   // A definition may intentionally omit an id for platform-wide policy writes.
-  return buildEventMutationInput(definition.action, values)
+  return validateEventMutationInput(definition.action, values)
 }

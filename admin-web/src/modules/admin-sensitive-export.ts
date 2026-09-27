@@ -120,13 +120,18 @@ export async function continueSensitiveExport(
 
   if (!workflow.ticket) {
     runtime.onProgress?.('creating')
-    workflow.ticket = parseTicket(await request('mip.admin.exports.create', {
-      exportType: workflow.input.kind === 'users' ? 'USERS' : workflow.input.kind === 'eventFeedback' ? 'EVENT_FEEDBACK' : 'ORDERS',
-      includesPhone: workflow.input.kind === 'users' && workflow.input.includesPhone === true,
-      filters: compactFilters(workflow.input.filters),
-      ...(workflow.input.kind === 'eventFeedback' ? { eventId: workflow.input.eventId } : {}),
-      idempotencyKey: workflow.keys.create,
-    }))
+    const created = workflow.input.kind === 'eventFeedback'
+      ? await request('mip.admin.events.feedbacks.export', {
+          eventId: workflow.input.eventId,
+          idempotencyKey: workflow.keys.create,
+        })
+      : await request('mip.admin.exports.create', {
+          exportType: workflow.input.kind === 'users' ? 'USERS' : 'ORDERS',
+          includesPhone: workflow.input.kind === 'users' && workflow.input.includesPhone === true,
+          filters: compactFilters(workflow.input.filters),
+          idempotencyKey: workflow.keys.create,
+        })
+    workflow.ticket = parseTicket(created)
   }
   assertNotExpired(workflow.ticket.expiresAt, now())
 

@@ -4,6 +4,7 @@ import { operationFieldVisible, type OperationField, type OperationValues } from
 import type { AdminMediaPurpose } from '../../modules/admin-media-upload'
 import { RegistrationSchemaEditor } from '../../features/shared/registration-schema-editor'
 import { AssetUploader, AssetListUploader } from './asset-uploader'
+import { SessionUserSelect, RemoteCatalogSelect } from './session-user-select'
 import { OVERLAY_Z_INDEX } from './overlay-z-index'
 
 function fieldName(field: OperationField) { return String(field.name || field.key || '') }
@@ -11,6 +12,8 @@ function fieldName(field: OperationField) { return String(field.name || field.ke
 function controlFor(field: OperationField) {
   const options = (field.options || []).map(option => typeof option === 'string' ? { value: option, label: option } : option)
   if (field.kind === 'checkbox' || field.kind === 'boolean') return <Checkbox />
+  if (field.remoteUserSearch) return <SessionUserSelect />
+  if (field.optionsAction) return <RemoteCatalogSelect action={field.optionsAction} />
   if (field.kind === 'select') return <Select options={options} allowClear={!field.required} />
   if (field.kind === 'multi-select') return <Select mode="multiple" options={options} />
   if (field.assetPurpose) {

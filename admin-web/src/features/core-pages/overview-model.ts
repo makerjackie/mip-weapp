@@ -42,7 +42,6 @@ export function mapAdminOverview(value: unknown): AdminOverviewView {
   const people = record(data.people)
   const membership = record(data.membership)
   const events = record(data.events)
-  const tasks = record(data.tasks)
   const operations = record(data.operations)
   const period = record(data.period)
   return {
@@ -54,12 +53,12 @@ export function mapAdminOverview(value: unknown): AdminOverviewView {
       metric('活动总数', events.totalEvents, '所选时间范围'),
       metric('有效报名', events.effectiveRegistrations, '所选时间范围'),
     ],
-    // The current neutral overview contract has no player-count time series.
+    // The current neutral overview contract has no player-count time series;
+    // purchase/registration series are not a player-count trend and must not be substituted.
     playerTrend: { available: false, points: [] },
     attention: [
       attention('30 日内到期会员', membership.expiringPlayers30d, '/users'),
       attention('待审核报名', events.pendingReviewRegistrations, '/events'),
-      attention('待审核任务', tasks.pendingReview, '/tasks'),
     ].filter((item): item is AdminOverviewAttentionItem => item !== null),
     activity: Array.isArray(operations.activity)
       ? operations.activity.map((item, index) => {

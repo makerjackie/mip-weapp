@@ -152,6 +152,8 @@ button, input, select, textarea { font: inherit; }
 .asset-uploader__thumb { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .asset-uploader__thumb img { width: 100px; height: 75px; object-fit: cover; border-radius: 8px; border: 1px solid var(--mip-line); }
 .asset-uploader__full { color: var(--mip-muted); font-size: 12px; }
+.asset-uploader__saved { color: var(--mip-muted); font-size: 12px; }
+.asset-uploader__saved-list { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .mobile-navigation .ant-drawer-header { background: linear-gradient(135deg, #347ce9, #1d4eb8); border-bottom: 0; }
 .mobile-navigation .ant-drawer-title { min-width: 0; }

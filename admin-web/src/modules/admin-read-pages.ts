@@ -60,19 +60,36 @@ const commonStatus = [{ value: '', label: '全部状态' }]
 
 const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
   users: {
-    searchPlaceholder: '搜索姓名、手机号或简介',
+    searchPlaceholder: '搜索姓名、简介或城市',
     statusOptions: [...commonStatus, ...options(['ACTIVE', 'BLOCKED', 'CLOSED'])],
     paginated: true,
+    filterDimensions: [
+      { key: 'createdFrom', urlParam: 'createdFrom' },
+      { key: 'createdTo', urlParam: 'createdTo' },
+      { key: 'kind', urlParam: 'kind' },
+    ],
   },
   events: {
     searchPlaceholder: '搜索活动名称、城市或服务器',
     statusOptions: [...commonStatus, ...options(['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'CANCELLED', 'ENDED', 'ARCHIVED'])],
     paginated: true,
+    filterDimensions: [
+      { key: 'startsFrom', urlParam: 'startsFrom' },
+      { key: 'startsTo', urlParam: 'startsTo' },
+      { key: 'accessType', urlParam: 'accessType' },
+      { key: 'priceMinCents', urlParam: 'priceMinCents' },
+      { key: 'priceMaxCents', urlParam: 'priceMaxCents' },
+    ],
   },
   orders: {
     searchPlaceholder: '搜索订单号、姓名或活动',
     statusOptions: [...commonStatus, ...options(['CREATED', 'PAYMENT_CREATED', 'PAID', 'FAILED', 'CLOSED', 'REFUND_PENDING', 'PARTIALLY_REFUNDED', 'REFUNDED'])],
     paginated: true,
+    filterDimensions: [
+      { key: 'createdFrom', urlParam: 'createdFrom' },
+      { key: 'createdTo', urlParam: 'createdTo' },
+      { key: 'orderType', urlParam: 'orderType' },
+    ],
   },
   tasks: {
     searchPlaceholder: '搜索任务或完成人',

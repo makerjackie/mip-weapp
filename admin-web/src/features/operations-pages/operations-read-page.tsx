@@ -48,6 +48,7 @@ export function OperationsReadPage({
   onOpenDetail,
   onWrite,
   onPageSizeChange,
+  canCapability,
 }: OperationsReadPageProps) {
   const filterValue = { q: query.query, status: query.status, filters: query.filters }
   const showPagination = Boolean(paginated && (hasPreviousPage || page?.nextCursor))
@@ -83,6 +84,9 @@ export function OperationsReadPage({
       />
       {loading && !page ? <LoadingState /> : null}
       {!loading && error ? <ErrorState description={error} onRetry={onRefresh} /> : null}
+      {!loading && !error && !page ? (
+        <EmptyState title="暂无页面数据" description="当前请求没有返回可显示的数据。" />
+      ) : null}
       {page ? (
         <Space orientation="vertical" size={16} style={{ width: '100%' }}>
           {page.summary?.length ? (
@@ -105,7 +109,7 @@ export function OperationsReadPage({
                     ? row => onOpenDetail({ route: detailRoute, id: String(row.detailId), row })
                     : undefined}
                   renderActions={onWrite || rowExtraActions ? (row) => {
-                    const operationActions = rowOperations(row, onWrite)
+                    const operationActions = rowOperations(row, onWrite, canCapability)
                     const extra = rowExtraActions?.(row, section, index)
                     return operationActions || extra ? <Space size={4}>{operationActions}{extra}</Space> : null
                   } : undefined}
@@ -135,9 +139,15 @@ export function OperationsReadPage({
 function rowOperations(
   row: AdminTableRow,
   onWrite: ((intent: OperationsWriteIntent) => void) | undefined,
+  canCapability?: (capability: string) => boolean,
 ) {
   if (!onWrite || !Array.isArray(row.rowActions) || !row.rowActions.length) return null
-  return (row.rowActions as AdminRowOperation[]).map(operation => (
+  const operations = (row.rowActions as AdminRowOperation[]).filter(operation =>
+    !canCapability
+    || !operation.allowedCapabilities?.length
+    || operation.allowedCapabilities.some(canCapability))
+  if (!operations.length) return null
+  return operations.map(operation => (
     <Button
       type="link"
       size="small"

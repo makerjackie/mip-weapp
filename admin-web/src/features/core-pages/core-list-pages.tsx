@@ -34,19 +34,43 @@ import './core-pages.css'
 
 type CoreListRoute = Extract<AdminListRoute, 'users' | 'events' | 'orders'>
 
-const dimensionOptionsByRoute: Record<CoreListRoute, Array<{ value: string; label: string }>> = {
-  users: [
-    { value: 'ACTIVE', label: '活跃' },
-    { value: 'BLOCKED', label: '封禁' },
-  ],
-  events: [
-    { value: 'OFFLINE', label: '线下' },
-    { value: 'ONLINE', label: '线上' },
-  ],
-  orders: [
-    { value: 'PAID', label: '已支付' },
-    { value: 'REFUNDED', label: '已退款' },
-  ],
+const timeRangeByRoute: Record<CoreListRoute, { from: string; to: string; label: string }> = {
+  users: { from: 'createdFrom', to: 'createdTo', label: '注册时间' },
+  events: { from: 'startsFrom', to: 'startsTo', label: '开始时间' },
+  orders: { from: 'createdFrom', to: 'createdTo', label: '下单时间' },
+}
+
+const dimensionByRoute: Record<CoreListRoute, { field: string; label: string; options: Array<{ value: string; label: string }> }> = {
+  users: {
+    field: 'kind',
+    label: '身份',
+    options: [
+      { value: 'PLAYER', label: '玩家' },
+      { value: 'GUEST', label: '嘉宾' },
+    ],
+  },
+  events: {
+    field: 'accessType',
+    label: '收费类型',
+    options: [
+      { value: 'FREE', label: '免费' },
+      { value: 'MEMBER_INCLUDED', label: '会员权益' },
+      { value: 'PAID', label: '付费' },
+    ],
+  },
+  orders: {
+    field: 'orderType',
+    label: '订单类型',
+    options: [
+      { value: 'MEMBERSHIP', label: '会员' },
+      { value: 'EVENT', label: '活动' },
+      { value: 'CONTENT', label: '内容' },
+    ],
+  },
+}
+
+const amountRangeByRoute: Partial<Record<CoreListRoute, { min: string; max: string; label: string }>> = {
+  events: { min: 'priceMinCents', max: 'priceMaxCents', label: '价格（元）' },
 }
 
 const pageDefinitions: Record<CoreListRoute, {
@@ -206,9 +230,11 @@ export function CoreListPageView({
         placeholder={readDefinition.searchPlaceholder}
         statusOptions={readDefinition.statusOptions}
         loading={loading}
-        dimensionOptions={dimensionOptionsByRoute[route]}
-        showTimeRange
-        showAmountRange={route === 'orders'}
+        timeRangeFields={timeRangeByRoute[route]}
+        amountRangeFields={amountRangeByRoute[route]}
+        dimensionField={dimensionByRoute[route].field}
+        dimensionLabel={dimensionByRoute[route].label}
+        dimensionOptions={dimensionByRoute[route].options}
         showPageSize
         pageSize={search.limit ?? 20}
         onPageSizeChange={size => onSearchChange({

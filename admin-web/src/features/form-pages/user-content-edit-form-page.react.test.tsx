@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from 'antd'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OpportunityEditFormPage } from './opportunity-edit-form-page'
@@ -24,7 +25,7 @@ async function select(label: string, value: string) {
   fireEvent.mouseDown(screen.getByLabelText(label))
   fireEvent.click(await screen.findByText(value, { selector: '.ant-select-item-option-content' }))
 }
-function mount() { render(<App><UserContentEditFormPage /></App>) }
+function mount() { render(<QueryClientProvider client={new QueryClient()}><App><UserContentEditFormPage /></App></QueryClientProvider>) }
 
 describe('independent user content editor', () => {
   it('submits the selected strategist fields after filling and switching away from connector', async () => {
@@ -86,7 +87,7 @@ describe('independent user content editor', () => {
 
 describe('independent opportunity editor', () => {
   it('submits multiple selected roles without incomplete commercial terms', async () => {
-    render(<App><OpportunityEditFormPage /></App>)
+    render(<QueryClientProvider client={new QueryClient()}><App><OpportunityEditFormPage /></App></QueryClientProvider>)
     fill('发布人', 'user-demo')
     fill('机会标题', '演示合作机会')
     fill('机会价值', '仅供验收')

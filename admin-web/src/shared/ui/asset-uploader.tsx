@@ -1,5 +1,5 @@
 import { UploadOutlined } from '@ant-design/icons'
-import { Button, Input, Upload, message as staticMessage } from 'antd'
+import { Button, Input, Tag, Upload, message as staticMessage } from 'antd'
 import { useState } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import { AdminMediaUploadError, type AdminMediaFile, type AdminMediaPurpose } from '../../modules/admin-media-upload'
@@ -30,7 +30,7 @@ const msg = {
   info: (text: string) => staticMessage.info(text),
 }
 
-const VALID_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+const VALID_IMAGE_TYPES = ['image/png', 'image/jpeg']
 const MAX_IMAGE_BYTES = 1024 * 1024
 
 /**
@@ -66,7 +66,7 @@ export function AssetUploader({
       return
     }
     if (!VALID_IMAGE_TYPES.includes(file.type)) {
-      msg.error('仅支持 PNG、JPEG 或 WebP 格式的图片')
+      msg.error('仅支持 PNG 或 JPEG 格式的图片')
       option.onError?.(new Error('格式无效'))
       return
     }
@@ -113,7 +113,7 @@ export function AssetUploader({
         disabled={disabled || uploading}
         addonAfter={
           <Upload
-            accept=".png,.jpg,.jpeg,.webp"
+            accept=".png,.jpg,.jpeg"
             showUploadList={false}
             customRequest={handleUpload}
             disabled={disabled || uploading}
@@ -128,6 +128,11 @@ export function AssetUploader({
         <div className="asset-uploader__preview">
           <img src={previewUrl} alt="预览" style={{ maxWidth: 200, maxHeight: 120, borderRadius: 8 }} />
           <Button size="small" type="link" danger onClick={() => { onChange?.(''); setPreviewUrl('') }}>移除</Button>
+        </div>
+      ) : value ? (
+        <div className="asset-uploader__preview">
+          <span className="asset-uploader__saved">已保存素材，可重新上传覆盖</span>
+          <Button size="small" type="link" danger onClick={() => { onChange?.(''); setPreviewUrl('') }}>清除</Button>
         </div>
       ) : null}
     </div>
@@ -169,7 +174,7 @@ export function AssetListUploader({
       return
     }
     if (!VALID_IMAGE_TYPES.includes(file.type)) {
-      msg.error('仅支持 PNG、JPEG 或 WebP 格式的图片')
+      msg.error('仅支持 PNG 或 JPEG 格式的图片')
       option.onError?.(new Error('格式无效'))
       return
     }
@@ -214,6 +219,8 @@ export function AssetListUploader({
     setPreviews(prev => prev.filter(item => item.assetId !== assetId))
   }
 
+  const savedWithoutPreview = lines.filter(id => !previews.some(item => item.assetId === id))
+
   return (
     <div className="asset-uploader">
       {previews.length > 0 ? (
@@ -226,9 +233,18 @@ export function AssetListUploader({
           ))}
         </div>
       ) : null}
+      {savedWithoutPreview.length > 0 ? (
+        <div className="asset-uploader__saved-list">
+          {savedWithoutPreview.map(assetId => (
+            <Tag key={assetId} closable onClose={() => removeAsset(assetId)}>
+              已保存素材 {assetId.slice(0, 8)}…
+            </Tag>
+          ))}
+        </div>
+      ) : null}
       {canAddMore ? (
         <Upload
-          accept=".png,.jpg,.jpeg,.webp"
+          accept=".png,.jpg,.jpeg"
           showUploadList={false}
           customRequest={handleUpload}
           disabled={disabled || uploading}

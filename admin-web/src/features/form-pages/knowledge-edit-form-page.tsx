@@ -31,7 +31,7 @@ export function KnowledgeEditFormPage() {
     buildInput: (submitted: OperationValues) => {
       const merged = { ...values, ...submitted, contentId }
       const result = validateContentMutation('mip.admin.knowledge.contents.save', merged)
-      return result.ok ? result.input : null
+      return result.ok ? { ok: true, input: result.input } : { ok: false, errors: { ...result.errors } }
     },
   }
 

@@ -193,8 +193,14 @@ export function SessionProvider({ children, client = defaultClient }: { children
   const logout = useCallback(async () => {
     loginFlow.current += 1
     setLoginConfirmed(false)
+    try {
+      await client.logout()
+    }
+    catch {
+      // Server session state is the source of truth; refreshSession below
+      // reconciles the client instead of assuming the cookie was cleared.
+    }
     commitSession(null)
-    await client.logout()
     await refreshSession()
   }, [client, commitSession, refreshSession])
 

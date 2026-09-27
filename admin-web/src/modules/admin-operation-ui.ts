@@ -17,6 +17,10 @@ export interface OperationField {
   }
   /** Upload purpose for asset/asset-list fields, used by AssetUploader. */
   assetPurpose?: string
+  /** Renders a session-backed searchable user picker instead of a static Select. */
+  remoteUserSearch?: boolean
+  /** Renders a session-backed catalog Select loaded from this query action. */
+  optionsAction?: string
 }
 
 export type OperationValues = Record<string, unknown>

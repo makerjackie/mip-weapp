@@ -1026,8 +1026,14 @@ describe('Admin Web BFF', () => {
 
     const envelopes = fetchMock.calls.map(([, init]) => JSON.parse(String(init?.body)))
     assert.deepEqual(envelopes.map((envelope) => envelope.request.action), REVIEWED_MUTATION_ACTIONS)
-    assert.deepEqual(envelopes.map((envelope) => envelope.request.idempotencyKey),
-      REVIEWED_MUTATION_ACTIONS.map((_, index) => `web-mutation-${index.toString().padStart(2, '0')}`))
+    envelopes.forEach((envelope, index) => {
+      if (REVIEWED_ADMIN_MUTATIONS[index].forwardIdempotencyKey) {
+        assert.equal(envelope.request.idempotencyKey, `web-mutation-${index.toString().padStart(2, '0')}`, REVIEWED_MUTATION_ACTIONS[index])
+      }
+      else {
+        assert.match(envelope.request.idempotencyKey, /^web-bff-[A-Za-z0-9_-]{32}$/, REVIEWED_MUTATION_ACTIONS[index])
+      }
+    })
     assert.ok(envelopes.every((envelope) => /^[A-Za-z0-9_-]{32}$/.test(envelope.nonce)))
     assert.equal(new Set(envelopes.map((envelope) => envelope.nonce)).size, envelopes.length)
   })

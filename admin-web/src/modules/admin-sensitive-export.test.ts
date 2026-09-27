@@ -62,7 +62,7 @@ describe('sensitive admin export workflow', () => {
     const eventId = '11111111-1111-4111-8111-111111111111'
     const fileName = 'mip-event-feedback-20300101T000000Z.xlsx'
     const responses = requestQueue({
-      'mip.admin.exports.create': { ticketId: 'ticket-feedback', token: TOKEN, status: 'PENDING', expiresAt: EXPIRES_AT },
+      'mip.admin.events.feedbacks.export': { ticketId: 'ticket-feedback', token: TOKEN, status: 'PENDING', expiresAt: EXPIRES_AT },
       'mip.admin.exports.prepare': ready(fileName),
       'mip.admin.exports.reserve': reservation(fileName),
       'mip.admin.exports.complete': { status: 'CONSUMED', consumedAt: '2030-01-01T00:00:10.000Z' },
@@ -74,8 +74,9 @@ describe('sensitive admin export workflow', () => {
 
     const result = await continueSensitiveExport(workflow, responses.request, runtime(saves))
 
+    assert.equal(responses.calls[0].action, 'mip.admin.events.feedbacks.export')
     assert.deepEqual(responses.calls[0].input, {
-      exportType: 'EVENT_FEEDBACK', eventId, includesPhone: false, filters: {}, idempotencyKey: 'web-export-create-fixture',
+      eventId, idempotencyKey: 'web-export-create-fixture',
     })
     assert.equal(result.rowCount, 2)
     assert.deepEqual(saves, [{ fileName, bytes: [...BYTES] }])

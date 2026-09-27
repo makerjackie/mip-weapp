@@ -32,7 +32,7 @@ export function OpportunityEditFormPage() {
     buildInput: (submitted: OperationValues) => {
       const merged = { ...values, ...submitted, opportunityId }
       const result = validateContentMutation('mip.admin.opportunities.save', contentFormValues('mip.admin.opportunities.save', merged, idempotencyKey))
-      return result.ok ? result.input : null
+      return result.ok ? { ok: true, input: result.input } : { ok: false, errors: { ...result.errors } }
     },
   }
 

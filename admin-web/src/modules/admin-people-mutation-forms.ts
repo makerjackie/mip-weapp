@@ -233,7 +233,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     fields: [
       { name: 'loginAccount', label: '登录账号', kind: 'text', required: true, maxLength: 64 },
       { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
-      { name: 'userId', label: '已注册用户', kind: 'select', required: true },
+      { name: 'userId', label: '已注册用户', kind: 'select', required: true, remoteUserSearch: true },
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
       { name: 'scopeId', label: '作用范围 ID', kind: 'text' },
       { name: 'reason', label: '创建原因', kind: 'textarea', maxLength: 300, wide: true },

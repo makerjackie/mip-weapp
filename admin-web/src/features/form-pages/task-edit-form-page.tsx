@@ -30,10 +30,15 @@ export function TaskEditFormPage() {
     action: 'mip.admin.tasks.save',
     idempotencyKey,
     capability: 'tasks.manage',
-    buildInput: (values: OperationValues) => buildTaskMutationInput(
-      { ...baseDefinition, values: { ...baseDefinition.values, ...values } },
-      values,
-    ),
+    buildInput: (values: OperationValues) => {
+      const input = buildTaskMutationInput(
+        { ...baseDefinition, values: { ...baseDefinition.values, ...values } },
+        values,
+      )
+      return input
+        ? { ok: true, input }
+        : { ok: false, errors: { form: '请检查必填项、时间顺序、标识和字段格式' } }
+    },
   }
 
   const loadDetail = useCallback(async (): Promise<OperationValues | null> => {

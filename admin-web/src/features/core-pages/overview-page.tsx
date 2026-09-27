@@ -105,7 +105,7 @@ export function OverviewPageView({
                   ))}
                 </ul>
               ) : (
-                <EmptyState title="暂无趋势数据" description="当前周期没有可显示的玩家增长趋势。" />
+                <EmptyState title="暂无趋势数据" description="服务端当前未提供玩家增长时间序列，不以报名或付费数据替代。" />
               )}
             </Card>
             <Card className="core-panel" title="最近待办" variant="borderless">

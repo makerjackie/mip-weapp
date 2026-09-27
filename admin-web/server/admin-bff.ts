@@ -3,6 +3,7 @@ import { createPasswordAuth, PasswordAuthError, passwordAuthDiagnostic, type Pas
 import type { AdminApiResponse, AdminRequest } from '../src/domain/contracts'
 import {
   REVIEWED_ADMIN_MUTATION_ACTIONS,
+  REVIEWED_ADMIN_MUTATION_FORWARD_IDEMPOTENCY,
   REVIEWED_ADMIN_MUTATION_SCHEMAS,
   WEB_ADMIN_QUERY_ACTIONS,
 } from './admin-mutation-contract.ts'
@@ -380,7 +381,14 @@ export function createAdminBff(
       return adminError('VALIDATION_FAILED', '运营请求包含未开放字段', 400)
     }
 
-    return forwardTrustedAdminRequest(adminRequest, session, { retryable: isQuery })
+    // Honor the server-generated idempotency policy: operations that declare
+    // forwardIdempotencyKey=false must not receive a browser-controlled key.
+    const forwardedRequest = isMutation
+      && REVIEWED_ADMIN_MUTATION_FORWARD_IDEMPOTENCY.get(adminRequest.action) !== true
+      ? { ...adminRequest, idempotencyKey: `web-bff-${randomToken(deps.crypto, 24)}` }
+      : adminRequest
+
+    return forwardTrustedAdminRequest(forwardedRequest, session, { retryable: isQuery })
   }
 
   async function generateLoginQrCode(challengeToken: string): Promise<string> {
@@ -729,7 +737,8 @@ async function readJsonRecord(request: Request) {
 }
 
 function hasTrustedOrigin(request: Request, env: AdminBffEnv) {
-  const expected = env.MIP_WEB_ALLOWED_ORIGIN || new URL(request.url).origin
+  const expected = env.MIP_WEB_ALLOWED_ORIGIN
+  if (!validOrigin(expected)) return false
   return request.headers.get('origin') === expected
 }
 
@@ -741,6 +750,7 @@ function challengeConfigError(env: AdminBffEnv) {
     return '网页登录服务尚未配置'
   }
   if (allowedAppIds(env.MIP_WEB_ALLOWED_APP_IDS).size === 0) return '网页登录应用范围尚未配置'
+  if (!validOrigin(env.MIP_WEB_ALLOWED_ORIGIN)) return '网页登录来源尚未配置'
   return ''
 }
 
@@ -750,6 +760,7 @@ function upstreamConfigError(env: AdminBffEnv) {
     || !absoluteHttpsUrl(env.MIP_ADMIN_UPSTREAM_URL)) {
     return '运营数据服务尚未配置'
   }
+  if (!validOrigin(env.MIP_WEB_ALLOWED_ORIGIN)) return '运营数据来源尚未配置'
   return ''
 }
 
@@ -1091,6 +1102,17 @@ function validSecret(value: string | undefined) {
 
 function absoluteHttpsUrl(value: string | undefined) {
   try { return Boolean(value && new URL(value).protocol === 'https:') } catch { return false }
+}
+
+function validOrigin(value: string | undefined) {
+  try {
+    if (!value) return false
+    const url = new URL(value)
+    const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+    return (url.protocol === 'https:' || (url.protocol === 'http:' && local))
+      && url.pathname === '/' && !url.search && !url.hash
+  }
+  catch { return false }
 }
 
 function plainRecord(value: unknown): value is Record<string, unknown> {

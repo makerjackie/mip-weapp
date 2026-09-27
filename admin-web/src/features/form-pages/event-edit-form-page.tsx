@@ -3,7 +3,7 @@ import { useCallback, useMemo } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminRequestInput, AdminOperationAction } from '../../domain/contracts'
 import type { OperationValues } from '../../modules/admin-operation-ui'
-import { createAdminEventMutationDefinition, buildAdminEventMutationInput, EVENT_MUTATION_CONFIGS } from '../../modules/admin-event-mutation-forms'
+import { createAdminEventMutationDefinition, validateAdminEventMutationInput, EVENT_MUTATION_CONFIGS } from '../../modules/admin-event-mutation-forms'
 import { loadEventDetailForForm } from './event-form-loader'
 import { EventMobilePreview } from './event-mobile-preview'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
@@ -35,10 +35,15 @@ export function EventEditFormPage() {
     action: 'mip.admin.events.save',
     idempotencyKey,
     capability: config.capability,
-    buildInput: (values: OperationValues) => buildAdminEventMutationInput(
-      { ...definition, values: { ...definition.values, ...values } },
-      values,
-    ),
+    buildInput: (values: OperationValues) => {
+      const result = validateAdminEventMutationInput(
+        { ...definition, values: { ...definition.values, ...values } },
+        values,
+      )
+      return result.ok
+        ? { ok: true, input: result.input }
+        : { ok: false, errors: Object.fromEntries(result.errors.map(error => [error.field, error.message])) }
+    },
     preview: {
       render: (values) => <EventMobilePreview values={values} />,
       capability: config.capability,

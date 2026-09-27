@@ -78,6 +78,8 @@ export interface ContentMutationField {
     readonly value: string
   }
   readonly assetPurpose?: string
+  readonly remoteUserSearch?: boolean
+  readonly optionsAction?: string
 }
 
 export interface ContentMutationFormDefinition {
@@ -303,8 +305,10 @@ const textField = (key: string, label: string, maxLength: number, required = tru
 const areaField = (key: string, label: string, maxLength: number, required = true): ContentMutationField => ({ key, label, kind: 'textarea', maxLength, required })
 const selectField = (key: string, label: string, options: readonly string[], required = true): ContentMutationField => ({ key, label, kind: 'select', options, required })
 const idField = (key: string, label: string, required = true): ContentMutationField => ({ key, label, kind: 'id', required })
+const userPickerField = (key: string, label: string, required = true): ContentMutationField => ({ ...idField(key, label, required), remoteUserSearch: true })
+const catalogPickerField = (key: string, label: string, action: string, required = true): ContentMutationField => ({ ...idField(key, label, required), optionsAction: action })
 const versionField = (): ContentMutationField => ({ key: 'expectedVersion', label: '记录版本', kind: 'integer', required: true })
-const scopeFields = (): ContentMutationField[] => [selectField('scopeType', '作用范围', ['PLATFORM', 'BRANCH']), idField('branchId', '服务器', false)]
+const scopeFields = (): ContentMutationField[] => [selectField('scopeType', '作用范围', ['PLATFORM', 'BRANCH']), { ...idField('branchId', '服务器', false), optionsAction: 'mip.admin.branches.list' }]
 const reasonField = (label = '处理原因'): ContentMutationField => areaField('reason', label, 300)
 
 function groupField(key: string, label: string, fields: readonly ContentMutationField[]): ContentMutationField {
@@ -405,9 +409,9 @@ const CONTENT_MUTATION_FORMS: readonly ContentMutationFormDefinition[] = [
   },
   { action: 'mip.admin.knowledge.contents.review', capability: 'knowledge.manage', resource: '知识内容', inputKeys: ['contentId', 'expectedVersion', 'decision', 'reason'], idempotencyRequired: false, fields: [idField('contentId', '知识内容'), versionField(), selectField('decision', '审核操作', ['SUBMIT', 'APPROVE', 'REJECT', 'PUBLISH', 'WITHDRAW']), reasonField('审核原因')] },
   { action: 'mip.admin.knowledge.schedules.save', capability: 'knowledge.manage', resource: '知识采集计划', inputKeys: ['scheduleId', 'expectedVersion', 'sourceId', 'categoryId', 'dailyTime', 'timeZone', 'status', 'idempotencyKey'], idempotencyRequired: true, fields: [idField('scheduleId', '采集计划', false), { ...versionField(), required: false }, idField('sourceId', '信息源'), idField('categoryId', '分类'), { key: 'dailyTime', label: '每日时间', kind: 'time', required: true }, textField('timeZone', '时区', 64), selectField('status', '计划状态', ['ACTIVE', 'PAUSED'], false)] },
-  { action: 'mip.admin.badges.grant', capability: 'badges.manage', resource: '用户勋章', inputKeys: ['userId', 'badgeId', 'reason'], idempotencyRequired: false, fields: [idField('userId', '用户'), idField('badgeId', '勋章'), reasonField('授予原因')] },
+  { action: 'mip.admin.badges.grant', capability: 'badges.manage', resource: '用户勋章', inputKeys: ['userId', 'badgeId', 'reason'], idempotencyRequired: false, fields: [userPickerField('userId', '用户'), catalogPickerField('badgeId', '勋章', 'mip.admin.badges.list'), reasonField('授予原因')] },
   { action: 'mip.admin.badges.revoke', capability: 'badges.manage', resource: '用户勋章', inputKeys: ['awardId', 'expectedVersion', 'reason'], idempotencyRequired: false, fields: [idField('awardId', '获授记录'), versionField(), reasonField('撤销原因')] },
-  { action: 'mip.admin.growth.adjust', capability: 'growth.adjust', resource: '成长流水', inputKeys: ['userId', 'metric', 'deltaValue', 'reason', 'idempotencyKey'], idempotencyRequired: true, fields: [idField('userId', '用户'), selectField('metric', '成长类型', ['EXPERIENCE', 'CONTRIBUTION', 'COIN']), { key: 'deltaValue', label: '调整数值', kind: 'integer', required: true }, reasonField('调整原因')] },
+  { action: 'mip.admin.growth.adjust', capability: 'growth.adjust', resource: '成长流水', inputKeys: ['userId', 'metric', 'deltaValue', 'reason', 'idempotencyKey'], idempotencyRequired: true, fields: [userPickerField('userId', '用户'), selectField('metric', '成长类型', ['EXPERIENCE', 'CONTRIBUTION', 'COIN']), { key: 'deltaValue', label: '调整数值', kind: 'integer', required: true }, reasonField('调整原因')] },
 ]
 
 const FORM_BY_ACTION = new Map(CONTENT_MUTATION_FORMS.map(form => [form.action, form]))

@@ -157,7 +157,16 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
     hasPreviousPage: Boolean(search.page && search.page > 1) && cursorStack.length > 0,
     onFilterChange: value => {
       setCursorStack([])
-      void updateSearch({ q: value.query || undefined, status: value.status || undefined })
+      const filters = value.filters && Object.keys(value.filters).length > 0 ? value.filters : undefined
+      void updateSearch({
+        q: value.query || undefined,
+        status: value.status || undefined,
+        filters,
+        limit: search.limit,
+        tab: search.tab,
+        cursor: undefined,
+        page: undefined,
+      })
     },
     onRefresh: () => void result.refetch(),
     onPreviousPage: cursorStack.length > 0 ? goPreviousPage : undefined,
@@ -167,6 +176,7 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
     },
     onOpenDetail: intent => detail.openDetail(intent.route, intent.id),
     onWrite,
+    canCapability: hasCapability,
     onPageSizeChange: size => {
       setCursorStack([])
       void updateSearch({ ...search, limit: size, cursor: undefined, page: undefined })
@@ -266,7 +276,18 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
     error: result.errorMessage,
     demoMode: session.demoMode,
     canCapability: session.hasCapability,
-    onFilterChange: (value: { q: string; status: string }) => void updateSearch({ q: value.q || undefined, status: value.status || undefined, tab: search.tab }),
+    onFilterChange: (value: { q: string; status: string; filters?: Record<string, string> }) => {
+      const filters = value.filters && Object.keys(value.filters).length > 0 ? value.filters : undefined
+      void updateSearch({
+        q: value.q || undefined,
+        status: value.status || undefined,
+        filters,
+        limit: search.limit,
+        tab: search.tab,
+        cursor: undefined,
+        page: undefined,
+      })
+    },
     onTabChange: (tab: string) => void updateSearch({ ...search, tab }),
     onRefresh: () => void result.refetch(),
     onViewDetail: (intent: { route: 'messages' | 'knowledge'; id: string }) => detail.openDetail(intent.route, intent.id),
@@ -324,6 +345,7 @@ function RouteDetailLayer({ detail, onMediaUpload }: {
       onRowAction={operation => void handleRowAction(operation)}
       onNestedView={(target, row) => detail.openDetail(target, String(row.detailId || ''))}
       onPagerChange={detail.changeDetailPage}
+      onRetry={() => void detail.refreshDetail()}
     />
   )
 }
@@ -338,7 +360,13 @@ function useUpdateSearch() {
 }
 
 function listQuery(search: AdminListSearch): AdminListQuery {
-  return { query: search.q?.trim() || '', status: search.status || '', cursor: search.cursor || null, limit: search.limit ?? 20 }
+  return {
+    query: search.q?.trim() || '',
+    status: search.status || '',
+    cursor: search.cursor || null,
+    limit: search.limit ?? 20,
+    filters: search.filters,
+  }
 }
 
 const operationRouteCapabilities: Record<OperationsRoute, string[]> = {

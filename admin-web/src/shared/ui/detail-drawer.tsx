@@ -5,7 +5,7 @@ import { ErrorState, LoadingState } from './feedback-states'
 import { StatusTag } from './status-tag'
 import { OVERLAY_Z_INDEX } from './overlay-z-index'
 
-export function DetailDrawer({ open, view, loading, error, onClose, actions, onRowAction, onNestedView, onPagerChange }: {
+export function DetailDrawer({ open, view, loading, error, onClose, actions, onRowAction, onNestedView, onPagerChange, onRetry }: {
   open: boolean
   view: AdminDetailView | null
   loading?: boolean
@@ -15,6 +15,7 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
   onRowAction?: (operation: AdminRowOperation) => void
   onNestedView?: (target: AdminDetailRoute, row: AdminOperationRow) => void
   onPagerChange?: (pager: AdminDetailPager, direction: 'previous' | 'next') => void
+  onRetry?: () => void
 }) {
   return (
     <Drawer
@@ -32,9 +33,9 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
       extra={actions}
       destroyOnHidden
     >
-      {loading ? <LoadingState /> : null}
-      {!loading && error ? <ErrorState description={error} /> : null}
-      {!loading && !error && view ? (
+      {loading && !view ? <LoadingState /> : null}
+      {!loading && error ? <ErrorState description={error} onRetry={onRetry} /> : null}
+      {!error && view ? (
         <Space orientation="vertical" size={16} className="detail-sections">
           {view.status ? <StatusTag value={view.status} /> : null}
           {view.sections.map(section => (
@@ -42,7 +43,7 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
               <Typography.Title level={4}>{section.title}</Typography.Title>
               {section.fields?.length ? (
                 <dl className="detail-fields">
-                  {section.fields.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{field.value}</dd></div>)}
+                  {section.fields.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{renderFieldValue(field.value)}</dd></div>)}
                 </dl>
               ) : null}
               {section.metrics?.length ? (
@@ -116,4 +117,11 @@ function stableRowKey(row: AdminOperationRow, prefix: string) {
   const id = row.detailId || row.id || row.key
   if (id) return String(id)
   return `${prefix}:${JSON.stringify(row, (key, value) => key === 'rowActions' ? undefined : value)}`
+}
+
+function renderFieldValue(value: React.ReactNode) {
+  if (typeof value === 'string' && /^https:\/\/[^\s]+$/.test(value)) {
+    return <a href={value} target="_blank" rel="noreferrer noopener">{value}</a>
+  }
+  return value
 }

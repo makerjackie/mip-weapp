@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from 'antd'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { IndependentFormPageConfig } from './independent-form-page'
@@ -25,14 +26,14 @@ const config: IndependentFormPageConfig = {
   ],
   values: { title: '默认标题', expectedVersion: 1 },
   backTarget: '/records',
-  buildInput: values => ({ title: values.title, expectedVersion: values.expectedVersion }),
+  buildInput: values => ({ ok: true, input: { title: values.title, expectedVersion: values.expectedVersion } }),
   action: 'mip.admin.knowledge.contents.save',
   idempotencyKey: 'initial-save-key',
   capability: 'knowledge.write',
 }
 
 function mount(loadDetail: () => Promise<Record<string, unknown> | null>) {
-  return render(<App><IndependentFormPage config={config} loadDetail={loadDetail} /></App>)
+  return render(<QueryClientProvider client={new QueryClient()}><App><IndependentFormPage config={config} loadDetail={loadDetail} /></App></QueryClientProvider>)
 }
 
 describe('IndependentFormPage loaded-record submission', () => {
@@ -102,7 +103,7 @@ describe('IndependentFormPage loaded-record submission', () => {
     const secondLoad = vi.fn().mockResolvedValue({ title: '第二条记录', expectedVersion: 12 })
     const view = mount(firstLoad)
 
-    view.rerender(<App><IndependentFormPage config={{ ...config, values: { title: '第二条默认值', expectedVersion: 1 } }} loadDetail={secondLoad} /></App>)
+    view.rerender(<QueryClientProvider client={new QueryClient()}><App><IndependentFormPage config={{ ...config, values: { title: '第二条默认值', expectedVersion: 1 } }} loadDetail={secondLoad} /></App></QueryClientProvider>)
     await screen.findByDisplayValue('第二条记录')
     resolveFirst({ title: '第一条记录迟到响应', expectedVersion: 4 })
 
@@ -111,12 +112,31 @@ describe('IndependentFormPage loaded-record submission', () => {
   })
 
   it('keeps an in-progress new-record value across ordinary parent rerenders', () => {
-    const view = render(<App><IndependentFormPage config={config} /></App>)
+    const view = render(<QueryClientProvider client={new QueryClient()}><App><IndependentFormPage config={config} /></App></QueryClientProvider>)
     fireEvent.change(screen.getByLabelText('标题'), { target: { value: '新建草稿内容' } })
 
-    view.rerender(<App><IndependentFormPage config={{ ...config, values: { ...config.values } }} /></App>)
+    view.rerender(<QueryClientProvider client={new QueryClient()}><App><IndependentFormPage config={{ ...config, values: { ...config.values } }} /></App></QueryClientProvider>)
 
     expect(screen.getByLabelText('标题')).toHaveValue('新建草稿内容')
     expect(state.request).not.toHaveBeenCalled()
+  })
+
+  it('refreshes the server version after a conflict so the retry can succeed', async () => {
+    const loadDetail = vi.fn()
+      .mockResolvedValueOnce({ title: '原标题', expectedVersion: 3 })
+      .mockResolvedValueOnce({ title: '别人的新标题', expectedVersion: 7 })
+    state.request
+      .mockRejectedValueOnce({ code: 'VERSION_CONFLICT' })
+      .mockResolvedValueOnce({})
+    mount(loadDetail)
+    await screen.findByDisplayValue('原标题')
+
+    fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
+    await waitFor(() => expect(screen.getByText(/已刷新最新版本/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByLabelText('标题')).toHaveValue('别人的新标题'))
+
+    fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
+    await waitFor(() => expect(state.request).toHaveBeenCalledTimes(2))
+    expect(state.request.mock.calls[1]?.[1]).toMatchObject({ title: '别人的新标题', expectedVersion: 7 })
   })
 })
