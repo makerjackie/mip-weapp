@@ -1,5 +1,5 @@
 import { useParams } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminRequestInput, AdminOperationAction } from '../../domain/contracts'
 import type { OperationValues } from '../../modules/admin-operation-ui'
@@ -36,7 +36,7 @@ export function TaskEditFormPage() {
     ),
   }
 
-  const loadDetail = async (): Promise<OperationValues | null> => {
+  const loadDetail = useCallback(async (): Promise<OperationValues | null> => {
     const [eligibleLevelCatalog, editorOptions] = await Promise.all([
       loadTaskEligibleLevels(request as AdminRequest), loadTaskEditorOptions(request as AdminRequest),
     ])
@@ -44,7 +44,7 @@ export function TaskEditFormPage() {
     const definition = createTaskMutationDefinition('mip.admin.tasks.save', taskId, { task, eligibleLevelCatalog, editorOptions })
     setDefinition(definition)
     return definition.values
-  }
+  }, [request, taskId])
 
   return <IndependentFormPage config={formConfig} loadDetail={loadDetail} />
 }

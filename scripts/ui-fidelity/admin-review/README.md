@@ -6,6 +6,7 @@
 node scripts/ui-fidelity/admin-review/build.mjs \
   --checklist .tmp/admin-acceptance-20260927/checklist.json \
   --captures .tmp/admin-acceptance-20260927/captures.public.json \
+  --prototype-html ".tmp/upstream/mip-minip-dev/docs/管理后台的原型和PRD/MIP 小程序后台管理系统 原型 - v1.html" \
   --out .tmp/miptest-next
 ```
 
@@ -34,6 +35,8 @@ node scripts/ui-fidelity/admin-review/build.mjs \
 ```
 
 图片路径相对截图 JSON 所在目录，同一步可有多个视口。只有 `approved:true` 且 SHA 一致的 PNG/JPEG/WebP 才会复制。未审核图片不会读取或发布；已审核但 SHA 不符直接阻止构建。输入只允许公开清单和公开截图记录，不读取 private 响应。图片需人工审核手机号、真实个人资料、登录码、二维码与凭据；SHA 校验不代替该审核。
+
+报告把实际截图作为 `captures`，与 Workbuddy V0.4 原型画面分开建模。`prototype-map.json` 按页面 ID 映射原型 HTML 中的锚点；没有对应模块/状态时页面会显示具体缺失原因，不会拿另一张实际截图代替。提供的 HTML 必须与映射清单中的文件名和 SHA256 一致。发布副本会隐藏 PRD 区域，并遮蔽 11 位中国手机号样式的原型示例号码，原始输入文件不修改。桌面显示原型与所选实际视口并排；窄屏可横向切换两栏，实际侧提供视口选择。
 
 `mode` 可为 `demo-visual`、`real-read`、`real-write`。缺少图片或操作证据保留待测；演示通过仅显示“演示画面已检查”，不能证明真实读取/写入。真实读成功仍提示写入未验证。
 

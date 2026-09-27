@@ -65,7 +65,7 @@ function normalizeSubmittedField(
     return
   }
   if (field.kind === 'asset-list') {
-    writePath(target, path, splitLines(String(raw || '')).map(assetId => ({ assetId, caption: '' })))
+    writePath(target, path, normalizeAssetList(raw, readPath(target, path)))
     return
   }
   if (field.kind === 'date' && raw && typeof raw === 'object'
@@ -88,6 +88,44 @@ function fieldKey(field: OperationField) {
 
 function splitLines(value: string) {
   return value.split(/[\n,，]/).map(item => item.trim()).filter(Boolean)
+}
+
+function normalizeAssetList(value: unknown, previous: unknown) {
+  const previousItems = assetListItems(previous)
+  const previousById = new Map<string, OperationValues>()
+  for (const item of previousItems) {
+    const assetId = assetIdFrom(item)
+    if (assetId && !previousById.has(assetId)) previousById.set(assetId, recordValue(item))
+  }
+
+  const submittedItems = typeof value === 'string'
+    ? splitLines(value)
+    : Array.isArray(value) ? value : []
+  const seen = new Set<string>()
+  const normalized: OperationValues[] = []
+  for (const item of submittedItems) {
+    const assetId = assetIdFrom(item)
+    if (!assetId || seen.has(assetId)) continue
+    seen.add(assetId)
+
+    const submittedItem = recordValue(item)
+    const previousItem = previousById.get(assetId)
+    const caption = Object.hasOwn(submittedItem, 'caption')
+      ? String(submittedItem.caption ?? '')
+      : String(previousItem?.caption ?? '')
+    normalized.push({ assetId, caption })
+  }
+  return normalized
+}
+
+function assetListItems(value: unknown) {
+  if (typeof value === 'string') return splitLines(value)
+  return Array.isArray(value) ? value : []
+}
+
+function assetIdFrom(value: unknown) {
+  const candidate = typeof value === 'string' ? value : recordValue(value).assetId
+  return String(candidate ?? '').trim()
 }
 
 function readPath(value: OperationValues, path: string) {

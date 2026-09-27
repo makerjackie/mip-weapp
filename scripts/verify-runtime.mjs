@@ -1117,7 +1117,7 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
         }
         if (step.type === 'input') {
           await retry(`input interaction ${journey.id}/${step.id}`, async () => {
-            const element = await page.$(step.selector)
+            const element = await queryFreshRenderedActionElement(page, step.selector)
             let actionError
             try {
               assert(element, `Interaction ${journey.id}/${step.id} selector was not rendered: ${step.selector}`)

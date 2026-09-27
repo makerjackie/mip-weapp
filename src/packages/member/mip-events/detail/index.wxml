@@ -116,7 +116,7 @@
           <view><view class="text-[22rpx] text-muted">邀请来源</view><view class="mt-1 text-[24rpx] font-semibold">{{event.invitationAttribution.displayName}}</view></view>
         </view>
 
-        <view class="mt-3 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4" bind:tap="openComments"><t-icon name="chat" size="34rpx" color="var(--color-brand)" /><view class="min-w-0 flex-1"><view class="text-[24rpx] font-semibold">活动评论</view><view class="mt-1 text-[22rpx] text-muted">查看和发布活动评论</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
+        <view class="mt-3 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4" bind:tap="openComments"><t-icon name="chat" size="34rpx" color="var(--color-brand)" /><view class="min-w-0 flex-1"><view class="text-[24rpx] font-semibold">活动评论</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
         <view wx:if="{{event.albumEnabled}}" class="mt-3 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4" bind:tap="openAlbum"><mip-icon name="image" size="{{17}}" color="var(--color-brand)" /><view class="min-w-0 flex-1"><view class="text-[24rpx] font-semibold">活动相册</view><view class="mt-1 text-[22rpx] text-muted">查看活动照片</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
         <view wx:if="{{event.changes.length}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[28rpx] font-bold">活动变更</view><view wx:for="{{event.changes}}" wx:key="version" class="mt-3 border-l-[4rpx] border-brand pl-3"><view class="text-[24rpx]">{{item.summary}}</view><view class="mt-1 text-[22rpx] text-muted">{{item.createdAt}}</view></view></view>
         <view wx:if="{{event.onlineAccessAvailable && onlineUrl}}" class="mt-3"><t-button block variant="outline" bind:tap="openOnlineEvent">进入线上活动</t-button></view>
@@ -150,11 +150,11 @@
             <view class="text-[28rpx] font-medium leading-[40rpx]">分享活动</view>
             <view class="mt-2 truncate text-[32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
             <view class="mt-3 flex flex-col gap-3">
-              <button id="mip-event-wechat-share" open-type="share" disabled="{{invitationLoading}}" aria-label="微信分享" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-[#07c160] p-0 text-[28rpx] font-medium leading-[40rpx] text-white after:border-0">
+              <button id="mip-event-wechat-share" open-type="share" disabled="{{invitationLoading || !outgoingInviteRef}}" aria-label="微信分享" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-[#07c160] p-0 text-[28rpx] font-medium leading-[40rpx] text-white after:border-0">
                 <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/packages/member/assets/figma/events/wechat.svg" />
                 <text>{{invitationLoading ? '正在准备分享' : '微信分享'}}</text>
               </button>
-              <button id="mip-event-copy-link" aria-label="复制链接" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-[#202020] p-0 text-[28rpx] font-medium leading-[40rpx] text-[#FCDF03] after:border-0" bind:tap="copyEventLink">
+              <button id="mip-event-copy-link" loading="{{shareLinkBusy}}" disabled="{{shareLinkBusy}}" aria-label="复制链接" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-[#202020] p-0 text-[28rpx] font-medium leading-[40rpx] text-[#FCDF03] after:border-0" bind:tap="copyEventLink">
                 <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/packages/member/assets/figma/events/link.svg" />
                 <text>复制链接</text>
               </button>
@@ -167,7 +167,7 @@
 
           <view id="mip-event-share-copy" class="relative mt-3 box-border h-[292rpx] rounded-[16rpx] bg-panel px-3 py-3">
             <view class="text-[28rpx] font-medium leading-[40rpx]">分享文案</view>
-            <button id="mip-event-copy-text" aria-label="复制分享文案" class="absolute right-[-4rpx] top-[-4rpx] m-0 flex h-[88rpx] w-[88rpx] items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" bind:tap="copyShareText">
+            <button id="mip-event-copy-text" disabled="{{shareLinkBusy}}" aria-label="复制分享文案" class="absolute right-[-4rpx] top-[-4rpx] m-0 flex h-[88rpx] w-[88rpx] items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" bind:tap="copyShareText">
               <image class="h-[32rpx] w-[32rpx]" mode="aspectFit" src="/packages/member/assets/figma/events/copy.svg" />
             </button>
             <view class="mt-2 truncate text-[32rpx] font-medium leading-[44rpx]">{{event.title}}</view>

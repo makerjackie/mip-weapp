@@ -36,9 +36,12 @@ function wrappedLines(context: WechatMiniprogram.CanvasRenderingContext.CanvasRe
     if (current && context.measureText(candidate).width > maxWidth) {
       lines.push(current)
       current = character
-      // Stop once maxLines lines are full; breaking at maxLines - 1 left the last line holding a
-      // single character and dropped the rest of the title.
       if (lines.length === maxLines) {
+        let lastLine = lines[maxLines - 1] || ''
+        while (lastLine && context.measureText(`${lastLine}…`).width > maxWidth) {
+          lastLine = Array.from(lastLine).slice(0, -1).join('')
+        }
+        lines[maxLines - 1] = `${lastLine}…`
         break
       }
     }
@@ -175,6 +178,8 @@ Page({
     inviteRef: '',
     incomingInvitationToken: '',
     invitationLoading: false,
+    outgoingInviteRef: '',
+    shareLinkBusy: false,
     shareOpen: false,
     posterBusy: false,
     posterPath: '',
@@ -200,6 +205,7 @@ Page({
   authToken: '' as string,
   authIntent: '' as AuthIntent | '',
   checkInAuthRetryAttempted: false,
+  invitationUrl: null as { eventId: string, url: string, validUntil: string } | null,
 
   onLoad(query: Record<string, string>) {
     this.onlineRequested = query.online === '1'
@@ -448,16 +454,16 @@ Page({
   },
 
   async loadInvitation() {
-    if (this.data.invitationLoading || this.data.inviteRef) {
+    if (this.data.invitationLoading || this.data.outgoingInviteRef) {
       return
     }
     this.setData({ invitationLoading: true })
     try {
       const result = await mipEventsModule.createInvitation(this.data.eventId)
-      this.setData({ inviteRef: result.inviteRef })
+      this.setData({ outgoingInviteRef: result.inviteRef })
     }
     catch {
-      this.setData({ inviteRef: '' })
+      this.setData({ outgoingInviteRef: '', message: '邀请信息准备失败，请重新打开分享重试。' })
     }
     finally {
       this.setData({ invitationLoading: false })
@@ -495,34 +501,45 @@ Page({
     }
   },
 
-  copyShareText() {
+  async copyInvitation(asText: boolean) {
     const event = this.data.event
-    if (!event) {
+    if (!event || this.data.shareLinkBusy) {
       return
     }
-    const lines = [
-      event.title,
-      `时间：${this.data.shareTimeText}`,
-      `地址：${this.data.locationText}`,
-      `报名链接：${eventInvitationPath(this.data.eventId, this.data.inviteRef)}`,
-    ].filter(Boolean)
-    wx.setClipboardData({
-      data: lines.join('\n'),
-      success: () => {
-        this.closeShare()
-        wx.showToast({ title: '活动信息已复制', icon: 'success' })
-      },
-    })
+    this.setData({ shareLinkBusy: true, message: '' })
+    try {
+      const eventId = this.data.eventId
+      let cached = this.invitationUrl
+      if (!cached || cached.eventId !== eventId || Date.parse(cached.validUntil) <= Date.now() + 60_000) {
+        const envVersion = wx.getAccountInfoSync().miniProgram.envVersion
+        const result = await mipEventsModule.createInvitationUrl(eventId, envVersion)
+        cached = { eventId, url: result.url, validUntil: result.validUntil }
+        this.invitationUrl = cached
+        this.setData({ outgoingInviteRef: result.inviteRef })
+      }
+      await wx.setClipboardData({
+        data: asText
+          ? [event.title, `时间：${this.data.shareTimeText}`, `地址：${this.data.locationText}`, `报名链接：${cached.url}`].join('\n')
+          : cached.url,
+      })
+      this.closeShare()
+      wx.showToast({ title: asText ? '活动信息已复制' : '活动链接已复制', icon: 'success' })
+    }
+    catch {
+      this.setData({ message: '暂时无法复制报名链接，请使用微信分享或下载活动二维码。' })
+      wx.showToast({ title: '链接暂不可用，请用微信分享', icon: 'none' })
+    }
+    finally {
+      this.setData({ shareLinkBusy: false })
+    }
+  },
+
+  copyShareText() {
+    return this.copyInvitation(true)
   },
 
   copyEventLink() {
-    wx.setClipboardData({
-      data: eventInvitationPath(this.data.eventId, this.data.inviteRef),
-      success: () => {
-        this.closeShare()
-        wx.showToast({ title: '活动链接已复制', icon: 'success' })
-      },
-    })
+    return this.copyInvitation(false)
   },
 
   async downloadInvitationCode() {
@@ -533,7 +550,7 @@ Page({
     this.setData({ posterBusy: true, message: '' })
     try {
       const credential = await mipEventsModule.createInvitationCode(this.data.eventId)
-      const posterPath = await this.drawInvitationPoster(credential.codeUrl)
+      const posterPath = await this.drawInvitationPoster(credential.codeUrl, credential.inviterName)
       this.setData({ posterPath })
       await wx.saveImageToPhotosAlbum({ filePath: posterPath })
       this.closeShare()
@@ -548,7 +565,7 @@ Page({
     }
   },
 
-  async drawInvitationPoster(codeUrl: string) {
+  async drawInvitationPoster(codeUrl: string, inviterName: string) {
     const event = this.data.event
     if (!event) {
       throw new Error('活动信息不可用')
@@ -576,23 +593,42 @@ Page({
     context.fillStyle = '#080808'
     context.font = '700 34px sans-serif'
     context.fillText('MIP', 28, 52)
+    context.font = '600 15px sans-serif'
+    const invitationLines = wrappedLines(context, `${inviterName.trim() || 'MIP 用户'} 邀请你一起参加`, POSTER_WIDTH - 56, 2)
+    let textY = 76
+    invitationLines.forEach((line) => {
+      context.fillText(line, 28, textY)
+      textY += 19
+    })
+    textY += 9
     context.font = '700 22px sans-serif'
-    wrappedLines(context, event.title, POSTER_WIDTH - 56, 2)
-      .forEach((line, index) => context.fillText(line, 28, 94 + index * 30))
+    const titleLines = wrappedLines(context, event.title, POSTER_WIDTH - 56, 2)
+    titleLines.forEach((line) => {
+      context.fillText(line, 28, textY)
+      textY += 27
+    })
+    textY += 8
     context.font = '400 14px sans-serif'
-    context.fillText(this.data.startsText, 28, 158)
-    context.fillText(this.data.locationText, 28, 182, POSTER_WIDTH - 56)
+    for (const line of wrappedLines(context, this.data.startsText, POSTER_WIDTH - 56, 2)) {
+      context.fillText(line, 28, textY)
+      textY += 18
+    }
+    for (const line of wrappedLines(context, this.data.locationText, POSTER_WIDTH - 56, 3)) {
+      context.fillText(line, 28, textY)
+      textY += 18
+    }
+    const codeCardTop = Math.max(240, textY + 10)
     context.fillStyle = '#FFFFFF'
-    context.fillRect(28, 208, 319, 286)
+    context.fillRect(28, codeCardTop, 319, 232)
     const codeImage = await loadCanvasImage(node, codeUrl)
-    context.drawImage(codeImage, 78, 228, 219, 219)
+    context.drawImage(codeImage, 99.5, codeCardTop + 10, 176, 176)
     context.fillStyle = '#080808'
     context.font = '600 15px sans-serif'
     context.textAlign = 'center'
-    context.fillText('使用微信扫码查看活动详情', POSTER_WIDTH / 2, 474)
+    context.fillText('使用微信扫码查看活动详情', POSTER_WIDTH / 2, codeCardTop + 210)
     context.textAlign = 'start'
     context.font = '400 12px sans-serif'
-    context.fillText('邀请你一起参加', 28, 526)
+    context.fillText('MIP 活动邀请', 28, 548)
     if (node.requestAnimationFrame) {
       await new Promise<void>(resolve => node.requestAnimationFrame?.(resolve))
     }
@@ -996,6 +1032,11 @@ Page({
     if (!event) {
       return
     }
+    this.setData({ message: '' })
+    if (!wx.canIUse('addPhoneCalendar')) {
+      this.setData({ message: '当前微信版本不支持加入系统日历。' })
+      return
+    }
     const startTime = Math.floor(new Date(event.startsAt).getTime() / 1000)
     const endTime = Math.floor(new Date(event.endsAt).getTime() / 1000)
     if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
@@ -1014,9 +1055,14 @@ Page({
       wx.showToast({ title: '已加入系统日历', icon: 'success' })
     }
     catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      if (!message.includes('cancel')) {
-        this.setData({ message: '暂时无法加入日历，请稍后重试。' })
+      const errMsg = error && typeof error === 'object' && 'errMsg' in error && typeof error.errMsg === 'string'
+        ? error.errMsg
+        : error instanceof Error ? error.message : String(error)
+      if (/cancel/i.test(errMsg)) {
+        wx.showToast({ title: '已取消加入日历', icon: 'none' })
+      }
+      else {
+        this.setData({ message: errMsg ? `加入系统日历失败：${errMsg}` : '加入系统日历失败，请稍后重试。' })
       }
     }
   },
@@ -1144,7 +1190,7 @@ Page({
     this.closeShare()
     return {
       title: this.data.event?.title || 'MIP 活动',
-      path: eventInvitationPath(this.data.eventId, this.data.inviteRef),
+      path: eventInvitationPath(this.data.eventId, this.data.outgoingInviteRef),
       imageUrl: this.data.event?.coverUrl || brand.logoPath,
     }
   },

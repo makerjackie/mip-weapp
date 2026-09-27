@@ -2738,6 +2738,10 @@ async function issueInvitationLink(db, { appId, eventId, userId, now = new Date(
     if (!event) {
       throw new DomainError('NOT_FOUND', '活动不存在或已下架')
     }
+    const inviter = await tx.one(
+      `SELECT nickname FROM mip_profiles WHERE app_id = ? AND user_id = ?`,
+      [appId, userId],
+    )
     const invitationId = randomUUID()
     const sceneKey = randomBytes(8).toString('base64url')
     const secret = randomBytes(8).toString('base64url')
@@ -2760,6 +2764,7 @@ async function issueInvitationLink(db, { appId, eventId, userId, now = new Date(
     return {
       invitationId,
       eventId,
+      inviterName: typeof inviter?.nickname === 'string' && inviter.nickname.trim() ? inviter.nickname.trim() : 'MIP 用户',
       scene: `i1.${sceneKey}.${secret}`,
       validUntil: iso(validUntil),
     }

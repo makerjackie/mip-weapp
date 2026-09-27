@@ -23,6 +23,7 @@ describe('MIP invitation mini-program scene', () => {
       async one(sql) {
         calls.push(String(sql))
         if (String(sql).includes('FROM mip_users')) return { id: userId, status: 'ACTIVE' }
+        if (String(sql).includes('FROM mip_profiles')) return { nickname: '邀请人昵称' }
         return { id: eventId }
       },
       async query(sql, params) {
@@ -43,6 +44,7 @@ describe('MIP invitation mini-program scene', () => {
     assert.match(result.scene, /^i1\.[A-Za-z0-9_-]{11}\.[A-Za-z0-9_-]{11}$/)
     assert.ok(result.scene.length <= 32)
     assert.equal(result.scene.includes(result.invitationId), false)
+    assert.equal(result.inviterName, '邀请人昵称')
     assert.ok(calls.some(call => call.params?.includes('EVENT_INVITATION_CODE_CREATED')))
   })
 

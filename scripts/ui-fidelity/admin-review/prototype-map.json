@@ -1,0 +1,32 @@
+{
+  "source": {
+    "title": "MIP 后台交互原型 V0.4（Workbuddy 导出）",
+    "sha256": "fd59dabd546e8bc32f9b74083a1eceddaf42a9dd0c487337c5b443b2126432b9",
+    "filename": "MIP 小程序后台管理系统 原型 - v1.html"
+  },
+  "pages": {
+    "overview": { "anchor": "dashboard", "title": "首页仪表盘" },
+    "users": { "anchor": "users", "title": "用户管理" },
+    "events": { "anchor": "activity", "title": "活动管理" },
+    "orders": { "anchor": "orders", "title": "订单管理" },
+    "tasks": { "anchor": "tasks", "title": "任务管理" },
+    "banners": { "anchor": "banner", "title": "Banner 管理" },
+    "opportunities": { "anchor": "opportunities", "title": "机会管理" },
+    "growth": { "anchor": "levels", "title": "等级管理（成长体系的一部分）" },
+    "permissions": { "anchor": "roles", "title": "角色与权限" },
+    "admin-accounts": { "anchor": "admins", "title": "后台账号" },
+    "messages": { "anchor": "messages", "title": "后台消息" }
+  },
+  "missing": {
+    "A-login": "V0.4 原型没有独立的登录与密码设置页面。",
+    "cards": "V0.4 原型只在用户详情中提到名片，没有独立的名片管理页面。",
+    "media": "V0.4 原型没有素材库或素材上传页面。",
+    "audit-logs": "V0.4 原型没有独立的审计日志页面。",
+    "operations": "V0.4 原型没有与运营记录对应的页面。",
+    "events-eventId-edit": "V0.4 原型有活动模块，但没有可直达的新建或编辑状态。",
+    "tasks-taskId-edit": "V0.4 原型有任务模块，但没有可直达的新建或编辑状态。",
+    "opportunities-opportunityId-edit": "V0.4 原型有机会模块，但没有可直达的新建或编辑状态。",
+    "userContent-contentId-edit": "V0.4 原型没有合作卡或超级案例的独立编辑页面。",
+    "knowledge-contentId-edit": "V0.4 原型没有知识库编辑页面。"
+  }
+}

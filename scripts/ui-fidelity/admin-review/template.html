@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="robots" content="noindex,nofollow,noarchive" />
     <title>MIP 管理后台验收</title>
-    <link rel="stylesheet" href="review.css" />
+    <link rel="stylesheet" href="/*REVIEW_CSS_ASSET*/" />
   </head>
   <body>
     <header>
@@ -32,7 +32,25 @@
         <ul id="requirements"></ul>
         <p id="step-notes"></p>
       </section>
-      <div id="captures"></div>
+      <section id="comparison" aria-label="原型与实际截图对照">
+        <div class="compare-panel prototype-panel">
+          <div class="compare-panel-heading">
+            <h3>原型</h3>
+            <span id="prototype-source"></span>
+          </div>
+          <div id="prototype-content"></div>
+        </div>
+        <div class="compare-panel actual-panel">
+          <div class="compare-panel-heading">
+            <h3>实际截图</h3>
+            <label id="viewport-control" for="viewport-select"
+              >视口
+              <select id="viewport-select" aria-label="选择实际截图视口"></select>
+            </label>
+          </div>
+          <div id="actual-content"></div>
+        </div>
+      </section>
       <section class="feedback">
         <h3>我的验收意见</h3>
         <label for="decision">结论</label
@@ -50,6 +68,6 @@
     <script id="report-data" type="application/json">
       /*REPORT_JSON*/ null
     </script>
-    <script src="review.js" defer></script>
+    <script src="/*REVIEW_JS_ASSET*/" defer></script>
   </body>
 </html>

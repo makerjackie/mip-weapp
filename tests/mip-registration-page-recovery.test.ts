@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   getEvent: vi.fn(),
   getMyRegistration: vi.fn(),
   register: vi.fn(),
+  payOrder: vi.fn(),
   loadSnapshot: vi.fn(),
   peekSnapshot: vi.fn(),
   loadDraft: vi.fn(),
@@ -16,7 +17,7 @@ vi.mock('../src/modules/mip-events/client', () => ({
   mipCheckInResumeStore: { peek: vi.fn() },
   mipRegistrationDraftStore: { load: mocks.loadDraft, save: mocks.saveDraft, remove: mocks.removeDraft },
 }))
-vi.mock('../src/modules/mip-commerce/client', () => ({ mipCommerceModule: {} }))
+vi.mock('../src/modules/mip-commerce/client', () => ({ mipCommerceModule: { payOrder: mocks.payOrder } }))
 vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: {} }))
 vi.mock('../src/modules/mip-identity/client', () => ({
   mipIdentityModule: { consumePendingResume: () => null, loadSnapshot: mocks.loadSnapshot, peekSnapshot: mocks.peekSnapshot },
@@ -121,6 +122,54 @@ describe('registration page recovery', () => {
     expect(instance.data.editing).toBe(false)
     expect(instance.data.fields[0].value).toBe('原内容')
     expect(instance.data.shareProfile).toBe(true)
+  })
+  it('shows an explicit unpaid state when payment is cancelled', async () => {
+    const instance = page()
+    instance.data.eventId = 'e1'
+    await instance.loadEvent()
+    instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '参加交流' } })
+    mocks.register.mockResolvedValue({
+      kind: 'PAYMENT_REQUIRED',
+      status: 'PAYMENT_PENDING',
+      registrationId: 'r1',
+      orderId: 'o1',
+      amountCents: 100,
+      currency: 'CNY',
+      holdExpiresAt: '2026-10-01T00:00:00.000Z',
+      paymentAvailable: true,
+    })
+    mocks.payOrder.mockResolvedValue({ kind: 'CANCELLED' })
+
+    await instance.submit()
+
+    expect(instance.data.resultTitle).toBe('报名待支付')
+    expect(instance.data.resultDescription).toContain('订单尚未支付，报名尚未生效')
+    expect(instance.data.resultDescription).toContain('完成支付并确认报名资格后，报名才会生效')
+    expect(instance.data.canContinueCheckIn).toBe(false)
+  })
+  it('keeps an uncertain payment result separate from the unpaid state', async () => {
+    const instance = page()
+    instance.data.eventId = 'e1'
+    await instance.loadEvent()
+    instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '参加交流' } })
+    mocks.register.mockResolvedValue({
+      kind: 'PAYMENT_REQUIRED',
+      status: 'PAYMENT_PENDING',
+      registrationId: 'r1',
+      orderId: 'o1',
+      amountCents: 100,
+      currency: 'CNY',
+      holdExpiresAt: '2026-10-01T00:00:00.000Z',
+      paymentAvailable: true,
+    })
+    mocks.payOrder.mockResolvedValue({ kind: 'PENDING', order: {} })
+
+    await instance.submit()
+
+    expect(instance.data.resultTitle).toBe('报名待确认')
+    expect(instance.data.resultDescription).toContain('支付结果正在确认')
+    expect(instance.data.resultDescription).not.toContain('订单尚未支付')
+    expect(instance.data.canContinueCheckIn).toBe(false)
   })
   it('blocks retry after the event closes', async () => {
     mocks.getEvent.mockResolvedValue({ ...event, canRegister: false })

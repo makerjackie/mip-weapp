@@ -41,6 +41,24 @@ function createCards({ access, repository, resolveCardAvatars }) {
     })
   }
   async function saveCard(caller, input = {}) {
+    if (input.cardType === 'PROFILE') {
+      const fields = input.fields
+      const allowed = ['realName', 'nickname', 'headline', 'introduction', 'companies', 'organizations', 'identityStatus']
+      if (!fields || typeof fields !== 'object' || Array.isArray(fields) || Object.keys(fields).some(key => !allowed.includes(key))) throw new AdminError('VALIDATION_FAILED', '名片字段无效')
+      const affiliations = (value) => {
+        if (!Array.isArray(value) || value.length > 5) throw new AdminError('VALIDATION_FAILED', '公司或组织最多填写五项')
+        return value.map(item => {
+          if (!item || typeof item !== 'object' || Object.keys(item).some(key => !['name', 'role'].includes(key))) throw new AdminError('VALIDATION_FAILED', '公司或组织格式无效')
+          return { name: text(item.name, 120, { required: true }), role: text(item.role, 120) }
+        })
+      }
+      return mutate(caller, input, 'PROFILE_EDIT', {
+        realName: text(fields.realName, 60), nickname: text(fields.nickname, 60, { required: true }),
+        headline: text(fields.headline, 120), introduction: text(fields.introduction, 600),
+        companies: affiliations(fields.companies), organizations: affiliations(fields.organizations),
+        identityStatus: text(fields.identityStatus, 32),
+      })
+    }
     if (input.cardType !== 'TEMPLATE' || !styles.includes(input.cardId)) throw new AdminError('VALIDATION_FAILED', '请选择现有名片模板')
     const fields = input.fields || {}
     if (!Array.isArray(fields.requiredFields) || fields.requiredFields.some(field => !allowedFields.includes(field))) throw new AdminError('VALIDATION_FAILED', '必填项无效')

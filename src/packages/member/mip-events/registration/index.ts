@@ -445,10 +445,10 @@ Page({
       void this.refreshInvitationAttribution()
       this.submissionIdempotencyKey = ''
       if (result.kind === 'PAYMENT_REQUIRED') {
-        let resultTitle = '报名订单已创建'
+        let resultTitle = '报名待支付'
         let canContinueCheckIn = false
         let resultDescription = result.paymentAvailable
-          ? '请完成支付。支付确认后报名生效。'
+          ? '订单尚未支付，报名尚未生效。完成支付并确认报名资格后，报名才会生效。'
           : '支付服务尚未配置，报名尚未生效。'
         if (result.paymentAvailable) {
           try {
@@ -462,13 +462,16 @@ Page({
               canContinueCheckIn = registrationReady && this.data.resumeCheckIn
             }
             else if (payment.kind === 'CANCELLED') {
-              resultDescription = '支付已取消，可在订单中继续支付。'
+              resultTitle = '报名待支付'
+              resultDescription = '支付已取消，订单尚未支付，报名尚未生效。完成支付并确认报名资格后，报名才会生效。'
             }
             else {
+              resultTitle = '报名待确认'
               resultDescription = '支付结果正在确认，可在订单中查看状态。'
             }
           }
           catch {
+            resultTitle = '报名待确认'
             resultDescription = '订单已创建，可在订单中继续支付。'
           }
         }

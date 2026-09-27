@@ -1,5 +1,5 @@
 import { useParams } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminRequestInput, AdminOperationAction } from '../../domain/contracts'
 import type { OperationValues } from '../../modules/admin-operation-ui'
@@ -45,9 +45,10 @@ export function EventEditFormPage() {
     },
   }
 
-  const loadDetail = eventId
-    ? () => loadEventDetailForForm(eventId, request as AdminRequest)
-    : undefined
+  const loadDetail = useCallback(
+    () => loadEventDetailForForm(eventId, request as AdminRequest),
+    [eventId, request],
+  )
 
-  return <IndependentFormPage config={formConfig} loadDetail={loadDetail} />
+  return <IndependentFormPage key={eventId || 'new'} config={formConfig} loadDetail={eventId ? loadDetail : undefined} />
 }

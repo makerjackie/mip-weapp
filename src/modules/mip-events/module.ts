@@ -350,6 +350,10 @@ export function createMipEventsModule(
       return gateway.createCheckInPoster(eventId, mode)
     },
 
+    createInvitationUrl(eventId: EventId, envVersion: 'develop' | 'trial' | 'release') {
+      return gateway.createInvitationUrl(eventId, envVersion)
+    },
+
     createInvitationCode(eventId: EventId) {
       return gateway.createInvitationCode(eventId)
     },

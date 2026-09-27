@@ -128,6 +128,7 @@ function createGateway() {
       eventId,
       scene: 'i1.abcdefghijk.lmnopqrstuv',
       validUntil: '',
+      inviterName: '邀请人昵称',
       assetId: 'asset-1',
       codeUrl: 'https://example.test/invitation.png',
     })),

@@ -13,6 +13,29 @@ function createWechatCodeProvider({ appId, appSecret, expectedAppId = appId, fet
   }
   if (appId !== expectedAppId) throw new Error('WECHAT_CODE_PROVIDER_APP_ID_MISMATCH')
   return {
+    async generateUrlLink({ path, query, envVersion = 'trial' }) {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const accessToken = await accessTokenFor({ cache, appId, appSecret, fetchImpl, now })
+        let response
+        try {
+          response = await fetchImpl(`https://api.weixin.qq.com/wxa/generate_urllink?access_token=${encodeURIComponent(accessToken)}`, {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ path, query, env_version: envVersion, is_expire: true, expire_type: 1, expire_interval: 30 }),
+            signal: AbortSignal.timeout(8000),
+          })
+        } catch { throw providerError('NETWORK') }
+        const content = await responseBuffer(response, 32 * 1024)
+        let payload
+        try { payload = JSON.parse(content.toString('utf8')) } catch { throw providerError('INVALID_RESPONSE') }
+        if (TOKEN_REFRESH_CODES.has(String(payload.errcode)) && attempt === 0) { cache.expiresAt = 0; continue }
+        if (!response.ok || (payload.errcode && payload.errcode !== 0)) throw providerError(String(payload.errcode || `HTTP_${response.status}`))
+        let link
+        try { link = new URL(payload.url_link) } catch { throw providerError('INVALID_RESPONSE') }
+        if (link.protocol !== 'https:' || link.username || link.password || !['wxaurl.cn', 'wxaurl.com', 'mp.weixin.qq.com'].includes(link.hostname)) throw providerError('INVALID_RESPONSE')
+        return link.toString()
+      }
+      throw providerError('UNAVAILABLE')
+    },
     async getUnlimited({ scene, page, width = 430, checkPath = false, envVersion = 'trial' }) {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const accessToken = await accessTokenFor({ cache, appId, appSecret, fetchImpl, now })

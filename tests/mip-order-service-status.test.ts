@@ -24,4 +24,18 @@ describe('member order service status contract', () => {
     expect(detailView).toContain('使用状态')
     expect(detailView).toContain('订单状态')
   })
+
+  it('keeps pending event payment status and continuation visible before scrolling', () => {
+    const eventPaymentState = detailView.indexOf('wx:if="{{paymentPending}}" class="mt-3 rounded-[16rpx]')
+    const priceDetails = detailView.indexOf('费用明细', eventPaymentState)
+    const fixedPaymentAction = detailView.indexOf('class="mip-liquid-glass box-border fixed')
+
+    expect(eventPaymentState).toBeGreaterThan(-1)
+    expect(eventPaymentState).toBeLessThan(priceDetails)
+    expect(detailView.slice(eventPaymentState, priceDetails)).toContain('订单尚未支付，报名尚未生效')
+    expect(detailView.slice(eventPaymentState, priceDetails)).toContain('支付结果尚未确认，报名资格暂未生效')
+    expect(fixedPaymentAction).toBeGreaterThan(-1)
+    expect(detailView.slice(fixedPaymentAction)).toContain('\'继续支付\'')
+    expect(detailView).not.toContain('wx:if="{{paymentPending}}" block size="large"')
+  })
 })

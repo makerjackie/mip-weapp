@@ -114,7 +114,7 @@ const EVENT_MUTATION_CONFIGS = {
     action: 'mip.admin.events.save',
     capability: 'events.write',
     title: '保存活动',
-    description: '保存活动基本信息。封面和活动介绍图片可使用素材上传页返回的素材 ID；服务端会再次校验活动内容、时间和当前版本。',
+    description: '编辑活动信息、报名规则与介绍图片。价格调整只影响新订单；已发布活动更改归属、活动方式、收费类型或报名方式前，请先下架。',
     fields: eventSaveFields,
   },
   'mip.admin.events.registrations.review': {

@@ -48,6 +48,55 @@ describe('admin operation UI', () => {
     })
   })
 
+  it('preserves existing image captions when only the title changes', () => {
+    const fields: OperationField[] = [{ key: 'draft', label: '草稿', kind: 'group', fields: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list' },
+    ] }]
+    const media = [
+      { assetId: 'asset-a', caption: '入口照片' },
+      { assetId: 'asset-b', caption: '现场全景' },
+    ]
+
+    assert.deepEqual(normalizeOperationValues(fields, {
+      draft: { title: '新标题', contentMedia: 'asset-a\nasset-b' },
+    }, { draft: { title: '旧标题', contentMedia: media } }), {
+      draft: { title: '新标题', contentMedia: media },
+    })
+  })
+
+  it('deduplicates string and structured asset lists while preserving retained captions', () => {
+    const field: OperationField[] = [{ key: 'media', label: '素材', kind: 'asset-list' }]
+    const previous = [
+      { assetId: 'asset-a', caption: '应被删除' },
+      { assetId: 'asset-b', caption: '保留说明' },
+    ]
+
+    assert.deepEqual(normalizeOperationValues(field, {
+      media: 'asset-b\nasset-c\nasset-b',
+    }, { media: previous }), {
+      media: [
+        { assetId: 'asset-b', caption: '保留说明' },
+        { assetId: 'asset-c', caption: '' },
+      ],
+    })
+
+    assert.deepEqual(normalizeOperationValues(field, {
+      media: [
+        { assetId: 'asset-b' },
+        { assetId: 'asset-c' },
+        { assetId: 'asset-c', caption: '重复项说明' },
+        { assetId: 'asset-a', caption: '' },
+      ],
+    }, { media: previous }), {
+      media: [
+        { assetId: 'asset-b', caption: '保留说明' },
+        { assetId: 'asset-c', caption: '' },
+        { assetId: 'asset-a', caption: '' },
+      ],
+    })
+  })
+
   it('normalizes only fields whose server-facing condition is active', () => {
     const fields: OperationField[] = [
       { key: 'kind', label: '类型', kind: 'select' },

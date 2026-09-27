@@ -283,7 +283,7 @@
         }
       ],
       "visibleAssertion": {
-        "selector": "#privacy-account-page #privacy-closure-processing"
+        "selector": "#privacy-account-page #privacy-closure-dialog"
       }
     }
   ],

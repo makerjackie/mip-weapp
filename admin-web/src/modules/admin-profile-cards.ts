@@ -3,6 +3,9 @@ import type { AdminRequest } from './admin-read-contracts'
 export interface ProfileCard {
   id: string
   name: string
+  realName: string
+  introduction: string
+  organizations: Array<{ name?: string; role?: string }>
   nickname: string
   headline: string
   companies: Array<{ name?: string; role?: string }>
@@ -36,6 +39,7 @@ export function profileCardsModule(request: AdminRequest) {
     list: (query: string, cursor?: string) => request<CardPage<ProfileCard>>('mip.admin.cards.list', { cardType: 'PROFILE', query, cursor, limit: 20 }),
     templates: () => request<CardPage<CardTemplate>>('mip.admin.cards.list', { cardType: 'TEMPLATE' }),
     history: (cardId: string, cursor?: string) => request<CardPage<CardHistory>>('mip.admin.cards.history', { cardId, cursor, limit: 20 }),
+    saveProfile: (item: ProfileCard, fields: Pick<ProfileCard, 'realName' | 'nickname' | 'headline' | 'introduction' | 'companies' | 'organizations' | 'identityStatus'>, idempotencyKey: string) => request('mip.admin.cards.save', { cardType: 'PROFILE', cardId: item.id, expectedVersion: item.profileVersion, fields, idempotencyKey }),
     saveTemplate: (item: CardTemplate, fields: Pick<CardTemplate, 'name' | 'sortOrder' | 'requiredFields'>, idempotencyKey: string) => request('mip.admin.cards.save', { cardType: 'TEMPLATE', cardId: item.id, expectedVersion: item.version, fields, idempotencyKey }),
     setTemplateStatus: (item: CardTemplate, idempotencyKey: string) => request('mip.admin.cards.changeStatus', { cardId: item.id, expectedVersion: item.version, status: item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE', idempotencyKey }),
     moderate: (item: ProfileCard, reason: string, idempotencyKey: string) => item.status === 'TAKEN_DOWN'
@@ -51,6 +55,7 @@ export function cardHistoryFields(snapshot: Record<string, unknown>): Array<{ la
   return [
     { label: '姓名', value: text(snapshot.realName) || text(snapshot.nickname) },
     { label: '昵称', value: text(snapshot.nickname) }, { label: '职位简介', value: text(snapshot.headline) },
+    { label: '个人介绍', value: text(snapshot.introduction) },
     { label: '公司与职位', value: organizations(snapshot.companies) },
     { label: '组织与职务', value: organizations(snapshot.organizations) },
     { label: 'MIP 身份', value: text(snapshot.identityStatus) },

@@ -15,6 +15,7 @@ if (!feedback || typeof feedback !== 'object' || Array.isArray(feedback)) {
   feedback = {}
 }
 let index = 0
+const viewportSelection = {}
 function evidenceChanged(step, saved) {
   const current = step.captures.map(capture => capture.sha256).filter(Boolean)
   return Boolean(saved?.updatedAt) && JSON.stringify(saved.reviewedImageSha256 || []) !== JSON.stringify(current)
@@ -40,38 +41,8 @@ function render() {
   byId('progress').textContent = `${index + 1} / ${report.steps.length}`
   byId('requirements').replaceChildren(...step.requirements.map(value => node('li', value)))
   byId('step-notes').textContent = step.notes
-  byId('captures').replaceChildren()
-  if (!step.captures.length) {
-    byId('captures').append(node('div', '尚无已采集证据，本页待补测。', 'placeholder'))
-  }
-  for (const capture of step.captures) {
-    const section = node('section', '', 'capture')
-    const heading = node('div', '', 'capture-head')
-    heading.append(node('strong', capture.title || capture.viewport), node('span', modes[capture.mode], 'tag'), node('span', states[capture.status], `tag ${capture.status}`))
-    section.append(heading, node('p', `${capture.viewport} · ${capture.capturedAt || '采集时间未记录'}`), node('p', capture.notes))
-    if (capture.operations.length) {
-      const operations = node('ul', '')
-      operations.append(...capture.operations.map(value => node('li', value)))
-      section.append(operations)
-    }
-    if (capture.image) {
-      const image = document.createElement('img')
-      image.src = capture.image
-      image.alt = `${step.title} — ${capture.title || capture.viewport}`
-      image.loading = 'lazy'
-      if (Number.parseInt(capture.viewport, 10) < 500) {
-        image.className = 'mobile'
-      }
-      section.append(image)
-    }
-    else {
-      section.append(node('div', capture.publicationNote, 'placeholder'))
-    }
-    if (capture.mode !== 'real-write') {
-      section.append(node('p', '此项没有验证真实写入。'))
-    }
-    byId('captures').append(section)
-  }
+  renderPrototype(step)
+  renderActual(step)
   const saved = feedback[step.id] || {}
   byId('decision').value = !evidenceChanged(step, saved) && ['pending', 'pass', 'needs-fix', 'question'].includes(saved.status) ? saved.status : 'pending'
   byId('comment').value = typeof saved.note === 'string' ? saved.note : ''
@@ -82,6 +53,67 @@ function render() {
   byId('previous').disabled = index === 0
   byId('next').disabled = index === report.steps.length - 1
   byId('step-select').value = String(index)
+}
+function renderPrototype(step) {
+  byId('prototype-content').replaceChildren()
+  byId('prototype-source').textContent = step.prototype?.sourceTitle || ''
+  if (!step.prototype) {
+    byId('prototype-content').append(node('div', step.prototypeUnavailableReason || '没有找到与本页对应的原型画面。', 'compare-missing'))
+    return
+  }
+  const frame = document.createElement('iframe')
+  frame.id = 'prototype-frame'
+  frame.title = `${step.title} 原型画面：${step.prototype.title}`
+  frame.src = step.prototype.src
+  frame.loading = 'lazy'
+  frame.setAttribute('sandbox', 'allow-scripts')
+  byId('prototype-content').append(frame)
+}
+function renderActual(step) {
+  const selector = byId('viewport-select')
+  const captures = step.captures || []
+  const selection = Number.isInteger(viewportSelection[step.id]) ? viewportSelection[step.id] : 0
+  selector.replaceChildren(...captures.map((capture, captureIndex) => {
+    const option = node('option', `${capture.viewport} · ${capture.title || modes[capture.mode]}`)
+    option.value = String(captureIndex)
+    return option
+  }))
+  byId('viewport-control').hidden = captures.length < 2
+  byId('actual-content').replaceChildren()
+  if (!captures.length) {
+    byId('actual-content').append(node('div', '本页还没有经过审核的实际截图。', 'compare-missing'))
+    return
+  }
+  const captureIndex = Math.min(selection, captures.length - 1)
+  viewportSelection[step.id] = captureIndex
+  selector.value = String(captureIndex)
+  const capture = captures[captureIndex]
+  const section = node('section', '', 'actual-capture')
+  const heading = node('div', '', 'capture-head')
+  heading.append(node('strong', capture.title || capture.viewport), node('span', modes[capture.mode], 'tag'), node('span', states[capture.status], `tag ${capture.status}`))
+  section.append(heading, node('p', `${capture.viewport} · ${capture.capturedAt || '采集时间未记录'}`))
+  if (capture.notes) {
+    section.append(node('p', capture.notes, 'capture-notes'))
+  }
+  if (capture.operations.length) {
+    const operations = node('ul', '')
+    operations.append(...capture.operations.map(value => node('li', value)))
+    section.append(operations)
+  }
+  if (capture.image) {
+    const image = document.createElement('img')
+    image.src = capture.image
+    image.alt = `${step.title} 实际截图 — ${capture.title || capture.viewport}`
+    image.loading = 'lazy'
+    section.append(image)
+  }
+  else {
+    section.append(node('div', capture.publicationNote || '尚无公开审核通过的实际截图。', 'compare-missing'))
+  }
+  if (capture.mode !== 'real-write') {
+    section.append(node('p', '此项没有验证真实写入。'))
+  }
+  byId('actual-content').append(section)
 }
 function go(next) {
   index = Math.max(0, Math.min(report.steps.length - 1, next))
@@ -116,6 +148,10 @@ function save() {
 byId('previous').onclick = () => go(index - 1)
 byId('next').onclick = () => go(index + 1)
 byId('step-select').onchange = event => go(Number(event.target.value))
+byId('viewport-select').onchange = (event) => {
+  viewportSelection[report.steps[index].id] = Number(event.target.value)
+  renderActual(report.steps[index])
+}
 byId('decision').onchange = save
 byId('comment').oninput = save
 byId('export').onclick = () => {

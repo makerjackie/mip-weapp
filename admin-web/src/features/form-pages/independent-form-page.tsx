@@ -1,7 +1,7 @@
 import { ArrowLeftOutlined, EyeOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Card, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Select, Space, type FormInstance } from 'antd'
 import dayjs from 'dayjs'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminRequestInput, AdminOperationAction } from '../../domain/contracts'
@@ -113,34 +113,64 @@ export function IndependentFormPage({ config, loadDetail }: {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState('')
+  const [loadedValues, setLoadedValues] = useState<OperationValues>(config.values)
+  const [detailFailed, setDetailFailed] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  const submission = useRef<{ payload: string; key: string } | null>(null)
+  const submitting = useRef(false)
 
   const initialValues = useMemo(() => toFormValues(config.fields, config.values), [config.fields, config.values])
+  const formContext = useRef({ config, initialValues })
+  useEffect(() => {
+    formContext.current = { config, initialValues }
+  }, [config, initialValues])
 
   useEffect(() => {
-    if (!loadDetail) return
+    let active = true
+    const current = formContext.current
+    submission.current = null
+    setLoadedValues(current.config.values)
+    setDetailFailed(false)
+    setError('')
+    setFieldErrors('')
+    form.resetFields()
+    form.setFieldsValue(current.initialValues)
+
+    if (!loadDetail) {
+      setDetailLoading(false)
+      return () => { active = false }
+    }
+
+    setDetailLoading(true)
     void loadDetail().then(detailValues => {
-      if (detailValues) {
-        form.setFieldsValue(toFormValues(config.fields, { ...config.values, ...detailValues }))
-      }
+      if (!active) return
+      if (!detailValues) throw new Error('记录不存在或无法读取')
+      const latest = formContext.current
+      const values = { ...latest.config.values, ...detailValues }
+      setLoadedValues(values)
+      form.setFieldsValue(toFormValues(latest.config.fields, values))
       setDetailLoading(false)
     }).catch(reason => {
+      if (!active) return
       setError(humanizeError(reason))
+      setDetailFailed(true)
       setDetailLoading(false)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load detail once on mount
-  }, [])
+    return () => { active = false }
+  }, [form, loadAttempt, loadDetail])
 
   if (!hasCapability(config.capability)) {
     return <ErrorState title="权限不足" description="当前运营账号不能执行此操作。" />
   }
 
   const submit = async () => {
-    if (loading) return
+    if (submitting.current || detailLoading || detailFailed) return
+    submitting.current = true
     setError('')
     setFieldErrors('')
     try {
       const submitted = await form.validateFields()
-      const normalized = normalizeOperationValues(config.fields, submitted, config.values)
+      const normalized = normalizeOperationValues(config.fields, submitted, loadedValues)
       if (demoMode) {
         void message.info('演示模式不会提交写操作')
         return
@@ -151,7 +181,11 @@ export function IndependentFormPage({ config, loadDetail }: {
         return
       }
       setLoading(true)
-      await request(config.action, { ...input, idempotencyKey: config.idempotencyKey })
+      const payload = JSON.stringify(input)
+      if (!submission.current || submission.current.payload !== payload) {
+        submission.current = { payload, key: submission.current ? `web-form-${crypto.randomUUID()}` : config.idempotencyKey }
+      }
+      await request(config.action, { ...input, idempotencyKey: submission.current.key })
       void message.success(`${config.title}已提交`)
       void navigate({ to: config.backTarget })
     }
@@ -159,11 +193,13 @@ export function IndependentFormPage({ config, loadDetail }: {
       setError(humanizeError(reason))
     }
     finally {
+      submitting.current = false
       setLoading(false)
     }
   }
 
   if (detailLoading) return <LoadingState label="正在加载记录" />
+  if (detailFailed) return <Card><Alert type="error" showIcon title="记录加载失败" description={error} /><Space style={{ marginTop: 16 }}><Button onClick={() => setLoadAttempt(value => value + 1)}>重新加载</Button><Button onClick={() => void navigate({ to: config.backTarget })}>返回列表</Button></Space></Card>
 
   return (
     <>

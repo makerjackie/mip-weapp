@@ -345,6 +345,7 @@ export interface EventInvitationCode {
   eventId: EventId
   scene: string
   validUntil: string
+  inviterName: string
   assetId: string
   codeUrl: string
 }
@@ -458,6 +459,7 @@ export interface MipEventsGateway {
   resolveCheckInScene: (scene: string) => Promise<CheckInScene>
   resolveInvitationScene: (scene: string) => Promise<InvitationSceneResolution>
   createCheckInPoster: (eventId: EventId, mode?: CheckInCredentialMode) => Promise<CheckInPosterCredential>
+  createInvitationUrl: (eventId: EventId, envVersion: 'develop' | 'trial' | 'release') => Promise<{ url: string, inviteRef: string, validUntil: string }>
   createInvitationCode: (eventId: EventId) => Promise<EventInvitationCode>
   listHeartCandidates: (eventId: EventId) => Promise<HeartCandidate[]>
   listHeartHistory: (kind: HeartHistoryKind, cursor?: string, limit?: number) => Promise<HeartHistoryPage>

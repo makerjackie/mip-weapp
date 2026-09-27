@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { createAdminEventRepository } = require('../domain/repositories/events')
+const { createAdminEvents } = require('../domain/events')
 
 const APP_ID = 'wx1111111111111111'
 const USER_ID = '11111111-1111-4111-8111-111111111111'
@@ -115,6 +116,38 @@ function saveInput(draft) {
     draft,
     audit: eventId => ({ resourceId: eventId }),
   }
+}
+
+function saveHarness({ status = 'PUBLISHED', capacityTotal = 0, schema = [], formVersion = 4 } = {}) {
+  const calls = []
+  const tx = {
+    async one(sql, params) {
+      calls.push({ method: 'one', sql, params })
+      if (sql.includes('FROM mip_events')) return {
+        id: EVENT_ID, scope_type: 'BRANCH', branch_id: 'branch-a', status,
+        version: 2, form_version: formVersion, registration_schema_json: JSON.stringify(schema),
+        cover_asset_id: null, access_type: 'FREE', registration_policy: 'AUTO', event_mode: 'OFFLINE',
+      }
+      if (sql.includes('mip_event_seat_holds')) return { total: capacityTotal }
+      return null
+    },
+    async query(sql, params) {
+      calls.push({ method: 'query', sql, params })
+      return { affectedRows: 1 }
+    },
+  }
+  const db = { async transaction(work) { calls.push({ method: 'transaction' }); return work(tx) } }
+  const adapter = repository(db, {
+    async writeAudit(transaction, value) {
+      calls.push({ method: 'audit', value })
+      await transaction.query('INSERT INTO mip_admin_audit_logs (...) VALUES (...)', [])
+    },
+    async writeOutbox(transaction, value) {
+      calls.push({ method: 'outbox', value })
+      await transaction.query('INSERT INTO mip_outbox (...) VALUES (...)', [])
+    },
+  })
+  return { adapter, calls }
 }
 
 describe('admin event repository module', () => {
@@ -573,6 +606,114 @@ describe('admin event repository module', () => {
     )
     assert.equal(calls.some(sql => sql.includes('UPDATE mip_events SET')), false)
     assert.equal(calls.some(sql => sql.includes("SET status = 'REMOVED'")), false)
+  })
+
+  it('allows published copy and price edits while preserving lifecycle, orders, form version, history, and outbox', async () => {
+    const { adapter, calls } = saveHarness()
+    const result = await adapter.saveEvent({
+      ...saveInput(eventDraft({ title: '新标题', description: '更新后的内容', priceCents: 3900 })),
+      idempotencyKey: 'published-content-edit-0001',
+    })
+
+    assert.deepEqual(result, { id: EVENT_ID, version: 3, status: 'PUBLISHED' })
+    const update = calls.find(call => call.sql?.includes('UPDATE mip_events SET'))
+    assert.ok(update)
+    const priceParam = (update.sql.slice(0, update.sql.indexOf('price_cents = ?')).match(/\?/g) || []).length
+    assert.equal(update.params[priceParam], 3900)
+    const formVersionParam = (update.sql.slice(0, update.sql.indexOf('registration_schema_json = ?')).match(/\?/g) || []).length + 1
+    assert.equal(update.params[formVersionParam], 4)
+    assert.doesNotMatch(calls.map(call => call.sql || '').join('\n'), /UPDATE\s+mip_orders\b/i)
+    const history = calls.find(call => call.sql?.includes('INSERT INTO mip_event_changes'))
+    assert.ok(history)
+    assert.equal(history.params[3], 3)
+    assert.equal(calls.some(call => call.method === 'audit'), true)
+    assert.equal(calls.some(call => call.method === 'outbox'), true)
+    const claimIndex = calls.findIndex(call => call.sql?.includes('INSERT INTO mip_idempotency_keys'))
+    const completeIndex = calls.findIndex(call => call.sql?.includes("SET status = 'COMPLETED'"))
+    assert.ok(claimIndex >= 0 && completeIndex > claimIndex)
+  })
+
+  it('requires passed content safety and rejects published contract changes before writes', async () => {
+    for (const status of ['REJECTED', 'ERROR', undefined]) {
+      const { adapter, calls } = saveHarness()
+      await assert.rejects(() => adapter.saveEvent({
+        ...saveInput(eventDraft()), contentSafetyStatus: status,
+      }), error => error.code === 'CONTENT_SAFETY_REQUIRED')
+      assert.equal(calls.some(call => call.sql?.includes('UPDATE mip_events SET')), false)
+      assert.equal(calls.some(call => call.sql?.includes('INSERT INTO mip_event_changes')), false)
+    }
+
+    const changes = [
+      { scopeType: 'PLATFORM', branchId: null },
+      { eventMode: 'ONLINE' },
+      { accessType: 'PAID', priceCents: 1200 },
+      { registrationPolicy: 'REVIEW' },
+    ]
+    for (const change of changes) {
+      const { adapter, calls } = saveHarness()
+      await assert.rejects(() => adapter.saveEvent(saveInput(eventDraft(change))), error => error.code === 'VALIDATION_FAILED')
+      assert.equal(calls.some(call => call.sql?.includes('UPDATE mip_events SET')), false)
+      assert.equal(calls.some(call => call.sql?.includes('INSERT INTO mip_event_changes')), false)
+      assert.equal(calls.some(call => call.sql?.includes('INSERT INTO mip_outbox')), false)
+    }
+  })
+
+  it('keeps DRAFT and UNPUBLISHED edits available and rejects ENDED or CANCELLED without writes', async () => {
+    for (const status of ['DRAFT', 'UNPUBLISHED']) {
+      const { adapter, calls } = saveHarness({ status })
+      const result = await adapter.saveEvent(saveInput(eventDraft({ title: `${status} 更新` })))
+      assert.equal(result.status, status)
+      assert.ok(calls.some(call => call.sql?.includes('UPDATE mip_events SET')))
+      assert.ok(calls.some(call => call.sql?.includes('INSERT INTO mip_event_changes')))
+    }
+    for (const status of ['ENDED', 'CANCELLED']) {
+      const { adapter, calls } = saveHarness({ status })
+      await assert.rejects(() => adapter.saveEvent(saveInput(eventDraft())), error => error.code === 'INVALID_STATE')
+      assert.equal(calls.some(call => call.sql?.includes('UPDATE mip_events SET')), false)
+      assert.equal(calls.some(call => call.sql?.includes('INSERT INTO mip_event_changes')), false)
+      assert.equal(calls.some(call => call.method === 'audit' || call.method === 'outbox'), false)
+    }
+  })
+
+  it('counts registrations and active unexpired seat holds before lowering capacity', async () => {
+    const { adapter, calls } = saveHarness({ capacityTotal: 5 })
+    await assert.rejects(() => adapter.saveEvent(saveInput(eventDraft({ capacity: 4 }))), error => error.code === 'VALIDATION_FAILED')
+    const capacityRead = calls.find(call => call.sql?.includes('mip_event_seat_holds'))
+    assert.match(capacityRead.sql, /status IN \('REGISTERED', 'CANCELLATION_PENDING', 'ATTENDED'\)/)
+    assert.match(capacityRead.sql, /status = 'ACTIVE' AND expires_at > \?/)
+    assert.equal(calls.some(call => call.sql?.includes('UPDATE mip_events SET')), false)
+
+    const { adapter: exactCapacity, calls: exactCalls } = saveHarness({ capacityTotal: 5 })
+    await exactCapacity.saveEvent(saveInput(eventDraft({ capacity: 5 })))
+    assert.ok(exactCalls.some(call => call.sql?.includes('UPDATE mip_events SET')))
+  })
+
+  it('forwards a web save idempotency key through the service into claim and completion', async () => {
+    let saved
+    const serviceRepo = {
+      async getEventScope() {
+        return { scopeType: 'EVENT', scopeId: EVENT_ID, eventScopeType: 'BRANCH', branchId: 'branch-a' }
+      },
+      async saveEvent(input) { saved = input; return { id: EVENT_ID, version: 3, status: 'PUBLISHED' } },
+      async resolveUser() { return { id: USER_ID, status: 'ACTIVE', agreementsAccepted: true, phoneBound: true, profileComplete: true } },
+      async listRoleBindings() { return [{ roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }] },
+    }
+    const service = createAdminEvents({
+      repository: serviceRepo,
+      access: {
+        async session() { return { caller: { appId: APP_ID, userId: USER_ID }, bindings: [{ roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }] } },
+        async eventAuthorization() { return { grant: { roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }, scope: { scopeType: 'EVENT', scopeId: EVENT_ID, eventScopeType: 'BRANCH', branchId: 'branch-a' } } },
+        mutationAuthorization(grant) { return grant },
+        audit() { return {} },
+      },
+      async contentSafety() { return 'PASSED' },
+    })
+    const rawDraft = eventDraft()
+    await service.saveEvent({ appId: APP_ID, userId: USER_ID }, {
+      eventId: EVENT_ID, expectedVersion: 2, idempotencyKey: 'web-event-save-0001', draft: rawDraft,
+    })
+    assert.equal(saved.idempotencyKey, 'web-event-save-0001')
+    assert.equal(saved.contentSafetyStatus, 'PASSED')
   })
 })
 

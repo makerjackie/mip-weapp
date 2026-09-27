@@ -1,5 +1,5 @@
 import { useParams } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
 import { getContentMutationForm, validateContentMutation } from '../../modules/content-mutation-forms'
@@ -36,19 +36,18 @@ export function OpportunityEditFormPage() {
     },
   }
 
-  const loadDetail = opportunityId
-    ? async (): Promise<OperationValues | null> => {
-        const data = await request<Record<string, unknown>>('mip.admin.opportunities.get', { opportunityId })
-        if (!data || typeof data !== 'object') return null
-        const opp = data as Record<string, unknown>
-        const draft = (opp.draft && typeof opp.draft === 'object' ? opp.draft : {}) as Record<string, unknown>
-        return {
-          opportunityId: String(opp.id || opportunityId),
-          expectedVersion: Number(opp.version) || undefined,
-          draft: { ...draft },
-        } as OperationValues
-      }
-    : undefined
+  const loadDetail = useCallback(async (): Promise<OperationValues | null> => {
+    if (!opportunityId) return null
+    const data = await request<Record<string, unknown>>('mip.admin.opportunities.get', { opportunityId })
+    if (!data || typeof data !== 'object') return null
+    const opp = data as Record<string, unknown>
+    const draft = (opp.draft && typeof opp.draft === 'object' ? opp.draft : {}) as Record<string, unknown>
+    return {
+      opportunityId: String(opp.id || opportunityId),
+      expectedVersion: Number(opp.version) || undefined,
+      draft: { ...draft },
+    } as OperationValues
+  }, [opportunityId, request])
 
-  return <IndependentFormPage config={formConfig} loadDetail={loadDetail} />
+  return <IndependentFormPage config={formConfig} loadDetail={opportunityId ? loadDetail : undefined} />
 }

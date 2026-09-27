@@ -1,5 +1,5 @@
 import { useParams, useSearch } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
 import { getContentMutationForm, validateContentMutation } from '../../modules/content-mutation-forms'
@@ -45,50 +45,49 @@ export function UserContentEditFormPage() {
     },
   }
 
-  const loadDetail = isNew
-    ? undefined
-    : async (): Promise<OperationValues | null> => {
-        const separator = rawContentId.indexOf(':')
-        const kind = separator > 0 ? rawContentId.slice(0, separator) : ''
-        const contentId = separator > 0 ? rawContentId.slice(separator + 1) : rawContentId
-        if (!['COOPERATION_CARD', 'SUPER_CASE'].includes(kind) || !contentId) return null
-        const data = await request<unknown>('mip.admin.userContent.get', { kind, contentId })
-        const item = asRecord(data)
-        const owner = asRecord(item.owner)
-        const itemKind = String(item.kind || kind)
-        const draft = itemKind === 'COOPERATION_CARD'
-          ? {
-              kind: itemKind,
-              roleKey: item.roleKey,
-              positioning: item.positioning,
-              targetSummary: item.targetSummary,
-              roleFields: item.roleFields,
-              abilityScores: item.abilityScores,
-              status: item.status,
-            }
-          : {
-              kind: itemKind,
-              projectName: item.projectName,
-              summary: item.summary,
-              startedOn: item.startedOn,
-              endedOn: item.endedOn,
-              responsibility: item.responsibility,
-              cityTagId: item.cityTagId,
-              industryTagId: item.industryTagId,
-              caseType: item.caseType,
-              description: item.description,
-              coverAssetId: item.coverAssetId,
-              mediaAssetIds: item.mediaAssetIds,
-              status: item.status,
-            }
-        return {
+  const loadDetail = useCallback(async (): Promise<OperationValues | null> => {
+    if (isNew) return null
+    const separator = rawContentId.indexOf(':')
+    const kind = separator > 0 ? rawContentId.slice(0, separator) : ''
+    const contentId = separator > 0 ? rawContentId.slice(separator + 1) : rawContentId
+    if (!['COOPERATION_CARD', 'SUPER_CASE'].includes(kind) || !contentId) return null
+    const data = await request<unknown>('mip.admin.userContent.get', { kind, contentId })
+    const item = asRecord(data)
+    const owner = asRecord(item.owner)
+    const itemKind = String(item.kind || kind)
+    const draft = itemKind === 'COOPERATION_CARD'
+      ? {
           kind: itemKind,
-          contentId: String(item.id || contentId),
-          ownerUserId: String(owner.userId || ''),
-          expectedVersion: item.version,
-          draft,
-        } as OperationValues
-      }
+          roleKey: item.roleKey,
+          positioning: item.positioning,
+          targetSummary: item.targetSummary,
+          roleFields: item.roleFields,
+          abilityScores: item.abilityScores,
+          status: item.status,
+        }
+      : {
+          kind: itemKind,
+          projectName: item.projectName,
+          summary: item.summary,
+          startedOn: item.startedOn,
+          endedOn: item.endedOn,
+          responsibility: item.responsibility,
+          cityTagId: item.cityTagId,
+          industryTagId: item.industryTagId,
+          caseType: item.caseType,
+          description: item.description,
+          coverAssetId: item.coverAssetId,
+          mediaAssetIds: item.mediaAssetIds,
+          status: item.status,
+        }
+    return {
+      kind: itemKind,
+      contentId: String(item.id || contentId),
+      ownerUserId: String(owner.userId || ''),
+      expectedVersion: item.version,
+      draft,
+    } as OperationValues
+  }, [isNew, rawContentId, request])
 
-  return <IndependentFormPage config={formConfig} loadDetail={loadDetail} />
+  return <IndependentFormPage config={formConfig} loadDetail={isNew ? undefined : loadDetail} />
 }

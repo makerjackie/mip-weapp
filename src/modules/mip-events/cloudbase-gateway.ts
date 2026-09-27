@@ -177,6 +177,10 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
     return callEvents<CheckInPosterCredential>('mip.events.admin.createCheckInPoster', { eventId, mode })
   },
 
+  createInvitationUrl(eventId: EventId, envVersion: 'develop' | 'trial' | 'release') {
+    return callEvents<{ url: string, inviteRef: string, validUntil: string }>('mip.events.createInvitationUrl', { eventId, envVersion })
+  },
+
   createInvitationCode(eventId: EventId) {
     return callEvents<EventInvitationCode>('mip.events.createInvitationCode', { eventId })
   },

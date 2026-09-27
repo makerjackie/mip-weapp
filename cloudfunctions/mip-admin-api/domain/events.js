@@ -219,6 +219,7 @@ function createAdminEvents({
       actorUserId: context.caller.userId,
       eventId: input.eventId ? requiredId(input.eventId, '活动') : null,
       expectedVersion: version,
+      idempotencyKey: normalizeOptionalIdempotencyKey(input.idempotencyKey),
       draft,
       contentSafetyStatus,
       authorization: access.mutationAuthorization(grant, CAPABILITIES.EVENTS_WRITE),

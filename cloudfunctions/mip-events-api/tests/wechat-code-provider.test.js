@@ -82,6 +82,30 @@ describe('MIP WeChat code provider', () => {
     })
   })
 
+  it('creates an expiring URL Link carrying invitation query and requested build channel', async () => {
+    const provider = createWechatCodeProvider({ appId: 'wx-app', appSecret: 'test-secret-value-123456', fetchImpl: async (url, options) => {
+      if (url.includes('/cgi-bin/token')) return response({ access_token: 'test-token-abcdefghijklmnopqrstuvwxyz', expires_in: 3600 })
+      assert.match(url, /wxa\/generate_urllink/)
+      assert.deepEqual(JSON.parse(options.body), { path: 'packages/member/mip-events/detail/index', query: 'eventId=demo&inviteRef=i1.owner.token', env_version: 'develop', is_expire: true, expire_type: 1, expire_interval: 30 })
+      return response({ errcode: 0, url_link: 'https://wxaurl.cn/demo' })
+    } })
+    assert.equal(await provider.generateUrlLink({ path: 'packages/member/mip-events/detail/index', query: 'eventId=demo&inviteRef=i1.owner.token', envVersion: 'develop' }), 'https://wxaurl.cn/demo')
+  })
+
+  it('refreshes an expired URL Link token once and rejects non-WeChat links', async () => {
+    let calls = 0
+    const provider = createWechatCodeProvider({ appId: 'wx-app', appSecret: 'test-secret-value-123456', fetchImpl: async url => {
+      calls += 1
+      if (url.includes('/cgi-bin/token')) return response({ access_token: 'test-token-abcdefghijklmnopqrstuvwxyz', expires_in: 3600 })
+      return calls === 2 ? response({ errcode: 42001 }) : response({ url_link: 'https://wxaurl.cn/demo' })
+    } })
+    assert.equal(await provider.generateUrlLink({ path: 'page', query: 'inviteRef=demo' }), 'https://wxaurl.cn/demo')
+    assert.equal(calls, 4)
+    const invalid = createWechatCodeProvider({ appId: 'wx-app', appSecret: 'test-secret-value-123456', fetchImpl: async url => url.includes('/cgi-bin/token')
+      ? response({ access_token: 'test-token-abcdefghijklmnopqrstuvwxyz', expires_in: 3600 }) : response({ url_link: 'https://untrusted.example/demo' }) })
+    await assert.rejects(invalid.generateUrlLink({ path: 'page', query: '' }), /UNAVAILABLE/)
+  })
+
   it('rejects an AppID mismatch before making an HTTP call', () => {
     assert.throws(() => createWechatCodeProvider({ appId: 'wx-other', expectedAppId: 'wx-real', appSecret: 'test-secret-value-123456', fetchImpl: async () => response(png) }), /APP_ID_MISMATCH/)
   })

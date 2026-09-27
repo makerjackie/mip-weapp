@@ -351,7 +351,8 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('invokeInteractionHandler(page, step)')
     expect(verifyRuntime).toContain('assertInteractionVisible(page, step)')
     expect(verifyRuntime).toContain('visibleDiffRatio >= 0.001')
-    expect(verifyRuntime).toMatch(/const element = await page\.\$\(step\.selector\)/)
+    expect(verifyRuntime).toContain('page?.elementMap?.clear?.()')
+    expect(verifyRuntime).toMatch(/const element = await queryFreshRenderedActionElement\(page, step\.selector\)/)
     expect(verifyRuntime).toMatch(/interaction-\$\{outputName\(journey\.id\)\}\.png/)
     const routeByPath = new Map(contract.routes.map(route => [route.path, route]))
     for (const journey of contract.interactionJourneys) {

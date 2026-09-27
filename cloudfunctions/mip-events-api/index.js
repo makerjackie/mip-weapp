@@ -6,6 +6,7 @@ const service = require('./domain/event-service')
 const { configuredAgreements, createParticipationAccessPolicy } = require('./domain/participation-access')
 const { identityKey, resolveMipUser, trustedWechatIdentity } = require('./lib/identity')
 const { createCheckInCodeAsset, createInvitationCodeAsset } = require('./lib/checkin-poster')
+const { createWechatCodeProvider } = require('./lib/wechat-code-provider')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
 
@@ -55,6 +56,7 @@ const userActions = new Set([
   'mip.events.saveFeedback',
   'mip.events.createInvitation',
   'mip.events.createInvitationCode',
+  'mip.events.createInvitationUrl',
   'mip.events.album.mine',
   'mip.events.album.submit',
   'mip.events.album.withdraw',
@@ -228,6 +230,18 @@ async function dispatch(event) {
       })
     case 'mip.events.createInvitation':
       return service.createInvitation(mysqlDatabase(), { ...shared, eventId: event.eventId })
+    case 'mip.events.createInvitationUrl': {
+      const invitation = await service.issueInvitationLink(mysqlDatabase(), { ...shared, eventId: event.eventId })
+      const envVersion = process.env.MIP_DEPLOYMENT_STAGE === 'production' ? 'release' : event.envVersion === 'develop' ? 'develop' : 'trial'
+      try {
+        const provider = createWechatCodeProvider({ appId: current.appId, appSecret: process.env.MIP_WECHAT_APP_SECRET, expectedAppId: process.env.MIP_WECHAT_APP_ID })
+        const url = await provider.generateUrlLink({ path: 'packages/member/mip-events/detail/index', query: `eventId=${encodeURIComponent(invitation.eventId)}&inviteRef=${encodeURIComponent(invitation.scene)}`, envVersion })
+        return { url, inviteRef: invitation.scene, validUntil: invitation.validUntil }
+      } catch (error) {
+        console.warn('[mip-event-link]', { code: /^\d+$/.test(String(error?.errCode)) ? String(error.errCode) : 'UNAVAILABLE' })
+        throw new DomainError('SHARE_LINK_UNAVAILABLE', '暂时无法生成报名链接，请使用微信分享或下载活动二维码', true)
+      }
+    }
     case 'mip.events.createInvitationCode': {
       const invitation = await service.issueInvitationLink(mysqlDatabase(), {
         ...shared,

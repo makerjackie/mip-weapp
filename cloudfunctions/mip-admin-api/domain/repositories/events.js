@@ -6,6 +6,7 @@ const { createOperationsPublisher } = require('../operations-publication')
 const { cursorPredicateFor, pageRows } = require('../pagination')
 const { claimOptional, complete } = require('../idempotency')
 const { createFullAccessPolicy } = require('../full-access')
+const { AdminError } = require('../validation')
 
 function createAdminEventRepository(database, dependencies) {
   const createId = dependencies.createId || randomUUID
@@ -573,13 +574,16 @@ function createAdminEventRepository(database, dependencies) {
   async function saveEvent(input) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
+      const operation = 'admin.events.save'
+      const idempotency = await claimOptional(tx, input, operation, { eventId: input.eventId || null, expectedVersion: input.expectedVersion, draft: input.draft }, createId)
+      if (idempotency.replay) return idempotency.replay
       const eventId = input.eventId || createId()
       let status = 'DRAFT'
       let nextVersion = 1
       if (input.eventId) {
         const current = await tx.one(
           `SELECT id, scope_type, branch_id, status, version, form_version,
-             registration_schema_json, cover_asset_id
+             registration_schema_json, cover_asset_id, access_type, registration_policy, event_mode
            FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
           [input.appId, eventId],
         )
@@ -595,7 +599,22 @@ function createAdminEventRepository(database, dependencies) {
           if (!sameScope(currentOwnedScope, draftResourceScope(input.draft))) throw codeError('FORBIDDEN')
         }
         if (Number(current.version) !== input.expectedVersion) throw codeError('CONFLICT')
-        if (!['DRAFT', 'UNPUBLISHED'].includes(current.status)) throw codeError('INVALID_STATE')
+        if (!['DRAFT', 'UNPUBLISHED', 'PUBLISHED'].includes(current.status)) throw codeError('INVALID_STATE')
+        if (current.status === 'PUBLISHED') {
+          if (input.contentSafetyStatus !== 'PASSED') throw codeError('CONTENT_SAFETY_REQUIRED')
+          if (current.scope_type !== input.draft.scopeType || (current.branch_id || null) !== (input.draft.branchId || null)
+            || current.access_type !== input.draft.accessType || current.registration_policy !== input.draft.registrationPolicy
+            || current.event_mode !== input.draft.eventMode) {
+            throw new AdminError('VALIDATION_FAILED', '已发布活动不能直接更改归属、活动方式、收费类型或报名方式，请先下架后编辑')
+          }
+        }
+        if (input.draft.capacity !== null) {
+          const occupied = await tx.one(`SELECT
+            (SELECT COUNT(*) FROM mip_event_registrations WHERE app_id = ? AND event_id = ? AND status IN ('REGISTERED', 'CANCELLATION_PENDING', 'ATTENDED'))
+            + (SELECT COUNT(*) FROM mip_event_seat_holds WHERE app_id = ? AND event_id = ? AND status = 'ACTIVE' AND expires_at > ?) AS total`,
+          [input.appId, eventId, input.appId, eventId, now()])
+          if (Number(occupied?.total || 0) > input.draft.capacity) throw new AdminError('VALIDATION_FAILED', '活动名额不能少于已报名及待支付占用的名额')
+        }
         await assertEventCover(tx, input, current.cover_asset_id || null)
         await assertEventContentMedia(tx, input, eventId)
         status = current.status
@@ -621,7 +640,7 @@ function createAdminEventRepository(database, dependencies) {
             online_url = ?, waitlist_enabled = ?, price_cents = ?,
             registration_schema_json = ?, form_version = ?,
             content_safety_status = ?, version = version + 1
-           WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'UNPUBLISHED')`,
+           WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'UNPUBLISHED', 'PUBLISHED')`,
           [input.draft.scopeType, input.draft.branchId || null,
             input.draft.title, input.draft.summary, input.draft.description, input.draft.notices || null,
             input.draft.coverAssetId,
@@ -692,7 +711,9 @@ function createAdminEventRepository(database, dependencies) {
         sourceVersion: nextVersion,
         payload: { eventId, status },
       })
-      return { id: eventId, version: nextVersion, status }
+      const result = { id: eventId, version: nextVersion, status }
+      await complete(tx, input, operation, idempotency.requestHash, result)
+      return result
     })
   }
 

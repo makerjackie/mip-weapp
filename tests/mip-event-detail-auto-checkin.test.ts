@@ -10,6 +10,8 @@ const eventsModule = vi.hoisted(() => ({
   getEvent: vi.fn(),
   resolveCheckInScene: vi.fn(),
   checkIn: vi.fn(),
+  createInvitation: vi.fn(),
+  createInvitationUrl: vi.fn(),
 }))
 const identityModule = vi.hoisted(() => ({
   beginProtectedAction: vi.fn(),
@@ -23,6 +25,7 @@ const identityModule = vi.hoisted(() => ({
 }))
 const navigateTo = vi.hoisted(() => vi.fn())
 const showToast = vi.hoisted(() => vi.fn())
+const setClipboardData = vi.hoisted(() => vi.fn())
 
 vi.mock('../src/modules/mip-events/client', () => ({
   mipCheckInResumeStore: checkInStore,
@@ -123,7 +126,7 @@ function read(relativePath: string) {
 }
 
 beforeAll(async () => {
-  vi.stubGlobal('wx', { showToast })
+  vi.stubGlobal('wx', { showToast, setClipboardData, getAccountInfoSync: () => ({ miniProgram: { envVersion: 'develop' } }) })
   vi.stubGlobal('Page', (input: PageDefinition) => {
     definition = input
   })
@@ -144,6 +147,8 @@ beforeEach(() => {
   identityModule.isSignedOut.mockReturnValue(false)
   navigateTo.mockReset()
   showToast.mockReset()
+  setClipboardData.mockReset()
+  setClipboardData.mockResolvedValue({})
   checkInStore.peek.mockReturnValue(CHECK_IN_INTENT)
 })
 
@@ -346,5 +351,38 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
     expect(checkIn).toContain('mip-events/participants/index?eventId=')
     expect(detailView).toContain('data-view="SENT" catch:tap="openInteractionView"')
     expect(detailView).toContain('data-view="RECEIVED" catch:tap="openInteractionView"')
+  })
+})
+
+describe('event outgoing invitation attribution and external links', () => {
+  it('creates the sharer own invitation without overwriting the incoming registration attribution', async () => {
+    const page = createPage({ eventId: EVENT_ID, inviteRef: 'original-inviter' })
+    eventsModule.createInvitation.mockResolvedValue({ inviteRef: 'current-sharer' })
+    await callPage(page, 'loadInvitation')
+    expect(eventsModule.createInvitation).toHaveBeenCalledWith(EVENT_ID)
+    expect(page.data.inviteRef).toBe('original-inviter')
+    expect(page.data.outgoingInviteRef).toBe('current-sharer')
+    expect(await callPage(page, 'onShareAppMessage')).toMatchObject({ path: expect.stringContaining('inviteRef=current-sharer') })
+  })
+
+  it('copies a real https registration URL and reuses it only within expiry', async () => {
+    const page = createPage({ eventId: EVENT_ID, event: attendedEvent(), inviteRef: 'incoming', shareTimeText: '时间', locationText: '地点' })
+    eventsModule.createInvitationUrl.mockResolvedValue({ url: 'https://wxaurl.cn/demo', inviteRef: 'outgoing', validUntil: new Date(Date.now() + 86400000).toISOString() })
+    await callPage(page, 'copyShareText')
+    expect(setClipboardData).toHaveBeenCalledWith({ data: expect.stringContaining('报名链接：https://wxaurl.cn/demo') })
+    expect(eventsModule.createInvitationUrl).toHaveBeenCalledWith(EVENT_ID, 'develop')
+    await callPage(page, 'copyEventLink')
+    expect(eventsModule.createInvitationUrl).toHaveBeenCalledTimes(1)
+    expect(setClipboardData).toHaveBeenLastCalledWith({ data: 'https://wxaurl.cn/demo' })
+    expect(page.data.inviteRef).toBe('incoming')
+  })
+
+  it('does not copy an internal path on URL Link provider failure', async () => {
+    const page = createPage({ eventId: EVENT_ID, event: attendedEvent() })
+    eventsModule.createInvitationUrl.mockRejectedValue(new Error('SHARE_LINK_UNAVAILABLE'))
+    await callPage(page, 'copyEventLink')
+    expect(setClipboardData).not.toHaveBeenCalled()
+    expect(page.data.shareLinkBusy).toBe(false)
+    expect(page.data.message).toContain('微信分享')
   })
 })

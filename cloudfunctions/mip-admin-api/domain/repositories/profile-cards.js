@@ -11,7 +11,7 @@ function createProfileCardRepository(database, { lockMutation, assertScope, writ
       return { items: rows.map(row => ({ id: row.style_key, name: row.name, requiredFields: json(row.required_fields_json, []), sortOrder: Number(row.sort_order), status: row.status, version: Number(row.version) })), nextCursor: null }
     }
     const cursor = decodeCursor(input.cursor, ['id'])
-    const rows = await database.query(`SELECT p.user_id, p.nickname, p.real_name, p.headline, p.companies_json,
+    const rows = await database.query(`SELECT p.user_id, p.nickname, p.real_name, p.headline, p.introduction, p.companies_json, p.organizations_json,
         p.identity_status, p.version AS profile_version, media.cloud_file_id AS avatar_url,
         COALESCE(m.status, 'ACTIVE') AS card_status, COALESCE(m.version, 0) AS card_version, COALESCE(m.reason, '') AS reason
       FROM mip_profiles p JOIN mip_users u ON u.app_id = p.app_id AND u.id = p.user_id AND u.status = 'ACTIVE'
@@ -21,6 +21,7 @@ function createProfileCardRepository(database, { lockMutation, assertScope, writ
         ${cursor ? 'AND p.user_id < ?' : ''} ORDER BY p.user_id DESC LIMIT ?`,
     [appId, input.query, input.query, input.query, ...(cursor ? [cursor.id] : []), input.limit + 1])
     return pageRows(rows.map(row => ({ id: row.user_id, name: row.real_name || row.nickname, nickname: row.nickname,
+      realName: row.real_name || '', introduction: row.introduction || '', organizations: json(row.organizations_json, []),
       headline: row.headline || '', companies: json(row.companies_json, []), identityStatus: row.identity_status || '',
       avatarUrl: row.avatar_url || '', profileVersion: Number(row.profile_version), status: row.card_status,
       version: Number(row.card_version), reason: row.reason })), input.limit, row => ({ id: row.id }))
@@ -41,6 +42,27 @@ function createProfileCardRepository(database, { lockMutation, assertScope, writ
       const operation = `admin.cards.${input.kind.toLowerCase()}`
       const key = await claimOptional(tx, input, operation, { cardId: input.cardId, version: input.expectedVersion, changes: input.changes }, randomUUID)
       if (key.replay) return key.replay
+      if (input.kind === 'PROFILE_EDIT') {
+        const user = await tx.one("SELECT id FROM mip_users WHERE app_id = ? AND id = ? AND status = 'ACTIVE' FOR UPDATE", [input.appId, input.cardId])
+        if (!user) throw new AdminError('NOT_FOUND', '用户不存在')
+        const profile = await tx.one('SELECT version FROM mip_profiles WHERE app_id = ? AND user_id = ? FOR UPDATE', [input.appId, input.cardId])
+        if (!profile) throw new AdminError('NOT_FOUND', '名片资料不存在')
+        if (Number(profile.version) !== input.expectedVersion) throw new AdminError('CONFLICT', '用户资料已变化，请重新打开后编辑')
+        const fields = input.changes
+        const result = await tx.query(`UPDATE mip_profiles SET real_name = ?, nickname = ?, headline = ?, introduction = ?, companies_json = ?, organizations_json = ?, identity_status = ?, version = version + 1
+          WHERE app_id = ? AND user_id = ? AND version = ?`,
+        [fields.realName || null, fields.nickname, fields.headline || null, fields.introduction || null, JSON.stringify(fields.companies), JSON.stringify(fields.organizations), fields.identityStatus || null, input.appId, input.cardId, input.expectedVersion])
+        if (Number(result.affectedRows) !== 1) throw new AdminError('CONFLICT', '用户资料已变化，请刷新后重试')
+        await tx.query(`INSERT INTO mip_profile_card_history (app_id, user_id, profile_version, snapshot_json)
+          SELECT app_id, user_id, version, JSON_OBJECT('nickname', nickname, 'realName', real_name,
+            'headline', headline, 'introduction', introduction, 'companies', companies_json, 'organizations', organizations_json,
+            'identityStatus', identity_status, 'avatarAssetId', avatar_asset_id, 'visibility', visibility_json)
+          FROM mip_profiles WHERE app_id = ? AND user_id = ?`, [input.appId, input.cardId])
+        await writeAudit(tx, { ...input.audit, metadata: { fields: Object.keys(fields), version: input.expectedVersion + 1 } })
+        const saved = { id: input.cardId, version: input.expectedVersion + 1 }
+        await complete(tx, input, operation, key.requestHash, saved)
+        return saved
+      }
       let row
       if (input.kind === 'PROFILE') {
         const user = await tx.one("SELECT id FROM mip_users WHERE app_id = ? AND id = ? AND status = 'ACTIVE' FOR UPDATE", [input.appId, input.cardId])
