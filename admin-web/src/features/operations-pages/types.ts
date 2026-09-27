@@ -46,6 +46,7 @@ export interface OperationsPageState extends OperationsPageCallbacks {
   page: AdminReadPage | null
   query: Pick<AdminListQuery, 'query' | 'status' | 'filters'> & { limit?: number }
   loading?: boolean
+  refreshing?: boolean
   error?: string
   demoMode?: boolean
   hasPreviousPage?: boolean

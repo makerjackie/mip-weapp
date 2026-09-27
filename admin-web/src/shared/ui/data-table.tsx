@@ -3,6 +3,7 @@ import { Button, Image, Space, Table, type TableColumnsType, type TableProps } f
 import { useMemo, useState } from 'react'
 import type { AdminTableColumn, AdminTableRow } from '../../modules/admin-read-pages'
 import { EmptyState } from './feedback-states'
+import { ConfirmDialog } from './confirm-dialog'
 import { StatusTag } from './status-tag'
 
 type SortDirection = 'ascend' | 'descend' | null
@@ -42,7 +43,8 @@ export interface BatchAction {
   key: string
   label: string
   danger?: boolean
-  onApply: (selectedRows: AdminTableRow[]) => void
+  confirmTitle?: string
+  confirmDescription?: string
 }
 
 export function DataTable({
@@ -64,12 +66,14 @@ export function DataTable({
   renderActions?: (row: AdminTableRow) => React.ReactNode
   selectable?: boolean
   batchActions?: readonly BatchAction[]
-  onBatchAction?: (action: BatchAction, selectedRows: AdminTableRow[]) => void
+  onBatchAction?: (action: BatchAction, selectedRows: AdminTableRow[]) => Promise<void> | void
   rowKey?: (row: AdminTableRow) => string
   loading?: boolean
 }) {
   const [sortState, setSortState] = useState<SortState | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [pendingBatch, setPendingBatch] = useState<{ action: BatchAction; rows: AdminTableRow[] } | null>(null)
+  const [batchLoading, setBatchLoading] = useState(false)
 
   const sortedRows = useMemo(() => {
     if (!sortState) return rows
@@ -148,6 +152,20 @@ export function DataTable({
     [selectionConfig, sortedRows, selectedRowKeys, label],
   )
 
+  const runBatch = async () => {
+    if (!pendingBatch) return
+    if (!onBatchAction) { setPendingBatch(null); return }
+    setBatchLoading(true)
+    try {
+      await onBatchAction(pendingBatch.action, pendingBatch.rows)
+      setSelectedRowKeys([])
+    }
+    finally {
+      setBatchLoading(false)
+      setPendingBatch(null)
+    }
+  }
+
   return (
     <div className="data-table" role="region" aria-label={label} tabIndex={0}>
       <Table<AdminTableRow>
@@ -171,10 +189,7 @@ export function DataTable({
                 key={action.key}
                 size="small"
                 danger={action.danger}
-                onClick={() => {
-                  onBatchAction?.(action, selectedRows)
-                  setSelectedRowKeys([])
-                }}
+                onClick={() => setPendingBatch({ action, rows: selectedRows })}
               >
                 {action.label}
               </Button>
@@ -183,6 +198,16 @@ export function DataTable({
           </Space>
         </div>
       ) : null}
+      <ConfirmDialog
+        open={Boolean(pendingBatch)}
+        title={pendingBatch?.action.confirmTitle || pendingBatch?.action.label || '批量操作'}
+        description={pendingBatch?.action.confirmDescription || `将对已选 ${pendingBatch?.rows.length ?? 0} 项执行“${pendingBatch?.action.label || ''}”。服务端会再次校验权限、范围和版本。`}
+        confirmText={pendingBatch?.action.label}
+        danger={pendingBatch?.action.danger}
+        loading={batchLoading}
+        onConfirm={() => void runBatch()}
+        onCancel={() => { if (!batchLoading) setPendingBatch(null) }}
+      />
     </div>
   )
 }

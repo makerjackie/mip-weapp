@@ -127,6 +127,7 @@ function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreList
         route={route}
         page={query.data || null}
         loading={query.loading}
+        refreshing={query.refreshing}
         error={query.errorMessage}
         canExport={hasCapability('exports.create')}
         canWriteEvents={hasCapability(EVENT_MUTATION_CONFIGS['mip.admin.events.save'].capability)}
@@ -147,6 +148,7 @@ export function CoreListPageView({
   search,
   page,
   loading,
+  refreshing,
   error,
   canExport,
   canWriteEvents,
@@ -164,6 +166,7 @@ export function CoreListPageView({
   search: CorePageSearchState
   page: AdminReadPage | null
   loading?: boolean
+  refreshing?: boolean
   error?: string
   canExport?: boolean
   canWriteEvents?: boolean
@@ -271,6 +274,7 @@ export function CoreListPageView({
                 label={section.title || pageDefinition.title}
                 rows={section.rows}
                 columns={section.columns}
+                loading={refreshing}
                 onView={section.detailTarget === null ? undefined : openDetail}
                 renderActions={route === 'events' && onMutation
                   ? row => renderEventRowActions(row, {

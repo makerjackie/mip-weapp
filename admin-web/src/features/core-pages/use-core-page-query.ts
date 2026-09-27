@@ -52,6 +52,7 @@ export function useCoreReadPage(route: CoreListRoute, search: CorePageSearchStat
   return {
     ...result,
     loading: sessionState.loading || (enabled && result.isPending),
+    refreshing: enabled && result.isFetching && !result.isPending,
     errorMessage: errorMessage(result.error || sessionState.error),
   }
 }

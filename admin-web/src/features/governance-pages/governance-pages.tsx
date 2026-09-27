@@ -58,6 +58,7 @@ export interface GovernancePageProps {
   filter: GovernanceFilterValue
   activeTab: string
   loading?: boolean
+  refreshing?: boolean
   error?: string
   demoMode?: boolean
   canCapability: (capability: string) => boolean
@@ -66,12 +67,19 @@ export interface GovernancePageProps {
   onRefresh?: () => void
   onViewDetail?: (request: GovernanceDetailRequest) => void
   onMutationRequest?: (request: GovernanceMutationRequest) => void
+  onBatchAction?: (action: string, rows: AdminTableRow[]) => Promise<void> | void
 }
 
 interface SectionSpec {
   key: string
   label: string
   detailTarget?: GovernanceDetailRequest['route']
+  batch?: {
+    action: ContentMutationAction | AdminRowOperationAction
+    label: string
+    capability: string
+    confirmDescription?: string
+  }
 }
 
 interface PageActionSpec {
@@ -125,7 +133,16 @@ const pageSpecs: Record<GovernanceRoute, GovernancePageSpec> = {
     title: '运营记录',
     description: '查看公告、社区举报、运营异常和待办记录。',
     sections: [
-      { key: 'announcements', label: '公告' },
+      {
+        key: 'announcements',
+        label: '公告',
+        batch: {
+          action: 'mip.admin.announcements.publish',
+          label: '批量发布',
+          capability: 'announcements.manage',
+          confirmDescription: '仅草稿或已撤回的公告会发布，服务端逐条校验权限和版本；已发布或已归档的记录会跳过。',
+        },
+      },
       { key: 'reports', label: '社区举报' },
       { key: 'exceptions', label: '运营异常' },
       { key: 'queue', label: '运营待办' },
@@ -157,6 +174,7 @@ export function GovernancePage({
   filter,
   activeTab,
   loading = false,
+  refreshing = false,
   error,
   demoMode = false,
   canCapability,
@@ -165,6 +183,7 @@ export function GovernancePage({
   onRefresh,
   onViewDetail,
   onMutationRequest,
+  onBatchAction,
 }: GovernancePageProps & { route: GovernanceRoute }) {
   const spec = pageSpecs[route]
   const navigate = useNavigate()
@@ -205,6 +224,8 @@ export function GovernancePage({
     canCapability,
     onViewDetail,
     onMutationRequest,
+    onBatchAction,
+    refreshing,
   })
   const selectedTab = tabItems.some(item => item.key === activeTab)
     ? activeTab
@@ -252,6 +273,8 @@ function createTabItems({
   canCapability,
   onViewDetail,
   onMutationRequest,
+  onBatchAction,
+  refreshing,
 }: {
   route: GovernanceRoute
   page: AdminReadPage | null
@@ -260,6 +283,8 @@ function createTabItems({
   canCapability: GovernancePageProps['canCapability']
   onViewDetail?: GovernancePageProps['onViewDetail']
   onMutationRequest?: GovernancePageProps['onMutationRequest']
+  onBatchAction?: GovernancePageProps['onBatchAction']
+  refreshing?: boolean
 }): Array<{ key: string; label: string; children: ReactNode }> {
   if (!page) return []
   return page.sections.map((section, index) => {
@@ -276,6 +301,8 @@ function createTabItems({
           if (id) onViewDetail({ route: sectionSpec.detailTarget as GovernanceDetailRequest['route'], id })
         }
       : undefined
+    const batch = sectionSpec.batch
+    const batchEnabled = Boolean(batch && onBatchAction && canCapability(batch.capability) && !demoMode)
     return {
       key: sectionSpec.key,
       label: section.title || sectionSpec.label,
@@ -284,8 +311,17 @@ function createTabItems({
           label={`${pageSpecs[route].title} - ${section.title || sectionSpec.label}`}
           rows={section.rows}
           columns={section.columns}
+          loading={refreshing}
           onView={onView}
           renderActions={renderActions}
+          selectable={batchEnabled}
+          batchActions={batchEnabled && batch ? [{
+            key: batch.action,
+            label: batch.label,
+            confirmTitle: batch.label,
+            confirmDescription: batch.confirmDescription,
+          }] : undefined}
+          onBatchAction={batchEnabled && batch ? (_action, rows) => onBatchAction?.(batch.action, rows) : undefined}
         />
       ),
     }

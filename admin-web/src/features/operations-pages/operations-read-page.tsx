@@ -38,6 +38,7 @@ export function OperationsReadPage({
   page,
   query,
   loading,
+  refreshing,
   error,
   demoMode,
   hasPreviousPage,
@@ -105,6 +106,7 @@ export function OperationsReadPage({
                   label={section.title || title}
                   rows={section.rows}
                   columns={section.columns}
+                  loading={refreshing}
                   onView={detailRoute && onOpenDetail
                     ? row => onOpenDetail({ route: detailRoute, id: String(row.detailId), row })
                     : undefined}

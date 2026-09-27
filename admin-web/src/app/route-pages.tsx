@@ -45,7 +45,9 @@ import {
   type AdminMediaPurpose,
   type AdminMediaUploadResult,
 } from '../modules/admin-media-upload'
-import { getAdminReadRouteDefinition, type AdminListQuery } from '../modules/admin-read-pages'
+import { getAdminReadRouteDefinition, type AdminListQuery, type AdminTableRow } from '../modules/admin-read-pages'
+import type { AdminRowOperation } from '../modules/admin-row-operations'
+import type { AdminOperationAction } from '../domain/contracts'
 import { downloadTaskCompletionExport, exportTaskCompletions } from '../modules/admin-task-management'
 import { DetailDrawer, PermissionGuard } from '../shared/ui'
 import { EventEditFormPage } from '../features/form-pages/event-edit-form-page'
@@ -152,6 +154,7 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
     page: result.data || null,
     query,
     loading: result.loading,
+    refreshing: result.refreshing,
     error: result.errorMessage,
     demoMode,
     hasPreviousPage: Boolean(search.page && search.page > 1) && cursorStack.length > 0,
@@ -305,16 +308,41 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
     return false
   }
 
+  const runBatchAction = async (action: string, rows: AdminTableRow[]) => {
+    if (session.demoMode) { void message.info('演示模式不会提交写操作'); return }
+    const targets = rows.flatMap(row => {
+      const operations = Array.isArray(row.rowActions) ? row.rowActions as AdminRowOperation[] : []
+      const operation = operations.find(item => item.action === action)
+      return operation ? [operation] : []
+    })
+    if (!targets.length) { void message.warning('所选记录当前不可执行该操作'); return }
+    let done = 0
+    let failed = 0
+    for (const operation of targets) {
+      try {
+        await session.request(action as AdminOperationAction, {
+          ...(operation.values || {}),
+          idempotencyKey: `web-batch-${crypto.randomUUID().replaceAll('-', '')}`.slice(0, 128),
+        })
+        done += 1
+      }
+      catch { failed += 1 }
+    }
+    await result.refetch()
+    if (failed) void message.warning(`已处理 ${done} 条，${failed} 条未成功`)
+    else void message.success(`已批量处理 ${done} 条`)
+  }
+
   const common = {
     page: result.data || null,
     routeDefinition: getAdminReadRouteDefinition(route),
     filter: { q: query.query, status: query.status },
     activeTab: search.tab || '',
     loading: result.loading,
+    refreshing: result.refreshing,
     error: result.errorMessage,
     demoMode: session.demoMode,
-    canCapability: session.hasCapability,
-    onFilterChange: (value: { q: string; status: string; filters?: Record<string, string> }) => {
+    canCapability: session.hasCapability,    onFilterChange: (value: { q: string; status: string; filters?: Record<string, string> }) => {
       const filters = value.filters && Object.keys(value.filters).length > 0 ? value.filters : undefined
       void updateSearch({
         q: value.q || undefined,
@@ -344,6 +372,7 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
         }
       })()
     },
+    onBatchAction: (action: string, rows: AdminTableRow[]) => runBatchAction(action, rows),
   }
   const page = route === 'permissions' ? <PermissionsPage {...common} />
     : route === 'messages' ? <MessagesPage {...common} />

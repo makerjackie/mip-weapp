@@ -24,6 +24,7 @@ export function useAdminReadPage(route: AdminListRoute, query: AdminListQuery) {
   return {
     ...result,
     loading: session.loading || (enabled && result.isPending),
+    refreshing: enabled && result.isFetching && !result.isPending,
     errorMessage: errorMessage(result.error || session.error),
   }
 }
