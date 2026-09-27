@@ -48,8 +48,8 @@ import {
 import { getAdminReadRouteDefinition, type AdminListQuery, type AdminTableRow } from '../modules/admin-read-pages'
 import { record } from '../modules/admin-read-formatters'
 import { nonEmptyString } from '../modules/admin-coercions'
-import type { AdminRowOperation } from '../modules/admin-row-operations'
-import type { AdminOperationAction } from '../domain/contracts'
+import { batchSummaryMessage, executeBatchAction } from '../modules/admin-batch-operations'
+import type { OperationValues } from '../modules/admin-operation-ui'
 import { downloadTaskCompletionExport, exportTaskCompletions } from '../modules/admin-task-management'
 import { DetailDrawer, PermissionGuard } from '../shared/ui'
 import { EventEditFormPage } from '../features/form-pages/event-edit-form-page'
@@ -310,29 +310,13 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
     return false
   }
 
-  const runBatchAction = async (action: string, rows: AdminTableRow[]) => {
+  const runBatchAction = async (action: string, rows: AdminTableRow[], values: OperationValues) => {
     if (session.demoMode) { void message.info('演示模式不会提交写操作'); return }
-    const targets = rows.flatMap(row => {
-      const operations = Array.isArray(row.rowActions) ? row.rowActions as AdminRowOperation[] : []
-      const operation = operations.find(item => item.action === action)
-      return operation ? [operation] : []
-    })
-    if (!targets.length) { void message.warning('所选记录当前不可执行该操作'); return }
-    let done = 0
-    let failed = 0
-    for (const operation of targets) {
-      try {
-        await session.request(action as AdminOperationAction, {
-          ...(operation.values || {}),
-          idempotencyKey: `web-batch-${crypto.randomUUID().replaceAll('-', '')}`.slice(0, 128),
-        })
-        done += 1
-      }
-      catch { failed += 1 }
-    }
+    const summary = await executeBatchAction(action, rows, values, (operationAction, input) => session.request(operationAction, input))
     await result.refetch()
-    if (failed) void message.warning(`已处理 ${done} 条，${failed} 条未成功`)
-    else void message.success(`已批量处理 ${done} 条`)
+    const notice = batchSummaryMessage(summary)
+    if (notice.type === 'success') void message.success(notice.text)
+    else void message.warning(notice.text)
   }
 
   const common = {
@@ -374,7 +358,7 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
         }
       })()
     },
-    onBatchAction: (action: string, rows: AdminTableRow[]) => runBatchAction(action, rows),
+    onBatchAction: (action: string, rows: AdminTableRow[], values: OperationValues) => runBatchAction(action, rows, values),
   }
   const page = route === 'permissions' ? <PermissionsPage {...common} />
     : route === 'messages' ? <MessagesPage {...common} />

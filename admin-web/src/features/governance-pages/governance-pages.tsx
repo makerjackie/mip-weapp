@@ -23,6 +23,7 @@ import type {
   AdminRowOperation,
   AdminRowOperationAction,
 } from '../../modules/admin-row-operations'
+import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
 import {
   DataTable,
   EmptyState,
@@ -68,19 +69,25 @@ export interface GovernancePageProps {
   onRefresh?: () => void
   onViewDetail?: (request: GovernanceDetailRequest) => void
   onMutationRequest?: (request: GovernanceMutationRequest) => void
-  onBatchAction?: (action: string, rows: AdminTableRow[]) => Promise<void> | void
+  onBatchAction?: (action: string, rows: AdminTableRow[], values: OperationValues) => Promise<void> | void
+}
+
+interface BatchSpec {
+  action: ContentMutationAction | AdminRowOperationAction
+  label: string
+  capability: string
+  danger?: boolean
+  confirmTitle?: string
+  confirmDescription?: string
+  /** Extra form fields collected once; per-row target/version fields are excluded. */
+  defaultValues?: OperationValues
 }
 
 interface SectionSpec {
   key: string
   label: string
   detailTarget?: GovernanceDetailRequest['route']
-  batch?: {
-    action: ContentMutationAction | AdminRowOperationAction
-    label: string
-    capability: string
-    confirmDescription?: string
-  }
+  batches?: readonly BatchSpec[]
 }
 
 interface PageActionSpec {
@@ -137,14 +144,41 @@ const pageSpecs: Record<GovernanceRoute, GovernancePageSpec> = {
       {
         key: 'announcements',
         label: '公告',
-        batch: {
-          action: 'mip.admin.announcements.publish',
-          label: '批量发布',
-          capability: 'announcements.manage',
-          confirmDescription: '仅草稿或已撤回的公告会发布，服务端逐条校验权限和版本；已发布或已归档的记录会跳过。',
-        },
+        batches: [
+          {
+            action: 'mip.admin.announcements.publish',
+            label: '批量发布',
+            capability: 'announcements.manage',
+            confirmDescription: '仅草稿或已撤回的公告会发布，服务端逐条校验权限和版本；已发布或已归档的记录会跳过。',
+          },
+          {
+            action: 'mip.admin.announcements.withdraw',
+            label: '批量撤回',
+            danger: true,
+            capability: 'announcements.manage',
+            confirmDescription: '撤回原因会应用到全部已选公告；仅已发布且版本一致的公告会撤回，其余记录跳过。',
+          },
+        ],
       },
-      { key: 'reports', label: '社区举报' },
+      {
+        key: 'reports',
+        label: '社区举报',
+        batches: [
+          {
+            action: 'mip.admin.communityReports.claim',
+            label: '批量认领',
+            capability: 'community.reports.manage',
+            confirmDescription: '仅待处理的举报会认领，处理原因会应用到全部已选记录。',
+          },
+          {
+            action: 'mip.admin.communityReports.close',
+            label: '批量结案',
+            danger: true,
+            capability: 'community.reports.manage',
+            confirmDescription: '仅审核中的举报会结案，处理结果和处理原因会应用到全部已选记录。',
+          },
+        ],
+      },
       { key: 'exceptions', label: '运营异常' },
       { key: 'queue', label: '运营待办' },
     ],
@@ -302,8 +336,19 @@ function createTabItems({
           if (id) onViewDetail({ route: sectionSpec.detailTarget as GovernanceDetailRequest['route'], id })
         }
       : undefined
-    const batch = sectionSpec.batch
-    const batchEnabled = Boolean(batch && onBatchAction && canCapability(batch.capability) && !demoMode)
+    const batchActions = (sectionSpec.batches ?? []).flatMap((batch) => {
+      if (!onBatchAction || demoMode || !canCapability(batch.capability)) return []
+      const fields = batchExtraFields(batch.action)
+      return [{
+        key: batch.action,
+        label: batch.label,
+        danger: batch.danger,
+        confirmTitle: batch.confirmTitle || batch.label,
+        confirmDescription: batch.confirmDescription,
+        fields: fields.length ? fields : undefined,
+        defaultValues: batch.defaultValues,
+      }]
+    })
     return {
       key: sectionSpec.key,
       label: section.title || sectionSpec.label,
@@ -315,18 +360,23 @@ function createTabItems({
           loading={refreshing}
           onView={onView}
           renderActions={renderActions}
-          selectable={batchEnabled}
-          batchActions={batchEnabled && batch ? [{
-            key: batch.action,
-            label: batch.label,
-            confirmTitle: batch.label,
-            confirmDescription: batch.confirmDescription,
-          }] : undefined}
-          onBatchAction={batchEnabled && batch ? (_action, rows) => onBatchAction?.(batch.action, rows) : undefined}
+          selectable={batchActions.length > 0}
+          batchActions={batchActions.length ? batchActions : undefined}
+          onBatchAction={(batch, rows, values) => onBatchAction?.(batch.key, rows, values)}
         />
       ),
     }
   })
+}
+
+const PER_ROW_FIELD = /(?:^expectedVersion$|Id$|Ids$)/
+
+/** Batch fields are a content action's editable fields minus the per-row target and version keys. */
+function batchExtraFields(action: BatchSpec['action']): OperationField[] {
+  if (!isContentMutationAction(action)) return []
+  return getContentMutationForm(action).fields
+    .filter(field => field.kind !== 'group' && !PER_ROW_FIELD.test(field.key))
+    .map(field => ({ ...field }) as OperationField)
 }
 
 function renderRowActions(

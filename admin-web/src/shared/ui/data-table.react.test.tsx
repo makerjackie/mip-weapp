@@ -41,4 +41,35 @@ describe('DataTable batch actions', () => {
     expect(onBatchAction.mock.calls[0][1]).toHaveLength(2)
     await waitFor(() => expect(screen.queryByText('已选 2 项')).not.toBeInTheDocument())
   })
+
+  it('collects shared form values and blocks confirm until required fields pass', async () => {
+    const onBatchAction = vi.fn().mockResolvedValue(undefined)
+    render(
+      <DataTable
+        label="公告"
+        rows={rows}
+        columns={columns}
+        selectable
+        batchActions={[{
+          key: 'withdraw',
+          label: '批量撤回',
+          fields: [{ key: 'reason', label: '撤回原因', kind: 'textarea', required: true, maxLength: 300 }],
+        }]}
+        onBatchAction={onBatchAction}
+      />,
+    )
+
+    await userEvent.click(screen.getAllByRole('checkbox')[0])
+    await userEvent.click(screen.getByRole('button', { name: '批量撤回' }))
+    const dialog = await screen.findByRole('dialog')
+
+    await userEvent.click(within(dialog).getByRole('button', { name: '批量撤回' }))
+    await waitFor(() => expect(within(dialog).getByText('请填写撤回原因')).toBeInTheDocument())
+    expect(onBatchAction).not.toHaveBeenCalled()
+
+    await userEvent.type(within(dialog).getByLabelText('撤回原因'), '内容已过期')
+    await userEvent.click(within(dialog).getByRole('button', { name: '批量撤回' }))
+    await waitFor(() => expect(onBatchAction).toHaveBeenCalledOnce())
+    expect(onBatchAction.mock.calls[0][2]).toMatchObject({ reason: '内容已过期' })
+  })
 })

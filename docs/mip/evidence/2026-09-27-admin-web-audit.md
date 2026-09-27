@@ -126,3 +126,10 @@
 - UX-04 列表写后刷新进度提示；UX-09 独立表单回车提交。
 - BUG-12 的玩家增长趋势需要服务端契约提供时间序列，本轮未改服务端。
 
+## 九、后续迭代（重构与参数化批量）
+
+- 合并 6 处重复的 `identifier/positiveVersion/nonNegativeVersion/boundedInteger/stringList` 校验到 `modules/admin-coercions.ts`，复用共享 `record()`，消除校验漂移。
+- `DataTable` 批量操作升级为可复用能力：二次确认 → 可选的共享表单（`OperationField[]`）→ 逐行执行；共享值覆盖每行 operation 值，每行独立 `expectedVersion` 与幂等键，逐行 try/catch 后汇总成功/失败/跳过。
+- 抽取 `modules/admin-batch-operations.ts`（纯函数 + 执行器 + 汇总文案），供页面与测试复用；服务端仍是最终授权者，未改服务端契约（小程序端零改动）。
+- 已接入的真实批量场景：运营记录 → 公告「批量发布/批量撤回（共享撤回原因）」、社区举报「批量认领/批量结案（共享处理结果与原因）」。
+- 仍未做：报名/内容审核批量（行操作位于详情抽屉，需要 `DetailDrawer` 批量支持，已在评估中）；任务成员分配批量；服务端原子批量为跨端契约变更，留待单独立项。

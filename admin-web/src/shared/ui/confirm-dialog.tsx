@@ -1,10 +1,11 @@
 import { Modal } from 'antd'
 import { OVERLAY_Z_INDEX } from './overlay-z-index'
 
-export function ConfirmDialog({ open, title, description, confirmText = '确认', danger, loading, onConfirm, onCancel }: {
+export function ConfirmDialog({ open, title, description, children, confirmText = '确认', danger, loading, onConfirm, onCancel }: {
   open: boolean
   title: string
   description: React.ReactNode
+  children?: React.ReactNode
   confirmText?: string
   danger?: boolean
   loading?: boolean
@@ -27,6 +28,7 @@ export function ConfirmDialog({ open, title, description, confirmText = '确认'
       keyboard={!loading}
     >
       <p>{description}</p>
+      {children}
     </Modal>
   )
 }

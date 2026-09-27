@@ -1,9 +1,11 @@
 import { CaretDownOutlined, CaretUpOutlined, SwapOutlined } from '@ant-design/icons'
-import { Button, Image, Space, Table, type TableColumnsType, type TableProps } from 'antd'
+import { Button, Form, Image, Space, Table, type TableColumnsType, type TableProps } from 'antd'
 import { useMemo, useState } from 'react'
 import type { AdminTableColumn, AdminTableRow } from '../../modules/admin-read-pages'
+import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
 import { EmptyState } from './feedback-states'
 import { ConfirmDialog } from './confirm-dialog'
+import { OperationFields, toFormValues } from './operation-fields'
 import { StatusTag } from './status-tag'
 
 type SortDirection = 'ascend' | 'descend' | null
@@ -45,6 +47,13 @@ export interface BatchAction {
   danger?: boolean
   confirmTitle?: string
   confirmDescription?: string
+  /**
+   * Optional form collected once for the whole batch and merged on top of each
+   * row's own operation values (e.g. a shared reason or review decision).
+   */
+  fields?: readonly OperationField[]
+  /** Initial values for `fields`. */
+  defaultValues?: OperationValues
 }
 
 export function DataTable({
@@ -66,7 +75,7 @@ export function DataTable({
   renderActions?: (row: AdminTableRow) => React.ReactNode
   selectable?: boolean
   batchActions?: readonly BatchAction[]
-  onBatchAction?: (action: BatchAction, selectedRows: AdminTableRow[]) => Promise<void> | void
+  onBatchAction?: (action: BatchAction, selectedRows: AdminTableRow[], values: OperationValues) => Promise<void> | void
   rowKey?: (row: AdminTableRow) => string
   loading?: boolean
 }) {
@@ -74,6 +83,7 @@ export function DataTable({
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [pendingBatch, setPendingBatch] = useState<{ action: BatchAction; rows: AdminTableRow[] } | null>(null)
   const [batchLoading, setBatchLoading] = useState(false)
+  const [batchForm] = Form.useForm<OperationValues>()
 
   const sortedRows = useMemo(() => {
     if (!sortState) return rows
@@ -152,12 +162,28 @@ export function DataTable({
     [selectionConfig, sortedRows, selectedRowKeys, label],
   )
 
+  const openBatch = (action: BatchAction) => {
+    batchForm.resetFields()
+    batchForm.setFieldsValue(toFormValues(action.fields ?? [], action.defaultValues ?? {}))
+    setPendingBatch({ action, rows: selectedRows })
+  }
+
   const runBatch = async () => {
     if (!pendingBatch) return
     if (!onBatchAction) { setPendingBatch(null); return }
+    let values: OperationValues = {}
+    if (pendingBatch.action.fields?.length) {
+      try {
+        values = await batchForm.validateFields()
+      }
+      catch {
+        // Ant Design shows the validation errors beside the fields.
+        return
+      }
+    }
     setBatchLoading(true)
     try {
-      await onBatchAction(pendingBatch.action, pendingBatch.rows)
+      await onBatchAction(pendingBatch.action, pendingBatch.rows, values)
       setSelectedRowKeys([])
     }
     finally {
@@ -165,6 +191,8 @@ export function DataTable({
       setPendingBatch(null)
     }
   }
+
+  const pendingFields = pendingBatch?.action.fields ?? []
 
   return (
     <div className="data-table" role="region" aria-label={label} tabIndex={0}>
@@ -189,7 +217,7 @@ export function DataTable({
                 key={action.key}
                 size="small"
                 danger={action.danger}
-                onClick={() => setPendingBatch({ action, rows: selectedRows })}
+                onClick={() => openBatch(action)}
               >
                 {action.label}
               </Button>
@@ -207,7 +235,18 @@ export function DataTable({
         loading={batchLoading}
         onConfirm={() => void runBatch()}
         onCancel={() => { if (!batchLoading) setPendingBatch(null) }}
-      />
+      >
+        {pendingFields.length ? (
+          <Form
+            form={batchForm}
+            layout="vertical"
+            disabled={batchLoading}
+            initialValues={toFormValues(pendingFields, pendingBatch?.action.defaultValues ?? {})}
+          >
+            <div className="mutation-grid"><OperationFields fields={pendingFields} form={batchForm} /></div>
+          </Form>
+        ) : null}
+      </ConfirmDialog>
     </div>
   )
 }
