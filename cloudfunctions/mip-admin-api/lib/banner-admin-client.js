@@ -94,9 +94,44 @@ function createBannerAdminClient(options = {}) {
       if (response?.result?.ok !== true) {
         throw codedError(publicErrorCode(response?.result?.error?.code))
       }
-      return response.result.data
+      return resolveBannerMedia(response.result.data, action, options.cloud)
     },
   })
+}
+
+async function resolveBannerMedia(data, action, cloud) {
+  if (!['mip.admin.banners.list', 'mip.admin.banners.get'].includes(action)
+    || !data || typeof data !== 'object'
+    || typeof cloud?.getTempFileURL !== 'function') return data
+  if (action === 'mip.admin.banners.get') {
+    const imageUrl = await resolveCloudFileUrl(data.imageUrl, cloud)
+    return imageUrl === data.imageUrl ? data : { ...data, imageUrl }
+  }
+  if (!Array.isArray(data.items)) return data
+  const fileList = [...new Set(data.items
+    .map(item => item?.imageUrl)
+    .filter(url => typeof url === 'string' && url.startsWith('cloud://')))]
+  if (!fileList.length) return data
+  let urls
+  try {
+    const response = await cloud.getTempFileURL({ fileList, maxAge: 600 })
+    urls = new Map((response?.fileList || [])
+      .filter(item => typeof item?.tempFileURL === 'string' && item.tempFileURL.startsWith('https://'))
+      .map(item => [item.fileID, item.tempFileURL]))
+  }
+  catch { return data }
+  return { ...data, items: data.items.map(item => urls.has(item?.imageUrl) ? { ...item, imageUrl: urls.get(item.imageUrl) } : item) }
+}
+
+async function resolveCloudFileUrl(value, cloud) {
+  if (typeof value !== 'string' || !value.startsWith('cloud://')) return value
+  try {
+    const response = await cloud.getTempFileURL({ fileList: [value], maxAge: 600 })
+    const file = response?.fileList?.find(item => item.fileID === value)
+    const url = new URL(file?.tempFileURL || '')
+    return url.protocol === 'https:' && !url.username && !url.password ? url.href : value
+  }
+  catch { return value }
 }
 
 function assertInput(operation, input) {

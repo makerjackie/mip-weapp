@@ -165,4 +165,53 @@ describe('banner admin typed client', () => {
       error => error.code === 'BANNERS_DISPATCH_UNAVAILABLE' && error.retryable === true,
     )
   })
+
+  it('resolves stored cloud:// Banner images to browser-previewable https URLs', async () => {
+    const temp = { 'cloud://env.mip/banner-1.png': 'https://cdn.example.test/banner-1.png' }
+    const cloud = {
+      async callFunction() {
+        return { result: { ok: true, data: { items: [
+          { bannerId: 'b1', imageUrl: 'cloud://env.mip/banner-1.png' },
+          { bannerId: 'b2', imageUrl: 'https://already.example.test/banner-2.png' },
+        ] } } }
+      },
+      async getTempFileURL({ fileList }) {
+        return { fileList: fileList.map(fileID => ({ fileID, tempFileURL: temp[fileID] })) }
+      },
+    }
+    const data = await clientWith(cloud).execute({
+      appId: APP_ID, actorUserId: USER_ID, actorOpenId: OPEN_ID,
+      action: 'mip.admin.banners.list', input: {},
+    })
+    assert.deepEqual(data.items.map(item => item.imageUrl), [
+      'https://cdn.example.test/banner-1.png',
+      'https://already.example.test/banner-2.png',
+    ])
+  })
+
+  it('resolves a single Banner image and leaves data intact when resolution is unavailable', async () => {
+    const getCloud = {
+      async callFunction() {
+        return { result: { ok: true, data: { bannerId: 'b1', imageUrl: 'cloud://env.mip/banner-1.png' } } }
+      },
+      async getTempFileURL() {
+        return { fileList: [{ fileID: 'cloud://env.mip/banner-1.png', tempFileURL: 'https://cdn.example.test/banner-1.png' }] }
+      },
+    }
+    const resolved = await clientWith(getCloud).execute({
+      appId: APP_ID, actorUserId: USER_ID, actorOpenId: OPEN_ID,
+      action: 'mip.admin.banners.get', input: { bannerId: 'b1' },
+    })
+    assert.equal(resolved.imageUrl, 'https://cdn.example.test/banner-1.png')
+
+    const noResolver = await clientWith({
+      async callFunction() {
+        return { result: { ok: true, data: { bannerId: 'b1', imageUrl: 'cloud://env.mip/banner-1.png' } } }
+      },
+    }).execute({
+      appId: APP_ID, actorUserId: USER_ID, actorOpenId: OPEN_ID,
+      action: 'mip.admin.banners.get', input: { bannerId: 'b1' },
+    })
+    assert.equal(noResolver.imageUrl, 'cloud://env.mip/banner-1.png')
+  })
 })
