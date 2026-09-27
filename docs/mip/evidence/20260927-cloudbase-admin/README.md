@@ -25,3 +25,9 @@
 ## 用户确认后的切换
 
 确认后再安排正式域名切换、登录 challenge 排空与 Cloudflare 运行服务下线，并保留备份。下线前复核常用写入和微信确认，核对迁移期间旧端的密码修改。Cloudflare DNS 与 Pages/Functions/D1 是不同资源，不得笼统删除整个账号或 DNS 配置。
+
+## 微信确认后的会话修复
+
+用户反馈登录确认成功但运营会话无法加载。真实 HTTP 复现：交换响应为 `AUTHENTICATED`，网关只传出最后一条 challenge 清理 Cookie，丢失会话 Cookie，随后查询返回 `401 AUTH_REQUIRED`。CloudBase runtime 现启用单 Cookie 响应，保留会话下发/清理；challenge 仍在服务端单次消费并自然过期，旧 Cloudflare 行为不变。
+
+修复后使用已授权测试管理员、受信签名确认通道完成真实 HTTPS 回归：challenge 201 → exchange 200 且收到 `mip_admin_session` → 运营会话 200 且 enabled=true → logout 200 并清除会话 → 旧 Cookie 重放 401。该回归覆盖网关/认证链路，不等同手机摄像头实际扫码验收。单测新增单 Cookie 交换、challenge 重放及退出后 session 重放用例。

@@ -19,7 +19,7 @@ node admin-web/scripts/build-cloudbase.mjs
 
 使用默认 `app.tcloudbase.com` HTTP 网关：`/api` 路由到该函数，`/` 路由到 CloudBase 静态托管，并设置 `PathRewrite.StaticStorePrefix=/mip-admin-console`。前端资产只上传到既有托管的 `mip-admin-console/` 隔离前缀，不覆盖共享托管根目录。为临时同源验收，可将 `/` 指向该函数，用打包内的 `public/` 返回同一份前端产物；不依赖 Cloudflare。事件函数不适合长期高流量静态资源托管。
 
-部署后必须实测多个 Set-Cookie 到达浏览器、登录/退出/改密码、可信 IP 限流、源站 origin 防护、真实业务接口与静态资源 MIME；本地协议测试不能代替网关验收。正式域名切换与 Cloudflare 下线单独执行，保留旧平台直至用户确认。
+部署后必须实测单 Cookie 兼容模式下的会话凭证到达浏览器、登录/退出/改密码、可信 IP 限流、源站 origin 防护、真实业务接口与静态资源 MIME；本地协议测试不能代替网关验收。正式域名切换与 Cloudflare 下线单独执行，保留旧平台直至用户确认。
 
 平台 event 协议参考：https://docs.cloudbase.net/service/access-cloud-function
 
@@ -69,3 +69,7 @@ node admin-web/scripts/build-cloudbase.mjs
 ## 本轮已知限制
 
 共享静态托管目前启用了 SPA fallback，不存在的 `/assets/...` 路径会返回首页 HTML 和 HTTP 200，而非 404。本应用使用 hash 路由，不需要该 fallback，但本次不改共享环境的网站全局配置。`verify-admin-cloudbase.mjs` 保留严格 404 检查并报告失败；真实 JS/CSS 的 MIME、部署文件 SHA-256 回读及浏览器加载须另行通过，不将缺失文件误报为成功。未来切正式域名前可评估独立静态托管配置。
+
+### 事件网关的 Cookie 限制
+
+实测本环境网关会把多个 `Set-Cookie` 合并成最后一条，不能仅靠本地 `multiValueHeaders` 单测判断成功。CloudBase runtime 启用单 Cookie 响应：微信确认交换只下发会话 Cookie，退出只清除会话 Cookie。已消费的 challenge 由服务端拒绝重用，浏览器残留的挑战 Cookie 最多五分钟自然过期，不承载运营权限。Cloudflare 保留原多 Cookie 行为。部署后必须验证“创建挑战 → 受信确认 → HTTP 交换收到 session Cookie → 查询运营会话 → 退出后旧会话被拒绝”。

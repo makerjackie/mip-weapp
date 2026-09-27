@@ -25,6 +25,7 @@ export interface AdminBffEnv {
   MIP_WEB_LOGIN_MINIPROGRAM_APP_ID?: string
   MIP_WEB_ALLOWED_ORIGIN?: string
   MIP_WEB_LOGIN_NAMESPACE?: string
+  MIP_WEB_SINGLE_COOKIE_RESPONSE?: string
   MIP_WEB_SESSION_SECRET?: string
 }
 
@@ -139,7 +140,9 @@ export function createAdminBff(
       if (session) await passwordAuth().revoke(session)
       const headers = new Headers({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
       headers.append('set-cookie', expireCookie(SESSION_COOKIE, request))
-      headers.append('set-cookie', expireCookie(CHALLENGE_COOKIE, request))
+      // CloudBase event gateways collapse multiple Set-Cookie fields. The challenge
+      // is single-use on the server and its browser cookie expires within five minutes.
+      if (env.MIP_WEB_SINGLE_COOKIE_RESPONSE !== 'true') headers.append('set-cookie', expireCookie(CHALLENGE_COOKIE, request))
       return new Response(JSON.stringify({ authenticated: false }), { status: 200, headers })
     }
     if (request.method === 'POST' && url.pathname === ADMIN_MEDIA_UPLOAD_PATH) {
@@ -267,7 +270,9 @@ export function createAdminBff(
     const sealed = await seal(session, env.MIP_WEB_SESSION_SECRET!, 'mip-admin-session-v1', deps.crypto)
     const headers = new Headers({ 'cache-control': 'no-store', 'content-type': 'application/json; charset=utf-8' })
     headers.append('set-cookie', cookie(SESSION_COOKIE, sealed, request, Math.floor(SESSION_TTL_MS / 1000)))
-    headers.append('set-cookie', expireCookie(CHALLENGE_COOKIE, request))
+    // CloudBase event gateways collapse multiple Set-Cookie fields. The challenge
+    // is single-use on the server and its browser cookie expires within five minutes.
+    if (env.MIP_WEB_SINGLE_COOKIE_RESPONSE !== 'true') headers.append('set-cookie', expireCookie(CHALLENGE_COOKIE, request))
     return new Response(JSON.stringify({
       state: 'AUTHENTICATED',
       actor: row.display_name ? { name: row.display_name } : {},

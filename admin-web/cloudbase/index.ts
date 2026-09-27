@@ -17,7 +17,7 @@ export async function main(event: unknown, context: unknown) {
     const parsed = new URL(uri)
     if (parsed.protocol !== 'mysql:' || !parsed.hostname || !parsed.username || !parsed.pathname.slice(1)) throw new Error('Invalid database configuration')
     const pool = createPool({ host: parsed.hostname, port: Number(parsed.port || 3306), user: decodeURIComponent(parsed.username), password: decodeURIComponent(parsed.password), database: decodeURIComponent(parsed.pathname.slice(1)), ssl: parsed.searchParams.get('ssl') === 'true' ? {} : undefined, connectionLimit: 3, maxIdle: 1, idleTimeout: 60_000, connectTimeout: 8000, timezone: 'Z', charset: 'utf8mb4', waitForConnections: true, queueLimit: 30, supportBigNumbers: true, bigNumberStrings: false, multipleStatements: false })
-    const env: AdminBffEnv = { ...process.env, MIP_ADMIN_AUTH_DB: createMysqlAuthDatabase(pool) }
+    const env: AdminBffEnv = { ...process.env, MIP_WEB_SINGLE_COOKIE_RESPONSE: 'true', MIP_ADMIN_AUTH_DB: createMysqlAuthDatabase(pool) }
     const bff = createAdminBff(env)
     handler = createHttpHandler({ origin: env.MIP_WEB_ALLOWED_ORIGIN, handle: (request: Request) => bff.handle(request), serveStatic: createStaticHandler(resolve(__dirname, 'public')) })
   }

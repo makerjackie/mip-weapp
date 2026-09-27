@@ -370,8 +370,8 @@ async function tokenLoginConfirmationBody(
 
 const noLoginQrCode = async () => ''
 
-async function confirmedLogin(fetchMock: FetchMock, database = new MemoryD1()) {
-  const bff = createAdminBff(env(database), {
+async function confirmedLogin(fetchMock: FetchMock, database = new MemoryD1(), overrides: Partial<AdminBffEnv> = {}) {
+  const bff = createAdminBff({ ...env(database), ...overrides }, {
     fetch: fetchMock,
     generateLoginQrCode: noLoginQrCode,
     now: () => NOW,
@@ -496,6 +496,26 @@ describe('Admin Web BFF', () => {
     assert.equal(response.status, 400)
     assert.equal((await response.json()).error.code, 'VALIDATION_FAILED')
     assert.equal(fetchMock.calls.length, 0)
+  })
+
+  it('keeps the session cookie on single-cookie gateways and rejects consumed challenge/session replay', async () => {
+    const fetchMock = fetchQueue(new Response(JSON.stringify({ ok: true, data: { enabled: true } }), {
+      headers: { 'content-type': 'application/json' },
+    }))
+    const { bff, exchange, challengeCookie, sessionCookie } = await confirmedLogin(fetchMock, new MemoryD1(), { MIP_WEB_SINGLE_COOKIE_RESPONSE: 'true' })
+    assert.equal(exchange.headers.getSetCookie().length, 1)
+    assert.ok(exchange.headers.getSetCookie()[0].startsWith('mip_admin_session='))
+    const request = () => new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST', headers: { origin: ORIGIN, cookie: sessionCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ contractVersion: 1, action: 'mip.admin.session', input: {} }),
+    })
+    assert.equal((await bff.handle(request())).status, 200)
+    const replay = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge/status`, { method: 'POST', headers: { origin: ORIGIN, cookie: challengeCookie } }))
+    assert.notEqual(replay.status, 200)
+    const logout = await bff.handle(new Request(`${ORIGIN}/api/auth/logout`, { method: 'POST', headers: { origin: ORIGIN, cookie: sessionCookie } }))
+    assert.equal(logout.headers.getSetCookie().length, 1)
+    assert.match(logout.headers.getSetCookie()[0], /^mip_admin_session=.*Max-Age=0/)
+    assert.equal((await bff.handle(request())).status, 401)
   })
 
   it('exchanges a mini-program-confirmed one-time code and forwards a signed read-only request', async () => {
