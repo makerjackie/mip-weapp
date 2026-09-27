@@ -25,6 +25,37 @@ export interface OperationField {
 
 export type OperationValues = Record<string, unknown>
 
+/** Field kinds that hold a list of values rather than a scalar. */
+export const MULTI_VALUE_KINDS: readonly string[] = ['id-list', 'profile-ref-list', 'asset-list', 'tags', 'multi-select']
+/** Field kinds whose editor is a textarea / line list. */
+export const TEXTAREA_LIKE_KINDS: readonly string[] = ['asset-list', 'id-list', 'profile-ref-list', 'tags']
+/** Field kinds serialized as newline-joined id lists. */
+export const LINE_LIST_KINDS: readonly string[] = ['id-list', 'profile-ref-list', 'tags']
+/** Field kinds bound to a Dayjs value. */
+export const DATE_KINDS: readonly string[] = ['datetime', 'datetime-local', 'date']
+
+export function operationFieldName(field: OperationField) {
+  return String(field.name || field.key || '')
+}
+
+/** Builds default form values from an operation field list (recurses into groups). */
+export function defaultOperationValues(fields: readonly OperationField[]): OperationValues {
+  const values: OperationValues = {}
+  for (const field of fields) {
+    const key = operationFieldName(field)
+    if (!key) continue
+    if (field.kind === 'group') values[key] = defaultOperationValues(field.fields || [])
+    else if (field.kind === 'checkbox' || field.kind === 'boolean') values[key] = false
+    else if (MULTI_VALUE_KINDS.includes(field.kind)) values[key] = []
+    else if (field.kind === 'select') {
+      const first = field.options?.[0]
+      values[key] = field.required && first ? (typeof first === 'string' ? first : first.value) : ''
+    }
+    else values[key] = ''
+  }
+  return values
+}
+
 export function normalizeOperationValues(
   fields: readonly OperationField[],
   submitted: OperationValues,

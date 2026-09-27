@@ -88,17 +88,17 @@ function LoginProbe() {
 
 describe('admin session query boundary', () => {
   it('recognizes every protected admin query family', () => {
-    expect(isProtectedAdminQueryKey(['admin-detail', 'actor-a'])).toBe(true)
-    expect(isProtectedAdminQueryKey(['admin', 'read-page'])).toBe(true)
-    expect(isProtectedAdminQueryKey(['admin-read-page', 'actor-a'])).toBe(true)
-    expect(isProtectedAdminQueryKey(['admin-overview', 'actor-a'])).toBe(true)
+    expect(isProtectedAdminQueryKey(['admin', 'detail', 'actor-a'])).toBe(true)
+    expect(isProtectedAdminQueryKey(['admin', 'read-page', 'actor-a'])).toBe(true)
+    expect(isProtectedAdminQueryKey(['admin', 'overview', 'actor-a'])).toBe(true)
+    expect(isProtectedAdminQueryKey(['admin-detail', 'actor-a'])).toBe(false)
     expect(isProtectedAdminQueryKey(['public-catalog'])).toBe(false)
   })
 
   it('removes protected cached data immediately on logout while preserving unrelated cache', async () => {
     const client = new SessionClient()
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    queryClient.setQueryData(['admin-detail', 'actor-a', 1, 'users', 'user-1'], { title: '账号 A 的用户详情' })
+    queryClient.setQueryData(['admin', 'detail', 'actor-a', 1, 'users', 'user-1'], { title: '账号 A 的用户详情' })
     queryClient.setQueryData(['public-catalog'], { value: 'public' })
     render(
       <QueryClientProvider client={queryClient}>

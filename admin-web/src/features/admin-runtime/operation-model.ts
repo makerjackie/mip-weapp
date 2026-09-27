@@ -26,7 +26,7 @@ import {
   createAdminPeopleMutationDefinition,
   type AdminPeopleMutationAction,
 } from '../../modules/admin-people-mutation-forms'
-import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
+import { defaultOperationValues, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
 import { contentFormValues, normalizeContentFields } from '../../modules/content-form-values'
 import type { AdminOperationLaunchContext } from '../../modules/admin-row-operations'
 import {
@@ -489,20 +489,7 @@ function prefillUserContent(values: OperationValues, targetId: string, item: Ope
 }
 
 function defaultValues(fields: readonly OperationField[]): OperationValues {
-  const values: OperationValues = {}
-  for (const field of fields) {
-    const key = String(field.key || field.name || '')
-    if (!key) continue
-    if (field.kind === 'group') values[key] = defaultValues(field.fields || [])
-    else if (field.kind === 'checkbox' || field.kind === 'boolean') values[key] = false
-    else if (['id-list', 'profile-ref-list', 'asset-list', 'tags', 'multi-select'].includes(field.kind)) values[key] = []
-    else if (field.kind === 'select') {
-      const first = field.options?.[0]
-      values[key] = field.required && first ? (typeof first === 'string' ? first : first.value) : ''
-    }
-    else values[key] = ''
-  }
-  return values
+  return defaultOperationValues(fields)
 }
 
 

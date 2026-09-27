@@ -32,7 +32,7 @@ export function useAdminDetail() {
   }), [hasCapability, hasCapabilityAtScope, selection])
 
   const detail = useQuery({
-    queryKey: ['admin-detail', session?.actor?.id || 'anonymous', sessionBoundary, selection?.route, selection?.id, options],
+    queryKey: ['admin', 'detail', session?.actor?.id || 'anonymous', sessionBoundary, selection?.route, selection?.id, options],
     enabled: Boolean(selection && !demoMode && session?.enabled),
     queryFn: () => loadAdminDetail(selection!.route, selection!.id, request, options),
   })

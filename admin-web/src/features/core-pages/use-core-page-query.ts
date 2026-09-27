@@ -28,7 +28,8 @@ export function useCoreReadPage(route: CoreListRoute, search: CorePageSearchStat
   const enabled = sessionState.demoMode || Boolean(sessionState.session?.enabled)
   const result = useQuery({
     queryKey: [
-      'admin-read-page',
+      'admin',
+      'read-page',
       sessionState.session?.actor?.id || 'anonymous',
       sessionState.sessionBoundary,
       sessionState.demoMode ? 'demo' : 'api',
@@ -61,7 +62,8 @@ export function useAdminOverview() {
   const enabled = sessionState.demoMode || Boolean(sessionState.session?.enabled)
   const result = useQuery({
     queryKey: [
-      'admin-overview',
+      'admin',
+      'overview',
       sessionState.session?.actor?.id || 'anonymous',
       sessionState.sessionBoundary,
       sessionState.demoMode ? 'demo' : 'api',

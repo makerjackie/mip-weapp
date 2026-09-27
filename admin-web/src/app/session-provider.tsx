@@ -252,8 +252,10 @@ export function SessionProvider({ children, client = defaultClient }: { children
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }
 
+/** Every protected admin query must be keyed under the shared `admin` root so
+ * session/capability changes can purge them without a hand-maintained list. */
 export function isProtectedAdminQueryKey(queryKey: readonly unknown[]) {
-  return ['admin', 'admin-detail', 'admin-read-page', 'admin-overview'].includes(String(queryKey[0] || ''))
+  return String(queryKey[0] || '') === 'admin'
 }
 
 export function useAdminSession() {
