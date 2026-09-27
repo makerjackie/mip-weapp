@@ -11,7 +11,7 @@
 | [PROJECT_STATUS.md](PROJECT_STATUS.md) | 当前仓库与已核实环境状态、剩余缺口 | 长期产品规则、验收方法 |
 | [ACCEPTANCE.md](ACCEPTANCE.md) | 静态、运行时、云端、真机和生产验收标准及证据索引 | 动态开发进度、临时报告路径 |
 | [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) | 需求域的“实现状态 + 验证状态”双轴矩阵 | 第二套逐项状态表 |
-| [FIGMA_MAP.md](FIGMA_MAP.md) | Figma 节点到当前页面、组件和设计合同的映射 | 动态运行状态和临时证据 |
+| [FIGMA_MAP.md](FIGMA_MAP.md) | Figma 节点/资产的历史溯源，现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | 动态运行状态和临时证据 |
 
 跨目录入口：
 
@@ -31,7 +31,7 @@
 2. 当前系统形态、模块边界和调用方向以 [ARCHITECTURE.md](ARCHITECTURE.md) 为准。
 3. 当前数量、部署状态和已知缺口以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准；代码和环境读回优先于文档中的旧数字。
 4. 验收层级和证据有效性以 [ACCEPTANCE.md](ACCEPTANCE.md) 为准。
-5. 视觉与交互以 [DESIGN.md](../../DESIGN.md)、[admin-web/DESIGN.md](../../admin-web/DESIGN.md) 和 [FIGMA_MAP.md](FIGMA_MAP.md) 为准，不能推翻服务端业务规则。
+5. 视觉与交互以 [DESIGN.md](../../DESIGN.md) 和 [admin-web/DESIGN.md](../../admin-web/DESIGN.md) 为准；[FIGMA_MAP.md](FIGMA_MAP.md) 仅作历史节点/资产溯源，不能推翻服务端业务规则。
 
 需求来源只用于追溯，不直接覆盖上述当前结论。固定快照见 [sources/README.md](sources/README.md)，可提交的验收材料见 [evidence/](evidence/)。来源表里的“未开始”“待评审”和原型演示数据都不是仓库实现状态。
 
@@ -43,7 +43,7 @@
 - `ACCEPTANCE.md` 只定义“如何证明”和引用可复核证据；`.tmp/` 会被忽略或覆盖，不得作为权威证据链接。
 - `COVERAGE_MATRIX.md` 同时维护实现与验证两个维度。代码存在不能自动把运行时、真机或生产状态标记为通过。
 - `sources/` 保存原始来源，`evidence/` 保存可复核证据；二者不承担当期结论，不因当前实现变化而改写历史内容。
-- 页面事实必须同时与 `src/app.json`、`config/runtime-pages.json` 和 `FIGMA_MAP.md` 对齐。
+- 页面事实必须与 `src/app.json`、`config/runtime-pages.json` 对齐；`FIGMA_MAP.md` 仅作历史溯源，不作为页面事实依据。
 
 ## 状态词
 

@@ -28,5 +28,3 @@ export const brand = {
     success: '#18E779',
   },
 } as const
-
-export type BrandConfig = typeof brand

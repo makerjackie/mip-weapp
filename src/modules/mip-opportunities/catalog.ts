@@ -46,10 +46,6 @@ export const opportunityProjectStatusOptions: Array<{
   { key: 'UNPUBLISHED', label: '下架项目', description: '仅自己可见' },
 ]
 
-export function opportunityProjectStatusLabel(key: OpportunityProjectStatus) {
-  return opportunityProjectStatusOptions.find(item => item.key === key)?.label || key
-}
-
 /** 兼容早期来源中的 DRAFT + publishedAt，正式下架使用 UNPUBLISHED。 */
 export function journeyStatusOf(item: { status: OpportunityStatus, publishedAt?: string }): OpportunityStatus {
   if (item.status === 'DRAFT' && item.publishedAt) {

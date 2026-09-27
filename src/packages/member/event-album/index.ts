@@ -177,6 +177,7 @@ Page({
     if (!photoId || this.data.withdrawingId) {
       return
     }
+    this.setData({ withdrawingId: photoId, message: '' })
     const confirmation = await wx.showModal({
       title: '撤回照片',
       content: '撤回后照片不再显示，确认继续吗？',
@@ -184,9 +185,9 @@ Page({
       confirmColor: '#B84A43',
     }).catch(() => null)
     if (!confirmation?.confirm) {
+      this.setData({ withdrawingId: '' })
       return
     }
-    this.setData({ withdrawingId: photoId, message: '' })
     try {
       await mipEventsModule.withdrawEventAlbumPhoto(photoId, version)
       await this.load(true)

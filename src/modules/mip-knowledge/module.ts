@@ -75,5 +75,3 @@ export function createMipKnowledgeModule(
     },
   })
 }
-
-export type MipKnowledgeModule = ReturnType<typeof createMipKnowledgeModule>

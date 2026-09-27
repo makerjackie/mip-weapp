@@ -15,6 +15,9 @@ const profileMocks = vi.hoisted(() => ({
   relationship: vi.fn(),
   navigate: vi.fn(),
   showModal: vi.fn(),
+  snapshot: vi.fn(),
+  loadSnapshot: vi.fn(),
+  registrations: vi.fn(),
 }))
 vi.mock('../src/modules/mip-community', () => ({
   createCommunityReportIntent: vi.fn(),
@@ -26,7 +29,7 @@ vi.mock('../src/modules/mip-identity', () => ({
   mipAccessPageUrl: vi.fn(),
 }))
 vi.mock('../src/modules/mip-identity/client', () => ({
-  mipIdentityModule: { beginProtectedAction: profileMocks.access, peekSnapshot: vi.fn(), consumePendingResume: vi.fn(), resolveProfileCardScene: vi.fn() },
+  mipIdentityModule: { beginProtectedAction: profileMocks.access, peekSnapshot: profileMocks.snapshot, loadSnapshot: profileMocks.loadSnapshot, consumePendingResume: vi.fn(), resolveProfileCardScene: vi.fn() },
 }))
 vi.mock('../src/modules/mip-opportunities', () => ({
   opportunityModule: {
@@ -39,6 +42,7 @@ vi.mock('../src/modules/mip-opportunities', () => ({
 }))
 // 合并 ws-settings 后档案页引入卡片归档链（mip-cases/mip-cooperation → transport → 运行时配置），
 // 测试环境无 weapp-vite 构建常量，按仓库惯例 mock 两个 facade（仅在长按删除 handler 中调用）。
+vi.mock('../src/modules/mip-events/client', () => ({ mipEventsModule: { listMyRegistrations: profileMocks.registrations } }))
 vi.mock('../src/modules/mip-cases', () => ({ superCaseModule: { get: vi.fn(), archive: vi.fn() } }))
 vi.mock('../src/modules/mip-cooperation', () => ({ cooperationModule: { get: vi.fn(), archive: vi.fn() } }))
 vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: profileMocks.navigate }))
@@ -71,9 +75,9 @@ describe('journey-review WS-PEOPLE · 档案互动条角色门禁（C1 终审 + 
   it('maps the viewer identity snapshot onto the three-role matrix', () => {
     const page = read('src/packages/member/mip-public-profile/index.ts')
 
-    // 普通用户 = INTERACT 未就绪 → locked；嘉宾 = 就绪且无会员权益 → hidden；玩家 → active。
+    // 完整资料不能替代真实签到；普通用户仍展示解锁入口。
     expect(page).toContain(`this.setData({ interactionBar: 'locked' })`)
-    expect(page).toContain(`snapshot.membership.kind === 'PLAYER' ? 'active' : 'hidden'`)
+    expect(page).toContain(`snapshot.membership.kind === 'PLAYER' ? 'active' : hasAttended ? 'hidden' : 'locked'`)
     expect(page).toContain(`if (this.data.interactionBar === 'locked')`)
   })
 
@@ -91,7 +95,11 @@ describe('journey-review WS-PEOPLE · 档案互动条行为（J2-03 → J2-04）
     setData: (patch: Record<string, unknown>) => void
     toggleInterest: () => void
     openInterestList: () => void
-    applyInteractionBarMode: (snapshot: unknown) => void
+    applyInteractionBarMode: (snapshot: unknown, hasAttended?: boolean) => void
+    resolveInteractionBar: () => Promise<void>
+    onUnload: () => void
+    profileRequest: number
+    interactionBarRequest: number
     pendingAction: string
   }
   let definition: ProfilePage
@@ -148,11 +156,51 @@ describe('journey-review WS-PEOPLE · 档案互动条行为（J2-03 → J2-04）
     p.applyInteractionBarMode({ ready: true, membership: { kind: 'PLAYER' } })
     expect(p.data.interactionBar).toBe('active')
     p.applyInteractionBarMode({ ready: true, membership: { kind: 'GUEST' } })
+    expect(p.data.interactionBar).toBe('locked')
+    p.applyInteractionBarMode({ ready: true, membership: { kind: 'GUEST' } }, true)
     expect(p.data.interactionBar).toBe('hidden')
     p.applyInteractionBarMode({ ready: false, membership: { kind: 'GUEST' } })
     expect(p.data.interactionBar).toBe('locked')
     p.applyInteractionBarMode(undefined)
     expect(p.data.interactionBar).toBe('locked')
+  })
+
+  it('uses server attendance rather than profile readiness and preserves content on failure', async () => {
+    const p = page({ state: 'ready' })
+    profileMocks.snapshot.mockReturnValue({ ready: true, membership: { kind: 'GUEST' } })
+    profileMocks.registrations.mockResolvedValue({ counts: { attended: 0 } })
+    await p.resolveInteractionBar()
+    expect(p.data.interactionBar).toBe('locked')
+    expect(profileMocks.registrations).toHaveBeenCalledWith(undefined, 'ATTENDED')
+    profileMocks.registrations.mockResolvedValue({ counts: { attended: 1 } })
+    await p.resolveInteractionBar()
+    expect(p.data.interactionBar).toBe('hidden')
+    profileMocks.registrations.mockRejectedValue(new Error('Unavailable'))
+    await p.resolveInteractionBar()
+    expect(p.data.interactionBar).toBe('locked')
+    expect(p.data.state).toBe('ready')
+  })
+
+  it('ignores stale attendance after a new profile or unload', async () => {
+    const p = page()
+    profileMocks.snapshot.mockReturnValue({ ready: true, membership: { kind: 'GUEST' } })
+    let finish!: (value: unknown) => void
+    profileMocks.registrations.mockImplementation(() => new Promise((resolve) => {
+      finish = resolve
+    }))
+    const first = p.resolveInteractionBar()
+    p.profileRequest++
+    profileMocks.snapshot.mockReturnValue({ ready: true, membership: { kind: 'PLAYER' } })
+    await p.resolveInteractionBar()
+    finish({ counts: { attended: 1 } })
+    await first
+    expect(p.data.interactionBar).toBe('active')
+    profileMocks.snapshot.mockReturnValue({ ready: true, membership: { kind: 'GUEST' } })
+    const second = p.resolveInteractionBar()
+    p.onUnload()
+    finish({ counts: { attended: 1 } })
+    await second
+    expect(p.data.interactionBar).toBe('active')
   })
 })
 
@@ -196,11 +244,13 @@ describe('journey-review WS-PEOPLE · 站内信（J3-04b QI 自拟承接）', ()
     vi.unstubAllGlobals()
 
     const now = Date.now()
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
     inbox.peekInbox.mockReturnValue(undefined)
     inbox.listInbox.mockResolvedValue({
       items: [
         { id: 'm1', messageType: 'PROFILE_INTEREST', title: '心动', body: '大鹅飞飞 对你心动了，快去看看', createdAt: new Date(now - 3 * 60000).toISOString() },
-        { id: 'm2', messageType: 'EVENT', title: '活动', body: '你报名的活动「设计户外过两天再说露营地」即将开始', createdAt: new Date(now - 26 * 3600000).toISOString() },
+        { id: 'm2', messageType: 'EVENT', title: '活动', body: '你报名的活动「设计户外过两天再说露营地」即将开始', createdAt: yesterday.toISOString() },
         { id: 'm3', messageType: 'OPERATIONS', title: '系统', body: '欢迎加入 MIP，完善名片让更多伙伴认识你', createdAt: new Date(now - 3 * 86400000).toISOString() },
         // review 补强：相对时间边界——<1 分钟归「刚刚」，无效日期静默为空串（不渲染时间行）。
         { id: 'm4', messageType: 'SYSTEM', title: '系统', body: '刚刚的边界', createdAt: new Date(now - 30 * 1000).toISOString() },

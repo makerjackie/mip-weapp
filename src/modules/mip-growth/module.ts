@@ -55,5 +55,3 @@ export function createMipGrowthModule(gateway: MipGrowthGateway) {
     },
   }
 }
-
-export type MipGrowthModule = ReturnType<typeof createMipGrowthModule>

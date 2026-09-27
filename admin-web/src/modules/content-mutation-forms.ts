@@ -412,15 +412,6 @@ const CONTENT_MUTATION_FORMS: readonly ContentMutationFormDefinition[] = [
 
 const FORM_BY_ACTION = new Map(CONTENT_MUTATION_FORMS.map(form => [form.action, form]))
 
-/** Alias for consumers that want a keyed manifest instead of a list. */
-export const ADMIN_CONTENT_MUTATION_CONFIG: Readonly<Record<ContentMutationAction, ContentMutationFormDefinition>> = Object.fromEntries(
-  CONTENT_MUTATION_FORMS.map(form => [form.action, form]),
-) as Readonly<Record<ContentMutationAction, ContentMutationFormDefinition>>
-
-export function listContentMutationForms(): readonly ContentMutationFormDefinition[] {
-  return CONTENT_MUTATION_FORMS
-}
-
 export function getContentMutationForm(action: ContentMutationAction): ContentMutationFormDefinition {
   const form = FORM_BY_ACTION.get(action)
   if (!form) throw new Error(`Unknown content mutation action: ${action}`)
@@ -435,22 +426,6 @@ export function validateContentMutation(action: ContentMutationAction, value: un
     const message = error instanceof Error ? error.message : '提交内容无效'
     return { ok: false, errors: { form: message } }
   }
-}
-
-export function createContentMutationIntent(
-  action: ContentMutationAction,
-  value: unknown,
-  idempotencyKey = createContentMutationIdempotencyKey(action),
-): ContentMutationIntent {
-  const form = getContentMutationForm(action)
-  const result = validateContentMutation(action, value)
-  if (!result.ok) throw new TypeError(Object.values(result.errors).join('；'))
-  if (!form.idempotencyRequired) return { action, input: result.input }
-  const key = String(idempotencyKey).trim()
-  if (!IDEMPOTENCY_PATTERN.test(key)) {
-    throw new TypeError('幂等标识格式无效')
-  }
-  return { action, idempotencyKey: key, input: { ...result.input, idempotencyKey: key } }
 }
 
 export function createContentMutationIdempotencyKey(action: ContentMutationAction): string {

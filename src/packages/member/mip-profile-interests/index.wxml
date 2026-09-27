@@ -8,13 +8,21 @@
     <!-- J4-02b reuses the J3-08 visitor card dimensions, without dates or search. -->
     <view class="grid grid-cols-2 gap-[24rpx]">
       <view wx:for="{{people}}" wx:key="profileRef" class="relative flex min-h-[374rpx] min-w-0 flex-col overflow-hidden rounded-[16rpx] bg-panel px-[24rpx] pb-[16rpx] pt-[16rpx] active:bg-panel-raised" aria-role="button" aria-label="查看{{item.nickname}}的公开档案" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
+        <view wx:if="{{item.level}}" class="absolute left-[16rpx] top-[16rpx] rounded-[8rpx] border border-canvas bg-panel-raised px-[8rpx] text-[20rpx] font-semibold leading-[28rpx] text-brand">Lv.{{item.level.number}}</view>
         <view class="flex shrink-0 justify-center">
           <image wx:if="{{item.avatarUrl}}" class="h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.avatarUrl}}" />
           <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[32rpx] font-semibold text-brand">{{item.nickname[0]}}</view>
         </view>
         <view class="mt-[16rpx] truncate text-center text-[32rpx] font-medium leading-[44.8rpx]">{{item.nickname}}</view>
         <view class="mt-[8rpx] truncate text-center text-[20rpx] font-medium leading-[34rpx] text-ink">{{item.userKind === 'PLAYER' ? '玩家' : '嘉宾'}}</view>
-        <view wx:if="{{item.headline}}" class="mt-[8rpx] line-clamp-2 text-[20rpx] leading-[28rpx] text-muted">{{item.headline}}</view>
+        <view wx:if="{{item.cityName || item.industryLabel || item.identityStatus}}" class="mt-[8rpx] line-clamp-2 text-center text-[20rpx] leading-[28rpx] text-ink">{{item.cityName}}{{item.cityName && item.industryLabel ? ' / ' : ''}}{{item.industryLabel}}{{(item.cityName || item.industryLabel) && item.identityStatus ? ' / ' : ''}}{{item.identityStatus}}</view>
+        <view wx:if="{{item.introduction || item.headline}}" class="mt-[8rpx] line-clamp-2 text-[20rpx] leading-[28rpx] text-muted">{{item.introduction || item.headline}}</view>
+        <view wx:if="{{item.badges.length}}" class="mt-[12rpx] flex flex-wrap gap-[8rpx]">
+          <view wx:for="{{item.badges}}" wx:for-item="badge" wx:key="id" class="flex items-center gap-[4rpx] text-[18rpx] text-brand">
+            <image wx:if="{{badge.imageUrl}}" src="{{badge.imageUrl}}" class="h-[32rpx] w-[32rpx]" mode="aspectFit" />
+            <text>{{badge.name}}</text>
+          </view>
+        </view>
       </view>
     </view>
     <view wx:if="{{message}}" class="mt-4 text-[24rpx] text-danger">{{message}}</view>

@@ -1,5 +1,26 @@
-import type { ProfileInterestPage, ProfileInterestPerson } from './types'
+import type { ProfileInterestPage, ProfileInterestPerson, PublicPersonDetails } from './types'
 import { MipOpportunityError } from './error'
+
+export function parsePublicPersonDetails(person: Record<string, unknown>): PublicPersonDetails {
+  const level = person.level && typeof person.level === 'object' ? person.level as Record<string, unknown> : undefined
+  return {
+    level: level && Number.isInteger(level.number) && Number(level.number) > 0 && typeof level.name === 'string'
+      ? { number: Number(level.number), name: level.name }
+      : undefined,
+    cityName: typeof person.cityName === 'string' ? person.cityName : undefined,
+    industryLabel: typeof person.industryLabel === 'string' ? person.industryLabel : undefined,
+    identityStatus: typeof person.identityStatus === 'string' ? person.identityStatus : undefined,
+    introduction: typeof person.introduction === 'string' ? person.introduction : undefined,
+    badges: Array.isArray(person.badges)
+      ? person.badges.flatMap((badge) => {
+          if (!badge || typeof badge !== 'object' || typeof badge.id !== 'string' || typeof badge.name !== 'string') {
+            return []
+          }
+          return [{ id: badge.id, name: badge.name, imageUrl: typeof badge.imageUrl === 'string' ? badge.imageUrl : undefined }]
+        })
+      : [],
+  }
+}
 
 /** Validate the non-empty roster contract and never forward private server fields. */
 export function parseProfileInterests(value: unknown): ProfileInterestPage {
@@ -24,6 +45,7 @@ export function parseProfileInterests(value: unknown): ProfileInterestPage {
       throw invalid()
     }
     return {
+      ...parsePublicPersonDetails(person),
       profileRef: person.profileRef,
       nickname: person.nickname,
       avatarUrl: typeof person.avatarUrl === 'string' ? person.avatarUrl : undefined,

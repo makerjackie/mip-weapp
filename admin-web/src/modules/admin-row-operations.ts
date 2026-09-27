@@ -92,14 +92,6 @@ export function eventRegistrationRowActions(
   return []
 }
 
-export function eventRowActions(eventIdValue: unknown): AdminRowOperation[] {
-  const eventId = identifier(eventIdValue)
-  if (!eventId) return []
-  return [
-    { action: 'mip.admin.events.checkinQrcode.get', label: '签到码', targetId: eventId, values: { eventId } },
-  ]
-}
-
 export function eventAlbumRowActions(
   eventIdValue: unknown,
   photo: Record<string, unknown>,

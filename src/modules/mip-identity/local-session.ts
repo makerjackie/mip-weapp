@@ -101,5 +101,3 @@ export function createMipLocalSessionController(
     },
   }
 }
-
-export type MipLocalSessionController = ReturnType<typeof createMipLocalSessionController>

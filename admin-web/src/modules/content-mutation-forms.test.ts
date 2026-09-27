@@ -2,9 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   CONTENT_MUTATION_ACTIONS,
-  createContentMutationIntent,
   getContentMutationForm,
-  listContentMutationForms,
   validateContentMutation,
 } from './content-mutation-forms.ts'
 
@@ -13,7 +11,7 @@ const profileRef = `p1.${'a'.repeat(16)}.${'b'.repeat(48)}.${'c'.repeat(22)}`
 
 describe('content mutation form manifest', () => {
   it('covers the reviewed P0 actions with an explicit capability and input key list', () => {
-    const forms = listContentMutationForms()
+    const forms = CONTENT_MUTATION_ACTIONS.map(action => getContentMutationForm(action))
     assert.equal(forms.length, CONTENT_MUTATION_ACTIONS.length)
     assert.deepEqual(new Set(forms.map(form => form.action)).size, forms.length)
     assert.deepEqual(getContentMutationForm('mip.admin.announcements.pin'), {
@@ -106,22 +104,5 @@ describe('content mutation validators', () => {
     assert.equal(validateContentMutation('mip.admin.badges.revoke', {
       awardId: 'award-1', expectedVersion: 0, reason: '撤销',
     }).ok, false)
-  })
-
-  it('creates a transport-ready idempotent intent without accepting arbitrary JSON', () => {
-    const intent = createContentMutationIntent('mip.admin.growth.adjust', {
-      userId: 'user-1', metric: 'EXPERIENCE', deltaValue: 5, reason: '补录',
-    }, 'growth-key-20300101')
-    assert.equal(intent.action, 'mip.admin.growth.adjust')
-    assert.equal(intent.idempotencyKey, 'growth-key-20300101')
-    assert.equal(intent.input.idempotencyKey, 'growth-key-20300101')
-    assert.throws(() => createContentMutationIntent('mip.admin.growth.adjust', {
-      userId: 'user-1', metric: 'EXPERIENCE', deltaValue: 5, reason: '补录',
-    }, 'bad key'), /幂等标识/)
-    const report = createContentMutationIntent('mip.admin.communityReports.claim', {
-      reportId: 'report-1', expectedVersion: 2, reason: '已核实',
-    })
-    assert.equal(report.idempotencyKey, undefined)
-    assert.deepEqual(report.input, { reportId: 'report-1', expectedVersion: 2, reason: '已核实' })
   })
 })

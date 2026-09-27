@@ -243,7 +243,16 @@ export interface PeoplePage {
   nextCursor?: string
 }
 
-export interface ProfileInterestPerson {
+export interface PublicPersonDetails {
+  level?: { number: number, name: string }
+  cityName?: string
+  industryLabel?: string
+  identityStatus?: string
+  introduction?: string
+  badges?: { id: string, name: string, imageUrl?: string }[]
+}
+
+export interface ProfileInterestPerson extends PublicPersonDetails {
   profileRef: string
   nickname: string
   avatarUrl?: string
@@ -394,7 +403,7 @@ export type ReceivedInteractionCategory
 export type ReceivedInteractionStatus = 'ACTIVE' | 'CANCELLED'
 export type ReceivedInterestSourceType = 'OPPORTUNITY' | 'COOPERATION_CARD' | 'SUPER_CASE' | 'PROFILE'
 
-export interface ReceivedInteractionActor {
+export interface ReceivedInteractionActor extends PublicPersonDetails {
   profileRef: string
   nickname: string
   avatarUrl?: string

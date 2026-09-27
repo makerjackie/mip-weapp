@@ -198,6 +198,7 @@ Page({
     if (!item || this.data.removingId) {
       return
     }
+    this.setData({ removingId: item.id, message: '' })
     wx.showModal({
       title: '删除提示',
       content: '删除后将无法恢复，是否删除？',
@@ -207,15 +208,15 @@ Page({
         if (result.confirm) {
           void this.deletePublished(item)
         }
+        else {
+          this.setData({ removingId: '' })
+        }
       },
+      fail: () => this.setData({ removingId: '' }),
     })
   },
 
   async deletePublished(item: PublishedView) {
-    if (this.data.removingId) {
-      return
-    }
-    this.setData({ removingId: item.id, message: '' })
     try {
       // 列表 DTO 不带 version，先取详情拿并发版本再归档。
       const detail = await opportunityModule.get(item.id)

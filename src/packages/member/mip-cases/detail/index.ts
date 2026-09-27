@@ -205,16 +205,17 @@ Page({
     if (!item?.mine || item.status !== 'PUBLISHED' || this.data.acting) {
       return
     }
+    this.setData({ acting: true, message: '' })
     const confirmation = await wx.showModal({
       title: '下架案例',
       content: '下架后，其他用户将无法查看这个案例。',
       confirmText: '确认下架',
       confirmColor: '#B30516',
-    })
-    if (!confirmation.confirm) {
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      this.setData({ acting: false })
       return
     }
-    this.setData({ acting: true, message: '' })
     try {
       const result = await superCaseModule.unpublish(item.id, item.version)
       this.setData({
@@ -238,16 +239,17 @@ Page({
     if (!item?.mine || this.data.acting) {
       return
     }
+    this.setData({ acting: true, message: '' })
     const confirmation = await wx.showModal({
       title: '删除案例',
       content: '删除后，这个案例将不再显示，且无法恢复。',
       confirmText: '删除',
       confirmColor: '#B30516',
-    })
-    if (!confirmation.confirm) {
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      this.setData({ acting: false })
       return
     }
-    this.setData({ acting: true, message: '' })
     try {
       await superCaseModule.archive(item.id, item.version)
       wx.showToast({ title: '已删除', icon: 'success' })

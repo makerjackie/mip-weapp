@@ -385,5 +385,3 @@ export function createProfileInterestMutationStore(options: ProfileInterestMutat
     },
   }
 }
-
-export type ProfileInterestMutationStore = ReturnType<typeof createProfileInterestMutationStore>

@@ -23,6 +23,9 @@ interface InteractionView {
   actorInitial: string
   actorAvatarUrl: string
   actorHeadline: string
+  profileMeta: string
+  levelNumber?: number
+  badges: NonNullable<ReceivedInteractionActor['badges']>
   statusText: string
   sourceText: string
   detailText: string
@@ -64,13 +67,16 @@ function createCategoryCache(): CategoryCache {
   }
 }
 
-function cardBase(subject: { profileRef: string, nickname?: string, avatarUrl?: string, headline?: string }) {
+function cardBase(subject: ReceivedInteractionActor) {
   const actorName = subject.nickname || 'MIP 用户'
   return {
     actorName,
     actorInitial: actorName.slice(0, 1),
     actorAvatarUrl: subject.avatarUrl || '',
-    actorHeadline: subject.headline || '',
+    actorHeadline: subject.introduction || subject.headline || '',
+    profileMeta: [subject.cityName, subject.industryLabel, subject.identityStatus].filter(Boolean).join(' / '),
+    badges: subject.badges || [],
+    levelNumber: subject.level?.number,
     metaText: subject.headline || '',
     countBadge: '',
     noteText: '',
@@ -246,9 +252,10 @@ function matchesInteractionSearch(view: InteractionView, keyword: string) {
   if (!needle) {
     return true
   }
-  // 搜索姓名、行业、简介等：DTO 只有昵称与 headline（身份/行业/简介混合行）。
+  // 只搜索服务端已公开的字段。
   return view.actorName.toLowerCase().includes(needle)
     || view.actorHeadline.toLowerCase().includes(needle)
+    || view.profileMeta.toLowerCase().includes(needle)
 }
 
 const influenceTitles: Partial<Record<ReceivedInteractionCategory, string>> = {

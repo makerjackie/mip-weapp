@@ -2,6 +2,8 @@
 
 MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`。新表前缀固定为 `mip_*`，完整迁移记录写入 `mip_schema_migrations`，每条语句的执行状态写入 `mip_schema_migration_steps`，引擎使用 InnoDB。`mip_orders` 统一承载会员、付费活动和付费内容订单。lock 只证明仓库期望结构；目标环境是否已应用、表级权限是否收敛，必须以环境回读为准，并记录在 [MIP 项目状态](mip/PROJECT_STATUS.md) 或对应证据中。
 
+以下仅列关键迁移，完整迁移清单以 [`migrations.lock.json`](../database/mysql/mip/migrations.lock.json) 为权威；当前共 94 个迁移。
+
 活动相册由 `012_event_album.sql` 追加 `mip_event_album_photos` 与活动相册配置；照片只做状态迁移和版本更新，不执行物理业务删除。`015_checkin_growth_compensation.sql` 追加签到 transition，并将经验余额改为可表达精确冲销的有符号值。`016_notification_delivery_reservations.sql` 为订阅授权追加任务级 reservation，使微信调用可以移出数据库事务且不被其他任务并发复用。`021_referral_targets.sql` 将历史引荐安全回填给对应机会发布人，再把被引荐人收敛为非空外键；发起人和机会的原唯一约束保持不变。后续迁移继续按 lock 中的版本和 checksum 顺序应用。
 
 `024_task_cards.sql` 追加任务卡与完成流水。每个 AppID 内同一用户和任务最多有一条完成事实；奖励经验值、任务内容和附件引用按完成时事实留存，任务删除只做软删除。

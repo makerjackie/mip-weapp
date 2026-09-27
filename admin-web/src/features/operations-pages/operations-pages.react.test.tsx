@@ -55,6 +55,29 @@ function pageState(page: AdminReadPage, overrides: Partial<OperationsPageState> 
 }
 
 describe('second-batch operations pages', () => {
+  it.each([TaskManagementPage, GrowthBadgesPage])('only exposes supported basic filters on %s', async (Page) => {
+    const onFilterChange = vi.fn()
+    const onRefresh = vi.fn()
+    render(<Page {...pageState({ sections: [], nextCursor: null }, { onFilterChange, onRefresh })} />)
+
+    expect(screen.queryByText('多维度')).toBeNull()
+    expect(screen.queryByText('时间范围')).toBeNull()
+    expect(screen.getByText('每页')).toBeTruthy()
+    await userEvent.type(screen.getByRole('textbox'), '验收任务')
+    await userEvent.click(screen.getByRole('button', { name: /筛\s*选/ }))
+    expect(onFilterChange).toHaveBeenLastCalledWith({ query: '验收任务', status: '', filters: undefined })
+    await userEvent.click(screen.getByRole('button', { name: '刷新数据' }))
+    expect(onRefresh).toHaveBeenCalledOnce()
+  })
+
+  it('retains the task status filter callback', async () => {
+    const onFilterChange = vi.fn()
+    render(<TaskManagementPage {...pageState({ sections: [], nextCursor: null }, { onFilterChange })} />)
+    await userEvent.click(screen.getAllByRole('combobox')[0])
+    await userEvent.click(await screen.findByText('已发布'))
+    expect(onFilterChange).toHaveBeenLastCalledWith({ query: '', status: 'PUBLISHED', filters: undefined })
+  })
+
   it('exposes task detail, create, and cursor pagination intents', async () => {
     const onWrite = vi.fn()
     const onOpenDetail = vi.fn()

@@ -20,7 +20,6 @@ interface OperationsReadPageProps extends OperationsPageState {
   description: string
   searchPlaceholder: string
   statusOptions: Array<{ value: string; label: string }>
-  dimensionOptions?: Array<{ value: string; label: string }>
   actions?: ReactNode
   paginated?: boolean
   detailRouteForSection?: (section: AdminTableSection, index: number) => AdminDetailRoute | null
@@ -32,7 +31,6 @@ export function OperationsReadPage({
   description,
   searchPlaceholder,
   statusOptions,
-  dimensionOptions,
   actions,
   paginated,
   detailRouteForSection,
@@ -67,8 +65,6 @@ export function OperationsReadPage({
         placeholder={searchPlaceholder}
         statusOptions={statusOptions}
         loading={loading}
-        dimensionOptions={dimensionOptions}
-        showTimeRange
         showPageSize
         pageSize={query.limit ?? 20}
         onPageSizeChange={onPageSizeChange}

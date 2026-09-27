@@ -8,8 +8,11 @@
 | --- | --- | --- |
 | 工程入口 | [根 README](../README.md) | 工程组成、开始使用、常用命令 |
 | 协作规则 | [AGENTS.md](../AGENTS.md) | 技术边界、开发规则、完成门禁 |
+| 安全 | [SECURITY.md](SECURITY.md) | 仓库密钥、环境与安全边界 |
+| 质量门禁 | [QUALITY_GATES.md](QUALITY_GATES.md) | 本地 `verify`/`verify:all` 门禁与 CI Node 约束 |
 | 业务语言 | [CONTEXT.md](../CONTEXT.md) | 统一术语和领域含义 |
 | 产品与视觉 | [DESIGN.md](../DESIGN.md) | 小程序设计规则与品牌入口 |
+| 品牌定制 | [CUSTOMIZATION.md](CUSTOMIZATION.md) | 品牌字符串、配置与整站替换入口 |
 | 组件画布 | [design-system/canvas.html](design-system/canvas.html) | 设计系统全量组件的可视化预览、属性与变种（浏览用快照，事实来源为 `.agents/skills/mip-design-system`） |
 | 当前架构 | [ARCHITECTURE.md](ARCHITECTURE.md) | 小程序、Web、服务端和共享契约边界 |
 | 产品要求 | [mip/REQUIREMENTS.md](mip/REQUIREMENTS.md) | 业务规则和已确认范围 |
@@ -20,6 +23,8 @@
 | 数据语义 | [data-contract.md](data-contract.md) | 数据归属、写入边界和隐私规则 |
 | CloudBase | [CLOUDBASE.md](CLOUDBASE.md) | 云资源和运行时安全边界 |
 | 部署 | [DEPLOYMENT.md](DEPLOYMENT.md) | 环境初始化与发布步骤 |
+| 公告 | [ANNOUNCEMENTS.md](ANNOUNCEMENTS.md) | 社区公告的公开事实、API 与管理边界 |
+| Banner | [BANNERS.md](BANNERS.md) | Banner 服务端事实、API 与管理能力 |
 | 运营 | [OPERATIONS.md](OPERATIONS.md) | 日常管理、恢复和受控操作 |
 | Web 管理端 | [admin-web README](../admin-web/README.md) | Web 开发、架构、设计与验证入口 |
 

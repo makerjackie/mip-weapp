@@ -42,16 +42,6 @@ export interface AdminMutationField<Name extends string = string> {
   wide?: boolean
 }
 
-export interface AdminPeopleMutationActionConfig {
-  action: AdminPeopleMutationAction
-  capability: string
-  title: string
-  description: string
-  fields: readonly AdminMutationField[]
-}
-
-export type PeopleMutationFieldConfig = AdminMutationField
-
 export type AdminPeopleMutationValues = Record<string, unknown>
 export type DetailFieldReader = (sectionTitle: string, label: string) => string
 
@@ -380,13 +370,6 @@ export function buildAdminPeopleMutationInput(
     case 'mip.admin.adminAccounts.resetCredential': return buildAdminAccountResetCredential(definition, values)
     case 'mip.admin.entitlements.grant': return buildEntitlementGrant(values)
   }
-}
-
-export function validateAdminPeopleMutationInput(
-  definition: AdminPeopleMutationDefinition,
-  submittedValues: AdminPeopleMutationValues,
-): boolean {
-  return buildAdminPeopleMutationInput(definition, submittedValues) !== null
 }
 
 function buildUserUpdate(definition: AdminPeopleMutationDefinition, values: AdminPeopleMutationValues) {

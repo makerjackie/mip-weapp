@@ -527,8 +527,12 @@ Page({
       this.setData({ collaborationOpportunityState: 'ready', collaborationOpportunities: [], collaborationOpportunityCursor: '' })
       return
     }
+    const version = this.portfolioVersions.opportunities
     try {
       const page = await opportunityModule.listMyCooperations()
+      if (version !== this.portfolioVersions.opportunities) {
+        return
+      }
       this.setData({
         collaborationOpportunityState: 'ready',
         collaborationOpportunities: page.items.map(item => ({ ...item, avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(value => typeof value === 'string' && value) : [] })),
@@ -536,6 +540,9 @@ Page({
       })
     }
     catch {
+      if (version !== this.portfolioVersions.opportunities) {
+        return
+      }
       this.setData(this.data.collaborationOpportunities.length
         ? { message: '合作意向更新失败，已保留上次结果。' }
         : { collaborationOpportunityState: 'error' })

@@ -95,6 +95,7 @@ describe('profile visits', () => {
     const oneCalls = []
     const database = {
       async query(sql, params) {
+        if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_user_badge_equipment') || sql.includes('FROM mip_growth_levels')) return []
         calls.push({ sql, params })
         assert.match(sql, /FROM mip_profile_visits/)
         assert.doesNotMatch(sql, /GROUP BY visitor_user_id/)

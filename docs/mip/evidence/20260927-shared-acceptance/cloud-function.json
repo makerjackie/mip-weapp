@@ -1,0 +1,14 @@
+{
+  "functionName": "mip-opportunities-api",
+  "codeSha256": "8cd0c09dde567a40eb97893d909bcbf15024c12ae5771efeac3cc9167d492fe6",
+  "readBackAt": "2026-09-27T02:10:14.258Z",
+  "codeAndConfigurationReadback": true,
+  "managementHealthCall": "CAM authentication failed",
+  "wechatSdkHealth": {
+    "qaTransportPresent": false,
+    "ok": true,
+    "persistence": "cloudbase-mysql",
+    "at": "2026-09-27T02:11:04.223Z"
+  },
+  "uploadedMiniProgram": false
+}

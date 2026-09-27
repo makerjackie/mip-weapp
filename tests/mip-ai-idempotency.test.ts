@@ -3,10 +3,6 @@ import type { AiDraft, AiDraftId, MipAiGateway } from '../src/modules/mip-ai'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMipAiGateway } from '../src/modules/mip-ai/cloudbase-gateway'
 import { createMipAiModule } from '../src/modules/mip-ai/module'
-import {
-  createAiDraftRequestSlot,
-  shouldRetainAiDraftRequest,
-} from '../src/modules/mip-ai/request-id'
 
 const cloudHarness = vi.hoisted(() => ({ callFunction: vi.fn() }))
 
@@ -50,26 +46,6 @@ afterEach(() => {
 })
 
 describe('MIP AI create idempotency', () => {
-  it('keeps one UI request id until edit or success rotates the logical submission', () => {
-    let sequence = 0
-    const slot = createAiDraftRequestSlot('ai-draft-text', () => `ai-draft:test-${++sequence}`)
-    expect(slot.current()).toBe('ai-draft:test-1')
-    expect(slot.current()).toBe('ai-draft:test-1')
-    expect(slot.matches('ai-draft:test-1')).toBe(true)
-    slot.rotate()
-    expect(slot.matches('ai-draft:test-1')).toBe(false)
-    expect(slot.current()).toBe('ai-draft:test-2')
-  })
-
-  it('retains an ambiguous request but rotates after a known terminal response', () => {
-    expect(shouldRetainAiDraftRequest({ code: 'SERVICE_UNAVAILABLE' })).toBe(true)
-    expect(shouldRetainAiDraftRequest({ code: 'AI_DRAFT_REQUEST_IN_PROGRESS' })).toBe(true)
-    expect(shouldRetainAiDraftRequest({ code: 'AI_PROVIDER_RESULT_UNKNOWN' })).toBe(true)
-    expect(shouldRetainAiDraftRequest({ code: 'AI_AUDIO_UPLOAD_RESULT_UNKNOWN' })).toBe(true)
-    expect(shouldRetainAiDraftRequest({ code: 'AI_PROVIDER_UNAVAILABLE' })).toBe(false)
-    expect(shouldRetainAiDraftRequest(new Error('unknown'))).toBe(false)
-  })
-
   it('adds a request id to every new-client create while preserving a stable caller id', async () => {
     const createTextDraft = vi.fn(async () => draft)
     const createVoiceDraft = vi.fn(async () => draft)

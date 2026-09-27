@@ -1,5 +1,7 @@
 'use strict'
 
+const { loadPublicPersonDetails } = require('./public-person-details')
+
 const { randomUUID } = require('node:crypto')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const { lockActiveContributor } = require('../lib/auth')
@@ -47,21 +49,6 @@ function visitorDto(row, caller) {
     lastVisitedAt: iso(row.last_visited_at),
     unread: Boolean(row.has_unread),
   }
-}
-
-async function assertVisibleTarget(database, caller, profileUserId) {
-  const blockFilter = mutualBlockFilter(caller.userId, 'target.id', 'target.app_id')
-  const row = await database.one(
-    `SELECT target.id
-     FROM mip_users target
-     INNER JOIN mip_profiles target_profile
-       ON target_profile.app_id = target.app_id AND target_profile.user_id = target.id
-     WHERE target.app_id = ? AND target.id = ? AND target.status = 'ACTIVE'
-       AND ${blockFilter.sql || '1 = 1'}
-     LIMIT 1`,
-    [caller.appId, profileUserId, ...blockFilter.params],
-  )
-  if (!row) throw new Error('NOT_FOUND')
 }
 
 async function recordProfileVisit(database, caller, rawInput = {}) {
@@ -150,6 +137,7 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
     params,
   )
   const page = rows.slice(0, limit)
+  const details = await loadPublicPersonDetails(database, caller.appId, page.map(row => row.visitor_id))
   const [unread, total] = await Promise.all([
     database.one(
       `SELECT COUNT(*) AS count
@@ -176,7 +164,7 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
     ),
   ])
   return {
-    items: page.map(row => visitorDto({ ...row, visitor_user_id: row.visitor_id }, caller)),
+    items: page.map(row => ({ ...visitorDto({ ...row, visitor_user_id: row.visitor_id }, caller), ...details.get(row.visitor_id) })),
     unreadCount: Number(unread?.count || 0),
     totalViewCount: Number(total?.count || 0),
     readThroughAt: iso(total?.read_through_at) || undefined,
@@ -260,7 +248,6 @@ async function markProfileVisitorRead(database, caller, rawInput = {}) {
 }
 
 module.exports = {
-  assertVisibleTarget,
   decodeVisitorCursor,
   encodeVisitorCursor,
   listProfileVisitors,

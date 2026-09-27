@@ -153,10 +153,9 @@ Page({
       }
     }
     catch (error) {
-      this.setData({
-        state: 'error',
-        message: error instanceof Error ? error.message : '机会加载失败',
-      })
+      this.setData(this.data.item
+        ? { message: '机会更新失败，已保留上次结果。' }
+        : { state: 'error', message: error instanceof Error ? error.message : '机会加载失败' })
     }
   },
 
@@ -380,6 +379,7 @@ Page({
     if (!item?.canDelete || this.data.commentActingId) {
       return
     }
+    this.setData({ commentActingId: item.id })
     wx.showModal({
       title: '删除评论',
       content: '删除后评论将不再展示。',
@@ -388,7 +388,11 @@ Page({
         if (result.confirm) {
           void this.confirmDeleteComment(item)
         }
+        else {
+          this.setData({ commentActingId: '' })
+        }
       },
+      fail: () => this.setData({ commentActingId: '' }),
     })
   },
 

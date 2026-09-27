@@ -25,6 +25,7 @@ function database(options = {}) {
     },
     async query(sql, params) {
       calls.push({ sql, params })
+      if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_user_badge_equipment') || sql.includes('FROM mip_growth_levels')) return []
       return options.rows || [row, { ...row, actor_user_id: '30000000-0000-4000-8000-000000000002' }]
     },
   }
@@ -54,7 +55,7 @@ describe('public profile interest roster', () => {
     assert.equal(count.sql, summaryCount.sql)
     assert.deepEqual(count.params, summaryCount.params)
     await listPublicProfileInterests(db, caller, { profileRef, cursor: result.nextCursor, limit: 1 })
-    assert.deepEqual(db.calls.at(-1).params.slice(-4), [row.updated_at, row.updated_at, actor, 2])
+    assert.deepEqual(db.calls.filter(call => call.sql.startsWith('SELECT actor.id')).at(-1).params.slice(-4), [row.updated_at, row.updated_at, actor, 2])
   })
 
   it('enforces trusted membership, target visibility, blocks and app-bound references before returning identities', async () => {

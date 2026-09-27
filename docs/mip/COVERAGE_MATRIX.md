@@ -10,7 +10,7 @@
 - 用户流程：[里程碑 1 用户流程](sources/github/里程碑1-MIP_v1.1.0_待评审需求_用户流程梳理.md)
 - 需求澄清：[2026-08-22 会议纪要](sources/github/会议纪要_20260822_需求澄清.md)
 - AME 增补：[2026-08-24 飞书快照](sources/feishu/MIP1.1.0需求看板-2026-08-24.md)
-- 视觉：[FIGMA_MAP.md](FIGMA_MAP.md)
+- 视觉：现行以 [DESIGN.md](../../DESIGN.md) 为准；历史节点/资产溯源见 [FIGMA_MAP.md](FIGMA_MAP.md)
 
 来源文件只用于追溯；源表状态和原型演示内容不直接成为实现或验收结论。
 
@@ -63,9 +63,9 @@
 
 | 页面族 | 设计输入 | 实现状态 | 验证状态 | 当前边界 |
 | --- | --- | --- | --- | --- |
-| 我的、档案、名片、勋章、合作卡、案例、成长 | [FIGMA_MAP.md](FIGMA_MAP.md) 的个人中心与档案节点 | implemented | verified-local + evidence-missing | 设计截图已固定；需当前实现同尺寸对照 |
-| 活动列表、详情、报名、参与人、心动 | [FIGMA_MAP.md](FIGMA_MAP.md) 的活动节点 | implemented | verified-local + external-wait | 媒体、地图、扫码、支付和相册仍需真机 |
-| 机会列表、筛选、详情、人才、发布 | [FIGMA_MAP.md](FIGMA_MAP.md) 的机会节点 | implemented | verified-local + evidence-missing | 需当前实现同尺寸对照及真实数据旅程 |
+| 我的、档案、名片、勋章、合作卡、案例、成长 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的个人中心与档案节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + evidence-missing | 设计截图已固定；需当前实现同尺寸对照 |
+| 活动列表、详情、报名、参与人、心动 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的活动节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + external-wait | 媒体、地图、扫码、支付和相册仍需真机 |
+| 机会列表、筛选、详情、人才、发布 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的机会节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + evidence-missing | 需当前实现同尺寸对照及真实数据旅程 |
 | 小程序现场工作台 | `DESIGN.md` 的现场工作台规则 | implemented | evidence-missing + external-wait | 旧 375px/1024px 完整管理端证据只作历史追溯；当前四路由需 375px 与真机验收 |
 | React Web | `admin-web/DESIGN.md` 与 WorkBuddy 信息架构 | implemented | verified-local + verified-production | 响应式读取已验；完整生产写操作仍按领域逐项验收 |
 

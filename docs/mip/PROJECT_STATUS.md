@@ -90,7 +90,7 @@
 
 - [2026-09-15 访客已读与感兴趣交互修复](evidence/2026-09-15-visitors-interest-fix.md)（机会服务已更新并通过健康回读；真机复测待完成）
 - [2026-09-14 微信支付修复与验收](evidence/2026-09-14-wechat-pay-fix.md)（CloudPay 查单、通知和内部签名已修复并部署；用户确认会员支付正常，活动支付及退款闭环仍待验收）
-- [当前 React Web 线上验收](evidence/admin-web-live-2026-08-28-react/README.md)
+- [历史 React Web 线上验收（2026-08-28）](evidence/admin-web-live-2026-08-28-react/README.md)（只作历史追溯；当前 Web 状态以本文件环境状态表和 2026-09-26 部署记录为准）
 - [早期 React Web 线上证据](evidence/admin-web-live-2026-08-28/README.md)（只作历史追溯）
 - [旧小程序完整管理端响应式密度验收](evidence/admin-density-2026-08-26/README.md)（只作历史追溯，不证明当前现场工作台）
 - [历史设计固定证据](evidence/figma-2026-08-25/README.md)（只作历史追溯，不作为本轮设计依据）

@@ -18,6 +18,7 @@ import {
   reportCategoryOptions,
 } from '../../../modules/mip-community'
 import { cooperationModule } from '../../../modules/mip-cooperation'
+import { mipEventsModule } from '../../../modules/mip-events/client'
 import { evaluateAccess, mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { careerIdentityOptions } from '../../../modules/mip-identity/profile-options'
@@ -112,6 +113,7 @@ Page({
   safetyActionBusy: false,
   influenceRequest: 0,
   profileRequest: 0,
+  interactionBarRequest: 0,
   stopInterestSubscription: null as (() => void) | null,
 
   onLoad(query: Record<string, string | undefined>) {
@@ -151,6 +153,7 @@ Page({
   },
 
   onUnload() {
+    this.interactionBarRequest += 1
     this.profileRequest += 1
     this.stopInterestSubscription?.()
     this.stopInterestSubscription = null
@@ -203,6 +206,10 @@ Page({
       if (request !== this.profileRequest) {
         return
       }
+      if (this.data.profile) {
+        this.setData({ message: '档案更新失败，已保留上次结果。' })
+        return
+      }
       this.setData({
         state: 'error',
         message: error instanceof Error ? error.message : '公开档案加载失败。',
@@ -210,15 +217,33 @@ Page({
     }
   },
 
-  // C1 终审矩阵：普通用户（INTERACT 未就绪）可见可点但弹解锁；嘉宾（就绪且无有效会员权益）
-  // 整条隐藏；玩家功能态。快照不可得时按普通用户处理，点击路径会再次核对。
+  // 普通用户显示解锁入口，已有真实签到的嘉宾隐藏，玩家显示功能入口。
+  // 可选签到查询失败时保守保留解锁入口，不影响已经加载的档案正文。
   async resolveInteractionBar() {
+    const request = ++this.interactionBarRequest
+    const profileRequest = this.profileRequest
+    const profileRef = this.data.profileRef
+    const current = () => request === this.interactionBarRequest
+      && profileRequest === this.profileRequest && profileRef === this.data.profileRef
     const snapshot = mipIdentityModule.peekSnapshot()
       || await mipIdentityModule.loadSnapshot().catch(() => null)
-    this.applyInteractionBarMode(snapshot)
+    if (!current()) {
+      return
+    }
+    let hasAttended = false
+    if (snapshot && snapshot.membership.kind !== 'PLAYER' && evaluateAccess(snapshot, {
+      action: 'INTERACT',
+      source: { navigation: 'navigateBack' },
+    }).ready) {
+      const registrations = await mipEventsModule.listMyRegistrations(undefined, 'ATTENDED').catch(() => null)
+      hasAttended = Number(registrations?.counts?.attended || 0) > 0
+    }
+    if (current()) {
+      this.applyInteractionBarMode(snapshot, hasAttended)
+    }
   },
 
-  applyInteractionBarMode(snapshot: IdentityAccessSnapshot | null | undefined) {
+  applyInteractionBarMode(snapshot: IdentityAccessSnapshot | null | undefined, hasAttended = false) {
     if (!snapshot || !evaluateAccess(snapshot, {
       action: 'INTERACT',
       source: { navigation: 'navigateBack' },
@@ -226,7 +251,7 @@ Page({
       this.setData({ interactionBar: 'locked' })
       return
     }
-    this.setData({ interactionBar: snapshot.membership.kind === 'PLAYER' ? 'active' : 'hidden' })
+    this.setData({ interactionBar: snapshot.membership.kind === 'PLAYER' ? 'active' : hasAttended ? 'hidden' : 'locked' })
   },
 
   observeInterest(profileRef: string) {

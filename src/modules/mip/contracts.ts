@@ -51,24 +51,6 @@ export const mipErrorCodes = [
 
 export type MipErrorCode = (typeof mipErrorCodes)[number]
 
-export interface MipErrorShape {
-  code: MipErrorCode
-  message: string
-  retryable: boolean
-  traceId?: string
-  details?: Record<string, unknown>
-}
-
-export interface PageRequest {
-  cursor?: string
-  limit?: number
-}
-
-export interface PageResult<Item> {
-  items: Item[]
-  nextCursor?: string
-}
-
 export interface EntitlementProjection {
   status: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'REFUNDED'
   startsAt: string
@@ -97,13 +79,6 @@ export interface CallerCapabilities {
   capabilities: string[]
 }
 
-export interface CallerContext {
-  appId: string
-  userId: UserId
-  primaryBranchId?: BranchId
-  grants: CallerCapabilities[]
-}
-
 export const mipDomainEvents = [
   'identity.user_registered',
   'identity.profile_completed',
@@ -123,8 +98,6 @@ export const mipDomainEvents = [
   'growth.entry_recorded',
   'message.inbox_created',
 ] as const
-
-export type MipDomainEvent = (typeof mipDomainEvents)[number]
 
 export function resolveUserKind(
   entitlement: EntitlementProjection | null | undefined,

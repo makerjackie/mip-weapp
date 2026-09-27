@@ -54,24 +54,6 @@ export interface MembershipInvitationAttribution {
   avatarUrl?: string
 }
 
-export interface MembershipCheckoutFact {
-  orderType: 'MEMBERSHIP'
-  planId: MembershipPlanId
-  amountCents: number
-  currency: 'CNY'
-  durationDays: number
-  productSnapshot: {
-    planKey: string
-    name: string
-    durationDays: number
-    priceCents: number
-    currency: 'CNY'
-    catalogStage: CatalogStage
-    benefits: string[]
-    version: number
-  }
-}
-
 export interface CommerceOrder {
   id: OrderId
   userId: UserId
@@ -100,17 +82,6 @@ export interface CommerceOrder {
   version: number
   createdAt?: string
   updatedAt?: string
-}
-
-export interface MembershipEntitlement {
-  id: EntitlementId
-  userId: UserId
-  orderId: OrderId
-  planId: MembershipPlanId
-  status: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'REFUNDED'
-  startsAt: string
-  endsAt: string
-  version: number
 }
 
 export interface MembershipBenefitItem {

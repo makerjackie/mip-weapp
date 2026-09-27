@@ -424,5 +424,3 @@ export function createMipEventsModule(
     },
   }
 }
-
-export type MipEventsModule = ReturnType<typeof createMipEventsModule>

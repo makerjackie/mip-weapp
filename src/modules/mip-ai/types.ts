@@ -3,13 +3,6 @@ import type { Brand, UserId } from '../mip'
 export type AiDraftId = Brand<string, 'AiDraftId'>
 export type AiDraftPurpose = 'PROFILE' | 'COOPERATION_CARD' | 'SUPER_CASE' | 'OPPORTUNITY'
 
-export interface AiOpportunityDraftFields {
-  title?: string
-  valueSummary?: string
-  cityLabel?: string
-  targetSummary?: string
-  description?: string
-}
 export type AiDraftStatus
   = | 'UPLOADED'
     | 'TRANSCRIBING'

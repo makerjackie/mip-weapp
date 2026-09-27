@@ -241,7 +241,7 @@
     <!-- journey-review J2-07/J3-02：非玩家不拦截，人才数据为空时的默认空态；带筛选时保留可操作的清筛选空态。 -->
     <view wx:elif="{{mode === 'cooperation' && !cooperationTalents.length && !hasAppliedFilters && authenticated}}" class="mt-[84rpx] flex flex-col items-center">
       <image class="h-[360rpx] w-[360rpx]" src="/assets/figma/opportunities/guest-mystery-box.png" mode="aspectFill" />
-      <view wx:if="{{!player}}" class="mt-4 flex min-h-[88rpx] items-center justify-center rounded-full border border-canvas bg-brand px-6 text-[32rpx] font-medium text-on-brand" aria-role="button" bind:tap="openBecomePlayerUnlock">去成为玩家解锁权限 &gt;</view>
+      <view wx:if="{{!player}}" class="mt-4 flex min-h-[88rpx] items-center justify-center rounded-full border border-canvas bg-brand px-6 text-[32rpx] font-medium text-on-brand" aria-role="button" bind:tap="openBecomePlayerUnlock">去成为玩家解锁权限 ›</view>
       <view wx:else class="mt-4 text-[32rpx] font-medium leading-[44rpx] text-ink">暂无人才数据</view>
     </view>
     <view wx:elif="{{mode === 'cooperation' && !cooperationTalents.length}}" class="mx-3 mt-5"><mip-empty-state title="没有找到人才" description="调整筛选条件后重试。" action-text="清除筛选" bind:action="clearAppliedFilters" /></view>

@@ -1,5 +1,6 @@
 import type { ReceivedInteractionPage, ReceivedVisitor } from './types'
 import { MipOpportunityError } from './error'
+import { parsePublicPersonDetails } from './profile-interests'
 
 /** The visitor service returns flat public profiles, unlike other interaction lists. */
 export function parseReceivedVisitors(value: unknown): ReceivedInteractionPage {
@@ -36,6 +37,7 @@ export function parseReceivedVisitors(value: unknown): ReceivedInteractionPage {
       visitId: typeof row.visitId === 'string' ? row.visitId : undefined,
       status: 'ACTIVE',
       actor: {
+        ...parsePublicPersonDetails(row),
         profileRef: row.profileRef,
         nickname: row.nickname,
         avatarUrl: typeof row.avatarUrl === 'string' ? row.avatarUrl : undefined,

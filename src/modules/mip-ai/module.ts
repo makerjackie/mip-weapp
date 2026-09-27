@@ -99,5 +99,3 @@ export function createMipAiModule(gateway: MipAiGateway) {
     },
   }
 }
-
-export type MipAiModule = ReturnType<typeof createMipAiModule>

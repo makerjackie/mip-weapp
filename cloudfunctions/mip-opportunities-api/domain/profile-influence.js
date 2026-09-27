@@ -1,5 +1,6 @@
 'use strict'
 
+const { loadPublicPersonDetails } = require('./public-person-details')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const {
   encodeCursor,
@@ -135,8 +136,9 @@ async function listPublicProfileInterests(database, caller, input = {}) {
     ),
   ])
   const page = rows.slice(0, limit)
+  const details = await loadPublicPersonDetails(database, caller.appId, page.map(row => row.actor_user_id))
   return {
-    items: page.map(row => ({ ...influencePersonDto(row, caller), interestedAt: iso(row.updated_at) })),
+    items: page.map(row => ({ ...influencePersonDto(row, caller), ...details.get(row.actor_user_id), interestedAt: iso(row.updated_at) })),
     totalCount: Number(count?.count || 0),
     nextCursor: rows.length > limit && page.length
       ? encodePersonCursor(page.at(-1).updated_at, page.at(-1).actor_user_id, caller)
@@ -268,12 +270,13 @@ async function listInfluenceGuests(database, caller, input = {}) {
     [params[0], params[1], caller.appId, ...params.slice(2)],
   )
   const page = rows.slice(0, limit)
+  const details = await loadPublicPersonDetails(database, caller.appId, page.map(row => row.actor_user_id))
   return {
     category: 'GUEST',
     items: page.map(row => ({
       kind: 'GUEST',
       status: 'ACTIVE',
-      actor: influencePersonDto(row, caller),
+      actor: { ...influencePersonDto(row, caller), ...details.get(row.actor_user_id) },
       event: { id: row.event_id, title: row.event_title },
       invitationCount: Number(row.invitation_count || 0),
       unread: false,

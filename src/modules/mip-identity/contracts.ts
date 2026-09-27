@@ -292,27 +292,6 @@ export interface MipIdentityActionInputMap {
   setPrimaryBranch: SetPrimaryBranchInput
 }
 
-export interface MipIdentityActionResultMap {
-  signIn: IdentityAccessSnapshot
-  getAccessSnapshot: IdentityAccessSnapshot
-  acceptAgreements: IdentityAccessSnapshot
-  bindWechatPhone: IdentityAccessSnapshot
-  requestPhoneSms: PhoneSmsRequestResult
-  bindSmsPhone: IdentityAccessSnapshot
-  closeAccount: AccountClosureResult
-  getProfile: MipProfileSnapshot
-  getMembershipAgreement: MembershipAgreement
-  getProfileCardSettings: ProfileCardSettings
-  getMyProfileCardCode: ProfileCardCode
-  getPublicProfile: PublicMipProfile
-  resolveProfileCardScene: ProfileCardSceneResolution
-  updateProfile: IdentityAccessSnapshot
-  updateCard: IdentityAccessSnapshot
-  listProfileTags: ProfileTagOption[]
-  listBranches: CityBranchSummary[]
-  setPrimaryBranch: BranchSelectionSnapshot
-}
-
 export type MipIdentityAction = keyof MipIdentityActionInputMap
 
 export interface MipIdentityRequest<A extends MipIdentityAction = MipIdentityAction> {

@@ -16,5 +16,3 @@ export const tabBarItems = [
     label: '我的',
   },
 ] as const
-
-export type TabBarItem = (typeof tabBarItems)[number]

@@ -1,0 +1,25 @@
+{
+  "verifiedAt": "2026-09-27T02:16:07.276128+00:00",
+  "verifyAll": {
+    "passed": true,
+    "miniProgramTests": 1465,
+    "adminTests": 71,
+    "logSha256": "b7191a3c99c27a5e49391310a48ffda950aa8e1414aa73049aecacf6b38b1210"
+  },
+  "runtimePreflight": {
+    "passed": true
+  },
+  "diffCheck": {
+    "passed": true
+  },
+  "hostRestoration": {
+    "hostMatchesDist": true,
+    "qaBridgePresent": false,
+    "at": "2026-09-27T02:11:45.560Z"
+  },
+  "browser": {
+    "updatedContentObserved": true,
+    "nextAndPrevious": true,
+    "commentsPersistAndExport": "verified in preceding deployment; same UI code preserved"
+  }
+}

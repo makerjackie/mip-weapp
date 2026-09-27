@@ -40,6 +40,10 @@ Page({
     }
     catch (error) {
       const blocked = error instanceof MipOpportunityError && ['FORBIDDEN', 'AUTH_REQUIRED', 'NOT_FOUND'].includes(error.code)
+      if (!blocked && this.data.people.length) {
+        this.setData({ message: error instanceof Error ? error.message : '名单暂时无法加载。' })
+        return
+      }
       this.setData({
         state: blocked ? 'blocked' : 'error',
         people: [],
