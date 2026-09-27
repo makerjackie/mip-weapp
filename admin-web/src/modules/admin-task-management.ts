@@ -1,5 +1,6 @@
 import { taskCompletionRowActions } from './admin-row-operations.ts'
 import type { AdminRequestInput } from '../domain/contracts'
+import { boundedInteger, nonNegativeVersion } from './admin-coercions.ts'
 import type {
   AdminDetailRequest,
   AdminDetailSection,
@@ -191,7 +192,7 @@ export async function loadTaskEligibleLevels(request: AdminRequest): Promise<Tas
     const level = record(item)
     const id = identifier(level.id)
     const name = text(level.name, 100)
-    const minimumExperience = safeNonNegativeInteger(level.minimumExperience)
+    const minimumExperience = nonNegativeVersion(level.minimumExperience)
     if (!id || !name || minimumExperience === null || level.status !== 'ACTIVE') {
       throw new Error('INVALID_TASK_LEVELS')
     }
@@ -862,16 +863,6 @@ function integer(value: unknown) {
 function positiveInteger(value: unknown) {
   const number = Number(value)
   return Number.isSafeInteger(number) && number > 0 ? number : null
-}
-
-function safeNonNegativeInteger(value: unknown) {
-  const number = Number(value)
-  return Number.isSafeInteger(number) && number >= 0 ? number : null
-}
-
-function boundedInteger(value: unknown, minimum: number, maximum: number) {
-  const number = Number(value)
-  return Number.isSafeInteger(number) && number >= minimum && number <= maximum ? number : null
 }
 
 function text(value: unknown, maximum: number) {

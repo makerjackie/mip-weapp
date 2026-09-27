@@ -6,6 +6,8 @@ import type { AdminOperationAction, AdminRequestInput } from '../../domain/contr
 import type { AdminDetailRoute, AdminDetailView } from '../../modules/admin-details'
 import type { AdminOperationLaunchContext, AdminRowOperation } from '../../modules/admin-row-operations'
 import { messageScheduleCancelAction } from '../../modules/admin-row-operations'
+import { positiveVersion } from '../../modules/admin-coercions'
+import { record } from '../../modules/admin-read-formatters'
 import { useAdminOperations } from './admin-operation-provider'
 import { SensitiveExportButton } from './sensitive-export-button'
 
@@ -254,15 +256,6 @@ function safeMediaUrl(value: unknown) {
     return url.protocol === 'https:' && !url.username && !url.password ? url.href : ''
   }
   catch { return '' }
-}
-
-function record(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
-}
-
-function positiveVersion(value: unknown) {
-  const version = Number(value)
-  return Number.isSafeInteger(version) && version >= 1 ? version : null
 }
 
 interface CheckinQrcodeResult {

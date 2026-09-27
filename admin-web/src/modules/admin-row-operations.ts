@@ -1,5 +1,6 @@
-export type AdminRowOperationAction
-  = | 'mip.admin.adminAccounts.create'
+import { boundedInteger, identifier, nonNegativeVersion, positiveVersion, uniqueStringList } from './admin-coercions.ts'
+
+export type AdminRowOperationAction  = | 'mip.admin.adminAccounts.create'
     | 'mip.admin.adminAccounts.update'
     | 'mip.admin.adminAccounts.changeStatus'
     | 'mip.admin.events.registrations.review'
@@ -277,11 +278,11 @@ export function rolePolicyRowActions(policy: Record<string, unknown>): AdminRowO
     label: '更新策略',
     values: {
       roleKey,
-      capabilities: stringList(policy.capabilities),
+      capabilities: uniqueStringList(policy.capabilities),
       reset: false,
     },
     expectedVersion,
-    allowedCapabilities: stringList(policy.allowedCapabilities),
+    allowedCapabilities: uniqueStringList(policy.allowedCapabilities),
   }]
 }
 
@@ -333,32 +334,6 @@ export function messageScheduleCancelAction(
     targetId: campaignId,
     values: { campaignId, expectedVersion, expectedDispatchVersion, reason: '' },
   }
-}
-
-function identifier(value: unknown) {
-  const text = typeof value === 'string' ? value.trim() : ''
-  return text && text.length <= 128 && /^[A-Za-z0-9_.:-]+$/.test(text) ? text : ''
-}
-
-function positiveVersion(value: unknown) {
-  const version = Number(value)
-  return Number.isSafeInteger(version) && version >= 1 ? version : null
-}
-
-function nonNegativeVersion(value: unknown) {
-  const version = Number(value)
-  return Number.isSafeInteger(version) && version >= 0 ? version : null
-}
-
-function boundedInteger(value: unknown, minimum: number, maximum: number) {
-  const number = Number(value)
-  return Number.isSafeInteger(number) && number >= minimum && number <= maximum ? number : null
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? [...new Set(value.filter(item => typeof item === 'string' && item.trim()).map(String))]
-    : []
 }
 
 export function adminAccountRowActions(account: Record<string, unknown>): AdminRowOperation[] {

@@ -1,3 +1,5 @@
+import { record } from './admin-read-formatters.ts'
+
 export type OperationFieldOption = string | { value: string; label: string }
 
 export interface OperationField {
@@ -130,7 +132,7 @@ function normalizeAssetList(value: unknown, previous: unknown) {
   const previousById = new Map<string, OperationValues>()
   for (const item of previousItems) {
     const assetId = assetIdFrom(item)
-    if (assetId && !previousById.has(assetId)) previousById.set(assetId, recordValue(item))
+    if (assetId && !previousById.has(assetId)) previousById.set(assetId, record(item))
   }
 
   const submittedItems = typeof value === 'string'
@@ -143,7 +145,7 @@ function normalizeAssetList(value: unknown, previous: unknown) {
     if (!assetId || seen.has(assetId)) continue
     seen.add(assetId)
 
-    const submittedItem = recordValue(item)
+    const submittedItem = record(item)
     const previousItem = previousById.get(assetId)
     const caption = Object.hasOwn(submittedItem, 'caption')
       ? String(submittedItem.caption ?? '')
@@ -159,27 +161,23 @@ function assetListItems(value: unknown) {
 }
 
 function assetIdFrom(value: unknown) {
-  const candidate = typeof value === 'string' ? value : recordValue(value).assetId
+  const candidate = typeof value === 'string' ? value : record(value).assetId
   return String(candidate ?? '').trim()
 }
 
 function readPath(value: OperationValues, path: string) {
-  return path.split('.').reduce<unknown>((current, key) => recordValue(current)[key], value)
+  return path.split('.').reduce<unknown>((current, key) => record(current)[key], value)
 }
 
 function writePath(value: OperationValues, path: string, next: unknown) {
   const parts = path.split('.')
   let current = value
   for (const part of parts.slice(0, -1)) {
-    const child = recordValue(current[part])
+    const child = record(current[part])
     current[part] = child
     current = child
   }
   current[parts.at(-1)!] = next
-}
-
-function recordValue(value: unknown): OperationValues {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as OperationValues : {}
 }
 
 function cloneValues(value: OperationValues): OperationValues {

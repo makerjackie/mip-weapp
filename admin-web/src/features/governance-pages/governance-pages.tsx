@@ -2,6 +2,7 @@ import { PlusOutlined } from '@ant-design/icons'
 import { Button, Space, Tabs, Tag } from 'antd'
 import { useNavigate } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+import { identifier } from '../../modules/admin-coercions'
 import {
   ADMIN_PEOPLE_MUTATION_ACTIONS,
   ADMIN_PEOPLE_MUTATION_CONFIG,
@@ -389,9 +390,4 @@ function isAdminRowOperation(value: unknown): value is AdminRowOperation {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const operation = value as Partial<AdminRowOperation>
   return typeof operation.action === 'string' && typeof operation.label === 'string'
-}
-
-function identifier(value: unknown) {
-  const id = typeof value === 'string' ? value.trim() : ''
-  return id && id.length <= 128 && /^[A-Za-z0-9_.:-]+$/.test(id) ? id : ''
 }

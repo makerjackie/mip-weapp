@@ -4,13 +4,9 @@ import { useAdminSession } from '../../app/session-provider'
 import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
 import { getContentMutationForm, validateContentMutation } from '../../modules/content-mutation-forms'
 import { contentFormValues } from '../../modules/content-form-values'
+import { record } from '../../modules/admin-read-formatters'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 import { defaultContentFormValues } from './content-form-helpers'
-
-type Record = { [key: string]: unknown }
-function asRecord(value: unknown): Record {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record : {}
-}
 
 export function UserContentEditFormPage() {
   const params = useParams({ from: '/userContent/$contentId/edit' }) as { contentId?: string }
@@ -52,8 +48,8 @@ export function UserContentEditFormPage() {
     const contentId = separator > 0 ? rawContentId.slice(separator + 1) : rawContentId
     if (!['COOPERATION_CARD', 'SUPER_CASE'].includes(kind) || !contentId) return null
     const data = await request<unknown>('mip.admin.userContent.get', { kind, contentId })
-    const item = asRecord(data)
-    const owner = asRecord(item.owner)
+    const item = record(data)
+    const owner = record(item.owner)
     const itemKind = String(item.kind || kind)
     const draft = itemKind === 'COOPERATION_CARD'
       ? {

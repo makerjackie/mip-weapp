@@ -46,6 +46,8 @@ import {
   type AdminMediaUploadResult,
 } from '../modules/admin-media-upload'
 import { getAdminReadRouteDefinition, type AdminListQuery, type AdminTableRow } from '../modules/admin-read-pages'
+import { record } from '../modules/admin-read-formatters'
+import { nonEmptyString } from '../modules/admin-coercions'
 import type { AdminRowOperation } from '../modules/admin-row-operations'
 import type { AdminOperationAction } from '../domain/contracts'
 import { downloadTaskCompletionExport, exportTaskCompletions } from '../modules/admin-task-management'
@@ -274,32 +276,32 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
 
   const editEntity = async (intent: GovernanceMutationRequest): Promise<boolean> => {
     if (intent.action === 'mip.admin.announcements.save' && intent.targetId) {
-      const value = recordValue(await session.request('mip.admin.announcements.get', { announcementId: intent.targetId }))
+      const value = record(await session.request('mip.admin.announcements.get', { announcementId: intent.targetId }))
       void launch(intent.action, intent.targetId, null, {
         values: {
-          scopeType: textValue(value.scopeType) || 'PLATFORM',
-          branchId: textValue(value.branchId) || '',
-          title: textValue(value.title) || '',
-          summary: textValue(value.summary) || '',
-          body: textValue(value.body) || '',
-          targetType: textValue(value.targetType) || '',
-          targetId: textValue(value.targetId) || '',
-          visibleFrom: textValue(value.visibleFrom) || '',
-          visibleUntil: textValue(value.visibleUntil) || '',
+          scopeType: nonEmptyString(value.scopeType) || 'PLATFORM',
+          branchId: nonEmptyString(value.branchId) || '',
+          title: nonEmptyString(value.title) || '',
+          summary: nonEmptyString(value.summary) || '',
+          body: nonEmptyString(value.body) || '',
+          targetType: nonEmptyString(value.targetType) || '',
+          targetId: nonEmptyString(value.targetId) || '',
+          visibleFrom: nonEmptyString(value.visibleFrom) || '',
+          visibleUntil: nonEmptyString(value.visibleUntil) || '',
         },
         expectedVersion: Number(value.version) || intent.expectedVersion,
       })
       return true
     }
     if (intent.action === 'mip.admin.messageTemplates.save' && intent.targetId) {
-      const value = recordValue(await session.request('mip.admin.messageTemplates.get', { templateId: intent.targetId }))
+      const value = record(await session.request('mip.admin.messageTemplates.get', { templateId: intent.targetId }))
       void launch(intent.action, intent.targetId, null, {
         values: {
-          scopeType: textValue(value.scopeType) || 'PLATFORM',
-          branchId: textValue(value.branchId) || '',
-          name: textValue(value.name) || '',
-          title: textValue(value.title) || '',
-          body: textValue(value.body) || '',
+          scopeType: nonEmptyString(value.scopeType) || 'PLATFORM',
+          branchId: nonEmptyString(value.branchId) || '',
+          name: nonEmptyString(value.name) || '',
+          title: nonEmptyString(value.title) || '',
+          body: nonEmptyString(value.body) || '',
         },
         expectedVersion: Number(value.version) || intent.expectedVersion,
       })
@@ -434,14 +436,6 @@ function useRouteSearch() {
 function useUpdateSearch() {
   const navigate = useNavigate()
   return useCallback((next: AdminListSearch) => navigate({ search: next as never }), [navigate])
-}
-
-function recordValue(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
-}
-
-function textValue(value: unknown): string | undefined {
-  return typeof value === 'string' && value ? value : undefined
 }
 
 function listQuery(search: AdminListSearch): AdminListQuery {
