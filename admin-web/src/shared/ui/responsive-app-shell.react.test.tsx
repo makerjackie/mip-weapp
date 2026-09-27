@@ -17,9 +17,10 @@ vi.mock('@tanstack/react-router', () => ({
 
 afterEach(cleanup)
 
-function setup() {
+function setup(authenticated = false) {
   const client = new AdminApiClient()
   const getSession = vi.spyOn(client, 'getSession').mockRejectedValue(new AdminApiClientError('AUTH_REQUIRED', '请先登录'))
+  if (authenticated) getSession.mockResolvedValue({ enabled: true, actor: { id: 'actor-a', name: '运营账号' }, capabilities: [] })
   const beginLogin = vi.spyOn(client, 'beginLogin').mockResolvedValue({
     state: 'PENDING',
     code: '123456',
@@ -43,7 +44,7 @@ function setup() {
 }
 
 describe('web login entry', () => {
-  it('opens the numeric login flow directly from the top bar without displaying a permission error', async () => {
+  it('defaults to password login and only requests a numeric code when selected', async () => {
     const { beginLogin } = setup()
     await screen.findByText('请先登录')
     expect(screen.queryByText('已登录的运营页面')).not.toBeInTheDocument()
@@ -52,6 +53,9 @@ describe('web login entry', () => {
 
     await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: /登\s*录/ }))
     const dialog = await screen.findByRole('dialog')
+    await waitFor(() => expect(within(dialog).getByLabelText('手机号')).toBeVisible())
+    expect(beginLogin).not.toHaveBeenCalled()
+    await userEvent.click(within(dialog).getByRole('tab', { name: '小程序登录' }))
     await waitFor(() => expect(within(dialog).getByText('123456')).toBeVisible())
     expect(within(dialog).getByText(/我的 → 现场工作台 → 确认网页登录/)).toBeVisible()
     expect(within(dialog).getByText(/开发版或体验版/)).toBeVisible()
@@ -65,6 +69,7 @@ describe('web login entry', () => {
     getSession.mockResolvedValue({ enabled: true, actor: { id: 'actor-a', name: '运营账号' }, capabilities: [] })
     pollLogin.mockResolvedValue({ state: 'AUTHENTICATED', actor: { name: '运营账号' }, expiresAt: new Date(Date.now() + 60_000).toISOString() })
     await userEvent.click(screen.getByRole('button', { name: '运营登录' }))
+    await userEvent.click(await screen.findByRole('tab', { name: '小程序登录' }))
     await screen.findByText('123456')
     await screen.findByText('已登录的运营页面', {}, { timeout: 2_000 })
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -76,6 +81,7 @@ describe('web login entry', () => {
     pollLogin.mockResolvedValue({ state: 'PENDING', expiresAt: new Date(Date.now() - 1_000).toISOString(), pollAfterMs: 750 })
     await screen.findByText('请先登录')
     await userEvent.click(screen.getByRole('button', { name: '运营登录' }))
+    await userEvent.click(await screen.findByRole('tab', { name: '小程序登录' }))
     await screen.findByText('登录请求已过期，请重新获取', {}, { timeout: 2_000 })
     expect(screen.queryByText('123456')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '重新获取登录请求' }))
@@ -89,6 +95,7 @@ describe('web login entry', () => {
     pollLogin.mockRejectedValue(new AdminApiClientError('AUTH_UNAVAILABLE', '网页登录服务连接失败，请稍后重试'))
     await screen.findByText('请先登录')
     await userEvent.click(screen.getByRole('button', { name: '运营登录' }))
+    await userEvent.click(await screen.findByRole('tab', { name: '小程序登录' }))
     await screen.findByText('网页登录服务连接失败，请稍后重试', {}, { timeout: 2_000 })
     expect(screen.getByRole('button', { name: '重新获取登录请求' })).toBeVisible()
     expect(screen.queryByText('123456')).not.toBeInTheDocument()
@@ -101,5 +108,76 @@ describe('web login entry', () => {
     expect(screen.getByRole('button', { name: /重\s*试/ })).toBeVisible()
     expect(screen.queryByText('请先登录')).not.toBeInTheDocument()
     expect(screen.queryByText('权限不足')).not.toBeInTheDocument()
+  })
+})
+
+describe('password login UI', () => {
+  it('logs in with password and refreshes the protected session without a challenge', async () => {
+    const { client, getSession, beginLogin } = setup()
+    const login = vi.spyOn(client, 'loginWithPassword').mockResolvedValue()
+    await screen.findByText('请先登录')
+    await userEvent.click(screen.getByRole('button', { name: '运营登录' }))
+    const dialog = await screen.findByRole('dialog')
+    await userEvent.type(within(dialog).getByLabelText('手机号'), '13800000000')
+    await userEvent.type(within(dialog).getByLabelText('登录密码'), 'fictional-test-password')
+    getSession.mockResolvedValue({ enabled: true, actor: { id: 'actor-a', name: '运营账号' }, capabilities: [] })
+    await userEvent.click(within(dialog).getByRole('button', { name: /登\s*录/ }))
+    await screen.findByText('已登录的运营页面')
+    expect(login).toHaveBeenCalledWith('13800000000', 'fictional-test-password')
+    expect(beginLogin).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('shows wrong-password errors, clears password input, and allows another method', async () => {
+    const { client } = setup()
+    vi.spyOn(client, 'loginWithPassword').mockRejectedValue(new AdminApiClientError('INVALID_CREDENTIALS', '手机号或密码不正确'))
+    await screen.findByText('请先登录')
+    await userEvent.click(screen.getByRole('button', { name: '运营登录' }))
+    const dialog = await screen.findByRole('dialog')
+    await userEvent.type(within(dialog).getByLabelText('手机号'), '13800000000')
+    await userEvent.type(within(dialog).getByLabelText('登录密码'), 'fictional-test-password')
+    await userEvent.click(within(dialog).getByRole('button', { name: /登\s*录/ }))
+    await screen.findByText('手机号或密码不正确')
+    expect(within(dialog).getByLabelText('登录密码')).toHaveValue('')
+    expect(screen.queryByText('已登录的运营页面')).not.toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('tab', { name: '小程序登录' }))
+    await screen.findByText('123456')
+  })
+
+  it('ignores a pending challenge after switching back to password login', async () => {
+    const { client, beginLogin, pollLogin } = setup()
+    let resolve!: (value: Awaited<ReturnType<typeof client.beginLogin>>) => void
+    beginLogin.mockImplementation(() => new Promise(done => { resolve = done }))
+    await screen.findByText('请先登录')
+    await userEvent.click(screen.getByRole('button', { name: '运营登录' }))
+    await userEvent.click(screen.getByRole('tab', { name: '小程序登录' }))
+    await userEvent.click(screen.getByRole('tab', { name: '手机号密码登录' }))
+    resolve({ state: 'PENDING', code: '654321', expiresAt: new Date(Date.now() + 60_000).toISOString(), pollAfterMs: 750 })
+    await waitFor(() => expect(screen.getByLabelText('手机号')).toBeVisible())
+    expect(screen.queryByText('654321')).not.toBeInTheDocument()
+    expect(pollLogin).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('password change session boundary', () => {
+  it('closes settings and returns to password login after the server revokes the session', async () => {
+    const { client, beginLogin } = setup(true)
+    const status = vi.spyOn(client, 'getPasswordStatus').mockResolvedValue({ configured: true, maskedPhone: '138****0000', recentWechatAuth: false })
+    vi.spyOn(client, 'setPassword').mockResolvedValue({ configured: true, requiresLogin: true })
+    await screen.findByText('已登录的运营页面')
+    await userEvent.click(screen.getByRole('button', { name: '账号菜单' }))
+    await userEvent.click(await screen.findByText('设置 / 修改登录密码'))
+    await screen.findByLabelText('当前密码')
+    await userEvent.type(screen.getByLabelText('当前密码'), 'fictional-current-password')
+    await userEvent.type(screen.getByLabelText('新密码'), 'fictional-new-password')
+    await userEvent.type(screen.getByLabelText('确认新密码'), 'fictional-new-password')
+    await userEvent.click(screen.getByRole('button', { name: '保存密码' }))
+    await screen.findByText('登录密码已更新，请使用新密码重新登录')
+    expect(screen.queryByText('已登录的运营页面')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('新密码')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('登录密码')).toHaveValue('')
+    expect(status).toHaveBeenCalledTimes(1)
+    expect(beginLogin).not.toHaveBeenCalled()
   })
 })

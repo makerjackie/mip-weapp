@@ -83,3 +83,48 @@ describe('AdminApiClient network failures', () => {
     } satisfies Partial<AdminApiClientError>)
   })
 })
+
+describe('password authentication transport', () => {
+  it('sends credentials in a same-origin POST body and never a URL', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ authenticated: true })))
+    vi.stubGlobal('fetch', fetchMock)
+    await new AdminApiClient().loginWithPassword('13800000000', 'fictional-test-password')
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/password/login', expect.objectContaining({
+      method: 'POST', credentials: 'same-origin', body: JSON.stringify({ phone: '13800000000', password: 'fictional-test-password' }),
+    }))
+  })
+
+  it.each([[401, 'INVALID_CREDENTIALS'], [429, 'RATE_LIMITED']])('preserves password error code for HTTP %s', async (status, code) => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: { code, message: '登录未完成' } }), { status })))
+    await expect(new AdminApiClient().loginWithPassword('13800000000', 'fictional-test-password')).rejects.toMatchObject({ code, message: '登录未完成' })
+  })
+
+  it('reports a missing password route without falling back to demo', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>Not Found</html>', { status: 404 })))
+    await expect(new AdminApiClient().loginWithPassword('13800000000', 'fictional-test-password')).rejects.toMatchObject({ code: 'AUTH_UNAVAILABLE', message: '密码登录服务尚未部署，请使用小程序登录' })
+  })
+
+  it('reads password configuration using GET and rejects demo mutations before fetching', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ configured: true, maskedPhone: '138****0000', recentWechatAuth: false })))
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new AdminApiClient()
+    await expect(client.getPasswordStatus()).resolves.toMatchObject({ configured: true, recentWechatAuth: false })
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/password', expect.objectContaining({ method: 'GET', credentials: 'same-origin' }))
+    fetchMock.mockClear()
+    Object.defineProperty(client, 'demoMode', { value: true })
+    await expect(client.setPassword('fictional-test-password')).rejects.toMatchObject({ code: 'DEMO_READ_ONLY' })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('password change response', () => {
+  it.each([true, false])('preserves requiresLogin=%s from the server', async requiresLogin => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ configured: true, requiresLogin }))))
+    await expect(new AdminApiClient().setPassword('fictional-test-password')).resolves.toEqual({ configured: true, requiresLogin })
+  })
+  it('rejects responses without the session revocation decision', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ configured: true }))))
+    await expect(new AdminApiClient().setPassword('fictional-test-password')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
+  })
+})

@@ -21,6 +21,12 @@ export interface AdminLoginChallenge {
   pollAfterMs: number
 }
 
+export interface AdminPasswordStatus {
+  configured: boolean
+  maskedPhone: string
+  recentWechatAuth: boolean
+}
+
 export type AdminLoginChallengeStatus = {
   state: 'PENDING'
   expiresAt: string
@@ -82,16 +88,46 @@ export class AdminApiClient {
     await this.authRequest('/api/auth/logout')
   }
 
-  private async authRequest(path: string): Promise<Record<string, unknown>> {
+  async loginWithPassword(phone: string, password: string): Promise<void> {
+    this.assertPasswordAvailable()
+    const payload = await this.authRequest('/api/auth/password/login', { phone, password })
+    if (payload.authenticated !== true) throw new AdminApiClientError('INVALID_RESPONSE', '密码登录服务返回格式无效')
+  }
+
+  async getPasswordStatus(): Promise<AdminPasswordStatus> {
+    this.assertPasswordAvailable()
+    const payload = await this.authRequest('/api/auth/password', undefined, 'GET')
+    if (typeof payload.configured !== 'boolean' || typeof payload.maskedPhone !== 'string' || typeof payload.recentWechatAuth !== 'boolean') {
+      throw new AdminApiClientError('INVALID_RESPONSE', '密码设置服务返回格式无效')
+    }
+    return payload as unknown as AdminPasswordStatus
+  }
+
+  async setPassword(password: string, currentPassword?: string): Promise<{ configured: true; requiresLogin: boolean }> {
+    this.assertPasswordAvailable()
+    const payload = await this.authRequest('/api/auth/password', { password, ...(currentPassword ? { currentPassword } : {}) })
+    if (payload.configured !== true || typeof payload.requiresLogin !== 'boolean') throw new AdminApiClientError('INVALID_RESPONSE', '密码设置服务返回格式无效')
+    return { configured: true, requiresLogin: payload.requiresLogin }
+  }
+
+  private assertPasswordAvailable() {
+    if (this.demoMode) throw new AdminApiClientError('DEMO_READ_ONLY', '演示模式不能登录或修改密码')
+  }
+
+  private async authRequest(path: string, body?: Record<string, string>, method = 'POST'): Promise<Record<string, unknown>> {
     let response: Response
     try {
       response = await fetchWithTimeout(path, {
-        method: 'POST',
+        method,
         credentials: 'same-origin',
+        ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}),
       }, AUTH_REQUEST_TIMEOUT_MS)
     }
     catch (error) {
       throw connectionError(error, 'AUTH_UNAVAILABLE', '网页登录服务连接失败，请稍后重试')
+    }
+    if (path.startsWith('/api/auth/password') && [404, 405].includes(response.status)) {
+      throw new AdminApiClientError('AUTH_UNAVAILABLE', '密码登录服务尚未部署，请使用小程序登录')
     }
     let payload: unknown
     try { payload = await response.json() } catch {

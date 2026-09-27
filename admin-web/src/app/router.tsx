@@ -69,6 +69,13 @@ const opportunityEditRoute = createRoute({
   component: routeComponents['/opportunities/$opportunityId/edit'],
 })
 
+const knowledgeListRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/knowledge',
+  validateSearch,
+  component: routeComponents['/knowledge'],
+})
+
 const knowledgeEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/knowledge/$contentId/edit',
@@ -87,6 +94,7 @@ const routeTree = rootRoute.addChildren([
   eventEditRoute,
   taskEditRoute,
   opportunityEditRoute,
+  knowledgeListRoute,
   knowledgeEditRoute,
   userContentEditRoute,
 ])

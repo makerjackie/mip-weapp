@@ -1,3 +1,4 @@
+import { createPasswordAuth, PasswordAuthError, passwordAuthDiagnostic, type PasswordSession } from './password-auth.ts'
 import type { AdminApiResponse, AdminRequest } from '../src/domain/contracts'
 import {
   REVIEWED_ADMIN_MUTATION_ACTIONS,
@@ -38,7 +39,7 @@ export interface AdminBffEnv {
   MIP_WEB_SESSION_SECRET?: string
 }
 
-interface SessionClaims {
+interface SessionClaims extends PasswordSession {
   v: 1
   appId: string
   openId: string
@@ -124,7 +125,16 @@ export function createAdminBff(
   }
 
   async function handle(request: Request): Promise<Response> {
+    try { return await dispatch(request) }
+    catch (error) {
+      if (error instanceof PasswordAuthError) return jsonError(error.code, error.message, error.status)
+      return jsonError('AUTH_UNAVAILABLE', '登录服务暂时不可用', 503)
+    }
+  }
+
+  async function dispatch(request: Request): Promise<Response> {
     const url = new URL(request.url)
+    if (url.pathname === '/api/auth/password' || url.pathname === '/api/auth/password/login') return passwordEndpoint(request)
     if (request.method === 'POST' && url.pathname === '/api/auth/challenge') {
       return createLoginChallenge(request)
     }
@@ -136,6 +146,8 @@ export function createAdminBff(
     }
     if (request.method === 'POST' && url.pathname === '/api/auth/logout') {
       if (!hasTrustedOrigin(request, env)) return jsonError('FORBIDDEN', '请求来源无效', 403)
+      const session = await sessionFromRequest(request)
+      if (session) await passwordAuth().revoke(session)
       const headers = new Headers({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
       headers.append('set-cookie', expireCookie(SESSION_COOKIE, request))
       headers.append('set-cookie', expireCookie(CHALLENGE_COOKIE, request))
@@ -273,9 +285,8 @@ export function createAdminBff(
     if (!consumed.success || Number(consumed.meta?.changes || 0) !== 1) return challengeExpired(request)
 
     const session: SessionClaims = {
+      ...await passwordAuth().issue({ appId: row.app_id, openId: row.open_id }, 'WECHAT'),
       v: 1,
-      appId: row.app_id,
-      openId: row.open_id,
       ...(row.display_name ? { displayName: row.display_name.slice(0, 80) } : {}),
       issuedAt: deps.now(),
       expiresAt: deps.now() + SESSION_TTL_MS,
@@ -493,8 +504,8 @@ export function createAdminBff(
   }
 
   async function forwardTrustedAdminRequest(
-    adminRequest: AdminRequest,
-    session: SessionClaims,
+    adminRequest: AdminRequest | { contractVersion: 1; action: 'mip.admin.webAuth.identity'; input: Record<string, never> },
+    session: Pick<SessionClaims, 'appId' | 'openId'>,
     options: { media?: boolean; retryable: boolean },
   ): Promise<Response> {
     const unsigned = {
@@ -539,7 +550,68 @@ export function createAdminBff(
       || claims.expiresAt < deps.now()
       || !identifier(claims.appId, 64)
       || !identifier(claims.openId, 128)) return null
-    return claims
+    return await passwordAuth().validate(claims) ? claims : null
+  }
+
+  async function derivePasswordKey(pepperedPassword: string, salt: string): Promise<string> {
+    const apps = allowedAppIds(env.MIP_WEB_ALLOWED_APP_IDS)
+    const appId = env.MIP_WEB_LOGIN_MINIPROGRAM_APP_ID || (apps.size === 1 ? [...apps][0] : '')
+    if (!appId || !apps.has(appId) || upstreamConfigError(env)) throw new PasswordAuthError('AUTH_UNAVAILABLE', 503, '登录服务暂时不可用')
+    const unsigned = { transport: 'MIP_WEB_PASSWORD_KDF_V1', appId, timestamp: deps.now(), nonce: randomToken(deps.crypto, 24), pepperedPassword, salt }
+    const signature = await hmacHex(env.MIP_ADMIN_UPSTREAM_HMAC_SECRET!, canonicalJson(unsigned), deps.crypto)
+    try {
+      const response = await deps.fetch(env.MIP_ADMIN_UPSTREAM_URL!, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...unsigned, signature }), signal: AbortSignal.timeout(10_000),
+      })
+      const payload = await safeJson(response)
+      if (response.ok && plainRecord(payload) && payload.ok === true && plainRecord(payload.data)
+        && typeof payload.data.derivedKey === 'string' && /^[a-f0-9]{64}$/.test(payload.data.derivedKey)) return payload.data.derivedKey
+    } catch { /* Do not include KDF inputs or upstream diagnostics in logs. */ }
+    throw new PasswordAuthError('AUTH_UNAVAILABLE', 503, '登录服务暂时不可用')
+  }
+
+  function passwordAuth() {
+    if (!env.MIP_ADMIN_AUTH_DB || !validSecret(env.MIP_WEB_SESSION_SECRET)) throw new PasswordAuthError('AUTH_UNAVAILABLE', 503, '登录服务暂时不可用')
+    return createPasswordAuth({ database: env.MIP_ADMIN_AUTH_DB, secret: env.MIP_WEB_SESSION_SECRET!, cryptoApi: deps.crypto, now: deps.now, deriveKey: derivePasswordKey, diagnostic: (stage, classification) => console.warn('[mip-password-auth]', { stage, classification }), identity: async principal => {
+      const response = await forwardTrustedAdminRequest({ contractVersion: 1, action: 'mip.admin.webAuth.identity', input: {} }, principal, { retryable: false })
+      const payload = await safeJson(response)
+      if (response.status >= 500 || (plainRecord(payload) && plainRecord(payload.error) && ['SERVICE_UNAVAILABLE', 'AUTH_UNAVAILABLE'].includes(String(payload.error.code)))) throw new PasswordAuthError('AUTH_UNAVAILABLE', 503, '登录服务暂时不可用')
+      if (!response.ok || !plainRecord(payload) || payload.ok !== true || !plainRecord(payload.data) || typeof payload.data.phone !== 'string' || typeof payload.data.userId !== 'string') {
+        throw new PasswordAuthError('INVALID_CREDENTIALS', 401, '手机号或密码不正确')
+      }
+      return { phone: payload.data.phone, userId: payload.data.userId }
+    } })
+  }
+
+  async function passwordEndpoint(request: Request): Promise<Response> {
+    try { return await handlePasswordEndpoint(request) }
+    catch (error) {
+      if (!(error instanceof PasswordAuthError) || error.code === 'AUTH_UNAVAILABLE') console.warn('[mip-password-auth]', { stage: 'ENDPOINT', classification: passwordAuthDiagnostic(error) })
+      throw error
+    }
+  }
+
+  async function handlePasswordEndpoint(request: Request): Promise<Response> {
+    const path = new URL(request.url).pathname
+    if (!['GET', 'POST'].includes(request.method) || (path.endsWith('/login') && request.method !== 'POST')) return jsonError('NOT_FOUND', '接口不存在', 404)
+    if (request.method === 'POST' && !hasTrustedOrigin(request, env)) return jsonError('FORBIDDEN', '请求来源无效', 403)
+    if (upstreamConfigError(env)) throw new PasswordAuthError('AUTH_UNAVAILABLE', 503, '登录服务暂时不可用')
+    const auth = passwordAuth()
+    const ip = request.headers.get('cf-connecting-ip')?.slice(0, 128) || 'unknown'
+    if (path.endsWith('/login')) {
+      const input = await readJsonRecord(request)
+      if (!input || Object.keys(input).some(key => !['phone', 'password'].includes(key))) return jsonError('INVALID_CREDENTIALS', '手机号或密码不正确', 401)
+      const session: SessionClaims = { ...await auth.login(input, ip), v: 1 }
+      const sealed = await seal(session, env.MIP_WEB_SESSION_SECRET!, 'mip-admin-session-v1', deps.crypto)
+      return json({ authenticated: true }, 200, { 'set-cookie': cookie(SESSION_COOKIE, sealed, request, Math.floor(SESSION_TTL_MS / 1000)), 'cache-control': 'no-store' })
+    }
+    const session = await sessionFromRequest(request)
+    if (!session) return jsonError('AUTH_REQUIRED', '请登录后继续', 401)
+    if (request.method === 'GET') return json(await auth.status(session), 200, { 'cache-control': 'no-store' })
+    const input = await readJsonRecord(request)
+    if (!input || Object.keys(input).some(key => !['password', 'currentPassword'].includes(key))) return jsonError('VALIDATION_FAILED', '密码设置请求无效', 400)
+    return json(await auth.set(session, input, ip), 200, { 'cache-control': 'no-store' })
   }
 
   return Object.freeze({ handle })

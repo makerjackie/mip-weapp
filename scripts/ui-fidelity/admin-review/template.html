@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>MIP 管理后台验收</title>
+    <link rel="stylesheet" href="review.css" />
+  </head>
+  <body>
+    <header>
+      <a href="../">小程序验收</a>
+      <h1 id="report-title">管理后台验收</h1>
+      <p>逐页查看截图，选择结论并填写意见。意见仅保存在当前浏览器，不自动共享；完成后导出 JSON 发回。</p>
+      <p class="boundary">
+        演示画面、真实读取、真实写入分别标注。没有截图或操作证据不会算通过，演示界面不代表真实业务已验证。
+      </p>
+    </header>
+    <nav aria-label="页面导航">
+      <button id="previous">上一步</button><label for="step-select" class="sr-only">选择验收页面</label
+      ><select id="step-select"></select
+      ><button id="next">下一步</button><button id="export">导出全部意见</button>
+    </nav>
+    <main>
+      <div class="heading">
+        <h2 id="step-title"></h2>
+        <span id="progress" aria-live="polite"></span>
+      </div>
+      <p id="route"></p>
+      <section class="checks">
+        <h3>本页核对内容</h3>
+        <ul id="requirements"></ul>
+        <p id="step-notes"></p>
+      </section>
+      <div id="captures"></div>
+      <section class="feedback">
+        <h3>我的验收意见</h3>
+        <label for="decision">结论</label
+        ><select id="decision">
+          <option value="pending">尚未验收</option>
+          <option value="pass">本页验收通过</option>
+          <option value="needs-fix">需要修改</option>
+          <option value="question">需要说明</option></select
+        ><label for="comment">批改意见</label
+        ><textarea id="comment" rows="4" placeholder="哪里不符合预期？请尽量描述具体位置和操作。"></textarea>
+        <p id="save-state" aria-live="polite"></p>
+      </section>
+    </main>
+    <footer>此网站展示验收证据，不连接后台数据，也不会执行管理操作。截图数据以每项采集标识为准。</footer>
+    <script id="report-data" type="application/json">
+      /*REPORT_JSON*/ null
+    </script>
+    <script src="review.js" defer></script>
+  </body>
+</html>

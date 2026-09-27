@@ -1,17 +1,20 @@
 import {
   BellOutlined,
   LoginOutlined,
+  LockOutlined,
   LogoutOutlined,
   MenuOutlined,
   ReloadOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { Avatar, Badge, Breadcrumb, Button, Drawer, Dropdown, Grid, Layout, Menu, Modal, Result, Space, Tag, Typography, type MenuProps } from 'antd'
+import { Avatar, Badge, Breadcrumb, Button, Drawer, Dropdown, Grid, Layout, Menu, Result, Space, Tag, type MenuProps } from 'antd'
 import { useMemo, useState } from 'react'
 import { adminNavigation, navigationByPath, type AdminRoutePath } from '../../app/navigation'
 import { useAdminSession } from '../../app/session-provider'
 import { ErrorState, LoadingState } from './feedback-states'
+import { AdminLoginDialog } from './admin-login-dialog'
+import { AdminPasswordDialog } from './admin-password-dialog'
 
 const { Header, Sider, Content } = Layout
 
@@ -29,11 +32,13 @@ export function ResponsiveAppShell() {
   const mobile = screens.md === false
   const [navigationOpen, setNavigationOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
+  const [passwordOpen, setPasswordOpen] = useState(false)
+  const [loginNotice, setLoginNotice] = useState('')
   const pathname = useRouterState({ select: state => state.location.pathname }) as AdminRoutePath
   const navigate = useNavigate()
   const {
-    session, loading, error, demoMode, hasCapability, challenge, loginError, loginConfirmed,
-    refreshSession, beginLogin, retryConfirmedLogin, closeLogin, logout,
+    session, loading, error, demoMode, hasCapability,
+    refreshSession, closeLogin, logout,
   } = useAdminSession()
 
   const loginVisible = loginOpen && !session?.enabled
@@ -85,9 +90,10 @@ export function ResponsiveAppShell() {
     />
   )
 
-  const openLogin = () => { setLoginOpen(true); void beginLogin() }
+  const openLogin = () => { closeLogin(); setLoginNotice(''); setLoginOpen(true) }
   const accountItems: MenuProps['items'] = [
-    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: () => { setLoginOpen(false); void logout() } },
+    { key: 'password', icon: <LockOutlined />, label: '设置 / 修改登录密码', disabled: demoMode, onClick: () => setPasswordOpen(true) },
+    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: () => { setLoginOpen(false); setPasswordOpen(false); closeLogin(); void logout() } },
   ]
 
   return (
@@ -140,31 +146,12 @@ export function ResponsiveAppShell() {
         </Content>
       </Layout>
 
-      <Modal
-        open={loginVisible}
-        title="运营登录"
-        footer={null}
-        onCancel={() => { setLoginOpen(false); closeLogin() }}
-        destroyOnHidden
-      >
-        <Typography.Paragraph>打开 MIP 小程序，进入“我的 → 现场工作台 → 确认网页登录”，输入下方 6 位登录码并确认。</Typography.Paragraph>
-        <Typography.Paragraph type="secondary">可使用已获得访问权限的开发版或体验版，请登录具有运营权限的账号。</Typography.Paragraph>
-        {challenge ? (
-          <div className="login-challenge" aria-live="polite">
-            <small>登录码</small>
-            <strong aria-label={`登录码 ${challenge.code}`}>{challenge.code}</strong>
-            <small>有效期至 {new Date(challenge.expiresAt).toLocaleTimeString('zh-CN', { hour12: false })}</small>
-            <span>等待小程序确认，完成后网页将自动登录</span>
-          </div>
-        ) : loginError ? (
-          <Space orientation="vertical">
-            <Typography.Text type="danger">{loginError}</Typography.Text>
-            <Button onClick={() => void (loginConfirmed ? retryConfirmedLogin() : beginLogin())}>
-              {loginConfirmed ? '重新加载会话' : '重新获取登录请求'}
-            </Button>
-          </Space>
-        ) : <Typography.Text type="secondary" role="status">{loginConfirmed ? '登录已确认，正在加载运营会话…' : '正在获取登录码…'}</Typography.Text>}
-      </Modal>
+      {loginVisible ? <AdminLoginDialog notice={loginNotice} onClose={() => { setLoginOpen(false); closeLogin() }} /> : null}
+      {passwordOpen && session?.enabled ? <AdminPasswordDialog onClose={() => setPasswordOpen(false)} onRequireLogin={() => {
+        setPasswordOpen(false)
+        setLoginNotice('登录密码已更新，请使用新密码重新登录')
+        setLoginOpen(true)
+      }} /> : null}
     </Layout>
   )
 }

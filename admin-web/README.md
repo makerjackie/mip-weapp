@@ -32,19 +32,25 @@ pnpm --dir admin-web exec wrangler pages dev dist --env-file .env.local
 
 ## 当前模块
 
-概览、用户、活动、订单、任务、Banner、战队、素材、机会与内容、成长与徽章、权限、消息、知识库和运营记录使用统一布局和导航。列表、详情和写操作均复用中立管理契约；真实请求失败时不会回退成演示状态。素材页按运营账号 capability 显示允许用途，支持 PNG/JPEG 本地预览、上传和素材 ID 复制。用户和订单页通过一次性导出票据下载当前筛选范围的数据；活动详情也可导出该活动反馈。手机号列额外要求 `users.phone.read`，浏览器会复核文件大小、XLSX 文件头和 SHA-256 后再消费票据。
+概览、用户、名片、活动、订单、任务、Banner、素材、机会与内容、成长与勋章、权限、后台账号、审计日志、消息和运营记录使用统一布局和导航。列表、详情和写操作均复用中立管理契约；真实请求失败时不会回退成演示状态。素材页按运营账号 capability 显示允许用途，支持 PNG/JPEG 本地预览、上传和素材 ID 复制。用户和订单页通过一次性导出票据下载当前筛选范围的数据；活动详情也可导出该活动反馈。手机号列额外要求 `users.phone.read`，浏览器会复核文件大小、XLSX 文件头和 SHA-256 后再消费票据。
 
 ## 服务器端 BFF
 
+后台支持可选的手机号密码登录，并保留小程序确认入口。首次设置或忘记密码时，先用小程序确认登录，再在账号菜单设置密码；密码会话修改密码需验证当前密码，修改成功后重新登录。手机号来自现有身份服务的已验证绑定，不能在密码设置表单指定另一账号。密码登录不会自动创建会员或授予管理权限。
+
+密码与会话迁移为 `migrations/0004_password_auth.sql`，需先应用再发布新版 BFF；旧会话升级后需要重新登录。密码使用 PBKDF2-SHA256、随机盐和服务端 pepper，D1 保存密码派生结果及 HMAC 手机号索引，不保存明文密码。现有服务端在密码登录时复核当前手机号、身份与运营权限，业务操作继续重新授权。详细边界见 [ADR 0007](../docs/adr/0007-optional-admin-password-login.md)。
+
+自动化登录冒烟：在仓库根目录被 Git 忽略的 `.env.secrets.local` 中配置 `MIP_ADMIN_TEST_ORIGIN`、`MIP_ADMIN_TEST_PHONE`、`MIP_ADMIN_TEST_PASSWORD`，然后运行 `node scripts/admin-password-smoke.mjs`。它通过真实密码登录读取管理员会话并退出，不绕过鉴权、不修改业务数据，也不打印凭证。
+
 Cloudflare Pages Function 位于 `functions/api/[[path]].ts`，核心 module 位于 `server/admin-bff.ts`。它完成：
 
-- 网页默认生成 5 分钟有效的 6 位数字登录码，不调用或等待小程序码接口；仅显式 `?qr=1` 请求可选小程序码；浏览器凭据只进入密封的 `HttpOnly` Cookie；
+- 切换到小程序登录时生成 5 分钟有效的 6 位数字登录码，不调用或等待小程序码接口；仅显式 `?qr=1` 请求可选小程序码；浏览器凭据只进入密封的 `HttpOnly` Cookie；
 - 已有运营账号在小程序现场工作台输入数字码并明确确认，开发版和体验版均可使用；可选扫码进入专用确认页；CloudBase 按现有角色和 capability 重新鉴权；
 - 小程序码图片只在本次响应中返回，不写对象存储；浏览器响应不包含 challenge token、AppID 或 OpenID；
 - CloudBase 以独立 HMAC 将可信 AppID/OpenID 回传 BFF，D1 原子确认且仅允许消费一次；
 - 每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，限流键只保存不可逆 HMAC；
 - 同一客户端 IP 在 10 分钟内最多创建 30 个登录码，限流键同样只保存 HMAC；该表不可用时自动旁路，不阻断登录；
-- AES-GCM 密封的 `HttpOnly`、`Secure`、`SameSite=Lax` 8 小时会话；
+- AES-GCM 密封的 `HttpOnly`、`Secure`、`SameSite=Lax` 8 小时会话，并通过 D1 session ID 校验有效性；退出撤销当前会话，密码变更撤销旧密码会话；
 - 严格同源检查；普通 `/api/admin` 保持 32 KB 请求上限和精确 action allowlist；
 - 专用 `/api/media/image` 只接受 `mip.admin.media.uploadImage`，整体请求不超过 1.5 MB、解码图片不超过 1 MB，上游超时为 60 秒；
 - mutation 必须携带业务幂等键，每次转发使用新的签名 nonce，网络失败不自动重试；

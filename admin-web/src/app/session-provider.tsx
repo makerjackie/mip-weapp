@@ -18,8 +18,10 @@ interface SessionContextValue {
   request: <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
   refreshSession: () => Promise<boolean>
   beginLogin: () => Promise<void>
+  loginWithPassword: (phone: string, password: string) => Promise<boolean>
   retryConfirmedLogin: () => Promise<void>
   closeLogin: () => void
+  requireLogin: () => void
   logout: () => Promise<void>
 }
 
@@ -148,6 +150,36 @@ export function SessionProvider({ children, client = defaultClient }: { children
     setLoginConfirmed(false)
   }, [])
 
+  const requireLogin = useCallback(() => {
+    closeLogin()
+    commitSession(null)
+    setLoading(false)
+    setError(new AdminApiClientError('AUTH_REQUIRED', '请重新登录'))
+  }, [closeLogin, commitSession])
+
+  const loginWithPassword = useCallback(async (phone: string, password: string) => {
+    const flow = ++loginFlow.current
+    setChallenge(null)
+    setLoginError('')
+    setLoginConfirmed(false)
+    try {
+      await client.loginWithPassword(phone, password)
+      if (loginFlow.current !== flow) return false
+      setLoginConfirmed(true)
+      const loaded = await refreshSession()
+      if (loginFlow.current !== flow) return false
+      if (loaded) setLoginConfirmed(false)
+      else setLoginError('登录已确认，但运营会话暂时无法加载，请重试')
+      return loaded
+    }
+    catch (reason) {
+      if (loginFlow.current === flow) {
+        setLoginError(reason instanceof Error ? reason.message : '密码登录暂时不可用，请稍后重试')
+      }
+      return false
+    }
+  }, [client, refreshSession])
+
   const retryConfirmedLogin = useCallback(async () => {
     setLoginError('')
     const loaded = await refreshSession()
@@ -204,10 +236,12 @@ export function SessionProvider({ children, client = defaultClient }: { children
     request,
     refreshSession,
     beginLogin,
+    loginWithPassword,
     retryConfirmedLogin,
     closeLogin,
+    requireLogin,
     logout,
-  }), [beginLogin, challenge, client, closeLogin, error, hasCapability, hasCapabilityAtScope, loading, loginConfirmed, loginError, logout, refreshSession, request, retryConfirmedLogin, session, sessionBoundary])
+  }), [beginLogin, challenge, client, closeLogin, error, hasCapability, hasCapabilityAtScope, loading, loginConfirmed, loginError, loginWithPassword, logout, refreshSession, request, requireLogin, retryConfirmedLogin, session, sessionBoundary])
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

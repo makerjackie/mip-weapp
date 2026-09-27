@@ -158,6 +158,7 @@ interface IpLimitRow {
 }
 
 class MemoryD1 implements D1DatabaseBinding {
+  readonly sessions = new Map<string, Record<string, unknown>>()
   readonly rows = new Map<string, Row>()
   readonly limits = new Map<string, LimitRow>()
   readonly ipLimits = new Map<string, IpLimitRow>()
@@ -170,6 +171,7 @@ class MemoryD1 implements D1DatabaseBinding {
         return statement
       },
       first: async <T>() => {
+        if (query.includes('FROM mip_admin_web_sessions')) return (this.sessions.get(String(values[0])) || null) as T | null
         if (query.includes('FROM mip_admin_web_login_challenges')) {
           const row = this.rows.get(String(values[0]))
           if (!row || row.browser_key_hash !== values[1]) return null
@@ -210,6 +212,15 @@ class MemoryD1 implements D1DatabaseBinding {
         throw new Error('QUERY_UNSUPPORTED')
       },
       run: async () => {
+        if (query.includes('DELETE FROM mip_admin_web_sessions') || query.includes('DELETE FROM mip_admin_web_password_limits')) return { success: true }
+        if (query.includes('INSERT INTO mip_admin_web_sessions')) {
+          this.sessions.set(String(values[0]), { principal_key: values[1], method: values[2], credential_version: values[3], expires_at: values[4], revoked_at: null })
+          return { success: true, meta: { changes: 1 } }
+        }
+        if (query.includes('UPDATE mip_admin_web_sessions')) {
+          const row = this.sessions.get(String(values[1])); if (row) row.revoked_at = values[0]
+          return { success: true, meta: { changes: row ? 1 : 0 } }
+        }
         if (query.includes('DELETE FROM mip_admin_web_login_ip_limits')) {
           for (const [key, row] of this.ipLimits) {
             if (row.window_started_at < Number(values[0])) this.ipLimits.delete(key)
@@ -1003,7 +1014,8 @@ describe('Admin Web BFF', () => {
 
   it('rejects mutation requests without a valid idempotency key and never retries upstream', async () => {
     const fetchMock = fetchQueue()
-    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const database = new MemoryD1()
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock, database)
     const request = (action: string, idempotencyKey?: unknown) => new Request(`${ORIGIN}/api/admin`, {
       method: 'POST',
       headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
@@ -1025,7 +1037,7 @@ describe('Admin Web BFF', () => {
       upstreamAttempts += 1
       throw new Error('NETWORK_DOWN')
     }) as typeof fetch, { calls: [] })
-    const networkBff = createAdminBff(env(), {
+    const networkBff = createAdminBff(env(database), {
       fetch: throwingFetch, generateLoginQrCode: noLoginQrCode, now: () => NOW,
     })
     const response = await networkBff.handle(new Request(`${ORIGIN}/api/admin`, {
@@ -1114,6 +1126,19 @@ describe('Admin Web BFF', () => {
         error: { code: 'VALIDATION_FAILED', message: '运营请求包含未开放字段', retryable: false },
       })
     }
+    assert.equal(fetchMock.calls.length, 0)
+  })
+
+  it('denies browser access to private identity and revokes logged-out sessions', async () => {
+    const fetchMock = fetchQueue()
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const request = (action: string) => new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST', headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({ contractVersion: 1, action, input: {} }),
+    })
+    assert.equal((await bff.handle(request('mip.admin.webAuth.identity'))).status, 403)
+    await bff.handle(new Request(`${ORIGIN}/api/auth/logout`, { method: 'POST', headers: { origin: ORIGIN, cookie: sessionCookie } }))
+    assert.equal((await bff.handle(request('mip.admin.session'))).status, 401)
     assert.equal(fetchMock.calls.length, 0)
   })
 

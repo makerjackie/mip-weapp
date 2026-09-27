@@ -14,7 +14,12 @@ const css = fs.readdirSync(assets)
 const sourceCss = fs.readFileSync(path.join(root, 'src/styles/app.css'), 'utf8')
 const sourceShell = fs.readFileSync(path.join(root, 'src/shared/ui/responsive-app-shell.tsx'), 'utf8')
 
+const redirectsPath = path.join(dist, '_redirects')
+const redirects = fs.existsSync(redirectsPath) ? fs.readFileSync(redirectsPath, 'utf8') : ''
 const checks = [
+  [!fs.existsSync(path.join(dist, '404.html')), '404.html is required to disable Pages implicit SPA fallback'],
+  [/^\s*\/\*\s+\/index\.html\s+200\s*$/m.test(redirects), 'catch-all SPA rewrite can cache HTML at missing asset URLs'],
+  [!assetFiles.some(file => /^router-query-.*\.js$/.test(file)), 'router-query chunk must use a fresh URL after the cached HTML incident'],
   [index.includes('src/main.ts'), 'legacy DOM entry remains in production HTML'],
   [!index.includes('/assets/'), 'production HTML does not reference built assets'],
   [antDesignChunks.length !== 1, 'Ant Design must stay in one production chunk to preserve module initialization order'],

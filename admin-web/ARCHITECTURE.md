@@ -40,9 +40,11 @@ pages
 
 TanStack Router 使用 hash history，保持 Cloudflare Pages 静态回退简单，并兼容现有分享链接。一级页面使用稳定路径：
 
-`/overview`、`/users`、`/events`、`/orders`、`/tasks`、`/banners`、`/media`、`/game`、`/opportunities`、`/growth`、`/permissions`、`/messages`、`/knowledge`、`/operations`。
+`/overview`、`/users`、`/cards`、`/events`、`/orders`、`/tasks`、`/banners`、`/media`、`/game`、`/opportunities`、`/growth`、`/permissions`、`/admin-accounts`、`/audit-logs`、`/messages`、`/knowledge`、`/operations`。
 
-列表 search 包含 `q`、`status`、`cursor`、`page`、`tab`。页面不能另存一份可分享筛选状态；打开或关闭详情使用 React 局部状态，因为详情不是独立可分享业务入口。
+其中 `/game`、`/knowledge` 已从导航隐藏；`/game` 未注册路由，`/knowledge` 保留列表和编辑路由以支持编辑页返回。其余 15 条为当前可见一级页面。
+
+列表 search 包含 `q`、`status`、`cursor`、`page`、`limit`、`tab`。页面不能另存一份可分享筛选状态；打开或关闭详情使用 React 局部状态，因为详情不是独立可分享业务入口。
 
 ## Query 与 mutation
 
@@ -74,6 +76,9 @@ action、query/mutation 分类、Web 暴露范围、mutation 字段白名单和�
 | `POST /api/auth/challenge` | 浏览器 | 创建 5 分钟有效的数字登录码；仅显式 `?qr=1` 额外请求可选小程序码 |
 | `POST /api/auth/challenge/status` | 浏览器 | 轮询并一次性消费已确认登录 |
 | `POST /api/auth/logout` | 浏览器 | 清除当前会话与登录挑战 Cookie |
+| `POST /api/auth/password/login` | 浏览器 | 已绑定手机号与密码登录，不新增角色 |
+| `GET /api/auth/password` | 已登录浏览器 | 读取密码配置状态和掩码手机号 |
+| `POST /api/auth/password` | 已登录浏览器 | 近期小程序身份或当前密码验证后设置密码，撤销旧密码会话 |
 | `POST /api/internal/auth/challenge/confirm` | CloudBase | 使用登录确认 HMAC 提交可信身份 |
 | `POST /api/admin` | 浏览器 | 转发精确 allowlist 内的 AdminRequest v1 |
 | `POST /api/media/image` | 浏览器 | 转发受控图片上传请求 |
@@ -96,7 +101,9 @@ Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的
 - `CONFLICT`：刷新当前资源并要求重新确认。
 - 5xx/网络：保留页面上下文，允许手动重试。
 
-网页登录使用 5 分钟有效的单次 challenge、浏览器 verifier、D1 原子确认和 AES-GCM `HttpOnly` 8 小时会话。动态小程序码是主入口，6 位数字码是降级入口；二维码图片不持久化，React 不持久化或接收原始 scene。每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，同一客户端 IP 在 10 分钟内最多创建 30 个 challenge，D1 只保存 HMAC 限流键。IP 计数表不可用时该限流自动旁路，不阻断登录。
+小程序确认登录使用 5 分钟有效的单次 challenge、浏览器 verifier 和 D1 原子确认。数字码为该方式的默认入口，可选动态小程序码图片不持久化，React 不持久化或接收原始 scene。每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，同一客户端 IP 在 10 分钟内最多创建 30 个 challenge，D1 只保存 HMAC 限流键。challenge IP 计数表不可用时该限流自动旁路，不阻断小程序确认流程。
+
+可选密码登录沿用相同可信身份，使用独立的账号与来源计数，计数不可用时失败关闭。BFF 私有身份查询不在浏览器 action allowlist 内，只能经签名与防重放校验后向云端读取当前账号的验证手机号；浏览器仅得到掩码。两种方式都签发 AES-GCM `HttpOnly` 8 小时会话并逐请求验证 D1 session ID；密码版本改变使旧密码会话失效。参见 [ADR 0007](../docs/adr/0007-optional-admin-password-login.md)。
 
 ## 测试策略
 
@@ -108,7 +115,9 @@ Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的
 
 ## Cloudflare 部署
 
-- Vite 输出 `dist/`，`public/_redirects` 保持 SPA 回退，`public/_headers` 保持安全头。
+- Vite 输出 `dist/`，路由使用 `/#/...`，不需要服务器 SPA 回退。`public/404.html` 禁用 Pages 默认回退；不得添加 `/* /index.html 200`，否则缺失 JS 可能被当成 HTML 成功响应缓存并造成白屏。`public/_headers` 保持安全头。
+- 静态资源使用 `max-age=0, must-revalidate`，保留 ETag 条件请求，避免缺失资源的错误响应继承一年缓存。
+- 部署后除首页外，还要确认不存在的 `/assets/*.js` 返回 HTTP 404；构建检查不能代替线上状态码验证。
 - `functions/api/[[path]].ts` 复用 `server/admin-bff.ts`。
 - `wrangler.toml` 与现有 Pages 项目 `mip-admin-web`、D1 binding 继续复用。
 - 自定义域名 `mipmini.01mvp.com` 的 DNS、密钥、生产变量和外部账号不由本次代码迁移自动变更。

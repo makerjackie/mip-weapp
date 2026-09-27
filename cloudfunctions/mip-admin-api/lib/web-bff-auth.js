@@ -4,6 +4,7 @@ const { createHash, createHmac, timingSafeEqual } = require('node:crypto')
 const { errorResponse, normalizeAdminRequest } = require('../domain/handler')
 const { adminWebOperationContract } = require('../domain/public-operation-contract')
 
+const WEB_PASSWORD_IDENTITY_ACTION = 'mip.admin.webAuth.identity'
 const WEB_BFF_TRANSPORT = 'MIP_WEB_BFF_V1'
 const WEB_BFF_MAX_CLOCK_SKEW_MS = 60_000
 const WEB_BFF_OPERATIONS = adminWebOperationContract.operations.filter(operation => operation.webAllowed)
@@ -33,6 +34,7 @@ function createWebBffRoute({
   issuePrincipal,
   replayGuard,
   afterSuccessfulMutation,
+  passwordIdentity,
   secret,
   now = Date.now,
 } = {}) {
@@ -61,7 +63,10 @@ function createWebBffRoute({
         action,
         requestHash: createHash('sha256').update(canonicalJson(verified)).digest('hex'),
       })
-      const data = await application.execute(principal, action, input)
+      if (action === WEB_PASSWORD_IDENTITY_ACTION && (Object.keys(input).length || typeof passwordIdentity !== 'function')) throw new Error('AUTH_REQUIRED')
+      const data = action === WEB_PASSWORD_IDENTITY_ACTION
+        ? await passwordIdentity(principal)
+        : await application.execute(principal, action, input)
       if (WEB_BFF_MUTATION_ACTIONS.has(action)) {
         const postCommit = await afterSuccessfulMutation({
           action,
@@ -123,7 +128,8 @@ function verifyWebBffEnvelope(value, { secret, now = Date.now() } = {}) {
     || !hasAllowedKeys(value.request, requestKeys)
     || value.request.contractVersion !== 1
     || typeof value.request.action !== 'string'
-    || (!WEB_BFF_QUERY_ACTIONS.has(value.request.action)
+    || (value.request.action !== WEB_PASSWORD_IDENTITY_ACTION
+      && !WEB_BFF_QUERY_ACTIONS.has(value.request.action)
       && !WEB_BFF_MUTATION_ACTIONS.has(value.request.action))
     || !isPlainRecord(value.request.input)) {
     throw new Error('FORBIDDEN')

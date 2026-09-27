@@ -21,6 +21,8 @@ const {
   createWebLoginQrCodeRoute,
   isWebLoginQrCodeEvent,
 } = require('./lib/web-login-qr-code')
+const { createWebPasswordKdfRoute, isWebPasswordKdfEvent } = require('./lib/web-password-kdf')
+const { createWebPasswordIdentity } = require('./lib/web-password-identity')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createRefundWorkerClient } = require('./lib/refund-worker-client')
 const { createCloudExportStorage } = require('./lib/export-storage')
@@ -318,8 +320,10 @@ const handler = createHandler({
   getContext: () => cloud.getWXContext(),
   issuePrincipal: principalIssuer.issue,
 })
+const webPasswordKdfRoute = createWebPasswordKdfRoute({ allowedAppIds, replayGuard: webBffReplayGuard, secret: process.env.MIP_ADMIN_WEB_BFF_HMAC_SECRET })
 const webBffRoute = createWebBffRoute({
   application,
+  passwordIdentity: createWebPasswordIdentity({ repository, database: mysqlDatabase(), phoneEncryptionKey: process.env.MIP_PHONE_ENCRYPTION_KEY }),
   issuePrincipal: principalIssuer.issue,
   replayGuard: webBffReplayGuard,
   afterSuccessfulMutation: ({ action, principal, resultData }) => postCommitAdminMutation({
@@ -350,6 +354,7 @@ exports.main = async (event = {}) => {
   if (isWebBffHttpEvent(event)) {
     try {
       const request = parseWebBffHttpBody(event)
+      if (isWebPasswordKdfEvent(request)) return webBffHttpResponse(await webPasswordKdfRoute(request))
       if (isWebLoginQrCodeEvent(request)) {
         const result = await webLoginQrCodeRoute(request)
         const status = result.ok
@@ -366,6 +371,7 @@ exports.main = async (event = {}) => {
       return webBffHttpError(error)
     }
   }
+  if (isWebPasswordKdfEvent(event)) return webPasswordKdfRoute(event)
   if (isWebBffEvent(event)) {
     return webBffRoute(event)
   }
