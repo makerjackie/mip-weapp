@@ -23,7 +23,8 @@ import type {
   AdminRowOperation,
   AdminRowOperationAction,
 } from '../../modules/admin-row-operations'
-import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
+import type { OperationValues } from '../../modules/admin-operation-ui'
+import { batchExtraFields } from '../../modules/admin-batch-operations'
 import {
   DataTable,
   EmptyState,
@@ -338,7 +339,9 @@ function createTabItems({
       : undefined
     const batchActions = (sectionSpec.batches ?? []).flatMap((batch) => {
       if (!onBatchAction || demoMode || !canCapability(batch.capability)) return []
-      const fields = batchExtraFields(batch.action)
+      const fields = isContentMutationAction(batch.action)
+        ? batchExtraFields(getContentMutationForm(batch.action).fields)
+        : []
       return [{
         key: batch.action,
         label: batch.label,
@@ -367,16 +370,6 @@ function createTabItems({
       ),
     }
   })
-}
-
-const PER_ROW_FIELD = /(?:^expectedVersion$|Id$|Ids$)/
-
-/** Batch fields are a content action's editable fields minus the per-row target and version keys. */
-function batchExtraFields(action: BatchSpec['action']): OperationField[] {
-  if (!isContentMutationAction(action)) return []
-  return getContentMutationForm(action).fields
-    .filter(field => field.kind !== 'group' && !PER_ROW_FIELD.test(field.key))
-    .map(field => ({ ...field }) as OperationField)
 }
 
 function renderRowActions(

@@ -1,12 +1,13 @@
 import { CaretDownOutlined, CaretUpOutlined, SwapOutlined } from '@ant-design/icons'
-import { Button, Form, Image, Space, Table, type TableColumnsType, type TableProps } from 'antd'
+import { Button, Image, Space, Table, type TableColumnsType, type TableProps } from 'antd'
 import { useMemo, useState } from 'react'
 import type { AdminTableColumn, AdminTableRow } from '../../modules/admin-read-pages'
-import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
+import type { OperationValues } from '../../modules/admin-operation-ui'
+import { BatchActionBar, type BatchAction } from './batch-actions'
 import { EmptyState } from './feedback-states'
-import { ConfirmDialog } from './confirm-dialog'
-import { OperationFields, toFormValues } from './operation-fields'
 import { StatusTag } from './status-tag'
+
+export type { BatchAction } from './batch-actions'
 
 type SortDirection = 'ascend' | 'descend' | null
 
@@ -41,21 +42,6 @@ function compareCellValues(left: unknown, right: unknown): number {
   return a.localeCompare(b, 'zh-Hans-CN')
 }
 
-export interface BatchAction {
-  key: string
-  label: string
-  danger?: boolean
-  confirmTitle?: string
-  confirmDescription?: string
-  /**
-   * Optional form collected once for the whole batch and merged on top of each
-   * row's own operation values (e.g. a shared reason or review decision).
-   */
-  fields?: readonly OperationField[]
-  /** Initial values for `fields`. */
-  defaultValues?: OperationValues
-}
-
 export function DataTable({
   label,
   rows,
@@ -81,9 +67,6 @@ export function DataTable({
 }) {
   const [sortState, setSortState] = useState<SortState | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
-  const [pendingBatch, setPendingBatch] = useState<{ action: BatchAction; rows: AdminTableRow[] } | null>(null)
-  const [batchLoading, setBatchLoading] = useState(false)
-  const [batchForm] = Form.useForm<OperationValues>()
 
   const sortedRows = useMemo(() => {
     if (!sortState) return rows
@@ -162,38 +145,6 @@ export function DataTable({
     [selectionConfig, sortedRows, selectedRowKeys, label],
   )
 
-  const openBatch = (action: BatchAction) => {
-    batchForm.resetFields()
-    batchForm.setFieldsValue(toFormValues(action.fields ?? [], action.defaultValues ?? {}))
-    setPendingBatch({ action, rows: selectedRows })
-  }
-
-  const runBatch = async () => {
-    if (!pendingBatch) return
-    if (!onBatchAction) { setPendingBatch(null); return }
-    let values: OperationValues = {}
-    if (pendingBatch.action.fields?.length) {
-      try {
-        values = await batchForm.validateFields()
-      }
-      catch {
-        // Ant Design shows the validation errors beside the fields.
-        return
-      }
-    }
-    setBatchLoading(true)
-    try {
-      await onBatchAction(pendingBatch.action, pendingBatch.rows, values)
-      setSelectedRowKeys([])
-    }
-    finally {
-      setBatchLoading(false)
-      setPendingBatch(null)
-    }
-  }
-
-  const pendingFields = pendingBatch?.action.fields ?? []
-
   return (
     <div className="data-table" role="region" aria-label={label} tabIndex={0}>
       <Table<AdminTableRow>
@@ -208,45 +159,14 @@ export function DataTable({
         rowSelection={selectionConfig}
         onChange={handleSorterChange}
       />
-      {selectionConfig && selectedRows.length > 0 ? (
-        <div className="batch-action-bar" role="toolbar" aria-label="批量操作">
-          <span className="batch-action-bar__count">已选 {selectedRows.length} 项</span>
-          <Space size={8}>
-            {batchActions!.map(action => (
-              <Button
-                key={action.key}
-                size="small"
-                danger={action.danger}
-                onClick={() => openBatch(action)}
-              >
-                {action.label}
-              </Button>
-            ))}
-            <Button size="small" type="link" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
-          </Space>
-        </div>
+      {batchActions?.length ? (
+        <BatchActionBar
+          count={selectedRows.length}
+          actions={batchActions}
+          onRun={(action, values) => onBatchAction?.(action, selectedRows, values)}
+          onClear={() => setSelectedRowKeys([])}
+        />
       ) : null}
-      <ConfirmDialog
-        open={Boolean(pendingBatch)}
-        title={pendingBatch?.action.confirmTitle || pendingBatch?.action.label || '批量操作'}
-        description={pendingBatch?.action.confirmDescription || `将对已选 ${pendingBatch?.rows.length ?? 0} 项执行“${pendingBatch?.action.label || ''}”。服务端会再次校验权限、范围和版本。`}
-        confirmText={pendingBatch?.action.label}
-        danger={pendingBatch?.action.danger}
-        loading={batchLoading}
-        onConfirm={() => void runBatch()}
-        onCancel={() => { if (!batchLoading) setPendingBatch(null) }}
-      >
-        {pendingFields.length ? (
-          <Form
-            form={batchForm}
-            layout="vertical"
-            disabled={batchLoading}
-            initialValues={toFormValues(pendingFields, pendingBatch?.action.defaultValues ?? {})}
-          >
-            <div className="mutation-grid"><OperationFields fields={pendingFields} form={batchForm} /></div>
-          </Form>
-        ) : null}
-      </ConfirmDialog>
     </div>
   )
 }

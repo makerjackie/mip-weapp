@@ -1,5 +1,5 @@
 import type { AdminRequestInput, AdminOperationAction } from '../domain/contracts'
-import type { OperationValues } from './admin-operation-ui'
+import type { OperationField, OperationValues } from './admin-operation-ui'
 import type { AdminRowOperation } from './admin-row-operations'
 
 /** Minimal row shape the batcher needs: row actions projected by the read page. */
@@ -37,6 +37,20 @@ export function collectBatchTargets(rows: readonly BatchableRow[], action: strin
 /** Shared batch input overrides the per-row defaults (e.g. reason, decision, outcome). */
 export function mergeBatchInput(operation: AdminRowOperation, values: OperationValues): AdminRequestInput {
   return { ...(operation.values || {}), ...values }
+}
+
+/** Per-row keys a batch form must not collect once: the target id and record version. */
+const PER_ROW_FIELD = /(?:^expectedVersion$|Id$|Ids$)/
+
+/**
+ * Turns a single-entity mutation definition's fields into the extra fields a
+ * batch form should collect: everything except the per-row target and version
+ * keys, which the batcher reads from each row's operation.
+ */
+export function batchExtraFields(fields: readonly OperationField[]): OperationField[] {
+  return fields
+    .filter(field => !field.hidden && field.kind !== 'group' && !PER_ROW_FIELD.test(String(field.name || field.key || '')))
+    .map(field => ({ ...field }))
 }
 
 export function batchIdempotencyKey(action: string): string {

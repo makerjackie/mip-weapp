@@ -36,7 +36,8 @@ import { useAdminDetail } from '../features/admin-runtime/use-admin-detail'
 import { useAdminOperations } from '../features/admin-runtime/admin-operation-provider'
 import { SensitiveExportButton } from '../features/admin-runtime/sensitive-export-button'
 import { useAdminReadPage } from '../features/admin-runtime/use-admin-read-page'
-import type { AdminDetailRoute } from '../modules/admin-details'
+import type { AdminDetailRoute, AdminDetailView } from '../modules/admin-details'
+type DetailSection = NonNullable<AdminDetailView>['sections'][number]
 import {
   ADMIN_MEDIA_PURPOSE_OPTIONS,
   ADMIN_MEDIA_PURPOSE_CAPABILITIES,
@@ -48,10 +49,16 @@ import {
 import { getAdminReadRouteDefinition, type AdminListQuery, type AdminTableRow } from '../modules/admin-read-pages'
 import { record } from '../modules/admin-read-formatters'
 import { nonEmptyString } from '../modules/admin-coercions'
-import { batchSummaryMessage, executeBatchAction } from '../modules/admin-batch-operations'
-import type { OperationValues } from '../modules/admin-operation-ui'
+import { batchExtraFields, batchSummaryMessage, executeBatchAction } from '../modules/admin-batch-operations'
+import type { OperationField, OperationValues } from '../modules/admin-operation-ui'
+import {
+  ADMIN_EVENT_MUTATION_ACTIONS,
+  eventMutationConfig,
+  type AdminEventMutationAction,
+} from '../modules/admin-event-mutation-forms'
+import type { AdminOperationRow } from '../modules/admin-row-operations'
 import { downloadTaskCompletionExport, exportTaskCompletions } from '../modules/admin-task-management'
-import { DetailDrawer, PermissionGuard } from '../shared/ui'
+import { DetailDrawer, PermissionGuard, type BatchAction } from '../shared/ui'
 import { EventEditFormPage } from '../features/form-pages/event-edit-form-page'
 import { TaskEditFormPage } from '../features/form-pages/task-edit-form-page'
 import { OpportunityEditFormPage } from '../features/form-pages/opportunity-edit-form-page'
@@ -377,9 +384,29 @@ function RouteDetailLayer({ detail, onMediaUpload }: {
   onMediaUpload?: () => void
 }) {
   const { message } = App.useApp()
-  const { demoMode, request } = useAdminSession()
+  const { demoMode, request, hasCapability } = useAdminSession()
   const handleRowAction = useDetailRowAction(detail.view)
   const selection = detail.selection
+  const sectionBatchActions = useCallback(
+    (section: DetailSection): readonly BatchAction[] => {
+      if (demoMode || !section.rows?.length) return []
+      const available = new Set<string>(section.rows.flatMap(row => row.rowActions?.map(operation => operation.action) ?? []))
+      return DETAIL_SECTION_BATCH.flatMap(([action, spec]) => {
+        if (!available.has(action) || !hasCapability(spec.capability)) return []
+        const fields = eventBatchFields(action as AdminEventMutationAction)
+        return [{ key: action, label: spec.label, fields: fields.length ? fields : undefined }]
+      })
+    },
+    [demoMode, hasCapability],
+  )
+  const runSectionBatch = async (action: BatchAction, rows: AdminOperationRow[], values: OperationValues) => {
+    if (demoMode) { void message.info('演示模式不会提交写操作'); return }
+    const summary = await executeBatchAction(action.key, rows, values, (operationAction, input) => request(operationAction, input))
+    await detail.refreshDetail()
+    const notice = batchSummaryMessage(summary)
+    if (notice.type === 'success') void message.success(notice.text)
+    else void message.warning(notice.text)
+  }
   const actions = selection && detail.view ? (
     <AdminDetailActions
       route={selection.route}
@@ -409,6 +436,8 @@ function RouteDetailLayer({ detail, onMediaUpload }: {
       onNestedView={(target, row) => detail.openDetail(target, String(row.detailId || ''))}
       onPagerChange={detail.changeDetailPage}
       onRetry={() => void detail.refreshDetail()}
+      batchActionsForSection={sectionBatchActions}
+      onSectionBatchAction={(section, action, rows, values) => runSectionBatch(action, rows, values)}
     />
   )
 }
@@ -430,6 +459,17 @@ function listQuery(search: AdminListSearch): AdminListQuery {
     limit: search.limit ?? 20,
     filters: search.filters,
   }
+}
+
+/** Batch-capable row actions inside a detail drawer section, keyed by server action. */
+const DETAIL_SECTION_BATCH: ReadonlyArray<[string, { label: string, capability: string }]> = [
+  ['mip.admin.events.registrations.review', { label: '批量审核报名', capability: 'events.registrations.manage' }],
+  ['mip.admin.events.album.review', { label: '批量审核照片', capability: 'events.album.manage' }],
+]
+
+function eventBatchFields(action: AdminEventMutationAction): OperationField[] {
+  if (!(ADMIN_EVENT_MUTATION_ACTIONS as readonly string[]).includes(action)) return []
+  return batchExtraFields(eventMutationConfig(action).fields)
 }
 
 const operationRouteCapabilities: Record<OperationsRoute, string[]> = {
