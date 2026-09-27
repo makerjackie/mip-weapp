@@ -2,6 +2,7 @@ import { PlusOutlined } from '@ant-design/icons'
 import { Button, Space, Tabs, Tag } from 'antd'
 import { useNavigate } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { identifier } from '../../modules/admin-coercions'
 import {
   ADMIN_PEOPLE_MUTATION_ACTIONS,
@@ -25,6 +26,7 @@ import type {
 } from '../../modules/admin-row-operations'
 import type { OperationValues } from '../../modules/admin-operation-ui'
 import { batchExtraFields } from '../../modules/admin-batch-operations'
+import { isRecordDetail, type RecordDetail } from '../../modules/admin-record-detail'
 import {
   DataTable,
   EmptyState,
@@ -32,6 +34,7 @@ import {
   FilterBar,
   LoadingState,
   PageHeader,
+  RecordDetailDialog,
 } from '../../shared/ui'
 
 export type GovernanceRoute = 'permissions' | 'messages' | 'knowledge' | 'operations'
@@ -223,6 +226,7 @@ export function GovernancePage({
 }: GovernancePageProps & { route: GovernanceRoute }) {
   const spec = pageSpecs[route]
   const navigate = useNavigate()
+  const [recordDetail, setRecordDetail] = useState<RecordDetail | null>(null)
   const actions = onMutationRequest
     ? spec.actions.filter(action => canCapability(action.capability))
     : []
@@ -261,6 +265,7 @@ export function GovernancePage({
     onViewDetail,
     onMutationRequest,
     onBatchAction,
+    onOpenRecordDetail: setRecordDetail,
     refreshing,
   })
   const selectedTab = tabItems.some(item => item.key === activeTab)
@@ -297,6 +302,7 @@ export function GovernancePage({
           />
         </section>
       ) : null}
+      <RecordDetailDialog open={Boolean(recordDetail)} detail={recordDetail} onClose={() => setRecordDetail(null)} />
     </>
   )
 }
@@ -310,6 +316,7 @@ function createTabItems({
   onViewDetail,
   onMutationRequest,
   onBatchAction,
+  onOpenRecordDetail,
   refreshing,
 }: {
   route: GovernanceRoute
@@ -320,6 +327,7 @@ function createTabItems({
   onViewDetail?: GovernancePageProps['onViewDetail']
   onMutationRequest?: GovernancePageProps['onMutationRequest']
   onBatchAction?: GovernancePageProps['onBatchAction']
+  onOpenRecordDetail?: (detail: RecordDetail) => void
   refreshing?: boolean
 }): Array<{ key: string; label: string; children: ReactNode }> {
   if (!page) return []
@@ -328,8 +336,20 @@ function createTabItems({
       key: `section-${index + 1}`,
       label: section.title || `分类 ${index + 1}`,
     }
-    const renderActions = onMutationRequest
-      ? (row: AdminTableRow) => renderRowActions(row, demoMode, canCapability, onMutationRequest)
+    const canOpenDetail = Boolean(onOpenRecordDetail)
+    const renderActions = onMutationRequest || canOpenDetail
+      ? (row: AdminTableRow) => {
+          const detail = row.rowDetail
+          const operations = onMutationRequest ? renderRowActions(row, demoMode, canCapability, onMutationRequest) : null
+          return (
+            <Space size={4}>
+              {canOpenDetail && isRecordDetail(detail)
+                ? <Button type="link" size="small" onClick={() => onOpenRecordDetail?.(detail)}>查看</Button>
+                : null}
+              {operations}
+            </Space>
+          )
+        }
       : undefined
     const onView = sectionSpec.detailTarget && onViewDetail
       ? (row: AdminTableRow) => {

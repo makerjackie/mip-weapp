@@ -118,4 +118,26 @@ describe('DetailDrawer', () => {
     expect(onSectionBatchAction.mock.calls[0][2]).toHaveLength(2)
     expect(onSectionBatchAction.mock.calls[0][3]).toMatchObject({ decision: 'APPROVE' })
   })
+
+  it('renders image detail fields as thumbnails and plain text as text', () => {
+    const view: AdminDetailView = {
+      route: 'banners',
+      title: 'Banner 详情',
+      subtitle: '',
+      status: '启用',
+      sections: [{
+        title: 'Banner 图片',
+        fields: [
+          { label: '当前 imageUrl', value: 'https://cdn.example.test/banner.jpg', kind: 'image' },
+          { label: '素材 ID', value: 'asset-1' },
+        ],
+      }],
+    }
+
+    render(<DetailDrawer open view={view} onClose={vi.fn()} />)
+
+    const image = screen.getByRole('img', { name: 'https://cdn.example.test/banner.jpg' })
+    expect(image).toHaveAttribute('src', 'https://cdn.example.test/banner.jpg')
+    expect(screen.getByText('asset-1')).toBeInTheDocument()
+  })
 })

@@ -51,6 +51,8 @@ export interface AdminDetailPager {
 export interface AdminDetailField {
   label: string
   value: string
+  /** `image` renders an https value as a thumbnail; `link` as an external link; default is auto-detect. */
+  kind?: 'text' | 'image' | 'link'
 }
 
 export interface AdminDetailSection {

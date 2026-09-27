@@ -105,14 +105,18 @@ export async function loadBannerDetail(
     sections: [
       {
         title: 'Banner 图片',
-        fields: fields([
-          ['图片状态', bannerImageStatus(banner)],
-          ['素材 ID', banner.imageAssetId],
-          ['当前 imageUrl', banner.imageUrl],
-          ['图片尺寸', imageDimensions(banner.imageWidth, banner.imageHeight)],
-          ['图片说明', banner.accessibilityLabel],
-          ['素材更新', '可从素材上传页获取新的素材 ID'],
-        ]),
+        fields: [
+          ...fields([
+            ['图片状态', bannerImageStatus(banner)],
+            ['素材 ID', banner.imageAssetId],
+          ]),
+          { label: '当前 imageUrl', value: stringValue(banner.imageUrl) || '—', kind: 'image' as const },
+          ...fields([
+            ['图片尺寸', imageDimensions(banner.imageWidth, banner.imageHeight)],
+            ['图片说明', banner.accessibilityLabel],
+            ['素材更新', '可从素材上传页获取新的素材 ID'],
+          ]),
+        ],
       },
       {
         title: '跳转与状态',

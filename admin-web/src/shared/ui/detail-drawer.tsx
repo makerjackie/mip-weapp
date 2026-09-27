@@ -1,4 +1,4 @@
-import { Button, Drawer, Space, Table, Typography } from 'antd'
+import { Button, Drawer, Image, Space, Table, Typography } from 'antd'
 import { useState } from 'react'
 import type { AdminDetailPager, AdminDetailRoute, AdminDetailView } from '../../modules/admin-details'
 import type { OperationValues } from '../../modules/admin-operation-ui'
@@ -57,7 +57,7 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
                 <Typography.Title level={4}>{section.title}</Typography.Title>
                 {section.fields?.length ? (
                   <dl className="detail-fields">
-                    {section.fields.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{renderFieldValue(field.value)}</dd></div>)}
+                    {section.fields.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{renderFieldValue(field)}</dd></div>)}
                   </dl>
                 ) : null}
                 {section.metrics?.length ? (
@@ -150,9 +150,16 @@ function stableRowKey(row: AdminOperationRow, prefix: string) {
   return `${prefix}:${JSON.stringify(row, (key, value) => key === 'rowActions' ? undefined : value)}`
 }
 
-function renderFieldValue(value: React.ReactNode) {
-  if (typeof value === 'string' && /^https:\/\/[^\s]+$/.test(value)) {
-    return <a href={value} target="_blank" rel="noreferrer noopener">{value}</a>
+function renderFieldValue(field: { value: string, kind?: 'text' | 'image' | 'link' }) {
+  const url = typeof field.value === 'string' ? field.value : ''
+  const isHttps = /^https:\/\/[^\s]+$/.test(url)
+  if (field.kind === 'image') {
+    return isHttps
+      ? <Image src={url} alt={field.value} width={160} style={{ borderRadius: 6 }} />
+      : field.value
   }
-  return value
+  if (field.kind === 'link' || (field.kind === undefined && isHttps)) {
+    return isHttps ? <a href={url} target="_blank" rel="noreferrer noopener">{url}</a> : field.value
+  }
+  return field.value
 }

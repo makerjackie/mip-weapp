@@ -1,4 +1,5 @@
 import type { AdminListQuery, AdminReadAccess, AdminReadPage, AdminRequest, AdminTableSection } from './admin-read-contracts.ts'
+import type { RecordDetail } from './admin-record-detail'
 import {
   arrayCodeLabel,
   arrayLabel,
@@ -199,6 +200,7 @@ export async function loadOperations(query: AdminListQuery, request: AdminReques
       updatedAt: formatDateTime(item.updatedAt),
       state: label(valueOf(item, 'status')),
       rowActions: communityReportRowActions(item),
+      rowDetail: communityReportDetail(item),
     }
   }), { ...query, status: '' })
   return { sections: [
@@ -207,6 +209,27 @@ export async function loadOperations(query: AdminListQuery, request: AdminReques
     exceptionsPayload ? { key: 'exceptions', title: '运营异常', rows: exceptions, columns: columns([['title', '异常'], ['source', '来源'], ['summary', '摘要'], ['reason', '原因'], ['target', '关联对象'], ['occurredAt', '发生时间'], ['state', '状态']]) } : null,
     queuePayload ? { key: 'queue', title: '运营待办', rows: queue, columns: columns([['title', '待办'], ['source', '来源'], ['summary', '摘要'], ['reason', '原因'], ['occurredAt', '发生时间'], ['state', '状态']]) } : null,
   ].filter(isSection), nextCursor: null }
+}
+
+function communityReportDetail(item: Record<string, unknown>): RecordDetail {
+  const reporter = record(item.reporter)
+  const target = record(item.target)
+  const party = (value: Record<string, unknown>) => [valueOf(value, 'nickname'), valueOf(value, 'headline'), valueOf(value, 'cityName')]
+    .filter(part => part !== '—').join(' · ') || '—'
+  return {
+    title: `举报详情 · ${label(valueOf(item, 'category'))}`,
+    entries: [
+      { label: '分类', value: label(valueOf(item, 'category')) },
+      { label: '描述', value: String(valueOf(item, 'description') ?? '') || '—' },
+      { label: '举报人', value: party(reporter) },
+      { label: '被举报对象', value: party(target) },
+      { label: '状态', value: label(valueOf(item, 'status')) },
+      { label: '创建时间', value: formatDateTime(item.createdAt) },
+      { label: '更新时间', value: formatDateTime(item.updatedAt) },
+      { label: '处理时间', value: item.reviewedAt ? formatDateTime(item.reviewedAt) : '—' },
+      { label: '处理说明', value: String(valueOf(item, 'resolutionReason') ?? '') || '—' },
+    ],
+  }
 }
 
 function canRead(access: AdminReadAccess | undefined, capability: string, scopeType?: string) {

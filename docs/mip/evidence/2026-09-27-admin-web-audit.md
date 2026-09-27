@@ -134,3 +134,9 @@
 - 已接入的真实批量场景：运营记录 → 公告「批量发布/批量撤回（共享撤回原因）」、社区举报「批量认领/批量结案（共享处理结果与原因）」；活动详情抽屉 → 报名名单「批量审核报名（共享审核结果）」、待审核相册「批量审核照片（共享审核结果与原因）」。
 - 批量 UI 抽为共享 `shared/ui/batch-actions.tsx`（`BatchActionBar`），列表 `DataTable` 与详情 `DetailDrawer` 复用同一套「选择 → 二次确认 → 可选共享表单 → 逐行执行」。详情按 section 多选，审计日志等 action 由「当前行是否暴露该 rowAction」推导，不靠 section 标题硬编码。
 - 仍未做：任务成员分配批量（`DetailDrawer` 内为多选成员编辑而非行动作）；账号/权限等其余实体批量；服务端原子批量为跨端契约变更，留待单独立项。
+
+## 十、后续迭代（MISS-05/06 与 API 面核查）
+
+- MISS-05：详情字段新增 `kind: 'image'`，`DetailDrawer` 对 https 图片字段渲染缩略图、非 https 保持文本；Banner 详情「当前 imageUrl」标记为图片。Banner 列表的「预览」列此前已由 `DataTable` 渲染缩略图。
+- MISS-06：新增渠道中立的 `modules/admin-record-detail.ts` 与只读弹窗 `shared/ui/record-detail-dialog.tsx`；社区举报行携带 `rowDetail`（分类/描述/举报人/被举报对象/状态/创建/更新/处理时间/处理说明），无服务端 `get` 也能在结案前读到完整举报内容。服务端 `communityReports.list` 已返回这些字段，证据（媒体）服务端暂未提供，仍需另行立项。
+- MISS-04 残留：知识内容的「信息源/分类」服务端只有 `*.save`、没有 `*.list`，无法做真下拉；待确认目录读接口后再改。

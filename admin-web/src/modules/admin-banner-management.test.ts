@@ -74,6 +74,7 @@ describe('admin Banner management', () => {
     const imageFields = detail.sections.find(section => section.title === 'Banner 图片')?.fields
     assert.equal(imageFields?.find(field => field.label === '素材 ID')?.value, ASSET_ID)
     assert.equal(imageFields?.find(field => field.label === '当前 imageUrl')?.value, banner.imageUrl)
+    assert.equal(imageFields?.find(field => field.label === '当前 imageUrl')?.kind, 'image')
     assert.equal(imageFields?.find(field => field.label === '素材更新')?.value, '可从素材上传页获取新的素材 ID')
     assert.equal(webBannerImageUrl(banner.imageUrl), '')
     assert.equal(webBannerImageUrl('https://cdn.example.test/banner.jpg'), 'https://cdn.example.test/banner.jpg')
