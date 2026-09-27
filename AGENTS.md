@@ -21,7 +21,7 @@
 - `src/modules/mip-admin` 运营领域
 - `src/platform` / `src/shared` 平台原语（已从共享包内联）
 - `src/config` 品牌、功能开关、运行时
-- `admin-web` React Web 管理后台（独立构建与 Cloudflare Pages/Worker 部署）
+- `admin-web` React Web 管理后台（独立构建；CloudBase 静态托管/云函数部署，Cloudflare 保留至迁移验收确认）
 - `packages/admin-contracts` 两端共用的 AdminRequest v1 中立契约
 - `cloudfunctions` 与 `database/mysql` 服务端事实
 - `.agents/skills` 任务技能

@@ -1149,3 +1149,18 @@ describe('Admin Web BFF', () => {
     )
   })
 })
+
+
+describe('migration challenge namespaces', () => {
+  it('keeps Cloudflare and CloudBase six-digit codes and QR tokens disjoint', async () => {
+    for (const namespace of ['', 'cloudbase']) {
+      let token = ''
+      const bff = createAdminBff({...env(), MIP_WEB_LOGIN_NAMESPACE:namespace}, {now:()=>NOW, generateLoginQrCode:async value=>{ token=value; return 'data:image/png;base64,eA==' }})
+      const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge?qr=1`,{method:'POST',headers:{origin:ORIGIN}}))
+      assert.equal(response.status,201)
+      const payload = await response.json()
+      assert.match(payload.code,namespace ? /^9\d{5}$/ : /^[0-8]\d{5}$/)
+      assert.equal(token.startsWith('z_'),Boolean(namespace))
+    }
+  })
+})

@@ -122,3 +122,7 @@ CLOUDBASE_AUTH_MODE=local pnpm cloud:verify -- --confirm-env=<EnvID>
 短期共享环境只允许 MIP 资源按上述边界共存。未来切换到独立 AppID 或 CloudBase 环境时，只迁移经过备份和校验的 `mip_*` 数据、`mip/` 对象及 MIP 函数配置，然后重新绑定可信 AppID；不得把旧项目表或共享环境的默认权限一起迁移。
 
 更多数据库和 MCP 说明见 [DATABASE.md](DATABASE.md) 与 [MCP.md](MCP.md)。
+
+## Web 管理后台 CloudBase 运行入口
+
+管理后台可整体运行于 CloudBase：`admin-web/dist` 上传独立静态前缀，HTTP 网关 `/api` 路由到 `mip-admin-web-api`，后者调用已有 `mip-admin-api`。密码、会话、登录限流和认证审计使用独立 `mip_admin_auth` MySQL schema 与专用最小权限账号，不与业务表迁移混用。初始化、部署、验证和并行微信确认流程见 [运行说明](../admin-web/cloudbase/README.md)。迁移期保留 Cloudflare 适配器、旧数据和原域名，确认后才下线；两个认证库不实时同步，密码更新以实际使用入口为准。

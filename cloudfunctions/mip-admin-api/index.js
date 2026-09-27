@@ -97,6 +97,7 @@ const notificationReconcileClient = createNotificationReconcileClient({
 })
 const webLoginConfirmationClient = createWebLoginConfirmationClient({
   endpoint: process.env.MIP_ADMIN_WEB_LOGIN_CONFIRM_URL,
+  migrationEndpoint: process.env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL,
   secret: process.env.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET,
 })
 const webBffReplayGuard = createWebBffReplayGuard({ database: mysqlDatabase() })

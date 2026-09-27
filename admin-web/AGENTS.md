@@ -1,6 +1,6 @@
 # AGENTS
 
-`admin-web/` 是 MIP 的 React 运营管理后台。它与根目录微信小程序独立构建、独立部署，但复用同一个 AdminRequest v1、Cloudflare Worker BFF、`mip-admin-api` 权限模型和服务端事实。
+`admin-web/` 是 MIP 的 React 运营管理后台。它与根目录微信小程序独立构建、独立部署，但复用同一个 AdminRequest v1、平台中立 BFF（CloudBase 云函数 / 迁移期 Cloudflare Worker）、`mip-admin-api` 权限模型和服务端事实。
 
 ## 技术栈
 

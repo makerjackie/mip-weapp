@@ -121,3 +121,8 @@ Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的
 - `functions/api/[[path]].ts` 复用 `server/admin-bff.ts`。
 - `wrangler.toml` 与现有 Pages 项目 `mip-admin-web`、D1 binding 继续复用。
 - 自定义域名 `mipmini.01mvp.com` 的 DNS、密钥、生产变量和外部账号不由本次代码迁移自动变更。
+
+
+## CloudBase 并行迁移
+
+后台已增加 CloudBase 同源运行入口；前端静态托管，BFF 云函数，认证存储为独立 MySQL schema，业务仍由原 `mip-admin-api` 鉴权。发布与回滚见 [CloudBase 运行说明](cloudbase/README.md)。Cloudflare 的部署适配器暂时保留，用户确认后才下线；新旧登录会话和密码存储不实时同步。

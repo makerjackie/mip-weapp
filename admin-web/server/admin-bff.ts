@@ -1,3 +1,4 @@
+import { authStatement, type AdminAuthDatabase, type AuthRunResult } from './auth-database.ts'
 import { createPasswordAuth, PasswordAuthError, passwordAuthDiagnostic, type PasswordSession } from './password-auth.ts'
 import type { AdminApiResponse, AdminRequest } from '../src/domain/contracts'
 import {
@@ -12,23 +13,10 @@ import {
   readAdminMediaUploadRequest,
 } from './admin-media-upload.ts'
 
-interface D1RunResult {
-  success: boolean
-  meta?: { changes?: number }
-}
-
-interface D1Statement {
-  bind: (...values: unknown[]) => D1Statement
-  first: <T>() => Promise<T | null>
-  run: () => Promise<D1RunResult>
-}
-
-export interface D1DatabaseBinding {
-  prepare: (query: string) => D1Statement
-}
+export type { D1DatabaseBinding } from './auth-database.ts'
 
 export interface AdminBffEnv {
-  MIP_ADMIN_AUTH_DB?: D1DatabaseBinding
+  MIP_ADMIN_AUTH_DB?: AdminAuthDatabase
   MIP_ADMIN_UPSTREAM_URL?: string
   MIP_ADMIN_UPSTREAM_HMAC_SECRET?: string
   MIP_ADMIN_WEB_LOGIN_HMAC_SECRET?: string
@@ -36,6 +24,7 @@ export interface AdminBffEnv {
   MIP_WEB_ALLOWED_APP_IDS?: string
   MIP_WEB_LOGIN_MINIPROGRAM_APP_ID?: string
   MIP_WEB_ALLOWED_ORIGIN?: string
+  MIP_WEB_LOGIN_NAMESPACE?: string
   MIP_WEB_SESSION_SECRET?: string
 }
 
@@ -172,9 +161,7 @@ export function createAdminBff(
 
     let ipHit: LoginIpLimitRow | null = null
     try {
-      await env.MIP_ADMIN_AUTH_DB!.prepare(
-        'DELETE FROM mip_admin_web_login_ip_limits WHERE window_started_at < ?1',
-      ).bind(createdAt - 2 * LOGIN_CHALLENGE_IP_WINDOW_MS).run()
+      await authStatement(env.MIP_ADMIN_AUTH_DB!, 'purgeLoginIpLimits').bind(createdAt - 2 * LOGIN_CHALLENGE_IP_WINDOW_MS).run()
       ipHit = await recordLoginChallengeHit(
         env.MIP_ADMIN_AUTH_DB!,
         await loginIpKey(request, env.MIP_WEB_SESSION_SECRET!, deps.crypto),
@@ -191,25 +178,19 @@ export function createAdminBff(
     }
 
     try {
-      await env.MIP_ADMIN_AUTH_DB!.prepare(
-        'DELETE FROM mip_admin_web_login_challenges WHERE expires_at < ?1',
-      ).bind(createdAt).run()
+      await authStatement(env.MIP_ADMIN_AUTH_DB!, 'purgeChallenges').bind(createdAt).run()
     }
     catch {
       return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
     }
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      const id = randomToken(deps.crypto, 24)
+      const id = randomChallengeToken(deps.crypto, env.MIP_WEB_LOGIN_NAMESPACE)
       const browserKey = randomToken(deps.crypto, 24)
-      const code = randomChallengeCode(deps.crypto)
+      const code = randomChallengeCode(deps.crypto, env.MIP_WEB_LOGIN_NAMESPACE)
       const codeHash = await hmacHex(env.MIP_WEB_SESSION_SECRET!, `code\0${code}`, deps.crypto)
       const browserKeyHash = await hmacHex(env.MIP_WEB_SESSION_SECRET!, `browser\0${browserKey}`, deps.crypto)
       try {
-        const result = await env.MIP_ADMIN_AUTH_DB!.prepare(
-          `INSERT INTO mip_admin_web_login_challenges
-            (id, code_hash, browser_key_hash, status, created_at, expires_at)
-           VALUES (?1, ?2, ?3, 'PENDING', ?4, ?5)`,
-        ).bind(id, codeHash, browserKeyHash, createdAt, expiresAt).run()
+        const result = await authStatement(env.MIP_ADMIN_AUTH_DB!, 'insertChallenge').bind(id, codeHash, browserKeyHash, createdAt, expiresAt).run()
         if (!result.success) continue
       }
       catch {
@@ -254,11 +235,7 @@ export function createAdminBff(
     const browserKeyHash = await hmacHex(env.MIP_WEB_SESSION_SECRET!, `browser\0${claims.browserKey}`, deps.crypto)
     let row: ChallengeRow | null
     try {
-      row = await env.MIP_ADMIN_AUTH_DB!.prepare(
-        `SELECT id, status, app_id, open_id, display_name, expires_at
-           FROM mip_admin_web_login_challenges
-          WHERE id = ?1 AND browser_key_hash = ?2`,
-      ).bind(claims.id, browserKeyHash).first<ChallengeRow>()
+      row = await authStatement(env.MIP_ADMIN_AUTH_DB!, 'findChallenge').bind(claims.id, browserKeyHash).first<ChallengeRow>()
     }
     catch {
       return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
@@ -271,13 +248,9 @@ export function createAdminBff(
       return challengeExpired(request)
     }
 
-    let consumed: D1RunResult
+    let consumed: AuthRunResult
     try {
-      consumed = await env.MIP_ADMIN_AUTH_DB!.prepare(
-        `UPDATE mip_admin_web_login_challenges
-            SET status = 'CONSUMED', consumed_at = ?1
-          WHERE id = ?2 AND browser_key_hash = ?3 AND status = 'CONFIRMED' AND consumed_at IS NULL`,
-      ).bind(deps.now(), claims.id, browserKeyHash).run()
+      consumed = await authStatement(env.MIP_ADMIN_AUTH_DB!, 'consumeChallenge').bind(deps.now(), claims.id, browserKeyHash).run()
     }
     catch {
       return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
@@ -323,11 +296,7 @@ export function createAdminBff(
     )
     let currentLimit: LoginPrincipalLimitRow | null
     try {
-      currentLimit = await env.MIP_ADMIN_AUTH_DB!.prepare(
-        `SELECT failed_attempts, locked_until
-           FROM mip_admin_web_login_principal_limits
-          WHERE principal_key = ?1`,
-      ).bind(principalKey).first<LoginPrincipalLimitRow>()
+      currentLimit = await authStatement(env.MIP_ADMIN_AUTH_DB!, 'findPrincipalLimit').bind(principalKey).first<LoginPrincipalLimitRow>()
     }
     catch {
       return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
@@ -338,30 +307,9 @@ export function createAdminBff(
     const selector = challenge.kind === 'CODE'
       ? await hmacHex(env.MIP_WEB_SESSION_SECRET!, `code\0${challenge.value}`, deps.crypto)
       : challenge.value
-    let confirmed: D1RunResult
+    let confirmed: AuthRunResult
     try {
-      const confirmationSql = challenge.kind === 'CODE'
-        ? `UPDATE mip_admin_web_login_challenges
-            SET status = 'CONFIRMED', app_id = ?1, open_id = ?2, display_name = ?3, confirmed_at = ?4
-          WHERE code_hash = ?5
-            AND status = 'PENDING'
-            AND expires_at >= ?4
-            AND NOT EXISTS (
-              SELECT 1
-                FROM mip_admin_web_login_principal_limits
-               WHERE principal_key = ?6 AND locked_until > ?4
-            )`
-        : `UPDATE mip_admin_web_login_challenges
-            SET status = 'CONFIRMED', app_id = ?1, open_id = ?2, display_name = ?3, confirmed_at = ?4
-          WHERE id = ?5
-            AND status = 'PENDING'
-            AND expires_at >= ?4
-            AND NOT EXISTS (
-              SELECT 1
-                FROM mip_admin_web_login_principal_limits
-               WHERE principal_key = ?6 AND locked_until > ?4
-            )`
-      confirmed = await env.MIP_ADMIN_AUTH_DB!.prepare(confirmationSql).bind(
+      confirmed = await authStatement(env.MIP_ADMIN_AUTH_DB!, challenge.kind === 'CODE' ? 'confirmChallengeCode' : 'confirmChallengeToken').bind(
         principal.appId,
         principal.openId,
         principal.displayName?.slice(0, 80) || null,
@@ -387,9 +335,7 @@ export function createAdminBff(
       return jsonError('CHALLENGE_NOT_FOUND', '登录请求无效或已过期', 404)
     }
     try {
-      await env.MIP_ADMIN_AUTH_DB!.prepare(
-        'DELETE FROM mip_admin_web_login_principal_limits WHERE principal_key = ?1',
-      ).bind(principalKey).run()
+      await authStatement(env.MIP_ADMIN_AUTH_DB!, 'clearPrincipalLimit').bind(principalKey).run()
     }
     catch {
       // A stale failure counter can only make the next confirmation stricter; login stays single-use.
@@ -734,55 +680,19 @@ async function loginIpKey(request: Request, secret: string, cryptoApi: Crypto) {
 }
 
 async function recordLoginChallengeHit(
-  database: D1DatabaseBinding,
+  database: AdminAuthDatabase,
   ipKey: string,
   now: number,
 ) {
-  return database.prepare(
-    `INSERT INTO mip_admin_web_login_ip_limits
-      (ip_key, window_started_at, hit_count)
-     VALUES (?1, ?2, 1)
-     ON CONFLICT(ip_key) DO UPDATE SET
-       hit_count = CASE
-         WHEN window_started_at <= ?3 THEN 1
-         ELSE hit_count + 1
-       END,
-       window_started_at = CASE
-         WHEN window_started_at <= ?3 THEN ?2
-         ELSE window_started_at
-       END
-     RETURNING window_started_at, hit_count`,
-  ).bind(ipKey, now, now - LOGIN_CHALLENGE_IP_WINDOW_MS).first<LoginIpLimitRow>()
+  return authStatement(database, 'hitLoginIp').bind(ipKey, now, now - LOGIN_CHALLENGE_IP_WINDOW_MS).first<LoginIpLimitRow>()
 }
 
 async function recordFailedLoginAttempt(
-  database: D1DatabaseBinding,
+  database: AdminAuthDatabase,
   principalKey: string,
   now: number,
 ) {
-  return database.prepare(
-    `INSERT INTO mip_admin_web_login_principal_limits
-      (principal_key, failed_attempts, window_started_at, locked_until, updated_at)
-     VALUES (?1, 1, ?2, 0, ?2)
-     ON CONFLICT(principal_key) DO UPDATE SET
-       failed_attempts = CASE
-         WHEN locked_until > ?2 THEN failed_attempts
-         WHEN window_started_at <= ?3 THEN 1
-         ELSE failed_attempts + 1
-       END,
-       window_started_at = CASE
-         WHEN locked_until > ?2 THEN window_started_at
-         WHEN window_started_at <= ?3 THEN ?2
-         ELSE window_started_at
-       END,
-       locked_until = CASE
-         WHEN locked_until > ?2 THEN locked_until
-         WHEN (CASE WHEN window_started_at <= ?3 THEN 1 ELSE failed_attempts + 1 END) >= ?4 THEN ?5
-         ELSE 0
-       END,
-       updated_at = ?2
-     RETURNING failed_attempts, locked_until`,
-  ).bind(
+  return authStatement(database, 'failPrincipal').bind(
     principalKey,
     now,
     now - LOGIN_FAILURE_WINDOW_MS,
@@ -819,7 +729,7 @@ function hasTrustedOrigin(request: Request, env: AdminBffEnv) {
 }
 
 function challengeConfigError(env: AdminBffEnv) {
-  if (!env.MIP_ADMIN_AUTH_DB || typeof env.MIP_ADMIN_AUTH_DB.prepare !== 'function') {
+  if (!env.MIP_ADMIN_AUTH_DB || !('statement' in env.MIP_ADMIN_AUTH_DB ? typeof env.MIP_ADMIN_AUTH_DB.statement === 'function' : typeof env.MIP_ADMIN_AUTH_DB.prepare === 'function')) {
     return '网页登录数据库尚未配置'
   }
   if (!validSecret(env.MIP_WEB_SESSION_SECRET) || !validSecret(env.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET)) {
@@ -1263,12 +1173,20 @@ function randomToken(cryptoApi: Crypto, length: number) {
   return base64Url(cryptoApi.getRandomValues(new Uint8Array(length)))
 }
 
-function randomChallengeCode(cryptoApi: Crypto) {
-  const range = 1_000_000
+function randomChallengeToken(cryptoApi: Crypto, namespace?: string) {
+  if (namespace === 'cloudbase') return `z_${randomToken(cryptoApi, 24).slice(2)}`
+  let token = randomToken(cryptoApi, 24)
+  while (token.startsWith('z_')) token = randomToken(cryptoApi, 24)
+  return token
+}
+
+function randomChallengeCode(cryptoApi: Crypto, namespace?: string) {
+  const migrated = namespace === 'cloudbase'
+  const range = migrated ? 100_000 : 900_000
   const maximum = Math.floor(0x1_0000_0000 / range) * range
   let value = maximum
   while (value >= maximum) value = cryptoApi.getRandomValues(new Uint32Array(1))[0]
-  return String(value % range).padStart(6, '0')
+  return String((value % range) + (migrated ? 900_000 : 0)).padStart(6, '0')
 }
 
 function base64Url(value: Uint8Array) {

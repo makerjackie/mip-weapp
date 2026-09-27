@@ -17,6 +17,6 @@
     "noEmit": true,
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src", "server", "functions", "vite.config.ts", "vitest.config.ts"],
+  "include": ["src", "server", "functions", "cloudbase/**/*.ts", "vite.config.ts", "vitest.config.ts"],
   "exclude": ["server/**/*.test.ts", "src/modules/**/*.test.ts"]
 }

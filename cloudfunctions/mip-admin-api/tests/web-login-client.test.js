@@ -127,3 +127,19 @@ describe('Web login confirmation client', () => {
     )
   })
 })
+
+
+describe('parallel CloudBase migration routing', () => {
+  it('routes only reserved codes and tokens to the configured migration endpoint', async () => {
+    const urls = []
+    const client = createWebLoginConfirmationClient({ endpoint: 'https://old.example/api/confirm', migrationEndpoint: 'https://new.example/api/confirm', secret: SECRET, fetchImpl: async url => { urls.push(url); return new Response(JSON.stringify({confirmed:true})) } })
+    for (const challenge of [{challengeCode:'123456'}, {challengeCode:'923456'}, {challengeToken:'z_'+'a'.repeat(30)}, {challengeToken:'b'.repeat(32)}]) await client.confirm({appId:'wx-test',openId:'test-user',...challenge})
+    assert.deepEqual(urls, ['https://old.example/api/confirm','https://new.example/api/confirm','https://new.example/api/confirm','https://old.example/api/confirm'])
+  })
+  it('does not fall back to another backend when a reserved code is missing', async () => {
+    const urls = []
+    const client = createWebLoginConfirmationClient({ endpoint: 'https://old.example/api/confirm', migrationEndpoint: 'https://new.example/api/confirm', secret: SECRET, fetchImpl: async url => { urls.push(url); return new Response(JSON.stringify({error:{code:'CHALLENGE_NOT_FOUND'}}),{status:404}) } })
+    await assert.rejects(client.confirm({appId:'wx-test',openId:'test-user',challengeCode:'923456'}), {code:'WEB_LOGIN_CHALLENGE_NOT_FOUND'})
+    assert.deepEqual(urls,['https://new.example/api/confirm'])
+  })
+})

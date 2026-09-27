@@ -1003,6 +1003,7 @@ function environmentForRole(role, options) {
       MIP_GAME_ADMIN_HMAC_SECRET: options.secrets.gameAdminHmac,
       MIP_MEDIA_ADMIN_HMAC_SECRET: options.secrets.mediaAdminHmac,
       MIP_ADMIN_WEB_LOGIN_CONFIRM_URL: adminWebLoginConfirmUrl,
+      ...(env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL ? { MIP_ADMIN_WEB_LOGIN_MIGRATION_URL: exactHttpsEndpoint(env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL, 'MIP_ADMIN_WEB_LOGIN_MIGRATION_URL') } : {}),
       MIP_MESSAGE_SCHEDULER_FUNCTION_NAME: options.functionNames.scheduler,
       MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME: options.functionNames.knowledgeScheduler,
       MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET: options.secrets.knowledgeSchedulerHmac,

@@ -7,14 +7,19 @@ const WEB_LOGIN_CONFIRM_TRANSPORT = 'MIP_WEB_LOGIN_CONFIRM_V1'
 
 function createWebLoginConfirmationClient({
   endpoint,
+  migrationEndpoint,
   fetchImpl = globalThis.fetch,
   now = Date.now,
   nonce = () => randomBytes(18).toString('base64url'),
   secret,
 } = {}) {
-  const normalizedEndpoint = exactHttpsUrl(endpoint)
+  const primaryEndpoint = exactHttpsUrl(endpoint)
+  const cloudbaseEndpoint = exactHttpsUrl(migrationEndpoint)
 
   async function confirm({ appId, challengeCode, challengeToken, displayName, openId } = {}) {
+    // Separate namespaces prevent a code on one backend from confirming another browser.
+    const migrated = Boolean(cloudbaseEndpoint) && ((typeof challengeCode === 'string' && challengeCode.startsWith('9')) || (typeof challengeToken === 'string' && challengeToken.startsWith('z_')))
+    const normalizedEndpoint = migrated ? cloudbaseEndpoint : primaryEndpoint
     if (!normalizedEndpoint
       || typeof secret !== 'string'
       || secret.length < 32

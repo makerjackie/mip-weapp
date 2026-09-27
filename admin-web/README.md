@@ -82,3 +82,8 @@ Cloudflare Pages 的项目配置在 `wrangler.toml`；从仓库根目录执行 `
 ## 边界
 
 Web 工程不复制会员、活动、订单或权限规则。真实请求沿用 `AdminRequest v1`，CloudBase adapter 回到同一个 `AdminApplication.execute` seam；BFF 只处理浏览器会话、来源验证和 server-to-server transport。
+
+
+## CloudBase 并行迁移
+
+后台已增加 CloudBase 同源运行入口；前端静态托管，BFF 云函数，认证存储为独立 MySQL schema，业务仍由原 `mip-admin-api` 鉴权。发布与回滚见 [CloudBase 运行说明](cloudbase/README.md)。Cloudflare 的部署适配器暂时保留，用户确认后才下线；新旧登录会话和密码存储不实时同步。
