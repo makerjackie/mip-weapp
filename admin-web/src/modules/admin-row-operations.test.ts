@@ -94,12 +94,16 @@ describe('admin row operations', () => {
     assert.deepEqual(announcementRowActions({
       id: 'announcement-1', version: 2, status: 'DRAFT', isPinned: false,
     }), [{
+      action: 'mip.admin.announcements.save', label: '编辑', targetId: 'announcement-1',
+      values: { announcementId: 'announcement-1', expectedVersion: 2 },
+    }, {
       action: 'mip.admin.announcements.publish', label: '发布', targetId: 'announcement-1',
       values: { announcementId: 'announcement-1', expectedVersion: 2 },
     }])
     assert.deepEqual(announcementRowActions({
       id: 'announcement-1', version: 3, status: 'PUBLISHED', isPinned: true,
     }).map(item => [item.action, item.label]), [
+      ['mip.admin.announcements.save', '编辑'],
       ['mip.admin.announcements.withdraw', '撤回'],
       ['mip.admin.announcements.pin', '取消置顶'],
     ])
@@ -107,8 +111,11 @@ describe('admin row operations', () => {
     assert.deepEqual(messageTemplateRowActions({
       id: 'template-1', version: 4, status: 'DRAFT',
     }).map(item => item.action), [
-      'mip.admin.messageTemplates.activate', 'mip.admin.messageTemplates.archive',
+      'mip.admin.messageTemplates.save', 'mip.admin.messageTemplates.activate', 'mip.admin.messageTemplates.archive',
     ])
+    assert.deepEqual(messageTemplateRowActions({
+      id: 'template-1', version: 5, status: 'ARCHIVED',
+    }), [])
     assert.deepEqual(messageTemplateRowActions({
       id: 'template-1', version: 5, status: 'ARCHIVED',
     }), [])

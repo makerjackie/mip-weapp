@@ -262,11 +262,49 @@ export function OperationsLogRoutePage() { return <GovernanceRoutePage route="op
 function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
   const session = useAdminSession()
   const { launch } = useAdminOperations()
+  const { message } = App.useApp()
   const search = useRouteSearch()
   const updateSearch = useUpdateSearch()
   const detail = useAdminDetail()
   const query = listQuery(search)
   const result = useAdminReadPage(route, query)
+
+  const editEntity = async (intent: GovernanceMutationRequest): Promise<boolean> => {
+    if (intent.action === 'mip.admin.announcements.save' && intent.targetId) {
+      const value = recordValue(await session.request('mip.admin.announcements.get', { announcementId: intent.targetId }))
+      void launch(intent.action, intent.targetId, null, {
+        values: {
+          scopeType: textValue(value.scopeType) || 'PLATFORM',
+          branchId: textValue(value.branchId) || '',
+          title: textValue(value.title) || '',
+          summary: textValue(value.summary) || '',
+          body: textValue(value.body) || '',
+          targetType: textValue(value.targetType) || '',
+          targetId: textValue(value.targetId) || '',
+          visibleFrom: textValue(value.visibleFrom) || '',
+          visibleUntil: textValue(value.visibleUntil) || '',
+        },
+        expectedVersion: Number(value.version) || intent.expectedVersion,
+      })
+      return true
+    }
+    if (intent.action === 'mip.admin.messageTemplates.save' && intent.targetId) {
+      const value = recordValue(await session.request('mip.admin.messageTemplates.get', { templateId: intent.targetId }))
+      void launch(intent.action, intent.targetId, null, {
+        values: {
+          scopeType: textValue(value.scopeType) || 'PLATFORM',
+          branchId: textValue(value.branchId) || '',
+          name: textValue(value.name) || '',
+          title: textValue(value.title) || '',
+          body: textValue(value.body) || '',
+        },
+        expectedVersion: Number(value.version) || intent.expectedVersion,
+      })
+      return true
+    }
+    return false
+  }
+
   const common = {
     page: result.data || null,
     routeDefinition: getAdminReadRouteDefinition(route),
@@ -291,11 +329,21 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
     onTabChange: (tab: string) => void updateSearch({ ...search, tab }),
     onRefresh: () => void result.refetch(),
     onViewDetail: (intent: { route: 'messages' | 'knowledge'; id: string }) => detail.openDetail(intent.route, intent.id),
-    onMutationRequest: (intent: GovernanceMutationRequest) => void launch(intent.action, intent.targetId, detail.view, {
-      values: intent.values,
-      expectedVersion: intent.expectedVersion,
-      allowedCapabilities: intent.allowedCapabilities,
-    }),
+    onMutationRequest: (intent: GovernanceMutationRequest) => {
+      void (async () => {
+        try {
+          if (await editEntity(intent)) return
+          void launch(intent.action, intent.targetId, detail.view, {
+            values: intent.values,
+            expectedVersion: intent.expectedVersion,
+            allowedCapabilities: intent.allowedCapabilities,
+          })
+        }
+        catch (reason) {
+          void message.error(reason instanceof Error ? reason.message : '记录加载失败，请刷新后重试')
+        }
+      })()
+    },
   }
   const page = route === 'permissions' ? <PermissionsPage {...common} />
     : route === 'messages' ? <MessagesPage {...common} />
@@ -357,6 +405,14 @@ function useRouteSearch() {
 function useUpdateSearch() {
   const navigate = useNavigate()
   return useCallback((next: AdminListSearch) => navigate({ search: next as never }), [navigate])
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function textValue(value: unknown): string | undefined {
+  return typeof value === 'string' && value ? value : undefined
 }
 
 function listQuery(search: AdminListSearch): AdminListQuery {

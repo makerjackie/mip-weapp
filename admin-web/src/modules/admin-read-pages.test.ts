@@ -218,7 +218,8 @@ describe('admin read pages', () => {
     assert.deepEqual(calls.map(call => call.action), ['mip.admin.communityReports.list', 'mip.admin.announcements.list', 'mip.admin.exceptions.list', 'mip.admin.operations.queue.list'])
     assert.deepEqual(calls[0].input, { status: 'PENDING', limit: 20 })
     assert.equal(page.sections.length, 4)
-    assert.equal(page.sections[0].rows[0].rowActions?.[0]?.action, 'mip.admin.announcements.publish')
+    assert.equal(page.sections[0].rows[0].rowActions?.[0]?.action, 'mip.admin.announcements.save')
+    assert.equal(page.sections[0].rows[0].rowActions?.[1]?.action, 'mip.admin.announcements.publish')
     assert.equal(page.sections[1].rows[0].category, '垃圾信息')
     assert.equal(page.sections[1].rows[0].rowActions?.[0]?.action, 'mip.admin.communityReports.claim')
     assert.equal(page.sections[3].rows[0].state, '待处理')
@@ -259,7 +260,9 @@ describe('admin read pages', () => {
     assert.equal(page.sections[0].rows[0].scope, '福田分会')
     assert.equal(page.sections[0].rows[0].detailId, 'campaign-1')
     assert.deepEqual(page.sections[1].rows[0].rowActions?.map(item => item.action), [
-      'mip.admin.messageTemplates.activate', 'mip.admin.messageTemplates.archive',
+      'mip.admin.messageTemplates.save',
+      'mip.admin.messageTemplates.activate',
+      'mip.admin.messageTemplates.archive',
     ])
   })
 

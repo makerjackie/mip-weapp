@@ -14,9 +14,11 @@ export type AdminRowOperationAction
     | 'mip.admin.branches.update'
     | 'mip.admin.branches.changeStatus'
     | 'mip.admin.messageCampaigns.cancelSchedule'
+    | 'mip.admin.announcements.save'
     | 'mip.admin.announcements.publish'
     | 'mip.admin.announcements.withdraw'
     | 'mip.admin.announcements.pin'
+    | 'mip.admin.messageTemplates.save'
     | 'mip.admin.messageTemplates.activate'
     | 'mip.admin.messageTemplates.archive'
     | 'mip.admin.communityReports.claim'
@@ -186,17 +188,24 @@ export function announcementRowActions(announcement: Record<string, unknown>): A
   const status = String(announcement.status || '')
   if (!announcementId || expectedVersion === null) return []
   const values = { announcementId, expectedVersion }
+  const edit: AdminRowOperation = {
+    action: 'mip.admin.announcements.save',
+    label: '编辑',
+    targetId: announcementId,
+    values,
+  }
   if (['DRAFT', 'WITHDRAWN'].includes(status)) {
-    return [{
+    return [edit, {
       action: 'mip.admin.announcements.publish',
       label: '发布',
       targetId: announcementId,
       values,
     }]
   }
-  if (status !== 'PUBLISHED') return []
+  if (status !== 'PUBLISHED') return [edit]
   const pinned = announcement.isPinned === true
   return [
+    edit,
     {
       action: 'mip.admin.announcements.withdraw',
       label: '撤回',
@@ -218,7 +227,12 @@ export function messageTemplateRowActions(template: Record<string, unknown>): Ad
   const status = String(template.status || '')
   if (!templateId || expectedVersion === null || !['DRAFT', 'ACTIVE'].includes(status)) return []
   const values = { templateId, expectedVersion }
-  const actions: AdminRowOperation[] = []
+  const actions: AdminRowOperation[] = [{
+    action: 'mip.admin.messageTemplates.save',
+    label: '编辑',
+    targetId: templateId,
+    values,
+  }]
   if (status === 'DRAFT') actions.push({
     action: 'mip.admin.messageTemplates.activate',
     label: '启用',
