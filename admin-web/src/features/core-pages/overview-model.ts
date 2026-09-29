@@ -61,7 +61,7 @@ export function mapAdminOverview(value: unknown): AdminOverviewView {
     metrics: [
       metric('用户总数', people.activeAccounts, '当前可见范围'),
       metric('有效会员', membership.currentPlayers, '付费权益有效'),
-      metric('活动总数', events.totalEvents, '所选时间范围'),
+      metric('活动总数', events.totalEvents, '当前可见范围'),
       metric('有效报名', events.effectiveRegistrations, '所选时间范围'),
       metric('新增用户', people.newAccounts, '所选时间范围'),
       metric('已完善档案', people.profiledUsers, '当前可见范围'),
@@ -166,8 +166,10 @@ function dateRange(start: unknown, end: unknown) {
   const startDate = new Date(String(start || ''))
   const endDate = new Date(String(end || ''))
   if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return '当前周期'
-  const format = (date: Date) => date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
-  return `${format(startDate)}–${format(endDate)}`
+  // Dashboard periods use [startAt, endAt) in Shanghai time. Display the last
+  // included calendar day, rather than the following midnight of a custom range.
+  const format = (date: Date) => date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', timeZone: 'Asia/Shanghai' })
+  return `${format(startDate)}–${format(new Date(endDate.getTime() - 1))}`
 }
 
 function formatDate(value: unknown, fallback = '时间未提供') {

@@ -7,6 +7,18 @@ import { OverviewPageView } from './overview-page'
 
 afterEach(cleanup)
 
+it('labels the included Shanghai calendar days instead of an exclusive midnight boundary', () => {
+  expect(mapAdminOverview({ period: { startAt: '2026-09-13T16:00:00.000Z', endAt: '2026-09-14T16:00:00.000Z' } }).period).toBe('9/14–9/14')
+  expect(mapAdminOverview({ period: { startAt: '2026-09-13T16:00:00.000Z', endAt: '2026-09-15T16:00:00.000Z' } }).period).toBe('9/14–9/15')
+  expect(mapAdminOverview({ period: { startAt: '2026-09-28T16:00:00.000Z', endAt: '2026-09-29T13:00:00.000Z' } }).period).toBe('9/29–9/29')
+})
+
+it('distinguishes the current event total from registrations during the selected period', () => {
+  const data = mapAdminOverview({ events: { totalEvents: { availability: 'AVAILABLE', count: 8 }, effectiveRegistrations: { availability: 'AVAILABLE', count: 0 } } })
+  expect(data.metrics.find(metric => metric.label === '活动总数')).toMatchObject({ value: '8', detail: '当前可见范围' })
+  expect(data.metrics.find(metric => metric.label === '有效报名')).toMatchObject({ value: '0', detail: '所选时间范围' })
+})
+
 it('keeps chart values numeric and preserves unknowns and money units in the matching table', () => {
   const data = mapAdminOverview({ membership: { purchaseFlow: { availability: 'AVAILABLE', series: [{ bucketStartDate: '2030-01-01', initialPurchaseCount: 1234, firstRenewalCount: 0, eligiblePaidAmountCents: 12345 }] } } })
   expect(data.purchaseTrend?.points).toEqual([{ date: '2030-01-01', initial: 1234, firstRenewal: 0, repeatRenewal: null, paidAmount: 123.45 }])

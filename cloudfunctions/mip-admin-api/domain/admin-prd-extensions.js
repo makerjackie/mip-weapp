@@ -395,11 +395,12 @@ function createAdminPrdExtensions(database, options = {}) {
           `UPDATE mip_opportunities SET owner_user_id = ?, scope_type = ?, branch_id = ?,
             title = ?, value_summary = ?, target_summary = ?, description = ?, city_tag_id = ?,
             deadline_at = ?, content_safety_status = ?, cover_asset_id = ?, version = version + 1
-           WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'PUBLISHED')`,
+           WHERE app_id = ? AND id = ? AND version = ? AND status IN (${placeholders(EDITABLE_OPPORTUNITY_STATUSES)})`,
           [input.draft.ownerUserId, input.draft.scopeType, input.draft.branchId,
             input.draft.title, input.draft.valueSummary, input.draft.targetSummary,
             input.draft.description, legacyCityTagId, input.draft.deadlineAt,
-            input.contentSafetyStatus, coverAssetId, input.appId, opportunityId, input.expectedVersion],
+            input.contentSafetyStatus, coverAssetId, input.appId, opportunityId, input.expectedVersion,
+            ...EDITABLE_OPPORTUNITY_STATUSES],
         )
         if (Number(updated.affectedRows) !== 1) throw codeError('CONFLICT')
       }
@@ -459,8 +460,8 @@ function createAdminPrdExtensions(database, options = {}) {
           published_at = COALESCE(published_at, UTC_TIMESTAMP(3)),
           moderated_at = UTC_TIMESTAMP(3), moderated_by_user_id = ?, moderation_reason = NULL,
           version = version + 1
-         WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'UNPUBLISHED', 'ENDED')`,
-        [input.actorUserId, input.appId, input.opportunityId, input.expectedVersion],
+         WHERE app_id = ? AND id = ? AND version = ? AND status IN (${placeholders(PUBLISHABLE_OPPORTUNITY_STATUSES)})`,
+        [input.actorUserId, input.appId, input.opportunityId, input.expectedVersion, ...PUBLISHABLE_OPPORTUNITY_STATUSES],
       )
       if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
       await writeAudit(tx, { ...input.audit, metadata: { ...input.audit.metadata, fromStatus: current.status, toStatus: 'PUBLISHED' } })

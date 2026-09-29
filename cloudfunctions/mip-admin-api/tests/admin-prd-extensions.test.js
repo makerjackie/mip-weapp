@@ -26,6 +26,36 @@ function audit(resourceId) {
 }
 
 describe('admin PRD extension persistence', () => {
+  it('saves a revised deadline while keeping ended and unpublished opportunities in their current state', async () => {
+    for (const status of ['UNPUBLISHED', 'ENDED']) {
+      const writes = []
+      const repository = extensions(database({
+        async one(sql) {
+          if (sql.includes('FROM mip_opportunities')) return { id: 'opportunity-a', branch_id: null, status, version: 4 }
+          if (sql.includes('FROM mip_users')) return { id: 'owner-a' }
+          return null
+        },
+        async query(sql, params) {
+          writes.push({ sql, params })
+          if (sql.includes('UPDATE mip_opportunities')) {
+            assert.equal((sql.match(/\?/g) || []).length, params.length)
+            return { affectedRows: params.slice(-4).includes(status) ? 1 : 0 }
+          }
+          return { affectedRows: 1 }
+        },
+      }))
+      const result = await repository.saveOpportunity({
+        appId: 'wx-app', actorUserId: 'admin-user', opportunityId: 'opportunity-a', expectedVersion: 4,
+        authorizedScope: { scopeType: 'PLATFORM', scopeId: null }, authorization: {}, contentSafetyStatus: 'APPROVED',
+        draft: { ownerUserId: 'owner-a', scopeType: 'PLATFORM', branchId: null, title: '机会', valueSummary: '价值',
+          targetSummary: '', description: '原正文', cityTagId: null, deadlineAt: '2030-10-01T00:00:00.000Z', roleKeys: [], tagIds: [] },
+        audit,
+      })
+      assert.deepEqual(result, { id: 'opportunity-a', status, version: 5 })
+      assert.equal(writes.find(write => write.sql.includes('UPDATE mip_opportunities')).params[8], '2030-10-01T00:00:00.000Z')
+      assert.ok(writes.some(write => write.sql.includes('INSERT INTO mip_audit_logs')))
+    }
+  })
   it('restores unpublished and ended opportunities without changing linked records and audits the transition', async () => {
     for (const status of ['UNPUBLISHED', 'ENDED']) {
       let version = 4

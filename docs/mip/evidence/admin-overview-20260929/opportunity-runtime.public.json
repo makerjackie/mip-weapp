@@ -1,0 +1,42 @@
+{
+  "at": "2026-09-29T13:13:38.958Z",
+  "stage": "staging",
+  "fixtureOnly": true,
+  "checks": [
+    {
+      "name": "configured-qa-authentication",
+      "passed": true
+    },
+    {
+      "name": "ended-edit-and-recruit-actions",
+      "passed": true
+    },
+    {
+      "name": "ended-recruit-readback",
+      "passed": true
+    },
+    {
+      "name": "stale-reopening-rejected",
+      "passed": true
+    },
+    {
+      "name": "unpublished-edit-and-restore-actions",
+      "passed": true
+    },
+    {
+      "name": "unpublished-restore-readback",
+      "passed": true
+    },
+    {
+      "name": "existing-content-and-relationships-preserved",
+      "passed": true
+    },
+    {
+      "name": "transition-history-retained",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "fixtureReturnedToOriginalPublishedState": true,
+  "completedAt": "2026-09-29T13:13:42.648Z"
+}
