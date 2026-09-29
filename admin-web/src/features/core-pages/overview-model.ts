@@ -22,6 +22,14 @@ export interface AdminOverviewAttentionItem {
   target: '/users' | '/events' | '/orders' | '/tasks'
 }
 
+export interface AdminOverviewPurchasePoint {
+  date: string
+  initial: number | null
+  firstRenewal: number | null
+  repeatRenewal: number | null
+  paidAmount: number | null
+}
+
 export interface AdminOverviewView {
   period: string
   asOf: string
@@ -30,7 +38,7 @@ export interface AdminOverviewView {
     available: boolean
     points: Array<{ label: string; value: number }>
   }
-  purchaseTrend?: { available: boolean; rows: Array<{ [key: string]: unknown; date: string; initial: string; firstRenewal: string; repeatRenewal: string; paidAmount: string }> }
+  purchaseTrend?: { available: boolean; points?: AdminOverviewPurchasePoint[]; rows: Array<{ [key: string]: unknown; date: string; initial: string; firstRenewal: string; repeatRenewal: string; paidAmount: string }> }
   attention: AdminOverviewAttentionItem[]
   activity: AdminOverviewActivityRow[]
 }
@@ -80,11 +88,7 @@ export function mapAdminOverview(value: unknown): AdminOverviewView {
     // The current neutral overview contract has no player-count time series;
     // purchase/registration series are not a player-count trend and must not be substituted.
     playerTrend: { available: false, points: [] },
-    purchaseTrend: { available: purchases.availability === 'AVAILABLE' && Array.isArray(purchases.series), rows: purchases.availability === 'AVAILABLE' && Array.isArray(purchases.series) ? purchases.series.map(value => {
-      const item = record(value)
-      const count = (key: string) => typeof item[key] === 'number' && Number.isSafeInteger(item[key]) ? Number(item[key]).toLocaleString('zh-CN') : '—'
-      return { date: String(item.bucketStartDate || '—'), initial: count('initialPurchaseCount'), firstRenewal: count('firstRenewalCount'), repeatRenewal: count('repeatRenewalCount'), paidAmount: typeof item.eligiblePaidAmountCents === 'number' ? (item.eligiblePaidAmountCents / 100).toFixed(2) : '—' }
-    }) : [] },
+    purchaseTrend: purchaseTrend(purchases),
     attention: [
       attention('30 日内到期会员', membership.expiringPlayers30d, '/users'),
       attention('待审核报名', events.pendingReviewRegistrations, '/events'),
@@ -103,6 +107,17 @@ export function mapAdminOverview(value: unknown): AdminOverviewView {
         })
       : [],
   }
+}
+
+function purchaseTrend(purchases: Record<string, unknown>): NonNullable<AdminOverviewView['purchaseTrend']> {
+  const available = purchases.availability === 'AVAILABLE' && Array.isArray(purchases.series)
+  const points: AdminOverviewPurchasePoint[] = available ? (purchases.series as unknown[]).map(value => {
+    const item = record(value)
+    const count = (key: string) => typeof item[key] === 'number' && Number.isSafeInteger(item[key]) && Number(item[key]) >= 0 ? Number(item[key]) : null
+    return { date: String(item.bucketStartDate || '—'), initial: count('initialPurchaseCount'), firstRenewal: count('firstRenewalCount'), repeatRenewal: count('repeatRenewalCount'), paidAmount: typeof item.eligiblePaidAmountCents === 'number' && Number.isSafeInteger(item.eligiblePaidAmountCents) ? item.eligiblePaidAmountCents / 100 : null }
+  }) : []
+  const countText = (value: number | null) => value === null ? '—' : value.toLocaleString('zh-CN')
+  return { available, points, rows: points.map(point => ({ date: point.date, initial: countText(point.initial), firstRenewal: countText(point.firstRenewal), repeatRenewal: countText(point.repeatRenewal), paidAmount: point.paidAmount === null ? '—' : point.paidAmount.toFixed(2) })) }
 }
 
 function moneyMetric(label: string, source: unknown): AdminOverviewMetric {

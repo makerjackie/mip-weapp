@@ -390,7 +390,7 @@ describe('admin opportunities deep module', () => {
     assert.equal(safetyReads, 0)
     assert.equal(repo.calls.filter(call => call.type === 'save').length, 0)
 
-    repo.opportunityScope.status = 'ENDED'
+    repo.opportunityScope.status = 'ARCHIVED'
     await assert.rejects(
       () => service.saveOpportunity(caller, {
         opportunityId: OPPORTUNITY_ID,

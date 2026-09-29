@@ -1,0 +1,54 @@
+.overview-scope-filter { min-width: 180px; }
+.overview-updated { color: var(--mip-muted); font-size: 12px; }
+.overview-refresh-error { margin-bottom: 16px; }
+.overview-headline { margin-bottom: 16px; }
+.overview-headline .ant-card-body { padding: 16px; }
+.overview-focus-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 16px; }
+.overview-chart-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.overview-chart-toolbar > span { color: var(--mip-muted); font-size: 12px; }
+.overview-chart { height: 248px; min-width: 0; }
+.overview-trend-details { max-height: 320px; overflow: auto; }
+.overview-attention { list-style: none; margin: 0; padding: 0; }
+.overview-attention li + li { margin-top: 8px; }
+.overview-attention .ant-btn { display: flex; gap: 12px; height: auto; min-height: 48px; padding: 12px; background: var(--mip-layout); }
+.overview-attention .ant-btn > span:first-child { flex: 1; text-align: left; white-space: normal; }
+.overview-attention strong { color: var(--mip-primary); font-size: 22px; }
+.overview-clear { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 0; }
+.overview-clear > .anticon { font-size: 30px; color: var(--mip-success); }
+.overview-clear > span:last-child { color: var(--mip-muted); font-size: 12px; }
+.overview-checked-items { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; color: var(--mip-muted); font-size: 12px; }
+.overview-checked-items .anticon { margin-right: 6px; }
+.overview-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--mip-line); }
+.overview-shortcuts h2 { grid-column: 1 / -1; margin: 0 0 4px; font-size: 14px; color: var(--mip-text); }
+.overview-shortcuts .ant-btn { min-width: 0; justify-content: space-between; padding-inline: 10px; }
+.overview-breakdown, .overview-activity { margin-top: 16px; }
+.overview-breakdown .ant-card-body { padding-top: 4px; }
+.overview-metric-details { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.overview-metric-details > div { min-width: 0; padding: 16px; border-radius: var(--mip-radius); background: var(--mip-layout); }
+.overview-metric-details dt { font-size: 13px; color: var(--mip-muted); }
+.overview-metric-details dd { margin: 8px 0 4px; font-size: 24px; line-height: 1.4; font-weight: 650; overflow-wrap: anywhere; }
+.overview-metric-details small { display: block; color: var(--mip-muted); font-size: 12px; }
+.overview-metric-details small[data-trend=up] { color: var(--mip-success); }
+.overview-metric-details small[data-trend=down] { color: var(--mip-error); }
+.overview-activity-list { list-style: none; padding: 0; margin: 0; }
+.overview-activity-list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--mip-line); }
+.overview-activity-list li:last-child { border-bottom: 0; }
+.overview-activity-icon { color: var(--mip-primary); font-size: 18px; }
+.overview-activity-list li > div { flex: 1; min-width: 0; }
+.overview-activity-list strong { display: block; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.overview-activity-list small { display: block; margin-top: 4px; color: var(--mip-muted); font-size: 12px; }
+.overview-activity-list .ant-tag { flex-shrink: 0; margin-right: 0; }
+.overview-data-note { margin: 16px 0 0; color: var(--mip-muted); font-size: 12px; }
+@media (max-width: 767px) {
+  .filter-bar.overview-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overview-scope-filter { min-width: 0; }
+  .overview-filters .ant-picker { grid-column: 1 / -1; max-width: 100%; }
+  .metric-grid.overview-headline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overview-focus-grid { grid-template-columns: minmax(0, 1fr); }
+  .overview-chart { height: 224px; }
+  .overview-chart-toolbar { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .overview-metric-details { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .overview-metric-details > div { padding: 12px; }
+  .overview-metric-details dd { font-size: 21px; }
+  .overview-updated { display: block; }
+}

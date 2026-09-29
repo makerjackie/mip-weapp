@@ -15,6 +15,7 @@
   --mip-warning: #d99a25;
   --mip-error: #c35645;
   --mip-sidebar-width: 184px;
+  --mip-radius: 8px;
 }
 
 * { box-sizing: border-box; }

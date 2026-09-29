@@ -227,8 +227,8 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
   else if (route === 'opportunities') {
     const opportunity = record(view.source?.opportunity)
     if (!opportunity.deleted && opportunity.status !== 'ARCHIVED') {
-      if (['DRAFT', 'PUBLISHED'].includes(String(opportunity.status))) actions.push(formPageButton('编辑机会', '/opportunities/$opportunityId/edit', id, 'opportunities.moderate', 'mip.admin.opportunities.save'))
-      if (['DRAFT', 'UNPUBLISHED'].includes(String(opportunity.status))) actions.push(button('mip.admin.opportunities.publish', '发布机会', id, 'opportunities.moderate'))
+      if (['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ENDED'].includes(String(opportunity.status))) actions.push(formPageButton('编辑机会', '/opportunities/$opportunityId/edit', id, 'opportunities.moderate', 'mip.admin.opportunities.save'))
+      if (['DRAFT', 'UNPUBLISHED', 'ENDED'].includes(String(opportunity.status))) actions.push(button('mip.admin.opportunities.publish', opportunity.status === 'ENDED' ? '重新招募' : opportunity.status === 'UNPUBLISHED' ? '恢复招募' : '发布机会', id, 'opportunities.moderate'))
       if (opportunity.status === 'PUBLISHED') actions.push(button('mip.admin.opportunities.end', '结束机会', id, 'opportunities.moderate'), button('mip.admin.opportunities.unpublish', '下架机会', id, 'opportunities.moderate'))
       if (opportunity.status === 'DRAFT') actions.push(button('mip.admin.opportunities.archive', '归档机会', id, 'opportunities.archive'))
       actions.push(button('mip.admin.opportunities.delete', '删除机会', id, 'opportunities.archive'))

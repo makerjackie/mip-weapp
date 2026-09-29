@@ -8,7 +8,7 @@ const {
 } = require('./mutation-authorization')
 const { load: loadCommercialTerms, sync: syncCommercialTerms } = require('./opportunity-commercial-terms')
 const { claimOptional, complete } = require('./idempotency')
-const { EDITABLE_OPPORTUNITY_STATUSES } = require('./opportunity-policy')
+const { EDITABLE_OPPORTUNITY_STATUSES, PUBLISHABLE_OPPORTUNITY_STATUSES } = require('./opportunity-policy')
 const { rosterPaymentFields } = require('./roster-payment')
 
 function codeError(code, details = null) {
@@ -451,19 +451,19 @@ function createAdminPrdExtensions(database, options = {}) {
       assertScope(authorization, scope)
       if (!sameScope(scope, input.authorizedScope)) throw codeError('CONFLICT')
       if (Number(current.version) !== input.expectedVersion) throw codeError('CONFLICT')
-      if (!['DRAFT', 'UNPUBLISHED'].includes(current.status)) throw codeError('INVALID_STATE')
+      if (!PUBLISHABLE_OPPORTUNITY_STATUSES.includes(current.status)) throw codeError('INVALID_STATE')
       if (current.content_safety_status !== 'APPROVED') throw codeError('CONTENT_SAFETY_REQUIRED')
       if (current.deadline_at && new Date(current.deadline_at) <= now()) throw codeError('INVALID_STATE')
       const result = await tx.query(
-        `UPDATE mip_opportunities SET status = 'PUBLISHED',
+        `UPDATE mip_opportunities SET status = 'PUBLISHED', ended_at = NULL,
           published_at = COALESCE(published_at, UTC_TIMESTAMP(3)),
           moderated_at = UTC_TIMESTAMP(3), moderated_by_user_id = ?, moderation_reason = NULL,
           version = version + 1
-         WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'UNPUBLISHED')`,
+         WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'UNPUBLISHED', 'ENDED')`,
         [input.actorUserId, input.appId, input.opportunityId, input.expectedVersion],
       )
       if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
-      await writeAudit(tx, input.audit)
+      await writeAudit(tx, { ...input.audit, metadata: { ...input.audit.metadata, fromStatus: current.status, toStatus: 'PUBLISHED' } })
       return { id: input.opportunityId, status: 'PUBLISHED', version: input.expectedVersion + 1 }
     })
   }

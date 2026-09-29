@@ -186,7 +186,7 @@ describe('core admin pages', () => {
         onNavigate={onNavigate}
       />,
     )
-    expect(screen.getByText('暂无趋势数据')).toBeInTheDocument()
+    expect(screen.getByText('玩家增长趋势暂无数据，暂不展示。')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /用户管理/ }))
     expect(onNavigate).toHaveBeenCalledWith('/users')
   })

@@ -26,6 +26,37 @@ function audit(resourceId) {
 }
 
 describe('admin PRD extension persistence', () => {
+  it('restores unpublished and ended opportunities without changing linked records and audits the transition', async () => {
+    for (const status of ['UNPUBLISHED', 'ENDED']) {
+      let version = 4
+      let currentStatus = status
+      const writes = []
+      const repository = extensions(database({
+        async one() { return { id: 'opportunity-a', branch_id: null, status: currentStatus, version, content_safety_status: 'APPROVED', deadline_at: null } },
+        async query(sql, params) {
+          writes.push({ sql, params })
+          if (sql.includes('UPDATE mip_opportunities')) { currentStatus = 'PUBLISHED'; version++ }
+          return { affectedRows: 1 }
+        },
+      }))
+      const input = { appId: 'wx-app', actorUserId: 'admin-user', opportunityId: 'opportunity-a', expectedVersion: 4, authorizedScope: { scopeType: 'PLATFORM', scopeId: null }, authorization: {}, audit: audit('opportunity-a') }
+      assert.deepEqual(await repository.publishOpportunity(input), { id: 'opportunity-a', status: 'PUBLISHED', version: 5 })
+      assert.equal(writes.length, 2)
+      assert.match(writes[0].sql, /ended_at = NULL/)
+      const auditWrite = writes.find(write => write.sql.includes('INSERT INTO mip_audit_logs'))
+      assert.ok(auditWrite.params.some(value => typeof value === 'string' && value.includes(`"fromStatus":"${status}"`) && value.includes('"toStatus":"PUBLISHED"')))
+      await assert.rejects(() => repository.publishOpportunity(input), error => error.code === 'CONFLICT')
+      assert.equal(writes.length, 2)
+    }
+  })
+  it('rejects expired or unsafe reopening before writes', async () => {
+    for (const [overrides, code] of [[{ deadline_at: '2020-01-01' }, 'INVALID_STATE'], [{ content_safety_status: 'ERROR' }, 'CONTENT_SAFETY_REQUIRED']]) {
+      const writes = []
+      const repository = extensions(database({ async one() { return { id: 'opportunity-a', branch_id: null, status: 'ENDED', version: 4, content_safety_status: 'APPROVED', ...overrides } }, async query(sql) { writes.push(sql); return { affectedRows: 1 } } }))
+      await assert.rejects(() => repository.publishOpportunity({ appId: 'wx-app', actorUserId: 'admin-user', opportunityId: 'opportunity-a', expectedVersion: 4, authorizedScope: { scopeType: 'PLATFORM', scopeId: null }, authorization: {}, audit: audit('opportunity-a') }), error => error.code === code)
+      assert.equal(writes.length, 0)
+    }
+  })
   it('maps editor options in query order and limits branch operators to their branch', async () => {
     const calls = []
     const repository = extensions(database({
@@ -187,8 +218,8 @@ describe('admin PRD extension persistence', () => {
     assert.equal(writes.length, 0)
   })
 
-  it('keeps ended and unpublished opportunities read-only', async () => {
-    for (const status of ['ENDED', 'UNPUBLISHED']) {
+  it('keeps archived opportunities read-only', async () => {
+    for (const status of ['ARCHIVED']) {
       const writes = []
       const repository = extensions(database({
         async one(sql) {

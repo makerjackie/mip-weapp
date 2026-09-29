@@ -22,3 +22,13 @@ test('opportunity projection never exposes impossible lifecycle mutations', () =
   assert.deepEqual(opportunityOperationPolicy({ status: 'DRAFT' }, () => false).availableActions, [])
   assert.equal(opportunityOperationPolicy({ status: 'DRAFT', contentSafetyStatus: 'APPROVED', deadlineAt: '2020-01-01' }, () => true).availableActions.includes('mip.admin.opportunities.publish'), false)
 })
+test('restoration and re-recruitment require approved content and a valid deadline', () => {
+  for (const status of ['UNPUBLISHED', 'ENDED']) {
+    assert.ok(opportunityOperationPolicy({ status, contentSafetyStatus: 'APPROVED' }, () => true).availableActions.includes('mip.admin.opportunities.publish'))
+    for (const item of [{ status, contentSafetyStatus: 'ERROR' }, { status, contentSafetyStatus: 'APPROVED', deadlineAt: '2020-01-01' }]) {
+      const actions = opportunityOperationPolicy(item, () => true).availableActions
+      assert.ok(actions.includes('mip.admin.opportunities.save'))
+      assert.ok(!actions.includes('mip.admin.opportunities.publish'))
+    }
+  }
+})
