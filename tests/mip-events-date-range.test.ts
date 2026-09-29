@@ -46,21 +46,18 @@ function gateway() {
 }
 
 describe('MIP event date range client contract', () => {
-  it('keeps an explicit active-filter label for a selected range', () => {
+  it('keeps an explicit active-filter label for a selected date', () => {
     const page = readFileSync(new URL('../src/pages/events/index.ts', import.meta.url), 'utf8')
     const view = readFileSync(new URL('../src/pages/events/index.wxml', import.meta.url), 'utf8')
     const confirmCalendar = page.slice(
       page.indexOf('  confirmCalendar('),
-      page.indexOf('  clearDateRange('),
-    )
-    const clearDateRange = page.slice(
-      page.indexOf('  clearDateRange('),
       page.indexOf('  openBanner('),
     )
-    expect(page).toContain('customDateLabel: this.data.dateToLabel')
-    expect(page).toContain('customDateLabel: this.data.dateFromLabel')
+    // MIW-11: the start/end range entry was removed; only the single-day calendar remains on the tab.
+    expect(page).not.toContain('dateFrom')
+    expect(page).not.toContain('dateTo')
+    expect(confirmCalendar).toContain('customDateLabel: formatChineseMonthDay(value)')
     expect(confirmCalendar).not.toContain('view: \'UPCOMING\'')
-    expect(clearDateRange).toContain('this.data.view === \'PAST\' ? \'ENDED\' : \'RECENT\'')
     expect(view).toContain('customDateLabel || \'自定义日期\'')
     // figma 1819_18218: the status radios track the date filter, not the tab view.
     expect(view).toContain('aria-checked="{{dateFilter !== \'ENDED\'}}"')

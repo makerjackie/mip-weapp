@@ -2,45 +2,25 @@ import type { EventCardView } from '../../components/mip-activity-card/model'
 import type { EventId } from '../../modules/mip'
 import type { MipPublicBanner } from '../../modules/mip-banners'
 import type {
-  EventAccessType,
   EventDateFilter,
-  EventDiscoveryOption,
   EventFeedQuery,
   EventListView,
-  EventSortDirection,
 } from '../../modules/mip-events'
 import { presentEventCard } from '../../components/mip-activity-card/model'
 import { mipOperationsConfig } from '../../config/mip-operations'
 import { mipBannerModule } from '../../modules/mip-banners'
-import { publicEventTypeLabel, resolvePrimaryBranchCity } from '../../modules/mip-events'
+import { resolvePrimaryBranchCity } from '../../modules/mip-events'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
 import { clearPageMedia, updatePageMedia } from '../../platform/storage/component-media'
 import { formatChineseMonthDay, formatLocalDate } from '../../utils/date'
 
-interface EventFilterOptionView extends EventDiscoveryOption {
-  selected: boolean
-}
-
 type EventBannerView = MipPublicBanner
 
 function rollingCalendarBoundary(yearOffset: number) {
   const today = new Date()
   return new Date(today.getFullYear() + yearOffset, yearOffset < 0 ? 0 : 11, yearOffset < 0 ? 1 : 31).getTime()
-}
-
-function selectedOptions(
-  options: EventDiscoveryOption[],
-  selected: string | string[],
-  presentNames = false,
-): EventFilterOptionView[] {
-  const keys = new Set(Array.isArray(selected) ? selected : selected ? [selected] : [])
-  return options.map(option => ({
-    ...option,
-    name: presentNames ? publicEventTypeLabel(option.name, option.key) : option.name,
-    selected: keys.has(option.key),
-  }))
 }
 
 Page({
@@ -53,30 +33,13 @@ Page({
     videoChannelConfigured: Boolean(mipOperationsConfig.videoChannelFinderUserName),
     cities: [] as string[],
     selectedCity: '',
-    eventTypeOptions: [] as EventFilterOptionView[],
-    tagOptions: [] as EventFilterOptionView[],
-    selectedEventTypeKey: '',
-    selectedTagKeys: [] as string[],
-    selectedAccessType: '' as '' | EventAccessType,
-    selectedSortDirection: '' as '' | EventSortDirection,
-    draftEventTypeKey: '',
-    draftTagKeys: [] as string[],
-    draftAccessType: '' as '' | EventAccessType,
-    draftSortDirection: '' as '' | EventSortDirection,
-    activeFilterCount: 0,
     searchInput: '',
     activeQuery: '',
     selectedDate: '',
     selectedDateLabel: '',
     customDateLabel: '',
-    dateFrom: '',
-    dateFromLabel: '',
-    dateTo: '',
-    dateToLabel: '',
-    rangePanelVisible: false,
     cityNoticeVisible: false,
     calendarVisible: false,
-    calendarTarget: 'SINGLE' as 'SINGLE' | 'FROM' | 'TO',
     calendarValue: Date.now(),
     calendarMinDate: rollingCalendarBoundary(-5),
     calendarMaxDate: rollingCalendarBoundary(10),
@@ -108,77 +71,16 @@ Page({
       dateFilter: this.data.dateFilter,
       cityName: this.data.selectedCity || undefined,
       date: this.data.dateFilter === 'CUSTOM' ? this.data.selectedDate : undefined,
-      dateFrom: this.data.dateFrom || undefined,
-      dateTo: this.data.dateTo || undefined,
-      eventTypeKey: this.data.selectedEventTypeKey || undefined,
-      tagKeys: this.data.selectedTagKeys.length ? [...this.data.selectedTagKeys] : undefined,
-      accessType: this.data.selectedAccessType || undefined,
-      sortDirection: this.data.selectedSortDirection || undefined,
       query: this.data.activeQuery || undefined,
       cursor: cursor || undefined,
     }
   },
 
   async loadPage(options: { force?: boolean } = {}) {
-    const filters = this.loadDiscoveryFilters(options.force === true)
-    const feed = (async () => {
-      await this.initializeDefaultCity()
-      // Only selected catalog filters need validation before querying the feed.
-      if (this.data.selectedEventTypeKey || this.data.selectedTagKeys.length) {
-        await filters
-      }
-      await this.loadEvents(options)
-    })()
-    await Promise.all([filters, feed, this.loadBanners(options.force === true)])
-  },
-
-  async loadDiscoveryFilters(force = false) {
-    const cached = mipEventsModule.peekDiscoveryFilters()
-    if (cached) {
-      this.applyDiscoveryFilters(cached)
-    }
-    try {
-      const filters = await mipEventsModule.getDiscoveryFilters({ force })
-      this.applyDiscoveryFilters(filters)
-    }
-    catch {
-      // Activity discovery remains usable when the optional catalog request is unavailable.
-    }
-  },
-
-  applyDiscoveryFilters(filters: Awaited<ReturnType<typeof mipEventsModule.getDiscoveryFilters>>) {
-    const eventTypeKeys = new Set(filters.eventTypes.map(option => option.key))
-    const tagKeys = new Set(filters.tags.map(option => option.key))
-    const selectedEventTypeKey = eventTypeKeys.has(this.data.selectedEventTypeKey)
-      ? this.data.selectedEventTypeKey
-      : ''
-    const selectedTagKeys = this.data.selectedTagKeys.filter(key => tagKeys.has(key))
-    const draftEventTypeKey = eventTypeKeys.has(this.data.draftEventTypeKey)
-      ? this.data.draftEventTypeKey
-      : selectedEventTypeKey
-    const draftTagKeys = this.data.draftTagKeys.filter(key => tagKeys.has(key))
-    this.setData({
-      selectedEventTypeKey,
-      selectedTagKeys,
-      draftEventTypeKey,
-      draftTagKeys: draftTagKeys.length ? draftTagKeys : [...selectedTagKeys],
-      eventTypeOptions: selectedOptions(filters.eventTypes, draftEventTypeKey, true),
-      tagOptions: selectedOptions(filters.tags, draftTagKeys.length ? draftTagKeys : selectedTagKeys),
-      activeFilterCount: this.countActiveFilters({ selectedEventTypeKey, selectedTagKeys }),
-    })
-  },
-
-  countActiveFilters(overrides: {
-    selectedEventTypeKey?: string
-    selectedTagKeys?: string[]
-    selectedAccessType?: '' | EventAccessType
-    selectedSortDirection?: '' | EventSortDirection
-  } = {}) {
-    const typeKey = overrides.selectedEventTypeKey ?? this.data.selectedEventTypeKey
-    const tagKeys = overrides.selectedTagKeys ?? this.data.selectedTagKeys
-    const accessType = overrides.selectedAccessType ?? this.data.selectedAccessType
-    const sortDirection = overrides.selectedSortDirection ?? this.data.selectedSortDirection
-    return Number(Boolean(typeKey)) + tagKeys.length + Number(Boolean(accessType)) + Number(Boolean(sortDirection))
+    await Promise.all([
+      this.initializeDefaultCity().then(() => this.loadEvents(options)),
+      this.loadBanners(options.force === true),
+    ])
   },
 
   async loadBanners(force = false) {
@@ -299,10 +201,6 @@ Page({
       selectedDate: '',
       selectedDateLabel: '',
       customDateLabel: '',
-      dateFrom: '',
-      dateFromLabel: '',
-      dateTo: '',
-      dateToLabel: '',
       nextCursor: '',
       message: '',
     })
@@ -321,10 +219,6 @@ Page({
       selectedDate: '',
       selectedDateLabel: '',
       customDateLabel: '',
-      dateFrom: '',
-      dateFromLabel: '',
-      dateTo: '',
-      dateToLabel: '',
       nextCursor: '',
       message: '',
     })
@@ -378,137 +272,7 @@ Page({
   },
 
   showCalendar() {
-    this.setData({ calendarVisible: true, calendarTarget: 'SINGLE' })
-  },
-
-  showRangeCalendar(event: WechatMiniprogram.TouchEvent) {
-    const target = String(event.currentTarget.dataset.target || '') as 'FROM' | 'TO'
-    if (target !== 'FROM' && target !== 'TO') {
-      return
-    }
-    this.setData({ calendarVisible: true, calendarTarget: target })
-  },
-
-  toggleRangePanel() {
-    if (this.data.rangePanelVisible) {
-      this.setData({ rangePanelVisible: false })
-      return
-    }
-    const draftEventTypeKey = this.data.selectedEventTypeKey
-    const draftTagKeys = [...this.data.selectedTagKeys]
-    this.setData({
-      rangePanelVisible: true,
-      draftEventTypeKey,
-      draftTagKeys,
-      draftAccessType: this.data.selectedAccessType,
-      draftSortDirection: this.data.selectedSortDirection
-        || (this.data.view === 'PAST' || this.data.dateFilter === 'ENDED' ? 'DESC' : 'ASC'),
-      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, draftEventTypeKey, true),
-      tagOptions: selectedOptions(this.data.tagOptions, draftTagKeys),
-    })
-  },
-
-  selectEventType(event: WechatMiniprogram.TouchEvent) {
-    const key = String(event.currentTarget.dataset.key || '')
-    if (!this.data.eventTypeOptions.some(option => option.key === key)) {
-      return
-    }
-    const draftEventTypeKey = this.data.draftEventTypeKey === key ? '' : key
-    this.setData({
-      draftEventTypeKey,
-      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, draftEventTypeKey, true),
-    })
-  },
-
-  toggleEventTag(event: WechatMiniprogram.TouchEvent) {
-    const key = String(event.currentTarget.dataset.key || '')
-    if (!this.data.tagOptions.some(option => option.key === key)) {
-      return
-    }
-    const selected = new Set(this.data.draftTagKeys)
-    if (selected.has(key)) {
-      selected.delete(key)
-    }
-    else if (selected.size < 12) {
-      selected.add(key)
-    }
-    else {
-      wx.showToast({ title: '最多选择 12 个活动标签', icon: 'none' })
-      return
-    }
-    const draftTagKeys = [...selected].sort()
-    this.setData({
-      draftTagKeys,
-      tagOptions: selectedOptions(this.data.tagOptions, draftTagKeys),
-    })
-  },
-
-  selectAccessType(event: WechatMiniprogram.TouchEvent) {
-    const value = String(event.currentTarget.dataset.value || '') as '' | EventAccessType
-    if (!['', 'FREE', 'MEMBER_INCLUDED', 'PAID'].includes(value)) {
-      return
-    }
-    this.setData({ draftAccessType: value })
-  },
-
-  selectSortDirection(event: WechatMiniprogram.TouchEvent) {
-    const value = String(event.currentTarget.dataset.value || '') as '' | EventSortDirection
-    if (!['', 'ASC', 'DESC'].includes(value)) {
-      return
-    }
-    this.setData({ draftSortDirection: value })
-  },
-
-  confirmDiscoveryFilters() {
-    const selectedEventTypeKey = this.data.draftEventTypeKey
-    const selectedTagKeys = [...this.data.draftTagKeys]
-    const selectedAccessType = this.data.draftAccessType
-    const selectedSortDirection = this.data.draftSortDirection
-    this.setData({
-      selectedEventTypeKey,
-      selectedTagKeys,
-      selectedAccessType,
-      selectedSortDirection,
-      activeFilterCount: this.countActiveFilters({
-        selectedEventTypeKey,
-        selectedTagKeys,
-        selectedAccessType,
-        selectedSortDirection,
-      }),
-      rangePanelVisible: false,
-      nextCursor: '',
-      message: '',
-    })
-    void this.loadEvents()
-  },
-
-  clearDiscoveryFilters() {
-    const dateFilter: EventDateFilter = this.data.view === 'PAST' ? 'ENDED' : 'RECENT'
-    this.setData({
-      dateFilter,
-      selectedDate: '',
-      selectedDateLabel: '',
-      customDateLabel: '',
-      dateFrom: '',
-      dateFromLabel: '',
-      dateTo: '',
-      dateToLabel: '',
-      selectedEventTypeKey: '',
-      selectedTagKeys: [],
-      selectedAccessType: '',
-      selectedSortDirection: '',
-      draftEventTypeKey: '',
-      draftTagKeys: [],
-      draftAccessType: '',
-      draftSortDirection: '',
-      activeFilterCount: 0,
-      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, '', true),
-      tagOptions: selectedOptions(this.data.tagOptions, []),
-      rangePanelVisible: false,
-      nextCursor: '',
-      message: '',
-    })
-    void this.loadEvents()
+    this.setData({ calendarVisible: true })
   },
 
   closeCalendar() {
@@ -526,75 +290,13 @@ Page({
       wx.showToast({ title: '请选择有效日期', icon: 'none' })
       return
     }
-    const label = formatChineseMonthDay(value)
-    if (this.data.calendarTarget === 'FROM') {
-      if (this.data.dateTo && selectedDate > this.data.dateTo) {
-        wx.showToast({ title: '开始日期不能晚于结束日期', icon: 'none' })
-        return
-      }
-      this.setData({
-        calendarVisible: false,
-        calendarValue: value,
-        dateFrom: selectedDate,
-        dateFromLabel: label,
-        dateFilter: 'CUSTOM',
-        selectedDate: '',
-        selectedDateLabel: '',
-        customDateLabel: this.data.dateToLabel ? `${label} - ${this.data.dateToLabel}` : `${label}起`,
-        nextCursor: '',
-        message: '',
-      })
-    }
-    else if (this.data.calendarTarget === 'TO') {
-      if (this.data.dateFrom && selectedDate < this.data.dateFrom) {
-        wx.showToast({ title: '结束日期不能早于开始日期', icon: 'none' })
-        return
-      }
-      this.setData({
-        calendarVisible: false,
-        calendarValue: value,
-        dateTo: selectedDate,
-        dateToLabel: label,
-        dateFilter: 'CUSTOM',
-        selectedDate: '',
-        selectedDateLabel: '',
-        customDateLabel: this.data.dateFromLabel ? `${this.data.dateFromLabel} - ${label}` : `截至${label}`,
-        nextCursor: '',
-        message: '',
-      })
-    }
-    else {
-      this.setData({
-        calendarVisible: false,
-        calendarValue: value,
-        selectedDate,
-        selectedDateLabel: label,
-        customDateLabel: label,
-        dateFrom: '',
-        dateFromLabel: '',
-        dateTo: '',
-        dateToLabel: '',
-        dateFilter: 'CUSTOM',
-        nextCursor: '',
-        message: '',
-      })
-    }
-    void this.loadEvents()
-  },
-
-  clearDateRange() {
-    if (!this.data.dateFrom && !this.data.dateTo) {
-      return
-    }
     this.setData({
-      dateFrom: '',
-      dateFromLabel: '',
-      dateTo: '',
-      dateToLabel: '',
-      customDateLabel: this.data.selectedDateLabel,
-      dateFilter: this.data.selectedDate
-        ? 'CUSTOM'
-        : this.data.view === 'PAST' ? 'ENDED' : 'RECENT',
+      calendarVisible: false,
+      calendarValue: value,
+      selectedDate,
+      selectedDateLabel: formatChineseMonthDay(value),
+      customDateLabel: formatChineseMonthDay(value),
+      dateFilter: 'CUSTOM',
       nextCursor: '',
       message: '',
     })
@@ -633,8 +335,6 @@ Page({
   loadMore() {
     void this.loadEvents({ append: true })
   },
-
-  stopPropagation() {},
 
   openEvent(event: WechatMiniprogram.TouchEvent) {
     const detail = (event as unknown as { detail?: { id?: string } }).detail
