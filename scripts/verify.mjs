@@ -7,6 +7,8 @@ const root = path.resolve(import.meta.dirname, '..')
 const steps = [
   ['verify:toolchain', ['node', 'scripts/verify-toolchain.mjs']],
   ['architecture:check', ['node', 'scripts/architecture-check.mjs']],
+  ['role-template-policy:check', ['node', 'scripts/generate-role-template-policy.mjs', '--check']],
+  ['wechat-content-client:check', ['node', 'scripts/generate-wechat-content-client.mjs', '--check']],
   ['mip:isolation:check', ['node', 'scripts/mip-isolation-check.mjs']],
   ['security:check', ['node', 'scripts/security-check.mjs']],
   ['mcp:doctor', ['node', 'scripts/mcp-doctor.mjs']],

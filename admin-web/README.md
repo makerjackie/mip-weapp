@@ -4,6 +4,10 @@
 
 ## 本地运行
 
+做后台产品验收只看 [ACCEPTANCE.md](ACCEPTANCE.md)；当前差距见[覆盖矩阵](../docs/mip/COVERAGE_MATRIX.md#管理端)，伙伴改动及版本关系见[2026-09-29 审查](../docs/mip/evidence/admin-audit-20260929/README.md)。`INTERACTION_SPEC.md`、`FORM_AUDIT.md` 是工程指南和历史排查，不是另一套验收标准。
+
+修复与完整交付按 [EXECUTION_PLAN.md](EXECUTION_PLAN.md) 的工作包执行；模型接手从 W00 开始，进度写项目状态，不能把执行计划当作通过证明。
+
 ### 演示模式
 
 ```bash

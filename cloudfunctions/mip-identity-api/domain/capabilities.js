@@ -1,5 +1,7 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('../lib/role-template-policy')
+
 const capabilitiesByRole = {
   PLATFORM_OWNER: [
     'admin:enter',
@@ -37,8 +39,9 @@ const policyRequirementByCapability = Object.freeze({
 })
 
 function configuredCapabilityAllows(row, capability) {
+  if (!templateAllowsBinding(row)) return false
   if (row.role_key === 'PLATFORM_OWNER') return true
-  const value = row.policy_capabilities_json
+  const value = effectivePolicyCapabilities(row)
   if (value === null || value === undefined) return true
   try {
     const capabilities = typeof value === 'string' ? JSON.parse(value) : value

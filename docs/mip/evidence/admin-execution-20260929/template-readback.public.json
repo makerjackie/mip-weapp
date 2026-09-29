@@ -1,0 +1,8 @@
+{
+  "at": "2026-09-29T11:20:16.369Z",
+  "stage": "staging",
+  "bindingWritesEnabled": true,
+  "realAccountReadback": true,
+  "noUserBindingGranted": true,
+  "disabledUnboundQaTemplates": 4
+}

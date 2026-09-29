@@ -1,5 +1,7 @@
 'use strict'
 
+const { createHash } = require('node:crypto')
+
 const { createProfileRef } = require('../lib/profile-ref')
 const {
   CAPABILITIES,
@@ -10,12 +12,14 @@ const {
 const { createOpportunityArchiveService } = require('./opportunity-archive')
 const { decodeCursor } = require('./pagination')
 const { normalizeCommercialTerms } = require('./opportunity-commercial-terms')
+const { EDITABLE_OPPORTUNITY_STATUSES, opportunityOperationPolicy } = require('./opportunity-policy')
 const {
   AdminError,
   expectedVersion,
   limit,
   requiredId,
   text,
+  stableKey,
 } = require('./validation')
 
 const OPPORTUNITY_STATUSES = ['DRAFT', 'PUBLISHED', 'ENDED', 'UNPUBLISHED', 'ARCHIVED']
@@ -54,32 +58,41 @@ function createAdminOpportunities({
   async function listOpportunities(caller, input = {}) {
     const context = await access.session(caller)
     firstGrant(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE)
+    const visibility = visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE)
+    const filters = normalizeOpportunityFilters(input.filters)
+    const queryHash = createHash('sha256').update(JSON.stringify({ appId: context.caller.appId, visibility, filters })).digest('hex')
+    const cursor = decodeCursor(input.cursor, ['updatedAt', 'id', 'queryHash'])
+    if (cursor && cursor.queryHash !== queryHash) throw new AdminError('VALIDATION_FAILED', '筛选范围已变化，请从第一页重新查询')
     return pageResult(await repository.listOpportunitiesV2(
       context.caller.appId,
-      visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE),
-      normalizeOpportunityFilters(input.filters),
+      visibility,
+      filters,
       limit(input.limit),
-      decodeCursor(input.cursor, ['updatedAt', 'id']),
+      cursor,
+      queryHash,
     ))
   }
 
   async function getOpportunity(caller, input = {}) {
     const context = await access.session(caller)
     const opportunityId = requiredId(input.opportunityId, '机会')
-    await opportunityAuthorization(context, opportunityId, CAPABILITIES.OPPORTUNITIES_MODERATE)
+    const { scope } = await opportunityAuthorization(context, opportunityId, CAPABILITIES.OPPORTUNITIES_MODERATE)
     const item = await repository.getOpportunityDetail(context.caller.appId, opportunityId)
     if (!item) {
       throw new AdminError('NOT_FOUND', '机会不存在')
     }
-    return item
+    return { ...item, ...opportunityOperationPolicy(item, (capability, target = scope) => {
+      try { authorize(context.bindings, capability, target); return true } catch { return false }
+    }) }
   }
 
-  async function getOpportunityEditorOptions(caller) {
+  async function getOpportunityEditorOptions(caller, input = {}) {
     const context = await access.session(caller)
     firstGrant(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE)
     return repository.getOpportunityEditorOptions(
       context.caller.appId,
       visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE),
+      { query: text(input.query, 80), selectedUserId: input.selectedUserId ? requiredId(input.selectedUserId, '发布人') : null },
     )
   }
 
@@ -89,7 +102,7 @@ function createAdminOpportunities({
     const existingAuthorization = opportunityId
       ? await opportunityAuthorization(context, opportunityId, CAPABILITIES.OPPORTUNITIES_MODERATE)
       : null
-    if (existingAuthorization && !['DRAFT', 'PUBLISHED'].includes(existingAuthorization.scope.status)) {
+    if (existingAuthorization && !EDITABLE_OPPORTUNITY_STATUSES.includes(existingAuthorization.scope.status)) {
       throw new AdminError('INVALID_STATE', '当前机会状态不能编辑')
     }
     const draft = normalizeOpportunityDraft(input.draft)
@@ -114,6 +127,7 @@ function createAdminOpportunities({
       actorUserId: context.caller.userId,
       opportunityId,
       expectedVersion: version,
+      idempotencyKey: input.idempotencyKey ? stableKey(input.idempotencyKey, '请求', 128) : undefined,
       draft,
       contentSafetyStatus,
       authorizedScope: existingAuthorization?.scope || null,
@@ -536,6 +550,9 @@ function normalizeOpportunityFilters(value) {
   const updatedTo = dateTimeFilter(filters.updatedTo, '结束时间')
   const deadlineFrom = dateTimeFilter(filters.deadlineFrom, '截止开始时间')
   const deadlineTo = dateTimeFilter(filters.deadlineTo, '截止结束时间')
+  const publishedFrom = dateTimeFilter(filters.publishedFrom, '发布开始时间')
+  const publishedTo = dateTimeFilter(filters.publishedTo, '发布结束时间')
+  if (publishedFrom && publishedTo && publishedFrom > publishedTo) throw new AdminError('VALIDATION_FAILED', '发布开始时间不能晚于结束时间')
   const minAmountCents = filters.minAmountCents === undefined || filters.minAmountCents === '' ? undefined : Number(filters.minAmountCents)
   const maxAmountCents = filters.maxAmountCents === undefined || filters.maxAmountCents === '' ? undefined : Number(filters.maxAmountCents)
   if ((minAmountCents !== undefined && (!Number.isSafeInteger(minAmountCents) || minAmountCents < 0))
@@ -558,12 +575,15 @@ function normalizeOpportunityFilters(value) {
   return {
     query: text(filters.query, 80),
     ownerQuery: text(filters.ownerQuery, 80),
+    ownerUserId: filters.ownerUserId ? requiredId(filters.ownerUserId, '发布人') : null,
     cityQuery: text(filters.cityQuery, 80),
     status: enumFilter(filters.status, OPPORTUNITY_STATUSES, '机会状态'),
     updatedFrom,
     updatedTo,
     deadlineFrom,
     deadlineTo,
+    publishedFrom,
+    publishedTo,
     ...(minAmountCents === undefined ? {} : { minAmountCents }),
     ...(maxAmountCents === undefined ? {} : { maxAmountCents }),
     ...(locationTypes.length ? { locationTypes } : {}),
@@ -595,6 +615,7 @@ function normalizeOpportunityDraft(value) {
     targetSummary: text(value.targetSummary, 300),
     description: text(value.description, 5_000),
     cityTagId: value.cityTagId ? requiredId(value.cityTagId, '城市') : null,
+    ...(Object.hasOwn(value, 'coverAssetId') ? { coverAssetId: value.coverAssetId ? requiredId(value.coverAssetId, '封面') : null } : {}),
     commercialTerms: normalizeCommercialTerms(value.commercialTerms),
     roleKeys,
     tagIds,

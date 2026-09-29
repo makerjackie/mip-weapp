@@ -19,6 +19,7 @@ const PURPOSE_POLICIES = Object.freeze({
   SUPER_CASE_MEDIA: Object.freeze({ directory: 'case-media', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
   TASK_ATTACHMENT: Object.freeze({ directory: 'task-attachments', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
   TASK_TEMPLATE: Object.freeze({ directory: 'task-templates', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
+  VIDEO_RECAP_COVER: Object.freeze({ directory: 'video-recap-covers', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
   BANNER: Object.freeze({ directory: 'banners', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
 })
 
@@ -251,27 +252,45 @@ function decodeAndSanitizeImage(base64, purpose) {
   throw new Error('IMAGE_INVALID')
 }
 
-function openApiChecker(cloud) {
-  return async (image) => {
-    const check = cloud?.openapi?.security?.imgSecCheck
-    if (typeof check !== 'function') throw new Error('IMAGE_SAFETY_UNAVAILABLE')
+function openApiChecker(cloud, report = metadata => console.warn('MIP_IMAGE_SAFETY', JSON.stringify(metadata))) {
+  const unavailable = (stage, rawCode, vendorMessage = '') => {
+    const code = typeof rawCode === 'number' || typeof rawCode === 'string' && /^-?\d{1,8}$/.test(rawCode)
+      ? Number(rawCode) : null
+    const reason = [
+      ['PERMISSION_DENIED', /permission|not authorized|auth fail|no authority/i],
+      ['APPLICATION_CONTEXT', /appid|application id/i],
+      ['NETWORK_ERROR', /timeout|timed out|connection|ECONN|ENOTFOUND|EAI_AGAIN/i],
+      ['API_UNAVAILABLE', /not support|deprecated|not found|not exist/i],
+      ['UPSTREAM_ERROR', /system error|internal error|unknown response|unknown wx response/i],
+    ].find(([, pattern]) => pattern.test(String(vendorMessage)))?.[0]
+    const nested = String(vendorMessage).match(/error code\s*[:=]\s*(-?\d{1,8})/i)
+    const subcode = nested && Number(nested[1]) !== code ? Number(nested[1]) : null
+    try { report({ stage, vendorCode: Number.isSafeInteger(code) ? code : null, ...(reason ? { vendorReason: reason } : {}), ...(Number.isSafeInteger(subcode) ? { vendorSubcode: subcode } : {}) }) } catch { /* Logging must not change the safety decision. */ }
+    return new Error('IMAGE_SAFETY_UNAVAILABLE')
+  }
+  return async (image, caller) => {
+    if (!/^wx[0-9a-f]{16}$/i.test(String(caller?.appId || ''))) throw unavailable('app-context-unavailable')
+    // HTTP/internal calls have no implicit Mini Program context. Use only the
+    // application identity already authenticated by the caller adapter.
+    const api = typeof cloud?.openapi === 'function' ? cloud.openapi({ appid: caller.appId }) : null
+    const check = api?.security?.imgSecCheck
+    if (typeof check !== 'function') throw unavailable('method-unavailable')
     let result
     try {
-      result = await check.call(cloud.openapi.security, {
+      result = await check.call(api.security, {
         media: { contentType: image.contentType, value: image.buffer },
       })
     }
     catch (error) {
       const code = Number(error?.errCode ?? error?.errcode)
       if (code === 87014) throw new Error('IMAGE_CONTENT_REJECTED')
-      throw new Error('IMAGE_SAFETY_UNAVAILABLE')
+      throw unavailable('request-failed', error?.errCode ?? error?.errcode ?? error?.code, error?.errMsg || error?.message)
     }
     const code = Object.prototype.hasOwnProperty.call(result || {}, 'errCode')
       ? result.errCode
       : result?.errcode
-    if (typeof code !== 'number' || code !== 0) {
-      throw new Error('IMAGE_CONTENT_REJECTED')
-    }
+    if (code === 87014) throw new Error('IMAGE_CONTENT_REJECTED')
+    if (typeof code !== 'number' || code !== 0) throw unavailable('invalid-result', code)
     return true
   }
 }

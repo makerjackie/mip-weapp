@@ -163,7 +163,7 @@ export function SessionProvider({ children, client = defaultClient }: { children
     setLoginError('')
     setLoginConfirmed(false)
     try {
-      await client.loginWithPassword(phone, password)
+      await client.loginWithPassword(phone, password, () => loginFlow.current === flow)
       if (loginFlow.current !== flow) return false
       setLoginConfirmed(true)
       const loaded = await refreshSession()

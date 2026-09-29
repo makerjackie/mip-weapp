@@ -48,7 +48,7 @@ export function useAdminDetail() {
     setSelection(null)
   }, [])
 
-  const changeDetailPage = useCallback((pager: AdminDetailPager, direction: 'previous' | 'next') => {
+  const changeDetailPage = useCallback((pager: AdminDetailPager, direction: 'previous' | 'next' | 'search') => {
     const transition = selection
       ? transitionDetailPage(pageHistory.current, selection.options, pager, direction)
       : null
@@ -72,18 +72,22 @@ export function useAdminDetail() {
 }
 
 export function createDetailPageHistory(): DetailPageHistory {
-  return { eventRoster: [], eventFeedback: [], taskMembers: [], taskCompletions: [], gameMembers: [] }
+  return { eventRoster: [], eventFeedback: [], messageDeliveries: [], messageReviews: [], taskMembers: [], taskCompletions: [], gameMembers: [] }
 }
 
 export function transitionDetailPage(
   history: DetailPageHistory,
   options: AdminDetailOptions | undefined,
   pager: AdminDetailPager,
-  direction: 'previous' | 'next',
+  direction: 'previous' | 'next' | 'search',
 ): { history: DetailPageHistory; options: AdminDetailOptions } | null {
   const keyHistory = [...history[pager.key]]
   let cursor: string | null
-  if (direction === 'next') {
+  if (direction === 'search') {
+    keyHistory.length = 0
+    cursor = null
+  }
+  else if (direction === 'next') {
     if (!pager.nextCursor) return null
     keyHistory.push(pager.currentCursor)
     cursor = pager.nextCursor
@@ -104,10 +108,13 @@ function detailOptionsWithCursor(
   cursor: string | null,
 ): AdminDetailOptions {
   if (pager.key === 'eventRoster') {
-    return { ...options, eventRoster: { ...options?.eventRoster, cursor } }
+    return { ...options, eventRoster: { ...options?.eventRoster, cursor, query: pager.query, status: pager.status || '' } }
   }
   if (pager.key === 'eventFeedback') {
     return { ...options, eventFeedback: { ...options?.eventFeedback, cursor } }
+  }
+  if (pager.key === 'messageDeliveries' || pager.key === 'messageReviews') {
+    return { ...options, [pager.key]: { ...options?.[pager.key], cursor } }
   }
   if (pager.key === 'taskMembers') {
     return {

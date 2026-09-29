@@ -2,6 +2,7 @@
 
 const { createHash, randomBytes, randomUUID } = require('node:crypto')
 const { cursorPredicateFor, pageRows } = require('../pagination')
+const { feedbackDisplayFields } = require('../event-feedback-display')
 
 function createAdminEventRuntimeRepository(database, dependencies) {
   const { lockMutationAuthorization: lockMutation, assertMutationScope: assertScope, assertAuthorizedScope,
@@ -59,8 +60,11 @@ function createAdminEventRuntimeRepository(database, dependencies) {
       FROM mip_event_feedback f LEFT JOIN mip_profiles p ON p.app_id = f.app_id AND p.user_id = f.user_id
       WHERE f.app_id = ? AND f.event_id = ? ${options.rating ? 'AND f.rating = ?' : ''}${cursor.sql}
       ORDER BY f.submitted_at DESC, f.id DESC LIMIT ?`, [appId, eventId, ...(options.rating ? [options.rating] : []), ...cursor.params, options.limit + 1])
-    return pageRows(rows.map(row => ({ id: row.id, nickname: row.nickname || '未填写昵称', rating: Number(row.rating), body: row.body || '',
-      answers: json(row.answers_json, {}), version: Number(row.version), submittedAt: iso(row.submitted_at), updatedAt: iso(row.updated_at) })),
+    return pageRows(rows.map(row => {
+      const item = { id: row.id, nickname: row.nickname || '未填写昵称', rating: Number(row.rating), body: row.body || '',
+        answers: json(row.answers_json, {}), version: Number(row.version), submittedAt: iso(row.submitted_at), updatedAt: iso(row.updated_at) }
+      return { ...item, displayFields: feedbackDisplayFields(item) }
+    }),
     options.limit, row => ({ submittedAt: row.submittedAt, id: row.id }))
   }
   async function listEventHearts(appId, eventId, options) {

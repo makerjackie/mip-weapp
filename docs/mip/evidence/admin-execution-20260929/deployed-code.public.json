@@ -1,0 +1,78 @@
+{
+  "at": "2026-09-29T12:16:31.861Z",
+  "passed": true,
+  "functions": [
+    {
+      "name": "mip-identity-api",
+      "codeSha256": "ce2c8babf598d78efd0715d3a3189c1468471b30464355850d35b08a9134716a",
+      "sourceJsFilesMatched": 32,
+      "runtime": "Nodejs20.19",
+      "mysqlHealthy": true,
+      "roleTemplatesEnabled": false
+    },
+    {
+      "name": "mip-events-api",
+      "codeSha256": "19bb7ef30e0c4f42722342392a06271c174588409438942218334aedf29c2c86",
+      "sourceJsFilesMatched": 43,
+      "runtime": "Nodejs20.19",
+      "mysqlHealthy": true,
+      "roleTemplatesEnabled": false
+    },
+    {
+      "name": "mip-tasks-api",
+      "codeSha256": "7d96c4f87fbdc092ddd7a100130048eaf641b85e3c02689cbbaa2c40d663b96e",
+      "sourceJsFilesMatched": 22,
+      "runtime": "Nodejs20.19",
+      "mysqlHealthy": true,
+      "roleTemplatesEnabled": false
+    },
+    {
+      "name": "mip-media-api",
+      "codeSha256": "bdf06c90fa2c22c3e23c970b3f51930c154f2d0c1d768cedbe225541e6481ec1",
+      "sourceJsFilesMatched": 15,
+      "runtime": "Nodejs20.19",
+      "mysqlHealthy": true,
+      "roleTemplatesEnabled": false
+    },
+    {
+      "name": "mip-game-api",
+      "codeSha256": "42eb7f0e85501d49be8dcadcc44f4f4cf87738f6cf19926eb94e1c418c812dbe",
+      "sourceJsFilesMatched": 19,
+      "runtime": "Nodejs20.19",
+      "mysqlHealthy": true,
+      "roleTemplatesEnabled": false
+    },
+    {
+      "name": "mip-banners-api",
+      "codeSha256": "61ef954bf739b6f3664ad8612e67022722e3edce707e0b09ffbe2dcc9e834821",
+      "sourceJsFilesMatched": 18,
+      "runtime": "Nodejs20.19",
+      "mysqlHealthy": true,
+      "roleTemplatesEnabled": false
+    },
+    {
+      "name": "mip-opportunities-api",
+      "codeSha256": "a19257bdbc72d893c5c71a672b2a867b981c60295c768c640f0cfe29f7c6e62f",
+      "sourceJsFilesMatched": 53,
+      "runtime": "Nodejs20.19",
+      "mysqlHealthy": true,
+      "roleTemplatesEnabled": false
+    },
+    {
+      "name": "mip-outbox-worker",
+      "codeSha256": "7f4c50364eeb1cc374ff0b868632c96e3081b43675d9bc81893d8622546d98ac",
+      "sourceJsFilesMatched": 21,
+      "runtime": "Nodejs20.19",
+      "mysqlHealthy": true,
+      "roleTemplatesEnabled": false
+    },
+    {
+      "name": "mip-admin-api",
+      "codeSha256": "3005934cfb629ac34792c27be34d31475eceed54d9f81ca636ebc64df6ebb45b",
+      "sourceJsFilesMatched": 274,
+      "runtime": "Nodejs20.19",
+      "mysqlHealthy": true,
+      "roleTemplatesEnabled": true
+    }
+  ]
+}

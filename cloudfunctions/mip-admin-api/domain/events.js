@@ -17,6 +17,7 @@ const {
 } = require('./validation')
 const { decryptPhone } = require('../lib/phone')
 const { normalizeRegistrationSchema } = require('./registration-schema')
+const { eventOperationPolicy } = require('./event-policy')
 
 const ROSTER_STATUSES = [
   'PENDING_REVIEW', 'WAITLISTED', 'PAYMENT_PENDING', 'REGISTERED',
@@ -64,11 +65,13 @@ function createAdminEvents({
 
   async function listEvents(caller, input = {}) {
     const context = await access.session(caller)
-    firstGrant(context.bindings, CAPABILITIES.EVENTS_READ)
+    const capability = input.purpose === 'ROLE_SCOPE' ? CAPABILITIES.ROLES_CHANGE : CAPABILITIES.EVENTS_READ
+    if (input.purpose && input.purpose !== 'ROLE_SCOPE') throw new AdminError('VALIDATION_FAILED', '活动选项用途无效')
+    firstGrant(context.bindings, capability)
     const query = normalizeEventListInput(input)
     return pageResult(await repository.listEvents(
       context.caller.appId,
-      visibilityForCapability(context.bindings, CAPABILITIES.EVENTS_READ),
+      visibilityForCapability(context.bindings, capability),
       query.filters,
       query.sort,
       query.pageLimit,
@@ -114,10 +117,12 @@ function createAdminEvents({
   async function getEvent(caller, input) {
     const context = await access.session(caller)
     const eventId = requiredId(input.eventId, '活动')
-    await access.eventAuthorization(context, eventId, CAPABILITIES.EVENTS_READ)
+    const { scope } = await access.eventAuthorization(context, eventId, CAPABILITIES.EVENTS_READ)
     const event = await repository.getEvent(context.caller.appId, eventId)
     if (!event) throw new AdminError('NOT_FOUND', '活动不存在')
-    return event
+    return { ...event, ...eventOperationPolicy(event, capability => {
+      try { authorize(context.bindings, capability, scope); return true } catch { return false }
+    }) }
   }
 
   async function getEventInsights(caller, input = {}) {
@@ -199,6 +204,11 @@ function createAdminEvents({
       grant = authorize(context.bindings, CAPABILITIES.EVENTS_WRITE, scope)
     }
     const draft = normalizeEventDraft(input.draft)
+    const cloneSourceEventId = input.cloneSourceEventId ? requiredId(input.cloneSourceEventId, '来源活动') : null
+    if (cloneSourceEventId) {
+      if (input.eventId) throw new AdminError('VALIDATION_FAILED', '仅新活动可以使用复制来源')
+      await access.eventAuthorization(context, cloneSourceEventId, CAPABILITIES.EVENTS_WRITE)
+    }
     if (existingScope && grant.scopeType !== 'PLATFORM') {
       const scopeChanged = draft.scopeType !== existingScope.eventScopeType
         || (draft.branchId || null) !== (existingScope.branchId || null)
@@ -221,6 +231,9 @@ function createAdminEvents({
       expectedVersion: version,
       idempotencyKey: normalizeOptionalIdempotencyKey(input.idempotencyKey),
       draft,
+      cloneSourceEventId,
+      editingDraftId: input.editingDraftId ? requiredId(input.editingDraftId, '编辑草稿') : null,
+      editingDraftVersion: input.editingDraftId ? expectedVersion(input.editingDraftVersion) : null,
       contentSafetyStatus,
       authorization: access.mutationAuthorization(grant, CAPABILITIES.EVENTS_WRITE),
       authorizedScope: existingScope,
@@ -270,6 +283,7 @@ function createAdminEvents({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
       sourceEventId,
+      draftOnly: input.draftOnly === true,
       expectedVersion: version,
       idempotencyKey,
       title,
@@ -398,10 +412,15 @@ function createAdminEvents({
       const rawPhone = includePhone && item.phoneCiphertext
         ? decryptPhone(item.phoneCiphertext, phoneEncryptionKey, { appId: context.caller.appId, userId: item.userId })
         : null
-      const { phoneCiphertext, userId, ...safe } = item
+      const { phoneCiphertext, userId, userBranchId, ...safe } = item
+      const users = visibilityForCapability(context.bindings, CAPABILITIES.USERS_READ)
+      const orders = visibilityForCapability(context.bindings, CAPABILITIES.ORDERS_READ)
       return {
         ...safe,
         phoneNumber: rawPhone,
+        ...(userId && (users.platform || users.branchIds.includes(userBranchId)) ? { userDetailId: userId } : {}),
+        ...(item.orderId && (orders.platform || orders.branchIds.includes(scope.branchId)
+          || orders.eventIds.includes(eventId)) ? { orderDetailId: item.orderId } : {}),
       }
     })
     if (includePhone) {
@@ -591,6 +610,7 @@ function normalizeEventListInput(input) {
       cityOrBranch: text(filters.cityOrBranch, 80),
       branchId: filters.branchId ? requiredId(filters.branchId, '城市分会') : '',
       eventTypeKey: filters.eventTypeKey ? stableKey(filters.eventTypeKey, '活动类型', 64) : '',
+      ...(filters.tagId ? { tagId: requiredId(filters.tagId, '活动标签') } : {}),
       accessType: enumFilter(filters.accessType, EVENT_ACCESS_TYPES, '收费类型'),
       priceMinCents,
       priceMaxCents,
@@ -671,6 +691,13 @@ function dateTimeFilter(value, label) {
     throw new AdminError('VALIDATION_FAILED', `${label}无效`)
   }
   return date.toISOString().slice(0, 23).replace('T', ' ')
+}
+
+function normalizeEventTags(value) {
+  if (!Array.isArray(value) || value.length > 100) throw new AdminError('VALIDATION_FAILED', '活动标签数量无效')
+  const ids = value.map(id => requiredId(id, '活动标签')).sort()
+  if (new Set(ids).size !== ids.length) throw new AdminError('VALIDATION_FAILED', '活动标签不能重复')
+  return ids
 }
 
 function normalizeEventDraft(value) {
@@ -755,6 +782,7 @@ function normalizeEventDraft(value) {
     waitlistEnabled,
     priceCents,
     registrationSchema: normalizeRegistrationSchema(value.registrationSchema === undefined ? [] : value.registrationSchema),
+    ...(Object.hasOwn(value, 'tagIds') ? { tagIds: normalizeEventTags(value.tagIds) } : {}),
   }
 }
 

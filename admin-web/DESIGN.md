@@ -2,6 +2,8 @@
 
 ## 视觉依据
 
+本文件维护视觉和组件规则；产品任务、详情载体和验收结论以唯一 [ACCEPTANCE.md](ACCEPTANCE.md) 为准。
+
 Web 以 [Workbuddy 管理原型](https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/#messages) 的蓝色渐变侧栏、浅灰画布、白色卡片、紧凑数据密度和清晰当前位置为视觉依据。原型右侧 PRD、演示数字、字符图标和桌面侧栏在手机端的横向溢出不是实现目标。
 
 设计目标是保持原型的结构和气质，同时让真实管理操作、权限边界、错误恢复与窄屏交互可用。所有视觉值通过 Ant Design `ConfigProvider` token、CSS 变量和 `shared/ui` 管理；页面不得重复声明品牌色、阴影、圆角或响应式断点。
@@ -89,9 +91,9 @@ Web 以 [Workbuddy 管理原型](https://bfd568111f4249be9902eba8e876cece.app.wo
 
 ### 抽屉和弹窗
 
-- 查看使用 `DetailDrawer`；短确认用 `ConfirmDialog`；结构化写操作用 `MutationDialog`。
+- 简短查看可用 `DetailDrawer`；用户档案使用独立页面并支持浏览器 Tab 多开，复杂编辑用独立表单页；短确认用 `ConfirmDialog`、简单写操作用 `MutationDialog`。
 - 桌面详情抽屉宽 720–860px；手机全屏。
-- 标题、资源标识、版本和状态位于固定头部；动作按 capability 过滤。
+- 固定头部显示可读标题和业务状态，长标题和动作分行；技术版本用于内部并发保护，不占普通运营表单或主标题。动作同时按 capability 和业务状态过滤。
 
 ### 状态标签
 

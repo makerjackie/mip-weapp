@@ -9,6 +9,7 @@ export const ADMIN_MEDIA_PURPOSE_OPTIONS = [
   { value: 'SUPER_CASE_COVER', label: '超级案例封面' },
   { value: 'SUPER_CASE_MEDIA', label: '超级案例图片' },
   { value: 'TASK_TEMPLATE', label: '任务模板图片' },
+  { value: 'VIDEO_RECAP_COVER', label: '视频回顾封面' },
 ] as const
 export const ADMIN_MEDIA_PURPOSE_CAPABILITIES = Object.freeze({
   BANNER: 'banners.manage',
@@ -19,6 +20,7 @@ export const ADMIN_MEDIA_PURPOSE_CAPABILITIES = Object.freeze({
   SUPER_CASE_COVER: 'userContent.moderate',
   SUPER_CASE_MEDIA: 'userContent.moderate',
   TASK_TEMPLATE: 'tasks.manage',
+  VIDEO_RECAP_COVER: 'events.recaps.manage',
 } satisfies Record<AdminMediaPurpose, string>)
 
 export type AdminMediaPurpose = typeof ADMIN_MEDIA_PURPOSE_OPTIONS[number]['value']
@@ -93,17 +95,18 @@ export function validateAdminMediaFileMetadata(file: Pick<AdminMediaFile, 'size'
 }
 
 export function availableAdminMediaPurposeOptions(grants: readonly AdminMediaCapabilityGrant[] = []) {
-  return ADMIN_MEDIA_PURPOSE_OPTIONS.filter(option => hasPlatformMediaCapability(
+  return ADMIN_MEDIA_PURPOSE_OPTIONS.filter(option => hasMediaUploadCapability(
     grants,
     ADMIN_MEDIA_PURPOSE_CAPABILITIES[option.value],
   ))
 }
 
-export function hasPlatformMediaCapability(
+export function hasMediaUploadCapability(
   grants: readonly AdminMediaCapabilityGrant[],
   capability: string,
 ) {
-  return grants.some(grant => grant.capability === capability && grant.scopeType === 'PLATFORM')
+  const scoped = ['events.write', 'events.album.manage', 'opportunities.moderate', 'userContent.moderate'].includes(capability)
+  return grants.some(grant => grant.capability === capability && (grant.scopeType === 'PLATFORM' || scoped && ['BRANCH', 'EVENT'].includes(grant.scopeType || '')))
 }
 
 export function parseAdminMediaUploadResult(value: unknown): AdminMediaUploadResult {

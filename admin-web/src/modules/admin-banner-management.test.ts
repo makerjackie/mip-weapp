@@ -101,7 +101,7 @@ describe('admin Banner management', () => {
     })
 
     const edit = createBannerMutationDefinition('mip.admin.banners.save', BANNER_ID, source)
-    assert.match(edit.description, /素材上传页上传 Banner 图片/)
+    assert.equal(edit.fields.find(field => field.name === 'imageAssetId')?.assetPurpose, 'BANNER')
     assert.deepEqual(buildBannerMutationInput(edit, edit.values), {
       bannerId: BANNER_ID,
       expectedVersion: 3,

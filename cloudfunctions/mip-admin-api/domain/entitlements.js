@@ -1,5 +1,6 @@
 'use strict'
 
+const { createHash } = require('node:crypto')
 const { CAPABILITIES, authorize } = require('./capabilities')
 const { decodeCursor } = require('./pagination')
 const { AdminError, limit, requiredId, stableKey, text } = require('./validation')
@@ -16,10 +17,17 @@ function createAdminEntitlements({ access, repository, memberships }) {
     if (entitlementType && !TYPES.has(entitlementType)) throw new AdminError('VALIDATION_FAILED', '权益类型无效')
     const sinceTime = filters.sinceTime ? new Date(filters.sinceTime) : null
     if (sinceTime && !Number.isFinite(sinceTime.getTime())) throw new AdminError('VALIDATION_FAILED', '开始时间无效')
-    return repository.listEntitlementTransactions({ appId: context.caller.appId,
-      filters: { entitlementType, query: text(filters.query, 100),
-        sinceTime: sinceTime ? sinceTime.toISOString().slice(0, 23).replace('T', ' ') : null },
-      limit: limit(input.limit, 100), cursor: decodeCursor(input.cursor, ['createdAt', 'id']) })
+    const untilTime = filters.untilTime ? new Date(filters.untilTime) : null
+    if (untilTime && !Number.isFinite(untilTime.getTime())) throw new AdminError('VALIDATION_FAILED', '结束时间无效')
+    if (sinceTime && untilTime && sinceTime > untilTime) throw new AdminError('VALIDATION_FAILED', '开始时间不能晚于结束时间')
+    const normalized = { entitlementType, query: text(filters.query, 100),
+      sinceTime: sinceTime ? sinceTime.toISOString().slice(0, 23).replace('T', ' ') : null,
+      ...(untilTime ? { untilTime: untilTime.toISOString().slice(0, 23).replace('T', ' ') } : {}) }
+    const cursorContext = createHash('sha256').update(JSON.stringify([context.caller.appId, normalized])).digest('hex')
+    const cursor = decodeCursor(input.cursor, ['createdAt', 'id', 'context'])
+    if (cursor && cursor.context !== cursorContext) throw new AdminError('VALIDATION_FAILED', '权益筛选条件已变化，请从第一页读取')
+    return repository.listEntitlementTransactions({ appId: context.caller.appId, filters: normalized,
+      limit: limit(input.limit, 100), cursor, cursorContext })
   }
 
   async function grantEntitlement(caller, input = {}) {

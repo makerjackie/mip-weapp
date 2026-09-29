@@ -50,7 +50,7 @@ it('updates only the authenticated operator’s tenant-scoped draft', async () =
   const tx = {
     async one(sql, params) {
       calls.push({ sql, params })
-      if (sql.includes('FROM mip_event_drafts')) return { draft_id: 7, event_uid: null, version: 2 }
+      if (sql.includes('FROM mip_event_drafts')) return { draft_id: 7, event_uid: null, version: 2, draft_data_json: '{}' }
       return null
     },
     async query(sql, params) { calls.push({ sql, params }); return { affectedRows: 1 } },

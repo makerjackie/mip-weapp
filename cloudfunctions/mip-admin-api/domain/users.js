@@ -17,6 +17,18 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
   const { listUserInfluence } = createUserInfluenceService({ access, repository })
   async function listUsers(caller, input = {}) {
     const context = await access.session(caller)
+    if (input.purpose) {
+      if (input.purpose === 'FILTER_OPTIONS') {
+        firstGrant(context.bindings, CAPABILITIES.USERS_READ)
+        return repository.listUserFilterOptions(context.caller.appId,
+          visibilityForCapability(context.bindings, CAPABILITIES.USERS_READ))
+      }
+      if (input.purpose !== 'ENTITLEMENT_GRANT') throw new AdminError('VALIDATION_FAILED', '用户选项用途无效')
+      authorize(context.bindings, CAPABILITIES.MEMBERSHIPS_ADJUST, { scopeType: 'PLATFORM', scopeId: null })
+      const filters = normalizeUserFilters({ query: text(input.filters?.query, 100), status: 'ACTIVE' })
+      const page = pageResult(await repository.listUsers(context.caller.appId, { platform: true, branchIds: [], eventIds: [] }, filters, limit(input.limit), null))
+      return { items: page.items.map(item => ({ id: item.id, nickname: item.nickname || item.realName || '未设置姓名' })), nextCursor: null }
+    }
     firstGrant(context.bindings, CAPABILITIES.USERS_READ)
     const filters = normalizeUserFilters(input.filters || {})
     const includePhone = input.includePhone === true
@@ -93,14 +105,29 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
       if (error?.code !== 'FORBIDDEN') throw error
     }
     const [relatedRecords, primaryBranchOptions] = await Promise.all([
-      typeof repository.getUserRelatedRecords === 'function'
-        ? repository.getUserRelatedRecords(context.caller.appId, userId)
+      input.relatedSection
+        ? repository.getUserRelatedPage(context.caller.appId, userId, input.relatedSection, limit(input.limit), input.cursor,
+          visibilityForCapability(context.bindings, CAPABILITIES.ORDERS_READ))
+        : typeof repository.getUserRelatedRecords === 'function'
+        ? repository.getUserRelatedRecords(context.caller.appId, userId).catch(() => ({ loadFailed: true }))
         : Promise.resolve({ superCases: [], opportunities: [], registrations: [], orders: [] }),
       canChangePrimaryBranch
-        ? repository.listPrimaryBranchOptions(context.caller.appId)
+        ? repository.listPrimaryBranchOptions(context.caller.appId).catch(() => [])
         : Promise.resolve([]),
     ])
-    return { ...safe, primaryBranchOptions, relatedRecords }
+    const allowed = (capability, requested) => context.bindings.some(binding => capabilitiesForBinding(binding).includes(capability) && coversScope(binding, requested))
+    const eventScope = row => ({ scopeType: 'EVENT', scopeId: row.eventId || row.resourceId, branchId: row.branchId || null })
+    const projected = relatedRecords.loadFailed ? relatedRecords : {
+      ...relatedRecords,
+      superCases: (relatedRecords.superCases || []).map(row => ({ ...row, detailAllowed: allowed(CAPABILITIES.USER_CONTENT_MODERATE, scope) })),
+      cooperationCards: (relatedRecords.cooperationCards || []).map(row => ({ ...row, detailAllowed: allowed(CAPABILITIES.USER_CONTENT_MODERATE, scope) })),
+      opportunities: (relatedRecords.opportunities || []).map(row => ({ ...row, detailAllowed: allowed(CAPABILITIES.OPPORTUNITIES_MODERATE,
+        { scopeType: row.scopeType === 'BRANCH' ? 'BRANCH' : 'PLATFORM', scopeId: row.branchId || null }) })),
+      registrations: (relatedRecords.registrations || []).map(row => ({ ...row, detailAllowed: allowed(CAPABILITIES.EVENTS_READ, eventScope(row)) })),
+      orders: (relatedRecords.orders || []).filter(row => allowed(CAPABILITIES.ORDERS_READ,
+        row.orderType === 'EVENT' ? eventScope(row) : { scopeType: 'PLATFORM', scopeId: null })).map(row => ({ ...row, detailAllowed: true })),
+    }
+    return { ...safe, primaryBranchOptions, relatedRecords: projected }
   }
 
   async function updateUser(caller, input) {
@@ -211,7 +238,8 @@ function projectUser(item, { appId, includePhone, phoneEncryptionKey, userId = i
     ? decryptPhone(item.phoneCiphertext, phoneEncryptionKey, { appId, userId })
     : null
   const { phoneCiphertext, ...safe } = item
-  return { ...safe, phoneNumber }
+  return { ...safe, phoneNumber,
+    ...(phoneNumber ? { phoneNumberMasked: phoneNumber.replace(/(\d{3})\d{4}(\d{4})$/, '$1****$2') } : {}) }
 }
 
 function pageResult(value) {
@@ -229,12 +257,21 @@ function normalizeUserFilters(value) {
   if (createdFrom && createdTo && createdFrom > createdTo) {
     throw new AdminError('VALIDATION_FAILED', '注册开始时间不能晚于结束时间')
   }
+  const expiresFrom = dateTimeFilter(filters.expiresFrom, '到期开始时间')
+  const expiresTo = dateTimeFilter(filters.expiresTo, '到期结束时间')
+  if (expiresFrom && expiresTo && expiresFrom > expiresTo) {
+    throw new AdminError('VALIDATION_FAILED', '到期开始时间不能晚于结束时间')
+  }
   const experienceMin = nonNegativeIntegerFilter(filters.experienceMin, '最低经验值')
   const experienceMax = nonNegativeIntegerFilter(filters.experienceMax, '最高经验值')
   if (experienceMin !== null && experienceMax !== null && experienceMin > experienceMax) {
     throw new AdminError('VALIDATION_FAILED', '最低经验值不能大于最高经验值')
   }
   const normalized = {
+    ...(filters.industryId ? { industryId: requiredId(filters.industryId, '行业') } : {}),
+    ...(filters.identityStatus ? { identityStatus: text(filters.identityStatus, 32, { required: true, label: '职业身份' }) } : {}),
+    ...(expiresFrom ? { expiresFrom } : {}),
+    ...(expiresTo ? { expiresTo } : {}),
     query: text(filters.query, 80),
     status: ['ACTIVE', 'BLOCKED', 'CLOSED'].includes(filters.status) ? filters.status : '',
     kind: ['PLAYER', 'GUEST'].includes(filters.kind) ? filters.kind : '',

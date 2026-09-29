@@ -229,7 +229,6 @@ describe('admin governance deep module', () => {
     assert.deepEqual(Object.keys(api).sort(), [
       'changeBranchStatus',
       'createBranch',
-      'createRole',
       'listAudit',
       'listBranches',
       'listOperationalExceptions',
@@ -434,7 +433,7 @@ describe('admin governance deep module', () => {
       resourceType: 'ADMIN_ROLE_BINDING',
       resourceId: TARGET_ID,
       effectiveRole: 'BRANCH_ADMIN',
-      metadata: { roleKey: 'EVENT_OWNER', active: true },
+      metadata: { roleKey: 'EVENT_OWNER', active: true, roleTemplateId: null, reason: null },
     })
 
     const candidates = await service.searchRoleCandidates(caller, {

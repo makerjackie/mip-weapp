@@ -2,7 +2,7 @@
 
 const { createHash } = require('node:crypto')
 const { decodeCursor, pageRows } = require('./pagination')
-const { AdminError, limit, text } = require('./validation')
+const { AdminError, limit, requiredId, text } = require('./validation')
 
 const CHANNELS = Object.freeze([
   'WECHAT_SUBSCRIPTION',
@@ -24,6 +24,7 @@ function createMessageDeliveryRecordRepository(database) {
         OR event.branch_id IN (${placeholders}))`)
       params.push(...visibility.branchIds, ...visibility.branchIds, ...visibility.branchIds)
     }
+    if (input.campaignId) { clauses.push('campaign.id = ?'); params.push(input.campaignId) }
     if (input.query) {
       const pattern = `%${escapeLike(input.query)}%`
       clauses.push(`(inbox.title LIKE ? ESCAPE '\\\\'
@@ -137,7 +138,7 @@ function escapeLike(value) {
 }
 
 function normalizeMessageDeliveryRecordList(input = {}) {
-  assertObject(input, ['query', 'channel', 'status', 'from', 'to', 'cursor', 'limit'])
+  assertObject(input, ['query', 'channel', 'status', 'from', 'to', 'cursor', 'limit', 'campaignId'])
   const query = input.query === undefined || input.query === '' ? null : text(input.query, 100, { label: '搜索条件' })
   const channel = enumOrNull(input.channel, CHANNELS, '消息渠道')
   const status = enumOrNull(input.status, STATUSES, '投递状态')
@@ -147,7 +148,7 @@ function normalizeMessageDeliveryRecordList(input = {}) {
     throw new AdminError('VALIDATION_FAILED', '时间范围无效')
   }
   const cursor = input.cursor ? decodeCursor(input.cursor, ['occurredAt', 'id']) : null
-  return { query, channel, status, from, to, cursor, limit: limit(input.limit || 20, 100) }
+  return { query, channel, status, from, to, cursor, ...(input.campaignId ? { campaignId: requiredId(input.campaignId, '消息活动') } : {}), limit: limit(input.limit || 20, 100) }
 }
 
 function enumOrNull(value, allowed, label) {

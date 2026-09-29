@@ -32,6 +32,7 @@ import {
   loadOperations,
   loadOpportunities,
 } from './admin-read-special-pages.ts'
+import { loadKnowledge } from './admin-knowledge-management.ts'
 import { loadTaskManagementPage } from './admin-task-management.ts'
 import { loadBannerManagementPage } from './admin-banner-management.ts'
 import { loadGameManagementPage } from './admin-game-management.ts'
@@ -67,6 +68,13 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
       { key: 'createdFrom', urlParam: 'createdFrom' },
       { key: 'createdTo', urlParam: 'createdTo' },
       { key: 'kind', urlParam: 'kind' },
+      { key: 'branchId', urlParam: 'branchId' },
+      { key: 'industryId', urlParam: 'industryId' },
+      { key: 'identityStatus', urlParam: 'identityStatus' },
+      { key: 'playerLifecycle', urlParam: 'playerLifecycle' },
+      { key: 'timeKind', urlParam: 'timeKind' },
+      { key: 'expiresFrom', urlParam: 'expiresFrom' },
+      { key: 'expiresTo', urlParam: 'expiresTo' },
     ],
   },
   events: {
@@ -76,6 +84,8 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
     filterDimensions: [
       { key: 'startsFrom', urlParam: 'startsFrom' },
       { key: 'startsTo', urlParam: 'startsTo' },
+      { key: 'tagId', urlParam: 'tagId' },
+      { key: 'branchId', urlParam: 'branchId' },
       { key: 'accessType', urlParam: 'accessType' },
       { key: 'priceMinCents', urlParam: 'priceMinCents' },
       { key: 'priceMaxCents', urlParam: 'priceMaxCents' },
@@ -89,6 +99,7 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
       { key: 'createdFrom', urlParam: 'createdFrom' },
       { key: 'createdTo', urlParam: 'createdTo' },
       { key: 'orderType', urlParam: 'orderType' },
+      { key: 'branchId', urlParam: 'branchId' },
     ],
   },
   tasks: {
@@ -114,12 +125,12 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
   messages: {
     searchPlaceholder: '搜索消息或模板',
     statusOptions: [...commonStatus, ...options(['DRAFT', 'READY', 'PUBLISHED', 'WITHDRAWN', 'ACTIVE', 'ARCHIVED'])],
-    paginated: false,
+    paginated: true,
   },
   knowledge: {
     searchPlaceholder: '搜索文档标题、作者或分类',
-    statusOptions: [...commonStatus, ...options(['DRAFT', 'PENDING_REVIEW', 'PUBLISHED', 'REJECTED', 'WITHDRAWN'])],
-    paginated: false,
+    statusOptions: [...commonStatus, ...options(['DRAFT', 'PENDING_REVIEW', 'PUBLISHED', 'REJECTED', 'WITHDRAWN', 'ACTIVE', 'INACTIVE', 'PAUSED', 'PENDING', 'HIDDEN', 'RESOLVED', 'DISMISSED'])],
+    paginated: true,
   },
   opportunities: {
     searchPlaceholder: '搜索机会、合作卡、案例或发布人',
@@ -159,7 +170,7 @@ export async function loadAdminReadPage(
   access?: AdminReadAccess,
 ): Promise<AdminReadPage> {
   switch (route) {
-    case 'users': return loadUsers(query, request)
+    case 'users': return loadUsers(query, request, access)
     case 'events': return loadEvents(query, request, access)
     case 'orders': return loadOrders(query, request)
     case 'tasks': return loadTaskManagementPage(query, request)
@@ -176,23 +187,32 @@ export async function loadAdminReadPage(
   }
 }
 
-async function loadUsers(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
-  const page = pageValue(await request('mip.admin.users.list', listInput(query)))
+async function loadUsers(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
+  const page = pageValue(await request('mip.admin.users.list', listInput(query,
+    access?.hasCapability('users.phone.read') ? { includePhone: true } : {})))
   return {
     sections: [{
       rows: page.items.map(item => ({
         detailId: valueOf(item, 'id', 'userId'),
         name: valueOf(item, 'nickname', 'name', 'displayName'),
+        avatarUrl: valueOf(item, 'avatarUrl'),
         headline: valueOf(item, 'headline', 'companyName'),
         identity: label(valueOf(item, 'kind')),
-        phone: item.phoneNumber || (item.phoneBound === true ? '已绑定' : '未绑定'),
+        phone: item.phoneNumberMasked || (typeof item.phoneNumber === 'string' ? item.phoneNumber.replace(/(\d{3})\d{4}(\d{4})$/, '$1****$2') : item.phoneBound === true ? '已绑定' : '未绑定'),
+        industry: valueOf(item, 'industryNames'),
+        profession: valueOf(item, 'identityStatus'),
         branch: valueOf(item, 'branchName', 'cityName'),
         level: valueOf(item, 'levelName'),
+        contribution: numberLabel(item.contribution),
+        membership: item.kind === 'PLAYER' ? '有效' : item.latestEntitlementEndsAt ? '当前无效' : '未开通',
+        createdAt: formatDateTime(item.createdAt),
+        expiresAt: formatDateTime(item.latestEntitlementEndsAt),
         state: label(valueOf(item, 'status', 'membershipStatus')),
       })),
       columns: columns([
-        ['name', '姓名'], ['headline', '简介'], ['identity', '身份'], ['phone', '手机状态'],
-        ['branch', '所属服务器'], ['level', '等级'], ['state', '账号状态'],
+        ['avatarUrl', '头像'], ['name', '姓名'], ['headline', '简介'], ['identity', '会员身份'], ['phone', '手机'],
+        ['industry', '行业'], ['profession', '职业身份'], ['branch', '所属服务器'], ['level', '等级'],
+        ['contribution', '贡献'], ['membership', '权益状态'], ['createdAt', '注册时间'], ['expiresAt', '会籍到期'], ['state', '账号状态'],
       ]),
     }],
     nextCursor: page.nextCursor,
@@ -206,17 +226,18 @@ async function loadEvents(
 ): Promise<AdminReadPage> {
   const canManagePolicy = access?.hasCapability('events.write', 'PLATFORM') === true
   const canManageCatalog = access?.hasCapability('events.catalog.manage', 'PLATFORM') === true
+  const optionalFailure = (reason: unknown) => ({ loadError: reason instanceof Error ? reason.message : '附加配置读取失败，请重试' })
   const [eventPayload, policyPayload, typePayload, tagPayload] = await Promise.all([
     request('mip.admin.events.list', listInput(query, {
-      sort: { field: 'startsAt', direction: 'DESC' },
+      sort: { field: 'startsAt', direction: 'ASC' },
     })),
-    canManagePolicy ? request('mip.admin.events.policy.get') : null,
+    canManagePolicy ? request('mip.admin.events.policy.get').catch(optionalFailure) : null,
     canManageCatalog ? request('mip.admin.events.catalog.list', {
       kind: 'TYPE', query: query.query, limit: query.limit,
-    }) : null,
+    }).catch(optionalFailure) : null,
     canManageCatalog ? request('mip.admin.events.catalog.list', {
       kind: 'TAG', query: query.query, limit: query.limit,
-    }) : null,
+    }).catch(optionalFailure) : null,
   ])
   const page = pageValue(eventPayload)
   const policy = record(policyPayload)
@@ -237,7 +258,10 @@ async function loadEvents(
       rows: page.items.map(item => ({
         detailId: valueOf(item, 'id', 'eventId'),
         title: valueOf(item, 'title', 'name'),
+        tags: Array.isArray(item.tags) ? item.tags.map(tag => valueOf(record(tag), 'name')).join('、') || '—' : '—',
         time: formatDateTime(item.startsAt),
+        endTime: formatDateTime(item.endsAt),
+        createdAt: formatDateTime(item.createdAt),
         location: [item.cityName, item.branchName].filter(Boolean).join(' · ') || '—',
         access: accessLabel(item.accessType, item.priceCents),
         registrations: countLabel(item.registrationCount, item.capacity),
@@ -245,14 +269,15 @@ async function loadEvents(
         state: label(valueOf(item, 'status')),
       })),
       columns: columns([
-        ['title', '活动名称'], ['time', '开始时间'], ['location', '城市与服务器'],
+        ['title', '活动名称'], ['tags', '标签'], ['time', '开始时间'], ['endTime', '结束时间'], ['createdAt', '创建时间'], ['location', '城市与服务器'],
         ['access', '活动类型'], ['registrations', '报名人数'], ['attended', '签到人数'], ['state', '状态'],
       ]),
     }, policyPayload ? {
       key: 'policy',
       title: '活动政策',
+      error: record(policyPayload).loadError as string | undefined,
       detailTarget: null,
-      rows: [{
+      rows: policy.loadError ? [] : [{
         cancellation: `${numberLabel(policy.cancellationHoursBeforeStart)} 小时`,
         version: numberLabel(policy.version),
         rowActions: eventPolicyRowActions(policy),
@@ -261,12 +286,14 @@ async function loadEvents(
     } : null, typePayload ? {
       key: 'event-types',
       title: '活动类型',
+      error: record(typePayload).loadError as string | undefined,
       detailTarget: null,
       rows: catalogRows(typePayload),
       columns: columns([['key', '目录标识'], ['name', '名称'], ['description', '说明'], ['sort', '排序'], ['usage', '使用数'], ['updatedAt', '更新时间'], ['state', '状态']]),
     } : null, tagPayload ? {
       key: 'event-tags',
       title: '活动标签',
+      error: record(tagPayload).loadError as string | undefined,
       detailTarget: null,
       rows: catalogRows(tagPayload),
       columns: columns([['key', '目录标识'], ['name', '名称'], ['description', '说明'], ['sort', '排序'], ['usage', '使用数'], ['updatedAt', '更新时间'], ['state', '状态']]),
@@ -287,13 +314,14 @@ async function loadOrders(query: AdminListQuery, request: AdminRequest): Promise
         user: valueOf(item, 'nickname', 'userName'),
         type: label(valueOf(item, 'orderType', 'type')),
         resource: valueOf(item, 'resourceTitle', 'title'),
+        branch: valueOf(item, 'resourceBranchName'),
         amount: money(item.amountCents, item.currency),
         createdAt: formatDateTime(item.createdAt),
         state: label(valueOf(item, 'status')),
       })),
       columns: columns([
         ['id', '订单号'], ['user', '用户'], ['type', '订单类型'], ['resource', '订单内容'],
-        ['amount', '金额'], ['createdAt', '创建时间'], ['state', '状态'],
+        ['branch', '活动服务器'], ['amount', '金额'], ['createdAt', '创建时间'], ['state', '状态'],
       ]),
     }],
     nextCursor: page.nextCursor,
@@ -329,6 +357,8 @@ async function loadPermissions(query: AdminListQuery, request: AdminRequest, acc
     summary: valueOf(item, 'summary'),
     players: numberLabel(item.currentPlayerCount),
     admins: arrayLabel(item.branchAdminNames),
+    leader: valueOf(item, 'leaderName'),
+    sort: numberLabel(item.sortOrder),
     blockers: blockersLabel(item.blockers),
     state: label(valueOf(item, 'status')),
     rowActions: branchRowActions(item),
@@ -355,7 +385,7 @@ async function loadPermissions(query: AdminListQuery, request: AdminRequest, acc
     sections: [
       rolePayload ? { key: 'members', title: '运营成员', rows: roles, columns: columns([['name', '姓名'], ['role', '角色'], ['scope', '作用范围'], ['grantedAt', '授权时间'], ['state', '状态']]) } : null,
       policyPayload ? { key: 'policies', title: '角色策略摘要', rows: policies, columns: columns([['role', '角色'], ['scope', '作用范围'], ['effective', '当前能力'], ['allowed', '可用能力边界'], ['source', '策略来源'], ['version', '版本'], ['updatedAt', '更新时间']]) } : null,
-      branchPayload ? { key: 'branches', title: '服务器', rows: branches, columns: columns([['name', '服务器'], ['city', '城市'], ['summary', '说明'], ['players', '有效会员'], ['admins', '管理员'], ['blockers', '关联数据'], ['state', '状态']]) } : null,
+      branchPayload ? { key: 'branches', title: '服务器', rows: branches, columns: columns([['name', '服务器'], ['city', '城市'], ['summary', '说明'], ['leader', '负责人'], ['sort', '排序'], ['players', '有效会员'], ['admins', '管理员'], ['blockers', '关联数据'], ['state', '状态']]) } : null,
       auditPayload ? { key: 'audit', title: '最近审计记录', rows: audits, columns: columns([['actor', '操作人'], ['action', '操作'], ['resource', '资源'], ['role', '生效角色'], ['scope', '作用范围'], ['createdAt', '时间']]) } : null,
     ].filter(isSection),
     nextCursor: null,
@@ -371,40 +401,29 @@ function isSection<T extends AdminReadPage['sections'][number]>(value: T | null)
 }
 
 async function loadMessages(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
-  const campaignFilter = {
-    query: query.query,
-    status: ['DRAFT', 'READY', 'PUBLISHED', 'WITHDRAWN'].includes(query.status) ? query.status : '',
-    limit: query.limit,
-    ...(query.filters ?? {}),
-  }
-  const templateFilter = {
-    query: query.query,
-    status: ['DRAFT', 'ACTIVE', 'ARCHIVED'].includes(query.status) ? query.status : '',
-    limit: query.limit,
-    ...(query.filters ?? {}),
-  }
-  const [campaignPayload, templatePayload] = await Promise.all([
-    request('mip.admin.messageCampaigns.list', campaignFilter),
-    request('mip.admin.messageTemplates.list', templateFilter),
-  ])
-  return {
-    sections: [{
-      key: 'campaigns',
-      title: '消息活动',
-      rows: pageValue(campaignPayload).items.map(item => ({
+  const { section, ...filters } = query.filters ?? {}
+  const selected = section === 'campaigns' || section === 'templates' ? section : null
+  const sections = await Promise.all((selected ? [selected] : ['campaigns', 'templates']).map(async key => {
+    const campaign = key === 'campaigns'
+    const payload = pageValue(await request(campaign ? 'mip.admin.messageCampaigns.list' : 'mip.admin.messageTemplates.list', {
+      query: query.query,
+      status: (campaign ? ['DRAFT', 'READY', 'PUBLISHED', 'WITHDRAWN'] : ['DRAFT', 'ACTIVE', 'ARCHIVED']).includes(query.status) ? query.status : '',
+      limit: query.limit,
+      ...filters,
+      ...(selected ? { cursor: query.cursor } : {}),
+    }))
+    return {
+      key,
+      title: campaign ? '消息活动' : '消息模板',
+      detailTarget: campaign ? undefined : null,
+      rows: payload.items.map(item => campaign ? ({
         detailId: valueOf(item, 'id', 'campaignId'),
         title: valueOf(item, 'title', 'name'),
         audience: item.audienceType === 'ALL' ? '全部用户' : `${numberLabel(item.recipientCount)} 人`,
         scope: item.branchName || label(valueOf(item, 'scopeType')),
         updatedAt: formatDateTime(item.updatedAt),
         state: label(valueOf(item, 'status')),
-      })),
-      columns: columns([['title', '消息标题'], ['audience', '发送范围'], ['scope', '作用范围'], ['updatedAt', '更新时间'], ['state', '状态']]),
-    }, {
-      key: 'templates',
-      title: '消息模板',
-      detailTarget: null,
-      rows: pageValue(templatePayload).items.map(item => ({
+      }) : ({
         name: valueOf(item, 'name'),
         title: valueOf(item, 'title'),
         scope: item.branchName || label(valueOf(item, 'scopeType')),
@@ -413,41 +432,15 @@ async function loadMessages(query: AdminListQuery, request: AdminRequest): Promi
         state: label(valueOf(item, 'status')),
         rowActions: messageTemplateRowActions(item),
       })),
-      columns: columns([['name', '模板名称'], ['title', '消息标题'], ['scope', '作用范围'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]),
-    }],
-    nextCursor: null,
-  }
+      columns: campaign
+        ? columns([['title', '消息标题'], ['audience', '发送范围'], ['scope', '作用范围'], ['updatedAt', '更新时间'], ['state', '状态']])
+        : columns([['name', '模板名称'], ['title', '消息标题'], ['scope', '作用范围'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]),
+      nextCursor: payload.nextCursor,
+    }
+  }))
+  return { sections, nextCursor: selected ? sections[0].nextCursor : null }
 }
 
-async function loadKnowledge(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
-  const payload = pageValue(await request('mip.admin.knowledge.list', {
-    section: 'CONTENTS',
-    status: query.status,
-    query: query.query || undefined,
-    limit: query.limit,
-    ...(query.filters ?? {}),
-  }))
-  const rows = filterRows(payload.items.map(item => {
-    const category = record(item.category)
-    return {
-      title: valueOf(item, 'title', 'name'),
-      detailId: valueOf(item, 'id', 'contentId'),
-      type: label(valueOf(item, 'contentType', 'type')),
-      category: valueOf(category, 'name'),
-      author: valueOf(item, 'authorName'),
-      access: label(valueOf(item, 'accessType')),
-      updatedAt: formatDateTime(item.updatedAt),
-      state: label(valueOf(item, 'status')),
-    }
-  }), { ...query, status: '' })
-  return {
-    sections: [{
-      rows,
-      columns: columns([['title', '文档标题'], ['type', '内容类型'], ['category', '分类'], ['author', '作者'], ['access', '访问范围'], ['updatedAt', '更新时间'], ['state', '状态']]),
-    }],
-    nextCursor: payload.nextCursor,
-  }
-}
 
 async function loadAdminAccounts(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
   const payload = pageValue(await request('mip.admin.adminAccounts.list', listInput(query)))
@@ -457,13 +450,14 @@ async function loadAdminAccounts(query: AdminListQuery, request: AdminRequest): 
         detailId: valueOf(item, 'accountId', 'id'),
         name: valueOf(item, 'name'),
         loginAccount: valueOf(item, 'loginAccount'),
+        bindings: Array.isArray(item.bindings) ? item.bindings.map(value => { const binding = record(value); return `${roleLabel(binding.roleKey)} · ${String(binding.scopeName || scopeLabel(binding.scopeType))}${binding.templateName ? ` · ${binding.templateName}` : ''}` }).join('；') || '暂无授权' : '—',
         rowActions: adminAccountRowActions(item),
         role: label(valueOf(item, 'roleKey')),
         branch: valueOf(item, 'branchName') || '—',
         state: label(valueOf(item, 'status')),
         version: numberLabel(item.version),
       })),
-      columns: columns([['name', '姓名'], ['loginAccount', '登录账号'], ['role', '角色'], ['branch', '服务器'], ['state', '状态']]),
+      columns: columns([['name', '姓名'], ['loginAccount', '后台标识'], ['role', '账号岗位'], ['bindings', '全部有效授权'], ['branch', '服务器'], ['state', '状态']]),
     }],
     nextCursor: payload.nextCursor,
   }

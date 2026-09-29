@@ -17,7 +17,9 @@
 | 当前架构 | [ARCHITECTURE.md](ARCHITECTURE.md) | 小程序、Web、服务端和共享契约边界 |
 | 产品要求 | [mip/REQUIREMENTS.md](mip/REQUIREMENTS.md) | 业务规则和已确认范围 |
 | 当前状态 | [mip/PROJECT_STATUS.md](mip/PROJECT_STATUS.md) | 当前数量、部署状态、阻塞和下一步 |
-| 验收标准 | [mip/ACCEPTANCE.md](mip/ACCEPTANCE.md) | 验收层级、判定条件和已提交证据 |
+| 后台产品验收 | [admin-web/ACCEPTANCE.md](../admin-web/ACCEPTANCE.md) | Web 后台唯一逐项验收标准，含来源取舍与可编辑边界 |
+| 后台执行计划 | [admin-web/EXECUTION_PLAN.md](../admin-web/EXECUTION_PLAN.md) | 工作包、依赖、维护约束、测试和模型交接；不另定义验收规则 |
+| 全项目证据方法 | [mip/ACCEPTANCE.md](mip/ACCEPTANCE.md) | 静态、运行时、真机/生产证据层级，不另定义 Web 产品标准 |
 | 覆盖追踪 | [mip/COVERAGE_MATRIX.md](mip/COVERAGE_MATRIX.md) | 实现状态与验证状态 |
 | 数据结构 | [`database/mysql/mip/`](../database/mysql/mip/) 与 [`migrations.lock.json`](../database/mysql/mip/migrations.lock.json) | 表、字段、索引、迁移顺序和校验和 |
 | 数据语义 | [data-contract.md](data-contract.md) | 数据归属、写入边界和隐私规则 |
@@ -46,7 +48,9 @@
 1. 代码、迁移 lock、生成合同和目标环境回读决定可验证事实。
 2. 已接受 ADR 决定架构方向。
 3. 权威文档解释规则和当前状态。
-4. 来源、研究和历史证据不覆盖较新的实现或决策。
+4. 来源、研究和历史证据不覆盖已确认决策；存在业务冲突时集中登记到需求基线待确认项。
+
+以上第 1 项只用于判断“现在做到了什么”。代码、测试和环境现状不能反过来降低“应该做到什么”；后台目标以唯一产品验收标准为准，阶段清单中的勾选不等于交付通过。
 
 仓库实现变化时，同步修改对应权威文档；不要在 README、运行手册或 ADR 中复制路由数、迁移数、部署 ID 等动态事实。
 

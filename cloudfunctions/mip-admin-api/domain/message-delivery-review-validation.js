@@ -7,7 +7,7 @@ const WORKFLOW_FILTERS = Object.freeze(['ACTIVE', 'RESOLVED', 'ALL'])
 const RESOLUTION_CODES = Object.freeze(['TERMINAL_ACCEPTED', 'UNKNOWN_NO_REPLAY'])
 
 function normalizeReviewListInput(input = {}) {
-  assertObject(input, ['sourceType', 'workflowStatus', 'cursor', 'limit'])
+  assertObject(input, ['sourceType', 'workflowStatus', 'cursor', 'limit', 'campaignId'])
   const sourceType = input.sourceType === undefined || input.sourceType === ''
     ? null
     : enumValue(input.sourceType, SOURCE_TYPES, '投递来源')
@@ -17,7 +17,8 @@ function normalizeReviewListInput(input = {}) {
   const cursor = input.cursor === undefined || input.cursor === null || input.cursor === ''
     ? null
     : text(input.cursor, 512, { required: true, label: '分页游标' })
-  return { sourceType, workflowStatus, cursor, limit: limit(input.limit || 20, 50) }
+  if (input.campaignId && sourceType !== 'CAMPAIGN_DISPATCH') throw new AdminError('VALIDATION_FAILED', '消息活动复核必须选择活动派发来源')
+  return { sourceType, workflowStatus, cursor, ...(input.campaignId ? { campaignId: requiredId(input.campaignId, '消息活动') } : {}), limit: limit(input.limit || 20, 50) }
 }
 
 function normalizeReviewGetInput(input = {}) {

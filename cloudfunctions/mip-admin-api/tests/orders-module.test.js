@@ -362,7 +362,7 @@ describe('admin orders deep module', () => {
     })
     const service = orders(repo)
     const filters = {
-      query: ' MIP-0001 ', eventId: EVENT_ID,
+      query: ' MIP-0001 ', eventId: EVENT_ID, branchId: BRANCH_ID,
       orderType: 'event', status: 'paid', refundStatus: 'none',
       createdFrom: '2030-08-01T00:00:00.000Z',
       createdTo: '2030-08-24T23:59:59.999Z',
@@ -370,7 +370,7 @@ describe('admin orders deep module', () => {
 
     await service.listOrders(caller, { filters })
     assert.deepEqual(captured, {
-      query: 'MIP-0001', eventId: EVENT_ID,
+      query: 'MIP-0001', eventId: EVENT_ID, branchId: BRANCH_ID,
       orderType: 'EVENT', status: 'PAID', refundStatus: 'NONE',
       createdFrom: '2030-08-01 00:00:00.000',
       createdTo: '2030-08-24 23:59:59.999',

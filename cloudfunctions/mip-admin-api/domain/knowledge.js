@@ -1,7 +1,10 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('./role-template-policy')
+
 const { createHash, randomUUID } = require('node:crypto')
 const net = require('node:net')
+const { decodeCursor, pageRows } = require('./pagination')
 const { capabilitiesForBinding } = require('./capabilities')
 const { assertFullAccessUser, createFullAccessPolicy } = require('./full-access')
 const {
@@ -50,19 +53,22 @@ function createKnowledgeAdminService(database, options = {}) {
     )
     const rows = await queryable.query(
       `SELECT binding.role_key, binding.scope_type, binding.scope_id,
-              policy.policy_mode, policy.capabilities_json
+              policy.policy_mode, policy.capabilities_json, binding.role_template_id,
+              role_template.base_role_key AS template_base_role_key, role_template.status AS template_status,
+              role_template.capabilities AS template_capabilities_json
        FROM mip_admin_role_bindings binding
+       LEFT JOIN mip_admin_roles role_template ON role_template.app_id = binding.app_id AND role_template.role_id = binding.role_template_id
        LEFT JOIN mip_role_capability_policies policy
          ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
-       WHERE binding.app_id = ? AND binding.user_id = ? AND binding.status = 'ACTIVE'
+       WHERE NOT EXISTS (SELECT 1 FROM mip_admin_accounts account WHERE account.app_id = binding.app_id AND account.linked_user_id = binding.user_id AND account.status <> 'ACTIVE') AND binding.app_id = ? AND binding.user_id = ? AND binding.status = 'ACTIVE'
        ${lock ? 'FOR UPDATE' : ''}`,
       [caller.appId, user.id],
     )
-    const bindings = rows.map(row => ({
+    const bindings = rows.filter(templateAllowsBinding).map(row => ({
       roleKey: row.role_key,
       scopeType: row.scope_type,
       scopeId: row.scope_type === 'PLATFORM' && row.scope_id === PLATFORM_SCOPE_ID ? null : row.scope_id,
-      policyCapabilities: row.policy_mode === 'CUSTOM' ? row.capabilities_json : undefined,
+      policyCapabilities: effectivePolicyCapabilities(row),
     }))
     const grant = bindings.find(binding => binding.scopeType === 'PLATFORM'
       && capabilitiesForBinding(binding).includes('knowledge.manage'))
@@ -75,16 +81,18 @@ function createKnowledgeAdminService(database, options = {}) {
     const section = String(input.section || 'CONTENTS').toUpperCase()
     const limit = pageLimit(input.limit)
     if (section === 'SOURCES') {
+      const page = knowledgeListPage(input, context.appId, section, 'updated_at', 'id', 'DESC', 'name', optionalEnum(input.status, ['ACTIVE', 'INACTIVE']))
       const rows = await database.query(
         `SELECT id, source_key, name, source_type, endpoint_url, status,
                 fetch_config_json, last_fetched_at, version, created_at, updated_at
-         FROM mip_knowledge_sources WHERE app_id = ?
+         FROM mip_knowledge_sources WHERE app_id = ?${page.sql}
          ORDER BY updated_at DESC, id DESC LIMIT ?`,
-        [context.appId, limit],
+        [context.appId, ...page.params, limit + 1],
       )
-      return { section, items: rows.map(sourceDto), nextCursor: null }
+      return { section, ...page.result(rows.map(sourceDto), limit, item => item.updatedAt) }
     }
     if (section === 'CATEGORIES') {
+      const page = knowledgeListPage(input, context.appId, section, 'category.sort_order', 'category.id', 'ASC', 'category.name', optionalEnum(input.status, ['ACTIVE', 'INACTIVE']), 'category.status')
       const rows = await database.query(
         `SELECT category.id, category.category_key, category.name, category.summary,
                 category.sort_order, category.status, category.version,
@@ -92,14 +100,15 @@ function createKnowledgeAdminService(database, options = {}) {
          FROM mip_knowledge_categories category
          LEFT JOIN mip_knowledge_contents content
            ON content.app_id = category.app_id AND content.category_id = category.id
-         WHERE category.app_id = ? GROUP BY category.app_id, category.id
+         WHERE category.app_id = ?${page.sql} GROUP BY category.app_id, category.id
          ORDER BY category.sort_order ASC, category.id ASC LIMIT ?`,
-        [context.appId, limit],
+        [context.appId, ...page.params, limit + 1],
       )
-      return { section, items: rows.map(categoryAdminDto), nextCursor: null }
+      return { section, ...page.result(rows.map(categoryAdminDto), limit, item => String(item.sortOrder)) }
     }
     if (section === 'COMMENTS') {
       const status = optionalEnum(input.status, ['PENDING', 'PUBLISHED', 'HIDDEN', 'DELETED'])
+      const page = knowledgeListPage(input, context.appId, section, 'comment.created_at', 'comment.id', 'DESC', 'content.title')
       const rows = await database.query(
         `SELECT comment.id, comment.target_id AS content_id, content.title AS content_title,
                 comment.body, comment.status, comment.version, comment.created_at,
@@ -114,15 +123,16 @@ function createKnowledgeAdminService(database, options = {}) {
          LEFT JOIN mip_content_comment_reports report
            ON report.app_id = comment.app_id AND report.comment_id = comment.id
             AND report.status IN ('PENDING', 'REVIEWING')
-         WHERE comment.app_id = ? AND (? IS NULL OR comment.status = ?)
+         WHERE comment.app_id = ? AND (? IS NULL OR comment.status = ?)${page.sql}
          GROUP BY comment.app_id, comment.id
          ORDER BY comment.created_at DESC, comment.id DESC LIMIT ?`,
-        [context.appId, status, status, limit],
+        [context.appId, status, status, ...page.params, limit + 1],
       )
-      return { section, items: rows.map(commentAdminDto), nextCursor: null }
+      return { section, ...page.result(rows.map(commentAdminDto), limit, item => item.createdAt) }
     }
     if (section === 'REPORTS') {
       const status = optionalEnum(input.status, ['PENDING', 'REVIEWING', 'RESOLVED', 'DISMISSED'])
+      const page = knowledgeListPage(input, context.appId, section, 'report.created_at', 'report.id', 'DESC', 'content.title')
       const rows = await database.query(
         `SELECT report.id, report.comment_id, report.category, report.description,
                 report.status, report.version, report.resolution_reason, report.created_at,
@@ -136,13 +146,14 @@ function createKnowledgeAdminService(database, options = {}) {
            ON content.app_id = comment.app_id AND content.id = comment.target_id
          LEFT JOIN mip_profiles profile
            ON profile.app_id = report.app_id AND profile.user_id = report.reporter_user_id
-         WHERE report.app_id = ? AND (? IS NULL OR report.status = ?)
+         WHERE report.app_id = ? AND (? IS NULL OR report.status = ?)${page.sql}
          ORDER BY report.created_at DESC, report.id DESC LIMIT ?`,
-        [context.appId, status, status, limit],
+        [context.appId, status, status, ...page.params, limit + 1],
       )
-      return { section, items: rows.map(reportAdminDto), nextCursor: null }
+      return { section, ...page.result(rows.map(reportAdminDto), limit, item => item.createdAt) }
     }
     if (section === 'RUNS') {
+      const page = knowledgeListPage(input, context.appId, section, 'run.started_at', 'run.id', 'DESC', 'source.name')
       const rows = await database.query(
         `SELECT run.id, run.source_id, source.name AS source_name, run.trigger_type,
                 run.status, run.fetched_count, run.created_count, run.duplicate_count,
@@ -150,15 +161,20 @@ function createKnowledgeAdminService(database, options = {}) {
          FROM mip_knowledge_ingestion_runs run
          INNER JOIN mip_knowledge_sources source
            ON source.app_id = run.app_id AND source.id = run.source_id
-         WHERE run.app_id = ? ORDER BY run.started_at DESC, run.id DESC LIMIT ?`,
-        [context.appId, limit],
+         WHERE run.app_id = ?${page.sql} ORDER BY run.started_at DESC, run.id DESC LIMIT ?`,
+        [context.appId, ...page.params, limit + 1],
       )
-      return { section, items: rows.map(runDto), nextCursor: null }
+      return { section, ...page.result(rows.map(runDto), limit, item => item.startedAt) }
     }
     const status = optionalEnum(input.status, ['DRAFT', 'PENDING_REVIEW', 'PUBLISHED', 'REJECTED', 'WITHDRAWN'])
     const keyword = typeof input.query === 'string' && input.query.trim()
       ? `%${escapeLike(input.query.trim().slice(0, 80))}%`
       : null
+    const cursorContext = createHash('sha256').update(JSON.stringify([context.appId, catalogStage, status, keyword])).digest('hex')
+    const cursor = decodeCursor(input.cursor, ['updatedAt', 'id', 'context'])
+    if (cursor && cursor.context !== cursorContext) throw codeError('VALIDATION_FAILED')
+    const cursorClause = cursor ? ' AND (content.updated_at < ? OR (content.updated_at = ? AND content.id < ?))' : ''
+    const cursorParams = cursor ? [cursor.updatedAt, cursor.updatedAt, cursor.id] : []
     const rows = await database.query(
       `SELECT content.id, content.title, content.summary, content.content_type,
               content.access_type, content.status, content.content_safety_status,
@@ -179,11 +195,11 @@ function createKnowledgeAdminService(database, options = {}) {
          ON product.app_id = content.app_id AND product.content_id = content.id
         AND product.catalog_stage = ?
        WHERE content.app_id = ? AND (? IS NULL OR content.status = ?)
-         AND (? IS NULL OR content.title LIKE ?)
+         AND (? IS NULL OR content.title LIKE ?)${cursorClause}
        ORDER BY content.updated_at DESC, content.id DESC LIMIT ?`,
-      [catalogStage, context.appId, status, status, keyword, keyword, limit],
+      [catalogStage, context.appId, status, status, keyword, keyword, ...cursorParams, limit + 1],
     )
-    return { section: 'CONTENTS', items: rows.map(contentAdminDto), nextCursor: null }
+    return { section: 'CONTENTS', ...pageRows(rows.map(contentAdminDto), limit, item => ({ updatedAt: item.updatedAt, id: item.id, context: cursorContext })) }
   }
 
   async function getKnowledgeAdminContent(caller, input = {}) {
@@ -479,6 +495,8 @@ function createKnowledgeAdminService(database, options = {}) {
   async function listKnowledgeSchedules(caller, input = {}) {
     const context = await admin(caller)
     const status = optionalScheduleEnum(input.status, ['ACTIVE', 'PAUSED'])
+    const page = knowledgeListPage(input, context.appId, 'SCHEDULES', 'schedule.next_run_at', 'schedule.id', 'ASC', 'source.name')
+    const limit = schedulePageLimit(input.limit)
     const rows = await database.query(
       `SELECT schedule.id, schedule.source_id, schedule.category_id,
               schedule.daily_time, schedule.timezone, schedule.status,
@@ -493,11 +511,11 @@ function createKnowledgeAdminService(database, options = {}) {
          ON source.app_id = schedule.app_id AND source.id = schedule.source_id
        INNER JOIN mip_knowledge_categories category
          ON category.app_id = schedule.app_id AND category.id = schedule.category_id
-       WHERE schedule.app_id = ? AND (? IS NULL OR schedule.status = ?)
+       WHERE schedule.app_id = ? AND (? IS NULL OR schedule.status = ?)${page.sql}
        ORDER BY schedule.next_run_at, schedule.id LIMIT ?`,
-      [context.appId, status, status, schedulePageLimit(input.limit)],
+      [context.appId, status, status, ...page.params, limit + 1],
     )
-    return { items: rows.map(scheduleDto), nextCursor: null }
+    return page.result(rows.map(scheduleDto), limit, item => item.nextRunAt)
   }
 
   async function saveKnowledgeSchedule(caller, input = {}) {
@@ -952,7 +970,16 @@ function normalizeIngestionItem(value, options = {}) {
   }
 }
 
+function knowledgeActions(row) {
+  if (row.status === 'PENDING_REVIEW') return ['APPROVE', 'REJECT']
+  if (row.status === 'PUBLISHED') return ['WITHDRAW']
+  if (row.status === 'REJECTED') return ['SUBMIT']
+  if (row.status === 'DRAFT') return row.content_safety_status === 'PASSED' && row.reviewed_at ? ['SUBMIT', 'PUBLISH'] : ['SUBMIT']
+  return []
+}
+
 function knowledgeTransition(current, decision, reason, safety, reviewerUserId) {
+  if (!knowledgeActions(current).includes(decision)) throw codeError('INVALID_STATE')
   const now = new Date()
   if (decision === 'SUBMIT' && ['DRAFT', 'REJECTED'].includes(current.status)) {
     return { status: 'PENDING_REVIEW', safety: current.content_safety_status, reviewer: null,
@@ -1082,10 +1109,30 @@ async function audit(tx, context, action, resourceType, resourceId, metadata) {
   )
 }
 
+function knowledgeListPage(input, appId, section, column, idColumn, direction, searchColumn, status, statusColumn = 'status') {
+  const query = typeof input.query === 'string' ? input.query.trim().slice(0, 80) : ''
+  const contentId = input.contentId && ['COMMENTS', 'REPORTS'].includes(section) ? requiredUuid(input.contentId) : null
+  if (input.contentId && !contentId) throw codeError('VALIDATION_FAILED')
+  const cursorContext = createHash('sha256').update(JSON.stringify([appId, section, query, input.status || '', contentId])).digest('hex')
+  const cursor = decodeCursor(input.cursor, ['value', 'id', 'context'])
+  if (cursor && cursor.context !== cursorContext) throw codeError('VALIDATION_FAILED')
+  const clauses = [], params = []
+  if (contentId) { clauses.push('content.id = ?'); params.push(contentId) }
+  if (query) { clauses.push(`${searchColumn} LIKE ?`); params.push(`%${escapeLike(query)}%`) }
+  if (status) { clauses.push(`${statusColumn} = ?`); params.push(status) }
+  if (cursor) {
+    const operator = direction === 'ASC' ? '>' : '<'
+    clauses.push(`(${column} ${operator} ? OR (${column} = ? AND ${idColumn} ${operator} ?))`)
+    params.push(cursor.value, cursor.value, cursor.id)
+  }
+  return { sql: clauses.length ? ` AND ${clauses.join(' AND ')}` : '', params,
+    result: (rows, pageLimit, value) => pageRows(rows, pageLimit, item => ({ value: String(value(item)), id: item.id, context: cursorContext })) }
+}
+
 function sourceDto(row) {
   return { id: row.id, sourceKey: row.source_key, name: row.name, sourceType: row.source_type,
     endpointUrl: row.endpoint_url || '', status: row.status, fetchConfig: json(row.fetch_config_json),
-    lastFetchedAt: iso(row.last_fetched_at), version: Number(row.version) }
+    lastFetchedAt: iso(row.last_fetched_at), updatedAt: iso(row.updated_at), version: Number(row.version) }
 }
 
 function categoryAdminDto(row) {
@@ -1096,6 +1143,7 @@ function categoryAdminDto(row) {
 
 function contentAdminDto(row) {
   return { id: row.id, title: row.title, summary: row.summary, contentType: row.content_type,
+    editable: row.status !== 'PUBLISHED', allowedReviewDecisions: knowledgeActions(row),
     accessType: row.access_type, status: row.status, contentSafetyStatus: row.content_safety_status,
     authorName: row.author_name || '', category: { id: row.category_id, name: row.category_name },
     source: row.source_id ? { id: row.source_id, name: row.source_name } : null,

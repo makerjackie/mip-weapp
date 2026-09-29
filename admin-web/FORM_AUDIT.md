@@ -1,5 +1,7 @@
 # admin-web 弹窗表单全量排查与载体判定
 
+这是 2026-09-19/20 交互改造的历史排查，不代表当前页面总数或生产验收结论。后台唯一验收标准见 [ACCEPTANCE.md](ACCEPTANCE.md)，当前缺口见[覆盖矩阵](../docs/mip/COVERAGE_MATRIX.md#管理端)。以下保留当时范围以便追溯。
+
 排查范围：admin-web 全部 14 个页面中所有通过 `MutationDialog`（Modal）或 `DetailDrawer` 发起的表单操作。
 判定标准：见 [INTERACTION_SPEC.md](./INTERACTION_SPEC.md) 第 3 节。
 

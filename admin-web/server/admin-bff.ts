@@ -25,6 +25,7 @@ export interface AdminBffEnv {
   MIP_WEB_ALLOWED_APP_IDS?: string
   MIP_WEB_LOGIN_MINIPROGRAM_APP_ID?: string
   MIP_WEB_ALLOWED_ORIGIN?: string
+  MIP_WEB_ADDITIONAL_ORIGINS?: string
   MIP_WEB_LOGIN_NAMESPACE?: string
   MIP_WEB_SINGLE_COOKIE_RESPONSE?: string
   MIP_WEB_SESSION_SECRET?: string
@@ -739,7 +740,9 @@ async function readJsonRecord(request: Request) {
 function hasTrustedOrigin(request: Request, env: AdminBffEnv) {
   const expected = env.MIP_WEB_ALLOWED_ORIGIN
   if (!validOrigin(expected)) return false
-  return request.headers.get('origin') === expected
+  const additional = (env.MIP_WEB_ADDITIONAL_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean)
+  if (additional.some(value => !validOrigin(value) || new URL(value).origin !== value)) return false
+  return [expected, ...additional].includes(request.headers.get('origin') || '')
 }
 
 function challengeConfigError(env: AdminBffEnv) {
@@ -1077,15 +1080,33 @@ function positiveVersion(value: unknown) {
 
 function validExportCreateInput(input: AdminRequest['input']) {
   const filters = input.filters
-  if (!['USERS', 'ORDERS'].includes(String(input.exportType || ''))
+  const type = String(input.exportType || '')
+  const shape = Object.hasOwn(exportFilterShapes, type) ? exportFilterShapes[type] : null
+  if (!shape
     || typeof input.includesPhone !== 'boolean'
-    || (input.exportType === 'ORDERS' && input.includesPhone !== false)
+    || (!['USERS', 'EVENT_ROSTER'].includes(type) && input.includesPhone !== false)
+    || (type === 'EVENT_ROSTER' ? !uuid(input.eventId) : input.eventId !== undefined)
+    || input.branchId !== undefined
     || !plainRecord(filters)) return false
-  const keys = Object.keys(filters)
-  return keys.every(key => ['query', 'status'].includes(key))
-    && keys.every(key => typeof filters[key] === 'string'
-      && filters[key].trim().length > 0
-      && filters[key].length <= (key === 'query' ? 80 : 40))
+  return Object.entries(filters).every(([key, value]) => {
+    const field = shape[key]
+    if (field === 'number') return Number.isSafeInteger(value) && Number(value) >= 0
+    if (field === 'list') return Array.isArray(value) && value.length <= 16
+      && value.every(item => typeof item === 'string' && item.length > 0 && item.length <= 36)
+    return field === 'text' && typeof value === 'string' && value.trim().length > 0 && value.length <= 100
+  })
+}
+
+// Shape only: scope, enum values, time ranges and business limits stay in the domain.
+const exportFilterShapes: Record<string, Record<string, 'text' | 'number' | 'list'>> = {
+  USERS: textExportFields('query status kind branchId levelId controlType phoneBound profileComplete playerLifecycle industryId identityStatus createdFrom createdTo expiresFrom expiresTo', ['joinedWithinDays', 'experienceMin', 'experienceMax']),
+  ORDERS: textExportFields('query status orderType eventId branchId refundStatus createdFrom createdTo'),
+  OPPORTUNITIES: { ...textExportFields('query status ownerQuery ownerUserId cityQuery updatedFrom updatedTo deadlineFrom deadlineTo publishedFrom publishedTo', ['minAmountCents', 'maxAmountCents']), locationTypes: 'list', locationCityTagIds: 'list' },
+  EVENT_ROSTER: textExportFields('query status createdFrom createdTo'),
+  GROWTH_ENTRIES: textExportFields('query userId metric sourceEventType createdFrom createdTo'),
+}
+function textExportFields(keys: string, numbers: string[] = []): Record<string, 'text' | 'number'> {
+  return { ...Object.fromEntries(keys.split(' ').map(key => [key, 'text' as const])), ...Object.fromEntries(numbers.map(key => [key, 'number' as const])) }
 }
 
 function validExportLifecycleInput(input: AdminRequest['input']) {

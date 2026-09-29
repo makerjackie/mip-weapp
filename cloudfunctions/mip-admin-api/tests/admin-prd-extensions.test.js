@@ -58,7 +58,7 @@ describe('admin PRD extension persistence', () => {
     assert.deepEqual(result.cities, [{ id: 'city-a', label: '深圳' }])
     assert.deepEqual(result.tags, [{ id: 'tag-a', kind: 'INDUSTRY', label: '企业服务' }])
     assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_city_branches')).params, ['wx-app', 'branch-a'])
-    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app', 'branch-a'])
+    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app', 'branch-a', '', '', '', '', ''])
 
     calls.length = 0
     await repository.getOpportunityEditorOptions('wx-app', {
@@ -67,7 +67,7 @@ describe('admin PRD extension persistence', () => {
       eventIds: [],
     })
     assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_city_branches')).params, ['wx-app'])
-    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app'])
+    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app', '', '', '', '', ''])
   })
 
   it('returns the opportunity deadline, editable relationships, and app-scoped audit history', async () => {
@@ -276,6 +276,8 @@ describe('admin PRD extension persistence', () => {
           user_id: 'user-a', nickname: '用户', city_name: '广州', status: 'REGISTERED', answers_json: '{"company":"MIP"}',
           registration_schema_json: '[{"key":"company","label":"公司"}]', phone_verified_at: new Date(),
           created_at: new Date('2026-08-24T00:00:00Z'), version: 1,
+          order_id: 'order-a', payment_status: 'PAID', order_amount_cents: 1250, refunded_amount_cents: 250,
+          paid_at: new Date('2026-08-24T00:00:00Z'), currency: 'CNY',
         }]
       },
     }))
@@ -284,6 +286,12 @@ describe('admin PRD extension persistence', () => {
     }, 20)
     assert.match(captured.sql, /r\.app_id = \?/)
     assert.match(captured.sql, /e\.branch_id IN \(\?\)/)
+    assert.match(captured.sql, /o\.app_id = r\.app_id AND o\.id = r\.order_id/)
+    assert.match(captured.sql, /o\.user_id = r\.user_id AND o\.resource_id = r\.event_id AND o\.order_type = 'EVENT'/)
+    assert.match(captured.sql, /refund\.app_id = o\.app_id AND refund\.order_id = o\.id AND refund\.status = 'SUCCEEDED'/)
     assert.deepEqual(page.items[0].answerItems, [{ key: 'company', label: '公司', value: 'MIP' }])
+    assert.equal(page.items[0].paymentStatus, 'PAID')
+    assert.equal(page.items[0].paidAmountCents, 1250)
+    assert.equal(page.items[0].refundedAmountCents, 250)
   })
 })

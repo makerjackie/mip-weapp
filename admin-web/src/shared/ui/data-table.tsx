@@ -1,5 +1,4 @@
-import { CaretDownOutlined, CaretUpOutlined, SwapOutlined } from '@ant-design/icons'
-import { Button, Image, Space, Table, type TableColumnsType, type TableProps } from 'antd'
+import { Button, Image, Space, Table, type TableColumnsType } from 'antd'
 import { useMemo, useState } from 'react'
 import type { AdminTableColumn, AdminTableRow } from '../../modules/admin-read-pages'
 import type { OperationValues } from '../../modules/admin-operation-ui'
@@ -8,39 +7,6 @@ import { EmptyState } from './feedback-states'
 import { StatusTag } from './status-tag'
 
 export type { BatchAction } from './batch-actions'
-
-type SortDirection = 'ascend' | 'descend' | null
-
-interface SortState {
-  columnKey: string
-  direction: SortDirection
-}
-
-function numericValue(raw: string): number | null {
-  const normalized = raw.replace(/[¥$€£,%\s]/g, '')
-  if (!normalized) return null
-  const value = Number(normalized)
-  return Number.isFinite(value) ? value : null
-}
-
-function timeValue(raw: string): number | null {
-  if (!/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(raw)) return null
-  const value = Date.parse(raw.replace(/\//g, '-'))
-  return Number.isFinite(value) ? value : null
-}
-
-function compareCellValues(left: unknown, right: unknown): number {
-  const a = String(left ?? '')
-  const b = String(right ?? '')
-  if (a === b) return 0
-  const numberA = numericValue(a)
-  const numberB = numericValue(b)
-  if (numberA !== null && numberB !== null) return numberA - numberB
-  const timeA = timeValue(a)
-  const timeB = timeValue(b)
-  if (timeA !== null && timeB !== null) return timeA - timeB
-  return a.localeCompare(b, 'zh-Hans-CN')
-}
 
 export function DataTable({
   label,
@@ -65,26 +31,12 @@ export function DataTable({
   rowKey?: (row: AdminTableRow) => string
   loading?: boolean
 }) {
-  const [sortState, setSortState] = useState<SortState | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
-
-  const sortedRows = useMemo(() => {
-    if (!sortState) return rows
-    const direction = sortState.direction === 'ascend' ? 1 : -1
-    return [...rows].sort((a, b) => compareCellValues(a[sortState.columnKey], b[sortState.columnKey]) * direction)
-  }, [rows, sortState])
 
   const tableColumns: TableColumnsType<AdminTableRow> = columns.map(column => ({
     title: column.label,
     dataIndex: column.key,
     key: column.key,
-    sorter: true,
-    sortOrder: sortState?.columnKey === column.key ? (sortState.direction ?? undefined) : undefined,
-    sortIcon: ({ sortOrder }: { sortOrder?: SortDirection }) => sortOrder === 'ascend'
-      ? <CaretUpOutlined style={{ fontSize: 12 }} />
-      : sortOrder === 'descend'
-        ? <CaretDownOutlined style={{ fontSize: 12 }} />
-        : <SwapOutlined style={{ opacity: 0.35, fontSize: 12 }} />,
     render: (value: unknown) => {
       if (['status', 'state'].includes(column.key)) return <StatusTag value={value} />
       const url = typeof value === 'string' ? value : ''
@@ -109,18 +61,6 @@ export function DataTable({
     })
   }
 
-  const handleSorterChange: TableProps<AdminTableRow>['onChange'] = (_pagination, _filters, sorter) => {
-    const sorterInfo = Array.isArray(sorter) ? sorter[0] : sorter
-    if (!sorterInfo || !sorterInfo.columnKey) {
-      setSortState(null)
-      return
-    }
-    setSortState({
-      columnKey: String(sorterInfo.columnKey),
-      direction: (sorterInfo.order ?? null) as SortDirection,
-    })
-  }
-
   const selectionConfig = useMemo(
     () => selectable && batchActions?.length
       ? {
@@ -140,9 +80,9 @@ export function DataTable({
     () => {
       if (!selectionConfig) return []
       const keySet = new Set(selectedRowKeys.map(String))
-      return sortedRows.filter(row => keySet.has(stableRowKey(row, label)))
+      return rows.filter(row => keySet.has(stableRowKey(row, label)))
     },
-    [selectionConfig, sortedRows, selectedRowKeys, label],
+    [selectionConfig, rows, selectedRowKeys, label],
   )
 
   return (
@@ -153,11 +93,10 @@ export function DataTable({
         loading={loading}
         rowKey={row => rowKeyProp ? rowKeyProp(row) : stableRowKey(row, label)}
         columns={tableColumns}
-        dataSource={sortedRows}
+        dataSource={rows}
         scroll={{ x: 'max-content' }}
         locale={{ emptyText: <EmptyState /> }}
         rowSelection={selectionConfig}
-        onChange={handleSorterChange}
       />
       {batchActions?.length ? (
         <BatchActionBar

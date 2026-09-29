@@ -1,5 +1,9 @@
 'use strict'
 
+const { EDITABLE_EVENT_STATUSES, EVENT_TRANSITIONS } = require('../event-policy')
+const { eventCopyDraft } = require('../event-copy')
+const { eventTagChange, applyEventTagChange } = require('../event-tag-selection')
+
 const { createHash, randomBytes, randomUUID } = require('node:crypto')
 const { isDeepStrictEqual } = require('node:util')
 const { createOperationsPublisher } = require('../operations-publication')
@@ -7,6 +11,7 @@ const { cursorPredicateFor, pageRows } = require('../pagination')
 const { claimOptional, complete } = require('../idempotency')
 const { createFullAccessPolicy } = require('../full-access')
 const { AdminError } = require('../validation')
+const { rosterPaymentFields } = require('../roster-payment')
 
 function createAdminEventRepository(database, dependencies) {
   const createId = dependencies.createId || randomUUID
@@ -299,6 +304,12 @@ function createAdminEventRepository(database, dependencies) {
       clauses.push('e.event_type_key = ?')
       params.push(filters.eventTypeKey)
     }
+    if (filters.tagId) {
+      clauses.push(`EXISTS (SELECT 1 FROM mip_event_tag_assignments tag_filter
+        WHERE tag_filter.app_id = e.app_id AND tag_filter.event_id = e.id
+          AND tag_filter.tag_id = ? AND tag_filter.status = 'ACTIVE')`)
+      params.push(filters.tagId)
+    }
     if (filters.accessType) {
       clauses.push('e.access_type = ?')
       params.push(filters.accessType)
@@ -317,7 +328,12 @@ function createAdminEventRepository(database, dependencies) {
       `SELECT e.id, e.title, e.summary, e.scope_type, e.branch_id, b.name AS branch_name,
         e.status, e.content_safety_status, e.starts_at, e.ends_at, e.city_name,
         e.event_type_key, e.access_type, e.price_cents, e.registration_policy,
-        e.album_enabled, e.album_submission_policy, e.capacity, e.version,
+        e.album_enabled, e.album_submission_policy, e.capacity, e.version, e.created_at,
+        (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', tag.id, 'name', tag.name, 'status', tag.status))
+         FROM mip_event_tag_assignments assignment INNER JOIN mip_event_tags tag
+           ON tag.app_id = assignment.app_id AND tag.id = assignment.tag_id
+         WHERE assignment.app_id = e.app_id AND assignment.event_id = e.id
+           AND assignment.status = 'ACTIVE') AS tags_json,
         SUM(CASE WHEN r.status IN ('REGISTERED', 'CANCELLATION_PENDING', 'ATTENDED')
           THEN 1 ELSE 0 END) AS registration_count,
         SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) AS attended_count
@@ -328,13 +344,15 @@ function createAdminEventRepository(database, dependencies) {
        GROUP BY e.id, e.title, e.summary, e.scope_type, e.branch_id, b.name, e.status,
         e.content_safety_status, e.starts_at, e.ends_at, e.city_name, e.event_type_key,
         e.access_type, e.price_cents, e.registration_policy, e.album_enabled,
-        e.album_submission_policy, e.capacity, e.version
+        e.album_submission_policy, e.capacity, e.version, e.created_at
        ORDER BY e.starts_at ${direction}, e.id ${direction} LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
     const items = rows.map(row => ({
       id: row.id,
       title: row.title,
+      tags: json(row.tags_json, []),
+      createdAt: iso(row.created_at),
       summary: row.summary,
       scopeType: row.scope_type,
       branchId: row.branch_id || null,
@@ -424,6 +442,8 @@ function createAdminEventRepository(database, dependencies) {
       waitlistEnabled: Number(row.waitlist_enabled) === 1,
       priceCents: Number(row.price_cents || 0),
       registrationSchema: json(row.registration_schema_json, []),
+      tagIds: (await database.query(`SELECT tag_id FROM mip_event_tag_assignments
+        WHERE app_id = ? AND event_id = ? AND status = 'ACTIVE' ORDER BY tag_id`, [appId, eventId])).map(tag => String(tag.tag_id)),
       status: row.status,
       contentSafetyStatus: row.content_safety_status,
       version: Number(row.version),
@@ -575,8 +595,20 @@ function createAdminEventRepository(database, dependencies) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
       const operation = 'admin.events.save'
-      const idempotency = await claimOptional(tx, input, operation, { eventId: input.eventId || null, expectedVersion: input.expectedVersion, draft: input.draft }, createId)
+      let cloneSource = null
+      if (input.cloneSourceEventId) {
+        cloneSource = await tx.one('SELECT id, scope_type, branch_id, cover_asset_id FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE', [input.appId, input.cloneSourceEventId])
+        if (!cloneSource || input.eventId) throw codeError('VALIDATION_FAILED')
+        assertScope(authorization, eventScopeFromRow(cloneSource))
+      }
+      const editingDraft = input.editingDraftId ? await tx.one(`SELECT draft_id, event_uid, version, draft_data_json FROM mip_event_drafts
+        WHERE app_id = ? AND operator_user_id = ? AND draft_id = ? FOR UPDATE`, [input.appId, input.actorUserId, input.editingDraftId]) : null
+      if (input.editingDraftId && (!editingDraft || (editingDraft.event_uid || null) !== input.eventId)) throw codeError('FORBIDDEN')
+      const idempotency = await claimOptional(tx, input, operation, { eventId: input.eventId || null, expectedVersion: input.expectedVersion, draft: input.draft,
+        ...(input.cloneSourceEventId ? { cloneSourceEventId: input.cloneSourceEventId } : {}),
+        ...(input.editingDraftId ? { editingDraftId: input.editingDraftId, editingDraftVersion: input.editingDraftVersion } : {}) }, createId)
       if (idempotency.replay) return idempotency.replay
+      if (editingDraft && (Number(editingDraft.version) !== input.editingDraftVersion || json(editingDraft.draft_data_json, {})._submittedEventId)) throw codeError('CONFLICT')
       const eventId = input.eventId || createId()
       let status = 'DRAFT'
       let nextVersion = 1
@@ -599,7 +631,7 @@ function createAdminEventRepository(database, dependencies) {
           if (!sameScope(currentOwnedScope, draftResourceScope(input.draft))) throw codeError('FORBIDDEN')
         }
         if (Number(current.version) !== input.expectedVersion) throw codeError('CONFLICT')
-        if (!['DRAFT', 'UNPUBLISHED', 'PUBLISHED'].includes(current.status)) throw codeError('INVALID_STATE')
+        if (!EDITABLE_EVENT_STATUSES.includes(current.status)) throw codeError('INVALID_STATE')
         if (current.status === 'PUBLISHED') {
           if (input.contentSafetyStatus !== 'PASSED') throw codeError('CONTENT_SAFETY_REQUIRED')
           if (current.scope_type !== input.draft.scopeType || (current.branch_id || null) !== (input.draft.branchId || null)
@@ -659,8 +691,8 @@ function createAdminEventRepository(database, dependencies) {
       }
       else {
         assertScope(authorization, draftResourceScope(input.draft))
-        await assertEventCover(tx, input, null)
-        await assertEventContentMedia(tx, input, null)
+        await assertEventCover(tx, input, cloneSource?.cover_asset_id || null)
+        await assertEventContentMedia(tx, input, cloneSource?.id || null)
         await ensureEventTypeCatalog(tx, {
           appId: input.appId,
           actorUserId: input.actorUserId,
@@ -691,6 +723,10 @@ function createAdminEventRepository(database, dependencies) {
         )
       }
       await replaceEventContentMedia(tx, input, eventId)
+      if (input.draft.tagIds) {
+        const selection = { appId: input.appId, actorUserId: input.actorUserId, eventId, tagIds: input.draft.tagIds }
+        await applyEventTagChange(tx, selection, await eventTagChange(tx, selection))
+      }
       await writeEventChange(tx, {
         id: createId(),
         appId: input.appId,
@@ -712,6 +748,11 @@ function createAdminEventRepository(database, dependencies) {
         payload: { eventId, status },
       })
       const result = { id: eventId, version: nextVersion, status }
+      if (editingDraft) {
+        const consumed = await tx.query(`UPDATE mip_event_drafts SET draft_data_json = JSON_SET(draft_data_json, '$._submittedEventId', ?), version = version + 1
+          WHERE app_id = ? AND operator_user_id = ? AND draft_id = ? AND version = ?`, [eventId, input.appId, input.actorUserId, input.editingDraftId, input.editingDraftVersion])
+        if (Number(consumed.affectedRows) !== 1) throw codeError('CONFLICT')
+      }
       await complete(tx, input, operation, idempotency.requestHash, result)
       return result
     })
@@ -745,7 +786,7 @@ function createAdminEventRepository(database, dependencies) {
 
       const operation = 'admin.events.clone'
       const requestHash = createHash('sha256')
-        .update(`${input.sourceEventId}\0${input.expectedVersion}`)
+        .update(`${input.sourceEventId}\0${input.expectedVersion}${input.draftOnly ? '\0PRIVATE_DRAFT' : ''}`)
         .digest('hex')
       const requestId = createId()
       try {
@@ -770,7 +811,7 @@ function createAdminEventRepository(database, dependencies) {
           throw codeError('CONFLICT')
         }
         const replay = json(stored.response_json, null)
-        if (!replay?.id || replay.status !== 'DRAFT' || Number(replay.version) !== 1) {
+        if (!(input.draftOnly ? replay?.draftId : replay?.id) || replay.status !== 'DRAFT' || Number(replay.version) !== 1) {
           throw codeError('CONFLICT')
         }
         return { ...replay, idempotent: true }
@@ -779,6 +820,28 @@ function createAdminEventRepository(database, dependencies) {
       if (Number(source.version) !== input.expectedVersion) throw codeError('CONFLICT')
       if (source.scope_type === 'BRANCH' && source.branch_status !== 'ACTIVE') {
         throw codeError('INVALID_STATE')
+      }
+
+      if (input.draftOnly) {
+        const media = await tx.query(`SELECT media.media_asset_id, media.caption FROM mip_event_content_media media
+          JOIN mip_media_assets asset ON asset.app_id = media.app_id AND asset.id = media.media_asset_id
+          WHERE media.app_id = ? AND media.event_id = ? AND media.status = 'ACTIVE'
+            AND asset.status = 'READY' AND asset.purpose = 'EVENT_CONTENT'
+          ORDER BY media.sort_order, media.media_asset_id FOR UPDATE`, [input.appId, input.sourceEventId])
+        const tags = await tx.query(`SELECT assignment.tag_id FROM mip_event_tag_assignments assignment
+          JOIN mip_event_tags tag ON tag.app_id = assignment.app_id AND tag.id = assignment.tag_id
+          WHERE assignment.app_id = ? AND assignment.event_id = ? AND assignment.status = 'ACTIVE' AND tag.status = 'ACTIVE'
+          ORDER BY assignment.tag_id FOR UPDATE`, [input.appId, input.sourceEventId])
+        const draftData = eventCopyDraft(source, media, json, tags.map(tag => String(tag.tag_id)))
+        const inserted = await tx.query(`INSERT INTO mip_event_drafts
+          (app_id, operator_user_id, event_uid, operator_id, event_id, draft_data_json)
+          VALUES (?, ?, NULL, 0, NULL, ?)`, [input.appId, input.actorUserId, JSON.stringify(draftData)])
+        const draftId = String(inserted.insertId)
+        if (!/^[1-9][0-9]*$/.test(draftId)) throw codeError('SERVICE_UNAVAILABLE')
+        await writeAudit(tx, { ...input.audit(input.sourceEventId), resourceType: 'EVENT_DRAFT', resourceId: draftId })
+        const response = { draftId, status: 'DRAFT', version: 1, idempotent: false }
+        await complete(tx, input, operation, requestHash, response)
+        return response
       }
 
       const dates = shiftedCloneDates(source, now())
@@ -883,14 +946,7 @@ function createAdminEventRepository(database, dependencies) {
       }, createId)
       if (idempotency.replay) return idempotency.replay
       if (Number(event.version) !== input.expectedVersion) throw codeError('CONFLICT')
-      const allowedTransitions = {
-        DRAFT: ['PUBLISHED', 'CANCELLED'],
-        PUBLISHED: ['UNPUBLISHED', 'CANCELLED', 'ENDED'],
-        UNPUBLISHED: ['PUBLISHED', 'CANCELLED'],
-        CANCELLED: [],
-        ENDED: [],
-      }
-      if (!allowedTransitions[event.status]?.includes(input.status)) throw codeError('INVALID_STATE')
+      if (!EVENT_TRANSITIONS[event.status]?.includes(input.status)) throw codeError('INVALID_STATE')
       if (input.status === 'PUBLISHED' && event.content_safety_status === 'ERROR'
         && input.contentSafetyReview?.version === input.expectedVersion) {
         const reviewed = await tx.query(
@@ -1087,8 +1143,12 @@ function createAdminEventRepository(database, dependencies) {
     const rows = await database.query(
       `SELECT r.id, r.user_id, r.status, r.answers_json, r.created_at, r.registered_at, r.version,
         r.registration_source, r.role_mark, r.imported_at, r.abnormal_reason, r.abnormal_marked_at,
-        p.nickname, b.city_name, pp.phone_ciphertext, pp.phone_verified_at,
-        c.checked_in_at, e.registration_schema_json
+        p.nickname, b.city_name, u.primary_branch_id AS user_branch_id, pp.phone_ciphertext, pp.phone_verified_at,
+        c.checked_in_at, e.registration_schema_json, e.access_type,
+        o.id AS order_id, o.status AS payment_status, o.amount_cents AS order_amount_cents,
+        o.paid_at, o.currency,
+        COALESCE((SELECT SUM(refund.amount_cents) FROM mip_refunds refund
+          WHERE refund.app_id = o.app_id AND refund.order_id = o.id AND refund.status = 'SUCCEEDED'), 0) AS refunded_amount_cents
        FROM mip_event_registrations r
        INNER JOIN mip_events e ON e.app_id = r.app_id AND e.id = r.event_id
        LEFT JOIN mip_profiles p ON p.app_id = r.app_id AND p.user_id = r.user_id
@@ -1096,12 +1156,15 @@ function createAdminEventRepository(database, dependencies) {
        LEFT JOIN mip_city_branches b ON b.app_id = u.app_id AND b.id = u.primary_branch_id
        LEFT JOIN mip_private_profiles pp ON pp.app_id = r.app_id AND pp.user_id = r.user_id
        LEFT JOIN mip_event_checkins c ON c.app_id = r.app_id AND c.registration_id = r.id AND c.status = 'ACTIVE'
+       LEFT JOIN mip_orders o ON o.app_id = r.app_id AND o.id = r.order_id
+         AND o.user_id = r.user_id AND o.resource_id = r.event_id AND o.order_type = 'EVENT'
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql} ORDER BY r.created_at DESC, r.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
     const items = rows.map(row => ({
       id: row.id,
       userId: row.user_id,
+      userBranchId: row.user_branch_id || null,
       nickname: row.nickname || '未填写昵称',
       cityName: row.city_name || '',
       status: row.abnormal_reason ? 'ABNORMAL' : row.status,
@@ -1118,6 +1181,7 @@ function createAdminEventRepository(database, dependencies) {
       submittedAt: iso(row.created_at),
       registeredAt: iso(row.registered_at),
       checkedInAt: iso(row.checked_in_at),
+      ...rosterPaymentFields(row),
       version: Number(row.version),
     }))
     return pageRows(items, pageLimit, row => ({ submittedAt: row.submittedAt, id: row.id }))

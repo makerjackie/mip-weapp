@@ -1,0 +1,15 @@
+{
+  "at": "2026-09-29T12:15:19.603Z",
+  "stage": "staging",
+  "purpose": "EVENT_COVER",
+  "fixtureOnly": true,
+  "dimensions": [
+    128,
+    128
+  ],
+  "notPublishedOrBound": true,
+  "safetyNotBypassed": true,
+  "result": "PASS",
+  "uploadCompleted": true,
+  "previewPassed": true
+}

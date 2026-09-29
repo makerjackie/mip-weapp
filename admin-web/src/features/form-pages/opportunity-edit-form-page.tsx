@@ -4,6 +4,8 @@ import { useAdminSession } from '../../app/session-provider'
 import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
 import { getContentMutationForm, validateContentMutation } from '../../modules/content-mutation-forms'
 import { contentFormValues, normalizeContentFields } from '../../modules/content-form-values'
+import { opportunityEditorValues } from '../../modules/opportunity-editor'
+import { opportunityTextSuggestions } from '../../modules/opportunity-text-assist'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 import { defaultContentFormValues } from './content-form-helpers'
 
@@ -17,7 +19,22 @@ export function OpportunityEditFormPage() {
   )
 
   const formDef = getContentMutationForm('mip.admin.opportunities.save')
-  const fields = useMemo(() => normalizeContentFields(formDef.fields as readonly OperationField[]), [formDef.fields])
+  const fields = useMemo(() => {
+    const optionsAction = 'mip.admin.opportunities.options'
+    const enhance = (items: readonly OperationField[]): readonly OperationField[] => items.map(field => {
+      const key = String(field.key || '')
+      return { ...field, ...(field.fields ? { fields: enhance(field.fields) } : {}),
+        ...(['opportunityId', 'expectedVersion', 'cityTagId'].includes(key) ? { hidden: true } : {}),
+        ...(key === 'ownerUserId' ? { remoteUserSearch: true, userSearchAction: optionsAction } : {}),
+        ...(key === 'branchId' ? { optionsAction, optionsKey: 'branches' } : {}),
+        ...(key === 'tagIds' ? { kind: 'multi-select', optionsAction, optionsKey: 'tags' } : {}),
+        ...(key === 'roleKeys' ? { options: [{ value: 'connector', label: '皮条客' }, { value: 'business_builder', label: '生意佬' }, { value: 'capital_operator', label: '暴发户' }, { value: 'strategist', label: '狗策划' }, { value: 'visual_designer', label: '死美工' }, { value: 'delivery_lead', label: '老保姆' }] } : {}),
+        ...(['minAmountCents', 'maxAmountCents'].includes(key) ? { kind: 'money', valueScale: 1000000, label: key === 'minAmountCents' ? '最低价值（万元）' : '最高价值（万元）' } : {}),
+        ...(key === 'locations' ? { kind: 'commercial-locations', fields: undefined, required: false } : {}),
+      }
+    })
+    return enhance(normalizeContentFields(formDef.fields as readonly OperationField[]))
+  }, [formDef.fields])
   const values = useMemo(() => defaultContentFormValues(fields), [fields])
 
   const formConfig: IndependentFormPageConfig = {
@@ -29,6 +46,7 @@ export function OpportunityEditFormPage() {
     action: 'mip.admin.opportunities.save',
     idempotencyKey,
     capability: 'opportunities.moderate',
+    textAssist: { suggest: opportunityTextSuggestions },
     buildInput: (submitted: OperationValues) => {
       const merged = { ...values, ...submitted, opportunityId }
       const result = validateContentMutation('mip.admin.opportunities.save', contentFormValues('mip.admin.opportunities.save', merged, idempotencyKey))
@@ -39,15 +57,8 @@ export function OpportunityEditFormPage() {
   const loadDetail = useCallback(async (): Promise<OperationValues | null> => {
     if (!opportunityId) return null
     const data = await request<Record<string, unknown>>('mip.admin.opportunities.get', { opportunityId })
-    if (!data || typeof data !== 'object') return null
-    const opp = data as Record<string, unknown>
-    const draft = (opp.draft && typeof opp.draft === 'object' ? opp.draft : {}) as Record<string, unknown>
-    return {
-      opportunityId: String(opp.id || opportunityId),
-      expectedVersion: Number(opp.version) || undefined,
-      draft: { ...draft },
-    } as OperationValues
+    return opportunityEditorValues(data)
   }, [opportunityId, request])
 
-  return <IndependentFormPage config={formConfig} loadDetail={opportunityId ? loadDetail : undefined} />
+  return <IndependentFormPage key={opportunityId || 'new'} config={formConfig} loadDetail={opportunityId ? loadDetail : undefined} />
 }

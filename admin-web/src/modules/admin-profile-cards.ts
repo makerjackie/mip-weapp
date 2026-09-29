@@ -1,4 +1,5 @@
 import type { AdminRequest } from './admin-read-contracts'
+import { record } from './admin-read-formatters.ts'
 
 export interface ProfileCard {
   id: string
@@ -25,6 +26,19 @@ export interface CardTemplate {
   version: number
 }
 export interface CardHistory { version: number; snapshot: Record<string, unknown>; createdAt: string }
+export type EditableProfileFields = Pick<ProfileCard, 'realName' | 'nickname' | 'headline' | 'introduction' | 'companies' | 'organizations' | 'identityStatus'>
+export function profileFormValues(item: EditableProfileFields): EditableProfileFields {
+  return { realName: item.realName, nickname: item.nickname, headline: item.headline,
+    introduction: item.introduction, companies: item.companies, organizations: item.organizations, identityStatus: item.identityStatus }
+}
+export function profileCardFromUser(payload: unknown): ProfileCard {
+  const user = record(payload)
+  if (!user.id || !Number.isInteger(user.profileVersion) || !Array.isArray(user.companies) || !Array.isArray(user.organizations)) throw new Error('用户资料字段不完整，请重新加载。')
+  return { id: String(user.id), name: String(user.realName || user.nickname || ''),
+    realName: String(user.realName ?? ''), nickname: String(user.nickname ?? ''), headline: String(user.headline ?? ''), introduction: String(user.introduction ?? ''),
+    companies: user.companies, organizations: user.organizations, identityStatus: String(user.identityStatus ?? ''), avatarUrl: String(user.avatarUrl ?? ''),
+    profileVersion: Number(user.profileVersion), status: 'ACTIVE', version: 0, reason: '' }
+}
 export interface CardPage<T> { items: T[]; nextCursor: string | null }
 export const cardTemplatePreviews: Record<string, string> = {
   PINK: '/card-templates/card-bg-a.webp', BLUE: '/card-templates/card-bg-b.webp',

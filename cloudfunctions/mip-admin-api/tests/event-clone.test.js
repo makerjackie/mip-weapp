@@ -66,6 +66,35 @@ function input() {
 }
 
 describe('admin event clone persistence', () => {
+  it('copies reusable configuration into an incomplete private draft without runtime business records', async () => {
+    const calls = []
+    const one = async sql => sql.includes('FROM mip_events e') ? sourceEvent() : null
+    const query = async (sql, params) => {
+      calls.push({ sql, params })
+      if (sql.includes('SELECT media.media_asset_id')) return [{ media_asset_id: 'body-image', caption: '说明图' }]
+      if (sql.includes('SELECT assignment.tag_id')) return [{ tag_id: 'tag-a' }]
+      return { affectedRows: 1, insertId: 901 }
+    }
+    const repository = createAdminRepository({ transaction: work => work({ one, query }) })
+    const result = await repository.cloneEvent({ ...input(), draftOnly: true })
+    assert.deepEqual(result, { draftId: '901', version: 1, status: 'DRAFT', idempotent: false })
+    const saved = calls.find(call => call.sql.includes('INSERT INTO mip_event_drafts'))
+    assert.deepEqual(saved.params.slice(0, 2), ['wx-app', 'admin-user'])
+    const draft = JSON.parse(saved.params[2])
+    for (const field of ['title', 'startsAt', 'endsAt', 'registrationDeadline', 'cancellationDeadline']) assert.equal(draft[field], '')
+    assert.equal(draft.cloneSourceEventId, 'event-source')
+    assert.equal(draft.summary, '活动摘要')
+    assert.equal(draft.coverAssetId, 'cover-a')
+    assert.equal(draft.priceCents, 0)
+    assert.deepEqual(draft.contentMedia, [{ assetId: 'body-image', caption: '说明图' }])
+    assert.deepEqual(draft.registrationSchema, [{ key: 'company', type: 'TEXT' }])
+    assert.deepEqual(draft.tagIds, ['tag-a'])
+    assert.equal(Object.hasOwn(draft, 'eventId'), false)
+    assert.equal(Object.hasOwn(draft, 'expectedVersion'), false)
+    assert.ok(calls.some(call => call.sql.includes('mip_audit_logs')))
+    assert.ok(calls.some(call => call.sql.includes("status = 'COMPLETED'")))
+    assert.equal(calls.some(call => /INSERT INTO mip_(events|orders|event_registrations|event_changes|outbox_events)\b/.test(call.sql)), false)
+  })
   it('creates an independent draft and shifts only reusable event definition dates', async () => {
     const calls = []
     let sequence = 0

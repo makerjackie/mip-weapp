@@ -16,6 +16,15 @@ const token = 'a'.repeat(43)
 const tokenHash = createHash('sha256').update(token).digest('hex')
 const now = new Date('2026-08-24T00:00:00.000Z')
 
+function exportedRow(exportType, row) {
+  const entries = unzipEntries(workbookForExport({ exportType, rows: [row], includesPhone: false }).content)
+  const unescape = text => text.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+  const strings = [...entries.get('xl/sharedStrings.xml').toString().matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(match => unescape(match[1]))
+  const rows = [...entries.get('xl/worksheets/sheet1.xml').toString().matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)]
+    .map(match => [...match[1].matchAll(/<v>(\d+)<\/v>/g)].map(cell => strings[Number(cell[1])]))
+  return Object.fromEntries(rows[0].map((key, index) => [key, rows[1][index]]))
+}
+
 function error(code) {
   const value = new Error(code)
   value.code = code
@@ -151,6 +160,34 @@ function memoryStorage(options = {}) {
 }
 
 describe('MIP admin XLSX', () => {
+  it('preserves opportunity full text, every location, zero and optional amounts in ten-thousand yuan', () => {
+    const row = exportedRow('OPPORTUNITIES', { id: 'op-a', description: '第一段\n第二段  ',
+      commercialTerms: { minAmountCents: 0, maxAmountCents: 1250000, currency: 'CNY', locations: [{ type: 'CITY', cityName: '广州' }, { type: 'REMOTE' }] },
+      roleKeys: ['connector', 'delivery_lead'], tags: ['教育'], referralCount: 0 })
+    assert.equal(row['机会全文'], '第一段\n第二段  ')
+    assert.equal(row['合作地区'], '广州、远程')
+    assert.equal(row['最低金额（万元）'], '0')
+    assert.equal(row['最高金额（万元）'], '1.25')
+    assert.equal(row['合作角色'], '皮条客、老保姆')
+    assert.equal(row['引荐数量'], '0')
+    assert.equal(exportedRow('OPPORTUNITIES', { commercialTerms: { minAmountCents: null } })['最低金额（万元）'], '')
+  })
+
+  it('uses yuan for order and roster ledgers and includes readable feedback without losing raw answers', () => {
+    assert.equal(exportedRow('ORDERS', { amountCents: 9900, refundedAmountCents: 0 })['金额（元）'], '99.00')
+    for (const type of ['EVENT_ROSTER', 'EVENT_ROSTER_ALL']) {
+      const row = exportedRow(type, { orderId: 'order-a', paymentStatus: 'PAID', paidAmountCents: 1250, refundedAmountCents: 0 })
+      assert.equal(row['实付金额（元）'], '12.50')
+      assert.equal(row['已退款金额（元）'], '0.00')
+      assert.equal(row['支付状态'], 'PAID')
+    }
+    const row = exportedRow('EVENT_FEEDBACK', { body: '资源一\n资源二', answers: { recommendation: 'NOT_RECOMMEND', roleKeys: ['connector'], rosterConsent: 'PRIVATE' } })
+    assert.equal(row['是否推荐'], '不愿意')
+    assert.equal(row['名册授权'], '仅私密保存')
+    assert.equal(row['资源与合作需求全文'], '资源一\n资源二')
+    assert.match(row['结构化答案'], /NOT_RECOMMEND/)
+  })
+
   it('neutralizes formulas and removes XML control characters', () => {
     const content = buildXlsx({
       sheetName: '用户',

@@ -1,0 +1,36 @@
+{
+  "at": "2026-09-29T12:23:52.248Z",
+  "command": "pnpm verify:all",
+  "exitCode": 0,
+  "node": "22.23.1",
+  "pnpm": "11.14.0",
+  "logSha256": "80897da07f2246d407804db74ad474242b808db343b5d70745e5060f41c08c5b",
+  "root": {
+    "files": 259,
+    "tests": 1484
+  },
+  "webContracts": 223,
+  "react": {
+    "files": 19,
+    "tests": 123
+  },
+  "mediaFunctionTests": 31,
+  "generatedContentClientCheck": true,
+  "lintTypeBuildIsolationResponsivePassed": true,
+  "planning": {
+    "productScenarios": 53,
+    "uniquePrimaryOwners": 53,
+    "workPackages": 22,
+    "acyclic": true
+  },
+  "limitations": [
+    "Local engineering gate is distinct from cloud Nodejs20.19, device and full product acceptance.",
+    "Known bundle size warning retained."
+  ],
+  "documentationCheckPassed": true,
+  "diffCheckPassed": true,
+  "sourceSnapshotCurrent": true,
+  "publishedFrontendMatchesRealBuild": true,
+  "finalHttpsChecks": 64,
+  "liveModules": 14
+}

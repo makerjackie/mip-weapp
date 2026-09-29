@@ -1,7 +1,8 @@
 import { DownloadOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Space, Typography } from 'antd'
+import { Button, Form, Select, Space, Typography } from 'antd'
 import { useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { RemoteCatalogSelect } from '../../shared/ui/session-user-select'
 import { useAdminSession } from '../../app/session-provider'
 import {
   EVENT_MUTATION_ACTIONS,
@@ -129,6 +130,30 @@ function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreList
         loading={query.loading}
         refreshing={query.refreshing}
         error={query.errorMessage}
+        extraFilterSlots={route === 'events' ? <>
+          <Form.Item label="标签">
+            <RemoteCatalogSelect action="mip.admin.events.catalog.list" input={{ kind: 'TAG', purpose: 'EVENT_FILTER' }} value={props.search.filters?.tagId || ''} placeholder="全部标签"
+              onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, tagId: String(value || '') }, cursor: undefined, page: undefined })} />
+          </Form.Item>
+          <Form.Item label="服务器">
+            <RemoteCatalogSelect action="mip.admin.branches.list" input={{ purpose: 'EVENT_FILTER' }} value={props.search.filters?.branchId || ''} placeholder="授权服务器"
+              onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, branchId: String(value || '') }, cursor: undefined, page: undefined })} />
+          </Form.Item>
+        </> : route === 'orders' ? <Form.Item label="活动服务器">
+          <RemoteCatalogSelect action="mip.admin.branches.list" input={{ purpose: 'ORDER_FILTER' }} value={props.search.filters?.branchId || ''} placeholder="全部授权服务器"
+            onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, branchId: String(value || '') }, cursor: undefined, page: undefined })} />
+        </Form.Item> : route === 'users' ? <>
+          <Form.Item label="服务器"><RemoteCatalogSelect action="mip.admin.branches.list" input={{ purpose: 'USER_FILTER' }} value={props.search.filters?.branchId || ''} placeholder="全部授权服务器"
+            onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, branchId: String(value || '') }, cursor: undefined, page: undefined })} /></Form.Item>
+          <Form.Item label="行业"><RemoteCatalogSelect action="mip.admin.users.list" input={{ purpose: 'FILTER_OPTIONS' }} optionsKey="industries" value={props.search.filters?.industryId || ''} placeholder="全部行业"
+            onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, industryId: String(value || '') }, cursor: undefined, page: undefined })} /></Form.Item>
+          <Form.Item label="职业身份"><RemoteCatalogSelect action="mip.admin.users.list" input={{ purpose: 'FILTER_OPTIONS' }} optionsKey="identities" value={props.search.filters?.identityStatus || ''} placeholder="全部职业身份"
+            onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, identityStatus: String(value || '') }, cursor: undefined, page: undefined })} /></Form.Item>
+          <Form.Item label="权益状态"><Select aria-label="权益状态" value={props.search.filters?.playerLifecycle || ''} options={[{ value: '', label: '全部权益状态' }, { value: 'CURRENT', label: '当前有效' }, { value: 'FORMER', label: '曾开通，当前无效' }, { value: 'NEVER', label: '从未开通' }]}
+            onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, playerLifecycle: value }, cursor: undefined, page: undefined })} /></Form.Item>
+          <Form.Item label="时间类型"><Select aria-label="时间类型" value={props.search.filters?.timeKind || 'REGISTERED'} options={[{ value: 'REGISTERED', label: '注册时间' }, { value: 'EXPIRY', label: '会籍到期时间' }]}
+            onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, timeKind: value, createdFrom: '', createdTo: '', expiresFrom: '', expiresTo: '' }, cursor: undefined, page: undefined })} /></Form.Item>
+        </> : undefined}
         canExport={hasCapability('exports.create')}
         canWriteEvents={hasCapability(EVENT_MUTATION_CONFIGS['mip.admin.events.save'].capability)}
         canWriteEventPolicy={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.policy.save'].capability, 'PLATFORM')}
@@ -156,6 +181,7 @@ export function CoreListPageView({
   canManageEventCatalog,
   onNavigateToForm,
   onRetry,
+  extraFilterSlots,
   onSearchChange,
   onOpenDetail,
   onPreviousPage,
@@ -174,6 +200,7 @@ export function CoreListPageView({
   canManageEventCatalog?: boolean
   onNavigateToForm?: (path: string, entityId: string) => void
   onRetry?: () => void
+  extraFilterSlots?: React.ReactNode
 }) {
   const pageDefinition = pageDefinitions[route]
   const readDefinition = getAdminReadRouteDefinition(route)
@@ -233,11 +260,12 @@ export function CoreListPageView({
         placeholder={readDefinition.searchPlaceholder}
         statusOptions={readDefinition.statusOptions}
         loading={loading}
-        timeRangeFields={timeRangeByRoute[route]}
+        timeRangeFields={route === 'users' && search.filters?.timeKind === 'EXPIRY' ? { from: 'expiresFrom', to: 'expiresTo', label: '会籍到期时间' } : timeRangeByRoute[route]}
         amountRangeFields={amountRangeByRoute[route]}
         dimensionField={dimensionByRoute[route].field}
         dimensionLabel={dimensionByRoute[route].label}
         dimensionOptions={dimensionByRoute[route].options}
+        extraFilterSlots={extraFilterSlots}
         showPageSize
         pageSize={search.limit ?? 20}
         onPageSizeChange={size => onSearchChange({

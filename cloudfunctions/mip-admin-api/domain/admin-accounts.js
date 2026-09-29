@@ -15,6 +15,7 @@ function accountDraft(input) {
   return {
     name: text(input.name, 64, { required: true, label: '姓名' }),
     roleKey, scopeType,
+    ...(Object.hasOwn(input, 'roleTemplateId') ? { roleTemplateId: input.roleTemplateId ? requiredId(input.roleTemplateId, '岗位模板') : null } : {}),
     scopeId: scopeType === 'PLATFORM' ? null : requiredId(input.scopeId, '管理范围'),
   }
 }

@@ -293,19 +293,25 @@ async function projectEventComment(database, event) {
        SELECT fact.app_id, fact.event_id, fact.author_user_id,
               fact.organizer_user_id AS recipient_user_id,
               'ORGANIZER' AS responsibility_kind,
-              NULL AS role_key, NULL AS policy_mode, NULL AS capabilities_json
+              NULL AS role_key, NULL AS policy_mode, NULL AS capabilities_json,
+              NULL AS role_template_id, NULL AS template_base_role_key, NULL AS template_status, NULL AS template_capabilities_json
        FROM comment_fact fact
        UNION ALL
        SELECT fact.app_id, fact.event_id, fact.author_user_id,
               binding.user_id AS recipient_user_id,
               'MANAGEMENT' AS responsibility_kind,
-              binding.role_key, policy.policy_mode, policy.capabilities_json
+              binding.role_key, policy.policy_mode, policy.capabilities_json,
+              binding.role_template_id, role_template.base_role_key AS template_base_role_key,
+              role_template.status AS template_status, role_template.capabilities AS template_capabilities_json
        FROM comment_fact fact
        INNER JOIN mip_admin_role_bindings binding
          ON binding.app_id = fact.app_id AND binding.status = 'ACTIVE'
        LEFT JOIN mip_role_capability_policies policy
          ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
-       WHERE (
+       LEFT JOIN mip_admin_roles role_template ON role_template.app_id = binding.app_id AND role_template.role_id = binding.role_template_id
+       WHERE NOT EXISTS (SELECT 1 FROM mip_admin_accounts disabled_account
+         WHERE disabled_account.app_id = binding.app_id AND disabled_account.linked_user_id = binding.user_id
+           AND disabled_account.status <> 'ACTIVE') AND (
            (binding.role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
              AND binding.scope_type = 'PLATFORM'
              AND binding.scope_id = '00000000-0000-0000-0000-000000000000')
@@ -317,7 +323,8 @@ async function projectEventComment(database, event) {
      )
      SELECT responsibility.recipient_user_id, responsibility.event_id,
             responsibility.responsibility_kind, responsibility.role_key,
-            responsibility.policy_mode, responsibility.capabilities_json
+            responsibility.policy_mode, responsibility.capabilities_json, responsibility.role_template_id,
+            responsibility.template_base_role_key, responsibility.template_status, responsibility.template_capabilities_json
      FROM responsible_users responsibility
      INNER JOIN mip_users recipient
        ON recipient.app_id = responsibility.app_id

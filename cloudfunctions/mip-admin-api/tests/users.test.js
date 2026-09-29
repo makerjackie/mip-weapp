@@ -57,7 +57,7 @@ function repository(bindings = [{
       : { scopeType: 'BRANCH', scopeId: 'branch-a' },
     getUserDetail: async (_appId, userId) => userRow(userId),
     getUserRelatedRecords: async () => ({
-      superCases: [], opportunities: [], registrations: [], orders: [],
+      superCases: [], cooperationCards: [], opportunities: [], registrations: [], orders: [],
     }),
     listPrimaryBranchOptions: async () => [],
     recordAudit: async audit => audits.push(audit),
@@ -140,6 +140,7 @@ describe('admin users module', () => {
     ownerRepo.listUsers = async () => [userRow()]
     const result = await usersFor(ownerRepo).listUsers(caller, { includePhone: true })
     assert.equal(result.items[0].phoneNumber, '+86 13800138000')
+    assert.equal(result.items[0].phoneNumberMasked, '+86 138****8000')
     assert.equal(Object.hasOwn(result.items[0], 'phoneCiphertext'), false)
     assert.deepEqual(ownerRepo.audits, [{
       appId: caller.appId,
@@ -156,6 +157,36 @@ describe('admin users module', () => {
         cursor: false,
       },
     }])
+  })
+
+  it('loads named filter options only inside the current user-read scope', async () => {
+    const repo = repository()
+    const reads = []
+    repo.listUserFilterOptions = async (...args) => {
+      reads.push(args)
+      return { industries: [{ id: 'industry-a', name: '软件' }], identities: [{ id: '创业者', name: '创业者' }] }
+    }
+    const service = usersFor(repo)
+    assert.deepEqual(await service.listUsers(caller, { purpose: 'FILTER_OPTIONS' }), {
+      industries: [{ id: 'industry-a', name: '软件' }], identities: [{ id: '创业者', name: '创业者' }],
+    })
+    assert.deepEqual(reads[0], [caller.appId, { platform: false, branchIds: ['branch-a'], eventIds: [] }])
+    repo.listRoleBindings = async () => []
+    await assert.rejects(() => service.listUsers(caller, { purpose: 'FILTER_OPTIONS' }), error => error?.code === 'FORBIDDEN')
+    assert.equal(reads.length, 1)
+  })
+
+  it('shares industry, professional identity and expiry filters with exports and rejects reversed expiry ranges', async () => {
+    const repo = repository()
+    let captured
+    repo.listUsers = async (_appId, _visibility, filters) => { captured = filters; return [] }
+    const service = usersFor(repo)
+    const filters = { industryId: 'industry-a', identityStatus: ' 创业者 ', expiresFrom: '2030-01-01T00:00:00Z', expiresTo: '2030-02-01T00:00:00Z' }
+    await service.listUsers(caller, { filters })
+    assert.deepEqual(captured, service.normalizeExportFilters(filters))
+    assert.equal(captured.identityStatus, '创业者')
+    assert.equal(captured.expiresFrom, '2030-01-01 00:00:00.000')
+    await assert.rejects(() => service.listUsers(caller, { filters: { expiresFrom: filters.expiresTo, expiresTo: filters.expiresFrom } }), error => error?.code === 'VALIDATION_FAILED')
   })
 
   it('returns NOT_FOUND before scope authorization and never reads a missing detail', async () => {
@@ -191,7 +222,7 @@ describe('admin users module', () => {
     assert.equal(result.phoneNumber, '+86 13800138000')
     assert.equal(Object.hasOwn(result, 'phoneCiphertext'), false)
     assert.deepEqual(result.relatedRecords, {
-      superCases: [], opportunities: [], registrations: [], orders: [],
+      superCases: [], cooperationCards: [], opportunities: [], registrations: [], orders: [],
     })
     assert.deepEqual(result.primaryBranchOptions, [])
     assert.equal(repo.audits[0].scopeType, 'BRANCH')

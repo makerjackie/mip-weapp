@@ -26,6 +26,7 @@ export interface FilterFieldAmount {
   min: string
   max: string
   label?: string
+  scale?: number
 }
 
 export function FilterBar({
@@ -124,14 +125,14 @@ export function FilterBar({
     const raw = typeof filters[key] === 'string' ? filters[key] as string : ''
     if (!raw) return undefined
     const cents = Number(raw)
-    return Number.isFinite(cents) ? cents / 100 : undefined
+    return Number.isFinite(cents) ? cents / (amountRangeFields?.scale ?? 100) : undefined
   }
 
   function handleAmountChange(key: string, val: number | null) {
     if (!amountRangeFields) return
     const nextFilters = { ...filters }
     if (val !== null && val !== undefined) {
-      nextFilters[key] = String(Math.round(val * 100))
+      nextFilters[key] = String(Math.round(val * (amountRangeFields.scale ?? 100)))
     } else {
       delete nextFilters[key]
     }

@@ -886,7 +886,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('forwards every explicitly reviewed query action', async () => {
-    assert.equal(REVIEWED_QUERY_ACTIONS.length, 104)
+    assert.equal(REVIEWED_QUERY_ACTIONS.length, 105)
     const fetchMock = fetchQueue(...REVIEWED_QUERY_ACTIONS.map(action => new Response(JSON.stringify({
       ok: true,
       data: { action },
@@ -914,7 +914,26 @@ describe('Admin Web BFF', () => {
     }), REVIEWED_QUERY_ACTIONS.map(action => ({ action, input: reviewedQueryInput(action) })))
   })
 
-  it('restricts sensitive export actions to user and order filters plus opaque ticket credentials', async () => {
+  it('forwards all reviewed export types with the same named list filters and zero bounds', async () => {
+    const cases = [
+      { exportType: 'USERS', includesPhone: false, filters: { branchId: 'branch-a', industryId: 'industry-a', identityStatus: '创业者', playerLifecycle: 'CURRENT', expiresTo: '2030-01-01T00:00:00Z' } },
+      { exportType: 'ORDERS', includesPhone: false, filters: { branchId: 'branch-a', refundStatus: 'NONE', createdFrom: '2030-01-01T00:00:00Z' } },
+      { exportType: 'OPPORTUNITIES', includesPhone: false, filters: { ownerQuery: '林', minAmountCents: 0, maxAmountCents: 1250000, locationTypes: ['CITY', 'REMOTE'], locationCityTagIds: ['city-a'] } },
+      { exportType: 'EVENT_ROSTER', includesPhone: false, eventId: '10000000-0000-4000-8000-000000000001', filters: { query: '林', status: 'ATTENDED' } },
+      { exportType: 'GROWTH_ENTRIES', includesPhone: false, filters: { userId: 'user-a', metric: 'CONTRIBUTION', sourceEventType: 'manual.adjustment' } },
+    ]
+    const fetchMock = fetchQueue(...cases.map(() => new Response(JSON.stringify({ ok: true, data: { ticketId: 'ticket-a' } }), { status: 200 })))
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    for (const input of cases) {
+      const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, { method: 'POST',
+        headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+        body: JSON.stringify({ contractVersion: 1, action: 'mip.admin.exports.create', input, idempotencyKey: 'web-export-fixture' }) }))
+      assert.equal(response.status, 200, input.exportType)
+    }
+    assert.deepEqual(fetchMock.calls.map(([, init]) => JSON.parse(String(init?.body)).request.input), cases)
+  })
+
+  it('rejects unreviewed export types, scope injection and phone access plus malformed ticket credentials', async () => {
     const fetchMock = fetchQueue()
     const { bff, sessionCookie } = await confirmedLogin(fetchMock)
     const submit = (action: string, input: Record<string, unknown>, mutation = true) => bff.handle(new Request(`${ORIGIN}/api/admin`, {
@@ -931,7 +950,10 @@ describe('Admin Web BFF', () => {
     const invalid = [
       submit('mip.admin.exports.create', { exportType: 'EVENT_ROSTER_ALL', includesPhone: false, filters: {} }),
       submit('mip.admin.exports.create', { exportType: 'ORDERS', includesPhone: true, filters: {} }),
-      submit('mip.admin.exports.create', { exportType: 'USERS', includesPhone: false, filters: { branchId: 'branch-a' } }),
+      submit('mip.admin.exports.create', { exportType: 'USERS', includesPhone: false, filters: { scopeType: 'PLATFORM' } }),
+      submit('mip.admin.exports.create', { exportType: 'OPPORTUNITIES', includesPhone: true, filters: {} }),
+      submit('mip.admin.exports.create', { exportType: 'EVENT_ROSTER', includesPhone: false, filters: {} }),
+      submit('mip.admin.exports.create', { exportType: 'OPPORTUNITIES', includesPhone: false, filters: { minAmountCents: -1 } }),
       submit('mip.admin.exports.reserve', { ticketId: 'ticket-a', token: 'short' }),
       submit('mip.admin.exports.status', { ticketId: 'ticket-a', token: EXPORT_TOKEN, extra: true }, false),
     ]
@@ -1188,5 +1210,26 @@ describe('migration challenge namespaces', () => {
       assert.match(payload.code,namespace ? /^9\d{5}$/ : /^[0-8]\d{5}$/)
       assert.equal(token.startsWith('z_'),Boolean(namespace))
     }
+  })
+})
+
+
+describe('additional admin origins', () => {
+  it('accepts only exact configured origins and preserves the existing origin', async () => {
+    const custom = 'https://mipadmin.01mvp.com'
+    const bff = createAdminBff({ ...env(new MemoryD1()), MIP_WEB_ADDITIONAL_ORIGINS: custom }, { generateLoginQrCode: noLoginQrCode, now: () => NOW })
+    for (const origin of [ORIGIN, custom]) {
+      const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, { method: 'POST', headers: { origin } }))
+      assert.equal(response.status, 201)
+    }
+    for (const origin of ['https://attacker.example', `${custom}.attacker.example`, 'http://mipadmin.01mvp.com', 'null']) {
+      const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, { method: 'POST', headers: { origin } }))
+      assert.equal(response.status, 403)
+    }
+  })
+  it('fails closed for malformed additional origins', async () => {
+    const bff = createAdminBff({ ...env(new MemoryD1()), MIP_WEB_ADDITIONAL_ORIGINS: 'https://mipadmin.01mvp.com/path' })
+    const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, { method: 'POST', headers: { origin: ORIGIN } }))
+    assert.equal(response.status, 403)
   })
 })

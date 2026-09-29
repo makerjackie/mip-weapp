@@ -1,4 +1,5 @@
 import { boundedInteger, identifier, nonNegativeVersion, positiveVersion, uniqueStringList } from './admin-coercions.ts'
+import type { AdminDetailRoute } from './admin-details.ts'
 
 export type AdminRowOperationAction  = | 'mip.admin.adminAccounts.create'
     | 'mip.admin.adminAccounts.update'
@@ -14,6 +15,12 @@ export type AdminRowOperationAction  = | 'mip.admin.adminAccounts.create'
     | 'mip.admin.rolePolicies.update'
     | 'mip.admin.branches.update'
     | 'mip.admin.branches.changeStatus'
+    | 'mip.admin.knowledge.sources.save'
+    | 'mip.admin.knowledge.categories.save'
+    | 'mip.admin.knowledge.schedules.save'
+    | 'mip.admin.knowledge.products.save'
+    | 'mip.admin.knowledge.comments.moderate'
+    | 'mip.admin.knowledge.reports.close'
     | 'mip.admin.messageCampaigns.cancelSchedule'
     | 'mip.admin.announcements.save'
     | 'mip.admin.announcements.publish'
@@ -64,6 +71,7 @@ export type AdminOperationLaunchContext = Pick<
 
 export type AdminOperationRow = Record<string, unknown> & {
   rowActions?: readonly AdminRowOperation[]
+  detailLinks?: readonly { route: AdminDetailRoute; id: string; label: string }[]
 }
 
 export function eventRegistrationRowActions(
@@ -300,6 +308,8 @@ export function branchRowActions(branch: Record<string, unknown>): AdminRowOpera
         name: String(branch.name || ''),
         cityName: String(branch.cityName || ''),
         summary: String(branch.summary || ''),
+        leaderUserId: typeof branch.leaderUserId === 'string' ? branch.leaderUserId : '',
+        sortOrder: Number(branch.sortOrder ?? 0),
       },
       expectedVersion,
     },

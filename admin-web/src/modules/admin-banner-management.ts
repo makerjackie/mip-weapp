@@ -64,8 +64,10 @@ export async function loadBannerManagementPage(
     throw new Error('INVALID_BANNER_SESSION')
   }
   const payload = record(payloadValue)
+  const catalog = record(session.catalog)
   const items = Array.isArray(payload.items) ? payload.items.map(record) : []
   return {
+    ...(typeof catalog.canCreate === 'boolean' ? { creationAllowed: catalog.canCreate } : {}),
     sections: [{
       rows: items.map(item => ({
         detailId: valueOf(item, 'id'),
@@ -86,7 +88,7 @@ export async function loadBannerManagementPage(
       detailTarget: 'banners',
     }],
     nextCursor: null,
-    summary: payload.truncated === true
+    summary: Number.isSafeInteger(catalog.configuredCount) ? [{ label: '已配置 Banner', value: `${catalog.configuredCount} / 5` }] : payload.truncated === true
       ? [{ label: '列表状态', value: '仅显示前 100 条' }]
       : undefined,
   }
@@ -126,6 +128,7 @@ export async function loadBannerDetail(
           ['跳转地址', banner.targetValue],
           ['排序', numberLabel(banner.sortOrder)],
           ['状态', bannerStatusLabel(banner.status)],
+          ...(banner.activationBlockedReason ? [['启用限制', banner.activationBlockedReason] as [string, unknown]] : []),
           ['版本', numberLabel(banner.version)],
           ['启用时间', formatDateTime(banner.activatedAt)],
           ['更新时间', formatDateTime(banner.updatedAt)],
@@ -147,11 +150,11 @@ export function createBannerMutationDefinition(
     return definition(
       action,
       targetId ? '编辑 Banner' : '新增 Banner',
-      '可先在素材上传页上传 Banner 图片并复制素材 ID；保存后仍需单独启用。',
+      '上传或选择 Banner 图片，核对跳转目标；保存后仍需单独启用。',
       [
         { name: 'title', label: '管理名称', kind: 'text', required: true, maxLength: 100 },
         { name: 'accessibilityLabel', label: '图片说明', kind: 'text', required: true, maxLength: 120 },
-        { name: 'imageAssetId', label: '图片素材 ID', kind: 'text', required: true },
+        { name: 'imageAssetId', label: 'Banner 图片', kind: 'text', assetPurpose: 'BANNER', required: true },
         { name: 'targetType', label: '跳转类型', kind: 'select', required: true, options: [
           { value: 'MINIPROGRAM_PATH', label: '小程序页面' },
           { value: 'ARTICLE_URL', label: '公众号文章' },

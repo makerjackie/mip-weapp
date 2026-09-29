@@ -113,6 +113,7 @@ describe('admin user repository module', () => {
       'getUserDetail',
       'getUserScope',
       'listPrimaryBranchOptions',
+      'listUserFilterOptions',
       'listUserInfluence',
       'listUsers',
       'setUserControl',
@@ -255,6 +256,8 @@ describe('admin user repository module', () => {
     const page = await repository.listUsers('wx-app', visibility, {
       status: 'ACTIVE',
       branchId: 'branch-a',
+      industryId: 'industry-a', identityStatus: '创业者',
+      expiresFrom: '2026-08-01 00:00:00.000', expiresTo: '2027-08-01 00:00:00.000',
       levelId: 'level-a',
       experienceMin: 10,
       experienceMax: 30,
@@ -273,6 +276,11 @@ describe('admin user repository module', () => {
     assert.match(read.sql, /FROM mip_users u/)
     assert.match(read.sql, /mip_membership_entitlements/)
     assert.match(read.sql, /mip_user_access_controls/)
+    assert.match(read.sql, /industry\.tag_id = \?/)
+    assert.match(read.sql, /p\.identity_status = \?/)
+    assert.match(read.sql, /player_entitlements\.latest_entitlement_ends_at >= \?/)
+    assert.equal(read.params.includes('industry-a'), true)
+    assert.equal(read.params.includes('创业者'), true)
     assert.match(read.sql, /ORDER BY u\.updated_at DESC, u\.id DESC LIMIT \?/)
     assert.ok(read.params.includes('%用户\\_\\%%'))
     assert.equal(read.params.at(-1), 2)
@@ -281,6 +289,18 @@ describe('admin user repository module', () => {
     assert.equal(page.items[0].kind, 'PLAYER')
     assert.deepEqual(page.items[0].visibility, { headline: true })
     assert.equal(typeof page.nextCursor, 'string')
+  })
+
+  it('uses the existing industry catalog and only visible professional identities as filter names', async () => {
+    const { calls, repository } = createFixture({ query: async sql => sql.includes('FROM mip_tags')
+      ? [{ id: 'industry-old', label: '历史行业' }]
+      : [{ identity_status: '创业者' }] })
+    assert.deepEqual(await repository.listUserFilterOptions('wx-app', { platform: false, branchIds: ['branch-a'], eventIds: [] }), {
+      industries: [{ id: 'industry-old', name: '历史行业' }], identities: [{ id: '创业者', name: '创业者' }],
+    })
+    const reads = calls.filter(call => call.type === 'query')
+    assert.equal(reads.every(call => call.params[0] === 'wx-app'), true)
+    assert.equal(reads[1].params.includes('branch-a'), true)
   })
 
   it('prioritizes the database-current entitlement when projecting player detail', async () => {

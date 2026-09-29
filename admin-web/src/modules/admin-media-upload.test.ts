@@ -46,11 +46,11 @@ function file(bytes: Uint8Array, type: string, extra: Partial<AdminMediaFile> = 
 }
 
 describe('browser admin media upload preparation', () => {
-  it('exposes all eight neutral purpose options and encodes a PNG as canonical base64', async () => {
+  it('exposes all nine neutral purpose options and encodes a PNG as canonical base64', async () => {
     const bytes = png()
     const prepared = await prepareAdminMediaUpload(file(bytes, 'image/png'), 'BANNER')
 
-    assert.equal(ADMIN_MEDIA_PURPOSE_OPTIONS.length, 8)
+    assert.equal(ADMIN_MEDIA_PURPOSE_OPTIONS.length, 9)
     assert.deepEqual(prepared, {
       action: ADMIN_MEDIA_UPLOAD_ACTION,
       input: { purpose: 'BANNER', imageBase64: Buffer.from(bytes).toString('base64') },
@@ -102,6 +102,7 @@ describe('browser admin media upload preparation', () => {
       SUPER_CASE_COVER: 'userContent.moderate',
       SUPER_CASE_MEDIA: 'userContent.moderate',
       TASK_TEMPLATE: 'tasks.manage',
+      VIDEO_RECAP_COVER: 'events.recaps.manage',
     })
     const platformGrants = [{ capability: 'events.write', scopeType: 'PLATFORM' }]
     assert.deepEqual(availableAdminMediaPurposeOptions(platformGrants).map(option => option.value), [
@@ -109,7 +110,7 @@ describe('browser admin media upload preparation', () => {
     ])
     assert.deepEqual(availableAdminMediaPurposeOptions([
       { capability: 'events.write', scopeType: 'BRANCH' },
-    ]), [])
+    ]).map(option => option.value), ['EVENT_CONTENT', 'EVENT_COVER'])
   })
 
   it('parses only a standard successful response with safe asset and image identifiers', () => {

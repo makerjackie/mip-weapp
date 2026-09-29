@@ -30,6 +30,7 @@ function createVideos({ repository, access, contentSafety = async () => 'ERROR' 
     const { context } = await contextFor(caller)
     return repository.listVideos(context.caller.appId, {
       status: input.status ? videoStatus(input.status) : '', query: text(input.query, 80),
+      videoId: input.videoId ? requiredId(String(input.videoId), '视频') : null,
       cursor: decodeCursor(input.cursor, ['updatedAt', 'id']), limit: limit(input.limit, 100),
     })
   }
@@ -53,6 +54,7 @@ function createVideos({ repository, access, contentSafety = async () => 'ERROR' 
     const status = videoStatus(input.status, '')
     return repository.changeVideoStatus({ appId: context.caller.appId, actorUserId: context.caller.userId, videoId,
       expectedVersion: expectedVersion(input.expectedVersion), status,
+      idempotencyKey: stableKey(input.idempotencyKey, '请求', 128),
       authorization: access.mutationAuthorization(grant, CAPABILITIES.EVENTS_RECAPS_MANAGE),
       audit: access.audit(context, grant, { ...PLATFORM, action: 'admin.videos.status.change', resourceType: 'VIDEO', resourceId: videoId, metadata: { status } }),
     })

@@ -42,8 +42,18 @@ const PLATFORM_SCOPE = Object.freeze({ scopeType: 'PLATFORM', scopeId: null })
 
 function createEventCatalogAdmin({ access, repository }) {
   async function listEventCatalogs(caller, rawInput = {}) {
-    const { context } = await platformContext(caller, CAPABILITIES.EVENTS_CATALOG_MANAGE)
-    const input = normalizeCatalogList(rawInput)
+    if (!rawInput || typeof rawInput !== 'object' || Array.isArray(rawInput)) throw new AdminError('VALIDATION_FAILED', '目录选项无效')
+    let context
+    if (rawInput.purpose && rawInput.purpose !== 'EVENT_FILTER') throw new AdminError('VALIDATION_FAILED', '目录选项用途无效')
+    if (rawInput.purpose === 'EVENT_FILTER' || rawInput.selectable === true) {
+      context = await access.session(caller)
+      firstGrant(context.bindings, rawInput.purpose === 'EVENT_FILTER' ? CAPABILITIES.EVENTS_READ : CAPABILITIES.EVENTS_WRITE)
+    } else {
+      ;({ context } = await platformContext(caller, CAPABILITIES.EVENTS_CATALOG_MANAGE))
+    }
+    const { selectable, purpose, ...filters } = rawInput
+    if (selectable !== undefined && typeof selectable !== 'boolean') throw new AdminError('VALIDATION_FAILED', '目录选项用途无效')
+    const input = normalizeCatalogList(selectable ? { ...filters, status: 'ACTIVE' } : purpose ? { ...filters, status: '' } : filters)
     return repository.listEventCatalogs(
       context.caller.appId,
       input.kind,
@@ -297,6 +307,7 @@ function normalizeCatalogSave(value) {
     '活动目录内容无效',
   )
   const kind = enumValue(value.kind, CATALOG_KINDS, '活动目录类型无效')
+  if (kind === 'TAG' && /[<>\r\n]/.test(String(value.name || ''))) throw new AdminError('VALIDATION_FAILED', '活动标签必须为五字以内纯文本')
   return {
     kind,
     catalogId: updating ? requiredId(value.catalogId, '活动目录') : null,

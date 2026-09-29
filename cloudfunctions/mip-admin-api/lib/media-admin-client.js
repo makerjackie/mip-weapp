@@ -21,6 +21,7 @@ const MEDIA_ADMIN_UPLOAD_POLICIES = Object.freeze({
   SUPER_CASE_COVER: policy(64, 4096, 12_000_000),
   SUPER_CASE_MEDIA: policy(64, 4096, 12_000_000),
   TASK_TEMPLATE: policy(64, 4096, 12_000_000),
+  VIDEO_RECAP_COVER: policy(64, 4096, 12_000_000),
 })
 const INPUT_KEYS = new Set(['purpose', 'imageBase64'])
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])

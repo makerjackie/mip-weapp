@@ -271,6 +271,8 @@ describe('admin event repository module', () => {
       items: [{
         id: EVENT_ID,
         title: '城市交流会',
+        tags: [],
+        createdAt: null,
         summary: '活动摘要',
         scopeType: 'BRANCH',
         branchId: 'branch-a',

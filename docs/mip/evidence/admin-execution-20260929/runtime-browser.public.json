@@ -1,0 +1,147 @@
+{
+  "at": "2026-09-29T11:34:33.892Z",
+  "origin": "https://cloud1-d2gm0vloa9e1b4f31-1429274561.ap-shanghai.app.tcloudbase.com",
+  "scope": "Focused real browser journeys; not all 53 acceptance scenarios",
+  "checks": [
+    {
+      "name": "events-list",
+      "width": 1280,
+      "height": 720,
+      "actualHeight": 720,
+      "actualWidth": 1280,
+      "rows": 19,
+      "scrollWidth": 1280
+    },
+    {
+      "name": "event-detail",
+      "dialogWidth": 820,
+      "height": 720,
+      "rosterRows": 6,
+      "scrollWidth": 1280,
+      "width": 1280
+    },
+    {
+      "name": "event-detail",
+      "dialogWidth": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "width": 390
+    },
+    {
+      "name": "events-list",
+      "height": 844,
+      "scrollWidth": 390,
+      "width": 390
+    },
+    {
+      "name": "event-private-draft",
+      "saveReloadRestore": true,
+      "height": 844,
+      "scrollWidth": 390,
+      "width": 390
+    },
+    {
+      "name": "private-draft-cancel-390",
+      "actualWidth": 390,
+      "actualHeight": 844,
+      "discardGuard": true,
+      "savedVersionPreserved": true
+    },
+    {
+      "name": "events-list-1440",
+      "actualWidth": 1440,
+      "actualHeight": 900,
+      "noHorizontalOverflow": true
+    },
+    {
+      "name": "opportunity-prefill-real",
+      "fulltextPresent": true,
+      "namedOwner": true,
+      "namedRole": true,
+      "moneyEmptyPreserved": true
+    },
+    {
+      "name": "users-two-independent-tabs",
+      "twoNamesDistinct": true,
+      "secondRefreshRetained": true,
+      "firstRelatedCardNonempty": true,
+      "listStayedOpen": true
+    },
+    {
+      "name": "opportunity-real-save-refresh-reopen",
+      "fulltextSavedAndReopened": true,
+      "paragraphBreaksRetained": true,
+      "ownerRoleAndEmptyMoneyRetained": true,
+      "testObjectOnly": true,
+      "originalRestored": true
+    },
+    {
+      "name": "opportunity-two-objects",
+      "distinctTitlesAndFulltext": true,
+      "namedSecondOwnerAndCity": true,
+      "noSecondObjectWrite": true
+    },
+    {
+      "name": "empty-event-form-validation-final",
+      "width": 1280,
+      "height": 720,
+      "requiredErrors": 5,
+      "noHorizontalOverflow": true,
+      "noWrite": true
+    },
+    {
+      "name": "empty-event-form-validation-final",
+      "width": 390,
+      "height": 844,
+      "requiredErrors": 5,
+      "noHorizontalOverflow": true,
+      "noWrite": true
+    },
+    {
+      "name": "private-draft-restore-final",
+      "width": 390,
+      "height": 844,
+      "titlePresent": true,
+      "fullTextPresent": true,
+      "noErrorAlerts": true,
+      "consumedRestoreBannerHidden": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "name": "private-draft-save-reload-restore-final",
+      "titlePresent": true,
+      "fullTextPresent": true,
+      "noErrorAlerts": true,
+      "privateOnly": true
+    },
+    {
+      "name": "final-navigation-and-private-draft-restore",
+      "asset": "index-BCN0QiWF.js",
+      "actualWidth": 1541,
+      "actualHeight": 870,
+      "correctParentBreadcrumb": true,
+      "correctSelectedMenu": true,
+      "ownedTitleAndFulltextPresent": true,
+      "redErrorCount": 0,
+      "consumedRestoreBannerHidden": true
+    },
+    {
+      "name": "owned-unpublished-media-event-reopen",
+      "asset": "index-BCN0QiWF.js",
+      "titleAndFulltextPrefilled": true,
+      "coverLoaded": true,
+      "coverWidth": 128,
+      "coverHeight": 128,
+      "errorCount": 0,
+      "published": false
+    }
+  ],
+  "limitations": [
+    "No real finance, broadcasting, user permission grants or device claims.",
+    "Own private drafts and explicitly marked demo opportunity only; opportunity restored.",
+    "Earlier viewport and write journeys were captured before the final navigation deployment; final version checks are named explicitly."
+  ],
+  "initialAsset": "index-DAHdrxQP.js",
+  "finalAsset": "index-BCN0QiWF.js",
+  "finalChecksAt": "2026-09-29T12:17:00Z"
+}

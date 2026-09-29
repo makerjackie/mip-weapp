@@ -62,8 +62,9 @@ function stripXmlControls(value) {
 }
 
 function neutralize(value) {
-  let text = stripXmlControls(value).replace(/[\r\n\t]+/g, ' ').trim()
-  if (/^[=+\-@]/.test(text)) text = `'${text}`
+  let text = stripXmlControls(value)
+  // Preserve multiline/full text, but neutralize formulas even after whitespace.
+  if (/^[=+\-@]/.test(text.trimStart())) text = `'${text}`
   return text
 }
 
@@ -110,7 +111,7 @@ function buildXlsx({ sheetName = '导出', header, rows }) {
       }
     }
   }
-  const sharedXml = shared.map(value => `<si><t>${xmlEscape(value)}</t></si>`).join('')
+  const sharedXml = shared.map(value => `<si><t xml:space="preserve">${xmlEscape(value)}</t></si>`).join('')
   const sheetRows = matrix.map((row, rowIndex) => {
     const cells = row.map((cell, columnIndex) => `<c r="${columnName(columnIndex)}${rowIndex + 1}" t="s"><v>${sharedIndex.get(cell)}</v></c>`).join('')
     return `<row r="${rowIndex + 1}">${cells}</row>`

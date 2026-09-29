@@ -58,6 +58,19 @@ function runtime(saveCalls: Array<{ fileName: string; bytes: number[] }>, fetchC
 }
 
 describe('sensitive admin export workflow', () => {
+  it('exports the selected event roster with exactly the list filters and independently chosen phone access', async () => {
+    const eventId = '11111111-1111-4111-8111-111111111111'
+    const fileName = 'mip-event-roster-20300101T000000Z.xlsx'
+    const responses = requestQueue({
+      'mip.admin.exports.create': { ticketId: 'ticket-roster', token: TOKEN, status: 'PENDING', expiresAt: EXPIRES_AT },
+      'mip.admin.exports.prepare': ready(fileName), 'mip.admin.exports.reserve': reservation(fileName),
+      'mip.admin.exports.complete': { status: 'CONSUMED', consumedAt: '2030-01-01T00:00:10.000Z' },
+    })
+    const workflow = createSensitiveExportWorkflow({ kind: 'eventRoster', eventId, includesPhone: false, filters: { query: ' 林 ', status: 'ATTENDED' } }, step => `web-export-${step}-fixture`)
+    const result = await continueSensitiveExport(workflow, responses.request, runtime([]))
+    assert.deepEqual(responses.calls[0].input, { exportType: 'EVENT_ROSTER', eventId, includesPhone: false, filters: { query: '林', status: 'ATTENDED' }, idempotencyKey: 'web-export-create-fixture' })
+    assert.equal(result.rowCount, 2)
+  })
   it('exports only the selected event feedback through the scoped ticket flow', async () => {
     const eventId = '11111111-1111-4111-8111-111111111111'
     const fileName = 'mip-event-feedback-20300101T000000Z.xlsx'

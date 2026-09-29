@@ -5,14 +5,17 @@ const { AdminError } = require('../validation')
 const { pageRows } = require('../pagination')
 const { claimOptional, complete } = require('../idempotency')
 const { lockMutationAuthorization, assertMutationScope, PLATFORM_SCOPE_ID } = require('../mutation-authorization')
+const { lockTemplateForBinding } = require('../role-templates')
 
 function error(code) { return new AdminError(code, code === 'CONFLICT' ? '账号已更新，请刷新后重试' : '无法操作此账号') }
 function dto(row) {
   return {
     accountId: String(row.account_id), userId: row.linked_user_id, name: row.name,
+    bindings: Array.isArray(row.bindings_json) ? row.bindings_json : typeof row.bindings_json === 'string' ? JSON.parse(row.bindings_json) : [],
     loginAccount: row.login_account, roleKey: row.role_key, scopeId: row.managed_scope_id || null,
     branchName: row.branch_name || '', status: row.status === 'DISABLED' ? 'INACTIVE' : row.status,
     version: Number(row.version),
+    roleTemplateId: row.role_template_id ? String(row.role_template_id) : null,
   }
 }
 function createAdminAccountRepository(database, { writeAudit }) {
@@ -26,8 +29,18 @@ function createAdminAccountRepository(database, { writeAudit }) {
     if (input.status) { clauses.push('a.status = ?'); params.push(input.status === 'INACTIVE' ? 'DISABLED' : input.status) }
     if (input.cursor) { clauses.push('a.account_id < ?'); params.push(input.cursor.id) }
     const rows = await database.query(`SELECT a.account_id, a.linked_user_id, a.name, a.login_account,
-      a.role_key, a.managed_scope_id, a.status, a.version, b.name AS branch_name
-      FROM mip_admin_accounts a LEFT JOIN mip_city_branches b
+      a.role_key, a.managed_scope_id, a.status, a.version, binding.role_template_id, b.name AS branch_name,
+      (SELECT JSON_ARRAYAGG(JSON_OBJECT('roleKey', related.role_key, 'scopeType', related.scope_type,
+        'scopeName', CASE WHEN related.scope_type = 'PLATFORM' THEN '全平台'
+          WHEN related.scope_type = 'BRANCH' THEN related_branch.name ELSE related_event.title END,
+        'status', related.status, 'templateName', related_template.role_name))
+       FROM mip_admin_role_bindings related
+       LEFT JOIN mip_city_branches related_branch ON related_branch.app_id = related.app_id AND related_branch.id = related.scope_id
+       LEFT JOIN mip_events related_event ON related_event.app_id = related.app_id AND related_event.id = related.scope_id
+       LEFT JOIN mip_admin_roles related_template ON related_template.app_id = related.app_id AND related_template.role_id = related.role_template_id
+       WHERE related.app_id = a.app_id AND related.user_id = a.linked_user_id AND related.status = 'ACTIVE') AS bindings_json
+      FROM mip_admin_accounts a LEFT JOIN mip_admin_role_bindings binding ON binding.app_id = a.app_id AND binding.id = a.binding_id
+      LEFT JOIN mip_city_branches b
         ON b.app_id = a.app_id AND a.managed_scope_type = 'BRANCH' AND b.id = a.managed_scope_id
       WHERE ${clauses.join(' AND ')} ORDER BY a.account_id DESC LIMIT ${input.limit + 1}`, params)
     const page = pageRows(rows, input.limit, row => ({ id: String(row.account_id) }))
@@ -73,18 +86,20 @@ function createAdminAccountRepository(database, { writeAudit }) {
         await tx.query("UPDATE mip_admin_role_bindings SET status = 'REVOKED', revoked_at = UTC_TIMESTAMP(3) WHERE app_id = ? AND id = ?", [input.appId, bindingId])
       }
       if (!stored || input.operation === 'update') {
-        const current = await tx.one(`SELECT id, status FROM mip_admin_role_bindings WHERE app_id = ? AND user_id = ?
+        const current = await tx.one(`SELECT id, status, role_template_id FROM mip_admin_role_bindings WHERE app_id = ? AND user_id = ?
           AND scope_type = ? AND scope_id = ? AND role_key = ? FOR UPDATE`, [input.appId, userId, scopeType, scopeId || PLATFORM_SCOPE_ID, roleKey])
         bindingId = current?.id || randomUUID()
+        const roleTemplateId = await lockTemplateForBinding(tx, input, authorization,
+          Object.hasOwn(input, 'roleTemplateId') ? input.roleTemplateId : current?.role_template_id, roleKey)
         if (current) {
           await tx.query(`UPDATE mip_admin_role_bindings SET status = ?, granted_by_user_id = ?,
-            granted_at = UTC_TIMESTAMP(3), revoked_at = NULL WHERE app_id = ? AND id = ?`,
-          [status === 'ACTIVE' ? 'ACTIVE' : 'REVOKED', input.actorUserId, input.appId, bindingId])
+            granted_at = UTC_TIMESTAMP(3), revoked_at = NULL, role_template_id = ? WHERE app_id = ? AND id = ?`,
+          [status === 'ACTIVE' ? 'ACTIVE' : 'REVOKED', input.actorUserId, roleTemplateId, input.appId, bindingId])
         }
         else {
           await tx.query(`INSERT INTO mip_admin_role_bindings (id, app_id, user_id, scope_type, scope_id,
-            role_key, status, granted_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [bindingId, input.appId, userId, scopeType, scopeId || PLATFORM_SCOPE_ID, roleKey, status === 'ACTIVE' ? 'ACTIVE' : 'REVOKED', input.actorUserId])
+            role_key, status, granted_by_user_id, role_template_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [bindingId, input.appId, userId, scopeType, scopeId || PLATFORM_SCOPE_ID, roleKey, status === 'ACTIVE' ? 'ACTIVE' : 'REVOKED', input.actorUserId, roleTemplateId])
         }
       }
       else {

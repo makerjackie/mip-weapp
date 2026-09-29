@@ -112,15 +112,53 @@ describe('MIP media image boundary', () => {
 
   it('fails closed when WeChat image safety rejects or is unavailable', async () => {
     const image = decodeAndSanitizeImage(pngBase64(), 'AVATAR')
+    const caller = { appId: APP_ID }
     await assert.rejects(
-      () => openApiChecker({ openapi: { security: { imgSecCheck: async () => ({ errCode: 87014 }) } } })(image),
+      () => openApiChecker({ openapi: () => ({ security: { imgSecCheck: async () => ({ errCode: 87014 }) } }) })(image, caller),
       /IMAGE_CONTENT_REJECTED/,
     )
-    await assert.rejects(() => openApiChecker({})(image), /IMAGE_SAFETY_UNAVAILABLE/)
+    await assert.rejects(() => openApiChecker({})(image, caller), /IMAGE_SAFETY_UNAVAILABLE/)
     await assert.rejects(
-      () => openApiChecker({ openapi: { security: { imgSecCheck: async () => ({ errCode: '0' }) } } })(image),
-      /IMAGE_CONTENT_REJECTED/,
+      () => openApiChecker({ openapi: () => ({ security: { imgSecCheck: async () => ({ errCode: '0' }) } }) })(image, caller),
+      /IMAGE_SAFETY_UNAVAILABLE/,
     )
+  })
+
+  it('distinguishes a vendor outage from rejected content and logs only the numeric diagnostic', async () => {
+    const image = decodeAndSanitizeImage(pngBase64(), 'AVATAR'), diagnostics = []
+    const caller = { appId: APP_ID }
+    const report = metadata => diagnostics.push(metadata)
+    const unavailableCloud = { openapi: () => ({ security: { imgSecCheck: async () => {
+      throw { errCode: -604101, errMsg: 'private vendor context', request: { token: 'private-token' } }
+    } } }) }
+    await assert.rejects(() => openApiChecker(unavailableCloud, report)(image, caller), /IMAGE_SAFETY_UNAVAILABLE/)
+    await assert.rejects(() => openApiChecker({ openapi: () => ({ security: { imgSecCheck: async () => ({ errCode: 50001, errMsg: 'private context' }) } }) }, report)(image, caller), /IMAGE_SAFETY_UNAVAILABLE/)
+    await assert.rejects(() => openApiChecker({}, report)(image, caller), /IMAGE_SAFETY_UNAVAILABLE/)
+    assert.deepEqual(diagnostics, [{ stage: 'request-failed', vendorCode: -604101 }, { stage: 'invalid-result', vendorCode: 50001 }, { stage: 'method-unavailable', vendorCode: null }])
+    await assert.rejects(() => openApiChecker({}, () => { throw new Error('logger failed') })(image, caller), /IMAGE_SAFETY_UNAVAILABLE/)
+  })
+
+  it('uses the authenticated application for each image check without sharing request context', async () => {
+    const calls = [], image = decodeAndSanitizeImage(pngBase64(), 'AVATAR')
+    const checker = openApiChecker({ openapi: options => {
+      calls.push(options)
+      return { security: { imgSecCheck: async () => ({ errCode: 0 }) } }
+    } }, () => {})
+    await checker(image, { appId: APP_ID })
+    await checker(image, { appId: 'wx2222222222222222' })
+    await assert.rejects(() => checker(image), /IMAGE_SAFETY_UNAVAILABLE/)
+    await assert.rejects(() => checker(image, { appId: 'untrusted' }), /IMAGE_SAFETY_UNAVAILABLE/)
+    assert.deepEqual(calls, [{ appid: APP_ID }, { appid: 'wx2222222222222222' }])
+  })
+
+  it('classifies system diagnostics without disclosing provider messages or credentials', async () => {
+    const diagnostics = [], image = decodeAndSanitizeImage(pngBase64(), 'AVATAR')
+    const checker = openApiChecker({ openapi: () => ({ security: { imgSecCheck: async () => {
+      throw { errCode: -501001, errMsg: 'permission denied; error code: -604101; token=private-token' }
+    } } }) }, value => diagnostics.push(value))
+    await assert.rejects(() => checker(image, { appId: APP_ID }), /IMAGE_SAFETY_UNAVAILABLE/)
+    assert.deepEqual(diagnostics, [{ stage: 'request-failed', vendorCode: -501001, vendorReason: 'PERMISSION_DENIED', vendorSubcode: -604101 }])
+    assert.equal(JSON.stringify(diagnostics).includes('private-token'), false)
   })
 
   it('builds generated object keys inside the exact MIP stage and app scope', () => {

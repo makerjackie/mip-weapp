@@ -1,5 +1,7 @@
 # 2026-09-22 需求与实现差异
 
+本文件是当时快照，不是当前实现状态或后台验收标准。后续已补齐部分占位实现；后台只按 [admin-web/ACCEPTANCE.md](../../admin-web/ACCEPTANCE.md) 验收，最新差距见[覆盖矩阵](COVERAGE_MATRIX.md#管理端)。以下时间线和差异保留用于追溯。
+
 本次主工程从 `b4713ad73863434400af647c617405ca62b20c8a` 快进至 `30537eab`，纳入 68 个提交、260 个文件变化。需求仓库从原固定 `a38bc48e` 对比到 `cb5956b`，包含 27 个提交。具体来源和校验值见 [来源快照](sources/github/20260922/README.md)。
 
 用户补充后已再次拉取：旧 `user-flow` 与 `journey-review-pilot` 已删除，仅以现行 `role-flows` 为设计与标注依据。

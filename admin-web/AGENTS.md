@@ -17,6 +17,8 @@
 1. [README.md](README.md)
 2. [ARCHITECTURE.md](ARCHITECTURE.md)
 3. [DESIGN.md](DESIGN.md)
+4. [ACCEPTANCE.md](ACCEPTANCE.md)：后台唯一产品验收标准。修复应引用场景号并区分非空运行证据与本地测试；不要用阶段性全勾选清单或当前实现反向缩减需求。
+5. 完整后台整改按 [EXECUTION_PLAN.md](EXECUTION_PLAN.md) 逐工作包推进；每次交接记录当前小步骤、证据和下一步。可维护性按唯一标准 K01–K08 审查，不新增平行的计划或验收表。
 
 ## 依赖方向
 

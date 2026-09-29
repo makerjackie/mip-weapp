@@ -191,9 +191,9 @@ describe('admin PRD query completion', () => {
     await service.listOpportunities({ appId: 'wx-app' }, { filters })
     const normalized = captured[0].args[2]
     assert.deepEqual(normalized, {
-      query: '合作', ownerQuery: '发布人', cityQuery: '广州', status: 'PUBLISHED',
+      query: '合作', ownerQuery: '发布人', ownerUserId: null, cityQuery: '广州', status: 'PUBLISHED',
       updatedFrom: '2026-08-01 00:00:00.000', updatedTo: '2026-08-24 23:59:59.999',
-      deadlineFrom: '', deadlineTo: '',
+      deadlineFrom: '', deadlineTo: '', publishedFrom: '', publishedTo: '',
     })
 
     await assert.rejects(

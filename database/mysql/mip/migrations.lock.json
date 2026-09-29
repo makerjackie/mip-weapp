@@ -1249,6 +1249,31 @@
         "mip_profile_card_moderation",
         "mip_profile_card_history"
       ]
+    },
+    {
+      "version": "20260929010000",
+      "name": "mip_role_templates",
+      "sql": "database/mysql/mip/094_role_templates.sql",
+      "sqlSha256": "36e9fc860f18894d5a31b1a26b8c52e1487a5c7df5f19c52a61779f4442bb36e",
+      "rollback": "database/mysql/mip/rollback/094_role_templates.sql",
+      "rollbackSha256": "93ae8431fbb427b347f83dda55745af33a703186ef9ba1ad4961f45ccdc88b57",
+      "createsTables": [],
+      "altersTables": [
+        "mip_admin_roles",
+        "mip_admin_role_bindings"
+      ]
+    },
+    {
+      "version": "20260929020000",
+      "name": "mip_branch_management_fields",
+      "sql": "database/mysql/mip/095_branch_management_fields.sql",
+      "sqlSha256": "d9b293d6482399c2ef960ab305e63b1cafdc669b3ed6a15de8e1294525d79fb1",
+      "rollback": "database/mysql/mip/rollback/095_branch_management_fields.sql",
+      "rollbackSha256": "1e783a7cac9d3d81eac3a927c4008f3d95abeac2ab33e2bb912ee55b1c1be73d",
+      "createsTables": [],
+      "altersTables": [
+        "mip_city_branches"
+      ]
     }
   ]
 }

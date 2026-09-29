@@ -378,6 +378,7 @@ function normalizeOrderFilters(value) {
   return {
     query: text(filters.query, 80),
     eventId: filters.eventId ? requiredId(filters.eventId, '活动') : '',
+    ...(filters.branchId ? { branchId: requiredId(filters.branchId, '活动服务器') } : {}),
     orderType: enumFilter(filters.orderType, ['MEMBERSHIP', 'EVENT', 'CONTENT'], '订单类型'),
     status: enumFilter(filters.status, ORDER_STATUSES, '订单状态'),
     refundStatus: enumFilter(filters.refundStatus, REFUND_STATUSES, '退款状态'),

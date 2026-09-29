@@ -1,5 +1,7 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('./role-template-policy')
+
 const { createHash, randomUUID } = require('node:crypto')
 const { CAPABILITIES, capabilitiesForBinding, coversScope } = require('./capabilities')
 const {
@@ -775,16 +777,17 @@ async function lockScheduledAuthorization(tx, appId, userId, scope) {
   const rows = await tx.query(
     `SELECT binding.scope_type, binding.scope_id, binding.role_key, binding.status,
       CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END
-        AS policy_capabilities_json
+        AS policy_capabilities_json, binding.role_template_id, role_template.base_role_key AS template_base_role_key, role_template.status AS template_status, role_template.capabilities AS template_capabilities_json
      FROM mip_admin_role_bindings binding
+     LEFT JOIN mip_admin_roles role_template ON role_template.app_id = binding.app_id AND role_template.role_id = binding.role_template_id
      LEFT JOIN mip_role_capability_policies policy
        ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
-     WHERE binding.app_id = ? AND binding.user_id = ?
+     WHERE NOT EXISTS (SELECT 1 FROM mip_admin_accounts account WHERE account.app_id = binding.app_id AND account.linked_user_id = binding.user_id AND account.status <> 'ACTIVE') AND (binding.role_template_id IS NULL OR binding.role_key <> 'PLATFORM_OWNER') AND binding.app_id = ? AND binding.user_id = ?
      ORDER BY binding.scope_type, binding.scope_id, binding.role_key FOR UPDATE`,
     [appId, userId],
   )
   for (const row of rows) {
-    if (row.status !== 'ACTIVE') continue
+    if (row.status !== 'ACTIVE' || !templateAllowsBinding(row)) continue
     const binding = {
       scopeType: row.scope_type,
       scopeId: row.scope_type === 'PLATFORM' && row.scope_id === PLATFORM_SCOPE_ID
@@ -793,9 +796,7 @@ async function lockScheduledAuthorization(tx, appId, userId, scope) {
       roleKey: row.role_key,
       capabilities: capabilitiesForBinding({
         roleKey: row.role_key,
-        policyCapabilities: Object.hasOwn(row, 'policy_capabilities_json')
-          ? row.policy_capabilities_json
-          : null,
+        policyCapabilities: effectivePolicyCapabilities(row),
       }),
     }
     if (binding.capabilities.includes(CAPABILITIES.MESSAGES_MANAGE)

@@ -741,7 +741,7 @@ describe('admin service', () => {
     assert.equal(result.captured.contentSafetyStatus, 'PASSED')
     assert.deepEqual(Object.keys(result.captured).sort(), [
       'actorUserId', 'appId', 'audit', 'authorization', 'authorizedScope',
-      'contentSafetyStatus', 'expectedVersion', 'idempotencyKey', 'sourceEventId', 'title',
+      'contentSafetyStatus', 'draftOnly', 'expectedVersion', 'idempotencyKey', 'sourceEventId', 'title',
     ])
     assert.equal(result.captured.audit('event-copy').action, 'admin.events.clone')
     assert.equal(result.captured.audit('event-copy').scopeId, 'event-copy')

@@ -2,6 +2,7 @@
 
 const cloud = require('wx-server-sdk')
 const { createAdminApplication } = require('./domain/application')
+const { createAdminMediaProjection } = require('./lib/admin-media-projection')
 const { createHandler, normalizeAdminRequest } = require('./domain/handler')
 const { configuredAgreements, createFullAccessPolicy } = require('./domain/full-access')
 const { createAdminRepository } = require('./domain/repository')
@@ -315,6 +316,7 @@ const principalIssuer = createTrustedPrincipalIssuer({
 const application = createAdminApplication({
   service,
   assertPrincipal: principalIssuer.assert,
+  projectMedia: createAdminMediaProjection(cloud),
 })
 const handler = createHandler({
   application,

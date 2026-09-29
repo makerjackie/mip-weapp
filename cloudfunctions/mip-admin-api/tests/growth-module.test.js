@@ -539,13 +539,13 @@ describe('admin growth deep module', () => {
         action: 'admin.badge.grant',
         resourceType: 'USER_BADGE',
         resourceId: AWARD_ID,
-        metadata: { userId: USER_ID, badgeId: BADGE_ID, reasonLength: 8 },
+        metadata: { userId: USER_ID, badgeId: BADGE_ID, reason: '完成活动参与记录' },
       },
       {
         action: 'admin.badge.revoke',
         resourceType: 'USER_BADGE',
         resourceId: AWARD_ID,
-        metadata: { reasonLength: 4, expectedVersion: 5 },
+        metadata: { reason: '信息复核', expectedVersion: 5 },
       },
     ])
     assert.equal(lastCall(repo, 'saveGrowthLevel').input.authorization.capability, 'growth.configure')
@@ -625,7 +625,7 @@ describe('admin growth deep module', () => {
     })
     assert.deepEqual(lastCall(repo, 'listBadgeAwards').filters, {
       status: 'ACTIVE',
-      query: '会员用户',
+      query: '会员用户', limit: 20, cursor: null,
     })
   })
 

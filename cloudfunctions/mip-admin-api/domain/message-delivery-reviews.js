@@ -386,9 +386,11 @@ async function listCandidates(database, input) {
     : "CONCAT(review.source_type, ':', review.source_id)"
   const params = [
     input.appId,
+    ...(input.campaignId ? [input.campaignId] : []),
     input.now,
     campaignEnabled && incidentEnabled ? 1 : 0,
     input.appId,
+    ...(input.campaignId ? [input.campaignId] : []),
     campaignEnabled ? 1 : 0,
     input.workflowStatus,
     input.appId,
@@ -414,7 +416,7 @@ async function listCandidates(database, input) {
        LEFT JOIN mip_message_delivery_reviews review
          ON review.app_id = dispatch.app_id
         AND review.source_type = 'CAMPAIGN_DISPATCH' AND review.source_id = dispatch.id
-       WHERE dispatch.app_id = ?
+       WHERE dispatch.app_id = ? ${input.campaignId ? 'AND dispatch.campaign_id = ?' : ''}
          AND (
            (dispatch.status = 'PROCESSING' AND dispatch.lease_expires_at <= ?)
            OR (dispatch.status = 'FAILED'
@@ -450,7 +452,7 @@ async function listCandidates(database, input) {
        FROM mip_message_delivery_reviews review
        INNER JOIN mip_message_campaign_dispatches dispatch
          ON dispatch.app_id = review.app_id AND dispatch.id = review.source_id
-       WHERE review.app_id = ? AND review.source_type = 'CAMPAIGN_DISPATCH'
+       WHERE review.app_id = ? ${input.campaignId ? 'AND dispatch.campaign_id = ?' : ''} AND review.source_type = 'CAMPAIGN_DISPATCH'
          AND ? = 1
          AND CASE ?
            WHEN 'RESOLVED' THEN review.workflow_status = 'RESOLVED'

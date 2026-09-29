@@ -328,12 +328,15 @@ describe('admin opportunities deep module', () => {
     assert.deepEqual(repo.calls.find(call => call.type === 'list').filters, {
       query: '品牌',
       ownerQuery: '发布人',
+      ownerUserId: null,
       cityQuery: '广州',
       status: 'PUBLISHED',
       updatedFrom: '2030-08-01 00:00:00.000',
       updatedTo: '2030-08-31 23:59:59.999',
       deadlineFrom: '',
       deadlineTo: '',
+      publishedFrom: '',
+      publishedTo: '',
     })
 
     repo.opportunityScope = { scopeType: 'BRANCH', scopeId: BRANCH_B, branchId: BRANCH_B }

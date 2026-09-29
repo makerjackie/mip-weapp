@@ -8,13 +8,13 @@ const fileNamePattern = /^mip-[a-z-]+-[0-9TZ]+\.xlsx$/
 const sha256Pattern = /^[a-f0-9]{64}$/
 const terminalStatuses = new Set(['CONSUMED', 'EXPIRED', 'REVOKED', 'FAILED'])
 
-export type SensitiveExportKind = 'users' | 'orders' | 'eventFeedback'
+export type SensitiveExportKind = 'users' | 'orders' | 'opportunities' | 'eventFeedback' | 'eventRoster' | 'growthEntries'
 export type SensitiveExportProgress = 'creating' | 'preparing' | 'checking' | 'downloading' | 'completing' | 'saving'
 export type SensitiveExportRequest = <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
 
 export interface SensitiveExportInput {
   kind: SensitiveExportKind
-  filters: { query?: string; status?: string }
+  filters: Record<string, unknown> & { query?: string; status?: string }
   includesPhone?: boolean
   eventId?: string
 }
@@ -126,8 +126,9 @@ export async function continueSensitiveExport(
           idempotencyKey: workflow.keys.create,
         })
       : await request('mip.admin.exports.create', {
-          exportType: workflow.input.kind === 'users' ? 'USERS' : 'ORDERS',
-          includesPhone: workflow.input.kind === 'users' && workflow.input.includesPhone === true,
+          exportType: workflow.input.kind === 'users' ? 'USERS' : workflow.input.kind === 'opportunities' ? 'OPPORTUNITIES' : workflow.input.kind === 'eventRoster' ? 'EVENT_ROSTER' : workflow.input.kind === 'growthEntries' ? 'GROWTH_ENTRIES' : 'ORDERS',
+          includesPhone: ['users', 'eventRoster'].includes(workflow.input.kind) && workflow.input.includesPhone === true,
+          ...(workflow.input.kind === 'eventRoster' ? { eventId: workflow.input.eventId } : {}),
           filters: compactFilters(workflow.input.filters),
           idempotencyKey: workflow.keys.create,
         })
@@ -341,25 +342,28 @@ function parseCompletion(value: unknown) {
 }
 
 function normalizeInput(value: SensitiveExportInput): SensitiveExportInput {
-  if (!value || !['users', 'orders', 'eventFeedback'].includes(value.kind)) {
+  if (!value || !['users', 'orders', 'opportunities', 'eventFeedback', 'eventRoster', 'growthEntries'].includes(value.kind)) {
     throw new SensitiveExportError('VALIDATION_FAILED', '导出类型无效')
   }
-  const eventId = value.kind === 'eventFeedback' ? String(value.eventId || '') : ''
-  if (value.kind === 'eventFeedback' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventId)) {
+  const eventId = ['eventFeedback', 'eventRoster'].includes(value.kind) ? String(value.eventId || '') : ''
+  if (['eventFeedback', 'eventRoster'].includes(value.kind) && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventId)) {
     throw new SensitiveExportError('VALIDATION_FAILED', '活动无效')
   }
   const query = textFilter(value.filters?.query, 80)
   const status = textFilter(value.filters?.status, 40)
+  const filters = compactFilters(structuredClone(value.filters || {}))
+  delete filters.query
+  delete filters.status
   return {
     kind: value.kind,
-    filters: value.kind === 'eventFeedback' ? {} : { ...(query ? { query } : {}), ...(status ? { status } : {}) },
-    includesPhone: value.kind === 'users' && value.includesPhone === true,
+    filters: value.kind === 'eventFeedback' ? {} : { ...filters, ...(query ? { query } : {}), ...(status ? { status } : {}) },
+    includesPhone: ['users', 'eventRoster'].includes(value.kind) && value.includesPhone === true,
     ...(eventId ? { eventId } : {}),
   }
 }
 
 function compactFilters(filters: SensitiveExportInput['filters']) {
-  return Object.fromEntries(Object.entries(filters).filter(([, value]) => Boolean(value)))
+  return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== undefined && value !== null && value !== ''))
 }
 
 function textFilter(value: unknown, maximum: number) {

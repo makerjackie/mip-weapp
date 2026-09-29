@@ -8,19 +8,21 @@ import { SessionProvider } from '../../app/session-provider'
 import { AdminApiClient, AdminApiClientError } from '../../services/admin-api'
 import { ResponsiveAppShell } from './responsive-app-shell'
 
+const routeState = vi.hoisted(() => ({ pathname: '/overview' }))
+
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="#/overview">{children}</a>,
   Outlet: () => <div>已登录的运营页面</div>,
   useNavigate: () => vi.fn(),
-  useRouterState: () => '/overview',
+  useRouterState: () => routeState.pathname,
 }))
 
-afterEach(cleanup)
+afterEach(() => { cleanup(); routeState.pathname = '/overview' })
 
-function setup(authenticated = false) {
+function setup(authenticated = false, capabilities: string[] = []) {
   const client = new AdminApiClient()
   const getSession = vi.spyOn(client, 'getSession').mockRejectedValue(new AdminApiClientError('AUTH_REQUIRED', '请先登录'))
-  if (authenticated) getSession.mockResolvedValue({ enabled: true, actor: { id: 'actor-a', name: '运营账号' }, capabilities: [] })
+  if (authenticated) getSession.mockResolvedValue({ enabled: true, actor: { id: 'actor-a', name: '运营账号' }, capabilities: capabilities.map(capability => ({ capability, scopeType: 'PLATFORM' })) })
   const beginLogin = vi.spyOn(client, 'beginLogin').mockResolvedValue({
     state: 'PENDING',
     code: '123456',
@@ -44,6 +46,19 @@ function setup(authenticated = false) {
 }
 
 describe('web login entry', () => {
+  it.each([
+    ['/events/new/edit', '活动管理', 'events.read'],
+    ['/userContent/content-a/edit', '机会与内容', 'userContent.moderate'],
+  ])('keeps the correct navigation context on %s', async (pathname, label, capability) => {
+    routeState.pathname = pathname
+    setup(true, [capability])
+    await screen.findByText('已登录的运营页面')
+    expect(within(screen.getByRole('banner')).getByText(label)).toBeVisible()
+    const navigation = screen.queryByRole('button', { name: '打开导航' })
+    if (navigation) await userEvent.click(navigation)
+    expect(await screen.findByRole('menuitem', { name: new RegExp(label) })).toHaveClass('ant-menu-item-selected')
+  })
+
   it('defaults to password login and only requests a numeric code when selected', async () => {
     const { beginLogin } = setup()
     await screen.findByText('请先登录')
@@ -123,7 +138,7 @@ describe('password login UI', () => {
     getSession.mockResolvedValue({ enabled: true, actor: { id: 'actor-a', name: '运营账号' }, capabilities: [] })
     await userEvent.click(within(dialog).getByRole('button', { name: /登\s*录/ }))
     await screen.findByText('已登录的运营页面')
-    expect(login).toHaveBeenCalledWith('13800000000', 'fictional-test-password')
+    expect(login).toHaveBeenCalledWith('13800000000', 'fictional-test-password', expect.any(Function))
     expect(beginLogin).not.toHaveBeenCalled()
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })

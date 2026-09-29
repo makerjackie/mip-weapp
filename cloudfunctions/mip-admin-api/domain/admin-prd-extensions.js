@@ -8,6 +8,8 @@ const {
 } = require('./mutation-authorization')
 const { load: loadCommercialTerms, sync: syncCommercialTerms } = require('./opportunity-commercial-terms')
 const { claimOptional, complete } = require('./idempotency')
+const { EDITABLE_OPPORTUNITY_STATUSES } = require('./opportunity-policy')
+const { rosterPaymentFields } = require('./roster-payment')
 
 function codeError(code, details = null) {
   const error = new Error(code)
@@ -167,7 +169,7 @@ function createAdminPrdExtensions(database, options = {}) {
   const lockMutation = options.lockMutation || lockMutationAuthorization
   const assertScope = options.assertMutationScope || assertMutationScope
 
-  async function listOpportunitiesV2(appId, visibility, filters, pageLimit, cursor = null) {
+  async function listOpportunitiesV2(appId, visibility, filters, pageLimit, cursor = null, queryHash) {
     const access = visibilityWhere(visibility, 'o')
     const clauses = ['o.app_id = ?', access.sql,
       `NOT EXISTS (SELECT 1 FROM mip_opportunity_delete_snapshots deleted
@@ -181,6 +183,7 @@ function createAdminPrdExtensions(database, options = {}) {
       params.push(query, query, query, query)
     }
     if (filters.ownerQuery) { clauses.push("owner_profile.nickname LIKE ? ESCAPE '\\\\'"); params.push(`%${escapeLike(filters.ownerQuery)}%`) }
+    if (filters.ownerUserId) { clauses.push('o.owner_user_id = ?'); params.push(filters.ownerUserId) }
     if (filters.cityQuery) {
       clauses.push("(b.city_name LIKE ? ESCAPE '\\\\' OR city_tag.label LIKE ? ESCAPE '\\\\' OR EXISTS (SELECT 1 FROM mip_opportunity_locations location LEFT JOIN mip_tags location_city ON location_city.app_id = location.app_id AND location_city.id = location.city_tag_id WHERE location.app_id = o.app_id AND location.opportunity_id = o.id AND location_city.label LIKE ? ESCAPE '\\\\'))")
       const query = `%${escapeLike(filters.cityQuery)}%`
@@ -206,6 +209,8 @@ function createAdminPrdExtensions(database, options = {}) {
     if (filters.deadlineTo) { clauses.push('o.deadline_at <= ?'); params.push(filters.deadlineTo) }
     if (filters.updatedFrom) { clauses.push('o.updated_at >= ?'); params.push(filters.updatedFrom) }
     if (filters.updatedTo) { clauses.push('o.updated_at <= ?'); params.push(filters.updatedTo) }
+    if (filters.publishedFrom) { clauses.push('o.published_at >= ?'); params.push(filters.publishedFrom) }
+    if (filters.publishedTo) { clauses.push('o.published_at <= ?'); params.push(filters.publishedTo) }
     const cursorWhere = cursorPredicateFor('o.updated_at', cursor, 'updatedAt', 'o.id')
     const rows = await database.query(
       opportunitySelect(clauses.join(' AND '), `${cursorWhere.sql} ORDER BY o.updated_at DESC, o.id DESC LIMIT ?`),
@@ -213,7 +218,7 @@ function createAdminPrdExtensions(database, options = {}) {
     )
     const terms = await Promise.all(rows.map(row => loadCommercialTerms(database, appId, row.id)))
     const items = rows.map((row, index) => opportunityDto(row, { commercialTerms: terms[index] }))
-    return pageRows(items, pageLimit, row => ({ updatedAt: row.updatedAt, id: row.id }))
+    return pageRows(items, pageLimit, row => ({ updatedAt: row.updatedAt, id: row.id, ...(queryHash ? { queryHash } : {}) }))
   }
 
   async function getOpportunityDetail(appId, opportunityId) {
@@ -259,7 +264,7 @@ function createAdminPrdExtensions(database, options = {}) {
     })
   }
 
-  async function getOpportunityEditorOptions(appId, visibility) {
+  async function getOpportunityEditorOptions(appId, visibility, input = {}) {
     const branchIds = visibility?.platform ? [] : [...new Set(visibility?.branchIds || [])]
     const branchAccess = visibility?.platform
       ? { sql: '1 = 1', params: [] }
@@ -284,8 +289,9 @@ function createAdminPrdExtensions(database, options = {}) {
          LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
          LEFT JOIN mip_city_branches b ON b.app_id = u.app_id AND b.id = u.primary_branch_id
          WHERE u.app_id = ? AND u.status = 'ACTIVE' AND ${ownerAccess.sql}
-         ORDER BY p.nickname, u.id LIMIT 500`,
-        [appId, ...ownerAccess.params],
+           AND (? = '' OR LOCATE(?, COALESCE(p.nickname, '')) > 0 OR LOCATE(?, COALESCE(p.real_name, '')) > 0 OR u.id = ?)
+         ORDER BY (u.id = ?) DESC, p.nickname, u.id LIMIT 50`,
+        [appId, ...ownerAccess.params, input.query || '', input.query || '', input.query || '', input.selectedUserId || '', input.selectedUserId || ''],
       ),
       database.query(
         `SELECT id, kind, label, popular, sort_order FROM mip_tags
@@ -310,24 +316,28 @@ function createAdminPrdExtensions(database, options = {}) {
   async function saveOpportunity(input) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
-      const opportunityId = input.opportunityId || id()
+      const operation = 'admin.opportunities.save'
       const draftScope = { scopeType: input.draft.scopeType, scopeId: input.draft.branchId || null }
       assertScope(authorization, draftScope)
-      let status = 'DRAFT'
-      let version = 1
+      let current = null
       if (input.opportunityId) {
-        const current = await tx.one(
-          `SELECT id, branch_id, status, version FROM mip_opportunities
-           WHERE app_id = ? AND id = ? FOR UPDATE`,
-          [input.appId, opportunityId],
-        )
+        current = await tx.one(`SELECT id, branch_id, status, version, cover_asset_id FROM mip_opportunities
+          WHERE app_id = ? AND id = ? FOR UPDATE`, [input.appId, input.opportunityId])
         if (!current) throw codeError('NOT_FOUND')
         const currentScope = ownedScope(current)
         assertScope(authorization, currentScope)
         if (!sameScope(currentScope, input.authorizedScope)) throw codeError('CONFLICT')
         if (authorization.effectiveGrant.scopeType !== 'PLATFORM' && !sameScope(currentScope, draftScope)) throw codeError('FORBIDDEN')
+      }
+      const claim = await claimOptional(tx, input, operation, { opportunityId: input.opportunityId,
+        expectedVersion: input.expectedVersion, draft: input.draft }, id)
+      if (claim.replay) return claim.replay
+      const opportunityId = input.opportunityId || id()
+      let status = 'DRAFT'
+      let version = 1
+      if (input.opportunityId) {
         if (Number(current.version) !== input.expectedVersion) throw codeError('CONFLICT')
-        if (!['DRAFT', 'PUBLISHED'].includes(current.status)) throw codeError('INVALID_STATE')
+        if (!EDITABLE_OPPORTUNITY_STATUSES.includes(current.status)) throw codeError('INVALID_STATE')
         if (current.status === 'PUBLISHED' && input.contentSafetyStatus !== 'APPROVED') {
           throw codeError('CONTENT_SAFETY_REQUIRED')
         }
@@ -342,6 +352,13 @@ function createAdminPrdExtensions(database, options = {}) {
       if (!owner) throw codeError('VALIDATION_FAILED')
       if (draftScope.scopeType === 'BRANCH' && owner.primary_branch_id !== draftScope.scopeId) {
         throw codeError('FORBIDDEN')
+      }
+      const coverAssetId = Object.hasOwn(input.draft, 'coverAssetId') ? input.draft.coverAssetId : current?.cover_asset_id || null
+      if (coverAssetId) {
+        const cover = await tx.one(`SELECT id FROM mip_media_assets WHERE app_id = ? AND id = ?
+          AND purpose = 'OPPORTUNITY_COVER' AND status = 'READY' AND (owner_user_id = ? OR id = ?) FOR SHARE`,
+          [input.appId, coverAssetId, input.actorUserId, current?.cover_asset_id || ''])
+        if (!cover) throw codeError('VALIDATION_FAILED')
       }
       if (input.draft.cityTagId) {
         const city = await tx.one(
@@ -377,12 +394,12 @@ function createAdminPrdExtensions(database, options = {}) {
         const updated = await tx.query(
           `UPDATE mip_opportunities SET owner_user_id = ?, scope_type = ?, branch_id = ?,
             title = ?, value_summary = ?, target_summary = ?, description = ?, city_tag_id = ?,
-            deadline_at = ?, content_safety_status = ?, version = version + 1
+            deadline_at = ?, content_safety_status = ?, cover_asset_id = ?, version = version + 1
            WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'PUBLISHED')`,
           [input.draft.ownerUserId, input.draft.scopeType, input.draft.branchId,
             input.draft.title, input.draft.valueSummary, input.draft.targetSummary,
             input.draft.description, legacyCityTagId, input.draft.deadlineAt,
-            input.contentSafetyStatus, input.appId, opportunityId, input.expectedVersion],
+            input.contentSafetyStatus, coverAssetId, input.appId, opportunityId, input.expectedVersion],
         )
         if (Number(updated.affectedRows) !== 1) throw codeError('CONFLICT')
       }
@@ -390,12 +407,12 @@ function createAdminPrdExtensions(database, options = {}) {
         await tx.query(
           `INSERT INTO mip_opportunities (
             id, app_id, owner_user_id, scope_type, branch_id, title, value_summary,
-            target_summary, description, city_tag_id, status, content_safety_status, deadline_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?)`,
+            target_summary, description, city_tag_id, status, content_safety_status, deadline_at, cover_asset_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?)`,
           [opportunityId, input.appId, input.draft.ownerUserId, input.draft.scopeType,
             input.draft.branchId, input.draft.title, input.draft.valueSummary,
             input.draft.targetSummary, input.draft.description, legacyCityTagId,
-            input.contentSafetyStatus, input.draft.deadlineAt],
+            input.contentSafetyStatus, input.draft.deadlineAt, coverAssetId],
         )
       }
       await syncCommercialTerms(tx, input.appId, opportunityId, input.draft.commercialTerms, version)
@@ -415,7 +432,9 @@ function createAdminPrdExtensions(database, options = {}) {
         )
       }
       await writeAudit(tx, input.audit(opportunityId))
-      return { id: opportunityId, status, version }
+      const result = { id: opportunityId, status, version }
+      await complete(tx, input, operation, claim.requestHash, result)
+      return result
     })
   }
 
@@ -723,7 +742,10 @@ function createAdminPrdExtensions(database, options = {}) {
       `SELECT r.id, r.event_id, e.title AS event_title, e.branch_id, b.name AS branch_name,
         r.user_id, r.status, r.answers_json, r.created_at, r.registered_at, r.version,
         r.registration_source, r.role_mark, r.imported_at, r.abnormal_reason, r.abnormal_marked_at,
-        e.registration_schema_json,
+        e.registration_schema_json, e.access_type,
+        o.id AS order_id, o.status AS payment_status, o.amount_cents AS order_amount_cents, o.paid_at, o.currency,
+        COALESCE((SELECT SUM(refund.amount_cents) FROM mip_refunds refund
+          WHERE refund.app_id = o.app_id AND refund.order_id = o.id AND refund.status = 'SUCCEEDED'), 0) AS refunded_amount_cents,
         p.nickname, b.city_name, pp.phone_ciphertext, pp.phone_verified_at, c.checked_in_at
        FROM mip_event_registrations r
        INNER JOIN mip_events e ON e.app_id = r.app_id AND e.id = r.event_id
@@ -731,6 +753,8 @@ function createAdminPrdExtensions(database, options = {}) {
        LEFT JOIN mip_profiles p ON p.app_id = r.app_id AND p.user_id = r.user_id
        LEFT JOIN mip_private_profiles pp ON pp.app_id = r.app_id AND pp.user_id = r.user_id
        LEFT JOIN mip_event_checkins c ON c.app_id = r.app_id AND c.registration_id = r.id AND c.status = 'ACTIVE'
+       LEFT JOIN mip_orders o ON o.app_id = r.app_id AND o.id = r.order_id
+         AND o.user_id = r.user_id AND o.resource_id = r.event_id AND o.order_type = 'EVENT'
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql}
        ORDER BY r.created_at DESC, r.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
@@ -758,20 +782,21 @@ function createAdminPrdExtensions(database, options = {}) {
       submittedAt: iso(row.created_at),
       registeredAt: iso(row.registered_at),
       checkedInAt: iso(row.checked_in_at),
+      ...rosterPaymentFields(row),
       version: Number(row.version),
     }))
     return pageRows(items, pageLimit, row => ({ submittedAt: row.submittedAt, id: row.id }))
   }
 
   async function getUserRelatedRecords(appId, userId) {
-    const [cases, opportunities, registrations, orders] = await Promise.all([
+    const [cases, opportunities, registrations, orders, cooperationCards] = await Promise.all([
       database.query(
-        `SELECT id, project_name, summary, status, updated_at FROM mip_super_cases
-         WHERE app_id = ? AND owner_user_id = ? ORDER BY updated_at DESC, id DESC LIMIT 50`,
+        `SELECT id, project_name, summary, status, started_on, updated_at FROM mip_super_cases
+         WHERE app_id = ? AND owner_user_id = ? ORDER BY started_on DESC, id DESC LIMIT 50`,
         [appId, userId],
       ),
       database.query(
-        `SELECT id, title, status, updated_at FROM mip_opportunities
+        `SELECT id, title, status, scope_type, branch_id, updated_at FROM mip_opportunities
          WHERE app_id = ? AND owner_user_id = ? AND NOT EXISTS (
            SELECT 1 FROM mip_opportunity_delete_snapshots deleted
            WHERE deleted.app_id = mip_opportunities.app_id AND deleted.opportunity_uid = mip_opportunities.id
@@ -779,14 +804,14 @@ function createAdminPrdExtensions(database, options = {}) {
         [appId, userId],
       ),
       database.query(
-        `SELECT r.id, r.event_id, e.title, r.status, r.created_at
+        `SELECT r.id, r.event_id, e.title, e.branch_id, r.status, r.created_at
          FROM mip_event_registrations r
          INNER JOIN mip_events e ON e.app_id = r.app_id AND e.id = r.event_id
          WHERE r.app_id = ? AND r.user_id = ? ORDER BY r.created_at DESC, r.id DESC LIMIT 50`,
         [appId, userId],
       ),
       database.query(
-        `SELECT o.id, o.order_type, o.status, o.amount_cents, o.currency, o.merchant_order_no,
+        `SELECT o.id, o.order_type, o.resource_id, e.branch_id, o.status, o.amount_cents, o.currency, o.merchant_order_no,
           COALESCE(e.title, plan.name, '业务订单') AS resource_title, o.created_at
          FROM mip_orders o
          LEFT JOIN mip_events e ON e.app_id = o.app_id AND o.order_type = 'EVENT' AND e.id = o.resource_id
@@ -794,13 +819,19 @@ function createAdminPrdExtensions(database, options = {}) {
          WHERE o.app_id = ? AND o.user_id = ? ORDER BY o.created_at DESC, o.id DESC LIMIT 50`,
         [appId, userId],
       ),
+      database.query(
+        `SELECT id, role_key, status, updated_at FROM mip_cooperation_cards
+         WHERE app_id = ? AND owner_user_id = ? ORDER BY updated_at DESC, id DESC LIMIT 50`,
+        [appId, userId],
+      ),
     ])
     return {
-      superCases: cases.map(row => ({ id: row.id, title: row.project_name, summary: row.summary, status: row.status, updatedAt: iso(row.updated_at) })),
-      opportunities: opportunities.map(row => ({ id: row.id, title: row.title, status: row.status, updatedAt: iso(row.updated_at) })),
-      registrations: registrations.map(row => ({ id: row.id, eventId: row.event_id, title: row.title, status: row.status, createdAt: iso(row.created_at) })),
+      superCases: cases.map(row => ({ id: row.id, title: row.project_name, summary: row.summary, status: row.status, startedOn: iso(row.started_on), updatedAt: iso(row.updated_at) })),
+      cooperationCards: cooperationCards.map(row => ({ id: row.id, roleKey: row.role_key, status: row.status, updatedAt: iso(row.updated_at) })),
+      opportunities: opportunities.map(row => ({ id: row.id, title: row.title, scopeType: row.scope_type, branchId: row.branch_id, status: row.status, updatedAt: iso(row.updated_at) })),
+      registrations: registrations.map(row => ({ id: row.id, eventId: row.event_id, branchId: row.branch_id, title: row.title, status: row.status, createdAt: iso(row.created_at) })),
       orders: orders.map(row => ({
-        id: row.id, orderType: row.order_type, title: row.resource_title, status: row.status,
+        id: row.id, orderType: row.order_type, resourceId: row.resource_id, branchId: row.branch_id, title: row.resource_title, status: row.status,
         amountCents: Number(row.amount_cents), currency: row.currency,
         merchantOrderNoMasked: maskMerchantNo(row.merchant_order_no), createdAt: iso(row.created_at),
       })),

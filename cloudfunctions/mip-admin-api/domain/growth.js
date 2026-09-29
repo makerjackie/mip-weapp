@@ -6,7 +6,8 @@ const {
   firstGrant,
   visibilityForCapability,
 } = require('./capabilities')
-const { decodeCursor } = require('./pagination')
+const { createHash } = require('node:crypto')
+const { decodeCursor, pageRows } = require('./pagination')
 const {
   AdminError,
   delta,
@@ -233,12 +234,15 @@ function createAdminGrowth({ repository, access }) {
     platformGrant(context, CAPABILITIES.BADGES_MANAGE)
     const status = input.status === 'ACTIVE' || input.status === 'REVOKED' ? input.status : ''
     const query = text(input.query, 100)
-    return {
-      items: (await repository.listBadgeAwards(
-        context.caller.appId,
-        { status, query },
-      )).map(projectBadgeAward),
-    }
+    const pageLimit = limit(input.limit, 100)
+    const userId = input.userId ? requiredId(input.userId, '用户') : null
+    const cursor = decodeCursor(input.cursor, ['updatedAt', 'id', 'context'])
+    const cursorContext = createHash('sha256').update(JSON.stringify([context.caller.appId, status, query, userId])).digest('hex')
+    if (cursor && cursor.context !== cursorContext) throw new AdminError('VALIDATION_FAILED', '筛选条件已变化，请从第一页读取勋章记录')
+    const items = (await repository.listBadgeAwards(context.caller.appId,
+      { status, query, ...(userId ? { userId } : {}), limit: pageLimit, cursor },
+    )).map(projectBadgeAward)
+    return pageRows(items, pageLimit, row => ({ updatedAt: row.updatedAt, id: row.id, context: cursorContext }))
   }
 
   async function grantBadge(caller, input = {}) {
@@ -259,7 +263,7 @@ function createAdminGrowth({ repository, access }) {
         action: 'admin.badge.grant',
         resourceType: 'USER_BADGE',
         resourceId,
-        metadata: { userId, badgeId, reasonLength: reason.length },
+        metadata: { userId, badgeId, reason },
       }),
     })
   }
@@ -282,7 +286,7 @@ function createAdminGrowth({ repository, access }) {
         action: 'admin.badge.revoke',
         resourceType: 'USER_BADGE',
         resourceId,
-        metadata: { reasonLength: reason.length, expectedVersion: version },
+        metadata: { reason, expectedVersion: version },
       }),
     })
   }
@@ -344,12 +348,14 @@ function normalizeGrowthBenefit(value) {
 
 function normalizeGrowthEntryFilters(value) {
   const filters = normalizeFilters(value)
+  const query = text(filters.query, 100)
   const createdFrom = dateTimeFilter(filters.createdFrom, '开始时间')
   const createdTo = dateTimeFilter(filters.createdTo, '结束时间')
   if (createdFrom && createdTo && createdFrom > createdTo) {
     throw new AdminError('VALIDATION_FAILED', '成长流水开始时间不能晚于结束时间')
   }
   return {
+    ...(query ? { query } : {}),
     userId: filters.userId ? requiredId(filters.userId, '用户') : '',
     metric: filters.metric ? metric(filters.metric) : '',
     sourceEventType: filters.sourceEventType
@@ -362,12 +368,14 @@ function normalizeGrowthEntryFilters(value) {
 
 function normalizeGrowthLevelTransitionFilters(value) {
   const filters = normalizeFilters(value)
+  const query = text(filters.query, 100)
   const createdFrom = dateTimeFilter(filters.createdFrom, '开始时间')
   const createdTo = dateTimeFilter(filters.createdTo, '结束时间')
   if (createdFrom && createdTo && createdFrom > createdTo) {
     throw new AdminError('VALIDATION_FAILED', '等级变更开始时间不能晚于结束时间')
   }
   return {
+    ...(query ? { query } : {}),
     userId: filters.userId ? requiredId(filters.userId, '用户') : '',
     fromLevelId: filters.fromLevelId ? requiredId(filters.fromLevelId, '原等级') : '',
     toLevelId: filters.toLevelId ? requiredId(filters.toLevelId, '新等级') : '',
@@ -515,6 +523,7 @@ function projectBadgeAward(item) {
     status: item.status,
     awardReason: item.awardReason,
     awardedAt: item.awardedAt,
+    ...(item.updatedAt ? { updatedAt: item.updatedAt } : {}),
     revokeReason: item.revokeReason,
     revokedAt: item.revokedAt,
     equipped: item.equipped,

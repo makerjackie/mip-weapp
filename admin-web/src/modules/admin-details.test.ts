@@ -33,7 +33,8 @@ describe('admin detail views', () => {
         growth: { levelName: 'L2', experience: 120, contribution: 30, coin: 18 },
         counts: { registrations: 4, attended: 3, orders: 2, opportunities: 1, cooperationCards: 2, superCases: 1 },
         influence: { guestCount: 2, interactionCount: 5, interestCount: 1, visitorCount: 8 },
-        companies: [{ name: '远岸咨询', role: '顾问' }], organizations: [], tags: [], roles: [],
+        companies: [{ name: '远岸咨询', role: '顾问' }], organizations: [],
+        tags: [{ kind: 'ABILITY', relation: 'ABILITY', label: '资源整合' }, { kind: 'INDUSTRY', relation: 'PRIMARY_INDUSTRY', label: '企业服务' }], roles: [],
       },
       'mip.admin.memberships.get': { chainVersion: 3, membership: { status: 'ACTIVE' } },
     }, calls))
@@ -47,6 +48,8 @@ describe('admin detail views', () => {
     assert.equal(detail.sections.find(section => section.title === '基本信息')?.fields?.find(item => item.label === '手机状态')?.value, '已绑定')
     assert.equal(detail.sections.find(section => section.title === '会员权益')?.fields?.find(item => item.label === '会员链版本')?.value, '3')
     assert.equal(detail.sections.find(section => section.title === '业务记录')?.metrics?.find(item => item.label === '订单')?.value, '2')
+    assert.deepEqual(detail.sections.find(section => section.title === '标签')?.rows,
+      [{ type: '能力', relation: '能力', label: '资源整合' }, { type: '行业', relation: '主要行业', label: '企业服务' }])
   })
 
   it('does not request membership detail when the session lacks membership read access', async () => {
@@ -78,7 +81,7 @@ describe('admin detail views', () => {
         financials: { access: 'GRANTED', currency: 'CNY', paidOrderCount: 6, grossAmountCents: 112800, refundedAmountCents: 18800, netAmountCents: 94000 },
       },
       'mip.admin.events.roster': {
-        items: [{ id: 'registration-1', version: 2, nickname: '周宁', cityName: '深圳', phoneBound: true, submittedAt: '2030-03-01T00:00:00.000Z', checkedInAt: null, status: 'REGISTERED' }],
+        items: [{ id: 'registration-1', version: 2, nickname: '周宁', cityName: '深圳', phoneBound: true, submittedAt: '2030-03-01T00:00:00.000Z', checkedInAt: null, status: 'REGISTERED', paymentStatus: 'PAID', paidAmountCents: 18800, refundedAmountCents: 0, currency: 'CNY' }],
         nextCursor: 'roster-cursor-3',
       },
       'mip.admin.events.album.list': {
@@ -91,12 +94,14 @@ describe('admin detail views', () => {
       'mip.admin.events.get', 'mip.admin.events.insights.get', 'mip.admin.events.roster',
       'mip.admin.events.album.list',
     ])
-    assert.deepEqual(calls[2].input, { eventId: 'event-1', includePhone: false, limit: 10, cursor: 'roster-cursor-2' })
+    assert.deepEqual(calls[2].input, { eventId: 'event-1', includePhone: false, limit: 10, filters: { query: '', status: '' }, cursor: 'roster-cursor-2' })
     assert.deepEqual(calls[3].input, { eventId: 'event-1', status: 'PENDING', limit: 20 })
     assert.equal(detail.sections.find(section => section.title === '活动信息')?.fields?.find(item => item.label === '价格')?.value, '¥188.00')
     assert.equal(detail.sections.find(section => section.title === '参与情况')?.metrics?.find(item => item.label === '签到率')?.value, '66.67%')
-    const registration = detail.sections.find(section => section.title.startsWith('报名名单'))?.rows?.[0]
+    const registration = detail.sections.find(section => section.title === '报名与参与人')?.rows?.[0]
     assert.equal(registration?.state, '已报名')
+    assert.equal(registration?.paidAmount, '¥188.00')
+    assert.equal(registration?.paymentStatus, '已支付')
     assert.deepEqual(registration?.rowActions, [{
       action: 'mip.admin.events.checkIn', label: '签到', targetId: 'event-1',
       values: { eventId: 'event-1', registrationId: 'registration-1', expectedVersion: 2 },
@@ -107,8 +112,9 @@ describe('admin detail views', () => {
       action: 'mip.admin.events.participants.markAbnormal', label: '标记异常', targetId: 'event-1',
       values: { eventId: 'event-1', registrationId: 'registration-1', expectedVersion: 2, reason: '' },
     }])
-    assert.deepEqual(detail.sections.find(section => section.title === '报名名单')?.pager, {
+    assert.deepEqual({ ...detail.sections.find(section => section.title === '报名与参与人')?.pager, searchable: undefined, status: undefined, statusOptions: undefined }, {
       key: 'eventRoster', query: '', currentCursor: 'roster-cursor-2', nextCursor: 'roster-cursor-3', placeholder: '报名名单',
+      searchable: undefined, status: undefined, statusOptions: undefined,
     })
     const photo = detail.sections.find(section => section.title === '待审核相册')?.rows?.[0]
     assert.equal(photo?.caption, '活动合影')
@@ -211,7 +217,8 @@ describe('admin detail views', () => {
         commercialTerms: { amountDisplay: '面议' }, deadlineAt: '2030-03-31T00:00:00.000Z', contentSafetyStatus: 'APPROVED',
         publishedAt: '2030-03-01T00:00:00.000Z', updatedAt: '2030-03-02T00:00:00.000Z', status: 'PUBLISHED',
         teamMembers: [{ nickname: '周宁', branchName: '福田分会' }],
-        history: [{ action: 'admin.opportunities.publish', actorNickname: '运营账号', createdAt: '2030-03-01T00:00:00.000Z' }],
+        history: [{ action: 'admin.opportunities.publish', actorNickname: '运营账号', createdAt: '2030-03-01T00:00:00.000Z' },
+          { action: 'OPPORTUNITY_UPDATED', actorNickname: '发布人', createdAt: '2030-03-02T00:00:00.000Z' }],
       },
       'mip.admin.opportunityComments.get': {
         settings: { commentsEnabled: true, reviewsEnabled: true, callsEnabled: false, moderationMode: 'REVIEW' },
@@ -228,6 +235,7 @@ describe('admin detail views', () => {
     assert.equal(detail.sections.find(section => section.title === '机会信息')?.fields?.find(item => item.label === '合作角色')?.value, '狗策划')
     assert.equal(detail.sections.find(section => section.title === '评论与评价')?.rows?.[0].body, '愿意沟通')
     assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[0].action, '发布机会')
+    assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[1].action, '更新机会')
   })
 
   it('does not request opportunity comments without comment access', async () => {
@@ -349,7 +357,9 @@ describe('admin detail views', () => {
         items: [{
           feedbackId: 'fb-001', nickname: '李四',
           submittedAt: '2030-03-01T00:00:00.000Z', rating: 5,
-          wouldRecommend: true, capabilityRoles: ['主持', '摄影'], joinMipIntent: 'YES',
+          body: '可引荐客户\n需要项目合作',
+          answers: { recommendation: 'RECOMMEND', roleKeys: ['connector', 'visual_designer'], joinIntent: 'LEARN_MORE', explorationMethods: ['COMMUNITY_CHAT'], rosterConsent: 'PRIVATE' },
+          displayFields: { wouldRecommend: '愿意', capabilityRoles: '皮条客、死美工', joinMipIntent: '想先了解', discoverySource: '社群交流', rosterConsent: '仅私密保存' },
         }],
         nextCursor: 'fb-cursor-2',
       },
@@ -362,7 +372,10 @@ describe('admin detail views', () => {
     const section = detail.sections.find(item => item.title === '活动反馈明细')
     assert.equal(section?.rows?.[0].nickname, '李四')
     assert.equal(section?.rows?.[0].rating, '5')
-    assert.equal(section?.rows?.[0].wouldRecommend, '是')
+    assert.equal(section?.rows?.[0].wouldRecommend, '愿意')
+    assert.equal(section?.rows?.[0].capabilityRoles, '皮条客、死美工')
+    assert.equal(section?.rows?.[0].resources, '可引荐客户\n需要项目合作')
+    assert.equal(section?.rows?.[0].rosterConsent, '仅私密保存')
     assert.equal(section?.pager?.nextCursor, 'fb-cursor-2')
   })
 

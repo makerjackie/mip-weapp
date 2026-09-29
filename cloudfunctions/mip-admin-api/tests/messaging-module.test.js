@@ -396,7 +396,7 @@ describe('admin messaging deep module', () => {
     assert.deepEqual(campaignList.visibility, announcementList.visibility)
     assert.deepEqual(templateList.visibility, announcementList.visibility)
     assert.deepEqual(templateList.filters, { status: 'DRAFT', query: '' })
-    assert.equal(templateList.pageLimit, 50)
+    assert.equal(templateList.pageLimit, 51)
 
     repo.announcementScope = { scopeType: 'BRANCH', scopeId: BRANCH_B, status: 'DRAFT' }
     await assert.rejects(
@@ -562,7 +562,7 @@ describe('admin messaging deep module', () => {
     assert.equal(readProfileRef(page.items[0].recipientRefs[0], APP_ID, PROFILE_REF_SECRET), RECIPIENT_ID)
     const listed = repo.calls.find(call => call.type === 'campaignList')
     assert.deepEqual(listed.filters, { status: 'DRAFT', query: '活动' })
-    assert.equal(listed.pageLimit, 50)
+    assert.equal(listed.pageLimit, 51)
 
     assert.deepEqual(Object.keys(search.items[0]).sort(), [
       'branchName', 'headline', 'nickname', 'profileRef',

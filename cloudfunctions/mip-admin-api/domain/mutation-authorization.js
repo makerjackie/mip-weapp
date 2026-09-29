@@ -1,5 +1,7 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('./role-template-policy')
+
 const { capabilitiesForBinding, coversScope } = require('./capabilities')
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
@@ -35,18 +37,19 @@ async function lockMutationAuthorization(tx, input) {
   if (!storedScopeId) throw codeError('FORBIDDEN')
   const binding = await tx.one(
     `SELECT r.scope_type, r.scope_id, r.role_key, r.status,
-      CASE WHEN p.policy_mode = 'CUSTOM' THEN p.capabilities_json ELSE NULL END AS policy_capabilities_json
+      CASE WHEN p.policy_mode = 'CUSTOM' THEN p.capabilities_json ELSE NULL END AS policy_capabilities_json, r.role_template_id, role_template.base_role_key AS template_base_role_key, role_template.status AS template_status, role_template.capabilities AS template_capabilities_json
      FROM mip_admin_role_bindings r
+     LEFT JOIN mip_admin_roles role_template ON role_template.app_id = r.app_id AND role_template.role_id = r.role_template_id
      LEFT JOIN mip_role_capability_policies p
        ON p.app_id = r.app_id AND p.role_key = r.role_key
-     WHERE r.app_id = ? AND r.user_id = ? AND r.scope_type = ? AND r.scope_id = ?
+     WHERE (r.role_template_id IS NULL OR r.role_key <> 'PLATFORM_OWNER') AND r.app_id = ? AND r.user_id = ? AND r.scope_type = ? AND r.scope_id = ?
        AND r.role_key = ?
        AND NOT EXISTS (SELECT 1 FROM mip_admin_accounts account
          WHERE account.app_id = r.app_id AND account.linked_user_id = r.user_id AND account.status <> 'ACTIVE')
      FOR UPDATE`,
     [input.appId, input.actorUserId, grant.scopeType, storedScopeId, grant.roleKey],
   )
-  if (!binding || binding.status !== 'ACTIVE') throw codeError('FORBIDDEN')
+  if (!binding || binding.status !== 'ACTIVE' || !templateAllowsBinding(binding)) throw codeError('FORBIDDEN')
 
   const effectiveGrant = {
     scopeType: binding.scope_type,
@@ -54,9 +57,7 @@ async function lockMutationAuthorization(tx, input) {
     roleKey: binding.role_key,
     capabilities: capabilitiesForBinding({
       roleKey: binding.role_key,
-      policyCapabilities: Object.hasOwn(binding, 'policy_capabilities_json')
-        ? binding.policy_capabilities_json
-        : null,
+      policyCapabilities: effectivePolicyCapabilities(binding),
     }),
   }
   if (!effectiveGrant.capabilities.includes(capability)) throw codeError('FORBIDDEN')

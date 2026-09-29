@@ -29,8 +29,7 @@ describe('content mutation form manifest', () => {
     for (const form of forms) {
       assert.ok(form.capability)
       assert.ok(form.inputKeys.length > 0)
-      const fieldKinds = JSON.stringify(form.fields)
-      assert.doesNotMatch(fieldKinds, /json/i)
+      assert.ok(form.fields.every(field => !/json/i.test(field.kind)), '表单不能要求原始 JSON 输入')
     }
   })
 })

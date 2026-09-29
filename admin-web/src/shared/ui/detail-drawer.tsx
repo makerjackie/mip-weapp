@@ -1,4 +1,4 @@
-import { Button, Drawer, Image, Space, Table, Typography } from 'antd'
+import { Button, Drawer, Image, Input, Select, Space, Table, Typography } from 'antd'
 import { useState } from 'react'
 import type { AdminDetailPager, AdminDetailRoute, AdminDetailView } from '../../modules/admin-details'
 import type { OperationValues } from '../../modules/admin-operation-ui'
@@ -10,7 +10,7 @@ import { OVERLAY_Z_INDEX } from './overlay-z-index'
 
 type DetailSection = NonNullable<AdminDetailView>['sections'][number]
 
-export function DetailDrawer({ open, view, loading, error, onClose, actions, onRowAction, onNestedView, onPagerChange, onRetry, batchActionsForSection, onSectionBatchAction }: {
+interface DetailSurfaceProps {
   open: boolean
   view: AdminDetailView | null
   loading?: boolean
@@ -19,29 +19,26 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
   actions?: React.ReactNode
   onRowAction?: (operation: AdminRowOperation) => void
   onNestedView?: (target: AdminDetailRoute, row: AdminOperationRow) => void
-  onPagerChange?: (pager: AdminDetailPager, direction: 'previous' | 'next') => void
+  onPagerChange?: (pager: AdminDetailPager, direction: 'previous' | 'next' | 'search') => void
   onRetry?: () => void
   batchActionsForSection?: (section: DetailSection) => readonly BatchAction[] | undefined
   onSectionBatchAction?: (section: DetailSection, action: BatchAction, rows: AdminOperationRow[], values: OperationValues) => Promise<void> | void
-}) {
+}
+
+export function DetailDrawer(props: DetailSurfaceProps) {
+  return <Drawer className="detail-drawer" zIndex={OVERLAY_Z_INDEX.drawer} size={820} open={props.open}
+    onClose={props.onClose} title={<span className="detail-drawer__title"><strong>{props.view?.title || '详情'}</strong>{props.view?.subtitle ? <small>{props.view.subtitle}</small> : null}</span>} destroyOnHidden>
+    <DetailSections {...props} />
+  </Drawer>
+}
+
+/** Shared detail renderer used in drawers and the independent user profile route. */
+export function DetailSections({ view, loading, error, actions, onRowAction, onNestedView, onPagerChange, onRetry, batchActionsForSection, onSectionBatchAction }: DetailSurfaceProps) {
   const [selection, setSelection] = useState<Record<string, React.Key[]>>({})
 
   return (
-    <Drawer
-      className="detail-drawer"
-      zIndex={OVERLAY_Z_INDEX.drawer}
-      size={820}
-      open={open}
-      onClose={() => { setSelection({}); onClose() }}
-      title={(
-        <span className="detail-drawer__title">
-          <strong>{view?.title || '详情'}</strong>
-          {view?.subtitle ? <small>{view.subtitle}</small> : null}
-        </span>
-      )}
-      extra={actions}
-      destroyOnHidden
-    >
+    <>
+      {actions ? <div className="detail-drawer__actions" aria-label="详情操作">{actions}</div> : null}
       {loading && !view ? <LoadingState /> : null}
       {!loading && error ? <ErrorState description={error} onRetry={onRetry} /> : null}
       {!error && view ? (
@@ -55,6 +52,13 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
             return (
               <section className="detail-section" key={section.title}>
                 <Typography.Title level={4}>{section.title}</Typography.Title>
+                {section.error ? <ErrorState description={section.error} onRetry={onRetry} /> : null}
+                {section.pager?.searchable && onPagerChange ? <Space wrap style={{ marginBottom: 12 }}>
+                  <Input.Search key={`${section.title}-${section.pager.query}`} aria-label={`搜索${section.title}`} placeholder={section.pager.placeholder} defaultValue={section.pager.query}
+                    allowClear onSearch={query => onPagerChange({ ...section.pager!, query }, 'search')} />
+                  {section.pager.statusOptions ? <Select aria-label={`${section.title}状态`} value={section.pager.status || ''} style={{ minWidth: 160 }} options={[{ value: '', label: '全部状态' }, ...section.pager.statusOptions]}
+                    onChange={status => onPagerChange({ ...section.pager!, status }, 'search')} /> : null}
+                </Space> : null}
                 {section.fields?.length ? (
                   <dl className="detail-fields">
                     {section.fields.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{renderFieldValue(field)}</dd></div>)}
@@ -86,7 +90,7 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
                             ? <StatusTag value={value} />
                             : String(value ?? '—'),
                         })),
-                        ...((section.detailTarget && onNestedView) || (onRowAction && section.rows.some(row => row.rowActions?.length))
+                        ...((section.detailTarget && onNestedView) || (onNestedView && section.rows.some(row => row.detailLinks?.length)) || (onRowAction && section.rows.some(row => row.rowActions?.length))
                           ? [{
                               title: '操作',
                               key: 'actions',
@@ -96,6 +100,7 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
                                   {section.detailTarget && onNestedView && row.detailId
                                     ? <Button type="link" size="small" onClick={() => onNestedView(section.detailTarget!, row)}>查看</Button>
                                     : null}
+                                  {onNestedView ? row.detailLinks?.map(link => <Button type="link" size="small" key={`${link.route}-${link.id}`} onClick={() => onNestedView(link.route, { detailId: link.id })}>{link.label}</Button>) : null}
                                   {onRowAction ? row.rowActions?.map(operation => (
                                     <Button type="link" size="small" key={`${operation.action}-${operation.label}`} onClick={() => onRowAction(operation)}>{operation.label}</Button>
                                   )) : null}
@@ -140,7 +145,7 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
           })}
         </Space>
       ) : null}
-    </Drawer>
+    </>
   )
 }
 

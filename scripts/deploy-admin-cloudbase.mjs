@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { adminAssetRoute } from './lib/admin-asset-route.mjs'
 import { environmentVariables, functionDetail } from './lib/ai-draft-provider-cloud.mjs'
 import { assertFunctionSecurityRulesConverged, assertNoTimerTriggers, parseFunctionSecurityRules, updateMipFunctionInvocationRule } from './lib/cloud-function-safety.mjs'
 import { parseMcpOutput, runMcporter } from './lib/cloudbase-mcp-runner.mjs'
@@ -55,6 +56,9 @@ const rootRoute = routes.find(r => r.Domain === targetDomain && r.Path === '/')
 if (rootRoute && rootRoute.UpstreamResourceName !== name && !(rootRoute.UpstreamResourceType === 'STATIC_STORE' && rootRoute.PathRewrite?.StaticStorePrefix === staticPrefix)) {
   throw new Error('Gateway root belongs to another application')
 }
+if (rootRoute) {
+  adminAssetRoute(routes, targetDomain, name)
+}
 const region = env.MIP_SCF_REGION || env.CLOUDBASE_REGION || targetEnvironment.Region || targetEnvironment.region || api.Domain.match(/\.([a-z]{2,12}-[a-z0-9-]+)\.app\.tcloudbase\.com$/)?.[1]
 if (!region || !/^[a-z]+-[a-z0-9-]+$/.test(region)) {
   throw new Error('MIP_SCF_REGION is required')
@@ -84,6 +88,7 @@ const variables = {
   MIP_WEB_ALLOWED_APP_IDS: upstream.MIP_ALLOWED_APP_IDS,
   MIP_WEB_LOGIN_MINIPROGRAM_APP_ID: env.MINI_PROGRAM_APP_ID,
   MIP_WEB_ALLOWED_ORIGIN: origin,
+  ...(env.MIP_WEB_ADDITIONAL_ORIGINS ? { MIP_WEB_ADDITIONAL_ORIGINS: env.MIP_WEB_ADDITIONAL_ORIGINS } : {}),
   MIP_WEB_LOGIN_NAMESPACE: 'cloudbase',
   MIP_ADMIN_WEB_CODE_SHA256: createHash('sha256').update(fs.readFileSync(path.join(artifact, 'index.js'))).digest('hex'),
 }
@@ -153,11 +158,17 @@ if (latestRoot && latestRoot.UpstreamResourceName !== name && !(latestRoot.Upstr
   throw new Error('Gateway root ownership changed during function deployment')
 }
 management('callCloudApi', { service: 'tcb', action: latestRoot ? 'ModifyHTTPServiceRoute' : 'CreateHTTPServiceRoute', params: { EnvId: env.CLOUDBASE_ENV_ID, Domain: { Domain: targetDomain, Routes: [{ Path: '/', UpstreamResourceType: 'STATIC_STORE', UpstreamResourceName: 'staticstore', PathRewrite: { StaticStorePrefix: staticPrefix }, EnablePathTransmission: false, EnableAuth: false, Enable: true }] } } })
+// This app's bundled static handler supplies MIME-aware 404s. Shared static
+// hosting SPA fallback settings remain untouched.
+management('manageGateway', adminAssetRoute(callCloudbase(root, 'queryGateway', { action: 'listRoutes' }).data.routes, targetDomain, name))
 const final = callCloudbase(root, 'queryGateway', { action: 'listRoutes' }).data.routes
+if (!final.some(r => r.Domain === targetDomain && r.Path === '/assets' && r.UpstreamResourceName === name && r.UpstreamResourceType === 'SCF' && r.Enable && r.EnablePathTransmission && !r.EnableAuth)) {
+  throw new Error('Asset route readback failed')
+}
 if (!final.some(r => r.Domain === targetDomain && r.Path === routePath && r.UpstreamResourceName === name && r.UpstreamResourceType === 'SCF' && r.Enable && r.EnablePathTransmission && !r.EnableAuth)) {
   throw new Error('Gateway route readback failed')
 }
-for (const route of routeBefore.filter(r => !(r.Domain === targetDomain && (r.Path === routePath || r.Path === '/')))) {
+for (const route of routeBefore.filter(r => !(r.Domain === targetDomain && (r.Path === routePath || r.Path === '/' || r.Path === '/assets')))) {
   if (!final.some(r => r.Domain === route.Domain && r.Path === route.Path && r.UpstreamResourceName === route.UpstreamResourceName && r.Enable === route.Enable)) {
     throw new Error('Existing gateway route changed during deployment')
   }

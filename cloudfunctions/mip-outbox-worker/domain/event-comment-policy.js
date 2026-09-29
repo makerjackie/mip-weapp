@@ -1,5 +1,7 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('../lib/role-template-policy')
+
 const { Buffer } = require('node:buffer')
 
 const EVENT_COMMENT_CAPABILITY = 'events.comments.manage'
@@ -102,16 +104,15 @@ function hasEffectiveEventCommentCapability(row = {}) {
     return row.role_key === null || row.role_key === undefined
   }
   if (row.responsibility_kind !== 'MANAGEMENT') return false
+  if (!templateAllowsBinding(row)) return false
   if (row.role_key === 'PLATFORM_OWNER') return true
 
   const safeMaximum = EVENT_COMMENT_ROLE_CAPABILITIES[row.role_key]
   if (!safeMaximum?.includes(EVENT_COMMENT_CAPABILITY)) return false
-  if (row.policy_mode === null || row.policy_mode === undefined || row.policy_mode === 'DEFAULT') {
-    return true
-  }
-  if (row.policy_mode !== 'CUSTOM') return false
-
-  const capabilities = parseCapabilities(row.capabilities_json)
+  if (row.policy_mode && !['CUSTOM', 'DEFAULT'].includes(row.policy_mode)) return false
+  const effective = effectivePolicyCapabilities(row)
+  if (effective === null || effective === undefined) return true
+  const capabilities = parseCapabilities(effective)
   if (!capabilities) return false
   const unique = new Set(capabilities)
   return unique.size === capabilities.length

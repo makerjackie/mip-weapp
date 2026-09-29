@@ -40,6 +40,11 @@ export interface AdminMutationField<Name extends string = string> {
   maxLength?: number
   options?: readonly AdminMutationFieldOption[]
   wide?: boolean
+  optionsAction?: string
+  optionsFilter?: { path: string; key: string }
+  remoteUserSearch?: boolean
+  userSearchInput?: AdminRequestInput
+  optionsActionByValue?: { path: string; actions: Record<string, string> }
 }
 
 export type AdminPeopleMutationValues = Record<string, unknown>
@@ -167,9 +172,10 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     description: '为用户设置指定作用范围内的运营角色。',
     fields: [
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: ROLE_OPTIONS },
-      { name: 'scopeId', label: '作用范围标识', kind: 'text' },
-      { name: 'branchId', label: '所属服务器标识', kind: 'text' },
+      { name: 'roleTemplateId', label: '岗位模板（选填）', kind: 'select', optionsAction: 'mip.admin.roles.templates.list', optionsFilter: { path: 'roleKey', key: 'baseRoleKey' } },
+      { name: 'scopeId', label: '管理范围', kind: 'select', optionsActionByValue: { path: 'roleKey', actions: { BRANCH_ADMIN: 'mip.admin.branches.list', EVENT_OWNER: 'mip.admin.events.list', EVENT_MANAGER: 'mip.admin.events.list', EVENT_STAFF: 'mip.admin.events.list' } } },
       { name: 'active', label: '启用角色', kind: 'checkbox', required: true },
+      { name: 'reason', label: '授权原因', kind: 'textarea', required: true, maxLength: 300 },
     ],
     values: { roleKey: 'BRANCH_ADMIN', scopeId: '', branchId: '', active: true },
   },
@@ -180,6 +186,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     description: '在角色允许的能力范围内更新权限策略，或恢复默认设置。',
     fields: [
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
+      { name: 'roleTemplateId', label: '岗位模板（选填）', kind: 'select', optionsAction: 'mip.admin.roles.templates.list', optionsFilter: { path: 'roleKey', key: 'baseRoleKey' } },
       { name: 'capabilities', label: '权限能力', kind: 'multi-select', options: CAPABILITY_OPTIONS, wide: true },
       { name: 'reset', label: '恢复默认设置', kind: 'checkbox' },
     ],
@@ -196,9 +203,11 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
       { name: 'branchKey', label: '服务器标识', kind: 'text', required: true, maxLength: 64 },
       { name: 'name', label: '服务器名称', kind: 'text', required: true, maxLength: 80 },
       { name: 'cityName', label: '城市名称', kind: 'text', required: true, maxLength: 80 },
+      { name: 'leaderUserId', label: '负责人', kind: 'select', remoteUserSearch: true },
+      { name: 'sortOrder', label: '排序（越小越靠前）', kind: 'text', maxLength: 7 },
       { name: 'summary', label: '服务器说明', kind: 'textarea', maxLength: 500, wide: true },
     ],
-    values: { branchKey: '', name: '', cityName: '', summary: '' },
+    values: { branchKey: '', name: '', cityName: '', leaderUserId: '', sortOrder: 0, summary: '' },
   },
   'mip.admin.branches.update': {
     action: 'mip.admin.branches.update',
@@ -208,9 +217,11 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     fields: [
       { name: 'name', label: '服务器名称', kind: 'text', required: true, maxLength: 80 },
       { name: 'cityName', label: '城市名称', kind: 'text', required: true, maxLength: 80 },
+      { name: 'leaderUserId', label: '负责人', kind: 'select', remoteUserSearch: true },
+      { name: 'sortOrder', label: '排序（越小越靠前）', kind: 'text', maxLength: 7 },
       { name: 'summary', label: '服务器说明', kind: 'textarea', maxLength: 500, wide: true },
     ],
-    values: { name: '', cityName: '', summary: '' },
+    values: { name: '', cityName: '', leaderUserId: '', sortOrder: 0, summary: '' },
     versionKind: 'branch',
   },
   'mip.admin.branches.changeStatus': {
@@ -231,11 +242,12 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     title: '新增后台账号',
     description: '为已注册的小程序用户开通后台权限，登录使用小程序确认。',
     fields: [
-      { name: 'loginAccount', label: '登录账号', kind: 'text', required: true, maxLength: 64 },
+      { name: 'loginAccount', label: '后台标识', kind: 'text', required: true, maxLength: 64 },
       { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
       { name: 'userId', label: '已注册用户', kind: 'select', required: true, remoteUserSearch: true },
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
-      { name: 'scopeId', label: '作用范围 ID', kind: 'text' },
+      { name: 'roleTemplateId', label: '岗位模板（选填）', kind: 'select', optionsAction: 'mip.admin.roles.templates.list', optionsFilter: { path: 'roleKey', key: 'baseRoleKey' } },
+      { name: 'scopeId', label: '管理范围', kind: 'select', optionsActionByValue: { path: 'roleKey', actions: { BRANCH_ADMIN: 'mip.admin.branches.list', EVENT_OWNER: 'mip.admin.events.list', EVENT_MANAGER: 'mip.admin.events.list', EVENT_STAFF: 'mip.admin.events.list' } } },
       { name: 'reason', label: '创建原因', kind: 'textarea', maxLength: 300, wide: true },
     ],
     values: { loginAccount: '', name: '', userId: '', roleKey: '', scopeId: '', branchId: '', reason: '' },
@@ -248,7 +260,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     fields: [
       { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
-      { name: 'scopeId', label: '作用范围 ID', kind: 'text' },
+      { name: 'scopeId', label: '管理范围', kind: 'select', optionsActionByValue: { path: 'roleKey', actions: { BRANCH_ADMIN: 'mip.admin.branches.list', EVENT_OWNER: 'mip.admin.events.list', EVENT_MANAGER: 'mip.admin.events.list', EVENT_STAFF: 'mip.admin.events.list' } } },
     ],
     values: { name: '', roleKey: '', scopeId: '', branchId: '' },
     versionKind: 'adminAccount',
@@ -282,7 +294,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     title: '授予权益',
     description: '单用户发放经验值、贡献值或玩家会籍。会籍只能追加 1、3、6、12 个月。',
     fields: [
-      { name: 'userId', label: '用户', kind: 'text', required: true, maxLength: 36 },
+      { name: 'userId', label: '用户', kind: 'select', required: true, remoteUserSearch: true, userSearchInput: { purpose: 'ENTITLEMENT_GRANT' } },
       { name: 'entitlementType', label: '权益类型', kind: 'select', required: true,
         options: [{ value: 'EXP', label: '经验值' }, { value: 'CONTRIBUTION', label: '贡献值' },
           { value: 'MEMBERSHIP', label: '玩家会籍' }] },
@@ -419,6 +431,8 @@ function buildRole(definition: AdminPeopleMutationDefinition, values: AdminPeopl
   const active = booleanValue(values.active)
   if (!definition.targetId || !roleKey || active === null) return null
   const result: Record<string, unknown> = { userId: definition.targetId, roleKey, active }
+  if (values.roleTemplateId) { const id = boundedId(values.roleTemplateId); if (!id) return null; result.roleTemplateId = id }
+  if (values.reason) result.reason = boundedText(values.reason, 300)
   if (roleKey === 'BRANCH_ADMIN' || roleKey.startsWith('EVENT_')) {
     const scopeId = boundedId(values.scopeId)
     if (!scopeId) return null
@@ -445,13 +459,28 @@ function buildPolicy(definition: AdminPeopleMutationDefinition, values: AdminPeo
   return capabilities === null ? null : { roleKey, expectedVersion, capabilities }
 }
 
+function branchManagementValues(values: AdminPeopleMutationValues) {
+  const result: Record<string, unknown> = {}
+  if (Object.hasOwn(values, 'leaderUserId')) {
+    if (values.leaderUserId === '' || values.leaderUserId === null) result.leaderUserId = null
+    else { const id = boundedId(values.leaderUserId); if (!id) return null; result.leaderUserId = id }
+  }
+  if (Object.hasOwn(values, 'sortOrder')) {
+    if (!/^(0|[1-9]\d{0,6})$/.test(String(values.sortOrder))) return null
+    const order = Number(values.sortOrder); if (order > 1000000) return null
+    result.sortOrder = order
+  }
+  return result
+}
+
 function buildBranchCreate(values: AdminPeopleMutationValues) {
   const branchKey = normalizeBranchKey(values.branchKey)
   const name = boundedText(values.name, 80)
   const cityName = boundedText(values.cityName, 80)
   const summary = optionalText(values.summary, 500)
-  if (!branchKey || !name || !cityName || summary === null) return null
-  return { branchKey, name, cityName, summary }
+  const management = branchManagementValues(values)
+  if (!branchKey || !name || !cityName || summary === null || management === null) return null
+  return { branchKey, name, cityName, summary, ...management }
 }
 
 function buildBranchUpdate(definition: AdminPeopleMutationDefinition, values: AdminPeopleMutationValues) {
@@ -459,8 +488,9 @@ function buildBranchUpdate(definition: AdminPeopleMutationDefinition, values: Ad
   const name = boundedText(values.name, 80)
   const cityName = boundedText(values.cityName, 80)
   const summary = optionalText(values.summary, 500)
-  if (!definition.targetId || expectedVersion === null || !name || !cityName || summary === null) return null
-  return { branchId: definition.targetId, expectedVersion, name, cityName, summary }
+  const management = branchManagementValues(values)
+  if (!definition.targetId || expectedVersion === null || !name || !cityName || summary === null || management === null) return null
+  return { branchId: definition.targetId, expectedVersion, name, cityName, summary, ...management }
 }
 
 function buildBranchStatus(definition: AdminPeopleMutationDefinition, values: AdminPeopleMutationValues) {
@@ -481,6 +511,7 @@ function buildAdminAccountCreate(values: AdminPeopleMutationValues) {
   if (!loginAccount || !name || !userId || !roleKey) return null
   if (!/^[A-Za-z0-9_.-]{3,64}$/.test(loginAccount)) return null
   const result: Record<string, unknown> = { loginAccount, name, userId, roleKey }
+  if (values.roleTemplateId) { const id = boundedId(values.roleTemplateId); if (!id) return null; result.roleTemplateId = id }
   if (values.scopeId !== undefined && values.scopeId !== '') {
     const scopeId = boundedId(values.scopeId)
     if (!scopeId) return null
@@ -504,6 +535,7 @@ function buildAdminAccountUpdate(definition: AdminPeopleMutationDefinition, valu
   ] as const)
   if (!definition.targetId || expectedVersion === null || !name || !roleKey) return null
   const result: Record<string, unknown> = { accountId: definition.targetId, expectedVersion, name, roleKey }
+  if (Object.hasOwn(values, 'roleTemplateId')) { const id = values.roleTemplateId ? boundedId(values.roleTemplateId) : null; if (values.roleTemplateId && !id) return null; result.roleTemplateId = id }
   if (values.scopeId !== undefined && values.scopeId !== '') {
     const scopeId = boundedId(values.scopeId)
     if (!scopeId) return null

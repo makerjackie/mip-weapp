@@ -447,7 +447,7 @@ describe('admin events deep module', () => {
     const rosterCalls = []
     const userId = 'target-user'
     const row = {
-      id: 'registration-a', userId, nickname: '用户', status: 'REGISTERED',
+      id: 'registration-a', userId, userBranchId: BRANCH_ID, orderId: 'order-a', nickname: '用户', status: 'REGISTERED',
       phoneCiphertext: encryptedPhone(userId), version: 2,
     }
     const repo = repository({
@@ -475,6 +475,9 @@ describe('admin events deep module', () => {
     assert.equal(page.items[0].phoneNumber, '+86 13800138000')
     assert.equal(Object.hasOwn(page.items[0], 'phoneCiphertext'), false)
     assert.equal(Object.hasOwn(page.items[0], 'userId'), false)
+    assert.equal(Object.hasOwn(page.items[0], 'userBranchId'), false)
+    assert.equal(page.items[0].userDetailId, userId)
+    assert.equal(page.items[0].orderDetailId, 'order-a')
     assert.deepEqual(rosterCalls[0].args[2], {
       query: '用户', status: 'REGISTERED',
       createdFrom: '2030-01-01 00:00:00.000',

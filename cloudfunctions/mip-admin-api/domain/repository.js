@@ -34,8 +34,10 @@ const { createAdminPaymentAttemptRepository } = require('./repositories/payment-
 const { createMembershipContentRepository } = require('./repositories/membership-content')
 const { createProfileCardRepository } = require('./repositories/profile-cards')
 const { createAdminUserRepository } = require('./repositories/users')
+const { createUserRelatedRecordsRepository } = require('./repositories/user-related-records')
 const { createAdminUserContentRepository } = require('./repositories/user-content')
 const { createRoleCapabilityPolicyRepository } = require('./role-capability-policies')
+const { createRoleTemplateRepository } = require('./role-templates')
 const { listOperationalExceptions: readOperationalExceptions } = require('./operational-exceptions')
 const { cursorPredicateFor, pageRows } = require('./pagination')
 const {
@@ -309,6 +311,7 @@ function createAdminRepository(database, options = {}) {
     createId: id,
     repositorySupport: { codeError, iso, json },
   })
+  const roleTemplateRepository = createRoleTemplateRepository(database, { lockMutation, writeAudit })
   const profileRecordsRepository = createProfileRecordsRepository(database)
   const cooperationCardRepository = createCooperationCardRepository(database, { lockMutationAuthorization: lockMutation, assertMutationScope: assertScope, writeAudit })
   const videoRepository = createVideoRepository(database, { lockMutationAuthorization: lockMutation, assertMutationScope: assertScope, writeAudit })
@@ -383,6 +386,7 @@ function createAdminRepository(database, options = {}) {
     getUserScope,
     listPrimaryBranchOptions,
     listUserInfluence,
+    listUserFilterOptions,
     listUsers,
     setUserControl,
     updateUserFields,
@@ -1064,6 +1068,7 @@ function createAdminRepository(database, options = {}) {
     const users = visibleBranchesWhere(visibility, 'u')
     const clauses = ["ge.app_id = ?", "ge.metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN')", users.sql]
     const params = [appId, ...users.params]
+    if (filters.query) { clauses.push("(p.nickname LIKE ? ESCAPE '\\\\' OR ge.id = ? OR ge.user_id = ?)"); params.push(`%${escapeLike(filters.query)}%`, filters.query, filters.query) }
     if (filters.userId) { clauses.push('ge.user_id = ?'); params.push(filters.userId) }
     if (filters.metric) { clauses.push('ge.metric = ?'); params.push(filters.metric) }
     if (filters.sourceEventType) { clauses.push('ge.source_event_type = ?'); params.push(filters.sourceEventType) }
@@ -1233,6 +1238,7 @@ function createAdminRepository(database, options = {}) {
     const users = visibleBranchesWhere(visibility, 'u')
     const clauses = ['transition.app_id = ?', users.sql]
     const params = [appId, ...users.params]
+    if (filters.query) { clauses.push("(profile.nickname LIKE ? ESCAPE '\\\\' OR transition.id = ? OR transition.user_id = ?)"); params.push(`%${escapeLike(filters.query)}%`, filters.query, filters.query) }
     if (filters.userId) { clauses.push('transition.user_id = ?'); params.push(filters.userId) }
     if (filters.fromLevelId) { clauses.push('transition.from_level_id = ?'); params.push(filters.fromLevelId) }
     if (filters.toLevelId) { clauses.push('transition.to_level_id = ?'); params.push(filters.toLevelId) }
@@ -1391,6 +1397,7 @@ function createAdminRepository(database, options = {}) {
     ...eventRuntimeRepository,
     ...eventDraftRepository,
     ...profileRecordsRepository,
+    ...createUserRelatedRecordsRepository(database),
     ...cooperationCardRepository,
     ...videoRepository,
     ...dashboardOverviewRepository,
@@ -1404,6 +1411,7 @@ function createAdminRepository(database, options = {}) {
     ...opportunityCommentAdminRepository,
     ...matchingAdminRepository,
     ...roleCapabilityPolicyRepository,
+    ...roleTemplateRepository,
     ...userContentRepository,
     ...profileCardRepository,
     ...createMembershipContentRepository(database, { lockMutation, assertScope, writeAudit }),
@@ -1442,6 +1450,7 @@ function createAdminRepository(database, options = {}) {
     listRoles,
     searchRoleCandidates,
     listUserInfluence,
+    listUserFilterOptions,
     listUsers,
     issueExportDownload,
     recordAudit,

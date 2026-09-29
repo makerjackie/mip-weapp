@@ -1,0 +1,211 @@
+{
+  "at": "2026-09-29T11:14:07.034Z",
+  "origin": "https://cloud1-d2gm0vloa9e1b4f31-1429274561.ap-shanghai.app.tcloudbase.com",
+  "stage": "staging",
+  "checks": [
+    {
+      "id": "auth:configured-real-account",
+      "passed": true
+    },
+    {
+      "id": "query:nonempty-users-events",
+      "passed": true
+    },
+    {
+      "id": "users:named-filter-options",
+      "passed": true
+    },
+    {
+      "id": "export:users:same-filter-all-pages",
+      "passed": true
+    },
+    {
+      "id": "export:users:no-phone-column",
+      "passed": true
+    },
+    {
+      "id": "export:orders:same-filter-all-pages",
+      "passed": true
+    },
+    {
+      "id": "export:orders:no-phone-column",
+      "passed": true
+    },
+    {
+      "id": "export:orders:yuan-unit",
+      "passed": true
+    },
+    {
+      "id": "export:opportunities:same-filter-all-pages",
+      "passed": true
+    },
+    {
+      "id": "export:opportunities:no-phone-column",
+      "passed": true
+    },
+    {
+      "id": "export:opportunities:full-fields",
+      "passed": true
+    },
+    {
+      "id": "export:eventRoster:same-filter-all-pages",
+      "passed": true
+    },
+    {
+      "id": "export:eventRoster:no-phone-column",
+      "passed": true
+    },
+    {
+      "id": "export:roster:payment-fields",
+      "passed": true
+    },
+    {
+      "id": "roster:nonempty-export-covered",
+      "passed": true
+    },
+    {
+      "id": "export:eventFeedback:same-filter-all-pages",
+      "passed": true
+    },
+    {
+      "id": "export:eventFeedback:no-phone-column",
+      "passed": true
+    },
+    {
+      "id": "feedback:nonempty-export-covered",
+      "passed": true
+    },
+    {
+      "id": "export:growthEntries:same-filter-all-pages",
+      "passed": true
+    },
+    {
+      "id": "export:growthEntries:no-phone-column",
+      "passed": true
+    },
+    {
+      "id": "export:orders:same-filter-all-pages",
+      "passed": true
+    },
+    {
+      "id": "export:orders:no-phone-column",
+      "passed": true
+    },
+    {
+      "id": "export:orders:yuan-unit",
+      "passed": true
+    },
+    {
+      "id": "orders:nonempty-filtered-export",
+      "passed": true
+    },
+    {
+      "id": "export:opportunities:same-filter-all-pages",
+      "passed": true
+    },
+    {
+      "id": "export:opportunities:no-phone-column",
+      "passed": true
+    },
+    {
+      "id": "export:opportunities:full-fields",
+      "passed": true
+    },
+    {
+      "id": "opportunities:nonempty-filtered-export",
+      "passed": true
+    },
+    {
+      "id": "export:opportunities:same-filter-all-pages",
+      "passed": true
+    },
+    {
+      "id": "export:opportunities:no-phone-column",
+      "passed": true
+    },
+    {
+      "id": "export:opportunities:full-fields",
+      "passed": true
+    },
+    {
+      "id": "opportunities:zero-bound-accepted",
+      "passed": true
+    }
+  ],
+  "exports": [
+    {
+      "kind": "users",
+      "rows": 11,
+      "nonempty": true,
+      "shaVerifiedByClient": true,
+      "lifecycleCompleted": true
+    },
+    {
+      "kind": "orders",
+      "rows": 9,
+      "nonempty": true,
+      "shaVerifiedByClient": true,
+      "lifecycleCompleted": true
+    },
+    {
+      "kind": "opportunities",
+      "rows": 6,
+      "nonempty": true,
+      "shaVerifiedByClient": true,
+      "lifecycleCompleted": true
+    },
+    {
+      "kind": "eventRoster",
+      "rows": 5,
+      "nonempty": true,
+      "shaVerifiedByClient": true,
+      "lifecycleCompleted": true
+    },
+    {
+      "kind": "eventFeedback",
+      "rows": 1,
+      "nonempty": true,
+      "shaVerifiedByClient": true,
+      "lifecycleCompleted": true
+    },
+    {
+      "kind": "growthEntries",
+      "rows": 12,
+      "nonempty": true,
+      "shaVerifiedByClient": true,
+      "lifecycleCompleted": true
+    },
+    {
+      "kind": "orders",
+      "rows": 3,
+      "nonempty": true,
+      "shaVerifiedByClient": true,
+      "lifecycleCompleted": true
+    },
+    {
+      "kind": "opportunities",
+      "rows": 1,
+      "nonempty": true,
+      "shaVerifiedByClient": true,
+      "lifecycleCompleted": true
+    },
+    {
+      "kind": "opportunities",
+      "rows": 0,
+      "nonempty": false,
+      "shaVerifiedByClient": true,
+      "lifecycleCompleted": true
+    }
+  ],
+  "limitations": [
+    "Owned private drafts and unbound templates only; no user grants, real finance, messages or publishing."
+  ],
+  "recordCounts": {
+    "users": 11,
+    "events": 7,
+    "orders": 9,
+    "opportunities": 6
+  },
+  "passed": true,
+  "completedAt": "2026-09-29T11:14:35.686Z"
+}

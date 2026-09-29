@@ -1,23 +1,39 @@
 # MIP 当前状态
 
-更新日期：2026-09-26（需求与缺口复核；环境证据仍保留各自采集日期）。
+更新日期：2026-09-29（后台统一标准、完整整改执行与 CloudBase 增量；其他环境证据保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
 
 ## 结论
 
+- 后台产品验收唯一入口已统一为 [admin-web/ACCEPTANCE.md](../../admin-web/ACCEPTANCE.md)，替换历史交互改造全勾选清单。五份上游原件、伙伴提交历史、原始缺口见[9 月 29 日审查](evidence/admin-audit-20260929/README.md)，当前实现/验证状态见[管理端矩阵](COVERAGE_MATRIX.md#管理端)。本轮可独立推进的整改已发布至既有 CloudBase staging 目标，不能把原审查当作当前未修复清单。
+- 最新完整 `pnpm verify:all` 通过：根工程 1484 项、Web 合同 223 项、React 123 项。兼容迁移 094/095 已应用；九个业务函数全部部署，下载代码与本地 JS 一致且 MySQL 健康通过。最终前端/BFF 发布及真实 HTTPS 64/64 通过，六类非空导出、草稿与演示机会回读、图片最终绑定均有真实证据。53 条产品场景仍未全部验收，18 条受未确认规则影响。
+
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 70 条小程序路由、94 个锁定迁移、239 个渠道中立管理 operation（104 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 104 个查询与 111 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 70 条小程序路由、96 个迁移（均已锁定）、243 个渠道中立管理 operation（105 查询、138 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 122 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+
+## 后台完整整改执行 checkpoint
+
+- 计划：[EXECUTION_PLAN.md](../../admin-web/EXECUTION_PLAN.md)。已制定 W00–W21 工作包，主责映射覆盖全部 53 组产品场景；可维护性 K01–K08 已进入唯一验收标准。
+- 当前状态：W00 已保存原有登录与文档改动的精确基线。机会回填/筛选导出、冲突保留、活动草稿/复制/标签/名单/反馈、独立用户档案/关联分页/勋章、岗位模板和八个授权消费者、服务器负责人/排序、成长流水、退款动作投影、视频/Banner/用途上传、消息批次、知识治理分页、团队成员和负责人保护已有实现及测试。概览已接同一时间/范围查询，未决指标和团队模型等仍保留缺口。各包逐条状态仍以矩阵为准，不据工作包标题宣称全部通过。
+- 最近检查：完整门禁通过，云函数测试、lint、类型、构建、契约生成与隔离检查均通过；CloudBase 真实非空活动列表/详情已验证 1280×720、1440×900、390×844；私有草稿保存/刷新恢复/放弃未保存修改、两用户独立 Tab 已复核。发布前数据库及十个函数备份已核对，094/095 与九个业务函数回读通过。前端入口 `index-BCN0QiWF.js`，12 个静态文件 SHA 核对；六类非空导出共 32 项、未发布活动图片绑定 10 项通过。岗位模板入口启用且四个验收模板停用、绑定数 0；没有真实授予、退款或群发。证据与逐项打勾入口见[执行目录](evidence/admin-execution-20260929/README.md)。
+- 规划验证：2026-09-29 完整 `pnpm verify:all` 通过；文档检查、53 组场景唯一主责映射、22 个工作包依赖无环检查及 diff 检查通过。Web 构建仍有既有 bundle 大小提示，未导致门禁失败；以上不替代业务运行验收。
+- 业务待决统一见 REQUIREMENTS 的 Q-ADMIN-01～09，只影响相关步骤；不重新创建第二套问题或验收表。
+- 后续每次只在此更新当前工作包/小步骤、最近验证、当前局部阻塞和下一步；场景实现/验证结果仍在 COVERAGE_MATRIX。
+
+## 2026-09-29 后台登录与临时入口
+
+密码登录已发布有限等待与临时失败重试，完整门禁通过。临时入口 https://mipadmin.01mvp.com 以 Cloudflare 302 跳转至既有 CloudBase 后台；浏览器已验证真实概览。当时真实 HTTPS 验收为 63/64；本轮整改追加所属 `/assets` 严格路由后已达到 64/64，缺失 JS 返回 404，未改共享托管全局配置。此前首次登录失败的冷启动根因尚未证实。详见[登录与入口验收](evidence/admin-login-20260929/README.md)。
 
 ## 仓库事实
 
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
 | 小程序路由 | 70 条：5 条主包、60 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
-| 数据库 | 94 个追加迁移；目标清单为 150 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
-| 管理合同 | 239 个 operation：104 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
-| Web 开放范围 | 104 查询、111 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| 数据库 | 96 个追加迁移；目标清单为 150 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
+| 管理合同 | 243 个 operation：105 查询、138 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| Web 开放范围 | 105 查询、122 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
 | 调度 | 消息和知识采集各有独立 scheduler；均不属于数据库核心函数 | `mip-message-scheduler`、`mip-knowledge-scheduler` 及部署脚本 |
 | Web 页面 | 15 个一级页面、13 类详情 | `admin-web/src/` 的路由与页面合同 |

@@ -18,6 +18,14 @@ const userPage: AdminReadPage = {
 afterEach(cleanup)
 
 describe('core admin pages', () => {
+  it('preserves server ordering when a table contains only a cursor page', async () => {
+    const user = userEvent.setup()
+    render(<CoreListPageView route="users" search={{}} page={{
+      sections: [{ rows: [{ name: '赵', detailId: 'user-z' }, { name: '阿', detailId: 'user-a' }], columns: [{ key: 'name', label: '姓名' }] }], nextCursor: 'more',
+    }} onSearchChange={() => {}} onOpenDetail={() => {}} />)
+    await user.click(screen.getByRole('columnheader', { name: '姓名' }))
+    expect(screen.getAllByRole('row').slice(1).map(row => row.textContent)).toEqual(['赵查看', '阿查看'])
+  })
   it('maps the authoritative overview without inventing a player trend', () => {
     const view = mapAdminOverview({
       asOf: '2030-03-01T00:00:00.000Z',
@@ -36,10 +44,18 @@ describe('core admin pages', () => {
         }],
       },
     })
-    expect(view.metrics.map(item => item.value)).toEqual(['1,284', '436', '12', '96'])
+    expect(view.metrics.slice(0, 4).map(item => item.value)).toEqual(['1,284', '436', '12', '96'])
+    expect(view.metrics.slice(4).every(item => item.value === '—')).toBe(true)
     expect(view.playerTrend).toEqual({ available: false, points: [] })
     expect(view.attention.map(item => item.label)).toEqual(['30 日内到期会员', '待审核报名'])
     expect(view.activity[0]).toMatchObject({ title: 'MIP 早会', state: '活动报名' })
+  })
+  it('shows authoritative purchase buckets and monetary units while keeping restricted metrics unknown', () => {
+    const view = mapAdminOverview({ membership: { purchaseFlow: { availability: 'AVAILABLE', eligiblePaidAmount: { availability: 'AVAILABLE', amountCents: 1990 }, series: [{ bucketStartDate: '2030-01-01', initialPurchaseCount: 1, firstRenewalCount: 0, repeatRenewalCount: 2, eligiblePaidAmountCents: 1990 }] } }, events: { financials: { netAmount: { availability: 'RESTRICTED', amountCents: null } } } })
+    expect(view.metrics.find(item => item.label === '会籍实付金额')?.value).toBe('¥19.90')
+    expect(view.metrics.find(item => item.label === '活动净收入')?.value).toBe('—')
+    expect(view.purchaseTrend?.rows).toEqual([{ date: '2030-01-01', initial: '1', firstRenewal: '0', repeatRenewal: '2', paidAmount: '19.90' }])
+    expect(view.playerTrend.available).toBe(false)
   })
 
   it('exposes URL search, detail and cursor pagination through callbacks', async () => {
