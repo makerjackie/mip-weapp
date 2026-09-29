@@ -52,13 +52,13 @@
 
 | 领域 / 来源 | 范围 | 实现状态 | 验证状态 | 当前证据与缺口 |
 | --- | --- | --- | --- | --- |
-| 概览 / D01–D03 | 指标、筛选、趋势、下钻、待办 | partial | verified-local + evidence-missing | 已接同一时间/授权服务器查询、金额与购买续费趋势、更新时间；全部指标口径与一致下钻仍受 Q-ADMIN-04 约束 |
+| 概览 / D01–D03 | 指标、筛选、趋势、下钻、待办 | partial | verified-local + verified-staging + evidence-missing | 四项关键指标、金额/购买续费图表、分组指标和折叠明细已部署；三个实际 CSS 视口、趋势切换/逐日明细/业务 Tab 已实测，见[增量证据](evidence/admin-overview-20260929/README.md)。全部指标口径与一致下钻仍受 Q-ADMIN-04 约束 |
 | 登录与账号 / A01/A02/A04 | 可信身份、可选密码、账号管理与日志 | implemented | verified-local + verified-production + evidence-missing | [登录证据](evidence/admin-login-20260929/README.md)只支持对应旅程；账号启停、恢复和真实日志未完成全角色验收，NPC 到期规则待定 |
 | 权限与服务器 / A03/A05 | 角色策略、范围、分会配置及迁移 | partial | verified-local + verified-staging + evidence-missing | 094/095、八个消费者及管理 API 已部署并逐 JS 回读；模板创建/复制/版本冲突/停用通过，绑定入口已启用且没有给真实用户授权。服务器负责人/排序已有；受控跨范围绑定/撤权仍待验，Q-ADMIN-06 待定 |
 | 用户管理 / U01–U05/U09 | 筛选、独立档案、编辑、影响力、勋章和日志 | partial | verified-local + evidence-missing + external-wait | 独立 Tab/分区、共享档案编辑、勋章多选与失败回读、用户日志及五类关联记录独立分页已接通；订单权限在分页前过滤。八项影响力口径和普通/嘉宾/玩家分类待确认，非空导出及前台效果仍需运行证据 |
 | 名片、合作卡、案例 / U06–U08 | 内容编辑、模板、下架和历史 | partial | verified-local + evidence-missing | 档案和名片共用编辑与版本历史；六角色名称、全文和实际案例字段回填已补，案例开始时间倒序；保存与前台同步待运行，头像/城市/行业代编辑范围 Q-ADMIN-08 未定 |
 | 活动 / E01–E09 | 编辑发布、参与人支付、反馈、签到和统计 | partial | verified-local + verified-staging + external-wait + evidence-missing | 私有草稿创建/重放/全文与版本冲突、手机保存/刷新恢复/取消、复制原对象不变通过；名单支付字段和非空名单/反馈 XLSX 已走真实下载流程。发布全状态、最终图片绑定、正式支付/扫码仍待验，E09 口径 Q-ADMIN-04 未定 |
-| 机会 / O01–O04 | 内容、筛选、导出、状态和日志 | partial | verified-local + verified-staging + evidence-missing | 平铺 DTO、白名单提交、万元与全文已补；演示机会实际保存/刷新/重开并恢复原文，第二对象回填不串数据；全页与同筛选非空 Excel 通过。用户端同对象回读及全部动作仍待验，Q-ADMIN-01 已确认恢复/重新招募，当前状态转换专项待验 |
+| 机会 / O01–O04 | 内容、筛选、导出、状态和日志 | partial | verified-local + verified-staging + evidence-missing | 平铺 DTO、白名单提交、万元与全文已补；演示机会实际保存/刷新/重开并恢复原文，第二对象回填不串数据；全页与同筛选非空 Excel 通过。Q-ADMIN-01 已确认，结束/下架后编辑保存、重新招募/恢复及冲突/关联/审计 14 项真实回读通过，演示数据已还原；全角色与用户端同对象回读仍待验 |
 | 订单 / F01–F03 | 查询/详情/导出、支付、退款、权益联动 | partial | verified-local + external-wait | 基础能力存在；服务器筛选、完成语义、正式非空支付/退款证据待补，Q-ADMIN-03 退款例外待定 |
 | 任务 / T01–T05 | 星级/周期、派发、附件、审批、奖励与恢复 | implemented | verified-local + evidence-missing + external-wait | 已有扩展任务实现/合同测试；批量和周期派发、真实附件、退回重提、重复审批全旅程未完成验收 |
 | 成长/权益/勋章 / R01–R05 | 目录、规则、发放/冲正/会籍追加、协议与流水 | implemented | verified-local + evidence-missing + external-wait | 配置页与服务端已接入；正式规则、权益兑现、前台生效和生产调整完整旅程待验，Q-ADMIN-07 未收口 |
@@ -66,7 +66,7 @@
 | Banner/视频/素材 / C01–C03 | 内容、上传绑定、排序启停、视频目标及上限 | implemented | verified-local + verified-production + evidence-missing | Banner 五个上限同事务锁、满额禁新增/启用、图片上传控件已补；视频独立编辑及临时媒体预览、用途鉴权已接通。[历史证据](evidence/admin-web-live-2026-08-28-react/README.md)只覆盖旧指定写入；当前真实上传/前台与真机视频号仍待验 |
 | 站内消息 / M01/M02 | 模板、范围、立即/定时、撤销、快照和失败恢复 | implemented | verified-local + evidence-missing + external-wait | 模板编辑等已补齐；真实接收范围、批次结果、定时/撤销和失败恢复待验，不恢复已下线通知 |
 | 知识/游戏扩展 / X01–X03 | 内容、商品、采集、赛季、排行、盲盒、评论治理 | partial | verified-local + external-wait | 导航与现有游戏运营入口已接通；知识来源/分类/计划/采集/商品/评论举报均接真实动作、独立分页与名字目录；知识对象内可定位评论/举报。正式来源、规则、价格、前台与跨域治理仍需验收 |
-| React Web 通用体验与维护 / G01–G08、K01–K08 | 非空读写、回填、权限、布局、恢复与维护合同 | partial | verified-local + verified-staging + evidence-missing | 完整工程门禁通过；真实 HTTPS 64/64、六类非空导出、私有草稿与演示机会保存回读、两用户独立 Tab、三个实际视口已有聚焦证据。尚未覆盖全部对象的完整 G01–G08；权限专项为执行者代码审查，不冒充独立安全审计 |
+| React Web 通用体验与维护 / G01–G08、K01–K08 | 非空读写、回填、权限、布局、恢复与维护合同 | partial | verified-local + verified-staging + evidence-missing | 完整工程门禁通过；最新真实 HTTPS 66/66、六类非空导出、私有草稿与演示机会保存/恢复回读、两用户独立 Tab、三个实际视口已有聚焦证据。尚未覆盖全部对象的完整 G01–G08；权限专项为执行者代码审查，不冒充独立安全审计 |
 | 小程序现场工作台 | Web 登录确认、已授权活动、签到码与海报、名单搜索、签到和受控撤销 | implemented | evidence-missing + external-wait | 四条现场路由已纳入实现范围；缺当前可提交运行报告和真实设备现场闭环 |
 
 ### 53 条场景当前记录
@@ -100,7 +100,7 @@
 | E09 | 待确认（Q-ADMIN-04） | 统计比率、归属及下钻口径 Q04。 |
 | O01 | 待验证 | 全页与同查询非空 Excel、万元/full fields 通过；0 金额界限已被真实传输接受。全部组合筛选/权限角色仍待验。 |
 | O02 | 待验证 | 演示对象多段正文实际保存/刷新/重开、姓名角色与空金额保留、第二对象独立回填通过，原文已恢复；用户端对照及真实并发旅程仍待验。 |
-| O03 | 待验证 | Q-ADMIN-01 已由用户确认：下架可恢复、已结束可重新招募。新增已下架/结束编辑、内容安全/截止时间保护及前后状态审计；完整运行旅程待验。 |
+| O03 | 待验证 | Q-ADMIN-01 已由用户确认：下架可恢复、已结束可重新招募。演示对象结束/下架后编辑保存、恢复/重新招募、旧版本拒绝、原关联保留和状态审计 14 项真实回读通过，数据已还原；全角色、越权分支和用户端完整旅程仍待验。 |
 | O04 | 待验证 | 详情、引荐和对象日志已有；补完整非空排序/关联/导出实际证据。 |
 | F01 | 待验证 | 真实全页及同类型筛选非空 XLSX、元单位、无手机号列通过；授权手机、全部状态时间线与跨角色范围仍待验。 |
 | F02 | 待验证 | 服务端 callback/ledger 合同已有；支付、报名、权益仍需目标环境和真机证据。 |

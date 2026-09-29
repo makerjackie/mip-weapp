@@ -1,0 +1,58 @@
+{
+  "sourceCommit": "3e6292c3936de85ad51115cb044fea9563c731d6",
+  "stage": "staging",
+  "passed": true,
+  "viewports": [
+    {
+      "cssWidth": 1440,
+      "cssHeight": 900,
+      "documentWidth": 1423,
+      "headlineCards": 4,
+      "rootHorizontalOverflow": false
+    },
+    {
+      "cssWidth": 1280,
+      "cssHeight": 720,
+      "documentWidth": 1263,
+      "headlineCards": 4,
+      "rootHorizontalOverflow": false
+    },
+    {
+      "cssWidth": 390,
+      "cssHeight": 844,
+      "documentWidth": 373,
+      "headlineCards": 4,
+      "headlineColumns": 2,
+      "rootHorizontalOverflow": false
+    }
+  ],
+  "checks": [
+    {
+      "name": "live-count-and-amount-chart-toggle",
+      "passed": true
+    },
+    {
+      "name": "live-daily-details-expand-collapse",
+      "passed": true,
+      "datedRows": 29,
+      "knownNonZeroAmountYuan": 0.3
+    },
+    {
+      "name": "live-grouped-metrics-tab-selection",
+      "passed": true,
+      "selectedTab": "活动与收入"
+    },
+    {
+      "name": "local-final-single-day-range-label-and-details",
+      "passed": true,
+      "dateLabel": "9/14–9/14",
+      "datedRows": 1,
+      "environment": "local UI with staging data"
+    }
+  ],
+  "screenshotNote": "Browser site zoom was 90 percent; CSS viewport sizes were measured from DOM, while JPEG pixel dimensions may differ. No browser zoom preference changed; temporary viewport override reset.",
+  "limitations": [
+    "Live custom-date journey was not separately completed",
+    "This increment does not claim a full keyboard, all-role or all-object UI acceptance"
+  ]
+}

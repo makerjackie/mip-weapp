@@ -1,0 +1,72 @@
+{
+  "sourceCommit": "3e6292c3936de85ad51115cb044fea9563c731d6",
+  "stage": "staging",
+  "paymentMode": "TEST",
+  "releaseRecordedAt": "2026-09-29T13:22:28.724Z",
+  "passed": true,
+  "stages": [
+    {
+      "stage": "build",
+      "passed": true
+    },
+    {
+      "stage": "admin-backend",
+      "passed": true
+    },
+    {
+      "stage": "static",
+      "passed": true
+    },
+    {
+      "stage": "bff",
+      "passed": true
+    },
+    {
+      "stage": "http",
+      "passed": true
+    }
+  ],
+  "https": {
+    "completedAt": "2026-09-29T13:22:23.237Z",
+    "checksPassed": 66,
+    "checksTotal": 66,
+    "readModules": 14
+  },
+  "backendReadback": {
+    "at": "2026-09-29T13:25:18.095Z",
+    "passed": true,
+    "functions": [
+      {
+        "name": "mip-admin-api",
+        "codeSha256": "8694ee5930070a1024c8af713aafe839929892e27a365cc80932f243bf89f573",
+        "sourceJsFilesMatched": 274,
+        "runtime": "Nodejs20.19",
+        "mysqlHealthy": true,
+        "roleTemplatesEnabled": true
+      }
+    ]
+  },
+  "initialBackendReadback": {
+    "passed": false,
+    "reason": "MCP_READ_ERROR",
+    "resolvedBy": "independent local-auth readback at backendReadback.at; original private report preserved"
+  },
+  "opportunityRuntime": {
+    "checksPassed": 14,
+    "checksTotal": 14,
+    "fixtureOnly": true,
+    "fixtureReturnedToOriginalPublishedState": true
+  },
+  "ci": {
+    "runId": 36574337283,
+    "status": "completed",
+    "conclusion": "success",
+    "headSha": "3e6292c3936de85ad51115cb044fea9563c731d6"
+  },
+  "limitations": [
+    "53 whole acceptance scenarios are not all passed",
+    "17 scenarios still depend on Q-ADMIN-02 through Q-ADMIN-09",
+    "No real refund, formal payment, phone or check-in device acceptance in this increment",
+    "Not a formal production payment release"
+  ]
+}
