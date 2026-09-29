@@ -45,13 +45,6 @@
   border-radius: 24rpx;
 }
 
-.mip-login-sheet__brand-name {
-  font-size: 36rpx;
-  font-weight: 600;
-  line-height: 50.4rpx;
-  color: var(--color-ink, #fff);
-}
-
 .mip-login-sheet__title {
   font-size: 32rpx;
   font-weight: 600;

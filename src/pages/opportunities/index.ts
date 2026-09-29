@@ -243,7 +243,6 @@ Page({
     loginSheetOpen: false,
     loginSheetBusy: false,
     loginSheetAllowSignIn: false,
-    brandName: brand.productName,
     logoPath: brand.logoPath,
   },
   requestSequence: 0,

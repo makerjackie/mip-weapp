@@ -5,7 +5,6 @@
   <view class="mip-login-sheet__grab"></view>
   <view class="mip-login-sheet__brand">
     <image class="mip-login-sheet__logo" mode="aspectFit" src="{{logoPath}}" />
-    <text class="mip-login-sheet__brand-name">{{brandName}}</text>
   </view>
   <view class="mip-login-sheet__title">授权手机号</view>
   <!-- subtitle 传入时整体覆盖副标题（J5-02 换绑变体，\n 换行）；缺省保持终审文案逐字不变。 -->
