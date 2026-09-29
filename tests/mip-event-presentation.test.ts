@@ -21,7 +21,7 @@ describe('MIP event public presentation', () => {
 
   it('uses the shared presenter on event list, detail, and registration surfaces', () => {
     for (const file of [
-      'src/pages/events/index.ts',
+      'src/components/mip-activity-card/model.ts',
       'src/packages/member/mip-events/detail/index.ts',
       'src/packages/member/mip-events/registration/index.ts',
     ]) {

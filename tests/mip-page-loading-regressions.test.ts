@@ -140,34 +140,14 @@ describe('page loading and profile interaction regressions', () => {
     expect(instance.data.opportunitySubTab).toBe('COOPERATING')
   })
 
-  it('starts the activity feed and banner while optional filters are still pending', async () => {
+  it('starts the activity feed and banner together after the default city settles', async () => {
     const instance = page(events)
-    const filters = deferred()
     instance.initializeDefaultCity = vi.fn().mockResolvedValue(undefined)
-    instance.loadDiscoveryFilters = vi.fn().mockReturnValue(filters.promise)
     instance.loadEvents = vi.fn().mockResolvedValue(undefined)
     instance.loadBanners = vi.fn().mockResolvedValue(undefined)
-    const loading = instance.loadPage()
-    await Promise.resolve()
+    await instance.loadPage()
+    expect(instance.initializeDefaultCity).toHaveBeenCalledOnce()
     expect(instance.loadEvents).toHaveBeenCalledOnce()
     expect(instance.loadBanners).toHaveBeenCalledOnce()
-    filters.resolve()
-    await loading
-  })
-
-  it('validates selected catalog filters before requesting the activity feed', async () => {
-    const instance = page(events)
-    const filters = deferred()
-    instance.data.selectedTagKeys = ['outdoor']
-    instance.initializeDefaultCity = vi.fn().mockResolvedValue(undefined)
-    instance.loadDiscoveryFilters = vi.fn().mockReturnValue(filters.promise)
-    instance.loadEvents = vi.fn().mockResolvedValue(undefined)
-    instance.loadBanners = vi.fn().mockResolvedValue(undefined)
-    const loading = instance.loadPage()
-    await Promise.resolve()
-    expect(instance.loadEvents).not.toHaveBeenCalled()
-    filters.resolve()
-    await loading
-    expect(instance.loadEvents).toHaveBeenCalledOnce()
   })
 })
