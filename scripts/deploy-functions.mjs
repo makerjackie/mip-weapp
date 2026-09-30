@@ -520,7 +520,7 @@ try {
         console.log(`[mip-cloud-deploy] configuration already current ${spec.name}`)
       }
     }
-    if (['admin', 'events', 'media'].includes(spec.role)) {
+    if (['admin', 'events', 'media', 'tasks', 'banners'].includes(spec.role)) {
       await ensureWechatApiPublicNetwork(spec.name)
     }
     const codeUpdate = {
