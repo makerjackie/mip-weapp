@@ -1,0 +1,47 @@
+{
+  "sourceCommit": "ee175186008ebbf3497f1594fee4b5f977303222",
+  "at": "2026-09-30T20:42:24.932Z",
+  "stage": "staging",
+  "paymentMode": "TEST",
+  "publicationMode": "existing-bff-static-fallback",
+  "functions": [
+    {
+      "name": "mip-admin-api",
+      "archiveSha256": "e5d2d173989b9195e2b13bc0a7ff95c48bd4f96a4cf0a3ed3f1a02c994dcd10d",
+      "configurationPreserved": true,
+      "contentCheckerConfigurationAdded": false
+    },
+    {
+      "name": "mip-tasks-api",
+      "archiveSha256": "e8559f7cc6c781c0e0e9cab274eb3d0e8a0c9e912f434358c06c499db07e1285",
+      "configurationPreserved": true,
+      "contentCheckerConfigurationAdded": true
+    },
+    {
+      "name": "mip-banners-api",
+      "archiveSha256": "21c1a53730f762388826f0fc2fb53e1d361707fe864b931898a5fba2138e43e5",
+      "configurationPreserved": true,
+      "onlyCodeHashMetadataUpdated": false,
+      "contentCheckerConfigurationAdded": true
+    },
+    {
+      "name": "mip-media-api",
+      "archiveSha256": "c1308c9c34c684da0c508fef347899cd17102399d67b8711a7cc61b66f50d55b",
+      "configurationPreserved": true,
+      "onlyCodeHashMetadataUpdated": false,
+      "contentCheckerConfigurationAdded": false
+    },
+    {
+      "name": "mip-admin-web-api",
+      "archiveSha256": "ad258ccb1513a42a338ebd7075816b5b6d62e6597243c50590d94eeed7fda537",
+      "configurationPreserved": true,
+      "onlyCodeHashMetadataUpdated": true,
+      "contentCheckerConfigurationAdded": false
+    }
+  ],
+  "adminRuntimeSourceFiles": 205,
+  "staticFilesVerified": 14,
+  "gatewayRoutesUnchanged": true,
+  "dnsUnchanged": true,
+  "noNewTimers": true
+}

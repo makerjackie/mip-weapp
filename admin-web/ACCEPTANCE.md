@@ -2,6 +2,8 @@
 
 本文件是管理后台产品验收的唯一入口。2026-09-29 按用户要求统一；后续直接修订本文件，不再另建 V0.6、改造版或另一套打勾清单。**这是目标标准，不是已通过验收的声明。** 当前差距见[需求覆盖矩阵](../docs/mip/COVERAGE_MATRIX.md#管理端)，来龙去脉见[本次审查报告](../docs/mip/evidence/admin-audit-20260929/README.md)。
 
+最新实际操作结果见 [常用功能 Computer Use 证据](../docs/mip/evidence/admin-common-cua-20261001/README.md)及[活动专项证据](../docs/mip/evidence/admin-events-cua-20261001/README.md)，均按下述场景记录已测步骤和未验边界，不另外定义标准。
+
 实现顺序、任务和模型交接见 [EXECUTION_PLAN.md](EXECUTION_PLAN.md)。该计划引用本文件，不新增一套验收规则。以下产品场景与第 6 节可维护性条件均属于交付标准。
 
 ## 1. 按什么验收
