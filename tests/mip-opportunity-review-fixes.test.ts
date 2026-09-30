@@ -176,7 +176,9 @@ describe('MIP opportunity review fixes', () => {
     expect(editorScript).toContain('publicationStatus:')
     expect(editorScript).not.toContain('opportunityModule.end(')
     expect(editorScript).toContain('result.status === \'UNPUBLISHED\' ? \'项目已下架\'')
-    expect(editorView).toContain('\'下架项目\'}}')
+    // figma 3359:6086：收起行文案由 projectStatusText 单点渲染（状态名+终审说明）。
+    expect(editorView).toContain('{{projectStatusText}}')
+    expect(editorScript).toContain('projectStatusTextOf(key)')
     expect(catalogSource).not.toContain('即将支持')
     expect(detailScript).toContain('? \'unpublished\'')
   })

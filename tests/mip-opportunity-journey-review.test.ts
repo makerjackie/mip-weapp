@@ -129,7 +129,9 @@ describe('MIP opportunity journey review', () => {
   it('collects the QZ1 trio and QZ2 status in the editor (J4-04)', () => {
     expect(editor).toContain('机会类型')
     expect(editor).toContain('wx:for="{{typeOptions}}"')
-    expect(editor).toContain('border border-brand bg-panel text-[28rpx] text-brand')
+    // figma 3359:6086：三件套渲染为行卡（黄圈单选形、多选语义），未选中圈用品牌色描边。
+    expect(editor).toContain('rounded-[16rpx] bg-panel px-[16rpx]" aria-role="checkbox" aria-checked="{{item.selected}}"')
+    expect(editor).toContain('rounded-full border-[2rpx] border-solid border-brand')
     expect(editorScript).toContain('typeKeys: this.data.typeOptions.filter(item => item.selected).map(item => item.key)')
     expect(editorScript).toContain('publicationStatus:')
     expect(editorScript).toContain('项目已下架')
@@ -140,13 +142,16 @@ describe('MIP opportunity journey review', () => {
     expect(editor).toContain('仅希望 MIP 内部玩家看到')
     expect(editor).toContain('项目封面（选填）')
     expect(editor).toContain('主营地区（选填）')
-    expect(editor).toContain('示例：南山十亩地')
+    // figma 3359:6086：示例文案更新为观澜古墟。
+    expect(editor).toContain('示例：观澜古墟')
     expect(editor).toContain('{{targetSummary.length}}/300')
     expect(editor).toContain('{{description.length}}/300')
     // J4-04 原型明确为选填；输入框保留 300 字上限。
     expect(editor).toContain('<text>展开讲讲（选填）</text>')
-    // 项目状态行去重：区块标题保留一份，收起行只显示当前值。
+    // 项目状态行去重：区块标题保留一份，收起行显示 projectStatusText。
     expect(editor.match(/项目状态<\/text>/g)?.length).toBe(1)
+    expect(editor).toContain('{{projectStatusText}}')
+    expect(editorScript).toContain('projectStatusTextOf(projectStatus)')
     // 编辑页不出现删除入口（C5：删除归我的项目长按）。
     expect(editor).not.toContain('删除机会')
   })

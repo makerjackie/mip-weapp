@@ -90,11 +90,11 @@ describe('MIP opportunity editor required fields', () => {
     const page = createPage()
 
     expect(Reflect.apply(page.validateRequiredFields, page, [])).toBe(false)
-    expect(page.data.titleError).toBe('请输入项目名称。')
+    expect(page.data.titleError).toBe('请输入机会名称。')
     expect(page.data.valueSummaryError).toBe('请输入价值金额或价值说明。')
     expect(page.data.targetSummaryError).toBe('请输入寻找合作方的说明。')
     expect(page.data.roleError).toBe('请至少选择一种合作角色。')
-    expect(showToast).toHaveBeenCalledWith({ title: '请输入项目名称。', icon: 'none' })
+    expect(showToast).toHaveBeenCalledWith({ title: '请输入机会名称。', icon: 'none' })
     expect(pageScrollTo).toHaveBeenCalledWith({ selector: '#opportunity-field-title', duration: 200 })
   })
 
