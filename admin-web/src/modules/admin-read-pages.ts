@@ -9,6 +9,7 @@ import type {
 } from './admin-read-contracts.ts'
 import {
   accessLabel,
+  campaignAudienceLabel,
   arrayLabel,
   auditActionLabel,
   blockersLabel,
@@ -419,7 +420,7 @@ async function loadMessages(query: AdminListQuery, request: AdminRequest): Promi
       rows: payload.items.map(item => campaign ? ({
         detailId: valueOf(item, 'id', 'campaignId'),
         title: valueOf(item, 'title', 'name'),
-        audience: item.audienceType === 'ALL' ? '全部用户' : `${numberLabel(item.recipientCount)} 人`,
+        audience: campaignAudienceLabel(item),
         scope: item.branchName || label(valueOf(item, 'scopeType')),
         updatedAt: formatDateTime(item.updatedAt),
         state: label(valueOf(item, 'status')),

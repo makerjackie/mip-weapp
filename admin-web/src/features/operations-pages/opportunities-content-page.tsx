@@ -42,9 +42,9 @@ export function OpportunitiesContentPage(props: OperationsPageState) {
       actions={props.onWrite ? (
         <Space wrap>
           {section === 'opportunities' ? <SensitiveExportButton kind="opportunities" query={props.query.query} status={props.query.status} filters={opportunityQueryFilters(props.query)} /> : null}
-          <Button icon={<PlusOutlined />} onClick={() => void navigate({ to: '/userContent/$contentId/edit' as never, params: { contentId: 'new' } as never, search: { kind: 'COOPERATION_CARD' } as never })}>创建合作卡</Button>
-          <Button icon={<PlusOutlined />} onClick={() => void navigate({ to: '/userContent/$contentId/edit' as never, params: { contentId: 'new' } as never, search: { kind: 'SUPER_CASE' } as never })}>创建超级案例</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => void navigate({ to: '/opportunities/$opportunityId/edit' as never, params: { opportunityId: 'new' } as never })}>创建机会</Button>
+          <Button icon={<PlusOutlined />} onClick={() => void navigate({ to: '/userContent/$contentId/edit' as never, params: { contentId: 'new' } as never, search: previous => ({ kind: 'COOPERATION_CARD', returnSearch: { ...previous, filters: { ...previous.filters, section: 'content' } } }) as never })}>创建合作卡</Button>
+          <Button icon={<PlusOutlined />} onClick={() => void navigate({ to: '/userContent/$contentId/edit' as never, params: { contentId: 'new' } as never, search: previous => ({ kind: 'SUPER_CASE', returnSearch: { ...previous, filters: { ...previous.filters, section: 'content' } } }) as never })}>创建超级案例</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => void navigate({ to: '/opportunities/$opportunityId/edit' as never, params: { opportunityId: 'new' } as never, search: previous => ({ returnSearch: previous }) as never })}>创建机会</Button>
         </Space>
       ) : null}
     />

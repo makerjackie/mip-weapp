@@ -63,7 +63,7 @@ describe('independent user content editor', () => {
         status: 'PUBLISHED',
       },
     })
-    expect(state.navigate).toHaveBeenCalledWith({ to: '/opportunities' })
+    expect(state.navigate).toHaveBeenCalledWith({ to: '/opportunities', search: { filters: { section: 'content' } } })
   })
 
   it('opens existing content with locked ownership, hidden metadata and zero scores intact', async () => {

@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { IndependentFormPageConfig } from './independent-form-page'
 import { IndependentFormPage } from './independent-form-page'
 
-const state = vi.hoisted(() => ({ request: vi.fn(), navigate: vi.fn() }))
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => state.navigate, useBlocker: () => ({ status: 'idle' }) }))
+const state = vi.hoisted(() => ({ request: vi.fn(), navigate: vi.fn(), search: {} as Record<string, unknown> }))
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => state.navigate, useSearch: () => state.search, useBlocker: () => ({ status: 'idle' }) }))
 vi.mock('../../app/session-provider', () => ({ useAdminSession: () => ({
   request: state.request, demoMode: false, hasCapability: () => true,
 }) }))
@@ -15,6 +15,7 @@ afterEach(cleanup)
 beforeEach(() => {
   state.request.mockReset().mockResolvedValue({})
   state.navigate.mockReset()
+  state.search = {}
 })
 
 const config: IndependentFormPageConfig = {
@@ -209,4 +210,16 @@ describe('IndependentFormPage loaded-record submission', () => {
     await waitFor(() => expect(state.request).toHaveBeenCalledTimes(2))
     expect(state.request.mock.calls[1]?.[1]).toMatchObject({ title: '我的修改', expectedVersion: 7 })
   })
+})
+
+
+it('returns to the original content list filters after saving', async () => {
+  const returnSearch = { q: '当前案例', page: 2, filters: { section: 'content', ownerUserId: 'owner-a' } }
+  state.search = { returnSearch }
+  mount(async () => ({ title: '当前案例', expectedVersion: 7 }))
+  await waitFor(() => expect(screen.getByLabelText('标题')).toHaveValue('当前案例'))
+  fireEvent.change(screen.getByLabelText('标题'), { target: { value: '当前案例已编辑' } })
+  fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
+  await waitFor(() => expect(state.navigate).toHaveBeenCalledWith({ to: '/records', search: returnSearch }))
+  expect(state.request).toHaveBeenCalledWith(config.action, expect.objectContaining({ title: '当前案例已编辑', expectedVersion: 7 }))
 })

@@ -18,7 +18,7 @@ export function TaskManagementPage(props: OperationsPageState) {
       paginated={definition.paginated}
       detailRouteForSection={(_, index) => index === 0 ? 'tasks' : 'taskCompletions'}
       actions={props.onWrite ? (
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => void navigate({ to: '/tasks/$taskId/edit' as never, params: { taskId: 'new' } as never })}>创建任务</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => void navigate({ to: '/tasks/$taskId/edit' as never, params: { taskId: 'new' } as never, search: previous => ({ returnSearch: previous }) as never })}>创建任务</Button>
       ) : null}
     />
   )

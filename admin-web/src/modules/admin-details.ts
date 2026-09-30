@@ -6,7 +6,7 @@ import {
 } from './admin-task-management.ts'
 import { loadBannerDetail } from './admin-banner-management.ts'
 import { feedbackFields } from './event-feedback.ts'
-import { label } from './admin-read-formatters.ts'
+import { campaignAudienceLabel, label } from './admin-read-formatters.ts'
 import {
   loadGameCatalogDetail,
   loadGameSeasonDetail,
@@ -563,7 +563,7 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
         ['消息标题', title],
         ['消息正文', text(campaign.body)],
         ['作用范围', campaign.scopeType === 'BRANCH' ? text(campaign.branchName) : '平台'],
-        ['发送范围', campaign.audienceType === 'ALL' ? '全部用户' : `${numberText(campaign.recipientCount)} 人`],
+        ['发送范围', campaignAudienceLabel(campaign)],
         ['状态', codeLabel(campaign.status)],
         ['内容安全', codeLabel(campaign.contentSafetyStatus)],
         ['版本', numberText(campaign.version)],

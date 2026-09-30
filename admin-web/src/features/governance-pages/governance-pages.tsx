@@ -244,7 +244,7 @@ export function GovernancePage({
             aria-label={action.label}
             onClick={() => {
               if (isFormPageAction) {
-                void navigate({ to: '/knowledge/$contentId/edit' as never, params: { contentId: 'new' } as never })
+                void navigate({ to: '/knowledge/$contentId/edit' as never, params: { contentId: 'new' } as never, search: previous => ({ returnSearch: previous }) as never })
                 return
               }
               onMutationRequest?.({ action: action.action, capability: action.capability })

@@ -46,7 +46,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     if (capability && !hasCapability(capability)) return null
     if (action && !permitted(action)) return null
     const paramName = path.match(/\$(\w+)/)?.[1] || 'entityId'
-    return <Button key={`form-${path}`} onClick={() => void navigate({ to: path as never, params: { [paramName]: entityId } as never })}>{label}</Button>
+    return <Button key={`form-${path}`} onClick={() => void navigate({ to: path as never, params: { [paramName]: entityId } as never, search: previous => ({ returnSearch: previous }) as never })}>{label}</Button>
   }
 
   const actions: React.ReactNode[] = []

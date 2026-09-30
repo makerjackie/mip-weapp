@@ -258,7 +258,7 @@ describe('admin read pages', () => {
       { action: 'mip.admin.messageTemplates.list', input: { query: '早会', status: '', limit: 20 } },
     ])
     assert.deepEqual(page.sections.map(section => section.key), ['campaigns', 'templates'])
-    assert.equal(page.sections[0].rows[0].audience, '24 人')
+    assert.equal(page.sections[0].rows[0].audience, '指定 24 人')
     assert.equal(page.sections[0].rows[0].scope, '福田分会')
     assert.equal(page.sections[0].rows[0].detailId, 'campaign-1')
     assert.deepEqual(page.sections[1].rows[0].rowActions?.map(item => item.action), [
