@@ -66,7 +66,7 @@
 | Banner/视频/素材 / C01–C03 | 内容、上传绑定、排序启停、视频目标及上限 | implemented | verified-local + verified-production + evidence-missing | Banner 五个上限同事务锁、满额禁新增/启用、图片上传控件已补；视频独立编辑及临时媒体预览、用途鉴权已接通。[历史证据](evidence/admin-web-live-2026-08-28-react/README.md)只覆盖旧指定写入；当前真实上传/前台与真机视频号仍待验 |
 | 站内消息 / M01/M02 | 模板、范围、立即/定时、撤销、快照和失败恢复 | implemented | verified-local + evidence-missing + external-wait | 模板编辑等已补齐；真实接收范围、批次结果、定时/撤销和失败恢复待验，不恢复已下线通知 |
 | 知识/游戏扩展 / X01–X03 | 内容、商品、采集、赛季、排行、盲盒、评论治理 | partial | verified-local + external-wait | 导航与现有游戏运营入口已接通；知识来源/分类/计划/采集/商品/评论举报均接真实动作、独立分页与名字目录；知识对象内可定位评论/举报。正式来源、规则、价格、前台与跨域治理仍需验收 |
-| React Web 通用体验与维护 / G01–G08、K01–K08 | 非空读写、回填、权限、布局、恢复与维护合同 | partial | verified-local + verified-staging + evidence-missing | 完整工程门禁通过；最新真实 HTTPS 66/66、六类非空导出、私有草稿与演示机会保存/恢复回读、两用户独立 Tab、三个实际视口已有聚焦证据。尚未覆盖全部对象的完整 G01–G08；权限专项为执行者代码审查，不冒充独立安全审计 |
+| React Web 通用体验与维护 / G01–G08、K01–K08 | 非空读写、回填、权限、布局、恢复与维护合同 | partial | verified-local + verified-staging + evidence-missing | 9 月 30 日补会话乱序/旧回调、归档和编辑归属约束、活动复制真实路由回归；70/70 只读覆盖 14 模块和 7 类详情，演示机会清空商业条件及还原 6/6；证据见[复核记录](evidence/admin-review-20260930/README.md)。此前真实 HTTPS 66/66、六类非空导出、私有草稿与演示机会保存/恢复回读、两用户独立 Tab、三个实际视口已有聚焦证据。尚未覆盖全部对象的完整 G01–G08；权限专项为执行者代码审查，不冒充独立安全审计 |
 | 小程序现场工作台 | Web 登录确认、已授权活动、签到码与海报、名单搜索、签到和受控撤销 | implemented | evidence-missing + external-wait | 四条现场路由已纳入实现范围；缺当前可提交运行报告和真实设备现场闭环 |
 
 ### 53 条场景当前记录

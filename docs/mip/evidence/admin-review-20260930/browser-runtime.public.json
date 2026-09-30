@@ -1,0 +1,33 @@
+{
+  "at": "2026-09-30T04:33:24.453Z",
+  "environment": "local-current-source-with-read-only-staging-proxy",
+  "businessWrites": false,
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "scrollWidth": 1425
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1265
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 375
+    }
+  ],
+  "userContentForm": {
+    "nameSearchOptionsNonempty": true,
+    "metadataInputsHidden": true,
+    "escapeClosesPicker": true,
+    "tabFocusId": "draft_roleKey",
+    "mobileScrollWidth": 375
+  },
+  "newWarningsOrErrors": 0,
+  "limitations": [
+    "Does not prove deployed browser session, all roles, real uploads or device flows."
+  ]
+}

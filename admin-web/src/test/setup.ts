@@ -26,3 +26,6 @@ class ResizeObserverStub {
 }
 
 Object.defineProperty(globalThis, 'ResizeObserver', { value: ResizeObserverStub })
+
+// Router scroll restoration is a browser feature absent in jsdom.
+Object.defineProperty(window, 'scrollTo', { writable: true, value: () => undefined })

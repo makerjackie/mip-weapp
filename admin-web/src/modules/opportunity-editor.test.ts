@@ -52,6 +52,22 @@ describe('opportunity read/edit/save contract', () => {
       roleKeys: ['connector', 'strategist'], tagIds: ['tag-a'], deadlineAt: '2026-12-01T00:00:00.000Z',
     })
   })
+
+  it('clears all existing commercial terms instead of preserving them on the server', async () => {
+    const values = opportunityEditorValues(await serializedOpportunity())
+    ;(values.draft as Record<string, unknown>).commercialTerms = { minAmountCents: null, maxAmountCents: '', locations: [] }
+    const result = validateContentMutation('mip.admin.opportunities.save', contentFormValues('mip.admin.opportunities.save', values, 'clear'))
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const savedDraft = result.input.draft as Record<string, unknown>
+    assert.equal(savedDraft.commercialTerms, null)
+    const queries: string[] = []
+    const { sync } = require('../../../cloudfunctions/mip-admin-api/domain/opportunity-commercial-terms.js')
+    await sync({ query: async (sql: string) => { queries.push(sql); return [] } }, 'wx-test', 'opportunity-a', savedDraft.commercialTerms, 8)
+    assert.equal(queries.length, 2)
+    assert.match(queries[0], /DELETE FROM mip_opportunity_locations/)
+    assert.match(queries[1], /status = 'INACTIVE'/)
+  })
   it('rejects incomplete DTOs rather than opening an empty existing record', async () => {
     const dto = await serializedOpportunity()
     for (const field of ['id', 'version', 'ownerUserId', 'title', 'valueSummary', 'roleKeys', 'tagIds']) {

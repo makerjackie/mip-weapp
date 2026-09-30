@@ -5,9 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OpportunityEditFormPage } from './opportunity-edit-form-page'
 import { UserContentEditFormPage } from './user-content-edit-form-page'
 
-const state = vi.hoisted(() => ({ request: vi.fn(), navigate: vi.fn() }))
+const state = vi.hoisted(() => ({ request: vi.fn(), navigate: vi.fn(), contentId: 'new' }))
 vi.mock('@tanstack/react-router', () => ({
-  useParams: () => ({ contentId: 'new', opportunityId: 'new' }),
+  useParams: () => ({ contentId: state.contentId, opportunityId: 'new' }),
   useSearch: () => ({ kind: 'COOPERATION_CARD' }),
   useNavigate: () => state.navigate,
   useBlocker: () => ({ status: 'idle' }),
@@ -18,6 +18,7 @@ vi.mock('../../app/session-provider', () => ({ useAdminSession: () => ({
 
 afterEach(cleanup)
 beforeEach(() => {
+  state.contentId = 'new'
   state.request.mockReset().mockImplementation(async (action: string) => action === 'mip.admin.users.list'
     ? { items: [{ id: 'user-demo', nickname: '验收发布人' }] }
     : action === 'mip.admin.opportunities.options' ? { owners: [{ id: 'user-demo', nickname: '验收发布人' }], tags: [], branches: [] } : { id: 'new-content' })
@@ -36,7 +37,7 @@ function mount() { render(<QueryClientProvider client={new QueryClient()}><App><
 describe('independent user content editor', () => {
   it('submits the selected strategist fields after filling and switching away from connector', async () => {
     mount()
-    fill('归属用户', 'user-demo')
+    await select('归属用户', '验收发布人')
     fill('圈层', '先前角色内容')
     fill('可提供资源', '不应提交的隐藏内容')
     await select('合作角色', '狗策划')
@@ -52,7 +53,7 @@ describe('independent user content editor', () => {
     for (const label of ['商务拓展', '资源整合', '资本运作', '战略策划', '视觉设计', '交付管理']) fill(label, '3')
     await select('内容状态', '已发布')
     fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
-    await waitFor(() => expect(state.request).toHaveBeenCalledOnce())
+    await waitFor(() => expect(state.request.mock.calls.filter(([action]) => action === 'mip.admin.userContent.save')).toHaveLength(1))
     expect(state.request).toHaveBeenCalledWith('mip.admin.userContent.save', {
       kind: 'COOPERATION_CARD', ownerUserId: 'user-demo', idempotencyKey: expect.any(String),
       draft: {
@@ -65,9 +66,29 @@ describe('independent user content editor', () => {
     expect(state.navigate).toHaveBeenCalledWith({ to: '/opportunities' })
   })
 
+  it('opens existing content with locked ownership, hidden metadata and zero scores intact', async () => {
+    state.contentId = 'COOPERATION_CARD:card-existing'
+    const item = { kind: 'COOPERATION_CARD', id: 'card-existing', version: 4, owner: { userId: 'user-demo' },
+      roleKey: 'connector', positioning: '已有定位', targetSummary: '已有目标', roleFields: { circles: '圈层', resources: '资源', target: '目标' },
+      abilityScores: { business_development: 0, resource_integration: 1, capital_operation: 2, strategy_planning: 3, visual_design: 4, delivery_management: 5 }, status: 'PUBLISHED' }
+    state.request.mockImplementation(async (action: string) => action === 'mip.admin.userContent.get' ? item : { items: [{ id: 'user-demo', nickname: '验收发布人' }] })
+    mount()
+    await waitFor(() => expect(screen.getByLabelText('合作定位')).toHaveValue('已有定位'))
+    expect(screen.getByLabelText('归属用户')).toBeDisabled()
+    expect(screen.getByLabelText('内容类型')).toBeDisabled()
+    expect(screen.queryByLabelText('版本')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('用户内容')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('商务拓展')).toHaveValue('0')
+    fill('合作定位', '更新定位')
+    fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
+    await waitFor(() => expect(state.request).toHaveBeenCalledWith('mip.admin.userContent.save', expect.objectContaining({
+      contentId: 'card-existing', expectedVersion: 4, ownerUserId: 'user-demo', draft: expect.objectContaining({ positioning: '更新定位', abilityScores: item.abilityScores }),
+    })))
+  })
+
   it('creates a case after switching content type with empty optional media and tags', async () => {
     mount()
-    fill('归属用户', 'user-demo')
+    await select('归属用户', '验收发布人')
     fill('合作定位', '不应提交的合作卡字段')
     await select('内容类型', '超级案例')
     await waitFor(() => expect(screen.queryByLabelText('合作定位')).not.toBeInTheDocument())
@@ -78,7 +99,7 @@ describe('independent user content editor', () => {
     fill('案例说明', '虚构案例，仅供验收')
     await select('内容状态', '已发布')
     fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
-    await waitFor(() => expect(state.request).toHaveBeenCalledOnce())
+    await waitFor(() => expect(state.request.mock.calls.filter(([action]) => action === 'mip.admin.userContent.save')).toHaveLength(1))
     expect(state.request).toHaveBeenCalledWith('mip.admin.userContent.save', {
       kind: 'SUPER_CASE', ownerUserId: 'user-demo', idempotencyKey: expect.any(String),
       draft: {

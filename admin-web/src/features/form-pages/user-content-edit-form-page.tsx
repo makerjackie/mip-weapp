@@ -4,7 +4,7 @@ import { useAdminSession } from '../../app/session-provider'
 import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
 import { getContentMutationForm, validateContentMutation } from '../../modules/content-mutation-forms'
 import { contentFormValues } from '../../modules/content-form-values'
-import { record } from '../../modules/admin-read-formatters'
+import { userContentEditorFields, userContentEditorValues } from '../../modules/user-content-editor'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 import { defaultContentFormValues } from './content-form-helpers'
 
@@ -21,7 +21,7 @@ export function UserContentEditFormPage() {
   )
 
   const formDef = getContentMutationForm('mip.admin.userContent.save')
-  const fields = formDef.fields as readonly OperationField[]
+  const fields = useMemo(() => userContentEditorFields(formDef.fields as readonly OperationField[], !isNew), [formDef.fields, isNew])
   const baseValues = useMemo(() => defaultContentFormValues(fields), [fields])
   const values = useMemo(() => ({ ...baseValues, kind: initialKind }), [baseValues, initialKind])
 
@@ -46,43 +46,9 @@ export function UserContentEditFormPage() {
     const separator = rawContentId.indexOf(':')
     const kind = separator > 0 ? rawContentId.slice(0, separator) : ''
     const contentId = separator > 0 ? rawContentId.slice(separator + 1) : rawContentId
-    if (!['COOPERATION_CARD', 'SUPER_CASE'].includes(kind) || !contentId) return null
+    if (!['COOPERATION_CARD', 'SUPER_CASE'].includes(kind) || !contentId) throw new Error('用户内容地址无效，请从列表重新打开。')
     const data = await request<unknown>('mip.admin.userContent.get', { kind, contentId })
-    const item = record(data)
-    const owner = record(item.owner)
-    const itemKind = String(item.kind || kind)
-    const draft = itemKind === 'COOPERATION_CARD'
-      ? {
-          kind: itemKind,
-          roleKey: item.roleKey,
-          positioning: item.positioning,
-          targetSummary: item.targetSummary,
-          roleFields: item.roleFields,
-          abilityScores: item.abilityScores,
-          status: item.status,
-        }
-      : {
-          kind: itemKind,
-          projectName: item.projectName,
-          summary: item.summary,
-          startedOn: item.startedOn,
-          endedOn: item.endedOn,
-          responsibility: item.responsibility,
-          cityTagId: item.cityTagId,
-          industryTagId: item.industryTagId,
-          caseType: item.caseType,
-          description: item.description,
-          coverAssetId: item.coverAssetId,
-          mediaAssetIds: item.mediaAssetIds,
-          status: item.status,
-        }
-    return {
-      kind: itemKind,
-      contentId: String(item.id || contentId),
-      ownerUserId: String(owner.userId || ''),
-      expectedVersion: item.version,
-      draft,
-    } as OperationValues
+    return userContentEditorValues(data)
   }, [isNew, rawContentId, request])
 
   return <IndependentFormPage config={formConfig} loadDetail={isNew ? undefined : loadDetail} />

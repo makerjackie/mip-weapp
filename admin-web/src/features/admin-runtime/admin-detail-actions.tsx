@@ -243,7 +243,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     const values = expectedVersion && contentId && ['COOPERATION_CARD', 'SUPER_CASE'].includes(kind)
       ? { kind, contentId, expectedVersion }
       : null
-    actions.push(formPageButton('编辑内容', '/userContent/$contentId/edit', `${kind}:${contentId}`, 'userContent.moderate'))
+    if (values && status !== 'ARCHIVED') actions.push(formPageButton('编辑内容', '/userContent/$contentId/edit', `${kind}:${contentId}`, 'userContent.moderate'))
     if (values && status === 'PUBLISHED') actions.push(button(
       'mip.admin.userContent.unpublish', '下架内容', contentId, 'userContent.moderate', { values },
     ))
