@@ -65,8 +65,10 @@ const jpegSofMarkers = new Set([
 
 export async function readAdminMediaUploadRequest(request: Request): Promise<InspectedAdminMediaUpload> {
   const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
-  if (contentType !== 'application/json') {
-    throw new AdminMediaUploadRequestError('VALIDATION_FAILED', '请求内容类型必须为 JSON')
+  // CloudBase limits text requests to 100 KB; the dedicated image route also
+  // accepts its bounded UTF-8 JSON envelope as binary transport (6 MB gateway limit).
+  if (contentType !== 'application/json' && contentType !== 'application/octet-stream') {
+    throw new AdminMediaUploadRequestError('VALIDATION_FAILED', '图片请求内容类型无效')
   }
   assertDeclaredBodySize(request.headers.get('content-length'))
   const body = await readBoundedBody(request, ADMIN_MEDIA_MAX_REQUEST_BYTES)
@@ -113,7 +115,9 @@ export function createAdminMediaUpstreamRequestInit(
   if (init.signal) {
     throw new AdminMediaUploadRequestError('VALIDATION_FAILED', '媒体上传上游请求不能覆盖超时信号')
   }
-  return { ...init, signal: timeoutFactory(ADMIN_MEDIA_UPSTREAM_TIMEOUT_MS) }
+  const headers = new Headers(init.headers)
+  headers.set('content-type', 'application/octet-stream')
+  return { ...init, headers, signal: timeoutFactory(ADMIN_MEDIA_UPSTREAM_TIMEOUT_MS) }
 }
 
 function assertDeclaredBodySize(header: string | null) {

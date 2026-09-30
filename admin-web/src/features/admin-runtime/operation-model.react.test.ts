@@ -21,6 +21,13 @@ const scores = {
 }
 
 describe('admin operation model', () => {
+  it('keeps row-bound event identifiers and versions hidden while submitting the original context', async () => {
+    const values = { eventId: 'event-1', registrationId: 'registration-1', expectedVersion: 3 }
+    const result = await createOperationModel('mip.admin.events.undoCheckIn', 'event-1', null, { values }, async <T>() => null as T)
+    expect(result.fields.filter(field => field.hidden).map(field => field.key)).toEqual(['eventId', 'registrationId', 'expectedVersion'])
+    expect(result.buildInput({ ...result.values, reason: '撤销测试签到' })).toMatchObject({ ...values, reason: '撤销测试签到' })
+  })
+
   const basicDetail: AdminDetailView = {
     route: 'events',
     title: '详情',

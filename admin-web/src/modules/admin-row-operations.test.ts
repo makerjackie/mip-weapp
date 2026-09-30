@@ -52,6 +52,14 @@ describe('admin row operations', () => {
     }), [])
   })
 
+  it('retains legal actions after an abnormal annotation and respects the underlying terminal state', () => {
+    for (const registrationStatus of ['REGISTERED', 'ATTENDED', 'PENDING_REVIEW', 'CANCELLED']) {
+      const base = { id: 'registration-1', version: 4, status: registrationStatus }
+      assert.deepEqual(eventRegistrationRowActions('event-1', { ...base, status: 'ABNORMAL', registrationStatus, abnormalReason: '需核对' }), eventRegistrationRowActions('event-1', base))
+    }
+    assert.deepEqual(eventRegistrationRowActions('event-1', { id: 'registration-1', version: 4, status: 'ABNORMAL' }), [])
+  })
+
   it('carries policy and branch list facts into their reviewed mutation forms', () => {
     assert.deepEqual(rolePolicyRowActions({
       roleKey: 'BRANCH_ADMIN', version: 0,

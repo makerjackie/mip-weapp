@@ -152,7 +152,10 @@ export async function createOperationModel(
       ? baseDefinition
       : { ...baseDefinition, expectedVersion: launchVersion }
     const values = { ...prefillEventValues(typedAction, definition.values, detail), ...launch.values }
-    return model(definition, definition.fields as readonly OperationField[], values, idempotencyKey, next => buildAdminEventMutationInput(definition, next))
+    const fields = definition.fields.map(field => launch.values
+      && ['eventId', 'registrationId', 'photoId', 'expectedVersion'].includes(String(field.key))
+      && Object.hasOwn(launch.values, String(field.key)) ? { ...field, hidden: true } : field)
+    return model(definition, fields as readonly OperationField[], values, idempotencyKey, next => buildAdminEventMutationInput(definition, next))
   }
   if (taskActions.has(action)) {
     const typedAction = action as AdminTaskMutationAction

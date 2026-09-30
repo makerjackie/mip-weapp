@@ -1,8 +1,7 @@
-import { App, Button, Space } from 'antd'
+import { Button, Space } from 'antd'
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
-import type { AdminOperationAction, AdminRequestInput } from '../../domain/contracts'
 import type { AdminDetailRoute, AdminDetailView } from '../../modules/admin-details'
 import type { AdminOperationLaunchContext, AdminRowOperation } from '../../modules/admin-row-operations'
 import { messageScheduleCancelAction } from '../../modules/admin-row-operations'
@@ -10,6 +9,7 @@ import { positiveVersion } from '../../modules/admin-coercions'
 import { record } from '../../modules/admin-read-formatters'
 import { useAdminOperations } from './admin-operation-provider'
 import { SensitiveExportButton } from './sensitive-export-button'
+import { CheckinQrcodeButton } from './checkin-qrcode-button'
 
 export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUpload, onEditProfile, onEditBadges }: {
   route: AdminDetailRoute
@@ -271,36 +271,4 @@ function safeMediaUrl(value: unknown) {
     return url.protocol === 'https:' && !url.username && !url.password ? url.href : ''
   }
   catch { return '' }
-}
-
-interface CheckinQrcodeResult {
-  qrCodeUrl?: string
-  qrCodeDataUrl?: string
-  url?: string
-}
-
-function CheckinQrcodeButton({ eventId, request, hasCapability }: {
-  eventId: string
-  request: <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
-  hasCapability: (capability: string) => boolean
-}) {
-  const { message } = App.useApp()
-  const [loading, setLoading] = useState(false)
-  if (!hasCapability('events.write')) return null
-  const onClick = async () => {
-    setLoading(true)
-    try {
-      const result = await request<CheckinQrcodeResult>('mip.admin.events.checkinQrcode.get', { eventId })
-      const url = result?.qrCodeUrl || result?.qrCodeDataUrl || result?.url || ''
-      if (url) window.open(url, '_blank', 'noopener')
-      else void message.info('签到二维码暂不可用')
-    }
-    catch (reason) {
-      void message.error(reason instanceof Error ? reason.message : '签到二维码获取失败')
-    }
-    finally {
-      setLoading(false)
-    }
-  }
-  return <Button key="checkin-qrcode" loading={loading} onClick={() => void onClick()}>签到二维码</Button>
 }

@@ -151,7 +151,8 @@ function createEventInsightsRepository(database) {
              ON f.app_id = c.app_id
              AND f.event_id = c.event_id
              AND f.user_id = c.user_id
-           WHERE c.app_id = ? AND c.event_id = ?`,
+           WHERE c.app_id = ? AND c.event_id = ? AND c.status = 'ACTIVE'
+             AND r.status IN (${EFFECTIVE_REGISTRATION_SQL})`,
           [input.appId, input.eventId],
         )
         feedback = grantedFeedback(feedbackRow)

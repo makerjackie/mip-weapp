@@ -186,3 +186,21 @@ describe('password login service startup', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('image gateway transport', () => {
+  it('uploads an image above the text gateway limit with the binary content type', async () => {
+    const bytes = new Uint8Array(120 * 1024)
+    bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    bytes.set([0x49, 0x48, 0x44, 0x52], 12)
+    bytes[19] = 96
+    bytes[23] = 64
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true, data: { assetId: '58000000-0000-4000-8000-000000000011', imageUrl: 'https://example.test/image.png' } })))
+    vi.stubGlobal('fetch', fetchMock)
+    await new AdminApiClient().uploadImage({ name: 'cover.png', type: 'image/png', size: bytes.length, arrayBuffer: async () => bytes.buffer }, 'EVENT_COVER')
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('/api/media/image')
+    expect(new Headers(init.headers).get('content-type')).toBe('application/octet-stream')
+    expect(String(init.body).length).toBeGreaterThan(100 * 1024)
+    expect(JSON.parse(String(init.body))).toMatchObject({ action: 'mip.admin.media.uploadImage', input: { purpose: 'EVENT_COVER' } })
+  })
+})

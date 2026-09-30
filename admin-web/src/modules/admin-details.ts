@@ -354,14 +354,16 @@ async function loadEventDetail(
         paymentStatus: item.paymentStatus === 'NOT_REQUIRED' ? '无需支付' : item.paymentStatus === 'UNPAID' ? '待支付' : codeLabel(item.paymentStatus),
         paidAmount: item.paidAmountCents === undefined ? '—' : money(item.paidAmountCents, item.currency),
         refundedAmount: item.refundedAmountCents === undefined ? '—' : money(item.refundedAmountCents, item.currency),
-        state: codeLabel(item.status),
+        state: item.status === 'ABNORMAL' && item.registrationStatus
+          ? `异常（${codeLabel(item.registrationStatus)}）` : codeLabel(item.status),
+        abnormalReason: text(item.abnormalReason),
         detailLinks: [
           ...(typeof item.userDetailId === 'string' ? [{ route: 'users' as const, id: item.userDetailId, label: '用户档案' }] : []),
           ...(typeof item.orderDetailId === 'string' ? [{ route: 'orders' as const, id: item.orderDetailId, label: '支付订单' }] : []),
         ],
         rowActions: eventRegistrationRowActions(eventId, item),
       })),
-      columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['paymentStatus', '支付状态'], ['paidAmount', '实付金额'], ['refundedAmount', '已退款'], ['checkedInAt', '签到时间'], ['state', '报名状态']]),
+      columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['paymentStatus', '支付状态'], ['paidAmount', '实付金额'], ['refundedAmount', '已退款'], ['checkedInAt', '签到时间'], ['state', '报名状态'], ['abnormalReason', '异常原因']]),
       pager: {
         key: 'eventRoster',
         query: rosterFilters.query,
