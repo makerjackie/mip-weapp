@@ -26,6 +26,12 @@ export const CONTENT_MUTATION_ACTIONS = [
   'mip.admin.userContent.save',
   'mip.admin.userContent.unpublish',
   'mip.admin.userContent.archive',
+  'mip.admin.knowledge.sources.save',
+  'mip.admin.knowledge.categories.save',
+  'mip.admin.knowledge.products.save',
+  'mip.admin.knowledge.ingestion.run',
+  'mip.admin.knowledge.comments.moderate',
+  'mip.admin.knowledge.reports.close',
   'mip.admin.knowledge.contents.save',
   'mip.admin.knowledge.contents.review',
   'mip.admin.knowledge.schedules.save',
@@ -79,6 +85,8 @@ export interface ContentMutationField {
   }
   readonly assetPurpose?: string
   readonly remoteUserSearch?: boolean
+  readonly optionsKey?: string
+  readonly optionsInput?: AdminRequestInput
   readonly optionsAction?: string
 }
 
@@ -193,6 +201,7 @@ interface OpportunityInput {
     targetSummary?: string
     description?: string
     cityTagId?: string
+    coverAssetId?: string | null
     commercialTerms?: CommercialTerms | null
     roleKeys: OpportunityRole[]
     tagIds: string[]
@@ -301,6 +310,7 @@ export const USER_CONTENT_ROLE_FIELDS: Record<OpportunityRole, readonly string[]
 }
 const ABILITY_KEYS = ['business_development', 'resource_integration', 'capital_operation', 'strategy_planning', 'visual_design', 'delivery_management'] as const
 
+const integerField = (key: string, label: string, required: boolean): ContentMutationField => ({ key, label, kind: 'integer', required })
 const textField = (key: string, label: string, maxLength: number, required = true): ContentMutationField => ({ key, label, kind: 'text', maxLength, required })
 const areaField = (key: string, label: string, maxLength: number, required = true): ContentMutationField => ({ key, label, kind: 'textarea', maxLength, required })
 const selectField = (key: string, label: string, options: readonly string[], required = true): ContentMutationField => ({ key, label, kind: 'select', options, required })
@@ -393,7 +403,7 @@ const CONTENT_MUTATION_FORMS: readonly ContentMutationFormDefinition[] = [
   {
     action: 'mip.admin.opportunities.save', capability: 'opportunities.moderate', resource: '机会',
     inputKeys: ['opportunityId', 'expectedVersion', 'draft'], idempotencyRequired: false,
-    fields: [idField('opportunityId', '机会', false), { ...versionField(), required: false }, groupField('draft', '机会草稿', [idField('ownerUserId', '发布人'), ...scopeFields(), textField('title', '机会标题', 120), textField('valueSummary', '机会价值', 240), textField('targetSummary', '合作目标', 300, false), areaField('description', '机会说明', 5_000, false), idField('cityTagId', '城市标签', false), groupField('commercialTerms', '商业条件', [{ key: 'minAmountCents', label: '最低金额（分）', kind: 'integer', required: false }, { key: 'maxAmountCents', label: '最高金额（分）', kind: 'integer', required: false }, { key: 'locations', label: '合作地点', kind: 'group', required: true }]), { key: 'roleKeys', label: '合作角色', kind: 'select', options: OPPORTUNITY_ROLES }, { key: 'tagIds', label: '标签', kind: 'id-list', required: false }, { key: 'deadlineAt', label: '截止时间', kind: 'datetime', required: false }])],
+    fields: [idField('opportunityId', '机会', false), { ...versionField(), required: false }, groupField('draft', '机会草稿', [idField('ownerUserId', '发布人'), ...scopeFields(), textField('title', '机会标题', 120), { ...idField('coverAssetId', '机会封面', false), assetPurpose: 'OPPORTUNITY_COVER' }, textField('valueSummary', '机会价值', 240), textField('targetSummary', '合作目标', 300, false), areaField('description', '机会说明', 5_000, false), idField('cityTagId', '城市标签', false), groupField('commercialTerms', '商业条件', [{ key: 'minAmountCents', label: '最低金额（分）', kind: 'integer', required: false }, { key: 'maxAmountCents', label: '最高金额（分）', kind: 'integer', required: false }, { key: 'locations', label: '合作地点', kind: 'group', required: true }]), { key: 'roleKeys', label: '合作角色', kind: 'select', options: OPPORTUNITY_ROLES }, { key: 'tagIds', label: '标签', kind: 'id-list', required: false }, { key: 'deadlineAt', label: '截止时间', kind: 'datetime', required: false }])],
   },
   { action: 'mip.admin.opportunities.publish', capability: 'opportunities.moderate', resource: '机会', inputKeys: ['opportunityId', 'expectedVersion'], idempotencyRequired: false, fields: [idField('opportunityId', '机会'), versionField()] },
   { action: 'mip.admin.opportunities.end', capability: 'opportunities.moderate', resource: '机会', inputKeys: ['opportunityId', 'expectedVersion'], idempotencyRequired: false, fields: [idField('opportunityId', '机会'), versionField()] },
@@ -407,6 +417,12 @@ const CONTENT_MUTATION_FORMS: readonly ContentMutationFormDefinition[] = [
     action: 'mip.admin.knowledge.contents.save', capability: 'knowledge.manage', resource: '知识内容', inputKeys: ['contentId', 'expectedVersion', 'sourceId', 'categoryId', 'contentType', 'title', 'summary', 'bodyText', 'externalUrl', 'channelFinderUserName', 'channelFeedId', 'coverAssetId', 'authorName', 'accessType', 'commentsEnabled', 'moderationMode'], idempotencyRequired: false,
     fields: [idField('contentId', '知识内容', false), { ...versionField(), required: false }, idField('sourceId', '信息源', false), idField('categoryId', '分类'), selectField('contentType', '内容类型', ['HOT_NEWS', 'ARTICLE', 'WEB', 'VIDEO', 'PRIVATE_CHANNEL', 'EXPERT_SHARE']), textField('title', '标题', 160), areaField('summary', '摘要', 500), areaField('bodyText', '正文', 100_000, false), { key: 'externalUrl', label: '外部地址', kind: 'url', required: false }, textField('channelFinderUserName', '视频号用户名', 64, false), textField('channelFeedId', '视频号 Feed ID', 128, false), { ...idField('coverAssetId', '封面图片', false), assetPurpose: 'SUPER_CASE_COVER' } as ContentMutationField, textField('authorName', '作者', 100, false), selectField('accessType', '访问范围', ['FREE', 'MEMBER', 'MEMBER_OR_PAID']), { key: 'commentsEnabled', label: '允许评论', kind: 'checkbox', required: true }, selectField('moderationMode', '评论审核方式', ['AUTO', 'REVIEW'])],
   },
+  { action: 'mip.admin.knowledge.sources.save', capability: 'knowledge.manage', resource: '知识信息源', inputKeys: ['sourceId', 'expectedVersion', 'sourceKey', 'name', 'sourceType', 'endpointUrl', 'status', 'fetchConfig'], idempotencyRequired: false, fields: [idField('sourceId', '信息源', false), { ...versionField(), required: false }, textField('sourceKey', '唯一编码', 64, true), textField('name', '名称', 100, true), selectField('sourceType', '来源类型', ['MANUAL', 'JSON_FEED', 'RSS']), textField('endpointUrl', 'HTTPS 地址', 2000, false), selectField('status', '状态', ['ACTIVE', 'INACTIVE'])] },
+  { action: 'mip.admin.knowledge.categories.save', capability: 'knowledge.manage', resource: '知识分类', inputKeys: ['categoryId', 'expectedVersion', 'categoryKey', 'name', 'summary', 'sortOrder', 'status'], idempotencyRequired: false, fields: [idField('categoryId', '分类', false), { ...versionField(), required: false }, textField('categoryKey', '唯一编码', 64, true), textField('name', '名称', 80, true), areaField('summary', '说明', 300, false), integerField('sortOrder', '排序', true), selectField('status', '状态', ['ACTIVE', 'INACTIVE'])] },
+  { action: 'mip.admin.knowledge.products.save', capability: 'knowledge.manage', resource: '知识解锁商品', inputKeys: ['productId', 'expectedVersion', 'contentId', 'name', 'priceCents', 'unlockDays', 'refundPolicy', 'refundWindowHours', 'status'], idempotencyRequired: false, fields: [idField('productId', '商品', false), { ...versionField(), required: false }, idField('contentId', '内容'), textField('name', '商品名称', 100, true), integerField('priceCents', '价格（分）', true), integerField('unlockDays', '解锁天数', false), selectField('refundPolicy', '退款规则', ['BEFORE_ACCESS', 'NON_REFUNDABLE']), integerField('refundWindowHours', '退款窗口（小时）', true), selectField('status', '状态', ['DRAFT', 'ACTIVE', 'INACTIVE'])] },
+  { action: 'mip.admin.knowledge.ingestion.run', capability: 'knowledge.manage', resource: '人工采集', inputKeys: ['sourceId', 'categoryId', 'idempotencyKey'], idempotencyRequired: true, fields: [idField('sourceId', '信息源'), idField('categoryId', '分类')] },
+  { action: 'mip.admin.knowledge.comments.moderate', capability: 'knowledge.manage', resource: '知识评论', inputKeys: ['commentId', 'expectedVersion', 'decision', 'reason'], idempotencyRequired: false, fields: [idField('commentId', '评论'), versionField(), selectField('decision', '处置', ['PUBLISH', 'HIDE']), reasonField()] },
+  { action: 'mip.admin.knowledge.reports.close', capability: 'knowledge.manage', resource: '知识举报', inputKeys: ['reportId', 'expectedVersion', 'status', 'reason'], idempotencyRequired: false, fields: [idField('reportId', '举报'), versionField(), selectField('status', '处置', ['RESOLVED', 'DISMISSED']), reasonField()] },
   { action: 'mip.admin.knowledge.contents.review', capability: 'knowledge.manage', resource: '知识内容', inputKeys: ['contentId', 'expectedVersion', 'decision', 'reason'], idempotencyRequired: false, fields: [idField('contentId', '知识内容'), versionField(), selectField('decision', '审核操作', ['SUBMIT', 'APPROVE', 'REJECT', 'PUBLISH', 'WITHDRAW']), reasonField('审核原因')] },
   { action: 'mip.admin.knowledge.schedules.save', capability: 'knowledge.manage', resource: '知识采集计划', inputKeys: ['scheduleId', 'expectedVersion', 'sourceId', 'categoryId', 'dailyTime', 'timeZone', 'status', 'idempotencyKey'], idempotencyRequired: true, fields: [idField('scheduleId', '采集计划', false), { ...versionField(), required: false }, idField('sourceId', '信息源'), idField('categoryId', '分类'), { key: 'dailyTime', label: '每日时间', kind: 'time', required: true }, textField('timeZone', '时区', 64), selectField('status', '计划状态', ['ACTIVE', 'PAUSED'], false)] },
   { action: 'mip.admin.badges.grant', capability: 'badges.manage', resource: '用户勋章', inputKeys: ['userId', 'badgeId', 'reason'], idempotencyRequired: false, fields: [userPickerField('userId', '用户'), catalogPickerField('badgeId', '勋章', 'mip.admin.badges.list'), reasonField('授予原因')] },
@@ -419,6 +435,13 @@ const FORM_BY_ACTION = new Map(CONTENT_MUTATION_FORMS.map(form => [form.action, 
 export function getContentMutationForm(action: ContentMutationAction): ContentMutationFormDefinition {
   const form = FORM_BY_ACTION.get(action)
   if (!form) throw new Error(`Unknown content mutation action: ${action}`)
+  if (action.startsWith('mip.admin.knowledge.')) {
+    return { ...form, fields: form.fields.map(field => {
+      if (field.key === 'sourceId' && action !== 'mip.admin.knowledge.sources.save') return { ...field, optionsAction: 'mip.admin.knowledge.list', optionsInput: { section: 'SOURCES', limit: 100 } }
+      if (field.key === 'categoryId' && action !== 'mip.admin.knowledge.categories.save') return { ...field, optionsAction: 'mip.admin.knowledge.list', optionsInput: { section: 'CATEGORIES', limit: 100 } }
+      return field
+    }) }
+  }
   return form
 }
 
@@ -469,6 +492,12 @@ function validateInput(action: ContentMutationAction, value: unknown): unknown {
     case 'mip.admin.userContent.save': return validateUserContent(input)
     case 'mip.admin.userContent.unpublish': return validateContentReason(input, '下架原因')
     case 'mip.admin.userContent.archive': return validateContentReason(input, '归档原因')
+    case 'mip.admin.knowledge.sources.save': return { ...optionalIdVersion(input, 'sourceId'), sourceKey: requiredText(input.sourceKey, 64, '唯一编码'), name: requiredText(input.name, 100, '名称'), sourceType: enumValue(input.sourceType, ['MANUAL', 'JSON_FEED', 'RSS'], '来源类型'), endpointUrl: optionalText(input.endpointUrl, 2000), status: enumValue(input.status, ['ACTIVE', 'INACTIVE'], '状态'), ...(input.fetchConfig ? { fetchConfig: record(input.fetchConfig) } : {}) }
+    case 'mip.admin.knowledge.categories.save': return { ...optionalIdVersion(input, 'categoryId'), categoryKey: requiredText(input.categoryKey, 64, '唯一编码'), name: requiredText(input.name, 80, '名称'), summary: optionalText(input.summary, 300), sortOrder: integer(input.sortOrder, '排序'), status: enumValue(input.status, ['ACTIVE', 'INACTIVE'], '状态') }
+    case 'mip.admin.knowledge.products.save': return { ...optionalIdVersion(input, 'productId'), contentId: requiredId(input.contentId, '内容'), name: requiredText(input.name, 100, '商品名称'), priceCents: integer(input.priceCents, '价格'), unlockDays: optionalInteger(input.unlockDays, '解锁天数'), refundPolicy: enumValue(input.refundPolicy, ['BEFORE_ACCESS', 'NON_REFUNDABLE'], '退款规则'), refundWindowHours: integer(input.refundWindowHours, '退款窗口'), status: enumValue(input.status, ['DRAFT', 'ACTIVE', 'INACTIVE'], '状态') }
+    case 'mip.admin.knowledge.ingestion.run': return { sourceId: requiredId(input.sourceId, '信息源'), categoryId: requiredId(input.categoryId, '分类'), ...optionalIdempotency(input.idempotencyKey) }
+    case 'mip.admin.knowledge.comments.moderate': return { ...validateVersionAction(input, 'commentId', '评论'), decision: enumValue(input.decision, ['PUBLISH', 'HIDE'], '处置'), reason: requiredText(input.reason, 300, '原因') }
+    case 'mip.admin.knowledge.reports.close': return { ...validateVersionAction(input, 'reportId', '举报'), status: enumValue(input.status, ['RESOLVED', 'DISMISSED'], '处置'), reason: requiredText(input.reason, 300, '原因') }
     case 'mip.admin.knowledge.contents.save': return validateKnowledgeContent(input)
     case 'mip.admin.knowledge.contents.review': return validateKnowledgeReview(input)
     case 'mip.admin.knowledge.schedules.save': return validateKnowledgeSchedule(input)
@@ -512,12 +541,12 @@ function validateTemplate(input: Record<string, unknown>): MessageTemplateInput 
 
 function validateOpportunity(input: Record<string, unknown>): OpportunityInput {
   const draft = record(input.draft)
-  assertKeys(draft, ['ownerUserId', 'scopeType', 'branchId', 'title', 'valueSummary', 'targetSummary', 'description', 'cityTagId', 'commercialTerms', 'roleKeys', 'tagIds', 'deadlineAt'])
+  assertKeys(draft, ['ownerUserId', 'scopeType', 'branchId', 'title', 'valueSummary', 'targetSummary', 'description', 'cityTagId', 'coverAssetId', 'commercialTerms', 'roleKeys', 'tagIds', 'deadlineAt'])
   const roles = stringList(draft.roleKeys, 6, '合作角色')
   if (roles.some(item => !(OPPORTUNITY_ROLES as readonly string[]).includes(item))) throw invalid('合作角色无效')
   const tagIds = idList(draft.tagIds, 20, '标签')
   const commercialTerms = validateCommercialTerms(draft.commercialTerms)
-  return { ...optionalIdVersion(input, 'opportunityId'), draft: { ownerUserId: requiredId(draft.ownerUserId, '发布人'), ...scope(draft), title: requiredText(draft.title, 120, '机会标题'), valueSummary: requiredText(draft.valueSummary, 240, '机会价值'), targetSummary: optionalText(draft.targetSummary, 300), description: optionalText(draft.description, 5_000), cityTagId: optionalId(draft.cityTagId), commercialTerms, roleKeys: roles as OpportunityRole[], tagIds, deadlineAt: optionalDateTime(draft.deadlineAt, '截止时间') } }
+  return { ...optionalIdVersion(input, 'opportunityId'), draft: { ownerUserId: requiredId(draft.ownerUserId, '发布人'), ...scope(draft), title: requiredText(draft.title, 120, '机会标题'), valueSummary: requiredText(draft.valueSummary, 240, '机会价值'), targetSummary: optionalText(draft.targetSummary, 300), description: optionalText(draft.description, 5_000), cityTagId: optionalId(draft.cityTagId), ...(Object.hasOwn(draft, 'coverAssetId') ? { coverAssetId: optionalId(draft.coverAssetId) || null } : {}), commercialTerms, roleKeys: roles as OpportunityRole[], tagIds, deadlineAt: optionalDateTime(draft.deadlineAt, '截止时间') } }
 }
 
 function validateCommercialTerms(value: unknown): CommercialTerms | null | undefined {
@@ -695,7 +724,7 @@ function requiredText(value: unknown, maximum: number, label: string): string {
 
 function optionalText(value: unknown, maximum: number): string | undefined {
   if (value === undefined || value === null || value === '') return undefined
-  const text = typeof value === 'string' ? value.normalize('NFKC').trim().replace(/\s+/g, ' ') : ''
+  const text = typeof value === 'string' ? value.normalize('NFKC').replace(/\r\n?/g, '\n').trim().replace(/[^\S\n]+/g, ' ') : ''
   if (!text || text.length > maximum) throw invalid('文本格式无效')
   return text
 }

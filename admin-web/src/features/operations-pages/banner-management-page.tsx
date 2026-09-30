@@ -20,7 +20,7 @@ export function BannerManagementPage(props: OperationsPageState & {
       actions={(
         <Space wrap>
           {props.onOpenMedia ? <Button icon={<UploadOutlined />} onClick={() => props.onOpenMedia?.('BANNER')}>上传图片</Button> : null}
-          {props.onWrite ? <Button type="primary" icon={<PlusOutlined />} onClick={() => props.onWrite?.({ action: 'mip.admin.banners.save' })}>新增 Banner</Button> : null}
+          {props.onWrite ? <Button type="primary" disabled={props.page?.creationAllowed === false} title={props.page?.creationAllowed === false ? '最多配置五个 Banner，请先删除不再使用的配置' : undefined} icon={<PlusOutlined />} onClick={() => props.onWrite?.({ action: 'mip.admin.banners.save' })}>新增 Banner</Button> : null}
         </Space>
       )}
     />

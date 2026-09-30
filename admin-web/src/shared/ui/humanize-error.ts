@@ -13,6 +13,8 @@ const ERROR_CODE_MAP: Record<string, string> = {
   RATE_LIMITED: '操作过于频繁，请稍后再试',
   INTERNAL_ERROR: '服务暂时不可用，请稍后重试',
   NETWORK_ERROR: '网络连接失败，请检查网络后重试',
+  BANNER_LIMIT_REACHED: 'Banner 最多五个，请先删除多余 Banner 后再新增或启用。',
+  CAPTAIN_REMOVAL_REQUIRES_REASSIGNMENT: '请先保留原负责人并指定新负责人，保存后再移除或转移原负责人。',
 }
 
 const ERROR_PATTERN_MAP: Array<{ pattern: RegExp; message: string }> = [

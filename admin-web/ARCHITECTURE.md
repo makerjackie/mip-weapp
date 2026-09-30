@@ -2,13 +2,13 @@
 
 ## 定位
 
-`admin-web/` 是纯客户端 React 管理界面和同源 Cloudflare Pages/Worker BFF。它不重写 MIP 领域模型，也不让浏览器计算会员、活动资格、订单、支付、权限或审计事实。
+`admin-web/` 是纯客户端 React 管理界面和同源 BFF，当前有 CloudBase 云函数/认证 MySQL adapter，迁移期保留 Cloudflare Pages/Worker/D1 adapter。它不重写 MIP 领域模型，也不让浏览器计算会员、活动资格、订单、支付、权限或审计事实。平台状态见项目状态，后续局部重构按 [EXECUTION_PLAN.md](EXECUTION_PLAN.md) 推进，不将计划中的接口当作已实现。
 
 ```text
 pages
   → React adapters / features
     → modules + services
-      → same-origin Cloudflare BFF
+      → same-origin BFF (CloudBase / retained Cloudflare adapter)
         → signed AdminRequest v1
           → mip-admin-api AdminApplication.execute
             → domain modules / mip_* MySQL / outbox / media / export
@@ -44,7 +44,7 @@ TanStack Router 使用 hash history，保持 Cloudflare Pages 静态回退简单
 
 其中 `/game`、`/knowledge` 已从导航隐藏；`/game` 未注册路由，`/knowledge` 保留列表和编辑路由以支持编辑页返回。其余 15 条为当前可见一级页面。
 
-列表 search 包含 `q`、`status`、`cursor`、`page`、`limit`、`tab`。页面不能另存一份可分享筛选状态；打开或关闭详情使用 React 局部状态，因为详情不是独立可分享业务入口。
+列表 search 包含 `q`、`status`、`cursor`、`page`、`limit`、`tab`。页面不能另存一份可分享筛选状态。当前多数详情使用 React 局部状态/抽屉，这是实现现状，不是全部详情的产品约束；用户档案尚未满足 [ACCEPTANCE.md](ACCEPTANCE.md) U02 的独立 URL、浏览器 Tab 与多开要求，需用 Router 承载对象身份。
 
 ## Query 与 mutation
 
@@ -101,9 +101,9 @@ Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的
 - `CONFLICT`：刷新当前资源并要求重新确认。
 - 5xx/网络：保留页面上下文，允许手动重试。
 
-小程序确认登录使用 5 分钟有效的单次 challenge、浏览器 verifier 和 D1 原子确认。数字码为该方式的默认入口，可选动态小程序码图片不持久化，React 不持久化或接收原始 scene。每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，同一客户端 IP 在 10 分钟内最多创建 30 个 challenge，D1 只保存 HMAC 限流键。challenge IP 计数表不可用时该限流自动旁路，不阻断小程序确认流程。
+小程序确认登录使用 5 分钟有效的单次 challenge、浏览器 verifier 和认证存储原子确认；CloudBase 使用认证 MySQL adapter，保留的 Cloudflare 使用 D1 adapter。数字码为该方式的默认入口，可选动态小程序码图片不持久化，React 不持久化或接收原始 scene。每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，同一客户端 IP 在 10 分钟内最多创建 30 个 challenge，认证存储只保存 HMAC 限流键。challenge IP 计数表不可用时该限流自动旁路，不阻断小程序确认流程。
 
-可选密码登录沿用相同可信身份，使用独立的账号与来源计数，计数不可用时失败关闭。BFF 私有身份查询不在浏览器 action allowlist 内，只能经签名与防重放校验后向云端读取当前账号的验证手机号；浏览器仅得到掩码。两种方式都签发 AES-GCM `HttpOnly` 8 小时会话并逐请求验证 D1 session ID；密码版本改变使旧密码会话失效。参见 [ADR 0007](../docs/adr/0007-optional-admin-password-login.md)。
+可选密码登录沿用相同可信身份，使用独立的账号与来源计数，计数不可用时失败关闭。BFF 私有身份查询不在浏览器 action allowlist 内，只能经签名与防重放校验后向云端读取当前账号的验证手机号；浏览器仅得到掩码。两种方式都签发 AES-GCM `HttpOnly` 8 小时会话并逐请求验证对应认证存储的 session ID；密码版本改变使旧密码会话失效。参见 [ADR 0007](../docs/adr/0007-optional-admin-password-login.md)。
 
 ## 测试策略
 

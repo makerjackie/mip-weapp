@@ -6,7 +6,7 @@ const {
 } = require('./operation-registry')
 const { AdminError } = require('./validation')
 
-function createAdminApplication({ service, assertPrincipal } = {}) {
+function createAdminApplication({ service, assertPrincipal, projectMedia = async value => value } = {}) {
   if (!service
     || typeof service.health !== 'function'
     || typeof assertPrincipal !== 'function') {
@@ -21,7 +21,7 @@ function createAdminApplication({ service, assertPrincipal } = {}) {
     }
     const caller = assertPrincipal(principal)
     const result = await dispatcher.execute(caller, action, input)
-    return result.data
+    return projectMedia(result.data)
   }
 
   async function probe() {

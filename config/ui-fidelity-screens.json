@@ -3280,93 +3280,81 @@
       },
       "fixture": {
         "state": "ready",
-        "figmaLayout": true,
-        "figma": {
-          "traits": [
-            {
-              "label": "开拓人脉",
-              "leftRpx": 24,
-              "topRpx": 380
-            },
-            {
-              "label": "引荐人脉",
-              "leftRpx": 362,
-              "topRpx": 380
-            },
-            {
-              "label": "长期维护",
-              "leftRpx": 24,
-              "topRpx": 540
-            },
-            {
-              "label": "引荐商机",
-              "leftRpx": 362,
-              "topRpx": 540
-            },
-            {
-              "label": "卖点提炼",
-              "leftRpx": 24,
-              "topRpx": 700
-            },
-            {
-              "label": "跨圈交际",
-              "leftRpx": 362,
-              "topRpx": 700
-            }
-          ],
-          "goals": [
-            {
-              "icon": "target",
-              "label": "目标",
-              "placeholder": "示例： 2026 年商务引荐赚100 万",
-              "topRpx": 860
-            },
-            {
-              "icon": "cup",
-              "label": "需要支持或引荐的是",
-              "placeholder": "示例： 需要能带队打仗的操盘手",
-              "topRpx": 1044
-            },
-            {
-              "icon": "diamond",
-              "label": "和我合作的最大价值是",
-              "placeholder": "示例： 躺着赚钱",
-              "topRpx": 1228
-            }
-          ],
-          "circles": [
-            {
-              "label": "圈子名称",
-              "value": "示例：MIP全球创意人平台"
-            },
-            {
-              "label": "圈内身份",
-              "value": "示例：资深玩家"
-            },
-            {
-              "label": "圈内年限",
-              "value": "示例：2年"
-            },
-            {
-              "label": "圈子特点",
-              "value": "聚集一群有创意，协同作战的超级个体"
-            }
-          ],
-          "quirks": [
-            {
-              "label": "“臭毛病”（外显）",
-              "value": "示例：拖延症晚期"
-            },
-            {
-              "label": "病因（内在）",
-              "value": "示例：存在侥幸心里"
-            },
-            {
-              "label": "预防发作建议（行为）",
-              "value": "示例：请跟我强调事情的紧迫性"
-            }
-          ]
-        }
+        "saving": false,
+        "message": "",
+        "bannerText": "合作卡可以帮助您更好的发现商机",
+        "roleLocked": true,
+        "roleKey": "connector",
+        "abilities": [
+          {
+            "key": "business_development",
+            "label": "开拓人脉",
+            "score": 4
+          },
+          {
+            "key": "resource_integration",
+            "label": "引荐人脉",
+            "score": 4
+          },
+          {
+            "key": "capital_operation",
+            "label": "长期维护",
+            "score": 4
+          },
+          {
+            "key": "strategy_planning",
+            "label": "引荐商机",
+            "score": 4
+          },
+          {
+            "key": "visual_design",
+            "label": "卖点提炼",
+            "score": 4
+          },
+          {
+            "key": "delivery_management",
+            "label": "跨圈交际",
+            "score": 4
+          }
+        ],
+        "goals": [
+          {
+            "key": "targetSummary",
+            "label": "目标",
+            "placeholder": "示例：2026 年商务引荐赚100 万",
+            "value": ""
+          },
+          {
+            "key": "support",
+            "label": "需要支持或引荐的是",
+            "placeholder": "示例：需要能带队打仗的操盘手",
+            "value": ""
+          },
+          {
+            "key": "value",
+            "label": "和我合作的最大价值是",
+            "placeholder": "示例：躺着赚钱",
+            "value": ""
+          }
+        ],
+        "menuTitle": "长混迹的圈子",
+        "menuStructured": "circles",
+        "menuFields": [],
+        "circles": [
+          {
+            "name": "",
+            "identity": "",
+            "years": "",
+            "trait": ""
+          }
+        ],
+        "quirks": [
+          {
+            "external": "",
+            "internal": "",
+            "advice": ""
+          }
+        ]
       }
     },
     {

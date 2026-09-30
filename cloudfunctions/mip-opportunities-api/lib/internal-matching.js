@@ -1,5 +1,7 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('./role-template-policy')
+
 const { createHash, createHmac, timingSafeEqual } = require('node:crypto')
 
 const transportMetadataKeys = new Set(['frameworkContext', 'tcbContext', 'userInfo'])
@@ -87,11 +89,14 @@ async function authorizeInternalMatching(database, request, source, options = {}
   if (!actor || actor.status !== 'ACTIVE') { throw new Error('AUTH_REQUIRED') }
   const bindings = await database.query(
     `SELECT binding.role_key, binding.scope_type, binding.scope_id,
-            policy.policy_mode, policy.capabilities_json
+            policy.policy_mode, policy.capabilities_json, binding.role_template_id,
+            role_template.base_role_key AS template_base_role_key, role_template.status AS template_status,
+            role_template.capabilities AS template_capabilities_json
      FROM mip_admin_role_bindings binding
+     LEFT JOIN mip_admin_roles role_template ON role_template.app_id = binding.app_id AND role_template.role_id = binding.role_template_id
      LEFT JOIN mip_role_capability_policies policy
        ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
-     WHERE binding.app_id = ? AND binding.user_id = ? AND binding.status = 'ACTIVE'
+     WHERE NOT EXISTS (SELECT 1 FROM mip_admin_accounts account WHERE account.app_id = binding.app_id AND account.linked_user_id = binding.user_id AND account.status <> 'ACTIVE') AND binding.app_id = ? AND binding.user_id = ? AND binding.status = 'ACTIVE'
      ORDER BY binding.scope_type, binding.scope_id, binding.role_key${options.lock ? ' FOR UPDATE' : ''}`,
     [request.appId, request.actorUserId],
   )
@@ -102,6 +107,7 @@ async function authorizeInternalMatching(database, request, source, options = {}
 }
 
 function bindingAllowsMatching(binding, branchId) {
+  if (!templateAllowsBinding(binding)) return false
   if (binding.role_key === 'PLATFORM_OWNER' && binding.scope_type === 'PLATFORM') { return true }
   const validDefault = (
     binding.role_key === 'PLATFORM_OPERATIONS' && binding.scope_type === 'PLATFORM'
@@ -110,8 +116,9 @@ function bindingAllowsMatching(binding, branchId) {
     && branchId && binding.scope_id === branchId
   )
   if (!validDefault) { return false }
-  if (binding.policy_mode !== 'CUSTOM') { return true }
-  const capabilities = jsonArray(binding.capabilities_json)
+  const effective = effectivePolicyCapabilities(binding)
+  if (effective === null || effective === undefined) return true
+  const capabilities = jsonArray(effective)
   return capabilities.includes('opportunities.moderate')
 }
 

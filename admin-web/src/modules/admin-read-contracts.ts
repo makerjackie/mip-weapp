@@ -11,6 +11,7 @@ export interface AdminTableColumn {
 }
 
 export interface AdminTableSection {
+  error?: string
   key?: string
   title?: string
   rows: AdminTableRow[]
@@ -19,6 +20,7 @@ export interface AdminTableSection {
 }
 
 export interface AdminReadPage {
+  creationAllowed?: boolean
   sections: AdminTableSection[]
   nextCursor: string | null
   summary?: Array<{ label: string; value: string }>

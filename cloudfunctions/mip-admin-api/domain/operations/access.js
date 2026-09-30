@@ -15,5 +15,9 @@ module.exports = defineManifest('ACCESS', [
   serviceOperation('mip.admin.branches.changeStatus', 'MUTATION', 'changeBranchStatus'),
   serviceOperation('mip.admin.roles.set', 'MUTATION', 'setRole'),
   serviceOperation('mip.admin.roles.create', 'MUTATION', 'createRole'),
+  serviceOperation('mip.admin.roles.templates.list', 'QUERY', 'listRoleTemplates'),
+  serviceOperation('mip.admin.roles.update', 'MUTATION', 'updateRoleTemplate'),
+  serviceOperation('mip.admin.roles.copy', 'MUTATION', 'copyRoleTemplate'),
+  serviceOperation('mip.admin.roles.changeStatus', 'MUTATION', 'changeRoleTemplateStatus'),
   serviceOperation('mip.admin.rolePolicies.update', 'MUTATION', 'updateRoleCapabilityPolicy'),
 ])

@@ -1,6 +1,8 @@
 'use strict'
 
 const { cursorPredicateFor, decodeCursor, pageRows } = require('../pagination')
+const { createHash } = require('node:crypto')
+const { AdminError } = require('../validation')
 
 function createAdminUserContentRepository(database, options = {}) {
   const assertScope = options.assertMutationScope
@@ -13,7 +15,10 @@ function createAdminUserContentRepository(database, options = {}) {
   }
 
   async function listUserContent(appId, visibility, filters, pageLimit) {
-    const cursor = decodeCursor(filters.cursor, ['updatedAt', 'id'])
+    const { cursor: ignoredCursor, ...normalizedFilters } = filters
+    const cursorContext = createHash('sha256').update(JSON.stringify([appId, visibility, normalizedFilters])).digest('hex')
+    const cursor = decodeCursor(ignoredCursor, ['updatedAt', 'id', 'context'])
+    if (cursor && cursor.context !== cursorContext) throw new AdminError('VALIDATION_FAILED', '筛选或授权范围已变化，请重新查询')
     const params = [appId, appId]
 
     const clauses = ["(content.published_at IS NOT NULL OR content.status IN ('DRAFT', 'ARCHIVED'))"]
@@ -98,6 +103,7 @@ function createAdminUserContentRepository(database, options = {}) {
     const page = pageRows(items, pageLimit, row => ({
       updatedAt: row.updatedAt,
       id: row.cursorId,
+      context: cursorContext,
     }))
     return {
       items: page.items.map(({ cursorId, ...item }) => item),

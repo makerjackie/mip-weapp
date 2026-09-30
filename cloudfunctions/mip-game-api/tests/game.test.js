@@ -707,6 +707,24 @@ test('locks the current roster and refuses to lower capacity below its size', as
   assert.deepEqual(writes, [])
 })
 
+test('refuses removing a captain before reassignment without changing memberships', async () => {
+  const writes = []
+  const repository = createGameRepository({ transaction: work => work({
+    async one(sql) {
+      if (sql.includes('FROM mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+      if (sql.includes('FROM mip_game_seasons')) return { status: 'ACTIVE' }
+      if (sql.includes('FROM mip_game_teams')) return { status: 'ACTIVE', member_limit: 12, version: 4 }
+      throw new Error(`unexpected one: ${sql}`)
+    },
+    async query(sql) {
+      if (sql.includes('SELECT id, user_id, role FROM mip_game_team_memberships')) return [{ id: 'captain', user_id: '30000000-0000-4000-8000-000000000001', role: 'CAPTAIN' }]
+      writes.push(sql); return { affectedRows: 1 }
+    },
+  }) })
+  await assert.rejects(repository.replaceTeamMembers({ appId: 'app', userId: 'admin', profileRefSecret: 's'.repeat(32) }, { seasonId, teamId, expectedVersion: 4, members: [] }), /CAPTAIN_REMOVAL_REQUIRES_REASSIGNMENT/)
+  assert.deepEqual(writes, [])
+})
+
 test('serializes current-player checks and versions every team affected by a roster transfer', async () => {
   const pepper = 's'.repeat(32)
   const targetTeamId = '20000000-0000-4000-8000-000000000001'
@@ -738,7 +756,7 @@ test('serializes current-player checks and versions every team affected by a ros
     },
     async query(sql, params) {
       calls.push({ kind: 'query', sql, params })
-      if (sql.includes('SELECT id, user_id FROM mip_game_team_memberships')) {
+      if (sql.includes('SELECT id, user_id, role FROM mip_game_team_memberships')) {
         return [{ id: 'removed-membership', user_id: '30000000-0000-4000-8000-000000000099' }]
       }
       return { affectedRows: 1 }

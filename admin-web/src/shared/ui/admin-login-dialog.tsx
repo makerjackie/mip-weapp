@@ -44,6 +44,7 @@ export function AdminLoginDialog({ onClose, notice }: { onClose: () => void; not
         <Form.Item name="password" label="登录密码" rules={[{ required: true, message: '请输入登录密码' }]}>
           <Input.Password autoComplete="current-password" maxLength={128} />
         </Form.Item>
+        {submitting ? <Typography.Paragraph type="secondary" role="status">正在连接登录服务，首次访问可能需要一些时间，请稍候…</Typography.Paragraph> : null}
         {loginError ? <Alert type="error" showIcon title={loginError} style={{ marginBottom: 16 }} /> : null}
         {loginConfirmed
           ? <Button block onClick={() => void retryConfirmedLogin()}>重新加载会话</Button>

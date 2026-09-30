@@ -5,10 +5,15 @@ const { createCards } = require('../domain/cards')
 const { createProfileCardRepository } = require('../domain/repositories/profile-cards')
 const { requestHash } = require('../domain/idempotency')
 const grant = { roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }
+const { authorize } = require('../domain/capabilities')
 
 function service(bindings = [grant], changes = [], repositoryOverrides = {}) {
   return createCards({ access: {
     session: async () => ({ caller: { appId: 'app', userId: 'admin' }, bindings }),
+    userAuthorization: async (context, _id, capability) => {
+      const scope = { scopeType: 'BRANCH', scopeId: 'branch' }
+      return { scope, grant: authorize(context.bindings, capability, scope) }
+    },
     mutationAuthorization: () => ({ effectiveGrant: grant, capability: 'users.fields.edit' }),
     audit: (_context, _grant, input) => input,
   }, repository: {
@@ -89,13 +94,16 @@ describe('profile-backed card governance', () => {
     })
   })
 
-  it('requires a platform grant for profile editing', async () => {
+  it('keeps the platform card catalog protected and allows ordinary editing only in the user scope', async () => {
     assert.equal((await service().listCards({}, {})).items[0].id, 'member')
     const branchService = service([{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: 'branch' }])
     await assert.rejects(() => branchService.listCards({}, {}), error => error.code === 'FORBIDDEN')
-    await assert.rejects(() => branchService.saveCard({}, {
+    await branchService.saveCard({}, {
       cardType: 'PROFILE', cardId: 'member', expectedVersion: 17,
       fields: { nickname: '修改', companies: [], organizations: [] },
+    })
+    await assert.rejects(() => service([{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: 'other' }]).saveCard({}, {
+      cardType: 'PROFILE', cardId: 'member', expectedVersion: 17, fields: { nickname: '修改', companies: [], organizations: [] },
     }), error => error.code === 'FORBIDDEN')
   })
 
@@ -220,7 +228,7 @@ describe('profile-backed card governance', () => {
           assert.deepEqual(params, ['app', 'admin', 'admin.cards.profile_edit', 'profile-save-retry'])
           return { request_hash: requestHash({ cardId: 'member', version: 17, changes }), status: 'COMPLETED', response_json: JSON.stringify({ id: 'member', version: 18 }) }
         }
-        if (sql.includes('FROM mip_users')) throw new Error('replay must return before profile lookup')
+        if (sql.includes('FROM mip_users')) return { id: 'member', primary_branch_id: 'branch' }
         return null
       },
       onQuery: async sql => {
@@ -232,7 +240,8 @@ describe('profile-backed card governance', () => {
     assert.deepEqual(await repository.changeProfileCard(input), { id: 'member', version: 18, idempotent: true })
     assert.deepEqual(state.committedWrites, [])
     assert.deepEqual(state.audits, [])
-    assert.equal(state.reads.some(({ sql }) => sql.includes('FROM mip_users')), false)
+    assert.equal(state.reads.some(({ sql }) => sql.includes('FROM mip_users')), true)
+    assert.equal(state.reads.some(({ sql }) => sql.includes('FROM mip_profiles')), false)
   })
 
   it('validates template style, mandatory fields, ordering and moderation reason', async () => {

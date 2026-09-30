@@ -13,6 +13,7 @@ import {
   MetricCard,
   PageHeader,
 } from '../../shared/ui'
+import type { FilterFieldAmount, FilterFieldRange } from '../../shared/ui/filter-bar'
 import type { OperationsPageState, OperationsWriteIntent } from './types'
 
 interface OperationsReadPageProps extends OperationsPageState {
@@ -21,6 +22,9 @@ interface OperationsReadPageProps extends OperationsPageState {
   searchPlaceholder: string
   statusOptions: Array<{ value: string; label: string }>
   actions?: ReactNode
+  extraFilterSlots?: ReactNode
+  timeRangeFields?: FilterFieldRange
+  amountRangeFields?: FilterFieldAmount
   paginated?: boolean
   detailRouteForSection?: (section: AdminTableSection, index: number) => AdminDetailRoute | null
   rowExtraActions?: (row: AdminTableRow, section: AdminTableSection, index: number) => ReactNode
@@ -32,6 +36,9 @@ export function OperationsReadPage({
   searchPlaceholder,
   statusOptions,
   actions,
+  extraFilterSlots,
+  timeRangeFields,
+  amountRangeFields,
   paginated,
   detailRouteForSection,
   rowExtraActions,
@@ -63,6 +70,9 @@ export function OperationsReadPage({
         actions={actions}
       />
       <FilterBar
+        extraFilterSlots={extraFilterSlots}
+        timeRangeFields={timeRangeFields}
+        amountRangeFields={amountRangeFields}
         value={filterValue}
         placeholder={searchPlaceholder}
         statusOptions={statusOptions}
@@ -102,7 +112,7 @@ export function OperationsReadPage({
             return (
               <section key={`${section.title || title}-${index}`} aria-labelledby={`${title}-section-${index}`}>
                 {section.title ? <Typography.Title id={`${title}-section-${index}`} level={4}>{section.title}</Typography.Title> : null}
-                <DataTable
+                {section.error ? <ErrorState description={section.error} onRetry={onRefresh} /> : <DataTable
                   label={section.title || title}
                   rows={section.rows}
                   columns={section.columns}
@@ -110,12 +120,13 @@ export function OperationsReadPage({
                   onView={detailRoute && onOpenDetail
                     ? row => onOpenDetail({ route: detailRoute, id: String(row.detailId), row })
                     : undefined}
-                  renderActions={onWrite || rowExtraActions ? (row) => {
+                  renderActions={onWrite || rowExtraActions || onOpenDetail ? (row) => {
                     const operationActions = rowOperations(row, onWrite, canCapability)
                     const extra = rowExtraActions?.(row, section, index)
-                    return operationActions || extra ? <Space size={4}>{operationActions}{extra}</Space> : null
+                    const links = onOpenDetail && row.detailLinks?.map(link => <Button type="link" size="small" key={`${link.route}:${link.id}`} onClick={() => onOpenDetail({ route: link.route, id: link.id, row })}>{link.label}</Button>)
+                    return operationActions || extra || links?.length ? <Space size={4} wrap>{links}{operationActions}{extra}</Space> : null
                   } : undefined}
-                />
+                />}
               </section>
             )
           }) : <EmptyState title="暂无可显示的数据" description="当前筛选条件下没有可显示的服务端记录。" />}

@@ -17,6 +17,7 @@ import {
   ADMIN_GAME_MUTATION_ACTIONS,
   buildGameMutationInput,
   createGameMutationDefinition,
+  loadGameMemberSelection,
   type AdminGameMutationAction,
 } from '../../modules/admin-game-management'
 import {
@@ -55,6 +56,7 @@ const BASIC_OPERATION_ACTIONS = [
   'mip.admin.events.archive',
   'mip.admin.communications.publishEventReminder',
   'mip.admin.refunds.submit',
+  'mip.admin.refunds.retry',
 ] as const
 
 type BasicOperationAction = typeof BASIC_OPERATION_ACTIONS[number]
@@ -185,14 +187,15 @@ export async function createOperationModel(
   }
   if (gameActions.has(action)) {
     const typedAction = action as AdminGameMutationAction
-    const definition = createGameMutationDefinition(typedAction, targetId, detail?.source || {})
+    const source = typedAction === 'mip.admin.game.teams.members.replace' ? await loadGameMemberSelection(detail?.source || {}, request) : detail?.source || {}
+    const definition = createGameMutationDefinition(typedAction, targetId, source)
     const values = { ...definition.values, ...versionValue(launch), ...launch.values }
     return model(definition, definition.fields, values, idempotencyKey, next => buildGameMutationInput(definition, next))
   }
 
   const typedAction = action as ContentMutationAction
   const definition = getContentMutationForm(typedAction)
-  const baseFields = normalizeContentFields(definition.fields as readonly OperationField[])
+  const baseFields = normalizeContentFields(definition.fields as readonly OperationField[]).map(field => typedAction === 'mip.admin.knowledge.products.save' && field.key === 'priceCents' ? { ...field, kind: 'money' as const, valueScale: 100, label: '价格（元）' } : field)
   const values = mergeValues(
     prefillContentValues(typedAction, defaultValues(baseFields), targetId, detail),
     launch.values || {},
@@ -207,7 +210,8 @@ export async function createOperationModel(
       || (trustedVersion !== undefined && key === 'expectedVersion')
       || (creating && (key === targetKey || key === 'expectedVersion'))
       ? { ...field, hidden: true }
-      : field
+      : typedAction === 'mip.admin.knowledge.contents.review' && key === 'decision' && Array.isArray(record(detail?.source?.content).allowedReviewDecisions) ? { ...field, options: (field.options || []).filter(option => (record(detail?.source?.content).allowedReviewDecisions as unknown[]).includes(typeof option === 'string' ? option : option.value)) }
+      : trustedTarget && ['sourceKey', 'categoryKey'].includes(key) ? { ...field, readOnly: true, readOnlyReason: '已创建的唯一编码不能修改' } : field
   })
   return {
     action: typedAction,
@@ -271,10 +275,10 @@ function createBasicOperationModel(
       action,
       capability,
       title: '克隆活动',
-      description: '根据当前活动创建一份新的草稿活动。提交后由服务端重新校验权限和活动版本。',
+      description: '复制可复用配置并打开独立草稿。新活动的标题和全部时间需要重新填写。',
     }, versionField(), values, idempotencyKey, (next) => {
       const version = positiveInteger(next.expectedVersion)
-      return version === undefined ? null : { sourceEventId: targetId, expectedVersion: version }
+      return version === undefined ? null : { sourceEventId: targetId, expectedVersion: version, draftOnly: true }
     })
   }
   if (action === 'mip.admin.events.changeStatus') {
@@ -333,6 +337,7 @@ function createBasicOperationModel(
       }
     })
   }
+  if (action === 'mip.admin.refunds.retry') return model({ action, capability, title: '重试退款', description: '核对当前退款与支付机构状态后恢复处理；不会另建退款或重复退款。' }, [], {}, idempotencyKey, () => ({ refundId: targetId }))
   const values = { reason: '' }
   return model({
     action,
@@ -348,7 +353,7 @@ function createBasicOperationModel(
 
 function basicOperationCapability(action: BasicOperationAction) {
   if (action === 'mip.admin.memberships.grant') return 'memberships.adjust'
-  if (action === 'mip.admin.refunds.submit') return 'refunds.submit'
+  if (action === 'mip.admin.refunds.submit' || action === 'mip.admin.refunds.retry') return 'refunds.submit'
   if (action === 'mip.admin.communications.publishEventReminder') return 'communications.publish'
   return 'events.write'
 }
@@ -364,6 +369,11 @@ function contentTargetKey(action: ContentMutationAction) {
   if (action.startsWith('mip.admin.communityReports.')) return 'reportId'
   if (action.startsWith('mip.admin.opportunities.')) return 'opportunityId'
   if (action.startsWith('mip.admin.userContent.')) return 'contentId'
+  if (action.startsWith('mip.admin.knowledge.sources.')) return 'sourceId'
+  if (action.startsWith('mip.admin.knowledge.categories.')) return 'categoryId'
+  if (action.startsWith('mip.admin.knowledge.products.')) return 'productId'
+  if (action.startsWith('mip.admin.knowledge.comments.')) return 'commentId'
+  if (action.startsWith('mip.admin.knowledge.reports.')) return 'reportId'
   if (action.startsWith('mip.admin.knowledge.contents.')) return 'contentId'
   if (action.startsWith('mip.admin.knowledge.schedules.')) return 'scheduleId'
   if (action === 'mip.admin.badges.revoke') return 'awardId'

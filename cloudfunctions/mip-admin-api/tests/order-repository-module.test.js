@@ -243,7 +243,7 @@ describe('admin order persistence adapter', () => {
     })
     const adapter = repository(database)
     const visibility = { platform: false, branchIds: [BRANCH_ID], eventIds: [] }
-    const filters = { query: '城市', orderType: 'EVENT', refundStatus: 'SUCCEEDED' }
+    const filters = { query: '城市', orderType: 'EVENT', refundStatus: 'SUCCEEDED', branchId: 'branch-selected' }
 
     const page = await adapter.listOrders(APP_ID, visibility, filters, 20)
     const summary = await adapter.summarizeOrders(APP_ID, visibility, filters)
@@ -262,6 +262,10 @@ describe('admin order persistence adapter', () => {
     assert.match(sql, /e\.branch_id IN \(\?\)/)
     assert.match(sql, /ORDER BY rf\.created_at DESC, rf\.id DESC LIMIT 1\) = \?/)
     const listSql = database.calls.find(call => call.sql.includes('SELECT o.id, o.user_id')).sql
+    const filtered = database.calls.filter(call => call.params.includes('branch-selected'))
+    assert.equal(filtered.length, 2)
+    assert.equal(filtered.every(call => call.sql.includes("o.order_type = 'EVENT' AND e.branch_id = ?")), true)
+    assert.deepEqual(filtered[0].params.slice(0, -1), filtered[1].params)
     assert.match(listSql, /entitlement\.order_id = o\.id\s+AND entitlement\.source_type = 'ORDER'/)
     assert.equal(database.calls.every(call => call.params[0] === APP_ID), true)
   })

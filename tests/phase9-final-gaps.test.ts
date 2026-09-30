@@ -110,7 +110,7 @@ describe('phase9 final gap contracts', () => {
     expect(rosterService).toContain('input.includePhone === true')
     expect(rosterService).toContain('CAPABILITIES.USERS_PHONE_READ')
     expect(rosterService).toContain('admin.events.roster.phone.view')
-    expect(rosterService).toContain('const { phoneCiphertext, userId, ...safe } = item')
+    expect(rosterService).toContain('const { phoneCiphertext, userId, userBranchId, ...safe } = item')
     expect(rosterService).not.toContain('phoneMasked')
   })
 

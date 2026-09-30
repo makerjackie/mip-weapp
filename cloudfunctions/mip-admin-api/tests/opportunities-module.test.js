@@ -328,12 +328,15 @@ describe('admin opportunities deep module', () => {
     assert.deepEqual(repo.calls.find(call => call.type === 'list').filters, {
       query: '品牌',
       ownerQuery: '发布人',
+      ownerUserId: null,
       cityQuery: '广州',
       status: 'PUBLISHED',
       updatedFrom: '2030-08-01 00:00:00.000',
       updatedTo: '2030-08-31 23:59:59.999',
       deadlineFrom: '',
       deadlineTo: '',
+      publishedFrom: '',
+      publishedTo: '',
     })
 
     repo.opportunityScope = { scopeType: 'BRANCH', scopeId: BRANCH_B, branchId: BRANCH_B }
@@ -387,7 +390,7 @@ describe('admin opportunities deep module', () => {
     assert.equal(safetyReads, 0)
     assert.equal(repo.calls.filter(call => call.type === 'save').length, 0)
 
-    repo.opportunityScope.status = 'ENDED'
+    repo.opportunityScope.status = 'ARCHIVED'
     await assert.rejects(
       () => service.saveOpportunity(caller, {
         opportunityId: OPPORTUNITY_ID,

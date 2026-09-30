@@ -6,6 +6,8 @@ import { normalizeOperationValues } from '../../modules/admin-operation-ui'
 import { MutationDialog } from '../../shared/ui/mutation-dialog'
 import { DetailDrawer } from '../../shared/ui/detail-drawer'
 import { createOperationModel } from './operation-model'
+const session = vi.hoisted(() => ({ request: async () => ({ items: [], nextCursor: null }) }))
+vi.mock('../../app/session-provider', () => ({ useAdminSession: () => session }))
 
 afterEach(cleanup)
 

@@ -1,5 +1,5 @@
 import type { OperationField, OperationValues } from './admin-operation-ui'
-import { getContentMutationForm, USER_CONTENT_ROLE_FIELDS, type ContentMutationAction } from './content-mutation-forms'
+import { getContentMutationForm, USER_CONTENT_ROLE_FIELDS, type ContentMutationAction } from './content-mutation-forms.ts'
 
 /** Project the selected content type and role; Ant Form preserves hidden fields. */
 function buildUserContentDraft(values: OperationValues) {
@@ -43,13 +43,13 @@ function record(value: unknown): OperationValues {
 }
 
 export function contentFormValues(action: ContentMutationAction, values: OperationValues, idempotencyKey: string) {
-  const next = pruneEmptyGroups({ ...values })
   const form = getContentMutationForm(action)
+  const next = pruneEmptyGroups(Object.fromEntries(Object.entries(values).filter(([key]) => form.inputKeys.includes(key))))
   if (form.idempotencyRequired) next.idempotencyKey = idempotencyKey
   if (action === 'mip.admin.opportunities.save') {
     const draft = record(next.draft)
     const terms = record(draft.commercialTerms)
-    if (!terms.minAmountCents && !terms.maxAmountCents && !Array.isArray(terms.locations)) delete draft.commercialTerms
+    if ([terms.minAmountCents, terms.maxAmountCents].every(value => value === undefined || value === null || value === '') && (!Array.isArray(terms.locations) || terms.locations.length === 0)) delete draft.commercialTerms
     next.draft = draft
   }
   if (action === 'mip.admin.userContent.save') next.draft = buildUserContentDraft(next)

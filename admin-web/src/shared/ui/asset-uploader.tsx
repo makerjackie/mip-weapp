@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import { AdminMediaUploadError, type AdminMediaFile, type AdminMediaPurpose } from '../../modules/admin-media-upload'
 import { humanizeError } from './humanize-error'
+import { useMediaPreview } from './media-preview-context'
 
 type CustomRequestOption = { file: unknown; onSuccess?: (response: unknown) => void; onError?: (error: Error) => void }
 
@@ -55,7 +56,9 @@ export function AssetUploader({
   const client = session?.client
   const demoMode = session?.demoMode ?? false
   const [uploading, setUploading] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState('')
+  const [uploadedAsset, setUploadedAsset] = useState<{ id: string; url: string } | null>(null)
+  const media = useMediaPreview()
+  const previewUrl = uploadedAsset?.id === value ? uploadedAsset.url : media.urls[value] || ''
 
   const handleUpload = async (option: CustomRequestOption) => {
     const file = asFile(option.file)
@@ -90,7 +93,8 @@ export function AssetUploader({
       }
       const result = await client.uploadImage(mediaFile, purpose)
       onChange?.(result.assetId)
-      setPreviewUrl(result.imageUrl)
+      setUploadedAsset({ id: result.assetId, url: result.imageUrl })
+      media.remember(result.assetId, result.imageUrl)
       msg.success('图片已上传')
       option.onSuccess?.(result)
     }
@@ -107,7 +111,7 @@ export function AssetUploader({
   return (
     <div className="asset-uploader">
       <Input
-        value={value}
+        value={value ? '已选择图片' : ''}
         placeholder={placeholder}
         readOnly
         disabled={disabled || uploading}
@@ -127,12 +131,12 @@ export function AssetUploader({
       {previewUrl ? (
         <div className="asset-uploader__preview">
           <img src={previewUrl} alt="预览" style={{ maxWidth: 200, maxHeight: 120, borderRadius: 8 }} />
-          <Button size="small" type="link" danger onClick={() => { onChange?.(''); setPreviewUrl('') }}>移除</Button>
+          <Button size="small" type="link" danger disabled={disabled || uploading} onClick={() => { onChange?.(''); setUploadedAsset(null) }}>移除</Button>
         </div>
       ) : value ? (
         <div className="asset-uploader__preview">
           <span className="asset-uploader__saved">已保存素材，可重新上传覆盖</span>
-          <Button size="small" type="link" danger onClick={() => { onChange?.(''); setPreviewUrl('') }}>清除</Button>
+          <Button size="small" type="link" danger disabled={disabled || uploading} onClick={() => { onChange?.(''); setUploadedAsset(null) }}>清除</Button>
         </div>
       ) : null}
     </div>
@@ -161,6 +165,7 @@ export function AssetListUploader({
   const demoMode = session?.demoMode ?? false
   const [uploading, setUploading] = useState(false)
   const [previews, setPreviews] = useState<Array<{ assetId: string; imageUrl: string }>>([])
+  const media = useMediaPreview()
 
   const lines = value.split('\n').filter(Boolean)
   const canAddMore = lines.length < maxCount
@@ -200,6 +205,7 @@ export function AssetListUploader({
       const next = [...lines, result.assetId].join('\n')
       onChange?.(next)
       setPreviews(prev => [...prev, { assetId: result.assetId, imageUrl: result.imageUrl }])
+      media.remember(result.assetId, result.imageUrl)
       msg.success(`图片已上传（${lines.length + 1}/${maxCount}）`)
       option.onSuccess?.(result)
     }
@@ -219,25 +225,29 @@ export function AssetListUploader({
     setPreviews(prev => prev.filter(item => item.assetId !== assetId))
   }
 
-  const savedWithoutPreview = lines.filter(id => !previews.some(item => item.assetId === id))
+  const visiblePreviews = lines.flatMap(assetId => {
+    const imageUrl = previews.find(item => item.assetId === assetId)?.imageUrl || media.urls[assetId]
+    return imageUrl ? [{ assetId, imageUrl }] : []
+  })
+  const savedWithoutPreview = lines.filter(id => !visiblePreviews.some(item => item.assetId === id))
 
   return (
     <div className="asset-uploader">
-      {previews.length > 0 ? (
+      {visiblePreviews.length > 0 ? (
         <div className="asset-uploader__grid">
-          {previews.map(item => (
+          {visiblePreviews.map(item => (
             <div key={item.assetId} className="asset-uploader__thumb">
               <img src={item.imageUrl} alt="素材预览" />
-              <Button size="small" type="link" danger onClick={() => removeAsset(item.assetId)}>移除</Button>
+              <Button size="small" type="link" danger disabled={disabled || uploading} onClick={() => removeAsset(item.assetId)}>移除</Button>
             </div>
           ))}
         </div>
       ) : null}
       {savedWithoutPreview.length > 0 ? (
         <div className="asset-uploader__saved-list">
-          {savedWithoutPreview.map(assetId => (
-            <Tag key={assetId} closable onClose={() => removeAsset(assetId)}>
-              已保存素材 {assetId.slice(0, 8)}…
+          {savedWithoutPreview.map((assetId, index) => (
+            <Tag key={assetId} closable={!disabled && !uploading} onClose={() => removeAsset(assetId)}>
+              已保存图片 {index + 1}
             </Tag>
           ))}
         </div>

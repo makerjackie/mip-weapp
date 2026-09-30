@@ -1,5 +1,7 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('../lib/role-template-policy')
+
 const { randomUUID } = require('node:crypto')
 const { claimOptional, complete } = require('./idempotency')
 const {
@@ -19,10 +21,24 @@ const BANNER_ADMIN_ROLES = new Set(['PLATFORM_OWNER', 'PLATFORM_OPERATIONS'])
 
 function createBannerRepository(database, options = {}) {
   const createId = options.createId || randomUUID
+  async function lockCatalog(tx, appId) {
+    // The AppID mutex serializes the catalog limit across different operators.
+    await tx.query(`INSERT INTO mip_app_settings (app_id, setting_key, value_json)
+      VALUES (?, 'banner_catalog_mutex', JSON_OBJECT()) ON DUPLICATE KEY UPDATE setting_key = setting_key`, [appId])
+    await tx.one("SELECT setting_key FROM mip_app_settings WHERE app_id = ? AND setting_key = 'banner_catalog_mutex' FOR UPDATE", [appId])
+  }
+  async function assertCatalogLimit(tx, appId, adding = false) {
+    const rows = await tx.query("SELECT id FROM mip_banners WHERE app_id = ? AND status <> 'DELETED' FOR UPDATE", [appId])
+    if (!Array.isArray(rows)) throw new Error('SERVICE_UNAVAILABLE')
+    if (rows.length + Number(adding) > 5) throw new Error('BANNER_LIMIT_REACHED')
+  }
 
   async function getAdminSession(caller) {
     const roleKey = await assertBannersAdmin(database, caller)
-    return { capability: BANNERS_CAPABILITY, roleKey }
+    const row = await database.one("SELECT COUNT(*) AS configured_count FROM mip_banners WHERE app_id = ? AND status <> 'DELETED'", [caller.appId])
+    const configuredCount = Number(row?.configured_count)
+    if (!Number.isSafeInteger(configuredCount) || configuredCount < 0) throw new Error('SERVICE_UNAVAILABLE')
+    return { capability: BANNERS_CAPABILITY, roleKey, catalog: { maximum: 5, configuredCount, canCreate: configuredCount < 5 } }
   }
 
   async function listActive(appId) {
@@ -80,7 +96,11 @@ function createBannerRepository(database, options = {}) {
       [caller.appId, bannerId],
     )
     if (!row) throw new Error('NOT_FOUND')
-    return adminBannerDto(row)
+    const count = await adapter.one("SELECT COUNT(*) AS configured_count FROM mip_banners WHERE app_id = ? AND status <> 'DELETED'", [caller.appId])
+    const configuredCount = Number(count?.configured_count)
+    if (!Number.isSafeInteger(configuredCount) || configuredCount < 0) throw new Error('SERVICE_UNAVAILABLE')
+    return { ...adminBannerDto(row), canActivate: row.status === 'INACTIVE' && configuredCount <= 5,
+      activationBlockedReason: configuredCount > 5 ? '已有配置超过五个，请先删除不再使用的 Banner' : '' }
   }
 
   async function save(caller, event) {
@@ -89,6 +109,7 @@ function createBannerRepository(database, options = {}) {
     const bannerId = event.bannerId ? requiredId(event.bannerId) : createId()
     const version = event.bannerId ? expectedVersion(event.expectedVersion) : null
     return database.transaction(async (tx) => {
+      const roleKey = await assertBannersAdmin(tx, caller, true)
       const idempotency = await claimOptional(
         tx,
         caller,
@@ -98,8 +119,9 @@ function createBannerRepository(database, options = {}) {
         createId,
       )
       if (idempotency.replay) return idempotency.replay
-      const roleKey = await assertBannersAdmin(tx, caller, true)
       if (!event.bannerId) {
+        await lockCatalog(tx, caller.appId)
+        await assertCatalogLimit(tx, caller.appId, true)
         const asset = await getMedia(tx, caller.appId, draft.imageAssetId, true)
         assertBannerAsset(asset, { actorUserId: caller.userId })
         const order = await tx.one(
@@ -193,6 +215,8 @@ function createBannerRepository(database, options = {}) {
         normalizeBannerTarget(current.target_type, current.target_value)
         const asset = await getMedia(tx, caller.appId, current.image_asset_id, true)
         assertBannerAsset(asset, { currentAssetId: current.image_asset_id })
+        await lockCatalog(tx, caller.appId)
+        await assertCatalogLimit(tx, caller.appId)
       }
       const result = await tx.query(
         `UPDATE mip_banners
@@ -293,11 +317,12 @@ async function assertBannersAdmin(adapter, caller, lock = false) {
   }
   const row = await adapter.one(
     `SELECT binding.role_key,
-      CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END AS policy_capabilities_json
+      CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END AS policy_capabilities_json, binding.role_template_id, role_template.base_role_key AS template_base_role_key, role_template.status AS template_status, role_template.capabilities AS template_capabilities_json
      FROM mip_admin_role_bindings binding
+     LEFT JOIN mip_admin_roles role_template ON role_template.app_id = binding.app_id AND role_template.role_id = binding.role_template_id
      LEFT JOIN mip_role_capability_policies policy
        ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
-     WHERE binding.app_id = ? AND binding.user_id = ? AND binding.scope_type = 'PLATFORM'
+     WHERE NOT EXISTS (SELECT 1 FROM mip_admin_accounts account WHERE account.app_id = binding.app_id AND account.linked_user_id = binding.user_id AND account.status <> 'ACTIVE') AND (binding.role_template_id IS NULL OR binding.role_key <> 'PLATFORM_OWNER') AND binding.app_id = ? AND binding.user_id = ? AND binding.scope_type = 'PLATFORM'
        AND binding.scope_id = ? AND binding.status = 'ACTIVE'
        AND binding.role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
      ORDER BY (binding.role_key = 'PLATFORM_OWNER') DESC, binding.role_key ${lock ? 'FOR UPDATE' : ''}`,
@@ -309,8 +334,9 @@ async function assertBannersAdmin(adapter, caller, lock = false) {
 }
 
 function configuredCapabilityAllows(row, capability) {
+  if (!templateAllowsBinding(row)) return false
   if (row.role_key === 'PLATFORM_OWNER') return true
-  const value = row.policy_capabilities_json
+  const value = effectivePolicyCapabilities(row)
   if (value === null || value === undefined) return true
   try {
     const capabilities = typeof value === 'string' ? JSON.parse(value) : value

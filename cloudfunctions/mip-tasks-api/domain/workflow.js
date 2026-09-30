@@ -1,5 +1,7 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('../lib/role-template-policy')
+
 const { requiredId, boundedText, normalizeRewardConfig, pageLimit, optionalDate, expectedVersion } = require('./validation')
 const { idempotentMutation } = require('./idempotency')
 const { appendLevelTransition } = require('./level-transitions')
@@ -32,21 +34,32 @@ function workflowDto(row) {
 }
 
 function createTaskWorkflow({ database, createId, assertTasksAdmin, writeAudit }) {
+  async function extraCapabilities(adapter, caller, roleKey, lock) {
+    const row = await adapter.one(`SELECT binding.role_key, binding.role_template_id,
+      role_template.base_role_key AS template_base_role_key, role_template.status AS template_status,
+      role_template.capabilities AS template_capabilities_json,
+      CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END AS policy_capabilities_json
+      FROM mip_admin_role_bindings binding
+      LEFT JOIN mip_role_capability_policies policy ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
+      LEFT JOIN mip_admin_roles role_template ON role_template.app_id = binding.app_id AND role_template.role_id = binding.role_template_id
+      WHERE NOT EXISTS (SELECT 1 FROM mip_admin_accounts account WHERE account.app_id = binding.app_id AND account.linked_user_id = binding.user_id AND account.status <> 'ACTIVE') AND binding.app_id = ? AND binding.user_id = ? AND binding.role_key = ?
+        AND binding.scope_type = 'PLATFORM' AND binding.scope_id = '00000000-0000-0000-0000-000000000000'
+        AND binding.status = 'ACTIVE' ${lock ? 'FOR UPDATE' : ''}`, [caller.appId, caller.userId, roleKey])
+    if (!row || !templateAllowsBinding(row)) return []
+    const effective = effectivePolicyCapabilities(row)
+    return Array.isArray(effective) ? effective : json(effective, [])
+  }
   async function assertTaskOwner(tx, caller, ownerId, capability) {
     const roleKey = await assertTasksAdmin(tx, caller, true)
     if (roleKey === 'PLATFORM_OWNER' || ownerId === caller.userId) return roleKey
-    const policy = await tx.one(`SELECT capabilities_json FROM mip_role_capability_policies
-      WHERE app_id = ? AND role_key = ? AND policy_mode = 'CUSTOM' FOR UPDATE`, [caller.appId, roleKey])
-    const capabilities = json(policy?.capabilities_json, [])
+    const capabilities = await extraCapabilities(tx, caller, roleKey, true)
     if (!Array.isArray(capabilities) || !capabilities.includes(capability)) throw new Error('FORBIDDEN')
     return roleKey
   }
 
   async function reviewPermissions(caller) {
     const roleKey = await assertTasksAdmin(database, caller)
-    const policy = roleKey === 'PLATFORM_OWNER' ? null : await database.one(`SELECT capabilities_json FROM mip_role_capability_policies
-      WHERE app_id = ? AND role_key = ? AND policy_mode = 'CUSTOM'`, [caller.appId, roleKey])
-    const capabilities = json(policy?.capabilities_json, [])
+    const capabilities = roleKey === 'PLATFORM_OWNER' ? [] : await extraCapabilities(database, caller, roleKey, false)
     const any = roleKey === 'PLATFORM_OWNER' || (Array.isArray(capabilities) && capabilities.includes('tasks.review.any'))
     return submission => any || submission.assigned_owner_id === caller.userId
   }

@@ -38,6 +38,7 @@ const { createVideos } = require('./videos')
 const { createMembershipContent } = require('./membership-content')
 const { createCards } = require('./cards')
 const { createEventDrafts } = require('./event-drafts')
+const { createRoleTemplates } = require('./role-templates')
 const { AdminError } = require('./validation')
 
 function createAdminService({
@@ -75,6 +76,7 @@ function createAdminService({
   knowledgeModule = null,
 }) {
   const access = createAdminAccess({ repository })
+  const { createRole, listRoleTemplates, updateRoleTemplate, copyRoleTemplate, changeRoleTemplateStatus } = createRoleTemplates({ access, repository })
   const {
     audit,
     publicBindings,
@@ -303,7 +305,6 @@ function createAdminService({
     listRoles,
     searchRoleCandidates,
     setRole,
-    createRole,
     updateBranch,
     updateRoleCapabilityPolicy,
   } = createAdminGovernance({ access, now, repository })
@@ -469,6 +470,10 @@ function createAdminService({
       changeBranchStatus,
     setRole,
     createRole,
+    listRoleTemplates,
+    updateRoleTemplate,
+    copyRoleTemplate,
+    changeRoleTemplateStatus,
     updateRoleCapabilityPolicy,
     }),
     USERS: freezeModule({

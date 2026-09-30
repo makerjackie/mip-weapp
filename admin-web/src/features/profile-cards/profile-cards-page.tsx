@@ -1,23 +1,11 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { Alert, App, Avatar, Button, Card, Checkbox, Drawer, Empty, Form, Image, Input, InputNumber, Modal, Space, Spin, Tabs, Tag, Typography } from 'antd'
+import { ProfileEditorDialog } from './profile-editor-dialog'
 import { useAdminSession } from '../../app/session-provider'
 import { cardHistoryFields, cardRequiredFields, cardTemplatePreviews, profileCardsModule, type CardTemplate, type ProfileCard } from '../../modules/admin-profile-cards'
 
-type EditableProfileFields = Pick<ProfileCard, 'realName' | 'nickname' | 'headline' | 'introduction' | 'companies' | 'organizations' | 'identityStatus'>
-
-function profileFormValues(item: ProfileCard): EditableProfileFields {
-  return {
-    realName: item.realName,
-    nickname: item.nickname,
-    headline: item.headline,
-    introduction: item.introduction,
-    companies: item.companies,
-    organizations: item.organizations,
-    identityStatus: item.identityStatus,
-  }
-}
 
 export function ProfileCardsPage() {
   const session = useAdminSession()
@@ -34,9 +22,6 @@ export function ProfileCardsPage() {
   const [historyCursor, setHistoryCursor] = useState<string | undefined>()
   const [reason, setReason] = useState('')
   const [form] = Form.useForm()
-  const profileSubmitting = useRef(false)
-  const profileSubmission = useRef<{ payload: string; key: string } | null>(null)
-  const [profileForm] = Form.useForm<EditableProfileFields>()
   const enabled = Boolean(session.session?.enabled) && session.hasCapabilityAtScope('users.read', 'PLATFORM') && !session.demoMode
   const writable = enabled && session.hasCapabilityAtScope('users.fields.edit', 'PLATFORM')
   const key = ['admin', 'profile-cards', session.session?.actor?.id, session.sessionBoundary]
@@ -49,15 +34,6 @@ export function ProfileCardsPage() {
     await queryClient.invalidateQueries({ queryKey: key })
     void message.success('已保存')
   }, onError: error => { void message.error(error instanceof Error ? error.message : '操作失败，请重试') } })
-  const profileMutation = useMutation({
-    mutationFn: (input: { item: ProfileCard; fields: EditableProfileFields; idempotencyKey: string }) => api.saveProfile(input.item, input.fields, input.idempotencyKey),
-    onSuccess: async () => {
-      setProfileEditing(null)
-      await queryClient.invalidateQueries({ queryKey: key })
-      void message.success('资料已保存')
-    },
-    onError: error => { void message.error(error instanceof Error ? error.message : '资料保存失败，请重试') },
-  })
   const requestKey = () => `web-cards-${crypto.randomUUID()}`
   const update = (values: typeof search) => void navigate({ to: '/cards', search: values })
   if (!enabled) return <Alert type="info" showIcon title="请使用具有平台用户查看权限的账号登录" />
@@ -76,11 +52,10 @@ export function ProfileCardsPage() {
           {item.identityStatus && <Typography.Paragraph>{item.identityStatus}</Typography.Paragraph>}
           {item.reason && <Alert type="warning" title={item.reason} />}
           <Space wrap style={{ marginTop: 12 }}>
+            <Button href={`#/users/${encodeURIComponent(item.id)}`} target="_blank" rel="noopener noreferrer">用户档案</Button>
             <Button onClick={() => { setHistory(item); setHistoryCursor(undefined) }}>修改记录</Button>
-            {writable && <Button disabled={mutation.isPending || profileMutation.isPending} onClick={() => {
-              profileSubmission.current = null
+            {writable && <Button disabled={mutation.isPending} onClick={() => {
               setProfileEditing(item)
-              profileForm.setFieldsValue(profileFormValues(item))
             }}>编辑资料</Button>}
             {writable && <Button danger={item.status === 'ACTIVE'} disabled={mutation.isPending} onClick={() => { setModerating(item); setReason('') }}>{item.status === 'ACTIVE' ? '下架' : '恢复'}</Button>}
           </Space>
@@ -95,64 +70,7 @@ export function ProfileCardsPage() {
         {writable && <Space><Button onClick={() => { setEditing(item); form.setFieldsValue(item) }}>编辑</Button><Button loading={mutation.isPending} onClick={() => { const key = requestKey(); mutation.mutate(() => api.setTemplateStatus(item, key)) }}>{item.status === 'ACTIVE' ? '停用' : '启用'}</Button></Space>}
       </Card>)}
     </div>}
-    <Modal
-      title="编辑名片资料"
-      centered
-      styles={{ body: { maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', paddingRight: 4 } }}
-      open={Boolean(profileEditing)}
-      onCancel={() => { if (!profileMutation.isPending) setProfileEditing(null) }}
-      onOk={() => {
-        if (profileSubmitting.current || profileMutation.isPending) return
-        profileSubmitting.current = true
-        void profileForm.validateFields().then(async fields => {
-          if (!profileEditing) return
-          const payload = JSON.stringify({ id: profileEditing.id, version: profileEditing.profileVersion, fields })
-          if (profileSubmission.current?.payload !== payload) profileSubmission.current = { payload, key: requestKey() }
-          await profileMutation.mutateAsync({ item: profileEditing, fields, idempotencyKey: profileSubmission.current.key })
-        }).catch(() => undefined).finally(() => { profileSubmitting.current = false })
-      }}
-      confirmLoading={profileMutation.isPending}
-      cancelButtonProps={{ disabled: profileMutation.isPending }}
-      closable={!profileMutation.isPending}
-      keyboard={!profileMutation.isPending}
-      maskClosable={!profileMutation.isPending}
-    >
-      <Form form={profileForm} layout="vertical" disabled={profileMutation.isPending}>
-        <Form.Item name="realName" label="真实姓名" rules={[{ max: 60, message: '最多输入 60 个字符' }]}><Input maxLength={60} /></Form.Item>
-        <Form.Item name="nickname" label="昵称" rules={[{ required: true, whitespace: true, message: '请输入昵称' }, { max: 60, message: '最多输入 60 个字符' }]}><Input maxLength={60} /></Form.Item>
-        <Form.Item name="headline" label="职位简介" rules={[{ max: 120, message: '最多输入 120 个字符' }]}><Input maxLength={120} /></Form.Item>
-        <Form.Item name="introduction" label="个人介绍" rules={[{ max: 600, message: '最多输入 600 个字符' }]}><Input.TextArea rows={4} maxLength={600} showCount /></Form.Item>
-        <Form.List name="companies" rules={[{ validator: async (_, value: unknown[] | undefined) => {
-          if ((value?.length || 0) > 5) throw new Error('公司最多填写 5 项')
-        } }]}>
-          {(fields, { add, remove }, { errors }) => <section style={{ marginBottom: 24 }}>
-            <Typography.Text strong>公司</Typography.Text>
-            {fields.map(({ key: fieldKey, name, ...restField }) => <div key={fieldKey} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto', gap: 8, alignItems: 'start', marginTop: 8 }}>
-              <Form.Item {...restField} name={[name, 'name']} rules={[{ required: true, whitespace: true, message: '请填写名称' }, { max: 120, message: '最多输入 120 个字符' }]} style={{ minWidth: 0, marginBottom: 0 }}><Input aria-label={`公司 ${name + 1}`} placeholder="公司名称" maxLength={120} /></Form.Item>
-              <Form.Item {...restField} name={[name, 'role']} style={{ minWidth: 0, marginBottom: 0 }}><Input aria-label={`公司职务 ${name + 1}`} placeholder="职位" maxLength={120} /></Form.Item>
-              <Button aria-label={`移除公司 ${name + 1}`} danger type="text" disabled={profileMutation.isPending} onClick={() => remove(name)}>移除</Button>
-            </div>)}
-            <Button style={{ marginTop: 8 }} type="dashed" onClick={() => add({ name: '', role: '' })} disabled={fields.length >= 5 || profileMutation.isPending}>添加公司</Button>
-            <Form.ErrorList errors={errors} />
-          </section>}
-        </Form.List>
-        <Form.List name="organizations" rules={[{ validator: async (_, value: unknown[] | undefined) => {
-          if ((value?.length || 0) > 5) throw new Error('组织最多填写 5 项')
-        } }]}>
-          {(fields, { add, remove }, { errors }) => <section style={{ marginBottom: 24 }}>
-            <Typography.Text strong>组织</Typography.Text>
-            {fields.map(({ key: fieldKey, name, ...restField }) => <div key={fieldKey} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto', gap: 8, alignItems: 'start', marginTop: 8 }}>
-              <Form.Item {...restField} name={[name, 'name']} rules={[{ required: true, whitespace: true, message: '请填写名称' }, { max: 120, message: '最多输入 120 个字符' }]} style={{ minWidth: 0, marginBottom: 0 }}><Input aria-label={`组织 ${name + 1}`} placeholder="组织名称" maxLength={120} /></Form.Item>
-              <Form.Item {...restField} name={[name, 'role']} style={{ minWidth: 0, marginBottom: 0 }}><Input aria-label={`组织职务 ${name + 1}`} placeholder="职务" maxLength={120} /></Form.Item>
-              <Button aria-label={`移除组织 ${name + 1}`} danger type="text" disabled={profileMutation.isPending} onClick={() => remove(name)}>移除</Button>
-            </div>)}
-            <Button style={{ marginTop: 8 }} type="dashed" onClick={() => add({ name: '', role: '' })} disabled={fields.length >= 5 || profileMutation.isPending}>添加组织</Button>
-            <Form.ErrorList errors={errors} />
-          </section>}
-        </Form.List>
-        <Form.Item name="identityStatus" label="MIP 身份" rules={[{ max: 32, message: '最多输入 32 个字符' }]}><Input maxLength={32} /></Form.Item>
-      </Form>
-    </Modal>
+    <ProfileEditorDialog item={profileEditing} onClose={() => setProfileEditing(null)} />
     <Modal title="编辑名片模板" open={Boolean(editing)} onCancel={() => setEditing(null)} confirmLoading={mutation.isPending} onOk={() => void form.validateFields().then(values => { if (editing) { const key = requestKey(); mutation.mutate(() => api.saveTemplate(editing, values, key)) } })}>
       <Form form={form} layout="vertical"><Form.Item name="name" label="名称" rules={[{ required: true }, { max: 60 }]}><Input /></Form.Item><Form.Item name="sortOrder" label="排序（小的在前）" rules={[{ required: true }]}><InputNumber min={0} max={9999} precision={0} /></Form.Item><Form.Item name="requiredFields" label="生成名片必填项"><Checkbox.Group options={cardRequiredFields} /></Form.Item></Form>
     </Modal>

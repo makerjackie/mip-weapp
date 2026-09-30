@@ -1,5 +1,7 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('../lib/role-template-policy')
+
 class DomainError extends Error {
   constructor(code, message, retryable = false) {
     super(message)
@@ -199,8 +201,9 @@ const policyCapabilityByEventCapability = Object.freeze({
 })
 
 function configuredCapabilityAllows(binding, capability) {
+  if (!templateAllowsBinding(binding)) return false
   if (binding.role_key === 'PLATFORM_OWNER') return true
-  const value = binding.policy_capabilities_json
+  const value = effectivePolicyCapabilities(binding)
   if (value === null || value === undefined) return true
   try {
     const capabilities = typeof value === 'string' ? JSON.parse(value) : value

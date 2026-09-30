@@ -73,16 +73,17 @@ function createProfileRecordsRepository(database) {
 
   async function listResourceOperationLogs(appId, resourceType, resourceId, input) {
     const cursor = cursorPredicateFor('a.created_at', input.cursor, 'createdAt', 'a.id')
-    const userRelated = resourceType === 'USER' ? `OR (a.resource_type IN ('COOPERATION_CARD', 'SUPER_CASE', 'BADGE_AWARD')
+    const userRelated = resourceType === 'USER' ? `OR (a.resource_type IN ('COOPERATION_CARD', 'SUPER_CASE', 'BADGE_AWARD', 'USER_BADGE')
       AND JSON_UNQUOTE(JSON_EXTRACT(a.metadata_json, '$.ownerUserId')) = ?)
-      OR (a.resource_type = 'BADGE_AWARD' AND JSON_UNQUOTE(JSON_EXTRACT(a.metadata_json, '$.userId')) = ?)` : ''
+      OR (a.resource_type IN ('BADGE_AWARD', 'USER_BADGE') AND (JSON_UNQUOTE(JSON_EXTRACT(a.metadata_json, '$.userId')) = ?
+        OR EXISTS (SELECT 1 FROM mip_user_badges award WHERE award.app_id = a.app_id AND award.id = a.resource_id AND award.user_id = ?)))` : ''
     const rows = await database.query(
       `SELECT a.id, a.action, a.actor_type, a.actor_user_id, a.effective_role,
          a.metadata_json, a.created_at, p.nickname AS actor_nickname
        FROM mip_audit_logs a LEFT JOIN mip_profiles p ON p.app_id = a.app_id AND p.user_id = a.actor_user_id
        WHERE a.app_id = ? AND ((a.resource_type = ? AND a.resource_id = ?) ${userRelated}) ${cursor.sql}
        ORDER BY a.created_at DESC, a.id DESC LIMIT ?`,
-      [appId, resourceType, resourceId, ...(resourceType === 'USER' ? [resourceId, resourceId] : []), ...cursor.params, input.limit + 1],
+      [appId, resourceType, resourceId, ...(resourceType === 'USER' ? [resourceId, resourceId, resourceId] : []), ...cursor.params, input.limit + 1],
     )
     return pageRows(rows.map(row => {
       const metadata = typeof row.metadata_json === 'string'

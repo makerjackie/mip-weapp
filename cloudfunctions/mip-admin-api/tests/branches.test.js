@@ -46,6 +46,7 @@ function branch(overrides = {}) {
     branchKey: 'shenzhen',
     name: '深圳分会',
     cityName: '深圳',
+    leaderUserId: null, leaderName: null, sortOrder: 0,
     summary: '分会简介',
     status: 'ACTIVE',
     version: 1,
@@ -433,4 +434,37 @@ describe('admin branch management', () => {
     assert.ok(updateIndex >= 0 && auditIndex > updateIndex)
     assert.deepEqual(queryCalls[updateIndex].params, ['INACTIVE', 'wx-app', 'branch-a', 8])
   })
+  it('preserves untouched leader/order, permits zero ordering and validates a new leader inside the tenant transaction', async () => {
+    const calls = []
+    const current = { id: 'branch-a', branch_key: 'shenzhen', name: '深圳分会', city_name: '深圳', summary: '', status: 'ACTIVE', version: 4,
+      leader_user_id: 'leader-a', leader_name: '负责人甲', sort_order: 9 }
+    const repository = createAdminRepository(transactionDatabase({
+      async one(sql, params) { calls.push({ sql, params }); if (sql.includes('FROM mip_city_branches')) return current
+        if (sql.includes('FROM mip_users')) return params[1] === 'leader-b' ? { id: 'leader-b', name: '负责人乙' } : null
+        return { total: 0 }
+      },
+      async query(sql, params) { calls.push({ sql, params }); return { affectedRows: 1 } },
+    }))
+    const base = { appId: 'wx-app', actorUserId: 'admin-user', branchId: 'branch-a', expectedVersion: 4, name: '深圳分会', cityName: '深圳', summary: '', audit: audit() }
+    const unchanged = await repository.updateBranch(base)
+    assert.equal(unchanged.leaderUserId, 'leader-a'); assert.equal(unchanged.leaderName, '负责人甲'); assert.equal(unchanged.sortOrder, 9)
+    const changed = await repository.updateBranch({ ...base, leaderUserId: 'leader-b', sortOrder: 0 })
+    assert.equal(changed.leaderName, '负责人乙'); assert.equal(changed.sortOrder, 0)
+    const leaderQuery = calls.find(call => call.sql.includes('FROM mip_users'))
+    assert.match(leaderQuery.sql, /u\.app_id = \? AND u\.id = \?[\s\S]*FOR UPDATE/)
+    assert.deepEqual(leaderQuery.params, ['wx-app', 'leader-b'])
+    const writes = calls.filter(call => call.sql.includes('UPDATE mip_city_branches')).length
+    await assert.rejects(repository.updateBranch({ ...base, leaderUserId: 'foreign-user' }), error => error.code === 'NOT_FOUND')
+    assert.equal(calls.filter(call => call.sql.includes('UPDATE mip_city_branches')).length, writes)
+    assert.equal(calls.some(call => call.sql.includes('INSERT INTO mip_admin_role_bindings')), false)
+  })
+
+  it('rejects invalid sort values and forwards optional management fields without granting a role', async () => {
+    const repo = serviceRepository(); const service = createAdminService({ repository: repo })
+    const base = { branchKey: 'shenzhen', name: '深圳', cityName: '深圳' }
+    for (const sortOrder of [-1, 1.5, '0', 1000001]) await assert.rejects(service.createBranch(caller, { ...base, sortOrder }), error => error.code === 'VALIDATION_FAILED')
+    await service.createBranch(caller, { ...base, leaderUserId: 'leader-a', sortOrder: 0 })
+    assert.equal(repo.captured.create.leaderUserId, 'leader-a'); assert.equal(repo.captured.create.sortOrder, 0)
+  })
+
 })

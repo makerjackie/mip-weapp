@@ -40,7 +40,7 @@ describe('admin read pages', () => {
         filters: { query: '早会', status: 'PUBLISHED' },
         cursor: 'next-cursor',
         limit: 20,
-        sort: { field: 'startsAt', direction: 'DESC' },
+        sort: { field: 'startsAt', direction: 'ASC' },
       },
     }])
     assert.equal(page.nextCursor, 'third-page')
@@ -79,11 +79,11 @@ describe('admin read pages', () => {
 
   it('keeps order summary and safe projected fields in the read model', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
-    const page = await loadAdminReadPage('orders', { ...query, query: 'MIP-001', status: 'PAID' }, requestWith({
+    const page = await loadAdminReadPage('orders', { ...query, query: 'MIP-001', status: 'PAID', filters: { branchId: 'branch-selected' } }, requestWith({
       'mip.admin.orders.list': {
         items: [{
           merchantOrderNoMasked: 'MIP…0001', nickname: '林晓', orderType: 'EVENT',
-          resourceTitle: 'MIP 早会', amountCents: 18800, currency: 'CNY',
+          resourceTitle: 'MIP 早会', resourceBranchName: '深圳服务器', amountCents: 18800, currency: 'CNY',
           createdAt: '2030-03-01T01:00:00.000Z', status: 'PAID',
         }],
         nextCursor: null,
@@ -92,6 +92,8 @@ describe('admin read pages', () => {
     }, calls))
 
     assert.equal(calls[0].action, 'mip.admin.orders.list')
+    assert.equal((calls[0].input as { filters: { branchId: string } }).filters.branchId, 'branch-selected')
+    assert.equal(page.sections[0].rows[0].branch, '深圳服务器')
     assert.equal(page.sections[0].rows[0].id, 'MIP…0001')
     assert.equal(page.sections[0].rows[0].amount, '¥188.00')
     assert.deepEqual(page.summary?.map(item => item.value), ['3', '2', '¥376.00', '¥0.00'])
@@ -199,10 +201,10 @@ describe('admin read pages', () => {
     assert.deepEqual(calls.map(call => call.action), [
       'mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules',
       'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions',
-      'mip.admin.entitlements.transactions.list', 'mip.admin.contribution.rules.list',
+      'mip.admin.contribution.rules.list',
       'mip.admin.contribution.transactions.list',
     ])
-    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '成长流水', '等级变更', '权益流水', '贡献值规则', '贡献值流水'])
+    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '成长流水', '等级变更', '贡献值规则', '贡献值流水'])
   })
 
   it('loads operations records without deriving queue or moderation state in the browser', async () => {
@@ -271,14 +273,14 @@ describe('admin read pages', () => {
     const page = await loadAdminReadPage('knowledge', { ...query, query: '运营' }, requestWith({
       'mip.admin.knowledge.list': {
         section: 'CONTENTS',
-        items: [{ id: 'content-1', title: '城市分会运营手册', contentType: 'ARTICLE', category: { name: '运营' }, authorName: 'MIP', accessType: 'MEMBER', updatedAt: '2030-02-01T00:00:00.000Z', status: 'PUBLISHED' }],
+        items: [{ id: 'content-1', title: '城市分会运营手册', version: 1, contentType: 'ARTICLE', category: { name: '运营' }, authorName: 'MIP', accessType: 'MEMBER', updatedAt: '2030-02-01T00:00:00.000Z', status: 'PUBLISHED' }],
         nextCursor: null,
       },
     }, calls))
 
     assert.deepEqual(calls, [{
       action: 'mip.admin.knowledge.list',
-      input: { section: 'CONTENTS', status: 'PUBLISHED', query: '运营', limit: 20 },
+      input: { section: 'CONTENTS', cursor: 'next-cursor', status: 'PUBLISHED', query: '运营', limit: 20 },
     }])
     assert.equal(page.sections[0].rows[0].category, '运营')
     assert.equal(page.sections[0].rows[0].access, '会员可见')

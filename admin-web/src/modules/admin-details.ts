@@ -5,6 +5,7 @@ import {
   type TaskDetailLoadOptions,
 } from './admin-task-management.ts'
 import { loadBannerDetail } from './admin-banner-management.ts'
+import { feedbackFields } from './event-feedback.ts'
 import {
   loadGameCatalogDetail,
   loadGameSeasonDetail,
@@ -23,6 +24,8 @@ export type AdminDetailRow = AdminOperationRow
 export interface AdminEventRosterPageQuery {
   cursor?: string | null
   limit?: number
+  query?: string
+  status?: string
 }
 
 export interface AdminDetailOptions {
@@ -34,11 +37,13 @@ export interface AdminDetailOptions {
   includeOpportunityComments?: boolean
   eventRoster?: AdminEventRosterPageQuery
   eventFeedback?: AdminEventRosterPageQuery
+  messageDeliveries?: AdminEventRosterPageQuery
+  messageReviews?: AdminEventRosterPageQuery
   task?: TaskDetailLoadOptions
   gameMembers?: GameMemberPageQuery
 }
 
-export type AdminDetailPagerKey = 'eventRoster' | 'eventFeedback' | 'taskMembers' | 'taskCompletions' | 'gameMembers'
+export type AdminDetailPagerKey = 'eventRoster' | 'eventFeedback' | 'taskMembers' | 'taskCompletions' | 'gameMembers' | 'messageDeliveries' | 'messageReviews'
 
 export interface AdminDetailPager {
   key: AdminDetailPagerKey
@@ -46,6 +51,9 @@ export interface AdminDetailPager {
   currentCursor: string | null
   nextCursor: string | null
   placeholder: string
+  searchable?: boolean
+  status?: string
+  statusOptions?: Array<{ value: string; label: string }>
 }
 
 export interface AdminDetailField {
@@ -57,6 +65,7 @@ export interface AdminDetailField {
 
 export interface AdminDetailSection {
   title: string
+  error?: string
   fields?: AdminDetailField[]
   metrics?: AdminDetailField[]
   rows?: AdminDetailRow[]
@@ -103,7 +112,7 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
     request('mip.admin.users.get', { userId, includePhone: false }),
     options.includeUserMembership === false
       ? Promise.resolve(null)
-      : request('mip.admin.memberships.get', { userId }),
+      : request('mip.admin.memberships.get', { userId }).catch(() => null),
   ])
   const user = record(userValue)
   const membershipDetail = record(membershipValue)
@@ -123,6 +132,8 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
       ['用户版本', numberText(user.userVersion)],
       ['简介', text(user.headline)],
       ['个人介绍', text(user.introduction)],
+      ['真实姓名', text(user.realName)],
+      ['职业身份', text(user.identityStatus)],
       ['注册时间', dateTime(user.createdAt)],
     ]),
   }]
@@ -151,6 +162,7 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
   if (Object.keys(counts).length) {
     sections.push({
       title: '业务记录',
+      ...(counts.loadFailed ? { error: '业务统计暂不可用，请重试。' } : {}),
       metrics: fields([
         ['活动报名', numberText(counts.registrations)],
         ['活动签到', numberText(counts.attended)],
@@ -164,6 +176,7 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
   if (Object.keys(influence).length) {
     sections.push({
       title: '影响力数据',
+      ...(influence.loadFailed ? { error: '影响力统计暂不可用，请重试。' } : {}),
       metrics: fields([
         ['嘉宾邀请', numberText(influence.guestCount)],
         ['互动', numberText(influence.interactionCount)],
@@ -173,6 +186,8 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
     })
   }
   appendUserCollections(sections, user)
+  const related = record(user.relatedRecords)
+  sections.push(...userRelatedSections(related))
   return {
     route: 'users',
     title: text(user.nickname, '用户详情'),
@@ -181,6 +196,19 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
     sections,
     source: { user, membership: membershipDetail },
   }
+}
+
+export function userRelatedSections(related: Record<string, unknown>): AdminDetailSection[] {
+  const sections: AdminDetailSection[] = []
+  if (related.loadFailed) sections.push({ title: '关联业务记录', error: '关联记录读取失败，请重试；基础档案已成功加载。' })
+  for (const [key, title, target] of [['superCases', '超级案例', 'userContent'], ['cooperationCards', '合作卡', 'userContent'], ['opportunities', '发布的机会', 'opportunities'], ['registrations', '报名活动', 'events'], ['orders', '关联订单', 'orders']] as const) {
+    const items = records(related[key])
+    if (items.length) sections.push({ title, detailTarget: target,
+      rows: items.map(item => ({ detailId: item.detailAllowed === false ? undefined : key === 'superCases' ? `SUPER_CASE:${item.id}` : key === 'cooperationCards' ? `COOPERATION_CARD:${item.id}` : String(item.eventId || item.id || ''), title: key === 'cooperationCards' ? codeLabel(item.roleKey) : text(item.title || item.projectName || item.resourceTitle), state: codeLabel(item.status), createdAt: dateTime(item.startedOn || item.createdAt || item.updatedAt) })),
+      columns: columns([['title', '名称'], ['state', '状态'], ['createdAt', '时间']]),
+    })
+  }
+  return sections
 }
 
 function appendUserCollections(sections: AdminDetailSection[], user: AdminDetailRow) {
@@ -228,26 +256,29 @@ async function loadEventDetail(
     && options.eventFeedback.cursor.length <= 512
     ? options.eventFeedback.cursor
     : null
+  const rosterFilters = { query: options.eventRoster?.query || '', status: options.eventRoster?.status || '' }
+  const optionalFailure = () => ({ items: [], nextCursor: null, loadFailed: true })
   const [eventValue, insightsValue, rosterValue, albumValue, feedbackValue] = await Promise.all([
     request('mip.admin.events.get', { eventId }),
-    request('mip.admin.events.insights.get', { eventId }),
+    request('mip.admin.events.insights.get', { eventId }).catch(() => ({ loadFailed: true })),
     options.includeEventRoster === false
       ? Promise.resolve({ items: [], nextCursor: null })
       : request('mip.admin.events.roster', {
           eventId,
           includePhone: false,
           limit: rosterLimit,
+          filters: rosterFilters,
           ...(rosterCursor ? { cursor: rosterCursor } : {}),
-        }),
+        }).catch(optionalFailure),
     options.includeEventAlbum
-      ? request('mip.admin.events.album.list', { eventId, status: 'PENDING', limit: 20 })
+      ? request('mip.admin.events.album.list', { eventId, status: 'PENDING', limit: 20 }).catch(optionalFailure)
       : Promise.resolve({ items: [], nextCursor: null }),
     options.includeEventFeedback
       ? request('mip.admin.events.feedbacks.list', {
           eventId,
           limit: 20,
           ...(feedbackCursor ? { cursor: feedbackCursor } : {}),
-        })
+        }).catch(optionalFailure)
       : Promise.resolve({ items: [], nextCursor: null }),
   ])
   const event = record(eventValue)
@@ -310,7 +341,8 @@ async function loadEventDetail(
   sections.push(financialSection(financials), feedbackSection(feedback))
   if (options.includeEventRoster !== false) {
     sections.push({
-      title: '报名名单',
+      title: '报名与参与人',
+      ...(rosterPage.loadFailed ? { error: '报名名单加载失败，请重试；活动资料已成功加载。' } : {}),
       rows: roster.map(item => ({
         registrationId: text(item.id, text(item.registrationId)),
         version: numberText(item.version),
@@ -319,24 +351,35 @@ async function loadEventDetail(
         phone: item.phoneBound === true ? '已绑定' : '未绑定',
         submittedAt: dateTime(item.submittedAt),
         checkedInAt: dateTime(item.checkedInAt),
+        paymentStatus: item.paymentStatus === 'NOT_REQUIRED' ? '无需支付' : item.paymentStatus === 'UNPAID' ? '待支付' : codeLabel(item.paymentStatus),
+        paidAmount: item.paidAmountCents === undefined ? '—' : money(item.paidAmountCents, item.currency),
+        refundedAmount: item.refundedAmountCents === undefined ? '—' : money(item.refundedAmountCents, item.currency),
         state: codeLabel(item.status),
+        detailLinks: [
+          ...(typeof item.userDetailId === 'string' ? [{ route: 'users' as const, id: item.userDetailId, label: '用户档案' }] : []),
+          ...(typeof item.orderDetailId === 'string' ? [{ route: 'orders' as const, id: item.orderDetailId, label: '支付订单' }] : []),
+        ],
         rowActions: eventRegistrationRowActions(eventId, item),
       })),
-      columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['checkedInAt', '签到时间'], ['state', '状态']]),
+      columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['paymentStatus', '支付状态'], ['paidAmount', '实付金额'], ['refundedAmount', '已退款'], ['checkedInAt', '签到时间'], ['state', '报名状态']]),
       pager: {
         key: 'eventRoster',
-        query: '',
+        query: rosterFilters.query,
         currentCursor: rosterCursor,
         nextCursor: typeof rosterPage.nextCursor === 'string' && rosterPage.nextCursor
           ? rosterPage.nextCursor
           : null,
         placeholder: '报名名单',
+        searchable: true,
+        status: rosterFilters.status,
+        statusOptions: ['PENDING_REVIEW', 'WAITLISTED', 'PAYMENT_PENDING', 'REGISTERED', 'CANCELLATION_PENDING', 'CANCELLED', 'REJECTED', 'ATTENDED', 'ABNORMAL'].map(value => ({ value, label: codeLabel(value) })),
       },
     })
   }
   if (options.includeEventAlbum) {
     sections.push({
       title: '待审核相册',
+      ...(record(albumValue).loadFailed ? { error: '相册加载失败，请重试。' } : {}),
       rows: pendingAlbum.map(item => ({
         caption: text(item.caption),
         uploader: text(item.nickname),
@@ -352,17 +395,17 @@ async function loadEventDetail(
   if (options.includeEventFeedback) {
     sections.push({
       title: '活动反馈明细',
+      ...(feedbackPage.loadFailed ? { error: '反馈明细加载失败，请重试。' } : {}),
       rows: feedbackRows.map(item => ({
         nickname: text(item.nickname),
         submittedAt: dateTime(item.submittedAt),
         rating: numberText(item.rating),
-        wouldRecommend: item.wouldRecommend === true ? '是' : item.wouldRecommend === false ? '否' : '—',
-        capabilityRoles: arrayText(item.capabilityRoles),
-        joinMipIntent: codeLabel(item.joinMipIntent),
+        ...feedbackFields(item),
       })),
       columns: columns([
         ['nickname', '提交人'], ['submittedAt', '提交时间'], ['rating', '评分'],
         ['wouldRecommend', '推荐意向'], ['capabilityRoles', '能力角色'], ['joinMipIntent', '加入意向'],
+        ['resources', '资源与引荐'], ['discoverySource', '了解方式'], ['rosterConsent', '花名册意愿'],
       ]),
       pager: {
         key: 'eventFeedback',
@@ -381,7 +424,7 @@ async function loadEventDetail(
     subtitle: [text(event.cityName, ''), text(event.venueName, '')].filter(Boolean).join(' · '),
     status: codeLabel(event.status),
     sections,
-    source: { event, roster, rosterPage, pendingAlbum, feedbackRows, feedbackPage },
+    source: { event, roster, rosterPage, rosterFilters, pendingAlbum, feedbackRows, feedbackPage },
   }
 }
 
@@ -481,6 +524,7 @@ async function loadOrderDetail(orderId: string, request: AdminDetailRequest): Pr
     subtitle: text(order.merchantOrderNoMasked, text(order.id)),
     status: codeLabel(order.status),
     sections,
+    source: { order },
   }
 }
 
@@ -489,21 +533,20 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
   const title = text(campaign.title, text(campaign.name, '消息活动'))
   const [reviewPage, deliveryPage] = await Promise.all([
     options.includeMessageDeliveryReviews === false ? Promise.resolve({ items: [], nextCursor: null }) : request('mip.admin.messageDeliveryReviews.list', {
-      sourceType: 'CAMPAIGN_DISPATCH',
+      sourceType: 'CAMPAIGN_DISPATCH', campaignId,
       workflowStatus: 'ALL',
-      limit: 20,
-    }),
+      limit: 20, ...(options.messageReviews?.cursor ? { cursor: options.messageReviews.cursor } : {}),
+    }).catch(() => ({ items: [], loadFailed: true })),
     request('mip.admin.messageDeliveryRecords.list', {
-      query: title,
-      limit: 20,
-    }),
+      campaignId, limit: 20, ...(options.messageDeliveries?.cursor ? { cursor: options.messageDeliveries.cursor } : {}),
+    }).catch(() => ({ items: [], loadFailed: true })),
   ])
   const reviews = pageRecords(reviewPage)
     .filter(item => record(item.evidence).campaignRef && record(record(item.evidence).campaignRef).id === campaignId)
   const reviewDetails = options.includeMessageDeliveryReviews === false
     ? []
-    : await Promise.all(reviews.slice(0, 5).map(item => (
-        request('mip.admin.messageDeliveryReviews.get', { resourceRef: item.resourceRef })
+    : await Promise.all(reviews.map(item => (
+        request('mip.admin.messageDeliveryReviews.get', { resourceRef: item.resourceRef }).catch(() => ({ ...item, loadFailed: true }))
       )))
   const stats = record(campaign.deliveryStats)
   const outbox = record(stats.outboxStats)
@@ -555,7 +598,9 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
     })
   }
   sections.push({
-    title: '投递记录（当前可见）',
+    title: '投递记录',
+    ...(record(deliveryPage).loadFailed ? { error: '投递记录暂未读取成功，消息正文已保留' } : {}),
+    pager: { key: 'messageDeliveries', query: '', currentCursor: options.messageDeliveries?.cursor || null, nextCursor: typeof record(deliveryPage).nextCursor === 'string' ? String(record(deliveryPage).nextCursor) : null, placeholder: '投递记录' },
     rows: pageRecords(deliveryPage).map(item => ({
       title: text(item.title),
       recipient: text(item.nickname),
@@ -572,7 +617,9 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
   })
   if (options.includeMessageDeliveryReviews !== false) {
     sections.push({
-      title: '投递复核（当前可见）',
+      title: '投递复核',
+      ...(record(reviewPage).loadFailed || reviewDetails.some(item => record(item).loadFailed) ? { error: '投递复核暂未读取成功，消息正文已保留' } : {}),
+      pager: { key: 'messageReviews', query: '', currentCursor: options.messageReviews?.cursor || null, nextCursor: typeof record(reviewPage).nextCursor === 'string' ? String(record(reviewPage).nextCursor) : null, placeholder: '投递复核' },
       rows: reviewDetails.map(value => {
         const item = record(value)
         const source = record(item.sourceState)
@@ -909,11 +956,13 @@ function keyValueText(value: unknown) {
 }
 
 function numberText(value: unknown) {
+  if (value === null || value === undefined || value === '') return '—'
   const number = Number(value)
   return Number.isFinite(number) ? number.toLocaleString('zh-CN') : '—'
 }
 
 function decimalText(value: unknown) {
+  if (value === null || value === undefined || value === '') return '—'
   const number = Number(value)
   return Number.isFinite(number) ? number.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) : '—'
 }
@@ -924,12 +973,14 @@ function dateTime(value: unknown) {
 }
 
 function money(value: unknown, currency: unknown) {
+  if (value === null || value === undefined || value === '') return '—'
   const cents = Number(value)
   if (!Number.isFinite(cents)) return '—'
   return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: text(currency, 'CNY') }).format(cents / 100)
 }
 
 function basisPoints(value: unknown) {
+  if (value === null || value === undefined || value === '') return '—'
   const points = Number(value)
   return Number.isFinite(points) ? `${(points / 100).toLocaleString('zh-CN', { maximumFractionDigits: 2 })}%` : '—'
 }
@@ -971,6 +1022,8 @@ const codeLabels: Record<string, string> = {
   'admin.opportunities.create': '创建机会', 'admin.opportunities.update': '更新机会', 'admin.opportunities.publish': '发布机会',
   'admin.opportunities.end': '结束机会', 'admin.opportunities.unpublish': '下架机会',
   'admin.opportunities.archive': '归档机会', 'admin.opportunities.delete': '删除机会',
+  OPPORTUNITY_CREATED: '创建机会', OPPORTUNITY_UPDATED: '更新机会', OPPORTUNITY_ARCHIVED: '归档机会', OPPORTUNITY_ENDED: '结束机会',
+  ABILITY: '能力', INDUSTRY: '行业', PRIMARY_INDUSTRY: '主要行业',
 }
 
 function codeLabel(value: unknown) {

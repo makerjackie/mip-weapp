@@ -1,5 +1,7 @@
 'use strict'
 
+const { mediaUploadBindingAllows } = require('./admin-upload-authorization')
+
 const { createHmac, timingSafeEqual } = require('node:crypto')
 const {
   MAX_IMAGE_BYTES,
@@ -21,6 +23,7 @@ const MEDIA_ADMIN_PURPOSE_CAPABILITIES = Object.freeze({
   SUPER_CASE_COVER: 'userContent.moderate',
   SUPER_CASE_MEDIA: 'userContent.moderate',
   TASK_TEMPLATE: 'tasks.manage',
+  VIDEO_RECAP_COVER: 'events.recaps.manage',
 })
 const MEDIA_ADMIN_UPLOAD_POLICIES = Object.freeze(Object.fromEntries(
   Object.keys(MEDIA_ADMIN_PURPOSE_CAPABILITIES).map(purpose => [purpose, PURPOSE_POLICIES[purpose]]),
@@ -84,21 +87,19 @@ async function assertMediaAdminCapability(database, request) {
     throw new Error('MEDIA_INTERNAL_HANDLER_CONFIG_INVALID')
   }
   const rows = await database.query(
-    `SELECT binding.role_key,
-       CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END AS policy_capabilities_json
+    `SELECT binding.role_key, binding.scope_type, binding.scope_id,
+       CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END AS policy_capabilities_json, binding.role_template_id, role_template.base_role_key AS template_base_role_key, role_template.status AS template_status, role_template.capabilities AS template_capabilities_json
      FROM mip_users u
      INNER JOIN mip_admin_role_bindings binding
        ON binding.app_id = u.app_id AND binding.user_id = u.id
+     LEFT JOIN mip_admin_roles role_template ON role_template.app_id = binding.app_id AND role_template.role_id = binding.role_template_id
      LEFT JOIN mip_role_capability_policies policy
        ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
-     WHERE u.app_id = ? AND u.id = ? AND u.status = 'ACTIVE'
-       AND binding.scope_type = 'PLATFORM'
-       AND binding.scope_id = '00000000-0000-0000-0000-000000000000'
-       AND binding.status = 'ACTIVE'
-       AND binding.role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')`,
+     WHERE NOT EXISTS (SELECT 1 FROM mip_admin_accounts account WHERE account.app_id = binding.app_id AND account.linked_user_id = binding.user_id AND account.status <> 'ACTIVE') AND (binding.role_template_id IS NULL OR binding.role_key <> 'PLATFORM_OWNER') AND u.app_id = ? AND u.id = ? AND u.status = 'ACTIVE'
+       AND binding.status = 'ACTIVE'`,
     [request.appId, request.actorUserId],
   )
-  if (!(Array.isArray(rows) && rows.some(row => configuredCapabilityAllows(row, request.capability)))) {
+  if (!(Array.isArray(rows) && rows.some(row => mediaUploadBindingAllows(row, request.capability)))) {
     throw new Error('FORBIDDEN')
   }
 }
@@ -188,22 +189,6 @@ function mediaCapabilityForInput(input) {
     : undefined
 }
 
-function configuredCapabilityAllows(row, capability) {
-  if (row?.role_key === 'PLATFORM_OWNER') return true
-  if (row?.role_key !== 'PLATFORM_OPERATIONS') return false
-  const value = row.policy_capabilities_json
-  if (value === null || value === undefined) return true
-  try {
-    const capabilities = typeof value === 'string' ? JSON.parse(value) : value
-    return Array.isArray(capabilities)
-      && new Set(capabilities).size === capabilities.length
-      && capabilities.every(item => typeof item === 'string')
-      && capabilities.includes(capability)
-  }
-  catch {
-    return false
-  }
-}
 
 function hasExactKeys(value, allowed) {
   const keys = Reflect.ownKeys(value)

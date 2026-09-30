@@ -25,8 +25,20 @@ const {
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 
 function createAdminGovernance({ repository, access, now = () => new Date() }) {
-  async function listBranches(caller) {
+  async function listBranches(caller, input = {}) {
     const context = await access.session(caller)
+    if (input.purpose) {
+      const capabilities = { EVENT_EDIT: CAPABILITIES.EVENTS_WRITE, EVENT_FILTER: CAPABILITIES.EVENTS_READ, OVERVIEW_FILTER: CAPABILITIES.DASHBOARD, ROLE_SCOPE: CAPABILITIES.ROLES_CHANGE,
+        USER_FILTER: CAPABILITIES.USERS_READ, ORDER_FILTER: CAPABILITIES.ORDERS_READ,
+        TASK_EDIT: CAPABILITIES.TASKS_MANAGE, MESSAGE_EDIT: CAPABILITIES.MESSAGES_MANAGE }
+      const capability = Object.hasOwn(capabilities, input.purpose) ? capabilities[input.purpose] : null
+      if (!capability) throw new AdminError('VALIDATION_FAILED', '服务器选项用途无效')
+      firstGrant(context.bindings, capability)
+      const visibility = visibilityForCapability(context.bindings, capability)
+      const rows = await repository.listBranches(context.caller.appId)
+      return { items: rows.filter(row => row.status === 'ACTIVE' && (visibility.platform || visibility.branchIds.includes(row.id)))
+        .map(row => ({ id: row.id, name: row.name, cityName: row.cityName })), nextCursor: null }
+    }
     platformGrant(context, CAPABILITIES.BRANCHES_MANAGE)
     return {
       items: await repository.listBranches(context.caller.appId),
@@ -76,7 +88,7 @@ function createAdminGovernance({ repository, access, now = () => new Date() }) {
         action: 'admin.branches.update',
         resourceType: 'CITY_BRANCH',
         resourceId: branchId,
-        metadata: { expectedVersion: version, fields: ['name', 'cityName', 'summary'] },
+        metadata: { expectedVersion: version, fields: ['name', 'cityName', 'summary', ...Object.keys(draft).filter(key => ['leaderUserId', 'sortOrder'].includes(key))] },
       }),
     })
   }
@@ -168,6 +180,8 @@ function createAdminGovernance({ repository, access, now = () => new Date() }) {
       userId,
       roleKey,
       active: input.active,
+      roleTemplateId: input.roleTemplateId ? requiredId(input.roleTemplateId, '岗位模板') : null,
+      idempotencyKey: input.idempotencyKey ? stableKey(input.idempotencyKey, '请求', 128) : null,
       scope: {
         ...scope,
         scopeId: scope.scopeType === 'PLATFORM' ? PLATFORM_SCOPE_ID : scope.scopeId,
@@ -180,7 +194,7 @@ function createAdminGovernance({ repository, access, now = () => new Date() }) {
         action: input.active ? 'admin.roles.grant' : 'admin.roles.revoke',
         resourceType: 'ADMIN_ROLE_BINDING',
         resourceId: userId,
-        metadata: { roleKey, active: input.active },
+        metadata: { roleKey, active: input.active, roleTemplateId: input.roleTemplateId || null, reason: text(input.reason, 300) || null },
       }),
     })
   }
@@ -304,16 +318,9 @@ function createAdminGovernance({ repository, access, now = () => new Date() }) {
     return { items, nextCursor: null, availableTypes }
   }
 
-  async function createRole(caller, input = {}) {
-    const context = await access.session(caller)
-    const grant = platformGrant(context, CAPABILITIES.ROLES_CHANGE)
-    throw new AdminError('NOT_IMPLEMENTED', '角色创建功能尚未实现', true)
-  }
-
   return {
     changeBranchStatus,
     createBranch,
-    createRole,
     listAudit,
     listBranches,
     listOperationalExceptions,
@@ -348,6 +355,11 @@ function normalizeBranchDraft(value, { includeKey = false } = {}) {
     name: normalizedBranchText(value.name, 80, { required: true, label: '分会名称' }),
     cityName: normalizedBranchText(value.cityName, 80, { required: true, label: '城市名称' }),
     summary: normalizedBranchText(value.summary, 500, { label: '分会简介' }),
+  }
+  if (Object.hasOwn(value, 'leaderUserId')) draft.leaderUserId = value.leaderUserId ? requiredId(value.leaderUserId, '负责人') : null
+  if (Object.hasOwn(value, 'sortOrder')) {
+    if (!Number.isSafeInteger(value.sortOrder) || value.sortOrder < 0 || value.sortOrder > 1000000) throw new AdminError('VALIDATION_FAILED', '排序须为 0 到 1000000 的整数')
+    draft.sortOrder = value.sortOrder
   }
   if (includeKey) {
     const rawKey = typeof value.branchKey === 'string'

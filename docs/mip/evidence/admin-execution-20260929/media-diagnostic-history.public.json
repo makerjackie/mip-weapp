@@ -1,0 +1,23 @@
+{
+  "at": "2026-09-29T11:56:52.439Z",
+  "diagnostics": [
+    {
+      "stage": "request-failed",
+      "vendorCode": -501001,
+      "vendorReason": "UPSTREAM_ERROR",
+      "time": "2026-09-29 19:56:17.728"
+    },
+    {
+      "stage": "request-failed",
+      "vendorCode": -501001,
+      "time": "2026-09-29 19:47:01.011"
+    },
+    {
+      "stage": "request-failed",
+      "vendorCode": -501001,
+      "time": "2026-09-29 19:36:30.342"
+    }
+  ],
+  "historical": true,
+  "resolvedBy": "Web server HTTP image safety client; subsequent upload and unpublished event binding passed."
+}

@@ -29,6 +29,7 @@ const messages = Object.freeze({
   PROFILE_REQUIRED: '请先完善个人资料',
   TARGET_INVALID: 'Banner 跳转地址不受支持',
   VALIDATION_FAILED: 'Banner 内容格式不正确',
+  BANNER_LIMIT_REACHED: 'Banner 最多五个，请先删除多余 Banner 后再新增或启用',
 })
 
 const CONTRACT_VERSION = 1

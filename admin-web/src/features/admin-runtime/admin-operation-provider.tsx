@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { App } from 'antd'
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminOperationAction, AdminRequestInput } from '../../domain/contracts'
 import type { AdminDetailView } from '../../modules/admin-details'
@@ -41,14 +42,23 @@ interface OperationContextValue {
 const OperationContext = createContext<OperationContextValue | null>(null)
 
 export function AdminOperationProvider({ children }: { children: ReactNode }) {
+  const { sessionBoundary } = useAdminSession()
+  return <AdminOperationSession key={sessionBoundary}>{children}</AdminOperationSession>
+}
+
+function AdminOperationSession({ children }: { children: ReactNode }) {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const { demoMode, hasCapability, request, sessionBoundary } = useAdminSession()
   const [model, setModel] = useState<DialogModel | null>(null)
   const [pendingValues, setPendingValues] = useState<OperationValues | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const conflictDrafts = useRef(new Map<string, OperationValues>())
+  const attemptedInput = useRef<{ draftKey: string; hash: string; key: string } | null>(null)
+  const epoch = useRef(0)
+  useLayoutEffect(() => () => { epoch.current += 1 }, [])
 
   const launch = useCallback(async (
     action: string,
@@ -56,12 +66,16 @@ export function AdminOperationProvider({ children }: { children: ReactNode }) {
     detail: AdminDetailView | null = null,
     options: LaunchOptions = {},
   ) => {
+    const currentEpoch = ++epoch.current
+    setModel(null)
+    setLoading(false)
     setError('')
     setPendingValues(null)
     try {
       const next = isReviewedOperationAction(action)
         ? await createOperationModel(action, targetId, detail, options, request)
         : null
+      if (epoch.current !== currentEpoch) return
       if (!next) {
         void message.error('当前操作尚未接入受控表单')
         return
@@ -84,12 +98,15 @@ export function AdminOperationProvider({ children }: { children: ReactNode }) {
       setModel({ ...next, draftKey, values })
     }
     catch (reason) {
+      if (epoch.current !== currentEpoch) return
       void message.error(humanizeError(reason))
     }
   }, [hasCapability, message, request, sessionBoundary])
 
   const close = useCallback(() => {
     if (loading) return
+    epoch.current += 1
+    attemptedInput.current = null
     setModel(null)
     setPendingValues(null)
     setError('')
@@ -121,29 +138,43 @@ export function AdminOperationProvider({ children }: { children: ReactNode }) {
     }
     const input = model.buildInput(pendingValues)
     if (!input) return
+    const hash = JSON.stringify(input)
+    const previous = attemptedInput.current
+    const idempotencyKey = previous?.draftKey === model.draftKey
+      ? previous.hash === hash ? previous.key : crypto.randomUUID() : model.idempotencyKey
+    attemptedInput.current = { draftKey: model.draftKey, hash, key: idempotencyKey }
+    const currentEpoch = epoch.current
     setLoading(true)
     setError('')
     try {
-      await request(model.action, { ...input, idempotencyKey: model.idempotencyKey })
+      const result = await request<Record<string, unknown>>(model.action, { ...input, idempotencyKey })
+      if (epoch.current !== currentEpoch) return
       conflictDrafts.current.delete(model.draftKey)
+      attemptedInput.current = null
       await queryClient.invalidateQueries()
+      if (epoch.current !== currentEpoch) return
       void message.success(`${model.title}已提交`)
       setModel(null)
       setPendingValues(null)
+      if (model.action === 'mip.admin.events.clone' && typeof result.draftId === 'string') {
+        void navigate({ to: '/events/$eventId/edit', params: { eventId: 'new' }, search: { draftId: result.draftId } })
+      }
     }
     catch (reason) {
+      if (epoch.current !== currentEpoch) return
       setPendingValues(null)
       if (reason && typeof reason === 'object' && 'code' in reason
         && (reason.code === 'CONFLICT' || reason.code === 'VERSION_CONFLICT')) {
         conflictDrafts.current.set(model.draftKey, model.values)
         setModel({ ...model, needsReload: true })
         await queryClient.invalidateQueries()
+        if (epoch.current !== currentEpoch) return
         setError('记录已更新，列表已刷新。填写内容已保留，请重新打开操作后核对。')
       }
       else setError(humanizeError(reason))
     }
-    finally { setLoading(false) }
-  }, [demoMode, loading, message, model, pendingValues, queryClient, request])
+    finally { if (epoch.current === currentEpoch) setLoading(false) }
+  }, [demoMode, loading, message, model, navigate, pendingValues, queryClient, request])
 
   const value = useMemo<OperationContextValue>(() => ({ launch }), [launch])
   return (

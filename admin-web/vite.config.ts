@@ -13,6 +13,7 @@ export default defineConfig({
           groups: [
             { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 30 },
             { name: 'router-query', test: /node_modules[\\/]@tanstack[\\/]/, priority: 20 },
+            { name: 'charts', test: /node_modules[\\/](recharts|recharts-scale|victory-vendor|d3[^\\/]*|@reduxjs|redux|react-redux|immer)[\\/]/, priority: 15 },
             { name: 'ant-design', test: /node_modules[\\/](antd|@ant-design)[\\/]/, priority: 10 },
             { name: 'vendor', test: /node_modules[\\/]/, priority: 1 },
           ],

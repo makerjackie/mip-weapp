@@ -9,8 +9,15 @@ const {
 } = require('./lib/internal-admin-transport')
 const { verifyMaintenanceRequest } = require('./lib/internal-auth')
 const { mysqlDatabase } = require('./lib/mysql')
+const { createWechatImageChecker } = require('./lib/wechat-content-checker')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+
+const webImageChecker = createWechatImageChecker({
+  appId: process.env.MIP_WECHAT_APP_ID,
+  appSecret: process.env.MIP_WECHAT_APP_SECRET,
+  report: metadata => console.warn('MIP_IMAGE_SAFETY', JSON.stringify(metadata)),
+})
 
 const messages = {
   AUTH_REQUIRED: '当前微信身份不可用，请重试',
@@ -47,7 +54,7 @@ function failure(error) {
 
 exports.main = async (event = {}) => {
   const database = mysqlDatabase()
-  const service = createMediaService({ database, cloud })
+  const service = createMediaService({ database, cloud, ...(event.transport === MEDIA_ADMIN_TRANSPORT ? { checker: webImageChecker } : {}) })
   try {
     if (event.transport === MEDIA_ADMIN_TRANSPORT) {
       return createInternalMediaHandler({

@@ -35,6 +35,27 @@ export const ADMIN_GAME_MUTATION_ACTIONS = [
 
 export type AdminGameMutationAction = typeof ADMIN_GAME_MUTATION_ACTIONS[number]
 
+export async function loadGameMemberSelection(source: Record<string, unknown>, request: AdminRequest) {
+  const team = record(source.team)
+  const seasonId = text(team.seasonId) || text(source.seasonId)
+  const teamId = text(team.id)
+  if (!uuid(seasonId) || !uuid(teamId) || team.status !== 'ACTIVE') throw new Error('当前战队不可编辑成员')
+  const items: Record<string, unknown>[] = [], seen = new Set<string>()
+  let cursor = ''
+  do {
+    const page = record(await request('mip.admin.game.members.assignable.list', { seasonId, teamId, limit: 100, ...(cursor ? { cursor } : {}) }))
+    if (!Array.isArray(page.items)) throw new Error('成员目录字段不完整')
+    items.push(...page.items.map(record))
+    cursor = page.hasMore === true ? String(page.nextCursor || '') : ''
+    if (page.hasMore === true && (!cursor || seen.has(cursor) || seen.size >= 100)) throw new Error('成员目录分页异常')
+    if (cursor) seen.add(cursor)
+  } while (cursor)
+  if (items.some(item => typeof item.memberRef !== 'string' || !item.memberRef || typeof item.nickname !== 'string')) throw new Error('成员目录字段不完整')
+  const current = items.filter(item => item.teamId === teamId)
+  if (!Number.isSafeInteger(team.memberCount) || current.length !== team.memberCount) throw new Error('现有成员与可分配目录不一致，请先核对会籍状态；本次不会替换名单')
+  return { ...source, assignableMembers: items }
+}
+
 export interface GameMemberPageQuery {
   query?: string
   cursor?: string | null
@@ -232,7 +253,7 @@ export async function loadGameTeamDetail(
           role: roleLabel(item.role),
         })),
         columns: columns([
-          ['name', '成员'], ['branch', '服务器'], ['currentTeam', '当前战队'], ['role', '角色'], ['memberRef', '成员引用'],
+          ['name', '成员'], ['branch', '服务器'], ['currentTeam', '当前战队'], ['role', '角色'],
         ]),
         pager: {
           key: 'gameMembers',
@@ -371,7 +392,7 @@ function teamSaveDefinition(targetId: string, source: Record<string, unknown>, t
   const branches = records(source.branches)
   return definition('mip.admin.game.teams.save', targetId ? '编辑战队' : '新增战队', '战队成员和比赛积分由独立操作维护。', [
     { name: 'seasonId', label: '赛季 ID', kind: 'text', hidden: true },
-    { name: 'branchId', label: '所属服务器', kind: branches.length ? 'select' : 'text', options: branches.map(item => ({ value: String(item.id || ''), label: String(item.name || item.id || '') })) },
+    { name: 'branchId', label: '所属服务器', kind: 'select', options: branches.map(item => ({ value: String(item.id || ''), label: String(item.name || '未命名服务器') })) },
     { name: 'name', label: '战队名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '简介', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'memberLimit', label: '成员上限', kind: 'integer' },
@@ -383,12 +404,15 @@ function teamSaveDefinition(targetId: string, source: Record<string, unknown>, t
 }
 
 function teamMembersDefinition(targetId: string, source: Record<string, unknown>, team: Record<string, unknown>) {
-  return definition('mip.admin.game.teams.members.replace', '替换战队成员', '这是全量替换操作。请填写全部成员引用；未填写的现有成员会离队。服务端不会接受客户端积分或奖励。', [
-    { name: 'memberRefs', label: '全部成员引用', kind: 'profile-ref-list', wide: true },
-    { name: 'captainRef', label: '队长成员引用', kind: 'text' },
+  const members = records(source.assignableMembers)
+  const current = members.filter(item => item.teamId === targetId)
+  const options = members.map(item => ({ value: String(item.memberRef), label: `${String(item.nickname)}${item.branchName ? ` · ${item.branchName}` : ''}${item.teamName ? ` · ${item.teamName}` : ''}` }))
+  return definition('mip.admin.game.teams.members.replace', '替换战队成员', '已选中全部现有成员。移除选中项会让该成员离队；跨队加入会转队。请核对名单和队长后保存。', [
+    { name: 'memberRefs', label: '战队成员', kind: 'multi-select', options, wide: true },
+    { name: 'captainRef', label: '队长', kind: 'select', options },
   ], {
     seasonId: text(team.seasonId) || text(source.seasonId), teamId: targetId,
-    expectedVersion: positiveInteger(team.version), memberRefs: [], captainRef: '',
+    expectedVersion: positiveInteger(team.version), memberRefs: current.map(item => item.memberRef), captainRef: current.find(item => item.role === 'CAPTAIN')?.memberRef || '',
   })
 }
 

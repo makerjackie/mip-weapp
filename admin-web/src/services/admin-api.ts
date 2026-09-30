@@ -88,10 +88,23 @@ export class AdminApiClient {
     await this.authRequest('/api/auth/logout')
   }
 
-  async loginWithPassword(phone: string, password: string): Promise<void> {
+  async loginWithPassword(phone: string, password: string, isCurrent = () => true): Promise<void> {
     this.assertPasswordAvailable()
-    const payload = await this.authRequest('/api/auth/password/login', { phone, password })
-    if (payload.authenticated !== true) throw new AdminApiClientError('INVALID_RESPONSE', '密码登录服务返回格式无效')
+    // Only replay explicit temporary service failures, never ambiguous network
+    // failures, incorrect credentials, rate limits, or password changes.
+    for (let attempt = 0; ; attempt++) {
+      if (!isCurrent()) return
+      try {
+        const payload = await this.authRequest('/api/auth/password/login', { phone, password })
+        if (payload.authenticated !== true) throw new AdminApiClientError('INVALID_RESPONSE', '密码登录服务返回格式无效')
+        return
+      }
+      catch (error) {
+        if (!(error instanceof AdminApiClientError) || error.code !== 'AUTH_STARTING') throw error
+        if (attempt >= 2) throw new AdminApiClientError('AUTH_UNAVAILABLE', '登录服务仍未就绪，请稍后重试', true)
+        await new Promise(resolve => globalThis.setTimeout(resolve, [2_000, 5_000][attempt]))
+      }
+    }
   }
 
   async getPasswordStatus(): Promise<AdminPasswordStatus> {
@@ -121,13 +134,21 @@ export class AdminApiClient {
         method,
         credentials: 'same-origin',
         ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}),
-      }, AUTH_REQUEST_TIMEOUT_MS)
+      }, path === '/api/auth/password/login' ? 30_000 : AUTH_REQUEST_TIMEOUT_MS)
     }
     catch (error) {
       throw connectionError(error, 'AUTH_UNAVAILABLE', '网页登录服务连接失败，请稍后重试')
     }
     if (path.startsWith('/api/auth/password') && [404, 405].includes(response.status)) {
       throw new AdminApiClientError('AUTH_UNAVAILABLE', '密码登录服务尚未部署，请使用小程序登录')
+    }
+    // Gateways can return an HTML 502/503/504 while the service starts.
+    if (path === '/api/auth/password/login' && [502, 503, 504].includes(response.status)) {
+      const failure = await response.clone().json().catch(() => null)
+      const code = failure?.error?.code
+      if (!code || ['AUTH_UNAVAILABLE', 'SERVICE_UNAVAILABLE', 'UPSTREAM_TIMEOUT'].includes(code)) {
+        throw new AdminApiClientError('AUTH_STARTING', '正在连接登录服务，请稍候', true)
+      }
     }
     let payload: unknown
     try { payload = await response.json() } catch {

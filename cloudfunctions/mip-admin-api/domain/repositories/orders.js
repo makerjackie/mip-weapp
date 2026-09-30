@@ -69,6 +69,7 @@ function createAdminOrderRepository(database, options = {}) {
     if (filters.status) { clauses.push('o.status = ?'); params.push(filters.status) }
     if (filters.orderType) { clauses.push('o.order_type = ?'); params.push(filters.orderType) }
     if (filters.eventId) { clauses.push("o.order_type = 'EVENT' AND o.resource_id = ?"); params.push(filters.eventId) }
+    if (filters.branchId) { clauses.push("o.order_type = 'EVENT' AND e.branch_id = ?"); params.push(filters.branchId) }
     if (filters.refundStatus === 'NONE') {
       clauses.push('NOT EXISTS (SELECT 1 FROM mip_refunds rf WHERE rf.app_id = o.app_id AND rf.order_id = o.id)')
     }

@@ -1,53 +1,40 @@
-import { Card, Tag, Typography } from 'antd'
+import { Button, Card, Image, Tag, Typography } from 'antd'
+import { CalendarOutlined, EnvironmentOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons'
+import { useMediaPreview } from '../../shared/ui/media-preview-context'
+import { formatDateTime } from '../../modules/admin-read-formatters'
 
 export function EventMobilePreview({ values }: { values: Record<string, unknown> }) {
+  const { urls } = useMediaPreview()
   const title = String(values.title || '活动名称')
-  const summary = String(values.summary || '')
-  const startsAt = String(values.startsAt || '')
-  const endsAt = String(values.endsAt || '')
-  const venueName = String(values.venueName || '')
-  const address = String(values.address || '')
+  const coverUrl = urls[String(values.coverAssetId || '')]
+  const media = Array.isArray(values.contentMedia) ? values.contentMedia : []
+  const fields = Array.isArray(values.registrationSchema) ? values.registrationSchema : []
   const accessType = String(values.accessType || 'FREE')
-  const priceCents = Number(values.priceCents || 0)
-  const capacity = Number(values.capacity || 0)
-  const description = String(values.description || '')
-  const notices = String(values.notices || '')
-  const eventTypeKey = String(values.eventTypeKey || '')
-  const coverAssetId = String(values.coverAssetId || '')
-
-  return (
-    <div style={{ width: 375, margin: '0 auto', background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e8e8e8' }}>
-      {coverAssetId ? (
-        <div style={{ height: 200, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <img src={`/api/media/${coverAssetId}`} alt="封面" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-        </div>
-      ) : (
-        <div style={{ height: 200, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>活动封面预览</div>
-      )}
-      <div style={{ padding: '16px' }}>
-        {eventTypeKey ? <Tag color="blue" style={{ marginBottom: 8 }}>{eventTypeKey}</Tag> : null}
-        <Typography.Title level={4} style={{ marginBottom: 8 }}>{title}</Typography.Title>
-        {summary ? <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>{summary}</Typography.Paragraph> : null}
-        <div style={{ marginBottom: 8, color: '#666', fontSize: 14 }}>
-          <div>📅 {startsAt}{endsAt ? ` ~ ${endsAt}` : ''}</div>
-          {venueName ? <div>📍 {venueName}{address ? ` · ${address}` : ''}</div> : null}
-          <div>🎫 {accessType === 'FREE' ? '免费' : accessType === 'MEMBER_INCLUDED' ? '会员权益' : `¥${(priceCents / 100).toFixed(2)}`}</div>
-          {capacity > 0 ? <div>👥 名额 {capacity}</div> : null}
-        </div>
-        {description ? (
-          <Card size="small" title="活动介绍" style={{ marginBottom: 12 }}>
-            <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', maxHeight: 200, overflow: 'auto' }}>{description}</Typography.Paragraph>
-          </Card>
-        ) : null}
-        {notices ? (
-          <Card size="small" title="报名须知" style={{ marginBottom: 12 }}>
-            <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', maxHeight: 150, overflow: 'auto' }}>{notices}</Typography.Paragraph>
-          </Card>
-        ) : null}
-        <button disabled style={{ width: '100%', padding: '12px', background: '#ccc', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, cursor: 'not-allowed' }}>
-          预览模式不可报名
-        </button>
-      </div>
+  return <div className="event-mobile-preview">
+    {coverUrl ? <Image src={coverUrl} alt="活动封面" width="100%" /> : <div className="event-mobile-preview__cover">{values.coverAssetId ? '封面暂不可预览' : '尚未选择活动封面'}</div>}
+    <div style={{ padding: 16 }}>
+      <Typography.Title level={4}>{title}</Typography.Title>
+      <Typography.Paragraph type="secondary">{String(values.summary || '')}</Typography.Paragraph>
+      <p><CalendarOutlined /> {formatDateTime(values.startsAt)} ～ {formatDateTime(values.endsAt)}</p>
+      <p><EnvironmentOutlined /> {[values.cityName, values.venueName, values.address].filter(Boolean).join(' · ') || '地点待填写'}</p>
+      <p><WalletOutlined /> {accessType === 'FREE' ? '免费' : accessType === 'MEMBER_INCLUDED' ? '会员权益' : `¥${(Number(values.priceCents || 0) / 100).toFixed(2)}`}</p>
+      {values.capacity ? <p><TeamOutlined /> 名额 {String(values.capacity)}</p> : null}
+      {values.registrationDeadline ? <p>报名截止：{formatDateTime(values.registrationDeadline)}</p> : null}
+      {values.cancellationDeadline ? <p>取消截止：{formatDateTime(values.cancellationDeadline)}</p> : null}
+      {typeof values.onlineUrl === 'string' && /^https:\/\//.test(values.onlineUrl) ? <p><a href={values.onlineUrl} target="_blank" rel="noopener noreferrer">线上活动 / 场地链接</a></p> : null}
+      <Card size="small" title="活动介绍"><Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{String(values.description || '')}</Typography.Paragraph>
+        {media.map((item, index) => {
+          const asset = item && typeof item === 'object' ? item as Record<string, unknown> : {}
+          const url = urls[String(asset.assetId || '')]
+          return <figure key={String(asset.assetId || index)} style={{ margin: '12px 0' }}>{url ? <Image src={url} width="100%" alt={String(asset.caption || '活动正文图片')} /> : <p>图片暂不可预览</p>}{asset.caption ? <figcaption>{String(asset.caption)}</figcaption> : null}</figure>
+        })}
+      </Card>
+      {values.notices ? <Card size="small" title="报名须知" style={{ marginTop: 12 }}><Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{String(values.notices)}</Typography.Paragraph></Card> : null}
+      {fields.length ? <Card size="small" title="报名需填写" style={{ marginTop: 12 }}>{fields.map((item, index) => {
+        const field = item && typeof item === 'object' ? item as Record<string, unknown> : {}
+        return <p key={String(field.key || index)}>{String(field.label || '')} {field.required ? <Tag>必填</Tag> : null}{Array.isArray(field.options) ? <small>{field.options.join(' / ')}</small> : null}</p>
+      })}</Card> : null}
+      <Button block disabled style={{ marginTop: 16 }}>预览模式不可报名</Button>
     </div>
-  )
+  </div>
 }

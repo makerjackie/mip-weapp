@@ -36,6 +36,7 @@ function createMessageCampaignReadRepository(database) {
       clauses.push('(campaign.name LIKE ? OR campaign.title LIKE ?)')
       params.push(pattern, pattern)
     }
+    if (filters.cursor) { clauses.push('(campaign.updated_at < ? OR (campaign.updated_at = ? AND campaign.id < ?))'); params.push(filters.cursor.updatedAt, filters.cursor.updatedAt, filters.cursor.id) }
     const rows = await database.query(
       `${campaignSelect(false)}
        WHERE ${clauses.join(' AND ')}
@@ -227,6 +228,9 @@ function campaignSelect(includeAudience) {
 
 function campaignDto(row) {
   return {
+    availableActions: row.status === 'DRAFT' ? ['mip.admin.messageCampaigns.save', ...(row.content_safety_status === 'PASSED' ? ['mip.admin.messageCampaigns.snapshot'] : [])]
+      : row.status === 'READY' ? row.active_dispatch_id ? ['mip.admin.messageCampaigns.cancelSchedule'] : ['mip.admin.messageCampaigns.publish', 'mip.admin.messageCampaigns.schedule']
+        : row.status === 'PUBLISHED' ? ['mip.admin.messageCampaigns.withdraw'] : [],
     id: String(row.id),
     scopeType: row.scope_type,
     branchId: row.branch_id || null,

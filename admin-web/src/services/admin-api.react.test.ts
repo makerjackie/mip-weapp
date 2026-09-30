@@ -128,3 +128,61 @@ describe('password change response', () => {
     await expect(new AdminApiClient().setPassword('fictional-test-password')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
   })
 })
+
+
+describe('password login service startup', () => {
+  it('waits through JSON and gateway failures before successful login', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 'AUTH_UNAVAILABLE' } }), { status: 503 }))
+      .mockResolvedValueOnce(new Response('<html>Starting</html>', { status: 502 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ authenticated: true })))
+    vi.stubGlobal('fetch', fetchMock)
+    const pending = new AdminApiClient().loginWithPassword('13800000000', 'fictional-test-password')
+    await vi.advanceTimersByTimeAsync(1_999)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(5_001)
+    await pending
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('stops after three temporary failures', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn(async () => new Response('Starting', { status: 504 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const pending = new AdminApiClient().loginWithPassword('13800000000', 'fictional-test-password').catch(error => error)
+    await vi.runAllTimersAsync()
+    expect(await pending).toMatchObject({ code: 'AUTH_UNAVAILABLE', message: '登录服务仍未就绪，请稍后重试' })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it.each([[401, 'INVALID_CREDENTIALS'], [403, 'FORBIDDEN'], [429, 'RATE_LIMITED'], [503, 'CONFIGURATION_REQUIRED']])('never retries %s %s', async (status, code) => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ error: { code } }), { status }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(new AdminApiClient().loginWithPassword('13800000000', 'fictional-test-password')).rejects.toMatchObject({ code })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not replay an ambiguous network failure or a password change', async () => {
+    const fetchMock = vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 'AUTH_UNAVAILABLE' } }), { status: 503 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new AdminApiClient()
+    await expect(client.loginWithPassword('13800000000', 'fictional-test-password')).rejects.toMatchObject({ code: 'AUTH_UNAVAILABLE' })
+    await expect(client.setPassword('fictional-test-password')).rejects.toMatchObject({ code: 'AUTH_UNAVAILABLE' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('cancels pending retries when the login dialog closes', async () => {
+    vi.useFakeTimers()
+    let current = true
+    const fetchMock = vi.fn(async () => new Response('Starting', { status: 503 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const pending = new AdminApiClient().loginWithPassword('13800000000', 'fictional-test-password', () => current)
+    await vi.advanceTimersByTimeAsync(1_000)
+    current = false
+    await vi.runAllTimersAsync()
+    await pending
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})

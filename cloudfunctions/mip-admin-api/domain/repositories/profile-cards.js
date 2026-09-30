@@ -38,13 +38,16 @@ function createProfileCardRepository(database, { lockMutation, assertScope, writ
   async function changeProfileCard(input) {
     return database.transaction(async tx => {
       const auth = await lockMutation(tx, input)
-      assertScope(auth, { scopeType: 'PLATFORM', scopeId: null })
+      if (input.kind !== 'PROFILE_EDIT') assertScope(auth, { scopeType: 'PLATFORM', scopeId: null })
+      if (input.kind === 'PROFILE_EDIT') {
+        const user = await tx.one("SELECT id, primary_branch_id FROM mip_users WHERE app_id = ? AND id = ? AND status = 'ACTIVE' FOR UPDATE", [input.appId, input.cardId])
+        if (!user) throw new AdminError('NOT_FOUND', '用户不存在')
+        assertScope(auth, { scopeType: user.primary_branch_id ? 'BRANCH' : 'PLATFORM', scopeId: user.primary_branch_id || null })
+      }
       const operation = `admin.cards.${input.kind.toLowerCase()}`
       const key = await claimOptional(tx, input, operation, { cardId: input.cardId, version: input.expectedVersion, changes: input.changes }, randomUUID)
       if (key.replay) return key.replay
       if (input.kind === 'PROFILE_EDIT') {
-        const user = await tx.one("SELECT id FROM mip_users WHERE app_id = ? AND id = ? AND status = 'ACTIVE' FOR UPDATE", [input.appId, input.cardId])
-        if (!user) throw new AdminError('NOT_FOUND', '用户不存在')
         const profile = await tx.one('SELECT version FROM mip_profiles WHERE app_id = ? AND user_id = ? FOR UPDATE', [input.appId, input.cardId])
         if (!profile) throw new AdminError('NOT_FOUND', '名片资料不存在')
         if (Number(profile.version) !== input.expectedVersion) throw new AdminError('CONFLICT', '用户资料已变化，请重新打开后编辑')

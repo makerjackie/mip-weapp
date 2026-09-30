@@ -54,11 +54,11 @@ describe('admin operation model', () => {
       action: 'mip.admin.events.clone' as const,
       capability: 'events.write',
       title: '克隆活动',
-      description: '根据当前活动创建一份新的草稿活动。提交后由服务端重新校验权限和活动版本。',
+      description: '复制可复用配置并打开独立草稿。新活动的标题和全部时间需要重新填写。',
       fields: [{ name: 'expectedVersion', label: '版本', kind: 'number', hidden: true }],
       values: { expectedVersion: '4' },
       submitted: { expectedVersion: '4' },
-      input: { sourceEventId: 'resource-1', expectedVersion: 4 },
+      input: { sourceEventId: 'resource-1', expectedVersion: 4, draftOnly: true },
     },
     {
       action: 'mip.admin.events.changeStatus' as const,

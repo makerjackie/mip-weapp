@@ -151,7 +151,7 @@ describe('knowledge schedule administration', () => {
     })
     const result = await service.listKnowledgeSchedules(caller, { limit: 20, status: 'ACTIVE' })
     assert.equal(queries[0].params[0], APP_ID)
-    assert.deepEqual(queries[0].params.slice(1), ['ACTIVE', 'ACTIVE', 20])
+    assert.deepEqual(queries[0].params.slice(1), ['ACTIVE', 'ACTIVE', 21])
     assert.deepEqual(result, {
       items: [{
         attemptCount: 2,

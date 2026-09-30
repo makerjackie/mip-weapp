@@ -130,6 +130,7 @@ describe('admin repository persistence contracts', () => {
             level_name: '一级',
           }
         }
+        if (sql.includes('AS registration_count')) return { registration_count: 0, attended_count: 0, order_count: 0, opportunity_count: 0, cooperation_card_count: 0, super_case_count: 0 }
         return null
       },
       async query(sql, params) {

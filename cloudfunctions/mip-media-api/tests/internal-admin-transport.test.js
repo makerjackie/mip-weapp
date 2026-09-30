@@ -61,6 +61,7 @@ describe('MIP media internal admin transport', () => {
       SUPER_CASE_COVER: 'userContent.moderate',
       SUPER_CASE_MEDIA: 'userContent.moderate',
       TASK_TEMPLATE: 'tasks.manage',
+      VIDEO_RECAP_COVER: 'events.recaps.manage',
     })
     assert.deepEqual(inspectAdminImageInput(request().input), {
       width: 96,
@@ -97,25 +98,26 @@ describe('MIP media internal admin transport', () => {
     )
   })
 
-  it('requires an active platform owner or operations binding with the signed capability', async () => {
+  it('requires an active valid role and scope with the signed capability', async () => {
     const queries = []
     await assert.doesNotReject(() => assertMediaAdminCapability({
       async query(sql, params) {
         queries.push({ sql, params })
         return [{
           role_key: 'PLATFORM_OPERATIONS',
+          scope_type: 'PLATFORM', scope_id: '00000000-0000-0000-0000-000000000000',
           policy_capabilities_json: JSON.stringify(['events.write']),
         }]
       },
     }, verify(request())))
     assert.match(queries[0].sql, /u\.status = 'ACTIVE'/)
-    assert.match(queries[0].sql, /scope_type = 'PLATFORM'/)
-    assert.match(queries[0].sql, /PLATFORM_OWNER.*PLATFORM_OPERATIONS/s)
+    assert.match(queries[0].sql, /binding\.scope_type, binding\.scope_id/)
+    assert.match(queries[0].sql, /account\.status <> 'ACTIVE'/)
     assert.deepEqual(queries[0].params, [APP_ID, USER_ID])
 
     await assert.rejects(() => assertMediaAdminCapability({
       async query() {
-        return [{ role_key: 'PLATFORM_OPERATIONS', policy_capabilities_json: '[]' }]
+        return [{ role_key: 'PLATFORM_OPERATIONS', scope_type: 'PLATFORM', scope_id: '00000000-0000-0000-0000-000000000000', policy_capabilities_json: '[]' }]
       },
     }, verify(request())), /FORBIDDEN/)
   })
@@ -131,7 +133,7 @@ describe('MIP media internal admin transport', () => {
       },
       database: {
         async query() {
-          return [{ role_key: 'PLATFORM_OWNER', policy_capabilities_json: null }]
+          return [{ role_key: 'PLATFORM_OWNER', scope_type: 'PLATFORM', scope_id: '00000000-0000-0000-0000-000000000000', policy_capabilities_json: null }]
         },
       },
       secret: SECRET,

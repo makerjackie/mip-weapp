@@ -64,15 +64,9 @@ describe('admin media adapter authorization', () => {
     }
   })
 
-  it('rejects weaker and branch-scoped grants before invoking the media service', async () => {
+  it('rejects weaker grants before invoking the media service', async () => {
     const bindings = [
       platformBinding(['events.read']),
-      {
-        roleKey: 'BRANCH_ADMIN',
-        scopeType: 'BRANCH',
-        scopeId: 'branch-a',
-        capabilities: ['events.write'],
-      },
     ]
     for (const binding of bindings) {
       let invoked = false

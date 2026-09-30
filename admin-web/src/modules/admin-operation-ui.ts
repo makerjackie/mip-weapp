@@ -1,4 +1,5 @@
 import { record } from './admin-read-formatters.ts'
+import type { AdminRequestInput } from '../domain/contracts'
 
 export type OperationFieldOption = string | { value: string; label: string }
 
@@ -23,12 +24,22 @@ export interface OperationField {
   remoteUserSearch?: boolean
   /** Renders a session-backed catalog Select loaded from this query action. */
   optionsAction?: string
+  optionsInput?: Record<string, unknown>
+  optionsValueKey?: string
+  userSearchInput?: AdminRequestInput
+  userSearchAction?: string
+  optionsKey?: string
+  optionsFilter?: { path: string; key: string }
+  optionsActionByValue?: { path: string; actions: Record<string, string> }
+  valueScale?: number
+  readOnly?: boolean
+  readOnlyReason?: string
 }
 
 export type OperationValues = Record<string, unknown>
 
 /** Field kinds that hold a list of values rather than a scalar. */
-export const MULTI_VALUE_KINDS: readonly string[] = ['id-list', 'profile-ref-list', 'asset-list', 'tags', 'multi-select']
+export const MULTI_VALUE_KINDS: readonly string[] = ['id-list', 'profile-ref-list', 'asset-list', 'tags', 'multi-select', 'commercial-locations']
 /** Field kinds whose editor is a textarea / line list. */
 export const TEXTAREA_LIKE_KINDS: readonly string[] = ['asset-list', 'id-list', 'profile-ref-list', 'tags']
 /** Field kinds serialized as newline-joined id lists. */
@@ -70,7 +81,8 @@ export function normalizeOperationValues(
 
 export function operationFieldVisible(field: OperationField, values: OperationValues) {
   if (!field.visibleWhen) return true
-  return readPath(values, field.visibleWhen.path) === field.visibleWhen.value
+  const actual = readPath(values, field.visibleWhen.path)
+  return Array.isArray(field.visibleWhen.value) ? field.visibleWhen.value.includes(actual) : actual === field.visibleWhen.value
 }
 
 function normalizeSubmittedField(
@@ -89,6 +101,11 @@ function normalizeSubmittedField(
     return
   }
   const raw = readPath(submitted, path)
+  if (field.kind === 'money') {
+    const value = raw === null || raw === undefined || raw === '' ? null : Math.round(Number(raw) * (field.valueScale || 100))
+    writePath(target, path, value)
+    return
+  }
   if (field.kind === 'checkbox' || field.kind === 'boolean') {
     writePath(target, path, raw === true)
     return

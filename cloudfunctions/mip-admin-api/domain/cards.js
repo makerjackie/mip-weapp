@@ -24,20 +24,24 @@ function createCards({ access, repository, resolveCardAvatars }) {
     return resolveCardAvatars && input.cardType !== 'TEMPLATE' ? resolveCardAvatars(page) : page
   }
   async function listCardHistory(caller, input = {}) {
-    const { session, grant } = await context(caller, CAPABILITIES.USERS_READ)
     const cardId = requiredId(input.cardId)
+    const session = await access.session(caller)
+    const { scope, grant } = await access.userAuthorization(session, cardId, CAPABILITIES.USERS_READ)
     const result = await repository.listProfileCardHistory(session.caller.appId, cardId, input.cursor, limit(input.limit, 100))
-    await repository.recordAudit(access.audit(session, grant, { ...platform, action: 'admin.cards.history.view', resourceType: 'USER', resourceId: cardId }))
+    await repository.recordAudit(access.audit(session, grant, { ...scope, action: 'admin.cards.history.view', resourceType: 'USER', resourceId: cardId }))
     return result
   }
   async function mutate(caller, input, kind, changes) {
-    const { session, grant } = await context(caller, CAPABILITIES.USERS_EDIT)
+    const session = await access.session(caller)
+    const { scope, grant } = kind === 'PROFILE_EDIT'
+      ? await access.userAuthorization(session, requiredId(input.cardId), CAPABILITIES.USERS_EDIT)
+      : { scope: platform, grant: authorize(session.bindings, CAPABILITIES.USERS_EDIT, platform) }
     return repository.changeProfileCard({
       appId: session.caller.appId, actorUserId: session.caller.userId,
       authorization: access.mutationAuthorization(grant, CAPABILITIES.USERS_EDIT),
       cardId: requiredId(input.cardId), expectedVersion: version(input.expectedVersion),
-      kind, changes, idempotencyKey: input.idempotencyKey,
-      audit: access.audit(session, grant, { ...platform, action: `admin.cards.${kind.toLowerCase()}`, resourceType: kind === 'TEMPLATE' ? 'CARD_TEMPLATE' : 'USER', resourceId: input.cardId }),
+      kind, changes, idempotencyKey: input.idempotencyKey, authorizedScope: scope,
+      audit: access.audit(session, grant, { ...scope, action: `admin.cards.${kind.toLowerCase()}`, resourceType: kind === 'TEMPLATE' ? 'CARD_TEMPLATE' : 'USER', resourceId: input.cardId }),
     })
   }
   async function saveCard(caller, input = {}) {

@@ -20,18 +20,18 @@ function createEventDraftRepository(database, dependencies) {
       }
       const claim = await claimOptional(tx, input, 'events.drafts.save', {
         draftId: input.draftId, eventId: input.eventId, dataJson: input.dataJson,
+        ...(input.expectedVersion != null ? { expectedVersion: input.expectedVersion } : {}),
       }, createId)
       if (claim.replay) return claim.replay
       const row = input.draftId
-        ? await tx.one(`SELECT draft_id, event_uid, version FROM mip_event_drafts
+        ? await tx.one(`SELECT draft_id, event_uid, version, draft_data_json FROM mip_event_drafts
           WHERE app_id = ? AND operator_user_id = ? AND draft_id = ? FOR UPDATE`,
         [input.appId, input.actorUserId, input.draftId])
-        : await tx.one(`SELECT draft_id, event_uid, version FROM mip_event_drafts
-          WHERE app_id = ? AND operator_user_id = ? AND event_uid ${input.eventId ? '= ?' : 'IS NULL'}
-          ORDER BY updated_at DESC, draft_id DESC LIMIT 1 FOR UPDATE`,
-        [input.appId, input.actorUserId, ...(input.eventId ? [input.eventId] : [])])
+        : null
       if (input.draftId && !row) throw codeError('NOT_FOUND')
       if (row && (row.event_uid || null) !== input.eventId) throw codeError('CONFLICT')
+      if (row && json(row.draft_data_json, {})._submittedEventId) throw codeError('INVALID_STATE')
+      if (row && input.expectedVersion != null && Number(row.version) !== input.expectedVersion) throw codeError('CONFLICT')
       let draftId
       let version
       if (row) {
@@ -57,10 +57,18 @@ function createEventDraftRepository(database, dependencies) {
     })
   }
 
-  async function getEventDraft(appId, actorUserId) {
+  async function getEventDraft(appId, actorUserId, selector = {}) {
+    const clauses = []; const params = [appId, actorUserId]
+    if (selector.draftId) { clauses.push('draft_id = ?'); params.push(selector.draftId) }
+    if (Object.hasOwn(selector, 'eventId')) {
+      clauses.push(selector.eventId ? 'event_uid = ?' : 'event_uid IS NULL')
+      if (selector.eventId) params.push(selector.eventId)
+    }
     const row = await database.one(`SELECT draft_id, event_uid, draft_data_json, version, updated_at
       FROM mip_event_drafts WHERE app_id = ? AND operator_user_id = ?
-      ORDER BY updated_at DESC, draft_id DESC LIMIT 1`, [appId, actorUserId])
+      AND JSON_EXTRACT(draft_data_json, '$._submittedEventId') IS NULL
+      ${clauses.length ? `AND ${clauses.join(' AND ')}` : ''}
+      ORDER BY updated_at DESC, draft_id DESC LIMIT 1`, params)
     if (!row) return null
     return { draftId: String(row.draft_id), eventId: row.event_uid || null,
       draftData: json(row.draft_data_json, {}), version: Number(row.version), updatedAt: iso(row.updated_at) }

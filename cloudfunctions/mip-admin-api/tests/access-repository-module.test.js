@@ -177,6 +177,7 @@ describe('admin access repository module', () => {
       id: 'generated-id',
       branchKey: 'guangzhou',
       name: '广州分会',
+      leaderUserId: null, leaderName: null, sortOrder: 0,
       cityName: '广州',
       summary: '',
       status: 'ACTIVE',
@@ -201,6 +202,8 @@ describe('admin access repository module', () => {
       '广州',
       null,
       'admin-user',
+      null,
+      0,
     ])
     assert.deepEqual(calls[3].audit, { ...audit, resourceId: 'generated-id' })
   })

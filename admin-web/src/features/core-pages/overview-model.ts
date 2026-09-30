@@ -1,3 +1,4 @@
+import type { AdminRequestInput } from '../../domain/contracts'
 import type { AdminRequest } from '../../modules/admin-read-pages'
 
 export interface AdminOverviewMetric {
@@ -21,6 +22,14 @@ export interface AdminOverviewAttentionItem {
   target: '/users' | '/events' | '/orders' | '/tasks'
 }
 
+export interface AdminOverviewPurchasePoint {
+  date: string
+  initial: number | null
+  firstRenewal: number | null
+  repeatRenewal: number | null
+  paidAmount: number | null
+}
+
 export interface AdminOverviewView {
   period: string
   asOf: string
@@ -29,12 +38,13 @@ export interface AdminOverviewView {
     available: boolean
     points: Array<{ label: string; value: number }>
   }
+  purchaseTrend?: { available: boolean; points?: AdminOverviewPurchasePoint[]; rows: Array<{ [key: string]: unknown; date: string; initial: string; firstRenewal: string; repeatRenewal: string; paidAmount: string }> }
   attention: AdminOverviewAttentionItem[]
   activity: AdminOverviewActivityRow[]
 }
 
-export async function loadAdminOverview(request: AdminRequest): Promise<AdminOverviewView> {
-  return mapAdminOverview(await request('mip.admin.dashboard.overview.get'))
+export async function loadAdminOverview(request: AdminRequest, input: AdminRequestInput = {}): Promise<AdminOverviewView> {
+  return mapAdminOverview(await request('mip.admin.dashboard.overview.get', input))
 }
 
 export function mapAdminOverview(value: unknown): AdminOverviewView {
@@ -44,18 +54,41 @@ export function mapAdminOverview(value: unknown): AdminOverviewView {
   const events = record(data.events)
   const operations = record(data.operations)
   const period = record(data.period)
+  const purchases = record(membership.purchaseFlow)
   return {
     period: dateRange(period.startAt, period.endAt),
     asOf: formatDate(data.asOf, '数据时间未提供'),
     metrics: [
       metric('用户总数', people.activeAccounts, '当前可见范围'),
       metric('有效会员', membership.currentPlayers, '付费权益有效'),
-      metric('活动总数', events.totalEvents, '所选时间范围'),
+      metric('活动总数', events.totalEvents, '当前可见范围'),
       metric('有效报名', events.effectiveRegistrations, '所选时间范围'),
+      metric('新增用户', people.newAccounts, '所选时间范围'),
+      metric('已完善档案', people.profiledUsers, '当前可见范围'),
+      metric('30 日互动玩家', people.interactingPlayers30d, '最近 30 日'),
+      metric('访客次数', people.recordedProfileVisits, '所选时间范围'),
+      metric('访客人数', people.distinctProfileVisitors, '所选时间范围'),
+      metric('首次会籍购买', record(membership.purchaseFlow).initialPurchases, '所选时间范围'),
+      metric('首次续费', record(membership.purchaseFlow).firstRenewals, '所选时间范围'),
+      metric('再次续费', record(membership.purchaseFlow).repeatRenewals, '所选时间范围'),
+      metric('机会总数', record(data.opportunities).totalOpportunities, '当前可见范围'),
+      metric('招募中机会', record(data.opportunities).publishedOpportunities, '当前可见范围'),
+      metric('有效引荐', record(data.opportunities).activeReferrals, '当前可见范围'),
+      metric('公开合作卡', record(data.opportunities).publishedCooperationCards, '当前可见范围'),
+      metric('公开案例', record(data.opportunities).publishedSuperCases, '当前可见范围'),
+      metric('已发布任务', record(data.tasks).publishedTasks, '当前可见范围'),
+      metric('成功完成任务', record(data.tasks).successfulCompletions, '所选时间范围'),
+      metric('任务发放经验', record(data.tasks).awardedExperience, '所选时间范围'),
+      moneyMetric('会籍实付金额', purchases.eligiblePaidAmount),
+      metric('活动缴费订单', record(events.financials).paidOrders, '所选时间范围'),
+      moneyMetric('活动实付金额', record(events.financials).grossAmount),
+      moneyMetric('活动退款金额', record(events.financials).refundedAmount),
+      moneyMetric('活动净收入', record(events.financials).netAmount),
     ],
     // The current neutral overview contract has no player-count time series;
     // purchase/registration series are not a player-count trend and must not be substituted.
     playerTrend: { available: false, points: [] },
+    purchaseTrend: purchaseTrend(purchases),
     attention: [
       attention('30 日内到期会员', membership.expiringPlayers30d, '/users'),
       attention('待审核报名', events.pendingReviewRegistrations, '/events'),
@@ -74,6 +107,22 @@ export function mapAdminOverview(value: unknown): AdminOverviewView {
         })
       : [],
   }
+}
+
+function purchaseTrend(purchases: Record<string, unknown>): NonNullable<AdminOverviewView['purchaseTrend']> {
+  const available = purchases.availability === 'AVAILABLE' && Array.isArray(purchases.series)
+  const points: AdminOverviewPurchasePoint[] = available ? (purchases.series as unknown[]).map(value => {
+    const item = record(value)
+    const count = (key: string) => typeof item[key] === 'number' && Number.isSafeInteger(item[key]) && Number(item[key]) >= 0 ? Number(item[key]) : null
+    return { date: String(item.bucketStartDate || '—'), initial: count('initialPurchaseCount'), firstRenewal: count('firstRenewalCount'), repeatRenewal: count('repeatRenewalCount'), paidAmount: typeof item.eligiblePaidAmountCents === 'number' && Number.isSafeInteger(item.eligiblePaidAmountCents) ? item.eligiblePaidAmountCents / 100 : null }
+  }) : []
+  const countText = (value: number | null) => value === null ? '—' : value.toLocaleString('zh-CN')
+  return { available, points, rows: points.map(point => ({ date: point.date, initial: countText(point.initial), firstRenewal: countText(point.firstRenewal), repeatRenewal: countText(point.repeatRenewal), paidAmount: point.paidAmount === null ? '—' : point.paidAmount.toFixed(2) })) }
+}
+
+function moneyMetric(label: string, source: unknown): AdminOverviewMetric {
+  const value = record(source)
+  return { label, value: value.availability === 'AVAILABLE' && typeof value.amountCents === 'number' && Number.isSafeInteger(value.amountCents) ? `¥${(value.amountCents / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—', detail: value.availability === 'AVAILABLE' ? '所选时间范围 · 人民币' : availabilityLabel(value.availability) }
 }
 
 function metric(label: string, source: unknown, fallbackDetail: string): AdminOverviewMetric {
@@ -117,8 +166,10 @@ function dateRange(start: unknown, end: unknown) {
   const startDate = new Date(String(start || ''))
   const endDate = new Date(String(end || ''))
   if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return '当前周期'
-  const format = (date: Date) => date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
-  return `${format(startDate)}–${format(endDate)}`
+  // Dashboard periods use [startAt, endAt) in Shanghai time. Display the last
+  // included calendar day, rather than the following midnight of a custom range.
+  const format = (date: Date) => date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', timeZone: 'Asia/Shanghai' })
+  return `${format(startDate)}–${format(new Date(endDate.getTime() - 1))}`
 }
 
 function formatDate(value: unknown, fallback = '时间未提供') {

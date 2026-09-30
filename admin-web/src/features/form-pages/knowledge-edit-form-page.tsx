@@ -5,6 +5,7 @@ import type { OperationField, OperationValues } from '../../modules/admin-operat
 import { getContentMutationForm, validateContentMutation } from '../../modules/content-mutation-forms'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 import { defaultContentFormValues } from './content-form-helpers'
+import { knowledgeEditorValues } from '../../modules/knowledge-editor'
 
 export function KnowledgeEditFormPage() {
   const params = useParams({ from: '/knowledge/$contentId/edit' }) as { contentId?: string }
@@ -15,8 +16,8 @@ export function KnowledgeEditFormPage() {
     [],
   )
 
-  const formDef = getContentMutationForm('mip.admin.knowledge.contents.save')
-  const fields = formDef.fields as readonly OperationField[]
+  const formDef = useMemo(() => getContentMutationForm('mip.admin.knowledge.contents.save'), [])
+  const fields = useMemo(() => (formDef.fields as readonly OperationField[]).map(field => ['contentId', 'expectedVersion'].includes(String(field.key)) ? { ...field, hidden: true } : field), [formDef.fields])
   const values = useMemo(() => defaultContentFormValues(fields), [fields])
 
   const formConfig: IndependentFormPageConfig = {
@@ -38,26 +39,7 @@ export function KnowledgeEditFormPage() {
   const loadDetail = useCallback(async (): Promise<OperationValues | null> => {
     if (!contentId) return null
     const data = await request<Record<string, unknown>>('mip.admin.knowledge.get', { contentId })
-    if (!data || typeof data !== 'object') return null
-    const content = data as Record<string, unknown>
-    return {
-      contentId: String(content.id || contentId),
-      expectedVersion: Number(content.version) || undefined,
-      sourceId: String(content.sourceId || ''),
-      categoryId: String(content.categoryId || ''),
-      contentType: String(content.contentType || 'ARTICLE'),
-      title: String(content.title || ''),
-      summary: String(content.summary || ''),
-      bodyText: String(content.bodyText || ''),
-      externalUrl: String(content.externalUrl || ''),
-      channelFinderUserName: String(content.channelFinderUserName || ''),
-      channelFeedId: String(content.channelFeedId || ''),
-      coverAssetId: String(content.coverAssetId || ''),
-      authorName: String(content.authorName || ''),
-      accessType: String(content.accessType || 'FREE'),
-      commentsEnabled: content.commentsEnabled !== false,
-      moderationMode: String(content.moderationMode || 'AUTO'),
-    } as OperationValues
+    return knowledgeEditorValues(data)
   }, [contentId, request])
 
   return <IndependentFormPage config={formConfig} loadDetail={contentId ? loadDetail : undefined} />

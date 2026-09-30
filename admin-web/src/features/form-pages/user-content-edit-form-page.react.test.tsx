@@ -10,13 +10,19 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ contentId: 'new', opportunityId: 'new' }),
   useSearch: () => ({ kind: 'COOPERATION_CARD' }),
   useNavigate: () => state.navigate,
+  useBlocker: () => ({ status: 'idle' }),
 }))
 vi.mock('../../app/session-provider', () => ({ useAdminSession: () => ({
   request: state.request, demoMode: false, hasCapability: () => true,
 }) }))
 
 afterEach(cleanup)
-beforeEach(() => { state.request.mockReset().mockResolvedValue({ id: 'new-content' }); state.navigate.mockReset() })
+beforeEach(() => {
+  state.request.mockReset().mockImplementation(async (action: string) => action === 'mip.admin.users.list'
+    ? { items: [{ id: 'user-demo', nickname: '验收发布人' }] }
+    : action === 'mip.admin.opportunities.options' ? { owners: [{ id: 'user-demo', nickname: '验收发布人' }], tags: [], branches: [] } : { id: 'new-content' })
+  state.navigate.mockReset()
+})
 
 function fill(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } })
@@ -33,7 +39,7 @@ describe('independent user content editor', () => {
     fill('归属用户', 'user-demo')
     fill('圈层', '先前角色内容')
     fill('可提供资源', '不应提交的隐藏内容')
-    await select('合作角色', 'strategist')
+    await select('合作角色', '狗策划')
     await waitFor(() => expect(screen.queryByLabelText('圈层')).not.toBeInTheDocument())
     expect(screen.queryByText('封面图片')).not.toBeInTheDocument()
     fill('合作定位', '演示合作卡')
@@ -44,7 +50,7 @@ describe('independent user content editor', () => {
     fill('策划类型', '社区策划')
     fill('工作方法', '目标拆解')
     for (const label of ['商务拓展', '资源整合', '资本运作', '战略策划', '视觉设计', '交付管理']) fill(label, '3')
-    await select('内容状态', 'PUBLISHED')
+    await select('内容状态', '已发布')
     fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
     await waitFor(() => expect(state.request).toHaveBeenCalledOnce())
     expect(state.request).toHaveBeenCalledWith('mip.admin.userContent.save', {
@@ -63,14 +69,14 @@ describe('independent user content editor', () => {
     mount()
     fill('归属用户', 'user-demo')
     fill('合作定位', '不应提交的合作卡字段')
-    await select('内容类型', 'SUPER_CASE')
+    await select('内容类型', '超级案例')
     await waitFor(() => expect(screen.queryByLabelText('合作定位')).not.toBeInTheDocument())
     expect(screen.getByText('封面图片')).toBeInTheDocument()
     fill('项目名称', '演示案例')
     fill('案例摘要', '案例摘要')
     fill('项目责任', '演示项目责任')
     fill('案例说明', '虚构案例，仅供验收')
-    await select('内容状态', 'PUBLISHED')
+    await select('内容状态', '已发布')
     fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
     await waitFor(() => expect(state.request).toHaveBeenCalledOnce())
     expect(state.request).toHaveBeenCalledWith('mip.admin.userContent.save', {
@@ -88,18 +94,18 @@ describe('independent user content editor', () => {
 describe('independent opportunity editor', () => {
   it('submits multiple selected roles without incomplete commercial terms', async () => {
     render(<QueryClientProvider client={new QueryClient()}><App><OpportunityEditFormPage /></App></QueryClientProvider>)
-    fill('发布人', 'user-demo')
+    await select('发布人', '验收发布人')
     fill('机会标题', '演示合作机会')
     fill('机会价值', '仅供验收')
-    await select('合作角色', 'strategist')
-    fireEvent.click(await screen.findByText('visual_designer', { selector: '.ant-select-item-option-content' }))
+    await select('合作角色', '狗策划')
+    fireEvent.click(await screen.findByText('死美工', { selector: '.ant-select-item-option-content' }))
     fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
-    await waitFor(() => expect(state.request).toHaveBeenCalledOnce())
+    await waitFor(() => expect(state.request.mock.calls.filter(([action]) => action === 'mip.admin.opportunities.save')).toHaveLength(1))
     expect(state.request).toHaveBeenCalledWith('mip.admin.opportunities.save', {
       idempotencyKey: expect.any(String),
       draft: {
         ownerUserId: 'user-demo', scopeType: 'PLATFORM', title: '演示合作机会', valueSummary: '仅供验收',
-        targetSummary: undefined, description: undefined, cityTagId: undefined, deadlineAt: undefined,
+        targetSummary: undefined, description: undefined, cityTagId: undefined, coverAssetId: null, deadlineAt: undefined,
         commercialTerms: undefined, roleKeys: ['strategist', 'visual_designer'], tagIds: [],
       },
     })

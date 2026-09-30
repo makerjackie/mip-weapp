@@ -1,3 +1,4 @@
+import type { AdminRequestInput } from '../../domain/contracts'
 import { useQuery } from '@tanstack/react-query'
 import { useAdminSession } from '../../app/session-provider'
 import {
@@ -57,7 +58,7 @@ export function useCoreReadPage(route: CoreListRoute, search: CorePageSearchStat
   }
 }
 
-export function useAdminOverview() {
+export function useAdminOverview(input: AdminRequestInput = {}) {
   const sessionState = useAdminSession()
   const request: AdminRequest = (action, input) => sessionState.request(action, input)
   const enabled = sessionState.demoMode || Boolean(sessionState.session?.enabled)
@@ -68,11 +69,12 @@ export function useAdminOverview() {
       sessionState.session?.actor?.id || 'anonymous',
       sessionState.sessionBoundary,
       sessionState.demoMode ? 'demo' : 'api',
+      JSON.stringify(input),
     ],
     enabled,
     queryFn: () => sessionState.demoMode
       ? Promise.resolve(createCoreDemoOverview())
-      : loadAdminOverview(request),
+      : loadAdminOverview(request, input),
   })
   return {
     ...result,

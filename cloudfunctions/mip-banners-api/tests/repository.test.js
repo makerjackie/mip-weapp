@@ -88,13 +88,16 @@ test('creates an inactive Banner with owned media and a business audit', async (
     async one(sql) {
       if (sql.includes('FROM mip_users')) return { status: 'ACTIVE' }
       if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OPERATIONS' }
+      if (sql.includes('banner_catalog_mutex')) return { setting_key: 'banner_catalog_mutex' }
       if (sql.includes('FROM mip_media_assets')) return media()
       if (sql.includes('ORDER BY sort_order DESC')) return { sort_order: 10 }
       if (sql.includes('FROM mip_banners banner')) return row({ status: 'INACTIVE', version: 1, sort_order: 20, activated_at: null })
+      if (sql.includes('COUNT(*) AS configured_count')) return { configured_count: 1 }
       throw new Error(`unexpected read: ${sql}`)
     },
     async query(sql, params) {
       writes.push({ sql, params })
+      if (sql.includes("SELECT id FROM mip_banners")) return []
       if (sql.includes('INSERT INTO mip_banners')) created = true
       return { affectedRows: 1 }
     },
@@ -124,6 +127,7 @@ test('activation revalidates media and refuses an invalid purpose', async () => 
     async one(sql) {
       if (sql.includes('FROM mip_users')) return { status: 'ACTIVE' }
       if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+      if (sql.includes('banner_catalog_mutex')) return { setting_key: 'banner_catalog_mutex' }
       if (sql.includes('SELECT * FROM mip_banners')) return row({ status: 'INACTIVE', activated_at: null })
       if (sql.includes('FROM mip_media_assets')) return media({ purpose: 'EVENT_COVER' })
       throw new Error(`unexpected read: ${sql}`)
@@ -245,4 +249,18 @@ test('write transactions stop when the current user is no longer active', async 
     /FORBIDDEN/,
   )
   assert.equal(roleRead, false)
+})
+
+test('catalog creation availability counts the whole tenant independently of list filters and fails closed on unknown counts', async () => {
+  const calls = []; let count = 5
+  const repository = createBannerRepository({ async one(sql, params) {
+    calls.push({ sql, params }); if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+    if (sql.includes('COUNT(*) AS configured_count')) return count === null ? null : { configured_count: count }
+    throw new Error('unexpected read')
+  } })
+  assert.deepEqual((await repository.getAdminSession(caller)).catalog, { maximum: 5, configuredCount: 5, canCreate: false })
+  count = 4; assert.equal((await repository.getAdminSession(caller)).catalog.canCreate, true)
+  count = 8; assert.equal((await repository.getAdminSession(caller)).catalog.canCreate, false)
+  count = null; await assert.rejects(repository.getAdminSession(caller), /SERVICE_UNAVAILABLE/)
+  for (const call of calls.filter(call => call.sql.includes('COUNT(*)'))) { assert.deepEqual(call.params, ['wx-app']); assert.match(call.sql, /app_id = \? AND status <> 'DELETED'/); assert.doesNotMatch(call.sql, /LIKE|LIMIT/) }
 })

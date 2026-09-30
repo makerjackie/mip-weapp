@@ -65,8 +65,8 @@ describe('Web BFF trusted query adapter', () => {
     const expectedMutations = adminWebOperationContract.operations
       .filter(operation => operation.webAllowed && operation.kind === 'MUTATION')
 
-    assert.equal(expectedQueries.length, 104)
-    assert.equal(expectedMutations.length, 111)
+    assert.equal(expectedQueries.length, 105)
+    assert.equal(expectedMutations.length, 122)
     assert.deepEqual([...WEB_BFF_QUERY_ACTIONS], expectedQueries.map(operation => operation.action))
     assert.deepEqual([...WEB_BFF_MUTATION_ACTIONS], expectedMutations.map(operation => operation.action))
     assert.deepEqual(
@@ -196,7 +196,7 @@ describe('Web BFF trusted query adapter', () => {
       }))
       assert.equal(result.ok, true, mutation.action)
     }
-    assert.equal(accepted.calls.length, 111)
+    assert.equal(accepted.calls.length, 122)
 
     const rejected = fixture()
     for (const mutation of WEB_BFF_REVIEWED_MUTATION_MANIFEST) {
@@ -227,7 +227,7 @@ describe('Web BFF trusted query adapter', () => {
       assert.equal(result.ok, true, mutation.action)
     }
 
-    assert.equal(calls.length, 111)
+    assert.equal(calls.length, 122)
     for (let index = 0; index < WEB_BFF_REVIEWED_MUTATION_MANIFEST.length; index += 1) {
       const mutation = WEB_BFF_REVIEWED_MUTATION_MANIFEST[index]
       assert.equal(
@@ -241,17 +241,25 @@ describe('Web BFF trusted query adapter', () => {
         .filter(item => item.forwardIdempotencyKey)
         .map(item => item.action),
       [
+        'mip.admin.roles.set',
+        'mip.admin.roles.create',
+        'mip.admin.roles.update',
+        'mip.admin.roles.copy',
+        'mip.admin.roles.changeStatus',
         'mip.admin.memberships.grant',
         'mip.admin.entitlements.grant',
+        'mip.admin.events.save',
         'mip.admin.events.clone',
         'mip.admin.events.changeStatus',
         'mip.admin.events.archive',
         'mip.admin.communications.publishEventReminder',
         'mip.admin.events.participants.import',
-        'mip.admin.refunds.submit',
+      'mip.admin.refunds.submit',
+      'mip.admin.refunds.retry',
         'mip.admin.messageCampaigns.schedule',
         'mip.admin.messageCampaigns.cancelSchedule',
         'mip.admin.messageCampaigns.publish',
+        'mip.admin.knowledge.ingestion.run',
         'mip.admin.knowledge.schedules.save',
       'mip.admin.membershipAgreement.save',
         'mip.admin.growth.adjust',
@@ -280,12 +288,14 @@ describe('Web BFF trusted query adapter', () => {
         'mip.admin.game.blindBoxes.cards.changeStatus',
         'mip.admin.exports.create',
         'mip.admin.adminAccounts.create',
+        'mip.admin.adminAccounts.update',
         'mip.admin.adminAccounts.resetCredential',
         'mip.admin.adminAccounts.passwordLogin',
         'mip.admin.cooperationCards.save',
         'mip.admin.contribution.rules.save',
         'mip.admin.contribution.transactions.reverse',
         'mip.admin.videos.save',
+        'mip.admin.videos.changeStatus',
         'mip.admin.cards.save',
         'mip.admin.cards.changeStatus',
         'mip.admin.cards.takedown',

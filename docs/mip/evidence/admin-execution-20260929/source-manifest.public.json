@@ -1,0 +1,1101 @@
+{
+  "at": "2026-09-29T12:23:52.685Z",
+  "head": "439abe48a4e0abf7496b803fd2bde8decd6c2ee6",
+  "includesPriorDirtyChanges": true,
+  "baselinePatchSha256": "1b9d200207cc12ad1a9a9ceafff87a0c374529d40800b94e1424b89b149d2cfe",
+  "scope": "Modified and untracked source and authority documents; excludes evidence, imported upstream originals, build metadata and ignored/private artifacts. No ownership or remote Git synchronization claim.",
+  "files": [
+    {
+      "path": ".env.example",
+      "sha256": "661e7eab29ca9f014e81740662151425d8218a1742c3208e5e480cab5ef9977f"
+    },
+    {
+      "path": "admin-web/ACCEPTANCE.md",
+      "sha256": "d07aba24c975b02f9e90d8d3d384fcdf1568dbeb6e40f1723b89f59c4b2d27a3"
+    },
+    {
+      "path": "admin-web/AGENTS.md",
+      "sha256": "a24b669819de4daa01fec5d251e8697c1fed2d6aa9af7082c5f4ade3da07ea75"
+    },
+    {
+      "path": "admin-web/ARCHITECTURE.md",
+      "sha256": "5f5826986f08a1c70d70c92f458df7026b82fe2945d886ceb70e3915d2d72a92"
+    },
+    {
+      "path": "admin-web/DESIGN.md",
+      "sha256": "72528d36b463ae1cb6a4ba2e36b1886b1b95326e5dd8ba7960f04ff0f9e687e8"
+    },
+    {
+      "path": "admin-web/EXECUTION_PLAN.md",
+      "sha256": "ba7a2b6dc5d3f826ba55d40af38896edf24edc468922ca5ee73e205300bbb366"
+    },
+    {
+      "path": "admin-web/FORM_AUDIT.md",
+      "sha256": "6302f1b2e57435320050bef4ea24eaf65033ffea05e4da464e4496ca2d06c398"
+    },
+    {
+      "path": "admin-web/INTERACTION_SPEC.md",
+      "sha256": "801e830aa0f6f3fa2f66b7a378dee753542bded2b5fdd50901338a5e531418b1"
+    },
+    {
+      "path": "admin-web/README.md",
+      "sha256": "faab73ec136e4a751190e372ba904701e72a63c5dfd1840bd6f26a6f2353710d"
+    },
+    {
+      "path": "admin-web/cloudbase/README.md",
+      "sha256": "d0a6989cd6dc598d3aadf6aaf9a9dc71d3fa1bb58515352b813a66082df89bd4"
+    },
+    {
+      "path": "admin-web/scripts/build-acceptance-review.mjs",
+      "sha256": "00eeb02510e7093124cee7a13ebdbe328042456ccc48743ebceb78bf93bfd803"
+    },
+    {
+      "path": "admin-web/server/admin-bff.test.ts",
+      "sha256": "ac7be26c42a98d71619485f4c01ad110782895ea254c05a4139ac4f35e9930ba"
+    },
+    {
+      "path": "admin-web/server/admin-bff.ts",
+      "sha256": "dd29ee9252a84016b6e484b359d584be80d482e237af9e522b02ae347f34dec1"
+    },
+    {
+      "path": "admin-web/server/admin-media-upload.ts",
+      "sha256": "7fa7a939993eb0fc34fc795f898afabda8767d7539f7d3f6f26bd11d5b6adc92"
+    },
+    {
+      "path": "admin-web/server/admin-mutation-contract.test.ts",
+      "sha256": "921014ca309f0eef74a058abb1718785ba292420d1738a2bf2cfe0a755365915"
+    },
+    {
+      "path": "admin-web/src/app/navigation.tsx",
+      "sha256": "b3e3ce2bc83d91aab2723ec8d21b3953b71e78f277a8854b9bf54949b9ec81cb"
+    },
+    {
+      "path": "admin-web/src/app/route-pages.tsx",
+      "sha256": "cf495a4100a12553c9e48da5a0f82716df8d16faa2d028015f1f60523886ffc9"
+    },
+    {
+      "path": "admin-web/src/app/router.tsx",
+      "sha256": "2b498cbb1db1b29ffa1be9d12ec0d81242b49391f40f5725344cc29b18677823"
+    },
+    {
+      "path": "admin-web/src/app/session-provider.tsx",
+      "sha256": "69bd24e8adbf435ec6e8ba7f61d9cc5aec7bc85ceaa4ce487818c48ef15871b0"
+    },
+    {
+      "path": "admin-web/src/features/admin-runtime/admin-detail-actions.tsx",
+      "sha256": "92dd60ca8162c99c9411dfa1241385b393e7087280e46ad8cc65cf5a8b720d7e"
+    },
+    {
+      "path": "admin-web/src/features/admin-runtime/admin-operation-provider.react.test.tsx",
+      "sha256": "1d704f49a5dc8ff9a05dd15bf7d415edfcc881ee6c4704b28844cc6a95d2d480"
+    },
+    {
+      "path": "admin-web/src/features/admin-runtime/admin-operation-provider.tsx",
+      "sha256": "a854b55d5fbfea6e48e570337d4346251ddf25a3313206d0cb4c59df5b3ecce1"
+    },
+    {
+      "path": "admin-web/src/features/admin-runtime/event-form-dialog.react.test.tsx",
+      "sha256": "1e2d1795221d68d28f953cb6a919baffe1f2a94d685a4b41015c24c0df4d2fdb"
+    },
+    {
+      "path": "admin-web/src/features/admin-runtime/operation-model.react.test.ts",
+      "sha256": "a80f8e6b1d581b1f48279cf46c52b04b856ecdee1765c4be464b5c1a3c09aa1a"
+    },
+    {
+      "path": "admin-web/src/features/admin-runtime/operation-model.ts",
+      "sha256": "2ad41e0c2cab741abacd8f85c49ce93299f7d467bf3101890076401efbf2d3d7"
+    },
+    {
+      "path": "admin-web/src/features/admin-runtime/sensitive-export-button.tsx",
+      "sha256": "58b41b176f180228746003b6d9d01988a650db5bf51fb819711dec5a50538418"
+    },
+    {
+      "path": "admin-web/src/features/admin-runtime/use-admin-detail.react.test.ts",
+      "sha256": "d9df0a61dc7542d8243a2afa7905130d756655af6ac5dec9221b6aee5da42d34"
+    },
+    {
+      "path": "admin-web/src/features/admin-runtime/use-admin-detail.ts",
+      "sha256": "bccd5deca559083fa1f026e20e85872a4f5b65c30ad4237139726815cb0600b0"
+    },
+    {
+      "path": "admin-web/src/features/core-pages/core-list-pages.tsx",
+      "sha256": "db4a90139ee7371bf7c928d80acafd35823afa4d6ec50a2ca103577aff76263e"
+    },
+    {
+      "path": "admin-web/src/features/core-pages/core-pages.react.test.tsx",
+      "sha256": "d4f2f0ae646eb349530d2e8ca6e393a19a8d5b5602a044991c1538a74984ba27"
+    },
+    {
+      "path": "admin-web/src/features/core-pages/overview-model.ts",
+      "sha256": "75a0c36f6e0a8ad69d85fc21270c6d25500f989efa7907a5403bb366e485b0e2"
+    },
+    {
+      "path": "admin-web/src/features/core-pages/overview-page.tsx",
+      "sha256": "281114016046f097433eefab574a922edf8d28a9cd958c96589a1d9ab6247b85"
+    },
+    {
+      "path": "admin-web/src/features/core-pages/use-core-page-query.ts",
+      "sha256": "bfbeff74815d9a8bc10fdf06a7927409f20b9576b0f99e0e3efd2b8ff72b01fa"
+    },
+    {
+      "path": "admin-web/src/features/form-pages/event-edit-form-page.tsx",
+      "sha256": "af4f072159fd088830c6d92611db85ada643b86e22539b489b080bf711ad5602"
+    },
+    {
+      "path": "admin-web/src/features/form-pages/event-form-loader.ts",
+      "sha256": "460f2865679b421f287b4a63b308e6111d4e05c8005ca1cfb0b0d85d40f6f079"
+    },
+    {
+      "path": "admin-web/src/features/form-pages/event-mobile-preview.tsx",
+      "sha256": "21bb7cc2abb46d07c0c2f4b31445411c51d0e61bd3e0c02940201a1b847c9135"
+    },
+    {
+      "path": "admin-web/src/features/form-pages/independent-form-page.react.test.tsx",
+      "sha256": "765c7f7b61e8546b8de8278ade787febd0dc4a06011623a3dba6c55ecaf99ace"
+    },
+    {
+      "path": "admin-web/src/features/form-pages/independent-form-page.tsx",
+      "sha256": "ec9881be8c6319485b87b94c522e95303169da3dbc3b4e3998d2c167f9c2d5b2"
+    },
+    {
+      "path": "admin-web/src/features/form-pages/knowledge-edit-form-page.tsx",
+      "sha256": "04f173b5181bb69b9c5d69840a51a232cdcb9ebe87b8ef50d9cbeb36fba60294"
+    },
+    {
+      "path": "admin-web/src/features/form-pages/opportunity-edit-form-page.tsx",
+      "sha256": "4ad334d3e695b220adec3efd5a148695c5919bd29bbcf39defcb5697db905a69"
+    },
+    {
+      "path": "admin-web/src/features/form-pages/user-content-edit-form-page.react.test.tsx",
+      "sha256": "f209207e19b7ea703ca45bbd82641fed31ed91dae4518778c6e81e0945f752a5"
+    },
+    {
+      "path": "admin-web/src/features/governance-pages/governance-pages.tsx",
+      "sha256": "4a9c101723dc2a1771bbc7d9ace11b47c115d9b09d31faed684ca5304789f026"
+    },
+    {
+      "path": "admin-web/src/features/governance-pages/role-templates-panel.react.test.tsx",
+      "sha256": "f13217a283fe59b7de06ea0f94b7a663acede941fb1e4c9d3d006554dab10bd5"
+    },
+    {
+      "path": "admin-web/src/features/governance-pages/role-templates-panel.tsx",
+      "sha256": "6523bff4b58b087e2b1113aa2c4b81364d11d05be625c0d7f5701dee92669db7"
+    },
+    {
+      "path": "admin-web/src/features/operations-pages/banner-management-page.tsx",
+      "sha256": "26b2eb5b73f3e7c6c43427101095dd7c70ee3362700e40adbb47edd7f1938549"
+    },
+    {
+      "path": "admin-web/src/features/operations-pages/growth-badges-page.tsx",
+      "sha256": "1e67f8b29f6ec4957b2772df63dd00c26be3bc448b74111aa7fe84fae5c157d0"
+    },
+    {
+      "path": "admin-web/src/features/operations-pages/operations-pages.react.test.tsx",
+      "sha256": "fc638ab4fb20af9739c90c4b2366cd1a17087993ae0e9c595d172d0129e4080e"
+    },
+    {
+      "path": "admin-web/src/features/operations-pages/operations-read-page.tsx",
+      "sha256": "b7e8f4a48fc39e312a31c610968618440c295da0f7d25aef5ae2dd101f1803ea"
+    },
+    {
+      "path": "admin-web/src/features/operations-pages/opportunities-content-page.tsx",
+      "sha256": "e7890ab65b13d42ee076bf5ae3aa871801c6765938f51b6fd3984af769e0851b"
+    },
+    {
+      "path": "admin-web/src/features/opportunities/opportunity-locations.tsx",
+      "sha256": "7a7e7bf440f753e3ccc0a70b91ae1d30f1a2be853e440cf44a8fa224cd5630b3"
+    },
+    {
+      "path": "admin-web/src/features/profile-cards/profile-cards-page.tsx",
+      "sha256": "ae3d4901930085137a474952aafed7595b0bd37f05263f62db1082a0b2b690e2"
+    },
+    {
+      "path": "admin-web/src/features/profile-cards/profile-editor-dialog.tsx",
+      "sha256": "7cb5f2c2bc2168615aad5a5b378caa05ce07289d91f43b4999162a1bed2c1c5c"
+    },
+    {
+      "path": "admin-web/src/features/profile-cards/profile-fields.tsx",
+      "sha256": "a45a9e9e694597fa508e9cd0a5d49156f8504f9ffe9ca3ee020ce8729c6b9922"
+    },
+    {
+      "path": "admin-web/src/features/user-profile/badge-selection-dialog.react.test.tsx",
+      "sha256": "497cb6d7e1744102651c8ef807ab649204f6bc61a6da3267753d0ebd8c6bb990"
+    },
+    {
+      "path": "admin-web/src/features/user-profile/badge-selection-dialog.tsx",
+      "sha256": "db1557d5259fd50be91a3bfe14d0415fc63ec8521a0e0c8887407b2a9232a15c"
+    },
+    {
+      "path": "admin-web/src/features/user-profile/user-profile-page.tsx",
+      "sha256": "86f9d85c000623351451ff6e9fba608e15a436dd8aa70f16a19e3d122fb3b214"
+    },
+    {
+      "path": "admin-web/src/features/videos/video-edit-page.tsx",
+      "sha256": "61239228114ca7f3a6399a3272e0c0494ae11ffe872af174f7164ae902d52d35"
+    },
+    {
+      "path": "admin-web/src/features/videos/videos-page.tsx",
+      "sha256": "d86ff5fdc13e5065093ae06da197cf454c787445fb36ef5a55ee0c8cabe01786"
+    },
+    {
+      "path": "admin-web/src/modules/admin-banner-management.test.ts",
+      "sha256": "72afd4ddb2100c7ebb036305a6ae71df725f83c5a99f722e0cee2ea90398091e"
+    },
+    {
+      "path": "admin-web/src/modules/admin-banner-management.ts",
+      "sha256": "579741a2b7fd5deff0ed00dd16cd37d57e0325795716ba29b0a81a727a73d399"
+    },
+    {
+      "path": "admin-web/src/modules/admin-details.test.ts",
+      "sha256": "db04c684813e3e245e71cbc8087581df8c07c279cde92e3ef05c7c5c61a21193"
+    },
+    {
+      "path": "admin-web/src/modules/admin-details.ts",
+      "sha256": "9c184ecefcbdee2c0a5193179a4e1362464190213085ed28ae96124b77953398"
+    },
+    {
+      "path": "admin-web/src/modules/admin-event-mutation-forms.ts",
+      "sha256": "8581f9f804eef3024f8f4e01c6e0e241943c8c613b62812baee9283cd8d4241e"
+    },
+    {
+      "path": "admin-web/src/modules/admin-game-management.ts",
+      "sha256": "6d788fcddde93b7c78fb1eedb2ad0c30b557452d8dbf130b15cf4fb06c73010c"
+    },
+    {
+      "path": "admin-web/src/modules/admin-knowledge-management.test.ts",
+      "sha256": "0e5a9fc3042d8f6fc486ac2a4706b09941ca4c837664184d58e222294a36f79c"
+    },
+    {
+      "path": "admin-web/src/modules/admin-knowledge-management.ts",
+      "sha256": "99160d832eb39742b6ad882ab2d085d5d7a56f4c0cd7c7f80a1308db9cc16ac9"
+    },
+    {
+      "path": "admin-web/src/modules/admin-media-upload.test.ts",
+      "sha256": "1a60759c56adead2edfbf00e045cea644cd4deed6c4f9353b3b27fb01d54633f"
+    },
+    {
+      "path": "admin-web/src/modules/admin-media-upload.ts",
+      "sha256": "9232c4acd87477f77901c31587e3c664c3880732caa7d0ac74f01bbda4348036"
+    },
+    {
+      "path": "admin-web/src/modules/admin-operation-ui.ts",
+      "sha256": "08950910903d24a5f5b2634fd9cbc14db290c9ab96ad5b5643ad836a0a75fe43"
+    },
+    {
+      "path": "admin-web/src/modules/admin-people-mutation-forms.ts",
+      "sha256": "3e30fa8a09513f7edd11790875ab9f27ccfae2fca04c1f6cb09d2452e1d513dd"
+    },
+    {
+      "path": "admin-web/src/modules/admin-profile-cards.ts",
+      "sha256": "f2264641307334cdc7e4e2f96f954a0247a8ce945ae345d1421828d7bf7274db"
+    },
+    {
+      "path": "admin-web/src/modules/admin-read-contracts.ts",
+      "sha256": "b325162693251a2f35bdf9412a535cada1632316a32babc4d941ebbc44005270"
+    },
+    {
+      "path": "admin-web/src/modules/admin-read-formatters.ts",
+      "sha256": "10cec073fc7a7a2d1c22ff2446c78df7fbbe431145955cb57ce86a77e61fff6b"
+    },
+    {
+      "path": "admin-web/src/modules/admin-read-pages.test.ts",
+      "sha256": "70c123535c964ce0c42190dd1f1070069500749877e20251bfb0161f97eb01f0"
+    },
+    {
+      "path": "admin-web/src/modules/admin-read-pages.ts",
+      "sha256": "9e568fdef990b9336a4915a21e2d683b5950b714e107d060562ca60baa3b381a"
+    },
+    {
+      "path": "admin-web/src/modules/admin-read-special-pages.ts",
+      "sha256": "258ab47eefa42670a31ac54fb6f11e28e8a29bfe97f6beedc659485184f2898c"
+    },
+    {
+      "path": "admin-web/src/modules/admin-remediation-contracts.test.ts",
+      "sha256": "75293233d6087aade42a9becf945ca1480ec03876b5e954d95c0c3df41e6a47f"
+    },
+    {
+      "path": "admin-web/src/modules/admin-role-templates.test.ts",
+      "sha256": "d21821128cd2f6c083f563649d3f736572c77243c0dccad9199a861775fbf6c3"
+    },
+    {
+      "path": "admin-web/src/modules/admin-role-templates.ts",
+      "sha256": "d431f5f8857699067e2b81539fd4028cdac6b6ea07b1023d86608b25492c4941"
+    },
+    {
+      "path": "admin-web/src/modules/admin-row-operations.ts",
+      "sha256": "089b26e5244d9c2a9971ff4ac1424027a13ccf0fa654378818f641c802544edf"
+    },
+    {
+      "path": "admin-web/src/modules/admin-sensitive-export.test.ts",
+      "sha256": "0aa81b30aff7cd38e7ea8635aa136e620cfc0e048fa54ecf41155ef8c55601c2"
+    },
+    {
+      "path": "admin-web/src/modules/admin-sensitive-export.ts",
+      "sha256": "096b2d66959aad4952721db8f8c909572256f3f9780c11d564bd7820cff912d9"
+    },
+    {
+      "path": "admin-web/src/modules/admin-user-list-contract.test.ts",
+      "sha256": "87037927986d813bfd40c3f5bb6c9287b07133702ab0eff6623d88f9dd0117ab"
+    },
+    {
+      "path": "admin-web/src/modules/admin-video-management.ts",
+      "sha256": "2faf68915b8180cad036c7b7d74cb42cdb74dc70ee49b7f0ecf74b6f70a55929"
+    },
+    {
+      "path": "admin-web/src/modules/content-form-values.ts",
+      "sha256": "f1a87a04b47f731b57111485999b6330bfa262d20bb0eee881fbb90f748a2bc4"
+    },
+    {
+      "path": "admin-web/src/modules/content-mutation-forms.test.ts",
+      "sha256": "7284b95955b8bd273fbdd1f704de94a9f6822dadd45119fd917e349440dbe471"
+    },
+    {
+      "path": "admin-web/src/modules/content-mutation-forms.ts",
+      "sha256": "208d7752101c8ff732c64023692ede0fc54aaa920cd8ed3774395a7b7454ad76"
+    },
+    {
+      "path": "admin-web/src/modules/edit-conflict.ts",
+      "sha256": "e8c70cce23f4b1f70f9a6b04b965d865e564481ae88fe93ce16b302130e356eb"
+    },
+    {
+      "path": "admin-web/src/modules/event-feedback.test.ts",
+      "sha256": "b47339295b3ac929198437bbccb70d44d97e6c487a6a880d85f6024128bfad11"
+    },
+    {
+      "path": "admin-web/src/modules/event-feedback.ts",
+      "sha256": "72a83d0944a2606bddf63d5d979993826095dbfc3c2d95187de4f317228d818f"
+    },
+    {
+      "path": "admin-web/src/modules/event-private-drafts.test.ts",
+      "sha256": "af6258464b723982a61264aa582e98f0c704c8b38f2d8cbf20877e31cc74c5d1"
+    },
+    {
+      "path": "admin-web/src/modules/event-private-drafts.ts",
+      "sha256": "5e396a586d74d710b5f05fd9f5b4f3cda3703087b9e84a9375656c9264f6db57"
+    },
+    {
+      "path": "admin-web/src/modules/growth-sections.test.ts",
+      "sha256": "79ce09ad85bc8b8ddb651437ac5a4cf71d530792225fdc606998a3e279b07f83"
+    },
+    {
+      "path": "admin-web/src/modules/growth-sections.ts",
+      "sha256": "346f8ea32b832f9e6f78a3cc4b9ed4dbe44e60f7d52df89108108c2fa3eead75"
+    },
+    {
+      "path": "admin-web/src/modules/knowledge-editor.ts",
+      "sha256": "51478c030260a61bf98c4692d7abe2765d3ef7e0689d7e2e975f04550abb85ff"
+    },
+    {
+      "path": "admin-web/src/modules/opportunity-editor.test.ts",
+      "sha256": "6eb5327ae69a29ea2e395a8d1cff249cd0100af7cb33e166ef209672e54dd7cc"
+    },
+    {
+      "path": "admin-web/src/modules/opportunity-editor.ts",
+      "sha256": "4ad23befd1940f52149871bc07bf09852a264e9b11c60cb0a0f437ad745f2c67"
+    },
+    {
+      "path": "admin-web/src/modules/opportunity-query.ts",
+      "sha256": "2a43e621fe93aa845f1a78de52783482b6b958bd6f40fc8d8e1d4afc67f93b67"
+    },
+    {
+      "path": "admin-web/src/modules/opportunity-text-assist.test.ts",
+      "sha256": "1e9812a724f1667a8d78b58671a9fb3281255b96f6783a371c1f156979f1e206"
+    },
+    {
+      "path": "admin-web/src/modules/opportunity-text-assist.ts",
+      "sha256": "5d57537c2f59e09339f2e2954576d68df43283d62b7d49d6a2baed0108936994"
+    },
+    {
+      "path": "admin-web/src/modules/user-badge-selection.test.ts",
+      "sha256": "a9d7e9f8603ea8deb308fe47d2a67bad4cc95384a4a0430d8d39d99fbe9fc5c6"
+    },
+    {
+      "path": "admin-web/src/modules/user-badge-selection.ts",
+      "sha256": "b6e01c6fd750ce91b74a3f0f87592fd3a54d605e3cfb188e366f586ee80495c1"
+    },
+    {
+      "path": "admin-web/src/modules/user-profile-records.ts",
+      "sha256": "40f93333c5a729f38d53e16de317f71643dfda599938877fbe613dd31ce65e29"
+    },
+    {
+      "path": "admin-web/src/services/admin-api.react.test.ts",
+      "sha256": "eee37a4802cbe7be32073dcf9536098ff4faa2775065eb0c059df14d73f2a615"
+    },
+    {
+      "path": "admin-web/src/services/admin-api.ts",
+      "sha256": "fbc3e2886c30ec9e723a781c538ff101bd496a1f86bcd5c4a1b16fa2b5e16e45"
+    },
+    {
+      "path": "admin-web/src/shared/ui/admin-login-dialog.tsx",
+      "sha256": "6a8d6db7a742ed78a869fb3876ddf4218e669323b6b10766278eb8957633e6f2"
+    },
+    {
+      "path": "admin-web/src/shared/ui/asset-uploader.tsx",
+      "sha256": "0e634d97623eb214dbb48ed6e7a4e0ef671220481e18d4c599c4db6e6cff8c23"
+    },
+    {
+      "path": "admin-web/src/shared/ui/data-table.tsx",
+      "sha256": "aaeb5b0dda613197fdfc3af97d83f62b79b998c9c10ac03abe923c6e4d687a3e"
+    },
+    {
+      "path": "admin-web/src/shared/ui/detail-drawer.tsx",
+      "sha256": "89395d04046862791e69bc894968cd9a2102d1540825897532d0e7c86f4366ae"
+    },
+    {
+      "path": "admin-web/src/shared/ui/filter-bar.tsx",
+      "sha256": "7c14153fbf24a597a4d119b671b76d2652a5f3b53267721af562fc84b9263789"
+    },
+    {
+      "path": "admin-web/src/shared/ui/humanize-error.ts",
+      "sha256": "ea04e4e46505d9729f76b2c3fcf6f3aa35ba8616c4e6bac6dd976137ae06e580"
+    },
+    {
+      "path": "admin-web/src/shared/ui/media-preview-context.ts",
+      "sha256": "3c44017b795338e8c0820fff1b79be86f8b9e3dc36603e12f3efb42f20050633"
+    },
+    {
+      "path": "admin-web/src/shared/ui/media-preview-provider.tsx",
+      "sha256": "eb32a8a81e309373d2d069bec0a27a4981cf48edef431700f2f4cea933bf3487"
+    },
+    {
+      "path": "admin-web/src/shared/ui/operation-fields.tsx",
+      "sha256": "561134b235790f4ecc2feed8376668fb9b806bdd88f7d7a47416a713943796b4"
+    },
+    {
+      "path": "admin-web/src/shared/ui/responsive-app-shell.react.test.tsx",
+      "sha256": "6e684ab9120f64f34cf357370d0a783de19a655eb6eb36b049ae8d6c571b952a"
+    },
+    {
+      "path": "admin-web/src/shared/ui/responsive-app-shell.tsx",
+      "sha256": "73a0ebb91657bdb40451a4e8f0a1fc7235f60e8767128f32007c7db056f17d89"
+    },
+    {
+      "path": "admin-web/src/shared/ui/session-user-select.tsx",
+      "sha256": "155c394b7ecf8a6ac1691adbb7929fceef318a1ec5de3590329519b2b0b5b288"
+    },
+    {
+      "path": "admin-web/src/styles/app.css",
+      "sha256": "90faed75d769e155d51324a1ef495bde084b364e7c83371a08b956658a11572d"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/admin-accounts.js",
+      "sha256": "18c6aef7f2b9309960f820fcd9892b519802eee0e08f25d1c169687230900ce4"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/admin-prd-extensions.js",
+      "sha256": "d8bc708c14cd45ecdf7852c5235342f422bfb90bcfa5a1566fdf16c06bddd048"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/application.js",
+      "sha256": "605c53879e7b4f6afde2ba253b2ed1785ed716f15f5d6c26410b7c8dd462ecea"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/badges.js",
+      "sha256": "1bf1b13f0a5adee6e9916735d1c5bf09a0237bd27a5d18b885137571b5c90013"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/cards.js",
+      "sha256": "ca3def536056a6b560701e9f7292d1ab06eaeab7b5a6987cbb5dea285201b214"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/entitlements.js",
+      "sha256": "a7aede9460d40f5da845c3e162742ed6c93a5256f3ecf2696e25c87682fcde7f"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/event-catalogs.js",
+      "sha256": "ec65acd88fdc764e493a6e55290e59d0fde20acb8f9200c352bcd2c5f56cf9c8"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/event-copy.js",
+      "sha256": "ec9a7466e4a354c1aa4e1b55dc9c0cd5dc54b8004ce47d437d11fe5329973584"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/event-drafts.js",
+      "sha256": "7878874847ef2d3e0207a11f93e0941bb837b78fec0075cf847125a8365d1705"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/event-feedback-display.js",
+      "sha256": "fb882c3f51d27bbe573a4ea5124ef2f180b7c73a40f3bfb0787a54ff8c1a8ca5"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/event-insights.js",
+      "sha256": "4ad1e5cfee65a79ea6ad34922ee4f008411d343e3f18c16acdff7373b7c5c7aa"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/event-policy.js",
+      "sha256": "805590e0ce6ff980cae4c45ff5ffc9295b3b3021b222b32a1df13beb98d5705b"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/event-tag-selection.js",
+      "sha256": "247f1b7ba8c5c4e871b523eb612d99f601322744e4e446a749c0635f6a677581"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/events.js",
+      "sha256": "c4b93b5d12f8e5fe8435e93a3c9c05cc34b639d8f6b69c089766a0f9443d99a5"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/export-workbook.js",
+      "sha256": "cd1ea7a183b3a3b12565ccabfee99753c06f284eccc35b6d962b8106e6d496c2"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/governance.js",
+      "sha256": "9445fc554a867dcd1576101425064b82be0d45d7204ced6169df32f9cd2a7e76"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/growth.js",
+      "sha256": "df81d1c1d5471c03c43680adae6e9e031309c52b3a5d988dcce0e0e1da939e95"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/knowledge-scheduling-repository.js",
+      "sha256": "ce2e0273dc5e62f0a594b6423e169a310f335eb47a030357184f0b532b97b7ba"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/knowledge.js",
+      "sha256": "94c8a8164f6bee8f7a2d30ca698d5c92214501afee537eed524bf2ebf79d9e64"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/media.js",
+      "sha256": "d3c93c85795474903388fbcda11c2f9e7291418acd8a700adb47f1de31314840"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/message-campaigns.js",
+      "sha256": "bceff708c763b42c4e9cd95ea0591f9a86045638491cd71427c3d9355087e457"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/message-delivery-records.js",
+      "sha256": "cc7604ae5b5747918c1d1cc46f0b3a6defceb547b8065e971d9ff2ab5c1cf35c"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/message-delivery-review-service.js",
+      "sha256": "6250766ede4499077dad668a67f7359a10580c8910983e2d04de901493a21a9a"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/message-delivery-review-validation.js",
+      "sha256": "1008aa9f5ddad8862a355ea749f8986caf6d71b86be2011f9676d8dfee5a4f53"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/message-delivery-reviews.js",
+      "sha256": "25c09b24ef46e831ab7cac19cea19567c87a85ca2d374c4e227c691ebf689e56"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/message-templates.js",
+      "sha256": "5d4e7cee20e7ccbb55c23226dad100a89dcd00b16e27727669329ad02a4893ea"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/messaging.js",
+      "sha256": "39d4ce399cf849d06a5afea5023995184f201b1867c8f9b2eb1e44549c6a46f2"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/mutation-authorization.js",
+      "sha256": "7b265bbd9f3d1da822a2f696a33d97e941ada28038f8790980f0ecf5d18d13c9"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/operation-registry.js",
+      "sha256": "586555090162d9950c3d1cee7d7151713f0200adf7ae611d805bbbdca964314c"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/operations/access.js",
+      "sha256": "9ffb59b7c4b8e810961ece73fe7eec4f94d03a9f52eeb24269c5bba763808a8c"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/opportunities.js",
+      "sha256": "053e6e107187e71b835ad4c533e5033236c0e319abfce32ffde18f7fb2b9d364"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/opportunity-policy.js",
+      "sha256": "4dac6c460f0f17f79cfd7e7eebd6a53bfbdc73d06b7ab2c5fed83e43f9bbd4cc"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/orders.js",
+      "sha256": "45206f4f15f4a6860d74e644c9152e65a49bdeb74d2a0224ab0a61c6f6282689"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/public-operation-contract.js",
+      "sha256": "fa8cb6c4c7e1a0724093f07b1c89f76bfbf17a1cb9a626232de55e21faa4145f"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/access.js",
+      "sha256": "390c5e26b3ffd0e3731e5d7630d6af40ef783391feba587e3d57952cb0b1fbb8"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/admin-accounts.js",
+      "sha256": "dff8626c4b0b75690dbb5910d306adc4ac5dca1d2ef6817975e05f958a58a310"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/dashboard-overview.js",
+      "sha256": "11b5cdd3ee20eb857fa0d0fb783f5b7155e4090e4b4d7c9fbca1d5bcfecfb835"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/event-catalogs.js",
+      "sha256": "ae6ad71a73dd4b12434bb31b6aa4312a9b7bd50b3a73fdf9dedf4af3a1fbbd7f"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/event-drafts.js",
+      "sha256": "afceabfc5b394cf981fc097fa35c4a0263cdb31babbe75e5234e9d0f878c7da4"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/event-runtime.js",
+      "sha256": "6c1a264bad42d1a88ef7428c714757a25ab74e816daacaebeebd3d72806c72fe"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/events.js",
+      "sha256": "4c949dbb5b0260a4f610e49f81fd66393adef729ca2ab8a45b3f1eab401e0ade"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/growth-operations.js",
+      "sha256": "40179cb743d990993a73729474073209f5a62c43e0d691878ff5264c724781c1"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/message-campaigns.js",
+      "sha256": "dbbf03343fbf6c4dd74af7b726d1fa97bf4d3017a79a5617cce970086b26071b"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/orders.js",
+      "sha256": "e44525efacf0e35af2464df38c653067b2ff5ab8f733be3418d6a3147fb40584"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/profile-cards.js",
+      "sha256": "415d8dbcfe85f47f5a8a1ec8f5e0530aa67e3c3d3f9df288cfe85b7e12526ca3"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/profile-records.js",
+      "sha256": "de2c721c303340840e592eda2983327fae610e7d4939513adf9cceffe23804bd"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/user-content.js",
+      "sha256": "4079584d4322dc41ce92968fc586f93e28fc936752770df7397bde79cfe245a5"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/user-related-records.js",
+      "sha256": "bf0e674f6158e7e04b4356a40f14ac4733129ff454ec60979135404f0d92945a"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/users.js",
+      "sha256": "35f3d7ea50a3fbc6abe91af1e925a4fd50a7a703b1d605761c12410137fcddbd"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repositories/videos.js",
+      "sha256": "09cf668466e610fe332015e4a5d508e52b6e712694ae605b307c89ae42b0150b"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/repository.js",
+      "sha256": "b8bc212d43a0c8410ffafe7700a019db7a303cb1d75cfa3404d4705bcd68a3c4"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/role-template-policy.js",
+      "sha256": "1f22af74e4d88d16f1a9ac7da54b2eea615deb433b3a4cc170392ae7aebc182e"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/role-templates.js",
+      "sha256": "062dd95a8d8c6876c5c1e664e930e6eab47317507da82a4c39278d7039f93ef1"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/roster-payment.js",
+      "sha256": "4716ca6ca87ad52d6e83a3bd4c53bb1495e4b1254690802061c79ce977cb1e37"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/service.js",
+      "sha256": "570a4f7cbe9f8c014a10c31df7cc7eaa21887163c124e7573008a1f49d089231"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/users.js",
+      "sha256": "e6faadf77e70bb702f713a6b39426adf8a03bb97218ae1849fd5d341cf533ddd"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/domain/videos.js",
+      "sha256": "c9bbf27fd4f8b99abaf93578c39f6bb8d7249ba45a639067cf83a26b225530d7"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/index.js",
+      "sha256": "624737e9af54397a15b1b9a9a70419b232549034e942951285ecd745a82c01fd"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/lib/admin-media-projection.js",
+      "sha256": "e7e023ca5f873670be24d702f9c516542ac49045a60aff1ed7f21099d6ad7aa3"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/lib/media-admin-client.js",
+      "sha256": "168e14a710a66995586a7b7c2a63eeaccf8fa465b59821ae38041c5ace729c75"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/lib/wechat-content-checker.js",
+      "sha256": "39816be877814344492c367c904c1f6db74bb85269c2a6ddbe3e8601bb1146f7"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/lib/wechat-text-checker.js",
+      "sha256": "784a47d5bb4f3658333886be3545101783dfbd3d69ce848be13a26ce58440852"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/lib/xlsx.js",
+      "sha256": "036aae6111a8930c08c47e5b08bc0b75289b5f35d7b5321f90ba99f87c3971c9"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/access-repository-module.test.js",
+      "sha256": "6bbcdb2467d1259ca61ae1f7d196a53878eb9ce018f01edc6ad1cabfe6a3881d"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/admin-media-projection.test.js",
+      "sha256": "978f089b3afae1c16e7136fd9dabcb88adc8937c719430d7fe2de4811c957aeb"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/admin-prd-completion.test.js",
+      "sha256": "e3234346f4f8ee4d191cbd8a8e17b60fde4482aecc17a9b04fa1e5a6aeb3af52"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/admin-prd-extensions.test.js",
+      "sha256": "f949903a86403f16e970542b27c97ca6de9177146560a82037b30fbbd299d0f8"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/branches.test.js",
+      "sha256": "fe93ea8fef484242f7572c9055e41824aa3148acec47c4de46d6bbbfa29a1ac4"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/event-clone.test.js",
+      "sha256": "d788e0002eb2cab872a02a21e8845bc6cc80830478b521cbca4d92f9fd23172c"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/event-draft-runtime.test.js",
+      "sha256": "0aef039e3e921d3475c0e66435be24d41661e55623860de7149979959ac798ab"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/event-repository-module.test.js",
+      "sha256": "98eb3790f5fa7e83c544a5a8bd5557681928e001ab43d75fab53298a985048b6"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/event-tag-selection.test.js",
+      "sha256": "0866270038eb3270f8ba273b96b8cd32cc5c2920fde44c0126b0057a08c315ff"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/events-module.test.js",
+      "sha256": "6ca5cb56364ccfb2a2bf045d8d0e21f88225a08e7ea7b6a5722be922d4434a96"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/export.test.js",
+      "sha256": "9d472acc48f8632bc19111893074bcacce3dc6b498244d355fae7531e0e23e18"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/governance-module.test.js",
+      "sha256": "05dc3eb75a5a63f4a0e2c4bf338af0002ccc74178c17e056904246773c11264a"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/growth-module.test.js",
+      "sha256": "658bd9db56b0d05c0ca57c1510dca382d12b96eac857be8c31ed75ea5668e601"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/handler-contract.test.js",
+      "sha256": "9cf4f39f5dacd6b1730bba7dc6f2bd96123e18b8706ab7653dd744a0890a59c3"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/knowledge-schedule-admin.test.js",
+      "sha256": "e29cfd102f6017241a29884d7d5a7471d0e865d6528e26ac6f10ca0b6982dd41"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/knowledge.test.js",
+      "sha256": "b043b88ed2828d99f94baee9241c5120bd55eb10f0d5ecec0fd0b3f28e813fed"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/media.test.js",
+      "sha256": "811d4809139da4b475f610c06a03874f5854c667381cb3c3fa6cc308efc02c48"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/messaging-module.test.js",
+      "sha256": "1c032f8c4e0924506b178d61595a192958bfa6852be86317ab6b011a945dbca9"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/operation-catalog.test.js",
+      "sha256": "af0aab6e27fe169d671bcc04f2eb220af8b4b4d51fdac24f519aaf550dfbb3c4"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/operation-policy.test.js",
+      "sha256": "011f63d0cb1d67400e3a6f2dacead5b0dbe83edc29e078620eee0c7784ccf144"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/opportunities-module.test.js",
+      "sha256": "0ebcf18d80b5119096b07871033b37eae61f8d624150ced196c2812461c67545"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/order-repository-module.test.js",
+      "sha256": "dcdb9c95a3c63d07dec144c5cc6fc174eabd206ddaf4acfe7cc950448c975bdc"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/orders-module.test.js",
+      "sha256": "d2e2aa6fb4b4fdc194ca77946f11dcc6841c1a1cd0f7d3d001ca9b03f4f48a14"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/profile-cards.test.js",
+      "sha256": "262bf02b7d62d8bcaf8dc01e5780db48a8ac068d3bc04302128112eeb6071e90"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/public-operation-contract.test.js",
+      "sha256": "5581a0ff06e0d73f514cb521d1e1d26b31ae51d9d5930eb316fb53bfb994246c"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/repository.test.js",
+      "sha256": "5f2043f1eb51e5f3f835d98260c454e9177e4903790fdd9a627bc72ccda71739"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/role-templates.test.js",
+      "sha256": "d8488be049aea632d4bfc62883b4bdcc716799c939b8d374079cb9a2d23974b6"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/service.test.js",
+      "sha256": "c85b658a3a186918595d602f83be0c3400fc414e747fbfec70513d4f5cc61650"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/user-related-records.test.js",
+      "sha256": "26210ec330fe623360287be035ee87ec1c13f2e5fe75c7f9c579eec2b182239f"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/user-repository-module.test.js",
+      "sha256": "fecd74d41e29a9a9dfe0a2252a3e5f749c9f007a0b9c8fe2f52af3fb3f249f06"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/users.test.js",
+      "sha256": "c5849c569a59ca422ab9bac18087261c1e4e59c45b0e7c4afd384485742344e0"
+    },
+    {
+      "path": "cloudfunctions/mip-admin-api/tests/web-bff-auth.test.js",
+      "sha256": "573612582347fa4a356cec92a7e3e97b86aee32b64596204cef8f520fb883c87"
+    },
+    {
+      "path": "cloudfunctions/mip-banners-api/domain/handler.js",
+      "sha256": "040f9adcfa2c233638eae671968fd27dd2a84a9fc8dbeb3f3a40936ffde3c59c"
+    },
+    {
+      "path": "cloudfunctions/mip-banners-api/domain/repository.js",
+      "sha256": "ee4914ef6cb0cebd6ea6d60334b47cedac8fc02527feff019072ee0cd259e251"
+    },
+    {
+      "path": "cloudfunctions/mip-banners-api/lib/role-template-policy.js",
+      "sha256": "37fb9c8632c64c230334efd31a968fa95ae9577ed865763935a82cf31eca7856"
+    },
+    {
+      "path": "cloudfunctions/mip-banners-api/tests/repository.test.js",
+      "sha256": "92f006db7c9914498be74c5cd58bc3509784c6a733f96b626b42230be35ae47e"
+    },
+    {
+      "path": "cloudfunctions/mip-events-api/domain/event-service.js",
+      "sha256": "215cd0e360592c3f68c55d0d8629c9728ff411ac0dc2aac48f48898f190b5e2f"
+    },
+    {
+      "path": "cloudfunctions/mip-events-api/domain/rules.js",
+      "sha256": "17392a03abaa9f892e4f1875ad5425e67f9c732bb6ea70e33c7bac81f3c90c53"
+    },
+    {
+      "path": "cloudfunctions/mip-events-api/lib/role-template-policy.js",
+      "sha256": "37fb9c8632c64c230334efd31a968fa95ae9577ed865763935a82cf31eca7856"
+    },
+    {
+      "path": "cloudfunctions/mip-game-api/domain/repository.js",
+      "sha256": "7ce5f9283e82cdcff568e0fcfcd6c052e5fb95b0f3e4c9e22da7adc4368740cf"
+    },
+    {
+      "path": "cloudfunctions/mip-game-api/lib/role-template-policy.js",
+      "sha256": "37fb9c8632c64c230334efd31a968fa95ae9577ed865763935a82cf31eca7856"
+    },
+    {
+      "path": "cloudfunctions/mip-game-api/tests/game.test.js",
+      "sha256": "272d922b55ed6a76c5b9f4a2b9e4795b3a87c0dd89058f8a761f918807f0d4c6"
+    },
+    {
+      "path": "cloudfunctions/mip-identity-api/domain/capabilities.js",
+      "sha256": "7c6dd5c25cb8482fcf610468710462797402881e737debdd1f6e802a8cad2376"
+    },
+    {
+      "path": "cloudfunctions/mip-identity-api/domain/repository.js",
+      "sha256": "c30e7bdd190cc46741de32c0ba72ae731077b20b98e1c9b631c98c60d301ca73"
+    },
+    {
+      "path": "cloudfunctions/mip-identity-api/lib/role-template-policy.js",
+      "sha256": "37fb9c8632c64c230334efd31a968fa95ae9577ed865763935a82cf31eca7856"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/domain/image.js",
+      "sha256": "49d70993e8b40b191a71721c726e5cc2d46d271a0cd00ccfb6e1d45b29722ed2"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/domain/service.js",
+      "sha256": "06d62ca669e9b5f12c34a2731a080fb2e57e4a97d9a9fedd96037af236eb45de"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/index.js",
+      "sha256": "730c1f981a2970138b41fa4f896efb4402df9e5e00fe46635bdfd12c5ce122cf"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/lib/admin-upload-authorization.js",
+      "sha256": "b647fa0ff410a900babac34477c72d245c84aab9a576923fa97c626ba0dd454c"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/lib/admin-upload-role-catalog.js",
+      "sha256": "aeb72dcbc74cc468e48f9b9791a7d8b32ea5e3173d7ff797ce7aeec369742927"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/lib/internal-admin-transport.js",
+      "sha256": "cada038c171fe4d00124fd728c648daf054635ed9a9ec51905b6e440f2770b7b"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/lib/role-template-policy.js",
+      "sha256": "37fb9c8632c64c230334efd31a968fa95ae9577ed865763935a82cf31eca7856"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/lib/wechat-content-checker.js",
+      "sha256": "c6c9fe4a1a3d6446ee44071f6ac77d168bf01124ca47eedda2a9cd53d8c01373"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/tests/admin-upload-authorization.test.js",
+      "sha256": "9e5b29c3bd29039e9bb19476514d089e36a9d8f891c875ef1c3acb62d3cccefd"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/tests/internal-admin-transport.test.js",
+      "sha256": "40e318f3c16ba5c41bc0c8e1ac4a783eda7b466262bf0b34c1dfed544e7b62ae"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/tests/media.test.js",
+      "sha256": "1b47abcf697beabf40e2fec8a521513b8e5dbc223dd60dbbe9e20c71f22934d5"
+    },
+    {
+      "path": "cloudfunctions/mip-media-api/tests/wechat-image-checker.test.js",
+      "sha256": "c49ba50ee8350f44340f84f9163ef4ccdf3d77f2089efec604e8252d0909ee9b"
+    },
+    {
+      "path": "cloudfunctions/mip-opportunities-api/lib/internal-matching.js",
+      "sha256": "bc3c7a54ae5ef6096a826c65cb028c8f88c02e9345d9f14bb00d9bf763d17adf"
+    },
+    {
+      "path": "cloudfunctions/mip-opportunities-api/lib/role-template-policy.js",
+      "sha256": "37fb9c8632c64c230334efd31a968fa95ae9577ed865763935a82cf31eca7856"
+    },
+    {
+      "path": "cloudfunctions/mip-outbox-worker/domain/event-comment-policy.js",
+      "sha256": "a54be2dc2ad0fc6b78ac85c41433102b1c3cd51c313d2019043785b79f0d37d3"
+    },
+    {
+      "path": "cloudfunctions/mip-outbox-worker/domain/projector.js",
+      "sha256": "fb0b602221a4d1b3eea5ebf650033aa93c5d40795161ee632b447e6b6d3a909f"
+    },
+    {
+      "path": "cloudfunctions/mip-outbox-worker/lib/role-template-policy.js",
+      "sha256": "37fb9c8632c64c230334efd31a968fa95ae9577ed865763935a82cf31eca7856"
+    },
+    {
+      "path": "cloudfunctions/mip-tasks-api/domain/repository.js",
+      "sha256": "e41f6151cf1b7313162424969546253293723222533f3d6bc994108625d43106"
+    },
+    {
+      "path": "cloudfunctions/mip-tasks-api/domain/workflow.js",
+      "sha256": "4e8d802740b2392da5addf986fdda0bdea964a6af8a0275a8947838efb984c60"
+    },
+    {
+      "path": "cloudfunctions/mip-tasks-api/lib/role-template-policy.js",
+      "sha256": "37fb9c8632c64c230334efd31a968fa95ae9577ed865763935a82cf31eca7856"
+    },
+    {
+      "path": "database/mysql/mip/094_role_templates.sql",
+      "sha256": "36e9fc860f18894d5a31b1a26b8c52e1487a5c7df5f19c52a61779f4442bb36e"
+    },
+    {
+      "path": "database/mysql/mip/095_branch_management_fields.sql",
+      "sha256": "d9b293d6482399c2ef960ab305e63b1cafdc669b3ed6a15de8e1294525d79fb1"
+    },
+    {
+      "path": "database/mysql/mip/migrations.lock.json",
+      "sha256": "c308052449926c6b884e34692a7069e9e5241dce2757bf170a6dc7c4136dface"
+    },
+    {
+      "path": "database/mysql/mip/rollback/094_role_templates.sql",
+      "sha256": "93ae8431fbb427b347f83dda55745af33a703186ef9ba1ad4961f45ccdc88b57"
+    },
+    {
+      "path": "database/mysql/mip/rollback/095_branch_management_fields.sql",
+      "sha256": "1e783a7cac9d3d81eac3a927c4008f3d95abeac2ab33e2bb912ee55b1c1be73d"
+    },
+    {
+      "path": "docs/CLOUDBASE.md",
+      "sha256": "62f4690fac02651da6d8d7c1c739afc73443e4cc99471c36d3111f40d332364e"
+    },
+    {
+      "path": "docs/README.md",
+      "sha256": "97d48412a8b086306e256297acad7778f69cad940745ff3616c01c06c3898179"
+    },
+    {
+      "path": "docs/mip/ACCEPTANCE.md",
+      "sha256": "a822fc5c309550787c3703835943e7d8eea126924bcac1bba9808eeb4959025f"
+    },
+    {
+      "path": "docs/mip/COVERAGE_MATRIX.md",
+      "sha256": "8ec84da909f5399f80d70c55466fb9d64b7d55238fc42ae8795749b51b0025b7"
+    },
+    {
+      "path": "docs/mip/PROJECT_STATUS.md",
+      "sha256": "9c991d2d56cb8952605506a890b584cdefc20d2f31eeda93cb9608ea1c793ad6"
+    },
+    {
+      "path": "docs/mip/README.md",
+      "sha256": "4ec99e5539160901742bb56a36e9afd9a105b02f10e626be8ab802c19d3b8838"
+    },
+    {
+      "path": "docs/mip/REQUIREMENTS.md",
+      "sha256": "5b1fc1e0c28872b80fe4e704f4f57c508f9c435b676dc5717e99db6d2c463d40"
+    },
+    {
+      "path": "docs/mip/REQUIREMENTS_DIFF_20260922.md",
+      "sha256": "a1e872c7644fdfb251bd90dedc5495742273c66346fedb432adc788d4f9f0b92"
+    },
+    {
+      "path": "docs/mip/sources/README.md",
+      "sha256": "c76e9db1dc23d9a0ef13031fc77dcfd3ab917bba67a3ad5c69af4e3ef33dbac8"
+    },
+    {
+      "path": "packages/admin-contracts/src/generated/admin-operation-contract.ts",
+      "sha256": "80c339463f042af6467fb339c8d8d40c0abba1f07b5685b7028d0dd3e1a2e66a"
+    },
+    {
+      "path": "scripts/deploy-admin-cloudbase.mjs",
+      "sha256": "03959102c7076340e488b8afe1533f815e01698306ca0f1e0de6759ebd3c50b0"
+    },
+    {
+      "path": "scripts/deploy-functions.mjs",
+      "sha256": "772fc54668bcf8b01f1ad78502048d1d63d1053e0bf4d6cbaf378a9124c8ca58"
+    },
+    {
+      "path": "scripts/generate-role-template-policy.mjs",
+      "sha256": "2de7793a60815f91dba21447ec3b32116b7975b29bbb0bad83a45eda8520fdd4"
+    },
+    {
+      "path": "scripts/generate-wechat-content-client.mjs",
+      "sha256": "ce89297c2ac623d75c33c88b30162b7a3463635cca260b87f6a1005bbf550126"
+    },
+    {
+      "path": "scripts/lib/admin-asset-route.mjs",
+      "sha256": "ded9a4b315d833c9df405c404191b305c7fd602056d1350b7c2f2c5e2a5650c3"
+    },
+    {
+      "path": "scripts/lib/admin-role-template-deployment.mjs",
+      "sha256": "39978b30fbe46ddd981b26ffd2628fc4561e5a0dc5cee474333a2ab3bc81f555"
+    },
+    {
+      "path": "scripts/verify.mjs",
+      "sha256": "9d34b289ee963ff2058a85ae84e117fc92e44e9f0b02521b3c93b4118797a903"
+    },
+    {
+      "path": "tests/admin-asset-route.test.ts",
+      "sha256": "712fafb30ea1ce8333c930ccd4ef13cc7a5367d5b791562dabfaac0943c95255"
+    },
+    {
+      "path": "tests/admin-role-template-deployment.test.ts",
+      "sha256": "fd82311751559f6aabd0fabcf0501b143082ce49d861cf9af6370ef4ab66bcd1"
+    },
+    {
+      "path": "tests/admin-roster.test.ts",
+      "sha256": "bb44bf5109943ce8bcbec56aef4be3315f67a3a5ba4a5e87ffe74e75e1792b2b"
+    },
+    {
+      "path": "tests/mip-admin-contract-matrix.test.ts",
+      "sha256": "73058143dfa2aa04a2a3db7e51808b5698a33be9045d5c431236421c3f55ed5a"
+    },
+    {
+      "path": "tests/phase9-final-gaps.test.ts",
+      "sha256": "0d8ceab6b279ec738ea6f301991551aa6d6cbaa5de0d25836c5169d989a169e2"
+    }
+  ]
+}

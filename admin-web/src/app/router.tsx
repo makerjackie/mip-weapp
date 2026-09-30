@@ -54,6 +54,7 @@ const pageRoutes = adminNavigation.map(item => createRoute({
 const eventEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/events/$eventId/edit',
+  validateSearch: (search: Record<string, unknown>) => ({ draftId: typeof search.draftId === 'string' && /^[1-9][0-9]{0,19}$/.test(search.draftId) ? search.draftId : undefined }),
   component: routeComponents['/events/$eventId/edit'],
 })
 
@@ -69,13 +70,6 @@ const opportunityEditRoute = createRoute({
   component: routeComponents['/opportunities/$opportunityId/edit'],
 })
 
-const knowledgeListRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/knowledge',
-  validateSearch,
-  component: routeComponents['/knowledge'],
-})
-
 const knowledgeEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/knowledge/$contentId/edit',
@@ -87,6 +81,13 @@ const userContentEditRoute = createRoute({
   path: '/userContent/$contentId/edit',
   component: routeComponents['/userContent/$contentId/edit'],
 })
+const userProfileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/users/$userId',
+  validateSearch: (search: Record<string, unknown>) => ({ ...validateSearch(search), direction: ['ALL', 'INCOMING', 'OUTGOING', 'MUTUAL'].includes(String(search.direction)) ? String(search.direction) : undefined }),
+  component: routeComponents['/users/$userId'],
+})
+const videoEditRoute = createRoute({ getParentRoute: () => rootRoute, path: '/videos/$videoId/edit', component: routeComponents['/videos/$videoId/edit'] })
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -94,9 +95,10 @@ const routeTree = rootRoute.addChildren([
   eventEditRoute,
   taskEditRoute,
   opportunityEditRoute,
-  knowledgeListRoute,
   knowledgeEditRoute,
   userContentEditRoute,
+  userProfileRoute,
+  videoEditRoute,
 ])
 
 export const router = createRouter({

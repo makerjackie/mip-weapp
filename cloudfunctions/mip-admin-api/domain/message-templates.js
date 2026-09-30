@@ -23,6 +23,7 @@ function createMessageTemplateRepository(database, options = {}) {
       clauses.push('(revision.name LIKE ? OR revision.title LIKE ? OR revision.body LIKE ?)')
       params.push(pattern, pattern, pattern)
     }
+    if (filters.cursor) { clauses.push('(template.updated_at < ? OR (template.updated_at = ? AND template.id < ?))'); params.push(filters.cursor.updatedAt, filters.cursor.updatedAt, filters.cursor.id) }
     const rows = await database.query(
       `${templateSelect()}
        WHERE ${clauses.join(' AND ')}

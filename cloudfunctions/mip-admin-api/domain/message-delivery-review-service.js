@@ -34,6 +34,7 @@ function createAdminMessageDeliveryReviews({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
       sourceType: request.sourceType,
+      ...(request.campaignId ? { campaignId: request.campaignId } : {}),
       workflowStatus: request.workflowStatus,
       cursor: decodeCursor(request.cursor, ['occurredAt', 'id']),
       limit: request.limit,

@@ -1,0 +1,52 @@
+{
+  "at": "2026-09-29T12:15:42.228Z",
+  "stage": "staging",
+  "fixtureOnly": true,
+  "published": false,
+  "realFinanceOrMessages": false,
+  "checks": [
+    {
+      "name": "configured-test-account-login",
+      "passed": true
+    },
+    {
+      "name": "actual-frontend-form-validates",
+      "passed": true
+    },
+    {
+      "name": "new-event-has-id",
+      "passed": true
+    },
+    {
+      "name": "owned-object-stays-draft",
+      "passed": true
+    },
+    {
+      "name": "cover-bound-to-ready-upload",
+      "passed": true
+    },
+    {
+      "name": "fulltext-and-zero-false-preserved",
+      "passed": true
+    },
+    {
+      "name": "text-safety-passed",
+      "passed": true
+    },
+    {
+      "name": "cover-readback-is-https",
+      "passed": true
+    },
+    {
+      "name": "bound-cover-actual-preview",
+      "passed": true
+    },
+    {
+      "name": "new-object-idempotent",
+      "passed": true
+    }
+  ],
+  "result": "PASS",
+  "eventCount": 1,
+  "retainedAsNamedUnpublishedFixture": true
+}

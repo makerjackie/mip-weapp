@@ -40,11 +40,12 @@ function createGrowthOperationsRepository(database, options = {}) {
     if (input.filters.status) { clauses.push('status = ?'); params.push(input.filters.status) }
     if (input.filters.query) { clauses.push('behavior LIKE ?'); params.push(`%${input.filters.query}%`) }
     const cursor = cursorPredicateFor('created_at', input.cursor, 'createdAt', 'rule_uid')
-    const rows = await database.query(`SELECT * FROM mip_contribution_rules WHERE ${clauses.join(' AND ')}${cursor.sql}
+    const rows = await database.query(`SELECT mip_contribution_rules.*, (SELECT JSON_ARRAYAGG(branch.name) FROM mip_city_branches branch WHERE branch.app_id = mip_contribution_rules.app_id AND JSON_CONTAINS(mip_contribution_rules.scope_servers, JSON_QUOTE(branch.id))) AS scope_server_names FROM mip_contribution_rules WHERE ${clauses.join(' AND ')}${cursor.sql}
       ORDER BY created_at DESC, rule_uid DESC LIMIT ?`, [...params, ...cursor.params, input.limit + 1])
     return pageRows(rows.map(row => ({ id: row.rule_uid, ruleId: row.rule_uid, behavior: row.behavior,
       behaviorLabel: BEHAVIORS[row.behavior] || row.behavior, rewardExp: Number(row.reward_exp),
       rewardLimit: { kind: row.reward_limit_kind, value: Number(row.reward_limit) },
+      scopeServerNames: json(row.scope_server_names, []),
       scopeServers: json(row.scope_servers, []), effectiveFrom: iso(row.effective_from), effectiveTo: iso(row.effective_to),
       status: row.status, version: Number(row.version), createdAt: iso(row.created_at),
     })), input.limit, row => ({ createdAt: row.createdAt, id: row.id }))
@@ -56,7 +57,7 @@ function createGrowthOperationsRepository(database, options = {}) {
       // the tenant app row also prevents races between different administrators.
       await tx.query(`INSERT INTO mip_app_settings (app_id, setting_key, value_json)
         VALUES (?, 'contribution.rules.lock', JSON_OBJECT()) ON DUPLICATE KEY UPDATE setting_key = VALUES(setting_key)`, [input.appId])
-      const rows = await tx.query('SELECT * FROM mip_contribution_rules WHERE app_id = ? ORDER BY rule_id FOR UPDATE', [input.appId])
+      const rows = await tx.query('SELECT mip_contribution_rules.*, (SELECT JSON_ARRAYAGG(branch.name) FROM mip_city_branches branch WHERE branch.app_id = mip_contribution_rules.app_id AND JSON_CONTAINS(mip_contribution_rules.scope_servers, JSON_QUOTE(branch.id))) AS scope_server_names FROM mip_contribution_rules WHERE app_id = ? ORDER BY rule_id FOR UPDATE', [input.appId])
       const current = rows.find(row => row.rule_uid === input.ruleId)
       if (input.ruleId && !current) fail('NOT_FOUND')
       if (current && Number(current.version) !== input.expectedVersion) fail('CONFLICT')
@@ -173,20 +174,23 @@ function createGrowthOperationsRepository(database, options = {}) {
     const clauses = ['1 = 1']; const params = [input.appId, input.appId]
     if (input.filters.entitlementType) { clauses.push('ledger.entitlement_type = ?'); params.push(input.filters.entitlementType) }
     if (input.filters.sinceTime) { clauses.push('ledger.granted_at >= ?'); params.push(input.filters.sinceTime) }
-    if (input.filters.query) { clauses.push('(ledger.nickname LIKE ? OR ledger.user_id = ? OR ledger.order_id = ? OR ledger.id = ?)'); params.push(`%${input.filters.query}%`, input.filters.query, input.filters.query, input.filters.query) }
+    if (input.filters.untilTime) { clauses.push('ledger.granted_at <= ?'); params.push(input.filters.untilTime) }
+    if (input.filters.query) { clauses.push('(ledger.nickname LIKE ? OR ledger.user_id = ? OR ledger.order_id = ? OR ledger.id = ?)'); params.push(`%${input.filters.query.replace(/[\\%_]/g, '\\$&')}%`, input.filters.query, input.filters.query, input.filters.query) }
     const cursor = cursorPredicateFor('ledger.granted_at', input.cursor, 'createdAt', 'ledger.id')
     const rows = await database.query(`SELECT ledger.* FROM (SELECT entry.id, entry.user_id, profile.nickname, IF(entry.metric = 'EXPERIENCE', 'EXP', 'CONTRIBUTION') AS entitlement_type,
-      entry.delta_value AS amount, NULL AS months, NULL AS order_id, actor.nickname AS grantor,
-      entry.created_at AS granted_at, IF(entry.actor_user_id IS NULL, 'SYSTEM', 'MANUAL') AS source
+      entry.delta_value AS amount, NULL AS months, linked_order.id AS order_id, linked_order.merchant_order_no AS order_no, actor.nickname AS grantor,
+      entry.created_at AS granted_at, IF(entry.actor_user_id IS NULL, 'SYSTEM', 'MANUAL') AS source, NULL AS starts_at, NULL AS ends_at
       FROM mip_growth_entries entry LEFT JOIN mip_profiles profile ON profile.app_id = entry.app_id AND profile.user_id = entry.user_id
       LEFT JOIN mip_profiles actor ON actor.app_id = entry.app_id AND actor.user_id = entry.actor_user_id
+      LEFT JOIN mip_orders linked_order ON linked_order.app_id = entry.app_id AND linked_order.id = entry.source_event_id
       WHERE entry.app_id = ? AND entry.metric IN ('EXPERIENCE', 'CONTRIBUTION') AND entry.delta_value > 0
       UNION ALL SELECT entitlement.id, entitlement.user_id, profile.nickname, 'MEMBERSHIP', plan.duration_days,
       COALESCE(adjustment.duration_months, CASE WHEN plan.duration_days IN (365, 366) THEN 12
         WHEN plan.duration_days IN (180, 182, 183) THEN 6 WHEN plan.duration_days IN (90, 91, 92) THEN 3
-        WHEN plan.duration_days IN (30, 31) THEN 1 END), entitlement.order_id, actor.nickname, entitlement.created_at,
-      IF(entitlement.source_type = 'ADMIN_ADJUSTMENT', 'MANUAL', 'SYSTEM')
+        WHEN plan.duration_days IN (30, 31) THEN 1 END), entitlement.order_id, linked_order.merchant_order_no AS order_no, actor.nickname, entitlement.created_at,
+      IF(entitlement.source_type = 'ADMIN_ADJUSTMENT', 'MANUAL', 'SYSTEM'), entitlement.starts_at, entitlement.ends_at
       FROM mip_membership_entitlements entitlement
+      LEFT JOIN mip_orders linked_order ON linked_order.app_id = entitlement.app_id AND linked_order.id = entitlement.order_id
       LEFT JOIN mip_profiles profile ON profile.app_id = entitlement.app_id AND profile.user_id = entitlement.user_id
       LEFT JOIN mip_membership_adjustments adjustment ON adjustment.app_id = entitlement.app_id AND adjustment.id = entitlement.source_adjustment_id
       LEFT JOIN mip_membership_plans plan ON plan.app_id = entitlement.app_id AND plan.id = entitlement.plan_id
@@ -194,11 +198,11 @@ function createGrowthOperationsRepository(database, options = {}) {
       WHERE entitlement.app_id = ?) ledger WHERE ${clauses.join(' AND ')}${cursor.sql}
       ORDER BY ledger.granted_at DESC, ledger.id DESC LIMIT ?`, [...params, ...cursor.params, input.limit + 1])
     return pageRows(rows.map(row => ({ id: row.id, entitlementNo: row.id, userId: row.user_id, nickname: row.nickname || '未填写昵称',
-      entitlementType: row.entitlement_type, entitlementContent: row.entitlement_type === 'MEMBERSHIP' ? (row.months ? `${row.months} 个月` : `${row.amount} 天`) : `${row.amount} ${row.entitlement_type === 'EXP' ? '经验值' : '贡献值'}`,
+      entitlementType: row.entitlement_type, entitlementContent: row.entitlement_type === 'MEMBERSHIP' ? (row.months ? `${row.months} 个月` : row.amount ? `${row.amount} 天` : '按记录有效期') : `${row.amount} ${row.entitlement_type === 'EXP' ? '经验值' : '贡献值'}`,
       amount: row.amount === null ? null : Number(row.amount), months: row.months === null ? null : Number(row.months),
-      relatedOrderNo: row.order_id || null, grantor: row.grantor || (row.source === 'SYSTEM' ? '系统' : '管理员'),
+      relatedOrderId: row.order_id || null, relatedOrderNo: row.order_no || null, startsAt: iso(row.starts_at), endsAt: iso(row.ends_at), grantor: row.grantor || (row.source === 'SYSTEM' ? '系统' : '管理员'),
       grantedAt: iso(row.granted_at), source: row.source,
-    })), input.limit, row => ({ createdAt: row.grantedAt, id: row.id }))
+    })), input.limit, row => ({ createdAt: row.grantedAt, id: row.id, ...(input.cursorContext ? { context: input.cursorContext } : {}) }))
   }
 
   return { listContributionRules, saveContributionRule, listContributionTransactions, reverseContribution,

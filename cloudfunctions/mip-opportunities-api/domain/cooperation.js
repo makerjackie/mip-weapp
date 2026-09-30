@@ -25,13 +25,28 @@ const {
   uuid,
 } = require('./common')
 
+// 共同字段：所有角色一致（support/value 为文本，quirks 为结构化多组）；
+// 菜单字段按角色配置；旧模型独有键保留为透传白名单，避免已有卡编辑时丢内容。
+const COMMON_ROLE_FIELD_KEYS = ['support', 'value', 'quirks']
+const LEGACY_ROLE_FIELD_KEYS = {
+  connector: ['resources', 'target'],
+  business_builder: ['business_models', 'target'],
+  capital_operator: ['capital_range', 'target'],
+  strategist: ['methods', 'target'],
+  visual_designer: ['portfolio_summary', 'target'],
+  delivery_lead: ['delivery_experience', 'target'],
+}
+const CIRCLE_ENTRY_KEYS = ['name', 'identity', 'years', 'trait']
+const QUIRK_ENTRY_KEYS = ['external', 'internal', 'advice']
+const MAX_ROLE_FIELD_GROUPS = 12
+
 const REQUIRED_ROLE_FIELDS = {
-  connector: ['circles', 'resources', 'target'],
-  business_builder: ['industries', 'business_models', 'target'],
-  capital_operator: ['investment_fields', 'capital_range', 'target'],
-  strategist: ['planning_types', 'methods', 'target'],
-  visual_designer: ['visual_types', 'portfolio_summary', 'target'],
-  delivery_lead: ['project_types', 'delivery_experience', 'target'],
+  connector: [...COMMON_ROLE_FIELD_KEYS, 'circles'],
+  business_builder: [...COMMON_ROLE_FIELD_KEYS, 'industries', 'industry_years', 'selling_point'],
+  capital_operator: [...COMMON_ROLE_FIELD_KEYS, 'investment_fields', 'field_years', 'achievements'],
+  strategist: [...COMMON_ROLE_FIELD_KEYS, 'planning_types', 'expertise', 'selling_point'],
+  visual_designer: [...COMMON_ROLE_FIELD_KEYS, 'visual_types', 'expertise', 'selling_point'],
+  delivery_lead: [...COMMON_ROLE_FIELD_KEYS, 'project_types', 'expertise', 'selling_point'],
 }
 
 function limit(value, fallback = 16) {
@@ -85,21 +100,90 @@ function mysqlTimestamp(value) {
   return String(value).replace('T', ' ').replace(/Z$/, '')
 }
 
+function optionalRoleText(raw, maximum = 1000) {
+  if (raw === undefined || raw === null) return null
+  const text = String(raw).trim()
+  if (text.length > maximum) throw new Error('VALIDATION_FAILED')
+  return text || null
+}
+
+function optionalRoleTextList(raw) {
+  if (raw === undefined || raw === null) return null
+  if (!Array.isArray(raw)) return optionalRoleText(raw)
+  const items = [...new Set(raw.map(item => String(item).trim()).filter(Boolean))].slice(0, MAX_ROLE_FIELD_GROUPS)
+  if (items.some(item => item.length > 80)) throw new Error('VALIDATION_FAILED')
+  return items.length ? items : null
+}
+
+function normalizeGroupEntries(value, keys, legacyNameKey) {
+  if (value === undefined || value === null) return null
+  if (!Array.isArray(value)) throw new Error('VALIDATION_FAILED')
+  const entries = value.slice(0, MAX_ROLE_FIELD_GROUPS).map((item) => {
+    if (legacyNameKey && typeof item === 'string') {
+      return optionalRoleText(item, 200) ? { [legacyNameKey]: String(item).trim() } : {}
+    }
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('VALIDATION_FAILED')
+    const entry = {}
+    for (const key of keys) {
+      const text = optionalRoleText(item[key], 200)
+      if (text) entry[key] = text
+    }
+    return entry
+  }).filter(entry => Object.keys(entry).length > 0)
+  return entries.length ? entries : null
+}
+
+function normalizeLegacyRoleField(raw) {
+  if (raw === undefined || raw === null) return null
+  if (Array.isArray(raw)) {
+    const items = raw.map(item => String(item).trim()).filter(Boolean).slice(0, MAX_ROLE_FIELD_GROUPS)
+    if (items.some(item => item.length > 1000)) throw new Error('VALIDATION_FAILED')
+    return items.length ? items : null
+  }
+  return optionalRoleText(raw)
+}
+
 function normalizeRoleFields(roleKey, value) {
   const source = jsonObject(value)
+  const allowed = new Set([...REQUIRED_ROLE_FIELDS[roleKey], ...LEGACY_ROLE_FIELD_KEYS[roleKey]])
+  if (Object.keys(source).some(key => !allowed.has(key))) throw new Error('VALIDATION_FAILED')
   const result = {}
   for (const key of REQUIRED_ROLE_FIELDS[roleKey]) {
-    const raw = source[key]
-    if (Array.isArray(raw)) {
-      const items = [...new Set(raw.map(item => String(item).trim()).filter(Boolean))].slice(0, 12)
-      if (!items.length || items.some(item => item.length > 80)) throw new Error('VALIDATION_FAILED')
-      result[key] = items
+    if (key === 'quirks') {
+      const quirks = normalizeGroupEntries(source[key], QUIRK_ENTRY_KEYS, null)
+      if (quirks) result[key] = quirks
+      continue
     }
-    else {
-      result[key] = stringValue(raw, 1000, 'VALIDATION_FAILED')
+    if (key === 'circles') {
+      // 圈子兼容旧字符串数组（仅名称）与新结构化对象数组
+      const circles = normalizeGroupEntries(source[key], CIRCLE_ENTRY_KEYS, 'name')
+      if (circles) result[key] = circles
+      continue
     }
+    const normalized = optionalRoleTextList(source[key])
+    if (normalized) result[key] = normalized
+  }
+  for (const key of LEGACY_ROLE_FIELD_KEYS[roleKey]) {
+    const legacy = normalizeLegacyRoleField(source[key])
+    if (legacy) result[key] = legacy
   }
   return result
+}
+
+function flattenRoleFieldValues(roleFields) {
+  const values = []
+  for (const value of Object.values(roleFields)) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === 'string') values.push(item)
+        else if (item && typeof item === 'object') values.push(...Object.values(item).filter(item => typeof item === 'string'))
+      }
+    }
+    else if (typeof value === 'string') {
+      values.push(value)
+    }
+  }
+  return values
 }
 
 function normalizeScores(value) {
@@ -524,7 +608,7 @@ async function saveCooperationCard(database, contentSafety, caller, input) {
   await contentSafety.assertSafe(caller, [
     draft.positioning,
     draft.targetSummary,
-    ...Object.values(draft.roleFields).flat(),
+    ...flattenRoleFieldValues(draft.roleFields),
   ])
   return idempotentTransaction(database, {
     appId: caller.appId,

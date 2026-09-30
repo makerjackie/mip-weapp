@@ -16,6 +16,22 @@ function createAdminUserRepository(database, options) {
     json,
   })
 
+  async function listUserFilterOptions(appId, visibility) {
+    const access = visibleBranchesWhere(visibility)
+    const [industries, identities] = await Promise.all([
+      database.query(`SELECT id, label FROM mip_tags WHERE app_id = ? AND kind = 'INDUSTRY'
+        AND (selectable = 1 OR EXISTS (SELECT 1 FROM mip_profile_tags relation
+          WHERE relation.app_id = mip_tags.app_id AND relation.tag_id = mip_tags.id))
+        ORDER BY enabled DESC, sort_order, id`, [appId]),
+      database.query(`SELECT DISTINCT p.identity_status FROM mip_users u
+        INNER JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
+        WHERE u.app_id = ? AND ${access.sql} AND p.identity_status IS NOT NULL
+          AND TRIM(p.identity_status) <> '' ORDER BY p.identity_status`, [appId, ...access.params]),
+    ])
+    return { industries: industries.map(row => ({ id: row.id, name: row.label })),
+      identities: identities.map(row => ({ id: row.identity_status, name: row.identity_status })) }
+  }
+
   async function listUsers(appId, visibility, filters, pageLimit, cursor = null) {
     const access = visibleBranchesWhere(visibility)
     const clauses = ['u.app_id = ?', access.sql]
@@ -28,6 +44,14 @@ function createAdminUserRepository(database, options) {
       clauses.push('u.primary_branch_id = ?')
       params.push(filters.branchId)
     }
+    if (filters.industryId) {
+      clauses.push(`EXISTS (SELECT 1 FROM mip_profile_tags industry
+        INNER JOIN mip_tags industry_tag ON industry_tag.app_id = industry.app_id AND industry_tag.id = industry.tag_id
+        WHERE industry.app_id = u.app_id AND industry.user_id = u.id AND industry.tag_id = ?
+          AND industry_tag.kind = 'INDUSTRY' AND industry.relation IN ('PRIMARY_INDUSTRY', 'INDUSTRY'))`)
+      params.push(filters.industryId)
+    }
+    if (filters.identityStatus) { clauses.push('p.identity_status = ?'); params.push(filters.identityStatus) }
     if (filters.levelId) {
       clauses.push('gl.id = ?')
       params.push(filters.levelId)
@@ -89,6 +113,8 @@ function createAdminUserRepository(database, options) {
       clauses.push('u.created_at <= ?')
       params.push(filters.createdTo)
     }
+    if (filters.expiresFrom) { clauses.push('player_entitlements.latest_entitlement_ends_at >= ?'); params.push(filters.expiresFrom) }
+    if (filters.expiresTo) { clauses.push('player_entitlements.latest_entitlement_ends_at <= ?'); params.push(filters.expiresTo) }
     if (filters.query) {
       clauses.push('(p.nickname LIKE ? ESCAPE \'\\\\\' OR p.headline LIKE ? ESCAPE \'\\\\\' OR b.city_name LIKE ? ESCAPE \'\\\\\')')
       const query = `%${escapeLike(filters.query)}%`
@@ -98,9 +124,13 @@ function createAdminUserRepository(database, options) {
     const rows = await database.query(
       `${playerEntitlementSummaryCte()}
        SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
-        p.nickname, p.headline, p.introduction, p.visibility_json, p.version AS profile_version,
+        p.nickname, p.identity_status, p.headline, p.introduction, p.visibility_json, p.version AS profile_version, media.cloud_file_id AS avatar_url,
+        (SELECT GROUP_CONCAT(DISTINCT tag.label ORDER BY tag.label SEPARATOR '、') FROM mip_profile_tags relation
+          INNER JOIN mip_tags tag ON tag.app_id = relation.app_id AND tag.id = relation.tag_id
+          WHERE relation.app_id = u.app_id AND relation.user_id = u.id AND tag.kind = 'INDUSTRY'
+            AND relation.relation IN ('PRIMARY_INDUSTRY', 'INDUSTRY')) AS industry_names,
         pp.phone_ciphertext, pp.phone_verified_at, b.name AS branch_name, b.city_name,
-        gl.id AS current_level_id, ga.experience_balance, gl.name AS level_name,
+        gl.id AS current_level_id, ga.experience_balance, ga.contribution_balance, gl.name AS level_name,
         EXISTS (SELECT 1 FROM mip_membership_entitlements me
           WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
             AND me.starts_at <= UTC_TIMESTAMP(3) AND me.ends_at > UTC_TIMESTAMP(3)) AS is_player,
@@ -114,6 +144,7 @@ function createAdminUserRepository(database, options) {
         u.created_at, u.updated_at
        FROM mip_users u
        LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
+       LEFT JOIN mip_media_assets media ON media.app_id = p.app_id AND media.id = p.avatar_asset_id AND media.status = 'READY'
        LEFT JOIN mip_private_profiles pp ON pp.app_id = u.app_id AND pp.user_id = u.id
        LEFT JOIN mip_city_branches b ON b.app_id = u.app_id AND b.id = u.primary_branch_id
        LEFT JOIN mip_growth_accounts ga ON ga.app_id = u.app_id AND ga.user_id = u.id
@@ -138,7 +169,10 @@ function createAdminUserRepository(database, options) {
       status: row.status,
       kind: Number(row.is_player) === 1 ? 'PLAYER' : 'GUEST',
       nickname: row.nickname || '未填写昵称',
+      avatarUrl: row.avatar_url || '',
       headline: row.headline || '',
+      identityStatus: row.identity_status || '',
+      industryNames: row.industry_names || '',
       introduction: row.introduction || '',
       primaryBranchId: row.primary_branch_id || null,
       branchName: row.branch_name || '',
@@ -149,6 +183,7 @@ function createAdminUserRepository(database, options) {
       levelId: row.current_level_id || null,
       levelName: row.level_name || '',
       experience: Number(row.experience_balance || 0),
+      contribution: Number(row.contribution_balance || 0),
       visibility: json(row.visibility_json, {}),
       userVersion: Number(row.user_version || 1),
       profileVersion: Number(row.profile_version || 0),
@@ -168,8 +203,8 @@ function createAdminUserRepository(database, options) {
     const user = await database.one(
       `SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
         u.created_at, u.updated_at,
-        p.nickname, p.headline, p.introduction, p.companies_json,
-        p.organizations_json, p.visibility_json, p.version AS profile_version,
+        p.nickname, p.real_name, p.identity_status, p.headline, p.introduction, p.companies_json,
+        p.organizations_json, p.visibility_json, p.version AS profile_version, media.cloud_file_id AS avatar_url,
         pp.phone_ciphertext, pp.phone_verified_at,
         b.name AS branch_name, b.city_name,
         (SELECT GROUP_CONCAT(c.control_type ORDER BY c.control_type SEPARATOR ',')
@@ -177,6 +212,7 @@ function createAdminUserRepository(database, options) {
           WHERE c.app_id = u.app_id AND c.user_id = u.id AND c.status = 'ACTIVE') AS controls
        FROM mip_users u
        LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
+       LEFT JOIN mip_media_assets media ON media.app_id = p.app_id AND media.id = p.avatar_asset_id AND media.status = 'READY'
        LEFT JOIN mip_private_profiles pp ON pp.app_id = u.app_id AND pp.user_id = u.id
        LEFT JOIN mip_city_branches b ON b.app_id = u.app_id AND b.id = u.primary_branch_id
        WHERE u.app_id = ? AND u.id = ?`,
@@ -233,7 +269,7 @@ function createAdminUserRepository(database, options) {
           (SELECT COUNT(*) FROM mip_super_cases c
             WHERE c.app_id = ? AND c.owner_user_id = ?) AS super_case_count`,
         [appId, userId, appId, userId, appId, userId, appId, userId, appId, userId, appId, userId],
-      ),
+      ).catch(() => null),
       database.query(
         `SELECT relation.relation, tag.id, tag.kind, tag.label
          FROM mip_profile_tags relation
@@ -250,7 +286,7 @@ function createAdminUserRepository(database, options) {
          ORDER BY scope_type, scope_id, role_key`,
         [appId, userId],
       ),
-      getUserInfluenceSummary(appId, userId),
+      getUserInfluenceSummary(appId, userId).catch(() => ({ loadFailed: true, guestCount: null, interactionCount: null, interestCount: null, visitorCount: null })),
       database.one(
         `${playerEntitlementSummaryCte()}
          SELECT lifecycle.player_number, lifecycle.first_player_at,
@@ -273,6 +309,9 @@ function createAdminUserRepository(database, options) {
       status: user.status,
       kind: activePlayer ? 'PLAYER' : 'GUEST',
       nickname: user.nickname || '未填写昵称',
+      avatarUrl: user.avatar_url || '',
+      realName: user.real_name || '',
+      identityStatus: user.identity_status || '',
       headline: user.headline || '',
       introduction: user.introduction || '',
       companies: json(user.companies_json, []),
@@ -305,12 +344,13 @@ function createAdminUserRepository(database, options) {
         coin: Number(growth?.coin_balance || 0),
       },
       counts: {
-        registrations: Number(counts?.registration_count || 0),
-        attended: Number(counts?.attended_count || 0),
-        orders: Number(counts?.order_count || 0),
-        opportunities: Number(counts?.opportunity_count || 0),
-        cooperationCards: Number(counts?.cooperation_card_count || 0),
-        superCases: Number(counts?.super_case_count || 0),
+        ...(counts === null ? { loadFailed: true } : {}),
+        registrations: counts ? Number(counts.registration_count || 0) : null,
+        attended: counts ? Number(counts.attended_count || 0) : null,
+        orders: counts ? Number(counts.order_count || 0) : null,
+        opportunities: counts ? Number(counts.opportunity_count || 0) : null,
+        cooperationCards: counts ? Number(counts.cooperation_card_count || 0) : null,
+        superCases: counts ? Number(counts.super_case_count || 0) : null,
       },
       influence,
       tags: tags.map(tag => ({ id: tag.id, kind: tag.kind, relation: tag.relation, label: tag.label })),
@@ -545,6 +585,7 @@ function createAdminUserRepository(database, options) {
     getUserScope,
     listPrimaryBranchOptions,
     listUserInfluence,
+    listUserFilterOptions,
     listUsers,
     setUserControl,
     updateUserFields,

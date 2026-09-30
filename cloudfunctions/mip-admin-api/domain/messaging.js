@@ -23,6 +23,8 @@ const {
   normalizeMessageTemplateDraft,
   normalizeMessageTemplateFilters,
 } = require('./message-template-validation')
+const { createHash } = require('node:crypto')
+const { decodeCursor, pageRows } = require('./pagination')
 const { normalizeMessageDeliveryRecordList } = require('./message-delivery-records')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const {
@@ -237,13 +239,18 @@ function createAdminMessaging({
     const context = await access.session(caller)
     firstGrant(context.bindings, CAPABILITIES.MESSAGES_MANAGE)
     const filters = normalizeMessageCampaignFilters(input)
+    const visibility = visibilityForCapability(context.bindings, CAPABILITIES.MESSAGES_MANAGE)
+    const pageLimit = limit(input.limit, 50)
+    const cursorContext = createHash('sha256').update(JSON.stringify([context.caller.appId, visibility, filters, 'CAMPAIGNS'])).digest('hex')
+    const cursor = decodeCursor(input.cursor, ['updatedAt', 'id', 'context'])
+    if (cursor && cursor.context !== cursorContext) throw new AdminError('VALIDATION_FAILED', '消息筛选条件已变化，请从第一页读取')
     const items = await repository.listCampaigns(
       context.caller.appId,
-      visibilityForCapability(context.bindings, CAPABILITIES.MESSAGES_MANAGE),
-      filters,
-      limit(input.limit, 50),
+      visibility,
+      { ...filters, ...(cursor ? { cursor } : {}) },
+      pageLimit + 1,
     )
-    return { items: items.map(item => publicCampaign(item, context.caller.appId)), nextCursor: null }
+    return pageRows(items.map(item => publicCampaign(item, context.caller.appId)), pageLimit, item => ({ updatedAt: item.updatedAt, id: item.id, context: cursorContext }))
   }
 
   async function listMessageDeliveryRecords(caller, input = {}) {
@@ -457,15 +464,14 @@ function createAdminMessaging({
   async function listMessageTemplates(caller, input = {}) {
     const context = await access.session(caller)
     firstGrant(context.bindings, CAPABILITIES.MESSAGES_MANAGE)
-    return {
-      items: await repository.listTemplates(
-        context.caller.appId,
-        visibilityForCapability(context.bindings, CAPABILITIES.MESSAGES_MANAGE),
-        normalizeMessageTemplateFilters(input),
-        limit(input.limit, 50),
-      ),
-      nextCursor: null,
-    }
+    const visibility = visibilityForCapability(context.bindings, CAPABILITIES.MESSAGES_MANAGE)
+    const filters = normalizeMessageTemplateFilters(input)
+    const pageLimit = limit(input.limit, 50)
+    const cursorContext = createHash('sha256').update(JSON.stringify([context.caller.appId, visibility, filters, 'TEMPLATES'])).digest('hex')
+    const cursor = decodeCursor(input.cursor, ['updatedAt', 'id', 'context'])
+    if (cursor && cursor.context !== cursorContext) throw new AdminError('VALIDATION_FAILED', '模板筛选条件已变化，请从第一页读取')
+    const items = await repository.listTemplates(context.caller.appId, visibility, { ...filters, ...(cursor ? { cursor } : {}) }, pageLimit + 1)
+    return pageRows(items, pageLimit, item => ({ updatedAt: item.updatedAt, id: item.id, context: cursorContext }))
   }
 
   async function getMessageTemplate(caller, input = {}) {

@@ -2,6 +2,7 @@
 
 const { randomUUID } = require('node:crypto')
 const { assertMutationAuthorization } = require('./mutation-authorization')
+const { cursorPredicateFor } = require('./pagination')
 
 function createBadgeAdminRepository(database, options = {}) {
   const createId = options.createId || randomUUID
@@ -75,6 +76,7 @@ function createBadgeAdminRepository(database, options = {}) {
   async function listBadgeAwards(appId, filters = {}) {
     const clauses = ['award.app_id = ?']
     const params = [appId]
+    if (filters.userId) { clauses.push('award.user_id = ?'); params.push(filters.userId) }
     if (filters.status) {
       clauses.push('award.status = ?')
       params.push(filters.status)
@@ -84,10 +86,11 @@ function createBadgeAdminRepository(database, options = {}) {
       const pattern = `%${filters.query.replace(/[\\%_]/g, '\\$&')}%`
       params.push(pattern, pattern, filters.query)
     }
+    const cursor = cursorPredicateFor('award.updated_at', filters.cursor, 'updatedAt', 'award.id')
     const rows = await database.query(
       `SELECT award.id, award.user_id, profile.nickname, award.badge_id, badge.name AS badge_name,
               award.status, award.award_reason, award.awarded_at, award.revoke_reason,
-              award.revoked_at, award.version,
+              award.revoked_at, award.version, award.updated_at,
               EXISTS (
                 SELECT 1 FROM mip_user_badge_equipment equipment
                 WHERE equipment.app_id = award.app_id AND equipment.user_id = award.user_id
@@ -97,10 +100,10 @@ function createBadgeAdminRepository(database, options = {}) {
        INNER JOIN mip_badges badge ON badge.app_id = award.app_id AND badge.id = award.badge_id
        INNER JOIN mip_users user ON user.app_id = award.app_id AND user.id = award.user_id
        LEFT JOIN mip_profiles profile ON profile.app_id = user.app_id AND profile.user_id = user.id
-       WHERE ${clauses.join(' AND ')}
+       WHERE ${clauses.join(' AND ')}${cursor.sql}
        ORDER BY award.updated_at DESC, award.id DESC
-       LIMIT 100`,
-      params,
+       LIMIT ?`,
+      [...params, ...cursor.params, (filters.limit ?? 100) + 1],
     )
     return rows.map(row => ({
       id: row.id,
@@ -111,6 +114,7 @@ function createBadgeAdminRepository(database, options = {}) {
       status: row.status,
       awardReason: row.award_reason,
       awardedAt: iso(row.awarded_at),
+      updatedAt: iso(row.updated_at),
       revokeReason: row.revoke_reason || '',
       revokedAt: iso(row.revoked_at),
       equipped: Number(row.equipped) === 1,

@@ -18,6 +18,7 @@ function createVideoRepository(database, options = {}) {
   const writeAudit = options.writeAudit
   async function listVideos(appId, input) {
     const clauses = ['v.app_id = ?']; const params = [appId]
+    if (input.videoId) { clauses.push('v.video_id = ?'); params.push(input.videoId) }
     if (input.status) { clauses.push('v.status = ?'); params.push(input.status) }
     if (input.query) { clauses.push("v.title LIKE ? ESCAPE '='"); params.push(`%${input.query.replace(/[=%_]/g, x => `=${x}`)}%`) }
     const cursor = cursorPredicateFor('v.updated_at', input.cursor, 'updatedAt', 'v.video_id')
@@ -27,8 +28,8 @@ function createVideoRepository(database, options = {}) {
       [...params, ...cursor.params, input.limit + 1])
     return pageRows(rows.map(videoDto), input.limit, row => ({ updatedAt: row.updatedAt, id: row.videoId }))
   }
-  async function requireCover(tx, appId, coverAssetId) {
-    const asset = await tx.one("SELECT id FROM mip_media_assets WHERE app_id = ? AND id = ? AND status = 'READY' FOR UPDATE", [appId, coverAssetId])
+  async function requireCover(tx, appId, coverAssetId, actorUserId, currentCoverId) {
+    const asset = await tx.one("SELECT id FROM mip_media_assets WHERE app_id = ? AND id = ? AND status = 'READY' AND (purpose = 'VIDEO_RECAP_COVER' OR id = ?) AND (owner_user_id = ? OR id = ?) FOR UPDATE", [appId, coverAssetId, currentCoverId || '', actorUserId, currentCoverId || ''])
     if (!asset) throw new AdminError('VALIDATION_FAILED', '请上传有效的视频封面')
   }
   async function saveVideo(input) {
@@ -40,7 +41,7 @@ function createVideoRepository(database, options = {}) {
       if (input.videoId && !existing) throw new AdminError('NOT_FOUND', '视频不存在')
       if (existing && Number(existing.version) !== input.expectedVersion) throw new AdminError('CONFLICT', '视频已变化，请刷新')
       if (existing?.status === 'ARCHIVED') throw new AdminError('INVALID_STATE', '已归档视频不能编辑')
-      await requireCover(tx, input.appId, input.draft.coverAssetId)
+      await requireCover(tx, input.appId, input.draft.coverAssetId, input.actorUserId, existing?.cover_asset_id)
       const d = input.draft
       let videoId = input.videoId
       if (existing) {
@@ -63,16 +64,21 @@ function createVideoRepository(database, options = {}) {
       const authorization = await lockMutation(tx, input); assertScope(authorization, PLATFORM)
       const row = await tx.one('SELECT * FROM mip_videos WHERE app_id = ? AND video_id = ? FOR UPDATE', [input.appId, input.videoId])
       if (!row) throw new AdminError('NOT_FOUND', '视频不存在')
+      const claim = await claimOptional(tx, input, 'admin.videos.status.change', { videoId: input.videoId, expectedVersion: input.expectedVersion, status: input.status }, randomUUID)
+      if (claim.replay) return claim.replay
       if (Number(row.version) !== input.expectedVersion) throw new AdminError('CONFLICT', '视频已变化，请刷新')
       if (row.status === 'ARCHIVED') throw new AdminError('INVALID_STATE', '已归档视频不能变更')
       if (input.status === 'PUBLISHED') {
         require('../videos').videoDraft({ title: row.title, coverAssetId: row.cover_asset_id, jumpUrl: row.jump_url })
-        await requireCover(tx, input.appId, row.cover_asset_id)
+        await requireCover(tx, input.appId, row.cover_asset_id, input.actorUserId, row.cover_asset_id)
         if (row.content_safety_status !== 'APPROVED') throw new AdminError('CONTENT_SAFETY_REQUIRED', '内容安全检查未通过，暂不能发布')
       }
-      await tx.query('UPDATE mip_videos SET status = ?, version = version + 1 WHERE app_id = ? AND video_id = ? AND version = ?', [input.status, input.appId, input.videoId, input.expectedVersion])
+      const updated = await tx.query('UPDATE mip_videos SET status = ?, version = version + 1 WHERE app_id = ? AND video_id = ? AND version = ?', [input.status, input.appId, input.videoId, input.expectedVersion])
+      if (Number(updated.affectedRows) !== 1) throw new AdminError('CONFLICT', '视频已变化，请刷新')
       await writeAudit(tx, input.audit)
-      return { videoId: input.videoId, id: input.videoId, status: input.status, version: input.expectedVersion + 1 }
+      const result = { videoId: input.videoId, id: input.videoId, status: input.status, version: input.expectedVersion + 1 }
+      await complete(tx, input, 'admin.videos.status.change', claim.requestHash, result)
+      return result
     })
   }
   return { listVideos, saveVideo, changeVideoStatus }

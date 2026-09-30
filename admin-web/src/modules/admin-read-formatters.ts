@@ -22,6 +22,7 @@ export const labels: Record<string, string> = {
   LOCAL: '本地撮合', EXTERNAL: '外部撮合', ADMIN: '运营发起',
   CITY: '城市', NATIONAL: '全国', REMOTE: '远程',
   STALLED: '停滞', EXPIRED: '已过期', CLEANUP_PENDING: '待清理',
+  MANUAL: '人工来源', JSON_FEED: '数据源', RSS: '订阅源', BEFORE_ACCESS: '访问前可退款', NON_REFUNDABLE: '不可退款', SUBMIT: '提交审核', APPROVE: '批准', REJECT: '拒绝', PUBLISH: '发布', WITHDRAW: '撤回', HIDE: '隐藏',
   PROCESSING: '处理中', MANUAL_REVIEW: '人工复核',
   REVIEWING: '审核中', RESOLVED: '已处理', DISMISSED: '已驳回',
   SPAM: '垃圾信息', HARASSMENT: '骚扰', FRAUD: '欺诈', INAPPROPRIATE_CONTENT: '不当内容', IMPERSONATION: '冒用身份', OTHER: '其他',
@@ -113,6 +114,7 @@ export function countLabel(count: unknown, capacity: unknown) {
 }
 
 export function numberLabel(value: unknown) {
+  if (value === undefined || value === null || value === '') return '—'
   const number = Number(value)
   return Number.isFinite(number) ? number.toLocaleString('zh-CN') : '—'
 }

@@ -1,5 +1,10 @@
 import { ProfileCardsPage } from '../features/profile-cards/profile-cards-page'
-import { App, Button } from 'antd'
+import { VideosPage } from '../features/videos/videos-page'
+import { VideoEditPage } from '../features/videos/video-edit-page'
+import { UserProfilePage } from '../features/user-profile/user-profile-page'
+import { RoleTemplatesPanel } from '../features/governance-pages/role-templates-panel'
+import { userProfileHref } from '../modules/user-profile-records'
+import { App, Button, Space } from 'antd'
 import { OperationsReadPage } from '../features/operations-pages/operations-read-page'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
@@ -83,7 +88,7 @@ function CoreRoutePage({ route }: { route: CoreRoute }) {
   const updateSearch = useUpdateSearch()
   const [cursorStack, setCursorStack] = useState<Array<string | null>>([])
   const detail = useAdminDetail()
-  const [exportIntent, setExportIntent] = useState<{ kind: 'users' | 'orders'; query: string; status: string } | null>(null)
+  const [exportIntent, setExportIntent] = useState<{ kind: 'users' | 'orders'; query: string; status: string; filters?: Record<string, string> } | null>(null)
   const changeSearch = useCallback((next: AdminListSearch) => {
     if (next.cursor === undefined) setCursorStack([])
     else if ((next.page ?? 1) > (search.page ?? 1)) setCursorStack(stack => [...stack, search.cursor || null])
@@ -99,14 +104,15 @@ function CoreRoutePage({ route }: { route: CoreRoute }) {
     search: search as CorePageSearchState,
     onSearchChange: (next: CorePageSearchState) => void changeSearch(next),
     onPreviousPage: cursorStack.length > 0 ? goPreviousPage : undefined,
-    onOpenDetail: (intent: { route: AdminDetailRoute; id: string }) => detail.openDetail(intent.route, intent.id),
+    onOpenDetail: (intent: { route: AdminDetailRoute; id: string }) => intent.route === 'users'
+      ? window.open(userProfileHref(intent.id), '_blank', 'noopener,noreferrer') : detail.openDetail(intent.route, intent.id),
     onMutation: (intent: CorePageMutationIntent) => void launch(intent.action, intent.targetId, null, {
       values: intent.values,
       expectedVersion: intent.expectedVersion,
       allowedCapabilities: intent.allowedCapabilities,
     }),
-    onSensitiveExport: (intent: { kind: 'users' | 'orders'; filters: { query: string; status: string } }) => setExportIntent({
-      kind: intent.kind, query: intent.filters.query, status: intent.filters.status,
+    onSensitiveExport: (intent: { kind: 'users' | 'orders'; filters: { query: string; status: string; filters?: Record<string, string> } }) => setExportIntent({
+      kind: intent.kind, query: intent.filters.query, status: intent.filters.status, filters: intent.filters.filters,
     }),
   }
   const page = route === 'users' ? <UsersPage {...common} />
@@ -122,6 +128,7 @@ function CoreRoutePage({ route }: { route: CoreRoute }) {
           kind={exportIntent.kind}
           query={exportIntent.query}
           status={exportIntent.status}
+          filters={exportIntent.filters}
           onOpenChange={open => { if (!open) setExportIntent(null) }}
         />
       ) : null}
@@ -145,7 +152,8 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
   const updateSearch = useUpdateSearch()
   const [cursorStack, setCursorStack] = useState<Array<string | null>>([])
   const detail = useAdminDetail()
-  const query = listQuery(search)
+  const baseQuery = listQuery(search)
+  const query = route === 'opportunities' ? { ...baseQuery, filters: { ...baseQuery.filters, section: baseQuery.filters?.section || 'opportunities' } } : baseQuery
   const result = useAdminReadPage(route, query)
   const canWrite = demoMode || operationRouteWriteCapabilities[route].some(hasCapability)
   const onWrite = canWrite ? (intent: OperationsWriteIntent) => void launch(intent.action, intent.targetId, detail.view, {
@@ -278,9 +286,23 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
   const search = useRouteSearch()
   const updateSearch = useUpdateSearch()
   const detail = useAdminDetail()
-  const query = listQuery(search)
+  const baseQuery = listQuery(search)
+  const query = route === 'messages'
+    ? { ...baseQuery, filters: { ...baseQuery.filters, section: search.tab === 'templates' ? 'templates' : 'campaigns' } }
+    : route === 'knowledge' ? { ...baseQuery, filters: { ...baseQuery.filters, section: search.tab || 'contents' } } : baseQuery
   const result = useAdminReadPage(route, query)
 
+  const [cursorStack, setCursorStack] = useState<Array<string | null>>([])
+  const nextPage = () => {
+    if (!result.data?.nextCursor) return
+    setCursorStack(stack => [...stack, search.cursor || null])
+    void updateSearch({ ...search, cursor: result.data.nextCursor, page: (search.page || 1) + 1 })
+  }
+  const previousPage = () => {
+    const cursor = cursorStack.at(-1) || undefined
+    setCursorStack(stack => stack.slice(0, -1))
+    void updateSearch({ ...search, cursor, page: Math.max(1, (search.page || 1) - 1) })
+  }
   const editEntity = async (intent: GovernanceMutationRequest): Promise<boolean> => {
     if (intent.action === 'mip.admin.announcements.save' && intent.targetId) {
       const value = record(await session.request('mip.admin.announcements.get', { announcementId: intent.targetId }))
@@ -329,13 +351,14 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
   const common = {
     page: result.data || null,
     routeDefinition: getAdminReadRouteDefinition(route),
-    filter: { q: query.query, status: query.status },
+    filter: { q: query.query, status: query.status, filters: baseQuery.filters },
     activeTab: search.tab || '',
     loading: result.loading,
     refreshing: result.refreshing,
     error: result.errorMessage,
     demoMode: session.demoMode,
     canCapability: session.hasCapability,    onFilterChange: (value: { q: string; status: string; filters?: Record<string, string> }) => {
+      setCursorStack([])
       const filters = value.filters && Object.keys(value.filters).length > 0 ? value.filters : undefined
       void updateSearch({
         q: value.q || undefined,
@@ -347,7 +370,7 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
         page: undefined,
       })
     },
-    onTabChange: (tab: string) => void updateSearch({ ...search, tab }),
+    onTabChange: (tab: string) => { setCursorStack([]); void updateSearch({ ...search, tab, status: undefined, cursor: undefined, page: undefined }) },
     onRefresh: () => void result.refetch(),
     onViewDetail: (intent: { route: 'messages' | 'knowledge'; id: string }) => detail.openDetail(intent.route, intent.id),
     onMutationRequest: (intent: GovernanceMutationRequest) => {
@@ -367,13 +390,18 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
     },
     onBatchAction: (action: string, rows: AdminTableRow[], values: OperationValues) => runBatchAction(action, rows, values),
   }
-  const page = route === 'permissions' ? <PermissionsPage {...common} />
+  const page = route === 'permissions' ? <><PermissionsPage {...common} /><RoleTemplatesPanel /></>
     : route === 'messages' ? <MessagesPage {...common} />
       : route === 'knowledge' ? <KnowledgePage {...common} /> : <OperationsPage {...common} />
   const capabilities = governanceRouteCapabilities[route]
   return (
     <PermissionGuard capabilities={capabilities} requireAny={capabilities.length > 1}>
       {page}
+      {getAdminReadRouteDefinition(route).paginated ? <Space className="table-pagination" wrap aria-label="列表翻页">
+        <Button onClick={previousPage} disabled={!cursorStack.length || result.refreshing}>上一页</Button>
+        <span>第 {search.page || 1} 页</span>
+        <Button onClick={nextPage} disabled={!result.data?.nextCursor || result.refreshing}>下一页</Button>
+      </Space> : null}
       <RouteDetailLayer detail={detail} />
     </PermissionGuard>
   )
@@ -433,7 +461,7 @@ function RouteDetailLayer({ detail, onMediaUpload }: {
       actions={actions}
       onClose={detail.closeDetail}
       onRowAction={operation => void handleRowAction(operation)}
-      onNestedView={(target, row) => detail.openDetail(target, String(row.detailId || ''))}
+      onNestedView={(target, row) => target === 'users' ? window.open(userProfileHref(String(row.detailId)), '_blank', 'noopener,noreferrer') : detail.openDetail(target, String(row.detailId || ''))}
       onPagerChange={detail.changeDetailPage}
       onRetry={() => void detail.refreshDetail()}
       batchActionsForSection={sectionBatchActions}
@@ -477,7 +505,7 @@ const operationRouteCapabilities: Record<OperationsRoute, string[]> = {
   banners: ['banners.manage'],
   game: ['game.manage'],
   opportunities: ['opportunities.moderate', 'userContent.moderate'],
-  growth: ['growth.read', 'growth.adjust', 'badges.manage'],
+  growth: ['growth.read', 'growth.adjust', 'badges.manage', 'memberships.read'],
   adminAccounts: ['roles.change'],
   auditLogs: ['audit.read'],
 }
@@ -502,11 +530,14 @@ const governanceRouteCapabilities: Record<GovernanceRoute, string[]> = {
 export const routeComponents = {
   '/overview': OverviewRoutePage,
   '/users': UsersRoutePage,
+  '/users/$userId': UserProfilePage,
   '/cards': ProfileCardsPage,
   '/events': EventsRoutePage,
   '/orders': OrdersRoutePage,
   '/tasks': TasksRoutePage,
   '/banners': BannersRoutePage,
+  '/videos': VideosPage,
+  '/videos/$videoId/edit': VideoEditPage,
   '/media': MediaRoutePage,
   '/game': GameRoutePage,
   '/opportunities': OpportunitiesRoutePage,

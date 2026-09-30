@@ -13,6 +13,10 @@ import type { OperationsPageState } from './types'
 vi.mock('./membership-configuration-panel', () => ({ MembershipConfigurationPanel: () => null }))
 
 const mockNavigate = vi.fn()
+const session = vi.hoisted(() => ({ request: async () => ({ items: [] }), hasCapability: () => true }))
+vi.mock('../../app/session-provider', () => ({ useAdminSession: () => ({
+  ...session,
+}) }))
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,
   useParams: () => ({} as Record<string, string>),

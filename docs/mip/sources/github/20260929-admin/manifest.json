@@ -1,0 +1,47 @@
+{
+  "repository": "https://github.com/douglas-ou/mip-minip-dev",
+  "verifiedAt": "2026-09-29",
+  "head": "cb5956bcc547046d0ad4568a1175131e82c04021",
+  "files": [
+    {
+      "path": "docs/PRDs/PRD-MIP后台管理系统_V0.5_需求评审对齐版.md",
+      "lastCommit": "0bfaf8e0de518c72a811ff9bc9d93a676d40ac5e",
+      "lastCommitDate": "2026-08-25T14:36:03Z",
+      "remoteMatchesLocal": true,
+      "sha256": "ec011021b117ea51c852d91f21e279409f82ca322a490ff2a294588407afb7d4",
+      "snapshot": "admin-v0.5.md"
+    },
+    {
+      "path": "docs/管理后台的原型和PRD/MIP 小程序后台管理系统 PRD - v1 (纯PRD).html",
+      "lastCommit": "475d5ac7a95eb4a5749e5ffcf6492aea197e7b4a",
+      "lastCommitDate": "2026-09-19T16:24:43Z",
+      "remoteMatchesLocal": true,
+      "sha256": "72282cfc3023967bf8b78858729a32b9bc18133ef49cdd48aaa424816d3d7f8d",
+      "snapshot": "admin-v1-prd.html"
+    },
+    {
+      "path": "docs/管理后台的原型和PRD/MIP 小程序后台管理系统 PRD - v1.html",
+      "lastCommit": "475d5ac7a95eb4a5749e5ffcf6492aea197e7b4a",
+      "lastCommitDate": "2026-09-19T16:24:43Z",
+      "remoteMatchesLocal": true,
+      "sha256": "924643b0d0ea03a83cdc034f60dcb1d3f002e9ab494710d15fd538e185271c06",
+      "snapshot": "admin-v1-combined.html"
+    },
+    {
+      "path": "docs/管理后台的原型和PRD/MIP 小程序后台管理系统 原型 - v1.html",
+      "lastCommit": "475d5ac7a95eb4a5749e5ffcf6492aea197e7b4a",
+      "lastCommitDate": "2026-09-19T16:24:43Z",
+      "remoteMatchesLocal": true,
+      "sha256": "fd59dabd546e8bc32f9b74083a1eceddaf42a9dd0c487337c5b443b2126432b9",
+      "snapshot": "admin-v1-prototype.html"
+    },
+    {
+      "path": "docs/管理后台的原型和PRD/MIP 小程序后台管理系统 PRD -0825- v0.5.html",
+      "lastCommit": "0bfaf8e0de518c72a811ff9bc9d93a676d40ac5e",
+      "lastCommitDate": "2026-08-25T14:36:03Z",
+      "remoteMatchesLocal": true,
+      "sha256": "071afcfdbb093e5a5ac442af3c60593045aede62e79977d9e3d7b34a45175dfc",
+      "snapshot": "admin-0825.html"
+    }
+  ]
+}

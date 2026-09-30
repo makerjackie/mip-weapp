@@ -1,6 +1,6 @@
 'use strict'
 
-const { CAPABILITIES, authorize } = require('./capabilities')
+const { CAPABILITIES, firstGrant } = require('./capabilities')
 const { AdminError } = require('./validation')
 
 const MEDIA_ADMIN_OPERATION = 'mip.admin.media.uploadImage'
@@ -13,6 +13,7 @@ const MEDIA_ADMIN_PURPOSE_CAPABILITIES = Object.freeze({
   SUPER_CASE_COVER: CAPABILITIES.USER_CONTENT_MODERATE,
   SUPER_CASE_MEDIA: CAPABILITIES.USER_CONTENT_MODERATE,
   TASK_TEMPLATE: CAPABILITIES.TASKS_MANAGE,
+  VIDEO_RECAP_COVER: CAPABILITIES.EVENTS_RECAPS_MANAGE,
 })
 const UPLOAD_INPUT_KEYS = new Set(['purpose', 'imageBase64'])
 
@@ -24,10 +25,10 @@ function createAdminMedia({ access, client } = {}) {
   async function uploadMediaImage(caller, input) {
     const context = await access.session(caller)
     const normalized = normalizeUploadInput(input)
-    authorize(
+    // Upload creates an actor-owned, unpublished asset. The eventual binding authorizes the object scope again.
+    firstGrant(
       context.bindings,
       MEDIA_ADMIN_PURPOSE_CAPABILITIES[normalized.purpose],
-      { scopeType: 'PLATFORM', scopeId: null },
     )
     return client.execute({
       appId: context.caller.appId,

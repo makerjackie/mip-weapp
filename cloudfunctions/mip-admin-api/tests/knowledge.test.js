@@ -59,7 +59,7 @@ describe('knowledge admin service', () => {
     const result = await service.listKnowledgeAdmin(caller, { section: 'SOURCES' })
     assert.deepEqual(result.items, [])
     assert.match(calls[2].sql, /mip_knowledge_sources/)
-    assert.deepEqual(calls[2].params, ['app', 50])
+    assert.deepEqual(calls[2].params, ['app', 51])
   })
 
   it('groups aggregate lists by the complete app-scoped primary key', async () => {
@@ -81,8 +81,8 @@ describe('knowledge admin service', () => {
     const commentQuery = calls.find(call => call.sql.includes('FROM mip_content_comments comment'))
     assert.match(categoryQuery.sql, /GROUP BY category\.app_id, category\.id/)
     assert.match(commentQuery.sql, /GROUP BY comment\.app_id, comment\.id/)
-    assert.deepEqual(categoryQuery.params, ['app', 50])
-    assert.deepEqual(commentQuery.params, ['app', null, null, 50])
+    assert.deepEqual(categoryQuery.params, ['app', 51])
+    assert.deepEqual(commentQuery.params, ['app', null, null, 51])
   })
 
   it('filters knowledge contents by an escaped server-side keyword', async () => {
@@ -105,7 +105,7 @@ describe('knowledge admin service', () => {
     assert.equal(status, null)
     assert.equal(keyword, '%早会\\%分享\\_%')
     assert.equal(keywordArg, keyword)
-    assert.equal(limit, 50)
+    assert.equal(limit, 51)
 
     await service.listKnowledgeAdmin(caller, { section: 'CONTENTS' })
     const unfiltered = calls.filter(call => call.sql.includes('FROM mip_knowledge_contents content')).at(-1)

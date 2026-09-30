@@ -17,6 +17,8 @@
 1. [README.md](README.md)
 2. [ARCHITECTURE.md](ARCHITECTURE.md)
 3. [DESIGN.md](DESIGN.md)
+4. [ACCEPTANCE.md](ACCEPTANCE.md)：后台唯一产品验收标准。修复应引用场景号并区分非空运行证据与本地测试；不要用阶段性全勾选清单或当前实现反向缩减需求。
+5. 完整后台整改按 [EXECUTION_PLAN.md](EXECUTION_PLAN.md) 逐工作包推进；每次交接记录当前小步骤、证据和下一步。可维护性按唯一标准 K01–K08 审查，不新增平行的计划或验收表。
 
 ## 依赖方向
 
@@ -43,6 +45,7 @@
 - 页面局部状态：React state。
 - 不增加全局客户端状态库。
 - `PermissionGuard` 只控制入口展示和交互；服务端仍是最终授权者。
+- 扩展业务状态时，同步核对动作投影、服务层校验和仓储 SQL 的更新条件；SQL 可用状态从同一策略常量生成。必须用非空对象验证实际保存、刷新回读和状态转换，按钮出现不能代替写入验收。
 - 真实请求失败不得回退到 demo；demo 必须由 `VITE_MIP_ADMIN_DEMO_MODE=true` 显式启用并持续显示标识。
 
 ## 测试与完成

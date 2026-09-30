@@ -1,0 +1,67 @@
+{
+  "at": "2026-09-29T13:22:29.344Z",
+  "stage": "staging",
+  "sourceCommit": "3e6292c3936de85ad51115cb044fea9563c731d6",
+  "fixtureOnly": true,
+  "checks": [
+    {
+      "name": "configured-qa-authentication",
+      "passed": true
+    },
+    {
+      "name": "ended-edit-and-recruit-actions",
+      "passed": true
+    },
+    {
+      "name": "ended-deadline-save-readback",
+      "passed": true
+    },
+    {
+      "name": "ended-deadline-restored",
+      "passed": true
+    },
+    {
+      "name": "ended-recruit-readback",
+      "passed": true
+    },
+    {
+      "name": "stale-reopening-rejected",
+      "passed": true
+    },
+    {
+      "name": "unpublished-edit-and-restore-actions",
+      "passed": true
+    },
+    {
+      "name": "unpublished-deadline-save-readback",
+      "passed": true
+    },
+    {
+      "name": "unpublished-deadline-restored",
+      "passed": true
+    },
+    {
+      "name": "unpublished-restore-readback",
+      "passed": true
+    },
+    {
+      "name": "existing-content-and-relationships-preserved",
+      "passed": true
+    },
+    {
+      "name": "transition-history-retained",
+      "passed": true
+    },
+    {
+      "name": "reopening-clears-ended-marker",
+      "passed": true
+    },
+    {
+      "name": "audited-from-and-to-status",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "fixtureReturnedToOriginalPublishedState": true,
+  "completedAt": "2026-09-29T13:22:42.805Z"
+}

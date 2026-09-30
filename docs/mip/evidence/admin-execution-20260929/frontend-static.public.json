@@ -1,0 +1,66 @@
+{
+  "prefix": "mip-admin-console/",
+  "files": [
+    {
+      "path": "404.html",
+      "bytes": 465,
+      "sha256": "cf81cd76f5d089408ef0d38c9caa98fc1fff0bbb8b01f92404edbde78c5d52b1"
+    },
+    {
+      "path": "assets/ant-design-DCIo_ePx.js",
+      "bytes": 1108731,
+      "sha256": "9d15d7ba01156dd57b57ba7449376dfbeb671d9fecf25101c67a4e1ca6f9d183"
+    },
+    {
+      "path": "assets/index-BCN0QiWF.js",
+      "bytes": 440235,
+      "sha256": "8cbb495261eb6168413642dc7a3f7adfcca606dd0bd3ff1d37b93d405987ae52"
+    },
+    {
+      "path": "assets/index-DJfwzT1N.css",
+      "bytes": 15973,
+      "sha256": "189a7f67be6278eac5876787c489840f9688324d22144f4d78229835576a2a7a"
+    },
+    {
+      "path": "assets/react-DXf84zf0.js",
+      "bytes": 189647,
+      "sha256": "9e43591c1f2a1bfbb7f5b2823ec6b0e30ae953d92172a1d1422799d1ad08376c"
+    },
+    {
+      "path": "assets/rolldown-runtime-CbXtAM7H.js",
+      "bytes": 589,
+      "sha256": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a"
+    },
+    {
+      "path": "assets/router-query-CRhITsa_.js",
+      "bytes": 112157,
+      "sha256": "26d6a3470eda0666aea726e16ef7d14657d4f462cb9a6103f5150d25f22d1db1"
+    },
+    {
+      "path": "card-templates/card-bg-a.webp",
+      "bytes": 17696,
+      "sha256": "4efaf5dafd2370f4d8eec904cc3571de8e8b5122d42eef0899fffed097b1dd0b"
+    },
+    {
+      "path": "card-templates/card-bg-b.webp",
+      "bytes": 572,
+      "sha256": "c3e46f89d29da59318bb1263cb2f5fd5f07ae935432f8bfe26280441042921ad"
+    },
+    {
+      "path": "card-templates/card-bg-c.webp",
+      "bytes": 444,
+      "sha256": "4f10ee9173ce8b5a74ec3e76762c5650153d9df2b25521d39405b47eb3f83ee8"
+    },
+    {
+      "path": "card-templates/card-bg-d.webp",
+      "bytes": 3026,
+      "sha256": "762fe3ee1c7adc5666e36566355cb4161ed2d4c341d995fb3ac25ed95095e6ee"
+    },
+    {
+      "path": "index.html",
+      "bytes": 795,
+      "sha256": "f277eddc31c7a26c7a394c4842265ff30b4ffe4258826b445e3749d658b6c535"
+    }
+  ],
+  "verifiedAt": "2026-09-29T11:45:57.535Z"
+}

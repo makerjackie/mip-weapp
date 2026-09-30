@@ -1,0 +1,48 @@
+{
+  "at": "2026-09-29T10:37:24.240Z",
+  "completedAt": "2026-09-29T10:37:42.327Z",
+  "stage": "staging",
+  "origin": "https://cloud1-d2gm0vloa9e1b4f31-1429274561.ap-shanghai.app.tcloudbase.com",
+  "checks": [
+    {
+      "id": "draft:create-idempotent",
+      "passed": true
+    },
+    {
+      "id": "draft:fulltext-zero-false-null-readback",
+      "passed": true
+    },
+    {
+      "id": "draft:stale-version-rejected",
+      "passed": true
+    },
+    {
+      "id": "draft:existing-draft-preserved",
+      "passed": true
+    },
+    {
+      "id": "event:copy-private-title-times-cleared",
+      "passed": true
+    },
+    {
+      "id": "event:copy-source-unchanged",
+      "passed": true
+    },
+    {
+      "id": "role:create-idempotent",
+      "passed": true
+    },
+    {
+      "id": "role:version-protection",
+      "passed": true
+    },
+    {
+      "id": "role:unbound-copies-disabled",
+      "passed": true
+    }
+  ],
+  "slicePassed": true,
+  "sourceRunPassed": false,
+  "sourceRunStoppedLaterAt": "Old BFF export validation; resolved in runtime-exports.public.json",
+  "noUserGrantsFinanceBroadcastOrPublishing": true
+}

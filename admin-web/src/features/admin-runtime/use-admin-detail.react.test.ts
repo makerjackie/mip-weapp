@@ -7,6 +7,15 @@ function pager(key: AdminDetailPager['key'], currentCursor: string | null, nextC
 }
 
 describe('admin detail pagination state', () => {
+  it('resets only the roster cursor when its search/status changes, retaining other sections', () => {
+    const history = { ...createDetailPageHistory(), eventRoster: [null, 'old'], eventFeedback: [null] }
+    const next = transitionDetailPage(history, { eventRoster: { cursor: 'old-next' }, eventFeedback: { cursor: 'feedback-2' } },
+      { ...pager('eventRoster', 'old-next', 'old-3'), query: '林', status: 'ATTENDED' }, 'search')!
+    expect(next.options.eventRoster).toEqual({ cursor: null, query: '林', status: 'ATTENDED' })
+    expect(next.options.eventFeedback).toEqual({ cursor: 'feedback-2' })
+    expect(next.history.eventRoster).toEqual([])
+    expect(next.history.eventFeedback).toEqual([null])
+  })
   it('maps every pager to its own options and keeps cursor histories independent', () => {
     let history = createDetailPageHistory()
     let options = {}
@@ -33,7 +42,7 @@ describe('admin detail pagination state', () => {
       gameMembers: { query: 'gameMembers-query', cursor: 'game-cursor' },
     })
     expect(history).toEqual({
-      eventRoster: [null], eventFeedback: [null], taskMembers: [null], taskCompletions: [null], gameMembers: [null],
+      eventRoster: [null], eventFeedback: [null], taskMembers: [null], taskCompletions: [null], gameMembers: [null], messageDeliveries: [], messageReviews: [],
     })
 
     const previousMemberPage = transitionDetailPage(

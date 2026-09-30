@@ -27,6 +27,7 @@ export type EventMutationFieldKind =
   | 'textarea'
   | 'number'
   | 'select'
+  | 'multi-select'
   | 'checkbox'
   | 'datetime'
   | 'asset'
@@ -57,6 +58,7 @@ export interface EventMutationFieldConfig {
   remoteUserSearch?: boolean
   /** Renders a session-backed catalog select loaded from this query action. */
   optionsAction?: string
+  optionsInput?: Record<string, unknown>
 }
 
 export interface EventMutationActionConfig {
@@ -79,6 +81,7 @@ export interface AdminEventMutationDefinition<Action extends AdminEventMutationA
 const option = (value: string, label: string): EventMutationFieldOption => ({ value, label })
 
 const eventSaveFields: readonly EventMutationFieldConfig[] = [
+  { key: 'cloneSourceEventId', label: '复制来源', kind: 'text', hidden: true },
   { key: 'eventId', label: '活动标识', kind: 'text', hidden: true },
   { key: 'expectedVersion', label: '记录版本', kind: 'number', hidden: true },
   { key: 'scopeType', label: '活动范围', kind: 'select', options: [option('PLATFORM', '平台'), option('BRANCH', '服务器')] },
@@ -90,6 +93,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'notices', label: '活动说明', kind: 'textarea', maxLength: 5_000 },
   { key: 'coverAssetId', label: '活动封面', kind: 'asset', assetPurpose: 'EVENT_COVER' },
   { key: 'eventTypeKey', label: '活动类型标识', kind: 'text', maxLength: 64 },
+  { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true } },
   { key: 'eventMode', label: '活动方式', kind: 'select', options: [option('OFFLINE', '线下'), option('ONLINE', '线上'), option('HYBRID', '混合')] },
   { key: 'accessType', label: '收费类型', kind: 'select', options: [option('FREE', '免费'), option('MEMBER_INCLUDED', '会员权益'), option('PAID', '付费')] },
   { key: 'registrationPolicy', label: '报名方式', kind: 'select', options: [option('AUTO', '自动确认'), option('APPROVAL', '审核确认')] },
@@ -490,6 +494,7 @@ function eventDraft(values: EventMutationValues) {
     waitlistEnabled,
     priceCents,
     registrationSchema: registrationSchemaResult,
+    ...(values.tagIds !== undefined ? { tagIds: tagIds(values.tagIds) } : {}),
   }
 }
 
@@ -502,7 +507,8 @@ function build(action: EventMutationAction, values: EventMutationValues): AdminR
     const expectedVersionValue = values.expectedVersion === undefined || values.expectedVersion === '' ? null : version(values.expectedVersion)
     if (eventId && expectedVersionValue === null) throw new FormValidationError('expectedVersion', '编辑活动必须提供记录版本')
     if (!eventId && expectedVersionValue !== null) throw new FormValidationError('eventId', '新建活动不能提供记录版本')
-    return eventId ? { eventId, expectedVersion: expectedVersionValue, draft } : { draft }
+    return eventId ? { eventId, expectedVersion: expectedVersionValue, draft }
+      : { draft, ...(values.cloneSourceEventId ? { cloneSourceEventId: id(values.cloneSourceEventId, '复制来源') } : {}) }
   }
   if (action === 'mip.admin.events.registrations.review') return {
     eventId: id(values.eventId, '活动'), registrationId: id(values.registrationId, '报名'),
@@ -672,8 +678,8 @@ export function validateAdminEventMutationInput(
   if (!definition || !eventMutationActionSet.has(definition.action)) {
     return { ok: false, errors: [{ field: 'action', message: '活动操作无效' }] }
   }
-  const values = { ...definition.values }
   const configured = new Set(definition.fields.map(field => field.key))
+  const values = Object.fromEntries(Object.entries(definition.values).filter(([key]) => configured.has(key)))
   if (submittedValues && typeof submittedValues === 'object' && !Array.isArray(submittedValues)) {
     for (const [key, value] of Object.entries(submittedValues)) {
       if (configured.has(key)) values[key] = value

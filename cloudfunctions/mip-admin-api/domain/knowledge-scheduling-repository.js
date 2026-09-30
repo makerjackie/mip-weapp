@@ -1,5 +1,7 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('./role-template-policy')
+
 const { createHash, randomBytes, randomUUID } = require('node:crypto')
 const { CAPABILITIES, capabilitiesForBinding } = require('./capabilities')
 const { nextDailyRunAt } = require('./knowledge-scheduling-time')
@@ -315,19 +317,20 @@ async function lockRunnableFacts(tx, schedule) {
   const rows = await tx.query(
     `SELECT binding.role_key, binding.scope_type, binding.scope_id, binding.status,
             CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END
-              AS policy_capabilities_json
+              AS policy_capabilities_json, binding.role_template_id, role_template.base_role_key AS template_base_role_key, role_template.status AS template_status, role_template.capabilities AS template_capabilities_json
      FROM mip_admin_role_bindings binding
+     LEFT JOIN mip_admin_roles role_template ON role_template.app_id = binding.app_id AND role_template.role_id = binding.role_template_id
      LEFT JOIN mip_role_capability_policies policy
        ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
-     WHERE binding.app_id = ? AND binding.user_id = ?
+     WHERE NOT EXISTS (SELECT 1 FROM mip_admin_accounts account WHERE account.app_id = binding.app_id AND account.linked_user_id = binding.user_id AND account.status <> 'ACTIVE') AND (binding.role_template_id IS NULL OR binding.role_key <> 'PLATFORM_OWNER') AND binding.app_id = ? AND binding.user_id = ?
      ORDER BY binding.role_key FOR UPDATE`,
     [schedule.app_id, schedule.configured_by_user_id],
   )
-  return rows.find((row) => row.status === 'ACTIVE'
+  return rows.find((row) => row.status === 'ACTIVE' && templateAllowsBinding(row)
     && row.scope_type === 'PLATFORM'
     && capabilitiesForBinding({
       roleKey: row.role_key,
-      policyCapabilities: row.policy_capabilities_json,
+      policyCapabilities: effectivePolicyCapabilities(row),
     }).includes(CAPABILITIES.KNOWLEDGE_MANAGE)) || null
 }
 

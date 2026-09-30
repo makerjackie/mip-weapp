@@ -110,12 +110,15 @@ export function ResponsiveAppShell() {
     }))
   }, [visibleNavigation])
 
-  const current = navigationByPath.get(pathname) || navigationByPath.get('/overview')!
+  const current = navigationByPath.get(pathname)
+    || adminNavigation.find(item => pathname.startsWith(`${item.path}/`))
+    || (pathname.startsWith('/userContent/') ? navigationByPath.get('/opportunities') : undefined)
+    || navigationByPath.get('/overview')!
   const menu = (
     <Menu
       theme="dark"
       mode="inline"
-      selectedKeys={[pathname]}
+      selectedKeys={[current.path]}
       items={items}
       onClick={({ key }) => {
         setNavigationOpen(false)

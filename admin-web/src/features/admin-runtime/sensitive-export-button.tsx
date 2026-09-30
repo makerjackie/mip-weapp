@@ -29,10 +29,11 @@ const progressPercent: Record<SensitiveExportProgress, number> = {
   saving: 96,
 }
 
-export function SensitiveExportButton({ kind, query, status, eventId, open: controlledOpen, hideTrigger = false, onOpenChange }: {
+export function SensitiveExportButton({ kind, query, status, filters, eventId, open: controlledOpen, hideTrigger = false, onOpenChange }: {
   kind: SensitiveExportKind
   query: string
   status: string
+  filters?: Record<string, unknown>
   eventId?: string
   open?: boolean
   hideTrigger?: boolean
@@ -70,8 +71,8 @@ export function SensitiveExportButton({ kind, query, status, eventId, open: cont
     }
     const next = workflow || createSensitiveExportWorkflow({
       kind,
-      filters: { query: query || undefined, status: status || undefined },
-      includesPhone: kind === 'users' && includesPhone,
+      filters: { ...filters, query: query || undefined, status: status || undefined },
+      includesPhone: ['users', 'eventRoster'].includes(kind) && includesPhone,
       eventId,
     })
     setWorkflow(next)
@@ -92,7 +93,7 @@ export function SensitiveExportButton({ kind, query, status, eventId, open: cont
     <>
       {!hideTrigger ? (
         <Button type="primary" icon={<DownloadOutlined />} onClick={() => { setInternalOpen(true); onOpenChange?.(true) }}>
-          {kind === 'users' ? '导出用户' : kind === 'eventFeedback' ? '导出活动反馈' : '导出订单'}
+          {kind === 'users' ? '导出用户' : kind === 'opportunities' ? '导出机会' : kind === 'eventFeedback' ? '导出活动反馈' : kind === 'eventRoster' ? '导出报名名单' : kind === 'growthEntries' ? '导出成长流水' : '导出订单'}
         </Button>
       ) : null}
       <Modal
@@ -110,13 +111,13 @@ export function SensitiveExportButton({ kind, query, status, eventId, open: cont
           <Typography.Paragraph type="secondary">
             {kind === 'eventFeedback'
               ? '导出当前活动的反馈，服务端会再次校验运营权限和活动范围。'
-              : '导出当前关键词与状态筛选范围，服务端会再次校验运营权限和数据范围。'}
+              : '导出当前全部筛选条件对应的记录，服务端会再次校验运营权限和数据范围。'}
           </Typography.Paragraph>
           {kind !== 'eventFeedback' ? <Descriptions size="small" column={1} bordered items={[
                 { key: 'query', label: '筛选关键词', children: query || '全部' },
                 { key: 'status', label: '状态', children: status || '全部' },
               ]} /> : null}
-          {kind === 'users' ? (
+          {['users', 'eventRoster'].includes(kind) ? (
             <Checkbox
               checked={includesPhone && canReadPhone}
               disabled={Boolean(workflow) || !canReadPhone}

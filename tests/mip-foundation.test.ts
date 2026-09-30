@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   cooperationAbilityDimensions,
+  cooperationCircleFields,
+  cooperationGoalFields,
+  cooperationQuirkFields,
   cooperationRoles,
   mipPlaceholderCatalog,
 } from '../src/config/mip-catalogs'
@@ -38,7 +41,14 @@ describe('MIP domain foundation', () => {
   it('keeps one configurable definition for each cooperation role', () => {
     expect(cooperationRoles.map(role => role.key)).toEqual(cooperationRoleKeys)
     expect(new Set(cooperationRoles.map(role => role.key)).size).toBe(6)
-    expect(cooperationRoles.every(role => role.fields.length >= 3)).toBe(true)
+    expect(cooperationRoles.every(role =>
+      role.menu.structured === 'circles' ? role.menu.fields.length === 0 : role.menu.fields.length >= 3,
+    )).toBe(true)
+    expect(cooperationRoles.every(role => role.abilityLabels.length === 6)).toBe(true)
+    expect(cooperationRoles.every(role => role.legacyFieldKeys.includes('target'))).toBe(true)
+    expect(cooperationGoalFields.map(field => field.key)).toEqual(['targetSummary', 'support', 'value'])
+    expect(cooperationQuirkFields.map(field => field.key)).toEqual(['external', 'internal', 'advice'])
+    expect(cooperationCircleFields.map(field => field.key)).toEqual(['name', 'identity', 'years', 'trait'])
     expect(cooperationAbilityDimensions).toHaveLength(6)
     expect(isCooperationRoleKey('connector')).toBe(true)
     expect(isCooperationRoleKey('owner')).toBe(false)

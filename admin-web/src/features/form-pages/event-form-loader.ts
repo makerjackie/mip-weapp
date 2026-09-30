@@ -12,7 +12,13 @@ export async function loadEventDetailForForm(eventId: string, request: AdminRequ
   const eventValue = await request<Record<string, unknown>>('mip.admin.events.get', { eventId })
   if (!eventValue || typeof eventValue !== 'object') return null
   const event = eventValue as Record<string, unknown>
+  if (!Number.isInteger(event.version) || !['PLATFORM', 'BRANCH'].includes(String(event.scopeType)) || typeof event.title !== 'string' || !Array.isArray(event.registrationSchema) || !Array.isArray(event.contentMedia)) throw new Error('活动详情字段不完整，请重新加载。')
+  const mediaUrls = Object.fromEntries((event.contentMedia as Array<Record<string, unknown>>).filter(item => typeof item.assetId === 'string' && typeof item.imageUrl === 'string').map(item => [String(item.assetId), String(item.imageUrl)]))
+  if (event.coverAssetId && typeof event.coverUrl === 'string') mediaUrls[String(event.coverAssetId)] = event.coverUrl
   return {
+    _mediaUrls: mediaUrls,
+    _readOnlyFields: event.readOnlyFields,
+    ...(Array.isArray(event.availableActions) ? { _canSave: event.availableActions.includes('mip.admin.events.save') } : {}),
     eventId: String(event.id || eventId),
     expectedVersion: Number(event.version) || undefined,
     scopeType: String(event.scopeType || 'PLATFORM'),
@@ -43,5 +49,6 @@ export async function loadEventDetailForForm(eventId: string, request: AdminRequ
     waitlistEnabled: event.waitlistEnabled === true,
     priceCents: String(event.priceCents ?? '0'),
     registrationSchema: Array.isArray(event.registrationSchema) ? event.registrationSchema : [],
+    tagIds: Array.isArray(event.tagIds) ? event.tagIds : [],
   }
 }

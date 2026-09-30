@@ -1,6 +1,11 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('../role-template-policy')
+
 const { cursorPredicateFor, pageRows } = require('../pagination')
+const { lockTemplateForBinding } = require('../role-templates')
+const { roleCapabilities, capabilitiesForBinding: bindingCapabilities } = require('../capabilities')
+const { claimOptional, complete } = require('../idempotency')
 
 // Derived branch columns every branchDto response needs. They must be selected by every query that
 // feeds branchDto (list and mutation paths), otherwise currentPlayerCount/branchAdminNames silently
@@ -57,6 +62,9 @@ function branchDto(row, blockers = branchBlockersFromRow(row)) {
     branchKey: String(row.branch_key),
     name: row.name,
     cityName: row.city_name,
+    leaderUserId: row.leader_user_id || null,
+    leaderName: row.leader_name || null,
+    sortOrder: Number(row.sort_order || 0),
     summary: row.summary || '',
     status: row.status,
     version: Number(row.version),
@@ -92,32 +100,32 @@ function createAdminAccessRepository(database, options) {
   async function listRoleBindings(appId, userId) {
     const rows = await database.query(
       `SELECT r.scope_type, r.scope_id, r.role_key,
-        CASE WHEN p.policy_mode = 'CUSTOM' THEN p.capabilities_json ELSE NULL END AS policy_capabilities_json
+        CASE WHEN p.policy_mode = 'CUSTOM' THEN p.capabilities_json ELSE NULL END AS policy_capabilities_json, r.role_template_id, role_template.base_role_key AS template_base_role_key, role_template.status AS template_status, role_template.capabilities AS template_capabilities_json
        FROM mip_admin_role_bindings r
-       LEFT JOIN mip_role_capability_policies p
+       LEFT JOIN mip_admin_roles role_template ON role_template.app_id = r.app_id AND role_template.role_id = r.role_template_id
+     LEFT JOIN mip_role_capability_policies p
          ON p.app_id = r.app_id AND p.role_key = r.role_key
-       WHERE r.app_id = ? AND r.user_id = ? AND r.status = 'ACTIVE'
+       WHERE (r.role_template_id IS NULL OR r.role_key <> 'PLATFORM_OWNER') AND r.app_id = ? AND r.user_id = ? AND r.status = 'ACTIVE'
          AND NOT EXISTS (SELECT 1 FROM mip_admin_accounts account
            WHERE account.app_id = r.app_id AND account.linked_user_id = r.user_id AND account.status <> 'ACTIVE')
        ORDER BY r.scope_type, r.scope_id, r.role_key`,
       [appId, userId],
     )
-    return rows.map(row => ({
+    return rows.filter(templateAllowsBinding).map(row => ({
       scopeType: row.scope_type,
       scopeId: row.scope_type === 'PLATFORM' ? null : row.scope_id,
       roleKey: row.role_key,
       capabilities: capabilitiesForBinding({
         roleKey: row.role_key,
-        policyCapabilities: Object.hasOwn(row, 'policy_capabilities_json')
-          ? row.policy_capabilities_json
-          : null,
+        policyCapabilities: effectivePolicyCapabilities(row),
       }),
     }))
   }
 
   async function listBranches(appId) {
     const rows = await database.query(
-      `SELECT b.id, b.branch_key, b.name, b.city_name, b.summary, b.status, b.version,
+      `SELECT b.id, b.branch_key, b.name, b.city_name, b.summary, b.status, b.version, b.leader_user_id, b.sort_order,
+        (SELECT COALESCE(NULLIF(p.real_name, ''), NULLIF(p.nickname, ''), '未设置姓名') FROM mip_profiles p WHERE p.app_id = b.app_id AND p.user_id = b.leader_user_id) AS leader_name,
         (SELECT COUNT(*) FROM mip_branch_memberships m
           WHERE m.app_id = b.app_id AND m.branch_id = b.id
             AND m.status = 'ACTIVE') AS active_memberships,
@@ -154,22 +162,32 @@ function createAdminAccessRepository(database, options) {
             AND o.branch_id = b.id AND o.status = 'PUBLISHED') AS published_opportunities
        FROM mip_city_branches b
        WHERE b.app_id = ?
-       ORDER BY b.status, b.city_name, b.name, b.id`,
+       ORDER BY b.sort_order, b.name, b.id`,
       [appId],
     )
     return rows.map(row => branchDto(row))
+  }
+
+  async function branchLeader(connection, appId, userId) {
+    if (!userId) return null
+    const user = await connection.one(`SELECT u.id, COALESCE(NULLIF(p.real_name, ''), NULLIF(p.nickname, ''), '未设置姓名') AS name
+      FROM mip_users u LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
+      WHERE u.app_id = ? AND u.id = ? AND u.status = 'ACTIVE' FOR UPDATE`, [appId, userId])
+    if (!user) throw codeError('NOT_FOUND')
+    return user
   }
 
   async function createBranch(input) {
     return database.transaction(async (tx) => {
       await authorizeMutation(tx, input, { scopeType: 'PLATFORM', scopeId: null })
       const branchId = createId()
+      const leader = await branchLeader(tx, input.appId, input.leaderUserId)
       try {
         await tx.query(
           `INSERT INTO mip_city_branches (
-            id, app_id, branch_key, name, city_name, summary, status, created_by_user_id
-          ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?)`,
-          [branchId, input.appId, input.branchKey, input.name, input.cityName, input.summary || null, input.actorUserId],
+            id, app_id, branch_key, name, city_name, summary, status, created_by_user_id, leader_user_id, sort_order
+          ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?)`,
+          [branchId, input.appId, input.branchKey, input.name, input.cityName, input.summary || null, input.actorUserId, input.leaderUserId || null, input.sortOrder ?? 0],
         )
       }
       catch (error) {
@@ -189,6 +207,7 @@ function createAdminAccessRepository(database, options) {
         name: input.name,
         city_name: input.cityName,
         summary: input.summary,
+        leader_user_id: input.leaderUserId || null, leader_name: leader?.name || null, sort_order: input.sortOrder ?? 0,
         status: 'ACTIVE',
         version: 1,
       })
@@ -199,7 +218,8 @@ function createAdminAccessRepository(database, options) {
     return database.transaction(async (tx) => {
       await authorizeMutation(tx, input, { scopeType: 'PLATFORM', scopeId: null })
       const current = await tx.one(
-        `SELECT b.id, b.branch_key, b.name, b.city_name, b.summary, b.status, b.version,
+        `SELECT b.id, b.branch_key, b.name, b.city_name, b.summary, b.status, b.version, b.leader_user_id, b.sort_order,
+        (SELECT COALESCE(NULLIF(p.real_name, ''), NULLIF(p.nickname, ''), '未设置姓名') FROM mip_profiles p WHERE p.app_id = b.app_id AND p.user_id = b.leader_user_id) AS leader_name,
           ${BRANCH_DERIVED_COLUMNS}
          FROM mip_city_branches b WHERE b.app_id = ? AND b.id = ? FOR UPDATE`,
         [input.appId, input.branchId],
@@ -210,10 +230,13 @@ function createAdminAccessRepository(database, options) {
       if (Number(current.version) !== input.expectedVersion) {
         throw codeError('CONFLICT')
       }
+      const leaderChanged = Object.hasOwn(input, 'leaderUserId')
+      const leaderId = leaderChanged ? input.leaderUserId : current.leader_user_id
+      const leader = leaderChanged ? await branchLeader(tx, input.appId, leaderId) : null
       const updated = await tx.query(
-        `UPDATE mip_city_branches SET name = ?, city_name = ?, summary = ?, version = version + 1
+        `UPDATE mip_city_branches SET name = ?, city_name = ?, summary = ?, leader_user_id = ?, sort_order = ?, version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
-        [input.name, input.cityName, input.summary || null, input.appId, input.branchId, input.expectedVersion],
+        [input.name, input.cityName, input.summary || null, leaderId || null, input.sortOrder ?? Number(current.sort_order || 0), input.appId, input.branchId, input.expectedVersion],
       )
       if (Number(updated.affectedRows) !== 1) {
         throw codeError('CONFLICT')
@@ -225,6 +248,7 @@ function createAdminAccessRepository(database, options) {
         name: input.name,
         city_name: input.cityName,
         summary: input.summary,
+        leader_user_id: leaderId || null, leader_name: leaderChanged ? leader?.name || null : current.leader_name, sort_order: input.sortOrder ?? Number(current.sort_order || 0),
         version: input.expectedVersion + 1,
       }, blockers)
     })
@@ -234,7 +258,8 @@ function createAdminAccessRepository(database, options) {
     return database.transaction(async (tx) => {
       await authorizeMutation(tx, input, { scopeType: 'PLATFORM', scopeId: null })
       const current = await tx.one(
-        `SELECT b.id, b.branch_key, b.name, b.city_name, b.summary, b.status, b.version,
+        `SELECT b.id, b.branch_key, b.name, b.city_name, b.summary, b.status, b.version, b.leader_user_id, b.sort_order,
+        (SELECT COALESCE(NULLIF(p.real_name, ''), NULLIF(p.nickname, ''), '未设置姓名') FROM mip_profiles p WHERE p.app_id = b.app_id AND p.user_id = b.leader_user_id) AS leader_name,
           ${BRANCH_DERIVED_COLUMNS}
          FROM mip_city_branches b WHERE b.app_id = ? AND b.id = ? FOR UPDATE`,
         [input.appId, input.branchId],
@@ -440,13 +465,21 @@ function createAdminAccessRepository(database, options) {
         }
       }
       if (input.active) {
+        const roleTemplateId = await lockTemplateForBinding(tx, input, authorization, input.roleTemplateId, input.roleKey)
+        if (!roleTemplateId && roleCapabilities[input.roleKey].some(cap => !bindingCapabilities(authorization.effectiveGrant).includes(cap))) throw codeError('FORBIDDEN')
+        input = { ...input, roleTemplateId }
+      }
+      const claim = await claimOptional(tx, input, 'admin.roles.set', { userId: input.userId, roleKey: input.roleKey,
+        active: input.active, scope: input.scope, roleTemplateId: input.roleTemplateId || null }, createId)
+      if (claim.replay) return claim.replay
+      if (input.active) {
         await tx.query(
           `INSERT INTO mip_admin_role_bindings (
-            id, app_id, user_id, scope_type, scope_id, role_key, status, granted_by_user_id
-          ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+            id, app_id, user_id, scope_type, scope_id, role_key, status, granted_by_user_id, role_template_id
+          ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)
           ON DUPLICATE KEY UPDATE status = 'ACTIVE', granted_by_user_id = VALUES(granted_by_user_id),
-            granted_at = UTC_TIMESTAMP(3), revoked_at = NULL`,
-          [createId(), input.appId, input.userId, input.scope.scopeType, input.scope.scopeId, input.roleKey, input.actorUserId],
+            granted_at = UTC_TIMESTAMP(3), revoked_at = NULL, role_template_id = VALUES(role_template_id)`,
+          [createId(), input.appId, input.userId, input.scope.scopeType, input.scope.scopeId, input.roleKey, input.actorUserId, input.roleTemplateId || null],
         )
       }
       else {
@@ -461,13 +494,15 @@ function createAdminAccessRepository(database, options) {
         }
       }
       await writeAudit(tx, input.audit)
-      return {
+      const result = {
         userId: input.userId,
         scopeType: input.scope.scopeType,
         scopeId: input.scope.scopeType === 'PLATFORM' ? null : input.scope.scopeId,
         roleKey: input.roleKey,
         active: input.active,
       }
+      await complete(tx, input, 'admin.roles.set', claim.requestHash, result)
+      return result
     })
   }
 

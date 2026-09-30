@@ -6,6 +6,7 @@ import { isIP } from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { roleTemplateBindingFlag } from './lib/admin-role-template-deployment.mjs'
 import {
   assertFunctionSecurityRulesConverged,
   assertNoTimerTriggers,
@@ -156,6 +157,10 @@ verifyLocalOpenApiDeclarations()
 const target = bindAndRequireMysqlEnvironment(root, envId)
 const scfRegion = String(env.MIP_SCF_REGION || findString(target.environment, ['region']) || '').trim()
 const existingDetails = new Map(manifest.map(spec => [spec.role, existingFunctionDetail(spec.name)]))
+const adminRoleTemplateBindingFlag = roleTemplateBindingFlag({
+  configured: env.MIP_ADMIN_ROLE_TEMPLATES_ENABLED,
+  existing: environmentVariables(existingDetails.get('admin')).MIP_ADMIN_ROLE_TEMPLATES_ENABLED,
+})
 const stableSecretValues = resolveMipStableSecrets({
   localEnv: env,
   deployedEnvironments: [...existingDetails.values()].filter(Boolean).map(environmentVariables),
@@ -416,6 +421,7 @@ try {
       customerServiceEnabled,
       deploymentStage,
       adminWebLoginQrEnvVersion,
+      adminRoleTemplateBindingFlag,
       exportMaxBytes,
       exportMaxRows,
       functionNames,
@@ -514,7 +520,7 @@ try {
         console.log(`[mip-cloud-deploy] configuration already current ${spec.name}`)
       }
     }
-    if (['admin', 'events'].includes(spec.role)) {
+    if (['admin', 'events', 'media'].includes(spec.role)) {
       await ensureWechatApiPublicNetwork(spec.name)
     }
     const codeUpdate = {
@@ -948,6 +954,8 @@ function environmentForRole(role, options) {
       MIP_UNION_ID_REBIND_ENABLED: options.unionIdRebindEnabled ? 'true' : 'false',
     },
     media: {
+      MIP_WECHAT_APP_ID: options.appId,
+      MIP_WECHAT_APP_SECRET: options.wechatAppSecret,
       MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,
       MIP_MEDIA_MAINTENANCE_HMAC_SECRET: options.secrets.mediaMaintenanceHmac,
       MIP_MEDIA_ADMIN_HMAC_SECRET: options.secrets.mediaAdminHmac,
@@ -981,6 +989,7 @@ function environmentForRole(role, options) {
     },
     admin: {
       ...agreementEnvironment,
+      MIP_ADMIN_ROLE_TEMPLATES_ENABLED: options.adminRoleTemplateBindingFlag,
       MIP_WECHAT_APP_ID: options.appId,
       MIP_WECHAT_APP_SECRET: options.wechatAppSecret,
       MIP_ADMIN_WEB_LOGIN_QR_ENV_VERSION: options.adminWebLoginQrEnvVersion,

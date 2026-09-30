@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 239,
+  "operationCount": 243,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -95,6 +95,38 @@ export const ADMIN_OPERATION_CONTRACT = {
     },
     {
       "action": "mip.admin.roles.create",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.roles.templates.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.roles.update",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.roles.copy",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.roles.changeStatus",
       "kind": "MUTATION",
       "authentication": "REQUIRED",
       "session": "REQUIRED",
@@ -1922,7 +1954,7 @@ export const ADMIN_OPERATION_CONTRACT = {
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 239,
+  "operationCount": 243,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -2003,7 +2035,9 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
         "branchKey",
         "name",
         "cityName",
-        "summary"
+        "summary",
+        "leaderUserId",
+        "sortOrder"
       ],
       "optionalInputKeys": [],
       "idempotencyKeyRequired": true,
@@ -2019,7 +2053,9 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
         "expectedVersion",
         "name",
         "cityName",
-        "summary"
+        "summary",
+        "leaderUserId",
+        "sortOrder"
       ],
       "optionalInputKeys": [],
       "idempotencyKeyRequired": true,
@@ -2051,20 +2087,92 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       ],
       "optionalInputKeys": [
         "scopeId",
-        "branchId"
+        "branchId",
+        "roleTemplateId",
+        "reason"
       ],
       "idempotencyKeyRequired": true,
-      "forwardIdempotencyKey": false
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.roles.create",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "name",
+        "baseRoleKey",
+        "capabilities",
+        "reason"
+      ],
+      "optionalInputKeys": [
+        "description"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.roles.templates.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
       "requiredInputKeys": [],
       "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.roles.update",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "templateId",
+        "expectedVersion",
+        "name",
+        "baseRoleKey",
+        "capabilities",
+        "reason"
+      ],
+      "optionalInputKeys": [
+        "description"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.roles.copy",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "templateId",
+        "expectedVersion",
+        "name",
+        "baseRoleKey",
+        "capabilities",
+        "reason"
+      ],
+      "optionalInputKeys": [
+        "description"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.roles.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "templateId",
+        "expectedVersion",
+        "status",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.rolePolicies.update",
@@ -2522,10 +2630,13 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       ],
       "optionalInputKeys": [
         "eventId",
-        "expectedVersion"
+        "expectedVersion",
+        "cloneSourceEventId",
+        "editingDraftId",
+        "editingDraftVersion"
       ],
       "idempotencyKeyRequired": true,
-      "forwardIdempotencyKey": false
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.events.clone",
@@ -2536,7 +2647,9 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
         "expectedVersion",
         "sourceEventId"
       ],
-      "optionalInputKeys": [],
+      "optionalInputKeys": [
+        "draftOnly"
+      ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
     },
@@ -2818,12 +2931,14 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
     {
       "action": "mip.admin.refunds.retry",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "refundId"
+      ],
       "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.refunds.list",
@@ -3209,22 +3324,41 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
     {
       "action": "mip.admin.knowledge.sources.save",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "sourceKey",
+        "name",
+        "sourceType",
+        "status"
+      ],
+      "optionalInputKeys": [
+        "sourceId",
+        "expectedVersion",
+        "endpointUrl",
+        "fetchConfig"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.knowledge.categories.save",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "categoryKey",
+        "name",
+        "sortOrder",
+        "status"
+      ],
+      "optionalInputKeys": [
+        "categoryId",
+        "expectedVersion",
+        "summary"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.knowledge.contents.save",
@@ -3273,42 +3407,66 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
     {
       "action": "mip.admin.knowledge.products.save",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "contentId",
+        "name",
+        "priceCents",
+        "status",
+        "refundPolicy",
+        "refundWindowHours"
+      ],
+      "optionalInputKeys": [
+        "productId",
+        "expectedVersion",
+        "unlockDays"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.knowledge.comments.moderate",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "commentId",
+        "expectedVersion",
+        "decision",
+        "reason"
+      ],
       "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.knowledge.reports.close",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "reportId",
+        "expectedVersion",
+        "status",
+        "reason"
+      ],
       "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.knowledge.ingestion.run",
       "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "sourceId",
+        "categoryId"
+      ],
       "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.knowledge.schedules.list",
@@ -4506,7 +4664,10 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
         "includesPhone",
         "filters"
       ],
-      "optionalInputKeys": [],
+      "optionalInputKeys": [
+        "eventId",
+        "branchId"
+      ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
     },
@@ -4572,7 +4733,8 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       ],
       "optionalInputKeys": [
         "scopeId",
-        "reason"
+        "reason",
+        "roleTemplateId"
       ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
@@ -4589,10 +4751,11 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "optionalInputKeys": [
         "name",
         "roleKey",
-        "scopeId"
+        "scopeId",
+        "roleTemplateId"
       ],
       "idempotencyKeyRequired": true,
-      "forwardIdempotencyKey": false
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.adminAccounts.changeStatus",
@@ -4779,7 +4942,7 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       ],
       "optionalInputKeys": [],
       "idempotencyKeyRequired": true,
-      "forwardIdempotencyKey": false
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.cards.list",
@@ -4857,7 +5020,8 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       ],
       "optionalInputKeys": [
         "eventId",
-        "draftId"
+        "draftId",
+        "expectedVersion"
       ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true

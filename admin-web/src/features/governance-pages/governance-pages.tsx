@@ -138,8 +138,8 @@ const pageSpecs: Record<GovernanceRoute, GovernancePageSpec> = {
   knowledge: {
     title: '知识库',
     description: '查看知识内容、审核状态和同步计划。',
-    sections: [{ key: 'contents', label: '知识内容', detailTarget: 'knowledge' }],
-    actions: [createKnowledgeContent, createKnowledgeSchedule],
+    sections: [{ key: 'contents', label: '知识内容', detailTarget: 'knowledge' }, { key: 'sources', label: '信息来源' }, { key: 'categories', label: '分类' }, { key: 'schedules', label: '采集计划' }, { key: 'runs', label: '采集记录' }, { key: 'comments', label: '评论' }, { key: 'reports', label: '举报' }],
+    actions: [createKnowledgeContent, createKnowledgeSchedule, contentAction('mip.admin.knowledge.sources.save', '新建信息源'), contentAction('mip.admin.knowledge.categories.save', '新建分类'), contentAction('mip.admin.knowledge.ingestion.run', '人工采集')],
   },
   operations: {
     title: '运营记录',
@@ -331,7 +331,10 @@ function createTabItems({
   refreshing?: boolean
 }): Array<{ key: string; label: string; children: ReactNode }> {
   if (!page) return []
-  return page.sections.map((section, index) => {
+  const visibleSections = (route === 'messages' || route === 'knowledge')
+    ? spec.sections.map((item, index) => page.sections.find(section => section.key === item.key) ?? (page.sections[index]?.key ? undefined : page.sections[index]) ?? { key: item.key, title: item.label, rows: [], columns: [] })
+    : page.sections
+  return visibleSections.map((section, index) => {
     const sectionSpec = spec.sections.find(item => item.key === section.key) ?? spec.sections[index] ?? {
       key: `section-${index + 1}`,
       label: section.title || `分类 ${index + 1}`,

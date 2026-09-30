@@ -1,5 +1,7 @@
 'use strict'
 
+const { effectivePolicyCapabilities, templateAllowsBinding } = require('./role-template-policy')
+
 const {
   CAPABILITIES,
   capabilitiesForBinding,
@@ -37,11 +39,12 @@ function createEventInsightsRepository(database) {
       const bindingRows = await tx.query(
         `SELECT r.scope_type, r.scope_id, r.role_key,
           CASE WHEN p.policy_mode = 'CUSTOM' THEN p.capabilities_json ELSE NULL END
-            AS policy_capabilities_json
+            AS policy_capabilities_json, r.role_template_id, role_template.base_role_key AS template_base_role_key, role_template.status AS template_status, role_template.capabilities AS template_capabilities_json
          FROM mip_admin_role_bindings r
-         LEFT JOIN mip_role_capability_policies p
+         LEFT JOIN mip_admin_roles role_template ON role_template.app_id = r.app_id AND role_template.role_id = r.role_template_id
+     LEFT JOIN mip_role_capability_policies p
            ON p.app_id = r.app_id AND p.role_key = r.role_key
-         WHERE r.app_id = ? AND r.user_id = ? AND r.status = 'ACTIVE'
+         WHERE NOT EXISTS (SELECT 1 FROM mip_admin_accounts account WHERE account.app_id = r.app_id AND account.linked_user_id = r.user_id AND account.status <> 'ACTIVE') AND (r.role_template_id IS NULL OR r.role_key <> 'PLATFORM_OWNER') AND r.app_id = ? AND r.user_id = ? AND r.status = 'ACTIVE'
          ORDER BY r.scope_type, r.scope_id, r.role_key`,
         [input.appId, input.actorUserId],
       )
@@ -198,15 +201,13 @@ function createEventInsightsRepository(database) {
 }
 
 function currentAuthorization(rows, scope) {
-  const bindings = rows.map(row => ({
+  const bindings = rows.filter(templateAllowsBinding).map(row => ({
     scopeType: row.scope_type,
     scopeId: row.scope_type === 'PLATFORM' ? null : row.scope_id,
     roleKey: row.role_key,
     capabilities: capabilitiesForBinding({
       roleKey: row.role_key,
-      policyCapabilities: Object.hasOwn(row, 'policy_capabilities_json')
-        ? row.policy_capabilities_json
-        : null,
+      policyCapabilities: effectivePolicyCapabilities(row),
     }),
   }))
   if (!hasScopedCapability(bindings, CAPABILITIES.EVENTS_READ, scope)) {

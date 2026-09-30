@@ -47,7 +47,7 @@ describe('MIP admin roster contract', () => {
     expect(rosterType).toContain('phoneNumber: string | null')
     expect(rosterType).not.toContain('phoneMasked')
     expect(service).toContain('action: \'admin.events.roster.phone.view\'')
-    expect(service).toContain('const { phoneCiphertext, userId, ...safe } = item')
+    expect(service).toContain('const { phoneCiphertext, userId, userBranchId, ...safe } = item')
   })
 
   it('prevents stale responses and requests only the masked onsite roster', () => {

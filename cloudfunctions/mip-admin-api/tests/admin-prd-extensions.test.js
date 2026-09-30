@@ -26,6 +26,67 @@ function audit(resourceId) {
 }
 
 describe('admin PRD extension persistence', () => {
+  it('saves a revised deadline while keeping ended and unpublished opportunities in their current state', async () => {
+    for (const status of ['UNPUBLISHED', 'ENDED']) {
+      const writes = []
+      const repository = extensions(database({
+        async one(sql) {
+          if (sql.includes('FROM mip_opportunities')) return { id: 'opportunity-a', branch_id: null, status, version: 4 }
+          if (sql.includes('FROM mip_users')) return { id: 'owner-a' }
+          return null
+        },
+        async query(sql, params) {
+          writes.push({ sql, params })
+          if (sql.includes('UPDATE mip_opportunities')) {
+            assert.equal((sql.match(/\?/g) || []).length, params.length)
+            return { affectedRows: params.slice(-4).includes(status) ? 1 : 0 }
+          }
+          return { affectedRows: 1 }
+        },
+      }))
+      const result = await repository.saveOpportunity({
+        appId: 'wx-app', actorUserId: 'admin-user', opportunityId: 'opportunity-a', expectedVersion: 4,
+        authorizedScope: { scopeType: 'PLATFORM', scopeId: null }, authorization: {}, contentSafetyStatus: 'APPROVED',
+        draft: { ownerUserId: 'owner-a', scopeType: 'PLATFORM', branchId: null, title: '机会', valueSummary: '价值',
+          targetSummary: '', description: '原正文', cityTagId: null, deadlineAt: '2030-10-01T00:00:00.000Z', roleKeys: [], tagIds: [] },
+        audit,
+      })
+      assert.deepEqual(result, { id: 'opportunity-a', status, version: 5 })
+      assert.equal(writes.find(write => write.sql.includes('UPDATE mip_opportunities')).params[8], '2030-10-01T00:00:00.000Z')
+      assert.ok(writes.some(write => write.sql.includes('INSERT INTO mip_audit_logs')))
+    }
+  })
+  it('restores unpublished and ended opportunities without changing linked records and audits the transition', async () => {
+    for (const status of ['UNPUBLISHED', 'ENDED']) {
+      let version = 4
+      let currentStatus = status
+      const writes = []
+      const repository = extensions(database({
+        async one() { return { id: 'opportunity-a', branch_id: null, status: currentStatus, version, content_safety_status: 'APPROVED', deadline_at: null } },
+        async query(sql, params) {
+          writes.push({ sql, params })
+          if (sql.includes('UPDATE mip_opportunities')) { currentStatus = 'PUBLISHED'; version++ }
+          return { affectedRows: 1 }
+        },
+      }))
+      const input = { appId: 'wx-app', actorUserId: 'admin-user', opportunityId: 'opportunity-a', expectedVersion: 4, authorizedScope: { scopeType: 'PLATFORM', scopeId: null }, authorization: {}, audit: audit('opportunity-a') }
+      assert.deepEqual(await repository.publishOpportunity(input), { id: 'opportunity-a', status: 'PUBLISHED', version: 5 })
+      assert.equal(writes.length, 2)
+      assert.match(writes[0].sql, /ended_at = NULL/)
+      const auditWrite = writes.find(write => write.sql.includes('INSERT INTO mip_audit_logs'))
+      assert.ok(auditWrite.params.some(value => typeof value === 'string' && value.includes(`"fromStatus":"${status}"`) && value.includes('"toStatus":"PUBLISHED"')))
+      await assert.rejects(() => repository.publishOpportunity(input), error => error.code === 'CONFLICT')
+      assert.equal(writes.length, 2)
+    }
+  })
+  it('rejects expired or unsafe reopening before writes', async () => {
+    for (const [overrides, code] of [[{ deadline_at: '2020-01-01' }, 'INVALID_STATE'], [{ content_safety_status: 'ERROR' }, 'CONTENT_SAFETY_REQUIRED']]) {
+      const writes = []
+      const repository = extensions(database({ async one() { return { id: 'opportunity-a', branch_id: null, status: 'ENDED', version: 4, content_safety_status: 'APPROVED', ...overrides } }, async query(sql) { writes.push(sql); return { affectedRows: 1 } } }))
+      await assert.rejects(() => repository.publishOpportunity({ appId: 'wx-app', actorUserId: 'admin-user', opportunityId: 'opportunity-a', expectedVersion: 4, authorizedScope: { scopeType: 'PLATFORM', scopeId: null }, authorization: {}, audit: audit('opportunity-a') }), error => error.code === code)
+      assert.equal(writes.length, 0)
+    }
+  })
   it('maps editor options in query order and limits branch operators to their branch', async () => {
     const calls = []
     const repository = extensions(database({
@@ -58,7 +119,7 @@ describe('admin PRD extension persistence', () => {
     assert.deepEqual(result.cities, [{ id: 'city-a', label: '深圳' }])
     assert.deepEqual(result.tags, [{ id: 'tag-a', kind: 'INDUSTRY', label: '企业服务' }])
     assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_city_branches')).params, ['wx-app', 'branch-a'])
-    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app', 'branch-a'])
+    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app', 'branch-a', '', '', '', '', ''])
 
     calls.length = 0
     await repository.getOpportunityEditorOptions('wx-app', {
@@ -67,7 +128,7 @@ describe('admin PRD extension persistence', () => {
       eventIds: [],
     })
     assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_city_branches')).params, ['wx-app'])
-    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app'])
+    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app', '', '', '', '', ''])
   })
 
   it('returns the opportunity deadline, editable relationships, and app-scoped audit history', async () => {
@@ -187,8 +248,8 @@ describe('admin PRD extension persistence', () => {
     assert.equal(writes.length, 0)
   })
 
-  it('keeps ended and unpublished opportunities read-only', async () => {
-    for (const status of ['ENDED', 'UNPUBLISHED']) {
+  it('keeps archived opportunities read-only', async () => {
+    for (const status of ['ARCHIVED']) {
       const writes = []
       const repository = extensions(database({
         async one(sql) {
@@ -276,6 +337,8 @@ describe('admin PRD extension persistence', () => {
           user_id: 'user-a', nickname: '用户', city_name: '广州', status: 'REGISTERED', answers_json: '{"company":"MIP"}',
           registration_schema_json: '[{"key":"company","label":"公司"}]', phone_verified_at: new Date(),
           created_at: new Date('2026-08-24T00:00:00Z'), version: 1,
+          order_id: 'order-a', payment_status: 'PAID', order_amount_cents: 1250, refunded_amount_cents: 250,
+          paid_at: new Date('2026-08-24T00:00:00Z'), currency: 'CNY',
         }]
       },
     }))
@@ -284,6 +347,12 @@ describe('admin PRD extension persistence', () => {
     }, 20)
     assert.match(captured.sql, /r\.app_id = \?/)
     assert.match(captured.sql, /e\.branch_id IN \(\?\)/)
+    assert.match(captured.sql, /o\.app_id = r\.app_id AND o\.id = r\.order_id/)
+    assert.match(captured.sql, /o\.user_id = r\.user_id AND o\.resource_id = r\.event_id AND o\.order_type = 'EVENT'/)
+    assert.match(captured.sql, /refund\.app_id = o\.app_id AND refund\.order_id = o\.id AND refund\.status = 'SUCCEEDED'/)
     assert.deepEqual(page.items[0].answerItems, [{ key: 'company', label: '公司', value: 'MIP' }])
+    assert.equal(page.items[0].paymentStatus, 'PAID')
+    assert.equal(page.items[0].paidAmountCents, 1250)
+    assert.equal(page.items[0].refundedAmountCents, 250)
   })
 })
