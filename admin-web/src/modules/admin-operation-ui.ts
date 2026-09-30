@@ -16,7 +16,7 @@ export interface OperationField {
   fields?: readonly OperationField[]
   visibleWhen?: {
     path: string
-    value: string
+    value: string | readonly string[]
   }
   /** Upload purpose for asset/asset-list fields, used by AssetUploader. */
   assetPurpose?: string
