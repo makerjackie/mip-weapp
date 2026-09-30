@@ -18,7 +18,7 @@ export const labels: Record<string, string> = {
   DEFAULT: '默认策略', CUSTOM: '自定义策略',
   COOPERATION_CARD: '合作卡', SUPER_CASE: '超级案例',
   PENDING: '待处理', PASSED: '已通过', ERROR: '处理异常', APPROVED: '已通过',
-  EXPERIENCE: '经验值', CONTRIBUTION: '贡献值', COIN: '游戏币',
+  EXPERIENCE: '经验值', EXP: '经验值', CONTRIBUTION: '贡献值', COIN: '游戏币', SYSTEM: '系统', AUTO: '自动审核',
   LOCAL: '本地撮合', EXTERNAL: '外部撮合', ADMIN: '运营发起',
   CITY: '城市', NATIONAL: '全国', REMOTE: '远程',
   STALLED: '停滞', EXPIRED: '已过期', CLEANUP_PENDING: '待清理',
@@ -188,6 +188,7 @@ export function auditActionLabel(value: unknown) {
   const key = String(value || '')
   const parts = key.replace(/^admin\./, '').split('.').filter(Boolean)
   const tokens: Record<string, string> = {
+    cards: '名片', history: '历史', profile_edit: '编辑资料', user_content: '用户内容',
     roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '服务器',
     events: '活动', orders: '订单', refunds: '退款', messages: '消息', knowledge: '知识库', audit: '审计',
     grant: '授权', revoke: '撤销', create: '创建', update: '更新', save: '保存', publish: '发布',

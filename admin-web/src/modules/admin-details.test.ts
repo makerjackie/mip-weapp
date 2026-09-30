@@ -392,3 +392,10 @@ describe('admin detail views', () => {
   })
 
 })
+
+it('uses actual commercial locations in opportunity detail, including remote cooperation', async () => {
+  const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
+    'mip.admin.opportunities.get': { ...opportunityDetailResponse(), cityName: null, commercialTerms: { locationDisplay: '深圳、全国、远程', amountDisplay: '¥12,500.00 - ¥25,000.00' } },
+  }, []), { includeOpportunityComments: false })
+  assert.equal(detail.sections[0].fields?.find(field => field.label === '合作地点')?.value, '深圳、全国、远程')
+})

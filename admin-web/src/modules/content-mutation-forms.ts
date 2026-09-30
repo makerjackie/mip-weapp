@@ -230,12 +230,12 @@ interface SuperCaseDraft {
   kind: 'SUPER_CASE'
   projectName: string
   summary: string
-  startedOn?: string
-  endedOn?: string
+  startedOn?: string | null
+  endedOn?: string | null
   responsibility: string
   cityTagId?: string | null
   industryTagId?: string | null
-  caseType?: string
+  caseType?: string | null
   description: string
   coverAssetId?: string | null
   mediaAssetIds: string[]
@@ -606,7 +606,7 @@ function validateCaseDraft(draft: Record<string, unknown>): SuperCaseDraft {
   const mediaAssetIds = draft.mediaAssetIds === undefined ? [] : idList(draft.mediaAssetIds, 12, '案例素材', true)
   for (const key of ['cityTagId', 'industryTagId', 'coverAssetId']) { const value = draft[key]; if (value !== undefined && value !== null && !UUID_PATTERN.test(String(value))) throw invalid('案例素材无效') }
   if (mediaAssetIds.some(id => !UUID_PATTERN.test(id))) throw invalid('案例素材无效')
-  return { kind: 'SUPER_CASE', projectName: requiredText(draft.projectName, 120, '项目名称'), summary: requiredText(draft.summary, 240, '案例摘要'), startedOn, endedOn, responsibility: requiredText(draft.responsibility, 500, '项目责任'), cityTagId: draft.cityTagId ? String(draft.cityTagId) : null, industryTagId: draft.industryTagId ? String(draft.industryTagId) : null, caseType: optionalText(draft.caseType, 80), description: requiredText(draft.description, 8_000, '案例说明'), coverAssetId: draft.coverAssetId ? String(draft.coverAssetId) : null, mediaAssetIds, status: optionalEnum(draft.status, ['DRAFT', 'PUBLISHED', 'UNPUBLISHED']) as SuperCaseDraft['status'] }
+  return { kind: 'SUPER_CASE', projectName: requiredText(draft.projectName, 120, '项目名称'), summary: requiredText(draft.summary, 240, '案例摘要'), startedOn: startedOn || null, endedOn: endedOn || null, responsibility: requiredText(draft.responsibility, 500, '项目责任'), cityTagId: draft.cityTagId ? String(draft.cityTagId) : null, industryTagId: draft.industryTagId ? String(draft.industryTagId) : null, caseType: optionalText(draft.caseType, 80) || null, description: requiredText(draft.description, 8_000, '案例说明'), coverAssetId: draft.coverAssetId ? String(draft.coverAssetId) : null, mediaAssetIds, status: optionalEnum(draft.status, ['DRAFT', 'PUBLISHED', 'UNPUBLISHED']) as SuperCaseDraft['status'] }
 }
 
 function validateKnowledgeContent(input: Record<string, unknown>): KnowledgeContentInput {

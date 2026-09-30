@@ -524,7 +524,8 @@ function contentTitle(action: ContentMutationAction, resource: string) {
             : action.endsWith('.close') ? '完成处理'
               : action.endsWith('.grant') ? '授予'
                 : action.endsWith('.revoke') ? '撤销'
-                  : action.endsWith('.adjust') ? '调整' : '更新'
+                  : action.endsWith('.adjust') ? '调整'
+                    : action.endsWith('.end') ? '结束' : '更新'
   return `${verb}${resource}`
 }
 

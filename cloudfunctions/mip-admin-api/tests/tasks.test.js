@@ -49,3 +49,11 @@ describe('admin task adapter authorization', () => {
     assert.equal(invoked, false)
   })
 })
+
+it('uses the authenticated caller OpenID, never an OpenID supplied in task input', async () => {
+  const authenticated = { ...caller, openId: 'server-resolved-openid' }
+  let forwarded
+  const adapter = createAdminTasks({ access: { async session() { return { caller: { appId: 'wx-server-app', userId: 'admin-user' }, bindings: [{ roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }] } } }, client: { async execute(input) { forwarded = input } } })
+  await adapter.saveTask(authenticated, { task: { name: 'draft' }, actorOpenId: 'browser-forgery' })
+  assert.equal(forwarded.actorOpenId, authenticated.openId)
+})

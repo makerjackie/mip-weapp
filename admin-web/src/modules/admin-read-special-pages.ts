@@ -190,7 +190,7 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
     badgesPayload ? { title: '徽章', rows: badges, columns: columns([['name', '徽章'], ['description', '说明'], ['shape', '图形'], ['updatedAt', '更新时间'], ['state', '状态']]) } : null,
     awardsPayload ? { title: '徽章获得记录', rows: awards, columns: columns([['user', '用户'], ['badge', '徽章'], ['reason', '原因'], ['awardedAt', '获得时间'], ['equipped', '佩戴'], ['state', '状态']]) } : null,
     entitlementsPayload ? { title: '权益流水', rows: entitlementRows, columns: columns([['entitlementNo', '权益号'], ['user', '用户'], ['type', '类型'], ['content', '权益内容'], ['order', '关联订单'], ['grantor', '发放人'], ['source', '来源'], ['validity', '有效期'], ['grantedAt', '发放时间']]) } : null,
-    contributionRulesPayload ? { title: '贡献值规则', rows: contributionRuleRows, columns: columns([['behavior', '行为'], ['rewardExp', '经验奖励'], ['rewardLimit', '上限'], ['scope', '范围'], ['effective', '生效期'], ['state', '状态']]) } : null,
+    contributionRulesPayload ? { title: '贡献值规则', rows: contributionRuleRows, columns: columns([['behavior', '行为'], ['rewardExp', '贡献奖励'], ['rewardLimit', '上限'], ['scope', '范围'], ['effective', '生效期'], ['state', '状态']]) } : null,
     contributionTxnsPayload ? { title: '贡献值流水', rows: contributionTxnRows, columns: columns([['txnNo', '流水号'], ['user', '用户'], ['behavior', '行为'], ['delta', '变化值'], ['createdAt', '时间']]) } : null,
   ].filter(isSection)
   return { sections: sections.map((section, index) => {

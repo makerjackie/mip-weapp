@@ -1,6 +1,7 @@
 'use strict'
 
 const cloud = require('wx-server-sdk')
+const { createWechatTextChecker } = require('./lib/wechat-content-checker')
 const { createContentSafety } = require('./domain/content-safety')
 const { createHandler } = require('./domain/handler')
 const { createBannerRepository } = require('./domain/repository')
@@ -19,7 +20,12 @@ const allowedAppIds = new Set(
   String(process.env.MIP_ALLOWED_APP_IDS || '').split(',').map(value => value.trim()).filter(Boolean),
 )
 const database = mysqlDatabase()
-const service = createBannerService(createBannerRepository(database), createContentSafety(cloud))
+const service = createBannerService(createBannerRepository(database), createContentSafety(cloud, {
+  appId: process.env.MIP_WECHAT_APP_ID,
+  checker: process.env.MIP_WECHAT_APP_ID && process.env.MIP_WECHAT_APP_SECRET
+    ? createWechatTextChecker({ appId: process.env.MIP_WECHAT_APP_ID, appSecret: process.env.MIP_WECHAT_APP_SECRET })
+    : null,
+}))
 
 function contextOptions() {
   return { allowedAppIds, pepper: process.env.MIP_IDENTITY_PEPPER }

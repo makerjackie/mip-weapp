@@ -1,4 +1,5 @@
 import { Alert, Form, Modal } from 'antd'
+import { useId } from 'react'
 import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
 import { OperationFields, toFormValues } from './operation-fields'
 import { OVERLAY_Z_INDEX } from './overlay-z-index'
@@ -15,6 +16,7 @@ export function MutationDialog({ open, title, description, fields, values, loadi
   onCancel: () => void
 }) {
   const [form] = Form.useForm<OperationValues>()
+  const formName = useId()
   return (
     <Modal
       className="mutation-dialog"
@@ -36,7 +38,7 @@ export function MutationDialog({ open, title, description, fields, values, loadi
       afterOpenChange={(next) => { if (next) form.setFieldsValue(toFormValues(fields, values)) }}
     >
       <p className="mutation-description">{description}</p>
-      <Form form={form} layout="vertical" initialValues={toFormValues(fields, values)} disabled={loading}>
+      <Form name={`mutation-${formName}`} form={form} layout="vertical" initialValues={toFormValues(fields, values)} disabled={loading}>
         <div className="mutation-grid"><OperationFields fields={fields} form={form} /></div>
       </Form>
       {error ? <Alert type="error" showIcon title={error} description="请求结果不确定时，请先刷新并核对服务端记录。" /> : null}

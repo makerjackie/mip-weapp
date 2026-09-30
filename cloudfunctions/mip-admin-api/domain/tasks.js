@@ -13,6 +13,7 @@ function createAdminTasks({ access, client } = {}) {
     return client.execute({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
+      ...(caller.openId ? { actorOpenId: caller.openId } : {}),
       action,
       input,
     })

@@ -104,7 +104,7 @@ describe('independent user content editor', () => {
       kind: 'SUPER_CASE', ownerUserId: 'user-demo', idempotencyKey: expect.any(String),
       draft: {
         kind: 'SUPER_CASE', projectName: '演示案例', summary: '案例摘要', responsibility: '演示项目责任',
-        description: '虚构案例,仅供验收', startedOn: undefined, endedOn: undefined, caseType: undefined,
+        description: '虚构案例,仅供验收', startedOn: null, endedOn: null, caseType: null,
         cityTagId: null, industryTagId: null, coverAssetId: null, mediaAssetIds: [], status: 'PUBLISHED',
       },
     })

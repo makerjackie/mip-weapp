@@ -6,6 +6,11 @@ import {
 } from './admin-operation-ui.ts'
 
 describe('admin operation UI', () => {
+  it('keeps selected recipient references as an array instead of comma-flattening them', () => {
+    const fields: OperationField[] = [{ key: 'recipientRefs', label: '收件人', kind: 'profile-ref-list' }]
+    const refs = ['opaque-recipient-a', 'opaque-recipient-b']
+    assert.deepEqual(normalizeOperationValues(fields, { recipientRefs: refs }), { recipientRefs: refs })
+  })
   it('normalizes nested groups and typed lists while preserving hidden values', () => {
     const fields: OperationField[] = [
       { key: 'expectedVersion', label: '版本', kind: 'number', hidden: true },

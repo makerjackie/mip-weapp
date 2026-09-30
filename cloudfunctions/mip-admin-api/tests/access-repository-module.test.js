@@ -311,3 +311,11 @@ describe('admin access repository module', () => {
     assert.equal(typeof page.nextCursor, 'string')
   })
 })
+
+it('applies audit keyword filtering before cursor pagination and escapes LIKE wildcards', async () => {
+  const { calls, repository } = createFixture()
+  await repository.listAudit('wx-app', { platform: true, branchIds: [], eventIds: [] }, { query: ' badge_100% ' }, 20)
+  const read = calls.find(call => call.type === 'query')
+  assert.match(read.sql, /a\.action LIKE \? OR a\.resource_type LIKE \? OR a\.resource_id LIKE \? OR p\.nickname LIKE \?/)
+  assert.deepEqual(read.params, ['wx-app', ...Array(4).fill('%badge\\_100\\%%'), 21])
+})

@@ -43,7 +43,7 @@ export const MULTI_VALUE_KINDS: readonly string[] = ['id-list', 'profile-ref-lis
 /** Field kinds whose editor is a textarea / line list. */
 export const TEXTAREA_LIKE_KINDS: readonly string[] = ['asset-list', 'id-list', 'profile-ref-list', 'tags']
 /** Field kinds serialized as newline-joined id lists. */
-export const LINE_LIST_KINDS: readonly string[] = ['id-list', 'profile-ref-list', 'tags']
+export const LINE_LIST_KINDS: readonly string[] = ['id-list', 'tags']
 /** Field kinds bound to a Dayjs value. */
 export const DATE_KINDS: readonly string[] = ['datetime', 'datetime-local', 'date']
 
@@ -110,11 +110,15 @@ function normalizeSubmittedField(
     writePath(target, path, raw === true)
     return
   }
+  if (field.kind === 'profile-ref-list') {
+    writePath(target, path, Array.isArray(raw) ? raw.map(String).filter(Boolean) : splitLines(String(raw || '')))
+    return
+  }
   if (field.kind === 'multi-select') {
     writePath(target, path, Array.isArray(raw) ? raw.map(String).filter(Boolean) : [])
     return
   }
-  if (['id-list', 'profile-ref-list', 'tags'].includes(field.kind)) {
+  if (['id-list', 'tags'].includes(field.kind)) {
     writePath(target, path, splitLines(String(raw || '')))
     return
   }

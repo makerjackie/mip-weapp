@@ -2,10 +2,10 @@ import { useParams } from '@tanstack/react-router'
 import { useCallback, useMemo } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
-import { getContentMutationForm, validateContentMutation } from '../../modules/content-mutation-forms'
+import { getContentMutationForm } from '../../modules/content-mutation-forms'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 import { defaultContentFormValues } from './content-form-helpers'
-import { knowledgeEditorValues } from '../../modules/knowledge-editor'
+import { knowledgeEditorInput, knowledgeEditorValues } from '../../modules/knowledge-editor'
 
 export function KnowledgeEditFormPage() {
   const params = useParams({ from: '/knowledge/$contentId/edit' }) as { contentId?: string }
@@ -31,7 +31,7 @@ export function KnowledgeEditFormPage() {
     capability: 'knowledge.manage',
     buildInput: (submitted: OperationValues) => {
       const merged = { ...values, ...submitted, contentId }
-      const result = validateContentMutation('mip.admin.knowledge.contents.save', merged)
+      const result = knowledgeEditorInput(merged)
       return result.ok ? { ok: true, input: result.input } : { ok: false, errors: { ...result.errors } }
     },
   }

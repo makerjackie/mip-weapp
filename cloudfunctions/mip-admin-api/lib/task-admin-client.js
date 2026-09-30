@@ -73,7 +73,7 @@ function createTaskAdminClient(options = {}) {
 
   return Object.freeze({
     configured,
-    async execute({ appId, actorUserId, action, input = {} } = {}) {
+    async execute({ appId, actorUserId, actorOpenId, action, input = {} } = {}) {
       const operation = OPERATION_SPECS[action]
       if (!operation) throw codedError('TASKS_OPERATION_NOT_ALLOWED')
       assertInput(operation, input)
@@ -84,7 +84,8 @@ function createTaskAdminClient(options = {}) {
       if (!configured || typeof now !== 'function' || typeof nonce !== 'function') {
         throw codedError('TASKS_DISPATCH_CONFIG_REQUIRED')
       }
-      if (!trustedIdentifier(appId, 64) || !uuid(actorUserId)) {
+      if (!trustedIdentifier(appId, 64) || !uuid(actorUserId)
+        || (actorOpenId !== undefined && !trustedIdentifier(actorOpenId, 128))) {
         throw codedError('AUTH_REQUIRED')
       }
       const timestamp = Number(now())
@@ -99,6 +100,7 @@ function createTaskAdminClient(options = {}) {
         nonce: requestNonce,
         appId,
         actorUserId,
+        ...(actorOpenId ? { actorOpenId } : {}),
         action: operation.internalAction,
         input: { ...input },
         sourceFunction,

@@ -1,7 +1,7 @@
 import { ArrowLeftOutlined, EyeOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Card, Form, Input, Modal, Space } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useBlocker, useNavigate } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminRequestInput, AdminOperationAction } from '../../domain/contracts'
@@ -46,6 +46,7 @@ export function IndependentFormPage({ config, loadDetail }: {
   const queryClient = useQueryClient()
   const { demoMode, hasCapability, request } = useAdminSession()
   const [form] = Form.useForm<OperationValues>()
+  const formName = useId()
   const [loading, setLoading] = useState(false)
   const [detailLoading, setDetailLoading] = useState(Boolean(loadDetail))
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -228,6 +229,7 @@ export function IndependentFormPage({ config, loadDetail }: {
         <Form
           form={form}
           id="independent-form"
+          name={`editor-${formName}`}
           layout="vertical"
           initialValues={initialValues}
           disabled={loading || draftSaving || Boolean(conflict)}

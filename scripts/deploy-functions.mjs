@@ -1029,10 +1029,14 @@ function environmentForRole(role, options) {
     },
     tasks: {
       ...agreementEnvironment,
+      MIP_WECHAT_APP_ID: options.appId,
+      MIP_WECHAT_APP_SECRET: options.wechatAppSecret,
       MIP_TASKS_ADMIN_HMAC_SECRET: options.secrets.tasksAdminHmac,
     },
     banners: {
       ...agreementEnvironment,
+      MIP_WECHAT_APP_ID: options.appId,
+      MIP_WECHAT_APP_SECRET: options.wechatAppSecret,
       MIP_BANNERS_ADMIN_HMAC_SECRET: options.secrets.bannersAdminHmac,
     },
     ai: {

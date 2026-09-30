@@ -314,7 +314,7 @@ describe('admin read pages', () => {
     const page = await loadAdminReadPage('auditLogs', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
       'mip.admin.audit.list': {
         items: [{
-          actorNickname: '管理员', actorRoleKey: 'PLATFORM_OWNER', scopeName: '平台',
+          actorNickname: '管理员', effectiveRole: 'PLATFORM_OWNER', scopeName: '平台',
           action: 'admin.session.enter', resourceType: 'ADMIN_SESSION',
           resourceId: 'sess-001', createdAt: '2030-01-01T00:00:00.000Z',
         }],
@@ -325,6 +325,7 @@ describe('admin read pages', () => {
     assert.equal(calls[0].action, 'mip.admin.audit.list')
     assert.equal(page.sections.length, 1)
     assert.equal(page.sections[0].rows[0].actor, '管理员')
+    assert.equal(page.sections[0].rows[0].role, '平台负责人')
     assert.equal(page.sections[0].rows[0].action, 'admin.session.enter')
     assert.equal(page.sections[0].rows[0].resource, '管理会话')
   })

@@ -28,7 +28,7 @@ export function OpportunitiesContentPage(props: OperationsPageState) {
         <Form.Item label="浏览内容"><Select aria-label="机会分区" value={section} options={[{ value: 'opportunities', label: '机会' }, { value: 'content', label: '合作卡与案例' }, { value: 'matching', label: '撮合设置与记录' }]} onChange={value => props.onFilterChange({ query: '', status: '', filters: { section: value } })} /></Form.Item>
         {section === 'opportunities' ? <Form.Item label="城市"><Input aria-label="合作城市" value={props.query.filters?.cityQuery || ''} onChange={event => changeFilter('cityQuery', event.target.value)} allowClear /></Form.Item> : null}
         {section !== 'matching' ?
-        <Form.Item label="发布人"><div style={{ minWidth: 180 }}><SessionUserSelect action="mip.admin.opportunities.options" value={props.query.filters?.ownerUserId} onChange={value => changeFilter('ownerUserId', value)} /></div></Form.Item>
+        <Form.Item label="发布人"><div style={{ minWidth: 180 }}><SessionUserSelect action="mip.admin.opportunities.options" value={props.query.filters?.ownerUserId} onChange={value => { if (typeof value === 'string') changeFilter('ownerUserId', value) }} /></div></Form.Item>
         : null}
         {section === 'opportunities' ? <Form.Item label="时间类型"><Select value={timeType} options={[{ value: 'published', label: '发布时间' }, { value: 'updated', label: '更新时间' }, { value: 'deadline', label: '截止时间' }]} onChange={value => {
           const filters: Record<string, string> = { ...props.query.filters, timeType: value }

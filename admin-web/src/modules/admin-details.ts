@@ -6,6 +6,7 @@ import {
 } from './admin-task-management.ts'
 import { loadBannerDetail } from './admin-banner-management.ts'
 import { feedbackFields } from './event-feedback.ts'
+import { label } from './admin-read-formatters.ts'
 import {
   loadGameCatalogDetail,
   loadGameSeasonDetail,
@@ -670,7 +671,7 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
     fields: fields([
       ['发布人', text(opportunity.ownerNickname)],
       ['作用范围', opportunity.scopeType === 'BRANCH' ? text(opportunity.branchName) : '平台'],
-      ['城市', text(opportunity.cityName)],
+      ['合作地点', text(terms.locationDisplay || opportunity.cityName)],
       ['价值说明', text(opportunity.valueSummary)],
       ['合作目标', text(opportunity.targetSummary)],
       ['详细说明', text(opportunity.description)],
@@ -1030,5 +1031,5 @@ const codeLabels: Record<string, string> = {
 
 function codeLabel(value: unknown) {
   const code = text(value, '')
-  return codeLabels[code] || code || '—'
+  return codeLabels[code] || label(code)
 }

@@ -469,7 +469,7 @@ async function loadAuditLogs(query: AdminListQuery, request: AdminRequest): Prom
     sections: [{
       rows: payload.items.map(item => ({
         actor: valueOf(item, 'actorNickname', 'actorName') || '—',
-        role: label(valueOf(item, 'actorRoleKey')) || '—',
+        role: label(valueOf(item, 'effectiveRole', 'actorRoleKey')) || '—',
         scope: valueOf(item, 'scopeName') || label(valueOf(item, 'scopeType')) || '—',
         action: valueOf(item, 'action'),
         resource: label(valueOf(item, 'resourceType')),

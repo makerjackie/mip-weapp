@@ -899,3 +899,12 @@ function isoDate(value: unknown): string | null {
   const date = new Date(String(value))
   return Number.isFinite(date.getTime()) ? date.toISOString() : null
 }
+
+export function taskValidationMessage(values: OperationValues) {
+  const reward = values.rewardConfig as Record<string, { enabled?: boolean; amount?: number }> | undefined
+  if (!reward || !Object.values(reward).some(item => item.enabled)) return '请至少启用一项奖励：经验值、贡献值或线下奖金。'
+  if (Object.entries(reward).some(([kind, item]) => item.enabled && (!Number.isFinite(Number(item.amount)) || Number(item.amount) <= 0 || (kind !== 'bonus' && !Number.isInteger(Number(item.amount)))))) return '已启用的奖励必须填写正数，经验值和贡献值必须为整数。'
+  if (values.periodStartAt && values.periodEndAt && new Date(String(values.periodStartAt)) > new Date(String(values.periodEndAt))) return '周期结束时间不能早于开始时间。'
+  if (values.weeklyDeliverAt && !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(values.weeklyDeliverAt))) return '周送达时间请按 HH:mm 填写，例如 09:30。'
+  return '请检查必填项、时间顺序和字段格式。'
+}

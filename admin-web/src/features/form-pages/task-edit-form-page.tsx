@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminRequestInput, AdminOperationAction } from '../../domain/contracts'
 import type { OperationValues } from '../../modules/admin-operation-ui'
-import { createTaskMutationDefinition, buildTaskMutationInput, loadTaskEligibleLevels, loadTaskEditorOptions } from '../../modules/admin-task-management'
+import { createTaskMutationDefinition, buildTaskMutationInput, loadTaskEligibleLevels, loadTaskEditorOptions, taskValidationMessage } from '../../modules/admin-task-management'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 
 type AdminRequest = <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
@@ -23,7 +23,7 @@ export function TaskEditFormPage() {
 
   const formConfig: IndependentFormPageConfig = {
     title: taskId ? '编辑任务' : '创建任务',
-    description: '填写任务内容、经验奖励、参与范围和截止时间。任务模板图片可使用素材上传页返回的素材 ID。',
+    description: '填写任务内容、奖励、负责人和参与范围；可直接上传任务模板图片。',
     fields: baseDefinition.fields,
     values: baseDefinition.values,
     backTarget: '/tasks',
@@ -37,7 +37,7 @@ export function TaskEditFormPage() {
       )
       return input
         ? { ok: true, input }
-        : { ok: false, errors: { form: '请检查必填项、时间顺序、标识和字段格式' } }
+        : { ok: false, errors: { form: taskValidationMessage(values) } }
     },
   }
 

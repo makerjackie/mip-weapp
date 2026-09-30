@@ -534,6 +534,12 @@ function createAdminAccessRepository(database, options) {
       clauses.push('a.resource_type = ?')
       params.push(filters.resourceType)
     }
+    const query = typeof filters.query === 'string' ? filters.query.trim().slice(0, 160) : ''
+    if (query) {
+      const pattern = `%${escapeLike(query)}%`
+      clauses.push('(a.action LIKE ? OR a.resource_type LIKE ? OR a.resource_id LIKE ? OR p.nickname LIKE ?)')
+      params.push(pattern, pattern, pattern, pattern)
+    }
     const cursorWhere = cursorPredicateFor('a.created_at', cursor, 'createdAt', 'a.id')
     const rows = await database.query(
       `SELECT a.id, a.actor_user_id, p.nickname AS actor_nickname, a.scope_type,

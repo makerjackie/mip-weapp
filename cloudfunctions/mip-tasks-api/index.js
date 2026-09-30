@@ -1,6 +1,7 @@
 'use strict'
 
 const cloud = require('wx-server-sdk')
+const { createWechatTextChecker } = require('./lib/wechat-content-checker')
 const { createContentSafety } = require('./domain/content-safety')
 const { createHandler } = require('./domain/handler')
 const { createTaskRepository } = require('./domain/repository')
@@ -20,7 +21,12 @@ const allowedAppIds = new Set(
   String(process.env.MIP_ALLOWED_APP_IDS || '').split(',').map(value => value.trim()).filter(Boolean),
 )
 const database = mysqlDatabase()
-const service = createTaskService(createTaskRepository(database), createContentSafety(cloud))
+const service = createTaskService(createTaskRepository(database), createContentSafety(cloud, {
+  appId: process.env.MIP_WECHAT_APP_ID,
+  checker: process.env.MIP_WECHAT_APP_ID && process.env.MIP_WECHAT_APP_SECRET
+    ? createWechatTextChecker({ appId: process.env.MIP_WECHAT_APP_ID, appSecret: process.env.MIP_WECHAT_APP_SECRET })
+    : null,
+}))
 const outboxMutationActions = new Set([
   'completeTask',
   'admin.approveSubmission',
