@@ -1,0 +1,21 @@
+{
+  "browser": "Chrome",
+  "origin": "https://cloud1-d2gm0vloa9e1b4f31-1429274561.ap-shanghai.app.tcloudbase.com",
+  "route": "/#/overview",
+  "title": "MIP 运营管理",
+  "entry": "/assets/index-Cc5-tcUT.js",
+  "loginDialogVisible": true,
+  "viewport": {
+    "width": 1535,
+    "height": 932
+  },
+  "horizontalOverflow": false,
+  "consoleErrorsAndWarnings": [],
+  "limitations": [
+    "Browser renders the public login dialog; no browser login credentials entered.",
+    "Authenticated login, modules and logout verified separately by real public HTTPS requests.",
+    "Not a complete browser write-flow or all-role acceptance."
+  ],
+  "checkDate": "2026-09-30",
+  "recordedAt": "2026-09-30T10:12:23.536481+00:00"
+}

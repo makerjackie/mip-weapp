@@ -1,0 +1,22 @@
+{
+  "startedAt": "2026-09-30T10:05:56.888Z",
+  "sourceCommit": "fdc524f57c974bed7c45ea3881f9ddded42c0773",
+  "origin": "https://cloud1-d2gm0vloa9e1b4f31-1429274561.ap-shanghai.app.tcloudbase.com",
+  "method": "public HTTPS fetch",
+  "businessWrites": false,
+  "attempts": [
+    {
+      "attempt": 1,
+      "at": "2026-09-30T10:05:56.897Z",
+      "httpStatus": 200,
+      "elapsedMs": 2289,
+      "entryMatches": true,
+      "htmlMatches": true,
+      "entryStatus": 200,
+      "entryHashMatches": true,
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "completedAt": "2026-09-30T10:06:00.490Z"
+}

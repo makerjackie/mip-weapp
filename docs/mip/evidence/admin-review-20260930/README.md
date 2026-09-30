@@ -28,8 +28,10 @@
 - [发布回读](release.public.json)：现有 `mip-admin-web-api` 已更新，入口为 `index-Cc5-tcUT.js`。普通 COS 发布在上传前遇到 TLS ECONNRESET；改用 SCF `UpdateFunctionCode` 的内联 ZipFile 发布同一构建包，并将本应用的 `/` 路由切换到既有 BFF 静态处理器（仓库已有备用实现）。`/api`、`/assets` 及其他应用路由保留，函数环境、运行时、VPC、角色、内存、公网、权限和 trigger 回读未改变；未部署业务管理 API、改数据库或改 DNS。
 - [14 个静态文件回读](function-static-readback.public.json)：通过已鉴权 SCF 控制接口调用部署后的静态处理器，全部与本地字节哈希一致。这证明新构建已进入云函数，不是 COS 静态存储上传证明或公开 HTTPS 证明。
 - [首轮部署后检查](function-runtime-first.public.json) 12/14，密码登录一次 503；[重跑](function-runtime.public.json) 66/66、14 读模块，涵盖来源拒绝、错误密码、真实登录、安全 cookie、非空读取、退出及旧 cookie 拒绝，均通过 SCF 调用通道。第一轮失败保留；不凭重试成功确认冷启动根因。
-- **公开 HTTPS 复验仍为 BLOCKED**：本机直连、HTTP/SOCKS 代理和浏览器均失败；Chrome 显示 `ERR_CONNECTION_CLOSED`，最终入口/JS 请求为 ECONNRESET 或连接超时。上传和路由控制面已完成，但本次不能声称新版本已完成公开浏览器验收。前述 9 月 29 日及本次部署前 HTTPS 成功证据有各自日期，不替代此次结果。
-- 当前 `/` 为临时 BFF 静态备用路由；静态存储内仍是旧构建。网络恢复后先用现有静态发布脚本上传新构建并逐文件回读，再用现有 BFF 部署脚本恢复 `/mip-admin-console` 的 STATIC_STORE 根路由，最后重跑公开 HTTPS 检查；不得只恢复根路由，否则会读取旧 HTML。不要为解决本机网络故障开通付费加速或改共享全局托管配置。
+- **公开 HTTPS 阻塞已解除（北京时间 9 月 30 日 18 时）**：[公开入口回读](public-retry.public.json)首次重试返回 200，HTML 与新版 JS 哈希均匹配；[浏览器检查](public-browser.public.json)显示真正公开入口的登录弹窗、正确入口文件，没有横向溢出或控制台警告/错误。先前 ERR_CONNECTION_CLOSED、ECONNRESET 和连接超时保留在发布 JSON 的历史字段，不推断为冷启动。
+- [公开 HTTPS 首轮](public-https-first.public.json) 65/66，任务完成列表一次 503；[第二轮](public-https-final.public.json) **66/66、14 读模块**，来源拒绝、错误密码、真实账号登录、安全 cookie、后台读取、退出及旧 cookie 拒绝全部通过。直接访问部署后的公开 HTTPS，未使用 SCF 替代或本地代理；不删除第一次失败，不用最终通过证明长期可用性或全部写入旅程。浏览器未输入 QA 凭证，登录后数据验证由 HTTPS 脚本完成。
+- [临时域名](public-domain.public.json) `https://mipadmin.01mvp.com/` 仍为 302，跳转至正确的 CloudBase 入口。没有重新部署、改变密码或写入业务数据；本次只补验收证据。
+- 当前 `/` 为临时 BFF 静态备用路由；静态存储内仍是旧构建。后续若恢复独立静态托管，先用现有静态发布脚本上传新构建并逐文件回读，再用现有 BFF 部署脚本恢复 `/mip-admin-console` 的 STATIC_STORE 根路由，最后重跑公开 HTTPS 检查；不得只恢复根路由，否则会读取旧 HTML。不要为解决本机网络故障开通付费加速或改共享全局托管配置。
 
 ## 用户复验建议
 
