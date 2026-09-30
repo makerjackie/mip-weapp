@@ -472,7 +472,7 @@ async function loadAuditLogs(query: AdminListQuery, request: AdminRequest): Prom
         actor: valueOf(item, 'actorNickname', 'actorName') || '—',
         role: label(valueOf(item, 'effectiveRole', 'actorRoleKey')) || '—',
         scope: valueOf(item, 'scopeName') || label(valueOf(item, 'scopeType')) || '—',
-        action: valueOf(item, 'action'),
+        action: auditActionLabel(valueOf(item, 'action')),
         resource: label(valueOf(item, 'resourceType')),
         resourceId: valueOf(item, 'resourceId') || '—',
         createdAt: formatDateTime(item.createdAt),

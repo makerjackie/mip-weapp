@@ -188,7 +188,7 @@ export function auditActionLabel(value: unknown) {
   const key = String(value || '')
   const parts = key.replace(/^admin\./, '').split('.').filter(Boolean)
   const tokens: Record<string, string> = {
-    badge: '勋章', cards: '名片', history: '历史', profile_edit: '编辑资料', user_content: '用户内容',
+    session: '登录会话', badge: '勋章', cards: '名片', history: '历史', profile_edit: '编辑资料', user_content: '用户内容',
     roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '服务器',
     events: '活动', orders: '订单', refunds: '退款', messages: '消息', knowledge: '知识库', audit: '审计',
     grant: '授权', revoke: '撤销', create: '创建', update: '更新', save: '保存', publish: '发布',
