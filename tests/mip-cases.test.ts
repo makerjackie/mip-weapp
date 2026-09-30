@@ -1,6 +1,7 @@
+import type { SuperCaseDraft } from '../src/modules/mip-cases/types'
 import fs from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { normalizeSuperCaseDraft } from '../src/modules/mip-cases/validation'
+import { collectMissingProjectFields, normalizeSuperCaseDraft } from '../src/modules/mip-cases/validation'
 
 describe('MIP super case contracts', () => {
   it('shows complete case media and opens the native image preview', () => {
@@ -26,13 +27,70 @@ describe('MIP super case contracts', () => {
       responsibility: '负责策略和项目统筹',
       cityTagId: 'city-1',
       industryTagId: 'industry-1',
+      region: '总部在深圳，2026 大湾区扩张中',
       caseType: '品牌升级',
       description: '项目按计划完成并交付。',
       mediaAssetIds: ['asset-1', 'asset-1', 'asset-2'],
       publish: true,
+      projects: [],
     })
     expect(normalized.mediaAssetIds).toEqual(['asset-1', 'asset-2'])
     expect(normalized.startedOn).toBe('2026-01-01')
+    // 兼容镜像：无 projects 时旧的扁平字段包装为第 1 个项目。
+    expect(normalized.projects).toHaveLength(1)
+    expect(normalized.projects[0]).toMatchObject({
+      projectName: '品牌升级项目',
+      cityTagId: 'city-1',
+      region: '总部在深圳，2026 大湾区扩张中',
+      caseType: '品牌升级',
+    })
+    expect(normalized.projectName).toBe('品牌升级项目')
+  })
+
+  it('keeps submitted projects and mirrors the first one into legacy flat fields', () => {
+    const normalized = normalizeSuperCaseDraft({
+      projectName: '',
+      summary: '',
+      responsibility: '',
+      description: '',
+      mediaAssetIds: [],
+      publish: false,
+      projects: [
+        {
+          projectName: '项目A',
+          summary: '描述A',
+          startedOn: '2026-01-01',
+          responsibility: '职责A',
+          cityTagId: 'city-1',
+          region: '深圳',
+          caseType: '品牌升级',
+          description: '说明A',
+        },
+        { projectName: '项目B', summary: '描述B', responsibility: '职责B', description: '' },
+      ],
+    })
+    expect(normalized.projects).toHaveLength(2)
+    expect(normalized.projects[1].projectName).toBe('项目B')
+    expect(normalized.projectName).toBe('项目A')
+    expect(normalized.summary).toBe('描述A')
+    expect(normalized.cityTagId).toBe('city-1')
+  })
+
+  it('blocks publish with missing required fields but keeps drafts allowed', () => {
+    const partial = {
+      projectName: '',
+      summary: '',
+      responsibility: '',
+      description: '',
+      mediaAssetIds: [],
+      projects: [
+        { projectName: '项目A', summary: '描述A', responsibility: '职责A', description: '' },
+      ] as SuperCaseDraft['projects'],
+    }
+    expect(normalizeSuperCaseDraft({ ...partial, publish: false }).projects).toHaveLength(1)
+    expect(() => normalizeSuperCaseDraft({ ...partial, publish: true })).toThrow('请完整填写案例项目必填项')
+    const missing = collectMissingProjectFields(partial.projects)
+    expect(missing).toEqual(['请填写开始时间', '请填写主营城市', '请填写主营地区', '请填写项目类型'])
   })
 
   it('rejects a reversed date range', () => {
@@ -45,6 +103,7 @@ describe('MIP super case contracts', () => {
       description: '项目详细说明',
       mediaAssetIds: [],
       publish: false,
+      projects: [],
     })).toThrow('结束日期不能早于开始日期')
   })
 })

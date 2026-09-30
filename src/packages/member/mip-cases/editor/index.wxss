@@ -18,9 +18,15 @@
   gap: 32rpx;
 }
 
+.case-editor-form-layout {
+  gap: 32rpx;
+}
+
 .case-editor-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
   overflow: hidden;
-  background: var(--color-panel);
   border-radius: 16rpx;
 }
 
@@ -35,11 +41,6 @@
   min-height: 92rpx;
   padding: 0 24rpx;
   background: var(--color-panel);
-  border-bottom: 1rpx solid var(--color-line);
-}
-
-.case-editor-field-row--last {
-  border-bottom: 0;
 }
 
 .case-editor-field-row--action {

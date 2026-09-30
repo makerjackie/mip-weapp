@@ -5,48 +5,27 @@
   </view>
   <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法查看案例" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
 
-  <!-- figma 2037_12261 / 1987_30162 超级案例详情：黄色 hero 卡(整体烘焙) + 连续信息行 +
-       展开讲讲面板。生产保持下方卡片详情布局(被 mip-case-detail 测试 pin)。
-       fixture figmaLayout 打开时按稿渲染。ref 页含 88px 导航,impl y = ref y - 88。 -->
-  <block wx:elif="{{figmaLayout}}">
-    <view class="-mx-3 -mt-3 relative min-h-[1352rpx]">
-      <image class="absolute left-[24rpx] top-[24rpx] h-[298rpx] w-[702rpx] rounded-[16rpx]" src="/packages/member/assets/figma/cases/case-hero.webp" />
-      <view wx:for="{{figma.rows}}" wx:key="label" class="absolute left-[24rpx] flex h-[92rpx] w-[702rpx] items-center justify-between bg-panel px-[24rpx] {{index === 0 ? 'rounded-t-[16rpx]' : ''}}" style="top:{{item.topRpx}}rpx">
-        <text class="text-[24rpx] leading-[33.6rpx] text-muted">{{item.label}}</text>
-        <text class="text-[28rpx] font-medium leading-[33.6rpx] text-ink">{{item.value}}</text>
-      </view>
-      <view class="absolute left-[24rpx] flex h-[338rpx] w-[702rpx] flex-col rounded-b-[16rpx] bg-panel px-[24rpx]" style="top:{{figma.panelTopRpx}}rpx;padding-top:{{figma.panelPadTopRpx}}rpx;gap:{{figma.panelGapRpx}}rpx">
-        <text class="text-right text-[24rpx] leading-[33.6rpx] text-muted">展开讲讲</text>
-        <text class="whitespace-pre-wrap text-justify text-[28rpx] leading-[39.2rpx] text-ink">{{figma.desc}}</text>
-      </view>
-      <view wx:if="{{figma.actionLabel}}" class="absolute left-3 right-3 flex h-[108rpx] items-center rounded-full bg-brand-dim px-[24rpx] py-[16rpx]" style="top:{{figma.actionTopRpx}}rpx">
-        <view class="flex h-[76rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand text-[28rpx] font-medium leading-[39.2rpx] text-on-brand">{{figma.actionLabel}}</view>
-      </view>
-    </view>
-  </block>
   <view wx:elif="{{state === 'ready' && !item}}">
-    <!-- figmaEmpty:1987_30475 空数据图标稿内为全屏居中 3D 问号(整体烘焙,底色与页面同为 #080808 可无缝贴合)。
-         生产保持 mip-empty-state 卡片式空态。ref 页含 88px 导航,impl y = ref y - 88。 -->
-    <block wx:if="{{figmaEmpty}}">
-      <view class="-mx-3 -mt-3 relative min-h-[1376rpx] overflow-hidden">
-        <image class="absolute left-[267rpx] top-[307rpx] h-[196rpx] w-[222rpx]" src="/packages/member/assets/figma/cases/empty-3d.webp" />
-        <text class="absolute left-0 top-[588rpx] w-full text-center text-[30rpx] leading-[42rpx] text-ink">页面不在MIP星球</text>
-      </view>
-    </block>
-    <block wx:else><mip-empty-state title="案例不存在" description="当前案例可能已删除或下架。" /><app-page-exit /></block>
+    <mip-empty-state title="案例不存在" description="当前案例可能已删除或下架。" /><app-page-exit />
   </view>
+  <!-- figma 2037_12261 超级案例详情：固定黄色 hero 封面 + 每个项目一块信息面板
+       (字段行 + 展开讲讲)，多项目按顺序追加；素材、发布人与操作保持契约能力。 -->
   <block wx:elif="{{item}}">
     <view class="flex h-[300rpx] items-center justify-center overflow-hidden rounded-[16rpx] bg-brand">
       <image class="h-full w-full" src="{{item.coverUrl}}" mode="aspectFill" />
     </view>
-    <view class="mt-3 overflow-hidden rounded-[16rpx] bg-panel px-3 py-3">
-      <view class="grid min-h-[80rpx] grid-cols-[128rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[22rpx] text-muted">项目名称</view><view class="min-w-0 text-right text-[28rpx] leading-6">{{item.projectName}}</view></view>
-      <view class="grid min-h-[80rpx] grid-cols-[128rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[22rpx] text-muted">一句话说明</view><view class="min-w-0 text-right text-[28rpx] leading-6">{{item.summary}}</view></view>
-      <view class="grid min-h-[80rpx] grid-cols-[128rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[22rpx] text-muted">项目时间</view><view class="min-w-0 text-right text-[28rpx] leading-6">{{item.periodText}}</view></view>
-      <view class="grid min-h-[80rpx] grid-cols-[128rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[22rpx] text-muted">负责内容</view><view class="min-w-0 whitespace-pre-wrap text-right text-[28rpx] leading-6">{{item.responsibility || '未填写'}}</view></view>
-      <view class="grid min-h-[80rpx] grid-cols-[128rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[22rpx] text-muted">项目城市</view><view class="min-w-0 text-right text-[28rpx] leading-6">{{item.cityLabel || '未填写'}}</view></view>
-      <view class="grid min-h-[80rpx] grid-cols-[128rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[22rpx] text-muted">项目类型</view><view class="min-w-0 text-right text-[28rpx] leading-6">{{item.classificationText}}</view></view>
-      <view class="border-t border-line pt-4"><view class="text-[22rpx] text-muted">展开讲讲</view><view class="mt-3 whitespace-pre-wrap text-[24rpx] leading-7">{{item.description}}</view></view>
+    <view class="mt-3 flex flex-col gap-3">
+      <view wx:for="{{item.projects}}" wx:for-item="project" wx:for-index="projectIndex" wx:key="projectIndex" class="overflow-hidden rounded-[16rpx] bg-panel px-3 py-3">
+        <view wx:if="{{item.projects.length > 1}}" class="flex min-h-[64rpx] items-center"><text class="text-[28rpx] font-medium text-brand">项目 {{projectIndex + 1}}</text></view>
+        <view class="grid min-h-[80rpx] grid-cols-[176rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[24rpx] leading-[33.6rpx] text-muted">项目名称</view><view class="min-w-0 text-right text-[28rpx] font-medium leading-[39.2rpx]">{{project.projectName || '未填写'}}</view></view>
+        <view class="grid min-h-[80rpx] grid-cols-[176rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[24rpx] leading-[33.6rpx] text-muted">一句话描述案例</view><view class="min-w-0 text-right text-[28rpx] font-medium leading-[39.2rpx]">{{project.summary || '未填写'}}</view></view>
+        <view class="grid min-h-[80rpx] grid-cols-[176rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[24rpx] leading-[33.6rpx] text-muted">开始时间</view><view class="min-w-0 text-right text-[28rpx] font-medium leading-[39.2rpx]">{{project.startedOnText}}</view></view>
+        <view class="grid min-h-[80rpx] grid-cols-[176rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[24rpx] leading-[33.6rpx] text-muted">担任职责</view><view class="min-w-0 whitespace-pre-wrap text-right text-[28rpx] font-medium leading-[39.2rpx]">{{project.responsibility || '未填写'}}</view></view>
+        <view wx:if="{{project.cityLabel}}" class="grid min-h-[80rpx] grid-cols-[176rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[24rpx] leading-[33.6rpx] text-muted">主营城市</view><view class="min-w-0 text-right text-[28rpx] font-medium leading-[39.2rpx]">{{project.cityLabel}}</view></view>
+        <view wx:if="{{project.region}}" class="grid min-h-[80rpx] grid-cols-[176rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[24rpx] leading-[33.6rpx] text-muted">主营地区</view><view class="min-w-0 text-right text-[28rpx] font-medium leading-[39.2rpx]">{{project.region}}</view></view>
+        <view wx:if="{{project.caseType}}" class="grid min-h-[80rpx] grid-cols-[176rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[24rpx] leading-[33.6rpx] text-muted">项目类型</view><view class="min-w-0 text-right text-[28rpx] font-medium leading-[39.2rpx]">{{project.caseType}}</view></view>
+        <view wx:if="{{project.description}}" class="mt-1 border-t border-line pt-4"><view class="text-[24rpx] leading-[33.6rpx] text-muted">展开讲讲</view><view class="mt-3 whitespace-pre-wrap text-[26rpx] leading-[39.2rpx]">{{project.description}}</view></view>
+      </view>
     </view>
     <view wx:if="{{item.media.length}}" class="mt-3 flex flex-col gap-3">
       <view wx:for="{{item.media}}" wx:key="url" class="overflow-hidden rounded-[16rpx] bg-panel"><image class="w-full bg-panel" src="{{item.url}}" mode="widthFix" data-url="{{item.url}}" bind:tap="previewImage" /><view wx:if="{{item.caption}}" class="px-3 py-3 text-[22rpx] leading-6 text-muted">{{item.caption}}</view></view>

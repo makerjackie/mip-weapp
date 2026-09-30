@@ -32,38 +32,105 @@ function dateValue(value) {
   return result
 }
 
-function normalizeDraft(value = {}) {
-  const startedOn = dateValue(value.startedOn)
-  const endedOn = dateValue(value.endedOn)
-  if (startedOn && endedOn && endedOn < startedOn) throw new Error('VALIDATION_FAILED')
+// 一个超级案例可包含 1..12 个项目（figma 2173_42605「添加项目」整组追加）。
+// 展开讲讲是设计稿唯一选填字段；发布时其余项目字段必填，草稿允许留空。
+const MAX_PROJECTS = 12
+const MAX_PROJECT_DESCRIPTION = 300
+
+function optionalText(value, maximum) {
+  return stringValue(value, maximum, 'VALIDATION_FAILED', false) || ''
+}
+
+function normalizeProject(value = {}, publish) {
   const cityTagId = stringValue(value.cityTagId, 36, 'VALIDATION_FAILED', false) || null
-  const industryTagId = stringValue(value.industryTagId, 36, 'VALIDATION_FAILED', false) || null
-  const coverAssetId = stringValue(value.coverAssetId, 36, 'VALIDATION_FAILED', false) || null
-  if ([cityTagId, industryTagId, coverAssetId].some(id => id && !uuid(id))) {
+  if (cityTagId && !uuid(cityTagId)) throw new Error('VALIDATION_FAILED')
+  const startedOn = dateValue(value.startedOn)
+  const projectName = optionalText(value.projectName, 120)
+  const summary = optionalText(value.summary, 240)
+  const responsibility = optionalText(value.responsibility, 500)
+  const region = optionalText(value.region, 120)
+  const caseType = optionalText(value.caseType, 80)
+  const description = optionalText(value.description, MAX_PROJECT_DESCRIPTION)
+  if (publish && [projectName, summary, startedOn, responsibility, cityTagId, region, caseType]
+    .some(field => !field)) {
     throw new Error('VALIDATION_FAILED')
   }
   return {
+    projectName,
+    summary,
+    startedOn,
+    responsibility,
+    cityTagId,
+    ...(region ? { region } : {}),
+    ...(caseType ? { caseType } : {}),
+    description,
+  }
+}
+
+function normalizeProjects(value, publish) {
+  const rawProjects = Array.isArray(value.projects) && value.projects.length
+    ? value.projects
+    : [{
+        projectName: value.projectName,
+        summary: value.summary,
+        startedOn: value.startedOn,
+        responsibility: value.responsibility,
+        cityTagId: value.cityTagId,
+        region: value.region,
+        caseType: value.caseType,
+        description: value.description,
+      }]
+  if (rawProjects.length > MAX_PROJECTS) throw new Error('VALIDATION_FAILED')
+  return rawProjects.map(project => normalizeProject(project, publish))
+}
+
+function parseStoredProjects(value) {
+  if (!value) return []
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value
+    return Array.isArray(parsed) ? parsed : []
+  }
+  catch {
+    return []
+  }
+}
+
+function normalizeDraft(value = {}) {
+  const publish = Boolean(value.publish)
+  const endedOn = dateValue(value.endedOn)
+  const industryTagId = stringValue(value.industryTagId, 36, 'VALIDATION_FAILED', false) || null
+  const coverAssetId = stringValue(value.coverAssetId, 36, 'VALIDATION_FAILED', false) || null
+  if ([industryTagId, coverAssetId].some(id => id && !uuid(id))) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  const legacyFlatOnly = !(Array.isArray(value.projects) && value.projects.length)
+  const projects = normalizeProjects(value, publish)
+  const [first] = projects
+  if (first.startedOn && endedOn && endedOn < first.startedOn) throw new Error('VALIDATION_FAILED')
+  return {
     id: value.id && uuid(value.id) ? value.id : null,
     expectedVersion: value.expectedVersion === undefined ? null : Number(value.expectedVersion),
-    projectName: stringValue(value.projectName, 120, 'VALIDATION_FAILED'),
-    summary: stringValue(value.summary, 240, 'VALIDATION_FAILED'),
-    startedOn,
+    projectName: first.projectName,
+    summary: first.summary,
+    startedOn: first.startedOn,
     endedOn,
-    responsibility: stringValue(value.responsibility, 500, 'VALIDATION_FAILED'),
-    cityTagId,
+    responsibility: first.responsibility,
+    cityTagId: first.cityTagId,
     industryTagId,
-    caseType: stringValue(value.caseType, 80, 'VALIDATION_FAILED', false) || null,
-    description: stringValue(value.description, 8000, 'VALIDATION_FAILED'),
+    caseType: first.caseType || null,
+    description: first.description,
+    projects,
+    legacyFlatOnly,
     coverAssetId,
     mediaAssetIds: stringList(value.mediaAssetIds, 12, 'VALIDATION_FAILED', uuid),
-    publish: Boolean(value.publish),
+    publish,
   }
 }
 
 const caseSelect = `
   SELECT c.id, c.owner_user_id, c.project_name, c.summary, c.started_on,
          c.ended_on, c.responsibility, c.city_tag_id, c.industry_tag_id,
-         c.case_type, c.description, c.cover_asset_id, c.status, c.version, c.published_at, c.updated_at,
+         c.case_type, c.description, c.projects, c.cover_asset_id, c.status, c.version, c.published_at, c.updated_at,
          city.label AS city_label, industry.label AS industry_label,
          cover.cloud_file_id AS cover_file_id,
          p.nickname, p.headline, p.visibility_json, avatar.cloud_file_id AS avatar_file_id
@@ -106,6 +173,41 @@ function summary(row, caller) {
     mine,
     ...(mine ? { version: Number(row.version) } : {}),
   }
+}
+
+// 详情项目块：优先使用存储的 projects JSON；缺失时回退顶层镜像列，包装成单项目。
+async function projectViews(database, appId, stored, row) {
+  const projects = stored.length
+    ? stored
+    : [{
+        projectName: row.project_name,
+        summary: row.summary,
+        startedOn: dateText(row.started_on),
+        responsibility: row.responsibility,
+        cityTagId: row.city_tag_id,
+        caseType: row.case_type || undefined,
+        description: row.description,
+      }]
+  const cityIds = [...new Set(projects.map(project => project.cityTagId).filter(Boolean))]
+  const cityLabels = new Map()
+  if (cityIds.length) {
+    const rows = await database.query(
+      `SELECT id, label FROM mip_tags
+       WHERE app_id = ? AND id IN (${cityIds.map(() => '?').join(', ')})`,
+      [appId, ...cityIds],
+    )
+    for (const item of rows) cityLabels.set(item.id, item.label)
+  }
+  return projects.map(project => ({
+    projectName: project.projectName || '',
+    summary: project.summary || '',
+    startedOn: dateText(project.startedOn),
+    responsibility: project.responsibility || '',
+    cityLabel: cityLabels.get(project.cityTagId) || undefined,
+    region: project.region || undefined,
+    caseType: project.caseType || undefined,
+    description: project.description || '',
+  }))
 }
 
 async function listSuperCases(database, caller, input = {}) {
@@ -191,11 +293,13 @@ async function getSuperCase(database, caller, id) {
     )
     interestActive = interest?.status === 'ACTIVE'
   }
+  const projects = await projectViews(database, caller.appId, parseStoredProjects(row.projects), row)
   return {
     ...summary(row, caller),
     startedOn: dateText(row.started_on),
     endedOn: dateText(row.ended_on),
     description: row.description,
+    projects,
     media: media.map(item => ({ url: item.cloud_file_id, caption: item.caption || undefined })),
     coverAssetId: mine ? (row.cover_asset_id || undefined) : undefined,
     mediaAssetIds: mine ? media.map(item => item.media_asset_id) : undefined,
@@ -207,7 +311,8 @@ async function getSuperCase(database, caller, id) {
 
 async function assertReferences(tx, caller, draft) {
   const tagPairs = [
-    ...(draft.cityTagId ? [[draft.cityTagId, 'CITY']] : []),
+    ...draft.projects.map(project => project.cityTagId).filter(Boolean)
+      .map(id => [id, 'CITY']),
     ...(draft.industryTagId ? [[draft.industryTagId, 'INDUSTRY']] : []),
   ]
   if (tagPairs.length) {
@@ -240,13 +345,14 @@ async function assertReferences(tx, caller, draft) {
 async function saveSuperCase(database, contentSafety, caller, input) {
   const draft = normalizeDraft(input.draft)
   const aiConfirmation = normalizeAiConfirmation(input.aiConfirmation, 'SUPER_CASE')
-  await contentSafety.assertSafe(caller, [
-    draft.projectName,
-    draft.summary,
-    draft.responsibility,
-    draft.caseType,
-    draft.description,
-  ])
+  await contentSafety.assertSafe(caller, draft.projects.flatMap(project => [
+    project.projectName,
+    project.summary,
+    project.responsibility,
+    project.region,
+    project.caseType,
+    project.description,
+  ]).filter(Boolean))
   return idempotentTransaction(database, {
     appId: caller.appId,
     userId: caller.userId,
@@ -260,7 +366,7 @@ async function saveSuperCase(database, contentSafety, caller, input) {
     let existing = null
     if (draft.id) {
       existing = await tx.one(
-        `SELECT owner_user_id, status, version, published_at FROM mip_super_cases
+        `SELECT owner_user_id, status, version, published_at, projects FROM mip_super_cases
          WHERE app_id = ? AND id = ? FOR UPDATE`,
         [caller.appId, draft.id],
       )
@@ -269,23 +375,29 @@ async function saveSuperCase(database, contentSafety, caller, input) {
       if (existing.status === 'ARCHIVED') throw new Error('FORBIDDEN')
       if (Number(existing.version) !== draft.expectedVersion) throw new Error('CONFLICT')
     }
+    // 旧客户端/管理端只提交平铺字段时，平铺值映射为第一个项目，保留已存的其余项目。
+    const projects = draft.legacyFlatOnly && existing
+      ? [draft.projects[0], ...parseStoredProjects(existing.projects).slice(1)]
+      : draft.projects
+    const [mirror] = projects
     const status = draft.publish
       ? 'PUBLISHED'
       : (['PUBLISHED', 'UNPUBLISHED'].includes(existing?.status) ? existing.status : 'DRAFT')
     const published = status === 'PUBLISHED'
+    const projectsJson = JSON.stringify(projects)
     if (existing) {
       await tx.query(
         `UPDATE mip_super_cases
          SET project_name = ?, summary = ?, started_on = ?, ended_on = ?,
              responsibility = ?, city_tag_id = ?, industry_tag_id = ?, case_type = ?,
-             description = ?, cover_asset_id = ?, status = ?, content_safety_status = 'APPROVED',
+             description = ?, projects = ?, cover_asset_id = ?, status = ?, content_safety_status = 'APPROVED',
              published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, UTC_TIMESTAMP(3)) ELSE published_at END,
              version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
         [
-          draft.projectName, draft.summary, draft.startedOn, draft.endedOn,
-          draft.responsibility, draft.cityTagId, draft.industryTagId, draft.caseType,
-          draft.description, draft.coverAssetId, status, published ? 1 : 0,
+          mirror.projectName, mirror.summary, mirror.startedOn, draft.endedOn,
+          mirror.responsibility, mirror.cityTagId, draft.industryTagId, mirror.caseType,
+          mirror.description, projectsJson, draft.coverAssetId, status, published ? 1 : 0,
           caller.appId, id, draft.expectedVersion,
         ],
       )
@@ -294,14 +406,15 @@ async function saveSuperCase(database, contentSafety, caller, input) {
       await tx.query(
         `INSERT INTO mip_super_cases (
            id, app_id, owner_user_id, project_name, summary, started_on, ended_on,
-           responsibility, city_tag_id, industry_tag_id, case_type, description,
+           responsibility, city_tag_id, industry_tag_id, case_type, description, projects,
            cover_asset_id, status, content_safety_status, published_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'APPROVED',
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'APPROVED',
            CASE WHEN ? = 1 THEN UTC_TIMESTAMP(3) ELSE NULL END)`,
         [
-          id, caller.appId, caller.userId, draft.projectName, draft.summary,
-          draft.startedOn, draft.endedOn, draft.responsibility, draft.cityTagId,
-          draft.industryTagId, draft.caseType, draft.description, draft.coverAssetId,
+          id, caller.appId, caller.userId, mirror.projectName, mirror.summary,
+          mirror.startedOn, draft.endedOn, mirror.responsibility, mirror.cityTagId,
+          draft.industryTagId, mirror.caseType, mirror.description, projectsJson,
+          draft.coverAssetId,
           status, published ? 1 : 0,
         ],
       )
