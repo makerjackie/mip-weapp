@@ -13,5 +13,6 @@ export default icebreaker({
     'cloudfunctions/**',
     'dist/**',
     'docs/**',
+    '.notma/**',
   ],
 })

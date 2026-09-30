@@ -5,6 +5,7 @@
 Component({
   options: {
     virtualHost: false,
+    multipleSlots: true,
   },
   properties: {
     label: { type: String, value: '' },
