@@ -10,7 +10,8 @@
     "mip-tasks fixtures use design-ahead optional fields (purpose/completionStandard/attachmentHint/attachment) absent from the backend contract; production pages degrade via wx:if until the API adds them.",
     "Settings refs 1728_19083/1731_19189/1861_18278: 账号设置 renders on packages/member/privacy/index behind a figmaLayout fixture branch (production keeps 退出登录/账号注销 blocks pinned by account-closure tests). 1731_19189 is named 账号安全 but its body is a 用户使用协议 document -> user-agreement page, fixture-only placeholder copy. 1861_18278 隐私设置 has no route: in-page figmaPanel branch on privacy/index; 绑定手机/绑定微信/会员服务协议 rows and both toggles have no destination/backend yet.",
     "Guest refs 1732_19323/2622_34610/2622_34365/2629_34819/2632_35120 嘉宾 render on packages/member/mip-received/index GUEST behind a figmaLayout fixture branch (production keeps 总浏览量 + tabs + list pinned by mip-received-interactions tests). Badge PNGs (heart-line/heart-fill/endorse/endorse-light/emblem-dark/emblem-crimson) are baked from the ref renders; heart/endorse/clover counts and the Lv.23/tag/intro/inviter card fields are design-ahead — the backend listReceived GUEST DTO has none of them yet, so they are fixture-only until the contract grows.",
-    "超级案例族缺口: 2215_4618 选择城市 uses a native picker route that does not exist yet; 2083_3795 勋章-素材总览 is a Figma asset sheet (badge artwork), not an app screen — both excluded from scoring."
+    "超级案例族缺口: 2215_4618 选择城市 uses a native picker route that does not exist yet; 2083_3795 勋章-素材总览 is a Figma asset sheet (badge artwork), not an app screen — both excluded from scoring.",
+    "MIW-14: 编辑机会页按新终审帧 3359:6086「发布机会-编辑-最新」重排生产表单后，旧 1766_36864 还原参考与 figmaLayout fixture 一并移除（生产表单即设计版式，不再维护绝对定位 fixture）。"
   ],
   "screens": [
     {
@@ -4338,106 +4339,6 @@
                   "value": "快闪店成熟的渠道"
                 }
               ]
-            }
-          ]
-        }
-      }
-    },
-    {
-      "key": "opportunities-发布机会-编辑",
-      "route": "packages/member/mip-opportunities/editor/index",
-      "reference": "1766_36864_发布机会-编辑.html",
-      "crop": {
-        "topPx": 112,
-        "bottomPx": 0
-      },
-      "fixture": {
-        "state": "ready",
-        "figmaLayout": true,
-        "figma": {
-          "banner": "准确的描述可以更容易帮你找到合作机会",
-          "fields": [
-            {
-              "label": "项目名称",
-              "icon": "/packages/member/assets/figma/opportunities/edit-draft.svg",
-              "labelTopRpx": 312
-            },
-            {
-              "label": "价值金额",
-              "icon": "/assets/figma/opportunities/money-cny-circle.svg",
-              "labelTopRpx": 496
-            },
-            {
-              "label": "主营城市",
-              "icon": "/pixel-assets/figma/opportunities/icon-building.png",
-              "labelTopRpx": 680
-            },
-            {
-              "label": "主营地区（选填）",
-              "icon": "/assets/figma/opportunities/location.svg",
-              "labelTopRpx": 1042
-            },
-            {
-              "label": "寻找合作方",
-              "icon": "/pixel-assets/figma/opportunities/icon-heart-hands.png",
-              "labelTopRpx": 1230
-            }
-          ],
-          "inputs": [
-            {
-              "text": "请输入你的项目名称",
-              "topRpx": 380
-            },
-            {
-              "text": "请输入价值金额",
-              "topRpx": 564
-            },
-            {
-              "text": "示例：南山十亩地",
-              "topRpx": 1114
-            }
-          ],
-          "cities": [
-            {
-              "label": "深圳",
-              "active": true,
-              "leftRpx": 16,
-              "topRpx": 24
-            },
-            {
-              "label": "北京",
-              "leftRpx": 188,
-              "topRpx": 24
-            },
-            {
-              "label": "上海",
-              "leftRpx": 360,
-              "topRpx": 24
-            },
-            {
-              "label": "成都",
-              "leftRpx": 532,
-              "topRpx": 24
-            },
-            {
-              "label": "广州",
-              "leftRpx": 16,
-              "topRpx": 96
-            },
-            {
-              "label": "中国香港",
-              "leftRpx": 188,
-              "topRpx": 96
-            },
-            {
-              "label": "中国澳门",
-              "leftRpx": 360,
-              "topRpx": 96
-            },
-            {
-              "label": "海外",
-              "leftRpx": 532,
-              "topRpx": 96
             }
           ]
         }

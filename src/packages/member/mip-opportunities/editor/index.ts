@@ -15,7 +15,7 @@ import { chooseSingleImage } from '../../../../platform/wechat/image-upload'
 interface SelectOption { id: string, label: string, selected: boolean }
 interface IndustryGroupOption { id: string, label: string, options: SelectOption[] }
 interface RoleOption { key: CooperationRoleKey, name: string, selected: boolean }
-interface TypeOption { key: OpportunityTypeKey, label: string, selected: boolean }
+interface TypeOption { key: OpportunityTypeKey, label: string, hint: string, selected: boolean }
 interface TeamSelection { profileRef: string, nickname: string, avatarUrl?: string, headline?: string }
 interface TeamCandidate extends PublicPerson { selected: boolean }
 interface CityOption { id: string, label: string }
@@ -24,6 +24,33 @@ type OpportunityEditorMode = 'CREATE' | 'DRAFT' | 'PUBLISHED'
 type VisibilityChoice = 'PLATFORM' | 'INTERNAL'
 
 const cityPriority = ['深圳', '北京', '上海', '成都', '广州', '中国香港', '中国澳门', '海外']
+
+/** figma 3359:6086 机会类型行序：找企业 / 找伙伴 / 找资源（QZ1 三件套仍为多选）。 */
+const typeDisplayOrder: OpportunityTypeKey[] = ['COMPANY', 'PARTNER', 'RESOURCE']
+
+/** figma 3359:6086 各类型行的示例说明文案（设计稿原文，「找找」笔误已修）。 */
+const typeHints: Record<OpportunityTypeKey, string> = {
+  COMPANY: '我想签腾讯的营销年框',
+  RESOURCE: '我想和张凌赫吃顿饭',
+  PARTNER: '我想找一个AI技术合伙人',
+}
+
+function typeOptionViews(selectedKeys: Set<OpportunityTypeKey>) {
+  return typeDisplayOrder
+    .map((key) => {
+      const option = opportunityTypeOptions.find(item => item.key === key)
+      return option
+        ? { key: option.key, label: option.label, hint: typeHints[option.key], selected: selectedKeys.has(option.key) }
+        : undefined
+    })
+    .filter((item): item is TypeOption => Boolean(item))
+}
+
+/** 项目状态收起行的完整文案：状态名 + 终审说明（QZ2 文案单点取自 catalog）。 */
+function projectStatusTextOf(key: OpportunityProjectStatus) {
+  const option = opportunityProjectStatusOptions.find(item => item.key === key)
+  return option ? `${option.label}，${option.description}` : ''
+}
 
 function cityGridOptions(options: CityOption[], selectedId = '') {
   const order = new Map(cityPriority.map((label, index) => [label, index]))
@@ -96,9 +123,7 @@ Page({
     branchOptions: [{ id: '', name: 'MIP 平台', cityName: '全国' }],
     cityOptions: [{ id: '', label: '全国' }],
     cityGridOptions: [] as CityOption[],
-    /** journey-review J4-04 ④：粘贴识别改为输入区内嵌确认，不再弹预览层。 */
-    pasteText: '',
-    pasteNotice: '',
+    /** journey-review J4-04 ④：粘贴识别一键完成，就地填入不跳页。 */
     pasteRecognizing: false,
     aiDraftId: '',
     pasteAiDraftId: '' as AiDraftId | '',
@@ -107,10 +132,11 @@ Page({
     confirmedAiDraftVersion: 0,
     advancedOpen: false,
     roleOptions: cooperationRoles.map(item => ({ key: item.key, name: item.name, selected: false })) as RoleOption[],
-    /** journey-review QZ1：机会类型三件套（找企业/找资源/找伙伴），多选。 */
-    typeOptions: opportunityTypeOptions.map(item => ({ ...item, selected: false })) as TypeOption[],
+    /** journey-review QZ1：机会类型三件套（找企业/找伙伴/找资源），多选。 */
+    typeOptions: typeOptionViews(new Set()),
     /** journey-review QZ2：项目状态三态半屏（「下架项目」暂置灰，见 projectStatusOptionViews）。 */
     projectStatus: 'RECRUITING' as OpportunityProjectStatus,
+    projectStatusText: projectStatusTextOf('RECRUITING'),
     projectStatusOptions: projectStatusOptionViews('CREATE'),
     statusSheetVisible: false,
     industryGroups: [] as IndustryGroupOption[],
@@ -120,9 +146,6 @@ Page({
     teamKeyword: '',
     teamCandidates: [] as TeamCandidate[],
     teamLoading: false,
-    // figma 1766_36864 发布机会-编辑还原态开关，fixture 专用；
-    // 生产保持流式表单（opportunity-editor 测试 pin）。
-    figmaLayout: false,
   },
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
@@ -246,8 +269,9 @@ Page({
       coverUrl: detail?.coverUrl || '',
       version: detail?.version || 0,
       roleOptions: cooperationRoles.map(item => ({ key: item.key, name: item.name, selected: roleKeys.has(item.key) })),
-      typeOptions: opportunityTypeOptions.map(item => ({ ...item, selected: typeKeys.has(item.key) })),
+      typeOptions: typeOptionViews(typeKeys),
       projectStatus,
+      projectStatusText: projectStatusTextOf(projectStatus),
       industryGroups: catalog.industryGroups.map(group => ({
         id: group.id,
         label: group.label,
@@ -275,37 +299,27 @@ Page({
   },
 
   /**
-   * journey-review J4-04 ④：粘贴整段文字后输入区内出现「确认」小按钮，
-   * 点确认就地识别填入，不跳页、不再弹预览层（M1 00:49:25）。
+   * journey-review J4-04 ④（figma 3359:6086）：虚线卡「粘贴并识别」一键读取剪贴板，
+   * 结构化识别后就地填入，不跳页、不再弹预览层（M1 00:49:25）。
    */
-  updatePasteText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ pasteText: event.detail.value })
-  },
-
-  async readClipboardIntoPaste() {
+  async pasteAndRecognize() {
     if (this.data.pasteRecognizing) {
       return
     }
+    let source = ''
     try {
       const clipboard = await wx.getClipboardData()
-      const source = typeof clipboard.data === 'string' ? clipboard.data.trim() : ''
-      if (source) {
-        this.setData({ pasteText: source })
-        return
-      }
-      wx.showToast({ title: '剪贴板中没有文字', icon: 'none' })
+      source = typeof clipboard.data === 'string' ? clipboard.data.trim() : ''
     }
     catch {
-      this.setData({ message: '暂时无法读取剪贴板，可直接在输入框内粘贴。' })
-    }
-  },
-
-  async recognizePastedText() {
-    const source = this.data.pasteText.trim()
-    if (!source || this.data.pasteRecognizing) {
+      this.setData({ message: '暂时无法读取剪贴板，请复制文字后再试。' })
       return
     }
-    this.setData({ pasteRecognizing: true, message: '', pasteNotice: '' })
+    if (!source) {
+      wx.showToast({ title: '剪贴板中没有文字', icon: 'none' })
+      return
+    }
+    this.setData({ pasteRecognizing: true, message: '' })
     try {
       const aiDraft = await mipAiModule.createTextDraft({
         purpose: 'OPPORTUNITY',
@@ -321,14 +335,13 @@ Page({
         pasteAiDraftVersion: aiDraft.version,
         confirmedAiDraftId: aiDraft.id,
         confirmedAiDraftVersion: aiDraft.version,
-        pasteText: '',
-        pasteNotice: '已使用智能识别，请核对结果。',
       })
+      wx.showToast({ title: '已使用智能识别，请核对结果。', icon: 'none' })
     }
     catch {
       const parsed = parseOpportunityText(source, this.data.cityOptions)
       if (!parsed.recognizedFields.length) {
-        this.setData({ pasteNotice: '', message: '暂时无法识别这段内容，请手动填写。' })
+        this.setData({ message: '暂时无法识别这段内容，请手动填写。' })
         return
       }
       this.applyPastedDraft(parsed.draft)
@@ -337,9 +350,8 @@ Page({
         pasteAiDraftVersion: 0,
         confirmedAiDraftId: '',
         confirmedAiDraftVersion: 0,
-        pasteText: '',
-        pasteNotice: '智能识别暂时不可用，已使用基础识别，请重点核对。',
       })
+      wx.showToast({ title: '智能识别暂时不可用，已使用基础识别，请重点核对。', icon: 'none' })
     }
     finally {
       this.setData({ pasteRecognizing: false })
@@ -358,7 +370,6 @@ Page({
       ...(cityIndex >= 0 ? { cityTagId: draft.cityTagId, cityIndex } : {}),
       message: '',
     })
-    wx.showToast({ title: '已填入，请确认内容', icon: 'none' })
   },
 
   chooseScope(event: WechatMiniprogram.TouchEvent) {
@@ -469,7 +480,7 @@ Page({
     if (!option || option.disabled) {
       return
     }
-    this.setData({ projectStatus: key, statusSheetVisible: false })
+    this.setData({ projectStatus: key, projectStatusText: projectStatusTextOf(key), statusSheetVisible: false })
   },
 
   /** journey-review J4-04 ⑥：顶层可见范围两选项；分会发布保留在更多设置。 */
@@ -617,7 +628,7 @@ Page({
   publish() { void this.save(true) },
 
   validateRequiredFields() {
-    const titleError = this.data.title.trim() ? '' : '请输入项目名称。'
+    const titleError = this.data.title.trim() ? '' : '请输入机会名称。'
     const valueSummaryError = this.data.valueSummary.trim() ? '' : '请输入价值金额或价值说明。'
     const targetSummaryError = this.data.targetSummary.trim() ? '' : '请输入寻找合作方的说明。'
     const roleError = this.data.roleOptions.some(item => item.selected) ? '' : '请至少选择一种合作角色。'

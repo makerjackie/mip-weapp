@@ -167,7 +167,11 @@ describe('MIP opportunity Figma surfaces', () => {
   it('keeps the editor sequence and uses one standard primary bottom action', () => {
     expect(editor).toContain('准确的描述可以更容易帮你找到合作机会')
     expect(editor.indexOf('未选择时为全国')).toBe(-1)
-    expect(editor.indexOf('请选择主营城市')).toBeGreaterThan(0)
+    // figma 3359:6086：主营城市收起行文案与字段顺序对齐最新帧。
+    expect(editor.indexOf('哪些城市有这个机会')).toBeGreaterThan(0)
+    expect(editor.indexOf('机会类型')).toBeGreaterThan(0)
+    expect(editor.indexOf('id="opportunity-field-types"')).toBeLessThan(editor.indexOf('id="opportunity-field-title"'))
+    expect(editor.indexOf('id="opportunity-field-status"')).toBeLessThan(editor.indexOf('id="opportunity-field-visibility"'))
     expect(editor.indexOf('主营地区（选填）')).toBeGreaterThan(0)
     expect(editor.indexOf('项目封面（选填）')).toBeLessThan(editor.indexOf('更多设置'))
     expect(editor).toContain('wx:if="{{advancedOpen}}"')
@@ -178,7 +182,7 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(editor).toContain(`bind:tap="publish">{{editorMode === 'PUBLISHED' ? '保存修改' : '确认发布'}}</view>`)
     expect(editor).toContain('bind:tap="saveDraft"')
     expect(editor).toContain('bind:tap="publish"')
-    expect(editor).toContain('bind:tap="readClipboardIntoPaste"')
+    expect(editor).toContain('bind:tap="pasteAndRecognize"')
     expect(editor).toContain('bind:tap="openTeamPicker"')
   })
 
@@ -200,10 +204,11 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(editorScript).toContain('aiConfirmation: {')
     expect(editorScript).toContain('已使用智能识别，请核对结果。')
     expect(editorScript).toContain('智能识别暂时不可用，已使用基础识别，请重点核对。')
-    // journey-review J4-04 ④：确认为输入区内嵌按钮，识别后就地填入不跳页、不再弹预览层。
-    expect(editor).toContain('pasteRecognizing ? \'正在智能识别\' : \'粘贴整段文字，自动识别\'')
-    expect(editor).toContain('bindinput="updatePasteText"')
-    expect(editor).toContain('bind:tap="recognizePastedText">确认')
+    // journey-review J4-04 ④（figma 3359:6086）：「粘贴并识别」一键读剪贴板，
+    // 识别后就地填入不跳页、不再弹预览层，也没有独立输入区。
+    expect(editor).toContain('pasteRecognizing ? \'正在识别\' : \'粘贴并识别\'')
+    expect(editor).toContain('bind:tap="pasteAndRecognize"')
+    expect(editor).not.toContain('updatePasteText')
     expect(editorScript).toContain('applyPastedDraft(parsed.draft)')
     expect(editor).not.toContain('确认识别结果')
   })
