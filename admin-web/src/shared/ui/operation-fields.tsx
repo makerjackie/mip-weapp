@@ -1,6 +1,6 @@
 import { Checkbox, DatePicker, Form, Input, InputNumber, Select, type FormInstance } from 'antd'
 import dayjs from 'dayjs'
-import { cloneElement } from 'react'
+import { cloneElement, type KeyboardEvent } from 'react'
 import {
   DATE_KINDS,
   LINE_LIST_KINDS,
@@ -40,8 +40,12 @@ export function controlFor(field: OperationField, values?: OperationValues) {
   if (field.kind === 'textarea' || TEXTAREA_LIKE_KINDS.includes(field.kind)) {
     return <Input.TextArea rows={4} maxLength={field.maxLength} showCount={Boolean(field.maxLength)} />
   }
-  if (field.kind === 'datetime' || field.kind === 'datetime-local') return <DatePicker showTime className="field-full-width" />
-  if (field.kind === 'date') return <DatePicker className="field-full-width" />
+  // Enter confirms the picker value; its native default must not submit the surrounding form.
+  const confirmDateOnly = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter') event.preventDefault()
+  }
+  if (field.kind === 'datetime' || field.kind === 'datetime-local') return <DatePicker showTime onKeyDown={confirmDateOnly} className="field-full-width" />
+  if (field.kind === 'date') return <DatePicker onKeyDown={confirmDateOnly} className="field-full-width" />
   if (field.kind === 'number' || field.kind === 'integer') return <InputNumber className="field-full-width" />
   if (field.kind === 'money') return <InputNumber min={0} precision={field.valueScale === 1000000 ? 6 : 2} className="field-full-width" />
   if (field.kind === 'registration-schema') return <RegistrationSchemaEditor />

@@ -147,7 +147,9 @@ export async function createOperationModel(
   if (eventActions.has(action)) {
     const typedAction = action as AdminEventMutationAction
     const baseDefinition = createAdminEventMutationDefinition(typedAction, targetId, readField)
+    const event = record(detail?.source?.event)
     const launchVersion = trustedEventVersion(typedAction, launch)
+      ?? (typedAction === 'mip.admin.events.tags.replace' && event.id === targetId ? positiveInteger(event.version) : undefined)
     const definition = launchVersion === undefined
       ? baseDefinition
       : { ...baseDefinition, expectedVersion: launchVersion }
@@ -440,6 +442,11 @@ function prefillPeopleValues(action: AdminPeopleMutationAction, values: Operatio
 
 function prefillEventValues(action: AdminEventMutationAction, values: OperationValues, detail: AdminDetailView | null) {
   const next = { ...values }
+  if (action === 'mip.admin.events.tags.replace') {
+    const event = record(record(detail?.source).event)
+    next.tagIds = Array.isArray(event.tagIds) ? event.tagIds : []
+    return next
+  }
   if (action !== 'mip.admin.events.save') return next
   const event = record(record(detail?.source).event)
   for (const field of eventMutationConfig(action).fields) if (!field.hidden && event[field.key] !== undefined) next[field.key] = event[field.key]

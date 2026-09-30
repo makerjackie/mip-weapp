@@ -37,6 +37,18 @@ function mount(loadDetail: () => Promise<Record<string, unknown> | null>) {
 }
 
 describe('IndependentFormPage loaded-record submission', () => {
+  it('confirms dates with Enter without implicitly saving the whole record', async () => {
+    const dateConfig: IndependentFormPageConfig = { ...config,
+      fields: [...config.fields, { name: 'startsAt', label: '开始时间', kind: 'datetime', required: true }],
+      values: { ...config.values, startsAt: '2031-10-02T02:00:00.000Z' },
+    }
+    render(<QueryClientProvider client={new QueryClient()}><App><IndependentFormPage config={dateConfig} /></App></QueryClientProvider>)
+    expect(fireEvent.keyDown(screen.getByLabelText('开始时间'), { key: 'Enter', code: 'Enter' })).toBe(false)
+    expect(state.request).not.toHaveBeenCalled()
+    expect(state.navigate).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
+    await waitFor(() => expect(state.request).toHaveBeenCalledOnce())
+  })
   it('restores a private draft once, retains its version when saving, and shows success without a failure alert', async () => {
     const save = vi.fn().mockResolvedValue({ title: '再次编辑', _draftId: 'draft-1', _draftVersion: 5 })
     const draftConfig: IndependentFormPageConfig = { ...config, privateDraft: {

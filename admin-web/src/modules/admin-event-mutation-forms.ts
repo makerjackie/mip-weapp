@@ -189,9 +189,9 @@ const EVENT_MUTATION_CONFIGS = {
     title: '更新活动标签',
     description: '替换活动标签集合。标签标识由目录服务端校验。',
     fields: [
-      { key: 'eventId', label: '活动标识', kind: 'text', required: true },
-      { key: 'expectedVersion', label: '记录版本', kind: 'number', required: true },
-      { key: 'tagIds', label: '活动标签标识', kind: 'tags' },
+      { key: 'eventId', label: '活动标识', kind: 'text', required: true, hidden: true },
+      { key: 'expectedVersion', label: '记录版本', kind: 'number', required: true, hidden: true },
+      { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true } },
     ],
   },
   'mip.admin.events.catalog.save': {

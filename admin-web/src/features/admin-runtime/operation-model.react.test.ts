@@ -39,6 +39,15 @@ describe('admin operation model', () => {
     ],
   }
 
+  it('edits activity tags by catalog selection and retains the existing selection and trusted version', async () => {
+    const result = await createOperationModel('mip.admin.events.tags.replace', 'event-1', {
+      ...basicDetail, source: { event: { id: 'event-1', version: 4, tagIds: ['tag-1'] } },
+    }, {}, async <T>() => null as T)
+    expect(result.fields.filter(field => !field.hidden)).toMatchObject([{ key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsInput: { kind: 'TAG', selectable: true } }])
+    expect(result.values.tagIds).toEqual(['tag-1'])
+    expect(result.buildInput({ ...result.values, tagIds: ['tag-2'] })).toEqual({ eventId: 'event-1', expectedVersion: 4, tagIds: ['tag-2'] })
+  })
+
   it.each([
     {
       action: 'mip.admin.memberships.grant' as const,

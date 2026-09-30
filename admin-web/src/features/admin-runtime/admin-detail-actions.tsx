@@ -82,7 +82,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     if (eventStatus === 'DRAFT') actions.push(button('mip.admin.events.archive', '归档活动', id, 'events.write'))
     actions.push(
       button('mip.admin.events.clone', '克隆活动', id, 'events.write'),
-      button('mip.admin.events.tags.replace', '活动标签', id, 'events.write'),
+      button('mip.admin.events.tags.replace', '活动标签', id, 'events.catalog.manage'),
       button('mip.admin.communications.publishEventReminder', '发布提醒', id, 'communications.publish'),
       button('mip.admin.events.participants.import', '补录报名', id, 'events.registrations.manage'),
       <CheckinQrcodeButton key="checkin-qrcode" eventId={id} request={request} hasCapability={hasCapability} />,
