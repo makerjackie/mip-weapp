@@ -1,0 +1,14 @@
+{
+  "sourceCommit": "c9b8047f794a2cc634036616b23e6c256a82da3b",
+  "nodeVersion": "22.23.1",
+  "command": "pnpm verify:all",
+  "exitCode": 0,
+  "rootTests": 1484,
+  "webContractTests": 227,
+  "reactTests": 148,
+  "reactFiles": 23,
+  "logSha256": "3c2bf6565c359b5c49b6536bc9278327a461ac13ae267445a56814f6f5ba42e8",
+  "diffCheck": "passed",
+  "scope": "Local full engineering gate; actual browser steps and cross-device gaps are in README.md",
+  "cloudFunctionNodeTests": 1841
+}

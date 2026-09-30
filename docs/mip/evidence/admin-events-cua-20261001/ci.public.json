@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "c9b8047f794a2cc634036616b23e6c256a82da3b",
+  "runId": 36762058969,
+  "status": "completed",
+  "conclusion": "success",
+  "url": "https://github.com/makerjackie/mip-weapp/actions/runs/36762058969",
+  "jobs": [
+    "verify: success (pnpm verify:all and git diff --check)",
+    "server-node20: success (node scripts/verify-server.mjs)"
+  ]
+}
