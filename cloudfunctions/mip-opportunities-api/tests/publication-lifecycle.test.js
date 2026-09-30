@@ -8,6 +8,7 @@ const { saveSuperCase, unpublishSuperCase } = require('../domain/cases')
 const appId = 'wx-publication-lifecycle'
 const userId = '10000000-0000-4000-8000-000000000001'
 const resourceId = '20000000-0000-4000-8000-000000000002'
+const cityTagId = '30000000-0000-4000-8000-000000000003'
 
 function databaseFor(table) {
   const calls = []
@@ -82,6 +83,7 @@ test('the first super-case publication emits one authoritative growth event', as
     },
     async query(sql, params) {
       calls.push({ sql, params })
+      if (sql.includes('FROM mip_tags')) return [{ id: cityTagId, kind: 'CITY' }]
       return { affectedRows: 1 }
     },
   }
@@ -94,7 +96,11 @@ test('the first super-case publication emits one authoritative growth event', as
     draft: {
       projectName: '品牌项目',
       summary: '完成品牌升级',
+      startedOn: '2026-01-01',
       responsibility: '项目统筹',
+      cityTagId,
+      region: '深圳',
+      caseType: '品牌升级',
       description: '项目按计划完成。',
       mediaAssetIds: [],
       publish: true,

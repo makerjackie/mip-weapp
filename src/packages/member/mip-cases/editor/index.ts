@@ -1,15 +1,28 @@
 import type { SuperCaseId } from '../../../../modules/mip'
 import type { AiDraftSourceConfirmation } from '../../../../modules/mip-ai'
-import type { SuperCaseDetail, SuperCaseStatus } from '../../../../modules/mip-cases'
+import type { SuperCaseDetail, SuperCaseDraft, SuperCaseProject, SuperCaseStatus } from '../../../../modules/mip-cases'
 import type { OpportunityCatalog } from '../../../../modules/mip-opportunities'
 import { aiText } from '../../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { superCaseModule } from '../../../../modules/mip-cases'
+import { collectMissingProjectFields, MAX_SUPER_CASE_PROJECTS } from '../../../../modules/mip-cases/validation'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
 import { chooseMultipleImages, chooseSingleImage } from '../../../../platform/wechat/image-upload'
 
 interface CaseMediaDraft { assetId: string, imageUrl: string }
+
+// 单个项目的编辑态（figma 2173_42605：「添加项目」整组追加，城市下拉共享目录）。
+interface ProjectForm {
+  projectName: string
+  summary: string
+  startedOn: string
+  responsibility: string
+  cityIndex: number
+  region: string
+  caseType: string
+  description: string
+}
 
 type CaseEditorPublicationStatus = SuperCaseStatus | 'NEW'
 
@@ -37,6 +50,21 @@ function aiDate(value: unknown) {
     : ''
 }
 
+function emptyProject(): ProjectForm {
+  return {
+    projectName: '',
+    summary: '',
+    startedOn: '',
+    responsibility: '',
+    cityIndex: 0,
+    region: '',
+    caseType: '',
+    description: '',
+  }
+}
+
+const PROJECT_TEXT_FIELDS = ['projectName', 'summary', 'responsibility', 'region', 'caseType', 'description']
+
 Page({
   data: {
     id: '' as SuperCaseId | '',
@@ -50,17 +78,7 @@ Page({
     aiDraftId: '',
     aiConfirmation: null as AiDraftSourceConfirmation | null,
     aiDraftLoaded: false,
-    projectName: '',
-    summary: '',
-    startedOn: '',
-    endedOn: '',
-    responsibility: '',
-    cityTagId: '',
-    cityIndex: 0,
-    industryTagId: '',
-    industryIndex: 0,
-    caseType: '',
-    description: '',
+    projects: [emptyProject()] as ProjectForm[],
     coverAssetId: '',
     coverUrl: '',
     coverUploading: false,
@@ -68,22 +86,6 @@ Page({
     mediaAssets: [] as CaseMediaDraft[],
     mediaUploading: false,
     cityOptions: [{ id: '', label: '未选择' }],
-    industryOptions: [{ id: '', label: '未选择' }],
-    // figmaEditor:2173_42605 编辑超级案例稿(引导横幅 + AI助手卡 + 我的案例字段组 +
-    // 展开讲讲面板 + 保存胶囊),仅像素 fixture 使用;生产保持真实编辑器布局
-    // (被 mip-case-editor-visual 测试 pin)。
-    figmaEditor: false,
-    figma: {
-      bannerText: '填写展现能力的超级案例',
-      aiText: 'AI 助手',
-      group1: [] as Array<{ label: string, value?: string, calendar?: boolean, chevron?: boolean }>,
-      group2: [] as Array<{ label: string, value: string }>,
-      bioLabel: '',
-      bioPlaceholder: '',
-      bioCount: '',
-      addText: '',
-      saveText: '',
-    },
   },
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
@@ -124,15 +126,14 @@ Page({
       this.applyData(catalog, detail)
       if (aiSource) {
         this.setData({
-          projectName: aiText(aiSource.fields, 'projectName', 120),
-          summary: aiText(aiSource.fields, 'summary', 240),
-          responsibility: aiText(aiSource.fields, 'responsibility', 500),
-          description: aiText(aiSource.fields, 'description', 8000),
-          startedOn: aiDate(aiSource.fields.startedOn),
-          endedOn: aiDate(aiSource.fields.endedOn),
-          caseType: aiText(aiSource.fields, 'caseType', 80),
-          aiConfirmation: aiSource.confirmation,
-          aiDraftLoaded: true,
+          'projects[0].projectName': aiText(aiSource.fields, 'projectName', 120),
+          'projects[0].summary': aiText(aiSource.fields, 'summary', 240),
+          'projects[0].responsibility': aiText(aiSource.fields, 'responsibility', 500),
+          'projects[0].description': aiText(aiSource.fields, 'description', 300),
+          'projects[0].startedOn': aiDate(aiSource.fields.startedOn),
+          'projects[0].caseType': aiText(aiSource.fields, 'caseType', 80),
+          'aiConfirmation': aiSource.confirmation,
+          'aiDraftLoaded': true,
         })
       }
       this.setData({ state: 'ready' })
@@ -144,28 +145,34 @@ Page({
 
   applyData(catalog: OpportunityCatalog, detail: SuperCaseDetail | null) {
     const cityOptions = [{ id: '', label: '未选择' }, ...catalog.cityTags]
-    const industryOptions = [{ id: '', label: '未选择' }, ...catalog.industryTags]
-    const cityIndex = detail?.cityLabel
-      ? Math.max(0, cityOptions.findIndex(item => item.label === detail.cityLabel))
-      : 0
-    const industryIndex = detail?.industryLabel
-      ? Math.max(0, industryOptions.findIndex(item => item.label === detail.industryLabel))
-      : 0
+    const storedProjects = detail?.projects?.length
+      ? detail.projects
+      : [{
+          projectName: detail?.projectName || '',
+          summary: detail?.summary || '',
+          startedOn: detail?.startedOn || '',
+          responsibility: detail?.responsibility || '',
+          cityLabel: detail?.cityLabel,
+          region: '',
+          caseType: detail?.caseType || '',
+          description: detail?.description || '',
+        }]
+    const projects: ProjectForm[] = storedProjects.map(project => ({
+      projectName: project.projectName || '',
+      summary: project.summary || '',
+      startedOn: project.startedOn || '',
+      responsibility: project.responsibility || '',
+      cityIndex: project.cityLabel
+        ? Math.max(0, cityOptions.findIndex(item => item.label === project.cityLabel))
+        : 0,
+      region: project.region || '',
+      caseType: project.caseType || '',
+      description: project.description || '',
+    }))
     const status = publicationStatus(detail?.status)
     this.setData({
       cityOptions,
-      industryOptions,
-      cityIndex,
-      industryIndex,
-      projectName: detail?.projectName || '',
-      summary: detail?.summary || '',
-      startedOn: detail?.startedOn || '',
-      endedOn: detail?.endedOn || '',
-      responsibility: detail?.responsibility || '',
-      cityTagId: cityOptions[cityIndex]?.id || '',
-      industryTagId: industryOptions[industryIndex]?.id || '',
-      caseType: detail?.caseType || '',
-      description: detail?.description || '',
+      projects,
       coverAssetId: detail?.coverAssetId || '',
       coverUrl: detail?.coverUrl || '',
       mediaAssetIds: detail?.mediaAssetIds || [],
@@ -179,39 +186,88 @@ Page({
     })
   },
 
-  updateText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+  // AI 语音填写入口(设计稿 2173_42605 AI助手卡)。语音转草稿能力尚未开放 UI 流程,
+  // 先给出明确反馈,不静默失效。
+  onAiAssistant() {
+    wx.showToast({ title: 'AI 语音填写即将开放', icon: 'none' })
+  },
+
+  updateProjectText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const groupIndex = Number(event.currentTarget.dataset.groupIndex)
     const field = String(event.currentTarget.dataset.field || '')
-    if (!['projectName', 'summary', 'responsibility', 'caseType', 'description'].includes(field)) {
+    if (!Number.isInteger(groupIndex) || !PROJECT_TEXT_FIELDS.includes(field)) {
       return
     }
-    this.setData({ [field]: event.detail.value })
+    this.setData({ [`projects[${groupIndex}].${field}`]: event.detail.value })
   },
 
-  changeStart(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ startedOn: event.detail.value })
+  changeProjectStart(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const groupIndex = Number(event.currentTarget.dataset.groupIndex)
+    if (Number.isInteger(groupIndex)) {
+      this.setData({ [`projects[${groupIndex}].startedOn`]: event.detail.value })
+    }
   },
 
-  changeEnd(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ endedOn: event.detail.value })
-  },
-
-  clearDates() { this.setData({ startedOn: '', endedOn: '' }) },
-
-  changeCity(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+  changeProjectCity(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const groupIndex = Number(event.currentTarget.dataset.groupIndex)
     const cityIndex = Number(event.detail.value)
-    const item = this.data.cityOptions[cityIndex]
-    if (item) {
-      this.setData({ cityIndex, cityTagId: item.id })
+    if (Number.isInteger(groupIndex) && this.data.cityOptions[cityIndex]) {
+      this.setData({ [`projects[${groupIndex}].cityIndex`]: cityIndex })
     }
   },
 
-  changeIndustry(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    const industryIndex = Number(event.detail.value)
-    const item = this.data.industryOptions[industryIndex]
-    if (item) {
-      this.setData({ industryIndex, industryTagId: item.id })
+  addProject() {
+    if (this.data.projects.length >= MAX_SUPER_CASE_PROJECTS) {
+      wx.showToast({ title: `最多 ${MAX_SUPER_CASE_PROJECTS} 个项目`, icon: 'none' })
+      return
     }
+    this.setData({ projects: [...this.data.projects, emptyProject()] })
   },
+
+  removeProject(event: WechatMiniprogram.TouchEvent) {
+    const groupIndex = Number(event.currentTarget.dataset.groupIndex)
+    if (!Number.isInteger(groupIndex) || groupIndex <= 0 || this.data.projects.length <= 1) {
+      return
+    }
+    const projects = this.data.projects.filter((_, index) => index !== groupIndex)
+    this.setData({ projects })
+  },
+
+  draftProjects(cityOptions: Array<{ id: string, label: string }>): SuperCaseProject[] {
+    return this.data.projects.map((project) => {
+      const draft: SuperCaseProject = {
+        projectName: project.projectName,
+        summary: project.summary,
+        startedOn: project.startedOn || undefined,
+        responsibility: project.responsibility,
+        cityTagId: cityOptions[project.cityIndex]?.id || undefined,
+        description: project.description,
+      }
+      if (project.region) {
+        draft.region = project.region
+      }
+      if (project.caseType) {
+        draft.caseType = project.caseType
+      }
+      return draft
+    })
+  },
+
+  publish() {
+    const missing = collectMissingProjectFields(this.draftProjects(this.data.cityOptions))
+    if (missing.length) {
+      wx.showModal({
+        title: '还有必填项未填写',
+        content: missing.join('；'),
+        showCancel: false,
+        confirmText: '去填写',
+      })
+      return
+    }
+    void this.save(true)
+  },
+
+  saveDraft() { void this.save(false) },
 
   async chooseCover() {
     if (this.data.coverUploading || this.data.mediaUploading || this.data.saving) {
@@ -283,36 +339,32 @@ Page({
     }
   },
 
-  saveDraft() { void this.save(false) },
-  publish() { void this.save(true) },
-
   async save(publish: boolean) {
     if (this.data.saving || this.data.coverUploading || this.data.mediaUploading) {
       return
     }
+    const projects = this.draftProjects(this.data.cityOptions)
+    const [first] = projects
     this.setData({
       saving: true,
       savingIntent: publish ? 'publish' : 'draft',
       message: '',
     })
     try {
-      const result = await superCaseModule.save({
+      const draft: SuperCaseDraft = {
         id: this.data.id || undefined,
         expectedVersion: this.data.id ? this.data.version : undefined,
-        projectName: this.data.projectName,
-        summary: this.data.summary,
-        startedOn: this.data.startedOn || undefined,
-        endedOn: this.data.endedOn || undefined,
-        responsibility: this.data.responsibility,
-        cityTagId: this.data.cityTagId || undefined,
-        industryTagId: this.data.industryTagId || undefined,
-        caseType: this.data.caseType || undefined,
-        description: this.data.description,
+        projectName: first.projectName,
+        summary: first.summary,
+        responsibility: first.responsibility,
+        description: first.description,
+        projects,
         coverAssetId: this.data.coverAssetId || undefined,
         mediaAssetIds: this.data.mediaAssetIds,
         publish,
         aiConfirmation: this.data.aiConfirmation || undefined,
-      })
+      }
+      const result = await superCaseModule.save(draft)
       const status = publicationStatus(result.status)
       this.setData({
         id: result.id,

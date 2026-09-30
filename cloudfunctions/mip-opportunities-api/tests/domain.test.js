@@ -356,11 +356,15 @@ test('super case server validation preserves a valid date range', () => {
     startedOn: '2026-01-01',
     endedOn: '2026-03-01',
     responsibility: '负责策略和统筹',
+    cityTagId: '44444444-4444-4444-8444-444444444444',
+    region: '总部在深圳，2026 大湾区扩张中',
+    caseType: '品牌升级',
     description: '项目完整说明',
     mediaAssetIds: [],
     publish: true,
   })
   assert.equal(value.endedOn, '2026-03-01')
+  assert.equal(value.projects.length, 1)
   assert.throws(() => normalizeCase({ ...value, endedOn: '2025-01-01' }), /VALIDATION_FAILED/)
 })
 

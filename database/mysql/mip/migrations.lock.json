@@ -1274,6 +1274,18 @@
       "altersTables": [
         "mip_city_branches"
       ]
+    },
+    {
+      "version": "20260930010000",
+      "name": "mip_super_case_projects",
+      "sql": "database/mysql/mip/096_super_case_projects.sql",
+      "sqlSha256": "c8c94bc16290b19970781415074e6b66a4ed4208746f71a7415c48adc7031a45",
+      "rollback": "database/mysql/mip/rollback/096_super_case_projects.sql",
+      "rollbackSha256": "7c47ebbb003cd47dc27d0d55a4d6e772878a7a3d09c80f241eebf9ab2c5d0b58",
+      "createsTables": [],
+      "altersTables": [
+        "mip_super_cases"
+      ]
     }
   ]
 }

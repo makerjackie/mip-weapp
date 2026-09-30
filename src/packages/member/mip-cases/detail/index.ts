@@ -1,5 +1,5 @@
 import type { SuperCaseId } from '../../../../modules/mip'
-import type { SuperCaseDetail } from '../../../../modules/mip-cases'
+import type { SuperCaseDetail, SuperCaseProjectView } from '../../../../modules/mip-cases'
 import type { ProfileInterestMutationSnapshot } from '../../../../modules/mip-opportunities'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { superCaseModule } from '../../../../modules/mip-cases'
@@ -8,11 +8,14 @@ import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { profileInterestMutations } from '../../../../modules/mip-opportunities'
 import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigation/client'
 
-interface SuperCaseDetailView extends SuperCaseDetail {
+interface CaseProjectView extends SuperCaseProjectView {
+  startedOnText: string
+}
+
+interface SuperCaseDetailView extends Omit<SuperCaseDetail, 'projects'> {
   coverUrl: string
-  periodText: string
-  classificationText: string
   statusText: string
+  projects: CaseProjectView[]
 }
 
 const CASE_STATUS_LABELS = {
@@ -27,18 +30,14 @@ function formatCaseDate(value?: string) {
 }
 
 function presentCase(item: SuperCaseDetail): SuperCaseDetailView {
-  const startedOn = formatCaseDate(item.startedOn)
-  const endedOn = formatCaseDate(item.endedOn)
   return {
     ...item,
     coverUrl: item.coverUrl || mipOperationsConfig.defaultCoverPaths.superCase,
-    periodText: startedOn && endedOn
-      ? `${startedOn} 至 ${endedOn}`
-      : startedOn
-        ? `${startedOn} 至今`
-        : endedOn || '未填写',
-    classificationText: [...new Set([item.industryLabel, item.caseType].filter(Boolean))].join('、') || '未填写',
     statusText: CASE_STATUS_LABELS[item.status],
+    projects: item.projects.map(project => ({
+      ...project,
+      startedOnText: formatCaseDate(project.startedOn) || '未填写',
+    })),
   }
 }
 
@@ -51,10 +50,6 @@ Page({
     acting: false,
     interestPending: false,
     message: '',
-    // 还原态开关,仅像素 fixture 使用;生产保持卡片详情布局(被 mip-case-detail 测试 pin)。
-    figmaLayout: false,
-    // figmaEmpty:1987_30475 空数据图标变体(全屏居中 3D 问号 + 页面不在MIP星球)。
-    figmaEmpty: false,
   },
   resumeInterest: false,
   stopInterestSubscription: null as (() => void) | null,
@@ -93,7 +88,10 @@ Page({
       this.observeInterest(item.author.profileRef)
       this.setData({
         state: 'ready',
-        item: { ...presented, interestActive: interest.active },
+        item: {
+          ...presented,
+          interestActive: interest.active,
+        },
         interestPending: interest.pending,
         mediaUrls: presented.media.map(media => media.url).filter(Boolean),
         message: '',

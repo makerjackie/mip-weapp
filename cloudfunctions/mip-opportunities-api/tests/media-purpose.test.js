@@ -45,6 +45,7 @@ describe('opportunity and super-case media ownership', () => {
       },
     }
     await assert.rejects(() => assertCaseReferences(tx, caller, {
+      projects: [],
       cityTagId: null,
       industryTagId: null,
       coverAssetId: COVER_ID,

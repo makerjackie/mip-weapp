@@ -64,18 +64,39 @@ describe('MIP super case editor visual contract', () => {
       navigationBarBackgroundColor: '#080808',
       navigationBarTextStyle: 'white',
     })
-    expect(template).toContain('填写展现能力的超级案例')
+    expect(template).toContain('做过哪些展现您能力的超级案例')
+    expect(template).toContain('border-brand bg-panel')
+    expect(template).toContain('AI助手')
+    expect(template).toContain('bind:tap="onAiAssistant"')
     expect(template).toContain('>我的案例</view>')
     expect(template).toContain('case-editor-field-group')
     expect(template).toContain('case-editor-field-row')
     expect(template).toContain('项目名称')
-    expect(template).toContain('一句话说明')
+    expect(template).toContain('一句话描述案例')
     expect(template).toContain('开始时间')
     expect(template).toContain('担任职责')
     expect(template).toContain('主营城市')
-    expect(template).toContain('案例类型')
-    expect(template).toContain('详细说明')
+    expect(template).toContain('主营地区')
+    expect(template).toContain('项目类型')
+    expect(template).toContain('展开讲讲（选填）')
     expect(template).not.toMatch(/创建超级案例|填写真实项目经历。发布前/)
+    expect(template).not.toContain('figmaEditor')
+    expect(page).not.toContain('figmaEditor')
+  })
+
+  it('appends whole project groups and prompts for missing required fields on publish', () => {
+    expect(template).toContain('wx:for="{{projects}}"')
+    expect(template).toContain('data-group-index="{{groupIndex}}"')
+    expect(template).toContain('aria-label="添加项目"')
+    expect(template).toContain('bind:tap="addProject"')
+    expect(template).toContain('bind:tap="removeProject"')
+    expect(page).toContain('MAX_SUPER_CASE_PROJECTS')
+    expect(page).toContain('collectMissingProjectFields(this.draftProjects(this.data.cityOptions))')
+    expect(page).toContain('还有必填项未填写')
+    expect(page).toContain('confirmText: \'去填写\'')
+    expect(page).toContain('projects: [...this.data.projects, emptyProject()]')
+    expect(template).toContain('maxlength="300"')
+    expect(template).toContain('{{project.description.length}}/300')
   })
 
   it('keeps the real draft, catalogue, AI, media, and publication contracts', () => {
@@ -85,17 +106,17 @@ describe('MIP super case editor visual contract', () => {
     expect(page).toContain('uploadImageFromPath(\'SUPER_CASE_COVER\'')
     expect(page).toContain('uploadImageFromPath(\'SUPER_CASE_MEDIA\'')
     expect(page).toContain('wx.previewImage({ current, urls })')
-    expect(page).toContain('const result = await superCaseModule.save({')
+    expect(page).toContain('const draft: SuperCaseDraft = {')
+    expect(page).toContain('await superCaseModule.save(draft)')
     for (const field of [
       'projectName',
       'summary',
       'startedOn',
-      'endedOn',
       'responsibility',
       'cityTagId',
-      'industryTagId',
       'caseType',
       'description',
+      'projects',
       'coverAssetId',
       'mediaAssetIds',
       'aiConfirmation',
@@ -104,11 +125,9 @@ describe('MIP super case editor visual contract', () => {
     }
     expect(page).toContain('publish,')
     for (const handler of [
-      'changeStart',
-      'changeEnd',
-      'clearDates',
-      'changeCity',
-      'changeIndustry',
+      'updateProjectText',
+      'changeProjectStart',
+      'changeProjectCity',
       'chooseCover',
       'addMedia',
       'previewMedia',
@@ -118,10 +137,10 @@ describe('MIP super case editor visual contract', () => {
     ]) {
       expect(
         template.includes(`bind:tap="${handler}"`)
-        || template.includes(`bindchange="${handler}"`),
+        || template.includes(`bindchange="${handler}"`)
+        || template.includes(`bindinput="${handler}"`),
       ).toBe(true)
     }
-    expect(template).toContain('maxlength="8000"')
     expect(template).toContain('{{publicationStatusText}}')
     expect(template).toContain('<app-page-exit always label="取消" />')
   })
