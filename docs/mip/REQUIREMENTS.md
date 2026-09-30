@@ -80,6 +80,10 @@
 - 一个用户可创建多张合作卡，但六种合作角色各最多一张。
 - 稳定角色 key 为 `connector`、`business_builder`、`capital_operator`、`strategist`、`visual_designer`、`delivery_lead`；展示名分别为皮条客、生意佬、暴发户、狗策划、死美工、老保姆。
 - 合作卡保存角色定位、目标、角色专属字段和六项用户自评能力，详情使用雷达图展示。
+- 六项能力按稳定存储 key（`business_development`、`resource_integration`、`capital_operation`、`strategy_planning`、`visual_design`、`delivery_management`）保存 0–5 分；每个角色在编辑页和详情页用自己的专属特征标签按顺序映射展示，存储契约不变。
+- 编辑页共同输入区包含“目标”（写入页面级 `targetSummary`）、“需要支持或引荐的是”和“和我合作的最大价值是”（后两项入 `roleFields.support` / `roleFields.value`）；“需要被理解的臭毛病”以结构化分组（`roleFields.quirks`：外显/内在/行为建议）保存，皮条客角色的“长混迹的圈子”以结构化分组（`roleFields.circles`：名称/圈内身份/圈内年限/圈子特点）保存，两者最多各 12 组。
+- 旧模型字段按角色白名单原样透传保存（所有角色含 `target`，另有 `resources`、`business_models`、`capital_range`、`methods`、`portfolio_summary`、`delivery_experience`），页面不展示、不静默改写；旧圈子字符串数组在详情页按名称列表渲染。未知字段键保存时拒绝。
+- 合作卡编辑页只有“保存”一个主操作；草稿的“发布”入口在详情页（仅本人草稿可见），服务端对已有已发布/未下架卡片在 `publish:false` 时保留原状态。
 - 超级案例保存项目名称、一句话说明、起止时间、职责、主营城市、行业/类型、详细说明和展示素材。
 - 合作卡和超级案例支持 AI 语音填写：录音转为可编辑草稿，用户确认后才保存正式内容。
 - 合作卡编辑中点击“预览”时，先保存当前已填写信息，再打开预览；未成功保存时不得把预览当成已保存结果。

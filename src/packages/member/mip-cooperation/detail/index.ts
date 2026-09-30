@@ -1,8 +1,8 @@
 import type { CooperationCardId } from '../../../../modules/mip'
-import type { CooperationCardDetail } from '../../../../modules/mip-cooperation'
+import type { CooperationCardDetail, CooperationRoleFieldValue } from '../../../../modules/mip-cooperation'
 import type { ProfileInterestMutationSnapshot } from '../../../../modules/mip-opportunities'
 import { cooperationAbilityDimensions, cooperationRoles } from '../../../../config/mip-catalogs'
-import { cooperationModule } from '../../../../modules/mip-cooperation'
+import { cooperationModule, normalizeCooperationCircles, normalizeCooperationQuirks } from '../../../../modules/mip-cooperation'
 import { evaluateAccess, mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { profileInterestMutations } from '../../../../modules/mip-opportunities'
@@ -10,6 +10,12 @@ import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigat
 
 interface AbilityView { key: string, label: string, score: number }
 interface RoleFieldView { key: string, label: string, value: string }
+interface CircleGroupView { name: string, identity: string, years: string, trait: string }
+interface QuirkGroupView { external: string, internal: string, advice: string }
+
+function textEntries(value: CooperationRoleFieldValue | undefined) {
+  return Array.isArray(value) ? value.map(item => String(item)).filter(Boolean) : []
+}
 
 Page({
   data: {
@@ -19,6 +25,8 @@ Page({
     roleName: '',
     abilities: [] as AbilityView[],
     roleFields: [] as RoleFieldView[],
+    circles: [] as CircleGroupView[],
+    quirks: [] as QuirkGroupView[],
     acting: false,
     interestPending: false,
     message: '',
@@ -66,18 +74,54 @@ Page({
       const interest = profileInterestMutations.mergeServer(item.author.profileRef, item.interestActive)
       this.observeInterest(item.author.profileRef)
       const definition = cooperationRoles.find(role => role.key === item.roleKey)
-      const abilities = cooperationAbilityDimensions.map(dimension => ({
-        ...dimension,
+      const abilities = cooperationAbilityDimensions.map((dimension, index) => ({
+        key: dimension.key,
+        label: definition?.abilityLabels[index] || dimension.label,
         score: Number(item.abilityScores[dimension.key] || 0),
       }))
-      const roleFields = (definition?.fields || []).map((field) => {
-        const value = item.roleFields[field.key]
-        return {
-          key: field.key,
-          label: field.label,
-          value: Array.isArray(value) ? value.join('、') : String(value ?? ''),
+      const roleFields: RoleFieldView[] = []
+      const goalRows: Array<{ key: string, label: string }> = [
+        { key: 'support', label: '需要支持或引荐的是' },
+        { key: 'value', label: '和我合作的最大价值是' },
+      ]
+      for (const goal of goalRows) {
+        const value = String(item.roleFields[goal.key] ?? '').trim()
+        if (value) {
+          roleFields.push({ key: goal.key, label: goal.label, value })
         }
-      })
+      }
+      for (const field of definition?.menu.fields || []) {
+        const value = item.roleFields[field.key]
+        const text = Array.isArray(value)
+          ? textEntries(value).join('、')
+          : String(value ?? '').trim()
+        if (text) {
+          roleFields.push({ key: field.key, label: field.label, value: text })
+        }
+      }
+      const rawCircles = item.roleFields.circles
+      let circles: CircleGroupView[] = []
+      if (Array.isArray(rawCircles) && rawCircles.every(item => typeof item === 'string')) {
+        const names = textEntries(rawCircles).join('、')
+        if (names) {
+          roleFields.push({ key: 'circles', label: definition?.menu.title || '长混迹的圈子', value: names })
+        }
+      }
+      else {
+        const circleEntries = normalizeCooperationCircles(rawCircles) || []
+        circles = circleEntries.map(entry => ({
+          name: entry.name || '',
+          identity: entry.identity || '',
+          years: entry.years || '',
+          trait: entry.trait || '',
+        }))
+      }
+      const quirkEntries = normalizeCooperationQuirks(item.roleFields.quirks) || []
+      const quirks: QuirkGroupView[] = quirkEntries.map(entry => ({
+        external: entry.external || '',
+        internal: entry.internal || '',
+        advice: entry.advice || '',
+      }))
       this.setData({
         state: 'ready',
         item: { ...item, interestActive: interest.active },
@@ -85,6 +129,8 @@ Page({
         roleName: definition?.name || item.roleKey,
         abilities,
         roleFields,
+        circles,
+        quirks,
         message: '',
       })
       wx.nextTick(() => this.drawRadar())
@@ -248,6 +294,35 @@ Page({
   edit() {
     if (this.data.item?.canEdit) {
       caseNavigateTo({ url: `/packages/member/mip-cooperation/editor/index?id=${encodeURIComponent(this.data.id)}` })
+    }
+  },
+
+  /** 编辑页只负责保存；草稿发布入口收敛到详情页 */
+  async publish() {
+    const item = this.data.item
+    if (!item?.mine || item.status !== 'DRAFT' || this.data.acting) {
+      return
+    }
+    this.setData({ acting: true, message: '' })
+    try {
+      const result = await cooperationModule.save({
+        id: item.id,
+        expectedVersion: item.version,
+        roleKey: item.roleKey,
+        positioning: item.positioning,
+        targetSummary: item.targetSummary,
+        roleFields: item.roleFields,
+        abilityScores: item.abilityScores,
+        publish: true,
+      })
+      this.setData({ 'item.status': result.status, 'item.version': result.version })
+      wx.showToast({ title: '合作卡已发布', icon: 'success' })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '合作卡发布失败' })
+    }
+    finally {
+      this.setData({ acting: false })
     }
   },
 

@@ -35,8 +35,14 @@ export interface CooperationCardSummary {
   version?: number
 }
 
+export interface CooperationCircleEntry { name?: string, identity?: string, years?: string, trait?: string }
+
+export interface CooperationQuirkEntry { external?: string, internal?: string, advice?: string }
+
+export type CooperationRoleFieldValue = string | number | Array<string | CooperationCircleEntry | CooperationQuirkEntry>
+
 export interface CooperationCardDetail extends CooperationCardSummary {
-  roleFields: Record<string, string | string[] | number>
+  roleFields: Record<string, CooperationRoleFieldValue>
   version: number
   interestActive: boolean
   canEdit: boolean
@@ -48,7 +54,7 @@ export interface CooperationCardDraft {
   roleKey: CooperationRoleKey
   positioning: string
   targetSummary: string
-  roleFields: Record<string, string | string[] | number>
+  roleFields: Record<string, CooperationRoleFieldValue>
   abilityScores: Record<string, number>
   publish: boolean
   aiConfirmation?: AiDraftSourceConfirmation

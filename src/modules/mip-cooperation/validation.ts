@@ -2,13 +2,23 @@ import type {
   CooperationAuthor,
   CooperationCardDraft,
   CooperationCardFilter,
+  CooperationCircleEntry,
+  CooperationQuirkEntry,
+  CooperationRoleFieldValue,
   CooperationTag,
   CooperationTalentCard,
   CooperationTalentPage,
   CooperationTalentSummary,
 } from './types'
-import { cooperationAbilityDimensions, cooperationRoles } from '../../config/mip-catalogs'
+import {
+  cooperationAbilityDimensions,
+  cooperationCircleFields,
+  cooperationQuirkFields,
+  cooperationRoles,
+} from '../../config/mip-catalogs'
 import { isCooperationRoleKey } from '../mip'
+
+const MAX_ROLE_FIELD_GROUPS = 12
 
 function optionalText(value: unknown, maximum: number, field: string) {
   const result = typeof value === 'string' ? value.trim() : ''
@@ -27,6 +37,70 @@ function uniqueIds(value: unknown, maximum: number, field: string) {
     throw new Error(`${field}格式不正确`)
   }
   return result
+}
+
+function entryText(value: unknown, maximum: number) {
+  const text = String(value ?? '').trim()
+  if (text.length > maximum) {
+    throw new Error('分组内容过长')
+  }
+  return text
+}
+
+/** 圈子兼容旧字符串数组（仅名称）与新结构化对象数组 */
+export function normalizeCooperationCircles(value: unknown): CooperationCircleEntry[] | undefined {
+  if (value === undefined || !Array.isArray(value)) {
+    return undefined
+  }
+  const entries = value.slice(0, MAX_ROLE_FIELD_GROUPS).map((item) => {
+    if (typeof item === 'string') {
+      const name = entryText(item, 200)
+      return name ? { name } : {}
+    }
+    const source = item && typeof item === 'object' && !Array.isArray(item) ? item as Record<string, unknown> : {}
+    const entry: CooperationCircleEntry = {}
+    for (const field of cooperationCircleFields) {
+      const text = entryText(source[field.key], 200)
+      if (text) {
+        entry[field.key as keyof CooperationCircleEntry] = text
+      }
+    }
+    return entry
+  }).filter(entry => Object.keys(entry).length > 0)
+  return entries
+}
+
+export function normalizeCooperationQuirks(value: unknown): CooperationQuirkEntry[] | undefined {
+  if (value === undefined || !Array.isArray(value)) {
+    return undefined
+  }
+  const entries = value.slice(0, MAX_ROLE_FIELD_GROUPS).map((item) => {
+    const source = item && typeof item === 'object' && !Array.isArray(item) ? item as Record<string, unknown> : {}
+    const entry: CooperationQuirkEntry = {}
+    for (const field of cooperationQuirkFields) {
+      const text = entryText(source[field.key], 200)
+      if (text) {
+        entry[field.key as keyof CooperationQuirkEntry] = text
+      }
+    }
+    return entry
+  }).filter(entry => Object.keys(entry).length > 0)
+  return entries
+}
+
+function normalizeLegacyRoleField(value: unknown): CooperationRoleFieldValue | undefined {
+  if (Array.isArray(value)) {
+    const items = value.map(item => String(item).trim()).filter(Boolean).slice(0, MAX_ROLE_FIELD_GROUPS)
+    if (items.some(item => item.length > 1000)) {
+      throw new Error('内容过长')
+    }
+    return items
+  }
+  const text = String(value ?? '').trim()
+  if (text.length > 1000) {
+    throw new Error('内容过长')
+  }
+  return text
 }
 
 export function normalizeAbilityScores(value: Record<string, number>) {
@@ -56,19 +130,42 @@ export function normalizeCooperationCardDraft(value: CooperationCardDraft): Coop
   if (!targetSummary || targetSummary.length > 500) {
     throw new Error('合作目标需为 1 至 500 个字符')
   }
-  const roleFields: Record<string, string | string[] | number> = {}
-  for (const field of definition.fields) {
-    const raw = value.roleFields?.[field.key]
-    const normalized = Array.isArray(raw)
-      ? raw.map(item => String(item).trim()).filter(Boolean).slice(0, 12)
-      : typeof raw === 'number' ? raw : String(raw || '').trim()
-    if (field.required && (Array.isArray(normalized) ? !normalized.length : normalized === '')) {
-      throw new Error(`请填写${field.label}`)
+  const source = value.roleFields || {}
+  const roleFields: Record<string, CooperationRoleFieldValue> = {}
+  for (const key of ['support', 'value']) {
+    const normalized = normalizeLegacyRoleField(source[key])
+    if (normalized !== undefined && normalized !== '') {
+      roleFields[key] = normalized
     }
-    if (typeof normalized === 'string' && normalized.length > 1000) {
-      throw new Error(`${field.label}内容过长`)
+  }
+  if (definition.menu.structured === 'circles') {
+    const circles = normalizeCooperationCircles(source.circles)
+    if (circles?.length) {
+      roleFields.circles = circles
     }
-    roleFields[field.key] = normalized
+  }
+  for (const field of definition.menu.fields) {
+    const raw = source[field.key]
+    const normalized = field.input === 'tags' && Array.isArray(raw)
+      ? raw.map(item => String(item).trim()).filter(Boolean).slice(0, MAX_ROLE_FIELD_GROUPS)
+      : normalizeLegacyRoleField(raw)
+    if (typeof normalized === 'string' && normalized === '') {
+      continue
+    }
+    if (Array.isArray(normalized) && !normalized.length) {
+      continue
+    }
+    roleFields[field.key] = normalized as CooperationRoleFieldValue
+  }
+  const quirks = normalizeCooperationQuirks(source.quirks)
+  if (quirks?.length) {
+    roleFields.quirks = quirks
+  }
+  for (const key of definition.legacyFieldKeys) {
+    const normalized = normalizeLegacyRoleField(source[key])
+    if (normalized !== undefined && normalized !== '' && !(Array.isArray(normalized) && !normalized.length)) {
+      roleFields[key] = normalized
+    }
   }
   return {
     ...value,

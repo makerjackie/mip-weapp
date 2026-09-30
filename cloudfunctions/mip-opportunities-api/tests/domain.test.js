@@ -292,6 +292,63 @@ test('cooperation server validation requires six explicit scores and role fields
   assert.throws(() => normalizeCooperation({ ...value, abilityScores: { ...scores, unknown: 1 } }), /VALIDATION_FAILED/)
 })
 
+test('cooperation server validation keeps common fields, structured groups and legacy keys', () => {
+  const scores = {
+    business_development: 4,
+    resource_integration: 4,
+    capital_operation: 4,
+    strategy_planning: 4,
+    visual_design: 4,
+    delivery_management: 4,
+  }
+  const connector = normalizeCooperation({
+    roleKey: 'connector',
+    positioning: '愿意分享自己的人脉或为他人引荐生意',
+    targetSummary: '2026 年商务引荐赚100 万',
+    roleFields: {
+      support: '需要能带队打仗的操盘手',
+      value: '和我合作，能打胜仗',
+      circles: [
+        { name: 'MIP全球创意人平台', identity: '资深玩家', years: '2年', trait: '超级个体' },
+        '创业者社群',
+        { unknown: '丢弃未知键' },
+        {},
+      ],
+      quirks: [{ external: '拖延症晚期', internal: '存在侥幸心理', advice: '强调紧迫性' }],
+      resources: '消费品牌渠道',
+      target: '促成三次合作',
+    },
+    abilityScores: scores,
+    publish: false,
+  })
+  assert.deepEqual(connector.roleFields, {
+    support: '需要能带队打仗的操盘手',
+    value: '和我合作，能打胜仗',
+    circles: [
+      { name: 'MIP全球创意人平台', identity: '资深玩家', years: '2年', trait: '超级个体' },
+      { name: '创业者社群' },
+    ],
+    quirks: [{ external: '拖延症晚期', internal: '存在侥幸心理', advice: '强调紧迫性' }],
+    resources: '消费品牌渠道',
+    target: '促成三次合作',
+  })
+  assert.throws(
+    () => normalizeCooperation({
+      ...connector,
+      roleFields: { ...connector.roleFields, quirks: ['不是对象'] },
+    }),
+    /VALIDATION_FAILED/,
+  )
+  // 跨角色旧字段不进白名单
+  assert.throws(
+    () => normalizeCooperation({
+      ...connector,
+      roleFields: { ...connector.roleFields, methods: '非该角色的旧字段' },
+    }),
+    /VALIDATION_FAILED/,
+  )
+})
+
 test('super case server validation preserves a valid date range', () => {
   const value = normalizeCase({
     projectName: '品牌升级',
