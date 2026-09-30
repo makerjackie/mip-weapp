@@ -340,7 +340,7 @@
         <text class="text-[24rpx] font-semibold text-brand">+</text>
         <text class="text-[24rpx] font-medium leading-[33.6rpx] text-brand">{{influence ? influence.interestCount + '感兴趣' : '感兴趣'}}</text>
       </view>
-      <view class="flex min-h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-3 text-[32rpx] font-medium text-on-brand active:bg-brand-active {{interestState === 'loading' ? 'opacity-50' : ''}}" aria-role="button" aria-disabled="{{interestState === 'loading'}}" bind:tap="toggleInterest">{{interestActive ? '已感兴趣' : '我感兴趣'}}</view>
+      <mip-pill-button class="min-w-0 flex-1" label="{{interestActive ? '已感兴趣' : '我感兴趣'}}" loading="{{interestState === 'loading'}}" bind:tap="toggleInterest" />
       </view>
     </mip-sticky-actions>
   </block>

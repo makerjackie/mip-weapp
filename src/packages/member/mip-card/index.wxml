@@ -57,23 +57,27 @@
     <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] bg-panel px-4 py-3 text-[22rpx] text-danger">{{message}}</view>
 
     <mip-sticky-actions>
-      <view slot="actions" class="{{isGuest ? 'flex w-full items-center px-[8rpx] py-[16rpx]' : 'flex h-[112rpx] w-full items-center gap-[22rpx] rounded-full bg-brand-soft px-[24rpx] py-[16rpx]'}}">
-        <button wx:if="{{!isGuest}}" open-type="share" class="mip-card-action flex h-[80rpx] w-[316rpx] items-center justify-center gap-[16rpx] rounded-full border border-black bg-panel">
-          <mip-icon name="share-circle-2" size="20" color="var(--color-brand)" />
-          <text class="text-[32rpx] font-medium text-brand">分享名片</text>
-        </button>
+      <view slot="actions" class="{{isGuest ? 'flex w-full items-center px-[8rpx] py-[16rpx]' : 'flex h-[112rpx] w-full items-center gap-[22rpx] px-[16rpx]'}}">
         <mip-pill-button
           wx:if="{{!isGuest}}"
-          class="mip-card-action flex-1"
-          style="width:100%"
+          class="w-[316rpx]"
+          variant="secondary"
+          label="分享名片"
+          withIcon
+          openType="share"
+        >
+          <mip-icon slot="icon" name="share-circle-2" size="20" color="var(--color-brand)" />
+        </mip-pill-button>
+        <mip-pill-button
+          wx:if="{{!isGuest}}"
+          class="min-w-0 flex-1"
           label="下载名片"
           disabled="{{generating}}"
           bind:tap="savePoster"
         />
         <mip-pill-button
           wx:else
-          class="mip-card-action"
-          style="width:100%"
+          class="w-full"
           label="登录制作我的名片"
           bind:tap="guestLogin"
         />

@@ -7,6 +7,8 @@
     "app-page-exit": "/components/page-exit/index",
     "mip-sticky-actions": "/components/sticky-actions/index",
     "t-button": "tdesign-miniprogram/button/button",
-    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
+    "mip-pill-button": "/components/mip-pill-button/index",
+    "mip-icon": "/components/mip-icon/index"
   }
 }

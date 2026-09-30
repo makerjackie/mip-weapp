@@ -183,14 +183,11 @@
     <!-- figma 1732_20291: 底部玻璃药丸 @ (12,1068) 351×56：预览 88×40 panel 底 + 保存 227×40
          品牌底，1px 黑描边，间距 12px。 -->
     <mip-sticky-actions>
-      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[24rpx] rounded-full bg-brand-soft px-[24rpx] py-[16rpx]">
-        <view class="flex h-[80rpx] w-[176rpx] items-center justify-center gap-[16rpx] rounded-full border border-black bg-panel" aria-role="button" aria-label="预览名片" bind:tap="openPreview">
-          <view class="flex h-[40rpx] w-[40rpx] items-center justify-center"><mip-icon name="id-card" size="{{20}}" color="var(--color-brand)" /></view>
-          <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx] text-brand">预览</text>
-        </view>
-        <view class="flex h-[80rpx] flex-1 items-center justify-center rounded-full border border-black bg-brand active:bg-brand-active" aria-role="button" aria-label="保存名片" bind:tap="save">
-          <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx] text-on-brand">{{saving ? '保存中…' : '保存'}}</text>
-        </view>
+      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[24rpx] px-[16rpx]">
+        <mip-pill-button class="w-[176rpx]" variant="secondary" label="预览" withIcon bind:tap="openPreview">
+          <mip-icon slot="icon" name="id-card" size="{{20}}" color="var(--color-brand)" />
+        </mip-pill-button>
+        <mip-pill-button class="min-w-0 flex-1" label="{{saving ? '保存中…' : '保存'}}" loading="{{saving}}" bind:tap="save" />
       </view>
     </mip-sticky-actions>
     <app-page-exit />

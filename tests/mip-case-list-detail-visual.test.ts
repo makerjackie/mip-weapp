@@ -41,7 +41,7 @@ describe('MIP super case list and detail visuals', () => {
     expect(template).toContain('h-[300rpx]')
     expect(template).toContain('展开讲讲')
     expect(template).toContain('item.caption')
-    expect(template).toContain('wx:if="{{item.status === \'PUBLISHED\'}}" open-type="share"')
+    expect(template).toContain('label="分享" withIcon openType="share"')
     expect(template).toContain('<mip-sticky-actions')
     expect(template).toContain('slot="actions"')
     expect(template).toContain('min-h-[112rpx]')

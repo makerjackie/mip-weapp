@@ -8,6 +8,8 @@
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "t-switch": "tdesign-miniprogram/switch/switch",
     "mip-icon": "/components/mip-icon/index",
-    "mip-subscription-prompt": "/components/mip-subscription-prompt/index"
+    "mip-subscription-prompt": "/components/mip-subscription-prompt/index",
+    "mip-sticky-actions": "/components/sticky-actions/index",
+    "mip-pill-button": "/components/mip-pill-button/index"
   }
 }

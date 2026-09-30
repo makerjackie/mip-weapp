@@ -150,7 +150,8 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(detail).toContain('id="opportunity-owner-actions"')
     expect(detail).toContain('取消合作意向')
     expect(detail).toContain('bind:tap="openCooperators"')
-    expect(detail).toContain('aria-pressed="{{item.cooperationActive}}"')
+    // mip-pill-button 不透传 aria-pressed，合作态由文案切换（我想合作/取消合作意向）+ loading 表达。
+    expect(detail).toContain('loading="{{acting}}"')
   })
 
   it('keeps detail content readable and every secondary state recoverable', () => {
@@ -176,10 +177,9 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(editor.indexOf('项目封面（选填）')).toBeLessThan(editor.indexOf('更多设置'))
     expect(editor).toContain('wx:if="{{advancedOpen}}"')
     expect(editor).toContain('id="opportunity-editor-fixed-actions"')
-    expect(editor).toContain('bottom-[calc(env(safe-area-inset-bottom)+16rpx)]')
-    // journey-review J4-04 ③：液态玻璃底部条 + 黄芯胶囊主按钮。
-    expect(editor).toContain('mip-liquid-glass')
-    expect(editor).toContain(`bind:tap="publish">{{editorMode === 'PUBLISHED' ? '保存修改' : '确认发布'}}</view>`)
+    // journey-review J4-04 ③：液态玻璃底部条（mip-sticky-actions 壳）+ 黄芯胶囊主按钮（mip-pill-button）。
+    expect(editor).toContain('<mip-sticky-actions id="opportunity-editor-fixed-actions">')
+    expect(editor).toContain(`label="{{editorMode === 'PUBLISHED' ? '保存修改' : '确认发布'}}"`)
     expect(editor).toContain('bind:tap="saveDraft"')
     expect(editor).toContain('bind:tap="publish"')
     expect(editor).toContain('bind:tap="pasteAndRecognize"')

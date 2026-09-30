@@ -124,9 +124,11 @@
       <view class="mt-2">提交{{event.accessType === 'PAID' ? '并支付' : '报名'}}表示已阅读并同意<text class="text-brand" bind:tap="openAgreement">《服务协议》</text>和<text class="text-brand" bind:tap="openPrivacy">《隐私政策》</text>。</view>
     </view>
     <app-page-exit />
-    <view class="mip-liquid-glass mip-member-fixed-inset box-border fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
-      <view class="flex min-w-[152rpx] items-baseline justify-center leading-none text-brand" aria-label="{{priceText}}"><text wx:if="{{priceSymbol}}" class="text-[24rpx] font-medium leading-none">{{priceSymbol}}</text><text class="text-[40rpx] font-medium leading-none">{{priceAmount}}</text></view>
-      <button id="event-registration-submit" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" loading="{{busy}}" aria-disabled="{{busy}}" bind:tap="submit"><view class="box-border flex h-[80rpx] w-full items-center justify-center rounded-full border border-black bg-brand text-[32rpx] font-medium text-on-brand">{{payLabel}}</view></button>
-    </view>
+    <mip-sticky-actions>
+      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-3 px-[16rpx]">
+        <view class="flex min-w-[152rpx] items-baseline justify-center leading-none text-brand" aria-label="{{priceText}}"><text wx:if="{{priceSymbol}}" class="text-[24rpx] font-medium leading-none">{{priceSymbol}}</text><text class="text-[40rpx] font-medium leading-none">{{priceAmount}}</text></view>
+        <mip-pill-button id="event-registration-submit" class="min-w-0 flex-1" label="{{payLabel}}" loading="{{busy}}" bind:tap="submit" />
+      </view>
+    </mip-sticky-actions>
   </block>
 </view>
