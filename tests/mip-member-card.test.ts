@@ -26,7 +26,7 @@ describe('MIP member card', () => {
     expect(view).toContain('wx:for="{{themeOptions}}"')
     expect(view).toContain('data-key="{{item.key}}"')
     expect(page).toContain('type CardStyleKey = \'PINK\' | \'BLUE\' | \'WHITE\' | \'YELLOW\'')
-    expect(view).toContain('open-type="share"')
+    expect(view).toContain('openType="share"')
     expect(page).toContain('wx.saveImageToPhotosAlbum')
     expect(page).toContain('mipIdentityModule.getMyProfileCardCode')
     expect(view).toContain('codeUrl')

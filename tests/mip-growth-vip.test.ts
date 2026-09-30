@@ -31,7 +31,7 @@ describe('MIP growth player actions', () => {
     // 续费/开通的跳转目标一律是会员订单确认页（邀请分享落地页仍为会员方案页，属既有邀请链路）。
     expect(script).toMatch(/renewMembership\(\)[\s\S]{0,200}source=growth-renew/)
     expect(script).toMatch(/openMembershipOrder\(\)[\s\S]{0,200}source=growth-join/)
-    expect(template).toContain('open-type="share"')
+    expect(template).toContain('openType="share"')
     expect(template).toContain('邀请加入')
     expect(template).toContain('立即续费')
     expect(template).toContain('立即加入')

@@ -11,6 +11,8 @@
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "mip-subscription-prompt": "/components/mip-subscription-prompt/index"
+    "mip-subscription-prompt": "/components/mip-subscription-prompt/index",
+    "mip-pill-button": "/components/mip-pill-button/index",
+    "mip-icon": "/components/mip-icon/index"
   }
 }

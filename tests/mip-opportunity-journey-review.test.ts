@@ -112,17 +112,15 @@ describe('MIP opportunity journey review', () => {
     expect(detail).toContain('{{item.cooperationCount || 0}}想合作</text>')
     // 招募结束的详情底部合作按钮不可点，文案「项目已结束」。
     expect(detail).toContain(`wx:elif="{{!item.mine && item.status === 'ENDED'}}"`)
-    expect(detail).toContain('aria-disabled="true">项目已结束</view>')
+    expect(detail).toContain('label="项目已结束" disabled')
   })
 
   it('keeps share enabled for recruiting and ended, disabled for unpublished (J4-05/J4-06)', () => {
-    expect(detail).toContain('open-type="share" aria-role="button">分享机会</button>')
+    expect(detail).toContain('label="分享机会" openType="share"')
     expect(detail).toContain(`wx:elif="{{ownerBar === 'unpublished'}}"`)
-    expect(detail).toContain('aria-disabled="true" disabled>分享机会</button>')
-    // 下架禁用态为 scene-specific 色值（#2C2C2C/#333/#666）。
-    expect(detailStyles).toContain('color: #666;')
-    expect(detailStyles).toContain('background: #2c2c2c;')
-    expect(detailStyles).toContain('border: 2rpx solid #333;')
+    expect(detail).toContain('label="分享机会" disabled')
+    // 下架禁用态收编 mip-pill-button（组件内 disabled 样式），页面不再持有 scene-specific 色值。
+    expect(detailStyles).not.toContain('opportunity-share-button')
     expect(detail).toContain('bind:tap="edit"')
   })
 

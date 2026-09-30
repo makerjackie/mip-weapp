@@ -169,7 +169,8 @@ describe('MIP people discovery client contract', () => {
     const view = source('src/packages/member/mip-people/index.wxml')
     const styles = source('src/packages/member/mip-people/index.wxss')
     expect(view).toContain('class="mip-people-filter-content mt-4"')
-    expect(view).toContain('bottom-[calc(env(safe-area-inset-bottom)+16rpx)]')
+    // 底部筛选确认条换 mip-sticky-actions 壳（bottom+16rpx 由组件内置）。
+    expect(view).toContain('<mip-sticky-actions>')
     expect(styles).toContain('padding-bottom: calc(260rpx + env(safe-area-inset-bottom) + 128rpx);')
   })
 

@@ -13,10 +13,10 @@
     "mip-opportunity-card": "/components/mip-opportunity-card/index",
     "mip-talent-card": "/components/talent-card/index",
     "mip-catalog-selector": "/components/catalog-selector/index",
-    "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-icon": "/components/mip-icon/index",
+    "mip-pill-button": "/components/mip-pill-button/index",
     "mip-login-sheet": "/components/mip-login-sheet/index"
   }
 }

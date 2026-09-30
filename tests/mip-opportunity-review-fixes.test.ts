@@ -298,9 +298,9 @@ describe('MIP opportunity review fixes', () => {
     expect(detail).toContain(`wx:elif="{{ownerBar === 'ended'}}"`)
     const endedBlock = detail.slice(
       detail.indexOf(`wx:elif="{{ownerBar === 'ended'}}"`),
-      detail.indexOf(`<view wx:else class="flex h-[88rpx] w-[176rpx]`),
+      detail.indexOf(`<mip-pill-button wx:else class="w-[176rpx] shrink-0" variant="secondary" label="编辑"`),
     )
-    expect(endedBlock).toContain('aria-disabled="true"')
+    expect(endedBlock).toContain('disabled')
     expect(endedBlock).not.toContain('bind:tap="edit"')
     // 点击兜底：已结束不再跳编辑页。
     expect(detailScript).toContain(`item.status !== 'ENDED'`)

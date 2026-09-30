@@ -86,26 +86,21 @@
     <!-- figma 1725_18515/18577 底部药丸（带外）：AVAILABLE=下载模板+上传附件双按钮；
          已结束且配置模板=整宽品牌色下载模板。上传后右按钮切换为提交完成。 -->
     <mip-sticky-actions wx:if="{{task.status === 'AVAILABLE'}}">
-      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[22rpx] rounded-full bg-brand-soft px-[24rpx] py-[16rpx]">
-        <view wx:if="{{task.template}}" class="flex h-[80rpx] flex-1 items-center justify-center gap-[16rpx] rounded-full border border-line bg-panel" aria-role="button" aria-label="下载模板" bind:tap="saveTemplate">
-          <view class="flex h-[40rpx] w-[40rpx] items-center justify-center"><mip-icon name="file-download-line" size="{{17}}" color="var(--color-brand)" /></view>
-          <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx] text-brand">下载模板</text>
-        </view>
-        <view wx:if="{{attachmentAssetId || !task.attachmentRequired}}" class="flex h-[80rpx] flex-1 items-center justify-center rounded-full bg-brand active:bg-brand-active" aria-role="button" bind:tap="submitTask">
-          <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx] text-on-brand">{{submitting ? '提交中…' : '提交完成'}}</text>
-        </view>
-        <view wx:else class="flex h-[80rpx] flex-1 items-center justify-center gap-[16rpx] rounded-full bg-brand active:bg-brand-active" aria-role="button" bind:tap="chooseAttachment">
-          <view class="flex h-[40rpx] w-[40rpx] items-center justify-center"><mip-icon name="upload-2-line" size="{{17}}" color="var(--color-on-brand)" /></view>
-          <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx] text-on-brand">{{uploading ? '上传中…' : '上传附件'}}</text>
-        </view>
+      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[22rpx] px-[16rpx]">
+        <mip-pill-button wx:if="{{task.template}}" class="min-w-0 flex-1" variant="secondary" label="下载模板" withIcon bind:tap="saveTemplate">
+          <mip-icon slot="icon" name="file-download-line" size="{{17}}" color="var(--color-brand)" />
+        </mip-pill-button>
+        <mip-pill-button wx:if="{{attachmentAssetId || !task.attachmentRequired}}" class="min-w-0 flex-1" label="{{submitting ? '提交中…' : '提交完成'}}" loading="{{submitting}}" bind:tap="submitTask" />
+        <mip-pill-button wx:else class="min-w-0 flex-1" label="{{uploading ? '上传中…' : '上传附件'}}" withIcon loading="{{uploading}}" bind:tap="chooseAttachment">
+          <mip-icon slot="icon" name="upload-2-line" size="{{17}}" color="var(--color-on-brand)" />
+        </mip-pill-button>
       </view>
     </mip-sticky-actions>
     <mip-sticky-actions wx:elif="{{task.template}}">
-      <view slot="actions" class="flex h-[112rpx] w-full items-center rounded-full bg-brand-soft px-[24rpx] py-[16rpx]">
-        <view class="flex h-[80rpx] w-full items-center justify-center gap-[16rpx] rounded-full bg-brand active:bg-brand-active" aria-role="button" aria-label="下载模板" bind:tap="saveTemplate">
-          <view class="flex h-[40rpx] w-[40rpx] items-center justify-center"><mip-icon name="file-download-line" size="{{17}}" color="var(--color-on-brand)" /></view>
-          <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx] text-on-brand">下载模板</text>
-        </view>
+      <view slot="actions" class="flex h-[112rpx] w-full items-center px-[16rpx]">
+        <mip-pill-button class="w-full" label="下载模板" withIcon bind:tap="saveTemplate">
+          <mip-icon slot="icon" name="file-download-line" size="{{17}}" color="var(--color-on-brand)" />
+        </mip-pill-button>
       </view>
     </mip-sticky-actions>
     <app-page-exit />

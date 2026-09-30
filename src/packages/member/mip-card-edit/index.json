@@ -5,6 +5,7 @@
     "app-page-exit": "/components/page-exit/index",
     "mip-icon": "/components/mip-icon/index",
     "mip-sticky-actions": "/components/sticky-actions/index",
+    "mip-pill-button": "/components/mip-pill-button/index",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

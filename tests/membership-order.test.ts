@@ -50,7 +50,7 @@ describe('MIP membership order confirmation page (journey-review J1-07 join-orde
     expect(template).toContain('总计')
     expect(template).toContain('购买须知')
     expect(template).toContain('立即支付')
-    expect(template).toContain('mip-liquid-glass')
+    expect(template).toContain('<mip-sticky-actions>')
     // 订单确认页无补充填写项（2026-09-21 终审 QO）
     expect(template).not.toMatch(/<(input|textarea|picker|picker-view|switch|slider|checkbox|radio|form|t-input|t-textarea|t-picker|t-switch|t-slider|t-radio-group|t-checkbox-group)\b/)
   })
@@ -95,9 +95,8 @@ describe('MIP membership order confirmation page (journey-review J1-07 join-orde
     expect(script).toContain('this.applyPlans(plans, true)')
     expect(script).toMatch(/catch \{[\s\S]*?plansVerified: false[\s\S]*?会员方案更新失败，暂时无法支付。/)
     expect(script).toMatch(/if \(!planId \|\| !this\.data\.plansVerified \|\| this\.data\.state !== 'ready'/)
-    // 按钮禁用与文案一致（刷新失败时不可发起购买）。
+    // 按钮禁用与文案一致（刷新失败时不可发起购买）；禁用态由 mip-pill-button 渲染。
     expect(template).toContain('disabled="{{paying || !plansVerified}}"')
-    expect(template).toContain('aria-disabled="{{paying || !plansVerified}}"')
   })
 
   it('offers pull-down retry and a visible hint while cached plans await verification (P2)', () => {

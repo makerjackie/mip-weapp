@@ -116,10 +116,12 @@
     </view>
     <view wx:if="{{editorMode !== 'PUBLISHED'}}" class="mt-5"><t-button block size="large" variant="outline" theme="primary" disabled="{{saving || coverUploading}}" bind:tap="saveDraft">保存草稿</t-button></view>
     <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] border border-danger px-4 py-3 text-[22rpx] text-danger" aria-live="polite">{{message}}</view>
-    <!-- journey-review J4-04 ③：液态玻璃底部条 + 黄芯胶囊「确认发布」。 -->
-    <view id="opportunity-editor-fixed-actions" class="mip-liquid-glass mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center rounded-full p-2">
-      <view class="flex h-[80rpx] w-full items-center justify-center rounded-full bg-brand text-[32rpx] font-medium text-on-brand active:bg-brand-active {{saving || coverUploading ? 'opacity-60' : ''}}" aria-role="button" aria-disabled="{{saving || coverUploading}}" bind:tap="publish">{{editorMode === 'PUBLISHED' ? '保存修改' : '确认发布'}}</view>
-    </view>
+    <!-- journey-review J4-04 ③：液态玻璃底部条（mip-sticky-actions）+ 黄芯胶囊「确认发布」（mip-pill-button）。 -->
+    <mip-sticky-actions id="opportunity-editor-fixed-actions">
+      <view slot="actions" class="w-full px-[16rpx]">
+        <mip-pill-button class="w-full" label="{{editorMode === 'PUBLISHED' ? '保存修改' : '确认发布'}}" loading="{{saving}}" disabled="{{saving || coverUploading}}" bind:tap="publish" />
+      </view>
+    </mip-sticky-actions>
     <app-page-exit always label="取消" />
     <!-- journey-review QZ2：项目状态半屏三选项（说明文案逐字取自终审稿）+ 取消胶囊。
          新建流程先发布，已发布机会支持结束和下架。 -->

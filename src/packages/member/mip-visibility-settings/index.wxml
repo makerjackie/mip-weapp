@@ -33,7 +33,7 @@
     </view>
 
     <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[22rpx] leading-6">{{message}}</view>
-    <mip-sticky-actions><view slot="actions" class="w-full"><t-button block size="large" theme="primary" loading="{{saving}}" bind:tap="save">保存公开设置</t-button></view></mip-sticky-actions>
+    <mip-sticky-actions><view slot="actions" class="w-full"><mip-pill-button label="保存公开设置" loading="{{saving}}" bind:tap="save" /></view></mip-sticky-actions>
     <app-page-exit label="返回我的" tab-url="/pages/profile/index" />
   </block>
 </view>

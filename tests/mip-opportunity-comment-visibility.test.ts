@@ -86,6 +86,6 @@ describe('opportunity public comment visibility', () => {
     expect(p.data.composerVisible).toBe(false)
     const view = readFileSync(new URL('../src/packages/member/mip-opportunities/detail/index.wxml', import.meta.url), 'utf8')
     expect(view).toContain('wx:if="{{commentsAvailable}}" id="opportunity-comments"')
-    expect(view).toContain('aria-disabled="true" disabled>分享机会</button>')
+    expect(view).toContain('label="分享机会" disabled')
   })
 })

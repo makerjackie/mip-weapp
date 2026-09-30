@@ -13,16 +13,16 @@ describe('MIP opportunity terminal state', () => {
 
     expect(editorPage).toContain('if (detail && !detail.canEdit)')
     expect(editorPage).toContain('机会已结束，不能继续编辑。')
-    // journey-review J4-05/J4-06：发布人底部条按 ownerBar 呈现；
-    // 招募中/已结束可分享（open-type=share），已下架置灰不可点，未发布草稿仍引导发布。
+    // journey-review J4-05/J4-06：发布人底部条按 ownerBar 呈现（mip-sticky-actions + mip-pill-button）；
+    // 招募中/已结束可分享（openType=share），已下架置灰不可点，未发布草稿仍引导发布。
     expect(detailPage).toContain(`journeyStatusOf(item)`)
     expect(detailPage).toContain(`? 'unpublished'`)
     expect(detailView).toContain('wx:if="{{ownerBar}}" id="opportunity-owner-actions"')
     expect(detailView).toContain(`wx:if="{{ownerBar === 'draft'}}"`)
-    expect(detailView).toContain('bind:tap="edit">发布机会</view>')
+    expect(detailView).toContain('label="发布机会" bind:tap="edit"')
     expect(detailView).toContain(`wx:elif="{{ownerBar === 'unpublished'}}"`)
-    expect(detailView).toContain('aria-disabled="true" disabled>分享机会</button>')
-    expect(detailView).toContain(`open-type="share" aria-role="button">分享机会</button>`)
+    expect(detailView).toContain('label="分享机会" disabled')
+    expect(detailView).toContain('label="分享机会" openType="share"')
     expect(detailView).not.toContain('机会已结束')
   })
 

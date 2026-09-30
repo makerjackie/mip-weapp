@@ -59,10 +59,12 @@
       <view>支付成功后开通玩家权益；未完成支付的订单不会保留，重新发起即重新创建。</view>
     </view>
     <app-page-exit />
-    <view class="mip-liquid-glass mip-member-fixed-inset box-border fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
-      <view class="flex min-w-[152rpx] items-baseline justify-center leading-none text-brand" aria-label="{{feeText}}"><text class="text-[24rpx] font-medium leading-none">{{totalSymbol}}</text><text class="text-[40rpx] font-medium leading-none">{{totalAmount}}</text></view>
-      <!-- 缓存方案未经服务端刷新确认（plansVerified=false）时禁用支付，与「会员方案更新失败，暂时无法支付。」文案一致。 -->
-      <button id="membership-order-pay" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" loading="{{paying}}" disabled="{{paying || !plansVerified}}" aria-disabled="{{paying || !plansVerified}}" bind:tap="pay"><view class="box-border flex h-[80rpx] w-full items-center justify-center rounded-full border border-black bg-brand text-[32rpx] font-medium text-on-brand {{paying || !plansVerified ? 'opacity-60' : ''}}">立即支付</view></button>
-    </view>
+    <mip-sticky-actions>
+      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-3 px-[16rpx]">
+        <view class="flex min-w-[152rpx] items-baseline justify-center leading-none text-brand" aria-label="{{feeText}}"><text class="text-[24rpx] font-medium leading-none">{{totalSymbol}}</text><text class="text-[40rpx] font-medium leading-none">{{totalAmount}}</text></view>
+        <!-- 缓存方案未经服务端刷新确认（plansVerified=false）时禁用支付，与「会员方案更新失败，暂时无法支付。」文案一致。 -->
+        <mip-pill-button id="membership-order-pay" class="min-w-0 flex-1" label="立即支付" loading="{{paying}}" disabled="{{paying || !plansVerified}}" bind:tap="pay" />
+      </view>
+    </mip-sticky-actions>
   </block>
 </view>

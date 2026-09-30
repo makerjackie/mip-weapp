@@ -28,7 +28,7 @@ describe('member order service status contract', () => {
   it('keeps pending event payment status and continuation visible before scrolling', () => {
     const eventPaymentState = detailView.indexOf('wx:if="{{paymentPending}}" class="mt-3 rounded-[16rpx]')
     const priceDetails = detailView.indexOf('费用明细', eventPaymentState)
-    const fixedPaymentAction = detailView.indexOf('class="mip-liquid-glass box-border fixed')
+    const fixedPaymentAction = detailView.indexOf('<mip-sticky-actions')
 
     expect(eventPaymentState).toBeGreaterThan(-1)
     expect(eventPaymentState).toBeLessThan(priceDetails)

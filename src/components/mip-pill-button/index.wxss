@@ -23,6 +23,16 @@
   opacity: 0.4;
 }
 
+/* Native-button root (open-type): strip WeChat defaults so the pill styles read as-is. */
+.mip-pill-button--native {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.mip-pill-button--native::after {
+  border: none;
+}
+
 .mip-pill-button__icon {
   display: flex;
   align-items: center;

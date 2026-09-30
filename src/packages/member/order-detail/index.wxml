@@ -125,8 +125,8 @@
       <view wx:else class="grid grid-cols-2 gap-3"><t-button block variant="outline" theme="default" bind:tap="openHelp">帮助与客服</t-button><t-button block theme="primary" bind:tap="openMembership">会员方案</t-button></view>
     </view>
   </block>
-  <view wx:if="{{state === 'ready' && paymentPending}}" class="mip-liquid-glass box-border fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 rounded-full p-2">
-    <t-button block size="large" theme="primary" loading="{{paying}}" disabled="{{!paymentEnabled}}" bind:tap="requestPayment">{{paymentEnabled ? '继续支付' : paymentUnavailableText}}</t-button>
-  </view>
+  <mip-sticky-actions wx:if="{{state === 'ready' && paymentPending}}">
+    <view slot="actions" class="w-full"><mip-pill-button label="{{paymentEnabled ? '继续支付' : paymentUnavailableText}}" loading="{{paying}}" disabled="{{!paymentEnabled}}" bind:tap="requestPayment" /></view>
+  </mip-sticky-actions>
   <app-page-exit label="返回" />
 </view>
