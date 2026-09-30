@@ -1,0 +1,41 @@
+{
+  "sourceCommit": "fdc524f57c974bed7c45ea3881f9ddded42c0773",
+  "stage": "staging",
+  "paymentMode": "TEST",
+  "publicationMode": "existing-bff-static-fallback",
+  "ordinaryCosPublication": "BLOCKED: TLS ECONNRESET",
+  "functionName": "mip-admin-web-api",
+  "functionConfigurationUnchanged": true,
+  "otherRoutesUnchanged": true,
+  "permissionsUnchanged": true,
+  "timersUnchanged": true,
+  "dnsUnchanged": true,
+  "businessBackendChanged": false,
+  "filesVerifiedByScf": 14,
+  "httpsVerification": "BLOCKED: local public-gateway TLS ECONNRESET / browser ERR_CONNECTION_CLOSED",
+  "completedAt": "2026-09-30T07:43:59.843Z",
+  "entry": "/assets/index-Cc5-tcUT.js",
+  "entrySha256": "002b94337fe226065e397c5332ead83a86c9f77ed17adcefdae00ffafd580441",
+  "publicHttpsChecks": [
+    {
+      "resource": "/",
+      "passed": false,
+      "error": "ECONNRESET"
+    },
+    {
+      "resource": "/assets/index-Cc5-tcUT.js",
+      "passed": false,
+      "error": "UND_ERR_CONNECT_TIMEOUT"
+    }
+  ],
+  "functionRuntime": {
+    "passed": 66,
+    "total": 66,
+    "modules": 14,
+    "transport": "SCF invocation; not public HTTPS"
+  },
+  "ci": {
+    "runId": 36682628775,
+    "status": "success"
+  }
+}
