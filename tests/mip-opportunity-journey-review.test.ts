@@ -77,7 +77,9 @@ describe('MIP opportunity journey review', () => {
     expect(discoveryScript).toContain('openBanner(event: WechatMiniprogram.TouchEvent)')
     expect(discovery).toContain('bind:tap="openBanner"')
     // 未配置不占位：banner 容器以 banners.length 为渲染条件，且复用活动页 swiper 尺寸。
-    expect(discovery).toContain(`wx:if="{{mode === 'opportunities' && banners.length}}"`)
+    // MIW-18：项目机会与人才合作两个 Tab 共用同一 Banner，仅以 banners.length 控制。
+    expect(discovery).toContain(`wx:if="{{banners.length}}"`)
+    expect(discovery).not.toContain(`mode === 'opportunities' && banners.length`)
     expect(discovery).toContain('h-[298rpx]')
   })
   it('adds the QZ1 type trio as optional card props with unchanged defaults', () => {
