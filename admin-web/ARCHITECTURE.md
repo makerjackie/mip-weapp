@@ -40,11 +40,11 @@ pages
 
 TanStack Router 使用 hash history，保持 Cloudflare Pages 静态回退简单，并兼容现有分享链接。一级页面使用稳定路径：
 
-`/overview`、`/users`、`/cards`、`/events`、`/orders`、`/tasks`、`/banners`、`/media`、`/game`、`/opportunities`、`/growth`、`/permissions`、`/admin-accounts`、`/audit-logs`、`/messages`、`/knowledge`、`/operations`。
+`/overview`、`/users`、`/cards`、`/events`、`/orders`、`/tasks`、`/banners`、`/videos`、`/media`、`/game`、`/opportunities`、`/growth`、`/permissions`、`/admin-accounts`、`/audit-logs`、`/messages`、`/knowledge`、`/operations`。
 
-其中 `/game`、`/knowledge` 已从导航隐藏；`/game` 未注册路由，`/knowledge` 保留列表和编辑路由以支持编辑页返回。其余 15 条为当前可见一级页面。
+`/game`、`/knowledge` 已注册并按 capability 展示；导航可见性由当前服务端权限决定。
 
-列表 search 包含 `q`、`status`、`cursor`、`page`、`limit`、`tab`。页面不能另存一份可分享筛选状态。当前多数详情使用 React 局部状态/抽屉，这是实现现状，不是全部详情的产品约束；用户档案尚未满足 [ACCEPTANCE.md](ACCEPTANCE.md) U02 的独立 URL、浏览器 Tab 与多开要求，需用 Router 承载对象身份。
+列表 search 包含 `q`、`status`、`cursor`、`page`、`limit`、`tab`。页面不能另存一份可分享筛选状态。当前多数详情使用 React 局部状态/抽屉，这是实现现状，不是全部详情的产品约束；用户档案由 `/users/$userId` 承载对象身份，支持独立 URL、浏览器 Tab 与多开（U02）。
 
 ## Query 与 mutation
 

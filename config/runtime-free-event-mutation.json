@@ -108,30 +108,12 @@
       ]
     },
     {
-      "id": "member-comment",
-      "route": "packages/member/mip-events/comments/index",
-      "selector": "#mip-event-comments-page",
-      "mode": "automated-mutation",
-      "handlers": [
-        "updateDraft",
-        "submitComment"
-      ]
-    },
-    {
       "id": "external-undo-check-in",
       "route": "packages/admin/event-registrations/index",
       "selector": "#admin-event-registrations-page",
       "mode": "external-wait",
       "handler": "undoCheckIn",
       "reason": "The bound handler requires an editable WeChat confirmation modal. The runner opens the authoritative roster and waits for the operator-confirmed status change."
-    },
-    {
-      "id": "external-delete-comment",
-      "route": "packages/member/mip-events/comments/index",
-      "selector": "#mip-event-comments-page",
-      "mode": "external-wait",
-      "handler": "deleteComment",
-      "reason": "The bound handler requires a WeChat delete confirmation modal. The runner waits for the created comment to disappear from the current authoritative page state."
     },
     {
       "id": "external-cancel-registration",

@@ -6,7 +6,7 @@ const scopes = { PLATFORM: '00000000-0000-0000-0000-000000000000', BRANCH: 'bran
 const binding = (role_key, scope_type, extras = {}) => ({ role_key, scope_type, scope_id: scopes[scope_type], ...extras })
 it('allows branch/event-owned unpublished images while keeping Banner/video/task capabilities at their system ceilings', () => {
   assert.equal(mediaUploadBindingAllows(binding('BRANCH_ADMIN', 'BRANCH'), 'events.write'), true)
-  assert.equal(mediaUploadBindingAllows(binding('EVENT_OWNER', 'EVENT'), 'events.album.manage'), true)
+  assert.equal(mediaUploadBindingAllows(binding('EVENT_OWNER', 'EVENT'), 'events.write'), true)
   for (const capability of ['banners.manage', 'events.recaps.manage', 'tasks.manage']) assert.equal(mediaUploadBindingAllows(binding('BRANCH_ADMIN', 'BRANCH'), capability), false)
   assert.equal(mediaUploadBindingAllows(binding('EVENT_STAFF', 'EVENT'), 'events.write'), false)
   assert.equal(mediaUploadBindingAllows(binding('BRANCH_ADMIN', 'PLATFORM'), 'events.write'), false)

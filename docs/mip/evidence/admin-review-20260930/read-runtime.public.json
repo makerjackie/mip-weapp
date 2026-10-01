@@ -1,0 +1,903 @@
+{
+  "startedAt": "2026-09-30T04:31:15.967Z",
+  "stage": "staging",
+  "businessWrites": false,
+  "checks": [
+    {
+      "name": "password-login",
+      "passed": true
+    },
+    {
+      "name": "mip.admin.session",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin-enabled",
+      "passed": true
+    },
+    {
+      "name": "mip.admin.users.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.users.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.memberships.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.events.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.events.policy.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.events.catalog.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.events.catalog.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.events.album.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.events.insights.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.events.roster",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.events.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.events.feedbacks.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.orders.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.orders.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.paymentAttempts.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.tasks.completions.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.tasks.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.tasks.editorOptions",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.tasks.eligibleLevels.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.tasks.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.tasks.editorOptions",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.tasks.completions.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.banners.session",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.banners.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.banners.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.game.blindBoxes.catalogs.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.game.seasons.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.game.session",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.rolePolicies.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.roles.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.branches.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.audit.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.messageTemplates.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.messageCampaigns.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.knowledge.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.userContent.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.matching.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.opportunities.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.userContent.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "nonempty-user-content-editor-projection",
+      "passed": true
+    },
+    {
+      "name": "mip.admin.opportunities.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.opportunityComments.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.growth.levels",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.growth.entries",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.growth.rules",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.growth.levelTransitions",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.entitlements.transactions.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.badges.awards",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.contribution.transactions.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.badges.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.growth.benefits",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.contribution.rules.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.communityReports.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.communityReports.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.communityReports.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.exceptions.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.communityReports.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.announcements.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.operations.queue.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.adminAccounts.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.audit.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.dashboard.overview.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.cards.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.cards.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.videos.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "mip.admin.membershipAgreement.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "logout",
+      "passed": true
+    }
+  ],
+  "modules": [
+    {
+      "route": "users",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 12,
+          "columns": 14,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "events",
+      "passed": true,
+      "sections": [
+        {
+          "title": "活动",
+          "rows": 8,
+          "columns": 10,
+          "error": false
+        },
+        {
+          "title": "活动政策",
+          "rows": 1,
+          "columns": 2,
+          "error": false
+        },
+        {
+          "title": "活动类型",
+          "rows": 4,
+          "columns": 7,
+          "error": false
+        },
+        {
+          "title": "活动标签",
+          "rows": 3,
+          "columns": 7,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "orders",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 9,
+          "columns": 8,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "tasks",
+      "passed": true,
+      "sections": [
+        {
+          "title": "任务",
+          "rows": 7,
+          "columns": 12,
+          "error": false
+        },
+        {
+          "title": "近期完成记录",
+          "rows": 1,
+          "columns": 5,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "banners",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 2,
+          "columns": 7,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "game",
+      "passed": true,
+      "sections": [
+        {
+          "title": "赛季",
+          "rows": 1,
+          "columns": 5,
+          "error": false
+        },
+        {
+          "title": "盲盒目录",
+          "rows": 1,
+          "columns": 6,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "permissions",
+      "passed": true,
+      "sections": [
+        {
+          "title": "运营成员",
+          "rows": 2,
+          "columns": 5,
+          "error": false
+        },
+        {
+          "title": "角色策略摘要",
+          "rows": 6,
+          "columns": 7,
+          "error": false
+        },
+        {
+          "title": "服务器",
+          "rows": 4,
+          "columns": 9,
+          "error": false
+        },
+        {
+          "title": "最近审计记录",
+          "rows": 20,
+          "columns": 6,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "messages",
+      "passed": true,
+      "sections": [
+        {
+          "title": "消息活动",
+          "rows": 1,
+          "columns": 5,
+          "error": false
+        },
+        {
+          "title": "消息模板",
+          "rows": 2,
+          "columns": 6,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "knowledge",
+      "passed": true,
+      "sections": [
+        {
+          "title": "知识内容",
+          "rows": 3,
+          "columns": 7,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "opportunities",
+      "passed": true,
+      "sections": [
+        {
+          "title": "机会",
+          "rows": 6,
+          "columns": 12,
+          "error": false
+        },
+        {
+          "title": "用户内容",
+          "rows": 11,
+          "columns": 8,
+          "error": false
+        },
+        {
+          "title": "撮合设置",
+          "rows": 1,
+          "columns": 6,
+          "error": false
+        },
+        {
+          "title": "撮合请求",
+          "rows": 1,
+          "columns": 6,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "growth",
+      "passed": true,
+      "sections": [
+        {
+          "title": "等级",
+          "rows": 3,
+          "columns": 7,
+          "error": false
+        },
+        {
+          "title": "等级权益",
+          "rows": 5,
+          "columns": 4,
+          "error": false
+        },
+        {
+          "title": "成长规则",
+          "rows": 4,
+          "columns": 8,
+          "error": false
+        },
+        {
+          "title": "成长流水",
+          "rows": 12,
+          "columns": 7,
+          "error": false
+        },
+        {
+          "title": "等级变更",
+          "rows": 0,
+          "columns": 5,
+          "error": false
+        },
+        {
+          "title": "徽章",
+          "rows": 17,
+          "columns": 5,
+          "error": false
+        },
+        {
+          "title": "徽章获得记录",
+          "rows": 3,
+          "columns": 6,
+          "error": false
+        },
+        {
+          "title": "权益流水",
+          "rows": 15,
+          "columns": 9,
+          "error": false
+        },
+        {
+          "title": "贡献值规则",
+          "rows": 0,
+          "columns": 6,
+          "error": false
+        },
+        {
+          "title": "贡献值流水",
+          "rows": 1,
+          "columns": 5,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "operations",
+      "passed": true,
+      "sections": [
+        {
+          "title": "公告",
+          "rows": 2,
+          "columns": 7,
+          "error": false
+        },
+        {
+          "title": "社区举报",
+          "rows": 0,
+          "columns": 6,
+          "error": false
+        },
+        {
+          "title": "运营异常",
+          "rows": 2,
+          "columns": 7,
+          "error": false
+        },
+        {
+          "title": "运营待办",
+          "rows": 3,
+          "columns": 6,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "adminAccounts",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 0,
+          "columns": 6,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "auditLogs",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 20,
+          "columns": 7,
+          "error": false
+        }
+      ]
+    }
+  ],
+  "details": [
+    {
+      "route": "users",
+      "passed": true,
+      "sections": [
+        {
+          "title": "基本信息",
+          "fields": 12,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "会员权益",
+          "fields": 4,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "成长数据",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "业务记录",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "影响力数据",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "events",
+      "passed": true,
+      "sections": [
+        {
+          "title": "活动信息",
+          "fields": 15,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "参与情况",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "互动数据",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "财务数据",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "反馈数据",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "报名与参与人",
+          "fields": 0,
+          "rows": 5,
+          "error": false
+        },
+        {
+          "title": "待审核相册",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "活动反馈明细",
+          "fields": 0,
+          "rows": 1,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "orders",
+      "passed": true,
+      "sections": [
+        {
+          "title": "订单信息",
+          "fields": 10,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "购买人",
+          "fields": 5,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "商品快照",
+          "fields": 7,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "支付尝试",
+          "fields": 0,
+          "rows": 1,
+          "error": false
+        },
+        {
+          "title": "状态记录",
+          "fields": 0,
+          "rows": 1,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "tasks",
+      "passed": true,
+      "sections": [
+        {
+          "title": "任务信息",
+          "fields": 18,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "执行数据",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "完成记录",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "banners",
+      "passed": true,
+      "sections": [
+        {
+          "title": "Banner 图片",
+          "fields": 6,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "跳转与状态",
+          "fields": 8,
+          "rows": 0,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "userContent",
+      "passed": true,
+      "sections": [
+        {
+          "title": "基本信息",
+          "fields": 9,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "案例内容",
+          "fields": 9,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "操作记录",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        }
+      ]
+    },
+    {
+      "route": "opportunities",
+      "passed": true,
+      "sections": [
+        {
+          "title": "机会信息",
+          "fields": 15,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "组队玩家",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "评论设置",
+          "fields": 4,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "评论与评价",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "评论举报",
+          "fields": 0,
+          "rows": 0,
+          "error": false
+        },
+        {
+          "title": "操作记录",
+          "fields": 0,
+          "rows": 24,
+          "error": false
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Read-only current-actor coverage; does not prove all roles, writes, refunds or device flows."
+  ],
+  "completedAt": "2026-09-30T04:31:51.136Z",
+  "passed": true
+}

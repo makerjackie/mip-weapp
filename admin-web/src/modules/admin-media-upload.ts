@@ -2,7 +2,6 @@ export const ADMIN_MEDIA_UPLOAD_ACTION = 'mip.admin.media.uploadImage' as const
 export const ADMIN_MEDIA_MAX_IMAGE_BYTES = 1024 * 1024
 export const ADMIN_MEDIA_PURPOSE_OPTIONS = [
   { value: 'BANNER', label: 'Banner 图片' },
-  { value: 'EVENT_ALBUM', label: '活动相册' },
   { value: 'EVENT_CONTENT', label: '活动正文图片' },
   { value: 'EVENT_COVER', label: '活动封面' },
   { value: 'OPPORTUNITY_COVER', label: '机会封面' },
@@ -13,7 +12,6 @@ export const ADMIN_MEDIA_PURPOSE_OPTIONS = [
 ] as const
 export const ADMIN_MEDIA_PURPOSE_CAPABILITIES = Object.freeze({
   BANNER: 'banners.manage',
-  EVENT_ALBUM: 'events.album.manage',
   EVENT_CONTENT: 'events.write',
   EVENT_COVER: 'events.write',
   OPPORTUNITY_COVER: 'opportunities.moderate',
@@ -105,7 +103,7 @@ export function hasMediaUploadCapability(
   grants: readonly AdminMediaCapabilityGrant[],
   capability: string,
 ) {
-  const scoped = ['events.write', 'events.album.manage', 'opportunities.moderate', 'userContent.moderate'].includes(capability)
+  const scoped = ['events.write', 'opportunities.moderate', 'userContent.moderate'].includes(capability)
   return grants.some(grant => grant.capability === capability && (grant.scopeType === 'PLATFORM' || scoped && ['BRANCH', 'EVENT'].includes(grant.scopeType || '')))
 }
 

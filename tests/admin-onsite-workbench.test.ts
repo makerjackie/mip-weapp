@@ -19,8 +19,6 @@ const event = {
   accessType: 'FREE',
   priceCents: 0,
   registrationPolicy: 'AUTO',
-  albumEnabled: false,
-  albumSubmissionPolicy: 'AUTO',
   capacity: 30,
   registrationCount: 1,
   attendedCount: 0,

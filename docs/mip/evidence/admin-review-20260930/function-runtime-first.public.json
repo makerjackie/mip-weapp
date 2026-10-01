@@ -1,0 +1,96 @@
+{
+  "generatedAt": "2026-09-30T07:45:36.798Z",
+  "origin": "https://cloud1-d2gm0vloa9e1b4f31-1429274561.ap-shanghai.app.tcloudbase.com",
+  "passwordChanged": false,
+  "businessWrites": false,
+  "checks": [
+    {
+      "id": "static:/",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/ant-design-DZvgLqR9.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/charts-D26ByYiC.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/index-BqX7yv-G.css",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/index-Cc5-tcUT.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/overview-purchase-chart-CabpwZCl.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/react-Mefe_Tge.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/rolldown-runtime-hePW80VL.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/router-query-DYZ4JsyJ.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:missing-asset-404",
+      "status": "pass",
+      "httpStatus": 404
+    },
+    {
+      "id": "auth:origin-rejected",
+      "status": "pass",
+      "httpStatus": 403
+    },
+    {
+      "id": "auth:wrong-password-rejected",
+      "status": "pass",
+      "httpStatus": 401
+    },
+    {
+      "id": "auth:password-login",
+      "status": "fail",
+      "httpStatus": 503
+    },
+    {
+      "id": "verification:completed",
+      "status": "fail"
+    }
+  ],
+  "modules": [],
+  "limitations": [
+    "Public gateway HTTPS connectivity is PENDING due to local TLS ECONNRESET. These checks exercise the deployed BFF handler via SCF invocation.",
+    "HTTP authentication and read-model verification, not browser visual acceptance.",
+    "No business writes, refunds, exports, file uploads, or WeChat confirmation are exercised.",
+    "Empty sections prove empty-state transport only; section counts distinguish nonempty coverage."
+  ],
+  "completedAt": "2026-09-30T07:46:13.006Z",
+  "passed": false,
+  "transport": "authenticated SCF control-plane invocation, not public gateway HTTPS"
+}

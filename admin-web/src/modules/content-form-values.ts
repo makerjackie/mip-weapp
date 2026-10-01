@@ -49,7 +49,7 @@ export function contentFormValues(action: ContentMutationAction, values: Operati
   if (action === 'mip.admin.opportunities.save') {
     const draft = record(next.draft)
     const terms = record(draft.commercialTerms)
-    if ([terms.minAmountCents, terms.maxAmountCents].every(value => value === undefined || value === null || value === '') && (!Array.isArray(terms.locations) || terms.locations.length === 0)) delete draft.commercialTerms
+    if ([terms.minAmountCents, terms.maxAmountCents].every(value => value === undefined || value === null || value === '') && (!Array.isArray(terms.locations) || terms.locations.length === 0)) draft.commercialTerms = next.opportunityId ? null : undefined
     next.draft = draft
   }
   if (action === 'mip.admin.userContent.save') next.draft = buildUserContentDraft(next)

@@ -23,17 +23,17 @@ describe('community outbox wakeup', () => {
       secret,
       sourceFunctionName: 'mip-community-api',
     })
-    const mutationActions = new Set(['saveEventComment'])
+    const mutationActions = new Set(['createKnowledgeComment'])
 
     assert.deepEqual(await wakeup.afterSuccessfulMutation({
-      action: 'listEventComments',
+      action: 'listKnowledgeComments',
       appId: 'wx-app',
       mutationActions,
     }), { status: 'SKIPPED' })
     assert.equal(calls.length, 0)
 
     assert.deepEqual(await wakeup.afterSuccessfulMutation({
-      action: 'saveEventComment',
+      action: 'createKnowledgeComment',
       appId: 'wx-app',
       mutationActions,
     }), { status: 'INVOKED' })
@@ -59,9 +59,9 @@ describe('community outbox wakeup', () => {
       secret: '',
     })
     assert.deepEqual(await missing.afterSuccessfulMutation({
-      action: 'saveEventComment',
+      action: 'createKnowledgeComment',
       appId: 'wx-app',
-      mutationActions: new Set(['saveEventComment']),
+      mutationActions: new Set(['createKnowledgeComment']),
     }), { status: 'SKIPPED' })
 
     const failing = createOutboxWakeup({
@@ -74,13 +74,13 @@ describe('community outbox wakeup', () => {
       secret,
     })
     assert.deepEqual(await failing.afterSuccessfulMutation({
-      action: 'saveEventComment',
+      action: 'createKnowledgeComment',
       appId: 'wx-app',
-      mutationActions: new Set(['saveEventComment']),
+      mutationActions: new Set(['createKnowledgeComment']),
     }), { status: 'FAILED' })
     assert.deepEqual(warnings[0][1], {
       event: 'outbox_wakeup_failed',
-      sourceAction: 'saveEventComment',
+      sourceAction: 'createKnowledgeComment',
       code: 'CONFLICT',
     })
     assert.doesNotMatch(JSON.stringify(warnings), new RegExp(secret))

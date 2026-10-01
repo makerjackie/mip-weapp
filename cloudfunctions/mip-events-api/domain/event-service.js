@@ -345,25 +345,6 @@ function currentBusinessDateStart(now) {
   return businessDateStart(value, '当前日期无效')
 }
 
-function encodeAlbumCursor(row) {
-  return Buffer.from(JSON.stringify({ createdAt: iso(row.created_at), id: row.id })).toString('base64url')
-}
-
-function decodeAlbumCursor(value) {
-  if (!value) return null
-  try {
-    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
-    if (typeof parsed.createdAt === 'string'
-      && Number.isFinite(Date.parse(parsed.createdAt))
-      && typeof parsed.id === 'string'
-      && /^[0-9a-f-]{36}$/i.test(parsed.id)) {
-      return parsed
-    }
-  }
-  catch {}
-  throw new DomainError('VALIDATION_FAILED', '分页参数无效')
-}
-
 function encodeParticipantCursor(row) {
   return Buffer.from(JSON.stringify({
     registeredAt: iso(row.registered_at),
@@ -396,24 +377,6 @@ function requiredUuid(value, label) {
     throw new DomainError('VALIDATION_FAILED', `${label}标识无效`)
   }
   return normalized
-}
-
-function albumPhotoRow(row, { mine = false } = {}) {
-  const visibility = publicVisibility(row.visibility_json)
-  return {
-    id: row.id,
-    imageUrl: row.asset_status === 'READY' ? (row.cloud_file_id || '') : '',
-    caption: row.caption || '',
-    status: row.status,
-    version: Number(row.version),
-    mine,
-    ...(row.status === 'REJECTED' && row.moderation_reason
-      ? { moderationReason: row.moderation_reason }
-      : {}),
-    ...(visibility.nickname && row.nickname ? { nickname: row.nickname } : {}),
-    ...(visibility.avatar && row.avatar_file_id ? { avatarUrl: row.avatar_file_id } : {}),
-    createdAt: iso(row.created_at),
-  }
 }
 
 function limitOf(value) {
@@ -553,7 +516,6 @@ function publicEventRow(row, previews = [], metadata = { tags: [], videoRecaps: 
     registrationCount: Number(row.registration_count || 0),
     participantPreview: previews,
     registrationStatus: row.registration_status || undefined,
-    albumEnabled: Number(row.album_enabled) === 1,
   }
 }
 
@@ -1219,7 +1181,6 @@ async function getEvent(db, {
     ...(row.registration_status ? { registrationVersion: Number(row.registration_version) } : {}),
     canCheckIn: ['REGISTERED', 'ATTENDED'].includes(row.registration_status),
     canInteract: row.registration_status === 'ATTENDED',
-    albumSubmissionPolicy: row.album_submission_policy,
     organizer: publicOrganizer(row, { appId, profileRefSecret }),
     invitationAttribution: publicInvitationAttribution(row),
   }
@@ -1437,273 +1398,6 @@ function publicVisibility(value) {
     industry: source.industry !== false,
     primaryBranch: source.primaryBranch !== false,
   }
-}
-
-async function listEventAlbum(db, {
-  appId,
-  userId = null,
-  eventId,
-  cursor,
-  limit = 20,
-}) {
-  const normalizedEventId = requiredUuid(eventId, '活动')
-  const event = await db.one(
-    `SELECT id, album_enabled, album_submission_policy
-     FROM mip_events
-     WHERE app_id = ? AND id = ?
-       AND (status = 'PUBLISHED' OR (published_at IS NOT NULL AND status IN ('ENDED', 'CANCELLED')))
-     LIMIT 1`,
-    [appId, normalizedEventId],
-  )
-  if (!event) throw new DomainError('NOT_FOUND', '活动不存在或未发布')
-  if (Number(event.album_enabled) !== 1) {
-    return {
-      eventId: normalizedEventId,
-      albumEnabled: false,
-      submissionPolicy: event.album_submission_policy,
-      items: [],
-    }
-  }
-
-  const pageLimit = limitOf(limit)
-  const decoded = decodeAlbumCursor(cursor)
-  const clauses = [
-    'photo.app_id = ?',
-    'photo.event_id = ?',
-    "photo.status = 'PUBLISHED'",
-    "asset.status = 'READY'",
-    "asset.purpose = 'EVENT_ALBUM'",
-  ]
-  const params = [appId, normalizedEventId]
-  if (decoded) {
-    clauses.push('(photo.created_at < ? OR (photo.created_at = ? AND photo.id < ?))')
-    params.push(decoded.createdAt, decoded.createdAt, decoded.id)
-  }
-  const block = mutualBlockFilter(userId, 'photo.uploader_user_id', 'photo.app_id')
-  if (block.sql) {
-    clauses.push(block.sql)
-    params.push(...block.params)
-  }
-  const rows = await db.query(
-    `SELECT photo.id, photo.uploader_user_id, photo.caption, photo.status, photo.version,
-       photo.created_at, asset.status AS asset_status, asset.cloud_file_id,
-       profile.nickname, profile.visibility_json,
-       avatar.cloud_file_id AS avatar_file_id
-     FROM mip_event_album_photos photo
-     LEFT JOIN mip_media_assets asset
-       ON asset.app_id = photo.app_id AND asset.id = photo.media_asset_id
-     LEFT JOIN mip_profiles profile
-       ON profile.app_id = photo.app_id AND profile.user_id = photo.uploader_user_id
-     LEFT JOIN mip_media_assets avatar
-       ON avatar.app_id = profile.app_id AND avatar.id = profile.avatar_asset_id
-       AND avatar.status = 'READY'
-     WHERE ${clauses.join(' AND ')}
-     ORDER BY photo.created_at DESC, photo.id DESC
-     LIMIT ?`,
-    [...params, pageLimit + 1],
-  )
-  const hasMore = rows.length > pageLimit
-  const page = rows.slice(0, pageLimit)
-  return {
-    eventId: normalizedEventId,
-    albumEnabled: true,
-    submissionPolicy: event.album_submission_policy,
-    items: page.map(row => albumPhotoRow(row, { mine: Boolean(userId) && row.uploader_user_id === userId })),
-    nextCursor: hasMore ? encodeAlbumCursor(page[page.length - 1]) : undefined,
-  }
-}
-
-async function listMyEventAlbumSubmissions(db, { appId, userId, eventId }) {
-  const normalizedEventId = requiredUuid(eventId, '活动')
-  const event = await db.one(
-    `SELECT e.id, e.status, e.published_at, e.album_enabled, e.album_submission_policy,
-       r.status AS registration_status
-     FROM mip_events e
-     LEFT JOIN mip_event_registrations r
-       ON r.app_id = e.app_id AND r.event_id = e.id AND r.user_id = ?
-     WHERE e.app_id = ? AND e.id = ? LIMIT 1`,
-    [userId, appId, normalizedEventId],
-  )
-  if (!event) throw new DomainError('NOT_FOUND', '活动不存在')
-  const rows = await db.query(
-    `SELECT photo.id, photo.caption, photo.status, photo.version, photo.moderation_reason,
-       photo.created_at, asset.status AS asset_status, asset.cloud_file_id,
-       profile.nickname, profile.visibility_json,
-       avatar.cloud_file_id AS avatar_file_id
-     FROM mip_event_album_photos photo
-     JOIN mip_media_assets asset
-       ON asset.app_id = photo.app_id AND asset.id = photo.media_asset_id
-     LEFT JOIN mip_profiles profile
-       ON profile.app_id = photo.app_id AND profile.user_id = photo.uploader_user_id
-     LEFT JOIN mip_media_assets avatar
-       ON avatar.app_id = profile.app_id AND avatar.id = profile.avatar_asset_id
-       AND avatar.status = 'READY'
-     WHERE photo.app_id = ? AND photo.event_id = ? AND photo.uploader_user_id = ?
-       AND photo.status IN ('PENDING', 'PUBLISHED', 'REJECTED')
-       AND (
-         photo.status = 'REJECTED'
-         OR (asset.status = 'READY' AND asset.purpose = 'EVENT_ALBUM')
-       )
-     ORDER BY photo.created_at DESC, photo.id DESC LIMIT 50`,
-    [appId, normalizedEventId, userId],
-  )
-  return {
-    eventId: normalizedEventId,
-    albumEnabled: Number(event.album_enabled) === 1,
-    submissionPolicy: event.album_submission_policy,
-    canSubmit: Number(event.album_enabled) === 1
-      && (event.status === 'PUBLISHED' || (event.status === 'ENDED' && event.published_at))
-      && ['REGISTERED', 'ATTENDED'].includes(event.registration_status),
-    items: rows.map(row => albumPhotoRow(row, { mine: true })),
-  }
-}
-
-function assertReadyAlbumAsset(asset) {
-  if (!asset
-    || asset.status !== 'READY'
-    || asset.purpose !== 'EVENT_ALBUM'
-    || !/^image\/(?:png|jpeg)$/.test(asset.content_type || '')
-    || !/^[0-9a-f]{64}$/.test(asset.content_sha256 || '')
-    || typeof asset.cloud_file_id !== 'string'
-    || !asset.cloud_file_id.startsWith('cloud://')
-    || typeof asset.object_key !== 'string'
-    || !/^mip\/(?:development|test|staging|production)\//.test(asset.object_key)
-    || asset.object_key.includes('..')
-    || Number(asset.content_bytes) < 1
-    || Number(asset.width_px) < 1
-    || Number(asset.height_px) < 1) {
-    throw new DomainError('EVENT_ALBUM_MEDIA_INVALID', '照片素材未完成安全检查')
-  }
-}
-
-async function submitEventAlbumPhoto(db, {
-  appId,
-  userId,
-  eventId,
-  mediaAssetId,
-  caption,
-}) {
-  const normalizedEventId = requiredUuid(eventId, '活动')
-  const normalizedAssetId = requiredUuid(mediaAssetId, '素材')
-  const normalizedCaption = typeof caption === 'string' ? caption.trim() : ''
-  if (normalizedCaption.length > 300) {
-    throw new DomainError('VALIDATION_FAILED', '照片说明不能超过 300 个字')
-  }
-  return db.transaction(async (tx) => {
-    await requireActiveUserForMutation(tx, appId, userId)
-    const event = await tx.one(
-      `SELECT id, status, published_at, album_enabled, album_submission_policy
-       FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
-      [appId, normalizedEventId],
-    )
-    if (!event) throw new DomainError('NOT_FOUND', '活动不存在')
-    if (Number(event.album_enabled) !== 1
-      || !(event.status === 'PUBLISHED' || (event.status === 'ENDED' && event.published_at))) {
-      throw new DomainError('EVENT_ALBUM_DISABLED', '活动相册暂未开放')
-    }
-    const registration = await tx.one(
-      `SELECT status FROM mip_event_registrations
-       WHERE app_id = ? AND event_id = ? AND user_id = ? FOR UPDATE`,
-      [appId, normalizedEventId, userId],
-    )
-    if (!registration || !['REGISTERED', 'ATTENDED'].includes(registration.status)) {
-      throw new DomainError('EVENT_ALBUM_PARTICIPATION_REQUIRED', '只有已确认参与者可以提交照片')
-    }
-    const asset = await tx.one(
-      `SELECT id, purpose, status, object_key, cloud_file_id,
-         content_sha256, content_type, content_bytes, width_px, height_px
-       FROM mip_media_assets
-       WHERE app_id = ? AND id = ? AND owner_user_id = ? FOR UPDATE`,
-      [appId, normalizedAssetId, userId],
-    )
-    assertReadyAlbumAsset(asset)
-    const existing = await tx.one(
-      `SELECT id, event_id, uploader_user_id, status, version
-       FROM mip_event_album_photos
-       WHERE app_id = ? AND media_asset_id = ? FOR UPDATE`,
-      [appId, normalizedAssetId],
-    )
-    if (existing) {
-      if (existing.event_id === normalizedEventId && existing.uploader_user_id === userId
-        && existing.status !== 'WITHDRAWN') {
-        return {
-          id: existing.id,
-          status: existing.status,
-          version: Number(existing.version),
-          idempotent: true,
-        }
-      }
-      throw new DomainError('EVENT_ALBUM_MEDIA_INVALID', '照片素材已被使用')
-    }
-
-    const photoId = randomUUID()
-    const status = event.album_submission_policy === 'AUTO' ? 'PUBLISHED' : 'PENDING'
-    await tx.query(
-      `INSERT INTO mip_event_album_photos (
-        id, app_id, event_id, uploader_user_id, media_asset_id, caption, status, published_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [photoId, appId, normalizedEventId, userId, normalizedAssetId, normalizedCaption,
-        status, status === 'PUBLISHED' ? new Date() : null],
-    )
-    await writeAudit(tx, {
-      appId,
-      actorUserId: userId,
-      scopeId: normalizedEventId,
-      action: 'event.album.photo.submit',
-      resourceType: 'EVENT_ALBUM_PHOTO',
-      resourceId: photoId,
-      metadata: { status, submissionPolicy: event.album_submission_policy },
-    })
-    return { id: photoId, status, version: 1, idempotent: false }
-  })
-}
-
-async function withdrawEventAlbumPhoto(db, {
-  appId,
-  userId,
-  photoId,
-  expectedVersion,
-}) {
-  const normalizedPhotoId = requiredUuid(photoId, '照片')
-  const version = Number(expectedVersion)
-  if (!Number.isInteger(version) || version < 1) {
-    throw new DomainError('VALIDATION_FAILED', '照片版本无效')
-  }
-  return db.transaction(async (tx) => {
-    await requireActiveUserForMutation(tx, appId, userId)
-    const photo = await tx.one(
-      `SELECT id, event_id, status, version FROM mip_event_album_photos
-       WHERE app_id = ? AND id = ? AND uploader_user_id = ? FOR UPDATE`,
-      [appId, normalizedPhotoId, userId],
-    )
-    if (!photo) throw new DomainError('NOT_FOUND', '照片不存在')
-    if (Number(photo.version) !== version) {
-      throw new DomainError('CONFLICT', '照片状态已变化，请刷新后重试', true)
-    }
-    if (!['PENDING', 'PUBLISHED', 'REJECTED'].includes(photo.status)) {
-      throw new DomainError('INVALID_STATE', '照片当前不能撤回')
-    }
-    const updated = await tx.query(
-      `UPDATE mip_event_album_photos
-       SET status = 'WITHDRAWN', withdrawn_at = UTC_TIMESTAMP(3), version = version + 1
-       WHERE app_id = ? AND id = ? AND uploader_user_id = ? AND version = ?
-         AND status IN ('PENDING', 'PUBLISHED', 'REJECTED')`,
-      [appId, normalizedPhotoId, userId, version],
-    )
-    if (Number(updated?.affectedRows) !== 1) {
-      throw new DomainError('CONFLICT', '照片状态已变化，请刷新后重试', true)
-    }
-    await writeAudit(tx, {
-      appId,
-      actorUserId: userId,
-      scopeId: photo.event_id,
-      action: 'event.album.photo.withdraw',
-      resourceType: 'EVENT_ALBUM_PHOTO',
-      resourceId: normalizedPhotoId,
-      metadata: { previousStatus: photo.status, expectedVersion: version },
-    })
-    return { id: normalizedPhotoId, status: 'WITHDRAWN', version: version + 1 }
-  })
 }
 
 function registrationOutcome(row, extras = {}) {
@@ -3315,12 +3009,10 @@ module.exports = {
   getFeedback,
   getHeart,
   getMyRegistration,
-  listEventAlbum,
   listEvents,
   listHeartCandidates,
   listHeartHistory,
   markHeartHistoryRead,
-  listMyEventAlbumSubmissions,
   listMyRegistrations,
   listPublicParticipants,
   parseCheckInToken,
@@ -3330,7 +3022,5 @@ module.exports = {
   saveFeedback,
   setHeart,
   issueInvitationLink,
-  submitEventAlbumPhoto,
   updateRegistration,
-  withdrawEventAlbumPhoto,
 }

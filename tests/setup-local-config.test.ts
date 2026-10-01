@@ -23,7 +23,6 @@ describe('local DevTools condition generation', () => {
 
     expect(routes).toHaveLength(project.routes.length)
     expect(new Set(routes).size).toBe(project.routes.length)
-    expect(routes).toContain('packages/member/mip-events/comments/index')
     expect(routes.filter(route => route.startsWith('packages/admin/'))).toEqual([
       'packages/admin/dashboard/index',
       'packages/admin/web-login-confirm/index',

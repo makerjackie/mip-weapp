@@ -76,25 +76,11 @@ const expectedStepSpecs = [
     ],
   },
   {
-    id: 'member-comment',
-    route: 'packages/member/mip-events/comments/index',
-    selector: '#mip-event-comments-page',
-    mode: 'automated-mutation',
-    handlers: ['updateDraft', 'submitComment'],
-  },
-  {
     id: 'external-undo-check-in',
     route: 'packages/admin/event-registrations/index',
     selector: '#admin-event-registrations-page',
     mode: 'external-wait',
     handler: 'undoCheckIn',
-  },
-  {
-    id: 'external-delete-comment',
-    route: 'packages/member/mip-events/comments/index',
-    selector: '#mip-event-comments-page',
-    mode: 'external-wait',
-    handler: 'deleteComment',
   },
   {
     id: 'external-cancel-registration',

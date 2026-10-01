@@ -54,7 +54,6 @@ describe('MIP media internal admin transport', () => {
   it('accepts only the reviewed image purposes and binds each purpose to one capability', () => {
     assert.deepEqual(MEDIA_ADMIN_PURPOSE_CAPABILITIES, {
       BANNER: 'banners.manage',
-      EVENT_ALBUM: 'events.album.manage',
       EVENT_CONTENT: 'events.write',
       EVENT_COVER: 'events.write',
       OPPORTUNITY_COVER: 'opportunities.moderate',

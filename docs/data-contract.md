@@ -43,7 +43,7 @@
 | `mip_event_checkin_credentials` / `mip_event_checkins` | 短期签到凭证和当前到场状态 | events/admin 事务 |
 | `mip_event_checkin_transitions` | 每轮签到和撤销的不可变关系事实 | events/admin 与 outbox 同一事务只追加 |
 | `mip_event_hearts` / `mip_event_feedback` | 已签到用户的心动选择和活动反馈 | events 事务 |
-| `mip_event_album_photos` | 活动照片的提交者、素材引用、审核/撤回状态和版本 | events 提交/撤回；受 capability 约束的 admin 审核 |
+| `mip_event_album_photos` | 已退役活动相册的历史照片事实（2026-10 移除读写代码，仅保留数据） | 无活跃读写 |
 | `mip_opportunities` / `mip_opportunity_roles` / `mip_opportunity_tags` | 机会、角色和标签关系；草稿只能由平台级 capability 软归档 | `mip-opportunities-api` / `mip-admin-api` |
 | `mip_referral_intents` / `mip_profile_interests` | 发起人、被引荐人、机会之间的引荐关系和用户感兴趣关系 | `mip-opportunities-api` |
 | `mip_opportunity_comment_settings` / `mip_opportunity_comments` | 机会评论开关、审核方式、评论和项目评价事实 | 用户写入由 `mip-opportunities-api`；配置与审核由 `mip-admin-api` |
@@ -99,7 +99,6 @@
 - `answers_json` 是报名时或本人最后一次有效修改时的表单版本快照；`share_profile` 默认关闭。本人修改先锁定活动与报名记录，校验当前 `form_version` 和报名记录 `version`，再按当前 `registration_schema_json` 重验答案。该修改追加审计但不产生通知 outbox，因为报名状态和资格没有变化。公开参与者 DTO 只能返回已审核公开资料、头像临时 URL，以及仅描述当前调用者与该参与者关系的可选心动状态；不得返回 `user_id`、OpenID、手机号、报名答案、完整票据或其他用户之间的心动关系。
 - 签到凭证只保存 hash，票据或短期 token 不能替代登录身份和跨 AppID 鉴权。每次签到与撤销都追加 transition 和同 id outbox；撤销 transition 精确指向本轮签到，不删除到场事实。
 - 活动反馈只允许当前活动已签到用户提交，并使用 `expectedVersion` 防止覆盖。新反馈必须包含 1–5 分评分，以及推荐选择、1–6 个不重复合作角色、参与意向、0–2 个不重复探索方式和名单使用范围；可选正文 trim 后最多 300 字。`mip_event_feedback.answers_json` 仅为兼容旧记录允许 `NULL`，所有新写入必须保存完整结构；本人和授权运营读取时解析为结构化 `answers`，旧记录明确返回 `null`。
-- 活动相册公开 DTO 只返回 `PUBLISHED` 且仍为 `READY` / `EVENT_ALBUM` 的素材和遵守公开可见性的展示摘要，不返回上传者内部用户 ID。本人列表可回查待审和拒绝状态；提交资格、`AUTO` / `REVIEW` 发布结论、素材 owner 和内容安全完成状态均由服务端回查。本人撤回和运营审核使用 `expectedVersion`，只更新状态并追加审计。
 - 公告公共 DTO 只返回处于展示窗口内的 `PUBLISHED` 内容；城市筛选同时返回平台和对应分会公告。管理端使用独立 `announcements.manage` capability、内容安全、`expectedVersion` 和追加审计，关联目标只允许同 AppID 的活动或机会，不接受任意 URL。
 
 ## 成长、消息和 AI

@@ -9,7 +9,6 @@ const { createAdminAccess } = require('./access')
 const { createAdminCommunityGovernance } = require('./community-governance')
 const { createDashboardOverview } = require('./dashboard-overview')
 const { createEventCatalogAdmin } = require('./event-catalogs')
-const { createAdminEventComments } = require('./event-comments')
 const { createAdminEvents } = require('./events')
 const { createAdminExports } = require('./exports')
 const { createAdminGovernance, PLATFORM_SCOPE_ID } = require('./governance')
@@ -115,13 +114,11 @@ function createAdminService({
     getEvent,
     getEventInsights,
     getEventPolicy,
-    listEventAlbumPhotos,
     listEvents,
     listRoster,
     listRosterAll,
     normalizeExportFilters: normalizeEventFilters,
     publishEventReminder,
-    reviewEventAlbumPhoto,
     reviewRegistration,
     saveEvent,
     saveEventPolicy,
@@ -146,13 +143,6 @@ function createAdminService({
     saveEventVideoRecap,
     replaceEventTagAssignments,
   } = createEventCatalogAdmin({ access, repository })
-  const {
-    claimEventCommentReport,
-    closeEventCommentReport,
-    getEventCommentAdminState,
-    moderateEventComment,
-    saveEventCommentSettings,
-  } = createAdminEventComments({ access, repository })
   const {
     getOrder,
     listRefunds,
@@ -506,8 +496,6 @@ function createAdminService({
       getEventPolicy,
       getEvent,
       getEventInsights,
-      listEventAlbumPhotos,
-      getEventCommentAdminState,
       listRoster,
       listRosterAll,
       saveEventPolicy,
@@ -522,11 +510,6 @@ function createAdminService({
       cloneEvent,
       changeEventStatus,
       archiveEvent,
-      reviewEventAlbumPhoto,
-      saveEventCommentSettings,
-      moderateEventComment,
-      claimEventCommentReport,
-      closeEventCommentReport,
       publishEventReminder,
       reviewRegistration,
       checkIn,

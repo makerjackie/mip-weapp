@@ -5,7 +5,7 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 ## 图片资源边界
 
 - TabBar 回退图标、品牌 Logo、小型界面图标、固定卡片插画、名片背景和压缩后的徽章兜底图随小程序代码发布，保证应用外壳无需网络即可呈现。
-- Banner、活动/机会/案例封面、头像、相册、任务附件和可长期使用的小程序码属于业务或运营内容，必须通过 `mip-media-api` 写入 `mip/` 对象存储，并在数据库保留素材引用或永久 `cloud://` 文件 ID。5 分钟有效的网页登录小程序码属于临时认证载体，只以受限图片响应返回，不进入对象存储、素材表或业务日志。
+- Banner、活动/机会/案例封面、头像、活动配图、任务附件和可长期使用的小程序码属于业务或运营内容，必须通过 `mip-media-api` 写入 `mip/` 对象存储，并在数据库保留素材引用或永久 `cloud://` 文件 ID。5 分钟有效的网页登录小程序码属于临时认证载体，只以受限图片响应返回，不进入对象存储、素材表或业务日志。
 - 客户端不硬编码临时 CDN 地址，也不在业务图片缺失时展示设计稿或通用二维码冒充正式内容；页面使用无图状态或小型中性占位。
 - development/test 演示媒体保存在 `database/mysql/mip/demo-assets/`，只由 `pnpm seed:demo` 上传并校验；MIP staging 也可使用，但必须追加 `--confirm-staging-demo` 并保持 TEST catalog、非 live payment 和 exact EnvID 确认。这些文件不进入小程序 `src/`，production 禁止运行 demo seed。
 
@@ -18,12 +18,12 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 | 函数 | 责任 | 客户端可直接调用 |
 | --- | --- | --- |
 | `mip-identity-api` | 身份、协议、手机号、用户档案、账号注销 | 是 |
-| `mip-media-api` | 图片解码、内容安全、隔离存储和素材登记（含活动相册） | 是 |
-| `mip-events-api` | 活动、报名、邀请、签到、心动、反馈和活动相册 | 是 |
+| `mip-media-api` | 图片解码、内容安全、隔离存储和素材登记 | 是 |
+| `mip-events-api` | 活动、报名、邀请、签到、心动和反馈 | 是 |
 | `mip-opportunities-api` | 机会、引荐、感兴趣、合作卡、超级案例、机会撮合和用户偏好 | 是 |
 | `mip-community-api` | 公开档案安全、知识内容目录/详情和知识评论 | 是；写操作受身份补全约束 |
 | `mip-commerce-api` | 会员方案、会员/活动/单内容统一订单、退款申请、订单查询 | 是 |
-| `mip-admin-api` | Web 完整运营后台、小程序现场工作台、分会、活动、相册与知识内容运营、审计、导出和显式采集 | 是，受 capability 约束 |
+| `mip-admin-api` | Web 完整运营后台、小程序现场工作台、分会、活动与知识内容运营、审计、导出和显式采集 | 是，受 capability 约束 |
 | `mip-growth-api` | 成长等级、规则、账户和流水 | 是；内部事件也可调用 |
 | `mip-game-api` | 团队、赛季、每周赛况、排行榜快照与队伍大本营 | 是；只向有效会员开放，管理动作受 `game.manage` capability 约束 |
 | `mip-tasks-api` | 任务卡、全员或指定成员派发、模板、截止窗口、单次完成事实、附件复核、经验奖励和完成流水 | 是；管理动作受 `tasks.manage` capability 约束 |
@@ -52,7 +52,6 @@ AI 草稿和数字分身分别使用不属于数据库业务清单的 `mip-ai-dr
 - 订单统一使用 `mip_orders`：`order_type=MEMBERSHIP` 表示会员订单，`order_type=EVENT` 表示付费活动订单，`order_type=CONTENT` 表示单内容解锁订单。不要再建立第二套订单事实。
 - 对象存储 key 统一使用 `mip/` 前缀。数据库保存完整 `cloud://` 文件 ID、摘要、大小和业务外键，不保存临时 HTTPS URL。
 - 图片只通过 `mip-media-api` 上传；函数完整解码并重新编码 PNG/JPEG，执行微信图片内容安全检查，再写入 `mip/<stage>/<appScope>/` 和 `mip_media_assets`。业务保存接口仍按 owner、状态和 purpose 验证素材，上传成功不能直接授予业务绑定。
-- 活动照片使用独立 `EVENT_ALBUM` purpose 和 `mip/<stage>/<appScope>/event-album/` 存储目录。相册提交和批准发布都会重新校验可信媒体记录；客户端不能提交发布状态、上传者或对象 key。
 - 任务模板使用独立 `TASK_TEMPLATE` purpose 和 `task-templates/` 目录，只允许平台负责人或平台运营上传；任务保存时再次复核 AppID、状态、purpose、类型、尺寸和大小，用户详情只在任务对本人有效时返回临时可下载地址。
 - 共享环境中的旧 `member_*`、`dating_*`、`sewing_*` 表和对象保持只读，不迁移、不修复、不删除。
 

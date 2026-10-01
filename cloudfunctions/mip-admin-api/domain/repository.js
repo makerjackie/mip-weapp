@@ -5,7 +5,6 @@ const { claimOptional, complete } = require('./idempotency')
 const { createAnnouncementRepository } = require('./announcements')
 const { createAdminPrdExtensions } = require('./admin-prd-extensions')
 const { createBadgeAdminRepository } = require('./badges')
-const { createEventCommentAdminRepository } = require('./event-comment-governance')
 const { createEventInsightsRepository } = require('./event-insights')
 const { createFullAccessPolicy } = require('./full-access')
 const { appendLevelTransition } = require('./level-transitions')
@@ -228,10 +227,6 @@ function createAdminRepository(database, options = {}) {
   })
   const badgeAdminRepository = createBadgeAdminRepository(database, { createId: id })
   const growthOperationsRepository = createGrowthOperationsRepository(database, { id, lockMutation, assertScope, writeAudit, writeOutbox })
-  const eventCommentAdminRepository = createEventCommentAdminRepository(database, {
-    assertMutationScope: assertScope,
-    lockMutationAuthorization: lockMutation,
-  })
   const eventInsightsRepository = createEventInsightsRepository(database)
   const dashboardOverviewRepository = createDashboardOverviewRepository(database)
   const opportunityArchiveRepository = createOpportunityArchiveRepository(database, {
@@ -1390,7 +1385,6 @@ function createAdminRepository(database, options = {}) {
     ...adminPrdExtensions,
     ...adminAccountRepository,
     ...badgeAdminRepository,
-    ...eventCommentAdminRepository,
     ...eventCatalogRepository,
     ...eventInsightsRepository,
     ...eventRepository,

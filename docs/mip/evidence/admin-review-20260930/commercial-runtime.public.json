@@ -1,0 +1,33 @@
+{
+  "stage": "staging",
+  "at": "2026-09-30T04:24:27.697Z",
+  "fixtureOnly": true,
+  "checks": [
+    {
+      "name": "qa-login",
+      "passed": true
+    },
+    {
+      "name": "nonempty-terms-readback",
+      "passed": true
+    },
+    {
+      "name": "empty-editor-clears-terms",
+      "passed": true
+    },
+    {
+      "name": "versions-advance",
+      "passed": true
+    },
+    {
+      "name": "unrelated-content-and-state-preserved",
+      "passed": true
+    },
+    {
+      "name": "fixture-restored",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "completedAt": "2026-09-30T04:24:36.432Z"
+}

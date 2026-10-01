@@ -24,7 +24,6 @@ function eventRow(overrides = {}) {
     status: 'PUBLISHED',
     public_status: 'PUBLISHED',
     registration_count: 0,
-    album_enabled: 0,
     ...overrides,
   }
 }

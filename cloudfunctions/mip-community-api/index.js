@@ -37,15 +37,8 @@ const messages = {
   VALIDATION_FAILED: '提交内容格式不正确，请检查后重试',
 }
 
-const eventCommentActions = new Set([
-  'listEventComments',
-  'saveEventComment',
-  'deleteEventComment',
-  'reportEventComment',
-])
 const outboxMutationActions = new Set([
   'createKnowledgeComment',
-  'saveEventComment',
 ])
 
 function success(data) {
@@ -93,9 +86,7 @@ function createHandler(options) {
         return success(await options.service.listKnowledgeComments(identity, event))
       }
       const caller = await options.resolveUser(options.database, identity)
-      if (!eventCommentActions.has(action)) {
-        await options.assertReady(options.database, caller, options.agreementRequirements)
-      }
+      await options.assertReady(options.database, caller, options.agreementRequirements)
       switch (action) {
         case 'getRelationship': return success(await options.service.getRelationship(caller, event))
         case 'blockProfile': return success(await options.service.blockProfile(caller, event))
@@ -109,14 +100,6 @@ function createHandler(options) {
         }
         case 'deleteKnowledgeComment': return success(await options.service.deleteKnowledgeComment(caller, event))
         case 'reportKnowledgeComment': return success(await options.service.reportKnowledgeComment(caller, event))
-        case 'listEventComments': return success(await options.service.listEventComments(caller, event))
-        case 'saveEventComment': {
-          const data = await options.service.saveEventComment(caller, event)
-          await wakeOutboxAfterMutation(options, { action, appId: caller.appId, event, result: data })
-          return success(data)
-        }
-        case 'deleteEventComment': return success(await options.service.deleteEventComment(caller, event))
-        case 'reportEventComment': return success(await options.service.reportEventComment(caller, event))
         default: throw new Error('UNSUPPORTED_ACTION')
       }
     }
@@ -148,9 +131,7 @@ async function wakeOutboxAfterMutation(options, input) {
 }
 
 function shouldWakeOutbox(input) {
-  if (input?.result?.status !== 'PUBLISHED') return false
-  if (input.action === 'createKnowledgeComment') return true
-  return input.action === 'saveEventComment' && !input.event?.commentId
+  return input?.result?.status === 'PUBLISHED' && input.action === 'createKnowledgeComment'
 }
 
 const database = mysqlDatabase()

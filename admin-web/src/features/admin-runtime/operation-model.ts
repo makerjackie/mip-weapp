@@ -28,6 +28,7 @@ import {
   type AdminPeopleMutationAction,
 } from '../../modules/admin-people-mutation-forms'
 import { defaultOperationValues, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
+import { userContentEditorValues } from '../../modules/user-content-editor'
 import { contentFormValues, normalizeContentFields } from '../../modules/content-form-values'
 import type { AdminOperationLaunchContext } from '../../modules/admin-row-operations'
 import {
@@ -307,7 +308,7 @@ function createBasicOperationModel(
       action,
       capability,
       title: '归档活动',
-      description: '仅可归档没有报名、订单、签到或相册记录的草稿活动。提交后活动历史仍会保留。',
+      description: '仅可归档没有报名、订单或签到记录的草稿活动。提交后活动历史仍会保留。',
     }, [
       ...versionField(),
       { name: 'reason', label: '归档原因', kind: 'textarea', required: true, maxLength: 300, wide: true },
@@ -485,16 +486,7 @@ function prefillUserContent(values: OperationValues, targetId: string, item: Ope
     if (targetId) next.contentId = targetId
     return next
   }
-  const kind = String(item.kind || '')
-  const owner = record(item.owner)
-  next.kind = kind
-  next.contentId = String(item.id || targetId || '')
-  next.ownerUserId = String(owner.userId || '')
-  next.expectedVersion = item.version
-  const common = { kind, status: item.status }
-  next.draft = kind === 'COOPERATION_CARD'
-    ? { ...common, roleKey: item.roleKey, positioning: item.positioning, targetSummary: item.targetSummary, roleFields: item.roleFields, abilityScores: item.abilityScores }
-    : { ...common, projectName: item.projectName, summary: item.summary, startedOn: item.startedOn, endedOn: item.endedOn, responsibility: item.responsibility, cityTagId: item.cityTagId, industryTagId: item.industryTagId, caseType: item.caseType, description: item.description, coverAssetId: item.coverAssetId, mediaAssetIds: item.mediaAssetIds }
+  Object.assign(next, userContentEditorValues(item))
   return next
 }
 

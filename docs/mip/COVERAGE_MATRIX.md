@@ -26,7 +26,7 @@
 | 会员与邀请 / N1、#55 | 可配置方案、玩家权益、会员期邀请归因、续费 | implemented | verified-local + external-wait | commerce/ledger 和邀请 token 测试已覆盖；正式分享、扫码和支付待验 |
 | 统一订单 / #56 | 会员、活动、内容订单及服务端使用状态 | implemented | verified-local + external-wait | `mip_orders`、商品快照、状态投影和退款边界已覆盖；正式支付/退款待验 |
 | 活动目录 / B1–B8 | Banner、近期/往期、城市/日期/搜索、卡片、分享、详情入口 | implemented | verified-local + external-wait | 页面、服务端查询和日期范围测试已覆盖；正式素材、视频号、日历和分享待验 |
-| 活动详情 / C1–C7 | 图文媒体、电话、地图、分享、参与人、邀请来源、报名恢复 | implemented | verified-local + external-wait | 富内容、媒体排序和恢复合同已覆盖；地图、拨号、相册、码图需真机 |
+| 活动详情 / C1–C7 | 图文媒体、电话、地图、分享、参与人、邀请来源、报名恢复 | implemented | verified-local + external-wait | 富内容、媒体排序和恢复合同已覆盖；地图、拨号、码图需真机 |
 | 付费报名 / C8 | 订单意图、支付参数、ledger、报名确认和退款 | implemented | verified-local + external-wait | 本地事务与错误状态已覆盖；正式商户、回调、查单和真机支付待验 |
 | 扫码签到 / D1–D4 | scene、登录/报名/支付恢复、资格复核、签到海报 | implemented | verified-local + external-wait | 服务端签名、过期和幂等合同已覆盖；真实码、扫码、Canvas 和相册待验 |
 | 心动与反馈 / D5–D8 | 单关系、双列表、已签到反馈和通知 | implemented | verified-local + external-wait | 关系、反馈和站内 outbox 已覆盖；订阅模板和真机通知待验 |
@@ -66,7 +66,7 @@
 | Banner/视频/素材 / C01–C03 | 内容、上传绑定、排序启停、视频目标及上限 | implemented | verified-local + verified-production + evidence-missing | Banner 五个上限同事务锁、满额禁新增/启用、图片上传控件已补；视频独立编辑及临时媒体预览、用途鉴权已接通。[历史证据](evidence/admin-web-live-2026-08-28-react/README.md)只覆盖旧指定写入；当前真实上传/前台与真机视频号仍待验 |
 | 站内消息 / M01/M02 | 模板、范围、立即/定时、撤销、快照和失败恢复 | implemented | verified-local + evidence-missing + external-wait | 模板编辑等已补齐；真实接收范围、批次结果、定时/撤销和失败恢复待验，不恢复已下线通知 |
 | 知识/游戏扩展 / X01–X03 | 内容、商品、采集、赛季、排行、盲盒、评论治理 | partial | verified-local + external-wait | 导航与现有游戏运营入口已接通；知识来源/分类/计划/采集/商品/评论举报均接真实动作、独立分页与名字目录；知识对象内可定位评论/举报。正式来源、规则、价格、前台与跨域治理仍需验收 |
-| React Web 通用体验与维护 / G01–G08、K01–K08 | 非空读写、回填、权限、布局、恢复与维护合同 | partial | verified-local + verified-staging + evidence-missing | 完整工程门禁通过；最新真实 HTTPS 66/66、六类非空导出、私有草稿与演示机会保存/恢复回读、两用户独立 Tab、三个实际视口已有聚焦证据。尚未覆盖全部对象的完整 G01–G08；权限专项为执行者代码审查，不冒充独立安全审计 |
+| React Web 通用体验与维护 / G01–G08、K01–K08 | 非空读写、回填、权限、布局、恢复与维护合同 | partial | verified-local + verified-staging + evidence-missing | 9 月 30 日补会话乱序/旧回调、归档和编辑归属约束、活动复制真实路由回归；70/70 只读覆盖 14 模块和 7 类详情，演示机会清空商业条件及还原 6/6；新构建已进入 BFF，SCF 调用静态哈希 14/14、部署后检查 66/66；随后公开 HTTPS 恢复，真实登录/14 读模块/退出复验 66/66 通过，浏览器登录页正常；首轮任务完成列表 503 保留，不据此升级整条状态。证据见[复核记录](evidence/admin-review-20260930/README.md)。此前真实 HTTPS 66/66、六类非空导出、私有草稿与演示机会保存/恢复回读、两用户独立 Tab、三个实际视口已有聚焦证据。尚未覆盖全部对象的完整 G01–G08；权限专项为执行者代码审查，不冒充独立安全审计 |
 | 小程序现场工作台 | Web 登录确认、已授权活动、签到码与海报、名单搜索、签到和受控撤销 | implemented | evidence-missing + external-wait | 四条现场路由已纳入实现范围；缺当前可提交运行报告和真实设备现场闭环 |
 
 ### 53 条场景当前记录
@@ -134,7 +134,7 @@
 | 页面族 | 设计输入 | 实现状态 | 验证状态 | 当前边界 |
 | --- | --- | --- | --- | --- |
 | 我的、档案、名片、勋章、合作卡、案例、成长 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的个人中心与档案节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + evidence-missing | 设计截图已固定；需当前实现同尺寸对照 |
-| 活动列表、详情、报名、参与人、心动 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的活动节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + external-wait | 媒体、地图、扫码、支付和相册仍需真机 |
+| 活动列表、详情、报名、参与人、心动 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的活动节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + external-wait | 媒体、地图、扫码和支付仍需真机 |
 | 机会列表、筛选、详情、人才、发布 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的机会节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + evidence-missing | 需当前实现同尺寸对照及真实数据旅程 |
 | 小程序现场工作台 | `DESIGN.md` 的现场工作台规则 | implemented | evidence-missing + external-wait | 旧 375px/1024px 完整管理端证据只作历史追溯；当前四路由需 375px 与真机验收 |
 | React Web | `admin-web/DESIGN.md` 与唯一标准 U02/G07 | partial | verified-local + verified-staging + evidence-missing | 独立档案和详情动作布局已交付；当前真实非空活动列表/详情已验证 1280×720、1440×900、390×844，手机草稿恢复不溢出。不能外推为所有页面/状态的完整视觉验收 |

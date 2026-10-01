@@ -33,8 +33,6 @@ const event: MipEventDetail = {
   canRetryRefund: false,
   canCheckIn: false,
   canInteract: false,
-  albumEnabled: false,
-  albumSubmissionPolicy: 'REVIEW',
 }
 
 function gateway() {

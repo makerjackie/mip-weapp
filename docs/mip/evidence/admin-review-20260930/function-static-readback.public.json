@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-09-30T07:42:57.316Z",
+  "functionName": "mip-admin-web-api",
+  "method": "authenticated SCF control-plane invocation",
+  "businessWrites": false,
+  "results": [
+    {
+      "file": "404.html",
+      "passed": true,
+      "sha256": "cf81cd76f5d089408ef0d38c9caa98fc1fff0bbb8b01f92404edbde78c5d52b1"
+    },
+    {
+      "file": "assets/ant-design-DZvgLqR9.js",
+      "passed": true,
+      "sha256": "d383ece5e5437794f40766462b14b4bc6ad105793c54fd771c650695984c9a24"
+    },
+    {
+      "file": "assets/charts-D26ByYiC.js",
+      "passed": true,
+      "sha256": "ef30181ebe2e91291534a3c05de7d6c8afedad8868b9001a6dcffc15d2de8d1c"
+    },
+    {
+      "file": "assets/index-BqX7yv-G.css",
+      "passed": true,
+      "sha256": "0d5ab196c1d2dfa847177df04f7900a44262595cf97dcf0c592e584e64d8b25e"
+    },
+    {
+      "file": "assets/index-Cc5-tcUT.js",
+      "passed": true,
+      "sha256": "002b94337fe226065e397c5332ead83a86c9f77ed17adcefdae00ffafd580441"
+    },
+    {
+      "file": "assets/overview-purchase-chart-CabpwZCl.js",
+      "passed": true,
+      "sha256": "5887ce198f1f89b90f7ebe5b7d0190e345ed3af47d4ca6d928baf4a5d8b8ea13"
+    },
+    {
+      "file": "assets/react-Mefe_Tge.js",
+      "passed": true,
+      "sha256": "53e857905a9e3cb132c11c752fe0b44ef37aa2dcd686c0bcbe64bf8e02a58812"
+    },
+    {
+      "file": "assets/rolldown-runtime-hePW80VL.js",
+      "passed": true,
+      "sha256": "580ad8c58061a4dde99bde0a56905e382f0568516ee2f5b84dbfb52085709021"
+    },
+    {
+      "file": "assets/router-query-DYZ4JsyJ.js",
+      "passed": true,
+      "sha256": "89c687e58bce66377201a7a32c490930f4ca1b6327f44fb0a7f7c0503a300dc3"
+    },
+    {
+      "file": "card-templates/card-bg-a.webp",
+      "passed": true,
+      "sha256": "4efaf5dafd2370f4d8eec904cc3571de8e8b5122d42eef0899fffed097b1dd0b"
+    },
+    {
+      "file": "card-templates/card-bg-b.webp",
+      "passed": true,
+      "sha256": "c3e46f89d29da59318bb1263cb2f5fd5f07ae935432f8bfe26280441042921ad"
+    },
+    {
+      "file": "card-templates/card-bg-c.webp",
+      "passed": true,
+      "sha256": "4f10ee9173ce8b5a74ec3e76762c5650153d9df2b25521d39405b47eb3f83ee8"
+    },
+    {
+      "file": "card-templates/card-bg-d.webp",
+      "passed": true,
+      "sha256": "762fe3ee1c7adc5666e36566355cb4161ed2d4c341d995fb3ac25ed95095e6ee"
+    },
+    {
+      "file": "index.html",
+      "passed": true,
+      "sha256": "606b16038737f6b3a666dd899b29e4483abf35e2c9cacd2fc711ddcbeb17a34e"
+    }
+  ],
+  "limitation": "Function invocation does not prove public HTTPS gateway connectivity"
+}

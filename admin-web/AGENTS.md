@@ -39,6 +39,8 @@
 
 ## 状态与权限
 
+- 使用 Router hook 的 Provider 必须位于 RouterProvider 内；跨页面 mutation（例如活动复制）应包含真实路由上下文的跳转回归，不能只 mock useNavigate。
+- 编辑保存需区分省略字段与显式清空（undefined/null）；金额、地点、图片等可清空字段必须覆盖已有非空值到清空后的服务端回读。
 - 服务端状态：TanStack Query。
 - 路由、筛选、分页、标签页：TanStack Router URL state。
 - 表单：Ant Design Form。

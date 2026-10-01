@@ -302,7 +302,7 @@ describe('admin PRD extension persistence', () => {
     const blocked = extensions(database({
       async one(sql) {
         if (sql.includes('FROM mip_events')) return event
-        if (sql.includes('AS registrations')) return { registrations: 1, orders: 0, checkins: 0, album_photos: 0 }
+        if (sql.includes('AS registrations')) return { registrations: 1, orders: 0, checkins: 0 }
         return null
       },
     }))
@@ -315,7 +315,7 @@ describe('admin PRD extension persistence', () => {
     const empty = extensions(database({
       async one(sql) {
         if (sql.includes('FROM mip_events')) return event
-        return { registrations: 0, orders: 0, checkins: 0, album_photos: 0 }
+        return { registrations: 0, orders: 0, checkins: 0 }
       },
       async query(sql) { writes.push(sql); return { affectedRows: 1 } },
     }))

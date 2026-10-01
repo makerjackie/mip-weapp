@@ -9,7 +9,6 @@ import { queryClient } from './app/query-client'
 import { router } from './app/router'
 import { SessionProvider } from './app/session-provider'
 import { adminTheme } from './app/theme'
-import { AdminOperationProvider } from './features/admin-runtime/admin-operation-provider'
 import './styles/app.css'
 
 const root = document.getElementById('app')
@@ -22,9 +21,7 @@ createRoot(root).render(
         <App>
           <QueryClientProvider client={queryClient}>
             <SessionProvider>
-              <AdminOperationProvider>
-                <RouterProvider router={router} />
-              </AdminOperationProvider>
+              <RouterProvider router={router} />
             </SessionProvider>
           </QueryClientProvider>
         </App>

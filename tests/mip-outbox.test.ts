@@ -60,7 +60,7 @@ describe('MIP durable outbox contract', () => {
     const community = read('cloudfunctions/mip-community-api/index.js')
     expect(community).toContain('sourceFunctionName: \'mip-community-api\'')
     expect(community).toContain('wakeOutboxAfterMutation(options')
-    expect(community).toContain('input?.result?.status !== \'PUBLISHED\'')
+    expect(community).toContain('input?.result?.status === \'PUBLISHED\' && input.action === \'createKnowledgeComment\'')
   })
 
   it('uses event-driven bounded draining and triggers external delivery without a timer', () => {

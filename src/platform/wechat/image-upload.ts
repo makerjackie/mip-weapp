@@ -30,8 +30,8 @@ export const IMAGE_UPLOAD_POLICIES = Object.freeze({
       { width: 1080, quality: 58 },
     ],
   },
-  eventAlbum: {
-    label: '活动照片',
+  eventContent: {
+    label: '活动配图',
     maximumBytes: HALF_MEGABYTE,
     steps: [
       { width: 1600, quality: 78 },

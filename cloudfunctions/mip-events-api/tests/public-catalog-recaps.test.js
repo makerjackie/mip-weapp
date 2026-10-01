@@ -35,7 +35,6 @@ function eventRow(overrides = {}) {
     registration_count: 0,
     registration_status: null,
     registration_version: null,
-    album_enabled: 0,
     album_submission_policy: 'REVIEW',
     ...overrides,
   }

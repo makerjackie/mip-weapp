@@ -316,15 +316,6 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
           AND published_at = ${sqlLiteral(item.publishedAt)}
           AND ${item.endedAt ? `ended_at = ${sqlLiteral(item.endedAt)}` : 'ended_at IS NULL'}
         )`).join(' OR ')})) AS eventTimelineSettings,
-    (SELECT COUNT(*) FROM mip_events
-      WHERE app_id = ${sqlLiteral(appId)}
-        AND (${seed.events.map(item => `(id = ${sqlLiteral(item.id)} AND album_enabled = ${item.albumEnabled ? 1 : 0} AND album_submission_policy = ${sqlLiteral(item.albumSubmissionPolicy)})`).join(' OR ')})) AS eventAlbumSettings,
-    (SELECT COUNT(*) FROM mip_events
-      WHERE app_id = ${sqlLiteral(appId)}
-        AND id IN (${seed.events.filter(item => item.albumEnabled).map(item => sqlLiteral(item.id)).join(', ')})
-        AND status = 'PUBLISHED' AND album_enabled = 1
-        AND starts_at >= '2030-01-01 00:00:00.000'
-        AND starts_at < '2031-01-01 00:00:00.000') AS eventAlbumRuntimeFixtures,
     (SELECT COUNT(*) FROM mip_event_registrations
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.eventRegistrations.map(item => sqlLiteral(item.id)).join(', ')})) AS eventRegistrations,
@@ -565,8 +556,6 @@ const expected = {
   eventContentMedia: seed.eventContentMedia.length,
   eventsWithCovers: seed.events.filter(item => item.coverAssetId).length,
   eventTimelineSettings: seed.events.length,
-  eventAlbumSettings: seed.events.length,
-  eventAlbumRuntimeFixtures: seed.events.filter(item => item.albumEnabled).length,
   eventRegistrations: seed.eventRegistrations.length,
   eventRegistrationStates: seed.eventRegistrations.length,
   taskCompletions: seed.taskCompletions.length,
@@ -1441,8 +1430,7 @@ function eventStatement(items) {
     ${sqlLiteral(item.organizerUserId)}, ${sqlLiteral(item.title)}, ${sqlLiteral(item.summary)},
     ${sqlLiteral(item.description)}, ${sqlLiteral(item.notices)}, ${sqlLiteral(item.coverAssetId)},
     ${sqlLiteral(item.eventTypeKey)}, ${sqlLiteral(item.eventMode)}, ${sqlLiteral(item.accessType)},
-    'AUTO', ${item.albumEnabled ? 1 : 0}, ${sqlLiteral(item.albumSubmissionPolicy)},
-    ${sqlLiteral(item.status)}, 'PASSED', ${sqlLiteral(item.startsAt)}, ${sqlLiteral(item.endsAt)},
+    'AUTO', ${sqlLiteral(item.status)}, 'PASSED', ${sqlLiteral(item.startsAt)}, ${sqlLiteral(item.endsAt)},
     ${sqlLiteral(item.registrationOpensAt)}, ${sqlLiteral(item.registrationDeadline)},
     ${sqlLiteral(item.cancellationDeadline)}, ${sqlLiteral(item.venueName)}, ${sqlLiteral(item.address)},
     ${sqlLiteral(item.cityName)}, NULL, NULL, NULL, ${Number(item.capacity)}, 0, ${Number(item.priceCents || 0)}, 'CNY',
@@ -1452,7 +1440,7 @@ function eventStatement(items) {
   return `INSERT INTO mip_events (
     id, app_id, scope_type, branch_id, organizer_user_id, title, summary, description,
     notices, cover_asset_id, event_type_key, event_mode, access_type, registration_policy,
-    album_enabled, album_submission_policy, status, content_safety_status, starts_at, ends_at, registration_opens_at,
+    status, content_safety_status, starts_at, ends_at, registration_opens_at,
     registration_deadline, cancellation_deadline, venue_name, address, city_name,
     latitude, longitude, online_url, capacity, waitlist_enabled, price_cents, currency,
     registration_schema_json, form_version, version, published_at, unpublished_at,
@@ -1465,7 +1453,6 @@ function eventStatement(items) {
     title = VALUES(title), summary = VALUES(summary), description = VALUES(description),
     notices = VALUES(notices), cover_asset_id = VALUES(cover_asset_id), event_type_key = VALUES(event_type_key),
     event_mode = VALUES(event_mode), access_type = VALUES(access_type), registration_policy = 'AUTO',
-    album_enabled = VALUES(album_enabled), album_submission_policy = VALUES(album_submission_policy),
     status = VALUES(status), content_safety_status = 'PASSED', starts_at = VALUES(starts_at),
     ends_at = VALUES(ends_at), registration_opens_at = VALUES(registration_opens_at),
     registration_deadline = VALUES(registration_deadline),
@@ -2910,8 +2897,6 @@ function assertDemoRelations(value) {
       || !Array.isArray(event.tagIds) || event.tagIds.length === 0 || event.tagIds.length > 12
       || new Set(event.tagIds).size !== event.tagIds.length
       || event.tagIds.some(tagId => !eventTagById.has(tagId))
-      || typeof event.albumEnabled !== 'boolean'
-      || !['AUTO', 'REVIEW'].includes(event.albumSubmissionPolicy)
       || !['PUBLISHED', 'ENDED'].includes(event.status)
       || !isSqlTimestamp(event.startsAt) || !isSqlTimestamp(event.endsAt)
       || !isSqlTimestamp(event.registrationOpensAt)
@@ -2938,7 +2923,7 @@ function assertDemoRelations(value) {
     }
   }
   if (!value.events.some(event => event.status === 'PUBLISHED'
-    && event.startsAt.startsWith('2030-') && event.albumEnabled)
+    && event.startsAt.startsWith('2030-'))
   || !value.events.some(event => event.status === 'ENDED'
     && event.endsAt < '2026-08-26 00:00:00.000')) {
     throw new Error('Demo events require both long-lived and historical interaction fixtures')

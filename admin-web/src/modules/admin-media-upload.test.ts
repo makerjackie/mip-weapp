@@ -50,7 +50,7 @@ describe('browser admin media upload preparation', () => {
     const bytes = png()
     const prepared = await prepareAdminMediaUpload(file(bytes, 'image/png'), 'BANNER')
 
-    assert.equal(ADMIN_MEDIA_PURPOSE_OPTIONS.length, 9)
+    assert.equal(ADMIN_MEDIA_PURPOSE_OPTIONS.length, 8)
     assert.deepEqual(prepared, {
       action: ADMIN_MEDIA_UPLOAD_ACTION,
       input: { purpose: 'BANNER', imageBase64: Buffer.from(bytes).toString('base64') },
@@ -58,8 +58,8 @@ describe('browser admin media upload preparation', () => {
   })
 
   it('accepts JPEG and rejects MIME/header mismatch or unreadable length', async () => {
-    const prepared = await prepareAdminMediaUpload(file(jpeg(), 'image/jpeg'), 'EVENT_ALBUM')
-    assert.equal(prepared.input.purpose, 'EVENT_ALBUM')
+    const prepared = await prepareAdminMediaUpload(file(jpeg(), 'image/jpeg'), 'EVENT_CONTENT')
+    assert.equal(prepared.input.purpose, 'EVENT_CONTENT')
 
     await assert.rejects(
       () => prepareAdminMediaUpload(file(png(), 'image/jpeg'), 'BANNER'),
@@ -95,7 +95,6 @@ describe('browser admin media upload preparation', () => {
   it('shows the page when any mapped capability is present and limits purpose choices exactly', () => {
     assert.deepEqual(ADMIN_MEDIA_PURPOSE_CAPABILITIES, {
       BANNER: 'banners.manage',
-      EVENT_ALBUM: 'events.album.manage',
       EVENT_CONTENT: 'events.write',
       EVENT_COVER: 'events.write',
       OPPORTUNITY_COVER: 'opportunities.moderate',

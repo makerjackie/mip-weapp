@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AdminApiClient, AdminApiClientError } from '../services/admin-api'
@@ -30,9 +31,19 @@ function SessionProbe() {
       <span>{session.session?.actor?.id || 'anonymous'}</span>
       <span>{session.sessionBoundary}</span>
       <button onClick={() => void session.logout()}>退出</button>
+      <button onClick={() => void session.refreshSession()}>刷新</button>
     </div>
   )
 }
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail })
+  return { promise, resolve, reject }
+}
+
+const actorSession = (id: string) => ({ enabled: true, actor: { id, name: id }, capabilities: [{ capability: 'users.read', scopeType: 'PLATFORM' }] })
 
 function ExpiringSessionProbe() {
   const session = useAdminSession()
@@ -87,6 +98,119 @@ function LoginProbe() {
 }
 
 describe('admin session query boundary', () => {
+  it('keeps the newest session when an older refresh finishes last', async () => {
+    const client = new AdminApiClient()
+    const older = deferred<Awaited<ReturnType<typeof client.getSession>>>()
+    const latest = deferred<Awaited<ReturnType<typeof client.getSession>>>()
+    vi.spyOn(client, 'getSession').mockResolvedValueOnce(actorSession('actor-a'))
+      .mockReturnValueOnce(older.promise).mockReturnValueOnce(latest.promise)
+    render(<QueryClientProvider client={new QueryClient()}><SessionProvider client={client}><SessionProbe /></SessionProvider></QueryClientProvider>)
+    await screen.findByText('actor-a')
+    await userEvent.click(screen.getByRole('button', { name: '刷新' }))
+    await userEvent.click(screen.getByRole('button', { name: '刷新' }))
+    await act(async () => { latest.resolve(actorSession('actor-b')); await latest.promise })
+    await screen.findByText('actor-b')
+    await act(async () => { older.resolve(actorSession('actor-a')); await older.promise })
+    expect(screen.getByText('actor-b')).toBeVisible()
+  })
+
+  it('ignores an older refresh authentication error after the latest session succeeds', async () => {
+    const client = new AdminApiClient()
+    const older = deferred<Awaited<ReturnType<typeof client.getSession>>>()
+    vi.spyOn(client, 'getSession').mockResolvedValueOnce(actorSession('actor-a'))
+      .mockReturnValueOnce(older.promise).mockResolvedValueOnce(actorSession('actor-b'))
+    render(<QueryClientProvider client={new QueryClient()}><SessionProvider client={client}><SessionProbe /></SessionProvider></QueryClientProvider>)
+    await screen.findByText('actor-a')
+    await userEvent.click(screen.getByRole('button', { name: '刷新' }))
+    await userEvent.click(screen.getByRole('button', { name: '刷新' }))
+    await screen.findByText('actor-b')
+    await act(async () => { older.reject(new AdminApiClientError('AUTH_REQUIRED', '旧会话失效')); await older.promise.catch(() => undefined) })
+    expect(screen.getByText('actor-b')).toBeVisible()
+  })
+
+  it('does not restore a stale session while logout is in flight', async () => {
+    const client = new AdminApiClient()
+    const older = deferred<Awaited<ReturnType<typeof client.getSession>>>()
+    const signingOut = deferred<void>()
+    vi.spyOn(client, 'getSession').mockResolvedValueOnce(actorSession('actor-a'))
+      .mockReturnValueOnce(older.promise).mockResolvedValue({ enabled: false })
+    vi.spyOn(client, 'logout').mockReturnValue(signingOut.promise)
+    const queryClient = new QueryClient()
+    render(<QueryClientProvider client={queryClient}><SessionProvider client={client}><SessionProbe /></SessionProvider></QueryClientProvider>)
+    await screen.findByText('actor-a')
+    queryClient.setQueryData(['admin', 'users'], { confidential: 'old data' })
+    await userEvent.click(screen.getByRole('button', { name: '刷新' }))
+    await userEvent.click(screen.getByRole('button', { name: '退出' }))
+    await act(async () => { older.resolve(actorSession('actor-a')); await older.promise })
+    expect(screen.getByText('anonymous')).toBeVisible()
+    expect(queryClient.getQueryData(['admin', 'users'])).toBeUndefined()
+    await act(async () => { signingOut.resolve(); await signingOut.promise })
+  })
+  it('rejects stale request results and prevents a previous account callback from dispatching', async () => {
+    const client = new AdminApiClient()
+    const pending = deferred<unknown>()
+    const transport = vi.spyOn(client, 'request').mockReturnValue(pending.promise)
+    vi.spyOn(client, 'getSession').mockResolvedValueOnce(actorSession('actor-a')).mockResolvedValue(actorSession('actor-b'))
+    let latest!: ReturnType<typeof useAdminSession>
+    function Probe() {
+      const session = useAdminSession()
+      useEffect(() => { latest = session }, [session])
+      return <span>{session.session?.actor?.id || 'anonymous'}</span>
+    }
+    render(<QueryClientProvider client={new QueryClient()}><SessionProvider client={client}><Probe /></SessionProvider></QueryClientProvider>)
+    await screen.findByText('actor-a')
+    const oldRequest = latest.request
+    const inFlight = oldRequest('mip.admin.users.list').catch(error => error)
+    await act(async () => { await latest.refreshSession() })
+    await screen.findByText('actor-b')
+    await act(async () => { pending.resolve({ items: [{ id: 'old-private-data' }] }); await pending.promise })
+    expect(await inFlight).toMatchObject({ code: 'SESSION_CHANGED' })
+    await expect(oldRequest('mip.admin.users.list')).rejects.toMatchObject({ code: 'SESSION_CHANGED' })
+    expect(transport).toHaveBeenCalledOnce()
+  })
+
+  it('ignores an old authentication failure after switching away and back to the same account', async () => {
+    const client = new AdminApiClient(), pending = deferred<unknown>()
+    vi.spyOn(client, 'request').mockReturnValue(pending.promise)
+    vi.spyOn(client, 'getSession').mockResolvedValueOnce(actorSession('actor-a'))
+      .mockResolvedValueOnce(actorSession('actor-b')).mockResolvedValue(actorSession('actor-a'))
+    let latest!: ReturnType<typeof useAdminSession>
+    function Probe() {
+      const session = useAdminSession()
+      useEffect(() => { latest = session }, [session])
+      return <span>{session.session?.actor?.id || 'anonymous'}</span>
+    }
+    render(<QueryClientProvider client={new QueryClient()}><SessionProvider client={client}><Probe /></SessionProvider></QueryClientProvider>)
+    await screen.findByText('actor-a')
+    const old = latest.request('mip.admin.users.list').catch(error => error)
+    await act(async () => { await latest.refreshSession() })
+    await screen.findByText('actor-b')
+    await act(async () => { await latest.refreshSession() })
+    await screen.findByText('actor-a')
+    await act(async () => { pending.reject(new AdminApiClientError('AUTH_REQUIRED', '旧账号会话')); await old })
+    expect(screen.getByText('actor-a')).toBeVisible()
+  })
+
+  it('does not revive an expired session from a refresh that started before the request failure', async () => {
+    const client = new AdminApiClient(), pending = deferred<Awaited<ReturnType<typeof client.getSession>>>()
+    vi.spyOn(client, 'getSession').mockResolvedValueOnce(actorSession('actor-a')).mockReturnValue(pending.promise)
+    vi.spyOn(client, 'request').mockRejectedValue(new AdminApiClientError('AUTH_REQUIRED', '当前会话失效'))
+    let latest!: ReturnType<typeof useAdminSession>
+    function Probe() {
+      const session = useAdminSession()
+      useEffect(() => { latest = session }, [session])
+      return <span>{session.session?.actor?.id || 'anonymous'}</span>
+    }
+    render(<QueryClientProvider client={new QueryClient()}><SessionProvider client={client}><Probe /></SessionProvider></QueryClientProvider>)
+    await screen.findByText('actor-a')
+    let refreshing!: Promise<boolean>
+    await act(async () => { refreshing = latest.refreshSession() })
+    await act(async () => { await latest.request('mip.admin.users.list').catch(() => undefined) })
+    await screen.findByText('anonymous')
+    await act(async () => { pending.resolve(actorSession('actor-a')); await refreshing })
+    expect(screen.getByText('anonymous')).toBeVisible()
+  })
+
   it('recognizes every protected admin query family', () => {
     expect(isProtectedAdminQueryKey(['admin', 'detail', 'actor-a'])).toBe(true)
     expect(isProtectedAdminQueryKey(['admin', 'read-page', 'actor-a'])).toBe(true)

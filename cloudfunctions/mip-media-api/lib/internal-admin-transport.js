@@ -16,7 +16,6 @@ const MAX_CLOCK_SKEW_MS = 60_000
 const MEDIA_ADMIN_ACTION = 'admin.uploadImage'
 const MEDIA_ADMIN_PURPOSE_CAPABILITIES = Object.freeze({
   BANNER: 'banners.manage',
-  EVENT_ALBUM: 'events.album.manage',
   EVENT_CONTENT: 'events.write',
   EVENT_COVER: 'events.write',
   OPPORTUNITY_COVER: 'opportunities.moderate',

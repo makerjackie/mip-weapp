@@ -79,7 +79,6 @@ function attendedEvent(overrides: Partial<MipEventDetail> = {}): MipEventDetail 
     registrationCount: 45,
     participantPreview: [],
     registrationStatus: 'ATTENDED',
-    albumEnabled: false,
     description: '活动介绍',
     onlineAccessAvailable: false,
     registrationPolicy: 'AUTO',

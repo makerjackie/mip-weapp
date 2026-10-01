@@ -6,7 +6,6 @@ export const EVENT_MUTATION_ACTIONS = [
   'mip.admin.events.registrations.review',
   'mip.admin.events.checkIn',
   'mip.admin.events.undoCheckIn',
-  'mip.admin.events.album.review',
   'mip.admin.events.policy.save',
   'mip.admin.events.tags.replace',
   'mip.admin.events.catalog.save',
@@ -97,8 +96,6 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'eventMode', label: '活动方式', kind: 'select', options: [option('OFFLINE', '线下'), option('ONLINE', '线上'), option('HYBRID', '混合')] },
   { key: 'accessType', label: '收费类型', kind: 'select', options: [option('FREE', '免费'), option('MEMBER_INCLUDED', '会员权益'), option('PAID', '付费')] },
   { key: 'registrationPolicy', label: '报名方式', kind: 'select', options: [option('AUTO', '自动确认'), option('APPROVAL', '审核确认')] },
-  { key: 'albumEnabled', label: '活动相册', kind: 'checkbox' },
-  { key: 'albumSubmissionPolicy', label: '相册提交方式', kind: 'select', options: [option('AUTO', '自动发布'), option('REVIEW', '审核后发布')] },
   { key: 'startsAt', label: '开始时间', kind: 'datetime', required: true },
   { key: 'endsAt', label: '结束时间', kind: 'datetime', required: true },
   { key: 'registrationDeadline', label: '报名截止时间', kind: 'datetime' },
@@ -158,19 +155,6 @@ const EVENT_MUTATION_CONFIGS = {
       { key: 'registrationId', label: '报名标识', kind: 'text', required: true },
       { key: 'expectedVersion', label: '记录版本', kind: 'number', required: true },
       { key: 'reason', label: '撤销原因', kind: 'textarea', required: true, maxLength: 120 },
-    ],
-  },
-  'mip.admin.events.album.review': {
-    action: 'mip.admin.events.album.review',
-    capability: 'events.album.manage',
-    title: '审核活动相册照片',
-    description: '提交照片审核结果。照片状态和版本由服务端确定。',
-    fields: [
-      { key: 'eventId', label: '活动标识', kind: 'text', required: true },
-      { key: 'photoId', label: '照片标识', kind: 'text', required: true },
-      { key: 'expectedVersion', label: '记录版本', kind: 'number', required: true },
-      { key: 'decision', label: '审核结果', kind: 'select', required: true, options: [option('APPROVE', '审核通过'), option('REJECT', '审核拒绝')] },
-      { key: 'reason', label: '审核原因', kind: 'textarea', required: true, maxLength: 300 },
     ],
   },
   'mip.admin.events.policy.save': {
@@ -434,9 +418,6 @@ function eventDraft(values: EventMutationValues) {
   const eventMode = enumValue(values.eventMode, '活动方式', ['OFFLINE', 'ONLINE', 'HYBRID'] as const)
   const accessType = enumValue(values.accessType, '收费类型', ['FREE', 'MEMBER_INCLUDED', 'PAID'] as const)
   const registrationPolicy = enumValue(values.registrationPolicy, '报名方式', ['AUTO', 'APPROVAL'] as const)
-  const albumSubmissionPolicy = values.albumSubmissionPolicy === undefined || values.albumSubmissionPolicy === ''
-    ? 'REVIEW'
-    : enumValue(values.albumSubmissionPolicy, '相册提交方式', ['AUTO', 'REVIEW'] as const)
   const priceCents = integer(values.priceCents === undefined || values.priceCents === '' ? 0 : values.priceCents, '金额（分）')
   const waitlistEnabled = values.waitlistEnabled === true
     || values.waitlistEnabled === 'true'
@@ -478,8 +459,6 @@ function eventDraft(values: EventMutationValues) {
     eventMode,
     accessType,
     registrationPolicy,
-    albumEnabled: values.albumEnabled !== false && values.albumEnabled !== 'false',
-    albumSubmissionPolicy,
     startsAt,
     endsAt,
     registrationDeadline,
@@ -519,10 +498,6 @@ function build(action: EventMutationAction, values: EventMutationValues): AdminR
   }
   if (action === 'mip.admin.events.undoCheckIn') return {
     eventId: id(values.eventId, '活动'), registrationId: id(values.registrationId, '报名'), expectedVersion: version(values.expectedVersion), reason: text(values.reason, '撤销原因', 120, true),
-  }
-  if (action === 'mip.admin.events.album.review') return {
-    eventId: id(values.eventId, '活动'), photoId: id(values.photoId, '照片'), expectedVersion: version(values.expectedVersion),
-    decision: enumValue(values.decision, '审核结果', ['APPROVE', 'REJECT'] as const), reason: text(values.reason, '审核原因', 300, true),
   }
   if (action === 'mip.admin.events.policy.save') return {
     expectedVersion: version(values.expectedVersion, '记录版本', true), cancellationHoursBeforeStart: integer(values.cancellationHoursBeforeStart, '默认取消提前小时数', 0, 720),
@@ -619,7 +594,7 @@ function defaultValues(action: EventMutationAction): EventMutationValues {
   const values: EventMutationValues = {}
   for (const field of EVENT_MUTATION_CONFIGS[action].fields) {
     values[field.key] = field.kind === 'checkbox'
-      ? field.key === 'albumEnabled'
+      ? true
       : field.kind === 'asset-list' || field.kind === 'tags' || field.kind === 'json'
         ? []
         : ''
@@ -627,8 +602,7 @@ function defaultValues(action: EventMutationAction): EventMutationValues {
   if (action === 'mip.admin.events.save') {
     Object.assign(values, {
       scopeType: 'PLATFORM', eventTypeKey: 'general', eventMode: 'OFFLINE', accessType: 'FREE',
-      registrationPolicy: 'AUTO', albumSubmissionPolicy: 'REVIEW', albumEnabled: true,
-      waitlistEnabled: false, priceCents: '0',
+      registrationPolicy: 'AUTO', waitlistEnabled: false, priceCents: '0',
     })
   }
   return values

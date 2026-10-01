@@ -1,5 +1,5 @@
 import { createHashHistory, createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router'
-import { ResponsiveAppShell } from '../shared/ui/responsive-app-shell'
+import { AdminRoot } from './admin-root'
 import { adminNavigation } from './navigation'
 import { routeComponents } from './route-pages'
 
@@ -37,7 +37,8 @@ function validateSearch(search: Record<string, unknown>): AdminListSearch {
   }
 }
 
-const rootRoute = createRootRoute({ component: ResponsiveAppShell })
+const rootRoute = createRootRoute({ component: AdminRoot })
+
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',

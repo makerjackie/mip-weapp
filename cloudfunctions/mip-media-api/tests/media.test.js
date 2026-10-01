@@ -192,16 +192,6 @@ describe('MIP media image boundary', () => {
     assert.notEqual(development, otherApp)
     assert.equal(development.includes(APP_ID), false)
     assert.equal(development.includes(USER_ID), false)
-
-    const eventAlbum = buildObjectKey({
-      appId: APP_ID,
-      userId: USER_ID,
-      purpose: 'EVENT_ALBUM',
-      assetId: ASSET_ID,
-      extension: 'jpg',
-      env: environment('test'),
-    })
-    assert.match(eventAlbum, /^mip\/test\/[0-9a-f]{24}\/event-album\/[0-9a-f]{24}\//)
   })
 
   it('removes the exact uploaded object when the initial tombstone insert is known to be absent', async () => {
@@ -458,8 +448,6 @@ describe('MIP media orphan maintenance', () => {
             if (sql.includes('SELECT asset.id')) {
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_profiles/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_events/)
-              assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_event_album_photos/)
-              assert.match(sql, /photo\.status IN \('PENDING', 'PUBLISHED'\)/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_opportunities/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_super_cases/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_super_case_media/)

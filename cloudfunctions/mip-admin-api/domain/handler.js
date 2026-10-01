@@ -207,7 +207,6 @@ function errorResponse(error) {
     IDEMPOTENCY_CONFLICT: '重复请求的内容不一致',
     NOT_ACTIONABLE: '当前投递状态不需要人工处理',
     REQUEST_IN_PROGRESS: '相同投递复核正在处理',
-    EVENT_ALBUM_MEDIA_INVALID: '照片素材状态无效，请刷新后重试',
     EVENT_ARCHIVE_BLOCKED: '活动已有报名、订单或其他业务记录，需保留历史',
     OPPORTUNITY_ARCHIVE_BLOCKED: '机会已有关联业务记录，无法归档',
     BADGE_IN_USE: '勋章仍在佩戴中，请用户先取消佩戴',
@@ -241,7 +240,7 @@ function errorResponse(error) {
 function eventArchiveBlockerDetails(code, details) {
   if (code !== 'EVENT_ARCHIVE_BLOCKED' || !details || typeof details !== 'object') return null
   const blockers = {}
-  for (const key of ['registrations', 'orders', 'checkins', 'albumPhotos']) {
+  for (const key of ['registrations', 'orders', 'checkins']) {
     const value = Number(details[key])
     if (!Number.isInteger(value) || value < 0) return null
     blockers[key] = value

@@ -54,7 +54,7 @@ function contractWithStep(id: string, update: Record<string, unknown>) {
 
 describe('free offline event mutation runtime contract', () => {
   it('keeps the flow isolated from the read-only runtime contract', () => {
-    expect(validateFreeEventMutationContract(contract)).toEqual({ routeCount: 7, stepCount: 11 })
+    expect(validateFreeEventMutationContract(contract)).toEqual({ routeCount: 6, stepCount: 9 })
     expect(contract.connection).toMatchObject({
       allowDirectDatabaseWrites: false,
       allowProjectWarmup: false,
@@ -92,10 +92,6 @@ describe('free offline event mutation runtime contract', () => {
           handlers: ['selectRating', 'selectRecommendation', 'saveFeedback'],
         }),
         message: 'member-feedback bound page handlers changed unexpectedly',
-      },
-      {
-        contract: contractWithStep('external-delete-comment', { handler: 'submitComment' }),
-        message: 'external-delete-comment bound page handler changed unexpectedly',
       },
       {
         contract: contractWithStep('member-heart', { unavailable: 'failed' }),
@@ -600,7 +596,6 @@ describe('free event runtime evidence summaries', () => {
     const externalSteps = contract.steps.filter((step: { mode: string }) => step.mode === 'external-wait')
     expect(externalSteps.map((step: { id: string }) => step.id)).toEqual([
       'external-undo-check-in',
-      'external-delete-comment',
       'external-cancel-registration',
     ])
     expect(externalSteps.every((step: { reason: string }) => step.reason.includes('confirmation modal'))).toBe(true)

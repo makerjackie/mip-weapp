@@ -13,7 +13,6 @@ import {
   type GameMemberPageQuery,
 } from './admin-game-management.ts'
 import {
-  eventAlbumRowActions,
   eventRegistrationRowActions,
   type AdminOperationRow,
 } from './admin-row-operations.ts'
@@ -31,7 +30,6 @@ export interface AdminEventRosterPageQuery {
 export interface AdminDetailOptions {
   includeUserMembership?: boolean
   includeEventRoster?: boolean
-  includeEventAlbum?: boolean
   includeEventFeedback?: boolean
   includeMessageDeliveryReviews?: boolean
   includeOpportunityComments?: boolean
@@ -258,7 +256,7 @@ async function loadEventDetail(
     : null
   const rosterFilters = { query: options.eventRoster?.query || '', status: options.eventRoster?.status || '' }
   const optionalFailure = () => ({ items: [], nextCursor: null, loadFailed: true })
-  const [eventValue, insightsValue, rosterValue, albumValue, feedbackValue] = await Promise.all([
+  const [eventValue, insightsValue, rosterValue, feedbackValue] = await Promise.all([
     request('mip.admin.events.get', { eventId }),
     request('mip.admin.events.insights.get', { eventId }).catch(() => ({ loadFailed: true })),
     options.includeEventRoster === false
@@ -270,9 +268,6 @@ async function loadEventDetail(
           filters: rosterFilters,
           ...(rosterCursor ? { cursor: rosterCursor } : {}),
         }).catch(optionalFailure),
-    options.includeEventAlbum
-      ? request('mip.admin.events.album.list', { eventId, status: 'PENDING', limit: 20 }).catch(optionalFailure)
-      : Promise.resolve({ items: [], nextCursor: null }),
     options.includeEventFeedback
       ? request('mip.admin.events.feedbacks.list', {
           eventId,
@@ -291,7 +286,6 @@ async function loadEventDetail(
   const feedback = record(insights.feedback)
   const roster = pageRecords(rosterValue)
   const rosterPage = record(rosterValue)
-  const pendingAlbum = pageRecords(albumValue)
   const feedbackPage = record(feedbackValue)
   const feedbackRows = pageRecords(feedbackValue)
   const sections: AdminDetailSection[] = [
@@ -376,22 +370,6 @@ async function loadEventDetail(
       },
     })
   }
-  if (options.includeEventAlbum) {
-    sections.push({
-      title: '待审核相册',
-      ...(record(albumValue).loadFailed ? { error: '相册加载失败，请重试。' } : {}),
-      rows: pendingAlbum.map(item => ({
-        caption: text(item.caption),
-        uploader: text(item.nickname),
-        submittedAt: dateTime(item.createdAt),
-        state: codeLabel(item.status),
-        rowActions: eventAlbumRowActions(eventId, item),
-      })),
-      columns: columns([
-        ['caption', '图片说明'], ['uploader', '提交人'], ['submittedAt', '提交时间'], ['state', '状态'],
-      ]),
-    })
-  }
   if (options.includeEventFeedback) {
     sections.push({
       title: '活动反馈明细',
@@ -424,7 +402,7 @@ async function loadEventDetail(
     subtitle: [text(event.cityName, ''), text(event.venueName, '')].filter(Boolean).join(' · '),
     status: codeLabel(event.status),
     sections,
-    source: { event, roster, rosterPage, rosterFilters, pendingAlbum, feedbackRows, feedbackPage },
+    source: { event, roster, rosterPage, rosterFilters, feedbackRows, feedbackPage },
   }
 }
 

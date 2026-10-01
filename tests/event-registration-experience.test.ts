@@ -317,7 +317,6 @@ describe('event registration experience', () => {
     expect(primaryActionButton).toContain('aria-disabled="{{primaryAction === \'disabled\' || busy}}"')
     expect(primaryActionButton).not.toMatch(/\sdisabled=/)
     expect(detailView).toContain('pb-[calc(env(safe-area-inset-bottom)+160rpx)]')
-    expect(detailView).toContain('id="mip-event-calendar-action"')
     expect(detailView).toContain('id="mip-event-bottom-actions"')
     expect(detailView).toContain('mip-member-fixed-inset fixed bottom-[env(safe-area-inset-bottom)]')
     expect(detailView).toContain('aria-label="联系客服"')

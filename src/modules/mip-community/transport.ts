@@ -15,7 +15,6 @@ const readActions = new Set([
   'getRelationship',
   'listAnnouncements',
   'listBlocked',
-  'listEventComments',
 ])
 
 function unwrap<T>(value: unknown): T {

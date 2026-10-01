@@ -20,7 +20,6 @@ const expectedOutboxActions = Object.freeze([
   'mip.admin.events.save',
   'mip.admin.events.clone',
   'mip.admin.events.changeStatus',
-  'mip.admin.events.comments.moderate',
   'mip.admin.communications.publishEventReminder',
   'mip.admin.events.registrations.review',
   'mip.admin.events.checkIn',
@@ -53,11 +52,11 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes all 243 business operations and keeps health outside the registry', () => {
+  it('freezes all 236 business operations and keeps health outside the registry', () => {
     const catalogActions = operationCatalog.map(operation => operation.action)
 
-    assert.equal(operationCatalog.length, 243)
-    assert.equal(new Set(catalogActions).size, 243)
+    assert.equal(operationCatalog.length, 236)
+    assert.equal(new Set(catalogActions).size, 236)
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(catalogActions))
     assert.equal(operationByAction.health, undefined)
     assert.equal(operationByAction.toString, undefined)

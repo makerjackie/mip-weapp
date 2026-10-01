@@ -54,20 +54,7 @@ describe('admin post-commit automation routing', () => {
     assert.equal(postCommitAutomationFor(outboxMutation).requiresTrustedAppId, true)
   })
 
-  it('wakes event comment moderation only when the committed result is published', () => {
-    const action = 'mip.admin.events.comments.moderate'
-    assert.deepEqual(postCommitAutomationFor(action, { status: 'PUBLISHED' }), {
-      messageSchedule: false,
-      outbox: true,
-      requiresTrustedAppId: true,
-    })
-    for (const resultData of [{ status: 'HIDDEN' }, null]) {
-      assert.deepEqual(postCommitAutomationFor(action, resultData), {
-        messageSchedule: false,
-        outbox: false,
-        requiresTrustedAppId: false,
-      })
-    }
+  it('keeps generic outbox mutations waking the worker regardless of committed result', () => {
     assert.equal(postCommitAutomationFor(
       'mip.admin.announcements.publish',
       { status: 'PUBLISHED' },

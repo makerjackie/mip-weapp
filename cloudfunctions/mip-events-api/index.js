@@ -36,7 +36,6 @@ const publicActions = new Set([
   'mip.events.discoveryFilters',
   'mip.events.detail',
   'mip.events.publicParticipants',
-  'mip.events.album.list',
   'mip.events.resolveCheckInScene',
   'mip.events.resolveInvitationScene',
 ])
@@ -57,9 +56,6 @@ const userActions = new Set([
   'mip.events.createInvitation',
   'mip.events.createInvitationCode',
   'mip.events.createInvitationUrl',
-  'mip.events.album.mine',
-  'mip.events.album.submit',
-  'mip.events.album.withdraw',
 ])
 const adminActions = new Set([
   'mip.events.admin.issueCheckInCredential',
@@ -151,13 +147,6 @@ async function dispatch(event) {
         ...shared,
         eventId: event.eventId,
         query: event.query || {},
-      })
-    case 'mip.events.album.list':
-      return service.listEventAlbum(mysqlDatabase(), {
-        ...shared,
-        eventId: event.eventId,
-        cursor: event.cursor,
-        limit: event.limit,
       })
     case 'mip.events.resolveCheckInScene':
       return service.resolveCheckInScene(mysqlDatabase(), { ...shared, scene: event.scene })
@@ -264,24 +253,6 @@ async function dispatch(event) {
       })
       return { ...invitation, ...asset }
     }
-    case 'mip.events.album.mine':
-      return service.listMyEventAlbumSubmissions(mysqlDatabase(), {
-        ...shared,
-        eventId: event.eventId,
-      })
-    case 'mip.events.album.submit':
-      return service.submitEventAlbumPhoto(mysqlDatabase(), {
-        ...shared,
-        eventId: event.eventId,
-        mediaAssetId: event.mediaAssetId,
-        caption: event.caption,
-      })
-    case 'mip.events.album.withdraw':
-      return service.withdrawEventAlbumPhoto(mysqlDatabase(), {
-        ...shared,
-        photoId: event.photoId,
-        expectedVersion: event.expectedVersion,
-      })
     case 'mip.events.admin.issueCheckInCredential':
       return service.adminIssueCheckInCredential(mysqlDatabase(), { ...shared, eventId: event.eventId, mode: event.mode })
     case 'mip.events.admin.createCheckInPoster': {

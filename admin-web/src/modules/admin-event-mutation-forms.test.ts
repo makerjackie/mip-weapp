@@ -13,7 +13,7 @@ import {
 const baseEvent = {
   scopeType: 'PLATFORM', title: '活动名称', summary: '活动摘要', description: '这是活动介绍',
   eventTypeKey: 'workshop', eventMode: 'OFFLINE', accessType: 'FREE', registrationPolicy: 'AUTO',
-  albumEnabled: true, albumSubmissionPolicy: 'REVIEW', startsAt: '2030-03-14T10:00:00+08:00',
+  startsAt: '2030-03-14T10:00:00+08:00',
   endsAt: '2030-03-14T12:00:00+08:00', venueName: '福田会场', address: '福华三路', cityName: '深圳',
   capacity: '30', waitlistEnabled: false, priceCents: '0', contentMedia: [], registrationSchema: [],
 }
@@ -45,7 +45,7 @@ describe('event mutation form contracts', () => {
     }
   })
   it('declares every requested action with a capability and typed fields', () => {
-    assert.equal(EVENT_MUTATION_ACTIONS.length, 13)
+    assert.equal(EVENT_MUTATION_ACTIONS.length, 12)
     for (const action of EVENT_MUTATION_ACTIONS) {
       const config = EVENT_MUTATION_CONFIGS[action]
       assert.equal(config.action, action)
@@ -59,7 +59,7 @@ describe('event mutation form contracts', () => {
       draft: {
         scopeType: 'PLATFORM', branchId: null, title: '活动名称', summary: '活动摘要', description: '这是活动介绍',
         contentMedia: [], notices: '', coverAssetId: null, eventTypeKey: 'workshop', eventMode: 'OFFLINE',
-        accessType: 'FREE', registrationPolicy: 'AUTO', albumEnabled: true, albumSubmissionPolicy: 'REVIEW',
+        accessType: 'FREE', registrationPolicy: 'AUTO',
         startsAt: '2030-03-14T10:00:00+08:00', endsAt: '2030-03-14T12:00:00+08:00', registrationDeadline: null,
         cancellationDeadline: null, venueName: '福田会场', address: '福华三路', cityName: '深圳', latitude: null,
         longitude: null, onlineUrl: null, capacity: 30, waitlistEnabled: false, priceCents: 0, registrationSchema: [],
@@ -78,7 +78,6 @@ describe('event mutation form contracts', () => {
     assert.deepEqual(buildEventMutationInput('mip.admin.events.registrations.review', { eventId: 'event-1', registrationId: 'reg-1', expectedVersion: '2', decision: 'APPROVE' }), { eventId: 'event-1', registrationId: 'reg-1', expectedVersion: 2, decision: 'APPROVE' })
     assert.deepEqual(buildEventMutationInput('mip.admin.events.checkIn', { eventId: 'event-1', registrationId: 'reg-1', expectedVersion: '2' }), { eventId: 'event-1', registrationId: 'reg-1', expectedVersion: 2 })
     assert.deepEqual(buildEventMutationInput('mip.admin.events.undoCheckIn', { eventId: 'event-1', registrationId: 'reg-1', expectedVersion: '2', reason: '误操作' }), { eventId: 'event-1', registrationId: 'reg-1', expectedVersion: 2, reason: '误操作' })
-    assert.deepEqual(buildEventMutationInput('mip.admin.events.album.review', { eventId: 'event-1', photoId: 'photo-1', expectedVersion: '2', decision: 'REJECT', reason: '内容不符合活动要求' }), { eventId: 'event-1', photoId: 'photo-1', expectedVersion: 2, decision: 'REJECT', reason: '内容不符合活动要求' })
     assert.deepEqual(buildEventMutationInput('mip.admin.events.policy.save', { expectedVersion: '0', cancellationHoursBeforeStart: '24' }), { expectedVersion: 0, cancellationHoursBeforeStart: 24 })
     assert.deepEqual(buildEventMutationInput('mip.admin.events.tags.replace', { eventId: 'event-1', expectedVersion: '3', tagIds: ['tag-2', 'tag-1'] }), { eventId: 'event-1', expectedVersion: 3, tagIds: ['tag-1', 'tag-2'] })
     assert.deepEqual(buildEventMutationInput('mip.admin.events.catalog.save', { kind: 'TAG', key: 'growth', name: '增长', description: '', sortOrder: '1' }), { kind: 'TAG', key: 'growth', name: '增长', description: '', sortOrder: 1 })

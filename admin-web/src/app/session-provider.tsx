@@ -38,9 +38,11 @@ export function SessionProvider({ children, client = defaultClient }: { children
   const [loginError, setLoginError] = useState('')
   const [loginConfirmed, setLoginConfirmed] = useState(false)
   const loginFlow = useRef(0)
+  const sessionRead = useRef(0)
   const sessionIdentity = useRef<string | null>(null)
+  const sessionGeneration = useRef(0)
 
-  useEffect(() => () => { loginFlow.current += 1 }, [])
+  useEffect(() => () => { loginFlow.current += 1; sessionRead.current += 1 }, [])
 
   const commitSession = useCallback((next: AdminSession | null) => {
     const capabilityBoundary = [...(next?.capabilities || [])]
@@ -52,13 +54,16 @@ export function SessionProvider({ children, client = defaultClient }: { children
       : null
     if (nextIdentity !== sessionIdentity.current) {
       sessionIdentity.current = nextIdentity
-      setSessionBoundary(value => value + 1)
+      setSessionBoundary(++sessionGeneration.current)
       queryClient.removeQueries({ predicate: query => isProtectedAdminQueryKey(query.queryKey) })
     }
     setSession(next)
   }, [queryClient])
 
   const refreshSession = useCallback(async () => {
+    const read = ++sessionRead.current
+    const flow = loginFlow.current
+    const current = () => read === sessionRead.current && flow === loginFlow.current
     setLoading(true)
     setError(null)
     if (client.demoMode) {
@@ -68,18 +73,20 @@ export function SessionProvider({ children, client = defaultClient }: { children
     }
     try {
       const next = await client.getSession()
+      if (!current()) return false
       commitSession(next)
       return Boolean(next.enabled)
     }
     catch (reason) {
+      if (!current()) return false
       const next = reason instanceof AdminApiClientError
         ? reason
         : new AdminApiClientError('SERVICE_UNAVAILABLE', '运营会话暂时无法加载', true)
-      if (next.code === 'AUTH_REQUIRED') commitSession(null)
+      if (next.code === 'AUTH_REQUIRED' || next.code === 'FORBIDDEN') commitSession(null)
       setError(next)
       return false
     }
-    finally { setLoading(false) }
+    finally { if (read === sessionRead.current) setLoading(false) }
   }, [client, commitSession])
 
   useEffect(() => {
@@ -152,6 +159,7 @@ export function SessionProvider({ children, client = defaultClient }: { children
 
   const requireLogin = useCallback(() => {
     closeLogin()
+    sessionRead.current += 1
     commitSession(null)
     setLoading(false)
     setError(new AdminApiClientError('AUTH_REQUIRED', '请重新登录'))
@@ -191,8 +199,12 @@ export function SessionProvider({ children, client = defaultClient }: { children
   }, [refreshSession])
 
   const logout = useCallback(async () => {
-    loginFlow.current += 1
+    const flow = ++loginFlow.current
+    sessionRead.current += 1
     setLoginConfirmed(false)
+    commitSession(null)
+    setError(null)
+    setLoading(true)
     try {
       await client.logout()
     }
@@ -200,8 +212,7 @@ export function SessionProvider({ children, client = defaultClient }: { children
       // Server session state is the source of truth; refreshSession below
       // reconciles the client instead of assuming the cookie was cleared.
     }
-    commitSession(null)
-    await refreshSession()
+    if (flow === loginFlow.current) await refreshSession()
   }, [client, commitSession, refreshSession])
 
   const hasCapability = useCallback((capability: string) => {
@@ -214,18 +225,29 @@ export function SessionProvider({ children, client = defaultClient }: { children
   }, [client.demoMode, session])
 
   const request = useCallback(async <T,>(action: AdminOperationAction, input: AdminRequestInput = {}) => {
+    if (sessionBoundary !== sessionGeneration.current) {
+      throw new AdminApiClientError('SESSION_CHANGED', '账号或权限已变化，请重新打开记录。')
+    }
     const identity = sessionIdentity.current
     const flow = loginFlow.current
-    try { return await client.request<T>(action, input) }
+    try {
+      const result = await client.request<T>(action, input)
+      if (sessionBoundary !== sessionGeneration.current || identity !== sessionIdentity.current || flow !== loginFlow.current) {
+        throw new AdminApiClientError('SESSION_CHANGED', '账号或权限已变化，请重新打开记录。')
+      }
+      return result
+    }
     catch (reason) {
       if (reason instanceof AdminApiClientError && reason.code === 'AUTH_REQUIRED'
-        && identity === sessionIdentity.current && flow === loginFlow.current) {
+        && sessionBoundary === sessionGeneration.current && identity === sessionIdentity.current && flow === loginFlow.current) {
+        sessionRead.current += 1
         commitSession(null)
+        setLoading(false)
         setError(reason)
       }
       throw reason
     }
-  }, [client, commitSession])
+  }, [client, commitSession, sessionBoundary])
 
   const value = useMemo<SessionContextValue>(() => ({
     client,
