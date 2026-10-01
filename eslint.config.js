@@ -14,5 +14,6 @@ export default icebreaker({
     'dist/**',
     'docs/**',
     '.notma/**',
+    '.zcode/**',
   ],
 })

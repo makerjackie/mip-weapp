@@ -49,6 +49,7 @@ tmp/
 .screenshots/
 .grok/
 .codex/
+.zcode/
 .wrangler/
 .claude/
 
