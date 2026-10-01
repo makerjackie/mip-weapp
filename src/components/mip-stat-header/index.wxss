@@ -46,11 +46,11 @@
   right: -17rpx;
   box-sizing: border-box;
   display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 28rpx;
   height: 28rpx;
   padding: 0 4rpx;
-  align-items: center;
-  justify-content: center;
   background: var(--mip-record);
   border-radius: 100rpx;
 }
