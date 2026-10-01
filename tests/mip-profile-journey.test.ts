@@ -78,17 +78,33 @@ describe('MIP profile membership journey frames', () => {
     const script = readSource('src/pages/profile/index.ts')
     const template = readSource('src/pages/profile/index.wxml')
     const statHeader = readSource('src/components/mip-stat-header/index.wxml')
+    const statHeaderStyles = readSource('src/components/mip-stat-header/index.wxss')
 
     // M1 00:35:58：心动值 / 访客有红点，嘉宾 / 互动过无。
     expect(script).toContain('mipEventsModule.listHeartHistory(\'RECEIVED\')')
     expect(script).toContain('updates.interestUnreadCount = interestResult.value.unreadCount || 0')
     expect(script).toContain('interestUnreadCount: 0')
-    expect(template).toContain('label: \'心动值\', category: \'ACTIVE_INTEREST\', target: \'influence\', badge: interestUnreadCount > 0, badgeLabel: \'有新的心动\'')
-    expect(template).toContain('label: \'访客\', target: \'visitor\', badge: visitorUnreadCount > 0')
+    expect(template).toContain('label: \'心动值\', category: \'ACTIVE_INTEREST\', target: \'influence\', badge: interestUnreadCount > 0, badgeCount: interestUnreadCount, badgeLabel: \'有新的心动\'')
+    expect(template).toContain('label: \'访客\', target: \'visitor\', badge: visitorUnreadCount > 0, badgeCount: visitorUnreadCount')
     expect(template).not.toContain('label: \'嘉宾\', category: \'GUEST\', target: \'influence\', badge')
     expect(template).not.toContain('label: \'互动过\', category: \'INTERACTION\', target: \'influence\', badge')
     // badge aria-label 由 item 传入；未传时保持「有新访客」默认（共享组件向后兼容）。
     expect(statHeader).toContain('aria-label="{{item.badgeLabel || \'有新访客\'}}"')
+    // MIW-17 G2（mine-member Frame 3754 / DS StatHeader）：角标 28rpx 圆、钉在 48px 列右上（原型 badge left = 列右缘 − 5.5px，
+    // 与数值文本宽度无关）、内含白色未读数。
+    expect(statHeader).toContain('class="mip-stat-header__value-wrap"')
+    expect(statHeader).toContain('<text class="mip-stat-header__badge-count">{{item.badgeCount}}</text>')
+    // 角标是列（而非 value-wrap）的子节点，锚点随固定列宽。
+    expect(statHeader.indexOf('mip-stat-header__badge')).toBeGreaterThan(statHeader.indexOf('mip-stat-header__label-wrap'))
+    const badgeRule = statHeaderStyles.split('.mip-stat-header__badge {')[1]?.split('}')[0] || ''
+    expect(badgeRule).toContain('min-width: 28rpx')
+    expect(badgeRule).toContain('height: 28rpx')
+    expect(badgeRule).toContain('background: var(--mip-record)')
+    expect(badgeRule).toContain('top: -8rpx')
+    expect(badgeRule).toContain('right: -17rpx')
+    const columnRule = statHeaderStyles.split('.mip-stat-header__column {')[1]?.split('}')[0] || ''
+    expect(columnRule).toContain('position: relative')
+    expect(statHeaderStyles).toContain('.mip-stat-header__badge-count')
   })
 
   it('keeps the four stat cards on the agreed WS-PEOPLE routes', () => {

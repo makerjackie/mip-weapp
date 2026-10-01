@@ -49,10 +49,6 @@
     <app-page-exit />
   </view>
   <block wx:else>
-    <view wx:if="{{activeView !== 'PUBLIC'}}" class="participants-private-note">
-      <t-icon name="lock-on-filled" size="14px" color="var(--color-muted)" />
-      <text>心动信息仅本人可见</text>
-    </view>
     <mip-empty-state wx:if="{{displayItems.length === 0}}" title="{{emptyTitle}}" description="{{emptyDescription}}" />
     <!-- figma 1818_17230：双列卡 170x187——56 圆头像带白描边环、16px 名字、左上 Lv 徽标槽
          （kind）、meta 行、两行简介、右上角 18x16 心形（灰描边未投可点 / 红实心已投，再点取消）。 -->
@@ -61,7 +57,8 @@
         <view class="participant-card__visual">
           <text wx:if="{{item.kindLabel}}" class="participant-card__kind">{{item.kindLabel}}</text>
           <view wx:if="{{item.heartTicket || heartState !== 'ready'}}" class="participant-card__heart" aria-role="button" aria-label="{{heart.target && heart.target.profileRef === item.profileRef ? '取消对' + item.displayName + '的心动' : '对' + item.displayName + '心动'}}" data-profile-ref="{{item.profileRef}}" catch:tap="toggleHeartVote">
-            <t-icon wx:if="{{heart.target && heart.target.profileRef === item.profileRef}}" name="heart-filled" size="18px" color="var(--color-danger)" />
+            <!-- MIW-17 G3：原型已投红心 fill #FF2238（DS record 红），非 danger #FF4D5E。 -->
+            <t-icon wx:if="{{heart.target && heart.target.profileRef === item.profileRef}}" name="heart-filled" size="18px" color="var(--mip-record)" />
             <t-icon wx:else name="heart" size="18px" color="var(--color-muted)" />
           </view>
           <image wx:if="{{item.avatarUrl}}" class="participant-card__avatar" mode="aspectFill" src="{{item.avatarUrl}}" />
@@ -74,7 +71,7 @@
             <text>我的心动</text>
           </view>
           <view wx:if="{{item.heartRelation === 'RECEIVED' || item.heartRelation === 'MUTUAL'}}" class="participant-card__relation">
-            <t-icon name="heart-filled" size="12px" color="var(--color-danger)" />
+            <t-icon name="heart-filled" size="12px" color="var(--mip-record)" />
             <text>对我心动</text>
           </view>
         </view>
