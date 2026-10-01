@@ -167,8 +167,9 @@
   </block>
 
   <block wx:else>
-    <!-- journey-review J3-01：导航栏正下方的运营 Banner 位，后台可配置、未配置不占位。 -->
-    <swiper wx:if="{{mode === 'opportunities' && banners.length}}" class="mx-3 mt-2 h-[298rpx] overflow-hidden rounded-[16rpx] bg-panel" autoplay="{{banners.length > 1}}" circular="{{banners.length > 1}}" indicator-dots="{{banners.length > 1}}" interval="4500" duration="400">
+    <!-- journey-review J3-01：导航栏正下方的运营 Banner 位，后台可配置、未配置不占位。
+         MIW-18：项目机会与人才合作两个 Tab 共用同一 Banner 位。 -->
+    <swiper wx:if="{{banners.length}}" class="mx-3 mt-2 h-[298rpx] overflow-hidden rounded-[16rpx] bg-panel" autoplay="{{banners.length > 1}}" circular="{{banners.length > 1}}" indicator-dots="{{banners.length > 1}}" interval="4500" duration="400">
       <swiper-item wx:for="{{banners}}" wx:key="id">
         <view class="h-full w-full" aria-role="button" aria-label="{{item.accessibilityLabel}}" data-banner-id="{{item.id}}" bind:tap="openBanner">
           <image class="h-full w-full" mode="aspectFill" src="{{item.imageUrl}}" />
