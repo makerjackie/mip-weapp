@@ -95,11 +95,14 @@ describe('MIP event participant visual hierarchy', () => {
     expect(template).toContain('participant-card__heart')
     expect(template).toContain('catch:tap="toggleHeartVote"')
     expect(template).toContain('heart.target && heart.target.profileRef === item.profileRef')
-    expect(template).toContain('name="heart-filled" size="18px" color="var(--color-danger)"')
+    // MIW-17 G3：原型已投红心为 record 红 #FF2238（非 danger #FF4D5E）。
+    expect(template).toContain('name="heart-filled" size="18px" color="var(--mip-record)"')
     expect(template).toContain('name="heart" size="18px" color="var(--color-muted)"')
     expect(template).toContain('item.heartRelation === \'SENT\' || item.heartRelation === \'MUTUAL\'')
     expect(template).toContain('item.heartRelation === \'RECEIVED\' || item.heartRelation === \'MUTUAL\'')
-    expect(template).toContain('心动信息仅本人可见')
+    // MIW-17：原型（figma 1818_17230）私密 tab 无「心动信息仅本人可见」提示条，不得自行加回。
+    expect(template).not.toContain('participants-private-note')
+    expect(template).not.toContain('心动信息仅本人可见')
     expect(declarations(rule(stylesheet, '.participant-card__relations', true))).toMatchObject({
       'display': 'flex',
       'flex-wrap': 'wrap',

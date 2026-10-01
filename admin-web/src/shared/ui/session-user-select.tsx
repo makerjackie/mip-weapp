@@ -124,10 +124,12 @@ export function SessionUserSelect({
   placeholder = '搜索姓名或简介',
   action = 'mip.admin.users.list',
   input,
+  multiple = false,
 }: {
   id?: string
-  value?: string
-  onChange?: (value: string) => void
+  value?: string | string[]
+  onChange?: (value: string | string[]) => void
+  multiple?: boolean
   disabled?: boolean
   placeholder?: string
   action?: string
@@ -147,13 +149,14 @@ export function SessionUserSelect({
     setFailed(false)
     try {
       const payload = await request<Record<string, unknown>>(action as AdminOperationAction, action === 'mip.admin.opportunities.options'
-        ? { query, selectedUserId: value || undefined } : { ...JSON.parse(inputKey), filters: query ? { query } : {}, limit: SEARCH_LIMIT })
+        ? { query, selectedUserId: typeof value === 'string' ? value || undefined : undefined } : action === 'mip.admin.messageCampaigns.recipients'
+          ? { ...JSON.parse(inputKey), query, limit: SEARCH_LIMIT } : { ...JSON.parse(inputKey), filters: query ? { query } : {}, limit: SEARCH_LIMIT })
       if (id !== requestId.current) return
       const list = action === 'mip.admin.opportunities.options' ? payload.owners : payload.items
       const items = Array.isArray(list) ? list : []
       setOptions(items.map(item => {
         const user = item && typeof item === 'object' ? item as Record<string, unknown> : {}
-        const userId = String(user.id || user.userId || '')
+        const userId = String(action === 'mip.admin.messageCampaigns.recipients' ? user.profileRef || '' : user.id || user.userId || '')
         return { value: userId, label: String(user.nickname || user.name || user.label || '未设置昵称') }
       }).filter(option => option.value))
     }
@@ -175,13 +178,14 @@ export function SessionUserSelect({
   }, [load])
 
   const merged = useMemo(() => {
-    if (value && !options.some(option => option.value === value)) return [{ value, label: '已选用户（等待资料核对）' }, ...options]
-    return options
+    const selected = Array.isArray(value) ? value : value ? [value] : []
+    return [...selected.filter(item => !options.some(option => option.value === item)).map(item => ({ value: item, label: '已选用户（等待资料核对）' })), ...options]
   }, [options, value])
 
   return (
     <Select
       id={id}
+      mode={multiple ? 'multiple' : undefined}
       showSearch
       value={value || undefined}
       placeholder={placeholder}
@@ -190,7 +194,7 @@ export function SessionUserSelect({
       allowClear
       notFoundContent={loading ? <Spin size="small" /> : failed ? '用户搜索暂不可用' : '没有匹配的用户'}
       options={merged}
-      onChange={next => onChange?.(next || '')}
+      onChange={next => onChange?.(next || (multiple ? [] : ''))}
       onSearch={query => {
         if (timer.current) clearTimeout(timer.current)
         timer.current = setTimeout(() => void load(query.trim()), 300)

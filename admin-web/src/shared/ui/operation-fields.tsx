@@ -1,6 +1,6 @@
 import { Checkbox, DatePicker, Form, Input, InputNumber, Select, type FormInstance } from 'antd'
 import dayjs from 'dayjs'
-import { cloneElement } from 'react'
+import { cloneElement, type KeyboardEvent } from 'react'
 import {
   DATE_KINDS,
   LINE_LIST_KINDS,
@@ -23,6 +23,7 @@ export const fieldName = operationFieldName
 export function controlFor(field: OperationField, values?: OperationValues) {
   const options = (field.options || []).map(option => typeof option === 'string' ? { value: option, label: label(option) } : option)
   if (field.kind === 'checkbox' || field.kind === 'boolean') return <Checkbox>{field.label}</Checkbox>
+  if (field.kind === 'profile-ref-list') return <SessionUserSelect multiple action="mip.admin.messageCampaigns.recipients" input={{ branchId: typeof values?.branchId === 'string' && values.branchId ? values.branchId : undefined }} placeholder="搜索并选择收件人" />
   if (field.remoteUserSearch) return <SessionUserSelect action={field.userSearchAction} input={field.userSearchInput} />
   if (field.kind === 'commercial-locations') return <OpportunityLocations />
   if (field.optionsActionByValue) {
@@ -40,8 +41,12 @@ export function controlFor(field: OperationField, values?: OperationValues) {
   if (field.kind === 'textarea' || TEXTAREA_LIKE_KINDS.includes(field.kind)) {
     return <Input.TextArea rows={4} maxLength={field.maxLength} showCount={Boolean(field.maxLength)} />
   }
-  if (field.kind === 'datetime' || field.kind === 'datetime-local') return <DatePicker showTime className="field-full-width" />
-  if (field.kind === 'date') return <DatePicker className="field-full-width" />
+  // Enter confirms the picker value; its native default must not submit the surrounding form.
+  const confirmDateOnly = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter') event.preventDefault()
+  }
+  if (field.kind === 'datetime' || field.kind === 'datetime-local') return <DatePicker showTime onKeyDown={confirmDateOnly} className="field-full-width" />
+  if (field.kind === 'date') return <DatePicker onKeyDown={confirmDateOnly} className="field-full-width" />
   if (field.kind === 'number' || field.kind === 'integer') return <InputNumber className="field-full-width" />
   if (field.kind === 'money') return <InputNumber min={0} precision={field.valueScale === 1000000 ? 6 : 2} className="field-full-width" />
   if (field.kind === 'registration-schema') return <RegistrationSchemaEditor />
@@ -76,7 +81,7 @@ export function OperationFields({ fields, form, prefix = [] }: {
         label={checkbox ? undefined : field.label}
         valuePropName={checkbox ? 'checked' : 'value'}
         rules={field.required ? [{ required: true, message: `请填写${field.label}` }] : undefined}
-        extra={field.readOnlyReason || (TEXTAREA_LIKE_KINDS.includes(field.kind) ? '每行填写一项' : undefined)}
+        extra={field.readOnlyReason || (TEXTAREA_LIKE_KINDS.includes(field.kind) && field.kind !== 'profile-ref-list' ? '每行填写一项' : undefined)}
       >
         {cloneElement(controlFor(field, watchedValues), { disabled: field.readOnly || undefined })}
       </Form.Item>
@@ -91,7 +96,8 @@ export function toFormValues(fields: readonly OperationField[], values: Operatio
     const key = operationFieldName(field)
     if (!key || field.hidden || !Object.hasOwn(values, key)) continue
     const value = values[key]
-    if (field.kind === 'group') {
+    if (field.kind === 'profile-ref-list') output[key] = Array.isArray(value) ? value : []
+    else if (field.kind === 'group') {
       output[key] = toFormValues(field.fields || [], value && typeof value === 'object' && !Array.isArray(value) ? value as OperationValues : {})
     }
     else if (DATE_KINDS.includes(field.kind) && typeof value === 'string' && value) output[key] = dayjs(value)

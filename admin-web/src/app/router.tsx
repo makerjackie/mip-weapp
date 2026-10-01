@@ -37,6 +37,14 @@ function validateSearch(search: Record<string, unknown>): AdminListSearch {
   }
 }
 
+function validateEditorSearch(search: Record<string, unknown>): { returnSearch?: AdminListSearch; kind?: string } {
+  return {
+    returnSearch: search.returnSearch && typeof search.returnSearch === 'object' && !Array.isArray(search.returnSearch)
+      ? validateSearch(search.returnSearch as Record<string, unknown>) : undefined,
+    kind: ['COOPERATION_CARD', 'SUPER_CASE'].includes(String(search.kind)) ? String(search.kind) : undefined,
+  }
+}
+
 const rootRoute = createRootRoute({ component: AdminRoot })
 
 const indexRoute = createRoute({
@@ -55,31 +63,35 @@ const pageRoutes = adminNavigation.map(item => createRoute({
 const eventEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/events/$eventId/edit',
-  validateSearch: (search: Record<string, unknown>) => ({ draftId: typeof search.draftId === 'string' && /^[1-9][0-9]{0,19}$/.test(search.draftId) ? search.draftId : undefined }),
+  validateSearch: (search: Record<string, unknown>) => ({ ...validateEditorSearch(search), draftId: typeof search.draftId === 'string' && /^[1-9][0-9]{0,19}$/.test(search.draftId) ? search.draftId : undefined }),
   component: routeComponents['/events/$eventId/edit'],
 })
 
 const taskEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tasks/$taskId/edit',
+  validateSearch: validateEditorSearch,
   component: routeComponents['/tasks/$taskId/edit'],
 })
 
 const opportunityEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/opportunities/$opportunityId/edit',
+  validateSearch: validateEditorSearch,
   component: routeComponents['/opportunities/$opportunityId/edit'],
 })
 
 const knowledgeEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/knowledge/$contentId/edit',
+  validateSearch: validateEditorSearch,
   component: routeComponents['/knowledge/$contentId/edit'],
 })
 
 const userContentEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/userContent/$contentId/edit',
+  validateSearch: validateEditorSearch,
   component: routeComponents['/userContent/$contentId/edit'],
 })
 const userProfileRoute = createRoute({
@@ -88,7 +100,7 @@ const userProfileRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => ({ ...validateSearch(search), direction: ['ALL', 'INCOMING', 'OUTGOING', 'MUTUAL'].includes(String(search.direction)) ? String(search.direction) : undefined }),
   component: routeComponents['/users/$userId'],
 })
-const videoEditRoute = createRoute({ getParentRoute: () => rootRoute, path: '/videos/$videoId/edit', component: routeComponents['/videos/$videoId/edit'] })
+const videoEditRoute = createRoute({ getParentRoute: () => rootRoute, path: '/videos/$videoId/edit', validateSearch: validateEditorSearch, component: routeComponents['/videos/$videoId/edit'] })
 
 const routeTree = rootRoute.addChildren([
   indexRoute,

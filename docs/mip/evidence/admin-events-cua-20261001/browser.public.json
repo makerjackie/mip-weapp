@@ -1,0 +1,72 @@
+{
+  "method": "Chrome Computer Use (cua_repl), actual public staging app",
+  "deployedSourceCommit": "c9b8047f794a2cc634036616b23e6c256a82da3b",
+  "mainEvent": {
+    "id": "0aee9202-1804-4945-ac6f-730952a82146",
+    "status": "ENDED",
+    "version": 10,
+    "effectiveRegistrations": 0,
+    "checkins": 0,
+    "feedbackEligible": 0,
+    "paidOrders": 0
+  },
+  "registration": {
+    "id": "437df5a2-fe52-495e-b6b9-94488917ae63",
+    "rawStatus": "CANCELLED",
+    "version": 7,
+    "display": "异常（已取消）",
+    "reasonRetained": true,
+    "noOrder": true
+  },
+  "secondEvent": {
+    "id": "01ed9a59-ae75-466c-9e8b-0fb20d40eac5",
+    "status": "DRAFT",
+    "mode": "HYBRID",
+    "access": "PAID",
+    "priceCents": 10,
+    "tagLabel": "项目协作",
+    "registrations": 0,
+    "orders": 0
+  },
+  "dateEnterRegression": {
+    "sameEditRoute": true,
+    "saveButtonStillVisible": true,
+    "explicitSaveTime": "2031-10-02 10:30:00"
+  },
+  "tagQuickEdit": {
+    "namedOptions": true,
+    "existingSelectionRestored": "项目协作",
+    "technicalInputsVisible": false,
+    "inactiveTestTagNotSelectable": true
+  },
+  "onlineFieldRegression": {
+    "hybridHttpsPrefilled": true,
+    "offlineInputCount": 0,
+    "offlinePreviewLinkCount": 0,
+    "temporaryModeChangeDiscarded": true
+  },
+  "responsive": [
+    {
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "documentWidth": 1280
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390
+    }
+  ],
+  "testCatalogs": {
+    "key": "cua_20261001",
+    "TAG": "INACTIVE",
+    "TYPE": "INACTIVE",
+    "historicalTagRetained": true
+  },
+  "scopeLimit": "No WeChat device, real payment/refund, all-role or cross-page acceptance claim"
+}

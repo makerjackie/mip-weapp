@@ -13,12 +13,12 @@ export const labels: Record<string, string> = {
   VIDEO: '视频', PRIVATE_CHANNEL: '私域内容', EXPERT_SHARE: '专家分享',
   PLATFORM_OWNER: '平台负责人', PLATFORM_OPERATIONS: '平台运营', PLATFORM_FINANCE: '平台财务',
   BRANCH_ADMIN: '服务器管理员', EVENT_OWNER: '活动负责人', EVENT_MANAGER: '活动管理员', EVENT_STAFF: '活动工作人员',
-  RESOURCE: '资源', ROLE: '角色', USER: '用户', ORDER: '订单', REFUND: '退款', MESSAGE: '消息', KNOWLEDGE: '知识内容',
+  RESOURCE: '资源', ROLE: '角色', USER: '用户', BADGE: '勋章', ORDER: '订单', REFUND: '退款', MESSAGE: '消息', KNOWLEDGE: '知识内容',
   ADMIN_SESSION: '管理会话',
   DEFAULT: '默认策略', CUSTOM: '自定义策略',
   COOPERATION_CARD: '合作卡', SUPER_CASE: '超级案例',
   PENDING: '待处理', PASSED: '已通过', ERROR: '处理异常', APPROVED: '已通过',
-  EXPERIENCE: '经验值', CONTRIBUTION: '贡献值', COIN: '游戏币',
+  EXPERIENCE: '经验值', EXP: '经验值', CONTRIBUTION: '贡献值', COIN: '游戏币', SYSTEM: '系统', AUTO: '自动审核',
   LOCAL: '本地撮合', EXTERNAL: '外部撮合', ADMIN: '运营发起',
   CITY: '城市', NATIONAL: '全国', REMOTE: '远程',
   STALLED: '停滞', EXPIRED: '已过期', CLEANUP_PENDING: '待清理',
@@ -188,6 +188,7 @@ export function auditActionLabel(value: unknown) {
   const key = String(value || '')
   const parts = key.replace(/^admin\./, '').split('.').filter(Boolean)
   const tokens: Record<string, string> = {
+    session: '登录会话', badge: '勋章', cards: '名片', history: '历史', profile_edit: '编辑资料', user_content: '用户内容',
     roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '服务器',
     events: '活动', orders: '订单', refunds: '退款', messages: '消息', knowledge: '知识库', audit: '审计',
     grant: '授权', revoke: '撤销', create: '创建', update: '更新', save: '保存', publish: '发布',
@@ -217,4 +218,11 @@ export function accessLabel(accessType: unknown, priceCents: unknown) {
 export function label(value: unknown) {
   const key = String(value || '')
   return labels[key] || key || '—'
+}
+
+export function campaignAudienceLabel(campaign: Record<string, unknown>) {
+  if (campaign.audienceType === 'ALL') return '全部用户'
+  const selected = Array.isArray(campaign.recipientRefs) ? campaign.recipientRefs.length : 0
+  if (selected) return `指定 ${selected} 人`
+  return Number(campaign.recipientCount) > 0 ? `指定 ${Number(campaign.recipientCount)} 人` : '指定用户'
 }

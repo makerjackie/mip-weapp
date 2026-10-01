@@ -1,0 +1,26 @@
+{
+  "sourceCommit": "c9b8047f794a2cc634036616b23e6c256a82da3b",
+  "at": "2026-09-30T18:58:11.132Z",
+  "stage": "staging",
+  "paymentMode": "TEST",
+  "publicationMode": "existing-bff-static-fallback",
+  "functions": [
+    {
+      "name": "mip-admin-api",
+      "archiveSha256": "3c20c5631a425b0bb82cab70fa39977c9e59b3ab40ebf4e49dfdeef715dbbdc0",
+      "configurationPreserved": true,
+      "onlyCodeHashMetadataUpdated": false
+    },
+    {
+      "name": "mip-admin-web-api",
+      "archiveSha256": "c8a13327886c9249a75491f98a1d1c83345287b4088e03309f475d4fea3bd60d",
+      "configurationPreserved": true,
+      "onlyCodeHashMetadataUpdated": true
+    }
+  ],
+  "adminRuntimeSourceFiles": 162,
+  "staticFilesVerified": 14,
+  "gatewayRoutesUnchanged": true,
+  "dnsUnchanged": true,
+  "noNewTimers": true
+}

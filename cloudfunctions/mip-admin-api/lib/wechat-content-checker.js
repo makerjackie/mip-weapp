@@ -1,6 +1,6 @@
 'use strict'
 
-// Authored here and generated into media so each deployment stays self-contained.
+// Authored here and generated into media, tasks and banners so each deployment stays self-contained.
 // Web/internal calls do not carry a WeChat cloud-call token.
 function createChecker({ appId, appSecret, fetchImpl = globalThis.fetch, now = Date.now, image = false, report = () => {} } = {}) {
   const unavailableCode = image ? 'IMAGE_SAFETY_UNAVAILABLE' : 'CONTENT_SAFETY_UNAVAILABLE'

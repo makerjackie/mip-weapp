@@ -181,6 +181,7 @@ function AdminOperationSession({ children }: { children: ReactNode }) {
     <OperationContext.Provider value={value}>
       {children}
       <MutationDialog
+        key={model?.draftKey || 'closed-operation'}
         open={Boolean(model) && !pendingValues}
         title={model?.title || '运营操作'}
         description={model?.description || ''}

@@ -72,6 +72,17 @@ describe('dedicated admin media upload request validation', () => {
     })
   })
 
+  it('accepts binary transport above the CloudBase text limit without relaxing image validation', async () => {
+    const image = new Uint8Array(120 * 1024)
+    image.set(png(512, 512))
+    const value = uploadValue(image, 'EVENT_COVER')
+    const result = await readAdminMediaUploadRequest(jsonRequest(value, { 'content-type': 'application/octet-stream' }))
+    assert.deepEqual(result.request, value)
+    assert.equal(result.image.byteLength, image.length)
+    await assert.rejects(() => readAdminMediaUploadRequest(jsonRequest({ ...value, action: 'mip.admin.users.list' }, { 'content-type': 'application/octet-stream' })))
+    await assert.rejects(() => readAdminMediaUploadRequest(jsonRequest(value, { 'content-type': 'application/octet-stream', 'content-length': String(ADMIN_MEDIA_MAX_REQUEST_BYTES + 1) })))
+  })
+
   it('recognizes a bounded JPEG from its SOF header', () => {
     const result = inspectAdminMediaUploadValue(uploadValue(jpeg(80, 60), 'TASK_TEMPLATE'))
     assert.deepEqual(result.image, {

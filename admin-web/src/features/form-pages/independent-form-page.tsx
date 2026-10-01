@@ -1,8 +1,8 @@
 import { ArrowLeftOutlined, EyeOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Card, Form, Input, Modal, Space } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useBlocker, useNavigate } from '@tanstack/react-router'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useBlocker, useNavigate, useSearch } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminRequestInput, AdminOperationAction } from '../../domain/contracts'
 import { normalizeOperationValues, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
@@ -42,10 +42,14 @@ export function IndependentFormPage({ config, loadDetail }: {
   loadDetail?: () => Promise<OperationValues | null>
 }) {
   const navigate = useNavigate()
+  const search = useSearch({ strict: false }) as { returnSearch?: Record<string, unknown> }
+  const returnSearch = search.returnSearch || (config.action === 'mip.admin.userContent.save' ? { filters: { section: 'content' } } : {})
+  const returnToList = () => navigate({ to: config.backTarget, search: returnSearch as never })
   const { message } = App.useApp()
   const queryClient = useQueryClient()
   const { demoMode, hasCapability, request } = useAdminSession()
   const [form] = Form.useForm<OperationValues>()
+  const formName = useId()
   const [loading, setLoading] = useState(false)
   const [detailLoading, setDetailLoading] = useState(Boolean(loadDetail))
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -162,7 +166,7 @@ export function IndependentFormPage({ config, loadDetail }: {
       dirty.current = false
       submitting.current = false
       void message.success(`${config.title}已提交`)
-      void navigate({ to: config.backTarget })
+      void returnToList()
     }
     catch (reason) {
       if (epoch !== recordEpoch.current) return
@@ -183,8 +187,8 @@ export function IndependentFormPage({ config, loadDetail }: {
   }
 
   if (detailLoading) return <LoadingState label="正在加载记录" />
-  if (loadedValues._canSave === false) return <Card><Alert type="info" showIcon title="当前状态或权限不允许编辑" /><Button style={{ marginTop: 16 }} onClick={() => void navigate({ to: config.backTarget })}>返回列表</Button></Card>
-  if (detailFailed) return <Card><Alert type="error" showIcon title="记录加载失败" description={error} /><Space style={{ marginTop: 16 }}><Button onClick={() => setLoadAttempt(value => value + 1)}>重新加载</Button><Button onClick={() => void navigate({ to: config.backTarget })}>返回列表</Button></Space></Card>
+  if (loadedValues._canSave === false) return <Card><Alert type="info" showIcon title="当前状态或权限不允许编辑" /><Button style={{ marginTop: 16 }} onClick={() => void returnToList()}>返回列表</Button></Card>
+  if (detailFailed) return <Card><Alert type="error" showIcon title="记录加载失败" description={error} /><Space style={{ marginTop: 16 }}><Button onClick={() => setLoadAttempt(value => value + 1)}>重新加载</Button><Button onClick={() => void returnToList()}>返回列表</Button></Space></Card>
 
   const resolveConflict = (keepLocal: boolean) => {
     if (!conflict?.latest) return
@@ -210,7 +214,7 @@ export function IndependentFormPage({ config, loadDetail }: {
             {config.preview && (!config.preview.capability || hasCapability(config.preview.capability)) ? (
               <Button icon={<EyeOutlined />} disabled={loading || draftSaving} onClick={() => setPreviewOpen(true)}>预览</Button>
             ) : null}
-            <Button icon={<ArrowLeftOutlined />} disabled={loading || draftSaving} onClick={() => void navigate({ to: config.backTarget })}>
+            <Button icon={<ArrowLeftOutlined />} disabled={loading || draftSaving} onClick={() => void returnToList()}>
               返回列表
             </Button>
           </>
@@ -228,6 +232,7 @@ export function IndependentFormPage({ config, loadDetail }: {
         <Form
           form={form}
           id="independent-form"
+          name={`editor-${formName}`}
           layout="vertical"
           initialValues={initialValues}
           disabled={loading || draftSaving || Boolean(conflict)}
@@ -281,7 +286,7 @@ export function IndependentFormPage({ config, loadDetail }: {
             }
             finally { if (epoch === recordEpoch.current) { savingDraft.current = false; setDraftSaving(false) } }
           }}>保存草稿</Button> : null}
-          <Button disabled={loading || draftSaving} onClick={() => void navigate({ to: config.backTarget })}>取消</Button>
+          <Button disabled={loading || draftSaving} onClick={() => void returnToList()}>取消</Button>
         </Space>
       </Card>
       {config.textAssist ? <Modal title="整段文本辅助填充" open={assistOpen} onCancel={() => setAssistOpen(false)} okText="填入表单后逐项核对" onOk={() => {

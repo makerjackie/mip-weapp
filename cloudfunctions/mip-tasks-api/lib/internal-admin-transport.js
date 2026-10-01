@@ -44,10 +44,11 @@ function verifyTaskAdminRequest(value, { secret, allowedAppIds, sourceFunction =
   for (const [key, item] of Object.entries(value)) {
     if (key === 'signature') continue
     if (FRAMEWORK_KEYS.has(key)) continue
-    if (!SIGNED_KEYS.has(key)) throw new Error('AUTH_REQUIRED')
+    if (!SIGNED_KEYS.has(key) && key !== 'actorOpenId') throw new Error('AUTH_REQUIRED')
     signed[key] = item
   }
-  if (!hasExactKeys(signed, SIGNED_KEYS)
+  if (!hasExactKeys(Object.fromEntries(Object.entries(signed).filter(([key]) => key !== 'actorOpenId')), SIGNED_KEYS)
+    || (Object.hasOwn(signed, 'actorOpenId') && (typeof signed.actorOpenId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(signed.actorOpenId)))
     || value.signature === undefined
     || typeof value.signature !== 'string'
     || !/^[a-f0-9]{64}$/.test(value.signature)
@@ -131,6 +132,7 @@ function createInternalTaskHandler({
       const caller = {
         appId: request.appId,
         userId: request.actorUserId,
+        ...(request.actorOpenId ? { openId: request.actorOpenId } : {}),
         profileRefSecret,
       }
       await assertAdminReady(caller)

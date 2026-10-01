@@ -426,7 +426,7 @@ describe('Admin Web BFF', () => {
       input: { purpose: 'BANNER', imageBase64: mediaPngBase64() },
     }
 
-    const response = await bff.handle(mediaUploadRequest(sessionCookie, body))
+    const response = await bff.handle(mediaUploadRequest(sessionCookie, body, { 'content-type': 'application/octet-stream' }))
 
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
@@ -443,6 +443,7 @@ describe('Admin Web BFF', () => {
     assert.match(upstream.nonce, /^[A-Za-z0-9_-]{32}$/)
     assert.match(upstream.signature, /^[a-f0-9]{64}$/)
     assert.equal(fetchMock.calls[0][1]?.signal instanceof AbortSignal, true)
+    assert.equal(new Headers(fetchMock.calls[0][1]?.headers).get('content-type'), 'application/octet-stream')
     assert.equal(JSON.stringify(upstream).includes(SESSION_SECRET), false)
   })
 

@@ -80,7 +80,8 @@ export function eventRegistrationRowActions(
   const eventId = identifier(eventIdValue)
   const registrationId = identifier(registration.id || registration.registrationId)
   const expectedVersion = positiveVersion(registration.version)
-  const status = String(registration.status || '')
+  // ABNORMAL is an annotation; the underlying registration still controls legal actions.
+  const status = String(registration.registrationStatus || registration.status || '')
   if (!eventId || !registrationId || expectedVersion === null) return []
   const values = { eventId, registrationId, expectedVersion }
   if (status === 'PENDING_REVIEW') {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Checkbox, Form, Input, InputNumber, Modal, Select, Space, Spin, Tabs, Tag, Typography } from 'antd'
@@ -19,6 +19,7 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
   const demoAgreement = document === 'user' ? demoUserAgreement : demoMembershipAgreement
   const setTab = (tab: string) => void navigate({ to: '/growth', search: { ...search, tab } })
   const [editing, setEditing] = useState<{ kind: ConfigurationKind; item: ConfigurationItem | null; draft: Record<string, unknown> } | null>(null)
+  const formName = useId()
   const [form] = Form.useForm()
   const [agreementForm] = Form.useForm()
   const key = ['admin', 'membership-configuration', session.session?.actor?.id, session.sessionBoundary]
@@ -41,7 +42,7 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
   return <Card style={{ marginBottom: 24 }} title="会员内容配置">
     <Typography.Paragraph type="secondary">等级、权益和勋章由管理员维护。任务的奖励金额、经验值和贡献值请在“任务管理”中编辑；下方“成长奖励规则”管理已有行为事件的奖励。修改不追溯改写已发放记录。</Typography.Paragraph>
     <Tabs activeKey={tab} onChange={setTab} items={[...Object.entries(labels).filter(([key]) => key !== 'badges' || badgeWritable).map(([key, label]) => ({ key, label })), { key: 'agreement', label: '会员服务协议' }, { key: 'user-agreement', label: '用户使用协议' }]} />
-    {isAgreement ? agreement.isPending ? <Spin /> : agreement.error ? <Alert type="error" title={agreement.error.message} action={<Button onClick={() => void agreement.refetch()}>重试</Button>} /> : <Form key={`${document}-${agreement.data?.version}`} form={agreementForm} clearOnDestroy layout="vertical" initialValues={agreement.data?.body ? agreement.data : demoAgreement} onFinish={values => {
+    {isAgreement ? agreement.isPending ? <Spin /> : agreement.error ? <Alert type="error" title={agreement.error.message} action={<Button onClick={() => void agreement.refetch()}>重试</Button>} /> : <Form key={`${document}-${agreement.data?.version}`} name={`agreement-${formName}`} form={agreementForm} clearOnDestroy layout="vertical" initialValues={agreement.data?.body ? agreement.data : demoAgreement} onFinish={values => {
       const version = agreement.data?.version
       if (version === undefined || !configurable) return
       mutation.mutate(() => api.saveAgreement(version, values, crypto.randomUUID(), document))
@@ -65,12 +66,12 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
         {!items.error && !items.isPending && !items.data?.items.length && <Typography.Text type="secondary">暂无配置，可新建或填写演示示例。</Typography.Text>}
       </div>}
     </>}
-    <Modal title={editing ? `编辑${labels[editing.kind]}` : ''} open={Boolean(editing)} onCancel={() => setEditing(null)} confirmLoading={mutation.isPending} onOk={() => void form.validateFields().then(values => {
+    <Modal title={editing ? `${editing.item ? '编辑' : '新建'}${labels[editing.kind]}` : ''} open={Boolean(editing)} onCancel={() => setEditing(null)} confirmLoading={mutation.isPending} onOk={() => void form.validateFields().then(values => {
       if (!editing) return
       const { kind, item, draft } = editing
       mutation.mutate(() => api.save(kind, item, { ...draft, ...values }, crypto.randomUUID()))
     }, () => undefined)}>
-      <Form form={form} layout="vertical">
+      <Form name={`membership-config-${formName}`} form={form} layout="vertical">
         <Form.Item name="name" label="名称" rules={[{ required: true, max: 80 }]}><Input /></Form.Item>
         {editing?.kind === 'levels' && <><Form.Item name="minimumExperience" label="最低经验值" extra="不同等级的门槛不能重复；必须保留一个启用的 0 经验等级。" rules={[{ required: true }]}><InputNumber min={0} precision={0} /></Form.Item><Form.Item name="benefitIds" label="包含权益"><Select mode="multiple" loading={benefits.isPending} options={benefits.data?.items.map(item => ({ value: item.id, label: `${item.name}${item.status !== 'ACTIVE' ? '（未启用）' : ''}` }))} /></Form.Item></>}
         {editing?.kind === 'rules' ? <><Form.Item name="deltaValue" label="每次奖励" rules={[{ required: true }]}><InputNumber min={1} precision={0} /></Form.Item><Form.Item name="dailyLimitValue" label="每日上限（留空不限）"><InputNumber min={0} precision={0} /></Form.Item></> : <Form.Item name="sortOrder" label="排序（小的在前）"><InputNumber min={0} max={1000000} precision={0} /></Form.Item>}

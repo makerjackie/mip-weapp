@@ -17,7 +17,7 @@ describe('identity unlock modal (journey-review J2-04, 2026-09-21 拍板)', () =
     await showIdentityUnlockModal()
 
     expect(showModal).toHaveBeenCalledExactlyOnceWith({
-      title: '',
+      title: '解锁提示',
       content: '报名并签到任意一场MIP活动，可解锁该功能',
       confirmText: '确定',
       cancelText: '取消',

@@ -141,12 +141,12 @@ function expectedResult(optionalAccess = 'GRANTED') {
   }
 }
 
-function executeFeedbackFixture(sql) {
+function executeFeedbackFixture(sql, revokeValid = false) {
   const fixture = new DatabaseSync(':memory:')
   try {
     fixture.exec(`
       CREATE TABLE mip_event_registrations (
-        app_id TEXT, id TEXT, event_id TEXT, user_id TEXT
+        app_id TEXT, id TEXT, event_id TEXT, user_id TEXT, status TEXT
       );
       CREATE TABLE mip_event_checkins (
         app_id TEXT, event_id TEXT, registration_id TEXT, user_id TEXT, status TEXT
@@ -155,10 +155,14 @@ function executeFeedbackFixture(sql) {
         id TEXT, app_id TEXT, event_id TEXT, user_id TEXT, rating INTEGER
       );
       INSERT INTO mip_event_registrations VALUES
-        ('wx-app', 'registration-a', '${eventId}', 'user-valid'),
-        ('wx-app', 'registration-b', '22222222-2222-4222-8222-222222222222', 'user-cross-event');
+        ('wx-app', 'registration-a', '${eventId}', 'user-valid', 'ATTENDED'),
+        ('wx-app', 'registration-b', '22222222-2222-4222-8222-222222222222', 'user-cross-event', 'ATTENDED'),
+        ('wx-app', 'registration-revoked', '${eventId}', 'user-revoked', 'REGISTERED'),
+        ('wx-app', 'registration-cancelled', '${eventId}', 'user-cancelled', 'CANCELLED');
       INSERT INTO mip_event_checkins VALUES
-        ('wx-app', '${eventId}', 'registration-a', 'user-valid', 'REVOKED'),
+        ('wx-app', '${eventId}', 'registration-a', 'user-valid', 'ACTIVE'),
+        ('wx-app', '${eventId}', 'registration-revoked', 'user-revoked', 'REVOKED'),
+        ('wx-app', '${eventId}', 'registration-cancelled', 'user-cancelled', 'ACTIVE'),
         ('wx-app', '${eventId}', 'registration-b', 'user-cross-event', 'ACTIVE'),
         ('wx-app', '${eventId}', 'registration-a', 'user-cross-user', 'ACTIVE');
       INSERT INTO mip_event_feedback VALUES
@@ -166,6 +170,7 @@ function executeFeedbackFixture(sql) {
         ('feedback-cross-event', 'wx-app', '${eventId}', 'user-cross-event', 1),
         ('feedback-cross-user', 'wx-app', '${eventId}', 'user-cross-user', 2);
     `)
+    if (revokeValid) fixture.exec("UPDATE mip_event_checkins SET status = 'REVOKED' WHERE user_id = 'user-valid'")
     return { ...fixture.prepare(sql).get(appId, eventId) }
   }
   finally {
@@ -211,13 +216,20 @@ describe('event insights repository', () => {
     assert.match(feedbackCall.sql, /f\.app_id = c\.app_id/)
     assert.match(feedbackCall.sql, /f\.event_id = c\.event_id/)
     assert.match(feedbackCall.sql, /f\.user_id = c\.user_id/)
-    assert.doesNotMatch(feedbackCall.sql, /c\.status = 'ACTIVE'/)
+    assert.match(feedbackCall.sql, /c\.status = 'ACTIVE'/)
+    assert.match(feedbackCall.sql, /r\.status IN \('REGISTERED', 'CANCELLATION_PENDING', 'ATTENDED'\)/)
     if (DatabaseSync) {
       assert.deepEqual(executeFeedbackFixture(feedbackCall.sql), {
         submission_count: 1,
         eligible_checkin_count: 1,
         rated_count: 1,
         average_rating: 5,
+      })
+      assert.deepEqual(executeFeedbackFixture(feedbackCall.sql, true), {
+        submission_count: 0,
+        eligible_checkin_count: 0,
+        rated_count: 0,
+        average_rating: null,
       })
     }
     const orderCall = harness.calls.find(call => call.sql.includes('AS paid_order_count'))

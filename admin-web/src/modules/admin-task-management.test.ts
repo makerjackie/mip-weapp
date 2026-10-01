@@ -4,6 +4,7 @@ import type { AdminRequest } from './admin-read-contracts.ts'
 import {
   ADMIN_TASK_MUTATION_ACTIONS,
   buildTaskMutationInput,
+  taskValidationMessage,
   createTaskMutationDefinition,
   exportTaskCompletions,
   loadTaskCompletionDetail,
@@ -215,4 +216,9 @@ describe('admin task management', () => {
     assert.equal((input as Record<string, unknown>)?.bossApproved, undefined)
     assert.equal((input as Record<string, unknown>)?.remark, '通过')
   })
+})
+
+it('explains missing rewards and malformed weekly times without issuing a save', () => {
+  assert.equal(taskValidationMessage({ rewardConfig: { experience: { enabled: false }, contribution: { enabled: false }, bonus: { enabled: false } } }), '请至少启用一项奖励：经验值、贡献值或线下奖金。')
+  assert.equal(taskValidationMessage({ rewardConfig: { experience: { enabled: true, amount: 1 } }, weeklyDeliverAt: '25:99' }), '周送达时间请按 HH:mm 填写，例如 09:30。')
 })

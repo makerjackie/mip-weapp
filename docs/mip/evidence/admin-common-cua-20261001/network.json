@@ -1,0 +1,21 @@
+{
+  "at": "2026-09-30T20:50:12.071Z",
+  "functions": [
+    {
+      "name": "mip-tasks-api",
+      "wechatApiOutboundEnabled": true,
+      "privateVpcAndRolePreserved": true,
+      "functionPermissionsPreserved": true,
+      "codeUnchanged": true
+    },
+    {
+      "name": "mip-banners-api",
+      "wechatApiOutboundEnabled": true,
+      "privateVpcAndRolePreserved": true,
+      "functionPermissionsPreserved": true,
+      "codeUnchanged": true
+    }
+  ],
+  "noNewTimers": true,
+  "noGatewayChanges": true
+}

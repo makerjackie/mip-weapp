@@ -6,6 +6,7 @@ import {
 } from './admin-task-management.ts'
 import { loadBannerDetail } from './admin-banner-management.ts'
 import { feedbackFields } from './event-feedback.ts'
+import { campaignAudienceLabel, label } from './admin-read-formatters.ts'
 import {
   loadGameCatalogDetail,
   loadGameSeasonDetail,
@@ -348,14 +349,16 @@ async function loadEventDetail(
         paymentStatus: item.paymentStatus === 'NOT_REQUIRED' ? '无需支付' : item.paymentStatus === 'UNPAID' ? '待支付' : codeLabel(item.paymentStatus),
         paidAmount: item.paidAmountCents === undefined ? '—' : money(item.paidAmountCents, item.currency),
         refundedAmount: item.refundedAmountCents === undefined ? '—' : money(item.refundedAmountCents, item.currency),
-        state: codeLabel(item.status),
+        state: item.status === 'ABNORMAL' && item.registrationStatus
+          ? `异常（${codeLabel(item.registrationStatus)}）` : codeLabel(item.status),
+        abnormalReason: text(item.abnormalReason),
         detailLinks: [
           ...(typeof item.userDetailId === 'string' ? [{ route: 'users' as const, id: item.userDetailId, label: '用户档案' }] : []),
           ...(typeof item.orderDetailId === 'string' ? [{ route: 'orders' as const, id: item.orderDetailId, label: '支付订单' }] : []),
         ],
         rowActions: eventRegistrationRowActions(eventId, item),
       })),
-      columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['paymentStatus', '支付状态'], ['paidAmount', '实付金额'], ['refundedAmount', '已退款'], ['checkedInAt', '签到时间'], ['state', '报名状态']]),
+      columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['paymentStatus', '支付状态'], ['paidAmount', '实付金额'], ['refundedAmount', '已退款'], ['checkedInAt', '签到时间'], ['state', '报名状态'], ['abnormalReason', '异常原因']]),
       pager: {
         key: 'eventRoster',
         query: rosterFilters.query,
@@ -538,7 +541,7 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
         ['消息标题', title],
         ['消息正文', text(campaign.body)],
         ['作用范围', campaign.scopeType === 'BRANCH' ? text(campaign.branchName) : '平台'],
-        ['发送范围', campaign.audienceType === 'ALL' ? '全部用户' : `${numberText(campaign.recipientCount)} 人`],
+        ['发送范围', campaignAudienceLabel(campaign)],
         ['状态', codeLabel(campaign.status)],
         ['内容安全', codeLabel(campaign.contentSafetyStatus)],
         ['版本', numberText(campaign.version)],
@@ -646,7 +649,7 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
     fields: fields([
       ['发布人', text(opportunity.ownerNickname)],
       ['作用范围', opportunity.scopeType === 'BRANCH' ? text(opportunity.branchName) : '平台'],
-      ['城市', text(opportunity.cityName)],
+      ['合作地点', text(terms.locationDisplay || opportunity.cityName)],
       ['价值说明', text(opportunity.valueSummary)],
       ['合作目标', text(opportunity.targetSummary)],
       ['详细说明', text(opportunity.description)],
@@ -1006,5 +1009,5 @@ const codeLabels: Record<string, string> = {
 
 function codeLabel(value: unknown) {
   const code = text(value, '')
-  return codeLabels[code] || code || '—'
+  return codeLabels[code] || label(code)
 }

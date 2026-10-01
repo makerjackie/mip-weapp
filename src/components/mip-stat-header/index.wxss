@@ -13,6 +13,7 @@
 }
 
 .mip-stat-header__column {
+  position: relative;
   display: flex;
   flex: none;
   flex-direction: column;
@@ -36,14 +37,29 @@
   position: relative;
 }
 
+/* MIW-17 G2（mine-member Frame 3754 / DS StatHeader）：14×14 圆角标钉在 48px 列右上——
+   原型 badge left 234/314 = 列右缘(239.5/319.5) − 5.5，即 right -17rpx、top -8rpx（列顶 12 → 角标顶 8）；
+   #ff2238 内含白色 10/500 未读数；min-width + 水平 padding 让两位数仍走胶囊形，一位数与设计稿同宽。 */
 .mip-stat-header__badge {
   position: absolute;
-  top: 0;
-  left: calc(100% + 6rpx);
-  width: 12rpx;
-  height: 12rpx;
-  background: var(--color-danger);
-  border-radius: 50%;
+  top: -8rpx;
+  right: -17rpx;
+  box-sizing: border-box;
+  display: flex;
+  min-width: 28rpx;
+  height: 28rpx;
+  padding: 0 4rpx;
+  align-items: center;
+  justify-content: center;
+  background: var(--mip-record);
+  border-radius: 100rpx;
+}
+
+.mip-stat-header__badge-count {
+  font-size: 20rpx;
+  font-weight: 500;
+  line-height: 26rpx;
+  color: var(--mip-text-primary);
 }
 
 .mip-stat-header__label {

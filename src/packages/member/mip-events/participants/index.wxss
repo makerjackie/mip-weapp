@@ -75,16 +75,6 @@
   text-align: center;
 }
 
-.participants-private-note {
-  display: flex;
-  column-gap: 8rpx;
-  align-items: center;
-  min-height: 56rpx;
-  margin-top: 8rpx;
-  font-size: 22rpx;
-  color: var(--color-muted);
-}
-
 .participants-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

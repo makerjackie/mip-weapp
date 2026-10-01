@@ -147,12 +147,17 @@ export async function createOperationModel(
   if (eventActions.has(action)) {
     const typedAction = action as AdminEventMutationAction
     const baseDefinition = createAdminEventMutationDefinition(typedAction, targetId, readField)
+    const event = record(detail?.source?.event)
     const launchVersion = trustedEventVersion(typedAction, launch)
+      ?? (typedAction === 'mip.admin.events.tags.replace' && event.id === targetId ? positiveInteger(event.version) : undefined)
     const definition = launchVersion === undefined
       ? baseDefinition
       : { ...baseDefinition, expectedVersion: launchVersion }
     const values = { ...prefillEventValues(typedAction, definition.values, detail), ...launch.values }
-    return model(definition, definition.fields as readonly OperationField[], values, idempotencyKey, next => buildAdminEventMutationInput(definition, next))
+    const fields = definition.fields.map(field => launch.values
+      && ['eventId', 'registrationId', 'photoId', 'expectedVersion'].includes(String(field.key))
+      && Object.hasOwn(launch.values, String(field.key)) ? { ...field, hidden: true } : field)
+    return model(definition, fields as readonly OperationField[], values, idempotencyKey, next => buildAdminEventMutationInput(definition, next))
   }
   if (taskActions.has(action)) {
     const typedAction = action as AdminTaskMutationAction
@@ -437,6 +442,11 @@ function prefillPeopleValues(action: AdminPeopleMutationAction, values: Operatio
 
 function prefillEventValues(action: AdminEventMutationAction, values: OperationValues, detail: AdminDetailView | null) {
   const next = { ...values }
+  if (action === 'mip.admin.events.tags.replace') {
+    const event = record(record(detail?.source).event)
+    next.tagIds = Array.isArray(event.tagIds) ? event.tagIds : []
+    return next
+  }
   if (action !== 'mip.admin.events.save') return next
   const event = record(record(detail?.source).event)
   for (const field of eventMutationConfig(action).fields) if (!field.hidden && event[field.key] !== undefined) next[field.key] = event[field.key]
@@ -514,7 +524,8 @@ function contentTitle(action: ContentMutationAction, resource: string) {
             : action.endsWith('.close') ? '完成处理'
               : action.endsWith('.grant') ? '授予'
                 : action.endsWith('.revoke') ? '撤销'
-                  : action.endsWith('.adjust') ? '调整' : '更新'
+                  : action.endsWith('.adjust') ? '调整'
+                    : action.endsWith('.end') ? '结束' : '更新'
   return `${verb}${resource}`
 }
 

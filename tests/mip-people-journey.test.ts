@@ -134,7 +134,7 @@ describe('journey-review WS-PEOPLE · 档案互动条行为（J2-03 → J2-04）
     const p = page({ interactionBar: 'locked' })
     p.toggleInterest()
     expect(profileMocks.showModal).toHaveBeenCalledExactlyOnceWith({
-      title: '',
+      title: '解锁提示',
       content: '报名并签到任意一场MIP活动，可解锁该功能',
       confirmText: '确定',
       cancelText: '取消',

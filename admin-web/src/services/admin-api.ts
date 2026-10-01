@@ -201,7 +201,7 @@ export class AdminApiClient {
     try {
       response = await fetchWithTimeout('/api/media/image', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/octet-stream' },
         credentials: 'same-origin',
         body: JSON.stringify(prepared),
       }, MEDIA_UPLOAD_TIMEOUT_MS)

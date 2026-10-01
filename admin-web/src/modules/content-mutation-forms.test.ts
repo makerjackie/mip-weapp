@@ -105,3 +105,13 @@ describe('content mutation validators', () => {
     }).ok, false)
   })
 })
+
+
+it('keeps optional case fields explicit through JSON transport so a minimal draft passes the server shape', () => {
+  const result = validateContentMutation('mip.admin.userContent.save', { kind: 'SUPER_CASE', ownerUserId: 'user-1', draft: { kind: 'SUPER_CASE', projectName: '项目', summary: '摘要', responsibility: '职责', description: '第一行\n第二行', status: 'DRAFT' } })
+  assert.equal(result.ok, true)
+  if (!result.ok) return
+  const transported = JSON.parse(JSON.stringify(result.input))
+  for (const key of ['startedOn', 'endedOn', 'caseType', 'cityTagId', 'industryTagId', 'coverAssetId']) assert.equal(transported.draft[key], null)
+  assert.deepEqual(transported.draft.mediaAssetIds, [])
+})

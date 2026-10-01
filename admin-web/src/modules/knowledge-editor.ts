@@ -1,4 +1,11 @@
 import type { OperationValues } from './admin-operation-ui'
+import { validateContentMutation } from './content-mutation-forms.ts'
+
+export function knowledgeEditorInput(values: OperationValues) {
+  const input = { ...values }
+  delete input._canSave
+  return validateContentMutation('mip.admin.knowledge.contents.save', input)
+}
 
 export function knowledgeEditorValues(value: Record<string, unknown>): OperationValues {
   if (typeof value.id !== 'string' || !value.id || !Number.isSafeInteger(value.version) || Number(value.version) < 1

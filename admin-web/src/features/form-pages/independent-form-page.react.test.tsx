@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { IndependentFormPageConfig } from './independent-form-page'
 import { IndependentFormPage } from './independent-form-page'
 
-const state = vi.hoisted(() => ({ request: vi.fn(), navigate: vi.fn() }))
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => state.navigate, useBlocker: () => ({ status: 'idle' }) }))
+const state = vi.hoisted(() => ({ request: vi.fn(), navigate: vi.fn(), search: {} as Record<string, unknown> }))
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => state.navigate, useSearch: () => state.search, useBlocker: () => ({ status: 'idle' }) }))
 vi.mock('../../app/session-provider', () => ({ useAdminSession: () => ({
   request: state.request, demoMode: false, hasCapability: () => true,
 }) }))
@@ -15,6 +15,7 @@ afterEach(cleanup)
 beforeEach(() => {
   state.request.mockReset().mockResolvedValue({})
   state.navigate.mockReset()
+  state.search = {}
 })
 
 const config: IndependentFormPageConfig = {
@@ -37,6 +38,18 @@ function mount(loadDetail: () => Promise<Record<string, unknown> | null>) {
 }
 
 describe('IndependentFormPage loaded-record submission', () => {
+  it('confirms dates with Enter without implicitly saving the whole record', async () => {
+    const dateConfig: IndependentFormPageConfig = { ...config,
+      fields: [...config.fields, { name: 'startsAt', label: '开始时间', kind: 'datetime', required: true }],
+      values: { ...config.values, startsAt: '2031-10-02T02:00:00.000Z' },
+    }
+    render(<QueryClientProvider client={new QueryClient()}><App><IndependentFormPage config={dateConfig} /></App></QueryClientProvider>)
+    expect(fireEvent.keyDown(screen.getByLabelText('开始时间'), { key: 'Enter', code: 'Enter' })).toBe(false)
+    expect(state.request).not.toHaveBeenCalled()
+    expect(state.navigate).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
+    await waitFor(() => expect(state.request).toHaveBeenCalledOnce())
+  })
   it('restores a private draft once, retains its version when saving, and shows success without a failure alert', async () => {
     const save = vi.fn().mockResolvedValue({ title: '再次编辑', _draftId: 'draft-1', _draftVersion: 5 })
     const draftConfig: IndependentFormPageConfig = { ...config, privateDraft: {
@@ -197,4 +210,16 @@ describe('IndependentFormPage loaded-record submission', () => {
     await waitFor(() => expect(state.request).toHaveBeenCalledTimes(2))
     expect(state.request.mock.calls[1]?.[1]).toMatchObject({ title: '我的修改', expectedVersion: 7 })
   })
+})
+
+
+it('returns to the original content list filters after saving', async () => {
+  const returnSearch = { q: '当前案例', page: 2, filters: { section: 'content', ownerUserId: 'owner-a' } }
+  state.search = { returnSearch }
+  mount(async () => ({ title: '当前案例', expectedVersion: 7 }))
+  await waitFor(() => expect(screen.getByLabelText('标题')).toHaveValue('当前案例'))
+  fireEvent.change(screen.getByLabelText('标题'), { target: { value: '当前案例已编辑' } })
+  fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
+  await waitFor(() => expect(state.navigate).toHaveBeenCalledWith({ to: '/records', search: returnSearch }))
+  expect(state.request).toHaveBeenCalledWith(config.action, expect.objectContaining({ title: '当前案例已编辑', expectedVersion: 7 }))
 })

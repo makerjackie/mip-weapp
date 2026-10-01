@@ -112,6 +112,18 @@ describe('admin detail views', () => {
     })
   })
 
+  it('shows the underlying registration state and abnormal reason without losing cancel actions', async () => {
+    const detail = await loadAdminDetail('events', 'event-1', requestWith({
+      'mip.admin.events.get': { event: { id: 'event-1', title: '异常报名测试', version: 1 } },
+      'mip.admin.events.insights.get': { participation: {}, invitations: {}, composition: {}, hearts: {}, feedback: { access: 'RESTRICTED' }, financials: { access: 'RESTRICTED' } },
+      'mip.admin.events.roster': { items: [{ id: 'registration-1', nickname: '验收参与人', status: 'ABNORMAL', registrationStatus: 'REGISTERED', abnormalReason: '需核对报名资料', version: 4 }], nextCursor: null },
+    }, []))
+    const row = detail.sections.find(section => section.title === '报名与参与人')?.rows?.[0]
+    assert.equal(row?.state, '异常（已报名）')
+    assert.equal(row?.abnormalReason, '需核对报名资料')
+    assert.equal(row?.rowActions?.some(action => action.label === '取消报名'), true)
+  })
+
   it('loads order detail before querying payment attempts by the exact order id', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const detail = await loadAdminDetail('orders', 'order-1', requestWith({
@@ -370,19 +382,11 @@ describe('admin detail views', () => {
     assert.equal(section?.pager?.nextCursor, 'fb-cursor-2')
   })
 
-  it('returns a valid download URL from checkin QR code query', async () => {
-    // Mock request that returns a QR code response with downloadUrl
-    const request = async (action: string) => {
-      if (action === 'mip.admin.events.checkinQrcode.get') {
-        return { qrCodeAssetId: 'asset-001', downloadUrl: 'https://example.com/qrcode/event-001.png', format: 'PNG', generatedAt: '2030-01-01T00:00:00.000Z' }
-      }
-      return null
-    }
-    // Call the QR code action and verify the response
-    const result = await request('mip.admin.events.checkinQrcode.get')
-    assert.ok(result, 'QR code response should not be null')
-    assert.equal(typeof (result as { downloadUrl: unknown }).downloadUrl, 'string')
-    assert.ok((result as { downloadUrl: string }).downloadUrl.startsWith('https://'), 'downloadUrl should be a valid HTTPS URL')
-    assert.equal((result as { format: string }).format, 'PNG')
-  })
+})
+
+it('uses actual commercial locations in opportunity detail, including remote cooperation', async () => {
+  const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
+    'mip.admin.opportunities.get': { ...opportunityDetailResponse(), cityName: null, commercialTerms: { locationDisplay: '深圳、全国、远程', amountDisplay: '¥12,500.00 - ¥25,000.00' } },
+  }, []), { includeOpportunityComments: false })
+  assert.equal(detail.sections[0].fields?.find(field => field.label === '合作地点')?.value, '深圳、全国、远程')
 })

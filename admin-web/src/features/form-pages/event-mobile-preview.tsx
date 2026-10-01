@@ -21,7 +21,7 @@ export function EventMobilePreview({ values }: { values: Record<string, unknown>
       {values.capacity ? <p><TeamOutlined /> 名额 {String(values.capacity)}</p> : null}
       {values.registrationDeadline ? <p>报名截止：{formatDateTime(values.registrationDeadline)}</p> : null}
       {values.cancellationDeadline ? <p>取消截止：{formatDateTime(values.cancellationDeadline)}</p> : null}
-      {typeof values.onlineUrl === 'string' && /^https:\/\//.test(values.onlineUrl) ? <p><a href={values.onlineUrl} target="_blank" rel="noopener noreferrer">线上活动 / 场地链接</a></p> : null}
+      {['ONLINE', 'HYBRID'].includes(String(values.eventMode)) && typeof values.onlineUrl === 'string' && /^https:\/\//.test(values.onlineUrl) ? <p><a href={values.onlineUrl} target="_blank" rel="noopener noreferrer">线上活动链接</a></p> : null}
       <Card size="small" title="活动介绍"><Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{String(values.description || '')}</Typography.Paragraph>
         {media.map((item, index) => {
           const asset = item && typeof item === 'object' ? item as Record<string, unknown> : {}

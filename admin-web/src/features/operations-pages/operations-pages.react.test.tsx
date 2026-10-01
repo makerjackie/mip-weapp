@@ -143,9 +143,11 @@ describe('second-batch operations pages', () => {
     fireEvent.click(screen.getByRole('button', { name: /创建机会/ }))
     expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: '/opportunities/$opportunityId/edit' }))
     fireEvent.click(screen.getByRole('button', { name: /创建合作卡/ }))
-    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: '/userContent/$contentId/edit', search: { kind: 'COOPERATION_CARD' } }))
+    expect(mockNavigate).toHaveBeenLastCalledWith(expect.objectContaining({ to: '/userContent/$contentId/edit', search: expect.any(Function) }))
+    expect(mockNavigate.mock.calls.at(-1)?.[0].search({ q: '当前内容', filters: { ownerUserId: 'owner-a' } })).toEqual({ kind: 'COOPERATION_CARD', returnSearch: { q: '当前内容', filters: { ownerUserId: 'owner-a', section: 'content' } } })
     fireEvent.click(screen.getByRole('button', { name: /创建超级案例/ }))
-    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: '/userContent/$contentId/edit', search: { kind: 'SUPER_CASE' } }))
+    expect(mockNavigate).toHaveBeenLastCalledWith(expect.objectContaining({ to: '/userContent/$contentId/edit', search: expect.any(Function) }))
+    expect(mockNavigate.mock.calls.at(-1)?.[0].search({ q: '当前内容', filters: { ownerUserId: 'owner-a' } })).toEqual({ kind: 'SUPER_CASE', returnSearch: { q: '当前内容', filters: { ownerUserId: 'owner-a', section: 'content' } } })
     unmount()
 
     const growthWrite = vi.fn()

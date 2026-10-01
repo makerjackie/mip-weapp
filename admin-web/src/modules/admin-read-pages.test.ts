@@ -258,7 +258,7 @@ describe('admin read pages', () => {
       { action: 'mip.admin.messageTemplates.list', input: { query: '早会', status: '', limit: 20 } },
     ])
     assert.deepEqual(page.sections.map(section => section.key), ['campaigns', 'templates'])
-    assert.equal(page.sections[0].rows[0].audience, '24 人')
+    assert.equal(page.sections[0].rows[0].audience, '指定 24 人')
     assert.equal(page.sections[0].rows[0].scope, '福田分会')
     assert.equal(page.sections[0].rows[0].detailId, 'campaign-1')
     assert.deepEqual(page.sections[1].rows[0].rowActions?.map(item => item.action), [
@@ -314,9 +314,13 @@ describe('admin read pages', () => {
     const page = await loadAdminReadPage('auditLogs', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
       'mip.admin.audit.list': {
         items: [{
-          actorNickname: '管理员', actorRoleKey: 'PLATFORM_OWNER', scopeName: '平台',
+          actorNickname: '管理员', effectiveRole: 'PLATFORM_OWNER', scopeName: '平台',
           action: 'admin.session.enter', resourceType: 'ADMIN_SESSION',
           resourceId: 'sess-001', createdAt: '2030-01-01T00:00:00.000Z',
+        }, {
+          actorNickname: '管理员', effectiveRole: 'PLATFORM_OWNER', scopeName: '平台',
+          action: 'admin.badge.update', resourceType: 'BADGE',
+          resourceId: 'badge-001', createdAt: '2030-01-01T00:00:01.000Z',
         }],
         nextCursor: null,
       },
@@ -325,8 +329,11 @@ describe('admin read pages', () => {
     assert.equal(calls[0].action, 'mip.admin.audit.list')
     assert.equal(page.sections.length, 1)
     assert.equal(page.sections[0].rows[0].actor, '管理员')
-    assert.equal(page.sections[0].rows[0].action, 'admin.session.enter')
+    assert.equal(page.sections[0].rows[0].role, '平台负责人')
+    assert.equal(page.sections[0].rows[0].action, '登录会话 · 进入')
     assert.equal(page.sections[0].rows[0].resource, '管理会话')
+    assert.equal(page.sections[0].rows[1].action, '勋章 · 更新')
+    assert.equal(page.sections[0].rows[1].resource, '勋章')
   })
 
   it('passes filter parameters through to action input for events list', async () => {

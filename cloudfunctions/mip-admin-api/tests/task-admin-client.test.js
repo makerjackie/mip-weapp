@@ -133,3 +133,12 @@ describe('task admin typed client', () => {
     )
   })
 })
+
+it('authenticates the resolved WeChat identity for task safety and rejects tampering', async () => {
+  let captured
+  const client = clientWith({ async callFunction({ data }) { captured = data; return { result: { ok: true, data: {} } } } })
+  await client.execute({ appId: APP_ID, actorUserId: USER_ID, actorOpenId: 'trusted-wechat-openid', action: 'mip.admin.tasks.save', input: { task: { name: 'draft' }, idempotencyKey: 'task-safety-identity-0001' } })
+  const options = { secret: SECRET, allowedAppIds: new Set([APP_ID]), now: () => 1_700_000_000_000 }
+  assert.equal(verifyTaskAdminRequest(captured, options).actorOpenId, 'trusted-wechat-openid')
+  assert.throws(() => verifyTaskAdminRequest({ ...captured, actorOpenId: 'forged-openid' }, options), /AUTH_REQUIRED/)
+})

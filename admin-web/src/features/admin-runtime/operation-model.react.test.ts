@@ -21,6 +21,13 @@ const scores = {
 }
 
 describe('admin operation model', () => {
+  it('keeps row-bound event identifiers and versions hidden while submitting the original context', async () => {
+    const values = { eventId: 'event-1', registrationId: 'registration-1', expectedVersion: 3 }
+    const result = await createOperationModel('mip.admin.events.undoCheckIn', 'event-1', null, { values }, async <T>() => null as T)
+    expect(result.fields.filter(field => field.hidden).map(field => field.key)).toEqual(['eventId', 'registrationId', 'expectedVersion'])
+    expect(result.buildInput({ ...result.values, reason: '撤销测试签到' })).toMatchObject({ ...values, reason: '撤销测试签到' })
+  })
+
   const basicDetail: AdminDetailView = {
     route: 'events',
     title: '详情',
@@ -31,6 +38,15 @@ describe('admin operation model', () => {
       { title: '会员权益', fields: [{ label: '会员链版本', value: '9' }] },
     ],
   }
+
+  it('edits activity tags by catalog selection and retains the existing selection and trusted version', async () => {
+    const result = await createOperationModel('mip.admin.events.tags.replace', 'event-1', {
+      ...basicDetail, source: { event: { id: 'event-1', version: 4, tagIds: ['tag-1'] } },
+    }, {}, async <T>() => null as T)
+    expect(result.fields.filter(field => !field.hidden)).toMatchObject([{ key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsInput: { kind: 'TAG', selectable: true } }])
+    expect(result.values.tagIds).toEqual(['tag-1'])
+    expect(result.buildInput({ ...result.values, tagIds: ['tag-2'] })).toEqual({ eventId: 'event-1', expectedVersion: 4, tagIds: ['tag-2'] })
+  })
 
   it.each([
     {
