@@ -24,9 +24,7 @@ export type AdminCapability
     | 'events.checkin.manage'
     | 'events.checkin.undo'
     | 'events.team.manage'
-    | 'events.album.manage'
     | 'events.feedback.read'
-    | 'events.comments.manage'
     | 'events.catalog.manage'
     | 'events.recaps.manage'
     | 'announcements.manage'
@@ -113,8 +111,6 @@ export interface AdminEvent {
   accessType: AdminEventAccessType
   priceCents: number
   registrationPolicy: 'AUTO' | 'APPROVAL'
-  albumEnabled: boolean
-  albumSubmissionPolicy: 'AUTO' | 'REVIEW'
   capacity: number | null
   registrationCount: number
   attendedCount: number
@@ -140,8 +136,6 @@ export interface AdminEventDetail {
   eventMode: 'OFFLINE' | 'ONLINE' | 'HYBRID'
   accessType: 'FREE' | 'MEMBER_INCLUDED' | 'PAID'
   registrationPolicy: 'AUTO' | 'APPROVAL'
-  albumEnabled: boolean
-  albumSubmissionPolicy: 'AUTO' | 'REVIEW'
   startsAt: string
   endsAt: string
   registrationDeadline: string | null

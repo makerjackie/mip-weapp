@@ -23,16 +23,6 @@ describe('MIP event native actions', () => {
     expect(page).toContain('hasCoordinates')
   })
 
-  it('adds the server-provided activity time to the system calendar', () => {
-    const page = read('src/packages/member/mip-events/detail/index.ts')
-    const view = read('src/packages/member/mip-events/detail/index.wxml')
-
-    expect(page).toContain('wx.addPhoneCalendar')
-    expect(page).toContain('new Date(event.startsAt)')
-    expect(page).toContain('new Date(event.endsAt)')
-    expect(view).toContain('加入系统日历')
-  })
-
   it('stores map coordinates only through the validated event draft', () => {
     const service = read('cloudfunctions/mip-admin-api/domain/events.js')
     const repository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')

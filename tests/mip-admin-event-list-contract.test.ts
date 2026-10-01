@@ -26,8 +26,6 @@ const event: AdminEvent = {
   accessType: 'PAID',
   priceCents: 2500,
   registrationPolicy: 'AUTO',
-  albumEnabled: true,
-  albumSubmissionPolicy: 'REVIEW',
   capacity: 50,
   registrationCount: 12,
   attendedCount: 3,

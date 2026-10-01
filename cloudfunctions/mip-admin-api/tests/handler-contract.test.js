@@ -251,7 +251,7 @@ describe('admin handler and isolation contract', () => {
     assert.equal(issues, 0)
   })
 
-  it('keeps all 243 business actions compatible with the handler configuration', async () => {
+  it('keeps all 236 business actions compatible with the handler configuration', async () => {
     const caller = { appId: 'wx', identityKey: 'key' }
     const calls = []
     const service = createServiceDouble({}, operation => async (...args) => {
@@ -265,7 +265,7 @@ describe('admin handler and isolation contract', () => {
     })
     const businessActions = operationRegistry.operationCatalog.map(operation => operation.action)
 
-    assert.equal(businessActions.length, 243)
+    assert.equal(businessActions.length, 236)
     for (const action of businessActions) {
       const before = calls.length
       const response = await handler({ contractVersion: 1, action, input: { marker: action } })
@@ -400,7 +400,6 @@ describe('admin handler and isolation contract', () => {
     const root = path.resolve(__dirname, '..')
     const repositoryFiles = [
       path.join(root, 'domain/repository.js'),
-      path.join(root, 'domain/event-comment-governance.js'),
       path.join(root, 'domain/repositories/access.js'),
       path.join(root, 'domain/repositories/events.js'),
       path.join(root, 'domain/repositories/users.js'),

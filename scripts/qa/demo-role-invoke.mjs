@@ -138,7 +138,7 @@ export async function invoke({ name, data = {} }, role = 'member') {
     return result
   }
   if (name === 'mip-events-api') {
-    const actions = { 'mip.events.list': 'listEvents', 'mip.events.discoveryFilters': 'getEventDiscoveryFilters', 'mip.events.detail': 'getEvent', 'mip.events.publicParticipants': 'listPublicParticipants', 'mip.events.mine': 'listMyRegistrations', 'mip.events.myRegistration': 'getMyRegistration', 'mip.events.feedback': 'getFeedback', 'mip.events.heartCandidates': 'listHeartCandidates', 'mip.events.heart': 'getHeart', 'mip.events.hearts.mine': 'listHeartHistory', 'mip.events.album.list': 'listEventAlbum' }
+    const actions = { 'mip.events.list': 'listEvents', 'mip.events.discoveryFilters': 'getEventDiscoveryFilters', 'mip.events.detail': 'getEvent', 'mip.events.publicParticipants': 'listPublicParticipants', 'mip.events.mine': 'listMyRegistrations', 'mip.events.myRegistration': 'getMyRegistration', 'mip.events.feedback': 'getFeedback', 'mip.events.heartCandidates': 'listHeartCandidates', 'mip.events.heart': 'getHeart', 'mip.events.hearts.mine': 'listHeartHistory' }
     const method = actions[action]
     if (!method) {
       throw new Error(`QA_UNSUPPORTED_ACTION:${name}:${action}`)

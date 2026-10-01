@@ -4,7 +4,6 @@ module.exports = {
   "PLATFORM_OWNER": {
     "capabilities": [
       "events.write",
-      "events.album.manage",
       "events.recaps.manage",
       "userContent.moderate",
       "opportunities.moderate",
@@ -18,7 +17,6 @@ module.exports = {
   "PLATFORM_OPERATIONS": {
     "capabilities": [
       "events.write",
-      "events.album.manage",
       "events.recaps.manage",
       "userContent.moderate",
       "opportunities.moderate",
@@ -38,7 +36,6 @@ module.exports = {
   "BRANCH_ADMIN": {
     "capabilities": [
       "events.write",
-      "events.album.manage",
       "userContent.moderate",
       "opportunities.moderate"
     ],
@@ -48,8 +45,7 @@ module.exports = {
   },
   "EVENT_OWNER": {
     "capabilities": [
-      "events.write",
-      "events.album.manage"
+      "events.write"
     ],
     "scopes": [
       "EVENT"
@@ -57,8 +53,7 @@ module.exports = {
   },
   "EVENT_MANAGER": {
     "capabilities": [
-      "events.write",
-      "events.album.manage"
+      "events.write"
     ],
     "scopes": [
       "EVENT"

@@ -4,7 +4,6 @@ import {
   announcementRowActions,
   branchRowActions,
   communityReportRowActions,
-  eventAlbumRowActions,
   eventCatalogRowActions,
   eventPolicyRowActions,
   eventRegistrationRowActions,
@@ -37,18 +36,6 @@ describe('admin row operations', () => {
     assert.equal(attended[0]?.action, 'mip.admin.events.undoCheckIn')
     assert.deepEqual(eventRegistrationRowActions('event-1', {
       id: 'registration-1', version: 5, status: 'CANCELLED',
-    }), [])
-  })
-
-  it('requires a pending, versioned album photo before exposing review', () => {
-    assert.deepEqual(eventAlbumRowActions('event-1', {
-      id: 'photo-1', version: 2, status: 'PENDING',
-    }), [{
-      action: 'mip.admin.events.album.review', label: '审核', targetId: 'event-1',
-      values: { eventId: 'event-1', photoId: 'photo-1', expectedVersion: 2 },
-    }])
-    assert.deepEqual(eventAlbumRowActions('event-1', {
-      id: 'photo-1', version: 2, status: 'PUBLISHED',
     }), [])
   })
 

@@ -341,11 +341,6 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
                AND content_media.status = 'ACTIVE'
            )
            AND NOT EXISTS (
-             SELECT 1 FROM mip_event_album_photos photo
-             WHERE photo.app_id = asset.app_id AND photo.media_asset_id = asset.id
-               AND photo.status IN ('PENDING', 'PUBLISHED')
-           )
-           AND NOT EXISTS (
              SELECT 1 FROM mip_opportunities opportunity
              WHERE opportunity.app_id = asset.app_id AND opportunity.cover_asset_id = asset.id
            )

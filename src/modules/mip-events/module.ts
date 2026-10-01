@@ -243,33 +243,6 @@ export function createMipEventsModule(
       })
     },
 
-    listEventAlbum(eventId: EventId, cursor?: string) {
-      return gateway.listEventAlbum(eventId, cursor, 20)
-    },
-
-    listMyEventAlbumSubmissions(eventId: EventId) {
-      return gateway.listMyEventAlbumSubmissions(eventId)
-    },
-
-    submitEventAlbumPhoto(eventId: EventId, mediaAssetId: string, caption = '') {
-      const normalizedCaption = caption.trim()
-      if (!/^[0-9a-f-]{36}$/i.test(mediaAssetId)) {
-        throw new Error('照片素材无效')
-      }
-      if (normalizedCaption.length > 300) {
-        throw new Error('照片说明不能超过 300 个字')
-      }
-      return gateway.submitEventAlbumPhoto(eventId, mediaAssetId, normalizedCaption)
-    },
-
-    withdrawEventAlbumPhoto(photoId: string, expectedVersion: number) {
-      if (!/^[0-9a-f-]{36}$/i.test(photoId)
-        || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
-        throw new Error('照片状态无效')
-      }
-      return gateway.withdrawEventAlbumPhoto(photoId, expectedVersion)
-    },
-
     listMyRegistrations(cursor?: string, category?: import('./types').MyRegistrationCategory) {
       return gateway.listMyRegistrations(cursor, category)
     },

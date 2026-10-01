@@ -77,8 +77,6 @@ function parseAdminEvent(value: unknown): AdminEvent {
     'accessType',
     'priceCents',
     'registrationPolicy',
-    'albumEnabled',
-    'albumSubmissionPolicy',
     'capacity',
     'registrationCount',
     'attendedCount',
@@ -112,8 +110,6 @@ function parseAdminEvent(value: unknown): AdminEvent {
     || !Number.isSafeInteger(value.priceCents)
     || Number(value.priceCents) < 0
     || !['AUTO', 'APPROVAL'].includes(String(value.registrationPolicy))
-    || typeof value.albumEnabled !== 'boolean'
-    || !['AUTO', 'REVIEW'].includes(String(value.albumSubmissionPolicy))
     || !(value.capacity === null || (Number.isInteger(value.capacity) && Number(value.capacity) > 0))
     || !Number.isInteger(value.registrationCount)
     || Number(value.registrationCount) < 0

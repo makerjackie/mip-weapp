@@ -979,22 +979,11 @@ Page({
     this.setData({ loginSheetOpen: false, loginSheetBusy: false })
   },
 
-  openComments() {
-    caseNavigateTo({ url: `/packages/member/mip-events/comments/index?eventId=${encodeURIComponent(this.data.eventId)}` })
-  },
-
   openFeedback() {
     if (!this.data.event?.canInteract) {
       return
     }
     caseNavigateTo({ url: `/packages/member/mip-events/feedback/index?eventId=${encodeURIComponent(this.data.eventId)}` })
-  },
-
-  openAlbum() {
-    if (!this.data.event?.albumEnabled) {
-      return
-    }
-    caseNavigateTo({ url: `/packages/member/event-album/index?eventId=${encodeURIComponent(this.data.eventId)}` })
   },
 
   async openVideoRecap(tapEvent: WechatMiniprogram.TouchEvent) {
@@ -1023,46 +1012,6 @@ Page({
     finally {
       if (this.data.videoRecapBusyId === recapId) {
         this.setData({ videoRecapBusyId: '' })
-      }
-    }
-  },
-
-  async addToCalendar() {
-    const event = this.data.event
-    if (!event) {
-      return
-    }
-    this.setData({ message: '' })
-    if (!wx.canIUse('addPhoneCalendar')) {
-      this.setData({ message: '当前微信版本不支持加入系统日历。' })
-      return
-    }
-    const startTime = Math.floor(new Date(event.startsAt).getTime() / 1000)
-    const endTime = Math.floor(new Date(event.endsAt).getTime() / 1000)
-    if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
-      this.setData({ message: '活动时间暂时无法加入日历。' })
-      return
-    }
-    try {
-      await wx.addPhoneCalendar({
-        title: event.title,
-        startTime,
-        endTime: String(Math.max(endTime, startTime + 1800)),
-        location: [event.venueName, event.address].filter(Boolean).join(' · '),
-        description: event.summary,
-        alarmOffset: 60 * 60,
-      })
-      wx.showToast({ title: '已加入系统日历', icon: 'success' })
-    }
-    catch (error) {
-      const errMsg = error && typeof error === 'object' && 'errMsg' in error && typeof error.errMsg === 'string'
-        ? error.errMsg
-        : error instanceof Error ? error.message : String(error)
-      if (/cancel/i.test(errMsg)) {
-        wx.showToast({ title: '已取消加入日历', icon: 'none' })
-      }
-      else {
-        this.setData({ message: errMsg ? `加入系统日历失败：${errMsg}` : '加入系统日历失败，请稍后重试。' })
       }
     }
   },

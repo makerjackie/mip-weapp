@@ -48,7 +48,6 @@ function eventListItem(): MipEventListItem {
     capacity: 20,
     registrationCount: 5,
     participantPreview: [],
-    albumEnabled: false,
   }
 }
 
@@ -69,7 +68,6 @@ function eventDetail(): MipEventDetail {
     canRetryRefund: false,
     canCheckIn: false,
     canInteract: false,
-    albumSubmissionPolicy: 'REVIEW',
   }
 }
 

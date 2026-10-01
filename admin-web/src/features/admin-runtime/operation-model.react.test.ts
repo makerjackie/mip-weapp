@@ -75,7 +75,7 @@ describe('admin operation model', () => {
       action: 'mip.admin.events.archive' as const,
       capability: 'events.write',
       title: '归档活动',
-      description: '仅可归档没有报名、订单、签到或相册记录的草稿活动。提交后活动历史仍会保留。',
+      description: '仅可归档没有报名、订单或签到记录的草稿活动。提交后活动历史仍会保留。',
       fields: [
         { name: 'expectedVersion', label: '版本', kind: 'number', hidden: true },
         { name: 'reason', label: '归档原因', kind: 'textarea', required: true, maxLength: 300, wide: true },

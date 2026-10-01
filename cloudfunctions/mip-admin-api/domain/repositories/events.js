@@ -67,37 +67,6 @@ function createAdminEventRepository(database, dependencies) {
     }))
   }
 
-  function eventAlbumPhotoDto(row) {
-    const visibility = json(row.visibility_json, {})
-    return {
-      id: String(row.id),
-      caption: row.caption || '',
-      imageUrl: row.asset_status === 'READY' ? (row.cloud_file_id || '') : '',
-      nickname: visibility.nickname === false ? '活动参与者' : (row.nickname || '活动参与者'),
-      avatarUrl: visibility.avatar === false ? '' : (row.avatar_file_id || ''),
-      status: row.status,
-      moderationReason: row.moderation_reason || '',
-      version: Number(row.version),
-      createdAt: iso(row.created_at),
-      reviewedAt: iso(row.reviewed_at),
-      publishedAt: iso(row.published_at),
-    }
-  }
-
-  function eventAlbumAssetReady(row) {
-    return row.asset_status === 'READY'
-      && row.asset_purpose === 'EVENT_ALBUM'
-      && /^image\/(?:png|jpeg)$/.test(row.asset_content_type || '')
-      && /^[0-9a-f]{64}$/.test(row.asset_content_sha256 || '')
-      && Number(row.asset_content_bytes) > 0
-      && Number(row.asset_width_px) > 0
-      && Number(row.asset_height_px) > 0
-      && typeof row.asset_cloud_file_id === 'string'
-      && row.asset_cloud_file_id.startsWith('cloud://')
-      && typeof row.asset_object_key === 'string'
-      && /^mip\/(?:development|test|staging|production)\//.test(row.asset_object_key)
-      && !row.asset_object_key.includes('..')
-  }
 
   function draftResourceScope(draft) {
     return {
@@ -328,7 +297,7 @@ function createAdminEventRepository(database, dependencies) {
       `SELECT e.id, e.title, e.summary, e.scope_type, e.branch_id, b.name AS branch_name,
         e.status, e.content_safety_status, e.starts_at, e.ends_at, e.city_name,
         e.event_type_key, e.access_type, e.price_cents, e.registration_policy,
-        e.album_enabled, e.album_submission_policy, e.capacity, e.version, e.created_at,
+        e.capacity, e.version, e.created_at,
         (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', tag.id, 'name', tag.name, 'status', tag.status))
          FROM mip_event_tag_assignments assignment INNER JOIN mip_event_tags tag
            ON tag.app_id = assignment.app_id AND tag.id = assignment.tag_id
@@ -343,8 +312,8 @@ function createAdminEventRepository(database, dependencies) {
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql}
        GROUP BY e.id, e.title, e.summary, e.scope_type, e.branch_id, b.name, e.status,
         e.content_safety_status, e.starts_at, e.ends_at, e.city_name, e.event_type_key,
-        e.access_type, e.price_cents, e.registration_policy, e.album_enabled,
-        e.album_submission_policy, e.capacity, e.version, e.created_at
+        e.access_type, e.price_cents, e.registration_policy,
+        e.capacity, e.version, e.created_at
        ORDER BY e.starts_at ${direction}, e.id ${direction} LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
@@ -366,8 +335,6 @@ function createAdminEventRepository(database, dependencies) {
       accessType: row.access_type,
       priceCents: Number(row.price_cents || 0),
       registrationPolicy: row.registration_policy,
-      albumEnabled: Number(row.album_enabled) === 1,
-      albumSubmissionPolicy: row.album_submission_policy,
       capacity: row.capacity === null ? null : Number(row.capacity),
       registrationCount: Number(row.registration_count || 0),
       attendedCount: Number(row.attended_count || 0),
@@ -385,7 +352,7 @@ function createAdminEventRepository(database, dependencies) {
     const row = await database.one(
       `SELECT e.id, e.scope_type, e.branch_id, e.title, e.summary, e.description, e.notices,
         event_type_key, event_mode, access_type, registration_policy,
-        album_enabled, album_submission_policy, starts_at, ends_at,
+        starts_at, ends_at,
         registration_deadline, cancellation_deadline, venue_name, address, city_name,
         latitude, longitude, online_url, capacity, waitlist_enabled, price_cents, registration_schema_json,
         e.cover_asset_id, cover.cloud_file_id AS cover_file_id,
@@ -426,8 +393,6 @@ function createAdminEventRepository(database, dependencies) {
       eventMode: row.event_mode,
       accessType: row.access_type,
       registrationPolicy: row.registration_policy,
-      albumEnabled: Number(row.album_enabled) === 1,
-      albumSubmissionPolicy: row.album_submission_policy,
       startsAt: iso(row.starts_at),
       endsAt: iso(row.ends_at),
       registrationDeadline: iso(row.registration_deadline),
@@ -503,91 +468,6 @@ function createAdminEventRepository(database, dependencies) {
         cancellationHoursBeforeStart: input.cancellationHoursBeforeStart,
         version: currentVersion + 1,
       }
-    })
-  }
-
-  async function listEventAlbumPhotos(appId, eventId, status, pageLimit) {
-    const rows = await database.query(
-      `SELECT photo.id, photo.caption, photo.status, photo.moderation_reason, photo.version,
-        photo.created_at, photo.reviewed_at, photo.published_at,
-        asset.status AS asset_status, asset.cloud_file_id,
-        profile.nickname, profile.visibility_json, avatar.cloud_file_id AS avatar_file_id
-       FROM mip_event_album_photos photo
-       LEFT JOIN mip_media_assets asset
-         ON asset.app_id = photo.app_id AND asset.id = photo.media_asset_id
-         AND asset.purpose = 'EVENT_ALBUM'
-       LEFT JOIN mip_profiles profile
-         ON profile.app_id = photo.app_id AND profile.user_id = photo.uploader_user_id
-       LEFT JOIN mip_media_assets avatar
-         ON avatar.app_id = profile.app_id AND avatar.id = profile.avatar_asset_id
-         AND avatar.status = 'READY'
-       WHERE photo.app_id = ? AND photo.event_id = ? AND photo.status = ?
-       ORDER BY photo.created_at DESC, photo.id DESC LIMIT ?`,
-      [appId, eventId, status, pageLimit],
-    )
-    return rows.map(eventAlbumPhotoDto)
-  }
-
-  async function reviewEventAlbumPhoto(input) {
-    return database.transaction(async (tx) => {
-      const authorization = await lockMutation(tx, input)
-      const event = await tx.one(
-        `SELECT id, branch_id FROM mip_events
-         WHERE app_id = ? AND id = ? FOR UPDATE`,
-        [input.appId, input.eventId],
-      )
-      if (!event) throw codeError('NOT_FOUND')
-      const currentScope = eventScopeFromRow(event, input.eventId)
-      assertScope(authorization, currentScope)
-      assertAuthorizedScope(currentScope, input.authorizedScope)
-      const photo = await tx.one(
-        `SELECT photo.id, photo.event_id, photo.status, photo.version,
-          asset.status AS asset_status, asset.purpose AS asset_purpose,
-          asset.object_key AS asset_object_key, asset.cloud_file_id AS asset_cloud_file_id,
-          asset.content_sha256 AS asset_content_sha256,
-          asset.content_type AS asset_content_type, asset.content_bytes AS asset_content_bytes,
-          asset.width_px AS asset_width_px, asset.height_px AS asset_height_px
-         FROM mip_event_album_photos photo
-         LEFT JOIN mip_media_assets asset
-           ON asset.app_id = photo.app_id AND asset.id = photo.media_asset_id
-         WHERE photo.app_id = ? AND photo.event_id = ? AND photo.id = ? FOR UPDATE`,
-        [input.appId, input.eventId, input.photoId],
-      )
-      if (!photo) throw codeError('NOT_FOUND')
-      if (Number(photo.version) !== input.expectedVersion) throw codeError('CONFLICT')
-      if (photo.status !== 'PENDING') throw codeError('INVALID_STATE')
-      if (input.status === 'PUBLISHED' && !eventAlbumAssetReady(photo)) {
-        throw codeError('EVENT_ALBUM_MEDIA_INVALID')
-      }
-      const result = await tx.query(
-        `UPDATE mip_event_album_photos SET status = ?, moderation_reason = ?,
-          reviewed_by_user_id = ?, reviewed_at = UTC_TIMESTAMP(3),
-          published_at = CASE WHEN ? = 'PUBLISHED' THEN UTC_TIMESTAMP(3) ELSE NULL END,
-          version = version + 1
-         WHERE app_id = ? AND event_id = ? AND id = ? AND status = 'PENDING' AND version = ?`,
-        [input.status, input.reason, input.actorUserId, input.status,
-          input.appId, input.eventId, input.photoId, input.expectedVersion],
-      )
-      if (Number(result?.affectedRows) !== 1) throw codeError('CONFLICT')
-      await writeAudit(tx, input.audit)
-      const row = await tx.one(
-        `SELECT photo.id, photo.caption, photo.status, photo.moderation_reason, photo.version,
-          photo.created_at, photo.reviewed_at, photo.published_at,
-          asset.status AS asset_status, asset.cloud_file_id,
-          profile.nickname, profile.visibility_json, avatar.cloud_file_id AS avatar_file_id
-         FROM mip_event_album_photos photo
-         LEFT JOIN mip_media_assets asset
-           ON asset.app_id = photo.app_id AND asset.id = photo.media_asset_id
-           AND asset.purpose = 'EVENT_ALBUM'
-         LEFT JOIN mip_profiles profile
-           ON profile.app_id = photo.app_id AND profile.user_id = photo.uploader_user_id
-         LEFT JOIN mip_media_assets avatar
-           ON avatar.app_id = profile.app_id AND avatar.id = profile.avatar_asset_id
-           AND avatar.status = 'READY'
-         WHERE photo.app_id = ? AND photo.event_id = ? AND photo.id = ?`,
-        [input.appId, input.eventId, input.photoId],
-      )
-      return eventAlbumPhotoDto(row)
     })
   }
 
@@ -668,7 +548,6 @@ function createAdminEventRepository(database, dependencies) {
             starts_at = ?, ends_at = ?, registration_deadline = ?, cancellation_deadline = ?,
             venue_name = ?, address = ?, city_name = ?, latitude = ?, longitude = ?, capacity = ?,
             event_type_key = ?, event_mode = ?, access_type = ?, registration_policy = ?,
-            album_enabled = ?, album_submission_policy = ?,
             online_url = ?, waitlist_enabled = ?, price_cents = ?,
             registration_schema_json = ?, form_version = ?,
             content_safety_status = ?, version = version + 1
@@ -681,8 +560,7 @@ function createAdminEventRepository(database, dependencies) {
             input.draft.address || null, input.draft.cityName || null,
             input.draft.latitude, input.draft.longitude, input.draft.capacity,
             input.draft.eventTypeKey, input.draft.eventMode, input.draft.accessType,
-            input.draft.registrationPolicy, input.draft.albumEnabled ? 1 : 0,
-            input.draft.albumSubmissionPolicy, input.draft.onlineUrl || null,
+            input.draft.registrationPolicy, input.draft.onlineUrl || null,
             input.draft.waitlistEnabled ? 1 : 0, input.draft.priceCents,
             JSON.stringify(input.draft.registrationSchema), formVersion, input.contentSafetyStatus,
             input.appId, eventId, input.expectedVersion],
@@ -702,16 +580,15 @@ function createAdminEventRepository(database, dependencies) {
           `INSERT INTO mip_events (
             id, app_id, scope_type, branch_id, organizer_user_id, title, summary,
             description, notices, cover_asset_id, event_type_key, event_mode, access_type,
-            registration_policy, album_enabled, album_submission_policy,
+            registration_policy,
             status, content_safety_status, starts_at, ends_at,
             registration_deadline, cancellation_deadline, venue_name, address, city_name,
             latitude, longitude, online_url, capacity, waitlist_enabled, price_cents, currency, registration_schema_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
           [eventId, input.appId, input.draft.scopeType, input.draft.branchId || null,
             input.actorUserId, input.draft.title, input.draft.summary, input.draft.description,
             input.draft.notices || null, input.draft.coverAssetId, input.draft.eventTypeKey, input.draft.eventMode,
             input.draft.accessType, input.draft.registrationPolicy,
-            input.draft.albumEnabled ? 1 : 0, input.draft.albumSubmissionPolicy,
             input.contentSafetyStatus,
             input.draft.startsAt,
             input.draft.endsAt, input.draft.registrationDeadline || null,
@@ -765,7 +642,7 @@ function createAdminEventRepository(database, dependencies) {
       const source = await tx.one(
         `SELECT e.id, e.scope_type, e.branch_id, e.title, e.summary, e.description, e.notices,
           e.cover_asset_id, cover.status AS cover_status, e.event_type_key, e.event_mode,
-          e.access_type, e.registration_policy, e.album_enabled, e.album_submission_policy,
+          e.access_type, e.registration_policy,
           e.starts_at, e.ends_at,
           e.registration_opens_at, e.registration_deadline, e.cancellation_deadline,
           e.venue_name, e.address, e.city_name, e.latitude, e.longitude, e.online_url,
@@ -855,18 +732,17 @@ function createAdminEventRepository(database, dependencies) {
         `INSERT INTO mip_events (
           id, app_id, scope_type, branch_id, organizer_user_id, title, summary,
           description, notices, cover_asset_id, event_type_key, event_mode, access_type,
-          registration_policy, album_enabled, album_submission_policy,
+          registration_policy,
           status, content_safety_status, starts_at, ends_at,
           registration_opens_at, registration_deadline, cancellation_deadline,
           venue_name, address, city_name, latitude, longitude, online_url, capacity,
           waitlist_enabled, price_cents, currency, registration_schema_json,
           form_version, version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
         [eventId, input.appId, source.scope_type, source.branch_id || null, input.actorUserId,
           input.title, source.summary, source.description, source.notices || null,
           source.cover_status === 'READY' ? source.cover_asset_id : null,
           source.event_type_key, source.event_mode, source.access_type, source.registration_policy,
-          Number(source.album_enabled) === 1 ? 1 : 0, source.album_submission_policy,
           input.contentSafetyStatus, dates.startsAt, dates.endsAt, dates.registrationOpensAt,
           dates.registrationDeadline, dates.cancellationDeadline, source.venue_name || null,
           source.address || null, source.city_name || null, source.latitude ?? null,
@@ -1489,11 +1365,9 @@ function createAdminEventRepository(database, dependencies) {
     getEvent,
     getEventPolicy,
     getEventScope,
-    listEventAlbumPhotos,
     listEvents,
     listRoster,
     publishEventReminder,
-    reviewEventAlbumPhoto,
     reviewRegistration,
     saveEvent,
     saveEventPolicy,

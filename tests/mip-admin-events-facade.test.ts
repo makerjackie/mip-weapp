@@ -25,8 +25,6 @@ const eventDetail: AdminEventDetail = {
   eventMode: 'OFFLINE',
   accessType: 'FREE',
   registrationPolicy: 'APPROVAL',
-  albumEnabled: true,
-  albumSubmissionPolicy: 'REVIEW',
   startsAt: '2030-08-25T10:00:00.000Z',
   endsAt: '2030-08-25T12:00:00.000Z',
   registrationDeadline: '2030-08-24T10:00:00.000Z',

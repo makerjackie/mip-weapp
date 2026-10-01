@@ -44,8 +44,6 @@ const event: MipEventDetail = {
   canRetryRefund: false,
   canCheckIn: false,
   canInteract: false,
-  albumEnabled: true,
-  albumSubmissionPolicy: 'REVIEW',
 }
 
 function createGateway() {
@@ -54,30 +52,6 @@ function createGateway() {
     listEvents: vi.fn(async () => feed),
     getEvent: vi.fn(async () => event),
     listPublicParticipants: vi.fn(async () => ({ items: [] })),
-    listEventAlbum: vi.fn(async () => ({
-      eventId,
-      albumEnabled: true,
-      submissionPolicy: 'REVIEW' as const,
-      items: [],
-    })),
-    listMyEventAlbumSubmissions: vi.fn(async () => ({
-      eventId,
-      albumEnabled: true,
-      submissionPolicy: 'REVIEW' as const,
-      canSubmit: true,
-      items: [],
-    })),
-    submitEventAlbumPhoto: vi.fn(async () => ({
-      id: '22222222-2222-4222-8222-222222222222',
-      status: 'PENDING' as const,
-      version: 1,
-      idempotent: false,
-    })),
-    withdrawEventAlbumPhoto: vi.fn(async () => ({
-      id: '22222222-2222-4222-8222-222222222222',
-      status: 'WITHDRAWN' as const,
-      version: 2,
-    })),
     listMyRegistrations: vi.fn(async () => ({ items: [] })),
     getMyRegistration: vi.fn(async () => null),
     register: vi.fn(async input => ({
@@ -399,25 +373,6 @@ describe('MIP events client module', () => {
     await expect(module.listHeartHistory('SENT', 'cursor-1')).resolves.toMatchObject({ kind: 'SENT' })
     expect(gateway.listHeartHistory).toHaveBeenCalledWith('SENT', 'cursor-1', 20)
     expect(() => module.listHeartHistory('UNKNOWN' as never)).toThrow('心动记录类型无效')
-  })
-
-  it('submits and withdraws album photos without client-owned review facts', async () => {
-    const gateway = createGateway()
-    const module = createMipEventsModule(gateway)
-    const assetId = '22222222-2222-4222-8222-222222222222'
-    const photoId = '33333333-3333-4333-8333-333333333333'
-
-    await expect(module.listEventAlbum(eventId)).resolves.toMatchObject({ albumEnabled: true })
-    await expect(module.listMyEventAlbumSubmissions(eventId)).resolves.toMatchObject({ canSubmit: true })
-    await expect(module.submitEventAlbumPhoto(eventId, assetId, '  活动照片  '))
-      .resolves
-      .toMatchObject({ status: 'PENDING' })
-    await expect(module.withdrawEventAlbumPhoto(photoId, 3)).resolves.toMatchObject({ status: 'WITHDRAWN' })
-
-    expect(gateway.submitEventAlbumPhoto).toHaveBeenCalledWith(eventId, assetId, '活动照片')
-    expect(gateway.submitEventAlbumPhoto.mock.calls[0][2]).not.toMatch(/PUBLISHED|REVIEW/)
-    expect(gateway.withdrawEventAlbumPhoto).toHaveBeenCalledWith(photoId, 3)
-    expect(() => module.withdrawEventAlbumPhoto(photoId, 0)).toThrow('照片状态无效')
   })
 })
 

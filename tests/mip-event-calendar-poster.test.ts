@@ -1,8 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  canIUse: vi.fn(),
-  addPhoneCalendar: vi.fn(),
   showToast: vi.fn(),
   canvasToTempFilePath: vi.fn(),
 }))
@@ -25,8 +23,6 @@ beforeAll(async () => {
     definition = value
   })
   vi.stubGlobal('wx', {
-    canIUse: mocks.canIUse,
-    addPhoneCalendar: mocks.addPhoneCalendar,
     showToast: mocks.showToast,
     getWindowInfo: () => ({ pixelRatio: 2 }),
     canvasToTempFilePath: mocks.canvasToTempFilePath,
@@ -36,8 +32,6 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mocks.canIUse.mockReturnValue(true)
-  mocks.addPhoneCalendar.mockResolvedValue(undefined)
   mocks.canvasToTempFilePath.mockImplementation(({ success }: { success: (result: { tempFilePath: string }) => void }) => success({ tempFilePath: '/tmp/invitation.png' }))
 })
 
@@ -60,39 +54,7 @@ function page() {
   return instance
 }
 
-describe('event calendar and invitation poster', () => {
-  it('reports unsupported calendar APIs without trying to call them', async () => {
-    mocks.canIUse.mockReturnValue(false)
-    const instance = page()
-
-    await instance.addToCalendar()
-
-    expect(mocks.addPhoneCalendar).not.toHaveBeenCalled()
-    expect(instance.data.message).toBe('当前微信版本不支持加入系统日历。')
-  })
-
-  it('keeps the calendar end time as a string and handles the WeChat cancel errMsg', async () => {
-    mocks.addPhoneCalendar.mockRejectedValue({ errMsg: 'addPhoneCalendar:fail cancel' })
-    const instance = page()
-
-    await instance.addToCalendar()
-
-    const [calendarEvent] = mocks.addPhoneCalendar.mock.calls[0] as [{ startTime: number, endTime: string }]
-    expect(typeof calendarEvent.endTime).toBe('string')
-    expect(calendarEvent.endTime).toBe(String(Math.floor(new Date(instance.data.event.endsAt).getTime() / 1000)))
-    expect(mocks.showToast).toHaveBeenCalledWith({ title: '已取消加入日历', icon: 'none' })
-    expect(instance.data.message).toBe('')
-  })
-
-  it('surfaces the WeChat errMsg for non-cancel failures', async () => {
-    mocks.addPhoneCalendar.mockRejectedValue({ errMsg: 'addPhoneCalendar:fail no permission' })
-    const instance = page()
-
-    await instance.addToCalendar()
-
-    expect(instance.data.message).toBe('加入系统日历失败：addPhoneCalendar:fail no permission')
-  })
-
+describe('event invitation poster', () => {
   it('wraps the inviter, long event title, and location without compressing text', async () => {
     const calls: CanvasCall[] = []
     const cardRects: Array<{ x: number, y: number, width: number, height: number }> = []

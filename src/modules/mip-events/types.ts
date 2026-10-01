@@ -4,8 +4,6 @@ export type EventScopeType = 'PLATFORM' | 'BRANCH'
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'CANCELLED' | 'ENDED'
 export type EventAccessType = 'FREE' | 'MEMBER_INCLUDED' | 'PAID'
 export type EventRegistrationPolicy = 'AUTO' | 'APPROVAL'
-export type EventAlbumSubmissionPolicy = 'AUTO' | 'REVIEW'
-export type EventAlbumPhotoStatus = 'PENDING' | 'PUBLISHED' | 'REJECTED'
 export type EventMode = 'OFFLINE' | 'ONLINE' | 'HYBRID'
 export type CheckInCredentialMode = 'STATIC' | 'ROTATING'
 export type RegistrationStatus
@@ -130,7 +128,6 @@ export interface MipEventListItem {
   registrationCount: number
   participantPreview: EventParticipantPreview[]
   registrationStatus?: RegistrationStatus
-  albumEnabled: boolean
 }
 
 export interface EventFeedResult {
@@ -174,48 +171,11 @@ export interface MipEventDetail extends MipEventListItem {
   registrationVersion?: number
   canCheckIn: boolean
   canInteract: boolean
-  albumSubmissionPolicy: EventAlbumSubmissionPolicy
   /** 与你互动 pill counts (figma 1818_17142); optional until the API emits them. */
   interactionSummary?: {
     myInterestCount: number
     receivedInterestCount: number
   }
-}
-
-export interface EventAlbumPhoto {
-  id: string
-  imageUrl: string
-  caption: string
-  status: EventAlbumPhotoStatus
-  version: number
-  mine: boolean
-  moderationReason?: string
-  nickname?: string
-  avatarUrl?: string
-  createdAt: string
-}
-
-export interface EventAlbumPage {
-  eventId: EventId
-  albumEnabled: boolean
-  submissionPolicy: EventAlbumSubmissionPolicy
-  items: EventAlbumPhoto[]
-  nextCursor?: string
-}
-
-export interface MyEventAlbumSubmissions {
-  eventId: EventId
-  albumEnabled: boolean
-  submissionPolicy: EventAlbumSubmissionPolicy
-  canSubmit: boolean
-  items: EventAlbumPhoto[]
-}
-
-export interface EventAlbumSubmission {
-  id: string
-  status: EventAlbumPhotoStatus
-  version: number
-  idempotent: boolean
 }
 
 export interface RegistrationField {
@@ -446,10 +406,6 @@ export interface MipEventsGateway {
   getDiscoveryFilters?: () => Promise<EventDiscoveryFilters>
   getEvent: (eventId: EventId, options?: { progressiveMedia?: boolean }) => Promise<MipEventDetail>
   listPublicParticipants: (eventId: EventId, query?: PublicEventParticipantQuery) => Promise<PublicEventParticipantPage>
-  listEventAlbum: (eventId: EventId, cursor?: string, limit?: number) => Promise<EventAlbumPage>
-  listMyEventAlbumSubmissions: (eventId: EventId) => Promise<MyEventAlbumSubmissions>
-  submitEventAlbumPhoto: (eventId: EventId, mediaAssetId: string, caption: string) => Promise<EventAlbumSubmission>
-  withdrawEventAlbumPhoto: (photoId: string, expectedVersion: number) => Promise<{ id: string, status: 'WITHDRAWN', version: number }>
   listMyRegistrations: (cursor?: string, category?: MyRegistrationCategory) => Promise<MyRegistrationPage>
   getMyRegistration: (eventId: EventId) => Promise<MyEventRegistration | null>
   register: (input: RegistrationIntent) => Promise<RegistrationOutcome>

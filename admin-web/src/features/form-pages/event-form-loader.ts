@@ -33,8 +33,6 @@ export async function loadEventDetailForForm(eventId: string, request: AdminRequ
     eventMode: String(event.eventMode || 'OFFLINE'),
     accessType: String(event.accessType || 'FREE'),
     registrationPolicy: String(event.registrationPolicy || 'AUTO'),
-    albumEnabled: event.albumEnabled !== false,
-    albumSubmissionPolicy: String(event.albumSubmissionPolicy || 'REVIEW'),
     startsAt: String(event.startsAt || ''),
     endsAt: String(event.endsAt || ''),
     registrationDeadline: String(event.registrationDeadline || ''),

@@ -41,10 +41,10 @@ function lifecycleDatabase() {
       if (text.includes('INSERT INTO mip_events')) {
         state.event = {
           id: params[0], app_id: params[1], scope_type: params[2], branch_id: params[3],
-          title: params[5], status: 'DRAFT', content_safety_status: params[16], starts_at: params[17],
-          ends_at: params[18], registration_schema_json: params[30], form_version: 1,
+          title: params[5], status: 'DRAFT', content_safety_status: params[14], starts_at: params[15],
+          ends_at: params[16], registration_schema_json: params[28], form_version: 1,
           version: 1, access_type: params[12], registration_policy: params[13],
-          capacity: params[27], waitlist_enabled: params[28],
+          capacity: params[25], waitlist_enabled: params[26],
         }
       }
       else if (text.includes('UPDATE mip_events SET status =')) {
@@ -166,8 +166,8 @@ describe('event lifecycle integration', () => {
       startsAt: new Date('2030-08-26T10:00:00.000Z'), endsAt: new Date('2030-08-26T12:00:00.000Z'),
       registrationDeadline: null, cancellationDeadline: null, venueName: '现场', address: '深圳',
       cityName: '深圳', latitude: null, longitude: null, capacity: 1, eventTypeKey: 'general',
-      eventMode: 'OFFLINE', accessType: 'FREE', registrationPolicy: 'AUTO', albumEnabled: false,
-      albumSubmissionPolicy: 'REVIEW', onlineUrl: '', waitlistEnabled: false, priceCents: 0,
+      eventMode: 'OFFLINE', accessType: 'FREE', registrationPolicy: 'AUTO',
+      onlineUrl: '', waitlistEnabled: false, priceCents: 0,
       registrationSchema: [{ key: 'role', type: 'TEXT', label: '参与身份', required: false, maxLength: 120 }],
     }
     const created = await events.saveEvent({ appId: APP_ID, actorUserId: ADMIN_ID, eventId: null, expectedVersion: null, draft, contentSafetyStatus: 'PASSED', audit: () => ({}) })

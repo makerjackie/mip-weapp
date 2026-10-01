@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 70,
+  "routeCount": 68,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
@@ -112,15 +112,9 @@
     },
     {
       "id": "calendar-location",
-      "label": "活动日历与地图",
+      "label": "活动地图",
       "routes": ["packages/member/mip-events/detail/index"],
-      "reason": "wx.addPhoneCalendar 和 wx.openLocation 需要在微信真机中验收"
-    },
-    {
-      "id": "event-album-photo",
-      "label": "活动照片上传",
-      "routes": ["packages/member/event-album/index"],
-      "reason": "wx.chooseMedia、客户端压缩、图片安全检查和上传结果需要真机验收"
+      "reason": "wx.openLocation 需要在微信真机中验收"
     },
     {
       "id": "task-attachment",
@@ -884,29 +878,6 @@
       ]
     },
     {
-      "id": "M26",
-      "name": "活动相册",
-      "path": "packages/member/event-album/index",
-      "selector": "#event-album-page",
-      "group": "member",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "disabled", "error"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["eventId"],
-      "queryFixture": {
-        "sourceRoute": "pages/events/index",
-        "dataPath": "events",
-        "where": {
-          "albumEnabled": true
-        },
-        "values": {
-          "eventId": "id"
-        }
-      },
-      "deviceRequired": ["event-album-photo"]
-    },
-    {
       "id": "M06",
       "name": "活动报名",
       "path": "packages/member/mip-events/registration/index",
@@ -996,34 +967,6 @@
         },
         "values": {
           "eventId": "event.id"
-        }
-      }
-    },
-    {
-      "id": "M47",
-      "name": "活动评论",
-      "path": "packages/member/mip-events/comments/index",
-      "selector": "#mip-event-comments-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "access",
-        "error",
-        "forbidden",
-        "conflict",
-        "disabled"
-      ],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["eventId"],
-      "queryFixture": {
-        "sourceRoute": "pages/events/index",
-        "dataPath": "events",
-        "values": {
-          "eventId": "id"
         }
       }
     },

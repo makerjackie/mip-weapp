@@ -6,8 +6,6 @@ import type {
   CheckInOutcome,
   CheckInPosterCredential,
   CheckInScene,
-  EventAlbumPage,
-  EventAlbumSubmission,
   EventDiscoveryFilters,
   EventFeedback,
   EventFeedbackDraft,
@@ -21,7 +19,6 @@ import type {
   InvitationSceneResolution,
   MipEventDetail,
   MipEventsGateway,
-  MyEventAlbumSubmissions,
   MyEventRegistration,
   MyRegistrationCategory,
   MyRegistrationPage,
@@ -50,8 +47,6 @@ const readActions = new Set([
   'mip.events.discoveryFilters',
   'mip.events.detail',
   'mip.events.publicParticipants',
-  'mip.events.album.list',
-  'mip.events.album.mine',
   'mip.events.mine',
   'mip.events.myRegistration',
   'mip.events.heartCandidates',
@@ -120,25 +115,6 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
 
   listPublicParticipants(eventId: EventId, query = {}) {
     return callEvents<PublicEventParticipantPage>('mip.events.publicParticipants', { eventId, query })
-  },
-
-  listEventAlbum(eventId: EventId, cursor?: string, limit = 20) {
-    return callEvents<EventAlbumPage>('mip.events.album.list', { eventId, cursor, limit })
-  },
-
-  listMyEventAlbumSubmissions(eventId: EventId) {
-    return callEvents<MyEventAlbumSubmissions>('mip.events.album.mine', { eventId })
-  },
-
-  submitEventAlbumPhoto(eventId: EventId, mediaAssetId: string, caption: string) {
-    return callEvents<EventAlbumSubmission>('mip.events.album.submit', { eventId, mediaAssetId, caption })
-  },
-
-  withdrawEventAlbumPhoto(photoId: string, expectedVersion: number) {
-    return callEvents<{ id: string, status: 'WITHDRAWN', version: number }>(
-      'mip.events.album.withdraw',
-      { photoId, expectedVersion },
-    )
   },
 
   listMyRegistrations(cursor?: string, category?: MyRegistrationCategory) {

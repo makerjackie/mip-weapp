@@ -52,7 +52,7 @@ interface AdminApplication {
 | --- | --- | --- |
 | `access` | trusted principal、角色、capability、平台/分会/活动 scope、登录审计 | 用户只读状态 |
 | `users` | 用户聚合、档案、分会归属、账号控制、敏感字段投影 | `access`、媒体引用 |
-| `events` | 活动、报名、签到、名单、反馈、相册、提醒 | `access`、订单只读状态、消息端口 |
+| `events` | 活动、报名、签到、名单、反馈、提醒 | `access`、订单只读状态、消息端口 |
 | `orders` | 订单查询、退款意图、财务字段 | `access`、payment ledger 端口 |
 | `messaging` | 公告、消息活动、收件人快照、outbox、发送状态 | `access`、目标资源只读端口 |
 | `knowledge` | 来源、分类、内容、商品、评论、举报和采集计划 | `access`、媒体、订单端口 |
@@ -67,7 +67,7 @@ operation dispatcher 只通过冻结的 owner module interface 调用实现，�
 | --- | --- | --- |
 | `mip-identity-api` | 微信身份、协议、手机号、用户档案 | 小程序调用 |
 | `mip-media-api` | 媒体隔离上传、解码、内容安全、重编码和绑定 | 小程序及受审管理 adapter |
-| `mip-events-api` | 活动、报名、邀请、签到、心动、反馈和相册 | 小程序调用 |
+| `mip-events-api` | 活动、报名、邀请、签到、心动和反馈 | 小程序调用 |
 | `mip-opportunities-api` | 机会、引荐、感兴趣、合作卡、案例、撮合和偏好 | 小程序；后台重算使用内部 HMAC |
 | `mip-community-api` | 公开档案、知识目录/详情和知识评论 | 小程序调用 |
 | `mip-commerce-api` | 会员、活动和内容统一订单、订单查询、退款申请 | 小程序调用 |
@@ -103,7 +103,7 @@ operation dispatcher 只通过冻结的 owner module interface 调用实现，�
 | identity/profile | 用户、微信身份、协议、手机号、公开/私密档案 | 用户 ID、手机号归属、资料可见性 |
 | branches | 城市分会、主分会、分会成员和范围 | 当前城市不等于管理权限 |
 | commerce | 会员/活动/内容统一订单、支付 ledger、退款、权益 | 价格、支付终态、玩家状态和内容解锁 |
-| events | 活动、报名、邀请、签到、心动、反馈、相册 | 名额、资格、签到和照片发布状态 |
+| events | 活动、报名、邀请、签到、心动、反馈 | 名额、资格和签到状态 |
 | opportunities | 机会、团队、引荐、兴趣、评论、案例、撮合和偏好 | 内容审核、候选范围、关系状态和结果版本 |
 | knowledge | 来源、分类、内容、采集计划/运行、商品、权益、评论和举报 | 发布状态、价格、受保护正文、退款资格 |
 | growth/game/tasks | 等级、余额、流水、勋章、任务、赛季、排行和盲盒 | 奖励、分数、抽取结果、完成资格 |
@@ -125,6 +125,6 @@ operation dispatcher 只通过冻结的 owner module interface 调用实现，�
 
 Web 登录使用短期、单次、绑定浏览器 verifier 的 challenge。动态小程序码只携带 challenge token 并打开专用确认页，6 位数字码保留为降级入口；两者都由已登录且拥有管理 capability 的小程序用户明确确认。服务端不保存会话状态：数据库只保存登录挑战和限流的哈希，会话本身是无状态的签名加密 Cookie，使用 `HttpOnly`、`Secure` 和合适的 `SameSite`，写操作校验请求 Origin。每次请求重新读取用户状态、协议、角色和 capability，撤权或停用后下一次请求立即失败。
 
-手机号原文、导出、退款、角色变更、签到覆盖、相册审核和成长人工调整使用独立 capability。mutation 与审计在同一事务内；审计只记录必要的 channel 和 request reference，不记录 Cookie、授权头、OpenID 或完整浏览器载荷。
+手机号原文、导出、退款、角色变更、签到覆盖和成长人工调整使用独立 capability。mutation 与审计在同一事务内；审计只记录必要的 channel 和 request reference，不记录 Cookie、授权头、OpenID 或完整浏览器载荷。
 
 临时 AppID 与正式 AppID 的 OpenID 不相同，身份迁移见 [IDENTITY_MIGRATION.md](../IDENTITY_MIGRATION.md)。

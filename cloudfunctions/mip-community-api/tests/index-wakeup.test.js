@@ -73,29 +73,12 @@ function createHarness(options = {}) {
         calls.push({ kind: 'mutation' })
         return result
       },
-      async saveEventComment() {
-        calls.push({ kind: 'mutation' })
-        return result
-      },
     },
   })
   return { calls, handler, result, warnings }
 }
 
 describe('community handler outbox wakeup', () => {
-  it('wakes the worker only after an AUTO event comment is published', async () => {
-    const harness = createHarness()
-
-    assert.deepEqual(await harness.handler({ action: 'saveEventComment', eventId: 'event-1' }), {
-      ok: true,
-      data: harness.result,
-    })
-    assert.deepEqual(harness.calls.map(call => call.kind), ['mutation', 'wakeup'])
-    assert.equal(harness.calls[1].input.action, 'saveEventComment')
-    assert.equal(harness.calls[1].input.appId, 'wx-app')
-    assert.equal(harness.calls[1].input.mutationActions.has('saveEventComment'), true)
-  })
-
   it('wakes the worker after an AUTO knowledge comment is published', async () => {
     const harness = createHarness()
 
@@ -111,7 +94,7 @@ describe('community handler outbox wakeup', () => {
     assert.equal(harness.calls[1].input.mutationActions.has('createKnowledgeComment'), true)
   })
 
-  it('does not wake for REVIEW pending creation or published edits', async () => {
+  it('does not wake when the knowledge comment stays pending review', async () => {
     const pending = createHarness({
       result: {
         id: '00000000-0000-4000-8000-000000000004',
@@ -119,29 +102,21 @@ describe('community handler outbox wakeup', () => {
         version: 1,
       },
     })
-    assert.equal((await pending.handler({ action: 'saveEventComment', eventId: 'event-1' })).ok, true)
+    assert.equal((await pending.handler({ action: 'createKnowledgeComment', contentId: 'knowledge-1' })).ok, true)
     assert.deepEqual(pending.calls.map(call => call.kind), ['mutation'])
-
-    const edit = createHarness()
-    assert.equal((await edit.handler({
-      action: 'saveEventComment',
-      commentId: '00000000-0000-4000-8000-000000000003',
-      eventId: 'event-1',
-    })).ok, true)
-    assert.deepEqual(edit.calls.map(call => call.kind), ['mutation'])
   })
 
   it('keeps a committed AUTO comment successful when wakeup throws', async () => {
     const harness = createHarness({ wakeupError: new Error('secret internal detail') })
 
-    assert.deepEqual(await harness.handler({ action: 'saveEventComment', eventId: 'event-1' }), {
+    assert.deepEqual(await harness.handler({ action: 'createKnowledgeComment', contentId: 'knowledge-1' }), {
       ok: true,
       data: harness.result,
     })
     assert.deepEqual(harness.calls.map(call => call.kind), ['mutation', 'wakeup'])
     assert.deepEqual(harness.warnings[0], ['[mip-community-api]', {
       event: 'outbox_wakeup_failed',
-      sourceAction: 'saveEventComment',
+      sourceAction: 'createKnowledgeComment',
       code: 'INTERNAL_FUNCTION_FAILED',
     }])
     assert.doesNotMatch(JSON.stringify(harness.warnings), /secret internal detail/)

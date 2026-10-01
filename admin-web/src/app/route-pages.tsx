@@ -492,7 +492,6 @@ function listQuery(search: AdminListSearch): AdminListQuery {
 /** Batch-capable row actions inside a detail drawer section, keyed by server action. */
 const DETAIL_SECTION_BATCH: ReadonlyArray<[string, { label: string, capability: string }]> = [
   ['mip.admin.events.registrations.review', { label: '批量审核报名', capability: 'events.registrations.manage' }],
-  ['mip.admin.events.album.review', { label: '批量审核照片', capability: 'events.album.manage' }],
 ]
 
 function eventBatchFields(action: AdminEventMutationAction): OperationField[] {

@@ -7,7 +7,6 @@ export type AdminRowOperationAction  = | 'mip.admin.adminAccounts.create'
     | 'mip.admin.events.registrations.review'
     | 'mip.admin.events.checkIn'
     | 'mip.admin.events.undoCheckIn'
-    | 'mip.admin.events.album.review'
     | 'mip.admin.events.policy.save'
     | 'mip.admin.events.catalog.save'
     | 'mip.admin.events.catalog.changeStatus'
@@ -101,22 +100,6 @@ export function eventRegistrationRowActions(
     ]
   }
   return []
-}
-
-export function eventAlbumRowActions(
-  eventIdValue: unknown,
-  photo: Record<string, unknown>,
-): AdminRowOperation[] {
-  const eventId = identifier(eventIdValue)
-  const photoId = identifier(photo.id || photo.photoId)
-  const expectedVersion = positiveVersion(photo.version)
-  if (!eventId || !photoId || expectedVersion === null || photo.status !== 'PENDING') return []
-  return [{
-    action: 'mip.admin.events.album.review',
-    label: '审核',
-    targetId: eventId,
-    values: { eventId, photoId, expectedVersion },
-  }]
 }
 
 export function taskCompletionRowActions(completion: Record<string, unknown>): AdminRowOperation[] {

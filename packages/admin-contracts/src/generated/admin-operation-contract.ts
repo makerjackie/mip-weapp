@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 243,
+  "operationCount": 236,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -342,22 +342,6 @@ export const ADMIN_OPERATION_CONTRACT = {
       "idempotencyKeyRequired": null
     },
     {
-      "action": "mip.admin.events.album.list",
-      "kind": "QUERY",
-      "authentication": "REQUIRED",
-      "session": "REQUIRED",
-      "safeToRetry": true,
-      "idempotencyKeyRequired": null
-    },
-    {
-      "action": "mip.admin.events.comments.get",
-      "kind": "QUERY",
-      "authentication": "REQUIRED",
-      "session": "REQUIRED",
-      "safeToRetry": true,
-      "idempotencyKeyRequired": null
-    },
-    {
       "action": "mip.admin.events.roster",
       "kind": "QUERY",
       "authentication": "REQUIRED",
@@ -463,46 +447,6 @@ export const ADMIN_OPERATION_CONTRACT = {
     },
     {
       "action": "mip.admin.events.archive",
-      "kind": "MUTATION",
-      "authentication": "REQUIRED",
-      "session": "REQUIRED",
-      "safeToRetry": false,
-      "idempotencyKeyRequired": null
-    },
-    {
-      "action": "mip.admin.events.album.review",
-      "kind": "MUTATION",
-      "authentication": "REQUIRED",
-      "session": "REQUIRED",
-      "safeToRetry": false,
-      "idempotencyKeyRequired": null
-    },
-    {
-      "action": "mip.admin.events.comments.settings.save",
-      "kind": "MUTATION",
-      "authentication": "REQUIRED",
-      "session": "REQUIRED",
-      "safeToRetry": false,
-      "idempotencyKeyRequired": null
-    },
-    {
-      "action": "mip.admin.events.comments.moderate",
-      "kind": "MUTATION",
-      "authentication": "REQUIRED",
-      "session": "REQUIRED",
-      "safeToRetry": false,
-      "idempotencyKeyRequired": null
-    },
-    {
-      "action": "mip.admin.events.comments.reports.claim",
-      "kind": "MUTATION",
-      "authentication": "REQUIRED",
-      "session": "REQUIRED",
-      "safeToRetry": false,
-      "idempotencyKeyRequired": null
-    },
-    {
-      "action": "mip.admin.events.comments.reports.close",
       "kind": "MUTATION",
       "authentication": "REQUIRED",
       "session": "REQUIRED",
@@ -1954,7 +1898,7 @@ export const ADMIN_OPERATION_CONTRACT = {
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 243,
+  "operationCount": 236,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -2475,26 +2419,6 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "forwardIdempotencyKey": false
     },
     {
-      "action": "mip.admin.events.album.list",
-      "kind": "QUERY",
-      "webAllowed": true,
-      "webRoute": "ADMIN",
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": false,
-      "forwardIdempotencyKey": false
-    },
-    {
-      "action": "mip.admin.events.comments.get",
-      "kind": "QUERY",
-      "webAllowed": true,
-      "webRoute": "ADMIN",
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": false,
-      "forwardIdempotencyKey": false
-    },
-    {
       "action": "mip.admin.events.roster",
       "kind": "QUERY",
       "webAllowed": true,
@@ -2682,62 +2606,6 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "optionalInputKeys": [],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
-    },
-    {
-      "action": "mip.admin.events.album.review",
-      "kind": "MUTATION",
-      "webAllowed": true,
-      "webRoute": "ADMIN",
-      "requiredInputKeys": [
-        "eventId",
-        "photoId",
-        "expectedVersion",
-        "decision",
-        "reason"
-      ],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": true,
-      "forwardIdempotencyKey": false
-    },
-    {
-      "action": "mip.admin.events.comments.settings.save",
-      "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
-    },
-    {
-      "action": "mip.admin.events.comments.moderate",
-      "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
-    },
-    {
-      "action": "mip.admin.events.comments.reports.claim",
-      "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
-    },
-    {
-      "action": "mip.admin.events.comments.reports.close",
-      "kind": "MUTATION",
-      "webAllowed": false,
-      "webRoute": null,
-      "requiredInputKeys": [],
-      "optionalInputKeys": [],
-      "idempotencyKeyRequired": null,
-      "forwardIdempotencyKey": null
     },
     {
       "action": "mip.admin.communications.publishEventReminder",

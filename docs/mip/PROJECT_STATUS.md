@@ -1,8 +1,10 @@
 # MIP 当前状态
 
-更新日期：2026-09-30（后台复核与修复；其他环境证据保留各自采集日期）。
+更新日期：2026-10-01（活动详情超集区块移除；其他环境证据保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
+
+2026-10-01：活动详情页的活动评论、活动相册和加入系统日历三个实现侧超集区块已按设计稿复核整体移除（含管理端相册治理、`events.album.manage` / `events.comments.manage` capability、媒体 `EVENT_ALBUM` purpose 与 outbox 评论通知策略）；路由数与管理 operation 数已同步。`mip_event_album_photos` 表与活动相册配置列按追加迁移守卫保留为 dormant 历史数据。该轮改动仅完成本地验证，未重新部署。
 
 ## 结论
 
@@ -11,7 +13,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 70 条小程序路由、96 个迁移（均已锁定）、243 个渠道中立管理 operation（105 查询、138 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 122 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 68 条小程序路由、96 个迁移（均已锁定）、236 个渠道中立管理 operation（103 查询、133 写）和 16 个数据库核心函数。Web 合同允许其中 103 个查询与 121 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -33,10 +35,10 @@
 
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
-| 小程序路由 | 70 条：5 条主包、60 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
+| 小程序路由 | 68 条：5 条主包、58 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
 | 数据库 | 96 个追加迁移；目标清单为 150 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
-| 管理合同 | 243 个 operation：105 查询、138 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
-| Web 开放范围 | 105 查询、122 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| 管理合同 | 236 个 operation：103 查询、133 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| Web 开放范围 | 103 查询、121 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
 | 调度 | 消息和知识采集各有独立 scheduler；均不属于数据库核心函数 | `mip-message-scheduler`、`mip-knowledge-scheduler` 及部署脚本 |
 | Web 页面 | 15 个一级页面、13 类详情 | `admin-web/src/` 的路由与页面合同 |
@@ -97,7 +99,7 @@
 
 ### 真机与正式配置
 
-- 手机号授权与换绑、扫码签到、相册、地图、日历、录音、私密视频号和 `web-view` 需要真机。
+- 手机号授权与换绑、扫码签到、地图、录音、私密视频号和 `web-view` 需要真机。
 - 正式 AppID、微信支付商户、支付/退款回调、通知模板和 AI/provider 尚未完成生产验收。
 - 正式协议、城市/行业目录、等级规则、勋章、游戏规则、知识内容和价格仍是可替换配置。
 - 消息和知识 scheduler 代码已完成；专用 CAM 角色、canary、激活和最终云端读回仍按各自环境证据判断，不用代码存在代替部署结论。

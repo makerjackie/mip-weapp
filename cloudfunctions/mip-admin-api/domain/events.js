@@ -135,59 +135,6 @@ function createAdminEvents({
     })
   }
 
-  async function listEventAlbumPhotos(caller, input = {}) {
-    const context = await access.session(caller)
-    const eventId = requiredId(input.eventId, '活动')
-    await access.eventAuthorization(context, eventId, CAPABILITIES.EVENTS_ALBUM_MANAGE)
-    const status = ['PENDING', 'PUBLISHED', 'REJECTED'].includes(input.status)
-      ? input.status
-      : null
-    if (!status) throw new AdminError('VALIDATION_FAILED', '相册筛选状态无效')
-    return {
-      items: await repository.listEventAlbumPhotos(
-        context.caller.appId,
-        eventId,
-        status,
-        limit(input.limit, 100),
-      ),
-      nextCursor: null,
-    }
-  }
-
-  async function reviewEventAlbumPhoto(caller, input = {}) {
-    const context = await access.session(caller)
-    const eventId = requiredId(input.eventId, '活动')
-    const photoId = requiredId(input.photoId, '照片')
-    const { scope, grant } = await access.eventAuthorization(context, eventId, CAPABILITIES.EVENTS_ALBUM_MANAGE)
-    const decision = input.decision === 'APPROVE'
-      ? { status: 'PUBLISHED', action: 'admin.events.album.approve' }
-      : input.decision === 'REJECT'
-        ? { status: 'REJECTED', action: 'admin.events.album.reject' }
-        : null
-    if (!decision) throw new AdminError('VALIDATION_FAILED', '相册审核结论无效')
-    const reason = text(input.reason, 300, { required: true, label: '审核原因' })
-    const version = expectedVersion(input.expectedVersion)
-    return repository.reviewEventAlbumPhoto({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      eventId,
-      photoId,
-      expectedVersion: version,
-      status: decision.status,
-      reason,
-      authorization: access.mutationAuthorization(grant, CAPABILITIES.EVENTS_ALBUM_MANAGE),
-      authorizedScope: scope,
-      audit: access.audit(context, grant, {
-        scopeType: 'EVENT',
-        scopeId: eventId,
-        action: decision.action,
-        resourceType: 'EVENT_ALBUM_PHOTO',
-        resourceId: photoId,
-        metadata: { expectedVersion: version, reason },
-      }),
-    })
-  }
-
   async function saveEvent(caller, input) {
     const context = await access.session(caller)
     let grant
@@ -557,13 +504,11 @@ function createAdminEvents({
     getEvent,
     getEventInsights,
     getEventPolicy,
-    listEventAlbumPhotos,
     listEvents,
     listRoster,
     listRosterAll,
     normalizeExportFilters,
     publishEventReminder,
-    reviewEventAlbumPhoto,
     reviewRegistration,
     saveEvent,
     saveEventPolicy,
@@ -710,7 +655,6 @@ function normalizeEventDraft(value) {
   const eventMode = ['OFFLINE', 'ONLINE', 'HYBRID'].includes(value.eventMode) ? value.eventMode : 'OFFLINE'
   const accessType = ['FREE', 'MEMBER_INCLUDED', 'PAID'].includes(value.accessType) ? value.accessType : 'FREE'
   const registrationPolicy = ['AUTO', 'APPROVAL'].includes(value.registrationPolicy) ? value.registrationPolicy : 'AUTO'
-  const albumSubmissionPolicy = value.albumSubmissionPolicy === 'AUTO' ? 'AUTO' : 'REVIEW'
   const priceCents = Number(value.priceCents || 0)
   const waitlistEnabled = value.waitlistEnabled === true
   if (accessType === 'PAID' && (!Number.isInteger(priceCents) || priceCents < 1 || registrationPolicy !== 'AUTO' || waitlistEnabled)) {
@@ -766,8 +710,6 @@ function normalizeEventDraft(value) {
     eventMode,
     accessType,
     registrationPolicy,
-    albumEnabled: value.albumEnabled !== false,
-    albumSubmissionPolicy,
     startsAt,
     endsAt,
     registrationDeadline,

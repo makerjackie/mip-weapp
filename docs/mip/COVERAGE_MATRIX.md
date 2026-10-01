@@ -26,7 +26,7 @@
 | 会员与邀请 / N1、#55 | 可配置方案、玩家权益、会员期邀请归因、续费 | implemented | verified-local + external-wait | commerce/ledger 和邀请 token 测试已覆盖；正式分享、扫码和支付待验 |
 | 统一订单 / #56 | 会员、活动、内容订单及服务端使用状态 | implemented | verified-local + external-wait | `mip_orders`、商品快照、状态投影和退款边界已覆盖；正式支付/退款待验 |
 | 活动目录 / B1–B8 | Banner、近期/往期、城市/日期/搜索、卡片、分享、详情入口 | implemented | verified-local + external-wait | 页面、服务端查询和日期范围测试已覆盖；正式素材、视频号、日历和分享待验 |
-| 活动详情 / C1–C7 | 图文媒体、电话、地图、分享、参与人、邀请来源、报名恢复 | implemented | verified-local + external-wait | 富内容、媒体排序和恢复合同已覆盖；地图、拨号、相册、码图需真机 |
+| 活动详情 / C1–C7 | 图文媒体、电话、地图、分享、参与人、邀请来源、报名恢复 | implemented | verified-local + external-wait | 富内容、媒体排序和恢复合同已覆盖；地图、拨号、码图需真机 |
 | 付费报名 / C8 | 订单意图、支付参数、ledger、报名确认和退款 | implemented | verified-local + external-wait | 本地事务与错误状态已覆盖；正式商户、回调、查单和真机支付待验 |
 | 扫码签到 / D1–D4 | scene、登录/报名/支付恢复、资格复核、签到海报 | implemented | verified-local + external-wait | 服务端签名、过期和幂等合同已覆盖；真实码、扫码、Canvas 和相册待验 |
 | 心动与反馈 / D5–D8 | 单关系、双列表、已签到反馈和通知 | implemented | verified-local + external-wait | 关系、反馈和站内 outbox 已覆盖；订阅模板和真机通知待验 |
@@ -134,7 +134,7 @@
 | 页面族 | 设计输入 | 实现状态 | 验证状态 | 当前边界 |
 | --- | --- | --- | --- | --- |
 | 我的、档案、名片、勋章、合作卡、案例、成长 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的个人中心与档案节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + evidence-missing | 设计截图已固定；需当前实现同尺寸对照 |
-| 活动列表、详情、报名、参与人、心动 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的活动节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + external-wait | 媒体、地图、扫码、支付和相册仍需真机 |
+| 活动列表、详情、报名、参与人、心动 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的活动节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + external-wait | 媒体、地图、扫码和支付仍需真机 |
 | 机会列表、筛选、详情、人才、发布 | 历史节点溯源（[FIGMA_MAP.md](FIGMA_MAP.md) 的机会节点）；现行视觉以 [DESIGN.md](../../DESIGN.md) 为准 | implemented | verified-local + evidence-missing | 需当前实现同尺寸对照及真实数据旅程 |
 | 小程序现场工作台 | `DESIGN.md` 的现场工作台规则 | implemented | evidence-missing + external-wait | 旧 375px/1024px 完整管理端证据只作历史追溯；当前四路由需 375px 与真机验收 |
 | React Web | `admin-web/DESIGN.md` 与唯一标准 U02/G07 | partial | verified-local + verified-staging + evidence-missing | 独立档案和详情动作布局已交付；当前真实非空活动列表/详情已验证 1280×720、1440×900、390×844，手机草稿恢复不溢出。不能外推为所有页面/状态的完整视觉验收 |

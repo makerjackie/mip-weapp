@@ -25,8 +25,6 @@ function sourceEvent() {
     event_mode: 'HYBRID',
     access_type: 'FREE',
     registration_policy: 'APPROVAL',
-    album_enabled: 1,
-    album_submission_policy: 'REVIEW',
     starts_at: new Date('2026-08-01T06:00:00.000Z'),
     ends_at: new Date('2026-08-01T08:00:00.000Z'),
     registration_opens_at: new Date('2026-07-01T00:00:00.000Z'),
@@ -132,13 +130,11 @@ describe('admin event clone persistence', () => {
     assert.equal(insert.params[4], 'admin-user')
     assert.equal(insert.params[5], '周末交流会（副本）')
     assert.equal(insert.params[9], 'cover-a')
-    assert.equal(insert.params[14], 1)
-    assert.equal(insert.params[15], 'REVIEW')
-    assert.equal(insert.params[16], 'PASSED')
-    assert.equal(insert.params[17].toISOString(), '2026-09-05T06:00:00.000Z')
-    assert.equal(insert.params[18].toISOString(), '2026-09-05T08:00:00.000Z')
-    assert.equal(insert.params[20].toISOString(), '2026-09-04T06:00:00.000Z')
-    assert.equal(insert.params[32], JSON.stringify([{ key: 'company', type: 'TEXT' }]))
+    assert.equal(insert.params[14], 'PASSED')
+    assert.equal(insert.params[15].toISOString(), '2026-09-05T06:00:00.000Z')
+    assert.equal(insert.params[16].toISOString(), '2026-09-05T08:00:00.000Z')
+    assert.equal(insert.params[18].toISOString(), '2026-09-04T06:00:00.000Z')
+    assert.equal(insert.params[30], JSON.stringify([{ key: 'company', type: 'TEXT' }]))
     assert.ok(calls.some(call => call.sql.includes('INSERT INTO mip_event_changes')))
     assert.ok(calls.some(call => call.sql.includes('INSERT INTO mip_audit_logs')))
     assert.ok(calls.some(call => call.sql.includes('INSERT INTO mip_outbox_events')))

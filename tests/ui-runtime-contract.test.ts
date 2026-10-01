@@ -165,7 +165,6 @@ describe('mip-weapp UI runtime contract', () => {
       'packages/admin/managed-events/index',
       'packages/admin/event-console/index',
       'packages/admin/event-registrations/index',
-      'packages/member/event-album/index',
       'packages/member/mip-events/check-in/index',
       'packages/member/mip-events/participants/index',
       'packages/member/mip-public-profile/index',
@@ -234,13 +233,6 @@ describe('mip-weapp UI runtime contract', () => {
     expect(shared).toContain('adminLoadFailure')
     expect(shared).toContain('FORBIDDEN')
     expect(shared).toContain('\'forbidden\'')
-  })
-
-  it('requires an enabled activity comment fixture for runtime success', () => {
-    const comments = contract.routes.find(route => route.path === 'packages/member/mip-events/comments/index')
-    expect(comments?.states).toEqual(expect.arrayContaining(['ready', 'empty', 'disabled']))
-    expect(comments?.acceptStates).toEqual(['ready', 'empty'])
-    expect(comments?.readyAssertion).toBe('state === \'ready\' || state === \'empty\'')
   })
 
   it('does not render concrete identity, storage, or credential values in WXML', () => {
@@ -432,7 +424,6 @@ describe('mip-weapp UI runtime contract', () => {
     expect(capabilityIds).toEqual([
       'calendar-location',
       'customer-service',
-      'event-album-photo',
       'knowledge-webview',
       'online-event-webview',
       'phone-auth',
@@ -475,7 +466,6 @@ describe('mip-weapp UI runtime contract', () => {
     expect(byId.get('video-channel')?.routes).toContain('packages/member/mip-events/detail/index')
     expect(contract.routes.find(route => route.path === 'packages/member/mip-events/detail/index')?.deviceRequired)
       .toContain('video-channel')
-    expect(byId.get('event-album-photo')?.routes).toEqual(['packages/member/event-album/index'])
     expect(byId.get('photo-save')?.routes).toEqual(expect.arrayContaining([
       'pages/membership/index',
       'packages/admin/event-console/index',
@@ -496,7 +486,6 @@ describe('mip-weapp UI runtime contract', () => {
     const byPath = new Map(contract.routes.map(route => [route.path, route]))
     expect(byPath.get('packages/admin/event-console/index')?.query).toEqual(['eventId'])
     expect(byPath.get('packages/admin/event-registrations/index')?.query).toEqual(['eventId'])
-    expect(byPath.get('packages/member/event-album/index')?.query).toEqual(['eventId'])
     expect(byPath.get('packages/member/mip-events/detail/index')?.query).toEqual(['eventId'])
     expect(byPath.get('packages/member/mip-events/participants/index')?.query).toEqual(['eventId'])
     expect(byPath.get('packages/member/mip-public-profile/index')?.query).toEqual(['profileRef'])
@@ -550,9 +539,6 @@ describe('mip-weapp UI runtime contract', () => {
       acceptStates: ['ready', 'empty'],
       readyAssertion: 'state === \'ready\' || state === \'empty\'',
       deviceRequired: ['knowledge-webview'],
-    })
-    expect(byId.get('M26')?.queryFixture).toMatchObject({
-      where: { albumEnabled: true },
     })
   })
 

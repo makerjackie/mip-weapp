@@ -17,9 +17,6 @@ describe('MIP media client boundary', () => {
     expect(uploadImage).toHaveBeenCalledWith('AVATAR', expect.any(String))
     expect(result.assetId).toBe('22222222-2222-4222-8222-222222222222')
 
-    await module.uploadImageBase64('EVENT_ALBUM', Buffer.alloc(64).toString('base64'))
-    expect(uploadImage).toHaveBeenLastCalledWith('EVENT_ALBUM', expect.any(String))
-
     await module.uploadImageBase64('EVENT_CONTENT', Buffer.alloc(64).toString('base64'))
     expect(uploadImage).toHaveBeenLastCalledWith('EVENT_CONTENT', expect.any(String))
 

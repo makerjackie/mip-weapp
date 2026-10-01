@@ -58,7 +58,7 @@ pnpm membership:test -- \
 活动创建/编辑、状态变更和撤销签到只通过 `mip-admin-api` 执行。`mip-events-api` 不接受这些管理写操作，避免同一活动事实存在第二套状态机、退款和权限路径。创建、编辑、复制、取消、报名审核、导出和退款只在 Web 提供界面；现场工作台只提交签到海报、签到和受控撤销意图。
 
 - 分会：平台范围、城市分会、主分会和分会成员归属
-- 活动：Web 使用统一列表 → 单场管理 → 编辑/名单/相册/导出/团队；可将任意授权活动复制为独立草稿，活动时间按周顺延，报名、订单、签到、相册和消息不会复制
+- 活动：Web 使用统一列表 → 单场管理 → 编辑/名单/导出/团队；可将任意授权活动复制为独立草稿，活动时间按周顺延，报名、订单、签到和消息不会复制
 - 订单：`mip_orders` 统一展示会员、付费活动和单内容订单；退款由 ledger 状态决定
 - 退款：服务端角色校验；管理端只提交订单/退款意图，金额和权益由 ledger 决定；到账后由 ledger 重算权益，不能手工改玩家状态
 - 名册导出：含手机号的导出走安全票据，页面只显示掩码票码
@@ -113,11 +113,9 @@ pnpm message-campaigns:run-due -- \
 
 单场活动提醒使用独立的 `communications.publish` capability。管理端只提交活动、事件版本、幂等请求标识和是否尝试微信提醒；`mip-admin-api` 仅从当前 `REGISTERED` / `ATTENDED` 报名事实选择收件人，并从已发布活动生成标题、正文和模板字段。单次最多 500 位收件人，超限时整笔拒绝；每位收件人的运营消息、outbox、幂等结果和一条汇总审计在同一事务提交。站内提醒始终进入 outbox；微信提醒仅在模板已配置且参与者有可用授权时投递，缺少模板不会使站内提醒失败。
 
-活动相册使用独立 `events.album.manage` capability，并按平台、分会或活动范围重新鉴权。运营端只提交活动、照片、审核结论、原因和 `expectedVersion`；批准时服务端重新校验照片仍引用 `READY` 的 `EVENT_ALBUM` 素材。只有待审照片可以批准或拒绝，成功事务追加审计；拒绝和参与者撤回都保留照片事实，不物理删除。
-
 管理端单笔退款会在事务提交后立即调用 `mip-refund-worker`；活动取消单次最多立即提交 10 笔，其余退款仍以 `mip_refunds` 为耐久队列。provider 暂时不可用、进程中断或晚到支付产生自动退款时，运行 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。命令可重复执行，不接收金额，不打印订单或支付凭证；返回 `failed>0` 时退出码非零，修复配置或 provider 故障后重试。退款 worker 不安装高频定时器。
 
-媒体孤儿清理只通过受控命令运行，不安装定时器：`pnpm media:cleanup -- --confirm-env=<EnvID> --confirm-media=mip-media-api --minimum-age-hours=24 --limit=10`。命令只领取超过最短保留时间且未被资料、活动、待审/已发布相册照片、机会、案例或有效签到海报引用的 `mip_media_assets`；领取时先在当前 AppID 内锁定素材并将其改为非公开的 `PENDING` 删除态，再在事务外删除严格匹配 MIP 对象范围的文件。对象删除失败、响应不明确或最终状态写入失败时都保留 `PENDING`，由后续清理重试，不能恢复为 `READY`；被拒绝或已撤回照片的素材在保留期后可以回收，但照片事实仍保留。返回 `failed>0` 时退出码非零，排查存储权限后再重试。
+媒体孤儿清理只通过受控命令运行，不安装定时器：`pnpm media:cleanup -- --confirm-env=<EnvID> --confirm-media=mip-media-api --minimum-age-hours=24 --limit=10`。命令只领取超过最短保留时间且未被资料、活动、机会、案例或有效签到海报引用的 `mip_media_assets`；领取时先在当前 AppID 内锁定素材并将其改为非公开的 `PENDING` 删除态，再在事务外删除严格匹配 MIP 对象范围的文件。对象删除失败、响应不明确或最终状态写入失败时都保留 `PENDING`，由后续清理重试，不能恢复为 `READY`。返回 `failed>0` 时退出码非零，排查存储权限后再重试。
 
 AI 草稿默认保留 72 小时，`MIP_AI_DRAFT_TTL_HOURS` 只允许 1–168。确认、过期或删除草稿后，AI 页面会重试清理私有语音文件；无人访问的草稿使用 `pnpm ai:cleanup -- --confirm-env=<EnvID> --confirm-ai=mip-ai-api --limit=10` 手动分批清理，不安装定时器。命令使用已部署 AI HMAC、AppID allowlist、五分钟时间戳和完整 body 签名，只返回状态与数量。领取、外部删除和最终状态更新分离；任何外部或数据库不确定结果都保留 `PENDING`，后续重试，只有云存储删除成功且仍持有相同租约时才标记 `DELETED`。发布前需按数据处理约定确认正式留存时长。
 

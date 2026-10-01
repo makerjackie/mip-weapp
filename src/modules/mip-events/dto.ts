@@ -35,7 +35,6 @@ const eventListKeys = [
   'registrationCount',
   'participantPreview',
   'registrationStatus',
-  'albumEnabled',
 ] as const
 const eventDetailKeys = [
   ...eventListKeys,
@@ -64,7 +63,6 @@ const eventDetailKeys = [
   'registrationVersion',
   'canCheckIn',
   'canInteract',
-  'albumSubmissionPolicy',
   'interactionSummary',
 ] as const
 
@@ -199,7 +197,6 @@ function validEventListFields(value: Record<string, unknown>) {
     'status',
     'registrationCount',
     'participantPreview',
-    'albumEnabled',
   ])
   && uuid(value.id)
   && ['PLATFORM', 'BRANCH'].includes(String(value.scopeType))
@@ -235,7 +232,6 @@ function validEventListFields(value: Record<string, unknown>) {
     'REJECTED',
     'ATTENDED',
   ].includes(String(value.registrationStatus)))
-  && typeof value.albumEnabled === 'boolean'
 }
 
 export function parseMipEventListItem(value: unknown): MipEventListItem {
@@ -323,7 +319,6 @@ export function parseMipEventDetail(value: unknown): MipEventDetail {
       'canRetryRefund',
       'canCheckIn',
       'canInteract',
-      'albumSubmissionPolicy',
     ])
     || !boundedString(value.description, 50000, true)
     || !Array.isArray(value.contentMedia) || value.contentMedia.length > 100 || !value.contentMedia.every(contentMedia)
@@ -353,8 +348,7 @@ export function parseMipEventDetail(value: unknown): MipEventDetail {
     || !(value.registrationVersion === undefined || positiveInteger(value.registrationVersion))
     || typeof value.canCheckIn !== 'boolean'
     || typeof value.canInteract !== 'boolean'
-    || !(value.interactionSummary === undefined || interactionSummary(value.interactionSummary))
-    || !['AUTO', 'REVIEW'].includes(String(value.albumSubmissionPolicy))) {
+    || !(value.interactionSummary === undefined || interactionSummary(value.interactionSummary))) {
     invalid('活动详情')
   }
   return value as unknown as MipEventDetail

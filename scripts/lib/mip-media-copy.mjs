@@ -19,7 +19,6 @@ export const MIP_LONG_TERM_MEDIA_PURPOSES = Object.freeze({
   AVATAR: 'avatars',
   BANNER: 'banners',
   DIGITAL_AVATAR: 'digital-avatars',
-  EVENT_ALBUM: 'event-album',
   EVENT_CONTENT: 'event-content',
   EVENT_COVER: 'event-covers',
   OPPORTUNITY_COVER: 'opportunity-covers',
@@ -31,6 +30,7 @@ export const MIP_LONG_TERM_MEDIA_PURPOSES = Object.freeze({
 
 const EXCLUDED_PURPOSES = Object.freeze({
   AI_AUDIO: 'EPHEMERAL_AI_AUDIO',
+  EVENT_ALBUM: 'RETIRED_EVENT_ALBUM',
   CHECKIN_POSTER: 'REISSUABLE_MINIPROGRAM_CODE',
   EVENT_INVITATION_CODE: 'REISSUABLE_MINIPROGRAM_CODE',
   MEMBERSHIP_INVITATION_CODE: 'REISSUABLE_MINIPROGRAM_CODE',

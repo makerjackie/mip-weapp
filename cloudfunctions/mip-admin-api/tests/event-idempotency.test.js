@@ -25,7 +25,7 @@ function eventDatabase(initialEvent, { archive = false } = {}) {
     }
     if (sql.includes('FROM mip_events')) return { ...state.event }
     if (archive && sql.includes('AS registrations')) {
-      return { registrations: 0, orders: 0, checkins: 0, album_photos: 0 }
+      return { registrations: 0, orders: 0, checkins: 0 }
     }
     return null
   }

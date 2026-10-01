@@ -701,16 +701,14 @@ function createAdminPrdExtensions(database, options = {}) {
         `SELECT
           (SELECT COUNT(*) FROM mip_event_registrations r WHERE r.app_id = ? AND r.event_id = ?) AS registrations,
           (SELECT COUNT(*) FROM mip_orders o WHERE o.app_id = ? AND o.order_type = 'EVENT' AND o.resource_id = ?) AS orders,
-          (SELECT COUNT(*) FROM mip_event_checkins c WHERE c.app_id = ? AND c.event_id = ?) AS checkins,
-          (SELECT COUNT(*) FROM mip_event_album_photos p WHERE p.app_id = ? AND p.event_id = ?) AS album_photos`,
+          (SELECT COUNT(*) FROM mip_event_checkins c WHERE c.app_id = ? AND c.event_id = ?) AS checkins`,
         [input.appId, input.eventId, input.appId, input.eventId,
-          input.appId, input.eventId, input.appId, input.eventId],
+          input.appId, input.eventId],
       )
       const details = {
         registrations: Number(blockers?.registrations || 0),
         orders: Number(blockers?.orders || 0),
         checkins: Number(blockers?.checkins || 0),
-        albumPhotos: Number(blockers?.album_photos || 0),
       }
       if (Object.values(details).some(value => value > 0)) throw codeError('EVENT_ARCHIVE_BLOCKED', details)
       const result = await tx.query(

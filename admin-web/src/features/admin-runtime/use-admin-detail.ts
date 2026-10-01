@@ -25,7 +25,6 @@ export function useAdminDetail() {
     ...selection?.options,
     includeUserMembership: selection?.route === 'users' && hasCapabilityAtScope('memberships.read', 'PLATFORM'),
     includeEventRoster: selection?.route === 'events' && hasCapability('events.roster.read'),
-    includeEventAlbum: selection?.route === 'events' && hasCapability('events.album.manage'),
     includeEventFeedback: selection?.route === 'events' && hasCapability('events.feedback.read'),
     includeMessageDeliveryReviews: selection?.route === 'messages' && hasCapabilityAtScope('messages.delivery.review', 'PLATFORM'),
     includeOpportunityComments: selection?.route === 'opportunities' && hasCapability('messages.manage'),

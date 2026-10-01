@@ -77,10 +77,6 @@
       "pathName": "packages/member/mip-events/detail/index"
     },
     {
-      "name": "活动相册",
-      "pathName": "packages/member/event-album/index"
-    },
-    {
       "name": "活动参与人",
       "pathName": "packages/member/mip-events/participants/index"
     },
@@ -103,10 +99,6 @@
     {
       "name": "活动反馈",
       "pathName": "packages/member/mip-events/feedback/index"
-    },
-    {
-      "name": "活动评论",
-      "pathName": "packages/member/mip-events/comments/index"
     },
     {
       "name": "机会详情",
