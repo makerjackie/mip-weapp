@@ -240,7 +240,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 374rpx;
-  padding: 16rpx 24rpx 16rpx;
+  padding: 16rpx 24rpx;
   overflow: hidden;
   background: var(--color-panel);
   border-radius: 16rpx;
@@ -311,10 +311,10 @@
 
 .mip-talent-card__figure-avatar {
   display: flex;
-  width: 112rpx;
-  height: 112rpx;
   align-items: center;
   justify-content: center;
+  width: 112rpx;
+  height: 112rpx;
   overflow: hidden;
   font-size: 32rpx;
   font-weight: 600;
@@ -326,59 +326,59 @@
 .mip-talent-card__figure-name {
   margin-top: 16rpx;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 32rpx;
   font-weight: 500;
   line-height: 44.8rpx;
   color: var(--color-ink);
   text-align: center;
   white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .mip-talent-card__figure-status {
   margin-top: 8rpx;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 20rpx;
   font-weight: 500;
   line-height: 34rpx;
   color: var(--color-ink);
   text-align: center;
   white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .mip-talent-card__figure-meta {
-  margin-top: 8rpx;
   display: -webkit-box;
+  margin-top: 8rpx;
   overflow: hidden;
+  -webkit-line-clamp: 2;
   font-size: 20rpx;
   line-height: 28rpx;
   color: var(--color-ink);
   text-align: center;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .mip-talent-card__figure-supporting {
-  margin-top: 8rpx;
   display: -webkit-box;
+  margin-top: 8rpx;
   overflow: hidden;
+  -webkit-line-clamp: 2;
   font-size: 20rpx;
   line-height: 28rpx;
   color: var(--color-muted);
   text-align: center;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .mip-talent-card__foot {
   display: flex;
+  gap: 16rpx;
   align-items: center;
   justify-content: space-between;
-  gap: 16rpx;
-  margin-top: auto;
-  padding-top: 24rpx;
   min-height: 40rpx;
+  padding-top: 24rpx;
+  margin-top: auto;
 }
 
 .mip-talent-card__medals {
