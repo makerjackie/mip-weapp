@@ -31,6 +31,8 @@ describe('MIP profile Figma structure', () => {
     expect(view).not.toContain('主城市分会')
     expect(view).not.toContain('能力标签')
     expect(view).not.toContain('补充资料')
+    // 性别只有男/女两个选项，未设置是缺省状态而非按钮。
+    expect(view).not.toContain('未设置')
     expect(view).not.toContain('公开范围')
     expect(view).not.toContain('bind:tap="addExperience"')
   })
