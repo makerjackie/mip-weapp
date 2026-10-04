@@ -100,17 +100,17 @@ describe('page loading and profile interaction regressions', () => {
     expect(instance.data.initialSectionsState).toBe('ready')
   })
 
-  it('refreshes a recent opportunity list after returning from an editing flow', () => {
+  it('refreshes a recent opportunity list after returning from an editing flow', async () => {
     const instance = page(discovery)
     instance.data.state = 'ready'
     instance.lastSuccessfulRefreshAt = Date.now()
     instance.loadCatalogs = vi.fn()
     instance.refreshAuthState = vi.fn()
     instance.loadContent = vi.fn()
-    instance.onShow()
+    await instance.onShow()
     expect(instance.loadContent).not.toHaveBeenCalled()
     instance.refreshOnReturn = true
-    instance.onShow()
+    await instance.onShow()
     expect(instance.loadContent).toHaveBeenCalledWith(true, { preserveContent: true })
     expect(instance.refreshOnReturn).toBe(false)
   })

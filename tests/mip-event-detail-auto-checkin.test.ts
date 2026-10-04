@@ -32,8 +32,9 @@ vi.mock('../src/modules/mip-events/client', () => ({
   mipEventsModule: eventsModule,
 }))
 vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: identityModule }))
-vi.mock('../src/modules/mip-identity', () => ({
-  mipAccessPageUrl: (token: string) => `/packages/member/mip-access/index?token=${token}`,
+// 通用登录引导控制器（createMipGuestLoginFlow）来自真实模块；身份决策仍走 identityModule 假件。
+vi.mock('../src/modules/mip-identity', async importOriginal => ({
+  ...(await importOriginal<object>()),
 }))
 vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: navigateTo }))
 vi.mock('../src/platform/storage/cloud-media', () => ({

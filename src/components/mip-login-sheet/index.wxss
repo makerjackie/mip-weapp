@@ -104,18 +104,3 @@
   line-height: 33.6rpx;
   color: var(--color-muted, #b3b3b3);
 }
-
-.mip-login-sheet__signin {
-  min-height: 80rpx;
-  padding: 12rpx 0;
-  margin-top: 12rpx;
-  font-size: 24rpx;
-  line-height: 56rpx;
-  color: var(--color-ink, #fff);
-  background: transparent;
-  border: 0;
-}
-
-.mip-login-sheet__signin::after {
-  border: 0;
-}

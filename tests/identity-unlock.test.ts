@@ -58,6 +58,25 @@ describe('login sheet subtitle override (journey-review J5-02 variant)', () => {
     expect(definition.properties.subtitle).toEqual({ type: String, value: '' })
   })
 
+  it('merges the returning sign-in into the single primary button behind restore-first (MIW-20)', () => {
+    expect(definition.properties.restoreFirst).toEqual({ type: Boolean, value: false })
+    const view = read('src/components/mip-login-sheet/index.wxml')
+    // 只有一个主按钮：恢复形态先按 OpenID 恢复会话，未绑时由页面切回手机号授权形态。
+    expect(view).toContain('<button\n    wx:if="{{restoreFirst}}"')
+    expect(view).toContain('使用当前微信账号登录')
+    expect(view).toContain('将使用你当前的微信账号恢复原有身份；未绑定手机号时会再向你授权')
+    expect(view).not.toContain('使用当前微信账号重新登录')
+    expect(view).not.toContain('mip-login-sheet__signin')
+    // 手机号授权形态与终审文案保持逐字不变。
+    expect(view).toContain('wx:else\n    id="mip-login-sheet-auth"\n    open-type="getPhoneNumber"')
+    // 恢复主按钮走 signin 事件且同样受 busy 保护。
+    const triggerEvent = vi.fn()
+    definition.methods.onSignIn.call({ data: { busy: true }, triggerEvent })
+    expect(triggerEvent).not.toHaveBeenCalled()
+    definition.methods.onSignIn.call({ data: { busy: false }, triggerEvent })
+    expect(triggerEvent).toHaveBeenCalledExactlyOnceWith('signin')
+  })
+
   it('keeps the verbatim default copy when no subtitle is passed', () => {
     const view = read('src/components/mip-login-sheet/index.wxml')
     expect(view).toContain('<view wx:else class="mip-login-sheet__sub">将获取你微信绑定的手机号，用于确认身份\n昵称与头像无需授权，在「编辑信息」中由你主动填写</view>')
