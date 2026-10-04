@@ -71,7 +71,7 @@ function createIdentityService(options) {
         exists: false, version: 0, nickname: '', realName: '', gender: 'UNKNOWN',
         careerIdentityKey: '', avatarBound: false, identityStatus: '', headline: '',
         introduction: '', companies: [], organizations: [], visibility: visibility('{}'),
-        abilityTagIds: [], complete: false, missingFields: ['NICKNAME', 'PRIMARY_BRANCH'],
+        abilityTagIds: [], complete: false, missingFields: ['NICKNAME'],
       },
       membership: { kind: 'GUEST', source: 'NONE' },
       grants: [],
@@ -360,9 +360,7 @@ function profileDto(facts, options = {}) {
   if (!nickname) {
     missingFields.push('NICKNAME')
   }
-  if (!facts.user.primary_branch_id) {
-    missingFields.push('PRIMARY_BRANCH')
-  }
+  // 主城市分会由管理后台在开通会员时配置，不再作为用户端资料完善度门槛。
   const profileTags = facts.profileTags || []
   return {
     exists: Boolean(profile),

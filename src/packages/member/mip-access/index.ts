@@ -21,7 +21,7 @@ const requirementCopy = {
   },
   PROFILE: {
     title: '完善资料',
-    description: '请填写昵称并选择主城市分会。',
+    description: '请填写您的昵称。',
   },
 }
 

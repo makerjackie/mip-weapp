@@ -125,10 +125,6 @@
         <view class="w-[120rpx] shrink-0 text-[24rpx] font-medium">昵称 <text class="text-[22rpx] text-danger">*</text></view>
         <input aria-label="昵称" class="h-[92rpx] min-w-0 flex-1 text-right text-[24rpx]" type="nickname" maxlength="64" value="{{nickname}}" data-field="nickname" bindinput="updateText" bindblur="updateText" placeholder="请输入您的昵称" placeholder-style="color:#B3B3B3;text-align:right" />
       </view>
-      <view data-profile-basic-row="realName" class="flex min-h-[92rpx] items-center border-t border-line px-3">
-        <view class="w-[120rpx] shrink-0 text-[24rpx] font-medium">姓名</view>
-        <input aria-label="姓名" class="h-[92rpx] min-w-0 flex-1 text-right text-[24rpx]" maxlength="64" value="{{realName}}" data-field="realName" bindinput="updateText" placeholder="请输入您的姓名" placeholder-style="color:#B3B3B3;text-align:right" />
-      </view>
       <view data-profile-basic-row="gender" class="flex min-h-[92rpx] items-center border-t border-line px-3">
         <view class="w-[120rpx] shrink-0 text-[24rpx] font-medium">性别</view>
         <radio-group class="flex min-w-0 flex-1 justify-end gap-2" bindchange="changeGender">
@@ -172,57 +168,6 @@
       <textarea aria-label="个人简介" class="block h-[176rpx] w-full max-w-full box-border bg-transparent text-[24rpx] leading-6" maxlength="160" value="{{headline}}" data-field="headline" bindinput="updateText" placeholder="例如：品牌主理人，寻找一起做项目的伙伴" placeholder-style="color:#B3B3B3" />
       <view class="text-right text-[22rpx] text-muted">{{headline.length}}/160</view>
     </view>
-
-    <view data-profile-more-toggle="true" class="mx-3 mt-5 flex min-h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-3" bind:tap="toggleMore">
-      <view class="flex items-center gap-2 text-[28rpx] font-semibold">
-        <t-icon name="view-list" size="28rpx" color="var(--color-brand)" />
-        <text>更多资料</text>
-      </view>
-      <t-icon name="{{moreExpanded ? 'chevron-up' : 'chevron-down'}}" size="28rpx" color="var(--color-muted)" />
-    </view>
-
-    <block wx:if="{{moreExpanded}}">
-    <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">
-      <mip-icon name="icon-map-pin-line" size="{{15}}" color="var(--color-brand)" />
-      <text>主城市分会</text>
-    </view>
-    <view wx:if="{{branchGroups.length}}" class="mx-3 mt-3 overflow-hidden rounded-[16rpx] bg-panel">
-      <view data-catalog="branch" class="flex min-h-[92rpx] items-center justify-between gap-3 px-3" bind:tap="toggleCatalog">
-        <text class="min-w-0 flex-1 truncate text-[24rpx] {{branchOptions[branchIndex].id ? 'text-ink' : 'text-muted'}}">{{branchOptions[branchIndex].id ? branchOptions[branchIndex].label : '请选择主城市分会'}}</text>
-        <mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-muted)" />
-      </view>
-      <view wx:if="{{branchCatalogExpanded}}" class="border-t border-line px-3 py-3"><mip-catalog-selector groups="{{branchGroups}}" selected-ids="{{selectedBranchIds}}" multiple="{{false}}" clear-label="未选择" bind:change="changeBranch" /></view>
-    </view>
-    <view wx:else class="mx-3 mt-3 rounded-[16rpx] bg-panel px-3 py-3 text-[24rpx] text-muted">城市分会暂未配置，请稍后再试。</view>
-
-    <block wx:if="{{abilityOptions.length}}">
-      <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">
-        <t-icon name="tag" size="30rpx" color="var(--color-brand)" />
-        <text>能力标签</text>
-      </view>
-      <view class="mx-3 mt-3 flex flex-wrap gap-2">
-        <block wx:for="{{abilityOptions}}" wx:key="id">
-          <view wx:if="{{item.selected}}" data-id="{{item.id}}" aria-role="checkbox" aria-checked="{{item.selected}}" class="flex items-center justify-center min-h-[88rpx] rounded-[8rpx] border border-brand bg-brand-soft px-3 py-1 text-[24rpx] text-brand" bind:tap="toggleAbility">{{item.label}}</view>
-          <view wx:else data-id="{{item.id}}" aria-role="checkbox" aria-checked="{{item.selected}}" class="flex items-center justify-center min-h-[88rpx] rounded-[8rpx] border border-transparent bg-panel px-3 py-1 text-[24rpx] text-muted" bind:tap="toggleAbility">{{item.label}}</view>
-        </block>
-      </view>
-    </block>
-
-    <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">
-      <t-icon name="info-circle" size="30rpx" color="var(--color-brand)" />
-      <text>补充资料</text>
-    </view>
-    <view class="mx-3 mt-3 overflow-hidden rounded-[16rpx] bg-panel">
-      <view class="flex min-h-[92rpx] items-center px-3">
-        <view class="w-[144rpx] shrink-0 text-[24rpx]">身份说明</view>
-        <input aria-label="职业身份" class="h-[92rpx] min-w-0 flex-1 text-right text-[24rpx]" maxlength="32" value="{{identityStatus}}" data-field="identityStatus" bindinput="updateText" placeholder="例如：创业者" placeholder-style="color:#B3B3B3;text-align:right" />
-      </view>
-      <view class="border-t border-line px-3 py-3">
-        <textarea aria-label="补充介绍" class="block h-[180rpx] w-full max-w-full box-border bg-transparent text-[24rpx] leading-6" maxlength="300" value="{{introduction}}" data-field="introduction" bindinput="updateText" placeholder="补充经历、能力和合作方向" placeholder-style="color:#B3B3B3" />
-        <view class="text-right text-[22rpx] text-muted">{{introduction.length}}/300</view>
-      </view>
-    </view>
-    </block>
 
     <mip-sticky-actions>
       <view slot="actions" class="w-full">
