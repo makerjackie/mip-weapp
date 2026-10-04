@@ -20,24 +20,23 @@ interface InteractionView {
   messageId: string
   unread: boolean
   actorName: string
-  actorInitial: string
   actorAvatarUrl: string
   actorHeadline: string
   profileMeta: string
-  levelNumber?: number
-  badges: NonNullable<ReceivedInteractionActor['badges']>
+  levelText: string
+  medals: { id: string, imageUrl?: string }[]
   statusText: string
   sourceText: string
   detailText: string
   note: string
   updatedText: string
   navigationUrl: string
-  // journey-review J3-05/06/07/08 四列表卡片网格（participants 卡族同构）：
-  // metaText = meta 行；countBadge = 右上角 ×N（邀请与同场次数均取服务端已签到事实）；
-  // noteText = 邀请人标注（数据=邀请人是我本人，服务端只回该口径）。
-  metaText: string
+  // journey-review J3-05/06/07/08 四列表卡片网格（统一嘉宾卡组件 grid 壳）：
+  // countBadge = 右上角 ×N（邀请与同场次数均取服务端已签到事实，corner 插槽）；
+  // inviter* = 邀请人标注（数据=邀请人是我本人，服务端只回该口径；玩家形态=昵称+头像）。
   countBadge: string
-  noteText: string
+  inviterName: string
+  inviterAvatarUrl: string
 }
 
 interface CategoryCache {
@@ -71,15 +70,14 @@ function cardBase(subject: ReceivedInteractionActor) {
   const actorName = subject.nickname || 'MIP 用户'
   return {
     actorName,
-    actorInitial: actorName.slice(0, 1),
     actorAvatarUrl: subject.avatarUrl || '',
     actorHeadline: subject.introduction || subject.headline || '',
     profileMeta: [subject.cityName, subject.industryLabel, subject.identityStatus].filter(Boolean).join(' / '),
-    badges: subject.badges || [],
-    levelNumber: subject.level?.number,
-    metaText: subject.headline || '',
+    levelText: subject.level ? `Lv.${subject.level.number}` : '',
+    medals: (subject.badges || []).map(badge => ({ id: badge.id, imageUrl: badge.imageUrl })),
     countBadge: '',
-    noteText: '',
+    inviterName: '',
+    inviterAvatarUrl: '',
   }
 }
 
@@ -88,7 +86,8 @@ function profileUrl(profileRef: string) {
 }
 
 // journey-review J3-05：同一嘉宾多次邀请右上角 ×N（invitationCount 为服务端口径）。
-function presentGuest(item: Extract<ReceivedInteraction, { kind: 'GUEST' }>, index: number, viewerName: string): InteractionView {
+// 邀请人=本人（数据口径「邀请人是我本人」），展示本人昵称与头像（玩家形态）。
+function presentGuest(item: Extract<ReceivedInteraction, { kind: 'GUEST' }>, index: number, viewer: { name: string, avatarUrl: string }): InteractionView {
   return {
     viewKey: `guest-${item.actor.profileRef}-${index}`,
     kind: item.kind,
@@ -101,7 +100,8 @@ function presentGuest(item: Extract<ReceivedInteraction, { kind: 'GUEST' }>, ind
       ? `通过你的邀请参加过 ${item.invitationCount} 场活动`
       : '通过你的邀请参加活动',
     note: '',
-    noteText: viewerName ? `邀请人${viewerName}` : '',
+    inviterName: viewer.name,
+    inviterAvatarUrl: viewer.avatarUrl,
     countBadge: item.invitationCount > 1 ? `×${item.invitationCount}` : '',
     updatedText: formatChineseMonthDayTime(item.updatedAt),
     navigationUrl: profileUrl(item.actor.profileRef),
@@ -109,8 +109,8 @@ function presentGuest(item: Extract<ReceivedInteraction, { kind: 'GUEST' }>, ind
 }
 
 // journey-review J3-06：同场多次 ×N 来自服务端全部有效签到的聚合，与翻页无关。
-// 邀请人标注（「邀请人Bear」口径）待服务端 listInfluenceInteractions 补 inviter 字段
-// （mip-opportunities-api），DTO 扩展归 WS-OPPORTUNITIES/服务端；noteText 渲染链保留，
+// 邀请人标注（玩家/平台判定）待服务端 listInfluenceInteractions 补 inviter 字段
+// （mip-opportunities-api），DTO 扩展归 WS-OPPORTUNITIES/服务端；inviter 渲染链保留，
 // 字段到位即显示（依赖记 .tmp/shared-change-requests.md）。
 function presentInteraction(person: ReceivedInteractionActor, factCount: number): InteractionView {
   return {
@@ -129,9 +129,9 @@ function presentInteraction(person: ReceivedInteractionActor, factCount: number)
   }
 }
 
-function present(item: ReceivedInteraction, index: number, viewerName = ''): InteractionView {
+function present(item: ReceivedInteraction, index: number, viewer: { name: string, avatarUrl: string } = { name: '', avatarUrl: '' }): InteractionView {
   if (item.kind === 'GUEST') {
-    return presentGuest(item, index, viewerName)
+    return presentGuest(item, index, viewer)
   }
   if (item.kind === 'INTERACTION') {
     return {
@@ -274,7 +274,7 @@ Page({
     items: [] as InteractionView[],
     displayItems: [] as InteractionView[],
     searchInput: '',
-    viewerName: '',
+    viewer: { name: '', avatarUrl: '' },
     referralUnreadCount: 0,
     interestUnreadCount: 0,
     visitorUnreadCount: 0,
@@ -361,7 +361,7 @@ Page({
       return
     }
     const snapshot = mipIdentityModule.peekSnapshot()
-    this.setData({ viewerName: snapshot?.profile.nickname || '' })
+    this.setData({ viewer: { name: snapshot?.profile.nickname || '', avatarUrl: snapshot?.profile.avatarUrl || '' } })
     const categories = this.data.heartsMode
       ? ['ACTIVE_INTEREST', 'OUTBOUND_INTEREST'] as const
       : this.data.influenceMode
@@ -542,8 +542,8 @@ Page({
       }
       else {
         cache.items = reset
-          ? page.items.map((item, index) => present(item, index, this.data.viewerName))
-          : [...cache.items, ...page.items.map((item, index) => present(item, cache.items.length + index, this.data.viewerName))]
+          ? page.items.map((item, index) => present(item, index, this.data.viewer))
+          : [...cache.items, ...page.items.map((item, index) => present(item, cache.items.length + index, this.data.viewer))]
       }
       cache.nextCursor = page.nextCursor || ''
       cache.unreadCount = page.unreadCount

@@ -51,11 +51,19 @@ describe('profile interest roster contract', () => {
     const p = page()
     await p.load()
     expect(p.data.state).toBe('ready')
-    expect(p.data.people[0]).toMatchObject({ nickname: 'Ame', headline: '设计', userKind: 'PLAYER' })
-    expect(p.data.people[0]).toMatchObject({ level: { number: 2, name: '共建' }, cityName: '深圳', industryLabel: '软件', identityStatus: '创业者', introduction: '帮助团队建立设计系统', badges: [{ id: 'badge-1', name: '社区共建者' }] })
+    // MIW-24：名单卡走统一嘉宾卡组件，页面 presenter 把服务端事实映射为视图字段；
+    // 简介取 introduction 优先于 headline，勋章接服务端佩戴口径（无图不伪造勋章图）。
+    expect(p.data.people[0]).toMatchObject({
+      displayName: 'Ame',
+      statusText: '玩家',
+      levelText: 'Lv.2',
+      metaText: '深圳 / 软件 / 创业者',
+      supportingText: '帮助团队建立设计系统',
+      medals: [{ id: 'badge-1' }],
+    })
     const template = fs.readFileSync(new URL('../src/packages/member/mip-profile-interests/index.wxml', import.meta.url), 'utf8')
-    for (const field of ['item.level.number', 'item.cityName', 'item.industryLabel', 'item.identityStatus', 'item.introduction', 'item.badges']) {
-      expect(template).toContain(field)
+    for (const attr of ['layout="grid"', 'display-name="{{item.displayName}}"', 'level-text="{{item.levelText}}"', 'status-text="{{item.statusText}}"', 'meta-text="{{item.metaText}}"', 'supporting-text="{{item.supportingText}}"', 'medals="{{item.medals}}"']) {
+      expect(template).toContain(attr)
     }
     expect(p.data.totalCount).toBe(1)
     p.openProfile({ currentTarget: { dataset: { profileRef: p.data.people[0].profileRef } } })

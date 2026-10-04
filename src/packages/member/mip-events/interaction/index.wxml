@@ -22,14 +22,16 @@
       <view class="mt-3 rounded-[16rpx] bg-panel px-3 py-3 text-[22rpx] leading-5 text-muted">每场活动可选择一位已签到参与者，可改选或取消。选择结果仅本人可查看。</view>
       <mip-empty-state wx:if="{{visibleCandidates.length === 0}}" title="暂无可选择的参与者" description="符合条件的已签到参与者会显示在这里。" />
       <view wx:else class="mt-3 grid grid-cols-2 gap-3">
-        <view wx:for="{{visibleCandidates}}" wx:key="participantRef" class="relative box-border min-h-[330rpx] rounded-[16rpx] border border-line bg-panel px-3 pb-3 pt-4 text-center" data-target-ref="{{item.participantRef}}" bind:tap="chooseHeart">
-          <view class="absolute right-2 top-2 flex h-[48rpx] w-[48rpx] items-center justify-center"><t-icon name="{{item.selected ? 'heart-filled' : 'heart'}}" size="36rpx" color="{{item.selected ? 'var(--color-danger)' : 'var(--color-muted)'}}" /></view>
-          <image wx:if="{{item.avatarUrl}}" class="mx-auto h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.avatarUrl}}" />
-          <view wx:else class="mx-auto flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="user-avatar" size="52rpx" color="var(--color-brand)" /></view>
-          <view class="mt-3 line-clamp-1 text-[30rpx] font-semibold">{{item.nickname}}</view>
-          <view wx:if="{{item.headline}}" class="mt-2 line-clamp-3 text-left text-[22rpx] leading-5 text-muted">{{item.headline}}</view>
-          <view wx:if="{{item.selected}}" class="mt-3 text-[22rpx] text-brand">已选择，再次点击可取消</view>
-          <view wx:else class="mt-3 text-[22rpx] text-muted">选择</view>
+        <!-- MIW-24：候选卡走统一嘉宾卡组件 grid 壳；右上角心形票与选择提示为页面自有事实
+             （corner/body 插槽），可选项以描边卡区分。 -->
+        <view wx:for="{{visibleCandidates}}" wx:key="participantRef" class="interaction-cell interaction-cell--bordered min-w-0" data-target-ref="{{item.participantRef}}" bind:tap="chooseHeart">
+          <mip-talent-card layout="grid" left-align-body="{{true}}" display-name="{{item.nickname}}" avatar-url="{{item.avatarUrl || ''}}" supporting-text="{{item.headline || ''}}">
+            <view slot="corner">
+              <view class="absolute right-2 top-2 flex h-[48rpx] w-[48rpx] items-center justify-center"><t-icon name="{{item.selected ? 'heart-filled' : 'heart'}}" size="36rpx" color="{{item.selected ? 'var(--color-danger)' : 'var(--color-muted)'}}" /></view>
+            </view>
+            <view slot="body" wx:if="{{item.selected}}" class="pt-[24rpx] text-[22rpx] text-brand">已选择，再次点击可取消</view>
+            <view slot="body" wx:else class="pt-[24rpx] text-[22rpx] text-muted">选择</view>
+          </mip-talent-card>
         </view>
       </view>
     </block>
@@ -37,12 +39,12 @@
     <block wx:else>
       <mip-empty-state wx:if="{{visibleReceived.length === 0}}" title="暂无对你心动的人" description="本场活动的互动结果会显示在这里。" />
       <view wx:else class="mt-3 grid grid-cols-2 gap-3">
-        <view wx:for="{{visibleReceived}}" wx:key="participantRef" class="relative box-border min-h-[310rpx] rounded-[16rpx] bg-panel px-3 pb-3 pt-4 text-center">
-          <view class="absolute right-2 top-2 flex h-[48rpx] w-[48rpx] items-center justify-center"><t-icon name="heart-filled" size="36rpx" color="var(--color-danger)" /></view>
-          <image wx:if="{{item.avatarUrl}}" class="mx-auto h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.avatarUrl}}" />
-          <view wx:else class="mx-auto flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="user-avatar" size="52rpx" color="var(--color-brand)" /></view>
-          <view class="mt-3 line-clamp-1 text-[30rpx] font-semibold">{{item.nickname}}</view>
-          <view wx:if="{{item.headline}}" class="mt-2 line-clamp-3 text-left text-[22rpx] leading-5 text-muted">{{item.headline}}</view>
+        <view wx:for="{{visibleReceived}}" wx:key="participantRef" class="interaction-cell min-w-0">
+          <mip-talent-card layout="grid" left-align-body="{{true}}" display-name="{{item.nickname}}" avatar-url="{{item.avatarUrl || ''}}" supporting-text="{{item.headline || ''}}">
+            <view slot="corner">
+              <view class="absolute right-2 top-2 flex h-[48rpx] w-[48rpx] items-center justify-center"><t-icon name="heart-filled" size="36rpx" color="var(--color-danger)" /></view>
+            </view>
+          </mip-talent-card>
         </view>
       </view>
     </block>

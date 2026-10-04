@@ -12,7 +12,6 @@ interface HeartView extends HeartHistoryItem {
   viewKey: string
   eventTimeText: string
   updatedText: string
-  personInitial: string
 }
 
 interface HeartCache {
@@ -35,7 +34,6 @@ function present(item: HeartHistoryItem, index: number): HeartView {
     viewKey: `${item.event.id}-${item.person.profileRef}-${index}`,
     eventTimeText: formatChineseDate(item.event.startsAt),
     updatedText: formatChineseDateTime(item.updatedAt),
-    personInitial: item.person.nickname.slice(0, 1) || 'M',
   }
 }
 

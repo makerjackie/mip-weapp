@@ -59,16 +59,15 @@
   <mip-empty-state wx:elif="{{state === 'empty'}}" title="{{kind === 'SENT' ? '暂无我的心动' : '暂无对我心动'}}" description="活动签到后的心动记录会显示在这里。" />
   <view wx:else class="mt-3">
     <view class="grid grid-cols-2 gap-[24rpx]">
-      <!-- 每条服务端心动记录显示心标；DTO 未返回等级、勋章与聚合次数时不造值。 -->
-      <view wx:for="{{items}}" wx:key="viewKey" class="relative flex min-h-[374rpx] min-w-0 flex-col overflow-hidden rounded-[16rpx] bg-panel px-[24rpx] pb-[16rpx] pt-[16rpx] active:bg-panel-raised" data-profile-ref="{{item.person.profileRef}}" bind:tap="openProfile" aria-role="button" aria-label="查看{{item.person.nickname}}的公开档案">
-        <image class="absolute right-[16rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-heart-fill.png" mode="aspectFit" aria-label="{{kind === 'SENT' ? '我已心动' : '对我心动'}}" />
-        <view class="flex shrink-0 justify-center">
-          <image wx:if="{{item.person.avatarUrl}}" class="h-[112rpx] w-[112rpx] rounded-full bg-brand-soft" mode="aspectFill" src="{{item.person.avatarUrl}}" />
-          <view wx:else class="flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft text-[32rpx] font-semibold text-brand">{{item.personInitial}}</view>
-        </view>
-        <view class="mt-[16rpx] truncate text-center text-[32rpx] font-medium leading-[44.8rpx]">{{item.person.nickname}}</view>
-        <view wx:if="{{item.person.headline}}" class="mt-[8rpx] line-clamp-2 text-[20rpx] leading-[28rpx] text-muted">{{item.person.headline}}</view>
-        <view class="mt-auto flex min-h-[64rpx] items-center gap-[8rpx] pt-[16rpx] text-[20rpx] leading-[28rpx] text-brand" data-event-id="{{item.event.id}}" catch:tap="openEvent" aria-role="button" aria-label="查看活动{{item.event.title}}"><text class="min-w-0 flex-1 truncate">{{item.event.title}}</text><mip-icon name="chevron-right-1" size="{{12}}" /></view>
+      <!-- MIW-24：心动记录卡走统一嘉宾卡组件 grid 壳；右上角红心徽标为页面自有事实（corner 插槽），
+           活动跳转行为 body 插槽；DTO 未返回等级、勋章与聚合次数时不造值。 -->
+      <view wx:for="{{items}}" wx:key="viewKey" class="min-w-0" data-profile-ref="{{item.person.profileRef}}" bind:tap="openProfile" aria-role="button" aria-label="查看{{item.person.nickname}}的公开档案">
+        <mip-talent-card layout="grid" display-name="{{item.person.nickname}}" avatar-url="{{item.person.avatarUrl || ''}}" supporting-text="{{item.person.headline || ''}}">
+          <view slot="corner">
+            <image class="absolute right-[16rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-heart-fill.png" mode="aspectFit" aria-label="{{kind === 'SENT' ? '我已心动' : '对我心动'}}" />
+          </view>
+          <view slot="body" class="mt-auto flex min-h-[64rpx] w-full items-center gap-[8rpx] pt-[16rpx] text-[20rpx] leading-[28rpx] text-brand" data-event-id="{{item.event.id}}" catch:tap="openEvent" aria-role="button" aria-label="查看活动{{item.event.title}}"><text class="min-w-0 flex-1 truncate">{{item.event.title}}</text><mip-icon name="chevron-right-1" size="{{12}}" /></view>
+        </mip-talent-card>
       </view>
     </view>
     <view wx:if="{{nextCursor}}" class="mt-1"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>

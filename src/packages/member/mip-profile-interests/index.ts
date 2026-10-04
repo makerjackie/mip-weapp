@@ -2,11 +2,37 @@ import type { ProfileInterestPerson } from '../../../modules/mip-opportunities'
 import { MipOpportunityError, opportunityModule } from '../../../modules/mip-opportunities'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 
+// MIW-24：名单卡走统一嘉宾卡组件 grid 壳；medals 只接服务端佩戴口径
+// （PublicPersonDetails.badges 由 mip_user_badge_equipment 过滤），未返回不造值。
+interface ProfileInterestView {
+  profileRef: string
+  displayName: string
+  avatarUrl: string
+  levelText: string
+  statusText: string
+  metaText: string
+  supportingText: string
+  medals: { id: string, imageUrl?: string }[]
+}
+
+function presentProfileInterest(person: ProfileInterestPerson): ProfileInterestView {
+  return {
+    profileRef: person.profileRef,
+    displayName: person.nickname,
+    avatarUrl: person.avatarUrl || '',
+    levelText: person.level ? `Lv.${person.level.number}` : '',
+    statusText: person.userKind === 'PLAYER' ? '玩家' : '嘉宾',
+    metaText: [person.cityName, person.industryLabel, person.identityStatus].filter(Boolean).join(' / '),
+    supportingText: person.introduction || person.headline || '',
+    medals: (person.badges || []).map(badge => ({ id: badge.id, imageUrl: badge.imageUrl })),
+  }
+}
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'empty' | 'blocked' | 'error',
     profileRef: '',
-    people: [] as ProfileInterestPerson[],
+    people: [] as ProfileInterestView[],
     totalCount: 0,
     nextCursor: '',
     loadingMore: false,
@@ -32,7 +58,7 @@ Page({
       const page = await opportunityModule.listProfileInterests(this.data.profileRef)
       this.setData({
         state: page.items.length ? 'ready' : 'empty',
-        people: page.items,
+        people: page.items.map(presentProfileInterest),
         totalCount: page.totalCount,
         nextCursor: page.nextCursor || '',
         message: '',
@@ -62,7 +88,7 @@ Page({
       const page = await opportunityModule.listProfileInterests(this.data.profileRef, this.data.nextCursor)
       const seen = new Set(this.data.people.map(person => person.profileRef))
       this.setData({
-        people: [...this.data.people, ...page.items.filter(person => !seen.has(person.profileRef))],
+        people: [...this.data.people, ...page.items.filter(person => !seen.has(person.profileRef)).map(presentProfileInterest)],
         totalCount: page.totalCount,
         nextCursor: page.nextCursor || '',
       })

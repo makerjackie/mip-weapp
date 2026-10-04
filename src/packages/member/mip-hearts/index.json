@@ -8,6 +8,7 @@
     "t-button": "tdesign-miniprogram/button/button",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-icon": "/components/mip-icon/index",
-    "mip-subscription-prompt": "/components/mip-subscription-prompt/index"
+    "mip-subscription-prompt": "/components/mip-subscription-prompt/index",
+    "mip-talent-card": "/components/talent-card/index"
   }
 }
