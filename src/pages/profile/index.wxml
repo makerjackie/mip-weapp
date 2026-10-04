@@ -240,4 +240,4 @@
   </block>
 </view>
 
-<mip-login-sheet visible="{{loginSheetOpen}}" busy="{{loginSheetBusy}}" allow-sign-in="{{loginSheetAllowSignIn}}" bind:phone="onLoginSheetPhone" bind:signin="onLoginSheetSignIn" bind:dismiss="onLoginSheetDismiss" />
+<mip-login-sheet visible="{{loginSheetOpen}}" busy="{{loginSheetBusy}}" restore-first="{{loginSheetRestoreFirst}}" bind:phone="onLoginSheetPhone" bind:signin="onLoginSheetSignIn" bind:dismiss="onLoginSheetDismiss" />

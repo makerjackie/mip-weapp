@@ -10,6 +10,7 @@ function source(relativePath: string) {
 const mocks = vi.hoisted(() => ({
   consumePendingResume: vi.fn(),
   loadSnapshot: vi.fn(),
+  peekSnapshot: vi.fn(),
   beginProtectedAction: vi.fn(),
   isSignedOut: vi.fn(),
   signIn: vi.fn(),
@@ -36,13 +37,14 @@ vi.mock('../src/modules/mip-cooperation', () => ({ cooperationModule: { listTale
 vi.mock('../src/modules/mip-cooperation/validation', () => ({
   mergeCooperationTalents: (current: unknown) => current,
 }))
-vi.mock('../src/modules/mip-identity', () => ({
-  mipAccessPageUrl: (token: string) => `/packages/member/mip-access/index?token=${token}`,
+vi.mock('../src/modules/mip-identity', async importOriginal => ({
+  ...(await importOriginal<object>()),
 }))
 vi.mock('../src/modules/mip-identity/client', () => ({
   mipIdentityModule: {
     consumePendingResume: mocks.consumePendingResume,
     loadSnapshot: mocks.loadSnapshot,
+    peekSnapshot: mocks.peekSnapshot,
     beginProtectedAction: mocks.beginProtectedAction,
     isSignedOut: mocks.isSignedOut,
     signIn: mocks.signIn,

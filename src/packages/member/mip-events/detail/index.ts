@@ -1,10 +1,11 @@
 import type { EventId, OrderId } from '../../../../modules/mip'
 import type { MipEventDetail } from '../../../../modules/mip-events'
+import type { MipGuestLoginProceedContext } from '../../../../modules/mip-identity'
 import { brand } from '../../../../config/brand'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { decodeInvitationToken, eventInvitationPath, eventRichTextNodes, isEventAccessRequirementError, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
-import { mipAccessPageUrl } from '../../../../modules/mip-identity'
+import { createMipGuestLoginFlow } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { peekCloudFileUrls } from '../../../../platform/storage/cloud-media'
@@ -194,7 +195,7 @@ Page({
     contentSection: 'INTRO' as 'INTRO' | 'ORGANIZER' | 'NOTICE',
     loginSheetOpen: false,
     loginSheetBusy: false,
-    loginSheetAllowSignIn: false,
+    loginSheetRestoreFirst: false,
     logoPath: brand.logoPath,
   },
   requestSeq: 0,
@@ -203,8 +204,42 @@ Page({
   entryScene: '',
   authToken: '' as string,
   authIntent: '' as AuthIntent | '',
+  guestLoginFlow: null as ReturnType<typeof createMipGuestLoginFlow> | null,
   checkInAuthRetryAttempted: false,
   invitationUrl: null as { eventId: string, url: string, validUntil: string } | null,
+
+  /** 通用游客登录引导（src/modules/mip-identity/guest-login-flow.ts）的本页接入点。 */
+  requireGuestLoginFlow() {
+    if (!this.guestLoginFlow) {
+      this.guestLoginFlow = createMipGuestLoginFlow({
+        route: DETAIL_ROUTE,
+        getAuthToken: () => this.authToken,
+        setAuthToken: (token: string) => { this.authToken = token },
+        isSheetActive: () => this.data.loginSheetOpen || this.data.loginSheetBusy,
+        setSheetState: state => this.setData(state),
+        proceed: context => this.proceedGuestLogin(context),
+      }, mipIdentityModule)
+    }
+    return this.guestLoginFlow
+  },
+
+  /** 身份就绪后在本页就地继续授权前的原意图；经 access 页回来时按 resume 映射。 */
+  proceedGuestLogin({ resume }: MipGuestLoginProceedContext) {
+    const pending = this.authIntent
+    this.authIntent = ''
+    if (resume) {
+      const intent = String(resume.source.query?.intent || '') as AuthIntent | ''
+      if (resume.action === 'REGISTER_EVENT') {
+        this.runAuthIntent('register')
+        return
+      }
+      if (intent === 'share' || intent === 'participants' || intent === 'checkin') {
+        this.runAuthIntent(intent)
+      }
+      return
+    }
+    this.runAuthIntent(pending)
+  },
 
   onLoad(query: Record<string, string>) {
     this.onlineRequested = query.online === '1'
@@ -792,127 +827,41 @@ Page({
   /**
    * journey-review J1-01/J1-02（2026-09-21 终审）：游客点分享 / 参与人数 / 立刻报名先弹
    * 手机号授权弹层；手机号未绑定的会话留在本页等待弹层结果，其余未完成项交给 access 页。
+   * 引导骨架已提取为通用 `createMipGuestLoginFlow`，本页只保留意图来源与就地执行。
    */
   async requireAuthIntent(intent: AuthIntent): Promise<boolean> {
-    if (this.authToken) {
-      this.setData({ loginSheetOpen: true })
-      return false
+    if (!this.authToken) {
+      // 已有挂起会话（弹层等待中）时保留首个意图，与弹层里挂着的 token 保持一致。
+      this.authIntent = intent
     }
-    try {
-      const session = await mipIdentityModule.beginProtectedAction({
-        action: intent === 'register' ? 'REGISTER_EVENT' : 'INTERACT',
-        source: {
-          navigation: 'navigateBack',
-          route: `/${DETAIL_ROUTE}`,
-          query: {
-            eventId: String(this.data.eventId),
-            intent,
-            ...(this.data.inviteRef ? { inviteRef: this.data.inviteRef } : {}),
-          },
+    const result = await this.requireGuestLoginFlow().begin({
+      action: intent === 'register' ? 'REGISTER_EVENT' : 'INTERACT',
+      source: {
+        navigation: 'navigateBack',
+        route: `/${DETAIL_ROUTE}`,
+        query: {
+          eventId: String(this.data.eventId),
+          intent,
+          ...(this.data.inviteRef ? { inviteRef: this.data.inviteRef } : {}),
         },
-      })
-      if (session.decision.ready) {
-        return true
-      }
-      if (session.decision.block !== 'FORBIDDEN'
-        && (!session.snapshot.authenticated || !session.snapshot.phoneBound)) {
-        this.authToken = session.token
-        this.authIntent = intent
-        this.setData({ loginSheetOpen: true, loginSheetAllowSignIn: mipIdentityModule.isSignedOut() })
-        return false
-      }
-      caseNavigateTo({ url: mipAccessPageUrl(session.token) })
-      return false
-    }
-    catch {
+      },
+    })
+    if (result.outcome === 'unavailable') {
       wx.showToast({ title: '身份状态暂时无法确认，请稍后重试。', icon: 'none' })
-      return false
     }
+    return result.outcome === 'ready'
   },
 
-  async onLoginSheetPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
-    const token = this.authToken
-    if (!token || this.data.loginSheetBusy) {
-      return
-    }
-    const code = String(event.detail.code || '')
-    if (!code) {
-      const cancelled = /cancel|deny|denied/i.test(String(event.detail.errMsg || ''))
-      wx.showToast({
-        title: cancelled ? '你已取消手机号授权，可以稍后再完成。' : '手机号授权必须在微信真机完成。',
-        icon: 'none',
-      })
-      return
-    }
-    this.setData({ loginSheetBusy: true })
-    try {
-      const session = await mipIdentityModule.bindWechatPhone(token, code)
-      await this.continueLoginSession(session)
-    }
-    catch (error) {
-      wx.showToast({ title: error instanceof Error ? error.message : '手机号绑定失败，请重试。', icon: 'none' })
-    }
-    finally {
-      this.setData({ loginSheetBusy: false })
-    }
+  onLoginSheetPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
+    return this.requireGuestLoginFlow().phone(event)
   },
 
-  async onLoginSheetSignIn() {
-    const token = this.authToken
-    if (!token || this.data.loginSheetBusy) {
-      return
-    }
-    this.setData({ loginSheetBusy: true })
-    try {
-      const session = await mipIdentityModule.signIn(token)
-      if (session.snapshot.authenticated && !session.snapshot.phoneBound) {
-        this.setData({ loginSheetAllowSignIn: false })
-        return
-      }
-      await this.continueLoginSession(session)
-    }
-    catch {
-      wx.showToast({ title: '登录失败，请稍后重试。', icon: 'none' })
-    }
-    finally {
-      this.setData({ loginSheetBusy: false })
-    }
-  },
-
-  async continueLoginSession(session: Awaited<ReturnType<typeof mipIdentityModule.loadAccess>>) {
-    const token = session.token
-    this.setData({ loginSheetOpen: false })
-    if (session.decision.ready) {
-      await this.finishAuthIntent(token, this.authIntent as AuthIntent)
-      return
-    }
-    if (session.decision.nextRequirement === 'PROFILE') {
-      // journey-review J1-03：新账号完善资料（填写信息），完成或关闭都回本页。
-      caseNavigateTo({ url: `/packages/member/mip-profile/index?token=${encodeURIComponent(token)}` })
-      return
-    }
-    // 协议等剩余项交给 access 页自完成，并经 pendingResume 回本页恢复意图。
-    this.authToken = ''
-    this.authIntent = ''
-    caseNavigateTo({ url: mipAccessPageUrl(token) })
+  onLoginSheetSignIn() {
+    return this.requireGuestLoginFlow().signIn()
   },
 
   onLoginSheetDismiss() {
-    this.abandonAuthIntent()
-  },
-
-  async finishAuthIntent(token: string, intent: AuthIntent) {
-    this.authToken = ''
-    this.authIntent = ''
-    try {
-      await mipIdentityModule.complete(token)
-    }
-    catch {
-      return
-    }
-    // complete() 会为 navigateBack 来源记录 pendingResume；本页就地继续意图，先清掉避免串页。
-    mipIdentityModule.consumePendingResume(DETAIL_ROUTE)
-    this.runAuthIntent(intent)
+    this.requireGuestLoginFlow().dismiss()
   },
 
   runAuthIntent(intent: AuthIntent) {
@@ -932,50 +881,8 @@ Page({
   },
 
   /** 返回本页时恢复授权前的原意图：access 页经 pendingResume 回来，或从「填写信息」回来。 */
-  async resumeAuthIntent() {
-    if (this.data.loginSheetOpen || this.data.loginSheetBusy) {
-      return
-    }
-    const resume = mipIdentityModule.consumePendingResume(DETAIL_ROUTE)
-    if (resume) {
-      const intent = String(resume.source.query?.intent || '') as AuthIntent | ''
-      if (resume.action === 'REGISTER_EVENT') {
-        this.runAuthIntent('register')
-      }
-      else if (intent === 'share' || intent === 'participants' || intent === 'checkin') {
-        this.runAuthIntent(intent)
-      }
-      return
-    }
-    if (!this.authToken) {
-      return
-    }
-    try {
-      const session = await mipIdentityModule.loadAccess(this.authToken)
-      if (session.decision.ready) {
-        const token = this.authToken
-        const intent = this.authIntent as AuthIntent
-        this.authToken = ''
-        this.authIntent = ''
-        await mipIdentityModule.complete(token)
-        mipIdentityModule.consumePendingResume(DETAIL_ROUTE)
-        this.runAuthIntent(intent)
-        return
-      }
-    }
-    catch {
-      // 身份确认失败时按「暂不授权」处理，留在本页。
-    }
-    this.abandonAuthIntent()
-  },
-
-  abandonAuthIntent() {
-    if (this.authToken) {
-      mipIdentityModule.cancel(this.authToken)
-    }
-    this.authToken = ''
-    this.authIntent = ''
-    this.setData({ loginSheetOpen: false, loginSheetBusy: false })
+  resumeAuthIntent() {
+    void this.requireGuestLoginFlow().resume()
   },
 
   openFeedback() {

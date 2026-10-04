@@ -38,7 +38,7 @@ describe('profile page readiness', () => {
   })
 
   it('shares one in-flight load across repeated onShow and refresh calls', () => {
-    const showBody = methodBody('onShow()', 'async loadProfile')
+    const showBody = methodBody('async onShow', 'async loadProfile')
     const loadBody = methodBody('async loadProfile', 'async loadProfileOnce')
     expect(showBody).toContain('if (this.loadPromise)')
     expect(loadBody).toContain('if (this.loadPromise)')
@@ -71,7 +71,7 @@ describe('profile page readiness', () => {
   })
 
   it('throttles ordinary onShow refreshes but forces refresh after protected pages', () => {
-    const showBody = methodBody('onShow()', 'async loadProfile')
+    const showBody = methodBody('async onShow', 'async loadProfile')
     expect(source).toContain('PROFILE_REFRESH_INTERVAL_MS = 30_000')
     expect(showBody).toContain('lastSuccessfulRefreshAt')
     expect(showBody).toContain('refreshOnReturn')

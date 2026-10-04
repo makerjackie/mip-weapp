@@ -239,4 +239,4 @@
   </block>
 </view>
 
-<mip-login-sheet visible="{{loginSheetOpen}}" busy="{{loginSheetBusy}}" allow-sign-in="{{loginSheetAllowSignIn}}" logo-path="{{logoPath}}" bind:phone="onLoginSheetPhone" bind:signin="onLoginSheetSignIn" bind:dismiss="onLoginSheetDismiss" />
+<mip-login-sheet visible="{{loginSheetOpen}}" busy="{{loginSheetBusy}}" restore-first="{{loginSheetRestoreFirst}}" logo-path="{{logoPath}}" bind:phone="onLoginSheetPhone" bind:signin="onLoginSheetSignIn" bind:dismiss="onLoginSheetDismiss" />

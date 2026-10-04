@@ -4,6 +4,7 @@ import type { BadgeCollectionItem } from '../../modules/mip-growth'
 import type {
   AccessRequirement,
   IdentityAccessSnapshot,
+  MipGuestLoginProceedContext,
   ProtectedActionIntent,
   ProtectedActionKey,
 } from '../../modules/mip-identity'
@@ -14,7 +15,7 @@ import { superCaseModule } from '../../modules/mip-cases'
 import { cooperationModule } from '../../modules/mip-cooperation'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipGrowthModule } from '../../modules/mip-growth/client'
-import { evaluateAccess, mipAccessPageUrl } from '../../modules/mip-identity'
+import { createMipGuestLoginFlow, evaluateAccess } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../modules/mip-messaging/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
@@ -117,7 +118,7 @@ Page({
     message: '',
     loginSheetOpen: false,
     loginSheetBusy: false,
-    loginSheetAllowSignIn: false,
+    loginSheetRestoreFirst: false,
   },
   authToken: '',
   resumeDestination: '',
@@ -125,10 +126,39 @@ Page({
   lastSuccessfulRefreshAt: 0,
   refreshOnReturn: false,
   openingActionLock: false,
+  guestLoginFlow: null as ReturnType<typeof createMipGuestLoginFlow> | null,
   // 删除成功后，丢弃此前开始的该类列表读取，防止已删内容重新出现。
   portfolioVersions: { cooperation: 0, cases: 0, opportunities: 0 },
 
-  onShow() {
+  /** 通用游客登录引导（src/modules/mip-identity/guest-login-flow.ts）的本页接入点。 */
+  requireGuestLoginFlow() {
+    if (!this.guestLoginFlow) {
+      this.guestLoginFlow = createMipGuestLoginFlow({
+        route: 'pages/profile/index',
+        getAuthToken: () => this.authToken,
+        setAuthToken: (token: string) => { this.authToken = token },
+        isSheetActive: () => this.data.loginSheetOpen || this.data.loginSheetBusy,
+        setSheetState: state => this.setData(state),
+        proceed: context => this.proceedGuestLogin(context),
+        noticeUnavailable: (message: string) => wx.showToast({ title: message, icon: 'none' }),
+        onAbandon: () => this.loadProfile({ force: true }),
+      }, mipIdentityModule)
+    }
+    return this.guestLoginFlow
+  },
+
+  /** 身份就绪后继续登录前的原目的地；无目的地时按「回到我的页」强制刷新。 */
+  proceedGuestLogin({ resume }: MipGuestLoginProceedContext) {
+    const destination = resume?.source.query?.destination || this.resumeDestination
+    this.resumeDestination = ''
+    if (destination) {
+      caseNavigateTo({ url: destination })
+      return
+    }
+    return this.loadProfile({ force: true })
+  },
+
+  async onShow() {
     syncCaseNavigation(this, 'pages/profile/index')
     this.openingActionLock = false
     if (this.data.openingAction) {
@@ -141,12 +171,7 @@ Page({
       void this.resumeLogin()
       return
     }
-    const resume = mipIdentityModule.consumePendingResume('pages/profile/index')
-    const resumeDestination = resume?.source.query?.destination || this.resumeDestination
-    if (resume && resumeDestination) {
-      const destination = resumeDestination
-      this.resumeDestination = ''
-      caseNavigateTo({ url: destination })
+    if (await this.requireGuestLoginFlow().resume() === 'resumed') {
       return
     }
     this.resumeDestination = ''
@@ -650,6 +675,7 @@ Page({
     }
   },
 
+  /** 受保护入口：引导骨架在通用 guest-login-flow，本页保留打开锁与快路径语义。 */
   async openProtected(
     destination: string,
     action: ProtectedActionKey,
@@ -664,137 +690,67 @@ Page({
     this.setData({ openingAction })
     this.refreshOnReturn = true
     this.resumeDestination = destination
-    try {
-      const intent: ProtectedActionIntent = {
-        action,
-        requiredCapability,
-        requirements: this.data.authenticated ? requirements : ['AUTHENTICATED', 'AGREEMENTS', 'PHONE', 'PROFILE'],
-        source: { navigation: 'navigateBack', route: '/pages/profile/index', query: { destination } },
-      }
-      const accessSnapshotFresh = this.lastSuccessfulRefreshAt > 0
-        && Date.now() - this.lastSuccessfulRefreshAt < PROFILE_REFRESH_INTERVAL_MS
-      if (openingAction === 'cooperation-editor' && accessSnapshotFresh) {
-        const cached = mipIdentityModule.peekSnapshot()
-        if (cached && evaluateAccess(cached, intent).ready) {
-          this.resumeDestination = ''
-          caseNavigateTo({ url: destination })
-          return
-        }
-      }
-      const session = await mipIdentityModule.beginProtectedAction(intent)
-      if (session.decision.ready) {
-        this.resumeDestination = ''
-        this.openingActionLock = false
-        this.setData({ openingAction: '' })
-        if (destination) {
-          caseNavigateTo({ url: destination })
-        }
-        else {
-          await this.loadProfile({ force: true })
-        }
-        return
-      }
-      if (session.decision.block !== 'FORBIDDEN'
-        && (!session.snapshot.authenticated || !session.snapshot.phoneBound)) {
-        this.authToken = session.token
-        this.openingActionLock = false
-        this.setData({ openingAction: '', loginSheetOpen: true, loginSheetAllowSignIn: mipIdentityModule.isSignedOut() })
-        return
-      }
-      caseNavigateTo({ url: mipAccessPageUrl(session.token) })
+    const intent: ProtectedActionIntent = {
+      action,
+      requiredCapability,
+      requirements: this.data.authenticated ? requirements : ['AUTHENTICATED', 'AGREEMENTS', 'PHONE', 'PROFILE'],
+      source: { navigation: 'navigateBack', route: '/pages/profile/index', query: { destination } },
     }
-    catch {
+    const accessSnapshotFresh = this.lastSuccessfulRefreshAt > 0
+      && Date.now() - this.lastSuccessfulRefreshAt < PROFILE_REFRESH_INTERVAL_MS
+    if (openingAction === 'cooperation-editor' && accessSnapshotFresh) {
+      const cached = mipIdentityModule.peekSnapshot()
+      if (cached && evaluateAccess(cached, intent).ready) {
+        this.resumeDestination = ''
+        caseNavigateTo({ url: destination })
+        return
+      }
+    }
+    const result = await this.requireGuestLoginFlow().begin(intent)
+    if (result.outcome === 'ready') {
+      this.resumeDestination = ''
+      this.openingActionLock = false
+      this.setData({ openingAction: '' })
+      if (destination) {
+        caseNavigateTo({ url: destination })
+      }
+      else {
+        await this.loadProfile({ force: true })
+      }
+      return
+    }
+    if (result.outcome === 'sheet') {
+      this.openingActionLock = false
+      this.setData({ openingAction: '' })
+      return
+    }
+    if (result.outcome === 'unavailable') {
       this.openingActionLock = false
       this.resumeDestination = ''
       this.setData({ openingAction: '', message: '身份状态暂时无法确认，请稍后重试。' })
     }
   },
 
-  async onLoginSheetPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
-    if (!this.authToken || this.data.loginSheetBusy) {
-      return
-    }
-    const code = String(event.detail.code || '')
-    if (!code) {
-      wx.showToast({
-        title: /cancel|deny|denied/i.test(String(event.detail.errMsg || ''))
-          ? '你已取消手机号授权，可以稍后再完成。'
-          : '手机号授权必须在微信真机完成。',
-        icon: 'none',
-      })
-      return
-    }
-    await this.submitLogin(() => mipIdentityModule.bindWechatPhone(this.authToken, code))
+  onLoginSheetPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
+    return this.requireGuestLoginFlow().phone(event)
   },
 
-  async onLoginSheetSignIn() {
-    if (!this.authToken || this.data.loginSheetBusy) {
-      return
-    }
-    await this.submitLogin(() => mipIdentityModule.signIn(this.authToken))
+  onLoginSheetSignIn() {
+    return this.requireGuestLoginFlow().signIn()
   },
 
-  async submitLogin(submit: () => ReturnType<typeof mipIdentityModule.loadAccess>) {
-    this.setData({ loginSheetBusy: true })
-    try {
-      const session = await submit()
-      if (session.snapshot.authenticated && !session.snapshot.phoneBound) {
-        this.setData({ loginSheetAllowSignIn: false })
-        return
-      }
-      this.setData({ loginSheetOpen: false, loginSheetBusy: false })
-      if (session.decision.ready) {
-        await this.resumeLogin()
-      }
-      else if (session.decision.nextRequirement === 'PROFILE') {
-        caseNavigateTo({ url: `/packages/member/mip-profile/index?token=${encodeURIComponent(session.token)}` })
-      }
-      else {
-        this.authToken = ''
-        caseNavigateTo({ url: mipAccessPageUrl(session.token) })
-      }
-    }
-    catch (error) {
-      wx.showToast({ title: error instanceof Error ? error.message : '登录失败，请稍后重试。', icon: 'none' })
-    }
-    finally {
-      this.setData({ loginSheetBusy: false })
-    }
-  },
-
-  async resumeLogin() {
-    try {
-      const session = await mipIdentityModule.loadAccess(this.authToken)
-      if (session.decision.ready) {
-        await mipIdentityModule.complete(this.authToken)
-        mipIdentityModule.consumePendingResume('pages/profile/index')
-        const destination = this.resumeDestination
-        this.authToken = ''
-        this.resumeDestination = ''
-        if (destination) {
-          caseNavigateTo({ url: destination })
-          return
-        }
-      }
-    }
-    catch {
-      wx.showToast({ title: '身份状态暂时无法确认，请稍后重试。', icon: 'none' })
-    }
-    this.onLoginSheetDismiss()
-    await this.loadProfile({ force: true })
+  resumeLogin() {
+    return this.requireGuestLoginFlow().resume()
   },
 
   onLoginSheetDismiss() {
     if (this.data.loginSheetBusy) {
       return
     }
-    if (this.authToken) {
-      mipIdentityModule.cancel(this.authToken)
-    }
-    this.authToken = ''
+    this.requireGuestLoginFlow().dismiss()
     this.resumeDestination = ''
     this.openingActionLock = false
-    this.setData({ loginSheetOpen: false, openingAction: '' })
+    this.setData({ openingAction: '' })
   },
 
   openMembership() { caseNavigateTo({ url: '/pages/membership/index' }) },

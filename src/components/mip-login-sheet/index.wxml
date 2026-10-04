@@ -1,5 +1,8 @@
-<!-- journey-review login-sheet（2026-09-21 终审）：游客触发需身份操作时的手机号授权弹层。
-     手机号是唯一弹窗授权项；昵称/头像由用户在「编辑信息」主动填写。 -->
+<!-- journey-review login-sheet（2026-09-21 终审；MIW-20 合并双按钮为单按钮）：
+     游客触发需身份操作时的手机号授权弹层。手机号是唯一弹窗授权项；
+     昵称/头像由用户在「编辑信息」主动填写。
+     restore-first：退出过的老账号点主按钮先按 OpenID 恢复会话（已绑手机号直接完成登录、
+     不弹原生授权）；服务端确认未绑后由页面切回手机号授权形态。 -->
 <view wx:if="{{visible}}" class="mip-login-sheet__scrim" bind:tap="onDismiss"></view>
 <view wx:if="{{visible}}" class="mip-login-sheet" aria-role="dialog" aria-modal="{{true}}" aria-label="授权手机号">
   <view class="mip-login-sheet__grab"></view>
@@ -9,15 +12,23 @@
   <view class="mip-login-sheet__title">授权手机号</view>
   <!-- subtitle 传入时整体覆盖副标题（J5-02 换绑变体，\n 换行）；缺省保持终审文案逐字不变。 -->
   <view wx:if="{{subtitle}}" class="mip-login-sheet__sub">{{subtitle}}</view>
+  <view wx:elif="{{restoreFirst}}" class="mip-login-sheet__sub">将使用你当前的微信账号恢复原有身份；未绑定手机号时会再向你授权</view>
   <view wx:else class="mip-login-sheet__sub">将获取你微信绑定的手机号，用于确认身份
 昵称与头像无需授权，在「编辑信息」中由你主动填写</view>
   <button
+    wx:if="{{restoreFirst}}"
+    id="mip-login-sheet-auth"
+    disabled="{{busy}}"
+    class="mip-login-sheet__btn"
+    bind:tap="onSignIn"
+  >{{busy ? '正在登录' : '使用当前微信账号登录'}}</button>
+  <button
+    wx:else
     id="mip-login-sheet-auth"
     open-type="getPhoneNumber"
     disabled="{{busy}}"
     class="mip-login-sheet__btn"
     bind:getphonenumber="onPhone"
   >{{busy ? '正在授权' : '微信手机号授权'}}</button>
-  <button wx:if="{{allowSignIn}}" disabled="{{busy}}" class="mip-login-sheet__signin" bind:tap="onSignIn">使用当前微信账号重新登录</button>
   <view id="mip-login-sheet-dismiss" class="mip-login-sheet__ghost" aria-role="button" aria-disabled="{{busy}}" bind:tap="onDismiss">暂不授权，返回原页面</view>
 </view>

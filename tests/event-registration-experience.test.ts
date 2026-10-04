@@ -377,14 +377,13 @@ describe('event registration experience', () => {
     expect(sheetLogic).toContain('triggerEvent(\'phone\', event.detail)')
     expect(sheetLogic).toContain('triggerEvent(\'dismiss\')')
 
-    // 三个游客触发点统一走 beginProtectedAction，手机号未绑定先弹层。
+    // 三个游客触发点统一走通用 guest-login-flow，页面只保留意图来源与就地执行。
     expect(detail).toContain('async requireAuthIntent(intent: AuthIntent): Promise<boolean>')
     expect(detail).toContain('intent === \'register\' ? \'REGISTER_EVENT\' : \'INTERACT\'')
-    expect(detail).toContain('!session.snapshot.authenticated || !session.snapshot.phoneBound')
-    expect(detail).toContain('mipIdentityModule.bindWechatPhone(token, code)')
+    expect(detail).toContain('requireGuestLoginFlow().begin(')
+    expect(detail).toContain('requireGuestLoginFlow().phone(event)')
+    expect(detail).toContain('requireGuestLoginFlow().signIn()')
     // 新账号走「填写信息」（mip-profile），完成或关闭都回本页并恢复原意图。
-    expect(detail).toContain('mip-profile/index?token=')
-    expect(detail).toContain('mipIdentityModule.consumePendingResume(DETAIL_ROUTE)')
     expect(detail).toContain('this.resumeAuthIntent()')
   })
 
