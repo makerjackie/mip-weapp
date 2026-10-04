@@ -113,6 +113,35 @@ describe('MIP public event detail', () => {
     }
   })
 
+  it('exposes the admin-configured route-guide link only when it is a safe https url', async () => {
+    const load = async overrides => getEvent(eventDatabase(eventRow({
+      event_mode: 'OFFLINE',
+      online_url: null,
+      ...overrides,
+    })), {
+      appId: 'wx-app',
+      userId: null,
+      eventId: 'event-1',
+      now: new Date('2026-08-24T00:00:00.000Z'),
+      tokenSecret: '',
+      profileRefSecret: 'public-organizer-profile-ref-pepper-more-than-32-characters',
+    })
+    const configured = await load({ guide_url: 'https://mp.weixin.qq.com/s/route-guide' })
+    assert.equal(configured.guideUrl, 'https://mp.weixin.qq.com/s/route-guide')
+    assert.equal(configured.onlineAccessAvailable, false)
+    assert.equal('onlineUrl' in configured, false)
+    const unconfigured = await load({ guide_url: null })
+    assert.equal('guideUrl' in unconfigured, false)
+    for (const guide_url of [
+      'http://mp.weixin.qq.com/s/route-guide',
+      'https://user:pass@example.test/route',
+      'https://example.test/has space',
+      'not-a-url',
+    ]) {
+      assert.equal('guideUrl' in await load({ guide_url }), false)
+    }
+  })
+
   it('projects a server-authorized refund retry without exposing manual-review refunds', async () => {
     const base = {
       registration_status: 'CANCELLATION_PENDING',

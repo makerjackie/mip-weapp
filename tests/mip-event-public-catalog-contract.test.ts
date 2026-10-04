@@ -90,6 +90,17 @@ describe('MIP public event catalog and recap client contract', () => {
     expect(parseMipEventDetail(eventDetail())).toEqual(eventDetail())
   })
 
+  it('keeps the optional route-guide link only when it is a full https url', () => {
+    // MIW-21: 未配置指引时详情不带 guideUrl；配置后原样透传给详情页。
+    const guideUrl = 'https://mp.weixin.qq.com/s/route-guide'
+    expect(parseMipEventDetail({ ...eventDetail(), guideUrl })).toEqual({ ...eventDetail(), guideUrl })
+    expect(parseMipEventDetail(eventDetail())).not.toHaveProperty('guideUrl')
+    for (const invalid of ['http://mp.weixin.qq.com/s/route-guide', '']) {
+      expect(() => parseMipEventDetail({ ...eventDetail(), guideUrl: invalid }))
+        .toThrowError(expect.objectContaining({ code: 'INVALID_RESPONSE' }))
+    }
+  })
+
   it('preserves registered DRAFT and UNPUBLISHED activity states while bounding feeds to 30 items', () => {
     for (const status of ['DRAFT', 'UNPUBLISHED'] as const) {
       expect(parseMipEventListItem({ ...eventListItem(), status }).status).toBe(status)

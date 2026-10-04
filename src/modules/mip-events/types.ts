@@ -159,6 +159,8 @@ export interface MipEventDetail extends MipEventListItem {
   longitude?: number
   onlineAccessAvailable: boolean
   onlineUrl?: string
+  /** 后台配置的路线指引网页/公众号文章；未配置时详情页隐藏指引按钮。 */
+  guideUrl?: string
   registrationPolicy: EventRegistrationPolicy
   registrationOpensAt?: string
   registrationDeadline?: string

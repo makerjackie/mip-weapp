@@ -1274,6 +1274,18 @@
       "altersTables": [
         "mip_city_branches"
       ]
+    },
+    {
+      "version": "20261004010000",
+      "name": "mip_event_guide_url",
+      "sql": "database/mysql/mip/096_event_guide_url.sql",
+      "sqlSha256": "932efecf26577cc2ee70464a20a1bc55d3efbc841a8f7dbff826f5c77642f615",
+      "rollback": "database/mysql/mip/rollback/096_event_guide_url.sql",
+      "rollbackSha256": "78daef517578c2a6b2b6f4c2defdc283acef2feb33cb6008508d766b5cc7a18c",
+      "createsTables": [],
+      "altersTables": [
+        "mip_events"
+      ]
     }
   ]
 }

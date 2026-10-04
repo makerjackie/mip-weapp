@@ -62,7 +62,7 @@ describe('event mutation form contracts', () => {
         accessType: 'FREE', registrationPolicy: 'AUTO', albumEnabled: true, albumSubmissionPolicy: 'REVIEW',
         startsAt: '2030-03-14T10:00:00+08:00', endsAt: '2030-03-14T12:00:00+08:00', registrationDeadline: null,
         cancellationDeadline: null, venueName: '福田会场', address: '福华三路', cityName: '深圳', latitude: null,
-        longitude: null, onlineUrl: null, capacity: 30, waitlistEnabled: false, priceCents: 0, registrationSchema: [],
+        longitude: null, onlineUrl: null, guideUrl: null, capacity: 30, waitlistEnabled: false, priceCents: 0, registrationSchema: [],
       },
     })
     const updated = buildEventMutationInput('mip.admin.events.save', {
@@ -72,6 +72,17 @@ describe('event mutation form contracts', () => {
     assert.equal(updated.eventId, 'event-1')
     assert.equal(updated.expectedVersion, 4)
     assert.equal((updated.draft as Record<string, unknown>).coverAssetId, '550e8400-e29b-41d4-a716-446655440000')
+  })
+
+  it('keeps the optional route-guide link only when it is a valid https url', () => {
+    // MIW-21: 指引按钮由后台配置的路线指引链接驱动；未配置时不提交该字段。
+    const guideDraft = (values: Record<string, unknown>) =>
+      (buildEventMutationInput('mip.admin.events.save', { ...baseEvent, ...values }) as { draft: Record<string, unknown> } | null)?.draft
+    assert.equal(guideDraft({ guideUrl: 'https://mp.weixin.qq.com/s/abc123' })?.guideUrl, 'https://mp.weixin.qq.com/s/abc123')
+    assert.equal(guideDraft({ guideUrl: '   ' })?.guideUrl, null)
+    assert.equal(guideDraft({})?.guideUrl, null)
+    assert.equal(buildEventMutationInput('mip.admin.events.save', { ...baseEvent, guideUrl: 'http://mp.weixin.qq.com/s/abc123' }), null)
+    assert.equal(buildEventMutationInput('mip.admin.events.save', { ...baseEvent, guideUrl: 'https://example.com/a link' }), null)
   })
 
   it('builds review, check-in, undo, policy, tags, and catalog inputs exactly', () => {

@@ -42,9 +42,9 @@ function lifecycleDatabase() {
         state.event = {
           id: params[0], app_id: params[1], scope_type: params[2], branch_id: params[3],
           title: params[5], status: 'DRAFT', content_safety_status: params[16], starts_at: params[17],
-          ends_at: params[18], registration_schema_json: params[30], form_version: 1,
+          ends_at: params[18], registration_schema_json: params[31], form_version: 1,
           version: 1, access_type: params[12], registration_policy: params[13],
-          capacity: params[27], waitlist_enabled: params[28],
+          capacity: params[28], waitlist_enabled: params[29],
         }
       }
       else if (text.includes('UPDATE mip_events SET status =')) {

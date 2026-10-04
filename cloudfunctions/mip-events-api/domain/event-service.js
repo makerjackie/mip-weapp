@@ -80,6 +80,27 @@ function sha256(value) {
   return createHash('sha256').update(value).digest('hex')
 }
 
+// Route-guide links are admin-configured article/web pages, independent of the
+// event mode; they are only exposed when they are safe to open in a web-view.
+function publicGuideUrl(row) {
+  if (typeof row.guide_url !== 'string') {
+    return undefined
+  }
+  const value = row.guide_url.trim()
+  if (!value || /\s/.test(value)) {
+    return undefined
+  }
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'https:' && parsed.hostname && !parsed.username && !parsed.password
+      ? value
+      : undefined
+  }
+  catch {
+    return undefined
+  }
+}
+
 function parseCheckInToken(value) {
   const token = typeof value === 'string' ? value.trim() : ''
   const short = /^s1\.([A-Za-z0-9_-]{11})\.([A-Za-z0-9_-]{11})$/.exec(token)
@@ -1187,6 +1208,7 @@ async function getEvent(db, {
   const deadline = row.registration_deadline ? new Date(row.registration_deadline).getTime() : new Date(row.starts_at).getTime()
   const activeStatus = activeRegistrationStatuses.has(row.registration_status)
   const onlineUrl = registeredOnlineUrl(row)
+  const guideUrl = publicGuideUrl(row)
   return {
     ...publicEventRow(row, previews.get(eventId) || [], metadata.get(eventId)),
     description: row.description,
@@ -1200,6 +1222,7 @@ async function getEvent(db, {
     longitude: row.longitude === null ? undefined : Number(row.longitude),
     onlineAccessAvailable: Boolean(onlineUrl),
     ...(onlineUrl ? { onlineUrl } : {}),
+    ...(guideUrl ? { guideUrl } : {}),
     registrationPolicy: row.registration_policy,
     registrationOpensAt: row.registration_opens_at ? iso(row.registration_opens_at) : undefined,
     registrationDeadline: row.registration_deadline ? iso(row.registration_deadline) : undefined,

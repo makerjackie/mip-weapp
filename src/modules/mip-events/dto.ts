@@ -49,6 +49,7 @@ const eventDetailKeys = [
   'longitude',
   'onlineAccessAvailable',
   'onlineUrl',
+  'guideUrl',
   'registrationPolicy',
   'registrationOpensAt',
   'registrationDeadline',
@@ -336,6 +337,7 @@ export function parseMipEventDetail(value: unknown): MipEventDetail {
     || typeof value.onlineAccessAvailable !== 'boolean'
     || !(value.onlineUrl === undefined || (boundedString(value.onlineUrl, 4096) && /^https:\/\//i.test(value.onlineUrl)))
     || (value.onlineAccessAvailable !== (typeof value.onlineUrl === 'string'))
+    || !(value.guideUrl === undefined || (boundedString(value.guideUrl, 4096) && /^https:\/\//i.test(value.guideUrl)))
     || !['AUTO', 'APPROVAL'].includes(String(value.registrationPolicy))
     || !optionalDate(value.registrationOpensAt)
     || !optionalDate(value.registrationDeadline)

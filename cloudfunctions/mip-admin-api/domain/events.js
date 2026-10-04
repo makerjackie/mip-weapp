@@ -719,6 +719,8 @@ function normalizeEventDraft(value) {
   if (accessType !== 'PAID' && priceCents !== 0) throw new AdminError('VALIDATION_FAILED', '免费活动金额必须为零')
   const venueName = text(value.venueName, 160)
   const onlineUrl = text(value.onlineUrl, 1024)
+  const guideUrl = text(value.guideUrl, 1024)
+  if (guideUrl && !/^https:\/\/\S+$/.test(guideUrl)) throw new AdminError('VALIDATION_FAILED', '路线指引链接必须是以 https:// 开头的完整链接')
   const latitude = coordinate(value.latitude, -90, 90, '纬度')
   const longitude = coordinate(value.longitude, -180, 180, '经度')
   if ((latitude === null) !== (longitude === null)) {
@@ -778,6 +780,7 @@ function normalizeEventDraft(value) {
     latitude,
     longitude,
     onlineUrl: eventMode === 'OFFLINE' ? null : onlineUrl,
+    guideUrl: guideUrl || null,
     capacity,
     waitlistEnabled,
     priceCents,

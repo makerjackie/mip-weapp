@@ -15,6 +15,7 @@ function eventCopyDraft(source, media, parseJson, tagIds = []) {
     albumSubmissionPolicy: source.album_submission_policy,
     venueName: source.venue_name || '', address: source.address || '', cityName: source.city_name || '',
     latitude: source.latitude ?? '', longitude: source.longitude ?? '', onlineUrl: source.online_url || '',
+    guideUrl: source.guide_url || '',
     capacity: source.capacity ?? '', waitlistEnabled: Number(source.waitlist_enabled) === 1,
     priceCents: Number(source.price_cents), registrationSchema: parseJson(source.registration_schema_json, []),
   }
