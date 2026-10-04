@@ -9,7 +9,7 @@ import type {
 import { presentEventCard } from '../../components/mip-activity-card/model'
 import { mipOperationsConfig } from '../../config/mip-operations'
 import { mipBannerModule } from '../../modules/mip-banners'
-import { resolvePrimaryBranchCity } from '../../modules/mip-events'
+import { eventInvitationPath, resolvePrimaryBranchCity } from '../../modules/mip-events'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
@@ -52,6 +52,7 @@ Page({
   citySelectionInitialized: false,
   cityManuallySelected: false,
   cityInitialization: null as Promise<void> | null,
+  shareInviteRequests: new Map<string, Promise<string>>(),
 
   onShow() {
     syncCaseNavigation(this, 'pages/events/index')
@@ -347,12 +348,38 @@ Page({
   onShareAppMessage(event: WechatMiniprogram.Page.IShareAppMessageOption) {
     const eventId = String(event.target?.dataset?.eventId || '')
     const item = this.data.events.find(current => current.id === eventId)
-    return {
+    const content = {
       title: item?.title || 'MIP 活动',
-      path: eventId
-        ? `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}`
-        : '/pages/events/index',
+      path: eventId ? eventInvitationPath(eventId) : '/pages/events/index',
       imageUrl: item?.coverUrl?.startsWith('cloud://') ? undefined : item?.coverUrl,
     }
+    if (!eventId) {
+      return content
+    }
+    // MIW-23：卡片按钮转发带上邀请 ref，服务端凭 openid 归属邀请人；游客或生成失败回落纯路径。
+    return {
+      ...content,
+      promise: this.ensureEventInviteRef(eventId).then((inviteRef: string) => ({
+        ...content,
+        ...(inviteRef ? { path: eventInvitationPath(eventId, inviteRef) } : {}),
+      })),
+    }
+  },
+
+  // Page 自定义属性在多实例间按引用共享，按 eventId 键控后跨实例复用也是同活动同用户的合法 ref。
+  ensureEventInviteRef(eventId: string): Promise<string> {
+    const pending = this.shareInviteRequests.get(eventId)
+    if (pending) {
+      return pending
+    }
+    const request = mipEventsModule.createInvitation(eventId as EventId).then(
+      result => result.inviteRef,
+      () => {
+        this.shareInviteRequests.delete(eventId)
+        return ''
+      },
+    )
+    this.shareInviteRequests.set(eventId, request)
+    return request
   },
 })
