@@ -206,6 +206,8 @@ Page({
   authIntent: '' as AuthIntent | '',
   checkInAuthRetryAttempted: false,
   invitationUrl: null as { eventId: string, url: string, validUntil: string } | null,
+  // Page 自定义属性在多实例间按引用共享，这里带 eventId 标记，防止把别的活动实例的 ref 用到当前转发。
+  shareInviteRequest: null as { eventId: EventId, promise: Promise<string> } | null,
 
   onLoad(query: Record<string, string>) {
     this.onlineRequested = query.online === '1'
@@ -459,15 +461,57 @@ Page({
     }
     this.setData({ invitationLoading: true })
     try {
-      const result = await mipEventsModule.createInvitation(this.data.eventId)
-      this.setData({ outgoingInviteRef: result.inviteRef })
-    }
-    catch {
-      this.setData({ outgoingInviteRef: '', message: '邀请信息准备失败，请重新打开分享重试。' })
+      const inviteRef = await this.ensureOutgoingInviteRef()
+      if (!inviteRef) {
+        this.setData({ message: '邀请信息准备失败，请重新打开分享重试。' })
+      }
     }
     finally {
       this.setData({ invitationLoading: false })
     }
+  },
+
+  buildShareContent(inviteRef: string) {
+    return {
+      title: this.data.event?.title || 'MIP 活动',
+      path: eventInvitationPath(this.data.eventId, inviteRef),
+      imageUrl: this.data.event?.coverUrl || brand.logoPath,
+    }
+  },
+
+  // MIW-23：右上角原生转发无法过 J1-01 登录门禁。服务端凭 openid 认人，任何 ACTIVE
+  // 用户（含已退出登录的会员）都能补建邀请链接，让转发带上归属；失败回落无 ref 路径。
+  ensureOutgoingInviteRef() {
+    const eventId = this.data.eventId
+    if (!eventId) {
+      return Promise.resolve('')
+    }
+    if (this.data.outgoingInviteRef) {
+      return Promise.resolve(this.data.outgoingInviteRef)
+    }
+    const pending = this.shareInviteRequest
+    if (pending && pending.eventId === eventId) {
+      return pending.promise
+    }
+    const promise = mipEventsModule.createInvitation(eventId).then(
+      (result) => {
+        if (this.shareInviteRequest?.promise === promise) {
+          this.shareInviteRequest = null
+        }
+        if (this.data.eventId === eventId) {
+          this.setData({ outgoingInviteRef: result.inviteRef })
+        }
+        return result.inviteRef
+      },
+      () => {
+        if (this.shareInviteRequest?.promise === promise) {
+          this.shareInviteRequest = null
+        }
+        return ''
+      },
+    )
+    this.shareInviteRequest = { eventId, promise }
+    return promise
   },
 
   openShare() {
@@ -1188,10 +1232,15 @@ Page({
 
   onShareAppMessage() {
     this.closeShare()
+    if (this.data.outgoingInviteRef) {
+      return this.buildShareContent(this.data.outgoingInviteRef)
+    }
+    const fallback = this.buildShareContent('')
     return {
-      title: this.data.event?.title || 'MIP 活动',
-      path: eventInvitationPath(this.data.eventId, this.data.outgoingInviteRef),
-      imageUrl: this.data.event?.coverUrl || brand.logoPath,
+      ...fallback,
+      promise: this.ensureOutgoingInviteRef().then((inviteRef: string) => (
+        this.buildShareContent(inviteRef || this.data.outgoingInviteRef)
+      )),
     }
   },
 })
