@@ -147,7 +147,7 @@
         <text class="min-w-0 flex-1 truncate text-[24rpx] {{industryOptions[industryIndex].id ? 'text-ink' : 'text-muted'}}">{{industryOptions[industryIndex].id ? industryOptions[industryIndex].label : '请选择代表的行业标签'}}</text>
         <mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-muted)" />
       </view>
-      <view wx:if="{{industryCatalogExpanded}}" class="border-t border-line px-3 py-3"><mip-catalog-selector groups="{{industryGroups}}" selected-ids="{{selectedIndustryIds}}" multiple="{{false}}" clear-label="未选择" bind:change="changeIndustry" /></view>
+      <view wx:if="{{industryCatalogExpanded}}" class="border-t border-line px-3 py-3"><mip-industry-selector groups="{{industryGroups}}" selected-ids="{{selectedIndustryIds}}" multiple="{{false}}" clear-label="未选择" bind:change="changeIndustry" /></view>
     </view>
 
     <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">

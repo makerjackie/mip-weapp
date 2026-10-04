@@ -103,9 +103,8 @@ describe('shared catalog selector', () => {
     }])
   })
 
-  it('reuses the grouped selector for profile, people, and opportunity filters', () => {
+  it('reuses the grouped selector for people and opportunity branch filters', () => {
     const pages = [
-      'src/packages/member/mip-profile',
       'src/packages/member/mip-people',
       'src/pages/opportunities',
     ]

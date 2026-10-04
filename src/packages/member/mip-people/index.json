@@ -9,6 +9,7 @@
     "mip-empty-state": "/components/mip-empty-state/index",
     "app-page-exit": "/components/page-exit/index",
     "mip-catalog-selector": "/components/catalog-selector/index",
+    "mip-industry-selector": "/components/mip-industry-selector/index",
     "mip-talent-card": "/components/talent-card/index",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-icon": "/components/mip-icon/index"

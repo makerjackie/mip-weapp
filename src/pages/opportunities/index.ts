@@ -9,7 +9,6 @@ import type {
   OpportunityLocationType,
   OpportunitySummary,
 } from '../../modules/mip-opportunities'
-import { catalogSelectorView } from '../../components/catalog-selector/model'
 import { brand } from '../../config/brand'
 import { cooperationRoles } from '../../config/mip-catalogs'
 import { mipBannerModule } from '../../modules/mip-banners'
@@ -36,7 +35,6 @@ interface CooperationTalentView extends Omit<CooperationTalentSummary, 'cards'> 
   primaryTargetSummary: string
 }
 interface TagView { id: string, label: string, selected: boolean, popular?: boolean }
-interface IndustryGroupView { id: string, label: string, options: TagView[] }
 interface CityOption { id: string, label: string, popular?: boolean }
 interface AppliedFilterChip { key: string, label: string }
 type LocationPreset = 'ALL' | OpportunityLocationType
@@ -201,7 +199,6 @@ Page({
     keyword: '',
     filterOpen: false,
     industryPickerOpen: false,
-    expandedIndustryGroupId: '',
     moreFiltersOpen: false,
     /** journey-review J3-01：导航栏下方的运营 Banner 位（后台可配置，未配置不占位）。 */
     banners: [] as MipPublicBanner[],
@@ -228,8 +225,6 @@ Page({
     draftMaxAmountYuan: '',
     selectedMinAmountCents: undefined as number | undefined,
     selectedMaxAmountCents: undefined as number | undefined,
-    industryGroups: [] as IndustryGroupView[],
-    popularIndustryOptions: [] as TagView[],
     abilityOptions: [] as TagView[],
     hasAppliedFilters: false,
     locationFilterLabel: '不限',
@@ -327,7 +322,6 @@ Page({
     try {
       const catalog = await opportunityModule.getCatalogs()
       const cityOptions = cityOptionsFor(this.data.mode, catalog)
-      const industryView = catalogSelectorView(catalog.industryGroups, this.data.draftIndustryTagIds)
       const draftCityId = this.data.mode === 'cooperation'
         ? this.data.draftCooperationBranchId
         : this.data.draftOpportunityCityTagId
@@ -337,8 +331,6 @@ Page({
         cityGroups: cityGroupsFor(this.data.mode, cityOptions),
         citySelectionIds: draftCityId ? [draftCityId] : [],
         cityIndex: Math.max(0, cityOptions.findIndex(item => item.id === draftCityId)),
-        industryGroups: industryView.viewGroups,
-        popularIndustryOptions: industryView.popularOptions,
         abilityOptions: catalog.abilityTags.map(item => ({
           id: item.id,
           label: item.label,
@@ -495,7 +487,6 @@ Page({
     const cityId = mode === 'cooperation'
       ? this.data.selectedCooperationBranchId
       : this.data.selectedCityTagId
-    const industryView = catalogSelectorView(this.data.catalog.industryGroups, this.data.selectedIndustryTagIds)
     const selectedLocationPreset = locationPreset(this.data.selectedLocationTypes)
     const hasAppliedFilters = Boolean(
       this.data.keyword
@@ -525,15 +516,12 @@ Page({
       draftLocationPreset: selectedLocationPreset,
       draftMinAmountYuan: this.data.selectedMinAmountCents === undefined ? '' : yuanFromCents(this.data.selectedMinAmountCents),
       draftMaxAmountYuan: this.data.selectedMaxAmountCents === undefined ? '' : yuanFromCents(this.data.selectedMaxAmountCents),
-      industryGroups: industryView.viewGroups,
-      popularIndustryOptions: industryView.popularOptions,
       abilityOptions: this.data.abilityOptions.map(item => ({
         ...item,
         selected: this.data.selectedAbilityTagIds.includes(item.id),
       })),
       filterOpen: false,
       industryPickerOpen: false,
-      expandedIndustryGroupId: '',
       moreFiltersOpen: false,
       hasAppliedFilters,
       nextCursor: '',
@@ -606,13 +594,10 @@ Page({
         })
   },
 
-  changeIndustry(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
-    const draftIndustryTagIds = event.detail.selectedIds.slice(0, 8)
-    const industryView = catalogSelectorView(this.data.catalog.industryGroups, draftIndustryTagIds)
+  changeIndustry(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[], limited?: boolean }>) {
     this.setData({
-      draftIndustryTagIds,
-      industryGroups: industryView.viewGroups,
-      popularIndustryOptions: industryView.popularOptions,
+      draftIndustryTagIds: event.detail.selectedIds.slice(0, 8),
+      message: event.detail.limited ? '行业最多选择 8 项。' : '',
     })
   },
 
@@ -625,12 +610,10 @@ Page({
       const cityId = this.data.mode === 'cooperation'
         ? this.data.selectedCooperationBranchId
         : this.data.selectedCityTagId
-      const industryView = catalogSelectorView(this.data.catalog.industryGroups, this.data.selectedIndustryTagIds)
       const selectedLocationPreset = locationPreset(this.data.selectedLocationTypes)
       this.setData({
         filterOpen: true,
         industryPickerOpen: false,
-        expandedIndustryGroupId: '',
         moreFiltersOpen: Boolean(
           this.data.selectedAbilityTagIds.length
           || this.data.selectedMinAmountCents !== undefined
@@ -647,8 +630,6 @@ Page({
         draftMaxAmountYuan: this.data.selectedMaxAmountCents === undefined ? '' : yuanFromCents(this.data.selectedMaxAmountCents),
         cityIndex: Math.max(0, this.data.cityOptions.findIndex(item => item.id === cityId)),
         citySelectionIds: cityId ? [cityId] : [],
-        industryGroups: industryView.viewGroups,
-        popularIndustryOptions: industryView.popularOptions,
         abilityOptions: this.data.abilityOptions.map(item => ({
           ...item,
           selected: this.data.selectedAbilityTagIds.includes(item.id),
@@ -660,7 +641,6 @@ Page({
     const cityId = this.data.mode === 'cooperation'
       ? this.data.selectedCooperationBranchId
       : this.data.selectedCityTagId
-    const industryView = catalogSelectorView(this.data.catalog.industryGroups, this.data.selectedIndustryTagIds)
     this.setData({
       filterOpen: false,
       draftOpportunityCityTagId: this.data.selectedCityTagId,
@@ -674,14 +654,11 @@ Page({
       draftMaxAmountYuan: this.data.selectedMaxAmountCents === undefined ? '' : yuanFromCents(this.data.selectedMaxAmountCents),
       cityIndex: Math.max(0, this.data.cityOptions.findIndex(item => item.id === cityId)),
       citySelectionIds: cityId ? [cityId] : [],
-      industryGroups: industryView.viewGroups,
-      popularIndustryOptions: industryView.popularOptions,
       abilityOptions: this.data.abilityOptions.map(item => ({
         ...item,
         selected: this.data.selectedAbilityTagIds.includes(item.id),
       })),
       industryPickerOpen: false,
-      expandedIndustryGroupId: '',
       moreFiltersOpen: false,
       message: '',
     })
@@ -698,25 +675,7 @@ Page({
   toggleTag(event: WechatMiniprogram.TouchEvent) {
     const type = String(event.currentTarget.dataset.type || '')
     const id = String(event.currentTarget.dataset.id || '')
-    if (!id || !['industry', 'ability'].includes(type)) {
-      return
-    }
-    if (type === 'industry') {
-      const selected = this.data.draftIndustryTagIds.includes(id)
-      if (!selected && this.data.draftIndustryTagIds.length >= 8) {
-        this.setData({ message: '行业最多选择 8 项。' })
-        return
-      }
-      const draftIndustryTagIds = selected
-        ? this.data.draftIndustryTagIds.filter(item => item !== id)
-        : [...this.data.draftIndustryTagIds, id]
-      const industryView = catalogSelectorView(this.data.catalog.industryGroups, draftIndustryTagIds)
-      this.setData({
-        draftIndustryTagIds,
-        industryGroups: industryView.viewGroups,
-        popularIndustryOptions: industryView.popularOptions,
-        message: '',
-      })
+    if (!id || type !== 'ability') {
       return
     }
     const next = this.data.draftAbilityTagIds.includes(id)
@@ -745,33 +704,7 @@ Page({
   },
 
   toggleIndustryPicker() {
-    this.setData({
-      industryPickerOpen: !this.data.industryPickerOpen,
-      expandedIndustryGroupId: this.data.industryPickerOpen ? '' : this.data.expandedIndustryGroupId,
-    })
-  },
-
-  toggleIndustryGroup(event: WechatMiniprogram.TouchEvent) {
-    const groupId = String(event.currentTarget.dataset.groupId || '')
-    if (!this.data.industryGroups.some(group => group.id === groupId)) {
-      return
-    }
-    this.setData({
-      expandedIndustryGroupId: this.data.expandedIndustryGroupId === groupId ? '' : groupId,
-    })
-  },
-
-  clearIndustrySelection() {
-    if (!this.data.draftIndustryTagIds.length) {
-      return
-    }
-    const industryView = catalogSelectorView(this.data.catalog.industryGroups, [])
-    this.setData({
-      draftIndustryTagIds: [],
-      industryGroups: industryView.viewGroups,
-      popularIndustryOptions: industryView.popularOptions,
-      message: '',
-    })
+    this.setData({ industryPickerOpen: !this.data.industryPickerOpen })
   },
 
   toggleMoreFilters() {
@@ -787,7 +720,6 @@ Page({
 
   resetFilters() {
     const cityOptions = cityOptionsFor(this.data.mode, this.data.catalog)
-    const industryView = catalogSelectorView(this.data.catalog.industryGroups, [])
     this.setData({
       cityIndex: 0,
       cityOptions,
@@ -802,11 +734,8 @@ Page({
       draftLocationPreset: 'ALL',
       draftMinAmountYuan: '',
       draftMaxAmountYuan: '',
-      industryGroups: industryView.viewGroups,
-      popularIndustryOptions: industryView.popularOptions,
       abilityOptions: this.data.abilityOptions.map(item => ({ ...item, selected: false })),
       industryPickerOpen: false,
-      expandedIndustryGroupId: '',
       moreFiltersOpen: false,
       message: '',
     })
@@ -867,7 +796,6 @@ Page({
       hasAppliedFilters: Boolean(keyword || presentation.appliedFilterCount),
       filterOpen: false,
       industryPickerOpen: false,
-      expandedIndustryGroupId: '',
       moreFiltersOpen: false,
       message: '',
     }, () => void this.loadContent(true))
@@ -875,7 +803,6 @@ Page({
 
   clearAppliedFilters() {
     const cityOptions = cityOptionsFor(this.data.mode, this.data.catalog)
-    const industryView = catalogSelectorView(this.data.catalog.industryGroups, [])
     this.setData({
       keywordInput: '',
       keyword: '',
@@ -900,8 +827,6 @@ Page({
       draftMaxAmountYuan: '',
       selectedMinAmountCents: undefined,
       selectedMaxAmountCents: undefined,
-      industryGroups: industryView.viewGroups,
-      popularIndustryOptions: industryView.popularOptions,
       abilityOptions: this.data.abilityOptions.map(item => ({ ...item, selected: false })),
       hasAppliedFilters: false,
       locationFilterLabel: this.data.mode === 'cooperation' ? '全国' : '不限',
@@ -909,7 +834,6 @@ Page({
       appliedFilterChips: [],
       filterOpen: false,
       industryPickerOpen: false,
-      expandedIndustryGroupId: '',
       moreFiltersOpen: false,
       message: '',
     }, () => void this.loadContent(true))
