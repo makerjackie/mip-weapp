@@ -106,6 +106,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'latitude', label: '纬度', kind: 'number' },
   { key: 'longitude', label: '经度', kind: 'number' },
   { key: 'onlineUrl', label: '线上地址', kind: 'text', maxLength: 1_024 },
+  { key: 'guideUrl', label: '路线指引链接', kind: 'text', maxLength: 1_024 },
   { key: 'capacity', label: '活动名额', kind: 'number' },
   { key: 'waitlistEnabled', label: '候补报名', kind: 'checkbox' },
   { key: 'priceCents', label: '金额（分）', kind: 'number' },
@@ -432,6 +433,8 @@ function eventDraft(values: EventMutationValues) {
   const onlineUrl = optionalText(values.onlineUrl, '线上地址', 1_024)
   if ((eventMode === 'OFFLINE' || eventMode === 'HYBRID') && !venueName) throw new FormValidationError('venueName', '请填写活动地点')
   if ((eventMode === 'ONLINE' || eventMode === 'HYBRID') && !onlineUrl.startsWith('https://')) throw new FormValidationError('onlineUrl', '线上地址必须使用 HTTPS')
+  const guideUrl = optionalText(values.guideUrl, '路线指引链接', 1_024)
+  if (guideUrl && !/^https:\/\/\S+$/.test(guideUrl)) throw new FormValidationError('guideUrl', '路线指引链接必须是以 https:// 开头的完整链接')
   const latitude = values.latitude === undefined || values.latitude === '' ? null : finiteNumber(values.latitude, '纬度', -90, 90)
   const longitude = values.longitude === undefined || values.longitude === '' ? null : finiteNumber(values.longitude, '经度', -180, 180)
   if ((latitude === null) !== (longitude === null)) throw new FormValidationError('latitude', '活动地点坐标不完整')
@@ -469,6 +472,7 @@ function eventDraft(values: EventMutationValues) {
     latitude,
     longitude,
     onlineUrl: eventMode === 'OFFLINE' ? null : onlineUrl,
+    guideUrl: guideUrl || null,
     capacity,
     waitlistEnabled,
     priceCents,

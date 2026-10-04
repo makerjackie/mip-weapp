@@ -118,6 +118,31 @@ describe('admin events deep module', () => {
     })
   }
 
+  it('keeps the optional route-guide link only when it is a full https url', async () => {
+    const captured = []
+    const service = events(repository({
+      async saveEvent(input) {
+        captured.push(input.draft)
+        return { id: input.eventId, status: 'DRAFT', version: input.expectedVersion + 1 }
+      },
+    }))
+    const save = guideUrl => service.saveEvent(caller, {
+      eventId: EVENT_ID,
+      expectedVersion: 1,
+      draft: eventDraft({ guideUrl }),
+    })
+    await save('https://mp.weixin.qq.com/s/route-guide')
+    await save('  ')
+    assert.deepEqual(captured.map(draft => draft.guideUrl), [
+      'https://mp.weixin.qq.com/s/route-guide',
+      null,
+    ])
+    for (const guideUrl of ['http://mp.weixin.qq.com/s/route-guide', 'https://example.com/a b', 'https://']) {
+      await assert.rejects(() => save(guideUrl), error => error?.code === 'VALIDATION_FAILED')
+    }
+    assert.equal(captured.length, 2)
+  })
+
   it('exposes only event administration and the export filter seam', () => {
     const api = createAdminEvents({ repository: {}, access: {} })
     assert.deepEqual(Object.keys(api).sort(), [

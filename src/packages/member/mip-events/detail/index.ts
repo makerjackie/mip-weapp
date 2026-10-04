@@ -190,6 +190,8 @@ Page({
     hasCheckInIntent: false,
     onlineMode: false,
     onlineUrl: '',
+    guideMode: false,
+    guideUrl: '',
     hasCoordinates: false,
     videoRecapBusyId: '',
     contentSection: 'INTRO' as 'INTRO' | 'ORGANIZER' | 'NOTICE',
@@ -201,6 +203,7 @@ Page({
   requestSeq: 0,
   loadingEvent: false,
   onlineRequested: false,
+  guideRequested: false,
   entryScene: '',
   authToken: '' as string,
   authIntent: '' as AuthIntent | '',
@@ -243,6 +246,7 @@ Page({
 
   onLoad(query: Record<string, string>) {
     this.onlineRequested = query.online === '1'
+    this.guideRequested = query.guide === '1'
     const scene = String(query.scene || '').trim()
     const inviteRef = String(query.inviteRef || '').trim()
     this.entryScene = scene
@@ -428,6 +432,7 @@ Page({
       : Boolean(mipCheckInResumeStore.peek(String(event.id)))
     const action = primaryAction(event, hasCheckInIntent)
     const onlineUrl = safeHttpsEventUrl(event.onlineUrl)
+    const guideUrl = safeHttpsEventUrl(event.guideUrl)
     const contentMedia = (event.contentMedia || []).map((item, index) => ({ ...item, renderKey: `media-${index}` }))
     const normalizedEvent = {
       ...event,
@@ -462,9 +467,11 @@ Page({
       primaryLabel: action.label,
       onlineMode: this.onlineRequested && Boolean(onlineUrl),
       onlineUrl,
+      guideMode: this.guideRequested && Boolean(guideUrl),
+      guideUrl,
       hasCoordinates: Number.isFinite(event.latitude) && Number.isFinite(event.longitude),
       hasCheckInIntent,
-      message: this.onlineRequested && !onlineUrl ? '当前暂不能进入线上活动。' : '',
+      message: this.onlineRequested && !onlineUrl ? '当前暂不能进入线上活动。' : this.guideRequested && !guideUrl ? '当前暂无路线指引。' : '',
     })
     updateComponentMedia(this, 'event.coverUrl', event.coverUrl || '')
     updateComponentMedia(this, 'event.participantPreview', event.participantPreview || [])
@@ -977,6 +984,24 @@ Page({
     }
     caseNavigateTo({
       url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(this.data.eventId)}&online=1`,
+    })
+  },
+
+  openGuide() {
+    const guideUrl = safeHttpsEventUrl(this.data.event?.guideUrl)
+    if (!guideUrl) {
+      this.setData({ message: '当前暂无路线指引。' })
+      return
+    }
+    caseNavigateTo({
+      url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(this.data.eventId)}&guide=1`,
+    })
+  },
+
+  handleGuideError() {
+    this.setData({
+      guideMode: false,
+      message: '路线指引暂时无法打开，请稍后重试。',
     })
   },
 

@@ -43,6 +43,7 @@ export async function loadEventDetailForForm(eventId: string, request: AdminRequ
     latitude: event.latitude ?? '',
     longitude: event.longitude ?? '',
     onlineUrl: String(event.onlineUrl || ''),
+    guideUrl: String(event.guideUrl || ''),
     capacity: event.capacity ?? '',
     waitlistEnabled: event.waitlistEnabled === true,
     priceCents: String(event.priceCents ?? '0'),

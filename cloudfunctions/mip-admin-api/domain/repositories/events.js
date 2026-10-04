@@ -354,7 +354,7 @@ function createAdminEventRepository(database, dependencies) {
         event_type_key, event_mode, access_type, registration_policy,
         starts_at, ends_at,
         registration_deadline, cancellation_deadline, venue_name, address, city_name,
-        latitude, longitude, online_url, capacity, waitlist_enabled, price_cents, registration_schema_json,
+        latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, price_cents, registration_schema_json,
         e.cover_asset_id, cover.cloud_file_id AS cover_file_id,
         e.status, e.content_safety_status, e.version
        FROM mip_events e
@@ -403,6 +403,7 @@ function createAdminEventRepository(database, dependencies) {
       latitude: row.latitude === null ? null : Number(row.latitude),
       longitude: row.longitude === null ? null : Number(row.longitude),
       onlineUrl: row.online_url || '',
+      guideUrl: row.guide_url || '',
       capacity: row.capacity === null ? null : Number(row.capacity),
       waitlistEnabled: Number(row.waitlist_enabled) === 1,
       priceCents: Number(row.price_cents || 0),
@@ -548,7 +549,7 @@ function createAdminEventRepository(database, dependencies) {
             starts_at = ?, ends_at = ?, registration_deadline = ?, cancellation_deadline = ?,
             venue_name = ?, address = ?, city_name = ?, latitude = ?, longitude = ?, capacity = ?,
             event_type_key = ?, event_mode = ?, access_type = ?, registration_policy = ?,
-            online_url = ?, waitlist_enabled = ?, price_cents = ?,
+            online_url = ?, guide_url = ?, waitlist_enabled = ?, price_cents = ?,
             registration_schema_json = ?, form_version = ?,
             content_safety_status = ?, version = version + 1
            WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'UNPUBLISHED', 'PUBLISHED')`,
@@ -561,6 +562,7 @@ function createAdminEventRepository(database, dependencies) {
             input.draft.latitude, input.draft.longitude, input.draft.capacity,
             input.draft.eventTypeKey, input.draft.eventMode, input.draft.accessType,
             input.draft.registrationPolicy, input.draft.onlineUrl || null,
+            input.draft.guideUrl || null,
             input.draft.waitlistEnabled ? 1 : 0, input.draft.priceCents,
             JSON.stringify(input.draft.registrationSchema), formVersion, input.contentSafetyStatus,
             input.appId, eventId, input.expectedVersion],
@@ -583,8 +585,8 @@ function createAdminEventRepository(database, dependencies) {
             registration_policy,
             status, content_safety_status, starts_at, ends_at,
             registration_deadline, cancellation_deadline, venue_name, address, city_name,
-            latitude, longitude, online_url, capacity, waitlist_enabled, price_cents, currency, registration_schema_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
+            latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, price_cents, currency, registration_schema_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
           [eventId, input.appId, input.draft.scopeType, input.draft.branchId || null,
             input.actorUserId, input.draft.title, input.draft.summary, input.draft.description,
             input.draft.notices || null, input.draft.coverAssetId, input.draft.eventTypeKey, input.draft.eventMode,
@@ -595,6 +597,7 @@ function createAdminEventRepository(database, dependencies) {
             input.draft.cancellationDeadline || null, input.draft.venueName || null,
             input.draft.address || null, input.draft.cityName || null,
             input.draft.latitude, input.draft.longitude, input.draft.onlineUrl || null,
+            input.draft.guideUrl || null,
             input.draft.capacity, input.draft.waitlistEnabled ? 1 : 0, input.draft.priceCents,
             JSON.stringify(input.draft.registrationSchema || [])],
         )
@@ -645,7 +648,7 @@ function createAdminEventRepository(database, dependencies) {
           e.access_type, e.registration_policy,
           e.starts_at, e.ends_at,
           e.registration_opens_at, e.registration_deadline, e.cancellation_deadline,
-          e.venue_name, e.address, e.city_name, e.latitude, e.longitude, e.online_url,
+          e.venue_name, e.address, e.city_name, e.latitude, e.longitude, e.online_url, e.guide_url,
           e.capacity, e.waitlist_enabled, e.price_cents, e.currency,
           e.registration_schema_json, e.version, branch.status AS branch_status
          FROM mip_events e
@@ -735,10 +738,10 @@ function createAdminEventRepository(database, dependencies) {
           registration_policy,
           status, content_safety_status, starts_at, ends_at,
           registration_opens_at, registration_deadline, cancellation_deadline,
-          venue_name, address, city_name, latitude, longitude, online_url, capacity,
+          venue_name, address, city_name, latitude, longitude, online_url, guide_url, capacity,
           waitlist_enabled, price_cents, currency, registration_schema_json,
           form_version, version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
         [eventId, input.appId, source.scope_type, source.branch_id || null, input.actorUserId,
           input.title, source.summary, source.description, source.notices || null,
           source.cover_status === 'READY' ? source.cover_asset_id : null,
@@ -746,7 +749,7 @@ function createAdminEventRepository(database, dependencies) {
           input.contentSafetyStatus, dates.startsAt, dates.endsAt, dates.registrationOpensAt,
           dates.registrationDeadline, dates.cancellationDeadline, source.venue_name || null,
           source.address || null, source.city_name || null, source.latitude ?? null,
-          source.longitude ?? null, source.online_url || null, source.capacity,
+          source.longitude ?? null, source.online_url || null, source.guide_url || null, source.capacity,
           Number(source.waitlist_enabled) === 1 ? 1 : 0, Number(source.price_cents || 0),
           source.currency || 'CNY', JSON.stringify(json(source.registration_schema_json, []))],
       )

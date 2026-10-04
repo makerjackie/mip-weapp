@@ -36,6 +36,7 @@ function sourceEvent() {
     latitude: '23.1234567',
     longitude: '113.1234567',
     online_url: 'https://example.test/event',
+    guide_url: 'https://mp.weixin.qq.com/s/route-guide',
     capacity: 80,
     waitlist_enabled: 1,
     price_cents: 0,
@@ -134,7 +135,9 @@ describe('admin event clone persistence', () => {
     assert.equal(insert.params[15].toISOString(), '2026-09-05T06:00:00.000Z')
     assert.equal(insert.params[16].toISOString(), '2026-09-05T08:00:00.000Z')
     assert.equal(insert.params[18].toISOString(), '2026-09-04T06:00:00.000Z')
-    assert.equal(insert.params[30], JSON.stringify([{ key: 'company', type: 'TEXT' }]))
+    assert.equal(insert.params[25], 'https://example.test/event')
+    assert.equal(insert.params[26], 'https://mp.weixin.qq.com/s/route-guide')
+    assert.equal(insert.params[31], JSON.stringify([{ key: 'company', type: 'TEXT' }]))
     assert.ok(calls.some(call => call.sql.includes('INSERT INTO mip_event_changes')))
     assert.ok(calls.some(call => call.sql.includes('INSERT INTO mip_audit_logs')))
     assert.ok(calls.some(call => call.sql.includes('INSERT INTO mip_outbox_events')))

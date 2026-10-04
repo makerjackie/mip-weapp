@@ -57,6 +57,25 @@ describe('MIP event experience contracts', () => {
     expect(view).toContain('<web-view')
   })
 
+  it('shows the route-guide button only with a configured link and opens it in a web-view', () => {
+    // MIW-21: 指引按钮由后台配置的 guideUrl 驱动，未配置时整个按钮隐藏。
+    const detail = source('src/packages/member/mip-events/detail/index.ts')
+    const view = source('src/packages/member/mip-events/detail/index.wxml')
+    expect(detail).toContain('safeHttpsEventUrl(this.data.event?.guideUrl)')
+    expect(detail).toContain('guideMode: this.guideRequested && Boolean(guideUrl)')
+    expect(detail).toContain('&guide=1')
+    expect(detail).toContain('handleGuideError')
+    expect(view).toContain('wx:if="{{guideUrl}}"')
+    expect(view).toContain('bind:tap="openGuide"')
+    expect(view).toContain('wx:elif="{{guideMode}}"')
+    // 未配置时保留等高占位（40+4+28=72rpx），反馈/价格栈位置不随显隐变化。
+    expect(view).toContain('wx:else class="mt-3 h-[72rpx]"')
+    // 地图入口保留在地址行；指引按钮不再复用 openLocation。
+    const signpost = view.split('\n').find(line => line.includes('signpost-fill'))
+    expect(signpost).toContain('openGuide')
+    expect(signpost).not.toContain('openLocation')
+  })
+
   it('keeps the invitation route actionable and classifies identity requirements', () => {
     expect(eventInvitationPath('event 1', 'invite/value')).toBe(
       '/packages/member/mip-events/detail/index?eventId=event%201&inviteRef=invite%2Fvalue',
