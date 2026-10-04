@@ -16,19 +16,23 @@ describe('MIP profile Figma structure', () => {
 
     expect(config.navigationBarTitleText).toBe('填写信息')
     expect(view).toContain('data-profile-basic-group="true"')
-    for (const row of ['avatar', 'nickname', 'realName', 'gender']) {
+    for (const row of ['avatar', 'nickname', 'gender']) {
       expect(view).toContain(`data-profile-basic-row="${row}"`)
     }
     expect(view).toMatch(/data-profile-basic-row="nickname"[^>]+min-h-\[92rpx\][^>]*>[\s\S]*?<input[^>]+text-right[^>]+placeholder="请输入您的昵称"/)
+    expect(view).not.toContain('data-profile-basic-row="realName"')
     expect(view).not.toContain('名片内容随下方资料实时更新')
-    expect(view).toContain('wx:if="{{branchCatalogExpanded}}"')
     expect(view).toContain('wx:if="{{industryCatalogExpanded}}"')
-    expect(view).toContain('data-profile-more-toggle="true"')
-    expect(view).toContain('wx:if="{{moreExpanded}}"')
-    expect(page).toContain('branchCatalogExpanded: false')
     expect(page).toContain('industryCatalogExpanded: false')
-    expect(page).toContain('toggleCatalog(event')
-    expect(page).toContain('toggleMore()')
+    expect(page).toContain('toggleCatalog()')
+    // 主城市分会由管理后台配置；能力标签/身份说明/补充介绍不再在本页编辑。
+    expect(view).not.toContain('更多资料')
+    expect(view).not.toContain('data-profile-more-toggle')
+    expect(view).not.toContain('主城市分会')
+    expect(view).not.toContain('能力标签')
+    expect(view).not.toContain('补充资料')
+    // 性别只有男/女两个选项，未设置是缺省状态而非按钮。
+    expect(view).not.toContain('未设置')
     expect(view).not.toContain('公开范围')
     expect(view).not.toContain('bind:tap="addExperience"')
   })

@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "styleIsolation": "apply-shared",
+  "usingComponents": {
+    "mip-tag-chip": "/components/mip-tag-chip/index",
+    "t-icon": "tdesign-miniprogram/icon/icon"
+  }
+}

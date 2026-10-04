@@ -42,7 +42,7 @@ describe('MIP opportunity Figma surfaces', () => {
       'bind:tap="chooseLocationPreset"',
       'bind:tap="chooseRole"',
       'bind:tap="toggleIndustryPicker"',
-      'bind:tap="toggleIndustryGroup"',
+      'bind:change="changeIndustry"',
       'bind:tap="toggleTag"',
       'bind:tap="toggleMoreFilters"',
       'bind:tap="resetFilters"',
@@ -69,7 +69,10 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discovery).toContain('data-preset="CITY"')
     expect(discovery).toContain('clear-label="全部城市"')
     expect(discovery).toContain('wx:if="{{industryPickerOpen}}"')
-    expect(discovery).toContain('wx:if="{{expandedIndustryGroupId === group.id}}"')
+    expect(discoveryScript).not.toContain('expandedIndustryGroupId')
+    expect(discovery).toContain('<mip-industry-selector groups="{{catalog.industryGroups}}"')
+    expect(discovery).toContain('accordion="{{true}}"')
+    expect(discovery).toContain('clear-label="不限"')
     expect(discovery).toContain('wx:if="{{moreFiltersOpen}}"')
     expect(discoveryScript).toContain('selectedLocation === \'NATIONAL\' ? \'全国\' : \'不限\'')
     expect(discoveryScript).toContain('locationFilterLabel: \'不限\'')

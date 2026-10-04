@@ -102,7 +102,7 @@ function signedOutSnapshot(): IdentityAccessSnapshot {
       },
       abilityTagIds: [],
       complete: false,
-      missingFields: ['NICKNAME', 'PRIMARY_BRANCH'],
+      missingFields: ['NICKNAME'],
     },
     membership: { kind: 'GUEST', source: 'NONE' },
     grants: [],

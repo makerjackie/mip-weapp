@@ -1,21 +1,16 @@
 import type { CatalogSelectorGroup } from '../../../components/catalog-selector/model'
 import type { AiDraftSourceConfirmation } from '../../../modules/mip-ai'
-import type { ProfileOrganization, ProfileTagOption, ProfileVisibility } from '../../../modules/mip-identity'
+import type { ProfileOrganization, ProfileVisibility } from '../../../modules/mip-identity'
 import { aiOrganizations, aiText } from '../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../modules/mip-ai/editor-loader'
-import { mipBranchesModule, mipIdentityModule } from '../../../modules/mip-identity/client'
+import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { careerIdentityOptions, profileGenderOptions } from '../../../modules/mip-identity/profile-options'
 import {
   flattenProfileIndustries,
   groupProfileIndustries,
 } from '../../../modules/mip-identity/tag-catalog'
 import { mipMediaModule } from '../../../modules/mip-media/client'
-import { groupedCityBranches, opportunityModule } from '../../../modules/mip-opportunities'
-import { profileBranchUpdate, profileSaveValidationMessage } from './save-intent'
-
-interface SelectableTag extends ProfileTagOption {
-  selected: boolean
-}
+import { profileSaveValidationMessage } from './save-intent'
 
 Page({
   data: {
@@ -28,8 +23,8 @@ Page({
     aiDraftLoaded: false,
     aiOrganizationDraftLoaded: false,
     profileVersion: 0,
-    userVersion: 0,
     nickname: '',
+    // 姓名输入框已下线，但保存接口按整行覆盖存储（未传即清空），需加载后原值回传。
     realName: '',
     gender: 'UNKNOWN' as 'UNKNOWN' | 'MALE' | 'FEMALE',
     careerIdentityKey: '',
@@ -39,25 +34,20 @@ Page({
     avatarUrl: '',
     avatarUploading: false,
     avatarPending: false,
+    // 身份说明/补充介绍编辑入口已下线，同样按整行覆盖存储，需原值回传。
     identityStatus: '',
     headline: '',
     introduction: '',
     companies: [] as ProfileOrganization[],
     organizations: [] as ProfileOrganization[],
     profileVisibility: null as ProfileVisibility | null,
-    branchOptions: [] as Array<{ id: string, label: string }>,
-    branchGroups: [] as CatalogSelectorGroup[],
-    selectedBranchIds: [] as string[],
-    branchIndex: 0,
-    savedPrimaryBranchId: '',
-    branchCatalogExpanded: false,
     industryOptions: [] as Array<{ id: string, label: string }>,
     industryGroups: [] as CatalogSelectorGroup[],
     selectedIndustryIds: [] as string[],
     industryIndex: 0,
     industryCatalogExpanded: false,
-    abilityOptions: [] as SelectableTag[],
-    moreExpanded: false,
+    // 能力标签属于合作卡属性，此处仅回传存量，不再提供编辑入口。
+    abilityTagIds: [] as string[],
     saving: false,
     message: '',
   },
@@ -100,11 +90,7 @@ Page({
           aiMessage = error instanceof Error ? error.message : 'AI 草稿加载失败'
         }
       }
-      const [tags, branches, opportunityCatalog] = await Promise.all([
-        mipIdentityModule.listProfileTags(),
-        mipBranchesModule.load(snapshot.primaryBranchId, snapshot.userVersion),
-        opportunityModule.getCatalogs().catch(() => null),
-      ])
+      const tags = await mipIdentityModule.listProfileTags()
       const industryOptions = [
         { id: '', label: '未选择' },
         ...flattenProfileIndustries(tags).map(tag => ({ id: tag.id, label: tag.displayLabel })),
@@ -118,17 +104,7 @@ Page({
           popular: option.popular,
         })),
       }))
-      const branchGroups = groupedCityBranches(
-        branches.branches,
-        opportunityCatalog?.cityTags || [],
-        { separatePopular: true },
-      )
-      const branchOptions = [
-        { id: '', label: '未选择' },
-        ...branchGroups.flatMap(group => group.options),
-      ]
       const primaryIndustryId = snapshot.profile.primaryIndustryTagId || ''
-      const primaryBranchId = snapshot.primaryBranchId || ''
       const aiFields = aiSource?.fields || {}
       const companies = aiOrganizations(aiFields, 'companies')
       const organizations = aiOrganizations(aiFields, 'organizations')
@@ -138,7 +114,6 @@ Page({
         aiDraftLoaded: Boolean(aiSource),
         aiOrganizationDraftLoaded: Boolean(companies.length || organizations.length),
         profileVersion: snapshot.profile.version,
-        userVersion: snapshot.userVersion,
         nickname: aiText(aiFields, 'nickname', 64) || snapshot.profile.nickname,
         realName: snapshot.profile.realName || '',
         gender: snapshot.profile.gender || 'UNKNOWN',
@@ -146,24 +121,17 @@ Page({
         avatarAssetId: snapshot.profile.avatarAssetId || '',
         avatarUrl: snapshot.profile.avatarUrl || '',
         avatarPending: false,
-        identityStatus: aiText(aiFields, 'identityStatus', 32) || snapshot.profile.identityStatus,
+        identityStatus: snapshot.profile.identityStatus,
         headline: aiText(aiFields, 'headline', 160) || snapshot.profile.headline,
-        introduction: aiText(aiFields, 'introduction', 300) || snapshot.profile.introduction,
+        introduction: snapshot.profile.introduction,
         companies: companies.length ? companies : snapshot.profile.companies,
         organizations: organizations.length ? organizations : snapshot.profile.organizations,
         profileVisibility: snapshot.profile.visibility,
-        branchOptions,
-        branchGroups,
-        selectedBranchIds: primaryBranchId ? [primaryBranchId] : [],
-        branchIndex: Math.max(0, branchOptions.findIndex(item => item.id === primaryBranchId)),
-        savedPrimaryBranchId: primaryBranchId,
         industryOptions,
         industryGroups,
         selectedIndustryIds: primaryIndustryId ? [primaryIndustryId] : [],
         industryIndex: Math.max(0, industryOptions.findIndex(item => item.id === primaryIndustryId)),
-        abilityOptions: tags
-          .filter(tag => tag.kind === 'ABILITY' && tag.selectable)
-          .map(tag => ({ ...tag, selected: snapshot.profile.abilityTagIds.includes(tag.id) })),
+        abilityTagIds: snapshot.profile.abilityTagIds,
         message: aiMessage,
       })
     }
@@ -177,13 +145,7 @@ Page({
 
   updateText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
-    if ([
-      'nickname',
-      'realName',
-      'identityStatus',
-      'headline',
-      'introduction',
-    ].includes(field)) {
+    if (['nickname', 'headline'].includes(field)) {
       this.setData({ [field]: event.detail.value })
     }
   },
@@ -223,16 +185,6 @@ Page({
     }
   },
 
-  changeBranch(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
-    const selectedBranchIds = event.detail.selectedIds.slice(0, 1)
-    const branchId = selectedBranchIds[0] || ''
-    this.setData({
-      selectedBranchIds,
-      branchIndex: Math.max(0, this.data.branchOptions.findIndex(item => item.id === branchId)),
-      branchCatalogExpanded: false,
-    })
-  },
-
   changeIndustry(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
     const selectedIndustryIds = event.detail.selectedIds.slice(0, 1)
     const industryId = selectedIndustryIds[0] || ''
@@ -243,33 +195,8 @@ Page({
     })
   },
 
-  toggleCatalog(event: WechatMiniprogram.TouchEvent) {
-    const catalog = String(event.currentTarget.dataset.catalog || '')
-    if (catalog === 'branch') {
-      this.setData({
-        branchCatalogExpanded: !this.data.branchCatalogExpanded,
-        industryCatalogExpanded: false,
-      })
-    }
-    else if (catalog === 'industry') {
-      this.setData({
-        branchCatalogExpanded: false,
-        industryCatalogExpanded: !this.data.industryCatalogExpanded,
-      })
-    }
-  },
-
-  toggleMore() {
-    this.setData({ moreExpanded: !this.data.moreExpanded })
-  },
-
-  toggleAbility(event: WechatMiniprogram.TouchEvent) {
-    const tagId = String(event.currentTarget.dataset.id || '')
-    this.setData({
-      abilityOptions: this.data.abilityOptions.map(tag => tag.id === tagId
-        ? { ...tag, selected: !tag.selected }
-        : tag),
-    })
+  toggleCatalog() {
+    this.setData({ industryCatalogExpanded: !this.data.industryCatalogExpanded })
   },
 
   async saveProfile() {
@@ -277,18 +204,8 @@ Page({
       return
     }
     const nickname = this.data.nickname.trim()
-    const selectedBranch = this.data.branchOptions[this.data.branchIndex]
-    const branchId = selectedBranch?.id || ''
-    const validationMessage = profileSaveValidationMessage({
-      nickname,
-      branchId,
-      currentBranchId: this.data.savedPrimaryBranchId,
-      requirePrimaryBranch: Boolean(this.data.token),
-    })
+    const validationMessage = profileSaveValidationMessage({ nickname })
     if (validationMessage) {
-      this.setData({
-        moreExpanded: validationMessage === '请选择主城市分会。' || this.data.moreExpanded,
-      })
       this.showEditorMessage(validationMessage)
       return
     }
@@ -300,10 +217,11 @@ Page({
     this.setData({ saving: true, message: '' })
     try {
       const selectedIndustry = this.data.industryOptions[this.data.industryIndex]
+      // 主城市分会由管理后台在开通会员时配置，此页不再提交；载荷不带分会
+      // 字段时服务端保留用户现有分会不变。
       const snapshot = await mipIdentityModule.saveProfile({
         expectedVersion: this.data.profileVersion,
         avatarAssetId: this.data.avatarAssetId || undefined,
-        ...profileBranchUpdate(branchId, this.data.userVersion),
         nickname,
         realName: this.data.realName,
         gender: this.data.gender,
@@ -315,13 +233,11 @@ Page({
         organizations: this.data.organizations,
         visibility: this.data.profileVisibility,
         primaryIndustryTagId: selectedIndustry?.id || undefined,
-        abilityTagIds: this.data.abilityOptions.filter(tag => tag.selected).map(tag => tag.id),
+        abilityTagIds: this.data.abilityTagIds,
         aiConfirmation: this.data.aiConfirmation || undefined,
       })
       this.setData({
         profileVersion: snapshot.profile.version,
-        userVersion: snapshot.userVersion,
-        savedPrimaryBranchId: snapshot.primaryBranchId || '',
         avatarAssetId: snapshot.profile.avatarAssetId || '',
         avatarUrl: snapshot.profile.avatarUrl || '',
         avatarPending: false,

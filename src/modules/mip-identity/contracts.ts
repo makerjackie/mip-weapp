@@ -119,7 +119,7 @@ export interface PublicMipProfile {
   primaryBranch?: { name: string, cityName: string }
 }
 
-export type ProfileMissingField = 'NICKNAME' | 'PRIMARY_BRANCH'
+export type ProfileMissingField = 'NICKNAME'
 
 export interface MipProfileSnapshot {
   exists: boolean

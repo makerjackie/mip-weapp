@@ -1,7 +1,7 @@
 import type { ProfileGender } from './contracts'
 
+// 仅可选值；未设置对应 UNKNOWN，是缺省状态而非选项。
 export const profileGenderOptions: Array<{ value: ProfileGender, label: string }> = [
-  { value: 'UNKNOWN', label: '未设置' },
   { value: 'MALE', label: '男' },
   { value: 'FEMALE', label: '女' },
 ]
