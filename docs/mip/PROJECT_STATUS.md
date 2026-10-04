@@ -1,6 +1,6 @@
 # MIP 当前状态
 
-更新日期：2026-10-04（提取通用游客登录引导流程；其他环境证据保留各自采集日期）。
+更新日期：2026-10-04（用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
 
