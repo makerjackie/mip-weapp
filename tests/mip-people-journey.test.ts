@@ -352,7 +352,7 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
     identityModule.peekSnapshot.mockReturnValue({ profile: { nickname: 'Bear' } })
 
     // J3-05 嘉宾：多次邀请 ×N + 邀请人标注（邀请人是我本人）。先过身份检查，
-    // viewerName 从身份快照带入（邀请人标注）。
+    // viewer 从身份快照带入（MIW-24 后由统一嘉宾卡 inviter 在卡右下角渲染为「邀请人Bear」）。
     receivedModule.listReceived.mockResolvedValueOnce({
       items: [{
         kind: 'GUEST',
@@ -366,13 +366,13 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
       unreadCount: 0,
     })
     await (instance as unknown as { checkAccess: () => Promise<void> }).checkAccess()
-    expect(instance.data.viewerName).toBe('Bear')
+    expect(instance.data.viewer.name).toBe('Bear')
     const guest = instance.categoryCache.GUEST.items[0]
     expect(guest).toMatchObject({
       actorName: '大鹅飞飞',
-      metaText: '深圳 MIP I 金融行业 I 激情创业者',
+      actorHeadline: '深圳 MIP I 金融行业 I 激情创业者',
       countBadge: '×3',
-      noteText: '邀请人Bear',
+      inviterName: 'Bear',
     })
     expect(String(guest.navigationUrl)).toContain('/packages/member/mip-public-profile/index?profileRef=g1')
 
@@ -472,10 +472,12 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
     expect(heartsBlock).not.toBe('')
     expect(heartsBlock).not.toContain('item.unread')
 
-    // 影响力网格保留 VISITOR 活红点；×N 使用真实次数与原型黄色角标。
+    // 影响力网格保留 VISITOR 活红点（MIW-24 后由统一嘉宾卡 unread 属性在组件内渲染）；
+    // ×N 使用真实次数与原型黄色角标（页面 corner 插槽自有事实）。
     const influenceBlock = view.slice(view.indexOf('journey-review J3-05/06/08'), view.indexOf('journey-review J3-07'))
-    expect(influenceBlock).toContain('wx:if="{{item.unread}}"')
-    const countBadge = influenceBlock.match(/<view wx:if="\{\{item\.countBadge\}\}"[^>]*>\{\{item\.countBadge\}\}<\/view>/)?.[0] || ''
+    expect(influenceBlock).toContain('<mip-talent-card layout="grid"')
+    expect(influenceBlock).toContain('unread="{{item.unread}}"')
+    const countBadge = influenceBlock.match(/<view slot="corner" wx:if="\{\{item\.countBadge\}\}"[^>]*>\{\{item\.countBadge\}\}<\/view>/)?.[0] || ''
     expect(countBadge).toContain('bg-brand')
     expect(countBadge).toContain('text-on-brand')
     expect(countBadge).toContain('text-[20rpx]')

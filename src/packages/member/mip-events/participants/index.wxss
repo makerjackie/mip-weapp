@@ -83,52 +83,21 @@
   margin-top: 8rpx;
 }
 
-.participant-card {
-  position: relative;
-  box-sizing: border-box;
+/* 卡面（头像/名字/meta/简介/kind 章）由统一嘉宾卡组件 mip-talent-card grid 壳渲染；
+   本页只保留页面自有事实：cell 按压态、corner 心形票热区、心动关系行、桌面缩放。 */
+.participants-cell {
   min-width: 0;
-  min-height: 368rpx;
-  padding: 16rpx 16rpx 20rpx;
-  overflow: hidden;
-  text-align: center;
-  background: var(--color-panel);
-  border: 1rpx solid transparent;
-  border-radius: 16rpx;
 }
 
-.participant-card--pressed {
+.participants-cell--pressed .mip-talent-card--grid {
   background: var(--color-panel-raised);
-  border-color: var(--color-line);
 }
 
 .participant-card--loading {
+  min-height: 368rpx;
   padding: 56rpx 32rpx;
-}
-
-.participant-card__visual {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  height: 120rpx;
-}
-
-.participant-card__kind {
-  position: absolute;
-  top: 0;
-  left: 0;
-  box-sizing: border-box;
-  max-width: 100%;
-  padding: 2rpx 8rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 20rpx;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--color-brand);
-  white-space: nowrap;
-  background: var(--color-panel-raised);
-  border-radius: 8rpx;
+  background: var(--color-panel);
+  border-radius: 16rpx;
 }
 
 /* figma 1818_17230：卡片右上角 18x16 心形票位——灰描边未投可点 / 红实心已投。
@@ -145,46 +114,7 @@
   min-width: 88rpx;
   min-height: 88rpx;
   padding: 8rpx 8rpx 44rpx 44rpx;
-}
-
-.participant-card__avatar {
-  box-sizing: border-box;
-  display: block;
-  width: 112rpx;
-  height: 112rpx;
-  background: var(--color-panel-raised);
-
-  /* figma 1818_17230：56px 头像带白色描边环。 */
-  border: 3rpx solid var(--color-ink);
-  border-radius: 50%;
-}
-
-.participant-card__avatar--empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-brand-soft);
-}
-
-.participant-card__name,
-.participant-card__meta,
-.participant-card__summary {
-  display: -webkit-box;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-}
-
-.participant-card__name {
-  margin-top: 12rpx;
-  -webkit-line-clamp: 1;
-
-  /* figma 1818_17230：16px medium 白色名字。 */
-  font-size: 32rpx;
-  font-weight: 500;
-  line-height: 1.4;
+  pointer-events: auto;
 }
 
 .participant-card__relations {
@@ -213,28 +143,6 @@
   color: var(--color-brand);
   background: var(--color-brand-soft);
   border-color: var(--color-brand-soft);
-}
-
-.participant-card__meta {
-  margin-top: 12rpx;
-  -webkit-line-clamp: 2;
-
-  /* figma 1818_17230：meta 行 10px #f7f7f7。 */
-  font-size: 20rpx;
-  line-height: 1.5;
-  color: var(--color-ink);
-  text-align: left;
-}
-
-.participant-card__summary {
-  margin-top: 8rpx;
-  -webkit-line-clamp: 2;
-
-  /* figma 1818_17230：简介两行 10px #b3b3b3。 */
-  font-size: 20rpx;
-  line-height: 1.5;
-  color: var(--color-muted);
-  text-align: left;
 }
 
 @media (min-width: 600px) and (max-width: 959px) {
@@ -282,7 +190,8 @@
     margin-top: 16px;
   }
 
-  .participant-card {
+  /* 统一嘉宾卡组件壳的桌面缩放（页面 apply-shared 覆盖组件类）。 */
+  .participants-cell .mip-talent-card--grid {
     min-height: 220px;
     padding: 12px 12px 14px;
     border-radius: 8px;
@@ -292,16 +201,12 @@
     padding: 32px 20px;
   }
 
-  .participant-card__visual {
-    height: 76px;
-  }
-
-  .participant-card__avatar {
+  .participants-cell .mip-talent-card__figure-avatar {
     width: 72px;
     height: 72px;
   }
 
-  .participant-card__kind {
+  .participants-cell .mip-talent-card__lead-label {
     padding: 2px 6px;
     font-size: 12px;
   }
@@ -312,17 +217,17 @@
     padding: 4px 4px 22px 22px;
   }
 
-  .participant-card__name {
+  .participants-cell .mip-talent-card__figure-name {
     margin-top: 8px;
     font-size: 18px;
   }
 
-  .participant-card__meta {
+  .participants-cell .mip-talent-card__figure-meta {
     margin-top: 8px;
     font-size: 13px;
   }
 
-  .participant-card__summary {
+  .participants-cell .mip-talent-card__figure-supporting {
     margin-top: 5px;
     font-size: 13px;
   }
@@ -373,7 +278,8 @@
     margin-top: 16px;
   }
 
-  .participant-card {
+  /* 统一嘉宾卡组件壳的桌面缩放（页面 apply-shared 覆盖组件类）。 */
+  .participants-cell .mip-talent-card--grid {
     min-height: 220px;
     padding: 12px 12px 14px;
     border-radius: 8px;
@@ -383,16 +289,12 @@
     padding: 32px 20px;
   }
 
-  .participant-card__visual {
-    height: 76px;
-  }
-
-  .participant-card__avatar {
+  .participants-cell .mip-talent-card__figure-avatar {
     width: 72px;
     height: 72px;
   }
 
-  .participant-card__kind {
+  .participants-cell .mip-talent-card__lead-label {
     padding: 2px 6px;
     font-size: 12px;
   }
@@ -403,17 +305,17 @@
     padding: 4px 4px 22px 22px;
   }
 
-  .participant-card__name {
+  .participants-cell .mip-talent-card__figure-name {
     margin-top: 8px;
     font-size: 18px;
   }
 
-  .participant-card__meta {
+  .participants-cell .mip-talent-card__figure-meta {
     margin-top: 8px;
     font-size: 13px;
   }
 
-  .participant-card__summary {
+  .participants-cell .mip-talent-card__figure-supporting {
     margin-top: 5px;
     font-size: 13px;
   }

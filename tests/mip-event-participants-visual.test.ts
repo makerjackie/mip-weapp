@@ -8,6 +8,10 @@ function source(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 }
 
+function stylesheetOf(path: string) {
+  return postcss.parse(source(path))
+}
+
 function declarations(rule: Rule) {
   return Object.fromEntries(
     rule.nodes
@@ -108,11 +112,12 @@ describe('MIP event participant visual hierarchy', () => {
       'flex-wrap': 'wrap',
     })
     expect(declarations(rule(stylesheet, '.participant-card__heart', true))).toMatchObject({
-      position: 'absolute',
+      'position': 'absolute',
+      'pointer-events': 'auto',
     })
-    // figma 1818_17230：56px 头像带白色描边环。
-    const avatar = declarations(rule(stylesheet, '.participant-card__avatar', true))
-    expect(String(avatar['border'] || '')).toContain('var(--color-ink)')
+    // figma 1818_17230：56px 头像带白色描边环——由统一嘉宾卡组件 avatar-ring 承载。
+    const ring = declarations(rule(stylesheetOf('src/components/talent-card/index.wxss'), '.mip-talent-card__figure-avatar--ring', true))
+    expect(String(ring['border'] || '')).toContain('var(--color-ink)')
   })
 
   it('uses compact visual pills without shrinking their phone hit targets', () => {
@@ -166,27 +171,42 @@ describe('MIP event participant visual hierarchy', () => {
     })
   })
 
-  it('separates identity, public metadata, and summary without overflowing cards', () => {
-    expect(template).toContain('participant-card__name')
-    expect(template).toContain('participant-card__meta')
-    expect(template).toContain('participant-card__summary')
+  it('renders participant cards through the unified talent-card grid shell', () => {
+    // MIW-24：参与人卡走统一嘉宾卡组件（grid 壳 + 描边环 + 左对齐正文 + kind 章），
+    // 页面只保留 corner 心形票与心动关系行；DTO 无 Lv/邀请人/勋章，不造值。
+    const cardShell = postcss.parse(source('src/components/talent-card/index.wxss'))
+    expect(template).toContain('<mip-talent-card')
+    expect(template).toContain('layout="grid"')
+    expect(template).toContain('left-align-body="{{true}}"')
+    expect(template).toContain('avatar-ring="{{true}}"')
+    expect(template).toContain('lead-label="{{item.kindLabel}}"')
+    expect(template).toContain('display-name="{{item.displayName}}"')
+    expect(template).toContain('meta-text="{{item.metaText}}"')
+    expect(template).toContain('supporting-text="{{item.introductionText}}"')
+    expect(template).toContain('slot="corner"')
+    expect(template).toContain('slot="body"')
     expect(template).toContain('aria-label="查看{{item.displayName}}的公开档案"')
-    expect(declarations(rule(stylesheet, '.participant-card', true))).toMatchObject({
+    expect(declarations(rule(cardShell, '.mip-talent-card--grid', true))).toMatchObject({
       'min-width': '0',
       'overflow': 'hidden',
     })
-    const textRule = stylesheet.nodes.find(
+    const leftBody = cardShell.nodes.find(
       (candidate): candidate is Rule => candidate.type === 'rule'
-        && candidate.selectors.length === 3
-        && candidate.selectors.includes('.participant-card__name')
-        && candidate.selectors.includes('.participant-card__meta')
-        && candidate.selectors.includes('.participant-card__summary'),
+        && candidate.selectors.includes('.mip-talent-card--grid-left .mip-talent-card__figure-meta'),
     )
-    expect(textRule).toBeDefined()
-    expect(declarations(textRule!)).toMatchObject({
-      'overflow': 'hidden',
-      'text-overflow': 'ellipsis',
-      'overflow-wrap': 'anywhere',
+    expect(leftBody).toBeDefined()
+    expect(declarations(rule(stylesheet, '.participants-cell', true))).toMatchObject({
+      'min-width': '0',
     })
+    expect(declarations(rule(stylesheet, '.participants-cell--pressed .mip-talent-card--grid'))).toMatchObject({
+      background: 'var(--color-panel-raised)',
+    })
+    // 桌面断点继续用 apply-shared 覆盖组件类缩放卡面。
+    for (const params of ['(min-width: 600px) and (max-width: 959px)', '(min-width: 960px)']) {
+      expect(declarations(rule(media(stylesheet, params), '.participants-cell .mip-talent-card--grid'))).toMatchObject({
+        'min-height': '220px',
+        'border-radius': '8px',
+      })
+    }
   })
 })

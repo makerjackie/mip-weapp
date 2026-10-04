@@ -1,0 +1,5 @@
+/* MIW-24：候选卡走统一嘉宾卡组件 grid 壳；可选择的候选卡以描边区分（页面 apply-shared 覆盖组件类）。 */
+.interaction-cell--bordered .mip-talent-card--grid {
+  box-sizing: border-box;
+  border: 1rpx solid var(--color-line);
+}

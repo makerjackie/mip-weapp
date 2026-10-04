@@ -88,6 +88,11 @@
   margin-left: 8rpx;
 }
 
+.mip-talent-card__badge--dot {
+  background: var(--color-brand);
+  border-radius: 50%;
+}
+
 .mip-talent-card__kind {
   flex: none;
   padding: 0 8rpx;
@@ -224,4 +229,190 @@
   color: var(--color-brand);
   text-align: right;
   white-space: nowrap;
+}
+
+/* Grid 竖版嘉宾卡：figma 1818_17230/1732_19323（170x187 -> 双列 374rpx 高）。
+   Lv/未读在左上角，corner 插槽留给页面自有事实（心动、×N、红心徽标），
+   底部左勋章（≤3 枚佩戴口径）、右邀请人。 */
+.mip-talent-card--grid {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 374rpx;
+  padding: 16rpx 24rpx 16rpx;
+  overflow: hidden;
+  background: var(--color-panel);
+  border-radius: 16rpx;
+}
+
+.mip-talent-card__lead {
+  position: absolute;
+  top: 16rpx;
+  left: 16rpx;
+  display: flex;
+  gap: 8rpx;
+  align-items: center;
+}
+
+.mip-talent-card__unread {
+  flex: none;
+  width: 16rpx;
+  height: 16rpx;
+  background: var(--color-danger);
+  border-radius: 50%;
+}
+
+.mip-talent-card--grid .mip-talent-card__level {
+  margin-left: 0;
+}
+
+.mip-talent-card__lead-label {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 32rpx;
+  padding: 0 8rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 28rpx;
+  color: var(--color-brand);
+  background: var(--color-panel-raised);
+  border: 1rpx solid var(--color-canvas);
+  border-radius: 8rpx;
+}
+
+.mip-talent-card__figure-avatar--ring {
+  border: 3rpx solid var(--color-ink);
+}
+
+/* 活动参与人卡（figma 1818_17230）：meta/简介左对齐；嘉宾/心动/访客卡（1732_19323）居中。 */
+.mip-talent-card--grid-left .mip-talent-card__figure-meta,
+.mip-talent-card--grid-left .mip-talent-card__figure-supporting {
+  text-align: left;
+}
+
+.mip-talent-card__corner {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.mip-talent-card__figure {
+  display: flex;
+  flex: none;
+  justify-content: center;
+}
+
+.mip-talent-card__figure-avatar {
+  display: flex;
+  width: 112rpx;
+  height: 112rpx;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+  border-radius: 50%;
+}
+
+.mip-talent-card__figure-name {
+  margin-top: 16rpx;
+  overflow: hidden;
+  font-size: 32rpx;
+  font-weight: 500;
+  line-height: 44.8rpx;
+  color: var(--color-ink);
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mip-talent-card__figure-status {
+  margin-top: 8rpx;
+  overflow: hidden;
+  font-size: 20rpx;
+  font-weight: 500;
+  line-height: 34rpx;
+  color: var(--color-ink);
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mip-talent-card__figure-meta {
+  margin-top: 8rpx;
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  color: var(--color-ink);
+  text-align: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.mip-talent-card__figure-supporting {
+  margin-top: 8rpx;
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  color: var(--color-muted);
+  text-align: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.mip-talent-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: auto;
+  padding-top: 24rpx;
+  min-height: 40rpx;
+}
+
+.mip-talent-card__medals {
+  display: flex;
+  flex: none;
+  gap: 8rpx;
+  align-items: center;
+}
+
+.mip-talent-card__medal {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+/* 无图勋章的兜底圆点（与公开档案页勋章 fallback-dot 同口径），不伪造勋章图。 */
+.mip-talent-card__medal--dot {
+  background: var(--color-brand);
+  border-radius: 50%;
+}
+
+.mip-talent-card__inviter--grid {
+  position: static;
+  gap: 8rpx;
+  margin-left: auto;
+}
+
+.mip-talent-card__inviter--grid .mip-talent-card__inviter-name {
+  max-width: 200rpx;
+  color: var(--color-ink);
+  text-align: left;
+}
+
+.mip-talent-card__inviter-avatar--grid {
+  width: 40rpx;
+  height: 40rpx;
+  box-shadow: none;
 }

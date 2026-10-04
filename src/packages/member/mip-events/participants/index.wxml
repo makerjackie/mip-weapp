@@ -50,33 +50,30 @@
   </view>
   <block wx:else>
     <mip-empty-state wx:if="{{displayItems.length === 0}}" title="{{emptyTitle}}" description="{{emptyDescription}}" />
-    <!-- figma 1818_17230：双列卡 170x187——56 圆头像带白描边环、16px 名字、左上 Lv 徽标槽
-         （kind）、meta 行、两行简介、右上角 18x16 心形（灰描边未投可点 / 红实心已投，再点取消）。 -->
+    <!-- figma 1818_17230：双列卡 170x187——统一嘉宾卡组件 grid 壳：左上 kind 章、右上心形票
+         （corner 插槽页面自有事实：灰描边未投可点 / 红实心已投）、描边环头像、名字、
+         心动关系行（body 插槽）、左对齐 meta/简介。等级、邀请来源与勋章未由 DTO 返回，不造值。 -->
     <view wx:else class="participants-grid">
-      <view wx:for="{{displayItems}}" wx:key="profileRef" class="participant-card" hover-class="participant-card--pressed" aria-role="button" aria-label="查看{{item.displayName}}的公开档案" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
-        <view class="participant-card__visual">
-          <text wx:if="{{item.kindLabel}}" class="participant-card__kind">{{item.kindLabel}}</text>
-          <view wx:if="{{item.heartTicket || heartState !== 'ready'}}" class="participant-card__heart" aria-role="button" aria-label="{{heart.target && heart.target.profileRef === item.profileRef ? '取消对' + item.displayName + '的心动' : '对' + item.displayName + '心动'}}" data-profile-ref="{{item.profileRef}}" catch:tap="toggleHeartVote">
-            <!-- MIW-17 G3：原型已投红心 fill #FF2238（DS record 红），非 danger #FF4D5E。 -->
-            <t-icon wx:if="{{heart.target && heart.target.profileRef === item.profileRef}}" name="heart-filled" size="18px" color="var(--mip-record)" />
-            <t-icon wx:else name="heart" size="18px" color="var(--color-muted)" />
+      <view wx:for="{{displayItems}}" wx:key="profileRef" class="participants-cell" hover-class="participants-cell--pressed" aria-role="button" aria-label="查看{{item.displayName}}的公开档案" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
+        <mip-talent-card layout="grid" left-align-body="{{true}}" avatar-ring="{{true}}" lead-label="{{item.kindLabel}}" display-name="{{item.displayName}}" avatar-url="{{item.avatarUrl || ''}}" meta-text="{{item.metaText}}" supporting-text="{{item.introductionText}}">
+          <view slot="corner">
+            <view wx:if="{{item.heartTicket || heartState !== 'ready'}}" class="participant-card__heart" aria-role="button" aria-label="{{heart.target && heart.target.profileRef === item.profileRef ? '取消对' + item.displayName + '的心动' : '对' + item.displayName + '心动'}}" data-profile-ref="{{item.profileRef}}" catch:tap="toggleHeartVote">
+              <!-- MIW-17 G3：原型已投红心 fill #FF2238（DS record 红），非 danger #FF4D5E。 -->
+              <t-icon wx:if="{{heart.target && heart.target.profileRef === item.profileRef}}" name="heart-filled" size="18px" color="var(--mip-record)" />
+              <t-icon wx:else name="heart" size="18px" color="var(--color-muted)" />
+            </view>
           </view>
-          <image wx:if="{{item.avatarUrl}}" class="participant-card__avatar" mode="aspectFill" src="{{item.avatarUrl}}" />
-          <view wx:else class="participant-card__avatar participant-card__avatar--empty"><t-icon name="user-avatar" size="26px" color="var(--color-brand)" /></view>
-        </view>
-        <view class="participant-card__name">{{item.displayName}}</view>
-        <view wx:if="{{item.heartRelation}}" class="participant-card__relations">
-          <view wx:if="{{item.heartRelation === 'SENT' || item.heartRelation === 'MUTUAL'}}" class="participant-card__relation participant-card__relation--sent">
-            <t-icon name="heart-filled" size="12px" color="var(--color-brand)" />
-            <text>我的心动</text>
+          <view slot="body" wx:if="{{item.heartRelation}}" class="participant-card__relations">
+            <view wx:if="{{item.heartRelation === 'SENT' || item.heartRelation === 'MUTUAL'}}" class="participant-card__relation participant-card__relation--sent">
+              <t-icon name="heart-filled" size="12px" color="var(--color-brand)" />
+              <text>我的心动</text>
+            </view>
+            <view wx:if="{{item.heartRelation === 'RECEIVED' || item.heartRelation === 'MUTUAL'}}" class="participant-card__relation">
+              <t-icon name="heart-filled" size="12px" color="var(--mip-record)" />
+              <text>对我心动</text>
+            </view>
           </view>
-          <view wx:if="{{item.heartRelation === 'RECEIVED' || item.heartRelation === 'MUTUAL'}}" class="participant-card__relation">
-            <t-icon name="heart-filled" size="12px" color="var(--mip-record)" />
-            <text>对我心动</text>
-          </view>
-        </view>
-        <view wx:if="{{item.metaText}}" class="participant-card__meta">{{item.metaText}}</view>
-        <view wx:if="{{item.introductionText}}" class="participant-card__summary">{{item.introductionText}}</view>
+        </mip-talent-card>
       </view>
     </view>
     <view wx:if="{{activeView === 'PUBLIC' && nextCursor}}" class="mt-4"><t-button block variant="outline" theme="primary" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
