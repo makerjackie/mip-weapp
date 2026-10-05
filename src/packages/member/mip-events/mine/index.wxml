@@ -1,66 +1,21 @@
 <view id="mip-events-mine-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+40rpx)] text-ink">
-  <view wx:if="{{!figmaLayout}}" class="grid grid-cols-3 border-b border-line text-center text-[24rpx]">
-    <view wx:if="{{activeCategory === 'UPCOMING'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
-    <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
-    <view wx:if="{{activeCategory === 'ATTENDED'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="ATTENDED" bind:tap="changeCategory">已参加({{counts.attended}})</view>
-    <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-category="ATTENDED" bind:tap="changeCategory">已参加({{counts.attended}})</view>
-    <view wx:if="{{activeCategory === 'HISTORY'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="HISTORY" bind:tap="changeCategory">历史({{counts.history || 0}})</view>
-    <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-category="HISTORY" bind:tap="changeCategory">历史({{counts.history || 0}})</view>
+  <!-- figma 3591_36185 我的活动：仅 待参加/已参加 两个 tab，无历史入口。 -->
+  <view class="grid grid-cols-2 border-b border-line text-center text-[28rpx] leading-[40rpx]">
+    <view wx:if="{{activeCategory === 'UPCOMING'}}" class="min-h-[80rpx] border-b-[4rpx] border-brand py-[20rpx] font-medium text-brand" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
+    <view wx:else class="min-h-[80rpx] border-b-[4rpx] border-transparent py-[20rpx] text-muted" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
+    <view wx:if="{{activeCategory === 'ATTENDED'}}" class="min-h-[80rpx] border-b-[4rpx] border-brand py-[20rpx] font-medium text-brand" data-category="ATTENDED" bind:tap="changeCategory">已参加({{counts.attended}})</view>
+    <view wx:else class="min-h-[80rpx] border-b-[4rpx] border-transparent py-[20rpx] text-muted" data-category="ATTENDED" bind:tap="changeCategory">已参加({{counts.attended}})</view>
   </view>
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-3 mt-4 rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><mip-empty-state title="暂时无法加载活动" description="{{message || '请稍后重试。'}}" action-text="重新加载" bind:action="loadRegistrations" /></view>
-  <block wx:elif="{{figmaLayout}}">
-    <!-- figma 1723_16383/1723_16299 我的-活动：
-         设计稿是 2 列 tab（待参加/已参加）+ 封面卡列表（封面烘焙自参考稿，含
-         头像拼图/+45参加/仅玩家/沙龙 覆盖层）；取消报名稿在全页 0.33 透明度的
-         背景上叠原生样式确认弹窗。生产保持下方 3 列 tab + 报名卡列表
-         （被 mip-events-mine 测试 pin）。fixture figmaLayout 打开时按稿渲染。 -->
-    <view class="relative min-h-[1080rpx]">
-      <view class="{{figma.dialog ? 'opacity-[0.33]' : ''}}">
-        <view class="absolute left-0 top-0 h-[80rpx] w-full">
-          <view class="absolute left-0 top-[20rpx] w-[375rpx] text-center text-[28rpx] {{figma.activeTab === 0 ? 'font-medium text-brand' : 'text-muted'}}" style="line-height:39.2rpx">待参加({{figma.counts.pending}})</view>
-          <view class="absolute left-[375rpx] top-[20rpx] w-[375rpx] text-center text-[28rpx] {{figma.activeTab === 1 ? 'font-medium text-brand' : 'text-muted'}}" style="line-height:39.2rpx">已参加({{figma.counts.joined}})</view>
-          <view class="absolute top-[76rpx] h-[4rpx] w-[375rpx] bg-brand" style="left:{{figma.activeTab === 0 ? 0 : 375}}rpx"></view>
-        </view>
-        <view wx:for="{{figma.cards}}" wx:key="name" class="absolute left-[24rpx] h-[476rpx] w-[702rpx] overflow-hidden rounded-[16rpx] bg-panel" style="top:{{item.topRpx}}rpx">
-          <image class="absolute left-0 top-0 h-[298rpx] w-full" src="{{item.cover}}" />
-          <view class="absolute left-[24rpx] top-[314rpx] text-[32rpx] font-medium leading-[44.8rpx] text-ink">{{item.name}}</view>
-          <image class="absolute left-[24rpx] top-[374rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/events/icon-calendar.png" />
-          <view class="absolute left-[67rpx] top-[375rpx] text-[24rpx] leading-[33.6rpx] text-ink">{{item.time}}</view>
-          <image class="absolute left-[24rpx] top-[420rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/events/icon-pin.png" />
-          <view class="absolute left-[67rpx] top-[419rpx] text-[24rpx] leading-[33.6rpx] text-ink">{{item.place}}</view>
-          <view wx:if="{{item.action}}" class="absolute right-[20rpx] top-[404rpx] flex h-[54rpx] w-[144rpx] items-center justify-center rounded-full bg-brand text-[24rpx] font-medium text-canvas">{{item.action}}</view>
-        </view>
-      </view>
-      <mip-dialog
-        wx:if="{{figma.dialog}}"
-        style="position:absolute;left:54rpx;top:404rpx;width:640rpx"
-        open="{{true}}"
-        frame-only="{{true}}"
-        title="{{figma.dialog.title}}"
-        button="{{figma.dialog.button}}"
-      >
-        <view class="w-full text-center">
-          <view>{{figma.dialog.line1}}</view>
-          <view>{{figma.dialog.line2}}</view>
-          <view>{{figma.dialog.line3}}</view>
-        </view>
-      </mip-dialog>
-    </view>
-  </block>
   <view wx:elif="{{registrations.length === 0}}" class="mx-3 mt-5"><mip-empty-state title="{{activeCategory === 'UPCOMING' ? '暂无待参加活动' : activeCategory === 'ATTENDED' ? '暂无已参加活动' : '暂无历史活动'}}" description="{{activeCategory === 'UPCOMING' ? '报名后的待参加活动会显示在这里。' : activeCategory === 'ATTENDED' ? '完成签到的活动会显示在这里。' : '已结束、已取消和未通过的报名会显示在这里。'}}" action-text="浏览活动" bind:action="browseEvents" /></view>
   <view wx:else class="mx-3 mt-4 flex flex-col gap-3">
-    <view wx:for="{{registrations}}" wx:key="registrationId" class="overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}">
+    <!-- 点卡片进详情；卡片上唯一动作是右下角黄色胶囊「取消报名」（服务端授权时渲染）。 -->
+    <view wx:for="{{registrations}}" wx:key="registrationId" class="relative overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}">
       <mip-activity-card event="{{item.card}}" variant="feed" bind:select="openRegistration" />
       <view wx:if="{{item.status === 'PAYMENT_PENDING'}}" class="border-t border-line px-3 py-2 text-[20rpx] text-muted">支付确认前不会生成报名资格。</view>
-      <view wx:if="{{item.orderId || item.canEdit || item.canCancel || item.canRetryRefund}}" data-role="registration-actions" class="flex flex-col gap-2 border-t border-line px-3 py-3">
-        <view wx:if="{{item.canEdit || item.canCancel || item.canRetryRefund}}" class="flex gap-2">
-          <t-button wx:if="{{item.canCancel || item.canRetryRefund}}" class="min-w-0 flex-1" block size="large" theme="{{item.canRetryRefund ? 'primary' : 'danger'}}" variant="outline" loading="{{cancelingId === item.registrationId}}" data-action="cancel" data-event-id="{{item.event.id}}" data-registration-id="{{item.registrationId}}" data-version="{{item.version}}" data-refund-retry="{{item.canRetryRefund}}" catch:tap="cancelRegistration">{{item.canRetryRefund ? '继续处理退款' : '取消报名'}}</t-button>
-          <t-button wx:if="{{item.canEdit}}" class="min-w-0 flex-1" block size="large" theme="primary" data-action="edit" data-event-id="{{item.event.id}}" catch:tap="editRegistration">修改报名</t-button>
-        </view>
-        <t-button wx:if="{{item.orderId}}" block size="large" theme="default" variant="text" data-action="order" data-order-id="{{item.orderId}}" catch:tap="openOrder">查看订单详情</t-button>
-      </view>
+      <view wx:if="{{item.canCancel || item.canRetryRefund}}" aria-role="button" aria-label="{{item.canRetryRefund ? '继续处理退款' : '取消报名'}}" class="absolute bottom-[16rpx] right-[16rpx] flex h-[56rpx] w-[152rpx] items-center justify-center rounded-full bg-brand text-[28rpx] font-medium leading-[40rpx] text-canvas {{cancelingId === item.registrationId ? 'opacity-60' : 'active:opacity-80'}}" data-action="cancel" data-event-id="{{item.event.id}}" data-registration-id="{{item.registrationId}}" data-version="{{item.version}}" data-refund-retry="{{item.canRetryRefund}}" catch:tap="cancelRegistration">{{item.canRetryRefund ? '继续处理退款' : '取消报名'}}</view>
     </view>
     <view wx:if="{{nextCursor}}" class="py-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
   </view>

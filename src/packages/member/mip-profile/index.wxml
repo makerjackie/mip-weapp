@@ -99,7 +99,7 @@
       <view class="absolute left-[24rpx] top-[1224rpx] h-[200rpx] w-[702rpx] rounded-[16rpx] bg-panel">
         <text wx:if="{{figma.intro}}" class="absolute left-[24rpx] top-[16rpx] text-[28rpx] leading-[40rpx] text-ink">{{figma.intro}}</text>
         <text wx:else class="absolute left-[24rpx] top-[16rpx] text-[28rpx] leading-[40rpx] text-muted">示例：MIP 创意社群创始人，寻找永创意做生意的伙伴</text>
-        <text class="absolute bottom-[24rpx] right-[24rpx] text-[20rpx] leading-[28rpx] text-muted">{{(figma.intro || '').length}}/160</text>
+        <text class="absolute bottom-[24rpx] right-[24rpx] text-[20rpx] leading-[28rpx] text-muted">{{figma.intro ? figma.intro.length : 0}}/160</text>
       </view>
     </view>
   </block>
