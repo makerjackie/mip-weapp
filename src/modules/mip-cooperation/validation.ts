@@ -190,6 +190,7 @@ export function normalizeCooperationCardFilter(value: CooperationCardFilter = {}
     branchId: branchId as CooperationCardFilter['branchId'],
     roleKey: value.roleKey && isCooperationRoleKey(value.roleKey) ? value.roleKey : undefined,
     industryTagIds: uniqueIds(value.industryTagIds, 8, '行业标签'),
+    abilityTagIds: uniqueIds(value.abilityTagIds, 8, '能力标签'),
     cursor: optionalText(value.cursor, 768, '分页位置'),
     limit: Math.min(30, Math.max(1, Math.trunc(value.limit || 16))),
   }

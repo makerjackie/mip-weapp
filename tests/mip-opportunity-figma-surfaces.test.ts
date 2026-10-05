@@ -36,6 +36,12 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(filterSurface).not.toContain('bind:tap="openMatching"')
     expect(filterSurface).not.toContain('bind:tap="openMine"')
 
+    // MIW-31:合作地点/合作角色/能力预设不再手写品牌底 pill,统一走 DS chip。
+    expect(filterSurface).toContain('<mip-tag-chip label="不限" active="{{draftLocationPreset === \'ALL\'}}" />')
+    expect(filterSurface).toContain('<mip-tag-chip label="{{item.name}}" active="{{draftRoleKey === item.key}}" />')
+    expect(filterSurface).toContain('<mip-tag-chip label="{{item.label}}" active="{{item.selected}}" />')
+    expect(filterSurface).not.toContain('bg-brand px-4 py-2')
+
     for (const binding of [
       'bindconfirm="onSearchConfirm"',
       'bind:change="changeCity"',
@@ -56,7 +62,8 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discoveryScript).toContain('preserveContent: this.data.state === \'ready\'')
     expect(discovery).toContain('class="opportunities-filter-panel')
     expect(discoveryScript).toContain('if (!this.data.filterOpen && this.data.nextCursor && !this.data.loadingMore)')
-    expect(discovery).toContain('<block wx:elif="{{filterOpen}}">')
+    // MIW-31：整页筛选态仅归项目机会；人才合作面板内联在搜索行下方。
+    expect(discovery).toContain('<block wx:elif="{{filterOpen && mode === \'opportunities\'}}">')
     expect(discovery).toContain('<block wx:else>')
   })
 
@@ -77,6 +84,42 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discoveryScript).toContain('selectedLocation === \'NATIONAL\' ? \'全国\' : \'不限\'')
     expect(discoveryScript).toContain('locationFilterLabel: \'不限\'')
     expect(discoveryScript).toContain('this.data.mode === \'cooperation\' ? \'全国\' : \'不限\'')
+  })
+
+  // MIW-31（figma 2917_4875 机会-人才合作筛选）：面板落在 tab+搜索行下方而非整页替换，
+  // 能力/行业 chips 与底部液态玻璃确认条全部走 DS 组件，已选计数为能力+行业之和。
+  it('presents the cooperation filter below the search row with DS chips and a selected count', () => {
+    const panelStart = discovery.indexOf('id="opportunities-cooperation-filter"')
+    expect(panelStart).toBeGreaterThan(discovery.indexOf('id="opportunities-search-input"'))
+    expect(panelStart).toBeGreaterThan(discovery.indexOf('id="opportunities-talent-tab"'))
+    const panel = discovery.slice(panelStart, discovery.indexOf('id="opportunities-cooperation-filter-actions"'))
+
+    expect(discovery).toContain('mode === \'cooperation\' && filterOpen')
+    expect(panel).toContain('能力选择')
+    expect(panel).toContain('行业选择')
+    expect(panel).toContain('<mip-tag-chip label="不限" active="{{!draftAbilityTagIds.length}}" />')
+    expect(panel).toContain('data-type="ability"')
+    expect(panel).toContain('bind:tap="toggleTag"')
+    expect(panel).toContain('<mip-industry-selector groups="{{catalog.industryGroups}}"')
+    expect(panel).toContain('show-popular="{{true}}"')
+    expect(panel).toContain('accordion="{{true}}"')
+    expect(panel).toContain('clear-label="不限"')
+    expect(panel).toContain('bind:tap="removeDraftIndustry"')
+    expect(panel).toContain('已选 {{draftAbilityTagIds.length + draftIndustryTagIds.length}}')
+    expect(panel).not.toContain('合作角色')
+    expect(panel).not.toContain('城市分会')
+
+    const actions = discovery.slice(discovery.indexOf('id="opportunities-cooperation-filter-actions"'))
+    expect(actions).toContain('mip-liquid-glass')
+    expect(actions).toContain('<mip-pill-button class="min-w-0 flex-1" variant="secondary" label="清除" bind:tap="resetFilters" />')
+    expect(actions).toContain('<mip-pill-button class="min-w-0 flex-1" label="确定" bind:tap="applyFilters" />')
+    // 面板打开时结果区让位，确认后回到列表。
+    expect(discovery).toContain('<block wx:if="{{!filterOpen}}">')
+
+    expect(discoveryScript).toContain('abilityTagIds: this.data.selectedAbilityTagIds')
+    expect(discoveryScript).toContain('draftIndustryViewsOf(this.data.catalog, ids)')
+    expect(source('src/modules/mip-cooperation/validation.ts')).toContain('abilityTagIds: uniqueIds(value.abilityTagIds, 8, \'能力标签\')')
+    expect(source('src/modules/mip-cooperation/types.ts')).toContain('abilityTagIds?: string[]')
   })
 
   it('maps the location preset to one backend scope and keeps search independent from filter reset', () => {

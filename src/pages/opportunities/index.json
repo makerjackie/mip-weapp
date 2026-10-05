@@ -14,6 +14,7 @@
     "mip-talent-card": "/components/talent-card/index",
     "mip-catalog-selector": "/components/catalog-selector/index",
     "mip-industry-selector": "/components/mip-industry-selector/index",
+    "mip-tag-chip": "/components/mip-tag-chip/index",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-icon": "/components/mip-icon/index",

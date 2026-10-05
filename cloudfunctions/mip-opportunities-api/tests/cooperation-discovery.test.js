@@ -13,6 +13,7 @@ const { createTalentCursor, readTalentCursor } = require('../lib/talent-cursor')
 const appId = 'wx-cooperation-app'
 const branchId = '10000000-0000-4000-8000-000000000001'
 const industryId = '20000000-0000-4000-8000-000000000001'
+const abilityId = '22000000-0000-4000-8000-000000000001'
 const firstCardId = '30000000-0000-4000-8000-000000000002'
 const secondCardId = '30000000-0000-4000-8000-000000000001'
 const firstOwnerId = '40000000-0000-4000-8000-000000000002'
@@ -30,6 +31,7 @@ test('cooperation filters normalize keyword, role, city, industry, cursor, and l
     branchId,
     roleKey: 'strategist',
     industryTagIds: [industryId, industryId],
+    abilityTagIds: [abilityId, abilityId],
     cursor,
     limit: 100,
   }), {
@@ -37,12 +39,14 @@ test('cooperation filters normalize keyword, role, city, industry, cursor, and l
     branchId,
     roleKey: 'strategist',
     industryTagIds: [industryId],
+    abilityTagIds: [abilityId],
     cursor: { timestamp: '2026-08-24T08:00:00.000Z', id: firstOwnerId },
     limit: 30,
   })
   assert.throws(() => normalizeFilter({ roleKey: 'owner' }), /VALIDATION_FAILED/)
   assert.throws(() => normalizeFilter({ branchId: 'not-a-branch' }), /VALIDATION_FAILED/)
   assert.throws(() => normalizeFilter({ cursor: 'not-a-cursor' }), /VALIDATION_FAILED/)
+  assert.throws(() => normalizeFilter({ abilityTagIds: ['not-a-tag'] }), /VALIDATION_FAILED/)
 })
 
 test('legacy cooperation-card action preserves the card-level response contract', async () => {
@@ -135,16 +139,19 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
     async query(sql, params) {
       calls.push({ sql, params })
       if (sql.includes('FROM mip_tags t')) {
-        return [{
-          id: industryId,
-          kind: 'INDUSTRY',
-          selectable: 1,
-          parent_id: '21000000-0000-4000-8000-000000000001',
-          parent_kind: 'INDUSTRY',
-          parent_parent_id: null,
-          parent_selectable: 0,
-          parent_enabled: 1,
-        }]
+        return [
+          {
+            id: industryId,
+            kind: 'INDUSTRY',
+            selectable: 1,
+            parent_id: '21000000-0000-4000-8000-000000000001',
+            parent_kind: 'INDUSTRY',
+            parent_parent_id: null,
+            parent_selectable: 0,
+            parent_enabled: 1,
+          },
+          { id: abilityId, kind: 'ABILITY', selectable: 1, parent_id: null, parent_kind: null, parent_parent_id: null, parent_selectable: 0, parent_enabled: 1 },
+        ]
       }
       if (sql.includes('FROM mip_cooperation_cards c')) return rows
       throw new Error(`unexpected query: ${sql}`)
@@ -160,6 +167,7 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
     branchId,
     roleKey: 'strategist',
     industryTagIds: [industryId],
+    abilityTagIds: [abilityId],
     limit: 1,
   })
 
@@ -175,14 +183,18 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
   assert.match(listCall.sql, /u\.primary_branch_id = \?/)
   assert.equal((listCall.sql.match(/c\.role_key = \?/g) || []).length, 1)
   assert.match(listCall.sql, /FROM mip_profile_tags industry_filter/)
+  assert.match(listCall.sql, /FROM mip_profile_tags ability_filter/)
+  assert.match(listCall.sql, /ability_filter\.relation = 'ABILITY'/)
   assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.primaryBranch'\)/)
   assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.industry'\)/)
+  assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.abilities'\)/)
   assert.deepEqual(listCall.params, [
     appId,
     '%品牌=_10=%%', '%品牌=_10=%%', '%品牌=_10=%%', '%品牌=_10=%%', '%品牌=_10=%%',
     branchId,
     'strategist',
     industryId,
+    abilityId,
     appId,
   ])
   assert.equal(result.items.length, 1)
@@ -213,6 +225,7 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
     branchId,
     roleKey: 'strategist',
     industryTagIds: [industryId],
+    abilityTagIds: [abilityId],
   }, secret), {
     snapshotAt,
     createdAt: '2026-06-24T08:00:00.000Z',

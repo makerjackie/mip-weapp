@@ -92,6 +92,7 @@ export interface CooperationCardFilter {
   branchId?: BranchId
   roleKey?: CooperationRoleKey
   industryTagIds?: string[]
+  abilityTagIds?: string[]
   cursor?: string
   limit?: number
 }
