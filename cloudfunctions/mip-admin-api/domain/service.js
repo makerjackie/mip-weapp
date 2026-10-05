@@ -35,6 +35,7 @@ const { createCooperationCards } = require('./cooperation-cards')
 const { createContribution } = require('./contribution')
 const { createVideos } = require('./videos')
 const { createMembershipContent } = require('./membership-content')
+const { createMembershipPlans } = require('./membership-plans')
 const { createCards } = require('./cards')
 const { createEventDrafts } = require('./event-drafts')
 const { createRoleTemplates } = require('./role-templates')
@@ -488,6 +489,7 @@ function createAdminService({
       grantMembership,
       listMembershipApprovals,
       decideMembershipApproval,
+      ...createMembershipPlans({ access, repository }),
       listEntitlementTransactions,
       grantEntitlement,
     }),

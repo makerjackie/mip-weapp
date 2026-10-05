@@ -147,4 +147,45 @@ describe('membership configuration UI', () => {
     await waitFor(() => expect(state.request).toHaveBeenCalledWith('mip.admin.membershipAgreement.save', expect.objectContaining({ document: 'experience-rules', expectedVersion: 3 })))
   })
 
+  it('renders plan facts read-only and converts the yuan input to cents on save', async () => {
+    state.tab = 'plans'
+    const plan = { id: 'plan-1', planKey: 'annual', catalogStage: 'TEST', name: '一年会员', durationDays: 365, priceCents: 600000, currency: 'CNY', status: 'ACTIVE', version: 4, updatedAt: null }
+    state.request.mockImplementation(async (action: string) => action === 'mip.admin.membershipPlans.list' ? { items: [plan] } : {})
+    const onSaved = vi.fn()
+    mount(onSaved)
+    await screen.findByText('一年会员')
+    expect(screen.getByText('测试')).toBeInTheDocument()
+    expect(screen.getByText('启用')).toBeInTheDocument()
+    expect(screen.getByText('时长 365 天')).toBeInTheDocument()
+    const price = screen.getByLabelText('价格-一年会员') as HTMLInputElement
+    expect(price).toHaveValue('6000.00')
+    fireEvent.change(price, { target: { value: '6888' } })
+    fireEvent.blur(price)
+    fireEvent.click(screen.getByRole('button', { name: /保\s*存/ }))
+    await waitFor(() => expect(state.request).toHaveBeenCalledWith('mip.admin.membershipPlans.save', expect.objectContaining({ planId: 'plan-1', expectedVersion: 4, priceCents: 688800 })))
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+  })
+
+  it('keeps plan prices read-only without the configure capability', async () => {
+    state.tab = 'plans'
+    state.writable = false
+    state.request.mockResolvedValue({ items: [{ id: 'plan-2', planKey: 'annual', catalogStage: 'LIVE', name: '一年会员', durationDays: 365, priceCents: 600000, currency: 'CNY', status: 'ACTIVE', version: 1, updatedAt: null }] })
+    mount()
+    expect(await screen.findByLabelText('价格-一年会员')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /保\s*存/ })).not.toBeInTheDocument()
+  })
+
+  it('surfaces a plan price conflict instead of reporting success', async () => {
+    state.tab = 'plans'
+    state.request.mockImplementation(async (action: string) => action === 'mip.admin.membershipPlans.list'
+      ? { items: [{ id: 'plan-3', planKey: 'annual', catalogStage: 'LIVE', name: '一年会员', durationDays: 365, priceCents: 600000, currency: 'CNY', status: 'ACTIVE', version: 2, updatedAt: null }] }
+      : Promise.reject(new Error('方案已被其他人修改，请刷新后重试')))
+    const onSaved = vi.fn()
+    mount(onSaved)
+    await screen.findByText('一年会员')
+    fireEvent.click(screen.getByRole('button', { name: /保\s*存/ }))
+    await screen.findByText('方案已被其他人修改，请刷新后重试')
+    expect(onSaved).not.toHaveBeenCalled()
+  })
+
 })

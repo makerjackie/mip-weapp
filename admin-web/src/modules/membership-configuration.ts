@@ -3,6 +3,18 @@ export type ConfigurationKind = 'levels' | 'benefits' | 'rules' | 'badges'
 export interface ConfigurationItem { id: string; name: string; version: number; status: string; [key: string]: unknown }
 export type AgreementDocument = 'membership' | 'user' | 'experience-rules'
 export interface MembershipAgreement { title: string; body: string; isDemo: boolean; version: number; updatedAt: string | null }
+// MIW-35：会员方案改价。名称/时长/上下架只读，后台仅允许调整 priceCents。
+export interface MembershipPlan { id: string; planKey: string; catalogStage: 'TEST' | 'LIVE'; name: string; durationDays: number; priceCents: number; currency: string; status: string; version: number; updatedAt: string | null }
+export const minPlanPriceCents = 1
+export const maxPlanPriceCents = 100000000
+export function planPriceCents(yuan: number | null): number | null {
+  if (yuan === null || !Number.isFinite(yuan)) return null
+  const cents = Math.round(yuan * 100)
+  return Number.isSafeInteger(cents) && cents >= minPlanPriceCents && cents <= maxPlanPriceCents ? cents : null
+}
+export function planPriceYuan(cents: number): number {
+  return Math.round(cents) / 100
+}
 export const demoMembershipAgreement = {
   title: '会员服务协议（演示）', isDemo: true,
   body: '【演示内容，仅供测试，不作为正式会员服务承诺】\n\n一、服务范围\n本演示会员可查看社区活动、交流资料与成长任务。具体服务、资格及有效期以后台配置和页面展示为准。\n\n二、成长与奖励\n完成任务后的经验值、贡献值和勋章，以服务端记录及管理员配置为准。演示奖励不承诺现金收益；奖金如有配置，需由运营另行核验和线下处理。\n\n三、使用规范\n请提供真实资料，尊重其他成员，不发布违法或侵权内容。\n\n四、服务调整与反馈\n此处为可编辑示例。正式上线前请替换为实际服务提供方、服务范围、退款及终止规则、联系方式等内容。',
@@ -30,6 +42,8 @@ export function membershipConfiguration(request: AdminRequest) {
     }),
     agreement: (document: AgreementDocument = 'membership') => request<MembershipAgreement>('mip.admin.membershipAgreement.get', document === 'membership' ? undefined : { document }),
     saveAgreement: (version: number, draft: Pick<MembershipAgreement, 'title' | 'body' | 'isDemo'>, idempotencyKey: string, document: AgreementDocument = 'membership') => request('mip.admin.membershipAgreement.save', { expectedVersion: version, draft, idempotencyKey, ...(document === 'membership' ? {} : { document }) }),
+    plans: () => request<{ items: MembershipPlan[] }>('mip.admin.membershipPlans.list'),
+    savePlanPrice: (planId: string, expectedVersion: number, priceCents: number, idempotencyKey: string) => request('mip.admin.membershipPlans.save', { planId, expectedVersion, priceCents, idempotencyKey }),
   }
 }
 export function configurationDraft(kind: ConfigurationKind, item: ConfigurationItem | null, demo = false): Record<string, unknown> {

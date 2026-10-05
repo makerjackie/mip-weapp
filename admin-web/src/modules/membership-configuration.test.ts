@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { configurationDraft, demoExperienceRules, demoMembershipAgreement, membershipConfiguration } from './membership-configuration.ts'
+import { configurationDraft, demoExperienceRules, demoMembershipAgreement, membershipConfiguration, planPriceCents } from './membership-configuration.ts'
 import type { AdminRequest } from './admin-read-contracts.ts'
 
 describe('membership configuration contracts', () => {
@@ -42,6 +42,19 @@ describe('membership configuration contracts', () => {
     assert.deepEqual(calls.map(call => (call.input as Record<string, unknown>).document), ['experience-rules', 'experience-rules'])
     assert.equal(demoExperienceRules.isDemo, true)
     assert.match(demoExperienceRules.body, /不作为正式规则说明/)
+  })
+  it('saves the plan price with the row version and converts yuan to integer cents', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const api = membershipConfiguration(async (action, input) => { calls.push({ action, input }); return {} as never })
+    await api.savePlanPrice('plan-a', 3, 688800, 'retry')
+    assert.deepEqual(calls[0], { action: 'mip.admin.membershipPlans.save', input: { planId: 'plan-a', expectedVersion: 3, priceCents: 688800, idempotencyKey: 'retry' } })
+    assert.equal(planPriceCents(6000), 600000)
+    assert.equal(planPriceCents(0.29), 29)
+    assert.equal(planPriceCents(1000000), 100000000)
+    assert.equal(planPriceCents(0), null)
+    assert.equal(planPriceCents(1000001), null)
+    assert.equal(planPriceCents(0.001), null)
+    assert.equal(planPriceCents(null), null)
   })
 
 })

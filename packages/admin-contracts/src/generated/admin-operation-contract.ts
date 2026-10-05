@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 238,
+  "operationCount": 240,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -267,6 +267,22 @@ export const ADMIN_OPERATION_CONTRACT = {
       "authentication": "REQUIRED",
       "session": "REQUIRED",
       "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.membershipPlans.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.membershipPlans.save",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
       "idempotencyKeyRequired": null
     },
     {
@@ -1914,7 +1930,7 @@ export const ADMIN_OPERATION_CONTRACT = {
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 238,
+  "operationCount": 240,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -2337,6 +2353,30 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "optionalInputKeys": [],
       "idempotencyKeyRequired": false,
       "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.membershipPlans.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.membershipPlans.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "expectedVersion",
+        "planId",
+        "priceCents"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.membershipApprovals.decide",
