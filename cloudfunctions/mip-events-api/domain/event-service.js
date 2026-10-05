@@ -1169,6 +1169,10 @@ async function getEvent(db, {
   const opensAt = row.registration_opens_at ? new Date(row.registration_opens_at).getTime() : Number.NEGATIVE_INFINITY
   const deadline = row.registration_deadline ? new Date(row.registration_deadline).getTime() : new Date(row.starts_at).getTime()
   const activeStatus = activeRegistrationStatuses.has(row.registration_status)
+  // MIW-28：仅签到查看者下发与你互动计数；未签到不产出，客户端整卡隐藏。
+  const interactionSummary = row.registration_status === 'ATTENDED' && userId
+    ? await getEventInteractionSummary(db, { appId, eventId, userId })
+    : undefined
   const onlineUrl = registeredOnlineUrl(row)
   const guideUrl = publicGuideUrl(row)
   return {
@@ -1204,6 +1208,7 @@ async function getEvent(db, {
     ...(row.registration_status ? { registrationVersion: Number(row.registration_version) } : {}),
     canCheckIn: ['REGISTERED', 'ATTENDED'].includes(row.registration_status),
     canInteract: row.registration_status === 'ATTENDED',
+    ...(interactionSummary ? { interactionSummary } : {}),
     organizer: publicOrganizer(row, { appId, profileRefSecret }),
     invitationAttribution: publicInvitationAttribution(row),
   }
@@ -2648,6 +2653,45 @@ async function getHeart(db, { appId, eventId, userId, tokenSecret, profileRefSec
   }
 }
 
+/**
+ * MIW-28：活动详情「与你互动」胶囊计数。仅在查看者已签到时调用；口径与参与人页
+ * 心动 tab 完全一致——我的心动 = 本人 ACTIVE 心动（目标可见），对我心动 = 指向本人
+ * 的 ACTIVE 心动（投票者可见），拉黑双向过滤，避免详情计数与 tab 列表不一致。
+ */
+async function getEventInteractionSummary(db, { appId, eventId, userId }) {
+  const sentBlock = mutualBlockFilter(userId, 'h.target_user_id', 'h.app_id')
+  const receivedBlock = mutualBlockFilter(userId, 'h.voter_user_id', 'h.app_id')
+  const row = await db.one(
+    `SELECT
+       (SELECT COUNT(*) FROM mip_event_hearts h
+        JOIN mip_event_registrations tr
+          ON tr.app_id = h.app_id AND tr.event_id = h.event_id AND tr.user_id = h.target_user_id
+          ${sentBlock.sql}
+        WHERE h.app_id = ? AND h.event_id = ? AND h.voter_user_id = ? AND h.status = 'ACTIVE'
+       ) AS my_interest_count,
+       (SELECT COUNT(*) FROM mip_event_hearts h
+        JOIN mip_event_registrations vr
+          ON vr.app_id = h.app_id AND vr.event_id = h.event_id AND vr.user_id = h.voter_user_id
+          ${receivedBlock.sql}
+        WHERE h.app_id = ? AND h.event_id = ? AND h.target_user_id = ? AND h.status = 'ACTIVE'
+       ) AS received_interest_count`,
+    [
+      ...sentBlock.params,
+      appId,
+      eventId,
+      userId,
+      ...receivedBlock.params,
+      appId,
+      eventId,
+      userId,
+    ],
+  )
+  return {
+    myInterestCount: Number(row?.my_interest_count || 0),
+    receivedInterestCount: Number(row?.received_interest_count || 0),
+  }
+}
+
 async function setHeart(db, {
   appId,
   eventId,
@@ -3031,6 +3075,7 @@ module.exports = {
   eventCancellationHours,
   getFeedback,
   getHeart,
+  getEventInteractionSummary,
   getMyRegistration,
   listEvents,
   listHeartCandidates,

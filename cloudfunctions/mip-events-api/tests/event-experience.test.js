@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict')
 const { test } = require('node:test')
-const { getHeart, listHeartCandidates, setHeart } = require('../domain/event-service')
+const { getEvent, getEventInteractionSummary, getHeart, listHeartCandidates, setHeart } = require('../domain/event-service')
 const { createSignedToken } = require('../lib/tokens')
 
 const profileRefSecret = 'event-experience-profile-reference-secret'
@@ -166,4 +166,95 @@ test('set heart rechecks a signed target inside the transaction', async () => {
     'user-self',
     'user-self',
   ])
+})
+
+test('interaction summary counts active hearts with app-scoped block filters', async () => {
+  const calls = []
+  const database = {
+    async one(sql, params) {
+      calls.push({ sql, params })
+      return { my_interest_count: '1', received_interest_count: '2' }
+    },
+  }
+
+  const result = await getEventInteractionSummary(database, {
+    appId: 'wx-app',
+    eventId: 'event-1',
+    userId: 'user-self',
+  })
+
+  const [summaryCall] = calls
+  assert.match(summaryCall.sql, /AS my_interest_count/)
+  assert.match(summaryCall.sql, /AS received_interest_count/)
+  assert.match(summaryCall.sql, /h\.voter_user_id = \? AND h\.status = 'ACTIVE'/)
+  assert.match(summaryCall.sql, /h\.target_user_id = \? AND h\.status = 'ACTIVE'/)
+  assert.match(summaryCall.sql, /visibility_block\.app_id = h\.app_id/)
+  assert.match(summaryCall.sql, /visibility_block\.blocked_user_id = h\.target_user_id/)
+  assert.match(summaryCall.sql, /visibility_block\.blocked_user_id = h\.voter_user_id/)
+  assert.deepEqual(summaryCall.params, [
+    'user-self',
+    'user-self',
+    'wx-app',
+    'event-1',
+    'user-self',
+    'user-self',
+    'user-self',
+    'wx-app',
+    'event-1',
+    'user-self',
+  ])
+  assert.deepEqual(result, { myInterestCount: 1, receivedInterestCount: 2 })
+})
+
+test('event detail emits interaction summary only for the attended viewer', async () => {
+  const summaryRow = { my_interest_count: 1, received_interest_count: 2 }
+  const detailDatabase = row => ({
+    async one(sql) {
+      if (sql.includes('AS received_interest_count')) return summaryRow
+      return row
+    },
+    async query() {
+      return []
+    },
+  })
+  const baseRow = {
+    id: 'event-1',
+    app_id: 'wx-app',
+    scope_type: 'PLATFORM',
+    organizer_user_id: 'organizer-1',
+    title: '活动',
+    summary: '摘要',
+    description: '介绍',
+    notices: null,
+    event_mode: 'ONLINE',
+    access_type: 'FREE',
+    registration_policy: 'AUTO',
+    status: 'PUBLISHED',
+    starts_at: '2026-08-25T00:00:00.000Z',
+    ends_at: '2026-08-25T02:00:00.000Z',
+    price_cents: 0,
+    currency: 'CNY',
+    form_version: 1,
+    registration_schema_json: '[]',
+    capacity: 10,
+    registration_count: 3,
+    cancellation_deadline: '2026-08-24T00:00:00.000Z',
+  }
+  const load = (row, userId) => getEvent(detailDatabase(row), {
+    appId: 'wx-app',
+    userId,
+    eventId: 'event-1',
+    now: new Date('2026-08-24T00:00:00.000Z'),
+    tokenSecret: '',
+    profileRefSecret: 'public-organizer-profile-ref-pepper-more-than-32-characters',
+  })
+
+  const attended = await load({ ...baseRow, registration_status: 'ATTENDED', registration_version: 3 }, 'viewer-1')
+  assert.deepEqual(attended.interactionSummary, { myInterestCount: 1, receivedInterestCount: 2 })
+
+  const registered = await load({ ...baseRow, registration_status: 'REGISTERED', registration_version: 3 }, 'viewer-1')
+  assert.equal('interactionSummary' in registered, false)
+
+  const guest = await load({ ...baseRow, registration_status: null }, null)
+  assert.equal('interactionSummary' in guest, false)
 })

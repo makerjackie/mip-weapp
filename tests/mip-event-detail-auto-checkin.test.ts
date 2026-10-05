@@ -311,18 +311,32 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
     expect(page.data.message).toContain('确认现场签到')
   })
 
-  it('hides the 与你互动 card when the attended event has no interest data', async () => {
+  it('shows the 与你互动 card for attended events even without interest data (MIW-28)', async () => {
     const page = createPage({ eventId: EVENT_ID })
     eventsModule.getEvent.mockResolvedValueOnce(attendedEvent({
       interactionSummary: { myInterestCount: 0, receivedInterestCount: 0 },
     }))
     await callPage(page, 'loadEvent', { force: true })
-    expect(page.data.interactionVisible).toBe(false)
+    expect(page.data.interactionVisible).toBe(true)
+    expect(page.data.heartMineLabel).toBe('我的心动 0')
+    expect(page.data.heartReceivedLabel).toBe('对我心动 0')
 
     const withoutSummary = createPage({ eventId: EVENT_ID })
     eventsModule.getEvent.mockResolvedValueOnce(attendedEvent({ interactionSummary: undefined }))
     await callPage(withoutSummary, 'loadEvent', { force: true })
     expect(withoutSummary.data.interactionVisible).toBe(false)
+    expect(withoutSummary.data.heartMineLabel).toBe('我的心动')
+    expect(withoutSummary.data.heartReceivedLabel).toBe('对我心动')
+  })
+
+  it('keeps the 与你互动 card hidden until the viewer has checked in', async () => {
+    const page = createPage({ eventId: EVENT_ID })
+    eventsModule.getEvent.mockResolvedValueOnce(attendedEvent({
+      registrationStatus: 'REGISTERED',
+      interactionSummary: { myInterestCount: 1, receivedInterestCount: 2 },
+    }))
+    await callPage(page, 'loadEvent', { force: true })
+    expect(page.data.interactionVisible).toBe(false)
   })
 
   it('deep-links the interaction pills to the matching participants tab and converges interaction routes', () => {
