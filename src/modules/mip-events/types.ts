@@ -173,7 +173,7 @@ export interface MipEventDetail extends MipEventListItem {
   registrationVersion?: number
   canCheckIn: boolean
   canInteract: boolean
-  /** 与你互动 pill counts (figma 1818_17142); optional until the API emits them. */
+  /** 与你互动 pill counts (figma 1818_17142); the API emits them for the attended viewer only (MIW-28). */
   interactionSummary?: {
     myInterestCount: number
     receivedInterestCount: number

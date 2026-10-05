@@ -1142,30 +1142,38 @@ async function getEvent(db, {
   if (!row) {
     throw new DomainError('NOT_FOUND', '活动不存在或已下架')
   }
-  const previews = await loadParticipantPreviews(db, {
-    appId,
-    eventIds: [eventId],
-    tokenSecret,
-    viewerUserId: userId,
-  })
-  const changes = await db.query(
-    `SELECT source_version, summary, created_at FROM mip_event_changes
-     WHERE app_id = ? AND event_id = ? ORDER BY source_version DESC, id DESC LIMIT 20`,
-    [appId, eventId],
-  )
-  const contentMedia = await db.query(
-    `SELECT asset.cloud_file_id, media.caption
-     FROM mip_event_content_media media
-     INNER JOIN mip_media_assets asset
-       ON asset.app_id = media.app_id AND asset.id = media.media_asset_id
-       AND asset.status = 'READY' AND asset.purpose = 'EVENT_CONTENT'
-     WHERE media.app_id = ? AND media.event_id = ? AND media.status = 'ACTIVE'
-     ORDER BY media.sort_order, media.media_asset_id`,
-    [appId, eventId],
-  )
-  const metadata = await loadPublicEventMetadata(db, { appId, eventIds: [eventId] })
+  // MIW-28：仅签到查看者下发与你互动计数；未签到不产出，客户端整卡隐藏。
+  // 计数属装饰性数据：失败只隐藏卡片，不阻断详情主载荷。
+  const wantsInteractionSummary = row.registration_status === 'ATTENDED' && Boolean(userId)
+  const [previews, changes, contentMedia, metadata, cancellationDeadline, interactionSummary] = await Promise.all([
+    loadParticipantPreviews(db, {
+      appId,
+      eventIds: [eventId],
+      tokenSecret,
+      viewerUserId: userId,
+    }),
+    db.query(
+      `SELECT source_version, summary, created_at FROM mip_event_changes
+       WHERE app_id = ? AND event_id = ? ORDER BY source_version DESC, id DESC LIMIT 20`,
+      [appId, eventId],
+    ),
+    db.query(
+      `SELECT asset.cloud_file_id, media.caption
+       FROM mip_event_content_media media
+       INNER JOIN mip_media_assets asset
+         ON asset.app_id = media.app_id AND asset.id = media.media_asset_id
+         AND asset.status = 'READY' AND asset.purpose = 'EVENT_CONTENT'
+       WHERE media.app_id = ? AND media.event_id = ? AND media.status = 'ACTIVE'
+       ORDER BY media.sort_order, media.media_asset_id`,
+      [appId, eventId],
+    ),
+    loadPublicEventMetadata(db, { appId, eventIds: [eventId] }),
+    effectiveCancellationDeadline(db, appId, row),
+    wantsInteractionSummary
+      ? getEventInteractionSummary(db, { appId, eventId, userId }).catch(() => undefined)
+      : Promise.resolve(undefined),
+  ])
   const timestamp = now.getTime()
-  const cancellationDeadline = await effectiveCancellationDeadline(db, appId, row)
   const opensAt = row.registration_opens_at ? new Date(row.registration_opens_at).getTime() : Number.NEGATIVE_INFINITY
   const deadline = row.registration_deadline ? new Date(row.registration_deadline).getTime() : new Date(row.starts_at).getTime()
   const activeStatus = activeRegistrationStatuses.has(row.registration_status)
@@ -1204,6 +1212,7 @@ async function getEvent(db, {
     ...(row.registration_status ? { registrationVersion: Number(row.registration_version) } : {}),
     canCheckIn: ['REGISTERED', 'ATTENDED'].includes(row.registration_status),
     canInteract: row.registration_status === 'ATTENDED',
+    ...(interactionSummary ? { interactionSummary } : {}),
     organizer: publicOrganizer(row, { appId, profileRefSecret }),
     invitationAttribution: publicInvitationAttribution(row),
   }
@@ -2648,6 +2657,41 @@ async function getHeart(db, { appId, eventId, userId, tokenSecret, profileRefSec
   }
 }
 
+/**
+ * MIW-28：活动详情「与你互动」胶囊计数。仅在查看者已签到时调用；口径与参与人页
+ * 心动 tab 完全一致——我的心动 = 本人 ACTIVE 心动（目标可见），对我心动 = 指向本人
+ * 的 ACTIVE 心动（与 getHeart received 列表同人群：投票者资料可见），拉黑双向过滤，
+ * 避免详情计数与 tab 列表不一致。拉黑片段带 `AND` 前缀置于 WHERE，与文件内其他
+ * mutualBlockFilter 调用点一致。
+ */
+async function getEventInteractionSummary(db, { appId, eventId, userId }) {
+  const sentBlock = mutualBlockFilter(userId, 'h.target_user_id', 'h.app_id')
+  const receivedBlock = mutualBlockFilter(userId, 'h.voter_user_id', 'h.app_id')
+  const [sent, received] = await Promise.all([
+    db.one(
+      `SELECT COUNT(*) AS my_interest_count FROM mip_event_hearts h
+       JOIN mip_event_registrations tr
+         ON tr.app_id = h.app_id AND tr.event_id = h.event_id AND tr.user_id = h.target_user_id
+       WHERE h.app_id = ? AND h.event_id = ? AND h.voter_user_id = ? AND h.status = 'ACTIVE'
+         AND ${sentBlock.sql}`,
+      [appId, eventId, userId, ...sentBlock.params],
+    ),
+    db.one(
+      `SELECT COUNT(*) AS received_interest_count FROM mip_event_hearts h
+       JOIN mip_event_registrations vr
+         ON vr.app_id = h.app_id AND vr.event_id = h.event_id AND vr.user_id = h.voter_user_id
+       JOIN mip_profiles vp ON vp.app_id = vr.app_id AND vp.user_id = vr.user_id
+       WHERE h.app_id = ? AND h.event_id = ? AND h.target_user_id = ? AND h.status = 'ACTIVE'
+         AND ${receivedBlock.sql}`,
+      [appId, eventId, userId, ...receivedBlock.params],
+    ),
+  ])
+  return {
+    myInterestCount: Number(sent?.my_interest_count || 0),
+    receivedInterestCount: Number(received?.received_interest_count || 0),
+  }
+}
+
 async function setHeart(db, {
   appId,
   eventId,
@@ -3031,6 +3075,7 @@ module.exports = {
   eventCancellationHours,
   getFeedback,
   getHeart,
+  getEventInteractionSummary,
   getMyRegistration,
   listEvents,
   listHeartCandidates,

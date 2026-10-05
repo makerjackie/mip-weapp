@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict')
 const { test } = require('node:test')
-const { getHeart, listHeartCandidates, setHeart } = require('../domain/event-service')
+const { getEvent, getEventInteractionSummary, getHeart, listHeartCandidates, setHeart } = require('../domain/event-service')
 const { createSignedToken } = require('../lib/tokens')
 
 const profileRefSecret = 'event-experience-profile-reference-secret'
@@ -166,4 +166,111 @@ test('set heart rechecks a signed target inside the transaction', async () => {
     'user-self',
     'user-self',
   ])
+})
+
+test('interaction summary counts active hearts with app-scoped block filters', async () => {
+  const calls = []
+  const database = {
+    async one(sql, params) {
+      calls.push({ sql, params })
+      if (sql.includes('AS my_interest_count')) return { my_interest_count: '1' }
+      return { received_interest_count: '2' }
+    },
+  }
+
+  const result = await getEventInteractionSummary(database, {
+    appId: 'wx-app',
+    eventId: 'event-1',
+    userId: 'user-self',
+  })
+
+  const [sentCall, receivedCall] = calls
+  // 回归守卫：拉黑片段必须以 `AND` 连词进入 WHERE，裸 NOT EXISTS 拼接是 MySQL 1064。
+  assert.match(sentCall.sql, /AND h\.status = 'ACTIVE'\s+AND NOT EXISTS \(/)
+  assert.match(sentCall.sql, /AS my_interest_count/)
+  assert.match(sentCall.sql, /h\.voter_user_id = \? AND h\.status = 'ACTIVE'/)
+  assert.match(sentCall.sql, /visibility_block\.app_id = h\.app_id/)
+  assert.match(sentCall.sql, /visibility_block\.blocked_user_id = h\.target_user_id/)
+  assert.deepEqual(sentCall.params, ['wx-app', 'event-1', 'user-self', 'user-self', 'user-self'])
+
+  assert.match(receivedCall.sql, /AND h\.status = 'ACTIVE'\s+AND NOT EXISTS \(/)
+  assert.match(receivedCall.sql, /AS received_interest_count/)
+  assert.match(receivedCall.sql, /h\.target_user_id = \? AND h\.status = 'ACTIVE'/)
+  assert.match(receivedCall.sql, /visibility_block\.blocked_user_id = h\.voter_user_id/)
+  // 与 getHeart received 列表同人群：投票者资料可见才计入（口径与参与人页 tab 一致）。
+  assert.match(receivedCall.sql, /JOIN mip_profiles vp ON vp\.app_id = vr\.app_id AND vp\.user_id = vr\.user_id/)
+  assert.deepEqual(receivedCall.params, ['wx-app', 'event-1', 'user-self', 'user-self', 'user-self'])
+
+  assert.deepEqual(result, { myInterestCount: 1, receivedInterestCount: 2 })
+})
+
+const detailBaseRow = {
+  id: 'event-1',
+  app_id: 'wx-app',
+  scope_type: 'PLATFORM',
+  organizer_user_id: 'organizer-1',
+  title: '活动',
+  summary: '摘要',
+  description: '介绍',
+  notices: null,
+  event_mode: 'ONLINE',
+  access_type: 'FREE',
+  registration_policy: 'AUTO',
+  status: 'PUBLISHED',
+  starts_at: '2026-08-25T00:00:00.000Z',
+  ends_at: '2026-08-25T02:00:00.000Z',
+  price_cents: 0,
+  currency: 'CNY',
+  form_version: 1,
+  registration_schema_json: '[]',
+  capacity: 10,
+  registration_count: 3,
+  cancellation_deadline: '2026-08-24T00:00:00.000Z',
+}
+
+function detailDatabase(row, { summaryError } = {}) {
+  return {
+    async one(sql) {
+      if (sql.includes('AS my_interest_count') || sql.includes('AS received_interest_count')) {
+        if (summaryError) throw summaryError
+        return sql.includes('AS my_interest_count')
+          ? { my_interest_count: 1 }
+          : { received_interest_count: 2 }
+      }
+      return row
+    },
+    async query() {
+      return []
+    },
+  }
+}
+
+const loadDetail = (row, userId, database) => getEvent(database || detailDatabase(row), {
+  appId: 'wx-app',
+  userId,
+  eventId: 'event-1',
+  now: new Date('2026-08-24T00:00:00.000Z'),
+  tokenSecret: '',
+  profileRefSecret: 'public-organizer-profile-ref-pepper-more-than-32-characters',
+})
+
+test('event detail emits interaction summary only for the attended viewer', async () => {
+  const attended = await loadDetail({ ...detailBaseRow, registration_status: 'ATTENDED', registration_version: 3 }, 'viewer-1')
+  assert.deepEqual(attended.interactionSummary, { myInterestCount: 1, receivedInterestCount: 2 })
+
+  const registered = await loadDetail({ ...detailBaseRow, registration_status: 'REGISTERED', registration_version: 3 }, 'viewer-1')
+  assert.equal('interactionSummary' in registered, false)
+
+  const guest = await loadDetail({ ...detailBaseRow, registration_status: null }, null)
+  assert.equal('interactionSummary' in guest, false)
+})
+
+test('event detail keeps loading when the interaction summary fails (MIW-28)', async () => {
+  const row = { ...detailBaseRow, registration_status: 'ATTENDED', registration_version: 3 }
+  const attended = await loadDetail(row, 'viewer-1', detailDatabase(row, {
+    summaryError: new Error('interaction summary unavailable'),
+  }))
+
+  assert.equal('interactionSummary' in attended, false)
+  assert.equal(attended.canInteract, true)
 })

@@ -105,13 +105,13 @@ function interactionLabels(event: MipEventDetail) {
 }
 
 /**
- * journey-review J0-01（设计师批注 2133:3831）：「与你互动」卡仅在本场有人发出或
- * 被点心动时展示，无互动数据时整卡隐藏。
+ * MIW-28（客户确认 2026-10-05）：未签到整卡隐藏；已签到即展示，0/0 也显示——
+ * 胶囊本身就是进入参与人页心动 tab 的入口。旧口径（J0-01 仅在有心动数据时展示）
+ * 随服务端下发 interactionSummary 一并废止。签到门槛由服务端 canInteract 决定，
+ * 页面不再重复推导 registrationStatus。
  */
 function interactionVisible(event: MipEventDetail) {
-  const summary = event.interactionSummary
-  return event.registrationStatus === 'ATTENDED'
-    && Boolean(summary && (summary.myInterestCount > 0 || summary.receivedInterestCount > 0))
+  return Boolean(event.canInteract) && Boolean(event.interactionSummary)
 }
 
 function compactEventTime(startsAt: string, endsAt: string) {
@@ -460,7 +460,8 @@ Page({
       accessLabel: accessLabel(event),
       priceText: priceText(event),
       // figma 1818_17142: the checked-in state fuses a 与你互动 card under the
-      // participant card; J0-01 narrows it to events that actually have interest data.
+      // participant card; MIW-28: shown for every attended viewer once the API
+      // supplies interactionSummary (0/0 included).
       interactionVisible: interactionVisible(event),
       ...interactionLabels(event),
       locationText: [event.cityName, event.venueName, event.address].filter(Boolean).join(' · ')
