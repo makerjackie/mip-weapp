@@ -162,7 +162,6 @@ function ruleDraft(overrides = {}) {
   return {
     ruleKey: 'event_attended',
     name: '完成活动签到',
-    description: '完成活动签到可获得经验值，每日最多累计 300。',
     metric: 'EXPERIENCE',
     deltaValue: 100,
     dailyLimitValue: 300,
@@ -472,7 +471,6 @@ describe('admin growth deep module', () => {
     assert.equal(lastCall(repo, 'saveGrowthBenefit').input.expectedVersion, 2)
     assert.deepEqual(lastCall(repo, 'saveGrowthLevel').input.draft.benefitIds, [BENEFIT_ID])
     assert.equal(lastCall(repo, 'saveGrowthRule').input.draft.dailyLimitValue, 300)
-    assert.equal(lastCall(repo, 'saveGrowthRule').input.draft.description, '完成活动签到可获得经验值，每日最多累计 300。')
     assert.equal(lastCall(repo, 'saveBadge').input.expectedVersion, 6)
     assert.equal(lastCall(repo, 'grantBadge').input.reason, '完成活动参与记录')
     assert.equal(lastCall(repo, 'revokeBadge').input.expectedVersion, 5)
@@ -529,7 +527,6 @@ describe('admin growth deep module', () => {
           scopeId: null,
           effectiveFrom: null,
           effectiveTo: null,
-          description: '完成活动签到可获得经验值，每日最多累计 300。',
         },
       },
       {
@@ -588,7 +585,9 @@ describe('admin growth deep module', () => {
     })
   })
 
-  it('normalizes the rule description copy and stores blanks as null', async () => {
+  // MIW-27 评审修正：规则详情页签文本改为 experience-rules 文档整段配置，
+  // 逐条规则只保留奖励数值，多余的文案字段不再落库。
+  it('drops any caller-supplied rule copy and keeps rule edits numeric-only', async () => {
     const repo = repository()
     const service = growth(repo)
 
@@ -597,23 +596,10 @@ describe('admin growth deep module', () => {
       expectedVersion: 4,
       draft: ruleDraft({ description: '  每日签到说明  ' }),
     })
-    assert.equal(lastCall(repo, 'saveGrowthRule').input.draft.description, '每日签到说明')
-
-    await service.saveGrowthRule(caller, {
-      ruleId: RULE_ID,
-      expectedVersion: 5,
-      draft: ruleDraft({ description: '   ' }),
-    })
-    assert.equal(lastCall(repo, 'saveGrowthRule').input.draft.description, null)
-
-    await assert.rejects(
-      () => service.saveGrowthRule(caller, {
-        ruleId: RULE_ID,
-        expectedVersion: 6,
-        draft: ruleDraft({ description: 'x'.repeat(501) }),
-      }),
-      error => error instanceof AdminError && error.code === 'VALIDATION_FAILED',
-    )
+    const draft = lastCall(repo, 'saveGrowthRule').input.draft
+    assert.equal('description' in draft, false)
+    assert.equal(draft.deltaValue, 100)
+    assert.equal(draft.dailyLimitValue, 300)
   })
 
   it('projects badge DTOs without private operator or identity facts and retains versions', async () => {

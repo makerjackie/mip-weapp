@@ -38,7 +38,7 @@ function createGrowthRepository(database, options = {}) {
         [appId],
       ),
       database.query(
-        `SELECT id, rule_key, name, description, metric, delta_value, daily_limit_value,
+        `SELECT id, rule_key, name, metric, delta_value, daily_limit_value,
                 source_event_type, scope_type, scope_id, effective_from, effective_to, status
          FROM mip_growth_rules
          WHERE app_id = ? AND status = 'ACTIVE'

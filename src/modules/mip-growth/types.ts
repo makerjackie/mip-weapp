@@ -17,8 +17,6 @@ export interface GrowthRule {
   id: GrowthRuleId
   ruleKey: string
   name: string
-  /** 管理后台配置的规则说明；未配置时页面回退到派生的每日上限文案。 */
-  description?: string
   metric: GrowthMetric
   deltaValue: number
   dailyLimitValue?: number

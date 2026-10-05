@@ -3,12 +3,14 @@ import path from 'node:path'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const growth = vi.hoisted(() => ({
-  peekSnapshot: vi.fn(),
-  getSnapshot: vi.fn(),
   listEntries: vi.fn(),
+}))
+const identity = vi.hoisted(() => ({
+  getMembershipAgreement: vi.fn(),
 }))
 
 vi.mock('../src/modules/mip-growth/client', () => ({ mipGrowthModule: growth }))
+vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: identity }))
 
 interface PageDefinition {
   data: Record<string, unknown>
@@ -35,26 +37,14 @@ function callPage(instance: PageDefinition, method: string, ...args: unknown[]) 
   return Reflect.apply(handler, instance, args) as Promise<void> | void
 }
 
-function snapshot() {
+function rulesDocument(overrides: Record<string, unknown> = {}) {
   return {
-    account: { userId: 'user-1', experienceBalance: 120, contributionBalance: 0, coinBalance: 0, version: 1 },
-    currentLevel: {
-      id: 'lv1',
-      levelKey: 'L1',
-      name: 'Lv.1',
-      minimumExperience: 0,
-      benefits: [],
-      status: 'ACTIVE',
-    },
-    levels: [
-      { id: 'lv1', levelKey: 'L1', name: 'Lv.1', minimumExperience: 0, benefits: [], status: 'ACTIVE' },
-    ],
-    earningRules: [
-      { id: 'rule-exp-1', ruleKey: 'early-sign-in', name: '早会签到', description: '每天完成早会签到，最多累计 30 经验值。', metric: 'EXPERIENCE', deltaValue: 10, dailyLimitValue: 30, sourceEventType: 'CHECK_IN', status: 'ACTIVE' },
-      { id: 'rule-exp-2', ruleKey: 'case-adopted', name: '案例被采纳', metric: 'EXPERIENCE', deltaValue: 50, sourceEventType: 'CASE_ADOPTED', status: 'ACTIVE' },
-      { id: 'rule-con-1', ruleKey: 'post-adopted', name: '投稿采纳', metric: 'CONTRIBUTION', deltaValue: 20, dailyLimitValue: 100, sourceEventType: 'POST_ADOPTED', status: 'ACTIVE' },
-    ],
-    levelProgressPercent: 0,
+    title: '经验值规则说明',
+    body: '一、每日签到\n二、活动奖励',
+    isDemo: false,
+    version: 2,
+    updatedAt: '2026-03-01T08:00:00+08:00',
+    ...overrides,
   }
 }
 
@@ -94,9 +84,8 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  growth.getSnapshot.mockResolvedValue(snapshot())
-  growth.peekSnapshot.mockReturnValue(snapshot())
   growth.listEntries.mockResolvedValue(entryPage([entry()]))
+  identity.getMembershipAgreement.mockResolvedValue(rulesDocument())
 })
 
 describe('member experience details page', () => {
@@ -108,20 +97,21 @@ describe('member experience details page', () => {
     await vi.waitFor(() => expect(instance.data.state).toBe('ready'))
     // MIW-27：指标过滤由服务端执行（客户端裁剪会破坏 keyset 分页游标）。
     expect(growth.listEntries).toHaveBeenCalledWith(undefined, 20, 'EXPERIENCE')
-    expect(growth.getSnapshot).toHaveBeenCalledWith({ force: false })
 
     const entries = instance.data.entries as Array<{ title: string, deltaPrefix: string, deltaValue: number }>
     expect(entries).toHaveLength(1)
     expect(entries[0]).toMatchObject({ title: '早会签到', deltaPrefix: '+ EXP ', deltaValue: 10 })
+  })
 
-    // 规则页签只列经验值规则：优先展示管理后台配置的规则说明，
-    // 未配置时回退为派生的每日上限文案（贡献值规则不进入该页签）。
-    const rules = instance.data.rules as Array<{ name: string, detailText: string }>
-    expect(rules.map(rule => rule.name)).toEqual(['早会签到', '案例被采纳'])
-    expect(rules.map(rule => rule.detailText)).toEqual([
-      '每天完成早会签到，最多累计 30 经验值。',
-      '无每日上限',
-    ])
+  // MIW-27 第二轮评审修正：规则详情页签是管理后台配置的「一整个文本」，
+  // 与经验值明细的逐条流水卡不同；读取 membership-content 的 experience-rules 文档。
+  it('loads the whole rules text from the experience-rules document channel', async () => {
+    const instance = page(definition)
+    await callPage(instance, 'onLoad')
+    await vi.waitFor(() => expect(instance.data.state).toBe('ready'))
+    expect(identity.getMembershipAgreement).toHaveBeenCalledWith('experience-rules')
+    const rulesDetail = instance.data.rulesDetail as { title: string, body: string, isDemo: boolean }
+    expect(rulesDetail).toMatchObject({ title: '经验值规则说明', body: '一、每日签到\n二、活动奖励', isDemo: false })
   })
 
   it('renders negative deltas without a leading plus and falls back when the rule name is missing', async () => {
@@ -151,19 +141,19 @@ describe('member experience details page', () => {
   })
 
   it('keeps the newest load result when an older refresh finishes later', async () => {
-    const older = deferred<ReturnType<typeof snapshot>>()
-    const newer = deferred<ReturnType<typeof snapshot>>()
-    growth.getSnapshot.mockReset()
-    growth.getSnapshot.mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise)
+    const older = deferred<ReturnType<typeof rulesDocument>>()
+    const newer = deferred<ReturnType<typeof rulesDocument>>()
+    identity.getMembershipAgreement.mockReset()
+    identity.getMembershipAgreement.mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise)
     growth.listEntries.mockReset()
     growth.listEntries.mockResolvedValue(entryPage([]))
     const instance = page(definition)
 
     const first = callPage(instance, 'load', true) as Promise<void>
     const second = callPage(instance, 'load', true) as Promise<void>
-    newer.resolve(snapshot())
+    newer.resolve(rulesDocument())
     await second
-    older.resolve(snapshot())
+    older.resolve(rulesDocument())
     await first
     expect(instance.data.state).toBe('ready')
   })
@@ -196,7 +186,7 @@ describe('member experience details page', () => {
     await callPage(instance, 'onPullDownRefresh')
     await vi.waitFor(() => expect(instance.data.state).toBe('ready'))
     expect(wx.stopPullDownRefresh).toHaveBeenCalled()
-    expect(growth.getSnapshot).toHaveBeenCalledWith({ force: true })
+    expect(identity.getMembershipAgreement).toHaveBeenCalledWith('experience-rules')
   })
 
   it('keeps the restored detail-page design contract in the page bundle', () => {
@@ -220,8 +210,9 @@ describe('member experience details page', () => {
     expect(template).toContain('wx:for="{{entries}}"')
     expect(template).toContain('class="exp-detail-card bg-panel"')
     expect(template).toContain('{{item.deltaPrefix}}')
-    // MIW-27 第二轮：规则卡正文绑定后台配置的规则说明（detailText）。
-    expect(template).toContain('{{item.detailText}}')
+    // MIW-27 第二轮评审修正：规则详情绑定后台配置的整段文本（rulesDetail.body，保留换行）。
+    expect(template).toContain('{{rulesDetail.body}}')
+    expect(template).toContain('whitespace-pre-wrap')
     const card = styles.match(/\.exp-detail-card\s*\{([^}]+)\}/)?.[1]
     expect(card).toContain('min-height: 134rpx')
     expect(card).toContain('border-radius: var(--mip-radius-card-small)')

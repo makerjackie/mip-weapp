@@ -136,7 +136,6 @@ function createAdminGrowth({ repository, access }) {
           scopeId: draft.scopeId,
           effectiveFrom: draft.effectiveFrom,
           effectiveTo: draft.effectiveTo,
-          description: draft.description,
         },
       }),
     })
@@ -482,11 +481,11 @@ function normalizeRule(value) {
   if (effectiveFrom && effectiveTo && effectiveTo <= effectiveFrom) {
     throw new AdminError('VALIDATION_FAILED', '生效结束时间必须晚于开始时间')
   }
-  // 规则说明是唯一开放给后台编辑的展示文本（身份字段由 FIXED_GROWTH_RULES 锁定）。
+  // 身份字段由 FIXED_GROWTH_RULES 锁定；规则详情页签的展示文本走 experience-rules 文档配置，
+  // 不再开放逐条规则说明。
   return {
     ruleKey: stableKey(value.ruleKey, '规则', 80),
     name: text(value.name, 100, { required: true, label: '规则名称' }),
-    description: text(value.description, 500, { label: '规则说明' }) || null,
     metric: metric(value.metric),
     deltaValue,
     dailyLimitValue,

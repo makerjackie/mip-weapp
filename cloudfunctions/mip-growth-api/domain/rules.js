@@ -97,8 +97,6 @@ function ruleDto(row) {
     id: row.id,
     ruleKey: row.rule_key,
     name: row.name,
-    // 后台配置的规则说明；未配置时由页面回退到派生的每日上限文案。
-    description: row.description || undefined,
     metric: row.metric,
     deltaValue: Number(row.delta_value),
     dailyLimitValue: row.daily_limit_value === null || row.daily_limit_value === undefined

@@ -1,7 +1,7 @@
 import type { AdminRequest } from './admin-read-contracts'
 export type ConfigurationKind = 'levels' | 'benefits' | 'rules' | 'badges'
 export interface ConfigurationItem { id: string; name: string; version: number; status: string; [key: string]: unknown }
-export type AgreementDocument = 'membership' | 'user'
+export type AgreementDocument = 'membership' | 'user' | 'experience-rules'
 export interface MembershipAgreement { title: string; body: string; isDemo: boolean; version: number; updatedAt: string | null }
 export const demoMembershipAgreement = {
   title: '会员服务协议（演示）', isDemo: true,
@@ -10,6 +10,11 @@ export const demoMembershipAgreement = {
 export const demoUserAgreement = {
   title: '用户使用协议（演示）', isDemo: true,
   body: '【演示内容，仅供测试，不作为正式服务条款】\n\n一、服务范围\n本小程序提供资料展示、社区活动、项目机会与成长任务。具体功能以页面及管理员配置为准。\n\n二、使用规范\n请使用本人账号，尊重他人，不提交违法、侵权或泄露他人隐私的内容。\n\n三、演示配置\n标注演示的权益与奖励仅供体验，可由管理员修改。任务提交后以服务端记录及审核结果为准，不承诺现金收益。\n\n四、账号与反馈\n你可以在设置中修改资料与隐私、退出登录或申请注销；问题可通过小程序客服反馈。正式上线前请替换为确认后的服务主体、联系方式与服务条款。',
+}
+// MIW-27：经验值详情-规则详情页签展示的整段文本（membership-content 第三种文档）。
+export const demoExperienceRules = {
+  title: '经验值规则说明（演示）', isDemo: true,
+  body: '【演示内容，仅供测试，不作为正式规则说明】\n\n一、获取方式\n完成每日签到、参加活动与成长任务可获得经验值，具体数值以管理后台配置的奖励规则为准。\n\n二、等级与权益\n经验值累计达到对应等级门槛后解锁相应等级权益；权益内容以「等级权益」配置为准。\n\n三、调整与说明\n经验值不兑现现金，不可转让；运营调整规则时不追溯改写已发放记录。正式上线前请替换为确认后的规则文案。',
 }
 const operations = {
   levels: { list: 'mip.admin.growth.levels', save: 'mip.admin.growth.saveLevel', id: 'levelId' },
@@ -23,8 +28,8 @@ export function membershipConfiguration(request: AdminRequest) {
     save: (kind: ConfigurationKind, item: ConfigurationItem | null, draft: Record<string, unknown>, idempotencyKey: string) => request(operations[kind].save, {
       ...(item ? { [operations[kind].id]: item.id, expectedVersion: item.version } : {}), draft, idempotencyKey,
     }),
-    agreement: (document: AgreementDocument = 'membership') => request<MembershipAgreement>('mip.admin.membershipAgreement.get', document === 'user' ? { document } : undefined),
-    saveAgreement: (version: number, draft: Pick<MembershipAgreement, 'title' | 'body' | 'isDemo'>, idempotencyKey: string, document: AgreementDocument = 'membership') => request('mip.admin.membershipAgreement.save', { expectedVersion: version, draft, idempotencyKey, ...(document === 'user' ? { document } : {}) }),
+    agreement: (document: AgreementDocument = 'membership') => request<MembershipAgreement>('mip.admin.membershipAgreement.get', document === 'membership' ? undefined : { document }),
+    saveAgreement: (version: number, draft: Pick<MembershipAgreement, 'title' | 'body' | 'isDemo'>, idempotencyKey: string, document: AgreementDocument = 'membership') => request('mip.admin.membershipAgreement.save', { expectedVersion: version, draft, idempotencyKey, ...(document === 'membership' ? {} : { document }) }),
   }
 }
 export function configurationDraft(kind: ConfigurationKind, item: ConfigurationItem | null, demo = false): Record<string, unknown> {

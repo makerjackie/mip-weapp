@@ -69,23 +69,34 @@ describe('membership configuration UI', () => {
     expect(screen.getByLabelText('正文')).toHaveValue('用户内容')
   })
 
-  it('edits the rule detail copy shown on the mini-program rules tab', async () => {
+  it('edits growth rules without a per-rule copy field and points to the document tab', async () => {
     state.tab = 'rules'
     state.request.mockImplementation(async (action: string) => action.endsWith('.rules')
-      ? { items: [{ id: 'rule-1', ruleKey: 'event_attended', name: '完成活动签到', description: '后台配置的签到说明', metric: 'EXPERIENCE', deltaValue: 100, dailyLimitValue: 300, sourceEventType: 'event.checked_in', status: 'ACTIVE', version: 4 }] }
+      ? { items: [{ id: 'rule-1', ruleKey: 'event_attended', name: '完成活动签到', metric: 'EXPERIENCE', deltaValue: 100, dailyLimitValue: 300, sourceEventType: 'event.checked_in', status: 'ACTIVE', version: 4 }] }
       : { version: 5 })
     mount()
     await screen.findByText('完成活动签到')
     fireEvent.click(screen.getByRole('button', { name: '编 辑' }))
-    const textarea = await screen.findByLabelText('规则说明')
-    expect(textarea).toHaveValue('后台配置的签到说明')
-    fireEvent.change(textarea, { target: { value: '更新后的签到说明' } })
+    expect(await screen.findByText('规则详情页签的展示文本请在「经验值规则说明」页签中整段配置；此处仅维护奖励数值。')).toBeInTheDocument()
+    expect(screen.queryByLabelText('规则说明')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'OK' }))
     await waitFor(() => expect(state.request).toHaveBeenCalledWith('mip.admin.growth.saveRule', expect.objectContaining({
       ruleId: 'rule-1',
       expectedVersion: 4,
-      draft: expect.objectContaining({ description: '更新后的签到说明', name: '完成活动签到' }),
+      draft: expect.objectContaining({ name: '完成活动签到' }),
     })))
+  })
+
+  it('loads and saves the experience rules text as its own document', async () => {
+    state.tab = 'experience-rules'
+    state.request.mockResolvedValue({ title: '经验值规则说明', body: '一、每日签到\n二、活动奖励', isDemo: false, version: 3 })
+    mount()
+    // 多行正文经 display-value 规范化后换行会折叠成空格，改用 label 定位读原始 value。
+    const body = await screen.findByLabelText('正文') as HTMLTextAreaElement
+    expect(body.value).toBe('一、每日签到\n二、活动奖励')
+    expect(state.request).toHaveBeenCalledWith('mip.admin.membershipAgreement.get', { document: 'experience-rules' })
+    fireEvent.click(screen.getByRole('button', { name: '保存并生效' }))
+    await waitFor(() => expect(state.request).toHaveBeenCalledWith('mip.admin.membershipAgreement.save', expect.objectContaining({ document: 'experience-rules', expectedVersion: 3 })))
   })
 
 })

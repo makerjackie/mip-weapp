@@ -40,11 +40,11 @@ Page({
   },
 
   onPullDownRefresh() {
-    void this.load(true).finally(() => wx.stopPullDownRefresh())
+    void this.load().finally(() => wx.stopPullDownRefresh())
   },
 
-  /** wxml「重新加载」与下拉刷新共用；事件对象作为 truthy force 传入（与玩家等级页同约定）。 */
-  async load(force = false) {
+  /** wxml「重新加载」与下拉刷新共用；每次都回到第一页并重读规则文档（事件对象入参被忽略）。 */
+  async load() {
     const requestSeq = ++this.requestSeq
     if (!this.data.entries.length) {
       this.setData({ state: 'loading', message: '' })
