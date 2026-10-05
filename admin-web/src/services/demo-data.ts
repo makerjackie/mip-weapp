@@ -30,6 +30,11 @@ export const demo = {
     { task: 'MIP 早会复盘', member: '林晓', reward: '30', completedAt: '2030-03-22 10:36', state: '成功' },
     { task: 'MIP 早会复盘', member: '陈默', reward: '30', completedAt: '2030-03-21 17:08', state: '成功' },
   ],
+  // MIW-27 第二轮：入会审核队列演示数据。targetId 对应上方演示用户，decision 为空表示待审核。
+  membershipApprovals: [
+    { id: 'MAP-20300021', targetId: 'USR-1002', user: '周宁', playerNumber: 'M000000002', plan: '年度会员', amount: '¥6,600.00', paidAt: '2030-03-20 15:42', requestedAt: '2030-03-20 15:43', state: '待处理', status: 'PENDING', chainVersion: 3, decision: '' },
+    { id: 'MAP-20300022', targetId: 'USR-1003', user: '陈默', playerNumber: 'M000000003', plan: '季度会员', amount: '¥1,880.00', paidAt: '2030-03-18 11:05', requestedAt: '2030-03-18 11:06', state: '已驳回', status: 'REJECTED', chainVersion: 5, decision: '驳回：线下支付未确认' },
+  ],
   roles: [
     { name: '平台管理员', members: 2, scope: '平台', capabilities: '全部运营权限' },
     { name: '服务器运营成员', members: 8, scope: '服务器', capabilities: '活动、用户、消息' },
