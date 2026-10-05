@@ -10,6 +10,7 @@
 | 协作规则 | [AGENTS.md](../AGENTS.md) | 技术边界、开发规则、完成门禁 |
 | 安全 | [SECURITY.md](SECURITY.md) | 仓库密钥、环境与安全边界 |
 | 质量门禁 | [QUALITY_GATES.md](QUALITY_GATES.md) | 本地 `verify`/`verify:all` 门禁与 CI Node 约束 |
+| 测试用例 | [testing/WEAPP_TEST_CASES.md](testing/WEAPP_TEST_CASES.md) · [testing/ADMIN_WEB_TEST_CASES.md](testing/ADMIN_WEB_TEST_CASES.md) | 小程序端与管理后台的多角色全流程手工测试用例（按当前代码维护，随领域变更更新） |
 | 业务语言 | [CONTEXT.md](../CONTEXT.md) | 统一术语和领域含义 |
 | 产品与视觉 | [DESIGN.md](../DESIGN.md) | 小程序设计规则与品牌入口 |
 | 品牌定制 | [CUSTOMIZATION.md](CUSTOMIZATION.md) | 品牌字符串、配置与整站替换入口 |
