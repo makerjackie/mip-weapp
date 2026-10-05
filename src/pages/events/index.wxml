@@ -72,8 +72,9 @@
     </view>
   </view>
 
-  <!-- MIW-37 figma 1819_17793 日期选择：按稿实现的选择弹层，替代 t-calendar（白底与稿不符）。 -->
-  <view wx:if="{{calendarVisible}}" class="fixed left-0 top-0 z-50 h-full w-full overflow-hidden" catchtouchmove="noop">
+  <!-- MIW-37 figma 1819_17793 日期选择：按稿实现的选择弹层，替代 t-calendar（白底与稿不符）。
+       层级取 11000（对话层）：底部确认按钮要压过 custom TabBar（9999）。 -->
+  <view wx:if="{{calendarVisible}}" class="fixed left-0 top-0 z-[11000] h-full w-full overflow-hidden" catchtouchmove="noop">
     <view class="absolute inset-0 bg-[rgba(0,0,0,0.9)]" aria-role="button" aria-label="关闭日期选择" bind:tap="closeCalendar"></view>
     <view class="events-calendar-sheet absolute bottom-0 left-0 w-full rounded-t-[32rpx] bg-canvas">
       <view class="flex h-[96rpx] items-center justify-center">
