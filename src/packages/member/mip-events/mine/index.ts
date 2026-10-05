@@ -79,8 +79,6 @@ function present(item: RegistrationSummary): RegistrationView {
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
-    // ui-fidelity fixture 开关：默认走生产布局（被 vitest pin）。
-    figmaLayout: false,
     activeCategory: 'UPCOMING' as MyRegistrationCategory,
     counts: { upcoming: 0, attended: 0, history: 0 },
     registrations: [] as RegistrationView[],
@@ -196,16 +194,6 @@ Page({
     caseNavigateTo({ url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}` })
   },
 
-  editRegistration(event: WechatMiniprogram.TouchEvent) {
-    const eventId = String(event.currentTarget.dataset.eventId || '') as EventId
-    if (!eventId) {
-      return
-    }
-    caseNavigateTo({
-      url: `/packages/member/mip-events/registration/index?eventId=${encodeURIComponent(eventId)}`,
-    })
-  },
-
   async cancelRegistration(event: WechatMiniprogram.TouchEvent) {
     const detail = (event as unknown as {
       detail?: { eventId?: string, registrationId?: string, version?: number, refundRetry?: boolean | string }
@@ -264,13 +252,4 @@ Page({
     }
   },
 
-  openOrder(event: WechatMiniprogram.TouchEvent) {
-    const orderId = String(event.currentTarget.dataset.orderId || '')
-    if (!orderId) {
-      return
-    }
-    caseNavigateTo({
-      url: `/packages/member/order-detail/index?orderId=${encodeURIComponent(orderId)}`,
-    })
-  },
 })

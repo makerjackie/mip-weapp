@@ -75,7 +75,7 @@ describe('event registration experience', () => {
     expect(registration).toContain('selectedIndex >= 0 ? field.options?.[selectedIndex] || \'请选择\' : \'请选择\'')
   })
 
-  it('uses optimistic update recovery and a dedicated non-bubbling edit entry', () => {
+  it('uses optimistic update recovery and keeps the edit entry off my registrations', () => {
     const registration = read('src/packages/member/mip-events/registration/index.ts')
     const mine = read('src/packages/member/mip-events/mine/index.ts')
     const mineView = read('src/packages/member/mip-events/mine/index.wxml')
@@ -86,10 +86,10 @@ describe('event registration experience', () => {
     expect(registration).toContain('recoverUpdateConflict(answers, this.data.shareProfile)')
     expect(registration).toContain('{ ...(registration?.answers || {}), ...draftAnswers }')
     expect(registration).toContain('当前填写内容已保留，请确认后重新保存')
-    expect(mine).toContain('/packages/member/mip-events/registration/index?eventId=')
-    expect(mineView).toContain('wx:if="{{item.canEdit}}"')
-    expect(mineView).toContain('catch:tap="editRegistration"')
-    expect(mineView).toContain('修改报名')
+    // figma 3591_36185 我的活动：卡片上没有修改报名入口，编辑只从活动详情页进入。
+    expect(mine).not.toContain('editRegistration')
+    expect(mineView).not.toContain('data-action="edit"')
+    expect(mineView).not.toContain('修改报名')
   })
 
   it('uses server-filtered activity tabs, server counts, and server-authorized cancellation', () => {
@@ -105,9 +105,8 @@ describe('event registration experience', () => {
     expect(mineView).toContain('data-version="{{item.version}}"')
     expect(mineView).toContain('待参加({{counts.upcoming}})')
     expect(mineView).toContain('已参加({{counts.attended}})')
-    expect(mineView).toContain('历史({{counts.history || 0}})')
+    expect(mineView).not.toContain('历史(')
     expect(mineView).toContain('event="{{item.card}}"')
-    expect(mineView).toContain('data-role="registration-actions"')
     expect(mineView).toContain('wx:if="{{item.canCancel || item.canRetryRefund}}"')
     expect(mineView).toContain('data-refund-retry="{{item.canRetryRefund}}"')
     expect(service).toContain('category === \'UPCOMING\'')
@@ -134,24 +133,21 @@ describe('event registration experience', () => {
     expect(mineView).toContain('{{item.canRetryRefund ? \'继续处理退款\' : \'取消报名\'}}')
   })
 
-  it('keeps registration actions in one footer with clear hierarchy', () => {
+  it('keeps the design-styled cancel pill as the only registration action', () => {
     const mineView = read('src/packages/member/mip-events/mine/index.wxml')
-    const actionsStart = mineView.indexOf('data-role="registration-actions"')
-    const actionsEnd = mineView.indexOf('</view>', mineView.indexOf('</view>', actionsStart) + 1)
-    const actions = mineView.slice(actionsStart, actionsEnd)
 
-    expect(actions).toContain('data-action="cancel"')
-    expect(actions).toContain('theme="{{item.canRetryRefund ? \'primary\' : \'danger\'}}"')
-    expect(actions).toContain('variant="outline"')
-    expect(actions).toContain('size="large"')
-    expect(actions).toContain('catch:tap="cancelRegistration"')
-    expect(actions).toContain('data-action="edit"')
-    expect(actions).toContain('theme="primary"')
-    expect(actions).toContain('catch:tap="editRegistration"')
-    expect(actions).toContain('class="min-w-0 flex-1"')
-    expect(mineView).toContain('data-action="order"')
-    expect(mineView).toContain('variant="text"')
-    expect(mineView).not.toContain('show-cancel=')
+    // figma 3591_36185：右下角黄色胶囊「取消报名」，整卡点击进详情，无其他按钮。
+    expect(mineView).toContain('data-action="cancel"')
+    expect(mineView).toContain('catch:tap="cancelRegistration"')
+    expect(mineView).toContain('bottom-[16rpx] right-[16rpx]')
+    expect(mineView).toContain('h-[56rpx] w-[152rpx]')
+    expect(mineView).toContain('rounded-full bg-brand')
+    expect(mineView).toContain('text-canvas')
+    expect(mineView).toContain('{{item.canRetryRefund ? \'继续处理退款\' : \'取消报名\'}}')
+    expect(mineView).not.toContain('data-action="edit"')
+    expect(mineView).not.toContain('data-action="order"')
+    expect(mineView).not.toContain('editRegistration')
+    expect(mineView).not.toContain('openOrder')
     expect(read('src/components/mip-activity-card/index.ts')).not.toContain('handleCancel')
   })
 
@@ -218,10 +214,8 @@ describe('event registration experience', () => {
     expect(registrationView).toContain('wx:if="{{orderId}}"')
     expect(registrationView).toContain('bind:tap="openOrder">查看订单详情')
 
-    expect(mineView).toContain('wx:if="{{item.orderId}}"')
-    expect(mineView).toContain('data-order-id="{{item.orderId}}"')
-    expect(mineView).toContain('catch:tap="openOrder">查看订单详情')
-    expect(mine).toContain('/packages/member/order-detail/index?orderId=')
+    expect(mineView).not.toContain('data-order-id')
+    expect(mine).not.toContain('/packages/member/order-detail/index?orderId=')
 
     expect(detail).toContain('return { key: \'order\', label: \'查看待支付订单\' }')
     expect(detail).toContain('mipEventsModule.listMyRegistrations(cursor)')

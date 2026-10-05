@@ -78,8 +78,7 @@ describe('MIP Design System native primitives', () => {
     expect(orders).not.toContain('mip-order-card__payment-value')
 
     const mine = read('src/packages/member/mip-events/mine/index.wxml')
-    expect(mine).toContain('<mip-dialog')
-    expect(mine).toContain('frame-only="{{true}}"')
+    expect(mine).toContain('<mip-activity-card')
 
     const profile = read('src/pages/profile/index.wxml')
     expect(profile).toContain('<mip-stat-header')
