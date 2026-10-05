@@ -8,8 +8,11 @@ const {
   normalizeRefinementIntent,
   normalizeTextIntent,
   normalizeVoiceIntent,
+  normalizeVoiceStorageIntent,
   normalizeVoiceUploadIntent,
+  normalizeVoiceUploadPrepareIntent,
 } = require('./validation')
+const { maximumAudioBytes } = require('../lib/audio-store')
 
 function createAiService(options) {
   const repository = options.repository
@@ -162,81 +165,67 @@ function createAiService(options) {
     )
   }
 
-  async function createKeyedVoiceUploadDraft(caller, input) {
-    const candidate = options.audioStore.preallocate({
-      appId: caller.appId,
-      userId: caller.userId,
-    })
-    const request = await claimCreate(caller, input, 'VOICE_UPLOAD', { allocation: candidate })
-    if (request.replay) return request.replay
-    let created
+  // 两条 keyed 语音链路(服务端转存 / 客户端直传)共用的落库+收尾。
+  async function produceKeyedVoiceCreated(caller, request, purpose, produceAsset) {
     if (request.claim.draft && request.claim.asset) {
-      created = { draft: request.claim.draft, asset: request.claim.asset }
+      return { draft: request.claim.draft, asset: request.claim.asset }
     }
-    else {
-      let asset
-      try {
-        asset = await options.audioStore.store({
-          appId: caller.appId,
-          userId: caller.userId,
-          audioBase64: input.audioBase64,
-          contentType: input.contentType,
-          ...request.claim.allocation,
-        })
-      }
-      catch (error) {
-        const code = errorCode(error, 'AI_AUDIO_UPLOAD_FAILED')
-        if (['AI_AUDIO_INVALID', 'AI_AUDIO_FILE_INVALID', 'AI_STORAGE_UNAVAILABLE'].includes(code)) {
-          await failCreateRequest(caller, request, code)
-          throw new Error(code)
-        }
-        throw new Error('AI_AUDIO_UPLOAD_RESULT_UNKNOWN')
-      }
-      try {
-        created = await repository.createVoiceDraftFromUpload(
-          caller.appId,
-          caller.userId,
-          asset,
-          input.purpose,
-          request.claim.draftId,
-        )
-      }
-      catch (error) {
-        let outcome = await repository.recoverVoiceDraftFromUpload(
-          caller.appId,
-          caller.userId,
-          asset.assetId,
-        ).catch(() => ({ state: 'UNKNOWN' }))
-        if (outcome.state === 'COMMITTED') {
-          created = outcome.created
-        }
-        else {
-          if (outcome.state === 'MISSING') {
-            try {
-              await repository.registerPendingAudioUpload(caller.appId, asset)
-              outcome = { state: 'PENDING' }
-            }
-            catch {
-              outcome = await repository.recoverVoiceDraftFromUpload(
-                caller.appId,
-                caller.userId,
-                asset.assetId,
-              ).catch(() => ({ state: 'UNKNOWN' }))
-            }
-          }
-          const code = errorCode(error, 'SERVICE_UNAVAILABLE')
-          if (outcome.state === 'PENDING' && ['FORBIDDEN', 'VALIDATION_FAILED'].includes(code)) {
-            await failCreateRequest(caller, request, code)
-            throw error
-          }
-          throw new Error('AI_AUDIO_UPLOAD_RESULT_UNKNOWN')
-        }
-      }
+    let asset
+    try {
+      asset = await produceAsset()
     }
+    catch (error) {
+      const code = errorCode(error, 'AI_AUDIO_UPLOAD_FAILED')
+      if (['AI_AUDIO_INVALID', 'AI_AUDIO_FILE_INVALID', 'AI_STORAGE_UNAVAILABLE'].includes(code)) {
+        await failCreateRequest(caller, request, code)
+        throw new Error(code)
+      }
+      throw new Error('AI_AUDIO_UPLOAD_RESULT_UNKNOWN')
+    }
+    try {
+      return await repository.createVoiceDraftFromUpload(
+        caller.appId,
+        caller.userId,
+        asset,
+        purpose,
+        request.claim.draftId,
+      )
+    }
+    catch (error) {
+      let outcome = await repository.recoverVoiceDraftFromUpload(
+        caller.appId,
+        caller.userId,
+        asset.assetId,
+      ).catch(() => ({ state: 'UNKNOWN' }))
+      if (outcome.state === 'COMMITTED') {
+        return outcome.created
+      }
+      if (outcome.state === 'MISSING') {
+        try {
+          await repository.registerPendingAudioUpload(caller.appId, asset)
+          outcome = { state: 'PENDING' }
+        }
+        catch {
+          outcome = await repository.recoverVoiceDraftFromUpload(
+            caller.appId,
+            caller.userId,
+            asset.assetId,
+          ).catch(() => ({ state: 'UNKNOWN' }))
+        }
+      }
+      const code = errorCode(error, 'SERVICE_UNAVAILABLE')
+      if (outcome.state === 'PENDING' && ['FORBIDDEN', 'VALIDATION_FAILED'].includes(code)) {
+        await failCreateRequest(caller, request, code)
+        throw error
+      }
+      throw new Error('AI_AUDIO_UPLOAD_RESULT_UNKNOWN')
+    }
+  }
 
+  async function finishKeyedVoiceDraft(caller, request, created, purpose) {
     let result
     try {
-      result = await provider.transcribeAndStructure(voiceProviderInput(caller, created, input.purpose))
+      result = await provider.transcribeAndStructure(voiceProviderInput(caller, created, purpose))
     }
     catch (error) {
       throw await handleCreateProviderFailure(caller, request, created.draft, error)
@@ -245,8 +234,45 @@ function createAiService(options) {
       caller,
       request,
       created.draft,
-      { ...result, purpose: input.purpose },
+      { ...result, purpose },
     )
+  }
+
+  async function createKeyedVoiceUploadDraft(caller, input) {
+    const candidate = options.audioStore.preallocate({
+      appId: caller.appId,
+      userId: caller.userId,
+    })
+    const request = await claimCreate(caller, input, 'VOICE_UPLOAD', { allocation: candidate })
+    if (request.replay) return request.replay
+    const created = await produceKeyedVoiceCreated(caller, request, input.purpose, async () => options.audioStore.store({
+      appId: caller.appId,
+      userId: caller.userId,
+      audioBase64: input.audioBase64,
+      contentType: input.contentType,
+      ...request.claim.allocation,
+    }))
+    return finishKeyedVoiceDraft(caller, request, created, input.purpose)
+  }
+
+  async function createKeyedVoiceStorageDraft(caller, input) {
+    const candidate = options.audioStore.preallocate({
+      appId: caller.appId,
+      userId: caller.userId,
+      assetId: input.audioAssetId,
+    })
+    const request = await claimCreate(caller, input, 'VOICE_STORAGE', { allocation: candidate })
+    if (request.replay) return request.replay
+    const created = await produceKeyedVoiceCreated(caller, request, input.purpose, async () => options.audioStore.validateStored({
+      appId: caller.appId,
+      userId: caller.userId,
+      assetId: input.audioAssetId,
+      fileId: input.fileId,
+      contentType: input.contentType,
+      contentBytes: input.contentBytes,
+      contentSha256: input.contentSha256,
+    }))
+    return finishKeyedVoiceDraft(caller, request, created, input.purpose)
   }
 
   return {
@@ -604,6 +630,65 @@ function createAiService(options) {
       })
     },
 
+    // 客户端直传第一步:只分配 HMAC 归属路径,音频由小程序 wx.cloud.uploadFile 上传。
+    async prepareVoiceUpload(caller, event) {
+      assertProvider(provider.capability(), 'voiceDrafts')
+      if (!options.audioStore?.configured) throw new Error('AI_STORAGE_UNAVAILABLE')
+      const input = normalizeVoiceUploadPrepareIntent(event)
+      const allocation = options.audioStore.preallocate({
+        appId: caller.appId,
+        userId: caller.userId,
+      })
+      return {
+        purpose: input.purpose,
+        assetId: allocation.assetId,
+        objectKey: allocation.objectKey,
+        contentType: 'audio/mpeg',
+        maximumContentBytes: maximumAudioBytes,
+      }
+    },
+
+    // 客户端直传第二步:复验路径归属后建草稿并触发转写+结构化。
+    async createVoiceDraftStorage(caller, event) {
+      assertProvider(provider.capability(), 'voiceDrafts')
+      if (!options.audioStore?.configured) throw new Error('AI_STORAGE_UNAVAILABLE')
+      const input = normalizeVoiceStorageIntent(event)
+      if (input.requestId) return createKeyedVoiceStorageDraft(caller, input)
+      const asset = options.audioStore.validateStored({
+        appId: caller.appId,
+        userId: caller.userId,
+        assetId: input.audioAssetId,
+        fileId: input.fileId,
+        contentType: input.contentType,
+        contentBytes: input.contentBytes,
+        contentSha256: input.contentSha256,
+      })
+      let created
+      try {
+        created = await repository.createVoiceDraftFromUpload(caller.appId, caller.userId, asset, input.purpose)
+      }
+      catch (error) {
+        const outcome = await repository.recoverVoiceDraftFromUpload(
+          caller.appId,
+          caller.userId,
+          asset.assetId,
+        ).catch(() => ({ state: 'UNKNOWN' }))
+        if (outcome.state === 'COMMITTED') created = outcome.created
+        else throw error
+      }
+      let result
+      try {
+        result = await provider.transcribeAndStructure(voiceProviderInput(caller, created, input.purpose))
+      }
+      catch (error) {
+        throw await handleCreateProviderFailure(caller, null, created.draft, error)
+      }
+      return repository.completeDraft(caller.appId, caller.userId, created.draft.id, created.draft.version, {
+        ...result,
+        purpose: input.purpose,
+      })
+    },
+
     async continueDraft(caller, event) {
       assertProvider(provider.capability(), 'refinementDrafts')
       const input = normalizeRefinementIntent(event)
@@ -724,7 +809,9 @@ function draftRequestHash(kind, input) {
       ? [input.purpose, input.audioAssetId]
       : kind === 'VOICE_UPLOAD'
         ? [input.purpose, input.contentType, input.audioBase64]
-        : null
+        : kind === 'VOICE_STORAGE'
+          ? [input.purpose, input.audioAssetId, input.fileId, input.contentSha256, input.contentBytes]
+          : null
   if (!fields) throw new Error('VALIDATION_FAILED')
   return createHash('sha256')
     .update('MIP_AI_DRAFT_REQUEST_V1\0')

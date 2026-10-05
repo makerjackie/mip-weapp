@@ -100,6 +100,24 @@ export interface AiVoiceUploadIntent {
   requestId?: string
 }
 
+export interface AiVoiceUploadPreparation {
+  purpose: AiDraftPurpose
+  assetId: string
+  objectKey: string
+  contentType: 'audio/mpeg'
+  maximumContentBytes: number
+}
+
+export interface AiVoiceStorageIntent {
+  purpose: AiDraftPurpose
+  audioAssetId: string
+  fileId: string
+  contentType: 'audio/mpeg'
+  contentBytes: number
+  contentSha256: string
+  requestId?: string
+}
+
 export interface AiDraftRefinementIntent {
   draftId: AiDraftId
   expectedVersion: number
@@ -113,6 +131,8 @@ export interface MipAiGateway {
   createTextDraft: (intent: AiTextDraftIntent) => Promise<AiDraft>
   createVoiceDraft: (intent: AiVoiceDraftIntent) => Promise<AiDraft>
   createVoiceDraftUpload: (intent: AiVoiceUploadIntent) => Promise<AiDraft>
+  prepareVoiceUpload: (purpose: AiDraftPurpose) => Promise<AiVoiceUploadPreparation>
+  createVoiceDraftStorage: (intent: AiVoiceStorageIntent) => Promise<AiDraft>
   continueDraft: (intent: AiDraftRefinementIntent) => Promise<AiDraft>
   updateDraft: (confirmation: AiDraftConfirmation) => Promise<AiDraft>
   deleteDraft: (draftId: AiDraftId, expectedVersion: number) => Promise<{ draftId: AiDraftId, status: 'DELETED' }>

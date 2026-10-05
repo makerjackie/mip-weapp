@@ -92,7 +92,7 @@ Page({
   onLoad(options: Record<string, string | undefined>) {
     this.setData({
       id: String(options.id || '') as SuperCaseId | '',
-      aiDraftId: '',
+      aiDraftId: String(options.aiDraftId || ''),
     })
     void this.initialize()
   },
@@ -186,10 +186,13 @@ Page({
     })
   },
 
-  // AI 语音填写入口(设计稿 2173_42605 AI助手卡)。语音转草稿能力尚未开放 UI 流程,
-  // 先给出明确反馈,不静默失效。
+  // AI 语音填写入口(设计稿 2173_42605 AI助手卡):进入录音页,完成后带 aiDraftId 回跳。
   onAiAssistant() {
-    wx.showToast({ title: 'AI 语音填写即将开放', icon: 'none' })
+    if (this.data.id) {
+      wx.showToast({ title: 'AI 语音填写仅用于新建案例', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url: '/packages/member/mip-ai/voice/index?purpose=SUPER_CASE' })
   },
 
   updateProjectText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {

@@ -244,7 +244,7 @@ function createAiRepository(database, options = {}) {
     if (input.kind === 'VOICE_ASSET') {
       asset = await requireOwnedAudioAsset(tx, appId, userId, row.audio_asset_id)
     }
-    else if (input.kind === 'VOICE_UPLOAD' && currentDraft) {
+    else if ((input.kind === 'VOICE_UPLOAD' || input.kind === 'VOICE_STORAGE') && currentDraft) {
       asset = await requireOwnedAudioAsset(tx, appId, userId, row.audio_asset_id)
     }
     return {
@@ -254,7 +254,7 @@ function createAiRepository(database, options = {}) {
       draftId: row.draft_id,
       draft: currentDraft,
       asset,
-      ...(input.kind === 'VOICE_UPLOAD'
+      ...((input.kind === 'VOICE_UPLOAD' || input.kind === 'VOICE_STORAGE')
         ? { allocation: { assetId: row.audio_asset_id, objectKey: row.audio_object_key } }
         : {}),
     }
@@ -740,7 +740,7 @@ function createAiRepository(database, options = {}) {
          LEFT JOIN mip_ai_draft_requests ai_request
            ON ai_request.app_id = asset.app_id
              AND ai_request.audio_asset_id = asset.id
-             AND ai_request.draft_kind = 'VOICE_UPLOAD'
+             AND ai_request.draft_kind IN ('VOICE_UPLOAD', 'VOICE_STORAGE')
              AND ai_request.status = 'PROCESSING'
              AND ai_request.expires_at > UTC_TIMESTAMP(3)
          WHERE asset.app_id = ?
@@ -1122,7 +1122,7 @@ function normalizeRequestLeaseSeconds(value) {
 
 function assertDraftRequestInput(input) {
   assertDraftRequestIdentity(input)
-  if (!['TEXT', 'VOICE_ASSET', 'VOICE_UPLOAD'].includes(input.kind)
+  if (!['TEXT', 'VOICE_ASSET', 'VOICE_UPLOAD', 'VOICE_STORAGE'].includes(input.kind)
     || typeof input.purpose !== 'string' || !input.purpose) {
     throw new Error('VALIDATION_FAILED')
   }
@@ -1132,7 +1132,7 @@ function assertDraftRequestInput(input) {
   if (input.kind === 'VOICE_ASSET' && !isUuid(input.audioAssetId)) {
     throw new Error('VALIDATION_FAILED')
   }
-  if (input.kind === 'VOICE_UPLOAD'
+  if ((input.kind === 'VOICE_UPLOAD' || input.kind === 'VOICE_STORAGE')
     && (!isUuid(input.allocation?.assetId)
       || typeof input.allocation?.objectKey !== 'string'
       || !input.allocation.objectKey || input.allocation.objectKey.length > 512)) {

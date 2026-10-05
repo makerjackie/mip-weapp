@@ -6,6 +6,7 @@ const {
   createAiProviderAdapter,
   createCloudAiProvider,
   normalizeProviderResult,
+  normalizeVoiceTimeout,
 } = require('../lib/provider')
 const {
   CONTRACT_VERSION,
@@ -430,4 +431,37 @@ test('binds digital-avatar source and style while accepting only the strict imag
     () => invalidProvider.generateDigitalAvatar(input),
     /DIGITAL_AVATAR_PROVIDER_RESPONSE_INVALID/,
   )
+})
+
+test('runs voice transcription once with the long voice budget while text keeps retrying', async () => {
+  let voiceCalls = 0
+  let textCalls = 0
+  const secret = 'draft-provider-secret-that-is-longer-than-thirty-two'
+  const provider = createCloudAiProvider({
+    async callFunction(call) {
+      if (call.data.action === 'transcribeAndStructure') {
+        voiceCalls += 1
+        assert.equal(voiceCalls <= 1, true)
+      }
+      else {
+        textCalls += 1
+      }
+      return {
+        result: {
+          ok: false,
+          error: { code: 'AI_DRAFT_PROVIDER_UPSTREAM_UNAVAILABLE', message: '上游暂不可用', retryable: true },
+        },
+      }
+    },
+  }, 'mip-ai-draft-provider', secret, { voiceTimeoutMs: 40_000 })
+  await assert.rejects(() => provider.transcribeAndStructure({}), /AI_PROVIDER_RESULT_UNKNOWN/)
+  await assert.rejects(() => provider.structureText({}), /AI_PROVIDER_RESULT_UNKNOWN/)
+  assert.equal(voiceCalls, 1)
+  assert.equal(textCalls, 2)
+})
+
+test('bounds the voice provider timeout', () => {
+  assert.equal(normalizeVoiceTimeout(), 45_000)
+  assert.equal(normalizeVoiceTimeout('60000'), 45_000)
+  assert.equal(normalizeVoiceTimeout(30_000), 30_000)
 })

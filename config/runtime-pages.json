@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 69,
+  "routeCount": 70,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 69 paths.",
+    "config/project.json routes must list the same 70 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -95,37 +95,49 @@
     {
       "id": "knowledge-webview",
       "label": "知识内容网页",
-      "routes": ["packages/member/mip-knowledge/web/index"],
+      "routes": [
+        "packages/member/mip-knowledge/web/index"
+      ],
       "reason": "web-view 业务域名、跳转和加载失败需要在正式 AppID 的微信真机中验收"
     },
     {
       "id": "profile-avatar",
       "label": "头像选择与上传",
-      "routes": ["packages/member/mip-profile/index"],
+      "routes": [
+        "packages/member/mip-profile/index"
+      ],
       "reason": "open-type=chooseAvatar、图片安全检查和上传结果需要真机验收"
     },
     {
       "id": "online-event-webview",
       "label": "线上活动网页",
-      "routes": ["packages/member/mip-events/detail/index"],
+      "routes": [
+        "packages/member/mip-events/detail/index"
+      ],
       "reason": "web-view 业务域名、跳转和加载失败需要在正式 AppID 的微信真机中验收"
     },
     {
       "id": "calendar-location",
       "label": "活动地图",
-      "routes": ["packages/member/mip-events/detail/index"],
+      "routes": [
+        "packages/member/mip-events/detail/index"
+      ],
       "reason": "wx.openLocation 需要在微信真机中验收"
     },
     {
       "id": "task-attachment",
       "label": "任务附件上传",
-      "routes": ["packages/member/mip-tasks/detail/index"],
+      "routes": [
+        "packages/member/mip-tasks/detail/index"
+      ],
       "reason": "wx.chooseMedia、客户端压缩、图片安全检查和上传结果需要真机验收"
     },
     {
       "id": "task-template",
       "label": "任务模板下载与保存",
-      "routes": ["packages/member/mip-tasks/detail/index"],
+      "routes": [
+        "packages/member/mip-tasks/detail/index"
+      ],
       "reason": "任务模板下载和相册保存结果需要真机验收"
     },
     {
@@ -151,8 +163,18 @@
     {
       "id": "web-login-qr",
       "label": "网页登录小程序码",
-      "routes": ["packages/admin/web-login-confirm/index"],
+      "routes": [
+        "packages/admin/web-login-confirm/index"
+      ],
       "reason": "动态小程序码打开、运营账号授权、显式确认和网页会话交换需要微信真机与电脑浏览器联合验证"
+    },
+    {
+      "id": "record",
+      "label": "麦克风录音",
+      "routes": [
+        "packages/member/mip-ai/voice/index"
+      ],
+      "reason": "RecorderManager 麦克风录音仅真机可用"
     }
   ],
   "sensitivePatterns": [
@@ -296,8 +318,15 @@
           "selector": "#opportunities-talent-tab",
           "handler": "changeMode",
           "scrollIntoView": true,
-          "dataAssertions": [{ "path": "mode", "equals": "cooperation" }],
-          "visibleAssertion": { "selector": "#opportunities-search-input" }
+          "dataAssertions": [
+            {
+              "path": "mode",
+              "equals": "cooperation"
+            }
+          ],
+          "visibleAssertion": {
+            "selector": "#opportunities-search-input"
+          }
         },
         {
           "id": "enter-keyword",
@@ -491,7 +520,12 @@
       "selector": "#mip-home-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
       "tab": true
     },
@@ -502,8 +536,16 @@
       "selector": "#member-announcements-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -513,9 +555,15 @@
       "selector": "#member-announcement-detail-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["announcementId"],
+      "query": [
+        "announcementId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/announcements/index",
         "dataPath": "items",
@@ -531,10 +579,18 @@
       "selector": "#mip-events-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
       "tab": true,
-      "deviceRequired": ["share", "video-channel"]
+      "deviceRequired": [
+        "share",
+        "video-channel"
+      ]
     },
     {
       "id": "U04",
@@ -543,9 +599,19 @@
       "selector": "#mip-membership-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["phone-auth", "photo-save", "share", "wechat-pay"]
+      "deviceRequired": [
+        "phone-auth",
+        "photo-save",
+        "share",
+        "wechat-pay"
+      ]
     },
     {
       "id": "U05",
@@ -554,7 +620,11 @@
       "selector": "#mip-account-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
       "tab": true
     },
@@ -565,7 +635,11 @@
       "selector": "#mip-visibility-settings-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -575,7 +649,12 @@
       "selector": "#member-orders-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -585,9 +664,15 @@
       "selector": "#order-detail-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["orderId"],
+      "query": [
+        "orderId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/orders/index",
         "dataPath": "orders",
@@ -595,7 +680,9 @@
           "orderId": "id"
         }
       },
-      "deviceRequired": ["wechat-pay"]
+      "deviceRequired": [
+        "wechat-pay"
+      ]
     },
     {
       "id": "U14",
@@ -604,11 +691,25 @@
       "selector": "#payment-result-page",
       "group": "member",
       "kind": "result",
-      "states": ["checking", "success", "pending", "failed", "refund"],
-      "acceptStates": ["success", "pending", "refund"],
-      "pendingStates": ["checking"],
+      "states": [
+        "checking",
+        "success",
+        "pending",
+        "failed",
+        "refund"
+      ],
+      "acceptStates": [
+        "success",
+        "pending",
+        "refund"
+      ],
+      "pendingStates": [
+        "checking"
+      ],
       "readyAssertion": "result in success|pending|refund",
-      "query": ["orderId"],
+      "query": [
+        "orderId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/orders/index",
         "dataPath": "orders",
@@ -616,7 +717,9 @@
           "orderId": "id"
         }
       },
-      "deviceRequired": ["wechat-pay"]
+      "deviceRequired": [
+        "wechat-pay"
+      ]
     },
     {
       "id": "U29",
@@ -625,9 +728,15 @@
       "selector": "#mip-membership-order-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["wechat-pay"]
+      "deviceRequired": [
+        "wechat-pay"
+      ]
     },
     {
       "id": "U16",
@@ -636,7 +745,11 @@
       "selector": "#member-benefits-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -655,7 +768,11 @@
         "conflict",
         "error"
       ],
-      "acceptStates": ["ready", "success", "blocked"],
+      "acceptStates": [
+        "ready",
+        "success",
+        "blocked"
+      ],
       "readyAssertion": "state === 'ready' || state === 'success' || state === 'blocked'"
     },
     {
@@ -665,9 +782,15 @@
       "selector": "#mip-bind-phone-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["phone-auth"]
+      "deviceRequired": [
+        "phone-auth"
+      ]
     },
     {
       "id": "U30",
@@ -676,7 +799,9 @@
       "selector": "#mip-privacy-settings-page",
       "group": "member",
       "kind": "static",
-      "states": ["ready"],
+      "states": [
+        "ready"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -686,9 +811,13 @@
       "selector": "#mip-privacy-policy-page",
       "group": "public",
       "kind": "static",
-      "states": ["ready"],
+      "states": [
+        "ready"
+      ],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["customer-service"]
+      "deviceRequired": [
+        "customer-service"
+      ]
     },
     {
       "id": "U27",
@@ -697,7 +826,9 @@
       "selector": "#mip-user-agreement-page",
       "group": "public",
       "kind": "static",
-      "states": ["ready"],
+      "states": [
+        "ready"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -707,9 +838,15 @@
       "selector": "#member-help-page",
       "group": "member",
       "kind": "static",
-      "states": ["ready"],
+      "states": [
+        "ready"
+      ],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["customer-service", "phone-call", "video-channel"]
+      "deviceRequired": [
+        "customer-service",
+        "phone-call",
+        "video-channel"
+      ]
     },
     {
       "id": "U19",
@@ -718,7 +855,9 @@
       "selector": "#member-about-page",
       "group": "member",
       "kind": "static",
-      "states": ["ready"],
+      "states": [
+        "ready"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -728,7 +867,12 @@
       "selector": "#admin-dashboard-page",
       "group": "admin",
       "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden"],
+      "states": [
+        "loading",
+        "ready",
+        "error",
+        "forbidden"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -738,10 +882,24 @@
       "selector": "#admin-web-login-confirm-page",
       "group": "admin",
       "kind": "data",
-      "states": ["loading", "ready", "access", "confirming", "success", "expired", "error", "forbidden"],
-      "acceptStates": ["ready", "success"],
+      "states": [
+        "loading",
+        "ready",
+        "access",
+        "confirming",
+        "success",
+        "expired",
+        "error",
+        "forbidden"
+      ],
+      "acceptStates": [
+        "ready",
+        "success"
+      ],
       "readyAssertion": "state === 'ready' || state === 'success'",
-      "deviceRequired": ["web-login-qr"]
+      "deviceRequired": [
+        "web-login-qr"
+      ]
     },
     {
       "id": "A02",
@@ -750,7 +908,13 @@
       "selector": "#admin-managed-events-page",
       "group": "admin",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error",
+        "forbidden"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -760,9 +924,16 @@
       "selector": "#admin-event-console-page",
       "group": "admin",
       "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden"],
+      "states": [
+        "loading",
+        "ready",
+        "error",
+        "forbidden"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"],
+      "query": [
+        "eventId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/admin/managed-events/index",
         "dataPath": "events",
@@ -770,7 +941,9 @@
           "eventId": "id"
         }
       },
-      "deviceRequired": ["photo-save"]
+      "deviceRequired": [
+        "photo-save"
+      ]
     },
     {
       "id": "A05",
@@ -779,9 +952,18 @@
       "selector": "#admin-event-registrations-page",
       "group": "admin",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error",
+        "forbidden",
+        "conflict"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"],
+      "query": [
+        "eventId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/admin/managed-events/index",
         "dataPath": "events",
@@ -789,7 +971,9 @@
           "eventId": "id"
         }
       },
-      "deviceRequired": ["qr-checkin"]
+      "deviceRequired": [
+        "qr-checkin"
+      ]
     },
     {
       "id": "M01",
@@ -798,7 +982,11 @@
       "selector": "#mip-opportunities-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
       "tab": true
     },
@@ -809,10 +997,19 @@
       "selector": "#mip-access-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error", "expired"],
-      "externalWaitStates": ["expired"],
+      "states": [
+        "loading",
+        "ready",
+        "error",
+        "expired"
+      ],
+      "externalWaitStates": [
+        "expired"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["token"],
+      "query": [
+        "token"
+      ],
       "protectedAccessFixture": {
         "kind": "local-sign-out-global-guard",
         "sourceRoute": "packages/member/privacy/index",
@@ -825,7 +1022,9 @@
         "restoreHandler": "signIn",
         "restoreRoute": "pages/index/index"
       },
-      "deviceRequired": ["phone-auth"]
+      "deviceRequired": [
+        "phone-auth"
+      ]
     },
     {
       "id": "M03",
@@ -834,9 +1033,16 @@
       "selector": "#mip-profile-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["phone-auth", "profile-avatar"]
+      "deviceRequired": [
+        "phone-auth",
+        "profile-avatar"
+      ]
     },
     {
       "id": "M04",
@@ -845,8 +1051,16 @@
       "selector": "#mip-branches-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -856,9 +1070,15 @@
       "selector": "#mip-event-detail-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"],
+      "query": [
+        "eventId"
+      ],
       "queryFixture": {
         "sourceRoute": "pages/events/index",
         "dataPath": "events",
@@ -884,9 +1104,17 @@
       "selector": "#mip-event-registration-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "blocked", "submitted", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "blocked",
+        "submitted",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"],
+      "query": [
+        "eventId"
+      ],
       "queryFixture": {
         "sourceRoute": "pages/events/index",
         "dataPath": "events",
@@ -907,7 +1135,11 @@
       "selector": "#mip-events-mine-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -917,10 +1149,20 @@
       "selector": "#mip-event-check-in-page",
       "group": "member",
       "kind": "result",
-      "states": ["idle", "checking", "success", "error"],
-      "acceptStates": ["idle", "success"],
+      "states": [
+        "idle",
+        "checking",
+        "success",
+        "error"
+      ],
+      "acceptStates": [
+        "idle",
+        "success"
+      ],
       "readyAssertion": "state === 'idle' || state === 'success'",
-      "deviceRequired": ["qr-checkin"]
+      "deviceRequired": [
+        "qr-checkin"
+      ]
     },
     {
       "id": "M09",
@@ -929,9 +1171,16 @@
       "selector": "#mip-event-interaction-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "blocked", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "blocked",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"],
+      "query": [
+        "eventId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-events/mine/index",
         "sourceQuery": {
@@ -953,9 +1202,18 @@
       "selector": "#mip-event-feedback-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "access", "blocked", "error", "conflict"],
+      "states": [
+        "loading",
+        "ready",
+        "access",
+        "blocked",
+        "error",
+        "conflict"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"],
+      "query": [
+        "eventId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-events/mine/index",
         "sourceQuery": {
@@ -977,9 +1235,15 @@
       "selector": "#mip-opportunity-detail-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["id"],
+      "query": [
+        "id"
+      ],
       "queryFixture": {
         "sourceRoute": "pages/opportunities/index",
         "dataPath": "opportunities",
@@ -987,7 +1251,9 @@
           "id": "id"
         }
       },
-      "deviceRequired": ["share"]
+      "deviceRequired": [
+        "share"
+      ]
     },
     {
       "id": "M11",
@@ -996,7 +1262,11 @@
       "selector": "#mip-opportunity-editor-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -1006,7 +1276,11 @@
       "selector": "#mip-opportunity-mine-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -1016,7 +1290,11 @@
       "selector": "#mip-opportunity-settings-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -1026,7 +1304,11 @@
       "selector": "#mip-cooperation-list-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -1036,9 +1318,15 @@
       "selector": "#mip-cooperation-detail-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["id"],
+      "query": [
+        "id"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-cooperation/list/index",
         "dataPath": "talents",
@@ -1054,7 +1342,11 @@
       "selector": "#mip-cooperation-editor-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -1064,7 +1356,11 @@
       "selector": "#mip-cases-list-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -1074,9 +1370,15 @@
       "selector": "#mip-case-detail-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["id"],
+      "query": [
+        "id"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-cases/list/index",
         "dataPath": "items",
@@ -1084,7 +1386,9 @@
           "id": "id"
         }
       },
-      "deviceRequired": ["share"]
+      "deviceRequired": [
+        "share"
+      ]
     },
     {
       "id": "M18",
@@ -1093,7 +1397,11 @@
       "selector": "#mip-case-editor-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -1103,9 +1411,15 @@
       "selector": "#mip-growth-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["share"]
+      "deviceRequired": [
+        "share"
+      ]
     },
     {
       "id": "M56",
@@ -1114,7 +1428,11 @@
       "selector": "#member-experience-details-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -1124,8 +1442,17 @@
       "selector": "#mip-badges-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "conflict"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error",
+        "conflict"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -1135,10 +1462,20 @@
       "selector": "#mip-badge-detail-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["badgeId"],
+      "query": [
+        "badgeId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-badges/index",
         "dataPath": "items",
@@ -1154,10 +1491,19 @@
       "selector": "#mip-member-card-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "allowedSensitivePaths": ["phone"],
-      "deviceRequired": ["photo-save", "share"]
+      "allowedSensitivePaths": [
+        "phone"
+      ],
+      "deviceRequired": [
+        "photo-save",
+        "share"
+      ]
     },
     {
       "id": "M37C",
@@ -1166,9 +1512,15 @@
       "selector": "#mip-card-edit-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["phone-auth"]
+      "deviceRequired": [
+        "phone-auth"
+      ]
     },
     {
       "id": "M34",
@@ -1177,8 +1529,16 @@
       "selector": "#mip-game-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -1188,9 +1548,15 @@
       "selector": "#mip-game-team-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["teamId"],
+      "query": [
+        "teamId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-game/index",
         "dataPath": "rankings",
@@ -1209,8 +1575,16 @@
       "selector": "#mip-blind-box-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -1220,9 +1594,15 @@
       "selector": "#mip-blind-box-detail-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["catalogId"],
+      "query": [
+        "catalogId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-blind-box/index",
         "dataPath": "items",
@@ -1238,8 +1618,16 @@
       "selector": "#mip-blind-box-backpack-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -1249,8 +1637,16 @@
       "selector": "#mip-blind-box-coin-entries-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -1260,8 +1656,16 @@
       "selector": "#mip-tasks-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -1271,9 +1675,15 @@
       "selector": "#mip-task-detail-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["taskId"],
+      "query": [
+        "taskId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-tasks/index",
         "dataPath": "tasks",
@@ -1281,7 +1691,10 @@
           "taskId": "id"
         }
       },
-      "deviceRequired": ["task-attachment", "task-template"]
+      "deviceRequired": [
+        "task-attachment",
+        "task-template"
+      ]
     },
     {
       "id": "M20",
@@ -1290,7 +1703,11 @@
       "selector": "#mip-notifications-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
       "deviceRequired": []
     },
@@ -1301,8 +1718,17 @@
       "selector": "#mip-received-interactions-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "access"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error",
+        "access"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -1312,10 +1738,21 @@
       "selector": "#mip-heart-history-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "access"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error",
+        "access"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'",
-      "deviceRequired": ["subscription-message"]
+      "deviceRequired": [
+        "subscription-message"
+      ]
     },
     {
       "id": "M29",
@@ -1324,8 +1761,16 @@
       "selector": "#mip-people-discovery-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -1335,14 +1780,27 @@
       "selector": "#mip-profile-interests-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "blocked", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "blocked",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["profileRef"],
+      "query": [
+        "profileRef"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-people/index",
         "dataPath": "people",
-        "values": { "profileRef": "profileRef" }
+        "values": {
+          "profileRef": "profileRef"
+        }
       }
     },
     {
@@ -1350,12 +1808,21 @@
       "name": "公开档案",
       "path": "packages/member/mip-public-profile/index",
       "selector": "#mip-public-profile-page",
-      "deviceRequired": ["subscription-message"],
+      "deviceRequired": [
+        "subscription-message"
+      ],
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error", "blocked"],
+      "states": [
+        "loading",
+        "ready",
+        "error",
+        "blocked"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["profileRef"],
+      "query": [
+        "profileRef"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-people/index",
         "dataPath": "people",
@@ -1371,8 +1838,17 @@
       "selector": "#mip-blocked-profiles-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "access"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error",
+        "access"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -1382,9 +1858,15 @@
       "selector": "#mip-event-participants-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"],
+      "query": [
+        "eventId"
+      ],
       "queryFixture": {
         "sourceRoute": "pages/events/index",
         "dataPath": "events",
@@ -1392,7 +1874,9 @@
           "eventId": "id"
         }
       },
-      "deviceRequired": ["share"]
+      "deviceRequired": [
+        "share"
+      ]
     },
     {
       "id": "M44",
@@ -1401,8 +1885,16 @@
       "selector": "#mip-knowledge-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
@@ -1412,9 +1904,15 @@
       "selector": "#mip-knowledge-detail-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
       "readyAssertion": "state === 'ready'",
-      "query": ["contentId"],
+      "query": [
+        "contentId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-knowledge/index",
         "dataPath": "items",
@@ -1422,7 +1920,10 @@
           "contentId": "id"
         }
       },
-      "deviceRequired": ["wechat-pay", "video-channel"]
+      "deviceRequired": [
+        "wechat-pay",
+        "video-channel"
+      ]
     },
     {
       "id": "M46",
@@ -1431,10 +1932,20 @@
       "selector": "#mip-knowledge-web-page",
       "group": "public",
       "kind": "static-data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
       "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["contentId"],
+      "query": [
+        "contentId"
+      ],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-knowledge/index",
         "dataPath": "items",
@@ -1442,7 +1953,29 @@
           "contentId": "id"
         }
       },
-      "deviceRequired": ["knowledge-webview"]
+      "deviceRequired": [
+        "knowledge-webview"
+      ]
+    },
+    {
+      "id": "M57",
+      "name": "AI 语音填写",
+      "path": "packages/member/mip-ai/voice/index",
+      "selector": "#mip-ai-voice-page",
+      "group": "member",
+      "kind": "static",
+      "states": [
+        "loading",
+        "ready",
+        "recording",
+        "review",
+        "processing",
+        "error"
+      ],
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": [
+        "record"
+      ]
     }
   ]
 }

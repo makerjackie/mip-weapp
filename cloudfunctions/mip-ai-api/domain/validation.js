@@ -74,6 +74,38 @@ function normalizeVoiceUploadIntent(event) {
   }
 }
 
+function normalizeVoiceUploadPrepareIntent(event) {
+  return { purpose: normalizePurpose(event.purpose) }
+}
+
+// 客户端直传云存储后的提交意图:路径归属由 audioStore.validateStored 用 HMAC scope 复验。
+function normalizeVoiceStorageIntent(event) {
+  if (!isUuid(event.audioAssetId)
+    || typeof event.fileId !== 'string'
+    || !event.fileId.startsWith('cloud://')
+    || event.fileId.length > 1024
+    || event.fileId.includes('..')
+    || event.fileId.includes('\\')
+    || /\s/.test(event.fileId)
+    || event.contentType !== 'audio/mpeg'
+    || !Number.isInteger(event.contentBytes)
+    || event.contentBytes < 1
+    || event.contentBytes > 6 * 1024 * 1024
+    || !/^[a-f0-9]{64}$/.test(event.contentSha256)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  const requestId = normalizeOptionalRequestId(event.requestId)
+  return {
+    purpose: normalizePurpose(event.purpose),
+    audioAssetId: event.audioAssetId,
+    fileId: event.fileId,
+    contentType: event.contentType,
+    contentBytes: event.contentBytes,
+    contentSha256: event.contentSha256,
+    ...(requestId ? { requestId } : {}),
+  }
+}
+
 function normalizeOptionalRequestId(value) {
   if (value === undefined || value === null || value === '') return undefined
   const requestId = typeof value === 'string' ? value.trim() : ''
@@ -149,5 +181,7 @@ module.exports = {
   normalizeStructuredDraft,
   normalizeTextIntent,
   normalizeVoiceIntent,
+  normalizeVoiceStorageIntent,
   normalizeVoiceUploadIntent,
+  normalizeVoiceUploadPrepareIntent,
 }

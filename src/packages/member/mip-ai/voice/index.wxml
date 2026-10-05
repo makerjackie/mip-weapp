@@ -1,0 +1,80 @@
+<view id="mip-ai-voice-page" class="mip-member-page min-h-screen bg-canvas text-ink">
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="pt-[240rpx]">
+    <view class="mx-auto h-[96rpx] w-[96rpx] rounded-full border-[4rpx] border-brand border-t-transparent mip-voice-spin"></view>
+    <text class="mt-[32rpx] block text-center text-[28rpx] text-muted">正在连接 AI 助手</text>
+  </view>
+
+  <view wx:elif="{{state === 'error'}}" class="pt-4">
+    <mip-empty-state title="暂时无法使用 AI 语音填写" description="{{message}}" action-text="重新加载" bind:action="initialize" />
+    <app-page-exit />
+  </view>
+
+  <block wx:else>
+    <!-- AI 助手头卡:设计 2172:42168 录音智能填充 -->
+    <view class="mx-[24rpx] mt-[24rpx] rounded-[16rpx] bg-panel px-[32rpx] py-[40rpx] text-center">
+      <view class="mx-auto flex h-[88rpx] w-[88rpx] items-center justify-center rounded-[24rpx] bg-brand">
+        <mip-icon name="pencil-ai-line" size="{{22}}" color="var(--color-ink)" />
+      </view>
+      <text class="mt-[24rpx] block text-[34rpx] font-medium leading-[48rpx]">AI 助手 · {{purposeLabel}}</text>
+      <text class="mt-[12rpx] block text-[26rpx] leading-[38rpx] text-muted">{{hint}}</text>
+    </view>
+
+    <!-- 开始态 -->
+    <block wx:if="{{state === 'ready'}}">
+      <view class="mt-[120rpx] flex flex-col items-center">
+        <view aria-role="button" aria-label="开始录制" bind:tap="startRecording" class="flex h-[220rpx] w-[220rpx] flex-col items-center justify-center rounded-full bg-brand">
+          <view class="mip-voice-mic"></view>
+        </view>
+        <text class="mt-[40rpx] text-[30rpx] font-medium">点击开始录制</text>
+        <text class="mt-[12rpx] text-[24rpx] text-muted">单次最长 {{maximumText}}，录音仅用于生成草稿</text>
+      </view>
+      <text wx:if="{{message}}" class="mx-[24rpx] mt-[32rpx] block text-center text-[26rpx] text-[#ff6b6b]">{{message}}</text>
+    </block>
+
+    <!-- 录音中:计时 + 录完 -->
+    <block wx:elif="{{state === 'recording'}}">
+      <view class="mt-[100rpx] flex flex-col items-center">
+        <text class="text-[72rpx] font-medium leading-[100rpx] mip-tabular-nums">{{elapsedText}}</text>
+        <view class="mt-[32rpx] flex h-[48rpx] items-end gap-[8rpx]" aria-label="正在录音">
+          <view class="mip-voice-wave mip-voice-wave-1"></view>
+          <view class="mip-voice-wave mip-voice-wave-2"></view>
+          <view class="mip-voice-wave mip-voice-wave-3"></view>
+          <view class="mip-voice-wave mip-voice-wave-4"></view>
+        </view>
+        <view aria-role="button" aria-label="录完" bind:tap="finishRecording" class="mt-[96rpx] flex h-[200rpx] w-[200rpx] flex-col items-center justify-center rounded-full bg-brand">
+          <view class="h-[56rpx] w-[56rpx] rounded-[8rpx] bg-canvas"></view>
+        </view>
+        <text class="mt-[32rpx] text-[28rpx] font-medium">录完</text>
+        <text class="mt-[12rpx] text-[24rpx] text-muted">最长 {{maximumText}}，到时会自动停止</text>
+      </view>
+    </block>
+
+    <!-- 确认录制:回听 + 时长 + 删除 + 确认使用 -->
+    <block wx:elif="{{state === 'review' || state === 'processing'}}">
+      <view class="mt-[100rpx] flex flex-col items-center">
+        <view aria-role="button" aria-label="{{playing ? '停止回听' : '回听录音'}}" bind:tap="togglePlayback" class="flex h-[220rpx] w-[220rpx] flex-col items-center justify-center rounded-full bg-panel">
+          <mip-icon wx:if="{{playing}}" name="close" size="{{40}}" color="var(--color-brand)" />
+          <mip-icon wx:else name="play-circle-line" size="{{40}}" color="var(--color-brand)" />
+          <text class="mt-[16rpx] text-[44rpx] font-medium mip-tabular-nums">{{durationText}}</text>
+        </view>
+        <text wx:if="{{state === 'processing'}}" class="mt-[40rpx] text-[30rpx] font-medium">AI 正在整理录音…</text>
+        <text wx:elif="{{playing}}" class="mt-[40rpx] px-[48rpx] text-center text-[26rpx] text-muted">正在回听，点击圆盘停止</text>
+        <text wx:elif="{{message}}" class="mt-[40rpx] px-[48rpx] text-center text-[26rpx] text-[#ff6b6b]">{{message}}</text>
+        <text wx:else class="mt-[40rpx] text-[28rpx] text-muted">确认使用这段录音生成{{purposeLabel}}草稿</text>
+      </view>
+      <view class="mx-[24rpx] mt-[80rpx] flex flex-col gap-[24rpx]">
+        <view aria-role="button" aria-label="确认使用" aria-disabled="{{state === 'processing'}}" bind:tap="confirmRecording" class="flex h-[96rpx] items-center justify-center rounded-full bg-brand text-[30rpx] font-medium text-canvas {{state === 'processing' ? 'opacity-60' : ''}}">
+          {{state === 'processing' ? 'AI 整理中…' : '确认使用'}}
+        </view>
+        <view aria-role="button" aria-label="删除重录" aria-disabled="{{state === 'processing'}}" bind:tap="askDeleteRecording" class="flex h-[96rpx] items-center justify-center rounded-full border-[2rpx] border-[#3a3a3a] text-[30rpx] text-muted {{state === 'processing' ? 'opacity-60' : ''}}">
+          删除重录
+        </view>
+      </view>
+    </block>
+
+    <!-- 删除提示 -->
+    <mip-dialog open="{{deleteDialogOpen}}" title="删除这段录音？" cancel-text="继续编辑" confirm-text="删除" bind:cancel="cancelDeleteRecording" bind:confirm="confirmDeleteRecording">
+      删除后将回到录制页面，这段录音不会被保存或上传。
+    </mip-dialog>
+  </block>
+</view>

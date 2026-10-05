@@ -2,6 +2,9 @@
 
 const { createHash, timingSafeEqual } = require('node:crypto')
 
+// 与 mip-ai-api audio-store 上限一致:15 分钟 48kbps mp3 ≈ 5.4MB,留余量取 6MB。
+const maximumAudioBytes = 6 * 1024 * 1024
+
 function createAudioLoader(cloud) {
   return {
     async load(input) {
@@ -23,7 +26,7 @@ function createAudioLoader(cloud) {
       if (input.audioContentType !== 'audio/mpeg'
         || content.length !== input.audioContentBytes
         || content.length < 1
-        || content.length > 2 * 1024 * 1024
+        || content.length > maximumAudioBytes
         || expectedDigest.length !== actualDigest.length
         || !timingSafeEqual(actualDigest, expectedDigest)
         || !hasMp3Header(content)) {
@@ -48,4 +51,4 @@ function hasMp3Header(buffer) {
   return false
 }
 
-module.exports = { createAudioLoader, hasMp3Header }
+module.exports = { createAudioLoader, hasMp3Header, maximumAudioBytes }

@@ -1,0 +1,74 @@
+/* AI 语音填写页的录音动效(麦克风、声波、加载) */
+
+.mip-voice-spin {
+  animation: mip-voice-spin 0.9s linear infinite;
+}
+
+@keyframes mip-voice-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 纯 CSS 麦克风:顶部拾音头 + 颈部 + 底座 */
+.mip-voice-mic {
+  position: relative;
+  width: 56rpx;
+  height: 84rpx;
+}
+
+.mip-voice-mic::before {
+  position: absolute;
+  top: 0;
+  left: 10rpx;
+  width: 36rpx;
+  height: 56rpx;
+  content: '';
+  background: #080808;
+  border-radius: 18rpx;
+}
+
+.mip-voice-mic::after {
+  position: absolute;
+  top: 52rpx;
+  left: 0;
+  box-sizing: border-box;
+  width: 56rpx;
+  height: 24rpx;
+  content: '';
+  border: 4rpx solid #080808;
+  border-top: none;
+  border-radius: 0 0 28rpx 28rpx;
+}
+
+.mip-voice-wave {
+  width: 8rpx;
+  background: var(--color-brand, #fcdf03);
+  border-radius: 4rpx;
+  animation: mip-voice-wave 1s ease-in-out infinite;
+}
+
+.mip-voice-wave-1 {
+  height: 20rpx;
+  animation-delay: 0s;
+}
+
+.mip-voice-wave-2 {
+  height: 40rpx;
+  animation-delay: 0.15s;
+}
+
+.mip-voice-wave-3 {
+  height: 32rpx;
+  animation-delay: 0.3s;
+}
+
+.mip-voice-wave-4 {
+  height: 24rpx;
+  animation-delay: 0.45s;
+}
+
+@keyframes mip-voice-wave {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1); }
+}

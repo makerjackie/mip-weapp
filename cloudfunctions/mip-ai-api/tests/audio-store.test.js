@@ -123,3 +123,57 @@ test('does not delete audio when the stable storage key is unavailable', async (
   }), false)
   assert.equal(called, false)
 })
+
+test('validates a client direct upload only against its own HMAC-scoped path', () => {
+  const appId = 'wx1111111111111111'
+  const userId = '10000000-0000-4000-8000-000000000001'
+  const otherUserId = '20000000-0000-4000-8000-000000000001'
+  const assetId = '30000000-0000-4000-8000-000000000001'
+  const store = createAudioStore({}, { storageKey: key, stage: 'development' })
+  const allocation = store.preallocate({ appId, userId, assetId })
+  const fileId = `cloud://env/${allocation.objectKey}`
+  const storedInput = {
+    appId,
+    userId,
+    assetId,
+    fileId,
+    contentType: 'audio/mpeg',
+    contentBytes: 4,
+    contentSha256: 'a'.repeat(64),
+  }
+  assert.deepEqual(store.validateStored(storedInput), {
+    assetId,
+    objectKey: allocation.objectKey,
+    cloudFileId: fileId,
+    contentSha256: 'a'.repeat(64),
+    contentType: 'audio/mpeg',
+    contentBytes: 4,
+  })
+  // 他人 scope 的 fileID、伪造 objectKey、超限字节、坏摘要一律拒绝
+  assert.throws(() => store.validateStored({
+    ...storedInput,
+    userId: otherUserId,
+  }), /AI_AUDIO_FILE_INVALID/)
+  assert.throws(() => store.validateStored({
+    ...storedInput,
+    fileId: `cloud://env/${allocation.objectKey.replace(assetId, '40000000-0000-4000-8000-000000000001')}`,
+  }), /AI_AUDIO_FILE_INVALID/)
+  assert.throws(() => store.validateStored({
+    ...storedInput,
+    contentBytes: 6 * 1024 * 1024 + 1,
+  }), /AI_AUDIO_FILE_INVALID/)
+  assert.throws(() => store.validateStored({
+    ...storedInput,
+    contentSha256: 'zz',
+  }), /AI_AUDIO_FILE_INVALID/)
+  assert.throws(() => store.validateStored({
+    ...storedInput,
+    contentType: 'audio/wav',
+  }), /AI_AUDIO_INVALID/)
+})
+
+test('rejects direct-upload validation when the stable storage key is unavailable', () => {
+  const store = createAudioStore({}, {})
+  assert.equal(store.configured, false)
+  assert.throws(() => store.validateStored({}), /AI_STORAGE_UNAVAILABLE/)
+})

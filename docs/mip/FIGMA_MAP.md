@@ -27,7 +27,7 @@
 | 编辑档案/个人名片 | `69:4972` | `1774:41143`、`1732:20291`、`1732:20401` | `src/packages/member/mip-profile`、`src/packages/member/mip-card` |
 | 合作卡 | `69:4972` | `2004:2227`、`2571:34139` | `src/packages/member/mip-cooperation` |
 | 超级案例 | `69:4972` | `1987:30162`、`2173:42605` | `src/packages/member/mip-cases` |
-| AI 语音填写 | `69:4972` | `2172:42168` | `src/packages/member/mip-ai` |
+| AI 语音填写 | `69:4972` | `2172:42168` | `src/packages/member/mip-ai/voice` |
 | 玩家等级 | `69:4972` | `1948:14079` | `src/packages/member/mip-growth` |
 | 活动首页 | `69:4975` | `1819:17664` | `src/pages/events` |
 | 活动详情 | `69:4975` | `1861:17860`、`1818:17142` | `src/packages/member/mip-events/detail` |
@@ -83,7 +83,7 @@ Figma 也没有单独定义“账号设置”页面。`src/packages/member/priva
 | `2004:2227`、`2571:34139` | 六类角色合作卡、角色信息、特征打分和底部操作 | `src/packages/member/mip-cooperation/list`、`editor` 保留真实摘要、能力评分和草稿/预览/发布生命周期；原型人物插画不作为用户内容 |
 | `1987:30162`、`2173:42605`、`2037:12261` | 超级案例封面、事实表、编辑表单和素材 | `src/packages/member/mip-cases` 使用服务端案例字段和用户上传素材；无封面时只显示品牌占位，不复制演示案例 |
 | `1958:11897` | 玩家档案的超级案例时间线 | `src/packages/member/mip-public-profile` 使用公开案例的真实发布时间和摘要；不复制原型案例 |
-| `2172:42168` | 语音计时和录音主操作 | `src/packages/member/mip-ai` 以真实录音状态驱动计时，并保留文字草稿、多轮补充、核对填写和删除流程 |
+| `2172:42168` | 语音计时和录音主操作 | `src/packages/member/mip-ai/voice` 以真实录音状态驱动计时（开始/录音中/确认/删除提示）；生成草稿后带 `aiDraftId` 回跳超级案例或合作卡编辑器，核对填写、文字草稿和多轮补充在编辑器内继续 |
 | `1948:14079` | 黄色等级主视觉、经验进度、权益和成长任务 | `src/packages/member/mip-growth` 使用服务端等级、经验、权益、规则和流水；等级序号只按服务端等级列表展示，不在客户端重算等级 |
 
 上述页面继续以模块和服务端权限为事实来源。手机号、录音、图片选择与上传仍需微信开发者工具或真机验收。

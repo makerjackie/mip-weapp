@@ -7,7 +7,9 @@ const {
   normalizeRefinementIntent,
   normalizeStructuredDraft,
   normalizeTextIntent,
+  normalizeVoiceStorageIntent,
   normalizeVoiceUploadIntent,
+  normalizeVoiceUploadPrepareIntent,
 } = require('../domain/validation')
 
 test('keeps only supported fields for the selected draft purpose', () => {
@@ -86,4 +88,32 @@ test('normalizes a bounded refinement turn and appends it without provider rewri
     supplementalText: ' ',
   }), /VALIDATION_FAILED/)
   assert.throws(() => combineDraftTranscript('a'.repeat(19_999), 'bb'), /AI_DRAFT_CONTENT_INVALID/)
+})
+
+test('validates client direct-upload intents for the storage channel', () => {
+  const base = {
+    purpose: 'SUPER_CASE',
+    audioAssetId: '30000000-0000-4000-8000-000000000001',
+    fileId: 'cloud://env/mip/development/a0a0a0a0a0a0a0a0a0a0a0a0/ai/b0b0b0b0b0b0b0b0b0b0b0b0/30000000-0000-4000-8000-000000000001.mp3',
+    contentType: 'audio/mpeg',
+    contentBytes: 4,
+    contentSha256: 'a'.repeat(64),
+  }
+  assert.deepEqual(normalizeVoiceUploadPrepareIntent({ purpose: 'super_case' }), { purpose: 'SUPER_CASE' })
+  assert.deepEqual(normalizeVoiceStorageIntent({ ...base, requestId: 'ai-draft:voice-storage' }), {
+    ...base,
+    requestId: 'ai-draft:voice-storage',
+  })
+  for (const broken of [
+    { ...base, audioAssetId: 'not-a-uuid' },
+    { ...base, fileId: 'https://env/other.mp3' },
+    { ...base, fileId: 'cloud://env/../secret.mp3' },
+    { ...base, fileId: 'cloud://env/with space.mp3' },
+    { ...base, contentType: 'audio/wav' },
+    { ...base, contentBytes: 0 },
+    { ...base, contentBytes: 6 * 1024 * 1024 + 1 },
+    { ...base, contentSha256: 'A'.repeat(64) },
+  ]) {
+    assert.throws(() => normalizeVoiceStorageIntent(broken), /VALIDATION_FAILED/)
+  }
 })

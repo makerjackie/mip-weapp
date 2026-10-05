@@ -12,7 +12,7 @@
       <text class="text-[28rpx] font-medium leading-[39.2rpx] text-canvas">{{bannerText}}</text>
     </view>
 
-    <view aria-label="AI助手" class="mx-[24rpx] mt-[24rpx] flex h-[200rpx] flex-col items-center justify-center rounded-[16rpx] border-[2rpx] border-brand bg-panel">
+    <view aria-label="AI助手" aria-role="button" bind:tap="onAiAssistant" class="mx-[24rpx] mt-[24rpx] flex h-[200rpx] flex-col items-center justify-center rounded-[16rpx] border-[2rpx] border-brand bg-panel">
       <view class="flex items-center">
         <view class="relative h-[48rpx] w-[48rpx]"><image class="absolute left-[4rpx] top-[2rpx] h-[42rpx] w-[44rpx]" src="/packages/member/assets/figma/coop/icon-chat-smile-ai.png" /><image class="absolute left-[12rpx] top-[18rpx] h-[12rpx] w-[24rpx]" src="/packages/member/assets/figma/coop/icon-chat-smile-mouth.png" /></view>
         <text class="ml-[8rpx] text-[28rpx] font-medium leading-[40rpx] text-brand">AI助手</text>

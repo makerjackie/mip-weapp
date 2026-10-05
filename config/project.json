@@ -279,6 +279,10 @@
     {
       "name": "知识内容网页",
       "pathName": "packages/member/mip-knowledge/web/index"
+    },
+    {
+      "name": "AI 语音填写",
+      "pathName": "packages/member/mip-ai/voice/index"
     }
   ]
 }

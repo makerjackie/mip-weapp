@@ -21,6 +21,9 @@ const opportunityTextLimits = Object.freeze({
 function createOpenAiCompatibleAdapter(options) {
   const config = options.config
   const http = options.http
+  const audioLoader = options.audioLoader
+  const flashAsr = options.flashAsr
+  const supportsVoiceDrafts = Boolean(audioLoader && flashAsr?.configured)
 
   return {
     async readiness() {
@@ -45,9 +48,11 @@ function createOpenAiCompatibleAdapter(options) {
       return true
     },
 
+    supportsVoiceDrafts,
+
     async invoke(request) {
       if (request.action === 'transcribeAndStructure') {
-        throw new Error('AI_DRAFT_PROVIDER_AUDIO_UNAVAILABLE')
+        return invokeTranscribeAndStructure(request)
       }
       const { providerJobKey, ...structuredDraft } = await requestStructuredDraft({
         action: request.action,
@@ -65,6 +70,33 @@ function createOpenAiCompatibleAdapter(options) {
             providerJobKey,
           }
     },
+  }
+
+  async function invokeTranscribeAndStructure(request) {
+    if (!supportsVoiceDrafts) {
+      throw new Error('AI_DRAFT_PROVIDER_AUDIO_UNAVAILABLE')
+    }
+    const audio = await audioLoader.load(request.payload)
+    const recognized = await flashAsr.transcribe({
+      contentBase64: audio.contentBase64,
+      voiceFormat: 'mp3',
+    })
+    const { providerJobKey, ...structuredDraft } = await requestStructuredDraft({
+      action: 'structureText',
+      config,
+      http,
+      operationKey: request.operationKey,
+      payload: {
+        purpose: request.payload.purpose,
+        transcriptText: recognized.transcript,
+      },
+      requestId: request.requestId,
+    })
+    return {
+      transcriptText: recognized.transcript,
+      structuredDraft,
+      providerJobKey,
+    }
   }
 }
 

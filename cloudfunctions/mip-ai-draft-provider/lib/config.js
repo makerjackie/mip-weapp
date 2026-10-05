@@ -1,6 +1,11 @@
 'use strict'
 
 const { isIP } = require('node:net')
+const {
+  isValidAsrAppId,
+  isValidAsrSecretId,
+  isValidAsrSecretKey,
+} = require('./flash-asr')
 
 const FUNCTION_NAME = 'mip-ai-draft-provider'
 
@@ -14,6 +19,10 @@ function readConfig(env = process.env) {
   const openAiModel = parseOpenAiModel(env.OPENAI_MODEL)
   const openAiApiKey = parseOpenAiApiKey(env.OPENAI_API_KEY)
   const timeoutMs = normalizeTimeout(env.MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS)
+  const tencentAsrSecretId = text(env.TENCENT_ASR_SECRET_ID)
+  const tencentAsrSecretKey = text(env.TENCENT_ASR_SECRET_KEY)
+  const tencentAsrAppId = text(env.TENCENT_ASR_APPID)
+  const asrTimeoutMs = normalizeAsrTimeout(env.TENCENT_ASR_TIMEOUT_MS)
   const openAiConfigured = Boolean(openAiBaseUrl && openAiModel && openAiApiKey)
   const openAiSupplied = [env.OPENAI_BASE_URL, env.OPENAI_MODEL, env.OPENAI_API_KEY]
     .some(value => text(value))
@@ -46,6 +55,13 @@ function readConfig(env = process.env) {
     secret,
     upstreamSecret,
     timeoutMs,
+    asrTimeoutMs,
+    asrConfigured: isValidAsrSecretId(tencentAsrSecretId)
+      && isValidAsrSecretKey(tencentAsrSecretKey)
+      && isValidAsrAppId(tencentAsrAppId),
+    tencentAsrAppId,
+    tencentAsrSecretId,
+    tencentAsrSecretKey,
     configured: errors.length === 0,
     errors: Object.freeze(errors),
   })
@@ -122,7 +138,12 @@ function parseEndpoint(value) {
 
 function normalizeTimeout(value) {
   const timeout = Number(value || 8000)
-  return Number.isInteger(timeout) && timeout >= 500 && timeout <= 10_000 ? timeout : 8000
+  return Number.isInteger(timeout) && timeout >= 500 && timeout <= 30_000 ? timeout : 8000
+}
+
+function normalizeAsrTimeout(value) {
+  const timeout = Number(value || 20_000)
+  return Number.isInteger(timeout) && timeout >= 1000 && timeout <= 45_000 ? timeout : 20_000
 }
 
 function split(value) {
@@ -135,6 +156,7 @@ function text(value) {
 
 module.exports = {
   FUNCTION_NAME,
+  normalizeAsrTimeout,
   normalizeTimeout,
   parseAllowedHosts,
   parseAppIds,

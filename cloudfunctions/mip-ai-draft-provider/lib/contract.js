@@ -91,7 +91,7 @@ function validatePayload(action, value, appId) {
     if (value.audioContentType !== 'audio/mpeg'
       || !Number.isInteger(value.audioContentBytes)
       || value.audioContentBytes < 1
-      || value.audioContentBytes > 2 * 1024 * 1024
+      || value.audioContentBytes > 6 * 1024 * 1024
       || !/^[a-f0-9]{64}$/.test(value.audioContentSha256)
       || !validAudioFileId(value.audioFileId)) {
       throw new Error('AI_DRAFT_PROVIDER_REQUEST_INVALID')

@@ -17,7 +17,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 69 条小程序路由、102 个迁移（均已锁定）、238 个渠道中立管理 operation（104 查询、134 写）和 16 个数据库核心函数。Web 合同允许其中 104 个查询与 122 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 70 条小程序路由、102 个迁移（均已锁定）、238 个渠道中立管理 operation（104 查询、134 写）和 16 个数据库核心函数。Web 合同允许其中 104 个查询与 122 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -34,6 +34,12 @@
 - 规划验证：2026-09-29 完整 `pnpm verify:all` 通过；文档检查、53 组场景唯一主责映射、22 个工作包依赖无环检查及 diff 检查通过。Web 构建仍有既有 bundle 大小提示，未导致门禁失败；以上不替代业务运行验收。
 - 业务待决统一见 REQUIREMENTS 的 Q-ADMIN-02～09；Q-ADMIN-01 已确认下架恢复和重新招募，只影响相关步骤；不重新创建第二套问题或验收表。
 - 后续每次只在此更新当前工作包/小步骤、最近验证、当前局部阻塞和下一步；场景实现/验证结果仍在 COVERAGE_MATRIX。
+
+## 2026-10-05 AI 助手录音语音填写（MIW-34）
+
+超级案例与合作卡编辑器的 AI 助手入口接入完整录音→转写→结构化链路（设计稿 2172:42168 录音主操作、2173:42605 AI 助手卡）。语音转写选型腾讯云 Flash ASR（录音文件识别极速版，`asr.cloud.tencent.com/asr/flash/v1`），实测 15 分钟/5.4MB mp3 约 5.3s 出稿；文本结构化沿用 CloudBase AI 网关（DeepSeek）。实现分两层：`mip-ai-draft-provider` 新增 `flash-asr.js` 签名客户端与 `transcribeAndStructure`（voice 预算 45s：下载 2s + ASR 20s + LLM 30s < 云函数 60s 平台上限，voice 调用不重试）；`mip-ai-api` 新增客户端直传云存储通道 `prepareVoiceUpload` → `wx.cloud.uploadFile` → `createVoiceDraftStorage`，对象路径由服务端 HMAC scope 生成（客户端不可伪造路径），提交时服务端复验路径归属、字节数（≤6MB）与 sha256 摘要，幂等新增 `VOICE_STORAGE` 类型并把直传中音频纳入清理保护。前端新增 `packages/member/mip-ai/voice/index` 录音页（开始/录音中计时与波形/确认（含回听）/删除提示四态，系统打断后回到前台自动把已录内容接回确认态）与 `voice-recorder`（RecorderManager 全局单例、帧流累积拼接、平台 10 分钟分段自动续录到 15 分钟上限、16kHz/mono/48kbps 使 15 分钟约 5.4MB），编辑器入口带 `purpose` 跳转、完成后带 `aiDraftId` 回跳填表。
+
+验证口径：mip-ai-api 86/86、mip-ai-draft-provider 43/43、根工程 `pnpm verify` 全门禁通过；真实录音 A/B 探针（ASR 时延、CloudBase 结构化、云存储直传）已在开发环境跑通。**尚未验收**：ASR 密钥仅存在于本地不入库探针文件，未配置到云函数环境变量（`TENCENT_ASR_SECRET_ID/KEY/APPID`），`mip-ai-api`/`mip-ai-draft-provider` 需按 60s 超时重新部署后能力门控才开放；录音权限、帧回调与分段续录仅真机可验；运行时路由扫描中该页因能力门控未开放而停在 error 态，不构成运行时通过。
 
 ## 2026-10-05 填写信息页字数与图标对齐
 
@@ -67,7 +73,7 @@ MIW-26：填写信息页（`packages/member/mip-profile`）「一句话介绍你
 
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
-| 小程序路由 | 69 条：5 条主包、59 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
+| 小程序路由 | 70 条：5 条主包、60 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
 | 数据库 | 102 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
 | 管理合同 | 238 个 operation：104 查询、134 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | Web 开放范围 | 104 查询、122 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |

@@ -909,3 +909,197 @@ test('restores the last ready draft when refinement provider processing fails', 
   assert.deepEqual(restored, [caller.appId, caller.userId, draft.id, 2])
   assert.equal(completed, false)
 })
+
+function voiceStorageEvent() {
+  return {
+    purpose: 'SUPER_CASE',
+    audioAssetId: '30000000-0000-4000-8000-000000000001',
+    fileId: `cloud://env/${uploadedAsset().objectKey}`,
+    contentType: 'audio/mpeg',
+    contentBytes: 4,
+    contentSha256: 'a'.repeat(64),
+  }
+}
+
+test('prepares a client direct upload with an HMAC-scoped allocation', async () => {
+  const asset = uploadedAsset()
+  let allocateInput
+  const service = createAiService({
+    repository: {},
+    provider: { capability: () => ({ voiceDrafts: true }) },
+    audioStore: {
+      configured: true,
+      preallocate(input) {
+        allocateInput = input
+        return { assetId: asset.assetId, objectKey: asset.objectKey }
+      },
+    },
+  })
+  assert.deepEqual(await service.prepareVoiceUpload(caller, { purpose: 'SUPER_CASE' }), {
+    purpose: 'SUPER_CASE',
+    assetId: asset.assetId,
+    objectKey: asset.objectKey,
+    contentType: 'audio/mpeg',
+    maximumContentBytes: 6 * 1024 * 1024,
+  })
+  assert.deepEqual(allocateInput, { appId: caller.appId, userId: caller.userId })
+})
+
+test('rejects prepareVoiceUpload when storage or the provider is unavailable', async () => {
+  const noStorage = createAiService({
+    repository: {},
+    provider: { capability: () => ({ voiceDrafts: true }) },
+    audioStore: { configured: false },
+  })
+  await assert.rejects(() => noStorage.prepareVoiceUpload(caller, { purpose: 'PROFILE' }), /AI_STORAGE_UNAVAILABLE/)
+  const noProvider = createAiService({
+    repository: {},
+    provider: { capability: () => ({ voiceDrafts: false }) },
+    audioStore: { configured: true, preallocate() { return uploadedAsset() } },
+  })
+  await assert.rejects(() => noProvider.prepareVoiceUpload(caller, { purpose: 'PROFILE' }), /AI_PROVIDER_UNAVAILABLE/)
+})
+
+test('claims a keyed storage draft and validates the direct upload before provider processing', async () => {
+  const calls = []
+  const asset = uploadedAsset()
+  const ready = { ...draft, status: 'DRAFT_READY', version: 2 }
+  const created = {
+    draft,
+    asset: {
+      cloud_file_id: asset.cloudFileId,
+      content_sha256: asset.contentSha256,
+      content_type: asset.contentType,
+      content_bytes: asset.contentBytes,
+    },
+  }
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        calls.push(['claim', input.kind, input.allocation.assetId])
+        return {
+          state: 'CLAIMED',
+          requestId: input.requestId,
+          leaseToken: '40000000-0000-4000-8000-000000000001',
+          draftId: draft.id,
+          allocation: input.allocation,
+        }
+      },
+      async createVoiceDraftFromUpload(_appId, _userId, stored, purpose, draftId) {
+        calls.push(['persist', stored.assetId, purpose, draftId])
+        return created
+      },
+      async completeKeyedDraft() { return ready },
+      async recoverCompletedDraftRequest() { throw new Error('unexpected recovery') },
+      async recoverVoiceDraftFromUpload() { throw new Error('unexpected recovery') },
+    },
+    provider: {
+      capability: () => ({ voiceDrafts: true }),
+      async transcribeAndStructure(input) {
+        calls.push(['provider', input.audioFileId, input.audioContentSha256])
+        return { transcriptText: '项目内容', structuredDraft: { projectName: '项目' } }
+      },
+    },
+    audioStore: {
+      configured: true,
+      preallocate(input) {
+        calls.push(['preallocate', input.assetId])
+        return { assetId: asset.assetId, objectKey: asset.objectKey }
+      },
+      validateStored(input) {
+        calls.push(['validate', input.assetId, input.fileId])
+        return asset
+      },
+    },
+  })
+  assert.equal(await service.createVoiceDraftStorage(caller, {
+    ...voiceStorageEvent(),
+    requestId: 'ai-draft:voice-storage',
+  }), ready)
+  assert.deepEqual(calls.map(item => item[0]), ['preallocate', 'claim', 'validate', 'persist', 'provider'])
+  assert.equal(calls[0][1], asset.assetId)
+  assert.equal(calls[1][1], 'VOICE_STORAGE')
+  assert.equal(calls[3][2], 'SUPER_CASE')
+  assert.equal(calls[3][3], draft.id)
+})
+
+test('fails a keyed storage request without provider processing when validation rejects the file', async () => {
+  let failedCode = ''
+  let providerCalled = false
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        return {
+          state: 'CLAIMED',
+          requestId: input.requestId,
+          leaseToken: '40000000-0000-4000-8000-000000000001',
+          draftId: draft.id,
+          allocation: input.allocation,
+        }
+      },
+      async failDraftRequest(_appId, _userId, input, code) {
+        failedCode = code
+      },
+      async recoverVoiceDraftFromUpload() { throw new Error('unexpected recovery') },
+    },
+    provider: {
+      capability: () => ({ voiceDrafts: true }),
+      async transcribeAndStructure() { providerCalled = true },
+    },
+    audioStore: {
+      configured: true,
+      preallocate(input) {
+        return { assetId: input.assetId, objectKey: uploadedAsset().objectKey }
+      },
+      validateStored() { throw new Error('AI_AUDIO_FILE_INVALID') },
+    },
+  })
+  await assert.rejects(() => service.createVoiceDraftStorage(caller, {
+    ...voiceStorageEvent(),
+    requestId: 'ai-draft:voice-storage-bad',
+  }), /AI_AUDIO_FILE_INVALID/)
+  assert.equal(failedCode, 'AI_AUDIO_FILE_INVALID')
+  assert.equal(providerCalled, false)
+})
+
+test('completes a non-keyed storage draft after validating the direct upload', async () => {
+  const asset = uploadedAsset()
+  const created = {
+    draft,
+    asset: {
+      cloud_file_id: asset.cloudFileId,
+      content_sha256: asset.contentSha256,
+      content_type: asset.contentType,
+      content_bytes: asset.contentBytes,
+    },
+  }
+  let persistedPurpose = ''
+  let providerInput
+  const service = createAiService({
+    repository: {
+      async createVoiceDraftFromUpload(_appId, _userId, _stored, purpose) {
+        persistedPurpose = purpose
+        return created
+      },
+      async completeDraft() { return { ...draft, status: 'DRAFT_READY', version: 2 } },
+    },
+    provider: {
+      capability: () => ({ voiceDrafts: true }),
+      async transcribeAndStructure(input) {
+        providerInput = input
+        return { transcriptText: '项目内容', structuredDraft: { projectName: '项目' } }
+      },
+    },
+    audioStore: {
+      configured: true,
+      validateStored(input) {
+        assert.equal(input.assetId, asset.assetId)
+        return asset
+      },
+    },
+  })
+  const result = await service.createVoiceDraftStorage(caller, voiceStorageEvent())
+  assert.equal(result.status, 'DRAFT_READY')
+  assert.equal(persistedPurpose, 'SUPER_CASE')
+  assert.equal(providerInput.audioFileId, asset.cloudFileId)
+})

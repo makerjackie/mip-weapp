@@ -431,6 +431,7 @@ describe('mip-weapp UI runtime contract', () => {
       'photo-save',
       'profile-avatar',
       'qr-checkin',
+      'record',
       'share',
       'subscription-message',
       'task-attachment',

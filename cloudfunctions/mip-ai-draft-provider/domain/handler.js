@@ -22,7 +22,7 @@ function createHandler(resolveRuntime) {
           ready: true,
           capabilities: {
             textDrafts: true,
-            voiceDrafts: runtime.config.mode !== 'openai_compatible',
+            voiceDrafts: runtime.upstream.supportsVoiceDrafts === true,
             refinementDrafts: true,
           },
         })
@@ -50,12 +50,14 @@ function success(data) {
 function failure(error) {
   const raw = error instanceof Error ? error.message : ''
   const allowed = new Set([
+    'AI_DRAFT_PROVIDER_ASR_FAILED',
     'AI_DRAFT_PROVIDER_AUDIO_INVALID',
     'AI_DRAFT_PROVIDER_AUDIO_UNAVAILABLE',
     'AI_DRAFT_PROVIDER_NOT_CONFIGURED',
     'AI_DRAFT_PROVIDER_REDIRECT_REJECTED',
     'AI_DRAFT_PROVIDER_REQUEST_INVALID',
     'AI_DRAFT_PROVIDER_RESPONSE_INVALID',
+    'AI_DRAFT_PROVIDER_TRANSCRIPT_EMPTY',
     'AI_DRAFT_PROVIDER_UPSTREAM_UNAVAILABLE',
     'FORBIDDEN',
     'IDEMPOTENCY_CONFLICT',
@@ -65,8 +67,17 @@ function failure(error) {
     ok: false,
     error: {
       code,
-      message: code === 'FORBIDDEN' ? '内部调用未授权' : 'AI 草稿服务暂时不可用',
-      retryable: !['FORBIDDEN', 'IDEMPOTENCY_CONFLICT', 'AI_DRAFT_PROVIDER_REQUEST_INVALID'].includes(code),
+      message: code === 'FORBIDDEN'
+        ? '内部调用未授权'
+        : code === 'AI_DRAFT_PROVIDER_TRANSCRIPT_EMPTY'
+          ? '录音中没有识别到内容'
+          : 'AI 草稿服务暂时不可用',
+      retryable: ![
+        'FORBIDDEN',
+        'IDEMPOTENCY_CONFLICT',
+        'AI_DRAFT_PROVIDER_REQUEST_INVALID',
+        'AI_DRAFT_PROVIDER_TRANSCRIPT_EMPTY',
+      ].includes(code),
     },
   }
 }

@@ -2,7 +2,8 @@
 
 const { createHash, createHmac, randomUUID } = require('node:crypto')
 
-const maximumAudioBytes = 2 * 1024 * 1024
+// 与 mip-ai-draft-provider 契约上限一致:15 分钟 48kbps mp3 ≈ 5.4MB,留余量取 6MB。
+const maximumAudioBytes = 6 * 1024 * 1024
 
 function decodeMp3(value) {
   if (typeof value !== 'string' || !value || value.length > Math.ceil(maximumAudioBytes / 3) * 4 + 8
@@ -106,17 +107,48 @@ function createAudioStore(cloud, options = {}) {
       : null
     return Number(item?.status) === 0
   }
+  function validateStored(input) {
+    if (input.contentType !== 'audio/mpeg') throw new Error('AI_AUDIO_INVALID')
+    if (typeof input.fileId !== 'string' || !input.fileId.startsWith('cloud://')) {
+      throw new Error('AI_AUDIO_FILE_INVALID')
+    }
+    if (!Number.isInteger(input.contentBytes)
+      || input.contentBytes < 1
+      || input.contentBytes > maximumAudioBytes
+      || !/^[a-f0-9]{64}$/.test(String(input.contentSha256))) {
+      throw new Error('AI_AUDIO_FILE_INVALID')
+    }
+    const { assetId, objectKey } = preallocate(input)
+    assertOwnedAudioFile({
+      appId: input.appId,
+      userId: input.userId,
+      objectKey,
+      fileId: input.fileId,
+      storageKey,
+    })
+    return {
+      assetId,
+      objectKey,
+      cloudFileId: input.fileId,
+      contentSha256: String(input.contentSha256),
+      contentType: input.contentType,
+      contentBytes: input.contentBytes,
+    }
+  }
+
   if (typeof storageKey !== 'string' || storageKey.length < 32) {
     return {
       configured: false,
       preallocate() { throw new Error('AI_STORAGE_UNAVAILABLE') },
       async store() { throw new Error('AI_STORAGE_UNAVAILABLE') },
+      validateStored() { throw new Error('AI_STORAGE_UNAVAILABLE') },
       remove,
     }
   }
   return {
     configured: true,
     preallocate,
+    validateStored,
     async store(input) {
       if (input.contentType !== 'audio/mpeg') throw new Error('AI_AUDIO_INVALID')
       const fileContent = decodeMp3(input.audioBase64)

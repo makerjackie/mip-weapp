@@ -104,6 +104,15 @@ Page({
     this.clearNavigationTimer()
   },
 
+  // AI 语音填写入口(设计稿 AI助手卡):进入录音页,完成后带 aiDraftId 回跳。
+  onAiAssistant() {
+    if (this.data.id) {
+      wx.showToast({ title: 'AI 语音填写仅用于新建合作卡', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url: '/packages/member/mip-ai/voice/index?purpose=COOPERATION_CARD' })
+  },
+
   onUnload() {
     this.clearNavigationTimer()
   },

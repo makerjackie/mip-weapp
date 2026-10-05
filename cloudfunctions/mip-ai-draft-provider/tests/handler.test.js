@@ -31,7 +31,7 @@ test('returns readiness only after the exact endpoint resolves', async () => {
       MIP_AI_DRAFT_UPSTREAM_SECRET: 's'.repeat(32),
     }),
     provider: {},
-    upstream: { async readiness() { checked = true } },
+    upstream: { supportsVoiceDrafts: true, async readiness() { checked = true } },
   }
   const result = await createHandler(() => runtime)({ action: 'readiness' })
   assert.equal(checked, true)
@@ -54,12 +54,38 @@ test('reports DeepSeek-compatible mode as text-only', async () => {
       OPENAI_API_KEY: 'k'.repeat(32),
     }),
     provider: {},
-    upstream: { async readiness() {} },
+    upstream: { supportsVoiceDrafts: false, async readiness() {} },
   }
   const result = await createHandler(() => runtime)({ action: 'readiness' })
   assert.deepEqual(result.data.capabilities, {
     textDrafts: true,
     voiceDrafts: false,
+    refinementDrafts: true,
+  })
+})
+
+test('reports DeepSeek-compatible mode with configured ASR as voice-capable', async () => {
+  const config = readConfig({
+    MIP_ALLOWED_APP_IDS: 'wx1234567890abcdef',
+    MIP_AI_DRAFT_PROVIDER_HMAC_SECRET: 'h'.repeat(48),
+    OPENAI_BASE_URL: 'https://api.deepseek.com',
+    OPENAI_MODEL: 'deepseek-v4-flash',
+    OPENAI_API_KEY: 'k'.repeat(32),
+    TENCENT_ASR_SECRET_ID: 'AKIDzExample0123456789abcdef',
+    TENCENT_ASR_SECRET_KEY: 'ExampleSecretKey0123456789abcd',
+    TENCENT_ASR_APPID: '1429274561',
+  })
+  assert.equal(config.mode, 'openai_compatible')
+  assert.equal(config.asrConfigured, true)
+  const runtime = {
+    config,
+    provider: {},
+    upstream: { supportsVoiceDrafts: config.asrConfigured, async readiness() {} },
+  }
+  const result = await createHandler(() => runtime)({ action: 'readiness' })
+  assert.deepEqual(result.data.capabilities, {
+    textDrafts: true,
+    voiceDrafts: true,
     refinementDrafts: true,
   })
 })

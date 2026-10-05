@@ -11,6 +11,8 @@ function createUpstreamAdapter(options) {
   const audioLoader = options.audioLoader
 
   return {
+    supportsVoiceDrafts: true,
+
     async readiness() {
       const operationKey = createHash('sha256').update('MIP_AI_DRAFT_READINESS_V1').digest('hex')
       const requestId = createHash('sha256').update([

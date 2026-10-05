@@ -30,6 +30,7 @@ const service = createAiService({
     avatarSecret: process.env.MIP_AI_AVATAR_PROVIDER_HMAC_SECRET,
     avatarTimeoutMs: process.env.MIP_AI_AVATAR_PROVIDER_TIMEOUT_MS,
     timeoutMs: process.env.MIP_AI_PROVIDER_TIMEOUT_MS,
+    voiceTimeoutMs: process.env.MIP_AI_PROVIDER_VOICE_TIMEOUT_MS,
   }),
   audioStore: createAudioStore(cloud, {
     storageKey: process.env.MIP_AI_STORAGE_KEY,

@@ -5,6 +5,7 @@ const { createHandler } = require('./domain/handler')
 const { createDraftProvider } = require('./domain/provider')
 const { createAudioLoader } = require('./lib/audio')
 const { readConfig } = require('./lib/config')
+const { createFlashAsr } = require('./lib/flash-asr')
 const { createHttpsJsonClient } = require('./lib/network')
 const { createOpenAiCompatibleAdapter } = require('./lib/openai-compatible')
 const { createOperationCache } = require('./lib/operation-cache')
@@ -17,10 +18,21 @@ let defaultRuntime
 function createRuntime(options = {}) {
   const config = options.config || readConfig()
   const http = options.http || createHttpsJsonClient()
+  const audioLoader = options.audioLoader || createAudioLoader(cloud)
   const upstream = options.upstream || (config.mode === 'openai_compatible'
-    ? createOpenAiCompatibleAdapter({ config, http })
+    ? createOpenAiCompatibleAdapter({
+        audioLoader,
+        config,
+        flashAsr: options.flashAsr || createFlashAsr({
+          appId: config.tencentAsrAppId,
+          secretId: config.tencentAsrSecretId,
+          secretKey: config.tencentAsrSecretKey,
+          timeoutMs: config.asrTimeoutMs,
+        }),
+        http,
+      })
     : createUpstreamAdapter({
-        audioLoader: options.audioLoader || createAudioLoader(cloud),
+        audioLoader,
         config,
         http,
       }))

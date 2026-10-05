@@ -18,7 +18,7 @@ interface Envelope<T> {
 }
 
 const readActions = new Set(['getCapability', 'listDrafts', 'getDraft', 'listDigitalAvatars'])
-const idempotentCreateActions = new Set(['createTextDraft', 'createVoiceDraft', 'createVoiceDraftUpload'])
+const idempotentCreateActions = new Set(['createTextDraft', 'createVoiceDraft', 'createVoiceDraftUpload', 'createVoiceDraftStorage'])
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const styleKeys = new Set<DigitalAvatarStyleKey>(['PROFESSIONAL', 'ILLUSTRATED', 'MONOCHROME'])
@@ -122,6 +122,8 @@ export function createMipAiGateway(functionName = runtimeConfig.cloudbase.aiFunc
     createTextDraft: intent => call('createTextDraft', intent as unknown as Record<string, unknown>),
     createVoiceDraft: intent => call('createVoiceDraft', intent as unknown as Record<string, unknown>),
     createVoiceDraftUpload: intent => call('createVoiceDraftUpload', intent as unknown as Record<string, unknown>),
+    prepareVoiceUpload: purpose => call('prepareVoiceUpload', { purpose }),
+    createVoiceDraftStorage: intent => call('createVoiceDraftStorage', intent as unknown as Record<string, unknown>),
     continueDraft: intent => call('continueDraft', intent as unknown as Record<string, unknown>),
     updateDraft: confirmation => call('updateDraft', confirmation as unknown as Record<string, unknown>),
     deleteDraft: (draftId, expectedVersion) => call('deleteDraft', { draftId, expectedVersion }),

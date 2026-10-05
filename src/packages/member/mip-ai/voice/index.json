@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "AI 语音填写",
+  "backgroundColor": "#080808",
+  "usingComponents": {
+    "mip-empty-state": "/components/mip-empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
+    "mip-dialog": "/components/mip-dialog/index",
+    "mip-icon": "/components/mip-icon/index"
+  }
+}

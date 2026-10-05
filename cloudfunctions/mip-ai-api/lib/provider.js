@@ -21,6 +21,7 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
     && avatarSecret.length >= 32
   const timeoutMs = normalizeTimeout(options.timeoutMs)
   const avatarTimeoutMs = normalizeAvatarTimeout(options.avatarTimeoutMs)
+  const voiceTimeoutMs = normalizeVoiceTimeout(options.voiceTimeoutMs)
   let draftCapabilities = {
     voiceDrafts: configured,
     textDrafts: configured,
@@ -31,6 +32,8 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
 
   async function call(action, input, options = {}) {
     const digitalAvatar = options.digitalAvatar === true
+    const voice = options.voice === true
+    const longRunning = digitalAvatar || voice
     if (digitalAvatar ? !avatarConfigured : !configured) throw new Error('AI_PROVIDER_UNAVAILABLE')
     const request = digitalAvatar
       ? createAvatarProviderRequest(input, avatarSecret)
@@ -38,15 +41,15 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
     let result
     try {
       result = await callProviderFunction({
-        attempts: digitalAvatar ? 1 : 2,
+        attempts: longRunning ? 1 : 2,
         cloud,
         functionName: digitalAvatar ? avatarFunctionName : functionName,
         request,
-        timeoutMs: digitalAvatar ? avatarTimeoutMs : timeoutMs,
+        timeoutMs: digitalAvatar ? avatarTimeoutMs : voice ? voiceTimeoutMs : timeoutMs,
       })
     }
     catch (error) {
-      if (digitalAvatar) throw error
+      if (longRunning) throw error
       throw new Error('AI_PROVIDER_RESULT_UNKNOWN')
     }
     const envelope = result?.result
@@ -118,7 +121,8 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
       return call('structureText', input)
     },
     transcribeAndStructure(input) {
-      return call('transcribeAndStructure', input)
+      // 转写+结构化整体链路最长(下载+ASR+LLM),不重试,用独立的语音超时。
+      return call('transcribeAndStructure', input, { voice: true })
     },
     refineDraft(input) {
       return call('refineDraft', input, { requireTranscript: false })
@@ -158,6 +162,7 @@ function createAiProviderAdapter(options = {}) {
     avatarSecret: options.avatarSecret,
     avatarTimeoutMs: options.avatarTimeoutMs,
     timeoutMs: options.timeoutMs,
+    voiceTimeoutMs: options.voiceTimeoutMs,
   })
 }
 
@@ -167,6 +172,13 @@ function normalizeTimeout(value) {
 }
 
 function normalizeAvatarTimeout(value) {
+  const timeout = Number(value ?? 45_000)
+  return Number.isInteger(timeout) && timeout >= 1000 && timeout <= 50_000 ? timeout : 45_000
+}
+
+// 语音链路(云函数内:下载音频 + Flash ASR + LLM 结构化)需要远超普通调用的预算;
+// 云函数平台超时上限 60s,这里默认 45s、硬顶 50s,给平台调度留余量。
+function normalizeVoiceTimeout(value) {
   const timeout = Number(value ?? 45_000)
   return Number.isInteger(timeout) && timeout >= 1000 && timeout <= 50_000 ? timeout : 45_000
 }
@@ -299,6 +311,7 @@ module.exports = {
   normalizeProviderResult,
   normalizeAvatarTimeout,
   normalizeTimeout,
+  normalizeVoiceTimeout,
   stableJson,
   withTimeout,
 }

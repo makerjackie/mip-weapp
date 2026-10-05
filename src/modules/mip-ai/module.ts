@@ -1,9 +1,11 @@
 import type {
   AiDraftConfirmation,
   AiDraftId,
+  AiDraftPurpose,
   AiDraftRefinementIntent,
   AiTextDraftIntent,
   AiVoiceDraftIntent,
+  AiVoiceStorageIntent,
   AiVoiceUploadIntent,
   DigitalAvatarGenerationIntent,
   MipAiGateway,
@@ -58,6 +60,23 @@ export function createMipAiModule(gateway: MipAiGateway) {
       ...intent,
       requestId: intent.requestId || createIntentKey('ai-draft-upload'),
     }),
+
+    prepareVoiceUpload: (purpose: AiDraftPurpose) => gateway.prepareVoiceUpload(purpose),
+
+    createVoiceDraftStorage: (intent: AiVoiceStorageIntent) => {
+      if (!uuidPattern.test(intent.audioAssetId)
+        || !/^cloud:\/\/\S+$/i.test(intent.fileId)
+        || intent.contentType !== 'audio/mpeg'
+        || !Number.isInteger(intent.contentBytes)
+        || intent.contentBytes < 1
+        || !/^[a-f0-9]{64}$/.test(intent.contentSha256)) {
+        throw new Error('录音文件信息不完整，请重新录制')
+      }
+      return gateway.createVoiceDraftStorage({
+        ...intent,
+        requestId: intent.requestId || createIntentKey('ai-draft-voice-storage'),
+      })
+    },
 
     continueDraft(intent: AiDraftRefinementIntent) {
       const supplementalText = intent.supplementalText.trim()
