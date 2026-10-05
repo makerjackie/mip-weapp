@@ -93,8 +93,9 @@ describe('MIP event participant visual hierarchy', () => {
   })
 
   it('shows private counts and on-card heart voting with a single red heart per event', () => {
-    expect(template).toContain('{{sentItems.length}}')
-    expect(template).toContain('{{receivedItems.length}}')
+    // MIW-36：徽标计数消费服务端 heartCounts（与详情胶囊同源），不以列表长度重算。
+    expect(template).toContain('{{heartMineCount}}')
+    expect(template).toContain('{{heartReceivedCount}}')
     // journey-review J2-02：心动票落在卡片右上角，灰描边未投 / 红实心已投，点卡其余区域进档案。
     expect(template).toContain('participant-card__heart')
     expect(template).toContain('catch:tap="toggleHeartVote"')

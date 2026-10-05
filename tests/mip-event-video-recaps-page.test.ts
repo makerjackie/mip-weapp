@@ -96,7 +96,8 @@ describe('MIP event video recap page', () => {
     expect(instance.loadEvent).not.toHaveBeenCalled()
     instance.loadingEvent = false
     definition.onShow.call(instance)
-    expect(instance.loadEvent).toHaveBeenCalledWith({ force: true })
+    // MIW-36：onShow 走缓存新鲜窗口（cache-and-revalidate，SHOW_REVALIDATE_MAX_AGE_MS = 30s），不再强刷。
+    expect(instance.loadEvent).toHaveBeenCalledWith({ maxAgeMs: 30_000 })
   })
   it.each([
     ['unsupported', '当前微信版本不支持打开视频号，请升级微信后重试。'],

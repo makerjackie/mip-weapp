@@ -19,13 +19,14 @@
         <view class="participants-filter-target" aria-role="radio" aria-checked="{{activeView === 'SENT'}}" data-view="SENT" bind:tap="changeView">
           <view class="participants-filter-pill {{activeView === 'SENT' ? 'participants-filter-pill--active' : ''}}">
             <text>我的心动</text>
-            <text wx:if="{{heartState === 'ready'}}" class="participants-filter-count">{{sentItems.length}}</text>
+            <!-- MIW-36：计数为服务端 heartCounts（与详情胶囊同源），不用列表长度重算。 -->
+            <text wx:if="{{heartState === 'ready'}}" class="participants-filter-count">{{heartMineCount}}</text>
           </view>
         </view>
         <view class="participants-filter-target" aria-role="radio" aria-checked="{{activeView === 'RECEIVED'}}" data-view="RECEIVED" bind:tap="changeView">
           <view class="participants-filter-pill {{activeView === 'RECEIVED' ? 'participants-filter-pill--active' : ''}}">
             <text>对我心动</text>
-            <text wx:if="{{heartState === 'ready'}}" class="participants-filter-count">{{receivedItems.length}}</text>
+            <text wx:if="{{heartState === 'ready'}}" class="participants-filter-count">{{heartReceivedCount}}</text>
           </view>
         </view>
       </view>

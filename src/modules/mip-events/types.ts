@@ -174,10 +174,13 @@ export interface MipEventDetail extends MipEventListItem {
   canCheckIn: boolean
   canInteract: boolean
   /** 与你互动 pill counts (figma 1818_17142); the API emits them for the attended viewer only (MIW-28). */
-  interactionSummary?: {
-    myInterestCount: number
-    receivedInterestCount: number
-  }
+  interactionSummary?: EventInteractionSummary
+}
+
+/** 服务端心动计数（MIW-36）：详情胶囊、心动 tab 徽标与 heartCounts 同源，禁止列表长度重算。 */
+export interface EventInteractionSummary {
+  myInterestCount: number
+  receivedInterestCount: number
 }
 
 export interface RegistrationField {
@@ -325,6 +328,8 @@ export interface HeartState {
   targetRef?: string
   target?: HeartCandidate
   received: HeartCandidate[]
+  /** MIW-36：服务端计数（与详情胶囊同一 heartCounts），心动 tab 徽标据此渲染。 */
+  counts?: EventInteractionSummary
   version: number
   updatedAt?: string
 }

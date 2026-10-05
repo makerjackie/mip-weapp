@@ -95,6 +95,9 @@ Page({
     displayItems: [] as ParticipantView[],
     sentItems: [] as ParticipantView[],
     receivedItems: [] as ParticipantView[],
+    /** MIW-36：tab 徽标计数来自服务端 heartCounts（与详情胶囊同源），非列表长度。 */
+    heartMineCount: 0,
+    heartReceivedCount: 0,
     candidates: [] as HeartCandidate[],
     heart: null as HeartState | null,
     activeView: 'PUBLIC' as ParticipantViewMode,
@@ -246,6 +249,8 @@ Page({
           candidates: [],
           sentItems: [],
           receivedItems: [],
+          heartMineCount: 0,
+          heartReceivedCount: 0,
           displayItems: this.data.activeView === 'PUBLIC' ? this.data.displayItems : [],
           heartMessage: '',
         })
@@ -254,12 +259,14 @@ Page({
       this.setData({
         heartState: 'error',
         heartMessage: error instanceof Error ? error.message : '心动信息加载失败。',
+        heartMineCount: 0,
+        heartReceivedCount: 0,
         displayItems: this.data.activeView === 'PUBLIC' ? this.data.displayItems : [],
       })
     }
   },
 
-  /** 以服务端心动事实刷新本地：sent/received 列表、候选选中态与「我的心动」计数。 */
+  /** 以服务端心动事实刷新本地：sent/received 列表、候选选中态与服务端计数（MIW-36）。 */
   applyHeartState(heart: HeartState, candidates: HeartCandidate[], requestSeq?: number) {
     if (requestSeq !== undefined && requestSeq !== this.heartRequestSeq) {
       return
@@ -279,7 +286,14 @@ Page({
       candidates: markedCandidates,
       sentItems,
       receivedItems,
+      // 徽标只认服务端计数（REQUIREMENTS：不以列表长度重算统计）。
+      heartMineCount: heart.counts?.myInterestCount ?? 0,
+      heartReceivedCount: heart.counts?.receivedInterestCount ?? 0,
       heartMessage: '',
+    }
+    if (heart.counts) {
+      // 回填详情胶囊（MIW-36）：返回详情页 onShow 应用缓存即见最新计数，免整页强刷。
+      mipEventsModule.patchEventInteractionSummary(this.data.eventId, heart.counts)
     }
     if (this.data.activeView !== 'PUBLIC') {
       Object.assign(patch, privateViewData(

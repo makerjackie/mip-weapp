@@ -16,6 +16,13 @@ import { formatChineseDateTime, formatChineseMonthDay, formatChineseMonthDayTime
 const POSTER_WIDTH = 375
 const POSTER_HEIGHT = 560
 
+/**
+ * MIW-36：onShow 缓存新鲜窗口。详情 ↔ 参与人/心动页一次往返通常在数秒内，窗口内
+ * 不再重发 mip.events.detail；超过窗口仍会后台重验证，外部变化（他人报名、活动编辑）
+ * 最迟在窗口结束后反映。
+ */
+const SHOW_REVALIDATE_MAX_AGE_MS = 30_000
+
 const DETAIL_ROUTE = 'packages/member/mip-events/detail/index'
 
 /** journey-review J1-01：游客触发分享 / 参与人数 / 立刻报名后要恢复的原意图；checkin 为 J0-02 扫码自动签到授权。 */
@@ -281,8 +288,12 @@ Page({
 
   onShow() {
     this.refreshCheckInIntent()
-    if (!this.loadingEvent && this.data.state === 'ready' && this.data.eventId) {
-      void this.loadEvent({ force: true })
+    if (!this.loadingEvent && this.data.eventId) {
+      // MIW-36：cache-and-revalidate——30s 内回到本页直接应用模块缓存（心动页已把
+      // getHeart/setHeart 的服务端计数回填进缓存），不再每次 onShow 丢弃缓存强刷全部
+      // 详情子查询（含互动计数被反复执行）。报名/取消/签到等状态变更会主动失效缓存，
+      // 缓存缺失时这里照常发起真实拉取，签到态与报名态的即时感知不变。
+      void this.loadEvent({ maxAgeMs: SHOW_REVALIDATE_MAX_AGE_MS })
     }
     this.resumeAuthIntent()
   },
@@ -394,7 +405,7 @@ Page({
     void this.loadEvent({ force: true })
   },
 
-  async loadEvent(options: { force?: boolean } = {}) {
+  async loadEvent(options: { force?: boolean, maxAgeMs?: number } = {}) {
     this.loadingEvent = true
     if (!this.data.event) {
       this.setData({ state: 'loading', message: '' })

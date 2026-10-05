@@ -202,6 +202,47 @@ describe('MIP events client module', () => {
     expect(gateway.getEvent).toHaveBeenCalledTimes(2)
   })
 
+  it('serves detail from the freshness window, refetches past it and after status changes', async () => {
+    const gateway = createGateway()
+    const module = createMipEventsModule(gateway)
+    await module.getEvent(eventId)
+    // MIW-36：详情 ↔ 参与人一次往返落在新鲜窗口内，onShow 直接应用缓存不重发详情。
+    await module.getEvent(eventId, { maxAgeMs: 30_000 })
+    expect(gateway.getEvent).toHaveBeenCalledTimes(1)
+    // 超窗后台重验证：照常重新拉取。
+    await module.getEvent(eventId, { maxAgeMs: 0 })
+    expect(gateway.getEvent).toHaveBeenCalledTimes(2)
+    // 报名/取消/签到类变更主动失效缓存：窗口内也必须真实拉取（签到态即时感知）。
+    await module.cancelRegistration(eventId, 1)
+    await module.getEvent(eventId, { maxAgeMs: 30_000 })
+    expect(gateway.getEvent).toHaveBeenCalledTimes(3)
+    await module.checkIn(`${'a'.repeat(24)}.${'b'.repeat(43)}`)
+    await module.getEvent(eventId, { maxAgeMs: 30_000 })
+    expect(gateway.getEvent).toHaveBeenCalledTimes(4)
+  })
+
+  it('lets an explicit force bypass the freshness window', async () => {
+    const gateway = createGateway()
+    const module = createMipEventsModule(gateway)
+    await module.getEvent(eventId)
+    // MIW-36：force 语义优先——显式强刷不得被窗口内的新鲜缓存静默拦截。
+    await module.getEvent(eventId, { force: true, maxAgeMs: 30_000 })
+    expect(gateway.getEvent).toHaveBeenCalledTimes(2)
+  })
+
+  it('backfills the detail interaction summary from server heart counts', async () => {
+    const gateway = createGateway()
+    const module = createMipEventsModule(gateway)
+    await module.getEvent(eventId)
+    // 参与人页 getHeart/setHeart 带回服务端计数后回填详情缓存：返回详情页 onShow
+    // 命中缓存即见最新计数，无需整页强刷。
+    module.patchEventInteractionSummary(eventId, { myInterestCount: 2, receivedInterestCount: 3 })
+    await expect(module.getEvent(eventId, { maxAgeMs: 30_000 })).resolves.toMatchObject({
+      interactionSummary: { myInterestCount: 2, receivedInterestCount: 3 },
+    })
+    expect(gateway.getEvent).toHaveBeenCalledTimes(1)
+  })
+
   it('submits answers and an idempotency key without a client amount', async () => {
     const gateway = createGateway()
     const module = createMipEventsModule(gateway)
