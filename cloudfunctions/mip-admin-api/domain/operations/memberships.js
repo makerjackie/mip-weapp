@@ -7,6 +7,8 @@ module.exports = defineManifest('MEMBERSHIPS', [
   serviceOperation('mip.admin.memberships.timeline', 'QUERY', 'listMembershipTimeline'),
   serviceOperation('mip.admin.memberships.grant', 'MUTATION', 'grantMembership', { wakesOutbox: true }),
   serviceOperation('mip.admin.membershipApprovals.list', 'QUERY', 'listMembershipApprovals'),
+  serviceOperation('mip.admin.membershipPlans.list', 'QUERY', 'listMembershipPlans'),
+  serviceOperation('mip.admin.membershipPlans.save', 'MUTATION', 'saveMembershipPlanPrice'),
   serviceOperation('mip.admin.membershipApprovals.decide', 'MUTATION', 'decideMembershipApproval',
     { wakesOutbox: true }),
   serviceOperation('mip.admin.entitlements.transactions.list', 'QUERY', 'listEntitlementTransactions', { sessionFirst: true }),

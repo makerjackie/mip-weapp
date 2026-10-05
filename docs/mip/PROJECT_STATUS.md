@@ -1,6 +1,6 @@
 # MIP 当前状态
 
-更新日期：2026-10-05（会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
+更新日期：2026-10-05（会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
 
@@ -17,7 +17,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 69 条小程序路由、102 个迁移（均已锁定）、238 个渠道中立管理 operation（104 查询、134 写）和 16 个数据库核心函数。Web 合同允许其中 104 个查询与 122 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 69 条小程序路由、102 个迁移（均已锁定）、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -34,6 +34,16 @@
 - 规划验证：2026-09-29 完整 `pnpm verify:all` 通过；文档检查、53 组场景唯一主责映射、22 个工作包依赖无环检查及 diff 检查通过。Web 构建仍有既有 bundle 大小提示，未导致门禁失败；以上不替代业务运行验收。
 - 业务待决统一见 REQUIREMENTS 的 Q-ADMIN-02～09；Q-ADMIN-01 已确认下架恢复和重新招募，只影响相关步骤；不重新创建第二套问题或验收表。
 - 后续每次只在此更新当前工作包/小步骤、最近验证、当前局部阻塞和下一步；场景实现/验证结果仍在 COVERAGE_MATRIX。
+
+## 2026-10-05 会员方案后台改价（MIW-35）
+
+客户提出 6000 元/年的会员价格需要后台可配置。此前价格虽由服务端下发（`mip_membership_plans.price_cents`，下单时快照 `amount_cents` + `product_snapshot_json`），但全仓库对该表只有 SELECT，改价只能直改数据库，无审计、无并发保护。本轮补齐「只改价」闭环，管理合同增至 240 operation（105 查询、135 写；Web 开放 105 查询、123 受审 mutation），admin-contracts 已再生：
+
+- 契约：`mip.admin.membershipPlans.list`（QUERY，返回该 app 全部方案含 TEST/LIVE 两 stage 与 status/version）与 `mip.admin.membershipPlans.save`（受审 mutation，入参 `planId`/`expectedVersion`/`priceCents`，幂等键由 Web BFF 转发）。
+- 服务端：`mip-admin-api` 新增 `domain/membership-plans.js` + `domain/repositories/membership-plans.js`（照 `membership-content` 成对结构），挂 MEMBERSHIPS manifest。保存走事务：`lockMutation` → `claimOptional` 幂等 → `SELECT ... FOR UPDATE` 校验 `expectedVersion`（冲突抛 CONFLICT「请刷新后重试」）→ 带版本守卫的 `UPDATE price_cents, version+1` → 审计 `MEMBERSHIP_PLAN`（metadata 记新价 `priceCents` 与旧价 `previousPriceCents`）。价格校验 1..100000000 分（¥0.01–¥100 万）；方案不存在抛 NOT_FOUND。读复用 `growth.read`、写复用 `growth.configure`（与会员协议保存同一权限，未新增能力、未动角色种子）。`RUNTIME_TABLE_PRIVILEGES` 中 `mip_membership_plans` 由 `['SELECT']` 扩为 `['SELECT', 'UPDATE']`（部署时需跑 `scripts/converge-mip-runtime-grants.mjs` 对账真实 GRANT，此前该表运行时账号只读）。
+- 后台：React「成长」页新增「会员方案」页签，行内只读展示名称、TEST/正式 Tag、时长、状态，价格以元为单位用 InputNumber 编辑（元→分 ×100 取整校验），保存带该行 `version`，成功提示「已保存，仅新订单按新价格下单」。
+- 约束：名称/时长/状态只读，不做新建/删除/上下架（当前仅一条年卡方案，等客户提出再扩展）；小程序端零改动。改价只影响之后的新订单（已支付订单金额与快照不可变），TEST 与 LIVE stage 相互独立，均为既有机制保证、本轮未新增代码。
+- 验证：完整 `pnpm verify` 与 `pnpm admin:web:verify` 通过（新增 `tests/membership-plans.test.js` 7 项：权限、服务端绑定、校验、版本冲突、幂等重放、审计新旧价、list 投影；admin-web 面板 React 测试补会员方案渲染、元→分换算、只读形态与冲突提示）。当前为 verified-local，未部署、未做后台改价→小程序下单页的真实链路验收；并发编辑两人冲突、审计留痕留待 browser 验收。
 
 ## 2026-10-05 填写信息页字数与图标对齐
 
@@ -69,8 +79,8 @@ MIW-26：填写信息页（`packages/member/mip-profile`）「一句话介绍你
 | --- | --- | --- |
 | 小程序路由 | 69 条：5 条主包、59 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
 | 数据库 | 102 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
-| 管理合同 | 238 个 operation：104 查询、134 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
-| Web 开放范围 | 104 查询、122 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| 管理合同 | 240 个 operation：105 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| Web 开放范围 | 105 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
 | 调度 | 消息和知识采集各有独立 scheduler；均不属于数据库核心函数 | `mip-message-scheduler`、`mip-knowledge-scheduler` 及部署脚本 |
 | Web 页面 | 15 个一级页面、13 类详情 | `admin-web/src/` 的路由与页面合同 |

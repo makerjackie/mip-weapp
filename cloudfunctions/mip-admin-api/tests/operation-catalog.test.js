@@ -53,11 +53,11 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes all 238 business operations and keeps health outside the registry', () => {
+  it('freezes all 240 business operations and keeps health outside the registry', () => {
     const catalogActions = operationCatalog.map(operation => operation.action)
 
-    assert.equal(operationCatalog.length, 238)
-    assert.equal(new Set(catalogActions).size, 238)
+    assert.equal(operationCatalog.length, 240)
+    assert.equal(new Set(catalogActions).size, 240)
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(catalogActions))
     assert.equal(operationByAction.health, undefined)
     assert.equal(operationByAction.toString, undefined)
