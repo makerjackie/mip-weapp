@@ -38,7 +38,7 @@
         <text class="absolute left-0 top-[12rpx] w-full text-center text-[28rpx] font-semibold leading-[40rpx] text-canvas">吸引更多适合你的资源和人脉~</text>
       </view>
 
-      <image class="absolute left-[24rpx] top-[96rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/profile/icon-section-people.png" />
+      <view class="absolute left-[27rpx] top-[97rpx]"><mip-icon name="contacts-1-1" color="var(--color-brand)" /></view>
       <text class="absolute left-[64rpx] top-[88rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">基础信息</text>
 
       <view class="absolute left-[24rpx] top-[156rpx] h-[160rpx] w-[702rpx] bg-panel">
@@ -64,7 +64,7 @@
         </view>
       </view>
 
-      <image class="absolute left-[24rpx] top-[536rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/profile/icon-section-industry.png" />
+      <view class="absolute left-[28rpx] top-[539rpx]"><mip-icon name="draft-line" color="var(--color-brand)" /></view>
       <text class="absolute left-[64rpx] top-[528rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">代表行业</text>
 
       <view class="absolute left-[24rpx] top-[596rpx] h-[92rpx] w-[702rpx] rounded-[16rpx] bg-panel">
@@ -86,20 +86,20 @@
         <text class="{{item.active ? 'text-[28rpx] leading-[40rpx] text-canvas' : 'text-[28rpx] leading-[40rpx] text-muted'}}">{{item.label}}</text>
       </view>
 
-      <image class="absolute left-[24rpx] top-[944rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/profile/icon-section-identity.png" />
+      <view class="absolute left-[28rpx] top-[947rpx]"><mip-icon name="draft-line" color="var(--color-brand)" /></view>
       <text class="absolute left-[64rpx] top-[936rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">当前身份状态</text>
 
       <view wx:for="{{figma.statuses}}" wx:key="index" class="absolute h-[56rpx] w-[164rpx] flex items-center justify-center rounded-[16rpx] {{item.active ? 'bg-brand' : 'bg-panel'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
         <text class="{{item.active ? 'text-[28rpx] leading-[40rpx] text-canvas' : 'text-[28rpx] leading-[40rpx] text-muted'}}">{{item.label}}</text>
       </view>
 
-      <image class="absolute left-[24rpx] top-[1164rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/profile/icon-section-intro.png" />
+      <view class="absolute left-[28rpx] top-[1167rpx]"><mip-icon name="survey-line" color="var(--color-brand)" /></view>
       <text class="absolute left-[64rpx] top-[1156rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">一句话介绍你的工作和背景</text>
 
       <view class="absolute left-[24rpx] top-[1224rpx] h-[200rpx] w-[702rpx] rounded-[16rpx] bg-panel">
         <text wx:if="{{figma.intro}}" class="absolute left-[24rpx] top-[16rpx] text-[28rpx] leading-[40rpx] text-ink">{{figma.intro}}</text>
         <text wx:else class="absolute left-[24rpx] top-[16rpx] text-[28rpx] leading-[40rpx] text-muted">示例：MIP 创意社群创始人，寻找永创意做生意的伙伴</text>
-        <text class="absolute bottom-[24rpx] right-[24rpx] text-[20rpx] leading-[28rpx] text-muted">0/300</text>
+        <text class="absolute bottom-[24rpx] right-[24rpx] text-[20rpx] leading-[28rpx] text-muted">{{(figma.intro || '').length}}/160</text>
       </view>
     </view>
   </block>
@@ -110,7 +110,7 @@
     <view wx:if="{{message}}" data-profile-message="true" class="mx-3 mt-3 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[24rpx] leading-6">{{message}}</view>
 
     <view class="mx-3 mt-3 flex items-center gap-2 text-[30rpx] font-semibold">
-      <t-icon name="user-avatar" size="30rpx" color="var(--color-brand)" />
+      <mip-icon name="contacts-1-1" size="{{15}}" color="var(--color-brand)" />
       <text>基础信息</text>
     </view>
     <view data-profile-basic-group="true" class="mx-3 mt-3 overflow-hidden rounded-[16rpx] bg-panel">
@@ -139,7 +139,7 @@
     </view>
 
     <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">
-      <t-icon name="file-edit" size="30rpx" color="var(--color-brand)" />
+      <mip-icon name="draft-line" size="{{15}}" color="var(--color-brand)" />
       <text>代表行业</text>
     </view>
     <view class="mx-3 mt-3 overflow-hidden rounded-[16rpx] bg-panel">
@@ -151,7 +151,7 @@
     </view>
 
     <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">
-      <t-icon name="usergroup" size="30rpx" color="var(--color-brand)" />
+      <mip-icon name="draft-line" size="{{15}}" color="var(--color-brand)" />
       <text>当前身份状态</text>
     </view>
     <view class="mx-3 mt-3 flex flex-wrap gap-2">
@@ -161,7 +161,7 @@
     </view>
 
     <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">
-      <mip-icon name="file-text" size="{{15}}" color="var(--color-brand)" />
+      <mip-icon name="survey-line" size="{{15}}" color="var(--color-brand)" />
       <text>一句话介绍你的工作和背景</text>
     </view>
     <view class="mx-3 mt-3 rounded-[16rpx] bg-panel px-3 py-3">
