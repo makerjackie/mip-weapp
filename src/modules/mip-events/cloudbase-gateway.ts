@@ -6,6 +6,8 @@ import type {
   CheckInOutcome,
   CheckInPosterCredential,
   CheckInScene,
+  EventCalendarDates,
+  EventCalendarDatesQuery,
   EventDiscoveryFilters,
   EventFeedback,
   EventFeedbackDraft,
@@ -33,7 +35,7 @@ import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../../platform/cloudbase/client'
 import { measureLoading } from '../../platform/cloudbase/loading-diagnostics'
 import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
-import { parseEventDiscoveryFilters, parseEventFeedResult, parseMipEventDetail } from './dto'
+import { parseEventCalendarDates, parseEventDiscoveryFilters, parseEventFeedResult, parseMipEventDetail } from './dto'
 import { MipEventsError } from './types'
 
 interface Envelope<T> {
@@ -44,6 +46,7 @@ interface Envelope<T> {
 
 const readActions = new Set([
   'mip.events.list',
+  'mip.events.calendarDates',
   'mip.events.discoveryFilters',
   'mip.events.detail',
   'mip.events.publicParticipants',
@@ -106,6 +109,12 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
   async getDiscoveryFilters() {
     return parseEventDiscoveryFilters(
       await callEvents<EventDiscoveryFilters>('mip.events.discoveryFilters'),
+    )
+  },
+
+  async getCalendarDates(query: EventCalendarDatesQuery) {
+    return parseEventCalendarDates(
+      await callEvents<EventCalendarDates>('mip.events.calendarDates', { query }),
     )
   },
 

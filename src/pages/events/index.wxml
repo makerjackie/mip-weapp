@@ -36,10 +36,10 @@
   <view wx:if="{{view === 'UPCOMING'}}" class="mt-3 flex items-center gap-2" aria-role="radiogroup" aria-label="活动状态">
     <view class="flex items-center" aria-role="radio" aria-checked="{{dateFilter !== 'ENDED'}}" data-filter="RECENT" bind:tap="changeStatusFilter"><text wx:if="{{dateFilter !== 'ENDED'}}" class="rounded-[16rpx] bg-brand px-[16rpx] py-[8rpx] text-[28rpx] font-medium leading-[39.2rpx] text-on-brand">近期活动</text><text wx:else class="rounded-[16rpx] bg-panel px-[16rpx] py-[8rpx] text-[28rpx] font-medium leading-[39.2rpx] text-muted">近期活动</text></view>
     <view class="flex items-center" aria-role="radio" aria-checked="{{dateFilter === 'ENDED'}}" data-filter="ENDED" bind:tap="changeStatusFilter"><text wx:if="{{dateFilter === 'ENDED'}}" class="rounded-[16rpx] bg-brand px-[16rpx] py-[8rpx] text-[28rpx] font-medium leading-[39.2rpx] text-on-brand">已结束</text><text wx:else class="rounded-[16rpx] bg-panel px-[16rpx] py-[8rpx] text-[28rpx] font-medium leading-[39.2rpx] text-muted">已结束</text></view>
-    <!-- MIW-37 figma 1819_17793: 选完日期后标签只显示所选日期（仅当天显示「今天」），不再与「今天」并排溢出。 -->
+    <!-- MIW-37/MIW-39 figma 1819_17793: 默认只有日历入口；在日期选择器确认后才出现所选日期标签
+         （选中当天显示「今天」，其他日期显示「M月D日」），点标签或 icon 都会再次打开选择器。 -->
     <view class="ml-auto flex h-[56rpx] shrink-0 items-center gap-2 rounded-[16rpx] bg-panel px-[16rpx]">
       <view wx:if="{{customDateLabel}}" class="whitespace-nowrap text-[28rpx] font-medium leading-[39.2rpx] text-brand" aria-role="button" aria-label="已选活动日期 {{customDateLabel}}" bind:tap="showCalendar">{{customDateLabel}}</view>
-      <view wx:else class="whitespace-nowrap text-[28rpx] font-medium leading-[39.2rpx] text-brand" aria-role="button" aria-pressed="{{dateFilter === 'TODAY'}}" data-filter="TODAY" bind:tap="changeDateFilter">今天</view>
       <view class="flex h-[56rpx] w-[40rpx] shrink-0 items-center justify-center" aria-role="button" aria-label="选择活动日期" bind:tap="showCalendar"><mip-icon name="calendar-schedule" size="{{20}}" color="var(--color-brand)" /></view>
     </view>
   </view>

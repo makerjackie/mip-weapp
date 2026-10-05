@@ -33,6 +33,7 @@ const participationAccessPolicy = createParticipationAccessPolicy({ agreements: 
 
 const publicActions = new Set([
   'mip.events.list',
+  'mip.events.calendarDates',
   'mip.events.discoveryFilters',
   'mip.events.detail',
   'mip.events.publicParticipants',
@@ -138,6 +139,8 @@ async function dispatch(event) {
   switch (action) {
     case 'mip.events.list':
       return service.listEvents(mysqlDatabase(), { ...shared, query: event.query || {} })
+    case 'mip.events.calendarDates':
+      return service.listEventCalendarDates(mysqlDatabase(), { ...shared, query: event.query || {} })
     case 'mip.events.discoveryFilters':
       return service.getEventDiscoveryFilters(mysqlDatabase(), shared)
     case 'mip.events.detail':

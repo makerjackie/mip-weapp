@@ -69,6 +69,8 @@ Page({
   cityManuallySelected: false,
   cityInitialization: null as Promise<void> | null,
   shareInviteRequests: new Map<string, Promise<string>>(),
+  // MIW-39 日历黄点：有活动的日期集合，只喂给 buildEventCalendarMonth，不进 wxml data。
+  calendarEventDates: new Set<string>(),
 
   onShow() {
     syncCaseNavigation(this, 'pages/events/index')
@@ -207,8 +209,9 @@ Page({
     const dateFilter = String(event.currentTarget.dataset.filter || '') as EventDateFilter
     // 「已结束」status radio only sets dateFilter and keeps the upcoming view, so the returning
     // 往期活动 tab must still be able to flip the view for the same dateFilter.
+    // MIW-39：TODAY 快捷入口已随默认态「今天」文字一起移除，日期只从日历确认（CUSTOM）。
     const nextView = dateFilter === 'ENDED' ? 'PAST' : 'UPCOMING'
-    if (!['RECENT', 'ENDED', 'TODAY'].includes(dateFilter)
+    if (!['RECENT', 'ENDED'].includes(dateFilter)
       || (dateFilter === this.data.dateFilter && this.data.view === nextView)) {
       return
     }
@@ -296,6 +299,28 @@ Page({
       calendarSelected: this.data.selectedDate,
     })
     this.rebuildCalendar()
+    void this.loadCalendarDates()
+  },
+
+  // MIW-39 figma 1819_17793：日历格子下的黄点 = 当天有活动；数据来自服务端日历接口，按可见月份取。
+  async loadCalendarDates() {
+    const { calendarYear: year, calendarMonth: month } = this.data
+    try {
+      const result = await mipEventsModule.getCalendarDates({
+        dateFrom: formatLocalDate(new Date(year, month - 1, 1)),
+        dateTo: formatLocalDate(new Date(year, month - 1, new Date(year, month, 0).getDate())),
+        cityName: this.data.selectedCity || undefined,
+      })
+      this.calendarEventDates = new Set(result.dates)
+    }
+    catch {
+      // 黄点拉取失败只降级为无点，不阻断选日期。
+      this.calendarEventDates = new Set()
+    }
+    // 等待期间用户可能已翻月或关掉弹层，只重绘仍然可见的月份。
+    if (this.data.calendarVisible && this.data.calendarYear === year && this.data.calendarMonth === month) {
+      this.rebuildCalendar()
+    }
   },
 
   rebuildCalendar() {
@@ -307,6 +332,7 @@ Page({
         selectedDate: calendarSelected,
         minDate: Math.max(calendarMinDate, startOfToday()),
         maxDate: calendarMaxDate,
+        eventDates: this.calendarEventDates,
       }),
     })
   },
@@ -330,6 +356,7 @@ Page({
     }
     this.setData({ calendarYear: Math.floor(clamped / 12), calendarMonth: clamped % 12 + 1 })
     this.rebuildCalendar()
+    void this.loadCalendarDates()
   },
 
   pickCalendarDay(event: WechatMiniprogram.TouchEvent) {

@@ -2,6 +2,8 @@ import type { EventId } from '../mip'
 import type {
   AdminEventFeedbackQuery,
   CheckInCredentialMode,
+  EventCalendarDates,
+  EventCalendarDatesQuery,
   EventDiscoveryFilters,
   EventFeedbackAnswers,
   EventFeedbackDraft,
@@ -94,6 +96,30 @@ function normalizeFeedbackAnswers(value: EventFeedbackAnswers): EventFeedbackAns
   }
 }
 
+// MIW-39 日历黄点范围：客户端一次取一个可见月，放行两个月窗口给未来跨月翻页。
+const calendarDatesMaxRangeDays = 62
+const calendarDatesCacheTtlMs = 300_000
+
+function normalizeCalendarDatesQuery(query: EventCalendarDatesQuery): EventCalendarDatesQuery {
+  const dateFrom = normalizeDate(query.dateFrom)
+  const dateTo = normalizeDate(query.dateTo)
+  if (!dateFrom || !dateTo) {
+    throw new Error('活动日历日期范围无效')
+  }
+  if (dateFrom > dateTo) {
+    throw new Error('开始日期不能晚于结束日期')
+  }
+  const spanDays = (Date.parse(`${dateTo}T00:00:00Z`) - Date.parse(`${dateFrom}T00:00:00Z`)) / 86_400_000
+  if (!Number.isFinite(spanDays) || spanDays > calendarDatesMaxRangeDays - 1) {
+    throw new Error('活动日历日期范围过大')
+  }
+  return {
+    dateFrom,
+    dateTo,
+    cityName: query.cityName?.trim().slice(0, 80) || undefined,
+  }
+}
+
 function normalizedQuery(query: EventFeedQuery): EventFeedQuery {
   const date = normalizeDate(query.date)
   const dateFrom = normalizeDate(query.dateFrom)
@@ -129,6 +155,8 @@ export function createMipEventsModule(
 ) {
   const eventCache = new Map<string, Awaited<ReturnType<MipEventsGateway['getEvent']>>>()
   const feedCache = new Map<string, Awaited<ReturnType<MipEventsGateway['listEvents']>>>()
+  const calendarDatesCache = new Map<string, { at: number, result: EventCalendarDates }>()
+  const calendarDatesFlights = new Map<string, Promise<EventCalendarDates>>()
   let discoveryFiltersCache: Awaited<ReturnType<NonNullable<MipEventsGateway['getDiscoveryFilters']>>> | null = null
   let discoveryFiltersLoadedAt = 0
   let discoveryFiltersFlight: Promise<EventDiscoveryFilters> | null = null
@@ -153,6 +181,10 @@ export function createMipEventsModule(
 
   function feedKey(query: EventFeedQuery) {
     return JSON.stringify(normalizedQuery(query))
+  }
+
+  function calendarDatesKey(query: EventCalendarDatesQuery) {
+    return `${query.dateFrom}~${query.dateTo}~${query.cityName || ''}`
   }
 
   return {
@@ -203,6 +235,39 @@ export function createMipEventsModule(
       finally {
         if (discoveryFiltersFlight === flight) {
           discoveryFiltersFlight = null
+        }
+      }
+    },
+
+    // MIW-39：日历黄点按「范围+城市」缓存并合并并发，翻月来回走读缓存；登录态变化随 invalidate 清空。
+    async getCalendarDates(query: EventCalendarDatesQuery, options: { force?: boolean } = {}): Promise<EventCalendarDates> {
+      if (!gateway.getCalendarDates) {
+        return { dates: [] }
+      }
+      const normalized = normalizeCalendarDatesQuery(query)
+      const key = calendarDatesKey(normalized)
+      const cached = calendarDatesCache.get(key)
+      if (!options.force && cached && Date.now() - cached.at < calendarDatesCacheTtlMs) {
+        return cached.result
+      }
+      const flight = calendarDatesFlights.get(key)
+      if (flight) {
+        return flight
+      }
+      const loadGeneration = generation
+      const request = gateway.getCalendarDates(normalized).then((result) => {
+        if (loadGeneration === generation) {
+          calendarDatesCache.set(key, { at: Date.now(), result })
+        }
+        return result
+      })
+      calendarDatesFlights.set(key, request)
+      try {
+        return await request
+      }
+      finally {
+        if (calendarDatesFlights.get(key) === request) {
+          calendarDatesFlights.delete(key)
         }
       }
     },
@@ -395,6 +460,8 @@ export function createMipEventsModule(
       generation += 1
       eventCache.clear()
       feedCache.clear()
+      calendarDatesCache.clear()
+      calendarDatesFlights.clear()
       discoveryFiltersCache = null
       discoveryFiltersLoadedAt = 0
       discoveryFiltersFlight = null

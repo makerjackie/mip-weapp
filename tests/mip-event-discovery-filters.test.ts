@@ -1,7 +1,7 @@
 import type { EventFeedResult, MipEventsGateway } from '../src/modules/mip-events'
 import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMipEventsModule, parseEventDiscoveryFilters } from '../src/modules/mip-events'
+import { createMipEventsModule, parseEventCalendarDates, parseEventDiscoveryFilters } from '../src/modules/mip-events'
 import { cloudbaseMipEventsGateway } from '../src/modules/mip-events/cloudbase-gateway'
 import { requireCloudClient } from '../src/platform/cloudbase/client'
 
@@ -56,6 +56,38 @@ describe('MIP event discovery filter client', () => {
     await expect(cloudbaseMipEventsGateway.getDiscoveryFilters!())
       .rejects
       .toMatchObject({ code: 'INVALID_RESPONSE' })
+  })
+
+  it('loads calendar dots through a dedicated public action and a strict ascending-date parser', async () => {
+    // MIW-39 figma 1819_17793：日历黄点来自 mip.events.calendarDates，只收升序去重的 YYYY-MM-DD。
+    callFunction.mockResolvedValueOnce({
+      result: { ok: true, data: { dates: ['2026-01-26', '2026-01-30'] } },
+    })
+    await expect(cloudbaseMipEventsGateway.getCalendarDates!({ dateFrom: '2026-01-01', dateTo: '2026-01-31' }))
+      .resolves
+      .toEqual({ dates: ['2026-01-26', '2026-01-30'] })
+    expect(callFunction).toHaveBeenCalledWith({
+      name: 'mip-events-api',
+      data: {
+        action: 'mip.events.calendarDates',
+        query: { dateFrom: '2026-01-01', dateTo: '2026-01-31' },
+      },
+    })
+
+    callFunction.mockResolvedValueOnce({
+      result: { ok: true, data: { dates: ['2026-01-30', '2026-01-26'] } },
+    })
+    await expect(cloudbaseMipEventsGateway.getCalendarDates!({ dateFrom: '2026-01-01', dateTo: '2026-01-31' }))
+      .rejects
+      .toMatchObject({ code: 'INVALID_RESPONSE' })
+    expect(() => parseEventCalendarDates({ dates: ['2026-01-30', '2026-01-26'] }))
+      .toThrowError(expect.objectContaining({ code: 'INVALID_RESPONSE' }))
+    expect(() => parseEventCalendarDates({ dates: ['2026-01-26', '2026-01-26'] }))
+      .toThrowError(expect.objectContaining({ code: 'INVALID_RESPONSE' }))
+    expect(() => parseEventCalendarDates({ dates: ['2026-1-26'] }))
+      .toThrowError(expect.objectContaining({ code: 'INVALID_RESPONSE' }))
+    expect(() => parseEventCalendarDates({ dates: ['2026-01-26'], cities: ['深圳'] }))
+      .toThrowError(expect.objectContaining({ code: 'INVALID_RESPONSE' }))
   })
 
   it('normalizes every filter before transport and caches the public catalog', async () => {
