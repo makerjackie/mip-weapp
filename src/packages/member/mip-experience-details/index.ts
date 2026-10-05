@@ -1,5 +1,7 @@
-import type { GrowthEntry, GrowthRule } from '../../../modules/mip-growth'
+import type { GrowthEntry } from '../../../modules/mip-growth'
+import type { MembershipAgreement } from '../../../modules/mip-identity'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
+import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { formatLocalDateTime } from '../../../utils/date'
 
 interface ExperienceEntryView {
@@ -7,13 +9,6 @@ interface ExperienceEntryView {
   title: string
   createdText: string
   deltaPrefix: string
-  deltaValue: number
-}
-
-interface ExperienceRuleView {
-  id: string
-  name: string
-  detailText: string
   deltaValue: number
 }
 
@@ -28,23 +23,12 @@ function entryView(entry: GrowthEntry): ExperienceEntryView {
   }
 }
 
-function experienceRuleView(rule: GrowthRule): ExperienceRuleView {
-  return {
-    id: rule.id,
-    name: rule.name,
-    // 规则说明来自管理后台配置；未配置时回退为派生的每日上限文案。
-    detailText: rule.description
-      || (rule.dailyLimitValue === undefined ? '无每日上限' : `每日最多 ${rule.dailyLimitValue} 经验值`),
-    deltaValue: rule.deltaValue,
-  }
-}
-
 Page({
   data: {
     tab: 'details' as 'rules' | 'details',
     state: 'loading' as 'loading' | 'ready' | 'error',
     entries: [] as ExperienceEntryView[],
-    rules: [] as ExperienceRuleView[],
+    rulesDetail: null as MembershipAgreement | null,
     nextCursor: '',
     loadingMore: false,
     message: '',
@@ -66,9 +50,9 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const [snapshot, page] = await Promise.all([
-        mipGrowthModule.getSnapshot({ force }),
+      const [page, rulesDetail] = await Promise.all([
         mipGrowthModule.listEntries(undefined, 20, 'EXPERIENCE'),
+        mipIdentityModule.getMembershipAgreement('experience-rules'),
       ])
       if (requestSeq !== this.requestSeq) {
         return
@@ -76,7 +60,7 @@ Page({
       this.setData({
         state: 'ready',
         entries: page.items.map(entryView),
-        rules: snapshot.earningRules.filter(rule => rule.metric === 'EXPERIENCE').map(experienceRuleView),
+        rulesDetail,
         nextCursor: page.nextCursor || '',
         message: '',
       })

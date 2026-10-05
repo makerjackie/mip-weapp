@@ -280,7 +280,7 @@ export interface MipIdentityActionInputMap {
   bindSmsPhone: BindSmsPhoneInput
   closeAccount: AccountClosureInput
   getProfile: Record<string, never>
-  getMembershipAgreement: { document?: 'membership' | 'user' }
+  getMembershipAgreement: { document?: AgreementDocument }
   getProfileCardSettings: Record<string, never>
   getMyProfileCardCode: Record<string, never>
   getPublicProfile: { profileRef: string }
@@ -309,7 +309,7 @@ export interface MipIdentityGateway {
   bindSmsPhone: (input: BindSmsPhoneInput) => Promise<IdentityAccessSnapshot>
   closeAccount: (input: AccountClosureInput) => Promise<AccountClosureResult>
   getProfile: () => Promise<MipProfileSnapshot>
-  getMembershipAgreement: (document?: 'membership' | 'user') => Promise<MembershipAgreement>
+  getMembershipAgreement: (document?: AgreementDocument) => Promise<MembershipAgreement>
   getProfileCardSettings: () => Promise<ProfileCardSettings>
   getMyProfileCardCode: () => Promise<ProfileCardCode>
   getPublicProfile: (profileRef: string) => Promise<PublicMipProfile>
@@ -322,3 +322,6 @@ export interface MipIdentityGateway {
 }
 
 export interface MembershipAgreement { title: string, body: string, isDemo: boolean, version: number, updatedAt: string }
+
+/** 后台可配置的整段文档：两份协议 + 经验值规则说明（MIW-27）。 */
+export type AgreementDocument = 'membership' | 'user' | 'experience-rules'

@@ -4,6 +4,7 @@ import type {
   AccountClosureInput,
   AccountClosureResult,
   AgreementAcceptanceInput,
+  AgreementDocument,
   BindSmsPhoneInput,
   IdentityAccessSnapshot,
   MembershipAgreement,
@@ -247,7 +248,7 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
       return profile(await call(transport, 'getProfile', {}))
     },
 
-    async getMembershipAgreement(document?: 'membership' | 'user'): Promise<MembershipAgreement> {
+    async getMembershipAgreement(document?: AgreementDocument): Promise<MembershipAgreement> {
       const value = await call(transport, 'getMembershipAgreement', document ? { document } : {})
       const item = value as MembershipAgreement
       if (!item || typeof item.title !== 'string' || typeof item.body !== 'string'

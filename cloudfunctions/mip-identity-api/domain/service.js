@@ -5,6 +5,9 @@ const { normalizeAiConfirmation } = require('./ai-confirmation')
 
 const ACCOUNT_CLOSURE_CONFIRMATION_PHRASE = '确认注销账号'
 
+// 后台可配置的整段文档：两份协议 + 经验值规则说明（MIW-27，membership-content 第三种文档）。
+const AGREEMENT_DOCUMENTS = ['membership', 'user', 'experience-rules']
+
 const defaultAgreements = [
   {
     key: 'SERVICE_AGREEMENT',
@@ -255,7 +258,7 @@ function createIdentityService(options) {
     getMyProfileCardCode,
     getMembershipAgreement: (caller, input = {}) => {
       const document = input.document || 'membership'
-      if (!['membership', 'user'].includes(document)) throw new Error('VALIDATION_FAILED')
+      if (!AGREEMENT_DOCUMENTS.includes(document)) throw new Error('VALIDATION_FAILED')
       return repository.getMembershipAgreement(caller.appId, document)
     },
     getProfileCardSettings,
