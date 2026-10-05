@@ -60,6 +60,9 @@ async function projectEvent(database, event) {
     case 'membership.adjustment_granted':
       return projectMembershipAdjustment(database, event)
     case 'membership.payment_confirmed':
+    // MIW-27 第二轮：入会审核结论只在业务页反馈（等级页/权益页由服务端投影驱动），
+    // 不额外生成站内消息。
+    case 'membership.approval_decided':
       return projection([], [], 'OPERATION_RECEIPT_SUPPRESSED')
     case 'membership.refund_confirmed':
       return projectMembershipRefund(database, event)

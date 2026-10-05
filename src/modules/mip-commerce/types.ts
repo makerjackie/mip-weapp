@@ -148,6 +148,18 @@ interface ActiveMembershipBenefitsBase {
   version: number
 }
 
+interface PendingMembershipBenefitsBase {
+  kind: 'PENDING'
+  status: 'PENDING'
+  entitlementId: EntitlementId
+  sourceType: MembershipEntitlementSourceType
+  sourceLabel: string
+  startsAt: string
+  endsAt: string
+  benefits: []
+  version: number
+}
+
 export type MembershipBenefitsSnapshot
   = | {
     kind: 'GUEST'
@@ -155,6 +167,15 @@ export type MembershipBenefitsSnapshot
     benefits: []
     history: MembershipEntitlementHistoryItem[]
   }
+  // MIW-27 第二轮：首笔付费会员等待管理后台审核时，commerce 只给出待审核事实；
+  // 身份投影仍按嘉宾处理，玩家侧权益在审核通过前不开放。
+  | (PendingMembershipBenefitsBase & {
+    plan: {
+      id: MembershipPlanId
+      name: string
+      description?: string
+    }
+  })
   | (ActiveMembershipBenefitsBase & {
     sourceType: 'ORDER'
     plan: {

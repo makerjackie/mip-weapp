@@ -281,6 +281,8 @@ function createAdminService({
     getMembership,
     grantMembership,
     listMembershipTimeline,
+    listMembershipApprovals,
+    decideMembershipApproval,
   } = createAdminMemberships({ access, repository })
   const { listEntitlementTransactions, grantEntitlement } = createAdminEntitlements({
     access, repository, memberships: { getMembership, grantMembership },
@@ -484,6 +486,8 @@ function createAdminService({
       getMembership,
       listMembershipTimeline,
       grantMembership,
+      listMembershipApprovals,
+      decideMembershipApproval,
       listEntitlementTransactions,
       grantEntitlement,
     }),

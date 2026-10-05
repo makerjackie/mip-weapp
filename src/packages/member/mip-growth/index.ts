@@ -76,7 +76,7 @@ Page({
     tasks: [] as GrowthTaskView[],
     tasksMessage: '',
     isPlayer: false,
-    membershipState: 'loading' as 'loading' | 'player' | 'guest' | 'error',
+    membershipState: 'loading' as 'loading' | 'player' | 'guest' | 'pending' | 'error',
     membershipValidityText: '',
     renewWindowOpen: false,
     invitationReady: false,
@@ -117,6 +117,20 @@ Page({
         isPlayer: false,
         membershipState: 'error',
         membershipValidityText: '',
+        renewWindowOpen: false,
+        invitationReady: false,
+        invitationMessage: '',
+      })
+      return
+    }
+    // MIW-27 第二轮：首笔付费等待管理后台审核。玩家等级页如实展示「审核中」，
+    // 不给第二次下单入口；同意后的会员态由服务端投影决定。
+    if (membership.kind === 'PENDING') {
+      this.shareInvitationToken = ''
+      this.setData({
+        isPlayer: false,
+        membershipState: 'pending',
+        membershipValidityText: '入会审核中，管理后台通过后生效',
         renewWindowOpen: false,
         invitationReady: false,
         invitationMessage: '',

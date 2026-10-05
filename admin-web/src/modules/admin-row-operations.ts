@@ -1,7 +1,8 @@
 import { boundedInteger, identifier, nonNegativeVersion, positiveVersion, uniqueStringList } from './admin-coercions.ts'
 import type { AdminDetailRoute } from './admin-details.ts'
 
-export type AdminRowOperationAction  = | 'mip.admin.adminAccounts.create'
+export type AdminRowOperationAction  = | 'mip.admin.membershipApprovals.decide'
+    | 'mip.admin.adminAccounts.create'
     | 'mip.admin.adminAccounts.update'
     | 'mip.admin.adminAccounts.changeStatus'
     | 'mip.admin.events.registrations.review'

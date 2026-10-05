@@ -1073,6 +1073,34 @@ async function rebuildMembershipEntitlements(tx, appId, userId, options = {}) {
     }
   }
   manualWindows.sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime())
+  // MIW-27 第二轮：首次入会需管理后台审核。已拥有过 ACTIVE/EXPIRED/REFUNDED 会员
+  // 或运营开通资格的玩家（含审核功能上线前的老会员）按续费处理，不受影响；
+  // REJECTED 后复议通过可恢复。
+  const grandfathered = existing.some(entitlement =>
+    entitlement.source_type === 'ADMIN_ADJUSTMENT'
+    || ['ACTIVE', 'EXPIRED', 'REFUNDED'].includes(entitlement.status))
+  let approvalStatus = null
+  if (!grandfathered && orders.length > 0) {
+    const approvalRows = await tx.query(
+      `SELECT status FROM mip_membership_approvals
+       WHERE app_id = ? AND user_id = ? FOR UPDATE`,
+      [appId, userId],
+    )
+    if (approvalRows[0]) {
+      approvalStatus = approvalRows[0].status
+    }
+    else {
+      await tx.query(
+        `INSERT INTO mip_membership_approvals
+           (id, app_id, user_id, order_id, status, requested_at)
+         VALUES (?, ?, ?, ?, 'PENDING', ?)`,
+        [createId(), appId, userId, orders[0].id, calculatedAt],
+      )
+      approvalStatus = 'PENDING'
+    }
+  }
+  const chainApproved = grandfathered || approvalStatus === 'APPROVED'
+  const approvalRevocationReason = approvalStatus === 'REJECTED' ? 'MEMBERSHIP_APPROVAL_REJECTED' : null
   const paidOrderIds = new Set(orders.map(row => row.id))
   let changed = false
   let chainEnd
@@ -1087,7 +1115,9 @@ async function rebuildMembershipEntitlements(tx, appId, userId, options = {}) {
     const window = placeOrderWindow(candidateStart, durationDays, manualWindows)
     const startsAt = window.startsAt
     chainEnd = window.endsAt
-    const status = chainEnd.getTime() > calculatedAt.getTime() ? 'ACTIVE' : 'EXPIRED'
+    const status = !chainApproved
+      ? (approvalRevocationReason ? 'REVOKED' : 'PENDING')
+      : (chainEnd.getTime() > calculatedAt.getTime() ? 'ACTIVE' : 'EXPIRED')
     if (status === 'ACTIVE'
       && startsAt.getTime() <= calculatedAt.getTime()
       && chainEnd.getTime() > calculatedAt.getTime()) {
@@ -1114,17 +1144,19 @@ async function rebuildMembershipEntitlements(tx, appId, userId, options = {}) {
       )
       changed = true
     }
-    else if (!orderProjectionMatches(current, order, status, startsAt, chainEnd)) {
+    else if (!orderProjectionMatches(current, order, status, startsAt, chainEnd, approvalRevocationReason)) {
       const updated = await tx.query(
         `UPDATE mip_membership_entitlements
          SET plan_id = ?, status = ?, starts_at = ?, ends_at = ?,
-             revoked_at = NULL, revocation_reason = NULL, version = version + 1
+             revoked_at = ?, revocation_reason = ?, version = version + 1
          WHERE app_id = ? AND id = ? AND source_type = 'ORDER' AND version = ?`,
         [
           order.membership_plan_id,
           status,
           startsAt,
           chainEnd,
+          approvalRevocationReason ? calculatedAt : null,
+          approvalRevocationReason,
           appId,
           current.id,
           current.version,
@@ -1225,14 +1257,14 @@ function placeOrderWindow(candidateStart, durationDays, manualWindows) {
   return { startsAt, endsAt }
 }
 
-function orderProjectionMatches(entitlement, order, status, startsAt, endsAt) {
+function orderProjectionMatches(entitlement, order, status, startsAt, endsAt, revocationReason) {
   return entitlement.source_type === 'ORDER'
     && entitlement.source_adjustment_id === null
     && entitlement.order_id === order.id
     && entitlement.plan_id === order.membership_plan_id
     && entitlement.status === status
-    && entitlement.revoked_at === null
-    && entitlement.revocation_reason === null
+    && entitlement.revocation_reason === revocationReason
+    && (revocationReason ? entitlement.revoked_at !== null : entitlement.revoked_at === null)
     && entitlementDate(entitlement.starts_at).getTime() === startsAt.getTime()
     && entitlementDate(entitlement.ends_at).getTime() === endsAt.getTime()
 }

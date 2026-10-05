@@ -782,7 +782,30 @@ function membershipBenefitsDto(rows) {
   const sourceRows = Array.isArray(rows) ? rows : rows ? [rows] : []
   const history = sourceRows.map(membershipHistoryItem)
   const row = sourceRows.find(item => item.window_status === 'ACTIVE')
-  if (!row) return { kind: 'GUEST', status: 'NONE', benefits: [], history }
+  if (!row) {
+    // MIW-27 第二轮：首笔会费已支付但管理后台仍在审核时，向页面给出待审核事实。
+    const pending = sourceRows.find(item => item.window_status === 'PENDING')
+    if (pending) {
+      return {
+        kind: 'PENDING',
+        status: 'PENDING',
+        entitlementId: pending.id,
+        sourceType: pending.source_type,
+        sourceLabel: membershipSourceLabel(pending.source_type),
+        startsAt: dateValue(pending.starts_at),
+        endsAt: dateValue(pending.ends_at),
+        plan: {
+          id: pending.plan_id,
+          name: pending.plan_name,
+          description: pending.plan_description || undefined,
+        },
+        benefits: [],
+        version: Number(pending.version),
+        history,
+      }
+    }
+    return { kind: 'GUEST', status: 'NONE', benefits: [], history }
+  }
 
   const base = {
     kind: 'PLAYER',

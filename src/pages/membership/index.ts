@@ -66,6 +66,7 @@ Page({
     membershipDescription: '当前没有有效会员权益',
     membershipEndsText: '',
     isPlayer: false,
+    pendingReview: false,
     paymentEnabled: runtimeConfig.paymentMode !== 'disabled',
     paying: false,
     accessing: false,
@@ -195,6 +196,12 @@ Page({
             .recordMembershipInvitationGuest(this.incomingInvitationToken)
             .catch(() => {})
         }
+        // 首笔付费可能仍在入会审核中：commerce 快照是唯一事实来源，身份投影仍按嘉宾呈现。
+        const cachedBenefits = mipCommerceModule.peekMembershipBenefits()
+        if (cachedBenefits?.kind === 'PENDING') {
+          this.setData({ pendingReview: true })
+        }
+        void this.refreshMembershipBenefits(cachedBenefits !== undefined)
       }
     }
     catch {
@@ -205,6 +212,8 @@ Page({
   async refreshMembershipBenefits(force: boolean) {
     try {
       const benefits = await mipCommerceModule.getMembershipBenefits({ force })
+      // MIW-27 第二轮：首笔付费待审核时暂停再次下单入口，审核结论由服务端投影决定。
+      this.setData({ pendingReview: benefits.kind === 'PENDING' })
       if (benefits.kind === 'PLAYER') {
         this.applyInvitationAttribution(benefits)
       }

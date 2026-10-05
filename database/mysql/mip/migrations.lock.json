@@ -1322,6 +1322,18 @@
         "mip_membership_invitation_guests"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20261005140000",
+      "name": "mip_membership_approvals",
+      "sql": "database/mysql/mip/100_membership_approvals.sql",
+      "sqlSha256": "d865142ce16f6ab141ccf3ca3ae05dabefbab280b25340c98db073797bda765e",
+      "rollback": "database/mysql/mip/rollback/100_membership_approvals.sql",
+      "rollbackSha256": "cf1f86cf0818323338ede66918b0170dfde6ba24c1be85ec0614ac48ad9f1f09",
+      "createsTables": [
+        "mip_membership_approvals"
+      ],
+      "altersTables": []
     }
   ]
 }

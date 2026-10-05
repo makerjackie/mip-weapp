@@ -145,6 +145,27 @@ describe('admin operation model', () => {
     expect(model.buildInput(testCase.submitted)).toEqual(testCase.input)
   })
 
+  it('gates the first-join approval decision on the queue chain version and a rejection reason', async () => {
+    const request = async <T>() => ({} as T)
+    const model = await createOperationModel('mip.admin.membershipApprovals.decide', 'user-9', null, {
+      values: { expectedChainVersion: 3 },
+    }, request)
+    expect(model).toMatchObject({
+      action: 'mip.admin.membershipApprovals.decide',
+      capability: 'memberships.adjust',
+      title: '入会审核',
+      values: { decision: 'APPROVED', expectedChainVersion: '3', reason: '' },
+    })
+    // 链条版本缺失时保持不可提交，直到行操作重新预填。
+    const withoutChain = await createOperationModel('mip.admin.membershipApprovals.decide', 'user-9', null, {}, request)
+    expect(withoutChain.buildInput({ ...withoutChain.values, decision: 'APPROVED', reason: '线下确认' })).toBeNull()
+    expect(model.buildInput({ decision: 'APPROVED', expectedChainVersion: '3', reason: '线下已确认收款' }))
+      .toEqual({ userId: 'user-9', decision: 'APPROVED', expectedChainVersion: 3, reason: '线下已确认收款' })
+    expect(model.buildInput({ decision: 'REJECTED', expectedChainVersion: '3', reason: '' })).toBeNull()
+    expect(model.buildInput({ decision: 'REJECTED', expectedChainVersion: '3', reason: '线下支付未确认' }))
+      .toEqual({ userId: 'user-9', decision: 'REJECTED', expectedChainVersion: 3, reason: '线下支付未确认' })
+  })
+
   it('keeps basic mutation validation inside the unified models', async () => {
     const request = async <T>() => ({} as T)
     const membership = await createOperationModel('mip.admin.memberships.grant', 'user-1', basicDetail, {}, request)

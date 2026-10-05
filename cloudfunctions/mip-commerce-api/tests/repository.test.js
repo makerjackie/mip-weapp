@@ -466,6 +466,53 @@ describe('membership benefit projection', () => {
     )
   })
 
+  it('surfaces a pending-review fact for the first paid membership awaiting approval', async () => {
+    const repository = createCommerceRepository({
+      async query() {
+        return [{
+          id: '30000000-0000-4000-8000-000000000008',
+          status: 'PENDING',
+          window_status: 'PENDING',
+          source_type: 'ORDER',
+          starts_at: '2026-10-05T00:00:00.000Z',
+          ends_at: '2027-10-05T00:00:00.000Z',
+          version: 1,
+          order_id: '50000000-0000-4000-8000-000000000008',
+          source_order_id: '50000000-0000-4000-8000-000000000008',
+          plan_id: '40000000-0000-4000-8000-000000000008',
+          source_plan_id: '40000000-0000-4000-8000-000000000008',
+          plan_name: '年度会员',
+          amount_cents: 79900,
+          currency: 'CNY',
+          invitation_source_type: 'PLATFORM',
+        }]
+      },
+    })
+    const result = await repository.getMembershipBenefits({ appId: 'app-1', identityKey: 'identity-1' })
+    assert.deepEqual(
+      {
+        kind: result.kind,
+        status: result.status,
+        entitlementId: result.entitlementId,
+        sourceType: result.sourceType,
+        sourceLabel: result.sourceLabel,
+        planName: result.plan?.name,
+        membershipEndsAt: result.membershipEndsAt,
+        historyStatuses: result.history.map(item => item.status),
+      },
+      {
+        kind: 'PENDING',
+        status: 'PENDING',
+        entitlementId: '30000000-0000-4000-8000-000000000008',
+        sourceType: 'ORDER',
+        sourceLabel: '会员购买',
+        planName: '年度会员',
+        membershipEndsAt: undefined,
+        historyStatuses: ['PENDING'],
+      },
+    )
+  })
+
   it('keeps revoked and refunded records in neutral user history', async () => {
     const repository = createCommerceRepository({
       async query() {

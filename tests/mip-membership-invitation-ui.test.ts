@@ -37,4 +37,15 @@ describe('MIP membership invitation carriers', () => {
     expect(controller).toContain('invitationGuestRecorded')
     expect(controller).toMatch(/recordMembershipInvitationGuest[\s\S]{0,80}\.catch\(\(\) => \{\}\)/)
   })
+
+  it('pauses repurchase while the first payment waits for the admin approval', () => {
+    const controller = source('src/pages/membership/index.ts')
+    const template = source('src/pages/membership/index.wxml')
+    // MIW-27 第二轮：待审核事实来自 commerce 快照；审核中禁用下单按钮，不虚构会员状态。
+    expect(controller).toContain('pendingReview: benefits.kind === \'PENDING\'')
+    expect(controller).toMatch(/cachedBenefits\?\.kind === 'PENDING'[\s\S]{0,120}pendingReview: true/)
+    expect(template).toContain('\'已开通\' : pendingReview ? \'审核中\' : \'待开通\'}}')
+    expect(template).toContain('disabled="{{pendingReview || !paymentEnabled || !selectedPlanId || !plansVerified}}"')
+    expect(template).toContain('{{pendingReview ? \'入会审核中\'')
+  })
 })

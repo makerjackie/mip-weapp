@@ -157,6 +157,24 @@ Page({
         })
         return
       }
+      if (!isEventOrder && !isContentOrder) {
+        // MIW-27 第二轮：首次入会支付成功≠会员生效。commerce 快照是服务端事实，
+        // PENDING 表示首笔付费正等待管理后台审核，支付结果页必须如实提醒。
+        const pendingApproval = await this.membershipPendingApproval(requestSeq)
+        if (!this.isCurrentCheck(requestSeq)) {
+          return
+        }
+        this.setData({
+          ...base,
+          result: 'success',
+          title: '支付已确认',
+          description: pendingApproval
+            ? '入会申请已提交，管理后台审核通过后会员权益生效。'
+            : '支付成功，会员权益已开通。',
+        })
+        void this.loadMembershipEnd(requestSeq)
+        return
+      }
       this.setData({
         ...base,
         result: 'success',
@@ -165,9 +183,6 @@ Page({
           ? '支付成功，现在可以查看内容。'
           : '支付成功，会员权益已开通。',
       })
-      if (!isEventOrder && !isContentOrder) {
-        void this.loadMembershipEnd(requestSeq)
-      }
       return
     }
     if (classification === 'pending') {
@@ -232,6 +247,17 @@ Page({
         void this.check()
       }
     }, 1500)
+  },
+
+  /** MIW-27 第二轮：首笔付费会员是否处于入会审核中（读不到快照时按已开通呈现，不阻塞支付结果）。 */
+  async membershipPendingApproval(requestSeq: number) {
+    try {
+      const benefits = await mipCommerceModule.getMembershipBenefits({ force: true })
+      return this.isCurrentCheck(requestSeq) && benefits.kind === 'PENDING'
+    }
+    catch {
+      return false
+    }
   },
 
   async loadMembershipEnd(requestSeq: number) {

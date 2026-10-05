@@ -136,7 +136,13 @@ function replayRow(overrides = {}) {
 describe('membership repository', () => {
   it('keeps the membership query and mutation surface', () => {
     const { repository } = createRepository({ query: async () => [] })
-    assert.deepEqual(Object.keys(repository).sort(), ['getMembership', 'grantMembership', 'listMembershipTimeline'])
+    assert.deepEqual(Object.keys(repository).sort(), [
+      'decideMembershipApproval',
+      'getMembership',
+      'grantMembership',
+      'listMembershipApprovals',
+      'listMembershipTimeline',
+    ])
   })
 
   it('returns the privileged membership projection and derives active and scheduled windows', async () => {

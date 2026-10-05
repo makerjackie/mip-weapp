@@ -57,6 +57,30 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('slot="actions"')
   })
 
+  it('shows a read-only pending state while the first payment awaits the admin approval', () => {
+    const script = fs.readFileSync(
+      path.join(process.cwd(), 'src/packages/member/mip-growth/index.ts'),
+      'utf8',
+    )
+    const template = fs.readFileSync(
+      path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxml'),
+      'utf8',
+    )
+
+    // MIW-27 第二轮：首笔付费等待管理后台审核。等级页如实展示审核中，
+    // 不提供再次下单或邀请入口；会员结论仍由服务端投影决定。
+    expect(script).toContain('membership.kind === \'PENDING\'')
+    expect(script).toContain('membershipState: \'pending\'')
+    expect(script).toContain('入会审核中，管理后台通过后生效')
+    expect(script).toMatch(/membershipState: 'loading' as 'loading' \| 'player' \| 'guest' \| 'pending' \| 'error'/)
+    expect(template).toContain('wx:elif="{{membershipState === \'pending\'}}"')
+    expect(template).toContain('label="入会审核中" disabled')
+    // 待审核态不出现任何下单入口。
+    const pendingBlock = template.split('membershipState === \'pending\'')[1]?.split('</mip-sticky-actions>')[0] || ''
+    expect(pendingBlock).not.toContain('openMembershipOrder')
+    expect(pendingBlock).not.toContain('openType="share"')
+  })
+
   it('gates the renewal CTA to the final three months of the server-provided membership', () => {
     const script = fs.readFileSync(
       path.join(process.cwd(), 'src/packages/member/mip-growth/index.ts'),

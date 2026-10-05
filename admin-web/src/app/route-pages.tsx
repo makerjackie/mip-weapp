@@ -514,7 +514,7 @@ const operationRouteWriteCapabilities: Record<OperationsRoute, string[]> = {
   banners: ['banners.manage'],
   game: ['game.manage'],
   opportunities: ['opportunities.moderate', 'userContent.moderate'],
-  growth: ['growth.adjust', 'badges.manage'],
+  growth: ['growth.adjust', 'badges.manage', 'memberships.adjust'],
   adminAccounts: ['roles.change'],
   auditLogs: [],
 }

@@ -13,7 +13,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 69 条小程序路由、100 个迁移（均已锁定）、236 个渠道中立管理 operation（103 查询、133 写）和 16 个数据库核心函数。Web 合同允许其中 103 个查询与 121 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 69 条小程序路由、101 个迁移（均已锁定）、238 个渠道中立管理 operation（104 查询、134 写）和 16 个数据库核心函数。Web 合同允许其中 104 个查询与 122 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -41,6 +41,8 @@
 
 玩家等级页（客户口中的「会员」页）底部按钮按会员事实分态：未加入（游客）保持「立即加入」；已加入玩家未进续费窗口时「邀请加入」改为黄底 primary 全宽（此前恒为黑底 secondary，属修正）；进入到期前 3 个月窗口后「立即续费」黄底居右、「邀请加入」退居左侧黑底黄字。右上角「经验值详情」入口下移至与 EXP 进度条同一水平线并放大一档；点击不再滚动到底部原地展开，改为跳转新增的 `packages/member/mip-experience-details/index` 经验值详情页（figma 1948:14177），「规则详情/经验值明细」双页签，明细按 EXPERIENCE 指标由服务端过滤（`mip-growth-api` listEntries 新增 metric 参数，非法值回退全量，保住 keyset 分页游标）。路由契约三处（app.json / runtime-pages.json / project.json）同步至 69 条。判断口径：明细卡副行取流水时间（规则表无描述列，设计稿副行文案无数据来源）；规则详情页签按占位设计帧沿用明细卡骨架；等级与权益、成长数据原展开区块随展开交互一并移除（无设计帧承载）。完整 `pnpm verify` 通过。
 
+同日追加第二轮：「立即加入」首笔付费不再即时生效——ledger 为首笔付费会员在 `mip_membership_approvals`（迁移 101，每用户至多一条）自动落待审核记录，会员资格投影为 PENDING；已拥有过会员（ACTIVE/EXPIRED/REFUNDED）或运营开通资格的玩家按续费处理，不设审核。管理后台「成长」页新增「入会审核」分区，行内受控弹窗同意/驳回（驳回必填审核意见，会员链版本乐观锁，留审计并写 outbox `membership.approval_decided`，outbox 按 OPERATION_RECEIPT_SUPPRESSED 消化不生成站内消息）；同意后资格立即生效（到期自支付起算，审核时长不补偿，特殊补偿走运营开通），驳回置 REVOKED，复议通过同链恢复。小程序端按服务端快照如实展示：支付结果页提示「管理后台审核通过后生效」，玩家等级页/会员方案页展示「审核中」并暂停重复下单，权益页展示待审核形态；身份投影保持嘉宾不变。规则详情页签文本改为后台配置；「邀请加入」卡片暂用品牌默认封面并记录嘉宾邀请关系。管理合同增至 238 operation（104 查询、134 写；Web 开放 104 查询、122 受审 mutation），admin-contracts 已再生。
+
 ## 2026-09-29 后台登录与临时入口
 
 密码登录已发布有限等待与临时失败重试，完整门禁通过。临时入口 https://mipadmin.01mvp.com 以 Cloudflare 302 跳转至既有 CloudBase 后台；浏览器已验证真实概览。当时真实 HTTPS 验收为 63/64；本轮整改追加所属 `/assets` 严格路由后已达到 64/64，缺失 JS 返回 404，未改共享托管全局配置。此前首次登录失败的冷启动根因尚未证实。详见[登录与入口验收](evidence/admin-login-20260929/README.md)。
@@ -50,9 +52,9 @@
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
 | 小程序路由 | 69 条：5 条主包、59 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
-| 数据库 | 100 个追加迁移；目标清单为 151 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
-| 管理合同 | 236 个 operation：103 查询、133 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
-| Web 开放范围 | 103 查询、121 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| 数据库 | 101 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
+| 管理合同 | 238 个 operation：104 查询、134 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| Web 开放范围 | 104 查询、122 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
 | 调度 | 消息和知识采集各有独立 scheduler；均不属于数据库核心函数 | `mip-message-scheduler`、`mip-knowledge-scheduler` 及部署脚本 |
 | Web 页面 | 15 个一级页面、13 类详情 | `admin-web/src/` 的路由与页面合同 |

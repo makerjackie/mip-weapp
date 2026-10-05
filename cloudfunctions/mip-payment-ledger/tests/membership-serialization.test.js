@@ -232,8 +232,11 @@ describe('membership ledger serialization and dual-source projection', () => {
     })
     assert.deepEqual(result, { status: 'FAILED', idempotent: true })
     const repair = database.calls.find(call => call.sql.startsWith('UPDATE mip_membership_entitlements')
-      && call.sql.includes('revoked_at = NULL'))
+      && call.sql.includes('revoked_at = ?'))
     assert.ok(repair)
+    // 审核后资格修复沿用同一重放通道：恢复为未撤销投影，而非字面 NULL 子句。
+    assert.equal(repair.params[4], null)
+    assert.equal(repair.params[5], null)
     assert.ok(database.calls.some(call => call.sql.includes('UPDATE mip_membership_chains')))
   })
 
@@ -265,6 +268,98 @@ describe('membership ledger serialization and dual-source projection', () => {
     assert.ok(chain >= 0 && orderLock > chain && refundLock > orderLock
       && sourceOrders > refundLock && entitlements > sourceOrders)
     assert.ok(statements.some(sql => sql.startsWith('UPDATE mip_orders SET status = ?')))
+  })
+
+  it('projects the first-ever membership payment as PENDING and opens an approval', async () => {
+    const order = membershipOrder('10000000-0000-4000-8000-000000000001', {
+      status: 'PAID',
+      paid_at: new Date('2026-08-01T00:00:00.000Z'),
+    })
+    const harness = rebuildHarness({ orders: [order], entitlements: [] })
+    const result = await runRebuild(harness)
+    assert.equal(result.membershipActive, false)
+    const approval = harness.calls.find(call => call.sql.includes('INSERT INTO mip_membership_approvals'))
+    assert.ok(approval)
+    assert.match(approval.sql, /'PENDING'/)
+    assert.deepEqual(approval.params.slice(1, 4), [appId, userId, order.id])
+    const insert = harness.calls.find(call => call.sql.includes('INSERT INTO mip_membership_entitlements'))
+    assert.equal(insert.params[5], 'PENDING')
+    // 未分配玩家编号：PENDING 资格不计入玩家生命周期。
+    assert.equal(harness.calls.some(call => call.sql.includes('INSERT INTO mip_player_lifecycles')), false)
+  })
+
+  it('keeps renewals of a former member outside the approval gate', async () => {
+    const order = membershipOrder('10000000-0000-4000-8000-000000000002', {
+      paid_at: new Date('2026-08-01T00:00:00.000Z'),
+    })
+    const refunded = orderEntitlement(order, {
+      status: 'REFUNDED',
+      starts_at: new Date('2026-08-01T00:00:00.000Z'),
+      ends_at: new Date('2026-08-31T00:00:00.000Z'),
+      revoked_at: new Date('2026-08-05T00:00:00.000Z'),
+      revocation_reason: 'ORDER_REFUNDED',
+    })
+    const harness = rebuildHarness({
+      orders: [order],
+      entitlements: [refunded],
+      approvals: [],
+    })
+    await runRebuild(harness)
+    // 老会员（曾拥有过会员资格）续费直接生效，不读取也不生成审核记录。
+    assert.equal(harness.calls.some(call => call.sql.includes('mip_membership_approvals')), false)
+    const restore = harness.calls.find(call => call.sql.startsWith('UPDATE mip_membership_entitlements'))
+    assert.equal(restore.params[1], 'ACTIVE')
+    assert.equal(restore.params[4], null)
+    assert.equal(restore.params[5], null)
+  })
+
+  it('projects the chain as REVOKED while the first-join approval is REJECTED', async () => {
+    const order = membershipOrder('10000000-0000-4000-8000-000000000001', {
+      status: 'PAID',
+      paid_at: new Date('2026-08-01T00:00:00.000Z'),
+    })
+    const revoked = orderEntitlement(order, {
+      status: 'REVOKED',
+      starts_at: new Date('2026-08-01T00:00:00.000Z'),
+      ends_at: new Date('2026-08-31T00:00:00.000Z'),
+      revoked_at: new Date('2026-08-02T00:00:00.000Z'),
+      revocation_reason: 'MEMBERSHIP_APPROVAL_REJECTED',
+      version: 4,
+    })
+    const harness = rebuildHarness({
+      orders: [order],
+      entitlements: [revoked],
+      approvals: [{ status: 'REJECTED' }],
+    })
+    await runRebuild(harness)
+    // 幂等重放：撤销事实只比对 reason 与 revoked_at 非空，不因时间戳重写同一行。
+    assert.equal(harness.calls.some(call => call.sql.startsWith('UPDATE mip_membership_entitlements')), false)
+    assert.equal(harness.calls.some(call => call.sql.includes('INSERT INTO mip_membership_entitlements')), false)
+  })
+
+  it('restores REVOKED rows to ACTIVE once the approval is reconsidered', async () => {
+    const order = membershipOrder('10000000-0000-4000-8000-000000000001', {
+      status: 'PAID',
+      paid_at: new Date('2026-08-01T00:00:00.000Z'),
+    })
+    const revoked = orderEntitlement(order, {
+      status: 'REVOKED',
+      starts_at: new Date('2026-08-01T00:00:00.000Z'),
+      ends_at: new Date('2026-08-31T00:00:00.000Z'),
+      revoked_at: new Date('2026-08-02T00:00:00.000Z'),
+      revocation_reason: 'MEMBERSHIP_APPROVAL_REJECTED',
+    })
+    const harness = rebuildHarness({
+      orders: [order],
+      entitlements: [revoked],
+      approvals: [{ status: 'APPROVED' }],
+    })
+    await runRebuild(harness)
+    const update = harness.calls.find(call => call.sql.startsWith('UPDATE mip_membership_entitlements'))
+    assert.ok(update)
+    assert.equal(update.params[1], 'ACTIVE')
+    assert.equal(update.params[4], null)
+    assert.equal(update.params[5], null)
   })
 
   it('applies a membership refund as chain, order, refund, callback, sources, then entitlements', async () => {
@@ -446,6 +541,7 @@ function rebuildHarness(options) {
           return options.orders
         }
         if (normalized.includes('FROM mip_membership_entitlements')) return options.entitlements
+        if (normalized.includes('FROM mip_membership_approvals')) return options.approvals || []
         return { affectedRows: 1 }
       },
       owner: null,

@@ -51,6 +51,7 @@ import {
 } from '../../modules/content-mutation-forms'
 
 const BASIC_OPERATION_ACTIONS = [
+  'mip.admin.membershipApprovals.decide',
   'mip.admin.memberships.grant',
   'mip.admin.events.clone',
   'mip.admin.events.changeStatus',
@@ -132,6 +133,7 @@ export async function createOperationModel(
       readField,
       launch.targetStatus,
       idempotencyKey,
+      launch,
     )
   }
   if (peopleActions.has(action)) {
@@ -243,12 +245,45 @@ function createBasicOperationModel(
   readField: (sectionTitle: string, label: string) => string,
   targetStatus: 'PUBLISHED' | 'UNPUBLISHED' | 'ENDED' | undefined,
   idempotencyKey: string,
+  launch: OperationLaunchContext = {},
 ): OperationModel {
   // A version is a server fact. Never invent version 1 when the detail is
   // incomplete; the validator will keep the mutation un-submittable until the
   // detail is refreshed.
   const expectedVersion = readField('活动信息', '版本')
   const capability = basicOperationCapability(action)
+  if (action === 'mip.admin.membershipApprovals.decide') {
+    // MIW-27 第二轮：首次入会审核。链条版本是审核队列行上的服务端事实，
+    // 由行操作预填；缺失时保持为空，提交按钮在补齐前不可用。
+    const launchChainVersion = positiveInteger(record(launch.values).expectedChainVersion)
+    const values = {
+      decision: 'APPROVED',
+      expectedChainVersion: launchChainVersion === undefined ? '' : String(launchChainVersion),
+      reason: '',
+    }
+    return model({
+      action,
+      capability,
+      title: '入会审核',
+      description: '同意后该玩家的首笔付费会员资格立即生效；驳回时必须填写审核意见（线下对接完成后再复议通过）。',
+    }, [
+      { name: 'expectedChainVersion', label: '会员链版本', kind: 'number', hidden: true },
+      { name: 'decision', label: '审核结论', kind: 'select', required: true, options: [
+        { value: 'APPROVED', label: '同意入会' }, { value: 'REJECTED', label: '驳回' },
+      ] },
+      { name: 'reason', label: '审核意见', kind: 'textarea', maxLength: 300, wide: true },
+    ], values, idempotencyKey, (next) => {
+      const chainVersion = positiveInteger(next.expectedChainVersion)
+      const decision = next.decision === 'REJECTED'
+        ? 'REJECTED'
+        : next.decision === 'APPROVED' ? 'APPROVED' : ''
+      // 驳回必须附审核意见（服务端同样校验）；同意时意见可选，用于记录线下沟通。
+      const reason = String(next.reason || '').trim().slice(0, 300)
+      return chainVersion !== undefined && decision && (decision === 'APPROVED' || reason)
+        ? { userId: targetId, decision, expectedChainVersion: chainVersion, reason }
+        : null
+    })
+  }
   if (action === 'mip.admin.memberships.grant') {
     const values = {
       durationMonths: '12',
@@ -358,7 +393,8 @@ function createBasicOperationModel(
 }
 
 function basicOperationCapability(action: BasicOperationAction) {
-  if (action === 'mip.admin.memberships.grant') return 'memberships.adjust'
+  if (action === 'mip.admin.memberships.grant'
+    || action === 'mip.admin.membershipApprovals.decide') return 'memberships.adjust'
   if (action === 'mip.admin.refunds.submit' || action === 'mip.admin.refunds.retry') return 'refunds.submit'
   if (action === 'mip.admin.communications.publishEventReminder') return 'communications.publish'
   return 'events.write'

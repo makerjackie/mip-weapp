@@ -73,6 +73,12 @@
       </mip-pill-button>
     </view>
   </mip-sticky-actions>
+  <!-- MIW-27 第二轮：首笔付费审核中——只读展示，不提供再次下单入口。 -->
+  <mip-sticky-actions wx:elif="{{membershipState === 'pending'}}">
+    <view slot="actions" class="flex h-[80rpx] w-full items-center px-2">
+      <mip-pill-button class="w-full" variant="secondary" label="入会审核中" disabled />
+    </view>
+  </mip-sticky-actions>
   <mip-sticky-actions wx:elif="{{membershipState === 'error'}}">
     <view slot="actions" class="flex h-[80rpx] w-full items-center px-2">
       <mip-pill-button class="w-full" variant="secondary" label="重新加载会员状态" bind:tap="loadMembershipActions" />

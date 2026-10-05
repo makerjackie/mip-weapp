@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 236,
+  "operationCount": 238,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -255,6 +255,22 @@ export const ADMIN_OPERATION_CONTRACT = {
     },
     {
       "action": "mip.admin.memberships.grant",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.membershipApprovals.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.membershipApprovals.decide",
       "kind": "MUTATION",
       "authentication": "REQUIRED",
       "session": "REQUIRED",
@@ -1898,7 +1914,7 @@ export const ADMIN_OPERATION_CONTRACT = {
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 236,
+  "operationCount": 238,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -2311,6 +2327,32 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "optionalInputKeys": [],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.membershipApprovals.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.membershipApprovals.decide",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "decision",
+        "expectedChainVersion",
+        "userId"
+      ],
+      "optionalInputKeys": [
+        "reason"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
     },
     {
       "action": "mip.admin.entitlements.transactions.list",

@@ -95,7 +95,8 @@ function historyItem(value: unknown): MembershipHistoryPresentation | null {
     title: planName || itemSourceLabel,
     status: itemStatus,
     statusLabel: ({
-      PENDING: '待确认',
+      // MIW-27 第二轮：PENDING 流水只来自首笔付费的入会审核。
+      PENDING: '待审核',
       ACTIVE: '有效',
       SCHEDULED: '待生效',
       EXPIRED: '已到期',
@@ -135,6 +136,23 @@ function guestPresentation(history: MembershipHistoryPresentation[]): Membership
   }
 }
 
+// MIW-27 第二轮：首笔付费会员尚在管理后台审核。权益不开放，但要如实呈现待审核事实。
+function pendingPresentation(
+  history: MembershipHistoryPresentation[],
+  planName: string,
+): MembershipBenefitsPresentation {
+  return {
+    membershipLabel: '待审核',
+    membershipDescription: '入会申请已提交，管理后台审核通过后会员权益生效',
+    membershipEndsText: '',
+    planEndsText: '',
+    currentSourceText: planName || '会员购买',
+    activeBenefits: [],
+    membershipHistory: history,
+    isPlayer: false,
+  }
+}
+
 export function presentMembershipBenefits(value: unknown): MembershipBenefitsPresentation {
   if (!record(value)) {
     return guestPresentation([])
@@ -142,6 +160,10 @@ export function presentMembershipBenefits(value: unknown): MembershipBenefitsPre
   const history = Array.isArray(value.history)
     ? value.history.flatMap(item => historyItem(item) || [])
     : []
+  if (value.kind === 'PENDING') {
+    const plan = record(value.plan) ? value.plan : null
+    return pendingPresentation(history, plan ? text(plan.name) : '')
+  }
   if (value.kind !== 'PLAYER') {
     return guestPresentation(history)
   }
