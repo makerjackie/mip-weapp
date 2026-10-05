@@ -2,7 +2,7 @@
 
 > 依据当前代码编写（基线 commit `d90752a2`），覆盖 `admin-web/`（React + TanStack Router Hash 路由 + Ant Design）。角色与能力权威来源：`cloudfunctions/mip-admin-api/domain/capabilities.js`；操作契约：`packages/admin-contracts`（AdminRequest v1，236 个操作）。
 >
-> 配套文档：[小程序端测试用例](./WEAPP_TEST_CASES.md)（含现场工作台与登录确认联动）；逐项验收标准以 [admin-web/ACCEPTANCE.md](../admin-web/ACCEPTANCE.md)（G01–G08）与 [admin-web/INTERACTION_SPEC.md](../admin-web/INTERACTION_SPEC.md) 为准。
+> 配套文档：[小程序端测试用例](./WEAPP_TEST_CASES.md)（含现场工作台与登录确认联动）；逐项验收标准以 [admin-web/ACCEPTANCE.md](../../admin-web/ACCEPTANCE.md)（G01–G08）与 [admin-web/INTERACTION_SPEC.md](../../admin-web/INTERACTION_SPEC.md) 为准。
 
 ## 1. 角色与账号矩阵
 
