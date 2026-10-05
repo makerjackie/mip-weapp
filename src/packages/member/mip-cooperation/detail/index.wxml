@@ -2,10 +2,67 @@
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法查看合作卡" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
   <block wx:elif="{{item}}">
-    <view class="rounded-[16rpx] bg-panel px-5 py-5"><view class="flex items-center justify-between"><view class="rounded-full bg-brand px-3 py-1 text-[22rpx] font-semibold text-on-brand">{{roleName}}</view><view class="text-[22rpx] text-muted">{{item.author.cityName || '全国'}}</view></view><view class="mt-3 flex min-h-[88rpx] items-center" bind:tap="openAuthor"><view class="min-w-0 flex-1"><view class="text-[34rpx] font-bold">{{item.author.nickname}}</view><view wx:if="{{item.author.headline}}" class="mt-1 text-[22rpx] text-muted">{{item.author.headline}}</view></view><mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-brand)" /></view><view class="mt-4 text-[24rpx] leading-7">{{item.positioning}}</view><view class="mt-4 rounded-[8rpx] bg-brand-soft px-4 py-3 text-[24rpx] leading-6"><text class="text-brand">合作目标：</text>{{item.targetSummary}}</view></view>
-    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[28rpx] font-semibold">能力自评</view><canvas id="cooperation-radar" type="2d" class="mt-3 h-[440rpx] w-full" /><view class="grid grid-cols-2 gap-2"><view wx:for="{{abilities}}" wx:key="key" class="flex items-center justify-between rounded-[8rpx] bg-panel-raised px-3 py-2 text-[22rpx]"><text class="text-muted">{{item.label}}</text><text>{{item.score}} / 5</text></view></view></view>
-    <view wx:if="{{roleFields.length || circles.length || quirks.length}}" class="mt-4 rounded-[16rpx] bg-panel px-5 py-5"><view class="text-[28rpx] font-semibold">合作信息</view><view class="mt-3 flex flex-col gap-3"><view wx:for="{{roleFields}}" wx:key="key" class="border-b border-line pb-3"><view class="text-[22rpx] text-muted">{{item.label}}</view><view class="mt-1 whitespace-pre-wrap text-[24rpx] leading-6">{{item.value}}</view></view><view wx:if="{{circles.length}}"><view class="text-[22rpx] text-muted">长混迹的圈子</view><view wx:for="{{circles}}" wx:for-item="circle" wx:for-index="circleIndex" wx:key="circleIndex" class="mt-2 rounded-[8rpx] bg-panel-raised px-3 py-2"><view class="flex justify-between text-[24rpx] leading-7"><text class="text-muted">圈子名称</text><text class="ml-4 text-right">{{circle.name || '—'}}</text></view><view class="flex justify-between text-[24rpx] leading-7"><text class="text-muted">圈内身份</text><text class="ml-4 text-right">{{circle.identity || '—'}}</text></view><view class="flex justify-between text-[24rpx] leading-7"><text class="text-muted">圈内年限</text><text class="ml-4 text-right">{{circle.years || '—'}}</text></view><view class="flex justify-between text-[24rpx] leading-7"><text class="text-muted">圈子特点</text><text class="ml-4 text-right">{{circle.trait || '—'}}</text></view></view></view><view wx:if="{{quirks.length}}"><view class="text-[22rpx] text-muted">需要被理解的“臭毛病”</view><view wx:for="{{quirks}}" wx:for-item="quirk" wx:for-index="quirkIndex" wx:key="quirkIndex" class="mt-2 rounded-[8rpx] bg-panel-raised px-3 py-2"><view class="flex justify-between text-[24rpx] leading-7"><text class="text-muted">“臭毛病”（外显）</text><text class="ml-4 text-right">{{quirk.external || '—'}}</text></view><view class="flex justify-between text-[24rpx] leading-7"><text class="text-muted">病因（内在）</text><text class="ml-4 text-right">{{quirk.internal || '—'}}</text></view><view class="flex justify-between text-[24rpx] leading-7"><text class="text-muted">预防发作建议（行为）</text><text class="ml-4 text-right">{{quirk.advice || '—'}}</text></view></view></view></view></view>
-    <t-button wx:if="{{!item.mine}}" class="mt-5" block size="large" theme="primary" disabled="{{acting}}" bind:tap="toggleInterest">{{item.interestActive ? '取消感兴趣' : '我感兴趣'}}</t-button>
+    <!-- figma 2058_12247 人才档案-合作卡详情-访客视角：作者头（头像/昵称/城市丨行业/一句话介绍）
+         置顶，角色烘焙卡带四条黑条（角色引荐语/我的目标/需要引荐/最大价值），雷达裸放画布，
+         圈子与臭毛病为带表头的表格模块。 -->
+    <view class="flex items-center px-1 pt-1 active:opacity-80" aria-role="button" aria-label="查看{{item.author.nickname}}的档案" bind:tap="openAuthor">
+      <image wx:if="{{item.author.avatarUrl}}" class="mr-3 h-[96rpx] w-[96rpx] shrink-0 rounded-full bg-brand-soft" src="{{item.author.avatarUrl}}" mode="aspectFill" />
+      <view wx:else class="mr-3 flex h-[96rpx] w-[96rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[26rpx] text-brand">MIP</view>
+      <view class="min-w-0 flex-1">
+        <view class="truncate text-[32rpx] font-semibold leading-[44rpx]">{{item.author.nickname}}</view>
+        <view wx:if="{{authorLine}}" class="mt-1 truncate text-[24rpx] leading-[34rpx] text-muted">{{authorLine}}</view>
+        <view wx:if="{{item.author.headline}}" class="mt-1 truncate text-[22rpx] leading-[32rpx] text-muted">{{item.author.headline}}</view>
+      </view>
+      <mip-icon name="chevron-right-1" size="{{14}}" color="var(--color-muted)" />
+    </view>
+    <view class="mt-4 overflow-hidden rounded-[32rpx]">
+      <mip-cooperation-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" max-value="{{maxValue}}" tall show-quote />
+    </view>
+    <canvas id="cooperation-radar" type="2d" class="mt-2 h-[560rpx] w-full" />
+    <view wx:if="{{roleFields.length}}" class="rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="flex items-center"><mip-icon name="target" size="{{16}}" color="var(--color-brand)" /><text class="ml-2 text-[28rpx] font-semibold">合作信息</text></view>
+      <view class="mt-3">
+        <view class="flex border-b border-line pb-2">
+          <text wx:for="{{roleFields}}" wx:key="key" class="min-w-0 flex-1 truncate px-1 text-[22rpx] text-muted">{{item.label}}</text>
+        </view>
+        <view class="flex items-start pt-3">
+          <text wx:for="{{roleFields}}" wx:key="key" class="min-w-0 flex-1 break-all px-1 text-[22rpx] leading-6">{{item.value}}</text>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{circles.length}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="flex items-center"><mip-icon name="star-favorite-3" size="{{16}}" color="var(--color-brand)" /><text class="ml-2 text-[28rpx] font-semibold">长混迹的圈子</text></view>
+      <view class="mt-3">
+        <view class="flex border-b border-line pb-2">
+          <text class="w-[25%] truncate px-1 text-[22rpx] text-muted">圈子名称</text>
+          <text class="w-[25%] truncate px-1 text-[22rpx] text-muted">圈内身份</text>
+          <text class="w-[15%] truncate px-1 text-[22rpx] text-muted">年限</text>
+          <text class="min-w-0 flex-1 truncate px-1 text-[22rpx] text-muted">圈子特点</text>
+        </view>
+        <view wx:for="{{circles}}" wx:for-item="circle" wx:key="name" class="flex items-start border-b border-line py-3">
+          <text class="w-[25%] break-all px-1 text-[22rpx] leading-6">{{circle.name || '—'}}</text>
+          <text class="w-[25%] break-all px-1 text-[22rpx] leading-6">{{circle.identity || '—'}}</text>
+          <text class="w-[15%] break-all px-1 text-[22rpx] leading-6">{{circle.years || '—'}}</text>
+          <text class="min-w-0 flex-1 break-all px-1 text-[22rpx] leading-6">{{circle.trait || '—'}}</text>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{quirks.length}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="flex items-center"><mip-icon name="bell-notification" size="{{16}}" color="var(--color-brand)" /><text class="ml-2 text-[28rpx] font-semibold">需要被理解的“臭毛病”</text></view>
+      <view class="mt-3">
+        <view class="flex border-b border-line pb-2">
+          <text class="w-[24%] truncate px-1 text-[22rpx] text-muted">臭毛病（外显）</text>
+          <text class="w-[28%] truncate px-1 text-[22rpx] text-muted">病因（内显）</text>
+          <text class="min-w-0 flex-1 truncate px-1 text-[22rpx] text-muted">预防发作建议（行为）</text>
+        </view>
+        <view wx:for="{{quirks}}" wx:for-item="quirk" wx:key="external" class="flex items-start border-b border-line py-3">
+          <text class="w-[24%] break-all px-1 text-[22rpx] leading-6">{{quirk.external || '—'}}</text>
+          <text class="w-[28%] break-all px-1 text-[22rpx] leading-6">{{quirk.internal || '—'}}</text>
+          <text class="min-w-0 flex-1 break-all px-1 text-[22rpx] leading-6">{{quirk.advice || '—'}}</text>
+        </view>
+      </view>
+    </view>
+    <!-- figma 2058_12247 访客视角没有底部互动 bar，感兴趣统一在玩家档案页表达。 -->
     <t-button wx:if="{{item.mine && item.status === 'DRAFT'}}" class="mt-5" block size="large" theme="primary" loading="{{acting}}" bind:tap="publish">发布合作卡</t-button>
     <t-button wx:if="{{item.canEdit}}" class="mt-5" block size="large" theme="primary" bind:tap="edit">编辑合作卡</t-button>
     <t-button wx:if="{{item.mine && item.status === 'PUBLISHED'}}" class="mt-3" block size="large" variant="outline" theme="danger" loading="{{acting}}" bind:tap="unpublish">下架合作卡</t-button>

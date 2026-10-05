@@ -205,8 +205,6 @@ describe('profile interest optimistic mutation', () => {
   it('keeps every profile-interest surface on the shared optimistic path', () => {
     const surfaces = [
       ['../src/packages/member/mip-public-profile/index.ts', 'sourceType: \'PROFILE\''],
-      ['../src/packages/member/mip-cooperation/detail/index.ts', 'sourceType: \'COOPERATION_CARD\''],
-      ['../src/packages/member/mip-cases/detail/index.ts', 'sourceType: \'SUPER_CASE\''],
     ] as const
 
     for (const [path, sourceType] of surfaces) {
@@ -215,15 +213,21 @@ describe('profile interest optimistic mutation', () => {
       expect(source).toContain(sourceType)
     }
 
+    // figma 2037_12261 超级案例详情、figma 2058_12247 合作卡详情（访客视角）都没有互动 bar：
+    // 案例与合作卡不再直接承载感兴趣入口，统一收敛到玩家档案页。
+    for (const path of [
+      '../src/packages/member/mip-cases/detail/index.ts',
+      '../src/packages/member/mip-cooperation/detail/index.ts',
+    ]) {
+      const page = readFileSync(new URL(path, import.meta.url), 'utf8')
+      expect(page).not.toContain('profileInterestMutations')
+      expect(page).not.toContain('COOPERATION_CARD')
+    }
+
     const publicProfileView = readFileSync(
       new URL('../src/packages/member/mip-public-profile/index.wxml', import.meta.url),
       'utf8',
     )
-    const caseView = readFileSync(
-      new URL('../src/packages/member/mip-cases/detail/index.wxml', import.meta.url),
-      'utf8',
-    )
     expect(publicProfileView).not.toContain('interestState === \'processing\'')
-    expect(caseView).not.toContain('{{acting ? \'处理中\' : (item.interestActive')
   })
 })

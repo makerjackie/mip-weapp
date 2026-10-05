@@ -1,17 +1,19 @@
 import type { CooperationCardId } from '../../../../modules/mip'
 import type { CooperationCardDetail, CooperationRoleFieldValue } from '../../../../modules/mip-cooperation'
-import type { ProfileInterestMutationSnapshot } from '../../../../modules/mip-opportunities'
 import { cooperationAbilityDimensions, cooperationRoles } from '../../../../config/mip-catalogs'
 import { cooperationModule, normalizeCooperationCircles, normalizeCooperationQuirks } from '../../../../modules/mip-cooperation'
-import { evaluateAccess, mipAccessPageUrl } from '../../../../modules/mip-identity'
-import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { profileInterestMutations } from '../../../../modules/mip-opportunities'
 import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigation/client'
 
 interface AbilityView { key: string, label: string, score: number }
 interface RoleFieldView { key: string, label: string, value: string }
 interface CircleGroupView { name: string, identity: string, years: string, trait: string }
 interface QuirkGroupView { external: string, internal: string, advice: string }
+
+function authorLineOf(item: CooperationCardDetail) {
+  return [item.author.cityName?.trim(), item.author.primaryIndustry?.label?.trim()]
+    .filter((line): line is string => Boolean(line))
+    .join('丨')
+}
 
 function textEntries(value: CooperationRoleFieldValue | undefined) {
   return Array.isArray(value) ? value.map(item => String(item)).filter(Boolean) : []
@@ -22,17 +24,15 @@ Page({
     id: '' as CooperationCardId,
     state: 'loading' as 'loading' | 'ready' | 'error',
     item: null as CooperationCardDetail | null,
-    roleName: '',
     abilities: [] as AbilityView[],
     roleFields: [] as RoleFieldView[],
     circles: [] as CircleGroupView[],
     quirks: [] as QuirkGroupView[],
+    maxValue: '',
+    authorLine: '',
     acting: false,
-    interestPending: false,
     message: '',
   },
-  resumeInterest: false,
-  stopInterestSubscription: null as (() => void) | null,
 
   onLoad(options: Record<string, string | undefined>) {
     this.setData({ id: String(options.id || '') as CooperationCardId })
@@ -40,14 +40,6 @@ Page({
   },
 
   onShow() {
-    const resume = mipIdentityModule.consumePendingResume('packages/member/mip-cooperation/detail/index')
-    if (resume?.action === 'INTERACT' && this.resumeInterest) {
-      this.resumeInterest = false
-      void this.performToggleInterest()
-    }
-    else if (this.resumeInterest) {
-      this.resumeInterest = false
-    }
     if (this.data.state === 'ready') {
       wx.nextTick(() => this.drawRadar())
     }
@@ -59,11 +51,6 @@ Page({
     }
   },
 
-  onUnload() {
-    this.stopInterestSubscription?.()
-    this.stopInterestSubscription = null
-  },
-
   async load() {
     if (!this.data.id) {
       this.setData({ state: 'error', message: '合作卡信息不完整' })
@@ -71,24 +58,21 @@ Page({
     }
     try {
       const item = await cooperationModule.get(this.data.id)
-      const interest = profileInterestMutations.mergeServer(item.author.profileRef, item.interestActive)
-      this.observeInterest(item.author.profileRef)
       const definition = cooperationRoles.find(role => role.key === item.roleKey)
+      // figma 2058_12247：导航标题是角色名（狗策划），「最大价值」黑条承载 roleFields.value。
+      if (definition?.name) {
+        wx.setNavigationBarTitle({ title: definition.name })
+      }
       const abilities = cooperationAbilityDimensions.map((dimension, index) => ({
         key: dimension.key,
         label: definition?.abilityLabels[index] || dimension.label,
         score: Number(item.abilityScores[dimension.key] || 0),
       }))
+      const maxValue = String(item.roleFields.value ?? '').trim()
       const roleFields: RoleFieldView[] = []
-      const goalRows: Array<{ key: string, label: string }> = [
-        { key: 'support', label: '需要支持或引荐的是' },
-        { key: 'value', label: '和我合作的最大价值是' },
-      ]
-      for (const goal of goalRows) {
-        const value = String(item.roleFields[goal.key] ?? '').trim()
-        if (value) {
-          roleFields.push({ key: goal.key, label: goal.label, value })
-        }
+      const support = String(item.roleFields.support ?? '').trim()
+      if (support) {
+        roleFields.push({ key: 'support', label: '需要支持或引荐的是', value: support })
       }
       for (const field of definition?.menu.fields || []) {
         const value = item.roleFields[field.key]
@@ -124,13 +108,13 @@ Page({
       }))
       this.setData({
         state: 'ready',
-        item: { ...item, interestActive: interest.active },
-        interestPending: interest.pending,
-        roleName: definition?.name || item.roleKey,
+        item,
         abilities,
         roleFields,
         circles,
         quirks,
+        maxValue,
+        authorLine: authorLineOf(item),
         message: '',
       })
       wx.nextTick(() => this.drawRadar())
@@ -155,7 +139,8 @@ Page({
       context.scale(ratio, ratio)
       const centerX = entry.width / 2
       const centerY = entry.height / 2
-      const radius = Math.min(entry.width, entry.height) * 0.38
+      // figma 2058_12247：雷达裸放画布，标签加大（13px），半径收一点给四周标签留白。
+      const radius = Math.min(entry.width, entry.height) * 0.34
       const point = (index: number, scale: number) => {
         const angle = -Math.PI / 2 + index * Math.PI / 3
         return { x: centerX + Math.cos(angle) * radius * scale, y: centerY + Math.sin(angle) * radius * scale }
@@ -197,91 +182,16 @@ Page({
       context.fill()
       context.stroke()
       context.fillStyle = '#B3B3B3'
-      context.font = '500 11px sans-serif'
+      context.font = '500 13px sans-serif'
       context.textBaseline = 'middle'
       this.data.abilities.forEach((ability, index) => {
         const angle = -Math.PI / 2 + index * Math.PI / 3
-        const label = point(index, 1.18)
+        const label = point(index, 1.16)
         const horizontal = Math.cos(angle)
         context.textAlign = horizontal > 0.35 ? 'left' : horizontal < -0.35 ? 'right' : 'center'
         context.fillText(ability.label, label.x, label.y)
       })
     })
-  },
-
-  async toggleInterest() {
-    const item = this.data.item
-    if (!item || item.mine || this.data.acting) {
-      return
-    }
-    if (this.hasCachedInterestAccess()) {
-      this.performToggleInterest()
-      return
-    }
-    this.resumeInterest = true
-    this.setData({ acting: true })
-    try {
-      const session = await mipIdentityModule.beginProtectedAction({
-        action: 'INTERACT',
-        source: { navigation: 'navigateBack' },
-      })
-      if (!session.decision.ready) {
-        caseNavigateTo({ url: mipAccessPageUrl(session.token) })
-        return
-      }
-      this.resumeInterest = false
-      this.setData({ acting: false })
-      this.performToggleInterest()
-    }
-    catch {
-      this.resumeInterest = false
-      wx.showToast({ title: '身份状态暂时无法确认', icon: 'none' })
-    }
-    finally {
-      this.setData({ acting: false })
-    }
-  },
-
-  observeInterest(profileRef: string) {
-    this.stopInterestSubscription?.()
-    this.stopInterestSubscription = profileInterestMutations.subscribe(profileRef, (interest) => {
-      if (this.data.item?.author.profileRef !== profileRef) {
-        return
-      }
-      this.applyInterest(interest)
-      if (interest.error) {
-        wx.showToast({ title: interest.error.message, icon: 'none' })
-      }
-    })
-  },
-
-  applyInterest(interest: ProfileInterestMutationSnapshot) {
-    this.setData({
-      'item.interestActive': interest.active,
-      'interestPending': interest.pending,
-    })
-  },
-
-  hasCachedInterestAccess() {
-    const snapshot = mipIdentityModule.peekSnapshot()
-    return Boolean(snapshot && evaluateAccess(snapshot, {
-      action: 'INTERACT',
-      source: { navigation: 'navigateBack' },
-    }).ready)
-  },
-
-  performToggleInterest() {
-    const item = this.data.item
-    if (!item || item.mine) {
-      return
-    }
-    const interest = profileInterestMutations.mutate({
-      targetProfileRef: item.author.profileRef,
-      active: !item.interestActive,
-      currentActive: item.interestActive,
-      source: { sourceType: 'COOPERATION_CARD', sourceId: item.id },
-    })
-    this.applyInterest(interest)
   },
 
   openAuthor() {

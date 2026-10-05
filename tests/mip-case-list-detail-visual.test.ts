@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 function source(path: string) {
@@ -44,10 +44,17 @@ describe('MIP super case list and detail visuals', () => {
     expect(template).toContain('label="分享" withIcon openType="share"')
     expect(template).toContain('<mip-sticky-actions')
     expect(template).toContain('slot="actions"')
-    expect(template).toContain('min-h-[112rpx]')
+    expect(template).toContain('h-[112rpx]')
     expect(template).toContain('下架案例')
     expect(template).toContain('删除案例')
     expect(template).toMatch(/state === 'ready' && !item/)
+    // 访客视角没有发布人模块和互动 bar；banner 走品牌默认封面。
+    expect(template).not.toContain('发布人')
+    expect(template).not.toContain('我感兴趣')
+    expect(template).not.toContain('bind:tap="openAuthor"')
+    expect(page).toContain('mipOperationsConfig.defaultCoverPaths.superCase')
+    expect(source('src/config/mip-operations.ts')).toContain('superCase: \'/assets/brand/brand-supercase-default.png\'')
+    expect(existsSync(new URL('../src/assets/brand/brand-supercase-default.png', import.meta.url).pathname)).toBe(true)
     expect(config.navigationBarTitleText).toBe('超级案例')
   })
 })

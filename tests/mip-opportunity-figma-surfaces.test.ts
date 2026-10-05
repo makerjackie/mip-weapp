@@ -160,11 +160,12 @@ describe('MIP opportunity Figma surfaces', () => {
   it('keeps detail content readable and every secondary state recoverable', () => {
     expect(detail).toContain('id="opportunity-detail-loading"')
     expect(detail).toContain('暂未填写项目介绍')
-    expect(detail).toContain('暂无评论与评价')
-    expect(detail).toContain('bind:tap="retryComments"')
-    expect(detail).toContain('bind:tap="startComment"')
-    expect(detailScript).toContain('retryComments()')
-    expect(detailScript).toContain('commentsState: reset || !this.data.comments.length ? \'error\' : \'ready\'')
+    // figma 1768_37369 访客视角：详情页只有顶部卡 + 项目介绍 + 底部 bar，
+    // 团队成员 / 想合作入口行 / 评论与评价模块不再渲染。
+    expect(detail).not.toContain('团队成员')
+    expect(detail).not.toContain('评论与评价')
+    expect(detail).not.toContain('人想合作')
+    expect(detailScript).not.toContain('loadComments')
     expect(detail).toContain('<app-page-exit label="返回机会" />')
   })
 

@@ -14,6 +14,7 @@ const {
 const { assertSelectableTags } = require('./opportunities')
 const { opportunityVisibility } = require('./journey-access')
 const { loadProfileInfluenceSummary } = require('./profile-influence')
+const { loadPublicLevel } = require('./public-person-details')
 
 const PEOPLE_KINDS = new Set(['ALL', 'PLAYER', 'GUEST'])
 const PEOPLE_SEARCH_SCOPES = new Set(['GLOBAL', 'PLAYER'])
@@ -158,7 +159,7 @@ function publicOrganizations(value) {
   }).slice(0, 12)
 }
 
-function publicProfileDto(row, tags, caller, profileRef, badges = []) {
+function publicProfileDto(row, tags, caller, profileRef, badges = [], level = undefined) {
   const allowed = visibleFields(row.visibility_json)
   const abilities = tags.filter(tag => tag.relation === 'ABILITY')
   return {
@@ -169,6 +170,7 @@ function publicProfileDto(row, tags, caller, profileRef, badges = []) {
     isSelf: Boolean(caller.userId && caller.userId === row.profile_user_id),
     userKind: Number(row.is_player) === 1 ? 'PLAYER' : 'GUEST',
     joinedAt: iso(row.joined_at),
+    ...(level ? { level } : {}),
     ...(allowed.nickname && row.nickname ? { nickname: String(row.nickname).trim() } : {}),
     ...(allowed.realName && row.real_name ? { realName: String(row.real_name).trim() } : {}),
     ...(allowed.gender && ['MALE', 'FEMALE'].includes(String(row.gender)) ? { gender: row.gender } : {}),
@@ -413,7 +415,7 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
 
   const profileVisibility = visibleFields(row.visibility_json)
   const opportunityPrivacy = opportunityVisibility(caller, 'o', 'owner_profile')
-  const [tags, badges, cooperationCards, superCases, opportunities, interest, influence] = await Promise.all([
+  const [tags, badges, cooperationCards, superCases, opportunities, interest, influence, level] = await Promise.all([
     loadProfileTags(database, caller.appId, [targetUserId]),
     loadPublicBadges(database, caller.appId, [targetUserId]),
     database.query(
@@ -462,6 +464,7 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
     profileVisibility.influence
       ? loadProfileInfluenceSummary(database, { appId: caller.appId, profileUserId: targetUserId, viewerUserId: caller.userId })
       : Promise.resolve(undefined),
+    loadPublicLevel(database, caller.appId, targetUserId),
   ])
 
   const cooperation = await cooperationSummaries(database, caller, opportunities.map(item => item.id))
@@ -472,6 +475,7 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
       caller,
       profileRef,
       badges.get(targetUserId) || [],
+      level,
     ),
     cooperationCards: cooperationCards.map(item => ({
       id: item.id,

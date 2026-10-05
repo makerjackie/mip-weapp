@@ -90,34 +90,69 @@ describe('MIP public profiles', () => {
     expect(profilePage).toContain('profileInterestMutations.mutate')
     expect(`${participantPage}\n${profilePage}`).not.toMatch(/membershipModule|wx\.cloud/)
 
+    // 机会详情的「我想合作」是唯一保留 INTERACT 门禁的详情互动。
+    const opportunityDetail = source('src/packages/member/mip-opportunities/detail/index.ts')
+    expect(opportunityDetail).toContain('action: \'INTERACT\'')
+    expect(opportunityDetail).toContain('consumePendingResume')
     for (const detail of [
       'src/packages/member/mip-opportunities/detail/index.ts',
       'src/packages/member/mip-cooperation/detail/index.ts',
+    ]) {
+      expect(source(detail)).toContain('/packages/member/mip-public-profile/index?profileRef=')
+    }
+    // 超级案例 / 合作卡详情（访客视角）没有互动 bar 和发布人模块，不再承载 INTERACT 门禁；
+    // 合作卡的感兴趣统一收敛在玩家档案页（figma 2058_12247）。
+    for (const detail of [
       'src/packages/member/mip-cases/detail/index.ts',
+      'src/packages/member/mip-cooperation/detail/index.ts',
     ]) {
       const code = source(detail)
-      expect(code).toContain('action: \'INTERACT\'')
-      expect(code).toContain('consumePendingResume')
-      expect(code).toContain('/packages/member/mip-public-profile/index?profileRef=')
+      expect(code).not.toContain('action: \'INTERACT\'')
+      expect(code).not.toContain('profileInterestMutations')
+      expect(code).not.toContain('consumePendingResume')
     }
   })
 
-  it('keeps all public details and safety access after compacting the profile summary', () => {
+  it('keeps the compact summary with the level pill and drops the details module (MIW-29)', () => {
     const view = source('src/packages/member/mip-public-profile/index.wxml')
     const production = view.slice(view.indexOf('<block wx:elif="{{profile}}">'))
     const summary = production.slice(0, production.indexOf('data-category="GUEST"'))
-    const details = production.slice(production.indexOf('id="public-profile-details"'))
-    for (const field of ['identityDetailText', 'primaryCompanyLine', 'headline', 'introduction']) {
-      expect(details).toContain(`{{profile.${field}}}`)
-    }
-    for (const field of ['abilities', 'badges', 'companies', 'organizations']) {
-      expect(details).toContain(`wx:for="{{profile.${field}}}"`)
-    }
-    expect(summary).not.toContain('{{profile.identityDetailText}}')
-    expect(summary).not.toContain('{{profile.primaryCompanyLine}}')
-    expect(summary).not.toContain('wx:for="{{profile.abilities}}"')
+    // 头部徽标按 figma 1769_38198 显示等级（Lv.N），不再渲染玩家/嘉宾称号。
+    expect(summary).toContain('{{profile.levelText}}')
+    expect(summary).not.toContain('kindLabel')
     expect(summary).toContain('bind:tap="openProfileMore"')
+    // MIW-29：合作卡/超级案例/相关机会三个 tab 下方不再有「个人资料」模块。
+    expect(production).not.toContain('id="public-profile-details"')
+    expect(production).not.toContain('个人资料')
+    for (const field of ['identityDetailText', 'primaryCompanyLine', 'introduction', 'abilities', 'companies', 'organizations']) {
+      expect(production).not.toContain(`{{profile.${field}}}`)
+      expect(production).not.toContain(`wx:for="{{profile.${field}}}"`)
+    }
+    // 头像下四统计的第三项是心动值：收到的活动红心票（S9 口径），与「我的」页心动值卡同源，
+    // 不再是档案「感兴趣」关系数；本人点击进心动值页（列表纯查看）。
+    const page = source('src/packages/member/mip-public-profile/index.ts')
+    expect(production).toContain('data-category="HEART" bind:tap="openOwnInfluence"')
+    expect(production).toContain('心动值</text>')
+    expect(production).toContain('influence ? influence.heartCount : \'—\'')
+    expect(production).not.toContain('influence.interestCount')
+    expect(page).toContain('category === \'HEART\'')
+    expect(page).toContain('\'/packages/member/mip-hearts/index\'')
     expect(production).toContain('bind:tap="openOwnInfluence"')
     expect(production).toContain('bind:tap="openInterestList"')
+  })
+
+  it('keeps the two-part interest bar: attend pill only after opting in', () => {
+    const view = source('src/packages/member/mip-public-profile/index.wxml')
+    const production = view.slice(view.indexOf('<block wx:elif="{{profile}}">'))
+    const stickyBar = production.slice(production.indexOf('<mip-sticky-actions'))
+    const config = JSON.parse(source('src/packages/member/mip-public-profile/index.json'))
+    // figma 1769_38198 底部两段式：左 mip-attend-pill（本人头像 + N感兴趣）只在已表态时渲染，
+    // 右侧黄色「我感兴趣」常驻；胶囊点击走心动名单入口（J4-02b）。
+    expect(config.usingComponents['mip-attend-pill']).toBe('/components/mip-attend-pill/index')
+    expect(stickyBar).toContain('<mip-attend-pill count="{{interestPillCount}}" label="感兴趣" avatars="{{viewerAvatars}}" variant="dark" />')
+    expect(stickyBar).toContain('wx:if="{{interestActive}}"')
+    expect(stickyBar).toContain('bind:tap="openInterestList"')
+    expect(stickyBar).toContain('{{interestActive ? \'已感兴趣\' : \'我感兴趣\'}}')
+    expect(stickyBar).not.toContain('influence.interestCount + \'感兴趣\'')
   })
 })

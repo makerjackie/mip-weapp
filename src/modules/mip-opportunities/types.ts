@@ -215,6 +215,7 @@ export interface PublicPerson {
   isSelf: boolean
   userKind: 'PLAYER' | 'GUEST'
   joinedAt: string
+  level?: { number: number, name: string }
   nickname?: string
   realName?: string
   gender?: 'MALE' | 'FEMALE'
@@ -236,6 +237,7 @@ export interface ProfileInfluenceSummary {
   interactionCount: number
   interestCount: number
   visitorCount: number
+  heartCount: number
 }
 
 export interface PeoplePage {

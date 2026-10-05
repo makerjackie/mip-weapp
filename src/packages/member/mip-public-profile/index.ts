@@ -21,7 +21,6 @@ import { cooperationModule } from '../../../modules/mip-cooperation'
 import { mipEventsModule } from '../../../modules/mip-events/client'
 import { evaluateAccess, mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
-import { careerIdentityOptions } from '../../../modules/mip-identity/profile-options'
 import { opportunityModule, profileInterestMutations } from '../../../modules/mip-opportunities'
 import { createMutationKey } from '../../../modules/mip-opportunities/validation'
 import { caseNavigateTo } from '../../../platform/navigation/client'
@@ -37,9 +36,7 @@ type InteractionBarMode = 'pending' | 'active' | 'hidden' | 'locked'
 
 interface PublicProfileView extends PublicPerson {
   displayName: string
-  kindLabel: string
-  identityDetailText: string
-  primaryCompanyLine: string
+  levelText: string
   companies: NonNullable<PublicPerson['companies']>
   organizations: NonNullable<PublicPerson['organizations']>
   abilities: NonNullable<PublicPerson['abilities']>
@@ -59,15 +56,11 @@ function monthText(value: string) {
 }
 
 function presentProfile(profile: PublicPerson): PublicProfileView {
-  const careerIdentity = careerIdentityOptions.find(option => option.value === profile.careerIdentityKey)?.label || ''
-  const gender = profile.gender === 'MALE' ? '男' : profile.gender === 'FEMALE' ? '女' : ''
-  const company = profile.companies?.[0]
   return {
     ...profile,
     displayName: profile.realName || profile.nickname || 'MIP 用户',
-    kindLabel: profile.userKind === 'PLAYER' ? '玩家' : '嘉宾',
-    identityDetailText: [gender, careerIdentity].filter(Boolean).join(' · '),
-    primaryCompanyLine: company ? [company.name, company.role].filter(Boolean).join(' · ') : '',
+    // figma 1769_38198 头部：名称与勋章之间是等级徽标（Lv.N），不再是玩家/嘉宾称号。
+    levelText: profile.level ? `Lv.${profile.level.number}` : '',
     companies: profile.companies || [],
     organizations: profile.organizations || [],
     abilities: profile.abilities || [],
@@ -94,6 +87,10 @@ Page({
     interestActive: false,
     interestState: 'idle' as 'idle' | 'loading' | 'ready' | 'access' | 'syncing' | 'error',
     interestMessage: '',
+    // figma 1769_38198 底部互动条：未表态时只有黄色「我感兴趣」；表态后左侧出现
+    // mip-attend-pill（本人头像 + N感兴趣），点击进入心动名单。
+    viewerAvatars: [] as string[],
+    interestPillCount: 1,
     safetyState: 'idle' as 'idle' | 'loading' | 'ready' | 'access' | 'processing' | 'reported' | 'error',
     safetyMessage: '',
     canRetryReport: false,
@@ -196,6 +193,7 @@ Page({
         isSelf: aggregate.profile.isSelf,
         message: '',
       })
+      this.syncInterestPillCount()
       wx.setNavigationBarTitle({ title: `${aggregate.profile.userKind === 'PLAYER' ? '玩家' : '嘉宾'}档案` })
       if (!aggregate.profile.isSelf) {
         void opportunityModule.recordProfileVisit(this.data.profileRef, this.visitKey).catch(() => undefined)
@@ -240,6 +238,8 @@ Page({
     }
     if (current()) {
       this.applyInteractionBarMode(snapshot, hasAttended)
+      // 左胶囊头像 = 表态者本人（figma 1769_38198），无头像时组件只渲染计数文案。
+      this.setData({ viewerAvatars: snapshot?.profile?.avatarUrl ? [snapshot.profile.avatarUrl] : [] })
     }
   },
 
@@ -277,6 +277,7 @@ Page({
       const aggregate = await opportunityModule.getPublicProfile(this.data.profileRef)
       if (request === this.influenceRequest && this.data.interestState !== 'syncing') {
         this.setData({ influence: aggregate.influence || null })
+        this.syncInterestPillCount()
       }
     }
     catch { /* An optional counter refresh must not hide the loaded profile. */ }
@@ -288,6 +289,12 @@ Page({
       interestState: interest.error ? 'error' : interest.pending ? 'syncing' : 'ready',
       interestMessage: interest.error?.message || '',
     })
+    this.syncInterestPillCount()
+  },
+
+  // 左侧胶囊计数：优先服务端聚合（含本人），聚合未公开或尚未回包时按本人 +1 展示。
+  syncInterestPillCount() {
+    this.setData({ interestPillCount: Math.max(1, this.data.influence?.interestCount || 0) })
   },
 
   hasCachedInterestAccess() {
@@ -303,11 +310,12 @@ Page({
       return
     }
     const category = String(event.currentTarget.dataset.category || '')
-    if (!['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR'].includes(category)) {
+    if (category === 'HEART') {
+      // 心动值 = 活动红心票（S9），与「我的」页心动值卡同源；列表纯查看，投票仍在原活动详情页。
+      caseNavigateTo({ url: '/packages/member/mip-hearts/index' })
       return
     }
-    if (category === 'ACTIVE_INTEREST') {
-      caseNavigateTo({ url: `/packages/member/mip-profile-interests/index?profileRef=${encodeURIComponent(this.data.profileRef)}` })
+    if (!['GUEST', 'INTERACTION', 'VISITOR'].includes(category)) {
       return
     }
     caseNavigateTo({

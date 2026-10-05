@@ -348,6 +348,19 @@ function publicOrganizations(value: unknown) {
   })
 }
 
+function publicLevel(value: unknown): PublicPerson['level'] {
+  if (value === undefined) {
+    return undefined
+  }
+  const source = record(value)
+  const levelNumber = Number(source.number)
+  const name = responseText(source.name, 80)
+  if (!Number.isInteger(levelNumber) || levelNumber < 1 || !name) {
+    throw new Error('人才服务返回了无效响应')
+  }
+  return { number: levelNumber, name }
+}
+
 function publicBadges(value: unknown): PublicProfileBadge[] {
   if (value === undefined) {
     return []
@@ -400,11 +413,13 @@ export function parsePublicPerson(value: unknown): PublicPerson {
   const identityStatus = responseText(source.identityStatus, 32)
   const headline = responseText(source.headline, 160)
   const introduction = responseText(source.introduction, 600)
+  const level = publicLevel(source.level)
   return {
     profileRef,
     isSelf: source.isSelf,
     userKind: source.userKind as PublicPerson['userKind'],
     joinedAt: responseDate(source.joinedAt),
+    ...(level ? { level } : {}),
     ...(nickname ? { nickname } : {}),
     ...(realName ? { realName } : {}),
     ...(gender ? { gender } : {}),
@@ -519,6 +534,7 @@ export function parseProfileInfluence(value: unknown) {
     source.interactionCount,
     source.interestCount,
     source.visitorCount,
+    source.heartCount,
   ]
   if (counts.some(count => typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0)) {
     throw new Error('人才服务返回了无效响应')
@@ -528,6 +544,7 @@ export function parseProfileInfluence(value: unknown) {
     interactionCount: source.interactionCount as number,
     interestCount: source.interestCount as number,
     visitorCount: source.visitorCount as number,
+    heartCount: source.heartCount as number,
   }
 }
 

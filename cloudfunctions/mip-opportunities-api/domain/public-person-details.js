@@ -51,4 +51,19 @@ function publicLevel(experience, levels) {
   return { level: { number: index + 1, name: active[index].name } }
 }
 
-module.exports = { loadPublicPersonDetails, publicLevel }
+// 公开档案头部的等级徽标：与列表详情同口径，无成长账户或配置不完整时返回 undefined。
+async function loadPublicLevel(database, appId, userId) {
+  const [accounts, levels] = await Promise.all([
+    database.query(
+      `SELECT growth.experience_balance
+       FROM mip_growth_accounts growth
+       WHERE growth.app_id = ? AND growth.user_id = ?`,
+      [appId, userId],
+    ),
+    database.query(`SELECT id, name, minimum_experience, status FROM mip_growth_levels
+      WHERE app_id = ? AND status = 'ACTIVE' ORDER BY minimum_experience, id`, [appId]),
+  ])
+  return publicLevel(accounts[0]?.experience_balance, levels).level
+}
+
+module.exports = { loadPublicLevel, loadPublicPersonDetails, publicLevel }

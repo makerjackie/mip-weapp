@@ -1,11 +1,7 @@
 import type { SuperCaseId } from '../../../../modules/mip'
 import type { SuperCaseDetail, SuperCaseProjectView } from '../../../../modules/mip-cases'
-import type { ProfileInterestMutationSnapshot } from '../../../../modules/mip-opportunities'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { superCaseModule } from '../../../../modules/mip-cases'
-import { evaluateAccess, mipAccessPageUrl } from '../../../../modules/mip-identity'
-import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { profileInterestMutations } from '../../../../modules/mip-opportunities'
 import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigation/client'
 
 interface CaseProjectView extends SuperCaseProjectView {
@@ -48,31 +44,12 @@ Page({
     item: null as SuperCaseDetailView | null,
     mediaUrls: [] as string[],
     acting: false,
-    interestPending: false,
     message: '',
   },
-  resumeInterest: false,
-  stopInterestSubscription: null as (() => void) | null,
 
   onLoad(options: Record<string, string | undefined>) {
     this.setData({ id: String(options.id || '') as SuperCaseId })
     void this.load()
-  },
-
-  onShow() {
-    const resume = mipIdentityModule.consumePendingResume('packages/member/mip-cases/detail/index')
-    if (resume?.action === 'INTERACT' && this.resumeInterest) {
-      this.resumeInterest = false
-      void this.performToggleInterest()
-    }
-    else if (this.resumeInterest) {
-      this.resumeInterest = false
-    }
-  },
-
-  onUnload() {
-    this.stopInterestSubscription?.()
-    this.stopInterestSubscription = null
   },
 
   async load() {
@@ -84,103 +61,15 @@ Page({
     try {
       const item = await superCaseModule.get(this.data.id)
       const presented = presentCase(item)
-      const interest = profileInterestMutations.mergeServer(item.author.profileRef, item.interestActive)
-      this.observeInterest(item.author.profileRef)
       this.setData({
         state: 'ready',
-        item: {
-          ...presented,
-          interestActive: interest.active,
-        },
-        interestPending: interest.pending,
+        item: presented,
         mediaUrls: presented.media.map(media => media.url).filter(Boolean),
         message: '',
       })
     }
     catch (error) {
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '案例加载失败' })
-    }
-  },
-
-  async toggleInterest() {
-    const item = this.data.item
-    if (!item || item.mine || this.data.acting || this.data.interestPending) {
-      return
-    }
-    if (this.hasCachedInterestAccess()) {
-      this.performToggleInterest()
-      return
-    }
-    this.resumeInterest = true
-    this.setData({ acting: true })
-    try {
-      const session = await mipIdentityModule.beginProtectedAction({
-        action: 'INTERACT',
-        source: { navigation: 'navigateBack' },
-      })
-      if (!session.decision.ready) {
-        caseNavigateTo({ url: mipAccessPageUrl(session.token) })
-        return
-      }
-      this.resumeInterest = false
-      this.setData({ acting: false })
-      this.performToggleInterest()
-    }
-    catch {
-      this.resumeInterest = false
-      wx.showToast({ title: '身份状态暂时无法确认', icon: 'none' })
-    }
-    finally {
-      this.setData({ acting: false })
-    }
-  },
-
-  observeInterest(profileRef: string) {
-    this.stopInterestSubscription?.()
-    this.stopInterestSubscription = profileInterestMutations.subscribe(profileRef, (interest) => {
-      if (this.data.item?.author.profileRef !== profileRef) {
-        return
-      }
-      this.applyInterest(interest)
-      if (interest.error) {
-        wx.showToast({ title: interest.error.message, icon: 'none' })
-      }
-    })
-  },
-
-  applyInterest(interest: ProfileInterestMutationSnapshot) {
-    this.setData({
-      'item.interestActive': interest.active,
-      'interestPending': interest.pending,
-    })
-  },
-
-  hasCachedInterestAccess() {
-    const snapshot = mipIdentityModule.peekSnapshot()
-    return Boolean(snapshot && evaluateAccess(snapshot, {
-      action: 'INTERACT',
-      source: { navigation: 'navigateBack' },
-    }).ready)
-  },
-
-  performToggleInterest() {
-    const item = this.data.item
-    if (!item || item.mine || this.data.interestPending) {
-      return
-    }
-    const interest = profileInterestMutations.mutate({
-      targetProfileRef: item.author.profileRef,
-      active: !item.interestActive,
-      currentActive: item.interestActive,
-      source: { sourceType: 'SUPER_CASE', sourceId: item.id },
-    })
-    this.applyInterest(interest)
-  },
-
-  openAuthor() {
-    const profileRef = this.data.item?.author.profileRef
-    if (profileRef) {
-      caseNavigateTo({ url: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}` })
     }
   },
 

@@ -49,6 +49,8 @@ export interface CooperationRoleCardInput {
   name?: string
   positioning?: string
   targetSummary?: string
+  /** 角色字段「和我合作的最大价值是」，详情页从 roleFields.value 取。 */
+  maxValue?: string
 }
 
 /** 未知角色退化为无烘焙底图的中性卡，不臆造美术资源。 */
@@ -65,6 +67,9 @@ export function cooperationRoleCardView(input: CooperationRoleCardInput) {
     nameRuns: cooperationNameRuns(name),
     goal: input.targetSummary?.trim() || definition?.targetDirection?.trim() || '',
     referral: input.positioning?.trim() || definition?.positioning?.trim() || '',
+    /** figma 2058_12247：黑条区顶部居中的黄色角色引荐语，取角色目录的固定 positioning。 */
+    slogan: definition?.positioning?.trim() || '',
+    maxValue: input.maxValue?.trim() || '',
     image: variant?.image || '',
     bg: variant?.bg || '#333333',
     light: variant?.light || '#f7f7f7',

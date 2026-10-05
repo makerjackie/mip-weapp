@@ -8,6 +8,6 @@ export const mipOperationsConfig = {
     accessibilityLabel: '运营活动',
   },
   defaultCoverPaths: {
-    superCase: '/assets/brand/mip-logo-yellow.png',
+    superCase: '/assets/brand/brand-supercase-default.png',
   },
 } as const
