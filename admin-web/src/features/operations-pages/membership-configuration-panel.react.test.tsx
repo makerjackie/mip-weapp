@@ -69,4 +69,23 @@ describe('membership configuration UI', () => {
     expect(screen.getByLabelText('正文')).toHaveValue('用户内容')
   })
 
+  it('edits the rule detail copy shown on the mini-program rules tab', async () => {
+    state.tab = 'rules'
+    state.request.mockImplementation(async (action: string) => action.endsWith('.rules')
+      ? { items: [{ id: 'rule-1', ruleKey: 'event_attended', name: '完成活动签到', description: '后台配置的签到说明', metric: 'EXPERIENCE', deltaValue: 100, dailyLimitValue: 300, sourceEventType: 'event.checked_in', status: 'ACTIVE', version: 4 }] }
+      : { version: 5 })
+    mount()
+    await screen.findByText('完成活动签到')
+    fireEvent.click(screen.getByRole('button', { name: '编 辑' }))
+    const textarea = await screen.findByLabelText('规则说明')
+    expect(textarea).toHaveValue('后台配置的签到说明')
+    fireEvent.change(textarea, { target: { value: '更新后的签到说明' } })
+    fireEvent.click(screen.getByRole('button', { name: 'OK' }))
+    await waitFor(() => expect(state.request).toHaveBeenCalledWith('mip.admin.growth.saveRule', expect.objectContaining({
+      ruleId: 'rule-1',
+      expectedVersion: 4,
+      draft: expect.objectContaining({ description: '更新后的签到说明', name: '完成活动签到' }),
+    })))
+  })
+
 })

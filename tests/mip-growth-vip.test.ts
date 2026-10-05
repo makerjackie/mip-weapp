@@ -35,6 +35,8 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('邀请加入')
     expect(template).toContain('立即续费')
     expect(template).toContain('立即加入')
+    // MIW-27 第二轮：邀请分享卡片图片暂用品牌默认封面。
+    expect(script).toContain('imageUrl: brand.opportunityDefaultCoverPath')
     // MIW-27：已加入会员态由 isPlayer 控制整块操作栏；未进续费窗口时「邀请加入」
     // 黄底 primary 全宽，进窗口后退居左侧黑底黄字（secondary），宽度让位给「立即续费」。
     expect(template).toContain('wx:if="{{isPlayer}}"')

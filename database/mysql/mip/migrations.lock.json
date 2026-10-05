@@ -1298,6 +1298,30 @@
       "altersTables": [
         "mip_events"
       ]
+    },
+    {
+      "version": "20261005120000",
+      "name": "mip_growth_rule_description",
+      "sql": "database/mysql/mip/098_growth_rule_description.sql",
+      "sqlSha256": "701858f9d9b516c2668a37841d49613fe9117885414669b31dc2014aca99187d",
+      "rollback": "database/mysql/mip/rollback/098_growth_rule_description.sql",
+      "rollbackSha256": "d21780dd203793fe06b7736da5ea0c6f5c09bf829fd55049c258d4222db8ab8f",
+      "createsTables": [],
+      "altersTables": [
+        "mip_growth_rules"
+      ]
+    },
+    {
+      "version": "20261005130000",
+      "name": "mip_membership_invitation_guests",
+      "sql": "database/mysql/mip/099_membership_invitation_guests.sql",
+      "sqlSha256": "34156bb806372e1e324157cd3a7b1edd8960a44bd1beec9c4b5cc5e86aa1f3ee",
+      "rollback": "database/mysql/mip/rollback/099_membership_invitation_guests.sql",
+      "rollbackSha256": "e39dfc84c717892894808c0d3cf4b634e0f5ce439f542df4d53e542c869f9ecf",
+      "createsTables": [
+        "mip_membership_invitation_guests"
+      ],
+      "altersTables": []
     }
   ]
 }

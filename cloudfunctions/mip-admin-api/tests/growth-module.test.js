@@ -162,6 +162,7 @@ function ruleDraft(overrides = {}) {
   return {
     ruleKey: 'event_attended',
     name: '完成活动签到',
+    description: '完成活动签到可获得经验值，每日最多累计 300。',
     metric: 'EXPERIENCE',
     deltaValue: 100,
     dailyLimitValue: 300,
@@ -471,6 +472,7 @@ describe('admin growth deep module', () => {
     assert.equal(lastCall(repo, 'saveGrowthBenefit').input.expectedVersion, 2)
     assert.deepEqual(lastCall(repo, 'saveGrowthLevel').input.draft.benefitIds, [BENEFIT_ID])
     assert.equal(lastCall(repo, 'saveGrowthRule').input.draft.dailyLimitValue, 300)
+    assert.equal(lastCall(repo, 'saveGrowthRule').input.draft.description, '完成活动签到可获得经验值，每日最多累计 300。')
     assert.equal(lastCall(repo, 'saveBadge').input.expectedVersion, 6)
     assert.equal(lastCall(repo, 'grantBadge').input.reason, '完成活动参与记录')
     assert.equal(lastCall(repo, 'revokeBadge').input.expectedVersion, 5)
@@ -527,6 +529,7 @@ describe('admin growth deep module', () => {
           scopeId: null,
           effectiveFrom: null,
           effectiveTo: null,
+          description: '完成活动签到可获得经验值，每日最多累计 300。',
         },
       },
       {
@@ -583,6 +586,34 @@ describe('admin growth deep module', () => {
       version: 5,
       idempotent: true,
     })
+  })
+
+  it('normalizes the rule description copy and stores blanks as null', async () => {
+    const repo = repository()
+    const service = growth(repo)
+
+    await service.saveGrowthRule(caller, {
+      ruleId: RULE_ID,
+      expectedVersion: 4,
+      draft: ruleDraft({ description: '  每日签到说明  ' }),
+    })
+    assert.equal(lastCall(repo, 'saveGrowthRule').input.draft.description, '每日签到说明')
+
+    await service.saveGrowthRule(caller, {
+      ruleId: RULE_ID,
+      expectedVersion: 5,
+      draft: ruleDraft({ description: '   ' }),
+    })
+    assert.equal(lastCall(repo, 'saveGrowthRule').input.draft.description, null)
+
+    await assert.rejects(
+      () => service.saveGrowthRule(caller, {
+        ruleId: RULE_ID,
+        expectedVersion: 6,
+        draft: ruleDraft({ description: 'x'.repeat(501) }),
+      }),
+      error => error instanceof AdminError && error.code === 'VALIDATION_FAILED',
+    )
   })
 
   it('projects badge DTOs without private operator or identity facts and retains versions', async () => {

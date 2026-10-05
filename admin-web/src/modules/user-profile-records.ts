@@ -29,9 +29,13 @@ export async function loadUserProfileRecords(userId: string, tab: UserRecordTab,
     : tab === 'history' ? items.map(item => ({ title: `资料版本 ${item.version} · ${dateTime(item.createdAt)}`, fields: cardHistoryFields(record(item.snapshot)) }))
       : [{ title: tab === 'hearts' ? '心动明细' : '邀请嘉宾', detailTarget: 'users', rows: items.map(item => ({
         id: text(item.id), detailId: typeof item.userId === 'string' ? item.userId : '', nickname: text(item.nickname),
+        source: item.source === 'MEMBERSHIP' ? '会员邀请' : '活动邀请',
         eventId: text(item.eventId), eventTitle: text(item.eventTitle), direction: codeLabel(item.direction),
-        state: codeLabel(item.status || item.registrationStatus), createdAt: dateTime(item.createdAt),
-      })), columns: [{ key: 'nickname', label: '用户' }, { key: 'eventTitle', label: '活动' }, ...(tab === 'hearts' ? [{ key: 'direction', label: '方向' }] : []), { key: 'state', label: '状态' }, { key: 'createdAt', label: '时间' }] }]
+        state: item.source === 'MEMBERSHIP'
+          ? (item.kind === 'PLAYER' ? '玩家' : '嘉宾')
+          : codeLabel(item.status || item.registrationStatus),
+        createdAt: dateTime(item.createdAt),
+      })), columns: [{ key: 'nickname', label: '用户' }, { key: 'source', label: '来源' }, { key: 'eventTitle', label: '活动' }, ...(tab === 'hearts' ? [{ key: 'direction', label: '方向' }] : []), { key: 'state', label: '状态' }, { key: 'createdAt', label: '时间' }] }]
   return { sections, nextCursor: typeof page.nextCursor === 'string' ? page.nextCursor : null }
 }
 

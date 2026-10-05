@@ -109,6 +109,22 @@ function createCommerceService(options) {
     }
   }
 
+  // MIW-27 第二轮：被邀请人加入小程序成为嘉宾时记录会员邀请关系。
+  // 身份、邀请人资格与幂等全部由服务端裁决，页面只提交邀请凭证。
+  async function recordMembershipInvitationGuest(caller, value) {
+    const invitationToken = optionalText(value?.invitationToken, 512)
+    if (!invitationToken) throw new Error('MEMBERSHIP_INVITATION_INVALID')
+    const invitation = readMembershipInvitation(invitationToken, caller.appId, invitationSecret, now())
+    if (invitation.inviterUserId === caller.userId) {
+      throw new Error('MEMBERSHIP_INVITATION_INVALID')
+    }
+    return repository.recordMembershipInvitationGuest(caller, {
+      inviterUserId: invitation.inviterUserId,
+      sourceTokenHash: hashMembershipInvitation(invitationToken),
+      capturedAt: now().toISOString(),
+    })
+  }
+
   function getOrder(caller, value) {
     return repository.getOrder(caller, uuid(value?.orderId))
   }
@@ -146,6 +162,7 @@ function createCommerceService(options) {
     listOrders,
     listOrderPage,
     listPlans,
+    recordMembershipInvitationGuest,
     requestRefund,
     resolveMembershipInvitationScene,
   }

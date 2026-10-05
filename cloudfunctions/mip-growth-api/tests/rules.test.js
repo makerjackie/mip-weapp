@@ -100,10 +100,21 @@ test('snapshot derives the active level from server thresholds', () => {
     id: 'rule-one',
     rule_key: 'event_attended',
     name: '完成活动签到',
+    description: '后台配置的签到说明',
     metric: 'EXPERIENCE',
     delta_value: 100,
     daily_limit_value: 300,
     source_event_type: 'event.checked_in',
+    status: 'ACTIVE',
+  }, {
+    id: 'rule-two',
+    rule_key: 'case_published',
+    name: '发布超级案例',
+    description: null,
+    metric: 'EXPERIENCE',
+    delta_value: 50,
+    daily_limit_value: null,
+    source_event_type: 'super_case.published',
     status: 'ACTIVE',
   }])
   assert.equal(result.currentLevel.levelKey, 'two')
@@ -112,10 +123,22 @@ test('snapshot derives the active level from server thresholds', () => {
     id: 'rule-one',
     ruleKey: 'event_attended',
     name: '完成活动签到',
+    description: '后台配置的签到说明',
     metric: 'EXPERIENCE',
     deltaValue: 100,
     dailyLimitValue: 300,
     sourceEventType: 'event.checked_in',
+    status: 'ACTIVE',
+  }, {
+    // 未配置说明的规则不携带该字段，页面回退到派生的每日上限文案。
+    id: 'rule-two',
+    ruleKey: 'case_published',
+    name: '发布超级案例',
+    description: undefined,
+    metric: 'EXPERIENCE',
+    deltaValue: 50,
+    dailyLimitValue: undefined,
+    sourceEventType: 'super_case.published',
     status: 'ACTIVE',
   }])
   assert.equal(result.experienceToNextLevel, 80)

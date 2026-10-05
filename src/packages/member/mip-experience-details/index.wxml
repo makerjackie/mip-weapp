@@ -27,15 +27,15 @@
     </view>
   </block>
 
-  <!-- figma 1948:14211 规则明细帧为占位文案：规则卡沿用明细卡骨架，展示经验值规则的
-       奖励与每日上限（内容口径与成长规则一致，仅过滤 EXPERIENCE）。 -->
+  <!-- figma 1948:14211 规则卡沿用明细卡骨架：正文为管理后台配置的规则说明，
+       未配置时回退到派生的每日上限文案（仅过滤 EXPERIENCE）。 -->
   <block wx:else>
     <view wx:if="{{rules.length === 0}}" class="mx-3 mt-[24rpx]"><mip-empty-state title="暂无经验值规则" description="启用经验值成长规则后会显示在这里。" /></view>
     <view wx:else class="mt-[24rpx] flex flex-col gap-[24rpx] px-[24rpx]">
       <view wx:for="{{rules}}" wx:key="id" class="exp-detail-card bg-panel">
         <view class="min-w-0 flex-1">
           <view class="truncate text-[24rpx] font-medium leading-[33.6rpx]">{{item.name}}</view>
-          <view class="mt-[4rpx] truncate text-[20rpx] font-normal leading-[28rpx]">{{item.dailyLimitText}}</view>
+          <view class="mt-[4rpx] truncate text-[20rpx] font-normal leading-[28rpx]">{{item.detailText}}</view>
         </view>
         <view class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-brand">+{{item.deltaValue}} 经验</view>
       </view>

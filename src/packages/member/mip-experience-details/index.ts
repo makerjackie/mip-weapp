@@ -13,7 +13,7 @@ interface ExperienceEntryView {
 interface ExperienceRuleView {
   id: string
   name: string
-  dailyLimitText: string
+  detailText: string
   deltaValue: number
 }
 
@@ -32,9 +32,9 @@ function experienceRuleView(rule: GrowthRule): ExperienceRuleView {
   return {
     id: rule.id,
     name: rule.name,
-    dailyLimitText: rule.dailyLimitValue === undefined
-      ? '无每日上限'
-      : `每日最多 ${rule.dailyLimitValue} 经验值`,
+    // 规则说明来自管理后台配置；未配置时回退为派生的每日上限文案。
+    detailText: rule.description
+      || (rule.dailyLimitValue === undefined ? '无每日上限' : `每日最多 ${rule.dailyLimitValue} 经验值`),
     deltaValue: rule.deltaValue,
   }
 }

@@ -1,4 +1,5 @@
 import type { MembershipPlan, MembershipPlanId } from '../../modules/mip-commerce'
+import { brand } from '../../config/brand'
 import { runtimeConfig } from '../../config/runtime'
 import { MipCommerceError } from '../../modules/mip-commerce'
 import { mipCommerceModule } from '../../modules/mip-commerce/client'
@@ -78,6 +79,7 @@ Page({
     message: '',
   },
   incomingInvitationToken: '',
+  invitationGuestRecorded: false,
   shareInvitationToken: '',
   resumePlanId: '' as MembershipPlanId | '',
   checkoutKey: '',
@@ -185,6 +187,14 @@ Page({
       else {
         this.shareInvitationToken = ''
         this.setData({ invitationReady: false, invitationSourceName: '', invitationSourceAvatar: '' })
+        // MIW-27 第二轮：受邀嘉宾进入会员页即上报邀请凭证；资格校验与
+        // 幂等在服务端完成，失败不影响页面（下次进入会再次尝试）。
+        if (this.incomingInvitationToken && !this.invitationGuestRecorded) {
+          this.invitationGuestRecorded = true
+          mipCommerceModule
+            .recordMembershipInvitationGuest(this.incomingInvitationToken)
+            .catch(() => {})
+        }
       }
     }
     catch {
@@ -426,6 +436,8 @@ Page({
       : ''
     return {
       title: 'MIP 会员方案',
+      // MIW-27 第二轮：邀请卡片先统一用品牌默认封面图（与成长页分享一致）。
+      imageUrl: brand.opportunityDefaultCoverPath,
       path: `/pages/membership/index?source=member-share${invitation}`,
     }
   },

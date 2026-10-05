@@ -1,5 +1,6 @@
 import type { GrowthLevel, GrowthSnapshot } from '../../../modules/mip-growth'
 import type { UserTaskCard } from '../../../modules/mip-tasks'
+import { brand } from '../../../config/brand'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
 import { mipTasksModule } from '../../../modules/mip-tasks/client'
@@ -267,6 +268,8 @@ Page({
       : ''
     return {
       title: 'MIP 会员方案',
+      // MIW-27 第二轮：邀请卡片先统一用品牌默认封面图。
+      imageUrl: brand.opportunityDefaultCoverPath,
       path: `/pages/membership/index?source=growth-share${invitation}`,
     }
   },

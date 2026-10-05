@@ -698,3 +698,80 @@ describe('event order projection', () => {
     }
   })
 })
+
+describe('membership invitation guest relationship', () => {
+  const guestUserId = '30000000-0000-4000-8000-000000000001'
+
+  function repositoryWith({ guestRow, inviterRow }) {
+    const calls = []
+    const repository = createCommerceRepository({
+      async transaction(work) {
+        return work({
+          async one(sql, params) {
+            calls.push({ kind: 'one', sql, params })
+            if (sql.includes('NOT EXISTS')) return guestRow
+            return inviterRow
+          },
+          async query(sql, params) {
+            calls.push({ kind: 'query', sql, params })
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    })
+    return { repository, calls }
+  }
+
+  it('locks both sides and stores one invitation relationship per invitee', async () => {
+    const { repository, calls } = repositoryWith({
+      guestRow: { id: guestUserId },
+      inviterRow: { id: inviterUserId },
+    })
+    assert.deepEqual(
+      await repository.recordMembershipInvitationGuest(
+        { appId: 'app-1', userId: guestUserId },
+        { inviterUserId, sourceTokenHash: 'a'.repeat(64), capturedAt: '2026-08-24T00:00:00.000Z' },
+      ),
+      { recorded: true, inviterUserId },
+    )
+    const guestLookup = calls[0]
+    assert.match(guestLookup.sql, /NOT EXISTS/)
+    assert.match(guestLookup.sql, /mip_membership_entitlements/)
+    assert.deepEqual(guestLookup.params, ['app-1', guestUserId])
+    const insert = calls.find(call => call.kind === 'query')
+    assert.match(insert.sql, /INSERT IGNORE INTO mip_membership_invitation_guests/)
+    assert.deepEqual(insert.params, [
+      'app-1',
+      guestUserId,
+      inviterUserId,
+      'a'.repeat(64),
+      '2026-08-24T00:00:00.000Z',
+    ])
+  })
+
+  it('refuses invalid input and missing guest or inviter membership facts', async () => {
+    const { repository } = repositoryWith({ guestRow: null, inviterRow: { id: inviterUserId } })
+    await assert.rejects(
+      () => repository.recordMembershipInvitationGuest(
+        { appId: 'app-1', userId: guestUserId },
+        { inviterUserId, sourceTokenHash: 'short', capturedAt: '2026-08-24T00:00:00.000Z' },
+      ),
+      /MEMBERSHIP_INVITATION_INVALID/,
+    )
+    await assert.rejects(
+      () => repository.recordMembershipInvitationGuest(
+        { appId: 'app-1', userId: guestUserId },
+        { inviterUserId, sourceTokenHash: 'a'.repeat(64), capturedAt: '2026-08-24T00:00:00.000Z' },
+      ),
+      /MEMBERSHIP_INVITATION_INVALID/,
+    )
+    const missingInviter = repositoryWith({ guestRow: { id: guestUserId }, inviterRow: null })
+    await assert.rejects(
+      () => missingInviter.repository.recordMembershipInvitationGuest(
+        { appId: 'app-1', userId: guestUserId },
+        { inviterUserId, sourceTokenHash: 'a'.repeat(64), capturedAt: '2026-08-24T00:00:00.000Z' },
+      ),
+      /MEMBERSHIP_INVITATION_INVALID/,
+    )
+  })
+})

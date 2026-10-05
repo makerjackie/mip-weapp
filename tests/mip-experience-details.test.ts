@@ -50,7 +50,7 @@ function snapshot() {
       { id: 'lv1', levelKey: 'L1', name: 'Lv.1', minimumExperience: 0, benefits: [], status: 'ACTIVE' },
     ],
     earningRules: [
-      { id: 'rule-exp-1', ruleKey: 'early-sign-in', name: '早会签到', metric: 'EXPERIENCE', deltaValue: 10, dailyLimitValue: 30, sourceEventType: 'CHECK_IN', status: 'ACTIVE' },
+      { id: 'rule-exp-1', ruleKey: 'early-sign-in', name: '早会签到', description: '每天完成早会签到，最多累计 30 经验值。', metric: 'EXPERIENCE', deltaValue: 10, dailyLimitValue: 30, sourceEventType: 'CHECK_IN', status: 'ACTIVE' },
       { id: 'rule-exp-2', ruleKey: 'case-adopted', name: '案例被采纳', metric: 'EXPERIENCE', deltaValue: 50, sourceEventType: 'CASE_ADOPTED', status: 'ACTIVE' },
       { id: 'rule-con-1', ruleKey: 'post-adopted', name: '投稿采纳', metric: 'CONTRIBUTION', deltaValue: 20, dailyLimitValue: 100, sourceEventType: 'POST_ADOPTED', status: 'ACTIVE' },
     ],
@@ -114,10 +114,14 @@ describe('member experience details page', () => {
     expect(entries).toHaveLength(1)
     expect(entries[0]).toMatchObject({ title: '早会签到', deltaPrefix: '+ EXP ', deltaValue: 10 })
 
-    // 规则页签只列经验值规则；无每日上限的规则明确标注。
-    const rules = instance.data.rules as Array<{ name: string, dailyLimitText: string }>
+    // 规则页签只列经验值规则：优先展示管理后台配置的规则说明，
+    // 未配置时回退为派生的每日上限文案（贡献值规则不进入该页签）。
+    const rules = instance.data.rules as Array<{ name: string, detailText: string }>
     expect(rules.map(rule => rule.name)).toEqual(['早会签到', '案例被采纳'])
-    expect(rules.map(rule => rule.dailyLimitText)).toEqual(['每日最多 30 经验值', '无每日上限'])
+    expect(rules.map(rule => rule.detailText)).toEqual([
+      '每天完成早会签到，最多累计 30 经验值。',
+      '无每日上限',
+    ])
   })
 
   it('renders negative deltas without a leading plus and falls back when the rule name is missing', async () => {
@@ -216,6 +220,8 @@ describe('member experience details page', () => {
     expect(template).toContain('wx:for="{{entries}}"')
     expect(template).toContain('class="exp-detail-card bg-panel"')
     expect(template).toContain('{{item.deltaPrefix}}')
+    // MIW-27 第二轮：规则卡正文绑定后台配置的规则说明（detailText）。
+    expect(template).toContain('{{item.detailText}}')
     const card = styles.match(/\.exp-detail-card\s*\{([^}]+)\}/)?.[1]
     expect(card).toContain('min-height: 134rpx')
     expect(card).toContain('border-radius: var(--mip-radius-card-small)')

@@ -996,7 +996,7 @@ function createAdminRepository(database, options = {}) {
 
   async function listGrowthRules(appId) {
     const rows = await database.query(
-      `SELECT id, rule_key, name, metric, delta_value, daily_limit_value,
+      `SELECT id, rule_key, name, description, metric, delta_value, daily_limit_value,
         source_event_type, scope_type, scope_id, effective_from, effective_to,
         status, version FROM mip_growth_rules
        WHERE app_id = ? AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
@@ -1009,6 +1009,7 @@ function createAdminRepository(database, options = {}) {
         id: row.id,
         ruleKey: row.rule_key,
         name: row.name,
+        description: row.description || null,
         metric: row.metric,
         deltaValue: Number(row.delta_value),
         dailyLimitValue: row.daily_limit_value === null ? null : Number(row.daily_limit_value),
@@ -1045,11 +1046,11 @@ function createAdminRepository(database, options = {}) {
       }, input.draft)
       assertGrowthRules(growthRuleProjection(rows, ruleId, input.draft))
       const result = await tx.query(
-        `UPDATE mip_growth_rules SET delta_value = ?, daily_limit_value = ?,
+        `UPDATE mip_growth_rules SET description = ?, delta_value = ?, daily_limit_value = ?,
           scope_type = ?, scope_id = ?, effective_from = ?, effective_to = ?,
           status = ?, version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
-        [input.draft.deltaValue, input.draft.dailyLimitValue, input.draft.scopeType,
+        [input.draft.description, input.draft.deltaValue, input.draft.dailyLimitValue, input.draft.scopeType,
           input.draft.scopeId, input.draft.effectiveFrom,
           input.draft.effectiveTo, input.draft.status, input.appId, ruleId, input.expectedVersion],
       )

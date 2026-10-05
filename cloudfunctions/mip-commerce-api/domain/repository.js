@@ -187,6 +187,49 @@ function createCommerceRepository(database, options = {}) {
     return row.id
   }
 
+  async function recordMembershipInvitationGuest(caller, input) {
+    if (!USER_ID_PATTERN.test(String(caller?.userId || ''))
+      || !USER_ID_PATTERN.test(String(input?.inviterUserId || ''))
+      || !/^[0-9a-f]{64}$/.test(String(input?.sourceTokenHash || ''))
+      || !Number.isFinite(new Date(input?.capturedAt).getTime())) {
+      throw new Error('MEMBERSHIP_INVITATION_INVALID')
+    }
+    return database.transaction(async (tx) => {
+      // 邀请人必须是有效会员；被邀请人必须是未持有有效会员权益的嘉宾
+      // （玩家的邀请人在入会支付时已固定，不再重复记录）。
+      const guest = await tx.one(
+        `SELECT u.id FROM mip_users u
+         WHERE u.app_id = ? AND u.id = ? AND u.status = 'ACTIVE'
+           AND NOT EXISTS (
+             SELECT 1 FROM mip_membership_entitlements e
+             WHERE e.app_id = u.app_id AND e.user_id = u.id AND e.status = 'ACTIVE'
+               AND e.starts_at <= UTC_TIMESTAMP(3) AND e.ends_at > UTC_TIMESTAMP(3)
+           )
+         LIMIT 1 FOR UPDATE`,
+        [caller.appId, caller.userId],
+      )
+      const inviter = await tx.one(
+        `SELECT u.id FROM mip_users u
+         WHERE u.app_id = ? AND u.id = ? AND u.status = 'ACTIVE'
+           AND EXISTS (
+             SELECT 1 FROM mip_membership_entitlements e
+             WHERE e.app_id = u.app_id AND e.user_id = u.id AND e.status = 'ACTIVE'
+               AND e.starts_at <= UTC_TIMESTAMP(3) AND e.ends_at > UTC_TIMESTAMP(3)
+           )
+         LIMIT 1 FOR UPDATE`,
+        [caller.appId, input.inviterUserId],
+      )
+      if (!guest || !inviter) throw new Error('MEMBERSHIP_INVITATION_INVALID')
+      await tx.query(
+        `INSERT IGNORE INTO mip_membership_invitation_guests
+          (app_id, guest_user_id, inviter_user_id, source_type, source_token_hash, captured_at)
+         VALUES (?, ?, ?, 'USER', ?, ?)`,
+        [caller.appId, caller.userId, inviter.id, input.sourceTokenHash, input.capturedAt],
+      )
+      return { recorded: true, inviterUserId: inviter.id }
+    })
+  }
+
   async function claimMembershipInvitationCode(appId, inviterUserId, input) {
     if (!USER_ID_PATTERN.test(inviterUserId)
       || !/^[0-9a-f]{64}$/.test(String(input?.sceneHash || ''))
@@ -699,6 +742,7 @@ function createCommerceRepository(database, options = {}) {
     listOrders,
     listOrderPage,
     listPlans,
+    recordMembershipInvitationGuest,
     requestRefund,
     resolveMembershipInviter,
   }

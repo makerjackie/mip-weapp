@@ -145,6 +145,10 @@ export function createMipCommerceModule(
       return gateway.resolveMembershipInvitationScene(scene)
     },
 
+    recordMembershipInvitationGuest(invitationToken: string) {
+      return gateway.recordMembershipInvitationGuest(invitationToken)
+    },
+
     async purchase(intent: CheckoutIntent) {
       if (options.paymentMode === 'disabled') {
         throw new Error('PAYMENT_UNAVAILABLE')
