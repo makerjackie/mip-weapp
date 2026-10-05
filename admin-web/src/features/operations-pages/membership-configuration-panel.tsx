@@ -4,8 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Checkbox, Form, Input, InputNumber, Modal, Select, Space, Spin, Tabs, Tag, Typography } from 'antd'
 import { useAdminSession } from '../../app/session-provider'
 import { configurationDraft, demoMembershipAgreement, demoUserAgreement, membershipConfiguration, type ConfigurationItem, type ConfigurationKind } from '../../modules/membership-configuration'
+import { AssetUploader } from '../../shared/ui/asset-uploader'
+import { MediaPreviewProvider } from '../../shared/ui/media-preview-provider'
 const labels: Record<ConfigurationKind, string> = { levels: '等级门槛', benefits: '等级权益', rules: '成长奖励规则', badges: '勋章定义' }
 const statuses = [{ value: 'DRAFT', label: '草稿' }, { value: 'ACTIVE', label: '启用' }, { value: 'INACTIVE', label: '停用' }]
+const badgeCategories = [{ value: 'IDENTITY', label: '身份勋章' }, { value: 'HONOR', label: '荣誉勋章' }]
 export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void }) {
   const session = useAdminSession()
   const api = useMemo(() => membershipConfiguration(session.request), [session.request])
@@ -39,7 +42,12 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
     setEditing({ kind, item, draft }); form.resetFields(); form.setFieldsValue(draft)
   }
   if (!readable) return null
+  // 服务端把已保存素材的 cloud:// 文件 id 解析为可预览的临时地址，供编辑时回显。
+  const mediaUrls = Object.fromEntries((items.data?.items || [])
+    .filter(item => item.imageAssetId && typeof item.imagePreviewUrl === 'string' && item.imagePreviewUrl)
+    .map(item => [String(item.imageAssetId), String(item.imagePreviewUrl)]))
   return <Card style={{ marginBottom: 24 }} title="会员内容配置">
+    <MediaPreviewProvider existingUrls={mediaUrls}>
     <Typography.Paragraph type="secondary">等级、权益和勋章由管理员维护。任务的奖励金额、经验值和贡献值请在“任务管理”中编辑；下方“成长奖励规则”管理已有行为事件的奖励。修改不追溯改写已发放记录。</Typography.Paragraph>
     <Tabs activeKey={tab} onChange={setTab} items={[...Object.entries(labels).filter(([key]) => key !== 'badges' || badgeWritable).map(([key, label]) => ({ key, label })), { key: 'agreement', label: '会员服务协议' }, { key: 'user-agreement', label: '用户使用协议' }]} />
     {isAgreement ? agreement.isPending ? <Spin /> : agreement.error ? <Alert type="error" title={agreement.error.message} action={<Button onClick={() => void agreement.refetch()}>重试</Button>} /> : <Form key={`${document}-${agreement.data?.version}`} name={`agreement-${formName}`} form={agreementForm} clearOnDestroy layout="vertical" initialValues={agreement.data?.body ? agreement.data : demoAgreement} onFinish={values => {
@@ -58,9 +66,11 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
       {items.isPending ? <Spin /> : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 12 }}>
         {items.data?.items.map(item => <Card size="small" key={item.id} title={item.name}>
           <Tag>{statuses.find(status => status.value === item.status)?.label || item.status}</Tag>
+          {kind === 'badges' && <Tag>{badgeCategories.find(category => category.value === item.category)?.label || String(item.category)}</Tag>}
           {kind === 'levels' && <p>门槛：{String(item.minimumExperience)} 经验值</p>}
           {kind === 'rules' && <p>奖励：{String(item.deltaValue)} {item.metric === 'EXPERIENCE' ? '经验值' : '贡献值'}</p>}
           {typeof item.description === 'string' && <Typography.Paragraph>{item.description}</Typography.Paragraph>}
+          {kind === 'badges' && typeof item.acquireCondition === 'string' && item.acquireCondition ? <p>获得条件：{item.acquireCondition}</p> : null}
           {(kind === 'badges' ? badgeWritable : configurable) && <Button onClick={() => edit(item)}>编辑</Button>}
         </Card>)}
         {!items.error && !items.isPending && !items.data?.items.length && <Typography.Text type="secondary">暂无配置，可新建或填写演示示例。</Typography.Text>}
@@ -76,9 +86,13 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
         {editing?.kind === 'levels' && <><Form.Item name="minimumExperience" label="最低经验值" extra="不同等级的门槛不能重复；必须保留一个启用的 0 经验等级。" rules={[{ required: true }]}><InputNumber min={0} precision={0} /></Form.Item><Form.Item name="benefitIds" label="包含权益"><Select mode="multiple" loading={benefits.isPending} options={benefits.data?.items.map(item => ({ value: item.id, label: `${item.name}${item.status !== 'ACTIVE' ? '（未启用）' : ''}` }))} /></Form.Item></>}
         {editing?.kind === 'rules' ? <><Form.Item name="deltaValue" label="每次奖励" rules={[{ required: true }]}><InputNumber min={1} precision={0} /></Form.Item><Form.Item name="dailyLimitValue" label="每日上限（留空不限）"><InputNumber min={0} precision={0} /></Form.Item></> : <Form.Item name="sortOrder" label="排序（小的在前）"><InputNumber min={0} max={1000000} precision={0} /></Form.Item>}
         {(editing?.kind === 'benefits' || editing?.kind === 'badges') && <Form.Item name="description" label="说明" rules={[{ max: 500 }]}><Input.TextArea rows={3} /></Form.Item>}
-        {editing?.kind === 'badges' && <Form.Item name="imageUrl" label="勋章图片 HTTPS 地址" rules={[{ pattern: /^https:\/\//, message: '请填写 HTTPS 图片地址或留空' }]}><Input placeholder="可使用素材上传后的 HTTPS 图片地址" /></Form.Item>}
+        {editing?.kind === 'badges' && <Form.Item name="category" label="分类" rules={[{ required: true }]}><Select options={badgeCategories} /></Form.Item>}
+        {editing?.kind === 'badges' && <Form.Item name="acquireCondition" label="获得条件" extra="仅作为说明展示给用户；勋章当前均由管理员人工发放" rules={[{ max: 300 }]}><Input.TextArea rows={2} /></Form.Item>}
+        {editing?.kind === 'badges' && <Form.Item name="imageAssetId" label="勋章形象" extra="上传 PNG/JPEG（≤1MB）后自动保存素材；小程序优先展示该形象"><AssetUploader purpose="BADGE_IMAGE" disabled={!badgeWritable} placeholder="上传勋章图片后自动填入" /></Form.Item>}
+        {editing?.kind === 'badges' && <Form.Item name="imageUrl" label="勋章图片 HTTPS 地址" extra="未上传素材时的兜底；已上传素材时以素材为准" rules={[{ pattern: /^https:\/\//, message: '请填写 HTTPS 图片地址或留空' }]}><Input /></Form.Item>}
         <Form.Item name="status" label="状态" rules={[{ required: true }]}><Select options={statuses} /></Form.Item>
       </Form>
     </Modal>
+    </MediaPreviewProvider>
   </Card>
 }

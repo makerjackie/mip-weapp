@@ -278,10 +278,14 @@ function createGrowthRepository(database, options = {}) {
         [appId, userId],
       ),
       database.query(
-        `SELECT badge.id, badge.badge_key, badge.name, badge.description, badge.icon_name,
-                badge.image_url, badge.placeholder_shape, badge.category, badge.sort_order, badge.status,
+        `SELECT badge.id, badge.badge_key, badge.name, badge.description, badge.acquire_condition,
+                badge.icon_name, badge.placeholder_shape, badge.category, badge.sort_order, badge.status,
+                COALESCE(NULLIF(asset.cloud_file_id, ''), badge.image_url) AS image_url,
                 award.id AS award_id, award.awarded_at, equipment.slot_no
          FROM mip_badges badge
+         LEFT JOIN mip_media_assets asset
+           ON asset.app_id = badge.app_id AND asset.id = badge.image_asset_id
+             AND asset.status = 'READY'
          LEFT JOIN mip_user_badges award
            ON award.app_id = badge.app_id AND award.badge_id = badge.id
              AND award.user_id = ? AND award.status = 'ACTIVE'
@@ -373,6 +377,7 @@ function badgeCollectionDto(profile, rows) {
       key: row.badge_key,
       name: row.name,
       description: row.description,
+      acquireCondition: row.acquire_condition || undefined,
       iconName: row.icon_name || undefined,
       imageUrl: row.image_url || undefined,
       placeholderShape: row.placeholder_shape,

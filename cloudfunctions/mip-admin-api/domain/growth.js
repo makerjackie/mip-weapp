@@ -430,12 +430,19 @@ function normalizeBadge(value) {
   if (!Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 1_000_000) {
     throw new AdminError('VALIDATION_FAILED', '勋章排序无效')
   }
+  const imageAssetId = text(value.imageAssetId, 64)
+  if (imageAssetId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(imageAssetId)) {
+    throw new AdminError('VALIDATION_FAILED', '勋章图片素材无效')
+  }
   return {
     key: stableKey(value.key, '勋章', 80),
     name: text(value.name, 100, { required: true, label: '勋章名称' }),
     description: text(value.description, 500),
+    acquireCondition: text(value.acquireCondition, 300),
+    category: ['IDENTITY', 'HONOR'].includes(value.category) ? value.category : 'IDENTITY',
     iconName,
     imageUrl,
+    imageAssetId,
     placeholderShape: ['CIRCLE', 'DIAMOND', 'HEXAGON'].includes(value.placeholderShape)
       ? value.placeholderShape
       : 'CIRCLE',
@@ -502,8 +509,11 @@ function projectBadge(item) {
     key: item.key,
     name: item.name,
     description: item.description,
+    acquireCondition: item.acquireCondition || '',
+    category: item.category === 'HONOR' ? 'HONOR' : 'IDENTITY',
     iconName: item.iconName,
     imageUrl: item.imageUrl,
+    imageAssetId: item.imageAssetId || null,
     placeholderShape: item.placeholderShape,
     sortOrder: item.sortOrder,
     status: item.status,

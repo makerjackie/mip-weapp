@@ -69,4 +69,52 @@ describe('membership configuration UI', () => {
     expect(screen.getByLabelText('正文')).toHaveValue('用户内容')
   })
 
+  it('edits badge definitions with category, acquire condition, and artwork upload', async () => {
+    state.tab = 'badges'
+    const badge = {
+      id: 'b1', key: 'event_participant', name: '活动参与', description: '已完成活动参与记录',
+      acquireCondition: '', category: 'IDENTITY', iconName: '', imageUrl: '', imageAssetId: null,
+      placeholderShape: 'CIRCLE', sortOrder: 10, status: 'ACTIVE', version: 3,
+    }
+    state.request.mockImplementation(async (action: string) => action === 'mip.admin.badges.list' ? { items: [badge] } : { title: '协议', body: '正文', isDemo: true, version: 1 })
+    mount()
+    await screen.findByText('活动参与')
+    fireEvent.click(screen.getByRole('button', { name: /编\s*辑/ }))
+    await screen.findByPlaceholderText('上传勋章图片后自动填入')
+    expect(screen.getByLabelText('勋章图片 HTTPS 地址')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('获得条件'), { target: { value: '由运营人工授予年度志愿者' } })
+    fireEvent.mouseDown(screen.getByLabelText('分类'))
+    fireEvent.click(await screen.findByTitle('荣誉勋章'))
+    fireEvent.click(screen.getByRole('button', { name: 'OK' }))
+    await waitFor(() => expect(state.request).toHaveBeenCalledWith('mip.admin.badges.save', expect.objectContaining({
+      badgeId: 'b1',
+      expectedVersion: 3,
+      draft: expect.objectContaining({ category: 'HONOR', acquireCondition: '由运营人工授予年度志愿者' }),
+    })))
+    const call = state.request.mock.calls.find(([action]) => action === 'mip.admin.badges.save')
+    expect(String((call?.[1] as { draft: { key: string } }).draft.key)).not.toMatch(/^demo_/)
+  })
+
+  it('previews the saved artwork from the server-resolved URL and clears it explicitly', async () => {
+    state.tab = 'badges'
+    const badge = {
+      id: 'b2', key: 'honor_volunteer', name: '荣誉志愿者', description: '年度志愿服务',
+      acquireCondition: '由运营人工授予年度志愿者', category: 'HONOR', iconName: '',
+      imageUrl: '', imagePreviewUrl: 'https://tmp.example/badge.png', imageAssetId: 'asset-1',
+      placeholderShape: 'CIRCLE', sortOrder: 30, status: 'ACTIVE', version: 5,
+    }
+    state.request.mockImplementation(async (action: string) => action === 'mip.admin.badges.list' ? { items: [badge] } : { title: '协议', body: '正文', isDemo: true, version: 1 })
+    mount()
+    await screen.findByText('荣誉志愿者')
+    fireEvent.click(screen.getByRole('button', { name: /编\s*辑/ }))
+    await waitFor(() => expect(screen.getByAltText('预览')).toHaveAttribute('src', 'https://tmp.example/badge.png'))
+    fireEvent.click(screen.getByRole('button', { name: '移除' }))
+    fireEvent.click(screen.getByRole('button', { name: 'OK' }))
+    await waitFor(() => expect(state.request).toHaveBeenCalledWith('mip.admin.badges.save', expect.objectContaining({
+      badgeId: 'b2',
+      expectedVersion: 5,
+      draft: expect.objectContaining({ imageAssetId: '', imageUrl: '' }),
+    })))
+  })
+
 })

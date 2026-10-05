@@ -22,6 +22,7 @@ const MEDIA_ADMIN_PURPOSE_CAPABILITIES = Object.freeze({
   SUPER_CASE_COVER: 'userContent.moderate',
   SUPER_CASE_MEDIA: 'userContent.moderate',
   TASK_TEMPLATE: 'tasks.manage',
+  BADGE_IMAGE: 'badges.manage',
   VIDEO_RECAP_COVER: 'events.recaps.manage',
 })
 const MEDIA_ADMIN_UPLOAD_POLICIES = Object.freeze(Object.fromEntries(

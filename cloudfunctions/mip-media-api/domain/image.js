@@ -20,6 +20,7 @@ const PURPOSE_POLICIES = Object.freeze({
   TASK_TEMPLATE: Object.freeze({ directory: 'task-templates', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
   VIDEO_RECAP_COVER: Object.freeze({ directory: 'video-recap-covers', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
   BANNER: Object.freeze({ directory: 'banners', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
+  BADGE_IMAGE: Object.freeze({ directory: 'badge-images', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
 })
 
 const CRC_TABLE = (() => {

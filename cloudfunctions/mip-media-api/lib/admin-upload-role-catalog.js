@@ -8,7 +8,8 @@ module.exports = {
       "userContent.moderate",
       "opportunities.moderate",
       "tasks.manage",
-      "banners.manage"
+      "banners.manage",
+      "badges.manage"
     ],
     "scopes": [
       "PLATFORM"
@@ -21,7 +22,8 @@ module.exports = {
       "userContent.moderate",
       "opportunities.moderate",
       "tasks.manage",
-      "banners.manage"
+      "banners.manage",
+      "badges.manage"
     ],
     "scopes": [
       "PLATFORM"

@@ -1,8 +1,12 @@
 # MIP 当前状态
 
-更新日期：2026-10-04（用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
+更新日期：2026-10-05（勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复；其他环境证据保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
+
+2026-10-05（评审修复）：勋章配置 diff code review 后修复五项。① 孤儿清理守卫：`mip-media-api` cleanupOrphans 增加 `mip_badges.image_asset_id` 引用守卫（此前 `BADGE_IMAGE` 随 `PURPOSE_POLICIES` 自动进入清理范围，已绑定勋章的形象会在 24 小时后被当孤儿删除，并导致勋章无法再编辑）；② 读取侧 status 谓词：`mip-growth-api` 与 `mip-opportunities-api`（公开档案/人物卡 loadPublicBadges 新增素材 join）的勋章素材 join 统一加 `asset.status = 'READY'`，非 READY 素材回退到 `image_url` 手填兜底；③ 后台预览贯通：`mip.admin.badges.list` DTO 新增 `imagePreviewUrl`（素材优先解析，`admin-media-projection` URL_KEYS 扩展后自动换临时 HTTPS），勋章表单编辑时可预览已保存形象，AssetUploader/AssetListUploader 上传后改用本地 blob 预览（此前渲染 `cloud://` 必然裂图）；④ 错误文案去 Banner 化：`mip-admin-api` 的 `IMAGE_ASSET_INVALID`/`IMAGE_NOT_OWNED` 文案改为素材中立措辞（`mip-banners-api` 自有映射保持不变）；⑤ 补清空回读测试：勋章形象从非空到清空的服务端回读（`imageAssetId: ''` 显式清空）纳入 React 测试。门禁 `pnpm verify` 与 `pnpm admin:web:verify` 全绿（React 156 项）。
+
+2026-10-05：勋章后台配置按 MIW-25 核对结论补齐三项（P0+P1）。① 勋章形象直接上传：新增 `BADGE_IMAGE` 媒体用途，贯通 admin-web 表单（AssetUploader）→ Web BFF（`server/admin-media-upload.ts`）→ `mip-admin-api` → `mip-media-api` 四层用途白名单与 `badges.manage` capability，迁移 098 为 `mip_badges` 增加 `acquire_condition` 与 `image_asset_id`（外键挂 `mip_media_assets`，RESTRICT），按 Banner 模式只存素材外键、读取时 LEFT JOIN 并 `COALESCE` 云文件（临时 HTTPS 地址不过期落库），服务端校验素材 READY/BADGE_IMAGE 用途/PNG-JPEG/归属；② 获得条件与分类：`acquire_condition`（≤300 字，仅作为说明展示给用户）与 IDENTITY/HONOR 分类暴露到后台列表 DTO、保存校验与表单，`mip-growth-api` 勋章集与小程序勋章页/详情页带回分类与获得条件；③ 草稿 key 前缀修复：会员配置草稿 key 由纯随机 UUID 生成，去掉 `demo_` 前缀（避免真勋章被误当演示数据）。范围裁定（用户确认）：不做有效期字段——勋章只有组织发放日期（既有 `awarded_at`）；不做获得条件自动发放——勋章仍全部由管理员人工发放。本地门禁 `pnpm verify` 与 `pnpm admin:web:verify` 全绿（迁移 99 个、Web 合同 234 项、React 153 项），未部署、未应用迁移到目标环境。
 
 2026-10-01：活动详情页的活动评论、活动相册和加入系统日历三个实现侧超集区块已按设计稿复核整体移除（含管理端相册治理、`events.album.manage` / `events.comments.manage` capability、媒体 `EVENT_ALBUM` purpose 与 outbox 评论通知策略）；路由数与管理 operation 数已同步。`mip_event_album_photos` 表与活动相册配置列按追加迁移守卫保留为 dormant 历史数据。该轮改动仅完成本地验证，未重新部署。
 
@@ -13,7 +17,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 68 条小程序路由、98 个迁移（均已锁定）、236 个渠道中立管理 operation（103 查询、133 写）和 16 个数据库核心函数。Web 合同允许其中 103 个查询与 121 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 68 条小程序路由、99 个迁移（均已锁定）、236 个渠道中立管理 operation（103 查询、133 写）和 16 个数据库核心函数。Web 合同允许其中 103 个查询与 121 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -46,7 +50,7 @@
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
 | 小程序路由 | 68 条：5 条主包、58 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
-| 数据库 | 98 个追加迁移；目标清单为 150 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
+| 数据库 | 99 个追加迁移；目标清单为 150 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
 | 管理合同 | 236 个 operation：103 查询、133 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | Web 开放范围 | 103 查询、121 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |

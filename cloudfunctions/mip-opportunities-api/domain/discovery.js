@@ -245,7 +245,8 @@ async function loadPublicBadges(database, appId, userIds) {
   if (!userIds.length) return new Map()
   const rows = await database.query(
     `SELECT equipment.user_id, equipment.slot_no, badge.id, badge.badge_key,
-            badge.name, badge.description, badge.icon_name, badge.image_url,
+            badge.name, badge.description, badge.icon_name,
+            COALESCE(NULLIF(asset.cloud_file_id, ''), badge.image_url) AS image_url,
             badge.placeholder_shape
      FROM mip_user_badge_equipment equipment
      INNER JOIN mip_user_badges award
@@ -254,6 +255,9 @@ async function loadPublicBadges(database, appId, userIds) {
      INNER JOIN mip_badges badge
        ON badge.app_id = equipment.app_id AND badge.id = equipment.badge_id
          AND badge.status = 'ACTIVE'
+     LEFT JOIN mip_media_assets asset
+       ON asset.app_id = badge.app_id AND asset.id = badge.image_asset_id
+         AND asset.status = 'READY'
      WHERE equipment.app_id = ? AND equipment.user_id IN (${userIds.map(() => '?').join(', ')})
      ORDER BY equipment.user_id, equipment.slot_no`,
     [appId, ...userIds],

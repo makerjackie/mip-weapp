@@ -50,11 +50,17 @@ describe('browser admin media upload preparation', () => {
     const bytes = png()
     const prepared = await prepareAdminMediaUpload(file(bytes, 'image/png'), 'BANNER')
 
-    assert.equal(ADMIN_MEDIA_PURPOSE_OPTIONS.length, 8)
+    assert.equal(ADMIN_MEDIA_PURPOSE_OPTIONS.length, 9)
     assert.deepEqual(prepared, {
       action: ADMIN_MEDIA_UPLOAD_ACTION,
       input: { purpose: 'BANNER', imageBase64: Buffer.from(bytes).toString('base64') },
     })
+  })
+
+  it('prepares badge artwork uploads under the badge capability', async () => {
+    const prepared = await prepareAdminMediaUpload(file(png(), 'image/png'), 'BADGE_IMAGE')
+    assert.equal(prepared.input.purpose, 'BADGE_IMAGE')
+    assert.equal(ADMIN_MEDIA_PURPOSE_CAPABILITIES.BADGE_IMAGE, 'badges.manage')
   })
 
   it('accepts JPEG and rejects MIME/header mismatch or unreadable length', async () => {
@@ -102,6 +108,7 @@ describe('browser admin media upload preparation', () => {
       SUPER_CASE_MEDIA: 'userContent.moderate',
       TASK_TEMPLATE: 'tasks.manage',
       VIDEO_RECAP_COVER: 'events.recaps.manage',
+      BADGE_IMAGE: 'badges.manage',
     })
     const platformGrants = [{ capability: 'events.write', scopeType: 'PLATFORM' }]
     assert.deepEqual(availableAdminMediaPurposeOptions(platformGrants).map(option => option.value), [

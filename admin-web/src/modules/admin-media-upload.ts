@@ -9,6 +9,7 @@ export const ADMIN_MEDIA_PURPOSE_OPTIONS = [
   { value: 'SUPER_CASE_MEDIA', label: '超级案例图片' },
   { value: 'TASK_TEMPLATE', label: '任务模板图片' },
   { value: 'VIDEO_RECAP_COVER', label: '视频回顾封面' },
+  { value: 'BADGE_IMAGE', label: '勋章图片' },
 ] as const
 export const ADMIN_MEDIA_PURPOSE_CAPABILITIES = Object.freeze({
   BANNER: 'banners.manage',
@@ -19,6 +20,7 @@ export const ADMIN_MEDIA_PURPOSE_CAPABILITIES = Object.freeze({
   SUPER_CASE_MEDIA: 'userContent.moderate',
   TASK_TEMPLATE: 'tasks.manage',
   VIDEO_RECAP_COVER: 'events.recaps.manage',
+  BADGE_IMAGE: 'badges.manage',
 } satisfies Record<AdminMediaPurpose, string>)
 
 export type AdminMediaPurpose = typeof ADMIN_MEDIA_PURPOSE_OPTIONS[number]['value']

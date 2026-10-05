@@ -247,6 +247,9 @@ describe('public profile aggregate', () => {
         calls.push({ sql, params })
         if (sql.includes('FROM mip_profile_tags pt')) return []
         if (sql.includes('FROM mip_user_badge_equipment')) {
+          assert.match(sql, /LEFT JOIN mip_media_assets asset/)
+          assert.match(sql, /asset\.status = 'READY'/)
+          assert.match(sql, /COALESCE\(NULLIF\(asset\.cloud_file_id, ''\), badge\.image_url\)/)
           return [{
             user_id: targetUserId,
             slot_no: 1,
@@ -255,7 +258,7 @@ describe('public profile aggregate', () => {
             name: '活动参与',
             description: '已完成活动参与记录',
             icon_name: 'calendar-check',
-            image_url: '',
+            image_url: 'cloud://mip/badge-art/event_participant.png',
             placeholder_shape: 'CIRCLE',
           }]
         }
@@ -296,6 +299,7 @@ describe('public profile aggregate', () => {
     assert.equal(result.profile.companies, undefined)
     assert.equal(result.profile.userKind, 'PLAYER')
     assert.deepEqual(result.profile.badges.map(item => item.name), ['活动参与'])
+    assert.equal(result.profile.badges[0].imageUrl, 'cloud://mip/badge-art/event_participant.png')
     assert.equal(result.cooperationCards[0].roleKey, 'strategist')
     assert.equal(result.superCases[0].projectName, '品牌升级')
     assert.equal(result.opportunities[0].status, 'PUBLISHED')

@@ -1298,6 +1298,18 @@
       "altersTables": [
         "mip_events"
       ]
+    },
+    {
+      "version": "20261005010000",
+      "name": "mip_badge_admin_fields",
+      "sql": "database/mysql/mip/098_badge_admin_fields.sql",
+      "sqlSha256": "8e5d1ea8bd033038de04f1840858c397b4b3922707fd26954eff5b88d4236224",
+      "rollback": "database/mysql/mip/rollback/098_badge_admin_fields.sql",
+      "rollbackSha256": "2e87eb6d8d436aa6d8d9d38349305b3cc701f73a5a6cc06fbd6559cb7f88407f",
+      "createsTables": [],
+      "altersTables": [
+        "mip_badges"
+      ]
     }
   ]
 }

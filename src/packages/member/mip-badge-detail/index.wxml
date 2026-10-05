@@ -9,6 +9,7 @@
     <view class="mt-8 text-center text-[34rpx] font-semibold">{{badge.name}}</view>
     <view class="mt-3 text-center text-[22rpx] text-muted">{{badge.earned ? '已获得' : '尚未获得'}}</view>
     <view class="mt-5 px-8 text-center text-[24rpx] leading-[1.8] text-[#B3B3B3]">{{badge.description || '暂无徽章说明。'}}</view>
+    <view wx:if="{{badge.acquireCondition}}" class="mt-3 px-8 text-center text-[22rpx] leading-[1.8] text-muted">获得条件：{{badge.acquireCondition}}</view>
     <view wx:if="{{badge.awardedText}}" class="mt-4 text-center text-[22rpx] text-muted">获得时间：{{badge.awardedText}}</view>
     <!-- figma 1740_3560: a locked badge has no CTA — the state lives in the
          status line, so the button only renders for earned badges. -->

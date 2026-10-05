@@ -60,6 +60,7 @@ describe('MIP media internal admin transport', () => {
       SUPER_CASE_COVER: 'userContent.moderate',
       SUPER_CASE_MEDIA: 'userContent.moderate',
       TASK_TEMPLATE: 'tasks.manage',
+      BADGE_IMAGE: 'badges.manage',
       VIDEO_RECAP_COVER: 'events.recaps.manage',
     })
     assert.deepEqual(inspectAdminImageInput(request().input), {

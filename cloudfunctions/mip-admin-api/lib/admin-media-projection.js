@@ -1,5 +1,5 @@
 'use strict'
-const URL_KEYS = new Set(['imageUrl', 'coverUrl', 'avatarUrl', 'url'])
+const URL_KEYS = new Set(['imageUrl', 'imagePreviewUrl', 'coverUrl', 'avatarUrl', 'url'])
 function createAdminMediaProjection(cloud) {
   return async value => {
     const ids = new Set()

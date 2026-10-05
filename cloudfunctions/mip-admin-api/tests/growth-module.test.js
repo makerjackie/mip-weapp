@@ -599,8 +599,11 @@ describe('admin growth deep module', () => {
       'key',
       'name',
       'description',
+      'acquireCondition',
+      'category',
       'iconName',
       'imageUrl',
+      'imageAssetId',
       'placeholderShape',
       'sortOrder',
       'status',
@@ -608,6 +611,9 @@ describe('admin growth deep module', () => {
       'createdAt',
       'updatedAt',
     ])
+    assert.equal(badges.items[0].acquireCondition, '')
+    assert.equal(badges.items[0].category, 'IDENTITY')
+    assert.equal(badges.items[0].imageAssetId, null)
     assert.equal(badges.items[0].version, 6)
     assert.deepEqual(awards.items[0], {
       id: AWARD_ID,
