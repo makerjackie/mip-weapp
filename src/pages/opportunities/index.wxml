@@ -1,11 +1,12 @@
 <view id="mip-opportunities-page" class="mip-member-page mip-member-tab-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+220rpx)] text-ink">
   <app-top-safe-area id="opportunities-status-bar" />
   <view id="opportunities-custom-navigation" class="box-border flex h-[88rpx] items-center pl-3 pr-[200rpx]">
-    <view wx:if="{{filterOpen}}" id="opportunities-filter-toggle" class="flex h-[88rpx] max-w-[360rpx] min-w-0 items-center gap-1 text-[32rpx] font-medium" aria-role="button" aria-label="关闭筛选" aria-expanded="true" bind:tap="toggleFilters">
+    <!-- figma 2917_4875：仅项目机会在筛选态把导航换成「< 筛选」；人才合作保持「全国」入口，面板落在搜索行下方。 -->
+    <view wx:if="{{filterOpen && mode === 'opportunities'}}" id="opportunities-filter-toggle" class="flex h-[88rpx] max-w-[360rpx] min-w-0 items-center gap-1 text-[32rpx] font-medium" aria-role="button" aria-label="关闭筛选" aria-expanded="true" bind:tap="toggleFilters">
       <t-icon name="chevron-left" size="36rpx" color="var(--color-ink)" />
       <text class="min-w-0 truncate">筛选</text>
     </view>
-    <view wx:else id="opportunities-location-filter" class="flex h-[88rpx] max-w-[360rpx] min-w-0 items-center gap-1 text-[32rpx] font-medium" aria-role="button" aria-label="当前地点：{{locationFilterLabel}}，打开筛选" aria-expanded="false" bind:tap="toggleFilters">
+    <view wx:else id="opportunities-location-filter" class="flex h-[88rpx] max-w-[360rpx] min-w-0 items-center gap-1 text-[32rpx] font-medium" aria-role="button" aria-label="当前地点：{{locationFilterLabel}}，打开筛选" aria-expanded="{{mode === 'cooperation' && filterOpen}}" bind:tap="toggleFilters">
       <text class="min-w-0 truncate">{{locationFilterLabel}}</text>
       <mip-icon class="shrink-0" name="chevron-down-1-15" size="{{16}}" color="var(--color-ink)" />
     </view>
@@ -63,7 +64,8 @@
       </view>
     </view>
   </block>
-  <block wx:elif="{{filterOpen}}">
+  <!-- 项目机会筛选保持整页态（journey-review J1/J2 已验收面）；人才合作筛选见下方搜索行下方面板。 -->
+  <block wx:elif="{{filterOpen && mode === 'opportunities'}}">
     <view id="opportunities-filter-page" class="opportunities-filter-panel mx-3 pb-[280rpx] pt-2">
       <view class="flex min-h-[88rpx] items-center justify-between border-b border-line">
         <view class="text-[30rpx] font-semibold">筛选条件</view>
@@ -72,29 +74,32 @@
 
       <block wx:if="{{mode === 'opportunities'}}">
         <view class="mt-4 text-[24rpx] font-semibold">合作地点</view>
+        <!-- MIW-31:预设 chips 走 DS(mip-tag-chip),与人才合作面板同一套 chip 视觉。 -->
         <view class="mt-2 flex flex-wrap gap-2">
-          <view wx:if="{{draftLocationPreset === 'ALL'}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[24rpx] text-on-brand" aria-role="radio" aria-checked="true" data-preset="ALL" bind:tap="chooseLocationPreset">不限</view>
-          <view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-4 py-2 text-[24rpx] text-muted" aria-role="radio" aria-checked="false" data-preset="ALL" bind:tap="chooseLocationPreset">不限</view>
-          <view wx:if="{{draftLocationPreset === 'REMOTE'}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[24rpx] text-on-brand" aria-role="radio" aria-checked="true" data-preset="REMOTE" bind:tap="chooseLocationPreset">远程</view>
-          <view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-4 py-2 text-[24rpx] text-muted" aria-role="radio" aria-checked="false" data-preset="REMOTE" bind:tap="chooseLocationPreset">远程</view>
-          <view wx:if="{{draftLocationPreset === 'NATIONAL'}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[24rpx] text-on-brand" aria-role="radio" aria-checked="true" data-preset="NATIONAL" bind:tap="chooseLocationPreset">全国</view>
-          <view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-4 py-2 text-[24rpx] text-muted" aria-role="radio" aria-checked="false" data-preset="NATIONAL" bind:tap="chooseLocationPreset">全国</view>
-          <view wx:if="{{draftLocationPreset === 'CITY'}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[24rpx] text-on-brand" aria-role="radio" aria-checked="true" data-preset="CITY" bind:tap="chooseLocationPreset">城市</view>
-          <view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-4 py-2 text-[24rpx] text-muted" aria-role="radio" aria-checked="false" data-preset="CITY" bind:tap="chooseLocationPreset">城市</view>
+          <view aria-role="radio" aria-checked="{{draftLocationPreset === 'ALL'}}" data-preset="ALL" bind:tap="chooseLocationPreset">
+            <mip-tag-chip label="不限" active="{{draftLocationPreset === 'ALL'}}" />
+          </view>
+          <view aria-role="radio" aria-checked="{{draftLocationPreset === 'REMOTE'}}" data-preset="REMOTE" bind:tap="chooseLocationPreset">
+            <mip-tag-chip label="远程" active="{{draftLocationPreset === 'REMOTE'}}" />
+          </view>
+          <view aria-role="radio" aria-checked="{{draftLocationPreset === 'NATIONAL'}}" data-preset="NATIONAL" bind:tap="chooseLocationPreset">
+            <mip-tag-chip label="全国" active="{{draftLocationPreset === 'NATIONAL'}}" />
+          </view>
+          <view aria-role="radio" aria-checked="{{draftLocationPreset === 'CITY'}}" data-preset="CITY" bind:tap="chooseLocationPreset">
+            <mip-tag-chip label="城市" active="{{draftLocationPreset === 'CITY'}}" />
+          </view>
         </view>
         <view wx:if="{{draftLocationPreset === 'CITY'}}" class="mt-3 rounded-[16rpx] border border-line bg-panel px-3 py-3">
           <mip-catalog-selector title="城市" groups="{{cityGroups}}" selected-ids="{{citySelectionIds}}" multiple="{{false}}" clear-label="全部城市" bind:change="changeCity" />
         </view>
       </block>
-      <view wx:else class="mt-4 rounded-[16rpx] border border-line bg-panel px-3 py-3">
-        <mip-catalog-selector title="城市分会" groups="{{cityGroups}}" selected-ids="{{citySelectionIds}}" multiple="{{false}}" clear-label="全部分会" bind:change="changeCity" />
-      </view>
 
       <view class="mt-5 text-[24rpx] font-semibold">合作角色</view>
       <view class="mt-2 flex flex-wrap gap-2">
         <block wx:for="{{roleOptions}}" wx:key="key">
-          <view wx:if="{{draftRoleKey === item.key}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[24rpx] text-on-brand" aria-role="radio" aria-checked="true" data-key="{{item.key}}" bind:tap="chooseRole">{{item.name}}</view>
-          <view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-4 py-2 text-[24rpx] text-muted" aria-role="radio" aria-checked="false" data-key="{{item.key}}" bind:tap="chooseRole">{{item.name}}</view>
+          <view aria-role="radio" aria-checked="{{draftRoleKey === item.key}}" data-key="{{item.key}}" bind:tap="chooseRole">
+            <mip-tag-chip label="{{item.name}}" active="{{draftRoleKey === item.key}}" />
+          </view>
         </block>
       </view>
 
@@ -118,8 +123,9 @@
             <view wx:if="{{abilityOptions.length}}" class="mt-3 text-[22rpx] text-muted">能力</view>
             <view wx:if="{{abilityOptions.length}}" class="mt-2 flex flex-wrap gap-2">
               <block wx:for="{{abilityOptions}}" wx:key="id">
-                <view wx:if="{{item.selected}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[24rpx] text-on-brand" aria-role="checkbox" aria-checked="true" data-type="ability" data-id="{{item.id}}" bind:tap="toggleTag">{{item.label}}</view>
-                <view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-4 py-2 text-[24rpx] text-muted" aria-role="checkbox" aria-checked="false" data-type="ability" data-id="{{item.id}}" bind:tap="toggleTag">{{item.label}}</view>
+                <view aria-role="checkbox" aria-checked="{{item.selected}}" data-type="ability" data-id="{{item.id}}" bind:tap="toggleTag">
+                  <mip-tag-chip label="{{item.label}}" active="{{item.selected}}" />
+                </view>
               </block>
             </view>
             <view class="mt-3 text-[22rpx] text-muted">金额（元）</view>
@@ -172,13 +178,51 @@
       </view>
       <!-- journey-review J1-05：游客点搜索/筛选先完成身份确认，列表本体对游客不可见。 -->
       <view wx:if="{{!authenticated}}" class="absolute inset-y-0 left-0 right-[176rpx]" aria-role="button" aria-label="登录后搜索玩家" bind:tap="openLogin" />
-      <view id="opportunities-filter-toggle" class="relative flex h-[80rpx] w-[160rpx] shrink-0 items-center justify-center gap-1 rounded-[16rpx] bg-panel active:bg-panel-raised" aria-role="button" aria-label="打开筛选" aria-expanded="false" bind:tap="toggleFilters">
+      <view id="opportunities-filter-toggle" class="relative flex h-[80rpx] w-[160rpx] shrink-0 items-center justify-center gap-1 rounded-[16rpx] bg-panel active:bg-panel-raised" aria-role="button" aria-label="打开筛选" aria-expanded="{{filterOpen}}" bind:tap="toggleFilters">
         <mip-icon name="filter-2" size="{{16}}" color="var(--color-brand)" /><text class="text-[32rpx] font-medium text-brand">筛选</text>
         <view wx:if="{{appliedFilterCount}}" class="absolute right-[8rpx] top-[6rpx] flex h-[32rpx] min-w-[32rpx] items-center justify-center rounded-full bg-brand px-1 text-[22rpx] text-on-brand">{{appliedFilterCount}}</view>
       </view>
     </view>
 
-    <view wx:if="{{appliedFilterChips.length}}" class="mx-3 mt-2 flex min-h-[88rpx] items-center gap-2 overflow-hidden">
+    <!-- figma 2917_4875（机会-人才合作筛选）：面板出现在 tab+搜索行下方而不是整页替换；
+         能力/行业 chips 走 DS（mip-tag-chip / mip-industry-selector），热门行业来自后台配置
+         的 popular 标签，细分分类经手风琴就地展开（对应稿内「代表行业」page）；
+         已选计数 = 能力 + 行业；底部液态玻璃条收编 mip-pill-button。 -->
+    <block wx:if="{{mode === 'cooperation' && filterOpen}}">
+      <view id="opportunities-cooperation-filter" class="opportunities-filter-panel pt-2">
+        <block wx:if="{{abilityOptions.length}}">
+          <view class="mx-3 text-[24rpx] font-semibold leading-[33.6rpx] text-muted">能力选择</view>
+          <view class="mx-3 mt-[16rpx] flex flex-wrap gap-x-[25rpx] gap-y-[16rpx]">
+            <view aria-role="radio" aria-checked="{{!draftAbilityTagIds.length}}" bind:tap="clearDraftAbilities">
+              <mip-tag-chip label="不限" active="{{!draftAbilityTagIds.length}}" />
+            </view>
+            <block wx:for="{{abilityOptions}}" wx:key="id">
+              <view data-type="ability" data-id="{{item.id}}" aria-role="checkbox" aria-checked="{{item.selected}}" bind:tap="toggleTag">
+                <mip-tag-chip label="{{item.label}}" active="{{item.selected}}" />
+              </view>
+            </block>
+          </view>
+        </block>
+        <view class="mx-3 mt-[32rpx] text-[24rpx] font-semibold leading-[33.6rpx] text-muted">行业选择</view>
+        <view wx:if="{{draftIndustryViews.length}}" class="mx-3 mt-[16rpx] flex min-h-[92rpx] flex-wrap items-center gap-[16rpx] rounded-[16rpx] bg-panel px-[16rpx] py-[16rpx]">
+          <view wx:for="{{draftIndustryViews}}" wx:key="id" class="flex h-[48rpx] items-center gap-[8rpx] rounded-full bg-brand px-[20rpx]" aria-role="button" aria-label="移除行业 {{item.label}}" data-id="{{item.id}}" bind:tap="removeDraftIndustry">
+            <text class="text-[24rpx] leading-[33.6rpx] text-on-brand">{{item.label}}</text>
+            <mip-icon name="close" size="{{10}}" color="var(--color-on-brand)" />
+          </view>
+        </view>
+        <view class="mx-3 mt-[16rpx]">
+          <mip-industry-selector groups="{{catalog.industryGroups}}" selected-ids="{{draftIndustryTagIds}}" multiple="{{true}}" max-count="{{8}}" show-popular="{{true}}" accordion="{{true}}" clear-label="不限" bind:change="changeIndustry" />
+        </view>
+        <view wx:if="{{message}}" class="mx-3 mt-3 rounded-[8rpx] border border-line bg-panel px-3 py-3 text-[22rpx] text-danger">{{message}}</view>
+        <view class="mx-3 mt-[24rpx] text-[28rpx] leading-[30.8rpx] text-brand">已选 {{draftAbilityTagIds.length + draftIndustryTagIds.length}}</view>
+      </view>
+      <view id="opportunities-cooperation-filter-actions" class="mip-liquid-glass mip-member-fixed-inset opportunities-filter-actions fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+112rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full p-2">
+        <mip-pill-button class="min-w-0 flex-1" variant="secondary" label="清除" bind:tap="resetFilters" />
+        <mip-pill-button class="min-w-0 flex-1" label="确定" bind:tap="applyFilters" />
+      </view>
+    </block>
+
+    <view wx:if="{{appliedFilterChips.length && !filterOpen}}" class="mx-3 mt-2 flex min-h-[88rpx] items-center gap-2 overflow-hidden">
       <scroll-view class="min-w-0 flex-1 whitespace-nowrap" scroll-x enhanced show-scrollbar="{{false}}"><view class="inline-flex gap-2 pr-2"><view wx:for="{{appliedFilterChips}}" wx:key="key" class="inline-flex h-[56rpx] items-center rounded-full bg-panel px-3 text-[22rpx] text-muted">{{item.label}}</view></view></scroll-view>
       <view class="flex min-h-[88rpx] shrink-0 items-center px-2 text-[22rpx] text-brand" aria-role="button" aria-label="清除筛选" bind:tap="clearAppliedFilters">清除筛选</view>
     </view>
@@ -191,6 +235,8 @@
       <view class="opportunities-chip-hit" aria-role="button" bind:tap="publish"><view class="flex h-[56rpx] items-center gap-2 rounded-[16rpx] bg-brand px-2 text-[28rpx] font-medium text-on-brand active:bg-brand-active"><image class="h-[28rpx] w-[28rpx]" src="/assets/figma/opportunities/publish-plus.svg" mode="aspectFit" /><text>发布机会</text></view></view>
     </view>
 
+    <!-- 筛选面板打开时（人才合作）列表区域让位，确认后再回到结果。 -->
+    <block wx:if="{{!filterOpen}}">
     <view wx:if="{{state === 'loading'}}" class="mip-opportunities-loading mx-3 mt-3 flex flex-col gap-3" aria-label="正在加载" aria-busy="true">
       <view class="flex h-[352rpx] rounded-[16rpx] bg-panel p-2"><view class="h-[320rpx] w-[240rpx] shrink-0 rounded-[8rpx] bg-panel-raised" /><view class="min-w-0 flex-1 px-2 py-2"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
       <view class="flex h-[352rpx] rounded-[16rpx] bg-panel p-2"><view class="h-[320rpx] w-[240rpx] shrink-0 rounded-[8rpx] bg-panel-raised" /><view class="min-w-0 flex-1 px-2 py-2"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
@@ -236,6 +282,7 @@
     </view>
     <view wx:if="{{loadingMore}}" class="py-5 text-center text-[24rpx] text-muted">正在加载</view>
     <view wx:if="{{message && state === 'ready'}}" class="mx-3 mt-4 rounded-[8rpx] border border-line bg-panel px-4 py-3 text-[22rpx] text-muted">{{message}}</view>
+    </block>
   </block>
 </view>
 

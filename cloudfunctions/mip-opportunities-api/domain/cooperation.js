@@ -70,6 +70,7 @@ function normalizeFilter(value = {}) {
     branchId,
     roleKey,
     industryTagIds: stringList(value.industryTagIds, 8, 'VALIDATION_FAILED', uuid),
+    abilityTagIds: stringList(value.abilityTagIds, 8, 'VALIDATION_FAILED', uuid),
     cursor: decodeCursor(value.cursor),
     limit: limit(value.limit),
   }
@@ -81,6 +82,7 @@ function normalizeTalentFilter(value = {}) {
   return {
     ...filter,
     industryTagIds: [...filter.industryTagIds].sort(),
+    abilityTagIds: [...filter.abilityTagIds].sort(),
     cursor: cursor || null,
   }
 }
@@ -93,6 +95,7 @@ function talentFilterContext(appId, viewerId, filter) {
     branchId: filter.branchId || '',
     roleKey: filter.roleKey || '',
     industryTagIds: filter.industryTagIds,
+    abilityTagIds: filter.abilityTagIds,
   }
 }
 
@@ -414,7 +417,10 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
   await assertSelectableTags(
     database,
     caller.appId,
-    filter.industryTagIds.map(id => [id, 'INDUSTRY']),
+    [
+      ...filter.industryTagIds.map(id => [id, 'INDUSTRY']),
+      ...filter.abilityTagIds.map(id => [id, 'ABILITY']),
+    ],
   )
   if (filter.branchId) {
     const branch = await database.one(
@@ -496,6 +502,23 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
           AND industry_filter.tag_id IN (${filter.industryTagIds.map(() => '?').join(', ')})
       )`)
     params.push(...filter.industryTagIds)
+  }
+  // 与人才名录(listPeople)同一能力口径：档案 ABILITY 标签，尊重 $.abilities 可见性。
+  if (filter.abilityTagIds.length) {
+    where.push(`COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.abilities')), 'true') <> 'false'
+      AND EXISTS (
+        SELECT 1 FROM mip_profile_tags ability_filter
+        INNER JOIN mip_tags ability_filter_tag
+          ON ability_filter_tag.app_id = ability_filter.app_id
+            AND ability_filter_tag.id = ability_filter.tag_id
+            AND ability_filter_tag.kind = 'ABILITY'
+            AND ability_filter_tag.enabled = 1
+        WHERE ability_filter.app_id = c.app_id
+          AND ability_filter.user_id = c.owner_user_id
+          AND ability_filter.relation = 'ABILITY'
+          AND ability_filter.tag_id IN (${filter.abilityTagIds.map(() => '?').join(', ')})
+      )`)
+    params.push(...filter.abilityTagIds)
   }
   const rows = await database.query(
     `WITH snapshot AS (

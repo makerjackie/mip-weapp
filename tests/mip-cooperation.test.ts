@@ -149,11 +149,13 @@ describe('MIP cooperation card contracts', () => {
   it('normalizes cooperation discovery filters before transport', () => {
     const branchId = '10000000-0000-4000-8000-000000000001'
     const industryId = '20000000-0000-4000-8000-000000000001'
+    const abilityId = '22000000-0000-4000-8000-000000000001'
     expect(normalizeCooperationCardFilter({
       keyword: '  品牌合作  ',
       branchId,
       roleKey: 'strategist',
       industryTagIds: [industryId, industryId],
+      abilityTagIds: [abilityId, abilityId],
       cursor: '  cursor-value  ',
       limit: 100,
     })).toEqual({
@@ -161,6 +163,7 @@ describe('MIP cooperation card contracts', () => {
       branchId,
       roleKey: 'strategist',
       industryTagIds: [industryId],
+      abilityTagIds: [abilityId],
       cursor: 'cursor-value',
       limit: 30,
     })
@@ -170,5 +173,12 @@ describe('MIP cooperation card contracts', () => {
     expect(() => normalizeCooperationCardFilter({
       industryTagIds: ['not-a-uuid'],
     })).toThrow('行业标签格式不正确')
+    // MIW-31：能力标签与行业同口径校验（UUID + 最多 8 项）。
+    expect(() => normalizeCooperationCardFilter({
+      abilityTagIds: ['not-a-uuid'],
+    })).toThrow('能力标签格式不正确')
+    expect(() => normalizeCooperationCardFilter({
+      abilityTagIds: Array.from({ length: 9 }, (_, index) => `22000000-0000-4000-8000-00000000000${index}`),
+    })).toThrow('能力标签格式不正确')
   })
 })

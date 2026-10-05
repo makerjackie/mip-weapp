@@ -129,7 +129,8 @@ function appliedFilterPresentation(input: {
   if (input.selectedIndustryTagIds.length) {
     chips.push({ key: 'industry', label: `${input.selectedIndustryTagIds.length} 个行业` })
   }
-  if (input.mode === 'opportunities' && input.selectedAbilityTagIds.length) {
+  // figma 2917_4875：能力筛选进入人才合作 tab 的已选口径。
+  if (input.selectedAbilityTagIds.length) {
     chips.push({ key: 'ability', label: `${input.selectedAbilityTagIds.length} 项能力` })
   }
   if (input.mode === 'opportunities'
@@ -188,6 +189,20 @@ function cityGroupsFor(mode: PageMode, cityOptions: CityOption[]): CatalogSelect
   }]
 }
 
+/** 人才合作筛选的已选行业 pill（figma 2917_4875）：id→label 视图，缺目录时保留 id 兜底。 */
+function draftIndustryViewsOf(catalog: OpportunityCatalog, ids: string[]): Array<{ id: string, label: string }> {
+  const labels = new Map<string, string>()
+  for (const tag of catalog.industryTags) {
+    labels.set(tag.id, tag.label)
+  }
+  for (const group of catalog.industryGroups) {
+    for (const option of group.options) {
+      labels.set(option.id, option.label)
+    }
+  }
+  return ids.map(id => ({ id, label: labels.get(id) || '行业' }))
+}
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
@@ -215,6 +230,7 @@ Page({
     draftRoleKey: '' as '' | CooperationRoleKey,
     selectedRoleKey: '' as '' | CooperationRoleKey,
     draftIndustryTagIds: [] as string[],
+    draftIndustryViews: [] as Array<{ id: string, label: string }>,
     selectedIndustryTagIds: [] as string[],
     draftAbilityTagIds: [] as string[],
     selectedAbilityTagIds: [] as string[],
@@ -359,6 +375,7 @@ Page({
           label: item.label,
           selected: this.data.draftAbilityTagIds.includes(item.id),
         })),
+        draftIndustryViews: draftIndustryViewsOf(catalog, this.data.draftIndustryTagIds),
       }, () => this.refreshAppliedFilterPresentation())
     }
     catch {
@@ -427,6 +444,7 @@ Page({
             branchId: this.data.selectedCooperationBranchId || undefined,
             roleKey: this.data.selectedRoleKey || undefined,
             industryTagIds: this.data.selectedIndustryTagIds,
+            abilityTagIds: this.data.selectedAbilityTagIds,
             cursor: reset ? undefined : this.data.nextCursor || undefined,
             limit: 16,
           },
@@ -511,14 +529,15 @@ Page({
       ? this.data.selectedCooperationBranchId
       : this.data.selectedCityTagId
     const selectedLocationPreset = locationPreset(this.data.selectedLocationTypes)
+    // figma 2917_4875：能力筛选同时服务两个 tab，跨 tab 与 keyword/行业口径一致。
     const hasAppliedFilters = Boolean(
       this.data.keyword
       || this.data.selectedRoleKey
       || this.data.selectedIndustryTagIds.length
+      || this.data.selectedAbilityTagIds.length
       || (mode === 'cooperation' ? this.data.selectedCooperationBranchId : this.data.selectedCityTagId)
       || (mode === 'opportunities' && (
-        this.data.selectedAbilityTagIds.length
-        || this.data.selectedLocationTypes.length
+        this.data.selectedLocationTypes.length
         || this.data.selectedMinAmountCents !== undefined
         || this.data.selectedMaxAmountCents !== undefined
       )),
@@ -533,7 +552,7 @@ Page({
       draftOpportunityCityTagId: this.data.selectedCityTagId,
       draftCooperationBranchId: this.data.selectedCooperationBranchId,
       draftRoleKey: this.data.selectedRoleKey,
-      draftIndustryTagIds: [...this.data.selectedIndustryTagIds],
+      ...this.draftIndustryPatch([...this.data.selectedIndustryTagIds]),
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
       draftLocationTypes: locationTypesForPreset(selectedLocationPreset),
       draftLocationPreset: selectedLocationPreset,
@@ -617,10 +636,35 @@ Page({
         })
   },
 
+  /** 人才合作筛选已选行业 pill 的统一草稿同步（draft ids + 展示视图）。 */
+  draftIndustryPatch(ids: string[]) {
+    return {
+      draftIndustryTagIds: ids,
+      draftIndustryViews: draftIndustryViewsOf(this.data.catalog, ids),
+    }
+  },
+
   changeIndustry(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[], limited?: boolean }>) {
     this.setData({
-      draftIndustryTagIds: event.detail.selectedIds.slice(0, 8),
+      ...this.draftIndustryPatch(event.detail.selectedIds.slice(0, 8)),
       message: event.detail.limited ? '行业最多选择 8 项。' : '',
+    })
+  },
+
+  /** figma 2917_4875：已选行业 pill 上的 × 就地移除，不打断筛选面板。 */
+  removeDraftIndustry(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!id || !this.data.draftIndustryTagIds.includes(id)) {
+      return
+    }
+    this.setData(this.draftIndustryPatch(this.data.draftIndustryTagIds.filter(item => item !== id)))
+  },
+
+  /** 能力选择的「不限」chip：一次清空能力草稿（行业草稿不受影响）。 */
+  clearDraftAbilities() {
+    this.setData({
+      draftAbilityTagIds: [],
+      abilityOptions: this.data.abilityOptions.map(item => ({ ...item, selected: false })),
     })
   },
 
@@ -645,7 +689,7 @@ Page({
         draftOpportunityCityTagId: this.data.selectedCityTagId,
         draftCooperationBranchId: this.data.selectedCooperationBranchId,
         draftRoleKey: this.data.selectedRoleKey,
-        draftIndustryTagIds: [...this.data.selectedIndustryTagIds],
+        ...this.draftIndustryPatch([...this.data.selectedIndustryTagIds]),
         draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
         draftLocationTypes: locationTypesForPreset(selectedLocationPreset),
         draftLocationPreset: selectedLocationPreset,
@@ -669,7 +713,7 @@ Page({
       draftOpportunityCityTagId: this.data.selectedCityTagId,
       draftCooperationBranchId: this.data.selectedCooperationBranchId,
       draftRoleKey: this.data.selectedRoleKey,
-      draftIndustryTagIds: [...this.data.selectedIndustryTagIds],
+      ...this.draftIndustryPatch([...this.data.selectedIndustryTagIds]),
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
       draftLocationTypes: locationTypesForPreset(locationPreset(this.data.selectedLocationTypes)),
       draftLocationPreset: locationPreset(this.data.selectedLocationTypes),
@@ -751,7 +795,7 @@ Page({
       draftOpportunityCityTagId: '',
       draftCooperationBranchId: '',
       draftRoleKey: '',
-      draftIndustryTagIds: [],
+      ...this.draftIndustryPatch([]),
       draftAbilityTagIds: [],
       draftLocationTypes: [],
       draftLocationPreset: 'ALL',
@@ -780,9 +824,8 @@ Page({
     const selectedCooperationBranchId = this.data.mode === 'cooperation'
       ? this.data.draftCooperationBranchId
       : this.data.selectedCooperationBranchId
-    const selectedAbilityTagIds = this.data.mode === 'opportunities'
-      ? this.data.draftAbilityTagIds
-      : this.data.selectedAbilityTagIds
+    // figma 2917_4875：人才合作面板同样提交能力筛选，两个 tab 共用能力草稿口径。
+    const selectedAbilityTagIds = this.data.draftAbilityTagIds
     const selectedLocationTypes = this.data.mode === 'opportunities'
       ? locationTypesForPreset(this.data.draftLocationPreset)
       : this.data.selectedLocationTypes
@@ -839,7 +882,7 @@ Page({
       selectedCooperationBranchId: '',
       draftRoleKey: '',
       selectedRoleKey: '',
-      draftIndustryTagIds: [],
+      ...this.draftIndustryPatch([]),
       selectedIndustryTagIds: [],
       draftAbilityTagIds: [],
       selectedAbilityTagIds: [],

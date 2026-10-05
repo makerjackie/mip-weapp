@@ -31,16 +31,22 @@ function normalizeFilterContext(value) {
   const keyword = normalizedText(value?.keyword, 80)
   const branchId = normalizedText(value?.branchId, 36)
   const roleKey = normalizedText(value?.roleKey, 32)
-  const industryTagIds = Array.isArray(value?.industryTagIds)
-    ? [...value.industryTagIds].map(item => normalizedText(item, 36)).sort()
-    : []
-  if (!appId
-    || (viewerId && !USER_ID_PATTERN.test(viewerId))
-    || industryTagIds.length > 8
-    || new Set(industryTagIds).size !== industryTagIds.length) {
+  const industryTagIds = normalizeTagIdList(value?.industryTagIds)
+  const abilityTagIds = normalizeTagIdList(value?.abilityTagIds)
+  if (!appId || (viewerId && !USER_ID_PATTERN.test(viewerId))) {
     throw new Error('VALIDATION_FAILED')
   }
-  return { appId, viewerId, keyword, branchId, roleKey, industryTagIds }
+  return { appId, viewerId, keyword, branchId, roleKey, industryTagIds, abilityTagIds }
+}
+
+function normalizeTagIdList(value) {
+  const ids = Array.isArray(value)
+    ? [...value].map(item => normalizedText(item, 36)).sort()
+    : []
+  if (ids.length > 8 || new Set(ids).size !== ids.length) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return ids
 }
 
 function aad(context) {

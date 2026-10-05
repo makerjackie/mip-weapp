@@ -25,6 +25,10 @@ const context = {
     '20000000-0000-4000-8000-000000000002',
     '20000000-0000-4000-8000-000000000001',
   ],
+  abilityTagIds: [
+    '22000000-0000-4000-8000-000000000002',
+    '22000000-0000-4000-8000-000000000001',
+  ],
 }
 
 test('talent cursor encrypts the user key and authenticates the full query context', () => {
@@ -35,6 +39,7 @@ test('talent cursor encrypts the user key and authenticates the full query conte
   assert.deepEqual(readTalentCursor(cursor, {
     ...context,
     industryTagIds: [...context.industryTagIds].reverse(),
+    abilityTagIds: [...context.abilityTagIds].reverse(),
   }, secret), payload)
 })
 
@@ -49,6 +54,11 @@ test('talent cursor rejects tampering and cross-app or cross-filter replay', () 
   assert.throws(() => readTalentCursor(cursor, { ...context, keyword: '产品' }, secret), /VALIDATION_FAILED/)
   assert.throws(() => readTalentCursor(cursor, { ...context, roleKey: 'connector' }, secret), /VALIDATION_FAILED/)
   assert.throws(() => readTalentCursor(cursor, { ...context, industryTagIds: [] }, secret), /VALIDATION_FAILED/)
+  assert.throws(() => readTalentCursor(cursor, { ...context, abilityTagIds: [] }, secret), /VALIDATION_FAILED/)
+  assert.throws(() => readTalentCursor(cursor, {
+    ...context,
+    abilityTagIds: [...context.abilityTagIds, context.abilityTagIds[0]],
+  }, secret), /VALIDATION_FAILED/)
 })
 
 test('talent key is stable, app-scoped, and irreversible', () => {
