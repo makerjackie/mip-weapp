@@ -4,6 +4,7 @@ import type {
   AccessSession,
   AccountClosureInput,
   AgreementAcceptanceInput,
+  AgreementDocument,
   BindSmsPhoneInput,
   IdentityAccessSnapshot,
   MipIdentityGateway,
@@ -594,7 +595,7 @@ export function createMipIdentityModule(
       return gateway.getProfile()
     },
 
-    getMembershipAgreement(document?: 'membership' | 'user') {
+    getMembershipAgreement(document?: AgreementDocument) {
       return gateway.getMembershipAgreement(document)
     },
     getProfileCardSettings() {

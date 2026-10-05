@@ -15,6 +15,9 @@ const grantInputKeys = new Set([
   'reason',
   'userId',
 ])
+const approvalFilterKeys = new Set(['status', 'userId'])
+const approvalStatuses = new Set(['PENDING', 'APPROVED', 'REJECTED'])
+const decideInputKeys = new Set(['decision', 'expectedChainVersion', 'reason', 'userId'])
 const timelineStatuses = new Set(['PENDING', 'ACTIVE', 'EXPIRED', 'REVOKED', 'REFUNDED'])
 const timelineSources = new Set(['ORDER', 'ADMIN_ADJUSTMENT'])
 const timelineFilterKeys = new Set([
@@ -93,7 +96,89 @@ function createAdminMemberships({ repository, access }) {
     return page
   }
 
-  return { getMembership, grantMembership, listMembershipTimeline }
+  // MIW-27 第二轮：首次入会审核。队列读取走 MEMBERSHIPS_READ，审核决定是
+  // 会员资格变更，复用 MEMBERSHIPS_ADJUST 并与运营开通一样走审计与链条版本。
+  async function listMembershipApprovals(caller, input = {}) {
+    const context = await access.session(caller)
+    const grant = platformGrant(context, CAPABILITIES.MEMBERSHIPS_READ)
+    const filters = normalizeApprovalFilters(input.filters)
+    const page = await repository.listMembershipApprovals({
+      appId: context.caller.appId,
+      ...filters,
+      pageLimit: limit(input.limit),
+      cursor: decodeCursor(input.cursor, ['requestedAt', 'id']),
+    })
+    if (typeof repository.recordAudit === 'function') {
+      await repository.recordAudit(access.audit(context, grant, {
+        scopeType: 'PLATFORM',
+        action: 'admin.memberships.approvals.view',
+        resourceType: 'MEMBERSHIP_APPROVAL_LIST',
+        metadata: { count: page?.items?.length || 0, filters, cursor: Boolean(input.cursor) },
+      }))
+    }
+    return page
+  }
+
+  async function decideMembershipApproval(caller, input = {}) {
+    const context = await access.session(caller)
+    assertExactInput(input, decideInputKeys)
+    const normalized = normalizeApprovalDecision(input)
+    const grant = platformGrant(context, CAPABILITIES.MEMBERSHIPS_ADJUST)
+    return repository.decideMembershipApproval({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      ...normalized,
+      authorization: access.mutationAuthorization(grant, CAPABILITIES.MEMBERSHIPS_ADJUST),
+      audit: (approvalId, facts) => access.audit(context, grant, {
+        scopeType: 'PLATFORM',
+        action: 'admin.memberships.approval.decide',
+        resourceType: 'MEMBERSHIP_APPROVAL',
+        resourceId: approvalId,
+        metadata: {
+          userId: normalized.userId,
+          decision: normalized.decision,
+          reasonLength: normalized.reason.length,
+          expectedChainVersion: normalized.expectedChainVersion,
+          resultChainVersion: facts.resultChainVersion,
+        },
+      }),
+    })
+  }
+
+  return {
+    decideMembershipApproval,
+    getMembership,
+    grantMembership,
+    listMembershipApprovals,
+    listMembershipTimeline,
+  }
+}
+
+function normalizeApprovalFilters(value) {
+  const filters = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  if (Reflect.ownKeys(filters).some(key => typeof key !== 'string' || !approvalFilterKeys.has(key))) {
+    throw validationError('审核筛选条件无效')
+  }
+  const status = filters.status || ''
+  if (status && !approvalStatuses.has(status)) throw validationError('审核状态无效')
+  return { status, userId: filters.userId ? strictUuid(filters.userId) : '' }
+}
+
+function normalizeApprovalDecision(input) {
+  const decision = input.decision
+  if (!['APPROVED', 'REJECTED'].includes(decision)) throw validationError('审核结论无效')
+  const reason = typeof input.reason === 'string' ? input.reason.trim().slice(0, 300) : ''
+  if (decision === 'REJECTED' && !reason) throw validationError('驳回时必须填写审核意见')
+  const expectedChainVersion = Number(input.expectedChainVersion)
+  if (!Number.isSafeInteger(expectedChainVersion) || expectedChainVersion < 1) {
+    throw validationError('会员链条版本无效')
+  }
+  return {
+    decision,
+    expectedChainVersion,
+    reason,
+    userId: strictUuid(input.userId),
+  }
 }
 
 function normalizeTimelineFilters(value) {

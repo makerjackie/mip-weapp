@@ -165,6 +165,157 @@ function createMembershipRepository(database, options = {}) {
     }
   }
 
+  // MIW-27 第二轮：首次入会审核队列。每位用户至多一条审核记录，回到小程序端的
+  // 事实由 mip_membership_entitlements 的 PENDING/ACTIVE 投影决定。
+  async function listMembershipApprovals(input) {
+    const clauses = ['approval.app_id = ?']
+    const params = [input.appId]
+    if (input.status) {
+      clauses.push('approval.status = ?')
+      params.push(input.status)
+    }
+    if (input.userId) {
+      clauses.push('approval.user_id = ?')
+      params.push(input.userId)
+    }
+    const cursorWhere = input.cursor
+      ? ' AND (approval.requested_at < ? OR (approval.requested_at = ? AND approval.id < ?))'
+      : ''
+    const cursorParams = input.cursor
+      ? [input.cursor.requestedAt, input.cursor.requestedAt, input.cursor.id]
+      : []
+    const rows = await database.query(
+      `SELECT approval.id AS approval_id, approval.user_id, approval.order_id,
+              approval.status AS approval_status, approval.decision_reason,
+              approval.decided_by_user_id, approval.decided_at,
+              approval.requested_at, approval.created_at, approval.updated_at,
+              user_row.status AS user_status, profile.nickname,
+              player_lifecycle.player_number,
+              chain.version AS chain_version,
+              order_row.status AS order_status, order_row.amount_cents AS order_amount_cents,
+              order_row.currency AS order_currency, order_row.paid_at AS order_paid_at,
+              plan.name AS plan_name,
+              decider_profile.nickname AS decider_nickname,
+              (SELECT COUNT(*) FROM mip_membership_entitlements pending_entitlement
+                WHERE pending_entitlement.app_id = approval.app_id
+                  AND pending_entitlement.user_id = approval.user_id
+                  AND pending_entitlement.status = 'PENDING') AS pending_entitlements
+       FROM mip_membership_approvals approval
+       INNER JOIN mip_users user_row
+         ON user_row.app_id = approval.app_id AND user_row.id = approval.user_id
+       LEFT JOIN mip_profiles profile
+         ON profile.app_id = approval.app_id AND profile.user_id = approval.user_id
+       LEFT JOIN mip_player_lifecycles player_lifecycle
+         ON player_lifecycle.app_id = approval.app_id
+           AND player_lifecycle.user_id = approval.user_id
+       LEFT JOIN mip_membership_chains chain
+         ON chain.app_id = approval.app_id AND chain.user_id = approval.user_id
+       LEFT JOIN mip_orders order_row
+         ON order_row.app_id = approval.app_id AND order_row.id = approval.order_id
+       LEFT JOIN mip_membership_plans plan
+         ON plan.app_id = order_row.app_id AND plan.id = order_row.membership_plan_id
+       LEFT JOIN mip_users decider
+         ON decider.app_id = approval.app_id AND decider.id = approval.decided_by_user_id
+       LEFT JOIN mip_profiles decider_profile
+         ON decider_profile.app_id = decider.app_id AND decider_profile.user_id = decider.id
+       WHERE ${clauses.join(' AND ')}${cursorWhere}
+       ORDER BY approval.requested_at DESC, approval.id DESC LIMIT ?`,
+      [...params, ...cursorParams, input.pageLimit + 1],
+    )
+    const items = rows.map(row => membershipApprovalDto(row, { codeError, iso }))
+    const hasMore = items.length > input.pageLimit
+    const pageItems = hasMore ? items.slice(0, input.pageLimit) : items
+    const last = pageItems[pageItems.length - 1]
+    return {
+      items: pageItems,
+      nextCursor: hasMore && last
+        ? encodeCursor({ requestedAt: last.requestedAt, id: last.id })
+        : null,
+    }
+  }
+
+  async function decideMembershipApproval(input) {
+    return database.transaction(async (tx) => {
+      const authorization = await lockMutationAuthorization(tx, input)
+      assertMutationScope(authorization, platformScope)
+      const targetUser = await lockTargetUser(tx, input)
+      const chain = await lockMembershipChain(tx, input)
+      if (chain.version !== input.expectedChainVersion) throw codeError('VERSION_CONFLICT')
+      if (!['ACTIVE', 'BLOCKED'].includes(targetUser.status)) throw codeError('INVALID_STATE')
+      const approval = await tx.one(
+        `SELECT id, status FROM mip_membership_approvals
+         WHERE app_id = ? AND user_id = ? FOR UPDATE`,
+        [input.appId, input.userId],
+      )
+      if (!approval) throw codeError('NOT_FOUND')
+      // PENDING 可通过或驳回；驳回后允许复议通过（线下对接完成后的补审）。
+      const allowed = approval.status === 'PENDING'
+        || (approval.status === 'REJECTED' && input.decision === 'APPROVED')
+      if (!allowed) throw codeError('INVALID_STATE')
+      const evaluatedAt = validDate(now(), codeError)
+      if (input.decision === 'APPROVED') {
+        await tx.query(
+          `UPDATE mip_membership_entitlements
+           SET status = CASE WHEN ends_at > ? THEN 'ACTIVE' ELSE 'EXPIRED' END,
+               revoked_at = NULL, revocation_reason = NULL, version = version + 1
+           WHERE app_id = ? AND user_id = ? AND source_type = 'ORDER'
+             AND status IN ('PENDING', 'REVOKED')`,
+          [evaluatedAt, input.appId, input.userId],
+        )
+        await ensurePlayerLifecycle(tx, input.appId, input.userId, evaluatedAt)
+      }
+      else {
+        await tx.query(
+          `UPDATE mip_membership_entitlements
+           SET status = 'REVOKED', revoked_at = ?,
+               revocation_reason = 'MEMBERSHIP_APPROVAL_REJECTED', version = version + 1
+           WHERE app_id = ? AND user_id = ? AND source_type = 'ORDER'
+             AND status = 'PENDING'`,
+          [evaluatedAt, input.appId, input.userId],
+        )
+      }
+      await tx.query(
+        `UPDATE mip_membership_approvals
+         SET status = ?, decision_reason = ?, decided_by_user_id = ?, decided_at = ?
+         WHERE app_id = ? AND user_id = ? AND id = ? AND status = ?`,
+        [
+          input.decision,
+          input.reason,
+          input.actorUserId,
+          evaluatedAt,
+          input.appId,
+          input.userId,
+          approval.id,
+          approval.status,
+        ],
+      )
+      const resultChainVersion = input.expectedChainVersion + 1
+      const chainUpdate = await tx.query(
+        `UPDATE mip_membership_chains
+         SET version = version + 1
+         WHERE app_id = ? AND user_id = ? AND version = ?`,
+        [input.appId, input.userId, input.expectedChainVersion],
+      )
+      if (Number(chainUpdate?.affectedRows) !== 1) throw codeError('VERSION_CONFLICT')
+      await writeAudit(tx, input.audit(approval.id, { resultChainVersion }))
+      await writeOutbox(tx, {
+        id: createId(),
+        appId: input.appId,
+        aggregateType: 'MEMBERSHIP_APPROVAL',
+        aggregateId: approval.id,
+        eventType: 'membership.approval_decided',
+        sourceVersion: resultChainVersion,
+        payload: {},
+      })
+      return {
+        approvalId: approval.id,
+        decision: input.decision,
+        resultChainVersion,
+        idempotent: false,
+      }
+    })
+  }
+
   async function grantMembership(input) {
     try {
       return await database.transaction(tx => grantInTransaction(tx, input))
@@ -315,7 +466,13 @@ function createMembershipRepository(database, options = {}) {
     )
   }
 
-  return { getMembership, listMembershipTimeline, grantMembership }
+  return {
+    decideMembershipApproval,
+    getMembership,
+    grantMembership,
+    listMembershipApprovals,
+    listMembershipTimeline,
+  }
 }
 
 function membershipTimelineDto(row, dependencies) {
@@ -402,6 +559,45 @@ function entitlementDto(row, evaluatedAt, dependencies) {
     currentlyActive,
     orderId: row.order_id || null,
     adjustment: manual ? adjustmentDto(row, { codeError, iso }) : null,
+  }
+}
+
+function membershipApprovalDto(row, dependencies) {
+  const { codeError, iso } = dependencies
+  const approvalStatus = row.approval_status
+  if (!['PENDING', 'APPROVED', 'REJECTED'].includes(approvalStatus)) throw codeError('INVALID_STATE')
+  const requestedAt = validDate(row.requested_at, codeError)
+  const createdAt = validDate(row.created_at, codeError)
+  const updatedAt = validDate(row.updated_at, codeError)
+  return {
+    id: String(row.approval_id),
+    user: {
+      id: String(row.user_id),
+      nickname: displayName(row.nickname),
+      status: row.user_status,
+      playerNumber: row.player_number === null || row.player_number === undefined
+        ? null
+        : Number(row.player_number),
+    },
+    status: approvalStatus,
+    chainVersion: positiveVersion(row.chain_version, codeError),
+    pendingEntitlements: Number(row.pending_entitlements || 0),
+    order: {
+      id: String(row.order_id),
+      status: row.order_status || 'UNKNOWN',
+      planName: row.plan_name || null,
+      amountCents: Number(row.order_amount_cents || 0),
+      currency: row.order_currency || 'CNY',
+      paidAt: row.order_paid_at ? iso(validDate(row.order_paid_at, codeError)) : null,
+    },
+    decisionReason: row.decision_reason || null,
+    decidedBy: row.decided_by_user_id
+      ? { id: String(row.decided_by_user_id), nickname: displayName(row.decider_nickname) }
+      : null,
+    decidedAt: row.decided_at ? iso(validDate(row.decided_at, codeError)) : null,
+    requestedAt: iso(requestedAt),
+    createdAt: iso(createdAt),
+    updatedAt: iso(updatedAt),
   }
 }
 

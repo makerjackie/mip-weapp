@@ -585,6 +585,23 @@ describe('admin growth deep module', () => {
     })
   })
 
+  // MIW-27 评审修正：规则详情页签文本改为 experience-rules 文档整段配置，
+  // 逐条规则只保留奖励数值，多余的文案字段不再落库。
+  it('drops any caller-supplied rule copy and keeps rule edits numeric-only', async () => {
+    const repo = repository()
+    const service = growth(repo)
+
+    await service.saveGrowthRule(caller, {
+      ruleId: RULE_ID,
+      expectedVersion: 4,
+      draft: ruleDraft({ description: '  每日签到说明  ' }),
+    })
+    const draft = lastCall(repo, 'saveGrowthRule').input.draft
+    assert.equal('description' in draft, false)
+    assert.equal(draft.deltaValue, 100)
+    assert.equal(draft.dailyLimitValue, 300)
+  })
+
   it('projects badge DTOs without private operator or identity facts and retains versions', async () => {
     const repo = repository()
     const service = growth(repo)

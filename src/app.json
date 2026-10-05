@@ -39,6 +39,7 @@
         "mip-cases/detail/index",
         "mip-cases/editor/index",
         "mip-growth/index",
+        "mip-experience-details/index",
         "mip-badges/index",
         "mip-badge-detail/index",
         "mip-game/index",

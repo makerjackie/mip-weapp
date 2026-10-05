@@ -1,0 +1,1 @@
+DROP TABLE mip_membership_invitation_guests;

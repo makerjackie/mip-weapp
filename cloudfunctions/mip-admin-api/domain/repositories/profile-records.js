@@ -6,22 +6,33 @@ const memberSql = alias => `EXISTS (SELECT 1 FROM mip_membership_entitlements m 
 
 function createProfileRecordsRepository(database) {
   async function listInvitedGuests(appId, userId, input) {
-    const cursor = cursorPredicateFor('a.captured_at', input.cursor, 'createdAt', 'a.registration_id')
+    // 活动邀请与会员邀请（MIW-27：嘉宾阶段记录的邀请关系）合并为同一邀请流水。
+    const cursor = cursorPredicateFor('a.captured_at', input.cursor, 'createdAt', 'a.id')
     const rows = await database.query(
-      `SELECT a.registration_id AS id, a.guest_user_id AS user_id, a.event_id, a.captured_at,
+      `SELECT a.source, a.id, a.guest_user_id AS user_id, a.captured_at, a.event_id,
         u.primary_branch_id, u.status AS user_status, p.nickname, e.title AS event_title,
         r.status AS registration_status, ${memberSql('u')} AS is_player
-       FROM mip_event_invitation_attributions a
-       JOIN mip_users u ON u.app_id = a.app_id AND u.id = a.guest_user_id
+       FROM (
+         SELECT 'EVENT' AS source, attr.registration_id AS id, attr.guest_user_id,
+           attr.captured_at, attr.event_id
+         FROM mip_event_invitation_attributions attr
+         WHERE attr.app_id = ? AND attr.source_type = 'USER' AND attr.inviter_user_id = ?
+         UNION ALL
+         SELECT 'MEMBERSHIP' AS source, guest.guest_user_id AS id, guest.guest_user_id,
+           guest.captured_at, NULL AS event_id
+         FROM mip_membership_invitation_guests guest
+         WHERE guest.app_id = ? AND guest.inviter_user_id = ?
+       ) a
+       JOIN mip_users u ON u.app_id = ? AND u.id = a.guest_user_id
        LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
-       JOIN mip_events e ON e.app_id = a.app_id AND e.id = a.event_id
-       JOIN mip_event_registrations r ON r.app_id = a.app_id AND r.id = a.registration_id
-       WHERE a.app_id = ? AND a.source_type = 'USER' AND a.inviter_user_id = ? ${cursor.sql}
-       ORDER BY a.captured_at DESC, a.registration_id DESC LIMIT ?`,
-      [appId, userId, ...cursor.params, input.limit + 1],
+       LEFT JOIN mip_events e ON e.app_id = ? AND e.id = a.event_id
+       LEFT JOIN mip_event_registrations r ON r.app_id = ? AND r.id = a.id AND a.source = 'EVENT'
+       WHERE 1 = 1 ${cursor.sql}
+       ORDER BY a.captured_at DESC, a.id DESC LIMIT ?`,
+      [appId, userId, appId, userId, appId, appId, appId, ...cursor.params, input.limit + 1],
     )
     return pageRows(rows.map(row => ({
-      id: row.id, userId: row.user_id, primaryBranchId: row.primary_branch_id,
+      id: row.id, source: row.source, userId: row.user_id, primaryBranchId: row.primary_branch_id,
       nickname: row.nickname || '未填写昵称', userStatus: row.user_status,
       kind: Number(row.is_player) ? 'PLAYER' : 'GUEST', eventId: row.event_id,
       eventTitle: row.event_title, registrationStatus: row.registration_status, createdAt: iso(row.captured_at),

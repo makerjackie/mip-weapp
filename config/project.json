@@ -145,6 +145,10 @@
       "pathName": "packages/member/mip-growth/index"
     },
     {
+      "name": "经验值详情",
+      "pathName": "packages/member/mip-experience-details/index"
+    },
+    {
       "name": "我的勋章",
       "pathName": "packages/member/mip-badges/index"
     },

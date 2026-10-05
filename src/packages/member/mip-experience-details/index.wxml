@@ -1,0 +1,43 @@
+<view id="member-experience-details-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
+  <!-- figma 1948_14177 双页签：40px 高，底部 1px panel 细线 + 活动半宽 2px 品牌指示条；
+       活动标签 16px medium 品牌黄，非活动 16px regular muted。默认落在「经验值明细」。 -->
+  <view class="relative flex h-[80rpx] bg-canvas">
+    <view class="flex flex-1 items-center justify-center whitespace-nowrap text-[32rpx] leading-[44.8rpx] {{tab === 'rules' ? 'font-medium text-brand' : 'font-normal text-muted'}}" aria-role="button" aria-label="规则详情" data-tab="rules" bind:tap="chooseTab">规则详情</view>
+    <view class="flex flex-1 items-center justify-center whitespace-nowrap text-[32rpx] leading-[44.8rpx] {{tab === 'details' ? 'font-medium text-brand' : 'font-normal text-muted'}}" aria-role="button" aria-label="经验值明细" data-tab="details" bind:tap="chooseTab">经验值明细</view>
+    <view class="absolute bottom-0 left-0 h-[2rpx] w-full bg-panel" />
+    <view class="absolute bottom-0 h-[4rpx] w-1/2 bg-brand {{tab === 'rules' ? 'left-0' : 'left-1/2'}}" />
+  </view>
+
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}" class="mx-3 mt-[24rpx]"><mip-empty-state title="暂时无法加载经验值详情" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="load" /></view>
+
+  <!-- figma 1948_14177 经验值明细：351×67 卡（panel r8），任务名 12px medium + 时间 10px，
+       右侧「+ EXP N」黄字（EXP 12px / 数字 16px）；卡间距 12px。 -->
+  <block wx:elif="{{tab === 'details'}}">
+    <view wx:if="{{entries.length === 0}}" class="mx-3 mt-[24rpx]"><mip-empty-state title="暂无经验值记录" description="完成成长任务后，经验值明细会显示在这里。" /></view>
+    <view wx:else class="mt-[24rpx] flex flex-col gap-[24rpx] px-[24rpx]">
+      <view wx:for="{{entries}}" wx:key="id" class="exp-detail-card bg-panel">
+        <view class="min-w-0 flex-1">
+          <view class="truncate text-[24rpx] font-medium leading-[33.6rpx]">{{item.title}}</view>
+          <view class="mt-[4rpx] truncate text-[20rpx] font-normal leading-[28rpx]">{{item.createdText}}</view>
+        </view>
+        <view class="whitespace-nowrap text-right text-[32rpx] font-medium leading-[44.8rpx] text-brand"><text class="text-[24rpx]">{{item.deltaPrefix}}</text>{{item.deltaValue}}</view>
+      </view>
+      <view wx:if="{{nextCursor}}" class="pt-[8rpx]"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+    </view>
+  </block>
+
+  <!-- 规则详情页签：管理后台配置的「一整个文本」（membership-content 第三种文档 experience-rules），
+       与经验值明细的逐条流水卡不同；未配置时提示后台尚未配置。 -->
+  <block wx:else>
+    <view wx:if="{{!rulesDetail || !rulesDetail.body}}" class="mx-3 mt-[24rpx]"><mip-empty-state title="规则说明暂未配置" description="经验值规则说明由运营在管理后台配置，配置后将展示在这里。" /></view>
+    <view wx:else class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-4">
+      <view class="text-[32rpx] font-semibold leading-[44rpx]">{{rulesDetail.title}}</view>
+      <view wx:if="{{rulesDetail.isDemo}}" class="mt-3 text-[24rpx] leading-[36rpx] text-brand">演示内容，仅供测试，不作为正式规则说明。</view>
+      <text selectable class="mt-4 block whitespace-pre-wrap text-[24rpx] leading-[36rpx]">{{rulesDetail.body}}</text>
+    </view>
+  </block>
+
+  <view wx:if="{{message && state !== 'error'}}" class="mx-3 mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
+  <view class="mx-3"><app-page-exit /></view>
+</view>

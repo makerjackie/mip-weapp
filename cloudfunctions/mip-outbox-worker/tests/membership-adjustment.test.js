@@ -111,4 +111,18 @@ describe('membership adjustment outbox projection', () => {
     }, adjustmentGranted({ aggregate_type: 'ORDER' })), /OUTBOX_EVENT_INVALID/)
     assert.equal(queried, false)
   })
+
+  // MIW-27 第二轮：审核结论只在业务页反馈，不生成站内消息。
+  it('suppresses the first-join approval decision receipt', async () => {
+    const result = await projectEvent({
+      async one() {
+        throw new Error('must not query facts for suppressed receipts')
+      },
+    }, adjustmentGranted({
+      aggregate_type: 'MEMBERSHIP_APPROVAL',
+      event_type: 'membership.approval_decided',
+    }))
+    assert.deepEqual(result.notifications, [])
+    assert.equal(result.reason, 'OPERATION_RECEIPT_SUPPRESSED')
+  })
 })

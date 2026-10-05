@@ -1,11 +1,12 @@
 <view id="mip-growth-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="px-3 pt-3"><view class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
-  <view wx:elif="{{state === 'error'}}" class="px-3 pt-3"><mip-empty-state title="暂时无法加载成长记录" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="loadGrowth" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}" class="px-3 pt-3"><mip-empty-state title="暂时无法加载成长记录" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="loadGrowth" /></view>
   <block wx:else>
     <!-- Keep the original illustration at its intrinsic aspect ratio; controls stay live. -->
     <view class="growth-hero relative h-[284rpx] overflow-hidden bg-brand px-5 py-6 text-on-brand">
       <image class="growth-hero-art" mode="aspectFit" src="/packages/member/assets/figma/growth/hero-character.png" />
       <view class="growth-hero-curve" />
+      <!-- MIW-27：经验值详情改为跳转独立明细页（figma 1948:14177），按钮与进度条同一水平线。 -->
       <view class="growth-experience-link" aria-role="button" aria-label="经验值详情" bind:tap="openExperienceDetails">经验值详情</view>
       <view class="relative z-10 ml-[8rpx] mt-[16rpx]">
         <view class="text-[96rpx] font-bold leading-[104.2rpx]">Lv.{{currentLevelNumber}}</view>
@@ -60,45 +61,7 @@
     </view>
 
     <view class="mx-3 flex min-h-[88rpx] items-center justify-end"><view class="flex min-h-[88rpx] items-center text-[24rpx] text-muted" aria-role="button" aria-label="查看全部成长任务" bind:tap="openTasks">全部任务<mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></view>
-    <view wx:if="{{experienceDetailsOpen}}">
-      <view id="growth-details-section" class="mx-3 mt-4 flex items-center justify-between gap-3">
-        <view class="text-[30rpx] font-bold">成长数据</view>
-        <view class="flex min-h-[88rpx] items-center text-[24rpx] text-brand" aria-role="button" bind:tap="closeExperienceDetails">收起详情</view>
-      </view>
-      <view class="mx-3 mt-4 grid grid-cols-3 gap-3">
-        <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[32rpx] font-bold">{{snapshot.account.experienceBalance}}</view><view class="mt-1 text-[22rpx] text-muted">经验值</view></view>
-        <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[32rpx] font-bold">{{snapshot.account.contributionBalance}}</view><view class="mt-1 text-[22rpx] text-muted">贡献值</view></view>
-        <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[32rpx] font-bold">{{snapshot.account.coinBalance}}</view><view class="mt-1 text-[22rpx] text-muted">游戏币</view></view>
-      </view>
-
-      <view id="growth-levels-section" class="mx-3 mt-6 text-[30rpx] font-bold">等级与权益</view>
-      <view class="mx-3 mt-3 flex flex-col gap-3">
-        <view wx:for="{{levels}}" wx:key="id" class="rounded-[16rpx] border border-line bg-panel px-4 py-4">
-          <view class="flex items-center justify-between gap-3"><view class="text-[24rpx] font-semibold">{{item.name}}</view><view wx:if="{{item.current}}" class="rounded-full bg-brand-soft px-3 py-1 text-[22rpx] text-brand">当前等级</view></view>
-          <view class="mt-2 text-[22rpx] text-muted">{{item.thresholdText}}</view>
-          <view wx:if="{{item.benefits.length}}" class="mt-3 flex flex-col gap-2"><view wx:for="{{item.benefits}}" wx:for-item="benefit" wx:key="*this" class="text-[22rpx] text-muted">{{benefit}}</view></view>
-          <view wx:else class="mt-3 text-[22rpx] text-muted">暂未配置等级权益。</view>
-        </view>
-      </view>
-
-      <view class="mx-3 mt-6 text-[30rpx] font-bold">成长规则</view>
-      <view wx:if="{{earningRules.length === 0}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-5 text-[22rpx] text-muted">暂无启用的成长规则。</view>
-      <view wx:else class="mx-3 mt-3 flex flex-col gap-3">
-        <view wx:for="{{earningRules}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-center justify-between gap-3"><view class="min-w-0 flex-1 text-[24rpx] font-semibold">{{item.name}}</view><view class="shrink-0 text-[24rpx] font-semibold text-brand">{{item.deltaText}}</view></view><view class="mt-2 text-[22rpx] text-muted">{{item.dailyLimitText}}</view></view>
-      </view>
-
-      <view class="mx-3 mt-6 text-[30rpx] font-bold">成长流水</view>
-      <view wx:if="{{entries.length === 0}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-7 text-center text-[24rpx] text-muted">暂无成长记录。</view>
-      <view wx:else class="mx-3 mt-3 flex flex-col gap-3">
-        <view wx:for="{{entries}}" wx:key="id" class="flex items-center justify-between gap-4 rounded-[16rpx] bg-panel px-4 py-4">
-          <view class="min-w-0 flex-1"><view class="line-clamp-1 text-[24rpx] font-semibold">{{item.ruleName || item.metricLabel}}</view><view class="mt-1 text-[22rpx] text-muted">{{item.createdText}}</view></view>
-          <view class="text-right"><view class="text-[28rpx] font-bold text-brand">{{item.deltaText}}</view><view class="mt-1 text-[22rpx] text-muted">余额 {{item.balanceAfter}}</view></view>
-        </view>
-      </view>
-      <view wx:if="{{nextCursor}}" class="mx-3 mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
-    </view>
     <view wx:if="{{message}}" class="mx-3 mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
-    <view class="mx-3"><app-page-exit /></view>
   </block>
 
   <!-- J1-06 开通态：无有效会员时底部仅「立即加入」→ 会员订单确认页（J1-07）；本页不展示金额。 -->
@@ -109,17 +72,25 @@
       </mip-pill-button>
     </view>
   </mip-sticky-actions>
+  <!-- MIW-27 第二轮：首笔付费审核中——只读展示，不提供再次下单入口。 -->
+  <mip-sticky-actions wx:elif="{{membershipState === 'pending'}}">
+    <view slot="actions" class="flex h-[80rpx] w-full items-center px-2">
+      <mip-pill-button class="w-full" variant="secondary" label="入会审核中" disabled />
+    </view>
+  </mip-sticky-actions>
   <mip-sticky-actions wx:elif="{{membershipState === 'error'}}">
     <view slot="actions" class="flex h-[80rpx] w-full items-center px-2">
       <mip-pill-button class="w-full" variant="secondary" label="重新加载会员状态" bind:tap="loadMembershipActions" />
     </view>
   </mip-sticky-actions>
 
-  <!-- J4-03 续费态：「邀请加入」常驻；「立即续费」仅到期前 3 个月展示（figma 2165:17142）→ 同一会员订单页。 -->
+  <!-- J4-03 续费态（figma 2165:17142 / 1948:14079）：未进续费窗口时「邀请加入」独占
+       全宽黄底；进入到期前 3 个月窗口后「立即续费」黄底居右，「邀请加入」退居左侧
+       黑底黄字。两者都指向同一会员订单确认页（J1-07）。 -->
   <mip-sticky-actions wx:if="{{isPlayer}}">
     <view id="growth-member-actions" slot="actions" class="flex h-[80rpx] w-full items-center gap-2">
-      <mip-pill-button class="min-w-0 flex-1" variant="secondary" label="邀请加入" withIcon openType="share" disabled="{{!invitationReady}}">
-        <mip-icon slot="icon" name="share-circle" size="{{15}}" color="var(--color-brand)" />
+      <mip-pill-button class="{{renewWindowOpen ? 'min-w-0 flex-1' : 'w-full'}}" variant="{{renewWindowOpen ? 'secondary' : 'primary'}}" label="邀请加入" withIcon openType="share" disabled="{{!invitationReady}}">
+        <mip-icon slot="icon" name="share-circle" size="{{15}}" color="{{renewWindowOpen ? 'var(--color-brand)' : 'var(--color-on-brand)'}}" />
       </mip-pill-button>
       <mip-pill-button wx:if="{{renewWindowOpen}}" class="min-w-0 flex-1" label="立即续费" withIcon bind:tap="renewMembership">
         <t-icon slot="icon" name="card" size="30rpx" color="var(--color-on-brand)" />

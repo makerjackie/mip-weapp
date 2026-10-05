@@ -76,8 +76,10 @@ function grantInput(overrides = {}) {
 describe('admin membership service', () => {
   it('keeps the membership query and mutation surface', () => {
     assert.deepEqual(Object.keys(createAdminMemberships({ repository: {}, access: {} })).sort(), [
+      'decideMembershipApproval',
       'getMembership',
       'grantMembership',
+      'listMembershipApprovals',
       'listMembershipTimeline',
     ])
   })

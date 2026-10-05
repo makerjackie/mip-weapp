@@ -18,15 +18,17 @@
   border-radius: 50% 50% 0 0 / 100% 100% 0 0;
 }
 
+/* MIW-27：按钮中心与 EXP 进度条中心（py-6 48 + mt-16 + 104.2 + 28 + 7.8 + 6 = 210rpx）
+   同一水平线，并较原右上角胶囊放大一档（figma 1948:14177 入口样式沿用）。 */
 .growth-experience-link {
   position: absolute;
-  top: 16rpx;
+  top: 183rpx;
   right: 16rpx;
   z-index: 20;
-  padding: 4rpx 12rpx;
-  font-size: 20rpx;
+  padding: 8rpx 20rpx;
+  font-size: 24rpx;
   font-weight: 600;
-  line-height: 28rpx;
+  line-height: 34rpx;
   background: var(--color-brand);
   border: 2rpx solid var(--color-on-brand);
   border-radius: 9999rpx;

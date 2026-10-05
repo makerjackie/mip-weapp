@@ -105,6 +105,15 @@ test('snapshot derives the active level from server thresholds', () => {
     daily_limit_value: 300,
     source_event_type: 'event.checked_in',
     status: 'ACTIVE',
+  }, {
+    id: 'rule-two',
+    rule_key: 'case_published',
+    name: '发布超级案例',
+    metric: 'EXPERIENCE',
+    delta_value: 50,
+    daily_limit_value: null,
+    source_event_type: 'super_case.published',
+    status: 'ACTIVE',
   }])
   assert.equal(result.currentLevel.levelKey, 'two')
   assert.deepEqual(result.levels.map(level => level.levelKey), ['one', 'two', 'three'])
@@ -116,6 +125,15 @@ test('snapshot derives the active level from server thresholds', () => {
     deltaValue: 100,
     dailyLimitValue: 300,
     sourceEventType: 'event.checked_in',
+    status: 'ACTIVE',
+  }, {
+    id: 'rule-two',
+    ruleKey: 'case_published',
+    name: '发布超级案例',
+    metric: 'EXPERIENCE',
+    deltaValue: 50,
+    dailyLimitValue: undefined,
+    sourceEventType: 'super_case.published',
     status: 'ACTIVE',
   }])
   assert.equal(result.experienceToNextLevel, 80)

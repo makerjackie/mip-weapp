@@ -115,4 +115,43 @@ describe('member benefit dual-source presentation', () => {
     expect(result).toMatchObject({ membershipLabel: '嘉宾', isPlayer: false })
     expect(result.membershipHistory).toEqual([])
   })
+
+  it('presents a first payment awaiting admin approval without opening benefits or an expiry', () => {
+    // MIW-27 第二轮：首笔付费待管理后台审核时，commerce 快照是待审核事实；
+    // 权益不开放、无到期时间，仅保留待审核流水。
+    const result = presentMembershipBenefits({
+      kind: 'PENDING',
+      status: 'PENDING',
+      entitlementId: 'pending-entitlement',
+      sourceType: 'ORDER',
+      sourceLabel: '会员购买',
+      startsAt: '2030-08-01T00:00:00.000Z',
+      endsAt: '2031-08-01T00:00:00.000Z',
+      plan: { id: 'plan-a', name: '年度会员' },
+      benefits: [],
+      history: [{
+        entitlementId: 'pending-entitlement',
+        sourceType: 'ORDER',
+        sourceLabel: '会员购买',
+        status: 'PENDING',
+        startsAt: '2030-08-01T00:00:00.000Z',
+        endsAt: '2031-08-01T00:00:00.000Z',
+        orderId: 'order-a',
+        plan: { id: 'plan-a', name: '年度会员' },
+        price: { amountCents: 6600, currency: 'CNY' },
+        invitationAttribution: { sourceType: 'PLATFORM', displayName: 'MIP 平台' },
+      }],
+    })
+
+    expect(result).toMatchObject({
+      membershipLabel: '待审核',
+      membershipDescription: '入会申请已提交，管理后台审核通过后会员权益生效',
+      currentSourceText: '年度会员',
+      membershipEndsText: '',
+      planEndsText: '',
+      activeBenefits: [],
+      isPlayer: false,
+    })
+    expect(result.membershipHistory[0]).toMatchObject({ status: 'PENDING', statusLabel: '待审核' })
+  })
 })

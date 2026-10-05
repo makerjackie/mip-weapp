@@ -54,6 +54,12 @@ export interface MembershipInvitationAttribution {
   avatarUrl?: string
 }
 
+/** 嘉宾阶段邀请关系的服务端回执（重复上报幂等，不重写既有关系）。 */
+export interface MembershipInvitationGuestRecord {
+  recorded: boolean
+  inviterUserId: string
+}
+
 export interface CommerceOrder {
   id: OrderId
   userId: UserId
@@ -142,6 +148,18 @@ interface ActiveMembershipBenefitsBase {
   version: number
 }
 
+interface PendingMembershipBenefitsBase {
+  kind: 'PENDING'
+  status: 'PENDING'
+  entitlementId: EntitlementId
+  sourceType: MembershipEntitlementSourceType
+  sourceLabel: string
+  startsAt: string
+  endsAt: string
+  benefits: []
+  version: number
+}
+
 export type MembershipBenefitsSnapshot
   = | {
     kind: 'GUEST'
@@ -149,6 +167,15 @@ export type MembershipBenefitsSnapshot
     benefits: []
     history: MembershipEntitlementHistoryItem[]
   }
+  // MIW-27 第二轮：首笔付费会员等待管理后台审核时，commerce 只给出待审核事实；
+  // 身份投影仍按嘉宾处理，玩家侧权益在审核通过前不开放。
+  | (PendingMembershipBenefitsBase & {
+    plan: {
+      id: MembershipPlanId
+      name: string
+      description?: string
+    }
+  })
   | (ActiveMembershipBenefitsBase & {
     sourceType: 'ORDER'
     plan: {
@@ -200,6 +227,8 @@ export interface CommerceGateway {
   createMembershipInvitation: () => Promise<MembershipInvitation>
   createMembershipInvitationCode: () => Promise<MembershipInvitationCode>
   resolveMembershipInvitationScene: (scene: string) => Promise<MembershipInvitation>
+  /** 被邀请人以嘉宾身份进入会员页时上报邀请凭证；资格与幂等由服务端裁决。 */
+  recordMembershipInvitationGuest: (invitationToken: string) => Promise<MembershipInvitationGuestRecord>
   createCheckout: (intent: CheckoutIntent) => Promise<CommerceOrder>
   createPayment: (orderId: OrderId) => Promise<WechatPaymentParameters>
   getOrder: (orderId: OrderId) => Promise<CommerceOrder>

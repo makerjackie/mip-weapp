@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
+const { createMembershipInvitation } = require('../lib/membership-invitation')
 const { createCommerceService } = require('../domain/service')
 
 function idFactory() {
@@ -162,6 +163,50 @@ describe('mip commerce service', () => {
         expiresAt: '2026-09-23T00:00:00.000Z',
       },
     )
+  })
+
+  it('records the guest invitation relationship only from a valid member invitation', async () => {
+    const invitationSecret = 'membership-invitation-secret-with-more-than-32-characters'
+    const inviter = '20000000-0000-4000-8000-000000000001'
+    const guest = '30000000-0000-4000-8000-000000000001'
+    const token = createMembershipInvitation({
+      appId: 'app-1',
+      inviterUserId: inviter,
+      expiresAt: new Date('2026-09-23T00:00:00.000Z'),
+    }, invitationSecret)
+    let captured
+    const service = createCommerceService({
+      catalogStage: 'TEST',
+      invitationSecret,
+      now: () => new Date('2026-08-24T00:00:00.000Z'),
+      repository: {
+        async recordMembershipInvitationGuest(caller, input) {
+          captured = { caller, input }
+          return { recorded: true, inviterUserId: input.inviterUserId }
+        },
+      },
+    })
+
+    // MIW-27 第二轮：受邀嘉宾进入会员页即上报邀请凭证，关系与幂等由服务端落库。
+    assert.deepEqual(
+      await service.recordMembershipInvitationGuest({ appId: 'app-1', userId: guest }, { invitationToken: token }),
+      { recorded: true, inviterUserId: inviter },
+    )
+    assert.equal(captured.caller.userId, guest)
+    assert.equal(captured.input.inviterUserId, inviter)
+    assert.match(captured.input.sourceTokenHash, /^[0-9a-f]{64}$/)
+    assert.equal(captured.input.capturedAt, '2026-08-24T00:00:00.000Z')
+
+    // 自己邀请自己、缺少凭证：在触达存储前直接拒绝。
+    await assert.rejects(
+      () => service.recordMembershipInvitationGuest({ appId: 'app-1', userId: inviter }, { invitationToken: token }),
+      /MEMBERSHIP_INVITATION_INVALID/,
+    )
+    await assert.rejects(
+      () => service.recordMembershipInvitationGuest({ appId: 'app-1', userId: guest }, {}),
+      /MEMBERSHIP_INVITATION_INVALID/,
+    )
+    assert.equal(captured.caller.userId, guest)
   })
 
   it('passes no client amount when requesting a refund', async () => {

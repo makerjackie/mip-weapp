@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 68,
+  "routeCount": 69,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 70 paths.",
+    "config/project.json routes must list the same 69 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -1106,6 +1106,16 @@
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
       "deviceRequired": ["share"]
+    },
+    {
+      "id": "M56",
+      "name": "经验值详情",
+      "path": "packages/member/mip-experience-details/index",
+      "selector": "#member-experience-details-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'"
     },
     {
       "id": "M33",

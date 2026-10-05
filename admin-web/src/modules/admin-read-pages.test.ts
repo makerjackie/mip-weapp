@@ -170,12 +170,13 @@ describe('admin read pages', () => {
       'mip.admin.badges.list': { items: [{ name: '资料完善', key: 'profile-complete', description: '完成资料', placeholderShape: 'HEXAGON', version: 1, updatedAt: '2030-03-01T00:00:00.000Z', status: 'ACTIVE' }] },
       'mip.admin.badges.awards': { items: [{ nickname: '林晓', badgeName: '资料完善', awardReason: '完成个人资料', awardedAt: '2030-03-01T00:00:00.000Z', equipped: true, status: 'ACTIVE' }] },
       'mip.admin.entitlements.transactions.list': { items: [], nextCursor: null },
+      'mip.admin.membershipApprovals.list': { items: [], nextCursor: null },
       'mip.admin.contribution.rules.list': { items: [], nextCursor: null },
       'mip.admin.contribution.transactions.list': { items: [], nextCursor: null },
     }, calls))
 
-    assert.deepEqual(calls.map(call => call.action), ['mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules', 'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions', 'mip.admin.badges.list', 'mip.admin.badges.awards', 'mip.admin.entitlements.transactions.list', 'mip.admin.contribution.rules.list', 'mip.admin.contribution.transactions.list'])
-    assert.equal(page.sections.length, 10)
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules', 'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions', 'mip.admin.badges.list', 'mip.admin.badges.awards', 'mip.admin.entitlements.transactions.list', 'mip.admin.membershipApprovals.list', 'mip.admin.contribution.rules.list', 'mip.admin.contribution.transactions.list'])
+    assert.equal(page.sections.length, 11)
     assert.equal(page.sections[0].rows[0].benefits, '活动优先报名')
     assert.equal(page.sections[3].rows[0].balance, '20 → 30')
     assert.equal(page.sections[3].rows[0].source, '活动签到')

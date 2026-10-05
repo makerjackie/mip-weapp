@@ -1,8 +1,14 @@
 'use strict'
 const { CAPABILITIES, authorize } = require('./capabilities')
 const { AdminError, text } = require('./validation')
+// 后台可配置的整段文档：两份协议 + 经验值规则说明（MIW-27，与小程序身份通道同一 setting_key）。
+const DOCUMENT_KINDS = {
+  membership: { settingKey: 'MEMBERSHIP_AGREEMENT', operation: 'membership.agreement.save', resource: 'MEMBERSHIP_AGREEMENT' },
+  user: { settingKey: 'USER_AGREEMENT', operation: 'user.agreement.save', resource: 'USER_AGREEMENT' },
+  'experience-rules': { settingKey: 'EXPERIENCE_RULES_TEXT', operation: 'experience.rules.save', resource: 'EXPERIENCE_RULES_TEXT' },
+}
 function documentKind(value = 'membership') {
-  if (!['membership', 'user'].includes(value)) throw new AdminError('VALIDATION_FAILED', '协议类型无效')
+  if (!Object.prototype.hasOwnProperty.call(DOCUMENT_KINDS, value)) throw new AdminError('VALIDATION_FAILED', '协议类型无效')
   return value
 }
 const scope = { scopeType: 'PLATFORM', scopeId: null }
@@ -19,13 +25,13 @@ function createMembershipContent({ access, repository }) {
     const document = documentKind(input.document)
     const draft = input.draft || {}
     if (typeof draft.isDemo !== 'boolean') throw new AdminError('VALIDATION_FAILED', '请选择演示或正式内容')
-    const value = { title: text(draft.title, 100, { required: true, label: '协议标题' }),
-      body: text(draft.body, 8000, { required: true, label: '协议正文' }), isDemo: draft.isDemo }
-    if (Buffer.byteLength(JSON.stringify(value), 'utf8') > 28000) throw new AdminError('VALIDATION_FAILED', '协议正文过长，请精简后重试')
+    const value = { title: text(draft.title, 100, { required: true, label: '标题' }),
+      body: text(draft.body, 8000, { required: true, label: '正文' }), isDemo: draft.isDemo }
+    if (Buffer.byteLength(JSON.stringify(value), 'utf8') > 28000) throw new AdminError('VALIDATION_FAILED', '正文过长，请精简后重试')
     return repository.saveMembershipAgreement({ appId: context.caller.appId, actorUserId: context.caller.userId,
       document, expectedVersion: input.expectedVersion, draft: value, idempotencyKey: input.idempotencyKey,
       authorization: access.mutationAuthorization(grant, CAPABILITIES.GROWTH_CONFIGURE),
-      audit: access.audit(context, grant, { ...scope, action: 'admin.membership.agreement.save', resourceType: 'APP_SETTING', resourceId: document === 'user' ? 'USER_AGREEMENT' : 'MEMBERSHIP_AGREEMENT', metadata: { document, isDemo: value.isDemo } }) })
+      audit: access.audit(context, grant, { ...scope, action: 'admin.membership.agreement.save', resourceType: 'APP_SETTING', resourceId: DOCUMENT_KINDS[document].resource, metadata: { document, isDemo: value.isDemo } }) })
   }
   return { getMembershipAgreement, saveMembershipAgreement }
 }

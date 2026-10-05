@@ -7,7 +7,6 @@
   "backgroundTextStyle": "dark",
   "usingComponents": {
     "mip-empty-state": "/components/mip-empty-state/index",
-    "app-page-exit": "/components/page-exit/index",
     "mip-sticky-actions": "/components/sticky-actions/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",

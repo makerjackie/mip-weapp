@@ -5,6 +5,7 @@ import type {
   MembershipBenefitsSnapshot,
   MembershipInvitation,
   MembershipInvitationCode,
+  MembershipInvitationGuestRecord,
   MembershipPlan,
   RefundId,
   RefundIntent,
@@ -97,6 +98,10 @@ export function createMipCommerceGateway(
 
     resolveMembershipInvitationScene(scene) {
       return commerce<MembershipInvitation>('resolveMembershipInvitationScene', { scene })
+    },
+
+    recordMembershipInvitationGuest(invitationToken) {
+      return commerce<MembershipInvitationGuestRecord>('recordMembershipInvitationGuest', { invitationToken })
     },
 
     createCheckout(intent) {

@@ -46,3 +46,43 @@ it('renders structured contribution limits and named servers rather than blank l
   const page = await loadGrowth({ query: '', status: '', cursor: null, limit: 20, filters: { section: 'contributionRules' } }, async () => ({ items: [{ behavior: 'EVENT_CHECKIN', behaviorLabel: '参加活动及签到', rewardExp: 2, rewardLimit: { kind: 'PER_DAY', value: 3 }, scopeServers: ['branch-a'], scopeServerNames: ['深圳'], status: 'ACTIVE' }], nextCursor: null }) as never)
   assert.equal(page.sections[0].rows[0].rewardLimit, '每日最多 3'); assert.equal(page.sections[0].rows[0].scope, '深圳'); assert.equal(page.sections[0].rows[0].behavior, '参加活动及签到')
 })
+it('renders the first-join approval queue with a decide row action prefilled by the chain version', async () => {
+  const payload = {
+    items: [
+      {
+        id: 'approval-a', status: 'PENDING', requestedAt: '2030-01-01T08:00:00.000Z', createdAt: '2030-01-01T08:00:00.000Z', updatedAt: '2030-01-01T08:00:00.000Z',
+        chainVersion: 3, pendingEntitlements: 1, decisionReason: null, decidedBy: null, decidedAt: null,
+        user: { id: 'user-a', nickname: '林晓', playerNumber: 'M000000006' },
+        order: { id: 'order-a', status: 'PAID', planName: '年度会员', amountCents: 36500, currency: 'CNY', paidAt: '2030-01-01T07:59:00.000Z' },
+      },
+      {
+        id: 'approval-b', status: 'REJECTED', requestedAt: '2030-01-02T08:00:00.000Z', createdAt: '2030-01-02T08:00:00.000Z', updatedAt: '2030-01-03T08:00:00.000Z',
+        chainVersion: 5, pendingEntitlements: 0, decisionReason: '线下支付未确认', decidedAt: '2030-01-03T08:00:00.000Z',
+        decidedBy: { id: 'admin-a', nickname: '周宁' },
+        user: { id: 'user-b', nickname: '陈青', playerNumber: 'M000000007' },
+        order: { id: 'order-b', status: 'PAID', planName: '月度会员', amountCents: 3000, currency: 'CNY', paidAt: '2030-01-02T07:59:00.000Z' },
+      },
+    ],
+    nextCursor: null,
+  }
+  const page = await loadGrowth({ query: '', status: '', cursor: null, limit: 20, filters: { section: 'membershipApprovals' } }, async () => payload as never)
+  assert.equal(page.sections.length, 1)
+  assert.equal(page.sections[0].title, '入会审核')
+  const [pending, rejected] = page.sections[0].rows
+  assert.equal(pending.plan, '年度会员'); assert.equal(pending.amount, '¥365.00')
+  assert.equal(pending.state, '待处理'); assert.equal(pending.decision, '—')
+  assert.deepEqual(pending.rowActions, [{
+    action: 'mip.admin.membershipApprovals.decide',
+    label: '审核', targetId: 'user-a',
+    values: { expectedChainVersion: 3 }, allowedCapabilities: ['memberships.adjust'],
+  }])
+  assert.equal(rejected.decision, '驳回：线下支付未确认')
+  assert.deepEqual(rejected.rowActions, [{
+    action: 'mip.admin.membershipApprovals.decide',
+    label: '复议', targetId: 'user-b',
+    values: { expectedChainVersion: 5 }, allowedCapabilities: ['memberships.adjust'],
+  }])
+  // 只读角色仍然能看到队列，但没有任何审核按钮。
+  const readonly = await loadGrowth({ query: '', status: '', cursor: null, limit: 20, filters: { section: 'membershipApprovals' } }, async () => payload as never, { hasCapability: capability => capability === 'memberships.read' })
+  assert.deepEqual(readonly.sections[0].rows[0].rowActions, [])
+})

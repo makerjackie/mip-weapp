@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { configurationDraft, demoMembershipAgreement, membershipConfiguration } from './membership-configuration.ts'
+import { configurationDraft, demoExperienceRules, demoMembershipAgreement, membershipConfiguration } from './membership-configuration.ts'
 import type { AdminRequest } from './admin-read-contracts.ts'
 
 describe('membership configuration contracts', () => {
@@ -33,6 +33,15 @@ describe('membership configuration contracts', () => {
     await api.agreement('user')
     await api.saveAgreement(1, demoMembershipAgreement, 'user-retry', 'user')
     assert.deepEqual(calls.map(call => (call.input as Record<string, unknown>).document), ['user', 'user'])
+  })
+  it('targets the experience rules text document for the mini-program rules tab', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const api = membershipConfiguration(async (action, input) => { calls.push({ action, input }); return {} as never })
+    await api.agreement('experience-rules')
+    await api.saveAgreement(2, demoExperienceRules, 'rules-retry', 'experience-rules')
+    assert.deepEqual(calls.map(call => (call.input as Record<string, unknown>).document), ['experience-rules', 'experience-rules'])
+    assert.equal(demoExperienceRules.isDemo, true)
+    assert.match(demoExperienceRules.body, /不作为正式规则说明/)
   })
 
 })

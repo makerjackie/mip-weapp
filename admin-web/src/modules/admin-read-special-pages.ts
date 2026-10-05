@@ -12,6 +12,7 @@ import {
   filterRows,
   formatDateTime,
   label,
+  money,
   nestedNames,
   numberLabel,
   pageValue,
@@ -124,7 +125,7 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
   const pagedInput = { filters: { ...filters, query: query.query }, limit: query.limit, ...(query.cursor ? { cursor: query.cursor } : {}) }
   const read = (key: string, allowed: boolean, action: AdminOperationAction, input?: AdminRequestInput) =>
     allowed && (!selected || selected === key) ? request(action, input).catch(reason => ({ items: [], nextCursor: null, loadError: reason instanceof Error ? reason.message : '读取失败，请重试' })) : null
-  const [levelsPayload, benefitsPayload, rulesPayload, entriesPayload, transitionsPayload, badgesPayload, awardsPayload, entitlementsPayload, contributionRulesPayload, contributionTxnsPayload] = await Promise.all([
+  const [levelsPayload, benefitsPayload, rulesPayload, entriesPayload, transitionsPayload, badgesPayload, awardsPayload, entitlementsPayload, membershipApprovalsPayload, contributionRulesPayload, contributionTxnsPayload] = await Promise.all([
     read('levels', canReadGrowth, 'mip.admin.growth.levels'),
     read('benefits', canReadGrowth, 'mip.admin.growth.benefits'),
     read('rules', canReadGrowth, 'mip.admin.growth.rules'),
@@ -138,6 +139,8 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
       status: ['ACTIVE', 'REVOKED'].includes(query.status) ? query.status : '',
     }),
     read('entitlements', canRead(access, 'memberships.read', 'PLATFORM'), 'mip.admin.entitlements.transactions.list', pagedInput),
+    // MIW-27 第二轮：首次入会审核队列（含已决定记录，默认按申请时间倒序）。
+    read('membershipApprovals', canRead(access, 'memberships.read', 'PLATFORM'), 'mip.admin.membershipApprovals.list', pagedInput),
     read('contributionRules', canRead(access, 'growth.read', 'PLATFORM'), 'mip.admin.contribution.rules.list', { ...pagedInput, filters: { ...pagedInput.filters, status: ['ACTIVE', 'INACTIVE'].includes(query.status) ? query.status : '' } }),
     read('contributionTransactions', canRead(access, 'growth.read', 'PLATFORM'), 'mip.admin.contribution.transactions.list', pagedInput),
   ])
@@ -165,6 +168,28 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
     source: label(valueOf(item, 'source')),
     grantedAt: formatDateTime(item.grantedAt),
   })), serverQuery)
+  const membershipApprovalRows = filterRows(pageValue(membershipApprovalsPayload).items.map(item => ({
+    user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'),
+    playerNumber: numberLabel(record(item.user).playerNumber),
+    plan: valueOf(record(item.order), 'planName') || '—',
+    amount: money(record(item.order).amountCents, record(item.order).currency),
+    paidAt: formatDateTime(record(item.order).paidAt),
+    requestedAt: formatDateTime(item.requestedAt),
+    state: label(valueOf(item, 'status')),
+    decision: approvalDecisionLabel(item),
+    detailLinks: canRead(access, 'users.read', 'PLATFORM') && typeof record(item.user).id === 'string'
+      ? [{ route: 'users' as const, id: String(record(item.user).id), label: '用户档案' }]
+      : [],
+    rowActions: typeof record(item.user).id === 'string' && canRead(access, 'memberships.adjust', 'PLATFORM')
+      ? [{
+        action: 'mip.admin.membershipApprovals.decide' as const,
+        label: valueOf(item, 'status') === 'PENDING' ? '审核' : '复议',
+        targetId: String(record(item.user).id),
+        values: { expectedChainVersion: Number(item.chainVersion) || '' },
+        allowedCapabilities: ['memberships.adjust'],
+      }]
+      : [],
+  })), serverQuery)
   const contributionRuleRows = filterRows(pageValue(contributionRulesPayload).items.map(item => ({
     behavior: valueOf(item, 'behaviorLabel', 'behavior'),
     rewardExp: numberLabel(item.rewardExp),
@@ -180,7 +205,7 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
     delta: numberLabel(item.deltaValue),
     createdAt: formatDateTime(item.createdAt),
   })), serverQuery)
-  const payloads = [levelsPayload, benefitsPayload, rulesPayload, entriesPayload, transitionsPayload, badgesPayload, awardsPayload, entitlementsPayload, contributionRulesPayload, contributionTxnsPayload]
+  const payloads = [levelsPayload, benefitsPayload, rulesPayload, entriesPayload, transitionsPayload, badgesPayload, awardsPayload, entitlementsPayload, membershipApprovalsPayload, contributionRulesPayload, contributionTxnsPayload]
   const sections = [
     levelsPayload ? { title: '等级', rows: levels, columns: columns([['name', '等级'], ['threshold', '最低经验'], ['badge', '展示徽章'], ['benefits', '权益'], ['users', '用户数'], ['share', '用户占比'], ['state', '状态']]) } : null,
     benefitsPayload ? { title: '等级权益', rows: benefits, columns: columns([['name', '权益'], ['description', '说明'], ['sort', '排序'], ['state', '状态']]) } : null,
@@ -190,6 +215,7 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
     badgesPayload ? { title: '徽章', rows: badges, columns: columns([['name', '徽章'], ['description', '说明'], ['shape', '图形'], ['updatedAt', '更新时间'], ['state', '状态']]) } : null,
     awardsPayload ? { title: '徽章获得记录', rows: awards, columns: columns([['user', '用户'], ['badge', '徽章'], ['reason', '原因'], ['awardedAt', '获得时间'], ['equipped', '佩戴'], ['state', '状态']]) } : null,
     entitlementsPayload ? { title: '权益流水', rows: entitlementRows, columns: columns([['entitlementNo', '权益号'], ['user', '用户'], ['type', '类型'], ['content', '权益内容'], ['order', '关联订单'], ['grantor', '发放人'], ['source', '来源'], ['validity', '有效期'], ['grantedAt', '发放时间']]) } : null,
+    membershipApprovalsPayload ? { title: '入会审核', rows: membershipApprovalRows, columns: columns([['user', '用户'], ['playerNumber', '玩家号'], ['plan', '方案'], ['amount', '金额'], ['paidAt', '支付时间'], ['requestedAt', '申请时间'], ['state', '状态'], ['decision', '审核结论']]) } : null,
     contributionRulesPayload ? { title: '贡献值规则', rows: contributionRuleRows, columns: columns([['behavior', '行为'], ['rewardExp', '贡献奖励'], ['rewardLimit', '上限'], ['scope', '范围'], ['effective', '生效期'], ['state', '状态']]) } : null,
     contributionTxnsPayload ? { title: '贡献值流水', rows: contributionTxnRows, columns: columns([['txnNo', '流水号'], ['user', '用户'], ['behavior', '行为'], ['delta', '变化值'], ['createdAt', '时间']]) } : null,
   ].filter(isSection)
@@ -290,4 +316,17 @@ function contributionLimit(value: unknown) {
   const limit = record(value)
   if (!['PER_EVENT', 'PER_DAY'].includes(String(limit.kind)) || !Number.isSafeInteger(limit.value) || Number(limit.value) < 1) return '—'
   return `${limit.kind === 'PER_EVENT' ? '每次' : '每日'}最多 ${Number(limit.value)}`
+}
+
+// MIW-27 第二轮：审核结论列（决定人/意见随结论展示，便于复议前回溯线下沟通）。
+function approvalDecisionLabel(item: Record<string, unknown>) {
+  const status = valueOf(item, 'status')
+  const decider = valueOf(record(item.decidedBy), 'nickname')
+  if (status === 'APPROVED') return decider === '—' ? '同意' : `同意（${decider}）`
+  if (status === 'REJECTED') {
+    const reason = valueOf(item, 'decisionReason')
+    return reason === '—' ? `驳回${decider === '—' ? '' : `（${decider}）`}` : `驳回：${reason}`
+  }
+  // 待审核时结论列为空，行上的「审核」按钮即待办入口。
+  return '—'
 }

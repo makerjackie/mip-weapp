@@ -65,5 +65,20 @@ describe('configurable membership agreement', () => {
     } }, {})
     assert.equal((await repo.getMembershipAgreement('app', 'user')).body, draft.body)
   })
+  it('stores the experience rules text as its own document and audits the dedicated resource', async () => {
+    const calls = []
+    const rulesDraft = { title: '经验值规则说明', body: '一、每日签到\n二、活动奖励', isDemo: true }
+    await service([grant], calls).saveMembershipAgreement({}, { document: 'experience-rules', expectedVersion: 1, draft: rulesDraft, idempotencyKey: 'retry-rules' })
+    assert.equal(calls[0].document, 'experience-rules')
+    assert.equal(calls[0].audit.resourceId, 'EXPERIENCE_RULES_TEXT')
+    assert.deepEqual(calls[0].draft, rulesDraft)
+    const repo = createMembershipContentRepository({ one: async (_sql, params) => {
+      assert.deepEqual(params, ['app', 'EXPERIENCE_RULES_TEXT'])
+      return { value_json: rulesDraft, version: 3 }
+    } }, {})
+    const stored = await repo.getMembershipAgreement('app', 'experience-rules')
+    assert.equal(stored.body, rulesDraft.body)
+    assert.equal(stored.version, 3)
+  })
 
 })

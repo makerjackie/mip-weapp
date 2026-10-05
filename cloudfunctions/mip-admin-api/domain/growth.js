@@ -488,6 +488,8 @@ function normalizeRule(value) {
   if (effectiveFrom && effectiveTo && effectiveTo <= effectiveFrom) {
     throw new AdminError('VALIDATION_FAILED', '生效结束时间必须晚于开始时间')
   }
+  // 身份字段由 FIXED_GROWTH_RULES 锁定；规则详情页签的展示文本走 experience-rules 文档配置，
+  // 不再开放逐条规则说明。
   return {
     ruleKey: stableKey(value.ruleKey, '规则', 80),
     name: text(value.name, 100, { required: true, label: '规则名称' }),

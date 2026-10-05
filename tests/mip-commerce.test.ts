@@ -58,6 +58,7 @@ describe('MIP membership commerce', () => {
       createMembershipInvitation: vi.fn(async () => ({ token: 'm1.opaque', expiresAt: '2026-09-23T00:00:00.000Z' })),
       createMembershipInvitationCode: vi.fn(async () => ({ codeUrl: 'cloud://env.test/code.png', expiresAt: '2026-09-23T00:00:00.000Z' })),
       resolveMembershipInvitationScene: vi.fn(async () => ({ token: 'm1.scene', expiresAt: '2026-09-23T00:00:00.000Z' })),
+      recordMembershipInvitationGuest: vi.fn(async () => ({ recorded: true, inviterUserId: 'inviter-1' })),
       createCheckout: vi.fn(async () => order('CREATED')),
       createPayment: vi.fn(async () => ({
         timeStamp: '1',

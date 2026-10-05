@@ -44,6 +44,23 @@ describe('MIP growth gateway retry policy', () => {
     }
   })
 
+  it('forwards the requested growth metric on the entry page read', async () => {
+    const invoke = vi.fn().mockResolvedValue({ ok: true, data: { items: [], nextCursor: 'cursor-9' } })
+    const gateway = createMipGrowthGateway('mip-growth-api', { invoke })
+
+    // MIW-27：经验值明细页按 EXPERIENCE 拉取流水；指标随请求下发，由服务端过滤，
+    // 客户端不裁剪页面（否则会破坏 keyset 分页游标）。
+    await expect(gateway.listEntries('cursor-1', 20, 'EXPERIENCE')).resolves.toEqual({
+      items: [],
+      nextCursor: 'cursor-9',
+    })
+    expect(invoke).toHaveBeenCalledWith('listEntries', {
+      cursor: 'cursor-1',
+      limit: 20,
+      metric: 'EXPERIENCE',
+    })
+  })
+
   it('does not replay equipBadges when the response is lost', async () => {
     let writes = 0
     const transport: MipGrowthTransport = {

@@ -1,43 +1,22 @@
-import type { GrowthEntry, GrowthLevel, GrowthRule, GrowthSnapshot } from '../../../modules/mip-growth'
+import type { GrowthLevel, GrowthSnapshot } from '../../../modules/mip-growth'
 import type { UserTaskCard } from '../../../modules/mip-tasks'
+import { brand } from '../../../config/brand'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
 import { mipTasksModule } from '../../../modules/mip-tasks/client'
 import { caseNavigateTo } from '../../../platform/navigation/client'
-import { formatLocalDate, formatLocalDateTime } from '../../../utils/date'
+import { formatLocalDate } from '../../../utils/date'
 import { withinRenewalWindow } from './renewal-window'
-
-const metricLabels = {
-  EXPERIENCE: '经验值',
-  CONTRIBUTION: '贡献值',
-  COIN: '游戏币',
-} as const
 
 /** journey-review J1-07：会员订单确认页（开通与续费共用）。 */
 const MEMBERSHIP_ORDER_PAGE = '/packages/member/membership-order/index'
 
+/** MIW-27：经验值详情独立页（figma 1948:14177 经验值明细）。 */
+const EXPERIENCE_DETAILS_PAGE = '/packages/member/mip-experience-details/index'
+
 /** 到期时间展示为 2026.08.08（figma 1948:14079 / 3296:5808）。 */
 function formatDottedDate(value: string) {
   return formatLocalDate(value).replaceAll('-', '.')
-}
-
-interface GrowthEntryView extends GrowthEntry {
-  metricLabel: string
-  deltaText: string
-  createdText: string
-}
-
-interface GrowthLevelView extends GrowthLevel {
-  levelNumber: number
-  thresholdText: string
-  current: boolean
-  reached: boolean
-}
-
-interface GrowthRuleView extends GrowthRule {
-  metricLabel: string
-  deltaText: string
-  dailyLimitText: string
 }
 
 interface GrowthTaskView extends UserTaskCard {
@@ -66,34 +45,13 @@ function levelScaleView(levels: GrowthLevel[], currentLevelNumber: number): Leve
   }
 }
 
-function entryView(entry: GrowthEntry): GrowthEntryView {
+function growthPresentation(snapshot: GrowthSnapshot) {
+  const currentIndex = snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id)
+  const currentLevelNumber = Math.max(1, currentIndex + 1)
   return {
-    ...entry,
-    metricLabel: metricLabels[entry.metric],
-    deltaText: entry.deltaValue > 0 ? `+${entry.deltaValue}` : String(entry.deltaValue),
-    createdText: formatLocalDateTime(entry.createdAt),
-  }
-}
-
-function levelView(level: GrowthLevel, currentLevelId: string, levelNumber: number, currentLevelNumber: number): GrowthLevelView {
-  return {
-    ...level,
-    levelNumber,
-    thresholdText: level.minimumExperience === 0 ? '基础等级' : `${level.minimumExperience} 经验值`,
-    current: level.id === currentLevelId,
-    reached: levelNumber <= currentLevelNumber,
-  }
-}
-
-function ruleView(rule: GrowthRule): GrowthRuleView {
-  const metricLabel = metricLabels[rule.metric]
-  return {
-    ...rule,
-    metricLabel,
-    deltaText: `${rule.deltaValue > 0 ? '+' : ''}${rule.deltaValue} ${metricLabel}`,
-    dailyLimitText: rule.dailyLimitValue === undefined
-      ? '无每日上限'
-      : `每日最多 ${rule.dailyLimitValue} ${metricLabel}`,
+    currentLevelNumber,
+    nextLevelThreshold: snapshot.nextLevel?.minimumExperience || 0,
+    levelScale: levelScaleView(snapshot.levels, currentLevelNumber),
   }
 }
 
@@ -107,42 +65,18 @@ function taskView(task: UserTaskCard): GrowthTaskView {
   }
 }
 
-function growthPresentation(snapshot: GrowthSnapshot) {
-  const currentIndex = snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id)
-  const currentLevelNumber = Math.max(1, currentIndex + 1)
-  return {
-    currentLevelNumber,
-    nextLevelNumber: snapshot.nextLevel ? currentLevelNumber + 1 : 0,
-    nextLevelThreshold: snapshot.nextLevel?.minimumExperience || 0,
-    levels: snapshot.levels.map((level, index) => levelView(
-      level,
-      snapshot.currentLevel.id,
-      index + 1,
-      currentLevelNumber,
-    )),
-    levelScale: levelScaleView(snapshot.levels, currentLevelNumber),
-  }
-}
-
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     snapshot: null as GrowthSnapshot | null,
     currentLevelNumber: 1,
-    nextLevelNumber: 0,
     nextLevelThreshold: 0,
-    levels: [] as GrowthLevelView[],
     levelScale: null as LevelScaleView | null,
-    experienceDetailsOpen: false,
-    earningRules: [] as GrowthRuleView[],
-    entries: [] as GrowthEntryView[],
-    nextCursor: '',
-    loadingMore: false,
     tasksState: 'loading' as 'loading' | 'ready' | 'empty' | 'error',
     tasks: [] as GrowthTaskView[],
     tasksMessage: '',
     isPlayer: false,
-    membershipState: 'loading' as 'loading' | 'player' | 'guest' | 'error',
+    membershipState: 'loading' as 'loading' | 'player' | 'guest' | 'pending' | 'error',
     membershipValidityText: '',
     renewWindowOpen: false,
     invitationReady: false,
@@ -183,6 +117,20 @@ Page({
         isPlayer: false,
         membershipState: 'error',
         membershipValidityText: '',
+        renewWindowOpen: false,
+        invitationReady: false,
+        invitationMessage: '',
+      })
+      return
+    }
+    // MIW-27 第二轮：首笔付费等待管理后台审核。玩家等级页如实展示「审核中」，
+    // 不给第二次下单入口；同意后的会员态由服务端投影决定。
+    if (membership.kind === 'PENDING') {
+      this.shareInvitationToken = ''
+      this.setData({
+        isPlayer: false,
+        membershipState: 'pending',
+        membershipValidityText: '入会审核中，管理后台通过后生效',
         renewWindowOpen: false,
         invitationReady: false,
         invitationMessage: '',
@@ -240,25 +188,15 @@ Page({
     if (!this.data.snapshot) {
       this.setData({ state: 'loading', message: '' })
     }
-    else {
-      this.setData({ loadingMore: false })
-    }
     try {
-      const [snapshot, page] = await Promise.all([
-        mipGrowthModule.getSnapshot({ force }),
-        mipGrowthModule.listEntries(undefined, 20),
-      ])
+      const snapshot = await mipGrowthModule.getSnapshot({ force })
       if (requestSeq !== this.growthRequestSeq) {
         return
       }
-      const presentation = growthPresentation(snapshot)
       this.setData({
         state: 'ready',
         snapshot,
-        ...presentation,
-        earningRules: snapshot.earningRules.map(ruleView),
-        entries: page.items.map(entryView),
-        nextCursor: page.nextCursor || '',
+        ...growthPresentation(snapshot),
         message: '',
       })
     }
@@ -277,7 +215,6 @@ Page({
       state: 'ready',
       snapshot,
       ...growthPresentation(snapshot),
-      earningRules: snapshot.earningRules.map(ruleView),
     })
   },
 
@@ -309,34 +246,6 @@ Page({
     }
   },
 
-  async loadMore() {
-    if (!this.data.nextCursor || this.data.loadingMore) {
-      return
-    }
-    const requestSeq = this.growthRequestSeq
-    this.setData({ loadingMore: true, message: '' })
-    try {
-      const page = await mipGrowthModule.listEntries(this.data.nextCursor, 20)
-      if (requestSeq !== this.growthRequestSeq) {
-        return
-      }
-      this.setData({
-        entries: [...this.data.entries, ...page.items.map(entryView)],
-        nextCursor: page.nextCursor || '',
-      })
-    }
-    catch {
-      if (requestSeq === this.growthRequestSeq) {
-        this.setData({ message: '更多成长记录加载失败。' })
-      }
-    }
-    finally {
-      if (requestSeq === this.growthRequestSeq) {
-        this.setData({ loadingMore: false })
-      }
-    }
-  },
-
   openTasks() {
     void wx.navigateTo({ url: '/packages/member/mip-tasks/index' })
   },
@@ -352,16 +261,9 @@ Page({
     void wx.navigateTo({ url: '/packages/member/benefits/index' })
   },
 
-  /** J1-06 / J4-03 keep secondary balances, level rules and history behind this entry. */
+  /** MIW-27：经验值详情跳转独立明细页（figma 1948:14177），不再原地展开滚动。 */
   openExperienceDetails() {
-    this.setData({ experienceDetailsOpen: true }, () => {
-      void wx.pageScrollTo({ selector: '#growth-details-section', duration: 200 })
-    })
-  },
-
-  closeExperienceDetails() {
-    this.setData({ experienceDetailsOpen: false })
-    void wx.pageScrollTo({ scrollTop: 0, duration: 200 })
+    void wx.navigateTo({ url: EXPERIENCE_DETAILS_PAGE })
   },
 
   /** J1-06 开通态「立即加入」→ 会员订单确认页（J1-07）。 */
@@ -380,6 +282,8 @@ Page({
       : ''
     return {
       title: 'MIP 会员方案',
+      // MIW-27 第二轮：邀请卡片先统一用品牌默认封面图。
+      imageUrl: brand.opportunityDefaultCoverPath,
       path: `/pages/membership/index?source=growth-share${invitation}`,
     }
   },

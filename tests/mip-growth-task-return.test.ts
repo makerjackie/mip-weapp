@@ -92,17 +92,12 @@ beforeEach(() => {
 })
 
 describe('growth and task return flow', () => {
-  it('keeps full balances, rules and history behind the experience details entry', () => {
+  it('routes the experience details entry to its own page instead of expanding in place', () => {
+    // MIW-27：经验值详情改为独立明细页跳转，不再原地展开与滚动定位。
     const instance = page(growthDefinition)
-    expect(instance.data.experienceDetailsOpen).toBe(false)
-
     callPage(instance, 'openExperienceDetails')
-    expect(instance.data.experienceDetailsOpen).toBe(true)
-    expect(wx.pageScrollTo).toHaveBeenCalledWith({ selector: '#growth-details-section', duration: 200 })
-
-    callPage(instance, 'closeExperienceDetails')
-    expect(instance.data.experienceDetailsOpen).toBe(false)
-    expect(wx.pageScrollTo).toHaveBeenLastCalledWith({ scrollTop: 0, duration: 200 })
+    expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/packages/member/mip-experience-details/index' })
+    expect(wx.pageScrollTo).not.toHaveBeenCalled()
   })
 
   it('refreshes server balances and tasks on every return to the growth page', async () => {

@@ -35,6 +35,13 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('邀请加入')
     expect(template).toContain('立即续费')
     expect(template).toContain('立即加入')
+    // MIW-27 第二轮：邀请分享卡片图片暂用品牌默认封面。
+    expect(script).toContain('imageUrl: brand.opportunityDefaultCoverPath')
+    // MIW-27：已加入会员态由 isPlayer 控制整块操作栏；未进续费窗口时「邀请加入」
+    // 黄底 primary 全宽，进窗口后退居左侧黑底黄字（secondary），宽度让位给「立即续费」。
+    expect(template).toContain('wx:if="{{isPlayer}}"')
+    expect(template).toContain('variant="{{renewWindowOpen ? \'secondary\' : \'primary\'}}"')
+    expect(template).toContain('class="{{renewWindowOpen ? \'min-w-0 flex-1\' : \'w-full\'}}"')
     expect(template).toContain('{{membershipValidityText}}')
     expect(template).toContain('wx:for="{{tasks}}"')
     // 最新 J1-06 原型：可执行任务使用黄底胶囊，完成态与未开放态保持区分。
@@ -48,6 +55,30 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('id="growth-join-actions"')
     expect(template).toContain('<mip-sticky-actions')
     expect(template).toContain('slot="actions"')
+  })
+
+  it('shows a read-only pending state while the first payment awaits the admin approval', () => {
+    const script = fs.readFileSync(
+      path.join(process.cwd(), 'src/packages/member/mip-growth/index.ts'),
+      'utf8',
+    )
+    const template = fs.readFileSync(
+      path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxml'),
+      'utf8',
+    )
+
+    // MIW-27 第二轮：首笔付费等待管理后台审核。等级页如实展示审核中，
+    // 不提供再次下单或邀请入口；会员结论仍由服务端投影决定。
+    expect(script).toContain('membership.kind === \'PENDING\'')
+    expect(script).toContain('membershipState: \'pending\'')
+    expect(script).toContain('入会审核中，管理后台通过后生效')
+    expect(script).toMatch(/membershipState: 'loading' as 'loading' \| 'player' \| 'guest' \| 'pending' \| 'error'/)
+    expect(template).toContain('wx:elif="{{membershipState === \'pending\'}}"')
+    expect(template).toContain('label="入会审核中" disabled')
+    // 待审核态不出现任何下单入口。
+    const pendingBlock = template.split('membershipState === \'pending\'')[1]?.split('</mip-sticky-actions>')[0] || ''
+    expect(pendingBlock).not.toContain('openMembershipOrder')
+    expect(pendingBlock).not.toContain('openType="share"')
   })
 
   it('gates the renewal CTA to the final three months of the server-provided membership', () => {
@@ -115,8 +146,44 @@ describe('MIP growth player actions', () => {
     expect(pageConfig).toContain('"backgroundColor": "#FCDF03"')
     expect(template).toContain('EXP: {{snapshot.account.experienceBalance}}')
     expect(template).toContain('{{nextLevelThreshold}}')
-    expect(template).toContain('wx:for="{{levels}}"')
     expect(template).toContain('可享 {{snapshot.currentLevel.benefits.length}} 项权益')
     expect(template).not.toContain('requestPayment')
+  })
+
+  it('moves the experience details entry beside the progress bar and opens its own page', () => {
+    const script = fs.readFileSync(
+      path.join(process.cwd(), 'src/packages/member/mip-growth/index.ts'),
+      'utf8',
+    )
+    const template = fs.readFileSync(
+      path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxml'),
+      'utf8',
+    )
+    const styles = fs.readFileSync(
+      path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxss'),
+      'utf8',
+    )
+
+    // MIW-27：点击「经验值详情」跳转独立明细页（figma 1948:14177），不再原地展开滚动。
+    expect(script).toContain('const EXPERIENCE_DETAILS_PAGE = \'/packages/member/mip-experience-details/index\'')
+    expect(script).toMatch(/openExperienceDetails\(\)[\s\S]{0,120}url: EXPERIENCE_DETAILS_PAGE/)
+    expect(script).not.toContain('experienceDetailsOpen')
+    expect(script).not.toContain('pageScrollTo')
+    expect(template).toContain('bind:tap="openExperienceDetails"')
+    expect(template).not.toContain('growth-details-section')
+
+    // 按钮中心对齐 EXP 进度条中心（48 + 16 + 104.2 + 28 + 7.8 + 6 = 210rpx），
+    // 并较原右上角胶囊放大一档（24rpx 字号 + 8×20rpx 内边距）。
+    const link = styles.match(/\.growth-experience-link\s*\{([^}]+)\}/)?.[1]
+    expect(link).toContain('top: 183rpx')
+    expect(link).toContain('padding: 8rpx 20rpx')
+    expect(link).toContain('font-size: 24rpx')
+
+    // 明细页已注册进分包路由（app.json 与 config/runtime-pages.json 契约一致）。
+    const appJson = JSON.parse(
+      fs.readFileSync(path.join(process.cwd(), 'src/app.json'), 'utf8'),
+    ) as { subPackages: Array<{ root: string, pages: string[] }> }
+    const member = appJson.subPackages.find(pkg => pkg.root === 'packages/member')
+    expect(member?.pages).toContain('mip-experience-details/index')
   })
 })

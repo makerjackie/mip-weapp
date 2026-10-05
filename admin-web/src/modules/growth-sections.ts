@@ -4,6 +4,7 @@ export const growthSections = [
   { value: 'transitions', label: '等级变更', capability: 'growth.read', paginated: true },
   { value: 'badges', label: '勋章目录', capability: 'badges.manage' }, { value: 'awards', label: '勋章获得记录', capability: 'badges.manage', paginated: true },
   { value: 'entitlements', label: '权益流水', capability: 'memberships.read', paginated: true },
+  { value: 'membershipApprovals', label: '入会审核', capability: 'memberships.read', paginated: true },
   { value: 'contributionRules', label: '贡献值规则', capability: 'growth.read', paginated: true },
   { value: 'contributionTransactions', label: '贡献值流水', capability: 'growth.read', paginated: true },
 ] as const

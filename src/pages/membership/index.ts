@@ -1,4 +1,5 @@
 import type { MembershipPlan, MembershipPlanId } from '../../modules/mip-commerce'
+import { brand } from '../../config/brand'
 import { runtimeConfig } from '../../config/runtime'
 import { MipCommerceError } from '../../modules/mip-commerce'
 import { mipCommerceModule } from '../../modules/mip-commerce/client'
@@ -65,6 +66,7 @@ Page({
     membershipDescription: '当前没有有效会员权益',
     membershipEndsText: '',
     isPlayer: false,
+    pendingReview: false,
     paymentEnabled: runtimeConfig.paymentMode !== 'disabled',
     paying: false,
     accessing: false,
@@ -78,6 +80,7 @@ Page({
     message: '',
   },
   incomingInvitationToken: '',
+  invitationGuestRecorded: false,
   shareInvitationToken: '',
   resumePlanId: '' as MembershipPlanId | '',
   checkoutKey: '',
@@ -185,6 +188,20 @@ Page({
       else {
         this.shareInvitationToken = ''
         this.setData({ invitationReady: false, invitationSourceName: '', invitationSourceAvatar: '' })
+        // MIW-27 第二轮：受邀嘉宾进入会员页即上报邀请凭证；资格校验与
+        // 幂等在服务端完成，失败不影响页面（下次进入会再次尝试）。
+        if (this.incomingInvitationToken && !this.invitationGuestRecorded) {
+          this.invitationGuestRecorded = true
+          mipCommerceModule
+            .recordMembershipInvitationGuest(this.incomingInvitationToken)
+            .catch(() => {})
+        }
+        // 首笔付费可能仍在入会审核中：commerce 快照是唯一事实来源，身份投影仍按嘉宾呈现。
+        const cachedBenefits = mipCommerceModule.peekMembershipBenefits()
+        if (cachedBenefits?.kind === 'PENDING') {
+          this.setData({ pendingReview: true })
+        }
+        void this.refreshMembershipBenefits(cachedBenefits !== undefined)
       }
     }
     catch {
@@ -195,6 +212,8 @@ Page({
   async refreshMembershipBenefits(force: boolean) {
     try {
       const benefits = await mipCommerceModule.getMembershipBenefits({ force })
+      // MIW-27 第二轮：首笔付费待审核时暂停再次下单入口，审核结论由服务端投影决定。
+      this.setData({ pendingReview: benefits.kind === 'PENDING' })
       if (benefits.kind === 'PLAYER') {
         this.applyInvitationAttribution(benefits)
       }
@@ -426,6 +445,8 @@ Page({
       : ''
     return {
       title: 'MIP 会员方案',
+      // MIW-27 第二轮：邀请卡片先统一用品牌默认封面图（与成长页分享一致）。
+      imageUrl: brand.opportunityDefaultCoverPath,
       path: `/pages/membership/index?source=member-share${invitation}`,
     }
   },
