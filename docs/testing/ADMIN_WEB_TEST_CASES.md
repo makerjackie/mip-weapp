@@ -1,6 +1,6 @@
 # MIP 管理后台测试用例（多角色 · 全流程）
 
-> 依据当前代码编写（基线 commit `050d8f5c`，含 MIW-25..37 批次），覆盖 `admin-web/`（React + TanStack Router Hash 路由 + Ant Design）。角色与能力权威来源：`cloudfunctions/mip-admin-api/domain/capabilities.js`；操作契约：`packages/admin-contracts`（AdminRequest v1，238 个操作，新增 `mip.admin.membershipApprovals.list/decide`）。
+> 依据当前代码编写（基线 commit `1aeacda8`，含 MIW-25..40 批次），覆盖 `admin-web/`（React + TanStack Router Hash 路由 + Ant Design）。角色与能力权威来源：`cloudfunctions/mip-admin-api/domain/capabilities.js`；操作契约：`packages/admin-contracts`（AdminRequest v1，240 个操作，最近新增 `mip.admin.membershipApprovals.list/decide` 与 `mip.admin.membershipPlans.list/save`）。
 >
 > 配套文档：[小程序端测试用例](./WEAPP_TEST_CASES.md)（含现场工作台与登录确认联动）；逐项验收标准以 [admin-web/ACCEPTANCE.md](../../admin-web/ACCEPTANCE.md)（G01–G08）与 [admin-web/INTERACTION_SPEC.md](../../admin-web/INTERACTION_SPEC.md) 为准。
 
@@ -185,6 +185,7 @@
 | TC-A-GRW-008 | 审核决策弹窗 | W1/W2 | P0 | 同上 | PENDING 行点「审核」：审核结论选 同意入会/驳回，填审核意见（≤300）提交 | 弹窗说明「同意后该玩家的首笔付费会员资格立即生效；驳回时必须填写审核意见（线下对接完成后再复议通过）」；**驳回必填意见、同意可选**；隐藏的会员链版本由行上预填，缺失时提交按钮不可用；提交后状态流转，小程序权益页/身份联动（WEAPP TC-MBR-008）；空会员链版本不可提交（服务端同样校验） |
 | TC-A-GRW-009 | 审核复议 | W1/W2 | P1 | 已有驳回/通过记录 | 已决定行点「复议」重新决策 | 复议走同一弹窗与校验；决定人/意见随结论留痕，可回溯线下沟通；重复提交幂等 |
 | TC-A-GRW-010 | 入会审核越权 | W3/W4/W5/W6 | P1 | 非 W1/W2 角色打开 `/growth` 入会审核分区 | 查看与操作 | 无 `memberships.read` 时分区不展示；无 `memberships.adjust` 时不显示行操作；直调 `membershipApprovals.decide` 服务端拒绝（G03） |
+| TC-A-GRW-011 | 会员方案改价 | W1/W2 | P0 | `/growth` 切「会员方案」页签（tab=plans），目录存在 TEST/LIVE 方案 | 编辑价格（元）并保存 | 名称、时长、状态、上架阶段（测试/正式）为只读服务端事实，仅价格可编辑；价格合法区间 0.01 元–100 万元，越界被拦（「价格无效，请输入 0.01 元至 100 万元之间的金额」）；保存带 `expectedVersion` + 幂等键，审计留痕（`admin.membership.plan.price.save`）；并发冲突提示核对；需 PLATFORM `growth.configure`（W1/W2），W3/W4/W5/W6 输入禁用且无保存按钮，直调 `membershipPlans.save` 服务端拒绝（G03）；小程序会员页方案价格联动（WEAPP TC-MBR-001） |
 
 ---
 
