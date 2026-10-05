@@ -14,6 +14,18 @@ export function formatLocalDate(value: string | number | Date) {
     : ''
 }
 
+/** Parses a `YYYY-MM-DD` key as a local calendar day (UTC parsing would shift the day). */
+export function parseLocalDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) {
+    return null
+  }
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])]
+  const date = new Date(year, month - 1, day)
+  const roundTrips = date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+  return roundTrips && !Number.isNaN(date.getTime()) ? date : null
+}
+
 export function formatLocalTime(value: string | number | Date) {
   const date = validDate(value)
   return date ? `${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}` : ''
