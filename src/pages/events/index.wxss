@@ -3,6 +3,12 @@
   --td-skeleton-animation-gradient: rgb(255 255 255 / 8%);
 }
 
+/* MIW-37 figma 1819_17793: the sheet ends above the mock home-indicator area;
+   on device the same strip is the safe area (the pixel proxy has env() = 0). */
+.events-calendar-sheet {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* City notice dialog per figma 1820_19040: 320x232 panel over a 70% scrim.
    Figma places the scrim at screen y 86..778 css; the pixel proxy collapses the
    44 css safe area, so fixed offsets are calibrated -44 css (top 84rpx, bottom

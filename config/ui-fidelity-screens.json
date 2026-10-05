@@ -6096,271 +6096,290 @@
             "typeTagStyle": "background:#428bff;border-color:#075adf;color:#f7f7f7"
           }
         ],
-        "calendarValue": 1770000000000,
-        "calendarMinDate": 1735689600000,
-        "calendarMaxDate": 1798761600000,
-        "figma": {
-          "calendarWeekdays": [
-            "日",
-            "一",
-            "二",
-            "三",
-            "四",
-            "五",
-            "六"
-          ],
-          "calendarDays": [
-            {
-              "label": "1",
-              "leftRpx": 424,
-              "topRpx": 856,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "2",
-              "leftRpx": 520,
-              "topRpx": 856,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "3",
-              "leftRpx": 616,
-              "topRpx": 856,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "4",
-              "leftRpx": 40,
-              "topRpx": 952,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "5",
-              "leftRpx": 136,
-              "topRpx": 952,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "6",
-              "leftRpx": 232,
-              "topRpx": 952,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "7",
-              "leftRpx": 328,
-              "topRpx": 952,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "8",
-              "leftRpx": 424,
-              "topRpx": 952,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "9",
-              "leftRpx": 520,
-              "topRpx": 952,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "10",
-              "leftRpx": 616,
-              "topRpx": 952,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "11",
-              "leftRpx": 40,
-              "topRpx": 1048,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "12",
-              "leftRpx": 136,
-              "topRpx": 1048,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "13",
-              "leftRpx": 232,
-              "topRpx": 1048,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "14",
-              "leftRpx": 328,
-              "topRpx": 1048,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "15",
-              "leftRpx": 424,
-              "topRpx": 1048,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "16",
-              "leftRpx": 520,
-              "topRpx": 1048,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "17",
-              "leftRpx": 616,
-              "topRpx": 1048,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "18",
-              "leftRpx": 40,
-              "topRpx": 1144,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "19",
-              "leftRpx": 136,
-              "topRpx": 1144,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "20",
-              "leftRpx": 232,
-              "topRpx": 1144,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "21",
-              "leftRpx": 328,
-              "topRpx": 1144,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "22",
-              "leftRpx": 424,
-              "topRpx": 1144,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "23",
-              "leftRpx": 520,
-              "topRpx": 1144,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "24",
-              "leftRpx": 616,
-              "topRpx": 1144,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "25",
-              "leftRpx": 40,
-              "topRpx": 1240,
-              "dimmed": true,
-              "dot": false,
-              "cellClass": "bg-panel text-[#767676]"
-            },
-            {
-              "label": "26",
-              "leftRpx": 136,
-              "topRpx": 1240,
-              "dimmed": false,
-              "dot": true,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "27",
-              "leftRpx": 232,
-              "topRpx": 1240,
-              "dimmed": false,
-              "dot": true,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "28",
-              "leftRpx": 328,
-              "topRpx": 1240,
-              "dimmed": false,
-              "dot": true,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "29",
-              "leftRpx": 424,
-              "topRpx": 1240,
-              "dimmed": false,
-              "dot": true,
-              "cellClass": "bg-panel text-ink"
-            },
-            {
-              "label": "30",
-              "leftRpx": 520,
-              "topRpx": 1240,
-              "dimmed": false,
-              "dot": false,
-              "cellClass": "bg-brand font-semibold text-canvas"
-            },
-            {
-              "label": "31",
-              "leftRpx": 616,
-              "topRpx": 1240,
-              "dimmed": false,
-              "dot": true,
-              "cellClass": "bg-panel text-ink"
-            }
-          ]
-        },
-        "figmaCalendar": true
+        "calendarYear": 2026,
+        "calendarMonth": 2,
+        "calendarWeekdays": [
+          "日",
+          "一",
+          "二",
+          "三",
+          "四",
+          "五",
+          "六"
+        ],
+        "calendarWeeks": [
+          {
+            "key": "week-0",
+            "cells": [
+              {
+                "key": "",
+                "day": 0,
+                "cellClass": "",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "",
+                "day": 0,
+                "cellClass": "",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "",
+                "day": 0,
+                "cellClass": "",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "",
+                "day": 0,
+                "cellClass": "",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-01",
+                "day": 1,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-02",
+                "day": 2,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-03",
+                "day": 3,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              }
+            ]
+          },
+          {
+            "key": "week-1",
+            "cells": [
+              {
+                "key": "2026-01-04",
+                "day": 4,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-05",
+                "day": 5,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-06",
+                "day": 6,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-07",
+                "day": 7,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-08",
+                "day": 8,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-09",
+                "day": 9,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-10",
+                "day": 10,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              }
+            ]
+          },
+          {
+            "key": "week-2",
+            "cells": [
+              {
+                "key": "2026-01-11",
+                "day": 11,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-12",
+                "day": 12,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-13",
+                "day": 13,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-14",
+                "day": 14,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-15",
+                "day": 15,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-16",
+                "day": 16,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-17",
+                "day": 17,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              }
+            ]
+          },
+          {
+            "key": "week-3",
+            "cells": [
+              {
+                "key": "2026-01-18",
+                "day": 18,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-19",
+                "day": 19,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-20",
+                "day": 20,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-21",
+                "day": 21,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-22",
+                "day": 22,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-23",
+                "day": 23,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-24",
+                "day": 24,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              }
+            ]
+          },
+          {
+            "key": "week-4",
+            "cells": [
+              {
+                "key": "2026-01-25",
+                "day": 25,
+                "cellClass": "bg-panel text-[#4c4c4c]",
+                "disabled": true,
+                "dot": false
+              },
+              {
+                "key": "2026-01-26",
+                "day": 26,
+                "cellClass": "bg-panel text-ink",
+                "disabled": false,
+                "dot": true
+              },
+              {
+                "key": "2026-01-27",
+                "day": 27,
+                "cellClass": "bg-panel text-ink",
+                "disabled": false,
+                "dot": true
+              },
+              {
+                "key": "2026-01-28",
+                "day": 28,
+                "cellClass": "bg-panel text-ink",
+                "disabled": false,
+                "dot": true
+              },
+              {
+                "key": "2026-01-29",
+                "day": 29,
+                "cellClass": "bg-panel text-ink",
+                "disabled": false,
+                "dot": true
+              },
+              {
+                "key": "2026-01-30",
+                "day": 30,
+                "cellClass": "bg-brand text-canvas",
+                "disabled": false,
+                "dot": false
+              },
+              {
+                "key": "2026-01-31",
+                "day": 31,
+                "cellClass": "bg-panel text-ink",
+                "disabled": false,
+                "dot": true
+              }
+            ]
+          }
+        ],
+        "calendarSelected": "2026-01-30"
       }
     },
     {

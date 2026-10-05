@@ -2,6 +2,7 @@ import type { EventCardView } from '../../components/mip-activity-card/model'
 import type { EventId } from '../../modules/mip'
 import type { MipPublicBanner } from '../../modules/mip-banners'
 import type {
+  EventCalendarWeek,
   EventDateFilter,
   EventFeedQuery,
   EventListView,
@@ -9,12 +10,16 @@ import type {
 import { presentEventCard } from '../../components/mip-activity-card/model'
 import { mipOperationsConfig } from '../../config/mip-operations'
 import { mipBannerModule } from '../../modules/mip-banners'
-import { eventInvitationPath, resolvePrimaryBranchCity } from '../../modules/mip-events'
+import {
+  buildEventCalendarMonth,
+  eventInvitationPath,
+  resolvePrimaryBranchCity,
+} from '../../modules/mip-events'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
 import { clearPageMedia, updatePageMedia } from '../../platform/storage/component-media'
-import { formatChineseMonthDay, formatLocalDate } from '../../utils/date'
+import { formatChineseMonthDay, formatLocalDate, parseLocalDate } from '../../utils/date'
 
 type EventBannerView = MipPublicBanner
 
@@ -22,6 +27,14 @@ function rollingCalendarBoundary(yearOffset: number) {
   const today = new Date()
   return new Date(today.getFullYear() + yearOffset, yearOffset < 0 ? 0 : 11, yearOffset < 0 ? 1 : 31).getTime()
 }
+
+// MIW-37 figma 1819_17793: 稿内「今天」之前的日期为 #4c4c4c 不可选，起始边界即今天零点。
+function startOfToday() {
+  const today = new Date()
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
+}
+
+const calendarWeekdays = ['日', '一', '二', '三', '四', '五', '六']
 
 Page({
   data: {
@@ -36,11 +49,14 @@ Page({
     searchInput: '',
     activeQuery: '',
     selectedDate: '',
-    selectedDateLabel: '',
     customDateLabel: '',
     cityNoticeVisible: false,
     calendarVisible: false,
-    calendarValue: Date.now(),
+    calendarYear: new Date().getFullYear(),
+    calendarMonth: new Date().getMonth() + 1,
+    calendarWeekdays,
+    calendarWeeks: [] as EventCalendarWeek[],
+    calendarSelected: '',
     calendarMinDate: rollingCalendarBoundary(-5),
     calendarMaxDate: rollingCalendarBoundary(10),
     nextCursor: '',
@@ -200,7 +216,6 @@ Page({
       dateFilter,
       view: dateFilter === 'ENDED' ? 'PAST' : 'UPCOMING',
       selectedDate: '',
-      selectedDateLabel: '',
       customDateLabel: '',
       nextCursor: '',
       message: '',
@@ -218,7 +233,6 @@ Page({
     this.setData({
       dateFilter,
       selectedDate: '',
-      selectedDateLabel: '',
       customDateLabel: '',
       nextCursor: '',
       message: '',
@@ -273,30 +287,83 @@ Page({
   },
 
   showCalendar() {
-    this.setData({ calendarVisible: true })
+    const base = this.data.selectedDate ? parseLocalDate(this.data.selectedDate) : null
+    const today = new Date()
+    this.setData({
+      calendarVisible: true,
+      calendarYear: base ? base.getFullYear() : today.getFullYear(),
+      calendarMonth: base ? base.getMonth() + 1 : today.getMonth() + 1,
+      calendarSelected: this.data.selectedDate,
+    })
+    this.rebuildCalendar()
+  },
+
+  rebuildCalendar() {
+    const { calendarYear, calendarMonth, calendarSelected, calendarMinDate, calendarMaxDate } = this.data
+    this.setData({
+      calendarWeeks: buildEventCalendarMonth({
+        year: calendarYear,
+        month: calendarMonth,
+        selectedDate: calendarSelected,
+        minDate: Math.max(calendarMinDate, startOfToday()),
+        maxDate: calendarMaxDate,
+      }),
+    })
+  },
+
+  // Steppers clamp to the same rolling window the grid disables days against.
+  shiftCalendarYear(event: WechatMiniprogram.TouchEvent) {
+    this.stepCalendarMonth(Number(event.currentTarget.dataset.delta) * 12)
+  },
+
+  shiftCalendarMonth(event: WechatMiniprogram.TouchEvent) {
+    this.stepCalendarMonth(Number(event.currentTarget.dataset.delta))
+  },
+
+  stepCalendarMonth(delta: number) {
+    const min = new Date(this.data.calendarMinDate)
+    const max = new Date(this.data.calendarMaxDate)
+    const current = this.data.calendarYear * 12 + this.data.calendarMonth - 1 + delta
+    const clamped = Math.min(Math.max(current, min.getFullYear() * 12 + min.getMonth()), max.getFullYear() * 12 + max.getMonth())
+    if (clamped === this.data.calendarYear * 12 + this.data.calendarMonth - 1) {
+      return
+    }
+    this.setData({ calendarYear: Math.floor(clamped / 12), calendarMonth: clamped % 12 + 1 })
+    this.rebuildCalendar()
+  },
+
+  pickCalendarDay(event: WechatMiniprogram.TouchEvent) {
+    const selectedDate = String(event.currentTarget.dataset.date || '')
+    if (!selectedDate || event.currentTarget.dataset.disabled) {
+      return
+    }
+    this.setData({ calendarSelected: selectedDate })
+    this.rebuildCalendar()
   },
 
   closeCalendar() {
     this.setData({ calendarVisible: false })
   },
 
+  noop() {},
+
   closeCityNotice() {
     this.setData({ cityNoticeVisible: false })
   },
 
-  confirmCalendar(event: WechatMiniprogram.CustomEvent<{ value: number | number[] }>) {
-    const value = Array.isArray(event.detail.value) ? event.detail.value[0] : event.detail.value
-    const selectedDate = formatLocalDate(value)
-    if (!selectedDate) {
+  confirmCalendar() {
+    const selectedDate = this.data.calendarSelected
+    const value = selectedDate ? parseLocalDate(selectedDate) : null
+    if (!selectedDate || !value) {
       wx.showToast({ title: '请选择有效日期', icon: 'none' })
       return
     }
+    // MIW-37 figma 1819_17793: 只有选中「今天」时标签才带「今天」，其他日期直接显示「M月D日」。
+    const label = selectedDate === formatLocalDate(new Date()) ? '今天' : formatChineseMonthDay(value)
     this.setData({
       calendarVisible: false,
-      calendarValue: value,
       selectedDate,
-      selectedDateLabel: formatChineseMonthDay(value),
-      customDateLabel: formatChineseMonthDay(value),
+      customDateLabel: label,
       dateFilter: 'CUSTOM',
       nextCursor: '',
       message: '',

@@ -8,6 +8,7 @@ import {
   formatLocalDateTime,
   formatLocalMonthDayTime,
   formatLocalTime,
+  parseLocalDate,
 } from '../src/utils/date'
 
 describe('local date formatting', () => {
@@ -29,5 +30,15 @@ describe('local date formatting', () => {
   it('returns an empty string for invalid timestamps', () => {
     expect(formatLocalDateTime('invalid')).toBe('')
     expect(formatChineseDateTime('invalid')).toBe('')
+  })
+
+  it('parses YYYY-MM-DD keys as local calendar days', () => {
+    vi.stubEnv('TZ', 'Asia/Shanghai')
+    const parsed = parseLocalDate('2026-01-01')
+    expect(parsed).not.toBeNull()
+    expect(formatLocalDate(parsed!)).toBe('2026-01-01')
+    expect(parseLocalDate('2026-13-01')).toBeNull()
+    expect(parseLocalDate('2026-1-1')).toBeNull()
+    vi.unstubAllEnvs()
   })
 })
