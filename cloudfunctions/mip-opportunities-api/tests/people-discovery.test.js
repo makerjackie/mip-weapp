@@ -246,6 +246,14 @@ describe('public profile aggregate', () => {
         if (sql.includes('FROM mip_opportunity_cooperations')) return []
         calls.push({ sql, params })
         if (sql.includes('FROM mip_profile_tags pt')) return []
+        if (sql.includes('FROM mip_growth_accounts')) return [{ experience_balance: 3000 }]
+        if (sql.includes('FROM mip_growth_levels')) {
+          return [
+            { id: 'l1', name: '启程', minimum_experience: 0, status: 'ACTIVE' },
+            { id: 'l2', name: '进阶', minimum_experience: 2500, status: 'ACTIVE' },
+            { id: 'l3', name: '资深', minimum_experience: 9000, status: 'ACTIVE' },
+          ]
+        }
         if (sql.includes('FROM mip_user_badge_equipment')) {
           return [{
             user_id: targetUserId,
@@ -295,6 +303,8 @@ describe('public profile aggregate', () => {
     assert.equal(result.profile.nickname, undefined)
     assert.equal(result.profile.companies, undefined)
     assert.equal(result.profile.userKind, 'PLAYER')
+    // 档案头部等级徽标：与公开名单详情同口径（3000 经验 → 第 2 级）。
+    assert.deepEqual(result.profile.level, { number: 2, name: '进阶' })
     assert.deepEqual(result.profile.badges.map(item => item.name), ['活动参与'])
     assert.equal(result.cooperationCards[0].roleKey, 'strategist')
     assert.equal(result.superCases[0].projectName, '品牌升级')
@@ -340,11 +350,15 @@ describe('public profile aggregate', () => {
         if (sql.includes('FROM mip_cooperation_cards')) return []
         if (sql.includes('FROM mip_super_cases c')) return []
         if (sql.includes('FROM mip_opportunities o')) return []
+        if (sql.includes('FROM mip_growth_accounts')) return []
+        if (sql.includes('FROM mip_growth_levels')) return []
         throw new Error(`unexpected query: ${sql}`)
       },
     }
     const result = await getPublicProfileAggregate(database, caller, { profileRef })
     assert.equal(result.influence, undefined)
+    // 无成长账户的嘉宾不返回等级，客户端隐藏徽标而不是渲染占位。
+    assert.equal(result.profile.level, undefined)
   })
 
   it('keeps historical profiles private when influence visibility is missing', async () => {
@@ -361,6 +375,8 @@ describe('public profile aggregate', () => {
         if (sql.includes('FROM mip_cooperation_cards')) return []
         if (sql.includes('FROM mip_super_cases c')) return []
         if (sql.includes('FROM mip_opportunities o')) return []
+        if (sql.includes('FROM mip_growth_accounts')) return []
+        if (sql.includes('FROM mip_growth_levels')) return []
         throw new Error(`unexpected query: ${sql}`)
       },
     }

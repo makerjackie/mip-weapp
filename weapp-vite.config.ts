@@ -97,6 +97,12 @@ export default defineConfig({
         { test: /(?:^|\/)modules\/mip-growth\/badge-presentation\.ts$/, mode: 'path' },
         { test: /(?:^|\/)modules\/mip-identity\/profile-options\.ts$/, mode: 'path' },
       ],
+      // sharedOverrides only renames shared chunks; preserveModules keeps the seams standalone
+      // even while a single page imports them (archive page no longer uses profile-options).
+      preserveModules: [
+        /(?:^|\/)modules\/mip-growth\/badge-presentation\.ts$/,
+        /(?:^|\/)modules\/mip-identity\/profile-options\.ts$/,
+      ],
     },
     copy: {
       include: ['**/*.webp'],

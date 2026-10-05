@@ -238,7 +238,8 @@
         <view class="min-w-0 flex-1">
           <view class="flex items-center gap-[8rpx]">
             <view class="truncate text-[32rpx] font-medium leading-[44.8rpx]">{{profile.displayName}}</view>
-            <text class="shrink-0 rounded-[8rpx] border border-canvas bg-panel-raised px-[8rpx] text-[20rpx] font-medium leading-[28rpx] text-brand">{{profile.kindLabel}}</text>
+            <!-- figma 1769_38198：名称与勋章之间是等级徽标；无成长账户（嘉宾）时不渲染。 -->
+            <text wx:if="{{profile.levelText}}" class="shrink-0 rounded-[8rpx] border border-canvas bg-panel-raised px-[8rpx] text-[20rpx] font-medium leading-[28rpx] text-brand">{{profile.levelText}}</text>
             <block wx:for="{{profile.badges}}" wx:key="id">
               <image wx:if="{{index === 0 && (item.imageUrl || profile.badgeArtFallbackUrls[item.id])}}" class="h-[40rpx] w-[40rpx] shrink-0" mode="aspectFit" src="{{item.imageUrl || profile.badgeArtFallbackUrls[item.id]}}" aria-label="{{item.name}}" />
             </block>
@@ -253,7 +254,7 @@
     <view class="-mx-3 grid grid-cols-4 bg-panel pb-3">
       <view class="flex min-h-[136rpx] flex-col items-center justify-center gap-[4rpx]" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="GUEST" bind:tap="openOwnInfluence"><text class="text-[40rpx] font-medium leading-[56rpx]">{{influence ? influence.guestCount : '—'}}</text><text class="text-[20rpx] leading-[28rpx] text-muted">嘉宾</text></view>
       <view class="flex min-h-[136rpx] flex-col items-center justify-center gap-[4rpx]" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="INTERACTION" bind:tap="openOwnInfluence"><text class="text-[40rpx] font-medium leading-[56rpx]">{{influence ? influence.interactionCount : '—'}}</text><text class="text-[20rpx] leading-[28rpx] text-muted">互动过</text></view>
-      <view class="flex min-h-[136rpx] flex-col items-center justify-center gap-[4rpx]" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="ACTIVE_INTEREST" bind:tap="openOwnInfluence"><text class="text-[40rpx] font-medium leading-[56rpx]">{{influence ? influence.interestCount : '—'}}</text><text class="text-[20rpx] leading-[28rpx] text-muted">感兴趣</text></view>
+      <view class="flex min-h-[136rpx] flex-col items-center justify-center gap-[4rpx]" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="ACTIVE_INTEREST" bind:tap="openOwnInfluence"><text class="text-[40rpx] font-medium leading-[56rpx]">{{influence ? influence.interestCount : '—'}}</text><text class="text-[20rpx] leading-[28rpx] text-muted">心动值</text></view>
       <view class="flex min-h-[136rpx] flex-col items-center justify-center gap-[4rpx]" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="VISITOR" bind:tap="openOwnInfluence"><text class="text-[40rpx] font-medium leading-[56rpx]">{{influence ? influence.visitorCount : '—'}}</text><text class="text-[20rpx] leading-[28rpx] text-muted">访客</text></view>
     </view>
 
@@ -301,29 +302,6 @@
       <view wx:else class="py-12 text-center text-[22rpx] text-muted">暂无招募中的机会。</view>
     </view>
 
-    <view wx:if="{{profile.identityDetailText || profile.primaryCompanyLine || profile.branchText || profile.primaryIndustry || profile.identityStatus || profile.headline || profile.introduction || profile.abilities.length || profile.badges.length || profile.companies.length || profile.organizations.length}}" id="public-profile-details" class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="text-[28rpx] font-medium">个人资料</view>
-      <view wx:if="{{profile.identityDetailText}}" class="mt-3 text-[22rpx] leading-6 text-muted">{{profile.identityDetailText}}</view>
-      <view wx:if="{{profile.primaryCompanyLine}}" class="mt-2 text-[22rpx] leading-6 text-ink">{{profile.primaryCompanyLine}}</view>
-      <view wx:if="{{profile.branchText || profile.primaryIndustry || profile.identityStatus}}" class="mt-2 text-[22rpx] leading-6 text-muted"><text wx:if="{{profile.branchText}}">{{profile.branchText}}</text><text wx:if="{{profile.branchText && (profile.primaryIndustry || profile.identityStatus)}}">｜</text><text wx:if="{{profile.primaryIndustry}}">{{profile.primaryIndustry.label}}</text><text wx:if="{{profile.primaryIndustry && profile.identityStatus}}">｜</text><text wx:if="{{profile.identityStatus}}">{{profile.identityStatus}}</text></view>
-      <view wx:if="{{profile.headline}}" class="mt-3 whitespace-pre-wrap text-[22rpx] leading-6 text-muted">{{profile.headline}}</view>
-      <view wx:if="{{profile.introduction}}" class="mt-3 whitespace-pre-wrap text-[22rpx] leading-6 text-muted">{{profile.introduction}}</view>
-      <view wx:if="{{profile.abilities.length}}" class="mt-4 flex flex-wrap gap-2"><text wx:for="{{profile.abilities}}" wx:key="id" class="rounded-[8rpx] bg-panel-raised px-2 py-1 text-[22rpx] text-muted">{{item.label}}</text></view>
-      <view wx:if="{{profile.badges.length}}" class="mt-3 flex flex-wrap gap-2">
-        <view wx:for="{{profile.badges}}" wx:key="id" class="flex h-[48rpx] items-center gap-1 rounded-[8rpx] border border-line px-2">
-          <image wx:if="{{item.imageUrl || profile.badgeArtFallbackUrls[item.id]}}" class="h-[28rpx] w-[28rpx] rounded-full" mode="aspectFit" src="{{item.imageUrl || profile.badgeArtFallbackUrls[item.id]}}" />
-          <t-icon wx:elif="{{item.iconName}}" name="{{item.iconName}}" size="26rpx" color="var(--color-brand)" />
-          <view wx:else class="h-[20rpx] w-[20rpx] rounded-full bg-brand" />
-          <text class="text-[22rpx] text-muted">{{item.name}}</text>
-        </view>
-      </view>
-      <view wx:if="{{profile.companies.length || profile.organizations.length}}" class="mt-5 border-t border-line pt-4">
-        <view class="text-[28rpx] font-medium">经历</view>
-        <view wx:for="{{profile.companies}}" wx:key="name" class="mt-3"><view class="text-[22rpx]">{{item.name}}</view><view wx:if="{{item.role}}" class="mt-1 text-[22rpx] text-muted">{{item.role}}</view></view>
-        <view wx:for="{{profile.organizations}}" wx:key="name" class="mt-3"><view class="text-[22rpx]">{{item.name}}</view><view wx:if="{{item.role}}" class="mt-1 text-[22rpx] text-muted">{{item.role}}</view></view>
-      </view>
-    </view>
-
     <view wx:if="{{!isSelf && safetyState === 'access'}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[24rpx]">需要完成身份信息后继续。</view><t-button block theme="primary" bind:tap="openAccess">继续</t-button></view>
     <view wx:if="{{!isSelf && safetyState === 'error'}}" class="mt-4 text-[24rpx] text-danger">{{safetyMessage}}<t-button wx:if="{{canRetryReport}}" variant="outline" bind:tap="retryReport">重新提交举报</t-button></view>
 
@@ -333,12 +311,12 @@
     <!-- journey-review 1769:38198 底部互动条（C1 终审角色门禁）：
          玩家=功能态；普通用户=可见、点击弹原生解锁（J2-04）；嘉宾=整条不渲染（interactionBar === 'hidden'）；
          pending=身份未定（resolveInteractionBar 完成前不渲染，防嘉宾态先见条后消失）。
-         左胶囊 = 感兴趣名单入口；仅档案公开影响力时显示聚合数。 -->
+         MIW-29 按稿两段式：右侧黄色「我感兴趣」常驻；左侧 mip-attend-pill 只在本人已表态后出现
+         （本人头像 + N感兴趣），点击进心动名单（J4-02b）。 -->
     <mip-sticky-actions wx:if="{{!isSelf && (interactionBar === 'active' || interactionBar === 'locked')}}">
       <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[16rpx]">
-      <view wx:if="{{influence}}" class="flex h-[80rpx] shrink-0 items-center gap-[4rpx] rounded-full bg-panel px-[24rpx]" aria-role="button" aria-label="查看感兴趣名单" bind:tap="openInterestList">
-        <text class="text-[24rpx] font-semibold text-brand">+</text>
-        <text class="text-[24rpx] font-medium leading-[33.6rpx] text-brand">{{influence ? influence.interestCount + '感兴趣' : '感兴趣'}}</text>
+      <view wx:if="{{interestActive}}" class="shrink-0" aria-role="button" aria-label="查看心动名单" bind:tap="openInterestList">
+        <mip-attend-pill count="{{interestPillCount}}" label="感兴趣" avatars="{{viewerAvatars}}" variant="dark" />
       </view>
       <mip-pill-button class="min-w-0 flex-1" label="{{interestActive ? '已感兴趣' : '我感兴趣'}}" loading="{{interestState === 'loading'}}" bind:tap="toggleInterest" />
       </view>

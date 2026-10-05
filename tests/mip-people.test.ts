@@ -158,11 +158,12 @@ describe('MIP people discovery client contract', () => {
     expect(profile).toContain('profileInterestMutations.mutate')
     expect(`${discovery}\n${profile}`).not.toMatch(/membershipModule|wx\.cloud/)
     expect(profile).not.toContain('mipIdentityModule.getPublicProfile')
-    for (const heading of ['合作卡', '超级案例', '招募中的机会', '感兴趣']) {
+    for (const heading of ['合作卡', '超级案例', '招募中的机会', '心动值']) {
       expect(profileView).toContain(heading)
     }
-    expect(profileView).toContain('profile.identityDetailText')
-    expect(profileView).toContain('profile.primaryCompanyLine')
+    // MIW-29：档案页按 figma 1769_38198 显示等级徽标，不再有「个人资料」模块。
+    expect(profileView).toContain('{{profile.levelText}}')
+    expect(profileView).not.toContain('个人资料')
   })
 
   it('keeps the filter apply bar clear of the final option row', () => {

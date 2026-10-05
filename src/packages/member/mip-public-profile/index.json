@@ -13,6 +13,7 @@
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-subscription-prompt": "/components/mip-subscription-prompt/index",
     "mip-pill-button": "/components/mip-pill-button/index",
+    "mip-attend-pill": "/components/mip-attend-pill/index",
     "mip-icon": "/components/mip-icon/index"
   }
 }
