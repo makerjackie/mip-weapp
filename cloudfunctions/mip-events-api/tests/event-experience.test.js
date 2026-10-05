@@ -85,6 +85,9 @@ test('heart state returns opaque profile references without exposing user ids', 
       if (sql.includes('SELECT id, event_id, user_id')) {
         return { id: 'registration-self', event_id: 'event-1', user_id: 'user-self', status: 'ATTENDED' }
       }
+      // MIW-36：getHeart 同时下发 heartCounts 服务端计数，stub 按 COUNT 别名路由。
+      if (sql.includes('AS my_interest_count')) return { my_interest_count: 1 }
+      if (sql.includes('AS received_interest_count')) return { received_interest_count: 1 }
       assert.match(sql, /tr\.id AS registration_id, tr\.user_id/)
       return {
         version: 2,
@@ -116,6 +119,8 @@ test('heart state returns opaque profile references without exposing user ids', 
   assert.match(result.received[0].profileRef, /^p1\./)
   assert.equal(JSON.stringify(result).includes(targetUserId), false)
   assert.equal(JSON.stringify(result).includes(voterUserId), false)
+  // 计数与列表同源（heartCounts）：target 在场 → 我的心动 1；received 一行 → 对我心动 1。
+  assert.deepEqual(result.counts, { myInterestCount: 1, receivedInterestCount: 1 })
 })
 
 test('set heart rechecks a signed target inside the transaction', async () => {

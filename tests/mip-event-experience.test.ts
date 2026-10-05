@@ -246,6 +246,23 @@ describe('MIP event experience contracts', () => {
     expect(detail).toContain('[\'ATTENDED\', \'CANCELLATION_PENDING\', \'CANCELLED\', \'REJECTED\']')
   })
 
+  it('reuses the detail cache within the freshness window on onShow instead of force-refetching', () => {
+    // MIW-36：onShow 走 cache-and-revalidate（maxAgeMs 窗口），不再每次强刷全部详情
+    // 子查询；报名/取消/签到由模块主动失效缓存，签到态即时感知不受影响。
+    const detail = source('src/packages/member/mip-events/detail/index.ts')
+    expect(detail).toContain('SHOW_REVALIDATE_MAX_AGE_MS')
+    // 仅约束 onShow：重试/场景恢复/自动签到等其他入口仍允许显式强刷。
+    const onShowBody = detail.slice(detail.indexOf('onShow()'), detail.indexOf('resumeAuthIntent()'))
+    expect(onShowBody).toContain('maxAgeMs: SHOW_REVALIDATE_MAX_AGE_MS')
+    expect(onShowBody).not.toContain('force: true')
+    // 徽标计数消费服务端 heartCounts，与详情胶囊同源（REQUIREMENTS：不以列表长度重算）。
+    const participantsView = source('src/packages/member/mip-events/participants/index.wxml')
+    expect(participantsView).toContain('{{heartMineCount}}')
+    expect(participantsView).toContain('{{heartReceivedCount}}')
+    expect(participantsView).not.toContain('{{sentItems.length}}')
+    expect(participantsView).not.toContain('{{receivedItems.length}}')
+  })
+
   it('formats a five-minute rotating credential countdown and exposes refresh controls', () => {
     const countdown = checkInCredentialCountdown(
       '2026-08-24T00:05:00.000Z',

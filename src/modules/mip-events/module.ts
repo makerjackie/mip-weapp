@@ -6,6 +6,7 @@ import type {
   EventFeedbackAnswers,
   EventFeedbackDraft,
   EventFeedQuery,
+  EventInteractionSummary,
   HeartHistoryKind,
   MipEventsGateway,
   PublicEventParticipantQuery,
@@ -128,6 +129,7 @@ export function createMipEventsModule(
   options: { submitRefund?: (refundId: string) => Promise<unknown> } = {},
 ) {
   const eventCache = new Map<string, Awaited<ReturnType<MipEventsGateway['getEvent']>>>()
+  const eventCacheLoadedAt = new Map<string, number>()
   const feedCache = new Map<string, Awaited<ReturnType<MipEventsGateway['listEvents']>>>()
   let discoveryFiltersCache: Awaited<ReturnType<NonNullable<MipEventsGateway['getDiscoveryFilters']>>> | null = null
   let discoveryFiltersLoadedAt = 0
@@ -153,6 +155,12 @@ export function createMipEventsModule(
 
   function feedKey(query: EventFeedQuery) {
     return JSON.stringify(normalizedQuery(query))
+  }
+
+  /** 报名状态类变更（报名/改单/取消/签到）统一失效详情缓存与新鲜度标记（MIW-36）。 */
+  function invalidateEventCache(key: string) {
+    eventCache.delete(key)
+    eventCacheLoadedAt.delete(key)
   }
 
   return {
@@ -211,10 +219,24 @@ export function createMipEventsModule(
       return eventCache.get(String(eventId))
     },
 
-    async getEvent(eventId: EventId, options: { force?: boolean, progressiveMedia?: boolean } = {}) {
+    async getEvent(eventId: EventId, options: {
+      force?: boolean
+      progressiveMedia?: boolean
+      /** MIW-36：缓存在此年龄内直接返回（详情页 onShow 回参页不再整页强刷）。 */
+      maxAgeMs?: number
+    } = {}) {
       const key = String(eventId)
+      // force 优先于新鲜窗口：显式强刷（重试/报名/签到后）不得被窗口内的旧缓存拦截。
       if (options.force) {
         eventCache.delete(key)
+        eventCacheLoadedAt.delete(key)
+      }
+      const cached = eventCache.get(key)
+      if (cached
+        && typeof options.maxAgeMs === 'number'
+        && Number.isFinite(options.maxAgeMs)
+        && Date.now() - (eventCacheLoadedAt.get(key) || 0) < options.maxAgeMs) {
+        return cached
       }
       const loadGeneration = generation
       const result = options.progressiveMedia
@@ -226,8 +248,23 @@ export function createMipEventsModule(
           onlineAccessAvailable: false,
           onlineUrl: undefined,
         })
+        eventCacheLoadedAt.set(key, Date.now())
       }
       return result
+    },
+
+    /**
+     * MIW-36：心动页以 getHeart/setHeart 响应里的服务端计数回填详情胶囊，返回详情页
+     * 时 onShow 应用缓存即可看到最新数字，无需整页强刷。无缓存时不动作（下次真实
+     * 拉取自带 summary）。
+     */
+    patchEventInteractionSummary(eventId: EventId, summary: EventInteractionSummary) {
+      const key = String(eventId)
+      const cached = eventCache.get(key)
+      if (!cached) {
+        return
+      }
+      eventCache.set(key, { ...cached, interactionSummary: summary })
     },
 
     listPublicParticipants(eventId: EventId, query: PublicEventParticipantQuery = {}) {
@@ -257,7 +294,7 @@ export function createMipEventsModule(
         idempotencyKey: input.idempotencyKey || requestKey('event-registration'),
       })
       feedCache.clear()
-      eventCache.delete(String(input.eventId))
+      invalidateEventCache(String(input.eventId))
       return outcome
     },
 
@@ -267,7 +304,7 @@ export function createMipEventsModule(
         idempotencyKey: input.idempotencyKey || requestKey('event-registration-update'),
       })
       feedCache.clear()
-      eventCache.delete(String(input.eventId))
+      invalidateEventCache(String(input.eventId))
       return outcome
     },
 
@@ -277,7 +314,7 @@ export function createMipEventsModule(
       }
       const outcome = await gateway.cancelRegistration(eventId, expectedVersion)
       feedCache.clear()
-      eventCache.delete(String(eventId))
+      invalidateEventCache(String(eventId))
       if (!outcome.refundRequired || !outcome.refundId || !outcome.paymentAvailable) {
         return outcome
       }
@@ -300,7 +337,12 @@ export function createMipEventsModule(
       }
       return runInCurrentSession(
         () => gateway.checkIn(normalized, requestKey('event-checkin')),
-      )
+      ).then((outcome) => {
+        // 签到改变报名状态（MIW-36）：失效该活动详情缓存，返回详情页时 onShow
+        // 因缓存缺失立刻重新拉取，保住签到态的即时感知。
+        invalidateEventCache(String(outcome.eventId))
+        return outcome
+      })
     },
 
     resolveCheckInScene(scene: string) {
@@ -394,6 +436,7 @@ export function createMipEventsModule(
     invalidate() {
       generation += 1
       eventCache.clear()
+      eventCacheLoadedAt.clear()
       feedCache.clear()
       discoveryFiltersCache = null
       discoveryFiltersLoadedAt = 0

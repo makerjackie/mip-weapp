@@ -1,6 +1,6 @@
 # MIP 当前状态
 
-更新日期：2026-10-05（会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
+更新日期：2026-10-05（心动计数口径收敛与 SQL 执行验证（MIW-36）：心动可见性 SQL 收敛为共享构造、tab 徽标改服务端计数、云函数 SQL 真实执行验证、详情 onShow 缓存新鲜窗口；会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
 
@@ -60,6 +60,18 @@ MIW-26：填写信息页（`packages/member/mip-profile`）「一句话介绍你
 活动详情参与人数模块的已签到态新增「与你互动」区块（黄色标题 + 「我的心动 N / 对我心动 N」两枚胶囊，深链参与人页对应心动 tab）。口径经客户确认（2026-10-05）：已签到即展示，0/0 也显示，废止 journey-review J0-01 的空态隐藏规则（设计师批注 2133:3831 不再适用）；未签到整卡隐藏。服务端仅对 `registration_status = 'ATTENDED'` 的查看者下发 `interactionSummary`，计数与参与人页心动 tab 同人群（received 侧含投票者资料 JOIN、拉黑双向过滤）；计数属装饰性数据，查询失败只隐藏卡片、不阻断详情主载荷，并随详情其余独立子查询并行执行。客户端可见性只跟随服务端 `canInteract` 与 `interactionSummary`，不再重复推导签到状态。
 
 代码评审曾发现该计数 SQL 把拉黑片段（裸 `NOT EXISTS`）拼进 JOIN ON 缺少 `AND` 前缀，会使已签到用户的 `mip.events.detail` 整体 1064 失败；已改为片段置于 WHERE 并补 `AND`，拆为两条独立计数查询，测试新增 `AND NOT EXISTS` 连词回归守卫与计数失败降级用例。完整 `pnpm verify` 通过。真机上的签到后卡片展示与心动深链仍待验收。
+
+## 2026-10-05 心动计数口径收敛与 SQL 执行验证（MIW-36）
+
+MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示、胶囊深链参与人页心动 tab 不变，本卡无真机验收项）。
+
+① 心动可见性 SQL 收敛为共享构造：`mip-events-api` 新增 `heartVisibilityFilters(userId)`——sent/received 两个方向的谓词、对方报名 JOIN、资料 JOIN 与拉黑双向过滤的唯一来源——与 `heartCounts(db, {appId, eventId, userId})`（两条 COUNT，详情胶囊与 `getHeart.counts` 的唯一计数来源）。`getHeart`、`listHeartCandidates` 与 `getEventInteractionSummary` 全部改为消费该构造：此前 5 条手写 SQL 各自表达「心动可见」且已漂移（selected 查询缺拉黑过滤、getHeart target 与 received 各写各的），现收敛为零；selected 查询的拉黑过滤缺口一并补上。getHeart 的 target 行读取保持不含 status 谓词（CANCELLED 行仅为并发版本号而读，`mip_event_hearts_status_ck` 保证其 `target_user_id` 恒 NULL），注释已钉进 `heartVisibilityFilters`。参与人页心动 tab 徽标改消费服务端计数（`heartMineCount`/`heartReceivedCount`，与详情胶囊同一 `heartCounts`），不再以 `sentItems.length`/`receivedItems.length` 重算（REQUIREMENTS「以服务端口径统计」）；心动页每次 `getHeart`/`setHeart` 后经新增的 `patchEventInteractionSummary` 回填详情缓存。
+
+② 云函数 SQL 真实执行验证：新增 `cloudfunctions/mip-events-api/tests/sql-execution.test.js` 两层防线，覆盖 `getEvent`/`getHeart`/`listHeartCandidates`/`heartCounts` 产出的全部语句。结构层恒跑：录制四类函数发出的 14 个语句族（含 `mip_app_settings` 取消截止回退与窗口函数标签查询），逐条 node-sql-parser MySQL 方言解析 + mysql2 占位符语义计数与 params 一致性 + sent/received 片段同源断言——MIW-28 的 1064 类故障（片段拼进 JOIN ON 缺 `AND`）在解析处被拦截。执行层由 `MIP_SQL_VERIFY_AUTO=1`（mysql-memory-server 自备一次性 MySQL 8.4，二进制按版本缓存）或 `MIP_SQL_VERIFY_URI`（任意 8.0.16+ 实例，仓库迁移用 `DROP CHECK` 语法）门控：应用全量 102 个迁移、种子真实场景（已签到查看者、已离开但报名行仍在的投票者、拉黑双向过滤、无任何心动的已签到者），端到端断言详情计数 == `getHeart.counts` == `heartCounts` == 列表长度、已签到 0/0 照常下发、未签到不下发 `interactionSummary`、拉黑者双向不可见；本机实跑通过。`pnpm verify` 默认只跑结构层（确定性优先）。devDependencies 新增 `node-sql-parser@5.4.0` 与 `mysql-memory-server`。
+
+③ 详情页 onShow 强刷消除：`mip-events` 模块 `getEvent` 新增 `maxAgeMs` 新鲜窗口与 `patchEventInteractionSummary` 回填，`invalidateEventCache` 统一报名/改单/取消/签到（`checkIn` 此前漏失效，一并补上）的缓存失效。`detail/index.ts` onShow 由每次 `loadEvent({ force: true })` 重发全部详情子查询改为 `maxAgeMs: 30_000` 的 cache-and-revalidate——详情 ↔ 参与人一次往返通常在数秒内，窗口内直接应用缓存（心动计数已被回填，返回即见最新值），超窗后台重验证；缓存缺失（报名/取消/签到后）时照常真实拉取，报名态与签到态变化的即时感知不变。重试、场景恢复、自动签到、CONFLICT 等其他入口仍显式强刷。
+
+测试：模块层新增新鲜窗口命中/超窗重拉/状态变更失效/计数回填用例（`tests/mip-events-module.test.ts`），页面契约新增 onShow 窗口与徽标消费服务端计数的断言（`tests/mip-event-experience.test.ts`、`tests/mip-event-video-recaps-page.test.ts`、`tests/mip-event-participants-visual.test.ts` 同步改钉新契约）。完整 `pnpm verify` 通过（根工程 1529 项测试）；执行层验证以 `MIP_SQL_VERIFY_AUTO=1` 实跑通过（MySQL 8.4.9，102 迁移 + 种子 + 四函数端到端断言）。
 
 ## 2026-10-04 通用游客登录引导提取
 

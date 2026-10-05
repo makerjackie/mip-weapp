@@ -1170,7 +1170,7 @@ async function getEvent(db, {
     loadPublicEventMetadata(db, { appId, eventIds: [eventId] }),
     effectiveCancellationDeadline(db, appId, row),
     wantsInteractionSummary
-      ? getEventInteractionSummary(db, { appId, eventId, userId }).catch(() => undefined)
+      ? heartCounts(db, { appId, eventId, userId }).catch(() => undefined)
       : Promise.resolve(undefined),
   ])
   const timestamp = now.getTime()
@@ -2584,9 +2584,81 @@ async function requireAttendedRegistration(db, { appId, eventId, userId, lock = 
   return registration
 }
 
+/**
+ * MIW-36：心动可见性单一来源。此前同一「心动可见」语义由 5 条手写 SQL 各自表达，
+ * 副本已经漂移（selected 查询无拉黑过滤、详情计数与列表各写各的）；这里把 sent /
+ * received 两个方向的谓词、对方报名 JOIN、资料 JOIN 与拉黑过滤收敛为唯一构造，
+ * listHeartCandidates、getHeart 与 heartCounts 全部从这里取片段——任何一侧调整
+ * 口径（例如给对方报名加状态谓词）都会同步生效到详情计数与 tab 列表，并被
+ * tests/sql-execution.test.js 的口径一致性断言捕获。
+ *
+ * - sent：本人发出且仍生效（ACTIVE）的心动；对方（目标）在本场存在报名行即计入，
+ *   不限定报名状态（报名行存在 = 仍是本场参与人），拉黑双向过滤目标方。
+ * - received：指向本人且仍生效（ACTIVE）的心动；对方（投票者）报名行与资料同时存在
+ *   才计入（资料可见 = received 列表可见），拉黑双向过滤投票者。
+ * - block：任意心动场景共用的拉黑双向过滤构造（app 维度）。
+ * getHeart 的 target 行读取不含 status 谓词——CANCELLED 行仅为并发版本号而读取，
+ * 其 target_user_id 恒为 NULL（mip_event_hearts_status_ck），不会产出 target 参与人。
+ */
+function heartVisibilityFilters(userId) {
+  const block = (subjectSql, appSql) => mutualBlockFilter(userId, subjectSql, appSql)
+  return {
+    sent: {
+      predicate: `h.voter_user_id = ? AND h.status = 'ACTIVE'`,
+      params: [userId],
+      counterpartJoin: `JOIN mip_event_registrations tr
+         ON tr.app_id = h.app_id AND tr.event_id = h.event_id AND tr.user_id = h.target_user_id`,
+      block: block('h.target_user_id', 'h.app_id'),
+    },
+    received: {
+      predicate: `h.target_user_id = ? AND h.status = 'ACTIVE'`,
+      params: [userId],
+      counterpartJoin: `JOIN mip_event_registrations vr
+         ON vr.app_id = h.app_id AND vr.event_id = h.event_id AND vr.user_id = h.voter_user_id`,
+      profileJoin: `JOIN mip_profiles vp ON vp.app_id = vr.app_id AND vp.user_id = vr.user_id`,
+      block: block('h.voter_user_id', 'h.app_id'),
+    },
+    block,
+  }
+}
+
+/**
+ * MIW-28/36：详情「与你互动」胶囊与参与人页心动 tab 徽标共用的服务端计数，也是
+ * getEvent 与 getHeart（counts 字段）的唯一计数来源。与 sent/received 列表消费同一
+ * 可见性构造，详情计数、tab 徽标、列表长度三者同口径；计数属装饰性数据，调用方
+ * （getEvent）自行降级。
+ */
+async function heartCounts(db, { appId, eventId, userId }) {
+  const visibility = heartVisibilityFilters(userId)
+  const [sent, received] = await Promise.all([
+    db.one(
+      `SELECT COUNT(*) AS my_interest_count FROM mip_event_hearts h
+       ${visibility.sent.counterpartJoin}
+       WHERE h.app_id = ? AND h.event_id = ?
+         AND ${visibility.sent.predicate}
+         AND ${visibility.sent.block.sql}`,
+      [appId, eventId, ...visibility.sent.params, ...visibility.sent.block.params],
+    ),
+    db.one(
+      `SELECT COUNT(*) AS received_interest_count FROM mip_event_hearts h
+       ${visibility.received.counterpartJoin}
+       ${visibility.received.profileJoin}
+       WHERE h.app_id = ? AND h.event_id = ?
+         AND ${visibility.received.predicate}
+         AND ${visibility.received.block.sql}`,
+      [appId, eventId, ...visibility.received.params, ...visibility.received.block.params],
+    ),
+  ])
+  return {
+    myInterestCount: Number(sent?.my_interest_count || 0),
+    receivedInterestCount: Number(received?.received_interest_count || 0),
+  }
+}
+
 async function listHeartCandidates(db, { appId, eventId, userId, tokenSecret, profileRefSecret }) {
   await requireAttendedRegistration(db, { appId, eventId, userId })
-  const blockFilter = mutualBlockFilter(userId, 'r.user_id', 'r.app_id')
+  const visibility = heartVisibilityFilters(userId)
+  const blockFilter = visibility.block('r.user_id', 'r.app_id')
   const [rows, selected] = await Promise.all([
     db.query(
       `SELECT r.id AS registration_id, r.user_id, p.nickname, p.headline,
@@ -2599,13 +2671,15 @@ async function listHeartCandidates(db, { appId, eventId, userId, tokenSecret, pr
        ORDER BY r.registered_at DESC, r.id DESC`,
       [appId, eventId, userId, ...blockFilter.params],
     ),
+    // MIW-36：selected 与 heartCounts sent 消费同一 sent 构造（含拉黑过滤）。
     db.one(
       `SELECT tr.id AS registration_id
        FROM mip_event_hearts h
-       JOIN mip_event_registrations tr
-         ON tr.app_id = h.app_id AND tr.event_id = h.event_id AND tr.user_id = h.target_user_id
-       WHERE h.app_id = ? AND h.event_id = ? AND h.voter_user_id = ? AND h.status = 'ACTIVE'`,
-      [appId, eventId, userId],
+       ${visibility.sent.counterpartJoin}
+       WHERE h.app_id = ? AND h.event_id = ?
+         AND ${visibility.sent.predicate}
+         AND ${visibility.sent.block.sql}`,
+      [appId, eventId, ...visibility.sent.params, ...visibility.sent.block.params],
     ),
   ])
   return rows.map(row => ({
@@ -2616,9 +2690,11 @@ async function listHeartCandidates(db, { appId, eventId, userId, tokenSecret, pr
 
 async function getHeart(db, { appId, eventId, userId, tokenSecret, profileRefSecret }) {
   await requireAttendedRegistration(db, { appId, eventId, userId })
-  const targetBlock = mutualBlockFilter(userId, 'h.target_user_id', 'h.app_id')
-  const voterBlock = mutualBlockFilter(userId, 'h.voter_user_id', 'h.app_id')
-  const [heart, received] = await Promise.all([
+  const visibility = heartVisibilityFilters(userId)
+  // target 行读取不含 status 谓词：CANCELLED 行用于并发版本号（见 heartVisibilityFilters 注释），
+  // 拉黑过滤仍进 JOIN ON，缺 AND 连词会让整条 SQL 1064（MIW-28 回归）。
+  const targetBlock = visibility.block('h.target_user_id', 'h.app_id')
+  const [heart, received, counts] = await Promise.all([
     db.one(
       `SELECT h.version, h.updated_at, tr.id AS registration_id, tr.user_id,
          p.nickname, p.headline, a.cloud_file_id AS avatar_file_id
@@ -2632,18 +2708,20 @@ async function getHeart(db, { appId, eventId, userId, tokenSecret, profileRefSec
       [...targetBlock.params, appId, eventId, userId],
     ),
     db.query(
-      `SELECT vr.id AS registration_id, vr.user_id, p.nickname, p.headline,
+      `SELECT vr.id AS registration_id, vr.user_id, vp.nickname, vp.headline,
          a.cloud_file_id AS avatar_file_id
        FROM mip_event_hearts h
-       JOIN mip_event_registrations vr
-         ON vr.app_id = h.app_id AND vr.event_id = h.event_id AND vr.user_id = h.voter_user_id
-       JOIN mip_profiles p ON p.app_id = vr.app_id AND p.user_id = vr.user_id
-       LEFT JOIN mip_media_assets a ON a.app_id = p.app_id AND a.id = p.avatar_asset_id AND a.status = 'READY'
-       WHERE h.app_id = ? AND h.event_id = ? AND h.target_user_id = ? AND h.status = 'ACTIVE'
-         AND ${voterBlock.sql}
+       ${visibility.received.counterpartJoin}
+       ${visibility.received.profileJoin}
+       LEFT JOIN mip_media_assets a ON a.app_id = vp.app_id AND a.id = vp.avatar_asset_id AND a.status = 'READY'
+       WHERE h.app_id = ? AND h.event_id = ?
+         AND ${visibility.received.predicate}
+         AND ${visibility.received.block.sql}
        ORDER BY h.updated_at DESC, h.id DESC`,
-      [appId, eventId, userId, ...voterBlock.params],
+      [appId, eventId, ...visibility.received.params, ...visibility.received.block.params],
     ),
+    // MIW-36：tab 徽标消费服务端计数（与详情胶囊同一 heartCounts），不再以列表长度重算。
+    heartCounts(db, { appId, eventId, userId }),
   ])
   const target = heart?.registration_id
     ? heartParticipant(heart, { appId, eventId, tokenSecret, profileRefSecret })
@@ -2652,44 +2730,19 @@ async function getHeart(db, { appId, eventId, userId, tokenSecret, profileRefSec
     targetRef: target?.participantRef,
     target,
     received: received.map(row => heartParticipant(row, { appId, eventId, tokenSecret, profileRefSecret })),
+    counts,
     version: Number(heart?.version || 0),
     updatedAt: heart?.updated_at ? iso(heart.updated_at) : undefined,
   }
 }
 
 /**
- * MIW-28：活动详情「与你互动」胶囊计数。仅在查看者已签到时调用；口径与参与人页
- * 心动 tab 完全一致——我的心动 = 本人 ACTIVE 心动（目标可见），对我心动 = 指向本人
- * 的 ACTIVE 心动（与 getHeart received 列表同人群：投票者资料可见），拉黑双向过滤，
- * 避免详情计数与 tab 列表不一致。拉黑片段带 `AND` 前缀置于 WHERE，与文件内其他
- * mutualBlockFilter 调用点一致。
+ * MIW-28：活动详情「与你互动」胶囊计数。仅在查看者已签到时调用（getEvent 内判定），
+ * 委托给 heartCounts——与 getHeart counts、参与人页心动 tab 徽标同源；计数属装饰性
+ * 数据，调用方负责失败降级。
  */
 async function getEventInteractionSummary(db, { appId, eventId, userId }) {
-  const sentBlock = mutualBlockFilter(userId, 'h.target_user_id', 'h.app_id')
-  const receivedBlock = mutualBlockFilter(userId, 'h.voter_user_id', 'h.app_id')
-  const [sent, received] = await Promise.all([
-    db.one(
-      `SELECT COUNT(*) AS my_interest_count FROM mip_event_hearts h
-       JOIN mip_event_registrations tr
-         ON tr.app_id = h.app_id AND tr.event_id = h.event_id AND tr.user_id = h.target_user_id
-       WHERE h.app_id = ? AND h.event_id = ? AND h.voter_user_id = ? AND h.status = 'ACTIVE'
-         AND ${sentBlock.sql}`,
-      [appId, eventId, userId, ...sentBlock.params],
-    ),
-    db.one(
-      `SELECT COUNT(*) AS received_interest_count FROM mip_event_hearts h
-       JOIN mip_event_registrations vr
-         ON vr.app_id = h.app_id AND vr.event_id = h.event_id AND vr.user_id = h.voter_user_id
-       JOIN mip_profiles vp ON vp.app_id = vr.app_id AND vp.user_id = vr.user_id
-       WHERE h.app_id = ? AND h.event_id = ? AND h.target_user_id = ? AND h.status = 'ACTIVE'
-         AND ${receivedBlock.sql}`,
-      [appId, eventId, userId, ...receivedBlock.params],
-    ),
-  ])
-  return {
-    myInterestCount: Number(sent?.my_interest_count || 0),
-    receivedInterestCount: Number(received?.received_interest_count || 0),
-  }
+  return heartCounts(db, { appId, eventId, userId })
 }
 
 async function setHeart(db, {
@@ -2713,7 +2766,8 @@ async function setHeart(db, {
       if (payload.eventId !== eventId) {
         throw new DomainError('VALIDATION_FAILED', '心动对象无效')
       }
-      const blockFilter = mutualBlockFilter(userId, 'r.user_id', 'r.app_id')
+      // 写路径对可见性的复检同样取自 heartVisibilityFilters 的拉黑构造（MIW-36）。
+      const blockFilter = heartVisibilityFilters(userId).block('r.user_id', 'r.app_id')
       target = await tx.one(
         `SELECT r.id, r.user_id FROM mip_event_registrations r
          WHERE r.app_id = ? AND r.event_id = ? AND r.id = ? AND r.status = 'ATTENDED'
@@ -3076,6 +3130,8 @@ module.exports = {
   getFeedback,
   getHeart,
   getEventInteractionSummary,
+  heartCounts,
+  heartVisibilityFilters,
   getMyRegistration,
   listEvents,
   listHeartCandidates,
