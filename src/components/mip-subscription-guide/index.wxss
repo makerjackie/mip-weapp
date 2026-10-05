@@ -1,0 +1,2 @@
+/* MIW-40：引导层样式全部走页面级工具类（styleIsolation: apply-shared）；
+   遮罩与层级由 t-popup 自带，避开自定义 TabBar 层级冲突（参照 cfae2294 教训）。 */

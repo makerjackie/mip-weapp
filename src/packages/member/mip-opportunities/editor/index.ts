@@ -7,6 +7,7 @@ import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { mipAiModule } from '../../../../modules/mip-ai/client'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
+import { GUIDE_PENDING_STORAGE_KEY, writePendingGuideOpportunity } from '../../../../modules/mip-messaging/guide-policy'
 import { journeyStatusOf, opportunityModule, opportunityProjectStatusOptions, opportunityTypeOptions } from '../../../../modules/mip-opportunities'
 import { parseOpportunityAiDraft } from '../../../../modules/mip-opportunities/ai-draft'
 import { parseOpportunityText } from '../../../../modules/mip-opportunities/text-parser'
@@ -714,6 +715,14 @@ Page({
         confirmedAiDraftId: '',
         confirmedAiDraftVersion: 0,
       })
+      // MIW-40 S8：发布成功记 pending，发布者落地页（机会列表/详情）onShow 消费后
+      // 弹订阅授权引导层；带 TTL，错过窗口即回退进详情的既有时机。
+      if (publish && result.status === 'PUBLISHED') {
+        const pending = writePendingGuideOpportunity(result.id, Date.now())
+        if (pending) {
+          wx.setStorageSync(GUIDE_PENDING_STORAGE_KEY, pending)
+        }
+      }
       wx.showToast({
         title: result.status === 'UNPUBLISHED' ? '项目已下架' : result.status === 'ENDED' ? '项目已结束' : result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存',
         icon: 'success',
