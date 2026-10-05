@@ -8,6 +8,16 @@
   border-radius: 32rpx;
 }
 
+/* 四条黑条详情形态（合作卡详情页）：底图仍按 400rpx 烘焙图渲染，
+   黑条区自 240rpx 向下延伸，多出的两条不拉伸底图。 */
+.mip-cooperation-card--tall {
+  height: 560rpx;
+}
+
+.mip-cooperation-card--tall .mip-cooperation-card__art {
+  height: 400rpx;
+}
+
 .mip-cooperation-card__art {
   position: absolute;
   top: 0;
@@ -46,6 +56,23 @@
   width: 100%;
   background: #202020;
   border-radius: 32rpx 32rpx 0 0;
+}
+
+.mip-cooperation-card__quote {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 80rpx;
+  padding: 0 24rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 24rpx;
+  font-weight: 500;
+  line-height: 33.6rpx;
+  color: var(--color-brand);
+  white-space: nowrap;
 }
 
 .mip-cooperation-card__strip {

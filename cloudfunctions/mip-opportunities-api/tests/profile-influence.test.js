@@ -41,6 +41,7 @@ describe('profile influence summary', () => {
         if (sql.includes('mip_event_checkins own_checkin')) return { count: 3 }
         if (sql.includes('mip_profile_interests')) return { count: 4 }
         if (sql.includes('mip_profile_visits')) return { count: 5 }
+        if (sql.includes('FROM mip_event_hearts')) return { count: 6 }
         throw new Error(`unexpected query: ${sql}`)
       },
     }
@@ -50,6 +51,7 @@ describe('profile influence summary', () => {
       interactionCount: 3,
       interestCount: 4,
       visitorCount: 5,
+      heartCount: 6,
     })
     const guest = calls.find(call => call.sql.includes('mip_event_invitation_attributions'))
     assert.match(guest.sql, /source_type = 'USER'/)
@@ -70,6 +72,12 @@ describe('profile influence summary', () => {
     const visitors = calls.find(call => call.sql.includes('mip_profile_visits'))
     assert.match(visitors.sql, /COUNT\(\*\)/)
     assert.match(visitors.sql, /visitor\.status = 'ACTIVE'/)
+    // 心动值 = 收到的当前有效活动红心票，与 events-api listHeartHistory('RECEIVED') 同口径。
+    const hearts = calls.find(call => call.sql.includes('FROM mip_event_hearts'))
+    assert.match(hearts.sql, /target_user_id = \? AND heart\.status = 'ACTIVE'/)
+    assert.match(hearts.sql, /voter\.status = 'ACTIVE'/)
+    assert.match(hearts.sql, /FROM mip_user_blocks visibility_block/)
+    assert.deepEqual(hearts.params, [appId, profileUserId, profileUserId, profileUserId])
   })
 })
 

@@ -289,11 +289,14 @@ describe('MIP opportunity review fixes', () => {
     expect(profile).not.toContain('avatars="{{item.avatars}}"')
     expect(home).not.toContain('avatars="{{item.avatars}}"')
     expect(detailScript).toContain('cooperationAvatars: Array.isArray(item.avatars)')
+    // figma 机会详情（访客视角）：底部聚合头像改由共享 mip-attend-pill 承载，页面不再内联手拼头像组。
     const cooperationActions = detail.slice(detail.indexOf('id="opportunity-cooperation-actions"'))
-    expect(cooperationActions).toContain('wx:for="{{cooperationAvatars}}"')
-    expect(cooperationActions).toContain('src="{{avatar}}"')
+    expect(cooperationActions).toContain('<mip-attend-pill')
+    expect(cooperationActions).toContain('count="{{item.cooperationCount}}"')
+    expect(cooperationActions).toContain('label="想合作"')
+    expect(cooperationActions).toContain('avatars="{{cooperationAvatars}}"')
     expect(cooperationActions).toContain('bind:tap="openCooperators"')
-    expect(cooperationActions).toContain('{{item.cooperationCount || 0}}想合作')
+    expect(detail).not.toContain('wx:for="{{cooperationAvatars}}"')
     expect(cardScript).toContain(`avatars: { type: Array, value: [] }`)
   })
 
@@ -308,8 +311,8 @@ describe('MIP opportunity review fixes', () => {
     expect(endedBlock).not.toContain('bind:tap="edit"')
     // 点击兜底：已结束不再跳编辑页。
     expect(detailScript).toContain(`item.status !== 'ENDED'`)
-    // 访客「+n想合作」24px 头像白描边（对齐 mip-attend-pill）。
-    expect(detail).toContain('rounded-full border-[2rpx] border-solid border-white')
+    // 访客「+n想合作」头像白描边收敛进 mip-attend-pill 组件自身样式。
+    expect(source('src/components/mip-attend-pill/index.wxss')).toContain('border: 2rpx solid rgb(255 255 255 / 100%)')
     expect(detail).not.toContain('border-solid border-panel-raised')
   })
 })

@@ -237,6 +237,7 @@ export interface ProfileInfluenceSummary {
   interactionCount: number
   interestCount: number
   visitorCount: number
+  heartCount: number
 }
 
 export interface PeoplePage {

@@ -534,6 +534,7 @@ export function parseProfileInfluence(value: unknown) {
     source.interactionCount,
     source.interestCount,
     source.visitorCount,
+    source.heartCount,
   ]
   if (counts.some(count => typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0)) {
     throw new Error('人才服务返回了无效响应')
@@ -543,6 +544,7 @@ export function parseProfileInfluence(value: unknown) {
     interactionCount: source.interactionCount as number,
     interestCount: source.interestCount as number,
     visitorCount: source.visitorCount as number,
+    heartCount: source.heartCount as number,
   }
 }
 

@@ -69,9 +69,12 @@ describe('MIP received interaction client flow', () => {
     expect(profileView).toContain('心动值')
     expect(publicView).toContain('感兴趣')
     expect(publicView).toContain('influence ? influence.guestCount : \'—\'')
+    // 公开档案第三统计与「我的」页心动值卡同源：收到的活动红心票（聚合内只读计数）。
+    expect(publicView).toContain('influence ? influence.heartCount : \'—\'')
     expect(visibilitySettings).toContain('visibilityInfluence')
     expect(server).toContain('FROM mip_event_invitation_attributions')
     expect(read('cloudfunctions/mip-events-api/domain/event-service.js')).toContain('FROM mip_event_hearts')
+    expect(server).toContain('FROM mip_event_hearts')
     expect(server).toContain('FROM mip_profile_interests')
     expect(server).toContain('FROM mip_profile_visits')
     expect(server).toContain('guest.status = \'ACTIVE\'')
@@ -84,29 +87,41 @@ describe('MIP received interaction client flow', () => {
       interactionCount: 2,
       interestCount: 3,
       visitorCount: 4,
+      heartCount: 5,
     })).toEqual({
       guestCount: 1,
       interactionCount: 2,
       interestCount: 3,
       visitorCount: 4,
+      heartCount: 5,
     })
     expect(() => parseProfileInfluence({
       guestCount: -1,
       interactionCount: 2,
       interestCount: 3,
       visitorCount: 4,
+      heartCount: 5,
     })).toThrow('人才服务返回了无效响应')
     expect(() => parseProfileInfluence({
       guestCount: 1,
       interactionCount: 2.5,
       interestCount: 3,
       visitorCount: 4,
+      heartCount: 5,
     })).toThrow('人才服务返回了无效响应')
     expect(() => parseProfileInfluence({
       guestCount: null,
       interactionCount: 2,
       interestCount: 3,
       visitorCount: 4,
+      heartCount: 5,
+    })).toThrow('人才服务返回了无效响应')
+    expect(() => parseProfileInfluence({
+      guestCount: 1,
+      interactionCount: 2,
+      interestCount: 3,
+      visitorCount: 4,
+      heartCount: undefined,
     })).toThrow('人才服务返回了无效响应')
   })
 

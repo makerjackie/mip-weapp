@@ -151,7 +151,8 @@ async function loadProfileInfluenceSummary(database, { appId, profileUserId, vie
   const interactionBlock = mutualBlockFilter(profileUserId, 'peer.id', 'peer.app_id')
   const interestScope = profileInterestScope(appId, profileUserId, viewerUserId)
   const visitorBlock = mutualBlockFilter(profileUserId, 'visitor.id', 'visitor.app_id')
-  const [guests, interactions, interests, visitors] = await Promise.all([
+  const heartBlock = mutualBlockFilter(profileUserId, 'voter.id', 'voter.app_id')
+  const [guests, interactions, interests, visitors, hearts] = await Promise.all([
     database.one(
       `SELECT COUNT(DISTINCT attribution.guest_user_id) AS count
        FROM mip_event_invitation_attributions attribution
@@ -200,12 +201,26 @@ async function loadProfileInfluenceSummary(database, { appId, profileUserId, vie
          AND ${visitorBlock.sql}`,
       [appId, profileUserId, ...visitorBlock.params],
     ),
+    // 心动值 = 收到的当前有效活动红心票（S9：双方须已签到、不可自投、取消即不计数），
+    // 与档案「感兴趣」关系分开；与 mip-events-api listHeartHistory('RECEIVED') 同口径。
+    database.one(
+      `SELECT COUNT(*) AS count
+       FROM mip_event_hearts heart
+       INNER JOIN mip_users voter
+         ON voter.app_id = heart.app_id AND voter.id = heart.voter_user_id AND voter.status = 'ACTIVE'
+       INNER JOIN mip_profiles voter_profile
+         ON voter_profile.app_id = voter.app_id AND voter_profile.user_id = voter.id
+       WHERE heart.app_id = ? AND heart.target_user_id = ? AND heart.status = 'ACTIVE'
+         AND ${heartBlock.sql}`,
+      [appId, profileUserId, ...heartBlock.params],
+    ),
   ])
   return {
     guestCount: Number(guests?.count || 0),
     interactionCount: Number(interactions?.count || 0),
     interestCount: Number(interests?.count || 0),
     visitorCount: Number(visitors?.count || 0),
+    heartCount: Number(hearts?.count || 0),
   }
 }
 

@@ -52,7 +52,7 @@ beforeAll(async () => {
 
 describe('page loading and profile interaction regressions', () => {
   it('renders freshly returned statistics and unread badge on the first response', async () => {
-    opportunities.getProfileInfluence.mockResolvedValue({ guestCount: 3, interactionCount: 4, interestCount: 5, visitorCount: 6 })
+    opportunities.getProfileInfluence.mockResolvedValue({ guestCount: 3, interactionCount: 4, interestCount: 5, visitorCount: 6, heartCount: 7 })
     opportunities.listReceived.mockResolvedValue({ unreadCount: 2 })
     const { mipEventsModule } = await import('../src/modules/mip-events/client')
     vi.mocked(mipEventsModule.listHeartHistory).mockResolvedValue({ totalCount: 5, unreadCount: 1, items: [], nextCursor: '' } as never)

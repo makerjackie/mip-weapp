@@ -28,7 +28,9 @@ describe('MIP related opportunity flow', () => {
     const detail = read('src/packages/member/mip-opportunities/detail/index.ts')
     const view = read('src/packages/member/mip-opportunities/detail/index.wxml')
     expect(detail).toContain('setCooperation(item.id, !item.cooperationActive)')
-    expect(detail).toContain('authorizeInteraction(\'cooperation\')')
+    // figma 1768_37369：详情只剩合作意向一种互动，交互方法不再带类型参数。
+    expect(detail).toContain('await this.authorizeInteraction()')
+    expect(detail).toContain('async performInteraction()')
     expect(view).toContain('bind:tap="cooperationIntent"')
     expect(view).toContain('取消合作意向')
     expect(view).toContain('想合作的人')

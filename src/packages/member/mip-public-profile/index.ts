@@ -310,11 +310,12 @@ Page({
       return
     }
     const category = String(event.currentTarget.dataset.category || '')
-    if (!['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR'].includes(category)) {
+    if (category === 'HEART') {
+      // 心动值 = 活动红心票（S9），与「我的」页心动值卡同源；列表纯查看，投票仍在原活动详情页。
+      caseNavigateTo({ url: '/packages/member/mip-hearts/index' })
       return
     }
-    if (category === 'ACTIVE_INTEREST') {
-      caseNavigateTo({ url: `/packages/member/mip-profile-interests/index?profileRef=${encodeURIComponent(this.data.profileRef)}` })
+    if (!['GUEST', 'INTERACTION', 'VISITOR'].includes(category)) {
       return
     }
     caseNavigateTo({

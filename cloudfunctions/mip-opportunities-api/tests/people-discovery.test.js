@@ -239,6 +239,7 @@ describe('public profile aggregate', () => {
         if (sql.includes('mip_event_checkins own_checkin')) return { count: 3 }
         if (sql.includes('SELECT COUNT(*) AS count') && sql.includes('mip_profile_interests')) return { count: 4 }
         if (sql.includes('mip_profile_visits')) return { count: 5 }
+        if (sql.includes('FROM mip_event_hearts')) return { count: 6 }
         if (sql.includes('FROM mip_profile_interests')) return { status: 'ACTIVE' }
         throw new Error(`unexpected one: ${sql}`)
       },
@@ -315,6 +316,7 @@ describe('public profile aggregate', () => {
       interactionCount: 3,
       interestCount: 4,
       visitorCount: 5,
+      heartCount: 6,
     })
     const profileQuery = calls.find(call => call.sql.includes('FROM mip_users u'))
     assert.match(profileQuery.sql, /FROM mip_user_blocks visibility_block/)

@@ -450,10 +450,11 @@ Page({
   },
 
   /** journey-review QZ1：机会类型三件套多选。 */
+  /** 找资源/找企业/找伙伴单选（figma 1768_37369 详情只挂一个类型标签）。 */
   toggleTypeOption(event: WechatMiniprogram.TouchEvent) {
     const key = String(event.currentTarget.dataset.key || '')
     const typeOptions = this.data.typeOptions.map(item => (
-      item.key === key ? { ...item, selected: !item.selected } : item
+      item.key === key ? { ...item, selected: !item.selected } : { ...item, selected: false }
     ))
     this.setData({ typeOptions })
   },

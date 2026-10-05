@@ -111,7 +111,8 @@ describe('MIP opportunity journey review', () => {
     expect(detail).toContain('city-text="{{item.city.label || \'\'}}"')
     expect(detail).toContain('type-tags="{{typeTagViews}}"')
     expect(detail).toContain('bind:tap="cooperationIntent"')
-    expect(detail).toContain('{{item.cooperationCount || 0}}想合作</text>')
+    // figma 机会详情（访客视角）：液态玻璃 bar 左侧为共享 mip-attend-pill「+N想合作」。
+    expect(detail).toMatch(/<mip-attend-pill\s+count="\{\{item\.cooperationCount\}\}"\s+label="想合作"/)
     // 招募结束的详情底部合作按钮不可点，文案「项目已结束」。
     expect(detail).toContain(`wx:elif="{{!item.mine && item.status === 'ENDED'}}"`)
     expect(detail).toContain('label="项目已结束" disabled')

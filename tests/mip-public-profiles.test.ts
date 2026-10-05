@@ -90,15 +90,26 @@ describe('MIP public profiles', () => {
     expect(profilePage).toContain('profileInterestMutations.mutate')
     expect(`${participantPage}\n${profilePage}`).not.toMatch(/membershipModule|wx\.cloud/)
 
+    // 机会详情的「我想合作」是唯一保留 INTERACT 门禁的详情互动。
+    const opportunityDetail = source('src/packages/member/mip-opportunities/detail/index.ts')
+    expect(opportunityDetail).toContain('action: \'INTERACT\'')
+    expect(opportunityDetail).toContain('consumePendingResume')
     for (const detail of [
       'src/packages/member/mip-opportunities/detail/index.ts',
       'src/packages/member/mip-cooperation/detail/index.ts',
+    ]) {
+      expect(source(detail)).toContain('/packages/member/mip-public-profile/index?profileRef=')
+    }
+    // 超级案例 / 合作卡详情（访客视角）没有互动 bar 和发布人模块，不再承载 INTERACT 门禁；
+    // 合作卡的感兴趣统一收敛在玩家档案页（figma 2058_12247）。
+    for (const detail of [
       'src/packages/member/mip-cases/detail/index.ts',
+      'src/packages/member/mip-cooperation/detail/index.ts',
     ]) {
       const code = source(detail)
-      expect(code).toContain('action: \'INTERACT\'')
-      expect(code).toContain('consumePendingResume')
-      expect(code).toContain('/packages/member/mip-public-profile/index?profileRef=')
+      expect(code).not.toContain('action: \'INTERACT\'')
+      expect(code).not.toContain('profileInterestMutations')
+      expect(code).not.toContain('consumePendingResume')
     }
   })
 
@@ -117,9 +128,15 @@ describe('MIP public profiles', () => {
       expect(production).not.toContain(`{{profile.${field}}}`)
       expect(production).not.toContain(`wx:for="{{profile.${field}}}"`)
     }
-    // 头像下四统计的第三项是心动值（同一感兴趣关系事实，journey D-01 定稿名）。
-    expect(production).toContain('data-category="ACTIVE_INTEREST" bind:tap="openOwnInfluence"')
+    // 头像下四统计的第三项是心动值：收到的活动红心票（S9 口径），与「我的」页心动值卡同源，
+    // 不再是档案「感兴趣」关系数；本人点击进心动值页（列表纯查看）。
+    const page = source('src/packages/member/mip-public-profile/index.ts')
+    expect(production).toContain('data-category="HEART" bind:tap="openOwnInfluence"')
     expect(production).toContain('心动值</text>')
+    expect(production).toContain('influence ? influence.heartCount : \'—\'')
+    expect(production).not.toContain('influence.interestCount')
+    expect(page).toContain('category === \'HEART\'')
+    expect(page).toContain('\'/packages/member/mip-hearts/index\'')
     expect(production).toContain('bind:tap="openOwnInfluence"')
     expect(production).toContain('bind:tap="openInterestList"')
   })
