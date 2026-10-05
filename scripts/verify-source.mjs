@@ -210,6 +210,8 @@ assertValidTDesignIconNames({
 })
 assertSemanticIconColors({ sources: [allWxml], assert, label: 'MIP source UI' })
 for (const route of declaredRoutes.filter(item => item.startsWith('packages/member/') || item.startsWith('packages/admin/'))) {
+  // MIW-27：玩家等级页按产品口径移除底部返回按钮，返回走导航栏左上角原生返回。
+  if (route === 'packages/member/mip-growth/index') continue
   const file = `src/${route}.wxml`
   assert(read(file).includes('<app-page-exit'), `${file} must provide a stable way out of its subpackage page`)
 }

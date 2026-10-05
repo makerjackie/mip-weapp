@@ -1,6 +1,6 @@
 <view id="mip-growth-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="px-3 pt-3"><view class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
-  <view wx:elif="{{state === 'error'}}" class="px-3 pt-3"><mip-empty-state title="暂时无法加载成长记录" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="loadGrowth" /><app-page-exit /></view>
+  <view wx:elif="{{state === 'error'}}" class="px-3 pt-3"><mip-empty-state title="暂时无法加载成长记录" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="loadGrowth" /></view>
   <block wx:else>
     <!-- Keep the original illustration at its intrinsic aspect ratio; controls stay live. -->
     <view class="growth-hero relative h-[284rpx] overflow-hidden bg-brand px-5 py-6 text-on-brand">
@@ -62,7 +62,6 @@
 
     <view class="mx-3 flex min-h-[88rpx] items-center justify-end"><view class="flex min-h-[88rpx] items-center text-[24rpx] text-muted" aria-role="button" aria-label="查看全部成长任务" bind:tap="openTasks">全部任务<mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></view>
     <view wx:if="{{message}}" class="mx-3 mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
-    <view class="mx-3"><app-page-exit /></view>
   </block>
 
   <!-- J1-06 开通态：无有效会员时底部仅「立即加入」→ 会员订单确认页（J1-07）；本页不展示金额。 -->
