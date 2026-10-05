@@ -43,6 +43,28 @@ export function updateEditableOrganization(
     : item)
 }
 
+/**
+ * 编辑页固定首行输入（公司/职位、组织/职位）的写入入口。
+ *
+ * 空资料时列表为空，但首行输入仍绑定 `companies[0]`/`organizations[0]`：
+ * 先落一行空行再写入，否则 updateEditableOrganization 原样返回空数组，
+ * 输入会被 value 绑定立即清空。唯一一行被清空时回退为空数组，保存即视为不填该段经历。
+ */
+export function editExperienceRow(
+  items: EditableProfileOrganization[],
+  index: number,
+  field: 'name' | 'role',
+  value: string,
+  id: string,
+): EditableProfileOrganization[] {
+  const source = items.length === 0 && index === 0
+    ? [{ id, name: '', role: '' }]
+    : items
+  const updated = updateEditableOrganization(source, index, field, value)
+  const soleRowCleared = updated.length === 1 && !updated[0]!.name.trim() && !updated[0]!.role.trim()
+  return soleRowCleared ? [] : updated
+}
+
 export function removeEditableOrganization(
   source: EditableProfileOrganization[],
   index: number,

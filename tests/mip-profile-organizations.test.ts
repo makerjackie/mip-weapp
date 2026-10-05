@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   appendEditableOrganization,
   createEditableOrganizations,
+  editExperienceRow,
   MAX_PROFILE_ORGANIZATIONS,
   moveEditableOrganization,
   normalizeEditableOrganizations,
@@ -66,6 +67,28 @@ describe('MIP profile multiple organizations editor', () => {
       { name: '示例公司', role: '产品负责人' },
       { name: '第二家公司' },
     ])
+  })
+
+  it('materializes the fixed first row when typing into an empty profile (MIW-33)', () => {
+    const typed = editExperienceRow([], 0, 'name', '深度互娱', 'company-1')
+    expect(typed).toEqual([{ id: 'company-1', name: '深度互娱', role: '' }])
+    expect(validateEditableOrganizations(typed, '公司')).toBeNull()
+
+    // 第二行输入不受影响：空数组 + 非零下标不落行。
+    expect(editExperienceRow([], 1, 'role', '创始人', 'company-2')).toEqual([])
+  })
+
+  it('falls back to an empty collection when the sole row is cleared again', () => {
+    const started = editExperienceRow([], 0, 'name', '临时公司', 'company-1')
+    const clearedName = editExperienceRow(started, 0, 'name', '', 'company-2')
+    expect(clearedName).toEqual([])
+    expect(validateEditableOrganizations(clearedName, '公司')).toBeNull()
+
+    // 只填了职位再清空同样回退；多于一行的列表不做自动删除。
+    const roleOnly = editExperienceRow([], 0, 'role', '顾问', 'company-3')
+    expect(editExperienceRow(roleOnly, 0, 'role', '', 'company-4')).toEqual([])
+    const twoRows = [...roleOnly, { id: 'company-5', name: '另一家', role: '' }]
+    expect(editExperienceRow(twoRows, 0, 'role', '', 'company-6')).toHaveLength(2)
   })
 
   it('renders independent company and organization collections in the card editor', () => {

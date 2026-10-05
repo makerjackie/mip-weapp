@@ -1312,7 +1312,7 @@
       ]
     },
     {
-"version": "20261005120000",
+      "version": "20261005120000",
       "name": "mip_growth_rule_description",
       "sql": "database/mysql/mip/099_growth_rule_description.sql",
       "sqlSha256": "701858f9d9b516c2668a37841d49613fe9117885414669b31dc2014aca99187d",

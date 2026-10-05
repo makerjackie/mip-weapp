@@ -1,4 +1,6 @@
 import type { IdentityAccessSnapshot, MipProfileSnapshot, PublicMipProfile } from '../../../modules/mip-identity'
+import { resolveIconColor } from '../../../components/mip-icon/colors'
+import { ICONS } from '../../../components/mip-icon/icons'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 
@@ -25,6 +27,29 @@ interface CardTheme {
 
 const CARD_WIDTH = 702
 const CARD_HEIGHT = 492
+// figma 1732_20401 卡面几何（canvas 像素 = 设计 rpx，均为 @2x 值）。
+const CARD_NAME = { x: 24, y: 24 }
+const CARD_ROWS: Array<{ field: 'companyName' | 'roleTitle' | 'organizationName' | 'organizationRole' | 'gender', y: number }> = [
+  { field: 'companyName', y: 88 },
+  { field: 'roleTitle', y: 130 },
+  { field: 'organizationName', y: 188 },
+  { field: 'organizationRole', y: 230 },
+  { field: 'gender', y: 272 },
+]
+const CONTACT_ROWS: Array<{ field: 'phone' | 'wechat' | 'email' | 'address', icon: string, y: number }> = [
+  { field: 'phone', icon: 'cellphone-2', y: 308 },
+  { field: 'wechat', icon: 'wechat-2', y: 350 },
+  { field: 'email', icon: 'mail-2', y: 392 },
+  { field: 'address', icon: 'icon-map-pin-line', y: 434 },
+]
+// 设计稿联系行：图标列 x=13 设计 px（=26 canvas px），文案 x=33（=66）；图标 32 盒内等比居中。
+const CONTACT_ICON_BOX = 32
+const CONTACT_ICON_X = 26
+const CONTACT_TEXT_X = 66
+const AVATAR = { x: 438, y: 24, size: 240 }
+const CODE = { x: 558, y: 348, size: 120 }
+// figma 1735_3369：品牌色卡的头像环 2px、名片码描边 1px，均为 #fcdf03。
+const CARD_RING_COLOR = '#fcdf03'
 const themes: Record<CardStyleKey, CardTheme> = {
   PINK: {
     key: 'PINK',
@@ -105,6 +130,33 @@ function compactText(value: string | undefined, fallback = '') {
   return String(value || fallback).trim().replace(/\s+/g, ' ')
 }
 
+/** 画布没有 WXML 的 truncate：超宽时截断并补省略号。 */
+function fitText(
+  context: WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D,
+  value: string,
+  maxWidth: number,
+) {
+  if (context.measureText(value).width <= maxWidth) {
+    return value
+  }
+  let text = value
+  while (text.length > 1 && context.measureText(`${text}…`).width > maxWidth) {
+    text = text.slice(0, -1)
+  }
+  return `${text}…`
+}
+
+/** 联系行图标：复用 mip-icon 的 SVG 注册表绘制，画布不支持 SVG 时静默跳过。 */
+function iconSource(name: string, color: string) {
+  const icon = ICONS[name]
+  if (!icon) {
+    return ''
+  }
+  const hex = resolveIconColor(color)
+  const body = icon.mono ? (icon.body || '').replace(/currentColor/g, hex) : (icon.body || '')
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${icon.vb}" width="${icon.w || 16}" height="${icon.h || 16}" fill="${hex}">${body}</svg>`)}`
+}
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
@@ -116,16 +168,11 @@ Page({
     initial: 'M',
     avatarUrl: '',
     cardAvatarUrl: '',
-    memberType: 'MIP 成员',
     gender: '',
-    identityStatus: '',
-    branchName: '',
-    industryName: '',
     companyName: '',
     roleTitle: '',
     organizationName: '',
     organizationRole: '',
-    organizationLine: '',
     phone: '',
     wechat: '',
     email: '',
@@ -133,10 +180,12 @@ Page({
     codeUrl: '',
     codeMessage: '',
     posterPath: '',
+    // 分享缩略图：进入页面/切换样式后静默渲染的名片图；下载仍走 createPoster 的模板校验。
+    shareImagePath: '',
     generating: false,
     message: '',
-    // figma 1732_20401 版式只有卡片/样式选择/底栏；页头与分身管理是存量功能，
-    // 用开关保留生产入口，打分 fixture 关闭以对齐设计稿。
+    // figma 1732_20401 版式只有卡片/样式选择/底栏；页头标题由原生导航承担，
+    // 「编辑名片」入口用 showHeader 保留在生产环境。
     showHeader: true,
     // figma 2165_17277 访客视角：无样式选择，底栏为单按钮「登录制作我的名片」。
     // 访客入口携带 guest=1 打开（路由缺口，见 ui-fidelity manifest notes）。
@@ -144,6 +193,7 @@ Page({
   },
   profileRef: '',
   loadSequence: 0,
+  drawingShare: false,
 
   onLoad(options: { guest?: string } = {}) {
     if (options?.guest === '1') {
@@ -198,6 +248,7 @@ Page({
         return
       }
       this.applyCard(snapshot, profile, privateProfile, cardCode.codeUrl)
+      void this.refreshShareImage()
     }
     catch (error) {
       if (sequence !== this.loadSequence) {
@@ -221,16 +272,11 @@ Page({
       initial: nickname.slice(0, 1) || 'M',
       avatarUrl,
       cardAvatarUrl: avatarUrl,
-      memberType: profile.userKind === 'PLAYER' ? '玩家' : profile.userKind === 'GUEST' ? '嘉宾' : 'MIP 成员',
       gender: profile.gender === 'MALE' ? '男' : profile.gender === 'FEMALE' ? '女' : '',
-      identityStatus: compactText(profile.identityStatus),
-      branchName: compactText(profile.primaryBranch?.name),
-      industryName: compactText(profile.primaryIndustry?.label),
       companyName: compactText(company?.name),
       roleTitle: compactText(company?.role),
       organizationName: compactText(organization?.name),
       organizationRole: compactText(organization?.role),
-      organizationLine: organization ? [compactText(organization.name), compactText(organization.role)].filter(Boolean).join(' · ') : '',
       phone: contactVisibility?.phone ? compactText(contact?.phone || contact?.phoneMasked) : '',
       wechat: contactVisibility?.wechat ? compactText(contact?.wechat) : '',
       email: contactVisibility?.email ? compactText(contact?.email) : '',
@@ -238,6 +284,8 @@ Page({
       codeUrl,
       codeMessage: codeUrl ? '' : '名片码暂时不可用，可稍后重试。',
       posterPath: '',
+      // 名片数据可能已变更（编辑返回、头像更新），分享缩略图按最新数据重画。
+      shareImagePath: '',
       message: '',
     })
   },
@@ -256,7 +304,26 @@ Page({
     if (!this.data.themeOptions.some(item => item.key === key) || key === this.data.styleKey || this.data.generating) {
       return
     }
-    this.setData({ styleKey: key, theme: themes[key], posterPath: '', message: '' })
+    this.setData({ styleKey: key, theme: themes[key], posterPath: '', shareImagePath: '', message: '' })
+    void this.refreshShareImage()
+  },
+
+  // 分享缩略图静默渲染：下载按钮仍由 createPoster 负责模板必填校验，这里不校验、不报错。
+  async refreshShareImage() {
+    if (this.data.isGuest || this.data.generating || this.drawingShare || this.data.state !== 'ready') {
+      return
+    }
+    this.drawingShare = true
+    try {
+      const shareImagePath = await this.drawCard()
+      if (shareImagePath) {
+        this.setData({ shareImagePath })
+      }
+    }
+    catch {}
+    finally {
+      this.drawingShare = false
+    }
   },
 
   async retryCode() {
@@ -277,7 +344,7 @@ Page({
   },
 
   async createPoster() {
-    if (this.data.generating || this.data.state !== 'ready') {
+    if (this.data.generating || this.drawingShare || this.data.state !== 'ready') {
       return ''
     }
     this.setData({ generating: true, message: '' })
@@ -328,37 +395,47 @@ Page({
     context.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
     await this.drawBackground(node, context, theme.asset)
 
+    // figma 1732_20401：全部卡面文字同一前景色、medium 字重，textBaseline=top 落在 WXML 同款行位。
     context.fillStyle = theme.foreground
-    context.font = '700 44px sans-serif'
-    context.fillText(this.data.nickname.slice(0, 10), 38, 78)
-    context.font = '600 22px sans-serif'
-    context.fillText([this.data.companyName, this.data.roleTitle].filter(Boolean).join(' · ').slice(0, 30), 40, 118)
-    context.fillText(this.data.organizationLine.slice(0, 30), 40, 150)
-    if (this.data.gender) {
-      context.fillText(`性别  ${this.data.gender}`, 40, 182)
+    context.textBaseline = 'top'
+    context.font = '500 40px sans-serif'
+    context.fillText(fitText(context, this.data.nickname, 420), CARD_NAME.x, CARD_NAME.y)
+    context.font = '500 24px sans-serif'
+    CARD_ROWS.forEach((row) => {
+      const value = row.field === 'gender' ? (this.data.gender ? `性别 · ${this.data.gender}` : '') : this.data[row.field]
+      if (value) {
+        context.fillText(fitText(context, value, 420), 24, row.y)
+      }
+    })
+    for (const row of CONTACT_ROWS) {
+      const value = this.data[row.field]
+      if (!value) {
+        continue
+      }
+      await this.drawContactIcon(node, context, row.icon, row.y, theme.foreground)
+      context.fillText(fitText(context, value, 458 - CONTACT_TEXT_X), CONTACT_TEXT_X, row.y)
     }
 
-    context.font = '500 20px sans-serif'
-    context.fillStyle = theme.muted
-    const contacts = [
-      this.data.phone ? `电话  ${this.data.phone}` : '',
-      this.data.wechat ? `微信  ${this.data.wechat}` : '',
-      this.data.email ? `邮箱  ${this.data.email}` : '',
-      this.data.address ? `地址  ${this.data.address}` : '',
-    ].filter(Boolean)
-    const details = contacts.length
-      ? contacts
-      : [[this.data.memberType, this.data.identityStatus].filter(Boolean).join(' · '), [this.data.branchName, this.data.industryName].filter(Boolean).join(' · ')]
-    details.slice(0, 4).forEach((item, index) => context.fillText(item.slice(0, 36), 40, 255 + index * 36))
-
-    await this.drawAvatar(node, context, 472, 36, 192, theme)
+    await this.drawAvatar(node, context, AVATAR.x, AVATAR.y, AVATAR.size, theme)
     if (this.data.codeUrl) {
       try {
         const code = await loadCanvasImage(node, this.data.codeUrl)
-        roundedRect(context, 548, 348, 104, 104, 12)
+        // 设计稿名片码为圆形（r=50），与线卡 rounded-full 一致；白底圆先铺避免透明码可读性差。
+        context.save()
+        context.beginPath()
+        context.arc(CODE.x + CODE.size / 2, CODE.y + CODE.size / 2, CODE.size / 2, 0, Math.PI * 2)
         context.fillStyle = theme.codeBackground
         context.fill()
-        context.drawImage(code, 554, 354, 92, 92)
+        context.clip()
+        context.drawImage(code, CODE.x, CODE.y, CODE.size, CODE.size)
+        context.restore()
+        if (this.data.styleKey === 'YELLOW') {
+          context.beginPath()
+          context.arc(CODE.x + CODE.size / 2, CODE.y + CODE.size / 2, CODE.size / 2 - 1, 0, Math.PI * 2)
+          context.lineWidth = 2
+          context.strokeStyle = CARD_RING_COLOR
+          context.stroke()
+        }
       }
       catch {}
     }
@@ -375,6 +452,30 @@ Page({
         fail: reject,
       })
     })
+  },
+
+  async drawContactIcon(
+    node: Canvas2dNode,
+    context: WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D,
+    name: string,
+    y: number,
+    color: string,
+  ) {
+    const source = iconSource(name, color)
+    if (!source) {
+      return
+    }
+    try {
+      const image = await loadCanvasImage(node, source)
+      const icon = ICONS[name]
+      const width = icon?.w || icon?.h || 16
+      const height = icon?.h || icon?.w || 16
+      const scale = Math.min(CONTACT_ICON_BOX / width, CONTACT_ICON_BOX / height)
+      const fittedWidth = width * scale
+      const fittedHeight = height * scale
+      context.drawImage(image, CONTACT_ICON_X + (CONTACT_ICON_BOX - fittedWidth) / 2, y + (CONTACT_ICON_BOX - fittedHeight) / 2, fittedWidth, fittedHeight)
+    }
+    catch {}
   },
 
   async drawBackground(node: Canvas2dNode, context: WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D, source: string) {
@@ -396,24 +497,51 @@ Page({
     size: number,
     theme: CardTheme,
   ) {
-    context.save()
-    roundedRect(context, x, y, size, size, size / 2)
-    context.clip()
+    let drawn = false
     if (this.data.cardAvatarUrl) {
       try {
         const image = await loadCanvasImage(node, this.data.cardAvatarUrl)
+        context.save()
+        roundedRect(context, x, y, size, size, size / 2)
+        context.clip()
         context.drawImage(image, x, y, size, size)
         context.restore()
-        return
+        drawn = true
       }
       catch {}
     }
+    if (!drawn) {
+      await this.drawAvatarFallback(context, x, y, size, theme)
+    }
+    // figma 1735_3369：品牌色卡头像 2px 品牌环（WXML ring-2 ring-brand），其余卡无环。
+    if (this.data.styleKey === 'YELLOW') {
+      context.beginPath()
+      context.arc(x + size / 2, y + size / 2, size / 2 - 2, 0, Math.PI * 2)
+      context.lineWidth = 4
+      context.strokeStyle = CARD_RING_COLOR
+      context.stroke()
+    }
+  },
+
+  async drawAvatarFallback(
+    context: WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    size: number,
+    theme: CardTheme,
+  ) {
+    context.save()
+    roundedRect(context, x, y, size, size, size / 2)
+    context.clip()
     context.fillStyle = theme.codeBackground
     context.fillRect(x, y, size, size)
     context.fillStyle = '#080808'
-    context.font = '700 58px sans-serif'
+    // 与线卡兜底一致：text-[48rpx] font-bold（=48 canvas px），居中。
+    context.font = '700 48px sans-serif'
     context.textAlign = 'center'
-    context.fillText(this.data.initial, x + size / 2, y + 92)
+    context.textBaseline = 'middle'
+    context.fillText(this.data.initial, x + size / 2, y + size / 2)
+    context.textBaseline = 'top'
     context.textAlign = 'start'
     context.restore()
   },
@@ -446,7 +574,8 @@ Page({
     return {
       title: `${this.data.nickname}的 MIP 名片`,
       path: `/packages/member/mip-public-profile/index?profileRef=${profileRef}`,
-      ...(this.data.posterPath ? { imageUrl: this.data.posterPath } : {}),
+      // 分享缩略图用已渲染的名片图；画布未就绪时退回当前样式的底图素材。
+      imageUrl: this.data.posterPath || this.data.shareImagePath || this.data.theme.asset,
     }
   },
 })
