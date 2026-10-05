@@ -69,7 +69,7 @@ export function createMipGrowthGateway(
 
   return {
     getSnapshot: () => call('getSnapshot'),
-    listEntries: (cursor, limit) => call('listEntries', { cursor, limit }),
+    listEntries: (cursor, limit, metric) => call('listEntries', { cursor, limit, metric }),
     listBadgeCollection: () => call('listBadgeCollection'),
     equipBadges: (badgeIds, expectedVersion) => call('equipBadges', { badgeIds, expectedVersion }),
   }

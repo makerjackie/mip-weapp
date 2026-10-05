@@ -81,7 +81,7 @@ export interface BadgeCollection {
 
 export interface MipGrowthGateway {
   getSnapshot: () => Promise<GrowthSnapshot>
-  listEntries: (cursor?: string, limit?: number) => Promise<GrowthEntryPage>
+  listEntries: (cursor?: string, limit?: number, metric?: GrowthMetric) => Promise<GrowthEntryPage>
   listBadgeCollection: () => Promise<BadgeCollection>
   equipBadges: (badgeIds: string[], expectedVersion: number) => Promise<BadgeCollection>
 }

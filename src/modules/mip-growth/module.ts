@@ -1,4 +1,4 @@
-import type { MipGrowthGateway } from './types'
+import type { GrowthMetric, MipGrowthGateway } from './types'
 
 export function createMipGrowthModule(gateway: MipGrowthGateway) {
   let snapshot: Awaited<ReturnType<MipGrowthGateway['getSnapshot']>> | undefined
@@ -35,8 +35,8 @@ export function createMipGrowthModule(gateway: MipGrowthGateway) {
       return request
     },
 
-    listEntries(cursor?: string, limit = 20) {
-      return gateway.listEntries(cursor, Math.min(30, Math.max(1, limit)))
+    listEntries(cursor?: string, limit = 20, metric?: GrowthMetric) {
+      return gateway.listEntries(cursor, Math.min(30, Math.max(1, limit)), metric)
     },
 
     listBadgeCollection() {

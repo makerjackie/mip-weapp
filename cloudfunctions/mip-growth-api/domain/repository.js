@@ -6,6 +6,8 @@ const { createGameCoinRepository } = require('./game-coins')
 const { levelSnapshot, projectAward, selectApplicableRules } = require('./rules')
 const { appendLevelTransition } = require('./level-transitions')
 
+const GROWTH_METRICS = ['EXPERIENCE', 'CONTRIBUTION', 'COIN']
+
 function createGrowthRepository(database, options = {}) {
   const createId = options.createId || randomUUID
   const checkInGrowthRepository = createCheckInGrowthRepository(database, { createId })
@@ -66,7 +68,10 @@ function createGrowthRepository(database, options = {}) {
   async function listEntries(appId, userId, options = {}) {
     const limit = Math.min(30, Math.max(1, Number(options.limit) || 20))
     const cursor = decodeCursor(options.cursor)
-    const params = [appId, userId]
+    // 经验值详情页按指标取流水；指标是服务端事实，未声明时不收窄。
+    const metricSql = GROWTH_METRICS.includes(options.metric) ? 'AND e.metric = ?' : ''
+    const metricParam = GROWTH_METRICS.includes(options.metric) ? [options.metric] : []
+    const params = [appId, userId, ...metricParam]
     let cursorSql = ''
     if (cursor) {
       cursorSql = 'AND (e.created_at < ? OR (e.created_at = ? AND e.id < ?))'
@@ -79,7 +84,7 @@ function createGrowthRepository(database, options = {}) {
        FROM mip_growth_entries e
        LEFT JOIN mip_growth_rules r ON r.app_id = e.app_id AND r.id = e.rule_id
        WHERE e.app_id = ? AND e.user_id = ?
-         AND e.metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN') ${cursorSql}
+         AND e.metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN') ${metricSql} ${cursorSql}
        ORDER BY e.created_at DESC, e.id DESC
        LIMIT ?`,
       params,
@@ -394,7 +399,7 @@ async function ensureAccount(database, appId, userId) {
 }
 
 function entryDto(row) {
-  if (!['EXPERIENCE', 'CONTRIBUTION', 'COIN'].includes(row.metric)) {
+  if (!GROWTH_METRICS.includes(row.metric)) {
     throw new Error('GROWTH_RULE_NOT_AVAILABLE')
   }
   return {

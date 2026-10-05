@@ -1,0 +1,11 @@
+/* figma 1948_14177 明细条目：351×67 卡（panel 色、8px 圆角），左侧任务名 12px +
+   副行 10px，右侧「+ EXP N」黄字；卡间距 12px 由 wxml gap 提供。 */
+.exp-detail-card {
+  box-sizing: border-box;
+  display: flex;
+  gap: 24rpx;
+  align-items: center;
+  min-height: 134rpx;
+  padding: 24rpx;
+  border-radius: var(--mip-radius-card-small);
+}

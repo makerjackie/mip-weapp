@@ -166,3 +166,34 @@ test('returns a completed idempotent response without writing another entry', as
   })
   assert.equal(queryCount, 0)
 })
+
+test('filters the entry page down to one metric when the request declares it', async () => {
+  const queries = []
+  const database = {
+    async query(sql, params) {
+      queries.push({ sql, params })
+      return [{
+        id: 'entry-1', source_event_type: 'event.checked_in', metric: 'EXPERIENCE',
+        delta_value: 45, balance_after: 90, created_at: new Date('2026-08-01T00:00:00Z'),
+        rule_key: 'event_attended', rule_name: '完成活动签到',
+      }]
+    },
+  }
+  const filtered = await createGrowthRepository(database).listEntries('wx-app', input.userId, {
+    metric: 'EXPERIENCE',
+  })
+  assert.equal(filtered.items.length, 1)
+  assert.equal(filtered.items[0].metric, 'EXPERIENCE')
+  const entryQuery = queries.at(-1)
+  assert.ok(entryQuery.sql.includes('AND e.metric = ?'))
+  assert.equal(entryQuery.params[2], 'EXPERIENCE')
+
+  // 未声明指标时保持既有全量口径，不收窄。
+  await createGrowthRepository(database).listEntries('wx-app', input.userId, {})
+  const openQuery = queries.at(-1)
+  assert.ok(!openQuery.sql.includes('AND e.metric = ?'))
+
+  // 非法指标不进 SQL，按全量处理而不是报错。
+  await createGrowthRepository(database).listEntries('wx-app', input.userId, { metric: 'evil' })
+  assert.ok(!queries.at(-1).sql.includes('AND e.metric = ?'))
+})
