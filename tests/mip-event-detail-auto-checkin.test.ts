@@ -64,6 +64,8 @@ const CHECK_IN_INTENT = {
 }
 
 function attendedEvent(overrides: Partial<MipEventDetail> = {}): MipEventDetail {
+  // canInteract 与服务端同口径：registration_status === 'ATTENDED'（显式覆盖仍可穿透）。
+  const registrationStatus = 'registrationStatus' in overrides ? overrides.registrationStatus : 'ATTENDED'
   return {
     id: EVENT_ID as MipEventDetail['id'],
     scopeType: 'BRANCH',
@@ -89,7 +91,7 @@ function attendedEvent(overrides: Partial<MipEventDetail> = {}): MipEventDetail 
     canCancel: false,
     canRetryRefund: false,
     canCheckIn: false,
-    canInteract: true,
+    canInteract: registrationStatus === 'ATTENDED',
     priceCents: 58900,
     currency: 'CNY',
     formVersion: 1,
@@ -183,7 +185,7 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
     expect(checkInStore.clear).toHaveBeenCalledWith(EVENT_ID)
     expect(showToast).toHaveBeenCalledWith({ title: '签到成功', icon: 'success' })
     expect(page.data.hasCheckInIntent).toBe(false)
-    // 签到后刷新：详情页转入已签到态，「与你互动」在存在互动数据时出现。
+    // 签到后刷新：详情页转入已签到态，「与你互动」已签到即展示（MIW-28，0/0 也显示）。
     expect(page.data.state).toBe('ready')
     expect(page.data.interactionVisible).toBe(true)
     expect(eventsModule.getEvent).toHaveBeenCalledTimes(2)
@@ -331,6 +333,7 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
 
   it('keeps the 与你互动 card hidden until the viewer has checked in', async () => {
     const page = createPage({ eventId: EVENT_ID })
+    // 防御性兜底：即使 payload 带了 summary（服务端只对已签到产出），卡片仍跟随服务端 canInteract。
     eventsModule.getEvent.mockResolvedValueOnce(attendedEvent({
       registrationStatus: 'REGISTERED',
       interactionSummary: { myInterestCount: 1, receivedInterestCount: 2 },

@@ -107,10 +107,11 @@ function interactionLabels(event: MipEventDetail) {
 /**
  * MIW-28（客户确认 2026-10-05）：未签到整卡隐藏；已签到即展示，0/0 也显示——
  * 胶囊本身就是进入参与人页心动 tab 的入口。旧口径（J0-01 仅在有心动数据时展示）
- * 随服务端下发 interactionSummary 一并废止。
+ * 随服务端下发 interactionSummary 一并废止。签到门槛由服务端 canInteract 决定，
+ * 页面不再重复推导 registrationStatus。
  */
 function interactionVisible(event: MipEventDetail) {
-  return event.registrationStatus === 'ATTENDED' && Boolean(event.interactionSummary)
+  return Boolean(event.canInteract) && Boolean(event.interactionSummary)
 }
 
 function compactEventTime(startsAt: string, endsAt: string) {
