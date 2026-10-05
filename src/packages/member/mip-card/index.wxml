@@ -2,9 +2,8 @@
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法加载名片" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
   <block wx:else>
-    <!-- figma 1732_20401 版式无页头；「编辑名片」入口用 showHeader 保留在生产环境。 -->
-    <view wx:if="{{showHeader}}" class="flex items-center justify-between">
-      <view><view class="text-[34rpx] font-semibold">我的名片</view><view class="mt-1 text-[22rpx] text-muted">展示已允许用于名片的资料。</view></view>
+    <!-- figma 1732_20401 版式无页头（标题由原生导航承担）；只保留「编辑名片」入口，访客无编辑入口。 -->
+    <view wx:if="{{showHeader && !isGuest}}" class="flex items-center justify-end">
       <view class="flex min-h-[88rpx] items-center px-2 text-[24rpx] text-brand" bind:tap="openProfileEdit">编辑名片</view>
     </view>
 

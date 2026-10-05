@@ -41,7 +41,8 @@ describe('MIP member card', () => {
     expect(view).toContain('{{address}}')
     expect(view).toContain('{{gender}}')
     expect(page).toContain('gender: profile.gender === \'MALE\' ? \'男\' : profile.gender === \'FEMALE\' ? \'女\' : \'\'')
-    expect(page).toContain(`\`性别  \${this.data.gender}\``)
+    // 画布文案与 WXML 一致：性别行用「性别 · X」，空值整行隐藏（figma 1732_20401）。
+    expect(page).toContain(`\`性别 · \${this.data.gender}\``)
     expect(view).toContain('下载名片')
     expect(page).toContain('/packages/member/mip-public-profile/index?profileRef=')
     for (const field of ['realName', 'wechat', 'email', 'address']) {

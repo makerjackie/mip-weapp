@@ -2,11 +2,11 @@ import type { EditableProfileOrganization } from '../../../modules/mip-identity'
 import {
   appendEditableOrganization,
   createEditableOrganizations,
+  editExperienceRow,
   MAX_PROFILE_ORGANIZATIONS,
   moveEditableOrganization,
   normalizeEditableOrganizations,
   removeEditableOrganization,
-  updateEditableOrganization,
   validateEditableOrganizations,
 } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
@@ -166,7 +166,7 @@ Page({
       return
     }
     this.setData({
-      [kind]: updateEditableOrganization(this.data[kind], index, field, event.detail.value),
+      [kind]: editExperienceRow(this.data[kind], index, field, event.detail.value, nextExperienceId(kind)),
       message: '',
     })
     this.syncPreview()
