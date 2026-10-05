@@ -9,10 +9,17 @@ function createBadgeAdminRepository(database, options = {}) {
 
   async function listBadges(appId) {
     const rows = await database.query(
-      `SELECT id, badge_key, name, description, icon_name, image_url,
-              placeholder_shape, sort_order, status, version, created_at, updated_at
-       FROM mip_badges WHERE app_id = ?
-       ORDER BY sort_order, name, id`,
+      `SELECT badge.id, badge.badge_key, badge.name, badge.description, badge.acquire_condition,
+              badge.category, badge.icon_name, badge.image_url, badge.image_asset_id,
+              badge.placeholder_shape, badge.sort_order, badge.status, badge.version,
+              badge.created_at, badge.updated_at,
+              COALESCE(NULLIF(asset.cloud_file_id, ''), badge.image_url) AS image_preview_url
+       FROM mip_badges badge
+       LEFT JOIN mip_media_assets asset
+         ON asset.app_id = badge.app_id AND asset.id = badge.image_asset_id
+           AND asset.status = 'READY'
+       WHERE badge.app_id = ?
+       ORDER BY badge.sort_order, badge.name, badge.id`,
       [appId],
     )
     return rows.map(badgeDto)
@@ -24,7 +31,7 @@ function createBadgeAdminRepository(database, options = {}) {
       const badgeId = input.badgeId || createId()
       const current = input.badgeId
         ? await tx.one(
-            `SELECT id, status, version FROM mip_badges
+            `SELECT id, status, version, image_asset_id FROM mip_badges
              WHERE app_id = ? AND id = ? FOR UPDATE`,
             [input.appId, badgeId],
           )
@@ -39,15 +46,35 @@ function createBadgeAdminRepository(database, options = {}) {
         )
         if (Number(equipped?.total || 0) > 0) throw codeError('BADGE_IN_USE')
       }
+      const imageAssetId = input.draft.imageAssetId || null
+      if (imageAssetId) {
+        // Uploads are actor-owned READY assets; keep the badge's current artwork
+        // editable by any operator with badge rights (same carve-out as banners).
+        const asset = await tx.one(
+          `SELECT id, owner_user_id, purpose, status, content_type, cloud_file_id
+           FROM mip_media_assets WHERE app_id = ? AND id = ? FOR UPDATE`,
+          [input.appId, imageAssetId],
+        )
+        if (!asset || asset.status !== 'READY' || asset.purpose !== 'BADGE_IMAGE'
+          || !['image/jpeg', 'image/png'].includes(asset.content_type)
+          || !String(asset.cloud_file_id || '').startsWith('cloud://')) {
+          throw codeError('IMAGE_ASSET_INVALID')
+        }
+        if (asset.owner_user_id !== input.actorUserId && asset.id !== current?.image_asset_id) {
+          throw codeError('IMAGE_NOT_OWNED')
+        }
+      }
       try {
         if (current) {
           const result = await tx.query(
             `UPDATE mip_badges
-             SET badge_key = ?, name = ?, description = ?, icon_name = ?, image_url = ?,
+             SET badge_key = ?, name = ?, description = ?, acquire_condition = ?, category = ?,
+                 icon_name = ?, image_url = ?, image_asset_id = ?,
                  placeholder_shape = ?, sort_order = ?, status = ?, version = version + 1
              WHERE app_id = ? AND id = ? AND version = ?`,
-            [input.draft.key, input.draft.name, input.draft.description, input.draft.iconName,
-              input.draft.imageUrl, input.draft.placeholderShape, input.draft.sortOrder,
+            [input.draft.key, input.draft.name, input.draft.description, input.draft.acquireCondition,
+              input.draft.category, input.draft.iconName, input.draft.imageUrl, imageAssetId,
+              input.draft.placeholderShape, input.draft.sortOrder,
               input.draft.status, input.appId, badgeId, input.expectedVersion],
           )
           if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
@@ -55,12 +82,14 @@ function createBadgeAdminRepository(database, options = {}) {
         else {
           await tx.query(
             `INSERT INTO mip_badges (
-               id, app_id, badge_key, name, description, icon_name, image_url,
+               id, app_id, badge_key, name, description, acquire_condition, category,
+               icon_name, image_url, image_asset_id,
                placeholder_shape, sort_order, status, created_by_user_id
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [badgeId, input.appId, input.draft.key, input.draft.name, input.draft.description,
-              input.draft.iconName, input.draft.imageUrl, input.draft.placeholderShape,
-              input.draft.sortOrder, input.draft.status, input.actorUserId],
+              input.draft.acquireCondition, input.draft.category,
+              input.draft.iconName, input.draft.imageUrl, imageAssetId,
+              input.draft.placeholderShape, input.draft.sortOrder, input.draft.status, input.actorUserId],
           )
         }
       }
@@ -211,8 +240,12 @@ function badgeDto(row) {
     key: row.badge_key,
     name: row.name,
     description: row.description,
+    acquireCondition: row.acquire_condition || '',
+    category: row.category === 'HONOR' ? 'HONOR' : 'IDENTITY',
     iconName: row.icon_name || '',
     imageUrl: row.image_url || '',
+    imagePreviewUrl: row.image_preview_url || '',
+    imageAssetId: row.image_asset_id || null,
     placeholderShape: row.placeholder_shape,
     sortOrder: Number(row.sort_order),
     status: row.status,

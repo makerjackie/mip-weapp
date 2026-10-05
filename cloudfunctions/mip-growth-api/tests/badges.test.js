@@ -18,11 +18,15 @@ test('lists the complete catalog with explicit award and equipment state', async
     async query(sql) {
       if (sql.includes('INSERT INTO mip_user_badge_profiles')) return { affectedRows: 1 }
       if (sql.includes('FROM mip_badges badge')) {
+        assert.match(sql, /LEFT JOIN mip_media_assets asset/)
+        assert.match(sql, /asset\.status = 'READY'/)
+        assert.match(sql, /COALESCE\(NULLIF\(asset\.cloud_file_id, ''\), badge\.image_url\)/)
         return [{
           id: badgeId,
           badge_key: 'event_participant',
           name: '活动参与',
           description: '已完成活动参与记录',
+          acquire_condition: '由运营人工授予活动参与勋章',
           icon_name: 'calendar-check',
           image_url: '',
           placeholder_shape: 'CIRCLE',
@@ -57,6 +61,7 @@ test('lists the complete catalog with explicit award and equipment state', async
   assert.deepEqual(result.items.map(item => [item.id, item.equippedSlot]), [[badgeId, 1], [lockedBadgeId, undefined]])
   assert.equal(result.items[0].earned, true)
   assert.equal(result.items[0].category, 'IDENTITY')
+  assert.equal(result.items[0].acquireCondition, '由运营人工授予活动参与勋章')
   assert.equal(result.items[1].earned, false)
   assert.equal(result.items[1].awardedAt, undefined)
   assert.equal(JSON.stringify(result).includes(userId), false)

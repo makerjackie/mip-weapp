@@ -11,10 +11,11 @@ const CLEANABLE_PURPOSES = Object.freeze([
   'EVENT_INVITATION_CODE',
   'MEMBERSHIP_INVITATION_CODE',
 ])
-const ADMIN_UPLOAD_PURPOSES = new Set(['BANNER', 'TASK_TEMPLATE'])
+const ADMIN_UPLOAD_PURPOSES = new Set(['BANNER', 'TASK_TEMPLATE', 'BADGE_IMAGE'])
 const ADMIN_UPLOAD_CAPABILITIES = Object.freeze({
   BANNER: 'banners.manage',
   TASK_TEMPLATE: 'tasks.manage',
+  BADGE_IMAGE: 'badges.manage',
 })
 
 function deploymentStage(value) {
@@ -369,6 +370,10 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
              SELECT 1 FROM mip_banners banner
              WHERE banner.app_id = asset.app_id AND banner.image_asset_id = asset.id
                AND banner.status <> 'DELETED'
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM mip_badges badge
+             WHERE badge.app_id = asset.app_id AND badge.image_asset_id = asset.id
            )
            AND NOT EXISTS (
              SELECT 1 FROM mip_event_invitation_links invitation

@@ -12,6 +12,7 @@ export const ADMIN_MEDIA_PURPOSES = [
   'SUPER_CASE_MEDIA',
   'TASK_TEMPLATE',
   'VIDEO_RECAP_COVER',
+  'BADGE_IMAGE',
 ] as const
 
 export type AdminMediaPurpose = typeof ADMIN_MEDIA_PURPOSES[number]

@@ -1,6 +1,6 @@
 import { UploadOutlined } from '@ant-design/icons'
 import { Button, Input, Tag, Upload, message as staticMessage } from 'antd'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import { AdminMediaUploadError, type AdminMediaFile, type AdminMediaPurpose } from '../../modules/admin-media-upload'
 import { humanizeError } from './humanize-error'
@@ -59,6 +59,14 @@ export function AssetUploader({
   const [uploadedAsset, setUploadedAsset] = useState<{ id: string; url: string } | null>(null)
   const media = useMediaPreview()
   const previewUrl = uploadedAsset?.id === value ? uploadedAsset.url : media.urls[value] || ''
+  useEffect(() => {
+    const current = uploadedAsset
+    // 服务端返回 cloud:// 文件 id，浏览器无法加载；预览一律用本地 blob，替换或卸载时回收。
+    return () => {
+      if (current?.url.startsWith('blob:')) URL.revokeObjectURL(current.url)
+      if (current) media.forget(current.id)
+    }
+  }, [uploadedAsset, media])
 
   const handleUpload = async (option: CustomRequestOption) => {
     const file = asFile(option.file)
@@ -92,9 +100,10 @@ export function AssetUploader({
         arrayBuffer: () => file.arrayBuffer(),
       }
       const result = await client.uploadImage(mediaFile, purpose)
+      const localPreviewUrl = URL.createObjectURL(file)
       onChange?.(result.assetId)
-      setUploadedAsset({ id: result.assetId, url: result.imageUrl })
-      media.remember(result.assetId, result.imageUrl)
+      setUploadedAsset({ id: result.assetId, url: localPreviewUrl })
+      media.remember(result.assetId, localPreviewUrl)
       msg.success('图片已上传')
       option.onSuccess?.(result)
     }
@@ -166,6 +175,16 @@ export function AssetListUploader({
   const [uploading, setUploading] = useState(false)
   const [previews, setPreviews] = useState<Array<{ assetId: string; imageUrl: string }>>([])
   const media = useMediaPreview()
+  useEffect(() => {
+    const current = previews
+    // 同 AssetUploader：预览使用本地 blob，条目移除或组件卸载时回收。
+    return () => {
+      for (const item of current) {
+        if (item.imageUrl.startsWith('blob:')) URL.revokeObjectURL(item.imageUrl)
+        media.forget(item.assetId)
+      }
+    }
+  }, [previews, media])
 
   const lines = value.split('\n').filter(Boolean)
   const canAddMore = lines.length < maxCount
@@ -202,10 +221,11 @@ export function AssetListUploader({
         arrayBuffer: () => file.arrayBuffer(),
       }
       const result = await client.uploadImage(mediaFile, purpose)
+      const localPreviewUrl = URL.createObjectURL(file)
       const next = [...lines, result.assetId].join('\n')
       onChange?.(next)
-      setPreviews(prev => [...prev, { assetId: result.assetId, imageUrl: result.imageUrl }])
-      media.remember(result.assetId, result.imageUrl)
+      setPreviews(prev => [...prev, { assetId: result.assetId, imageUrl: localPreviewUrl }])
+      media.remember(result.assetId, localPreviewUrl)
       msg.success(`图片已上传（${lines.length + 1}/${maxCount}）`)
       option.onSuccess?.(result)
     }

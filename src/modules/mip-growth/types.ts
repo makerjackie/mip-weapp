@@ -63,6 +63,7 @@ export interface BadgeCollectionItem {
   key: string
   name: string
   description: string
+  acquireCondition?: string
   iconName?: string
   imageUrl?: string
   placeholderShape: 'CIRCLE' | 'DIAMOND' | 'HEXAGON'

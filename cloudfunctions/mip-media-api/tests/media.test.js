@@ -92,6 +92,34 @@ describe('MIP media image boundary', () => {
     ), /FORBIDDEN/)
   })
 
+  it('stores badge artwork uploads under the badge-images scope', async () => {
+    const service = createMediaService({
+      database: {
+        async one() {
+          return { role_key: 'PLATFORM_OWNER', policy_capabilities_json: null }
+        },
+        async query() { return { affectedRows: 1 } },
+        async transaction(work) {
+          return work({
+            async one() { return { id: USER_ID, status: 'ACTIVE' } },
+            async query() { return { affectedRows: 1 } },
+          })
+        },
+      },
+      cloud: {
+        async uploadFile(input) { return { fileID: `cloud://env.mip/${input.cloudPath}` } },
+      },
+      checker: async () => ({ ok: true }),
+      env: environment(),
+      id: () => ASSET_ID,
+    })
+    const result = await service.uploadImage({ appId: APP_ID, userId: USER_ID }, {
+      purpose: 'BADGE_IMAGE',
+      imageBase64: pngBase64(128, 128),
+    })
+    assert.match(result.imageUrl, /\/badge-images\//)
+  })
+
   it('rejects malformed and truncated image payloads', () => {
     assert.throws(() => decodeAndSanitizeImage('not-base64', 'AVATAR'), /IMAGE_INVALID/)
     const truncated = Buffer.from(pngBase64(), 'base64').subarray(0, 48).toString('base64')
@@ -454,6 +482,8 @@ describe('MIP media orphan maintenance', () => {
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_task_completions/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_task_cards/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_banners/)
+              assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_badges/)
+              assert.match(sql, /badge\.image_asset_id = asset\.id/)
               assert.match(sql, /mip_membership_invitation_codes invitation/)
               assert.match(sql, /invitation\.status IN \('PENDING', 'READY'\)/)
               assert.match(sql, /invitation\.expires_at > UTC_TIMESTAMP/)

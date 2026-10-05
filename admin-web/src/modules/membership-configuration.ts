@@ -29,8 +29,8 @@ export function membershipConfiguration(request: AdminRequest) {
 }
 export function configurationDraft(kind: ConfigurationKind, item: ConfigurationItem | null, demo = false): Record<string, unknown> {
   if (item) return { ...item, benefitIds: Array.isArray(item.benefits) ? item.benefits.map((benefit: { id: string }) => benefit.id) : [] }
-  const key = `demo_${crypto.randomUUID().replaceAll('-', '').slice(0, 16)}`
+  const key = crypto.randomUUID().replaceAll('-', '').slice(0, 16)
   return { name: demo ? ({ levels: '演示·探索者', benefits: '演示·社区交流资料', badges: '演示·热心伙伴', rules: '演示奖励' })[kind] : '',
     description: demo ? '用于演示，可由管理员修改或停用，不代表正式服务承诺。' : '',
-    status: 'DRAFT', sortOrder: 0, levelKey: key, key, minimumExperience: 0, benefitIds: [], displayBadge: '', iconName: '', imageUrl: '', placeholderShape: 'CIRCLE' }
+    status: 'DRAFT', sortOrder: 0, levelKey: key, key, minimumExperience: 0, benefitIds: [], displayBadge: '', iconName: '', imageUrl: '', imageAssetId: '', acquireCondition: '', category: 'IDENTITY', placeholderShape: 'CIRCLE' }
 }
