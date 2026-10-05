@@ -1,4 +1,5 @@
 import type { OpportunitySummary } from '../../../../modules/mip-opportunities'
+import { GUIDE_PENDING_STORAGE_KEY, readPendingGuideOpportunity } from '../../../../modules/mip-messaging/guide-policy'
 import { opportunityModule, opportunityStatusLabel } from '../../../../modules/mip-opportunities'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 
@@ -44,6 +45,7 @@ Page({
   },
 
   onShow() {
+    this.checkPendingSubscriptionGuide()
     void Promise.allSettled([
       this.loadPublished(true),
       this.loadCooperating(true),
@@ -58,6 +60,19 @@ Page({
   onUnload() {
     this.publishedRequestSeq += 1
     this.cooperatingRequestSeq += 1
+  },
+
+  /**
+   * MIW-40 S8（发布时机）：编辑器发布成功写 pending，本页是主落地（发布入口都从
+   * 本页进入）；一次性消费后弹订阅授权引导层，节奏仍由 guide-policy 按机会 ID 判定。
+   */
+  checkPendingSubscriptionGuide() {
+    const pending = readPendingGuideOpportunity(wx.getStorageSync(GUIDE_PENDING_STORAGE_KEY), Date.now())
+    if (!pending) {
+      return
+    }
+    wx.removeStorageSync(GUIDE_PENDING_STORAGE_KEY)
+    this.selectComponent('#opportunity-mine-subscribe-guide')?.check(pending)
   },
 
   changeTab(event: WechatMiniprogram.TouchEvent) {

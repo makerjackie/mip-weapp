@@ -42,4 +42,7 @@
   <view wx:if="{{loadingMore}}" class="py-5 text-center text-[22rpx] text-muted">正在加载</view>
   <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
   <app-page-exit label="返回机会" />
+
+  <!-- MIW-40 S8：发布时机落地弹层，ID 由 onShow 消费 pending 时传入 -->
+  <mip-subscription-guide id="opportunity-mine-subscribe-guide" template-key="OPPORTUNITY_NOTICE" opportunity-id="" />
 </view>

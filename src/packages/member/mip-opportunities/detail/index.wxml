@@ -115,4 +115,6 @@
       </view>
     </t-popup>
   </block>
+  <!-- MIW-40：发布人订阅授权引导层。页面级单实例常驻（自隐藏），check 由页面在三时机调用。 -->
+  <mip-subscription-guide id="opportunity-subscribe-guide" template-key="OPPORTUNITY_NOTICE" opportunity-id="{{id}}" />
 </view>
