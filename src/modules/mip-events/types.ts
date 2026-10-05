@@ -43,6 +43,20 @@ export interface EventDiscoveryOption {
   name: string
 }
 
+/** MIW-39 活动日历黄点：查询一段日期内「可选且列表非空」的活动日（中国业务日）。 */
+export interface EventCalendarDatesQuery {
+  /** Local `YYYY-MM-DD`，含端点。 */
+  dateFrom: string
+  /** Local `YYYY-MM-DD`，含端点。 */
+  dateTo: string
+  cityName?: string
+}
+
+export interface EventCalendarDates {
+  /** 升序 `YYYY-MM-DD`。 */
+  dates: string[]
+}
+
 export interface EventDiscoveryFilters {
   eventTypes: EventDiscoveryOption[]
   tags: EventDiscoveryOption[]
@@ -411,6 +425,7 @@ export interface AdminEventFeedbackPage {
 export interface MipEventsGateway {
   listEvents: (query: EventFeedQuery) => Promise<EventFeedResult>
   getDiscoveryFilters?: () => Promise<EventDiscoveryFilters>
+  getCalendarDates?: (query: EventCalendarDatesQuery) => Promise<EventCalendarDates>
   getEvent: (eventId: EventId, options?: { progressiveMedia?: boolean }) => Promise<MipEventDetail>
   listPublicParticipants: (eventId: EventId, query?: PublicEventParticipantQuery) => Promise<PublicEventParticipantPage>
   listMyRegistrations: (cursor?: string, category?: MyRegistrationCategory) => Promise<MyRegistrationPage>

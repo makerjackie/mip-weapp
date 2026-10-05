@@ -1,5 +1,5 @@
 import type { EventId } from '../src/modules/mip'
-import type { EventFeedResult, MipEventDetail, MipEventsGateway } from '../src/modules/mip-events'
+import type { EventCalendarDates, EventFeedResult, MipEventDetail, MipEventsGateway } from '../src/modules/mip-events'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { buildEventCalendarMonth, createMipEventsModule } from '../src/modules/mip-events'
@@ -51,18 +51,40 @@ describe('MIP event date range client contract', () => {
       page.indexOf('  confirmCalendar('),
       page.indexOf('  openBanner('),
     )
-    // MIW-11: the start/end range entry was removed; only the single-day calendar remains on the tab.
-    expect(page).not.toContain('dateFrom')
-    expect(page).not.toContain('dateTo')
+    const currentQuery = page.slice(
+      page.indexOf('  currentQuery('),
+      page.indexOf('  async loadPage('),
+    )
+    // MIW-11: the start/end range entry was removed from the feed query; only the single-day
+    // calendar remains on the tab. MIW-39 reuses dateFrom/dateTo for the calendar dot lookup,
+    // so the ban is scoped to the feed query that the tab submits.
+    expect(currentQuery).not.toContain('dateFrom')
+    expect(currentQuery).not.toContain('dateTo')
     // MIW-37 figma 1819_17793: 「今天」only labels today; other dates show M月D日.
     expect(confirmCalendar).toContain('? \'今天\' : formatChineseMonthDay(value)')
     expect(confirmCalendar).not.toContain('view: \'UPCOMING\'')
+    // MIW-39: the default state shows only the calendar icon; the label appears after confirm.
+    expect(view).not.toContain('data-filter="TODAY"')
+    expect(view).not.toContain('>今天<')
     // The picked date replaces the 今天 shortcut instead of stacking next to it.
     expect(view).toContain('wx:if="{{customDateLabel}}"')
     expect(view).not.toContain('{{customDateLabel || \'自定义日期\'}}')
     // figma 1819_18218: the status radios track the date filter, not the tab view.
     expect(view).toContain('aria-checked="{{dateFilter !== \'ENDED\'}}"')
     expect(view).toContain('aria-checked="{{dateFilter === \'ENDED\'}}"')
+  })
+
+  it('draws activity dots from the server calendar dates per visible month', () => {
+    const page = readFileSync(new URL('../src/pages/events/index.ts', import.meta.url), 'utf8')
+    const view = readFileSync(new URL('../src/pages/events/index.wxml', import.meta.url), 'utf8')
+    // figma 1819_17793: dates with activities carry a brand dot; empty days stay clean.
+    expect(view).toContain('wx:if="{{cell.dot}}"')
+    expect(page).toContain('eventDates: this.calendarEventDates')
+    // Dots load with the sheet and follow month paging, scoped to the visible month.
+    expect(page).toContain('void this.loadCalendarDates()')
+    expect(page).toContain('dateFrom: formatLocalDate(new Date(year, month - 1, 1))')
+    // Dot lookup fails soft: no dates, but picking a date still works.
+    expect(page).toContain('this.calendarEventDates = new Set()')
   })
 
   it('renders the figma 1819_17793 calendar sheet instead of t-calendar', () => {
@@ -157,5 +179,84 @@ describe('MIP event date range client contract', () => {
       dateFrom: undefined,
       dateTo: '2026-03-01',
     }))
+  })
+})
+
+describe('MIP event calendar dates client contract', () => {
+  function calendarGateway() {
+    const dates: EventCalendarDates = { dates: ['2026-01-26', '2026-01-30'] }
+    return {
+      dates,
+      getCalendarDates: vi.fn(async () => dates),
+    } as unknown as MipEventsGateway & {
+      getCalendarDates: ReturnType<typeof vi.fn>
+    }
+  }
+
+  it('fetches a visible month once and serves repeats and paging from cache', async () => {
+    const eventGateway = calendarGateway()
+    const module = createMipEventsModule(eventGateway)
+    const month = { dateFrom: '2026-01-01', dateTo: '2026-01-31', cityName: '深圳' }
+
+    const first = await module.getCalendarDates(month)
+    const second = await module.getCalendarDates({ ...month })
+    expect(first).toEqual({ dates: ['2026-01-26', '2026-01-30'] })
+    expect(second).toEqual(first)
+    expect(eventGateway.getCalendarDates).toHaveBeenCalledTimes(1)
+    expect(eventGateway.getCalendarDates).toHaveBeenCalledWith({
+      dateFrom: '2026-01-01',
+      dateTo: '2026-01-31',
+      cityName: '深圳',
+    })
+
+    // 翻月各自取数，翻回来仍读缓存；force 才回源。
+    await module.getCalendarDates({ dateFrom: '2026-02-01', dateTo: '2026-02-28' })
+    await module.getCalendarDates(month)
+    expect(eventGateway.getCalendarDates).toHaveBeenCalledTimes(2)
+    await module.getCalendarDates(month, { force: true })
+    expect(eventGateway.getCalendarDates).toHaveBeenCalledTimes(3)
+  })
+
+  it('merges concurrent lookups of the same range into one transport call', async () => {
+    let release: (value: EventCalendarDates) => void = () => {}
+    const eventGateway = {
+      getCalendarDates: vi.fn(() => new Promise<EventCalendarDates>((resolve) => {
+        release = resolve
+      })),
+    } as unknown as MipEventsGateway
+    const module = createMipEventsModule(eventGateway)
+    const month = { dateFrom: '2026-03-01', dateTo: '2026-03-31' }
+
+    const pending = Promise.all([module.getCalendarDates(month), module.getCalendarDates(month)])
+    release({ dates: ['2026-03-08'] })
+    await expect(pending).resolves.toEqual([{ dates: ['2026-03-08'] }, { dates: ['2026-03-08'] }])
+    expect((eventGateway.getCalendarDates as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1)
+  })
+
+  it('validates the range before transport and tolerates a gateway without dots', async () => {
+    const eventGateway = calendarGateway()
+    const module = createMipEventsModule(eventGateway)
+    await expect(module.getCalendarDates({ dateFrom: '2026-08-25', dateTo: '2026-08-24' }))
+      .rejects
+      .toThrow('开始日期不能晚于结束日期')
+    await expect(module.getCalendarDates({ dateFrom: '2026-08-25', dateTo: '' }))
+      .rejects
+      .toThrow('活动日历日期范围无效')
+    await expect(module.getCalendarDates({ dateFrom: '2026-01-01', dateTo: '2026-12-31' }))
+      .rejects
+      .toThrow('活动日历日期范围过大')
+    expect(eventGateway.getCalendarDates).not.toHaveBeenCalled()
+
+    // 网关未实现（旧部署）时黄点整体降级为无点。
+    const bare = createMipEventsModule({} as MipEventsGateway)
+    await expect(bare.getCalendarDates({ dateFrom: '2026-01-01', dateTo: '2026-01-31' }))
+      .resolves
+      .toEqual({ dates: [] })
+
+    // 登录态切换使缓存失效，下次重新取数。
+    await module.getCalendarDates({ dateFrom: '2026-01-01', dateTo: '2026-01-31' })
+    module.invalidate()
+    await module.getCalendarDates({ dateFrom: '2026-01-01', dateTo: '2026-01-31' })
+    expect(eventGateway.getCalendarDates).toHaveBeenCalledTimes(2)
   })
 })

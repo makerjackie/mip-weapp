@@ -87,6 +87,14 @@ MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示�
 
 同日评审修正（第三轮，取代第二轮的逐条规则文案方案）：「经验值详情-规则详情」不是逐条规则卡，而是一整段由管理后台配置的文本（与经验值明细的逐条流水卡不同）。改走既有 membership-content 文档通道：`mip_app_settings` 新增 `EXPERIENCE_RULES_TEXT` 键，作为第三种文档 `experience-rules`（复用两份协议的版本乐观锁、幂等键、审计与演示标记，无需新迁移，管理合同 operation 数不变——文档枚举不属公开契约固定项）。管理后台「成长」页新增「经验值规则说明」页签（标题/正文/演示标记），成长奖励规则编辑弹窗移除「规则说明」字段、只维护奖励数值并以提示指向该页签；第二轮迁移 098 的 `mip_growth_rules.description` 列按追加迁移政策保留但全链路不再读取（admin 校验/投影、growth-api DTO 与 SELECT、小程序 `GrowthRule` 类型同步移除）。小程序「规则详情」页签读取该文档整段正文按 `whitespace-pre-wrap` 纯文本展示（保留换行），未配置时展示空态说明；页面不再依赖 getSnapshot。
 
+## 2026-10-05 活动日历筛选器黄点与默认态收口（MIW-39）
+
+活动页「活动报名」筛选行右上角默认只保留日历入口，移除常态常显的「今天」文字与 TODAY 快捷筛选（figma 1819_17793 产品口径：未选日期不显示任何日期文字）。只有用户在日期选择器选中日期并确认后才出现筛选标签——选中当天显示「今天」，其他日期显示「M月D日」（沿用 MIW-37 的 confirmCalendar），点标签或日历 icon 都会再次打开选择器。日期弹层补齐黄点语义：当天有活动的日期在数字下显示品牌黄点（#fcdf03、12rpx），无活动不显示。
+
+黄点数据走新增公开只读契约 `mip.events.calendarDates`：按 `dateFrom/dateTo(+cityName)` 返回范围内「当天仍会被公开目录列出」的中国业务日期（PUBLISHED + published_at 非空 + ends_at 未过，按 `DATE_ADD(starts_at, 8h)` 归日、去重升序，范围上限 62 天）。谓词与 `listEvents` 的 UPCOMING/CUSTOM 同源，保证「有点子 ⟺ 选中该日列表非空」。客户端 `mipEventsModule.getCalendarDates` 归一化日期范围，按「范围+城市」缓存 5 分钟并合并并发、随 invalidate 清空；旧部署网关未实现该 action 时整体降级为无点。events 页打开弹层或翻月时按可见月份取数，失败仅降级为无点不阻断选日期；翻月或关闭后的迟到响应按可见月份守卫丢弃。
+
+`config/ui-fidelity-screens.json` 三个「活动-首页」像素夹具从 TODAY 默认态改为「已确认当天」的 CUSTOM 态，与还原稿右上角「今天+日历」pill 对齐（还原稿 1819_17664 本身仍画着默认态带「今天」，按产品口径不再跟随）。MIW-11 的「tab 不提供区间筛选」断言收窄到 `currentQuery` 查询构造——`dateFrom/dateTo` 现为日历取数所复用。完整 `pnpm verify` 通过（根工程 1531 项测试、260 个测试文件）；`mip-events-api` 未重新部署，新 action 属追加，未部署期间客户端自动降级为无点。
+
 ## 2026-09-29 后台登录与临时入口
 
 密码登录已发布有限等待与临时失败重试，完整门禁通过。临时入口 https://mipadmin.01mvp.com 以 Cloudflare 302 跳转至既有 CloudBase 后台；浏览器已验证真实概览。当时真实 HTTPS 验收为 63/64；本轮整改追加所属 `/assets` 严格路由后已达到 64/64，缺失 JS 返回 404，未改共享托管全局配置。此前首次登录失败的冷启动根因尚未证实。详见[登录与入口验收](evidence/admin-login-20260929/README.md)。

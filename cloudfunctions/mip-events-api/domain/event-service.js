@@ -341,6 +341,8 @@ function decodeCursor(value) {
 
 const businessDayMilliseconds = 24 * 60 * 60 * 1000
 const chinaOffsetMilliseconds = 8 * 60 * 60 * 1000
+// 日历黄点查询按月取数；放行两个月窗口给未来的跨月翻页，避免客户端拼月请求。
+const calendarDatesMaxRangeDays = 62
 
 function businessDateStart(value, label) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -1068,6 +1070,51 @@ async function listEvents(db, {
           tokenSecret,
         })
       : undefined,
+  }
+}
+
+// MIW-39 活动日历筛选器的黄点数据源：返回范围内「当天仍可被公开目录列出」的业务日期。
+// 与 listEvents 的 UPCOMING/CUSTOM 谓词同源（PUBLISHED + 已发布 + ends_at 未过 + starts_at 落在当天），
+// 保证「有点子」⟺「选中该日列表非空」；日期按中国业务日（+8h）归组，与 businessDateStart 一致。
+async function listEventCalendarDates(db, {
+  appId,
+  query = {},
+  now = new Date(),
+}) {
+  const dateFrom = businessDateStart(query.dateFrom, '开始日期无效')
+  const dateTo = businessDateStart(query.dateTo, '结束日期无效')
+  if (dateFrom > dateTo) {
+    throw new DomainError('VALIDATION_FAILED', '开始日期不能晚于结束日期')
+  }
+  if (dateTo.getTime() - dateFrom.getTime() > (calendarDatesMaxRangeDays - 1) * businessDayMilliseconds) {
+    throw new DomainError('VALIDATION_FAILED', '日期范围过大')
+  }
+  const clauses = [
+    'e.app_id = ?',
+    "e.status = 'PUBLISHED'",
+    'e.published_at IS NOT NULL',
+    'e.ends_at >= ?',
+    'e.starts_at >= ?',
+    'e.starts_at < ?',
+  ]
+  const params = [appId, now, dateFrom, new Date(dateTo.getTime() + businessDayMilliseconds)]
+  const cityName = typeof query.cityName === 'string' ? query.cityName.trim().slice(0, 80) : ''
+  if (cityName) {
+    clauses.push('e.city_name = ?')
+    params.push(cityName)
+  }
+  const rows = await db.query(
+    `SELECT DISTINCT DATE_FORMAT(DATE_ADD(e.starts_at, INTERVAL 8 HOUR), '%Y-%m-%d') AS event_date
+     FROM mip_events e
+     WHERE ${clauses.join(' AND ')}
+     ORDER BY event_date ASC
+     LIMIT 124`,
+    params,
+  )
+  return {
+    dates: [...new Set(rows
+      .map(row => String(row.event_date || ''))
+      .filter(value => /^\d{4}-\d{2}-\d{2}$/.test(value)))].sort(),
   }
 }
 
@@ -3134,6 +3181,7 @@ module.exports = {
   heartVisibilityFilters,
   getMyRegistration,
   listEvents,
+  listEventCalendarDates,
   listHeartCandidates,
   listHeartHistory,
   markHeartHistoryRead,

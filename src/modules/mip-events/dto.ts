@@ -1,4 +1,5 @@
 import type {
+  EventCalendarDates,
   EventDiscoveryFilters,
   EventDiscoveryOption,
   EventFeedResult,
@@ -136,6 +137,27 @@ function parseDiscoveryOptions(value: unknown, maxItems: number): EventDiscovery
     keys.add(item.key)
     return item as unknown as EventDiscoveryOption
   })
+}
+
+const dateKeyPattern = /^\d{4}-\d{2}-\d{2}$/
+
+function dateKeyList(value: unknown, maxItems: number) {
+  return Array.isArray(value)
+    && value.length <= maxItems
+    && value.every(item => typeof item === 'string' && dateKeyPattern.test(item))
+    && new Set(value).size === value.length
+    && value.every((item, index) => index === 0 || String(value[index - 1]) < item)
+}
+
+/** MIW-39 活动日历黄点：只接受升序去重后的 `YYYY-MM-DD` 列表。 */
+export function parseEventCalendarDates(value: unknown): EventCalendarDates {
+  if (!record(value)
+    || !onlyKeys(value, ['dates'])
+    || !hasKeys(value, ['dates'])
+    || !dateKeyList(value.dates, 124)) {
+    invalid('活动日历日期')
+  }
+  return { dates: value.dates as string[] }
 }
 
 export function parseEventDiscoveryFilters(value: unknown): EventDiscoveryFilters {
