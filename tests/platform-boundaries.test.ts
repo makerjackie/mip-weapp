@@ -25,12 +25,4 @@ describe('platform boundaries', () => {
       )
     }
   })
-
-  it('keeps the knowledge domain module independent from runtime composition', () => {
-    const module = fs.readFileSync(path.join(root, 'src/modules/mip-knowledge/module.ts'), 'utf8')
-    expect(module).not.toContain('runtimeConfig')
-    expect(module).not.toContain('requireCloudClient')
-    expect(module).not.toContain('mipCommerceModule')
-    expect(module).not.toMatch(/from ['"].*platform/)
-  })
 })

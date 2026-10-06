@@ -157,30 +157,6 @@
       "pathName": "packages/member/mip-badge-detail/index"
     },
     {
-      "name": "团队 PK",
-      "pathName": "packages/member/mip-game/index"
-    },
-    {
-      "name": "队伍大本营",
-      "pathName": "packages/member/mip-game/team/index"
-    },
-    {
-      "name": "笨笨盲盒",
-      "pathName": "packages/member/mip-blind-box/index"
-    },
-    {
-      "name": "盲盒详情",
-      "pathName": "packages/member/mip-blind-box/detail/index"
-    },
-    {
-      "name": "卡牌背包",
-      "pathName": "packages/member/mip-blind-box/backpack/index"
-    },
-    {
-      "name": "游戏币流水",
-      "pathName": "packages/member/mip-blind-box/coin-entries/index"
-    },
-    {
       "name": "任务",
       "pathName": "packages/member/mip-tasks/index"
     },
@@ -267,18 +243,6 @@
     {
       "name": "参与者与签到",
       "pathName": "packages/admin/event-registrations/index"
-    },
-    {
-      "name": "知识内容",
-      "pathName": "packages/member/mip-knowledge/index"
-    },
-    {
-      "name": "知识内容详情",
-      "pathName": "packages/member/mip-knowledge/detail/index"
-    },
-    {
-      "name": "知识内容网页",
-      "pathName": "packages/member/mip-knowledge/web/index"
     },
     {
       "name": "AI 语音填写",

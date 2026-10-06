@@ -35,7 +35,9 @@ describe('MIP profile notification entry', () => {
     const profile = readSource('src/pages/profile/index.wxml')
     expect(profile).toContain('openSettings')
     const settings = readSource('src/packages/member/privacy/index.wxml')
-    for (const action of ['openGame', 'openHelp']) {
+    // MIW-44：团队 PK 随功能下线，openGame 入口一并移除。
+    expect(settings).not.toContain('openGame')
+    for (const action of ['openHelp']) {
       expect(profile).not.toContain(action)
       expect(settings).toContain(action)
     }

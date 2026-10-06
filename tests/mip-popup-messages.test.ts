@@ -257,7 +257,7 @@ describe('MIP popup messages', () => {
         messageType: 'OPERATIONS',
         title: '系统消息',
         body: '当前有一条待查看消息。',
-        target: { type: 'GAME', id: 'game', route: '/packages/member/mip-game/index' },
+        target: { type: 'OPERATIONS', id: 'ops-1', route: '/pages/profile/index' },
         createdAt: new Date().toISOString(),
       }])) as never,
       markRead,

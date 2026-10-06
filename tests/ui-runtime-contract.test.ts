@@ -395,36 +395,11 @@ describe('mip-weapp UI runtime contract', () => {
     }
   })
 
-  it('proves ranking tab changes through a visible native control', () => {
-    const journey = contract.interactionJourneys.find(item => item.id === 'game-ranking-tabs')
-    const step = journey?.steps.find(item => item.id === 'show-individual-season-ranking')
-    const gameMarkup = read('src/packages/member/mip-game/index.wxml')
-    const controlStart = gameMarkup.indexOf('<view wx:for="{{rankingOptions}}"')
-    const controlEnd = gameMarkup.indexOf('</view>', controlStart)
-    const rankingControl = gameMarkup.slice(controlStart, controlEnd)
-
-    expect(step).toMatchObject({
-      scrollIntoView: true,
-      requireVisibleTarget: true,
-      requireRenderedAction: true,
-      requireScreenshotDiff: true,
-    })
-    expect(controlStart).toBeGreaterThanOrEqual(0)
-    expect(rankingControl).toContain('id="game-ranking-{{item.key}}"')
-    expect(rankingControl).toContain('class="flex min-h-[88rpx] items-center"')
-    expect(rankingControl).toContain('aria-role="radio"')
-    expect(rankingControl).toContain('aria-checked="{{rankingType === item.key}}"')
-    expect(rankingControl).toContain('data-type="{{item.key}}" bind:tap="changeRanking"')
-    expect(rankingControl).toContain('variant="{{rankingType === item.key ? \'light\' : \'outline\'}}"')
-    expect(gameMarkup).not.toContain('<t-tag wx:for="{{rankingOptions}}"')
-  })
-
   it('keeps real-device capabilities explicit and unresolved by DevTools', () => {
     const capabilityIds = contract.deviceRequiredCapabilities.map(item => item.id).sort()
     expect(capabilityIds).toEqual([
       'calendar-location',
       'customer-service',
-      'knowledge-webview',
       'online-event-webview',
       'phone-auth',
       'phone-call',
@@ -491,8 +466,6 @@ describe('mip-weapp UI runtime contract', () => {
     expect(byPath.get('packages/member/mip-events/participants/index')?.query).toEqual(['eventId'])
     expect(byPath.get('packages/member/mip-public-profile/index')?.query).toEqual(['profileRef'])
     expect(byPath.get('packages/member/order-detail/index')?.query).toEqual(['orderId'])
-    expect(byPath.get('packages/member/mip-knowledge/detail/index')?.query).toEqual(['contentId'])
-    expect(byPath.get('packages/member/mip-knowledge/web/index')?.query).toEqual(['contentId'])
     for (const route of contract.routes.filter(item => item.query?.length)) {
       if (route.protectedAccessFixture) {
         expect(route.path).toBe('packages/member/mip-access/index')
@@ -524,22 +497,10 @@ describe('mip-weapp UI runtime contract', () => {
       where: { status: 'ATTENDED' },
       values: { eventId: 'event.id' },
     })
-    expect(byId.get('M35')?.queryFixture).toMatchObject({
-      sourceRoute: 'packages/member/mip-game/index',
-      dataPath: 'rankings',
-      where: { subjectType: 'TEAM' },
-      values: { teamId: 'teamId' },
-    })
     expect(byId.get('M14')?.queryFixture).toMatchObject({
       sourceRoute: 'packages/member/mip-cooperation/list/index',
       dataPath: 'talents',
       values: { id: 'cards.0.id' },
-    })
-    expect(byId.get('M46')).toMatchObject({
-      states: ['loading', 'ready', 'empty', 'error'],
-      acceptStates: ['ready', 'empty'],
-      readyAssertion: 'state === \'ready\' || state === \'empty\'',
-      deviceRequired: ['knowledge-webview'],
     })
   })
 

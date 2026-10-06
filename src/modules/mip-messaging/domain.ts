@@ -11,15 +11,13 @@ const routeByTargetType: Readonly<Record<string, (id: string) => string>> = {
   ORDER: id => `/packages/member/order-detail/index?orderId=${encodeURIComponent(id)}`,
   PROFILE: profileRef => `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}`,
   GROWTH: () => '/packages/member/mip-growth/index',
-  GAME: () => '/packages/member/mip-game/index',
-  KNOWLEDGE: id => `/packages/member/mip-knowledge/detail/index?contentId=${encodeURIComponent(id)}`,
+  // GAME/KNOWLEDGE 目标已随功能下线（MIW-44）：存量消息保留为不可跳转的普通条目。
 }
 
 const trustedRoutePrefixes = [
   '/packages/member/mip-events/detail/index?eventId=',
   '/packages/member/mip-opportunities/detail/index?id=',
   '/packages/member/order-detail/index?orderId=',
-  '/packages/member/mip-knowledge/detail/index?contentId=',
 ] as const
 
 const publicProfileRoutePrefix = '/packages/member/mip-public-profile/index?profileRef='
@@ -27,7 +25,6 @@ const profileRefPattern = /^p1\.[\w-]{16}\.[\w-]{48}\.[\w-]{22}$/
 
 export function isTrustedInboxRoute(route: string) {
   return route === '/packages/member/mip-growth/index'
-    || route === '/packages/member/mip-game/index'
     || (route.startsWith(publicProfileRoutePrefix) && profileRefPattern.test(route.slice(publicProfileRoutePrefix.length)))
     || trustedRoutePrefixes.some(prefix => route.startsWith(prefix) && route.length > prefix.length)
 }

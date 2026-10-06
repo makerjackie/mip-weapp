@@ -16,7 +16,6 @@ Page({
     isEventOrder: false,
     isContentOrder: false,
     eventId: '',
-    contentId: '',
     attempts: 0,
     title: '正在确认支付',
     description: '正在查询支付结果，请稍候。',
@@ -119,7 +118,6 @@ Page({
       isEventOrder,
       isContentOrder,
       eventId: isEventOrder ? order.resourceId || '' : '',
-      contentId: isContentOrder ? order.resourceId || '' : '',
       amountText: formatCny(order.amountCents),
       planName: planTitle(order, plans),
       statusText: presentOrderStatus(order.status).label,
@@ -180,7 +178,7 @@ Page({
         result: 'success',
         title: '支付已确认',
         description: isContentOrder
-          ? '支付成功，现在可以查看内容。'
+          ? '支付成功。'
           : '支付成功，会员权益已开通。',
       })
       return
@@ -219,7 +217,7 @@ Page({
       description: isEventOrder
         ? '这笔订单未完成付款，报名未成功。'
         : isContentOrder
-          ? '这笔订单未完成付款，暂时无法查看内容。'
+          ? '这笔订单未完成付款。'
           : '这笔订单未完成付款，会员未开通。',
     })
   },
@@ -303,11 +301,6 @@ Page({
     caseNavigateTo({
       url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}&resumeCheckIn=1`,
     })
-  },
-  openContent() {
-    if (this.data.contentId) {
-      caseNavigateTo({ url: `/packages/member/mip-knowledge/detail/index?contentId=${encodeURIComponent(this.data.contentId)}` })
-    }
   },
   openOrder() { caseNavigateTo({ url: `/packages/member/order-detail/index?orderId=${encodeURIComponent(this.data.orderId)}` }) },
 })
