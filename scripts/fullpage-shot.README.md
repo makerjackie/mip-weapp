@@ -21,21 +21,21 @@ node scripts/fullpage-shot.mjs /packages/member/mip-cooperation/editor/index --c
 
 ## 参数
 
-| 参数 | 说明 |
-| --- | --- |
-| `<页面路径>` / `--route` | 页面路径，可带 query；位置参数与 `--route` 二选一 |
-| `--fixture <file>` | 注入的 page data JSON；不传则用页面自身数据 |
-| `--out <dir>` | 输出目录，默认 `.tmp/fullpage-shots` |
-| `--name <name>` | 输出文件名前缀，默认取路由末两段（如 `mip-cooperation-detail`） |
-| `--title <text>` | 覆盖导航栏标题（截图里看得见，标场景用） |
-| `--call <method>` | `setData` 后依次调用的页面方法，可重复（如 canvas 重绘 `drawRadar`） |
-| `--probe <field>` | data 字段新鲜度探针，可重复；缺字段 = 连到了旧 bundle，直接报错 |
-| `--wait-error` | 先等 onLoad 云调用失败落地（`state==='error'`）再注入 fixture |
-| `--expect-state <v>` | fixture 注入后断言 `data.state` |
-| `--root <selector>` | 页面根节点存在性检查（如 `#mip-cooperation-detail-page`） |
-| `--settle <ms>` | `reLaunch` 后的初始等待，默认 1400 |
-| `--connect` / `--port <n>` | 只连已打开的 automator 会话；端口默认按宿主项目推导 |
-| `--keep-frames` | 保留中间滚动帧与 manifest |
+| 参数                       | 说明                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| `<页面路径>` / `--route`   | 页面路径，可带 query；位置参数与 `--route` 二选一                    |
+| `--fixture <file>`         | 注入的 page data JSON；不传则用页面自身数据                          |
+| `--out <dir>`              | 输出目录，默认 `.tmp/fullpage-shots`                                 |
+| `--name <name>`            | 输出文件名前缀，默认取路由末两段（如 `mip-cooperation-detail`）      |
+| `--title <text>`           | 覆盖导航栏标题（截图里看得见，标场景用）                             |
+| `--call <method>`          | `setData` 后依次调用的页面方法，可重复（如 canvas 重绘 `drawRadar`） |
+| `--probe <field>`          | data 字段新鲜度探针，可重复；缺字段 = 连到了旧 bundle，直接报错      |
+| `--wait-error`             | 先等 onLoad 云调用失败落地（`state==='error'`）再注入 fixture        |
+| `--expect-state <v>`       | fixture 注入后断言 `data.state`                                      |
+| `--root <selector>`        | 页面根节点存在性检查（如 `#mip-cooperation-detail-page`）            |
+| `--settle <ms>`            | `reLaunch` 后的初始等待，默认 1400                                   |
+| `--connect` / `--port <n>` | 只连已打开的 automator 会话；端口默认按宿主项目推导                  |
+| `--keep-frames`            | 保留中间滚动帧与 manifest                                            |
 
 ## 原理（6 步）
 
@@ -55,10 +55,10 @@ node scripts/fullpage-shot.mjs /packages/member/mip-cooperation/editor/index --c
 
 ## 排错速查
 
-| 症状 | 原因 / 处理 |
-| --- | --- |
-| `stale bundle: data lacks probe fields` | 连到了旧 bundle：重新构建（`pnpm build:mp`），或关掉旧窗口后重跑 |
-| fixture 注入后被空态/报错态覆盖 | 没等 `load()` 失败落地，加 `--wait-error` |
-| 长图有重影 / 断层 | 用 `--keep-frames` 留帧，看 manifest 里各帧 `diff/ties`；`ties>12` 说明该帧走了 DOM 回退 |
-| automator 连到别的小程序 | 宿主项目被嵌套打开：关闭工具里所有该项目窗口，重跑（工具会自己拉起宿主） |
-| 页面跳转超时 | 模拟器刚被重启还在恢复：等 10 秒重跑 |
+| 症状                                    | 原因 / 处理                                                                              |
+| --------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `stale bundle: data lacks probe fields` | 连到了旧 bundle：重新构建（`pnpm build:mp`），或关掉旧窗口后重跑                         |
+| fixture 注入后被空态/报错态覆盖         | 没等 `load()` 失败落地，加 `--wait-error`                                                |
+| 长图有重影 / 断层                       | 用 `--keep-frames` 留帧，看 manifest 里各帧 `diff/ties`；`ties>12` 说明该帧走了 DOM 回退 |
+| automator 连到别的小程序                | 宿主项目被嵌套打开：关闭工具里所有该项目窗口，重跑（工具会自己拉起宿主）                 |
+| 页面跳转超时                            | 模拟器刚被重启还在恢复：等 10 秒重跑                                                     |
