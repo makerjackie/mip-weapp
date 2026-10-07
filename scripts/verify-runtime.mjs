@@ -181,10 +181,78 @@ export function interactionTargetViewportEvidence(nodes, systemInfo) {
         height,
         windowHeight: viewportHeight,
         windowWidth: viewportWidth,
+        source: 'rendered-nodes',
       }
     }
   }
   return null
+}
+
+/**
+ * SelectorQuery rect reporting can degrade in long-lived shared DevTools
+ * sessions while the target stays visible (MIW-45): the same journey step
+ * that screenshots correctly returns no usable rect from renderedNodes.
+ * The element DOM-property path (size/offset) is an independent measurement,
+ * so it is accepted as equivalent viewport evidence when it agrees on a
+ * fully visible target.
+ */
+export async function interactionTargetElementEvidence(element, systemInfo) {
+  const viewportHeight = Number(systemInfo?.windowHeight)
+  const viewportWidth = Number(systemInfo?.windowWidth)
+  if (
+    !Number.isFinite(viewportHeight)
+    || viewportHeight <= 0
+    || !Number.isFinite(viewportWidth)
+    || viewportWidth <= 0
+    || !element
+    || typeof element.size !== 'function'
+    || typeof element.offset !== 'function'
+  ) {
+    return null
+  }
+  const [size, offset] = await Promise.all([
+    element.size().catch(() => undefined),
+    element.offset().catch(() => undefined),
+  ])
+  const width = Number(size?.width)
+  const height = Number(size?.height)
+  const top = Number(offset?.top)
+  const left = Number(offset?.left)
+  if (![width, height, top, left].every(Number.isFinite)) {
+    return null
+  }
+  const bottom = top + height
+  const right = left + width
+  if (
+    width <= 0
+    || height <= 0
+    || top < 0
+    || left < 0
+    || bottom > viewportHeight
+    || right > viewportWidth
+  ) {
+    return null
+  }
+  return {
+    top,
+    bottom,
+    left,
+    right,
+    width,
+    height,
+    windowHeight: viewportHeight,
+    windowWidth: viewportWidth,
+    source: 'element-rect',
+  }
+}
+
+function unmeasurableInteractionTargetError(context) {
+  const error = new Error(`${context} target is outside the measured viewport`)
+  // Marker consumed by isRecoverableRuntimeMeasurementError: both measurement
+  // paths failed, which indicates a degraded DevTools measurement context
+  // rather than a page regression, so the attempt loop may relaunch fresh.
+  error.unmeasurableInteractionTarget = true
+  return error
 }
 
 async function assertInteractionTargetInViewport(page, miniProgram, journey, step) {
@@ -193,8 +261,15 @@ async function assertInteractionTargetInViewport(page, miniProgram, journey, ste
     miniProgram.systemInfo(),
   ])
   const evidence = interactionTargetViewportEvidence(nodes, systemInfo)
-  assert(evidence, `Interaction ${journey.id}/${step.id} target is outside the measured viewport`)
-  return evidence
+  if (evidence) {
+    return evidence
+  }
+  const element = await queryFreshRenderedActionElement(page, step.selector).catch(() => undefined)
+  const fallbackEvidence = await interactionTargetElementEvidence(element, systemInfo)
+  if (fallbackEvidence) {
+    return fallbackEvidence
+  }
+  throw unmeasurableInteractionTargetError(`Interaction ${journey.id}/${step.id}`)
 }
 
 export async function queryFreshRenderedActionElement(page, selector) {
@@ -795,6 +870,16 @@ function isScreenshotCaptureError(error) {
   return error instanceof Error && error.message.includes('fail to capture screenshot')
 }
 
+/**
+ * Both viewport measurement paths (renderedNodes SelectorQuery rects and the
+ * element DOM-property fallback) returned nothing usable for a visible
+ * target. That pattern indicates a degraded shared DevTools measurement
+ * context (MIW-45), so a fresh automator session is worth one relaunch.
+ */
+function isRecoverableRuntimeMeasurementError(error) {
+  return error?.unmeasurableInteractionTarget === true
+}
+
 async function captureScreenshot(label, miniProgram, screenshotPath, attempts = 3) {
   let lastError
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -947,7 +1032,7 @@ export async function observeRepresentativeState(page, scenario) {
   }
 }
 
-async function waitForRepresentativeEvidence(page, scenario, timeoutMs = 1200) {
+async function waitForRepresentativeEvidence(page, scenario, timeoutMs = 4000) {
   const deadline = Date.now() + timeoutMs
   let lastError
   while (Date.now() < deadline) {
@@ -1070,6 +1155,53 @@ async function verifyRepresentativeStates(miniProgram, runtimePages, report, sen
   }
 }
 
+/**
+ * wx.pageScrollTo({ selector }) aligns the target top with y=0, parking it
+ * under the fixed status-bar/capsule chrome that DevTools burns into
+ * screenshots. The target still passes the rect-based viewport assert, but
+ * its rendered change is occluded and screenshot diffs collapse (MIW-45:
+ * enter-keyword diff fell to 0.0008 with the keyword half-clipped). Nudge
+ * the scroll back down so the target renders fully below the chrome.
+ */
+async function revealScrolledInteractionTarget(miniProgram, page, selector) {
+  const [nodes, scrollTop, menuButton, systemInfo] = await Promise.all([
+    page.renderedNodes(selector, { routeOnly: true }),
+    page.scrollTop().catch(() => undefined),
+    miniProgram.evaluate(() => wx.getMenuButtonBoundingClientRect()).catch(() => undefined),
+    miniProgram.systemInfo().catch(() => undefined),
+  ])
+  const node = Array.isArray(nodes) ? nodes[0] : undefined
+  const top = Number(node?.top)
+  const height = Number(node?.height)
+  const viewportHeight = Number(systemInfo?.windowHeight)
+  const measuredChromeBottom = Number(menuButton?.bottom)
+  const statusBarHeight = Number(systemInfo?.statusBarHeight)
+  // App.callWxMethod cannot return sync API values, so read the capsule rect
+  // through evaluate and fall back to the status bar plus a capsule row.
+  const chromeBottom = Number.isFinite(measuredChromeBottom) && measuredChromeBottom > 0
+    ? measuredChromeBottom
+    : Number.isFinite(statusBarHeight)
+      ? statusBarHeight + 36
+      : Number.NaN
+  if (
+    !Number.isFinite(top)
+    || !Number.isFinite(height)
+    || !Number.isFinite(viewportHeight)
+    || !Number.isFinite(scrollTop)
+    || scrollTop <= 0
+    || !Number.isFinite(chromeBottom)
+  ) {
+    return
+  }
+  const safeTop = chromeBottom + 8
+  const delta = safeTop - top
+  if (delta <= 0 || top + height + delta > viewportHeight) {
+    return
+  }
+  await miniProgram.pageScrollTo(Math.max(0, scrollTop - delta))
+  await new Promise(resolve => setTimeout(resolve, 180))
+}
+
 async function verifyInteractionJourneys(miniProgram, runtimePages, report, sensitivePatterns) {
   const routes = new Map(runtimePages.routes.map(route => [route.path, route]))
   report.interactions = []
@@ -1098,6 +1230,7 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
             () => miniProgram.callWxMethod('pageScrollTo', { selector: step.selector, duration: 0 }),
           )
           await new Promise(resolve => setTimeout(resolve, 180))
+          await revealScrolledInteractionTarget(miniProgram, page, step.selector)
         }
         else if (stepScrollTop !== undefined) {
           await retry(`scroll interaction ${journey.id}/${step.id}`, () => miniProgram.pageScrollTo(stepScrollTop))
@@ -1332,10 +1465,14 @@ async function tapVisibleRuntimeFixtureAction(page, miniProgram, selector, label
     page.renderedNodes(selector, { routeOnly: true }),
     miniProgram.systemInfo(),
   ])
-  assert(
-    interactionTargetViewportEvidence(nodes, systemInfo),
-    `Runtime fixture ${label} target is outside the measured viewport`,
-  )
+  const evidence = interactionTargetViewportEvidence(nodes, systemInfo)
+  if (!evidence) {
+    const fallbackElement = await queryFreshRenderedActionElement(page, selector).catch(() => undefined)
+    assert(
+      await interactionTargetElementEvidence(fallbackElement, systemInfo),
+      `Runtime fixture ${label} target is outside the measured viewport`,
+    )
+  }
   const element = await queryFreshRenderedActionElement(page, selector)
   assert(element, `Runtime fixture ${label} selector was not rendered: ${selector}`)
   await element.tap()
@@ -1641,7 +1778,8 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
       }
       if (isRecoverableRuntimeConnectionError(error)
         || isScreenshotCaptureError(error)
-        || isRecoverableRuntimeRenderError(error)) {
+        || isRecoverableRuntimeRenderError(error)
+        || isRecoverableRuntimeMeasurementError(error)) {
         throw error
       }
       report.pages.push({
@@ -1891,7 +2029,8 @@ export async function main(runArgs = process.argv.slice(2)) {
         })
         if (attempt !== 1 || (!isRecoverableRuntimeConnectionError(error)
           && !isScreenshotCaptureError(error)
-          && !isRecoverableRuntimeRenderError(error))) {
+          && !isRecoverableRuntimeRenderError(error)
+          && !isRecoverableRuntimeMeasurementError(error))) {
           throw error
         }
         report.recoveries.push({
@@ -1901,7 +2040,9 @@ export async function main(runArgs = process.argv.slice(2)) {
             ? 'screenshot-capture-failed'
             : isRecoverableRuntimeRenderError(error)
               ? 'renderer-not-ready'
-              : 'connection-failed',
+              : isRecoverableRuntimeMeasurementError(error)
+                ? 'interaction-target-unmeasurable'
+                : 'connection-failed',
         })
         await closeSharedMiniProgram(devtoolsRoot, sessionId).catch(() => undefined)
         miniProgram = undefined
