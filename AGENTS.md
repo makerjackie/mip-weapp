@@ -44,6 +44,7 @@
 - 页面不得直接 `wx.cloud.init` 或 `wx.requestPayment`
 - 云函数不得依赖仓库外路径
 - `admin-web/` 不得引用 `wx`、WXML、TDesign MiniProgram 或 `src/pages` / `src/packages`。
+- 增删改查功能时必须双端联动排查：删除、下线或调整小程序功能时，不能只看小程序，还要检查 `admin-web/` 是否有对应的管理界面，以及 `packages/admin-contracts`、`cloudfunctions`、`database/mysql` 是否有需要一并处理的契约、云函数和数据结构；改管理后台时同样反向检查小程序侧。不得只改一端就收工。
 
 ## 7. 配置和密钥
 
