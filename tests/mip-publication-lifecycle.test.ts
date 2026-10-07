@@ -18,7 +18,8 @@ describe('MIP member publication lifecycle', () => {
     expect(cooperationClient).toContain('\'unpublishCooperationCard\'')
     expect(caseClient).toContain('\'unpublishSuperCase\'')
     expect(cooperationPage).toContain('cooperationModule.unpublish(item.id, item.version)')
-    expect(casePage).toContain('superCaseModule.unpublish(item.id, item.version)')
+    // MIW-49（figma 2704_13347）：超级案例详情页不再放下架/删除入口，案例管理收敛到「我的」tab。
+    expect(casePage).not.toContain('superCaseModule.unpublish')
   })
 
   it('keeps unpublish separate from irreversible member-side deletion', () => {
@@ -26,8 +27,8 @@ describe('MIP member publication lifecycle', () => {
     const caseDomain = source('cloudfunctions/mip-opportunities-api/domain/cases.js')
     const detailTemplates = [
       source('src/packages/member/mip-cooperation/detail/index.wxml'),
-      source('src/packages/member/mip-cases/detail/index.wxml'),
     ].join('\n')
+    const caseDetailTemplate = source('src/packages/member/mip-cases/detail/index.wxml')
     const listTemplates = [
       source('src/pages/profile/index.wxml'),
       source('src/packages/member/mip-cases/list/index.wxml'),
@@ -42,9 +43,12 @@ describe('MIP member publication lifecycle', () => {
     expect(caseDomain).not.toMatch(/DELETE FROM mip_super_cases/)
     expect(cooperationDomain).not.toMatch(/DELETE FROM mip_cooperation_cards/)
     expect(detailTemplates).toContain('下架合作卡')
-    expect(detailTemplates).toContain('下架案例')
+    expect(detailTemplates).toContain('下架合作卡')
     expect(detailTemplates).toContain('删除合作卡')
-    expect(detailTemplates).toContain('删除案例')
+    // MIW-49（figma 2704_13347 + 2026-10-07 拍板）：超级案例详情页无案例管理模块，
+    // 删除唯一入口 = 「我的」tab 长按超级案例卡片。
+    expect(caseDetailTemplate).not.toContain('下架案例')
+    expect(caseDetailTemplate).not.toContain('删除案例')
     // journey-review C5（2026-09-21 拍板）：列表删除入口收敛为长按卡片（原生 longpress 手势）+
     // 微信原生确认弹窗（删除警示红）→ 卡片移除 + toast「已删除」（1.8s），按钮行移除。
     // 2026-10-07：合作卡独立列表页删除后，本人合作卡列表即档案页「相关合作卡」栏。

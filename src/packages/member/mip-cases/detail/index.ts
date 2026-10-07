@@ -1,25 +1,16 @@
 import type { SuperCaseId } from '../../../../modules/mip'
 import type { SuperCaseDetail, SuperCaseProjectView } from '../../../../modules/mip-cases'
-import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { superCaseModule } from '../../../../modules/mip-cases'
-import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigation/client'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 interface CaseProjectView extends SuperCaseProjectView {
   startedOnText: string
 }
 
+// figma 2704_13347 我的编辑：banner 统一品牌图，无封面/状态字段，案例管理不在详情页。
 interface SuperCaseDetailView extends Omit<SuperCaseDetail, 'projects'> {
-  coverUrl: string
-  statusText: string
   projects: CaseProjectView[]
 }
-
-const CASE_STATUS_LABELS = {
-  DRAFT: '草稿',
-  PUBLISHED: '已发布',
-  UNPUBLISHED: '已下架',
-  ARCHIVED: '已删除',
-} as const
 
 function formatCaseDate(value?: string) {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.replace(/-/g, '.') : value || ''
@@ -28,8 +19,6 @@ function formatCaseDate(value?: string) {
 function presentCase(item: SuperCaseDetail): SuperCaseDetailView {
   return {
     ...item,
-    coverUrl: item.coverUrl || mipOperationsConfig.defaultCoverPaths.superCase,
-    statusText: CASE_STATUS_LABELS[item.status],
     projects: item.projects.map(project => ({
       ...project,
       startedOnText: formatCaseDate(project.startedOn) || '未填写',
@@ -43,7 +32,6 @@ Page({
     state: 'loading' as 'loading' | 'ready' | 'error',
     item: null as SuperCaseDetailView | null,
     mediaUrls: [] as string[],
-    acting: false,
     message: '',
   },
 
@@ -82,73 +70,8 @@ Page({
   },
 
   edit() {
-    if (this.data.item?.canEdit && !this.data.acting) {
+    if (this.data.item?.canEdit) {
       caseNavigateTo({ url: `/packages/member/mip-cases/editor/index?id=${encodeURIComponent(this.data.id)}` })
-    }
-  },
-
-  async unpublish() {
-    const item = this.data.item
-    if (!item?.mine || item.status !== 'PUBLISHED' || this.data.acting) {
-      return
-    }
-    this.setData({ acting: true, message: '' })
-    const confirmation = await wx.showModal({
-      title: '下架案例',
-      content: '下架后，其他用户将无法查看这个案例。',
-      confirmText: '确认下架',
-      confirmColor: '#B30516',
-    }).catch(() => null)
-    if (!confirmation?.confirm) {
-      this.setData({ acting: false })
-      return
-    }
-    try {
-      const result = await superCaseModule.unpublish(item.id, item.version)
-      this.setData({
-        'item.status': result.status,
-        'item.version': result.version,
-        'item.canEdit': true,
-        'item.statusText': CASE_STATUS_LABELS[result.status],
-      })
-      wx.showToast({ title: '案例已下架', icon: 'success' })
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '案例下架失败' })
-    }
-    finally {
-      this.setData({ acting: false })
-    }
-  },
-
-  async deleteCase() {
-    const item = this.data.item
-    if (!item?.mine || this.data.acting) {
-      return
-    }
-    this.setData({ acting: true, message: '' })
-    const confirmation = await wx.showModal({
-      title: '删除案例',
-      content: '删除后，这个案例将不再显示，且无法恢复。',
-      confirmText: '删除',
-      confirmColor: '#B30516',
-    }).catch(() => null)
-    if (!confirmation?.confirm) {
-      this.setData({ acting: false })
-      return
-    }
-    try {
-      await superCaseModule.archive(item.id, item.version)
-      wx.showToast({ title: '已删除', icon: 'success' })
-      leaveSecondaryPage('/pages/opportunities/index')
-    }
-    catch (error) {
-      const message = error instanceof Error ? error.message : '案例删除失败'
-      await this.load()
-      wx.showToast({ title: message, icon: 'none' })
-    }
-    finally {
-      this.setData({ acting: false })
     }
   },
 

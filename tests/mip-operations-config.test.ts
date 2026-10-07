@@ -11,7 +11,8 @@ describe('replaceable MIP operations configuration', () => {
     expect(mipOperationsConfig.supportPhone).toBe('18819253403')
     expect(mipOperationsConfig).toHaveProperty('videoChannelFinderUserName')
     expect(mipOperationsConfig.homeBanner).toHaveProperty('imagePath')
-    expect(mipOperationsConfig.defaultCoverPaths.superCase).toMatch(/^\/assets\//)
+    // MIW-49：超级案例 banner 统一品牌图，封面兜底配置随案例管理一起移除。
+    expect(mipOperationsConfig).not.toHaveProperty('defaultCoverPaths')
     expect(mipOperationsConfig).not.toHaveProperty('eventBanners')
   })
 
@@ -21,7 +22,8 @@ describe('replaceable MIP operations configuration', () => {
     const helpPage = fs.readFileSync(path.join(root, 'src/packages/member/help/index.ts'), 'utf8')
     const eventDetail = fs.readFileSync(path.join(root, 'src/packages/member/mip-events/detail/index.ts'), 'utf8')
     expect(eventPage).not.toContain('mipOperationsConfig.defaultCoverPaths.event')
-    expect(caseDetail).toContain('mipOperationsConfig.defaultCoverPaths.superCase')
+    // MIW-49（figma 2704_13347 + 标注 2127_2198）：超级案例详情 banner 统一品牌图，不走封面兜底。
+    expect(caseDetail).not.toContain('mipOperationsConfig')
     expect(helpPage).toMatch(/callSupport\(\)[\s\S]*mipOperationsConfig\.supportPhone[\s\S]*wx\.makePhoneCall/)
     expect(eventDetail).toMatch(/callSupport\(\)[\s\S]*const supportPhone = mipOperationsConfig\.supportPhone[\s\S]*wx\.makePhoneCall\(\{ phoneNumber: supportPhone \}\)/)
     expect(helpPage).not.toContain(mipOperationsConfig.supportPhone)

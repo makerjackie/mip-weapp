@@ -6,22 +6,25 @@ import { aiText } from '../../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { superCaseModule } from '../../../../modules/mip-cases'
 import { collectMissingProjectFields, MAX_SUPER_CASE_PROJECTS } from '../../../../modules/mip-cases/validation'
-import { mipMediaModule } from '../../../../modules/mip-media/client'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
-import { chooseMultipleImages, chooseSingleImage } from '../../../../platform/wechat/image-upload'
+import { EDITOR_HOT_CITY_COUNT, HOT_CITY_LABELS } from '../city-selector/city-directory'
 
-interface CaseMediaDraft { assetId: string, imageUrl: string }
-
-// 单个项目的编辑态（figma 2173_42605：「添加项目」整组追加，城市下拉共享目录）。
+// 单个项目的编辑态（figma 2173_42605：整块 panel 表单，「主营城市」行 + 热门城市标签 + 选择城市二级页）。
 interface ProjectForm {
   projectName: string
   summary: string
   startedOn: string
   responsibility: string
-  cityIndex: number
+  cityLabel: string
+  cityTagId: string
   region: string
   caseType: string
   description: string
+}
+
+interface HotCityOption {
+  label: string
+  tagId: string
 }
 
 type CaseEditorPublicationStatus = SuperCaseStatus | 'NEW'
@@ -56,7 +59,8 @@ function emptyProject(): ProjectForm {
     summary: '',
     startedOn: '',
     responsibility: '',
-    cityIndex: 0,
+    cityLabel: '',
+    cityTagId: '',
     region: '',
     caseType: '',
     description: '',
@@ -71,7 +75,6 @@ Page({
     version: 0,
     state: 'loading' as 'loading' | 'ready' | 'error',
     saving: false,
-    savingIntent: '' as '' | 'draft' | 'publish',
     message: '',
     publicationStatus: 'NEW' as CaseEditorPublicationStatus,
     publicationStatusText: publicationStatusText('NEW'),
@@ -79,12 +82,9 @@ Page({
     aiConfirmation: null as AiDraftSourceConfirmation | null,
     aiDraftLoaded: false,
     projects: [emptyProject()] as ProjectForm[],
+    hotCities: [] as HotCityOption[],
     coverAssetId: '',
-    coverUrl: '',
-    coverUploading: false,
     mediaAssetIds: [] as string[],
-    mediaAssets: [] as CaseMediaDraft[],
-    mediaUploading: false,
     cityOptions: [{ id: '', label: '未选择' }],
   },
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
@@ -145,6 +145,7 @@ Page({
 
   applyData(catalog: OpportunityCatalog, detail: SuperCaseDetail | null) {
     const cityOptions = [{ id: '', label: '未选择' }, ...catalog.cityTags]
+    const cityTagIdOf = (label: string) => catalog.cityTags.find(tag => tag.label === label)?.id || ''
     const storedProjects = detail?.projects?.length
       ? detail.projects
       : [{
@@ -162,9 +163,8 @@ Page({
       summary: project.summary || '',
       startedOn: project.startedOn || '',
       responsibility: project.responsibility || '',
-      cityIndex: project.cityLabel
-        ? Math.max(0, cityOptions.findIndex(item => item.label === project.cityLabel))
-        : 0,
+      cityLabel: project.cityLabel || '',
+      cityTagId: cityTagIdOf(project.cityLabel || ''),
       region: project.region || '',
       caseType: project.caseType || '',
       description: project.description || '',
@@ -172,14 +172,12 @@ Page({
     const status = publicationStatus(detail?.status)
     this.setData({
       cityOptions,
+      // 标注 2127_2195：热门城市走城市标签库，仅展示标签库中能对上 id 的前 8 个。
+      hotCities: HOT_CITY_LABELS.slice(0, EDITOR_HOT_CITY_COUNT)
+        .map(label => ({ label, tagId: cityTagIdOf(label) })),
       projects,
       coverAssetId: detail?.coverAssetId || '',
-      coverUrl: detail?.coverUrl || '',
       mediaAssetIds: detail?.mediaAssetIds || [],
-      mediaAssets: (detail?.mediaAssetIds || []).map((assetId, index) => ({
-        assetId,
-        imageUrl: detail?.media[index]?.url || '',
-      })),
       version: detail?.version || 0,
       publicationStatus: status,
       publicationStatusText: publicationStatusText(status),
@@ -211,12 +209,41 @@ Page({
     }
   },
 
-  changeProjectCity(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+  applyCity(groupIndex: number, label: string, tagId = '') {
+    const knownTagId = this.data.cityOptions.find(option => option.label === label)?.id || ''
+    this.setData({
+      [`projects[${groupIndex}].cityLabel`]: label,
+      // 标签库为主：标签库暂缺该城市时 tagId 留空，发布校验会给出明确提示。
+      [`projects[${groupIndex}].cityTagId`]: tagId || knownTagId,
+    })
+  },
+
+  // figma 2215_4618：主营城市不再用原生滚动选择，跳「选择城市」二级页，EventChannel 带回结果。
+  openCitySelector(event: WechatMiniprogram.TouchEvent) {
     const groupIndex = Number(event.currentTarget.dataset.groupIndex)
-    const cityIndex = Number(event.detail.value)
-    if (Number.isInteger(groupIndex) && this.data.cityOptions[cityIndex]) {
-      this.setData({ [`projects[${groupIndex}].cityIndex`]: cityIndex })
+    if (!Number.isInteger(groupIndex)) {
+      return
     }
+    wx.navigateTo({
+      url: `/packages/member/mip-cases/city-selector/index?selected=${encodeURIComponent(this.data.projects[groupIndex]?.cityLabel || '')}`,
+      events: {
+        citySelected: (payload: { label?: string, tagId?: string }) => {
+          const label = String(payload?.label || '')
+          if (label) {
+            this.applyCity(groupIndex, label, String(payload?.tagId || ''))
+          }
+        },
+      },
+    })
+  },
+
+  applyHotCity(event: WechatMiniprogram.CustomEvent<{ label: string }>) {
+    const groupIndex = Number(event.currentTarget.dataset.groupIndex)
+    const label = String(event.detail.label || '')
+    if (!Number.isInteger(groupIndex) || !label) {
+      return
+    }
+    this.applyCity(groupIndex, label)
   },
 
   addProject() {
@@ -236,14 +263,14 @@ Page({
     this.setData({ projects })
   },
 
-  draftProjects(cityOptions: Array<{ id: string, label: string }>): SuperCaseProject[] {
+  draftProjects(): SuperCaseProject[] {
     return this.data.projects.map((project) => {
       const draft: SuperCaseProject = {
         projectName: project.projectName,
         summary: project.summary,
         startedOn: project.startedOn || undefined,
         responsibility: project.responsibility,
-        cityTagId: cityOptions[project.cityIndex]?.id || undefined,
+        cityTagId: project.cityTagId || this.data.cityOptions.find(option => option.label === project.cityLabel)?.id || undefined,
         description: project.description,
       }
       if (project.region) {
@@ -256,8 +283,9 @@ Page({
     })
   },
 
-  publish() {
-    const missing = collectMissingProjectFields(this.draftProjects(this.data.cityOptions))
+  // figma 2173_42605 底部唯一操作：保存（必填校验通过后直接保存发布，草稿通道随「保存草稿」一起移除）。
+  saveCase() {
+    const missing = collectMissingProjectFields(this.draftProjects())
     if (missing.length) {
       wx.showModal({
         title: '还有必填项未填写',
@@ -267,90 +295,17 @@ Page({
       })
       return
     }
-    void this.save(true)
+    void this.save()
   },
 
-  saveDraft() { void this.save(false) },
-
-  async chooseCover() {
-    if (this.data.coverUploading || this.data.mediaUploading || this.data.saving) {
+  async save() {
+    if (this.data.saving) {
       return
     }
-    this.setData({ coverUploading: true, message: '' })
-    try {
-      const sourcePath = await chooseSingleImage()
-      const asset = await mipMediaModule.uploadImageFromPath('SUPER_CASE_COVER', sourcePath)
-      this.setData({ coverAssetId: asset.assetId, coverUrl: asset.imageUrl })
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '封面上传失败，请重试。' })
-    }
-    finally {
-      this.setData({ coverUploading: false })
-    }
-  },
-
-  async addMedia() {
-    const remaining = 12 - this.data.mediaAssets.length
-    if (remaining <= 0) {
-      this.setData({ message: '最多上传 12 张展示素材。' })
-      return
-    }
-    if (this.data.mediaUploading || this.data.coverUploading || this.data.saving) {
-      return
-    }
-    this.setData({ mediaUploading: true, message: '' })
-    try {
-      const paths = await chooseMultipleImages(Math.min(9, remaining))
-      for (const sourcePath of paths) {
-        const asset = await mipMediaModule.uploadImageFromPath('SUPER_CASE_MEDIA', sourcePath)
-        const mediaAssets = [...this.data.mediaAssets, {
-          assetId: asset.assetId,
-          imageUrl: asset.imageUrl,
-        }]
-        this.setData({
-          mediaAssets,
-          mediaAssetIds: mediaAssets.map(item => item.assetId),
-        })
-      }
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '案例素材上传失败，请重试。' })
-    }
-    finally {
-      this.setData({ mediaUploading: false })
-    }
-  },
-
-  removeMedia(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.mediaUploading || this.data.saving) {
-      return
-    }
-    const assetId = String(event.currentTarget.dataset.assetId || '')
-    const mediaAssets = this.data.mediaAssets.filter(item => item.assetId !== assetId)
-    this.setData({
-      mediaAssets,
-      mediaAssetIds: mediaAssets.map(item => item.assetId),
-    })
-  },
-
-  previewMedia(event: WechatMiniprogram.TouchEvent) {
-    const current = String(event.currentTarget.dataset.url || '')
-    const urls = this.data.mediaAssets.map(item => item.imageUrl).filter(Boolean)
-    if (current && urls.includes(current)) {
-      wx.previewImage({ current, urls })
-    }
-  },
-
-  async save(publish: boolean) {
-    if (this.data.saving || this.data.coverUploading || this.data.mediaUploading) {
-      return
-    }
-    const projects = this.draftProjects(this.data.cityOptions)
+    const projects = this.draftProjects()
     const [first] = projects
     this.setData({
       saving: true,
-      savingIntent: publish ? 'publish' : 'draft',
       message: '',
     })
     try {
@@ -364,7 +319,7 @@ Page({
         projects,
         coverAssetId: this.data.coverAssetId || undefined,
         mediaAssetIds: this.data.mediaAssetIds,
-        publish,
+        publish: true,
         aiConfirmation: this.data.aiConfirmation || undefined,
       }
       const result = await superCaseModule.save(draft)
@@ -375,7 +330,7 @@ Page({
         publicationStatus: status,
         publicationStatusText: publicationStatusText(status),
       })
-      wx.showToast({ title: result.status === 'PUBLISHED' ? '案例已发布' : '草稿已保存', icon: 'success' })
+      wx.showToast({ title: result.status === 'PUBLISHED' ? '案例已发布' : '案例已保存', icon: 'success' })
       this.clearNavigationTimer()
       this.navigationTimer = setTimeout(() => {
         this.navigationTimer = undefined
@@ -386,7 +341,7 @@ Page({
       this.setData({ message: error instanceof Error ? error.message : '保存失败' })
     }
     finally {
-      this.setData({ saving: false, savingIntent: '' })
+      this.setData({ saving: false })
     }
   },
 })

@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 58,
+  "routeCount": 59,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
@@ -1283,6 +1283,20 @@
       "name": "编辑超级案例",
       "path": "packages/member/mip-cases/editor/index",
       "selector": "#mip-case-editor-page",
+      "group": "member",
+      "kind": "data",
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "M18C",
+      "name": "选择城市",
+      "path": "packages/member/mip-cases/city-selector/index",
+      "selector": "#mip-city-selector-page",
       "group": "member",
       "kind": "data",
       "states": [

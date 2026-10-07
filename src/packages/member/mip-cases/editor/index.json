@@ -6,9 +6,9 @@
     "mip-empty-state": "/components/mip-empty-state/index",
     "app-page-exit": "/components/page-exit/index",
     "mip-sticky-actions": "/components/sticky-actions/index",
-    "t-button": "tdesign-miniprogram/button/button",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-pill-button": "/components/mip-pill-button/index",
-    "mip-icon": "/components/mip-icon/index"
+    "mip-icon": "/components/mip-icon/index",
+    "mip-tag-chip": "/components/mip-tag-chip/index"
   }
 }

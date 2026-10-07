@@ -29,6 +29,7 @@
         "mip-cases/detail/index",
         "mip-cases/editor/index",
         "mip-cases/list/index",
+        "mip-cases/city-selector/index",
         "mip-cooperation/detail/index",
         "mip-cooperation/editor/index",
         "mip-events/check-in/index",
