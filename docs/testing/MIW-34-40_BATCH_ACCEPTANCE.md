@@ -71,6 +71,6 @@ external-wait ×10 为既有的真机/外部依赖项（支付、订阅触达等
 ## 遗留与后续
 
 - C5、D4–D5、D8–D10 为需人工/真机/测试账号的验收项，完成后在本文勾选补充。
-- `deploy-admin-cloudbase-static.mjs` 的 downloadDirectory 回读与新版 MCP 响应结构不兼容（findFiles 文件清单移入 `result.Contents`），建议单独小卡修复脚本读法。
+- `deploy-admin-cloudbase-static.mjs` 的 downloadDirectory 回读与新版 MCP 响应结构不兼容（findFiles 文件清单移入 `result.Contents`），建议单独小卡修复脚本读法。→ 已由 MIW-46 修复并实机验收，见 `docs/testing/MIW-46_ADMIN_STATIC_READBACK.md`（另发现并补偿了 downloadDirectory 并发静默丢文件问题）。
 - CloudBase API Key 临时 STS 本轮拒绝 InvokeFunction（Cam authentication failed），已按 AGENTS §8 切本机 Device Flow 完成部署；若复现频繁建议检查环境级 API Key 权限策略。
 - MIW-30（勋章迁移部署顺序）、MIW-41（通知链路走查）不在本批范围，状态未动。
