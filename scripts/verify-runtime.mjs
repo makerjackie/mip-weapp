@@ -464,7 +464,7 @@ function validateRuntimeContract(runtimePages) {
   }
 
   const interactionJourneys = runtimePages.interactionJourneys
-  assert(Array.isArray(interactionJourneys) && interactionJourneys.length >= 3, 'runtime-pages.json must define at least three interactionJourneys')
+  assert(Array.isArray(interactionJourneys) && interactionJourneys.length >= 2, 'runtime-pages.json must define at least two interactionJourneys')
   const seenJourneyIds = new Set()
   for (const journey of interactionJourneys) {
     assert(journey?.id && !seenJourneyIds.has(journey.id), `Invalid or duplicate interaction journey id: ${journey?.id}`)

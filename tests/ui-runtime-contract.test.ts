@@ -334,7 +334,8 @@ describe('mip-weapp UI runtime contract', () => {
   })
 
   it('executes non-mutating UI interactions through rendered controls', () => {
-    expect(contract.interactionJourneys.length).toBeGreaterThanOrEqual(3)
+    // MIW-42 删除 people-search-and-filter、MIW-44 删除 game-ranking-tabs 后保留 2 条旅程。
+    expect(contract.interactionJourneys.length).toBeGreaterThanOrEqual(2)
     expect(verifyRuntime).toContain('verifyInteractionJourneys')
     expect(verifyRuntime).toContain('element.input(step.value)')
     expect(verifyRuntime).toContain('element.tap()')
