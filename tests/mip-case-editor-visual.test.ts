@@ -55,6 +55,7 @@ describe('MIP super case editor visual contract', () => {
     navigationBarTitleText: string
     navigationBarBackgroundColor: string
     navigationBarTextStyle: string
+    usingComponents: Record<string, string>
   }
   const stylesheet = postcss.parse(read('src/packages/member/mip-cases/editor/index.wxss'))
 
@@ -84,14 +85,55 @@ describe('MIP super case editor visual contract', () => {
     expect(page).not.toContain('figmaEditor')
   })
 
-  it('appends whole project groups and prompts for missing required fields on publish', () => {
+  it('keeps all project fields in one shared form panel per project', () => {
+    // figma 2173_42605：热门城市标签位于主营城市与主营地区之间，整组字段同一 panel 背景。
+    const groupStart = template.indexOf('<view class="case-editor-field-group">')
+    const cityRow = template.indexOf('主营城市', groupStart)
+    const hotBlock = template.indexOf('case-editor-hot-cities', groupStart)
+    const regionRow = template.indexOf('主营地区', groupStart)
+    const typeRow = template.indexOf('项目类型', groupStart)
+    const description = template.indexOf('展开讲讲（选填）', groupStart)
+    const groupEnd = template.indexOf('</view>\n      </view>\n      </view>', groupStart)
+    expect(groupStart).toBeGreaterThan(-1)
+    expect(cityRow).toBeGreaterThan(groupStart)
+    expect(hotBlock).toBeGreaterThan(cityRow)
+    expect(regionRow).toBeGreaterThan(hotBlock)
+    expect(typeRow).toBeGreaterThan(regionRow)
+    expect(description).toBeGreaterThan(typeRow)
+    expect(groupEnd).toBeGreaterThan(description)
+    // 项目之间的旧 180rpx 空隙已随分体表单一起移除。
+    expect(template).not.toContain('gap-[180rpx]')
+  })
+
+  it('offers eight quick hot cities with the shared tag chip inside the city field group', () => {
+    // 标注 2127_2195：主营城市使用城市标签库；标签组件 mip-tag-chip 渲染快捷项。
+    expect(config.usingComponents['mip-tag-chip']).toBe('/components/mip-tag-chip/index')
+    expect(template).toContain('<mip-tag-chip')
+    expect(template).toContain('active="{{project.cityLabel === hotCity.label}}"')
+    expect(page).toContain('EDITOR_HOT_CITY_COUNT')
+    expect(page).toContain('HOT_CITY_LABELS.slice(0, EDITOR_HOT_CITY_COUNT)')
+    expect(page).toMatch(/hotCities: HOT_CITY_LABELS\.slice\(0, EDITOR_HOT_CITY_COUNT\)[\s\S]*cityTagIdOf/)
+  })
+
+  it('routes 主营城市 to the dedicated city selector page instead of a native picker', () => {
+    // figma 2215_4618：点击选择城市进入二级城市选择页，EventChannel 带回 label/tagId。
+    expect(template).not.toContain('picker mode="selector"')
+    expect(template).toContain('bind:tap="openCitySelector"')
+    expect(template).toContain('请选择城市')
+    expect(page).toContain('/packages/member/mip-cases/city-selector/index?selected=')
+    expect(page).toContain('citySelected')
+    expect(page).toContain('applyCity(groupIndex, label')
+    expect(template).toContain('bind:tap="applyHotCity"')
+  })
+
+  it('appends whole project groups and prompts for missing required fields on save', () => {
     expect(template).toContain('wx:for="{{projects}}"')
     expect(template).toContain('data-group-index="{{groupIndex}}"')
     expect(template).toContain('aria-label="添加项目"')
     expect(template).toContain('bind:tap="addProject"')
     expect(template).toContain('bind:tap="removeProject"')
     expect(page).toContain('MAX_SUPER_CASE_PROJECTS')
-    expect(page).toContain('collectMissingProjectFields(this.draftProjects(this.data.cityOptions))')
+    expect(page).toContain('collectMissingProjectFields(this.draftProjects())')
     expect(page).toContain('还有必填项未填写')
     expect(page).toContain('confirmText: \'去填写\'')
     expect(page).toContain('projects: [...this.data.projects, emptyProject()]')
@@ -99,13 +141,10 @@ describe('MIP super case editor visual contract', () => {
     expect(template).toContain('{{project.description.length}}/300')
   })
 
-  it('keeps the real draft, catalogue, AI, media, and publication contracts', () => {
+  it('keeps the real catalogue, AI, and publication contracts without media upload UI', () => {
     expect(page).toContain('opportunityModule.getCatalogs()')
     expect(page).toContain('superCaseModule.get(this.data.id)')
     expect(page).toContain('loadAiEditorDraft(this.data.aiDraftId, \'SUPER_CASE\')')
-    expect(page).toContain('uploadImageFromPath(\'SUPER_CASE_COVER\'')
-    expect(page).toContain('uploadImageFromPath(\'SUPER_CASE_MEDIA\'')
-    expect(page).toContain('wx.previewImage({ current, urls })')
     expect(page).toContain('const draft: SuperCaseDraft = {')
     expect(page).toContain('await superCaseModule.save(draft)')
     for (const field of [
@@ -123,17 +162,19 @@ describe('MIP super case editor visual contract', () => {
     ]) {
       expect(page).toContain(`${field}:`)
     }
-    expect(page).toContain('publish,')
+    expect(page).toContain('publish: true')
+    // 案例素材/展示素材/取消 不在设计稿内（figma 2173_42605）。
+    expect(page).not.toContain('uploadImageFromPath')
+    expect(page).not.toContain('mipMediaModule')
+    expect(template).not.toContain('案例素材')
+    expect(template).not.toContain('展示素材')
+    expect(template).not.toContain('app-page-exit always')
     for (const handler of [
       'updateProjectText',
       'changeProjectStart',
-      'changeProjectCity',
-      'chooseCover',
-      'addMedia',
-      'previewMedia',
-      'removeMedia',
-      'saveDraft',
-      'publish',
+      'openCitySelector',
+      'applyHotCity',
+      'saveCase',
     ]) {
       expect(
         template.includes(`bind:tap="${handler}"`)
@@ -141,8 +182,9 @@ describe('MIP super case editor visual contract', () => {
         || template.includes(`bindinput="${handler}"`),
       ).toBe(true)
     }
+    expect(template).not.toContain('bind:tap="saveDraft"')
+    expect(template).not.toContain('bind:tap="publish"')
     expect(template).toContain('{{publicationStatusText}}')
-    expect(template).toContain('<app-page-exit always label="取消" />')
   })
 
   it('uses the exact exported Figma glyphs without remote runtime assets', () => {
@@ -152,10 +194,11 @@ describe('MIP super case editor visual contract', () => {
       expect(template).toContain(`/packages/member/mip-cases/editor/assets/${asset}`)
       expect(read(assetPath)).toContain('<svg')
     }
+    expect(read('src/packages/member/mip-cases/editor/assets/chevron.svg')).toContain('stroke="#FFFFFF"')
     expect(template).not.toContain('https://www.figma.com/api/mcp/asset/')
   })
 
-  it('keeps compact phone rows and expands forms and media at both desktop breakpoints', () => {
+  it('keeps compact phone rows and expands forms at both desktop breakpoints', () => {
     expect(declarations(ruleWith(stylesheet, '.case-editor-form-layout', 'display', true))).toMatchObject({
       'display': 'grid',
       'grid-template-columns': 'minmax(0, 1fr)',
@@ -166,17 +209,15 @@ describe('MIP super case editor visual contract', () => {
       'grid-template-columns': 'max-content minmax(0, 1fr)',
       'min-height': '92rpx',
     })
-    expect(declarations(ruleWith(stylesheet, '.case-editor-media-grid', 'display', true))).toMatchObject({
+    expect(declarations(ruleWith(stylesheet, '.case-editor-hot-cities', 'display', true))).toMatchObject({
       'display': 'grid',
-      'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
+      'grid-template-columns': 'repeat(4, minmax(0, 1fr))',
+      'background': 'var(--color-panel)',
     })
 
     for (const query of ['(min-width: 600px) and (max-width: 959px)', '(min-width: 960px)']) {
       const breakpoint = media(stylesheet, query)
       expect(declarations(ruleWith(breakpoint, '.case-editor-form-layout', 'grid-template-columns'))).toMatchObject({
-        'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
-      })
-      expect(declarations(ruleWith(breakpoint, '.case-editor-media-layout', 'grid-template-columns'))).toMatchObject({
         'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
       })
       expect(declarations(ruleWith(breakpoint, '.case-editor-field-row', 'min-height'))).toMatchObject({
@@ -185,16 +226,15 @@ describe('MIP super case editor visual contract', () => {
     }
   })
 
-  it('separates draft and publish progress in one constrained fixed action bar', () => {
+  it('keeps one save action in the fixed bottom bar', () => {
     expect(template).toContain('id="case-editor-fixed-actions"')
     expect(template).toContain('<mip-sticky-actions>')
     expect(template).toContain('slot="actions"')
-    expect(template).toContain('grid-cols-2')
-    expect(template).toContain('savingIntent === \'draft\'')
-    expect(template).toContain('savingIntent === \'publish\'')
-    expect(template).toContain('bind:tap="saveDraft"')
-    expect(template).toContain('bind:tap="publish"')
-    expect(page).toContain('savingIntent: publish ? \'publish\' : \'draft\'')
-    expect(page).toContain('this.setData({ saving: false, savingIntent: \'\' })')
+    expect(template).toContain('label="保存"')
+    expect(template).toContain('bind:tap="saveCase"')
+    expect(template).not.toContain('保存草稿')
+    expect(template).not.toContain('保存修改')
+    expect(page).toContain('publish: true')
+    expect(page).toContain('this.setData({ saving: false })')
   })
 })

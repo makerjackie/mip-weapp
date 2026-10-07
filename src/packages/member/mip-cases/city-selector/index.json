@@ -1,12 +1,11 @@
 {
-  "navigationBarTitleText": "超级案例",
+  "navigationBarTitleText": "选择城市",
   "navigationBarBackgroundColor": "#080808",
   "navigationBarTextStyle": "white",
   "usingComponents": {
     "mip-empty-state": "/components/mip-empty-state/index",
+    "mip-search-bar": "/components/mip-search-bar/index",
     "app-page-exit": "/components/page-exit/index",
-    "mip-sticky-actions": "/components/sticky-actions/index",
-    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "mip-pill-button": "/components/mip-pill-button/index"
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

@@ -7,7 +7,4 @@ export const mipOperationsConfig = {
     targetPath: '',
     accessibilityLabel: '运营活动',
   },
-  defaultCoverPaths: {
-    superCase: '/assets/brand/brand-supercase-default.png',
-  },
 } as const

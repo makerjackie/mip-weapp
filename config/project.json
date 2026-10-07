@@ -129,6 +129,10 @@
       "pathName": "packages/member/mip-cases/editor/index"
     },
     {
+      "name": "选择城市",
+      "pathName": "packages/member/mip-cases/city-selector/index"
+    },
+    {
       "name": "成长记录",
       "pathName": "packages/member/mip-growth/index"
     },

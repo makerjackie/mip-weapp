@@ -430,41 +430,43 @@
   border-radius: var(--mip-radius-card-medium);
 }
 
+/* figma 3646_5903 我的-超级案例tab：时间线只保留相邻节点之间的连线段——
+   每个条目用 ::after 从自身圆点下沿连到下一个圆点上沿，末条目不再拖出竖线。 */
 .profile-case-timeline {
   position: relative;
 }
 
-.profile-case-timeline::before {
-  position: absolute;
-  top: 12rpx;
-  bottom: 48rpx;
-  left: 17rpx;
-  width: 2rpx;
-  content: '';
-  background: var(--color-brand);
-}
-
 .profile-case-entry {
   position: relative;
-  padding-bottom: 24rpx;
+  padding-bottom: 34rpx;
 }
 
 .profile-case-entry::before {
   position: absolute;
-  top: 8rpx;
-  left: 6rpx;
-  width: 24rpx;
-  height: 24rpx;
+  top: 4rpx;
+  left: 48rpx;
+  z-index: 1;
+  width: 26rpx;
+  height: 26rpx;
   content: '';
   background: var(--color-brand);
   border-radius: 50%;
 }
 
+.profile-case-entry:not(:last-child)::after {
+  position: absolute;
+  top: 30rpx;
+  bottom: -4rpx;
+  left: 60rpx;
+  width: 2rpx;
+  content: '';
+  background: var(--color-brand);
+}
+
 .profile-case-month {
-  min-height: 40rpx;
   font-size: 24rpx;
   font-weight: 600;
-  line-height: 40rpx;
+  line-height: 34rpx;
   color: var(--color-brand);
   text-align: center;
 }
@@ -472,10 +474,10 @@
 .profile-case-card {
   box-sizing: border-box;
   min-height: 126rpx;
-  padding: 18rpx 22rpx;
-  margin: 16rpx 0 0 60rpx;
+  padding: 22rpx 24rpx;
+  margin: 32rpx 0 0 124rpx;
   background: var(--color-panel);
-  border-radius: var(--mip-radius-card-medium);
+  border-radius: 16rpx;
 }
 
 .profile-case-title-row {
@@ -485,9 +487,13 @@
 }
 
 .profile-case-icon {
+  display: flex;
   flex: 0 0 auto;
-  width: 28rpx;
-  height: 28rpx;
+  align-items: center;
+  justify-content: center;
+  width: 32rpx;
+  height: 32rpx;
+  overflow: hidden;
 }
 
 .profile-content-heading {

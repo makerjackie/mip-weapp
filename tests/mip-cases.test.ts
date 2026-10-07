@@ -13,9 +13,10 @@ describe('MIP super case contracts', () => {
     expect(view).toContain('mode="widthFix"')
     expect(view).toContain('bind:tap="previewImage"')
     expect(view).not.toContain('h-[420rpx]')
-    expect(editorSource).toContain('previewMedia')
-    expect(editorSource).toContain('wx.previewImage({ current, urls })')
-    expect(editorView).toContain('bind:tap="previewMedia"')
+    // MIW-49（figma 2173_42605）：编辑页去掉案例素材/展示素材上传，只保留媒体资产透传。
+    expect(editorSource).not.toContain('uploadImageFromPath')
+    expect(editorSource).toContain('mediaAssetIds')
+    expect(editorView).not.toContain('bind:tap="previewMedia"')
   })
 
   it('normalizes optional classification and de-duplicates media assets', () => {

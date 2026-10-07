@@ -1,9 +1,7 @@
 .case-editor-page,
 .case-editor-form-layout,
-.case-editor-media-layout,
 .case-editor-field-group,
-.case-editor-media-panel,
-.case-editor-action {
+.case-editor-project {
   min-width: 0;
 }
 
@@ -11,15 +9,19 @@
   box-sizing: border-box;
 }
 
-.case-editor-form-layout,
-.case-editor-media-layout {
+.case-editor-form-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 32rpx;
 }
 
-.case-editor-form-layout {
-  gap: 32rpx;
+/* 主营城市行下的 8 个热门城市快捷标签（标注 2127_2195：走城市标签库），与字段行同底色。 */
+.case-editor-hot-cities {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16rpx;
+  padding: 8rpx 24rpx 24rpx;
+  background: var(--color-panel);
 }
 
 .case-editor-field-group {
@@ -93,10 +95,6 @@
   white-space: nowrap;
 }
 
-.case-editor-chevron {
-  transform: rotate(-90deg);
-}
-
 .case-editor-description {
   box-sizing: border-box;
   min-width: 0;
@@ -114,22 +112,6 @@
   font-size: 24rpx;
   line-height: 1.6;
   color: var(--color-ink);
-}
-
-.case-editor-media-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16rpx;
-  min-width: 0;
-}
-
-.case-editor-media-item {
-  min-width: 0;
-}
-
-.case-editor-media-item__image {
-  display: block;
-  height: 180rpx;
 }
 
 .case-editor-actions {
@@ -171,8 +153,7 @@
     font-size: 12px;
   }
 
-  .case-editor-form-layout,
-  .case-editor-media-layout {
+  .case-editor-form-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
   }
@@ -206,15 +187,6 @@
     min-height: 176px;
     padding: 10px 0 6px;
     font-size: 13px;
-  }
-
-  .case-editor-media-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .case-editor-media-item__image {
-    height: 96px;
   }
 
   .case-editor-actions {
@@ -260,8 +232,7 @@
     font-size: 12px;
   }
 
-  .case-editor-form-layout,
-  .case-editor-media-layout {
+  .case-editor-form-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
   }
@@ -295,15 +266,6 @@
     min-height: 176px;
     padding: 10px 0 6px;
     font-size: 13px;
-  }
-
-  .case-editor-media-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .case-editor-media-item__image {
-    height: 104px;
   }
 
   .case-editor-actions {

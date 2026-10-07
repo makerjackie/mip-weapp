@@ -1,0 +1,96 @@
+<view id="mip-city-selector-page" class="mip-member-page min-h-screen bg-[#080808]">
+  <!-- figma 2215_4618 超级案例详情-选择城市：顶部搜索 + 热门城市 + A-Z 字母分组 + 右侧字母索引条。 -->
+  <view wx:if="{{state === 'loading'}}" class="px-[32rpx] pt-[40rpx]">
+    <t-skeleton theme="text" animation="gradient" row-col="{{skeletonRows}}" />
+  </view>
+
+  <view wx:elif="{{state === 'error'}}" class="pt-[200rpx]">
+    <mip-empty-state title="城市列表加载失败" description="检查网络后重试" action-text="重新加载" bind:action="retry" />
+  </view>
+
+  <block wx:else>
+    <view class="city-selector-search">
+      <mip-search-bar
+        class="flex-1"
+        placeholder="搜索城市名/拼音"
+        value="{{searchTerm}}"
+        bind:change="onSearchInput"
+        bind:confirm="onSearchInput"
+      />
+    </view>
+
+    <scroll-view
+      class="city-selector-scroll"
+      scroll-y
+      scroll-with-animation
+      scroll-into-view="{{scrollAnchor}}"
+      enhanced
+      show-scrollbar="{{false}}"
+    >
+      <block wx:if="{{searchTerm}}">
+        <view class="city-selector-section-title">搜索结果</view>
+        <view wx:if="{{searchResults.length}}" class="city-selector-grid">
+          <view
+            wx:for="{{searchResults}}"
+            wx:key="label"
+            class="city-selector-chip {{item.selected ? 'city-selector-chip--active' : ''}}"
+            data-label="{{item.label}}"
+            bind:tap="onPickCity"
+          >
+            {{item.label}}
+          </view>
+        </view>
+        <view wx:else class="city-selector-empty-hint">没有找到「{{searchTerm}}」相关的城市</view>
+      </block>
+
+      <block wx:else>
+        <view class="city-selector-section-title">热门城市</view>
+        <view class="city-selector-grid">
+          <view
+            wx:for="{{hotCities}}"
+            wx:key="label"
+            class="city-selector-chip {{item.selected ? 'city-selector-chip--active' : ''}}"
+            data-label="{{item.label}}"
+            bind:tap="onPickCity"
+          >
+            {{item.label}}
+          </view>
+        </view>
+
+        <view wx:for="{{groups}}" wx:key="letter" wx:for-item="group" class="city-selector-group">
+          <view id="city-letter-{{group.letter}}" class="city-selector-section-title city-selector-group__letter">
+            {{group.letter}}
+          </view>
+          <view class="city-selector-grid">
+            <view
+              wx:for="{{group.cities}}"
+              wx:key="label"
+              class="city-selector-chip {{item.selected ? 'city-selector-chip--active' : ''}}"
+              data-label="{{item.label}}"
+              bind:tap="onPickCity"
+            >
+              {{item.label}}
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <view class="city-selector-scroll__footer-space" />
+    </scroll-view>
+
+    <view class="city-selector-index">
+      <view
+        wx:for="{{indexLetters}}"
+        wx:key="letter"
+        class="city-selector-index__letter {{item.available ? '' : 'city-selector-index__letter--dimmed'}}"
+        data-letter="{{item.letter}}"
+        data-available="{{item.available}}"
+        bind:tap="onJumpLetter"
+      >
+        {{item.letter}}
+      </view>
+    </view>
+    <!-- 稳定出口：仅直链进入（无返回栈）时显示，正常从编辑页进入不渲染。 -->
+    <app-page-exit label="返回编辑" />
+  </block>
+</view>
