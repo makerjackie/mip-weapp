@@ -58,7 +58,7 @@ beforeEach(() => {
 })
 
 describe('MIP opportunity editor required fields', () => {
-  it('keeps every required field and cooperation roles in the basic section', () => {
+  it('keeps every required field in the basic section and drops the roles form (MIW-50)', () => {
     const view = source('src/packages/member/mip-opportunities/editor/index.wxml')
     // 2026-10-07：「更多设置」折叠区删除后，基础区以底部固定操作条为界。
     const actionsAnchor = view.indexOf('id="opportunity-editor-fixed-actions"')
@@ -68,7 +68,6 @@ describe('MIP opportunity editor required fields', () => {
       'opportunity-field-value-summary',
       'opportunity-field-target-summary',
       'opportunity-field-description',
-      'opportunity-field-roles',
     ]) {
       expect(view).toContain(`id="${id}"`)
       expect(view.indexOf(`id="${id}"`)).toBeLessThan(actionsAnchor)
@@ -76,15 +75,15 @@ describe('MIP opportunity editor required fields', () => {
     // J4-04 marks description optional while retaining its 300-character input limit.
     const descriptionBlock = view.slice(
       view.indexOf('id="opportunity-field-description"'),
-      view.indexOf('id="opportunity-field-roles"'),
+      view.indexOf('id="opportunity-field-status"'),
     )
     expect(descriptionBlock).toContain('<text>展开讲讲（选填）</text>')
     expect(descriptionBlock).not.toContain('>必填</text>')
     expect(descriptionBlock).toContain('maxlength="300"')
     expect(descriptionBlock).toContain('aria-label="展开讲讲，选填，最多300字"')
-    expect(view).toContain('必填，至少选择一种')
-    expect(view).toContain('aria-role="checkbox"')
-    expect(view).toContain('aria-checked="{{item.selected}}"')
+    // MIW-50 客户确认：设计稿无「合作角色」表单项，小程序不再提供角色编辑。
+    expect(view).not.toContain('id="opportunity-field-roles"')
+    expect(view).not.toContain('必填，至少选择一种')
   })
 
   it('shows inline errors and scrolls to the first missing field', () => {
@@ -94,28 +93,23 @@ describe('MIP opportunity editor required fields', () => {
     expect(page.data.titleError).toBe('请输入机会名称。')
     expect(page.data.valueSummaryError).toBe('请输入价值金额或价值说明。')
     expect(page.data.targetSummaryError).toBe('请输入寻找合作方的说明。')
-    expect(page.data.roleError).toBe('请至少选择一种合作角色。')
+    expect(page.data.roleError).toBeUndefined()
     expect(showToast).toHaveBeenCalledWith({ title: '请输入机会名称。', icon: 'none' })
     expect(pageScrollTo).toHaveBeenCalledWith({ selector: '#opportunity-field-title', duration: 200 })
   })
 
-  it('accepts an empty description while still requiring a cooperation role', () => {
-    const roleOptions = definition.data.roleOptions.map((role: { key: string }) => ({ ...role, selected: false }))
+  it('accepts an empty description now that cooperation roles are not a form field', () => {
     const page = createPage({
       title: '项目',
       valueSummary: '资源互换',
       targetSummary: '寻找渠道合作方',
       description: '',
-      roleOptions,
     })
 
-    expect(Reflect.apply(page.validateRequiredFields, page, [])).toBe(false)
-    expect(pageScrollTo).toHaveBeenLastCalledWith({ selector: '#opportunity-field-roles', duration: 200 })
-
-    page.data.roleOptions[0].selected = true
     expect(Reflect.apply(page.validateRequiredFields, page, [])).toBe(true)
     expect(page.data.description).toBe('')
-    expect(page.data.roleError).toBe('')
+    expect(pageScrollTo).not.toHaveBeenCalled()
+    expect(showToast).not.toHaveBeenCalled()
   })
 
   it.each([false, true])('immediately reports failed saves without exposing provider details in a toast (publish=%s)', async (publish) => {

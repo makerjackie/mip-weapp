@@ -100,8 +100,9 @@ function normalizeDraft(value = {}) {
     throw new Error('VALIDATION_FAILED')
   }
   if (value.typeKeys !== undefined && !Array.isArray(value.typeKeys)) throw new Error('VALIDATION_FAILED')
+  // MIW-50（2026-10-07 客户确认）：小程序表单不再提供「合作角色」编辑项，新增机会
+  // 允许无角色；存量机会的角色由小程序原样带回，维护入口收敛到管理后台。
   const roleKeys = stringList(value.roleKeys, 6, 'VALIDATION_FAILED', key => ROLE_KEYS.has(key))
-  if (!roleKeys.length) throw new Error('VALIDATION_FAILED')
   const scopeType = value.scopeType === 'BRANCH' ? 'BRANCH' : 'PLATFORM'
   const branchId = scopeType === 'BRANCH' ? stringValue(value.branchId, 36, 'VALIDATION_FAILED') : null
   if (branchId && !uuid(branchId)) throw new Error('VALIDATION_FAILED')
@@ -584,8 +585,11 @@ async function resolveReferralTarget(tx, caller, profileRef) {
   return target.id
 }
 
-async function assertReferences(tx, caller, draft) {
-  if (draft.branchId) {
+async function assertReferences(tx, caller, draft, stored = null) {
+  // MIW-50：小程序编辑器只保留主表单（行业/能力/合作地点/分会等由管理后台维护，
+  // 小程序保存时原样带回）。存量值只在发生变化时才做引用校验——否则目录漂移
+  // （标签停用、分会停用、素材清理）会把「什么都没改」的编辑保存卡死。
+  if (draft.branchId && draft.branchId !== (stored?.branch_id || null)) {
     const branch = await tx.one(
       `SELECT 1 AS found FROM mip_city_branches
        WHERE app_id = ? AND id = ? AND status = 'ACTIVE'`,
@@ -593,7 +597,7 @@ async function assertReferences(tx, caller, draft) {
     )
     if (!branch) throw new Error('VALIDATION_FAILED')
   }
-  if (draft.coverAssetId) {
+  if (draft.coverAssetId && draft.coverAssetId !== (stored?.cover_asset_id || null)) {
     const asset = await tx.one(
       `SELECT 1 AS found FROM mip_media_assets
        WHERE app_id = ? AND id = ? AND owner_user_id = ?
@@ -602,16 +606,86 @@ async function assertReferences(tx, caller, draft) {
     )
     if (!asset) throw new Error('VALIDATION_FAILED')
   }
-  const expectedTags = [
-    ...(draft.cityTagId ? [[draft.cityTagId, 'CITY']] : []),
-    ...draft.industryTagIds.map(id => [id, 'INDUSTRY']),
-    ...draft.abilityTagIds.map(id => [id, 'ABILITY']),
-  ]
-  await assertSelectableTags(tx, caller.appId, expectedTags)
-  await assertCommercialTerms(tx, caller.appId, draft.commercialTerms)
+  const storedTags = stored && draft.id ? await loadStoredTagIds(tx, caller.appId, draft.id) : null
+  const tagsUnchanged = storedTags
+    && sameIdSet(storedTags.INDUSTRY, draft.industryTagIds)
+    && sameIdSet(storedTags.ABILITY, draft.abilityTagIds)
+  if (!tagsUnchanged) {
+    const expectedTags = [
+      ...(draft.cityTagId && draft.cityTagId !== (stored?.city_tag_id || null) ? [[draft.cityTagId, 'CITY']] : []),
+      ...draft.industryTagIds.map(id => [id, 'INDUSTRY']),
+      ...draft.abilityTagIds.map(id => [id, 'ABILITY']),
+    ]
+    await assertSelectableTags(tx, caller.appId, expectedTags)
+  }
+  if (draft.cityTagId && draft.cityTagId !== (stored?.city_tag_id || null) && tagsUnchanged) {
+    await assertSelectableTags(tx, caller.appId, [[draft.cityTagId, 'CITY']])
+  }
+  const termsUnchanged = stored && draft.id
+    ? await commercialTermsCityIdsUnchanged(tx, caller.appId, draft.id, draft.commercialTerms)
+    : false
+  if (!termsUnchanged) {
+    await assertCommercialTerms(tx, caller.appId, draft.commercialTerms)
+  }
 }
 
-async function resolveTeamUserIds(tx, caller, profileRefs) {
+async function loadStoredTagIds(tx, appId, opportunityId) {
+  const rows = await tx.query(
+    `SELECT relation, tag_id
+     FROM mip_opportunity_tags
+     WHERE app_id = ? AND opportunity_id = ?`,
+    [appId, opportunityId],
+  )
+  const result = { INDUSTRY: new Set(), ABILITY: new Set() }
+  for (const row of rows) {
+    if (result[row.relation]) {
+      result[row.relation].add(row.tag_id)
+    }
+  }
+  return result
+}
+
+function sameIdSet(set, ids) {
+  const candidate = new Set(ids)
+  if (set.size !== candidate.size) {
+    return false
+  }
+  for (const id of candidate) {
+    if (!set.has(id)) {
+      return false
+    }
+  }
+  return true
+}
+
+// 仅比较承载引用的城市标签集合：金额/币种不涉及引用校验，无需参与变更判定。
+async function commercialTermsCityIdsUnchanged(tx, appId, opportunityId, terms) {
+  if (!terms) return true
+  const draftCityIds = terms.locations
+    .filter(location => location.type === 'CITY')
+    .map(location => location.cityTagId)
+    .sort()
+  if (!draftCityIds.length) return true
+  const stored = await loadCommercialTerms(tx, appId, [opportunityId])
+  const storedCityIds = ((stored.get(opportunityId)?.locations) || [])
+    .filter(location => location.type === 'CITY')
+    .map(location => location.city?.id || '')
+    .sort()
+  return draftCityIds.length === storedCityIds.length
+    && draftCityIds.every((id, index) => id === storedCityIds[index])
+}
+
+async function activeTeamUserIds(tx, appId, opportunityId) {
+  const rows = await tx.query(
+    `SELECT user_id
+     FROM mip_opportunity_team_members
+     WHERE app_id = ? AND opportunity_id = ? AND status = 'ACTIVE'`,
+    [appId, opportunityId],
+  )
+  return rows.map(row => row.user_id)
+}
+
+async function resolveTeamUserIds(tx, caller, profileRefs, storedUserIds = null) {
   if (!profileRefs.length) return []
   let userIds
   try {
@@ -624,6 +698,11 @@ async function resolveTeamUserIds(tx, caller, profileRefs) {
     throw new Error('VALIDATION_FAILED')
   }
   if (userIds.includes(caller.userId)) throw new Error('VALIDATION_FAILED')
+  // MIW-50：名单与存量一致时跳过资格复核——小程序编辑器把团队成员原样带回，
+  // 成员事后失去会员资格不应卡死「什么都没改」的编辑保存；名单有增删才重新校验。
+  if (storedUserIds && sameIdSet(new Set(storedUserIds), userIds)) {
+    return userIds
+  }
   const blockFilter = mutualBlockFilter(caller.userId, 'u.id', 'u.app_id')
   const rows = await tx.query(
     `SELECT u.id
@@ -738,13 +817,13 @@ async function saveOpportunity(database, contentSafety, caller, input) {
     request: aiConfirmation ? { draft, aiConfirmation } : draft,
   }, async (tx) => {
     await lockActiveContributor(tx, caller)
-    await assertReferences(tx, caller, draft)
-    const teamUserIds = await resolveTeamUserIds(tx, caller, draft.teamProfileRefs)
     const id = draft.id || randomUUID()
+    // MIW-50：先取存量行再校验引用——引用校验需要和存量值比对，只有发生变化的
+    // 引用才重新验证，保证「未改动任何 ride-along 字段的编辑保存」不被目录漂移卡死。
     let existing = null
     if (draft.id) {
       existing = await tx.one(
-        `SELECT owner_user_id, branch_id, status, version, moderated_by_user_id
+        `SELECT owner_user_id, branch_id, city_tag_id, cover_asset_id, status, version, moderated_by_user_id
          FROM mip_opportunities
          WHERE app_id = ? AND id = ? FOR UPDATE`,
         [caller.appId, draft.id],
@@ -756,6 +835,9 @@ async function saveOpportunity(database, contentSafety, caller, input) {
         throw new Error('CONFLICT')
       }
     }
+    await assertReferences(tx, caller, draft, existing)
+    const teamUserIds = await resolveTeamUserIds(tx, caller, draft.teamProfileRefs,
+      existing ? await activeTeamUserIds(tx, caller.appId, id) : null)
     const status = draft.publish
       ? (draft.publicationStatus || 'PUBLISHED')
       : (existing && existing.status !== 'DRAFT' ? existing.status : 'DRAFT')

@@ -225,9 +225,10 @@ describe('MIP opportunity review fixes', () => {
 
   it('keeps description optional with the prototype input limit (#3)', () => {
     const view = source('src/packages/member/mip-opportunities/editor/index.wxml')
+    // MIW-50 删除「合作角色」表单项后，描述块以项目状态为界。
     const descriptionBlock = view.slice(
       view.indexOf('id="opportunity-field-description"'),
-      view.indexOf('id="opportunity-field-roles"'),
+      view.indexOf('id="opportunity-field-status"'),
     )
     expect(descriptionBlock).toContain('<text>展开讲讲（选填）</text>')
     expect(descriptionBlock).not.toContain('>必填</text>')

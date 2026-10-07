@@ -32,7 +32,10 @@ describe('MIP runtime UX regressions', () => {
     expect(component).toContain('ready()')
     expect(component).toContain('visible: false')
     expect(template).toContain('wx:if="{{visible}}"')
-    expect(opportunityEditor).toContain('<app-page-exit always label="取消" />')
+    // MIW-50（2026-10-07 客户确认）：编辑机会页设计稿无底部「取消」，编辑器只保留
+    // 栈根兜底退出（非 always）；支付结果页仍用 always 完成按钮收口。
+    expect(opportunityEditor).not.toContain('app-page-exit always')
+    expect(opportunityEditor).toContain('<app-page-exit label="取消" />')
     expect(paymentResult).toContain('<app-page-exit always label="完成"')
   })
 

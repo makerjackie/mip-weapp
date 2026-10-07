@@ -35,6 +35,7 @@
 
 .mip-pill-button__icon {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 40rpx;
@@ -50,7 +51,11 @@
 }
 
 .mip-pill-button__label {
+  /* 窄胶囊（176rpx 编辑/分享）去掉左右 padding 后内容仍放不下，label 一旦可换行
+     就会把「编辑」竖排（MIW-50）。图标与文字整体不收缩，居中溢出 padding 即可。 */
+  flex-shrink: 0;
   font-size: 32rpx;
   font-weight: 500;
   line-height: 44.8rpx;
+  white-space: nowrap;
 }
