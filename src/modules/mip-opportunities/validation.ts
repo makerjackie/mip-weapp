@@ -125,9 +125,12 @@ export function normalizeOpportunityDraft(value: OpportunityDraft): OpportunityD
   if (value.publicationStatus !== undefined && !['PUBLISHED', 'ENDED', 'UNPUBLISHED'].includes(value.publicationStatus)) {
     throw new Error('项目状态不正确')
   }
+  // MIW-50（2026-10-07 客户确认）：小程序表单不再提供「合作角色」编辑项。
+  // 角色随存量机会原样带回；新增机会允许为空（服务端同步放开），
+  // 角色维护收敛到管理后台。非法 key 仍拒绝，避免写入脏数据。
   const roleKeys = uniqueStrings(value.roleKeys, 6, '合作角色')
-  if (!roleKeys.length || !roleKeys.every(isCooperationRoleKey)) {
-    throw new Error('请选择至少一种合作角色')
+  if (!roleKeys.every(isCooperationRoleKey)) {
+    throw new Error('合作角色不正确')
   }
   const scopeType = value.scopeType === 'BRANCH' ? 'BRANCH' : 'PLATFORM'
   if (scopeType === 'BRANCH' && !value.branchId) {

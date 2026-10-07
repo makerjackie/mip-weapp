@@ -110,7 +110,10 @@ describe('MIP opportunity contracts', () => {
     for (const field of ['title', 'valueSummary', 'targetSummary']) {
       expect(() => normalizeOpportunityDraft({ ...draft, [field]: ' ' })).toThrow()
     }
-    expect(() => normalizeOpportunityDraft({ ...draft, roleKeys: [] })).toThrow('请选择至少一种合作角色')
+    // MIW-50（2026-10-07 客户确认）：小程序表单不再提供「合作角色」编辑项，
+    // 新增机会允许空角色（服务端同步放开）；非法 key 仍拒绝。
+    expect(normalizeOpportunityDraft({ ...draft, roleKeys: [] }).roleKeys).toEqual([])
+    expect(() => normalizeOpportunityDraft({ ...draft, roleKeys: ['owner' as CooperationRoleKey] })).toThrow('合作角色不正确')
   })
 
   it('keeps the migration isolated and reversible', () => {

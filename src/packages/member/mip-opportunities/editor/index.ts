@@ -102,7 +102,6 @@ Page({
     titleError: '',
     valueSummaryError: '',
     targetSummaryError: '',
-    roleError: '',
     playersOnly: false,
     scopeType: 'PLATFORM' as 'PLATFORM' | 'BRANCH',
     branchId: '' as BranchId | '',
@@ -131,6 +130,8 @@ Page({
     // 但保留数据回填与提交组装，编辑存量机会时原值原样带回，避免误清。
     industryTagIds: [] as string[],
     abilityTagIds: [] as string[],
+    // MIW-50：合作角色不再是表单项（设计稿无此字段），roleOptions 仅承接
+    // 存量机会的角色回填，保存时原样带回，避免误清管理后台维护的数据。
     roleOptions: cooperationRoles.map(item => ({ key: item.key, name: item.name, selected: false })) as RoleOption[],
     /** journey-review QZ1：机会类型三件套（找企业/找伙伴/找资源），多选。 */
     typeOptions: typeOptionViews(new Set()),
@@ -244,7 +245,6 @@ Page({
       titleError: '',
       valueSummaryError: '',
       targetSummaryError: '',
-      roleError: '',
       playersOnly: detail?.playersOnly === true,
       scopeType: detail?.branchId ? 'BRANCH' : 'PLATFORM',
       cityTagId: detail?.city?.id || '',
@@ -415,15 +415,6 @@ Page({
     }
   },
 
-  toggleRole(event: WechatMiniprogram.TouchEvent) {
-    const key = String(event.currentTarget.dataset.key || '')
-    const roleOptions = this.data.roleOptions.map(item => item.key === key ? { ...item, selected: !item.selected } : item)
-    this.setData({
-      roleOptions,
-      roleError: roleOptions.some(item => item.selected) ? '' : this.data.roleError,
-    })
-  },
-
   async chooseCover() {
     if (this.data.coverUploading || this.data.saving) {
       return
@@ -447,26 +438,23 @@ Page({
     }
   },
 
-  saveDraft() { void this.save(false) },
+  // MIW-50：不再提供「保存草稿」入口，表单只以发布收口（publish 恒为 true）。
   publish() { void this.save(true) },
 
   validateRequiredFields() {
     const titleError = this.data.title.trim() ? '' : '请输入机会名称。'
     const valueSummaryError = this.data.valueSummary.trim() ? '' : '请输入价值金额或价值说明。'
     const targetSummaryError = this.data.targetSummary.trim() ? '' : '请输入寻找合作方的说明。'
-    const roleError = this.data.roleOptions.some(item => item.selected) ? '' : '请至少选择一种合作角色。'
     const firstIssue = [
       { message: titleError, selector: '#opportunity-field-title' },
       { message: valueSummaryError, selector: '#opportunity-field-value-summary' },
       { message: targetSummaryError, selector: '#opportunity-field-target-summary' },
-      { message: roleError, selector: '#opportunity-field-roles' },
     ].find(issue => issue.message)
 
     this.setData({
       titleError,
       valueSummaryError,
       targetSummaryError,
-      roleError,
       message: '',
     })
     if (!firstIssue) {
@@ -542,15 +530,32 @@ Page({
         }
       }
       wx.showToast({
-        title: result.status === 'UNPUBLISHED' ? '项目已下架' : result.status === 'ENDED' ? '项目已结束' : result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存',
+        title: result.status === 'UNPUBLISHED' ? '项目已下架' : result.status === 'ENDED' ? '项目已结束' : '机会已发布',
         icon: 'success',
       })
       this.clearNavigationTimer()
       this.navigationTimer = setTimeout(() => {
         this.navigationTimer = undefined
-        const pages = getCurrentPages()
-        // journey-review J4-04：确认发布回机会列表；无上级页面时落机会详情。
-        if (pages.length > 1) {
+        // MIW-50：编辑存量机会保存后必须落回该机会的详情页。栈里能找到本机会
+        // 的详情就按 delta 返回（顺带清掉栈中夹层的旧编辑页）；新建流程维持
+        // journey-review J4-04 口径：确认发布回上级页面，无上级时落详情。
+        if (this.data.id === result.id) {
+          const pages = getCurrentPages() as Array<{ route?: string, options?: Record<string, string> }>
+          const detailRoute = 'packages/member/mip-opportunities/detail/index'
+          const currentIndex = pages.length - 1
+          for (let index = currentIndex - 1; index >= 0; index -= 1) {
+            const page = pages[index]
+            if (page.route === detailRoute && page.options?.id === result.id) {
+              wx.navigateBack({ delta: currentIndex - index })
+              return
+            }
+          }
+          wx.redirectTo({
+            url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(result.id)}`,
+          })
+          return
+        }
+        if (getCurrentPages().length > 1) {
           wx.navigateBack()
           return
         }

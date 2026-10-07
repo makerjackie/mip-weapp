@@ -71,7 +71,9 @@ test('opportunity descriptions are optional without weakening other required fie
   for (const field of ['title', 'valueSummary', 'targetSummary']) {
     assert.throws(() => normalizeOpportunity({ ...draft, description: '', [field]: ' ' }), /VALIDATION_FAILED/)
   }
-  assert.throws(() => normalizeOpportunity({ ...draft, description: '', roleKeys: [] }), /VALIDATION_FAILED/)
+  // MIW-50（2026-10-07 客户确认）：小程序表单不再提供「合作角色」编辑项，允许空角色；
+  // 非法 role key 仍拒绝。
+  assert.deepEqual(normalizeOpportunity({ ...draft, description: '', roleKeys: [] }).roleKeys, [])
 })
 
 test('opportunity catalog exposes non-selectable industry parents only as groups', async () => {

@@ -612,8 +612,10 @@ function normalizeOpportunityDraft(value) {
     branchId: scopeType === 'BRANCH' ? requiredId(value.branchId, '城市分会') : null,
     title: text(value.title, 120, { required: true, label: '机会标题' }),
     valueSummary: text(value.valueSummary, 240, { required: true, label: '机会价值' }),
-    targetSummary: text(value.targetSummary, 300),
-    description: text(value.description, 5_000),
+    // MIW-50 三端对齐：上限取会员端服务端口径（targetSummary 500 / description 6000），
+    // 小程序历史数据（旧口径更长）在管理后台编辑保存不再被拒。
+    targetSummary: text(value.targetSummary, 500),
+    description: text(value.description, 6_000),
     cityTagId: value.cityTagId ? requiredId(value.cityTagId, '城市') : null,
     ...(Object.hasOwn(value, 'coverAssetId') ? { coverAssetId: value.coverAssetId ? requiredId(value.coverAssetId, '封面') : null } : {}),
     commercialTerms: normalizeCommercialTerms(value.commercialTerms),

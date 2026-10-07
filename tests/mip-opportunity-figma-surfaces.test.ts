@@ -228,7 +228,9 @@ describe('MIP opportunity Figma surfaces', () => {
     // journey-review J4-04 ③：液态玻璃底部条（mip-sticky-actions 壳）+ 黄芯胶囊主按钮（mip-pill-button）。
     expect(editor).toContain('<mip-sticky-actions id="opportunity-editor-fixed-actions">')
     expect(editor).toContain(`label="{{editorMode === 'PUBLISHED' ? '保存修改' : '确认发布'}}"`)
-    expect(editor).toContain('bind:tap="saveDraft"')
+    // MIW-50 客户确认（2026-10-07）：「保存草稿」按钮删除，表单只以发布收口。
+    expect(editor).not.toContain('bind:tap="saveDraft"')
+    expect(editor).not.toContain('<t-button')
     expect(editor).toContain('bind:tap="publish"')
     expect(editor).toContain('bind:tap="pasteAndRecognize"')
     expect(editor).not.toContain('openTeamPicker')
@@ -238,7 +240,9 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(editorConfig).toContain('"navigationBarTitleText": "发布机会"')
     expect(editorScript).toContain(`type OpportunityEditorMode = 'CREATE' | 'DRAFT' | 'PUBLISHED'`)
     expect(editorScript).toContain(`editorMode === 'CREATE' ? '发布机会' : editorMode === 'DRAFT' ? '编辑草稿' : '编辑机会'`)
-    expect(editor).toContain(`editorMode !== 'PUBLISHED'`)
+    // MIW-50：草稿态专用操作条（editorMode !== 'PUBLISHED'）随「保存草稿」一起删除，
+    // 草稿态与已发布态共用同一发布收口，仅按钮文案不同。
+    expect(editor).not.toContain(`editorMode !== 'PUBLISHED'`)
     expect(editor).toContain(`editorMode === 'PUBLISHED' ? '保存修改' : '确认发布'`)
   })
 
@@ -266,17 +270,22 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(editor).toContain('{{coverMessage}}')
     expect(editorScript).toContain('封面为选填，可以稍后补充。')
     expect(editor.indexOf('wx:if="{{coverMessage}}"')).toBeGreaterThan(editor.indexOf('项目封面（选填）'))
-    expect(editor.indexOf('bind:tap="saveDraft"')).toBeLessThan(editor.indexOf('wx:if="{{message}}"'))
+    expect(editor.indexOf('wx:if="{{message}}"')).toBeGreaterThan(editor.indexOf('项目封面（选填）'))
     expect(editor.indexOf('wx:if="{{message}}"')).toBeLessThan(editor.indexOf('id="opportunity-editor-fixed-actions"'))
   })
 
-  it('opens new saves on detail and refreshes detail after returning from an edit', () => {
+  it('returns edit saves to the opportunity detail; create keeps the J4-04 landing', () => {
     expect(editorScript).toContain('wx.redirectTo({')
     expect(editorScript).toContain('/packages/member/mip-opportunities/detail/index?id=')
-    // journey-review J4-04 + QZ2 复审：确认发布回机会列表（navigateBack 优先）；
+    // MIW-50：编辑存量机会保存后必须落回该机会的详情页——栈里能找到本机会
+    // 的详情就按 delta 返回（顺带清掉栈中夹层的旧编辑页），否则 redirectTo 兜底。
+    expect(editorScript).toContain('wx.navigateBack({ delta: currentIndex - index })')
+    expect(editorScript).toMatch(/const detailRoute = 'packages\/member\/mip-opportunities\/detail\/index'/)
+    expect(editorScript).toMatch(/page\.route === detailRoute && page\.options\?\.id === result\.id/)
+    // journey-review J4-04 + QZ2 复审：新建确认发布回上级页面（navigateBack 优先）；
     // 已发布机会可通过保存改为下架，服务端保留其版本与审核保护。
     expect(editorScript).toContain('项目已下架')
-    expect(editorScript).toMatch(/if \(pages\.length > 1\) \{\n {10}wx\.navigateBack\(\)/)
+    expect(editorScript).toMatch(/if \(getCurrentPages\(\)\.length > 1\) \{\n {10}wx\.navigateBack\(\)/)
     expect(detailScript).toContain('if (this.data.item) {\n      void this.load()')
   })
 

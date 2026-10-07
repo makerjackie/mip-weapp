@@ -5,8 +5,6 @@
   "usingComponents": {
     "mip-empty-state": "/components/mip-empty-state/index",
     "app-page-exit": "/components/page-exit/index",
-    "t-button": "tdesign-miniprogram/button/button",
-    "t-icon": "tdesign-miniprogram/icon/icon",
     "t-popup": "tdesign-miniprogram/popup/popup",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-icon": "/components/mip-icon/index",

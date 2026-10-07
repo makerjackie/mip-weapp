@@ -2,9 +2,9 @@
   <view wx:if="{{state === 'loading'}}" class="mt-3 flex flex-col gap-3">
     <view class="min-h-[196rpx] rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="min-h-[360rpx] rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-    <app-page-exit always label="取消" />
+    <app-page-exit label="取消" />
   </view>
-  <view wx:elif="{{state === 'error'}}" class="pt-3"><mip-empty-state title="暂时无法编辑机会" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit always label="取消" /></view>
+  <view wx:elif="{{state === 'error'}}" class="pt-3"><mip-empty-state title="暂时无法编辑机会" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit label="取消" /></view>
   <!-- figma 3359:6086 发布机会-编辑-最新：黄条提示 + 虚线粘贴卡（粘贴并识别）+ 图标小节标签 +
        机会类型/项目状态/可见性行卡 + 城市宫格 chip + 默认封面与虚线添加卡。
        2026-10-07 客户确认删除「更多设置」（金额范围/合作地点/发布范围/行业/能力/团队成员，
@@ -76,7 +76,9 @@
           <view class="pointer-events-none absolute bottom-2 right-4 text-[24rpx] text-muted">{{description.length}}/300</view>
         </view>
       </view>
-      <view id="opportunity-field-roles"><view class="mb-2 flex items-center gap-2 text-[28rpx] font-medium"><t-icon name="usergroup" size="32rpx" color="var(--color-brand)" /><text>合作角色</text><text class="text-[22rpx] text-danger">必填，至少选择一种</text></view><view class="flex flex-wrap gap-2"><block wx:for="{{roleOptions}}" wx:key="key"><view class="flex min-h-[88rpx] items-center gap-2 rounded-full px-3 text-[22rpx] {{item.selected ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" aria-role="checkbox" aria-checked="{{item.selected}}" aria-label="{{item.name}}{{item.selected ? '，已选择' : '，未选择'}}" data-key="{{item.key}}" bind:tap="toggleRole"><view wx:if="{{item.selected}}" class="flex h-[32rpx] w-[32rpx] shrink-0 items-center justify-center rounded-full bg-panel"><mip-icon name="check" size="{{11}}" color="var(--color-brand)" /></view><view wx:else class="box-border h-[32rpx] w-[32rpx] shrink-0 rounded-full border border-brand" /><text>{{item.name}}</text></view></block></view><view wx:if="{{roleError}}" class="mt-2 text-[22rpx] text-danger" aria-live="polite">{{roleError}}</view></view>
+      <!-- MIW-50 客户确认（2026-10-07）：设计稿无「合作角色」表单项，小程序不再提供角色编辑。
+           roleOptions 仅作存量回填，编辑时随 save() 原样带回；新增机会不传角色，
+           字段改由管理后台维护。 -->
       <view id="opportunity-field-status">
         <view class="flex items-center gap-[8rpx] text-[32rpx] font-medium leading-[44rpx]"><image class="h-[32rpx] w-[32rpx]" src="/assets/figma/opportunities/status-hourglass.svg" mode="aspectFit" /><text>项目状态</text></view>
         <view class="mt-2 flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-[16rpx]" aria-role="button" aria-expanded="{{statusSheetVisible}}" aria-label="选择项目状态" bind:tap="openStatusSheet">
@@ -111,7 +113,9 @@
         <view wx:if="{{coverMessage}}" class="mt-3 rounded-[8rpx] border border-danger px-3 py-3 text-[22rpx] text-danger" aria-live="polite">{{coverMessage}}</view>
       </view>
     </view>
-    <view wx:if="{{editorMode !== 'PUBLISHED'}}" class="mt-5"><t-button block size="large" variant="outline" theme="primary" disabled="{{saving || coverUploading}}" bind:tap="saveDraft">保存草稿</t-button></view>
+    <!-- MIW-50 客户确认（2026-10-07）：编辑器不提供「保存草稿」按钮，表单只走
+         「确认发布/保存修改」（publish=true）；草稿态编辑（编辑草稿入口）同样
+         以发布收口，字段填完即可发布。 -->
     <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] border border-danger px-4 py-3 text-[22rpx] text-danger" aria-live="polite">{{message}}</view>
     <!-- journey-review J4-04 ③：液态玻璃底部条（mip-sticky-actions）+ 黄芯胶囊「确认发布」（mip-pill-button）。 -->
     <mip-sticky-actions id="opportunity-editor-fixed-actions">
@@ -119,7 +123,6 @@
         <mip-pill-button class="w-full" label="{{editorMode === 'PUBLISHED' ? '保存修改' : '确认发布'}}" loading="{{saving}}" disabled="{{saving || coverUploading}}" bind:tap="publish" />
       </view>
     </mip-sticky-actions>
-    <app-page-exit always label="取消" />
     <!-- journey-review QZ2：项目状态半屏三选项（说明文案逐字取自终审稿）+ 取消胶囊。
          新建流程先发布，已发布机会支持结束和下架。 -->
     <t-popup visible="{{statusSheetVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleStatusSheetVisibility">
