@@ -25,16 +25,17 @@ describe('MIP cooperation card and super case archives', () => {
   })
 
   it('offers confirmed deletion from owner lists and details and refreshes after mutations', () => {
-    const cooperationList = source('src/packages/member/mip-cooperation/list/index.ts')
+    // 2026-10-07：合作卡/机会独立「我的列表」页删除后，owner 列表删除统一落在「我的」档案页三栏长按。
+    const profile = source('src/pages/profile/index.ts')
     const cooperationDetail = source('src/packages/member/mip-cooperation/detail/index.ts')
     const caseList = source('src/packages/member/mip-cases/list/index.ts')
     const caseDetail = source('src/packages/member/mip-cases/detail/index.ts')
 
     // journey-review C5（2026-09-21 拍板）：列表删除入口收敛为长按卡片 + 统一原生确认弹窗
     // 「删除提示 / 删除后将无法恢复，是否删除？」；详情页保留各自命名的删除入口。
-    expect(cooperationList).toContain('title: \'删除提示\'')
-    expect(cooperationList).toContain('cooperationModule.archive(item.id, expectedVersion)')
-    expect(cooperationList).toContain('await this.load(true)')
+    expect(profile).toContain('title: \'删除提示\'')
+    expect(profile).toContain('await cooperationModule.archive(card.id, version)')
+    expect(profile).toContain('await superCaseModule.archive(card.id, version)')
     expect(cooperationDetail).toContain('cooperationModule.archive(item.id, item.version)')
     expect(cooperationDetail).toContain('leaveSecondaryPage(\'/pages/opportunities/index\')')
     expect(caseList).toContain('title: \'删除提示\'')
@@ -42,7 +43,7 @@ describe('MIP cooperation card and super case archives', () => {
     expect(caseList).toContain('await this.load(true)')
     expect(caseDetail).toContain('superCaseModule.archive(item.id, item.version)')
     expect(caseDetail).toContain('leaveSecondaryPage(\'/pages/opportunities/index\')')
-    for (const page of [cooperationList, cooperationDetail, caseList, caseDetail]) {
+    for (const page of [profile, cooperationDetail, caseList, caseDetail]) {
       expect(page).toContain('无法恢复')
       expect(page).not.toContain('wx.cloud.init')
     }

@@ -11,17 +11,20 @@ function read(relativePath: string) {
 
 describe('MIP related opportunity flow', () => {
   it('uses independent self-cooperation facts in both personal opportunity lists', () => {
-    for (const file of ['src/packages/member/mip-opportunities/mine/index.ts', 'src/pages/profile/index.ts']) {
-      const page = read(file)
-      expect(page).toContain('opportunityModule.listMine(')
-      expect(page).toContain('opportunityModule.listMyCooperations(')
-      expect(page).not.toContain('listReceived(\'REFERRAL\'')
-      expect(page).not.toContain('wx.cloud')
-    }
-    const view = read('src/packages/member/mip-opportunities/mine/index.wxml')
+    // 2026-10-07：「我的机会」独立页删除后，本人视角的两份机会清单（发布/想合作）
+    // 统一落在档案页「相关机会」栏；机会 Tab「我的项目」pill 只取本人发布的列表。
+    const opportunities = read('src/pages/opportunities/index.ts')
+    expect(opportunities).toContain('opportunityModule.listMine(')
+    expect(opportunities).not.toContain('listReceived(\'REFERRAL\'')
+    expect(opportunities).not.toContain('wx.cloud')
+    const profile = read('src/pages/profile/index.ts')
+    expect(profile).toContain('opportunityModule.listMine(')
+    expect(profile).toContain('opportunityModule.listMyCooperations(')
+    expect(profile).not.toContain('listReceived(\'REFERRAL\'')
+    expect(profile).not.toContain('wx.cloud')
+    const view = read('src/pages/profile/index.wxml')
     expect(view).toContain('我想合作')
-    expect(view).toContain('catch:tap="editPublished"')
-    expect(view).toContain('bindlongpress="confirmDeletePublished"')
+    expect(view).toContain('bind:longpress="deleteOpportunity"')
   })
 
   it('removes the third-person picker and activates only the callers cooperation intent', () => {

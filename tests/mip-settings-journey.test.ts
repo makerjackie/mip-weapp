@@ -114,7 +114,8 @@ describe('journey-review WS-SETTINGS', () => {
   it('J6-01/J6-02 apply the C5 longpress deletion to the owner showcase and both management lists', () => {
     const profileView = read('src/packages/member/mip-public-profile/index.wxml')
     const profilePage = read('src/packages/member/mip-public-profile/index.ts')
-    const coopList = read('src/packages/member/mip-cooperation/list/index.wxml')
+    // 2026-10-07：合作卡独立列表页删除，合作卡管理列表即「我的」档案页相关合作卡栏。
+    const mainProfileView = read('src/pages/profile/index.wxml')
     const caseList = read('src/packages/member/mip-cases/list/index.wxml')
 
     // 本人档案合作卡 / 超级案例 tab：tap 与 longpress 并存，仅本人态生效。
@@ -126,9 +127,9 @@ describe('journey-review WS-SETTINGS', () => {
     // 相关机会 tab 的长按删除已随 J6-03 补齐：与另两 tab 同口径，走机会域 archive 契约。
     expect(profileView).toContain('bind:tap="openOpportunity" bind:longpress="deleteOwnOpportunity"')
     expect(profilePage).toContain('await opportunityModule.remove(item.id, detail.version)')
-    // 两个管理页同口径：长按 + 原生弹窗 + toast（1.8s），删除按钮行移除。
+    // 档案页与案例管理页同口径：长按 + 原生弹窗 + toast（1.8s），删除按钮行移除。
     for (const [template, handler] of [
-      [coopList, 'deleteCard'],
+      [mainProfileView, 'deleteCooperationCard'],
       [caseList, 'deleteCase'],
     ] as const) {
       expect(template).toContain(`bind:longpress="${handler}"`)

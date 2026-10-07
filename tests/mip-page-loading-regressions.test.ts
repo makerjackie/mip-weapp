@@ -16,7 +16,6 @@ type Definition = { data: Record<string, unknown> } & Record<string, unknown>
 let profile: Definition
 let events: Definition
 let discovery: Definition
-let mine: Definition
 function page(definition: Definition) {
   return Object.assign(Object.create(definition), {
     data: structuredClone(definition.data),
@@ -43,10 +42,6 @@ beforeAll(async () => {
     discovery = value
   })
   await import('../src/pages/opportunities/index')
-  vi.stubGlobal('Page', (value: Definition) => {
-    mine = value
-  })
-  await import('../src/packages/member/mip-opportunities/mine/index')
   vi.unstubAllGlobals()
 })
 
@@ -116,11 +111,12 @@ describe('page loading and profile interaction regressions', () => {
   })
 
   it('selects the cooperation list on arrival and ignores unknown tab values', () => {
-    const instance = page(mine)
-    instance.onLoad({ tab: 'unknown' })
-    expect(instance.data.tab).toBe('PUBLISHED')
-    instance.onLoad({ tab: 'COOPERATING' })
-    expect(instance.data.tab).toBe('COOPERATING')
+    // 2026-10-07：独立「我的机会」页删除后，发布机会/我想合作两栏落在档案页 changeOpportunitySubTab。
+    const instance = page(profile)
+    instance.changeOpportunitySubTab({ currentTarget: { dataset: { tab: 'unknown' } } })
+    expect(instance.data.opportunitySubTab).toBe('PUBLISHED')
+    instance.changeOpportunitySubTab({ currentTarget: { dataset: { tab: 'COOPERATING' } } })
+    expect(instance.data.opportunitySubTab).toBe('COOPERATING')
   })
 
   it('switches related opportunities in place and renders the real cooperation response', async () => {

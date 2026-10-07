@@ -8,7 +8,7 @@ function source(relativePath: string) {
 /**
  * journey-review WS-OPPORTUNITIES（2026-09-21 终审稿）验收点。
  * 覆盖：机会 Tab 四角色口径、Banner 位、机会类型黄标、项目状态三态、
- * 访客/发布人详情底部条、mine 列表长按删除与下架置灰。
+ * 访客/发布人详情底部条、档案页「相关机会」栏长按删除。
  */
 describe('MIP opportunity journey review', () => {
   const discovery = source('src/pages/opportunities/index.wxml')
@@ -20,8 +20,6 @@ describe('MIP opportunity journey review', () => {
   const detailStyles = source('src/packages/member/mip-opportunities/detail/index.wxss')
   const editor = source('src/packages/member/mip-opportunities/editor/index.wxml')
   const editorScript = source('src/packages/member/mip-opportunities/editor/index.ts')
-  const mine = source('src/packages/member/mip-opportunities/mine/index.wxml')
-  const mineScript = source('src/packages/member/mip-opportunities/mine/index.ts')
   const catalog = source('src/modules/mip-opportunities/catalog.ts')
 
   it('renames the sub tabs and status pills to the final wording (J2-05)', () => {
@@ -157,25 +155,26 @@ describe('MIP opportunity journey review', () => {
     expect(editor).not.toContain('删除机会')
   })
 
-  it('supports long-press delete with the native modal and greyed-out unpublished cards (J6-03)', () => {
-    expect(mine).toContain('发布机会')
-    expect(mine).toContain('我想合作')
-    expect(mine).not.toContain('发布机会 {{publishedItems.length}}')
-    expect(mine).not.toContain('我想合作 {{cooperatingItems.length}}')
-    expect(mine).toContain('bindlongpress="confirmDeletePublished"')
-    expect(mineScript).toContain('删除后将无法恢复，是否删除？')
-    expect(mineScript).toContain(`confirmColor: '#FF4D5E'`)
+  it('supports long-press delete with the native modal from the profile portfolio (J6-03)', () => {
+    // 2026-10-07：「我的机会」独立页删除后，J6-01~03 长按删除统一落在
+    // 「我的」档案页「相关机会」栏（发布机会/我想合作两栏）。
+    const profileTemplate = source('src/pages/profile/index.wxml')
+    const profileScript = source('src/pages/profile/index.ts')
+    expect(profileTemplate).toContain('>发布机会</view>')
+    expect(profileTemplate).toContain('>我想合作</view>')
+    expect(profileTemplate).toContain('bind:longpress="deleteOpportunity"')
+    expect(profileScript).toContain(`deletePortfolioItem('opportunities', String(event.currentTarget.dataset.id || ''))`)
+    expect(profileScript).toContain('删除后将无法恢复，是否删除？')
+    expect(profileScript).toContain(`confirmColor: '#FF4D5E'`)
     // C5 口径与其余四处一致：弹窗标题「删除提示」、toast success 1.8s。
-    expect(mineScript).toContain(`title: '删除提示'`)
-    expect(mineScript).not.toContain(`title: '删除机会'`)
-    expect(mineScript).toContain(`title: '已删除', icon: 'success', duration: 1800`)
-    expect(mineScript).toContain(`dimmed: label === '已下架'`)
-    expect(mine).toContain(`{{item.dimmed ? 'opacity-50 grayscale' : ''}}`)
-    // mine 列表卡片保持现行样式：不传机会类型黄标新属性。
-    expect(mine).not.toContain('mip-opportunity-card')
-    expect(mine).not.toContain('type-tags=')
+    expect(profileScript).toContain(`title: '删除提示'`)
+    expect(profileScript).not.toContain(`title: '删除机会'`)
+    expect(profileScript).toContain(`title: '已删除', icon: 'success', duration: 1800`)
+    // 删除确认后卡片先置灰再移除；已下架态改由详情页/编辑器承载。
+    expect(profileTemplate).toContain(`removingPortfolioId === item.id ? 'opacity-50' : ''`)
+    expect(profileTemplate).toContain('<mip-opportunity-card')
     // 空态文案与发布入口。
-    expect(mine).toContain('欢迎发布项目机会')
-    expect(mine).toContain('有匹配的资源或人才MIP将主动联系你')
+    expect(profileTemplate).toContain('暂无相关机会，发布后会显示在这里。')
+    expect(profileTemplate).toContain('bind:tap="openOpportunityEditor"')
   })
 })

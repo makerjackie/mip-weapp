@@ -38,10 +38,7 @@ describe('MIP runtime UX regressions', () => {
 
   it('keeps fixed filter actions clear of the final options', () => {
     const opportunities = source('src/pages/opportunities/index.wxml')
-    const people = source('src/packages/member/mip-people/index.wxml')
 
     expect(opportunities).toContain('pb-[280rpx]')
-    expect(people).toContain('pb-[calc(env(safe-area-inset-bottom)+260rpx)]')
-    expect(people).not.toContain('fixed left-6 bottom-[calc(env(safe-area-inset-bottom)+140rpx)]')
   })
 })

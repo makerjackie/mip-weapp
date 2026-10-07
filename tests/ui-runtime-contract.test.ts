@@ -531,8 +531,9 @@ describe('mip-weapp UI runtime contract', () => {
       values: { teamId: 'teamId' },
     })
     expect(byId.get('M14')?.queryFixture).toMatchObject({
-      sourceRoute: 'packages/member/mip-cooperation/list/index',
-      dataPath: 'talents',
+      sourceRoute: 'pages/opportunities/index',
+      sourceQuery: { mode: 'cooperation' },
+      dataPath: 'cooperationTalents',
       values: { id: 'cards.0.id' },
     })
     expect(byId.get('M46')).toMatchObject({

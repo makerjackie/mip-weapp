@@ -135,13 +135,11 @@ describe('client stability source contracts', () => {
 
   it('invalidates refresh and pagination work by request generation', () => {
     const tasks = source('src/packages/member/mip-tasks/index.ts')
-    const opportunities = source('src/packages/member/mip-opportunities/mine/index.ts')
+    const opportunities = source('src/pages/opportunities/index.ts')
     expect(tasks).toContain('requestSeq: 0')
     expect(tasks).toMatch(/if \(seq !== this\.requestSeq\)/)
-    expect(opportunities).toContain('publishedRequestSeq: 0')
-    expect(opportunities).toContain('cooperatingRequestSeq: 0')
-    expect(opportunities).toMatch(/if \(sequence !== this\.publishedRequestSeq\)/)
-    expect(opportunities).toMatch(/if \(sequence !== this\.cooperatingRequestSeq\)/)
+    expect(opportunities).toContain('requestSequence: 0')
+    expect(opportunities).toMatch(/if \(sequence !== this\.requestSequence\)/)
   })
 
   it('clears every delayed editor navigation on hide and unload', () => {

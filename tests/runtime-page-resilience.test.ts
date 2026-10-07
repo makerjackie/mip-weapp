@@ -7,12 +7,14 @@ const read = (relativePath: string) => fs.readFileSync(path.join(root, relativeP
 
 describe('runtime page resilience', () => {
   it('exposes the active opportunity tab through the aggregate runtime state', () => {
-    const page = read('src/packages/member/mip-opportunities/mine/index.ts')
+    // 2026-10-07：独立「我的机会」页删除后，机会 Tab 的聚合态统一在机会页
+    // 单一 state 字段上流转（loading → ready/error），三个 Tab 共用。
+    const page = read('src/pages/opportunities/index.ts')
 
-    expect(page).toContain('state: \'loading\' as SectionState')
-    expect(page).toContain('state: tab === \'PUBLISHED\' ? this.data.publishedState : this.data.cooperatingState')
-    expect(page).toContain('this.data.tab === \'PUBLISHED\' ? { state: \'ready\' as SectionState } : {}')
-    expect(page).toContain('this.data.tab === \'COOPERATING\' ? { state: \'ready\' as SectionState } : {}')
+    expect(page).toContain('state: \'loading\' as \'loading\' | \'ready\' | \'error\'')
+    expect(page).toContain('this.setData({ state: \'loading\', nextCursor: \'\', message: \'\' })')
+    expect(page.match(/state: 'ready',/g)?.length).toBe(3)
+    expect(page).toContain('state: \'error\',')
   })
 
   it('re-resolves the original scene when event detail loading is retried', () => {

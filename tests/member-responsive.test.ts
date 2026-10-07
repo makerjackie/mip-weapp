@@ -223,7 +223,6 @@ describe('MIP member responsive foundation', () => {
       'src/packages/member/mip-events/registration/index.wxml',
       'src/packages/member/mip-opportunities/detail/index.wxml',
       'src/packages/member/mip-opportunities/editor/index.wxml',
-      'src/packages/member/mip-people/index.wxml',
       'src/packages/member/mip-public-profile/index.wxml',
     ]) {
       const pageSource = read(file)

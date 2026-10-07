@@ -41,12 +41,7 @@ function method(source: string, start: string, end: string) {
 
 describe('MIP cooperation discovery experience', () => {
   it('keeps filter choices as drafts until the user confirms', () => {
-    const page = read('src/packages/member/mip-cooperation/list/index.ts')
-    expect(method(page, '  chooseRole(', '  toggleIndustry(')).not.toContain('this.load(')
-    expect(method(page, '  toggleIndustry(', '  resetFilterDraft(')).not.toContain('this.load(')
-    expect(method(page, '  resetFilterDraft(', '  applyFilters(')).not.toContain('this.load(')
-    expect(method(page, '  applyFilters(', '  clearAppliedFilters(')).toContain('this.load(true)')
-
+    // 2026-10-07：人才名录独立页删除后，草稿式筛选口径全部落在机会页的人才合作 Tab。
     const rootPage = read('src/pages/opportunities/index.ts')
     expect(method(rootPage, '  chooseRole(', '  toggleTag(')).not.toContain('loadContent(')
     expect(method(rootPage, '  toggleTag(', '  resetFilters(')).not.toContain('loadContent(')
@@ -55,20 +50,16 @@ describe('MIP cooperation discovery experience', () => {
   })
 
   it('renders one talent per row with aggregated role cards and explicit states', () => {
-    const legacyTemplate = read('src/packages/member/mip-cooperation/list/index.wxml')
     const componentTemplate = read('src/pages/opportunities/index.wxml')
-    for (const template of [legacyTemplate, componentTemplate]) {
-      expect(template).toContain('item.author.nickname')
-      expect(template).toContain('item.primaryPositioning')
-      expect(template).toContain('item.primaryTargetSummary')
-      expect(template).toContain('wx:key="talentKey"')
-      expect(template).toContain('data-profile-ref="{{item.profileRef}}"')
-      expect(template).toContain('state === \'loading\'')
-      expect(template).toContain('state === \'error\'')
-      expect(template).toContain('没有找到人才')
-      expect(template).toContain('确认筛选')
-    }
-    expect(legacyTemplate).toContain('wx:for="{{item.cards}}"')
+    expect(componentTemplate).toContain('item.author.nickname')
+    expect(componentTemplate).toContain('item.primaryPositioning')
+    expect(componentTemplate).toContain('item.primaryTargetSummary')
+    expect(componentTemplate).toContain('wx:key="talentKey"')
+    expect(componentTemplate).toContain('data-profile-ref="{{item.profileRef}}"')
+    expect(componentTemplate).toContain('state === \'loading\'')
+    expect(componentTemplate).toContain('state === \'error\'')
+    expect(componentTemplate).toContain('没有找到人才')
+    expect(componentTemplate).toContain('确认筛选')
     expect(componentTemplate).toContain('<mip-talent-card')
     expect(componentTemplate).toContain('role-names="{{item.roleNames}}"')
   })
@@ -77,7 +68,7 @@ describe('MIP cooperation discovery experience', () => {
     const module = read('src/modules/mip-cooperation/client.ts')
     const transport = read('src/modules/mip-opportunities/transport.ts')
     const server = read('cloudfunctions/mip-opportunities-api/index.js')
-    const page = read('src/packages/member/mip-cooperation/list/index.ts')
+    const page = read('src/pages/opportunities/index.ts')
     expect(module).toContain('normalizeCooperationCardFilter(filter)')
     expect(module).toContain('callOpportunityApi<CooperationCardPage>(\'listCooperationCards\'')
     expect(module).toContain('callOpportunityApi<CooperationTalentPage>(\'listCooperationTalents\'')
@@ -85,10 +76,10 @@ describe('MIP cooperation discovery experience', () => {
     expect(transport).toContain('\'listCooperationTalents\'')
     expect(server).toContain('case \'listCooperationTalents\': return await canBrowseTalents(database, caller)')
     expect(server).toContain('? listCooperationTalents(database, caller, event.filter) : { items: [] }')
-    expect(page).toContain('cooperationModule.listTalents({')
-    expect(page).toContain('mergeCooperationTalents(this.data.talents, talents)')
-    expect(page).toContain('keyword: this.data.appliedKeyword')
-    expect(page).toContain('branchId: this.data.selectedBranchId || undefined')
+    expect(page).toContain('cooperationModule.listTalents(')
+    expect(page).toContain('mergeCooperationTalents(this.data.cooperationTalents, talents)')
+    expect(page).toContain('keyword: this.data.keyword')
+    expect(page).toContain('branchId: this.data.selectedCooperationBranchId || undefined')
     expect(page).toContain('roleKey: this.data.selectedRoleKey || undefined')
     expect(page).toContain('industryTagIds: this.data.selectedIndustryTagIds')
     expect(page).toContain('cursor: reset ? undefined : this.data.nextCursor || undefined')

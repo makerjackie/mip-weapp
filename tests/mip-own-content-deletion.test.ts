@@ -26,8 +26,6 @@ beforeAll(async () => {
   await import('../src/pages/profile/index')
   registering = 'public'
   await import('../src/packages/member/mip-public-profile/index')
-  registering = 'cooperation-list'
-  await import('../src/packages/member/mip-cooperation/list/index')
   registering = 'cases-list'
   await import('../src/packages/member/mip-cases/list/index')
 })
@@ -42,7 +40,7 @@ const scenarios = [
   { name: 'public cooperation', page: 'public', tab: 'cooperation', method: 'deleteOwnCooperationCard', field: 'cooperationCards', load: 'loadProfile', lock: 'deletingId' },
   { name: 'public cases', page: 'public', tab: 'cases', method: 'deleteOwnSuperCase', field: 'superCases', load: 'loadProfile', lock: 'deletingId' },
   { name: 'public opportunities', page: 'public', tab: 'opportunities', method: 'deleteOwnOpportunity', field: 'opportunities', load: 'loadProfile', lock: 'deletingId' },
-  { name: 'cooperation list', page: 'cooperation-list', tab: 'cooperation', method: 'deleteCard', field: 'cards', load: 'load', lock: 'archivingId' },
+  // 2026-10-07：合作卡独立列表页删除，owner 删除入口收敛到 main（档案页三栏）。
   { name: 'cases list', page: 'cases-list', tab: 'cases', method: 'deleteCase', field: 'items', load: 'load', lock: 'archivingId' },
 ] as const
 function createPage(scenario: typeof scenarios[number]) {

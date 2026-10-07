@@ -48,7 +48,7 @@ describe('MIP opportunity subscribe guide wiring (MIW-40)', () => {
     expect(componentView).toContain('bind:tap="dismiss"')
   })
 
-  it('writes a publish pending on success and consumes it on landing pages (S8)', () => {
+  it('writes a publish pending on success and consumes it on the detail landing page (S8)', () => {
     // 编辑器：仅在发布成功（PUBLISHED）时写 pending；草稿保存/下架不写
     const editor = readSource('src/packages/member/mip-opportunities/editor/index.ts')
     const save = editor.match(/async save\(publish: boolean\) \{[\s\S]*?\n {2}\},/)?.[0] || ''
@@ -56,24 +56,16 @@ describe('MIP opportunity subscribe guide wiring (MIW-40)', () => {
     expect(save).toContain('writePendingGuideOpportunity(result.id, Date.now())')
     expect(save).toContain('wx.setStorageSync(GUIDE_PENDING_STORAGE_KEY, pending)')
 
-    // 主落地：我的机会列表 onShow 一次性消费 pending，ID 走参数传入
-    const mine = readSource('src/packages/member/mip-opportunities/mine/index.ts')
-    const onShow = mine.match(/onShow\(\) \{[\s\S]*?\n {2}\},/)?.[0] || ''
-    expect(onShow).toContain('this.checkPendingSubscriptionGuide()')
-    const consume = mine.match(/checkPendingSubscriptionGuide\(\) \{[\s\S]*?\n {2}\},/)?.[0] || ''
-    expect(consume).toContain('readPendingGuideOpportunity')
-    expect(consume).toContain('wx.removeStorageSync(GUIDE_PENDING_STORAGE_KEY)')
-    expect(consume).toContain(`selectComponent('#opportunity-mine-subscribe-guide')`)
-    expect(consume).toContain('?.check(pending)')
-    expect(mine).not.toContain('requestWechatSubscription')
-    const mineConfig = JSON.parse(readSource('src/packages/member/mip-opportunities/mine/index.json'))
-    expect(mineConfig.usingComponents['mip-subscription-guide']).toBe('/components/mip-subscription-guide/index')
-    expect(readSource('src/packages/member/mip-opportunities/mine/index.wxml'))
-      .toContain('<mip-subscription-guide id="opportunity-mine-subscribe-guide" template-key="OPPORTUNITY_NOTICE" opportunity-id="" />')
-
-    // 兜底落地：详情页只清 pending，展示仍由 S1 检查负责（不重复弹）
-    const guideMethod = pageSource().match(/checkSubscriptionGuide\(\) \{[\s\S]*?\n {2}\},/)?.[0] || ''
+    // 2026-10-07：「我的机会」列表页删除后，详情页是唯一落地页——
+    // redirectTo 详情（无上级页面）时本页消费 pending：只清记录，展示沿用 S1 检查（不重复弹）。
+    const detail = pageSource()
+    expect(detail).toContain('readPendingGuideOpportunity')
+    expect(detail).toContain('wx.removeStorageSync(GUIDE_PENDING_STORAGE_KEY)')
+    expect(detail).not.toContain('requestWechatSubscription')
+    const guideMethod = detail.match(/checkSubscriptionGuide\(\) \{[\s\S]*?\n {2}\},/)?.[0] || ''
+    expect(guideMethod).toContain('readPendingGuideOpportunity(wx.getStorageSync(GUIDE_PENDING_STORAGE_KEY), Date.now())')
     expect(guideMethod).toContain('wx.removeStorageSync(GUIDE_PENDING_STORAGE_KEY)')
+    expect(guideMethod).toContain(`selectComponent('#opportunity-subscribe-guide')`)
     expect(guideMethod).toContain('if (!this.data.item?.mine)')
   })
 

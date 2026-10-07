@@ -1,6 +1,6 @@
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../../../modules/mip'
 import type { AiDraftId } from '../../../../modules/mip-ai'
-import type { OpportunityCatalog, OpportunityDetail, OpportunityLocationType, OpportunityProjectStatus, OpportunityTypeKey, PublicPerson } from '../../../../modules/mip-opportunities'
+import type { OpportunityCatalog, OpportunityDetail, OpportunityLocationType, OpportunityProjectStatus, OpportunityTypeKey } from '../../../../modules/mip-opportunities'
 import type { OpportunityTextDraft } from '../../../../modules/mip-opportunities/text-parser'
 import { brand } from '../../../../config/brand'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
@@ -13,15 +13,12 @@ import { parseOpportunityAiDraft } from '../../../../modules/mip-opportunities/a
 import { parseOpportunityText } from '../../../../modules/mip-opportunities/text-parser'
 import { chooseSingleImage } from '../../../../platform/wechat/image-upload'
 
-interface SelectOption { id: string, label: string, selected: boolean }
-interface IndustryGroupOption { id: string, label: string, options: SelectOption[] }
 interface RoleOption { key: CooperationRoleKey, name: string, selected: boolean }
 interface TypeOption { key: OpportunityTypeKey, label: string, hint: string, selected: boolean }
 interface TeamSelection { profileRef: string, nickname: string, avatarUrl?: string, headline?: string }
-interface TeamCandidate extends PublicPerson { selected: boolean }
 interface CityOption { id: string, label: string }
 type OpportunityEditorMode = 'CREATE' | 'DRAFT' | 'PUBLISHED'
-/** journey-review J4-04 ⑥：顶层可见范围两选项（分会发布保留在更多设置里）。 */
+/** journey-review J4-04 ⑥：顶层可见范围两选项。 */
 type VisibilityChoice = 'PLATFORM' | 'INTERNAL'
 
 const cityPriority = ['深圳', '北京', '上海', '成都', '广州', '中国香港', '中国澳门', '海外']
@@ -121,7 +118,6 @@ Page({
     defaultCoverUrl: brand.opportunityDefaultCoverPath,
     coverUploading: false,
     catalog: { branches: [], cityTags: [], industryGroups: [], industryTags: [], abilityTags: [] } as OpportunityCatalog,
-    branchOptions: [{ id: '', name: 'MIP 平台', cityName: '全国' }],
     cityOptions: [{ id: '', label: '全国' }],
     cityGridOptions: [] as CityOption[],
     /** journey-review J4-04 ④：粘贴识别一键完成，就地填入不跳页。 */
@@ -131,7 +127,10 @@ Page({
     pasteAiDraftVersion: 0,
     confirmedAiDraftId: '' as AiDraftId | '',
     confirmedAiDraftVersion: 0,
-    advancedOpen: false,
+    // 「更多设置」已删（2026-10-07 客户确认）：行业/能力不再提供编辑入口，
+    // 但保留数据回填与提交组装，编辑存量机会时原值原样带回，避免误清。
+    industryTagIds: [] as string[],
+    abilityTagIds: [] as string[],
     roleOptions: cooperationRoles.map(item => ({ key: item.key, name: item.name, selected: false })) as RoleOption[],
     /** journey-review QZ1：机会类型三件套（找企业/找伙伴/找资源），多选。 */
     typeOptions: typeOptionViews(new Set()),
@@ -140,13 +139,7 @@ Page({
     projectStatusText: projectStatusTextOf('RECRUITING'),
     projectStatusOptions: projectStatusOptionViews('CREATE'),
     statusSheetVisible: false,
-    industryGroups: [] as IndustryGroupOption[],
-    abilityOptions: [] as SelectOption[],
     teamMembers: [] as TeamSelection[],
-    teamPickerVisible: false,
-    teamKeyword: '',
-    teamCandidates: [] as TeamCandidate[],
-    teamLoading: false,
   },
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
@@ -223,14 +216,9 @@ Page({
   },
 
   applyCatalog(catalog: OpportunityCatalog, detail: OpportunityDetail | null) {
-    const branchOptions = [{ id: '', name: 'MIP 平台', cityName: '全国' }, ...catalog.branches]
     const cityOptions = [{ id: '', label: '全国' }, ...catalog.cityTags]
     const roleKeys = new Set(detail?.roles || [])
-    const industryIds = new Set(detail?.industryTags.map(item => item.id) || [])
-    const abilityIds = new Set(detail?.abilityTags.map(item => item.id) || [])
-    const branchIndex = detail?.branchId
-      ? Math.max(0, branchOptions.findIndex(item => item.id === detail.branchId))
-      : 0
+    const branchId = detail?.branchId || ''
     const cityIndex = detail?.city?.id
       ? Math.max(0, cityOptions.findIndex(item => item.id === detail.city?.id))
       : 0
@@ -244,10 +232,9 @@ Page({
     const typeKeys = new Set(detail?.typeKeys || [])
     this.setData({
       catalog,
-      branchOptions,
       cityOptions,
       cityGridOptions: cityGridOptions(cityOptions, detail?.city?.id || ''),
-      branchIndex,
+      branchId,
       cityIndex,
       title: detail?.title || '',
       valueSummary: detail?.valueSummary || '',
@@ -260,7 +247,6 @@ Page({
       roleError: '',
       playersOnly: detail?.playersOnly === true,
       scopeType: detail?.branchId ? 'BRANCH' : 'PLATFORM',
-      branchId: detail?.branchId || '',
       cityTagId: detail?.city?.id || '',
       minAmountYuan: terms?.minAmountCents === undefined ? '' : String(terms.minAmountCents / 100),
       maxAmountYuan: terms?.maxAmountCents === undefined ? '' : String(terms.maxAmountCents / 100),
@@ -273,12 +259,8 @@ Page({
       typeOptions: typeOptionViews(typeKeys),
       projectStatus,
       projectStatusText: projectStatusTextOf(projectStatus),
-      industryGroups: catalog.industryGroups.map(group => ({
-        id: group.id,
-        label: group.label,
-        options: group.options.map(item => ({ id: item.id, label: item.label, selected: industryIds.has(item.id) })),
-      })),
-      abilityOptions: catalog.abilityTags.map(item => ({ id: item.id, label: item.label, selected: abilityIds.has(item.id) })),
+      industryTagIds: detail?.industryTags.map(item => item.id) || [],
+      abilityTagIds: detail?.abilityTags.map(item => item.id) || [],
       teamMembers: (detail?.teamMembers || []).map(item => ({
         profileRef: item.profileRef,
         nickname: item.nickname,
@@ -373,27 +355,6 @@ Page({
     })
   },
 
-  chooseScope(event: WechatMiniprogram.TouchEvent) {
-    const scopeType = String(event.currentTarget.dataset.scope || '') as 'PLATFORM' | 'BRANCH'
-    if (!['PLATFORM', 'BRANCH'].includes(scopeType)) {
-      return
-    }
-    this.setData({
-      scopeType,
-      branchId: scopeType === 'PLATFORM' ? '' : this.data.branchId,
-      branchIndex: scopeType === 'PLATFORM' ? 0 : this.data.branchIndex,
-    })
-  },
-
-  changeBranch(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    const branchIndex = Number(event.detail.value)
-    const branch = this.data.branchOptions[branchIndex]
-    if (!branch) {
-      return
-    }
-    this.setData({ branchIndex, branchId: branch.id as BranchId | '', scopeType: branch.id ? 'BRANCH' : 'PLATFORM' })
-  },
-
   changeCity(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const cityIndex = Number(event.detail.value)
     const city = this.data.cityOptions[cityIndex]
@@ -409,45 +370,6 @@ Page({
       return
     }
     this.setData({ cityIndex, cityTagId })
-  },
-
-  updateAmount(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    const field = String(event.currentTarget.dataset.field || '')
-    if (field === 'minAmountYuan' || field === 'maxAmountYuan') {
-      this.setData({ [field]: event.detail.value })
-    }
-  },
-
-  toggleLocationType(event: WechatMiniprogram.TouchEvent) {
-    const type = String(event.currentTarget.dataset.type || '') as OpportunityLocationType
-    if (!['NATIONAL', 'REMOTE'].includes(type)) {
-      return
-    }
-    const selected = new Set(this.data.locationTypes)
-    if (selected.has(type)) {
-      selected.delete(type)
-    }
-    else { selected.add(type) }
-    this.setData({ locationTypes: [...selected] })
-  },
-
-  toggleLocationCity(event: WechatMiniprogram.TouchEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
-    if (!id) {
-      return
-    }
-    const selected = new Set(this.data.locationCityTagIds)
-    if (selected.has(id)) {
-      selected.delete(id)
-    }
-    else if (selected.size < 16) {
-      selected.add(id)
-    }
-    this.setData({ locationCityTagIds: [...selected] })
-  },
-
-  toggleAdvancedSettings() {
-    this.setData({ advancedOpen: !this.data.advancedOpen })
   },
 
   /** journey-review QZ1：机会类型三件套多选。 */
@@ -485,7 +407,7 @@ Page({
     this.setData({ projectStatus: key, projectStatusText: projectStatusTextOf(key), statusSheetVisible: false })
   },
 
-  /** journey-review J4-04 ⑥：顶层可见范围两选项；分会发布保留在更多设置。 */
+  /** journey-review J4-04 ⑥：顶层可见范围两选项。 */
   chooseVisibility(event: WechatMiniprogram.TouchEvent) {
     const choice = String(event.currentTarget.dataset.visibility || '') as VisibilityChoice
     if (choice === 'PLATFORM' || choice === 'INTERNAL') {
@@ -499,107 +421,6 @@ Page({
     this.setData({
       roleOptions,
       roleError: roleOptions.some(item => item.selected) ? '' : this.data.roleError,
-    })
-  },
-
-  toggleTag(event: WechatMiniprogram.TouchEvent) {
-    const type = String(event.currentTarget.dataset.type || '')
-    const id = String(event.currentTarget.dataset.id || '')
-    if (!id || !['industry', 'ability'].includes(type)) {
-      return
-    }
-    if (type === 'industry') {
-      this.setData({
-        industryGroups: this.data.industryGroups.map(group => ({
-          ...group,
-          options: group.options.map(item => item.id === id ? { ...item, selected: !item.selected } : item),
-        })),
-      })
-    }
-    else {
-      this.setData({ abilityOptions: this.data.abilityOptions.map(item => item.id === id ? { ...item, selected: !item.selected } : item) })
-    }
-  },
-
-  openTeamPicker() {
-    this.setData({ teamPickerVisible: true })
-    void this.searchTeam()
-  },
-
-  closeTeamPicker() {
-    this.setData({ teamPickerVisible: false })
-  },
-
-  handleTeamPickerVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
-    if (!event.detail.visible) {
-      this.closeTeamPicker()
-    }
-  },
-
-  updateTeamKeyword(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ teamKeyword: event.detail.value })
-  },
-
-  async searchTeam() {
-    if (this.data.teamLoading) {
-      return
-    }
-    this.setData({ teamLoading: true, message: '' })
-    try {
-      const selected = new Set(this.data.teamMembers.map(item => item.profileRef))
-      const page = await opportunityModule.listPeople({
-        kind: 'PLAYER',
-        keyword: this.data.teamKeyword.trim() || undefined,
-        limit: 20,
-      })
-      this.setData({
-        teamCandidates: page.items
-          .filter(item => !item.isSelf)
-          .map(item => ({ ...item, selected: selected.has(item.profileRef) })),
-      })
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '团队成员加载失败' })
-    }
-    finally {
-      this.setData({ teamLoading: false })
-    }
-  },
-
-  toggleTeamMember(event: WechatMiniprogram.TouchEvent) {
-    const profileRef = String(event.currentTarget.dataset.profileRef || '')
-    const candidate = this.data.teamCandidates.find(item => item.profileRef === profileRef)
-    if (!candidate) {
-      return
-    }
-    const exists = this.data.teamMembers.some(item => item.profileRef === profileRef)
-    if (!exists && this.data.teamMembers.length >= 8) {
-      wx.showToast({ title: '最多选择 8 名成员', icon: 'none' })
-      return
-    }
-    const teamMembers = exists
-      ? this.data.teamMembers.filter(item => item.profileRef !== profileRef)
-      : [...this.data.teamMembers, {
-          profileRef: candidate.profileRef,
-          nickname: candidate.nickname || 'MIP 用户',
-          ...(candidate.avatarUrl ? { avatarUrl: candidate.avatarUrl } : {}),
-          ...(candidate.headline ? { headline: candidate.headline } : {}),
-        }]
-    this.setData({
-      teamMembers,
-      teamCandidates: this.data.teamCandidates.map(item => (
-        item.profileRef === profileRef ? { ...item, selected: !exists } : item
-      )),
-    })
-  },
-
-  removeTeamMember(event: WechatMiniprogram.TouchEvent) {
-    const profileRef = String(event.currentTarget.dataset.profileRef || '')
-    this.setData({
-      teamMembers: this.data.teamMembers.filter(item => item.profileRef !== profileRef),
-      teamCandidates: this.data.teamCandidates.map(item => (
-        item.profileRef === profileRef ? { ...item, selected: false } : item
-      )),
     })
   },
 
@@ -692,11 +513,8 @@ Page({
         coverAssetId: this.data.coverAssetId || undefined,
         roleKeys: this.data.roleOptions.filter(item => item.selected).map(item => item.key),
         typeKeys: this.data.typeOptions.filter(item => item.selected).map(item => item.key),
-        industryTagIds: this.data.industryGroups
-          .flatMap(group => group.options)
-          .filter(item => item.selected)
-          .map(item => item.id),
-        abilityTagIds: this.data.abilityOptions.filter(item => item.selected).map(item => item.id),
+        industryTagIds: this.data.industryTagIds,
+        abilityTagIds: this.data.abilityTagIds,
         teamProfileRefs: this.data.teamMembers.map(item => item.profileRef),
         publish,
         ...(publish ? { publicationStatus: this.data.projectStatus === 'RECRUITING' ? 'PUBLISHED' as const : this.data.projectStatus } : {}),

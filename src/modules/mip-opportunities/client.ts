@@ -16,8 +16,6 @@ import type {
   OpportunityInteractionResult,
   OpportunityMutationResult,
   OpportunityPage,
-  PeopleFilter,
-  PeoplePage,
   ProfileInfluenceSummary,
   PublicProfileAggregate,
   ReceivedInteractionCategory,
@@ -35,11 +33,9 @@ import {
   createMutationKey,
   normalizeOpportunityDraft,
   normalizeOpportunityFilter,
-  normalizePeopleFilter,
   parseOpportunityCooperators,
   parseOpportunityDetail,
   parseOpportunityPage,
-  parsePeoplePage,
   parseProfileInfluence,
   parsePublicProfileAggregate,
 } from './validation'
@@ -73,12 +69,6 @@ export const opportunityModule = {
 
   async get(id: OpportunityId) {
     return parseOpportunityDetail(await callOpportunityApi<OpportunityDetail>('getOpportunity', { id }))
-  },
-
-  async listPeople(filter: PeopleFilter) {
-    return parsePeoplePage(await callOpportunityApi<PeoplePage>('listPeople', {
-      filter: normalizePeopleFilter(filter),
-    }))
   },
 
   async getPublicProfile(profileRef: string) {

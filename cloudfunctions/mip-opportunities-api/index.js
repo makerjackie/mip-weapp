@@ -68,7 +68,6 @@ const {
 } = require('./domain/comments')
 const {
   getPublicProfileAggregate,
-  listPeople,
 } = require('./domain/discovery')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -106,8 +105,7 @@ const publicActions = new Set([
   'getCooperationCard',
   'listSuperCases',
   'getSuperCase',
-  'listPeople',
-  'getPublicProfileAggregate',
+    'getPublicProfileAggregate',
 ])
 
 const messages = {
@@ -170,7 +168,6 @@ async function dispatch(database, caller, event) {
     case 'setOpportunityCooperation': return setOpportunityCooperation(database, caller, event)
     case 'setReferral': return setReferral(database, caller, event)
     case 'setProfileInterest': return setProfileInterest(database, caller, event)
-    case 'listPeople': return listPeople(database, caller, event.filter)
     case 'getPublicProfileAggregate': return getPublicProfileAggregate(database, caller, event)
     case 'recordProfileVisit': return recordProfileVisit(database, caller, event)
     case 'getProfileInfluence': return getOwnProfileInfluence(database, caller)

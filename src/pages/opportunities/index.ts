@@ -302,6 +302,13 @@ Page({
     }
   },
 
+  onLoad(query: Record<string, string | undefined>) {
+    // runtime-pages queryFixture（M14/M22/M55）经 reLaunch 携带 mode 进入人才合作 Tab 取数。
+    if (query.mode === 'cooperation') {
+      this.setData({ mode: 'cooperation' })
+    }
+  },
+
   async onShow() {
     syncCaseNavigation(this, 'pages/opportunities/index')
     if (this.data.loginSheetOpen || this.data.loginSheetBusy) {
@@ -1032,51 +1039,5 @@ Page({
    */
   openBecomePlayerUnlock() {
     void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE')
-  },
-
-  openDiscoveryMenu() {
-    const entries: Array<{
-      label: string
-      action: 'people' | 'mine' | 'cases'
-    }> = this.data.mode === 'opportunities'
-      ? [
-          { label: '找人才', action: 'people' },
-          { label: '我的机会', action: 'mine' },
-        ]
-      : [
-          { label: '人才名录', action: 'people' },
-          { label: '我的合作卡', action: 'mine' },
-          { label: '超级案例', action: 'cases' },
-        ]
-    wx.showActionSheet({
-      itemList: entries.map(item => item.label),
-      success: ({ tapIndex }) => {
-        const action = entries[tapIndex]?.action
-        if (action === 'people') {
-          this.openPeople()
-        }
-        else if (action === 'mine') {
-          this.openMine()
-        }
-        else if (action === 'cases') {
-          this.openCases()
-        }
-      },
-    })
-  },
-
-  openMine() {
-    const url = this.data.mode === 'opportunities'
-      ? '/packages/member/mip-opportunities/mine/index'
-      : '/packages/member/mip-cooperation/list/index?mine=1'
-    void this.openProtected(url, 'INTERACT')
-  },
-
-  openCases() {
-    caseNavigateTo({ url: '/packages/member/mip-cases/list/index' })
-  },
-
-  openPeople() {
-    caseNavigateTo({ url: '/packages/member/mip-people/index' })
   },
 })

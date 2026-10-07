@@ -52,12 +52,7 @@ describe('mip-industry-selector 业务组件', () => {
     expect(profileTemplate).toContain('bind:change="changeIndustry"')
   })
 
-  it('人才筛选页以多选(上限 8)接入,机会筛选页以手风琴接入', () => {
-    const peopleTemplate = read('src/packages/member/mip-people/index.wxml')
-    const peopleConfig = JSON.parse(read('src/packages/member/mip-people/index.json'))
-    expect(peopleConfig.usingComponents['mip-industry-selector']).toBe('/components/mip-industry-selector/index')
-    expect(peopleTemplate).toContain('<mip-industry-selector groups="{{industryGroups}}" selected-ids="{{draftIndustryTagIds}}" multiple="{{true}}" max-count="{{8}}"')
-
+  it('机会筛选页以多选(上限 8)手风琴接入行业选择器', () => {
     const discoveryTemplate = read('src/pages/opportunities/index.wxml')
     const discoveryConfig = JSON.parse(read('src/pages/opportunities/index.json'))
     expect(discoveryConfig.usingComponents['mip-industry-selector']).toBe('/components/mip-industry-selector/index')

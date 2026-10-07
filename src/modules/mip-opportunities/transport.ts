@@ -15,7 +15,6 @@ const readActions = new Set([
   'getCatalogs',
   'listOpportunities',
   'getOpportunity',
-  'listPeople',
   'getPublicProfileAggregate',
   'getProfileInfluence',
   'listPublicProfileInterests',
