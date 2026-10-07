@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 70,
+  "routeCount": 67,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 70 paths.",
+    "config/project.json routes must list the same 67 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -381,53 +381,6 @@
           "visibleAssertion": {
             "selector": "#opportunities-search-input"
           }
-        }
-      ]
-    },
-    {
-      "id": "people-search-and-filter",
-      "route": "packages/member/mip-people/index",
-      "nonMutating": true,
-      "steps": [
-        {
-          "id": "enter-keyword",
-          "type": "input",
-          "selector": "#people-search-input",
-          "handler": "onKeywordInput",
-          "value": "设计",
-          "dataAssertions": [
-            {
-              "path": "keywordInput",
-              "equals": "设计"
-            }
-          ]
-        },
-        {
-          "id": "open-filter",
-          "type": "tap",
-          "selector": "#people-filter-toggle",
-          "handler": "toggleFilters",
-          "dataAssertions": [
-            {
-              "path": "filterOpen",
-              "equals": true
-            }
-          ],
-          "visibleAssertion": {
-            "text": "人才筛选"
-          }
-        },
-        {
-          "id": "close-filter",
-          "type": "tap",
-          "selector": "#people-filter-toggle",
-          "handler": "toggleFilters",
-          "dataAssertions": [
-            {
-              "path": "filterOpen",
-              "equals": false
-            }
-          ]
         }
       ]
     },
@@ -1270,39 +1223,11 @@
       "readyAssertion": "state === 'ready'"
     },
     {
-      "id": "M12",
-      "name": "我的机会",
-      "path": "packages/member/mip-opportunities/mine/index",
-      "selector": "#mip-opportunity-mine-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
       "id": "M43",
       "name": "消息与机会权限",
       "path": "packages/member/mip-opportunity-settings/index",
       "selector": "#mip-opportunity-settings-page",
       "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "M13",
-      "name": "合作卡",
-      "path": "packages/member/mip-cooperation/list/index",
-      "selector": "#mip-cooperation-list-page",
-      "group": "public",
       "kind": "data",
       "states": [
         "loading",
@@ -1328,10 +1253,13 @@
         "id"
       ],
       "queryFixture": {
-        "sourceRoute": "packages/member/mip-cooperation/list/index",
-        "dataPath": "talents",
+        "sourceRoute": "pages/opportunities/index",
+        "dataPath": "cooperationTalents",
         "values": {
           "id": "cards.0.id"
+        },
+        "sourceQuery": {
+          "mode": "cooperation"
         }
       }
     },
@@ -1755,25 +1683,6 @@
       ]
     },
     {
-      "id": "M29",
-      "name": "玩家与嘉宾",
-      "path": "packages/member/mip-people/index",
-      "selector": "#mip-people-discovery-page",
-      "group": "public",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "error"
-      ],
-      "acceptStates": [
-        "ready",
-        "empty"
-      ],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
       "id": "M55",
       "name": "对TA感兴趣",
       "path": "packages/member/mip-profile-interests/index",
@@ -1796,10 +1705,13 @@
         "profileRef"
       ],
       "queryFixture": {
-        "sourceRoute": "packages/member/mip-people/index",
-        "dataPath": "people",
+        "sourceRoute": "pages/opportunities/index",
+        "dataPath": "cooperationTalents",
         "values": {
           "profileRef": "profileRef"
+        },
+        "sourceQuery": {
+          "mode": "cooperation"
         }
       }
     },
@@ -1824,10 +1736,13 @@
         "profileRef"
       ],
       "queryFixture": {
-        "sourceRoute": "packages/member/mip-people/index",
-        "dataPath": "people",
+        "sourceRoute": "pages/opportunities/index",
+        "dataPath": "cooperationTalents",
         "values": {
           "profileRef": "profileRef"
+        },
+        "sourceQuery": {
+          "mode": "cooperation"
         }
       }
     },

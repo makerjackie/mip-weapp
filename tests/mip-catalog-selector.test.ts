@@ -103,9 +103,8 @@ describe('shared catalog selector', () => {
     }])
   })
 
-  it('reuses the grouped selector for people and opportunity branch filters', () => {
+  it('reuses the grouped selector for opportunity branch filters', () => {
     const pages = [
-      'src/packages/member/mip-people',
       'src/pages/opportunities',
     ]
     for (const page of pages) {
@@ -117,13 +116,9 @@ describe('shared catalog selector', () => {
 
   it('exposes stable runtime selectors for user discovery and profile tabs', () => {
     const opportunities = read('src/pages/opportunities/index.wxml')
-    const people = read('src/packages/member/mip-people/index.wxml')
     const profile = read('src/pages/profile/index.wxml')
     expect(opportunities).toContain('id="opportunities-search-input"')
     expect(opportunities).toContain('id="opportunities-filter-toggle"')
-    expect(people).toContain('id="people-search-input"')
-    expect(people).toContain('id="people-filter-toggle"')
-    expect(people).not.toContain('text-subtle')
     for (const id of ['cooperation', 'cases', 'opportunities']) {
       expect(profile.match(new RegExp(`id="profile-tab-${id}"`, 'g'))).toHaveLength(2)
     }

@@ -75,13 +75,13 @@ describe('runtime ready assertions', () => {
       path: 'packages/member/mip-public-profile/index',
       query: ['profileRef'],
       queryFixture: {
-        sourceRoute: 'packages/member/mip-people/index',
-        dataPath: 'people',
+        sourceRoute: 'packages/member/mip-cooperation/list/index',
+        dataPath: 'talents',
         values: { profileRef: 'profileRef' },
       },
     }
     const resolved = resolveQueryFixtureValues(route, {
-      people: [{ profileRef: 'p1.real.iv.tag' }],
+      talents: [{ profileRef: 'p1.real.iv.tag' }],
     })
     expect(resolved).toEqual({
       status: 'resolved',
@@ -89,7 +89,7 @@ describe('runtime ready assertions', () => {
     })
     expect(queryForRoute(route, resolved.status === 'resolved' ? resolved.values : {}))
       .toBe('profileRef=p1.real.iv.tag')
-    expect(resolveQueryFixtureValues(route, { people: [] })).toMatchObject({ status: 'external-wait' })
+    expect(resolveQueryFixtureValues(route, { talents: [] })).toMatchObject({ status: 'external-wait' })
   })
 
   it('selects the first matching fixture that also has every required query value', () => {

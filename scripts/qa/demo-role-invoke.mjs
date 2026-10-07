@@ -153,7 +153,7 @@ export async function invoke({ name, data = {} }, role = 'member') {
   }
   if (name === 'mip-opportunities-api') {
     const catalog = { ...opportunities, ...cooperation, ...cases, ...influence, ...discovery, ...interactions, getProfileInfluence: influence.getOwnProfileInfluence }
-    const allowed = ['listMySuperCases', 'listSuperCases', 'getSuperCase', 'getCatalogs', 'listOpportunities', 'getOpportunity', 'listMine', 'listMyCooperations', 'listCooperationCards', 'listCooperationTalents', 'listMyCooperationCards', 'getCooperationCard', 'getProfileInfluence', 'listPublicProfileInterests', 'listReceivedInteractions', 'listPeople', 'getPublicProfileAggregate']
+    const allowed = ['listMySuperCases', 'listSuperCases', 'getSuperCase', 'getCatalogs', 'listOpportunities', 'getOpportunity', 'listMine', 'listMyCooperations', 'listCooperationCards', 'listCooperationTalents', 'listMyCooperationCards', 'getCooperationCard', 'getProfileInfluence', 'listPublicProfileInterests', 'listReceivedInteractions', 'getPublicProfileAggregate']
     if (!allowed.includes(action)) {
       throw new Error(`QA_UNSUPPORTED_ACTION:${name}:${action}`)
     }
@@ -163,7 +163,7 @@ export async function invoke({ name, data = {} }, role = 'member') {
     if (['listCooperationCards', 'listCooperationTalents'].includes(action) && !(await journey.canBrowseTalents(db, caller))) {
       return { items: [] }
     }
-    const input = ['listOpportunities', 'listCooperationCards', 'listCooperationTalents', 'listPeople'].includes(action) ? data.filter : ['getOpportunity', 'getCooperationCard', 'getSuperCase'].includes(action) ? data.id : data
+    const input = ['listOpportunities', 'listCooperationCards', 'listCooperationTalents'].includes(action) ? data.filter : ['getOpportunity', 'getCooperationCard', 'getSuperCase'].includes(action) ? data.id : data
     return catalog[action](db, caller, input)
   }
   if (name === 'mip-tasks-api') {

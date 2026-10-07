@@ -130,11 +130,6 @@ describe('MIP cooperation role visual component', () => {
   it('integrates the shared role card without changing page click contracts', () => {
     const pages = [
       {
-        config: 'src/packages/member/mip-cooperation/list/index.json',
-        template: 'src/packages/member/mip-cooperation/list/index.wxml',
-        click: 'data-id="{{item.id}}" bind:tap="openCard"',
-      },
-      {
         config: 'src/pages/profile/index.json',
         template: 'src/pages/profile/index.wxml',
         click: 'bind:tap="openCooperation" bind:longpress="deleteCooperationCard"',
@@ -157,10 +152,8 @@ describe('MIP cooperation role visual component', () => {
       expect(template).toContain(page.click)
     }
 
-    const list = source('src/packages/member/mip-cooperation/list/index.wxml')
     const profile = source('src/pages/profile/index.wxml')
-    expect(list).not.toContain('item.roleKey ===')
-    expect(list).toContain('item.author.avatarUrl')
+    expect(profile).not.toContain('item.roleKey ===')
     expect(profile).not.toContain('/assets/figma/profile/role-strategist.png')
   })
 })

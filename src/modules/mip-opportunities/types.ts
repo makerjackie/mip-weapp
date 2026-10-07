@@ -179,21 +179,6 @@ export interface OpportunityCatalog {
   abilityTags: OpportunityTag[]
 }
 
-export type PeopleKindFilter = 'ALL' | 'PLAYER' | 'GUEST'
-export type PeopleSearchScope = 'GLOBAL' | 'PLAYER'
-
-export interface PeopleFilter {
-  scope?: PeopleSearchScope
-  kind?: PeopleKindFilter
-  keyword?: string
-  branchId?: BranchId
-  roleKey?: CooperationRoleKey
-  industryTagIds?: string[]
-  abilityTagIds?: string[]
-  cursor?: string
-  limit?: number
-}
-
 export interface PublicProfileOrganization {
   name: string
   role?: string
@@ -238,11 +223,6 @@ export interface ProfileInfluenceSummary {
   interestCount: number
   visitorCount: number
   heartCount: number
-}
-
-export interface PeoplePage {
-  items: PublicPerson[]
-  nextCursor?: string
 }
 
 export interface PublicPersonDetails {

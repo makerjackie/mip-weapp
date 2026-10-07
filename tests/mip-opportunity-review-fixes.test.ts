@@ -166,7 +166,6 @@ describe('MIP opportunity review fixes', () => {
   const editorView = source('src/packages/member/mip-opportunities/editor/index.wxml')
   const detailScript = source('src/packages/member/mip-opportunities/detail/index.ts')
   const detail = source('src/packages/member/mip-opportunities/detail/index.wxml')
-  const mine = source('src/packages/member/mip-opportunities/mine/index.wxml')
   const card = source('src/components/mip-opportunity-card/index.wxml')
   const cardScript = source('src/components/mip-opportunity-card/index.ts')
   const catalogSource = source('src/modules/mip-opportunities/catalog.ts')
@@ -240,12 +239,12 @@ describe('MIP opportunity review fixes', () => {
     // 卡片取值链：regionText 优先 → locationText（调用方 locationDisplay 兜底）→ cityText。
     expect(cardScript).toContain(`regionText: { type: String, value: '' }`)
     expect(card).toContain('地区：{{regionText || locationText || cityText}}')
-    // 详情/机会 Tab/mine 列表/首页信息流/我的页都透传 regionText，服务端将来回传即生效。
+    // 详情/机会 Tab/首页信息流/我的页都透传 regionText，服务端将来回传即生效。
+    // 2026-10-07：mine 列表页删除后，档案页「相关机会」栏即为本人视角列表。
     expect(detail).toContain(`region-text="{{item.regionText || ''}}"`)
     expect(discovery).toContain(`region-text="{{item.regionText || ''}}"`)
     expect(home).toContain(`region-text="{{item.regionText || ''}}"`)
     expect(profile).toContain(`region-text="{{item.regionText || ''}}"`)
-    expect(mine).toContain('{{item.regionText || item.commercialTerms.locationDisplay')
     // 无数据时不劣化：城市名兜底链保持现状。
     expect(detail).toContain(`location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}"`)
     expect(discovery).toContain(`location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}"`)

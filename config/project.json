@@ -53,10 +53,6 @@
       "pathName": "packages/member/mip-card-edit/index"
     },
     {
-      "name": "玩家与嘉宾",
-      "pathName": "packages/member/mip-people/index"
-    },
-    {
       "name": "公开档案",
       "pathName": "packages/member/mip-public-profile/index"
     },
@@ -109,16 +105,8 @@
       "pathName": "packages/member/mip-opportunities/editor/index"
     },
     {
-      "name": "我的机会",
-      "pathName": "packages/member/mip-opportunities/mine/index"
-    },
-    {
       "name": "消息与机会权限",
       "pathName": "packages/member/mip-opportunity-settings/index"
-    },
-    {
-      "name": "合作卡",
-      "pathName": "packages/member/mip-cooperation/list/index"
     },
     {
       "name": "合作卡详情",

@@ -503,7 +503,7 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
       )`)
     params.push(...filter.industryTagIds)
   }
-  // 与人才名录(listPeople)同一能力口径：档案 ABILITY 标签，尊重 $.abilities 可见性。
+  // 能力口径：档案 ABILITY 标签，尊重 $.abilities 可见性。
   if (filter.abilityTagIds.length) {
     where.push(`COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.abilities')), 'true') <> 'false'
       AND EXISTS (

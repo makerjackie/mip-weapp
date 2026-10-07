@@ -60,7 +60,8 @@ beforeEach(() => {
 describe('MIP opportunity editor required fields', () => {
   it('keeps every required field and cooperation roles in the basic section', () => {
     const view = source('src/packages/member/mip-opportunities/editor/index.wxml')
-    const advancedTrigger = view.indexOf('更多设置')
+    // 2026-10-07：「更多设置」折叠区删除后，基础区以底部固定操作条为界。
+    const actionsAnchor = view.indexOf('id="opportunity-editor-fixed-actions"')
 
     for (const id of [
       'opportunity-field-title',
@@ -70,7 +71,7 @@ describe('MIP opportunity editor required fields', () => {
       'opportunity-field-roles',
     ]) {
       expect(view).toContain(`id="${id}"`)
-      expect(view.indexOf(`id="${id}"`)).toBeLessThan(advancedTrigger)
+      expect(view.indexOf(`id="${id}"`)).toBeLessThan(actionsAnchor)
     }
     // J4-04 marks description optional while retaining its 300-character input limit.
     const descriptionBlock = view.slice(

@@ -8,8 +8,6 @@ import type {
   OpportunityPage,
   OpportunityTag,
   OpportunityTypeKey,
-  PeopleFilter,
-  PeoplePage,
   PublicPerson,
   PublicProfileAggregate,
   PublicProfileBadge,
@@ -277,22 +275,6 @@ export function parseOpportunityDetail(value: unknown): OpportunityDetail {
   return parseOpportunityResponse(value) as unknown as OpportunityDetail
 }
 
-export function normalizePeopleFilter(value: PeopleFilter): PeopleFilter {
-  const scope = value.scope === 'PLAYER' || (!value.scope && value.kind === 'PLAYER')
-    ? 'PLAYER'
-    : 'GLOBAL'
-  return {
-    scope,
-    keyword: text(value.keyword, 80, '关键词', false) || undefined,
-    branchId: value.branchId,
-    roleKey: value.roleKey && isCooperationRoleKey(value.roleKey) ? value.roleKey : undefined,
-    industryTagIds: uniqueStrings(value.industryTagIds, 8, '行业标签'),
-    abilityTagIds: uniqueStrings(value.abilityTagIds, 8, '能力标签'),
-    cursor: text(value.cursor, 768, '分页位置', false) || undefined,
-    limit: Math.min(30, Math.max(1, Math.trunc(value.limit || 20))),
-  }
-}
-
 function responseText(value: unknown, maximum: number, required = false) {
   const result = typeof value === 'string' ? value.trim() : ''
   if ((required && !result) || result.length > maximum) {
@@ -442,18 +424,6 @@ export function parsePublicPerson(value: unknown): PublicPerson {
         }
       : {}),
     badges: publicBadges(source.badges),
-  }
-}
-
-export function parsePeoplePage(value: unknown): PeoplePage {
-  const source = record(value)
-  if (!Array.isArray(source.items) || source.items.length > 30) {
-    throw new Error('人才服务返回了无效响应')
-  }
-  const nextCursor = responseText(source.nextCursor, 768)
-  return {
-    items: source.items.map(parsePublicPerson),
-    ...(nextCursor ? { nextCursor } : {}),
   }
 }
 

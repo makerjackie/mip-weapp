@@ -6566,19 +6566,6 @@
       }
     },
     {
-      "key": "coop-合作卡列表",
-      "route": "packages/member/mip-cooperation/list/index",
-      "reference": "2004_2227_合作卡.html",
-      "crop": {
-        "topPx": 124,
-        "bottomPx": 0
-      },
-      "fixture": {
-        "state": "ready",
-        "figmaList": true
-      }
-    },
-    {
       "key": "opportunities-机会详情-访客-默认封面",
       "route": "packages/member/mip-opportunities/detail/index",
       "reference": "2188_42941_机会详情-访客视角-默认封面.html",

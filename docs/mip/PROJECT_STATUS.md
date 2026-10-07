@@ -17,7 +17,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 70 条小程序路由、102 个迁移（均已锁定）、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 67 条小程序路由、102 个迁移（均已锁定）、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -34,6 +34,16 @@
 - 规划验证：2026-09-29 完整 `pnpm verify:all` 通过；文档检查、53 组场景唯一主责映射、22 个工作包依赖无环检查及 diff 检查通过。Web 构建仍有既有 bundle 大小提示，未导致门禁失败；以上不替代业务运行验收。
 - 业务待决统一见 REQUIREMENTS 的 Q-ADMIN-02～09；Q-ADMIN-01 已确认下架恢复和重新招募，只影响相关步骤；不重新创建第二套问题或验收表。
 - 后续每次只在此更新当前工作包/小步骤、最近验证、当前局部阻塞和下一步；场景实现/验证结果仍在 COVERAGE_MATRIX。
+
+## 2026-10-07 两个机会「死页」与编辑器「更多设置」删除（MIW-42）
+
+客户拍板：`packages/member/mip-opportunities/mine`（我的机会）与 `packages/member/mip-cooperation/list`（合作卡列表）两个无导航入口的页面删除；发布机会编辑器的「更多设置」折叠区（金额范围/合作地点/发布范围/行业/能力/团队成员）不是客户需求，一并删除。路由契约三处（app.json / runtime-pages.json / project.json）同步至 67 条（用户分包 59→57）。
+
+安全删法——数据与提交组装保留，仅删 UI 与交互：编辑器不再渲染「更多设置」表单块与团队成员选择器，但 `industryTagIds/abilityTagIds/minAmountYuan/maxAmountYuan/locationTypes/locationCityTagIds/scopeType/branchId/teamMembers` 仍参与详情回填与 save() 载荷组装，编辑存量机会时这些字段原值原样带回，不会误清；新发布的机会这些字段传空（服务端 `normalizeDraft` 本就全部可选），字段改由管理后台 `admin-web` 机会编辑表单维护。合作卡列表页删除后其职责由既有页面承接：本人合作卡管理在「我的」档案页相关合作卡栏（长按删除，`deletePortfolioItem` 三栏统一口径，J6-01~03）；浏览入口在机会页人才合作 Tab；M14/M22/M55 三条 `queryFixture` 改挂 `pages/opportunities/index`（reLaunch 携 `mode=cooperation`，页面 `onLoad` 解析后落人才合作 Tab 取 `cooperationTalents`）。MIW-40 订阅引导的 mine 页挂载点删除，详情页是唯一 pending 消费方（S8 落地页）。`listPeople` 全链下线（客户端模块/transport/云函数 domain+入口/demo 脚本），`mip-opportunities-api` 需重新部署。
+
+## 2026-10-06 人才名录收敛为人才合作 Tab（MIW-42）
+
+客户确认「人才合作」Tab 就是人才名录/目录本体，且属玩家（会员）权益；独立全局人脉目录页 `packages/member/mip-people/index` 与机会列表底部「找不到想要的？打开更多入口」入口（无会员门槛，构成权益绕行）一并删除。路由契约三处（app.json / runtime-pages.json / project.json）同步至 69 条（用户分包 60→59）；`runtime-pages.json` 移除 M29 路由与 people 交互场景，M22/M55 `queryFixture` 改由 `mip-cooperation/list` 的 `talents` 提供 `profileRef`（合作卡详情 M14 的 fixture 链早已依赖同一来源）。`mip-opportunities` 模块的 `listPeople` 未整体下线：发布机会编辑器的团队成员选择器（最多 8 名有效玩家）仍依赖它，因此保留为仅玩家口径——服务端 `discovery.listPeople` 强制拼接 ACTIVE `mip_membership_entitlements`，原先的 GLOBAL（无门槛游客目录）范围删除，关闭绕行；客户端 `PeopleFilter` 收敛为 `keyword/limit`，`PeopleKindFilter/PeopleSearchScope` 与 cursor 分页移除。`mip-banners-api` 允许列表移除该路由。`mip-opportunities/mine` 与 `mip-cooperation/list` 两个页面本轮保留未删（后经 2026-10-07 客户确认已删除，见上条）。云函数 `mip-opportunities-api` 需重新部署后 PLAYER-only 口径才在生产生效。
 
 ## 2026-10-05 会员方案后台改价（MIW-35）
 
@@ -103,7 +113,7 @@ MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示�
 
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
-| 小程序路由 | 70 条：5 条主包、60 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
+| 小程序路由 | 67 条：5 条主包、57 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
 | 数据库 | 102 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
 | 管理合同 | 240 个 operation：105 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | Web 开放范围 | 105 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |

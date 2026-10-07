@@ -221,8 +221,9 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(editor.indexOf('id="opportunity-field-types"')).toBeLessThan(editor.indexOf('id="opportunity-field-title"'))
     expect(editor.indexOf('id="opportunity-field-status"')).toBeLessThan(editor.indexOf('id="opportunity-field-visibility"'))
     expect(editor.indexOf('主营地区（选填）')).toBeGreaterThan(0)
-    expect(editor.indexOf('项目封面（选填）')).toBeLessThan(editor.indexOf('更多设置'))
-    expect(editor).toContain('wx:if="{{advancedOpen}}"')
+    // 2026-10-07：「更多设置」折叠区删除后，封面即基础区最后一个字段。
+    expect(editor.indexOf('项目封面（选填）')).toBeGreaterThan(editor.indexOf('id="opportunity-field-visibility"'))
+    expect(editor).not.toContain('wx:if="{{advancedOpen}}"')
     expect(editor).toContain('id="opportunity-editor-fixed-actions"')
     // journey-review J4-04 ③：液态玻璃底部条（mip-sticky-actions 壳）+ 黄芯胶囊主按钮（mip-pill-button）。
     expect(editor).toContain('<mip-sticky-actions id="opportunity-editor-fixed-actions">')
@@ -230,7 +231,7 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(editor).toContain('bind:tap="saveDraft"')
     expect(editor).toContain('bind:tap="publish"')
     expect(editor).toContain('bind:tap="pasteAndRecognize"')
-    expect(editor).toContain('bind:tap="openTeamPicker"')
+    expect(editor).not.toContain('openTeamPicker')
   })
 
   it('distinguishes create, draft edit and published edit behavior', () => {
@@ -264,7 +265,7 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(editor).toContain('wx:if="{{coverMessage}}"')
     expect(editor).toContain('{{coverMessage}}')
     expect(editorScript).toContain('封面为选填，可以稍后补充。')
-    expect(editor.indexOf('wx:if="{{coverMessage}}"')).toBeLessThan(editor.indexOf('更多设置'))
+    expect(editor.indexOf('wx:if="{{coverMessage}}"')).toBeGreaterThan(editor.indexOf('项目封面（选填）'))
     expect(editor.indexOf('bind:tap="saveDraft"')).toBeLessThan(editor.indexOf('wx:if="{{message}}"'))
     expect(editor.indexOf('wx:if="{{message}}"')).toBeLessThan(editor.indexOf('id="opportunity-editor-fixed-actions"'))
   })

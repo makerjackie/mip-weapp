@@ -29,11 +29,11 @@ describe('MIP member publication lifecycle', () => {
       source('src/packages/member/mip-cases/detail/index.wxml'),
     ].join('\n')
     const listTemplates = [
-      source('src/packages/member/mip-cooperation/list/index.wxml'),
+      source('src/pages/profile/index.wxml'),
       source('src/packages/member/mip-cases/list/index.wxml'),
     ].join('\n')
     const listPages = [
-      source('src/packages/member/mip-cooperation/list/index.ts'),
+      source('src/pages/profile/index.ts'),
       source('src/packages/member/mip-cases/list/index.ts'),
     ].join('\n')
 
@@ -47,11 +47,11 @@ describe('MIP member publication lifecycle', () => {
     expect(detailTemplates).toContain('删除案例')
     // journey-review C5（2026-09-21 拍板）：列表删除入口收敛为长按卡片（原生 longpress 手势）+
     // 微信原生确认弹窗（删除警示红）→ 卡片移除 + toast「已删除」（1.8s），按钮行移除。
-    expect(listTemplates).toContain('bind:longpress="deleteCard"')
+    // 2026-10-07：合作卡独立列表页删除后，本人合作卡列表即档案页「相关合作卡」栏。
+    expect(listTemplates).toContain('bind:longpress="deleteCooperationCard"')
     expect(listTemplates).toContain('bind:longpress="deleteCase"')
-    expect(listTemplates).not.toContain('catch:tap="deleteCard"')
+    expect(listTemplates).not.toContain('catch:tap="deleteCooperationCard"')
     expect(listTemplates).not.toContain('catch:tap="deleteCase"')
-    expect(listTemplates).not.toContain('管理案例')
     expect(listPages).toContain('删除后将无法恢复，是否删除？')
     expect(listPages).toContain('confirmColor: \'#FF4D5E\'')
     expect(listPages).toContain('duration: 1800')

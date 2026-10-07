@@ -6,18 +6,11 @@ const {
   iso,
   jsonObject,
   mutualBlockFilter,
-  ROLE_KEYS,
-  stringList,
   stringValue,
-  uuid,
 } = require('./common')
-const { assertSelectableTags } = require('./opportunities')
 const { opportunityVisibility } = require('./journey-access')
 const { loadProfileInfluenceSummary } = require('./profile-influence')
 const { loadPublicLevel } = require('./public-person-details')
-
-const PEOPLE_KINDS = new Set(['ALL', 'PLAYER', 'GUEST'])
-const PEOPLE_SEARCH_SCOPES = new Set(['GLOBAL', 'PLAYER'])
 
 const activeEntitlementSql = `EXISTS (
   SELECT 1 FROM mip_membership_entitlements entitlement
@@ -70,10 +63,6 @@ function limit(value, fallback = 20) {
   return Math.min(30, Math.max(1, Number.isInteger(parsed) ? parsed : fallback))
 }
 
-function likePattern(value) {
-  return `%${value.replaceAll('=', '==').replaceAll('%', '=%').replaceAll('_', '=_')}%`
-}
-
 function encodePeopleCursor(timestamp, userId, caller) {
   const profileRef = createProfileRef(
     { appId: caller.appId, userId },
@@ -82,42 +71,6 @@ function encodePeopleCursor(timestamp, userId, caller) {
   return Buffer.from(JSON.stringify({ timestamp: iso(timestamp), profileRef }), 'utf8').toString('base64url')
 }
 
-function decodePeopleCursor(value, caller) {
-  if (!value) return null
-  if (typeof value !== 'string' || value.length > 768) throw new Error('VALIDATION_FAILED')
-  try {
-    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
-    const timestamp = iso(parsed.timestamp)
-    if (!timestamp) throw new Error('INVALID_CURSOR')
-    const userId = readProfileRef(parsed.profileRef, caller.appId, caller.profileRefSecret)
-    return { timestamp, userId }
-  }
-  catch (error) {
-    if (error?.message === 'IDENTITY_CONFIG_REQUIRED') throw error
-    throw new Error('VALIDATION_FAILED')
-  }
-}
-
-function normalizePeopleFilter(value = {}, caller) {
-  const kind = String(value.kind || 'ALL').trim().toUpperCase()
-  if (!PEOPLE_KINDS.has(kind)) throw new Error('VALIDATION_FAILED')
-  const requestedScope = String(value.scope || '').trim().toUpperCase()
-  if (requestedScope && !PEOPLE_SEARCH_SCOPES.has(requestedScope)) throw new Error('VALIDATION_FAILED')
-  const branchId = stringValue(value.branchId, 36, 'VALIDATION_FAILED', false) || null
-  if (branchId && !uuid(branchId)) throw new Error('VALIDATION_FAILED')
-  const roleKey = stringValue(value.roleKey, 32, 'VALIDATION_FAILED', false)
-  if (roleKey && !ROLE_KEYS.has(roleKey)) throw new Error('VALIDATION_FAILED')
-  return {
-    scope: requestedScope || (kind === 'PLAYER' ? 'PLAYER' : 'GLOBAL'),
-    keyword: stringValue(value.keyword, 80, 'VALIDATION_FAILED', false),
-    branchId,
-    roleKey,
-    industryTagIds: stringList(value.industryTagIds, 8, 'VALIDATION_FAILED', uuid),
-    abilityTagIds: stringList(value.abilityTagIds, 8, 'VALIDATION_FAILED', uuid),
-    cursor: decodePeopleCursor(value.cursor, caller),
-    limit: limit(value.limit),
-  }
-}
 
 function visibleFields(value) {
   const source = jsonObject(value)
@@ -273,133 +226,6 @@ async function loadPublicBadges(database, appId, userIds) {
   return byUser
 }
 
-async function listPeople(database, caller, rawFilter = {}) {
-  const filter = normalizePeopleFilter(rawFilter, caller)
-  await assertSelectableTags(database, caller.appId, [
-    ...filter.industryTagIds.map(id => [id, 'INDUSTRY']),
-    ...filter.abilityTagIds.map(id => [id, 'ABILITY']),
-  ])
-  const where = ["u.app_id = ?", "u.status = 'ACTIVE'", "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.talentSearch')), 'true') <> 'false'"]
-  const params = [caller.appId]
-  const blockFilter = mutualBlockFilter(caller.userId, 'u.id', 'u.app_id')
-  if (blockFilter.sql) {
-    where.push(blockFilter.sql)
-    params.push(...blockFilter.params)
-  }
-  if (filter.scope === 'PLAYER') where.push(activeEntitlementSql)
-  if (filter.keyword) {
-    const pattern = likePattern(filter.keyword)
-    where.push(`(
-      (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.nickname')), 'true') <> 'false'
-        AND p.nickname LIKE ? ESCAPE '=')
-      OR (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.identityStatus')), 'true') <> 'false'
-        AND p.identity_status LIKE ? ESCAPE '=')
-      OR (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.headline')), 'true') <> 'false'
-        AND p.headline LIKE ? ESCAPE '=')
-      OR (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.introduction')), 'true') <> 'false'
-        AND p.introduction LIKE ? ESCAPE '=')
-      OR (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.companies')), 'true') <> 'false'
-        AND CAST(p.companies_json AS CHAR) LIKE ? ESCAPE '=')
-      OR (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.organizations')), 'true') <> 'false'
-        AND CAST(p.organizations_json AS CHAR) LIKE ? ESCAPE '=')
-      OR (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.primaryBranch')), 'true') <> 'false'
-        AND (branch.name LIKE ? ESCAPE '=' OR branch.city_name LIKE ? ESCAPE '='))
-      OR (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.industry')), 'true') <> 'false'
-        AND industry.label LIKE ? ESCAPE '=')
-      OR (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.abilities')), 'true') <> 'false'
-        AND EXISTS (
-          SELECT 1 FROM mip_profile_tags ability_search
-          INNER JOIN mip_tags ability_search_tag
-            ON ability_search_tag.app_id = ability_search.app_id
-              AND ability_search_tag.id = ability_search.tag_id
-              AND ability_search_tag.kind = 'ABILITY'
-              AND ability_search_tag.enabled = 1
-          WHERE ability_search.app_id = u.app_id
-            AND ability_search.user_id = u.id
-            AND ability_search.relation = 'ABILITY'
-            AND ability_search_tag.label LIKE ? ESCAPE '='
-        ))
-    )`)
-    params.push(...Array.from({ length: 10 }, () => pattern))
-  }
-  if (filter.branchId) {
-    where.push(`u.primary_branch_id = ?
-      AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.primaryBranch')), 'true') <> 'false'`)
-    params.push(filter.branchId)
-  }
-  if (filter.roleKey) {
-    where.push(`EXISTS (
-      SELECT 1 FROM mip_cooperation_cards role_card
-      WHERE role_card.app_id = u.app_id
-        AND role_card.owner_user_id = u.id
-        AND role_card.role_key = ?
-        AND role_card.status = 'PUBLISHED'
-    )`)
-    params.push(filter.roleKey)
-  }
-  if (filter.industryTagIds.length) {
-    where.push(`COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.industry')), 'true') <> 'false'
-      AND EXISTS (
-        SELECT 1 FROM mip_profile_tags industry_filter
-        INNER JOIN mip_tags industry_filter_tag
-          ON industry_filter_tag.app_id = industry_filter.app_id
-            AND industry_filter_tag.id = industry_filter.tag_id
-            AND industry_filter_tag.kind = 'INDUSTRY'
-            AND industry_filter_tag.enabled = 1
-        WHERE industry_filter.app_id = u.app_id
-          AND industry_filter.user_id = u.id
-          AND industry_filter.relation IN ('PRIMARY_INDUSTRY', 'INDUSTRY')
-          AND industry_filter.tag_id IN (${filter.industryTagIds.map(() => '?').join(', ')})
-      )`)
-    params.push(...filter.industryTagIds)
-  }
-  if (filter.abilityTagIds.length) {
-    where.push(`COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.abilities')), 'true') <> 'false'
-      AND EXISTS (
-        SELECT 1 FROM mip_profile_tags ability_filter
-        INNER JOIN mip_tags ability_filter_tag
-          ON ability_filter_tag.app_id = ability_filter.app_id
-            AND ability_filter_tag.id = ability_filter.tag_id
-            AND ability_filter_tag.kind = 'ABILITY'
-            AND ability_filter_tag.enabled = 1
-        WHERE ability_filter.app_id = u.app_id
-          AND ability_filter.user_id = u.id
-          AND ability_filter.relation = 'ABILITY'
-          AND ability_filter.tag_id IN (${filter.abilityTagIds.map(() => '?').join(', ')})
-      )`)
-    params.push(...filter.abilityTagIds)
-  }
-  if (filter.cursor) {
-    where.push('(u.created_at < ? OR (u.created_at = ? AND u.id < ?))')
-    params.push(filter.cursor.timestamp, filter.cursor.timestamp, filter.cursor.userId)
-  }
-  const rows = await database.query(
-    `${profileSelect}
-     WHERE ${where.join(' AND ')}
-     ORDER BY u.created_at DESC, u.id DESC
-     LIMIT ${filter.limit + 1}`,
-    params,
-  )
-  const pageRows = rows.slice(0, filter.limit)
-  const userIds = pageRows.map(row => row.profile_user_id)
-  const [tags, badges] = await Promise.all([
-    loadProfileTags(database, caller.appId, userIds),
-    loadPublicBadges(database, caller.appId, userIds),
-  ])
-  return {
-    items: pageRows.map(row => publicProfileDto(
-      row,
-      tags.get(row.profile_user_id) || [],
-      caller,
-      undefined,
-      badges.get(row.profile_user_id) || [],
-    )),
-    nextCursor: rows.length > filter.limit && pageRows.length
-      ? encodePeopleCursor(pageRows.at(-1).joined_at, pageRows.at(-1).profile_user_id, caller)
-      : undefined,
-  }
-}
-
 async function getPublicProfileAggregate(database, caller, input = {}) {
   const profileRef = typeof input.profileRef === 'string' ? input.profileRef.trim() : ''
   const targetUserId = readProfileRef(profileRef, caller.appId, caller.profileRefSecret)
@@ -517,11 +343,8 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
 }
 
 module.exports = {
-  decodePeopleCursor,
   encodePeopleCursor,
   getPublicProfileAggregate,
-  listPeople,
   loadPublicBadges,
-  normalizePeopleFilter,
   publicProfileDto,
 }
