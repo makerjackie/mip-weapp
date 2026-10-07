@@ -15,9 +15,11 @@ describe('MIP member publication lifecycle', () => {
 
     expect(server).toContain('\'unpublishCooperationCard\'')
     expect(server).toContain('\'unpublishSuperCase\'')
-    expect(cooperationClient).toContain('\'unpublishCooperationCard\'')
+    // MIW-48（2026-10-07 拍板）：合作卡不需要下架操作——小程序端不再暴露 unpublish，
+    // 服务端 API 保留给管理流程；超级案例不受影响。
+    expect(cooperationClient).not.toContain('\'unpublishCooperationCard\'')
     expect(caseClient).toContain('\'unpublishSuperCase\'')
-    expect(cooperationPage).toContain('cooperationModule.unpublish(item.id, item.version)')
+    expect(cooperationPage).not.toContain('cooperationModule.unpublish')
     expect(casePage).toContain('superCaseModule.unpublish(item.id, item.version)')
   })
 
@@ -41,9 +43,11 @@ describe('MIP member publication lifecycle', () => {
     expect(caseDomain).toContain('SET status = \'UNPUBLISHED\', version = version + 1')
     expect(caseDomain).not.toMatch(/DELETE FROM mip_super_cases/)
     expect(cooperationDomain).not.toMatch(/DELETE FROM mip_cooperation_cards/)
-    expect(detailTemplates).toContain('下架合作卡')
+    expect(detailTemplates).not.toContain('下架合作卡')
     expect(detailTemplates).toContain('下架案例')
-    expect(detailTemplates).toContain('删除合作卡')
+    expect(detailTemplates).toContain('bind:longpress="onCardLongPress"')
+    const cooperationDetailPage = source('src/packages/member/mip-cooperation/detail/index.ts')
+    expect(cooperationDetailPage).toContain('删除合作卡')
     expect(detailTemplates).toContain('删除案例')
     // journey-review C5（2026-09-21 拍板）：列表删除入口收敛为长按卡片（原生 longpress 手势）+
     // 微信原生确认弹窗（删除警示红）→ 卡片移除 + toast「已删除」（1.8s），按钮行移除。

@@ -9,7 +9,9 @@ const {
   readTalentCursor,
 } = require('../lib/talent-cursor')
 const { confirmAiDraft, normalizeAiConfirmation } = require('./ai-confirmation')
+const { loadPublicBadges } = require('./discovery')
 const { assertSelectableTags } = require('./opportunities')
+const { loadPublicLevel } = require('./public-person-details')
 const {
   ABILITY_KEYS,
   ROLE_KEYS,
@@ -260,7 +262,7 @@ const cardFrom = `
 
 const cardSelect = `SELECT ${cardFields} ${cardFrom}`
 
-function author(row, caller, { includeProfileRef = true } = {}) {
+function author(row, caller, { includeProfileRef = true, level, badge } = {}) {
   const profileVisibility = jsonObject(row.visibility_json)
   return {
     ...(includeProfileRef
@@ -273,10 +275,28 @@ function author(row, caller, { includeProfileRef = true } = {}) {
     primaryIndustry: profileVisibility.industry === false || !row.industry_tag_id
       ? undefined
       : { id: row.industry_tag_id, key: row.industry_key, label: row.industry_label },
+    ...(level ? { level } : {}),
+    ...(badge ? { badge } : {}),
   }
 }
 
-function summary(row, caller) {
+// 详情页作者头（figma 2704:13454）：等级与首枚佩戴勋章。与公开档案同口径
+// （loadPublicLevel/loadPublicBadges），无成长账户、等级配置不完整或未佩戴时省略。
+async function loadAuthorExtras(database, caller, row) {
+  const [level, badges] = await Promise.all([
+    loadPublicLevel(database, caller.appId, row.owner_user_id),
+    loadPublicBadges(database, caller.appId, [row.owner_user_id]),
+  ])
+  const badge = (badges.get(row.owner_user_id) || [])[0]
+  return {
+    level: level ? { number: level.number, name: level.name } : undefined,
+    badge: badge
+      ? { name: badge.name, imageUrl: badge.image_url || undefined, placeholderShape: badge.placeholder_shape }
+      : undefined,
+  }
+}
+
+function summary(row, caller, extras = {}) {
   const mine = Boolean(caller.userId && caller.userId === row.owner_user_id)
   return {
     id: row.id,
@@ -286,7 +306,7 @@ function summary(row, caller) {
     abilityScores: jsonObject(row.ability_scores_json),
     status: row.status,
     publishedAt: iso(row.published_at),
-    author: author(row, caller),
+    author: author(row, caller, extras),
     mine,
     ...(mine ? { version: Number(row.version) } : {}),
   }
@@ -617,7 +637,7 @@ async function getCooperationCard(database, caller, id) {
     interestActive = interest?.status === 'ACTIVE'
   }
   return {
-    ...summary(row, caller),
+    ...summary(row, caller, await loadAuthorExtras(database, caller, row)),
     roleFields: jsonObject(row.role_fields_json),
     version: Number(row.version),
     interestActive,

@@ -51,7 +51,7 @@ export const cooperationQuirkFields = [
   { key: 'advice', label: '预防发作建议（行为）', placeholder: '示例：请跟我强调事情的紧迫性' },
 ] as const
 
-/** 长混迹的圈子：单组结构化字段（皮条客菜单区），支持多组（roleFields.circles） */
+/** 常混迹的圈子：单组结构化字段（皮条客菜单区），支持多组（roleFields.circles） */
 export const cooperationCircleFields = [
   { key: 'name', label: '圈子名称', placeholder: '示例：MIP全球创意人平台' },
   { key: 'identity', label: '圈内身份', placeholder: '示例：资深玩家' },
@@ -156,7 +156,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
     abilities: ['拉业务', '拉资源', '识别商机', '经营圈子'],
     targetDirection: '引荐客户、促成生意和带来成交额',
     abilityLabels: ['开拓人脉', '引荐人脉', '长期维护', '引荐商机', '卖点提炼', '跨圈交际'],
-    menu: { title: '长混迹的圈子', structured: 'circles', fields: [] },
+    menu: { title: '常混迹的圈子', structured: 'circles', fields: [] },
     legacyFieldKeys: ['resources', 'target'],
   },
   {
@@ -167,7 +167,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
     targetDirection: '明确生意行业和商业模式服务人数',
     abilityLabels: ['商机洞察', '财务测算', '盈利建模', '资源整合', '利益统筹', '合作谈判'],
     menu: {
-      title: '',
+      title: '本人的菜单',
       structured: '',
       fields: [
         { key: 'industries', label: '做过行业或在做行业', input: 'tags', placeholder: '示例：餐饮、商业地产' },
@@ -185,7 +185,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
     targetDirection: '明确投资领域、资金规模和目标规模',
     abilityLabels: ['投资洞察', '上市规划', '股权规划', '投融策划', '融资达成', '资源整合'],
     menu: {
-      title: '',
+      title: '本人的菜单',
       structured: '',
       fields: [
         { key: 'investment_fields', label: '擅长领域', input: 'tags', placeholder: '示例：消费、医疗' },
@@ -203,7 +203,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
     targetDirection: '明确作品类型和产品策划数量',
     abilityLabels: ['项目调研', '项目定位', '创新创意', '方法设计', '提案竞标', '落地规划'],
     menu: {
-      title: '',
+      title: '本人的菜单',
       structured: '',
       fields: [
         { key: 'planning_types', label: '类型', input: 'tags', placeholder: '示例：品牌策划、活动策划' },
@@ -221,7 +221,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
     targetDirection: '明确视觉作品类型和服务品牌数量',
     abilityLabels: ['视觉策略', '视觉设计', '素材搜寻', '视觉落地', '视觉管理', '提案竞标'],
     menu: {
-      title: '',
+      title: '本人的菜单',
       structured: '',
       fields: [
         { key: 'visual_types', label: '类型', input: 'tags', placeholder: '示例：品牌 VI、包装' },
@@ -239,7 +239,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
     targetDirection: '明确项目数量和项目类型',
     abilityLabels: ['目标计划', '执行统筹', '进度复盘', '沟通机制', '标准研发', '应急沟通'],
     menu: {
-      title: '',
+      title: '本人的菜单',
       structured: '',
       fields: [
         { key: 'project_types', label: '类型', input: 'tags', placeholder: '示例：快闪店、展会' },

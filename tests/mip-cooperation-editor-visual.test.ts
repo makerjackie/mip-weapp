@@ -49,8 +49,39 @@ describe('MIP cooperation card editor per the 2571:34139 mockup', () => {
   })
 
   it('keeps the single save capsule and publishes drafts from the detail page instead', () => {
-    expect(view).toMatch(/bind:tap="saveCard"[\s\S]*?保存/)
-    expect(read('src/packages/member/mip-cooperation/detail/index.wxml')).toMatch(/bind:tap="publish"[\s\S]*?发布合作卡/)
+    expect(view).toMatch(/保存[\s\S]*?bind:tap="saveCard"/)
+    expect(view).toContain('mip-sticky-actions')
+    expect(view).toContain('mip-pill-button')
+    expect(view).not.toContain('bind:tap="preview"')
+    // 按钮区整块黄色：全宽单元格撑起胶囊（2026-10-07 拍板），内容区不再有页内返回
+    expect(view).toContain('grid w-full grid-cols-1 items-center')
+    expect(view).toContain('min-w-0')
+    expect((view.match(/<app-page-exit/g) || []).length).toBe(1)
+    const detailView = read('src/packages/member/mip-cooperation/detail/index.wxml')
+    expect(detailView).toContain('bind:tap="publish"')
+    expect(detailView).toContain('发布')
     expect(read('src/packages/member/mip-cooperation/detail/index.ts')).toMatch(/publish: true/)
+  })
+
+  it('renders the 2571:34139 section anatomy (square menu rows, star metrics, glass save bar)', () => {
+    // 分组标题：16px 图标 + fs16 标题
+    expect(view).toContain('size="{{16}}"')
+    // 菜单/臭毛病行为直角行 + 1px 拼缝
+    expect(view).not.toMatch(/mt-\[22rpx\]/)
+    expect((view.match(/mt-\[2rpx\]/g) || []).length).toBeGreaterThanOrEqual(6)
+    // 星标 20x20，列距 11px
+    expect(view).toContain('size="{{20}}"')
+    expect(view).toContain('gap-[8rpx]')
+    expect(view).toContain('gap-[22rpx]')
+    // AI 助手卡不带描边
+    expect(view).not.toContain('border-brand')
+  })
+
+  it('warns on back navigation with unsaved edits and auto-drafts on confirm', () => {
+    expect(source).toContain('wx.enableAlertBeforeUnload')
+    expect(source).toContain('wx.disableAlertBeforeUnload')
+    expect(source).toMatch(/touch\(\)/)
+    expect(source).toMatch(/saveDraftOnExit/)
+    expect(source).toMatch(/publish: false/)
   })
 })

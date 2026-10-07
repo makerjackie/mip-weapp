@@ -89,20 +89,7 @@ export const cooperationModule = {
     })
   },
 
-  unpublish(
-    id: CooperationCardId,
-    expectedVersion: number,
-    idempotencyKey = createMutationKey('cooperation-unpublish'),
-  ) {
-    const request = callOpportunityApi<{ id: CooperationCardId, status: 'UNPUBLISHED', version: number }>(
-      'unpublishCooperationCard',
-      { id, expectedVersion, idempotencyKey },
-    )
-    return request.then((result) => {
-      cooperationModule.invalidateMine()
-      return result
-    })
-  },
+  // unpublish 已从小程序端移除（MIW-48：合作卡不需要下架操作，服务端 API 保留给管理流程）
 
   archive(
     id: CooperationCardId,

@@ -96,10 +96,11 @@ describe('MIP public profiles', () => {
     expect(opportunityDetail).toContain('consumePendingResume')
     for (const detail of [
       'src/packages/member/mip-opportunities/detail/index.ts',
-      'src/packages/member/mip-cooperation/detail/index.ts',
     ]) {
       expect(source(detail)).toContain('/packages/member/mip-public-profile/index?profileRef=')
     }
+    // MIW-48：合作卡详情访客视角同样展示作者头（2026-10-07 拍板：与本人的差异仅在
+    // 本人态吸底「编辑」）；作者上下文跳转与「感兴趣」仍收敛在玩家档案页。
     // 超级案例 / 合作卡详情（访客视角）没有互动 bar 和发布人模块，不再承载 INTERACT 门禁；
     // 合作卡的感兴趣统一收敛在玩家档案页（figma 2058_12247）。
     for (const detail of [
@@ -111,6 +112,10 @@ describe('MIP public profiles', () => {
       expect(code).not.toContain('profileInterestMutations')
       expect(code).not.toContain('consumePendingResume')
     }
+    // 作者头不做本人/访客视角门禁（门禁只在吸底操作与长按删除）
+    const coopDetail = source('src/packages/member/mip-cooperation/detail/index.wxml')
+    expect(coopDetail).toContain('wx:if="{{item.author}}"')
+    expect(coopDetail).not.toContain('wx:if="{{item.mine}}" class="flex items-center"')
   })
 
   it('keeps the compact summary with the level pill and drops the details module (MIW-29)', () => {

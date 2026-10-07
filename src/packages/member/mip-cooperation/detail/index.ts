@@ -5,9 +5,11 @@ import { cooperationModule, normalizeCooperationCircles, normalizeCooperationQui
 import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigation/client'
 
 interface AbilityView { key: string, label: string, score: number }
-interface RoleFieldView { key: string, label: string, value: string }
-interface CircleGroupView { name: string, identity: string, years: string, trait: string }
-interface QuirkGroupView { external: string, internal: string, advice: string }
+
+/** figma 2704:13454 表格模块：单元格文本直角 32px 行，列宽按设计稿换算为 rpx 模板。 */
+const MENU_GRID_CIRCLES = '128rpx 128rpx 96rpx 1fr'
+const MENU_GRID_FIELDS = '128rpx 160rpx 1fr'
+const MENU_GRID_NAMES = '1fr'
 
 function authorLineOf(item: CooperationCardDetail) {
   return [item.author.cityName?.trim(), item.author.primaryIndustry?.label?.trim()]
@@ -19,16 +21,25 @@ function textEntries(value: CooperationRoleFieldValue | undefined) {
   return Array.isArray(value) ? value.map(item => String(item)).filter(Boolean) : []
 }
 
+function cellText(value: unknown) {
+  const text = String(value ?? '').trim()
+  return text || '—'
+}
+
 Page({
   data: {
     id: '' as CooperationCardId,
     state: 'loading' as 'loading' | 'ready' | 'error',
     item: null as CooperationCardDetail | null,
     abilities: [] as AbilityView[],
-    roleFields: [] as RoleFieldView[],
-    circles: [] as CircleGroupView[],
-    quirks: [] as QuirkGroupView[],
+    roleName: '',
+    menuTitle: '',
+    menuRows: [] as string[][],
+    menuGridTemplate: MENU_GRID_FIELDS,
+    quirkRows: [] as string[][],
+    support: '',
     maxValue: '',
+    badgeUrl: '',
     authorLine: '',
     acting: false,
     message: '',
@@ -59,7 +70,7 @@ Page({
     try {
       const item = await cooperationModule.get(this.data.id)
       const definition = cooperationRoles.find(role => role.key === item.roleKey)
-      // figma 2058_12247：导航标题是角色名（狗策划），「最大价值」黑条承载 roleFields.value。
+      // figma 2704:13454：导航标题是角色名（狗策划），黑条「需要引荐」承载 roleFields.support。
       if (definition?.name) {
         wx.setNavigationBarTitle({ title: definition.name })
       }
@@ -68,52 +79,66 @@ Page({
         label: definition?.abilityLabels[index] || dimension.label,
         score: Number(item.abilityScores[dimension.key] || 0),
       }))
-      const maxValue = String(item.roleFields.value ?? '').trim()
-      const roleFields: RoleFieldView[] = []
       const support = String(item.roleFields.support ?? '').trim()
-      if (support) {
-        roleFields.push({ key: 'support', label: '需要支持或引荐的是', value: support })
-      }
-      for (const field of definition?.menu.fields || []) {
-        const value = item.roleFields[field.key]
-        const text = Array.isArray(value)
-          ? textEntries(value).join('、')
-          : String(value ?? '').trim()
-        if (text) {
-          roleFields.push({ key: field.key, label: field.label, value: text })
-        }
-      }
+      const maxValue = String(item.roleFields.value ?? '').trim()
+
+      // 菜单模块（PRD v1）：皮条客=常混迹的圈子表格，其余角色=本人的菜单字段行；
+      // 历史 string 数组圈子退化为单列名单。
+      const menuTitle = definition?.menu.title || ''
+      let menuRows: string[][] = []
+      let menuGridTemplate = MENU_GRID_FIELDS
       const rawCircles = item.roleFields.circles
-      let circles: CircleGroupView[] = []
-      if (Array.isArray(rawCircles) && rawCircles.every(item => typeof item === 'string')) {
-        const names = textEntries(rawCircles).join('、')
-        if (names) {
-          roleFields.push({ key: 'circles', label: definition?.menu.title || '长混迹的圈子', value: names })
+      if (definition?.menu.structured === 'circles') {
+        if (Array.isArray(rawCircles) && rawCircles.every(entry => typeof entry === 'string')) {
+          menuGridTemplate = MENU_GRID_NAMES
+          menuRows = textEntries(rawCircles).map(name => [name])
+        }
+        else {
+          const entries = (normalizeCooperationCircles(rawCircles) || [])
+            .filter(entry => entry.name || entry.identity || entry.years || entry.trait)
+          if (entries.length) {
+            menuRows = [
+              ['圈子名称', '圈内身份', '圈内年限', '圈子特点'],
+              ...entries.map(entry => [cellText(entry.name), cellText(entry.identity), cellText(entry.years), cellText(entry.trait)]),
+            ]
+            menuGridTemplate = MENU_GRID_CIRCLES
+          }
         }
       }
       else {
-        const circleEntries = normalizeCooperationCircles(rawCircles) || []
-        circles = circleEntries.map(entry => ({
-          name: entry.name || '',
-          identity: entry.identity || '',
-          years: entry.years || '',
-          trait: entry.trait || '',
-        }))
+        const values = (definition?.menu.fields || []).map((field) => {
+          const value = item.roleFields[field.key]
+          const text = Array.isArray(value) ? textEntries(value).join('、') : String(value ?? '').trim()
+          return text
+        })
+        if (values.some(Boolean)) {
+          menuRows = [
+            (definition?.menu.fields || []).map(field => field.label),
+            values.map(value => value || '—'),
+          ]
+        }
       }
+
       const quirkEntries = normalizeCooperationQuirks(item.roleFields.quirks) || []
-      const quirks: QuirkGroupView[] = quirkEntries.map(entry => ({
-        external: entry.external || '',
-        internal: entry.internal || '',
-        advice: entry.advice || '',
-      }))
+      const quirkRows: string[][] = quirkEntries.length
+        ? [
+            ['臭毛病(外显)', '病因(内在)', '预防发作建议(行为)'],
+            ...quirkEntries.map(entry => [cellText(entry.external), cellText(entry.internal), cellText(entry.advice)]),
+          ]
+        : []
+
       this.setData({
         state: 'ready',
         item,
         abilities,
-        roleFields,
-        circles,
-        quirks,
+        roleName: definition?.name || '合作角色',
+        menuTitle,
+        menuRows,
+        menuGridTemplate,
+        quirkRows,
+        support,
         maxValue,
+        badgeUrl: item.author.badge?.imageUrl || '',
         authorLine: authorLineOf(item),
         message: '',
       })
@@ -139,7 +164,7 @@ Page({
       context.scale(ratio, ratio)
       const centerX = entry.width / 2
       const centerY = entry.height / 2
-      // figma 2058_12247：雷达裸放画布，标签加大（13px），半径收一点给四周标签留白。
+      // figma 2704:13454：雷达裸放画布（290px 高），标签 fs12 白色，半径收一点给四周标签留白。
       const radius = Math.min(entry.width, entry.height) * 0.34
       const point = (index: number, scale: number) => {
         const angle = -Math.PI / 2 + index * Math.PI / 3
@@ -181,8 +206,8 @@ Page({
       context.lineWidth = 2
       context.fill()
       context.stroke()
-      context.fillStyle = '#B3B3B3'
-      context.font = '500 13px sans-serif'
+      context.fillStyle = '#FFFFFF'
+      context.font = '500 12px sans-serif'
       context.textBaseline = 'middle'
       this.data.abilities.forEach((ability, index) => {
         const angle = -Math.PI / 2 + index * Math.PI / 3
@@ -194,13 +219,6 @@ Page({
     })
   },
 
-  openAuthor() {
-    const profileRef = this.data.item?.author.profileRef
-    if (profileRef) {
-      caseNavigateTo({ url: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}` })
-    }
-  },
-
   edit() {
     if (this.data.item?.canEdit) {
       caseNavigateTo({ url: `/packages/member/mip-cooperation/editor/index?id=${encodeURIComponent(this.data.id)}` })
@@ -210,7 +228,7 @@ Page({
   /** 编辑页只负责保存；草稿发布入口收敛到详情页 */
   async publish() {
     const item = this.data.item
-    if (!item?.mine || item.status !== 'DRAFT' || this.data.acting) {
+    if (!item?.mine || item.status === 'PUBLISHED' || this.data.acting) {
       return
     }
     this.setData({ acting: true, message: '' })
@@ -236,37 +254,17 @@ Page({
     }
   },
 
-  async unpublish() {
+  /** 本人态长按烘焙卡：原生操作单删除（设计稿无删除入口，产品决策收敛到长按）。 */
+  async onCardLongPress() {
     const item = this.data.item
-    if (!item?.mine || item.status !== 'PUBLISHED' || this.data.acting) {
+    if (!item?.mine || this.data.acting) {
       return
     }
-    this.setData({ acting: true, message: '' })
-    const confirmation = await wx.showModal({
-      title: '下架合作卡',
-      content: '下架后，其他用户将无法查看这张合作卡。',
-      confirmText: '确认下架',
-      confirmColor: '#B30516',
-    }).catch(() => null)
-    if (!confirmation?.confirm) {
-      this.setData({ acting: false })
+    const sheet = await wx.showActionSheet({ itemList: ['删除合作卡'], itemColor: '#B30516' }).catch(() => null)
+    if (!sheet) {
       return
     }
-    try {
-      const result = await cooperationModule.unpublish(item.id, item.version)
-      this.setData({
-        'item.status': result.status,
-        'item.version': result.version,
-        'item.canEdit': true,
-      })
-      wx.showToast({ title: '合作卡已下架', icon: 'success' })
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '合作卡下架失败' })
-    }
-    finally {
-      this.setData({ acting: false })
-    }
+    await this.deleteCard()
   },
 
   async deleteCard() {

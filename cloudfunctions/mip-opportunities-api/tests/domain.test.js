@@ -410,6 +410,7 @@ test('public content author DTOs contain only an opaque profile reference', asyn
         nickname: '发布人',
       }
     },
+    async query() { return [] },
   }, caller, id)
   const superCase = await getSuperCase({
     async one() {
@@ -433,4 +434,60 @@ test('public content author DTOs contain only an opaque profile reference', asyn
     assert.equal(JSON.stringify(item.author).includes(ownerUserId), false)
     assert.equal('userId' in item.author, false)
   }
+})
+
+test('cooperation detail author carries growth level and the first equipped badge', async () => {
+  const ownerUserId = '10000000-0000-4000-8000-000000000003'
+  const caller = {
+    appId: 'trusted-app',
+    userId: null,
+    grants: [],
+    profileRefSecret: 'author-profile-ref-pepper-with-more-than-32-characters',
+  }
+  const row = {
+    id,
+    owner_user_id: ownerUserId,
+    role_key: 'strategist',
+    positioning: '策划',
+    target_summary: '目标',
+    role_fields_json: '{}',
+    ability_scores_json: '{}',
+    status: 'PUBLISHED',
+    version: 1,
+    published_at: '2026-08-24T00:00:00.000Z',
+    nickname: '发布人',
+  }
+  const item = await getCooperationCard({
+    async one() { return { ...row } },
+    async query(sql) {
+      if (/FROM mip_growth_accounts/.test(sql)) {
+        return [{ experience_balance: 250 }]
+      }
+      if (/FROM mip_growth_levels/.test(sql)) {
+        return [
+          { id: 'l0', name: '见习', minimum_experience: 0, status: 'ACTIVE' },
+          { id: 'l1', name: '老手', minimum_experience: 100, status: 'ACTIVE' },
+        ]
+      }
+      if (/FROM mip_user_badge_equipment/.test(sql)) {
+        return [{
+          user_id: ownerUserId,
+          slot_no: 1,
+          id: 'b1',
+          badge_key: 'frog',
+          name: '青蛙勋章',
+          description: '陪我跳过一整个雨季',
+          icon_name: 'frog',
+          image_url: '',
+          placeholder_shape: 'CIRCLE',
+        }]
+      }
+      return []
+    },
+  }, caller, id)
+  // 与公开档案同口径（loadPublicLevel/loadPublicBadges）：等级 + 首枚佩戴勋章
+  assert.deepEqual(item.author.level, { number: 2, name: '老手' })
+  assert.equal(item.author.badge.name, '青蛙勋章')
+  assert.equal(item.author.badge.imageUrl, undefined)
+  assert.equal(JSON.stringify(item.author).includes(ownerUserId), false)
 })
