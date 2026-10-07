@@ -49,8 +49,13 @@ export interface CooperationRoleCardInput {
   name?: string
   positioning?: string
   targetSummary?: string
+  /** 角色字段「需要支持或引荐的是」，详情页从 roleFields.support 取。 */
+  support?: string
   /** 角色字段「和我合作的最大价值是」，详情页从 roleFields.value 取。 */
   maxValue?: string
+  /** 四条黑条详情形态：黑条文案改取卡片自身数据，不再回退角色目录。 */
+  tall?: boolean
+  showQuote?: boolean
 }
 
 /** 未知角色退化为无烘焙底图的中性卡，不臆造美术资源。 */
@@ -59,16 +64,23 @@ export function cooperationRoleCardView(input: CooperationRoleCardInput) {
   const variantKey = (definition && variantByRoleKey[definition.key]) || ''
   const variant = cooperationCardVariants[variantKey]
   const name = input.name?.trim() || variant?.name || definition?.name || '合作角色'
+  const positioning = input.positioning?.trim() || ''
+
+  // 档案页列表卡没有 support 数据，沿用 positioning 展示「需要引荐」；
+  // 详情页 tall 形态按 PRD 语义取 roleFields.support，不回退目录文案。
+  const referral = input.tall
+    ? input.support?.trim() || ''
+    : input.support?.trim() || positioning || definition?.positioning?.trim() || ''
 
   return {
     roleKey: definition?.key || '',
     variant: variantKey,
     name,
     nameRuns: cooperationNameRuns(name),
-    goal: input.targetSummary?.trim() || definition?.targetDirection?.trim() || '',
-    referral: input.positioning?.trim() || definition?.positioning?.trim() || '',
-    /** figma 2058_12247：黑条区顶部居中的黄色角色引荐语，取角色目录的固定 positioning。 */
-    slogan: definition?.positioning?.trim() || '',
+    goal: input.targetSummary?.trim() || (input.tall ? '' : definition?.targetDirection?.trim() || ''),
+    referral,
+    /** figma 2058_12247：黑条区顶部居中的黄色角色引荐语，取卡片自身 positioning，回退角色目录。 */
+    slogan: positioning || definition?.positioning?.trim() || '',
     maxValue: input.maxValue?.trim() || '',
     image: variant?.image || '',
     bg: variant?.bg || '#333333',

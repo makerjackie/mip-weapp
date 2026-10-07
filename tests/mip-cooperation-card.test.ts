@@ -109,6 +109,38 @@ describe('MIP cooperation role visual component', () => {
     })
   })
 
+  it('renders MIW-48 detail strips from card data with the copper-diamond value icon', () => {
+    const component = source('src/components/mip-cooperation-card/index.wxml')
+    // 最大价值条用铜钻图标（figma 2704:13454 copper-diamond-line），目标/引荐保持 target/cup 字形。
+    // 组件被主包档案页引用，图标必须取主包 /assets/mip/ 路径（member 子包资源主包不可见）。
+    expect(component).toContain('src="/assets/mip/icon-copper-diamond-dark.png"')
+    expect(existsSync(new URL('../src/assets/mip/icon-copper-diamond-dark.png', import.meta.url))).toBe(true)
+    expect(component).not.toContain('name="gift"')
+    // 黄圈 16px 内 10px 字形：显式尺寸 + line-height:0 修正基线下坠
+    expect(component).toContain('size="{{10}}"')
+    expect(source('src/components/mip-cooperation-card/index.wxss')).toMatch(/line-height: 0/)
+
+    // tall 详情形态（PRD v1）：「需要引荐」取 roleFields.support，引荐语条取卡片自身 positioning，
+    // 都不回退角色目录；档案页列表卡仍以 positioning 展示「需要引荐」。
+    expect(cooperationRoleCardView({
+      roleKey: 'strategist',
+      positioning: '卡片自己的引荐语',
+      support: '需要认识更多地产开发商',
+      tall: true,
+      showQuote: true,
+    })).toMatchObject({ referral: '需要认识更多地产开发商', slogan: '卡片自己的引荐语' })
+    expect(cooperationRoleCardView({ roleKey: 'strategist', tall: true })).toMatchObject({ referral: '' })
+    expect(cooperationRoleCardView({ roleKey: 'strategist', positioning: '列表卡引荐' })).toMatchObject({
+      referral: '列表卡引荐',
+    })
+  })
+
+  it('names the role menu per PRD v1 (circles for connector, own menu for the rest)', () => {
+    for (const role of cooperationRoles) {
+      expect(role.menu.title).toBe(role.key === 'connector' ? '常混迹的圈子' : '本人的菜单')
+    }
+  })
+
   it('keeps one neutral component structure instead of six repeated templates', () => {
     const config = JSON.parse(source('src/components/mip-cooperation-card/index.json'))
     const component = source('src/components/mip-cooperation-card/index.wxml')

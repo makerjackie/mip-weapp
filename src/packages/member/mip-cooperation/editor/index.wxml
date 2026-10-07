@@ -1,4 +1,4 @@
-<view id="mip-cooperation-editor-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
+<view id="mip-cooperation-editor-page" class="mip-member-page min-h-screen bg-canvas pb-[24rpx] text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-[24rpx] rounded-[16rpx] bg-panel px-5 py-7 pt-4"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="pt-4"><mip-empty-state title="暂时无法编辑合作卡" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
 
@@ -8,11 +8,13 @@
       <view wx:for="{{roleOptions}}" wx:key="key" aria-role="radio" aria-checked="{{roleKey === item.key}}" data-key="{{item.key}}" bind:tap="changeRole" class="flex h-[56rpx] items-center rounded-full px-[24rpx] text-[24rpx] {{roleKey === item.key ? 'bg-brand font-medium text-canvas' : 'bg-panel text-muted'}}">{{item.name}}</view>
     </view>
 
+    <!-- figma 2571:34139：375x32 横幅 -->
     <view class="flex h-[64rpx] w-full flex-col items-center justify-center bg-brand">
       <text class="text-[28rpx] font-medium leading-[39.2rpx] text-canvas">{{bannerText}}</text>
     </view>
 
-    <view aria-label="AI助手" aria-role="button" bind:tap="onAiAssistant" class="mx-[24rpx] mt-[24rpx] flex h-[200rpx] flex-col items-center justify-center rounded-[16rpx] border-[2rpx] border-brand bg-panel">
+    <!-- figma 2571:34139 Frame 45：351x100 无边框卡片，图标 24x24 + 文案 fs14 -->
+    <view aria-label="AI助手" aria-role="button" bind:tap="onAiAssistant" class="mx-[24rpx] mt-[24rpx] flex h-[200rpx] flex-col items-center justify-center rounded-[16rpx] bg-panel">
       <view class="flex items-center">
         <view class="relative h-[48rpx] w-[48rpx]"><image class="absolute left-[4rpx] top-[2rpx] h-[42rpx] w-[44rpx]" src="/packages/member/assets/figma/coop/icon-chat-smile-ai.png" /><image class="absolute left-[12rpx] top-[18rpx] h-[12rpx] w-[24rpx]" src="/packages/member/assets/figma/coop/icon-chat-smile-mouth.png" /></view>
         <text class="ml-[8rpx] text-[28rpx] font-medium leading-[40rpx] text-brand">AI助手</text>
@@ -20,16 +22,17 @@
     </view>
 
     <view class="mx-[24rpx] mt-[24rpx] flex items-center gap-[8rpx]">
-      <mip-icon name="target" size="32rpx" color="var(--color-brand)" />
+      <mip-icon name="target" size="{{16}}" color="var(--color-brand)" />
       <text class="text-[32rpx] font-medium leading-[44.8rpx]">特征打分</text>
     </view>
-    <view class="mx-[24rpx] mt-[24rpx] grid grid-cols-2 gap-[24rpx]">
+    <!-- figma 2571:34139：170x68 r8 卡片、11px 列距、星标 20x20 间距 4px -->
+    <view class="mx-[24rpx] mt-[24rpx] grid grid-cols-2 gap-[22rpx]">
       <view wx:for="{{abilities}}" wx:key="key" class="flex h-[136rpx] flex-col items-center rounded-[16rpx] bg-panel pt-[24rpx]">
         <text class="text-[24rpx] font-medium leading-[33.6rpx]">{{item.label}}</text>
-        <view class="mt-[22rpx] flex items-center gap-[20rpx]">
-          <view wx:for="{{[1,2,3,4,5]}}" wx:for-item="star" wx:key="*this" aria-role="radio" aria-checked="{{star <= item.score}}" aria-label="{{item.label}} {{star}} 星" data-key="{{item.key}}" data-score="{{star}}" bind:tap="updateAbility">
-            <mip-icon wx:if="{{star <= item.score}}" name="star-favorite-3" size="28rpx" color="var(--color-brand)" />
-            <image wx:else class="h-[28rpx] w-[28rpx]" src="/packages/member/assets/figma/coop/icon-star-line.png" />
+        <view class="mt-[16rpx] flex items-center gap-[8rpx]">
+          <view wx:for="{{[1,2,3,4,5]}}" wx:for-item="star" wx:key="*this" aria-role="radio" aria-checked="{{star <= item.score}}" aria-label="{{item.label}} {{star}} 星" data-key="{{item.key}}" data-score="{{star}}" bind:tap="updateAbility" class="flex h-[40rpx] w-[40rpx] items-center justify-center">
+            <mip-icon wx:if="{{star <= item.score}}" name="star-favorite-3" size="{{20}}" color="var(--color-brand)" />
+            <image wx:else class="h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/coop/icon-star-line.png" />
           </view>
         </view>
       </view>
@@ -37,8 +40,8 @@
 
     <view wx:for="{{goals}}" wx:key="key" class="mx-[24rpx] mt-[24rpx]">
       <view class="flex items-center gap-[8rpx]">
-        <mip-icon wx:if="{{item.key === 'targetSummary'}}" name="target" size="32rpx" color="var(--color-brand)" />
-        <mip-icon wx:elif="{{item.key === 'support'}}" name="cup" size="32rpx" color="var(--color-brand)" />
+        <mip-icon wx:if="{{item.key === 'targetSummary'}}" name="target" size="{{16}}" color="var(--color-brand)" />
+        <mip-icon wx:elif="{{item.key === 'support'}}" name="cup" size="{{16}}" color="var(--color-brand)" />
         <image wx:else class="h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/coop/icon-copper-diamond-yellow.png" />
         <text class="text-[32rpx] font-medium leading-[44.8rpx]">{{item.label}}</text>
       </view>
@@ -47,43 +50,51 @@
       </view>
     </view>
 
+    <!-- 皮条客专属菜单：常混迹的圈子（figma 2571:34139 Group 27212，直角行 + 1px 拼缝） -->
     <view wx:if="{{menuStructured === 'circles'}}" class="mx-[24rpx] mt-[24rpx]">
       <view class="flex items-center gap-[8rpx]">
         <image class="h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/coop/icon-lifebuoy-yellow.png" />
         <text class="text-[32rpx] font-medium leading-[44.8rpx]">{{menuTitle}}</text>
       </view>
-      <view wx:for="{{circles}}" wx:for-index="groupIndex" wx:key="groupIndex" class="mt-[22rpx]">
-        <view class="flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-[24rpx]">
+      <view wx:for="{{circles}}" wx:for-index="groupIndex" wx:key="groupIndex" class="{{groupIndex > 0 ? 'mt-[16rpx]' : 'mt-[24rpx]'}}">
+        <view class="flex h-[92rpx] items-center justify-between bg-panel px-[24rpx]">
           <text class="text-[28rpx] font-medium">圈子名称</text>
-          <input class="h-full min-w-0 flex-1 text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.name}}" placeholder="示例：MIP全球创意人平台" data-group="{{groupIndex}}" data-field="name" bindinput="updateCircle" aria-label="圈子名称" />
+          <input class="h-full min-w-0 flex-1 pl-[24rpx] text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.name}}" placeholder="示例：MIP全球创意人平台" data-group="{{groupIndex}}" data-field="name" bindinput="updateCircle" aria-label="圈子名称" />
         </view>
-        <view class="mt-[22rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-[24rpx]">
+        <view class="mt-[2rpx] flex h-[92rpx] items-center justify-between bg-panel px-[24rpx]">
           <text class="text-[28rpx] font-medium">圈内身份</text>
-          <input class="h-full min-w-0 flex-1 text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.identity}}" placeholder="示例：资深玩家" data-group="{{groupIndex}}" data-field="identity" bindinput="updateCircle" aria-label="圈内身份" />
+          <input class="h-full min-w-0 flex-1 pl-[24rpx] text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.identity}}" placeholder="示例：资深玩家" data-group="{{groupIndex}}" data-field="identity" bindinput="updateCircle" aria-label="圈内身份" />
         </view>
-        <view class="mt-[22rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-[24rpx]">
+        <view class="mt-[2rpx] flex h-[92rpx] items-center justify-between bg-panel px-[24rpx]">
           <text class="text-[28rpx] font-medium">圈内年限</text>
-          <input class="h-full min-w-0 flex-1 text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.years}}" placeholder="示例：2年" data-group="{{groupIndex}}" data-field="years" bindinput="updateCircle" aria-label="圈内年限" />
+          <input class="h-full min-w-0 flex-1 pl-[24rpx] text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.years}}" placeholder="示例：2年" data-group="{{groupIndex}}" data-field="years" bindinput="updateCircle" aria-label="圈内年限" />
         </view>
-        <view class="mt-[22rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-[24rpx]">
+        <view class="mt-[2rpx] flex h-[92rpx] items-center justify-between bg-panel px-[24rpx]">
           <text class="shrink-0 text-[28rpx] font-medium">圈子特点</text>
-          <input class="h-full min-w-0 flex-1 text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.trait}}" placeholder="聚集一群有创意，协同作战的超级个体" data-group="{{groupIndex}}" data-field="trait" bindinput="updateCircle" aria-label="圈子特点" />
+          <input class="h-full min-w-0 flex-1 pl-[24rpx] text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.trait}}" placeholder="聚集一群有创意，协同作战的超级个体" data-group="{{groupIndex}}" data-field="trait" bindinput="updateCircle" aria-label="圈子特点" />
         </view>
         <view wx:if="{{groupIndex > 0}}" data-group="{{groupIndex}}" bind:tap="removeCircle" class="flex justify-end py-[8rpx]" aria-role="button" aria-label="删除该圈子"><text class="text-[22rpx] text-muted">删除该圈子</text></view>
       </view>
-      <view data-type="circle" bind:tap="addCircle" class="mt-[8rpx] flex justify-end" aria-role="button" aria-label="添加圈子"><text class="text-[24rpx] font-medium text-brand">+ 添加圈子</text></view>
+      <view data-type="circle" bind:tap="addCircle" class="flex h-[92rpx] items-center justify-end gap-[4rpx]" aria-role="button" aria-label="添加圈子">
+        <mip-icon name="icon-plus-fill" size="{{14}}" color="var(--color-brand)" />
+        <text class="text-[24rpx] font-medium text-brand">添加圈子</text>
+      </view>
     </view>
 
+    <!-- 其余角色专属菜单：本人的菜单（PRD v1：类型/擅长领域/卖点等角色字段） -->
     <view wx:if="{{menuFields.length}}" class="mx-[24rpx] mt-[24rpx]">
-      <view wx:for="{{menuFields}}" wx:key="key" class="{{index > 0 ? 'mt-[24rpx]' : ''}}">
-        <view class="flex items-center gap-[8rpx]">
-          <text class="text-[32rpx] font-medium leading-[44.8rpx]">{{item.label}}</text>
+      <view class="flex items-center gap-[8rpx]">
+        <image class="h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/coop/icon-lifebuoy-yellow.png" />
+        <text class="text-[32rpx] font-medium leading-[44.8rpx]">{{menuTitle}}</text>
+      </view>
+      <view wx:for="{{menuFields}}" wx:key="key" class="{{index > 0 ? 'mt-[2rpx]' : 'mt-[24rpx]'}}">
+        <view wx:if="{{item.input === 'textarea'}}" class="box-border min-h-[144rpx] bg-panel px-[24rpx] py-[16rpx]">
+          <text class="text-[28rpx] font-medium leading-[40rpx]">{{item.label}}</text>
+          <textarea class="mt-[8rpx] box-border w-full text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.value}}" maxlength="1000" placeholder="{{item.placeholder}}" data-key="{{item.key}}" bindinput="updateMenuField" aria-label="{{item.label}}" />
         </view>
-        <view wx:if="{{item.input === 'textarea'}}" class="mt-[24rpx] rounded-[16rpx] bg-panel px-[24rpx] py-[16rpx]">
-          <textarea class="box-border min-h-[144rpx] w-full text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.value}}" maxlength="1000" placeholder="{{item.placeholder}}" data-key="{{item.key}}" bindinput="updateMenuField" aria-label="{{item.label}}" />
-        </view>
-        <view wx:else class="mt-[24rpx] flex h-[92rpx] items-center rounded-[16rpx] bg-panel px-[24rpx]">
-          <input class="h-full w-full text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.value}}" placeholder="{{item.placeholder}}" data-key="{{item.key}}" bindinput="updateMenuField" aria-label="{{item.label}}" />
+        <view wx:else class="flex h-[92rpx] items-center justify-between bg-panel px-[24rpx]">
+          <text class="shrink-0 text-[28rpx] font-medium">{{item.label}}</text>
+          <input class="h-full min-w-0 flex-1 pl-[24rpx] text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.value}}" placeholder="{{item.placeholder}}" data-key="{{item.key}}" bindinput="updateMenuField" aria-label="{{item.label}}" />
         </view>
       </view>
     </view>
@@ -93,34 +104,36 @@
         <image class="h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/coop/icon-lifebuoy-yellow.png" />
         <text class="text-[32rpx] font-medium leading-[44.8rpx]">需要被理解的“臭毛病”</text>
       </view>
-      <view wx:for="{{quirks}}" wx:for-index="groupIndex" wx:key="groupIndex" class="mt-[22rpx]">
-        <view class="flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-[24rpx]">
+      <view wx:for="{{quirks}}" wx:for-index="groupIndex" wx:key="groupIndex" class="{{groupIndex > 0 ? 'mt-[16rpx]' : 'mt-[24rpx]'}}">
+        <view class="flex h-[92rpx] items-center justify-between bg-panel px-[24rpx]">
           <text class="shrink-0 text-[28rpx] font-medium">“臭毛病”（外显）</text>
-          <input class="h-full min-w-0 flex-1 text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.external}}" placeholder="示例：拖延症晚期" data-group="{{groupIndex}}" data-field="external" bindinput="updateQuirk" aria-label="臭毛病（外显）" />
+          <input class="h-full min-w-0 flex-1 pl-[24rpx] text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.external}}" placeholder="示例：拖延症晚期" data-group="{{groupIndex}}" data-field="external" bindinput="updateQuirk" aria-label="臭毛病（外显）" />
         </view>
-        <view class="mt-[22rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-[24rpx]">
+        <view class="mt-[2rpx] flex h-[92rpx] items-center justify-between bg-panel px-[24rpx]">
           <text class="shrink-0 text-[28rpx] font-medium">病因（内在）</text>
-          <input class="h-full min-w-0 flex-1 text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.internal}}" placeholder="示例：存在侥幸心理" data-group="{{groupIndex}}" data-field="internal" bindinput="updateQuirk" aria-label="病因（内在）" />
+          <input class="h-full min-w-0 flex-1 pl-[24rpx] text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.internal}}" placeholder="示例：存在侥幸心理" data-group="{{groupIndex}}" data-field="internal" bindinput="updateQuirk" aria-label="病因（内在）" />
         </view>
-        <view class="mt-[22rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-[24rpx]">
+        <view class="mt-[2rpx] flex h-[92rpx] items-center justify-between bg-panel px-[24rpx]">
           <text class="shrink-0 text-[28rpx] font-medium">预防发作建议（行为）</text>
-          <input class="h-full min-w-0 flex-1 text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.advice}}" placeholder="示例：请跟我强调事情的紧迫性" data-group="{{groupIndex}}" data-field="advice" bindinput="updateQuirk" aria-label="预防发作建议（行为）" />
+          <input class="h-full min-w-0 flex-1 pl-[24rpx] text-right text-[24rpx] text-ink" placeholder-style="color: var(--color-muted)" value="{{item.advice}}" placeholder="示例：请跟我强调事情的紧迫性" data-group="{{groupIndex}}" data-field="advice" bindinput="updateQuirk" aria-label="预防发作建议（行为）" />
         </view>
         <view wx:if="{{groupIndex > 0}}" data-group="{{groupIndex}}" bind:tap="removeQuirk" class="flex justify-end py-[8rpx]" aria-role="button" aria-label="删除该组特点"><text class="text-[22rpx] text-muted">删除该组特点</text></view>
       </view>
-      <view bind:tap="addQuirk" class="mt-[8rpx] flex justify-end" aria-role="button" aria-label="添加个人特点"><text class="text-[24rpx] font-medium text-brand">+ 个人特点</text></view>
+      <view bind:tap="addQuirk" class="flex h-[92rpx] items-center justify-end gap-[4rpx]" aria-role="button" aria-label="添加个人特点">
+        <mip-icon name="icon-plus-fill" size="{{14}}" color="var(--color-brand)" />
+        <text class="text-[24rpx] font-medium text-brand">个人特点</text>
+      </view>
     </view>
 
     <view wx:if="{{message}}" class="mx-[24rpx] mt-[24rpx] rounded-[8rpx] border border-danger px-[24rpx] py-[16rpx] text-[22rpx] text-danger">{{message}}</view>
+  </block>
 
-    <view class="mx-[24rpx] mt-[32rpx] box-border h-[112rpx] rounded-full p-[16rpx]">
-      <view bind:tap="saveCard" aria-role="button" aria-label="保存" class="flex h-[80rpx] w-full items-center justify-center rounded-full border-[2rpx] border-canvas bg-brand">
-        <text class="text-[32rpx] font-medium leading-[44.8rpx] text-canvas">{{saving ? '保存中…' : '保存'}}</text>
+  <!-- figma 2571:34139 Group 27137：液态玻璃吸底栏 + 全宽「保存」（按钮区整块黄色，返回走导航栏与返回暂存守卫） -->
+  <mip-sticky-actions wx:if="{{state === 'ready'}}">
+    <view slot="actions" class="grid w-full grid-cols-1 items-center">
+      <view class="min-w-0">
+        <mip-pill-button label="{{saving ? '保存中…' : '保存'}}" loading="{{saving}}" bind:tap="saveCard" />
       </view>
     </view>
-    <view bind:tap="preview" aria-role="button" aria-label="预览" class="mx-[24rpx] mt-[16rpx] flex h-[80rpx] items-center justify-center rounded-full border-[2rpx] border-line">
-      <text class="text-[28rpx] text-muted">{{saving ? '保存中…' : '预览'}}</text>
-    </view>
-    <app-page-exit always label="取消" />
-  </block>
+  </mip-sticky-actions>
 </view>

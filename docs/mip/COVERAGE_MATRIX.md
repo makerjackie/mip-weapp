@@ -35,7 +35,7 @@
 | 机会目录与详情 / E1–E4 | 状态、筛选、人才范围、详情、发布和最多 8 人团队 | implemented | verified-local + evidence-missing | 页面、服务端列表、团队和 profile reference 测试已覆盖；缺当前完整运行证据 |
 | 引荐与兴趣 / E5–E7 | 唯一关系、替换/取消、公开档案、站内通知 | implemented | verified-local + external-wait | 服务端关系和屏蔽复核已覆盖；微信补充通知待验 |
 | 机会评论 / E8 | 评论、评价、打 call、举报、屏蔽和运营审核 | implemented | verified-local + evidence-missing | 评论域、内容安全、审计和管理能力已有测试；缺可提交端到端证据 |
-| 合作卡与案例 / E9、F2–F3、N5 | 六角色、CRUD、雷达、预览前保存、AI 草稿、案例素材 | implemented | verified-local + external-wait | CRUD、软归档和草稿确认测试已覆盖；录音、媒体和真实 AI provider 待验 |
+| 合作卡与案例 / E9、F2–F3、N5 | 六角色、CRUD、雷达、返回暂存守卫、AI 草稿、案例素材（MIW-48 移除合作卡预览与下架） | implemented | verified-local + external-wait | CRUD、软归档、草稿确认和 MIW-48 交互契约测试已覆盖；录音、媒体和真实 AI provider 待验 |
 | 我的活动与相关机会 / F1、F4 | 当前/历史活动、票码、发布/被引荐列表和未读 | implemented | verified-local + evidence-missing | 页面与服务合同已覆盖；缺当前完整运行证据 |
 | 成长与勋章 / H4、AME 106–108 | 等级、经验、贡献、游戏币、权益、流水、勋章与调整 | implemented | verified-local + external-wait | 权威账户、不可变流水、佩戴和管理测试已覆盖；正式数值与素材待验 |
 | 任务 / H5 | 全员/指定成员、等级、模板、截止、完成和经验奖励 | implemented | verified-local + external-wait | 资格重验、单次完成和同事务奖励已覆盖；真机模板媒体待验 |

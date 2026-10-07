@@ -3,6 +3,19 @@ import type { AiDraftSourceConfirmation } from '../mip-ai/types'
 
 export type CooperationCardStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED'
 
+/** 成长等级（服务端 loadPublicLevel 同口径；无成长账户或配置不完整时缺省）。 */
+export interface CooperationAuthorLevel {
+  number: number
+  name: string
+}
+
+/** 佩戴勋章（服务端取第一佩戴槽位；未佩戴时缺省）。 */
+export interface CooperationAuthorBadge {
+  name: string
+  imageUrl?: string
+  placeholderShape?: string
+}
+
 export interface CooperationAuthor {
   profileRef: string
   nickname: string
@@ -10,6 +23,8 @@ export interface CooperationAuthor {
   headline?: string
   cityName?: string
   primaryIndustry?: CooperationTag
+  level?: CooperationAuthorLevel
+  badge?: CooperationAuthorBadge
 }
 
 export interface CooperationTag {

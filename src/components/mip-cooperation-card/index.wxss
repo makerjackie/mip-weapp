@@ -100,6 +100,9 @@
   justify-content: center;
   width: 32rpx;
   height: 32rpx;
+
+  /* line-height:0 抵消 mip-icon 的基线 strut，让 16px 圆内 10px 字形严格居中 */
+  line-height: 0;
   background: var(--color-brand);
   border-radius: 50%;
 }

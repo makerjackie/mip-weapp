@@ -10,6 +10,8 @@ Component({
     name: { type: String, value: '' },
     positioning: { type: String, value: '' },
     targetSummary: { type: String, value: '' },
+    /** 角色字段「需要支持或引荐的是」；tall 形态的黑条「需要引荐」取它而非 positioning。 */
+    support: { type: String, value: '' },
     goalLabel: { type: String, value: '我的目标' },
     referralLabel: { type: String, value: '需要引荐' },
     valueLabel: { type: String, value: '最大价值' },
@@ -26,14 +28,19 @@ Component({
   },
 
   observers: {
-    'roleKey, name, positioning, targetSummary, maxValue': function (
+    'roleKey, name, positioning, targetSummary, support, maxValue, tall, showQuote': function (
       roleKey: string,
       name: string,
       positioning: string,
       targetSummary: string,
+      support: string,
       maxValue: string,
+      tall: boolean,
+      showQuote: boolean,
     ) {
-      this.setData({ view: cooperationRoleCardView({ roleKey, name, positioning, targetSummary, maxValue }) })
+      this.setData({
+        view: cooperationRoleCardView({ roleKey, name, positioning, targetSummary, support, maxValue, tall, showQuote }),
+      })
     },
   },
 })

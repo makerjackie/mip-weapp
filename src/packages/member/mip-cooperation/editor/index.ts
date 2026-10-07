@@ -91,6 +91,9 @@ Page({
     legacyFields: {} as Record<string, CooperationRoleFieldValue>,
   },
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
+  // 返回守卫状态：dirty=有未保存修改，alertArmed=已注册原生返回确认
+  dirty: false,
+  alertArmed: false,
 
   onLoad(options: Record<string, string | undefined>) {
     this.setData({
@@ -115,6 +118,31 @@ Page({
 
   onUnload() {
     this.clearNavigationTimer()
+    // 原生返回确认的「确定」落到这里：未保存修改静默暂存为草稿（发布卡保持发布态，服务端只更新内容）
+    if (this.data.state === 'ready' && this.dirty && !this.data.saving) {
+      this.dirty = false
+      void this.saveDraftOnExit()
+    }
+  },
+
+  /** 用户改动任一字段后登记 dirty，并武装原生返回确认（确定=暂存并返回，取消=留下）。 */
+  touch() {
+    if (this.data.state !== 'ready') {
+      return
+    }
+    this.dirty = true
+    if (!this.alertArmed) {
+      this.alertArmed = true
+      wx.enableAlertBeforeUnload({ message: '合作卡尚未保存，返回将自动暂存为草稿' })
+    }
+  },
+
+  markClean() {
+    this.dirty = false
+    if (this.alertArmed) {
+      this.alertArmed = false
+      wx.disableAlertBeforeUnload()
+    }
   },
 
   clearNavigationTimer() {
@@ -142,6 +170,10 @@ Page({
         this.applyAiDraft(aiSource.fields, aiSource.confirmation)
       }
       this.setData({ state: 'ready' })
+      if (aiSource) {
+        // AI 草稿覆盖了表单内容，视为未保存修改
+        this.touch()
+      }
     }
     catch (error) {
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '页面加载失败' })
@@ -228,6 +260,7 @@ Page({
     const key = String(event.currentTarget.dataset.key || '') as CooperationRoleKey
     if (key && key !== this.data.roleKey && cooperationRoles.some(role => role.key === key)) {
       this.applyRole(key, null)
+      this.touch()
     }
   },
 
@@ -236,11 +269,13 @@ Page({
     if (!this.data.goals.some(goal => goal.key === key)) {
       return
     }
+    this.touch()
     this.setData({ goals: this.data.goals.map(goal => goal.key === key ? { ...goal, value: event.detail.value } : goal) })
   },
 
   updateMenuField(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const key = String(event.currentTarget.dataset.key || '')
+    this.touch()
     this.setData({ menuFields: this.data.menuFields.map(item => item.key === key ? { ...item, value: event.detail.value } : item) })
   },
 
@@ -250,6 +285,7 @@ Page({
     if (!Number.isInteger(score) || score < 1 || score > MAX_ABILITY_SCORE) {
       return
     }
+    this.touch()
     this.setData({ abilities: this.data.abilities.map(item => item.key === key ? { ...item, score } : item) })
   },
 
@@ -259,6 +295,7 @@ Page({
     if (!Number.isInteger(group) || !['name', 'identity', 'years', 'trait'].includes(field)) {
       return
     }
+    this.touch()
     this.setData({
       circles: this.data.circles.map((item, index) => index === group ? { ...item, [field]: event.detail.value } : item),
     })
@@ -268,6 +305,7 @@ Page({
     if (this.data.circles.length >= 12) {
       return
     }
+    this.touch()
     this.setData({ circles: [...this.data.circles, emptyCircle()] })
   },
 
@@ -276,6 +314,7 @@ Page({
     if (!Number.isInteger(group) || group <= 0 || this.data.circles.length <= 1) {
       return
     }
+    this.touch()
     this.setData({ circles: this.data.circles.filter((_, index) => index !== group) })
   },
 
@@ -285,6 +324,7 @@ Page({
     if (!Number.isInteger(group) || !['external', 'internal', 'advice'].includes(field)) {
       return
     }
+    this.touch()
     this.setData({
       quirks: this.data.quirks.map((item, index) => index === group ? { ...item, [field]: event.detail.value } : item),
     })
@@ -294,6 +334,7 @@ Page({
     if (this.data.quirks.length >= 12) {
       return
     }
+    this.touch()
     this.setData({ quirks: [...this.data.quirks, emptyQuirk()] })
   },
 
@@ -302,71 +343,82 @@ Page({
     if (!Number.isInteger(group) || group <= 0 || this.data.quirks.length <= 1) {
       return
     }
+    this.touch()
     this.setData({ quirks: this.data.quirks.filter((_, index) => index !== group) })
   },
 
-  preview() { void this.save(false, 'preview') },
-  saveCard() { void this.save(false, 'back') },
+  saveCard() { void this.save() },
 
-  async save(publish: boolean, destination: 'back' | 'preview') {
+  /** 组装保存载荷（保存按钮与返回暂存共用）。 */
+  buildDraftPayload() {
+    const definition = cooperationRoles.find(role => role.key === this.data.roleKey)
+    const roleFields: Record<string, CooperationRoleFieldValue> = {
+      ...this.data.legacyFields,
+    }
+    for (const goal of this.data.goals) {
+      if (goal.key !== 'targetSummary' && goal.value.trim()) {
+        roleFields[goal.key] = goal.value.trim()
+      }
+    }
+    if (definition?.menu.structured === 'circles') {
+      const circles = normalizeCooperationCircles(this.data.circles)
+      if (Array.isArray(circles) && circles.length) {
+        roleFields.circles = circles
+      }
+    }
+    for (const field of this.data.menuFields) {
+      const value = field.input === 'tags'
+        ? field.value.split(/[、,，]/).map(item => item.trim()).filter(Boolean).slice(0, 12)
+        : field.value.trim()
+      if (Array.isArray(value) ? value.length : value) {
+        roleFields[field.key] = value
+      }
+    }
+    const quirks = normalizeCooperationQuirks(this.data.quirks)
+    if (Array.isArray(quirks) && quirks.length) {
+      roleFields.quirks = quirks
+    }
+    const targetSummary = this.data.goals.find(goal => goal.key === 'targetSummary')?.value.trim() || ''
+    return {
+      id: this.data.id || undefined,
+      expectedVersion: this.data.id ? this.data.version : undefined,
+      roleKey: this.data.roleKey,
+      positioning: this.data.positioning,
+      targetSummary,
+      roleFields,
+      abilityScores: Object.fromEntries(this.data.abilities.map(item => [item.key, item.score])),
+      aiConfirmation: this.data.aiConfirmation || undefined,
+    }
+  },
+
+  /** 返回时的静默暂存：不走 UI 反馈，失败也不打断返回。 */
+  async saveDraftOnExit() {
+    try {
+      await cooperationModule.save({ ...this.buildDraftPayload(), publish: false })
+    }
+    catch {
+      // 静默失败：网络异常时放弃暂存，用户下次进入仍可重填
+    }
+  },
+
+  async save() {
     if (this.data.saving) {
       return
     }
     this.setData({ saving: true, message: '' })
     try {
-      const definition = cooperationRoles.find(role => role.key === this.data.roleKey)
-      const roleFields: Record<string, CooperationRoleFieldValue> = {
-        ...this.data.legacyFields,
-      }
-      for (const goal of this.data.goals) {
-        if (goal.key !== 'targetSummary' && goal.value.trim()) {
-          roleFields[goal.key] = goal.value.trim()
-        }
-      }
-      if (definition?.menu.structured === 'circles') {
-        const circles = normalizeCooperationCircles(this.data.circles)
-        if (Array.isArray(circles) && circles.length) {
-          roleFields.circles = circles
-        }
-      }
-      for (const field of this.data.menuFields) {
-        const value = field.input === 'tags'
-          ? field.value.split(/[、,，]/).map(item => item.trim()).filter(Boolean).slice(0, 12)
-          : field.value.trim()
-        if (Array.isArray(value) ? value.length : value) {
-          roleFields[field.key] = value
-        }
-      }
-      const quirks = normalizeCooperationQuirks(this.data.quirks)
-      if (Array.isArray(quirks) && quirks.length) {
-        roleFields.quirks = quirks
-      }
-      const targetSummary = this.data.goals.find(goal => goal.key === 'targetSummary')?.value.trim() || ''
       const result = await cooperationModule.save({
-        id: this.data.id || undefined,
-        expectedVersion: this.data.id ? this.data.version : undefined,
-        roleKey: this.data.roleKey,
-        positioning: this.data.positioning,
-        targetSummary,
-        roleFields,
-        abilityScores: Object.fromEntries(this.data.abilities.map(item => [item.key, item.score])),
-        publish,
-        aiConfirmation: this.data.aiConfirmation || undefined,
+        ...this.buildDraftPayload(),
+        publish: false,
       })
       this.setData({ id: result.id, version: result.version })
+      this.markClean()
       wx.showToast({ title: result.status === 'PUBLISHED' ? '合作卡已保存' : '草稿已保存', icon: 'success' })
-      if (destination === 'preview') {
-        await wx.navigateTo({
-          url: `/packages/member/mip-cooperation/detail/index?id=${encodeURIComponent(result.id)}`,
-        })
-      }
-      else {
-        this.clearNavigationTimer()
-        this.navigationTimer = setTimeout(() => {
-          this.navigationTimer = undefined
-          wx.navigateBack()
-        }, 500)
-      }
+      this.clearNavigationTimer()
+      this.navigationTimer = setTimeout(() => {
+        this.navigationTimer = undefined
+        wx.navigateBack()
+      }, 500)
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '保存失败' })

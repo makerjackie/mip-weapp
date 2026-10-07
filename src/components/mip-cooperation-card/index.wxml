@@ -7,21 +7,21 @@
     <view wx:if="{{showQuote && view.slogan}}" class="mip-cooperation-card__quote">{{view.slogan}}</view>
     <view wx:if="{{view.goal}}" class="mip-cooperation-card__strip mip-cooperation-card__strip--goal">
       <view class="mip-cooperation-card__badge">
-        <view class="mip-cooperation-card__badge-circle"><mip-icon name="target" color="var(--color-panel)" /></view>
+        <view class="mip-cooperation-card__badge-circle"><mip-icon name="target" size="{{10}}" color="var(--color-panel)" /></view>
         <text class="mip-cooperation-card__badge-label">{{goalLabel}}</text>
       </view>
       <text class="mip-cooperation-card__value">{{view.goal}}</text>
     </view>
     <view wx:if="{{view.referral}}" class="mip-cooperation-card__strip mip-cooperation-card__strip--referral">
       <view class="mip-cooperation-card__badge">
-        <view class="mip-cooperation-card__badge-circle"><mip-icon name="cup" color="var(--color-panel)" /></view>
+        <view class="mip-cooperation-card__badge-circle"><mip-icon name="cup" size="{{10}}" color="var(--color-panel)" /></view>
         <text class="mip-cooperation-card__badge-label">{{referralLabel}}</text>
       </view>
       <text class="mip-cooperation-card__value">{{view.referral}}</text>
     </view>
     <view wx:if="{{view.maxValue}}" class="mip-cooperation-card__strip mip-cooperation-card__strip--value">
       <view class="mip-cooperation-card__badge">
-        <view class="mip-cooperation-card__badge-circle"><mip-icon name="gift" color="var(--color-panel)" /></view>
+        <view class="mip-cooperation-card__badge-circle"><image class="h-[20rpx] w-[20rpx]" src="/assets/mip/icon-copper-diamond-dark.png" /></view>
         <text class="mip-cooperation-card__badge-label">{{valueLabel}}</text>
       </view>
       <text class="mip-cooperation-card__value">{{view.maxValue}}</text>
