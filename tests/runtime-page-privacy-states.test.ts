@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assertNoSensitivePageData,
   evaluateRouteState,
+  interactionTargetElementEvidence,
   interactionTargetViewportEvidence,
   queryFreshRenderedActionElement,
 } from '../scripts/verify-runtime.mjs'
@@ -67,7 +68,6 @@ describe('runtime page privacy and normal unavailable states', () => {
 
   it('requires measured target visibility, rendered actions, and screenshot changes for profile tabs', () => {
     const journey = contract.interactionJourneys.find((item: { id: string }) => item.id === 'profile-content-tabs')
-    const verifier = read('scripts/verify-runtime.mjs')
 
     expect(journey.scrollTop).toBeUndefined()
     expect(journey).toMatchObject({
@@ -120,12 +120,78 @@ describe('runtime page privacy and normal unavailable states', () => {
     expect(interactionTargetViewportEvidence([
       { top: 100, bottom: 180, left: 310, right: 430, width: 120, height: 80 },
     ], { windowHeight: 720, windowWidth: 390 })).toBeNull()
+    expect(interactionTargetViewportEvidence([
+      { top: 154.296875, bottom: 176.6953125, left: 44, right: 271, width: 227, height: 22.3984375 },
+    ], { windowHeight: 753, windowWidth: 390 })).toMatchObject({
+      top: 154.296875,
+      bottom: 176.6953125,
+      left: 44,
+      right: 271,
+      width: 227,
+      height: 22.3984375,
+      windowHeight: 753,
+      windowWidth: 390,
+      source: 'rendered-nodes',
+    })
+  })
+
+  it('accepts element rect measurements as equivalent viewport evidence when SelectorQuery rects degrade', async () => {
+    const systemInfo = { windowHeight: 753, windowWidth: 390 }
+    const visibleInput = {
+      size: async () => ({ width: 227, height: 22 }),
+      offset: async () => ({ left: 44, top: 154.296875, width: 227, height: 22 }),
+    }
+    await expect(interactionTargetElementEvidence(visibleInput, systemInfo)).resolves.toMatchObject({
+      top: 154.296875,
+      bottom: 176.296875,
+      left: 44,
+      right: 271,
+      width: 227,
+      height: 22,
+      windowHeight: 753,
+      windowWidth: 390,
+      source: 'element-rect',
+    })
+
+    for (const element of [
+      // Off-screen targets must never pass on the fallback path.
+      {
+        size: async () => ({ width: 227, height: 22 }),
+        offset: async () => ({ left: 44, top: 752, width: 227, height: 22 }),
+      },
+      {
+        size: async () => ({ width: 227, height: 22 }),
+        offset: async () => ({ left: 389, top: 100, width: 227, height: 22 }),
+      },
+      // Zero-size or unusable measurements stay null.
+      {
+        size: async () => ({ width: 0, height: 22 }),
+        offset: async () => ({ left: 44, top: 100, width: 0, height: 22 }),
+      },
+      {
+        size: async () => undefined,
+        offset: async () => undefined,
+      },
+    ] as const) {
+      await expect(interactionTargetElementEvidence(element, systemInfo)).resolves.toBeNull()
+    }
+    await expect(interactionTargetElementEvidence(null, systemInfo)).resolves.toBeNull()
+    await expect(interactionTargetElementEvidence({ size: async () => ({ width: 1, height: 1 }) }, systemInfo)).resolves.toBeNull()
+    await expect(interactionTargetElementEvidence(visibleInput, { windowHeight: 0, windowWidth: 390 })).resolves.toBeNull()
+  })
+
+  it('keeps interaction measurement guardrails and marks both-path failures recoverable', () => {
+    const verifier = read('scripts/verify-runtime.mjs')
     expect(verifier).toContain('miniProgram.callWxMethod(\'pageScrollTo\', { selector: step.selector, duration: 0 })')
     expect(verifier).toContain('assertInteractionTargetInViewport')
     expect(verifier).toContain('queryFreshRenderedActionElement(page, step.selector)')
     expect(verifier).toContain('was already satisfied before the rendered tap')
     expect(verifier).toContain('const requireRenderedAction = (step.requireRenderedAction ?? journey.requireRenderedAction) === true')
     expect(verifier).toContain('const requireScreenshotDiff = (step.requireScreenshotDiff ?? journey.requireScreenshotDiff) === true')
+    expect(verifier).toContain('error.unmeasurableInteractionTarget = true')
+    expect(verifier).toContain('isRecoverableRuntimeMeasurementError(error)')
+    expect(verifier).toContain('\'interaction-target-unmeasurable\'')
+    expect(verifier).toContain('source: \'element-rect\'')
   })
 
   it('drops cached automator handles before every strict rendered action query', async () => {

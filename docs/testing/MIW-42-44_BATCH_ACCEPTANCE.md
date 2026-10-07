@@ -66,6 +66,27 @@
 - 基线工作树对照运行（runtime-baseline2/3）因 DevTools host automator 连接超时未能完成（环境性，与代码无关）；改以静态等价性归因：两条保留旅程（`opportunity-search-and-filter`、`profile-content-tabs`）与 87b48084 基线逐字节一致，视口断言代码本批仅改旅程数量下限（3→2），机会首页本批改动（新增 onLoad mode 解析、删除列表底部「打开更多入口」区块）不触及搜索行布局。
 - **结论：`enter-keyword` 视口断言失败为既有工具链测量问题（native `<input>` rect 上报疑似兼容性缺陷），非本批引入。** 建议单独小卡排查 `renderedNodes` 对 input 元素的 rect 上报。
 
+### MIW-45 复核结论（2026-10-07）
+
+- 独立会话（`@weapp-vite/miniprogram-automator` `Automator.launch`，独立端口、当前 bundle）复测：`renderedNodes('#opportunities-search-input')` 返回 1 个节点，rect `top=154.30 left=44 bottom=176.70 right=271 width=227 height=22.4`（视口 390x753），与 `element.size()/offset()`（227x22 @ 44,154.3）一致，t+0ms 即稳定，重复 4 次不变——**排除库的 rect 数据缺陷与 wx:if 测量时机问题**。
+- 失败轮特征：`preferOpenedSession=true` 附加到已开共享会话后，同会话内 view 选择器（步骤 1）rect 证据通过、截图渲染正常，仅 native `<input>` 选择器连续 3 次重试拿不到可用 rect。归属为**长寿命共享 DevTools 会话的测量上下文退化**（与「开发者工具旧窗口陷阱」同类），而非选择器或页面缺陷。
+- 修复（调用侧，`scripts/verify-runtime.mjs`）：① renderedNodes 无可用 rect 时，用 `queryFreshRenderedActionElement` + `element.size()/offset()`（DOM 属性协议，独立测量路径）构建等价视口证据（`source: 'element-rect'`）；② 两路均失败抛 `unmeasurableInteractionTarget` 标记错误，归入可恢复运行时错误（`interaction-target-unmeasurable`），复用既有 attempt 2 新会话重启机制。未改 node_modules。
+- 库 issue 线索：`@weapp-vite/miniprogram-automator@1.2.22` `Page.renderedNodes`（`App.callFunction` + `SelectorQuery.selectAll().fields({rect,size})`）在长寿命共享会话中对部分 native 元素可返回无 rect/空结果；同页同帧 `element.size()/offset()` 正常。复现依赖已开会话状态，暂不可稳定重装；若再次出现，记录 DevTools 版本与 `App.callFunction` 返回体。
+
+### MIW-45 验收运行（2026-10-07，run 4 attempt 2 完整轮）
+
+| 项 | 结果 | 证据 |
+| --- | --- | --- |
+| 两条交互旅程全部步骤 passed | ✅ | `opportunity-search-and-filter` 4/4（open-talent-tab diff 0.424、**enter-keyword diff 0.00252**、open-filter diff 0.143、close-filter diff 0.125）；`profile-content-tabs` 2/2（show-cases 0.123、show-opportunities 0.139）；全部步骤带视口证据（`.tmp/runtime/report.json` interactions） |
+| `enter-keyword` 视口判定（原失败步骤） | ✅ | renderedNodes rect `227x22.4 @ (44, 90.8)`（视口 390x753），`source: rendered-nodes`；top 90.8 ≈ chromeBottom(83)+8，证明 `revealScrolledInteractionTarget` 补偿把输入框滚出胶囊遮挡区，真实视觉 diff 0.00252 ≥ 0.001 门限 |
+| 6 个代表状态 | ✅ | loading/empty/error/forbidden/conflict/disabled 全 passed（证据窗口 1200→4000ms 后稳定） |
+| 导航（tabs/back/deepLink） | ✅ | 4 tab + 返回流 + deepLink 全 passed |
+| 58 路由不回归 | ✅ | 53 passed / 3 failed / 2 external-wait。3 个 failed 与 2 个 WAIT 全部落在既有 4 项归因内：managed-events（需 Web 登录；本轮独立新会话无登录态，数据未 settled，其 fixture 依赖 event-console/event-registrations 按设计记 external-wait）、mip-access（登录拦截夹具）、mip-ai/voice（ASR 密钥门控）；mip-profile-interests 本轮 passed（较 D3 基线改善）。今日全部完整轮次失败模式一致（run 1 与 run 4 双 attempt 相同），与本次改动无关；无新增失败根因 |
+| 尝试与恢复机制 | ✅ | attempt 1 因 `App.callFunction` 12000ms 超时（connection 类）触发既有恢复 → attempt 2 新会话完成全程；recoveries 记录 prewarmed-devtools-project / cleared-stale-port-lease(10248) / reconnect-target-project；cleanup closed |
+| 聚焦单元测试 | ✅ | `tests/runtime-page-privacy-states.test.ts` 10 passed（element-rect 兜底证据、guardrail 标记、可恢复分类断言齐全） |
+
+说明：`pnpm test:runtime` 退出码仍为 1——runner 末段断言要求 0 个非 passed 页面，既有归因失败按批次口径记录在本文档而非使运行转绿（与 D3 的 ⚠️ 同一处理方式）。MIW-45 目标（enter-keyword 视口判定）已修复并通过完整运行验证。
+
 ## E. 回滚与安全
 
 | # | 验收项 | 结果 | 证据 |
