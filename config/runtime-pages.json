@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 67,
+  "routeCount": 58,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 67 paths.",
+    "config/project.json routes must list the same 58 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -32,8 +32,7 @@
         "packages/member/mip-events/detail/index",
         "packages/member/payment-result/index",
         "packages/member/membership-order/index",
-        "packages/member/order-detail/index",
-        "packages/member/mip-knowledge/detail/index"
+        "packages/member/order-detail/index"
       ],
       "reason": "wx.requestPayment and real entitlement require a real device and merchant binding"
     },
@@ -87,18 +86,9 @@
       "routes": [
         "pages/events/index",
         "packages/member/help/index",
-        "packages/member/mip-events/detail/index",
-        "packages/member/mip-knowledge/detail/index"
+        "packages/member/mip-events/detail/index"
       ],
       "reason": "wx.openChannelsUserProfile 和 wx.openChannelsActivity 依赖已绑定的视频号和微信真机环境"
-    },
-    {
-      "id": "knowledge-webview",
-      "label": "知识内容网页",
-      "routes": [
-        "packages/member/mip-knowledge/web/index"
-      ],
-      "reason": "web-view 业务域名、跳转和加载失败需要在正式 AppID 的微信真机中验收"
     },
     {
       "id": "profile-avatar",
@@ -430,36 +420,6 @@
           "visibleAssertion": {
             "selector": "#profile-tab-opportunities",
             "text": "相关机会"
-          }
-        }
-      ]
-    },
-    {
-      "id": "game-ranking-tabs",
-      "route": "packages/member/mip-game/index",
-      "nonMutating": true,
-      "steps": [
-        {
-          "id": "show-individual-season-ranking",
-          "type": "tap",
-          "selector": "#game-ranking-INDIVIDUAL_SEASON",
-          "handler": "changeRanking",
-          "handlerDataset": {
-            "type": "INDIVIDUAL_SEASON"
-          },
-          "scrollIntoView": true,
-          "requireVisibleTarget": true,
-          "requireRenderedAction": true,
-          "requireScreenshotDiff": true,
-          "dataAssertions": [
-            {
-              "path": "rankingType",
-              "equals": "INDIVIDUAL_SEASON"
-            }
-          ],
-          "visibleAssertion": {
-            "selector": "#game-ranking-INDIVIDUAL_SEASON",
-            "text": "个人赛季榜"
           }
         }
       ]
@@ -1451,133 +1411,6 @@
       ]
     },
     {
-      "id": "M34",
-      "name": "团队 PK",
-      "path": "packages/member/mip-game/index",
-      "selector": "#mip-game-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "error"
-      ],
-      "acceptStates": [
-        "ready",
-        "empty"
-      ],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "M35",
-      "name": "队伍大本营",
-      "path": "packages/member/mip-game/team/index",
-      "selector": "#mip-game-team-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'",
-      "query": [
-        "teamId"
-      ],
-      "queryFixture": {
-        "sourceRoute": "packages/member/mip-game/index",
-        "dataPath": "rankings",
-        "where": {
-          "subjectType": "TEAM"
-        },
-        "values": {
-          "teamId": "teamId"
-        }
-      }
-    },
-    {
-      "id": "M38",
-      "name": "笨笨盲盒",
-      "path": "packages/member/mip-blind-box/index",
-      "selector": "#mip-blind-box-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "error"
-      ],
-      "acceptStates": [
-        "ready",
-        "empty"
-      ],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "M39",
-      "name": "盲盒详情",
-      "path": "packages/member/mip-blind-box/detail/index",
-      "selector": "#mip-blind-box-detail-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'",
-      "query": [
-        "catalogId"
-      ],
-      "queryFixture": {
-        "sourceRoute": "packages/member/mip-blind-box/index",
-        "dataPath": "items",
-        "values": {
-          "catalogId": "id"
-        }
-      }
-    },
-    {
-      "id": "M40",
-      "name": "卡牌背包",
-      "path": "packages/member/mip-blind-box/backpack/index",
-      "selector": "#mip-blind-box-backpack-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "error"
-      ],
-      "acceptStates": [
-        "ready",
-        "empty"
-      ],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "M41",
-      "name": "游戏币流水",
-      "path": "packages/member/mip-blind-box/coin-entries/index",
-      "selector": "#mip-blind-box-coin-entries-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "error"
-      ],
-      "acceptStates": [
-        "ready",
-        "empty"
-      ],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
       "id": "M31",
       "name": "任务",
       "path": "packages/member/mip-tasks/index",
@@ -1791,85 +1624,6 @@
       },
       "deviceRequired": [
         "share"
-      ]
-    },
-    {
-      "id": "M44",
-      "name": "知识内容",
-      "path": "packages/member/mip-knowledge/index",
-      "selector": "#mip-knowledge-page",
-      "group": "public",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "error"
-      ],
-      "acceptStates": [
-        "ready",
-        "empty"
-      ],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "M45",
-      "name": "知识内容详情",
-      "path": "packages/member/mip-knowledge/detail/index",
-      "selector": "#mip-knowledge-detail-page",
-      "group": "public",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'",
-      "query": [
-        "contentId"
-      ],
-      "queryFixture": {
-        "sourceRoute": "packages/member/mip-knowledge/index",
-        "dataPath": "items",
-        "values": {
-          "contentId": "id"
-        }
-      },
-      "deviceRequired": [
-        "wechat-pay",
-        "video-channel"
-      ]
-    },
-    {
-      "id": "M46",
-      "name": "知识内容网页",
-      "path": "packages/member/mip-knowledge/web/index",
-      "selector": "#mip-knowledge-web-page",
-      "group": "public",
-      "kind": "static-data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "error"
-      ],
-      "acceptStates": [
-        "ready",
-        "empty"
-      ],
-      "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": [
-        "contentId"
-      ],
-      "queryFixture": {
-        "sourceRoute": "packages/member/mip-knowledge/index",
-        "dataPath": "items",
-        "values": {
-          "contentId": "id"
-        }
-      },
-      "deviceRequired": [
-        "knowledge-webview"
       ]
     },
     {

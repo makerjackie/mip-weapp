@@ -227,10 +227,6 @@ Page({
     caseNavigateTo({ url: '/packages/member/mip-branches/index' })
   },
 
-  openKnowledge() {
-    caseNavigateTo({ url: '/packages/member/mip-knowledge/index' })
-  },
-
   openEvents() {
     caseSwitchPrimary('/pages/events/index')
   },

@@ -1,8 +1,10 @@
 # MIP 当前状态
 
-更新日期：2026-10-05（心动计数口径收敛与 SQL 执行验证（MIW-36）：心动可见性 SQL 收敛为共享构造、tab 徽标改服务端计数、云函数 SQL 真实执行验证、详情 onShow 缓存新鲜窗口；会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
+更新日期：2026-10-06（知识/游戏/盲盒 9 页用户端下线、路由契约同步 61 条（MIW-44）。此前 2026-10-05：心动计数口径收敛与 SQL 执行验证（MIW-36）：心动可见性 SQL 收敛为共享构造、tab 徽标改服务端计数、云函数 SQL 真实执行验证、详情 onShow 缓存新鲜窗口；会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
+
+2026-10-06（MIW-44）：知识内容、笨笨盲盒、团队 PK 三个域的用户端整体下线。删除小程序 9 条路由（知识内容/内容详情/内容网页、笨笨盲盒/盲盒详情/卡牌背包/游戏币流水、团队 PK/队伍大本营）及仅被其引用的 `src/modules/mip-game`、`src/modules/mip-knowledge` 前端模块；同步清理首页「更多内容」知识入口、设置页「团队 PK」行、内容订单「返回内容」按钮与四处订单文案、消息 GAME/KNOWLEDGE 目标路由（存量 GAME 消息保留为不可跳转条目且不再弹窗）。路由契约三处（app.json / runtime-pages.json / project.json）同步至 61 条，设备能力清单移除 knowledge-webview，`game-ranking-tabs` 交互旅程删除。`mip-game-api`、`mip-knowledge-scheduler` 云函数、管理端知识/游戏运营、数据库表与存量数据本期全部保留，数据与后端处置另行决定；`defaults.ts` 的 `gameFunctionName` 配置随云函数保留。banner 目标白名单（`mip-banners-api` validation 及其测试）同步移除团队 PK 两条路由，指向已下线页面的存量 banner 数据待运营清理。本地根工程 vitest 1530 项、完整 `pnpm verify`（server contract 697 源 + docs 仓库事实校验）与 `pnpm admin:web:verify`（27 个 React 测试文件）全部通过；未部署、未应用云端变更。
 
 2026-10-05（评审修复）：勋章配置 diff code review 后修复五项。① 孤儿清理守卫：`mip-media-api` cleanupOrphans 增加 `mip_badges.image_asset_id` 引用守卫（此前 `BADGE_IMAGE` 随 `PURPOSE_POLICIES` 自动进入清理范围，已绑定勋章的形象会在 24 小时后被当孤儿删除，并导致勋章无法再编辑）；② 读取侧 status 谓词：`mip-growth-api` 与 `mip-opportunities-api`（公开档案/人物卡 loadPublicBadges 新增素材 join）的勋章素材 join 统一加 `asset.status = 'READY'`，非 READY 素材回退到 `image_url` 手填兜底；③ 后台预览贯通：`mip.admin.badges.list` DTO 新增 `imagePreviewUrl`（素材优先解析，`admin-media-projection` URL_KEYS 扩展后自动换临时 HTTPS），勋章表单编辑时可预览已保存形象，AssetUploader/AssetListUploader 上传后改用本地 blob 预览（此前渲染 `cloud://` 必然裂图）；④ 错误文案去 Banner 化：`mip-admin-api` 的 `IMAGE_ASSET_INVALID`/`IMAGE_NOT_OWNED` 文案改为素材中立措辞（`mip-banners-api` 自有映射保持不变）；⑤ 补清空回读测试：勋章形象从非空到清空的服务端回读（`imageAssetId: ''` 显式清空）纳入 React 测试。门禁 `pnpm verify` 与 `pnpm admin:web:verify` 全绿（React 156 项）。
 
@@ -17,7 +19,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 67 条小程序路由、102 个迁移（均已锁定）、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 58 条小程序路由、102 个迁移（均已锁定）、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -113,7 +115,7 @@ MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示�
 
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
-| 小程序路由 | 67 条：5 条主包、57 条用户分包、5 条管理分包（含网页登录确认页） | `config/runtime-pages.json`、`src/app.json` |
+| 小程序路由 | 58 条：5 条主包、48 条用户分包、5 条管理分包（含网页登录确认页）；2026-10-06/07 MIW-42 删除机会死页 3 条、MIW-44 下线知识/游戏/盲盒 9 条 | `config/runtime-pages.json`、`src/app.json` |
 | 数据库 | 102 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
 | 管理合同 | 240 个 operation：105 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | Web 开放范围 | 105 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |

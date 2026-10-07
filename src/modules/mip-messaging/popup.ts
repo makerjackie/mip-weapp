@@ -2,7 +2,8 @@ import type { MipMessagingModule } from './module'
 import type { InboxMessage, InboxMessageId } from './types'
 import { isTrustedInboxRoute } from './domain'
 
-const POPUP_TYPES = new Set<InboxMessage['messageType']>(['GROWTH_LEVEL_UP', 'GAME', 'OPERATIONS'])
+// GAME 弹窗随功能下线移除（MIW-44）：存量 GAME 消息只保留在消息列表。
+const POPUP_TYPES = new Set<InboxMessage['messageType']>(['GROWTH_LEVEL_UP', 'OPERATIONS'])
 
 interface PopupStorage {
   read: () => unknown

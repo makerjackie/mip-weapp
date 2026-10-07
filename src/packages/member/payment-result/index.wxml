@@ -19,7 +19,6 @@
     <t-button wx:if="{{order}}" block size="large" theme="primary" bind:tap="openOrder">查看订单详情</t-button>
     <t-button wx:if="{{isEventOrder && eventId}}" block variant="outline" theme="default" bind:tap="openEvent">返回活动</t-button>
     <t-button wx:if="{{isEventOrder}}" block variant="outline" theme="default" bind:tap="openMyEvents">查看我的活动</t-button>
-    <t-button wx:if="{{isContentOrder && contentId}}" block variant="outline" theme="default" bind:tap="openContent">返回内容</t-button>
     <t-button wx:if="{{!isEventOrder && !isContentOrder && result === 'success'}}" block variant="outline" theme="default" bind:tap="openMembership">查看会员权益</t-button>
   </view>
   <app-page-exit always label="完成" tab-url="/pages/profile/index" />

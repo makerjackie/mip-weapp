@@ -94,22 +94,22 @@ describe('runtime ready assertions', () => {
 
   it('selects the first matching fixture that also has every required query value', () => {
     const route = {
-      path: 'packages/member/mip-game/team/index',
-      query: ['teamId'],
+      path: 'packages/member/mip-events/interaction/index',
+      query: ['eventId'],
       queryFixture: {
-        sourceRoute: 'packages/member/mip-game/index',
-        dataPath: 'rankings',
-        where: { subjectType: 'TEAM' },
-        values: { teamId: 'teamId' },
+        sourceRoute: 'packages/member/mip-events/mine/index',
+        dataPath: 'registrations',
+        where: { status: 'ATTENDED' },
+        values: { eventId: 'eventId' },
       },
     }
     expect(resolveQueryFixtureValues(route, {
-      rankings: [
-        { subjectType: 'USER', teamId: 'user-row' },
-        { subjectType: 'TEAM', teamId: '' },
-        { subjectType: 'TEAM', teamId: 'team-real' },
+      registrations: [
+        { status: 'REGISTERED', eventId: 'event-row' },
+        { status: 'ATTENDED', eventId: '' },
+        { status: 'ATTENDED', eventId: 'event-real' },
       ],
-    })).toEqual({ status: 'resolved', values: { teamId: 'team-real' } })
+    })).toEqual({ status: 'resolved', values: { eventId: 'event-real' } })
   })
 
   it('resolves query values from nested list items', () => {

@@ -12,8 +12,6 @@ const MINIPROGRAM_PATH_ALLOWLIST = Object.freeze({
   '/packages/member/mip-cases/list/index': Object.freeze([]),
   '/packages/member/mip-tasks/index': Object.freeze([]),
   '/packages/member/mip-tasks/detail/index': Object.freeze(['taskId']),
-  '/packages/member/mip-game/index': Object.freeze([]),
-  '/packages/member/mip-game/team/index': Object.freeze(['teamId']),
   '/packages/member/mip-events/detail/index': Object.freeze(['eventId']),
   '/packages/member/mip-opportunities/detail/index': Object.freeze(['id']),
   '/packages/member/mip-cases/detail/index': Object.freeze(['id']),

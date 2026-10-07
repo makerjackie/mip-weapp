@@ -33,11 +33,8 @@ test('allows only repository-owned absolute mini-program routes', () => {
     normalizeMiniprogramPath('/packages/member/mip-tasks/detail/index?taskId=30000000-0000-4000-8000-000000000001'),
     '/packages/member/mip-tasks/detail/index?taskId=30000000-0000-4000-8000-000000000001',
   )
-  assert.equal(normalizeMiniprogramPath('/packages/member/mip-game/index'), '/packages/member/mip-game/index')
-  assert.equal(
-    normalizeMiniprogramPath('/packages/member/mip-game/team/index?teamId=30000000-0000-4000-8000-000000000001'),
-    '/packages/member/mip-game/team/index?teamId=30000000-0000-4000-8000-000000000001',
-  )
+  // MIW-44：团队 PK 页面下线后，banner 目标不再接受游戏路由。
+  assert.throws(() => normalizeMiniprogramPath('/packages/member/mip-game/index'), /TARGET_INVALID/)
   assert.ok(Object.keys(MINIPROGRAM_PATH_ALLOWLIST).every(path => path.startsWith('/')))
   assert.throws(() => normalizeMiniprogramPath('/packages/admin/dashboard/index'), /TARGET_INVALID/)
   assert.throws(() => normalizeMiniprogramPath('/pages/events/index?next=%2Fpackages%2Fadmin'), /TARGET_INVALID/)

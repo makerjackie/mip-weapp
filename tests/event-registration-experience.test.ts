@@ -246,7 +246,8 @@ describe('event registration experience', () => {
     expect(paymentResultView).toContain('bind:tap="openEvent">返回活动')
     expect(paymentResultView).toContain('bind:tap="openMyEvents">查看我的活动')
     expect(paymentResultView).toContain('wx:if="{{!isEventOrder && !isContentOrder && result === \'success\'}}"')
-    expect(paymentResultView).toContain('bind:tap="openContent">返回内容')
+    // MIW-44：知识内容页面下线，内容订单不再提供「返回内容」入口。
+    expect(paymentResultView).not.toContain('openContent')
 
     expect(orderDetail).toContain('order.orderType === \'CONTENT\' ? \'INTERACT\' : \'PURCHASE_MEMBERSHIP\'')
     expect(orderDetail).toContain('order.orderType === \'CONTENT\' ? \'内容支付尚未配置\' : \'会员支付尚未配置\'')

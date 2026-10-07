@@ -18,7 +18,7 @@ function statusDescription(order: CommerceOrder) {
     case 'PAID': return order.orderType === 'EVENT'
       ? '已付款，可在“我的活动”查看报名结果。'
       : order.orderType === 'CONTENT'
-        ? '支付成功，现在可以查看内容。'
+        ? '支付成功。'
         : '支付成功，会员权益已开通。'
     case 'FAILED': return '这笔订单未完成支付。'
     case 'CLOSED': return '这笔订单已关闭。'
@@ -27,7 +27,7 @@ function statusDescription(order: CommerceOrder) {
     case 'REFUNDED': return order.orderType === 'EVENT'
       ? '退款已完成，可在“我的活动”查看报名状态。'
       : order.orderType === 'CONTENT'
-        ? '退款已完成，可在内容详情查看当前访问权限。'
+        ? '退款已完成。'
         : '退款已完成，可在会员页查看当前权益。'
   }
 }
@@ -46,7 +46,6 @@ Page({
     isEventOrder: false,
     isContentOrder: false,
     eventId: '',
-    contentId: '',
     eventCoverUrl: '',
     eventStartsText: '',
     eventEndsText: '',
@@ -155,7 +154,6 @@ Page({
       isEventOrder: order.orderType === 'EVENT',
       isContentOrder: order.orderType === 'CONTENT',
       eventId: order.orderType === 'EVENT' ? order.resourceId || '' : '',
-      contentId: order.orderType === 'CONTENT' ? order.resourceId || '' : '',
       eventCoverUrl: order.event?.coverUrl || '',
       eventStartsText: order.event?.startsAt ? formatLocalDateTime(order.event.startsAt) : '',
       eventEndsText: order.event?.endsAt ? formatLocalDateTime(order.event.endsAt) : '',
@@ -426,10 +424,5 @@ Page({
     })
   },
   openMyEvents() { caseNavigateTo({ url: '/packages/member/mip-events/mine/index' }) },
-  openContent() {
-    if (this.data.contentId) {
-      caseNavigateTo({ url: `/packages/member/mip-knowledge/detail/index?contentId=${encodeURIComponent(this.data.contentId)}` })
-    }
-  },
   openHelp() { caseNavigateTo({ url: '/packages/member/help/index' }) },
 })

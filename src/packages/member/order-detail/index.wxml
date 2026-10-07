@@ -121,7 +121,7 @@
     <view class="mt-6 flex flex-col gap-3">
       <t-button wx:if="{{refundable}}" block size="large" variant="outline" theme="danger" loading="{{submittingRefund}}" disabled="{{!paymentEnabled}}" bind:tap="requestRefund">{{paymentEnabled ? '申请退款' : '退款服务尚未配置'}}</t-button>
       <view wx:if="{{isEventOrder}}" class="flex gap-3"><t-button class="min-w-0 flex-1" block variant="outline" theme="default" bind:tap="openMyEvents">我的活动</t-button><t-button wx:if="{{eventId}}" class="min-w-0 flex-1" block theme="primary" bind:tap="openEvent">返回活动</t-button></view>
-      <view wx:elif="{{isContentOrder}}" class="grid grid-cols-2 gap-3"><t-button block variant="outline" theme="default" bind:tap="openHelp">帮助与客服</t-button><t-button block theme="primary" bind:tap="openContent">返回内容</t-button></view>
+      <t-button wx:elif="{{isContentOrder}}" block variant="outline" theme="default" bind:tap="openHelp">帮助与客服</t-button>
       <view wx:else class="grid grid-cols-2 gap-3"><t-button block variant="outline" theme="default" bind:tap="openHelp">帮助与客服</t-button><t-button block theme="primary" bind:tap="openMembership">会员方案</t-button></view>
     </view>
   </block>

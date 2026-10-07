@@ -1,7 +1,6 @@
 import {
   accountClosureConfirmationPhrase,
   createAccountClosureRequestTracker,
-  mipAccessPageUrl,
   MipIdentityGatewayError,
 } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
@@ -21,8 +20,6 @@ Page({
     message: '',
   },
   closureRequest: null as ReturnType<typeof createAccountClosureRequestTracker> | null,
-
-  openingGame: false,
 
   onLoad() {
     // WeChat deep-clones free Page fields during instantiation, so create the stateful tracker afterwards.
@@ -68,26 +65,6 @@ Page({
     }
   },
 
-  async openGame() {
-    if (this.openingGame) {
-      return
-    }
-    this.openingGame = true
-    try {
-      const destination = '/packages/member/mip-game/index'
-      const session = await mipIdentityModule.beginProtectedAction({
-        action: 'VIEW_RESTRICTED_PROFILE',
-        source: { navigation: 'redirectTo', route: destination },
-      })
-      caseNavigateTo({ url: session.decision.ready ? destination : mipAccessPageUrl(session.token) })
-    }
-    catch {
-      wx.showToast({ title: '身份状态暂时无法确认，请稍后重试。', icon: 'none' })
-    }
-    finally {
-      this.openingGame = false
-    }
-  },
   openHelp() { caseNavigateTo({ url: '/packages/member/help/index' }) },
   openNotificationSettings() { caseNavigateTo({ url: '/packages/member/mip-opportunity-settings/index' }) },
   openAbout() { caseNavigateTo({ url: '/packages/member/about/index' }) },

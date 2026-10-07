@@ -4,6 +4,8 @@
 
 状态定义见 [README.md](README.md)。`implemented` 不等于已通过运行时、staging、真机或生产验收；验证列可同时包含 `verified-local` 与 `external-wait`。
 
+2026-10-06（MIW-44）：知识内容、笨笨盲盒、团队 PK 的用户端页面（共 9 条路由）已从小程序下线删除；下述相关行的实现/验证状态此后只描述服务端与管理端合同。`mip-game-api`、`mip-knowledge-scheduler`、管理端运营与数据库数据本期保留，处置另行决定。
+
 ## 来源范围
 
 - 固定 v1.1.0 PRD：[PRD-v1.1.0.md](sources/github/PRD-v1.1.0.md)
@@ -37,10 +39,10 @@
 | 我的活动与相关机会 / F1、F4 | 当前/历史活动、票码、发布/被引荐列表和未读 | implemented | verified-local + evidence-missing | 页面与服务合同已覆盖；缺当前完整运行证据 |
 | 成长与勋章 / H4、AME 106–108 | 等级、经验、贡献、游戏币、权益、流水、勋章与调整 | implemented | verified-local + external-wait | 权威账户、不可变流水、佩戴和管理测试已覆盖；正式数值与素材待验 |
 | 任务 / H5 | 全员/指定成员、等级、模板、截止、完成和经验奖励 | implemented | verified-local + external-wait | 资格重验、单次完成和同事务奖励已覆盖；真机模板媒体待验 |
-| 团队 PK / PRD 60–68、AME 95 | 赛季、队伍、周赛、四类排行和队伍大本营 | implemented | verified-local + external-wait | 服务端计分、快照和会员门禁已有测试；正式规则、数据和视觉待验 |
-| 盲盒 / AME 54、56–58 | 目录、规则、概率、库存、抽取、背包和动画 | implemented | verified-local + external-wait | 事务扣币、防负、库存和幂等结果已覆盖；正式规则与视觉待验 |
+| 团队 PK / PRD 60–68、AME 95（用户端已下线 MIW-44） | 赛季、队伍、周赛、四类排行和队伍大本营 | implemented | verified-local + external-wait | 服务端计分、快照和会员门禁已有测试；正式规则、数据和视觉待验 |
+| 盲盒 / AME 54、56–58（用户端已下线 MIW-44） | 目录、规则、概率、库存、抽取、背包和动画 | implemented | verified-local + external-wait | 事务扣币、防负、库存和幂等结果已覆盖；正式规则与视觉待验 |
 | AI 机会撮合 / AME 93 | 人才/项目匹配、解释、反馈、设置、重算和 provider 降级 | implemented | verified-local + external-wait | 确定性本地 provider 和隐私边界已覆盖；外部 provider 待验 |
-| 知识内容 / AME 94、96–101、103 | 来源、分类、计划、采集、审核、免费/会员/单内容访问和商品 | implemented | verified-local + external-wait | knowledge/community/commerce/ledger 合同已覆盖；正式来源、内容、价格、域名、视频号和支付待验 |
+| 知识内容 / AME 94、96–101、103（用户端已下线 MIW-44） | 来源、分类、计划、采集、审核、免费/会员/单内容访问和商品 | implemented | verified-local + external-wait | knowledge/community/commerce/ledger 合同已覆盖；正式来源、内容、价格、域名、视频号和支付待验 |
 | 跨域评论 / AME 102 | 知识、活动、机会的评论设置、审核和举报 | implemented | verified-local + evidence-missing | 共用规则和各域 adapter 已实现；缺统一端到端证据 |
 | 消息与偏好 / G1–G2、AME 104–105 | 站内信、未读、偏好、订阅/客服/服务号 adapter | implemented | verified-local + external-wait | outbox、站内信和偏好重查已覆盖；正式模板、窗口、端点和回执待验 |
 | 消息排期 | 模板、活动、收件人快照、定时、撤回和失败复核 | implemented | verified-local + external-wait | 管理领域和独立滚动 scheduler 已实现；对应环境的 CAM/canary/激活读回待验 |
