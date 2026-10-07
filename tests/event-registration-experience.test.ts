@@ -136,11 +136,13 @@ describe('event registration experience', () => {
   it('keeps the design-styled cancel pill as the only registration action', () => {
     const mineView = read('src/packages/member/mip-events/mine/index.wxml')
 
-    // figma 3591_36185：右下角黄色胶囊「取消报名」，整卡点击进详情，无其他按钮。
+    // figma 3591_36185：黄色胶囊「取消报名」放卡片 footer 行（提示居左、按钮居右），
+    // 不得绝对定位悬浮——悬浮会遮挡时间/地点文字（MIW-43）。整卡点击进详情，无其他按钮。
     expect(mineView).toContain('data-action="cancel"')
     expect(mineView).toContain('catch:tap="cancelRegistration"')
-    expect(mineView).toContain('bottom-[16rpx] right-[16rpx]')
-    expect(mineView).toContain('h-[56rpx] w-[152rpx]')
+    expect(mineView).not.toContain('absolute bottom-[16rpx] right-[16rpx]')
+    expect(mineView).toContain('items-center justify-end gap-3 border-t border-line px-3 py-2')
+    expect(mineView).toContain('h-[56rpx] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-brand px-[24rpx]')
     expect(mineView).toContain('rounded-full bg-brand')
     expect(mineView).toContain('text-canvas')
     expect(mineView).toContain('{{item.canRetryRefund ? \'继续处理退款\' : \'取消报名\'}}')

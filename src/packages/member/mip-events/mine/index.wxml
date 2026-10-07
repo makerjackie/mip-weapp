@@ -11,11 +11,13 @@
   <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><mip-empty-state title="暂时无法加载活动" description="{{message || '请稍后重试。'}}" action-text="重新加载" bind:action="loadRegistrations" /></view>
   <view wx:elif="{{registrations.length === 0}}" class="mx-3 mt-5"><mip-empty-state title="{{activeCategory === 'UPCOMING' ? '暂无待参加活动' : activeCategory === 'ATTENDED' ? '暂无已参加活动' : '暂无历史活动'}}" description="{{activeCategory === 'UPCOMING' ? '报名后的待参加活动会显示在这里。' : activeCategory === 'ATTENDED' ? '完成签到的活动会显示在这里。' : '已结束、已取消和未通过的报名会显示在这里。'}}" action-text="浏览活动" bind:action="browseEvents" /></view>
   <view wx:else class="mx-3 mt-4 flex flex-col gap-3">
-    <!-- 点卡片进详情；卡片上唯一动作是右下角黄色胶囊「取消报名」（服务端授权时渲染）。 -->
-    <view wx:for="{{registrations}}" wx:key="registrationId" class="relative overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}">
+    <!-- 点卡片进详情；卡片动作放正常文档流 footer 行（提示居左、按钮居右），不悬浮遮挡时间/地点。 -->
+    <view wx:for="{{registrations}}" wx:key="registrationId" class="flex flex-col overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}">
       <mip-activity-card event="{{item.card}}" variant="feed" bind:select="openRegistration" />
-      <view wx:if="{{item.status === 'PAYMENT_PENDING'}}" class="border-t border-line px-3 py-2 text-[20rpx] text-muted">支付确认前不会生成报名资格。</view>
-      <view wx:if="{{item.canCancel || item.canRetryRefund}}" aria-role="button" aria-label="{{item.canRetryRefund ? '继续处理退款' : '取消报名'}}" class="absolute bottom-[16rpx] right-[16rpx] flex h-[56rpx] w-[152rpx] items-center justify-center rounded-full bg-brand text-[28rpx] font-medium leading-[40rpx] text-canvas {{cancelingId === item.registrationId ? 'opacity-60' : 'active:opacity-80'}}" data-action="cancel" data-event-id="{{item.event.id}}" data-registration-id="{{item.registrationId}}" data-version="{{item.version}}" data-refund-retry="{{item.canRetryRefund}}" catch:tap="cancelRegistration">{{item.canRetryRefund ? '继续处理退款' : '取消报名'}}</view>
+      <view wx:if="{{item.status === 'PAYMENT_PENDING' || item.canCancel || item.canRetryRefund}}" class="flex items-center justify-end gap-3 border-t border-line px-3 py-2">
+        <view wx:if="{{item.status === 'PAYMENT_PENDING'}}" class="min-w-0 flex-1 text-[20rpx] leading-[28rpx] text-muted">支付确认前不会生成报名资格。</view>
+        <view wx:if="{{item.canCancel || item.canRetryRefund}}" aria-role="button" aria-label="{{item.canRetryRefund ? '继续处理退款' : '取消报名'}}" class="flex h-[56rpx] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-brand px-[24rpx] text-[28rpx] font-medium leading-[40rpx] text-canvas {{cancelingId === item.registrationId ? 'opacity-60' : 'active:opacity-80'}}" data-action="cancel" data-event-id="{{item.event.id}}" data-registration-id="{{item.registrationId}}" data-version="{{item.version}}" data-refund-retry="{{item.canRetryRefund}}" catch:tap="cancelRegistration">{{item.canRetryRefund ? '继续处理退款' : '取消报名'}}</view>
+      </view>
     </view>
     <view wx:if="{{nextCursor}}" class="py-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
   </view>
