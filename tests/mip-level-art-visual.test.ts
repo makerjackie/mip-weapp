@@ -15,7 +15,9 @@ describe('MIP level artwork presentation', () => {
     // The profile delegates the level band to the baked-card component instead of
     // blending level-art.png itself (references/wechat-component-contracts.md).
     expect(markup).toContain('<mip-level-banner')
-    expect(markup).toContain('level="{{levelName}}" current="{{experience}}" target="{{growthTarget}}"')
+    expect(markup).toContain('level="{{levelBannerText}}" current="{{experience}}" target="{{growthTarget}}"')
+    // 昵称旁徽标与横幅同源，玩家态展示 Lv.数字而非等级名（MIW-51）。
+    expect(markup).toContain('{{growthState === \'ready\' ? levelBannerText : membershipLabel}}')
     expect(styles).not.toContain('profile-level-art')
     expect(bannerMarkup).toContain('src="/assets/mip/level-banner-deco@3x.png"')
     expect(bannerMarkup).toContain('mode="scaleToFill"')

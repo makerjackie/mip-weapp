@@ -32,6 +32,8 @@
 
 /* 24rpx of hero panel between the summary row and the level banner (figma 1770:38871). */
 .profile-level-banner {
+  /* 组件宿主节点默认 inline，缺 display:block 时 margin-top 不参与布局（MIW-51 实测 gap=0）。 */
+  display: block;
   margin-top: 24rpx;
 }
 

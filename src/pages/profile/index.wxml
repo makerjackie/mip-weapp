@@ -110,7 +110,7 @@
         <view class="profile-identity">
           <view class="profile-name-row">
             <text class="profile-name">{{nickname}}</text>
-            <text class="profile-level-chip">{{growthState === 'ready' ? levelName : membershipLabel}}</text>
+            <text class="profile-level-chip">{{growthState === 'ready' ? levelBannerText : membershipLabel}}</text>
             <image wx:if="{{primaryBadge && primaryBadge.imageUrl}}" class="profile-rank-mark" mode="aspectFill" src="{{primaryBadge.imageUrl}}" />
             <t-icon wx:elif="{{primaryBadge && primaryBadge.iconName}}" name="{{primaryBadge.iconName}}" size="36rpx" color="var(--color-brand)" />
             <image wx:elif="{{primaryBadge}}" class="profile-rank-mark" mode="aspectFit" src="/assets/figma/profile/rank-mark.png" />
@@ -125,7 +125,7 @@
         </view>
       </view>
 
-      <mip-level-banner wx:if="{{isPlayer && growthState === 'ready'}}" class="profile-level-banner" level="{{levelName}}" current="{{experience}}" target="{{growthTarget}}" fill-px="{{growthFillPx}}" bind:tap="openGrowth" />
+      <mip-level-banner wx:if="{{isPlayer && growthState === 'ready'}}" class="profile-level-banner" level="{{levelBannerText}}" current="{{experience}}" target="{{growthTarget}}" fill-px="{{growthFillPx}}" bind:tap="openGrowth" />
       <view wx:elif="{{isPlayer}}" class="profile-level-card" bind:tap="openGrowth">
         <view class="profile-level-header">
           <text class="profile-level-name">玩家等级</text>
