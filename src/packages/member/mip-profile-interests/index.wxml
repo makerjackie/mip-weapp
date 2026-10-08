@@ -4,13 +4,13 @@
   <mip-empty-state wx:elif="{{state === 'error'}}" title="名单暂时无法加载" description="{{message}}" action-text="重新加载" bind:action="load" />
   <mip-empty-state wx:elif="{{state === 'empty'}}" title="暂无感兴趣的人" description="对 TA 感兴趣的人会显示在这里。" />
   <block wx:else>
-    <view class="mb-4 text-[24rpx] text-muted">{{totalCount}} 人感兴趣</view>
     <!-- J4-02b reuses the J3-08 visitor card dimensions, without dates or search.
+         「N 人感兴趣」计数行按 owner 2026-10-08 裁决移除（totalCount 仍由服务端返回/分页用）。
          MIW-24：名单卡走统一嘉宾卡组件 grid 壳；medals 为服务端佩戴勋章（≤3 枚，组件兜底），
          等级/行业/简介未返回时不造值；DTO 暂无邀请来源，不显示邀请人行。 -->
     <view class="grid grid-cols-2 gap-[24rpx]">
       <view wx:for="{{people}}" wx:key="profileRef" class="min-w-0" aria-role="button" aria-label="查看{{item.displayName}}的公开档案" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
-        <mip-talent-card layout="grid" display-name="{{item.displayName}}" avatar-url="{{item.avatarUrl}}" level-text="{{item.levelText}}" status-text="{{item.statusText}}" meta-text="{{item.metaText}}" supporting-text="{{item.supportingText}}" medals="{{item.medals}}" />
+        <mip-talent-card layout="grid" display-name="{{item.displayName}}" avatar-url="{{item.avatarUrl}}" level-text="{{item.levelText}}" tags="{{item.profileTags}}" supporting-text="{{item.supportingText}}" medals="{{item.medals}}" />
       </view>
     </view>
     <view wx:if="{{message}}" class="mt-4 text-[24rpx] text-danger">{{message}}</view>

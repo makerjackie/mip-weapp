@@ -175,6 +175,7 @@ describe('MIP event participant visual hierarchy', () => {
   it('renders participant cards through the unified talent-card grid shell', () => {
     // MIW-24：参与人卡走统一嘉宾卡组件（grid 壳 + 描边环 + 左对齐正文 + kind 章），
     // 页面只保留 corner 心形票与心动关系行；DTO 无 Lv/邀请人/勋章，不造值。
+    // MIW-52：中间固定行换统一三标签（地区MIP | 行业 | 身份状态），metaText 保留作搜索口径。
     const cardShell = postcss.parse(source('src/components/talent-card/index.wxss'))
     expect(template).toContain('<mip-talent-card')
     expect(template).toContain('layout="grid"')
@@ -182,7 +183,7 @@ describe('MIP event participant visual hierarchy', () => {
     expect(template).toContain('avatar-ring="{{true}}"')
     expect(template).toContain('lead-label="{{item.kindLabel}}"')
     expect(template).toContain('display-name="{{item.displayName}}"')
-    expect(template).toContain('meta-text="{{item.metaText}}"')
+    expect(template).toContain('tags="{{item.profileTags}}"')
     expect(template).toContain('supporting-text="{{item.introductionText}}"')
     expect(template).toContain('slot="corner"')
     expect(template).toContain('slot="body"')
@@ -193,7 +194,7 @@ describe('MIP event participant visual hierarchy', () => {
     })
     const leftBody = cardShell.nodes.find(
       (candidate): candidate is Rule => candidate.type === 'rule'
-        && candidate.selectors.includes('.mip-talent-card--grid-left .mip-talent-card__figure-meta'),
+        && candidate.selectors.includes('.mip-talent-card--grid-left .mip-talent-card__figure-tags'),
     )
     expect(leftBody).toBeDefined()
     expect(declarations(rule(stylesheet, '.participants-cell', true))).toMatchObject({

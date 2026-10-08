@@ -5,7 +5,11 @@
 // medals 只接服务端佩戴口径（mip_user_badge_equipment 已过滤未佩戴），组件兜底最多展示 3 枚；
 // 未返回的勋章不造值。inviterKind：'PLAYER' 玩家邀请人（昵称+头像）/ 'PLATFORM' MIP 平台
 // （平台名+平台系统头像）；玩家与平台的判定规则由服务端口径决定，调用方传入，组件不判定。
+// MIW-52 统一竖版卡：tags=固定三标签（地区MIP | 代表行业 | 身份状态），组件过滤空值并
+// 兜底最多 3 个，缺省回退 metaText；footRightMode：'inviter'（默认，右下邀请人/targetText）
+// / 'custom'（渲染 foot-right 插槽，如 NPC 任务分配勾选态），右上角沿用 corner 插槽。
 const MAX_MEDALS = 3
+const MAX_TAGS = 3
 const PLATFORM_INVITER_NAME = 'MIP平台'
 const PLATFORM_INVITER_AVATAR = '/assets/brand/mip-logo-yellow.png'
 
@@ -26,6 +30,8 @@ Component({
     avatarRing: { type: Boolean, value: false },
     leftAlignBody: { type: Boolean, value: false },
     metaText: { type: String, value: '' },
+    tags: { type: Array, value: [] },
+    footRightMode: { type: String, value: 'inviter' },
     supportingText: { type: String, value: '' },
     levelText: { type: String, value: '' },
     leadLabel: { type: String, value: '' },
@@ -41,6 +47,7 @@ Component({
   },
   data: {
     displayMedals: [] as TalentMedal[],
+    displayTags: [] as string[],
     inviter: { name: '', avatarUrl: '', platform: false },
   },
   observers: {
@@ -55,6 +62,11 @@ Component({
       this.setData({
         displayMedals: (Array.isArray(medals) ? medals : []).slice(0, MAX_MEDALS),
         inviter: { name, avatarUrl: platform ? (inviterAvatarUrl || PLATFORM_INVITER_AVATAR) : inviterAvatarUrl, platform },
+      })
+    },
+    'tags': function (tags: string[]) {
+      this.setData({
+        displayTags: (Array.isArray(tags) ? tags : []).filter(tag => !!tag).slice(0, MAX_TAGS),
       })
     },
   },

@@ -3,12 +3,15 @@
 const { DomainError } = require('./rules')
 const { createProfileRef } = require('../lib/profile-ref')
 const { requireActiveUserForMutation } = require('./registration-lifecycle')
+const { loadPublicPersonDetails, loadHeartInviters } = require('./public-person-details')
 
 function createHeartHistory({ iso, limitOf, mutualBlockFilter, parseJson }) {
+  // 列表按人聚合（产品口径：同一个人多点几次心动则累计展示"2次"，最新互动排最前），
+  // 游标 = (最近互动时间, 人)。
   function encodeHeartCursor(row) {
     return Buffer.from(JSON.stringify({
-      updatedAt: iso(row.updated_at),
-      id: row.id,
+      lastAt: iso(row.last_at),
+      personUserId: row.person_user_id,
     })).toString('base64url')
   }
 
@@ -16,10 +19,10 @@ function createHeartHistory({ iso, limitOf, mutualBlockFilter, parseJson }) {
     if (!value) return null
     try {
       const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
-      if (typeof parsed.updatedAt === 'string'
-        && Number.isFinite(Date.parse(parsed.updatedAt))
-        && typeof parsed.id === 'string'
-        && /^[0-9a-f-]{36}$/i.test(parsed.id)) {
+      if (typeof parsed.lastAt === 'string'
+        && Number.isFinite(Date.parse(parsed.lastAt))
+        && typeof parsed.personUserId === 'string'
+        && /^[0-9a-f-]{36}$/i.test(parsed.personUserId)) {
         return parsed
       }
     }
@@ -44,26 +47,30 @@ function createHeartHistory({ iso, limitOf, mutualBlockFilter, parseJson }) {
     const ownerSql = kind === 'SENT' ? 'h.voter_user_id' : 'h.target_user_id'
     const blockFilter = mutualBlockFilter(userId, personSql, 'h.app_id')
     const cursorClause = decoded
-      ? 'AND (h.updated_at < ? OR (h.updated_at = ? AND h.id < ?))'
+      ? 'HAVING last_at < ? OR (last_at = ? AND person_user_id < ?)'
       : ''
     const params = [appId, userId, ...blockFilter.params]
     if (decoded) {
-      params.push(decoded.updatedAt, decoded.updatedAt, decoded.id)
+      params.push(decoded.lastAt, decoded.lastAt, decoded.personUserId)
     }
     params.push(pageLimit + 1)
     const rows = await db.query(
-      `SELECT h.id, h.updated_at, e.id AS event_id, e.title AS event_title,
-         e.starts_at, e.ends_at, p.user_id AS person_user_id, p.nickname, p.headline,
-         p.visibility_json, a.cloud_file_id AS avatar_file_id
+      `SELECT ${personSql} AS person_user_id,
+         COUNT(*) AS heart_count,
+         MAX(h.updated_at) AS last_at,
+         COALESCE(SUM(h.received_read_at IS NULL), 0) AS person_unread_count,
+         p.nickname, p.headline, p.visibility_json, a.cloud_file_id AS avatar_file_id
        FROM mip_event_hearts h
-       JOIN mip_events e ON e.app_id = h.app_id AND e.id = h.event_id
        JOIN mip_profiles p ON p.app_id = h.app_id AND p.user_id = ${personSql}
        JOIN mip_users person ON person.app_id = p.app_id AND person.id = p.user_id AND person.status = 'ACTIVE'
        LEFT JOIN mip_media_assets a
          ON a.app_id = p.app_id AND a.id = p.avatar_asset_id AND a.status = 'READY'
        WHERE h.app_id = ? AND ${ownerSql} = ? AND h.status = 'ACTIVE'
-         AND ${blockFilter.sql} ${cursorClause}
-       ORDER BY h.updated_at DESC, h.id DESC LIMIT ?`,
+         AND ${blockFilter.sql}
+       GROUP BY ${personSql}, p.nickname, p.headline, p.visibility_json, a.cloud_file_id
+       ${cursorClause}
+       ORDER BY last_at DESC, person_user_id DESC
+       LIMIT ?`,
       params,
     )
     const totals = await db.one(
@@ -78,26 +85,42 @@ function createHeartHistory({ iso, limitOf, mutualBlockFilter, parseJson }) {
     )
     const hasMore = rows.length > pageLimit
     const pageRows = rows.slice(0, pageLimit)
+    // MIW-52 统一竖版用户卡：心动值列表与嘉宾卡同口径，person 补公开详情
+    // （城市/代表行业/身份状态/等级/佩戴勋章）与邀请人标注；不造值，缺什么省什么。
+    const personUserIds = [...new Set(pageRows.map(row => row.person_user_id))]
+    const [details, inviters] = personUserIds.length
+      ? await Promise.all([
+          loadPublicPersonDetails(db, appId, personUserIds),
+          loadHeartInviters(db, appId, personUserIds),
+        ])
+      : [new Map(), new Map()]
     return {
       kind,
       totalCount: Number(totals?.total_count || 0),
       unreadCount: kind === 'RECEIVED' ? Number(totals?.unread_count || 0) : 0,
       readThroughAt: iso(totals?.read_through_at),
-      items: pageRows.map(row => ({
-        event: {
-          id: row.event_id,
-          title: row.event_title,
-          startsAt: iso(row.starts_at),
-          endsAt: iso(row.ends_at),
-        },
-        person: {
-          profileRef: createProfileRef({ appId, userId: row.person_user_id }, profileRefSecret),
-          nickname: parseJson(row.visibility_json, {}).nickname === false ? 'MIP 用户' : (row.nickname || 'MIP 用户'),
-          avatarUrl: parseJson(row.visibility_json, {}).avatar === false ? undefined : (row.avatar_file_id || undefined),
-          headline: parseJson(row.visibility_json, {}).headline === false ? undefined : (row.headline || undefined),
-        },
-        updatedAt: iso(row.updated_at),
-      })),
+      items: pageRows.map((row) => {
+        const detail = details.get(row.person_user_id) || {}
+        const inviter = inviters.get(row.person_user_id)
+        return {
+          person: {
+            profileRef: createProfileRef({ appId, userId: row.person_user_id }, profileRefSecret),
+            nickname: parseJson(row.visibility_json, {}).nickname === false ? 'MIP 用户' : (row.nickname || 'MIP 用户'),
+            avatarUrl: parseJson(row.visibility_json, {}).avatar === false ? undefined : (row.avatar_file_id || undefined),
+            headline: parseJson(row.visibility_json, {}).headline === false ? undefined : (row.headline || undefined),
+            // 累计心动次数（跨所有活动）；RECEIVED 侧标注该人是否有未读心动。
+            heartCount: Number(row.heart_count || 0),
+            ...(kind === 'RECEIVED' && Number(row.person_unread_count) > 0 ? { unread: true } : {}),
+            ...(detail.cityName ? { cityName: detail.cityName } : {}),
+            ...(detail.industryLabel ? { industryLabel: detail.industryLabel } : {}),
+            ...(detail.identityStatus ? { identityStatus: detail.identityStatus } : {}),
+            ...(detail.level ? { level: detail.level } : {}),
+            ...(Array.isArray(detail.badges) && detail.badges.length ? { badges: detail.badges } : {}),
+            ...(inviter ? { inviter } : {}),
+          },
+          updatedAt: iso(row.last_at),
+        }
+      }),
       nextCursor: hasMore && pageRows.length
         ? encodeHeartCursor(pageRows[pageRows.length - 1])
         : undefined,

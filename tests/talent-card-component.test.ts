@@ -37,6 +37,28 @@ describe('talent-card component contract', () => {
     expect(component).toContain('statusText: { type: String, value: \'\' }')
   })
 
+  // MIW-52 统一竖版卡：固定三标签行（地区MIP | 代表行业 | 身份状态），空值过滤、最多 3 个，
+  // 未传 tags 回退旧 metaText；右下角可配置（默认邀请人，custom 渲染 foot-right 插槽）。
+  it('renders the unified three-tag row with bar dividers and metaText fallback', () => {
+    expect(component).toContain('MAX_TAGS = 3')
+    expect(component).toContain('.filter(tag => !!tag).slice(0, MAX_TAGS)')
+    expect(template).toContain('mip-talent-card__figure-tags')
+    expect(template).toContain('mip-talent-card__figure-tag-divider')
+    expect(template).toContain('wx:elif="{{metaText}}"')
+    expect(styles).toContain('.mip-talent-card__figure-tags')
+    expect(styles).toContain('.mip-talent-card__figure-tag-divider')
+  })
+
+  it('makes the grid foot right configurable with inviter as the default', () => {
+    expect(component).toContain('footRightMode: { type: String, value: \'inviter\' }')
+    expect(template).toContain('<slot name="foot-right" />')
+    // horizontal 保持 inviter 优先；grid 在 custom 模式后接 inviter/targetText 兜底。
+    expect(template.match(/wx:if="\{\{inviter\.name\}\}"/g) || []).toHaveLength(1)
+    expect(template.match(/wx:elif="\{\{inviter\.name\}\}"/g) || []).toHaveLength(1)
+    expect(template.match(/wx:elif="\{\{targetText\}\}"/g) || []).toHaveLength(2)
+    expect(template).toContain('footRightMode === \'custom\'')
+  })
+
   it('shows the platform inviter with platform name and system avatar fallback', () => {
     expect(component).toContain('inviterKind: { type: String, value: \'PLAYER\' }')
     expect(component).toContain('PLATFORM_INVITER_NAME = \'MIP平台\'')
@@ -45,9 +67,10 @@ describe('talent-card component contract', () => {
   })
 
   it('falls back to target text only when no inviter is known', () => {
-    const inviterBlocks = template.match(/wx:if="\{\{inviter\.name\}\}"/g) || []
-    const targetBlocks = template.match(/wx:elif="\{\{targetText\}\}"/g) || []
-    expect(inviterBlocks.length).toBe(2)
-    expect(targetBlocks.length).toBe(2)
+    // MIW-52：horizontal 与 grid 两条 footer 链均为 inviter 优先、targetText 兜底；
+    // grid 链前的 custom 模式（foot-right 插槽）见上一条契约。
+    expect(template.match(/wx:if="\{\{inviter\.name\}\}"/g) || []).toHaveLength(1)
+    expect(template.match(/wx:elif="\{\{inviter\.name\}\}"/g) || []).toHaveLength(1)
+    expect(template.match(/wx:elif="\{\{targetText\}\}"/g) || []).toHaveLength(2)
   })
 })

@@ -4,14 +4,20 @@ import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { ensureProtectedPageAccess, requiresIdentityRefresh } from '../../../modules/mip-identity/protected-page-load'
 import { caseNavigateTo } from '../../../platform/navigation/client'
-import { formatChineseDate, formatChineseDateTime } from '../../../utils/date'
+import { formatChineseDateTime } from '../../../utils/date'
 
 type PageState = 'loading' | 'ready' | 'empty' | 'error' | 'access'
 
 interface HeartView extends HeartHistoryItem {
   viewKey: string
-  eventTimeText: string
   updatedText: string
+  // MIW-52 统一竖版用户卡：心动值卡与嘉宾卡同布局（Lv/三标签/勋章/邀请人），缺省不造值。
+  levelText: string
+  profileTags: string[]
+  medals: { id: string, imageUrl?: string }[]
+  inviterName: string
+  inviterAvatarUrl: string
+  inviterKind: 'PLAYER' | 'PLATFORM'
 }
 
 interface HeartCache {
@@ -29,11 +35,21 @@ function createCache(): HeartCache {
 }
 
 function present(item: HeartHistoryItem, index: number): HeartView {
+  const inviter = item.person.inviter
   return {
     ...item,
-    viewKey: `${item.event.id}-${item.person.profileRef}-${index}`,
-    eventTimeText: formatChineseDate(item.event.startsAt),
+    viewKey: `${item.person.profileRef}-${index}`,
     updatedText: formatChineseDateTime(item.updatedAt),
+    levelText: item.person.level ? `Lv.${item.person.level.number}` : '',
+    profileTags: [
+      item.person.cityName ? `${item.person.cityName}MIP` : '',
+      item.person.industryLabel || '',
+      item.person.identityStatus || '',
+    ].filter(Boolean).slice(0, 3),
+    medals: (item.person.badges || []).map(badge => ({ id: badge.id, imageUrl: badge.imageUrl })),
+    inviterName: inviter?.displayName || '',
+    inviterAvatarUrl: inviter?.avatarUrl || '',
+    inviterKind: inviter?.sourceType === 'PLATFORM' ? 'PLATFORM' : 'PLAYER',
   }
 }
 
@@ -228,13 +244,6 @@ Page({
 
   loadMore() {
     void this.load(this.data.kind, false)
-  },
-
-  openEvent(event: WechatMiniprogram.TouchEvent) {
-    const eventId = String(event.currentTarget.dataset.eventId || '')
-    if (eventId) {
-      caseNavigateTo({ url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}` })
-    }
   },
 
   openProfile(event: WechatMiniprogram.TouchEvent) {

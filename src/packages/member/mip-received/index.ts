@@ -23,6 +23,8 @@ interface InteractionView {
   actorAvatarUrl: string
   actorHeadline: string
   profileMeta: string
+  // MIW-52 统一三标签（地区MIP | 代表行业 | 身份状态）；profileMeta 保留作搜索口径。
+  profileTags: string[]
   levelText: string
   medals: { id: string, imageUrl?: string }[]
   statusText: string
@@ -73,6 +75,7 @@ function cardBase(subject: ReceivedInteractionActor) {
     actorAvatarUrl: subject.avatarUrl || '',
     actorHeadline: subject.introduction || subject.headline || '',
     profileMeta: [subject.cityName, subject.industryLabel, subject.identityStatus].filter(Boolean).join(' / '),
+    profileTags: [subject.cityName ? `${subject.cityName}MIP` : '', subject.industryLabel || '', subject.identityStatus || ''].filter(Boolean).slice(0, 3),
     levelText: subject.level ? `Lv.${subject.level.number}` : '',
     medals: (subject.badges || []).map(badge => ({ id: badge.id, imageUrl: badge.imageUrl })),
     countBadge: '',

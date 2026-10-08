@@ -20,6 +20,8 @@ interface ParticipantView {
   displayName: string
   kindLabel: string
   metaText: string
+  // MIW-52 统一三标签（地区MIP | 代表行业 | 身份状态）；metaText 保留作搜索口径（含分支名）。
+  profileTags: string[]
   introductionText: string
   heartRelation?: ParticipantHeartRelation
   /** 心动票凭证（仅签到参与人持有）：卡片右上角心形可投的依据，undefined 表示不可投。 */
@@ -35,6 +37,11 @@ function presentParticipant(participant: PublicEventParticipant, candidates: Hea
     displayName: participant.nickname || '未公开姓名',
     kindLabel: participant.userKind === 'PLAYER' ? '玩家' : participant.userKind === 'GUEST' ? '嘉宾' : '',
     metaText: [branchText, participant.primaryIndustry?.label, participant.identityStatus].filter(Boolean).join(' · '),
+    profileTags: [
+      participant.primaryBranch?.cityName ? `${participant.primaryBranch.cityName}MIP` : '',
+      participant.primaryIndustry?.label || '',
+      participant.identityStatus || '',
+    ].filter(Boolean).slice(0, 3),
     introductionText: participant.introduction || participant.headline || '',
     heartRelation: participant.heartRelation,
     heartTicket: candidates.find(candidate => candidate.profileRef === participant.profileRef)?.participantRef,
@@ -51,6 +58,7 @@ function presentHeartCandidate(
     displayName: candidate.nickname || '未公开姓名',
     kindLabel: '',
     metaText: '',
+    profileTags: [],
     introductionText: candidate.headline || '',
     heartRelation,
     heartTicket: candidate.participantRef,
