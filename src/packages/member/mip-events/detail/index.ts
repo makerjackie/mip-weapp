@@ -439,7 +439,6 @@ Page({
       videoRecaps: event.videoRecaps || [],
       participantPreview: peekCloudFileUrls(event.participantPreview || []),
       organizer: peekCloudFileUrls(event.organizer),
-      changes: event.changes || [],
     }
     this.setData({
       state: 'ready',

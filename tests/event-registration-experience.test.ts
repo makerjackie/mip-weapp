@@ -312,9 +312,11 @@ describe('event registration experience', () => {
     expect(detailView).toContain('活动介绍')
     expect(detailView).toContain('报名须知')
     expect(detailView).toContain('open-type="share"')
-    // MIW-53：邀请来源 / 活动签到模块按设计稿整体删除。
+    // MIW-53：邀请来源 / 活动签到 / 活动变更模块按客户口径整体删除。
     expect(detailView).not.toContain('邀请来源')
     expect(detailView).not.toContain('活动签到')
+    expect(detailView).not.toContain('活动变更')
+    expect(detailLogic).not.toContain('event.changes')
     expect(primaryActionButton).toContain('wx:if="{{primaryAction}}"')
     expect(primaryActionButton).toContain('aria-disabled="{{busy}}"')
     expect(primaryActionButton).not.toMatch(/\sdisabled=/)
