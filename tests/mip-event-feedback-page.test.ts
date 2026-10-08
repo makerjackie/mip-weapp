@@ -31,9 +31,10 @@ describe('MIP event feedback page', () => {
     // binding and the copy are no longer adjacent in the markup.
     expect(detailView).toContain('bind:tap="openFeedback"')
     expect(detailView).toContain('>\u6D3B\u52A8\u53CD\u9988</text>')
-    expect(detail.indexOf('event.registrationStatus === \'ATTENDED\''))
-      .toBeLessThan(detail.indexOf('event.status === \'ENDED\''))
-    expect(detail).toContain('return { key: \'interact\', label: \'\u4E0E\u4F60\u4E92\u52A8\' }')
+    // MIW-53\uFF1A\u4E3B\u6309\u94AE\u6536\u655B\u4E3A canRegister\u2192\u7ACB\u523B\u62A5\u540D\u4E24\u6001\uFF0C\u65E7\u7684 ATTENDED\u2192interact \u4F18\u5148\u7EA7
+    // \u4E0D\u518D\u5B58\u5728\uFF1B\u5DF2\u7B7E\u5230\u6001\u7684\u6D3B\u52A8\u53CD\u9988\u5165\u53E3\u4ECD\u7531\u670D\u52A1\u7AEF canInteract \u51B3\u5B9A\u3002
+    expect(detail).not.toContain('key: \'interact\'')
+    expect(detailView).toContain('wx:if="{{event.canInteract}}"')
     expect(mine).toContain('/packages/member/mip-events/detail/index?eventId=')
     expect(mine).not.toContain('/packages/member/mip-events/interaction/index?eventId=')
   })

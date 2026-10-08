@@ -1,4 +1,4 @@
-import type { EventId, OrderId } from '../../../../modules/mip'
+import type { EventId } from '../../../../modules/mip'
 import type { MipEventDetail } from '../../../../modules/mip-events'
 import type { MipGuestLoginProceedContext } from '../../../../modules/mip-identity'
 import { brand } from '../../../../config/brand'
@@ -132,41 +132,23 @@ function compactEventTime(startsAt: string, endsAt: string) {
     : `${formatChineseMonthDayTime(startsAt)} 至 ${formatChineseMonthDayTime(endsAt)}`
 }
 
-function primaryAction(event: MipEventDetail, hasCheckInScene = false) {
-  if (event.status === 'CANCELLED') {
-    return { key: 'disabled', label: '活动已取消' }
-  }
-  if (event.registrationStatus === 'ATTENDED') {
-    return { key: 'interact', label: '与你互动' }
-  }
-  if (event.status === 'ENDED') {
-    return { key: 'disabled', label: '活动已结束' }
-  }
-  if (event.registrationStatus === 'REGISTERED') {
-    if (hasCheckInScene) {
-      return { key: 'checkin', label: '确认现场签到' }
-    }
-    return { key: 'registration', label: '查看报名' }
-  }
-  if (event.registrationStatus === 'PAYMENT_PENDING') {
-    return { key: 'order', label: '查看待支付订单' }
-  }
-  if (event.registrationStatus === 'PENDING_REVIEW') {
-    return { key: 'registration', label: '报名审核中' }
-  }
-  if (event.registrationStatus === 'WAITLISTED') {
-    return { key: 'registration', label: '查看候补状态' }
-  }
+/**
+ * MIW-53（客户确认 2026-10-08，figma 1818_17142「活动详情（以签到）」）：底部 sticky
+ * 只保留两种状态——未报名且服务端允许报名时展示「立刻报名」；其余（已报名、待支付、
+ * 审核中、候补、已签到、已结束/已取消、暂不可报名）一律只保留客服与转发两个胶囊，
+ * 不再出现任何黄色主按钮（订单 / 互动 / 签到等旧主按钮均随本口径废止，与你互动已并入
+ * 参与人模块）。报名可能性完全由服务端 canRegister 决定。
+ */
+function primaryAction(event: MipEventDetail): { key: 'register', label: string } | null {
   return event.canRegister
     ? { key: 'register', label: '立刻报名' }
-    : { key: 'disabled', label: '暂不可报名' }
+    : null
 }
 
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     eventId: '' as EventId,
-    orderId: '' as OrderId | '',
     event: null as MipEventDetail | null,
     descriptionNodes: [] as ReturnType<typeof eventRichTextNodes>,
     startsText: '',
@@ -179,7 +161,7 @@ Page({
     heartMineLabel: '我的心动',
     heartReceivedLabel: '对我心动',
     locationText: '',
-    primaryAction: 'disabled',
+    primaryAction: '' as '' | 'register',
     primaryLabel: '',
     busy: false,
     message: '',
@@ -330,8 +312,9 @@ Page({
   /**
    * journey-review J0-01（M1 00:46:24）：扫码进入详情页后自动发起签到，成功即弹
    * 微信原生「签到成功」toast 并转入已签到态（与你互动 / 活动反馈出现）。服务端
-   * 要求人工处理（未报名、非现场、时间不符等）时保留「确认现场签到」按钮兜底；
+   * 要求人工处理（未报名、非现场、时间不符等）时仅保留提示，签到意图留待重新扫码；
    * 未登录（J0-02）先走手机号授权，回本页后重试签到并提示结果。
+   * （MIW-53：详情页活动签到模块与签到主按钮已按设计稿删除，扫码直达仍是唯一入口。）
    */
   async attemptAutoCheckIn() {
     const eventId = String(this.data.eventId || '')
@@ -351,9 +334,9 @@ Page({
       if (isEventAccessRequirementError(error)) {
         // 对齐 feedback 页 recoverAccess 的单次重试上限：身份会话 ready 而活动服务仍
         // 要求授权（状态分裂）时，requireAuthIntent 会直接放行并立刻重试，无上限即
-        // 无界循环；重试一次后停在手动脉冲兜底。
+        // 无界循环；重试一次后停在提示兜底（MIW-53：主按钮不再提供签到入口）。
         if (this.checkInAuthRetryAttempted) {
-          this.setData({ message: '自动签到暂时未能完成，请稍后点击「确认现场签到」重试。' })
+          this.setData({ message: '自动签到暂时未能完成，请稍后重新扫描现场活动码进入本页重试。' })
           return
         }
         void this.requireAuthIntent('checkin').then((allowed: boolean) => {
@@ -364,7 +347,7 @@ Page({
         })
         return
       }
-      // 其余校验失败不打断浏览：签到意图保留，主按钮仍提供「确认现场签到」兜底。
+      // 其余校验失败不打断浏览：签到意图保留，重新扫码进入本页即可再次自动签到。
     }
     finally {
       this.setData({ busy: false })
@@ -443,7 +426,7 @@ Page({
     const hasCheckInIntent = shouldClearCheckInIntent
       ? false
       : Boolean(mipCheckInResumeStore.peek(String(event.id)))
-    const action = primaryAction(event, hasCheckInIntent)
+    const action = primaryAction(event)
     const onlineUrl = safeHttpsEventUrl(event.onlineUrl)
     const guideUrl = safeHttpsEventUrl(event.guideUrl)
     const contentMedia = (event.contentMedia || []).map((item, index) => ({ ...item, renderKey: `media-${index}` }))
@@ -477,8 +460,8 @@ Page({
       ...interactionLabels(event),
       locationText: [event.cityName, event.venueName, event.address].filter(Boolean).join(' · ')
         || (event.mode === 'ONLINE' ? '线上活动' : '地点待公布'),
-      primaryAction: action.key,
-      primaryLabel: action.label,
+      primaryAction: action ? action.key : '',
+      primaryLabel: action ? action.label : '',
       onlineMode: this.onlineRequested && Boolean(onlineUrl),
       onlineUrl,
       guideMode: this.guideRequested && Boolean(guideUrl),
@@ -498,14 +481,9 @@ Page({
     if (!eventId) {
       return
     }
-    const hasCheckInIntent = Boolean(mipCheckInResumeStore.peek(eventId))
-    const action = this.data.event
-      ? primaryAction(this.data.event, hasCheckInIntent)
-      : null
-    this.setData({
-      hasCheckInIntent,
-      ...(action ? { primaryAction: action.key, primaryLabel: action.label } : {}),
-    })
+    // MIW-53：签到意图只影响扫码链路的自动签到与报名续签（resumeCheckIn），
+    // 不再驱动底部主按钮（两态口径见 primaryAction）。
+    this.setData({ hasCheckInIntent: Boolean(mipCheckInResumeStore.peek(eventId)) })
   },
 
   async loadInvitation() {
@@ -768,85 +746,16 @@ Page({
     }
   },
 
+  /** MIW-53：主按钮只剩「立刻报名」，走 J1-01 游客登录门禁后进入报名页。 */
   handlePrimary() {
-    if (this.data.busy || this.data.primaryAction === 'disabled') {
+    if (this.data.busy || this.data.primaryAction !== 'register') {
       return
     }
-    if (this.data.primaryAction === 'register') {
-      void this.requireAuthIntent('register').then((allowed: boolean) => {
-        if (allowed) {
-          this.openRegistration()
-        }
-      })
-      return
-    }
-    if (this.data.primaryAction === 'checkin') {
-      void this.openCheckIn()
-      return
-    }
-    if (this.data.primaryAction === 'interact') {
-      // journey-review J0-01：已签到态主按钮进入参与人列表「我的心动」tab（互动页已并入 participants）。
-      caseNavigateTo({ url: `/packages/member/mip-events/participants/index?eventId=${encodeURIComponent(this.data.eventId)}&view=SENT` })
-      return
-    }
-    if (this.data.primaryAction === 'order') {
-      void this.openOrder()
-      return
-    }
-    if (this.data.primaryAction === 'registration') {
-      caseNavigateTo({ url: '/packages/member/mip-events/mine/index' })
-    }
-  },
-
-  async openOrder() {
-    if (this.data.busy) {
-      return
-    }
-    if (this.data.orderId) {
-      caseNavigateTo({
-        url: `/packages/member/order-detail/index?orderId=${encodeURIComponent(this.data.orderId)}`,
-      })
-      return
-    }
-    let orderId: OrderId | '' = ''
-    this.setData({ busy: true, message: '' })
-    try {
-      let cursor: string | undefined
-      do {
-        const result = await mipEventsModule.listMyRegistrations(cursor)
-        const registration = result.items.find(item => item.event.id === this.data.eventId)
-        if (registration) {
-          orderId = registration.orderId || ''
-          break
-        }
-        cursor = result.nextCursor
-      } while (cursor)
-      if (!orderId) {
-        this.setData({ message: '暂时无法找到待支付订单，请稍后重试。' })
-        return
+    void this.requireAuthIntent('register').then((allowed: boolean) => {
+      if (allowed) {
+        this.openRegistration()
       }
-      this.setData({ orderId })
-      caseNavigateTo({
-        url: `/packages/member/order-detail/index?orderId=${encodeURIComponent(orderId)}`,
-      })
-    }
-    catch {
-      this.setData({ message: '待支付订单暂时无法加载，请稍后重试。' })
-    }
-    finally {
-      this.setData({ busy: false })
-    }
-  },
-
-  async openCheckIn() {
-    if (!mipCheckInResumeStore.peek(String(this.data.eventId))) {
-      this.setData({
-        hasCheckInIntent: false,
-        message: '请重新扫描现场签到码。',
-      })
-      return
-    }
-    caseNavigateTo({ url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}&resumeCheckIn=1` })
+    })
   },
 
   openRegistration() {

@@ -263,7 +263,7 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
     expect(navigateTo).toHaveBeenCalledWith({ url: `/packages/member/mip-events/participants/index?eventId=${EVENT_ID}&view=PUBLIC&kind=PLAYER` })
   })
 
-  it('keeps the manual check-in fallback when the server rejects the auto check-in', async () => {
+  it('keeps the check-in intent and re-scan hint when the server rejects the auto check-in', async () => {
     const page = createPage()
     eventsModule.resolveCheckInScene.mockResolvedValueOnce({
       eventId: EVENT_ID,
@@ -306,11 +306,12 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
     await flushAsync()
 
     // 授权驱动的自动重试仅一次（首试 + 单次重试），不形成无界循环。
+    // MIW-53：签到主按钮已删除，重试兜底只剩「重新扫码」提示。
     expect(eventsModule.checkIn).toHaveBeenCalledTimes(2)
     expect(showToast).not.toHaveBeenCalledWith({ title: '签到成功', icon: 'success' })
     expect(page.data.hasCheckInIntent).toBe(true)
     expect(checkInStore.clear).not.toHaveBeenCalled()
-    expect(page.data.message).toContain('确认现场签到')
+    expect(page.data.message).toContain('重新扫描现场活动码')
   })
 
   it('shows the 与你互动 card for attended events even without interest data (MIW-28)', async () => {

@@ -219,10 +219,9 @@ describe('event registration experience', () => {
     expect(mineView).not.toContain('data-order-id')
     expect(mine).not.toContain('/packages/member/order-detail/index?orderId=')
 
-    expect(detail).toContain('return { key: \'order\', label: \'查看待支付订单\' }')
-    expect(detail).toContain('mipEventsModule.listMyRegistrations(cursor)')
-    expect(detail).toContain('orderId = registration.orderId || \'\'')
-    expect(detail).toContain('/packages/member/order-detail/index?orderId=')
+    // MIW-53：详情页底部不再提供「查看待支付订单」主按钮，待支付订单从报名/订单链路进入。
+    expect(detail).not.toContain('查看待支付订单')
+    expect(detail).not.toContain('listMyRegistrations')
   })
 
   it('presents event payment results without describing membership entitlement changes', () => {
@@ -300,8 +299,10 @@ describe('event registration experience', () => {
     const primaryActionButton = detailView.match(/<button[^>]*id="mip-event-primary-action"[^>]*>/)?.[0] || ''
 
     expect(detailLogic).toContain('{ key: \'register\', label: \'立刻报名\' }')
-    expect(detailLogic).toContain('return { key: \'disabled\', label: \'活动已结束\' }')
-    expect(detailLogic).toContain('if (this.data.busy || this.data.primaryAction === \'disabled\')')
+    // MIW-53（figma 1818_17142）：底部 sticky 只有两态——可报名展示「立刻报名」，
+    // 其余状态（含已结束/已取消）一律回落客服+转发双胶囊，不再有 disabled 主按钮。
+    expect(detailLogic).not.toContain('key: \'disabled\'')
+    expect(detailLogic).toContain('if (this.data.busy || this.data.primaryAction !== \'register\')')
     expect(detailLogic).toContain('imageUrl: this.data.event?.coverUrl || brand.logoPath')
     expect(detailView).toContain('id="mip-event-detail-page"')
     expect(detailView).toContain('wx:if="{{event.coverUrl}}"')
@@ -311,13 +312,19 @@ describe('event registration experience', () => {
     expect(detailView).toContain('活动介绍')
     expect(detailView).toContain('报名须知')
     expect(detailView).toContain('open-type="share"')
-    expect(primaryActionButton).toContain('aria-disabled="{{primaryAction === \'disabled\' || busy}}"')
+    // MIW-53：邀请来源 / 活动签到模块按设计稿整体删除。
+    expect(detailView).not.toContain('邀请来源')
+    expect(detailView).not.toContain('活动签到')
+    expect(primaryActionButton).toContain('wx:if="{{primaryAction}}"')
+    expect(primaryActionButton).toContain('aria-disabled="{{busy}}"')
     expect(primaryActionButton).not.toMatch(/\sdisabled=/)
+    // 未报名态：客服/转发收窄为 120rpx 胶囊、主按钮占满剩余宽度；
+    // 已报名态：主按钮不渲染，客服/转发以 flex-1 平分宽度（figma 1818_17142）。
+    expect(detailView).toContain('{{primaryAction ? \'w-[120rpx] shrink-0\' : \'min-w-0 flex-1\'}}')
     expect(detailView).toContain('pb-[calc(env(safe-area-inset-bottom)+160rpx)]')
     expect(detailView).toContain('id="mip-event-bottom-actions"')
     expect(detailView).toContain('mip-member-fixed-inset fixed bottom-[env(safe-area-inset-bottom)]')
     expect(detailView).toContain('aria-label="联系客服"')
-    expect(detailView).toContain('h-[88rpx] w-[120rpx]')
     expect(detailView).toContain('id="mip-event-support-surface"')
     expect(detailView).toContain('id="mip-event-primary-action"')
     expect(detailView).toContain('/assets/figma/events/customer-service.svg')

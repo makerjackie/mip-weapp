@@ -28,7 +28,7 @@
 | 会员与邀请 / N1、#55 | 可配置方案、玩家权益、会员期邀请归因、续费 | implemented | verified-local + external-wait | commerce/ledger 和邀请 token 测试已覆盖；正式分享、扫码和支付待验 |
 | 统一订单 / #56 | 会员、活动、内容订单及服务端使用状态 | implemented | verified-local + external-wait | `mip_orders`、商品快照、状态投影和退款边界已覆盖；正式支付/退款待验 |
 | 活动目录 / B1–B8 | Banner、近期/往期、城市/日期/搜索、卡片、分享、详情入口 | implemented | verified-local + external-wait | 页面、服务端查询和日期范围测试已覆盖；正式素材、视频号、日历和分享待验 |
-| 活动详情 / C1–C7 | 图文媒体、电话、地图、指引链接、分享、参与人、邀请来源、报名恢复 | implemented | verified-local + external-wait | 富内容、媒体排序、指引按钮显隐与 web-view 跳转合同已覆盖；地图、拨号、码图需真机 |
+| 活动详情 / C1–C7 | 图文媒体、电话、地图、指引链接、分享、参与人、报名恢复；底部 sticky 两态（MIW-53：未报名=客服+转发+立刻报名，其余=客服+转发双胶囊）；邀请来源与活动签到模块已按 2026-10-08 客户口径删除 | implemented | verified-local + external-wait | 富内容、媒体排序、指引按钮显隐与 web-view 跳转合同已覆盖；两态 sticky 已本机截图比对 figma 1818_17142/3319_5944；地图、拨号、码图需真机 |
 | 付费报名 / C8 | 订单意图、支付参数、ledger、报名确认和退款 | implemented | verified-local + external-wait | 本地事务与错误状态已覆盖；正式商户、回调、查单和真机支付待验 |
 | 扫码签到 / D1–D4 | scene、登录/报名/支付恢复、资格复核、签到海报 | implemented | verified-local + external-wait | 服务端签名、过期和幂等合同已覆盖；真实码、扫码、Canvas 和相册待验 |
 | 心动与反馈 / D5–D8 | 单关系、双列表、已签到反馈和通知 | implemented | verified-local + external-wait | 关系、反馈和站内 outbox 已覆盖；订阅模板和真机通知待验 |
