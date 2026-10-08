@@ -89,6 +89,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'summary', label: '活动摘要', kind: 'textarea', required: true, maxLength: 300 },
   { key: 'description', label: '活动介绍', kind: 'textarea', required: true, maxLength: 20_000 },
   { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list', assetPurpose: 'EVENT_CONTENT' },
+  { key: 'organizerIntroduction', label: '主办方介绍', kind: 'textarea', maxLength: 20_000 },
   { key: 'notices', label: '活动说明', kind: 'textarea', maxLength: 5_000 },
   { key: 'coverAssetId', label: '活动封面', kind: 'asset', assetPurpose: 'EVENT_COVER' },
   { key: 'eventTypeKey', label: '活动类型标识', kind: 'text', maxLength: 64 },
@@ -452,6 +453,7 @@ function eventDraft(values: EventMutationValues) {
     summary: text(values.summary, '活动摘要', 300, true),
     description: text(values.description, '活动介绍', 20_000, true),
     contentMedia: eventMedia(values.contentMedia),
+    organizerIntroduction: optionalText(values.organizerIntroduction, '主办方介绍', 20_000),
     notices: optionalText(values.notices, '活动说明', 5_000),
     coverAssetId: asset(values.coverAssetId, '活动封面素材 ID'),
     eventTypeKey: values.eventTypeKey === undefined || values.eventTypeKey === '' ? 'general' : (() => {

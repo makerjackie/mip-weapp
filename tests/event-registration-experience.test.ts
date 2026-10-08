@@ -337,6 +337,23 @@ describe('event registration experience', () => {
     expect(detailView).not.toContain('shadow-[0_8rpx_22rpx')
   })
 
+  it('renders the organizer tab as the admin-configured introduction rich text (C1)', () => {
+    // 小程序需求 C1 / TC-C-01：「主办方」Tab 展示后台配置的主办方介绍富文本（图文），
+    // 与活动介绍同一解析通道；旧的主办方资料卡不再出现。
+    const detailLogic = read('src/packages/member/mip-events/detail/index.ts')
+    const detailView = read('src/packages/member/mip-events/detail/index.wxml')
+
+    expect(detailView).toContain('contentSection === \'ORGANIZER\'')
+    expect(detailView).toContain('nodes="{{organizerIntroductionNodes}}"')
+    expect(detailView).toContain('暂无主办方介绍')
+    expect(detailLogic).toContain('eventRichTextNodes(event.organizerIntroduction || \'\')')
+    expect(detailView).not.toContain('openOrganizer')
+    expect(detailView).not.toContain('主办方资料暂未公开')
+    expect(detailView).not.toContain('event.organizer')
+    // organizerIntroduction 合法存在，负断言只锁定资料卡读取（event.organizer 后不再跟字段名）。
+    expect(detailLogic).not.toMatch(/event\.organizer(?![A-Za-z])/)
+  })
+
   it('matches the Figma event-share sheet structure and actions', () => {
     const detailLogic = read('src/packages/member/mip-events/detail/index.ts')
     const detailView = read('src/packages/member/mip-events/detail/index.wxml')

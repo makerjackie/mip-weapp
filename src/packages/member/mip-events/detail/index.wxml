@@ -90,14 +90,11 @@
           <view wx:if="{{!event.description && !event.contentMedia.length}}" class="py-4 text-[24rpx] text-muted">暂无活动介绍。</view>
         </view>
 
+        <!-- 小程序需求 C1：主办方 Tab 展示后台配置的主办方介绍富文本（图文），前台原样渲染；
+             未配置时回退空态。旧的主办方资料卡（头像/昵称/一句话介绍）不再在本页展示。 -->
         <view wx:elif="{{contentSection === 'ORGANIZER'}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4">
-          <view wx:if="{{event.organizer}}" class="flex min-h-[104rpx] items-center gap-3" bind:tap="openOrganizer">
-            <image wx:if="{{event.organizer.avatarUrl}}" class="h-[88rpx] w-[88rpx] shrink-0 rounded-full bg-panel-raised" mode="aspectFill" src="{{event.organizer.avatarUrl}}" />
-            <view wx:else class="flex h-[88rpx] w-[88rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="user-avatar" size="40rpx" color="var(--color-brand)" /></view>
-            <view class="min-w-0 flex-1"><view class="text-[28rpx] font-semibold">{{event.organizer.nickname || 'MIP 用户'}}</view><view wx:if="{{event.organizer.headline}}" class="mt-2 line-clamp-2 text-[22rpx] leading-5 text-muted">{{event.organizer.headline}}</view></view>
-            <mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" />
-          </view>
-          <view wx:else class="py-4 text-[24rpx] text-muted">主办方资料暂未公开。</view>
+          <rich-text wx:if="{{organizerIntroductionNodes.length}}" class="mip-event-rich-content text-[24rpx] leading-7 text-muted" nodes="{{organizerIntroductionNodes}}" />
+          <view wx:else class="py-4 text-[24rpx] text-muted">暂无主办方介绍。</view>
         </view>
 
         <view wx:else class="mt-3 rounded-[16rpx] bg-panel px-4 py-4">

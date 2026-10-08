@@ -151,6 +151,7 @@ Page({
     eventId: '' as EventId,
     event: null as MipEventDetail | null,
     descriptionNodes: [] as ReturnType<typeof eventRichTextNodes>,
+    organizerIntroductionNodes: [] as ReturnType<typeof eventRichTextNodes>,
     startsText: '',
     endsText: '',
     shareTimeText: '',
@@ -438,12 +439,13 @@ Page({
       tags: event.tags || [],
       videoRecaps: event.videoRecaps || [],
       participantPreview: peekCloudFileUrls(event.participantPreview || []),
-      organizer: peekCloudFileUrls(event.organizer),
     }
     this.setData({
       state: 'ready',
       event: normalizedEvent,
       descriptionNodes: eventRichTextNodes(event.description),
+      // 小程序需求 C1（TC-C-01）：主办方 Tab 与后台配置的主办方介绍一致，原样渲染富文本。
+      organizerIntroductionNodes: eventRichTextNodes(event.organizerIntroduction || ''),
       // figma 1861_17860 shows the compact range ("12月12日 10:00-12:00") on the
       // date row; compactEventTime already folds same-day and multi-day forms.
       startsText: compactEventTime(event.startsAt, event.endsAt) || formatChineseDateTime(event.startsAt),
@@ -472,7 +474,6 @@ Page({
     updateComponentMedia(this, 'event.coverUrl', event.coverUrl || '')
     updateComponentMedia(this, 'event.participantPreview', event.participantPreview || [])
     updateComponentMedia(this, 'event.contentMedia', contentMedia)
-    updateComponentMedia(this, 'event.organizer', event.organizer)
   },
 
   refreshCheckInIntent() {
@@ -931,13 +932,6 @@ Page({
       return
     }
     wx.makePhoneCall({ phoneNumber: supportPhone })
-  },
-
-  openOrganizer() {
-    const profileRef = this.data.event?.organizer?.profileRef
-    if (profileRef) {
-      caseNavigateTo({ url: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}` })
-    }
   },
 
   openOnlineEvent() {

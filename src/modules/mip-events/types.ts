@@ -160,6 +160,8 @@ export interface MipEventDetail extends MipEventListItem {
   organizer?: EventOrganizer
   invitationAttribution?: EventInvitationAttribution
   description: string
+  /** 后台「主办方介绍」图文富文本（小程序需求 C1）；主办方 Tab 原样展示，未配置时缺省。 */
+  organizerIntroduction?: string
   contentMedia?: Array<{
     imageUrl: string
     caption: string

@@ -1229,6 +1229,8 @@ async function getEvent(db, {
   return {
     ...publicEventRow(row, previews.get(eventId) || [], metadata.get(eventId)),
     description: row.description,
+    // 小程序需求 C1：主办方 Tab 展示后台配置的主办方介绍富文本；未配置时不下发，前端回退空态。
+    ...(row.organizer_introduction ? { organizerIntroduction: row.organizer_introduction } : {}),
     contentMedia: contentMedia.map(item => ({
       imageUrl: item.cloud_file_id,
       caption: item.caption || '',

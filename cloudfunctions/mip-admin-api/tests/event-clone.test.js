@@ -18,6 +18,7 @@ function sourceEvent() {
     title: '周末交流会',
     summary: '活动摘要',
     description: '活动介绍',
+    organizer_introduction: '主办方介绍',
     notices: '参与须知',
     cover_asset_id: 'cover-a',
     cover_status: 'READY',
@@ -130,14 +131,23 @@ describe('admin event clone persistence', () => {
     assert.ok(insert)
     assert.equal(insert.params[4], 'admin-user')
     assert.equal(insert.params[5], '周末交流会（副本）')
-    assert.equal(insert.params[9], 'cover-a')
-    assert.equal(insert.params[14], 'PASSED')
-    assert.equal(insert.params[15].toISOString(), '2026-09-05T06:00:00.000Z')
-    assert.equal(insert.params[16].toISOString(), '2026-09-05T08:00:00.000Z')
-    assert.equal(insert.params[18].toISOString(), '2026-09-04T06:00:00.000Z')
-    assert.equal(insert.params[25], 'https://example.test/event')
-    assert.equal(insert.params[26], 'https://mp.weixin.qq.com/s/route-guide')
-    assert.equal(insert.params[31], JSON.stringify([{ key: 'company', type: 'TEXT' }]))
+    assert.match(insert.sql, /organizer_introduction/)
+    assert.equal(insert.params[8], '主办方介绍')
+    assert.equal(insert.params[10], 'cover-a')
+    assert.equal(insert.params[15], 'PASSED')
+    assert.equal(insert.params[16].toISOString(), '2026-09-05T06:00:00.000Z')
+    assert.equal(insert.params[17].toISOString(), '2026-09-05T08:00:00.000Z')
+    assert.equal(insert.params[19].toISOString(), '2026-09-04T06:00:00.000Z')
+    assert.equal(insert.params[26], 'https://example.test/event')
+    assert.equal(insert.params[27], 'https://mp.weixin.qq.com/s/route-guide')
+    assert.equal(insert.params[32], JSON.stringify([{ key: 'company', type: 'TEXT' }]))
+    // 列与占位符逐位对齐（防止加列后 'DRAFT' 字面量错位到前一列）。
+    const cloneInsert = /INSERT INTO mip_events\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/.exec(insert.sql)
+    const cloneColumns = cloneInsert[1].split(',').map(value => value.trim())
+    const cloneValues = cloneInsert[2].split(',').map(value => value.trim())
+    assert.equal(cloneValues.length, cloneColumns.length)
+    assert.equal(cloneValues[cloneColumns.indexOf('status')], "'DRAFT'")
+    assert.equal(cloneValues[cloneColumns.indexOf('organizer_introduction')], '?')
     assert.ok(calls.some(call => call.sql.includes('INSERT INTO mip_event_changes')))
     assert.ok(calls.some(call => call.sql.includes('INSERT INTO mip_audit_logs')))
     assert.ok(calls.some(call => call.sql.includes('INSERT INTO mip_outbox_events')))

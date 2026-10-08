@@ -41,10 +41,10 @@ function lifecycleDatabase() {
       if (text.includes('INSERT INTO mip_events')) {
         state.event = {
           id: params[0], app_id: params[1], scope_type: params[2], branch_id: params[3],
-          title: params[5], status: 'DRAFT', content_safety_status: params[14], starts_at: params[15],
-          ends_at: params[16], registration_schema_json: params[29], form_version: 1,
-          version: 1, access_type: params[12], registration_policy: params[13],
-          capacity: params[26], waitlist_enabled: params[27],
+          title: params[5], status: 'DRAFT', content_safety_status: params[15], starts_at: params[16],
+          ends_at: params[17], registration_schema_json: params[30], form_version: 1,
+          version: 1, access_type: params[13], registration_policy: params[14],
+          capacity: params[27], waitlist_enabled: params[28],
         }
       }
       else if (text.includes('UPDATE mip_events SET status =')) {

@@ -350,7 +350,7 @@ function createAdminEventRepository(database, dependencies) {
 
   async function getEvent(appId, eventId) {
     const row = await database.one(
-      `SELECT e.id, e.scope_type, e.branch_id, e.title, e.summary, e.description, e.notices,
+      `SELECT e.id, e.scope_type, e.branch_id, e.title, e.summary, e.description, e.organizer_introduction, e.notices,
         event_type_key, event_mode, access_type, registration_policy,
         starts_at, ends_at,
         registration_deadline, cancellation_deadline, venue_name, address, city_name,
@@ -381,6 +381,7 @@ function createAdminEventRepository(database, dependencies) {
       title: row.title,
       summary: row.summary,
       description: row.description,
+      organizerIntroduction: row.organizer_introduction || '',
       contentMedia: contentMedia.map(item => ({
         assetId: item.media_asset_id,
         imageUrl: item.cloud_file_id,
@@ -544,7 +545,7 @@ function createAdminEventRepository(database, dependencies) {
         })
         const result = await tx.query(
           `UPDATE mip_events SET scope_type = ?, branch_id = ?,
-            title = ?, summary = ?, description = ?, notices = ?,
+            title = ?, summary = ?, description = ?, organizer_introduction = ?, notices = ?,
             cover_asset_id = ?,
             starts_at = ?, ends_at = ?, registration_deadline = ?, cancellation_deadline = ?,
             venue_name = ?, address = ?, city_name = ?, latitude = ?, longitude = ?, capacity = ?,
@@ -554,7 +555,7 @@ function createAdminEventRepository(database, dependencies) {
             content_safety_status = ?, version = version + 1
            WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'UNPUBLISHED', 'PUBLISHED')`,
           [input.draft.scopeType, input.draft.branchId || null,
-            input.draft.title, input.draft.summary, input.draft.description, input.draft.notices || null,
+            input.draft.title, input.draft.summary, input.draft.description, input.draft.organizerIntroduction || null, input.draft.notices || null,
             input.draft.coverAssetId,
             input.draft.startsAt, input.draft.endsAt, input.draft.registrationDeadline || null,
             input.draft.cancellationDeadline || null, input.draft.venueName || null,
@@ -581,15 +582,15 @@ function createAdminEventRepository(database, dependencies) {
         await tx.query(
           `INSERT INTO mip_events (
             id, app_id, scope_type, branch_id, organizer_user_id, title, summary,
-            description, notices, cover_asset_id, event_type_key, event_mode, access_type,
+            description, organizer_introduction, notices, cover_asset_id, event_type_key, event_mode, access_type,
             registration_policy,
             status, content_safety_status, starts_at, ends_at,
             registration_deadline, cancellation_deadline, venue_name, address, city_name,
             latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, price_cents, currency, registration_schema_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
           [eventId, input.appId, input.draft.scopeType, input.draft.branchId || null,
             input.actorUserId, input.draft.title, input.draft.summary, input.draft.description,
-            input.draft.notices || null, input.draft.coverAssetId, input.draft.eventTypeKey, input.draft.eventMode,
+            input.draft.organizerIntroduction || null, input.draft.notices || null, input.draft.coverAssetId, input.draft.eventTypeKey, input.draft.eventMode,
             input.draft.accessType, input.draft.registrationPolicy,
             input.contentSafetyStatus,
             input.draft.startsAt,
@@ -643,7 +644,7 @@ function createAdminEventRepository(database, dependencies) {
       const authorization = await lockMutation(tx, input)
       if (authorization.effectiveGrant.scopeType === 'EVENT') throw codeError('FORBIDDEN')
       const source = await tx.one(
-        `SELECT e.id, e.scope_type, e.branch_id, e.title, e.summary, e.description, e.notices,
+        `SELECT e.id, e.scope_type, e.branch_id, e.title, e.summary, e.description, e.organizer_introduction, e.notices,
           e.cover_asset_id, cover.status AS cover_status, e.event_type_key, e.event_mode,
           e.access_type, e.registration_policy,
           e.starts_at, e.ends_at,
@@ -734,16 +735,16 @@ function createAdminEventRepository(database, dependencies) {
       await tx.query(
         `INSERT INTO mip_events (
           id, app_id, scope_type, branch_id, organizer_user_id, title, summary,
-          description, notices, cover_asset_id, event_type_key, event_mode, access_type,
+          description, organizer_introduction, notices, cover_asset_id, event_type_key, event_mode, access_type,
           registration_policy,
           status, content_safety_status, starts_at, ends_at,
           registration_opens_at, registration_deadline, cancellation_deadline,
           venue_name, address, city_name, latitude, longitude, online_url, guide_url, capacity,
           waitlist_enabled, price_cents, currency, registration_schema_json,
           form_version, version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
         [eventId, input.appId, source.scope_type, source.branch_id || null, input.actorUserId,
-          input.title, source.summary, source.description, source.notices || null,
+          input.title, source.summary, source.description, source.organizer_introduction || null, source.notices || null,
           source.cover_status === 'READY' ? source.cover_asset_id : null,
           source.event_type_key, source.event_mode, source.access_type, source.registration_policy,
           input.contentSafetyStatus, dates.startsAt, dates.endsAt, dates.registrationOpensAt,

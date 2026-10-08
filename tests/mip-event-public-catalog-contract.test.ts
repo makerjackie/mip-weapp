@@ -99,6 +99,16 @@ describe('MIP public event catalog and recap client contract', () => {
     }
   })
 
+  it('keeps the admin-configured organizer introduction intact for the 主办方 tab (C1)', () => {
+    // 小程序需求 C1 / TC-C-01：主办方介绍与后台配置一致；未配置时详情不带该字段。
+    const introduction = '主办方介绍图文正文'
+    expect(parseMipEventDetail({ ...eventDetail(), organizerIntroduction: introduction }))
+      .toEqual({ ...eventDetail(), organizerIntroduction: introduction })
+    expect(parseMipEventDetail(eventDetail())).not.toHaveProperty('organizerIntroduction')
+    expect(() => parseMipEventDetail({ ...eventDetail(), organizerIntroduction: '长'.repeat(50_001) }))
+      .toThrowError(expect.objectContaining({ code: 'INVALID_RESPONSE' }))
+  })
+
   it('preserves registered DRAFT and UNPUBLISHED activity states while bounding feeds to 30 items', () => {
     for (const status of ['DRAFT', 'UNPUBLISHED'] as const) {
       expect(parseMipEventListItem({ ...eventListItem(), status }).status).toBe(status)
