@@ -21,21 +21,22 @@ node scripts/fullpage-shot.mjs /packages/member/mip-cooperation/editor/index --c
 
 ## 参数
 
-| 参数                       | 说明                                                                 |
-| -------------------------- | -------------------------------------------------------------------- |
-| `<页面路径>` / `--route`   | 页面路径，可带 query；位置参数与 `--route` 二选一                    |
-| `--fixture <file>`         | 注入的 page data JSON；不传则用页面自身数据                          |
-| `--out <dir>`              | 输出目录，默认 `.tmp/fullpage-shots`                                 |
-| `--name <name>`            | 输出文件名前缀，默认取路由末两段（如 `mip-cooperation-detail`）      |
-| `--title <text>`           | 覆盖导航栏标题（截图里看得见，标场景用）                             |
-| `--call <method>`          | `setData` 后依次调用的页面方法，可重复（如 canvas 重绘 `drawRadar`） |
-| `--probe <field>`          | data 字段新鲜度探针，可重复；缺字段 = 连到了旧 bundle，直接报错      |
-| `--wait-error`             | 先等 onLoad 云调用失败落地（`state==='error'`）再注入 fixture        |
-| `--expect-state <v>`       | fixture 注入后断言 `data.state`                                      |
-| `--root <selector>`        | 页面根节点存在性检查（如 `#mip-cooperation-detail-page`）            |
-| `--settle <ms>`            | `reLaunch` 后的初始等待，默认 1400                                   |
-| `--connect` / `--port <n>` | 只连已打开的 automator 会话；端口默认按宿主项目推导                  |
-| `--keep-frames`            | 保留中间滚动帧与 manifest                                            |
+| 参数                       | 说明                                                                                                                               |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `<页面路径>` / `--route`   | 页面路径，可带 query；位置参数与 `--route` 二选一                                                                                  |
+| `--fixture <file>`         | 注入的 page data JSON；不传则用页面自身数据                                                                                        |
+| `--out <dir>`              | 输出目录，默认 `.tmp/fullpage-shots`                                                                                               |
+| `--name <name>`            | 输出文件名前缀，默认取路由末两段（如 `mip-cooperation-detail`）                                                                    |
+| `--title <text>`           | 覆盖导航栏标题（截图里看得见，标场景用）                                                                                           |
+| `--call <method>`          | `setData` 后依次调用的页面方法，可重复（如 canvas 重绘 `drawRadar`）                                                               |
+| `--probe <field>`          | data 字段新鲜度探针，可重复；缺字段 = 连到了旧 bundle，直接报错                                                                    |
+| `--wait-error`             | 先等 onLoad 云调用失败落地（`state==='error'`）再注入 fixture                                                                      |
+| （默认注入时机）           | 不带 `--wait-error` 且有 fixture 时，先等 `state` 离开 `loading`（云环境可用时等真数据落地）再注入，避免迟到的成功响应覆盖 fixture |
+| `--expect-state <v>`       | fixture 注入后断言 `data.state`                                                                                                    |
+| `--root <selector>`        | 页面根节点存在性检查（如 `#mip-cooperation-detail-page`）                                                                          |
+| `--settle <ms>`            | `reLaunch` 后的初始等待，默认 1400                                                                                                 |
+| `--connect` / `--port <n>` | 只连已打开的 automator 会话；端口默认按宿主项目推导                                                                                |
+| `--keep-frames`            | 保留中间滚动帧与 manifest                                                                                                          |
 
 ## 原理（6 步）
 
