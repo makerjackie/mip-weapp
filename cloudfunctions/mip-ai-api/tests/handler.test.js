@@ -30,3 +30,19 @@ test('exposes unknown provider and upload results as retryable without claiming 
   assert.equal(failure(new Error('AI_AUDIO_UPLOAD_RESULT_UNKNOWN')).error.retryable, true)
   assert.equal(failure(new Error('AI_PROVIDER_REJECTED')).error.retryable, false)
 })
+
+test('reports unknown actions as version skew instead of draft-missing (MIW-56)', async () => {
+  const handler = createHandler({
+    async health() { return {} },
+    async resolveCaller() { return { appId: 'wxapp', userId: 'user-1' } },
+    service: {},
+  })
+  assert.deepEqual(await handler({ action: 'timeTravel' }), {
+    ok: false,
+    error: {
+      code: 'ACTION_NOT_FOUND',
+      message: 'AI 服务版本暂不匹配，请稍后重试',
+      retryable: true,
+    },
+  })
+})
