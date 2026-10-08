@@ -11,6 +11,7 @@ Component({
     fallbackCoverUrl: brand.opportunityDefaultCoverPath,
     displayCoverUrl: '',
     displayAvatars: [],
+    offline: false,
   },
   observers: {
     coverUrl(value: string) {
@@ -18,6 +19,9 @@ Component({
     },
     avatars(value: unknown[]) {
       updateComponentMedia(this, 'displayAvatars', value)
+    },
+    status(value: string) {
+      this.setData({ offline: value === 'UNPUBLISHED' || value === 'DRAFT' })
     },
   },
   lifetimes: {
@@ -43,5 +47,7 @@ Component({
     pillLabel: { type: String, value: '想合作' },
     /** 发表时间前缀：详情页用「发表于：」，列表默认「发布于 」。 */
     publishedPrefix: { type: String, value: '发布于 ' },
+    /** MIW-55 figma 3675:7012：下架（UNPUBLISHED，含早期草稿态）机会走置灰卡态。 */
+    status: { type: String, value: 'PUBLISHED' },
   },
 })

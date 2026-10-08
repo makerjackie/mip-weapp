@@ -485,6 +485,9 @@ function profileOpportunity(value: unknown): PublicProfileOpportunity {
   const branchName = responseText(source.branchName, 80)
   const cityLabel = responseText(source.cityLabel, 80)
   const coverUrl = responseText(source.coverUrl, 1024)
+  // MIW-55：黄标类型与想合作头像均为可选增强字段，旧服务端缺省时不阻断档案渲染。
+  const typeKeys = parseOpportunityTypeKeys(source.typeKeys)
+  const avatars = Array.isArray(source.avatars) ? source.avatars.filter((item): item is string => typeof item === 'string' && item.length > 0) : []
   return {
     id: responseId(source.id) as PublicProfileOpportunity['id'],
     title: responseText(source.title, 120, true),
@@ -492,6 +495,8 @@ function profileOpportunity(value: unknown): PublicProfileOpportunity {
     targetSummary: responseText(source.targetSummary, 500, true),
     referralCount: Number(source.referralCount),
     cooperationCount: Number.isInteger(source.cooperationCount) && Number(source.cooperationCount) >= 0 ? Number(source.cooperationCount) : 0,
+    ...(typeKeys === undefined ? {} : { typeKeys }),
+    ...(avatars.length ? { avatars } : {}),
     ...(branchName ? { branchName } : {}),
     ...(cityLabel ? { cityLabel } : {}),
     ...(coverUrl ? { coverUrl } : {}),

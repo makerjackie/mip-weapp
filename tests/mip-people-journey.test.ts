@@ -85,7 +85,9 @@ describe('journey-review WS-PEOPLE · 档案互动条角色门禁（C1 终审 + 
     const view = read('src/packages/member/mip-public-profile/index.wxml')
     const production = view.slice(view.indexOf('<block wx:elif="{{profile}}">'))
     expect(production).not.toContain('bind:tap="cooperationIntent"')
-    expect(production).toContain('{{item.cooperationCount || 0}} 人想合作')
+    // MIW-55 figma 3359:5705：相关机会换共享机会卡，合作聚合收敛为卡片内「+N想合作」胶囊。
+    expect(production).toContain('<mip-opportunity-card')
+    expect(production).toContain('pill-label="想合作"')
   })
 })
 

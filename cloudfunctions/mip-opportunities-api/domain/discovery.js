@@ -266,7 +266,7 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
     ),
     database.query(
       `SELECT o.id, o.title, o.value_summary, o.target_summary, o.referral_count,
-              o.published_at, branch.name AS branch_name, city.label AS city_label,
+              o.type_keys_json, o.published_at, branch.name AS branch_name, city.label AS city_label,
               cover.cloud_file_id AS cover_file_id
        FROM mip_opportunities o
        INNER JOIN mip_profiles owner_profile ON owner_profile.app_id = o.app_id AND owner_profile.user_id = o.owner_user_id
@@ -331,6 +331,9 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
       targetSummary: item.target_summary,
       referralCount: Number(item.referral_count || 0),
       cooperationCount: cooperation.get(item.id)?.count || 0,
+      // MIW-55 figma 3359:5705 相关机会卡：黄标取机会类型、胶囊取最近想合作头像。
+      typeKeys: (jsonObject(item.type_keys_json) || []).filter(key => typeof key === 'string'),
+      avatars: cooperation.get(item.id)?.avatars || [],
       branchName: item.branch_name || undefined,
       cityLabel: item.city_label || undefined,
       coverUrl: item.cover_file_id || undefined,

@@ -20,6 +20,15 @@
   background: var(--mip-brand);
 }
 
+/* MIW-55 figma 3675:7012 下架机会卡的聚合胶囊：#b3b3b3 底、字色同黄标。 */
+.mip-attend-pill--gray {
+  background: var(--mip-text-secondary);
+}
+
+.mip-attend-pill--gray .mip-attend-pill__count {
+  color: var(--mip-text-on-brand);
+}
+
 .mip-attend-pill--dark .mip-attend-pill__count {
   color: var(--mip-text-primary);
 }
