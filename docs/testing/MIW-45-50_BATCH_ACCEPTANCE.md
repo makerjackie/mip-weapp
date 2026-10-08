@@ -36,7 +36,7 @@
 | C2 | CloudBase 静态托管隔离前缀 `mip-admin-console/` 上传并逐文件回读一致；**downloadDirectory 回读已走新版 MCP `result.Contents` 嵌套结构（MIW-46 修复上线生效）** | ✅ | `filesVerified:14, listingSource:"result-contents", listingFiles:51, directoryReadbackFiles:51, status:"VERIFIED"` |
 | C3 | BFF `mip-admin-web-api` 重新部署：active、客户端调用关闭、0 timer、Cloudflare 不变；BFF 源站根路由 200 并引用新入口 `index-DZvhtVHV.js` | ✅ | deploy 输出 JSON + tcloudbase origin curl |
 | C4 | 线上 MIW-50 特征校验：CloudBase 通道 JS 含 `targetSummary:…(500)` / `description:…(6e3)` | ✅ | 本地构建与 BFF 源站产物特征比对 |
-| C5 | Cloudflare Pages 边缘（mipmini.01mvp.com 当前 200 承载方）仍为旧构建（入口 `index-9erprWtl.js`，特征 300/5e3）；`wrangler` OAuth 令牌过期且刷新需交互式登录，无 `CLOUDFLARE_API_TOKEN` | ⏳ | `/assets/index-9erprWtl.js` 特征比对；**待维护者 `wrangler login` 后 `pnpm --dir admin-web deploy:pages`**（迁移期内 CloudBase 通道已承载新代码，见 C3/C4） |
+| C5 | Cloudflare Pages 边缘（mipmini.01mvp.com 当前 200 承载方）仍为旧构建（入口 `index-9erprWtl.js`，特征 300/5e3）；`wrangler` OAuth 令牌过期且刷新需交互式登录，无 `CLOUDFLARE_API_TOKEN`。2026-10-08 已自动发起 19 个 OAuth 授权窗口（05:23–08:56，含 12 轮长周期重试）均未被授权——维护者不在机前，已停止继续弹窗 | ⏳ | `/assets/index-9erprWtl.js` 特征比对；**待维护者执行 `pnpm --dir admin-web exec wrangler login` 完成浏览器授权后运行 `pnpm --dir admin-web deploy:pages`**（或配置 `CLOUDFLARE_API_TOKEN` 后由会话代为部署）。迁移期内 CloudBase 通道已承载新代码，见 C3/C4 |
 | C6 | 真实登录 + 14 读模块云端验收 | ⏳ | 同上批 C5 限制（本机未配置 `MIP_ADMIN_TEST_PHONE/PASSWORD`） |
 
 ## D. 小程序端（weapp）
