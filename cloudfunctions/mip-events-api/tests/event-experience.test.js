@@ -279,3 +279,12 @@ test('event detail keeps loading when the interaction summary fails (MIW-28)', a
   assert.equal('interactionSummary' in attended, false)
   assert.equal(attended.canInteract, true)
 })
+
+test('event detail projects the admin-configured organizer introduction (C1)', async () => {
+  // 小程序需求 C1：主办方 Tab 展示后台配置的主办方介绍富文本，前台原样透传。
+  const configured = await loadDetail({ ...detailBaseRow, organizer_introduction: '主办方介绍正文' }, null)
+  assert.equal(configured.organizerIntroduction, '主办方介绍正文')
+
+  const unconfigured = await loadDetail(detailBaseRow, null)
+  assert.equal('organizerIntroduction' in unconfigured, false)
+})

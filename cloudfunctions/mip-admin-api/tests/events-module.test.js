@@ -291,7 +291,7 @@ describe('admin events deep module', () => {
     })
     assert.deepEqual(result, { id: EVENT_ID, status: 'DRAFT', version: 4 })
     assert.deepEqual(checked, [{
-      title: '城市交流会', summary: '活动摘要', description: '活动介绍', notices: '活动须知',
+      title: '城市交流会', summary: '活动摘要', description: '活动介绍', organizerIntroduction: '', notices: '活动须知',
     }])
     assert.deepEqual(captured[0].authorizedScope, {
       scopeType: 'EVENT', scopeId: EVENT_ID,
@@ -364,7 +364,7 @@ describe('admin events deep module', () => {
     assert.equal(cloned[0].title, '城市交流会（副本）')
     assert.equal(Object.hasOwn(cloned[0], 'startsAt'), false)
     assert.deepEqual(checked[0], {
-      title: '城市交流会（副本）', summary: '摘要', description: '介绍', notices: '须知',
+      title: '城市交流会（副本）', summary: '摘要', description: '介绍', organizerIntroduction: '', notices: '须知',
     })
 
     await assert.rejects(() => service.cloneEvent(caller, {

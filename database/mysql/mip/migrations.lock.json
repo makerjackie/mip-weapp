@@ -1346,6 +1346,18 @@
         "mip_membership_approvals"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20261008100000",
+      "name": "mip_event_organizer_introduction",
+      "sql": "database/mysql/mip/102_event_organizer_introduction.sql",
+      "sqlSha256": "e778f8254fc082a8a6aa561e04512d782070cad37cfdff07050f06c655cb08e3",
+      "rollback": "database/mysql/mip/rollback/102_event_organizer_introduction.sql",
+      "rollbackSha256": "efdd045d07359a80164381871db35ba05dd39a2dcf2a81e0f6ee160c8189494a",
+      "createsTables": [],
+      "altersTables": [
+        "mip_events"
+      ]
     }
   ]
 }

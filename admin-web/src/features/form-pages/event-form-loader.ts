@@ -27,6 +27,7 @@ export async function loadEventDetailForForm(eventId: string, request: AdminRequ
     summary: String(event.summary || ''),
     description: String(event.description || ''),
     contentMedia: Array.isArray(event.contentMedia) ? event.contentMedia : [],
+    organizerIntroduction: String(event.organizerIntroduction || ''),
     notices: String(event.notices || ''),
     coverAssetId: String(event.coverAssetId || ''),
     eventTypeKey: String(event.eventTypeKey || 'general'),

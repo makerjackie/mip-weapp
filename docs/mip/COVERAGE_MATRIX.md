@@ -28,7 +28,7 @@
 | 会员与邀请 / N1、#55 | 可配置方案、玩家权益、会员期邀请归因、续费 | implemented | verified-local + external-wait | commerce/ledger 和邀请 token 测试已覆盖；正式分享、扫码和支付待验 |
 | 统一订单 / #56 | 会员、活动、内容订单及服务端使用状态 | implemented | verified-local + external-wait | `mip_orders`、商品快照、状态投影和退款边界已覆盖；正式支付/退款待验 |
 | 活动目录 / B1–B8 | Banner、近期/往期、城市/日期/搜索、卡片、分享、详情入口 | implemented | verified-local + external-wait | 页面、服务端查询和日期范围测试已覆盖；正式素材、视频号、日历和分享待验 |
-| 活动详情 / C1–C7 | 图文媒体、电话、地图、指引链接、分享、参与人、邀请来源、报名恢复 | implemented | verified-local + external-wait | 富内容、媒体排序、指引按钮显隐与 web-view 跳转合同已覆盖；地图、拨号、码图需真机 |
+| 活动详情 / C1–C7 | 图文媒体、电话、地图、指引链接、分享、参与人、报名恢复；底部 sticky 两态（MIW-53：未报名=客服+转发+立刻报名，其余=客服+转发双胶囊）；邀请来源、活动签到、活动变更模块已按 2026-10-08 客户口径删除；「主办方」Tab 改为后台配置的主办方介绍富文本（C1/TC-C-01，迁移 102 `organizer_introduction`，不再展示主办方资料卡） | implemented | verified-local + external-wait | 富内容、媒体排序、指引按钮显隐与 web-view 跳转合同已覆盖；两态 sticky 已本机截图比对 figma 1818_17142/3319_5944；主办方介绍后台编辑→小程序展示链路已合同+仓库测试覆盖；地图、拨号、码图需真机 |
 | 付费报名 / C8 | 订单意图、支付参数、ledger、报名确认和退款 | implemented | verified-local + external-wait | 本地事务与错误状态已覆盖；正式商户、回调、查单和真机支付待验 |
 | 扫码签到 / D1–D4 | scene、登录/报名/支付恢复、资格复核、签到海报 | implemented | verified-local + external-wait | 服务端签名、过期和幂等合同已覆盖；真实码、扫码、Canvas 和相册待验 |
 | 心动与反馈 / D5–D8 | 单关系、双列表、已签到反馈和通知 | implemented | verified-local + external-wait | 关系、反馈和站内 outbox 已覆盖；订阅模板和真机通知待验 |
@@ -59,7 +59,7 @@
 | 权限与服务器 / A03/A05 | 角色策略、范围、分会配置及迁移 | partial | verified-local + verified-staging + evidence-missing | 094/095、八个消费者及管理 API 已部署并逐 JS 回读；模板创建/复制/版本冲突/停用通过，绑定入口已启用且没有给真实用户授权。服务器负责人/排序已有；受控跨范围绑定/撤权仍待验，Q-ADMIN-06 待定 |
 | 用户管理 / U01–U05/U09 | 筛选、独立档案、编辑、影响力、勋章和日志 | partial | verified-local + verified-staging + evidence-missing + external-wait | 独立 Tab/分区、共享档案编辑、勋章多选与失败回读、用户日志及五类关联记录独立分页已接通；订单权限在分页前过滤。10 月 1 日姓名搜索、独立档案、普通简介保存/刷新/还原及非空版本历史/日志已实测。八项影响力口径和普通/嘉宾/玩家分类待确认，非空导出及前台效果仍需运行证据 |
 | 名片、合作卡、案例 / U06–U08 | 内容编辑、模板、下架和历史 | partial | verified-local + verified-staging + evidence-missing | 档案和名片共用编辑与版本历史；六角色名称、全文和实际案例字段回填已补，案例开始时间倒序；案例草稿留空可选日期/类型新建、单字段编辑、刷新回读和取消不写入通过，保存/取消返回保留内容分区和搜索；六角色完整旅程与前台同步待验，头像/城市/行业代编辑范围 Q-ADMIN-08 未定 |
-| 活动 / E01–E09 | 编辑发布、参与人支付、反馈、签到和统计 | partial | verified-local + verified-staging + external-wait + evidence-missing | [10 月 1 日公开 CUA](evidence/admin-events-cua-20261001/README.md)补创建/编辑/预览/发布/下架恢复/结束、封面上传保存与清空、标签启停与具名回填、免费补录/异常/补签撤销/取消、名单搜索及非空 XLSX、同场签到码下载和三个实际视口；七项缺陷已修复部署。独立场地 H5 缺实现；旧样例签到事实不一致保留说明；正式支付/微信扫码、审核候补、全角色及跨页仍待验，E09 口径 Q-ADMIN-04 未定 |
+| 活动 / E01–E09 | 编辑发布、参与人支付、反馈、签到和统计 | partial | verified-local + verified-staging + external-wait + evidence-missing | [10 月 1 日公开 CUA](evidence/admin-events-cua-20261001/README.md)补创建/编辑/预览/发布/下架恢复/结束、封面上传保存与清空、标签启停与具名回填、免费补录/异常/补签撤销/取消、名单搜索及非空 XLSX、同场签到码下载和三个实际视口；七项缺陷已修复部署。活动表单新增「主办方介绍」长文本（C1/TC-C-01，上限 2 万字，预览与小程序回填同链路，迁移 102）；独立场地 H5 缺实现；旧样例签到事实不一致保留说明；正式支付/微信扫码、审核候补、全角色及跨页仍待验，E09 口径 Q-ADMIN-04 未定 |
 | 机会 / O01–O04 | 内容、筛选、导出、状态和日志 | partial | verified-local + verified-staging + evidence-missing | 平铺 DTO、白名单提交、万元与全文已补；演示机会实际保存/刷新/重开并恢复原文，第二对象回填不串数据；全页与同筛选非空 Excel 通过。Q-ADMIN-01 已确认，结束/下架后编辑保存、重新招募/恢复及冲突/关联/审计 14 项真实回读通过，演示数据已还原；全角色与用户端同对象回读仍待验 |
 | 订单 / F01–F03 | 查询/详情/导出、支付、退款、权益联动 | partial | verified-local + verified-staging + external-wait | 姓名筛选 4 条订单、TEST 支付详情/权益时间线及实际 Excel 下载解析通过；服务器筛选、完成语义、正式非空支付/退款证据待补，Q-ADMIN-03 退款例外待定 |
 | 任务 / T01–T05 | 星级/周期、派发、附件、审批、奖励与恢复 | implemented | verified-local + verified-staging + evidence-missing + external-wait | HTTP 审核及出站已修复部署；任务新建/编辑/发布/下架和模板真实上传保存/回填/清空通过，最终 v6 下架、已分配/完成 0；批量和周期派发、真实附件、退回重提、重复审批全旅程未完成验收 |

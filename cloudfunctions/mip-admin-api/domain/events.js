@@ -166,6 +166,7 @@ function createAdminEvents({
       title: draft.title,
       summary: draft.summary,
       description: draft.description,
+      organizerIntroduction: draft.organizerIntroduction,
       notices: draft.notices,
     }, caller)
     const contentSafetyStatus = ['PASSED', 'REJECTED', 'ERROR'].includes(checkedContentSafetyStatus)
@@ -221,6 +222,7 @@ function createAdminEvents({
       title,
       summary: source.summary,
       description: source.description,
+      organizerIntroduction: source.organizer_introduction || '',
       notices: source.notices,
     }, caller)
     const contentSafetyStatus = ['PASSED', 'REJECTED', 'ERROR'].includes(checkedContentSafetyStatus)
@@ -705,6 +707,8 @@ function normalizeEventDraft(value) {
     title: text(value.title, 120, { required: true, label: '活动名称' }),
     summary: text(value.summary, 300, { required: true, label: '活动摘要' }),
     description: text(value.description, 20_000, { required: true, label: '活动介绍' }),
+    // 小程序需求 C1：详情页「主办方」Tab 展示后台配置的主办方介绍（图文富文本），可选。
+    organizerIntroduction: text(value.organizerIntroduction, 20_000),
     contentMedia: normalizedContentMedia,
     notices: text(value.notices, 5_000),
     coverAssetId: coverAssetId || null,

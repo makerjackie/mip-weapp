@@ -58,7 +58,7 @@ describe('event mutation form contracts', () => {
     assert.deepEqual(buildEventMutationInput('mip.admin.events.save', baseEvent), {
       draft: {
         scopeType: 'PLATFORM', branchId: null, title: '活动名称', summary: '活动摘要', description: '这是活动介绍',
-        contentMedia: [], notices: '', coverAssetId: null, eventTypeKey: 'workshop', eventMode: 'OFFLINE',
+        contentMedia: [], organizerIntroduction: '', notices: '', coverAssetId: null, eventTypeKey: 'workshop', eventMode: 'OFFLINE',
         accessType: 'FREE', registrationPolicy: 'AUTO',
         startsAt: '2030-03-14T10:00:00+08:00', endsAt: '2030-03-14T12:00:00+08:00', registrationDeadline: null,
         cancellationDeadline: null, venueName: '福田会场', address: '福华三路', cityName: '深圳', latitude: null,
@@ -72,6 +72,24 @@ describe('event mutation form contracts', () => {
     assert.equal(updated.eventId, 'event-1')
     assert.equal(updated.expectedVersion, 4)
     assert.equal((updated.draft as Record<string, unknown>).coverAssetId, '550e8400-e29b-41d4-a716-446655440000')
+  })
+
+  it('carries the admin-configured organizer introduction into the save draft (C1)', () => {
+    // 小程序需求 C1：主办方介绍为可选长文本（上限与活动介绍一致），空值归一为空串。
+    const withIntro = buildEventMutationInput('mip.admin.events.save', {
+      ...baseEvent, organizerIntroduction: '  主办方介绍正文  ',
+    }) as { draft: Record<string, unknown> }
+    assert.equal(withIntro.draft.organizerIntroduction, '主办方介绍正文')
+
+    const withoutIntro = buildEventMutationInput('mip.admin.events.save', baseEvent) as { draft: Record<string, unknown> }
+    assert.equal(withoutIntro.draft.organizerIntroduction, '')
+
+    assert.equal(buildEventMutationInput('mip.admin.events.save', {
+      ...baseEvent, organizerIntroduction: '长'.repeat(20_001),
+    }), null)
+    assert.ok(buildEventMutationInput('mip.admin.events.save', {
+      ...baseEvent, organizerIntroduction: '长'.repeat(20_000),
+    }))
   })
 
   it('keeps the optional route-guide link only when it is a valid https url', () => {

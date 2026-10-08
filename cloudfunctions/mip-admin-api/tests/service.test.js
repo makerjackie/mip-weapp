@@ -736,7 +736,7 @@ describe('admin service', () => {
       title: '客户端伪造标题',
       startsAt: '2000-01-01T00:00:00.000Z',
     })
-    assert.deepEqual(checked, { title: '活动（副本）', summary: '摘要', description: '介绍', notices: '' })
+    assert.deepEqual(checked, { title: '活动（副本）', summary: '摘要', description: '介绍', organizerIntroduction: '', notices: '' })
     assert.equal(result.captured.title, '活动（副本）')
     assert.equal(result.captured.contentSafetyStatus, 'PASSED')
     assert.deepEqual(Object.keys(result.captured).sort(), [

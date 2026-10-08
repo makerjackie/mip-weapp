@@ -30,6 +30,7 @@ export function EventMobilePreview({ values }: { values: Record<string, unknown>
         })}
       </Card>
       {values.notices ? <Card size="small" title="报名须知" style={{ marginTop: 12 }}><Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{String(values.notices)}</Typography.Paragraph></Card> : null}
+      {values.organizerIntroduction ? <Card size="small" title="主办方介绍" style={{ marginTop: 12 }}><Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{String(values.organizerIntroduction)}</Typography.Paragraph></Card> : null}
       {fields.length ? <Card size="small" title="报名需填写" style={{ marginTop: 12 }}>{fields.map((item, index) => {
         const field = item && typeof item === 'object' ? item as Record<string, unknown> : {}
         return <p key={String(field.key || index)}>{String(field.label || '')} {field.required ? <Tag>必填</Tag> : null}{Array.isArray(field.options) ? <small>{field.options.join(' / ')}</small> : null}</p>

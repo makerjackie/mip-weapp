@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { createAdminEventRepository } = require('../domain/repositories/events')
 const { createAdminEvents } = require('../domain/events')
+const { eventCopyDraft } = require('../domain/event-copy')
 
 const APP_ID = 'wx1111111111111111'
 const USER_ID = '11111111-1111-4111-8111-111111111111'
@@ -311,6 +312,35 @@ describe('admin event repository module', () => {
       'event-after',
       21,
     ])
+  })
+
+  it('persists the admin-configured organizer introduction on insert and update (C1)', async () => {
+    const draft = eventDraft({ organizerIntroduction: '主办方介绍正文' })
+    const calls = []
+    const tx = {
+      async one(sql) {
+        calls.push({ sql })
+        return sql.includes('FROM mip_events')
+          ? { id: EVENT_ID, scope_type: 'BRANCH', branch_id: 'branch-a', status: 'DRAFT', version: 2, cover_asset_id: null }
+          : null
+      },
+      async query(sql, params) {
+        calls.push({ sql, params })
+        return { affectedRows: 1 }
+      },
+    }
+    const database = { async transaction(work) { return work(tx) } }
+
+    await repository(database).saveEvent({ ...saveInput(draft), eventId: null, expectedVersion: null })
+    const insert = calls.find(call => call.sql?.includes('INSERT INTO mip_events'))
+    assert.equal(insert.params[8], '主办方介绍正文')
+
+    await repository(database).saveEvent(saveInput(draft))
+    const update = calls.find(call => call.sql?.includes('UPDATE mip_events SET'))
+    assert.match(update.sql, /description = \?, organizer_introduction = \?, notices = \?/)
+    const descriptionIndex = update.params.indexOf('活动介绍')
+    assert.equal(update.params[descriptionIndex + 1], '主办方介绍正文')
+    assert.equal(update.params[descriptionIndex + 2], null)
   })
 
   it('creates a missing mechanical type catalog before inserting a new event', async () => {
@@ -708,6 +738,42 @@ describe('admin event repository module', () => {
     })
     assert.equal(saved.idempotencyKey, 'web-event-save-0001')
     assert.equal(saved.contentSafetyStatus, 'PASSED')
+  })
+
+  it('reads back the organizer introduction for the edit form and copies it into drafts (C1)', async () => {
+    const readTx = {
+      async one(sql) {
+        if (sql.includes('FROM mip_events e')) {
+          return {
+            id: EVENT_ID, scope_type: 'PLATFORM', branch_id: null, title: '活动', summary: '摘要',
+            description: '介绍', organizer_introduction: '主办方介绍正文', notices: null,
+            event_type_key: 'general', event_mode: 'OFFLINE', access_type: 'FREE',
+            registration_policy: 'AUTO', starts_at: '2030-08-26T10:00:00.000Z',
+            ends_at: '2030-08-26T12:00:00.000Z', registration_deadline: null,
+            cancellation_deadline: null, venue_name: null, address: null, city_name: null,
+            latitude: null, longitude: null, online_url: null, guide_url: null, capacity: null,
+            waitlist_enabled: 0, price_cents: 0, registration_schema_json: '[]',
+            cover_asset_id: null, cover_file_id: null, status: 'DRAFT',
+            content_safety_status: 'PASSED', version: 2,
+          }
+        }
+        return null
+      },
+      async query() { return [] },
+    }
+    const event = await repository({ one: readTx.one, query: readTx.query, transaction: work => work(readTx) }).getEvent(APP_ID, EVENT_ID)
+    assert.equal(event.organizerIntroduction, '主办方介绍正文')
+
+    const copied = eventCopyDraft({
+      id: EVENT_ID, scope_type: 'PLATFORM', branch_id: null, summary: '摘要',
+      description: '介绍', organizer_introduction: '主办方介绍正文', notices: null,
+      cover_asset_id: null, cover_status: 'READY', event_type_key: 'general',
+      event_mode: 'OFFLINE', access_type: 'FREE', registration_policy: 'AUTO',
+      venue_name: null, address: null, city_name: null, latitude: null, longitude: null,
+      online_url: null, guide_url: null, capacity: null, waitlist_enabled: 0,
+      price_cents: 0, registration_schema_json: '[]',
+    }, [], json => json, [])
+    assert.equal(copied.organizerIntroduction, '主办方介绍正文')
   })
 })
 

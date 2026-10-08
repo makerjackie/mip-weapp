@@ -10,6 +10,7 @@ async function checkCompleteContentSafety(draft, caller, checker, options = {}) 
     draft.body,
     draft.bodyText,
     draft.description,
+    draft.organizerIntroduction,
     draft.notices,
   ]
     .filter(value => typeof value === 'string' && value.trim())

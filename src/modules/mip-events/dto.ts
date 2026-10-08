@@ -42,6 +42,7 @@ const eventDetailKeys = [
   'organizer',
   'invitationAttribution',
   'description',
+  'organizerIntroduction',
   'contentMedia',
   'notices',
   'address',
@@ -344,6 +345,7 @@ export function parseMipEventDetail(value: unknown): MipEventDetail {
       'canInteract',
     ])
     || !boundedString(value.description, 50000, true)
+    || !(value.organizerIntroduction === undefined || boundedString(value.organizerIntroduction, 50000, true))
     || !Array.isArray(value.contentMedia) || value.contentMedia.length > 100 || !value.contentMedia.every(contentMedia)
     || !(value.organizer === undefined || organizer(value.organizer))
     || !(value.invitationAttribution === undefined || invitationAttribution(value.invitationAttribution))
