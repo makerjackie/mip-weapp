@@ -119,7 +119,9 @@ describe('MIW-55 opportunity card alignment', () => {
   it('selects type keys and returns avatars from the public profile aggregate', () => {
     const discoveryDomain = source('cloudfunctions/mip-opportunities-api/domain/discovery.js')
     expect(discoveryDomain).toContain('o.type_keys_json')
-    expect(discoveryDomain).toContain(`typeKeys: (jsonObject(item.type_keys_json) || []).filter(key => typeof key === 'string')`)
+    // 2026-10-08 端到端验收回归修复：jsonObject 对数组/NULL 兜底返回 {}（对象），
+    // `.filter` 会让历史行崩掉整个聚合接口；契约钉住 arrayOrEmpty 直接收口。
+    expect(discoveryDomain).toContain(`typeKeys: arrayOrEmpty(item.type_keys_json).filter(key => typeof key === 'string')`)
     expect(discoveryDomain).toContain('avatars: cooperation.get(item.id)?.avatars || []')
   })
 })
