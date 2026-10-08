@@ -263,7 +263,7 @@ const adminWebMutationPolicies = Object.freeze([
   webMutation('mip.admin.growth.levels.changeStatus', ['levelId', 'expectedVersion', 'status']),
   webMutation('mip.admin.growth.benefits.changeStatus', ['benefitId', 'expectedVersion', 'status']),
   webMutation('mip.admin.opportunities.delete', ['opportunityId', 'expectedVersion', 'reason']),
-  domainIdempotentWebMutation('mip.admin.videos.save', ['coverAssetId', 'jumpUrl', 'title'], ['videoId', 'expectedVersion', 'status']),
+  domainIdempotentWebMutation('mip.admin.videos.save', ['coverAssetId', 'finderUserName', 'title'], ['feedId', 'videoId', 'expectedVersion', 'status']),
   domainIdempotentWebMutation('mip.admin.videos.changeStatus', ['videoId', 'expectedVersion', 'status']),
   domainIdempotentWebMutation('mip.admin.cards.save', ['cardType', 'fields'], ['cardId', 'expectedVersion']),
   domainIdempotentWebMutation('mip.admin.cards.changeStatus', ['cardId', 'expectedVersion', 'status'], ['cardType']),

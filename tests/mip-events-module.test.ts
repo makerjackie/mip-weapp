@@ -455,3 +455,44 @@ describe('activity discovery catalog request reuse', () => {
     expect(getDiscoveryFilters).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('configured past-event recaps', () => {
+  it('shares concurrent recap loads, expires after five minutes and supports explicit refresh', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000)
+    try {
+      const items = [{
+        id: '12',
+        title: 'MIP 反人性早会第 328 场',
+        coverUrl: 'cloud://cover-1.jpg',
+        destination: {
+          provider: 'WECHAT_CHANNELS' as const,
+          type: 'ACTIVITY' as const,
+          finderUserName: 'sphMIP2026',
+          feedId: 'feed-token-1',
+        },
+      }]
+      const listEventRecaps = vi.fn().mockResolvedValue({ items })
+      const module = createMipEventsModule({ ...createGateway(), listEventRecaps })
+      await Promise.all([module.listRecaps(), module.listRecaps()])
+      expect(listEventRecaps).toHaveBeenCalledTimes(1)
+      expect(module.peekRecaps()).toEqual({ items })
+      clock.mockReturnValue(301_000)
+      await module.listRecaps()
+      expect(listEventRecaps).toHaveBeenCalledTimes(2)
+      await module.listRecaps({ force: true })
+      expect(listEventRecaps).toHaveBeenCalledTimes(3)
+      module.invalidate()
+      expect(module.peekRecaps()).toBeNull()
+    }
+    finally {
+      clock.mockRestore()
+    }
+  })
+
+  it('degrades to an empty recap list when the gateway cannot serve configured recaps', async () => {
+    const gateway = createGateway()
+    delete (gateway as Partial<MipEventsGateway>).listEventRecaps
+    const module = createMipEventsModule(gateway)
+    await expect(module.listRecaps()).resolves.toEqual({ items: [] })
+  })
+})

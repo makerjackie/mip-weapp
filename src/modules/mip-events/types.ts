@@ -109,6 +109,19 @@ export interface EventVideoRecap {
   destination: EventVideoRecapDestination
 }
 
+/** MIW-57 往期活动 tab：后台配置的回顾条目（封面 + 标题 + 视频号目标），独立于活动记录。 */
+export interface EventRecapCard {
+  id: string
+  title: string
+  /** 云文件 ID 或 HTTPS 地址；素材缺失时为空串，卡片回退占位图。 */
+  coverUrl: string
+  destination: EventVideoRecapDestination
+}
+
+export interface EventRecapList {
+  items: EventRecapCard[]
+}
+
 export interface EventInvitationAttribution {
   sourceType: 'PLATFORM' | 'USER'
   displayName: string
@@ -435,6 +448,7 @@ export interface MipEventsGateway {
   listEvents: (query: EventFeedQuery) => Promise<EventFeedResult>
   getDiscoveryFilters?: () => Promise<EventDiscoveryFilters>
   getCalendarDates?: (query: EventCalendarDatesQuery) => Promise<EventCalendarDates>
+  listEventRecaps?: () => Promise<EventRecapList>
   getEvent: (eventId: EventId, options?: { progressiveMedia?: boolean }) => Promise<MipEventDetail>
   listPublicParticipants: (eventId: EventId, query?: PublicEventParticipantQuery) => Promise<PublicEventParticipantPage>
   listMyRegistrations: (cursor?: string, category?: MyRegistrationCategory) => Promise<MyRegistrationPage>

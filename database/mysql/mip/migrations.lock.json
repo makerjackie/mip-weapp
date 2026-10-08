@@ -1358,6 +1358,18 @@
       "altersTables": [
         "mip_events"
       ]
+    },
+    {
+      "version": "20261008110000",
+      "name": "mip_video_recap_channels",
+      "sql": "database/mysql/mip/103_video_recap_channels.sql",
+      "sqlSha256": "2f84cdc9cbb166fb77238094a456a42cdfb3b82245872cb87b6c9134dc55ed10",
+      "rollback": "database/mysql/mip/rollback/103_video_recap_channels.sql",
+      "rollbackSha256": "ce36fe5ef2a84a91749e52f218991edd9f19d230c61793a20e121c9bb5f532f0",
+      "createsTables": [],
+      "altersTables": [
+        "mip_videos"
+      ]
     }
   ]
 }

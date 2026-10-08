@@ -542,6 +542,59 @@ function publicEventRow(row, previews = [], metadata = { tags: [], videoRecaps: 
   }
 }
 
+// MIW-57 往期活动 tab 的回放卡：后台配置的 mip_videos（标题 + 封面 + 视频号目标）。
+// 目标合法性已在 listEventRecaps 的 SQL 里过滤；这里仅做防御性投影，
+// 防止数据库或仓储契约漂移时把打不开的视频号目标发给用户端。
+function publicRecapCardRow(row) {
+  const finderUserName = typeof row.finder_user_name === 'string' ? row.finder_user_name : ''
+  const feedId = typeof row.feed_id === 'string' && row.feed_id ? row.feed_id : null
+  if (!/^\d+$/.test(String(row.video_id))
+    || typeof row.title !== 'string' || !row.title || row.title.length > 255
+    || (row.cover_url !== null && row.cover_url !== undefined && (typeof row.cover_url !== 'string' || row.cover_url.length > 4096))
+    || !/^sph[A-Za-z0-9]+$/.test(finderUserName)
+    || finderUserName.length > 128
+    || (feedId !== null && (feedId.length > 256 || !/^[\w=:+/.-]+$/.test(feedId)))) {
+    return null
+  }
+  return {
+    id: String(row.video_id),
+    title: row.title,
+    coverUrl: typeof row.cover_url === 'string' ? row.cover_url : '',
+    destination: {
+      provider: 'WECHAT_CHANNELS',
+      type: feedId ? 'ACTIVITY' : 'PROFILE',
+      finderUserName,
+      feedId,
+    },
+  }
+}
+
+async function listEventRecaps(db, { appId }) {
+  const rows = await db.query(
+    `SELECT video.video_id, video.title, video.finder_user_name, video.feed_id,
+            asset.cloud_file_id AS cover_url
+     FROM mip_videos video
+     LEFT JOIN mip_media_assets asset
+       ON asset.app_id = video.app_id AND asset.id = video.cover_asset_id AND asset.status = 'READY'
+     WHERE video.app_id = ?
+       AND video.status = 'PUBLISHED'
+       AND video.title <> ''
+       AND video.finder_user_name REGEXP '^sph[A-Za-z0-9]+$'
+       AND (video.feed_id IS NULL OR video.feed_id REGEXP '^[A-Za-z0-9_=+/.-]+$')
+     ORDER BY video.sort_order ASC, video.video_id DESC
+     LIMIT 100`,
+    [appId],
+  )
+  const items = []
+  for (const row of rows) {
+    const item = publicRecapCardRow(row)
+    if (item) {
+      items.push(item)
+    }
+  }
+  return { items }
+}
+
 async function getEventDiscoveryFilters(db, { appId }) {
   const eventTypes = await db.query(
     `SELECT event_type.type_key AS \`key\`, event_type.name
@@ -3184,6 +3237,7 @@ module.exports = {
   getMyRegistration,
   listEvents,
   listEventCalendarDates,
+  listEventRecaps,
   listHeartCandidates,
   listHeartHistory,
   markHeartHistoryRead,

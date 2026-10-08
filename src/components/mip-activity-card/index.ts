@@ -10,6 +10,7 @@ Component({
   data: {
     displayCoverUrl: '',
     displayParticipants: [],
+    recapBusy: false,
   },
   observers: {
     event(value: { coverUrl?: string, participantPreview?: unknown[] }) {
@@ -36,15 +37,31 @@ Component({
     },
     handleShare() {},
 
-    /** Recap cards open the event's first video recap; without one, the detail page. */
-    handleRecap() {
-      const event = this.data.event as { id?: string, status?: string, videoRecaps?: RecapEntry[] }
-      const recap = event.videoRecaps?.[0]
-      if (recap) {
-        void openWechatChannelsDestination(recap.destination)
+    /** MIW-57 往期活动 tab：回顾卡直接打开视频号目标，无目标时回落活动详情。 */
+    async handleRecap() {
+      if (this.data.recapBusy) {
         return
       }
-      this.triggerEvent('select', { id: event.id || '', status: event.status || '' })
+      const event = this.data.event as { id?: string, status?: string, videoRecaps?: RecapEntry[] }
+      const recap = event.videoRecaps?.[0]
+      if (!recap) {
+        this.triggerEvent('select', { id: event.id || '', status: event.status || '' })
+        return
+      }
+      this.setData({ recapBusy: true })
+      try {
+        const result = await openWechatChannelsDestination(recap.destination)
+        // 用户主动退出不打扰；其余失败给出与详情页一致的提示。
+        if (result.status === 'unsupported') {
+          wx.showToast({ title: '当前微信版本不支持打开视频号，请升级微信后重试。', icon: 'none' })
+        }
+        else if (result.status === 'failed') {
+          wx.showToast({ title: '视频回顾暂时无法打开，请稍后重试。', icon: 'none' })
+        }
+      }
+      finally {
+        this.setData({ recapBusy: false })
+      }
     },
 
     handleAction() {

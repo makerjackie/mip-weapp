@@ -1,8 +1,10 @@
 # MIP 当前状态
 
-更新日期：2026-10-08（超级案例独立列表页下线、路由契约同步 58 条（MIW-54）。此前 2026-10-06：知识/游戏/盲盒 9 页用户端下线、路由契约同步 61 条（MIW-44）。此前 2026-10-05：心动计数口径收敛与 SQL 执行验证（MIW-36）：心动可见性 SQL 收敛为共享构造、tab 徽标改服务端计数、云函数 SQL 真实执行验证、详情 onShow 缓存新鲜窗口；会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
+更新日期：2026-10-08（往期活动 tab 改后台配置回顾条目并跳视频号（MIW-57）；超级案例独立列表页下线、路由契约同步 58 条（MIW-54）。此前 2026-10-06：知识/游戏/盲盒 9 页用户端下线、路由契约同步 61 条（MIW-44）。此前 2026-10-05：心动计数口径收敛与 SQL 执行验证（MIW-36）：心动可见性 SQL 收敛为共享构造、tab 徽标改服务端计数、云函数 SQL 真实执行验证、详情 onShow 缓存新鲜窗口；会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
+
+2026-10-08（MIW-57）：活动 Tab「往期」视图数据源从「已结束活动 feed」切换为后台配置的回顾条目（`mip_videos`）。迁移 103 为 `mip_videos` 增加 `finder_user_name`/`feed_id`（带 `sph` 前缀与格式 CHECK），原 `jump_url` 外链列按追加迁移政策保留为 dormant、全链路不再读写；`mip-admin-api` 视频草稿改为「标题 + 封面素材 + 视频号 ID（必填）+ 可选动态 ID」，无视频号 ID 的历史记录不可发布（legacy 发布前重校验被拒），内容安全输入同步换为视频号目标字段，管理合同 `mip.admin.videos.save` 幂等键更新（operation 总数不变，已再生 admin-contracts）。`mip-events-api` 新增公共只读 action `mip.events.recaps`（readActions 冷启动重试范围），只投影 `PUBLISHED` 条目按 `sort_order` 排序、LEFT JOIN READY 素材取封面云文件 ID，目标非法的行跳过。小程序活动页 PAST tab 走 `mipEventsModule.listRecaps`（300 秒 TTL、并发合并、generation 守卫），复用 `mip-activity-card` recap 变体渲染（封面走卡片级 `updateComponentMedia` 渐进水合，缺失回退占位图），点击经 `wx.openChannelsActivity` 打开具体动态（无动态 ID 打开主页），低版本不支持时 toast 提示；`mip.events.list` 的 view=PAST 服务端分支保留（「即将开始」tab 的「已结束」chip 仍依赖 ENDED 日期过滤）。同日评审确认后移除活动页顶部全局「往期回顾」视频号入口卡（`openPastReview`/`videoChannelConfigured` 一并删除）：客户口径为往期 tab 本身即「在视频号查看活动内容」，逐条回顾卡是唯一视频号入口，不再保留 tab 级 shortcut。admin-web `/videos` 列表与编辑表单去掉 jumpUrl 外链，改为视频号 ID/动态 ID 字段并前置同口径正则校验。测试：admin-api videos 域、events-api 公共投影、weapp dto/gateway/module/页面源码契约、admin-web module 往返各新增聚焦用例；`pnpm verify` 与 `pnpm admin:web:verify` 全绿。未部署、迁移 103 未应用到目标环境；正式素材与真机视频号跳转待验。
 
 2026-10-08（MIW-54）：「我的」档案页三栏（合作卡/超级案例/相关机会）长按删除确认弹窗升级为标题带对象类型、正文带卡片标识（合作卡拼 roleName · positioning，超 16 字截断，空名回退通用文案），解决同栏多卡无法分辨删除目标的问题；同轮排查确认 `packages/member/mip-cases/list`（超级案例独立列表页）自 2026-09-23 档案页 tab 对齐 role-flow 原型（bd0096a1）后已无任何导航入口，属孤儿路由，按 MIW-44 先例整页下线：删除页面 4 文件与 `openCaseList` 死代码，路由契约三处（app.json / runtime-pages.json / project.json）同步至 58 条（用户分包 48），runtime-pages 移除 M16 路由、M17 详情 `queryFixture` 改由 `pages/profile/index` 的 `cases` 提供 `id`，`mip-banners-api` 允许列表移除该路由（云函数未部署）。云函数、数据库表与存量数据全部保留。
 
@@ -21,7 +23,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 58 条小程序路由（用户分包 48 条）、103 个迁移（均已锁定）、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 58 条小程序路由（用户分包 48 条）、104 个迁移（均已锁定）、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -138,7 +140,7 @@ MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示�
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
 | 小程序路由 | 58 条：5 条主包、48 条用户分包、5 条管理分包（含网页登录确认页）；2026-10-08 MIW-54 下线超级案例孤儿列表页 1 条、2026-10-07 MIW-49 新增城市选择页 1 条、此前 MIW-42 删除机会死页 3 条、MIW-44 下线知识/游戏/盲盒 9 条 | `config/runtime-pages.json`、`src/app.json` |
-| 数据库 | 103 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
+| 数据库 | 104 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
 | 管理合同 | 240 个 operation：105 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | Web 开放范围 | 105 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |

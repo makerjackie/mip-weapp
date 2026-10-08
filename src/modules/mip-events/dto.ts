@@ -3,6 +3,8 @@ import type {
   EventDiscoveryFilters,
   EventDiscoveryOption,
   EventFeedResult,
+  EventRecapCard,
+  EventRecapList,
   EventVideoRecap,
   MipEventDetail,
   MipEventListItem,
@@ -173,6 +175,21 @@ export function parseEventDiscoveryFilters(value: unknown): EventDiscoveryFilter
   }
 }
 
+/** MIW-57 往期活动 tab 与活动详情回顾共用的视频号目标谓词。 */
+function parseRecapDestination(value: unknown): boolean {
+  return record(value)
+    && onlyKeys(value, ['provider', 'type', 'finderUserName', 'feedId'])
+    && hasKeys(value, ['provider', 'type', 'finderUserName', 'feedId'])
+    && value.provider === 'WECHAT_CHANNELS'
+    && ['PROFILE', 'ACTIVITY'].includes(String(value.type))
+    && boundedString(value.finderUserName, 128)
+    && finderUserNamePattern.test(value.finderUserName)
+    && (value.feedId === null
+      || (boundedString(value.feedId, 256) && feedIdPattern.test(value.feedId)))
+    && !(value.type === 'PROFILE' && value.feedId !== null)
+    && !(value.type === 'ACTIVITY' && typeof value.feedId !== 'string')
+}
+
 function parseVideoRecap(value: unknown): EventVideoRecap {
   if (!record(value)
     || !onlyKeys(value, ['id', 'title', 'summary', 'destination'])
@@ -180,20 +197,37 @@ function parseVideoRecap(value: unknown): EventVideoRecap {
     || !uuid(value.id)
     || !boundedString(value.title, 120)
     || !boundedString(value.summary, 300, true)
-    || !record(value.destination)
-    || !onlyKeys(value.destination, ['provider', 'type', 'finderUserName', 'feedId'])
-    || !hasKeys(value.destination, ['provider', 'type', 'finderUserName', 'feedId'])
-    || value.destination.provider !== 'WECHAT_CHANNELS'
-    || !['PROFILE', 'ACTIVITY'].includes(String(value.destination.type))
-    || !boundedString(value.destination.finderUserName, 128)
-    || !finderUserNamePattern.test(value.destination.finderUserName)
-    || !(value.destination.feedId === null
-      || (boundedString(value.destination.feedId, 256) && feedIdPattern.test(value.destination.feedId)))
-    || (value.destination.type === 'PROFILE' && value.destination.feedId !== null)
-    || (value.destination.type === 'ACTIVITY' && typeof value.destination.feedId !== 'string')) {
+    || !parseRecapDestination(value.destination)) {
     invalid('视频回顾')
   }
   return value as unknown as EventVideoRecap
+}
+
+/** MIW-57 往期活动 tab：后台配置的回顾条目，封面可为空（卡片回退占位图）。 */
+function parseEventRecapCard(value: unknown): EventRecapCard {
+  if (!record(value)
+    || !onlyKeys(value, ['id', 'title', 'coverUrl', 'destination'])
+    || !hasKeys(value, ['id', 'title', 'coverUrl', 'destination'])
+    || !boundedString(value.id, 32)
+    || !boundedString(value.title, 255)
+    || !boundedString(value.coverUrl, 4096, true)
+    || !parseRecapDestination(value.destination)) {
+    invalid('往期活动回顾')
+  }
+  return value as unknown as EventRecapCard
+}
+
+/** MIW-57 往期活动 tab 数据：`mip.events.recaps` 返回的已发布回顾条目。 */
+export function parseEventRecapList(value: unknown): EventRecapList {
+  if (!record(value)
+    || !onlyKeys(value, ['items'])
+    || !hasKeys(value, ['items'])
+    || !Array.isArray(value.items)
+    || value.items.length > 100
+    || !value.items.every(item => Boolean(parseEventRecapCard(item)))) {
+    invalid('往期活动回顾')
+  }
+  return value as unknown as EventRecapList
 }
 
 function participantPreview(value: unknown) {

@@ -35,6 +35,7 @@ const publicActions = new Set([
   'mip.events.list',
   'mip.events.calendarDates',
   'mip.events.discoveryFilters',
+  'mip.events.recaps',
   'mip.events.detail',
   'mip.events.publicParticipants',
   'mip.events.resolveCheckInScene',
@@ -141,6 +142,8 @@ async function dispatch(event) {
       return service.listEvents(mysqlDatabase(), { ...shared, query: event.query || {} })
     case 'mip.events.calendarDates':
       return service.listEventCalendarDates(mysqlDatabase(), { ...shared, query: event.query || {} })
+    case 'mip.events.recaps':
+      return service.listEventRecaps(mysqlDatabase(), { appId: shared.appId })
     case 'mip.events.discoveryFilters':
       return service.getEventDiscoveryFilters(mysqlDatabase(), shared)
     case 'mip.events.detail':

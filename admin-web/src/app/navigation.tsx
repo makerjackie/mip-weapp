@@ -54,7 +54,7 @@ export const adminNavigation: AdminNavigationItem[] = [
   { path: '/orders', label: '订单管理', description: '查看订单、支付和退款事实', group: '业务管理', icon: <ShoppingCartOutlined />, capabilities: ['orders.read'] },
   { path: '/tasks', label: '任务管理', description: '管理任务、成员分配和完成记录', group: '业务管理', icon: <CheckSquareOutlined />, capabilities: ['tasks.manage'] },
   { path: '/banners', label: 'Banner 管理', description: '管理首页 Banner 和跳转目标', group: '业务管理', icon: <PictureOutlined />, capabilities: ['banners.manage'] },
-  { path: '/videos', label: '视频回顾', description: '管理视频回顾封面与跳转', group: '业务管理', icon: <PictureOutlined />, capabilities: ['events.recaps.manage'] },
+  { path: '/videos', label: '视频回顾', description: '管理往期活动回顾的封面与视频号跳转', group: '业务管理', icon: <PictureOutlined />, capabilities: ['events.recaps.manage'] },
   { path: '/media', label: '素材上传', description: '上传并复用受控运营素材', group: '业务管理', icon: <UploadOutlined />, capabilities: ['banners.manage', 'events.write', 'events.recaps.manage', 'opportunities.moderate', 'userContent.moderate', 'tasks.manage'], requireAny: true },
   { path: '/game', label: '战队管理', description: '管理赛季、战队、赛况、排行和盲盒', group: '业务管理', icon: <TrophyOutlined />, capabilities: ['game.manage'] },
   { path: '/opportunities', label: '机会与内容', description: '管理机会、合作内容和治理记录', group: '业务管理', icon: <BulbOutlined />, capabilities: ['opportunities.moderate', 'userContent.moderate'], requireAny: true },

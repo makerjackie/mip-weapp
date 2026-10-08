@@ -8,7 +8,8 @@ const PLATFORM = { scopeType: 'PLATFORM', scopeId: null }
 const iso = value => value ? new Date(value).toISOString() : null
 function videoDto(row) {
   return { videoId: String(row.video_id), id: String(row.video_id), coverAssetId: row.cover_asset_id,
-    coverUrl: row.cover_url || '', jumpUrl: row.jump_url, title: row.title, status: row.status,
+    coverUrl: row.cover_url || '', finderUserName: row.finder_user_name || '', feedId: row.feed_id || null,
+    title: row.title, status: row.status,
     version: Number(row.version), contentSafetyStatus: row.content_safety_status,
     createdAt: iso(row.created_at), updatedAt: iso(row.updated_at) }
 }
@@ -45,12 +46,12 @@ function createVideoRepository(database, options = {}) {
       const d = input.draft
       let videoId = input.videoId
       if (existing) {
-        await tx.query(`UPDATE mip_videos SET title = ?, cover_asset_id = ?, jump_url = ?, status = ?, content_safety_status = ?, version = version + 1 WHERE app_id = ? AND video_id = ? AND version = ?`,
-          [d.title, d.coverAssetId, d.jumpUrl, d.status, input.contentSafetyStatus, input.appId, videoId, input.expectedVersion])
+        await tx.query(`UPDATE mip_videos SET title = ?, cover_asset_id = ?, finder_user_name = ?, feed_id = ?, status = ?, content_safety_status = ?, version = version + 1 WHERE app_id = ? AND video_id = ? AND version = ?`,
+          [d.title, d.coverAssetId, d.finderUserName, d.feedId, d.status, input.contentSafetyStatus, input.appId, videoId, input.expectedVersion])
       }
       else {
-        const result = await tx.query(`INSERT INTO mip_videos (app_id, title, cover_asset_id, jump_url, status, content_safety_status) VALUES (?, ?, ?, ?, ?, ?)`,
-          [input.appId, d.title, d.coverAssetId, d.jumpUrl, d.status, input.contentSafetyStatus])
+        const result = await tx.query(`INSERT INTO mip_videos (app_id, title, cover_asset_id, finder_user_name, feed_id, status, content_safety_status) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [input.appId, d.title, d.coverAssetId, d.finderUserName, d.feedId, d.status, input.contentSafetyStatus])
         videoId = String(result.insertId)
       }
       const result = { videoId, id: videoId, status: d.status, version: existing ? input.expectedVersion + 1 : 1 }
@@ -69,7 +70,7 @@ function createVideoRepository(database, options = {}) {
       if (Number(row.version) !== input.expectedVersion) throw new AdminError('CONFLICT', '视频已变化，请刷新')
       if (row.status === 'ARCHIVED') throw new AdminError('INVALID_STATE', '已归档视频不能变更')
       if (input.status === 'PUBLISHED') {
-        require('../videos').videoDraft({ title: row.title, coverAssetId: row.cover_asset_id, jumpUrl: row.jump_url })
+        require('../videos').videoDraft({ title: row.title, coverAssetId: row.cover_asset_id, finderUserName: row.finder_user_name, feedId: row.feed_id })
         await requireCover(tx, input.appId, row.cover_asset_id, input.actorUserId, row.cover_asset_id)
         if (row.content_safety_status !== 'APPROVED') throw new AdminError('CONTENT_SAFETY_REQUIRED', '内容安全检查未通过，暂不能发布')
       }

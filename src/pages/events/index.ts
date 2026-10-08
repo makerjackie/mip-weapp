@@ -1,4 +1,4 @@
-import type { EventCardView } from '../../components/mip-activity-card/model'
+import type { EventCardView, RecapCardView } from '../../components/mip-activity-card/model'
 import type { EventId } from '../../modules/mip'
 import type { MipPublicBanner } from '../../modules/mip-banners'
 import type {
@@ -7,8 +7,7 @@ import type {
   EventFeedQuery,
   EventListView,
 } from '../../modules/mip-events'
-import { presentEventCard } from '../../components/mip-activity-card/model'
-import { mipOperationsConfig } from '../../config/mip-operations'
+import { presentEventCard, presentRecapCard } from '../../components/mip-activity-card/model'
 import { mipBannerModule } from '../../modules/mip-banners'
 import {
   buildEventCalendarMonth,
@@ -41,9 +40,9 @@ Page({
     state: 'loading' as 'loading' | 'ready' | 'error',
     view: 'UPCOMING' as EventListView,
     dateFilter: 'RECENT' as EventDateFilter,
-    events: [] as EventCardView[],
+    // 往期活动 tab 放的是后台配置的回顾条目（RecapCardView），与活动 feed 卡片共用列表渲染。
+    events: [] as (EventCardView | RecapCardView)[],
     banners: [] as EventBannerView[],
-    videoChannelConfigured: Boolean(mipOperationsConfig.videoChannelFinderUserName),
     cities: [] as string[],
     selectedCity: '',
     searchInput: '',
@@ -143,6 +142,10 @@ Page({
   },
 
   async loadEvents(options: { force?: boolean, append?: boolean } = {}) {
+    // MIW-57 往期活动 tab 的内容来自后台配置的回顾条目，不查活动 feed。
+    if (this.data.view === 'PAST') {
+      return this.loadRecaps(options)
+    }
     const cursor = options.append ? this.data.nextCursor : ''
     if (options.append && (!cursor || this.data.loadingMore)) {
       return
@@ -194,6 +197,37 @@ Page({
       loadingMore: false,
       message: '',
     })
+  },
+
+  // MIW-57：回顾条目走模块短缓存，下拉刷新 force 绕过；加载态/错误态与活动 feed 同一套。
+  async loadRecaps(options: { force?: boolean } = {}) {
+    const cached = mipEventsModule.peekRecaps()
+    if (this.data.state !== 'ready' && !cached) {
+      this.setData({ state: 'loading', message: '' })
+    }
+    const requestSeq = this.requestSeq + 1
+    this.requestSeq = requestSeq
+    try {
+      const recaps = await mipEventsModule.listRecaps({ force: options.force === true })
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
+      updatePageMedia(this, 'events', recaps.items.map(presentRecapCard))
+      this.setData({
+        state: 'ready',
+        nextCursor: '',
+        loadingMore: false,
+        message: '',
+      })
+    }
+    catch (error) {
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
+      this.setData(cached
+        ? { message: '往期活动更新失败，已保留上次结果。' }
+        : { state: 'error', message: error instanceof Error ? error.message : '往期活动加载失败' })
+    }
   },
 
   async onPullDownRefresh() {
@@ -414,17 +448,6 @@ Page({
     if (banner.targetValue && banner.targetValue !== '/pages/events/index') {
       caseNavigateTo({ url: banner.targetValue })
     }
-  },
-
-  openPastReview() {
-    const finderUserName = mipOperationsConfig.videoChannelFinderUserName
-    if (!finderUserName) {
-      return
-    }
-    wx.openChannelsUserProfile({
-      finderUserName,
-      fail: () => wx.showToast({ title: '暂时无法打开视频号', icon: 'none' }),
-    })
   },
 
   loadMore() {

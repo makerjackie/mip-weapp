@@ -4869,10 +4869,11 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "webRoute": "ADMIN",
       "requiredInputKeys": [
         "coverAssetId",
-        "jumpUrl",
+        "finderUserName",
         "title"
       ],
       "optionalInputKeys": [
+        "feedId",
         "videoId",
         "expectedVersion",
         "status"

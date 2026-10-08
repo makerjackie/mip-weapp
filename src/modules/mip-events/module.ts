@@ -9,6 +9,7 @@ import type {
   EventFeedbackDraft,
   EventFeedQuery,
   EventInteractionSummary,
+  EventRecapList,
   HeartHistoryKind,
   MipEventsGateway,
   PublicEventParticipantQuery,
@@ -162,6 +163,9 @@ export function createMipEventsModule(
   let discoveryFiltersCache: Awaited<ReturnType<NonNullable<MipEventsGateway['getDiscoveryFilters']>>> | null = null
   let discoveryFiltersLoadedAt = 0
   let discoveryFiltersFlight: Promise<EventDiscoveryFilters> | null = null
+  let recapsCache: Awaited<ReturnType<NonNullable<MipEventsGateway['listEventRecaps']>>> | null = null
+  let recapsLoadedAt = 0
+  let recapsFlight: Promise<EventRecapList> | null = null
   let generation = 0
 
   async function runInCurrentSession<T>(work: () => Promise<T>): Promise<T> {
@@ -216,6 +220,40 @@ export function createMipEventsModule(
 
     peekDiscoveryFilters() {
       return discoveryFiltersCache
+    },
+
+    // MIW-57 往期活动 tab：后台配置的回顾条目，短缓存合并并发；配置更新靠 force 拉新。
+    peekRecaps() {
+      return recapsCache
+    },
+
+    async listRecaps(options: { force?: boolean } = {}) {
+      if (!gateway.listEventRecaps) {
+        return { items: [] }
+      }
+      if (!options.force && recapsCache && Date.now() - recapsLoadedAt < 300_000) {
+        return recapsCache
+      }
+      if (recapsFlight) {
+        return recapsFlight
+      }
+      const loadGeneration = generation
+      const flight = gateway.listEventRecaps().then((result) => {
+        if (loadGeneration === generation) {
+          recapsCache = result
+          recapsLoadedAt = Date.now()
+        }
+        return result
+      })
+      recapsFlight = flight
+      try {
+        return await flight
+      }
+      finally {
+        if (recapsFlight === flight) {
+          recapsFlight = null
+        }
+      }
     },
 
     async getDiscoveryFilters(options: { force?: boolean } = {}) {
@@ -508,6 +546,9 @@ export function createMipEventsModule(
       discoveryFiltersCache = null
       discoveryFiltersLoadedAt = 0
       discoveryFiltersFlight = null
+      recapsCache = null
+      recapsLoadedAt = 0
+      recapsFlight = null
     },
   }
 }

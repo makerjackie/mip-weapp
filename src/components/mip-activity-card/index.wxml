@@ -1,4 +1,4 @@
-<view wx:if="{{variant === 'recap'}}" class="mip-activity-card mip-activity-card--recap mip-radius-card overflow-hidden bg-panel" bind:tap="handleRecap">
+<view wx:if="{{variant === 'recap'}}" class="mip-activity-card mip-activity-card--recap mip-radius-card overflow-hidden bg-panel" aria-role="button" aria-disabled="{{recapBusy}}" bind:tap="handleRecap">
   <view class="relative h-[394rpx] w-full active:opacity-80">
     <image wx:if="{{displayCoverUrl}}" class="h-full w-full bg-brand-soft" mode="aspectFill" src="{{displayCoverUrl}}" />
     <view wx:else class="flex h-full w-full items-center justify-center bg-brand-soft"><mip-icon name="calendar-schedule" size="{{35}}" color="var(--color-brand)" /></view>

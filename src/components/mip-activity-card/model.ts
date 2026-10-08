@@ -1,4 +1,4 @@
-import type { MipEventListItem } from '../../modules/mip-events'
+import type { EventRecapCard, EventVideoRecap, MipEventListItem } from '../../modules/mip-events'
 import { publicEventTypeLabel } from '../../modules/mip-events'
 import { formatChineseDateTime } from '../../utils/date'
 
@@ -70,5 +70,27 @@ export function presentEventCard(event: MipEventListItem): EventCardView {
     remainText: participantRemainText(event),
     locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
     eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
+  }
+}
+
+export interface RecapCardView {
+  id: string
+  title: string
+  coverUrl: string
+  videoRecaps: EventVideoRecap[]
+}
+
+/** MIW-57 往期活动 tab：后台配置的回顾条目复用 recap 卡片（封面 + 代码绘制播放层 + 标题）。 */
+export function presentRecapCard(recap: EventRecapCard): RecapCardView {
+  return {
+    id: recap.id,
+    title: recap.title,
+    coverUrl: recap.coverUrl,
+    videoRecaps: [{
+      id: recap.id,
+      title: recap.title,
+      summary: '',
+      destination: recap.destination,
+    }],
   }
 }

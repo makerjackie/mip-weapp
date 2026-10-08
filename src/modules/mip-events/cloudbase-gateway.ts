@@ -14,6 +14,7 @@ import type {
   EventFeedQuery,
   EventFeedResult,
   EventInvitationCode,
+  EventRecapList,
   HeartCandidate,
   HeartHistoryKind,
   HeartHistoryPage,
@@ -35,7 +36,7 @@ import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../../platform/cloudbase/client'
 import { measureLoading } from '../../platform/cloudbase/loading-diagnostics'
 import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
-import { parseEventCalendarDates, parseEventDiscoveryFilters, parseEventFeedResult, parseMipEventDetail } from './dto'
+import { parseEventCalendarDates, parseEventDiscoveryFilters, parseEventFeedResult, parseEventRecapList, parseMipEventDetail } from './dto'
 import { MipEventsError } from './types'
 
 interface Envelope<T> {
@@ -48,6 +49,7 @@ const readActions = new Set([
   'mip.events.list',
   'mip.events.calendarDates',
   'mip.events.discoveryFilters',
+  'mip.events.recaps',
   'mip.events.detail',
   'mip.events.publicParticipants',
   'mip.events.mine',
@@ -90,8 +92,10 @@ async function callEvents<T>(action: string, data: Record<string, unknown> = {},
       })
     }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }))
     const result = unwrap<T>(response.result)
-    // Feed cards localize images after displaying business data.
-    return action === 'mip.events.list' || progressiveMedia ? result : resolveCloudFileUrls(result)
+    // Feed cards and configured recap cards localize images after displaying business data.
+    return action === 'mip.events.list' || action === 'mip.events.recaps' || progressiveMedia
+      ? result
+      : resolveCloudFileUrls(result)
   }
   catch (error) {
     if (error instanceof MipEventsError) {
@@ -116,6 +120,11 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
     return parseEventCalendarDates(
       await callEvents<EventCalendarDates>('mip.events.calendarDates', { query }),
     )
+  },
+
+  async listEventRecaps() {
+    // 封面交给卡片组件按云文件 ID 自行解析，与活动 feed 同一条渐进加载路径。
+    return parseEventRecapList(await callEvents<EventRecapList>('mip.events.recaps'))
   },
 
   async getEvent(eventId: EventId, options = {}) {

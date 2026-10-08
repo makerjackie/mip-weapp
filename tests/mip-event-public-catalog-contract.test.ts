@@ -1,4 +1,4 @@
-import type { EventVideoRecap, MipEventDetail, MipEventListItem, MipEventsGateway } from '../src/modules/mip-events'
+import type { EventRecapCard, EventVideoRecap, MipEventDetail, MipEventListItem, MipEventsGateway } from '../src/modules/mip-events'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMipEventsModule } from '../src/modules/mip-events'
 import {
@@ -6,6 +6,7 @@ import {
 } from '../src/modules/mip-events/cloudbase-gateway'
 import {
   parseEventFeedResult,
+  parseEventRecapList,
   parseMipEventDetail,
   parseMipEventListItem,
 } from '../src/modules/mip-events/dto'
@@ -21,6 +22,19 @@ const recap: EventVideoRecap = {
   id: '22222222-2222-4222-8222-222222222222',
   title: '活动回顾',
   summary: '查看本次活动视频',
+  destination: {
+    provider: 'WECHAT_CHANNELS',
+    type: 'ACTIVITY',
+    finderUserName: 'sphMIP2026',
+    feedId: 'feed-token-1',
+  },
+}
+
+// MIW-57 往期活动 tab：后台配置的回顾条目（mip_videos），id 为视频记录主键而非活动 UUID。
+const recapCard: EventRecapCard = {
+  id: '12',
+  title: 'MIP 反人性早会第 328 场',
+  coverUrl: 'cloud://cover-1.jpg',
   destination: {
     provider: 'WECHAT_CHANNELS',
     type: 'ACTIVITY',
@@ -208,5 +222,35 @@ describe('MIP public event catalog and recap client contract', () => {
       view: 'UPCOMING',
       dateFilter: 'RECENT',
     })).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
+  })
+
+  it('strictly parses the configured past-event recap list', () => {
+    expect(parseEventRecapList({ items: [recapCard] })).toEqual({ items: [recapCard] })
+    // 封面缺失回退为空串由卡片占位，但目标必须是合法的视频号。
+    expect(parseEventRecapList({ items: [{ ...recapCard, coverUrl: '' }] }).items[0].coverUrl).toBe('')
+    const invalidDestinations = [
+      { ...recapCard.destination, finderUserName: 'invalid-finder' },
+      { ...recapCard.destination, type: 'PROFILE', feedId: 'feed-token-1' },
+      { ...recapCard.destination, type: 'ACTIVITY', feedId: null },
+    ] as const
+    for (const destination of invalidDestinations) {
+      expect(() => parseEventRecapList({ items: [{ ...recapCard, destination }] }))
+        .toThrowError(expect.objectContaining({ code: 'INVALID_RESPONSE' }))
+    }
+    expect(() => parseEventRecapList({ items: [{ ...recapCard, status: 'PUBLISHED' }] }))
+      .toThrowError(expect.objectContaining({ code: 'INVALID_RESPONSE' }))
+  })
+
+  it('loads configured past-event recaps through the public recap action', async () => {
+    callFunction
+      .mockResolvedValueOnce({ result: { ok: true, data: { items: [recapCard] } } })
+      .mockResolvedValueOnce({ result: { ok: true, data: { items: [{ ...recapCard, finderUserName: 'no-sph-prefix' }] } } })
+
+    await expect(cloudbaseMipEventsGateway.listEventRecaps()).resolves.toEqual({ items: [recapCard] })
+    expect(callFunction).toHaveBeenCalledWith({
+      name: 'mip-events-api',
+      data: { action: 'mip.events.recaps' },
+    })
+    await expect(cloudbaseMipEventsGateway.listEventRecaps()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
   })
 })
