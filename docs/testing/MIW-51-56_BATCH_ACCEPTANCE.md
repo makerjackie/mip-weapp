@@ -60,7 +60,21 @@
 | D9 | MIW-55 机会页实机验证：真实数据卡片渲染（值/城市/地区/寻找四行 + 想合作 pill + 状态），离线卡可见性规则由云函数测试与 `miw55-opportunity-card-alignment.test.ts` 双重钉住 | ✅ | `.tmp/fullpage-shots/opportunities-miw55-fullpage.png` |
 | D10 | MIW-56 mip-dialog 确认键实机验证：AI 语音页 review 态触发删除弹窗，「继续编辑」「删除」两键文案均渲染（修复前确认键为空白）； 云端 ACTION_NOT_FOUND 区分已部署（B5） | ✅ | `.tmp/fullpage-shots/voice-dialog-miw56.png` |
 | D11 | MIW-56 完整录音流（真实麦克风录音→确认→草稿生成） | ⏳ | 需真机麦克风与真实 AI provider 配额；组件修复已由合同测试 + D10 覆盖 |
-| D12 | 完整运行时路由验证 `pnpm test:runtime`（DevTools automator 驱动真实产物全路由） | 见运行时报告 | `.tmp/runtime/report.json` |
+| D12 | 完整运行时路由验证 `pnpm test:runtime`（DevTools automator 驱动真实产物，58 路由）：6 代表态全过、2 条交互旅程（opportunity-search-and-filter / profile-content-tabs）全过、`mip-events/detail` 与 `mip-public-profile` 在修复后整跑 PASS；剩余 6 页未达标全部为既有归因——managed-events（需 Web 登录，设计如此）+ event-console/event-registrations（其 fixture 依赖）+ mip-access（登录拦截夹具）+ mip-ai/voice（MIW-34 记录的 ASR 能力门控，按设计落 error）+ mip-cases/detail（external-wait：harness 从「我的」页采样 cases 数据的时序竞争，页面代码本批零改动、合同测试覆盖，需下批观察是否复现）。注：代表态校验在「复用被重度驱动的 automator 会话」时会稳定抖动（WXML 取证 4s 窗口），runner 自管会话（IDE 退出后直跑）即恢复，已连续两轮复现该规律 | ⚠️ | `.tmp/runtime/report.json` |
+
+## E. 端到端验收发现并修复的回归（本批新增提交）
+
+| # | 项 | 说明 | 结果 | 证据 |
+| --- | --- | --- | --- | --- |
+| E1 | MIW-55 公开档案聚合 500 | `getPublicProfileAggregate` 的 typeKeys 投影把 mysql2 JSON 列过 `jsonObject`——它对数组与 NULL 的兜底都是 `{}`（对象），`.filter` 抛 TypeError 崩掉整个请求；实机稳定复现（真实 profileRef → 「机会服务暂时不可用」），回滚到合并前版本即恢复，定位为云端改动引入。修复：新增 `common.arrayOrEmpty`（数组/双编码字符串/NULL 三态收口），投影改用它；附 SQL 指纹假库回归测试（NULL 行不崩、数组与双编码行照常投影）。修复后重新部署并实机复测：`state: ready`、6 张合作卡 | ✅ | commit `b1218e13`；`[mip-cloud-deploy] verified mip-opportunities-api`；automator 复测输出 |
+| E2 | MIW-53 详情页敏感数据回退 | 主办方资料卡下线时未把 `organizer` 移出页面数据，原始 `cloud://` 头像引用重新落入 data，运行时验收敏感值断言失败（`event.organizer.avatarUrl` 命中 `cloud://` 模式）。修复：`normalizedEvent` 剥离 organizer 再 setData。修复后整跑中该页 PASS | ✅ | commit `b1218e13`；automator 复测 `event.organizer ABSENT`；最终轮 `mip-events/detail PASS` |
+
+## F. 回滚与安全
+
+| # | 验收项 | 结果 | 证据 |
+| --- | --- | --- | --- |
+| F1 | 本批 1 个迁移（102）；回滚 = 回退 5 个云函数代码版本（云端保留历史版本）+ 静态托管前缀旧资产（未删除）+ 迁移 rollback 脚本 `database/mysql/mip/rollback/102_event_organizer_introduction.sql` + Cloudflare 不动 | ✅ | B1–B7 与 C2 事实 |
+| F2 | 函数无新增 timer/权限/客户端调用；部署产物不含环境 ID、身份值或密钥（每次部署均有 no-persist 声明）；安全规则收敛检查随部署与 cloud:verify 通过 | ✅ | 部署脚本终检输出 |
 
 ## 真机/后续待验清单（⏳ 汇总）
 
@@ -68,3 +82,4 @@
 2. 管理后台真实登录后配置某活动「主办方介绍」，回扫码端验证详情页同内容展示（C6 + D6 闭环）。
 3. MIW-56 真实录音流（真机麦克风 + AI provider 真配额）与 MIW-52 心动值微信订阅消息提醒（订阅消息类必须真机）。
 4. 支付/手机号能力本批未触及，不适用。
+5. 观察项：`mip-cases/detail` 的 harness fixture 采样时序竞争（D12）是否在后续批次复现；复现则按「列表加载合同测试」要求补 profile 作品集加载的运行时合同断言。
