@@ -431,8 +431,11 @@ Page({
     const onlineUrl = safeHttpsEventUrl(event.onlineUrl)
     const guideUrl = safeHttpsEventUrl(event.guideUrl)
     const contentMedia = (event.contentMedia || []).map((item, index) => ({ ...item, renderKey: `media-${index}` }))
+    // MIW-53：主办方资料卡已从详情页下线，organizer（含头像 cloud file id）不再进页面数据；
+    // 运行时验收的敏感值断言（cloud:// 模式）同样依赖这里的最小化。
+    const { organizer: _retiredOrganizer, ...eventWithoutOrganizer } = event
     const normalizedEvent = {
-      ...event,
+      ...eventWithoutOrganizer,
       eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
       coverUrl: peekCloudFileUrls(event.coverUrl || ''),
       contentMedia: peekCloudFileUrls(contentMedia),

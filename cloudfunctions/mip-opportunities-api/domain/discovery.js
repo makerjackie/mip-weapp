@@ -3,6 +3,7 @@ const { cooperationSummaries } = require('./opportunity-cooperations')
 
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const {
+  arrayOrEmpty,
   iso,
   jsonObject,
   mutualBlockFilter,
@@ -332,7 +333,9 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
       referralCount: Number(item.referral_count || 0),
       cooperationCount: cooperation.get(item.id)?.count || 0,
       // MIW-55 figma 3359:5705 相关机会卡：黄标取机会类型、胶囊取最近想合作头像。
-      typeKeys: (jsonObject(item.type_keys_json) || []).filter(key => typeof key === 'string'),
+      // 不能过 jsonObject：它对数组和 NULL 的兜底都是 {}（对象），`.filter` 会 500 掉整个聚合；
+      // arrayOrEmpty 直接收口 mysql2 的 JSON 数组、双编码字符串与历史 NULL 行。
+      typeKeys: arrayOrEmpty(item.type_keys_json).filter(key => typeof key === 'string'),
       avatars: cooperation.get(item.id)?.avatars || [],
       branchName: item.branch_name || undefined,
       cityLabel: item.city_label || undefined,

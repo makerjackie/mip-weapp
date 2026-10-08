@@ -78,6 +78,22 @@ function jsonObject(value) {
   return {}
 }
 
+/** 取数组字段时用它收口：mysql2 的 JSON 列回读为数组，双编码行是字符串，历史行可能是 NULL——
+ * jsonObject 对数组和 NULL 的兜底都是 {}（对象），直接 `.filter` 会崩掉整个请求。 */
+function arrayOrEmpty(value) {
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    }
+    catch {
+      return []
+    }
+  }
+  return []
+}
+
 function encodeCursor(timestamp, id) {
   return Buffer.from(JSON.stringify({ timestamp: iso(timestamp), id }), 'utf8').toString('base64url')
 }
@@ -182,6 +198,7 @@ module.exports = {
   ROLE_KEYS,
   appendAudit,
   appendOutbox,
+  arrayOrEmpty,
   decodeCursor,
   encodeCursor,
   idempotentTransaction,
