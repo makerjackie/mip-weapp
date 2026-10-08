@@ -6,17 +6,10 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 const eventsModule = vi.hoisted(() => ({
   listMyRegistrations: vi.fn(),
 }))
-const casesModule = vi.hoisted(() => ({
-  list: vi.fn(),
-  listMine: vi.fn(),
-}))
 
 vi.mock('../src/modules/mip-events/client', () => ({
   mipCheckInResumeStore: { clear: vi.fn() },
   mipEventsModule: eventsModule,
-}))
-vi.mock('../src/modules/mip-cases', () => ({
-  superCaseModule: casesModule,
 }))
 vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: vi.fn(),
@@ -30,7 +23,6 @@ interface PageDefinition {
 
 let capturedPage: PageDefinition
 let myEventsDefinition: PageDefinition
-let caseListDefinition: PageDefinition
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -75,20 +67,6 @@ function registration(id: string) {
   }
 }
 
-function superCase(id: string) {
-  return {
-    id,
-    title: id,
-    status: 'PUBLISHED',
-    publishedAt: '2026-08-01T00:00:00.000Z',
-    cityLabel: '深圳',
-    industryLabel: '',
-    caseType: '项目',
-    mine: true,
-    version: 1,
-  }
-}
-
 beforeAll(async () => {
   vi.stubGlobal('wx', { showModal: vi.fn(), showToast: vi.fn() })
   vi.stubGlobal('Page', (definition: PageDefinition) => {
@@ -96,14 +74,10 @@ beforeAll(async () => {
   })
   await import('../src/packages/member/mip-events/mine/index')
   myEventsDefinition = capturedPage
-  await import('../src/packages/member/mip-cases/list/index')
-  caseListDefinition = capturedPage
 })
 
 beforeEach(() => {
   eventsModule.listMyRegistrations.mockReset()
-  casesModule.list.mockReset()
-  casesModule.listMine.mockReset()
 })
 
 describe('second-pass client request ordering', () => {
@@ -123,25 +97,6 @@ describe('second-pass client request ordering', () => {
     await appendRun
 
     expect(page.data.registrations).toEqual([expect.objectContaining({ event: expect.objectContaining({ id: 'fresh' }) })])
-  })
-
-  it('keeps the selected case scope when an older response finishes last', async () => {
-    const allCases = deferred<unknown>()
-    const mine = deferred<unknown>()
-    casesModule.list.mockReturnValue(allCases.promise)
-    casesModule.listMine.mockReturnValue(mine.promise)
-    const page = createPage(caseListDefinition)
-
-    const oldRun = callPage(page, 'load', true) as Promise<unknown>
-    page.data.mine = true
-    const currentRun = callPage(page, 'load', true) as Promise<unknown>
-    mine.resolve({ items: [superCase('mine')], nextCursor: '' })
-    await currentRun
-    allCases.resolve({ items: [superCase('all')], nextCursor: '' })
-    await oldRun
-
-    expect(page.data.mine).toBe(true)
-    expect(page.data.items).toEqual([expect.objectContaining({ id: 'mine' })])
   })
 })
 

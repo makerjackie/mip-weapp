@@ -5,23 +5,8 @@ function source(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 }
 
-describe('MIP super case list and detail visuals', () => {
-  it('uses a compact timeline for real case summaries and keeps every list state visible', () => {
-    const page = source('src/packages/member/mip-cases/list/index.ts')
-    const template = source('src/packages/member/mip-cases/list/index.wxml')
-
-    expect(page).toContain('formatPublishedMonth')
-    expect(page).toMatch(/state: reset \? 'error' : 'ready'/)
-    expect(template).toContain('aria-role="tablist"')
-    expect(template).toContain('item.publishedText || item.statusText')
-    expect(template).toContain('left-[-76rpx]')
-    expect(template).toMatch(/state === 'loading'/)
-    expect(template).toMatch(/state === 'error'/)
-    expect(template).toContain('!items.length')
-    expect(template).toContain('正在加载更多案例')
-    expect(template).not.toContain('展示已发布的项目经历和结果。')
-  })
-
+describe('MIP super case detail visuals', () => {
+  // MIW-54（2026-10-08）：超级案例独立列表页为孤儿路由，整页下线；时间线布局收敛到「我的」档案页超级案例 tab。
   it('matches the Figma cover-to-facts hierarchy and protects fixed actions with the safe area', () => {
     const page = source('src/packages/member/mip-cases/detail/index.ts')
     const template = source('src/packages/member/mip-cases/detail/index.wxml')

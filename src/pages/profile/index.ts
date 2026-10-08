@@ -53,6 +53,24 @@ interface OpportunityCardView extends OpportunitySummary {
   avatarViews: string[]
 }
 
+/** MIW-54（2026-10-08）：弹窗标题带对象类型、内容带卡片标识——同栏多张卡时用户才能确认长按删的是哪一张。 */
+function portfolioItemLabel(item: CooperationCardView | CaseView | OpportunityCardView, tab: PortfolioTab): string {
+  if (tab === 'cooperation' && 'roleName' in item) {
+    // 同角色可有多张卡，positioning 才是区分它们的行。
+    return item.positioning ? `${item.roleName} · ${item.positioning}` : item.roleName
+  }
+  if (tab === 'cases' && 'projectName' in item) {
+    return item.projectName
+  }
+  return 'title' in item ? item.title : ''
+}
+
+function portfolioDeleteContent(item: CooperationCardView | CaseView | OpportunityCardView, tab: PortfolioTab): string {
+  const label = portfolioItemLabel(item, tab).trim()
+  const name = label.length > 16 ? `${label.slice(0, 16)}…` : label
+  return name ? `「${name}」删除后将无法恢复，是否删除？` : '删除后将无法恢复，是否删除？'
+}
+
 Page({
   copyLoadingDiagnostics() {
     wx.setClipboardData({
@@ -806,7 +824,6 @@ Page({
       ['AUTHENTICATED', 'AGREEMENTS'],
     )
   },
-  openCaseList() { void this.openProtected('/packages/member/mip-cases/list/index?mine=1', 'INTERACT') },
   openCaseEditor() { void this.openProtected('/packages/member/mip-cases/editor/index', 'INTERACT') },
   openOpportunityEditor() { void this.openProtected('/packages/member/mip-opportunities/editor/index', 'INTERACT') },
   /** J5-01/J1-08：设置入口（账号设置口径，WS-SETTINGS 承接页面内容）；游客点击先过登录门禁（六入口口径）。 */
@@ -862,8 +879,12 @@ Page({
     }
     this.setData({ removingPortfolioId: id })
     const confirmation = await wx.showModal({
-      title: '删除提示',
-      content: '删除后将无法恢复，是否删除？',
+      title: tab === 'cooperation'
+        ? '删除合作卡'
+        : tab === 'cases'
+          ? '删除超级案例'
+          : '删除机会',
+      content: portfolioDeleteContent(item, tab),
       confirmText: '删除',
       confirmColor: '#FF4D5E',
     }).catch(() => null)

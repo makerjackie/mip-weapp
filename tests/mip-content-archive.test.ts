@@ -26,25 +26,24 @@ describe('MIP cooperation card and super case archives', () => {
 
   it('offers confirmed deletion from owner lists and details and refreshes after mutations', () => {
     // 2026-10-07：合作卡/机会独立「我的列表」页删除后，owner 列表删除统一落在「我的」档案页三栏长按。
-    // MIW-49（figma 2704_13347）：超级案例详情页不再提供删除入口，长按删除只保留在
-    // 「我的」档案页与超级案例列表页；合作卡详情页删除入口不变。
+    // MIW-49（figma 2704_13347）：超级案例详情页不再提供删除入口，长按删除只保留在「我的」档案页。
+    // MIW-54（2026-10-08）：超级案例独立列表页为孤儿路由（入口随 9-23 档案页 tab 重构撤下），整页下线。
     const profile = source('src/pages/profile/index.ts')
     const cooperationDetail = source('src/packages/member/mip-cooperation/detail/index.ts')
-    const caseList = source('src/packages/member/mip-cases/list/index.ts')
     const caseDetail = source('src/packages/member/mip-cases/detail/index.ts')
 
-    // journey-review C5（2026-09-21 拍板）：列表删除入口收敛为长按卡片 + 统一原生确认弹窗
-    // 「删除提示 / 删除后将无法恢复，是否删除？」；合作卡详情页保留各自命名的删除入口。
-    expect(profile).toContain('title: \'删除提示\'')
+    // journey-review C5（2026-09-21 拍板）：列表删除入口收敛为长按卡片 + 原生确认弹窗；
+    // MIW-54（2026-10-08）：「我的」档案页弹窗升级为标题带对象类型 + 内容带卡片名。
+    expect(profile).toContain('\'删除合作卡\'')
+    expect(profile).toContain('\'删除超级案例\'')
+    expect(profile).toContain('\'删除机会\'')
+    expect(profile).toContain('」删除后将无法恢复，是否删除？')
     expect(profile).toContain('await cooperationModule.archive(card.id, version)')
     expect(profile).toContain('await superCaseModule.archive(card.id, version)')
     expect(cooperationDetail).toContain('cooperationModule.archive(item.id, item.version)')
     expect(cooperationDetail).toContain('leaveSecondaryPage(\'/pages/opportunities/index\')')
-    expect(caseList).toContain('title: \'删除提示\'')
-    expect(caseList).toContain('superCaseModule.archive(item.id, expectedVersion)')
-    expect(caseList).toContain('await this.load(true)')
     expect(caseDetail).not.toContain('superCaseModule.archive')
-    for (const page of [profile, cooperationDetail, caseList]) {
+    for (const page of [profile, cooperationDetail]) {
       expect(page).toContain('无法恢复')
       expect(page).not.toContain('wx.cloud.init')
     }

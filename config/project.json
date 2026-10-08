@@ -117,10 +117,6 @@
       "pathName": "packages/member/mip-cooperation/editor/index"
     },
     {
-      "name": "超级案例",
-      "pathName": "packages/member/mip-cases/list/index"
-    },
-    {
       "name": "超级案例详情",
       "pathName": "packages/member/mip-cases/detail/index"
     },

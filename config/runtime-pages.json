@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 59,
+  "routeCount": 58,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
@@ -1238,20 +1238,6 @@
       "readyAssertion": "state === 'ready'"
     },
     {
-      "id": "M16",
-      "name": "超级案例",
-      "path": "packages/member/mip-cases/list/index",
-      "selector": "#mip-cases-list-page",
-      "group": "public",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
       "id": "M17",
       "name": "超级案例详情",
       "path": "packages/member/mip-cases/detail/index",
@@ -1268,8 +1254,8 @@
         "id"
       ],
       "queryFixture": {
-        "sourceRoute": "packages/member/mip-cases/list/index",
-        "dataPath": "items",
+        "sourceRoute": "pages/profile/index",
+        "dataPath": "cases",
         "values": {
           "id": "id"
         }
