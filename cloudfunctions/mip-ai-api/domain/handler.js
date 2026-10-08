@@ -1,6 +1,7 @@
 'use strict'
 
 const messages = {
+  ACTION_NOT_FOUND: 'AI 服务版本暂不匹配，请稍后重试',
   AI_CLEANUP_INVALID: 'AI 语音清理参数无效',
   AI_AUDIO_NOT_AVAILABLE: '语音文件不可用，请重新录制',
   AI_AUDIO_FILE_INVALID: '录音文件存储信息不正确',
@@ -70,7 +71,9 @@ function createHandler(options) {
       if (event.action === 'updateDraft') return success(await options.service.updateDraft(caller, event))
       if (event.action === 'deleteDraft') return success(await options.service.deleteDraft(caller, event))
       if (event.action === 'generateDigitalAvatar') return success(await options.service.generateDigitalAvatar(caller, event))
-      throw new Error('NOT_FOUND')
+      // 未知 action 是客户端/云函数版本偏差（MIW-56：旧包没有 prepareVoiceUpload，
+      // 复用 NOT_FOUND 会把「服务没这个接口」伪装成「草稿不存在或已删除」误导排障）。
+      throw new Error('ACTION_NOT_FOUND')
     }
     catch (error) {
       return failure(error)
@@ -91,6 +94,7 @@ function failure(error) {
       code,
       message: messages[code] || 'AI 草稿服务暂时不可用',
       retryable: [
+        'ACTION_NOT_FOUND',
         'CONFLICT',
         'AI_DRAFT_REQUEST_IN_PROGRESS',
         'AI_PROVIDER_UNAVAILABLE',

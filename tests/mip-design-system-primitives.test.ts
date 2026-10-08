@@ -70,6 +70,10 @@ describe('MIP Design System native primitives', () => {
     expect(read('src/components/mip-attend-pill/index.wxss')).toContain('width: 232rpx;')
     expect(read('src/components/mip-stat-header/index.wxml')).toContain('bind:tap="handleSelect"')
     expect(read('src/components/mip-dialog/index.wxml')).toContain('aria-role="dialog"')
+    // MIW-56：组件未开 multipleSlots，命名 slot 兜底不渲染，确认键必须直接绑定 confirmText。
+    const dialog = read('src/components/mip-dialog/index.wxml')
+    expect(dialog).toContain('bind:tap="handleConfirm">{{confirmText}}</view>')
+    expect(dialog).not.toContain('slot name=')
   })
 
   it('delegates repeated fixture structures to shared business components', () => {

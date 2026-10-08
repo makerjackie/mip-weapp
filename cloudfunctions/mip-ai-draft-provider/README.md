@@ -13,7 +13,9 @@
 - OpenAI-compatible：`OPENAI_BASE_URL`、`OPENAI_MODEL`、`OPENAI_API_KEY`
 - 旧版 MIP 协议：`MIP_AI_DRAFT_UPSTREAM_ENDPOINT`、`MIP_AI_DRAFT_UPSTREAM_ALLOWED_HOSTS`、`MIP_AI_DRAFT_UPSTREAM_SECRET`
 
-OpenAI-compatible 模式使用 `${OPENAI_BASE_URL}/chat/completions`，启用 JSON mode、non-thinking、固定单结果和总超时。API Key 只注入本函数，不进入 `mip-ai-api` 或小程序。响应必须正常结束并返回纯 JSON；机会草稿严格限制为 `title`、`valueSummary`、`cityLabel`、`targetSummary`、`description` 五个字符串字段，不从原文之外推断事实。该模式只处理文字整理与补充整理；语音转写仍需旧版 MIP 上游提供。
+语音转写（Flash ASR，MIW-34）：`TENCENT_ASR_SECRET_ID`、`TENCENT_ASR_SECRET_KEY`、`TENCENT_ASR_APPID`，可选 `TENCENT_ASR_TIMEOUT_MS`（默认 20000，范围 1000–45000）。凭据取自腾讯云 CAM API 密钥与账号 APPID，随部署从本地密钥文件注入函数环境，不进入 `mip-ai-api` 或小程序；三种一起配置才开启语音能力（`voiceDrafts`），任一缺失则 `readiness` 上报 `voiceDrafts: false`，客户端能力门控随之关闭。
+
+OpenAI-compatible 模式使用 `${OPENAI_BASE_URL}/chat/completions`，启用 JSON mode、non-thinking、固定单结果和总超时。API Key 只注入本函数，不进入 `mip-ai-api` 或小程序。响应必须正常结束并返回纯 JSON；机会草稿严格限制为 `title`、`valueSummary`、`cityLabel`、`targetSummary`、`description` 五个字符串字段，不从原文之外推断事实。文字整理与补充整理走该上游；语音转写由 Flash ASR 直连 `asr.cloud.tencent.com`（HMAC 签名 + 二进制 body），转写文本再交给同一上游做结构化。
 
 Endpoint 或 Base URL 只接受 HTTPS、443 端口、无凭证/查询/片段的 URL。旧版 hostname 必须精确出现在 allowlist；OpenAI-compatible 模式只连接 Base URL 的精确 hostname。每次调用重新解析全部 DNS 结果并拒绝任一私网或保留地址，实际 TLS 连接固定使用本次已验证地址；重定向、压缩响应、超时、超过 64 KB 的响应均被拒绝。
 

@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
+
+// Flash ASR 凭据格式校验与函数内同一份实现（lib 只依赖 node 内置模块，可安全跨引）。
+const require = createRequire(import.meta.url)
+const { isValidAsrAppId, isValidAsrSecretId, isValidAsrSecretKey } = require('../../cloudfunctions/mip-ai-draft-provider/lib/flash-asr')
 
 export const AI_DRAFT_PROVIDER_FUNCTION_NAME = 'mip-ai-draft-provider'
 export const AI_DRAFT_PROVIDER_RUNTIME = 'Nodejs20.19'
@@ -31,6 +36,10 @@ export const AI_DRAFT_PROVIDER_ENVIRONMENT_KEYS = Object.freeze([
   'OPENAI_MODEL',
   'MIP_AI_DRAFT_PROVIDER_HMAC_SECRET',
   'MIP_ALLOWED_APP_IDS',
+  'TENCENT_ASR_APPID',
+  'TENCENT_ASR_SECRET_ID',
+  'TENCENT_ASR_SECRET_KEY',
+  'TENCENT_ASR_TIMEOUT_MS',
 ])
 
 export function providerSourceFingerprint(sourceRoot) {
@@ -68,6 +77,8 @@ export function providerEnvironment({ aiEnvironment, env, sourceMarker }) {
   const allowedHosts = exactHosts(env.MIP_AI_DRAFT_UPSTREAM_ALLOWED_HOSTS)
   const upstreamSecret = text(env.MIP_AI_DRAFT_UPSTREAM_SECRET)
   const timeoutMs = Number(env.MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS || 8000)
+  // MIW-56:语音转写凭据随部署注入,不配置时语音能力保持关闭;配置则三者缺一或格式不符直接拒绝部署。
+  const asrEnvironment = asrEnvironmentFrom(env)
   if (!allowedAppIds.length
     || allowedAppIds.some(value => !/^wx[0-9a-f]{16}$/i.test(value))
     || hmacSecret.length < 32) {
@@ -96,6 +107,7 @@ export function providerEnvironment({ aiEnvironment, env, sourceMarker }) {
     }
     return Object.freeze({
       ...baseEnvironment,
+      ...asrEnvironment,
       OPENAI_BASE_URL: openAiBaseUrl.toString(),
       OPENAI_MODEL: openAiModel,
       OPENAI_API_KEY: openAiApiKey,
@@ -113,11 +125,42 @@ export function providerEnvironment({ aiEnvironment, env, sourceMarker }) {
   }
   return Object.freeze({
     ...baseEnvironment,
+    ...asrEnvironment,
     MIP_AI_DRAFT_UPSTREAM_ENDPOINT: endpoint.toString(),
     MIP_AI_DRAFT_UPSTREAM_ALLOWED_HOSTS: allowedHosts.join(','),
     MIP_AI_DRAFT_UPSTREAM_SECRET: upstreamSecret,
     MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS: String(timeoutMs),
   })
+}
+
+// 腾讯云 Flash ASR 凭据:三件套要么全空(能力关闭),要么齐全且通过函数内同一格式校验。
+function asrEnvironmentFrom(env) {
+  const secretId = text(env.TENCENT_ASR_SECRET_ID)
+  const secretKey = text(env.TENCENT_ASR_SECRET_KEY)
+  const appId = text(env.TENCENT_ASR_APPID)
+  const timeoutValue = text(env.TENCENT_ASR_TIMEOUT_MS)
+  if (!secretId && !secretKey && !appId && !timeoutValue) {
+    return {}
+  }
+  if (!secretId || !secretKey || !appId) {
+    throw new Error('TENCENT_ASR_SECRET_ID, TENCENT_ASR_SECRET_KEY, and TENCENT_ASR_APPID must be configured together')
+  }
+  if (!isValidAsrSecretId(secretId) || !isValidAsrSecretKey(secretKey) || !isValidAsrAppId(appId)) {
+    throw new Error('TENCENT_ASR_SECRET_ID (AKID…), TENCENT_ASR_SECRET_KEY (16-64 chars), or TENCENT_ASR_APPID (4-12 digits) format is invalid')
+  }
+  const environment = {
+    TENCENT_ASR_SECRET_ID: secretId,
+    TENCENT_ASR_SECRET_KEY: secretKey,
+    TENCENT_ASR_APPID: appId,
+  }
+  if (timeoutValue) {
+    const timeout = Number(timeoutValue)
+    if (!Number.isInteger(timeout) || timeout < 1000 || timeout > 45_000) {
+      throw new Error('TENCENT_ASR_TIMEOUT_MS must be an integer between 1000 and 45000')
+    }
+    environment.TENCENT_ASR_TIMEOUT_MS = String(timeout)
+  }
+  return environment
 }
 
 export function assertAiApiProviderLink(aiEnvironment, functionName = AI_DRAFT_PROVIDER_FUNCTION_NAME) {

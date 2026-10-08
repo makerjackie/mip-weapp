@@ -95,6 +95,54 @@ describe('AI draft Provider cloud contract', () => {
     expect(exactHosts('127.0.0.1')).toEqual([])
   })
 
+  // MIW-56:Flash ASR 凭据只在三件套齐全且格式合法时注入,全空保持能力关闭。
+  it('omits ASR credentials when unconfigured so the voice capability stays closed', () => {
+    const environment = providerEnvironment({
+      aiEnvironment,
+      env: localEnvironment,
+      sourceMarker,
+    })
+    expect(environment.TENCENT_ASR_SECRET_ID).toBeUndefined()
+    expect(environment.TENCENT_ASR_SECRET_KEY).toBeUndefined()
+    expect(environment.TENCENT_ASR_APPID).toBeUndefined()
+    expect(environment.TENCENT_ASR_TIMEOUT_MS).toBeUndefined()
+  })
+
+  it('injects complete ASR credentials and validates them against the function contract', () => {
+    const asrEnvironment = {
+      ...localEnvironment,
+      TENCENT_ASR_SECRET_ID: `AKID${'a'.repeat(16)}`,
+      TENCENT_ASR_SECRET_KEY: 'k'.repeat(32),
+      TENCENT_ASR_APPID: '1429274561',
+      TENCENT_ASR_TIMEOUT_MS: '20000',
+    }
+    const environment = providerEnvironment({
+      aiEnvironment,
+      env: asrEnvironment,
+      sourceMarker,
+    })
+    expect(environment.TENCENT_ASR_SECRET_ID).toBe(`AKID${'a'.repeat(16)}`)
+    expect(environment.TENCENT_ASR_SECRET_KEY).toBe('k'.repeat(32))
+    expect(environment.TENCENT_ASR_APPID).toBe('1429274561')
+    expect(environment.TENCENT_ASR_TIMEOUT_MS).toBe('20000')
+
+    expect(() => providerEnvironment({
+      aiEnvironment,
+      env: { ...localEnvironment, TENCENT_ASR_SECRET_ID: `AKID${'a'.repeat(16)}` },
+      sourceMarker,
+    })).toThrow('must be configured together')
+    expect(() => providerEnvironment({
+      aiEnvironment,
+      env: { ...asrEnvironment, TENCENT_ASR_SECRET_ID: 'not-an-akid' },
+      sourceMarker,
+    })).toThrow('format is invalid')
+    expect(() => providerEnvironment({
+      aiEnvironment,
+      env: { ...asrEnvironment, TENCENT_ASR_TIMEOUT_MS: '500' },
+      sourceMarker,
+    })).toThrow('TENCENT_ASR_TIMEOUT_MS')
+  })
+
   it('rejects VPC, runtime, environment, and source-marker drift', () => {
     const environment = providerEnvironment({
       aiEnvironment,

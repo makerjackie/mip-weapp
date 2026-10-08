@@ -6,9 +6,9 @@
     </view>
     <view class="mip-dialog__actions {{single ? 'mip-dialog__actions--single' : ''}}">
       <view wx:if="{{!single}}" class="mip-dialog__button" aria-role="button" bind:tap="handleCancel">{{cancelText}}</view>
-      <view class="mip-dialog__button mip-dialog__button--confirm {{confirmDisabled ? 'mip-dialog__button--disabled' : ''}}" aria-role="button" aria-disabled="{{confirmDisabled}}" bind:tap="handleConfirm">
-        <slot name="confirm-text">{{confirmText}}</slot>
-      </view>
+      <!-- MIW-56：确认键直接绑定 confirmText。此前用命名 slot 兜底，但组件未开 multipleSlots，
+           消费方填了默认 slot 后该命名 slot 渲染为空（录音页「删除」键无字）。 -->
+      <view class="mip-dialog__button mip-dialog__button--confirm {{confirmDisabled ? 'mip-dialog__button--disabled' : ''}}" aria-role="button" aria-disabled="{{confirmDisabled}}" bind:tap="handleConfirm">{{confirmText}}</view>
     </view>
   </view>
 </view>
