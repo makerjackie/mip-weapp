@@ -76,6 +76,9 @@
   justify-content: center;
   width: 24rpx;
   height: 24rpx;
+
+  /* line-height:0 抵消 mip-icon 的基线 strut，与 mip-cooperation-card__badge-circle 同款居中手法 */
+  line-height: 0;
   transform: rotate(1.6deg);
 }
 

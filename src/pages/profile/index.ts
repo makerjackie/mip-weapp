@@ -79,7 +79,7 @@ Page({
     isPlayer: false,
     adminVisible: false,
     growthState: 'loading' as 'hidden' | SectionState,
-    levelName: '',
+    levelBannerText: '',
     growthProgress: 0,
     growthNextText: '',
     experience: 0,
@@ -414,9 +414,12 @@ Page({
   },
 
   applyGrowth(snapshot: Awaited<ReturnType<typeof mipGrowthModule.getSnapshot>>) {
+    // 等级序号按等级表位置推导，与 packages/member/mip-growth 的 growthPresentation 同规则；
+    // 横幅与昵称旁徽标统一展示 Lv.数字（设计稿 level-banner-mine.png），等级名不在我的页露出。
+    const currentIndex = snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id)
     this.setData({
       growthState: 'ready',
-      levelName: snapshot.currentLevel.name,
+      levelBannerText: `Lv.${Math.max(1, currentIndex + 1)}`,
       growthProgress: snapshot.levelProgressPercent,
       growthNextText: snapshot.nextLevel
         ? `距 ${snapshot.nextLevel.name} 还需 ${snapshot.experienceToNextLevel || 0} 经验值`
