@@ -183,7 +183,8 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(detailCard).toContain('published-text="{{publishedText}}"')
     expect(detailCard).not.toContain('referral-count=')
     expect(discovery).not.toContain('variant="detail"')
-    expect(opportunityCard).toMatch(/<mip-attend-pill\s+wx:if="\{\{variant !== 'detail'\}\}"/)
+    // MIW-55 figma 3675:6640：0 想合作不渲染胶囊（wrapper 收敛 variant/count 条件）。
+    expect(opportunityCard).toMatch(/wx:if="\{\{variant !== 'detail' && referralCount > 0\}\}"/)
     // Unlike a fixed-height list row, a detail can wrap multiple type tags
     // and a complete publication date without cropping its bottom line.
     expect(opportunityCardStyles).toMatch(/\.mip-opportunity-card--detail\s*\{[^}]*height: auto;[^}]*min-height: 352rpx;/)

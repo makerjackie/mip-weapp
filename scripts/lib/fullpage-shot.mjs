@@ -167,6 +167,20 @@ export async function captureFullPageFrames(mini, options) {
       await sleep(400)
     }
   }
+  else if (fixture) {
+    // 云环境可用时页面会成功加载真数据，迟到的成功响应同样会覆盖注入——等 ready 落地再注入
+    const deadline = Date.now() + 20000
+    for (;;) {
+      const data = await page.data()
+      if (data.state && data.state !== 'loading') {
+        break
+      }
+      if (Date.now() > deadline) {
+        break
+      }
+      await sleep(400)
+    }
+  }
   if (fixture) {
     await page.setData(fixture)
     await sleep(700)

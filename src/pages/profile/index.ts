@@ -18,7 +18,7 @@ import { mipGrowthModule } from '../../modules/mip-growth/client'
 import { createMipGuestLoginFlow, evaluateAccess } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../modules/mip-messaging/client'
-import { opportunityModule } from '../../modules/mip-opportunities'
+import { opportunityModule, opportunityTypeLabel } from '../../modules/mip-opportunities'
 import { canManageEvents, hasCapability, membershipPresentation } from '../../modules/mip-shell'
 import { getLoadingDiagnostics, recordLoadingFailure } from '../../platform/cloudbase/loading-diagnostics'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
@@ -51,6 +51,17 @@ function presentCase(item: SuperCaseSummary): CaseView {
 interface OpportunityCardView extends OpportunitySummary {
   /** 运行时验收（2026-09-22）：服务端 avatars 形状不可信，presenter 保底数组后才绑给卡片 type: Array 属性。 */
   avatarViews: string[]
+  /** MIW-55 figma 3675:6828：卡片左下机会类型黄标（找资源/找伙伴）。 */
+  typeTagViews: Array<{ key: string, label: string }>
+}
+
+/** MIW-55：发布/想合作两份清单共用卡片视图模型（头像保底数组 + 机会类型黄标）。 */
+function presentOpportunityCard(item: OpportunitySummary): OpportunityCardView {
+  return {
+    ...item,
+    avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
+    typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
+  }
 }
 
 /** MIW-54（2026-10-08）：弹窗标题带对象类型、内容带卡片标识——同栏多张卡时用户才能确认长按删的是哪一张。 */
@@ -549,10 +560,7 @@ Page({
         return
       }
       // 保底数组：非数组（含 null/对象/字符串）与非法元素一律丢弃，杜绝卡片属性收到 non-array 告警。
-      const opportunities: OpportunityCardView[] = page.items.map(item => ({
-        ...item,
-        avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
-      }))
+      const opportunities: OpportunityCardView[] = page.items.map(presentOpportunityCard)
       this.setData({ opportunityState: 'ready', opportunities, opportunityCursor: page.nextCursor || '' })
     }
     catch {
@@ -581,7 +589,7 @@ Page({
       }
       this.setData({
         collaborationOpportunityState: 'ready',
-        collaborationOpportunities: page.items.map(item => ({ ...item, avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(value => typeof value === 'string' && value) : [] })),
+        collaborationOpportunities: page.items.map(presentOpportunityCard),
         collaborationOpportunityCursor: page.nextCursor || '',
       })
     }
@@ -669,7 +677,7 @@ Page({
         }
         const ids = new Set(this.data.collaborationOpportunities.map(item => item.id))
         this.setData({
-          collaborationOpportunities: [...this.data.collaborationOpportunities, ...page.items.filter(item => !ids.has(item.id)).map(item => ({ ...item, avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(value => typeof value === 'string' && value) : [] }))],
+          collaborationOpportunities: [...this.data.collaborationOpportunities, ...page.items.filter(item => !ids.has(item.id)).map(presentOpportunityCard)],
           collaborationOpportunityCursor: page.nextCursor || '',
         })
       }
@@ -680,10 +688,7 @@ Page({
         }
         const ids = new Set(this.data.opportunities.map(item => item.id))
         this.setData({
-          opportunities: [...this.data.opportunities, ...page.items.filter(item => !ids.has(item.id)).map(item => ({
-            ...item,
-            avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
-          }))],
+          opportunities: [...this.data.opportunities, ...page.items.filter(item => !ids.has(item.id)).map(presentOpportunityCard)],
           opportunityCursor: page.nextCursor || '',
         })
       }

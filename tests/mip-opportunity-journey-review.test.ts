@@ -94,8 +94,9 @@ describe('MIP opportunity journey review', () => {
     expect(cardScript).toContain(`pillLabel: { type: String, value: '想合作' }`)
     expect(cardScript).toContain(`cityText: { type: String, value: '' }`)
     expect(cardScript).toContain(`publishedPrefix: { type: String, value: '发布于 ' }`)
-    expect(card).toContain('wx:if="{{typeTags.length}}"')
-    expect(card).toContain('wx:if="{{cityText}}"')
+    // MIW-55 figma 3675:7012：下架卡不渲染黄标与城市行（wx:if 追加 !offline）。
+    expect(card).toContain('wx:if="{{typeTags.length && !offline}}"')
+    expect(card).toContain('wx:if="{{cityText && !offline}}"')
     expect(card).toContain('城市：{{cityText}}')
     expect(cardStyles).toContain('height: 40rpx;')
     expect(cardStyles).toContain('border-radius: 8rpx;')

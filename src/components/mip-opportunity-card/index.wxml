@@ -1,4 +1,4 @@
-<view class="mip-opportunity-card {{variant === 'detail' ? 'mip-opportunity-card--detail' : ''}}" aria-label="{{title}}">
+<view class="mip-opportunity-card {{variant === 'detail' ? 'mip-opportunity-card--detail' : ''}} {{offline ? 'mip-opportunity-card--offline' : ''}}" aria-label="{{title}}">
   <view class="mip-opportunity-card__cover">
     <image wx:if="{{displayCoverUrl}}" class="mip-opportunity-card__cover-image" src="{{displayCoverUrl}}" mode="aspectFill" />
     <view wx:else class="mip-opportunity-card__cover-placeholder"><image class="mip-opportunity-card__cover-placeholder-image" src="{{fallbackCoverUrl}}" mode="aspectFill" /></view>
@@ -7,23 +7,26 @@
     <view class="mip-opportunity-card__title">{{title}}</view>
     <view class="mip-opportunity-card__facts">
       <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/money-cny-circle.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">价值：{{valueText}}</text></view>
-      <view wx:if="{{cityText}}" class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/location.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">城市：{{cityText}}</text></view>
+      <!-- MIW-55 figma 3675:6828 城市行换 building 图标；3675:7012 下架卡不展示城市行。 -->
+      <view wx:if="{{cityText && !offline}}" class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/city-building.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">城市：{{cityText}}</text></view>
       <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/location.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">地区：{{regionText || locationText || cityText}}</text></view>
       <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/service-target.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">寻找：{{targetText}}</text></view>
     </view>
     <view wx:if="{{publishedText && variant !== 'detail'}}" class="mip-opportunity-card__published">{{publishedPrefix}}{{publishedText}}</view>
-    <view class="mip-opportunity-card__footer {{typeTags.length ? 'mip-opportunity-card__footer--split' : ''}}">
-      <view wx:if="{{typeTags.length}}" class="mip-opportunity-card__type-tags">
+    <view class="mip-opportunity-card__footer">
+      <view wx:if="{{typeTags.length && !offline}}" class="mip-opportunity-card__type-tags">
         <text wx:for="{{typeTags}}" wx:key="key" class="mip-opportunity-card__type-tag">{{item.label}}</text>
       </view>
       <view wx:if="{{variant === 'detail' && publishedText}}" class="mip-opportunity-card__detail-published">{{publishedPrefix}}{{publishedText}}</view>
-      <mip-attend-pill
-        wx:if="{{variant !== 'detail'}}"
-        count="{{referralCount}}"
-        label="{{pillLabel}}"
-        avatars="{{displayAvatars}}"
-        variant="yellow"
-      />
+      <!-- figma 3675:6640：0 想合作不渲染聚合胶囊；3675:7012 下架卡胶囊置灰。 -->
+      <view wx:if="{{variant !== 'detail' && referralCount > 0}}" class="mip-opportunity-card__pill">
+        <mip-attend-pill
+          count="{{referralCount}}"
+          label="{{pillLabel}}"
+          avatars="{{displayAvatars}}"
+          variant="{{offline ? 'gray' : 'yellow'}}"
+        />
+      </view>
     </view>
   </view>
 </view>

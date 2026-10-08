@@ -21,7 +21,7 @@ import { cooperationModule } from '../../../modules/mip-cooperation'
 import { mipEventsModule } from '../../../modules/mip-events/client'
 import { evaluateAccess, mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
-import { opportunityModule, profileInterestMutations } from '../../../modules/mip-opportunities'
+import { opportunityModule, opportunityTypeLabel, profileInterestMutations } from '../../../modules/mip-opportunities'
 import { createMutationKey } from '../../../modules/mip-opportunities/validation'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 import { showIdentityUnlockModal } from '../../../shared/identity-unlock'
@@ -47,6 +47,11 @@ interface PublicProfileView extends PublicPerson {
 
 interface CooperationCardView extends PublicProfileCooperationCard { roleName: string }
 interface SuperCaseView extends PublicProfileSuperCase { publishedText: string }
+/** MIW-55 figma 3359:5705：相关机会卡换用 mip-opportunity-card，黄标/胶囊头像先过保底数组。 */
+interface PublicProfileOpportunityView extends PublicProfileOpportunity {
+  typeTagViews: Array<{ key: string, label: string }>
+  avatarViews: string[]
+}
 
 function monthText(value: string) {
   const date = new Date(value)
@@ -82,7 +87,7 @@ Page({
     profile: null as PublicProfileView | null,
     cooperationCards: [] as CooperationCardView[],
     superCases: [] as SuperCaseView[],
-    opportunities: [] as PublicProfileOpportunity[],
+    opportunities: [] as PublicProfileOpportunityView[],
     influence: null as ProfileInfluenceSummary | null,
     interestActive: false,
     interestState: 'idle' as 'idle' | 'loading' | 'ready' | 'access' | 'syncing' | 'error',
@@ -186,7 +191,11 @@ Page({
           ...item,
           publishedText: monthText(item.publishedAt),
         })),
-        opportunities: aggregate.opportunities,
+        opportunities: aggregate.opportunities.map(item => ({
+          ...item,
+          typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
+          avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
+        })),
         influence: aggregate.influence || null,
         interestActive: interest.active,
         interestState: interest.pending ? 'syncing' : 'ready',

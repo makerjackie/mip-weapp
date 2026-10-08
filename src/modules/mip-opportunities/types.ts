@@ -279,6 +279,9 @@ export interface PublicProfileOpportunity {
   targetSummary: string
   referralCount: number
   cooperationCount?: number
+  /** MIW-55 figma 3359:5705：相关机会卡黄标（机会类型）与聚合胶囊头像。服务端补充前缺省。 */
+  typeKeys?: OpportunityTypeKey[]
+  avatars?: string[]
   branchName?: string
   cityLabel?: string
   coverUrl?: string
