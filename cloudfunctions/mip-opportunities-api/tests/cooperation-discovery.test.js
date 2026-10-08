@@ -154,6 +154,43 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
         ]
       }
       if (sql.includes('FROM mip_cooperation_cards c')) return rows
+      // 人才卡公开详情：身份状态/等级/佩戴勋章与邀请人归档（与竖版用户卡同口径）。
+      if (sql.includes('FROM mip_profiles profile')) {
+        return [
+          {
+            user_id: firstOwnerId,
+            visibility_json: '{}',
+            identity_status: '公司在职',
+            introduction: '十年品牌咨询',
+            city_name: '深圳',
+            experience_balance: 120,
+            industry_label: '品牌咨询',
+          },
+        ]
+      }
+      if (sql.includes('FROM mip_user_badge_equipment')) {
+        return [
+          { user_id: firstOwnerId, slot_no: 1, id: '50000000-0000-4000-8000-000000000001', name: '城主', image_url: 'badge-1.png' },
+          { user_id: firstOwnerId, slot_no: 2, id: '50000000-0000-4000-8000-000000000002', name: '公会长' },
+        ]
+      }
+      if (sql.includes('FROM mip_growth_levels')) {
+        return [
+          { id: '60000000-0000-4000-8000-000000000001', name: 'Lv1', minimum_experience: 0, status: 'ACTIVE' },
+          { id: '60000000-0000-4000-8000-000000000002', name: 'Lv2', minimum_experience: 100, status: 'ACTIVE' },
+        ]
+      }
+      if (sql.includes('FROM mip_event_invitation_attributions attribution')) {
+        return [
+          {
+            guest_user_id: firstOwnerId,
+            invitation_source_type: 'USER',
+            inviter_nickname: '邀请人甲',
+            inviter_visibility_json: '{}',
+            inviter_avatar_file_id: 'inviter-avatar.png',
+          },
+        ]
+      }
       throw new Error(`unexpected query: ${sql}`)
     },
   }
@@ -206,6 +243,20 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
     key: 'brand_consulting',
     label: '品牌咨询',
   })
+  // 人才卡公开详情（figma 1768_37534）：身份状态/等级/佩戴勋章（槽位序）/邀请人，
+  // 不泄露内部 user id。
+  assert.equal(result.items[0].author.identityStatus, '公司在职')
+  assert.deepEqual(result.items[0].author.level, { number: 2, name: 'Lv2' })
+  assert.deepEqual(result.items[0].author.badges, [
+    { id: '50000000-0000-4000-8000-000000000001', name: '城主', imageUrl: 'badge-1.png' },
+    { id: '50000000-0000-4000-8000-000000000002', name: '公会长', imageUrl: undefined },
+  ])
+  assert.deepEqual(result.items[0].author.inviter, {
+    sourceType: 'USER',
+    displayName: '邀请人甲',
+    avatarUrl: 'inviter-avatar.png',
+  })
+  assert.equal(JSON.stringify(result.items[0]).includes(firstOwnerId), false)
   assert.deepEqual(result.items[0].cards.map(card => ({
     id: card.id,
     roleKey: card.roleKey,

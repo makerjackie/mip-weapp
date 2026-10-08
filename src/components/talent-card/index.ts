@@ -1,5 +1,7 @@
 // 嘉宾卡/人才卡统一业务组件：
-// - layout="horizontal"（默认）：人才合作/找人才横版卡（figma 1768_37534），底部左角色标签、右邀请人。
+// - layout="horizontal"（默认）：人才合作横版卡（figma 1768_37534，MIW-58 字段重排），
+//   上板名称+Lv+佩戴勋章+三标签行（城市 | 代表行业 | 身份状态，24rpx 灰）+一句话介绍，
+//   下板左角色黄色小标签、右邀请人（昵称+「邀请」黄字+头像，玩家/平台判定在服务端）。
 // - layout="grid"：活动参与人、嘉宾/互动/心动/访客等双列竖版卡（figma 1818_17230/1732_19323），
 //   左上角 Lv、右上角 corner 插槽（心动/×N/未读等页面自有事实）、底部左勋章、右邀请人。
 // medals 只接服务端佩戴口径（mip_user_badge_equipment 已过滤未佩戴），组件兜底最多展示 3 枚；
@@ -25,7 +27,6 @@ Component({
   properties: {
     layout: { type: String, value: 'horizontal' },
     displayName: { type: String, value: 'MIP 用户' },
-    kindLabel: { type: String, value: '' },
     avatarUrl: { type: String, value: '' },
     avatarRing: { type: Boolean, value: false },
     leftAlignBody: { type: Boolean, value: false },
@@ -38,7 +39,6 @@ Component({
     statusText: { type: String, value: '' },
     unread: { type: Boolean, value: false },
     roleNames: { type: Array, value: [] },
-    roleTags: { type: Array, value: [] },
     medals: { type: Array, value: [] },
     inviterName: { type: String, value: '' },
     inviterAvatarUrl: { type: String, value: '' },
@@ -48,7 +48,7 @@ Component({
   data: {
     displayMedals: [] as TalentMedal[],
     displayTags: [] as string[],
-    inviter: { name: '', avatarUrl: '', platform: false },
+    inviter: { name: '', avatarUrl: '' },
   },
   observers: {
     'medals, inviterName, inviterAvatarUrl, inviterKind': function (
@@ -61,7 +61,7 @@ Component({
       const name = inviterName || (platform ? PLATFORM_INVITER_NAME : '')
       this.setData({
         displayMedals: (Array.isArray(medals) ? medals : []).slice(0, MAX_MEDALS),
-        inviter: { name, avatarUrl: platform ? (inviterAvatarUrl || PLATFORM_INVITER_AVATAR) : inviterAvatarUrl, platform },
+        inviter: { name, avatarUrl: platform ? (inviterAvatarUrl || PLATFORM_INVITER_AVATAR) : inviterAvatarUrl },
       })
     },
     'tags': function (tags: string[]) {

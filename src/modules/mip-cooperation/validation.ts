@@ -1,5 +1,8 @@
 import type {
   CooperationAuthor,
+  CooperationAuthorBadgeItem,
+  CooperationAuthorInviter,
+  CooperationAuthorLevel,
   CooperationCardDraft,
   CooperationCardFilter,
   CooperationCircleEntry,
@@ -263,21 +266,71 @@ function responseTag(value: unknown): CooperationTag {
   }
 }
 
+/** 成长等级（服务端 loadPublicLevel 口径：正整数序号 + 名称）。 */
+function responseAuthorLevel(value: unknown): CooperationAuthorLevel {
+  const source = responseRecord(value, ['number', 'name'], ['number', 'name'])
+  const number = Number(source.number)
+  if (!Number.isInteger(number) || number < 1 || number > 1000) {
+    return invalidTalentResponse()
+  }
+  return { number, name: responseText(source.name, 64, true) }
+}
+
+/** 佩戴勋章列表（人才卡横竖版同口径：id+名称+素材，空数组视为缺省）。 */
+function responseAuthorBadges(value: unknown): CooperationAuthorBadgeItem[] {
+  if (!Array.isArray(value) || value.length > 8) {
+    return invalidTalentResponse()
+  }
+  const badges = value.map((item) => {
+    const source = responseRecord(item, ['id', 'name', 'imageUrl'], ['id', 'name'])
+    const imageUrl = source.imageUrl === undefined ? '' : responseText(source.imageUrl, 1024)
+    return {
+      id: responseId(source.id),
+      name: responseText(source.name, 64, true),
+      ...(imageUrl ? { imageUrl } : {}),
+    }
+  })
+  if (new Set(badges.map(badge => badge.id)).size !== badges.length) {
+    return invalidTalentResponse()
+  }
+  return badges
+}
+
+/** 邀请人标注（服务端判定玩家/平台，组件不判定）。 */
+function responseAuthorInviter(value: unknown): CooperationAuthorInviter {
+  const source = responseRecord(value, ['sourceType', 'displayName', 'avatarUrl'], ['sourceType', 'displayName'])
+  if (source.sourceType !== 'USER' && source.sourceType !== 'PLATFORM') {
+    return invalidTalentResponse()
+  }
+  const avatarUrl = source.avatarUrl === undefined ? '' : responseText(source.avatarUrl, 1024)
+  return {
+    sourceType: source.sourceType,
+    displayName: responseText(source.displayName, 64, true),
+    ...(avatarUrl ? { avatarUrl } : {}),
+  }
+}
+
 function responseAuthor(value: unknown): Omit<CooperationAuthor, 'profileRef'> {
   const source = responseRecord(
     value,
-    ['nickname', 'avatarUrl', 'headline', 'cityName', 'primaryIndustry'],
+    ['nickname', 'avatarUrl', 'headline', 'cityName', 'primaryIndustry', 'identityStatus', 'level', 'badges', 'inviter'],
     ['nickname'],
   )
   const avatarUrl = source.avatarUrl === undefined ? '' : responseText(source.avatarUrl, 1024)
   const headline = source.headline === undefined ? '' : responseText(source.headline, 160)
   const cityName = source.cityName === undefined ? '' : responseText(source.cityName, 80)
+  // 人才卡公开详情（figma 1768_37534）：身份状态/等级/佩戴勋章/邀请人，缺省省略不造值。
+  const identityStatus = source.identityStatus === undefined ? '' : responseText(source.identityStatus, 32)
   return {
     nickname: responseText(source.nickname, 64, true),
     ...(avatarUrl ? { avatarUrl } : {}),
     ...(headline ? { headline } : {}),
     ...(cityName ? { cityName } : {}),
     ...(source.primaryIndustry === undefined ? {} : { primaryIndustry: responseTag(source.primaryIndustry) }),
+    ...(identityStatus ? { identityStatus } : {}),
+    ...(source.level === undefined ? {} : { level: responseAuthorLevel(source.level) }),
+    ...(Array.isArray(source.badges) && source.badges.length ? { badges: responseAuthorBadges(source.badges) } : {}),
+    ...(source.inviter === undefined ? {} : { inviter: responseAuthorInviter(source.inviter) }),
   }
 }
 

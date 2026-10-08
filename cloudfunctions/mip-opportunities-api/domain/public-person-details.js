@@ -51,6 +51,56 @@ function publicLevel(experience, levels) {
   return { level: { number: index + 1, name: active[index].name } }
 }
 
+// 邀请人标注（人才/嘉宾卡 footer 右：用户最近一次活动归档）：USER=玩家邀请人
+// （visibility 门控），否则 PLATFORM=MIP 平台（文案与兜底头像由组件决定）；
+// 无归档返回 undefined。与 mip-events-api 同名实现同口径，两边同步维护（勿单边改）。
+function publicHeartInviter(row) {
+  if (!row || !row.invitation_source_type) return undefined
+  if (row.invitation_source_type !== 'USER') {
+    return { sourceType: 'PLATFORM', displayName: 'MIP 平台' }
+  }
+  const visible = jsonObject(row.inviter_visibility_json)
+  return {
+    sourceType: 'USER',
+    displayName: visible.nickname !== false && row.inviter_nickname ? row.inviter_nickname : 'MIP 用户',
+    ...(visible.avatar !== false && row.inviter_avatar_file_id ? { avatarUrl: row.inviter_avatar_file_id } : {}),
+  }
+}
+
+// 批量取用户的最近邀请归档（每人取 captured_at 最新一条），供人才列表合并。
+async function loadHeartInviters(database, appId, userIds) {
+  if (!userIds.length) return new Map()
+  const rows = await database.query(
+    `SELECT attribution.guest_user_id, attribution.source_type AS invitation_source_type,
+            inviter_profile.nickname AS inviter_nickname,
+            inviter_profile.visibility_json AS inviter_visibility_json,
+            inviter_avatar.cloud_file_id AS inviter_avatar_file_id
+     FROM mip_event_invitation_attributions attribution
+     INNER JOIN (
+       SELECT guest_user_id, MAX(captured_at) AS captured_at
+       FROM mip_event_invitation_attributions
+       WHERE app_id = ? AND guest_user_id IN (${userIds.map(() => '?').join(', ')})
+       GROUP BY guest_user_id
+     ) latest ON latest.guest_user_id = attribution.guest_user_id
+       AND latest.captured_at = attribution.captured_at
+     LEFT JOIN mip_profiles inviter_profile
+       ON inviter_profile.app_id = attribution.app_id
+         AND inviter_profile.user_id = attribution.inviter_user_id
+     LEFT JOIN mip_media_assets inviter_avatar
+       ON inviter_avatar.app_id = inviter_profile.app_id
+         AND inviter_avatar.id = inviter_profile.avatar_asset_id AND inviter_avatar.status = 'READY'
+     WHERE attribution.app_id = ? AND attribution.guest_user_id IN (${userIds.map(() => '?').join(', ')})
+     ORDER BY attribution.captured_at DESC`,
+    [appId, ...userIds, appId, ...userIds],
+  )
+  // 最新一条胜出：同人同毫秒多条归档时按 captured_at DESC 保留首条。
+  const byUser = new Map()
+  for (const row of rows) {
+    if (!byUser.has(row.guest_user_id)) byUser.set(row.guest_user_id, publicHeartInviter(row))
+  }
+  return byUser
+}
+
 // 公开档案头部的等级徽标：与列表详情同口径，无成长账户或配置不完整时返回 undefined。
 async function loadPublicLevel(database, appId, userId) {
   const [accounts, levels] = await Promise.all([
@@ -66,4 +116,4 @@ async function loadPublicLevel(database, appId, userId) {
   return publicLevel(accounts[0]?.experience_balance, levels).level
 }
 
-module.exports = { loadPublicLevel, loadPublicPersonDetails, publicLevel }
+module.exports = { loadHeartInviters, loadPublicLevel, loadPublicPersonDetails, publicHeartInviter, publicLevel }

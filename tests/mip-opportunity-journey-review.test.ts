@@ -49,7 +49,8 @@ describe('MIP opportunity journey review', () => {
     expect(discoveryScript).toContain(`if (destination === MINE_AUTH_RESUME)`)
     // 游客在人才合作子 tab 点搜索也先授权。
     expect(discovery).toContain(`wx:if="{{!authenticated}}" class="absolute inset-y-0 left-0 right-[176rpx]"`)
-    expect(discovery).toContain('placeholder="搜索玩家名称"')
+    // MIW-58：占位按 figma 2917_4875 改为「搜索」（a11y label 仍保留「搜索玩家名称」）。
+    expect(discovery).toContain('placeholder="搜索"')
   })
 
   it('shows the member empty states without the guest login block (J2-05/J2-07)', () => {

@@ -52,8 +52,12 @@ describe('MIP cooperation discovery experience', () => {
   it('renders one talent per row with aggregated role cards and explicit states', () => {
     const componentTemplate = read('src/pages/opportunities/index.wxml')
     expect(componentTemplate).toContain('item.author.nickname')
-    expect(componentTemplate).toContain('item.primaryPositioning')
-    expect(componentTemplate).toContain('item.primaryTargetSummary')
+    // MIW-58 横版人才卡：三标签行 + 一句话介绍 + 角色/邀请人 footer（figma 1768_37534）。
+    expect(componentTemplate).toContain('level-text="{{item.levelText}}"')
+    expect(componentTemplate).toContain('tags="{{item.profileTags}}"')
+    expect(componentTemplate).toContain('supporting-text="{{item.author.headline || \'\'}}"')
+    expect(componentTemplate).toContain('medals="{{item.medals}}"')
+    expect(componentTemplate).toContain('inviter-kind="{{item.inviterKind}}"')
     expect(componentTemplate).toContain('wx:key="talentKey"')
     expect(componentTemplate).toContain('data-profile-ref="{{item.profileRef}}"')
     expect(componentTemplate).toContain('state === \'loading\'')
@@ -62,6 +66,27 @@ describe('MIP cooperation discovery experience', () => {
     expect(componentTemplate).toContain('确认筛选')
     expect(componentTemplate).toContain('<mip-talent-card')
     expect(componentTemplate).toContain('role-names="{{item.roleNames}}"')
+  })
+
+  // MIW-58 最新稿对齐（figma 2917_4875 面板 / 2917_4785 行业二级页 / 1768_37534 按钮）：
+  // 筛选按钮关灰开黄、行业全量手风琴进页内全屏二级页、面板留已选行+热门快选、计数 n/8。
+  it('aligns the cooperation filter shell with the latest figma frames', () => {
+    const componentTemplate = read('src/pages/opportunities/index.wxml')
+    const page = read('src/pages/opportunities/index.ts')
+    expect(componentTemplate).toContain('placeholder="搜索"')
+    expect(componentTemplate).toContain(`color="{{filterOpen ? 'var(--color-brand)' : 'var(--color-muted)'}}"`)
+    expect(componentTemplate).toContain(`{{filterOpen ? 'text-brand' : 'text-muted'}}`)
+    expect(componentTemplate).not.toContain('{{appliedFilterCount}}')
+    expect(componentTemplate).toContain('bind:tap="openIndustryPage"')
+    expect(componentTemplate).toContain('已选 {{draftIndustryTagIds.length}}/8')
+    expect(componentTemplate).toContain('class="opportunities-industry-page"')
+    expect(componentTemplate).toContain('show-popular="{{false}}"')
+    expect(componentTemplate).toContain('bind:tap="toggleDraftIndustry"')
+    expect(componentTemplate).toContain('bind:tap="clearDraftIndustries"')
+    expect(componentTemplate).toContain('catch:tap="removeDraftIndustry"')
+    expect(page).toContain('const INDUSTRY_MAX_COUNT = 8')
+    expect(page).toContain('industryPageOpen: false')
+    expect(read('src/pages/opportunities/index.wxss')).toMatch(/\.opportunities-industry-page\s*\{[^}]*z-index: 10000;/)
   })
 
   it('sends all applied cooperation filters and a stable cursor through the module', () => {
@@ -93,6 +118,45 @@ describe('MIP cooperation discovery experience', () => {
     })).toMatchObject({
       items: [{ talentKey, profileRef, joinedAt: '2026-06-24T08:00:00.000Z' }],
     })
+  })
+
+  // MIW-58 横版人才卡：身份状态/等级/佩戴勋章/邀请人随 author 下发，缺省省略不造值。
+  it('keeps the talent-card public details attached to the author', () => {
+    const [item] = parseCooperationTalentPage({
+      items: [talent({
+        author: {
+          nickname: '成员甲',
+          cityName: '深圳',
+          identityStatus: '公司在职',
+          level: { number: 2, name: 'Lv2' },
+          badges: [
+            { id: '50000000-0000-4000-8000-000000000001', name: '城主', imageUrl: 'badge-1.png' },
+            { id: '50000000-0000-4000-8000-000000000002', name: '公会长' },
+          ],
+          inviter: { sourceType: 'PLATFORM', displayName: 'MIP 平台' },
+        },
+      })],
+    }).items
+    expect(item.author).toMatchObject({
+      identityStatus: '公司在职',
+      level: { number: 2, name: 'Lv2' },
+      badges: [
+        { id: '50000000-0000-4000-8000-000000000001', name: '城主', imageUrl: 'badge-1.png' },
+        { id: '50000000-0000-4000-8000-000000000002', name: '公会长' },
+      ],
+      inviter: { sourceType: 'PLATFORM', displayName: 'MIP 平台' },
+    })
+  })
+
+  it.each([
+    { author: { nickname: '成员甲', level: { number: 0, name: 'Lv0' } } },
+    { author: { nickname: '成员甲', level: { number: 2 } } },
+    { author: { nickname: '成员甲', badges: [{ id: '50000000-0000-4000-8000-000000000001' }] } },
+    { author: { nickname: '成员甲', badges: [{ id: '50000000-0000-4000-8000-000000000001', name: '城主' }, { id: '50000000-0000-4000-8000-000000000001', name: '城主' }] } },
+    { author: { nickname: '成员甲', inviter: { sourceType: 'GUEST', displayName: 'x' } } },
+    { author: { nickname: '成员甲', inviter: { sourceType: 'USER' } } },
+  ])('rejects malformed public-detail fields without partial items', (override) => {
+    expect(() => parseCooperationTalentPage({ items: [talent(override)] })).toThrow('人才服务返回了无效响应')
   })
 
   it.each([

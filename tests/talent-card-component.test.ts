@@ -18,10 +18,35 @@ describe('talent-card component contract', () => {
     expect(template).toContain('mip-talent-card__medals')
   })
 
-  it('keeps the horizontal talent shell for cooperation and people discovery', () => {
+  // MIW-58 横版人才合作卡（figma 1768_37534 字段重排 + 最新稿对齐）：名称+Lv+≤3 勋章 +
+  // 三标签行（城市 | 代表行业 | 身份状态，24rpx 灰）+ 一句话介绍（≤2 行）；下板左角色
+  // 黄色小标签、右邀请人（{昵称}邀请 黄字+头像，玩家/平台判定在服务端，组件不区分）。
+  it('keeps the horizontal talent shell with the reworked cooperation fields', () => {
+    expect(template).toContain('mip-talent-card__name-row')
+    expect(template).toContain('mip-talent-card__level')
+    expect(template).toContain('mip-talent-card__tags')
+    expect(template).toContain('mip-talent-card__tag-divider')
+    expect(template).toContain('wx:elif="{{metaText}}"')
+    expect(template).toContain('mip-talent-card__supporting')
     expect(template).toContain('mip-talent-card__roles')
+    expect(template).toContain('mip-talent-card__bottom')
+    expect(template).not.toContain('roleTags')
+    expect(template).not.toContain('mip-talent-card__kind')
+    // 角色只渲染后台配置名（黄色小标签，狗 icon 暂不做）；一句话介绍两行截断。
+    expect(template).toContain('wx:for="{{roleNames}}"')
+    expect(styles).toContain('-webkit-line-clamp: 2')
+    expect(styles).toContain('background: var(--color-tag-player)')
+    // 最新稿（1768:37534）：三标签行 24rpx 灰（#b3b3b3），城市标签不带 MIP 后缀由调用方裁剪。
+    expect(styles).toMatch(/\.mip-talent-card__tag\s*\{[^}]*font-size: 24rpx;[^}]*color: var\(--color-muted\);/)
+    expect(styles).toMatch(/\.mip-talent-card__tag-divider\s*\{[^}]*background: var\(--color-muted\);/)
+  })
+
+  it('renders the horizontal inviter as a yellow suffix while the grid keeps its prefix', () => {
+    // 横版（1768_37534）：{昵称}邀请 品牌黄；竖版 grid（1732_19323）沿用「邀请人」前缀白字。
     expect(template).toContain('{{inviter.name}}邀请')
-    expect(styles).toContain('.mip-talent-card__bottom')
+    expect(template).toContain('邀请人{{inviter.name}}')
+    expect(template).not.toContain('inviter.platform')
+    expect(styles).toMatch(/\.mip-talent-card__inviter-name\s*\{[^}]*color: var\(--color-brand\);/)
   })
 
   it('renders the grid guest shell with corner and body slots for page-owned facts', () => {
@@ -52,10 +77,10 @@ describe('talent-card component contract', () => {
   it('makes the grid foot right configurable with inviter as the default', () => {
     expect(component).toContain('footRightMode: { type: String, value: \'inviter\' }')
     expect(template).toContain('<slot name="foot-right" />')
-    // horizontal 保持 inviter 优先；grid 在 custom 模式后接 inviter/targetText 兜底。
+    // horizontal 的 inviter 是唯一右下内容（MIW-58 起 targetText 只留在 grid 兜底）。
     expect(template.match(/wx:if="\{\{inviter\.name\}\}"/g) || []).toHaveLength(1)
     expect(template.match(/wx:elif="\{\{inviter\.name\}\}"/g) || []).toHaveLength(1)
-    expect(template.match(/wx:elif="\{\{targetText\}\}"/g) || []).toHaveLength(2)
+    expect(template.match(/wx:elif="\{\{targetText\}\}"/g) || []).toHaveLength(1)
     expect(template).toContain('footRightMode === \'custom\'')
   })
 
@@ -67,10 +92,10 @@ describe('talent-card component contract', () => {
   })
 
   it('falls back to target text only when no inviter is known', () => {
-    // MIW-52：horizontal 与 grid 两条 footer 链均为 inviter 优先、targetText 兜底；
-    // grid 链前的 custom 模式（foot-right 插槽）见上一条契约。
+    // MIW-52：grid footer 链为 custom 插槽 → inviter → targetText 兜底；
+    // MIW-58：horizontal 只渲染 inviter（设计稿无 target 文案）。
     expect(template.match(/wx:if="\{\{inviter\.name\}\}"/g) || []).toHaveLength(1)
     expect(template.match(/wx:elif="\{\{inviter\.name\}\}"/g) || []).toHaveLength(1)
-    expect(template.match(/wx:elif="\{\{targetText\}\}"/g) || []).toHaveLength(2)
+    expect(template.match(/wx:elif="\{\{targetText\}\}"/g) || []).toHaveLength(1)
   })
 })
