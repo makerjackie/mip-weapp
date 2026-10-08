@@ -22,6 +22,16 @@
   padding-bottom: calc(280rpx + env(safe-area-inset-bottom) + 112rpx);
 }
 
+/* figma 2917_4785 行业二级页：页内全屏覆盖，须压过自绘 tabBar（custom-tab-bar z-index 9999）。 */
+.opportunities-industry-page {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-canvas);
+}
+
 /* Paint the native page before asynchronously loaded components are ready. */
 page {
   background-color: #080808;

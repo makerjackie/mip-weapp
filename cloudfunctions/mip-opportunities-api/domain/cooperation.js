@@ -11,7 +11,7 @@ const {
 const { confirmAiDraft, normalizeAiConfirmation } = require('./ai-confirmation')
 const { loadPublicBadges } = require('./discovery')
 const { assertSelectableTags } = require('./opportunities')
-const { loadPublicLevel } = require('./public-person-details')
+const { loadHeartInviters, loadPublicLevel, loadPublicPersonDetails } = require('./public-person-details')
 const {
   ABILITY_KEYS,
   ROLE_KEYS,
@@ -579,7 +579,7 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
   const talents = talentSummaries(rows, caller)
   const pageTalents = talents.slice(0, filter.limit)
   return {
-    items: pageTalents.map(talent => talent.item),
+    items: await enrichTalentAuthors(database, caller, pageTalents),
     nextCursor: talents.length > filter.limit && pageTalents.length
       ? createTalentCursor(context, {
           snapshotAt: rows[0].snapshot_at,
@@ -588,6 +588,32 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
         }, caller.profileRefSecret)
       : undefined,
   }
+}
+
+// 人才卡（figma 1768_37534）需要与竖版用户卡同口径的公开详情：身份状态、等级、
+// 佩戴勋章与邀请人标注。只补列表页已授权成员，可见性/拉黑由上方主查询负责；
+// 不造值，缺什么省什么。主查询已有的城市/代表行业不重复覆盖。
+async function enrichTalentAuthors(database, caller, pageTalents) {
+  if (!pageTalents.length) return []
+  const ownerUserIds = pageTalents.map(talent => talent.ownerUserId)
+  const [details, inviters] = await Promise.all([
+    loadPublicPersonDetails(database, caller.appId, ownerUserIds),
+    loadHeartInviters(database, caller.appId, ownerUserIds),
+  ])
+  return pageTalents.map(({ ownerUserId, item }) => {
+    const detail = details.get(ownerUserId) || {}
+    const inviter = inviters.get(ownerUserId)
+    return {
+      ...item,
+      author: {
+        ...item.author,
+        ...(detail.identityStatus ? { identityStatus: detail.identityStatus } : {}),
+        ...(detail.level ? { level: detail.level } : {}),
+        ...(Array.isArray(detail.badges) && detail.badges.length ? { badges: detail.badges } : {}),
+        ...(inviter ? { inviter } : {}),
+      },
+    }
+  })
 }
 
 async function listMyCooperationCards(database, caller, input = {}) {

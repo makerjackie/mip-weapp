@@ -16,6 +16,20 @@ export interface CooperationAuthorBadge {
   placeholderShape?: string
 }
 
+/** 佩戴勋章列表（人才列表口径：服务端按槽位序返回，组件兜底最多展示 3 枚）。 */
+export interface CooperationAuthorBadgeItem {
+  id: string
+  name: string
+  imageUrl?: string
+}
+
+/** 邀请人标注（服务端判定玩家/平台：USER=玩家邀请人，PLATFORM=MIP 平台）。 */
+export interface CooperationAuthorInviter {
+  sourceType: 'USER' | 'PLATFORM'
+  displayName: string
+  avatarUrl?: string
+}
+
 export interface CooperationAuthor {
   profileRef: string
   nickname: string
@@ -25,6 +39,10 @@ export interface CooperationAuthor {
   primaryIndustry?: CooperationTag
   level?: CooperationAuthorLevel
   badge?: CooperationAuthorBadge
+  /** 当前身份状态（档案 seven-label 口径，visibility 门控后缺省省略）。 */
+  identityStatus?: string
+  badges?: CooperationAuthorBadgeItem[]
+  inviter?: CooperationAuthorInviter
 }
 
 export interface CooperationTag {

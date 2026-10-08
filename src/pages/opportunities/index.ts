@@ -9,6 +9,7 @@ import type {
   OpportunityLocationType,
   OpportunitySummary,
 } from '../../modules/mip-opportunities'
+import { catalogSelectorView, toggleCatalogSelection } from '../../components/catalog-selector/model'
 import { brand } from '../../config/brand'
 import { cooperationRoles } from '../../config/mip-catalogs'
 import { mipBannerModule } from '../../modules/mip-banners'
@@ -28,11 +29,17 @@ interface OpportunityCardView extends OpportunitySummary {
   /** 运行时验收（2026-09-22）：服务端 avatars 形状不可信，presenter 保底数组后才绑给卡片 type: Array 属性。 */
   avatarViews: string[]
 }
+// MIW-58 横版人才卡（figma 1768_37534）：名称+Lv+佩戴勋章+三标签行+一句话介绍；
+// 角色名与邀请人由服务端口径展开为视图字段，缺省不造值。
 interface CooperationTalentView extends Omit<CooperationTalentSummary, 'cards'> {
   cards: Array<CooperationTalentSummary['cards'][number] & { roleName: string }>
   roleNames: string[]
-  primaryPositioning: string
-  primaryTargetSummary: string
+  levelText: string
+  profileTags: string[]
+  medals: Array<{ id: string, imageUrl?: string }>
+  inviterName: string
+  inviterAvatarUrl: string
+  inviterKind: 'PLAYER' | 'PLATFORM'
 }
 interface TagView { id: string, label: string, selected: boolean, popular?: boolean }
 interface CityOption { id: string, label: string, popular?: boolean }
@@ -42,6 +49,8 @@ type LocationPreset = 'ALL' | OpportunityLocationType
 const allRoleOptions = [{ key: '', name: '全部角色' }, ...cooperationRoles]
 const nationwideOption: CityOption = { id: '', label: '全国' }
 const OPPORTUNITY_REFRESH_INTERVAL_MS = 30_000
+/** 行业筛选上限（figma 2917_4875 面板与 2917_4785 二级页共用口径，草稿多选）。 */
+const INDUSTRY_MAX_COUNT = 8
 /** journey-review J1-05：游客点筛选先完成身份确认，授权回来后重开筛选面板。 */
 const FILTER_AUTH_RESUME = 'auth-intent:open-filters'
 /** journey-review J1-04：游客点「我的项目」先完成身份确认，授权回来后切到我的项目 pill。 */
@@ -190,7 +199,10 @@ function cityGroupsFor(mode: PageMode, cityOptions: CityOption[]): CatalogSelect
 }
 
 /** 人才合作筛选的已选行业 pill（figma 2917_4875）：id→label 视图，缺目录时保留 id 兜底。 */
-function draftIndustryViewsOf(catalog: OpportunityCatalog, ids: string[]): Array<{ id: string, label: string }> {
+function draftIndustryViewsOf(
+  catalog: OpportunityCatalog,
+  ids: string[],
+): Array<{ id: string, label: string }> {
   const labels = new Map<string, string>()
   for (const tag of catalog.industryTags) {
     labels.set(tag.id, tag.label)
@@ -231,6 +243,10 @@ Page({
     selectedRoleKey: '' as '' | CooperationRoleKey,
     draftIndustryTagIds: [] as string[],
     draftIndustryViews: [] as Array<{ id: string, label: string }>,
+    /** figma 2917_4875 面板热门行业快选 chips（与二级页同一目录口径）。 */
+    popularIndustryOptions: [] as ReturnType<typeof catalogSelectorView>['popularOptions'],
+    /** figma 2917_4785 行业二级页（页内全屏 overlay，盖在自绘 tabBar 之上）。 */
+    industryPageOpen: false,
     selectedIndustryTagIds: [] as string[],
     draftAbilityTagIds: [] as string[],
     selectedAbilityTagIds: [] as string[],
@@ -383,6 +399,7 @@ Page({
           selected: this.data.draftAbilityTagIds.includes(item.id),
         })),
         draftIndustryViews: draftIndustryViewsOf(catalog, this.data.draftIndustryTagIds),
+        popularIndustryOptions: catalogSelectorView(catalog.industryGroups, this.data.draftIndustryTagIds).popularOptions,
       }, () => this.refreshAppliedFilterPresentation())
     }
     catch {
@@ -464,12 +481,22 @@ Page({
             ...card,
             roleName: cooperationRoles.find(role => role.key === card.roleKey)?.name || card.roleKey,
           }))
+          // 三标签行按 figma 1768_37534 最新稿：城市 | 代表行业 | 身份状态（24rpx 灰，无 MIP 后缀）。
+          const author = item.author
           return {
             ...item,
             cards,
             roleNames: cards.map(card => card.roleName),
-            primaryPositioning: cards[0]?.positioning || '',
-            primaryTargetSummary: cards[0]?.targetSummary || '',
+            levelText: author.level ? `Lv.${author.level.number}` : '',
+            profileTags: [
+              author.cityName || '',
+              author.primaryIndustry?.label || '',
+              author.identityStatus || '',
+            ].filter(Boolean).slice(0, 3),
+            medals: (author.badges || []).map(badge => ({ id: badge.id, imageUrl: badge.imageUrl })),
+            inviterName: author.inviter?.displayName || '',
+            inviterAvatarUrl: author.inviter?.avatarUrl || '',
+            inviterKind: author.inviter?.sourceType === 'PLATFORM' ? 'PLATFORM' : 'PLAYER',
           }
         })
         updatePageMedia(this, 'cooperationTalents', reset
@@ -559,7 +586,7 @@ Page({
       draftOpportunityCityTagId: this.data.selectedCityTagId,
       draftCooperationBranchId: this.data.selectedCooperationBranchId,
       draftRoleKey: this.data.selectedRoleKey,
-      ...this.draftIndustryPatch([...this.data.selectedIndustryTagIds]),
+      ...this.draftIndustryPatch(this.data.catalog, [...this.data.selectedIndustryTagIds]),
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
       draftLocationTypes: locationTypesForPreset(selectedLocationPreset),
       draftLocationPreset: selectedLocationPreset,
@@ -643,18 +670,19 @@ Page({
         })
   },
 
-  /** 人才合作筛选已选行业 pill 的统一草稿同步（draft ids + 展示视图）。 */
-  draftIndustryPatch(ids: string[]) {
+  /** 人才合作筛选已选行业 pill 的统一草稿同步（draft ids + 展示视图 + 热门快选选中态）。 */
+  draftIndustryPatch(catalog: OpportunityCatalog, ids: string[]) {
     return {
       draftIndustryTagIds: ids,
-      draftIndustryViews: draftIndustryViewsOf(this.data.catalog, ids),
+      draftIndustryViews: draftIndustryViewsOf(catalog, ids),
+      popularIndustryOptions: catalogSelectorView(catalog.industryGroups, ids).popularOptions,
     }
   },
 
   changeIndustry(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[], limited?: boolean }>) {
     this.setData({
-      ...this.draftIndustryPatch(event.detail.selectedIds.slice(0, 8)),
-      message: event.detail.limited ? '行业最多选择 8 项。' : '',
+      ...this.draftIndustryPatch(this.data.catalog, event.detail.selectedIds.slice(0, INDUSTRY_MAX_COUNT)),
+      message: event.detail.limited ? `行业最多选择 ${INDUSTRY_MAX_COUNT} 项。` : '',
     })
   },
 
@@ -664,7 +692,34 @@ Page({
     if (!id || !this.data.draftIndustryTagIds.includes(id)) {
       return
     }
-    this.setData(this.draftIndustryPatch(this.data.draftIndustryTagIds.filter(item => item !== id)))
+    this.setData(this.draftIndustryPatch(this.data.catalog, this.data.draftIndustryTagIds.filter(item => item !== id)))
+  },
+
+  /** 面板热门行业快选 chip：与二级页同一份草稿，超上限只提示不追加。 */
+  toggleDraftIndustry(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!id) {
+      return
+    }
+    const result = toggleCatalogSelection(this.data.draftIndustryTagIds, id, true, INDUSTRY_MAX_COUNT)
+    this.setData({
+      ...this.draftIndustryPatch(this.data.catalog, result.selectedIds),
+      message: result.limited ? `行业最多选择 ${INDUSTRY_MAX_COUNT} 项。` : '',
+    })
+  },
+
+  /** 「不限」chip：一次清空行业草稿（能力草稿不受影响）。 */
+  clearDraftIndustries() {
+    this.setData(this.draftIndustryPatch(this.data.catalog, []))
+  },
+
+  /** figma 2917_4785 行业二级页：全屏展开收起，草稿与面板共享，确定不直接提交筛选。 */
+  openIndustryPage() {
+    this.setData({ industryPageOpen: true })
+  },
+
+  closeIndustryPage() {
+    this.setData({ industryPageOpen: false })
   },
 
   /** 能力选择的「不限」chip：一次清空能力草稿（行业草稿不受影响）。 */
@@ -696,7 +751,7 @@ Page({
         draftOpportunityCityTagId: this.data.selectedCityTagId,
         draftCooperationBranchId: this.data.selectedCooperationBranchId,
         draftRoleKey: this.data.selectedRoleKey,
-        ...this.draftIndustryPatch([...this.data.selectedIndustryTagIds]),
+        ...this.draftIndustryPatch(this.data.catalog, [...this.data.selectedIndustryTagIds]),
         draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
         draftLocationTypes: locationTypesForPreset(selectedLocationPreset),
         draftLocationPreset: selectedLocationPreset,
@@ -720,7 +775,7 @@ Page({
       draftOpportunityCityTagId: this.data.selectedCityTagId,
       draftCooperationBranchId: this.data.selectedCooperationBranchId,
       draftRoleKey: this.data.selectedRoleKey,
-      ...this.draftIndustryPatch([...this.data.selectedIndustryTagIds]),
+      ...this.draftIndustryPatch(this.data.catalog, [...this.data.selectedIndustryTagIds]),
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
       draftLocationTypes: locationTypesForPreset(locationPreset(this.data.selectedLocationTypes)),
       draftLocationPreset: locationPreset(this.data.selectedLocationTypes),
@@ -802,7 +857,7 @@ Page({
       draftOpportunityCityTagId: '',
       draftCooperationBranchId: '',
       draftRoleKey: '',
-      ...this.draftIndustryPatch([]),
+      ...this.draftIndustryPatch(this.data.catalog, []),
       draftAbilityTagIds: [],
       draftLocationTypes: [],
       draftLocationPreset: 'ALL',
@@ -889,7 +944,7 @@ Page({
       selectedCooperationBranchId: '',
       draftRoleKey: '',
       selectedRoleKey: '',
-      ...this.draftIndustryPatch([]),
+      ...this.draftIndustryPatch(this.data.catalog, []),
       selectedIndustryTagIds: [],
       draftAbilityTagIds: [],
       selectedAbilityTagIds: [],

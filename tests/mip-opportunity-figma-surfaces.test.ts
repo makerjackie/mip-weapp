@@ -89,6 +89,8 @@ describe('MIP opportunity Figma surfaces', () => {
   // MIW-31（figma 2917_4875 机会-人才合作筛选）：面板落在 tab+搜索行下方而非整页替换，
   // 能力/行业 chips 与底部液态玻璃确认条全部走 DS 组件，已选计数为能力+行业之和。
   it('presents the cooperation filter below the search row with DS chips and a selected count', () => {
+    // MIW-58 最新稿（figma 2917_4875）：行业选择收敛为「已选行（黄胶囊 ⊗，> 进二级页）
+    // + 不限/热门快选」，全量分组手风琴移到 2917_4785 页内全屏二级页；行业计数 n/8。
     const panelStart = discovery.indexOf('id="opportunities-cooperation-filter"')
     expect(panelStart).toBeGreaterThan(discovery.indexOf('id="opportunities-search-input"'))
     expect(panelStart).toBeGreaterThan(discovery.indexOf('id="opportunities-talent-tab"'))
@@ -100,14 +102,19 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(panel).toContain('<mip-tag-chip label="不限" active="{{!draftAbilityTagIds.length}}" />')
     expect(panel).toContain('data-type="ability"')
     expect(panel).toContain('bind:tap="toggleTag"')
-    expect(panel).toContain('<mip-industry-selector groups="{{catalog.industryGroups}}"')
-    expect(panel).toContain('show-popular="{{true}}"')
-    expect(panel).toContain('accordion="{{true}}"')
-    expect(panel).toContain('clear-label="不限"')
-    expect(panel).toContain('bind:tap="removeDraftIndustry"')
-    expect(panel).toContain('已选 {{draftAbilityTagIds.length + draftIndustryTagIds.length}}')
+    expect(panel).toContain('bind:tap="openIndustryPage"')
+    expect(panel).toContain('catch:tap="removeDraftIndustry"')
+    expect(panel).toContain('bind:tap="toggleDraftIndustry"')
+    expect(panel).toContain('bind:tap="clearDraftIndustries"')
+    expect(panel).not.toContain('<mip-industry-selector')
+    expect(panel).toContain('已选 {{draftIndustryTagIds.length}}/8')
     expect(panel).not.toContain('合作角色')
     expect(panel).not.toContain('城市分会')
+    // 二级页持全量分组手风琴（关热门快选），清除文案沿用「不限」。
+    expect(discovery).toContain('<mip-industry-selector groups="{{catalog.industryGroups}}"')
+    expect(discovery).toContain('show-popular="{{false}}"')
+    expect(discovery).toContain('accordion="{{true}}"')
+    expect(discovery).toContain('clear-label="不限"')
 
     const actions = discovery.slice(discovery.indexOf('id="opportunities-cooperation-filter-actions"'))
     expect(actions).toContain('mip-liquid-glass')
@@ -117,7 +124,7 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discovery).toContain('<block wx:if="{{!filterOpen}}">')
 
     expect(discoveryScript).toContain('abilityTagIds: this.data.selectedAbilityTagIds')
-    expect(discoveryScript).toContain('draftIndustryViewsOf(this.data.catalog, ids)')
+    expect(discoveryScript).toContain('draftIndustryViewsOf(catalog, ids)')
     expect(source('src/modules/mip-cooperation/validation.ts')).toContain('abilityTagIds: uniqueIds(value.abilityTagIds, 8, \'能力标签\')')
     expect(source('src/modules/mip-cooperation/types.ts')).toContain('abilityTagIds?: string[]')
   })
