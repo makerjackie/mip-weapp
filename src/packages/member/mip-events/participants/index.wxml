@@ -56,7 +56,7 @@
          心动关系行（body 插槽）、左对齐 meta/简介。等级、邀请来源与勋章未由 DTO 返回，不造值。 -->
     <view wx:else class="participants-grid">
       <view wx:for="{{displayItems}}" wx:key="profileRef" class="participants-cell" hover-class="participants-cell--pressed" aria-role="button" aria-label="查看{{item.displayName}}的公开档案" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
-        <mip-talent-card layout="grid" left-align-body="{{true}}" avatar-ring="{{true}}" lead-label="{{item.kindLabel}}" display-name="{{item.displayName}}" avatar-url="{{item.avatarUrl || ''}}" meta-text="{{item.metaText}}" supporting-text="{{item.introductionText}}">
+        <mip-talent-card layout="grid" left-align-body="{{true}}" avatar-ring="{{true}}" lead-label="{{item.kindLabel}}" display-name="{{item.displayName}}" avatar-url="{{item.avatarUrl || ''}}" tags="{{item.profileTags}}" supporting-text="{{item.introductionText}}">
           <view slot="corner">
             <view wx:if="{{item.heartTicket || heartState !== 'ready'}}" class="participant-card__heart" aria-role="button" aria-label="{{heart.target && heart.target.profileRef === item.profileRef ? '取消对' + item.displayName + '的心动' : '对' + item.displayName + '心动'}}" data-profile-ref="{{item.profileRef}}" catch:tap="toggleHeartVote">
               <!-- MIW-17 G3：原型已投红心 fill #FF2238（DS record 红），非 danger #FF4D5E。 -->

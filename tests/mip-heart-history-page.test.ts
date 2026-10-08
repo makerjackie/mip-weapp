@@ -29,8 +29,19 @@ function response(kind = 'RECEIVED', readThroughAt = '2026-09-22T10:00:00.000Z')
     readThroughAt,
     hasMore: false,
     items: [{
-      event: { id: 'event-1', title: '城市聚会', startsAt: '2026-09-20T10:00:00.000Z', endsAt: '2026-09-20T12:00:00.000Z' },
-      person: { profileRef: 'p1.opaque', nickname: '设计伙伴', headline: '品牌设计' },
+      person: {
+        profileRef: 'p1.opaque',
+        nickname: '设计伙伴',
+        headline: '品牌设计',
+        heartCount: 3,
+        unread: true,
+        cityName: '广州',
+        industryLabel: '品牌设计',
+        identityStatus: '品牌主理人',
+        level: { number: 6, name: '同行' },
+        badges: [{ id: 'badge-1', name: '主理人' }],
+        inviter: { sourceType: 'USER', displayName: '李慕白' },
+      },
       updatedAt: '2026-09-21T10:00:00.000Z',
     }],
   }
@@ -55,7 +66,15 @@ describe('activity heart history page contract', () => {
     await instance.load('SENT', true)
     await instance.load('RECEIVED', true)
     await vi.waitFor(() => expect(events.markHeartHistoryRead).toHaveBeenCalledWith('2026-09-22T10:00:00.000Z'))
-    expect(instance.data.items[0]).toMatchObject({ person: { nickname: '设计伙伴', headline: '品牌设计' } })
+    expect(instance.data.items[0]).toMatchObject({
+      person: { nickname: '设计伙伴', headline: '品牌设计' },
+      levelText: 'Lv.6',
+      profileTags: ['广州MIP', '品牌设计', '品牌主理人'],
+      medals: [{ id: 'badge-1' }],
+      inviterName: '李慕白',
+      inviterAvatarUrl: '',
+      inviterKind: 'PLAYER',
+    })
     expect(instance.data.receivedUnreadCount).toBe(0)
     expect(instance.cache.RECEIVED.items).toHaveLength(1)
   })

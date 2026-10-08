@@ -9,8 +9,8 @@ interface ProfileInterestView {
   displayName: string
   avatarUrl: string
   levelText: string
-  statusText: string
-  metaText: string
+  // MIW-52 统一三标签（地区MIP | 代表行业 | 身份状态），替换旧 metaText 斜杠串。
+  profileTags: string[]
   supportingText: string
   medals: { id: string, imageUrl?: string }[]
 }
@@ -21,8 +21,7 @@ function presentProfileInterest(person: ProfileInterestPerson): ProfileInterestV
     displayName: person.nickname,
     avatarUrl: person.avatarUrl || '',
     levelText: person.level ? `Lv.${person.level.number}` : '',
-    statusText: person.userKind === 'PLAYER' ? '玩家' : '嘉宾',
-    metaText: [person.cityName, person.industryLabel, person.identityStatus].filter(Boolean).join(' / '),
+    profileTags: [person.cityName ? `${person.cityName}MIP` : '', person.industryLabel || '', person.identityStatus || ''].filter(Boolean).slice(0, 3),
     supportingText: person.introduction || person.headline || '',
     medals: (person.badges || []).map(badge => ({ id: badge.id, imageUrl: badge.imageUrl })),
   }

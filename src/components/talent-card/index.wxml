@@ -11,7 +11,14 @@
   </view>
   <view class="mip-talent-card__figure-name">{{displayName}}</view>
   <view wx:if="{{statusText}}" class="mip-talent-card__figure-status">{{statusText}}</view>
-  <view wx:if="{{metaText}}" class="mip-talent-card__figure-meta">{{metaText}}</view>
+  <!-- MIW-52 统一三标签行（地区MIP | 代表行业 | 身份状态）；未传 tags 回退旧 metaText。 -->
+  <view wx:if="{{displayTags.length}}" class="mip-talent-card__figure-tags">
+    <block wx:for="{{displayTags}}" wx:key="*this">
+      <view wx:if="{{index > 0}}" class="mip-talent-card__figure-tag-divider" aria-hidden="true" />
+      <text class="mip-talent-card__figure-tag">{{item}}</text>
+    </block>
+  </view>
+  <view wx:elif="{{metaText}}" class="mip-talent-card__figure-meta">{{metaText}}</view>
   <view wx:if="{{supportingText}}" class="mip-talent-card__figure-supporting">{{supportingText}}</view>
   <slot name="body" />
   <view class="mip-talent-card__foot">
@@ -21,7 +28,12 @@
         <view wx:else class="mip-talent-card__medal mip-talent-card__medal--dot" aria-label="{{item.id}}" />
       </block>
     </view>
-    <view wx:if="{{inviter.name}}" class="mip-talent-card__inviter mip-talent-card__inviter--grid">
+    <!-- MIW-52 右下角可配置：footRightMode="custom" 渲染 foot-right 插槽（NPC 任务分配勾选态预留），
+         默认 'inviter' 保持邀请人/targetText 行为。 -->
+    <block wx:if="{{footRightMode === 'custom'}}">
+      <slot name="foot-right" />
+    </block>
+    <view wx:elif="{{inviter.name}}" class="mip-talent-card__inviter mip-talent-card__inviter--grid">
       <text class="mip-talent-card__inviter-name">邀请人{{inviter.name}}</text>
       <image wx:if="{{inviter.avatarUrl}}" class="mip-talent-card__inviter-avatar mip-talent-card__inviter-avatar--grid" src="{{inviter.avatarUrl}}" mode="aspectFill" />
     </view>

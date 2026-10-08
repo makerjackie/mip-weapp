@@ -294,6 +294,11 @@
   text-align: left;
 }
 
+/* 参与人卡走三标签行时同样左对齐（justify 覆盖，text-align 管不到 flex 子项）。 */
+.mip-talent-card--grid-left .mip-talent-card__figure-tags {
+  justify-content: flex-start;
+}
+
 .mip-talent-card__corner {
   position: absolute;
   inset: 0;
@@ -345,6 +350,35 @@
   color: var(--color-ink);
   text-align: center;
   white-space: nowrap;
+}
+
+/* MIW-52 统一三标签行：地区MIP | 代表行业 | 身份状态，竖线分隔、单行居中、超宽省略。
+   gap 8rpx：双列卡内宽约 291rpx，三标签（20rpx 字号）+2 竖线需在此内放下。 */
+.mip-talent-card__figure-tags {
+  display: flex;
+  gap: 8rpx;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin-top: 8rpx;
+  overflow: hidden;
+}
+
+.mip-talent-card__figure-tag {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+
+.mip-talent-card__figure-tag-divider {
+  flex: none;
+  width: 2rpx;
+  height: 20rpx;
+  background: var(--color-line);
 }
 
 .mip-talent-card__figure-meta {

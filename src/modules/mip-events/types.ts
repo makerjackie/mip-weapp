@@ -351,17 +351,24 @@ export interface HeartState {
 export type HeartHistoryKind = 'SENT' | 'RECEIVED'
 
 export interface HeartHistoryItem {
-  event: {
-    id: EventId
-    title: string
-    startsAt: string
-    endsAt: string
-  }
+  // 按人聚合（产品口径：同一个人多点几次心动累计展示，最新互动排最前），
+  // 不再携带单场活动维度（设计稿心动值卡无活动入口）。
   person: {
     profileRef: string
     nickname: string
     avatarUrl?: string
     headline?: string
+    // 与该人的累计心动次数（跨所有活动，同一个人多次则累加）。
+    heartCount: number
+    // 仅 RECEIVED：该人存在未读心动。
+    unread?: boolean
+    // MIW-52 统一竖版用户卡：与嘉宾卡同口径的公开详情与邀请人标注（不造值，缺省省略）。
+    cityName?: string
+    industryLabel?: string
+    identityStatus?: string
+    level?: { number: number, name: string }
+    badges?: { id: string, name: string, imageUrl?: string }[]
+    inviter?: { sourceType: 'USER' | 'PLATFORM', displayName: string, avatarUrl?: string }
   }
   updatedAt: string
 }

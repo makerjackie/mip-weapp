@@ -53,16 +53,16 @@ describe('profile interest roster contract', () => {
     expect(p.data.state).toBe('ready')
     // MIW-24：名单卡走统一嘉宾卡组件，页面 presenter 把服务端事实映射为视图字段；
     // 简介取 introduction 优先于 headline，勋章接服务端佩戴口径（无图不伪造勋章图）。
+    // MIW-52：统一三标签（地区MIP | 代表行业 | 身份状态）替换旧 metaText 斜杠串。
     expect(p.data.people[0]).toMatchObject({
       displayName: 'Ame',
-      statusText: '玩家',
       levelText: 'Lv.2',
-      metaText: '深圳 / 软件 / 创业者',
+      profileTags: ['深圳MIP', '软件', '创业者'],
       supportingText: '帮助团队建立设计系统',
       medals: [{ id: 'badge-1' }],
     })
     const template = fs.readFileSync(new URL('../src/packages/member/mip-profile-interests/index.wxml', import.meta.url), 'utf8')
-    for (const attr of ['layout="grid"', 'display-name="{{item.displayName}}"', 'level-text="{{item.levelText}}"', 'status-text="{{item.statusText}}"', 'meta-text="{{item.metaText}}"', 'supporting-text="{{item.supportingText}}"', 'medals="{{item.medals}}"']) {
+    for (const attr of ['layout="grid"', 'display-name="{{item.displayName}}"', 'level-text="{{item.levelText}}"', 'tags="{{item.profileTags}}"', 'supporting-text="{{item.supportingText}}"', 'medals="{{item.medals}}"']) {
       expect(template).toContain(attr)
     }
     expect(p.data.totalCount).toBe(1)
