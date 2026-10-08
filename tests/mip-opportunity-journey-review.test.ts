@@ -166,9 +166,11 @@ describe('MIP opportunity journey review', () => {
     expect(profileScript).toContain(`deletePortfolioItem('opportunities', String(event.currentTarget.dataset.id || ''))`)
     expect(profileScript).toContain('删除后将无法恢复，是否删除？')
     expect(profileScript).toContain(`confirmColor: '#FF4D5E'`)
-    // C5 口径与其余四处一致：弹窗标题「删除提示」、toast success 1.8s。
-    expect(profileScript).toContain(`title: '删除提示'`)
-    expect(profileScript).not.toContain(`title: '删除机会'`)
+    // MIW-54（2026-10-08）：弹窗标题带对象类型（取代 C5 通用「删除提示」），内容带卡片名区分同栏多张卡。
+    expect(profileScript).toContain(`'删除合作卡'`)
+    expect(profileScript).toContain(`'删除超级案例'`)
+    expect(profileScript).toContain(`'删除机会'`)
+    expect(profileScript).toContain('」删除后将无法恢复，是否删除？')
     expect(profileScript).toContain(`title: '已删除', icon: 'success', duration: 1800`)
     // 删除确认后卡片先置灰再移除；已下架态改由详情页/编辑器承载。
     expect(profileTemplate).toContain(`removingPortfolioId === item.id ? 'opacity-50' : ''`)

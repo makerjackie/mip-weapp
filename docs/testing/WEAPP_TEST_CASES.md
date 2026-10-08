@@ -165,7 +165,7 @@
 | TC-OPP-005 | 撮合结果与反馈 | R2 | P2 | 已有撮合结果 | 查看候选与解释、提交反馈 | 只见 `candidateRef` 签名引用，不暴露内部主键；屏蔽双方不出现在候选；反馈留痕 |
 | TC-OPP-006 | 合作卡浏览 | R2 | P1 | 机会页人才合作 Tab / 公开主页 / 档案页相关合作卡栏 → detail | 浏览合作卡 | 仅审核通过内容可见；合作卡面展示目标/推荐/价值等标签条（黑条 badges）；举报入口可用 |
 | TC-OPP-007 | 合作卡发布/编辑 | R2 | P2 | `mip-cooperation/editor` | 创建并提交合作卡 | 提交后进入服务端审核流，未过审不可见 |
-| TC-OPP-008 | 案例浏览与编辑 | R2 | P2 | `mip-cases/list` → detail；`mip-cases/editor` 新建/编辑 | 浏览案例字段完整（无封面时使用超级案例默认主图；详情无发布者模块）；编辑器支持 AI 草稿（需来源确认 `AiDraftSourceConfirmation`）后提交 | 同审核口径，未过审不可见；AI 草稿未经来源确认不能提交 |
+| TC-OPP-008 | 案例浏览与编辑 | R2 | P2 | 「我的」档案页超级案例 tab → detail（MIW-54 列表页下线）；`mip-cases/editor` 新建/编辑 | 浏览案例字段完整（无封面时使用超级案例默认主图；详情无发布者模块）；编辑器支持 AI 草稿（需来源确认 `AiDraftSourceConfirmation`）后提交 | 同审核口径，未过审不可见；AI 草稿未经来源确认不能提交 |
 | TC-OPP-009 | AI 语音整理草稿 | R2 | P1 **[真机]** | 超级案例/合作卡编辑器 → 语音入口（`mip-ai/voice?purpose=SUPER_CASE|COOPERATION_CARD`） | 授权麦克风 → 录音（时长计时）→ 上传 → 云函数 Flash ASR 转写（`mip-ai-draft-provider` 直传管线）→ 生成 AI 草稿回填对应编辑器 | 页面状态机 loading/ready/recording/review/processing/error 完整；按 purpose 显示对应提示文案（案例/合作卡各自 hint）；草稿需来源确认（`AiDraftSourceConfirmation`）才能提交；麦克风权限拒绝有引导；ASR 环境密钥（`TENCENT_ASR_SECRET_ID/KEY/APPID`）未配置时明确失败提示，不得静默成功 |
 | TC-OPP-010 | 人才合作名录（玩家权益） | R1/R2 | P0 | R1 已购会员（ACTIVE）；R2 已登录普通用户/未登录 | 「机会」Tab → 人才合作：搜索、城市/分会、角色、行业筛选并打开某条人才 → 公开主页 | 玩家：按服务端 `listCooperationTalents` 返回真实人才卡并可进详情；未购会员用户与游客：服务端按 `canBrowseTalents` 拒绝（`PERMISSION_DENIED`），页面呈现权益引导而非名录内容。独立人脉目录页 `mip-people` 已删除（2026-10-06 客户确认目录即玩家权益，收敛到本 Tab） |
 

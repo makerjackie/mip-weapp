@@ -35,11 +35,9 @@ describe('MIP member publication lifecycle', () => {
     const caseDetailTemplate = source('src/packages/member/mip-cases/detail/index.wxml')
     const listTemplates = [
       source('src/pages/profile/index.wxml'),
-      source('src/packages/member/mip-cases/list/index.wxml'),
     ].join('\n')
     const listPages = [
       source('src/pages/profile/index.ts'),
-      source('src/packages/member/mip-cases/list/index.ts'),
     ].join('\n')
 
     expect(cooperationDomain).toContain('SET status = \'UNPUBLISHED\', version = version + 1')
@@ -57,6 +55,7 @@ describe('MIP member publication lifecycle', () => {
     // journey-review C5（2026-09-21 拍板）：列表删除入口收敛为长按卡片（原生 longpress 手势）+
     // 微信原生确认弹窗（删除警示红）→ 卡片移除 + toast「已删除」（1.8s），按钮行移除。
     // 2026-10-07：合作卡独立列表页删除后，本人合作卡列表即档案页「相关合作卡」栏。
+    // MIW-54（2026-10-08）：超级案例独立列表页（孤儿路由）下线，owner 列表即档案页三栏。
     expect(listTemplates).toContain('bind:longpress="deleteCooperationCard"')
     expect(listTemplates).toContain('bind:longpress="deleteCase"')
     expect(listTemplates).not.toContain('catch:tap="deleteCooperationCard"')

@@ -115,8 +115,8 @@ describe('journey-review WS-SETTINGS', () => {
     const profileView = read('src/packages/member/mip-public-profile/index.wxml')
     const profilePage = read('src/packages/member/mip-public-profile/index.ts')
     // 2026-10-07：合作卡独立列表页删除，合作卡管理列表即「我的」档案页相关合作卡栏。
+    // MIW-54（2026-10-08）：超级案例独立列表页（孤儿路由）下线，长按删除只看档案页三栏。
     const mainProfileView = read('src/pages/profile/index.wxml')
-    const caseList = read('src/packages/member/mip-cases/list/index.wxml')
 
     // 本人档案合作卡 / 超级案例 tab：tap 与 longpress 并存，仅本人态生效。
     expect(profileView).toContain('bind:tap="openCooperationCard" bind:longpress="deleteOwnCooperationCard"')
@@ -127,15 +127,12 @@ describe('journey-review WS-SETTINGS', () => {
     // 相关机会 tab 的长按删除已随 J6-03 补齐：与另两 tab 同口径，走机会域 archive 契约。
     expect(profileView).toContain('bind:tap="openOpportunity" bind:longpress="deleteOwnOpportunity"')
     expect(profilePage).toContain('await opportunityModule.remove(item.id, detail.version)')
-    // 档案页与案例管理页同口径：长按 + 原生弹窗 + toast（1.8s），删除按钮行移除。
-    for (const [template, handler] of [
-      [mainProfileView, 'deleteCooperationCard'],
-      [caseList, 'deleteCase'],
-    ] as const) {
-      expect(template).toContain(`bind:longpress="${handler}"`)
-      expect(template).not.toContain(`catch:tap="${handler}"`)
-      expect(template).not.toContain('删除案例」</view>')
-      expect(template).not.toContain('>删除</view>')
+    // 档案页三栏同口径：长按 + 原生弹窗 + toast（1.8s），删除按钮行移除。
+    for (const handler of ['deleteCooperationCard', 'deleteCase', 'deleteOpportunity'] as const) {
+      expect(mainProfileView).toContain(`bind:longpress="${handler}"`)
+      expect(mainProfileView).not.toContain(`catch:tap="${handler}"`)
+      expect(mainProfileView).not.toContain('删除案例」</view>')
+      expect(mainProfileView).not.toContain('>删除</view>')
     }
   })
 
