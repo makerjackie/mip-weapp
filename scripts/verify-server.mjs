@@ -12,6 +12,7 @@ const require = createRequire(import.meta.url)
 const providerSources = [
   'mip-ai-avatar-provider',
   'mip-ai-draft-provider',
+  'mip-admin-cert-renewer',
 ]
 const sourceRoots = [...new Set(Object.values(MIP_FUNCTION_SOURCES))]
   .map(source => path.join('cloudfunctions', source))

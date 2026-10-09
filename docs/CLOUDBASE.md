@@ -44,6 +44,8 @@ Web 内部转发不携带微信云调用凭证；文本及图片检查使用固�
 
 消息定时和知识采集分别使用不属于数据库业务清单的 `mip-message-scheduler` 与 `mip-knowledge-scheduler`。两个函数都不配置 MySQL URI 或 VPC，各自只维护一个固定滚动单次 timer，并通过互不复用的 HMAC 和专用 CAM 角色调用 `mip-admin-api`。CAM 的 `InvokeFunction` 不支持资源级授权时，目标限制由固定函数名、AppID allowlist、内部 HMAC 和专用角色共同完成；不得把 scheduler 绑定到共享 `TCB_QcsRole`。具体创建、canary、激活和回读步骤见 [DEPLOYMENT.md](DEPLOYMENT.md)。
 
+管理后台证书由独立 `mip-admin-cert-renewer` 维护，只允许一个每天执行的签名 timer；它不连接 MySQL、不调用业务函数、不加入核心业务函数发布清单。专用 SCF 角色使用临时凭证，权限限定免费 SSL 申请/读取、当前环境网关证书修改、隔离 COS 状态和 CA 验证文件。待签发订单持久化，失败不重复申请；成功必须有实际可信 TLS 指纹回读。部署、canary、激活与恢复见[证书续期流程](../.agents/skills/mip-admin-release/references/certificate-renewal.md)，启用状态仅以当前项目状态和运行证据为准。
+
 AI 草稿和数字分身分别使用不属于数据库业务清单的 `mip-ai-draft-provider` 与 `mip-ai-avatar-provider`。两个 Provider 都不配置 MySQL URI 或 VPC，客户端调用保持关闭，只从已部署 `mip-ai-api` 继承 AppID allowlist 和各自专用 HMAC；数字分身 Provider 额外要求零 trigger。上游 Endpoint、allowlist、总超时和鉴权都是函数环境配置，内部 HMAC 与上游凭证必须互不复用。缺少任一配置或 readiness 未通过时 fail closed，不复制源图，也不存在 mock 成功路径。
 
 ## 数据和存储
