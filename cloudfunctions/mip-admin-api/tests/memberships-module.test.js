@@ -74,6 +74,23 @@ function grantInput(overrides = {}) {
 }
 
 describe('admin membership service', () => {
+  it('accepts the approval queue search contract and normalizes empty and nonempty queries', async () => {
+    for (const [query, expected] of [['', ''], [' 林%_ ', '林%_']]) {
+      const repo = repository({
+        async listMembershipApprovals(input) { repo.calls.push({ type: 'approvalList', input }); return { items: [], nextCursor: null } },
+      })
+      await memberships(repo).listMembershipApprovals(caller, { filters: { query, status: 'PENDING' }, limit: 20 })
+      assert.deepEqual(repo.calls.at(-1), { type: 'approvalList', input: { appId: APP_ID, query: expected, status: 'PENDING', userId: '', pageLimit: 20, cursor: null } })
+    }
+  })
+
+  it('rejects unsupported approval filters and invalid search terms before the queue query', async () => {
+    for (const filters of [{ query: 'a'.repeat(65) }, { query: '\u0000' }, { query: {} }, { scopeId: 'other-scope' }]) {
+      const repo = repository({ async listMembershipApprovals() { assert.fail('invalid filters reached repository') } })
+      await assert.rejects(() => memberships(repo).listMembershipApprovals(caller, { filters }), error => error.code === 'VALIDATION_FAILED')
+    }
+  })
+
   it('keeps the membership query and mutation surface', () => {
     assert.deepEqual(Object.keys(createAdminMemberships({ repository: {}, access: {} })).sort(), [
       'decideMembershipApproval',

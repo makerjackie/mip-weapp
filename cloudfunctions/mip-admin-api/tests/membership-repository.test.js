@@ -134,6 +134,15 @@ function replayRow(overrides = {}) {
 }
 
 describe('membership repository', () => {
+  it('filters approval search on the full app-scoped queue before pagination with literal LIKE characters', async () => {
+    let captured
+    const { repository } = createRepository({ async query(sql, params) { captured = { sql, params }; return [] } })
+    await repository.listMembershipApprovals({ appId: APP_ID, query: '林%_', status: 'PENDING', pageLimit: 20 })
+    assert.match(captured.sql, /WHERE approval\.app_id = \? AND \(approval\.user_id = \? OR profile\.nickname LIKE \? ESCAPE/)
+    assert.match(captured.sql, /ORDER BY approval\.requested_at DESC, approval\.id DESC LIMIT \?/)
+    assert.deepEqual(captured.params, [APP_ID, '林%_', '%林\\%\\_%', 'PENDING', 21])
+  })
+
   it('keeps the membership query and mutation surface', () => {
     const { repository } = createRepository({ query: async () => [] })
     assert.deepEqual(Object.keys(repository).sort(), [

@@ -15,7 +15,7 @@ const grantInputKeys = new Set([
   'reason',
   'userId',
 ])
-const approvalFilterKeys = new Set(['status', 'userId'])
+const approvalFilterKeys = new Set(['query', 'status', 'userId'])
 const approvalStatuses = new Set(['PENDING', 'APPROVED', 'REJECTED'])
 const decideInputKeys = new Set(['decision', 'expectedChainVersion', 'reason', 'userId'])
 const timelineStatuses = new Set(['PENDING', 'ACTIVE', 'EXPIRED', 'REVOKED', 'REFUNDED'])
@@ -161,7 +161,7 @@ function normalizeApprovalFilters(value) {
   }
   const status = filters.status || ''
   if (status && !approvalStatuses.has(status)) throw validationError('审核状态无效')
-  return { status, userId: filters.userId ? strictUuid(filters.userId) : '' }
+  return { query: timelineUserQuery(filters.query), status, userId: filters.userId ? strictUuid(filters.userId) : '' }
 }
 
 function normalizeApprovalDecision(input) {

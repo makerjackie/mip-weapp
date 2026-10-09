@@ -7,6 +7,7 @@ import type { OperationsPageState, OperationsWriteAction } from './types'
 import { SensitiveExportButton } from '../admin-runtime/sensitive-export-button'
 import { Space } from 'antd'
 import { growthSections } from '../../modules/growth-sections'
+import { options } from '../../modules/admin-read-formatters'
 
 const actions: Array<{ key: OperationsWriteAction; label: string; capability: string }> = [
   { key: 'mip.admin.growth.adjust', label: '调整成长数据', capability: 'growth.adjust' },
@@ -31,7 +32,7 @@ export function GrowthBadgesPage(props: OperationsPageState) {
       title="成长与勋章"
       description="查看等级、权益、成长流水和勋章事实"
       searchPlaceholder={definition.searchPlaceholder}
-      statusOptions={definition.statusOptions}
+      statusOptions={selected === 'membershipApprovals' ? [{ value: '', label: '全部状态' }, ...options(['PENDING', 'APPROVED', 'REJECTED'])] : definition.statusOptions}
       paginated={growthSections.some(section => section.value === selected && 'paginated' in section && section.paginated)}
       timeRangeFields={selected === 'entitlements' ? { from: 'sinceTime', to: 'untilTime' } : selected === 'entries' || selected === 'transitions' ? { from: 'createdFrom', to: 'createdTo' } : undefined}
       extraFilterSlots={<><Form.Item label="分区"><Select aria-label="成长分区" style={{ minWidth: 180 }} value={selected}

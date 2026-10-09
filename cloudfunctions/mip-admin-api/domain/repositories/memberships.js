@@ -170,6 +170,10 @@ function createMembershipRepository(database, options = {}) {
   async function listMembershipApprovals(input) {
     const clauses = ['approval.app_id = ?']
     const params = [input.appId]
+    if (input.query) {
+      clauses.push(`(approval.user_id = ? OR profile.nickname LIKE ? ESCAPE '\\\\')`)
+      params.push(input.query, `%${escapeLike(input.query)}%`)
+    }
     if (input.status) {
       clauses.push('approval.status = ?')
       params.push(input.status)

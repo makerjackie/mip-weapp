@@ -140,7 +140,10 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
     }),
     read('entitlements', canRead(access, 'memberships.read', 'PLATFORM'), 'mip.admin.entitlements.transactions.list', pagedInput),
     // MIW-27 第二轮：首次入会审核队列（含已决定记录，默认按申请时间倒序）。
-    read('membershipApprovals', canRead(access, 'memberships.read', 'PLATFORM'), 'mip.admin.membershipApprovals.list', pagedInput),
+    read('membershipApprovals', canRead(access, 'memberships.read', 'PLATFORM'), 'mip.admin.membershipApprovals.list', {
+      ...pagedInput,
+      filters: { query: query.query, ...(filters.userId ? { userId: filters.userId } : {}), status: ['PENDING', 'APPROVED', 'REJECTED'].includes(query.status) ? query.status : '' },
+    }),
     read('contributionRules', canRead(access, 'growth.read', 'PLATFORM'), 'mip.admin.contribution.rules.list', { ...pagedInput, filters: { ...pagedInput.filters, status: ['ACTIVE', 'INACTIVE'].includes(query.status) ? query.status : '' } }),
     read('contributionTransactions', canRead(access, 'growth.read', 'PLATFORM'), 'mip.admin.contribution.transactions.list', pagedInput),
   ])
@@ -169,7 +172,7 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
     grantedAt: formatDateTime(item.grantedAt),
   })), serverQuery)
   const membershipApprovalRows = filterRows(pageValue(membershipApprovalsPayload).items.map(item => ({
-    user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'),
+    user: valueOf(record(item.user), 'nickname') === '—' ? '未知用户' : valueOf(record(item.user), 'nickname'),
     playerNumber: numberLabel(record(item.user).playerNumber),
     plan: valueOf(record(item.order), 'planName') || '—',
     amount: money(record(item.order).amountCents, record(item.order).currency),

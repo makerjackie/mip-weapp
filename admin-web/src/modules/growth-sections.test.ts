@@ -1,6 +1,29 @@
 import assert from 'node:assert/strict'
 import { it } from 'node:test'
+import { createRequire } from 'node:module'
 import { loadGrowth } from './admin-read-special-pages.ts'
+const require = createRequire(import.meta.url)
+const { createMembershipRepository } = require('../../../cloudfunctions/mip-admin-api/domain/repositories/memberships.js')
+
+it('round trips a nonempty approval repository DTO into the page and sends only supported queue filters', async () => {
+  const backend = createMembershipRepository({ query: async () => [{
+    approval_id: 'approval-a', user_id: 'user-a', user_status: 'ACTIVE', nickname: '林晓', player_number: 6,
+    approval_status: 'PENDING', chain_version: 3, pending_entitlements: 1, order_id: 'order-a', order_status: 'PAID',
+    order_amount_cents: 36500, order_currency: 'CNY', plan_name: '年度会员', order_paid_at: '2030-01-01T07:59:00Z',
+    requested_at: '2030-01-01T08:00:00Z', created_at: '2030-01-01T08:00:00Z', updated_at: '2030-01-01T08:00:00Z',
+  }] })
+  const payload = await backend.listMembershipApprovals({ appId: 'test-app', pageLimit: 20 })
+  const page = await loadGrowth({ query: '林', status: 'PENDING', limit: 20, cursor: 'next-page', filters: { section: 'membershipApprovals', metric: 'EXPERIENCE' } }, async (action, input) => {
+    assert.equal(action, 'mip.admin.membershipApprovals.list')
+    assert.deepEqual(input, { filters: { query: '林', status: 'PENDING' }, limit: 20, cursor: 'next-page' })
+    return payload
+  })
+  assert.equal(page.sections[0].rows.length, 1)
+  assert.equal(page.sections[0].rows[0].user, '林晓')
+  assert.equal(page.sections[0].rows[0].playerNumber, '6')
+  assert.equal(page.sections[0].rows[0].amount, '¥365.00')
+  assert.equal(page.sections[0].rows[0].state, '待处理')
+})
 it('queries only the selected ledger, retains server pagination and does not filter an ID search out of the current page', async () => {
   const calls: unknown[] = []
   const page = await loadGrowth({ query: 'entry-a', status: '', cursor: 'cursor-a', limit: 20, filters: { section: 'entries', metric: 'EXPERIENCE', createdFrom: '2030-01-01T00:00:00Z' } }, async (action, input) => {
@@ -52,14 +75,14 @@ it('renders the first-join approval queue with a decide row action prefilled by 
       {
         id: 'approval-a', status: 'PENDING', requestedAt: '2030-01-01T08:00:00.000Z', createdAt: '2030-01-01T08:00:00.000Z', updatedAt: '2030-01-01T08:00:00.000Z',
         chainVersion: 3, pendingEntitlements: 1, decisionReason: null, decidedBy: null, decidedAt: null,
-        user: { id: 'user-a', nickname: '林晓', playerNumber: 'M000000006' },
+        user: { id: 'user-a', nickname: '林晓', playerNumber: 6 },
         order: { id: 'order-a', status: 'PAID', planName: '年度会员', amountCents: 36500, currency: 'CNY', paidAt: '2030-01-01T07:59:00.000Z' },
       },
       {
         id: 'approval-b', status: 'REJECTED', requestedAt: '2030-01-02T08:00:00.000Z', createdAt: '2030-01-02T08:00:00.000Z', updatedAt: '2030-01-03T08:00:00.000Z',
         chainVersion: 5, pendingEntitlements: 0, decisionReason: '线下支付未确认', decidedAt: '2030-01-03T08:00:00.000Z',
         decidedBy: { id: 'admin-a', nickname: '周宁' },
-        user: { id: 'user-b', nickname: '陈青', playerNumber: 'M000000007' },
+        user: { id: 'user-b', nickname: '陈青', playerNumber: 7 },
         order: { id: 'order-b', status: 'PAID', planName: '月度会员', amountCents: 3000, currency: 'CNY', paidAt: '2030-01-02T07:59:00.000Z' },
       },
     ],
