@@ -1,6 +1,6 @@
 'use strict'
 
-const { loadPublicPersonDetails } = require('./public-person-details')
+const { loadHeartInviters, loadPublicPersonDetails } = require('./public-person-details')
 
 const { randomUUID } = require('node:crypto')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
@@ -137,7 +137,12 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
     params,
   )
   const page = rows.slice(0, limit)
-  const details = await loadPublicPersonDetails(database, caller.appId, page.map(row => row.visitor_id))
+  // MIW-64：访客卡 footer 邀请人标注与互动过/心动值列表同口径（loadHeartInviters），
+  // 无归档省略，不造值；visibility 门控在 loadHeartInviters 内。
+  const [details, inviters] = await Promise.all([
+    loadPublicPersonDetails(database, caller.appId, page.map(row => row.visitor_id)),
+    loadHeartInviters(database, caller.appId, page.map(row => row.visitor_id)),
+  ])
   const [unread, total] = await Promise.all([
     database.one(
       `SELECT COUNT(*) AS count
@@ -164,7 +169,14 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
     ),
   ])
   return {
-    items: page.map(row => ({ ...visitorDto({ ...row, visitor_user_id: row.visitor_id }, caller), ...details.get(row.visitor_id) })),
+    items: page.map((row) => {
+      const inviter = inviters.get(row.visitor_id)
+      return {
+        ...visitorDto({ ...row, visitor_user_id: row.visitor_id }, caller),
+        ...details.get(row.visitor_id),
+        ...(inviter ? { inviter } : {}),
+      }
+    }),
     unreadCount: Number(unread?.count || 0),
     totalViewCount: Number(total?.count || 0),
     readThroughAt: iso(total?.read_through_at) || undefined,

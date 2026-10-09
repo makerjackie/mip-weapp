@@ -39,6 +39,7 @@ interface InteractionView {
   countBadge: string
   inviterName: string
   inviterAvatarUrl: string
+  inviterKind: 'PLAYER' | 'PLATFORM'
 }
 
 interface CategoryCache {
@@ -70,6 +71,9 @@ function createCategoryCache(): CategoryCache {
 
 function cardBase(subject: ReceivedInteractionActor) {
   const actorName = subject.nickname || 'MIP 用户'
+  // MIW-64：footer 邀请人与 G3 公开档案同源（服务端 actor.inviter，loadHeartInviters 口径）；
+  // 无归档时 name 为空、组件隐藏 footer，不造值；玩家/平台形态由 inviterKind 决定。
+  const inviterKind: InteractionView['inviterKind'] = subject.inviter?.sourceType === 'PLATFORM' ? 'PLATFORM' : 'PLAYER'
   return {
     actorName,
     actorAvatarUrl: subject.avatarUrl || '',
@@ -79,8 +83,9 @@ function cardBase(subject: ReceivedInteractionActor) {
     levelText: subject.level ? `Lv.${subject.level.number}` : '',
     medals: (subject.badges || []).map(badge => ({ id: badge.id, imageUrl: badge.imageUrl })),
     countBadge: '',
-    inviterName: '',
-    inviterAvatarUrl: '',
+    inviterName: subject.inviter?.displayName || '',
+    inviterAvatarUrl: subject.inviter?.avatarUrl || '',
+    inviterKind,
   }
 }
 
@@ -112,9 +117,8 @@ function presentGuest(item: Extract<ReceivedInteraction, { kind: 'GUEST' }>, ind
 }
 
 // journey-review J3-06：同场多次 ×N 来自服务端全部有效签到的聚合，与翻页无关。
-// 邀请人标注（玩家/平台判定）待服务端 listInfluenceInteractions 补 inviter 字段
-// （mip-opportunities-api），DTO 扩展归 WS-OPPORTUNITIES/服务端；inviter 渲染链保留，
-// 字段到位即显示（依赖记 .tmp/shared-change-requests.md）。
+// MIW-64：邀请人标注（玩家/平台判定）已接线——listInfluenceInteractions/listActiveInfluenceInterests/
+// listProfileVisitors 均按 G3 同源口径补 actor.inviter，cardBase 直接映射，无归档省略不造值。
 function presentInteraction(person: ReceivedInteractionActor, factCount: number): InteractionView {
   return {
     viewKey: `interaction-${person.profileRef}`,

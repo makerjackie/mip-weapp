@@ -91,7 +91,7 @@
            勋章为服务端佩戴口径（≤3 枚，组件兜底），未返回的等级/行业/勋章不造值。 -->
       <view wx:else class="grid grid-cols-2 gap-[24rpx] {{category === 'INTERACTION' ? 'mt-3' : ''}}">
         <view wx:for="{{displayItems}}" wx:key="viewKey" class="min-w-0" aria-role="button" aria-label="查看{{item.actorName}}的公开档案" data-key="{{item.viewKey}}" bind:tap="openInteraction">
-          <mip-talent-card layout="grid" display-name="{{item.actorName}}" avatar-url="{{item.actorAvatarUrl}}" level-text="{{item.levelText}}" tags="{{item.profileTags}}" supporting-text="{{item.actorHeadline}}" medals="{{item.medals}}" unread="{{item.unread}}" inviter-name="{{item.inviterName}}" inviter-avatar-url="{{item.inviterAvatarUrl}}" inviter-kind="PLAYER">
+          <mip-talent-card layout="grid" display-name="{{item.actorName}}" avatar-url="{{item.actorAvatarUrl}}" level-text="{{item.levelText}}" tags="{{item.profileTags}}" supporting-text="{{item.actorHeadline}}" medals="{{item.medals}}" unread="{{item.unread}}" inviter-name="{{item.inviterName}}" inviter-avatar-url="{{item.inviterAvatarUrl}}" inviter-kind="{{item.inviterKind}}">
             <!-- ×N 角标与红心角标同留白（owner 2026-10-08：右 16rpx/上 14rpx），不贴卡边。 -->
             <view slot="corner" wx:if="{{item.countBadge}}" class="absolute right-[16rpx] top-[14rpx] flex min-w-[52rpx] items-center justify-center rounded-full border border-canvas bg-brand px-[8rpx] text-[20rpx] font-semibold leading-[28rpx] text-on-brand">{{item.countBadge}}</view>
           </mip-talent-card>
@@ -120,7 +120,7 @@
       <!-- MIW-24：心动值卡走统一嘉宾卡组件 grid 壳；右上角红心徽标为页面自有事实（corner 插槽）。 -->
       <view wx:else class="grid grid-cols-2 gap-[24rpx]">
         <view wx:for="{{displayItems}}" wx:key="viewKey" class="min-w-0" aria-role="button" aria-label="查看{{item.actorName}}的公开档案" data-key="{{item.viewKey}}" bind:tap="openInteraction">
-          <mip-talent-card layout="grid" display-name="{{item.actorName}}" avatar-url="{{item.actorAvatarUrl}}" level-text="{{item.levelText}}" tags="{{item.profileTags}}" supporting-text="{{item.actorHeadline}}" medals="{{item.medals}}">
+          <mip-talent-card layout="grid" display-name="{{item.actorName}}" avatar-url="{{item.actorAvatarUrl}}" level-text="{{item.levelText}}" tags="{{item.profileTags}}" supporting-text="{{item.actorHeadline}}" medals="{{item.medals}}" inviter-name="{{item.inviterName}}" inviter-avatar-url="{{item.inviterAvatarUrl}}" inviter-kind="{{item.inviterKind}}">
             <view slot="corner">
               <image class="absolute right-[16rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-heart-fill.png" mode="aspectFit" aria-label="{{category === 'OUTBOUND_INTEREST' ? '我已心动' : '对我心动'}}" />
             </view>
