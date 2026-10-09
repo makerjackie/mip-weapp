@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-10-09T10:35:04.638Z",
+  "domain": "admin.mip.cool",
+  "accessType": "DIRECT",
+  "status": "SUCCESS",
+  "dnsStatus": "OK",
+  "platformCnameDnsStatus": "OK",
+  "cname": "admin.mip.cool.tcbaccess.tencentcloudbase.com",
+  "protocol": "HTTP_TO_HTTPS",
+  "routes": [
+    {
+      "path": "/",
+      "type": "STATIC_STORE",
+      "target": "staticstore",
+      "enable": true,
+      "enableAuth": false,
+      "enableSafeDomain": true,
+      "enablePathTransmission": false,
+      "pathRewrite": {
+        "StaticStorePrefix": "/mip-admin-console"
+      }
+    },
+    {
+      "path": "/api",
+      "type": "SCF",
+      "target": "mip-admin-web-api",
+      "enable": true,
+      "enableAuth": false,
+      "enableSafeDomain": true,
+      "enablePathTransmission": true,
+      "pathRewrite": {}
+    },
+    {
+      "path": "/assets",
+      "type": "SCF",
+      "target": "mip-admin-web-api",
+      "enable": true,
+      "enableAuth": false,
+      "enableSafeDomain": true,
+      "enablePathTransmission": true,
+      "pathRewrite": {}
+    }
+  ],
+  "tls": {
+    "authorized": true,
+    "subject": "admin.mip.cool",
+    "issuer": "TrustAsia DV TLS RSA CA 2024",
+    "validFrom": "Oct  9 09:00:00 2026 GMT",
+    "validTo": "Jan  7 08:59:59 2027 GMT",
+    "fingerprint256": "AE:7E:D5:E9:FF:AC:4A:48:4D:96:6D:83:1F:9B:47:E0:07:B1:DF:C9:EA:33:D0:5D:85:97:FE:FC:65:2B:78:CE"
+  },
+  "defaultRoutesPreserved": true,
+  "sourceCodeRedeployed": false,
+  "additionalOriginConfigured": true,
+  "safeDomainEnabled": true,
+  "cloudflareChanged": false,
+  "businessWrites": false,
+  "renewBefore": "2027-01-07T08:59:59Z"
+}

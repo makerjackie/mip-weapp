@@ -16,6 +16,8 @@ description: 更新、部署本仓库的 CloudBase Web 管理后台，并验证�
 - BFF → HTTPS `mip-admin-api`；需要发布的其他业务函数由本次 diff 和调用链决定。
 - 原域名可能仍经 Cloudflare 跳转；“CloudBase 入口工作”不等于“Cloudflare 已下线”。
 
+需要绑定独立后台域名时，按[自定义域名流程](references/custom-domain.md)完成证书、网关、DNS 与登录来源的闭环。保留默认 CloudBase 发布 origin，自定义域名作为同一套产物的额外入口。
+
 目标环境、阶段、完整 HTTPS origin、runtime 用户及测试账号从仓库本机配置和目标环境回读确定，不硬编码历史环境 ID、域名、账号、提交或资产数量。用户提供的测试域名缺字时，核对配置中的真实 origin，不能猜测或创建新网关。
 
 ## 拉取与门禁

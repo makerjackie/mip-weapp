@@ -1,0 +1,662 @@
+{
+  "generatedAt": "2026-10-09T10:29:37.975Z",
+  "passwordChanged": false,
+  "businessWrites": false,
+  "checks": [
+    {
+      "id": "static:/",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/html"
+    },
+    {
+      "id": "static:/assets/ant-design-DZvgLqR9.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/charts-D26ByYiC.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/index-6Oxq4SMS.css",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/index-CYFT5GuB.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/overview-purchase-chart-CabpwZCl.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/react-Mefe_Tge.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/rolldown-runtime-hePW80VL.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:/assets/router-query-DYZ4JsyJ.js",
+      "status": "pass",
+      "httpStatus": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "id": "static:missing-asset-404",
+      "status": "pass",
+      "httpStatus": 404
+    },
+    {
+      "id": "auth:origin-rejected",
+      "status": "pass",
+      "httpStatus": 403
+    },
+    {
+      "id": "auth:wrong-password-rejected",
+      "status": "pass",
+      "httpStatus": 401
+    },
+    {
+      "id": "auth:password-login",
+      "status": "pass",
+      "httpStatus": 200
+    },
+    {
+      "id": "auth:cookie-security",
+      "status": "pass"
+    },
+    {
+      "id": "mip.admin.session",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "auth:admin-enabled",
+      "status": "pass"
+    },
+    {
+      "id": "mip.admin.users.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.events.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.events.policy.get",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.events.catalog.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.events.catalog.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.orders.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.tasks.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.tasks.completions.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.tasks.editorOptions",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.banners.session",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.banners.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.game.session",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.game.seasons.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.game.blindBoxes.catalogs.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.roles.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.branches.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.rolePolicies.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.audit.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.messageCampaigns.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.messageTemplates.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.knowledge.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.opportunities.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.userContent.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.matching.get",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.growth.levels",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.growth.benefits",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.growth.rules",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.growth.entries",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.growth.levelTransitions",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.badges.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.badges.awards",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.entitlements.transactions.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.membershipApprovals.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.contribution.rules.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.contribution.transactions.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.communityReports.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.communityReports.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.communityReports.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.communityReports.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.announcements.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.exceptions.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.operations.queue.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.adminAccounts.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.audit.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.dashboard.overview.get",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.membershipAgreement.get",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.membershipAgreement.get",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.cards.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "mip.admin.cards.list",
+      "status": "pass",
+      "httpStatus": 200,
+      "responseHasData": true
+    },
+    {
+      "id": "auth:logout",
+      "status": "pass",
+      "httpStatus": 200
+    },
+    {
+      "id": "auth:logout-replay-rejected",
+      "status": "pass",
+      "httpStatus": 401
+    }
+  ],
+  "modules": [
+    {
+      "route": "users",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 14,
+          "columns": 14
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "events",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 10,
+          "columns": 10
+        },
+        {
+          "rows": 1,
+          "columns": 2
+        },
+        {
+          "rows": 5,
+          "columns": 7
+        },
+        {
+          "rows": 4,
+          "columns": 7
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "orders",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 11,
+          "columns": 8
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "tasks",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 8,
+          "columns": 12
+        },
+        {
+          "rows": 1,
+          "columns": 5
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "banners",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 3,
+          "columns": 7
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "game",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 1,
+          "columns": 5
+        },
+        {
+          "rows": 1,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "permissions",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 5,
+          "columns": 5
+        },
+        {
+          "rows": 6,
+          "columns": 7
+        },
+        {
+          "rows": 4,
+          "columns": 9
+        },
+        {
+          "rows": 20,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "messages",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 2,
+          "columns": 5
+        },
+        {
+          "rows": 2,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "knowledge",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 4,
+          "columns": 7
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "opportunities",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 10,
+          "columns": 12
+        },
+        {
+          "rows": 20,
+          "columns": 8
+        },
+        {
+          "rows": 1,
+          "columns": 6
+        },
+        {
+          "rows": 1,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "growth",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 3,
+          "columns": 7
+        },
+        {
+          "rows": 5,
+          "columns": 4
+        },
+        {
+          "rows": 4,
+          "columns": 8
+        },
+        {
+          "rows": 17,
+          "columns": 7
+        },
+        {
+          "rows": 0,
+          "columns": 5
+        },
+        {
+          "rows": 18,
+          "columns": 5
+        },
+        {
+          "rows": 8,
+          "columns": 6
+        },
+        {
+          "rows": 19,
+          "columns": 9
+        },
+        {
+          "rows": 1,
+          "columns": 8
+        },
+        {
+          "rows": 0,
+          "columns": 6
+        },
+        {
+          "rows": 1,
+          "columns": 5
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "operations",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 2,
+          "columns": 7
+        },
+        {
+          "rows": 0,
+          "columns": 6
+        },
+        {
+          "rows": 3,
+          "columns": 7
+        },
+        {
+          "rows": 4,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "adminAccounts",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 1,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "auditLogs",
+      "status": "pass",
+      "sections": [
+        {
+          "rows": 20,
+          "columns": 7
+        }
+      ],
+      "hasNonemptySection": true
+    }
+  ],
+  "limitations": [
+    "HTTP authentication and read-model verification, not browser visual acceptance.",
+    "No business writes, refunds, exports, file uploads, or WeChat confirmation are exercised.",
+    "Empty sections prove empty-state transport only; section counts distinguish nonempty coverage."
+  ],
+  "completedAt": "2026-10-09T10:30:22.497Z",
+  "passed": true
+}

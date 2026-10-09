@@ -1,0 +1,30 @@
+{
+  "verified": true,
+  "entry": "/assets/index-CYFT5GuB.js",
+  "passwordLoginVerified": true,
+  "realDashboardRendered": true,
+  "viewports": [
+    {
+      "height": 900,
+      "realData": true,
+      "scrollWidth": 1423,
+      "width": 1440,
+      "noHorizontalOverflow": true
+    },
+    {
+      "height": 720,
+      "realData": true,
+      "scrollWidth": 1263,
+      "width": 1280,
+      "noHorizontalOverflow": true
+    },
+    {
+      "height": 844,
+      "realData": true,
+      "scrollWidth": 373,
+      "width": 390,
+      "noHorizontalOverflow": true
+    }
+  ],
+  "viewportRestored": true
+}
