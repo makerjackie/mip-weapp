@@ -2,6 +2,7 @@ import type { BranchId, CooperationRoleKey } from '../mip'
 import type {
   OpportunityCommercialTerms,
   OpportunityCooperator,
+  OpportunityCooperatorInviter,
   OpportunityDetail,
   OpportunityDraft,
   OpportunityFilter,
@@ -596,12 +597,23 @@ export function parseOpportunityCooperators(value: unknown): { items: Opportunit
       || typeof (badge as Record<string, unknown>).name !== 'string'))) {
       throw new Error('合作意向名单返回了无效响应')
     }
-    const inviter = item.inviter === undefined ? undefined : record(item.inviter)
-    if (inviter && (Object.keys(inviter).some(key => !['sourceType', 'displayName', 'avatarUrl'].includes(key))
-      || !['USER', 'PLATFORM'].includes(String(inviter.sourceType))
-      || typeof inviter.displayName !== 'string' || !inviter.displayName || inviter.displayName.length > 64
-      || !(inviter.avatarUrl === undefined || typeof inviter.avatarUrl === 'string'))) {
-      throw new Error('合作意向名单返回了无效响应')
+    // 校验即窄化：先收口成具名局部量，通过守卫后直接组装 DTO，不依赖 || 链后的事后收窄。
+    let inviter: OpportunityCooperatorInviter | undefined
+    if (item.inviter !== undefined) {
+      const source = record(item.inviter)
+      const displayName = typeof source.displayName === 'string' ? source.displayName.trim() : ''
+      const avatarUrl = source.avatarUrl === undefined || typeof source.avatarUrl === 'string' ? source.avatarUrl : null
+      if (Object.keys(source).some(key => !['sourceType', 'displayName', 'avatarUrl'].includes(key))
+        || !['USER', 'PLATFORM'].includes(String(source.sourceType))
+        || !displayName || displayName.length > 64
+        || avatarUrl === null) {
+        throw new Error('合作意向名单返回了无效响应')
+      }
+      inviter = {
+        sourceType: source.sourceType as OpportunityCooperatorInviter['sourceType'],
+        displayName,
+        ...(avatarUrl ? { avatarUrl } : {}),
+      }
     }
     return {
       profileRef: item.profileRef,
@@ -620,13 +632,7 @@ export function parseOpportunityCooperators(value: unknown): { items: Opportunit
             ...((badge as Record<string, unknown>).imageUrl === undefined ? {} : { imageUrl: (badge as Record<string, unknown>).imageUrl as string }),
           })) }
         : {}),
-      ...(inviter
-        ? { inviter: {
-            sourceType: inviter.sourceType as 'USER' | 'PLATFORM',
-            displayName: inviter.displayName,
-            ...(inviter.avatarUrl === undefined ? {} : { avatarUrl: inviter.avatarUrl }),
-          } }
-        : {}),
+      ...(inviter ? { inviter } : {}),
     }
   })
   return { items, nextCursor: source.nextCursor }

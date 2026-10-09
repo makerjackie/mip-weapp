@@ -1,4 +1,5 @@
-import type { OpportunityCooperator, OpportunityId } from '../../../modules/mip-opportunities'
+import type { OpportunityId } from '../../../modules/mip'
+import type { OpportunityCooperator } from '../../../modules/mip-opportunities'
 import { MipOpportunityError, opportunityModule } from '../../../modules/mip-opportunities'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 
