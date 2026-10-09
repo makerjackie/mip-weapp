@@ -369,12 +369,15 @@ async function listInfluenceInteractions(database, caller, input = {}) {
     params,
   )
   const page = rows.slice(0, limit)
+  // MIW-59：与嘉宾/访客列表同口径补公开详情（城市/代表行业/身份状态/一句话介绍/等级/佩戴勋章），
+  // 竖版卡三标签行与勋章的数据源；visibility 门控在 loadPublicPersonDetails 内。
+  const details = await loadPublicPersonDetails(database, caller.appId, page.map(row => row.actor_user_id))
   return {
     category: 'INTERACTION',
     items: page.map(row => ({
       kind: 'INTERACTION',
       status: 'ACTIVE',
-      actor: influencePersonDto(row, caller),
+      actor: { ...influencePersonDto(row, caller), ...details.get(row.actor_user_id) },
       interactionCount: Number(row.interaction_count || 1),
       event: { id: row.event_id, title: row.event_title },
       unread: false,
@@ -433,12 +436,13 @@ async function listActiveInfluenceInterests(database, caller, input = {}) {
     params,
   )
   const page = rows.slice(0, limit)
+  const details = await loadPublicPersonDetails(database, caller.appId, page.map(row => row.actor_user_id))
   return {
     category: 'ACTIVE_INTEREST',
     items: page.map(row => ({
       kind: 'ACTIVE_INTEREST',
       status: 'ACTIVE',
-      actor: influencePersonDto(row, caller),
+      actor: { ...influencePersonDto(row, caller), ...details.get(row.actor_user_id) },
       source: {
         type: row.source_type,
         label: row.source_label || '关联内容已不可用',
