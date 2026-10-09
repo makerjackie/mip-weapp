@@ -894,6 +894,12 @@ async function createEventRefund(tx, {
   return { id: refundId, status: 'PENDING', idempotent: false }
 }
 
+/**
+ * 公开参与者头像预览。口径必须与公开名单（listPublicParticipants）一致：
+ * share_profile=1 + REGISTERED/ATTENDED + 用户 ACTIVE + 资料存在（互拉黑按查看者过滤）。
+ * 列表/详情的 registration_count 展示子查询同口径——三处数字用户会互相核对，不允许漂移；
+ * 占座与容量判断用的是报名事实口径（不看 share_profile），不在这里。
+ */
 async function loadParticipantPreviews(db, {
   appId,
   eventIds,
@@ -909,6 +915,7 @@ async function loadParticipantPreviews(db, {
   const rows = await db.query(
     `SELECT r.event_id, r.id AS registration_id, p.nickname, a.cloud_file_id AS avatar_file_id
      FROM mip_event_registrations r
+     INNER JOIN mip_users ru ON ru.app_id = r.app_id AND ru.id = r.user_id AND ru.status = 'ACTIVE'
      JOIN mip_profiles p ON p.app_id = r.app_id AND p.user_id = r.user_id
      LEFT JOIN mip_media_assets a ON a.app_id = p.app_id AND a.id = p.avatar_asset_id AND a.status = 'READY'
      WHERE r.app_id = ? AND r.event_id IN (${placeholders})
@@ -1077,8 +1084,11 @@ async function listEvents(db, {
        r.status AS registration_status,
        CASE WHEN e.status = 'PUBLISHED' AND e.ends_at < ? THEN 'ENDED' ELSE e.status END AS public_status,
        (SELECT COUNT(*) FROM mip_event_registrations rc
+         INNER JOIN mip_users rcu ON rcu.app_id = rc.app_id AND rcu.id = rc.user_id AND rcu.status = 'ACTIVE'
+         INNER JOIN mip_profiles rcp ON rcp.app_id = rc.app_id AND rcp.user_id = rc.user_id
         WHERE rc.app_id = e.app_id AND rc.event_id = e.id
-          AND rc.status IN ('REGISTERED','CANCELLATION_PENDING','ATTENDED')) AS registration_count
+          AND rc.share_profile = 1
+          AND rc.status IN ('REGISTERED','ATTENDED')) AS registration_count
      FROM mip_events e
      LEFT JOIN mip_city_branches b ON b.app_id = e.app_id AND b.id = e.branch_id
      LEFT JOIN mip_media_assets a ON a.app_id = e.app_id AND a.id = e.cover_asset_id AND a.status = 'READY'
@@ -1199,8 +1209,11 @@ async function getEvent(db, {
        r.version AS registration_version,
        CASE WHEN e.status = 'PUBLISHED' AND e.ends_at < ? THEN 'ENDED' ELSE e.status END AS public_status,
        (SELECT COUNT(*) FROM mip_event_registrations rc
+         INNER JOIN mip_users rcu ON rcu.app_id = rc.app_id AND rcu.id = rc.user_id AND rcu.status = 'ACTIVE'
+         INNER JOIN mip_profiles rcp ON rcp.app_id = rc.app_id AND rcp.user_id = rc.user_id
         WHERE rc.app_id = e.app_id AND rc.event_id = e.id
-          AND rc.status IN ('REGISTERED','CANCELLATION_PENDING','ATTENDED')) AS registration_count
+          AND rc.share_profile = 1
+          AND rc.status IN ('REGISTERED','ATTENDED')) AS registration_count
      FROM mip_events e
      LEFT JOIN mip_city_branches b ON b.app_id = e.app_id AND b.id = e.branch_id
      LEFT JOIN mip_media_assets a ON a.app_id = e.app_id AND a.id = e.cover_asset_id AND a.status = 'READY'
@@ -2068,8 +2081,11 @@ async function listMyRegistrations(db, {
        latest_refund.last_error_code AS refund_last_error_code,
        CASE WHEN e.status = 'PUBLISHED' AND e.ends_at < ? THEN 'ENDED' ELSE e.status END AS public_status,
        (SELECT COUNT(*) FROM mip_event_registrations rc
+         INNER JOIN mip_users rcu ON rcu.app_id = rc.app_id AND rcu.id = rc.user_id AND rcu.status = 'ACTIVE'
+         INNER JOIN mip_profiles rcp ON rcp.app_id = rc.app_id AND rcp.user_id = rc.user_id
         WHERE rc.app_id = e.app_id AND rc.event_id = e.id
-          AND rc.status IN ('REGISTERED','CANCELLATION_PENDING','ATTENDED')) AS registration_count
+          AND rc.share_profile = 1
+          AND rc.status IN ('REGISTERED','ATTENDED')) AS registration_count
      FROM mip_event_registrations r
      JOIN mip_events e ON e.app_id = r.app_id AND e.id = r.event_id
      LEFT JOIN mip_city_branches b ON b.app_id = e.app_id AND b.id = e.branch_id
