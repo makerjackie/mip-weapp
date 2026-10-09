@@ -1,6 +1,6 @@
 import type { SuperCaseId } from '../../../../modules/mip'
 import type { AiDraftSourceConfirmation } from '../../../../modules/mip-ai'
-import type { SuperCaseDetail, SuperCaseDraft, SuperCaseProject, SuperCaseStatus } from '../../../../modules/mip-cases'
+import type { SuperCaseDetail, SuperCaseDraft, SuperCaseProject, SuperCaseProjectView, SuperCaseStatus } from '../../../../modules/mip-cases'
 import type { OpportunityCatalog } from '../../../../modules/mip-opportunities'
 import { aiText } from '../../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
@@ -65,6 +65,13 @@ function emptyProject(): ProjectForm {
     caseType: '',
     description: '',
   }
+}
+
+// MIP-2：服务端详情视图当前未回传项目级 cityTagId（存储的 projects JSON 里有该字段）。
+// 防御式读取原值：契约补齐后「编辑已有案例」即自动原样保留 tagId，不再依赖 label 反查。
+function storedProjectCityTagId(project: SuperCaseProjectView): string {
+  const value = (project as { cityTagId?: unknown }).cityTagId
+  return typeof value === 'string' ? value.trim() : ''
 }
 
 const PROJECT_TEXT_FIELDS = ['projectName', 'summary', 'responsibility', 'region', 'caseType', 'description']
@@ -164,7 +171,9 @@ Page({
       startedOn: project.startedOn || '',
       responsibility: project.responsibility || '',
       cityLabel: project.cityLabel || '',
-      cityTagId: cityTagIdOf(project.cityLabel || ''),
+      // MIP-2：优先保留服务端自带的城市 tagId，catalog 按 label 反查仅作兜底——
+      // catalog 缓存/时序异常导致反查不到时，不清空已知 tagId（否则发布保存必被 VALIDATION_FAILED 拒绝）。
+      cityTagId: storedProjectCityTagId(project) || cityTagIdOf(project.cityLabel || ''),
       region: project.region || '',
       caseType: project.caseType || '',
       description: project.description || '',
