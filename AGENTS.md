@@ -89,15 +89,16 @@ API Key 是日常通道，Device Flow 是部署高权限通道。只有创建、
 
 ## 12. Skill
 
-| 任务       | Skill                   |
-| ---------- | ----------------------- |
-| 页面/工程  | `weapp-development`     |
-| 视觉       | `weapp-design`          |
-| 云开发     | `weapp-cloudbase`       |
-| 支付       | `wechat-pay`            |
-| 会员领域   | `mip-membership-domain` |
-| 部署运营   | `mip-operations`        |
-| 运行时验收 | `weapp-runtime-qa`      |
+| 任务               | Skill                   |
+| ------------------ | ----------------------- |
+| 页面/工程          | `weapp-development`     |
+| 视觉               | `weapp-design`          |
+| 云开发             | `weapp-cloudbase`       |
+| 支付               | `wechat-pay`            |
+| 会员领域           | `mip-membership-domain` |
+| 部署运营           | `mip-operations`        |
+| Web 后台更新与发布 | `mip-admin-release`     |
+| 运行时验收         | `weapp-runtime-qa`      |
 
 ## 13. 禁止
 

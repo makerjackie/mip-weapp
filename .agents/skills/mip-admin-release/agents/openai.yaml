@@ -1,0 +1,4 @@
+interface:
+  display_name: "MIP 管理后台发布"
+  short_description: "更新 CloudBase 管理后台并核对线上代码、资源与真实页面"
+  default_prompt: "使用 $mip-admin-release 拉取并部署最新管理后台，验证实际访问的代码版本。"
