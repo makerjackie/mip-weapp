@@ -162,4 +162,27 @@ describe('MIP public profiles', () => {
     expect(stickyBar).toContain('{{interestActive ? \'已感兴趣\' : \'我感兴趣\'}}')
     expect(stickyBar).not.toContain('influence.interestCount + \'感兴趣\'')
   })
+
+  it('switches the opportunities tab between published and referred lists (G4)', () => {
+    const view = source('src/packages/member/mip-public-profile/index.wxml')
+    const production = view.slice(view.indexOf('<block wx:elif="{{profile}}">'))
+    const opportunities = production.slice(production.indexOf('activeSection === \'opportunities\''))
+    // figma 3359:5705：两个带计数的子 chips，激活黄底（同档案 chip 风格），默认发布。
+    expect(opportunities).toContain('发布机会 {{opportunities.length}}')
+    expect(opportunities).toContain('引荐机会 {{referrals.length}}')
+    expect(opportunities.match(/data-tab="(published|referral)" bind:tap="changeOpportunityTab"/g) ?? []).toHaveLength(2)
+    expect(opportunities).toContain(`opportunityTab === 'published' ? 'bg-brand text-on-brand' : 'bg-panel text-ink'`)
+    // 两条列表同口径 mip-opportunity-card；空态文案区分；长按删除仅发布列表（引荐非本人所有）。
+    expect(opportunities.match(/<mip-opportunity-card/g) ?? []).toHaveLength(2)
+    expect(opportunities).toContain('bind:tap="openOpportunity" bind:longpress="deleteOwnOpportunity"')
+    const referralBlock = opportunities.slice(opportunities.indexOf('<block wx:else>'))
+    expect(referralBlock).toContain('bind:tap="openOpportunity"')
+    expect(referralBlock).not.toContain('bind:longpress')
+    expect(opportunities).toContain('暂无招募中的机会')
+    expect(opportunities).toContain('暂无引荐机会')
+    const page = source('src/packages/member/mip-public-profile/index.ts')
+    expect(page).toContain('referrals: aggregate.referrals.map(presentProfileOpportunity)')
+    expect(page).toContain(`opportunityTab: 'published'`)
+    expect(page).toContain(`opportunityTab: tab`)
+  })
 })

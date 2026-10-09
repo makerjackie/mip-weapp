@@ -291,26 +291,55 @@
     </view>
 
     <view wx:elif="{{activeSection === 'opportunities'}}" class="pt-3">
-      <view class="mb-3 flex items-center justify-between text-[22rpx]"><text>招募中的机会</text><text class="text-muted">{{opportunities.length}} 个</text></view>
-      <!-- MIW-55 figma 3359:5705：相关机会换用共享 mip-opportunity-card（黄标/想合作胶囊/下架态同口径）。 -->
-      <view wx:if="{{opportunities.length}}" class="flex flex-col gap-3">
-        <view wx:for="{{opportunities}}" wx:key="id" class="active:bg-panel-raised {{deletingId === item.id ? 'opacity-60' : ''}}" aria-role="button" data-id="{{item.id}}" bind:tap="openOpportunity" bind:longpress="deleteOwnOpportunity">
-          <mip-opportunity-card
-            title="{{item.title}}"
-            cover-url="{{item.coverUrl || ''}}"
-            value-text="{{item.valueSummary}}"
-            city-text="{{item.cityLabel || ''}}"
-            location-text="{{item.cityLabel || item.branchName || '全国'}}"
-            target-text="{{item.targetSummary}}"
-            status="{{item.status}}"
-            referral-count="{{item.cooperationCount || 0}}"
-            avatars="{{item.avatarViews}}"
-            type-tags="{{item.typeTagViews}}"
-            pill-label="想合作"
-          />
-        </view>
+      <!-- G4（figma 3359:5705）：相关机会 Tab 两个带计数的子 chips——发布机会（默认，黄底
+           激活）/ 引荐机会（该用户作为引荐人关联的机会）；引荐卡同样复用 mip-opportunity-card
+           （黄标/想合作胶囊/下架置灰同口径），长按删除仅发布列表（引荐机会非本人所有）。 -->
+      <view class="mb-3 flex items-center gap-[16rpx]">
+        <view class="flex h-[56rpx] items-center justify-center rounded-[16rpx] px-[24rpx] text-[28rpx] font-medium {{opportunityTab === 'published' ? 'bg-brand text-on-brand' : 'bg-panel text-ink'}}" aria-role="tab" aria-selected="{{opportunityTab === 'published'}}" data-tab="published" bind:tap="changeOpportunityTab">发布机会 {{opportunities.length}}</view>
+        <view class="flex h-[56rpx] items-center justify-center rounded-[16rpx] px-[24rpx] text-[28rpx] font-medium {{opportunityTab === 'referral' ? 'bg-brand text-on-brand' : 'bg-panel text-ink'}}" aria-role="tab" aria-selected="{{opportunityTab === 'referral'}}" data-tab="referral" bind:tap="changeOpportunityTab">引荐机会 {{referrals.length}}</view>
       </view>
-      <view wx:else class="py-12 text-center text-[22rpx] text-muted">暂无招募中的机会。</view>
+      <block wx:if="{{opportunityTab === 'published'}}">
+        <view class="mb-3 flex items-center justify-between text-[22rpx]"><text>招募中的机会</text><text class="text-muted">{{opportunities.length}} 个</text></view>
+        <!-- MIW-55 figma 3359:5705：相关机会换用共享 mip-opportunity-card（黄标/想合作胶囊/下架态同口径）。 -->
+        <view wx:if="{{opportunities.length}}" class="flex flex-col gap-3">
+          <view wx:for="{{opportunities}}" wx:key="id" class="active:bg-panel-raised {{deletingId === item.id ? 'opacity-60' : ''}}" aria-role="button" data-id="{{item.id}}" bind:tap="openOpportunity" bind:longpress="deleteOwnOpportunity">
+            <mip-opportunity-card
+              title="{{item.title}}"
+              cover-url="{{item.coverUrl || ''}}"
+              value-text="{{item.valueSummary}}"
+              city-text="{{item.cityLabel || ''}}"
+              location-text="{{item.cityLabel || item.branchName || '全国'}}"
+              target-text="{{item.targetSummary}}"
+              status="{{item.status}}"
+              referral-count="{{item.cooperationCount || 0}}"
+              avatars="{{item.avatarViews}}"
+              type-tags="{{item.typeTagViews}}"
+              pill-label="想合作"
+            />
+          </view>
+        </view>
+        <view wx:else class="py-12 text-center text-[22rpx] text-muted">暂无招募中的机会。</view>
+      </block>
+      <block wx:else>
+        <view wx:if="{{referrals.length}}" class="flex flex-col gap-3">
+          <view wx:for="{{referrals}}" wx:key="id" class="active:bg-panel-raised" aria-role="button" data-id="{{item.id}}" bind:tap="openOpportunity">
+            <mip-opportunity-card
+              title="{{item.title}}"
+              cover-url="{{item.coverUrl || ''}}"
+              value-text="{{item.valueSummary}}"
+              city-text="{{item.cityLabel || ''}}"
+              location-text="{{item.cityLabel || item.branchName || '全国'}}"
+              target-text="{{item.targetSummary}}"
+              status="{{item.status}}"
+              referral-count="{{item.cooperationCount || 0}}"
+              avatars="{{item.avatarViews}}"
+              type-tags="{{item.typeTagViews}}"
+              pill-label="想合作"
+            />
+          </view>
+        </view>
+        <view wx:else class="py-12 text-center text-[22rpx] text-muted">暂无引荐机会。</view>
+      </block>
     </view>
 
     <view wx:if="{{!isSelf && safetyState === 'access'}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[24rpx]">需要完成身份信息后继续。</view><t-button block theme="primary" bind:tap="openAccess">继续</t-button></view>

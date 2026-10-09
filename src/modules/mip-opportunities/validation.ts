@@ -538,11 +538,21 @@ export function parsePublicProfileAggregate(value: unknown): PublicProfileAggreg
     || typeof source.interestActive !== 'boolean') {
     throw new Error('人才服务返回了无效响应')
   }
+  // G4：引荐机会列表与发布列表同 DTO/同校验；旧服务端未回该字段时按空数组处理
+  // （前端 chip 计数 0、切换走空态），新服务端畸形列表整页拒绝。
+  let referrals: PublicProfileOpportunity[] = []
+  if (source.referrals !== undefined) {
+    if (!Array.isArray(source.referrals) || source.referrals.length > 200) {
+      throw new Error('人才服务返回了无效响应')
+    }
+    referrals = source.referrals.map(profileOpportunity)
+  }
   return {
     profile: parsePublicPerson(source.profile),
     cooperationCards: source.cooperationCards.map(cooperationCard),
     superCases: source.superCases.map(superCase),
     opportunities: source.opportunities.map(profileOpportunity),
+    referrals,
     interestActive: source.interestActive,
     ...(source.influence === undefined ? {} : { influence: parseProfileInfluence(source.influence) }),
   }

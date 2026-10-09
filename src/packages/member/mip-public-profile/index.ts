@@ -53,6 +53,15 @@ interface PublicProfileOpportunityView extends PublicProfileOpportunity {
   avatarViews: string[]
 }
 
+// 发布/引荐两张列表共用同一卡片视图口径（黄标类型 + 想合作胶囊保底数组）。
+function presentProfileOpportunity(item: PublicProfileOpportunity): PublicProfileOpportunityView {
+  return {
+    ...item,
+    typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
+    avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
+  }
+}
+
 function monthText(value: string) {
   const date = new Date(value)
   return Number.isFinite(date.getTime())
@@ -88,6 +97,10 @@ Page({
     cooperationCards: [] as CooperationCardView[],
     superCases: [] as SuperCaseView[],
     opportunities: [] as PublicProfileOpportunityView[],
+    // G4（审计 2026-10-09，figma 3359:5705）：相关机会 Tab 的「发布/引荐」子筛选，
+    // 引荐列表 = 该用户作为引荐人 ACTIVE 关联的公开机会（服务端事实，无则空数组）。
+    referrals: [] as PublicProfileOpportunityView[],
+    opportunityTab: 'published' as 'published' | 'referral',
     influence: null as ProfileInfluenceSummary | null,
     interestActive: false,
     interestState: 'idle' as 'idle' | 'loading' | 'ready' | 'access' | 'syncing' | 'error',
@@ -191,11 +204,8 @@ Page({
           ...item,
           publishedText: monthText(item.publishedAt),
         })),
-        opportunities: aggregate.opportunities.map(item => ({
-          ...item,
-          typeTagViews: (item.typeKeys || []).map(key => ({ key, label: opportunityTypeLabel(key) })),
-          avatarViews: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
-        })),
+        opportunities: aggregate.opportunities.map(presentProfileOpportunity),
+        referrals: aggregate.referrals.map(presentProfileOpportunity),
         influence: aggregate.influence || null,
         interestActive: interest.active,
         interestState: interest.pending ? 'syncing' : 'ready',
@@ -399,6 +409,14 @@ Page({
       return
     }
     this.setData({ activeSection })
+  },
+
+  // G4：相关机会 Tab 的「发布机会 / 引荐机会」子筛选切换（默认发布）。
+  changeOpportunityTab(event: WechatMiniprogram.TouchEvent) {
+    const tab = String(event.currentTarget.dataset.tab || '')
+    if ((tab === 'published' || tab === 'referral') && tab !== this.data.opportunityTab) {
+      this.setData({ opportunityTab: tab })
+    }
   },
 
   toggleInterest() {
@@ -684,9 +702,10 @@ Page({
     }
   },
 
+  // G4：发布/引荐两张列表的卡都跳机会详情；长按删除仅发布列表（引荐机会非本人所有）。
   openOpportunity(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
-    if (id) {
+    if (id && [...this.data.opportunities, ...this.data.referrals].some(entry => entry.id === id)) {
       caseNavigateTo({ url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(id)}` })
     }
   },

@@ -58,7 +58,7 @@ function opportunityRow(typeKeysJson) {
   }
 }
 
-function fakeDatabase(opportunityRows) {
+function fakeDatabase(opportunityRows, referralRows = []) {
   return {
     async one(sql) {
       if (sql.includes('FROM mip_users')) return profileRow
@@ -66,6 +66,9 @@ function fakeDatabase(opportunityRows) {
       return null
     },
     async query(sql) {
+      // G4：引荐机会查询在 opportunities 之上 INNER JOIN mip_referral_intents，先按
+      // 引荐指纹分流，避免与发布列表查询共用同一返回。
+      if (sql.includes('mip_referral_intents')) return referralRows
       if (/FROM mip_opportunities o\b/.test(sql)) return opportunityRows
       return []
     },
@@ -79,6 +82,23 @@ test('aggregate keeps historical opportunities with NULL type_keys_json renderab
   assert.deepEqual(aggregate.opportunities[0].typeKeys, [])
   assert.deepEqual(aggregate.opportunities[0].avatars, [])
   assert.equal(aggregate.profile.profileRef, profileRef)
+})
+
+test('aggregate returns the referred opportunity list from active referral intents (G4)', async () => {
+  const profileRef = createProfileRef({ appId, userId: target }, secret)
+  const noReferrals = await getPublicProfileAggregate(fakeDatabase([opportunityRow(null)]), caller, { profileRef })
+  // 无引荐事实时回空数组（前端 chip 计数 0、切换走空态），不造数据。
+  assert.deepEqual(noReferrals.referrals, [])
+  const aggregate = await getPublicProfileAggregate(
+    fakeDatabase([], [opportunityRow(['PARTNER'])]),
+    caller,
+    { profileRef },
+  )
+  assert.equal(aggregate.opportunities.length, 0)
+  assert.equal(aggregate.referrals.length, 1)
+  assert.equal(aggregate.referrals[0].id, opportunityId)
+  assert.deepEqual(aggregate.referrals[0].typeKeys, ['PARTNER'])
+  assert.equal(aggregate.referrals[0].status, 'PUBLISHED')
 })
 
 test('aggregate projects array and JSON-string type_keys_json into string arrays', async () => {

@@ -242,7 +242,17 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
 
   const profileVisibility = visibleFields(row.visibility_json)
   const opportunityPrivacy = opportunityVisibility(caller, 'o', 'owner_profile')
-  const [tags, badges, cooperationCards, superCases, opportunities, interest, influence, level] = await Promise.all([
+  const opportunitySelect = `SELECT o.id, o.title, o.value_summary, o.target_summary, o.referral_count,
+      o.type_keys_json, o.published_at, branch.name AS branch_name, city.label AS city_label,
+      cover.cloud_file_id AS cover_file_id
+    FROM mip_opportunities o
+    INNER JOIN mip_profiles owner_profile ON owner_profile.app_id = o.app_id AND owner_profile.user_id = o.owner_user_id
+    LEFT JOIN mip_city_branches branch
+      ON branch.app_id = o.app_id AND branch.id = o.branch_id AND branch.status = 'ACTIVE'
+    LEFT JOIN mip_tags city ON city.app_id = o.app_id AND city.id = o.city_tag_id AND city.enabled = 1
+    LEFT JOIN mip_media_assets cover
+      ON cover.app_id = o.app_id AND cover.id = o.cover_asset_id AND cover.status = 'READY'`
+  const [tags, badges, cooperationCards, superCases, opportunities, referrals, interest, influence, level] = await Promise.all([
     loadProfileTags(database, caller.appId, [targetUserId]),
     loadPublicBadges(database, caller.appId, [targetUserId]),
     database.query(
@@ -266,20 +276,24 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
       [caller.appId, targetUserId],
     ),
     database.query(
-      `SELECT o.id, o.title, o.value_summary, o.target_summary, o.referral_count,
-              o.type_keys_json, o.published_at, branch.name AS branch_name, city.label AS city_label,
-              cover.cloud_file_id AS cover_file_id
-       FROM mip_opportunities o
-       INNER JOIN mip_profiles owner_profile ON owner_profile.app_id = o.app_id AND owner_profile.user_id = o.owner_user_id
-       LEFT JOIN mip_city_branches branch
-         ON branch.app_id = o.app_id AND branch.id = o.branch_id AND branch.status = 'ACTIVE'
-       LEFT JOIN mip_tags city ON city.app_id = o.app_id AND city.id = o.city_tag_id AND city.enabled = 1
-       LEFT JOIN mip_media_assets cover
-         ON cover.app_id = o.app_id AND cover.id = o.cover_asset_id AND cover.status = 'READY'
+      `${opportunitySelect}
        WHERE o.app_id = ? AND o.owner_user_id = ? AND o.status = 'PUBLISHED'
          AND ${opportunityPrivacy.sql}
        ORDER BY o.published_at DESC, o.id DESC`,
       [caller.appId, targetUserId, ...opportunityPrivacy.params],
+    ),
+    // G4（审计 2026-10-09，figma 3359:5705）：「引荐机会」= 该档案用户作为引荐人
+    // （mip_referral_intents.actor_user_id）当前 ACTIVE 关联的 PUBLISHED 机会，与发布
+    // 列表同一可见性/拉黑口径。引荐事实为空时回空数组，前端 chip 计数 0 + 空态，不造数据。
+    database.query(
+      `${opportunitySelect}
+       INNER JOIN mip_referral_intents referral ON referral.app_id = o.app_id
+         AND referral.opportunity_id = o.id AND referral.actor_user_id = ?
+         AND referral.status = 'ACTIVE'
+       WHERE o.app_id = ? AND o.status = 'PUBLISHED'
+         AND ${opportunityPrivacy.sql}
+       ORDER BY o.published_at DESC, o.id DESC`,
+      [targetUserId, caller.appId, ...opportunityPrivacy.params],
     ),
     caller.userId && caller.userId !== targetUserId
       ? database.one(
@@ -294,7 +308,25 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
     loadPublicLevel(database, caller.appId, targetUserId),
   ])
 
-  const cooperation = await cooperationSummaries(database, caller, opportunities.map(item => item.id))
+  const cooperation = await cooperationSummaries(database, caller, [...opportunities, ...referrals].map(item => item.id))
+  // MIW-55 figma 3359:5705 相关机会卡：黄标取机会类型、胶囊取最近想合作头像。
+  // 不能过 jsonObject：它对数组和 NULL 的兜底都是 {}（对象），`.filter` 会 500 掉整个聚合；
+  // arrayOrEmpty 直接收口 mysql2 的 JSON 数组、双编码字符串与历史 NULL 行。
+  const opportunityDto = item => ({
+    id: item.id,
+    title: item.title,
+    valueSummary: item.value_summary,
+    targetSummary: item.target_summary,
+    referralCount: Number(item.referral_count || 0),
+    cooperationCount: cooperation.get(item.id)?.count || 0,
+    typeKeys: arrayOrEmpty(item.type_keys_json).filter(key => typeof key === 'string'),
+    avatars: cooperation.get(item.id)?.avatars || [],
+    branchName: item.branch_name || undefined,
+    cityLabel: item.city_label || undefined,
+    coverUrl: item.cover_file_id || undefined,
+    status: 'PUBLISHED',
+    publishedAt: iso(item.published_at),
+  })
   return {
     profile: publicProfileDto(
       row,
@@ -325,24 +357,8 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
       status: 'PUBLISHED',
       publishedAt: iso(item.published_at),
     })),
-    opportunities: opportunities.map(item => ({
-      id: item.id,
-      title: item.title,
-      valueSummary: item.value_summary,
-      targetSummary: item.target_summary,
-      referralCount: Number(item.referral_count || 0),
-      cooperationCount: cooperation.get(item.id)?.count || 0,
-      // MIW-55 figma 3359:5705 相关机会卡：黄标取机会类型、胶囊取最近想合作头像。
-      // 不能过 jsonObject：它对数组和 NULL 的兜底都是 {}（对象），`.filter` 会 500 掉整个聚合；
-      // arrayOrEmpty 直接收口 mysql2 的 JSON 数组、双编码字符串与历史 NULL 行。
-      typeKeys: arrayOrEmpty(item.type_keys_json).filter(key => typeof key === 'string'),
-      avatars: cooperation.get(item.id)?.avatars || [],
-      branchName: item.branch_name || undefined,
-      cityLabel: item.city_label || undefined,
-      coverUrl: item.cover_file_id || undefined,
-      status: 'PUBLISHED',
-      publishedAt: iso(item.published_at),
-    })),
+    opportunities: opportunities.map(opportunityDto),
+    referrals: referrals.map(opportunityDto),
     interestActive: interest?.status === 'ACTIVE',
     ...(influence ? { influence } : {}),
   }

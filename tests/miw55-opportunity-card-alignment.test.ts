@@ -114,6 +114,25 @@ describe('MIW-55 opportunity card alignment', () => {
     })
     expect(enhanced.opportunities[0].typeKeys).toEqual(['RESOURCE'])
     expect(enhanced.opportunities[0].avatars).toEqual(['cloud://a'])
+
+    // G4：referrals 与发布列表同 DTO 同校验；旧服务端缺省按空数组（chip 计数 0 + 空态），
+    // 新服务端畸形列表整页拒绝。
+    expect(parsePublicProfileAggregate({ ...base, opportunities: [] }).referrals).toEqual([])
+    expect(parsePublicProfileAggregate({
+      ...base,
+      opportunities: [],
+      referrals: [{
+        id: '60000000-0000-4000-8000-000000000002',
+        title: '引荐的机会',
+        valueSummary: '15000',
+        targetSummary: '露营地帐篷供应商',
+        referralCount: 0,
+        status: 'PUBLISHED',
+        publishedAt: '2026-01-05T13:00:00.000Z',
+      }],
+    }).referrals[0]).toMatchObject({ id: '60000000-0000-4000-8000-000000000002', title: '引荐的机会', cooperationCount: 0 })
+    expect(() => parsePublicProfileAggregate({ ...base, opportunities: [], referrals: 'x' })).toThrow()
+    expect(() => parsePublicProfileAggregate({ ...base, opportunities: [], referrals: [{ id: 'broken' }] })).toThrow()
   })
 
   it('selects type keys and returns avatars from the public profile aggregate', () => {

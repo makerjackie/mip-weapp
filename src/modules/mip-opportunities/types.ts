@@ -313,6 +313,8 @@ export interface PublicProfileAggregate {
   cooperationCards: PublicProfileCooperationCard[]
   superCases: PublicProfileSuperCase[]
   opportunities: PublicProfileOpportunity[]
+  /** G4（审计 2026-10-09）：该档案用户作为引荐人 ACTIVE 关联的公开机会，无事实时空数组。 */
+  referrals: PublicProfileOpportunity[]
   interestActive: boolean
   influence?: ProfileInfluenceSummary
 }
