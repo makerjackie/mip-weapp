@@ -277,13 +277,19 @@
 
     <view wx:elif="{{activeSection === 'cases'}}" class="pt-3">
       <view wx:if="{{superCases.length}}" class="relative pl-[100rpx]">
-        <view class="absolute bottom-6 left-[36rpx] top-3 w-[2rpx] bg-brand" />
-        <view wx:for="{{superCases}}" wx:key="id" class="relative pb-6 {{deletingId === item.id ? 'opacity-60' : ''}}" aria-role="button" data-id="{{item.id}}" bind:tap="openSuperCase" bind:longpress="deleteOwnSuperCase">
-          <view class="absolute left-[-76rpx] top-[12rpx] h-[24rpx] w-[24rpx] rounded-full border-[2rpx] border-white bg-brand" />
-          <view wx:if="{{item.publishedText}}" class="mb-3 text-[22rpx] font-medium text-brand">{{item.publishedText}}</view>
-          <view class="overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised">
-            <image wx:if="{{item.coverUrl}}" class="h-[220rpx] w-full bg-panel-raised" src="{{item.coverUrl}}" mode="aspectFill" />
-            <view class="px-3 py-3"><view class="line-clamp-1 text-[24rpx] font-medium">{{item.projectName}}</view><view class="mt-2 line-clamp-2 text-[22rpx] leading-5 text-muted">{{item.summary}}</view><view wx:if="{{item.cityLabel || item.industryLabel}}" class="mt-3 truncate text-[22rpx] text-brand">{{item.cityLabel}} {{item.industryLabel}}</view></view>
+        <!-- MIW-63 figma 1958:11897：紧凑行卡（578×126 文件夹图标+标题+摘要，无封面）；
+             竖线按段绘制——首条自圆点起、中间贯通、末条止于圆点（设计以最后一个黄点收尾）。 -->
+        <view wx:for="{{superCases}}" wx:key="id" class="relative pb-[36rpx] {{deletingId === item.id ? 'opacity-60' : ''}}" aria-role="button" data-id="{{item.id}}" bind:tap="openSuperCase" bind:longpress="deleteOwnSuperCase">
+          <view wx:if="{{index === 0 && superCases.length > 1}}" class="absolute bottom-0 left-[-64rpx] top-[16rpx] w-[2rpx] bg-brand" />
+          <view wx:elif="{{index === superCases.length - 1 && superCases.length > 1}}" class="absolute left-[-64rpx] top-0 h-[16rpx] w-[2rpx] bg-brand" />
+          <view wx:elif="{{index > 0}}" class="absolute bottom-0 left-[-64rpx] top-0 w-[2rpx] bg-brand" />
+          <view class="absolute left-[-76rpx] top-[4rpx] h-[24rpx] w-[24rpx] rounded-full border-[2rpx] border-white bg-brand" />
+          <view wx:if="{{item.publishedText}}" class="mb-[32rpx] text-center text-[24rpx] font-semibold leading-[33.6rpx] text-brand">{{item.publishedText}}</view>
+          <view class="overflow-hidden rounded-[16rpx] bg-panel px-[28rpx] pb-[30rpx] pt-[16rpx] active:bg-panel-raised">
+            <view class="flex items-center gap-[12rpx]"><mip-icon class="shrink-0" name="folder-5-line" size="{{16}}" color="var(--color-ink)" /><view class="line-clamp-1 text-[28rpx] font-medium leading-[39.2rpx] text-ink">{{item.projectName}}</view></view>
+            <view class="line-clamp-1 text-[24rpx] leading-[33.6rpx] text-muted">{{item.summary}}</view>
+            <!-- A4 待拍板：设计稿无此行；拍板为「有意增强」则更新稿，否则删除本行。 -->
+            <view wx:if="{{item.cityLabel || item.industryLabel}}" class="mt-[8rpx] truncate text-[22rpx] leading-[30rpx] text-brand">{{item.cityLabel}} {{item.industryLabel}}</view>
           </view>
         </view>
       </view>

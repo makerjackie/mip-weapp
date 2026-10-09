@@ -25,7 +25,8 @@
         <view wx:if="{{project.cityLabel}}" class="grid min-h-[80rpx] grid-cols-[176rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[24rpx] leading-[33.6rpx] text-muted">主营城市</view><view class="min-w-0 text-right text-[28rpx] font-medium leading-[39.2rpx]">{{project.cityLabel}}</view></view>
         <view wx:if="{{project.region}}" class="grid min-h-[80rpx] grid-cols-[176rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[24rpx] leading-[33.6rpx] text-muted">主营地区</view><view class="min-w-0 text-right text-[28rpx] font-medium leading-[39.2rpx]">{{project.region}}</view></view>
         <view wx:if="{{project.caseType}}" class="grid min-h-[80rpx] grid-cols-[176rpx_minmax(0,1fr)] items-start gap-3 py-2"><view class="text-[24rpx] leading-[33.6rpx] text-muted">项目类型</view><view class="min-w-0 text-right text-[28rpx] font-medium leading-[39.2rpx]">{{project.caseType}}</view></view>
-        <view wx:if="{{project.description}}" class="mt-1 border-t border-line pt-4"><view class="text-[24rpx] leading-[33.6rpx] text-muted">展开讲讲</view><view class="mt-3 whitespace-pre-wrap text-[26rpx] leading-[39.2rpx]">{{project.description}}</view></view>
+        <!-- MIW-63 figma 2037:12261：展开讲讲上方无分隔线，仅留段间距。 -->
+        <view wx:if="{{project.description}}" class="mt-6"><view class="text-[24rpx] leading-[33.6rpx] text-muted">展开讲讲</view><view class="mt-3 whitespace-pre-wrap text-[26rpx] leading-[39.2rpx]">{{project.description}}</view></view>
       </view>
     </view>
     <view wx:if="{{item.media.length}}" class="mt-3 flex flex-col gap-3">

@@ -44,10 +44,10 @@ function typeOptionViews(selectedKeys: Set<OpportunityTypeKey>) {
     .filter((item): item is TypeOption => Boolean(item))
 }
 
-/** 项目状态收起行的完整文案：状态名 + 终审说明（QZ2 文案单点取自 catalog）。 */
+/** 项目状态收起行的完整文案：状态名 + 终审说明（QZ2 文案单点取自 catalog）；逗号随 figma 3359:6086 用半角。 */
 function projectStatusTextOf(key: OpportunityProjectStatus) {
   const option = opportunityProjectStatusOptions.find(item => item.key === key)
-  return option ? `${option.label}，${option.description}` : ''
+  return option ? `${option.label}, ${option.description}` : ''
 }
 
 function cityGridOptions(options: CityOption[], selectedId = '') {
