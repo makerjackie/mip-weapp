@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 58,
+  "routeCount": 59,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
@@ -1167,6 +1167,36 @@
       "deviceRequired": [
         "share"
       ]
+    },
+    {
+      "id": "M58",
+      "name": "想跟TA合作",
+      "path": "packages/member/mip-opportunity-cooperators/index",
+      "selector": "#mip-opportunity-cooperators-page",
+      "group": "member",
+      "kind": "data",
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "blocked",
+        "error"
+      ],
+      "acceptStates": [
+        "ready",
+        "empty"
+      ],
+      "readyAssertion": "state === 'ready' || state === 'empty'",
+      "query": [
+        "id"
+      ],
+      "queryFixture": {
+        "sourceRoute": "pages/opportunities/index",
+        "dataPath": "opportunities",
+        "values": {
+          "id": "id"
+        }
+      }
     },
     {
       "id": "M11",

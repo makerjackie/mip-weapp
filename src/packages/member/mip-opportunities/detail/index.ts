@@ -32,17 +32,11 @@ Page({
     roleNames: [] as string[],
     message: '',
     acting: false,
-    cooperatorsVisible: false,
-    cooperators: [] as OpportunityDetail['author'][],
-    cooperatorsCursor: '',
-    cooperatorsLoading: false,
-    cooperatorsMessage: '',
     // figma 1768_37414/1768_37369 机会详情还原态开关，fixture 专用；
     // 生产保持 skeleton+卡片+介绍布局（opportunity-detail 测试 pin）。
     figmaLayout: false,
   },
   resumeInteraction: '' as '' | 'cooperation',
-  cooperatorsRequestSeq: 0,
 
   onLoad(options: Record<string, string | undefined>) {
     const id = String(options.id || '') as OpportunityId
@@ -63,10 +57,6 @@ Page({
     if (this.data.item) {
       void this.load()
     }
-  },
-
-  onUnload() {
-    this.cooperatorsRequestSeq += 1
   },
 
   async load() {
@@ -156,59 +146,11 @@ Page({
     }
   },
 
-  async openCooperators() {
-    this.setData({ cooperatorsVisible: true, cooperators: [], cooperatorsCursor: '', cooperatorsMessage: '' })
-    await this.loadCooperators(true)
-  },
-
-  closeCooperators() {
-    this.cooperatorsRequestSeq += 1
-    this.setData({ cooperatorsVisible: false, cooperatorsLoading: false })
-  },
-
-  handleCooperatorsVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
-    if (!event.detail.visible) {
-      this.closeCooperators()
-      // MIW-40 S3：名单弹层关闭后再出订阅引导层，不抢占当前动作。
-      this.checkSubscriptionGuide()
-    }
-  },
-
-  async loadCooperators(reset = false) {
-    if (!reset && (!this.data.cooperatorsCursor || this.data.cooperatorsLoading)) {
-      return
-    }
-    const seq = ++this.cooperatorsRequestSeq
-    this.setData({ cooperatorsLoading: true, cooperatorsMessage: '' })
-    try {
-      const page = await opportunityModule.listCooperators(this.data.id, reset ? undefined : this.data.cooperatorsCursor)
-      if (seq !== this.cooperatorsRequestSeq) {
-        return
-      }
-      const current = reset ? [] : this.data.cooperators
-      const ids = new Set(current.map(item => item.profileRef))
-      this.setData({ cooperators: [...current, ...page.items.filter(item => !ids.has(item.profileRef))], cooperatorsCursor: page.nextCursor || '' })
-    }
-    catch (error) {
-      if (seq === this.cooperatorsRequestSeq) {
-        this.setData({ cooperatorsMessage: error instanceof Error ? error.message : '合作意向名单加载失败' })
-      }
-    }
-    finally {
-      if (seq === this.cooperatorsRequestSeq) {
-        this.setData({ cooperatorsLoading: false })
-      }
-    }
-  },
-
-  loadMoreCooperators() { void this.loadCooperators(false) },
-  retryCooperators() { void this.loadCooperators(true) },
-
-  openTeamMember(event: WechatMiniprogram.TouchEvent) {
-    const profileRef = String(event.currentTarget.dataset.profileRef || '')
-    if (profileRef) {
-      caseNavigateTo({ url: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}` })
-    }
+  // G1（审计 2026-10-09，figma 1769_37984）：「+N想合作」胶囊改为跳转独立二级页
+  // 「想跟TA合作」（2 列竖版人才卡，服务端 activated_at DESC 最新在前），
+  // 取代旧底部弹层；数据仍走现有合作名单接口（服务端可见性/登录校验不变）。
+  openCooperators() {
+    caseNavigateTo({ url: `/packages/member/mip-opportunity-cooperators/index?id=${encodeURIComponent(this.data.id)}` })
   },
 
   edit() {
@@ -221,8 +163,9 @@ Page({
 
   /**
    * MIW-40 订阅授权引导层（发布人侧）：仅在 item.mine 时检查；组件内部还有
-   * 模板/节奏门控（guide-policy）。三个时机都顺延到当前动作完成后：
-   * 详情加载完成（S1，编辑返回经 onShow→load 复用，S2）、想合作名单弹层关闭（S3）。
+   * 模板/节奏门控（guide-policy）。两个时机都顺延到当前动作完成后：
+   * 详情加载完成（S1，编辑返回与「想跟TA合作」页返回经 onShow→load 复用，S2）。
+   * G1 后名单是独立页面，页内弹层关闭时机（S3）随之移除——从名单页返回走 S2。
    * 引导层非原生面板，无需手势上下文；原生面板只在层内按钮 tap 中触发。
    * S8：发布成功 redirectTo 详情（无上级页面）时本页是落地页——只清 pending，
    * 展示沿用 S1 检查，避免同一机会连续弹两次。

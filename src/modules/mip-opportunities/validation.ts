@@ -1,6 +1,7 @@
 import type { BranchId, CooperationRoleKey } from '../mip'
 import type {
   OpportunityCommercialTerms,
+  OpportunityCooperator,
   OpportunityDetail,
   OpportunityDraft,
   OpportunityFilter,
@@ -552,21 +553,71 @@ export function createMutationKey(prefix: string) {
   return `${prefix}:${Date.now().toString(36)}:${random}`
 }
 
-export function parseOpportunityCooperators(value: unknown): { items: OpportunityDetail['author'][], nextCursor?: string } {
+export function parseOpportunityCooperators(value: unknown): { items: OpportunityCooperator[], nextCursor?: string } {
   const source = record(value)
   if (!Array.isArray(source.items) || !(source.nextCursor === undefined || typeof source.nextCursor === 'string')) {
     throw new Error('合作意向名单返回了无效响应')
   }
   const items = source.items.map((value: unknown) => {
     const item = record(value)
-    if (Object.keys(item).some(key => !['profileRef', 'nickname', 'headline', 'avatarUrl'].includes(key))
+    // G1（审计 2026-10-09）：名单升级为人才卡 DTO——公开详情（城市/行业/身份状态/简介/
+    // 等级/勋章）+ 邀请人标注（服务端判定 USER/PLATFORM）。严格校验未知键拒绝、
+    // 畸形整页拒绝；私密开关省略的字段保持缺省，不造值。
+    if (Object.keys(item).some(key => !['profileRef', 'nickname', 'headline', 'avatarUrl', 'cityName', 'industryLabel', 'identityStatus', 'introduction', 'level', 'badges', 'inviter'].includes(key))
       || typeof item.profileRef !== 'string' || !item.profileRef.startsWith('p1.') || item.profileRef.length > 200
       || typeof item.nickname !== 'string' || !item.nickname || item.nickname.length > 100
       || !(item.headline === undefined || typeof item.headline === 'string')
-      || !(item.avatarUrl === undefined || typeof item.avatarUrl === 'string')) {
+      || !(item.avatarUrl === undefined || typeof item.avatarUrl === 'string')
+      || !(item.cityName === undefined || typeof item.cityName === 'string')
+      || !(item.industryLabel === undefined || typeof item.industryLabel === 'string')
+      || !(item.identityStatus === undefined || typeof item.identityStatus === 'string')
+      || !(item.introduction === undefined || typeof item.introduction === 'string')) {
       throw new Error('合作意向名单返回了无效响应')
     }
-    return { profileRef: item.profileRef, nickname: item.nickname, headline: item.headline, avatarUrl: item.avatarUrl }
+    const level = item.level && typeof item.level === 'object' && !Array.isArray(item.level)
+      ? item.level as Record<string, unknown>
+      : undefined
+    if (level && !(Number.isInteger(level.number) && Number(level.number) > 0 && typeof level.name === 'string' && level.name)) {
+      throw new Error('合作意向名单返回了无效响应')
+    }
+    const badges = item.badges === undefined ? undefined : Array.isArray(item.badges) ? item.badges : null
+    if (badges === null || (Array.isArray(badges) && badges.some(badge => !badge || typeof badge !== 'object'
+      || Array.isArray(badge) || typeof (badge as Record<string, unknown>).id !== 'string'
+      || typeof (badge as Record<string, unknown>).name !== 'string'))) {
+      throw new Error('合作意向名单返回了无效响应')
+    }
+    const inviter = item.inviter === undefined ? undefined : record(item.inviter)
+    if (inviter && (Object.keys(inviter).some(key => !['sourceType', 'displayName', 'avatarUrl'].includes(key))
+      || !['USER', 'PLATFORM'].includes(String(inviter.sourceType))
+      || typeof inviter.displayName !== 'string' || !inviter.displayName || inviter.displayName.length > 64
+      || !(inviter.avatarUrl === undefined || typeof inviter.avatarUrl === 'string'))) {
+      throw new Error('合作意向名单返回了无效响应')
+    }
+    return {
+      profileRef: item.profileRef,
+      nickname: item.nickname,
+      headline: item.headline,
+      avatarUrl: item.avatarUrl,
+      ...(item.cityName === undefined ? {} : { cityName: item.cityName }),
+      ...(item.industryLabel === undefined ? {} : { industryLabel: item.industryLabel }),
+      ...(item.identityStatus === undefined ? {} : { identityStatus: item.identityStatus }),
+      ...(item.introduction === undefined ? {} : { introduction: item.introduction }),
+      ...(level ? { level: { number: Number(level.number), name: level.name as string } } : {}),
+      ...(badges?.length
+        ? { badges: badges.map(badge => ({
+            id: (badge as Record<string, unknown>).id as string,
+            name: (badge as Record<string, unknown>).name as string,
+            ...((badge as Record<string, unknown>).imageUrl === undefined ? {} : { imageUrl: (badge as Record<string, unknown>).imageUrl as string }),
+          })) }
+        : {}),
+      ...(inviter
+        ? { inviter: {
+            sourceType: inviter.sourceType as 'USER' | 'PLATFORM',
+            displayName: inviter.displayName,
+            ...(inviter.avatarUrl === undefined ? {} : { avatarUrl: inviter.avatarUrl }),
+          } }
+        : {}),
+    }
   })
   return { items, nextCursor: source.nextCursor }
 }

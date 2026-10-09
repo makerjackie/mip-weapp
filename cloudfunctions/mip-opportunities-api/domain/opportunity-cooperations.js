@@ -5,6 +5,7 @@ const { lockActiveContributor } = require('../lib/auth')
 const { createProfileRef } = require('../lib/profile-ref')
 const { appendAudit, appendOutbox, decodeCursor, encodeCursor, idempotentTransaction, jsonObject, mutualBlockFilter, uuid } = require('./common')
 const { canBrowsePlatformOpportunities, opportunityVisibility } = require('./journey-access')
+const { loadHeartInviters, loadPublicPersonDetails } = require('./public-person-details')
 
 async function visibleOpportunity(database, caller, id, lock = false) {
   if (!caller.userId) throw new Error('AUTH_REQUIRED')
@@ -77,7 +78,24 @@ async function listOpportunityCooperators(database, caller, input) {
     ORDER BY intent.activated_at DESC, intent.id DESC LIMIT ?`,
   [...members.params, ...(cursor ? [new Date(cursor.timestamp), new Date(cursor.timestamp), cursor.id] : []), size + 1])
   const page = rows.slice(0, size)
-  return { items: page.map(row => memberDto(row, caller)), nextCursor: rows.length > size ? encodeCursor(page.at(-1).activated_at, page.at(-1).id) : undefined }
+  // G1（审计 2026-10-09）：「想跟TA合作」页用竖版人才卡（figma 1769_37984），卡片
+  // 字段口径对齐感兴趣名单——等级/城市/代表行业/身份状态/简介/佩戴勋章 + 邀请人标注。
+  // 只补列表已授权成员，可见性/拉黑由 visibleMembers 负责；不造值，缺什么省什么。
+  const [details, inviters] = await Promise.all([
+    loadPublicPersonDetails(database, caller.appId, page.map(row => row.user_id)),
+    loadHeartInviters(database, caller.appId, page.map(row => row.user_id)),
+  ])
+  return {
+    items: page.map((row) => {
+      const inviter = inviters.get(row.user_id)
+      return {
+        ...memberDto(row, caller),
+        ...details.get(row.user_id),
+        ...(inviter ? { inviter } : {}),
+      }
+    }),
+    nextCursor: rows.length > size ? encodeCursor(page.at(-1).activated_at, page.at(-1).id) : undefined,
+  }
 }
 
 async function setOpportunityCooperation(database, caller, input) {

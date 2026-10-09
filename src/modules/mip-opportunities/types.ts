@@ -27,6 +27,23 @@ export interface OpportunityAuthor {
   headline?: string
 }
 
+/** G1（审计 2026-10-09）：想合作人才卡（figma 1769_37984）公开详情，缺省省略不造值。 */
+export interface OpportunityCooperatorInviter {
+  sourceType: 'USER' | 'PLATFORM'
+  displayName: string
+  avatarUrl?: string
+}
+
+export interface OpportunityCooperator extends OpportunityAuthor {
+  cityName?: string
+  industryLabel?: string
+  identityStatus?: string
+  introduction?: string
+  level?: { number: number, name: string }
+  badges?: { id: string, name: string, imageUrl?: string }[]
+  inviter?: OpportunityCooperatorInviter
+}
+
 export interface OpportunityTeamMember extends OpportunityAuthor {
   userKind: 'PLAYER'
 }

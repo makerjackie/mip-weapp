@@ -105,6 +105,10 @@
       "pathName": "packages/member/mip-opportunities/editor/index"
     },
     {
+      "name": "想跟TA合作",
+      "pathName": "packages/member/mip-opportunity-cooperators/index"
+    },
+    {
       "name": "消息与机会权限",
       "pathName": "packages/member/mip-opportunity-settings/index"
     },

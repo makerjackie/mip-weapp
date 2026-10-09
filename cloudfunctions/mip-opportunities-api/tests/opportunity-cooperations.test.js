@@ -66,7 +66,12 @@ test('nonempty cooperator list uses public profile references and respects visib
     activated_at: '2026-09-26T00:00:00.000Z', cooperation_count: 2 }
   const db = fixture()
   const queries = []
-  db.query = async (sql) => { queries.push(sql); return [row, { ...row, id: ownerId }] }
+  db.query = async (sql) => {
+    queries.push(sql)
+    if (sql.includes('FROM mip_opportunity_cooperations')) return [row, { ...row, id: ownerId }]
+    // G1：竖版人才卡 enrich（详情/勋章/等级/邀请人），名单外查询回空即不造值。
+    return []
+  }
   const list = await listOpportunityCooperators(db, caller, { id: opportunityId, limit: 1 })
   assert.equal(list.items.length, 1)
   assert.match(list.items[0].profileRef, /^p1\./)
@@ -76,5 +81,57 @@ test('nonempty cooperator list uses public profile references and respects visib
   assert.ok(list.nextCursor)
   const summary = await cooperationSummaries(db, caller, [opportunityId])
   assert.deepEqual(summary.get(opportunityId), { count: 2, avatars: [] })
-  assert.ok(queries.every(sql => sql.includes('mip_user_blocks') && sql.includes("member.status = 'ACTIVE'")))
+  assert.ok(queries.filter(sql => sql.includes('FROM mip_opportunity_cooperations'))
+    .every(sql => sql.includes('mip_user_blocks') && sql.includes("member.status = 'ACTIVE'")))
+})
+
+test('cooperator list enriches public person details and inviter annotations for the talent cards', async () => {
+  const row = { id: opportunityId, opportunity_id: opportunityId, user_id: caller.userId, nickname: 'Ame',
+    avatar_file_id: 'cloud://avatar', headline: '设计', visibility_json: {},
+    activated_at: '2026-09-26T00:00:00.000Z', cooperation_count: 1 }
+  const db = fixture()
+  db.query = async (sql) => {
+    if (sql.includes('FROM mip_opportunity_cooperations')) return [row]
+    if (sql.includes('FROM mip_profiles profile')) {
+      return [{ user_id: caller.userId, visibility_json: {}, city_name: '深圳', industry_label: '软件',
+        identity_status: '创业者', introduction: '帮助团队建立设计系统', experience_balance: 100 }]
+    }
+    if (sql.includes('FROM mip_growth_levels')) {
+      return [{ id: 'lv1', name: '初识', minimum_experience: 0, status: 'ACTIVE' }, { id: 'lv2', name: '共建', minimum_experience: 100, status: 'ACTIVE' }]
+    }
+    if (sql.includes('FROM mip_event_invitation_attributions')) {
+      return [{ guest_user_id: caller.userId, invitation_source_type: 'USER', inviter_nickname: 'Bear',
+        inviter_visibility_json: {}, inviter_avatar_file_id: 'cloud://bear' }]
+    }
+    return []
+  }
+  const list = await listOpportunityCooperators(db, caller, { id: opportunityId })
+  assert.deepEqual(list.items[0], {
+    profileRef: list.items[0].profileRef,
+    nickname: 'Ame',
+    avatarUrl: 'cloud://avatar',
+    headline: '设计',
+    cityName: '深圳',
+    industryLabel: '软件',
+    identityStatus: '创业者',
+    introduction: '帮助团队建立设计系统',
+    level: { number: 2, name: '共建' },
+    badges: [],
+    inviter: { sourceType: 'USER', displayName: 'Bear', avatarUrl: 'cloud://bear' },
+  })
+  // 私密开关同样作用于 enrich 字段：关闭行业/简介后省略，不造值。
+  const hidden = { ...row, visibility_json: { industry: false, introduction: false } }
+  db.query = async (sql) => {
+    if (sql.includes('FROM mip_opportunity_cooperations')) return [hidden]
+    if (sql.includes('FROM mip_profiles profile')) {
+      return [{ user_id: caller.userId, visibility_json: { industry: false, introduction: false }, city_name: '深圳',
+        industry_label: '软件', identity_status: '创业者', introduction: '私密', experience_balance: null }]
+    }
+    return []
+  }
+  const gated = await listOpportunityCooperators(db, caller, { id: opportunityId })
+  assert.equal(gated.items[0].industryLabel, undefined)
+  assert.equal(gated.items[0].introduction, undefined)
+  assert.equal(gated.items[0].level, undefined)
+  assert.equal(gated.items[0].inviter, undefined)
 })

@@ -94,8 +94,10 @@ describe('MIP public profiles', () => {
     const opportunityDetail = source('src/packages/member/mip-opportunities/detail/index.ts')
     expect(opportunityDetail).toContain('action: \'INTERACT\'')
     expect(opportunityDetail).toContain('consumePendingResume')
+    // G1：详情页「+N想合作」跳独立名单页，公开档案入口随名单卡迁移到该页
+    // （详情 → 想跟TA合作 → 公开档案）。
     for (const detail of [
-      'src/packages/member/mip-opportunities/detail/index.ts',
+      'src/packages/member/mip-opportunity-cooperators/index.ts',
     ]) {
       expect(source(detail)).toContain('/packages/member/mip-public-profile/index?profileRef=')
     }

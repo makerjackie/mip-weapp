@@ -7,7 +7,6 @@
     "app-page-exit": "/components/page-exit/index",
     "mip-opportunity-card": "/components/mip-opportunity-card/index",
     "t-button": "tdesign-miniprogram/button/button",
-    "t-popup": "tdesign-miniprogram/popup/popup",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-icon": "/components/mip-icon/index",
     "mip-attend-pill": "/components/mip-attend-pill/index",

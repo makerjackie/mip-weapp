@@ -1,0 +1,20 @@
+<view id="mip-opportunity-cooperators-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-3 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7" aria-label="正在加载" aria-busy="true"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <mip-empty-state wx:elif="{{state === 'blocked'}}" title="暂时无法查看名单" description="{{message}}" action-text="重新加载" bind:action="load" />
+  <mip-empty-state wx:elif="{{state === 'error'}}" title="名单暂时无法加载" description="{{message}}" action-text="重新加载" bind:action="load" />
+  <!-- figma 1769_37984 想跟TA合作：详情页「+N想合作」跳转的独立二级页，2 列竖版人才卡
+       （头像/昵称/Lv/三标签/两行简介/佩戴勋章/邀请人），服务端 activated_at DESC 最新在前。 -->
+  <mip-empty-state wx:elif="{{state === 'empty'}}" title="暂无合作意向" description="对这台机会表达合作意向的人会显示在这里。" />
+  <block wx:else>
+    <!-- 名单卡走统一人才卡组件 grid 壳；等级/三标签/简介/勋章/邀请人均为服务端事实，
+         未返回不造值；点击卡片查看对方公开档案（原弹层行卡行为迁移）。 -->
+    <view class="grid grid-cols-2 gap-[24rpx]">
+      <view wx:for="{{people}}" wx:key="profileRef" class="min-w-0" aria-role="button" aria-label="查看{{item.displayName}}的公开档案" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
+        <mip-talent-card layout="grid" display-name="{{item.displayName}}" avatar-url="{{item.avatarUrl}}" level-text="{{item.levelText}}" tags="{{item.profileTags}}" supporting-text="{{item.supportingText}}" medals="{{item.medals}}" inviter-name="{{item.inviterName}}" inviter-avatar-url="{{item.inviterAvatarUrl}}" inviter-kind="{{item.inviterKind}}" />
+      </view>
+    </view>
+    <view wx:if="{{message}}" class="mt-4 text-[24rpx] text-danger">{{message}}</view>
+    <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+  </block>
+  <app-page-exit label="返回机会" />
+</view>

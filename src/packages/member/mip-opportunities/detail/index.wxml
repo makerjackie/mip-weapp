@@ -98,22 +98,6 @@
       </view>
     </mip-sticky-actions>
     <app-page-exit label="返回机会" />
-    <t-popup visible="{{cooperatorsVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleCooperatorsVisibility">
-      <view class="rounded-t-[24rpx] bg-panel px-4 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-5 text-ink">
-        <view class="flex items-center justify-between"><text class="text-[30rpx] font-semibold">想合作的人</text><view class="flex min-h-[88rpx] items-center px-3" aria-role="button" bind:tap="closeCooperators">关闭</view></view>
-        <scroll-view scroll-y class="h-[600rpx]" bindscrolltolower="loadMoreCooperators">
-          <view wx:for="{{cooperators}}" wx:key="profileRef" class="my-2 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-panel-raised px-3 py-3" data-profile-ref="{{item.profileRef}}" aria-role="button" bind:tap="openTeamMember">
-            <image wx:if="{{item.avatarUrl}}" class="h-[72rpx] w-[72rpx] shrink-0 rounded-full" src="{{item.avatarUrl}}" mode="aspectFill" />
-            <view class="min-w-0 flex-1"><view class="truncate">{{item.nickname}}</view><view wx:if="{{item.headline}}" class="mt-1 truncate text-[22rpx] text-muted">{{item.headline}}</view></view>
-            <mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-muted)" />
-          </view>
-          <view wx:if="{{cooperatorsMessage}}" class="py-4 text-center text-muted" aria-role="button" bind:tap="retryCooperators">{{cooperatorsMessage}}，点击重试</view>
-          <view wx:elif="{{cooperatorsLoading}}" class="py-4 text-center text-muted">正在加载</view>
-          <view wx:elif="{{!cooperators.length}}" class="py-8 text-center text-muted">暂无合作意向</view>
-          <view wx:elif="{{cooperatorsCursor}}" class="py-4 text-center text-brand" aria-role="button" bind:tap="loadMoreCooperators">加载更多</view>
-        </scroll-view>
-      </view>
-    </t-popup>
   </block>
   <!-- MIW-40：发布人订阅授权引导层。页面级单实例常驻（自隐藏），check 由页面在三时机调用。 -->
   <mip-subscription-guide id="opportunity-subscribe-guide" template-key="OPPORTUNITY_NOTICE" opportunity-id="{{id}}" />

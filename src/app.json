@@ -44,6 +44,7 @@
         "mip-notifications/index",
         "mip-opportunities/detail/index",
         "mip-opportunities/editor/index",
+        "mip-opportunity-cooperators/index",
         "mip-opportunity-settings/index",
         "mip-profile-interests/index",
         "mip-profile/index",

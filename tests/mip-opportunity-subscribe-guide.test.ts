@@ -11,25 +11,26 @@ describe('MIP opportunity subscribe guide wiring (MIW-40)', () => {
     expect(config.usingComponents['mip-subscription-guide']).toBe('/components/mip-subscription-guide/index')
     const view = viewSource()
     expect(view).toContain('<mip-subscription-guide id="opportunity-subscribe-guide" template-key="OPPORTUNITY_NOTICE" opportunity-id="{{id}}" />')
-    // 常驻挂载在页面根部：不依赖 state 条件块的渲染时序
-    expect(view.indexOf('<mip-subscription-guide')).toBeGreaterThan(view.indexOf('</t-popup>'))
+    // 常驻挂载在页面根部：不依赖 state 条件块的渲染时序（G1 后想合作名单是独立页面，
+    // 详情页不再有 t-popup 弹层）。
+    expect(view).not.toContain('t-popup')
+    const productionEnd = view.lastIndexOf('</block>')
+    expect(view.indexOf('<mip-subscription-guide')).toBeGreaterThan(productionEnd)
   })
 
-  it('checks the guide only after the current action completes (S1/S2/S3)', () => {
+  it('checks the guide only after the current action completes (S1/S2)', () => {
     const page = pageSource()
     // 门槛：仅发布人；组件内部还有模板/节奏门控
     const guideMethod = page.match(/checkSubscriptionGuide\(\) \{[\s\S]*?\n {2}\},/)?.[0] || ''
     expect(guideMethod).toContain('if (!this.data.item?.mine)')
     expect(guideMethod).toContain(`selectComponent('#opportunity-subscribe-guide')`)
-    // S1/S2：详情加载完成后检查；编辑返回复用 onShow→load 同一入口，edit() 本身不拦截
+    // S1/S2：详情加载完成后检查；编辑返回与「想跟TA合作」页返回复用 onShow→load 同一入口
     const loadMethod = page.match(/async load\(\) \{[\s\S]*?\n {2}\},/)?.[0] || ''
     expect(loadMethod).toContain('this.checkSubscriptionGuide()')
     expect(page.match(/edit\(\) \{[\s\S]*?\n {2}\},/)?.[0] || '').not.toContain('checkSubscriptionGuide')
-    // S3：想合作名单弹层关闭后检查
-    const closeHandler = page.match(/handleCooperatorsVisibility\([\s\S]*?\n {2}\},/)?.[0] || ''
-    expect(closeHandler).toContain('this.closeCooperators()')
-    expect(closeHandler).toContain('this.checkSubscriptionGuide()')
-    expect(page.match(/this\.checkSubscriptionGuide\(\)/g)).toHaveLength(2)
+    // G1：页内名单弹层移除，S3 关闭时机随之移除，页内只剩 load 一处检查
+    expect(page.match(/this\.checkSubscriptionGuide\(\)/g)).toHaveLength(1)
+    expect(page).not.toContain('handleCooperatorsVisibility')
   })
 
   it('keeps the native panel inside the guide layer only', () => {
