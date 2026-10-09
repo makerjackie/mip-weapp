@@ -237,4 +237,11 @@ describe('MIP super case editor visual contract', () => {
     expect(page).toContain('publish: true')
     expect(page).toContain('this.setData({ saving: false })')
   })
+
+  it('warns on back navigation with unsaved edits and disarms after save (MIP-4)', () => {
+    expect(page).toContain('wx.enableAlertBeforeUnload')
+    expect(page).toContain('wx.disableAlertBeforeUnload')
+    expect(page).toMatch(/touch\(\)/)
+    expect(page).toMatch(/markClean\(\)/)
+  })
 })

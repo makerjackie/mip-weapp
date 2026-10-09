@@ -88,6 +88,9 @@ Page({
     cityOptions: [{ id: '', label: '未选择' }],
   },
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
+  // 返回守卫状态：dirty=有未保存修改，alertArmed=已注册原生返回确认（MIP-4，与合作卡编辑器对称）
+  dirty: false,
+  alertArmed: false,
 
   onLoad(options: Record<string, string | undefined>) {
     this.setData({
@@ -103,12 +106,33 @@ Page({
 
   onUnload() {
     this.clearNavigationTimer()
+    this.markClean()
   },
 
   clearNavigationTimer() {
     if (this.navigationTimer !== undefined) {
       clearTimeout(this.navigationTimer)
       this.navigationTimer = undefined
+    }
+  },
+
+  /** 用户改动任一字段后登记 dirty，并武装原生返回确认（确定=放弃修改并返回，取消=留下）。 */
+  touch() {
+    if (this.data.state !== 'ready') {
+      return
+    }
+    this.dirty = true
+    if (!this.alertArmed) {
+      this.alertArmed = true
+      wx.enableAlertBeforeUnload({ message: '案例尚未保存，返回将丢失已填写内容' })
+    }
+  },
+
+  markClean() {
+    this.dirty = false
+    if (this.alertArmed) {
+      this.alertArmed = false
+      wx.disableAlertBeforeUnload()
     }
   },
 
@@ -137,6 +161,10 @@ Page({
         })
       }
       this.setData({ state: 'ready' })
+      if (aiSource) {
+        // AI 草稿覆盖了表单内容，视为未保存修改
+        this.touch()
+      }
     }
     catch (error) {
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '页面加载失败' })
@@ -199,17 +227,20 @@ Page({
     if (!Number.isInteger(groupIndex) || !PROJECT_TEXT_FIELDS.includes(field)) {
       return
     }
+    this.touch()
     this.setData({ [`projects[${groupIndex}].${field}`]: event.detail.value })
   },
 
   changeProjectStart(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const groupIndex = Number(event.currentTarget.dataset.groupIndex)
     if (Number.isInteger(groupIndex)) {
+      this.touch()
       this.setData({ [`projects[${groupIndex}].startedOn`]: event.detail.value })
     }
   },
 
   applyCity(groupIndex: number, label: string, tagId = '') {
+    this.touch()
     const knownTagId = this.data.cityOptions.find(option => option.label === label)?.id || ''
     this.setData({
       [`projects[${groupIndex}].cityLabel`]: label,
@@ -251,6 +282,7 @@ Page({
       wx.showToast({ title: `最多 ${MAX_SUPER_CASE_PROJECTS} 个项目`, icon: 'none' })
       return
     }
+    this.touch()
     this.setData({ projects: [...this.data.projects, emptyProject()] })
   },
 
@@ -259,6 +291,7 @@ Page({
     if (!Number.isInteger(groupIndex) || groupIndex <= 0 || this.data.projects.length <= 1) {
       return
     }
+    this.touch()
     const projects = this.data.projects.filter((_, index) => index !== groupIndex)
     this.setData({ projects })
   },
@@ -330,6 +363,8 @@ Page({
         publicationStatus: status,
         publicationStatusText: publicationStatusText(status),
       })
+      // 保存成功先解除返回守卫，避免自动返回时误弹确认框
+      this.markClean()
       wx.showToast({ title: result.status === 'PUBLISHED' ? '案例已发布' : '案例已保存', icon: 'success' })
       this.clearNavigationTimer()
       this.navigationTimer = setTimeout(() => {
