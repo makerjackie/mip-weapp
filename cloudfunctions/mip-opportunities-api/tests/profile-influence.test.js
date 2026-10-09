@@ -129,9 +129,11 @@ describe('profile influence lists', () => {
           })]
         }
         // MIW-59：两个列表都会经 loadPublicPersonDetails 补公开详情（此处返回空详情）。
+        // MIW-64：邀请归档批量查询（loadHeartInviters），无归档回空即省略 inviter。
         if (sql.includes('FROM mip_profiles profile')) return []
         if (sql.includes('FROM mip_user_badge_equipment')) return []
         if (sql.includes('FROM mip_growth_levels')) return []
+        if (sql.includes('FROM mip_event_invitation_attributions')) return []
         throw new Error(`unexpected query: ${sql}`)
       },
     }
@@ -178,6 +180,7 @@ describe('profile influence lists', () => {
             { id: 2, name: '共建者', minimum_experience: 100, status: 'ACTIVE' },
           ]
         }
+        if (sql.includes('FROM mip_event_invitation_attributions')) return []
         throw new Error(`unexpected query: ${sql}`)
       },
     }
@@ -197,6 +200,40 @@ describe('profile influence lists', () => {
     // 详情查询按当前页人员过滤（appId + 页内 user_id），不扫全表。
     const detailCall = calls.find(call => call.sql.includes('FROM mip_profiles profile'))
     assert.deepEqual(detailCall.params, [appId, actorUserId])
+  })
+
+  // MIW-64：互动过/心动值卡 footer 邀请人与 G3 公开档案同口径（loadHeartInviters）——
+  // 每人取 captured_at 最新一条，USER 昵称+头像（visibility 门控）/ PLATFORM 平台，
+  // 无归档省略不造值。
+  it('merges the latest invitation archive as inviter annotation on interaction and heart lists', async () => {
+    const database = inviters => ({
+      async query(sql) {
+        if (sql.includes('WITH co_attendance AS')) {
+          return [actorRow({ relation_id: relationId, interaction_count: 2, event_id: eventId, event_title: '城市交流会' })]
+        }
+        if (sql.includes('FROM mip_profile_interests interest')) {
+          return [actorRow({ relation_id: relationId, source_type: 'PROFILE', source_label: '公开档案' })]
+        }
+        if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_user_badge_equipment') || sql.includes('FROM mip_growth_levels')) return []
+        if (sql.includes('FROM mip_event_invitation_attributions')) return inviters
+        throw new Error(`unexpected query: ${sql}`)
+      },
+    })
+    const bear = [{ guest_user_id: actorUserId, invitation_source_type: 'USER', inviter_nickname: 'Bear', inviter_visibility_json: {}, inviter_avatar_file_id: 'cloud://bear' }]
+    const interactions = await listInfluenceInteractions(database(bear), caller, { limit: 20 })
+    const interests = await listActiveInfluenceInterests(database(bear), caller, { limit: 20 })
+    assert.deepEqual(interactions.items[0].actor.inviter, { sourceType: 'USER', displayName: 'Bear', avatarUrl: 'cloud://bear' })
+    assert.deepEqual(interests.items[0].actor.inviter, { sourceType: 'USER', displayName: 'Bear', avatarUrl: 'cloud://bear' })
+    const platform = await listActiveInfluenceInterests(database([{ guest_user_id: actorUserId, invitation_source_type: 'PLATFORM' }]), caller, { limit: 20 })
+    assert.deepEqual(platform.items[0].actor.inviter, { sourceType: 'PLATFORM', displayName: 'MIP 平台' })
+    const noArchive = await listActiveInfluenceInterests(database([]), caller, { limit: 20 })
+    assert.equal(noArchive.items[0].actor.inviter, undefined)
+    // 邀请人昵称被私密开关关闭时不泄露真名，回退「MIP 用户」。
+    const gated = await listInfluenceInteractions(database([
+      { guest_user_id: actorUserId, invitation_source_type: 'USER', inviter_nickname: 'Bear', inviter_visibility_json: { nickname: false } },
+    ]), caller, { limit: 20 })
+    assert.equal(gated.items[0].actor.inviter.displayName, 'MIP 用户')
+    assert.equal(gated.items[0].actor.inviter.avatarUrl, undefined)
   })
 
   it('round-trips guest pagination without putting a raw user id in the cursor', async () => {
@@ -224,6 +261,7 @@ describe('profile influence lists', () => {
     const calls = []
     const database = { async query(sql, params) {
       calls.push({ sql, params })
+      if (sql.includes('FROM mip_event_invitation_attributions')) return []
       return [actorRow({ interaction_count: 12, event_id: eventId, event_title: '最近同场' }),
         actorRow({ actor_user_id: '20000000-0000-4000-8000-000000000002' })]
     } }

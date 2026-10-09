@@ -371,18 +371,29 @@ async function listInfluenceInteractions(database, caller, input = {}) {
   const page = rows.slice(0, limit)
   // MIW-59：与嘉宾/访客列表同口径补公开详情（城市/代表行业/身份状态/一句话介绍/等级/佩戴勋章），
   // 竖版卡三标签行与勋章的数据源；visibility 门控在 loadPublicPersonDetails 内。
-  const details = await loadPublicPersonDetails(database, caller.appId, page.map(row => row.actor_user_id))
+  // MIW-64：footer 邀请人标注与 G3 公开档案列表同源（loadHeartInviters），无归档省略，不造值。
+  const [details, inviters] = await Promise.all([
+    loadPublicPersonDetails(database, caller.appId, page.map(row => row.actor_user_id)),
+    loadHeartInviters(database, caller.appId, page.map(row => row.actor_user_id)),
+  ])
   return {
     category: 'INTERACTION',
-    items: page.map(row => ({
-      kind: 'INTERACTION',
-      status: 'ACTIVE',
-      actor: { ...influencePersonDto(row, caller), ...details.get(row.actor_user_id) },
-      interactionCount: Number(row.interaction_count || 1),
-      event: { id: row.event_id, title: row.event_title },
-      unread: false,
-      updatedAt: iso(row.updated_at),
-    })),
+    items: page.map((row) => {
+      const inviter = inviters.get(row.actor_user_id)
+      return {
+        kind: 'INTERACTION',
+        status: 'ACTIVE',
+        actor: {
+          ...influencePersonDto(row, caller),
+          ...details.get(row.actor_user_id),
+          ...(inviter ? { inviter } : {}),
+        },
+        interactionCount: Number(row.interaction_count || 1),
+        event: { id: row.event_id, title: row.event_title },
+        unread: false,
+        updatedAt: iso(row.updated_at),
+      }
+    }),
     unreadCount: 0,
     nextCursor: rows.length > limit && page.length
       ? encodePersonCursor(page.at(-1).updated_at, page.at(-1).actor_user_id, caller)
@@ -436,20 +447,31 @@ async function listActiveInfluenceInterests(database, caller, input = {}) {
     params,
   )
   const page = rows.slice(0, limit)
-  const details = await loadPublicPersonDetails(database, caller.appId, page.map(row => row.actor_user_id))
+  // MIW-64：邀请人标注与互动过/公开档案列表同口径（loadHeartInviters），无归档省略，不造值。
+  const [details, inviters] = await Promise.all([
+    loadPublicPersonDetails(database, caller.appId, page.map(row => row.actor_user_id)),
+    loadHeartInviters(database, caller.appId, page.map(row => row.actor_user_id)),
+  ])
   return {
     category: 'ACTIVE_INTEREST',
-    items: page.map(row => ({
-      kind: 'ACTIVE_INTEREST',
-      status: 'ACTIVE',
-      actor: { ...influencePersonDto(row, caller), ...details.get(row.actor_user_id) },
-      source: {
-        type: row.source_type,
-        label: row.source_label || '关联内容已不可用',
-      },
-      unread: false,
-      updatedAt: iso(row.updated_at),
-    })),
+    items: page.map((row) => {
+      const inviter = inviters.get(row.actor_user_id)
+      return {
+        kind: 'ACTIVE_INTEREST',
+        status: 'ACTIVE',
+        actor: {
+          ...influencePersonDto(row, caller),
+          ...details.get(row.actor_user_id),
+          ...(inviter ? { inviter } : {}),
+        },
+        source: {
+          type: row.source_type,
+          label: row.source_label || '关联内容已不可用',
+        },
+        unread: false,
+        updatedAt: iso(row.updated_at),
+      }
+    }),
     unreadCount: 0,
     nextCursor: rows.length > limit && page.length
       ? encodeCursor(page.at(-1).updated_at, page.at(-1).relation_id)

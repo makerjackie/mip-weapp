@@ -415,6 +415,8 @@ export interface ReceivedInteractionActor extends PublicPersonDetails {
   avatarUrl?: string
   headline?: string
   userKind?: 'PLAYER' | 'GUEST'
+  /** MIW-64：互动过/对我心动/访客卡 footer 邀请人标注，与 G3 公开档案同源；无归档省略不造值。 */
+  inviter?: OpportunityCooperatorInviter
 }
 
 interface ReceivedInteractionBase {

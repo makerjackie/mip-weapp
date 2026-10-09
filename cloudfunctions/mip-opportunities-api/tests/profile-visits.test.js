@@ -95,7 +95,9 @@ describe('profile visits', () => {
     const oneCalls = []
     const database = {
       async query(sql, params) {
-        if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_user_badge_equipment') || sql.includes('FROM mip_growth_levels')) return []
+        // MIW-64：邀请归档批量查询（loadHeartInviters），无归档回空即省略 inviter。
+        if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_user_badge_equipment')
+          || sql.includes('FROM mip_growth_levels') || sql.includes('FROM mip_event_invitation_attributions')) return []
         calls.push({ sql, params })
         assert.match(sql, /FROM mip_profile_visits/)
         assert.doesNotMatch(sql, /GROUP BY visitor_user_id/)
@@ -157,13 +159,52 @@ describe('profile visits', () => {
     assert.equal(Buffer.from(cursor, 'base64url').toString('utf8').includes(visitorId), false)
   })
 
+  // MIW-64：访客卡 footer 邀请人与互动过/心动值列表同口径（loadHeartInviters，按页过滤，
+  // USER 走邀请人 visibility 门控 / PLATFORM 平台标注，无归档省略不造值）。
+  it('merges the latest invitation archive as inviter annotation and omits it without one', async () => {
+    const visitRow = {
+      visit_id: visitId,
+      visitor_id: visitorId,
+      last_visited_at: '2026-08-24T03:00:00.000Z',
+      has_unread: 1,
+      visitor_nickname: '访客甲',
+      visitor_headline: '公开介绍',
+      visibility_json: '{}',
+      is_player: 1,
+    }
+    const calls = []
+    const database = inviters => ({
+      async query(sql, params) {
+        calls.push({ sql, params })
+        if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_user_badge_equipment') || sql.includes('FROM mip_growth_levels')) return []
+        if (sql.includes('FROM mip_event_invitation_attributions')) {
+          // 邀请归档查询按当前页访客过滤（appId + 页内 visitor_id），不扫全表。
+          assert.deepEqual(params, [appId, visitorId, appId, visitorId])
+          return inviters
+        }
+        return [visitRow]
+      },
+      async one(sql) { return { count: sql.includes('visit.read_at IS NULL') ? 1 : 7 } },
+    })
+    const bear = [{ guest_user_id: visitorId, invitation_source_type: 'USER', inviter_nickname: 'Bear', inviter_visibility_json: {}, inviter_avatar_file_id: 'cloud://bear' }]
+    const result = await listProfileVisitors(database(bear), owner, { limit: 20 })
+    assert.deepEqual(result.items[0].inviter, { sourceType: 'USER', displayName: 'Bear', avatarUrl: 'cloud://bear' })
+    const platform = await listProfileVisitors(database([{ guest_user_id: visitorId, invitation_source_type: 'PLATFORM' }]), owner, { limit: 20 })
+    assert.deepEqual(platform.items[0].inviter, { sourceType: 'PLATFORM', displayName: 'MIP 平台' })
+    const noArchive = await listProfileVisitors(database([]), owner, { limit: 20 })
+    assert.equal(noArchive.items[0].inviter, undefined)
+  })
+
   it('keeps repeated visits by the same user as separate ordered records', async () => {
     const rows = [
       { visit_id: visitId, visitor_id: visitorId, last_visited_at: '2026-09-22T09:00:00.000Z', visitor_nickname: '访客甲', has_unread: 1 },
       { visit_id: '30000000-0000-4000-8000-000000000002', visitor_id: visitorId, last_visited_at: '2026-09-22T08:00:00.000Z', visitor_nickname: '访客甲', has_unread: 1 },
     ]
     const database = {
-      async query() { return rows },
+      async query(sql) {
+        if (sql.includes('FROM mip_event_invitation_attributions')) return []
+        return rows
+      },
       async one() { return { count: 2, read_through_at: '2026-09-22T10:00:00.000Z' } },
     }
     const page = await listProfileVisitors(database, owner)
