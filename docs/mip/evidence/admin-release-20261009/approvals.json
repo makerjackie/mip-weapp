@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-10-09T08:51:46.980Z",
+  "passed": true,
+  "businessWrites": false,
+  "personalDataRecorded": false,
+  "checks": [
+    {
+      "id": "approval:nonempty-dto-to-page",
+      "passed": true,
+      "rows": 1
+    },
+    {
+      "id": "approval:server-name-and-status-search",
+      "passed": true,
+      "rows": 1
+    },
+    {
+      "id": "approval:nonmatching-search-empty-success",
+      "passed": true
+    }
+  ],
+  "sourceCommit": "d69d9b7336e2f41cd3a21d62e0449911f291b38f"
+}

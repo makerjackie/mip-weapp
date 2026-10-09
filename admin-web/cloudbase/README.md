@@ -54,6 +54,8 @@ node admin-web/scripts/build-cloudbase.mjs
    node scripts/deploy-admin-cloudbase.mjs --confirm-env=<ENV_ID> --confirm-function=mip-admin-web-api
    ```
 
+   已有后台滚动发布时，静态入口和 BFF 内的 `/assets` 必须作为同一份发布产物更新；仅上传静态文件会让新 HTML 引用 BFF 尚不存在的哈希 JS，造成 404/白屏。先从目标函数下载并核对旧 ZIP 摘要，将旧 `public/assets` 中缺少的不可变哈希资源保留到新 BFF 包（不替换新 `index.html` 或服务端代码），先部署这个兼容包，再上传新静态入口。发布后同时下载函数和抓取当前 HTML/JS，核对各自 SHA-256；回滚也恢复相匹配的两份产物。
+
 5. 微信确认登录并行期间使用独立 challenge 命名空间：CloudBase 的六位码为 `9xxxxx`，token 为 `z_` 前缀；旧后台生成器排除这两个范围。业务函数通过 `MIP_ADMIN_WEB_LOGIN_MIGRATION_URL` 将新命名空间回调送到新 BFF，旧确认地址继续服务旧后台。必须先发布旧后台的保留范围，再等待至少 **5 分钟**，让旧版已签发 challenge 到期，最后启用分流。否则旧码恰好落入新范围会被送错目的地。此等待不清除账户、密码或业务数据。只切换静态网站无法替代登录回调配置。
 
 6. 执行真实 HTTPS 验证，再进行浏览器桌面/手机视口及业务写操作验收：
