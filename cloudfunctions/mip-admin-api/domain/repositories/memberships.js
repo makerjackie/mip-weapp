@@ -171,8 +171,13 @@ function createMembershipRepository(database, options = {}) {
     const clauses = ['approval.app_id = ?']
     const params = [input.appId]
     if (input.query) {
-      clauses.push(`(approval.user_id = ? OR profile.nickname LIKE ? ESCAPE '\\\\')`)
-      params.push(input.query, `%${escapeLike(input.query)}%`)
+      // UUID columns use ascii_bin; comparing a Chinese nickname to them fails charset conversion.
+      const uuidQuery = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.query)
+      clauses.push(uuidQuery
+        ? `(approval.user_id = ? OR profile.nickname LIKE ? ESCAPE '\\\\')`
+        : `profile.nickname LIKE ? ESCAPE '\\\\'`)
+      if (uuidQuery) params.push(input.query)
+      params.push(`%${escapeLike(input.query)}%`)
     }
     if (input.status) {
       clauses.push('approval.status = ?')

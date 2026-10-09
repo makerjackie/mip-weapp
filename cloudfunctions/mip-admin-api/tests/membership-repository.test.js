@@ -138,9 +138,18 @@ describe('membership repository', () => {
     let captured
     const { repository } = createRepository({ async query(sql, params) { captured = { sql, params }; return [] } })
     await repository.listMembershipApprovals({ appId: APP_ID, query: '林%_', status: 'PENDING', pageLimit: 20 })
-    assert.match(captured.sql, /WHERE approval\.app_id = \? AND \(approval\.user_id = \? OR profile\.nickname LIKE \? ESCAPE/)
+    assert.match(captured.sql, /WHERE approval\.app_id = \? AND profile\.nickname LIKE \? ESCAPE/)
+    assert.doesNotMatch(captured.sql, /approval\.user_id = \?/)
     assert.match(captured.sql, /ORDER BY approval\.requested_at DESC, approval\.id DESC LIMIT \?/)
-    assert.deepEqual(captured.params, [APP_ID, '林%_', '%林\\%\\_%', 'PENDING', 21])
+    assert.deepEqual(captured.params, [APP_ID, '%林\\%\\_%', 'PENDING', 21])
+  })
+
+  it('uses the ASCII user ID predicate only for a UUID search', async () => {
+    let captured
+    const { repository } = createRepository({ async query(sql, params) { captured = { sql, params }; return [] } })
+    await repository.listMembershipApprovals({ appId: APP_ID, query: USER_ID, pageLimit: 20 })
+    assert.match(captured.sql, /WHERE approval\.app_id = \? AND \(approval\.user_id = \? OR profile\.nickname LIKE \? ESCAPE/)
+    assert.deepEqual(captured.params, [APP_ID, USER_ID, `%${USER_ID}%`, 21])
   })
 
   it('keeps the membership query and mutation surface', () => {
