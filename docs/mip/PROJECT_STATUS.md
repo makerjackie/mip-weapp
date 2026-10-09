@@ -8,6 +8,8 @@
 
 2026-10-09（MIW-61）：AI 语音填写（录音确认）线上全量失败，客户端只见「AI 草稿服务暂时不可用」。排查：CLS 日志显示 `getCapability`、`prepareVoiceUpload` 均成功，`createVoiceDraftStorage` 以 17–130ms 快速返回 `SERVICE_UNAVAILABLE`（函数未捕获异常 message 非领域码时的兜底码），且每次确认出现两次（客户端同 requestID 重试）；线下测试未拦住，因单测用内存数据库桩不执行 MySQL CHECK 约束。根因是 MIW-34 引入的直传链路使用 `VOICE_STORAGE` 请求种类并向 `mip_ai_draft_requests` 写入 `audio_object_key`，但迁移 057 的 `mip_ai_draft_requests_kind_ck` 只允许 TEXT/VOICE_ASSET/VOICE_UPLOAD，`mip_ai_draft_requests_upload_ck` 要求非 VOICE_UPLOAD 的 `audio_object_key` 为 NULL，INSERT 被约束拒绝（errno 3819）——该链路自上线起在目标环境从未成功过（表内仅 TEXT 历史行）。修复：迁移 104 把 `VOICE_STORAGE` 补进两条 CHECK（`VOICE_STORAGE` 与 `VOICE_UPLOAD` 同样要求 `audio_asset_id`+`audio_object_key` 非空，孤儿素材清理 `draft_kind IN ('VOICE_UPLOAD','VOICE_STORAGE')` 语义保持）；`mip-ai-api` handler 对未经领域码归类的异常补 `console.error('[mip-ai-api] uncoded failure', code|name)`（沿用 mip-admin-api 惯例，只记类别不记消息，Provider 原始错误与用户输入不进日志），handler 测试覆盖。部署（MIP staging）：仓库外逻辑备份 154 表/3773 行后应用迁移 104（目标环境唯一 pending 项，回读 CHECK 已更新），`mip-ai-api` 以 `cloud:deploy --only` 更新且下载代码与本地一致；`pnpm verify` 全绿。剩余待验：真机录音确认链路（函数健康探针与 `--only` 部署的收尾健康门因 API Key `Invoke` 的 CAM 拒绝未跑完，与同日后台发布记录的 BLOCKED 同因；不影响小程序真实调用路径）。
 
+2026-10-10（chore）：超级案例 projects 存量回填入库为迁移 105（版本 20261009200000，编号避让 MIW-61 已在 staging 应用的迁移 104）：`mip_super_cases.projects` 仍为 NULL 的旧平铺行按 `mip-opportunities-api` normalizeProjects 单项目包装语义补齐为等价 JSON（region 保持缺省、startedOn 统一 YYYY-MM-DD），含回滚脚本；该迁移在仓库入库但**尚未应用到任何环境**，随下次部署窗口按「仓库外逻辑备份 → 应用 → 回读」流程执行。源文件此前以未提交状态遗留在主工作区，本次仅补提交与编号，SQL 语句未改动。
+
 2026-10-09 后台自定义域名：新入口 [admin.mip.cool](https://admin.mip.cool/#/overview) 已绑定 CloudBase `DIRECT` HTTP 网关，阿里云精确 CNAME 与平台 DNS 状态均通过；同源 `/`、`/api`、`/assets` 路由与精确登录来源已配置。14/14 静态 SHA-256 与同日最新构建一致，入口 `index-CYFT5GuB.js`，真实 HTTPS 67/67、14 读模块与浏览器密码登录/非空概览/桌面手机视口通过。运行源码沿用 `d69d9b73`，未再次部署代码或改变旧入口。证书到期 2027-01-07 16:59:59（Asia/Shanghai），需在到期前更新；Cloudflare 旧别名与旧站仍保留。原生健康探针权限阻塞、微信真机和支付未验收边界继续保留。[绑定证据](evidence/admin-domain-20261009/README.md)及发布 skill 已记录流程与证书预检不等于签发的处理经验。
 
 2026-10-08（MIW-57）：活动 Tab「往期」视图数据源从「已结束活动 feed」切换为后台配置的回顾条目（`mip_videos`）。迁移 103 为 `mip_videos` 增加 `finder_user_name`/`feed_id`（带 `sph` 前缀与格式 CHECK），原 `jump_url` 外链列按追加迁移政策保留为 dormant、全链路不再读写；`mip-admin-api` 视频草稿改为「标题 + 封面素材 + 视频号 ID（必填）+ 可选动态 ID」，无视频号 ID 的历史记录不可发布（legacy 发布前重校验被拒），内容安全输入同步换为视频号目标字段，管理合同 `mip.admin.videos.save` 幂等键更新（operation 总数不变，已再生 admin-contracts）。`mip-events-api` 新增公共只读 action `mip.events.recaps`（readActions 冷启动重试范围），只投影 `PUBLISHED` 条目按 `sort_order` 排序、LEFT JOIN READY 素材取封面云文件 ID，目标非法的行跳过。小程序活动页 PAST tab 走 `mipEventsModule.listRecaps`（300 秒 TTL、并发合并、generation 守卫），复用 `mip-activity-card` recap 变体渲染（封面走卡片级 `updateComponentMedia` 渐进水合，缺失回退占位图），点击经 `wx.openChannelsActivity` 打开具体动态（无动态 ID 打开主页），低版本不支持时 toast 提示；`mip.events.list` 的 view=PAST 服务端分支保留（「即将开始」tab 的「已结束」chip 仍依赖 ENDED 日期过滤）。同日评审确认后移除活动页顶部全局「往期回顾」视频号入口卡（`openPastReview`/`videoChannelConfigured` 一并删除）：客户口径为往期 tab 本身即「在视频号查看活动内容」，逐条回顾卡是唯一视频号入口，不再保留 tab 级 shortcut。admin-web `/videos` 列表与编辑表单去掉 jumpUrl 外链，改为视频号 ID/动态 ID 字段并前置同口径正则校验。测试：admin-api videos 域、events-api 公共投影、weapp dto/gateway/module/页面源码契约、admin-web module 往返各新增聚焦用例；`pnpm verify` 与 `pnpm admin:web:verify` 全绿。2026-10-09 部署（MIP staging）：仓库外逻辑备份 154 表/3495 行后应用迁移 103（目标环境唯一 pending 项，此前积压的迁移 102 主办方列确认已在环境内）；核心 `mip-*` 函数全量重新部署并通过 `cloud:verify`（schema、最小权限、函数、健康、受保护调用规则）；admin-web 静态以 `mip-admin-console/` 前缀部署并回读 VERIFIED（53 文件一致、Cloudflare 未变更）。正式素材配置与真机视频号跳转仍待验。
@@ -29,7 +31,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 59 条小程序路由（用户分包 49 条）、105 个锁定迁移、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 59 条小程序路由（用户分包 49 条）、106 个锁定迁移、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -148,7 +150,7 @@ MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示�
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
 | 小程序路由 | 59 条：5 条主包、49 条用户分包、5 条管理分包（含网页登录确认页）；2026-10-09 审计修复 G1 新增想跟TA合作页 1 条、2026-10-08 MIW-54 下线超级案例孤儿列表页 1 条、2026-10-07 MIW-49 新增城市选择页 1 条、此前 MIW-42 删除机会死页 3 条、MIW-44 下线知识/游戏/盲盒 9 条 | `config/runtime-pages.json`、`src/app.json` |
-| 数据库 | 105 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
+| 数据库 | 106 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
 | 管理合同 | 240 个 operation：105 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | Web 开放范围 | 105 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |

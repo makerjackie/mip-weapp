@@ -1382,6 +1382,18 @@
       "altersTables": [
         "mip_ai_draft_requests"
       ]
+    },
+    {
+      "version": "20261009200000",
+      "name": "mip_super_case_projects_backfill",
+      "sql": "database/mysql/mip/105_super_case_projects_backfill.sql",
+      "rollback": "database/mysql/mip/rollback/105_super_case_projects_backfill.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_super_cases"
+      ],
+      "sqlSha256": "b1c35ae3e5769aee2a64e8bb66a5bce8d2283dadf175d66e8fd98f8132c1df71",
+      "rollbackSha256": "e7c9098d71b7fee330a203273dcc0d5f80f8e3f654864bf427584830508f270d"
     }
   ]
 }
