@@ -18,6 +18,8 @@ description: 更新、部署本仓库的 CloudBase Web 管理后台，并验证�
 
 需要绑定独立后台域名时，按[自定义域名流程](references/custom-domain.md)完成证书、网关、DNS 与登录来源的闭环。保留默认 CloudBase 发布 origin，自定义域名作为同一套产物的额外入口。
 
+需要启用或维护 HTTPS 自动续期时，按[证书自动续期流程](references/certificate-renewal.md)配置独立云端任务，并取得 timer、CA 签发及真实 TLS 的运行证据。日常发布不覆盖该任务。
+
 目标环境、阶段、完整 HTTPS origin、runtime 用户及测试账号从仓库本机配置和目标环境回读确定，不硬编码历史环境 ID、域名、账号、提交或资产数量。用户提供的测试域名缺字时，核对配置中的真实 origin，不能猜测或创建新网关。
 
 ## 拉取与门禁

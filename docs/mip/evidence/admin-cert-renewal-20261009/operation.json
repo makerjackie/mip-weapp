@@ -1,0 +1,51 @@
+{
+  "verifiedAt": "2026-10-09T14:29:05.507Z",
+  "status": "ENABLED",
+  "timer": {
+    "name": "mip-admin-cert-daily",
+    "cron": "0 17 11 * * * *",
+    "enabled": true,
+    "timezone": "UTC+08:00 empirically verified",
+    "utcSchedule": "03:17 daily",
+    "mode": "CHECK",
+    "signatureVerified": true
+  },
+  "canary": {
+    "scheduledAt": "2026-10-09T14:25:11.150Z",
+    "executedAt": "2026-10-09T14:25:11.074Z",
+    "generationMatches": true,
+    "guard": "COS_CREATE_ONLY"
+  },
+  "lastCheck": {
+    "checkedAt": "2026-10-09T14:23:20.318Z",
+    "status": "RENEWED"
+  },
+  "lastSuccess": {
+    "certificateId": "bRTCTBmo",
+    "verifiedAt": "2026-10-09T14:23:20.318Z",
+    "fingerprint256": "D7:4E:CC:87:AA:C2:21:52:0C:4B:27:D4:70:74:01:39:F5:7B:5E:6C:F1:1D:4C:78:0C:C2:0A:B5:95:48:59:3C",
+    "validTo": "Jan  7 12:59:59 2027 GMT"
+  },
+  "pending": false,
+  "reconciliationRequired": false,
+  "gateway": {
+    "accessType": "DIRECT",
+    "protocol": "HTTP_TO_HTTPS",
+    "certificateId": "bRTCTBmo",
+    "routes": [
+      "/",
+      "/api",
+      "/assets"
+    ],
+    "otherDomainsPreserved": true
+  },
+  "monitoring": {
+    "functionErrorAlarm": "MIP-admin-certificate-renewal-errors",
+    "enabled": true,
+    "qualifier": "$DEFAULT",
+    "errorThreshold": 0,
+    "periodSeconds": 60,
+    "sslExpirySubscriptionEnabled": true,
+    "notificationDeliveryAcknowledged": false
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "function": "mip-admin-cert-renewer",
+  "status": "Active",
+  "runtime": "Nodejs20.19",
+  "type": "Event",
+  "role": "MIPAdminCertRenewerRole",
+  "memoryMb": 128,
+  "timeoutSeconds": 60,
+  "sourceFingerprint": "6acc75f301ea363d5cd57c767e34796f4ac8e9ec8dc7ebb0a61d8b6603734130",
+  "platformCodeSha256": "80565d85c5bfca575862acb6c441826f2cc85339435f61ed9ad204d6e95dbde4",
+  "archiveSha256Verified": true,
+  "matchingRuntimeFiles": 4,
+  "sdkClientInvocation": false,
+  "httpEntry": false,
+  "databaseAccess": false,
+  "vpcConfigured": false,
+  "dedicatedLogRetentionDays": 7,
+  "policyFingerprint": "46cc0297d2b3cb74",
+  "policyStatements": 9,
+  "verification": "pnpm verify:all",
+  "runtimeTests": 13,
+  "deploymentTests": 10
+}

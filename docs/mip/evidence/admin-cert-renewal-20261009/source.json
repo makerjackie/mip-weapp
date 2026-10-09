@@ -1,0 +1,22 @@
+{
+  "function": "mip-admin-cert-renewer",
+  "sourceFingerprint": "6acc75f301ea363d5cd57c767e34796f4ac8e9ec8dc7ebb0a61d8b6603734130",
+  "files": [
+    {
+      "path": "index.js",
+      "sha256": "b1881a335e352f842825d59e2dc576e24632c7077dc1f172034ade822ee96ef3"
+    },
+    {
+      "path": "cloud-api.js",
+      "sha256": "3ab2d6ba8b06d45e583d5295152c662e596dc2677e2a33ffe2fc0f2b5916c5f4"
+    },
+    {
+      "path": "renewal.js",
+      "sha256": "c6d7678216c8ef99d688d360ea431f88c734c2a9303bce935a82f77ab9e4b793"
+    },
+    {
+      "path": "package.json",
+      "sha256": "ce6beaed6dcd76bddd1fd7b4f99115da61376d18bffd36e10e9b1a67fec96085"
+    }
+  ]
+}
