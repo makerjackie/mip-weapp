@@ -2,7 +2,7 @@
 
 你在 git worktree 分支上工作（基于 origin/main）。请先读仓库根目录 `AGENTS.md`（必读，含边界规则与完成门禁），再读本文档，按四个问题逐项修复。**只在本分支提交，不合并 main、不 push。**
 
-设计稿参照图在本 worktree `design-refs/`（本目录） 下（Figma 2x 导出）：
+设计稿获取：优先用本机 Figma Bridge MCP 直读（PROMPT.md 有 frame id 清单），`design-refs/` 下的 PNG（Figma 2x 导出）作兜底对照：
 - `14-想跟TA合作页.png`（G1 目标形态）
 - `15-对TA感兴趣页.png`（G3 目标形态）
 - `18-玩家档案-相关机会.png`（G4 目标形态）
