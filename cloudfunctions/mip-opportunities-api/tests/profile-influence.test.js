@@ -128,6 +128,10 @@ describe('profile influence lists', () => {
             source_label: '公开档案',
           })]
         }
+        // MIW-59：两个列表都会经 loadPublicPersonDetails 补公开详情（此处返回空详情）。
+        if (sql.includes('FROM mip_profiles profile')) return []
+        if (sql.includes('FROM mip_user_badge_equipment')) return []
+        if (sql.includes('FROM mip_growth_levels')) return []
         throw new Error(`unexpected query: ${sql}`)
       },
     }
@@ -139,6 +143,60 @@ describe('profile influence lists', () => {
     assert.equal(interests.items[0].kind, 'ACTIVE_INTEREST')
     assert.equal(interests.items[0].source.label, '公开档案')
     assert.equal(JSON.stringify({ interactions, interests }).includes(actorUserId), false)
+  })
+
+  // MIW-59：互动过/心动值(对我心动) 卡与嘉宾/访客同口径——竖版卡的 Lv/三标签行/一句话介绍/
+  // 佩戴勋章都来自 loadPublicPersonDetails；visibility 关闭的字段不返回，未返回不造值。
+  it('enriches co-attendance and active-interest actors with public person details', async () => {
+    const calls = []
+    const database = {
+      async query(sql, params) {
+        calls.push({ sql, params })
+        if (sql.includes('WITH co_attendance AS')) {
+          return [actorRow({ relation_id: relationId, interaction_count: 3, event_id: eventId, event_title: '城市交流会' })]
+        }
+        if (sql.includes('FROM mip_profile_interests interest')) {
+          return [actorRow({ relation_id: relationId, source_type: 'PROFILE', source_label: '公开档案' })]
+        }
+        if (sql.includes('FROM mip_profiles profile')) {
+          return [{
+            user_id: actorUserId,
+            visibility_json: JSON.stringify({ introduction: false }),
+            identity_status: '深度链接中',
+            introduction: '专注供应链的连续创业者',
+            city_name: '广州',
+            experience_balance: 120,
+            industry_label: '供应链',
+          }]
+        }
+        if (sql.includes('FROM mip_user_badge_equipment')) {
+          return [{ user_id: actorUserId, slot_no: 1, id: 'badge-pioneer', name: '先行者', image_url: 'cloud://badge' }]
+        }
+        if (sql.includes('FROM mip_growth_levels')) {
+          return [
+            { id: 1, name: '链接者', minimum_experience: 0, status: 'ACTIVE' },
+            { id: 2, name: '共建者', minimum_experience: 100, status: 'ACTIVE' },
+          ]
+        }
+        throw new Error(`unexpected query: ${sql}`)
+      },
+    }
+    const interactions = await listInfluenceInteractions(database, caller, { limit: 20 })
+    const interests = await listActiveInfluenceInterests(database, caller, { limit: 20 })
+    for (const item of [...interactions.items, ...interests.items]) {
+      assert.deepEqual(item.actor.level, { number: 2, name: '共建者' })
+      assert.equal(item.actor.cityName, '广州')
+      assert.equal(item.actor.industryLabel, '供应链')
+      assert.equal(item.actor.identityStatus, '深度链接中')
+      // visibility.introduction=false 的字段不返回。
+      assert.equal(item.actor.introduction, undefined)
+      assert.deepEqual(item.actor.badges, [{ id: 'badge-pioneer', name: '先行者', imageUrl: 'cloud://badge' }])
+      assert.equal(item.actor.nickname, 'MIP 用户')
+      assert.equal(JSON.stringify(item).includes(actorUserId), false)
+    }
+    // 详情查询按当前页人员过滤（appId + 页内 user_id），不扫全表。
+    const detailCall = calls.find(call => call.sql.includes('FROM mip_profiles profile'))
+    assert.deepEqual(detailCall.params, [appId, actorUserId])
   })
 
   it('round-trips guest pagination without putting a raw user id in the cursor', async () => {
@@ -182,6 +240,8 @@ describe('profile influence lists', () => {
     assert.match(calls[0].sql, /industry\.label LIKE \? ESCAPE '='/)
     assert.equal(calls[0].params.filter(value => value === '%金融=_50=%%').length, 4)
     await listInfluenceInteractions(database, caller, { keyword: '金融_50%', cursor: first.nextCursor, limit: 1 })
-    assert.deepEqual(calls[1].params.slice(-3), ['2026-08-25T01:00:00.000Z', '2026-08-25T01:00:00.000Z', actorUserId])
+    // MIW-59：列表查询后新增了 loadPublicPersonDetails 的 3 条富化查询，按列表 SQL 过滤再取游标参数。
+    const listCalls = calls.filter(call => call.sql.includes('WITH co_attendance AS'))
+    assert.deepEqual(listCalls[1].params.slice(-3), ['2026-08-25T01:00:00.000Z', '2026-08-25T01:00:00.000Z', actorUserId])
   })
 })

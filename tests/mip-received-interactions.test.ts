@@ -37,6 +37,11 @@ describe('MIP received interaction client flow', () => {
     // J3-06 互动过口径 = 同场签到（双方都签到，只报名不算），空态文案不得回到心动语义。
     expect(view).toContain('与你同场签到过活动的用户会显示在这里。')
     expect(view).not.toContain('有效心动会显示在这里')
+    // MIW-52/59 竖版卡契约：影响力与心动值分支都走统一嘉宾卡 grid 壳，
+    // Lv/三标签行/一句话介绍/勋章全由服务端事实渲染（服务端未返回即留空，不造值）。
+    for (const attr of ['layout="grid"', 'level-text="{{item.levelText}}"', 'tags="{{item.profileTags}}"', 'supporting-text="{{item.actorHeadline}}"', 'medals="{{item.medals}}"']) {
+      expect(view).toContain(attr)
+    }
     expect(pageConfig.navigationBarTitleText).toBe('影响力数据')
     expect(profile).toContain('bind:select="openStat"')
     expect(profile).toContain('target: \'visitor\'')
@@ -79,6 +84,10 @@ describe('MIP received interaction client flow', () => {
     expect(server).toContain('FROM mip_profile_visits')
     expect(server).toContain('guest.status = \'ACTIVE\'')
     expect(server).toContain('registration.share_profile = 1')
+    // MIW-59：竖版卡数据源——对TA感兴趣/嘉宾/互动过/心动值(对我心动) 四个列表都要经
+    // loadPublicPersonDetails 补公开详情（访客走 profile-visits 同名实现），缺一卡面即缺 Lv/三标签/简介/勋章。
+    const enrichCount = (server.match(/loadPublicPersonDetails\(database, caller\.appId, page\.map\(row => row\.actor_user_id\)\)/g) || []).length
+    expect(enrichCount).toBe(4)
   })
 
   it('rejects invented or malformed influence figures at the client boundary', () => {
