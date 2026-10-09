@@ -258,6 +258,8 @@ export interface ProfileInterestPerson extends PublicPersonDetails {
   headline?: string
   userKind: 'PLAYER' | 'GUEST'
   interestedAt: string
+  /** G3（审计 2026-10-09）：邀请来源标注（figma 2189_43192），服务端无归档时省略。 */
+  inviter?: OpportunityCooperatorInviter
 }
 
 export interface ProfileInterestPage {

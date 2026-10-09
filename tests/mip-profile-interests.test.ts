@@ -45,7 +45,9 @@ describe('profile interest roster contract', () => {
           ? [{ id: 'lv1', name: '初识', minimum_experience: 0, status: 'ACTIVE' }, { id: 'lv2', name: '共建', minimum_experience: 100, status: 'ACTIVE' }]
           : sql.includes('FROM mip_user_badge_equipment')
             ? [{ user_id: actor, id: 'badge-1', name: '社区共建者' }]
-            : [{ actor_user_id: actor, actor_nickname: 'Ame', actor_headline: '设计', is_player: 1, updated_at: '2026-09-22T02:30:00.000Z', actor_visibility_json: {} }],
+            : sql.includes('FROM mip_event_invitation_attributions')
+              ? [{ guest_user_id: actor, invitation_source_type: 'USER', inviter_nickname: 'Bear', inviter_visibility_json: {}, inviter_avatar_file_id: 'cloud://bear' }]
+              : [{ actor_user_id: actor, actor_nickname: 'Ame', actor_headline: '设计', is_player: 1, updated_at: '2026-09-22T02:30:00.000Z', actor_visibility_json: {} }],
     }, caller, { profileRef: createProfileRef({ appId, userId: owner }, pepper) })
     list.mockResolvedValue(parseProfileInterests(response))
     const p = page()
@@ -54,15 +56,19 @@ describe('profile interest roster contract', () => {
     // MIW-24：名单卡走统一嘉宾卡组件，页面 presenter 把服务端事实映射为视图字段；
     // 简介取 introduction 优先于 headline，勋章接服务端佩戴口径（无图不伪造勋章图）。
     // MIW-52：统一三标签（地区MIP | 代表行业 | 身份状态）替换旧 metaText 斜杠串。
+    // G3：邀请人标注（figma 2189_43192 邀请人Bear + 头像）随服务端归档返回，无归档省略。
     expect(p.data.people[0]).toMatchObject({
       displayName: 'Ame',
       levelText: 'Lv.2',
       profileTags: ['深圳MIP', '软件', '创业者'],
       supportingText: '帮助团队建立设计系统',
       medals: [{ id: 'badge-1' }],
+      inviterName: 'Bear',
+      inviterAvatarUrl: 'cloud://bear',
+      inviterKind: 'PLAYER',
     })
     const template = fs.readFileSync(new URL('../src/packages/member/mip-profile-interests/index.wxml', import.meta.url), 'utf8')
-    for (const attr of ['layout="grid"', 'display-name="{{item.displayName}}"', 'level-text="{{item.levelText}}"', 'tags="{{item.profileTags}}"', 'supporting-text="{{item.supportingText}}"', 'medals="{{item.medals}}"']) {
+    for (const attr of ['layout="grid"', 'display-name="{{item.displayName}}"', 'level-text="{{item.levelText}}"', 'tags="{{item.profileTags}}"', 'supporting-text="{{item.supportingText}}"', 'medals="{{item.medals}}"', 'inviter-name="{{item.inviterName}}"', 'inviter-avatar-url="{{item.inviterAvatarUrl}}"', 'inviter-kind="{{item.inviterKind}}"']) {
       expect(template).toContain(attr)
     }
     expect(p.data.totalCount).toBe(1)
@@ -101,6 +107,20 @@ describe('profile interest roster contract', () => {
     expect(parseProfileInterests({ items: [person], totalCount: 1 }).items[0]).not.toHaveProperty('phone')
     expect(() => parseProfileInterests({ items: [{ ...person, interestedAt: '' }], totalCount: 1 })).toThrow('格式不正确')
     expect(() => parseProfileInterests({ items: [person], totalCount: '1' })).toThrow('格式不正确')
+    // G3：inviter 严格校验（responseAuthorInviter 口径）——未知键/畸形整页拒绝，合法结构保留。
+    expect(parseProfileInterests({
+      items: [{ ...person, inviter: { sourceType: 'PLATFORM', displayName: 'MIP 平台' } }],
+      totalCount: 1,
+    }).items[0]?.inviter).toEqual({ sourceType: 'PLATFORM', displayName: 'MIP 平台' })
+    for (const inviter of [
+      { sourceType: 'BOT', displayName: 'x' },
+      { sourceType: 'USER', displayName: '' },
+      { sourceType: 'USER', displayName: 'Bear', extra: 1 },
+      { sourceType: 'USER' },
+      'Bear',
+    ]) {
+      expect(() => parseProfileInterests({ items: [{ ...person, inviter }], totalCount: 1 })).toThrow('格式不正确')
+    }
   })
   it('keeps loaded content on a pagination failure and retries the same cursor', async () => {
     const first = parseProfileInterests({ items: [{ profileRef: 'p1.first', nickname: 'Ame', userKind: 'PLAYER', interestedAt: '2026-09-22T02:30:00Z' }], totalCount: 2, nextCursor: 'cursor' })

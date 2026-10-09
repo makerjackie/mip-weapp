@@ -13,6 +13,10 @@ interface ProfileInterestView {
   profileTags: string[]
   supportingText: string
   medals: { id: string, imageUrl?: string }[]
+  // G3（审计 2026-10-09）：邀请来源标注（figma 2189_43192），服务端无归档时省略不渲染。
+  inviterName: string
+  inviterAvatarUrl: string
+  inviterKind: 'PLAYER' | 'PLATFORM'
 }
 
 function presentProfileInterest(person: ProfileInterestPerson): ProfileInterestView {
@@ -24,6 +28,9 @@ function presentProfileInterest(person: ProfileInterestPerson): ProfileInterestV
     profileTags: [person.cityName ? `${person.cityName}MIP` : '', person.industryLabel || '', person.identityStatus || ''].filter(Boolean).slice(0, 3),
     supportingText: person.introduction || person.headline || '',
     medals: (person.badges || []).map(badge => ({ id: badge.id, imageUrl: badge.imageUrl })),
+    inviterName: person.inviter?.displayName || '',
+    inviterAvatarUrl: person.inviter?.avatarUrl || '',
+    inviterKind: person.inviter?.sourceType === 'PLATFORM' ? 'PLATFORM' : 'PLAYER',
   }
 }
 

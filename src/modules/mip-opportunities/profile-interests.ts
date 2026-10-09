@@ -1,4 +1,4 @@
-import type { ProfileInterestPage, ProfileInterestPerson, PublicPersonDetails } from './types'
+import type { OpportunityCooperatorInviter, ProfileInterestPage, ProfileInterestPerson, PublicPersonDetails } from './types'
 import { MipOpportunityError } from './error'
 
 export function parsePublicPersonDetails(person: Record<string, unknown>): PublicPersonDetails {
@@ -22,9 +22,32 @@ export function parsePublicPersonDetails(person: Record<string, unknown>): Publi
   }
 }
 
+const invalidResponse = () => new MipOpportunityError('INVALID_RESPONSE', '感兴趣名单返回的数据格式不正确，请稍后重试。', true)
+
+// G3（审计 2026-10-09）：邀请来源标注（figma 2189_43192「邀请人Bear + 头像」）。
+// 口径对齐 mip-cooperation responseAuthorInviter：未知键拒绝、畸形整页拒绝；
+// 服务端判定 USER/PLATFORM，无归档时服务端省略该字段。
+function parseProfileInterestInviter(value: unknown): OpportunityCooperatorInviter {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw invalidResponse()
+  }
+  const source = value as Record<string, unknown>
+  if (Object.keys(source).some(key => !['sourceType', 'displayName', 'avatarUrl'].includes(key))
+    || !['USER', 'PLATFORM'].includes(String(source.sourceType))
+    || typeof source.displayName !== 'string' || !source.displayName.trim() || source.displayName.length > 64
+    || !(source.avatarUrl === undefined || typeof source.avatarUrl === 'string')) {
+    throw invalidResponse()
+  }
+  return {
+    sourceType: source.sourceType as OpportunityCooperatorInviter['sourceType'],
+    displayName: source.displayName,
+    ...(source.avatarUrl === undefined ? {} : { avatarUrl: source.avatarUrl }),
+  }
+}
+
 /** Validate the non-empty roster contract and never forward private server fields. */
 export function parseProfileInterests(value: unknown): ProfileInterestPage {
-  const invalid = () => new MipOpportunityError('INVALID_RESPONSE', '感兴趣名单返回的数据格式不正确，请稍后重试。', true)
+  const invalid = invalidResponse
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw invalid()
   }
@@ -52,6 +75,7 @@ export function parseProfileInterests(value: unknown): ProfileInterestPage {
       headline: typeof person.headline === 'string' ? person.headline : undefined,
       userKind: person.userKind as 'PLAYER' | 'GUEST',
       interestedAt: person.interestedAt,
+      ...(person.inviter === undefined ? {} : { inviter: parseProfileInterestInviter(person.inviter) }),
     }
   })
   return { items, totalCount: Number(page.totalCount), nextCursor: page.nextCursor as string | undefined }

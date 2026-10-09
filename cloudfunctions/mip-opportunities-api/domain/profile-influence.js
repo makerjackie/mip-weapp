@@ -1,6 +1,6 @@
 'use strict'
 
-const { loadPublicPersonDetails } = require('./public-person-details')
+const { loadHeartInviters, loadPublicPersonDetails } = require('./public-person-details')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const {
   encodeCursor,
@@ -136,9 +136,23 @@ async function listPublicProfileInterests(database, caller, input = {}) {
     ),
   ])
   const page = rows.slice(0, limit)
-  const details = await loadPublicPersonDetails(database, caller.appId, page.map(row => row.actor_user_id))
+  // G3（审计 2026-10-09）：竖版卡 footer 邀请人标注（figma 2189_43192「邀请人Bear + 头像」）
+  // 与人才列表同源——复用 loadHeartInviters（mip_event_invitation_attributions 最新一条，
+  // USER 走可见性门控 / PLATFORM 平台标注），无归档省略，不造值。
+  const [details, inviters] = await Promise.all([
+    loadPublicPersonDetails(database, caller.appId, page.map(row => row.actor_user_id)),
+    loadHeartInviters(database, caller.appId, page.map(row => row.actor_user_id)),
+  ])
   return {
-    items: page.map(row => ({ ...influencePersonDto(row, caller), ...details.get(row.actor_user_id), interestedAt: iso(row.updated_at) })),
+    items: page.map((row) => {
+      const inviter = inviters.get(row.actor_user_id)
+      return {
+        ...influencePersonDto(row, caller),
+        ...details.get(row.actor_user_id),
+        ...(inviter ? { inviter } : {}),
+        interestedAt: iso(row.updated_at),
+      }
+    }),
     totalCount: Number(count?.count || 0),
     nextCursor: rows.length > limit && page.length
       ? encodePersonCursor(page.at(-1).updated_at, page.at(-1).actor_user_id, caller)

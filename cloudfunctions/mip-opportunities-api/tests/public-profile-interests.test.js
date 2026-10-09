@@ -26,6 +26,8 @@ function database(options = {}) {
     async query(sql, params) {
       calls.push({ sql, params })
       if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_user_badge_equipment') || sql.includes('FROM mip_growth_levels')) return []
+      // G3：邀请归档批量查询（loadHeartInviters），无归档回空即省略 inviter。
+      if (sql.includes('FROM mip_event_invitation_attributions')) return options.inviters || []
       return options.rows || [row, { ...row, actor_user_id: '30000000-0000-4000-8000-000000000002' }]
     },
   }
@@ -46,7 +48,7 @@ describe('public profile interest roster', () => {
     const roster = db.calls.find(call => call.sql.startsWith('SELECT actor.id'))
     assert.match(roster.sql, /interest\.status = 'ACTIVE'/)
     assert.match(roster.sql, /actor\.status = 'ACTIVE'/)
-    assert.match(roster.sql, /ORDER BY interest.updated_at DESC, actor.id DESC/)
+    assert.match(roster.sql, /ORDER BY interest.updated_at DESC, actor\.id DESC/)
     assert.deepEqual(roster.params, [appId, owner, owner, owner, viewer, viewer, 2])
     const count = db.calls.find(call => call.sql.includes('SELECT COUNT(*)'))
     const summaryDb = database()
@@ -56,6 +58,28 @@ describe('public profile interest roster', () => {
     assert.deepEqual(count.params, summaryCount.params)
     await listPublicProfileInterests(db, caller, { profileRef, cursor: result.nextCursor, limit: 1 })
     assert.deepEqual(db.calls.filter(call => call.sql.startsWith('SELECT actor.id')).at(-1).params.slice(-4), [row.updated_at, row.updated_at, actor, 2])
+  })
+
+  it('merges the latest invitation archive as the inviter annotation and omits it without one', async () => {
+    // G3（figma 2189_43192）：名单卡 footer「邀请人Bear + 头像」，口径同人才列表
+    // loadHeartInviters——每人取 captured_at 最新一条，USER 昵称+头像 / PLATFORM 平台。
+    const db = database({
+      inviters: [
+        { guest_user_id: actor, invitation_source_type: 'USER', inviter_nickname: 'Bear', inviter_visibility_json: {}, inviter_avatar_file_id: 'cloud://bear' },
+        { guest_user_id: '30000000-0000-4000-8000-000000000002', invitation_source_type: 'PLATFORM' },
+      ],
+    })
+    const result = await listPublicProfileInterests(db, caller, { profileRef })
+    assert.deepEqual(result.items[0].inviter, { sourceType: 'USER', displayName: 'Bear', avatarUrl: 'cloud://bear' })
+    assert.deepEqual(result.items[1].inviter, { sourceType: 'PLATFORM', displayName: 'MIP 平台' })
+    const noArchive = await listPublicProfileInterests(database(), caller, { profileRef })
+    assert.equal(noArchive.items[0].inviter, undefined)
+    // 邀请人昵称被私密开关关闭时不泄露真名，回退「MIP 用户」。
+    const gated = await listPublicProfileInterests(database({
+      inviters: [{ guest_user_id: actor, invitation_source_type: 'USER', inviter_nickname: 'Bear', inviter_visibility_json: { nickname: false } }],
+    }), caller, { profileRef })
+    assert.equal(gated.items[0].inviter.displayName, 'MIP 用户')
+    assert.equal(gated.items[0].inviter.avatarUrl, undefined)
   })
 
   it('enforces trusted membership, target visibility, blocks and app-bound references before returning identities', async () => {
