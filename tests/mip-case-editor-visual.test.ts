@@ -237,4 +237,25 @@ describe('MIP super case editor visual contract', () => {
     expect(page).toContain('publish: true')
     expect(page).toContain('this.setData({ saving: false })')
   })
+
+  it('pins a persistent save-error banner above the fixed save bar (MIP-3)', () => {
+    // 保存失败横幅固定在吸底保存按钮上方，border-danger 样式，不自动消失
+    const bannerIndex = template.indexOf('save-error-banner')
+    const actionsIndex = template.indexOf('<mip-sticky-actions>')
+    expect(template).toContain('border border-danger')
+    expect(template).toContain('aria-live="polite"')
+    expect(bannerIndex).toBeGreaterThan(-1)
+    expect(bannerIndex).toBeLessThan(actionsIndex)
+    expect(declarations(ruleWith(stylesheet, '.save-error-banner', 'position', true))).toMatchObject({
+      position: 'fixed',
+      bottom: 'calc(env(safe-area-inset-bottom) + 136rpx)',
+      background: 'var(--color-panel)',
+    })
+    // 横幅在下一次保存（save() 开头清 message）或修改字段（dismissSaveError）后清除
+    expect(page).toMatch(/dismissSaveError\(\) \{[\s\S]*?if \(this\.data\.message\) \{[\s\S]*?this\.setData\(\{ message: '' \}\)/)
+    for (const handler of ['updateProjectText', 'changeProjectStart', 'applyCity', 'addProject', 'removeProject']) {
+      const body = page.slice(page.indexOf(`${handler}(`))
+      expect(body.slice(0, body.indexOf('\n  },'))).toContain('this.dismissSaveError()')
+    }
+  })
 })

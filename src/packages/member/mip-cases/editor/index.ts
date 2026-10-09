@@ -199,18 +199,21 @@ Page({
     if (!Number.isInteger(groupIndex) || !PROJECT_TEXT_FIELDS.includes(field)) {
       return
     }
+    this.dismissSaveError()
     this.setData({ [`projects[${groupIndex}].${field}`]: event.detail.value })
   },
 
   changeProjectStart(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const groupIndex = Number(event.currentTarget.dataset.groupIndex)
     if (Number.isInteger(groupIndex)) {
+      this.dismissSaveError()
       this.setData({ [`projects[${groupIndex}].startedOn`]: event.detail.value })
     }
   },
 
   applyCity(groupIndex: number, label: string, tagId = '') {
     const knownTagId = this.data.cityOptions.find(option => option.label === label)?.id || ''
+    this.dismissSaveError()
     this.setData({
       [`projects[${groupIndex}].cityLabel`]: label,
       // 标签库为主：标签库暂缺该城市时 tagId 留空，发布校验会给出明确提示。
@@ -251,6 +254,7 @@ Page({
       wx.showToast({ title: `最多 ${MAX_SUPER_CASE_PROJECTS} 个项目`, icon: 'none' })
       return
     }
+    this.dismissSaveError()
     this.setData({ projects: [...this.data.projects, emptyProject()] })
   },
 
@@ -259,6 +263,7 @@ Page({
     if (!Number.isInteger(groupIndex) || groupIndex <= 0 || this.data.projects.length <= 1) {
       return
     }
+    this.dismissSaveError()
     const projects = this.data.projects.filter((_, index) => index !== groupIndex)
     this.setData({ projects })
   },
@@ -296,6 +301,14 @@ Page({
       return
     }
     void this.save()
+  },
+
+  // MIP-3：保存失败横幅（save-error-banner）持久展示，修改任一字段后清除；
+  // 下一次保存则在 save() 开始时清除。
+  dismissSaveError() {
+    if (this.data.message) {
+      this.setData({ message: '' })
+    }
   },
 
   async save() {

@@ -1,0 +1,15 @@
+/* MIP-3：保存失败横幅固定在吸底保存按钮（mip-sticky-actions 玻璃条）上方，
+   任意滚动位置可见；下一次保存或修改任一字段后清除。
+   页面根节点已有 pb-[calc(env(safe-area-inset-bottom)+220rpx)] 预留，横幅不遮挡表单。 */
+.save-error-banner {
+  position: fixed;
+  right: auto;
+  bottom: calc(env(safe-area-inset-bottom) + 136rpx);
+  left: 50%;
+  z-index: 20;
+  box-sizing: border-box;
+  width: calc(100% - 48rpx);
+  max-width: calc(var(--mip-member-shell-max-width, 100%) - 48rpx);
+  background: var(--color-panel);
+  transform: translateX(-50%);
+}
