@@ -1370,6 +1370,18 @@
       "altersTables": [
         "mip_videos"
       ]
+    },
+    {
+      "version": "20261009180000",
+      "name": "mip_ai_voice_storage_request_kind",
+      "sql": "database/mysql/mip/104_ai_voice_storage_request_kind.sql",
+      "sqlSha256": "18c3819e952a5922597f8274be0d6ee232a311435c1820478a9ac4d6a034e134",
+      "rollback": "database/mysql/mip/rollback/104_ai_voice_storage_request_kind.sql",
+      "rollbackSha256": "4f8b4955619132b53915e047564837dec3fc59d8a064f711e1e14e78572f7d7a",
+      "createsTables": [],
+      "altersTables": [
+        "mip_ai_draft_requests"
+      ]
     }
   ]
 }

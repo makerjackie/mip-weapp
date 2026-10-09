@@ -87,7 +87,14 @@ function success(data) {
 
 function failure(error) {
   const raw = error instanceof Error ? error.message : ''
-  const code = /^[A-Z][A-Z0-9_]+$/.test(raw) ? raw : 'SERVICE_UNAVAILABLE'
+  const isDomainCode = /^[A-Z][A-Z0-9_]+$/.test(raw)
+  const code = isDomainCode ? raw : 'SERVICE_UNAVAILABLE'
+  if (!isDomainCode) {
+    // 未经领域码归类的异常(典型:数据库层错误)。只留错误类别,不留消息,
+    // 避免 Provider 原始错误或用户输入进入业务日志;否则线上只能看到
+    // 「AI 草稿服务暂时不可用」,排障必须靠猜。
+    console.error('[mip-ai-api] uncoded failure', error?.code || error?.name || 'UNKNOWN')
+  }
   return {
     ok: false,
     error: {

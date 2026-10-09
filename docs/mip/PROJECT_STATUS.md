@@ -1,8 +1,10 @@
 # MIP 当前状态
 
-更新日期：2026-10-09（最新 CloudBase 管理后台发布及 HTTPS/浏览器复验；此前 2026-10-08：往期活动 tab 改后台配置回顾条目并跳视频号（MIW-57）；超级案例独立列表页下线、路由契约同步 58 条（MIW-54）。此前 2026-10-06：知识/游戏/盲盒 9 页用户端下线、路由契约同步 61 条（MIW-44）。此前 2026-10-05：心动计数口径收敛与 SQL 执行验证（MIW-36）：心动可见性 SQL 收敛为共享构造、tab 徽标改服务端计数、云函数 SQL 真实执行验证、详情 onShow 缓存新鲜窗口；会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
+更新日期：2026-10-09（AI 语音直传「AI 草稿服务暂时不可用」根因修复：迁移 104 补 VOICE_STORAGE 请求种类约束（MIW-61）；同日后台自定义域名绑定与 CloudBase 管理后台发布复验；此前 2026-10-08：往期活动 tab 改后台配置回顾条目并跳视频号（MIW-57）；超级案例独立列表页下线、路由契约同步 58 条（MIW-54）。此前 2026-10-06：知识/游戏/盲盒 9 页用户端下线、路由契约同步 61 条（MIW-44）。此前 2026-10-05：心动计数口径收敛与 SQL 执行验证（MIW-36）：心动可见性 SQL 收敛为共享构造、tab 徽标改服务端计数、云函数 SQL 真实执行验证、详情 onShow 缓存新鲜窗口；会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
+
+2026-10-09（MIW-61）：AI 语音填写（录音确认）线上全量失败，客户端只见「AI 草稿服务暂时不可用」。排查：CLS 日志显示 `getCapability`、`prepareVoiceUpload` 均成功，`createVoiceDraftStorage` 以 17–130ms 快速返回 `SERVICE_UNAVAILABLE`（函数未捕获异常 message 非领域码时的兜底码），且每次确认出现两次（客户端同 requestID 重试）；线下测试未拦住，因单测用内存数据库桩不执行 MySQL CHECK 约束。根因是 MIW-34 引入的直传链路使用 `VOICE_STORAGE` 请求种类并向 `mip_ai_draft_requests` 写入 `audio_object_key`，但迁移 057 的 `mip_ai_draft_requests_kind_ck` 只允许 TEXT/VOICE_ASSET/VOICE_UPLOAD，`mip_ai_draft_requests_upload_ck` 要求非 VOICE_UPLOAD 的 `audio_object_key` 为 NULL，INSERT 被约束拒绝（errno 3819）——该链路自上线起在目标环境从未成功过（表内仅 TEXT 历史行）。修复：迁移 104 把 `VOICE_STORAGE` 补进两条 CHECK（`VOICE_STORAGE` 与 `VOICE_UPLOAD` 同样要求 `audio_asset_id`+`audio_object_key` 非空，孤儿素材清理 `draft_kind IN ('VOICE_UPLOAD','VOICE_STORAGE')` 语义保持）；`mip-ai-api` handler 对未经领域码归类的异常补 `console.error('[mip-ai-api] uncoded failure', code|name)`（沿用 mip-admin-api 惯例，只记类别不记消息，Provider 原始错误与用户输入不进日志），handler 测试覆盖。部署（MIP staging）：仓库外逻辑备份 154 表/3773 行后应用迁移 104（目标环境唯一 pending 项，回读 CHECK 已更新），`mip-ai-api` 以 `cloud:deploy --only` 更新且下载代码与本地一致；`pnpm verify` 全绿。剩余待验：真机录音确认链路（函数健康探针与 `--only` 部署的收尾健康门因 API Key `Invoke` 的 CAM 拒绝未跑完，与同日后台发布记录的 BLOCKED 同因；不影响小程序真实调用路径）。
 
 2026-10-09 后台自定义域名：新入口 [admin.mip.cool](https://admin.mip.cool/#/overview) 已绑定 CloudBase `DIRECT` HTTP 网关，阿里云精确 CNAME 与平台 DNS 状态均通过；同源 `/`、`/api`、`/assets` 路由与精确登录来源已配置。14/14 静态 SHA-256 与同日最新构建一致，入口 `index-CYFT5GuB.js`，真实 HTTPS 67/67、14 读模块与浏览器密码登录/非空概览/桌面手机视口通过。运行源码沿用 `d69d9b73`，未再次部署代码或改变旧入口。证书到期 2027-01-07 16:59:59（Asia/Shanghai），需在到期前更新；Cloudflare 旧别名与旧站仍保留。原生健康探针权限阻塞、微信真机和支付未验收边界继续保留。[绑定证据](evidence/admin-domain-20261009/README.md)及发布 skill 已记录流程与证书预检不等于签发的处理经验。
 
@@ -25,7 +27,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 59 条小程序路由（用户分包 49 条）、104 个迁移（均已锁定）、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 59 条小程序路由（用户分包 49 条）、105 个锁定迁移、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -144,7 +146,7 @@ MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示�
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
 | 小程序路由 | 59 条：5 条主包、49 条用户分包、5 条管理分包（含网页登录确认页）；2026-10-09 审计修复 G1 新增想跟TA合作页 1 条、2026-10-08 MIW-54 下线超级案例孤儿列表页 1 条、2026-10-07 MIW-49 新增城市选择页 1 条、此前 MIW-42 删除机会死页 3 条、MIW-44 下线知识/游戏/盲盒 9 条 | `config/runtime-pages.json`、`src/app.json` |
-| 数据库 | 104 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
+| 数据库 | 105 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
 | 管理合同 | 240 个 operation：105 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | Web 开放范围 | 105 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
