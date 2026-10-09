@@ -64,6 +64,15 @@ describe('MIP Design System native primitives', () => {
     expect(read('src/components/sticky-actions/index.wxml')).toContain('<slot name="actions" />')
   })
 
+  it('fires pill taps once: both roots catch native bubbling and only triggerEvent reaches the host (F1)', () => {
+    const pill = read('src/components/mip-pill-button/index.wxml')
+    // 双通道根因：bind:tap 触发自定义事件的同时原生 tap 继续冒泡、再次命中宿主节点，
+    // 页面 handler 一次点按执行两次（无闩锁的快速路径开/关相互抵消，如档案页我感兴趣）。
+    // 两个分支（native button / view）都必须 catch:tap。
+    expect(pill.match(/bind:tap/g) ?? []).toEqual([])
+    expect(pill.match(/catch:tap="handleTap"/g) ?? []).toHaveLength(2)
+  })
+
   it('implements business primitives with reference geometry', () => {
     expect(read('src/components/mip-nav-bar/index.wxml')).toContain('mip-nav-bar__title')
     expect(read('src/components/mip-order-card/index.wxml')).toContain('mip-order-card__payment-value')
