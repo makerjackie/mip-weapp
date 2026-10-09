@@ -54,6 +54,7 @@ tmp/
 .claude/
 .pipeline/
 .notma/
+.worktrees/
 
 # Local source material used to refresh the canonical MIP documents.
 docs/research/legacy-mip-app/

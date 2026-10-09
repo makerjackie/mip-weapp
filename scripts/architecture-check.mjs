@@ -16,7 +16,7 @@ const patterns = [
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    if (['node_modules', 'dist', 'coverage', '.git', '.weapp-vite', '.tmp', '.screenshots', '.wrangler'].includes(entry.name)) {
+    if (['node_modules', 'dist', 'coverage', '.git', '.weapp-vite', '.tmp', '.screenshots', '.wrangler', '.worktrees'].includes(entry.name)) {
       return []
     }
     if (entry.name === 'pnpm-lock.yaml') {
