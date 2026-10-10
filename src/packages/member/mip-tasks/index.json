@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "任务",
+  "navigationBarTitleText": "NPC任务",
   "enablePullDownRefresh": true,
   "backgroundColor": "#080808",
   "usingComponents": {

@@ -306,7 +306,7 @@ function normalizeEditableFields(value) {
   }
   const fields = {}
   if ('nickname' in value) fields.nickname = text(value.nickname, 64, { required: true, label: '昵称' })
-  if ('headline' in value) fields.headline = text(value.headline, 160, { label: '简介标题' })
+  if ('headline' in value) fields.headline = text(value.headline, 300, { label: '简介标题' })
   if ('introduction' in value) fields.introduction = text(value.introduction, 600, { label: '个人介绍' })
   if ('visibility' in value) {
     if (!value.visibility || typeof value.visibility !== 'object' || Array.isArray(value.visibility)) {

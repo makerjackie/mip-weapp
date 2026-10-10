@@ -131,6 +131,8 @@ export interface EventInvitationAttribution {
 export interface PublicEventParticipantPage {
   items: PublicEventParticipant[]
   nextCursor?: string
+  /** 差异报告 C1（figma 1818:17230）：筛选胶囊计数，与列表同可见性口径、不含关键词过滤。 */
+  kindTotals?: { PLAYER: number, GUEST: number }
 }
 
 export interface MipEventListItem {

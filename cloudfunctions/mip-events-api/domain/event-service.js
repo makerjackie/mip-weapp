@@ -1430,6 +1430,10 @@ async function listPublicParticipants(db, {
     clauses.push(blockFilter.sql)
     params.push(...blockFilter.params)
   }
+  // 差异报告 C1（figma 1818:17230）：嘉宾/玩家筛选胶囊带计数。口径与列表一致
+  // （公开分享、有效报名、互相屏蔽过滤），不受关键词与游标影响。
+  const baseClauses = clauses.slice()
+  const baseParams = params.slice()
   if (keyword) {
     const pattern = likePattern(keyword)
     clauses.push(`(
@@ -1504,7 +1508,20 @@ async function listPublicParticipants(db, {
     [...heartRelationParams, ...params, pageLimit + 1],
   )
   const pageRows = rows.slice(0, pageLimit)
+  const kindTotalRows = await db.query(
+    `SELECT ${membershipExists} AS is_player, COUNT(*) AS total
+     FROM mip_event_registrations r
+     WHERE ${baseClauses.join(' AND ')}
+     GROUP BY is_player`,
+    baseParams,
+  )
+  const kindTotals = { PLAYER: 0, GUEST: 0 }
+  for (const row of kindTotalRows) {
+    if (Number(row.is_player) === 1) kindTotals.PLAYER = Number(row.total)
+    else kindTotals.GUEST = Number(row.total)
+  }
   return {
+    kindTotals,
     items: pageRows.map((row) => {
       const allowed = publicVisibility(row.visibility_json)
       return {

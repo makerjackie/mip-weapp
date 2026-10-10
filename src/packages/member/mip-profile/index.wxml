@@ -101,13 +101,13 @@
         <text wx:else class="absolute left-[24rpx] top-[16rpx] text-[28rpx] leading-[40rpx] text-muted">示例：MIP 创意社群创始人，寻找永创意做生意的伙伴</text>
         <!-- WXML 绑定不支持括号表达式后接成员访问（devtools 编译报 unexpected token，
              会拖垮整个 member 分包），字数在模板内用惰性三元求值。 -->
-        <text class="absolute bottom-[24rpx] right-[24rpx] text-[20rpx] leading-[28rpx] text-muted">{{figma.intro ? figma.intro.length : 0}}/160</text>
+        <text class="absolute bottom-[24rpx] right-[24rpx] text-[20rpx] leading-[28rpx] text-muted">{{figma.intro ? figma.intro.length : 0}}/300</text>
       </view>
     </view>
   </block>
 
   <block wx:else>
-    <view class="bg-brand px-3 py-2 text-center text-[24rpx] text-on-brand">资料用于个人名片和公开档案展示</view>
+    <view class="bg-brand px-3 py-2 text-center text-[24rpx] text-on-brand">吸引更多适合你的资源和人脉~</view>
     <view wx:if="{{aiOrganizationDraftLoaded}}" class="mx-3 mt-3 rounded-[16rpx] border border-line bg-panel px-4 py-3 text-[22rpx] leading-6 text-muted">草稿中的公司和组织信息会随本次保存同步更新，可在名片编辑中继续调整。</view>
     <view wx:if="{{message}}" data-profile-message="true" class="mx-3 mt-3 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[24rpx] leading-6">{{message}}</view>
 
@@ -167,14 +167,14 @@
       <text>一句话介绍你的工作和背景</text>
     </view>
     <view class="mx-3 mt-3 rounded-[16rpx] bg-panel px-3 py-3">
-      <textarea aria-label="个人简介" class="block h-[176rpx] w-full max-w-full box-border bg-transparent text-[24rpx] leading-6" maxlength="160" value="{{headline}}" data-field="headline" bindinput="updateText" placeholder="例如：品牌主理人，寻找一起做项目的伙伴" placeholder-style="color:#B3B3B3" />
-      <view class="text-right text-[22rpx] text-muted">{{headline.length}}/160</view>
+      <textarea aria-label="个人简介" class="block h-[176rpx] w-full max-w-full box-border bg-transparent text-[24rpx] leading-6" maxlength="300" value="{{headline}}" data-field="headline" bindinput="updateText" placeholder="例如：品牌主理人，寻找一起做项目的伙伴" placeholder-style="color:#B3B3B3" />
+      <view class="text-right text-[22rpx] text-muted">{{headline.length}}/300</view>
     </view>
 
     <mip-sticky-actions>
       <view slot="actions" class="w-full">
         <mip-pill-button
-          label="保存资料"
+          label="保存"
           loading="{{saving}}"
           disabled="{{avatarUploading}}"
           bind:tap="saveProfile"

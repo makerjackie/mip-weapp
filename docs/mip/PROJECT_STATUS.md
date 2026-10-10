@@ -8,6 +8,8 @@
 
 2026-10-09（MIW-61）：AI 语音填写（录音确认）线上全量失败，客户端只见「AI 草稿服务暂时不可用」。排查：CLS 日志显示 `getCapability`、`prepareVoiceUpload` 均成功，`createVoiceDraftStorage` 以 17–130ms 快速返回 `SERVICE_UNAVAILABLE`（函数未捕获异常 message 非领域码时的兜底码），且每次确认出现两次（客户端同 requestID 重试）；线下测试未拦住，因单测用内存数据库桩不执行 MySQL CHECK 约束。根因是 MIW-34 引入的直传链路使用 `VOICE_STORAGE` 请求种类并向 `mip_ai_draft_requests` 写入 `audio_object_key`，但迁移 057 的 `mip_ai_draft_requests_kind_ck` 只允许 TEXT/VOICE_ASSET/VOICE_UPLOAD，`mip_ai_draft_requests_upload_ck` 要求非 VOICE_UPLOAD 的 `audio_object_key` 为 NULL，INSERT 被约束拒绝（errno 3819）——该链路自上线起在目标环境从未成功过（表内仅 TEXT 历史行）。修复：迁移 104 把 `VOICE_STORAGE` 补进两条 CHECK（`VOICE_STORAGE` 与 `VOICE_UPLOAD` 同样要求 `audio_asset_id`+`audio_object_key` 非空，孤儿素材清理 `draft_kind IN ('VOICE_UPLOAD','VOICE_STORAGE')` 语义保持）；`mip-ai-api` handler 对未经领域码归类的异常补 `console.error('[mip-ai-api] uncoded failure', code|name)`（沿用 mip-admin-api 惯例，只记类别不记消息，Provider 原始错误与用户输入不进日志），handler 测试覆盖。部署（MIP staging）：仓库外逻辑备份 154 表/3773 行后应用迁移 104（目标环境唯一 pending 项，回读 CHECK 已更新），`mip-ai-api` 以 `cloud:deploy --only` 更新且下载代码与本地一致；`pnpm verify` 全绿。剩余待验：真机录音确认链路（函数健康探针与 `--only` 部署的收尾健康门因 API Key `Invoke` 的 CAM 拒绝未跑完，与同日后台发布记录的 BLOCKED 同因；不影响小程序真实调用路径）。
 
+2026-10-10（设计还原差异修复）：按设计差异报告修复 8 项（报告 diff-work/report/index.html）：活动参与人嘉宾/玩家筛选胶囊补计数（`mip-events-api` publicParticipants 响应新增 `kindTotals`，与列表同可见性口径、不含关键词过滤）；玩家档案超级案例行卡删除城市/行业行、相关机会删除「招募中的机会 N 个」小标题、玩家等级页删除「全部任务」入口（三项均经用户拍板删除）；NPC任务导航标题改「NPC任务」；填写信息页横幅文案回设计稿「吸引更多适合你的资源和人脉~」、底部主按钮改「保存」、一句话介绍字数上限 160→300（用户拍板 300）：迁移 106 放宽 `mip_profiles.headline` 到 VARCHAR(300)，`mip-identity-api` 保存校验与 `mip-admin-api` 资料编辑校验同步放宽，小程序 maxlength/计数器/AI 草稿截断同步 300。部署（MIP staging，2026-10-10）：仓库外逻辑备份 154 表/3824 行（行数校验通过，`Backups/mip-weapp/2026-10-10T050437-085Z`）后应用迁移 105（超级案例回填，回读 projects NULL 余量 0）与迁移 106（回读 headline 列 varchar(300)）；`mip-events-api`/`mip-identity-api`/`mip-admin-api` 更新并回读 Active，下载代码包 SHA-256 与 SCF CodeSha256 一致、改动源文件逐字节一致（健康探针仍因 API Key Invoke 的 CAM 拒绝未跑，沿记录口径以代码包回读为准）；staging 复验截图确认「嘉宾 1 / 玩家 2」计数上线。修复后 6 页复验截图已并入差异报告，「要改」归零。
+
 2026-10-10（chore）：超级案例 projects 存量回填入库为迁移 105（版本 20261009200000，编号避让 MIW-61 已在 staging 应用的迁移 104）：`mip_super_cases.projects` 仍为 NULL 的旧平铺行按 `mip-opportunities-api` normalizeProjects 单项目包装语义补齐为等价 JSON（region 保持缺省、startedOn 统一 YYYY-MM-DD），含回滚脚本；该迁移在仓库入库但**尚未应用到任何环境**，随下次部署窗口按「仓库外逻辑备份 → 应用 → 回读」流程执行。源文件此前以未提交状态遗留在主工作区，本次仅补提交与编号，SQL 语句未改动。
 
 2026-10-09 后台自定义域名：新入口 [admin.mip.cool](https://admin.mip.cool/#/overview) 已绑定 CloudBase `DIRECT` HTTP 网关，阿里云精确 CNAME 与平台 DNS 状态均通过；同源 `/`、`/api`、`/assets` 路由与精确登录来源已配置。14/14 静态 SHA-256 与同日最新构建一致，入口 `index-CYFT5GuB.js`，真实 HTTPS 67/67、14 读模块与浏览器密码登录/非空概览/桌面手机视口通过。运行源码沿用 `d69d9b73`，未再次部署代码或改变旧入口。绑定时证书到期 2027-01-07 16:59:59（Asia/Shanghai），当前证书及自动续期状态见下一条；Cloudflare 旧别名与旧站仍保留。原生健康探针权限阻塞、微信真机和支付未验收边界继续保留。[绑定证据](evidence/admin-domain-20261009/README.md)及发布 skill 已记录流程与证书预检不等于签发的处理经验。
@@ -33,7 +35,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 59 条小程序路由（用户分包 49 条）、106 个锁定迁移、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 59 条小程序路由（用户分包 49 条）、107 个锁定迁移、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -152,7 +154,7 @@ MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示�
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
 | 小程序路由 | 59 条：5 条主包、49 条用户分包、5 条管理分包（含网页登录确认页）；2026-10-09 审计修复 G1 新增想跟TA合作页 1 条、2026-10-08 MIW-54 下线超级案例孤儿列表页 1 条、2026-10-07 MIW-49 新增城市选择页 1 条、此前 MIW-42 删除机会死页 3 条、MIW-44 下线知识/游戏/盲盒 9 条 | `config/runtime-pages.json`、`src/app.json` |
-| 数据库 | 106 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
+| 数据库 | 107 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
 | 管理合同 | 240 个 operation：105 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | Web 开放范围 | 105 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 24 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |

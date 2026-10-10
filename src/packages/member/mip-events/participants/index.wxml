@@ -11,10 +11,17 @@
     <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="participants-filters">
       <view class="participants-filter-row">
         <view class="participants-filter-target" aria-role="radio" aria-checked="{{activeView === 'PUBLIC' && kind === 'GUEST'}}" data-kind="GUEST" bind:tap="changeKind">
-          <view class="participants-filter-pill {{activeView === 'PUBLIC' && kind === 'GUEST' ? 'participants-filter-pill--active' : ''}}">嘉宾</view>
+          <view class="participants-filter-pill {{activeView === 'PUBLIC' && kind === 'GUEST' ? 'participants-filter-pill--active' : ''}}">
+            <text>嘉宾</text>
+            <!-- 差异报告 C1：计数来自服务端 kindTotals（列表同口径，不含关键词过滤）。 -->
+            <text wx:if="{{kindTotals}}" class="participants-filter-count">{{kindTotals.GUEST}}</text>
+          </view>
         </view>
         <view class="participants-filter-target" aria-role="radio" aria-checked="{{activeView === 'PUBLIC' && kind === 'PLAYER'}}" data-kind="PLAYER" bind:tap="changeKind">
-          <view class="participants-filter-pill {{activeView === 'PUBLIC' && kind === 'PLAYER' ? 'participants-filter-pill--active' : ''}}">玩家</view>
+          <view class="participants-filter-pill {{activeView === 'PUBLIC' && kind === 'PLAYER' ? 'participants-filter-pill--active' : ''}}">
+            <text>玩家</text>
+            <text wx:if="{{kindTotals}}" class="participants-filter-count">{{kindTotals.PLAYER}}</text>
+          </view>
         </view>
         <view class="participants-filter-target" aria-role="radio" aria-checked="{{activeView === 'SENT'}}" data-view="SENT" bind:tap="changeView">
           <view class="participants-filter-pill {{activeView === 'SENT' ? 'participants-filter-pill--active' : ''}}">

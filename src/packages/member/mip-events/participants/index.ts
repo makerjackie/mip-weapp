@@ -106,6 +106,8 @@ Page({
     /** MIW-36：tab 徽标计数来自服务端 heartCounts（与详情胶囊同源），非列表长度。 */
     heartMineCount: 0,
     heartReceivedCount: 0,
+    /** 差异报告 C1（figma 1818:17230）：嘉宾/玩家胶囊计数，来自服务端 kindTotals。 */
+    kindTotals: null as { PLAYER: number, GUEST: number } | null,
     candidates: [] as HeartCandidate[],
     heart: null as HeartState | null,
     activeView: 'PUBLIC' as ParticipantViewMode,
@@ -199,6 +201,9 @@ Page({
         items: uniqueItems,
         nextCursor: page.nextCursor || '',
         message: '',
+      }
+      if (page.kindTotals) {
+        patch.kindTotals = page.kindTotals
       }
       if (this.data.activeView === 'PUBLIC') {
         patch.displayItems = uniqueItems

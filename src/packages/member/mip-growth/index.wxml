@@ -60,7 +60,6 @@
       </view>
     </view>
 
-    <view class="mx-3 flex min-h-[88rpx] items-center justify-end"><view class="flex min-h-[88rpx] items-center text-[24rpx] text-muted" aria-role="button" aria-label="查看全部成长任务" bind:tap="openTasks">全部任务<mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></view>
     <view wx:if="{{message}}" class="mx-3 mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
   </block>
 

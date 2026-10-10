@@ -16,6 +16,14 @@ test('public participant list filters server-side and returns no private registr
       return { id: '20000000-0000-4000-8000-000000000001' }
     },
     async query(sql, parameters) {
+      // 差异报告 C1：胶囊计数查询与主列表查询共用 mock，按 GROUP BY is_player 分流。
+      if (sql.includes('GROUP BY is_player')) {
+        assert.match(sql, /r\.share_profile = 1/)
+        assert.match(sql, /mip_membership_entitlements/)
+        assert.doesNotMatch(sql, /JSON_EXTRACT/)
+        assert.deepEqual(parameters, [appId, '20000000-0000-4000-8000-000000000001', viewerUserId, viewerUserId])
+        return [{ is_player: 1, total: 2 }, { is_player: 0, total: 1 }]
+      }
       assert.match(sql, /r\.share_profile = 1/)
       assert.match(sql, /r\.status IN \('REGISTERED', 'ATTENDED'\)/)
       assert.match(sql, /FROM mip_user_blocks visibility_block/)
@@ -78,6 +86,7 @@ test('public participant list filters server-side and returns no private registr
     'userKind',
   ])
   assert.equal(result.items[0].heartRelation, 'SENT')
+  assert.deepEqual(result.kindTotals, { PLAYER: 2, GUEST: 1 })
   const serialized = JSON.stringify(result)
   assert.equal(serialized.includes(userId), false)
   assert.doesNotMatch(serialized, /answers|ticket|phone|openid/i)
@@ -90,6 +99,7 @@ test('anonymous public participant list keeps the original public range', async 
       return { id: '20000000-0000-4000-8000-000000000001' }
     },
     async query(sql) {
+      if (sql.includes('GROUP BY is_player')) return []
       participantSql = sql
       return []
     },
@@ -112,6 +122,7 @@ test('public participant heart relation is caller-relative and omits absent rela
       return { id: '20000000-0000-4000-8000-000000000001' }
     },
     async query(sql, parameters) {
+      if (sql.includes('GROUP BY is_player')) return [{ is_player: 1, total: 0 }, { is_player: 0, total: 4 }]
       assert.equal((sql.match(/mip_event_hearts/g) || []).length, 2)
       assert.deepEqual(parameters.slice(0, 2), [viewerUserId, viewerUserId])
       return relationships.map((heart_relation, index) => ({
@@ -148,6 +159,7 @@ test('public participant list applies visible keyword, player filter, and a stab
       return { id: '20000000-0000-4000-8000-000000000001' }
     },
     async query(sql, parameters) {
+      if (sql.includes('GROUP BY is_player')) return []
       participantQuery = { sql, parameters }
       return []
     },

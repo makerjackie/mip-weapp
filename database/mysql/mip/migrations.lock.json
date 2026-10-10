@@ -1394,6 +1394,18 @@
       ],
       "sqlSha256": "b1c35ae3e5769aee2a64e8bb66a5bce8d2283dadf175d66e8fd98f8132c1df71",
       "rollbackSha256": "e7c9098d71b7fee330a203273dcc0d5f80f8e3f654864bf427584830508f270d"
+    },
+    {
+      "version": "20261010120000",
+      "name": "mip_profiles_headline_300",
+      "sql": "database/mysql/mip/106_profile_headline_300.sql",
+      "rollback": "database/mysql/mip/rollback/106_profile_headline_300.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_profiles"
+      ],
+      "sqlSha256": "7c8bff927ce57fe39a994c5c42906dd1e9ef57d80444bf8e0c7d7c0012b1a3b1",
+      "rollbackSha256": "2a8120fe4fb090ed6bdac3e52b9874d6dfad5c87cbf7066a86825ec62a062193"
     }
   ]
 }

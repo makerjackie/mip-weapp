@@ -246,10 +246,6 @@ Page({
     }
   },
 
-  openTasks() {
-    void wx.navigateTo({ url: '/packages/member/mip-tasks/index' })
-  },
-
   openTask(event: WechatMiniprogram.TouchEvent) {
     const taskId = String(event.currentTarget.dataset.id || '')
     if (taskId) {

@@ -489,7 +489,7 @@ function normalizeProfileInput(value) {
     : String(value.avatarAssetId)
   const nickname = boundedText(value.nickname, 1, 64)
   const identityStatus = boundedText(value.identityStatus, 0, 32)
-  const headline = boundedText(value.headline, 0, 160)
+  const headline = boundedText(value.headline, 0, 300)
   const introduction = boundedText(value.introduction, 0, 300)
   const realName = boundedText(value.realName, 0, 64)
   const gender = ['UNKNOWN', 'MALE', 'FEMALE'].includes(value.gender) ? value.gender : 'UNKNOWN'

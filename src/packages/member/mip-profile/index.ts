@@ -122,7 +122,7 @@ Page({
         avatarUrl: snapshot.profile.avatarUrl || '',
         avatarPending: false,
         identityStatus: snapshot.profile.identityStatus,
-        headline: aiText(aiFields, 'headline', 160) || snapshot.profile.headline,
+        headline: aiText(aiFields, 'headline', 300) || snapshot.profile.headline,
         introduction: snapshot.profile.introduction,
         companies: companies.length ? companies : snapshot.profile.companies,
         organizations: organizations.length ? organizations : snapshot.profile.organizations,
