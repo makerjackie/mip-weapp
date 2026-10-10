@@ -1,0 +1,21 @@
+{
+  "label": "after",
+  "observedAt": "2026-10-10T09:47:37.720Z",
+  "function": "mip-admin-api",
+  "status": "Active",
+  "codeSha256": "69e933ddeebfaa9bbfd013a348a15c5309496b445734bd75da8f57cfebc68160",
+  "matchedSourceFiles": 277,
+  "configurationPreserved": true,
+  "triggersPreserved": true,
+  "permissionsPreserved": true,
+  "gatewayPreserved": true,
+  "runtimeCommit": "628f539fab4313725ee6854f1d2bc3c7a3fa7401",
+  "deploymentExitCode": 0,
+  "nativeMysqlHealthPassed": true,
+  "memoryPreserved": true,
+  "publicNetworkPreserved": true,
+  "fileScope": "All archived JS/JSON excluding node_modules; includes test source",
+  "ownedSourceSymlinksAbsent": true,
+  "vendorSymlinksUnchanged": true,
+  "archiveInspection": "Read archived source bytes without extracting filesystem entries"
+}

@@ -1,0 +1,547 @@
+{
+  "generatedAt": "2026-10-10T09:49:45.740Z",
+  "businessWrites": false,
+  "passwordChanged": false,
+  "checks": [
+    {
+      "id": "origin-rejected",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "id": "wrong-password-rejected",
+      "passed": true,
+      "httpStatus": 401
+    },
+    {
+      "id": "password-login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "secure-cookie",
+      "passed": true
+    },
+    {
+      "id": "mip.admin.session",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "admin-enabled",
+      "passed": true
+    },
+    {
+      "id": "mip.admin.users.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.events.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.events.catalog.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.events.policy.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.events.catalog.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.orders.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.tasks.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.tasks.completions.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.tasks.editorOptions",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.banners.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.banners.session",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.game.session",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.game.seasons.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.game.blindBoxes.catalogs.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.branches.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.rolePolicies.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.roles.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.audit.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.messageTemplates.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.messageCampaigns.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.knowledge.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.matching.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.userContent.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.opportunities.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.growth.entries",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.growth.rules",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.entitlements.transactions.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.contribution.rules.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.growth.levels",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.badges.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.badges.awards",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.contribution.transactions.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.growth.benefits",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.growth.levelTransitions",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.membershipApprovals.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.announcements.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.communityReports.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.communityReports.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.exceptions.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.communityReports.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.communityReports.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.operations.queue.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.adminAccounts.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.audit.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.dashboard.overview.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.membershipAgreement.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.membershipAgreement.get",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.cards.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "mip.admin.cards.list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "id": "logout",
+      "passed": true
+    },
+    {
+      "id": "revoked-cookie-rejected",
+      "passed": true,
+      "httpStatus": 401
+    }
+  ],
+  "modules": [
+    {
+      "route": "users",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 14,
+          "columns": 14
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "events",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 13,
+          "columns": 10
+        },
+        {
+          "rows": 1,
+          "columns": 2
+        },
+        {
+          "rows": 5,
+          "columns": 7
+        },
+        {
+          "rows": 4,
+          "columns": 7
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "orders",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 12,
+          "columns": 8
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "tasks",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 8,
+          "columns": 12
+        },
+        {
+          "rows": 1,
+          "columns": 5
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "banners",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 3,
+          "columns": 7
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "game",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 1,
+          "columns": 5
+        },
+        {
+          "rows": 1,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "permissions",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 5,
+          "columns": 5
+        },
+        {
+          "rows": 6,
+          "columns": 7
+        },
+        {
+          "rows": 4,
+          "columns": 9
+        },
+        {
+          "rows": 20,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "messages",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 2,
+          "columns": 5
+        },
+        {
+          "rows": 2,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "knowledge",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 5,
+          "columns": 7
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "opportunities",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 13,
+          "columns": 12
+        },
+        {
+          "rows": 20,
+          "columns": 8
+        },
+        {
+          "rows": 1,
+          "columns": 6
+        },
+        {
+          "rows": 1,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "growth",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 3,
+          "columns": 7
+        },
+        {
+          "rows": 5,
+          "columns": 4
+        },
+        {
+          "rows": 4,
+          "columns": 8
+        },
+        {
+          "rows": 19,
+          "columns": 7
+        },
+        {
+          "rows": 0,
+          "columns": 5
+        },
+        {
+          "rows": 18,
+          "columns": 5
+        },
+        {
+          "rows": 8,
+          "columns": 6
+        },
+        {
+          "rows": 20,
+          "columns": 9
+        },
+        {
+          "rows": 1,
+          "columns": 8
+        },
+        {
+          "rows": 0,
+          "columns": 6
+        },
+        {
+          "rows": 1,
+          "columns": 5
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "operations",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 2,
+          "columns": 7
+        },
+        {
+          "rows": 0,
+          "columns": 6
+        },
+        {
+          "rows": 3,
+          "columns": 7
+        },
+        {
+          "rows": 4,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "adminAccounts",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 1,
+          "columns": 6
+        }
+      ],
+      "hasNonemptySection": true
+    },
+    {
+      "route": "auditLogs",
+      "passed": true,
+      "sections": [
+        {
+          "rows": 20,
+          "columns": 7
+        }
+      ],
+      "hasNonemptySection": true
+    }
+  ],
+  "completedAt": "2026-10-10T09:50:20.454Z",
+  "passed": true
+}

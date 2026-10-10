@@ -1,0 +1,93 @@
+{
+  "generatedAt": "2026-10-10T09:49:11.461Z",
+  "staticAssetsVerified": true,
+  "filesMatched": 14,
+  "entry": "/assets/index-CYFT5GuB.js",
+  "files": [
+    {
+      "path": "/404.html",
+      "bytes": 465,
+      "sha256": "cf81cd76f5d089408ef0d38c9caa98fc1fff0bbb8b01f92404edbde78c5d52b1",
+      "matched": true
+    },
+    {
+      "path": "/",
+      "bytes": 872,
+      "sha256": "3f765ddc27cb4c68db4604664e6d30a70c992101f75a4475556855e27fbc0c9b",
+      "matched": true
+    },
+    {
+      "path": "/assets/ant-design-DZvgLqR9.js",
+      "bytes": 1127668,
+      "sha256": "d383ece5e5437794f40766462b14b4bc6ad105793c54fd771c650695984c9a24",
+      "matched": true
+    },
+    {
+      "path": "/assets/charts-D26ByYiC.js",
+      "bytes": 369323,
+      "sha256": "ef30181ebe2e91291534a3c05de7d6c8afedad8868b9001a6dcffc15d2de8d1c",
+      "matched": true
+    },
+    {
+      "path": "/assets/index-6Oxq4SMS.css",
+      "bytes": 19799,
+      "sha256": "f49ab07868378279f487d8d84653a3be3ebf9ccdaa1909db443c026731fb32c4",
+      "matched": true
+    },
+    {
+      "path": "/assets/index-CYFT5GuB.js",
+      "bytes": 458369,
+      "sha256": "0433277513a95cdeff02242ba3f30288322f948308f98ff37ce39fbbe6c7f156",
+      "matched": true
+    },
+    {
+      "path": "/assets/overview-purchase-chart-CabpwZCl.js",
+      "bytes": 1884,
+      "sha256": "5887ce198f1f89b90f7ebe5b7d0190e345ed3af47d4ca6d928baf4a5d8b8ea13",
+      "matched": true
+    },
+    {
+      "path": "/assets/react-Mefe_Tge.js",
+      "bytes": 189647,
+      "sha256": "53e857905a9e3cb132c11c752fe0b44ef37aa2dcd686c0bcbe64bf8e02a58812",
+      "matched": true
+    },
+    {
+      "path": "/assets/rolldown-runtime-hePW80VL.js",
+      "bytes": 716,
+      "sha256": "580ad8c58061a4dde99bde0a56905e382f0568516ee2f5b84dbfb52085709021",
+      "matched": true
+    },
+    {
+      "path": "/assets/router-query-DYZ4JsyJ.js",
+      "bytes": 112171,
+      "sha256": "89c687e58bce66377201a7a32c490930f4ca1b6327f44fb0a7f7c0503a300dc3",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-a.webp",
+      "bytes": 17696,
+      "sha256": "4efaf5dafd2370f4d8eec904cc3571de8e8b5122d42eef0899fffed097b1dd0b",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-b.webp",
+      "bytes": 572,
+      "sha256": "c3e46f89d29da59318bb1263cb2f5fd5f07ae935432f8bfe26280441042921ad",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-c.webp",
+      "bytes": 444,
+      "sha256": "4f10ee9173ce8b5a74ec3e76762c5650153d9df2b25521d39405b47eb3f83ee8",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-d.webp",
+      "bytes": 3026,
+      "sha256": "762fe3ee1c7adc5666e36566355cb4161ed2d4c341d995fb3ac25ed95095e6ee",
+      "matched": true
+    }
+  ],
+  "scope": "Public static bytes only; function source, authentication and browser acceptance require separate evidence."
+}

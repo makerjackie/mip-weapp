@@ -1,0 +1,136 @@
+{
+  "generatedAt": "2026-10-10T09:50:58.137Z",
+  "method": "Chrome Computer Use through visible UI",
+  "origin": "https://admin.mip.cool",
+  "runtimeCommit": "628f539fab4313725ee6854f1d2bc3c7a3fa7401",
+  "scope": "Sampled basic functionality; partial evidence for listed acceptance scenarios, not full scenario acceptance",
+  "checks": [
+    {
+      "id": "login",
+      "scenario": "A01",
+      "passed": true
+    },
+    {
+      "id": "events-title-filter",
+      "scenario": "E01",
+      "passed": true
+    },
+    {
+      "id": "events-detail-roster",
+      "scenario": "E06",
+      "passed": true
+    },
+    {
+      "id": "orders-detail",
+      "scenario": "F01",
+      "passed": true
+    },
+    {
+      "id": "orders-search-before",
+      "scenario": "F01",
+      "passed": false,
+      "observed": "SERVICE_UNAVAILABLE",
+      "resolvedBy": "orders-chinese-search-after"
+    },
+    {
+      "id": "knowledge-required-validation",
+      "scenario": "X02",
+      "passed": true
+    },
+    {
+      "id": "knowledge-draft-create",
+      "scenario": "X02",
+      "passed": true
+    },
+    {
+      "id": "knowledge-edit-prefill",
+      "scenario": "X02",
+      "passed": true
+    },
+    {
+      "id": "knowledge-edit-save-reload",
+      "scenario": "X02",
+      "passed": true
+    },
+    {
+      "id": "task-required-validation",
+      "scenario": "T01",
+      "passed": true
+    },
+    {
+      "id": "banner-required-validation",
+      "scenario": "C01",
+      "passed": true
+    },
+    {
+      "id": "message-required-validation",
+      "scenario": "M01",
+      "passed": true
+    },
+    {
+      "id": "message-draft-detail-delivery-stats",
+      "scenario": "M02",
+      "passed": true
+    },
+    {
+      "id": "orders-export-ui-workflow",
+      "scenario": "F01",
+      "passed": null,
+      "observed": "workflow dialog closed; download event not captured; file receipt PENDING"
+    },
+    {
+      "id": "users-profile-text-search",
+      "scenario": "U01",
+      "passed": true
+    },
+    {
+      "id": "user-profile-new-tab",
+      "scenario": "U02",
+      "passed": true
+    },
+    {
+      "id": "orders-chinese-search-after",
+      "scenario": "F01",
+      "passed": true,
+      "rows": 5
+    },
+    {
+      "id": "user-profile-edit-prefill-cancel",
+      "scenario": "U04",
+      "passed": true
+    },
+    {
+      "id": "orders-empty-search-after",
+      "scenario": "F01",
+      "passed": true
+    },
+    {
+      "id": "orders-clear-filter-after",
+      "scenario": "F01",
+      "passed": true,
+      "rows": 12
+    },
+    {
+      "id": "logout-after-basic-checks",
+      "scenario": "A01",
+      "passed": true
+    },
+    {
+      "id": "protected-orders-after-logout",
+      "scenario": "A01",
+      "passed": true
+    }
+  ],
+  "businessWrites": {
+    "unpublishedKnowledgeDraftsCreated": 1,
+    "ownDraftEdits": 1,
+    "published": 0,
+    "messagesSent": 0,
+    "financialActions": 0,
+    "accountChanges": 0
+  },
+  "pending": [
+    "Actual exported file receipt was not captured; browser security policy blocks its internal download page.",
+    "Physical WeChat scan, phone, payment/refund and full business lifecycle acceptance were not performed."
+  ]
+}
