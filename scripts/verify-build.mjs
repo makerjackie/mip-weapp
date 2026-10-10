@@ -82,17 +82,18 @@ const homeJson = JSON.parse(read('dist/pages/index/index.json'))
 const components = { ...membershipJson.usingComponents, ...homeJson.usingComponents }
 
 assertBuiltComponentTargets()
-// Fixed action bars must remain readable even when backdrop-filter is unsupported.
+// Fixed action bars keep the MIW-64 brand-yellow translucent glass (figma 3828:26877
+// Frame 3719; user sign-off 2026-10-11) so the blur reads as glass on every surface.
 let hasActionSurfaceBase = false
 postcss.parse(appWxss).walkRules('.mip-liquid-glass', (rule) => {
   if (rule.parent.type !== 'root') {
     return
   }
   rule.walkDecls('background', (decl) => {
-    hasActionSurfaceBase ||= /^(?:rgb\(32 32 32 \/ 96%\)|rgba\(32,\s*32,\s*32,\s*0\.96\))$/.test(decl.value)
+    hasActionSurfaceBase ||= /^(?:rgb\(255 221 2 \/ 10%\)|rgba\(255,\s*221,\s*2,\s*0\.1\))$/.test(decl.value)
   })
 })
-assert(hasActionSurfaceBase, 'Compiled fixed action bars lost their unconditional dark background')
+assert(hasActionSurfaceBase, 'Compiled fixed action bars lost the brand-yellow translucent glass base')
 postcss.parse(appWxss).walkDecls('appearance', (decl) => {
   assert(decl.value !== 'button', 'Browser Preflight must not restore native browser chrome on mini-program buttons')
 })
