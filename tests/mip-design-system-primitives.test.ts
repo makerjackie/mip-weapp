@@ -60,7 +60,9 @@ describe('MIP Design System native primitives', () => {
 
     const pill = read('src/components/mip-pill-button/index.wxml')
     expect(pill).toContain('aria-disabled="{{disabled || loading}}"')
-    expect(read('src/components/mip-pill-button/index.wxss')).toContain('opacity: 0.4')
+    // MIW-64 figma 3828:27052：disabled 为灰底 #B3B3B3 + 深灰字 #4C4C4C，不再是黄底降透明
+    expect(read('src/components/mip-pill-button/index.wxss')).toContain('background: var(--mip-text-secondary)')
+    expect(read('src/components/mip-pill-button/index.wxss')).toContain('color: #4c4c4c')
     expect(read('src/components/sticky-actions/index.wxml')).toContain('<slot name="actions" />')
   })
 

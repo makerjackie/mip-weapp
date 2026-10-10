@@ -28,7 +28,7 @@ describe('MIP super case detail visuals', () => {
     expect(template).toContain('item.caption')
     expect(template).toContain('<mip-sticky-actions')
     expect(template).toContain('slot="actions"')
-    expect(template).toContain('h-[112rpx]')
+    expect(template).toContain('h-[80rpx]')  // MIW-64 figma 3828:26877：slot 按钮高 80rpx（栏 padding 16rpx）
     expect(template).toMatch(/state === 'ready' && !item/)
     // MIW-49（figma 2704_13347 我的编辑 + 标注 2127_2198）：banner 统一品牌图，
     // 案例管理（下架/删除）不在详情页——删除走「我的」tab 长按，底部仅「编辑」。
