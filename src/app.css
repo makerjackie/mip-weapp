@@ -214,10 +214,12 @@
   }
 }
 
-/* Keep fixed actions readable without filter support. Blur is decorative;
-   the dark base also works on older WebViews without vendor-specific CSS. */
+/* MIW-64 figma 3828:26877 Frame 3719：吸底玻璃条统一为品牌黄 10% 透明 + GLASS
+   （用户拍板 2026-10-11：所有 sticky action 玻璃底按设计稿的透明玻璃效果）。
+   Blur is decorative; 无 backdrop-filter 的老 WebView 退化为浅黄透明底，
+   可读性由条内实底按钮自身保障。 */
 .mip-liquid-glass {
-  background: rgb(32 32 32 / 96%);
+  background: rgb(255 221 2 / 10%);
   border: 1px solid rgb(255 255 255 / 14%);
   backdrop-filter: blur(20px) saturate(150%);
 
