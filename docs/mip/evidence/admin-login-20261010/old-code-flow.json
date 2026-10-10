@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-10-10T08:01:31.481Z",
+  "checks": [
+    {
+      "id": "old-code-confirmed",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "id": "admin-session",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "id": "logout",
+      "passed": true
+    }
+  ],
+  "device": "WeChat DevTools, real cloud calls",
+  "passed": true
+}

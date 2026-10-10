@@ -1,0 +1,19 @@
+{
+  "generatedAt": "2026-10-10T07:45:21.853Z",
+  "origins": [
+    {
+      "origin": "https://mipmini.01mvp.com",
+      "loginStatus": 200,
+      "authenticated": true,
+      "adminEnabled": true
+    },
+    {
+      "origin": "https://admin.mip.cool",
+      "loginStatus": 200,
+      "authenticated": true,
+      "adminEnabled": true
+    }
+  ],
+  "businessWrites": false,
+  "passwordChanged": false
+}

@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-10-10",
+  "state": "Active",
+  "sourceCommit": "168e23415781a66480b71de3e6d5235647037ff0",
+  "zipSha256": "e37189d437b769b2f9285f37c310c2837ed837b07122537c0dbd5680b3e44553",
+  "filesMatched": 277,
+  "sourceMismatches": [],
+  "stableConfiguration": [],
+  "environmentChangedKeys": [
+    "MIP_ADMIN_WEB_LOGIN_QR_ENV_VERSION"
+  ],
+  "sdkRulesPreserved": true,
+  "triggersPreserved": true,
+  "gatewayPreserved": true,
+  "nativeHealth": true,
+  "callbackMatchesLocal": true
+}

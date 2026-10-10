@@ -20,6 +20,8 @@ description: 更新、部署本仓库的 CloudBase Web 管理后台，并验证�
 
 需要启用或维护 HTTPS 自动续期时，按[证书自动续期流程](references/certificate-renewal.md)配置独立云端任务，并取得 timer、CA 签发及真实 TLS 的运行证据。日常发布不覆盖该任务。
 
+需要排查密码或小程序登录码时，按[登录链路验证](references/login-verification.md)分别核对认证存储、回调分流及真实客户端确认；旧站密码和新站密码不能默认视为已同步。
+
 目标环境、阶段、完整 HTTPS origin、runtime 用户及测试账号从仓库本机配置和目标环境回读确定，不硬编码历史环境 ID、域名、账号、提交或资产数量。用户提供的测试域名缺字时，核对配置中的真实 origin，不能猜测或创建新网关。
 
 ## 拉取与门禁
@@ -36,6 +38,8 @@ description: 更新、部署本仓库的 CloudBase Web 管理后台，并验证�
 对将更新的函数保存完整配置、权限、触发器和代码包。使用仓库 `callCloudbase`/MCP 的 SCF `GetFunctionAddress` 获取 ZIP 与 `CodeSha256`，下载后校验摘要，安全解包（拒绝绝对路径、`..` 和符号链接）。配置、ZIP 地址、凭证及会话只保留在本机忽略目录，敏感文件 `0600`，不打印值。保存网关路由和当前 HTML/入口 JS，便于证明更新范围与回滚。
 
 控制面受 API Key 权限限制时，先检查操作是否已经上传代码/修改配置；**失败退出码不等于没有部署**。可复用同权限的既有官方 CLI/SDK/本机登录态；不要改写 auth.json 或拼接刷新 token。Device Flow 依根 AGENTS.md 的维护者授权规则执行，不能自动发起新授权或扩大权限。
+
+已授权复用本机 Device Flow，但项目 MCP 仍返回旧 API Key 权限拒绝时，检查守护进程是否缓存认证模式。在该次进程设置 `CLOUDBASE_AUTH_MODE=local`，通过仓库 `restartCloudbaseMcp(projectRoot)` 重启项目 MCP，再回读登录状态和目标环境。不要删除凭证或自动重新发起授权；以部署命令及原生健康的实际结果判断成功。
 
 若代码已 Active，但原生 `Invoke` 健康探针被 CAM 拒绝：单独记 `BLOCKED`，继续做获授权的代码/配置/权限/触发器回读和真实 HTTP 读取。不得把原命令记作成功或称原生健康通过；独立证据不能自动取消仓库要求的门禁。若强制检查仍未完成，明确保留该项阻塞。
 

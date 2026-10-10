@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-10-10T08:24:58.972Z",
+  "device": "WeChat DevTools, real cloud calls; no physical scan",
+  "checks": [
+    {
+      "id": "token-confirmed",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "id": "admin-session",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "id": "logout",
+      "passed": true
+    }
+  ],
+  "passed": true
+}

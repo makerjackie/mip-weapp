@@ -27,7 +27,7 @@
 4. 用 `queryEnv(domains)` 确认目标 host 未存在后，`envDomainManagement(create)` 只追加该 host；回读 `ENABLE`。平台安全域名与 BFF 的 Origin 允许列表是两个配置项。
 5. 以平台创建后返回的 `Cname` 为 DNS 目标，添加精确子域名 CNAME；不要猜目标或用重定向记录代替绑定。先确保目标证书与路由就绪，再切换 DNS。用权威 DNS 和递归 DNS 分别回读，预留旧缓存传播时间。
 
-`MIP_ADMIN_WEB_CLOUDBASE_ORIGIN` 仍是默认网关发布目标；绑定自定义域名不会更改微信 challenge 的稳定回调地址，也不自动证明微信真机确认成功。
+`MIP_ADMIN_WEB_CLOUDBASE_ORIGIN` 仍是默认网关发布目标。若本次同时把 CloudBase challenge 回调改到自定义域名，必须把 `MIP_ADMIN_WEB_LOGIN_MIGRATION_URL` 同步到本机 `.env.local`（已有显式覆盖时更新覆盖值），再核对部署脚本生成的目标配置；仅改云端会被后续部署覆盖。保留旧站 `MIP_ADMIN_WEB_LOGIN_CONFIRM_URL`，不要用新回调替换所有登录请求。绑定域名或回读配置不证明微信确认成功。
 
 ## 验证与留证
 
