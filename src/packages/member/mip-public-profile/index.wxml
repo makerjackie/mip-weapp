@@ -351,9 +351,10 @@
     <mip-subscription-prompt wx:if="{{isSelf}}" template-key="PROFILE_INTEREST" label="接收感兴趣提醒" description="有人对你感兴趣时，通过微信提醒你。" />
     <app-page-exit />
     <view wx:if="{{interestMessage}}" class="fixed inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+132rpx)] z-20 rounded-[8rpx] border border-danger bg-panel px-3 py-2 text-center text-[22rpx] text-danger">{{interestMessage}}</view>
-    <!-- journey-review 1769:38198 底部互动条（C1 终审角色门禁）：
-         玩家=功能态；普通用户=可见、点击弹原生解锁（J2-04）；嘉宾=整条不渲染（interactionBar === 'hidden'）；
-         pending=身份未定（resolveInteractionBar 完成前不渲染，防嘉宾态先见条后消失）。
+    <!-- journey-review 1769:38198 底部互动条：
+         玩家、已真实签到的嘉宾=功能态（MIW-64 用户拍板 2026-10-11，常驻可互动）；
+         普通用户未签到=可见、点击弹原生解锁（J2-04）；
+         pending=身份未定（resolveInteractionBar 完成前不渲染，防先见条后消失）。
          MIW-29 按稿两段式：右侧黄色「我感兴趣」常驻；左侧 mip-attend-pill 只在本人已表态后出现
          （本人头像 + N感兴趣），点击进心动名单（J4-02b）。 -->
     <mip-sticky-actions wx:if="{{!isSelf && (interactionBar === 'active' || interactionBar === 'locked')}}">

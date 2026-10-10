@@ -77,7 +77,7 @@ describe('journey-review WS-PEOPLE · 档案互动条角色门禁（C1 终审 + 
 
     // 完整资料不能替代真实签到；普通用户仍展示解锁入口。
     expect(page).toContain(`this.setData({ interactionBar: 'locked' })`)
-    expect(page).toContain(`snapshot.membership.kind === 'PLAYER' ? 'active' : hasAttended ? 'hidden' : 'locked'`)
+    expect(page).toContain(`snapshot.membership.kind === 'PLAYER' || hasAttended ? 'active' : 'locked'`)
     expect(page).toContain(`if (this.data.interactionBar === 'locked')`)
   })
 
@@ -153,14 +153,14 @@ describe('journey-review WS-PEOPLE · 档案互动条行为（J2-03 → J2-04）
     expect(profileMocks.navigate).not.toHaveBeenCalled()
   })
 
-  it('keeps the bar functional for players and hidden for guests', () => {
+  it('keeps the bar functional for players and checked-in guests (MIW-64 拍板), locked otherwise', () => {
     const p = page()
     p.applyInteractionBarMode({ ready: true, membership: { kind: 'PLAYER' } })
     expect(p.data.interactionBar).toBe('active')
     p.applyInteractionBarMode({ ready: true, membership: { kind: 'GUEST' } })
     expect(p.data.interactionBar).toBe('locked')
     p.applyInteractionBarMode({ ready: true, membership: { kind: 'GUEST' } }, true)
-    expect(p.data.interactionBar).toBe('hidden')
+    expect(p.data.interactionBar).toBe('active')
     p.applyInteractionBarMode({ ready: false, membership: { kind: 'GUEST' } })
     expect(p.data.interactionBar).toBe('locked')
     p.applyInteractionBarMode(undefined)
@@ -176,7 +176,7 @@ describe('journey-review WS-PEOPLE · 档案互动条行为（J2-03 → J2-04）
     expect(profileMocks.registrations).toHaveBeenCalledWith(undefined, 'ATTENDED')
     profileMocks.registrations.mockResolvedValue({ counts: { attended: 1 } })
     await p.resolveInteractionBar()
-    expect(p.data.interactionBar).toBe('hidden')
+    expect(p.data.interactionBar).toBe('active')
     profileMocks.registrations.mockRejectedValue(new Error('Unavailable'))
     await p.resolveInteractionBar()
     expect(p.data.interactionBar).toBe('locked')

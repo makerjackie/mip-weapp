@@ -270,7 +270,10 @@ Page({
       this.setData({ interactionBar: 'locked' })
       return
     }
-    this.setData({ interactionBar: snapshot.membership.kind === 'PLAYER' ? 'active' : hasAttended ? 'hidden' : 'locked' })
+    // MIW-64 用户拍板（2026-10-11，figma 3828:27925/3828:27605）：吸底互动条对
+    // 玩家与已真实签到的嘉宾都常驻功能态，正常互动；未签到保持 locked 解锁弹窗。
+    // 旧 C1 终审「嘉宾=整条不渲染」随新设计稿作废。
+    this.setData({ interactionBar: snapshot.membership.kind === 'PLAYER' || hasAttended ? 'active' : 'locked' })
   },
 
   observeInterest(profileRef: string) {
