@@ -1,4 +1,5 @@
 import type { AdminPageState } from '../shared/page-state'
+import { brand } from '../../../config/brand'
 import { MipAdminError, mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure } from '../shared/page-state'
 
@@ -33,6 +34,7 @@ Page({
   data: {
     state: 'loading' as AdminPageState,
     message: '',
+    consoleDomain: brand.adminConsoleDomain,
     webLoginOpen: false,
     webLoginCode: '',
     webLoginBusy: false,

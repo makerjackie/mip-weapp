@@ -6,6 +6,7 @@ export const brand = {
   markText: 'MIP',
   operatorName: '深圳市奇点聚合科技有限公司',
   websiteDomain: 'mip.cool',
+  adminConsoleDomain: 'admin.mip.cool',
   icpFilingNumber: '粤ICP备2026005262号-2',
   supportChannel: '小程序客服',
   contactHint: '请通过小程序客服联系运营团队',

@@ -33,7 +33,7 @@
     </view>
 
     <view wx:if="{{webLoginOpen}}" class="mt-4 rounded-[24rpx] bg-panel px-4 py-4">
-      <view class="text-[24rpx] text-muted">请核对网页域名为 mipmini.01mvp.com，再输入登录码。</view>
+      <view class="text-[24rpx] text-muted">请核对网页域名为 {{consoleDomain}}，再输入登录码。</view>
       <input
         id="admin-web-login-code-input"
         class="mt-4 box-border h-[96rpx] w-full rounded-[16rpx] border border-line bg-panel-raised px-4 text-center text-[34rpx] font-semibold tracking-[0.16em] text-ink"

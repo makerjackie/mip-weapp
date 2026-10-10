@@ -2,7 +2,7 @@
   <view class="border-b border-line pb-5">
     <view class="text-[22rpx] font-semibold text-brand">MIP 管理</view>
     <view class="mt-2 text-[40rpx] font-bold">确认网页登录</view>
-    <view class="mt-2 text-[24rpx] text-muted">电脑后台：mipmini.01mvp.com</view>
+    <view class="mt-2 text-[24rpx] text-muted">电脑后台：{{consoleDomain}}</view>
   </view>
 
   <view wx:if="{{state === 'loading' || state === 'access' || state === 'confirming'}}" class="mt-6 rounded-[24rpx] bg-panel px-5 py-6">

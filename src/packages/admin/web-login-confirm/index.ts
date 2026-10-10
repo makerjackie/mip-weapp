@@ -1,3 +1,4 @@
+import { brand } from '../../../config/brand'
 import { MipAdminError, mipAdminModule } from '../../../modules/mip-admin'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
@@ -46,6 +47,7 @@ Page({
   data: {
     state: 'loading' as WebLoginConfirmState,
     message: '',
+    consoleDomain: brand.adminConsoleDomain,
     hasChallenge: false,
   },
 

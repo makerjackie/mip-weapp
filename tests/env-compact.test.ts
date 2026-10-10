@@ -28,6 +28,7 @@ describe('local environment compaction', () => {
       'MIP_DEPLOYMENT_STAGE=development',
       'MIP_UNION_ID_REBIND_ENABLED=false',
       'MIP_ADMIN_WEB_LOGIN_CONFIRM_URL=https://mipmini.01mvp.com/api/internal/auth/challenge/confirm',
+      'MIP_ADMIN_WEB_LOGIN_MIGRATION_URL=https://admin.mip.cool/api/internal/auth/challenge/confirm',
       'CUSTOM_OVERRIDE=value',
       'UNKNOWN_EMPTY=',
       'OPENAI_API_KEY=openai-value',
@@ -42,6 +43,7 @@ describe('local environment compaction', () => {
     expect(result.local).toContain('MIP_DEPLOYMENT_STAGE=development')
     expect(result.local).not.toContain('MIP_UNION_ID_REBIND_ENABLED=false')
     expect(result.local).not.toContain('MIP_ADMIN_WEB_LOGIN_CONFIRM_URL=')
+    expect(result.local).not.toContain('MIP_ADMIN_WEB_LOGIN_MIGRATION_URL=')
     expect(result.local).not.toContain('UNKNOWN_EMPTY=')
   })
 

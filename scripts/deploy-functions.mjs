@@ -75,6 +75,11 @@ const adminWebLoginConfirmUrl = exactHttpsEndpoint(
   || 'https://mipmini.01mvp.com/api/internal/auth/challenge/confirm',
   'MIP_ADMIN_WEB_LOGIN_CONFIRM_URL',
 )
+// CloudBase generates 9xxxxx codes / z_ tokens; without this callback the
+// miniprogram confirmation is routed to the legacy backend and rejected there.
+const adminWebLoginMigrationUrl = env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL
+  ? exactHttpsEndpoint(env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL, 'MIP_ADMIN_WEB_LOGIN_MIGRATION_URL')
+  : 'https://admin.mip.cool/api/internal/auth/challenge/confirm'
 const databaseRuntimeUser = String(env.MIP_DB_RUNTIME_USER || runtimeUserForEnvironment(envId)).trim()
 const confirmedRuntimeUser = argumentValue('--confirm-runtime-user=')
 const allowedAppIds = String(env.MIP_ALLOWED_APP_IDS || appId)
@@ -1012,7 +1017,7 @@ function environmentForRole(role, options) {
       MIP_GAME_ADMIN_HMAC_SECRET: options.secrets.gameAdminHmac,
       MIP_MEDIA_ADMIN_HMAC_SECRET: options.secrets.mediaAdminHmac,
       MIP_ADMIN_WEB_LOGIN_CONFIRM_URL: adminWebLoginConfirmUrl,
-      ...(env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL ? { MIP_ADMIN_WEB_LOGIN_MIGRATION_URL: exactHttpsEndpoint(env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL, 'MIP_ADMIN_WEB_LOGIN_MIGRATION_URL') } : {}),
+      MIP_ADMIN_WEB_LOGIN_MIGRATION_URL: adminWebLoginMigrationUrl,
       MIP_MESSAGE_SCHEDULER_FUNCTION_NAME: options.functionNames.scheduler,
       MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME: options.functionNames.knowledgeScheduler,
       MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET: options.secrets.knowledgeSchedulerHmac,
