@@ -1,0 +1,292 @@
+{
+  "generatedAt": "2026-10-10T08:39:11.392Z",
+  "method": "Computer Use, real Chrome UI",
+  "origin": "https://admin.mip.cool",
+  "identity": "User-provided account; credentials and identity omitted",
+  "businessWrites": false,
+  "passwordChanged": false,
+  "credentialsPersistedByAgent": false,
+  "checks": [
+    {
+      "id": "password-login",
+      "passed": true
+    },
+    {
+      "id": "refresh-session",
+      "passed": true
+    },
+    {
+      "id": "opportunity-chinese-search",
+      "passed": true
+    },
+    {
+      "id": "opportunity-empty-result",
+      "passed": true
+    },
+    {
+      "id": "opportunity-clear-filter",
+      "passed": true
+    },
+    {
+      "id": "opportunity-detail",
+      "passed": true
+    },
+    {
+      "id": "audit-next-page",
+      "passed": true
+    },
+    {
+      "id": "audit-previous-page",
+      "passed": true
+    },
+    {
+      "id": "deployed-entry",
+      "passed": true
+    },
+    {
+      "id": "logout",
+      "passed": true
+    },
+    {
+      "id": "protected-page-after-logout",
+      "passed": true
+    }
+  ],
+  "modules": [
+    {
+      "module": "用户管理",
+      "heading": "用户管理",
+      "tables": 1,
+      "inputs": 11,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 15
+    },
+    {
+      "module": "名片管理",
+      "buttons": 38,
+      "heading": "名片管理",
+      "inputs": 1,
+      "links": 11,
+      "tables": 0,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 0
+    },
+    {
+      "module": "活动管理",
+      "buttons": 44,
+      "heading": "活动管理",
+      "inputs": 10,
+      "links": 0,
+      "tables": 4,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 25
+    },
+    {
+      "module": "订单管理",
+      "buttons": 16,
+      "heading": "订单管理",
+      "inputs": 7,
+      "links": 0,
+      "tables": 1,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 13
+    },
+    {
+      "module": "任务管理",
+      "buttons": 13,
+      "heading": "任务管理",
+      "inputs": 3,
+      "links": 0,
+      "tables": 2,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 11
+    },
+    {
+      "module": "Banner 管理",
+      "buttons": 8,
+      "heading": "Banner 管理",
+      "inputs": 3,
+      "links": 0,
+      "tables": 1,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 4
+    },
+    {
+      "module": "视频回顾",
+      "buttons": 5,
+      "heading": "视频回顾",
+      "inputs": 2,
+      "links": 2,
+      "tables": 1,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 2
+    },
+    {
+      "module": "素材上传",
+      "buttons": 1,
+      "heading": "素材上传",
+      "inputs": 2,
+      "links": 0,
+      "tables": 0,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 0
+    },
+    {
+      "module": "战队管理",
+      "buttons": 11,
+      "heading": "战队管理",
+      "inputs": 3,
+      "links": 0,
+      "tables": 2,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 4
+    },
+    {
+      "module": "机会与内容",
+      "buttons": 22,
+      "heading": "机会与内容",
+      "inputs": 11,
+      "links": 0,
+      "tables": 1,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 14
+    },
+    {
+      "module": "成长与勋章",
+      "buttons": 39,
+      "heading": "成长与勋章",
+      "inputs": 4,
+      "links": 0,
+      "tables": 11,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 91
+    },
+    {
+      "module": "权限管理",
+      "buttons": 14,
+      "heading": "权限管理",
+      "inputs": 2,
+      "links": 0,
+      "tables": 2,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 11
+    },
+    {
+      "module": "后台账号",
+      "buttons": 4,
+      "heading": "后台账号",
+      "inputs": 3,
+      "links": 0,
+      "tables": 1,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 2
+    },
+    {
+      "module": "审计日志",
+      "buttons": 5,
+      "heading": "操作审计",
+      "inputs": 3,
+      "links": 0,
+      "tables": 1,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 21
+    },
+    {
+      "module": "消息管理",
+      "buttons": 10,
+      "heading": "消息管理",
+      "inputs": 2,
+      "links": 0,
+      "tables": 1,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 3
+    },
+    {
+      "module": "知识库",
+      "buttons": 16,
+      "heading": "知识库",
+      "inputs": 2,
+      "links": 0,
+      "tables": 1,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 5
+    },
+    {
+      "module": "运营记录",
+      "buttons": 11,
+      "heading": "运营记录",
+      "inputs": 6,
+      "links": 0,
+      "tables": 1,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 3
+    },
+    {
+      "module": "网站概览",
+      "buttons": 7,
+      "heading": "网站概览",
+      "inputs": 4,
+      "links": 0,
+      "tables": 0,
+      "authenticated": true,
+      "errorShown": false,
+      "loading": false,
+      "passed": true,
+      "domRows": 0
+    }
+  ],
+  "moduleCount": 18,
+  "passed": true,
+  "scope": "Login, session refresh, 18 visible navigation pages, opportunity search/empty/detail, audit pagination and logout. No business mutation, payment or physical WeChat scan."
+}
