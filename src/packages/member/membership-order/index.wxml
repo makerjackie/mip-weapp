@@ -60,7 +60,7 @@
     </view>
     <app-page-exit />
     <mip-sticky-actions>
-      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-3 px-[16rpx]">
+      <view slot="actions" class="flex h-[80rpx] w-full items-center gap-3 px-[16rpx]">
         <view class="flex min-w-[152rpx] items-baseline justify-center leading-none text-brand" aria-label="{{feeText}}"><text class="text-[24rpx] font-medium leading-none">{{totalSymbol}}</text><text class="text-[40rpx] font-medium leading-none">{{totalAmount}}</text></view>
         <!-- 缓存方案未经服务端刷新确认（plansVerified=false）时禁用支付，与「会员方案更新失败，暂时无法支付。」文案一致。 -->
         <mip-pill-button id="membership-order-pay" class="min-w-0 flex-1" label="立即支付" loading="{{paying}}" disabled="{{paying || !plansVerified}}" bind:tap="pay" />

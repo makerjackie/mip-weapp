@@ -63,7 +63,7 @@
          招募中/已结束均可分享；已下架置灰不可点（组件 disabled 态）；未发布过的草稿保持「发布机会」主按钮。
          已结束（ENDED）服务端不可编辑，「编辑」置灰不可点（编辑入口仅 DRAFT/PUBLISHED）。 -->
     <mip-sticky-actions wx:if="{{ownerBar}}" id="opportunity-owner-actions">
-      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-3 px-[16rpx]">
+      <view slot="actions" class="flex h-[80rpx] w-full items-center gap-3 px-[16rpx]">
         <mip-pill-button wx:if="{{ownerBar === 'draft'}}" class="w-[176rpx] shrink-0" variant="secondary" label="编辑草稿" withIcon bind:tap="edit">
           <image slot="icon" class="h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" />
         </mip-pill-button>
@@ -82,7 +82,7 @@
          左「+N想合作」mip-attend-pill（无合作意向时隐藏）+ 右黄色「我想合作」。
          合作意向支持取消；项目结束后只允许取消已有意向。 -->
     <mip-sticky-actions wx:elif="{{!item.mine && (item.status === 'PUBLISHED' || item.cooperationActive)}}" id="opportunity-cooperation-actions">
-      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[16rpx]">
+      <view slot="actions" class="flex h-[80rpx] w-full items-center gap-[16rpx]">
         <view wx:if="{{item.cooperationCount}}" class="shrink-0" aria-role="button" aria-label="查看想合作的人" bind:tap="openCooperators">
           <mip-attend-pill count="{{item.cooperationCount}}" label="想合作" avatars="{{cooperationAvatars}}" variant="dark" />
         </view>
@@ -90,7 +90,7 @@
       </view>
     </mip-sticky-actions>
     <mip-sticky-actions wx:elif="{{!item.mine && item.status === 'ENDED'}}" id="opportunity-cooperation-actions">
-      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[16rpx]">
+      <view slot="actions" class="flex h-[80rpx] w-full items-center gap-[16rpx]">
         <view wx:if="{{item.cooperationCount}}" class="shrink-0" aria-role="button" aria-label="查看想合作的人" bind:tap="openCooperators">
           <mip-attend-pill count="{{item.cooperationCount}}" label="想合作" avatars="{{cooperationAvatars}}" variant="dark" />
         </view>

@@ -102,7 +102,7 @@
     <view wx:if="{{message}}" class="save-error-banner rounded-[8rpx] border border-danger px-4 py-3 text-[22rpx] leading-6 text-danger" aria-live="polite">{{message}}</view>
 
     <mip-sticky-actions>
-      <view id="case-editor-fixed-actions" slot="actions" class="case-editor-actions flex min-h-[112rpx] w-full items-center">
+      <view id="case-editor-fixed-actions" slot="actions" class="case-editor-actions flex min-h-[80rpx] w-full items-center">
         <mip-pill-button class="min-w-0 flex-1" label="保存" loading="{{saving}}" disabled="{{saving}}" bind:tap="saveCase" />
       </view>
     </mip-sticky-actions>

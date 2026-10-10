@@ -183,7 +183,7 @@
     <!-- figma 1732_20291: 底部玻璃药丸 @ (12,1068) 351×56：预览 88×40 panel 底 + 保存 227×40
          品牌底，1px 黑描边，间距 12px。 -->
     <mip-sticky-actions>
-      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[24rpx] px-[16rpx]">
+      <view slot="actions" class="flex h-[80rpx] w-full items-center gap-[24rpx] px-[16rpx]">
         <mip-pill-button class="min-w-[176rpx]" variant="secondary" label="预览" withIcon bind:tap="openPreview">
           <mip-icon slot="icon" name="id-card" size="{{20}}" color="var(--color-brand)" />
         </mip-pill-button>

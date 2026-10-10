@@ -15,7 +15,8 @@
   width: calc(100% - 48rpx);
   max-width: calc(var(--mip-member-shell-max-width, 100%) - 48rpx);
   min-height: 112rpx;
-  padding: 8rpx;
+  /* MIW-64 figma 3828:26877：栏 56px 高、上下内边距 8px，slot 内容 80rpx（=40px 按钮高）。 */
+  padding: 16rpx;
   border-radius: 9999rpx;
   transform: translateX(-50%);
 }

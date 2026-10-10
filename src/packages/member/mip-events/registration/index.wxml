@@ -125,7 +125,7 @@
     </view>
     <app-page-exit />
     <mip-sticky-actions>
-      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-3 px-[16rpx]">
+      <view slot="actions" class="flex h-[80rpx] w-full items-center gap-3 px-[16rpx]">
         <view class="flex min-w-[152rpx] items-baseline justify-center leading-none text-brand" aria-label="{{priceText}}"><text wx:if="{{priceSymbol}}" class="text-[24rpx] font-medium leading-none">{{priceSymbol}}</text><text class="text-[40rpx] font-medium leading-none">{{priceAmount}}</text></view>
         <mip-pill-button id="event-registration-submit" class="min-w-0 flex-1" label="{{payLabel}}" loading="{{busy}}" bind:tap="submit" />
       </view>

@@ -36,7 +36,7 @@
     <app-page-exit label="返回案例" />
     <!-- figma 2704_13347：底部固定唯一「编辑」，点击进入编辑超级案例。 -->
     <mip-sticky-actions wx:if="{{item.canEdit}}">
-      <view slot="actions" class="flex h-[112rpx] w-full items-center">
+      <view slot="actions" class="flex h-[80rpx] w-full items-center">
         <mip-pill-button class="min-w-0 flex-1" label="编辑" bind:tap="edit" />
       </view>
     </mip-sticky-actions>

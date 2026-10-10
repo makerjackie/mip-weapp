@@ -56,7 +56,7 @@
     <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] bg-panel px-4 py-3 text-[22rpx] text-danger">{{message}}</view>
 
     <mip-sticky-actions>
-      <view slot="actions" class="{{isGuest ? 'flex w-full items-center px-[8rpx] py-[16rpx]' : 'flex h-[112rpx] w-full items-center gap-[22rpx] px-[16rpx]'}}">
+      <view slot="actions" class="{{isGuest ? 'flex w-full items-center px-[8rpx] py-[16rpx]' : 'flex h-[80rpx] w-full items-center gap-[22rpx] px-[16rpx]'}}">
         <mip-pill-button
           wx:if="{{!isGuest}}"
           class="w-[316rpx]"

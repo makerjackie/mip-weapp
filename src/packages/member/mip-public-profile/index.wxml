@@ -357,7 +357,7 @@
          MIW-29 按稿两段式：右侧黄色「我感兴趣」常驻；左侧 mip-attend-pill 只在本人已表态后出现
          （本人头像 + N感兴趣），点击进心动名单（J4-02b）。 -->
     <mip-sticky-actions wx:if="{{!isSelf && (interactionBar === 'active' || interactionBar === 'locked')}}">
-      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[16rpx]">
+      <view slot="actions" class="flex h-[80rpx] w-full items-center gap-[16rpx]">
       <view wx:if="{{interestActive}}" class="shrink-0" aria-role="button" aria-label="查看心动名单" bind:tap="openInterestList">
         <mip-attend-pill count="{{interestPillCount}}" label="感兴趣" avatars="{{viewerAvatars}}" variant="dark" />
       </view>
