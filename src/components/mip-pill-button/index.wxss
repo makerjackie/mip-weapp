@@ -19,10 +19,6 @@
   background: var(--mip-bg-surface);
 }
 
-.mip-pill-button--disabled {
-  opacity: 0.4;
-}
-
 /* Native-button root (open-type): strip WeChat defaults so the pill styles read as-is. */
 .mip-pill-button--native {
   margin: 0;
@@ -58,4 +54,15 @@
   font-weight: 500;
   line-height: 44.8rpx;
   white-space: nowrap;
+}
+
+/* MIW-64 figma 3828:27052：disabled/loading 不再是黄底降透明（观感「暗黄」），
+   而是设计稿里「不可用」的固定表达：灰底 #B3B3B3 + 深灰字 #4C4C4C。
+   置于文件末尾以覆盖上方 primary/secondary 的底色与字色（同特异性后者胜）。 */
+.mip-pill-button--disabled {
+  background: var(--mip-text-secondary);
+}
+
+.mip-pill-button--disabled .mip-pill-button__label {
+  color: #4c4c4c;
 }
