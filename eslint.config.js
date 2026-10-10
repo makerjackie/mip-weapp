@@ -15,5 +15,7 @@ export default icebreaker({
     'docs/**',
     '.notma/**',
     '.zcode/**',
+    'project/**',
+    'diff-work/**',
   ],
 })

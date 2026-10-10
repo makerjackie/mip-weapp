@@ -44,7 +44,7 @@ const navigateBack = vi.fn()
 const redirectTo = vi.fn()
 let currentPages: Array<{ route?: string, options?: Record<string, string> }> = []
 
-let definitions: PageDefinition[] = []
+const definitions: PageDefinition[] = []
 
 function definitionOf(marker: string) {
   const found = definitions.find(definition => marker in definition.data)
@@ -84,10 +84,6 @@ beforeAll(async () => {
   vi.useFakeTimers()
   await import('../src/packages/member/mip-cases/editor/index')
   await import('../src/packages/member/mip-opportunities/editor/index')
-})
-
-afterAll(() => {
-  vi.useRealTimers()
 })
 
 beforeEach(() => {
@@ -300,4 +296,8 @@ describe('MIP opportunity editor dirty back-guard (MIP-4)', () => {
     expect(page.dirty).toBe(false)
     expect(disableAlertBeforeUnload).toHaveBeenCalledTimes(1)
   })
+})
+
+afterAll(() => {
+  vi.useRealTimers()
 })

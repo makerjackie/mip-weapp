@@ -61,3 +61,7 @@ docs/research/legacy-mip-app/
 
 # Generated UI fidelity reports and pixel baselines
 .ui-fidelity/
+
+# Local Notma kanban task files and personal scratch tooling
+project/
+diff-work/
