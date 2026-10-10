@@ -29,8 +29,10 @@
   color: var(--mip-text-on-brand);
 }
 
+/* MIW-64 figma 3828:26877/3828:27925：深底胶囊上的计数文字为品牌黄
+   （设计稿实测 fills=rgba(252,223,3,1)），与右侧黄色主按钮呼应。 */
 .mip-attend-pill--dark .mip-attend-pill__count {
-  color: var(--mip-text-primary);
+  color: var(--mip-brand);
 }
 
 .mip-attend-pill--yellow .mip-attend-pill__count {
