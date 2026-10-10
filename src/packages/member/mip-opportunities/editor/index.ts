@@ -143,6 +143,9 @@ Page({
     teamMembers: [] as TeamSelection[],
   },
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
+  // 返回守卫状态：dirty=有未保存修改，alertArmed=已注册原生返回确认（MIP-4，与合作卡编辑器对称）
+  dirty: false,
+  alertArmed: false,
 
   onLoad(options: Record<string, string | undefined>) {
     const id = String(options.id || '') as OpportunityId | ''
@@ -157,12 +160,33 @@ Page({
 
   onUnload() {
     this.clearNavigationTimer()
+    this.markClean()
   },
 
   clearNavigationTimer() {
     if (this.navigationTimer !== undefined) {
       clearTimeout(this.navigationTimer)
       this.navigationTimer = undefined
+    }
+  },
+
+  /** 用户改动任一字段后登记 dirty，并武装原生返回确认（确定=放弃修改并返回，取消=留下）。 */
+  touch() {
+    if (this.data.state !== 'ready') {
+      return
+    }
+    this.dirty = true
+    if (!this.alertArmed) {
+      this.alertArmed = true
+      wx.enableAlertBeforeUnload({ message: '机会尚未保存，返回将丢失已填写内容' })
+    }
+  },
+
+  markClean() {
+    this.dirty = false
+    if (this.alertArmed) {
+      this.alertArmed = false
+      wx.disableAlertBeforeUnload()
     }
   },
 
@@ -210,6 +234,10 @@ Page({
         })
       }
       this.setData({ state: 'ready' })
+      if (aiSource) {
+        // AI 草稿覆盖了表单内容，视为未保存修改
+        this.touch()
+      }
     }
     catch (error) {
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '页面加载失败' })
@@ -276,6 +304,7 @@ Page({
       return
     }
     this.dismissSaveError()
+    this.touch()
     this.setData({
       [field]: event.detail.value,
       ...(['title', 'valueSummary', 'targetSummary'].includes(field) ? { [`${field}Error`]: '' } : {}),
@@ -346,6 +375,7 @@ Page({
     const cityIndex = draft.cityTagId
       ? this.data.cityOptions.findIndex(item => item.id === draft.cityTagId)
       : -1
+    this.touch()
     this.setData({
       ...(draft.title ? { title: draft.title, titleError: '' } : {}),
       ...(draft.valueSummary ? { valueSummary: draft.valueSummary, valueSummaryError: '' } : {}),
@@ -361,6 +391,7 @@ Page({
     const city = this.data.cityOptions[cityIndex]
     if (city) {
       this.dismissSaveError()
+      this.touch()
       this.setData({ cityIndex, cityTagId: city.id })
     }
   },
@@ -372,6 +403,7 @@ Page({
       return
     }
     this.dismissSaveError()
+    this.touch()
     this.setData({ cityIndex, cityTagId })
   },
 
@@ -383,6 +415,7 @@ Page({
       item.key === key ? { ...item, selected: !item.selected } : { ...item, selected: false }
     ))
     this.dismissSaveError()
+    this.touch()
     this.setData({ typeOptions })
   },
 
@@ -409,6 +442,7 @@ Page({
       return
     }
     this.dismissSaveError()
+    this.touch()
     this.setData({ projectStatus: key, projectStatusText: projectStatusTextOf(key), statusSheetVisible: false })
   },
 
@@ -417,6 +451,7 @@ Page({
     const choice = String(event.currentTarget.dataset.visibility || '') as VisibilityChoice
     if (choice === 'PLATFORM' || choice === 'INTERNAL') {
       this.dismissSaveError()
+      this.touch()
       this.setData({ playersOnly: choice === 'INTERNAL' })
     }
   },
@@ -430,6 +465,7 @@ Page({
       const sourcePath = await chooseSingleImage()
       const asset = await mipMediaModule.uploadImageFromPath('OPPORTUNITY_COVER', sourcePath)
       this.dismissSaveError()
+      this.touch()
       this.setData({ coverAssetId: asset.assetId, coverUrl: asset.imageUrl })
     }
     catch (error) {
@@ -536,6 +572,8 @@ Page({
         confirmedAiDraftId: '',
         confirmedAiDraftVersion: 0,
       })
+      // 保存成功先解除返回守卫，避免自动返回详情时误弹确认框
+      this.markClean()
       // MIW-40 S8：发布成功记 pending，发布者落地页（机会列表/详情）onShow 消费后
       // 弹订阅授权引导层；带 TTL，错过窗口即回退进详情的既有时机。
       if (publish && result.status === 'PUBLISHED') {
