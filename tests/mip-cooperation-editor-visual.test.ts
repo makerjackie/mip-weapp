@@ -84,4 +84,18 @@ describe('MIP cooperation card editor per the 2571:34139 mockup', () => {
     expect(source).toMatch(/saveDraftOnExit/)
     expect(source).toMatch(/publish: false/)
   })
+
+  it('pins a persistent save-error banner above the save capsule until fields change (MIP-3)', () => {
+    // 保存失败横幅固定在吸底保存按钮上方：border-danger 样式、修改字段即清除
+    const bannerIndex = view.indexOf('save-error-banner')
+    const actionsIndex = view.indexOf('<mip-sticky-actions')
+    expect(view).toContain('border border-danger')
+    expect(bannerIndex).toBeGreaterThan(-1)
+    expect(bannerIndex).toBeLessThan(actionsIndex)
+    expect(read('src/packages/member/mip-cooperation/editor/index.wxss')).toMatch(
+      /\.save-error-banner \{[\s\S]*?position: fixed;[\s\S]*?bottom: calc\(env\(safe-area-inset-bottom\) \+ 136rpx\)/,
+    )
+    // touch() 是所有字段改动的统一入口，横幅在此清除
+    expect(source).toMatch(/touch\(\) \{[\s\S]*?this\.setData\(\{ message: '' \}\)[\s\S]*?this\.dirty = true/)
+  })
 })

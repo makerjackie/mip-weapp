@@ -116,7 +116,8 @@
     <!-- MIW-50 客户确认（2026-10-07）：编辑器不提供「保存草稿」按钮，表单只走
          「确认发布/保存修改」（publish=true）；草稿态编辑（编辑草稿入口）同样
          以发布收口，字段填完即可发布。 -->
-    <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] border border-danger px-4 py-3 text-[22rpx] text-danger" aria-live="polite">{{message}}</view>
+    <!-- MIP-3：保存失败横幅固定在吸底保存按钮上方，不自动消失（下一次保存或修改字段后清除）。 -->
+    <view wx:if="{{message}}" class="save-error-banner rounded-[8rpx] border border-danger px-4 py-3 text-[22rpx] text-danger" aria-live="polite">{{message}}</view>
     <!-- journey-review J4-04 ③：液态玻璃底部条（mip-sticky-actions）+ 黄芯胶囊「确认发布」（mip-pill-button）。 -->
     <mip-sticky-actions id="opportunity-editor-fixed-actions">
       <view slot="actions" class="w-full px-[16rpx]">

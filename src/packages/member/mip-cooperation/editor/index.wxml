@@ -1,4 +1,4 @@
-<view id="mip-cooperation-editor-page" class="mip-member-page min-h-screen bg-canvas pb-[24rpx] text-ink">
+<view id="mip-cooperation-editor-page" class="mip-member-page min-h-screen bg-canvas pb-[24rpx] text-ink" style="{{message ? 'padding-bottom: calc(env(safe-area-inset-bottom) + 168rpx)' : ''}}">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-[24rpx] rounded-[16rpx] bg-panel px-5 py-7 pt-4"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="pt-4"><mip-empty-state title="暂时无法编辑合作卡" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
 
@@ -125,7 +125,8 @@
       </view>
     </view>
 
-    <view wx:if="{{message}}" class="mx-[24rpx] mt-[24rpx] rounded-[8rpx] border border-danger px-[24rpx] py-[16rpx] text-[22rpx] text-danger">{{message}}</view>
+    <!-- MIP-3：保存失败横幅固定在吸底保存按钮上方，不自动消失（下一次保存或修改字段后清除）。 -->
+    <view wx:if="{{message}}" class="save-error-banner rounded-[8rpx] border border-danger px-[24rpx] py-[16rpx] text-[22rpx] text-danger">{{message}}</view>
   </block>
 
   <!-- figma 2571:34139 Group 27137：液态玻璃吸底栏 + 全宽「保存」（按钮区整块黄色，返回走导航栏与返回暂存守卫） -->

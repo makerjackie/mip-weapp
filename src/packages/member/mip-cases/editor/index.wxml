@@ -1,4 +1,4 @@
-<view id="mip-case-editor-page" class="mip-member-page case-editor-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
+<view id="mip-case-editor-page" class="mip-member-page case-editor-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink" style="{{message ? 'padding-bottom: calc(env(safe-area-inset-bottom) + 168rpx)' : ''}}">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><mip-empty-state title="暂时无法编辑案例" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
   <!-- figma 2173_42605 编辑超级案例:全宽 brand 引导横幅 + AI助手卡 + 我的案例标题 +
@@ -98,7 +98,8 @@
       <text class="text-[24rpx] font-medium text-brand">添加项目</text>
     </view>
 
-    <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] border border-danger px-4 py-3 text-[22rpx] leading-6 text-danger" aria-live="polite">{{message}}</view>
+    <!-- MIP-3：保存失败横幅固定在吸底保存按钮上方，不自动消失（下一次保存或修改字段后清除）。 -->
+    <view wx:if="{{message}}" class="save-error-banner rounded-[8rpx] border border-danger px-4 py-3 text-[22rpx] leading-6 text-danger" aria-live="polite">{{message}}</view>
 
     <mip-sticky-actions>
       <view id="case-editor-fixed-actions" slot="actions" class="case-editor-actions flex min-h-[112rpx] w-full items-center">

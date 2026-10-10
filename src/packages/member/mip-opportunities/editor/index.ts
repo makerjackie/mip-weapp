@@ -275,6 +275,7 @@ Page({
     if (!['title', 'valueSummary', 'targetSummary', 'description', 'regionText'].includes(field)) {
       return
     }
+    this.dismissSaveError()
     this.setData({
       [field]: event.detail.value,
       ...(['title', 'valueSummary', 'targetSummary'].includes(field) ? { [`${field}Error`]: '' } : {}),
@@ -359,6 +360,7 @@ Page({
     const cityIndex = Number(event.detail.value)
     const city = this.data.cityOptions[cityIndex]
     if (city) {
+      this.dismissSaveError()
       this.setData({ cityIndex, cityTagId: city.id })
     }
   },
@@ -369,6 +371,7 @@ Page({
     if (cityIndex < 0) {
       return
     }
+    this.dismissSaveError()
     this.setData({ cityIndex, cityTagId })
   },
 
@@ -379,6 +382,7 @@ Page({
     const typeOptions = this.data.typeOptions.map(item => (
       item.key === key ? { ...item, selected: !item.selected } : { ...item, selected: false }
     ))
+    this.dismissSaveError()
     this.setData({ typeOptions })
   },
 
@@ -404,6 +408,7 @@ Page({
     if (!option || option.disabled) {
       return
     }
+    this.dismissSaveError()
     this.setData({ projectStatus: key, projectStatusText: projectStatusTextOf(key), statusSheetVisible: false })
   },
 
@@ -411,6 +416,7 @@ Page({
   chooseVisibility(event: WechatMiniprogram.TouchEvent) {
     const choice = String(event.currentTarget.dataset.visibility || '') as VisibilityChoice
     if (choice === 'PLATFORM' || choice === 'INTERNAL') {
+      this.dismissSaveError()
       this.setData({ playersOnly: choice === 'INTERNAL' })
     }
   },
@@ -423,6 +429,7 @@ Page({
     try {
       const sourcePath = await chooseSingleImage()
       const asset = await mipMediaModule.uploadImageFromPath('OPPORTUNITY_COVER', sourcePath)
+      this.dismissSaveError()
       this.setData({ coverAssetId: asset.assetId, coverUrl: asset.imageUrl })
     }
     catch (error) {
@@ -463,6 +470,14 @@ Page({
     wx.showToast({ title: firstIssue.message, icon: 'none' })
     wx.pageScrollTo({ selector: firstIssue.selector, duration: 200 })
     return false
+  },
+
+  // MIP-3：保存失败横幅（save-error-banner）持久展示，修改任一字段后清除；
+  // 下一次保存则在 save() 开始时清除。
+  dismissSaveError() {
+    if (this.data.message) {
+      this.setData({ message: '' })
+    }
   },
 
   async save(publish: boolean) {

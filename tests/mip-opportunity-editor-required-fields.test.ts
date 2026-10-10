@@ -145,6 +145,41 @@ describe('MIP opportunity editor required fields', () => {
     expect(saveOpportunity).toHaveBeenCalledTimes(2)
   })
 
+  it('keeps the failure banner until the next save or a field change, button clickable (MIP-3)', async () => {
+    const page = createPage({
+      title: '项目',
+      valueSummary: '资源互换',
+      targetSummary: '寻找合作方',
+      description: '',
+    })
+    const error = new Error('提交内容格式不正确，请检查后重试')
+    saveOpportunity.mockRejectedValueOnce(error)
+
+    await page.save(false)
+
+    expect(page.data.saving).toBe(false)
+    expect(page.data.message).toBe(error.message)
+    // 横幅持久：等待之后仍未被清空（无自动消失定时器）
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(page.data.message).toBe(error.message)
+
+    // 修改任一字段后清除
+    Reflect.apply(page.updateText, page, [{
+      currentTarget: { dataset: { field: 'title' } },
+      detail: { value: '改名后的机会' },
+    }])
+    expect(page.data.message).toBe('')
+
+    // 下一次保存开始即清掉旧横幅，失败后能再次展示新错误
+    saveOpportunity.mockRejectedValueOnce(error)
+    const submission = page.save(false)
+    expect(page.data.message).toBe('')
+    expect(page.data.saving).toBe(true)
+    await submission
+    expect(page.data.message).toBe(error.message)
+    expect(page.data.saving).toBe(false)
+  })
+
   it('greys out unpublish and create-mode end in the status sheet', () => {
     // CREATE 模式不可直接下架或结束；发布后两种状态均可在同一次保存中提交。
     const createViews = definition.data.projectStatusOptions

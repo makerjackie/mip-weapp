@@ -130,6 +130,11 @@ Page({
     if (this.data.state !== 'ready') {
       return
     }
+    // MIP-3：保存失败横幅（save-error-banner）持久展示，修改任一字段即清除；
+    // 下一次保存则在 save() 开始时清除。
+    if (this.data.message) {
+      this.setData({ message: '' })
+    }
     this.dirty = true
     if (!this.alertArmed) {
       this.alertArmed = true
