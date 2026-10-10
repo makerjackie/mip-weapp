@@ -82,6 +82,39 @@ async function load(database, appId, opportunityId) {
   return term || locations.length ? dto(term, locations) : undefined
 }
 
+async function loadMany(database, appId, opportunityIds) {
+  const ids = [...new Set(opportunityIds)]
+  if (!ids.length) return new Map()
+  const placeholders = ids.map(() => '?').join(', ')
+  const [terms, locations] = await Promise.all([
+    database.query(
+      `SELECT opportunity_id, currency, amount_unit, min_amount_cents, max_amount_cents
+       FROM mip_opportunity_commercial_terms
+       WHERE app_id = ? AND status = 'ACTIVE' AND opportunity_id IN (${placeholders})`,
+      [appId, ...ids],
+    ),
+    database.query(
+      `SELECT location.opportunity_id, location.location_type, location.city_tag_id, city.label AS city_name
+       FROM mip_opportunity_locations location
+       LEFT JOIN mip_tags city ON city.app_id = location.app_id AND city.id = location.city_tag_id
+       WHERE location.app_id = ? AND location.opportunity_id IN (${placeholders})
+       ORDER BY location.opportunity_id, location.sort_order, location.location_key`,
+      [appId, ...ids],
+    ),
+  ])
+  const termsById = new Map(terms.map(term => [term.opportunity_id, term]))
+  const locationsById = new Map()
+  for (const location of locations) {
+    const list = locationsById.get(location.opportunity_id) || []
+    list.push(location)
+    locationsById.set(location.opportunity_id, list)
+  }
+  return new Map(ids.flatMap(id => {
+    const term = termsById.get(id), places = locationsById.get(id) || []
+    return term || places.length ? [[id, dto(term, places)]] : []
+  }))
+}
+
 async function sync(tx, appId, opportunityId, terms, version) {
   if (terms === undefined) return
   await tx.query('DELETE FROM mip_opportunity_locations WHERE app_id = ? AND opportunity_id = ?', [appId, opportunityId])
@@ -116,4 +149,4 @@ async function sync(tx, appId, opportunityId, terms, version) {
   }
 }
 
-module.exports = { load, normalizeCommercialTerms, sync }
+module.exports = { load, loadMany, normalizeCommercialTerms, sync }

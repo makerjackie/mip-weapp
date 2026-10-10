@@ -6,7 +6,7 @@ const {
   assertMutationScope,
   lockMutationAuthorization,
 } = require('./mutation-authorization')
-const { load: loadCommercialTerms, sync: syncCommercialTerms } = require('./opportunity-commercial-terms')
+const { load: loadCommercialTerms, loadMany: loadCommercialTermsBatch, sync: syncCommercialTerms } = require('./opportunity-commercial-terms')
 const { claimOptional, complete } = require('./idempotency')
 const { EDITABLE_OPPORTUNITY_STATUSES, PUBLISHABLE_OPPORTUNITY_STATUSES } = require('./opportunity-policy')
 const { rosterPaymentFields } = require('./roster-payment')
@@ -216,8 +216,8 @@ function createAdminPrdExtensions(database, options = {}) {
       opportunitySelect(clauses.join(' AND '), `${cursorWhere.sql} ORDER BY o.updated_at DESC, o.id DESC LIMIT ?`),
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
-    const terms = await Promise.all(rows.map(row => loadCommercialTerms(database, appId, row.id)))
-    const items = rows.map((row, index) => opportunityDto(row, { commercialTerms: terms[index] }))
+    const terms = await loadCommercialTermsBatch(database, appId, rows.map(row => row.id))
+    const items = rows.map(row => opportunityDto(row, { commercialTerms: terms.get(row.id) }))
     return pageRows(items, pageLimit, row => ({ updatedAt: row.updatedAt, id: row.id, ...(queryHash ? { queryHash } : {}) }))
   }
 

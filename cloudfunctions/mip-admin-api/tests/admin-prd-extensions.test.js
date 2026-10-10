@@ -26,6 +26,47 @@ function audit(resourceId) {
 }
 
 describe('admin PRD extension persistence', () => {
+  it('loads nonempty opportunity pages within the runtime pool queue and preserves terms, locations and pagination', async () => {
+    const rows = Array.from({ length: 14 }, (_, index) => ({
+      id: `opportunity-${index}`, title: `合作机会 ${index}`, owner_user_id: 'owner-a',
+      city_tag_id: 'legacy-city', city_name: '广州', status: 'PUBLISHED', version: 1,
+      updated_at: new Date(`2030-01-${String(28 - index).padStart(2, '0')}T00:00:00Z`),
+    }))
+    let pending = 0
+    const adapter = database({
+      async query(sql, params) {
+        // Match the real runtime's four connections plus sixteen queued requests.
+        if (++pending > 20) { pending--; throw new Error('Queue limit reached.') }
+        try {
+          await new Promise(resolve => setImmediate(resolve))
+          assert.equal(params[0], 'wx-app')
+          if (sql.includes('FROM mip_opportunities o')) return rows
+          const ids = new Set(params.slice(1))
+          if (sql.includes('FROM mip_opportunity_commercial_terms')) return [1, 0]
+            .filter(index => ids.has(`opportunity-${index}`))
+            .map(index => ({ opportunity_id: `opportunity-${index}`, currency: 'CNY', amount_unit: 'CNY_CENTS', min_amount_cents: (index + 1) * 10000, max_amount_cents: (index + 1) * 20000 }))
+          if (sql.includes('FROM mip_opportunity_locations')) return [
+            { opportunity_id: 'opportunity-0', location_type: 'CITY', city_tag_id: 'city-a', city_name: '深圳' },
+            { opportunity_id: 'opportunity-2', location_type: 'REMOTE' },
+          ].filter(row => ids.has(row.opportunity_id))
+          throw new Error('Unexpected opportunity read')
+        }
+        finally { pending-- }
+      },
+    })
+    adapter.one = async (sql, params) => (await adapter.query(sql, params))[0] || null
+    const page = await extensions(adapter).listOpportunitiesV2('wx-app', { platform: true }, {}, 13)
+    assert.equal(page.items.length, 13)
+    assert.ok(page.nextCursor)
+    assert.deepEqual(page.items.map(item => item.id), rows.slice(0, 13).map(row => row.id))
+    assert.equal(page.items[0].commercialTerms.minAmountCents, 10000)
+    assert.equal(page.items[0].commercialTerms.locationDisplay, '深圳')
+    assert.equal(page.items[1].commercialTerms.minAmountCents, 20000)
+    assert.equal(page.items[1].commercialTerms.locations.length, 0)
+    assert.equal(page.items[2].commercialTerms.locationDisplay, '远程')
+    assert.deepEqual(page.items[3].commercialTerms.locations, [{ type: 'CITY', cityTagId: 'legacy-city', cityName: '广州' }])
+  })
+
   it('saves a revised deadline while keeping ended and unpublished opportunities in their current state', async () => {
     for (const status of ['UNPUBLISHED', 'ENDED']) {
       const writes = []
