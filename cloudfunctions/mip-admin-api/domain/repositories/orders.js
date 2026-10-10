@@ -82,7 +82,10 @@ function createAdminOrderRepository(database, options = {}) {
     if (filters.createdFrom) { clauses.push('o.created_at >= ?'); params.push(filters.createdFrom) }
     if (filters.createdTo) { clauses.push('o.created_at <= ?'); params.push(filters.createdTo) }
     if (filters.query) {
-      clauses.push(`(o.id LIKE ? ESCAPE '\\\\' OR o.merchant_order_no LIKE ? ESCAPE '\\\\'
+      // UUIDs/order numbers use ascii_bin; Unicode search must also reach the
+      // nickname/title alternatives without MySQL rejecting the LIKE operands.
+      clauses.push(`(CONVERT(o.id USING utf8mb4) COLLATE utf8mb4_bin LIKE ? ESCAPE '\\\\'
+        OR CONVERT(o.merchant_order_no USING utf8mb4) COLLATE utf8mb4_bin LIKE ? ESCAPE '\\\\'
         OR p.nickname LIKE ? ESCAPE '\\\\' OR mp.name LIKE ? ESCAPE '\\\\'
         OR e.title LIKE ? ESCAPE '\\\\' OR knowledge.title LIKE ? ESCAPE '\\\\')`)
       const query = `%${escapeLike(filters.query)}%`

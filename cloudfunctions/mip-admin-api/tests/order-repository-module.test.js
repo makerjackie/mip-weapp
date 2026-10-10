@@ -270,6 +270,26 @@ describe('admin order persistence adapter', () => {
     assert.equal(database.calls.every(call => call.params[0] === APP_ID), true)
   })
 
+  it('searches ASCII identifiers with Unicode keywords in both list and summary without losing scope or literal wildcards', async () => {
+    const database = databaseHarness()
+    const adapter = repository(database)
+    const filters = { query: '早会_%\\', branchId: BRANCH_ID }
+    const visibility = { platform: false, branchIds: [BRANCH_ID], eventIds: [] }
+
+    await adapter.listOrders(APP_ID, visibility, filters, 20)
+    await adapter.summarizeOrders(APP_ID, visibility, filters)
+
+    assert.equal(database.calls.length, 2)
+    for (const { sql, params } of database.calls) {
+      assert.match(sql, /CONVERT\(o\.id USING utf8mb4\) COLLATE utf8mb4_bin LIKE \?/)
+      assert.match(sql, /CONVERT\(o\.merchant_order_no USING utf8mb4\) COLLATE utf8mb4_bin LIKE \?/)
+      assert.equal(params[0], APP_ID)
+      assert.deepEqual(params.slice(1, 3), [BRANCH_ID, BRANCH_ID])
+      assert.deepEqual(params.slice(3, 9), Array(6).fill('%早会\\_\\%\\\\%'))
+    }
+    assert.deepEqual(database.calls[0].params.slice(0, -1), database.calls[1].params)
+  })
+
   it('commits event refund, registration, audit and outbox facts in one transaction', async () => {
     const database = databaseHarness({
       one(sql) {

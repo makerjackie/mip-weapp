@@ -194,7 +194,7 @@ describe('admin repository persistence contracts', () => {
     }, 20)
     assert.match(captured.sql, /LEFT JOIN mip_membership_plans/)
     assert.match(captured.sql, /LEFT JOIN mip_events/)
-    assert.match(captured.sql, /o\.merchant_order_no LIKE/)
+    assert.match(captured.sql, /CONVERT\(o\.merchant_order_no USING utf8mb4\) COLLATE utf8mb4_bin LIKE/)
     assert.match(captured.sql, /ORDER BY rf\.created_at DESC, rf\.id DESC LIMIT 1\) = \?/)
     assert.match(captured.sql, /o\.created_at >= \?/)
     assert.match(captured.sql, /o\.created_at <= \?/)
