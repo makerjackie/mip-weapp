@@ -6,6 +6,7 @@ const templateFieldContracts = Object.freeze({
   CHECKIN_RESULT: Object.freeze(new Set(['title', 'checkedAt', 'participationMethod', 'status'])),
   HEART_RECEIVED: Object.freeze(new Set(['title', 'status', 'receivedAt'])),
   PROFILE_INTEREST: Object.freeze(new Set(['title', 'status', 'receivedAt'])),
+  OPPORTUNITY_NOTICE: Object.freeze(new Set(['title', 'status', 'receivedAt'])),
 })
 
 function parseTemplateConfig(source) {

@@ -61,7 +61,9 @@ worker 仅通过内部 HMAC 调用，不开放客户端权限，不安装高频�
 
 ## 机会发布人订阅引导
 
-MIW-40（2026-10-05）：机会场景使用单一逻辑模板键 `OPPORTUNITY_NOTICE`；W26 模板获批后如需拆分多键，只改模板配置与组件入参，不改架构。引导层（`mip-subscription-guide` 组件，挂在机会详情页与「我的机会」列表）只做授权收集，不做投递——机会通知的 projector 投递分支（状态变化、引荐等）由后续任务接入。模板未配置时客户端整层不渲染，服务端照常只写站内消息，不创建外部任务。
+MIW-40（2026-10-05）：机会场景使用单一逻辑模板键 `OPPORTUNITY_NOTICE`；W26 模板获批后如需拆分多键，只改模板配置与组件入参，不改架构。引导层（`mip-subscription-guide` 组件，挂在机会详情页与「我的机会」列表）只做授权收集，不做投递。模板未配置时客户端整层不渲染，服务端照常只写站内消息，不创建外部任务。
+
+MIW-67（2026-10-12）：机会动态的 projector 投递分支已接入——合作意向（`opportunity.cooperation_changed`）与机会来源的感兴趣（`profile.interest_changed` 的 `OPPORTUNITY` 分支）外部投递从客服消息改为 `WECHAT_SUBSCRIPTION` 渠道的 `OPPORTUNITY_NOTICE` 模板，逻辑字段 `title`（机会名，超长或缺名回退为动态短语）、`status`、`receivedAt`；引荐与合作卡/超级案例/档案来源的感兴趣维持既有渠道。发布人无可用授权时任务按 worker 既有可重试上限（5 次）收敛为失败，站内信始终无条件落库，不回退成已送达，也不阻断表态；`OPPORTUNITY_NOTICE` 模板未配置时 `publishMessage` 丢弃 external，同样只保留站内信。
 
 展示节奏由纯函数 `guide-policy` 判定：同一机会 24 小时内最多展示 1 次；原生面板拒绝累计满 3 次后不再展示；`BANNED`（拒绝且不再询问）永久隐藏，并经既有 `recordSubscriptionDecision` 触发服务端 `revokeGrants`。已入账（`ACCEPTED`）后不再重复引导——微信订阅授权为一次性额度，重复收集以服务端 `mip_notification_grants` 为唯一事实源，客户端不预测余额。
 
