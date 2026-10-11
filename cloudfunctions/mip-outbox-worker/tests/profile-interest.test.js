@@ -37,6 +37,7 @@ function currentRelationship(overrides = {}) {
     target_user_id: TARGET_ID,
     source_type: 'OPPORTUNITY',
     source_id: SOURCE_ID,
+    opportunity_title: '联合创始人在哪找',
     ...overrides,
   }
 }
@@ -84,13 +85,25 @@ describe('profile interest outbox projection', () => {
       dedupeKey: `outbox:${OUTBOX_ID}:opportunity-interest`,
       targetType: 'OPPORTUNITY',
       targetId: SOURCE_ID,
+      // MIW-67：机会来源的感兴趣消费发布人 OPPORTUNITY_NOTICE 订阅额度。
       external: {
-        channel: 'WECHAT_CUSTOMER_SERVICE',
-        templateKey: 'CUSTOMER_SERVICE_TEXT',
-        fields: { content: '机会收到新的关注，请在小程序内查看。' },
+        channel: 'WECHAT_SUBSCRIPTION',
+        templateKey: 'OPPORTUNITY_NOTICE',
+        fields: { title: '联合创始人在哪找', status: '收到新的感兴趣标记', receivedAt: '2026-09-22 10:30' },
       },
     }])
     assert.equal(JSON.stringify(result).includes('attacker-controlled'), false)
+  })
+
+  it('falls back to the status phrase when the opportunity title is missing for subscription fields', async () => {
+    const outboxEvent = interestEvent()
+    const result = await projectEvent({
+      async one(sql, params) {
+        assertCurrentFactQuery(sql, params, outboxEvent)
+        return currentRelationship({ opportunity_title: '  ' })
+      },
+    }, outboxEvent)
+    assert.deepEqual(result.notifications[0].external.fields.title, '收到新的感兴趣标记')
   })
 
   it('keeps direct public-profile interest bound to the current target profile', async () => {

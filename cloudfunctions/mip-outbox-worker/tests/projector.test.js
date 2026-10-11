@@ -908,11 +908,25 @@ describe('self cooperation notifications', () => {
     const result = await projectEvent({ async one(sql, params) {
       assert.match(sql, /mip_opportunity_cooperations/)
       assert.match(sql, /mip_user_blocks/)
+      assert.match(sql, /o\.title, intent\.activated_at/)
       assert.deepEqual(params, [event.app_id, event.aggregate_id])
-      return { status: 'ACTIVE', version: 3, owner_user_id: 'publisher', opportunity_id: 'opportunity' }
+      return {
+        status: 'ACTIVE',
+        version: 3,
+        owner_user_id: 'publisher',
+        opportunity_id: 'opportunity',
+        title: '联合创始人在哪找',
+        activated_at: '2026-09-22T02:30:00.000Z',
+      }
     } }, { ...event, payload_json: { recipientUserId: 'untrusted' } })
     assert.equal(result.notifications[0].recipientUserId, 'publisher')
     assert.equal(result.notifications[0].dedupeKey, `outbox:${event.id}:cooperation`)
+    // MIW-67：合作意向消费发布人 OPPORTUNITY_NOTICE 订阅额度，不再走客服消息。
+    assert.deepEqual(result.notifications[0].external, {
+      channel: 'WECHAT_SUBSCRIPTION',
+      templateKey: 'OPPORTUNITY_NOTICE',
+      fields: { title: '联合创始人在哪找', status: '收到新的合作意向', receivedAt: '2026-09-22 10:30' },
+    })
     assert.deepEqual(result.growth, [])
   })
   for (const row of [null, { status: 'CANCELLED', version: 3 }, { status: 'ACTIVE', version: 4 }]) {
