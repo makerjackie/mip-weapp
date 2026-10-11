@@ -26,6 +26,11 @@
   height: 100%;
 }
 
+/* MIW-68: 未获授徽章与列表页同口径整枚置灰，获授后按原色渲染。 */
+.badge-detail-art-wrap--locked .badge-detail-art {
+  filter: grayscale(1);
+}
+
 .badge-placeholder {
   display: flex;
   align-items: center;

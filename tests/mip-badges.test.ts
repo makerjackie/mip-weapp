@@ -149,6 +149,15 @@ describe('MIP badge collection', () => {
     expect(page).toContain('label: \'可佩戴\'')
   })
 
+  it('greys unearned badge art and keeps earned badges in full colour', () => {
+    const gridStyles = source('src/packages/member/mip-badges/index.wxss')
+    expect(gridStyles).toContain('.badge-art-wrap--locked .badge-art')
+    expect(gridStyles).toContain('filter: grayscale(1)')
+    const detailTemplate = source('src/packages/member/mip-badge-detail/index.wxml')
+    expect(detailTemplate).toContain('badge-detail-art-wrap--locked')
+    expect(source('src/packages/member/mip-badge-detail/index.wxss')).toContain('filter: grayscale(1)')
+  })
+
   it('keeps the profile primary badge visible when the server omits visual art', () => {
     const profilePage = source('src/pages/profile/index.ts')
     expect(profilePage).toContain('import { badgeArtUrl } from \'../../config/mip-badge-art\'')
