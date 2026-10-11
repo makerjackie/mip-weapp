@@ -19,6 +19,7 @@ function readConfig(env = process.env) {
   const openAiModel = parseOpenAiModel(env.OPENAI_MODEL)
   const openAiApiKey = parseOpenAiApiKey(env.OPENAI_API_KEY)
   const timeoutMs = normalizeTimeout(env.MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS)
+  const voiceTimeoutMs = normalizeVoiceTimeout(env.MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS)
   const tencentAsrSecretId = text(env.TENCENT_ASR_SECRET_ID)
   const tencentAsrSecretKey = text(env.TENCENT_ASR_SECRET_KEY)
   const tencentAsrAppId = text(env.TENCENT_ASR_APPID)
@@ -55,6 +56,7 @@ function readConfig(env = process.env) {
     secret,
     upstreamSecret,
     timeoutMs,
+    voiceTimeoutMs,
     asrTimeoutMs,
     asrConfigured: isValidAsrSecretId(tencentAsrSecretId)
       && isValidAsrSecretKey(tencentAsrSecretKey)
@@ -141,6 +143,14 @@ function normalizeTimeout(value) {
   return Number.isInteger(timeout) && timeout >= 500 && timeout <= 30_000 ? timeout : 8000
 }
 
+// 语音转写后的结构化 LLM 调用要吃下长转写文本,预算独立于文本链路的
+// MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS;默认 20s,与下载(≈2s)+ ASR(≤45s 默认 20s)
+// 一起落在 mip-ai-api 的 45s 语音预算和本函数 60s 平台超时之内。
+function normalizeVoiceTimeout(value) {
+  const timeout = Number(value || 20_000)
+  return Number.isInteger(timeout) && timeout >= 1000 && timeout <= 30_000 ? timeout : 20_000
+}
+
 function normalizeAsrTimeout(value) {
   const timeout = Number(value || 20_000)
   return Number.isInteger(timeout) && timeout >= 1000 && timeout <= 45_000 ? timeout : 20_000
@@ -158,6 +168,7 @@ module.exports = {
   FUNCTION_NAME,
   normalizeAsrTimeout,
   normalizeTimeout,
+  normalizeVoiceTimeout,
   parseAllowedHosts,
   parseAppIds,
   parseEndpoint,

@@ -31,6 +31,26 @@ test('exposes unknown provider and upload results as retryable without claiming 
   assert.equal(failure(new Error('AI_PROVIDER_REJECTED')).error.retryable, false)
 })
 
+// MIW-66:静音录音要引导重录(非重试),ASR 瞬时失败明确可重试。
+test('maps voice transcription failures to re-record and retry guidance', () => {
+  assert.deepEqual(failure(new Error('AI_PROVIDER_TRANSCRIPT_EMPTY')), {
+    ok: false,
+    error: {
+      code: 'AI_PROVIDER_TRANSCRIPT_EMPTY',
+      message: '录音中没有识别到内容，请重新录制',
+      retryable: false,
+    },
+  })
+  assert.deepEqual(failure(new Error('AI_PROVIDER_TRANSCRIBE_FAILED')), {
+    ok: false,
+    error: {
+      code: 'AI_PROVIDER_TRANSCRIBE_FAILED',
+      message: '语音转写失败，请重试',
+      retryable: true,
+    },
+  })
+})
+
 test('maps uncoded internal failures to SERVICE_UNAVAILABLE and logs only the error category (MIW-61)', () => {
   const logged = []
   const original = console.error

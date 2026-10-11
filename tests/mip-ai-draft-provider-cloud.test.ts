@@ -64,6 +64,37 @@ describe('AI draft Provider cloud contract', () => {
     expect(environment.OPENAI_API_KEY).toBeUndefined()
   })
 
+  // MIW-66:语音结构化预算独立于文本超时;默认 20s,越界拒绝部署。
+  it('injects the voice structuring timeout with bounds in both upstream modes', () => {
+    const local = providerEnvironment({
+      aiEnvironment,
+      env: localEnvironment,
+      sourceMarker,
+    })
+    expect(local.MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS).toBe('20000')
+    const legacy = providerEnvironment({
+      aiEnvironment,
+      env: legacyEnvironment,
+      sourceMarker,
+    })
+    expect(legacy.MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS).toBe('20000')
+    expect(providerEnvironment({
+      aiEnvironment,
+      env: { ...localEnvironment, MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS: '15000' },
+      sourceMarker,
+    }).MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS).toBe('15000')
+    expect(() => providerEnvironment({
+      aiEnvironment,
+      env: { ...localEnvironment, MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS: '500' },
+      sourceMarker,
+    })).toThrow('timeout is invalid')
+    expect(() => providerEnvironment({
+      aiEnvironment,
+      env: { ...localEnvironment, MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS: '45000' },
+      sourceMarker,
+    })).toThrow('timeout is invalid')
+  })
+
   it('stops before Provider deployment unless the existing AI API already targets the exact function', () => {
     expect(() => assertAiApiProviderLink(aiEnvironment)).not.toThrow()
     expect(() => assertAiApiProviderLink({
@@ -153,7 +184,7 @@ describe('AI draft Provider cloud contract', () => {
       FunctionName: AI_DRAFT_PROVIDER_FUNCTION_NAME,
       Runtime: 'Nodejs20.19',
       Handler: 'index.main',
-      Timeout: 15,
+      Timeout: 60,
       Status: 'Active',
       AvailableStatus: 'Available',
       VpcConfig: { VpcId: '', SubnetId: '' },
