@@ -385,3 +385,21 @@ describe('admin people mutation forms', () => {
     assert.equal((result as Record<string, unknown>).status, 'INACTIVE')
   })
 })
+
+describe('novice-friendly governance form contracts', () => {
+  it('hides branchKey and generates it when creating a branch', () => {
+    const definition = createAdminPeopleMutationDefinition('mip.admin.branches.create', '')
+    const keyField = definition.fields.find(field => field.key === 'branchKey')
+    assert.ok(keyField?.hidden)
+    assert.match(String(definition.values.branchKey), /^branch-[a-z0-9]+$/)
+  })
+
+  it('labels capabilities in Chinese while keeping capability keys as values', () => {
+    const definition = createAdminPeopleMutationDefinition('mip.admin.rolePolicies.update', '')
+    const capabilities = definition.fields.find(field => field.key === 'capabilities')
+    assert.ok(capabilities?.options?.length)
+    for (const option of capabilities.options) {
+      assert.notEqual(typeof option === 'string' ? option : option.label, typeof option === 'string' ? option : option.value, 'labels must not be raw capability keys')
+    }
+  })
+})

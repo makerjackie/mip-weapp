@@ -159,7 +159,7 @@ export function createBannerMutationDefinition(
           { value: 'MINIPROGRAM_PATH', label: '小程序页面' },
           { value: 'ARTICLE_URL', label: '公众号文章' },
         ] },
-        { name: 'targetValue', label: '跳转地址', kind: 'text', required: true, maxLength: 1024, wide: true },
+        { name: 'targetValue', label: '跳转地址', kind: 'text', required: true, maxLength: 1024, wide: true, placeholder: '如 /pages/events/index', extra: '小程序页面路径（如 /pages/events/index）或公众号文章链接（mp.weixin.qq.com 开头）' },
       ],
       {
         bannerId: targetId,

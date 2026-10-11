@@ -1,3 +1,4 @@
+import { capabilityLabels } from './admin-read-formatters.ts'
 import type { AdminRequestInput } from '../domain/contracts'
 
 /** The governance mutations which are safe to expose through a form model. */
@@ -95,7 +96,7 @@ const CAPABILITY_OPTIONS: readonly AdminMutationFieldOption[] = [
   'growth.read', 'growth.configure', 'growth.adjust', 'tasks.manage', 'banners.manage',
   'badges.manage', 'game.manage', 'knowledge.manage', 'orders.read', 'refunds.submit',
   'operations.exceptions.read', 'roles.change', 'audit.read',
-].map(value => ({ value, label: value }))
+].map(value => ({ value, label: capabilityLabels[value] || value }))
 
 const VERSION_FIELDS = {
   userProfile: [
@@ -144,7 +145,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     title: '变更主服务器',
     description: '为用户选择新的主服务器，并记录变更原因。',
     fields: [
-      { name: 'targetBranchId', label: '目标服务器', kind: 'select', required: true },
+      { name: 'targetBranchId', label: '目标服务器', kind: 'select', required: true, optionsAction: 'mip.admin.branches.list', emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' },
       { name: 'reason', label: '变更原因', kind: 'textarea', required: true, maxLength: 300, wide: true },
     ],
     values: { targetBranchId: '', reason: '' },
@@ -200,9 +201,9 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     title: '创建服务器',
     description: '填写服务器的标识、名称和说明。新服务器创建后默认启用。',
     fields: [
-      { name: 'branchKey', label: '服务器标识', kind: 'text', required: true, maxLength: 64 },
+      { name: 'branchKey', label: '服务器标识', kind: 'text', required: true, maxLength: 64, hidden: true },
       { name: 'name', label: '服务器名称', kind: 'text', required: true, maxLength: 80 },
-      { name: 'cityName', label: '城市名称', kind: 'text', required: true, maxLength: 80 },
+      { name: 'cityName', label: '城市名称', kind: 'text', required: true, maxLength: 80, placeholder: '如：深圳' },
       { name: 'leaderUserId', label: '负责人', kind: 'select', remoteUserSearch: true },
       { name: 'sortOrder', label: '排序（越小越靠前）', kind: 'text', maxLength: 7 },
       { name: 'summary', label: '服务器说明', kind: 'textarea', maxLength: 500, wide: true },
@@ -242,7 +243,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     title: '新增后台账号',
     description: '为已注册的小程序用户开通后台权限，登录使用小程序确认。',
     fields: [
-      { name: 'loginAccount', label: '后台标识', kind: 'text', required: true, maxLength: 64 },
+      { name: 'loginAccount', label: '登录账号', kind: 'text', required: true, maxLength: 64, placeholder: '如 zhangsan', extra: '登录后台时使用的账号名，创建后不可修改；建议用姓名拼音或工号' },
       { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
       { name: 'userId', label: '已注册用户', kind: 'select', required: true, remoteUserSearch: true },
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
@@ -342,7 +343,9 @@ export function createAdminPeopleMutationDefinition<Action extends AdminPeopleMu
     description: config.description,
     capability: config.capability,
     fields: config.fields.map(field => ({ ...field, key: field.name })),
-    values: { ...config.values },
+    values: action === 'mip.admin.branches.create'
+      ? { ...config.values, branchKey: `branch-${crypto.randomUUID().replaceAll('-', '').slice(0, 10)}` }
+      : { ...config.values },
     ...(versionSource ? { expectedVersion: versionSource.value, versionSource: versionSource.field } : {}),
     ...(allowedCapabilities ? { allowedCapabilities: [...allowedCapabilities] } : {}),
   }

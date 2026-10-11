@@ -371,7 +371,7 @@ export function buildGameMutationInput(
 
 function seasonSaveDefinition(targetId: string, season: Record<string, unknown>) {
   return definition('mip.admin.game.seasons.save', targetId ? '编辑赛季' : '新增赛季', '排行与周赛积分始终由服务端经验值事实生成。', [
-    { name: 'seasonKey', label: '赛季标识', kind: 'text', required: true, maxLength: 64 },
+    { name: 'seasonKey', label: '赛季标识', kind: 'text', required: true, maxLength: 64, hidden: true },
     { name: 'name', label: '赛季名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '简介', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'rulesText', label: '规则说明', kind: 'textarea', required: true, maxLength: 4000, wide: true },
@@ -382,7 +382,7 @@ function seasonSaveDefinition(targetId: string, season: Record<string, unknown>)
     { name: 'endsAt', label: '结束时间', kind: 'datetime', required: true },
   ], {
     seasonId: targetId, expectedVersion: positiveInteger(season.version),
-    seasonKey: text(season.seasonKey), name: text(season.name), summary: text(season.summary),
+    seasonKey: text(season.seasonKey) || (targetId ? '' : generatedKey('season')), name: text(season.name), summary: text(season.summary),
     rulesText: text(season.rulesText), rules: season.rules,
     periodKind: text(season.periodKind) || 'HALF_YEAR', startsAt: text(season.startsAt), endsAt: text(season.endsAt),
   })
@@ -437,7 +437,7 @@ function rankingDefinition(source: Record<string, unknown>) {
 
 function catalogSaveDefinition(targetId: string, catalog: Record<string, unknown>) {
   return definition('mip.admin.game.blindBoxes.catalogs.save', targetId ? '编辑盲盒目录' : '新增盲盒目录', '目录只配置抽取与兑换规则，不模拟真实抽取或奖励发放。', [
-    { name: 'catalogKey', label: '目录标识', kind: 'text', required: true, maxLength: 64 },
+    { name: 'catalogKey', label: '目录标识', kind: 'text', required: true, maxLength: 64, hidden: true },
     { name: 'name', label: '目录名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '简介', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'rulesText', label: '抽取规则', kind: 'textarea', required: true, maxLength: 4000, wide: true },
@@ -447,7 +447,7 @@ function catalogSaveDefinition(targetId: string, catalog: Record<string, unknown
     { name: 'pityThreshold', label: '保底次数', kind: 'integer', required: true },
     { name: 'pityMinRarity', label: '保底最低稀有度', kind: 'select', required: true, options: rarityOptions },
   ], {
-    catalogId: targetId, expectedVersion: positiveInteger(catalog.version), catalogKey: text(catalog.catalogKey),
+    catalogId: targetId, expectedVersion: positiveInteger(catalog.version), catalogKey: text(catalog.catalogKey) || (targetId ? '' : generatedKey('box')),
     name: text(catalog.name), summary: text(catalog.summary), rulesText: text(catalog.rulesText),
     redemptionRulesText: text(catalog.redemptionRulesText), drawCostCoin: integer(catalog.drawCostCoin) || 1,
     dailyDrawLimit: integer(catalog.dailyDrawLimit) || 20, pityThreshold: integer(catalog.pityThreshold) || 10,
@@ -458,7 +458,7 @@ function catalogSaveDefinition(targetId: string, catalog: Record<string, unknown
 function cardSaveDefinition(targetId: string, source: Record<string, unknown>, card: Record<string, unknown>) {
   return definition('mip.admin.game.blindBoxes.cards.save', targetId ? '编辑盲盒卡片' : '新增盲盒卡片', '这里只配置卡片权重与库存，不伪造用户中奖或奖励发放。', [
     { name: 'catalogId', label: '目录 ID', kind: 'text', hidden: true },
-    { name: 'cardKey', label: '卡片标识', kind: 'text', required: true, maxLength: 64 },
+    { name: 'cardKey', label: '卡片标识', kind: 'text', required: true, maxLength: 64, hidden: true },
     { name: 'name', label: '卡片名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '说明', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'rarity', label: '稀有度', kind: 'select', required: true, options: rarityOptions },
@@ -467,7 +467,7 @@ function cardSaveDefinition(targetId: string, source: Record<string, unknown>, c
     { name: 'displayOrder', label: '展示顺序', kind: 'integer', required: true },
   ], {
     cardId: targetId, expectedVersion: positiveInteger(card.version), catalogId: text(card.catalogId) || text(record(source.catalog).id),
-    cardKey: text(card.cardKey), name: text(card.name), summary: text(card.summary), rarity: text(card.rarity) || 'COMMON',
+    cardKey: text(card.cardKey) || (targetId ? '' : generatedKey('card')), name: text(card.name), summary: text(card.summary), rarity: text(card.rarity) || 'COMMON',
     weight: integer(card.weight) || 1, stockTotal: integer(card.stockTotal), displayOrder: integer(card.displayOrder),
   })
 }
@@ -731,6 +731,11 @@ function records(value: unknown) { return Array.isArray(value) ? value.map(recor
 function text(value: unknown) { return typeof value === 'string' ? value.trim() : '' }
 function boundedText(value: unknown, maximum: number, required = false) { const result = text(value); return (!required || result) && result.length <= maximum ? result : '' }
 function enumText(value: unknown, allowed: readonly string[]) { const result = text(value); return allowed.includes(result) ? result : '' }
+/** Generated internal keys share one shape: lowercase prefix + random tail (keyText-compatible). */
+function generatedKey(prefix: string) {
+  return `${prefix}-${crypto.randomUUID().replaceAll('-', '').slice(0, 10)}`
+}
+
 function keyText(value: unknown) { const result = text(value); return /^[a-z][a-z0-9_-]{2,63}$/.test(result) ? result : '' }
 function integer(value: unknown) { const result = Number(value); return Number.isSafeInteger(result) ? result : 0 }
 function positiveInteger(value: unknown) { const result = Number(value); return Number.isSafeInteger(result) && result >= 1 ? result : null }

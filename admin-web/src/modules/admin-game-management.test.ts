@@ -166,3 +166,19 @@ describe('admin game management', () => {
     }
   })
 })
+
+describe('novice-friendly game form contracts', () => {
+  it('hides internal keys and generates them when creating seasons, catalogs, and cards', () => {
+    const season = createGameMutationDefinition('mip.admin.game.seasons.save', '', {})
+    assert.ok(season.fields.find(field => field.name === 'seasonKey')?.hidden)
+    assert.match(String(season.values.seasonKey), /^season-[a-z0-9]+$/)
+
+    const catalog = createGameMutationDefinition('mip.admin.game.blindBoxes.catalogs.save', '', {})
+    assert.ok(catalog.fields.find(field => field.name === 'catalogKey')?.hidden)
+    assert.match(String(catalog.values.catalogKey), /^box-[a-z0-9]+$/)
+
+    const card = createGameMutationDefinition('mip.admin.game.blindBoxes.cards.save', '', {})
+    assert.ok(card.fields.find(field => field.name === 'cardKey')?.hidden)
+    assert.match(String(card.values.cardKey), /^card-[a-z0-9]+$/)
+  })
+})

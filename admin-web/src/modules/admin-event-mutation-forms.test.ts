@@ -144,3 +144,44 @@ describe('event mutation form contracts', () => {
     }), { kind: 'TYPE', catalogId: 'catalog-1', expectedVersion: 2, name: '工作坊', description: '', sortOrder: 0 })
   })
 })
+
+describe('novice-friendly event form contracts', () => {
+  it('derives the summary from the description when the operator leaves it empty', () => {
+    const result = buildEventMutationInput('mip.admin.events.save', { ...baseEvent, summary: '' })
+    assert.ok(result && 'draft' in result)
+    const draft = result.draft as { summary: string, description: string }
+    assert.equal(draft.summary, baseEvent.description)
+    assert.ok(draft.summary.length <= 300)
+  })
+
+  it('marks latitude/longitude as advanced optional fields with guidance', () => {
+    const fields = EVENT_MUTATION_CONFIGS['mip.admin.events.save'].fields
+    const latitude = fields.find(field => field.key === 'latitude')
+    const longitude = fields.find(field => field.key === 'longitude')
+    assert.ok(latitude && latitude.advanced && !latitude.required && (latitude.extra || '').includes('导航'))
+    assert.ok(longitude && longitude.advanced && !longitude.required)
+  })
+
+  it('keeps price in yuan behind the paid gate', () => {
+    const fields = EVENT_MUTATION_CONFIGS['mip.admin.events.save'].fields
+    const price = fields.find(field => field.key === 'priceCents')
+    assert.ok(price)
+    assert.equal(price.kind, 'money')
+    assert.equal(price.label, '金额（元）')
+    assert.deepEqual(price.visibleWhen, { path: 'accessType', value: 'PAID' })
+  })
+
+  it('hides the catalog stable key and auto-generates it on create', () => {
+    const creating = createAdminEventMutationDefinition('mip.admin.events.catalog.save', '')
+    const keyField = creating.fields.find(field => field.key === 'key')
+    assert.ok(keyField?.hidden)
+    assert.match(String(creating.values.key), /^web-[a-z0-9]+$/)
+    const editing = createAdminEventMutationDefinition('mip.admin.events.catalog.save', 'cat-123')
+    assert.ok(editing.fields.find(field => field.key === 'key')?.hidden)
+    const input = buildAdminEventMutationInput(editing, {
+      kind: 'TAG', catalogId: 'cat-123', expectedVersion: 3, name: '标签', description: '', sortOrder: 1,
+    })
+    assert.ok(input)
+    assert.equal('key' in input, false)
+  })
+})

@@ -154,6 +154,7 @@ describe('admin task management', () => {
       kind: 'multi-select',
       options: [{ value: LEVEL_ID, label: '成长会员 · 100 经验' }],
       wide: true,
+      emptyHint: '暂无可选等级。等级在「成长与勋章」页的会员配置中维护',
     })
     assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.label, '任务模板图片')
     assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.hidden, undefined)
@@ -221,4 +222,14 @@ describe('admin task management', () => {
 it('explains missing rewards and malformed weekly times without issuing a save', () => {
   assert.equal(taskValidationMessage({ rewardConfig: { experience: { enabled: false }, contribution: { enabled: false }, bonus: { enabled: false } } }), '请至少启用一项奖励：经验值、贡献值或线下奖金。')
   assert.equal(taskValidationMessage({ rewardConfig: { experience: { enabled: true, amount: 1 } }, weeklyDeliverAt: '25:99' }), '周送达时间请按 HH:mm 填写，例如 09:30。')
+})
+
+describe('novice-friendly task form contracts', () => {
+  it('renders the weekly delivery time as a picker and keeps the level selector guided', async () => {
+    const definition = createTaskMutationDefinition('mip.admin.tasks.save', '', { eligibleLevelCatalog: [], editorOptions: {} })
+    const weekly = definition.fields.find(field => field.name === 'weeklyDeliverAt')
+    assert.equal(weekly?.kind, 'time')
+    const levels = definition.fields.find(field => field.name === 'eligibleLevelIds')
+    assert.ok((levels?.emptyHint || '').includes('等级'))
+  })
 })

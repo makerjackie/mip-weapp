@@ -138,7 +138,7 @@ export function MediaUploadPage({
                   >{copied ? '已复制' : '复制'}</Button>
                 </Space.Compact>
                 <Typography.Paragraph type="secondary" style={{ marginTop: 12 }}>
-                  保存 Banner、活动、机会、案例或任务时，将素材 ID 填入对应字段。
+                  上传成功后，在 Banner、活动、机会、案例或任务的表单里可直接选用刚上传的图片；素材 ID 仅在个别高级场景需要复制使用。
                 </Typography.Paragraph>
               </section>
             ) : null}
