@@ -153,7 +153,7 @@ describe('admin read pages', () => {
     assert.deepEqual(calls[1].input, { query: '', status: 'ALL', limit: 20 })
     assert.equal(page.sections.length, 4)
     assert.equal(page.sections[0].rows[0].referrals, '4')
-    assert.equal(page.sections[0].rows[0].roles, '狗策划')
+    assert.equal(page.sections[0].rows[0].roles, '策略策划')
     assert.equal(page.sections[1].rows[0].detailId, 'COOPERATION_CARD:content-1')
     assert.equal(page.sections[2].rows[0].provider, '仅本地服务')
     assert.equal(page.nextCursor, 'next')

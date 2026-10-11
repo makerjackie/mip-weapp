@@ -219,14 +219,23 @@ export async function createOperationModel(
   const trustedTarget = targetId && targetKey ? targetId : ''
   const trustedVersion = positiveInteger(values.expectedVersion)
   const creating = typedAction.endsWith('.save') && !targetId && !detail
+  if (creating && ['sourceKey', 'categoryKey'].some(key => defaultValues(baseFields)[key] !== undefined)) {
+    // Internal codes are generated for the operator; never ask them to invent one.
+    for (const key of ['sourceKey', 'categoryKey']) {
+      if (baseFields.some(field => String(field.key || field.name || '') === key)) {
+        values[key] = `web-${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
+      }
+    }
+  }
   const fields = baseFields.map(field => {
     const key = String(field.key || field.name || '')
     return (trustedTarget && key === targetKey)
       || (trustedVersion !== undefined && key === 'expectedVersion')
       || (creating && (key === targetKey || key === 'expectedVersion'))
+      || (launch.values && key === 'expectedDispatchVersion' && Object.hasOwn(launch.values, 'expectedDispatchVersion'))
       ? { ...field, hidden: true }
       : typedAction === 'mip.admin.knowledge.contents.review' && key === 'decision' && Array.isArray(record(detail?.source?.content).allowedReviewDecisions) ? { ...field, options: (field.options || []).filter(option => (record(detail?.source?.content).allowedReviewDecisions as unknown[]).includes(typeof option === 'string' ? option : option.value)) }
-      : trustedTarget && ['sourceKey', 'categoryKey'].includes(key) ? { ...field, readOnly: true, readOnlyReason: '已创建的唯一编码不能修改' } : field
+      : (creating && ['sourceKey', 'categoryKey'].includes(key)) || (trustedTarget && ['sourceKey', 'categoryKey'].includes(key)) ? { ...field, hidden: true } : field
   })
   return {
     action: typedAction,

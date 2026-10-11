@@ -8,9 +8,9 @@ export const demo = {
     ],
   },
   users: [
-    { id: 'USR-1001', name: '林晓', company: '远岸品牌咨询', role: '狗策划', phone: '188****3403', status: '有效会员', branch: '深圳福田' },
-    { id: 'USR-1002', name: '周宁', company: '新域投资', role: '暴发户', phone: '139****2811', status: '嘉宾', branch: '香港' },
-    { id: 'USR-1003', name: '陈默', company: '木棉设计', role: '死美工', phone: '186****9077', status: '有效会员', branch: '中山' },
+    { id: 'USR-1001', name: '林晓', company: '远岸品牌咨询', role: '策略策划', phone: '188****3403', status: '有效会员', branch: '深圳福田' },
+    { id: 'USR-1002', name: '周宁', company: '新域投资', role: '资本合作', phone: '139****2811', status: '嘉宾', branch: '香港' },
+    { id: 'USR-1003', name: '陈默', company: '木棉设计', role: '视觉设计', phone: '186****9077', status: '有效会员', branch: '中山' },
   ],
   events: [
     { id: 'EVT-20300314', title: 'MIP 早会｜城市增长与资源协作', time: '2030-03-14 10:00–12:00', location: '深圳市福田区福华三路 118 号', registrations: 36, status: '已发布' },
