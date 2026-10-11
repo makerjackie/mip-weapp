@@ -29,12 +29,12 @@ const CARD_WIDTH = 702
 const CARD_HEIGHT = 492
 // figma 1732_20401 卡面几何（canvas 像素 = 设计 rpx，均为 @2x 值）。
 const CARD_NAME = { x: 24, y: 24 }
-const CARD_ROWS: Array<{ field: 'companyName' | 'roleTitle' | 'organizationName' | 'organizationRole' | 'gender', y: number }> = [
+// figma 1732_20401 卡面字段 = 公司/职位/组织/组织职位四行（设计稿无性别行）。
+const CARD_ROWS: Array<{ field: 'companyName' | 'roleTitle' | 'organizationName' | 'organizationRole', y: number }> = [
   { field: 'companyName', y: 88 },
   { field: 'roleTitle', y: 130 },
   { field: 'organizationName', y: 188 },
   { field: 'organizationRole', y: 230 },
-  { field: 'gender', y: 272 },
 ]
 const CONTACT_ROWS: Array<{ field: 'phone' | 'wechat' | 'email' | 'address', icon: string, y: number }> = [
   { field: 'phone', icon: 'cellphone-2', y: 308 },
@@ -168,7 +168,6 @@ Page({
     initial: 'M',
     avatarUrl: '',
     cardAvatarUrl: '',
-    gender: '',
     companyName: '',
     roleTitle: '',
     organizationName: '',
@@ -272,7 +271,6 @@ Page({
       initial: nickname.slice(0, 1) || 'M',
       avatarUrl,
       cardAvatarUrl: avatarUrl,
-      gender: profile.gender === 'MALE' ? '男' : profile.gender === 'FEMALE' ? '女' : '',
       companyName: compactText(company?.name),
       roleTitle: compactText(company?.role),
       organizationName: compactText(organization?.name),
@@ -402,7 +400,7 @@ Page({
     context.fillText(fitText(context, this.data.nickname, 420), CARD_NAME.x, CARD_NAME.y)
     context.font = '500 24px sans-serif'
     CARD_ROWS.forEach((row) => {
-      const value = row.field === 'gender' ? (this.data.gender ? `性别 · ${this.data.gender}` : '') : this.data[row.field]
+      const value = this.data[row.field]
       if (value) {
         context.fillText(fitText(context, value, 420), 24, row.y)
       }

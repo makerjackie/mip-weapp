@@ -8,9 +8,9 @@ export interface CardPreviewIdentity {
   initial: string
 }
 
-export function cardPreviewIdentity(input: CardPreviewIdentityInput): CardPreviewIdentity {
+export function cardPreviewIdentity(input: CardPreviewIdentityInput, fallback = 'MIP 成员'): CardPreviewIdentity {
   const realName = String(input.realName || '').trim()
   const nickname = String(input.nickname || '').trim()
-  const name = realName || nickname || 'MIP 成员'
+  const name = realName || nickname || fallback
   return { name, initial: name.slice(0, 1) }
 }

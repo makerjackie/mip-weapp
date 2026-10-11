@@ -15,7 +15,6 @@
       <view wx:if="{{roleTitle}}" class="absolute left-[24rpx] top-[130rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">{{roleTitle}}</view>
       <view wx:if="{{organizationName}}" class="absolute left-[24rpx] top-[188rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">{{organizationName}}</view>
       <view wx:if="{{organizationRole}}" class="absolute left-[24rpx] top-[230rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">{{organizationRole}}</view>
-      <view wx:if="{{gender}}" class="absolute left-[24rpx] top-[272rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">性别 · {{gender}}</view>
       <view wx:if="{{phone}}" class="absolute left-[26rpx] top-[308rpx] flex max-w-[458rpx] items-center gap-[8rpx]">
         <mip-icon name="cellphone-2" size="16" color="{{theme.foreground}}" />
         <text class="truncate text-[24rpx] leading-[33.6rpx] font-medium">{{phone}}</text>
@@ -44,10 +43,10 @@
 
     <view wx:if="{{codeMessage}}" class="mt-3 flex items-center justify-between rounded-[8rpx] bg-panel px-4 py-3 text-[22rpx] text-muted"><text>{{codeMessage}}</text><text class="ml-3 shrink-0 text-brand" bind:tap="retryCode">重试</text></view>
 
-    <!-- figma 1732_20401: 样式缩略 82×40，无选中描边与文案；访客视角（2165_17277）无样式选择。 -->
+    <!-- figma 1732_20401: 样式缩略 82×40（设计稿缩略图为 IMAGE FILL = aspectFill），无选中描边与文案；访客视角（2165_17277）无样式选择。 -->
     <view wx:if="{{!isGuest}}" class="mt-[22rpx] grid grid-cols-4 gap-2">
       <view wx:for="{{themeOptions}}" wx:key="key" class="relative h-[80rpx] overflow-hidden rounded-[8rpx]" style="background: {{item.background}};" data-key="{{item.key}}" bind:tap="chooseStyle">
-        <image wx:if="{{item.thumbAsset}}" class="absolute inset-0 h-full w-full" src="{{item.thumbAsset}}" />
+        <image wx:if="{{item.thumbAsset}}" class="absolute inset-0 h-full w-full" mode="aspectFill" src="{{item.thumbAsset}}" />
       </view>
     </view>
 

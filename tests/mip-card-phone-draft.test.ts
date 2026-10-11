@@ -4,8 +4,12 @@ const identity = vi.hoisted(() => ({
   rebindWechatPhone: vi.fn(),
   getProfile: vi.fn(),
 }))
+const media = vi.hoisted(() => ({
+  uploadImageFromPath: vi.fn(),
+}))
 vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: identity }))
 vi.mock('../src/modules/mip-identity', () => ({ MAX_PROFILE_ORGANIZATIONS: 5 }))
+vi.mock('../src/modules/mip-media/client', () => ({ mipMediaModule: media }))
 
 type Data = Record<string, unknown>
 interface Definition { data: Data, [key: string]: unknown }

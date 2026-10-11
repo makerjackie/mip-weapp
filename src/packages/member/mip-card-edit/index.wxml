@@ -46,13 +46,13 @@
       <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx]">个人信息</text>
     </view>
     <view class="mx-[24rpx] mt-[24rpx] flex flex-col gap-[2rpx]">
-      <view data-card-field-group="company" class="flex h-[160rpx] items-center justify-between rounded-t-[16rpx] bg-panel px-[24rpx]">
+      <button plain data-card-field-group="company" class="m-0 flex h-[160rpx] w-auto items-center justify-between rounded-t-[16rpx] border-0 bg-panel px-[24rpx] text-left font-normal" disabled="{{avatarUploading || saving}}" open-type="chooseAvatar" bindchooseavatar="chooseAvatar">
         <view class="h-[112rpx] w-[112rpx] overflow-hidden rounded-full bg-panel-raised">
           <image wx:if="{{formAvatarUrl}}" class="h-full w-full" src="{{formAvatarUrl}}" mode="aspectFill" />
           <view wx:else class="flex h-full w-full items-center justify-center text-[40rpx] font-medium text-muted">{{previewInitial}}</view>
         </view>
-        <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-muted">更换头像</text>
-      </view>
+        <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-muted">{{avatarUploading ? '上传中…' : '更换头像'}}</text>
+      </button>
       <view data-card-field-group="identity" data-card-field-row="realName" class="flex min-h-[92rpx] items-center justify-between bg-panel px-[24rpx] py-[20rpx]">
         <view class="flex items-baseline gap-[4rpx]">
           <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">姓名</text>
