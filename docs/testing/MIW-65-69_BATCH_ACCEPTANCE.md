@@ -57,6 +57,7 @@
 | D6 | MIW-68 勋章：未获授整枚置灰（列表 + 详情）、获授原色；佩戴往返全链路无错 | ✅（DevTools 实机） | 任务会话以真实云环境 + 铭龙账号实测通过；截图 `.tmp/miw68/`（6 张）；样式契约测试防回退 |
 | D7 | MIW-69 名片：编辑保存即按「填了即上卡」推导可见性（实测 `save()` 后 `[false×4]→[true×4]`，四条联系行真实渲染）；卡面无性别行；样式缩略图 `aspectFill` 不再拉伸变形；「更换头像」端到端可用（chooseAvatar → AVATAR 资产上传 → updateCard，服务端校验本人 READY 资产） | ✅（DevTools 实机 + 真实后端） | 1600 项客户端 + 99 项 identity 云函数测试绿（新增 7 项）；截图 `.tmp/miw69/`（8 张） |
 | D8 | MIW-69 已知边界：canvas 海报头像用云 fileID 无法 `createImage` 加载（回退首字圆形，页面 image 正常）；名片码需正式发布页面才能出码（重试入口保留） | ⚠️ | 任务报告记录，独立问题不阻断本批 |
+| D9 | 体验版发布：发布前在发布 HEAD（`9f12c474`，含本文档）重跑完整 `pnpm verify:all` exit 0 + `pnpm build` 后，经已登录微信开发者工具 CLI 上传（本机 `MIP_WECHAT_CODE_UPLOAD_KEY_PATH` 私钥不存在，按 AGENTS §7 优先 DevTools 登录态通道） | ✅ | `cli upload -v 0.3.0` → `✔ upload`；包体 total 3.1 MB（main 1.7 MB / member 1.2 MB / admin 134.5 KB） |
 
 ## E. 端到端运行时验收（`pnpm test:runtime`，automator 驱动真实产物）
 
