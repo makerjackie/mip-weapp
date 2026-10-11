@@ -82,18 +82,18 @@ const homeJson = JSON.parse(read('dist/pages/index/index.json'))
 const components = { ...membershipJson.usingComponents, ...homeJson.usingComponents }
 
 assertBuiltComponentTargets()
-// Fixed action bars keep the MIW-64 brand-yellow translucent glass (figma 3828:26877
-// Frame 3719; user sign-off 2026-10-11) so the blur reads as glass on every surface.
+// Fixed action bars keep a hue-neutral translucent glass (user sign-off 2026-10-11:
+// 8% white lift + backdrop blur, no brand tint) so the blur reads as clear glass.
 let hasActionSurfaceBase = false
 postcss.parse(appWxss).walkRules('.mip-liquid-glass', (rule) => {
   if (rule.parent.type !== 'root') {
     return
   }
   rule.walkDecls('background', (decl) => {
-    hasActionSurfaceBase ||= /^(?:rgb\(255 221 2 \/ 10%\)|rgba\(255,\s*221,\s*2,\s*0\.1\))$/.test(decl.value)
+    hasActionSurfaceBase ||= /^(?:rgb\(255 255 255 \/ 8%\)|rgba\(255,\s*255,\s*255,\s*0\.08\))$/.test(decl.value)
   })
 })
-assert(hasActionSurfaceBase, 'Compiled fixed action bars lost the brand-yellow translucent glass base')
+assert(hasActionSurfaceBase, 'Compiled fixed action bars lost the neutral translucent glass base')
 postcss.parse(appWxss).walkDecls('appearance', (decl) => {
   assert(decl.value !== 'button', 'Browser Preflight must not restore native browser chrome on mini-program buttons')
 })
