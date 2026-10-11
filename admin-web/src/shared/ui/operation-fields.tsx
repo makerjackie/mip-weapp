@@ -1,4 +1,4 @@
-import { Checkbox, DatePicker, Form, Input, InputNumber, Select, type FormInstance } from 'antd'
+import { Checkbox, Collapse, DatePicker, Form, Input, InputNumber, Select, TimePicker, type FormInstance } from 'antd'
 import dayjs from 'dayjs'
 import { cloneElement, type KeyboardEvent } from 'react'
 import {
@@ -8,6 +8,7 @@ import {
   TEXTAREA_LIKE_KINDS,
   operationFieldName,
   operationFieldVisible,
+  timeOfDay,
   type OperationField,
   type OperationValues,
 } from '../../modules/admin-operation-ui'
@@ -28,18 +29,18 @@ export function controlFor(field: OperationField, values?: OperationValues) {
   if (field.kind === 'commercial-locations') return <OpportunityLocations />
   if (field.optionsActionByValue) {
     const action = field.optionsActionByValue.actions[String(values?.[field.optionsActionByValue.path] || '')]
-    return action ? <RemoteCatalogSelect action={action} input={['mip.admin.branches.list', 'mip.admin.events.list'].includes(action) ? { purpose: 'ROLE_SCOPE' } : undefined} /> : <Input disabled placeholder="平台范围" />
+    return action ? <RemoteCatalogSelect action={action} input={['mip.admin.branches.list', 'mip.admin.events.list'].includes(action) ? { purpose: 'ROLE_SCOPE' } : undefined} emptyHint={field.emptyHint} /> : <Input disabled placeholder="平台范围" />
   }
-  if (field.optionsAction) return <RemoteCatalogSelect action={field.optionsAction} input={field.optionsInput} valueKey={field.optionsValueKey} optionsKey={field.optionsKey} multiple={field.kind === 'multi-select'} filter={field.optionsFilter ? { key: field.optionsFilter.key, value: String(values?.[field.optionsFilter.path] || '') } : undefined} />
-  if (field.kind === 'select') return <Select options={options} allowClear={!field.required} />
-  if (field.kind === 'multi-select') return <Select mode="multiple" options={options} />
+  if (field.optionsAction) return <RemoteCatalogSelect action={field.optionsAction} input={field.optionsInput} valueKey={field.optionsValueKey} optionsKey={field.optionsKey} multiple={field.kind === 'multi-select'} filter={field.optionsFilter ? { key: field.optionsFilter.key, value: String(values?.[field.optionsFilter.path] || '') } : undefined} emptyHint={field.emptyHint} />
+  if (field.kind === 'select') return <Select options={options} allowClear={!field.required} placeholder={field.placeholder || '请选择'} />
+  if (field.kind === 'multi-select') return <Select mode="multiple" options={options} placeholder={field.placeholder || '请选择'} />
   if (field.assetPurpose) {
     const purpose = field.assetPurpose as AdminMediaPurpose
     if (field.kind === 'asset-list' || field.kind === 'id-list') return <AssetListUploader purpose={purpose} maxCount={12} />
     return <AssetUploader purpose={purpose} />
   }
   if (field.kind === 'textarea' || TEXTAREA_LIKE_KINDS.includes(field.kind)) {
-    return <Input.TextArea rows={4} maxLength={field.maxLength} showCount={Boolean(field.maxLength)} />
+    return <Input.TextArea rows={4} maxLength={field.maxLength} showCount={Boolean(field.maxLength)} placeholder={field.placeholder} />
   }
   // Enter confirms the picker value; its native default must not submit the surrounding form.
   const confirmDateOnly = (event: KeyboardEvent<HTMLElement>) => {
@@ -47,10 +48,11 @@ export function controlFor(field: OperationField, values?: OperationValues) {
   }
   if (field.kind === 'datetime' || field.kind === 'datetime-local') return <DatePicker showTime onKeyDown={confirmDateOnly} className="field-full-width" />
   if (field.kind === 'date') return <DatePicker onKeyDown={confirmDateOnly} className="field-full-width" />
-  if (field.kind === 'number' || field.kind === 'integer') return <InputNumber className="field-full-width" />
-  if (field.kind === 'money') return <InputNumber min={0} precision={field.valueScale === 1000000 ? 6 : 2} className="field-full-width" />
+  if (field.kind === 'time') return <TimePicker format="HH:mm" minuteStep={5} onKeyDown={confirmDateOnly} className="field-full-width" />
+  if (field.kind === 'number' || field.kind === 'integer') return <InputNumber className="field-full-width" placeholder={field.placeholder} />
+  if (field.kind === 'money') return <InputNumber min={0} precision={field.valueScale === 1000000 ? 6 : 2} className="field-full-width" placeholder={field.placeholder || '0.00'} />
   if (field.kind === 'registration-schema') return <RegistrationSchemaEditor />
-  return <Input maxLength={field.maxLength} type={field.kind === 'url' ? 'url' : 'text'} />
+  return <Input maxLength={field.maxLength} type={field.kind === 'url' ? 'url' : 'text'} placeholder={field.placeholder} />
 }
 
 export function OperationFields({ fields, form, prefix = [] }: {
@@ -59,7 +61,7 @@ export function OperationFields({ fields, form, prefix = [] }: {
   prefix?: string[]
 }) {
   const watchedValues = Form.useWatch([], form) || form.getFieldsValue(true)
-  return fields.filter(field => !field.hidden && operationFieldVisible(field, watchedValues)).map((field) => {
+  const renderField = (field: OperationField) => {
     const name = operationFieldName(field)
     if (!name) return null
     const path = [...prefix, name]
@@ -81,12 +83,32 @@ export function OperationFields({ fields, form, prefix = [] }: {
         label={checkbox ? undefined : field.label}
         valuePropName={checkbox ? 'checked' : 'value'}
         rules={field.required ? [{ required: true, message: `请填写${field.label}` }] : undefined}
-        extra={field.readOnlyReason || (TEXTAREA_LIKE_KINDS.includes(field.kind) && field.kind !== 'profile-ref-list' ? '每行填写一项' : undefined)}
+        extra={field.extra || field.readOnlyReason || (TEXTAREA_LIKE_KINDS.includes(field.kind) && field.kind !== 'profile-ref-list' ? '每行填写一项' : undefined)}
       >
         {cloneElement(controlFor(field, watchedValues), { disabled: field.readOnly || undefined })}
       </Form.Item>
     )
-  })
+  }
+  const visible = fields.filter(field => !field.hidden && operationFieldVisible(field, watchedValues))
+  const regular = visible.filter(field => !field.advanced)
+  const advanced = visible.filter(field => field.advanced)
+  return (
+    <>
+      {regular.map(renderField)}
+      {advanced.length ? (
+        <Collapse
+          ghost
+          className="mutation-advanced-collapse"
+          items={[{
+            key: 'advanced',
+            label: '高级设置（选填）',
+            forceRender: true,
+            children: advanced.map(renderField),
+          }]}
+        />
+      ) : null}
+    </>
+  )
 }
 
 /** Converts server/definition values into Ant Design form values (Dayjs, joined lists). */
@@ -99,6 +121,10 @@ export function toFormValues(fields: readonly OperationField[], values: Operatio
     if (field.kind === 'profile-ref-list') output[key] = Array.isArray(value) ? value : []
     else if (field.kind === 'group') {
       output[key] = toFormValues(field.fields || [], value && typeof value === 'object' && !Array.isArray(value) ? value as OperationValues : {})
+    }
+    else if (field.kind === 'time' && typeof value === 'string' && value) {
+      const clock = timeOfDay(value)
+      output[key] = clock ? dayjs().hour(clock.hour).minute(clock.minute) : value
     }
     else if (DATE_KINDS.includes(field.kind) && typeof value === 'string' && value) output[key] = dayjs(value)
     else if (field.kind === 'asset-list' && Array.isArray(value)) {

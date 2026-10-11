@@ -34,6 +34,14 @@ export interface OperationField {
   valueScale?: number
   readOnly?: boolean
   readOnlyReason?: string
+  /** Input placeholder shown inside the control for novice operators. */
+  placeholder?: string
+  /** Helper text rendered under the control explaining where the value comes from. */
+  extra?: string
+  /** Shown when a remote options list loads successfully but has no entries yet. */
+  emptyHint?: string
+  /** Tucks the field into the collapsed「高级设置」section; only for optional fields. */
+  advanced?: boolean
 }
 
 export type OperationValues = Record<string, unknown>
@@ -45,7 +53,16 @@ export const TEXTAREA_LIKE_KINDS: readonly string[] = ['asset-list', 'id-list', 
 /** Field kinds serialized as newline-joined id lists. */
 export const LINE_LIST_KINDS: readonly string[] = ['id-list', 'tags']
 /** Field kinds bound to a Dayjs value. */
-export const DATE_KINDS: readonly string[] = ['datetime', 'datetime-local', 'date']
+export const DATE_KINDS: readonly string[] = ['datetime', 'datetime-local', 'date', 'time']
+
+/** Parses an "HH:mm" string into a today-anchored Dayjs clock value. */
+export function timeOfDay(value: string) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim())
+  if (!match) return null
+  const hour = Number(match[1]), minute = Number(match[2])
+  if (hour > 23 || minute > 59) return null
+  return { hour, minute }
+}
 
 export function operationFieldName(field: OperationField) {
   return String(field.name || field.key || '')
@@ -129,6 +146,12 @@ function normalizeSubmittedField(
   if (field.kind === 'date' && raw && typeof raw === 'object'
     && 'format' in raw && typeof raw.format === 'function') {
     writePath(target, path, raw.format('YYYY-MM-DD'))
+    return
+  }
+  if (field.kind === 'time') {
+    const formatted = raw && typeof raw === 'object'
+      && 'format' in raw && typeof raw.format === 'function' ? raw.format('HH:mm') : String(raw ?? '')
+    writePath(target, path, formatted)
     return
   }
   if (['datetime', 'datetime-local'].includes(field.kind)

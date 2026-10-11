@@ -36,6 +36,7 @@ export function RemoteCatalogSelect({
   filter,
   input,
   valueKey,
+  emptyHint,
 }: {
   id?: string
   action: string
@@ -48,6 +49,8 @@ export function RemoteCatalogSelect({
   filter?: { key: string; value: string }
   input?: AdminRequestInput
   valueKey?: string
+  /** Shown when the catalog loads but has no entries, telling operators where options come from. */
+  emptyHint?: string
 }) {
   const { request } = useAdminSession()
   const [options, setOptions] = useState<UserOption[]>([])
@@ -101,7 +104,7 @@ export function RemoteCatalogSelect({
       placeholder={placeholder || '请选择'}
       disabled={disabled || policyDisabled}
       allowClear
-      notFoundContent={failed ? '目录加载失败' : undefined}
+      notFoundContent={failed ? '目录加载失败，请稍后重试' : options.length === 0 && emptyHint ? emptyHint : '暂无可选项'}
       options={merged}
       onChange={next => onChange?.(next || (multiple ? [] : ''))}
     />

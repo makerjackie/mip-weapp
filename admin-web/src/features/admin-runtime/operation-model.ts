@@ -156,9 +156,16 @@ export async function createOperationModel(
       ? baseDefinition
       : { ...baseDefinition, expectedVersion: launchVersion }
     const values = { ...prefillEventValues(typedAction, definition.values, detail), ...launch.values }
-    const fields = definition.fields.map(field => launch.values
-      && ['eventId', 'registrationId', 'photoId', 'expectedVersion'].includes(String(field.key))
-      && Object.hasOwn(launch.values, String(field.key)) ? { ...field, hidden: true } : field)
+    const fields = definition.fields.map(field => {
+      const key = String(field.key)
+      if (launch.values
+        && ['eventId', 'registrationId', 'photoId', 'expectedVersion', 'catalogId'].includes(key)
+        && Object.hasOwn(launch.values, key)) return { ...field, hidden: true }
+      if (launch.values && key === 'kind' && Object.hasOwn(launch.values, 'kind')) {
+        return { ...field, readOnly: true, readOnlyReason: '目录类型不能修改' }
+      }
+      return field
+    })
     return model(definition, fields as readonly OperationField[], values, idempotencyKey, next => buildAdminEventMutationInput(definition, next))
   }
   if (taskActions.has(action)) {

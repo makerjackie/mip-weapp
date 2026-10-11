@@ -32,12 +32,7 @@ export function EventEditFormPage() {
   const formConfig: IndependentFormPageConfig = {
     title: eventId ? '编辑活动' : '新建活动',
     description: config.description,
-    fields: definition.fields.map(field => ({ ...field,
-      ...(field.key === 'priceCents' ? { kind: 'money', valueScale: 100, label: '金额（元）' } : {}),
-      ...(field.key === 'branchId' ? { label: '服务器', optionsAction: 'mip.admin.branches.list', optionsInput: { purpose: 'EVENT_EDIT' }, visibleWhen: { path: 'scopeType', value: 'BRANCH' } } : {}),
-      ...(field.key === 'eventTypeKey' ? { label: '活动类型', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TYPE', selectable: true }, optionsValueKey: 'key' } : {}),
-      ...(field.key === 'onlineUrl' ? { visibleWhen: { path: 'eventMode', value: ['ONLINE', 'HYBRID'] } } : {}),
-    })),
+    fields: definition.fields,
     values: definition.values,
     backTarget: '/events',
     action: 'mip.admin.events.save',
