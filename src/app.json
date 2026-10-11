@@ -2,7 +2,6 @@
   "$schema": "https://vite.icebreaker.top/app.json",
   "pages": [
     "pages/index/index",
-    "pages/membership/index",
     "pages/events/index",
     "pages/opportunities/index",
     "pages/profile/index"
@@ -14,10 +13,8 @@
         "about/index",
         "announcement-detail/index",
         "announcements/index",
-        "benefits/index",
         "bind-phone/index",
         "help/index",
-        "membership-order/index",
         "mip-access/index",
         "mip-ai/voice/index",
         "mip-badge-detail/index",

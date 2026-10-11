@@ -187,21 +187,16 @@ describe('event registration experience', () => {
   })
 
   it('routes checkout to a server-confirmed result and keeps explicit exits', () => {
-    const membership = read('src/pages/membership/index.ts')
-    const membershipView = read('src/pages/membership/index.wxml')
+    // MIW-65：会员方案页/权益页下线，结账发起收敛到玩家等级页，结果页回读语义不变。
+    const growth = read('src/packages/member/mip-growth/index.ts')
     const paymentResult = read('src/packages/member/payment-result/index.ts')
     const paymentResultView = read('src/packages/member/payment-result/index.wxml')
-    const benefits = read('src/packages/member/benefits/index.ts')
-    const benefitsView = read('src/packages/member/benefits/index.wxml')
 
-    expect(membership).toContain('/packages/member/payment-result/index?orderId=')
-    expect(membershipView).toContain('<app-page-exit label="返回" />')
+    expect(growth).toContain('/packages/member/payment-result/index?orderId=')
     expect(paymentResult).toContain('mipCommerceModule.reconcile(order.id)')
     expect(paymentResult).toContain('classification === \'success\'')
     expect(paymentResultView).toContain('订单状态')
     expect(paymentResultView).toContain('<app-page-exit always label="完成" tab-url="/pages/profile/index" />')
-    expect(benefits).toContain('caseNavigateTo({ url: \'/pages/membership/index\' })')
-    expect(benefitsView).toContain('<app-page-exit label="返回" />')
   })
 
   it('links paid registration states to their exact order when the server provides an order id', () => {

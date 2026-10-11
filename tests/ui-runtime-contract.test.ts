@@ -188,7 +188,7 @@ describe('mip-weapp UI runtime contract', () => {
       expect(fs.readFileSync(wxmlFile, 'utf8')).toContain(`id="${route.selector.slice(1)}"`)
     }
     expect(contract.routes.find(route => route.path === 'pages/index/index')?.selector).toBe('#mip-home-page')
-    expect(contract.routes.find(route => route.path === 'pages/membership/index')?.selector).toBe('#mip-membership-page')
+    expect(contract.routes.find(route => route.path === 'packages/member/mip-growth/index')?.selector).toBe('#mip-growth-page')
     expect(contract.routes.find(route => route.path === 'pages/profile/index')?.selector).toBe('#mip-account-page')
   })
 
@@ -444,7 +444,7 @@ describe('mip-weapp UI runtime contract', () => {
     expect(contract.routes.find(route => route.path === 'packages/member/mip-events/detail/index')?.deviceRequired)
       .toContain('video-channel')
     expect(byId.get('photo-save')?.routes).toEqual(expect.arrayContaining([
-      'pages/membership/index',
+      'packages/member/mip-growth/index',
       'packages/admin/event-console/index',
       'packages/member/mip-events/detail/index',
     ]))
