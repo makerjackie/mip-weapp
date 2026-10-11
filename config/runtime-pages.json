@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 59,
+  "routeCount": 56,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 58 paths.",
+    "config/project.json routes must list the same 56 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -19,7 +19,7 @@
         "packages/member/mip-card-edit/index",
         "packages/member/mip-events/registration/index",
         "packages/member/mip-profile/index",
-        "pages/membership/index"
+        "packages/member/mip-growth/index"
       ],
       "reason": "open-type=getPhoneNumber only works on a real device"
     },
@@ -27,12 +27,11 @@
       "id": "wechat-pay",
       "label": "微信支付",
       "routes": [
-        "pages/membership/index",
         "packages/member/mip-events/registration/index",
         "packages/member/mip-events/detail/index",
         "packages/member/payment-result/index",
-        "packages/member/membership-order/index",
-        "packages/member/order-detail/index"
+        "packages/member/order-detail/index",
+        "packages/member/mip-growth/index"
       ],
       "reason": "wx.requestPayment and real entitlement require a real device and merchant binding"
     },
@@ -61,7 +60,6 @@
       "label": "分享",
       "routes": [
         "pages/events/index",
-        "pages/membership/index",
         "packages/member/mip-card/index",
         "packages/member/mip-events/detail/index",
         "packages/member/mip-events/participants/index",
@@ -134,10 +132,10 @@
       "id": "photo-save",
       "label": "图片保存到相册",
       "routes": [
-        "pages/membership/index",
         "packages/admin/event-console/index",
         "packages/member/mip-card/index",
-        "packages/member/mip-events/detail/index"
+        "packages/member/mip-events/detail/index",
+        "packages/member/mip-growth/index"
       ],
       "reason": "wx.saveImageToPhotosAlbum 的相册权限和保存结果需要真机验证"
     },
@@ -186,7 +184,7 @@
   "representativeStates": [
     {
       "id": "loading",
-      "route": "pages/membership/index",
+      "route": "packages/member/mip-growth/index",
       "patch": {
         "state": "loading"
       },
@@ -197,7 +195,24 @@
         }
       ],
       "visibleAssertion": {
-        "selector": "#mip-membership-page #mip-membership-loading-state"
+        "selector": "#mip-growth-page #mip-growth-loading-state"
+      }
+    },
+    {
+      "id": "error",
+      "route": "packages/member/mip-growth/index",
+      "patch": {
+        "state": "error",
+        "message": "暂时无法加载"
+      },
+      "dataAssertions": [
+        {
+          "path": "state",
+          "equals": "error"
+        }
+      ],
+      "visibleAssertion": {
+        "selector": "#mip-growth-page #mip-growth-error-state"
       }
     },
     {
@@ -219,23 +234,6 @@
       ],
       "visibleAssertion": {
         "selector": "#mip-branches-page #mip-branches-empty-state"
-      }
-    },
-    {
-      "id": "error",
-      "route": "pages/membership/index",
-      "patch": {
-        "state": "error",
-        "message": "暂时无法加载"
-      },
-      "dataAssertions": [
-        {
-          "path": "state",
-          "equals": "error"
-        }
-      ],
-      "visibleAssertion": {
-        "selector": "#mip-membership-page #mip-membership-error-state"
       }
     },
     {
@@ -506,27 +504,6 @@
       ]
     },
     {
-      "id": "U04",
-      "name": "会员支付",
-      "path": "pages/membership/index",
-      "selector": "#mip-membership-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'",
-      "deviceRequired": [
-        "phone-auth",
-        "photo-save",
-        "share",
-        "wechat-pay"
-      ]
-    },
-    {
       "id": "U05",
       "name": "个人中心",
       "path": "pages/profile/index",
@@ -633,37 +610,6 @@
       "deviceRequired": [
         "wechat-pay"
       ]
-    },
-    {
-      "id": "U29",
-      "name": "会员订单确认",
-      "path": "packages/member/membership-order/index",
-      "selector": "#mip-membership-order-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'",
-      "deviceRequired": [
-        "wechat-pay"
-      ]
-    },
-    {
-      "id": "U16",
-      "name": "会员权益说明",
-      "path": "packages/member/benefits/index",
-      "selector": "#member-benefits-page",
-      "group": "member",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'"
     },
     {
       "id": "U17",
@@ -1336,7 +1282,10 @@
       ],
       "readyAssertion": "state === 'ready'",
       "deviceRequired": [
-        "share"
+        "phone-auth",
+        "photo-save",
+        "share",
+        "wechat-pay"
       ]
     },
     {

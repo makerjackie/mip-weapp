@@ -5,11 +5,14 @@ const navigation = vi.hoisted(() => ({ redirect: vi.fn(), navigate: vi.fn() }))
 const intent = vi.hoisted(() => ({ create: vi.fn() }))
 
 vi.mock('../src/config/runtime', () => ({ runtimeConfig: { paymentMode: 'test' } }))
+vi.mock('../src/config/brand', () => ({ brand: {} }))
 vi.mock('../src/modules/mip-commerce/client', () => ({ mipCommerceModule: { purchase: commerce.purchase } }))
 vi.mock('../src/modules/mip-commerce', () => ({ MipCommerceError: class extends Error { code = '' } }))
+vi.mock('../src/modules/mip-growth/client', () => ({ mipGrowthModule: {} }))
+vi.mock('../src/modules/mip-tasks/client', () => ({ mipTasksModule: {} }))
 vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: {} }))
 vi.mock('../src/modules/mip-identity', () => ({ mipAccessPageUrl: vi.fn() }))
-vi.mock('../src/modules/mip-shell', () => ({ createIntentKey: intent.create }))
+vi.mock('../src/modules/mip-shell', () => ({ createIntentKey: intent.create, formatCny: (cents: number) => `¥${(cents / 100).toFixed(2)}` }))
 vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: navigation.navigate,
   caseRedirectTo: navigation.redirect,
@@ -41,16 +44,17 @@ beforeAll(async () => {
   vi.stubGlobal('Page', (value: PageDefinition) => {
     definition = value
   })
-  await import('../src/packages/member/membership-order/index')
+  // MIW-65：会员订单确认页下线，购买重试语义收敛到玩家等级页直购。
+  await import('../src/packages/member/mip-growth/index')
 })
 
 beforeEach(() => {
   vi.clearAllMocks()
   let index = 0
-  intent.create.mockImplementation(() => `membership-order-${++index}`)
+  intent.create.mockImplementation(() => `membership-checkout-${++index}`)
 })
 
-describe('membership order retry and result flow', () => {
+describe('membership purchase retry and result flow on the growth page', () => {
   it('reuses the same order identity after an uncertain failure and shows the result page', async () => {
     commerce.purchase
       .mockRejectedValueOnce(new Error('network response lost'))
@@ -58,7 +62,7 @@ describe('membership order retry and result flow', () => {
     const instance = page()
 
     await purchase(instance)
-    expect(instance.data.message).toBe('暂时无法发起支付，请稍后重试。')
+    expect(instance.data.purchaseMessage).toBe('暂时无法发起支付，请稍后重试。')
     await purchase(instance)
 
     expect(commerce.purchase).toHaveBeenCalledTimes(2)

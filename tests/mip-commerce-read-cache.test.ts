@@ -48,18 +48,16 @@ const payment: PaymentAdapter = { request: vi.fn() }
 
 describe('MIP commerce read cache', () => {
   it('renders shared server facts before starting background revalidation', () => {
-    const membershipPage = readFileSync(new URL('../src/pages/membership/index.ts', import.meta.url), 'utf8')
-    const membershipView = readFileSync(new URL('../src/pages/membership/index.wxml', import.meta.url), 'utf8')
-    const benefitsPage = readFileSync(new URL('../src/packages/member/benefits/index.ts', import.meta.url), 'utf8')
+    // MIW-65：方案缓存先出内容、服务端刷新确认（plansVerified）的守卫收敛到成长页购买弹层；
+    // 权益快照的 peek 守卫随会员权益页下线移除，缓存命中本身由下方 plan-cache 用例覆盖。
+    const growthPage = readFileSync(new URL('../src/packages/member/mip-growth/index.ts', import.meta.url), 'utf8')
+    const growthView = readFileSync(new URL('../src/packages/member/mip-growth/index.wxml', import.meta.url), 'utf8')
 
-    expect(membershipPage.indexOf('mipCommerceModule.peekPlans()'))
-      .toBeLessThan(membershipPage.indexOf('mipCommerceModule.listPlans({ force: hasCachedPlans })'))
-    expect(benefitsPage.indexOf('mipCommerceModule.peekMembershipBenefits()'))
-      .toBeLessThan(benefitsPage.indexOf('Promise.allSettled(['))
-    expect(benefitsPage).toContain('mipCommerceModule.listPlans({ force: cachedPlans !== undefined })')
-    expect(membershipPage).toContain('this.applyPlans(cached, false)')
-    expect(membershipPage).toContain('this.applyPlans(plans, true)')
-    expect(membershipView).toContain('!plansVerified')
+    expect(growthPage.indexOf('mipCommerceModule.peekPlans()'))
+      .toBeLessThan(growthPage.indexOf('mipCommerceModule.listPlans({ force: hasCachedPlans })'))
+    expect(growthPage).toContain('this.applyPlans(cached, false)')
+    expect(growthPage).toContain('this.applyPlans(plans, true)')
+    expect(growthView).toContain('!plansVerified')
   })
 
   it('hydrates a recent server plan catalog and rejects expired local data', () => {

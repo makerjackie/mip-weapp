@@ -414,7 +414,7 @@ Page({
     }
   },
 
-  openMembership() { caseNavigateTo({ url: '/pages/membership/index' }) },
+  openMembership() { caseNavigateTo({ url: '/packages/member/mip-growth/index' }) },
   openEvent() {
     if (!this.data.eventId) {
       return

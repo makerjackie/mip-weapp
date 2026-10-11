@@ -65,12 +65,12 @@ describe('MIP shell presentation', () => {
 
   it('uses the server typed membership kind for page behavior instead of display copy', () => {
     const profileSource = readFileSync(new URL('../src/pages/profile/index.ts', import.meta.url), 'utf8')
-    const membershipSource = readFileSync(new URL('../src/pages/membership/index.ts', import.meta.url), 'utf8')
+    // MIW-65：会员方案页下线后，成长页是会员身份分态的用户端载体。
+    const membershipSource = readFileSync(new URL('../src/packages/member/mip-growth/index.ts', import.meta.url), 'utf8')
 
     expect(profileSource).toContain('const isPlayer = snapshot.membership.kind === \'PLAYER\'')
-    expect(membershipSource).toContain('const isPlayer = snapshot.membership.kind === \'PLAYER\'')
-    expect(profileSource).not.toMatch(/membership\.label\s*===\s*['"]玩家['"]/)
     expect(membershipSource).not.toMatch(/membership\.label\s*===\s*['"]玩家['"]/)
+    expect(profileSource).not.toMatch(/membership\.label\s*===\s*['"]玩家['"]/)
   })
 
   it('uses server capability grants for management entry', () => {

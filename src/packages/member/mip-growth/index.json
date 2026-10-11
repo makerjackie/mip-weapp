@@ -10,6 +10,7 @@
     "mip-sticky-actions": "/components/sticky-actions/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-popup": "tdesign-miniprogram/popup/popup",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-icon": "/components/mip-icon/index",
     "mip-pill-button": "/components/mip-pill-button/index"

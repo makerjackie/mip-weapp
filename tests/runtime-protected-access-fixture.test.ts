@@ -119,10 +119,10 @@ function createFixtureRuntime(
 describe('runtime protected access fixture', () => {
   it('restarts only when the requested route exists but its rendered root is unavailable', () => {
     expect(isRecoverableRuntimeRenderError(new Error(
-      'Runtime navigation representative loading did not render: Runtime fixture expected rendered pages/membership/index:#mip-membership-page, received pages/membership/index',
+      'Runtime navigation representative loading did not render: Runtime fixture expected rendered packages/member/mip-growth/index:#mip-growth-page, received packages/member/mip-growth/index',
     ))).toBe(true)
     expect(isRecoverableRuntimeRenderError(new Error(
-      'Runtime fixture expected rendered pages/membership/index:#mip-membership-page, received pages/index/index',
+      'Runtime fixture expected rendered packages/member/mip-growth/index:#mip-growth-page, received pages/index/index',
     ))).toBe(false)
     expect(isRecoverableRuntimeRenderError(new Error('connection failed'))).toBe(false)
   })

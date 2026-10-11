@@ -18,12 +18,17 @@ const tasks = vi.hoisted(() => ({
 
 vi.mock('../src/modules/mip-growth/client', () => ({ mipGrowthModule: growth }))
 vi.mock('../src/modules/mip-commerce/client', () => ({ mipCommerceModule: commerce }))
+// MIW-65：成长页承接购买意图后引入 runtime/identity/shell 依赖，测试内替换为纯桩。
+vi.mock('../src/config/runtime', () => ({ runtimeConfig: { paymentMode: 'test' } }))
+vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: { consumePendingResume: vi.fn(() => null) } }))
+vi.mock('../src/modules/mip-identity', () => ({ mipAccessPageUrl: vi.fn() }))
+vi.mock('../src/modules/mip-shell', () => ({ createIntentKey: vi.fn(() => 'intent-key'), formatCny: (cents: number) => `¥${(cents / 100).toFixed(2)}` }))
 vi.mock('../src/modules/mip-tasks/client', () => ({ mipTasksModule: { query: { listTasks: tasks.listTasks } } }))
 vi.mock('../src/modules/mip-tasks', () => ({
   mipTasksModule: { query: { listTasks: tasks.listTasks }, mutation: { completeTask: tasks.completeTask } },
   rewardExperienceStarIndexes: vi.fn(() => []),
 }))
-vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn() }))
+vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn(), caseRedirectTo: vi.fn() }))
 
 interface PageDefinition {
   data: Record<string, unknown>

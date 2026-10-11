@@ -7,7 +7,6 @@ const MINIPROGRAM_PATH_ALLOWLIST = Object.freeze({
   '/pages/events/index': Object.freeze([]),
   '/pages/opportunities/index': Object.freeze([]),
   '/pages/profile/index': Object.freeze([]),
-  '/pages/membership/index': Object.freeze([]),
   '/packages/member/mip-branches/index': Object.freeze([]),
   '/packages/member/mip-tasks/index': Object.freeze([]),
   '/packages/member/mip-tasks/detail/index': Object.freeze(['taskId']),

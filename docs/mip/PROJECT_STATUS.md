@@ -1,8 +1,10 @@
 # MIP 当前状态
 
-更新日期：2026-10-10（后台登录链路/密码存储核对、机会列表队列修复与只读模块复验；此前 2026-10-09：最新 MIW-64 影响力三列表邀请人标注补齐并部署 `mip-opportunities-api`；同日 AI 语音直传「AI 草稿服务暂时不可用」根因修复：迁移 104 补 VOICE_STORAGE 请求种类约束（MIW-61）；同日后台自定义域名绑定与 CloudBase 管理后台发布复验；此前 2026-10-08：往期活动 tab 改后台配置回顾条目并跳视频号（MIW-57）；超级案例独立列表页下线、路由契约同步 58 条（MIW-54）。此前 2026-10-06：知识/游戏/盲盒 9 页用户端下线、路由契约同步 61 条（MIW-44）。此前 2026-10-05：心动计数口径收敛与 SQL 执行验证（MIW-36）：心动可见性 SQL 收敛为共享构造、tab 徽标改服务端计数、云函数 SQL 真实执行验证、详情 onShow 缓存新鲜窗口；会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
+更新日期：2026-10-12（MIW-65 会员开通面收敛：会员方案/会员权益/会员订单确认 3 页下线、等级页确认弹层直付与邀请落地迁移、路由契约同步 56 条；此前 2026-10-10：后台登录链路/密码存储核对、机会列表队列修复与只读模块复验；此前 2026-10-09：最新 MIW-64 影响力三列表邀请人标注补齐并部署 `mip-opportunities-api`；同日 AI 语音直传「AI 草稿服务暂时不可用」根因修复：迁移 104 补 VOICE_STORAGE 请求种类约束（MIW-61）；同日后台自定义域名绑定与 CloudBase 管理后台发布复验；此前 2026-10-08：往期活动 tab 改后台配置回顾条目并跳视频号（MIW-57）；超级案例独立列表页下线、路由契约同步 58 条（MIW-54）。此前 2026-10-06：知识/游戏/盲盒 9 页用户端下线、路由契约同步 61 条（MIW-44）。此前 2026-10-05：心动计数口径收敛与 SQL 执行验证（MIW-36）：心动可见性 SQL 收敛为共享构造、tab 徽标改服务端计数、云函数 SQL 真实执行验证、详情 onShow 缓存新鲜窗口；会员方案后台改价（MIW-35）；会员/成长整轮：玩家等级会员按钮分态、经验值详情独立页与后台可配置规则文档、首笔入会人工审核流、邀请卡图片与嘉宾关系（MIW-27）；勋章后台配置补齐 + 评审修复：勋章形象直接上传、获得条件与身份/荣誉分类暴露、草稿 key 去演示前缀、勋章形象生命周期与预览修复（MIW-25）；填写信息页一句话介绍字数与区块图标对齐设计稿（MIW-26）；此前 2026-10-04：用户信息页精简、通用游客登录单按钮流程、活动详情指引链接、原生分享邀请归属、嘉宾卡统一组件化；其他环境证据保留各自采集日期）。
 
 本文是路由数、迁移数、operation 数、部署状态和当前缺口的唯一文档入口。产品规则见 [REQUIREMENTS.md](REQUIREMENTS.md)，验证口径见 [ACCEPTANCE.md](ACCEPTANCE.md)，逐域状态见 [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)。
+
+2026-10-12（MIW-65）：会员开通面收敛，整页下线 3 条路由——`pages/membership/index`（会员方案/开通会员）、`packages/member/benefits/index`（会员权益说明）、`packages/member/membership-order/index`（会员订单确认），玩家等级页 `packages/member/mip-growth/index` 成为唯一会员开通/续费入口。客户确认的形态：游客「立即加入」与玩家「立即续费」均先弹半屏确认弹层（方案名/有效期/价格/权益清单/购买须知/《会员服务协议》入口，金额与权益全部来自服务端方案快照），确认后在本页直接 `purchase` → `wx.requestPayment` 拉起微信支付，不再经过独立订单确认页；沿用 `plansVerified` 门禁（先渲染缓存方案、`listPlans({force})` 确认后才允许支付）与 membership-order 页更优的重试语义（幂等 checkoutKey 仅在明确 CANCELLED 时重置）。首笔入会人工审核流（MIW-27）不变：PENDING 态等级页仍只展示「入会审核中，管理后台通过后生效」，无任何下单入口，审核通过与管理后台 `grant` 授予权益/到期时间均在既有后台完成，未新增页面或状态。MIW-27 的邀请载体整体迁移到等级页：微信分享卡（`onShareAppMessage` 带 invitationToken）、复制邀请文案、canvas 邀请海报（小程序码）生成/预览/保存，被邀请人落地页从 `pages/membership` 改为等级页（`invitationToken`/`scene` 解析、嘉宾关系记录、邀请人展示逻辑原样迁移；该落地此前就受登录门控，MIP_PUBLIC_ROUTES 未包含两页，访问口径不变）。入口重定向：「我的」档案页 openMembership、支付结果页、订单详情页的会员按钮一律跳等级页，帮助页 FAQ 文案同步。路由契约三处（app.json / runtime-pages.json / project.json）同步至 56 条（主包 5→4、用户分包 49→47）；runtime-pages 设备能力迁移（wechat-pay/photo-save/share 挂到等级页路由并回填 route deviceRequired）、等级页补 loading/error representativeStates；`verify-source`/`verify-build` 断言从 membership 页改指 growth 页；`mip-banners-api` 的 MINIPROGRAM_PATH_ALLOWLIST 同步移除 `/pages/membership/index`（该函数需随下次窗口重新部署）。测试：删除 membership-order、membership-benefits-dual-source、membership-benefits-readiness 3 个套件，重写 membership-order-retry（改测 growth 页幂等语义）与 membership-invitation-ui（改测等级页载体），growth-vip/commerce-read-cache/ui-runtime-contract/mip-shell 等随契约调整；根工程 `pnpm test` 1595 项、`pnpm typecheck`、完整 `pnpm verify` 全绿。当前 verified-local：服务端业务逻辑与管理后台零改动（仅 `mip-banners-api` 目标白名单一行收缩）；小程序需随下次发版生效。已 circulated 的旧邀请分享卡/海报小程序码指向 `pages/membership` 将提示页面不存在（按 MIW-44/MIW-54 先例接受，旧码重新生成即可）。
 
 2026-10-10 后台基础操作追加复验：用户账号经 Chrome Computer Use 登录，活动/用户搜索与详情、任务/Banner/消息必填校验、用户资料编辑回填及取消通过；新增一条明确标记 QA 的未发布知识草稿，修改保存后刷新回读版本 2，未发布或发送通知。发现订单 Unicode 搜索触发 ASCII 列的 MySQL collation 错误，已在 `628f539f` 修复列表与汇总共用筛选；完整 `pnpm verify:all` 通过，官方命令仅发布 `mip-admin-api` 并通过原生 MySQL health。277 个 JS/JSON 与下载 ZIP 一致，配置/角色/网络/权限/触发器/网关保留；14 个公开静态文件对既有发布清单复验一致。发布后网页中文搜索 5 条、无匹配空态、清除恢复 12 条通过，57/57 HTTPS 检查和 14/14 非空模块通过。22 条浏览器记录包含 20 条通过、1 条已修复故障复现与 1 条导出文件落盘待验；单次重载空白后恢复的根因证据不足，保留观察。不代表全部产品场景通过。[本轮证据](evidence/admin-basic-cua-20261010/README.md)。
 
@@ -39,7 +41,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 59 条小程序路由（用户分包 49 条）、107 个锁定迁移、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 56 条小程序路由（用户分包 47 条）、107 个锁定迁移、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -157,7 +159,7 @@ MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示�
 
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
-| 小程序路由 | 59 条：5 条主包、49 条用户分包、5 条管理分包（含网页登录确认页）；2026-10-09 审计修复 G1 新增想跟TA合作页 1 条、2026-10-08 MIW-54 下线超级案例孤儿列表页 1 条、2026-10-07 MIW-49 新增城市选择页 1 条、此前 MIW-42 删除机会死页 3 条、MIW-44 下线知识/游戏/盲盒 9 条 | `config/runtime-pages.json`、`src/app.json` |
+| 小程序路由 | 56 条：4 条主包、47 条用户分包、5 条管理分包（含网页登录确认页）；2026-10-12 MIW-65 下线会员方案/会员权益/会员订单确认 3 条、2026-10-09 审计修复 G1 新增想跟TA合作页 1 条、2026-10-08 MIW-54 下线超级案例孤儿列表页 1 条、2026-10-07 MIW-49 新增城市选择页 1 条、此前 MIW-42 删除机会死页 3 条、MIW-44 下线知识/游戏/盲盒 9 条 | `config/runtime-pages.json`、`src/app.json` |
 | 数据库 | 107 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
 | 管理合同 | 240 个 operation：105 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | Web 开放范围 | 105 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
