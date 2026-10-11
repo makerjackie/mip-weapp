@@ -9,7 +9,9 @@ const { isValidAsrAppId, isValidAsrSecretId, isValidAsrSecretKey } = require('..
 
 export const AI_DRAFT_PROVIDER_FUNCTION_NAME = 'mip-ai-draft-provider'
 export const AI_DRAFT_PROVIDER_RUNTIME = 'Nodejs20.19'
-export const AI_DRAFT_PROVIDER_TIMEOUT_SECONDS = 15
+// MIW-66:语音链路(下载 ≈2s + ASR ≤20s + 语音结构化 ≤20s)需要 60s 平台超时;
+// 之前的 15s 会把函数在 ASR/LLM 中途杀掉,客户端只见「AI 草稿结果暂未确认」。
+export const AI_DRAFT_PROVIDER_TIMEOUT_SECONDS = 60
 export const AI_DRAFT_PROVIDER_DEPLOYABLE_SOURCE_FILES = Object.freeze([
   'config.json',
   'domain/handler.js',
@@ -31,6 +33,7 @@ export const AI_DRAFT_PROVIDER_ENVIRONMENT_KEYS = Object.freeze([
   'MIP_AI_DRAFT_UPSTREAM_ENDPOINT',
   'MIP_AI_DRAFT_UPSTREAM_SECRET',
   'MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS',
+  'MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS',
   'OPENAI_API_KEY',
   'OPENAI_BASE_URL',
   'OPENAI_MODEL',
@@ -77,6 +80,7 @@ export function providerEnvironment({ aiEnvironment, env, sourceMarker }) {
   const allowedHosts = exactHosts(env.MIP_AI_DRAFT_UPSTREAM_ALLOWED_HOSTS)
   const upstreamSecret = text(env.MIP_AI_DRAFT_UPSTREAM_SECRET)
   const timeoutMs = Number(env.MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS || 8000)
+  const voiceTimeoutMs = Number(env.MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS || 20_000)
   // MIW-56:语音转写凭据随部署注入,不配置时语音能力保持关闭;配置则三者缺一或格式不符直接拒绝部署。
   const asrEnvironment = asrEnvironmentFrom(env)
   if (!allowedAppIds.length
@@ -102,7 +106,8 @@ export function providerEnvironment({ aiEnvironment, env, sourceMarker }) {
       || !/^[\x21-\x7E]+$/.test(openAiApiKey)
       || !Number.isInteger(timeoutMs)
       || timeoutMs < 500
-      || timeoutMs > 10_000) {
+      || timeoutMs > 10_000
+      || !validVoiceTimeoutMs(voiceTimeoutMs)) {
       throw new Error('AI draft Provider OpenAI-compatible base URL, model, API key, or timeout is invalid')
     }
     return Object.freeze({
@@ -112,6 +117,7 @@ export function providerEnvironment({ aiEnvironment, env, sourceMarker }) {
       OPENAI_MODEL: openAiModel,
       OPENAI_API_KEY: openAiApiKey,
       MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS: String(timeoutMs),
+      MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS: String(voiceTimeoutMs),
     })
   }
   if (!endpoint
@@ -120,7 +126,8 @@ export function providerEnvironment({ aiEnvironment, env, sourceMarker }) {
     || upstreamSecret.length < 16
     || !Number.isInteger(timeoutMs)
     || timeoutMs < 500
-    || timeoutMs > 10_000) {
+    || timeoutMs > 10_000
+    || !validVoiceTimeoutMs(voiceTimeoutMs)) {
     throw new Error('AI draft Provider upstream endpoint, exact host allowlist, secret, timeout, or source marker is invalid')
   }
   return Object.freeze({
@@ -130,7 +137,13 @@ export function providerEnvironment({ aiEnvironment, env, sourceMarker }) {
     MIP_AI_DRAFT_UPSTREAM_ALLOWED_HOSTS: allowedHosts.join(','),
     MIP_AI_DRAFT_UPSTREAM_SECRET: upstreamSecret,
     MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS: String(timeoutMs),
+    MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS: String(voiceTimeoutMs),
   })
+}
+
+// 语音结构化预算独立于文本超时;上限与函数内 normalizeVoiceTimeout 的 30s 硬顶一致。
+function validVoiceTimeoutMs(value) {
+  return Number.isInteger(value) && value >= 1000 && value <= 30_000
 }
 
 // 腾讯云 Flash ASR 凭据:三件套要么全空(能力关闭),要么齐全且通过函数内同一格式校验。

@@ -1062,6 +1062,77 @@ test('fails a keyed storage request without provider processing when validation 
   assert.equal(providerCalled, false)
 })
 
+// MIW-66:静音录音重试同一音频不可能成功 → 终态失败并原样透出;
+// ASR 瞬时失败保持非终态,同样原样透出,不再伪装成「结果暂未确认」。
+test('classifies voice transcription failures as terminal empty or transient ASR errors', async () => {
+  const claim = async (_appId, _userId, input) => ({
+    state: 'CLAIMED',
+    requestId: input.requestId,
+    leaseToken: '40000000-0000-4000-8000-000000000001',
+    draft,
+  })
+  const voiceEvent = requestId => ({
+    ...voiceStorageEvent(),
+    requestId,
+  })
+
+  let failedInput = null
+  const emptyService = createAiService({
+    repository: {
+      async claimDraftRequest(...args) { return claim(...args) },
+      async createVoiceDraftFromUpload() { return { draft, asset: {} } },
+      async failKeyedDraft(_appId, _userId, input, code) {
+        failedInput = { requestId: input.requestId, code }
+        return true
+      },
+    },
+    provider: {
+      capability: () => ({ voiceDrafts: true }),
+      async transcribeAndStructure() { throw new Error('AI_PROVIDER_TRANSCRIPT_EMPTY') },
+    },
+    audioStore: {
+      configured: true,
+      preallocate(input) {
+        return { assetId: input.assetId, objectKey: uploadedAsset().objectKey }
+      },
+      validateStored() { return uploadedAsset() },
+    },
+  })
+  await assert.rejects(
+    () => emptyService.createVoiceDraftStorage(caller, voiceEvent('ai-draft:voice-silent')),
+    /AI_PROVIDER_TRANSCRIPT_EMPTY/,
+  )
+  assert.deepEqual(failedInput, {
+    requestId: 'ai-draft:voice-silent',
+    code: 'AI_PROVIDER_TRANSCRIPT_EMPTY',
+  })
+
+  let transientFailed = false
+  const asrService = createAiService({
+    repository: {
+      async claimDraftRequest(...args) { return claim(...args) },
+      async createVoiceDraftFromUpload() { return { draft, asset: {} } },
+      async failKeyedDraft() { transientFailed = true },
+    },
+    provider: {
+      capability: () => ({ voiceDrafts: true }),
+      async transcribeAndStructure() { throw new Error('AI_PROVIDER_TRANSCRIBE_FAILED') },
+    },
+    audioStore: {
+      configured: true,
+      preallocate(input) {
+        return { assetId: input.assetId, objectKey: uploadedAsset().objectKey }
+      },
+      validateStored() { return uploadedAsset() },
+    },
+  })
+  await assert.rejects(
+    () => asrService.createVoiceDraftStorage(caller, voiceEvent('ai-draft:voice-asr')),
+    /AI_PROVIDER_TRANSCRIBE_FAILED/,
+  )
+  assert.equal(transientFailed, false)
+})
+
 test('completes a non-keyed storage draft after validating the direct upload', async () => {
   const asset = uploadedAsset()
   const created = {

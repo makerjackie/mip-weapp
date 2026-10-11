@@ -465,3 +465,79 @@ test('bounds the voice provider timeout', () => {
   assert.equal(normalizeVoiceTimeout('60000'), 45_000)
   assert.equal(normalizeVoiceTimeout(30_000), 30_000)
 })
+
+// MIW-66:cloudbase node-sdk 客户端默认 15s 截断,必须把领域预算显式传给 callFunction。
+test('passes the domain timeout to the SDK call so the voice budget is not cut at 15s', async () => {
+  const timeouts = []
+  const secret = 'draft-provider-secret-that-is-longer-than-thirty-two'
+  const provider = createCloudAiProvider({
+    async callFunction(call) {
+      timeouts.push(call.timeout)
+      const data = {
+        transcriptText: '资料内容',
+        structuredDraft: { headline: '产品负责人' },
+        providerJobKey: 'job-timeout-1',
+      }
+      const result = {
+        version: CONTRACT_VERSION,
+        timestamp: Date.now(),
+        requestId: call.data.requestId,
+        operationKey: call.data.operationKey,
+        ok: true,
+        data,
+        dataDigest: digest(data),
+      }
+      return { result: { ...result, signature: sign(result, secret) } }
+    },
+  }, 'mip-ai-draft-provider', secret, { voiceTimeoutMs: 40_000 })
+  await provider.transcribeAndStructure({
+    appId: 'wx1234567890abcdef',
+    draftId: '20000000-0000-4000-8000-000000000001',
+    purpose: 'PROFILE',
+    expectedVersion: 1,
+    audioFileId: 'cloud://env/mip/development/0123456789abcdef01234567/ai/89abcdef0123456789abcdef/11111111-2222-4333-8444-555566667777.mp3',
+    audioContentSha256: 'a'.repeat(64),
+    audioContentType: 'audio/mpeg',
+    audioContentBytes: 1024,
+  })
+  await provider.structureText({
+    appId: 'wx1234567890abcdef',
+    draftId: '20000000-0000-4000-8000-000000000001',
+    purpose: 'PROFILE',
+    expectedVersion: 1,
+    transcriptText: '资料内容',
+  })
+  assert.deepEqual(timeouts, [40_000, 8_000])
+})
+
+test('maps transcript-empty and ASR failures to dedicated voice draft errors', async () => {
+  const secret = 'draft-provider-secret-that-is-longer-than-thirty-two'
+  const emptyTranscript = createCloudAiProvider({
+    async callFunction() {
+      return {
+        result: {
+          ok: false,
+          error: { code: 'AI_DRAFT_PROVIDER_TRANSCRIPT_EMPTY', message: '录音中没有识别到内容', retryable: false },
+        },
+      }
+    },
+  }, 'mip-ai-draft-provider', secret)
+  await assert.rejects(
+    () => emptyTranscript.transcribeAndStructure({}),
+    /AI_PROVIDER_TRANSCRIPT_EMPTY/,
+  )
+  const asrFailed = createCloudAiProvider({
+    async callFunction() {
+      return {
+        result: {
+          ok: false,
+          error: { code: 'AI_DRAFT_PROVIDER_ASR_FAILED', message: 'ASR 引擎失败', retryable: true },
+        },
+      }
+    },
+  }, 'mip-ai-draft-provider', secret)
+  await assert.rejects(
+    () => asrFailed.transcribeAndStructure({}),
+    /AI_PROVIDER_TRANSCRIBE_FAILED/,
+  )
+})

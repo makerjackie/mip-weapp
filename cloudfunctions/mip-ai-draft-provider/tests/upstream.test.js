@@ -55,6 +55,7 @@ test('sends verified audio bytes without exposing the CloudBase file ID and bind
       endpoint: new URL('https://provider.example.com/v1'),
       upstreamSecret: 'private-key',
       timeoutMs: 5000,
+      voiceTimeoutMs: 20000,
     },
     audioLoader: {
       async load() {
@@ -90,6 +91,8 @@ test('sends verified audio bytes without exposing the CloudBase file ID and bind
   assert.equal(callOptions.operationKey, request.operationKey)
   assert.equal(callOptions.requestId, request.requestId)
   assert.equal(callOptions.payloadDigest, request.payloadDigest)
+  // 语音动作(旧协议下含转写)使用独立语音预算,不吃文本超时(MIW-66)。
+  assert.equal(callOptions.timeoutMs, 20000)
 })
 
 test('rejects mismatched response identity and extra result fields', async () => {

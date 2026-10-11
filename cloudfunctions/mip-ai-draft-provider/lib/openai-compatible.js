@@ -91,6 +91,8 @@ function createOpenAiCompatibleAdapter(options) {
         transcriptText: recognized.transcript,
       },
       requestId: request.requestId,
+      // 长转写文本的结构化慢于短文本,用语音独立预算而不是文本超时。
+      timeoutMs: config.voiceTimeoutMs,
     })
     return {
       transcriptText: recognized.transcript,
@@ -110,7 +112,7 @@ async function requestStructuredDraft(options) {
     payloadDigest,
     requestId: options.requestId,
     secret: options.config.openAiApiKey,
-    timeoutMs: options.config.timeoutMs,
+    timeoutMs: options.timeoutMs || options.config.timeoutMs,
   })
   const completion = parseCompletion(response)
   const structuredDraft = normalizeDraft(options.payload.purpose, completion.content)

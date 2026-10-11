@@ -4,7 +4,9 @@ MIP AI 草稿服务。服务只生成、保存和更新可过期草稿，不直�
 
 草稿默认保留 72 小时，可通过 `MIP_AI_DRAFT_TTL_HOURS` 设置为 1–168 小时。语音上传通过对象范围校验后先登记 ownerless `PENDING` 清理事实，再在锁定 `ACTIVE` 用户的事务内绑定 owner、改为 `READY` 并创建草稿；事务结果不明确时先重读素材和草稿，不能盲删可能已经提交的对象。确认、过期或删除的语音素材会在用户访问 AI 草稿时重试删除；无人再次访问时，运行 `pnpm ai:cleanup -- --confirm-env=<EnvID> --confirm-ai=mip-ai-api --limit=10` 扫描当前 AppID 的过期草稿、终态语音和没有草稿的上传 tombstone。两条路径复用同一删除租约：先把素材置为 `PENDING` 并记录 `updated_at`，事务外删除云对象，再按相同租约把素材标记为 `DELETED`。ownerless tombstone 只允许使用 AppID scope 和完整 object key 校验后删除；对象删除失败、响应不明确、租约丢失或数据库最终更新失败时保留 `PENDING`，不恢复为 `READY`，30 分钟后可重试。
 
-创建 action 必须携带稳定 request ID。服务端把请求摘要、租约、草稿/音频分配和响应保存在 `mip_ai_draft_requests`：只有当前租约可以原子提交完成或失败；Provider 传输错误、超时和语音上传/登记结果未知时保持 `PROCESSING`，客户端继续复用同一 request ID。只有 Provider 明确拒绝或响应无效才进入失败终态。到期维护将请求标记为 `AI_DRAFT_REQUEST_EXPIRED` 并清空 `response_json`；未过期的语音上传请求会保护对应素材不被孤儿清理。
+创建 action 必须携带稳定 request ID。服务端把请求摘要、租约、草稿/音频分配和响应保存在 `mip_ai_draft_requests`：只有当前租约可以原子提交完成或失败；Provider 传输错误、超时和语音上传/登记结果未知时保持 `PROCESSING`，客户端继续复用同一 request ID。只有 Provider 明确拒绝、响应无效或录音中没有可转写内容（`AI_PROVIDER_TRANSCRIPT_EMPTY`）才进入失败终态。到期维护将请求标记为 `AI_DRAFT_REQUEST_EXPIRED` 并清空 `response_json`；未过期的语音上传请求会保护对应素材不被孤儿清理。
+
+调用 Provider 的 `cloud.callFunction` 显式携带与领域预算一致的超时（MIW-66）：cloudbase node-sdk 客户端默认 15s 截断，不传会让语音 45s 预算（`MIP_AI_PROVIDER_VOICE_TIMEOUT_MS`，默认 45000，范围 1000–50000）失效；语音链路不重试，文本/补充链路按可重试错误重试一次。`AI_PROVIDER_TRANSCRIBE_FAILED` 表示 ASR 瞬时失败可重试，`AI_PROVIDER_TRANSCRIPT_EMPTY` 表示录音中没有识别到内容需重新录制。
 
 维护 action 只接受 `MIP_ALLOWED_APP_IDS` 内的 AppID，并使用已部署的 `MIP_AI_HMAC_SECRET` 校验五分钟内时间戳和完整未签名 body。单次最多处理 20 条；响应只包含状态及过期、扫描、删除、失败数量，不包含用户、草稿或文件标识。该命令由运营人员显式执行，不安装定时器。
 
@@ -18,4 +20,4 @@ Provider 通过 `MIP_AI_PROVIDER_ADAPTER` 选择。当前正式适配器值为 `
 
 草稿 Provider 契约固定为 `mip.ai.draft-provider.v1`。请求和响应都使用专用 `MIP_AI_DRAFT_PROVIDER_HMAC_SECRET` 对完整版本化 envelope 签名，并校验五分钟内时间戳、AppID/action allowlist、稳定 request ID、operation key、payload/data digest 和精确字段集合。语音请求额外绑定 CloudBase file ID、SHA-256、字节数和类型；Provider 原始错误和用户输入不得写入普通业务日志或返回客户端。该密钥不得复用于 AI 清理、数字分身或上游 HTTP 鉴权。
 
-环境变量：`MIP_ALLOWED_APP_IDS`、`MIP_IDENTITY_PEPPER`、`MIP_AI_PROVIDER_ADAPTER`、`MIP_AI_PROVIDER_FUNCTION_NAME`、`MIP_AI_PROVIDER_TIMEOUT_MS`、`MIP_AI_DRAFT_PROVIDER_HMAC_SECRET`、`MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME`、`MIP_AI_AVATAR_PROVIDER_HMAC_SECRET`、`MIP_AI_AVATAR_PROVIDER_TIMEOUT_MS`、`MIP_AI_HMAC_SECRET`、`MIP_AI_STORAGE_KEY`、`MIP_AI_DRAFT_TTL_HOURS`、`MIP_DEPLOYMENT_STAGE`、`MIP_DB_CONNECTION_URI`。
+环境变量：`MIP_ALLOWED_APP_IDS`、`MIP_IDENTITY_PEPPER`、`MIP_AI_PROVIDER_ADAPTER`、`MIP_AI_PROVIDER_FUNCTION_NAME`、`MIP_AI_PROVIDER_TIMEOUT_MS`、`MIP_AI_PROVIDER_VOICE_TIMEOUT_MS`、`MIP_AI_DRAFT_PROVIDER_HMAC_SECRET`、`MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME`、`MIP_AI_AVATAR_PROVIDER_HMAC_SECRET`、`MIP_AI_AVATAR_PROVIDER_TIMEOUT_MS`、`MIP_AI_HMAC_SECRET`、`MIP_AI_STORAGE_KEY`、`MIP_AI_DRAFT_TTL_HOURS`、`MIP_DEPLOYMENT_STAGE`、`MIP_DB_CONNECTION_URI`。

@@ -23,6 +23,7 @@ import {
   parseFunctionSecurityRules,
   updateMipFunctionInvocationRule,
 } from './lib/cloud-function-safety.mjs'
+import { assertScfRegion } from './lib/core-function-config-update.mjs'
 import {
   bindAndRequireCloudbaseEnvironment,
   callCloudbase,
@@ -53,7 +54,9 @@ if (!fs.existsSync(path.join(sourceRoot, 'index.js'))
   throw new Error('AI draft Provider source is incomplete')
 }
 
-bindAndRequireCloudbaseEnvironment(root, envId)
+const targetEnvironment = bindAndRequireCloudbaseEnvironment(root, envId)
+const scfRegion = String(env.MIP_SCF_REGION || findString(targetEnvironment, ['region']) || '').trim()
+assertScfRegion(scfRegion)
 const aiDetail = existingFunctionDetail(aiFunctionName)
 if (!aiDetail) {
   throw new Error('Deploy mip-ai-api before the AI draft Provider')
@@ -78,35 +81,42 @@ if (existing) {
 }
 
 const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-ai-draft-provider-'))
+let detail
 try {
   stageProviderSources(sourceRoot, path.join(stagingRoot, functionName))
-  callCloudbase(root, 'manageFunctions', {
-    action: 'createFunction',
-    functionRootPath: stagingRoot,
-    force: true,
-    func: {
-      name: functionName,
-      type: 'Event',
-      runtime: AI_DRAFT_PROVIDER_RUNTIME,
-      handler: 'index.main',
-      timeout: AI_DRAFT_PROVIDER_TIMEOUT_SECONDS,
-      envVariables: expectedEnvironment,
-      isWaitInstall: true,
-    },
-  }, 300000)
-  await waitForActive(functionName)
+  if (!existing) {
+    callCloudbase(root, 'manageFunctions', {
+      action: 'createFunction',
+      functionRootPath: stagingRoot,
+      force: true,
+      func: {
+        name: functionName,
+        type: 'Event',
+        runtime: AI_DRAFT_PROVIDER_RUNTIME,
+        handler: 'index.main',
+        timeout: AI_DRAFT_PROVIDER_TIMEOUT_SECONDS,
+        envVariables: expectedEnvironment,
+        isWaitInstall: true,
+      },
+    }, 300000)
+    await waitForActive(functionName)
+  }
   callCloudbase(root, 'manageFunctions', {
     action: 'updateFunctionCode',
     functionName,
     functionRootPath: stagingRoot,
     force: true,
   }, 300000)
+  await waitForActive(functionName)
+  // 配置(超时/环境)独立收敛:已部署函数只有 updateFunctionCode 时,平台超时
+  // 与新环境键永远不会落位,readback 会永远失败(MIW-66:15s→60s)。
+  updateProviderConfiguration(functionName, expectedEnvironment)
+  detail = await waitForConfiguration(functionName, expectedEnvironment)
 }
 finally {
   fs.rmSync(stagingRoot, { recursive: true, force: true })
 }
 
-const detail = await waitForActive(functionName)
 assertProviderFunctionReadback(detail, expectedEnvironment)
 assertNoTimers(functionName)
 disableClientInvocation(functionName)
@@ -147,6 +157,61 @@ function existingFunctionDetail(name) {
 
 function delay(milliseconds) {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
+}
+
+function updateProviderConfiguration(name, environment) {
+  try {
+    callCloudbase(root, 'callCloudApi', {
+      service: 'scf',
+      action: 'UpdateFunctionConfiguration',
+      region: scfRegion,
+      params: {
+        FunctionName: name,
+        Namespace: envId,
+        Timeout: AI_DRAFT_PROVIDER_TIMEOUT_SECONDS,
+        Environment: {
+          Variables: Object.entries(environment)
+            .sort(([left], [right]) => left.localeCompare(right))
+            .map(([Key, Value]) => ({ Key, Value })),
+        },
+      },
+    }, 300000)
+  }
+  catch {
+    throw new Error('AI draft Provider configuration update failed')
+  }
+}
+
+async function waitForConfiguration(name, expectedEnvironment) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const current = existingFunctionDetail(name)
+    try {
+      assertProviderFunctionReadback(current, expectedEnvironment)
+      return current
+    }
+    catch {}
+    await delay(1000)
+  }
+  throw new Error(`${name} configuration did not converge after deployment`)
+}
+
+function findString(value, names) {
+  if (!value || typeof value !== 'object') {
+    return undefined
+  }
+  const expected = new Set(names.map(name => name.toLowerCase()))
+  for (const [key, child] of Object.entries(value)) {
+    if (expected.has(key.toLowerCase()) && typeof child === 'string' && child.trim()) {
+      return child
+    }
+  }
+  for (const child of Object.values(value)) {
+    const found = findString(child, names)
+    if (found) {
+      return found
+    }
+  }
+  return undefined
 }
 
 async function waitForActive(name) {

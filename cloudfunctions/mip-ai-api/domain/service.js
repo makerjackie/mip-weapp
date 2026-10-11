@@ -764,17 +764,27 @@ function assertProvider(capability, key) {
   if (!capability[key]) throw new Error('AI_PROVIDER_UNAVAILABLE')
 }
 
+const PROVIDER_PASSTHROUGH_ERRORS = [
+  'AI_PROVIDER_REJECTED',
+  'AI_PROVIDER_RESPONSE_INVALID',
+  'AI_PROVIDER_TRANSCRIBE_FAILED',
+  'AI_PROVIDER_TRANSCRIPT_EMPTY',
+]
+
 function normalizeProviderError(error) {
   const code = error instanceof Error ? error.message : ''
-  if (['AI_PROVIDER_REJECTED', 'AI_PROVIDER_RESPONSE_INVALID'].includes(code)) {
+  if (PROVIDER_PASSTHROUGH_ERRORS.includes(code)) {
     return error
   }
   return new Error('AI_PROVIDER_RESULT_UNKNOWN')
 }
 
+// 终态 = 同一输入重试也不可能成功,可以安全把请求记为 FAILED;
+// AI_PROVIDER_TRANSCRIBE_FAILED 是瞬时失败(ASR 引擎/网络),保持非终态。
 function isTerminalProviderError(error) {
   return error instanceof Error
-    && ['AI_PROVIDER_REJECTED', 'AI_PROVIDER_RESPONSE_INVALID'].includes(error.message)
+    && ['AI_PROVIDER_REJECTED', 'AI_PROVIDER_RESPONSE_INVALID', 'AI_PROVIDER_TRANSCRIPT_EMPTY']
+      .includes(error.message)
 }
 
 function normalizeAvatarProviderError(error) {

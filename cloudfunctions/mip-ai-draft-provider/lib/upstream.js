@@ -67,7 +67,10 @@ function createUpstreamAdapter(options) {
         payloadDigest: request.payloadDigest,
         requestId: request.requestId,
         secret: config.upstreamSecret,
-        timeoutMs: config.timeoutMs,
+        // 旧协议模式下转写在 upstream 内完成,语音动作用独立语音预算。
+        timeoutMs: request.action === 'transcribeAndStructure'
+          ? config.voiceTimeoutMs
+          : config.timeoutMs,
       })
       if (!exactKeys(response, responseKeys)
         || response.version !== UPSTREAM_VERSION

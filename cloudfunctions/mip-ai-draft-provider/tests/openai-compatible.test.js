@@ -14,6 +14,7 @@ const config = {
   openAiChatEndpoint: new URL('https://api.deepseek.com/chat/completions'),
   openAiModel: 'deepseek-v4-flash',
   timeoutMs: 5000,
+  voiceTimeoutMs: 20000,
 }
 
 const request = {
@@ -125,6 +126,7 @@ test('transcribes storage audio through Flash ASR then structures the transcript
   const loadedPayloads = []
   const asrInputs = []
   const outboundBodies = []
+  const outboundOptions = []
   const voiceRequest = {
     action: 'transcribeAndStructure',
     operationKey: '1'.repeat(64),
@@ -143,8 +145,9 @@ test('transcribes storage audio through Flash ASR then structures the transcript
   const adapter = createOpenAiCompatibleAdapter({
     config,
     http: {
-      async postJson(_endpoint, body) {
+      async postJson(_endpoint, body, options) {
         outboundBodies.push(body)
+        outboundOptions.push(options)
         return completion(JSON.stringify({
           projectName: '商业项目',
           caseType: '创意实践',
@@ -191,6 +194,8 @@ test('transcribes storage audio through Flash ASR then structures the transcript
   })
   assert.match(outboundBodies[0].messages[0].content, /SUPER_CASE/)
   assert.equal(outboundBodies[0].messages[1].content.includes('我去年负责一个商业项目'), true)
+  // 语音结构化必须用语音预算,不吃文本 5s 超时(MIW-66)。
+  assert.equal(outboundOptions[0].timeoutMs, config.voiceTimeoutMs)
 })
 
 test('reports voice capability off when ASR is not configured', async () => {

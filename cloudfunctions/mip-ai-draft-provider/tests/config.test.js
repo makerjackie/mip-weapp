@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
 const {
+  normalizeVoiceTimeout,
   parseAllowedHosts,
   parseEndpoint,
   parseOpenAiApiKey,
@@ -57,6 +58,20 @@ test('validates OpenAI-compatible values without exposing the API key', () => {
   assert.equal(parseOpenAiModel('bad model'), '')
   assert.equal(parseOpenAiApiKey(`sk-${'k'.repeat(32)}`).length > 16, true)
   assert.equal(parseOpenAiApiKey('short'), '')
+})
+
+// MIW-66:语音结构化预算独立于文本超时,默认 20s、硬顶 30s,越界回落默认值。
+test('bounds the voice structuring timeout separately from the text timeout', () => {
+  assert.equal(normalizeVoiceTimeout(), 20_000)
+  assert.equal(normalizeVoiceTimeout('45000'), 20_000)
+  assert.equal(normalizeVoiceTimeout('15000'), 15_000)
+  const config = readConfig({
+    ...openAiConfigured,
+    MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS: '25000',
+  })
+  assert.equal(config.timeoutMs, 5000)
+  assert.equal(config.voiceTimeoutMs, 25_000)
+  assert.equal(readConfig(openAiConfigured).voiceTimeoutMs, 20_000)
 })
 
 test('rejects wildcard, IP, insecure, credential, query, and non-standard-port endpoints', () => {

@@ -61,6 +61,13 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
       if (envelope.error?.code === 'AI_DRAFT_PROVIDER_RESPONSE_INVALID') {
         throw new Error('AI_PROVIDER_RESPONSE_INVALID')
       }
+      if (envelope.error?.code === 'AI_DRAFT_PROVIDER_TRANSCRIPT_EMPTY') {
+        // 静音/无语音内容的录音重试也不会成功,必须把「重录」而不是「稍后重试」还给用户。
+        throw new Error('AI_PROVIDER_TRANSCRIPT_EMPTY')
+      }
+      if (envelope.error?.code === 'AI_DRAFT_PROVIDER_ASR_FAILED') {
+        throw new Error('AI_PROVIDER_TRANSCRIBE_FAILED')
+      }
       if (envelope.error?.retryable === false
         && ['FORBIDDEN', 'IDEMPOTENCY_CONFLICT', 'AI_DRAFT_PROVIDER_REQUEST_INVALID']
           .includes(envelope.error?.code)) {
@@ -82,6 +89,7 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
       const promise = Promise.resolve().then(() => withTimeout(cloud.callFunction({
         name: functionName,
         data: { action: 'readiness' },
+        timeout: timeoutMs,
       }), timeoutMs)).then((result) => {
         const ready = result?.result?.ok === true && result?.result?.data?.ready === true
         const capabilities = result?.result?.data?.capabilities
@@ -202,9 +210,12 @@ async function callProviderFunction(options) {
   let lastError
   for (let attempt = 0; attempt < options.attempts; attempt += 1) {
     try {
+      // 显式传 SDK 超时:cloudbase node-sdk 客户端默认 15s 截断,不传的话
+      // 语音链路 45s 预算(MIP_AI_PROVIDER_VOICE_TIMEOUT_MS)永远到不了。
       const result = await withTimeout(Promise.resolve().then(() => options.cloud.callFunction({
         name: options.functionName,
         data: options.request,
+        timeout: options.timeoutMs,
       })), options.timeoutMs)
       if (result?.result?.ok === false
         && result?.result?.error?.retryable === true

@@ -7,6 +7,7 @@
 - `MIP_ALLOWED_APP_IDS`
 - `MIP_AI_DRAFT_PROVIDER_HMAC_SECRET`
 - `MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS`（可选，默认 8000，范围 500–10000）
+- `MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS`（可选，默认 20000，范围 1000–30000；语音结构化独立预算，长转写文本慢于普通文本）
 
 上游二选一：
 
@@ -20,6 +21,8 @@ OpenAI-compatible 模式使用 `${OPENAI_BASE_URL}/chat/completions`，启用 JS
 Endpoint 或 Base URL 只接受 HTTPS、443 端口、无凭证/查询/片段的 URL。旧版 hostname 必须精确出现在 allowlist；OpenAI-compatible 模式只连接 Base URL 的精确 hostname。每次调用重新解析全部 DNS 结果并拒绝任一私网或保留地址，实际 TLS 连接固定使用本次已验证地址；重定向、压缩响应、超时、超过 64 KB 的响应均被拒绝。
 
 语音动作先从当前 CloudBase 环境下载签名请求指定的私有 MP3，复核 SHA-256、字节数、类型和文件头，再只向白名单 Endpoint 发送音频内容，不暴露 CloudBase file ID。上游必须回显版本、稳定 request ID 和 operation key；`Idempotency-Key` 同时作为 HTTP header 传递。函数内只提供暖实例内的并发合并与短期冲突检测，跨实例幂等由上游按 operation key 实现。
+
+语音预算（MIW-66）：函数平台超时 60s，链路预算为下载（≈2s）+ ASR（`TENCENT_ASR_TIMEOUT_MS`，默认 20s）+ 语音结构化（`MIP_AI_DRAFT_VOICE_UPSTREAM_TIMEOUT_MS`，默认 20s），整体落在 `mip-ai-api` 的 45s 语音预算（`MIP_AI_PROVIDER_VOICE_TIMEOUT_MS`）之内；部署脚本会把平台超时与环境一起通过 `UpdateFunctionConfiguration` 收敛。
 
 上游请求统一使用 `mip.ai.draft-upstream.v1`。readiness 请求为 `{ version, action: "readiness", requestId }`，响应必须精确为 `{ version, requestId, ready: true }`。三个业务动作接收 `{ version, requestId, operationKey, action, appId, payloadDigest, payload }`，响应必须精确为 `{ version, requestId, operationKey, data }`；`data` 对文本/语音包含 `transcriptText`、`structuredDraft`、`providerJobKey`，对补充整理只包含 `structuredDraft`、`providerJobKey`。上游必须按 HTTP `Idempotency-Key` 对相同 operation key 和 payload digest 返回同一结果，并拒绝同 key 不同 digest。
 
