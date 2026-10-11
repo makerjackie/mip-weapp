@@ -10,6 +10,7 @@ import {
   validateEditableOrganizations,
 } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { mipMediaModule } from '../../../modules/mip-media/client'
 import { cardPreviewIdentity } from './preview'
 
 type ExperienceCollection = 'companies' | 'organizations'
@@ -35,6 +36,8 @@ Page({
     previewAvatarUrl: '',
     previewCodeUrl: '',
     formAvatarUrl: '',
+    avatarAssetId: '',
+    avatarUploading: false,
     previewCompany: '公司',
     previewRole: '职位',
     previewOrganization: '组织',
@@ -79,11 +82,12 @@ Page({
     }
   },
 
-  // 名片卡预览（figma 1732_20291）：第一段公司/组织与联系方式即时同步，空值回退为字段名。
+  // 名片卡预览（figma 1732_20291）：第一段公司/组织与联系方式即时同步，
+  // 空值回退为字段名占位（figma 2169_17541 空数据卡：姓名/公司/职位/电话/微信/邮箱/地址）。
   syncPreview() {
     const company = this.data.companies[0]
     const organization = this.data.organizations[0]
-    const preview = cardPreviewIdentity({ realName: this.data.realName, nickname: this.data.previewFallbackName })
+    const preview = cardPreviewIdentity({ realName: this.data.realName, nickname: this.data.previewFallbackName }, '姓名')
     this.setData({
       previewNickname: preview.name,
       previewInitial: preview.initial,
@@ -91,10 +95,10 @@ Page({
       previewRole: company?.role || '职位',
       previewOrganization: organization?.name || '组织',
       previewOrganizationRole: organization?.role || '职位',
-      previewPhone: this.data.phoneMasked,
-      previewWechat: this.data.wechat,
-      previewEmail: this.data.email,
-      previewAddress: this.data.address,
+      previewPhone: this.data.phoneMasked || '电话',
+      previewWechat: this.data.wechat || '微信',
+      previewEmail: this.data.email || '邮箱',
+      previewAddress: this.data.address || '地址',
     })
   },
 
@@ -112,6 +116,7 @@ Page({
         previewFallbackName: profile.nickname || 'MIP 成员',
         previewAvatarUrl: profile.avatarUrl || '',
         formAvatarUrl: profile.avatarUrl || '',
+        avatarAssetId: profile.avatarAssetId || '',
         previewCodeUrl: cardCode.codeUrl,
         realName: profile.realName,
         companies: createEditableOrganizations(profile.companies, () => nextExperienceId('companies')),
@@ -138,6 +143,30 @@ Page({
     if (['realName', 'wechat', 'email', 'address'].includes(field)) {
       this.setData({ [field]: event.detail.value })
       this.syncPreview()
+    }
+  },
+
+  // figma 1732_20291「更换头像」：微信头像选择 + AVATAR 资产上传，随名片保存绑定。
+  async chooseAvatar(event: WechatMiniprogram.CustomEvent<{ avatarUrl?: string }>) {
+    const avatarUrl = String(event.detail.avatarUrl || '')
+    if (!avatarUrl || this.data.avatarUploading || this.data.saving) {
+      return
+    }
+    this.setData({ avatarUploading: true, message: '' })
+    try {
+      const asset = await mipMediaModule.uploadImageFromPath('AVATAR', avatarUrl)
+      this.setData({
+        avatarAssetId: asset.assetId,
+        formAvatarUrl: asset.imageUrl,
+        previewAvatarUrl: asset.imageUrl,
+      })
+      wx.showToast({ title: '头像已选择，请保存名片', icon: 'none' })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '头像上传失败，请重试。' })
+    }
+    finally {
+      this.setData({ avatarUploading: false })
     }
   },
 
@@ -245,23 +274,36 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      await mipIdentityModule.updateCard({
+      const snapshot = await mipIdentityModule.updateCard({
         expectedVersion: this.data.profileVersion,
         realName: this.data.realName,
         companies: normalizeEditableOrganizations(this.data.companies),
         organizations: normalizeEditableOrganizations(this.data.organizations),
+        avatarAssetId: this.data.avatarAssetId || undefined,
         wechat: this.data.wechat,
         email: this.data.email,
         address: this.data.address,
+        // 名片编辑即名片发布（figma 1732_20291 无独立展示开关）：填了哪个联系方式，
+        // 哪个就出现在名片上；清空即下卡。手机号跟随绑定状态。
         visibility: {
           cardContacts: {
-            phone: this.data.visibilityPhone,
-            wechat: this.data.visibilityWechat,
-            email: this.data.visibilityEmail,
-            address: this.data.visibilityAddress,
+            phone: this.data.phoneBound,
+            wechat: Boolean(this.data.wechat.trim()),
+            email: Boolean(this.data.email.trim()),
+            address: Boolean(this.data.address.trim()),
           },
         },
       })
+      const cardContacts = snapshot.profile.visibility?.cardContacts
+      if (cardContacts) {
+        this.setData({
+          profileVersion: snapshot.profile.version,
+          visibilityPhone: cardContacts.phone === true,
+          visibilityWechat: cardContacts.wechat === true,
+          visibilityEmail: cardContacts.email === true,
+          visibilityAddress: cardContacts.address === true,
+        })
+      }
       wx.showToast({ title: '名片已保存', icon: 'success' })
       this.clearNavigationTimer()
       this.navigationTimer = setTimeout(() => {

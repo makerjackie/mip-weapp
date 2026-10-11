@@ -472,23 +472,40 @@ function createIdentityRepository(database, options = {}) {
     await database.transaction(async (tx) => {
       await requireActiveUserForUpdate(tx, appId, userId)
       const current = await tx.one(
-        `SELECT version, visibility_json FROM mip_profiles
+        `SELECT version, avatar_asset_id, visibility_json FROM mip_profiles
          WHERE app_id = ? AND user_id = ? FOR UPDATE`,
         [appId, userId],
       )
       if (!current || Number(current.version) !== input.expectedVersion) throw new Error('CONFLICT')
+      // 头像与 updateProfile 同口径：显式传入时校验本人 AVATAR 资产，缺省保留现值。
+      const avatarAssetId = input.avatarAssetId === undefined
+        ? (current.avatar_asset_id || null)
+        : input.avatarAssetId
+      if (avatarAssetId) {
+        const avatar = await tx.one(
+          `SELECT id FROM mip_media_assets
+           WHERE app_id = ? AND id = ? AND owner_user_id = ?
+             AND purpose = 'AVATAR' AND status = 'READY'
+           FOR UPDATE`,
+          [appId, avatarAssetId, userId],
+        )
+        if (!avatar) {
+          throw new Error('PROFILE_AVATAR_INVALID')
+        }
+      }
       const currentVisibility = current.visibility_json && typeof current.visibility_json === 'string'
         ? JSON.parse(current.visibility_json)
         : (current.visibility_json || {})
       const mergedVisibility = { ...currentVisibility, cardContacts: input.visibility.cardContacts }
       await tx.query(
         `UPDATE mip_profiles SET real_name = ?, companies_json = ?, organizations_json = ?,
-           visibility_json = ?, version = version + 1
+           avatar_asset_id = ?, visibility_json = ?, version = version + 1
          WHERE app_id = ? AND user_id = ? AND version = ?`,
         [
           input.realName || null,
           JSON.stringify(input.companies),
           JSON.stringify(input.organizations),
+          avatarAssetId,
           JSON.stringify(mergedVisibility),
           appId,
           userId,

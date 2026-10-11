@@ -610,11 +610,14 @@ function normalizeCardInput(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('VALIDATION_FAILED')
   const expectedVersion = Number(value.expectedVersion)
   if (!Number.isInteger(expectedVersion) || expectedVersion < 1) throw new Error('VALIDATION_FAILED')
+  const avatarAssetId = value.avatarAssetId === undefined ? undefined : String(value.avatarAssetId)
+  if (avatarAssetId !== undefined && !isUuid(avatarAssetId)) throw new Error('VALIDATION_FAILED')
   return {
     expectedVersion,
     realName: boundedText(value.realName, 0, 64),
     companies: organizations(value.companies),
     organizations: organizations(value.organizations),
+    avatarAssetId,
     wechat: boundedText(value.wechat, 0, 120),
     email: boundedText(value.email, 0, 160),
     address: boundedText(value.address, 0, 240),

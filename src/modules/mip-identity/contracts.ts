@@ -226,6 +226,8 @@ export interface ProfileCardUpdateInput {
   realName: string
   companies: ProfileOrganization[]
   organizations: ProfileOrganization[]
+  /** 名片编辑页「更换头像」上传后的媒体资产 ID；缺省保持现有头像不变。 */
+  avatarAssetId?: string
   wechat: string
   email: string
   address: string
