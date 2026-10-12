@@ -336,6 +336,8 @@ function talentSummaries(rows, caller) {
       }
       talents.set(row.owner_user_id, talent)
     }
+    // 名单册口径（MIW-78）：用户锚定 LEFT JOIN 卡片，无发布卡的用户 cards 为空。
+    if (!row.id) continue
     talent.item.cards.push({
       id: row.id,
       roleKey: row.role_key,
@@ -432,6 +434,50 @@ async function listCooperationCards(database, caller, rawFilter = {}) {
   }
 }
 
+/** 名单册展示字段：用户锚定（MIW-78），卡片列全部可空（无发布卡的用户也在名单内）。 */
+const talentUserFields = `
+  u.id AS owner_user_id, u.created_at AS user_created_at,
+  p.nickname, p.headline, p.visibility_json,
+  avatar.cloud_file_id AS avatar_file_id, branch.city_name,
+  industry.id AS industry_tag_id, industry.tag_key AS industry_key,
+  industry.label AS industry_label,
+  c.id, c.role_key, c.positioning, c.target_summary,
+  c.ability_scores_json, c.published_at`
+
+/** 用户锚定 FROM 段：卡片为可选项，行业/头像/分会沿用名单卡展示口径。 */
+const talentUserFrom = `
+  FROM mip_users u
+  INNER JOIN talent_page ON talent_page.owner_user_id = u.id
+  LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
+  LEFT JOIN mip_city_branches branch
+    ON branch.app_id = u.app_id AND branch.id = u.primary_branch_id AND branch.status = 'ACTIVE'
+  LEFT JOIN mip_media_assets avatar
+    ON avatar.app_id = p.app_id AND avatar.id = p.avatar_asset_id AND avatar.status = 'READY'
+  LEFT JOIN mip_profile_tags primary_industry
+    ON primary_industry.app_id = u.app_id
+      AND primary_industry.user_id = u.id
+      AND primary_industry.relation = 'PRIMARY_INDUSTRY'
+      AND primary_industry.tag_id = (
+        SELECT MIN(selected_industry.tag_id)
+        FROM mip_profile_tags selected_industry
+        INNER JOIN mip_tags selected_tag
+          ON selected_tag.app_id = selected_industry.app_id
+            AND selected_tag.id = selected_industry.tag_id
+            AND selected_tag.kind = 'INDUSTRY'
+            AND selected_tag.enabled = 1
+        WHERE selected_industry.app_id = u.app_id
+          AND selected_industry.user_id = u.id
+          AND selected_industry.relation = 'PRIMARY_INDUSTRY'
+      )
+  LEFT JOIN mip_tags industry
+    ON industry.app_id = primary_industry.app_id
+      AND industry.id = primary_industry.tag_id
+      AND industry.kind = 'INDUSTRY'
+      AND industry.enabled = 1
+  LEFT JOIN mip_cooperation_cards c
+    ON c.app_id = u.app_id AND c.owner_user_id = u.id
+      AND c.status = 'PUBLISHED' AND c.published_at <= talent_page.snapshot_at`
+
 async function listCooperationTalents(database, caller, rawFilter = {}) {
   const filter = normalizeTalentFilter(rawFilter)
   await assertSelectableTags(
@@ -454,26 +500,23 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
   const cursor = filter.cursor
     ? readTalentCursor(filter.cursor, context, caller.profileRefSecret)
     : null
+  // 名单册（MIW-78）：名单覆盖全部 ACTIVE 用户，发布合作卡只是用户身上可选的展示层；
+  // 档案可见性（talentSearch 等开关）与拉黑口径保持不变。
   const where = [
-    'c.app_id = ?',
-    "c.status = 'PUBLISHED'",
+    'u.app_id = ?',
     "u.status = 'ACTIVE'",
     'u.created_at <= snapshot.snapshot_at',
-    'c.published_at <= snapshot.snapshot_at',
     "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.talentSearch')), 'true') <> 'false'",
   ]
   const params = [caller.appId]
-  const blockFilter = mutualBlockFilter(caller.userId, 'c.owner_user_id', 'c.app_id')
+  const blockFilter = mutualBlockFilter(caller.userId, 'u.id', 'u.app_id')
   if (blockFilter.sql) {
     where.push(blockFilter.sql)
     params.push(...blockFilter.params)
   }
   const visibleWhere = [
-    'c.app_id = ?',
-    "c.status = 'PUBLISHED'",
+    'u.app_id = ?',
     "u.status = 'ACTIVE'",
-    'u.created_at <= talent_page.snapshot_at',
-    'c.published_at <= talent_page.snapshot_at',
     "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.talentSearch')), 'true') <> 'false'",
   ]
   const visibleParams = [caller.appId]
@@ -516,8 +559,8 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
             AND industry_tag.id = industry_filter.tag_id
             AND industry_tag.kind = 'INDUSTRY'
             AND industry_tag.enabled = 1
-        WHERE industry_filter.app_id = c.app_id
-          AND industry_filter.user_id = c.owner_user_id
+        WHERE industry_filter.app_id = u.app_id
+          AND industry_filter.user_id = u.id
           AND industry_filter.relation = 'PRIMARY_INDUSTRY'
           AND industry_filter.tag_id IN (${filter.industryTagIds.map(() => '?').join(', ')})
       )`)
@@ -533,8 +576,8 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
             AND ability_filter_tag.id = ability_filter.tag_id
             AND ability_filter_tag.kind = 'ABILITY'
             AND ability_filter_tag.enabled = 1
-        WHERE ability_filter.app_id = c.app_id
-          AND ability_filter.user_id = c.owner_user_id
+        WHERE ability_filter.app_id = u.app_id
+          AND ability_filter.user_id = u.id
           AND ability_filter.relation = 'ABILITY'
           AND ability_filter.tag_id IN (${filter.abilityTagIds.map(() => '?').join(', ')})
       )`)
@@ -543,25 +586,28 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
   const rows = await database.query(
     `WITH snapshot AS (
        SELECT ${cursor ? 'CAST(? AS DATETIME(3))' : 'UTC_TIMESTAMP(3)'} AS snapshot_at
-     ), matching_cards AS (
-       SELECT c.owner_user_id, u.created_at AS user_created_at, snapshot.snapshot_at
-       ${cardFrom}
+     ), matching_users AS (
+       SELECT u.id AS owner_user_id, u.created_at AS user_created_at, snapshot.snapshot_at
+       FROM mip_users u
        CROSS JOIN snapshot
+       LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
+       LEFT JOIN mip_cooperation_cards c
+         ON c.app_id = u.app_id AND c.owner_user_id = u.id
+           AND c.status = 'PUBLISHED' AND c.published_at <= snapshot.snapshot_at
        WHERE ${where.join(' AND ')}
+       GROUP BY u.id, u.created_at, snapshot.snapshot_at
      ), talent_page AS (
        SELECT owner_user_id, user_created_at, snapshot_at
-       FROM matching_cards
-       GROUP BY owner_user_id, user_created_at, snapshot_at
+       FROM matching_users
        ${cursor
-         ? `HAVING user_created_at < ?
+         ? `WHERE user_created_at < ?
            OR (user_created_at = ? AND owner_user_id < ?)`
          : ''}
        ORDER BY user_created_at DESC, owner_user_id DESC
        LIMIT ${filter.limit + 1}
      )
-     SELECT ${cardFields}, talent_page.user_created_at, talent_page.snapshot_at
-     ${cardFrom}
-     INNER JOIN talent_page ON talent_page.owner_user_id = c.owner_user_id
+     SELECT ${talentUserFields}, talent_page.snapshot_at
+     ${talentUserFrom}
      WHERE ${visibleWhere.join(' AND ')}
      ORDER BY talent_page.user_created_at DESC, talent_page.owner_user_id DESC,
               c.published_at DESC, c.id DESC`,

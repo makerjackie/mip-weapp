@@ -53,12 +53,13 @@ describe('public opportunity visibility', () => {
     await listSuperCases(database, caller, {})
 
     const opportunity = calls.find(call => call.sql.includes('FROM mip_opportunities o'))
-    const cooperationCalls = calls.filter(call => call.sql.includes('FROM mip_cooperation_cards c'))
-    const [cooperation, talents] = cooperationCalls
+    const cooperation = calls.find(call => call.sql.includes('FROM mip_cooperation_cards c'))
+    // MIW-78 名单册：人才列表以用户为锚，拉黑口径挂在 u.id/u.app_id 上。
+    const talents = calls.find(call => call.sql.includes('FROM mip_users u'))
     const superCase = calls.find(call => call.sql.includes('FROM mip_super_cases c'))
     assertMutualBlock(opportunity.sql, 'o.owner_user_id', 'o.app_id')
     assertMutualBlock(cooperation.sql, 'c.owner_user_id', 'c.app_id')
-    assertMutualBlock(talents.sql, 'c.owner_user_id', 'c.app_id')
+    assertMutualBlock(talents.sql, 'u.id', 'u.app_id')
     assertMutualBlock(superCase.sql, 'c.owner_user_id', 'c.app_id')
     for (const call of [opportunity, cooperation, talents, superCase]) {
       assert.deepEqual(call.params.slice(-2), [viewerUserId, viewerUserId])

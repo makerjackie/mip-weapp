@@ -78,14 +78,8 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
   const calls = []
   const rows = [
     {
-      id: firstCardId,
       owner_user_id: firstOwnerId,
-      role_key: 'strategist',
-      positioning: '品牌策划与产品方向',
-      target_summary: '完成三个合作项目',
-      ability_scores_json: '{"strategy_planning":5}',
-      status: 'PUBLISHED',
-      published_at: '2026-08-24T08:00:00.000Z',
+      user_created_at: '2026-06-24T08:00:00.000Z',
       nickname: '成员甲',
       headline: '品牌顾问',
       visibility_json: '{}',
@@ -93,41 +87,44 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
       industry_tag_id: industryId,
       industry_key: 'brand_consulting',
       industry_label: '品牌咨询',
-      user_created_at: '2026-06-24T08:00:00.000Z',
       snapshot_at: snapshotAt,
+      id: firstCardId,
+      role_key: 'strategist',
+      positioning: '品牌策划与产品方向',
+      target_summary: '完成三个合作项目',
+      ability_scores_json: '{"strategy_planning":5}',
+      published_at: '2026-08-24T08:00:00.000Z',
     },
     {
-      id: secondCardId,
       owner_user_id: firstOwnerId,
-      role_key: 'visual_designer',
-      positioning: '品牌视觉设计',
-      target_summary: '完成两个品牌项目',
-      ability_scores_json: '{}',
-      status: 'PUBLISHED',
-      published_at: '2026-08-23T08:00:00.000Z',
+      user_created_at: '2026-06-24T08:00:00.000Z',
       nickname: '成员甲',
       visibility_json: '{}',
       city_name: '深圳',
       industry_tag_id: industryId,
       industry_key: 'brand_consulting',
       industry_label: '品牌咨询',
-      user_created_at: '2026-06-24T08:00:00.000Z',
       snapshot_at: snapshotAt,
+      id: secondCardId,
+      role_key: 'visual_designer',
+      positioning: '品牌视觉设计',
+      target_summary: '完成两个品牌项目',
+      ability_scores_json: '{}',
+      published_at: '2026-08-23T08:00:00.000Z',
     },
     {
-      id: '30000000-0000-4000-8000-000000000003',
       owner_user_id: secondOwnerId,
+      user_created_at: '2026-06-22T08:00:00.000Z',
+      nickname: '成员乙',
+      visibility_json: '{}',
+      city_name: '深圳',
+      snapshot_at: snapshotAt,
+      id: '30000000-0000-4000-8000-000000000003',
       role_key: 'strategist',
       positioning: '品牌_10% 产品策划',
       target_summary: '完成一个合作项目',
       ability_scores_json: '{}',
-      status: 'PUBLISHED',
       published_at: '2026-08-22T08:00:00.000Z',
-      nickname: '成员乙',
-      visibility_json: '{}',
-      city_name: '深圳',
-      user_created_at: '2026-06-22T08:00:00.000Z',
-      snapshot_at: snapshotAt,
     },
   ]
   const database = {
@@ -153,7 +150,7 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
           { id: abilityId, kind: 'ABILITY', selectable: 1, parent_id: null, parent_kind: null, parent_parent_id: null, parent_selectable: 0, parent_enabled: 1 },
         ]
       }
-      if (sql.includes('FROM mip_cooperation_cards c')) return rows
+      if (sql.includes('FROM mip_users u')) return rows
       // 人才卡公开详情：身份状态/等级/佩戴勋章与邀请人归档（与竖版用户卡同口径）。
       if (sql.includes('FROM mip_profiles profile')) {
         return [
@@ -208,11 +205,13 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
     limit: 1,
   })
 
-  const listCall = calls.find(call => call.sql.includes('FROM mip_cooperation_cards c'))
+  const listCall = calls.find(call => call.sql.includes('FROM mip_users u'))
   assert.ok(listCall)
-  assert.match(listCall.sql, /c\.app_id = \?/)
+  assert.match(listCall.sql, /u\.app_id = \?/)
   assert.match(listCall.sql, /WITH snapshot AS/)
-  assert.match(listCall.sql, /GROUP BY owner_user_id, user_created_at, snapshot_at/)
+  assert.match(listCall.sql, /FROM mip_users u\s+CROSS JOIN snapshot\s+LEFT JOIN mip_profiles p/)
+  assert.match(listCall.sql, /LEFT JOIN mip_cooperation_cards c\s+ON c\.app_id = u\.app_id AND c\.owner_user_id = u\.id/)
+  assert.match(listCall.sql, /GROUP BY u\.id, u\.created_at, snapshot\.snapshot_at/)
   assert.match(listCall.sql, /ORDER BY user_created_at DESC, owner_user_id DESC/)
   assert.equal((listCall.sql.match(/u\.status = 'ACTIVE'/g) || []).length, 2)
   assert.equal((listCall.sql.match(/c\.published_at <=/g) || []).length, 2)
@@ -220,8 +219,10 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
   assert.match(listCall.sql, /u\.primary_branch_id = \?/)
   assert.equal((listCall.sql.match(/c\.role_key = \?/g) || []).length, 1)
   assert.match(listCall.sql, /FROM mip_profile_tags industry_filter/)
+  assert.match(listCall.sql, /industry_filter\.user_id = u\.id/)
   assert.match(listCall.sql, /FROM mip_profile_tags ability_filter/)
   assert.match(listCall.sql, /ability_filter\.relation = 'ABILITY'/)
+  assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.talentSearch'\)/)
   assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.primaryBranch'\)/)
   assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.industry'\)/)
   assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.abilities'\)/)
@@ -284,6 +285,72 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
   })
 })
 
+// MIW-78 名单册：名单覆盖全部 ACTIVE 用户——无发布卡、只有草稿卡或无档案的用户也在列，
+// cards 为空数组；仅发布后快照可见的卡片参与展示与关键词/角色匹配。
+test('cooperation talent roster includes users without published cards or profiles', async () => {
+  const calls = []
+  const cardlessOwnerId = '44000000-0000-4000-8000-000000000001'
+  const rows = [
+    {
+      owner_user_id: firstOwnerId,
+      user_created_at: '2026-06-24T08:00:00.000Z',
+      nickname: '成员甲',
+      headline: null,
+      visibility_json: '{}',
+      city_name: '深圳',
+      snapshot_at: snapshotAt,
+      id: firstCardId,
+      role_key: 'strategist',
+      positioning: '品牌策划',
+      target_summary: '目标',
+      ability_scores_json: '{}',
+      published_at: '2026-08-24T08:00:00.000Z',
+    },
+    {
+      // 无档案用户：LEFT JOIN 档案全空，昵称走 MIP 用户占位，cards 为空。
+      owner_user_id: cardlessOwnerId,
+      user_created_at: '2026-06-20T08:00:00.000Z',
+      nickname: null,
+      headline: null,
+      visibility_json: null,
+      city_name: null,
+      snapshot_at: snapshotAt,
+      id: null,
+      role_key: null,
+      positioning: null,
+      target_summary: null,
+      ability_scores_json: null,
+      published_at: null,
+    },
+  ]
+  const result = await listCooperationTalents({
+    async one() { throw new Error('unexpected one') },
+    async query(sql) {
+      calls.push({ sql })
+      if (sql.includes('FROM mip_tags t')) return []
+      if (sql.includes('FROM mip_users u')) return rows
+      if (sql.includes('FROM mip_profiles profile')) return []
+      if (sql.includes('FROM mip_user_badge_equipment')) return []
+      if (sql.includes('FROM mip_growth_levels')) return []
+      if (sql.includes('FROM mip_event_invitation_attributions attribution')) return []
+      throw new Error(`unexpected query: ${sql}`)
+    },
+  }, {
+    appId,
+    userId: null,
+    profileRefSecret: secret,
+  }, { limit: 10 })
+  const listCall = calls.find(call => call.sql.includes('FROM mip_users u'))
+  assert.match(listCall.sql, /COALESCE\(JSON_UNQUOTE\(JSON_EXTRACT\(p\.visibility_json, '\$\.talentSearch'\)\), 'true'\)/)
+  assert.equal(result.items.length, 2)
+  const [withCards, withoutCards] = result.items
+  assert.equal(withCards.author.nickname, '成员甲')
+  assert.equal(withCards.cards.length, 1)
+  assert.equal(withoutCards.author.nickname, 'MIP 用户')
+  assert.equal(withoutCards.author.avatarUrl, undefined)
+  assert.deepEqual(withoutCards.cards, [])
+})
+
 test('cooperation talent cursor keeps the original snapshot and applies to the immutable user keyset', async () => {
   const context = {
     appId,
@@ -310,7 +377,7 @@ test('cooperation talent cursor keeps the original snapshot and applies to the i
     profileRefSecret: secret,
   }, { cursor, limit: 1, roleKey: 'strategist' })
   assert.match(calls[0].sql, /c\.role_key = \?/)
-  assert.match(calls[0].sql, /HAVING user_created_at < \?/)
+  assert.match(calls[0].sql, /WHERE user_created_at < \?/)
   assert.deepEqual(calls[0].params, [
     '2026-08-25 08:00:00.000',
     appId,
@@ -347,7 +414,7 @@ test('cooperation city and industry filters require visible author fields', asyn
     userId: null,
     profileRefSecret: secret,
   }, { branchId, industryTagIds: [industryId] })
-  const listCall = calls.find(call => call.sql.includes('FROM mip_cooperation_cards c'))
+  const listCall = calls.find(call => call.sql.includes('FROM mip_users u'))
   assert.match(listCall.sql, /primaryBranch[\s\S]*<> 'false'/)
   assert.match(listCall.sql, /industry[\s\S]*<> 'false'/)
 })
