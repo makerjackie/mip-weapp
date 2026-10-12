@@ -150,7 +150,7 @@ describe('Owner event interaction fixture', () => {
     expect(ownerInteractionFixtureSummary({ ready: 1 })).toEqual({
       ready: true,
       registrationStatus: 'ATTENDED',
-      interactionPage: 'packages/member/mip-events/interaction/index',
+      interactionPage: 'packages/member/mip-events/participants/index',
     })
     expect(() => ownerInteractionFixtureSummary({ ready: 0 })).toThrow('verification failed')
     expect(JSON.stringify(ownerInteractionFixtureSummary({ ready: 1 }))).not.toContain(appId)

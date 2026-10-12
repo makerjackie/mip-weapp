@@ -85,10 +85,6 @@
       "pathName": "packages/member/mip-events/check-in/index"
     },
     {
-      "name": "活动互动",
-      "pathName": "packages/member/mip-events/interaction/index"
-    },
-    {
       "name": "活动反馈",
       "pathName": "packages/member/mip-events/feedback/index"
     },

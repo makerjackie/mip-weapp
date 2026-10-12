@@ -94,7 +94,7 @@ describe('runtime ready assertions', () => {
 
   it('selects the first matching fixture that also has every required query value', () => {
     const route = {
-      path: 'packages/member/mip-events/interaction/index',
+      path: 'packages/member/mip-events/participants/index',
       query: ['eventId'],
       queryFixture: {
         sourceRoute: 'packages/member/mip-events/mine/index',

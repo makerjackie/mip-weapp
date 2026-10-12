@@ -52,14 +52,6 @@ const expectedStepSpecs = [
     handlers: ['checkIn'],
   },
   {
-    id: 'member-heart',
-    route: 'packages/member/mip-events/interaction/index',
-    selector: '#mip-event-interaction-page',
-    mode: 'automated-mutation',
-    handlers: ['chooseHeart'],
-    unavailable: 'external-wait-continue',
-  },
-  {
     id: 'member-feedback',
     route: 'packages/member/mip-events/feedback/index',
     selector: '#mip-event-feedback-page',
@@ -451,7 +443,7 @@ export function summarizeMutationCleanup(steps, mutations) {
   const noWorkStarted = mutations.length === 0 && actions.every(action => action.status === 'not-run')
   const persistentFactConfirmed = mutations.some(mutation => (
     mutation.status === 'confirmed'
-    && ['member-feedback-save', 'member-heart-select'].includes(mutation.action)
+    && ['member-feedback-save'].includes(mutation.action)
   ))
   const uncertainMutation = mutations.some(mutation => mutation.status !== 'confirmed')
   const businessStateMayRemain = mutations.length > 0
@@ -459,7 +451,7 @@ export function summarizeMutationCleanup(steps, mutations) {
   return {
     automated: false,
     businessStateMayRemain,
-    factsNotTargetedByCleanup: ['heart', 'feedback'],
+    factsNotTargetedByCleanup: ['feedback'],
     operatorActions: {
       actions,
       status: noWorkStarted ? 'not-started' : allConfirmed ? 'confirmed' : 'incomplete',
@@ -596,49 +588,6 @@ export function summarizeRoster(data, registrationId) {
           id: item.id,
           status: item.status,
           version: item.version,
-        }
-      : null,
-  }
-}
-
-export function hasExactHeartCandidateState(data, {
-  participantRef,
-  previousVersion,
-  selected,
-}) {
-  const candidates = Array.isArray(data?.candidates) ? data.candidates : []
-  const heart = data?.heart
-  const version = Number(heart?.version)
-  const baseline = Number(previousVersion)
-  if (data?.state !== 'ready'
-    || typeof participantRef !== 'string'
-    || !participantRef
-    || !Number.isFinite(version)
-    || !Number.isFinite(baseline)
-    || version <= baseline) {
-    return false
-  }
-  const candidate = candidates.find(item => item?.participantRef === participantRef)
-  const selectedCandidates = candidates.filter(item => item?.selected === true)
-  if (selected === true) {
-    return candidate?.selected === true
-      && selectedCandidates.length === 1
-      && Boolean(heart?.targetRef)
-  }
-  return candidate?.selected === false
-    && selectedCandidates.length === 0
-    && !heart?.targetRef
-}
-
-export function summarizeInteraction(data) {
-  return {
-    state: data?.state || null,
-    activeView: data?.activeView || null,
-    candidateCount: Array.isArray(data?.candidates) ? data.candidates.length : 0,
-    heart: data?.heart
-      ? {
-          selected: Boolean(data.heart.targetRef),
-          version: data.heart.version,
         }
       : null,
   }

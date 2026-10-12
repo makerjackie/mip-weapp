@@ -491,7 +491,7 @@ describe('mip-weapp UI runtime contract', () => {
 
   it('maps normal-state fixtures without patching source page data', () => {
     const byId = new Map(contract.routes.map(route => [route.id, route]))
-    expect(byId.get('M09')?.queryFixture).toMatchObject({
+    expect(byId.get('M09F')?.queryFixture).toMatchObject({
       sourceRoute: 'packages/member/mip-events/mine/index',
       sourceQuery: { category: 'ATTENDED' },
       dataPath: 'registrations',
