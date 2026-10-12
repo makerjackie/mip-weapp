@@ -20,6 +20,7 @@ export const AI_DRAFT_PROVIDER_DEPLOYABLE_SOURCE_FILES = Object.freeze([
   'lib/audio.js',
   'lib/config.js',
   'lib/contract.js',
+  'lib/flash-asr.js',
   'lib/network.js',
   'lib/openai-compatible.js',
   'lib/operation-cache.js',

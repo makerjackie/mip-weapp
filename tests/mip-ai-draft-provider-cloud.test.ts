@@ -231,6 +231,43 @@ describe('AI draft Provider cloud contract', () => {
     }
   })
 
+  // MIW-71:MIW-34 引入 lib/flash-asr.js 时漏进打包清单,线上包 require 即崩,
+  // provider 所有 action 失败 → readiness=false → 语音/文本能力门控全部关闭。
+  // 清单必须覆盖 index.js 的传递 require 闭包,新增运行时文件不允许再靠手记。
+  it('stages the transitive require closure of the function entry', () => {
+    const staged = new Set(AI_DRAFT_PROVIDER_DEPLOYABLE_SOURCE_FILES)
+    const visited = new Set<string>()
+    const unresolved: string[] = []
+    function visit(relative: string) {
+      if (visited.has(relative)) {
+        return
+      }
+      visited.add(relative)
+      const file = path.join(sourceRoot, relative)
+      if (!fs.existsSync(file)) {
+        unresolved.push(relative)
+        return
+      }
+      if (!relative.endsWith('.js')) {
+        return
+      }
+      const source = fs.readFileSync(file, 'utf8')
+      for (const match of source.matchAll(/require\('(\.[^']+)'\)/g)) {
+        const base = path.posix.join(path.posix.dirname(relative), match[1])
+        const resolved = [base, `${base}.js`, path.posix.join(base, 'index.js')]
+          .find(candidate => fs.existsSync(path.join(sourceRoot, candidate)))
+        if (!resolved) {
+          unresolved.push(base)
+          continue
+        }
+        visit(resolved)
+      }
+    }
+    visit('index.js')
+    expect(unresolved).toEqual([])
+    expect([...visited].filter(relative => !staged.has(relative))).toEqual([])
+  })
+
   it('wires the optional Provider through local secrets, core deployment, and root commands', () => {
     const envExample = fs.readFileSync(path.join(root, '.env.example'), 'utf8')
     const localSecrets = fs.readFileSync(path.join(root, 'scripts/lib/mip-local-secrets.mjs'), 'utf8')
