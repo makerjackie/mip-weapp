@@ -65,6 +65,12 @@
    - 合作卡烘焙底图（`src/components/mip-cooperation-card/model.ts` 的 variant 名与美术图）仍是旧角色名，需要新美术资源才能换；
    - 角色 key 英文 slug 未变（只改了展示文案），若要连 key 一起换是数据迁移级变更。
 
+### 4.6 拍板记录（2026-10-12，产品已决策）
+
+- **知识库模块**：彻底下线。范围含后台路由/导航/权限（knowledge.manage）、BFF、云函数 `mip-admin-api` knowledge 域、MySQL 存量表归档——按单独立项排期，不在本分支内执行。
+- **合作卡烘焙底图**：资产已定位（`src/assets/mip/coop-card-*@3x.png` 六张，`src/components/mip-cooperation-card/model.ts` 的 variants 表 + roleKey→variant 映射）；等设计产出中性命名底图后单独更换。搜索时发现 variants 表的 `name` 兜底文案仍是旧侮辱性词（卡名缺失时会直接上屏），已按 UX-09 方向改为中性文案（variant key/底图/配色不动，随新美术一并重命名）。
+- **角色 key 英文 slug**：保持现状。key 永久作为内部标识，仅展示中文，不做数据迁移。
+
 ## 5. 目标与完成定义
 
 - 目标：管理后台所有创建/编辑表单对不懂技术的运营「能顺利填完并提交」——无手填 ID/key/版本号、无技术黑话、前置依赖有引导、小程序不消费的字段不让用户填。
