@@ -223,7 +223,7 @@ assert(shellPresentation.includes('kind === \'PLAYER\'')
   && shellPresentation.includes('entitlement?.status === \'ACTIVE\'')
   && shellPresentation.includes('label: \'嘉宾\''), '玩家/嘉宾 must derive from a server entitlement projection')
 const cooperationCatalog = read('src/config/mip-catalogs.ts')
-for (const roleName of ['皮条客', '生意佬', '暴发户', '狗策划', '死美工', '老保姆']) {
+for (const roleName of ['商务对接', '企业经营者', '资本合作', '策略策划', '视觉设计', '交付管理']) {
   assert(cooperationCatalog.includes(`name: '${roleName}'`), `Cooperation role is missing: ${roleName}`)
 }
 assert(cooperationCatalog.includes('replaceBeforeProduction: true'), 'Placeholder city and industry catalogs must be explicitly replaceable')

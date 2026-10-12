@@ -4,6 +4,7 @@ import {
   ADMIN_PEOPLE_MUTATION_ACTIONS,
   buildAdminPeopleMutationInput,
   createAdminPeopleMutationDefinition,
+  explainAdminPeopleMutationInput,
   type AdminPeopleMutationAction,
 } from './admin-people-mutation-forms.ts'
 
@@ -383,5 +384,65 @@ describe('admin people mutation forms', () => {
     assert.ok(result, 'valid input should produce result')
     assert.equal((result as Record<string, unknown>).accountId, 'acc-001', 'accountId must be in output for server self-check')
     assert.equal((result as Record<string, unknown>).status, 'INACTIVE')
+  })
+})
+
+describe('novice-friendly governance form contracts', () => {
+  it('hides branchKey and generates it when creating a branch', () => {
+    const definition = createAdminPeopleMutationDefinition('mip.admin.branches.create', '')
+    const keyField = definition.fields.find(field => field.key === 'branchKey')
+    assert.ok(keyField?.hidden)
+    assert.match(String(definition.values.branchKey), /^branch-[a-z0-9]+$/)
+  })
+
+  it('labels capabilities in Chinese while keeping capability keys as values', () => {
+    const definition = createAdminPeopleMutationDefinition('mip.admin.rolePolicies.update', '')
+    const capabilities = definition.fields.find(field => field.key === 'capabilities')
+    assert.ok(capabilities?.options?.length)
+    for (const option of capabilities.options) {
+      assert.notEqual(typeof option === 'string' ? option : option.label, typeof option === 'string' ? option : option.value, 'labels must not be raw capability keys')
+    }
+  })
+})
+
+describe('R1 novice walkthrough fixes', () => {
+  it('marks scope required for branch and event roles while platform roles stay optional', () => {
+    for (const action of ['mip.admin.roles.set', 'mip.admin.adminAccounts.create', 'mip.admin.adminAccounts.update'] as const) {
+      const definition = createAdminPeopleMutationDefinition(action, action === 'mip.admin.roles.set' ? 'user-1' : 'acc-1')
+      const scopeId = definition.fields.find(field => field.key === 'scopeId') as { requiredWhen?: { values: readonly string[] } } | undefined
+      assert.ok(scopeId?.requiredWhen, `${action} scopeId must carry requiredWhen`)
+      assert.deepEqual(scopeId.requiredWhen.values, ['BRANCH_ADMIN', 'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF'])
+    }
+  })
+
+  it('uses a number input for branch sort order and tolerates a cleared box', () => {
+    for (const action of ['mip.admin.branches.create', 'mip.admin.branches.update'] as const) {
+      const definition = createAdminPeopleMutationDefinition(action, action === 'mip.admin.branches.update' ? 'branch-1' : '')
+      const sortOrder = definition.fields.find(field => field.key === 'sortOrder')
+      assert.equal(sortOrder?.kind, 'number')
+    }
+    const definition = createAdminPeopleMutationDefinition('mip.admin.branches.create', '')
+    const cleared = buildAdminPeopleMutationInput(definition, { branchKey: 'branch-abc', name: '深圳', cityName: '深圳', summary: '', leaderUserId: '', sortOrder: '' })
+    assert.equal((cleared as Record<string, unknown> | null)?.sortOrder, 0)
+  })
+
+  it('guides empty role template catalogs to the governance page', () => {
+    const definition = createAdminPeopleMutationDefinition('mip.admin.roles.set', 'user-1')
+    const template = definition.fields.find(field => field.key === 'roleTemplateId') as { emptyHint?: string } | undefined
+    assert.ok(template?.emptyHint?.includes('岗位模板'))
+  })
+})
+
+describe('R2 novice walkthrough fixes', () => {
+  it('explains the login-account format instead of a generic banner failure', () => {
+    const definition = createAdminPeopleMutationDefinition('mip.admin.adminAccounts.create', '')
+    assert.equal(explainAdminPeopleMutationInput(definition, { loginAccount: '张三' }), '登录账号需为 3–64 位英文字母、数字或 . _ - 组合（不支持中文或空格）')
+    assert.equal(explainAdminPeopleMutationInput(definition, { loginAccount: 'zhangsan' }), null)
+  })
+
+  it('explains a missing scope for branch and event roles', () => {
+    const definition = createAdminPeopleMutationDefinition('mip.admin.roles.set', 'user-1')
+    assert.equal(explainAdminPeopleMutationInput(definition, { roleKey: 'BRANCH_ADMIN', scopeId: '' }), '请选择管理范围：服务器管理员需选择服务器，活动类角色需选择活动')
+    assert.equal(explainAdminPeopleMutationInput(definition, { roleKey: 'PLATFORM_OPERATIONS', scopeId: '' }), null)
   })
 })

@@ -16,8 +16,16 @@ export interface OperationField {
   fields?: readonly OperationField[]
   visibleWhen?: {
     path: string
-    value: string | readonly string[]
+    value: string | boolean | readonly (string | boolean)[]
   }
+  /** Marks the field required only when another field holds one of the given values. */
+  requiredWhen?: {
+    path: string
+    values: readonly string[]
+  }
+  /** Numeric bounds for number/integer inputs, enforced by the control itself. */
+  min?: number
+  max?: number
   /** Upload purpose for asset/asset-list fields, used by AssetUploader. */
   assetPurpose?: string
   /** Renders a session-backed searchable user picker instead of a static Select. */
@@ -34,6 +42,14 @@ export interface OperationField {
   valueScale?: number
   readOnly?: boolean
   readOnlyReason?: string
+  /** Input placeholder shown inside the control for novice operators. */
+  placeholder?: string
+  /** Helper text rendered under the control explaining where the value comes from. */
+  extra?: string
+  /** Shown when a remote options list loads successfully but has no entries yet. */
+  emptyHint?: string
+  /** Tucks the field into the collapsed「高级设置」section; only for optional fields. */
+  advanced?: boolean
 }
 
 export type OperationValues = Record<string, unknown>
@@ -45,7 +61,16 @@ export const TEXTAREA_LIKE_KINDS: readonly string[] = ['asset-list', 'id-list', 
 /** Field kinds serialized as newline-joined id lists. */
 export const LINE_LIST_KINDS: readonly string[] = ['id-list', 'tags']
 /** Field kinds bound to a Dayjs value. */
-export const DATE_KINDS: readonly string[] = ['datetime', 'datetime-local', 'date']
+export const DATE_KINDS: readonly string[] = ['datetime', 'datetime-local', 'date', 'time']
+
+/** Parses an "HH:mm" string into a today-anchored Dayjs clock value. */
+export function timeOfDay(value: string) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim())
+  if (!match) return null
+  const hour = Number(match[1]), minute = Number(match[2])
+  if (hour > 23 || minute > 59) return null
+  return { hour, minute }
+}
 
 export function operationFieldName(field: OperationField) {
   return String(field.name || field.key || '')
@@ -75,14 +100,39 @@ export function normalizeOperationValues(
   previous: OperationValues = {},
 ) {
   const values = cloneValues(previous)
-  for (const field of fields) normalizeSubmittedField(values, submitted, field, '')
+  // Several field definitions may share one path under different linkage
+  // conditions (for example every cooperation role defines `target`); the
+  // path counts as visible when ANY of its definitions is visible, so a
+  // later hidden twin cannot wipe the value the visible one just wrote.
+  const visiblePaths = collectVisiblePaths(fields, submitted, '')
+  for (const field of fields) normalizeSubmittedField(values, submitted, field, '', visiblePaths)
   return values
+}
+
+function collectVisiblePaths(fields: readonly OperationField[], values: OperationValues, prefix: string, paths = new Set<string>()): Set<string> {
+  for (const field of fields) {
+    const key = fieldKey(field)
+    if (!key) continue
+    const path = prefix ? `${prefix}.${key}` : key
+    if (!operationFieldVisible(field, values)) continue
+    paths.add(path)
+    if (field.fields) collectVisiblePaths(field.fields, values, path, paths)
+  }
+  return paths
 }
 
 export function operationFieldVisible(field: OperationField, values: OperationValues) {
   if (!field.visibleWhen) return true
   const actual = readPath(values, field.visibleWhen.path)
-  return Array.isArray(field.visibleWhen.value) ? field.visibleWhen.value.includes(actual) : actual === field.visibleWhen.value
+  const expected = field.visibleWhen.value
+  return Array.isArray(expected) ? expected.includes(actual) : actual === expected
+}
+
+/** True when the field must be filled right now (always, or conditionally via requiredWhen). */
+export function operationFieldRequired(field: OperationField, values: OperationValues) {
+  if (field.required) return true
+  if (!field.requiredWhen) return false
+  return field.requiredWhen.values.includes(String(readPath(values, field.requiredWhen.path)))
 }
 
 function normalizeSubmittedField(
@@ -90,14 +140,22 @@ function normalizeSubmittedField(
   submitted: OperationValues,
   field: OperationField,
   prefix: string,
+  visiblePaths: Set<string>,
 ) {
-  if (!operationFieldVisible(field, submitted)) return
-  if (field.hidden) return
   const key = fieldKey(field)
   if (!key) return
   const path = prefix ? `${prefix}.${key}` : key
+  if (!visiblePaths.has(path)) {
+    // A field hidden by a linkage change must not carry its stale value into
+    // the submit payload — that is how hidden-field dead ends happen. The Ant
+    // form store still preserves the value, so toggling the linkage back
+    // restores the operator's input.
+    writePath(target, path, emptyFieldValue(field))
+    return
+  }
+  if (field.hidden) return
   if (field.kind === 'group') {
-    for (const nested of field.fields || []) normalizeSubmittedField(target, submitted, nested, path)
+    for (const nested of field.fields || []) normalizeSubmittedField(target, submitted, nested, path, visiblePaths)
     return
   }
   const raw = readPath(submitted, path)
@@ -131,6 +189,12 @@ function normalizeSubmittedField(
     writePath(target, path, raw.format('YYYY-MM-DD'))
     return
   }
+  if (field.kind === 'time') {
+    const formatted = raw && typeof raw === 'object'
+      && 'format' in raw && typeof raw.format === 'function' ? raw.format('HH:mm') : String(raw ?? '')
+    writePath(target, path, formatted)
+    return
+  }
   if (['datetime', 'datetime-local'].includes(field.kind)
     && raw && typeof raw === 'object' && 'toISOString' in raw
     && typeof raw.toISOString === 'function') {
@@ -142,6 +206,30 @@ function normalizeSubmittedField(
 
 function fieldKey(field: OperationField) {
   return String(field.name || field.key || '').trim()
+}
+
+/** Neutral value written for fields that are currently hidden by a linkage. */
+function emptyFieldValue(field: OperationField): unknown {
+  if (field.kind === 'checkbox' || field.kind === 'boolean') return false
+  if (field.kind === 'group') return {}
+  if (MULTI_VALUE_KINDS.includes(field.kind)) return []
+  return ''
+}
+
+/**
+ * Field paths whose options source follows another field (optionsActionByValue
+ * or optionsFilter). When that controlling field changes, the dependent
+ * selection is stale and callers should reset it.
+ */
+export function fieldsControlledBy(fields: readonly OperationField[], controller: string, prefix = ''): string[] {
+  const result: string[] = []
+  for (const field of fields) {
+    const key = fieldKey(field)
+    const path = prefix && key ? `${prefix}.${key}` : key
+    if (path && (field.optionsActionByValue?.path === controller || field.optionsFilter?.path === controller)) result.push(path)
+    if (field.fields && path) result.push(...fieldsControlledBy(field.fields, controller, path))
+  }
+  return result
 }
 
 function splitLines(value: string) {

@@ -11,12 +11,14 @@ import {
   buildAdminEventMutationInput,
   createAdminEventMutationDefinition,
   eventMutationConfig,
+  validateAdminEventMutationInput,
   type AdminEventMutationAction,
 } from '../../modules/admin-event-mutation-forms'
 import {
   ADMIN_GAME_MUTATION_ACTIONS,
   buildGameMutationInput,
   createGameMutationDefinition,
+  explainGameMutation,
   loadGameMemberSelection,
   type AdminGameMutationAction,
 } from '../../modules/admin-game-management'
@@ -25,6 +27,7 @@ import {
   ADMIN_PEOPLE_MUTATION_CONFIGS,
   buildAdminPeopleMutationInput,
   createAdminPeopleMutationDefinition,
+  explainAdminPeopleMutationInput,
   type AdminPeopleMutationAction,
 } from '../../modules/admin-people-mutation-forms'
 import { defaultOperationValues, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
@@ -39,6 +42,7 @@ import {
   createTaskSubmissionMutationDefinition,
   buildTaskAssignmentInput,
   buildTaskSubmissionInput,
+  explainTaskAssignment,
   loadTaskEligibleLevels,
   loadTaskEditorOptions,
   type AdminTaskMutationAction,
@@ -83,6 +87,8 @@ export interface OperationModel {
   values: OperationValues
   idempotencyKey: string
   buildInput: (values: OperationValues) => AdminRequestInput | null
+  /** Returns the validator's human-readable failure for the dialog banner, or null. */
+  explain?: (values: OperationValues) => string | null
 }
 
 const peopleActions = new Set<string>(ADMIN_PEOPLE_MUTATION_ACTIONS)
@@ -144,7 +150,7 @@ export async function createOperationModel(
     })
     const values = { ...prefillPeopleValues(typedAction, definition.values, detail), ...launch.values }
     const fields = peopleFields(typedAction, definition.fields, launch.allowedCapabilities, detail)
-    return model(definition, fields, values, idempotencyKey, next => buildAdminPeopleMutationInput(definition, next))
+    return model(definition, fields, values, idempotencyKey, next => buildAdminPeopleMutationInput(definition, next), next => explainAdminPeopleMutationInput(definition, next))
   }
   if (eventActions.has(action)) {
     const typedAction = action as AdminEventMutationAction
@@ -156,10 +162,22 @@ export async function createOperationModel(
       ? baseDefinition
       : { ...baseDefinition, expectedVersion: launchVersion }
     const values = { ...prefillEventValues(typedAction, definition.values, detail), ...launch.values }
-    const fields = definition.fields.map(field => launch.values
-      && ['eventId', 'registrationId', 'photoId', 'expectedVersion'].includes(String(field.key))
-      && Object.hasOwn(launch.values, String(field.key)) ? { ...field, hidden: true } : field)
-    return model(definition, fields as readonly OperationField[], values, idempotencyKey, next => buildAdminEventMutationInput(definition, next))
+    const fields = definition.fields.map(field => {
+      const key = String(field.key)
+      if (launch.values
+        && ['eventId', 'registrationId', 'photoId', 'expectedVersion', 'catalogId'].includes(key)
+        && Object.hasOwn(launch.values, key)) return { ...field, hidden: true }
+      if (launch.values && key === 'kind' && Object.hasOwn(launch.values, 'kind')) {
+        return { ...field, readOnly: true, readOnlyReason: '目录类型不能修改' }
+      }
+      return field
+    })
+    return model(definition, fields as readonly OperationField[], values, idempotencyKey,
+      next => buildAdminEventMutationInput(definition, next),
+      next => {
+        const result = validateAdminEventMutationInput(definition, next)
+        return result.ok ? null : result.errors[0]?.message || null
+      })
   }
   if (taskActions.has(action)) {
     const typedAction = action as AdminTaskMutationAction
@@ -177,7 +195,7 @@ export async function createOperationModel(
         : []
       const definition = createTaskAssignmentMutationDefinition(typedAction, targetId, { task: taskSource, assignableMembers, editorOptions: await loadTaskEditorOptions(request) })
       const values = { ...definition.values, ...launch.values }
-      return model(definition, definition.fields, values, idempotencyKey, next => buildTaskAssignmentInput(typedAction, next))
+      return model(definition, definition.fields, values, idempotencyKey, next => buildTaskAssignmentInput(typedAction, next), explainTaskAssignment)
     }
     let source = detail?.source || {}
     if (typedAction === 'mip.admin.tasks.save' && !Array.isArray(source.eligibleLevelCatalog)) {
@@ -198,7 +216,7 @@ export async function createOperationModel(
     const source = typedAction === 'mip.admin.game.teams.members.replace' ? await loadGameMemberSelection(detail?.source || {}, request) : detail?.source || {}
     const definition = createGameMutationDefinition(typedAction, targetId, source)
     const values = { ...definition.values, ...versionValue(launch), ...launch.values }
-    return model(definition, definition.fields, values, idempotencyKey, next => buildGameMutationInput(definition, next))
+    return model(definition, definition.fields, values, idempotencyKey, next => buildGameMutationInput(definition, next), next => explainGameMutation(definition, next))
   }
 
   const typedAction = action as ContentMutationAction
@@ -212,14 +230,26 @@ export async function createOperationModel(
   const trustedTarget = targetId && targetKey ? targetId : ''
   const trustedVersion = positiveInteger(values.expectedVersion)
   const creating = typedAction.endsWith('.save') && !targetId && !detail
+  if (creating && ['sourceKey', 'categoryKey'].some(key => defaultValues(baseFields)[key] !== undefined)) {
+    // Internal codes are generated for the operator; never ask them to invent one.
+    for (const key of ['sourceKey', 'categoryKey']) {
+      if (baseFields.some(field => String(field.key || field.name || '') === key)) {
+        values[key] = `web-${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
+      }
+    }
+  }
   const fields = baseFields.map(field => {
     const key = String(field.key || field.name || '')
     return (trustedTarget && key === targetKey)
       || (trustedVersion !== undefined && key === 'expectedVersion')
       || (creating && (key === targetKey || key === 'expectedVersion'))
+      || (launch.values && key === 'expectedDispatchVersion' && Object.hasOwn(launch.values, 'expectedDispatchVersion'))
+      // First-time scheduling has no dispatch version yet; the field is optional
+      // and a bare integer box would be unanswerable for operators.
+      || (typedAction === 'mip.admin.messageCampaigns.schedule' && key === 'expectedDispatchVersion')
       ? { ...field, hidden: true }
       : typedAction === 'mip.admin.knowledge.contents.review' && key === 'decision' && Array.isArray(record(detail?.source?.content).allowedReviewDecisions) ? { ...field, options: (field.options || []).filter(option => (record(detail?.source?.content).allowedReviewDecisions as unknown[]).includes(typeof option === 'string' ? option : option.value)) }
-      : trustedTarget && ['sourceKey', 'categoryKey'].includes(key) ? { ...field, readOnly: true, readOnlyReason: '已创建的唯一编码不能修改' } : field
+      : (creating && ['sourceKey', 'categoryKey'].includes(key)) || (trustedTarget && ['sourceKey', 'categoryKey'].includes(key)) ? { ...field, hidden: true } : field
   })
   return {
     action: typedAction,
@@ -235,6 +265,18 @@ export async function createOperationModel(
       if (trustedVersion !== undefined) normalized.expectedVersion = trustedVersion
       const result = validateContentMutation(typedAction, normalized)
       return result.ok ? result.input : null
+    },
+    explain: (next) => {
+      try {
+        const normalized = contentFormValues(typedAction, next, idempotencyKey)
+        if (trustedTarget) normalized[targetKey] = trustedTarget
+        if (trustedVersion !== undefined) normalized.expectedVersion = trustedVersion
+        const result = validateContentMutation(typedAction, normalized)
+        return result.ok ? null : Object.values(result.errors)[0] || null
+      }
+      catch {
+        return null
+      }
     },
   }
 }
@@ -441,8 +483,9 @@ function model(
   values: OperationValues,
   idempotencyKey: string,
   buildInput: (values: OperationValues) => AdminRequestInput | null,
+  explain?: (values: OperationValues) => string | null,
 ): OperationModel {
-  return { ...definition, fields, values, idempotencyKey, buildInput }
+  return { ...definition, fields, values, idempotencyKey, buildInput, explain }
 }
 
 function peopleFields(

@@ -235,7 +235,7 @@ describe('admin detail views', () => {
       { action: 'mip.admin.opportunityComments.get', input: { opportunityId: 'opportunity-1' } },
     ])
     assert.equal(detail.title, '寻找品牌合作伙伴')
-    assert.equal(detail.sections.find(section => section.title === '机会信息')?.fields?.find(item => item.label === '合作角色')?.value, '狗策划')
+    assert.equal(detail.sections.find(section => section.title === '机会信息')?.fields?.find(item => item.label === '合作角色')?.value, '策略策划')
     assert.equal(detail.sections.find(section => section.title === '评论与评价')?.rows?.[0].body, '愿意沟通')
     assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[0].action, '发布机会')
     assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[1].action, '更新机会')
@@ -362,7 +362,7 @@ describe('admin detail views', () => {
           submittedAt: '2030-03-01T00:00:00.000Z', rating: 5,
           body: '可引荐客户\n需要项目合作',
           answers: { recommendation: 'RECOMMEND', roleKeys: ['connector', 'visual_designer'], joinIntent: 'LEARN_MORE', explorationMethods: ['COMMUNITY_CHAT'], rosterConsent: 'PRIVATE' },
-          displayFields: { wouldRecommend: '愿意', capabilityRoles: '皮条客、死美工', joinMipIntent: '想先了解', discoverySource: '社群交流', rosterConsent: '仅私密保存' },
+          displayFields: { wouldRecommend: '愿意', capabilityRoles: '商务对接、视觉设计', joinMipIntent: '想先了解', discoverySource: '社群交流', rosterConsent: '仅私密保存' },
         }],
         nextCursor: 'fb-cursor-2',
       },
@@ -376,7 +376,7 @@ describe('admin detail views', () => {
     assert.equal(section?.rows?.[0].nickname, '李四')
     assert.equal(section?.rows?.[0].rating, '5')
     assert.equal(section?.rows?.[0].wouldRecommend, '愿意')
-    assert.equal(section?.rows?.[0].capabilityRoles, '皮条客、死美工')
+    assert.equal(section?.rows?.[0].capabilityRoles, '商务对接、视觉设计')
     assert.equal(section?.rows?.[0].resources, '可引荐客户\n需要项目合作')
     assert.equal(section?.rows?.[0].rosterConsent, '仅私密保存')
     assert.equal(section?.pager?.nextCursor, 'fb-cursor-2')

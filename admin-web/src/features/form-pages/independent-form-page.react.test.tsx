@@ -223,3 +223,19 @@ it('returns to the original content list filters after saving', async () => {
   await waitFor(() => expect(state.navigate).toHaveBeenCalledWith({ to: '/records', search: returnSearch }))
   expect(state.request).toHaveBeenCalledWith(config.action, expect.objectContaining({ title: '当前案例已编辑', expectedVersion: 7 }))
 })
+
+it('tucks advanced optional fields into a collapsed 高级设置 section', async () => {
+  const advancedConfig: IndependentFormPageConfig = { ...config,
+    fields: [
+      ...config.fields,
+      { name: 'latitude', label: '位置纬度', kind: 'number', advanced: true, extra: '用于小程序「导航」按钮' },
+      { name: 'longitude', label: '位置经度', kind: 'number', advanced: true },
+    ],
+    values: { ...config.values, latitude: '', longitude: '' },
+  }
+  render(<QueryClientProvider client={new QueryClient()}><App><IndependentFormPage config={advancedConfig} /></App></QueryClientProvider>)
+  expect(screen.getByText('高级设置（选填）')).toBeTruthy()
+  // forceRender keeps the fields mounted so validation and values still work.
+  expect(screen.getByLabelText('位置纬度')).toBeTruthy()
+  expect(screen.getByLabelText('位置经度')).toBeTruthy()
+})

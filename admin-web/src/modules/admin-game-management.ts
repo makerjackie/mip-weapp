@@ -337,6 +337,43 @@ export function createGameMutationDefinition(
   return definition(action, mutationTitle(action), mutationDescription(action), [], values)
 }
 
+/** Human-readable reasons for game build failures, for the dialog banner. */
+export function explainGameMutation(
+  definitionValue: AdminGameMutationDefinition,
+  values: OperationValues,
+): string | null {
+  const action = definitionValue.action
+  if (action === 'mip.admin.game.teams.members.replace') {
+    const captainRef = text(values.captainRef)
+    const members = Array.isArray(values.memberRefs) ? values.memberRefs.map(String).filter(Boolean) : []
+    if (captainRef && !members.includes(captainRef)) return '队长必须在战队成员名单中，请调整名单或更换队长'
+    return null
+  }
+  if (action === 'mip.admin.game.matches.save') {
+    if (String(values.teamAId || '') && values.teamAId === values.teamBId) return '两支战队不能相同，请重新选择'
+    const weekStart = dateOnly(values.weekStart)
+    const weekEnd = dateOnly(values.weekEnd)
+    if (weekStart && weekEnd) {
+      const days = (new Date(`${weekEnd}T00:00:00Z`).getTime() - new Date(`${weekStart}T00:00:00Z`).getTime()) / 86_400_000
+      if (days !== 6) return '周赛必须为完整一周：周结束日期 = 周开始日期 + 6 天'
+    }
+    return null
+  }
+  if (action === 'mip.admin.game.seasons.save') {
+    const startsAt = text(values.startsAt)
+    const endsAt = text(values.endsAt)
+    if (startsAt && endsAt && new Date(endsAt).getTime() <= new Date(startsAt).getTime()) return '赛季结束时间必须晚于开始时间'
+    return null
+  }
+  if (action === 'mip.admin.game.blindBoxes.catalogs.save') {
+    if (Number(values.drawCostCoin) < 1 || Number(values.dailyDrawLimit) < 1 || Number(values.pityThreshold) < 1) {
+      return '单次游戏币、每日次数上限、保底次数至少为 1'
+    }
+    return null
+  }
+  return null
+}
+
 export function buildGameMutationInput(
   definitionValue: AdminGameMutationDefinition,
   values: OperationValues,
@@ -371,7 +408,7 @@ export function buildGameMutationInput(
 
 function seasonSaveDefinition(targetId: string, season: Record<string, unknown>) {
   return definition('mip.admin.game.seasons.save', targetId ? '编辑赛季' : '新增赛季', '排行与周赛积分始终由服务端经验值事实生成。', [
-    { name: 'seasonKey', label: '赛季标识', kind: 'text', required: true, maxLength: 64 },
+    { name: 'seasonKey', label: '赛季标识', kind: 'text', required: true, maxLength: 64, hidden: true },
     { name: 'name', label: '赛季名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '简介', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'rulesText', label: '规则说明', kind: 'textarea', required: true, maxLength: 4000, wide: true },
@@ -382,17 +419,18 @@ function seasonSaveDefinition(targetId: string, season: Record<string, unknown>)
     { name: 'endsAt', label: '结束时间', kind: 'datetime', required: true },
   ], {
     seasonId: targetId, expectedVersion: positiveInteger(season.version),
-    seasonKey: text(season.seasonKey), name: text(season.name), summary: text(season.summary),
+    seasonKey: text(season.seasonKey) || (targetId ? '' : generatedKey('season')), name: text(season.name), summary: text(season.summary),
     rulesText: text(season.rulesText), rules: season.rules,
     periodKind: text(season.periodKind) || 'HALF_YEAR', startsAt: text(season.startsAt), endsAt: text(season.endsAt),
   })
 }
 
 function teamSaveDefinition(targetId: string, source: Record<string, unknown>, team: Record<string, unknown>) {
-  const branches = records(source.branches)
   return definition('mip.admin.game.teams.save', targetId ? '编辑战队' : '新增战队', '战队成员和比赛积分由独立操作维护。', [
     { name: 'seasonId', label: '赛季 ID', kind: 'text', hidden: true },
-    { name: 'branchId', label: '所属服务器', kind: 'select', options: branches.map(item => ({ value: String(item.id || ''), label: String(item.name || '未命名服务器') })) },
+    // Options come from the branch catalog rather than the season's ranking
+    // snapshot: a fresh branch never appears in rankings yet is a valid choice.
+    { name: 'branchId', label: '所属服务器', kind: 'select', optionsAction: 'mip.admin.branches.list', emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' },
     { name: 'name', label: '战队名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '简介', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'memberLimit', label: '成员上限', kind: 'integer' },
@@ -422,9 +460,9 @@ function matchSaveDefinition(source: Record<string, unknown>) {
   return definition('mip.admin.game.matches.save', '新增周赛', '只配置周次和对阵；比分与胜者由服务端在结算时计算。', [
     { name: 'seasonId', label: '赛季 ID', kind: 'text', hidden: true },
     { name: 'weekStart', label: '周开始日期', kind: 'date', required: true },
-    { name: 'weekEnd', label: '周结束日期', kind: 'date', required: true },
-    { name: 'teamAId', label: '战队 A', kind: 'select', required: true, options },
-    { name: 'teamBId', label: '战队 B', kind: 'select', required: true, options },
+    { name: 'weekEnd', label: '周结束日期', kind: 'date', required: true, extra: '周赛按完整一周配置：周结束日期 = 周开始日期 + 6 天' },
+    { name: 'teamAId', label: '战队 A', kind: 'select', required: true, options, emptyHint: '暂无可选战队。战队在本页战队列表中创建，并需保持启用状态' },
+    { name: 'teamBId', label: '战队 B', kind: 'select', required: true, options, emptyHint: '暂无可选战队。战队在本页战队列表中创建，并需保持启用状态' },
   ], { seasonId: text(record(source.season).id), weekStart: '', weekEnd: '', teamAId: options[0]?.value || '', teamBId: options[1]?.value || '' })
 }
 
@@ -437,17 +475,17 @@ function rankingDefinition(source: Record<string, unknown>) {
 
 function catalogSaveDefinition(targetId: string, catalog: Record<string, unknown>) {
   return definition('mip.admin.game.blindBoxes.catalogs.save', targetId ? '编辑盲盒目录' : '新增盲盒目录', '目录只配置抽取与兑换规则，不模拟真实抽取或奖励发放。', [
-    { name: 'catalogKey', label: '目录标识', kind: 'text', required: true, maxLength: 64 },
+    { name: 'catalogKey', label: '目录标识', kind: 'text', required: true, maxLength: 64, hidden: true },
     { name: 'name', label: '目录名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '简介', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'rulesText', label: '抽取规则', kind: 'textarea', required: true, maxLength: 4000, wide: true },
     { name: 'redemptionRulesText', label: '兑换规则', kind: 'textarea', required: true, maxLength: 4000, wide: true },
-    { name: 'drawCostCoin', label: '单次游戏币', kind: 'integer', required: true },
-    { name: 'dailyDrawLimit', label: '每日次数上限', kind: 'integer', required: true },
-    { name: 'pityThreshold', label: '保底次数', kind: 'integer', required: true },
+    { name: 'drawCostCoin', label: '单次游戏币', kind: 'integer', required: true, min: 1 },
+    { name: 'dailyDrawLimit', label: '每日次数上限', kind: 'integer', required: true, min: 1 },
+    { name: 'pityThreshold', label: '保底次数', kind: 'integer', required: true, min: 1 },
     { name: 'pityMinRarity', label: '保底最低稀有度', kind: 'select', required: true, options: rarityOptions },
   ], {
-    catalogId: targetId, expectedVersion: positiveInteger(catalog.version), catalogKey: text(catalog.catalogKey),
+    catalogId: targetId, expectedVersion: positiveInteger(catalog.version), catalogKey: text(catalog.catalogKey) || (targetId ? '' : generatedKey('box')),
     name: text(catalog.name), summary: text(catalog.summary), rulesText: text(catalog.rulesText),
     redemptionRulesText: text(catalog.redemptionRulesText), drawCostCoin: integer(catalog.drawCostCoin) || 1,
     dailyDrawLimit: integer(catalog.dailyDrawLimit) || 20, pityThreshold: integer(catalog.pityThreshold) || 10,
@@ -458,16 +496,16 @@ function catalogSaveDefinition(targetId: string, catalog: Record<string, unknown
 function cardSaveDefinition(targetId: string, source: Record<string, unknown>, card: Record<string, unknown>) {
   return definition('mip.admin.game.blindBoxes.cards.save', targetId ? '编辑盲盒卡片' : '新增盲盒卡片', '这里只配置卡片权重与库存，不伪造用户中奖或奖励发放。', [
     { name: 'catalogId', label: '目录 ID', kind: 'text', hidden: true },
-    { name: 'cardKey', label: '卡片标识', kind: 'text', required: true, maxLength: 64 },
+    { name: 'cardKey', label: '卡片标识', kind: 'text', required: true, maxLength: 64, hidden: true },
     { name: 'name', label: '卡片名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '说明', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'rarity', label: '稀有度', kind: 'select', required: true, options: rarityOptions },
-    { name: 'weight', label: '权重', kind: 'integer', required: true },
+    { name: 'weight', label: '权重', kind: 'integer', required: true, min: 1 },
     { name: 'stockTotal', label: '总库存', kind: 'integer', required: true },
     { name: 'displayOrder', label: '展示顺序', kind: 'integer', required: true },
   ], {
     cardId: targetId, expectedVersion: positiveInteger(card.version), catalogId: text(card.catalogId) || text(record(source.catalog).id),
-    cardKey: text(card.cardKey), name: text(card.name), summary: text(card.summary), rarity: text(card.rarity) || 'COMMON',
+    cardKey: text(card.cardKey) || (targetId ? '' : generatedKey('card')), name: text(card.name), summary: text(card.summary), rarity: text(card.rarity) || 'COMMON',
     weight: integer(card.weight) || 1, stockTotal: integer(card.stockTotal), displayOrder: integer(card.displayOrder),
   })
 }
@@ -731,6 +769,11 @@ function records(value: unknown) { return Array.isArray(value) ? value.map(recor
 function text(value: unknown) { return typeof value === 'string' ? value.trim() : '' }
 function boundedText(value: unknown, maximum: number, required = false) { const result = text(value); return (!required || result) && result.length <= maximum ? result : '' }
 function enumText(value: unknown, allowed: readonly string[]) { const result = text(value); return allowed.includes(result) ? result : '' }
+/** Generated internal keys share one shape: lowercase prefix + random tail (keyText-compatible). */
+function generatedKey(prefix: string) {
+  return `${prefix}-${crypto.randomUUID().replaceAll('-', '').slice(0, 10)}`
+}
+
 function keyText(value: unknown) { const result = text(value); return /^[a-z][a-z0-9_-]{2,63}$/.test(result) ? result : '' }
 function integer(value: unknown) { const result = Number(value); return Number.isSafeInteger(result) ? result : 0 }
 function positiveInteger(value: unknown) { const result = Number(value); return Number.isSafeInteger(result) && result >= 1 ? result : null }

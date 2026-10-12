@@ -14,12 +14,12 @@ import {
 describe('MIP cooperation card contracts', () => {
   it('keeps the six confirmed role keys and display names', () => {
     expect(cooperationRoles.map(role => [role.key, role.name])).toEqual([
-      ['connector', '皮条客'],
-      ['business_builder', '生意佬'],
-      ['capital_operator', '暴发户'],
-      ['strategist', '狗策划'],
-      ['visual_designer', '死美工'],
-      ['delivery_lead', '老保姆'],
+      ['connector', '商务对接'],
+      ['business_builder', '企业经营者'],
+      ['capital_operator', '资本合作'],
+      ['strategist', '策略策划'],
+      ['visual_designer', '视觉设计'],
+      ['delivery_lead', '交付管理'],
     ])
   })
 

@@ -18,6 +18,7 @@
 
 2026-10-10（chore）：超级案例 projects 存量回填入库为迁移 105（版本 20261009200000，编号避让 MIW-61 已在 staging 应用的迁移 104）：`mip_super_cases.projects` 仍为 NULL 的旧平铺行按 `mip-opportunities-api` normalizeProjects 单项目包装语义补齐为等价 JSON（region 保持缺省、startedOn 统一 YYYY-MM-DD），含回滚脚本；该迁移在仓库入库但**尚未应用到任何环境**，随下次部署窗口按「仓库外逻辑备份 → 应用 → 回读」流程执行。源文件此前以未提交状态遗留在主工作区，本次仅补提交与编号，SQL 语句未改动。
 
+2026-10-12 活动满员策略「允许超售」发布：迁移 107（`mip_events.oversell_enabled`，与候补互斥 CHECK）已应用 staging（备份 manifest 仓库外留存）；`mip-events-api`/`mip-admin-api`/`mip-outbox-worker` 逐个部署并 verified（首轮 API Key STS 被 CAM 拒，改用既有 Device Flow 授权 + local 模式通过）；admin-web BFF 与静态 14/14 重新发布，公开 HTTPS 资产校验通过且线上入口已是本次构建。报名满员策略三选一（候补/拒绝/允许超售）逻辑级 926 项服务端测试与 admin-web 全量门禁通过；真实登录校验与真机报名四场景因缺配置验证账号与真实微信成员身份而 [BLOCKED，边界见证据](evidence/oversell-20261012/README.md)。PAID 活动超售、候补自动转正、超售第二硬上限为明确不做项。
 2026-10-09 后台自定义域名：新入口 [admin.mip.cool](https://admin.mip.cool/#/overview) 已绑定 CloudBase `DIRECT` HTTP 网关，阿里云精确 CNAME 与平台 DNS 状态均通过；同源 `/`、`/api`、`/assets` 路由与精确登录来源已配置。14/14 静态 SHA-256 与同日最新构建一致，入口 `index-CYFT5GuB.js`，真实 HTTPS 67/67、14 读模块与浏览器密码登录/非空概览/桌面手机视口通过。运行源码沿用 `d69d9b73`，未再次部署代码或改变旧入口。绑定时证书到期 2027-01-07 16:59:59（Asia/Shanghai），当前证书及自动续期状态见下一条；Cloudflare 旧别名与旧站仍保留。原生健康探针权限阻塞、微信真机和支付未验收边界继续保留。[绑定证据](evidence/admin-domain-20261009/README.md)及发布 skill 已记录流程与证书预检不等于签发的处理经验。
 
 2026-10-09 后台证书续期：独立 `mip-admin-cert-renewer` 已 Active，下载 ZIP 的四个运行文件与源码指纹 `6acc75f3` 一致；13 个运行测试、10 个部署/权限测试及完整 `pnpm verify:all` 通过。最终 CANARY 实际执行并验证 COS 原子防重复保护，每日北京时间 11:17 的签名 CHECK 已 OPEN，剩余 30 天自动申请免费 FILE 证书。真实订单 `bRTCTBmo` 已由函数完成验证文件发布、CA 签发、网关替换与实际可信 TLS 指纹匹配，状态 **RENEWED / ENABLED**，有效期至 2027-01-07 20:59:59（Asia/Shanghai）。新证书下 14/14 静态字节、7/7 认证/跳转复验和浏览器真实概览通过，后台运行版本保持不变。专用角色、独立 7 天日志、函数错误告警及 SSL 到期订阅均已回读；通知实际接收尚未确认。任务不访问 MySQL，不使用长期凭证；旧平台与原后台健康探针历史阻塞未改变。[实施证据](evidence/admin-cert-renewal-20261009/README.md)及发布 skill 已记录部署、续期和故障恢复。
@@ -41,7 +42,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 56 条小程序路由（用户分包 47 条）、107 个锁定迁移、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 56 条小程序路由（用户分包 47 条）、108 个锁定迁移、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 

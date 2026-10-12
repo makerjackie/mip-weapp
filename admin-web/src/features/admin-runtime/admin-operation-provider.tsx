@@ -28,6 +28,7 @@ interface DialogModel {
   values: OperationValues
   idempotencyKey: string
   buildInput: (values: OperationValues) => AdminRequestInput | null
+  explain?: (values: OperationValues) => string | null
 }
 
 interface OperationContextValue {
@@ -120,7 +121,9 @@ function AdminOperationSession({ children }: { children: ReactNode }) {
     }
     const values = normalizeOperationValues(model.fields, submitted, model.values)
     if (!model.buildInput(values)) {
-      setError('请检查必填项、标识、版本和字段格式')
+      // Surface the validator's own wording when available; never fall back to
+      // jargon like「标识、版本」that a novice operator cannot act on.
+      setError(model.explain?.(values) || '请检查表单填写内容：部分字段缺失或格式不符合要求')
       return
     }
     setModel({ ...model, values })

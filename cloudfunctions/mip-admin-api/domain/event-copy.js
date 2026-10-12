@@ -17,6 +17,7 @@ function eventCopyDraft(source, media, parseJson, tagIds = []) {
     latitude: source.latitude ?? '', longitude: source.longitude ?? '', onlineUrl: source.online_url || '',
     guideUrl: source.guide_url || '',
     capacity: source.capacity ?? '', waitlistEnabled: Number(source.waitlist_enabled) === 1,
+    oversellEnabled: Number(source.oversell_enabled) === 1,
     priceCents: Number(source.price_cents), registrationSchema: parseJson(source.registration_schema_json, []),
   }
 }

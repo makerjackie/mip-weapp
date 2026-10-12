@@ -53,7 +53,7 @@ export function MediaUploadPage({
     <>
       <PageHeader
         title="素材上传"
-        description="上传运营页面使用的图片，并获取可复制的素材 ID"
+        description="上传运营页面使用的图片，上传后可在各表单中直接选择使用"
         eyebrow={demoMode ? '演示模式' : undefined}
       />
       <div className="media-upload-layout">
@@ -138,7 +138,7 @@ export function MediaUploadPage({
                   >{copied ? '已复制' : '复制'}</Button>
                 </Space.Compact>
                 <Typography.Paragraph type="secondary" style={{ marginTop: 12 }}>
-                  保存 Banner、活动、机会、案例或任务时，将素材 ID 填入对应字段。
+                  上传成功后，在 Banner、活动、机会、案例或任务的表单里可直接选用刚上传的图片；素材 ID 仅在个别高级场景需要复制使用。
                 </Typography.Paragraph>
               </section>
             ) : null}

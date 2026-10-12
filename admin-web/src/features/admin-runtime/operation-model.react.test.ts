@@ -334,3 +334,39 @@ describe('admin operation model', () => {
   })
 
 })
+
+describe('dialog error explanations (R1 fixes)', () => {
+  it('surfaces the content validator message instead of a generic banner', async () => {
+    const model = await createOperationModel('mip.admin.messageCampaigns.save', '', null, {}, async <T>() => null as T)
+    const values = { ...model.values, audienceType: 'EXPLICIT', name: '开学提醒', title: '标题', body: '正文' }
+    expect(model.buildInput(values)).toBeNull()
+    expect(model.explain?.(values)).toBe('请选择 1 至 100 个收件人')
+  })
+
+  it('surfaces event validator messages with field-level wording', async () => {
+    const model = await createOperationModel('mip.admin.events.save', '', null, {}, async <T>() => null as T)
+    const values = {
+      ...model.values, accessType: 'PAID', priceCents: '0', title: '活动', description: '介绍',
+      startsAt: '2030-03-14T10:00:00+08:00', endsAt: '2030-03-14T12:00:00+08:00', venueName: '会场',
+    }
+    expect(model.explain?.(values)).toBe('付费活动必须填写大于 0 的金额（元）')
+  })
+
+  it('hides the dispatch version on first-time scheduling', async () => {
+    const model = await createOperationModel('mip.admin.messageCampaigns.schedule', 'campaign-1', null, { expectedVersion: 2 }, async <T>() => null as T)
+    expect(model.fields.find(field => field.key === 'expectedDispatchVersion')?.hidden).toBe(true)
+  })
+})
+
+describe('R2 explain wiring', () => {
+  it('routes people, task, and game dialog failures through their human explainers', async () => {
+    const people = await createOperationModel('mip.admin.adminAccounts.create', '', null, {}, async <T>() => null as T)
+    expect(people.explain?.({ loginAccount: '张三' })).toBe('登录账号需为 3–64 位英文字母、数字或 . _ - 组合（不支持中文或空格）')
+
+    const task = await createOperationModel('mip.admin.tasks.assign', 'task-1', null, {}, async <T>() => ({}) as T)
+    expect(task.explain?.({ assignMode: 'batch' })).toBe('请至少选择一类接收对象：成员、角色、服务器或标签')
+
+    const game = await createOperationModel('mip.admin.game.matches.save', '', null, {}, async <T>() => null as T)
+    expect(game.explain?.({ teamAId: 'team-a', teamBId: 'team-a', weekStart: '2030-01-03', weekEnd: '2030-01-09' })).toBe('两支战队不能相同，请重新选择')
+  })
+})

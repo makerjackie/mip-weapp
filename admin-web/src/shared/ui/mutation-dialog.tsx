@@ -1,6 +1,6 @@
 import { Alert, Form, Modal } from 'antd'
 import { useId } from 'react'
-import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
+import { fieldsControlledBy, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
 import { OperationFields, toFormValues } from './operation-fields'
 import { OVERLAY_Z_INDEX } from './overlay-z-index'
 
@@ -38,7 +38,17 @@ export function MutationDialog({ open, title, description, fields, values, loadi
       afterOpenChange={(next) => { if (next) form.setFieldsValue(toFormValues(fields, values)) }}
     >
       <p className="mutation-description">{description}</p>
-      <Form name={`mutation-${formName}`} form={form} layout="vertical" initialValues={toFormValues(fields, values)} disabled={loading}>
+      <Form name={`mutation-${formName}`} form={form} layout="vertical" initialValues={toFormValues(fields, values)} disabled={loading}
+        onValuesChange={(changed) => {
+          // A selection made under one controlling value (for example an event
+          // picked under 关联类型=活动) is meaningless after that value changes;
+          // reset the dependent pickers instead of submitting a mismatched id.
+          for (const controller of Object.keys(changed)) {
+            for (const dependent of fieldsControlledBy(fields, controller)) {
+              form.setFieldValue(dependent, undefined)
+            }
+          }
+        }}>
         <div className="mutation-grid"><OperationFields fields={fields} form={form} /></div>
       </Form>
       {error ? <Alert type="error" showIcon title={error} description="请求结果不确定时，请先刷新并核对服务端记录。" /> : null}

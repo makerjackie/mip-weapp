@@ -761,13 +761,14 @@ async function loadUserContentDetail(reference: string, request: AdminDetailRequ
       title: '案例内容',
       fields: fields([
         ['项目名称', text(item.projectName)],
-        ['案例摘要', text(item.summary)],
+        // 字段名对齐小程序「我的案例」详情页的展示文案
+        ['一句话描述案例', text(item.summary)],
         ['项目时间', [text(item.startedOn, ''), text(item.endedOn, '')].filter(Boolean).join(' — ') || '—'],
-        ['项目责任', text(item.responsibility)],
-        ['城市', text(item.cityLabel)],
+        ['担任职责', text(item.responsibility)],
+        ['主营城市', text(item.cityLabel)],
         ['行业', text(item.industryLabel)],
-        ['案例类型', text(item.caseType)],
-        ['案例说明', text(item.description)],
+        ['项目类型', text(item.caseType)],
+        ['项目说明', text(item.description)],
         ['案例素材', numberText(records(item.media).length)],
       ]),
     })
@@ -997,7 +998,7 @@ const codeLabels: Record<string, string> = {
   BRANCH_ADMIN: '服务器管理员', EVENT_OWNER: '活动负责人', EVENT_MANAGER: '活动管理员', EVENT_STAFF: '活动工作人员',
   PENDING_REVIEW: '待审核', WAITLISTED: '候补', PAYMENT_PENDING: '待支付', REGISTERED: '已报名', CANCELLATION_PENDING: '取消处理中', REJECTED: '已拒绝', ATTENDED: '已签到', ABNORMAL: '异常',
   ORDER_CREATED: '订单创建', PAYMENT_CONFIRMED: '支付确认', ORDER_CLOSED: '订单关闭', REFUND_CREATED: '退款创建', REFUND_COMPLETED: '退款完成',
-  connector: '皮条客', business_builder: '生意佬', capital_operator: '暴发户', strategist: '狗策划', visual_designer: '死美工', delivery_lead: '老保姆',
+  connector: '商务对接', business_builder: '企业经营者', capital_operator: '资本合作', strategist: '策略策划', visual_designer: '视觉设计', delivery_lead: '交付管理',
   COMMENT: '评论', REVIEW: '项目评价', HIDDEN: '已隐藏', APPROVED: '已通过',
   SPAM: '垃圾信息', HARASSMENT: '骚扰行为', FRAUD: '欺诈风险', INAPPROPRIATE_CONTENT: '不当内容', IMPERSONATION: '冒充他人', OTHER: '其他问题',
   'admin.opportunities.create': '创建机会', 'admin.opportunities.update': '更新机会', 'admin.opportunities.publish': '发布机会',

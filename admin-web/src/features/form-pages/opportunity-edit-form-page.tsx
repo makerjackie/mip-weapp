@@ -28,7 +28,6 @@ export function OpportunityEditFormPage() {
         ...(key === 'ownerUserId' ? { remoteUserSearch: true, userSearchAction: optionsAction } : {}),
         ...(key === 'branchId' ? { optionsAction, optionsKey: 'branches' } : {}),
         ...(key === 'tagIds' ? { kind: 'multi-select', optionsAction, optionsKey: 'tags' } : {}),
-        ...(key === 'roleKeys' ? { options: [{ value: 'connector', label: '皮条客' }, { value: 'business_builder', label: '生意佬' }, { value: 'capital_operator', label: '暴发户' }, { value: 'strategist', label: '狗策划' }, { value: 'visual_designer', label: '死美工' }, { value: 'delivery_lead', label: '老保姆' }] } : {}),
         ...(['minAmountCents', 'maxAmountCents'].includes(key) ? { kind: 'money', valueScale: 1000000, label: key === 'minAmountCents' ? '最低价值（万元）' : '最高价值（万元）' } : {}),
         ...(key === 'locations' ? { kind: 'commercial-locations', fields: undefined, required: false } : {}),
       }

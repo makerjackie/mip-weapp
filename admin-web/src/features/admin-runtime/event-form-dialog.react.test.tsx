@@ -1,5 +1,4 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createAdminEventMutationDefinition, buildEventMutationInput } from '../../modules/admin-event-mutation-forms'
 import { normalizeOperationValues } from '../../modules/admin-operation-ui'
@@ -7,7 +6,7 @@ import { MutationDialog } from '../../shared/ui/mutation-dialog'
 import { DetailDrawer } from '../../shared/ui/detail-drawer'
 import { createOperationModel } from './operation-model'
 const session = vi.hoisted(() => ({ request: async () => ({ items: [], nextCursor: null }) }))
-vi.mock('../../app/session-provider', () => ({ useAdminSession: () => session }))
+vi.mock('../../app/session-provider', () => ({ useAdminSession: () => session, useOptionalSession: () => null }))
 
 afterEach(cleanup)
 
@@ -74,26 +73,26 @@ describe('event form submission through the actual dialog', () => {
       title: '活动全流程验证', summary: '现场交流', description: '一起交流产品想法',
       venueName: '交流室', cityName: '深圳', capacity: 20, accessType: 'FREE',
       startsAt: '2030-09-20T02:00:00.000Z', endsAt: '2030-09-20T04:00:00.000Z',
-      registrationSchema: [{ ...values.registrationSchema[0], maxLength: 120 }],
+      // 报名字段编辑入口已下线：预置的已有配置必须原样保留提交，不被清空
+      registrationSchema: values.registrationSchema,
     } })
   })
 
-  it('edits registration fields without exposing raw JSON', async () => {
+  it('keeps the stored registration schema when the editor entry is removed', async () => {
     const definition = createAdminEventMutationDefinition('mip.admin.events.save', '')
-    const values = { ...definition.values, title: '活动全流程验证', summary: '现场交流', description: '一起交流产品想法', venueName: '交流室', cityName: '深圳', startsAt: '2030-09-20T10:00:00+08:00', endsAt: '2030-09-20T12:00:00+08:00' }
+    const stored = [{ key: 'role', label: '参与身份', type: 'TEXT', required: true }]
+    const values = { ...definition.values, title: '活动', summary: '摘要', description: '介绍', startsAt: '2030-09-20T10:00:00+08:00', endsAt: '2030-09-20T12:00:00+08:00', venueName: '交流室', registrationSchema: stored }
     const submitted = vi.fn()
     render(<MutationDialog open title="创建活动" description="" fields={definition.fields}
       values={values} onCancel={() => {}} onSubmit={(form) => submitted(normalizeOperationValues(definition.fields, form, values))} />)
-    fireEvent.click(screen.getByRole('button', { name: '添加报名字段' }))
-    fireEvent.change(screen.getByLabelText('字段 1 名称'), { target: { value: '参与身份' } })
-    fireEvent.mouseDown(screen.getByLabelText('字段 1 类型'))
-    fireEvent.click(await screen.findByText('单选', { selector: '.ant-select-item-option-content' }))
-    await userEvent.type(screen.getByLabelText('字段 1 选项'), '成员,嘉宾')
-    fireEvent.click(screen.getByRole('checkbox', { name: '必填' }))
+    // 编辑入口已下线：表单上不再出现「添加报名字段」，也看不到编辑器
+    expect(screen.queryByRole('button', { name: '添加报名字段' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
-    await waitFor(() => expect(submitted).toHaveBeenCalledTimes(1))
-    expect(submitted.mock.calls[0]?.[0].registrationSchema).toEqual([
-      { key: expect.stringMatching(/^field_[a-f0-9]{32}$/), label: '参与身份', type: 'SELECT', required: true, options: ['成员', '嘉宾'] },
-    ])
+    await waitFor(() => {
+      const errors = [...document.querySelectorAll('.ant-form-item-explain-error')].map(e => e.textContent)
+      if (errors.length) throw new Error(`表单校验未通过: ${errors.join(' | ')}`)
+      expect(submitted).toHaveBeenCalledTimes(1)
+    })
+    expect(submitted.mock.calls[0]?.[0].registrationSchema).toEqual(stored)
   })
 })

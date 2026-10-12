@@ -36,6 +36,29 @@ describe('MIP event registration rules', () => {
     assert.equal(decideRegistration({ event: event({ access_type: 'PAID' }), userKind: 'GUEST', capacityCount: 0, activeHoldCount: 0, now }), 'PAYMENT_PENDING')
   })
 
+  it('keeps accepting registrations past capacity when oversell is enabled', () => {
+    assert.equal(
+      decideRegistration({ event: event({ capacity: 1, oversell_enabled: 1 }), userKind: 'GUEST', capacityCount: 1, activeHoldCount: 0, now }),
+      'REGISTERED',
+    )
+    assert.equal(
+      decideRegistration({ event: event({ capacity: 1, oversell_enabled: 1, registration_policy: 'APPROVAL' }), userKind: 'GUEST', capacityCount: 3, activeHoldCount: 2, now }),
+      'PENDING_REVIEW',
+    )
+    // 候补优先级高于超售：两者互斥由写入层保证，判定层候补开关存在时仍走候补
+    assert.equal(
+      decideRegistration({ event: event({ capacity: 1, waitlist_enabled: 1, oversell_enabled: 1 }), userKind: 'GUEST', capacityCount: 1, activeHoldCount: 0, now }),
+      'WAITLISTED',
+    )
+  })
+
+  it('still rejects paid events past capacity even when oversell is enabled', () => {
+    assert.throws(
+      () => decideRegistration({ event: event({ access_type: 'PAID', capacity: 1, oversell_enabled: 1 }), userKind: 'GUEST', capacityCount: 1, activeHoldCount: 0, now }),
+      error => error.code === 'CONFLICT',
+    )
+  })
+
   it('rejects a guest from a player-only event', () => {
     assert.throws(
       () => decideRegistration({ event: event({ access_type: 'MEMBER_INCLUDED' }), userKind: 'GUEST', capacityCount: 0, activeHoldCount: 0, now }),

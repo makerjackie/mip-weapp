@@ -24,6 +24,7 @@ export type AdminEventMutationAction = EventMutationAction
 export type EventMutationFieldKind =
   | 'text'
   | 'textarea'
+  | 'rich-text'
   | 'number'
   | 'select'
   | 'multi-select'
@@ -34,6 +35,7 @@ export type EventMutationFieldKind =
   | 'tags'
   | 'json'
   | 'registration-schema'
+  | 'money'
 
 export interface EventMutationFieldOption {
   value: string
@@ -58,6 +60,22 @@ export interface EventMutationFieldConfig {
   /** Renders a session-backed catalog select loaded from this query action. */
   optionsAction?: string
   optionsInput?: Record<string, unknown>
+  optionsValueKey?: string
+  optionsKey?: string
+  /** Shows the control only when another field has the given value. */
+  visibleWhen?: { path: string, value: string | boolean | readonly (string | boolean)[] }
+  /** Marks the field required only when another field holds one of the given values. */
+  requiredWhen?: { path: string, values: readonly string[] }
+  /** Input placeholder shown inside the control. */
+  placeholder?: string
+  /** Helper text under the control explaining the value's origin. */
+  extra?: string
+  /** Empty-catalog hint telling operators where options come from. */
+  emptyHint?: string
+  /** Tucks the field into the collapsed「高级设置」section. */
+  advanced?: boolean
+  /** Money unit scale: 100 = cents, 1_000_000 = 万元. */
+  valueScale?: number
 }
 
 export interface EventMutationActionConfig {
@@ -84,36 +102,38 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'eventId', label: '活动标识', kind: 'text', hidden: true },
   { key: 'expectedVersion', label: '记录版本', kind: 'number', hidden: true },
   { key: 'scopeType', label: '活动范围', kind: 'select', options: [option('PLATFORM', '平台'), option('BRANCH', '服务器')] },
-  { key: 'branchId', label: '服务器标识', kind: 'text' },
-  { key: 'title', label: '活动名称', kind: 'text', required: true, maxLength: 120 },
-  { key: 'summary', label: '活动摘要', kind: 'textarea', required: true, maxLength: 300 },
-  { key: 'description', label: '活动介绍', kind: 'textarea', required: true, maxLength: 20_000 },
+  { key: 'branchId', label: '服务器', kind: 'text', visibleWhen: { path: 'scopeType', value: 'BRANCH' }, requiredWhen: { path: 'scopeType', values: ['BRANCH'] }, optionsAction: 'mip.admin.branches.list', optionsInput: { purpose: 'EVENT_EDIT' }, emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' },
+  { key: 'title', label: '活动名称', kind: 'text', required: true, maxLength: 120, placeholder: '如：周末城市漫步·第 3 期' },
+  { key: 'summary', label: '活动摘要', kind: 'textarea', required: false, maxLength: 300, placeholder: '一句话介绍活动（选填）', extra: '选填。不填时将自动截取活动介绍的开头，小程序列表不直接展示摘要' },
+  { key: 'description', label: '活动介绍', kind: 'rich-text', required: true, maxLength: 20_000, placeholder: '介绍活动亮点、流程与注意事项；可用「# 大标题」「- 列表」，支持插入图片' },
   { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list', assetPurpose: 'EVENT_CONTENT' },
-  { key: 'organizerIntroduction', label: '主办方介绍', kind: 'textarea', maxLength: 20_000 },
-  { key: 'notices', label: '活动说明', kind: 'textarea', maxLength: 5_000 },
+  { key: 'organizerIntroduction', label: '主办方介绍', kind: 'rich-text', maxLength: 20_000, placeholder: '介绍主办方或主理人背景；支持标题、列表与插图' },
+  { key: 'notices', label: '活动说明', kind: 'rich-text', maxLength: 5_000, placeholder: '报名须知、注意事项等；支持标题、列表与插图' },
   { key: 'coverAssetId', label: '活动封面', kind: 'asset', assetPurpose: 'EVENT_COVER' },
-  { key: 'eventTypeKey', label: '活动类型标识', kind: 'text', maxLength: 64 },
-  { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true } },
+  { key: 'eventTypeKey', label: '活动类型', kind: 'text', maxLength: 64, optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TYPE', selectable: true }, optionsValueKey: 'key', emptyHint: '暂无可选活动类型。可在「活动」页的「新建活动目录」中添加类型；不选择时默认为「活动」' },
+  { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true }, emptyHint: '暂无可选标签。可在「活动」页的「新建活动目录」中添加标签' },
   { key: 'eventMode', label: '活动方式', kind: 'select', options: [option('OFFLINE', '线下'), option('ONLINE', '线上'), option('HYBRID', '混合')] },
   { key: 'accessType', label: '收费类型', kind: 'select', options: [option('FREE', '免费'), option('MEMBER_INCLUDED', '会员权益'), option('PAID', '付费')] },
   { key: 'registrationPolicy', label: '报名方式', kind: 'select', options: [option('AUTO', '自动确认'), option('APPROVAL', '审核确认')] },
   { key: 'startsAt', label: '开始时间', kind: 'datetime', required: true },
   { key: 'endsAt', label: '结束时间', kind: 'datetime', required: true },
-  { key: 'registrationDeadline', label: '报名截止时间', kind: 'datetime' },
-  { key: 'cancellationDeadline', label: '取消截止时间', kind: 'datetime' },
-  { key: 'venueName', label: '活动地点', kind: 'text', maxLength: 160 },
-  { key: 'address', label: '详细地址', kind: 'text', maxLength: 300 },
-  { key: 'cityName', label: '城市', kind: 'text', maxLength: 80 },
-  { key: 'latitude', label: '纬度', kind: 'number' },
-  { key: 'longitude', label: '经度', kind: 'number' },
-  { key: 'onlineUrl', label: '线上地址', kind: 'text', maxLength: 1_024 },
-  { key: 'guideUrl', label: '路线指引链接', kind: 'text', maxLength: 1_024 },
-  { key: 'capacity', label: '活动名额', kind: 'number' },
-  { key: 'waitlistEnabled', label: '候补报名', kind: 'checkbox' },
-  { key: 'priceCents', label: '金额（分）', kind: 'number' },
-  // The service accepts this typed array; the shared dialog renders a small editor
-  // so edits preserve fields without asking operators to edit raw JSON.
-  { key: 'registrationSchema', label: '报名字段', kind: 'registration-schema', wide: true },
+  { key: 'registrationDeadline', label: '报名截止时间', kind: 'datetime', advanced: true, extra: '选填。不填则报名持续到活动开始' },
+  { key: 'cancellationDeadline', label: '取消截止时间', kind: 'datetime', advanced: true, extra: '选填。在此时间前成员可自主取消报名' },
+  { key: 'venueName', label: '活动地点', kind: 'text', maxLength: 160, requiredWhen: { path: 'eventMode', values: ['OFFLINE', 'HYBRID'] }, placeholder: '如：上海·徐汇 XX 空间' },
+  { key: 'address', label: '详细地址', kind: 'text', maxLength: 300, placeholder: '街道门牌号，方便成员找路' },
+  { key: 'cityName', label: '城市', kind: 'text', maxLength: 80, placeholder: '如：上海' },
+  { key: 'latitude', label: '位置纬度', kind: 'number', advanced: true, extra: '选填，用于小程序活动详情页的「导航」按钮（打开地图）。获取方式：微信里打开该位置卡片，或在高德/腾讯地图搜索地点后复制坐标；须与经度成对填写。示例：31.230416' },
+  { key: 'longitude', label: '位置经度', kind: 'number', advanced: true, extra: '选填，与纬度成对填写。示例：121.473701' },
+  { key: 'onlineUrl', label: '线上地址', kind: 'text', maxLength: 1_024, visibleWhen: { path: 'eventMode', value: ['ONLINE', 'HYBRID'] }, placeholder: 'https:// 开头的直播/会议链接' },
+  { key: 'guideUrl', label: '路线指引链接', kind: 'text', maxLength: 1_024, advanced: true, placeholder: 'https:// 开头，成员点击可查看路线说明' },
+  { key: 'capacity', label: '活动名额', kind: 'number', placeholder: '留空表示不限名额' },
+  { key: 'waitlistEnabled', label: '满员进入候补', kind: 'checkbox', extra: '名额报满后，新报名自动进入候补名单（不勾选则名额报满后拒绝报名）' },
+  { key: 'oversellEnabled', label: '允许超售', kind: 'checkbox', visibleWhen: { path: 'waitlistEnabled', value: false }, extra: '名额报满后仍继续接受报名（忽略名额上限）；付费活动不支持' },
+  { key: 'priceCents', label: '金额（元）', kind: 'money', valueScale: 100, required: true, visibleWhen: { path: 'accessType', value: 'PAID' }, placeholder: '如 199.00' },
+  // 报名字段编辑入口已按产品决策下线：字段保持 hidden，编辑已有活动时
+  // definition.values 携带服务端已存的配置原样提交，不会被清空；新建活动为空数组
+  // （报名页退回基础字段）。小程序报名页仍消费这份配置。
+  { key: 'registrationSchema', label: '报名字段', kind: 'registration-schema', wide: true, hidden: true },
 ]
 
 const EVENT_MUTATION_CONFIGS = {
@@ -177,7 +197,7 @@ const EVENT_MUTATION_CONFIGS = {
     fields: [
       { key: 'eventId', label: '活动标识', kind: 'text', required: true, hidden: true },
       { key: 'expectedVersion', label: '记录版本', kind: 'number', required: true, hidden: true },
-      { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true } },
+      { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true }, emptyHint: '暂无可选标签。可在「活动」页的「新建活动目录」中添加标签' },
     ],
   },
   'mip.admin.events.catalog.save': {
@@ -186,13 +206,13 @@ const EVENT_MUTATION_CONFIGS = {
     title: '保存活动目录项',
     description: '保存活动类型或标签目录项。新建和编辑使用不同的服务端字段。',
     fields: [
-      { key: 'catalogId', label: '目录项标识', kind: 'text' },
-      { key: 'expectedVersion', label: '记录版本', kind: 'number' },
+      { key: 'catalogId', label: '目录项标识', kind: 'text', hidden: true },
+      { key: 'expectedVersion', label: '记录版本', kind: 'number', hidden: true },
       { key: 'kind', label: '目录类型', kind: 'select', required: true, options: [option('TYPE', '活动类型'), option('TAG', '活动标签')] },
-      { key: 'key', label: '目录标识', kind: 'text', maxLength: 64 },
-      { key: 'name', label: '目录名称', kind: 'text', required: true },
+      { key: 'key', label: '目录标识', kind: 'text', maxLength: 64, hidden: true },
+      { key: 'name', label: '目录名称', kind: 'text', required: true, extra: '标签类名称不能超过 5 个字，类型类不能超过 80 个字' },
       { key: 'description', label: '目录说明', kind: 'textarea', maxLength: 300 },
-      { key: 'sortOrder', label: '目录排序', kind: 'number', required: true },
+      { key: 'sortOrder', label: '目录排序', kind: 'number', required: true, extra: '数字越小越靠前' },
     ],
   },
   'mip.admin.events.catalog.changeStatus': {
@@ -420,16 +440,31 @@ function eventDraft(values: EventMutationValues) {
   const eventMode = enumValue(values.eventMode, '活动方式', ['OFFLINE', 'ONLINE', 'HYBRID'] as const)
   const accessType = enumValue(values.accessType, '收费类型', ['FREE', 'MEMBER_INCLUDED', 'PAID'] as const)
   const registrationPolicy = enumValue(values.registrationPolicy, '报名方式', ['AUTO', 'APPROVAL'] as const)
-  const priceCents = integer(values.priceCents === undefined || values.priceCents === '' ? 0 : values.priceCents, '金额（分）')
+  // A stale price from a previously paid draft must not block a free save: the
+  // control is hidden once accessType leaves PAID, so the operator cannot clear it.
+  const priceCents = accessType === 'PAID'
+    ? integer(values.priceCents === undefined || values.priceCents === '' || values.priceCents === null ? 0 : values.priceCents, '金额')
+    : 0
   const waitlistEnabled = values.waitlistEnabled === true
     || values.waitlistEnabled === 'true'
     || values.waitlistEnabled === 'on'
-  if (accessType === 'PAID' && (priceCents < 1 || registrationPolicy !== 'AUTO' || waitlistEnabled)) {
-    throw new FormValidationError('accessType', '付费活动配置无效')
+  const oversellEnabled = values.oversellEnabled === true
+    || values.oversellEnabled === 'true'
+    || values.oversellEnabled === 'on'
+  if (waitlistEnabled && oversellEnabled) throw new FormValidationError('oversellEnabled', '候补与允许超售不能同时开启，请只选择一种')
+  if (accessType === 'PAID') {
+    if (priceCents < 1) throw new FormValidationError('priceCents', '付费活动必须填写大于 0 的金额（元）')
+    if (registrationPolicy !== 'AUTO') throw new FormValidationError('registrationPolicy', '付费活动仅支持「自动确认」报名方式，请先调整报名方式')
+    if (waitlistEnabled) throw new FormValidationError('waitlistEnabled', '付费活动不支持候补报名，请关闭候补报名')
+    if (oversellEnabled) throw new FormValidationError('oversellEnabled', '付费活动不支持允许超售，请关闭允许超售')
   }
-  if (accessType !== 'PAID' && priceCents !== 0) throw new FormValidationError('priceCents', '免费活动金额必须为零')
   const scopeType = values.scopeType === undefined || values.scopeType === '' ? 'PLATFORM' : enumValue(values.scopeType, '活动范围', ['PLATFORM', 'BRANCH'] as const)
-  const branchId = scopeType === 'BRANCH' ? id(values.branchId, '服务器') : null
+  const branchId = scopeType === 'BRANCH' ? (() => {
+    const candidate = String(values.branchId ?? '').trim()
+    if (!candidate) throw new FormValidationError('branchId', '请选择服务器')
+    if (!identifierPattern.test(candidate)) throw new FormValidationError('branchId', '服务器无效，请重新选择')
+    return candidate
+  })() : null
   const venueName = optionalText(values.venueName, '活动地点', 160)
   const onlineUrl = optionalText(values.onlineUrl, '线上地址', 1_024)
   if ((eventMode === 'OFFLINE' || eventMode === 'HYBRID') && !venueName) throw new FormValidationError('venueName', '请填写活动地点')
@@ -446,12 +481,17 @@ function eventDraft(values: EventMutationValues) {
   if (cancellationDeadline && new Date(cancellationDeadline).getTime() > new Date(startsAt).getTime()) throw new FormValidationError('cancellationDeadline', '取消截止时间不能晚于活动开始时间')
   const registrationSchemaValue = values.registrationSchema === undefined || values.registrationSchema === '' ? [] : values.registrationSchema
   const registrationSchemaResult = registrationSchema(registrationSchemaValue)
+  const description = text(values.description, '活动介绍', 20_000, true)
+  // The mini program never renders summary; derive one from the description so
+  // operators are never forced to write it (server still requires ≤300 chars).
+  const summary = optionalText(values.summary, '活动摘要', 300)
+    || description.replace(/\s+/g, ' ').trim().slice(0, 120)
   return {
     scopeType,
     branchId,
     title: text(values.title, '活动名称', 120, true),
-    summary: text(values.summary, '活动摘要', 300, true),
-    description: text(values.description, '活动介绍', 20_000, true),
+    summary,
+    description,
     contentMedia: eventMedia(values.contentMedia),
     organizerIntroduction: optionalText(values.organizerIntroduction, '主办方介绍', 20_000),
     notices: optionalText(values.notices, '活动说明', 5_000),
@@ -477,6 +517,7 @@ function eventDraft(values: EventMutationValues) {
     guideUrl: guideUrl || null,
     capacity,
     waitlistEnabled,
+    oversellEnabled,
     priceCents,
     registrationSchema: registrationSchemaResult,
     ...(values.tagIds !== undefined ? { tagIds: tagIds(values.tagIds) } : {}),
@@ -515,6 +556,8 @@ function build(action: EventMutationAction, values: EventMutationValues): AdminR
     const kind = enumValue(values.kind, '目录类型', ['TYPE', 'TAG'] as const)
     const catalogId = values.catalogId === undefined || values.catalogId === '' ? '' : id(values.catalogId, '目录项')
     const expectedVersionValue = values.expectedVersion === undefined || values.expectedVersion === '' ? null : version(values.expectedVersion)
+    // The server caps TAG names at 5 chars; name it explicitly instead of a generic format error.
+    if (kind === 'TAG' && String(values.name ?? '').trim().length > 5) throw new FormValidationError('name', '标签名称不能超过 5 个字')
     const name = text(values.name, '目录名称', kind === 'TAG' ? 5 : 80, true)
     const description = optionalText(values.description, '目录说明', 300)
     const sortOrder = integer(values.sortOrder, '目录排序')
@@ -606,9 +649,11 @@ function defaultValues(action: EventMutationAction): EventMutationValues {
         : ''
   }
   if (action === 'mip.admin.events.save') {
+    // eventTypeKey stays empty on create: the draft builder falls back to the
+    // platform default type, and preseeding it showed a ghost「等待目录核对」row.
     Object.assign(values, {
-      scopeType: 'PLATFORM', eventTypeKey: 'general', eventMode: 'OFFLINE', accessType: 'FREE',
-      registrationPolicy: 'AUTO', waitlistEnabled: false, priceCents: '0',
+      scopeType: 'PLATFORM', eventMode: 'OFFLINE', accessType: 'FREE',
+      registrationPolicy: 'AUTO', waitlistEnabled: false, oversellEnabled: false, priceCents: '0',
     })
   }
   return values
@@ -622,12 +667,23 @@ export function createAdminEventMutationDefinition<Action extends AdminEventMuta
 ): AdminEventMutationDefinition<Action> {
   const config = EVENT_MUTATION_CONFIGS[action]
   const source = readVersion(action, idOrEmpty(targetId), readDetailField)
+  const values = defaultValues(action)
+  const fields = config.fields.map(field => ({ ...field, name: field.key }))
+  if (action === 'mip.admin.events.catalog.save') {
+    // The stable key, catalogId and expectedVersion are internal identifiers or
+    // server facts: generated/prefilled from row context, never surfaced. Updates
+    // must not carry the key at all (server rejects it).
+    if (!targetId) {
+      values.key = `web-${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
+      values.sortOrder = 0
+    }
+  }
   return {
     ...config,
     action,
-    fields: config.fields.map(field => ({ ...field, name: field.key })),
+    fields,
     targetId: idOrEmpty(targetId),
-    values: defaultValues(action),
+    values,
     ...(source ? { expectedVersion: source.value, versionSource: source.field } : {}),
   }
 }

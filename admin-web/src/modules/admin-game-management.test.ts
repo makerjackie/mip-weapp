@@ -9,6 +9,7 @@ import {
   loadGameManagementPage,
   loadGameSeasonDetail,
   loadGameTeamDetail,
+  explainGameMutation,
   type AdminGameMutationAction,
 } from './admin-game-management.ts'
 import type { AdminDetailRequest } from './admin-details.ts'
@@ -164,5 +165,67 @@ describe('admin game management', () => {
       const json = JSON.stringify(input)
       assert.equal(/"(?:score|teamAScore|teamBScore|reward)"/.test(json), false, action)
     }
+  })
+})
+
+describe('novice-friendly game form contracts', () => {
+  it('hides internal keys and generates them when creating seasons, catalogs, and cards', () => {
+    const season = createGameMutationDefinition('mip.admin.game.seasons.save', '', {})
+    assert.ok(season.fields.find(field => field.name === 'seasonKey')?.hidden)
+    assert.match(String(season.values.seasonKey), /^season-[a-z0-9]+$/)
+
+    const catalog = createGameMutationDefinition('mip.admin.game.blindBoxes.catalogs.save', '', {})
+    assert.ok(catalog.fields.find(field => field.name === 'catalogKey')?.hidden)
+    assert.match(String(catalog.values.catalogKey), /^box-[a-z0-9]+$/)
+
+    const card = createGameMutationDefinition('mip.admin.game.blindBoxes.cards.save', '', {})
+    assert.ok(card.fields.find(field => field.name === 'cardKey')?.hidden)
+    assert.match(String(card.values.cardKey), /^card-[a-z0-9]+$/)
+  })
+})
+
+describe('R1 novice walkthrough fixes', () => {
+  it('sources team branches from the branch catalog with an empty-state hint', () => {
+    const definition = createGameMutationDefinition('mip.admin.game.teams.save', '', { season })
+    const branchField = definition.fields.find(field => field.name === 'branchId')
+    assert.equal(branchField?.optionsAction, 'mip.admin.branches.list')
+    assert.ok((branchField as { emptyHint?: string }).emptyHint?.includes('新建服务器'))
+  })
+
+  it('explains the full-week rule on the weekly match dates', () => {
+    const definition = createGameMutationDefinition('mip.admin.game.matches.save', '', { season })
+    const weekEnd = definition.fields.find(field => field.name === 'weekEnd')
+    assert.ok((weekEnd as { extra?: string }).extra?.includes('+ 6 天'))
+  })
+})
+
+describe('R2 novice walkthrough fixes', () => {
+  it('bounds blind box catalog numbers to a minimum of one on the control', () => {
+    const definition = createGameMutationDefinition('mip.admin.game.blindBoxes.catalogs.save', '', {})
+    for (const name of ['drawCostCoin', 'dailyDrawLimit', 'pityThreshold']) {
+      assert.equal(definition.fields.find(field => field.name === name)?.min, 1)
+    }
+  })
+
+  it('explains the hidden game rules instead of a generic banner failure', () => {
+    const season = { id: seasonId }
+    const match = createGameMutationDefinition('mip.admin.game.matches.save', '', { season })
+    assert.equal(explainGameMutation(match, { teamAId, teamBId: teamAId, weekStart: '2030-01-03', weekEnd: '2030-01-09' }), '两支战队不能相同，请重新选择')
+    assert.equal(explainGameMutation(match, { teamAId, teamBId, weekStart: '2030-01-03', weekEnd: '2030-01-10' }), '周赛必须为完整一周：周结束日期 = 周开始日期 + 6 天')
+    const catalog = createGameMutationDefinition('mip.admin.game.blindBoxes.catalogs.save', '', {})
+    assert.equal(explainGameMutation(catalog, { drawCostCoin: 0, dailyDrawLimit: 1, pityThreshold: 1 }), '单次游戏币、每日次数上限、保底次数至少为 1')
+    const members = createGameMutationDefinition('mip.admin.game.teams.members.replace', teamAId, { team: { seasonId, version: 3 } })
+    assert.equal(explainGameMutation(members, { memberRefs: ['p1.a'], captainRef: 'p1.b' }), '队长必须在战队成员名单中，请调整名单或更换队长')
+  })
+})
+
+describe('R3 novice walkthrough fixes', () => {
+  it('bounds card weight to a minimum of one and explains season date order', () => {
+    const card = createGameMutationDefinition('mip.admin.game.blindBoxes.cards.save', '', {})
+    assert.equal(card.fields.find(field => field.name === 'weight')?.min, 1)
+    const season = createGameMutationDefinition('mip.admin.game.seasons.save', '', {})
+    assert.equal(explainGameMutation(season, { startsAt: '2030-06-01T00:00:00Z', endsAt: '2030-05-01T00:00:00Z' }), '赛季结束时间必须晚于开始时间')
+    const match = createGameMutationDefinition('mip.admin.game.matches.save', '', { season })
+    assert.ok((match.fields.find(field => field.name === 'teamAId') as { emptyHint?: string }).emptyHint?.includes('战队'))
   })
 })

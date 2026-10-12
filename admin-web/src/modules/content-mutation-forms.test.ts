@@ -5,6 +5,8 @@ import {
   getContentMutationForm,
   validateContentMutation,
 } from './content-mutation-forms.ts'
+import { label } from './admin-read-formatters.ts'
+import { operationFieldVisible } from './admin-operation-ui.ts'
 
 const uuid = '11111111-1111-4111-8111-111111111111'
 const profileRef = `p1.${'a'.repeat(16)}.${'b'.repeat(48)}.${'c'.repeat(22)}`
@@ -114,4 +116,154 @@ it('keeps optional case fields explicit through JSON transport so a minimal draf
   const transported = JSON.parse(JSON.stringify(result.input))
   for (const key of ['startedOn', 'endedOn', 'caseType', 'cityTagId', 'industryTagId', 'coverAssetId']) assert.equal(transported.draft[key], null)
   assert.deepEqual(transported.draft.mediaAssetIds, [])
+})
+
+describe('R1 novice walkthrough fixes', () => {
+  it('shows the recipient picker only for explicit audiences and marks it required there', () => {
+    const fields = getContentMutationForm('mip.admin.messageCampaigns.save').fields
+    const recipientRefs = fields.find(field => field.key === 'recipientRefs')
+    assert.deepEqual(recipientRefs?.visibleWhen, { path: 'audienceType', value: 'EXPLICIT' })
+    assert.equal(recipientRefs?.required, true)
+    // ALL keeps working without recipients: nothing silently blocks the save.
+    assert.equal(validateContentMutation('mip.admin.messageCampaigns.save', {
+      scopeType: 'PLATFORM', audienceType: 'ALL', recipientRefs: [], name: '开学提醒', title: '标题', body: '正文',
+    }).ok, true)
+  })
+
+  it('labels the announcement target type and knowledge moderation in plain Chinese', () => {
+    // String options are localized by the shared renderer via label(); assert both layers.
+    const targetField = getContentMutationForm('mip.admin.announcements.save').fields.find(field => field.key === 'targetType')
+    assert.deepEqual(targetField?.options, ['EVENT', 'OPPORTUNITY'])
+    assert.deepEqual((targetField?.options || []).map(option => label(option)), ['活动', '机会'])
+    const moderation = getContentMutationForm('mip.admin.knowledge.contents.save').fields.find(field => field.key === 'moderationMode')
+    assert.deepEqual((moderation?.options || []).map(option => typeof option === 'string' ? option : option.label), ['自动审核', '人工审核'])
+  })
+
+  it('guides empty knowledge catalogs to their maintenance pages', () => {
+    const content = getContentMutationForm('mip.admin.knowledge.contents.save')
+    const categoryId = content.fields.find(field => field.key === 'categoryId')
+    assert.ok(categoryId?.optionsAction === 'mip.admin.knowledge.list' && (categoryId as { emptyHint?: string }).emptyHint?.includes('新建分类'))
+    const schedule = getContentMutationForm('mip.admin.knowledge.schedules.save')
+    const sourceId = schedule.fields.find(field => field.key === 'sourceId')
+    assert.ok(sourceId?.optionsAction === 'mip.admin.knowledge.list' && (sourceId as { emptyHint?: string }).emptyHint?.includes('新建信息源'))
+  })
+
+  it('marks opportunity title and value summary as required like the server does', () => {
+    const draft = getContentMutationForm('mip.admin.opportunities.save').fields.find(field => field.key === 'draft')
+    const nested = draft?.fields || []
+    assert.equal(nested.find(field => field.key === 'title')?.required, true)
+    assert.equal(nested.find(field => field.key === 'valueSummary')?.required, true)
+  })
+
+  it('bounds ability score inputs to the 0-5 server range', () => {
+    const draft = getContentMutationForm('mip.admin.userContent.save').fields.find(field => field.key === 'draft')
+    const scores = (draft?.fields || []).find(field => field.key === 'abilityScores')
+    for (const score of (scores?.fields || [])) {
+      assert.equal(score.min, 0)
+      assert.equal(score.max, 5)
+    }
+  })
+
+  it('guides badge selection when the badge catalog is empty', () => {
+    const badgeId = getContentMutationForm('mip.admin.badges.grant').fields.find(field => field.key === 'badgeId')
+    assert.ok((badgeId as { emptyHint?: string }).emptyHint?.includes('成长与勋章'))
+  })
+})
+
+describe('R2 novice walkthrough fixes', () => {
+  it('keeps scope linkage safe: stale branch ids never block a platform save', () => {
+    const platform = validateContentMutation('mip.admin.announcements.save', {
+      scopeType: 'PLATFORM', branchId: 'branch-stale', title: '公告', summary: '摘要', body: '正文', visibleFrom: '2030-01-01T00:00:00Z',
+    })
+    assert.equal(platform.ok, true)
+    if (platform.ok) assert.equal('branchId' in platform.input, false)
+
+    const missingBranch = validateContentMutation('mip.admin.announcements.save', {
+      scopeType: 'BRANCH', branchId: '', title: '公告', summary: '摘要', body: '正文', visibleFrom: '2030-01-01T00:00:00Z',
+    })
+    assert.equal(missingBranch.ok === false && missingBranch.errors.form, '请选择服务器')
+  })
+
+  it('marks the scope branch field as linked and conditionally required across content forms', () => {
+    for (const action of ['mip.admin.announcements.save', 'mip.admin.messageCampaigns.save', 'mip.admin.messageTemplates.save'] as const) {
+      const form = getContentMutationForm(action)
+      const flat = [...form.fields, ...(form.fields.find(field => field.key === 'draft')?.fields || [])]
+      const branchId = flat.find(field => field.key === 'branchId')
+      assert.deepEqual(branchId?.visibleWhen, { path: 'scopeType', value: 'BRANCH' }, action)
+      assert.deepEqual(branchId?.requiredWhen, { path: 'scopeType', values: ['BRANCH'] }, action)
+    }
+    // the opportunity form nests scope fields inside the draft group, so its
+    // linkage paths are draft-relative (asserted separately in the R3 suite)
+  })
+
+  it('clearing the announcement association never dead-ends the save', () => {
+    // Type cleared but a stale target id lingers: the association is simply dropped.
+    const cleared = validateContentMutation('mip.admin.announcements.save', {
+      scopeType: 'PLATFORM', title: '公告', summary: '摘要', body: '正文', visibleFrom: '2030-01-01T00:00:00Z',
+      targetType: '', targetId: 'event-stale',
+    })
+    assert.equal(cleared.ok, true)
+    if (cleared.ok) {
+      assert.equal('targetType' in cleared.input, false)
+      assert.equal('targetId' in cleared.input, false)
+    }
+    // Type chosen but no content picked: a plain-language pointer.
+    const unmatched = validateContentMutation('mip.admin.announcements.save', {
+      scopeType: 'PLATFORM', title: '公告', summary: '摘要', body: '正文', visibleFrom: '2030-01-01T00:00:00Z',
+      targetType: 'EVENT', targetId: '',
+    })
+    assert.equal(unmatched.ok === false && unmatched.errors.form, '选择了关联类型后，请选择关联内容，或清空关联类型')
+  })
+
+  it('names the video-account format errors after the field', () => {
+    const result = validateContentMutation('mip.admin.knowledge.contents.save', {
+      categoryId: uuid, contentType: 'PRIVATE_CHANNEL', title: '标题', summary: '摘要',
+      channelFinderUserName: 'https://finder.qq.com/xxx', channelFeedId: 'feed-1',
+      accessType: 'FREE', commentsEnabled: true, moderationMode: 'AUTO',
+    })
+    assert.equal(result.ok === false && result.errors.form.includes('视频号用户名'), true)
+  })
+
+  it('turns the knowledge product content field into a guided catalog pick', () => {
+    const contentId = getContentMutationForm('mip.admin.knowledge.products.save').fields.find(field => field.key === 'contentId') as { optionsAction?: string, emptyHint?: string }
+    assert.equal(contentId.optionsAction, 'mip.admin.knowledge.list')
+    assert.ok(contentId.emptyHint?.includes('新建内容'))
+  })
+})
+
+describe('R3 novice walkthrough fixes', () => {
+  it('resolves the opportunity scope linkage inside the draft group', () => {
+    const draft = getContentMutationForm('mip.admin.opportunities.save').fields.find(field => field.key === 'draft')
+    const branchId = (draft?.fields || []).find(field => field.key === 'branchId')
+    assert.ok(branchId, 'opportunity draft must define branchId')
+    assert.equal(branchId.visibleWhen?.path, 'draft.scopeType')
+    assert.equal(branchId.requiredWhen?.path, 'draft.scopeType')
+    // the nested linkage resolves against draft.scopeType, not the form root
+    assert.equal(operationFieldVisible(branchId, { draft: { scopeType: 'BRANCH' } }), true)
+    assert.equal(operationFieldVisible(branchId, { scopeType: 'BRANCH', draft: { scopeType: 'PLATFORM' } }), false)
+    // top-level scope fields (announcements, messages, templates) keep root paths
+    const announcementBranch = getContentMutationForm('mip.admin.announcements.save').fields.find(field => field.key === 'branchId')
+    assert.equal(announcementBranch?.visibleWhen?.path, 'scopeType')
+  })
+
+  it('still submits a server-scoped opportunity end to end', () => {
+    const result = validateContentMutation('mip.admin.opportunities.save', {
+      draft: {
+        ownerUserId: 'user-1', scopeType: 'BRANCH', branchId: 'branch-1', title: '联名咖啡',
+        valueSummary: '品牌曝光', roleKeys: ['connector'], tagIds: [], commercialTerms: { locations: [] },
+      },
+    })
+    assert.equal(result.ok, true)
+  })
+
+  it('names reversed commercial amounts instead of a generic error', () => {
+    const result = validateContentMutation('mip.admin.opportunities.save', {
+      draft: {
+        ownerUserId: 'user-1', scopeType: 'PLATFORM', title: '联名咖啡', valueSummary: '品牌曝光',
+        roleKeys: ['connector'], tagIds: [],
+        commercialTerms: { minAmountCents: 1_000_000, maxAmountCents: 500_000, locations: [] },
+      },
+    })
+    assert.equal(result.ok === false && result.errors.form, '最低价值不能高于最高价值')
+  })
 })

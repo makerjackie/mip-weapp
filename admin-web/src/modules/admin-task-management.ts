@@ -398,7 +398,7 @@ export function createTaskMutationDefinition(
           label: `${String(item.name || '未命名等级')} · ${numberLabel(item.minimumExperience)} 经验`,
         })).filter(item => identifier(item.value))
       : []
-    return definition(action, targetId ? '编辑任务' : '创建任务', '填写任务内容、经验奖励、参与范围和截止时间。任务模板图片可使用素材上传页返回的素材 ID。', [
+    return definition(action, targetId ? '编辑任务' : '创建任务', '填写任务内容、经验奖励、参与范围和截止时间。任务模板图片可直接上传，成员完成任务时可下载使用。', [
       { name: 'name', label: '任务名称', kind: 'text', required: true, maxLength: 100 },
       { name: 'content', label: '任务内容', kind: 'textarea', required: true, maxLength: 5000, wide: true },
 
@@ -407,15 +407,15 @@ export function createTaskMutationDefinition(
       ] },
       { name: 'attachmentRequired', label: '完成时必须上传附件', kind: 'checkbox', wide: true },
       { name: 'endsAt', label: '截止时间', kind: 'datetime' },
-      { name: 'templateAssetId', label: '任务模板图片', kind: 'text', wide: true, assetPurpose: 'TASK_TEMPLATE' },
-      { name: 'eligibleLevelIds', label: '可参与等级（不选择表示不限）', kind: 'multi-select', options: levelOptions, wide: true },
+      { name: 'templateAssetId', label: '任务模板图片', kind: 'text', wide: true, assetPurpose: 'TASK_TEMPLATE', extra: '选填。上传模板后，成员可在任务详情中下载' },
+      { name: 'eligibleLevelIds', label: '可参与等级（不选择表示不限）', kind: 'multi-select', options: levelOptions, wide: true, emptyHint: '暂无可选等级。等级在「成长与勋章」页的会员配置中维护' },
       { name: 'starLevel', label: '星级', kind: 'select', required: true, options: [1, 2, 3, 4, 5].map(level => ({ value: String(level), label: `${level} 星` })) },
       { name: 'purpose', label: '任务目的', kind: 'textarea', required: true, maxLength: 500, wide: true },
       { name: 'completionCriteria', label: '完成标准', kind: 'textarea', required: true, maxLength: 1000, wide: true },
       { name: 'periodStartAt', label: '周期开始', kind: 'datetime' },
       { name: 'periodEndAt', label: '周期结束', kind: 'datetime' },
-      { name: 'weeklyDeliverAt', label: '周送达时间（HH:mm，北京时间）', kind: 'text', maxLength: 5 },
-      { name: 'assignedOwnerId', label: '任务负责人', kind: 'select', required: true, options: catalogOptions(record(source.editorOptions).owners) },
+      { name: 'weeklyDeliverAt', label: '周送达时间（北京时间）', kind: 'time' },
+      { name: 'assignedOwnerId', label: '任务负责人', kind: 'select', required: true, options: catalogOptions(record(source.editorOptions).owners), emptyHint: '暂无可选负责人。负责人来自有后台权限的账号，可在「权限」页维护' },
       { name: 'applicableServers', label: '适用服务器', kind: 'multi-select', options: catalogOptions(record(source.editorOptions).servers), wide: true },
       { name: 'rewardConfig', label: '奖励配置（奖金线下发放）', kind: 'group', fields: rewardFields(), wide: true },
     ], {
@@ -515,13 +515,13 @@ export function createTaskAssignmentMutationDefinition(
     { name: 'assignMode', label: '派发模式', kind: 'select', required: true, options: [
       { value: 'single', label: '单次派发' }, { value: 'batch', label: '批量派发' }, { value: 'weekly', label: '每周派发' },
     ] },
-    { name: 'recipients', label: '接收成员', kind: 'multi-select', options, wide: true },
+    { name: 'recipients', label: '接收成员', kind: 'multi-select', options, wide: true, extra: '接收成员、角色、服务器、标签至少填写一类' },
     { name: 'roleIds', label: '接收角色', kind: 'multi-select', options: Array.isArray(record(source.editorOptions).roles) ? (record(source.editorOptions).roles as unknown[]).map(record).map(role => ({ value: String(role.id), label: String(role.name) })) : [] },
     { name: 'serverIds', label: '接收服务器', kind: 'multi-select', options: catalogOptions(record(source.editorOptions).servers) },
     { name: 'tagIds', label: '接收标签', kind: 'multi-select', options: catalogOptions(record(source.editorOptions).tags) },
-    { name: 'weeklyDeliverAt', label: '周送达时间（HH:mm，北京时间）', kind: 'text', maxLength: 5, visibleWhen: { path: 'assignMode', value: 'weekly' } },
-    { name: 'weeklyStartAt', label: '周派发开始', kind: 'datetime', visibleWhen: { path: 'assignMode', value: 'weekly' } },
-    { name: 'weeklyEndAt', label: '周派发结束', kind: 'datetime', visibleWhen: { path: 'assignMode', value: 'weekly' } },
+    { name: 'weeklyDeliverAt', label: '周送达时间（北京时间）', kind: 'time', requiredWhen: { path: 'assignMode', values: ['weekly'] }, visibleWhen: { path: 'assignMode', value: 'weekly' } },
+    { name: 'weeklyStartAt', label: '周派发开始', kind: 'datetime', requiredWhen: { path: 'assignMode', values: ['weekly'] }, visibleWhen: { path: 'assignMode', value: 'weekly' } },
+    { name: 'weeklyEndAt', label: '周派发结束', kind: 'datetime', requiredWhen: { path: 'assignMode', values: ['weekly'] }, visibleWhen: { path: 'assignMode', value: 'weekly' } },
   ], {
     taskId: targetId,
     expectedVersion: version,
@@ -623,6 +623,23 @@ export function buildTaskSubmissionInput(
   const input: AdminRequestInput = { submissionId }
   if (remark) input.remark = remark
   return input
+}
+
+/** Human-readable reasons for assignment build failures, for the dialog banner. */
+export function explainTaskAssignment(values: OperationValues): string | null {
+  const assignMode = String(values.assignMode || '')
+  const count = (value: unknown) => Array.isArray(value) ? value.map(String).filter(Boolean).length : 0
+  if (![count(values.recipients), count(values.roleIds), count(values.serverIds), count(values.tagIds)].some(Boolean)) {
+    return '请至少选择一类接收对象：成员、角色、服务器或标签'
+  }
+  if (assignMode === 'weekly') {
+    const weeklyDeliverAt = String(values.weeklyDeliverAt || '').trim()
+    const weeklyStartAt = values.weeklyStartAt
+    const weeklyEndAt = values.weeklyEndAt
+    if (!weeklyDeliverAt || !weeklyStartAt || !weeklyEndAt) return '每周派发需要填写周送达时间、周开始和周结束'
+    if (new Date(String(weeklyEndAt)).getTime() <= new Date(String(weeklyStartAt)).getTime()) return '周派发结束时间必须晚于开始时间'
+  }
+  return null
 }
 
 export function buildTaskAssignmentInput(

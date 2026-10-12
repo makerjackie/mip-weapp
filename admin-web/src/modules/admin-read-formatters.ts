@@ -2,7 +2,7 @@ import type { AdminListQuery, AdminTableColumn, AdminTableRow } from './admin-re
 
 export const labels: Record<string, string> = {
   ACTIVE: '启用', BLOCKED: '已限制', CLOSED: '已关闭', INACTIVE: '停用', REVOKED: '已撤销',
-  PLAYER: '玩家', GUEST: '嘉宾', PLATFORM: '平台', BRANCH: '服务器', EVENT: '活动',
+  PLAYER: '玩家', GUEST: '嘉宾', PLATFORM: '平台', BRANCH: '服务器', EVENT: '活动', OPPORTUNITY: '机会',
   DRAFT: '草稿', READY: '待发布', PUBLISHED: '已发布', UNPUBLISHED: '已下架',
   CANCELLED: '已取消', ENDED: '已结束', ARCHIVED: '已归档', WITHDRAWN: '已撤回',
   CREATED: '待支付', PAYMENT_CREATED: '支付处理中', PAID: '已支付', FAILED: '失败',
@@ -29,9 +29,9 @@ export const labels: Record<string, string> = {
   OUTBOX: '消息队列', PAYMENT: '支付', MEDIA: '媒体', DELIVERY: '投递', AI: 'AI',
   EXCEPTION: '运营异常', DELIVERY_REVIEW: '投递复核',
   CIRCLE: '圆形', DIAMOND: '菱形', HEXAGON: '六边形',
-  connector: '皮条客', business_builder: '生意佬', capital_operator: '暴发户',
-  strategist: '狗策划', visual_designer: '死美工', delivery_lead: '老保姆',
-  DOG_PLANNER: '狗策划', COMMENT: '评论', REVIEW: '项目评价',
+  connector: '商务对接', business_builder: '企业经营者', capital_operator: '资本合作',
+  strategist: '策略策划', visual_designer: '视觉设计', delivery_lead: '交付管理',
+  DOG_PLANNER: '策略策划', COMMENT: '评论', REVIEW: '项目评价',
 }
 
 export const capabilityLabels: Record<string, string> = {

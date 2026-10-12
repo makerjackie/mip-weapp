@@ -208,11 +208,18 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
   }
   else if (route === 'messages') {
     const source = record(view.source)
-    const cancel = messageScheduleCancelAction(record(source.campaign), record(source.dispatch))
+    const campaign = record(source.campaign)
+    const dispatch = record(source.dispatch)
+    const cancel = messageScheduleCancelAction(campaign, dispatch)
+    const campaignVersion = positiveVersion(campaign.version)
+    const dispatchVersion = positiveVersion(dispatch.version)
+    const scheduleOptions = campaignVersion && dispatchVersion
+      ? { expectedVersion: campaignVersion, values: { expectedDispatchVersion: dispatchVersion } }
+      : undefined
     actions.push(
       button('mip.admin.messageCampaigns.save', '编辑消息', id, 'messages.manage'),
       button('mip.admin.messageCampaigns.snapshot', '生成收件人快照', id, 'messages.manage'),
-      button('mip.admin.messageCampaigns.schedule', '设置发送时间', id, 'messages.manage'),
+      button('mip.admin.messageCampaigns.schedule', '设置发送时间', id, 'messages.manage', scheduleOptions),
       cancel ? button(cancel.action, cancel.label, cancel.targetId, 'messages.manage', cancel) : null,
       button('mip.admin.messageCampaigns.publish', '发布消息', id, 'messages.manage'),
       button('mip.admin.messageCampaigns.withdraw', '撤回消息', id, 'messages.manage'),
