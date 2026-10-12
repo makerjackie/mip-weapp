@@ -213,7 +213,9 @@ describe('journey-review WS-PEOPLE · 站内信（J3-04b QI 自拟承接）', ()
     const page = read('src/packages/member/mip-notifications/index.ts')
 
     expect(config.navigationBarTitleText).toBe('站内信')
-    expect(page).toContain(`PROFILE_INTEREST: { key: 'HEART', label: '心动通知'`)
+    expect(page).toContain(`HEART: { key: 'HEART', label: '心动通知'`)
+    expect(page).toContain(`PROFILE_INTEREST: { key: 'INTEREST', label: '感兴趣通知'`)
+    expect(page).toContain(`OPPORTUNITY: { key: 'INTEREST', label: '感兴趣通知'`)
     expect(page).toContain(`EVENT: { key: 'EVENT', label: '活动提醒'`)
     expect(page).toContain(`SYSTEM: { key: 'SYSTEM', label: '系统通知'`)
     expect(page).toContain(`return inboxRowTypes[messageType as InboxMessageType] || inboxRowTypes.SYSTEM`)
@@ -251,7 +253,7 @@ describe('journey-review WS-PEOPLE · 站内信（J3-04b QI 自拟承接）', ()
     inbox.peekInbox.mockReturnValue(undefined)
     inbox.listInbox.mockResolvedValue({
       items: [
-        { id: 'm1', messageType: 'PROFILE_INTEREST', title: '心动', body: '大鹅飞飞 对你心动了，快去看看', createdAt: new Date(now - 3 * 60000).toISOString() },
+        { id: 'm1', messageType: 'HEART', title: '心动', body: '大鹅飞飞 对你心动了，快去看看', createdAt: new Date(now - 3 * 60000).toISOString() },
         { id: 'm2', messageType: 'EVENT', title: '活动', body: '你报名的活动「设计户外过两天再说露营地」即将开始', createdAt: yesterday.toISOString() },
         { id: 'm3', messageType: 'OPERATIONS', title: '系统', body: '欢迎加入 MIP，完善名片让更多伙伴认识你', createdAt: new Date(now - 3 * 86400000).toISOString() },
         // review 补强：相对时间边界——<1 分钟归「刚刚」，无效日期静默为空串（不渲染时间行）。
@@ -276,6 +278,45 @@ describe('journey-review WS-PEOPLE · 站内信（J3-04b QI 自拟承接）', ()
     expect(inbox.markAllRead).toHaveBeenCalledTimes(1)
     expect(instance.data.unreadCount).toBe(0)
     expect(instance.data.items.every(item => item.readAt)).toBe(true)
+  })
+
+  it('buckets opportunity cooperation and profile interest as 感兴趣通知, not 心动通知', async () => {
+    // 客户口径：心动行只来自现场心动票（HEART）；机会合作与档案/机会感兴趣同属「感兴趣通知」。
+    const messaging = await import('../src/modules/mip-messaging/client')
+    const inbox = messaging.mipMessagingModule as unknown as {
+      listInbox: ReturnType<typeof vi.fn>
+      markAllRead: ReturnType<typeof vi.fn>
+      peekInbox: ReturnType<typeof vi.fn>
+    }
+    let definition: Record<string, unknown> & {
+      data: { items: Array<{ rowType: { label: string }, createdText: string, readAt?: string }>, unreadCount: number }
+      setData: (patch: Record<string, unknown>) => void
+      enterInbox: () => Promise<void>
+    }
+    vi.stubGlobal('wx', { stopPullDownRefresh: vi.fn() })
+    vi.stubGlobal('Page', (value: typeof definition) => {
+      definition = value
+    })
+    vi.resetModules()
+    await import('../src/packages/member/mip-notifications/index')
+    vi.unstubAllGlobals()
+    const now = Date.now()
+    inbox.listInbox.mockResolvedValue({
+      items: [
+        { id: 'i1', messageType: 'PROFILE_INTEREST', title: '感兴趣', body: '张三 对你的机会标记了感兴趣', createdAt: new Date(now - 60000).toISOString() },
+        { id: 'i2', messageType: 'OPPORTUNITY', title: '合作', body: '你发布的机会收到新的合作意向。', createdAt: new Date(now - 120000).toISOString() },
+      ],
+      unreadCount: 2,
+      nextCursor: '',
+    })
+    inbox.markAllRead.mockResolvedValue({ readAt: '2026-09-22T00:00:00.000Z' })
+    const instance = Object.create(definition!) as typeof definition
+    instance.data = structuredClone(definition!.data)
+    instance.setData = (patch: Record<string, unknown>) => {
+      Object.assign(instance.data, patch)
+    }
+    await instance.enterInbox()
+    expect(instance.data.items.map(item => item.rowType.label)).toEqual(['感兴趣通知', '感兴趣通知'])
   })
 })
 

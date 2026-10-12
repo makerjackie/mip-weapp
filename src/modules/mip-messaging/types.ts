@@ -9,6 +9,7 @@ export type NotificationChannel
 export type InboxMessageType
   = | 'MEMBERSHIP'
     | 'EVENT'
+    | 'HEART'
     | 'OPPORTUNITY'
     | 'PROFILE_INTEREST'
     | 'GROWTH'

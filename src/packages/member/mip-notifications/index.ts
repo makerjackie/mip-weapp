@@ -3,17 +3,22 @@ import { isTrustedInboxRoute } from '../../../modules/mip-messaging'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 
-// journey-review J3-04b（QI 自拟承接稿，2026-09-21 终审）：站内信三类消息行。
-// 心动通知 = PROFILE_INTEREST；活动提醒 = EVENT；其余类型（含无类型老数据）归入系统通知。
+// journey-review J3-04b（QI 自拟承接稿，2026-09-21 终审）+ 客户口径修正（2026-10-12）：
+// 心动通知 = 活动现场投心动票（messageType HEART，推 HEART_RECEIVED 模板）；
+// 感兴趣通知 = 机会合作意向（OPPORTUNITY）与机会/档案的感兴趣标记（PROFILE_INTEREST），
+//   推送统一走「合作邀请发起提醒」模板；
+// 活动提醒 = EVENT；其余类型（含无类型老数据）归入系统通知。
 interface InboxRowType {
-  key: 'HEART' | 'EVENT' | 'SYSTEM'
+  key: 'HEART' | 'INTEREST' | 'EVENT' | 'SYSTEM'
   label: string
   iconName: string
   iconColor: string
 }
 
 const inboxRowTypes: Record<string, InboxRowType> = {
-  PROFILE_INTEREST: { key: 'HEART', label: '心动通知', iconName: 'heart-filled', iconColor: 'var(--color-brand)' },
+  HEART: { key: 'HEART', label: '心动通知', iconName: 'heart-filled', iconColor: 'var(--color-brand)' },
+  PROFILE_INTEREST: { key: 'INTEREST', label: '感兴趣通知', iconName: 'star', iconColor: 'var(--color-brand)' },
+  OPPORTUNITY: { key: 'INTEREST', label: '感兴趣通知', iconName: 'star', iconColor: 'var(--color-brand)' },
   EVENT: { key: 'EVENT', label: '活动提醒', iconName: 'calendar', iconColor: 'var(--color-brand)' },
   SYSTEM: { key: 'SYSTEM', label: '系统通知', iconName: 'notification', iconColor: 'var(--color-muted)' },
 }

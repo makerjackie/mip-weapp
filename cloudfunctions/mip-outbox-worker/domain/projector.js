@@ -702,7 +702,9 @@ async function projectHeart(database, event) {
   }
   return projection([
     message(event, row.target_user_id, 'heart', {
-      messageType: 'EVENT',
+      // 心动语义只指活动现场投心动票（HEART_RECEIVED 模板）；站内信行类型 HEART，
+      // 与机会/档案的「感兴趣通知」（PROFILE_INTEREST/OPPORTUNITY）区分。
+      messageType: 'HEART',
       title: '活动心动选择',
       body: '活动中有新的心动选择。',
       targetType: 'EVENT',
@@ -1094,17 +1096,24 @@ async function projectInterest(database, event) {
       external: row.source_type === 'OPPORTUNITY'
         // MIW-67：机会来源的感兴趣改走发布人订阅额度（OPPORTUNITY_NOTICE）。
         ? opportunityNoticeExternal(row.opportunity_title, '收到新的感兴趣标记', row.updated_at, row.actor_nickname)
-        : row.source_type === 'PROFILE'
-          ? {
-              channel: 'WECHAT_SUBSCRIPTION',
-              templateKey: 'PROFILE_INTEREST',
-              fields: { title: label[1], status: '有人对你感兴趣', receivedAt: notificationDateTime(row.updated_at) },
-            }
-          : {
-              channel: 'WECHAT_CUSTOMER_SERVICE',
-              templateKey: 'CUSTOMER_SERVICE_TEXT',
-              fields: { content: `${label[1]}，请在小程序内查看。` },
-            },
+          : row.source_type === 'PROFILE'
+            ? {
+                // 客户口径：对嘉宾/玩家档案点感兴趣同属「合作邀请发起提醒」模板族，
+                // 不再使用未配置的 PROFILE_INTEREST 模板键（此前静默丢弃只留站内信）。
+                channel: 'WECHAT_SUBSCRIPTION',
+                templateKey: 'OPPORTUNITY_NOTICE',
+                fields: {
+                  title: '个人档案',
+                  initiator: boundedText(row.actor_nickname, 100) || '有人',
+                  status: '对你的档案标记了感兴趣',
+                  receivedAt: notificationDateTime(row.updated_at),
+                },
+              }
+            : {
+                channel: 'WECHAT_CUSTOMER_SERVICE',
+                templateKey: 'CUSTOMER_SERVICE_TEXT',
+                fields: { content: `${label[1]}，请在小程序内查看。` },
+              },
     }),
   ], [], 'PROJECTED')
 }

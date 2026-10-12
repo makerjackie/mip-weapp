@@ -161,6 +161,8 @@ describe('outbox event projector', () => {
         version: 3,
       }),
     }, event)
+    // 心动语义只指现场心动票：站内信行类型 HEART，推送仍走 HEART_RECEIVED 模板。
+    assert.equal(result.notifications[0].messageType, 'HEART')
     assert.deepEqual(result.notifications[0].external, {
       channel: 'WECHAT_SUBSCRIPTION',
       templateKey: 'HEART_RECEIVED',

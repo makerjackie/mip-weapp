@@ -5,6 +5,7 @@ const { buildTarget } = require('./routes')
 const messageTypes = new Set([
   'MEMBERSHIP',
   'EVENT',
+  'HEART',
   'OPPORTUNITY',
   'PROFILE_INTEREST',
   'GROWTH',

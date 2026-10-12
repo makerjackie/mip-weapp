@@ -5,7 +5,6 @@ const templateFieldContracts = Object.freeze({
   EVENT_REMINDER: Object.freeze(new Set(['title', 'startsAt', 'description', 'location'])),
   CHECKIN_RESULT: Object.freeze(new Set(['title', 'checkedAt', 'participationMethod', 'status'])),
   HEART_RECEIVED: Object.freeze(new Set(['title', 'status', 'receivedAt'])),
-  PROFILE_INTEREST: Object.freeze(new Set(['title', 'status', 'receivedAt'])),
   OPPORTUNITY_NOTICE: Object.freeze(new Set(['title', 'initiator', 'status', 'receivedAt'])),
 })
 

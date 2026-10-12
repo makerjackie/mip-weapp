@@ -136,9 +136,15 @@ describe('profile interest outbox projection', () => {
     assert.equal(result.notifications.length, 1)
     assert.equal(result.notifications[0].recipientUserId, TARGET_ID)
     assert.equal(result.notifications[0].title, '有人对你感兴趣')
+    // 客户口径：档案感兴趣同属「合作邀请发起提醒」模板族，不再使用 PROFILE_INTEREST 模板键。
     assert.deepEqual(result.notifications[0].external, {
-      channel: 'WECHAT_SUBSCRIPTION', templateKey: 'PROFILE_INTEREST',
-      fields: { title: '有人对你感兴趣', status: '有人对你感兴趣', receivedAt: '2026-09-22 10:30' },
+      channel: 'WECHAT_SUBSCRIPTION', templateKey: 'OPPORTUNITY_NOTICE',
+      fields: {
+        title: '个人档案',
+        initiator: '张三',
+        status: '对你的档案标记了感兴趣',
+        receivedAt: '2026-09-22 10:30',
+      },
     })
     assert.equal(result.notifications[0].dedupeKey, `outbox:${OUTBOX_ID}:profile-interest`)
     assert.equal(JSON.stringify(result).includes('attacker-controlled'), false)
