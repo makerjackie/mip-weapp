@@ -39,7 +39,7 @@ describe('MIP event calendar dates', () => {
     assert.match(sql, /e\.ends_at >= \?/)
     assert.match(sql, /e\.starts_at >= \?/)
     assert.match(sql, /e\.starts_at < \?/)
-    assert.match(sql, /e\.city_name = \?/)
+    assert.match(sql, /\(e\.city_name = \? OR e\.city_name IS NULL OR e\.city_name = ''\)/)
     assert.match(sql, /DATE_ADD\(e\.starts_at, INTERVAL 8 HOUR\)/)
     assert.match(sql, /ORDER BY event_date ASC/)
     assert.deepEqual(params, [

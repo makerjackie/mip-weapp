@@ -9,6 +9,7 @@ import { requestEntrySubscription } from '../../../../modules/mip-messaging/entr
 import { GUIDE_EVENT_REGISTER_KEY } from '../../../../modules/mip-messaging/guide-policy'
 import { showErrorFeedback } from '../../../../platform/feedback/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
+import { clearPageMedia, updatePageMedia } from '../../../../platform/storage/component-media'
 import { formatChineseDateTime, formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
 
 interface RegistrationFieldView extends RegistrationField {
@@ -236,6 +237,7 @@ Page({
 
   onUnload() {
     this.persistDraft()
+    clearPageMedia(this)
   },
 
   persistDraft() {
@@ -303,6 +305,8 @@ Page({
         ...registrationPriceParts(event),
         ...orderDerived(event, editing || resumingPayment ? registration : null, editing),
       })
+      // 封面与详情页同一条本地下载管道：cloud:// 先隐藏，解析成临时路径后再渲染。
+      updatePageMedia(this, 'event.coverUrl', event.coverUrl || '')
       if (this.pendingAccessResume) {
         this.pendingAccessResume = false
         this.setData({ message: '身份已确认，请核对报名信息后提交。' })

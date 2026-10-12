@@ -20,9 +20,11 @@ function useOptionalSession() {
  * 轻量富文本编辑器：所见即所得预览 + 受限标记语法。
  *
  * 语法与小程序端解析器（src/modules/mip-events/rich-content.ts · eventRichTextNodes）逐条对齐：
- *   `# 大标题` / `## 小标题` / `- 列表项` / `![图片说明](https://…)`（独占一行）/ 普通文本行。
+ *   `# 大标题` / `## 小标题` / `- 列表项` / `![图片说明](cloud://…)`（独占一行）/ 普通文本行。
  * 不支持其它 Markdown 语法——超出部分小程序端会按普通文本展示，因此工具栏只提供上述五种操作。
- * 插图走活动素材上传通道（mip.admin.media.uploadImage），插入服务端返回的 https 直链。
+ * 插图走活动素材上传通道（mip.admin.media.uploadImage），插入稳定 cloud:// fileID；
+ * 小程序详情页会把它解析成本地临时路径再渲染。服务端返回的签名直链只有 10 分钟时效，
+ * 持久化后必挂，仅用于本编辑器本次会话的预览。
  */
 export function RichTextArea({
   id,
@@ -53,6 +55,8 @@ export function RichTextArea({
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  /** cloud:// fileID → 上传时返回的短时效签名直链，只服务本次会话的预览渲染。 */
+  const [previewImages, setPreviewImages] = useState<Record<string, string>>({})
 
   const emit = (next: string) => onChange?.(maxLength ? next.slice(0, maxLength) : next)
 
@@ -99,7 +103,15 @@ export function RichTextArea({
         name: file.name, size: file.size, type: file.type, arrayBuffer: () => file.arrayBuffer(),
       }
       const result = await client.uploadImage(mediaFile, 'EVENT_CONTENT')
-      insertBlock(`![图片](${result.imageUrl})`)
+      const stableRef = result.cloudFileId
+      if (!stableRef) {
+        setUploadError('图片上传结果缺少稳定引用，请重试')
+        return
+      }
+      if (/^https:\/\//.test(result.imageUrl) && !result.imageUrl.includes('@')) {
+        setPreviewImages(current => ({ ...current, [stableRef]: result.imageUrl }))
+      }
+      insertBlock(`![图片](${stableRef})`)
     }
     catch { setUploadError('图片上传失败，请重试') }
     finally { setUploading(false) }
@@ -135,7 +147,7 @@ export function RichTextArea({
       <details className="rich-text-area__preview">
         <summary>实时预览（成员在小程序中看到的效果）</summary>
         {/* 预览 HTML 由本文件内的 escapeHtml + renderPreview 生成，输入均经转义，无用户可控的原始 HTML。 */}
-        <div className="rich-text-area__rendered" dangerouslySetInnerHTML={{ __html: renderPreview(String(value || '')) }} />
+        <div className="rich-text-area__rendered" dangerouslySetInnerHTML={{ __html: renderPreview(String(value || ''), previewImages) }} />
       </details>
     </div>
   )
@@ -145,22 +157,26 @@ function escapeHtml(text: string) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-/** 与小程序 eventRichTextNodes 同规则的预览渲染（仅用于管理后台预览）。 */
-export function renderPreview(value: string): string {
+/** 与小程序 eventRichTextNodes 同规则的预览渲染（仅用于管理后台预览）。
+ *  cloud:// 插图引用经 previewImages 映射成本次会话的签名直链预览；没有映射时退化为占位说明。 */
+export function renderPreview(value: string, previewImages: Record<string, string> = {}): string {
   const lines = String(value || '').replace(/\r\n?/g, '\n').split('\n')
   const html: string[] = []
   let list: string[] = []
   const flushList = () => {
     if (list.length) { html.push(`<ul>${list.join('')}</ul>`); list = [] }
   }
-  for (const raw of lines) {
-    const line = raw.trim()
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
     if (!line) { flushList(); continue }
     const image = /^!\[([^\]]{0,120})\]\(([^)]+)\)$/.exec(line)
     if (image) {
       flushList()
       const source = image[2].trim()
-      const safe = /^https:\/\//.test(source) && !source.includes('@') ? source : ''
+      const cloudPreview = source.startsWith('cloud://') ? previewImages[source] : undefined
+      const safe = cloudPreview && /^https:\/\//.test(cloudPreview) && !cloudPreview.includes('@')
+        ? cloudPreview
+        : /^https:\/\//.test(source) && !source.includes('@') ? source : ''
       html.push(safe ? `<img src="${escapeHtml(safe)}" alt="${escapeHtml(image[1])}" />` : `<p>🖼 ${escapeHtml(image[1] || '图片（链接暂不可显示）')}</p>`)
       continue
     }

@@ -401,6 +401,8 @@ describe('MIP media image boundary', () => {
     assert.deepEqual(writes[1].params, [USER_ID, APP_ID, ASSET_ID])
     assert.equal(result.assetId, ASSET_ID)
     assert.equal(result.imageUrl, `cloud://env.mip/${writes[0].params[3]}`)
+    // 稳定引用：富文本插图等持久化消费方使用 cloudFileId，避免投影后的短时效直链。
+    assert.equal(result.cloudFileId, result.imageUrl)
   })
 
   it('recovers a committed READY upload instead of deleting it after an uncertain commit result', async () => {

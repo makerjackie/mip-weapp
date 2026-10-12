@@ -9,6 +9,7 @@ vi.mock('../src/modules/mip-commerce/client', () => ({ mipCommerceModule: { payO
 vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: {} }))
 vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: {} }))
 vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: mocks.navigateTo, caseRedirectTo: vi.fn() }))
+vi.mock('../src/platform/storage/component-media', () => ({ updatePageMedia: vi.fn(), clearPageMedia: vi.fn() }))
 let definition: Record<string, any>
 beforeAll(async () => {
   vi.stubGlobal('Page', (value: Record<string, any>) => {

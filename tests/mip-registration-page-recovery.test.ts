@@ -25,6 +25,7 @@ vi.mock('../src/modules/mip-identity/client', () => ({
 }))
 vi.mock('../src/platform/feedback/client', () => ({ showErrorFeedback: vi.fn() }))
 vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn() }))
+vi.mock('../src/platform/storage/component-media', () => ({ updatePageMedia: vi.fn(), clearPageMedia: vi.fn() }))
 
 let definition: Record<string, any>
 function page() {

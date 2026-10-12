@@ -290,3 +290,36 @@ test('event detail projects the admin-configured organizer introduction (C1)', a
   const unconfigured = await loadDetail(detailBaseRow, null)
   assert.equal('organizerIntroduction' in unconfigured, false)
 })
+
+test('event detail rewrites expiring rich-text image links back to cloud file ids', async () => {
+  // 契约修复：早期后台插图存的是 10 分钟时效的 tcb.qcloud.la 签名直链，过期后小程序图片
+  // 全挂；详情读取时按 EVENT_CONTENT 资产重写回 cloud:// fileID（含带 query 与不带 query 两种形态）。
+  const cloudFileId = 'cloud://cloud1-env.636c-cloud1-env-1330001000/mip/staging/wx-app/event-content/user-a/asset-1.png'
+  const row = {
+    ...detailBaseRow,
+    description: `开场介绍\n![图片](https://636c-cloud1-env-1330001000.tcb.qcloud.la/mip/staging/wx-app/event-content/user-a/asset-1.png?sign=abc123&t=1791824075)`,
+    organizer_introduction: `![图片](https://636c-cloud1-env-1330001000.tcb.qcloud.la/mip/staging/wx-app/event-content/user-a/asset-1.png)`,
+  }
+  const database = {
+    async one(sql) {
+      if (sql.includes('AS my_interest_count') || sql.includes('AS received_interest_count')) {
+        return sql.includes('AS my_interest_count')
+          ? { my_interest_count: 1 }
+          : { received_interest_count: 2 }
+      }
+      return row
+    },
+    async query(sql) {
+      if (sql.includes("purpose = 'EVENT_CONTENT'")) {
+        return [{ cloud_file_id: cloudFileId }]
+      }
+      return []
+    },
+  }
+  const detail = await loadDetail(row, null, database)
+  assert.equal(
+    detail.description,
+    `开场介绍\n![图片](${cloudFileId})`,
+  )
+  assert.equal(detail.organizerIntroduction, `![图片](${cloudFileId})`)
+})

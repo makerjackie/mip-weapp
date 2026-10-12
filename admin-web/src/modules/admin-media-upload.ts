@@ -39,7 +39,10 @@ export interface PreparedAdminMediaUpload {
 
 export interface AdminMediaUploadResult {
   assetId: string
+  /** 预览直链：服务端响应投影把 cloud:// 换成 10 分钟时效的 tcb.qcloud.la 签名 URL，只能用于即时预览。 */
   imageUrl: string
+  /** 稳定引用：富文本等持久化场景必须写这个 cloud:// fileID，签名直链过期后图片会失效。 */
+  cloudFileId?: string
 }
 
 export interface AdminMediaCapabilityGrant {
@@ -120,7 +123,16 @@ export function parseAdminMediaUploadResult(value: unknown): AdminMediaUploadRes
     || !/^(?:cloud|https):\/\/[^\s\\]+$/.test(imageUrl)) {
     throw new AdminMediaUploadError('INVALID_RESPONSE', '图片上传结果无效')
   }
-  return { assetId, imageUrl }
+  const rawCloudFileId = value.data.cloudFileId
+  if (rawCloudFileId !== undefined
+    && (typeof rawCloudFileId !== 'string' || rawCloudFileId.length < 1 || rawCloudFileId.length > 1024
+      || !/^cloud:\/\/[^\s\\]+$/.test(rawCloudFileId))) {
+    throw new AdminMediaUploadError('INVALID_RESPONSE', '图片上传结果无效')
+  }
+  // 新契约返回显式 cloudFileId；旧响应（或未经投影的直连响应）里 imageUrl 本身就是 cloud://，
+  // 同样可作为稳定引用兜底。
+  const cloudFileId = rawCloudFileId || (/^cloud:\/\//.test(imageUrl) ? imageUrl : undefined)
+  return { assetId, imageUrl, cloudFileId }
 }
 
 function imageContentType(bytes: Uint8Array): 'image/png' | 'image/jpeg' | null {

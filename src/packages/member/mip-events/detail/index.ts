@@ -3,12 +3,12 @@ import type { MipEventDetail } from '../../../../modules/mip-events'
 import type { MipGuestLoginProceedContext } from '../../../../modules/mip-identity'
 import { brand } from '../../../../config/brand'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
-import { decodeInvitationToken, eventInvitationPath, eventRichTextNodes, isEventAccessRequirementError, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
+import { decodeInvitationToken, eventInvitationPath, eventRichTextNodes, extractRichTextCloudImageIds, isEventAccessRequirementError, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { createMipGuestLoginFlow } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
-import { peekCloudFileUrls } from '../../../../platform/storage/cloud-media'
+import { peekCloudFileUrls, resolveCloudFileUrls } from '../../../../platform/storage/cloud-media'
 import { clearComponentMedia, updateComponentMedia } from '../../../../platform/storage/component-media'
 import { openWechatChannelsDestination } from '../../../../platform/wechat/channels'
 import { formatChineseDateTime, formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
@@ -192,6 +192,8 @@ Page({
   },
   requestSeq: 0,
   loadingEvent: false,
+  // 富文本插图水合代际：applyEvent 重入或页面卸载时推进，旧解析回包不再覆盖新内容。
+  richTextMediaSeq: 0,
   onlineRequested: false,
   guideRequested: false,
   entryScene: '',
@@ -287,6 +289,7 @@ Page({
 
   onUnload() {
     this.requestSeq += 1
+    this.richTextMediaSeq += 1
     clearComponentMedia(this)
   },
 
@@ -489,6 +492,51 @@ Page({
     updateComponentMedia(this, 'event.coverUrl', event.coverUrl || '')
     updateComponentMedia(this, 'event.participantPreview', event.participantPreview || [])
     updateComponentMedia(this, 'event.contentMedia', contentMedia)
+    this.hydrateRichTextMedia(event.description || '', event.organizerIntroduction || '')
+  },
+
+  /**
+   * 富文本插图（description / organizerIntroduction 里的 cloud:// 引用）与封面走同一条
+   * 本地下载管道：先按原始 markdown 渲染文本（未解析图先隐藏），解析完成后把 cloud://
+   * 替换成 wxfile:// 本地路径再重建节点，避免把云存储 ID 或短时效签名直链直接喂给 rich-text。
+   */
+  hydrateRichTextMedia(description: string, organizerIntroduction: string) {
+    const fileIds = [...new Set([
+      ...extractRichTextCloudImageIds(description),
+      ...extractRichTextCloudImageIds(organizerIntroduction),
+    ])]
+    if (!fileIds.length) {
+      return
+    }
+    const seq = this.richTextMediaSeq + 1
+    this.richTextMediaSeq = seq
+    void resolveCloudFileUrls(fileIds, undefined, true).then((resolvedIds) => {
+      if (seq !== this.richTextMediaSeq) {
+        return
+      }
+      const localPaths = new Map<string, string>()
+      fileIds.forEach((fileId, index) => {
+        const local = resolvedIds[index]
+        if (local) {
+          localPaths.set(fileId, local)
+        }
+      })
+      if (!localPaths.size) {
+        return
+      }
+      const substitute = (markdown: string) => markdown.replace(
+        /!\[([^\]]{0,120})\]\((cloud:\/\/[^)\s]+)\)/g,
+        (whole, alt: string, fileId: string) => localPaths.get(fileId) ? `![${alt}](${localPaths.get(fileId)})` : whole,
+      )
+      this.setData({
+        descriptionNodes: eventRichTextNodes(substitute(description)),
+        ...(organizerIntroduction
+          ? { organizerIntroductionNodes: eventRichTextNodes(substitute(organizerIntroduction)) }
+          : {}),
+      })
+    }).catch(() => {
+      // 解析失败保持已渲染的文本内容，不阻塞详情页。
+    })
   },
 
   refreshCheckInIntent() {
