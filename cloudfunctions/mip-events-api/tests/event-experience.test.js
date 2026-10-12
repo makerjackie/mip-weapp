@@ -98,6 +98,8 @@ test('heart state returns opaque profile references without exposing user ids', 
       }
     },
     async query(sql) {
+      // MIW-73：嘉宾卡同构补齐（公开详情/勋章/等级/邀请人）批量查询与本测试无关，返回空。
+      if (/mip_profiles profile|mip_growth_levels|mip_user_badge_equipment|mip_event_invitation_attributions/.test(sql)) return []
       assert.match(sql, /vr\.user_id/)
       return [{
         registration_id: 'registration-voter',

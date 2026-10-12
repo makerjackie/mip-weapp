@@ -27,6 +27,7 @@ const {
 const { createSignedToken, readSignedToken } = require('../lib/tokens')
 const { createProfileRef } = require('../lib/profile-ref')
 const { createHeartHistory } = require('./heart-history')
+const { loadHeartInviters, loadPublicPersonDetails } = require('./public-person-details')
 
 function parseJson(value, fallback) {
   if (value === null || value === undefined) {
@@ -926,7 +927,9 @@ async function loadParticipantPreviews(db, {
   )
   for (const row of rows) {
     const current = grouped.get(row.event_id) || []
-    if (current.length < 4) {
+    // MIW-73：详情页 80rpx 头像 + 32rpx 间距在 750 设计宽下（卡片 px-3 + 行 px-1，内宽 694rpx）
+    // 单行最多放 6 个——预览上限从 4 提到 6，头像行从左到右铺满；列表胶囊只出镜前 3 个。
+    if (current.length < 6) {
       current.push({
         participantRef: createSignedToken({ type: 'participant', eventId: row.event_id, registrationId: row.registration_id }, tokenSecret),
         nickname: row.nickname,
@@ -1520,6 +1523,14 @@ async function listPublicParticipants(db, {
     if (Number(row.is_player) === 1) kindTotals.PLAYER = Number(row.total)
     else kindTotals.GUEST = Number(row.total)
   }
+  // MIW-73：名单条目补齐嘉宾卡同构字段（等级/勋章/邀请人/城市代表行业等），
+  // 让嘉宾、玩家与心动 tab 的卡片信息面一致；city/行业/身份/介绍由
+  // loadPublicPersonDetails 内部按 visibility_json 把关。
+  const attachments = await loadPublicPersonAttachments(
+    db,
+    appId,
+    pageRows.map(row => row.user_id),
+  )
   return {
     kindTotals,
     items: pageRows.map((row) => {
@@ -1543,6 +1554,7 @@ async function listPublicParticipants(db, {
         ...(allowed.primaryBranch && row.branch_name
           ? { primaryBranch: { name: row.branch_name, cityName: row.branch_city_name || '' } }
           : {}),
+        ...(attachments.get(row.user_id) || {}),
       }
     }),
     nextCursor: rows.length > pageLimit && pageRows.length
@@ -1562,6 +1574,38 @@ function publicVisibility(value) {
     industry: source.industry !== false,
     primaryBranch: source.primaryBranch !== false,
   }
+}
+
+/**
+ * MIW-73：参与人页四个 tab 的嘉宾卡同构（MIW-52 统一竖版用户卡同源口径）。名单条目与
+ * 心动对象补公开详情（城市/代表行业/身份状态/一句话介绍/等级/佩戴勋章）与邀请人标注；
+ * 只补已授权名单成员，可见性与拉黑口径由调用方保证；不造值，缺什么省什么。
+ */
+function publicPersonAttachments(detail, inviter) {
+  return {
+    ...(detail.cityName ? { cityName: detail.cityName } : {}),
+    ...(detail.industryLabel ? { industryLabel: detail.industryLabel } : {}),
+    ...(detail.identityStatus ? { identityStatus: detail.identityStatus } : {}),
+    ...(detail.introduction ? { introduction: detail.introduction } : {}),
+    ...(detail.level ? { level: detail.level } : {}),
+    ...(Array.isArray(detail.badges) && detail.badges.length ? { badges: detail.badges } : {}),
+    ...(inviter ? { inviter } : {}),
+  }
+}
+
+async function loadPublicPersonAttachments(db, appId, userIds) {
+  const unique = [...new Set(userIds.filter(Boolean))]
+  if (!unique.length) {
+    return new Map()
+  }
+  const [details, inviters] = await Promise.all([
+    loadPublicPersonDetails(db, appId, unique),
+    loadHeartInviters(db, appId, unique),
+  ])
+  return new Map(unique.map(userId => [
+    userId,
+    publicPersonAttachments(details.get(userId) || {}, inviters.get(userId)),
+  ]))
 }
 
 function registrationOutcome(row, extras = {}) {
@@ -2858,13 +2902,33 @@ async function getHeart(db, { appId, eventId, userId, tokenSecret, profileRefSec
     // MIW-36：tab 徽标消费服务端计数（与详情胶囊同一 heartCounts），不再以列表长度重算。
     heartCounts(db, { appId, eventId, userId }),
   ])
+  // MIW-73：心动对象与收到的喜欢补齐嘉宾卡同构字段（等级/勋章/邀请人/城市标签等），
+  // 与公开名单 tab 共用 loadPublicPersonAttachments 口径。
+  const attachments = await loadPublicPersonAttachments(
+    db,
+    appId,
+    [
+      ...(heart?.registration_id && heart.user_id ? [heart.user_id] : []),
+      ...received.map(row => row.user_id),
+    ],
+  )
+  const withAttachments = (candidate, userId) => ({
+    ...candidate,
+    ...(attachments.get(userId) || {}),
+  })
   const target = heart?.registration_id
-    ? heartParticipant(heart, { appId, eventId, tokenSecret, profileRefSecret })
+    ? withAttachments(
+      heartParticipant(heart, { appId, eventId, tokenSecret, profileRefSecret }),
+      heart.user_id,
+    )
     : undefined
   return {
     targetRef: target?.participantRef,
     target,
-    received: received.map(row => heartParticipant(row, { appId, eventId, tokenSecret, profileRefSecret })),
+    received: received.map(row => withAttachments(
+      heartParticipant(row, { appId, eventId, tokenSecret, profileRefSecret }),
+      row.user_id,
+    )),
     counts,
     version: Number(heart?.version || 0),
     updatedAt: heart?.updated_at ? iso(heart.updated_at) : undefined,

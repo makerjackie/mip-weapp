@@ -81,12 +81,25 @@ beforeEach(() => {
 
 describe('MIP event participant private heart state', () => {
   it('keeps public relations and builds sent 0/1 and received private lists from the server heart', async () => {
-    const selected = candidate('selected', true)
+    const selected = {
+      ...candidate('selected', true),
+      // MIW-73：心动对象携带嘉宾卡同构公开详情（城市/行业/身份/介绍/等级/勋章/邀请人）。
+      cityName: '上海',
+      industryLabel: '产品',
+      identityStatus: 'MIP会员',
+      introduction: '一句话介绍',
+      level: { number: 3, name: '资深' },
+      badges: [{ id: 'badge-gold', name: '金牌', imageUrl: 'https://cdn/badge-gold.png' }],
+      inviter: { sourceType: 'PLATFORM' as const, displayName: 'MIP平台' },
+    }
     const receivedPerson = candidate('received')
     const publicParticipant: PublicEventParticipant = {
       profileRef: 'p1.public',
       nickname: '公开参与人',
       heartRelation: 'MUTUAL',
+      level: { number: 2, name: '进阶' },
+      badges: [{ id: 'badge-star', name: '之星' }],
+      inviter: { sourceType: 'USER' as const, displayName: '邀请人甲', avatarUrl: 'https://cdn/a.png' },
     }
     const page = createPage({ eventId: '60000000-0000-4000-8000-000000000001' })
     eventsModule.listPublicParticipants.mockResolvedValueOnce({ items: [publicParticipant] })
@@ -98,13 +111,44 @@ describe('MIP event participant private heart state', () => {
     expect(page.data.state).toBe('ready')
     expect(page.data.heartState).toBe('ready')
     expect(page.data.displayItems).toEqual([
-      expect.objectContaining({ displayName: '公开参与人', heartRelation: 'MUTUAL' }),
+      expect.objectContaining({ displayName: '公开参与人' }),
     ])
     expect(page.data.sentItems).toEqual([
-      expect.objectContaining({ displayName: 'selected', heartRelation: 'SENT' }),
+      expect.objectContaining({
+        displayName: 'selected',
+        // MIW-73：心动 tab 三标签与等级/勋章/邀请人信息面（同 mip-hearts 口径，不造值）。
+        profileTags: ['上海MIP', '产品', 'MIP会员'],
+        introductionText: '一句话介绍',
+        levelText: 'Lv.3',
+        medals: [{ id: 'badge-gold', imageUrl: 'https://cdn/badge-gold.png' }],
+        inviterName: 'MIP平台',
+        inviterAvatarUrl: '',
+        inviterKind: 'PLATFORM',
+      }),
     ])
     expect(page.data.receivedItems).toEqual([
-      expect.objectContaining({ displayName: 'received', heartRelation: 'RECEIVED' }),
+      expect.objectContaining({
+        displayName: 'received',
+        // 无公开详情的心动对象不造值：标签/介绍/等级/勋章/邀请人全部缺省。
+        profileTags: [],
+        introductionText: '',
+        levelText: '',
+        medals: [],
+        inviterName: '',
+        inviterAvatarUrl: '',
+        inviterKind: 'PLAYER',
+      }),
+    ])
+    // 名单 tab 同样消费服务端补齐的等级/勋章/邀请人（kind 章与 Lv 并存）。
+    expect(page.data.items).toEqual([
+      expect.objectContaining({
+        displayName: '公开参与人',
+        levelText: 'Lv.2',
+        medals: [{ id: 'badge-star', imageUrl: undefined }],
+        inviterName: '邀请人甲',
+        inviterAvatarUrl: 'https://cdn/a.png',
+        inviterKind: 'PLAYER',
+      }),
     ])
   })
 

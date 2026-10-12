@@ -278,7 +278,7 @@ function validEventListFields(value: Record<string, unknown>) {
   && (value.capacity === undefined || positiveInteger(value.capacity))
   && nonNegativeInteger(value.registrationCount)
   && Array.isArray(value.participantPreview)
-  && value.participantPreview.length <= 4
+  && value.participantPreview.length <= 6
   && value.participantPreview.every(participantPreview)
   && (value.registrationStatus === undefined || [
     'PENDING_REVIEW',

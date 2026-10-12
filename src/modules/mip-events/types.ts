@@ -79,6 +79,12 @@ export interface PublicEventParticipant {
   introduction?: string
   primaryIndustry?: { label: string }
   primaryBranch?: { name: string, cityName: string }
+  // MIW-73：嘉宾卡同构公开详情与邀请人标注（与心动记录 person 同口径，不造值，缺省省略）。
+  cityName?: string
+  industryLabel?: string
+  level?: { number: number, name: string }
+  badges?: { id: string, name: string, imageUrl?: string }[]
+  inviter?: { sourceType: 'USER' | 'PLATFORM', displayName: string, avatarUrl?: string }
 }
 
 export interface PublicEventParticipantQuery {
@@ -353,6 +359,15 @@ export interface HeartCandidate {
   avatarUrl?: string
   headline?: string
   selected: boolean
+  // MIW-73：心动对象补齐嘉宾卡同构公开详情与邀请人标注（与心动记录 person 同口径，
+  // 不造值，缺省省略）。
+  cityName?: string
+  industryLabel?: string
+  identityStatus?: string
+  introduction?: string
+  level?: { number: number, name: string }
+  badges?: { id: string, name: string, imageUrl?: string }[]
+  inviter?: { sourceType: 'USER' | 'PLATFORM', displayName: string, avatarUrl?: string }
 }
 
 export interface HeartState {
