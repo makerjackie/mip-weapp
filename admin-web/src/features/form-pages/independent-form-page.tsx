@@ -5,7 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useBlocker, useNavigate, useSearch } from '@tanstack/react-router'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminRequestInput, AdminOperationAction } from '../../domain/contracts'
-import { normalizeOperationValues, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
+import { fieldsControlledBy, normalizeOperationValues, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
 import { rebaseEdit } from '../../modules/edit-conflict'
 import { ErrorState, LoadingState, OperationFields, PageHeader, toFormValues, humanizeError } from '../../shared/ui'
 import { MediaPreviewProvider } from '../../shared/ui/media-preview-provider'
@@ -237,7 +237,16 @@ export function IndependentFormPage({ config, loadDetail }: {
           initialValues={initialValues}
           disabled={loading || draftSaving || Boolean(conflict)}
           onFinish={() => void submit()}
-          onValuesChange={() => { dirty.current = true }}
+          onValuesChange={(changed) => {
+            dirty.current = true
+            // Reset pickers whose options follow a controlling field once that
+            // control changes, so a stale id of the wrong kind is never kept.
+            for (const controller of Object.keys(changed)) {
+              for (const dependent of fieldsControlledBy(fields, controller)) {
+                form.setFieldValue(dependent, undefined)
+              }
+            }
+          }}
         >
           <div className="mutation-grid"><OperationFields fields={fields} form={form} /></div>
         </Form>

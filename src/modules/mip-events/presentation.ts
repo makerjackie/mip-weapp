@@ -3,6 +3,8 @@ import { formatLocalDate } from '../../utils/date'
 const publicEventTypeLabels: Record<string, string> = {
   community: '社区活动',
   mip_morning_meeting: 'MIP 早会',
+  // 后台未选类型时服务端落库的默认 key；对用户展示为普通「活动」而非英文单词。
+  general: '活动',
 }
 
 const technicalKeyPattern = /^[a-z][a-z0-9]*(?:[_.:-][a-z0-9]+)+$/

@@ -515,13 +515,13 @@ export function createTaskAssignmentMutationDefinition(
     { name: 'assignMode', label: '派发模式', kind: 'select', required: true, options: [
       { value: 'single', label: '单次派发' }, { value: 'batch', label: '批量派发' }, { value: 'weekly', label: '每周派发' },
     ] },
-    { name: 'recipients', label: '接收成员', kind: 'multi-select', options, wide: true },
+    { name: 'recipients', label: '接收成员', kind: 'multi-select', options, wide: true, extra: '接收成员、角色、服务器、标签至少填写一类' },
     { name: 'roleIds', label: '接收角色', kind: 'multi-select', options: Array.isArray(record(source.editorOptions).roles) ? (record(source.editorOptions).roles as unknown[]).map(record).map(role => ({ value: String(role.id), label: String(role.name) })) : [] },
     { name: 'serverIds', label: '接收服务器', kind: 'multi-select', options: catalogOptions(record(source.editorOptions).servers) },
     { name: 'tagIds', label: '接收标签', kind: 'multi-select', options: catalogOptions(record(source.editorOptions).tags) },
-    { name: 'weeklyDeliverAt', label: '周送达时间（北京时间）', kind: 'time', visibleWhen: { path: 'assignMode', value: 'weekly' } },
-    { name: 'weeklyStartAt', label: '周派发开始', kind: 'datetime', visibleWhen: { path: 'assignMode', value: 'weekly' } },
-    { name: 'weeklyEndAt', label: '周派发结束', kind: 'datetime', visibleWhen: { path: 'assignMode', value: 'weekly' } },
+    { name: 'weeklyDeliverAt', label: '周送达时间（北京时间）', kind: 'time', requiredWhen: { path: 'assignMode', values: ['weekly'] }, visibleWhen: { path: 'assignMode', value: 'weekly' } },
+    { name: 'weeklyStartAt', label: '周派发开始', kind: 'datetime', requiredWhen: { path: 'assignMode', values: ['weekly'] }, visibleWhen: { path: 'assignMode', value: 'weekly' } },
+    { name: 'weeklyEndAt', label: '周派发结束', kind: 'datetime', requiredWhen: { path: 'assignMode', values: ['weekly'] }, visibleWhen: { path: 'assignMode', value: 'weekly' } },
   ], {
     taskId: targetId,
     expectedVersion: version,
@@ -623,6 +623,23 @@ export function buildTaskSubmissionInput(
   const input: AdminRequestInput = { submissionId }
   if (remark) input.remark = remark
   return input
+}
+
+/** Human-readable reasons for assignment build failures, for the dialog banner. */
+export function explainTaskAssignment(values: OperationValues): string | null {
+  const assignMode = String(values.assignMode || '')
+  const count = (value: unknown) => Array.isArray(value) ? value.map(String).filter(Boolean).length : 0
+  if (![count(values.recipients), count(values.roleIds), count(values.serverIds), count(values.tagIds)].some(Boolean)) {
+    return '请至少选择一类接收对象：成员、角色、服务器或标签'
+  }
+  if (assignMode === 'weekly') {
+    const weeklyDeliverAt = String(values.weeklyDeliverAt || '').trim()
+    const weeklyStartAt = values.weeklyStartAt
+    const weeklyEndAt = values.weeklyEndAt
+    if (!weeklyDeliverAt || !weeklyStartAt || !weeklyEndAt) return '每周派发需要填写周送达时间、周开始和周结束'
+    if (new Date(String(weeklyEndAt)).getTime() <= new Date(String(weeklyStartAt)).getTime()) return '周派发结束时间必须晚于开始时间'
+  }
+  return null
 }
 
 export function buildTaskAssignmentInput(

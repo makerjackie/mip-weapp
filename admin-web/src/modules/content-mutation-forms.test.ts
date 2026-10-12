@@ -168,3 +168,62 @@ describe('R1 novice walkthrough fixes', () => {
     assert.ok((badgeId as { emptyHint?: string }).emptyHint?.includes('成长与勋章'))
   })
 })
+
+describe('R2 novice walkthrough fixes', () => {
+  it('keeps scope linkage safe: stale branch ids never block a platform save', () => {
+    const platform = validateContentMutation('mip.admin.announcements.save', {
+      scopeType: 'PLATFORM', branchId: 'branch-stale', title: '公告', summary: '摘要', body: '正文', visibleFrom: '2030-01-01T00:00:00Z',
+    })
+    assert.equal(platform.ok, true)
+    if (platform.ok) assert.equal('branchId' in platform.input, false)
+
+    const missingBranch = validateContentMutation('mip.admin.announcements.save', {
+      scopeType: 'BRANCH', branchId: '', title: '公告', summary: '摘要', body: '正文', visibleFrom: '2030-01-01T00:00:00Z',
+    })
+    assert.equal(missingBranch.ok === false && missingBranch.errors.form, '请选择服务器')
+  })
+
+  it('marks the scope branch field as linked and conditionally required across content forms', () => {
+    for (const action of ['mip.admin.announcements.save', 'mip.admin.messageCampaigns.save', 'mip.admin.messageTemplates.save', 'mip.admin.opportunities.save'] as const) {
+      const form = getContentMutationForm(action)
+      const flat = [...form.fields, ...(form.fields.find(field => field.key === 'draft')?.fields || [])]
+      const branchId = flat.find(field => field.key === 'branchId')
+      assert.deepEqual(branchId?.visibleWhen, { path: 'scopeType', value: 'BRANCH' }, action)
+      assert.deepEqual(branchId?.requiredWhen, { path: 'scopeType', values: ['BRANCH'] }, action)
+    }
+  })
+
+  it('clearing the announcement association never dead-ends the save', () => {
+    // Type cleared but a stale target id lingers: the association is simply dropped.
+    const cleared = validateContentMutation('mip.admin.announcements.save', {
+      scopeType: 'PLATFORM', title: '公告', summary: '摘要', body: '正文', visibleFrom: '2030-01-01T00:00:00Z',
+      targetType: '', targetId: 'event-stale',
+    })
+    assert.equal(cleared.ok, true)
+    if (cleared.ok) {
+      assert.equal('targetType' in cleared.input, false)
+      assert.equal('targetId' in cleared.input, false)
+    }
+    // Type chosen but no content picked: a plain-language pointer.
+    const unmatched = validateContentMutation('mip.admin.announcements.save', {
+      scopeType: 'PLATFORM', title: '公告', summary: '摘要', body: '正文', visibleFrom: '2030-01-01T00:00:00Z',
+      targetType: 'EVENT', targetId: '',
+    })
+    assert.equal(unmatched.ok === false && unmatched.errors.form, '选择了关联类型后，请选择关联内容，或清空关联类型')
+  })
+
+  it('names the video-account format errors after the field', () => {
+    const result = validateContentMutation('mip.admin.knowledge.contents.save', {
+      categoryId: uuid, contentType: 'PRIVATE_CHANNEL', title: '标题', summary: '摘要',
+      channelFinderUserName: 'https://finder.qq.com/xxx', channelFeedId: 'feed-1',
+      accessType: 'FREE', commentsEnabled: true, moderationMode: 'AUTO',
+    })
+    assert.equal(result.ok === false && result.errors.form.includes('视频号用户名'), true)
+  })
+
+  it('turns the knowledge product content field into a guided catalog pick', () => {
+    const contentId = getContentMutationForm('mip.admin.knowledge.products.save').fields.find(field => field.key === 'contentId') as { optionsAction?: string, emptyHint?: string }
+    assert.equal(contentId.optionsAction, 'mip.admin.knowledge.list')
+    assert.ok(contentId.emptyHint?.includes('新建内容'))
+  })
+})

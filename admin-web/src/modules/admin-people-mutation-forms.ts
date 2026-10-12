@@ -251,7 +251,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     title: '新增后台账号',
     description: '为已注册的小程序用户开通后台权限，登录使用小程序确认。',
     fields: [
-      { name: 'loginAccount', label: '登录账号', kind: 'text', required: true, maxLength: 64, placeholder: '如 zhangsan', extra: '登录后台时使用的账号名，创建后不可修改；建议用姓名拼音或工号' },
+      { name: 'loginAccount', label: '登录账号', kind: 'text', required: true, maxLength: 64, placeholder: '如 zhangsan', extra: '登录后台时使用的账号名，创建后不可修改；建议用姓名拼音或工号。仅支持 3–64 位英文字母、数字和 . _ - ，不支持中文' },
       { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
       { name: 'userId', label: '已注册用户', kind: 'select', required: true, remoteUserSearch: true },
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
@@ -366,6 +366,30 @@ function explicitVersionSource(value: unknown, minimum: number) {
         field: { sectionTitle: '列表当前数据', label: '版本', minimum },
       }
     : undefined
+}
+
+/** Human-readable reasons for people-mutation build failures, for the dialog banner. */
+export function explainAdminPeopleMutationInput(
+  definition: AdminPeopleMutationDefinition,
+  values: AdminPeopleMutationValues,
+): string | null {
+  switch (definition.action) {
+    case 'mip.admin.adminAccounts.create': {
+      const loginAccount = typeof values.loginAccount === 'string' ? values.loginAccount.trim() : ''
+      if (!/^[A-Za-z0-9_.-]{3,64}$/.test(loginAccount)) return '登录账号需为 3–64 位英文字母、数字或 . _ - 组合（不支持中文或空格）'
+      break
+    }
+    case 'mip.admin.roles.set': {
+      const roleKey = String(values.roleKey || '')
+      if ((roleKey === 'BRANCH_ADMIN' || roleKey.startsWith('EVENT_')) && !boundedId(values.scopeId)) {
+        return '请选择管理范围：服务器管理员需选择服务器，活动类角色需选择活动'
+      }
+      break
+    }
+    default:
+      break
+  }
+  return null
 }
 
 /**

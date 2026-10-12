@@ -337,6 +337,37 @@ export function createGameMutationDefinition(
   return definition(action, mutationTitle(action), mutationDescription(action), [], values)
 }
 
+/** Human-readable reasons for game build failures, for the dialog banner. */
+export function explainGameMutation(
+  definitionValue: AdminGameMutationDefinition,
+  values: OperationValues,
+): string | null {
+  const action = definitionValue.action
+  if (action === 'mip.admin.game.teams.members.replace') {
+    const captainRef = text(values.captainRef)
+    const members = Array.isArray(values.memberRefs) ? values.memberRefs.map(String).filter(Boolean) : []
+    if (captainRef && !members.includes(captainRef)) return '队长必须在战队成员名单中，请调整名单或更换队长'
+    return null
+  }
+  if (action === 'mip.admin.game.matches.save') {
+    if (String(values.teamAId || '') && values.teamAId === values.teamBId) return '两支战队不能相同，请重新选择'
+    const weekStart = dateOnly(values.weekStart)
+    const weekEnd = dateOnly(values.weekEnd)
+    if (weekStart && weekEnd) {
+      const days = (new Date(`${weekEnd}T00:00:00Z`).getTime() - new Date(`${weekStart}T00:00:00Z`).getTime()) / 86_400_000
+      if (days !== 6) return '周赛必须为完整一周：周结束日期 = 周开始日期 + 6 天'
+    }
+    return null
+  }
+  if (action === 'mip.admin.game.blindBoxes.catalogs.save') {
+    if (Number(values.drawCostCoin) < 1 || Number(values.dailyDrawLimit) < 1 || Number(values.pityThreshold) < 1) {
+      return '单次游戏币、每日次数上限、保底次数至少为 1'
+    }
+    return null
+  }
+  return null
+}
+
 export function buildGameMutationInput(
   definitionValue: AdminGameMutationDefinition,
   values: OperationValues,
@@ -443,9 +474,9 @@ function catalogSaveDefinition(targetId: string, catalog: Record<string, unknown
     { name: 'summary', label: '简介', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'rulesText', label: '抽取规则', kind: 'textarea', required: true, maxLength: 4000, wide: true },
     { name: 'redemptionRulesText', label: '兑换规则', kind: 'textarea', required: true, maxLength: 4000, wide: true },
-    { name: 'drawCostCoin', label: '单次游戏币', kind: 'integer', required: true },
-    { name: 'dailyDrawLimit', label: '每日次数上限', kind: 'integer', required: true },
-    { name: 'pityThreshold', label: '保底次数', kind: 'integer', required: true },
+    { name: 'drawCostCoin', label: '单次游戏币', kind: 'integer', required: true, min: 1 },
+    { name: 'dailyDrawLimit', label: '每日次数上限', kind: 'integer', required: true, min: 1 },
+    { name: 'pityThreshold', label: '保底次数', kind: 'integer', required: true, min: 1 },
     { name: 'pityMinRarity', label: '保底最低稀有度', kind: 'select', required: true, options: rarityOptions },
   ], {
     catalogId: targetId, expectedVersion: positiveInteger(catalog.version), catalogKey: text(catalog.catalogKey) || (targetId ? '' : generatedKey('box')),

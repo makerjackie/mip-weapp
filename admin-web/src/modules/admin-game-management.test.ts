@@ -9,6 +9,7 @@ import {
   loadGameManagementPage,
   loadGameSeasonDetail,
   loadGameTeamDetail,
+  explainGameMutation,
   type AdminGameMutationAction,
 } from './admin-game-management.ts'
 import type { AdminDetailRequest } from './admin-details.ts'
@@ -195,5 +196,25 @@ describe('R1 novice walkthrough fixes', () => {
     const definition = createGameMutationDefinition('mip.admin.game.matches.save', '', { season })
     const weekEnd = definition.fields.find(field => field.name === 'weekEnd')
     assert.ok((weekEnd as { extra?: string }).extra?.includes('+ 6 天'))
+  })
+})
+
+describe('R2 novice walkthrough fixes', () => {
+  it('bounds blind box catalog numbers to a minimum of one on the control', () => {
+    const definition = createGameMutationDefinition('mip.admin.game.blindBoxes.catalogs.save', '', {})
+    for (const name of ['drawCostCoin', 'dailyDrawLimit', 'pityThreshold']) {
+      assert.equal(definition.fields.find(field => field.name === name)?.min, 1)
+    }
+  })
+
+  it('explains the hidden game rules instead of a generic banner failure', () => {
+    const season = { id: seasonId }
+    const match = createGameMutationDefinition('mip.admin.game.matches.save', '', { season })
+    assert.equal(explainGameMutation(match, { teamAId, teamBId: teamAId, weekStart: '2030-01-03', weekEnd: '2030-01-09' }), '两支战队不能相同，请重新选择')
+    assert.equal(explainGameMutation(match, { teamAId, teamBId, weekStart: '2030-01-03', weekEnd: '2030-01-10' }), '周赛必须为完整一周：周结束日期 = 周开始日期 + 6 天')
+    const catalog = createGameMutationDefinition('mip.admin.game.blindBoxes.catalogs.save', '', {})
+    assert.equal(explainGameMutation(catalog, { drawCostCoin: 0, dailyDrawLimit: 1, pityThreshold: 1 }), '单次游戏币、每日次数上限、保底次数至少为 1')
+    const members = createGameMutationDefinition('mip.admin.game.teams.members.replace', teamAId, { team: { seasonId, version: 3 } })
+    assert.equal(explainGameMutation(members, { memberRefs: ['p1.a'], captainRef: 'p1.b' }), '队长必须在战队成员名单中，请调整名单或更换队长')
   })
 })

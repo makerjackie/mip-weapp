@@ -11,6 +11,7 @@ import {
   loadTaskDetail,
   loadTaskEligibleLevels,
   loadTaskManagementPage,
+  explainTaskAssignment,
 } from './admin-task-management.ts'
 
 const TASK_ID = '10000000-0000-4000-8000-000000000001'
@@ -231,5 +232,19 @@ describe('novice-friendly task form contracts', () => {
     assert.equal(weekly?.kind, 'time')
     const levels = definition.fields.find(field => field.name === 'eligibleLevelIds')
     assert.ok((levels?.emptyHint || '').includes('等级'))
+  })
+})
+
+describe('R2 novice walkthrough fixes', () => {
+  it('marks weekly dispatch fields required only in weekly mode and explains silent rules', () => {
+    const definition = createTaskMutationDefinition('mip.admin.tasks.assign', 'task-1', {})
+    const flat = definition.fields.flatMap(field => field.name === 'weeklyDeliverAt' || field.name === 'weeklyStartAt' || field.name === 'weeklyEndAt' ? [field] : [])
+    for (const field of flat) {
+      assert.deepEqual((field as { requiredWhen?: unknown }).requiredWhen, { path: 'assignMode', values: ['weekly'] })
+    }
+    assert.equal(explainTaskAssignment({ assignMode: 'batch' }), '请至少选择一类接收对象：成员、角色、服务器或标签')
+    assert.equal(explainTaskAssignment({ assignMode: 'weekly', recipients: ['p1.x'], weeklyDeliverAt: '', weeklyStartAt: '', weeklyEndAt: '' }), '每周派发需要填写周送达时间、周开始和周结束')
+    assert.equal(explainTaskAssignment({ assignMode: 'weekly', recipients: ['p1.x'], weeklyDeliverAt: '09:00', weeklyStartAt: '2030-01-06T00:00:00Z', weeklyEndAt: '2030-01-05T00:00:00Z' }), '周派发结束时间必须晚于开始时间')
+    assert.equal(explainTaskAssignment({ assignMode: 'weekly', recipients: ['p1.x'], weeklyDeliverAt: '09:00', weeklyStartAt: '2030-01-06T00:00:00Z', weeklyEndAt: '2030-01-13T00:00:00Z' }), null)
   })
 })

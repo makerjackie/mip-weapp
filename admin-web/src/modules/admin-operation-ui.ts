@@ -100,8 +100,25 @@ export function normalizeOperationValues(
   previous: OperationValues = {},
 ) {
   const values = cloneValues(previous)
-  for (const field of fields) normalizeSubmittedField(values, submitted, field, '')
+  // Several field definitions may share one path under different linkage
+  // conditions (for example every cooperation role defines `target`); the
+  // path counts as visible when ANY of its definitions is visible, so a
+  // later hidden twin cannot wipe the value the visible one just wrote.
+  const visiblePaths = collectVisiblePaths(fields, submitted, '')
+  for (const field of fields) normalizeSubmittedField(values, submitted, field, '', visiblePaths)
   return values
+}
+
+function collectVisiblePaths(fields: readonly OperationField[], values: OperationValues, prefix: string, paths = new Set<string>()): Set<string> {
+  for (const field of fields) {
+    const key = fieldKey(field)
+    if (!key) continue
+    const path = prefix ? `${prefix}.${key}` : key
+    if (!operationFieldVisible(field, values)) continue
+    paths.add(path)
+    if (field.fields) collectVisiblePaths(field.fields, values, path, paths)
+  }
+  return paths
 }
 
 export function operationFieldVisible(field: OperationField, values: OperationValues) {
@@ -122,14 +139,22 @@ function normalizeSubmittedField(
   submitted: OperationValues,
   field: OperationField,
   prefix: string,
+  visiblePaths: Set<string>,
 ) {
-  if (!operationFieldVisible(field, submitted)) return
-  if (field.hidden) return
   const key = fieldKey(field)
   if (!key) return
   const path = prefix ? `${prefix}.${key}` : key
+  if (!visiblePaths.has(path)) {
+    // A field hidden by a linkage change must not carry its stale value into
+    // the submit payload — that is how hidden-field dead ends happen. The Ant
+    // form store still preserves the value, so toggling the linkage back
+    // restores the operator's input.
+    writePath(target, path, emptyFieldValue(field))
+    return
+  }
+  if (field.hidden) return
   if (field.kind === 'group') {
-    for (const nested of field.fields || []) normalizeSubmittedField(target, submitted, nested, path)
+    for (const nested of field.fields || []) normalizeSubmittedField(target, submitted, nested, path, visiblePaths)
     return
   }
   const raw = readPath(submitted, path)
@@ -180,6 +205,30 @@ function normalizeSubmittedField(
 
 function fieldKey(field: OperationField) {
   return String(field.name || field.key || '').trim()
+}
+
+/** Neutral value written for fields that are currently hidden by a linkage. */
+function emptyFieldValue(field: OperationField): unknown {
+  if (field.kind === 'checkbox' || field.kind === 'boolean') return false
+  if (field.kind === 'group') return {}
+  if (MULTI_VALUE_KINDS.includes(field.kind)) return []
+  return ''
+}
+
+/**
+ * Field paths whose options source follows another field (optionsActionByValue).
+ * When that controlling field changes, the dependent selection is stale and
+ * callers should reset it.
+ */
+export function fieldsControlledBy(fields: readonly OperationField[], controller: string, prefix = ''): string[] {
+  const result: string[] = []
+  for (const field of fields) {
+    const key = fieldKey(field)
+    const path = prefix && key ? `${prefix}.${key}` : key
+    if (path && field.optionsActionByValue?.path === controller) result.push(path)
+    if (field.fields && path) result.push(...fieldsControlledBy(field.fields, controller, path))
+  }
+  return result
 }
 
 function splitLines(value: string) {

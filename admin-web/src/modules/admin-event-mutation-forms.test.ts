@@ -243,3 +243,19 @@ describe('R1 novice walkthrough fixes', () => {
     assert.ok(tagIds?.emptyHint && tagIds.emptyHint.includes('新建活动目录'))
   })
 })
+
+describe('R2 novice walkthrough fixes', () => {
+  it('keeps the event type empty on create so no ghost selection appears', () => {
+    const creating = createAdminEventMutationDefinition('mip.admin.events.save', '')
+    assert.equal(creating.values.eventTypeKey, '')
+    // submitting without a type still lands on the platform default
+    const result = buildEventMutationInput('mip.admin.events.save', { ...baseEvent, eventTypeKey: '' })
+    assert.ok(result && 'draft' in result)
+    assert.equal((result.draft as { eventTypeKey: string }).eventTypeKey, 'general')
+  })
+
+  it('marks the offline venue as conditionally required', () => {
+    const venueName = EVENT_MUTATION_CONFIGS['mip.admin.events.save'].fields.find(field => field.key === 'venueName')
+    assert.deepEqual(venueName?.requiredWhen, { path: 'eventMode', values: ['OFFLINE', 'HYBRID'] })
+  })
+})

@@ -85,6 +85,10 @@ export interface ContentMutationField {
     readonly path: string
     readonly value: string | readonly string[]
   }
+  readonly requiredWhen?: {
+    readonly path: string
+    readonly values: readonly string[]
+  }
   readonly assetPurpose?: string
   readonly remoteUserSearch?: boolean
   readonly optionsKey?: string
@@ -329,7 +333,7 @@ const idField = (key: string, label: string, required = true): ContentMutationFi
 const userPickerField = (key: string, label: string, required = true): ContentMutationField => ({ ...idField(key, label, required), remoteUserSearch: true })
 const catalogPickerField = (key: string, label: string, action: string, required = true): ContentMutationField => ({ ...idField(key, label, required), optionsAction: action })
 const versionField = (): ContentMutationField => ({ key: 'expectedVersion', label: '记录版本', kind: 'integer', required: true })
-const scopeFields = (): ContentMutationField[] => [selectField('scopeType', '作用范围', ['PLATFORM', 'BRANCH']), { ...idField('branchId', '服务器', false), optionsAction: 'mip.admin.branches.list', emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' }]
+const scopeFields = (): ContentMutationField[] => [selectField('scopeType', '作用范围', ['PLATFORM', 'BRANCH']), { ...idField('branchId', '服务器', false), visibleWhen: { path: 'scopeType', value: 'BRANCH' }, requiredWhen: { path: 'scopeType', values: ['BRANCH'] }, optionsAction: 'mip.admin.branches.list', emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' }]
 const reasonField = (label = '处理原因'): ContentMutationField => areaField('reason', label, 300)
 
 function groupField(key: string, label: string, fields: readonly ContentMutationField[]): ContentMutationField {
@@ -426,7 +430,7 @@ const CONTENT_MUTATION_FORMS: readonly ContentMutationFormDefinition[] = [
   { action: 'mip.admin.userContent.archive', capability: 'userContent.moderate', resource: '用户内容', inputKeys: ['kind', 'contentId', 'expectedVersion', 'reason'], idempotencyRequired: false, fields: [selectField('kind', '内容类型', ['COOPERATION_CARD', 'SUPER_CASE']), idField('contentId', '用户内容'), versionField(), reasonField('归档原因')] },
   {
     action: 'mip.admin.knowledge.contents.save', capability: 'knowledge.manage', resource: '知识内容', inputKeys: ['contentId', 'expectedVersion', 'sourceId', 'categoryId', 'contentType', 'title', 'summary', 'bodyText', 'externalUrl', 'channelFinderUserName', 'channelFeedId', 'coverAssetId', 'authorName', 'accessType', 'commentsEnabled', 'moderationMode'], idempotencyRequired: false,
-    fields: [idField('contentId', '知识内容', false), { ...versionField(), required: false }, idField('sourceId', '信息源', false), idField('categoryId', '分类'), selectField('contentType', '内容类型', ['HOT_NEWS', 'ARTICLE', 'WEB', 'VIDEO', 'PRIVATE_CHANNEL', 'EXPERT_SHARE']), textField('title', '标题', 160), areaField('summary', '摘要', 500), areaField('bodyText', '正文', 100_000, false), { key: 'externalUrl', label: '外部地址', kind: 'url', required: false }, { ...textField('channelFinderUserName', '视频号用户名', 64, false), placeholder: '如 sphXxXxXx', extra: '视频号主页的账号名（一般以 sph 开头），仅在「私域内容」类型时需要' }, { ...textField('channelFeedId', '视频号 Feed ID', 128, false), extra: '视频号动态 ID，从视频号分享链接中获取；仅在「私域内容」类型时需要' }, { ...idField('coverAssetId', '封面图片', false), assetPurpose: 'SUPER_CASE_COVER' } as ContentMutationField, textField('authorName', '作者', 100, false), selectField('accessType', '访问范围', ['FREE', 'MEMBER', 'MEMBER_OR_PAID']), { key: 'commentsEnabled', label: '允许评论', kind: 'checkbox', required: true }, { key: 'moderationMode', label: '评论审核方式', kind: 'select', options: [{ value: 'AUTO', label: '自动审核' }, { value: 'REVIEW', label: '人工审核' }] }],
+    fields: [idField('contentId', '知识内容', false), { ...versionField(), required: false }, idField('sourceId', '信息源', false), idField('categoryId', '分类'), selectField('contentType', '内容类型', ['HOT_NEWS', 'ARTICLE', 'WEB', 'VIDEO', 'PRIVATE_CHANNEL', 'EXPERT_SHARE']), textField('title', '标题', 160), areaField('summary', '摘要', 500), areaField('bodyText', '正文', 100_000, false), { key: 'externalUrl', label: '外部地址', kind: 'url', required: false }, { ...textField('channelFinderUserName', '视频号用户名', 64, false), placeholder: '如 sphXxXxXx', extra: '视频号主页的账号名（一般以 sph 开头），仅在「私域内容」类型时需要' }, { ...textField('channelFeedId', '视频号 Feed ID', 128, false), placeholder: '从视频号分享链接中复制', extra: '视频号动态 ID，从视频号分享链接中获取；仅在「私域内容」类型时需要' }, { ...idField('coverAssetId', '封面图片', false), assetPurpose: 'SUPER_CASE_COVER' } as ContentMutationField, textField('authorName', '作者', 100, false), selectField('accessType', '访问范围', ['FREE', 'MEMBER', 'MEMBER_OR_PAID']), { key: 'commentsEnabled', label: '允许评论', kind: 'checkbox', required: true }, { key: 'moderationMode', label: '评论审核方式', kind: 'select', options: [{ value: 'AUTO', label: '自动审核' }, { value: 'REVIEW', label: '人工审核' }] }],
   },
   { action: 'mip.admin.knowledge.sources.save', capability: 'knowledge.manage', resource: '知识信息源', inputKeys: ['sourceId', 'expectedVersion', 'sourceKey', 'name', 'sourceType', 'endpointUrl', 'status', 'fetchConfig'], idempotencyRequired: false, fields: [idField('sourceId', '信息源', false), { ...versionField(), required: false }, textField('sourceKey', '唯一编码', 64, true), textField('name', '名称', 100, true), selectField('sourceType', '来源类型', ['MANUAL', 'JSON_FEED', 'RSS']), textField('endpointUrl', 'HTTPS 地址', 2000, false), selectField('status', '状态', ['ACTIVE', 'INACTIVE'])] },
   { action: 'mip.admin.knowledge.categories.save', capability: 'knowledge.manage', resource: '知识分类', inputKeys: ['categoryId', 'expectedVersion', 'categoryKey', 'name', 'summary', 'sortOrder', 'status'], idempotencyRequired: false, fields: [idField('categoryId', '分类', false), { ...versionField(), required: false }, textField('categoryKey', '唯一编码', 64, true), textField('name', '名称', 80, true), areaField('summary', '说明', 300, false), integerField('sortOrder', '排序', true), selectField('status', '状态', ['ACTIVE', 'INACTIVE'])] },
@@ -450,6 +454,7 @@ export function getContentMutationForm(action: ContentMutationAction): ContentMu
     return { ...form, fields: form.fields.map(field => {
       if (field.key === 'sourceId' && action !== 'mip.admin.knowledge.sources.save') return { ...field, optionsAction: 'mip.admin.knowledge.list', optionsInput: { section: 'SOURCES', limit: 100 }, emptyHint: '暂无可选信息源。可在「知识库」页的「新建信息源」中创建' }
       if (field.key === 'categoryId' && action !== 'mip.admin.knowledge.categories.save') return { ...field, optionsAction: 'mip.admin.knowledge.list', optionsInput: { section: 'CATEGORIES', limit: 100 }, emptyHint: '暂无可选分类。可在「知识库」页的「新建分类」中创建' }
+      if (field.key === 'contentId' && action === 'mip.admin.knowledge.products.save') return { ...field, optionsAction: 'mip.admin.knowledge.list', optionsInput: { section: 'CONTENTS', limit: 100 }, emptyHint: '暂无可选内容。可在「知识库」页的「新建内容」中创建' }
       return field
     }) }
   }
@@ -526,11 +531,13 @@ function assertAllowedInputKeys(action: ContentMutationAction, input: Record<str
 function validateAnnouncement(input: Record<string, unknown>): AnnouncementInput {
   assertKeys(input, ['announcementId', 'expectedVersion', 'scopeType', 'branchId', 'title', 'summary', 'body', 'targetType', 'targetId', 'visibleFrom', 'visibleUntil'])
   const result = { ...optionalIdVersion(input, 'announcementId'), ...scope(input), title: requiredText(input.title, 100, '公告标题'), summary: requiredText(input.summary, 240, '公告摘要'), body: requiredText(input.body, 5_000, '公告正文'), visibleFrom: requiredDate(input.visibleFrom, '展示开始时间') } as AnnouncementInput
+  // Association is optional: a missing type simply drops any stale target id
+  // (hidden by the linkage), so clearing the type can never dead-end the save.
   const targetType = optionalEnum(input.targetType, ['EVENT', 'OPPORTUNITY'])
   const targetId = optionalId(input.targetId)
-  if (Boolean(targetType) !== Boolean(targetId)) throw invalid('公告关联内容无效')
+  if (targetType && !targetId) throw invalid('选择了关联类型后，请选择关联内容，或清空关联类型')
   if (targetType) result.targetType = targetType as AnnouncementTarget
-  if (targetId) result.targetId = targetId
+  if (targetType && targetId) result.targetId = targetId
   const visibleUntil = optionalDate(input.visibleUntil, '展示结束时间')
   if (visibleUntil && new Date(visibleUntil) <= new Date(result.visibleFrom)) throw invalid('展示结束时间必须晚于开始时间')
   if (visibleUntil) result.visibleUntil = visibleUntil
@@ -630,9 +637,9 @@ function validateKnowledgeContent(input: Record<string, unknown>): KnowledgeCont
   const externalUrl = optionalUrl(input.externalUrl, '外部地址')
   if (['ARTICLE', 'HOT_NEWS', 'EXPERT_SHARE'].includes(contentType) && !bodyText) throw invalid('请填写正文')
   if (['WEB', 'VIDEO'].includes(contentType) && !externalUrl) throw invalid('请填写外部地址')
-  const finder = optionalAscii(input.channelFinderUserName, 64)
-  const feed = optionalAscii(input.channelFeedId, 128)
-  if (contentType === 'PRIVATE_CHANNEL' && (!finder || !feed)) throw invalid('私域频道信息无效')
+  const finder = optionalAscii(input.channelFinderUserName, 64, '视频号用户名')
+  const feed = optionalAscii(input.channelFeedId, 128, '视频号 Feed ID')
+  if (contentType === 'PRIVATE_CHANNEL' && (!finder || !feed)) throw invalid('私域内容需要填写视频号用户名和 Feed ID')
   return { ...(contentId ? { contentId, expectedVersion: positiveVersion(input.expectedVersion) } : {}), sourceId: optionalUuid(input.sourceId, '信息源'), categoryId: uuid(input.categoryId, '分类'), contentType, title: requiredText(input.title, 160, '标题'), summary: requiredText(input.summary, 500, '摘要'), bodyText, externalUrl, channelFinderUserName: contentType === 'PRIVATE_CHANNEL' ? finder : undefined, channelFeedId: contentType === 'PRIVATE_CHANNEL' ? feed : undefined, coverAssetId: optionalUuid(input.coverAssetId, '封面素材'), authorName: optionalText(input.authorName, 100), accessType: enumValue(input.accessType, ['FREE', 'MEMBER', 'MEMBER_OR_PAID'], '访问范围') as KnowledgeContentInput['accessType'], commentsEnabled: boolean(input.commentsEnabled, '评论开关'), moderationMode: enumValue(input.moderationMode, ['AUTO', 'REVIEW'], '评论审核方式') as KnowledgeContentInput['moderationMode'] }
 }
 
@@ -688,8 +695,9 @@ function optionalIdVersion(input: Record<string, unknown>, key: string) {
 function scope(input: Record<string, unknown>) {
   const scopeType = enumValue(input.scopeType, ['PLATFORM', 'BRANCH'], '作用范围') as ScopeType
   const branchId = optionalId(input.branchId)
-  if (scopeType === 'BRANCH' && !branchId) throw invalid('服务器不能为空')
-  if (scopeType === 'PLATFORM' && branchId) throw invalid('平台范围不能填写服务器')
+  if (scopeType === 'BRANCH' && !branchId) throw invalid('请选择服务器')
+  // A stale branch id left over from switching back to platform scope is
+  // dropped rather than rejected — the field is hidden at that point.
   return scopeType === 'BRANCH' ? { scopeType, branchId } : { scopeType }
 }
 
@@ -838,10 +846,10 @@ function optionalUrl(value: unknown, label: string): string | undefined {
   return value.trim()
 }
 
-function optionalAscii(value: unknown, maximum: number): string | undefined {
+function optionalAscii(value: unknown, maximum: number, label: string): string | undefined {
   if (value === undefined || value === null || value === '') return undefined
   const result = typeof value === 'string' ? value.trim() : ''
-  if (!result || result.length > maximum || !/^[A-Za-z0-9_@.-]+$/.test(result)) throw invalid('标识格式无效')
+  if (!result || result.length > maximum || !/^[A-Za-z0-9_@.-]+$/.test(result)) throw invalid(`${label}仅支持字母、数字和 _ @ . - 组合，请勿粘贴完整链接`)
   return result
 }
 

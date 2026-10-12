@@ -118,7 +118,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'endsAt', label: '结束时间', kind: 'datetime', required: true },
   { key: 'registrationDeadline', label: '报名截止时间', kind: 'datetime', advanced: true, extra: '选填。不填则报名持续到活动开始' },
   { key: 'cancellationDeadline', label: '取消截止时间', kind: 'datetime', advanced: true, extra: '选填。在此时间前成员可自主取消报名' },
-  { key: 'venueName', label: '活动地点', kind: 'text', maxLength: 160, placeholder: '如：上海·徐汇 XX 空间' },
+  { key: 'venueName', label: '活动地点', kind: 'text', maxLength: 160, requiredWhen: { path: 'eventMode', values: ['OFFLINE', 'HYBRID'] }, placeholder: '如：上海·徐汇 XX 空间' },
   { key: 'address', label: '详细地址', kind: 'text', maxLength: 300, placeholder: '街道门牌号，方便成员找路' },
   { key: 'cityName', label: '城市', kind: 'text', maxLength: 80, placeholder: '如：上海' },
   { key: 'latitude', label: '位置纬度', kind: 'number', advanced: true, extra: '选填，用于小程序活动详情页的「导航」按钮（打开地图）。获取方式：微信里打开该位置卡片，或在高德/腾讯地图搜索地点后复制坐标；须与经度成对填写。示例：31.230416' },
@@ -640,8 +640,10 @@ function defaultValues(action: EventMutationAction): EventMutationValues {
         : ''
   }
   if (action === 'mip.admin.events.save') {
+    // eventTypeKey stays empty on create: the draft builder falls back to the
+    // platform default type, and preseeding it showed a ghost「等待目录核对」row.
     Object.assign(values, {
-      scopeType: 'PLATFORM', eventTypeKey: 'general', eventMode: 'OFFLINE', accessType: 'FREE',
+      scopeType: 'PLATFORM', eventMode: 'OFFLINE', accessType: 'FREE',
       registrationPolicy: 'AUTO', waitlistEnabled: false, priceCents: '0',
     })
   }

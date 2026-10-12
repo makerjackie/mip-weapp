@@ -4,6 +4,7 @@ import {
   ADMIN_PEOPLE_MUTATION_ACTIONS,
   buildAdminPeopleMutationInput,
   createAdminPeopleMutationDefinition,
+  explainAdminPeopleMutationInput,
   type AdminPeopleMutationAction,
 } from './admin-people-mutation-forms.ts'
 
@@ -429,5 +430,19 @@ describe('R1 novice walkthrough fixes', () => {
     const definition = createAdminPeopleMutationDefinition('mip.admin.roles.set', 'user-1')
     const template = definition.fields.find(field => field.key === 'roleTemplateId') as { emptyHint?: string } | undefined
     assert.ok(template?.emptyHint?.includes('岗位模板'))
+  })
+})
+
+describe('R2 novice walkthrough fixes', () => {
+  it('explains the login-account format instead of a generic banner failure', () => {
+    const definition = createAdminPeopleMutationDefinition('mip.admin.adminAccounts.create', '')
+    assert.equal(explainAdminPeopleMutationInput(definition, { loginAccount: '张三' }), '登录账号需为 3–64 位英文字母、数字或 . _ - 组合（不支持中文或空格）')
+    assert.equal(explainAdminPeopleMutationInput(definition, { loginAccount: 'zhangsan' }), null)
+  })
+
+  it('explains a missing scope for branch and event roles', () => {
+    const definition = createAdminPeopleMutationDefinition('mip.admin.roles.set', 'user-1')
+    assert.equal(explainAdminPeopleMutationInput(definition, { roleKey: 'BRANCH_ADMIN', scopeId: '' }), '请选择管理范围：服务器管理员需选择服务器，活动类角色需选择活动')
+    assert.equal(explainAdminPeopleMutationInput(definition, { roleKey: 'PLATFORM_OPERATIONS', scopeId: '' }), null)
   })
 })

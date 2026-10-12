@@ -18,6 +18,7 @@ import {
   ADMIN_GAME_MUTATION_ACTIONS,
   buildGameMutationInput,
   createGameMutationDefinition,
+  explainGameMutation,
   loadGameMemberSelection,
   type AdminGameMutationAction,
 } from '../../modules/admin-game-management'
@@ -26,6 +27,7 @@ import {
   ADMIN_PEOPLE_MUTATION_CONFIGS,
   buildAdminPeopleMutationInput,
   createAdminPeopleMutationDefinition,
+  explainAdminPeopleMutationInput,
   type AdminPeopleMutationAction,
 } from '../../modules/admin-people-mutation-forms'
 import { defaultOperationValues, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
@@ -40,6 +42,7 @@ import {
   createTaskSubmissionMutationDefinition,
   buildTaskAssignmentInput,
   buildTaskSubmissionInput,
+  explainTaskAssignment,
   loadTaskEligibleLevels,
   loadTaskEditorOptions,
   type AdminTaskMutationAction,
@@ -147,7 +150,7 @@ export async function createOperationModel(
     })
     const values = { ...prefillPeopleValues(typedAction, definition.values, detail), ...launch.values }
     const fields = peopleFields(typedAction, definition.fields, launch.allowedCapabilities, detail)
-    return model(definition, fields, values, idempotencyKey, next => buildAdminPeopleMutationInput(definition, next))
+    return model(definition, fields, values, idempotencyKey, next => buildAdminPeopleMutationInput(definition, next), next => explainAdminPeopleMutationInput(definition, next))
   }
   if (eventActions.has(action)) {
     const typedAction = action as AdminEventMutationAction
@@ -192,7 +195,7 @@ export async function createOperationModel(
         : []
       const definition = createTaskAssignmentMutationDefinition(typedAction, targetId, { task: taskSource, assignableMembers, editorOptions: await loadTaskEditorOptions(request) })
       const values = { ...definition.values, ...launch.values }
-      return model(definition, definition.fields, values, idempotencyKey, next => buildTaskAssignmentInput(typedAction, next))
+      return model(definition, definition.fields, values, idempotencyKey, next => buildTaskAssignmentInput(typedAction, next), explainTaskAssignment)
     }
     let source = detail?.source || {}
     if (typedAction === 'mip.admin.tasks.save' && !Array.isArray(source.eligibleLevelCatalog)) {
@@ -213,7 +216,7 @@ export async function createOperationModel(
     const source = typedAction === 'mip.admin.game.teams.members.replace' ? await loadGameMemberSelection(detail?.source || {}, request) : detail?.source || {}
     const definition = createGameMutationDefinition(typedAction, targetId, source)
     const values = { ...definition.values, ...versionValue(launch), ...launch.values }
-    return model(definition, definition.fields, values, idempotencyKey, next => buildGameMutationInput(definition, next))
+    return model(definition, definition.fields, values, idempotencyKey, next => buildGameMutationInput(definition, next), next => explainGameMutation(definition, next))
   }
 
   const typedAction = action as ContentMutationAction
