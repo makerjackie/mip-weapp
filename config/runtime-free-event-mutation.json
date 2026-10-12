@@ -82,16 +82,6 @@
       ]
     },
     {
-      "id": "member-heart",
-      "route": "packages/member/mip-events/interaction/index",
-      "selector": "#mip-event-interaction-page",
-      "mode": "automated-mutation",
-      "handlers": [
-        "chooseHeart"
-      ],
-      "unavailable": "external-wait-continue"
-    },
-    {
       "id": "member-feedback",
       "route": "packages/member/mip-events/feedback/index",
       "selector": "#mip-event-feedback-page",

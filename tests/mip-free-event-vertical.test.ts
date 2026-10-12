@@ -65,15 +65,10 @@ describe('MIP free event vertical contract', () => {
   it('rechecks full access for participation mutations and refreshes optimistic conflicts', () => {
     const handler = read('cloudfunctions/mip-events-api/index.js')
     const service = read('cloudfunctions/mip-events-api/domain/event-service.js')
-    const interaction = read('src/packages/member/mip-events/interaction/index.ts')
     const feedback = read('src/packages/member/mip-events/feedback/index.ts')
 
     expect(handler.match(/participationAccessPolicy,/g)?.length).toBeGreaterThanOrEqual(4)
     expect(service).toContain('await requireCurrentParticipationAccess(participationAccessPolicy, tx, appId, userId)')
-    expect(interaction).toContain('consumePendingResume(\'packages/member/mip-events/interaction/index\')')
-    expect(interaction).toContain('action: \'INTERACT\'')
-    expect(interaction).toContain('error.code === \'CONFLICT\'')
-    expect(interaction).toContain('mipEventsModule.listHeartCandidates(this.data.eventId)')
     expect(feedback).toContain('consumePendingResume(PAGE_ROUTE)')
     expect(feedback).toContain('action: \'INTERACT\'')
     expect(feedback).toContain('error.code === \'CONFLICT\'')
@@ -87,7 +82,6 @@ describe('MIP free event vertical contract', () => {
       read('src/packages/member/mip-events/detail/index.wxml'),
       read('src/packages/member/mip-events/registration/index.wxml'),
       read('src/packages/member/mip-events/mine/index.wxml'),
-      read('src/packages/member/mip-events/interaction/index.wxml'),
       read('src/packages/member/mip-events/feedback/index.wxml'),
     ].join('\n')
 

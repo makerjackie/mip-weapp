@@ -117,7 +117,7 @@ export function ownerInteractionFixtureSummary(value) {
   return {
     ready: true,
     registrationStatus: 'ATTENDED',
-    interactionPage: 'packages/member/mip-events/interaction/index',
+    interactionPage: 'packages/member/mip-events/participants/index',
   }
 }
 

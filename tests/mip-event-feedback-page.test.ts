@@ -39,14 +39,13 @@ describe('MIP event feedback page', () => {
     expect(mine).not.toContain('/packages/member/mip-events/interaction/index?eventId=')
   })
 
-  it('keeps feedback separate from the two heart views', () => {
-    const interaction = read('src/packages/member/mip-events/interaction/index.ts')
-    const interactionView = read('src/packages/member/mip-events/interaction/index.wxml')
+  it('keeps feedback separate from the participant heart views', () => {
+    const participants = read('src/packages/member/mip-events/participants/index.ts')
+    const participantsView = read('src/packages/member/mip-events/participants/index.wxml')
 
-    expect(interaction).toContain('type InteractionView = \'SENT\' | \'RECEIVED\'')
-    expect(interaction).not.toContain('\'FEEDBACK\'')
-    expect(interaction).not.toContain('saveFeedback')
-    expect(interactionView).not.toContain('\u6D3B\u52A8\u53CD\u9988')
+    expect(participants).toContain('toggleHeartVote')
+    expect(participants).not.toContain('saveFeedback')
+    expect(participantsView).not.toContain('\u6D3B\u52A8\u53CD\u9988')
   })
 
   it('implements every field from the Figma form without prototype data', () => {

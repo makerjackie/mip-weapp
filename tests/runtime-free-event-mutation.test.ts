@@ -3,7 +3,6 @@ import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
   createOpenedAutomatorOptions,
-  hasExactHeartCandidateState,
   isReusableFreeEventRegistrationStatus,
   planRegistrationFieldActions,
   resolveFreeEventMutationOptions,
@@ -14,7 +13,6 @@ import {
   summarizeCommentPage,
   summarizeEventDetail,
   summarizeFeedback,
-  summarizeInteraction,
   summarizeMutationCleanup,
   summarizeRegistrationFact,
   summarizeRoster,
@@ -54,7 +52,7 @@ function contractWithStep(id: string, update: Record<string, unknown>) {
 
 describe('free offline event mutation runtime contract', () => {
   it('keeps the flow isolated from the read-only runtime contract', () => {
-    expect(validateFreeEventMutationContract(contract)).toEqual({ routeCount: 6, stepCount: 9 })
+    expect(validateFreeEventMutationContract(contract)).toEqual({ routeCount: 5, stepCount: 8 })
     expect(contract.connection).toMatchObject({
       allowDirectDatabaseWrites: false,
       allowProjectWarmup: false,
@@ -92,10 +90,6 @@ describe('free offline event mutation runtime contract', () => {
           handlers: ['selectRating', 'selectRecommendation', 'saveFeedback'],
         }),
         message: 'member-feedback bound page handlers changed unexpectedly',
-      },
-      {
-        contract: contractWithStep('member-heart', { unavailable: 'failed' }),
-        message: 'member-heart unavailable policy changed unexpectedly',
       },
       {
         contract: contractWithStep('member-event-detail', { handler: 'loadEvent' }),
@@ -402,51 +396,6 @@ describe('free offline event mutation runtime contract', () => {
 })
 
 describe('free event runtime evidence summaries', () => {
-  it('matches heart mutations by the exact candidate fact without comparing signed tokens', () => {
-    const candidateRef = 'candidate-token-with-one-expiry'
-    const selected = {
-      state: 'ready',
-      candidates: [
-        { participantRef: candidateRef, selected: true },
-        { participantRef: 'other-candidate-token', selected: false },
-      ],
-      heart: { targetRef: 'heart-token-with-another-expiry', version: 4 },
-    }
-    expect(hasExactHeartCandidateState(selected, {
-      participantRef: candidateRef,
-      previousVersion: 3,
-      selected: true,
-    })).toBe(true)
-    expect(hasExactHeartCandidateState(selected, {
-      participantRef: 'other-candidate-token',
-      previousVersion: 3,
-      selected: true,
-    })).toBe(false)
-    expect(hasExactHeartCandidateState(selected, {
-      participantRef: candidateRef,
-      previousVersion: 4,
-      selected: true,
-    })).toBe(false)
-
-    expect(hasExactHeartCandidateState({
-      state: 'ready',
-      candidates: [
-        { participantRef: candidateRef, selected: false },
-        { participantRef: 'other-candidate-token', selected: false },
-      ],
-      heart: { version: 5 },
-    }, {
-      participantRef: candidateRef,
-      previousVersion: 4,
-      selected: false,
-    })).toBe(true)
-
-    const runnerSource = fs.readFileSync(path.join(root, 'scripts/verify-free-event-runtime.mjs'), 'utf8')
-    expect(runnerSource).toContain('hasExactHeartCandidateState(value, {')
-    expect(runnerSource).not.toContain('value?.heart?.targetRef === target.participantRef')
-    expect(runnerSource).not.toContain('target.participantRef === originalTarget')
-  })
-
   it('waits for the operator only when Automator compile is exactly unimplemented', () => {
     expect(runtimeCompileDisposition(new Error('unimplemented'))).toBe('operator-wait')
     expect(runtimeCompileDisposition({ message: 'unimplemented' })).toBe('operator-wait')
@@ -545,12 +494,6 @@ describe('free event runtime evidence summaries', () => {
           version: 1,
         }],
       }, 'registration-1'),
-      summarizeInteraction({
-        state: 'ready',
-        activeView: 'SENT',
-        candidates: [{ participantRef: sensitiveValues[3] }],
-        heart: { targetRef: sensitiveValues[3], version: 2 },
-      }),
       summarizeFeedback({
         state: 'ready',
         event: { id: eventId, title: 'secret title' },
