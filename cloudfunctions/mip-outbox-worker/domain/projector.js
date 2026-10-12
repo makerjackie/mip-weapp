@@ -938,13 +938,16 @@ function boundedText(value, limit) {
  * 授权入账的一次性额度；无授权（GRANT_UNAVAILABLE）按 worker 既有重试上限收敛，
  * 站内信始终无条件落库，不回退成已送达。OPPORTUNITY_NOTICE 模板未配置时
  * publishMessage 丢弃 external，只保留站内信（isChannelConfigured）。
+ * MIW-67 后续：改用「合作邀请发起提醒」模板（事件名称/发起人/备注/发起时间），
+ * 字段扩为 title/initiator/status/receivedAt；发起人缺名回退「有人」。
  */
-function opportunityNoticeExternal(title, statusText, receivedAtValue) {
+function opportunityNoticeExternal(title, statusText, receivedAtValue, initiator) {
   return {
     channel: 'WECHAT_SUBSCRIPTION',
     templateKey: 'OPPORTUNITY_NOTICE',
     fields: {
       title: boundedText(title, 100) || statusText,
+      initiator: boundedText(initiator, 100) || '有人',
       status: statusText,
       receivedAt: notificationDateTime(receivedAtValue),
     },
@@ -953,7 +956,7 @@ function opportunityNoticeExternal(title, statusText, receivedAtValue) {
 
 async function projectCooperation(database, event) {
   assertAggregate(event, 'OPPORTUNITY_COOPERATION')
-  const row = await database.one(`SELECT intent.status, intent.version, intent.opportunity_id, o.owner_user_id, o.title, intent.activated_at
+  const row = await database.one(`SELECT intent.status, intent.version, intent.opportunity_id, o.owner_user_id, o.title, intent.activated_at, actor.nickname AS actor_nickname
     FROM mip_opportunity_cooperations intent
     JOIN mip_opportunities o ON o.app_id = intent.app_id AND o.id = intent.opportunity_id AND o.status IN ('PUBLISHED', 'ENDED')
     JOIN mip_users actor ON actor.app_id = intent.app_id AND actor.id = intent.user_id AND actor.status = 'ACTIVE'
@@ -969,7 +972,7 @@ async function projectCooperation(database, event) {
   return projection([message(event, row.owner_user_id, 'cooperation', {
     messageType: 'OPPORTUNITY', title: '有人想与你合作', body: '你发布的机会收到新的合作意向。',
     targetType: 'OPPORTUNITY', targetId: row.opportunity_id,
-    external: opportunityNoticeExternal(row.title, '收到新的合作意向', row.activated_at),
+    external: opportunityNoticeExternal(row.title, '收到新的合作意向', row.activated_at, row.actor_nickname),
   })], [], 'PROJECTED')
 }
 
@@ -1023,7 +1026,7 @@ async function projectReferral(database, event) {
 async function projectInterest(database, event) {
   assertAggregate(event, 'PROFILE_INTEREST')
   const row = await database.one(
-    `SELECT i.status, i.version, i.actor_user_id, i.target_user_id, i.source_type, i.source_id, i.updated_at, opportunity.title AS opportunity_title
+    `SELECT i.status, i.version, i.actor_user_id, i.target_user_id, i.source_type, i.source_id, i.updated_at, opportunity.title AS opportunity_title, actor.nickname AS actor_nickname
      FROM mip_profile_interests i
      INNER JOIN mip_users actor
        ON actor.app_id = i.app_id AND actor.id = i.actor_user_id AND actor.status = 'ACTIVE'
@@ -1090,7 +1093,7 @@ async function projectInterest(database, event) {
       ...target,
       external: row.source_type === 'OPPORTUNITY'
         // MIW-67：机会来源的感兴趣改走发布人订阅额度（OPPORTUNITY_NOTICE）。
-        ? opportunityNoticeExternal(row.opportunity_title, '收到新的感兴趣标记', row.updated_at)
+        ? opportunityNoticeExternal(row.opportunity_title, '收到新的感兴趣标记', row.updated_at, row.actor_nickname)
         : row.source_type === 'PROFILE'
           ? {
               channel: 'WECHAT_SUBSCRIPTION',

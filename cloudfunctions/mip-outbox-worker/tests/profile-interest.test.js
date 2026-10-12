@@ -38,6 +38,7 @@ function currentRelationship(overrides = {}) {
     source_type: 'OPPORTUNITY',
     source_id: SOURCE_ID,
     opportunity_title: '联合创始人在哪找',
+    actor_nickname: '张三',
     ...overrides,
   }
 }
@@ -89,7 +90,12 @@ describe('profile interest outbox projection', () => {
       external: {
         channel: 'WECHAT_SUBSCRIPTION',
         templateKey: 'OPPORTUNITY_NOTICE',
-        fields: { title: '联合创始人在哪找', status: '收到新的感兴趣标记', receivedAt: '2026-09-22 10:30' },
+        fields: {
+          title: '联合创始人在哪找',
+          initiator: '张三',
+          status: '收到新的感兴趣标记',
+          receivedAt: '2026-09-22 10:30',
+        },
       },
     }])
     assert.equal(JSON.stringify(result).includes('attacker-controlled'), false)
@@ -104,6 +110,17 @@ describe('profile interest outbox projection', () => {
       },
     }, outboxEvent)
     assert.deepEqual(result.notifications[0].external.fields.title, '收到新的感兴趣标记')
+  })
+
+  it('falls back to a generic initiator when the actor nickname is missing', async () => {
+    const outboxEvent = interestEvent()
+    const result = await projectEvent({
+      async one(sql, params) {
+        assertCurrentFactQuery(sql, params, outboxEvent)
+        return currentRelationship({ actor_nickname: '   ' })
+      },
+    }, outboxEvent)
+    assert.deepEqual(result.notifications[0].external.fields.initiator, '有人')
   })
 
   it('keeps direct public-profile interest bound to the current target profile', async () => {

@@ -65,6 +65,8 @@ MIW-40（2026-10-05）：机会场景使用单一逻辑模板键 `OPPORTUNITY_NO
 
 MIW-67（2026-10-12）：机会动态的 projector 投递分支已接入——合作意向（`opportunity.cooperation_changed`）与机会来源的感兴趣（`profile.interest_changed` 的 `OPPORTUNITY` 分支）外部投递从客服消息改为 `WECHAT_SUBSCRIPTION` 渠道的 `OPPORTUNITY_NOTICE` 模板，逻辑字段 `title`（机会名，超长或缺名回退为动态短语）、`status`、`receivedAt`；引荐与合作卡/超级案例/档案来源的感兴趣维持既有渠道。发布人无可用授权时任务按 worker 既有可重试上限（5 次）收敛为失败，站内信始终无条件落库，不回退成已送达，也不阻断表态；`OPPORTUNITY_NOTICE` 模板未配置时 `publishMessage` 丢弃 external，同样只保留站内信。
 
+MIW-67 后续（2026-10-12）：`OPPORTUNITY_NOTICE` 改绑自有模板「合作邀请发起提醒」（一次性订阅），字段扩为 4 个——`title`（事件名称=机会名，回退口径不变）、`initiator`（发起人=表态用户昵称，缺名回退「有人」）、`status`（备注=动作短语：收到新的合作意向/收到新的感兴趣标记）、`receivedAt`（发起时间）。两个通知函数的 `templateFieldContracts` 与 projector 载荷同步；切换模板只需改 `MIP_SUBSCRIBE_TEMPLATES_JSON` 的 templateId/fields 并重部署，用户侧需按新模板重新授权一次（额度按模板分开）。
+
 展示节奏由纯函数 `guide-policy` 判定：同一机会 24 小时内最多展示 1 次；原生面板拒绝累计满 3 次后不再展示；`BANNED`（拒绝且不再询问）永久隐藏，并经既有 `recordSubscriptionDecision` 触发服务端 `revokeGrants`。已入账（`ACCEPTED`）后不再重复引导——微信订阅授权为一次性额度，重复收集以服务端 `mip_notification_grants` 为唯一事实源，客户端不预测余额。
 
 触发时机全部顺延到当前动作完成之后，不抢占手势：进入自己机会详情加载完成后；编辑返回（编辑入口本身不拦截，经 `onShow`→`load` 复用同一检查入口）；想合作名单弹层关闭后（当前详情页该弹层仅访客视角可打开，发布人侧名单入口接入后该时机自动生效）；发布成功后（见下）。拒绝过一次后，引导层只保留手动开启文案（右上角「···」→「设置」→「订阅消息」），不再重复拉起原生面板；手动开启无法由服务端入账，这是平台限制下的既定口径，文案引导不改变授权事实。
