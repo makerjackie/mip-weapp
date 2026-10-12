@@ -10,6 +10,7 @@ import {
 } from '../../../modules/mip-growth/badge-presentation'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 type BadgeCategory = 'IDENTITY' | 'HONOR'
 
@@ -209,7 +210,7 @@ Page({
   openDetail(event: WechatMiniprogram.TouchEvent) {
     const badgeId = String(event.currentTarget.dataset.id || '')
     if (badgeId) {
-      wx.navigateTo({ url: `/packages/member/mip-badge-detail/index?badgeId=${encodeURIComponent(badgeId)}` })
+      caseNavigateTo({ url: `/packages/member/mip-badge-detail/index?badgeId=${encodeURIComponent(badgeId)}` })
     }
   },
 })

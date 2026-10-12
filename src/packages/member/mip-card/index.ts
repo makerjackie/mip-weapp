@@ -182,6 +182,9 @@ Page({
     // 分享缩略图：进入页面/切换样式后静默渲染的名片图；下载仍走 createPoster 的模板校验。
     shareImagePath: '',
     generating: false,
+    // BUG-11.3（审计 2026-10-12）：分享图渲染中口径从实例字段移入 data，
+    // 供 WXML 下载按钮 disabled 绑定，避免渲染窗口内点击被静默吞掉。
+    drawingShare: false,
     message: '',
     // figma 1732_20401 版式只有卡片/样式选择/底栏；页头标题由原生导航承担，
     // 「编辑名片」入口用 showHeader 保留在生产环境。
@@ -192,7 +195,6 @@ Page({
   },
   profileRef: '',
   loadSequence: 0,
-  drawingShare: false,
 
   onLoad(options: { guest?: string } = {}) {
     if (options?.guest === '1') {
@@ -253,6 +255,13 @@ Page({
       if (sequence !== this.loadSequence) {
         return
       }
+      // BUG-11.1（审计 2026-10-12）：onShow 每次重载，从编辑页返回时网络抖动不应把
+      // 已展示的名片整页替换成错误态（AGENTS.md §11：装饰性/刷新请求失败不得让已
+      // 成功正文变整页错误）。已有内容只提示 message，空内容才整页 error。
+      if (this.data.state === 'ready') {
+        this.setData({ message: '名片更新失败，已保留上次结果。' })
+        return
+      }
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '名片加载失败' })
     }
   },
@@ -308,10 +317,10 @@ Page({
 
   // 分享缩略图静默渲染：下载按钮仍由 createPoster 负责模板必填校验，这里不校验、不报错。
   async refreshShareImage() {
-    if (this.data.isGuest || this.data.generating || this.drawingShare || this.data.state !== 'ready') {
+    if (this.data.isGuest || this.data.generating || this.data.drawingShare || this.data.state !== 'ready') {
       return
     }
-    this.drawingShare = true
+    this.setData({ drawingShare: true })
     try {
       const shareImagePath = await this.drawCard()
       if (shareImagePath) {
@@ -320,7 +329,7 @@ Page({
     }
     catch {}
     finally {
-      this.drawingShare = false
+      this.setData({ drawingShare: false })
     }
   },
 
@@ -342,7 +351,7 @@ Page({
   },
 
   async createPoster() {
-    if (this.data.generating || this.drawingShare || this.data.state !== 'ready') {
+    if (this.data.generating || this.data.drawingShare || this.data.state !== 'ready') {
       return ''
     }
     this.setData({ generating: true, message: '' })
@@ -552,6 +561,12 @@ Page({
 
   async savePoster() {
     if (this.data.generating) {
+      return
+    }
+    // BUG-11.3：分享缩略图在渲染时画布被占用，createPoster 会直接放弃并返回空串；
+    // 这里先给出明确反馈，不再让点击被静默吞掉（约 1 秒渲染窗口内必现）。
+    if (this.data.drawingShare) {
+      wx.showToast({ title: '图片生成中，请稍候', icon: 'none' })
       return
     }
     const posterPath = await this.createPoster()

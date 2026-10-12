@@ -1,6 +1,7 @@
 import type { AdminRosterItem, AdminRosterStatus } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
 
@@ -255,7 +256,7 @@ Page({
     if (!this.data.eventId) {
       return
     }
-    void wx.navigateTo({
+    void caseNavigateTo({
       url: `/packages/admin/event-console/index?eventId=${encodeURIComponent(this.data.eventId)}`,
     })
   },

@@ -5,6 +5,7 @@ import {
   exitMipMiniProgram,
   mipGlobalAccessGuard,
 } from '../../../modules/mip-identity/runtime'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 const requirementCopy = {
   AUTHENTICATED: {
@@ -221,13 +222,13 @@ Page({
   openAgreement(event: WechatMiniprogram.TouchEvent) {
     const documentPath = String(event.currentTarget.dataset.path || '')
     if (/^\/[\w/-]+$/.test(documentPath)) {
-      wx.navigateTo({ url: documentPath })
+      caseNavigateTo({ url: documentPath })
     }
   },
 
   openProfile() {
     this.profileOpened = true
-    wx.navigateTo({
+    caseNavigateTo({
       url: `/packages/member/mip-profile/index?token=${encodeURIComponent(this.data.token)}`,
       fail: () => { this.profileOpened = false },
     })

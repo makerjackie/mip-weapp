@@ -123,7 +123,8 @@ describe('MIP super case editor visual contract', () => {
     expect(page).toContain('/packages/member/mip-cases/city-selector/index?selected=')
     expect(page).toContain('citySelected')
     expect(page).toContain('applyCity(groupIndex, label')
-    expect(template).toContain('bind:tap="applyHotCity"')
+    // BUG-01：mip-tag-chip 自定义事件改名 select，避免与原生冒泡 tap 同名双触发。
+    expect(template).toContain('bind:select="applyHotCity"')
   })
 
   it('appends whole project groups and prompts for missing required fields on save', () => {
@@ -178,6 +179,7 @@ describe('MIP super case editor visual contract', () => {
     ]) {
       expect(
         template.includes(`bind:tap="${handler}"`)
+        || template.includes(`bind:select="${handler}"`)
         || template.includes(`bindchange="${handler}"`)
         || template.includes(`bindinput="${handler}"`),
       ).toBe(true)

@@ -1,4 +1,6 @@
-<view class="mip-order-card" style="border-radius:{{radius}}" bind:tap="handleTap">
+<!-- BUG-01（交互审计 2026-10-12）：根节点必须 catch:tap——triggerEvent('tap') 与原生
+     冒泡 tap 同名，bind 会让宿主绑定一次点按执行两次（同 mip-pill-button 的 F1 修复）。 -->
+<view class="mip-order-card" style="border-radius:{{radius}}" catch:tap="handleTap">
   <image wx:if="{{image}}" class="mip-order-card__cover" src="{{image}}" mode="aspectFill" />
   <view class="mip-order-card__main">
     <text wx:if="{{title}}" class="mip-order-card__title">{{title}}</text>

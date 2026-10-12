@@ -63,10 +63,18 @@
         <text wx:else class="mt-[40rpx] text-[28rpx] text-muted">确认使用这段录音生成{{purposeLabel}}草稿</text>
       </view>
       <view class="mx-[24rpx] mt-[80rpx] flex flex-col gap-[24rpx]">
-        <view aria-role="button" aria-label="确认使用" aria-disabled="{{state === 'processing'}}" bind:tap="confirmRecording" class="flex h-[96rpx] items-center justify-center rounded-full bg-brand text-[30rpx] font-medium text-canvas {{state === 'processing' ? 'opacity-60' : ''}}">
-          {{state === 'processing' ? 'AI 整理中…' : '确认使用'}}
+        <!-- BUG-07.2:处理中拆成无 tap 绑定的纯展示分支(原生 view 无 disabled 属性,
+             去掉 bind:tap 才是真禁用),避免整理期间点「确认使用/删除重录」与跳转打架。 -->
+        <view wx:if="{{state === 'processing'}}" aria-label="确认使用" aria-disabled="true" class="flex h-[96rpx] items-center justify-center rounded-full bg-brand text-[30rpx] font-medium text-canvas opacity-60">
+          AI 整理中…
         </view>
-        <view aria-role="button" aria-label="删除重录" aria-disabled="{{state === 'processing'}}" bind:tap="askDeleteRecording" class="flex h-[96rpx] items-center justify-center rounded-full border-[2rpx] border-[#3a3a3a] text-[30rpx] text-muted {{state === 'processing' ? 'opacity-60' : ''}}">
+        <view wx:else aria-role="button" aria-label="确认使用" bind:tap="confirmRecording" class="flex h-[96rpx] items-center justify-center rounded-full bg-brand text-[30rpx] font-medium text-canvas">
+          确认使用
+        </view>
+        <view wx:if="{{state === 'processing'}}" aria-label="删除重录" aria-disabled="true" class="flex h-[96rpx] items-center justify-center rounded-full border-[2rpx] border-[#3a3a3a] text-[30rpx] text-muted opacity-60">
+          删除重录
+        </view>
+        <view wx:else aria-role="button" aria-label="删除重录" bind:tap="askDeleteRecording" class="flex h-[96rpx] items-center justify-center rounded-full border-[2rpx] border-[#3a3a3a] text-[30rpx] text-muted">
           删除重录
         </view>
       </view>

@@ -1,7 +1,9 @@
+<!-- BUG-01（交互审计 2026-10-12）：根节点必须 catch:tap——triggerEvent('tap') 与原生
+     冒泡 tap 同名，bind 会让宿主绑定一次点按执行两次（同 mip-pill-button 的 F1 修复）。 -->
 <view
   class="mip-detail-row"
   aria-role="{{actionable ? 'button' : ''}}"
-  bind:tap="handleTap"
+  catch:tap="handleTap"
 >
   <text class="mip-detail-row__label">{{label}}</text>
   <view class="mip-detail-row__trailing">

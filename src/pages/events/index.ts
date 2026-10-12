@@ -155,11 +155,16 @@ Page({
     if (options.append) {
       this.setData({ loadingMore: true })
     }
-    else if (cached) {
-      this.applyFeed(cached, false)
-    }
-    else if (this.data.state !== 'ready') {
-      this.setData({ state: 'loading', message: '' })
+    else {
+      // BUG-06：非追加加载会推进 requestSeq 并 supersede 在途的「加载更多」，旧 append 回包因 seq 失配被丢弃、
+      // 不再经过任何复位路径；这里在发起新请求前同步复位 loadingMore，否则失败且仅有缓存时按钮永久卡死、分页失效。
+      this.setData({ loadingMore: false })
+      if (cached) {
+        this.applyFeed(cached, false)
+      }
+      else if (this.data.state !== 'ready') {
+        this.setData({ state: 'loading', message: '' })
+      }
     }
     const requestSeq = this.requestSeq + 1
     this.requestSeq = requestSeq

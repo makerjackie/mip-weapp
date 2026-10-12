@@ -15,7 +15,10 @@ Component({
       if (this.data.disabled) {
         return
       }
-      this.triggerEvent('tap', { count: this.data.count })
+      // BUG-01（交互审计 2026-10-12）：事件名不能叫 'tap'——会与原生冒泡 tap 同名，
+      // 宿主在标签上 bind:tap 时一次点按收两次；本组件用法由外层容器依赖原生
+      // 冒泡接住点击，根节点保持 bind:tap 不动，只把自定义事件改名。
+      this.triggerEvent('select', { count: this.data.count })
     },
   },
 })

@@ -126,7 +126,7 @@
     </view>
   </block>
   <mip-sticky-actions wx:if="{{state === 'ready' && paymentPending}}">
-    <view slot="actions" class="w-full"><mip-pill-button label="{{paymentEnabled ? '继续支付' : paymentUnavailableText}}" loading="{{paying}}" disabled="{{!paymentEnabled}}" bind:tap="requestPayment" /></view>
+    <view slot="actions" class="w-full"><mip-pill-button label="{{paymentEnabled ? '继续支付' : paymentUnavailableText}}" loading="{{paying || accessing}}" disabled="{{!paymentEnabled || accessing}}" bind:tap="requestPayment" /></view>
   </mip-sticky-actions>
   <app-page-exit label="返回" />
 </view>

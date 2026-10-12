@@ -72,7 +72,7 @@
             active="{{project.cityLabel === hotCity.label}}"
             data-group-index="{{groupIndex}}"
             data-label="{{hotCity.label}}"
-            bind:tap="applyHotCity"
+            bind:select="applyHotCity"
           />
         </view>
         <view class="case-editor-field-row">

@@ -75,6 +75,13 @@ Page({
       })
     }
     catch (error) {
+      // BUG-11.2（审计 2026-10-12）：submitTask 成功后刷新失败时不能把整页任务内容
+      // 替换成「暂时无法加载任务」，否则用户会误判提交失败而重复操作（AGENTS.md §11）。
+      // 已有任务正文时只提示 message，空内容（首次加载）才整页 error。
+      if (this.data.task) {
+        this.setData({ message: error instanceof Error ? `任务状态刷新失败，已保留上次内容。(${error.message})` : '任务状态刷新失败，已保留上次内容。' })
+        return
+      }
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '任务加载失败' })
     }
   },

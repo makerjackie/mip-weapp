@@ -162,6 +162,9 @@ Page({
   checkoutPlanId: '' as MembershipPlanId | '',
   growthRequestSeq: 0,
   tasksRequestSeq: 0,
+  // BUG-10.4（审计 2026-10-12）：会员态加载补序列守卫（对齐 growthRequestSeq/tasksRequestSeq），
+  // onShow 与下拉刷新并发双跑时后写胜出，避免文案回跳与并发 createMembershipInvitation。
+  membershipRequestSeq: 0,
 
   onLoad(query: Record<string, string | undefined> = {}) {
     const cached = mipGrowthModule.peekSnapshot()
@@ -195,14 +198,20 @@ Page({
   onHide() {
     this.growthRequestSeq += 1
     this.tasksRequestSeq += 1
+    this.membershipRequestSeq += 1
   },
 
   async loadMembershipActions() {
+    // BUG-10.4：整段绑定代际号，两个 await（权益 + 邀请码）之后的写入都要复核代际。
+    const requestSeq = ++this.membershipRequestSeq
     let membership
     try {
       membership = await mipCommerceModule.getMembershipBenefits()
     }
     catch {
+      if (requestSeq !== this.membershipRequestSeq) {
+        return
+      }
       this.shareInvitationToken = ''
       this.setData({
         isPlayer: false,
@@ -211,6 +220,9 @@ Page({
         renewWindowOpen: false,
         invitationReady: false,
       })
+      return
+    }
+    if (requestSeq !== this.membershipRequestSeq) {
       return
     }
     // MIW-27 第二轮：首笔付费等待管理后台审核。玩家等级页如实展示「审核中」，
@@ -259,10 +271,16 @@ Page({
     })
     try {
       const invitation = await mipCommerceModule.createMembershipInvitation()
+      if (requestSeq !== this.membershipRequestSeq) {
+        return
+      }
       this.shareInvitationToken = invitation.token
       this.setData({ invitationReady: true })
     }
     catch {
+      if (requestSeq !== this.membershipRequestSeq) {
+        return
+      }
       this.shareInvitationToken = ''
       this.setData({ invitationReady: false, invitationMessage: '邀请暂时不可用，请稍后重试。' })
     }
@@ -347,13 +365,13 @@ Page({
   openTask(event: WechatMiniprogram.TouchEvent) {
     const taskId = String(event.currentTarget.dataset.id || '')
     if (taskId) {
-      void wx.navigateTo({ url: `/packages/member/mip-tasks/detail/index?taskId=${taskId}` })
+      void caseNavigateTo({ url: `/packages/member/mip-tasks/detail/index?taskId=${taskId}` })
     }
   },
 
   /** MIW-27：经验值详情跳转独立明细页（figma 1948:14177），不再原地展开滚动。 */
   openExperienceDetails() {
-    void wx.navigateTo({ url: EXPERIENCE_DETAILS_PAGE })
+    void caseNavigateTo({ url: EXPERIENCE_DETAILS_PAGE })
   },
 
   /** J1-06/J4-03：开通与续费共用确认弹层（原会员订单确认页收敛于此）。 */

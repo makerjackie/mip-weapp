@@ -5,6 +5,7 @@ import type { AdminPageState } from '../shared/page-state'
 import { hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { checkInCredentialCountdown } from '../../../modules/mip-events'
 import { mipEventsModule } from '../../../modules/mip-events/client'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatChineseDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
 
@@ -82,6 +83,8 @@ Page({
     posterValidText: '',
     posterCountdownText: '',
     posterExpired: false,
+    /** BUG-09.2：保存到相册全程无锁时双击并发两次保存，先「已保存」又失败红条；对齐 posterBusy 的闩锁模式。 */
+    posterSaving: false,
     message: '',
   },
   posterCountdownTimer: 0 as number | ReturnType<typeof setInterval>,
@@ -147,7 +150,7 @@ Page({
     if (!this.data.canRoster || !this.data.eventId) {
       return
     }
-    void wx.navigateTo({
+    void caseNavigateTo({
       url: `/packages/admin/event-registrations/index?eventId=${encodeURIComponent(this.data.eventId)}`,
     })
   },
@@ -282,15 +285,20 @@ Page({
   },
 
   async saveCheckInPoster() {
-    if (!this.data.posterPath || this.data.posterBusy || this.data.posterExpired) {
+    if (!this.data.posterPath || this.data.posterBusy || this.data.posterExpired || this.data.posterSaving) {
       return
     }
+    // BUG-09.2：锁必须在首个 await 前同步置位，挡住保存 promise 回包前的第二次 tap。
+    this.setData({ posterSaving: true })
     try {
       await wx.saveImageToPhotosAlbum({ filePath: this.data.posterPath })
       wx.showToast({ title: '已保存到相册', icon: 'success' })
     }
     catch {
       this.setData({ message: '保存失败，请检查相册权限后重试。' })
+    }
+    finally {
+      this.setData({ posterSaving: false })
     }
   },
 })

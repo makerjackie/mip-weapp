@@ -57,6 +57,12 @@ Page({
     if (!branchId || this.data.selectingId) {
       return
     }
+    // BUG-04.4（审计 2026-10-12）：selectingId 原先到 applyPrimaryBranch 才置位，
+    // beginProtectedAction 的身份快照往返窗口内无锁，双击并发两次 setPrimaryBranch →
+    // 先「主分会已更新」toast 又弹版本冲突失败横幅。锁提前到入口（按钮已绑
+    // loading="{{selectingId === item.id}}"），转交 access 页与身份检查失败的早退路径都要复位；
+    // applyPrimaryBranch 自身的 finally 负责成功路径复位。
+    this.setData({ selectingId: branchId })
     try {
       const session = await mipIdentityModule.beginProtectedAction({
         action: 'EDIT_PROFILE',
@@ -67,12 +73,13 @@ Page({
         },
       })
       if (!session.decision.ready) {
+        this.setData({ selectingId: '' })
         caseNavigateTo({ url: mipAccessPageUrl(session.token) })
         return
       }
     }
     catch {
-      this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
+      this.setData({ selectingId: '', message: '身份状态暂时无法确认，请稍后重试。' })
       return
     }
     await this.applyPrimaryBranch(branchId)

@@ -169,9 +169,13 @@ Page({
       if (requestSeq !== this.requestSeq || category !== this.data.activeCategory) {
         return
       }
+      // BUG-10.2（审计 2026-10-12）：追加按 registrationId 去重（与 participants 页同款
+      // Map 合并写法）。游标窗口与服务端状态变化重叠时同一报名可能再次返回，
+      // 直接拼接会让 wx:key="registrationId" 撞 key 渲染错乱。
+      const merged = [...new Map([...this.data.registrations, ...result.items.map(present)].map(item => [item.registrationId, item])).values()]
       this.setData({
         counts: result.counts ? { ...result.counts, history: result.counts.history || 0 } : this.data.counts,
-        registrations: [...this.data.registrations, ...result.items.map(present)],
+        registrations: merged,
         nextCursor: result.nextCursor || '',
       })
     }
