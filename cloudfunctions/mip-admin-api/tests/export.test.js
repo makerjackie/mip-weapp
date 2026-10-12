@@ -168,7 +168,7 @@ describe('MIP admin XLSX', () => {
     assert.equal(row['合作地区'], '广州、远程')
     assert.equal(row['最低金额（万元）'], '0')
     assert.equal(row['最高金额（万元）'], '1.25')
-    assert.equal(row['合作角色'], '商务对接、交付管理')
+    assert.equal(row['合作角色'], '皮条客、老保姆')
     assert.equal(row['引荐数量'], '0')
     assert.equal(exportedRow('OPPORTUNITIES', { commercialTerms: { minAmountCents: null } })['最低金额（万元）'], '')
   })

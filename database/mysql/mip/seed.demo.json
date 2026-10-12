@@ -79,12 +79,12 @@
     { "id": "21000000-0000-4000-8000-000000000025", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000005", "key": "sports_wellness", "label": "运动健康", "selectable": true, "popular": false, "sortOrder": 40 },
     { "id": "21000000-0000-4000-8000-000000000026", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000005", "key": "travel_hospitality", "label": "文旅与酒店", "selectable": true, "popular": false, "sortOrder": 50 },
 
-    { "id": "22000000-0000-4000-8000-000000000001", "kind": "ABILITY", "key": "business_development", "label": "业务拓展", "selectable": true, "popular": true, "sortOrder": 10 },
-    { "id": "22000000-0000-4000-8000-000000000002", "kind": "ABILITY", "key": "resource_integration", "label": "资源整合", "selectable": true, "popular": true, "sortOrder": 20 },
-    { "id": "22000000-0000-4000-8000-000000000003", "kind": "ABILITY", "key": "capital_operation", "label": "资本运作", "selectable": true, "popular": false, "sortOrder": 30 },
-    { "id": "22000000-0000-4000-8000-000000000004", "kind": "ABILITY", "key": "strategy_planning", "label": "策划能力", "selectable": true, "popular": true, "sortOrder": 40 },
-    { "id": "22000000-0000-4000-8000-000000000005", "kind": "ABILITY", "key": "visual_design", "label": "视觉能力", "selectable": true, "popular": true, "sortOrder": 50 },
-    { "id": "22000000-0000-4000-8000-000000000006", "kind": "ABILITY", "key": "delivery_management", "label": "交付管理", "selectable": true, "popular": true, "sortOrder": 60 }
+    { "id": "22000000-0000-4000-8000-000000000001", "kind": "ABILITY", "key": "business_development", "label": "皮条客", "selectable": true, "popular": true, "sortOrder": 10 },
+    { "id": "22000000-0000-4000-8000-000000000002", "kind": "ABILITY", "key": "resource_integration", "label": "生意佬", "selectable": true, "popular": true, "sortOrder": 20 },
+    { "id": "22000000-0000-4000-8000-000000000003", "kind": "ABILITY", "key": "capital_operation", "label": "暴发户", "selectable": true, "popular": false, "sortOrder": 30 },
+    { "id": "22000000-0000-4000-8000-000000000004", "kind": "ABILITY", "key": "strategy_planning", "label": "狗策划", "selectable": true, "popular": true, "sortOrder": 40 },
+    { "id": "22000000-0000-4000-8000-000000000005", "kind": "ABILITY", "key": "visual_design", "label": "死美工", "selectable": true, "popular": true, "sortOrder": 50 },
+    { "id": "22000000-0000-4000-8000-000000000006", "kind": "ABILITY", "key": "delivery_management", "label": "老保姆", "selectable": true, "popular": true, "sortOrder": 60 }
   ],
   "membershipPlans": [
     {

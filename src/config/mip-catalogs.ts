@@ -148,10 +148,14 @@ export const cooperationAbilityDimensions = [
   { key: 'delivery_management', label: '交付管理' },
 ] as const
 
+/**
+ * 六角色展示名是客户指定的产品文案（皮条客/生意佬/暴发户/狗策划/死美工/老保姆，MIW-78 复原），
+ * 与烘焙卡美术（mip-cooperation-card model）和 mip_tags 能力标签文案同口径，勿改成职业化称呼。
+ */
 export const cooperationRoles: CooperationRoleDefinition[] = [
   {
     key: 'connector',
-    name: '商务对接',
+    name: '皮条客',
     positioning: '愿意分享自己的人脉或为他人引荐生意',
     abilities: ['拉业务', '拉资源', '识别商机', '经营圈子'],
     targetDirection: '引荐客户、促成生意和带来成交额',
@@ -161,7 +165,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
   },
   {
     key: 'business_builder',
-    name: '企业经营者',
+    name: '生意佬',
     positioning: '自己赚过钱并知道如何帮助别人赚钱',
     abilities: ['商业盈利模式设计', '资源整合', '财务测算'],
     targetDirection: '明确生意行业和商业模式服务人数',
@@ -179,7 +183,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
   },
   {
     key: 'capital_operator',
-    name: '资本合作',
+    name: '暴发户',
     positioning: '调度资源推动项目实现财富目标',
     abilities: ['投资', '拉投资', '找钱', '算账'],
     targetDirection: '明确投资领域、资金规模和目标规模',
@@ -197,7 +201,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
   },
   {
     key: 'strategist',
-    name: '策略策划',
+    name: '狗策划',
     positioning: '为项目确定方向，并结合创新方式有效落地',
     abilities: ['产品经理', '创意策划', '方法论设计'],
     targetDirection: '明确作品类型和产品策划数量',
@@ -215,7 +219,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
   },
   {
     key: 'visual_designer',
-    name: '视觉设计',
+    name: '死美工',
     positioning: '为项目实现准确并符合审美标准的视觉效果',
     abilities: ['视觉设计', '包装', '审美把控'],
     targetDirection: '明确视觉作品类型和服务品牌数量',
@@ -233,7 +237,7 @@ export const cooperationRoles: CooperationRoleDefinition[] = [
   },
   {
     key: 'delivery_lead',
-    name: '交付管理',
+    name: '老保姆',
     positioning: '带领团队确保项目按进度完成目标',
     abilities: ['项目管理', '执行统筹', '团队协调'],
     targetDirection: '明确项目数量和项目类型',

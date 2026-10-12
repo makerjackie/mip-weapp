@@ -2,12 +2,12 @@
 const { CAPABILITIES } = require('./capabilities')
 const { AdminError, requiredId, stableKey, text } = require('./validation')
 const CARD_TYPES = {
-  PIMP: { roleKey: 'connector', label: '商务对接', scores: ['开拓人脉', '引荐人脉', '长期维护', '引荐商机', '卖点提炼', '跨圈交际'], menu: ['圈子名称', '圈内身份', '圈内年限', '圈子特点简述'] },
-  BUSINESS: { roleKey: 'business_builder', label: '企业经营者', scores: ['商机洞察', '财务测算', '盈利建模', '资源整合', '利益统筹', '合作谈判'], menu: ['行业', '行业年限', '卖点'] },
-  RICH: { roleKey: 'capital_operator', label: '资本合作', scores: ['投资洞察', '上市规划', '股权规划', '投融策划', '融资达成', '资源整合'], menu: ['擅长领域', '领域年限', '成就'] },
-  PLANNER: { roleKey: 'strategist', label: '策略策划', scores: ['项目调研', '项目定位', '创新创意', '方法设计', '提案竞标', '落地规划'], menu: ['类型', '擅长领域', '卖点'] },
-  DESIGNER: { roleKey: 'visual_designer', label: '视觉设计', scores: ['视觉策略', '视觉设计', '素材搜寻', '视觉落地', '视觉管理', '提案竞标'], menu: ['类型', '擅长领域', '卖点'] },
-  NANNY: { roleKey: 'delivery_lead', label: '交付管理', scores: ['目标计划', '执行统筹', '进度复盘', '沟通机制', '标准研发', '应急沟通'], menu: ['类型', '擅长领域', '卖点'] },
+  PIMP: { roleKey: 'connector', label: '皮条客', scores: ['开拓人脉', '引荐人脉', '长期维护', '引荐商机', '卖点提炼', '跨圈交际'], menu: ['圈子名称', '圈内身份', '圈内年限', '圈子特点简述'] },
+  BUSINESS: { roleKey: 'business_builder', label: '生意佬', scores: ['商机洞察', '财务测算', '盈利建模', '资源整合', '利益统筹', '合作谈判'], menu: ['行业', '行业年限', '卖点'] },
+  RICH: { roleKey: 'capital_operator', label: '暴发户', scores: ['投资洞察', '上市规划', '股权规划', '投融策划', '融资达成', '资源整合'], menu: ['擅长领域', '领域年限', '成就'] },
+  PLANNER: { roleKey: 'strategist', label: '狗策划', scores: ['项目调研', '项目定位', '创新创意', '方法设计', '提案竞标', '落地规划'], menu: ['类型', '擅长领域', '卖点'] },
+  DESIGNER: { roleKey: 'visual_designer', label: '死美工', scores: ['视觉策略', '视觉设计', '素材搜寻', '视觉落地', '视觉管理', '提案竞标'], menu: ['类型', '擅长领域', '卖点'] },
+  NANNY: { roleKey: 'delivery_lead', label: '老保姆', scores: ['目标计划', '执行统筹', '进度复盘', '沟通机制', '标准研发', '应急沟通'], menu: ['类型', '擅长领域', '卖点'] },
 }
 const LEGACY_SCORE_KEYS = ['business_development', 'resource_integration', 'capital_operation', 'strategy_planning', 'visual_design', 'delivery_management']
 function cardDraft(input) {
