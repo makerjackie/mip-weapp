@@ -8,24 +8,19 @@ export interface EventCardView extends MipEventListItem {
   statusLabel: string
   locationText: string
   countText: string
-  plusLabel: string
-  remainText: string
 }
 
 /**
- * 头像 stack 的人数标签。registrationCount 与头像预览同是公开参与者口径（服务端保证），
- * 头像之外还有剩余读「+N参加」；全部出镜时读「N人参加」，避免出现「+0参加」。
+ * MIW-73：头像 stack 的人数标签读报名总数（头像最多出镜 3 个，不计入文案）。
+ * 超过 3 人（头像必然被截断）读「+N人参加」；≤3 人全员出镜读「N人参加」；
+ * 0 人文案为空，胶囊由卡片侧 registrationCount > 0 整体隐藏。
  */
-function participantLabelParts(event: MipEventListItem) {
-  const shown = event.participantPreview?.length ?? 0
+function participantCountText(event: MipEventListItem) {
   const count = event.registrationCount ?? 0
-  const remainder = Math.max(count - shown, 0)
-  if (shown <= 0) {
-    return { plus: '', label: `${count}参加` }
+  if (count <= 0) {
+    return ''
   }
-  return remainder > 0
-    ? { plus: '+', label: `${remainder}参加` }
-    : { plus: '', label: `${count}人参加` }
+  return count > 3 ? `+${count}人参加` : `${count}人参加`
 }
 
 function accessLabel(event: MipEventListItem) {
@@ -61,16 +56,13 @@ function statusLabel(event: MipEventListItem) {
 }
 
 export function presentEventCard(event: MipEventListItem): EventCardView {
-  const { plus, label } = participantLabelParts(event)
   return {
     ...event,
     coverUrl: event.coverUrl || '',
     startsText: formatChineseDateTime(event.startsAt),
     accessLabel: accessLabel(event),
     statusLabel: statusLabel(event),
-    countText: `${plus}${label}`,
-    plusLabel: plus,
-    remainText: label,
+    countText: participantCountText(event),
     locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
     eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
   }

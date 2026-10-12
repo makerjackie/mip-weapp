@@ -117,34 +117,6 @@
   pointer-events: auto;
 }
 
-.participant-card__relations {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
-  justify-content: center;
-  margin-top: 10rpx;
-}
-
-.participant-card__relation {
-  display: flex;
-  column-gap: 6rpx;
-  align-items: center;
-  min-height: 36rpx;
-  padding: 0 10rpx;
-  font-size: 22rpx;
-  line-height: 1;
-  color: var(--color-ink);
-  background: var(--color-panel-raised);
-  border: 1rpx solid var(--color-line);
-  border-radius: 999rpx;
-}
-
-.participant-card__relation--sent {
-  color: var(--color-brand);
-  background: var(--color-brand-soft);
-  border-color: var(--color-brand-soft);
-}
-
 @media (min-width: 600px) and (max-width: 959px) {
   .participants-toolbar {
     display: grid;

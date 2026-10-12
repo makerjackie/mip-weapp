@@ -24,6 +24,36 @@ test('public participant list filters server-side and returns no private registr
         assert.deepEqual(parameters, [appId, '20000000-0000-4000-8000-000000000001', viewerUserId, viewerUserId])
         return [{ is_player: 1, total: 2 }, { is_player: 0, total: 1 }]
       }
+      // MIW-73：嘉宾卡同构补齐（公开详情/等级/勋章/邀请人）批量查询，按表名分流。
+      if (sql.includes('FROM mip_profiles profile')) {
+        return [{
+          user_id: userId,
+          visibility_json: '{}',
+          identity_status: '设计师',
+          introduction: '设计十年',
+          city_name: '深圳',
+          experience_balance: 120,
+          industry_label: '视觉设计',
+        }]
+      }
+      if (sql.includes('FROM mip_growth_levels')) {
+        return [
+          { id: 'level-1', name: '新手', minimum_experience: 0, status: 'ACTIVE' },
+          { id: 'level-2', name: '进阶', minimum_experience: 100, status: 'ACTIVE' },
+        ]
+      }
+      if (sql.includes('mip_user_badge_equipment')) {
+        return [{ user_id: userId, slot_no: 1, id: 'badge-1', name: '金徽', image_url: 'cloud://badge' }]
+      }
+      if (sql.includes('mip_event_invitation_attributions')) {
+        return [{
+          guest_user_id: userId,
+          invitation_source_type: 'USER',
+          inviter_nickname: '邀请人甲',
+          inviter_visibility_json: '{}',
+          inviter_avatar_file_id: 'cloud://inviter',
+        }]
+      }
       assert.match(sql, /r\.share_profile = 1/)
       assert.match(sql, /r\.status IN \('REGISTERED', 'ATTENDED'\)/)
       assert.match(sql, /FROM mip_user_blocks visibility_block/)
@@ -75,17 +105,31 @@ test('public participant list filters server-side and returns no private registr
   })
   assert.equal(result.items.length, 1)
   assert.match(result.items[0].profileRef, /^p1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{48}\.[A-Za-z0-9_-]{22}$/)
+  // MIW-73：名单条目补齐嘉宾卡同构字段（城市/行业/身份/介绍/等级/勋章/邀请人）。
   assert.deepEqual(Object.keys(result.items[0]).sort(), [
     'avatarUrl',
+    'badges',
+    'cityName',
     'headline',
     'heartRelation',
     'identityStatus',
+    'industryLabel',
+    'introduction',
+    'inviter',
+    'level',
     'nickname',
     'primaryBranch',
     'profileRef',
     'userKind',
   ])
   assert.equal(result.items[0].heartRelation, 'SENT')
+  assert.equal(result.items[0].cityName, '深圳')
+  assert.equal(result.items[0].industryLabel, '视觉设计')
+  assert.equal(result.items[0].identityStatus, '设计师')
+  assert.equal(result.items[0].introduction, '设计十年')
+  assert.deepEqual(result.items[0].level, { number: 2, name: '进阶' })
+  assert.deepEqual(result.items[0].badges, [{ id: 'badge-1', name: '金徽', imageUrl: 'cloud://badge' }])
+  assert.deepEqual(result.items[0].inviter, { sourceType: 'USER', displayName: '邀请人甲', avatarUrl: 'cloud://inviter' })
   assert.deepEqual(result.kindTotals, { PLAYER: 2, GUEST: 1 })
   const serialized = JSON.stringify(result)
   assert.equal(serialized.includes(userId), false)
@@ -123,6 +167,8 @@ test('public participant heart relation is caller-relative and omits absent rela
     },
     async query(sql, parameters) {
       if (sql.includes('GROUP BY is_player')) return [{ is_player: 1, total: 0 }, { is_player: 0, total: 4 }]
+      // MIW-73：公开详情/勋章/等级/邀请人批量补齐与本测试无关，静默返回空。
+      if (/mip_profiles profile|mip_growth_levels|mip_user_badge_equipment|mip_event_invitation_attributions/.test(sql)) return []
       assert.equal((sql.match(/mip_event_hearts/g) || []).length, 2)
       assert.deepEqual(parameters.slice(0, 2), [viewerUserId, viewerUserId])
       return relationships.map((heart_relation, index) => ({

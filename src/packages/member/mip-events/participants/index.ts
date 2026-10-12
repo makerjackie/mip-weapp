@@ -12,7 +12,6 @@ import { caseNavigateTo } from '../../../../platform/navigation/client'
 type ParticipantKindFilter = 'PLAYER' | 'GUEST'
 type ParticipantViewMode = 'PUBLIC' | 'SENT' | 'RECEIVED'
 type HeartAccessState = 'loading' | 'ready' | 'restricted' | 'error'
-type ParticipantHeartRelation = 'SENT' | 'RECEIVED' | 'MUTUAL'
 
 interface ParticipantView {
   profileRef: string
@@ -23,9 +22,29 @@ interface ParticipantView {
   // MIW-52 统一三标签（地区MIP | 代表行业 | 身份状态）；metaText 保留作搜索口径（含分支名）。
   profileTags: string[]
   introductionText: string
-  heartRelation?: ParticipantHeartRelation
+  // MIW-73：嘉宾卡同构信息面——左上等级、左下勋章、右下邀请人；不造值，缺省空串/空数组。
+  levelText: string
+  medals: { id: string, imageUrl?: string }[]
+  inviterName: string
+  inviterAvatarUrl: string
+  inviterKind: 'PLAYER' | 'PLATFORM'
   /** 心动票凭证（仅签到参与人持有）：卡片右上角心形可投的依据，undefined 表示不可投。 */
   heartTicket?: string
+}
+
+/** MIW-73：嘉宾卡同构字段映射（等级/勋章/邀请人），四个 tab 共用，同 mip-hearts 口径。 */
+function presentCardPerson(source: {
+  level?: { number: number, name: string }
+  badges?: { id: string, name: string, imageUrl?: string }[]
+  inviter?: { sourceType: 'USER' | 'PLATFORM', displayName: string, avatarUrl?: string }
+}) {
+  return {
+    levelText: source.level ? `Lv.${source.level.number}` : '',
+    medals: (source.badges || []).map(badge => ({ id: badge.id, imageUrl: badge.imageUrl })),
+    inviterName: source.inviter?.displayName || '',
+    inviterAvatarUrl: source.inviter?.avatarUrl || '',
+    inviterKind: (source.inviter?.sourceType === 'PLATFORM' ? 'PLATFORM' : 'PLAYER') as 'PLAYER' | 'PLATFORM',
+  }
 }
 
 function presentParticipant(participant: PublicEventParticipant, candidates: HeartCandidate[]): ParticipantView {
@@ -43,24 +62,26 @@ function presentParticipant(participant: PublicEventParticipant, candidates: Hea
       participant.identityStatus || '',
     ].filter(Boolean).slice(0, 3),
     introductionText: participant.introduction || participant.headline || '',
-    heartRelation: participant.heartRelation,
+    ...presentCardPerson(participant),
     heartTicket: candidates.find(candidate => candidate.profileRef === participant.profileRef)?.participantRef,
   }
 }
 
-function presentHeartCandidate(
-  candidate: HeartCandidate,
-  heartRelation: ParticipantHeartRelation,
-): ParticipantView {
+function presentHeartCandidate(candidate: HeartCandidate): ParticipantView {
   return {
     profileRef: candidate.profileRef,
     avatarUrl: candidate.avatarUrl,
     displayName: candidate.nickname || '未公开姓名',
     kindLabel: '',
     metaText: '',
-    profileTags: [],
-    introductionText: candidate.headline || '',
-    heartRelation,
+    // MIW-73：心动 tab 补齐与名单 tab 同构的三标签（地区MIP | 代表行业 | 身份状态）与介绍。
+    profileTags: [
+      candidate.cityName ? `${candidate.cityName}MIP` : '',
+      candidate.industryLabel || '',
+      candidate.identityStatus || '',
+    ].filter(Boolean).slice(0, 3),
+    introductionText: candidate.introduction || candidate.headline || '',
+    ...presentCardPerson(candidate),
     heartTicket: candidate.participantRef,
   }
 }
@@ -289,10 +310,10 @@ Page({
       selected: Boolean(heart.targetRef) && heart.target?.profileRef === candidate.profileRef,
     }))
     const sentItems = heart.target
-      ? [presentHeartCandidate(heart.target, 'SENT')]
+      ? [presentHeartCandidate(heart.target)]
       : []
     const receivedItems = heart.received
-      .map(candidate => presentHeartCandidate(candidate, 'RECEIVED'))
+      .map(candidate => presentHeartCandidate(candidate))
     const patch: Record<string, unknown> = {
       heartState: 'ready',
       heart,

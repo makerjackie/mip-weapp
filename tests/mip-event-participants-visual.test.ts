@@ -74,7 +74,9 @@ describe('MIP event participant visual hierarchy', () => {
     expect(template).toContain('data-view="RECEIVED"')
     expect(template).toContain('bind:tap="changeView"')
     expect(template).toContain('data-profile-ref="{{item.profileRef}}"')
-    expect(template).not.toMatch(/邀请人|Lv\.|参与人数/)
+    // MIW-73：邀请人行改由 talent-card 组件按服务端 inviter 渲染，页面仍不得硬编码
+    // Lv 等级字样或「参与人数」统计文案（等级值只走 level-text 绑定）。
+    expect(template).not.toMatch(/Lv\.|参与人数/)
   })
 
   it('preserves public states and separates restricted heart access from retryable errors', () => {
@@ -103,15 +105,13 @@ describe('MIP event participant visual hierarchy', () => {
     // MIW-17 G3：原型已投红心为 record 红 #FF2238（非 danger #FF4D5E）。
     expect(template).toContain('name="heart-filled" size="18px" color="var(--mip-record)"')
     expect(template).toContain('name="heart" size="18px" color="var(--color-muted)"')
-    expect(template).toContain('item.heartRelation === \'SENT\' || item.heartRelation === \'MUTUAL\'')
-    expect(template).toContain('item.heartRelation === \'RECEIVED\' || item.heartRelation === \'MUTUAL\'')
     // MIW-17：原型（figma 1818_17230）私密 tab 无「心动信息仅本人可见」提示条，不得自行加回。
     expect(template).not.toContain('participants-private-note')
     expect(template).not.toContain('心动信息仅本人可见')
-    expect(declarations(rule(stylesheet, '.participant-card__relations', true))).toMatchObject({
-      'display': 'flex',
-      'flex-wrap': 'wrap',
-    })
+    // MIW-73：卡面不再渲染「我的心动/对我心动」关系行（body 插槽移除）——tab 归属已由
+    // 筛选胶囊表达，右上红心是唯一投票交互；tab 胶囊文案不受影响。
+    expect(template).not.toContain('participant-card__relation')
+    expect(template).not.toContain('slot="body"')
     expect(declarations(rule(stylesheet, '.participant-card__heart', true))).toMatchObject({
       'position': 'absolute',
       'pointer-events': 'auto',
@@ -173,29 +173,42 @@ describe('MIP event participant visual hierarchy', () => {
   })
 
   it('renders participant cards through the unified talent-card grid shell', () => {
-    // MIW-24：参与人卡走统一嘉宾卡组件（grid 壳 + 描边环 + 左对齐正文 + kind 章），
-    // 页面只保留 corner 心形票与心动关系行；DTO 无 Lv/邀请人/勋章，不造值。
-    // MIW-52：中间固定行换统一三标签（地区MIP | 行业 | 身份状态），metaText 保留作搜索口径。
+    // MIW-24：参与人卡走统一嘉宾卡组件（grid 壳 + 描边环 + kind 章），页面只保留 corner 心形票。
+    // MIW-52：中间固定行换统一三标签（地区MIP | 行业 | 身份状态）。
+    // MIW-73：四 tab 同构——左上 Lv、左下勋章、右下邀请人由服务端公开口径补齐；
+    // 三标签居中（不再 left-align-body），竖线用白色（--color-ink）。
     const cardShell = postcss.parse(source('src/components/talent-card/index.wxss'))
     expect(template).toContain('<mip-talent-card')
     expect(template).toContain('layout="grid"')
-    expect(template).toContain('left-align-body="{{true}}"')
+    expect(template).not.toContain('left-align-body')
     expect(template).toContain('avatar-ring="{{true}}"')
     expect(template).toContain('lead-label="{{item.kindLabel}}"')
+    expect(template).toContain('level-text="{{item.levelText}}"')
     expect(template).toContain('display-name="{{item.displayName}}"')
     expect(template).toContain('tags="{{item.profileTags}}"')
     expect(template).toContain('supporting-text="{{item.introductionText}}"')
+    expect(template).toContain('medals="{{item.medals}}"')
+    expect(template).toContain('inviter-name="{{item.inviterName}}"')
+    expect(template).toContain('inviter-avatar-url="{{item.inviterAvatarUrl}}"')
+    expect(template).toContain('inviter-kind="{{item.inviterKind}}"')
     expect(template).toContain('slot="corner"')
-    expect(template).toContain('slot="body"')
     expect(template).toContain('aria-label="查看{{item.displayName}}的公开档案"')
     expect(declarations(rule(cardShell, '.mip-talent-card--grid', true))).toMatchObject({
       'min-width': '0',
       'overflow': 'hidden',
     })
+    // MIW-73：grid 卡标签行保持居中；竖线白色（--color-ink #fff）。
+    expect(declarations(rule(cardShell, '.mip-talent-card__figure-tags', true))).toMatchObject({
+      'justify-content': 'center',
+    })
+    expect(declarations(rule(cardShell, '.mip-talent-card__figure-tag-divider', true))).toMatchObject({
+      background: 'var(--color-ink)',
+    })
     const leftBody = cardShell.nodes.find(
       (candidate): candidate is Rule => candidate.type === 'rule'
         && candidate.selectors.includes('.mip-talent-card--grid-left .mip-talent-card__figure-tags'),
     )
+    // interaction 页仍用左对齐变体，组件壳保留该规则；本页不再消费。
     expect(leftBody).toBeDefined()
     expect(declarations(rule(stylesheet, '.participants-cell', true))).toMatchObject({
       'min-width': '0',

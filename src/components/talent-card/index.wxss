@@ -350,11 +350,12 @@
   white-space: nowrap;
 }
 
+/* MIW-73：标签竖线用白色（--color-ink #fff），与标签文字同色，深底上可读。 */
 .mip-talent-card__figure-tag-divider {
   flex: none;
   width: 2rpx;
   height: 20rpx;
-  background: var(--color-line);
+  background: var(--color-ink);
 }
 
 .mip-talent-card__figure-meta {
