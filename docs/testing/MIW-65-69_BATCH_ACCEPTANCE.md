@@ -84,6 +84,6 @@
 | # | 事项 | 责任 |
 | --- | --- | --- |
 | G1 | **CloudBase 账户欠费**：静态托管与云存储下载全部 451（管理后台网页、小程序 banner/头像/海报等媒体、证书续期回读均受影响）。充值后按 C6 复核静态回读并抽查小程序媒体加载 | 维护者 |
-| G2 | ~~机会通知模板 W26 需在微信公众平台申请~~ **已闭环（2026-10-12）**：公共模板库选用「职位感兴趣提醒」（模板 ID `a_fsppA4xyeo79ImEd311PiehNYDIksH1t54XqIsLAg`，一次性订阅，关键词 职位=thing1/用户=thing2/时间=time3）；`OPPORTUNITY_NOTICE` 已追加进 `.env.local` 的 `MIP_SUBSCRIBE_TEMPLATES_JSON`（保留原 3 键），`mip-notifications-api`/`mip-notification-worker` 重部署并回读验证，verify:all 全绿后体验版 0.3.1 已上传。剩余：真机弹窗/收信走查 | 维护者（真机） |
+| G2 | ~~机会通知模板 W26 需在微信公众平台申请~~ **已闭环（2026-10-12，二次迭代）**：初版选用公共模板「职位感兴趣提醒」并上传体验版 0.3.1 后，按产品口径改绑自有模板「**合作邀请发起提醒**」（`R4g1Y…`，一次性订阅）——字段契约扩为 4 个 `title/initiator/status/receivedAt`（事件名称 thing1/发起人 thing2/备注 thing3/发起时间 time4），projector 投递载荷带表态用户昵称（缺名回退「有人」），两个通知函数 `templateFieldContracts` 同步；`f32b1026` 已合并推送，云函数 41 项相关测试绿，`mip-notifications-api`/`mip-notification-worker` 重部署回读一致，verify:all 全绿后体验版 **0.3.2** 已上传。剩余：真机弹窗/收信走查 | 维护者（真机） |
 | G3 | 11 枚启用勋章 `image_url` 为空（笨笨系列/城主/公会长等），需运营在 Web 管理后台上传勋章形象（BADGE_IMAGE） | 运营 |
 | G4 | 真机项：微信支付（会员开通新链路）、订阅消息弹窗与接收、AI 语音真实录音链路，按仓库惯例须真机复核 | 维护者 |
