@@ -341,7 +341,9 @@ describe('event registration experience', () => {
     expect(detailView).toContain('contentSection === \'ORGANIZER\'')
     expect(detailView).toContain('nodes="{{organizerIntroductionNodes}}"')
     expect(detailView).toContain('暂无主办方介绍')
-    expect(detailLogic).toContain('eventRichTextNodes(event.organizerIntroduction || \'\')')
+    // MIW-79：原始 markdown（可能含 cloud:// 插图引用）先解构出局部变量再建节点，不进页面数据。
+    expect(detailLogic).toContain('organizerIntroduction: richOrganizerIntroduction')
+    expect(detailLogic).toContain('eventRichTextNodes(richOrganizerIntroduction || \'\')')
     expect(detailView).not.toContain('openOrganizer')
     expect(detailView).not.toContain('主办方资料暂未公开')
     expect(detailView).not.toContain('event.organizer')

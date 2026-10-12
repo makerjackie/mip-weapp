@@ -152,7 +152,7 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'blocked' | 'error' | 'submitted',
     eventId: '' as EventId,
-    event: null as MipEventDetail | null,
+    event: null as (Omit<MipEventDetail, 'description' | 'organizerIntroduction'>) | null,
     registration: null as MyEventRegistration | null,
     fields: [] as RegistrationFieldView[],
     editing: false,
@@ -257,8 +257,11 @@ Page({
     this.setData({ state: 'loading', message: '' })
     try {
       const event = await mipEventsModule.getEvent(this.data.eventId)
+      // MIW-79：富文本原始 markdown（可能含 cloud:// 插图引用）不进页面数据，
+      // 页面只消费下方派生字段（noticesText/startsText/locationText 等）。
+      const { description: _richDescription, organizerIntroduction: _richOrganizerIntroduction, ...presentableEvent } = event
       const presentedEvent = {
-        ...event,
+        ...presentableEvent,
         eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
       }
       let registration: MyEventRegistration | null = null

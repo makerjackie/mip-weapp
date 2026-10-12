@@ -149,9 +149,10 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     eventId: '' as EventId,
-    event: null as MipEventDetail | null,
+    event: null as (Omit<MipEventDetail, 'organizer' | 'description' | 'organizerIntroduction'> & { hasDescription?: boolean }) | null,
     descriptionNodes: [] as ReturnType<typeof eventRichTextNodes>,
     organizerIntroductionNodes: [] as ReturnType<typeof eventRichTextNodes>,
+    hasDescription: false,
     startsText: '',
     endsText: '',
     shareTimeText: '',
@@ -448,22 +449,30 @@ Page({
     const contentMedia = (event.contentMedia || []).map((item, index) => ({ ...item, renderKey: `media-${index}` }))
     // MIW-53：主办方资料卡已从详情页下线，organizer（含头像 cloud file id）不再进页面数据；
     // 运行时验收的敏感值断言（cloud:// 模式）同样依赖这里的最小化。
-    const { organizer: _retiredOrganizer, ...eventWithoutOrganizer } = event
+    // MIW-79：服务端把富文本插图重写成 cloud:// 稳定引用，description / organizerIntroduction
+    // 原始 markdown 同样不得进页面数据，只在构建 rich-text 节点与水合时本地使用。
+    const {
+      organizer: _retiredOrganizer,
+      description: richDescription,
+      organizerIntroduction: richOrganizerIntroduction,
+      ...eventWithoutRichText
+    } = event
     const normalizedEvent = {
-      ...eventWithoutOrganizer,
+      ...eventWithoutRichText,
       eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
       coverUrl: peekCloudFileUrls(event.coverUrl || ''),
       contentMedia: peekCloudFileUrls(contentMedia),
       tags: event.tags || [],
       videoRecaps: event.videoRecaps || [],
       participantPreview: peekCloudFileUrls(event.participantPreview || []),
+      hasDescription: Boolean(richDescription),
     }
     this.setData({
       state: 'ready',
       event: normalizedEvent,
-      descriptionNodes: eventRichTextNodes(event.description),
+      descriptionNodes: eventRichTextNodes(richDescription || ''),
       // 小程序需求 C1（TC-C-01）：主办方 Tab 与后台配置的主办方介绍一致，原样渲染富文本。
-      organizerIntroductionNodes: eventRichTextNodes(event.organizerIntroduction || ''),
+      organizerIntroductionNodes: eventRichTextNodes(richOrganizerIntroduction || ''),
       // figma 1861_17860 shows the compact range ("12月12日 10:00-12:00") on the
       // date row; compactEventTime already folds same-day and multi-day forms.
       startsText: compactEventTime(event.startsAt, event.endsAt) || formatChineseDateTime(event.startsAt),
@@ -492,7 +501,7 @@ Page({
     updateComponentMedia(this, 'event.coverUrl', event.coverUrl || '')
     updateComponentMedia(this, 'event.participantPreview', event.participantPreview || [])
     updateComponentMedia(this, 'event.contentMedia', contentMedia)
-    this.hydrateRichTextMedia(event.description || '', event.organizerIntroduction || '')
+    this.hydrateRichTextMedia(richDescription || '', richOrganizerIntroduction || '')
   },
 
   /**

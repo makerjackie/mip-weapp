@@ -24,8 +24,11 @@ describe('MIP event rich content', () => {
   })
 
   it('still hides raw cloud file ids until the page hydrates them', () => {
-    const nodes = eventRichTextNodes('![图片](cloud://cloud1-env.636c-prefix/mip/staging/app/event-content/user/asset.png)')
+    const nodes = eventRichTextNodes('前文\n![图片](cloud://cloud1-env.636c-prefix/mip/staging/app/event-content/user/asset.png)\n后文')
     expect(nodes.every(node => node.name !== 'img')).toBe(true)
+    // 未水合的 cloud:// 图片行整行跳过：既不出 img，也不把 cloud:// 原文带进节点文本。
+    expect(nodes.map(node => node.children?.[0]?.text)).toEqual(['前文', '后文'])
+    expect(JSON.stringify(nodes)).not.toContain('cloud://')
   })
 
   it('collects unique cloud image ids in order for batch resolution', () => {

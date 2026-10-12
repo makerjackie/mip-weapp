@@ -79,8 +79,10 @@ export function eventRichTextNodes(value: string): EventRichTextNode[] {
         if (image[1]) {
           nodes.push(element('p', image[1], { style: 'margin:0 0 12px;text-align:center;font-size:12px;color:#b3b3b3;' }))
         }
-        continue
       }
+      // 不可渲染的图片行（待水合的 cloud:// 引用、非法协议）整行跳过，
+      // 不回退成普通文本——避免把原始 markdown 暴露给用户或页面数据。
+      continue
     }
     if (line.startsWith('## ')) {
       flushList()
