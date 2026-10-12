@@ -17,7 +17,7 @@ it('renders the actual non-empty repository feedback serialization including pri
   }, { includeEventFeedback: true })
   const row = detail.sections.find(section => section.title === '活动反馈明细')!.rows![0]
   assert.equal(row.wouldRecommend, '不愿意')
-  assert.equal(row.capabilityRoles, '商务对接、交付管理')
+  assert.equal(row.capabilityRoles, '皮条客、老保姆')
   assert.equal(row.resources, '客户资源\n引荐要求')
   assert.equal(row.discoverySource, '参与活动、社群交流')
   assert.equal(row.rosterConsent, '仅私密保存')

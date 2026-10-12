@@ -29,8 +29,9 @@ export const labels: Record<string, string> = {
   OUTBOX: '消息队列', PAYMENT: '支付', MEDIA: '媒体', DELIVERY: '投递', AI: 'AI',
   EXCEPTION: '运营异常', DELIVERY_REVIEW: '投递复核',
   CIRCLE: '圆形', DIAMOND: '菱形', HEXAGON: '六边形',
-  connector: '商务对接', business_builder: '企业经营者', capital_operator: '资本合作',
-  strategist: '策略策划', visual_designer: '视觉设计', delivery_lead: '交付管理',
+  // 六角色展示名与小程序 cooperationRoles 同口径（客户指定文案，MIW-78 复原两端）。
+  connector: '皮条客', business_builder: '生意佬', capital_operator: '暴发户',
+  strategist: '狗策划', visual_designer: '死美工', delivery_lead: '老保姆',
   DOG_PLANNER: '策略策划', COMMENT: '评论', REVIEW: '项目评价',
 }
 

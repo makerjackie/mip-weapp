@@ -444,10 +444,10 @@ const talentUserFields = `
   c.id, c.role_key, c.positioning, c.target_summary,
   c.ability_scores_json, c.published_at`
 
-/** 用户锚定 FROM 段：卡片为可选项，行业/头像/分会沿用名单卡展示口径。 */
-const talentUserFrom = `
-  FROM mip_users u
-  INNER JOIN talent_page ON talent_page.owner_user_id = u.id
+/** 用户锚定 JOIN 段（不含 talent_page：该 JOIN 内联在主查询模板里，CTE 作用域才能
+ *  覆盖 talent_page 并通过 SQL 隔离检查）；卡片为可选项，行业 / 头像 / 分会沿用名单卡展示口径。 */
+const talentUserJoins = `
+  LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
   LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
   LEFT JOIN mip_city_branches branch
     ON branch.app_id = u.app_id AND branch.id = u.primary_branch_id AND branch.status = 'ACTIVE'
@@ -607,7 +607,9 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
        LIMIT ${filter.limit + 1}
      )
      SELECT ${talentUserFields}, talent_page.snapshot_at
-     ${talentUserFrom}
+     FROM mip_users u
+     INNER JOIN talent_page ON talent_page.owner_user_id = u.id
+     ${talentUserJoins}
      WHERE ${visibleWhere.join(' AND ')}
      ORDER BY talent_page.user_created_at DESC, talent_page.owner_user_id DESC,
               c.published_at DESC, c.id DESC`,
