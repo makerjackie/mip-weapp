@@ -325,5 +325,3 @@
 </view>
 
 <mip-login-sheet visible="{{loginSheetOpen}}" busy="{{loginSheetBusy}}" restore-first="{{loginSheetRestoreFirst}}" logo-path="{{logoPath}}" bind:phone="onLoginSheetPhone" bind:signin="onLoginSheetSignIn" bind:dismiss="onLoginSheetDismiss" />
-<!-- MIW-40 S8（列表侧）：新建机会发布成功回本页时消费 pending 弹订阅授权引导层。 -->
-<mip-subscription-guide id="opportunity-subscribe-guide" template-key="OPPORTUNITY_NOTICE" opportunity-id="{{subscribeGuideOpportunityId}}" />

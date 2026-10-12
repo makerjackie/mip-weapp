@@ -2,16 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   createEmptyGuideRecord,
   evaluateSubscriptionGuide,
-  GUIDE_PENDING_STORAGE_KEY,
-  GUIDE_PENDING_TTL_MS,
   GUIDE_RECORD_LIMIT,
   GUIDE_REJECTION_CAP,
   GUIDE_SHOWN_INTERVAL_MS,
   normalizeGuideRecord,
-  readPendingGuideOpportunity,
   recordGuideDecision,
   recordGuideShown,
-  writePendingGuideOpportunity,
 } from '../src/modules/mip-messaging/guide-policy'
 
 const DAY = GUIDE_SHOWN_INTERVAL_MS
@@ -116,27 +112,5 @@ describe('subscription guide policy', () => {
     const record = createEmptyGuideRecord()
     expect(recordGuideShown(record, ' ', 1)).toBe(record)
     expect(recordGuideDecision(record, ' ', 'REJECTED')).toBe(record)
-  })
-
-  it('writes and consumes a publish pending within its TTL (S8)', () => {
-    const now = 1_000_000
-    const raw = writePendingGuideOpportunity(' opp-9 ', now)
-    expect(JSON.parse(raw)).toEqual({ id: 'opp-9', at: now })
-    expect(readPendingGuideOpportunity(raw, now + GUIDE_PENDING_TTL_MS)).toBe('opp-9')
-    // TTL 之外、时钟回拨、坏形状都不产生 pending
-    expect(readPendingGuideOpportunity(raw, now + GUIDE_PENDING_TTL_MS + 1)).toBe('')
-    expect(readPendingGuideOpportunity(raw, now - 1)).toBe('')
-    expect(readPendingGuideOpportunity('junk', now)).toBe('')
-    expect(readPendingGuideOpportunity(undefined, now)).toBe('')
-    expect(readPendingGuideOpportunity(JSON.stringify({ id: 'opp-9' }), now)).toBe('')
-    expect(readPendingGuideOpportunity(JSON.stringify({ id: 'opp-9', at: 'x' }), now)).toBe('')
-    expect(readPendingGuideOpportunity(GUIDE_PENDING_STORAGE_KEY, now)).toBe('')
-  })
-
-  it('rejects invalid opportunity ids when writing a publish pending', () => {
-    const now = 1_000_000
-    expect(writePendingGuideOpportunity(' ', now)).toBe('')
-    expect(writePendingGuideOpportunity('x'.repeat(65), now)).toBe('')
-    expect(readPendingGuideOpportunity(writePendingGuideOpportunity('x'.repeat(64), now), now)).toBe('x'.repeat(64))
   })
 })

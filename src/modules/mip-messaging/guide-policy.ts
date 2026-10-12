@@ -1,11 +1,11 @@
 import type { SubscriptionDecision } from './types'
 
 /**
- * 订阅授权引导层弹出节奏（MIW-40 D2，机会发布人侧）。
- * 纯函数：不触 wx、不触网；组件负责存储与手势。决策口径——
- * TEMPLATE_MISSING / 已入账 / BANNED / 拒绝封顶 / 24h 内已展示 → 不出层；
- * 拒绝过但未封顶 → 只出手动开启文案（D4：原生面板不再重复拉起）；
- * 其余 → 出「开启提醒」引导层（原生面板仅在层内按钮 tap 手势中调用）。
+ * 订阅授权节奏（MIW-40 引入；MIW-77 起不再有引导层弹层组件——设计稿无此形态，
+ * 原生面板只在业务按钮 tap 手势内经 entry-subscription 拉起，本模块只负责节奏判定）。
+ * 纯函数：不触 wx、不触网；调用方负责存储与手势。决策口径——
+ * TEMPLATE_MISSING / 已入账 / BANNED / 拒绝封顶 / 24h 内已展示 → 不拉面板；
+ * 其余 → 在当前 tap 手势内拉起原生订阅面板。
  */
 export type SubscriptionGuidePresentation = 'REQUEST' | 'MANUAL' | 'HIDDEN'
 
@@ -47,7 +47,7 @@ export const GUIDE_REJECTION_CAP = 3
 export const GUIDE_RECORD_LIMIT = 20
 
 /**
- * 节奏记录的统一存储键：机会引导层（组件）与入口前置授权（页面）共享同一记录。
+ * 节奏记录的统一存储键：各入口前置授权（发布、报名、心动值入口）共享同一记录。
  * 决策按模板键隔离、展示节奏按动作键隔离，共享不会互相覆盖。
  */
 export const GUIDE_RECORD_STORAGE_KEY = 'mip:opportunity-subscribe-guide:v1'
@@ -59,17 +59,16 @@ export const GUIDE_RECORD_STORAGE_KEY = 'mip:opportunity-subscribe-guide:v1'
 export const GUIDE_HEARTS_ENTRY_KEY = 'hearts-entry'
 
 /**
- * 发布时机（S8）pending：编辑器发布成功写入，发布者落地页（我的机会列表/详情）
- * onShow 消费。带 TTL：错过落地窗口就回退到进详情的既有时机，避免陈旧弹出。
- */
-export const GUIDE_PENDING_STORAGE_KEY = 'mip:opportunity-subscribe-guide:pending:v1'
-export const GUIDE_PENDING_TTL_MS = 10 * 60 * 1000
-
-/**
- * 前置授权挂载点（发布/创建机会进入编辑器时）的节奏键：此时还没有机会 ID，
- * 用固定哨兵让 24h 展示间隔记在「发布动作」上，而不是某个具体机会。
+ * 发布动作（MIW-77：「确认发布」按钮 tap）前置授权的节奏键：按钮触发时还没有
+ * 机会 ID，用固定哨兵把 24h 展示间隔记在「发布动作」上，而不是某个具体机会。
  */
 export const GUIDE_PUBLISH_ENTRY_KEY = 'publish-entry'
+
+/**
+ * 活动报名动作（MIW-77：「提交报名」按钮 tap）前置授权的节奏键：
+ * 同哨兵口径，24h 展示间隔记在「报名动作」上。
+ */
+export const GUIDE_EVENT_REGISTER_KEY = 'event-register'
 
 export function createEmptyGuideRecord(): SubscriptionGuideRecord {
   return { shownAtByOpportunity: {}, rejectedCountByTemplate: {}, decidedTemplates: {} }
@@ -174,40 +173,5 @@ export function normalizeGuideRecord(value: unknown): SubscriptionGuideRecord {
     shownAtByOpportunity: boundedEntries(source.shownAtByOpportunity, isFiniteCount),
     rejectedCountByTemplate: boundedEntries(source.rejectedCountByTemplate, isFiniteCount),
     decidedTemplates: boundedEntries(source.decidedTemplates, isTerminalDecision),
-  }
-}
-
-/** 发布成功时写入 pending（页面负责放进 storage）；非法 ID 返回空串，不产生 pending。 */
-export function writePendingGuideOpportunity(opportunityId: string, now: number): string {
-  const key = opportunityId.trim()
-  if (!key || key.length > 64) {
-    return ''
-  }
-  return JSON.stringify({ id: key, at: now })
-}
-
-/** 消费端读取 pending：形状/时长不合规（含时钟回拨）一律视为无 pending。 */
-export function readPendingGuideOpportunity(raw: unknown, now: number): string {
-  if (typeof raw !== 'string' || !raw.trim()) {
-    return ''
-  }
-  try {
-    const value = JSON.parse(raw) as unknown
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      return ''
-    }
-    const id = (value as Record<string, unknown>).id
-    const at = (value as Record<string, unknown>).at
-    if (typeof id !== 'string' || !id.trim() || id.trim().length > 64) {
-      return ''
-    }
-    if (typeof at !== 'number' || !Number.isFinite(at)
-      || now - at > GUIDE_PENDING_TTL_MS || now - at < 0) {
-      return ''
-    }
-    return id.trim()
-  }
-  catch {
-    return ''
   }
 }

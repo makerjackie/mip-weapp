@@ -18,7 +18,7 @@ vi.mock('../src/modules/mip-events/client', () => ({
   mipRegistrationDraftStore: { load: mocks.loadDraft, save: mocks.saveDraft, remove: mocks.removeDraft },
 }))
 vi.mock('../src/modules/mip-commerce/client', () => ({ mipCommerceModule: { payOrder: mocks.payOrder } }))
-vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: {} }))
+vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: { subscriptionCapability: vi.fn(() => ({ available: false })), peekUnreadCount: vi.fn(() => 0), refreshUnreadCount: vi.fn() } }))
 vi.mock('../src/modules/mip-identity/client', () => ({
   mipIdentityModule: { consumePendingResume: () => null, loadSnapshot: mocks.loadSnapshot, peekSnapshot: mocks.peekSnapshot },
   mipBranchesModule: {},

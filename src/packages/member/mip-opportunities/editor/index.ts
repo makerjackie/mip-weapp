@@ -7,7 +7,8 @@ import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { mipAiModule } from '../../../../modules/mip-ai/client'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
-import { GUIDE_PENDING_STORAGE_KEY, GUIDE_PUBLISH_ENTRY_KEY, writePendingGuideOpportunity } from '../../../../modules/mip-messaging/guide-policy'
+import { requestEntrySubscription } from '../../../../modules/mip-messaging/entry-subscription'
+import { GUIDE_PUBLISH_ENTRY_KEY } from '../../../../modules/mip-messaging/guide-policy'
 import { journeyStatusOf, opportunityModule, opportunityProjectStatusOptions, opportunityTypeOptions } from '../../../../modules/mip-opportunities'
 import { parseOpportunityAiDraft } from '../../../../modules/mip-opportunities/ai-draft'
 import { parseOpportunityText } from '../../../../modules/mip-opportunities/text-parser'
@@ -88,7 +89,6 @@ Page({
   data: {
     id: '' as OpportunityId | '',
     version: 0,
-    subscribeGuideOpportunityId: '',
     state: 'loading' as 'loading' | 'ready' | 'error',
     editorMode: 'CREATE' as OpportunityEditorMode,
     saving: false,
@@ -153,17 +153,6 @@ Page({
     this.setData({ id, aiDraftId: '' })
     wx.setNavigationBarTitle({ title: id ? '编辑机会' : '发布机会' })
     void this.initialize()
-  },
-
-  onReady() {
-    // MIW-40 前置授权：新建机会（无 id）进入编辑器即弹订阅授权引导层，让授权额度
-    // 先于发布入账（原生面板仍只在引导层按钮 tap 内触发）。编辑存量机会不打扰。
-    // 节奏用固定哨兵 GUIDE_PUBLISH_ENTRY_KEY 记 24h 间隔；已入账/拒绝封顶由
-    // guide-policy 收敛，发布成功的落地提示（S8）对已入账用户自动隐藏。
-    if (this.data.id) {
-      return
-    }
-    this.selectComponent('#opportunity-subscribe-guide')?.check(GUIDE_PUBLISH_ENTRY_KEY)
   },
 
   onHide() {
@@ -535,6 +524,10 @@ Page({
     if (!this.validateRequiredFields()) {
       return
     }
+    // MIW-77：订阅授权不做开屏弹层/常驻模块，只在「确认发布」tap 手势内同步拉起
+    // 原生面板（validate 全同步，手势上下文未断）。节奏 24h 一次、已入账/总是拒绝
+    // 静默跳过；面板结果与失败都不拦截发布。
+    void requestEntrySubscription('OPPORTUNITY_NOTICE', GUIDE_PUBLISH_ENTRY_KEY)
     this.setData({ saving: true, message: '' })
     try {
       const minAmountCents = this.data.minAmountYuan.trim() ? Math.round(Number(this.data.minAmountYuan) * 100) : undefined
@@ -586,14 +579,6 @@ Page({
       })
       // 保存成功先解除返回守卫，避免自动返回详情时误弹确认框
       this.markClean()
-      // MIW-40 S8：发布成功记 pending，发布者落地页（机会列表/详情）onShow 消费后
-      // 弹订阅授权引导层；带 TTL，错过窗口即回退进详情的既有时机。
-      if (publish && result.status === 'PUBLISHED') {
-        const pending = writePendingGuideOpportunity(result.id, Date.now())
-        if (pending) {
-          wx.setStorageSync(GUIDE_PENDING_STORAGE_KEY, pending)
-        }
-      }
       wx.showToast({
         title: result.status === 'UNPUBLISHED' ? '项目已下架' : result.status === 'ENDED' ? '项目已结束' : '机会已发布',
         icon: 'success',

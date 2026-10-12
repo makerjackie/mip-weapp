@@ -348,7 +348,6 @@
     <view wx:if="{{!isSelf && safetyState === 'access'}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[24rpx]">需要完成身份信息后继续。</view><t-button block theme="primary" bind:tap="openAccess">继续</t-button></view>
     <view wx:if="{{!isSelf && safetyState === 'error'}}" class="mt-4 text-[24rpx] text-danger">{{safetyMessage}}<t-button wx:if="{{canRetryReport}}" variant="outline" bind:tap="retryReport">重新提交举报</t-button></view>
 
-    <mip-subscription-prompt wx:if="{{isSelf}}" template-key="PROFILE_INTEREST" label="接收感兴趣提醒" description="有人对你感兴趣时，通过微信提醒你。" />
     <app-page-exit />
     <view wx:if="{{interestMessage}}" class="fixed inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+132rpx)] z-20 rounded-[8rpx] border border-danger bg-panel px-3 py-2 text-center text-[22rpx] text-danger">{{interestMessage}}</view>
     <!-- journey-review 1769:38198 底部互动条：

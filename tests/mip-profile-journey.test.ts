@@ -127,11 +127,9 @@ describe('MIP profile membership journey frames', () => {
 
     // openStat 心动值分支先取订阅授权，再进 protected 路由；授权不拦截进入。
     expect(script).toMatch(/label === '心动值'[\s\S]*?requestHeartsEntrySubscription\(\)\.then[\s\S]*?openProtected\('\/packages\/member\/mip-hearts\/index', 'INTERACT'\)/)
-    // 入口门节奏复用 guide-policy（24h 一次、ACCEPTED/BANNED 终态）；游客先登录不拉授权。
-    expect(script).toContain('evaluateSubscriptionGuide')
-    expect(script).toContain('GUIDE_HEARTS_ENTRY_KEY')
-    expect(script).toContain('HEART_RECEIVED')
-    expect(script).toContain('if (!this.data.authenticated || !mipMessagingModule.subscriptionCapability(templateKey).available)')
+    // MIW-77：节奏判定统一收敛到 entry-subscription 共享实现；游客先登录不拉授权。
+    expect(script).toContain('requestEntrySubscription(\'HEART_RECEIVED\', GUIDE_HEARTS_ENTRY_KEY)')
+    expect(script).toContain('if (!this.data.authenticated)')
 
     // 心动值页不再渲染/注册 mip-subscription-prompt（页内手动开启按钮随入口授权移除）。
     expect(heartsView).not.toContain('mip-subscription-prompt')

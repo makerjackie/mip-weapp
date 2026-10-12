@@ -6,6 +6,7 @@ const { saveOpportunity } = vi.hoisted(() => ({ saveOpportunity: vi.fn() }))
 vi.mock('../src/modules/mip-ai/client', () => ({ mipAiModule: {} }))
 vi.mock('../src/modules/mip-ai/editor-loader', () => ({ loadAiEditorDraft: vi.fn() }))
 vi.mock('../src/modules/mip-media/client', () => ({ mipMediaModule: {} }))
+vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: { subscriptionCapability: vi.fn(() => ({ available: false })), requestWechatSubscription: vi.fn() } }))
 vi.mock('../src/modules/mip-opportunities', () => ({
   opportunityModule: { save: saveOpportunity },
   journeyStatusOf: (item: { status: string }) => item.status,
@@ -58,19 +59,12 @@ beforeEach(() => {
 })
 
 describe('MIP opportunity editor required fields', () => {
-  it('prompts the subscription guide on create entry and skips it when editing (MIW-40 前置授权)', () => {
-    const guideCheck = vi.fn()
+  it('never prompts any subscription layer on entry (MIW-77：授权只在发布按钮 tap 内)', () => {
     const instance = createPage()
-    instance.selectComponent = vi.fn(() => ({ check: guideCheck }))
-    instance.onReady()
-    expect(instance.selectComponent).toHaveBeenCalledWith('#opportunity-subscribe-guide')
-    expect(guideCheck).toHaveBeenCalledWith('publish-entry')
-
-    const editInstance = createPage({ id: '20000000-0000-4000-8000-000000000001' })
-    const editGuideCheck = vi.fn()
-    editInstance.selectComponent = vi.fn(() => ({ check: editGuideCheck }))
-    editInstance.onReady()
-    expect(editGuideCheck).not.toHaveBeenCalled()
+    // 进入编辑器（新建或编辑）不弹任何订阅引导层：selectComponent 无订阅组件可寻址。
+    instance.selectComponent = vi.fn()
+    instance.onReady?.()
+    expect(instance.selectComponent).not.toHaveBeenCalled()
   })
 
   it('keeps every required field in the basic section and drops the roles form (MIW-50)', () => {
