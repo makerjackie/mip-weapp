@@ -761,13 +761,14 @@ async function loadUserContentDetail(reference: string, request: AdminDetailRequ
       title: '案例内容',
       fields: fields([
         ['项目名称', text(item.projectName)],
-        ['案例摘要', text(item.summary)],
+        // 字段名对齐小程序「我的案例」详情（src/packages/member/mip-cases/detail）
+        ['一句话描述案例', text(item.summary)],
         ['项目时间', [text(item.startedOn, ''), text(item.endedOn, '')].filter(Boolean).join(' — ') || '—'],
-        ['项目责任', text(item.responsibility)],
-        ['城市', text(item.cityLabel)],
+        ['担任职责', text(item.responsibility)],
+        ['主营城市', text(item.cityLabel)],
         ['行业', text(item.industryLabel)],
-        ['案例类型', text(item.caseType)],
-        ['案例说明', text(item.description)],
+        ['项目类型', text(item.caseType)],
+        ['项目说明', text(item.description)],
         ['案例素材', numberText(records(item.media).length)],
       ]),
     })

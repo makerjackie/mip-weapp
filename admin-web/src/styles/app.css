@@ -151,6 +151,25 @@ button, input, select, textarea { font: inherit; }
 .login-challenge span, .login-challenge small { color: var(--mip-muted); font-size: 12px; }
 .login-challenge__qr { display: block; width: min(220px, 72vw); height: auto; border-radius: 8px; background: #fff; }
 .event-checkin-qr { display: block; width: min(280px, 100%); height: auto; }
+
+/* 轻量富文本编辑器（活动介绍/主办方介绍/活动说明）：工具栏 + 深底实时预览，
+   预览配色对齐小程序活动详情的 rich-text 展示。 */
+.rich-text-area{border:1px solid #d9d9d9; border-radius:8px; overflow:hidden;}
+.rich-text-area__toolbar{display:flex; gap:6px; align-items:center; flex-wrap:wrap; padding:6px 8px; background:#fafafa; border-bottom:1px solid #d9d9d9;}
+.rich-text-area__count{margin-left:auto; color:#999; font-size:12px;}
+.rich-text-area__error{padding:4px 10px; color:#ff4d4f; font-size:12px; background:#fff2f0;}
+.rich-text-area .ant-input{border:none; border-radius:0;}
+.rich-text-area .ant-input:focus{box-shadow:none;}
+.rich-text-area__preview{border-top:1px dashed #e5e5e5; background:#141414; color:#b3b3b3;}
+.rich-text-area__preview summary{cursor:pointer; padding:6px 10px; font-size:12px; color:#666; user-select:none;}
+.rich-text-area__rendered{padding:4px 14px 14px; font-size:13px; line-height:1.75; max-height:320px; overflow:auto;}
+.rich-text-area__rendered h2{font-size:19px; font-weight:700; color:#fff; margin:16px 0 8px;}
+.rich-text-area__rendered h3{font-size:17px; font-weight:700; color:#fff; margin:14px 0 8px;}
+.rich-text-area__rendered ul{margin:8px 0; padding-left:20px;}
+.rich-text-area__rendered li{margin:5px 0;}
+.rich-text-area__rendered img{display:block; width:100%; margin:14px 0 6px; border-radius:8px;}
+.rich-text-area__rendered p{margin:8px 0;}
+.rich-text-area__rendered .empty{color:#666;}
 .login-challenge__fallback { display: grid; gap: 4px; place-items: center; width: 100%; padding-top: 10px; border-top: 1px solid #cfe0f8; }
 .login-challenge strong { color: var(--mip-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 32px; letter-spacing: .18em; }
 .independent-form-card { max-width: 960px; margin: 0 auto; }

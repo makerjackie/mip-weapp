@@ -16,6 +16,7 @@ import {
 import type { AdminMediaPurpose } from '../../modules/admin-media-upload'
 import { RegistrationSchemaEditor } from '../../features/shared/registration-schema-editor'
 import { AssetUploader, AssetListUploader } from './asset-uploader'
+import { RichTextArea } from './rich-text-area'
 import { RemoteCatalogSelect, SessionUserSelect } from './session-user-select'
 import { label } from '../../modules/admin-read-formatters'
 import { OpportunityLocations } from '../../features/opportunities/opportunity-locations'
@@ -43,6 +44,7 @@ export function controlFor(field: OperationField, values?: OperationValues) {
   if (field.kind === 'textarea' || TEXTAREA_LIKE_KINDS.includes(field.kind)) {
     return <Input.TextArea rows={4} maxLength={field.maxLength} showCount={Boolean(field.maxLength)} placeholder={field.placeholder} />
   }
+  if (field.kind === 'rich-text') return <RichTextArea placeholder={field.placeholder} maxLength={field.maxLength} disabled={field.readOnly} rows={10} />
   // Enter confirms the picker value; its native default must not submit the surrounding form.
   const confirmDateOnly = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Enter') event.preventDefault()

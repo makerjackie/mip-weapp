@@ -24,6 +24,7 @@ export type AdminEventMutationAction = EventMutationAction
 export type EventMutationFieldKind =
   | 'text'
   | 'textarea'
+  | 'rich-text'
   | 'number'
   | 'select'
   | 'multi-select'
@@ -104,10 +105,10 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'branchId', label: '服务器', kind: 'text', visibleWhen: { path: 'scopeType', value: 'BRANCH' }, requiredWhen: { path: 'scopeType', values: ['BRANCH'] }, optionsAction: 'mip.admin.branches.list', optionsInput: { purpose: 'EVENT_EDIT' }, emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' },
   { key: 'title', label: '活动名称', kind: 'text', required: true, maxLength: 120, placeholder: '如：周末城市漫步·第 3 期' },
   { key: 'summary', label: '活动摘要', kind: 'textarea', required: false, maxLength: 300, placeholder: '一句话介绍活动（选填）', extra: '选填。不填时将自动截取活动介绍的开头，小程序列表不直接展示摘要' },
-  { key: 'description', label: '活动介绍', kind: 'textarea', required: true, maxLength: 20_000 },
+  { key: 'description', label: '活动介绍', kind: 'rich-text', required: true, maxLength: 20_000, placeholder: '介绍活动亮点、流程与注意事项；可用「# 大标题」「- 列表」，支持插入图片' },
   { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list', assetPurpose: 'EVENT_CONTENT' },
-  { key: 'organizerIntroduction', label: '主办方介绍', kind: 'textarea', maxLength: 20_000 },
-  { key: 'notices', label: '活动说明', kind: 'textarea', maxLength: 5_000 },
+  { key: 'organizerIntroduction', label: '主办方介绍', kind: 'rich-text', maxLength: 20_000, placeholder: '介绍主办方或主理人背景；支持标题、列表与插图' },
+  { key: 'notices', label: '活动说明', kind: 'rich-text', maxLength: 5_000, placeholder: '报名须知、注意事项等；支持标题、列表与插图' },
   { key: 'coverAssetId', label: '活动封面', kind: 'asset', assetPurpose: 'EVENT_COVER' },
   { key: 'eventTypeKey', label: '活动类型', kind: 'text', maxLength: 64, optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TYPE', selectable: true }, optionsValueKey: 'key', emptyHint: '暂无可选活动类型。可在「活动」页的「新建活动目录」中添加类型；不选择时默认为「活动」' },
   { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true }, emptyHint: '暂无可选标签。可在「活动」页的「新建活动目录」中添加标签' },
@@ -128,9 +129,10 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'capacity', label: '活动名额', kind: 'number', placeholder: '留空表示不限名额' },
   { key: 'waitlistEnabled', label: '候补报名', kind: 'checkbox' },
   { key: 'priceCents', label: '金额（元）', kind: 'money', valueScale: 100, required: true, visibleWhen: { path: 'accessType', value: 'PAID' }, placeholder: '如 199.00' },
-  // The service accepts this typed array; the shared dialog renders a small editor
-  // so edits preserve fields without asking operators to edit raw JSON.
-  { key: 'registrationSchema', label: '报名字段', kind: 'registration-schema', wide: true },
+  // 报名字段编辑入口已按产品决策下线：字段保持 hidden，编辑已有活动时
+  // definition.values 携带服务端已存的配置原样提交，不会被清空；新建活动为空数组
+  // （报名页退回基础字段）。小程序报名页仍消费这份配置。
+  { key: 'registrationSchema', label: '报名字段', kind: 'registration-schema', wide: true, hidden: true },
 ]
 
 const EVENT_MUTATION_CONFIGS = {
