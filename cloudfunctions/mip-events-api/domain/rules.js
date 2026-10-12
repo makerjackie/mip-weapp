@@ -68,6 +68,11 @@ function decideRegistration({ event, userKind, capacityCount, activeHoldCount, n
     if (Number(event.waitlist_enabled) === 1) {
       return 'WAITLISTED'
     }
+    // 「允许超售」（产品拍板 2026-10-12）：名额报满后仍继续接受报名；
+    // 与候补由写入层互斥，判定层候补优先（防御性顺序，见 tests 互斥用例）；PAID 分支已在其上先行拒绝。
+    if (Number(event.oversell_enabled) === 1) {
+      return event.registration_policy === 'APPROVAL' ? 'PENDING_REVIEW' : 'REGISTERED'
+    }
     throw new DomainError('CONFLICT', '活动名额已满')
   }
   return event.registration_policy === 'APPROVAL' ? 'PENDING_REVIEW' : 'REGISTERED'

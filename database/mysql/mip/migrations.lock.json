@@ -1406,6 +1406,18 @@
       ],
       "sqlSha256": "7c8bff927ce57fe39a994c5c42906dd1e9ef57d80444bf8e0c7d7c0012b1a3b1",
       "rollbackSha256": "2a8120fe4fb090ed6bdac3e52b9874d6dfad5c87cbf7066a86825ec62a062193"
+    },
+    {
+      "version": "20261012100000",
+      "name": "mip_events_oversell_enabled",
+      "sql": "database/mysql/mip/107_event_oversell_enabled.sql",
+      "rollback": "database/mysql/mip/rollback/107_event_oversell_enabled.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_events"
+      ],
+      "sqlSha256": "30771631ffa3e8c351d5e1f4ed9e1b939a3f3a410f3a8eb2fa3caee4ff8369d0",
+      "rollbackSha256": "7a0c2763b7f6ae3040c9fe0af0ea2073c608e1fcd9807aa758f5d6c98af11f57"
     }
   ]
 }

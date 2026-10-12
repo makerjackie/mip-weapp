@@ -118,6 +118,26 @@ describe('admin events deep module', () => {
     })
   }
 
+  it('accepts the oversell full-capacity policy only for free events and never beside waitlist', async () => {
+    let writes = 0
+    const service = events(repository({ async saveEvent() { writes += 1 } }))
+    // 允许超售：FREE 活动合法保存
+    await assert.doesNotReject(service.saveEvent(caller, {
+      draft: eventDraft({ oversellEnabled: true }),
+    }))
+    writes = 0
+    // 与候补互斥
+    await assert.rejects(service.saveEvent(caller, {
+      draft: eventDraft({ oversellEnabled: true, waitlistEnabled: true }),
+    }), error => error.code === 'VALIDATION_FAILED')
+    assert.equal(writes, 0)
+    // 付费活动不允许超售
+    await assert.rejects(service.saveEvent(caller, {
+      draft: eventDraft({ oversellEnabled: true, accessType: 'PAID', priceCents: 19900, registrationPolicy: 'AUTO' }),
+    }), error => error.code === 'VALIDATION_FAILED')
+    assert.equal(writes, 0)
+  })
+
   it('keeps the optional route-guide link only when it is a full https url', async () => {
     const captured = []
     const service = events(repository({

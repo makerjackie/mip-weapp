@@ -16,7 +16,7 @@ export interface OperationField {
   fields?: readonly OperationField[]
   visibleWhen?: {
     path: string
-    value: string | readonly string[]
+    value: string | boolean | readonly (string | boolean)[]
   }
   /** Marks the field required only when another field holds one of the given values. */
   requiredWhen?: {
@@ -124,7 +124,8 @@ function collectVisiblePaths(fields: readonly OperationField[], values: Operatio
 export function operationFieldVisible(field: OperationField, values: OperationValues) {
   if (!field.visibleWhen) return true
   const actual = readPath(values, field.visibleWhen.path)
-  return Array.isArray(field.visibleWhen.value) ? field.visibleWhen.value.includes(actual) : actual === field.visibleWhen.value
+  const expected = field.visibleWhen.value
+  return Array.isArray(expected) ? expected.includes(actual) : actual === expected
 }
 
 /** True when the field must be filled right now (always, or conditionally via requiredWhen). */

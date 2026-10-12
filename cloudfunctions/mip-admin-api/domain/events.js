@@ -659,7 +659,11 @@ function normalizeEventDraft(value) {
   const registrationPolicy = ['AUTO', 'APPROVAL'].includes(value.registrationPolicy) ? value.registrationPolicy : 'AUTO'
   const priceCents = Number(value.priceCents || 0)
   const waitlistEnabled = value.waitlistEnabled === true
-  if (accessType === 'PAID' && (!Number.isInteger(priceCents) || priceCents < 1 || registrationPolicy !== 'AUTO' || waitlistEnabled)) {
+  const oversellEnabled = value.oversellEnabled === true
+  if (waitlistEnabled && oversellEnabled) {
+    throw new AdminError('VALIDATION_FAILED', '候补与允许超售不能同时开启')
+  }
+  if (accessType === 'PAID' && (!Number.isInteger(priceCents) || priceCents < 1 || registrationPolicy !== 'AUTO' || waitlistEnabled || oversellEnabled)) {
     throw new AdminError('VALIDATION_FAILED', '付费活动配置无效')
   }
   if (accessType !== 'PAID' && priceCents !== 0) throw new AdminError('VALIDATION_FAILED', '免费活动金额必须为零')
@@ -729,6 +733,7 @@ function normalizeEventDraft(value) {
     guideUrl: guideUrl || null,
     capacity,
     waitlistEnabled,
+    oversellEnabled,
     priceCents,
     registrationSchema: normalizeRegistrationSchema(value.registrationSchema === undefined ? [] : value.registrationSchema),
     ...(Object.hasOwn(value, 'tagIds') ? { tagIds: normalizeEventTags(value.tagIds) } : {}),

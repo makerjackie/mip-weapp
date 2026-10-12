@@ -63,7 +63,7 @@ export interface EventMutationFieldConfig {
   optionsValueKey?: string
   optionsKey?: string
   /** Shows the control only when another field has the given value. */
-  visibleWhen?: { path: string, value: string | readonly string[] }
+  visibleWhen?: { path: string, value: string | boolean | readonly (string | boolean)[] }
   /** Marks the field required only when another field holds one of the given values. */
   requiredWhen?: { path: string, values: readonly string[] }
   /** Input placeholder shown inside the control. */
@@ -127,7 +127,8 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'onlineUrl', label: '线上地址', kind: 'text', maxLength: 1_024, visibleWhen: { path: 'eventMode', value: ['ONLINE', 'HYBRID'] }, placeholder: 'https:// 开头的直播/会议链接' },
   { key: 'guideUrl', label: '路线指引链接', kind: 'text', maxLength: 1_024, advanced: true, placeholder: 'https:// 开头，成员点击可查看路线说明' },
   { key: 'capacity', label: '活动名额', kind: 'number', placeholder: '留空表示不限名额' },
-  { key: 'waitlistEnabled', label: '候补报名', kind: 'checkbox' },
+  { key: 'waitlistEnabled', label: '满员进入候补', kind: 'checkbox', extra: '名额报满后，新报名自动进入候补名单（不勾选则名额报满后拒绝报名）' },
+  { key: 'oversellEnabled', label: '允许超售', kind: 'checkbox', visibleWhen: { path: 'waitlistEnabled', value: false }, extra: '名额报满后仍继续接受报名（忽略名额上限）；付费活动不支持' },
   { key: 'priceCents', label: '金额（元）', kind: 'money', valueScale: 100, required: true, visibleWhen: { path: 'accessType', value: 'PAID' }, placeholder: '如 199.00' },
   // 报名字段编辑入口已按产品决策下线：字段保持 hidden，编辑已有活动时
   // definition.values 携带服务端已存的配置原样提交，不会被清空；新建活动为空数组
@@ -447,10 +448,15 @@ function eventDraft(values: EventMutationValues) {
   const waitlistEnabled = values.waitlistEnabled === true
     || values.waitlistEnabled === 'true'
     || values.waitlistEnabled === 'on'
+  const oversellEnabled = values.oversellEnabled === true
+    || values.oversellEnabled === 'true'
+    || values.oversellEnabled === 'on'
+  if (waitlistEnabled && oversellEnabled) throw new FormValidationError('oversellEnabled', '候补与允许超售不能同时开启，请只选择一种')
   if (accessType === 'PAID') {
     if (priceCents < 1) throw new FormValidationError('priceCents', '付费活动必须填写大于 0 的金额（元）')
     if (registrationPolicy !== 'AUTO') throw new FormValidationError('registrationPolicy', '付费活动仅支持「自动确认」报名方式，请先调整报名方式')
     if (waitlistEnabled) throw new FormValidationError('waitlistEnabled', '付费活动不支持候补报名，请关闭候补报名')
+    if (oversellEnabled) throw new FormValidationError('oversellEnabled', '付费活动不支持允许超售，请关闭允许超售')
   }
   const scopeType = values.scopeType === undefined || values.scopeType === '' ? 'PLATFORM' : enumValue(values.scopeType, '活动范围', ['PLATFORM', 'BRANCH'] as const)
   const branchId = scopeType === 'BRANCH' ? (() => {
@@ -511,6 +517,7 @@ function eventDraft(values: EventMutationValues) {
     guideUrl: guideUrl || null,
     capacity,
     waitlistEnabled,
+    oversellEnabled,
     priceCents,
     registrationSchema: registrationSchemaResult,
     ...(values.tagIds !== undefined ? { tagIds: tagIds(values.tagIds) } : {}),
@@ -646,7 +653,7 @@ function defaultValues(action: EventMutationAction): EventMutationValues {
     // platform default type, and preseeding it showed a ghost「等待目录核对」row.
     Object.assign(values, {
       scopeType: 'PLATFORM', eventMode: 'OFFLINE', accessType: 'FREE',
-      registrationPolicy: 'AUTO', waitlistEnabled: false, priceCents: '0',
+      registrationPolicy: 'AUTO', waitlistEnabled: false, oversellEnabled: false, priceCents: '0',
     })
   }
   return values

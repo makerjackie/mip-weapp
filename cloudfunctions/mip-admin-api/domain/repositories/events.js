@@ -354,7 +354,7 @@ function createAdminEventRepository(database, dependencies) {
         event_type_key, event_mode, access_type, registration_policy,
         starts_at, ends_at,
         registration_deadline, cancellation_deadline, venue_name, address, city_name,
-        latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, price_cents, registration_schema_json,
+        latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, oversell_enabled, price_cents, registration_schema_json,
         e.cover_asset_id, cover.cloud_file_id AS cover_file_id,
         e.status, e.content_safety_status, e.version
        FROM mip_events e
@@ -407,6 +407,7 @@ function createAdminEventRepository(database, dependencies) {
       guideUrl: row.guide_url || '',
       capacity: row.capacity === null ? null : Number(row.capacity),
       waitlistEnabled: Number(row.waitlist_enabled) === 1,
+      oversellEnabled: Number(row.oversell_enabled) === 1,
       priceCents: Number(row.price_cents || 0),
       registrationSchema: json(row.registration_schema_json, []),
       tagIds: (await database.query(`SELECT tag_id FROM mip_event_tag_assignments
@@ -550,7 +551,7 @@ function createAdminEventRepository(database, dependencies) {
             starts_at = ?, ends_at = ?, registration_deadline = ?, cancellation_deadline = ?,
             venue_name = ?, address = ?, city_name = ?, latitude = ?, longitude = ?, capacity = ?,
             event_type_key = ?, event_mode = ?, access_type = ?, registration_policy = ?,
-            online_url = ?, guide_url = ?, waitlist_enabled = ?, price_cents = ?,
+            online_url = ?, guide_url = ?, waitlist_enabled = ?, oversell_enabled = ?, price_cents = ?,
             registration_schema_json = ?, form_version = ?,
             content_safety_status = ?, version = version + 1
            WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'UNPUBLISHED', 'PUBLISHED')`,
@@ -564,7 +565,7 @@ function createAdminEventRepository(database, dependencies) {
             input.draft.eventTypeKey, input.draft.eventMode, input.draft.accessType,
             input.draft.registrationPolicy, input.draft.onlineUrl || null,
             input.draft.guideUrl || null,
-            input.draft.waitlistEnabled ? 1 : 0, input.draft.priceCents,
+            input.draft.waitlistEnabled ? 1 : 0, input.draft.oversellEnabled ? 1 : 0, input.draft.priceCents,
             JSON.stringify(input.draft.registrationSchema), formVersion, input.contentSafetyStatus,
             input.appId, eventId, input.expectedVersion],
         )
@@ -586,8 +587,8 @@ function createAdminEventRepository(database, dependencies) {
             registration_policy,
             status, content_safety_status, starts_at, ends_at,
             registration_deadline, cancellation_deadline, venue_name, address, city_name,
-            latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, price_cents, currency, registration_schema_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
+            latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, oversell_enabled, price_cents, currency, registration_schema_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
           [eventId, input.appId, input.draft.scopeType, input.draft.branchId || null,
             input.actorUserId, input.draft.title, input.draft.summary, input.draft.description,
             input.draft.organizerIntroduction || null, input.draft.notices || null, input.draft.coverAssetId, input.draft.eventTypeKey, input.draft.eventMode,
@@ -599,7 +600,7 @@ function createAdminEventRepository(database, dependencies) {
             input.draft.address || null, input.draft.cityName || null,
             input.draft.latitude, input.draft.longitude, input.draft.onlineUrl || null,
             input.draft.guideUrl || null,
-            input.draft.capacity, input.draft.waitlistEnabled ? 1 : 0, input.draft.priceCents,
+            input.draft.capacity, input.draft.waitlistEnabled ? 1 : 0, input.draft.oversellEnabled ? 1 : 0, input.draft.priceCents,
             JSON.stringify(input.draft.registrationSchema || [])],
         )
       }
@@ -650,7 +651,7 @@ function createAdminEventRepository(database, dependencies) {
           e.starts_at, e.ends_at,
           e.registration_opens_at, e.registration_deadline, e.cancellation_deadline,
           e.venue_name, e.address, e.city_name, e.latitude, e.longitude, e.online_url, e.guide_url,
-          e.capacity, e.waitlist_enabled, e.price_cents, e.currency,
+          e.capacity, e.waitlist_enabled, e.oversell_enabled, e.price_cents, e.currency,
           e.registration_schema_json, e.version, branch.status AS branch_status
          FROM mip_events e
          LEFT JOIN mip_media_assets cover
@@ -1071,7 +1072,7 @@ function createAdminEventRepository(database, dependencies) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
       const event = await tx.one(
-        `SELECT id, branch_id, access_type, registration_policy, status, capacity, waitlist_enabled, ends_at
+        `SELECT id, branch_id, access_type, registration_policy, status, capacity, waitlist_enabled, oversell_enabled, ends_at
          FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
         [input.appId, input.eventId],
       )
@@ -1126,8 +1127,9 @@ function createAdminEventRepository(database, dependencies) {
         const capacityLimit = event.capacity === null ? null : Number(event.capacity)
         const full = capacityLimit !== null
           && Number(capacity?.total || 0) + Number(holds?.total || 0) >= capacityLimit
-        if (full && Number(event.waitlist_enabled) !== 1) throw codeError('INVALID_STATE')
-        nextStatus = full ? 'WAITLISTED' : 'REGISTERED'
+        // 允许超售（产品拍板 2026-10-12）：满员时审核通过仍直接 REGISTERED（候补优先的互斥语义与报名判定一致）。
+        if (full && Number(event.waitlist_enabled) !== 1 && Number(event.oversell_enabled) !== 1) throw codeError('INVALID_STATE')
+        nextStatus = full && Number(event.oversell_enabled) !== 1 ? 'WAITLISTED' : 'REGISTERED'
         const updated = await tx.query(
           `UPDATE mip_event_registrations SET status = ?, ticket_hash = ?,
             waitlisted_at = ?, registered_at = ?, version = version + 1

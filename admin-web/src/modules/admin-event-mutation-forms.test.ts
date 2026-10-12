@@ -62,7 +62,7 @@ describe('event mutation form contracts', () => {
         accessType: 'FREE', registrationPolicy: 'AUTO',
         startsAt: '2030-03-14T10:00:00+08:00', endsAt: '2030-03-14T12:00:00+08:00', registrationDeadline: null,
         cancellationDeadline: null, venueName: '福田会场', address: '福华三路', cityName: '深圳', latitude: null,
-        longitude: null, onlineUrl: null, guideUrl: null, capacity: 30, waitlistEnabled: false, priceCents: 0, registrationSchema: [],
+        longitude: null, onlineUrl: null, guideUrl: null, capacity: 30, waitlistEnabled: false, oversellEnabled: false, priceCents: 0, registrationSchema: [],
       },
     })
     const updated = buildEventMutationInput('mip.admin.events.save', {
@@ -202,6 +202,21 @@ describe('R1 novice walkthrough fixes', () => {
 
     const waitlist = validateEventMutationInput('mip.admin.events.save', { ...baseEvent, accessType: 'PAID', waitlistEnabled: true, priceCents: '19900' })
     assert.equal(waitlist.ok === false && waitlist.errors[0]?.message, '付费活动不支持候补报名，请关闭候补报名')
+
+    const oversell = validateEventMutationInput('mip.admin.events.save', { ...baseEvent, accessType: 'PAID', oversellEnabled: true, priceCents: '19900' })
+    assert.equal(oversell.ok === false && oversell.errors[0]?.message, '付费活动不支持允许超售，请关闭允许超售')
+
+    const both = validateEventMutationInput('mip.admin.events.save', { ...baseEvent, waitlistEnabled: true, oversellEnabled: true })
+    assert.equal(both.ok === false && both.errors[0]?.message, '候补与允许超售不能同时开启，请只选择一种')
+
+    // 允许超售：FREE 活动满员照常构造，payload 携带 oversellEnabled=true
+    const oversellFree = buildEventMutationInput('mip.admin.events.save', { ...baseEvent, oversellEnabled: true })
+    assert.ok(oversellFree && 'draft' in oversellFree)
+    assert.equal((oversellFree.draft as { oversellEnabled: boolean }).oversellEnabled, true)
+
+    // 超售仅在未开候补时可见（联动 UI 防呆）
+    const oversellField = EVENT_MUTATION_CONFIGS['mip.admin.events.save'].fields.find(field => field.key === 'oversellEnabled')
+    assert.deepEqual(oversellField?.visibleWhen, { path: 'waitlistEnabled', value: false })
 
     const freePrice = validateEventMutationInput('mip.admin.events.save', { ...baseEvent, accessType: 'PAID', priceCents: '0' })
     assert.equal(freePrice.ok === false && freePrice.errors[0]?.message, '付费活动必须填写大于 0 的金额（元）')

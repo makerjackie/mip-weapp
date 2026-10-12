@@ -31,6 +31,7 @@ const SUBSTANTIVE_EVENT_FIELDS = new Set([
   'title',
   'venueName',
   'waitlistEnabled',
+  'oversellEnabled',
 ])
 
 const NO_PROJECTION_EVENT_TYPES = new Set([
