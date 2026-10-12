@@ -53,6 +53,12 @@ export const GUIDE_RECORD_LIMIT = 20
 export const GUIDE_PENDING_STORAGE_KEY = 'mip:opportunity-subscribe-guide:pending:v1'
 export const GUIDE_PENDING_TTL_MS = 10 * 60 * 1000
 
+/**
+ * 前置授权挂载点（发布/创建机会进入编辑器时）的节奏键：此时还没有机会 ID，
+ * 用固定哨兵让 24h 展示间隔记在「发布动作」上，而不是某个具体机会。
+ */
+export const GUIDE_PUBLISH_ENTRY_KEY = 'publish-entry'
+
 export function createEmptyGuideRecord(): SubscriptionGuideRecord {
   return { shownAtByOpportunity: {}, rejectedCountByTemplate: {}, decidedTemplates: {} }
 }

@@ -61,7 +61,7 @@ worker 仅通过内部 HMAC 调用，不开放客户端权限，不安装高频�
 
 ## 机会发布人订阅引导
 
-MIW-40（2026-10-05）：机会场景使用单一逻辑模板键 `OPPORTUNITY_NOTICE`；W26 模板获批后如需拆分多键，只改模板配置与组件入参，不改架构。引导层（`mip-subscription-guide` 组件，挂载点：机会详情页 S1、机会 tab 落地页 S8 列表侧消费发布 pending、站内信页点开机会类通知时触发）只做授权收集，不做投递。模板未配置时客户端整层不渲染，服务端照常只写站内消息，不创建外部任务。
+MIW-40（2026-10-05）：机会场景使用单一逻辑模板键 `OPPORTUNITY_NOTICE`；W26 模板获批后如需拆分多键，只改模板配置与组件入参，不改架构。引导层（`mip-subscription-guide` 组件，挂载点：发布/新建机会进入编辑器时前置弹出（节奏键 `GUIDE_PUBLISH_ENTRY_KEY`，24h 一次）、机会详情页 S1、机会 tab 落地页 S8 列表侧消费发布 pending、站内信页点开机会类通知时触发）只做授权收集，不做投递。模板未配置时客户端整层不渲染，服务端照常只写站内消息，不创建外部任务。
 
 MIW-67（2026-10-12）：机会动态的 projector 投递分支已接入——合作意向（`opportunity.cooperation_changed`）与机会来源的感兴趣（`profile.interest_changed` 的 `OPPORTUNITY` 分支）外部投递从客服消息改为 `WECHAT_SUBSCRIPTION` 渠道的 `OPPORTUNITY_NOTICE` 模板，逻辑字段 `title`（机会名，超长或缺名回退为动态短语）、`status`、`receivedAt`；引荐与合作卡/超级案例/档案来源的感兴趣维持既有渠道。发布人无可用授权时任务按 worker 既有可重试上限（5 次）收敛为失败，站内信始终无条件落库，不回退成已送达，也不阻断表态；`OPPORTUNITY_NOTICE` 模板未配置时 `publishMessage` 丢弃 external，同样只保留站内信。
 

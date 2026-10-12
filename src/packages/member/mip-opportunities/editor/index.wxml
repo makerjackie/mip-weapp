@@ -144,4 +144,7 @@
       </view>
     </t-popup>
   </block>
+  <!-- MIW-40 前置授权：新建机会进入编辑器即弹订阅授权引导层（GUIDE_PUBLISH_ENTRY_KEY 节奏），
+       额度先于发布入账；发布成功的落地提示（S8）对已入账用户自动隐藏。 -->
+  <mip-subscription-guide id="opportunity-subscribe-guide" template-key="OPPORTUNITY_NOTICE" opportunity-id="{{subscribeGuideOpportunityId}}" />
 </view>

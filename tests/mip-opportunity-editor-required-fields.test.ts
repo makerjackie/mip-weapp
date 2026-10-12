@@ -58,6 +58,21 @@ beforeEach(() => {
 })
 
 describe('MIP opportunity editor required fields', () => {
+  it('prompts the subscription guide on create entry and skips it when editing (MIW-40 前置授权)', () => {
+    const guideCheck = vi.fn()
+    const instance = createPage()
+    instance.selectComponent = vi.fn(() => ({ check: guideCheck }))
+    instance.onReady()
+    expect(instance.selectComponent).toHaveBeenCalledWith('#opportunity-subscribe-guide')
+    expect(guideCheck).toHaveBeenCalledWith('publish-entry')
+
+    const editInstance = createPage({ id: '20000000-0000-4000-8000-000000000001' })
+    const editGuideCheck = vi.fn()
+    editInstance.selectComponent = vi.fn(() => ({ check: editGuideCheck }))
+    editInstance.onReady()
+    expect(editGuideCheck).not.toHaveBeenCalled()
+  })
+
   it('keeps every required field in the basic section and drops the roles form (MIW-50)', () => {
     const view = source('src/packages/member/mip-opportunities/editor/index.wxml')
     // 2026-10-07：「更多设置」折叠区删除后，基础区以底部固定操作条为界。
