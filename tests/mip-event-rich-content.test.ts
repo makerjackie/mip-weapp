@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { eventRichTextNodes } from '../src/modules/mip-events'
+import { eventRichTextNodes, extractRichTextCloudImageIds } from '../src/modules/mip-events'
 
 describe('MIP event rich content', () => {
   it('renders headings, lists and approved HTTPS images as structured nodes', () => {
@@ -13,5 +13,33 @@ describe('MIP event rich content', () => {
     const nodes = eventRichTextNodes('<script>alert(1)</script>\n![图片](javascript:alert(1))')
     expect(nodes.every(node => node.name !== 'img')).toBe(true)
     expect(nodes[0].children?.[0].text).toBe('<script>alert(1)</script>')
+  })
+
+  it('accepts locally resolved temp image paths after cloud file hydration', () => {
+    const nodes = eventRichTextNodes('![图片](wxfile://tmp_event-content-1.png)\n![图](http://tmp/preview.jpeg)')
+    expect(nodes.filter(node => node.name === 'img').map(node => node.attrs?.src)).toEqual([
+      'wxfile://tmp_event-content-1.png',
+      'http://tmp/preview.jpeg',
+    ])
+  })
+
+  it('still hides raw cloud file ids until the page hydrates them', () => {
+    const nodes = eventRichTextNodes('![图片](cloud://cloud1-env.636c-prefix/mip/staging/app/event-content/user/asset.png)')
+    expect(nodes.every(node => node.name !== 'img')).toBe(true)
+  })
+
+  it('collects unique cloud image ids in order for batch resolution', () => {
+    const markdown = [
+      '# 介绍',
+      '![图片](cloud://cloud1-env.636c-prefix/mip/a.png)',
+      '![图片](cloud://cloud1-env.636c-prefix/mip/b.png)',
+      '![重复](cloud://cloud1-env.636c-prefix/mip/a.png)',
+      '![https 图](https://cdn.example.com/keep.png)',
+    ].join('\n')
+    expect(extractRichTextCloudImageIds(markdown)).toEqual([
+      'cloud://cloud1-env.636c-prefix/mip/a.png',
+      'cloud://cloud1-env.636c-prefix/mip/b.png',
+    ])
+    expect(extractRichTextCloudImageIds('没有插图')).toEqual([])
   })
 })

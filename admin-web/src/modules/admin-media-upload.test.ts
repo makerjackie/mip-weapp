@@ -120,23 +120,34 @@ describe('browser admin media upload preparation', () => {
   })
 
   it('parses only a standard successful response with safe asset and image identifiers', () => {
+    const cloudId = 'cloud://env.mip/mip/live/app/banners/asset.png'
     assert.deepEqual(parseAdminMediaUploadResult({
       ok: true,
       data: {
         assetId,
-        imageUrl: 'cloud://env.mip/mip/live/app/banners/asset.png',
+        imageUrl: 'https://env.mip.tcb.qcloud.la/mip/live/app/banners/asset.png?sign=tmp',
+        cloudFileId: cloudId,
         width: 96,
         height: 64,
       },
     }), {
       assetId,
-      imageUrl: 'cloud://env.mip/mip/live/app/banners/asset.png',
+      imageUrl: 'https://env.mip.tcb.qcloud.la/mip/live/app/banners/asset.png?sign=tmp',
+      cloudFileId: cloudId,
     })
+
+    // 旧响应没有显式 cloudFileId 时，cloud:// 形态的 imageUrl 可作为稳定引用兜底。
+    assert.deepEqual(parseAdminMediaUploadResult({
+      ok: true,
+      data: { assetId, imageUrl: cloudId },
+    }), { assetId, imageUrl: cloudId, cloudFileId: cloudId })
 
     for (const value of [
       { ok: false, error: { code: 'UPLOAD_FAILED' } },
       { ok: true, data: { assetId: 'asset-a', imageUrl: 'cloud://env/file.png' } },
       { ok: true, data: { assetId, imageUrl: 'javascript:alert(1)' } },
+      { ok: true, data: { assetId, imageUrl: cloudId, cloudFileId: 'https://env.mip/file.png' } },
+      { ok: true, data: { assetId, imageUrl: cloudId, cloudFileId: 'cloud://bad id' } },
     ]) {
       assert.throws(
         () => parseAdminMediaUploadResult(value),

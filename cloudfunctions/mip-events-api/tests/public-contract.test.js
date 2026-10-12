@@ -51,6 +51,7 @@ function eventDatabase(row, contentMedia = []) {
       if (sql.includes('mip_event_content_media')) return contentMedia
       if (sql.includes('mip_event_tag_assignments')) return []
       if (sql.includes('mip_event_video_recaps')) return []
+      if (sql.includes('mip_media_assets')) return []
       assert.match(sql, /mip_event_changes/)
       return []
     },
@@ -254,6 +255,7 @@ describe('MIP public event detail', () => {
       async query(sql) {
         if (sql.includes('mip_event_content_media')) return []
         if (sql.includes('mip_event_tag_assignments')) return []
+        if (sql.includes('mip_media_assets')) return []
         if (sql.includes('mip_event_video_recaps')) {
           return [{
             event_id: 'event-1',

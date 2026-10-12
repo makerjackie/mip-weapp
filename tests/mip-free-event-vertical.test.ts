@@ -13,7 +13,7 @@ describe('MIP free event vertical contract', () => {
     expect(feed).toContain('cityName: this.data.selectedCity || undefined')
     expect(feed).toContain('query: this.data.activeQuery || undefined')
     expect(feed).toContain('/packages/member/mip-events/detail/index?eventId=')
-    expect(service).toContain('clauses.push(\'e.city_name = ?\')')
+    expect(service).toContain('clauses.push("(e.city_name = ? OR e.city_name IS NULL OR e.city_name = \'\')")')
     expect(service).toMatch(/clauses\.push\('e\.title LIKE \? ESCAPE/)
   })
 

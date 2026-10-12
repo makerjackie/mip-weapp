@@ -543,6 +543,33 @@ function publicEventRow(row, previews = [], metadata = { tags: [], videoRecaps: 
   }
 }
 
+// 富文本插图的签名直链（https://<prefix>.tcb.qcloud.la/<objectKey>?sign=…）重写回
+// cloud:// fileID。fileID 形如 cloud://<env>.<prefix>/<objectKey>，前缀与直链主机名
+// 一一对应，因此对每个 EVENT_CONTENT 资产构造直链基串做全量替换（含可选 query）。
+function escapeRegExpLike(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function rewriteExpiringRichImageUrls(value, assetRows) {
+  if (typeof value !== 'string' || !value.includes('tcb.qcloud.la') || !Array.isArray(assetRows)) {
+    return value
+  }
+  let rewritten = value
+  for (const row of assetRows) {
+    const fileId = typeof row?.cloud_file_id === 'string' ? row.cloud_file_id : ''
+    const parsed = /^cloud:\/\/[^./]+\.([^/]+)\/(.+)$/.exec(fileId)
+    if (!parsed) {
+      continue
+    }
+    const httpsBase = `https://${parsed[1]}.tcb.qcloud.la/${parsed[2]}`
+    rewritten = rewritten.replace(
+      new RegExp(`${escapeRegExpLike(httpsBase)}(?:\\?[^)\\s]*)?`, 'g'),
+      fileId,
+    )
+  }
+  return rewritten
+}
+
 // MIW-57 往期活动 tab 的回放卡：后台配置的 mip_videos（标题 + 封面 + 视频号目标）。
 // 目标合法性已在 listEventRecaps 的 SQL 里过滤；这里仅做防御性投影，
 // 防止数据库或仓储契约漂移时把打不开的视频号目标发给用户端。
@@ -1042,7 +1069,9 @@ async function listEvents(db, {
     params.push(String(query.branchId))
   }
   if (typeof query.cityName === 'string' && query.cityName.trim()) {
-    clauses.push('e.city_name = ?')
+    // 未填城市的活动（如后台创建的全国/测试活动）对所有城市可见，避免被精确匹配过滤成
+    // 「活动页看不到、发现页才看得到」；已填城市的活动仍按城市精确过滤。
+    clauses.push("(e.city_name = ? OR e.city_name IS NULL OR e.city_name = '')")
     params.push(query.cityName.trim().slice(0, 80))
   }
   if (eventTypeKey) {
@@ -1166,7 +1195,8 @@ async function listEventCalendarDates(db, {
   const params = [appId, now, dateFrom, new Date(dateTo.getTime() + businessDayMilliseconds)]
   const cityName = typeof query.cityName === 'string' ? query.cityName.trim().slice(0, 80) : ''
   if (cityName) {
-    clauses.push('e.city_name = ?')
+    // 与活动 feed 同口径：未填城市的活动对每个城市日历都点亮。
+    clauses.push("(e.city_name = ? OR e.city_name IS NULL OR e.city_name = '')")
     params.push(cityName)
   }
   const rows = await db.query(
@@ -1261,7 +1291,7 @@ async function getEvent(db, {
   // MIW-28：仅签到查看者下发与你互动计数；未签到不产出，客户端整卡隐藏。
   // 计数属装饰性数据：失败只隐藏卡片，不阻断详情主载荷。
   const wantsInteractionSummary = row.registration_status === 'ATTENDED' && Boolean(userId)
-  const [previews, changes, contentMedia, metadata, cancellationDeadline, interactionSummary] = await Promise.all([
+  const [previews, changes, contentMedia, metadata, cancellationDeadline, interactionSummary, contentAssetRows] = await Promise.all([
     loadParticipantPreviews(db, {
       appId,
       eventIds: [eventId],
@@ -1288,6 +1318,14 @@ async function getEvent(db, {
     wantsInteractionSummary
       ? heartCounts(db, { appId, eventId, userId }).catch(() => undefined)
       : Promise.resolve(undefined),
+    // 富文本插图历史契约修复：早期管理后台把 10 分钟时效的 tcb.qcloud.la 签名直链写进
+    // description / organizer_introduction，过期后小程序图片全挂。这里按 app 内
+    // EVENT_CONTENT 资产把签名直链重写回 cloud:// fileID，客户端再走本地下载管道渲染。
+    db.query(
+      `SELECT cloud_file_id FROM mip_media_assets
+       WHERE app_id = ? AND purpose = 'EVENT_CONTENT' AND status = 'READY'`,
+      [appId],
+    ),
   ])
   const timestamp = now.getTime()
   const opensAt = row.registration_opens_at ? new Date(row.registration_opens_at).getTime() : Number.NEGATIVE_INFINITY
@@ -1297,9 +1335,11 @@ async function getEvent(db, {
   const guideUrl = publicGuideUrl(row)
   return {
     ...publicEventRow(row, previews.get(eventId) || [], metadata.get(eventId)),
-    description: row.description,
+    description: rewriteExpiringRichImageUrls(row.description, contentAssetRows),
     // 小程序需求 C1：主办方 Tab 展示后台配置的主办方介绍富文本；未配置时不下发，前端回退空态。
-    ...(row.organizer_introduction ? { organizerIntroduction: row.organizer_introduction } : {}),
+    ...(row.organizer_introduction
+      ? { organizerIntroduction: rewriteExpiringRichImageUrls(row.organizer_introduction, contentAssetRows) }
+      : {}),
     contentMedia: contentMedia.map(item => ({
       imageUrl: item.cloud_file_id,
       caption: item.caption || '',

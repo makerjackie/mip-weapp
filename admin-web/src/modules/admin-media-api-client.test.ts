@@ -34,9 +34,11 @@ describe('admin media API client', () => {
 
     const result = await new AdminApiClient('/api/admin').uploadImage(pngFile(), 'BANNER')
 
+    // 未带显式 cloudFileId 的旧响应：cloud:// 形态的 imageUrl 兜底为稳定引用。
     assert.deepEqual(result, {
       assetId,
       imageUrl: 'cloud://env.mip/mip/live/app/banners/image.png',
+      cloudFileId: 'cloud://env.mip/mip/live/app/banners/image.png',
     })
     assert.equal(captured.url, '/api/media/image')
     assert.equal(captured.init.method, 'POST')

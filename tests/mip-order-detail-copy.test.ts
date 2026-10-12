@@ -15,6 +15,7 @@ describe('MIP order detail copy action', () => {
     expect(page).toContain('wx.setClipboardData')
     expect(page).toContain('message: \'订单号复制失败，请点击订单号重试。\'')
     expect(view).toContain('bind:tap="copyOrderId"')
-    expect(view).toContain('>复制</text>')
+    // figma 1821_19274：订单 ID 行用复制图标（file-copy）代替文字「复制」。
+    expect(view).toContain('mip-icon name="file-copy"')
   })
 })

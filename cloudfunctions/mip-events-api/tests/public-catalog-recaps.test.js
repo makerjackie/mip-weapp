@@ -139,7 +139,7 @@ describe('MIP public event catalog and recap contract', () => {
         calls.push({ sql, params })
         const metadata = publicMetadataRows(sql)
         if (metadata) return metadata
-        if (sql.includes('mip_event_changes') || sql.includes('mip_event_content_media')) return []
+        if (sql.includes('mip_event_changes') || sql.includes('mip_event_content_media') || sql.includes('mip_media_assets')) return []
         throw new Error(`unexpected query: ${sql}`)
       },
     }
@@ -240,6 +240,7 @@ describe('MIP public event catalog and recap contract', () => {
           }
           if (sql.includes('mip_event_changes')
             || sql.includes('mip_event_content_media')
+            || sql.includes('mip_media_assets')
             || sql.includes('mip_event_tag_assignments')
             || sql.includes('mip_event_video_recaps')
             || sql.includes('SELECT DISTINCT city_name')) {

@@ -201,6 +201,9 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
         assetId,
         purpose,
         imageUrl: cloudFileId,
+        // 稳定引用：管理端响应投影会把 imageUrl 换成 10 分钟时效的临时直链，
+        // 需要持久化（如富文本插图）的消费方必须改用 cloudFileId。
+        cloudFileId,
         width: image.width,
         height: image.height,
       }
@@ -223,6 +226,7 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
           assetId,
           purpose,
           imageUrl: cloudFileId,
+          cloudFileId,
           width: image.width,
           height: image.height,
         }
@@ -255,6 +259,7 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
           assetId,
           purpose,
           imageUrl: cloudFileId,
+          cloudFileId,
           width: image.width,
           height: image.height,
         }

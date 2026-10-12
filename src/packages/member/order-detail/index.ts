@@ -9,6 +9,7 @@ import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { createIntentKey, formatCny, planTitle, presentOrderServiceStatus, presentOrderStatus } from '../../../modules/mip-shell'
 import { caseNavigateTo, caseRedirectTo } from '../../../platform/navigation/client'
+import { clearPageMedia, updatePageMedia } from '../../../platform/storage/component-media'
 import { formatLocalDateTime } from '../../../utils/date'
 
 function statusDescription(order: CommerceOrder) {
@@ -102,6 +103,10 @@ Page({
     void this.load()
   },
 
+  onUnload() {
+    clearPageMedia(this)
+  },
+
   async load() {
     if (!this.data.orderId) {
       this.setData({ state: 'error', message: '没有找到这笔订单。' })
@@ -155,7 +160,6 @@ Page({
       isEventOrder: order.orderType === 'EVENT',
       isContentOrder: order.orderType === 'CONTENT',
       eventId: order.orderType === 'EVENT' ? order.resourceId || '' : '',
-      eventCoverUrl: order.event?.coverUrl || '',
       eventStartsText: order.event?.startsAt ? formatLocalDateTime(order.event.startsAt) : '',
       eventEndsText: order.event?.endsAt ? formatLocalDateTime(order.event.endsAt) : '',
       eventLocationText: uniqueText([order.event?.cityName, order.event?.venueName, order.event?.address]),
@@ -184,6 +188,8 @@ Page({
       checkInResumeMessage: '',
       message: '',
     })
+    // 封面与详情页同一条本地下载管道：cloud:// 先隐藏，解析成临时路径后再渲染。
+    updatePageMedia(this, 'eventCoverUrl', order.event?.coverUrl || '')
     if (order.orderType === 'EVENT' && order.status === 'PAID') {
       void this.refreshCheckInResume(order)
     }

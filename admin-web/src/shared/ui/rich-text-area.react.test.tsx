@@ -39,6 +39,21 @@ describe('RichTextArea preview rendering', () => {
     expect(html).toContain('🖼 b')
   })
 
+  it('renders cloud:// rich-text images through the session preview mapping only', () => {
+    const cloudId = 'cloud://env.mip/mip/staging/app/event-content/user/asset.png'
+    // 没有映射时退化为占位说明：cloud:// 引用本身绝不进 <img src>。
+    const unmapped = renderPreview(`![现场](${cloudId})`)
+    expect(unmapped).not.toContain('<img')
+    expect(unmapped).toContain('🖼 现场')
+    // 本次会话上传过的图经签名直链预览，且该直链仍要过 https 安全校验。
+    const mapped = renderPreview(`![现场](${cloudId})`, {
+      [cloudId]: 'https://env.mip.tcb.qcloud.la/mip/staging/app/event-content/user/asset.png?sign=tmp',
+    })
+    expect(mapped).toContain('<img src="https://env.mip.tcb.qcloud.la/mip/staging/app/event-content/user/asset.png?sign=tmp"')
+    const insecure = renderPreview(`![现场](${cloudId})`, { [cloudId]: 'http://insecure.example.com/x.jpg' })
+    expect(insecure).not.toContain('<img')
+  })
+
   it('wires the form label to the textarea through the injected id', () => {
     render(<RichTextArea id="intro" value="" onChange={() => {}} placeholder="写点什么" />)
     expect(document.getElementById('intro')).not.toBeNull()

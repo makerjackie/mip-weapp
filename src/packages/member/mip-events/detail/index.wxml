@@ -150,7 +150,7 @@
                 <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/packages/member/assets/figma/events/wechat.svg" />
                 <text>{{invitationLoading ? '正在准备分享' : '微信分享'}}</text>
               </button>
-              <button id="mip-event-copy-link" loading="{{shareLinkBusy}}" disabled="{{shareLinkBusy}}" aria-label="复制链接" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-[#202020] p-0 text-[28rpx] font-medium leading-[40rpx] text-[#FCDF03] after:border-0" bind:tap="copyEventLink">
+              <button id="mip-event-copy-link" loading="{{shareLinkBusy}}" disabled="{{shareLinkBusy}}" aria-label="复制链接" class="m-0 box-border flex h-[92rpx] w-full max-w-full items-center justify-center gap-2 rounded-[16rpx] border-0 bg-[#1a71ff] p-0 text-[28rpx] font-medium leading-[40rpx] text-white after:border-0" bind:tap="copyEventLink">
                 <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/packages/member/assets/figma/events/link.svg" />
                 <text>复制链接</text>
               </button>
