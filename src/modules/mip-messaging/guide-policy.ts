@@ -47,6 +47,18 @@ export const GUIDE_REJECTION_CAP = 3
 export const GUIDE_RECORD_LIMIT = 20
 
 /**
+ * 节奏记录的统一存储键：机会引导层（组件）与入口前置授权（页面）共享同一记录。
+ * 决策按模板键隔离、展示节奏按动作键隔离，共享不会互相覆盖。
+ */
+export const GUIDE_RECORD_STORAGE_KEY = 'mip:opportunity-subscribe-guide:v1'
+
+/**
+ * 心动值入口前置授权（MIW-74）的节奏键：进入动作没有机会 ID，
+ * 用固定哨兵把 24h 展示间隔记在「进入心动值」动作上（同 GUIDE_PUBLISH_ENTRY_KEY 口径）。
+ */
+export const GUIDE_HEARTS_ENTRY_KEY = 'hearts-entry'
+
+/**
  * 发布时机（S8）pending：编辑器发布成功写入，发布者落地页（我的机会列表/详情）
  * onShow 消费。带 TTL：错过落地窗口就回退到进详情的既有时机，避免陈旧弹出。
  */

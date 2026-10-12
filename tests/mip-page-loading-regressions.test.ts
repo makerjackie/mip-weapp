@@ -69,10 +69,13 @@ describe('page loading and profile interaction regressions', () => {
     expect(instance.data.visitorUnreadCount).toBe(0)
   })
 
-  it('opens a unified heart history from the heart statistic', () => {
+  it('opens a unified heart history from the heart statistic', async () => {
     const instance = page(profile)
     instance.openProtected = vi.fn()
+    // MIW-74：心动值入口先走订阅授权门（游客态短路），微任务后再进 protected 路由。
     instance.openStat({ detail: { label: '心动值' } })
+    await Promise.resolve()
+    await Promise.resolve()
     expect(instance.openProtected).toHaveBeenCalledWith('/packages/member/mip-hearts/index', 'INTERACT')
   })
 

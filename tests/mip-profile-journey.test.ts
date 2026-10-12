@@ -118,4 +118,23 @@ describe('MIP profile membership journey frames', () => {
     expect(script).toContain('\'/packages/member/mip-received/index?scope=influence&category=VISITOR\'')
     expect(script).toContain('\'/packages/member/mip-notifications/index\'')
   })
+
+  // MIW-74：心动值授权前置到入口 tap（进页前拉原生订阅面板），页内订阅模块删除。
+  it('asks for the heart reminder subscription at the stat-card entry, not inside the hearts page', () => {
+    const script = readSource('src/pages/profile/index.ts')
+    const heartsView = readSource('src/packages/member/mip-hearts/index.wxml')
+    const heartsConfig = readSource('src/packages/member/mip-hearts/index.json')
+
+    // openStat 心动值分支先取订阅授权，再进 protected 路由；授权不拦截进入。
+    expect(script).toMatch(/label === '心动值'[\s\S]*?requestHeartsEntrySubscription\(\)\.then[\s\S]*?openProtected\('\/packages\/member\/mip-hearts\/index', 'INTERACT'\)/)
+    // 入口门节奏复用 guide-policy（24h 一次、ACCEPTED/BANNED 终态）；游客先登录不拉授权。
+    expect(script).toContain('evaluateSubscriptionGuide')
+    expect(script).toContain('GUIDE_HEARTS_ENTRY_KEY')
+    expect(script).toContain('HEART_RECEIVED')
+    expect(script).toContain('if (!this.data.authenticated || !mipMessagingModule.subscriptionCapability(templateKey).available)')
+
+    // 心动值页不再渲染/注册 mip-subscription-prompt（页内手动开启按钮随入口授权移除）。
+    expect(heartsView).not.toContain('mip-subscription-prompt')
+    expect(heartsConfig).not.toContain('mip-subscription-prompt')
+  })
 })

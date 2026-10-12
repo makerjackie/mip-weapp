@@ -77,6 +77,7 @@
     <view wx:if="{{nextCursor}}" class="mt-1"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
   </view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
-  <mip-subscription-prompt wx:if="{{state === 'ready' || state === 'empty'}}" template-key="HEART_RECEIVED" label="接收心动提醒" description="有人在活动中向你发送心动时，通过微信提醒你。" />
+  <!-- MIW-74：页内「接收心动提醒」订阅模块已移除——授权前置到「我的」页心动值入口 tap，
+       进页前拉起原生订阅面板（guide-policy 24h 节奏），页内不再保留手动开启按钮。 -->
   <app-page-exit />
 </view>

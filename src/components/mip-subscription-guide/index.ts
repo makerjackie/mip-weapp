@@ -2,12 +2,11 @@ import { mipMessagingModule } from '../../modules/mip-messaging/client'
 import {
   createEmptyGuideRecord,
   evaluateSubscriptionGuide,
+  GUIDE_RECORD_STORAGE_KEY,
   normalizeGuideRecord,
   recordGuideDecision,
   recordGuideShown,
 } from '../../modules/mip-messaging/guide-policy'
-
-const GUIDE_STORAGE_KEY = 'mip:opportunity-subscribe-guide:v1'
 
 /**
  * 订阅授权两段式引导层（MIW-40，机会发布人侧）。
@@ -34,7 +33,7 @@ Component({
   },
   lifetimes: {
     attached() {
-      this.data.record = normalizeGuideRecord(wx.getStorageSync(GUIDE_STORAGE_KEY))
+      this.data.record = normalizeGuideRecord(wx.getStorageSync(GUIDE_RECORD_STORAGE_KEY))
     },
   },
   methods: {
@@ -61,7 +60,7 @@ Component({
         return false
       }
       this.data.record = recordGuideShown(this.data.record, key, Date.now())
-      wx.setStorageSync(GUIDE_STORAGE_KEY, this.data.record)
+      wx.setStorageSync(GUIDE_RECORD_STORAGE_KEY, this.data.record)
       this.setData({ visible: true, mode: outcome.presentation, message: '' })
       return true
     },
@@ -75,7 +74,7 @@ Component({
       try {
         const result = await mipMessagingModule.requestWechatSubscription(this.data.templateKey)
         this.data.record = recordGuideDecision(this.data.record, this.data.templateKey, result.decision)
-        wx.setStorageSync(GUIDE_STORAGE_KEY, this.data.record)
+        wx.setStorageSync(GUIDE_RECORD_STORAGE_KEY, this.data.record)
         if (result.decision === 'REJECTED') {
           this.setData({ mode: 'MANUAL' })
           return

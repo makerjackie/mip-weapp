@@ -439,7 +439,8 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
     instance.applySearch('不存在的名字')
     expect(instance.data.displayItems).toHaveLength(0)
 
-    // J3-08 访客：卡片不显示访问时间（QT 终审），每次访问一条，无 ×N。
+    // J3-08 访客：卡片不显示访问时间（QT 终审）。MIW-74：服务端按人聚合后一人一卡，
+    // visitCount > 1 走 GUEST/INTERACTION 同款右上角 ×N 角标（同日重复来访不再摊平头像卡）。
     instance.data.category = 'VISITOR'
     instance.data.searchInput = ''
     receivedModule.listReceived.mockResolvedValueOnce({
@@ -451,7 +452,7 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
     const visitorView = read('src/packages/member/mip-received/index.wxml')
     const influenceGrid = visitorView.slice(visitorView.indexOf('journey-review J3-05/06/08'), visitorView.indexOf('journey-review J3-07'))
     expect(influenceGrid).not.toContain('updatedText')
-    expect(instance.categoryCache.VISITOR.items[0]).toMatchObject({ actorName: '菠萝大凤梨', messageId: 'v1', countBadge: '' })
+    expect(instance.categoryCache.VISITOR.items[0]).toMatchObject({ actorName: '菠萝大凤梨', messageId: 'v1', viewKey: 'visitor-v1', countBadge: '×2' })
   })
 
   // review 补强：心动值页两 tab 切换与默认落点行为。

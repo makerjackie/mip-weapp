@@ -18,6 +18,14 @@ import { mipGrowthModule } from '../../modules/mip-growth/client'
 import { createMipGuestLoginFlow, evaluateAccess } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../modules/mip-messaging/client'
+import {
+  evaluateSubscriptionGuide,
+  GUIDE_HEARTS_ENTRY_KEY,
+  GUIDE_RECORD_STORAGE_KEY,
+  normalizeGuideRecord,
+  recordGuideDecision,
+  recordGuideShown,
+} from '../../modules/mip-messaging/guide-policy'
 import { opportunityModule, opportunityTypeLabel } from '../../modules/mip-opportunities'
 import { canManageEvents, hasCapability, membershipPresentation } from '../../modules/mip-shell'
 import { getLoadingDiagnostics, recordLoadingFailure } from '../../platform/cloudbase/loading-diagnostics'
@@ -808,7 +816,11 @@ Page({
   openStat(event: WechatMiniprogram.CustomEvent<{ label: string }>) {
     const label = String(event.detail.label || '')
     if (label === '心动值') {
-      void this.openProtected('/packages/member/mip-hearts/index', 'INTERACT')
+      // MIW-74：进心动值前先取「心动提醒」订阅授权（本方法在 tap 手势内被触发，
+      // 原生面板可同步拉起），授权动作结束后照常进入，不因拒绝拦截。
+      void this.requestHeartsEntrySubscription().then(() => {
+        void this.openProtected('/packages/member/mip-hearts/index', 'INTERACT')
+      })
       return
     }
     if (label === '访客') {
@@ -818,6 +830,40 @@ Page({
     const category = ({ 嘉宾: 'GUEST', 互动过: 'INTERACTION', 心动值: 'ACTIVE_INTEREST' } as Record<string, string>)[label]
     if (category) {
       this.openInfluenceList({ currentTarget: { dataset: { category } } } as unknown as WechatMiniprogram.TouchEvent)
+    }
+  },
+
+  /**
+   * MIW-74 心动值入口前置订阅授权：页内「接收心动提醒」按钮已移除，入口 tap 是唯一授权时机。
+   * 节奏复用机会引导层 policy（同一动作键 24h 一次、ACCEPTED/BANNED 终态隐藏）；
+   * 与机会层 D4「拒绝后只出手动文案」不同——入口没有手动按钮兜底，软拒绝 24h 后重问
+   * （传 rejectionCap 封顶值使其不再隐藏），用户勾选「总是拒绝」后平台回 BANNED 即永久停问。
+   * 游客先过登录门禁，不在登录前拉起授权；面板拉起失败不拦截进入。
+   */
+  async requestHeartsEntrySubscription() {
+    const templateKey = 'HEART_RECEIVED'
+    if (!this.data.authenticated || !mipMessagingModule.subscriptionCapability(templateKey).available) {
+      return
+    }
+    const record = normalizeGuideRecord(wx.getStorageSync(GUIDE_RECORD_STORAGE_KEY))
+    const outcome = evaluateSubscriptionGuide(record, {
+      templateKey,
+      opportunityId: GUIDE_HEARTS_ENTRY_KEY,
+      now: Date.now(),
+      capabilityAvailable: true,
+      rejectionCap: Number.MAX_SAFE_INTEGER,
+    })
+    if (outcome.presentation === 'HIDDEN') {
+      return
+    }
+    // 先记展示节奏再拉面板：面板中途失败也保持 24h 一次，不连环打扰。
+    const shown = recordGuideShown(record, GUIDE_HEARTS_ENTRY_KEY, Date.now())
+    try {
+      const result = await mipMessagingModule.requestWechatSubscription(templateKey)
+      wx.setStorageSync(GUIDE_RECORD_STORAGE_KEY, recordGuideDecision(shown, templateKey, result.decision))
+    }
+    catch {
+      wx.setStorageSync(GUIDE_RECORD_STORAGE_KEY, shown)
     }
   },
   openGrowth() { void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE') },

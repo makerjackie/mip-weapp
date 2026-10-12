@@ -90,7 +90,7 @@ describe('profile visits', () => {
     assert.equal(writes.some(call => call.sql.includes('INSERT INTO mip_profile_visits')), false)
   })
 
-  it('returns each visit separately, filters inactive visitors and returns opaque profile refs', async () => {
+  it('returns one aggregated card per visitor, filters inactive visitors and returns opaque profile refs', async () => {
     const calls = []
     const oneCalls = []
     const database = {
@@ -99,15 +99,17 @@ describe('profile visits', () => {
         if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_user_badge_equipment')
           || sql.includes('FROM mip_growth_levels') || sql.includes('FROM mip_event_invitation_attributions')) return []
         calls.push({ sql, params })
-        assert.match(sql, /FROM mip_profile_visits/)
-        assert.doesNotMatch(sql, /GROUP BY visitor_user_id/)
+        assert.match(sql, /FROM mip_profile_visits visits/)
+        // MIW-74：按人聚合——窗口计数 + 只取每人最近一次事实，同日重复来访不再摊平。
+        assert.match(sql, /COUNT\(\*\) OVER \(PARTITION BY visits\.visitor_user_id\) AS visit_count/)
+        assert.match(sql, /visit\.visit_position = 1/)
         assert.match(sql, /visitor\.status = 'ACTIVE'/)
         return [{
           visit_id: visitId,
           visitor_id: visitorId,
           visit_count: 3,
+          unread_visit_count: 1,
           last_visited_at: '2026-08-24T03:00:00.000Z',
-          has_unread: 1,
           visitor_nickname: '访客甲',
           visitor_headline: '公开介绍',
           visibility_json: '{}',
@@ -122,12 +124,14 @@ describe('profile visits', () => {
     const result = await listProfileVisitors(database, owner, { limit: 20 })
     assert.equal(result.unreadCount, 1)
     assert.equal(result.totalViewCount, 7)
-    assert.equal(result.items[0].visitCount, 1)
+    assert.equal(result.items[0].visitCount, 3)
+    assert.equal(result.items[0].unread, true)
     assert.equal(result.items[0].visitId, visitId)
     assert.equal(result.items[0].nickname, '访客甲')
     assert.match(result.items[0].profileRef, /^p1\./)
     assert.equal(JSON.stringify(result).includes(visitorId), false)
-    assert.deepEqual(calls[0].params, [appId, ownerId, ownerId, ownerId])
+    // 子查询时间过滤 + 访客 join + 拉黑过滤（block 参数两个），无游标时无时间参数。
+    assert.deepEqual(calls[0].params, [appId, ownerId, appId, ownerId, ownerId])
     assert.equal(calls.length, 1)
     assert.deepEqual(oneCalls[0].params, [appId, ownerId, ownerId, ownerId])
     assert.match(oneCalls[0].sql, /visit\.read_at IS NULL/)
@@ -143,6 +147,7 @@ describe('profile visits', () => {
     assert.deepEqual(calls[1].params, [
       appId,
       ownerId,
+      appId,
       ownerId,
       ownerId,
       '2026-08-24T03:00:00.000Z',
@@ -195,24 +200,25 @@ describe('profile visits', () => {
     assert.equal(noArchive.items[0].inviter, undefined)
   })
 
-  it('keeps repeated visits by the same user as separate ordered records', async () => {
+  it('merges repeated visits by the same user onto one ordered card with the aggregated count', async () => {
+    // MIW-74：SQL 层按人聚合后每人只回一行（最近一次事实 + 次数）；
+    // 这里验证 DTO 直接透传聚合口径，不再按次摊平。
     const rows = [
-      { visit_id: visitId, visitor_id: visitorId, last_visited_at: '2026-09-22T09:00:00.000Z', visitor_nickname: '访客甲', has_unread: 1 },
-      { visit_id: '30000000-0000-4000-8000-000000000002', visitor_id: visitorId, last_visited_at: '2026-09-22T08:00:00.000Z', visitor_nickname: '访客甲', has_unread: 1 },
+      { visit_id: visitId, visitor_id: visitorId, visit_count: 2, unread_visit_count: 2, last_visited_at: '2026-09-22T09:00:00.000Z', visitor_nickname: '访客甲' },
     ]
     const database = {
       async query(sql) {
         if (sql.includes('FROM mip_event_invitation_attributions')) return []
         return rows
       },
-      async one() { return { count: 2, read_through_at: '2026-09-22T10:00:00.000Z' } },
+      async one() { return { count: 1, read_through_at: '2026-09-22T10:00:00.000Z' } },
     }
     const page = await listProfileVisitors(database, owner)
-    assert.equal(page.items.length, 2)
+    assert.equal(page.items.length, 1)
     assert.equal(readProfileRef(page.items[0].profileRef, appId, pepper), visitorId)
-    assert.equal(readProfileRef(page.items[1].profileRef, appId, pepper), visitorId)
-    assert.notEqual(page.items[0].visitId, page.items[1].visitId)
-    assert.equal(page.totalViewCount, 2)
+    assert.equal(page.items[0].visitCount, 2)
+    assert.equal(page.items[0].unread, true)
+    assert.equal(page.totalViewCount, 1)
     assert.equal(page.readThroughAt, '2026-09-22T10:00:00.000Z')
   })
 
