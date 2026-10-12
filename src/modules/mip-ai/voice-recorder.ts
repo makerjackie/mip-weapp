@@ -38,6 +38,7 @@ export interface VoiceRecorderDeps {
   maximumDurationMs?: number
   maximumBytes?: number
   userFilePath?: string
+  startTimeoutMs?: number
 }
 
 export interface VoiceRecorder {
@@ -76,6 +77,9 @@ export function createVoiceRecorder(deps: VoiceRecorderDeps = {}): VoiceRecorder
   const maximumDurationMs = deps.maximumDurationMs ?? voiceRecordingLimits.maximumDurationMs
   const maximumBytes = deps.maximumBytes ?? voiceRecordingLimits.maximumBytes
   const userFilePath = deps.userFilePath || `${wx.env.USER_DATA_PATH}/mip-ai-voice.mp3`
+  // MIW-71:平台 start() 可能同步返回但 onStart/onError 永不回调(开发者工具实测、
+  // 真机麦克风被占用/授权异常同样会发生),不兜底页面就永远冻在录音态。
+  const startTimeoutMs = deps.startTimeoutMs ?? 6000
 
   let state: 'idle' | 'recording' | 'finalizing' = 'idle'
   let segments: Uint8Array[] = []
@@ -86,8 +90,13 @@ export function createVoiceRecorder(deps: VoiceRecorderDeps = {}): VoiceRecorder
   let lastFinished: VoiceRecordingResult | null = null
   let startSettle: { resolve: () => void, reject: (error: Error) => void } | null = null
   let stopSettle: { resolve: (result: VoiceRecordingResult) => void, reject: (error: Error) => void } | null = null
+  let startWatchdog: ReturnType<typeof setTimeout> | undefined
 
   function settleStart(error?: Error) {
+    if (startWatchdog !== undefined) {
+      clearTimeout(startWatchdog)
+      startWatchdog = undefined
+    }
     const pending = startSettle
     startSettle = null
     if (!pending) {
@@ -181,6 +190,11 @@ export function createVoiceRecorder(deps: VoiceRecorderDeps = {}): VoiceRecorder
   }
 
   manager.onStart(() => {
+    // start 超时已判失败后迟到的确认不得把状态机拽回 recording,否则
+    // 页面在 ready 态而 recorder 内部是 recording,下一次 start 被误拒。
+    if (!startSettle) {
+      return
+    }
     state = 'recording'
     settleStart()
   })
@@ -214,6 +228,15 @@ export function createVoiceRecorder(deps: VoiceRecorderDeps = {}): VoiceRecorder
       startedAt = now()
       return new Promise<void>((resolve, reject) => {
         startSettle = { resolve, reject }
+        startWatchdog = setTimeout(() => {
+          // 平台半开的会话要 stop 复位,否则下一次 start 可能被底层拒绝;
+          // 若底层随后补发 onError/onStop,对应的 settle 都已是 no-op。
+          try {
+            manager.stop()
+          }
+          catch {}
+          settleStart(new Error('录音启动失败，请检查麦克风后重试'))
+        }, startTimeoutMs)
         try {
           manager.start(startOptions())
         }

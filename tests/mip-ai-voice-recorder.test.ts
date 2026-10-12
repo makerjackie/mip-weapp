@@ -174,6 +174,49 @@ describe('AI voice recorder', () => {
     expect(recorder.recording()).toBe(false)
   })
 
+  // MIW-71 E2E 实测:开发者工具/部分真机场景下 manager.start() 同步返回但平台
+  // onStart/onError 永不回调,页面会永远冻在录音态(计时 00:00、「录完」死锁)。
+  // start() 必须在有限时间内落定,并复位平台半开会话让用户立即重试。
+  it('fails the start when the platform never acknowledges it', async () => {
+    const { manager, harness } = createManagerHarness()
+    const { fileSystem } = writeFileHarness()
+    const recorder = createVoiceRecorder({
+      manager,
+      fileSystem,
+      now: () => 0,
+      startTimeoutMs: 20,
+      userFilePath: 'wxfile://usr/mip-ai-voice.mp3',
+    })
+    await expect(recorder.start()).rejects.toThrow('录音启动失败，请检查麦克风后重试')
+    expect(recorder.recording()).toBe(false)
+    // 平台侧半开的录音会话要被复位。
+    expect(harness.stop).toHaveBeenCalled()
+    // 失败后立即可重新开始,不卡死状态机。
+    const restarted = recorder.start()
+    harness.emitStart()
+    await expect(restarted).resolves.toBeUndefined()
+  })
+
+  it('ignores a late platform acknowledgement after the start already timed out', async () => {
+    const { manager, harness } = createManagerHarness()
+    const { fileSystem } = writeFileHarness()
+    const recorder = createVoiceRecorder({
+      manager,
+      fileSystem,
+      now: () => 0,
+      startTimeoutMs: 20,
+      userFilePath: 'wxfile://usr/mip-ai-voice.mp3',
+    })
+    await expect(recorder.start()).rejects.toThrow('录音启动失败')
+    // 迟到的 onStart 不得把状态机拽回 recording:页面已在 ready 态,
+    // 若 recorder 内部变成 recording,下一次 start 会被「正在录音中」拒绝。
+    harness.emitStart()
+    expect(recorder.recording()).toBe(false)
+    const restarted = recorder.start()
+    harness.emitStart()
+    await expect(restarted).resolves.toBeUndefined()
+  })
+
   it('rejects stop when manager.stop throws synchronously instead of hanging', async () => {
     const { manager, harness } = createManagerHarness()
     const { fileSystem } = writeFileHarness()
