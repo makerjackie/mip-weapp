@@ -19,12 +19,12 @@ const figmaRawSourceNodes = {
 
 /** 烘焙卡合约（references/wechat-component-contracts.md）：六变种的底色/浅色/名称/底图。 */
 const bakedVariants = {
-  'dogplaner': { bg: '#7b00ff', light: '#f2e5ff', name: '策略策划' },
-  'upstart': { bg: '#7a2900', light: '#fadab3', name: '资本合作' },
-  'design-slave': { bg: '#04a44f', light: '#e5fff1', name: '视觉设计' },
-  'pimp': { bg: '#df07a9', light: '#ffe5f9', name: '商务对接' },
-  'business-man': { bg: '#ff5500', light: '#ffeee5', name: '企业经营者' },
-  'old-nanny': { bg: '#1a71ff', light: '#e5efff', name: '交付管理' },
+  'dogplaner': { bg: '#7b00ff', light: '#f2e5ff', name: '狗策划 DOGPLANER' },
+  'upstart': { bg: '#7a2900', light: '#fadab3', name: '暴发户 UPSTART' },
+  'design-slave': { bg: '#04a44f', light: '#e5fff1', name: '死美工 Design Slave' },
+  'pimp': { bg: '#df07a9', light: '#ffe5f9', name: '皮条客 pimp' },
+  'business-man': { bg: '#ff5500', light: '#ffeee5', name: '生意佬 business man' },
+  'old-nanny': { bg: '#1a71ff', light: '#e5efff', name: '老保姆 old nanny' },
 } as const
 
 function source(path: string) {

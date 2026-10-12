@@ -13,14 +13,12 @@ export interface CooperationCardVariant {
  *  image 只能用 <image> 承载，WXSS background-image 不行；bg 仅作底图加载前的垫底色。
  */
 export const cooperationCardVariants: Record<string, CooperationCardVariant> = {
-  // 变种 key 与底图文件名仍沿旧命名，待新美术到位后随资产一起重命名；
-  // 展示名已按 UX-09 换为中性文案（此前「皮条客 pimp」等会作为卡名兜底直接上屏）。
-  'dogplaner': { image: '/assets/mip/coop-card-dogplaner@3x.png', bg: '#7b00ff', light: '#f2e5ff', name: '策略策划' },
-  'upstart': { image: '/assets/mip/coop-card-upstart@3x.png', bg: '#7a2900', light: '#fadab3', name: '资本合作' },
-  'design-slave': { image: '/assets/mip/coop-card-design-slave@3x.png', bg: '#04a44f', light: '#e5fff1', name: '视觉设计' },
-  'pimp': { image: '/assets/mip/coop-card-pimp@3x.png', bg: '#df07a9', light: '#ffe5f9', name: '商务对接' },
-  'business-man': { image: '/assets/mip/coop-card-business-man@3x.png', bg: '#ff5500', light: '#ffeee5', name: '企业经营者' },
-  'old-nanny': { image: '/assets/mip/coop-card-old-nanny@3x.png', bg: '#1a71ff', light: '#e5efff', name: '交付管理' },
+  'dogplaner': { image: '/assets/mip/coop-card-dogplaner@3x.png', bg: '#7b00ff', light: '#f2e5ff', name: '狗策划 DOGPLANER' },
+  'upstart': { image: '/assets/mip/coop-card-upstart@3x.png', bg: '#7a2900', light: '#fadab3', name: '暴发户 UPSTART' },
+  'design-slave': { image: '/assets/mip/coop-card-design-slave@3x.png', bg: '#04a44f', light: '#e5fff1', name: '死美工 Design Slave' },
+  'pimp': { image: '/assets/mip/coop-card-pimp@3x.png', bg: '#df07a9', light: '#ffe5f9', name: '皮条客 pimp' },
+  'business-man': { image: '/assets/mip/coop-card-business-man@3x.png', bg: '#ff5500', light: '#ffeee5', name: '生意佬 business man' },
+  'old-nanny': { image: '/assets/mip/coop-card-old-nanny@3x.png', bg: '#1a71ff', light: '#e5efff', name: '老保姆 old nanny' },
 }
 
 /** 产品角色 key → 设计变种 key。 */

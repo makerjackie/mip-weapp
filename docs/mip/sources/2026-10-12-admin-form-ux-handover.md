@@ -68,7 +68,7 @@
 ### 4.6 拍板记录（2026-10-12，产品已决策）
 
 - **知识库模块**：彻底下线。范围含后台路由/导航/权限（knowledge.manage）、BFF、云函数 `mip-admin-api` knowledge 域、MySQL 存量表归档——按单独立项排期，不在本分支内执行。
-- **合作卡烘焙底图**：资产已定位（`src/assets/mip/coop-card-*@3x.png` 六张，`src/components/mip-cooperation-card/model.ts` 的 variants 表 + roleKey→variant 映射）；等设计产出中性命名底图后单独更换。搜索时发现 variants 表的 `name` 兜底文案仍是旧侮辱性词（卡名缺失时会直接上屏），已按 UX-09 方向改为中性文案（variant key/底图/配色不动，随新美术一并重命名）。
+- **合作卡烘焙底图**：资产已定位（`src/assets/mip/coop-card-*@3x.png` 六张，`src/components/mip-cooperation-card/model.ts` 的 variants 表 + roleKey→variant 映射）；等设计产出中性命名底图后单独更换。注意：variants 表的 `name` 字段文案（含双语风格）是**客户端既定需求，保持原样不动**——曾误改为中性文案，已回滚（见回滚提交）。
 - **角色 key 英文 slug**：保持现状。key 永久作为内部标识，仅展示中文，不做数据迁移。
 
 ## 5. 目标与完成定义
