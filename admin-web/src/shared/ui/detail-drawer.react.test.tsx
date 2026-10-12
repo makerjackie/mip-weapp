@@ -108,7 +108,7 @@ describe('DetailDrawer', () => {
       return target
     })
     await user.click(within(dialog).getByRole('button', { name: '批量审核报名' }))
-    expect(await within(dialog).findByText('请填写审核结果')).toBeInTheDocument()
+    expect(await within(dialog).findByText('请选择审核结果')).toBeInTheDocument()
     expect(onSectionBatchAction).not.toHaveBeenCalled()
 
     await user.click(within(dialog).getByRole('combobox'))

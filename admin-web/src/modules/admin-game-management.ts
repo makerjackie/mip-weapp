@@ -389,10 +389,11 @@ function seasonSaveDefinition(targetId: string, season: Record<string, unknown>)
 }
 
 function teamSaveDefinition(targetId: string, source: Record<string, unknown>, team: Record<string, unknown>) {
-  const branches = records(source.branches)
   return definition('mip.admin.game.teams.save', targetId ? '编辑战队' : '新增战队', '战队成员和比赛积分由独立操作维护。', [
     { name: 'seasonId', label: '赛季 ID', kind: 'text', hidden: true },
-    { name: 'branchId', label: '所属服务器', kind: 'select', options: branches.map(item => ({ value: String(item.id || ''), label: String(item.name || '未命名服务器') })) },
+    // Options come from the branch catalog rather than the season's ranking
+    // snapshot: a fresh branch never appears in rankings yet is a valid choice.
+    { name: 'branchId', label: '所属服务器', kind: 'select', optionsAction: 'mip.admin.branches.list', emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' },
     { name: 'name', label: '战队名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '简介', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'memberLimit', label: '成员上限', kind: 'integer' },
@@ -422,7 +423,7 @@ function matchSaveDefinition(source: Record<string, unknown>) {
   return definition('mip.admin.game.matches.save', '新增周赛', '只配置周次和对阵；比分与胜者由服务端在结算时计算。', [
     { name: 'seasonId', label: '赛季 ID', kind: 'text', hidden: true },
     { name: 'weekStart', label: '周开始日期', kind: 'date', required: true },
-    { name: 'weekEnd', label: '周结束日期', kind: 'date', required: true },
+    { name: 'weekEnd', label: '周结束日期', kind: 'date', required: true, extra: '周赛按完整一周配置：周结束日期 = 周开始日期 + 6 天' },
     { name: 'teamAId', label: '战队 A', kind: 'select', required: true, options },
     { name: 'teamBId', label: '战队 B', kind: 'select', required: true, options },
   ], { seasonId: text(record(source.season).id), weekStart: '', weekEnd: '', teamAId: options[0]?.value || '', teamBId: options[1]?.value || '' })

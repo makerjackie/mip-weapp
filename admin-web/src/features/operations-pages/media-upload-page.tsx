@@ -53,7 +53,7 @@ export function MediaUploadPage({
     <>
       <PageHeader
         title="素材上传"
-        description="上传运营页面使用的图片，并获取可复制的素材 ID"
+        description="上传运营页面使用的图片，上传后可在各表单中直接选择使用"
         eyebrow={demoMode ? '演示模式' : undefined}
       />
       <div className="media-upload-layout">

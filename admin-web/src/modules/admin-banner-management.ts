@@ -116,7 +116,7 @@ export async function loadBannerDetail(
           ...fields([
             ['图片尺寸', imageDimensions(banner.imageWidth, banner.imageHeight)],
             ['图片说明', banner.accessibilityLabel],
-            ['素材更新', '可从素材上传页获取新的素材 ID'],
+            ['素材更新', '在编辑 Banner 时重新上传或选择图片即可'],
           ]),
         ],
       },

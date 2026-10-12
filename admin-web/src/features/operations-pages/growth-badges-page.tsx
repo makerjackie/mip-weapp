@@ -12,7 +12,8 @@ import { options } from '../../modules/admin-read-formatters'
 const actions: Array<{ key: OperationsWriteAction; label: string; capability: string }> = [
   { key: 'mip.admin.growth.adjust', label: '调整成长数据', capability: 'growth.adjust' },
   { key: 'mip.admin.badges.grant', label: '授予勋章', capability: 'badges.manage' },
-  { key: 'mip.admin.badges.revoke', label: '撤销勋章', capability: 'badges.manage' },
+  // 撤销勋章不设全局入口：它需要某条获授记录的 ID 与版本，只有
+  // 「用户详情 → 勋章」的行上下文能提供；从全局菜单打开必然要求手填技术字段。
 ]
 
 export function GrowthBadgesPage(props: OperationsPageState) {

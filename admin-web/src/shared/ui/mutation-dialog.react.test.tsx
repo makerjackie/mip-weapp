@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, expect, it } from 'vitest'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
 import { MutationDialog } from './mutation-dialog'
 
 afterEach(cleanup)
@@ -24,4 +24,35 @@ it('starts a different operation with its own empty fields instead of the previo
   expect(screen.getByRole('textbox', { name: '服务器名称' })).toHaveValue('上海分会')
   view.rerender(<MutationDialog {...shared} key="message-create" title="消息" fields={[{ name: 'name', label: '活动名称', kind: 'text' }]} values={{}} />)
   expect(screen.getByRole('textbox', { name: '活动名称' })).toHaveValue('')
+})
+
+import userEvent from '@testing-library/user-event'
+
+it('shows the empty-catalog guidance on static selects and multi-selects', async () => {
+  const user = userEvent.setup()
+  render(<MutationDialog open title="任务" description="" fields={[
+    { name: 'eligibleLevelIds', label: '可参与等级', kind: 'multi-select', options: [], emptyHint: '暂无可选等级。等级在「成长与勋章」页的会员配置中维护' },
+  ]} values={{ eligibleLevelIds: [] }} onCancel={() => {}} onSubmit={() => {}} />)
+  await user.click(screen.getByRole('combobox'))
+  expect(await screen.findByText('暂无可选等级。等级在「成长与勋章」页的会员配置中维护')).toBeInTheDocument()
+})
+
+it('enforces requiredWhen against the current form values', async () => {
+  const user = userEvent.setup()
+  const branchAdmin = render(<MutationDialog open title="设置角色" description="" fields={[
+    { name: 'roleKey', label: '角色', kind: 'select', options: [{ value: 'BRANCH_ADMIN', label: '服务器管理员' }] },
+    { name: 'scopeId', label: '管理范围', kind: 'select', requiredWhen: { path: 'roleKey', values: ['BRANCH_ADMIN'] }, options: [] },
+  ]} values={{ roleKey: 'BRANCH_ADMIN', scopeId: '' }} onCancel={() => {}} onSubmit={() => {}} />)
+  await user.click(screen.getByRole('button', { name: '确认提交' }))
+  expect(await screen.findByText('请选择管理范围')).toBeInTheDocument()
+  branchAdmin.unmount()
+
+  const submitted = vi.fn()
+  render(<MutationDialog open title="设置角色" description="" fields={[
+    { name: 'roleKey', label: '角色', kind: 'select', options: [{ value: 'PLATFORM_OPERATIONS', label: '平台运营' }] },
+    { name: 'scopeId', label: '管理范围', kind: 'select', requiredWhen: { path: 'roleKey', values: ['BRANCH_ADMIN'] }, options: [] },
+  ]} values={{ roleKey: 'PLATFORM_OPERATIONS', scopeId: '' }} onCancel={() => {}} onSubmit={submitted} />)
+  await user.click(screen.getByRole('button', { name: '确认提交' }))
+  await waitFor(() => expect(submitted).toHaveBeenCalled())
+  expect(screen.queryByText('请选择管理范围')).not.toBeInTheDocument()
 })

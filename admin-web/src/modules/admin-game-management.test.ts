@@ -182,3 +182,18 @@ describe('novice-friendly game form contracts', () => {
     assert.match(String(card.values.cardKey), /^card-[a-z0-9]+$/)
   })
 })
+
+describe('R1 novice walkthrough fixes', () => {
+  it('sources team branches from the branch catalog with an empty-state hint', () => {
+    const definition = createGameMutationDefinition('mip.admin.game.teams.save', '', { season })
+    const branchField = definition.fields.find(field => field.name === 'branchId')
+    assert.equal(branchField?.optionsAction, 'mip.admin.branches.list')
+    assert.ok((branchField as { emptyHint?: string }).emptyHint?.includes('新建服务器'))
+  })
+
+  it('explains the full-week rule on the weekly match dates', () => {
+    const definition = createGameMutationDefinition('mip.admin.game.matches.save', '', { season })
+    const weekEnd = definition.fields.find(field => field.name === 'weekEnd')
+    assert.ok((weekEnd as { extra?: string }).extra?.includes('+ 6 天'))
+  })
+})

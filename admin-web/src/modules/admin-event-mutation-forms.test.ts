@@ -185,3 +185,61 @@ describe('novice-friendly event form contracts', () => {
     assert.equal('key' in input, false)
   })
 })
+
+describe('R1 novice walkthrough fixes', () => {
+  it('zeroes a stale paid price once accessType leaves PAID instead of failing on a hidden field', () => {
+    // Switching a 199-yuan draft to FREE hides the price control; its old value
+    // must not block the save with an error the operator cannot see or clear.
+    const result = buildEventMutationInput('mip.admin.events.save', { ...baseEvent, accessType: 'FREE', priceCents: '19900' })
+    assert.ok(result && 'draft' in result)
+    assert.equal((result.draft as { priceCents: number }).priceCents, 0)
+  })
+
+  it('explains each paid-event precondition instead of one opaque message', () => {
+    const approval = validateEventMutationInput('mip.admin.events.save', { ...baseEvent, accessType: 'PAID', registrationPolicy: 'APPROVAL', priceCents: '19900' })
+    assert.equal(approval.ok, false)
+    assert.equal(approval.ok === false && approval.errors[0]?.message, '付费活动仅支持「自动确认」报名方式，请先调整报名方式')
+
+    const waitlist = validateEventMutationInput('mip.admin.events.save', { ...baseEvent, accessType: 'PAID', waitlistEnabled: true, priceCents: '19900' })
+    assert.equal(waitlist.ok === false && waitlist.errors[0]?.message, '付费活动不支持候补报名，请关闭候补报名')
+
+    const freePrice = validateEventMutationInput('mip.admin.events.save', { ...baseEvent, accessType: 'PAID', priceCents: '0' })
+    assert.equal(freePrice.ok === false && freePrice.errors[0]?.message, '付费活动必须填写大于 0 的金额（元）')
+  })
+
+  it('marks the paid price required so the form flags it before submit', () => {
+    const price = EVENT_MUTATION_CONFIGS['mip.admin.events.save'].fields.find(field => field.key === 'priceCents')
+    assert.equal(price?.required, true)
+  })
+
+  it('points a missing branch selection at the branchId field with plain wording', () => {
+    const result = validateEventMutationInput('mip.admin.events.save', { ...baseEvent, scopeType: 'BRANCH', branchId: '' })
+    assert.equal(result.ok, false)
+    assert.equal(result.ok === false && result.errors[0]?.field, 'branchId')
+    assert.equal(result.ok === false && result.errors[0]?.message, '请选择服务器')
+    const branchField = EVENT_MUTATION_CONFIGS['mip.admin.events.save'].fields.find(field => field.key === 'branchId')
+    assert.deepEqual(branchField?.requiredWhen, { path: 'scopeType', values: ['BRANCH'] })
+  })
+
+  it('hides catalogId and expectedVersion on the catalog save form for both create and edit', () => {
+    const creating = createAdminEventMutationDefinition('mip.admin.events.catalog.save', '')
+    assert.ok(creating.fields.find(field => field.key === 'catalogId')?.hidden)
+    assert.ok(creating.fields.find(field => field.key === 'expectedVersion')?.hidden)
+    const editing = createAdminEventMutationDefinition('mip.admin.events.catalog.save', 'cat-123')
+    assert.ok(editing.fields.find(field => field.key === 'catalogId')?.hidden)
+    assert.ok(editing.fields.find(field => field.key === 'expectedVersion')?.hidden)
+  })
+
+  it('names the 5-character tag limit instead of a generic format error', () => {
+    const result = validateEventMutationInput('mip.admin.events.catalog.save', { kind: 'TAG', key: 'web-abc', name: '周末城市漫步', description: '', sortOrder: 0 })
+    assert.equal(result.ok, false)
+    assert.equal(result.ok === false && result.errors[0]?.message, '标签名称不能超过 5 个字')
+    const nameField = EVENT_MUTATION_CONFIGS['mip.admin.events.catalog.save'].fields.find(field => field.key === 'name')
+    assert.ok((nameField?.extra || '').includes('5 个字'))
+  })
+
+  it('guides the tags.replace dialog to the catalog page when tags are empty', () => {
+    const tagIds = EVENT_MUTATION_CONFIGS['mip.admin.events.tags.replace'].fields.find(field => field.key === 'tagIds')
+    assert.ok(tagIds?.emptyHint && tagIds.emptyHint.includes('新建活动目录'))
+  })
+})

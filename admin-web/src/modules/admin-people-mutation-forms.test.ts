@@ -403,3 +403,31 @@ describe('novice-friendly governance form contracts', () => {
     }
   })
 })
+
+describe('R1 novice walkthrough fixes', () => {
+  it('marks scope required for branch and event roles while platform roles stay optional', () => {
+    for (const action of ['mip.admin.roles.set', 'mip.admin.adminAccounts.create', 'mip.admin.adminAccounts.update'] as const) {
+      const definition = createAdminPeopleMutationDefinition(action, action === 'mip.admin.roles.set' ? 'user-1' : 'acc-1')
+      const scopeId = definition.fields.find(field => field.key === 'scopeId') as { requiredWhen?: { values: readonly string[] } } | undefined
+      assert.ok(scopeId?.requiredWhen, `${action} scopeId must carry requiredWhen`)
+      assert.deepEqual(scopeId.requiredWhen.values, ['BRANCH_ADMIN', 'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF'])
+    }
+  })
+
+  it('uses a number input for branch sort order and tolerates a cleared box', () => {
+    for (const action of ['mip.admin.branches.create', 'mip.admin.branches.update'] as const) {
+      const definition = createAdminPeopleMutationDefinition(action, action === 'mip.admin.branches.update' ? 'branch-1' : '')
+      const sortOrder = definition.fields.find(field => field.key === 'sortOrder')
+      assert.equal(sortOrder?.kind, 'number')
+    }
+    const definition = createAdminPeopleMutationDefinition('mip.admin.branches.create', '')
+    const cleared = buildAdminPeopleMutationInput(definition, { branchKey: 'branch-abc', name: '深圳', cityName: '深圳', summary: '', leaderUserId: '', sortOrder: '' })
+    assert.equal((cleared as Record<string, unknown> | null)?.sortOrder, 0)
+  })
+
+  it('guides empty role template catalogs to the governance page', () => {
+    const definition = createAdminPeopleMutationDefinition('mip.admin.roles.set', 'user-1')
+    const template = definition.fields.find(field => field.key === 'roleTemplateId') as { emptyHint?: string } | undefined
+    assert.ok(template?.emptyHint?.includes('岗位模板'))
+  })
+})

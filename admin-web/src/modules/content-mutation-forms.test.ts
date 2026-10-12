@@ -5,6 +5,7 @@ import {
   getContentMutationForm,
   validateContentMutation,
 } from './content-mutation-forms.ts'
+import { label } from './admin-read-formatters.ts'
 
 const uuid = '11111111-1111-4111-8111-111111111111'
 const profileRef = `p1.${'a'.repeat(16)}.${'b'.repeat(48)}.${'c'.repeat(22)}`
@@ -114,4 +115,56 @@ it('keeps optional case fields explicit through JSON transport so a minimal draf
   const transported = JSON.parse(JSON.stringify(result.input))
   for (const key of ['startedOn', 'endedOn', 'caseType', 'cityTagId', 'industryTagId', 'coverAssetId']) assert.equal(transported.draft[key], null)
   assert.deepEqual(transported.draft.mediaAssetIds, [])
+})
+
+describe('R1 novice walkthrough fixes', () => {
+  it('shows the recipient picker only for explicit audiences and marks it required there', () => {
+    const fields = getContentMutationForm('mip.admin.messageCampaigns.save').fields
+    const recipientRefs = fields.find(field => field.key === 'recipientRefs')
+    assert.deepEqual(recipientRefs?.visibleWhen, { path: 'audienceType', value: 'EXPLICIT' })
+    assert.equal(recipientRefs?.required, true)
+    // ALL keeps working without recipients: nothing silently blocks the save.
+    assert.equal(validateContentMutation('mip.admin.messageCampaigns.save', {
+      scopeType: 'PLATFORM', audienceType: 'ALL', recipientRefs: [], name: '开学提醒', title: '标题', body: '正文',
+    }).ok, true)
+  })
+
+  it('labels the announcement target type and knowledge moderation in plain Chinese', () => {
+    // String options are localized by the shared renderer via label(); assert both layers.
+    const targetField = getContentMutationForm('mip.admin.announcements.save').fields.find(field => field.key === 'targetType')
+    assert.deepEqual(targetField?.options, ['EVENT', 'OPPORTUNITY'])
+    assert.deepEqual((targetField?.options || []).map(option => label(option)), ['活动', '机会'])
+    const moderation = getContentMutationForm('mip.admin.knowledge.contents.save').fields.find(field => field.key === 'moderationMode')
+    assert.deepEqual((moderation?.options || []).map(option => typeof option === 'string' ? option : option.label), ['自动审核', '人工审核'])
+  })
+
+  it('guides empty knowledge catalogs to their maintenance pages', () => {
+    const content = getContentMutationForm('mip.admin.knowledge.contents.save')
+    const categoryId = content.fields.find(field => field.key === 'categoryId')
+    assert.ok(categoryId?.optionsAction === 'mip.admin.knowledge.list' && (categoryId as { emptyHint?: string }).emptyHint?.includes('新建分类'))
+    const schedule = getContentMutationForm('mip.admin.knowledge.schedules.save')
+    const sourceId = schedule.fields.find(field => field.key === 'sourceId')
+    assert.ok(sourceId?.optionsAction === 'mip.admin.knowledge.list' && (sourceId as { emptyHint?: string }).emptyHint?.includes('新建信息源'))
+  })
+
+  it('marks opportunity title and value summary as required like the server does', () => {
+    const draft = getContentMutationForm('mip.admin.opportunities.save').fields.find(field => field.key === 'draft')
+    const nested = draft?.fields || []
+    assert.equal(nested.find(field => field.key === 'title')?.required, true)
+    assert.equal(nested.find(field => field.key === 'valueSummary')?.required, true)
+  })
+
+  it('bounds ability score inputs to the 0-5 server range', () => {
+    const draft = getContentMutationForm('mip.admin.userContent.save').fields.find(field => field.key === 'draft')
+    const scores = (draft?.fields || []).find(field => field.key === 'abilityScores')
+    for (const score of (scores?.fields || [])) {
+      assert.equal(score.min, 0)
+      assert.equal(score.max, 5)
+    }
+  })
+
+  it('guides badge selection when the badge catalog is empty', () => {
+    const badgeId = getContentMutationForm('mip.admin.badges.grant').fields.find(field => field.key === 'badgeId')
+    assert.ok((badgeId as { emptyHint?: string }).emptyHint?.includes('成长与勋章'))
+  })
 })

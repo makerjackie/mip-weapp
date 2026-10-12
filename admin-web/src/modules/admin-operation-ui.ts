@@ -18,6 +18,14 @@ export interface OperationField {
     path: string
     value: string | readonly string[]
   }
+  /** Marks the field required only when another field holds one of the given values. */
+  requiredWhen?: {
+    path: string
+    values: readonly string[]
+  }
+  /** Numeric bounds for number/integer inputs, enforced by the control itself. */
+  min?: number
+  max?: number
   /** Upload purpose for asset/asset-list fields, used by AssetUploader. */
   assetPurpose?: string
   /** Renders a session-backed searchable user picker instead of a static Select. */
@@ -100,6 +108,13 @@ export function operationFieldVisible(field: OperationField, values: OperationVa
   if (!field.visibleWhen) return true
   const actual = readPath(values, field.visibleWhen.path)
   return Array.isArray(field.visibleWhen.value) ? field.visibleWhen.value.includes(actual) : actual === field.visibleWhen.value
+}
+
+/** True when the field must be filled right now (always, or conditionally via requiredWhen). */
+export function operationFieldRequired(field: OperationField, values: OperationValues) {
+  if (field.required) return true
+  if (!field.requiredWhen) return false
+  return field.requiredWhen.values.includes(String(readPath(values, field.requiredWhen.path)))
 }
 
 function normalizeSubmittedField(

@@ -334,3 +334,26 @@ describe('admin operation model', () => {
   })
 
 })
+
+describe('dialog error explanations (R1 fixes)', () => {
+  it('surfaces the content validator message instead of a generic banner', async () => {
+    const model = await createOperationModel('mip.admin.messageCampaigns.save', '', null, {}, async <T>() => null as T)
+    const values = { ...model.values, audienceType: 'EXPLICIT', name: '开学提醒', title: '标题', body: '正文' }
+    expect(model.buildInput(values)).toBeNull()
+    expect(model.explain?.(values)).toBe('请选择 1 至 100 个收件人')
+  })
+
+  it('surfaces event validator messages with field-level wording', async () => {
+    const model = await createOperationModel('mip.admin.events.save', '', null, {}, async <T>() => null as T)
+    const values = {
+      ...model.values, accessType: 'PAID', priceCents: '0', title: '活动', description: '介绍',
+      startsAt: '2030-03-14T10:00:00+08:00', endsAt: '2030-03-14T12:00:00+08:00', venueName: '会场',
+    }
+    expect(model.explain?.(values)).toBe('付费活动必须填写大于 0 的金额（元）')
+  })
+
+  it('hides the dispatch version on first-time scheduling', async () => {
+    const model = await createOperationModel('mip.admin.messageCampaigns.schedule', 'campaign-1', null, { expectedVersion: 2 }, async <T>() => null as T)
+    expect(model.fields.find(field => field.key === 'expectedDispatchVersion')?.hidden).toBe(true)
+  })
+})

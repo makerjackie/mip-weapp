@@ -415,7 +415,7 @@ export function createTaskMutationDefinition(
       { name: 'periodStartAt', label: '周期开始', kind: 'datetime' },
       { name: 'periodEndAt', label: '周期结束', kind: 'datetime' },
       { name: 'weeklyDeliverAt', label: '周送达时间（北京时间）', kind: 'time' },
-      { name: 'assignedOwnerId', label: '任务负责人', kind: 'select', required: true, options: catalogOptions(record(source.editorOptions).owners) },
+      { name: 'assignedOwnerId', label: '任务负责人', kind: 'select', required: true, options: catalogOptions(record(source.editorOptions).owners), emptyHint: '暂无可选负责人。负责人来自有后台权限的账号，可在「权限」页维护' },
       { name: 'applicableServers', label: '适用服务器', kind: 'multi-select', options: catalogOptions(record(source.editorOptions).servers), wide: true },
       { name: 'rewardConfig', label: '奖励配置（奖金线下发放）', kind: 'group', fields: rewardFields(), wide: true },
     ], {

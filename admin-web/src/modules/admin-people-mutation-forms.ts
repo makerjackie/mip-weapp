@@ -23,7 +23,7 @@ export type AdminPeopleMutationAction = typeof ADMIN_PEOPLE_MUTATION_ACTIONS[num
 export const PEOPLE_MUTATION_ACTIONS = ADMIN_PEOPLE_MUTATION_ACTIONS
 export type PeopleMutationAction = AdminPeopleMutationAction
 
-export type AdminMutationFieldKind = 'text' | 'textarea' | 'select' | 'checkbox' | 'multi-select'
+export type AdminMutationFieldKind = 'text' | 'textarea' | 'select' | 'checkbox' | 'multi-select' | 'number'
 
 export interface AdminMutationFieldOption {
   value: string
@@ -38,6 +38,7 @@ export interface AdminMutationField<Name extends string = string> {
   label: string
   kind: AdminMutationFieldKind
   required?: boolean
+  hidden?: boolean
   maxLength?: number
   options?: readonly AdminMutationFieldOption[]
   wide?: boolean
@@ -46,6 +47,13 @@ export interface AdminMutationField<Name extends string = string> {
   remoteUserSearch?: boolean
   userSearchInput?: AdminRequestInput
   optionsActionByValue?: { path: string; actions: Record<string, string> }
+  /** Renderer niceties shared with OperationField. */
+  placeholder?: string
+  extra?: string
+  emptyHint?: string
+  requiredWhen?: { path: string; values: readonly string[] }
+  min?: number
+  max?: number
 }
 
 export type AdminPeopleMutationValues = Record<string, unknown>
@@ -173,8 +181,8 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     description: '为用户设置指定作用范围内的运营角色。',
     fields: [
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: ROLE_OPTIONS },
-      { name: 'roleTemplateId', label: '岗位模板（选填）', kind: 'select', optionsAction: 'mip.admin.roles.templates.list', optionsFilter: { path: 'roleKey', key: 'baseRoleKey' } },
-      { name: 'scopeId', label: '管理范围', kind: 'select', optionsActionByValue: { path: 'roleKey', actions: { BRANCH_ADMIN: 'mip.admin.branches.list', EVENT_OWNER: 'mip.admin.events.list', EVENT_MANAGER: 'mip.admin.events.list', EVENT_STAFF: 'mip.admin.events.list' } } },
+      { name: 'roleTemplateId', label: '岗位模板（选填）', kind: 'select', optionsAction: 'mip.admin.roles.templates.list', optionsFilter: { path: 'roleKey', key: 'baseRoleKey' }, emptyHint: '暂无可选岗位模板。模板在「权限」页的「岗位模板」中维护' },
+      { name: 'scopeId', label: '管理范围', kind: 'select', requiredWhen: { path: 'roleKey', values: ['BRANCH_ADMIN', 'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF'] }, extra: '服务器管理员和活动类角色需要选择具体的服务器或活动', optionsActionByValue: { path: 'roleKey', actions: { BRANCH_ADMIN: 'mip.admin.branches.list', EVENT_OWNER: 'mip.admin.events.list', EVENT_MANAGER: 'mip.admin.events.list', EVENT_STAFF: 'mip.admin.events.list' } } },
       { name: 'active', label: '启用角色', kind: 'checkbox', required: true },
       { name: 'reason', label: '授权原因', kind: 'textarea', required: true, maxLength: 300 },
     ],
@@ -187,7 +195,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     description: '在角色允许的能力范围内更新权限策略，或恢复默认设置。',
     fields: [
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
-      { name: 'roleTemplateId', label: '岗位模板（选填）', kind: 'select', optionsAction: 'mip.admin.roles.templates.list', optionsFilter: { path: 'roleKey', key: 'baseRoleKey' } },
+      { name: 'roleTemplateId', label: '岗位模板（选填）', kind: 'select', optionsAction: 'mip.admin.roles.templates.list', optionsFilter: { path: 'roleKey', key: 'baseRoleKey' }, emptyHint: '暂无可选岗位模板。模板在「权限」页的「岗位模板」中维护' },
       { name: 'capabilities', label: '权限能力', kind: 'multi-select', options: CAPABILITY_OPTIONS, wide: true },
       { name: 'reset', label: '恢复默认设置', kind: 'checkbox' },
     ],
@@ -205,7 +213,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
       { name: 'name', label: '服务器名称', kind: 'text', required: true, maxLength: 80 },
       { name: 'cityName', label: '城市名称', kind: 'text', required: true, maxLength: 80, placeholder: '如：深圳' },
       { name: 'leaderUserId', label: '负责人', kind: 'select', remoteUserSearch: true },
-      { name: 'sortOrder', label: '排序（越小越靠前）', kind: 'text', maxLength: 7 },
+      { name: 'sortOrder', label: '排序（越小越靠前）', kind: 'number', min: 0 },
       { name: 'summary', label: '服务器说明', kind: 'textarea', maxLength: 500, wide: true },
     ],
     values: { branchKey: '', name: '', cityName: '', leaderUserId: '', sortOrder: 0, summary: '' },
@@ -219,7 +227,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
       { name: 'name', label: '服务器名称', kind: 'text', required: true, maxLength: 80 },
       { name: 'cityName', label: '城市名称', kind: 'text', required: true, maxLength: 80 },
       { name: 'leaderUserId', label: '负责人', kind: 'select', remoteUserSearch: true },
-      { name: 'sortOrder', label: '排序（越小越靠前）', kind: 'text', maxLength: 7 },
+      { name: 'sortOrder', label: '排序（越小越靠前）', kind: 'number', min: 0 },
       { name: 'summary', label: '服务器说明', kind: 'textarea', maxLength: 500, wide: true },
     ],
     values: { name: '', cityName: '', leaderUserId: '', sortOrder: 0, summary: '' },
@@ -247,8 +255,8 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
       { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
       { name: 'userId', label: '已注册用户', kind: 'select', required: true, remoteUserSearch: true },
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
-      { name: 'roleTemplateId', label: '岗位模板（选填）', kind: 'select', optionsAction: 'mip.admin.roles.templates.list', optionsFilter: { path: 'roleKey', key: 'baseRoleKey' } },
-      { name: 'scopeId', label: '管理范围', kind: 'select', optionsActionByValue: { path: 'roleKey', actions: { BRANCH_ADMIN: 'mip.admin.branches.list', EVENT_OWNER: 'mip.admin.events.list', EVENT_MANAGER: 'mip.admin.events.list', EVENT_STAFF: 'mip.admin.events.list' } } },
+      { name: 'roleTemplateId', label: '岗位模板（选填）', kind: 'select', optionsAction: 'mip.admin.roles.templates.list', optionsFilter: { path: 'roleKey', key: 'baseRoleKey' }, emptyHint: '暂无可选岗位模板。模板在「权限」页的「岗位模板」中维护' },
+      { name: 'scopeId', label: '管理范围', kind: 'select', requiredWhen: { path: 'roleKey', values: ['BRANCH_ADMIN', 'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF'] }, extra: '服务器管理员和活动类角色需要选择具体的服务器或活动', optionsActionByValue: { path: 'roleKey', actions: { BRANCH_ADMIN: 'mip.admin.branches.list', EVENT_OWNER: 'mip.admin.events.list', EVENT_MANAGER: 'mip.admin.events.list', EVENT_STAFF: 'mip.admin.events.list' } } },
       { name: 'reason', label: '创建原因', kind: 'textarea', maxLength: 300, wide: true },
     ],
     values: { loginAccount: '', name: '', userId: '', roleKey: '', scopeId: '', branchId: '', reason: '' },
@@ -261,7 +269,7 @@ export const ADMIN_PEOPLE_MUTATION_CONFIG = {
     fields: [
       { name: 'name', label: '姓名', kind: 'text', required: true, maxLength: 64 },
       { name: 'roleKey', label: '角色', kind: 'select', required: true, options: CONFIGURABLE_ROLE_OPTIONS },
-      { name: 'scopeId', label: '管理范围', kind: 'select', optionsActionByValue: { path: 'roleKey', actions: { BRANCH_ADMIN: 'mip.admin.branches.list', EVENT_OWNER: 'mip.admin.events.list', EVENT_MANAGER: 'mip.admin.events.list', EVENT_STAFF: 'mip.admin.events.list' } } },
+      { name: 'scopeId', label: '管理范围', kind: 'select', requiredWhen: { path: 'roleKey', values: ['BRANCH_ADMIN', 'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF'] }, extra: '服务器管理员和活动类角色需要选择具体的服务器或活动', optionsActionByValue: { path: 'roleKey', actions: { BRANCH_ADMIN: 'mip.admin.branches.list', EVENT_OWNER: 'mip.admin.events.list', EVENT_MANAGER: 'mip.admin.events.list', EVENT_STAFF: 'mip.admin.events.list' } } },
     ],
     values: { name: '', roleKey: '', scopeId: '', branchId: '' },
     versionKind: 'adminAccount',
@@ -469,8 +477,11 @@ function branchManagementValues(values: AdminPeopleMutationValues) {
     else { const id = boundedId(values.leaderUserId); if (!id) return null; result.leaderUserId = id }
   }
   if (Object.hasOwn(values, 'sortOrder')) {
-    if (!/^(0|[1-9]\d{0,6})$/.test(String(values.sortOrder))) return null
-    const order = Number(values.sortOrder); if (order > 1000000) return null
+    // The control is a number input; treat a cleared box as the neutral default
+    // instead of failing the whole submit with a generic error.
+    const raw = values.sortOrder === undefined || values.sortOrder === null || values.sortOrder === '' ? '0' : String(values.sortOrder)
+    if (!/^(0|[1-9]\d{0,6})$/.test(raw)) return null
+    const order = Number(raw); if (order > 1000000) return null
     result.sortOrder = order
   }
   return result

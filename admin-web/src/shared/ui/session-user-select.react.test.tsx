@@ -24,7 +24,7 @@ it('searches message recipients by name and selects the server profile reference
 it('shows the empty-catalog guidance when a remote catalog loads without entries', async () => {
   request.mockResolvedValue({ items: [] })
   const user = userEvent.setup()
-  render(<RemoteCatalogSelectForTest emptyHint="暂无可选标签。可在「活动」页的「新建活动目录」中添加标签" />)
+  render(<RemoteCatalogSelectForTest action="mip.admin.events.catalog.list" emptyHint="暂无可选标签。可在「活动」页的「新建活动目录」中添加标签" />)
   await user.click(screen.getByRole('combobox'))
   await waitFor(() => expect(screen.getByText('暂无可选标签。可在「活动」页的「新建活动目录」中添加标签')).toBeTruthy())
 })

@@ -63,6 +63,8 @@ export interface EventMutationFieldConfig {
   optionsKey?: string
   /** Shows the control only when another field has the given value. */
   visibleWhen?: { path: string, value: string | readonly string[] }
+  /** Marks the field required only when another field holds one of the given values. */
+  requiredWhen?: { path: string, values: readonly string[] }
   /** Input placeholder shown inside the control. */
   placeholder?: string
   /** Helper text under the control explaining the value's origin. */
@@ -99,7 +101,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'eventId', label: '活动标识', kind: 'text', hidden: true },
   { key: 'expectedVersion', label: '记录版本', kind: 'number', hidden: true },
   { key: 'scopeType', label: '活动范围', kind: 'select', options: [option('PLATFORM', '平台'), option('BRANCH', '服务器')] },
-  { key: 'branchId', label: '服务器', kind: 'text', visibleWhen: { path: 'scopeType', value: 'BRANCH' }, optionsAction: 'mip.admin.branches.list', optionsInput: { purpose: 'EVENT_EDIT' }, emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' },
+  { key: 'branchId', label: '服务器', kind: 'text', visibleWhen: { path: 'scopeType', value: 'BRANCH' }, requiredWhen: { path: 'scopeType', values: ['BRANCH'] }, optionsAction: 'mip.admin.branches.list', optionsInput: { purpose: 'EVENT_EDIT' }, emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' },
   { key: 'title', label: '活动名称', kind: 'text', required: true, maxLength: 120, placeholder: '如：周末城市漫步·第 3 期' },
   { key: 'summary', label: '活动摘要', kind: 'textarea', required: false, maxLength: 300, placeholder: '一句话介绍活动（选填）', extra: '选填。不填时将自动截取活动介绍的开头，小程序列表不直接展示摘要' },
   { key: 'description', label: '活动介绍', kind: 'textarea', required: true, maxLength: 20_000 },
@@ -125,7 +127,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'guideUrl', label: '路线指引链接', kind: 'text', maxLength: 1_024, advanced: true, placeholder: 'https:// 开头，成员点击可查看路线说明' },
   { key: 'capacity', label: '活动名额', kind: 'number', placeholder: '留空表示不限名额' },
   { key: 'waitlistEnabled', label: '候补报名', kind: 'checkbox' },
-  { key: 'priceCents', label: '金额（元）', kind: 'money', valueScale: 100, visibleWhen: { path: 'accessType', value: 'PAID' }, placeholder: '如 199.00' },
+  { key: 'priceCents', label: '金额（元）', kind: 'money', valueScale: 100, required: true, visibleWhen: { path: 'accessType', value: 'PAID' }, placeholder: '如 199.00' },
   // The service accepts this typed array; the shared dialog renders a small editor
   // so edits preserve fields without asking operators to edit raw JSON.
   { key: 'registrationSchema', label: '报名字段', kind: 'registration-schema', wide: true },
@@ -192,7 +194,7 @@ const EVENT_MUTATION_CONFIGS = {
     fields: [
       { key: 'eventId', label: '活动标识', kind: 'text', required: true, hidden: true },
       { key: 'expectedVersion', label: '记录版本', kind: 'number', required: true, hidden: true },
-      { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true } },
+      { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true }, emptyHint: '暂无可选标签。可在「活动」页的「新建活动目录」中添加标签' },
     ],
   },
   'mip.admin.events.catalog.save': {
@@ -201,13 +203,13 @@ const EVENT_MUTATION_CONFIGS = {
     title: '保存活动目录项',
     description: '保存活动类型或标签目录项。新建和编辑使用不同的服务端字段。',
     fields: [
-      { key: 'catalogId', label: '目录项标识', kind: 'text' },
-      { key: 'expectedVersion', label: '记录版本', kind: 'number' },
+      { key: 'catalogId', label: '目录项标识', kind: 'text', hidden: true },
+      { key: 'expectedVersion', label: '记录版本', kind: 'number', hidden: true },
       { key: 'kind', label: '目录类型', kind: 'select', required: true, options: [option('TYPE', '活动类型'), option('TAG', '活动标签')] },
-      { key: 'key', label: '目录标识', kind: 'text', maxLength: 64 },
-      { key: 'name', label: '目录名称', kind: 'text', required: true },
+      { key: 'key', label: '目录标识', kind: 'text', maxLength: 64, hidden: true },
+      { key: 'name', label: '目录名称', kind: 'text', required: true, extra: '标签类名称不能超过 5 个字，类型类不能超过 80 个字' },
       { key: 'description', label: '目录说明', kind: 'textarea', maxLength: 300 },
-      { key: 'sortOrder', label: '目录排序', kind: 'number', required: true },
+      { key: 'sortOrder', label: '目录排序', kind: 'number', required: true, extra: '数字越小越靠前' },
     ],
   },
   'mip.admin.events.catalog.changeStatus': {
@@ -435,16 +437,26 @@ function eventDraft(values: EventMutationValues) {
   const eventMode = enumValue(values.eventMode, '活动方式', ['OFFLINE', 'ONLINE', 'HYBRID'] as const)
   const accessType = enumValue(values.accessType, '收费类型', ['FREE', 'MEMBER_INCLUDED', 'PAID'] as const)
   const registrationPolicy = enumValue(values.registrationPolicy, '报名方式', ['AUTO', 'APPROVAL'] as const)
-  const priceCents = integer(values.priceCents === undefined || values.priceCents === '' || values.priceCents === null ? 0 : values.priceCents, '金额')
+  // A stale price from a previously paid draft must not block a free save: the
+  // control is hidden once accessType leaves PAID, so the operator cannot clear it.
+  const priceCents = accessType === 'PAID'
+    ? integer(values.priceCents === undefined || values.priceCents === '' || values.priceCents === null ? 0 : values.priceCents, '金额')
+    : 0
   const waitlistEnabled = values.waitlistEnabled === true
     || values.waitlistEnabled === 'true'
     || values.waitlistEnabled === 'on'
-  if (accessType === 'PAID' && (priceCents < 1 || registrationPolicy !== 'AUTO' || waitlistEnabled)) {
-    throw new FormValidationError('accessType', '付费活动配置无效')
+  if (accessType === 'PAID') {
+    if (priceCents < 1) throw new FormValidationError('priceCents', '付费活动必须填写大于 0 的金额（元）')
+    if (registrationPolicy !== 'AUTO') throw new FormValidationError('registrationPolicy', '付费活动仅支持「自动确认」报名方式，请先调整报名方式')
+    if (waitlistEnabled) throw new FormValidationError('waitlistEnabled', '付费活动不支持候补报名，请关闭候补报名')
   }
-  if (accessType !== 'PAID' && priceCents !== 0) throw new FormValidationError('priceCents', '免费活动金额必须为零')
   const scopeType = values.scopeType === undefined || values.scopeType === '' ? 'PLATFORM' : enumValue(values.scopeType, '活动范围', ['PLATFORM', 'BRANCH'] as const)
-  const branchId = scopeType === 'BRANCH' ? id(values.branchId, '服务器') : null
+  const branchId = scopeType === 'BRANCH' ? (() => {
+    const candidate = String(values.branchId ?? '').trim()
+    if (!candidate) throw new FormValidationError('branchId', '请选择服务器')
+    if (!identifierPattern.test(candidate)) throw new FormValidationError('branchId', '服务器无效，请重新选择')
+    return candidate
+  })() : null
   const venueName = optionalText(values.venueName, '活动地点', 160)
   const onlineUrl = optionalText(values.onlineUrl, '线上地址', 1_024)
   if ((eventMode === 'OFFLINE' || eventMode === 'HYBRID') && !venueName) throw new FormValidationError('venueName', '请填写活动地点')
@@ -535,6 +547,8 @@ function build(action: EventMutationAction, values: EventMutationValues): AdminR
     const kind = enumValue(values.kind, '目录类型', ['TYPE', 'TAG'] as const)
     const catalogId = values.catalogId === undefined || values.catalogId === '' ? '' : id(values.catalogId, '目录项')
     const expectedVersionValue = values.expectedVersion === undefined || values.expectedVersion === '' ? null : version(values.expectedVersion)
+    // The server caps TAG names at 5 chars; name it explicitly instead of a generic format error.
+    if (kind === 'TAG' && String(values.name ?? '').trim().length > 5) throw new FormValidationError('name', '标签名称不能超过 5 个字')
     const name = text(values.name, '目录名称', kind === 'TAG' ? 5 : 80, true)
     const description = optionalText(values.description, '目录说明', 300)
     const sortOrder = integer(values.sortOrder, '目录排序')
@@ -643,11 +657,11 @@ export function createAdminEventMutationDefinition<Action extends AdminEventMuta
   const config = EVENT_MUTATION_CONFIGS[action]
   const source = readVersion(action, idOrEmpty(targetId), readDetailField)
   const values = defaultValues(action)
-  let fields = config.fields.map(field => ({ ...field, name: field.key }))
+  const fields = config.fields.map(field => ({ ...field, name: field.key }))
   if (action === 'mip.admin.events.catalog.save') {
-    // The stable key is an internal identifier: generate it on create and never
-    // surface it. Updates must not carry the key at all (server rejects it).
-    fields = fields.map(field => field.key === 'key' ? { ...field, hidden: true } : field)
+    // The stable key, catalogId and expectedVersion are internal identifiers or
+    // server facts: generated/prefilled from row context, never surfaced. Updates
+    // must not carry the key at all (server rejects it).
     if (!targetId) {
       values.key = `web-${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
       values.sortOrder = 0

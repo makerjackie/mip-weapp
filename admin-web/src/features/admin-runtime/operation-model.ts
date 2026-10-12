@@ -11,6 +11,7 @@ import {
   buildAdminEventMutationInput,
   createAdminEventMutationDefinition,
   eventMutationConfig,
+  validateAdminEventMutationInput,
   type AdminEventMutationAction,
 } from '../../modules/admin-event-mutation-forms'
 import {
@@ -83,6 +84,8 @@ export interface OperationModel {
   values: OperationValues
   idempotencyKey: string
   buildInput: (values: OperationValues) => AdminRequestInput | null
+  /** Returns the validator's human-readable failure for the dialog banner, or null. */
+  explain?: (values: OperationValues) => string | null
 }
 
 const peopleActions = new Set<string>(ADMIN_PEOPLE_MUTATION_ACTIONS)
@@ -166,7 +169,12 @@ export async function createOperationModel(
       }
       return field
     })
-    return model(definition, fields as readonly OperationField[], values, idempotencyKey, next => buildAdminEventMutationInput(definition, next))
+    return model(definition, fields as readonly OperationField[], values, idempotencyKey,
+      next => buildAdminEventMutationInput(definition, next),
+      next => {
+        const result = validateAdminEventMutationInput(definition, next)
+        return result.ok ? null : result.errors[0]?.message || null
+      })
   }
   if (taskActions.has(action)) {
     const typedAction = action as AdminTaskMutationAction
@@ -233,6 +241,9 @@ export async function createOperationModel(
       || (trustedVersion !== undefined && key === 'expectedVersion')
       || (creating && (key === targetKey || key === 'expectedVersion'))
       || (launch.values && key === 'expectedDispatchVersion' && Object.hasOwn(launch.values, 'expectedDispatchVersion'))
+      // First-time scheduling has no dispatch version yet; the field is optional
+      // and a bare integer box would be unanswerable for operators.
+      || (typedAction === 'mip.admin.messageCampaigns.schedule' && key === 'expectedDispatchVersion')
       ? { ...field, hidden: true }
       : typedAction === 'mip.admin.knowledge.contents.review' && key === 'decision' && Array.isArray(record(detail?.source?.content).allowedReviewDecisions) ? { ...field, options: (field.options || []).filter(option => (record(detail?.source?.content).allowedReviewDecisions as unknown[]).includes(typeof option === 'string' ? option : option.value)) }
       : (creating && ['sourceKey', 'categoryKey'].includes(key)) || (trustedTarget && ['sourceKey', 'categoryKey'].includes(key)) ? { ...field, hidden: true } : field
@@ -251,6 +262,18 @@ export async function createOperationModel(
       if (trustedVersion !== undefined) normalized.expectedVersion = trustedVersion
       const result = validateContentMutation(typedAction, normalized)
       return result.ok ? result.input : null
+    },
+    explain: (next) => {
+      try {
+        const normalized = contentFormValues(typedAction, next, idempotencyKey)
+        if (trustedTarget) normalized[targetKey] = trustedTarget
+        if (trustedVersion !== undefined) normalized.expectedVersion = trustedVersion
+        const result = validateContentMutation(typedAction, normalized)
+        return result.ok ? null : Object.values(result.errors)[0] || null
+      }
+      catch {
+        return null
+      }
     },
   }
 }
@@ -457,8 +480,9 @@ function model(
   values: OperationValues,
   idempotencyKey: string,
   buildInput: (values: OperationValues) => AdminRequestInput | null,
+  explain?: (values: OperationValues) => string | null,
 ): OperationModel {
-  return { ...definition, fields, values, idempotencyKey, buildInput }
+  return { ...definition, fields, values, idempotencyKey, buildInput, explain }
 }
 
 function peopleFields(
