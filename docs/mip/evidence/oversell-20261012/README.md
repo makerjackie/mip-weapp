@@ -6,7 +6,7 @@
 
 | 项 | 结果 | 证据 |
 | --- | --- | --- |
-| DB 迁移 107（mip_events.oversell_enabled + 互斥 CHECK） | 已应用到 staging（此前在 106，仅应用本条）；`applied: mip_events_oversell_enabled` + `isolated schema verified` | 迁移脚本输出；备份 manifest `/Users/oudouglas/Backups/mip-weapp/2026-10-12T120929-334Z/`（154 表 4944 行，仓库外） |
+| DB 迁移 107（mip_events.oversell_enabled + 互斥 CHECK） | 已应用到 staging（此前在 106，仅应用本条）；`applied: mip_events_oversell_enabled` + `isolated schema verified` | 迁移脚本输出；备份 manifest 在仓库外本机备份目录（154 表 4944 行，row-count-verified） |
 | 云函数 mip-events-api / mip-admin-api / mip-outbox-worker | 逐个部署，`verified`（健康检查含 CloudBase MySQL 持久化证明） | 部署脚本输出；首轮 API Key STS 被拒（`Cam authentication failed`），改用本机既有 Device Flow 授权 + `CLOUDBASE_AUTH_MODE=local` 后通过 |
 | admin-web BFF（mip-admin-web-api） | 重新构建部署（内置 public/assets 随新前端更新），Active、0 timer | 部署输出 JSON（privateTarget 本机） |
 | admin-web 静态（mip-admin-console/） | 14 文件上传并 VERIFIED | `.tmp/admin-cloudbase-static` |
