@@ -35,8 +35,10 @@ describe('MIP opportunity journey review', () => {
   })
 
   it('keeps all guest trigger points behind the identity sheet (J1-04/J1-05)', () => {
-    // 玩家登录 / 去成为玩家解锁权限 仅游客态（!authenticated）渲染。
-    expect(discovery).toContain(`wx:elif="{{!authenticated}}"`)
+    // MIW-70 figma 3828:26439/27376：teaser 覆盖全体非玩家（!player）；玩家登录胶囊仅
+    // 未登录渲染，嘉宾（已登录非玩家）只有解锁文案。
+    expect(discovery).toContain(`wx:elif="{{!player}}"`)
+    expect(discovery).toContain(`wx:if="{{!authenticated}}" class="mt-4 flex h-[80rpx]`)
     expect(discovery).toContain('bind:tap="openLogin">玩家登录')
     // J1-06→J1-07：解锁入口走 openProtected 门禁，授权后落玩家等级页（不再原地刷新）。
     expect(discovery).toContain('bind:tap="openBecomePlayerUnlock">去成为玩家解锁权限>')
@@ -51,6 +53,19 @@ describe('MIP opportunity journey review', () => {
     expect(discovery).toContain(`wx:if="{{!authenticated}}" class="absolute inset-y-0 left-0 right-[176rpx]"`)
     // MIW-58：占位按 figma 2917_4875 改为「搜索」（a11y label 仍保留「搜索玩家名称」）。
     expect(discovery).toContain('placeholder="搜索"')
+  })
+
+  it('hides both lists from non-players behind the mystery-box teaser (MIW-70)', () => {
+    // figma 3828:26439（机会-项目机会 非玩家的-已登录）/3828:27376（机会-人才合作
+    // 非玩家的-已登录）：列表本体仅玩家可见，嘉宾不再看到项目机会/人才 list。
+    expect(discovery).toContain(`state === 'ready' && mode === 'opportunities' && player`)
+    expect(discovery).toContain(`state === 'ready' && mode === 'cooperation' && player`)
+    // 人才合作空态分支收敛为玩家-only（嘉宾由 teaser 拦截）。
+    expect(discovery).toContain(`!hasAppliedFilters && player}}`)
+    // teaser 几何：容器锚各 tab 首行底（pills 168→box 210 = 84rpx / 搜索行 180→210 = 60rpx），
+    // 嘉宾解锁文案 box 下 16css（项目机会）/24css（人才合作）。
+    expect(discovery).toContain(`mode === 'cooperation' ? 'mt-[60rpx]' : 'mt-[84rpx]'`)
+    expect(discovery).toContain(`mode === 'cooperation' ? 'mt-[48rpx]' : 'mt-4'`)
   })
 
   it('shows the member empty states without the guest login block (J2-05/J2-07)', () => {
