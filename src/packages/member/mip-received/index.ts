@@ -169,8 +169,10 @@ function present(item: ReceivedInteraction, index: number, viewer: { name: strin
   }
   if (item.kind === 'VISITOR') {
     // journey-review J3-08（QT 终审）：访客卡不显示访问时间。
+    // MIW-74：服务端已按人聚合（visitCount = 全部来访次数），同一人不再摊平多张卡；
+    // 同日重复来访走 GUEST/INTERACTION 同款右上角 ×N 角标（countBadge）。
     return {
-      viewKey: `visitor-${item.visitId || `${item.actor.profileRef}-${index}`}`,
+      viewKey: `visitor-${item.actor.profileRef}`,
       kind: item.kind,
       messageId: item.actor.profileRef,
       unread: item.unread,
@@ -178,6 +180,7 @@ function present(item: ReceivedInteraction, index: number, viewer: { name: strin
       statusText: item.actor.userKind === 'PLAYER' ? '玩家' : '嘉宾',
       sourceText: '公开档案',
       detailText: `访问了你的公开档案 ${item.visitCount} 次`,
+      countBadge: item.visitCount > 1 ? `×${item.visitCount}` : '',
       note: '',
       updatedText: formatChineseMonthDayTime(item.lastVisitedAt),
       navigationUrl: profileUrl(item.actor.profileRef),

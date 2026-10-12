@@ -45,9 +45,9 @@ function visitorDto(row, caller) {
     avatarUrl: allowed.avatar === false ? undefined : (row.visitor_avatar_file_id || undefined),
     headline: allowed.headline === false ? undefined : (row.visitor_headline || undefined),
     userKind: Number(row.is_player) === 1 ? 'PLAYER' : 'GUEST',
-    visitCount: 1,
+    visitCount: Number(row.visit_count || 1),
     lastVisitedAt: iso(row.last_visited_at),
-    unread: Boolean(row.has_unread),
+    unread: Number(row.unread_visit_count || 0) > 0,
   }
 }
 
@@ -102,14 +102,18 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
   const limit = Math.min(30, Math.max(1, Number.isInteger(limitValue) ? limitValue : 20))
   const cursor = decodeVisitorCursor(rawInput.cursor)
   const blockFilter = mutualBlockFilter(caller.userId, 'visitor.id', 'visitor.app_id')
-  const params = [caller.appId, caller.userId, ...blockFilter.params]
+  // MIW-74：访客列表按人聚合（同一天重复来访不再摊平成多张头像卡），
+  // 每人一行：visit_count = 全部有效来访次数、unread_visit_count = 未读次数、
+  // visit_position = 1 取最近一次事实（last_visited_at / visit_id 作组锚点）。
+  // 游标沿用 (时间, 访问行 UUID) 二元组，不暴露原始访客 id（与既有游标口径一致）。
+  const params = [caller.appId, caller.userId, caller.appId, ...blockFilter.params]
   const cursorSql = cursor
-    ? 'AND (visit.visited_at < ? OR (visit.visited_at = ? AND visit.id < ?))'
+    ? 'AND (visit.last_visited_at < ? OR (visit.last_visited_at = ? AND visit.visit_id < ?))'
     : ''
   if (cursor) params.push(cursor.timestamp, cursor.timestamp, cursor.id)
   const rows = await database.query(
-    `SELECT visit.id AS visit_id, visit.visited_at AS last_visited_at,
-            (visit.read_at IS NULL) AS has_unread, visitor.id AS visitor_id,
+    `SELECT visit.visit_id, visit.last_visited_at, visit.visit_count, visit.unread_visit_count,
+            visitor.id AS visitor_id,
             visitor_profile.nickname AS visitor_nickname,
             visitor_profile.headline AS visitor_headline,
             visitor_profile.visibility_json,
@@ -121,18 +125,28 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
                 AND entitlement.starts_at <= UTC_TIMESTAMP(3)
                 AND entitlement.ends_at > UTC_TIMESTAMP(3)
             )`} AS is_player
-     FROM mip_profile_visits visit
+     FROM (
+       SELECT visits.id AS visit_id, visits.visited_at AS last_visited_at, visits.visitor_user_id,
+              COUNT(*) OVER (PARTITION BY visits.visitor_user_id) AS visit_count,
+              SUM(visits.read_at IS NULL) OVER (PARTITION BY visits.visitor_user_id) AS unread_visit_count,
+              ROW_NUMBER() OVER (
+                PARTITION BY visits.visitor_user_id
+                ORDER BY visits.visited_at DESC, visits.id DESC
+              ) AS visit_position
+       FROM mip_profile_visits visits
+       WHERE visits.app_id = ? AND visits.profile_user_id = ?
+     ) visit
      INNER JOIN mip_users visitor
-       ON visitor.app_id = visit.app_id AND visitor.id = visit.visitor_user_id
+       ON visitor.app_id = ? AND visitor.id = visit.visitor_user_id
        AND visitor.status = 'ACTIVE'
      INNER JOIN mip_profiles visitor_profile
        ON visitor_profile.app_id = visitor.app_id AND visitor_profile.user_id = visitor.id
      LEFT JOIN mip_media_assets visitor_avatar
        ON visitor_avatar.app_id = visitor.app_id
        AND visitor_avatar.id = visitor_profile.avatar_asset_id AND visitor_avatar.status = 'READY'
-     WHERE visit.app_id = ? AND visit.profile_user_id = ?
+     WHERE visit.visit_position = 1
        AND ${blockFilter.sql || '1 = 1'} ${cursorSql}
-     ORDER BY visit.visited_at DESC, visit.id DESC
+     ORDER BY visit.last_visited_at DESC, visit.visit_id DESC
      LIMIT ${limit + 1}`,
     params,
   )
@@ -144,15 +158,21 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
     loadHeartInviters(database, caller.appId, page.map(row => row.visitor_id)),
   ])
   const [unread, total] = await Promise.all([
+    // 未读口径随卡片聚合：按「有未读来访的人」计数，与列表可见未读卡数一致。
     database.one(
       `SELECT COUNT(*) AS count
-       FROM mip_profile_visits visit
-       INNER JOIN mip_users visitor
-         ON visitor.app_id = visit.app_id AND visitor.id = visit.visitor_user_id AND visitor.status = 'ACTIVE'
-       INNER JOIN mip_profiles visitor_profile
-         ON visitor_profile.app_id = visitor.app_id AND visitor_profile.user_id = visitor.id
-       WHERE visit.app_id = ? AND visit.profile_user_id = ? AND visit.read_at IS NULL
-         AND ${blockFilter.sql || '1 = 1'}`,
+       FROM (
+         SELECT visit.visitor_user_id
+         FROM mip_profile_visits visit
+         INNER JOIN mip_users visitor
+           ON visitor.app_id = visit.app_id AND visitor.id = visit.visitor_user_id AND visitor.status = 'ACTIVE'
+         INNER JOIN mip_profiles visitor_profile
+           ON visitor_profile.app_id = visitor.app_id AND visitor_profile.user_id = visitor.id
+         WHERE visit.app_id = ? AND visit.profile_user_id = ?
+           AND ${blockFilter.sql || '1 = 1'}
+         GROUP BY visit.visitor_user_id
+         HAVING SUM(visit.read_at IS NULL) > 0
+       ) unread_visitor`,
       [caller.appId, caller.userId, ...blockFilter.params],
     ),
     database.one(
