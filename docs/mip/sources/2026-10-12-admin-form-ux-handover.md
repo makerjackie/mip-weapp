@@ -72,7 +72,7 @@
 
 ## 6. 交接操作指引
 
-- 本分支 worktree（本机）：`/Users/oudouglas/project/mip-weapp/.worktrees/admin-form-ux`；
+- 本分支 worktree（本机）：仓库根目录下的 `.worktrees/admin-form-ux`（`git worktree add --track -b feature/admin-form-ux .worktrees/admin-form-ux origin/feature/admin-form-ux`）；
 - 首次进入 worktree 需 `pnpm install`（pnpm workspace，store 共享，较快）；
 - 验证命令一律从**仓库根目录**执行：`pnpm admin:web:verify`、`pnpm verify`；
 - 后台唯一验收标准是 `admin-web/ACCEPTANCE.md`；PRD 是需求输入材料，不是平行验收表；
