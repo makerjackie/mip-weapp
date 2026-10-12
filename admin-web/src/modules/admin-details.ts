@@ -761,7 +761,7 @@ async function loadUserContentDetail(reference: string, request: AdminDetailRequ
       title: '案例内容',
       fields: fields([
         ['项目名称', text(item.projectName)],
-        // 字段名对齐小程序「我的案例」详情（src/packages/member/mip-cases/detail）
+        // 字段名对齐小程序「我的案例」详情页的展示文案
         ['一句话描述案例', text(item.summary)],
         ['项目时间', [text(item.startedOn, ''), text(item.endedOn, '')].filter(Boolean).join(' — ') || '—'],
         ['担任职责', text(item.responsibility)],
