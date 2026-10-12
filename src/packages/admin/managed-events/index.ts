@@ -1,6 +1,7 @@
 import type { AdminEvent, AdminEventStatus } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { mipAdminModule } from '../../../modules/mip-admin'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
 
@@ -152,7 +153,7 @@ Page({
   openEvent(event: WechatMiniprogram.TouchEvent) {
     const eventId = String(event.currentTarget.dataset.id || '')
     if (eventId) {
-      void wx.navigateTo({
+      void caseNavigateTo({
         url: `/packages/admin/event-console/index?eventId=${encodeURIComponent(eventId)}`,
       })
     }

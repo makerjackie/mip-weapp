@@ -12,6 +12,7 @@ import {
 import { aiObject, aiText } from '../../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { cooperationModule, normalizeCooperationCircles, normalizeCooperationQuirks } from '../../../../modules/mip-cooperation'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 interface RoleOption { key: CooperationRoleKey, name: string }
 interface AbilityView { key: string, label: string, score: number }
@@ -113,7 +114,7 @@ Page({
       wx.showToast({ title: 'AI 语音填写仅用于新建合作卡', icon: 'none' })
       return
     }
-    wx.navigateTo({ url: '/packages/member/mip-ai/voice/index?purpose=COOPERATION_CARD' })
+    caseNavigateTo({ url: '/packages/member/mip-ai/voice/index?purpose=COOPERATION_CARD' })
   },
 
   onUnload() {

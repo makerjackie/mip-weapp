@@ -5,6 +5,7 @@ import type { AdminPageState } from '../shared/page-state'
 import { hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { checkInCredentialCountdown } from '../../../modules/mip-events'
 import { mipEventsModule } from '../../../modules/mip-events/client'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatChineseDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
 
@@ -147,7 +148,7 @@ Page({
     if (!this.data.canRoster || !this.data.eventId) {
       return
     }
-    void wx.navigateTo({
+    void caseNavigateTo({
       url: `/packages/admin/event-registrations/index?eventId=${encodeURIComponent(this.data.eventId)}`,
     })
   },

@@ -11,6 +11,7 @@ import {
 } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipMediaModule } from '../../../modules/mip-media/client'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { cardPreviewIdentity } from './preview'
 
 type ExperienceCollection = 'companies' | 'organizations'
@@ -69,7 +70,7 @@ Page({
 
   // figma 1732_20291 底部「预览」：打开名片详情页查看保存效果。
   openPreview() {
-    wx.navigateTo({ url: '/packages/member/mip-card/index' })
+    caseNavigateTo({ url: '/packages/member/mip-card/index' })
   },
 
   onHide() { this.clearNavigationTimer() },

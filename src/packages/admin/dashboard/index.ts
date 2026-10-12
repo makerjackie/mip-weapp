@@ -1,6 +1,7 @@
 import type { AdminPageState } from '../shared/page-state'
 import { brand } from '../../../config/brand'
 import { MipAdminError, mipAdminModule } from '../../../modules/mip-admin'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { adminLoadFailure } from '../shared/page-state'
 
 function webLoginFailureMessage(error: unknown): string {
@@ -71,7 +72,7 @@ Page({
   },
 
   openEvents() {
-    void wx.navigateTo({ url: '/packages/admin/managed-events/index' })
+    void caseNavigateTo({ url: '/packages/admin/managed-events/index' })
   },
 
   openWebLogin() {

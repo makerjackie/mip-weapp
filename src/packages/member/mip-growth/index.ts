@@ -347,13 +347,13 @@ Page({
   openTask(event: WechatMiniprogram.TouchEvent) {
     const taskId = String(event.currentTarget.dataset.id || '')
     if (taskId) {
-      void wx.navigateTo({ url: `/packages/member/mip-tasks/detail/index?taskId=${taskId}` })
+      void caseNavigateTo({ url: `/packages/member/mip-tasks/detail/index?taskId=${taskId}` })
     }
   },
 
   /** MIW-27：经验值详情跳转独立明细页（figma 1948:14177），不再原地展开滚动。 */
   openExperienceDetails() {
-    void wx.navigateTo({ url: EXPERIENCE_DETAILS_PAGE })
+    void caseNavigateTo({ url: EXPERIENCE_DETAILS_PAGE })
   },
 
   /** J1-06/J4-03：开通与续费共用确认弹层（原会员订单确认页收敛于此）。 */

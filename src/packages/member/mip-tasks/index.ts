@@ -1,5 +1,6 @@
 import type { UserTaskCard } from '../../../modules/mip-tasks'
 import { mipTasksModule, rewardExperienceStarIndexes } from '../../../modules/mip-tasks'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 interface TaskView extends UserTaskCard {
   /** figma 1725_18357: 任务周期 row value（仅值部分，标签在模板中固定） */
@@ -141,7 +142,7 @@ Page({
   openTask(event: WechatMiniprogram.TouchEvent) {
     const taskId = String(event.currentTarget.dataset.id || '')
     if (taskId) {
-      void wx.navigateTo({ url: `/packages/member/mip-tasks/detail/index?taskId=${taskId}` })
+      void caseNavigateTo({ url: `/packages/member/mip-tasks/detail/index?taskId=${taskId}` })
     }
   },
 

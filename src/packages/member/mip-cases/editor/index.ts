@@ -7,6 +7,7 @@ import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { superCaseModule } from '../../../../modules/mip-cases'
 import { collectMissingProjectFields, MAX_SUPER_CASE_PROJECTS } from '../../../../modules/mip-cases/validation'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { EDITOR_HOT_CITY_COUNT, HOT_CITY_LABELS } from '../city-selector/city-directory'
 
 // 单个项目的编辑态（figma 2173_42605：整块 panel 表单，「主营城市」行 + 热门城市标签 + 选择城市二级页）。
@@ -227,7 +228,7 @@ Page({
       wx.showToast({ title: 'AI 语音填写仅用于新建案例', icon: 'none' })
       return
     }
-    wx.navigateTo({ url: '/packages/member/mip-ai/voice/index?purpose=SUPER_CASE' })
+    caseNavigateTo({ url: '/packages/member/mip-ai/voice/index?purpose=SUPER_CASE' })
   },
 
   updateProjectText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -267,7 +268,7 @@ Page({
     if (!Number.isInteger(groupIndex)) {
       return
     }
-    wx.navigateTo({
+    caseNavigateTo({
       url: `/packages/member/mip-cases/city-selector/index?selected=${encodeURIComponent(this.data.projects[groupIndex]?.cityLabel || '')}`,
       events: {
         citySelected: (payload: { label?: string, tagId?: string }) => {
