@@ -33,6 +33,8 @@ Page({
     selectedLabel: '',
   },
   cityTagIds: {} as Record<string, string>,
+  /** BUG-10.5：emit 后立即 navigateBack，转场内第二次 tap 会连退两级把编辑页弹掉；一次性锁保证只退一次。 */
+  pickedLabel: '',
 
   onLoad(options: Record<string, string | undefined>) {
     let selectedLabel = ''
@@ -107,6 +109,11 @@ Page({
     if (!label) {
       return
     }
+    // BUG-10.5：锁在 emit 前置位；编辑页 applyCity 幂等，重复 emit 无意义，双击只允许退一次。
+    if (this.pickedLabel) {
+      return
+    }
+    this.pickedLabel = label
     const opener = this as unknown as { getOpenerEventChannel?: () => WechatMiniprogram.IAnyObject }
     const channel = typeof opener.getOpenerEventChannel === 'function' ? opener.getOpenerEventChannel() : undefined
     channel?.emit?.('citySelected', { label, tagId: this.cityTagIds[label] || '' })

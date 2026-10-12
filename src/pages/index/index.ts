@@ -55,10 +55,36 @@ Page({
       this.loadBranches(options),
       this.loadEvents(options),
       this.loadOpportunities(),
-      this.loadAnnouncements(),
+      this.settleAnnouncements(),
       this.loadBanner(options.force === true),
     ])
     this.setData({ state: 'ready' })
+  },
+
+  // BUG-12.1（审计 2026-10-12）：公告口径跟随主分会。冷启动无身份缓存时若与身份
+  // 并行直接发全城公告，applyIdentity 拿到分会 id 后必须再发一次分会公告——设主分会
+  // 用户冷启动公告接口请求两次，且公告卡先闪全城再跳分会。
+  // 方案取舍：公告请求等身份「落地」，但不引入串行网络等待——loadSnapshot 对并发
+  // 调用去重复用同一飞行（mip-identity/module.ts snapshotFlight），这里 await 的就是
+  // loadIdentity 已经发起的那一次请求，不新增身份请求，也不阻塞其余并行板块首屏。
+  // 落地后分流：分会变化时 applyIdentity 已按最终口径发出唯一一次公告请求（本方法
+  // 通过对比落地前后的 primaryBranchId 识别，跳过重复补发）；分会未变（未设主分会）
+  // 或身份失败时，才由这里按全城口径补发——保证无分会用户仍能看到全城公告。
+  // loadAnnouncements 本身的 requestSeq 守卫语义保持不变。
+  async settleAnnouncements() {
+    if (this.data.identityState === 'ready') {
+      // 身份已落地（缓存命中或后续 onShow）：直接按当前主分会口径请求。
+      await this.loadAnnouncements()
+      return
+    }
+    const beforeBranchId = this.data.primaryBranchId
+    try {
+      await mipIdentityModule.loadSnapshot()
+    }
+    catch {}
+    if (this.data.primaryBranchId === beforeBranchId) {
+      await this.loadAnnouncements()
+    }
   },
 
   applyCachedContent() {

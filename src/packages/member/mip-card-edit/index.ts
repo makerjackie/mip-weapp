@@ -80,6 +80,9 @@ Page({
     if (this.navigationTimer !== undefined) {
       clearTimeout(this.navigationTimer)
       this.navigationTimer = undefined
+      // BUG-08:待返回定时器被取消而页面未出栈时(如保存后 300ms 内切后台再回来),
+      // 同步放开保存锁,避免按钮永久 loading;请求在途时没有定时器,不走到这里。
+      this.setData({ saving: false })
     }
   },
 
@@ -306,6 +309,9 @@ Page({
         })
       }
       wx.showToast({ title: '名片已保存', icon: 'success' })
+      // BUG-08:成功后进入「toast 展示 300ms 再返回」窗口,期间保持 saving=true,
+      // 否则按钮 loading 解除但页面还在,再点保存会发起第二次真实写入;
+      // 页面即将出栈,成功路径不复位 saving,由 clearNavigationTimer 兜底。
       this.clearNavigationTimer()
       this.navigationTimer = setTimeout(() => {
         this.navigationTimer = undefined
@@ -314,7 +320,8 @@ Page({
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '名片保存失败，请重试。' })
+      // BUG-08:仅失败/异常路径复位保存锁;成功路径页面即将离开,保持锁定。
+      this.setData({ saving: false })
     }
-    finally { this.setData({ saving: false }) }
   },
 })

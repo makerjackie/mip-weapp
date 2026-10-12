@@ -267,6 +267,8 @@ Page({
     nextCursor: '',
     loadingMore: false,
     message: '',
+    /** BUG-04.2：受保护入口（发布机会/玩家登录/筛选/我的项目）身份检查往返窗口内的动作闩锁展示位。 */
+    openingAction: false,
     loginSheetOpen: false,
     loginSheetBusy: false,
     loginSheetRestoreFirst: false,
@@ -277,6 +279,8 @@ Page({
   lastSuccessfulRefreshAt: 0,
   refreshOnReturn: false,
   authToken: '',
+  /** BUG-04.2：openProtected 的动作锁；data.openingAction 为其展示位，双检防实例字段漏复位。 */
+  openingActionLock: false,
   guestLoginFlow: null as ReturnType<typeof createMipGuestLoginFlow> | null,
 
   /** 通用游客登录引导（src/modules/mip-identity/guest-login-flow.ts）的本页接入点。 */
@@ -327,6 +331,12 @@ Page({
 
   async onShow() {
     syncCaseNavigation(this, 'pages/opportunities/index')
+    // BUG-04.2：openProtected 走 access 转交后带锁离开，回本页（完成或返回）统一复位，
+    // 避免授权页中途返回后所有受保护入口永久哑火。
+    this.openingActionLock = false
+    if (this.data.openingAction) {
+      this.setData({ openingAction: false })
+    }
     if (this.data.loginSheetOpen || this.data.loginSheetBusy) {
       return
     }
@@ -1005,8 +1015,20 @@ Page({
     }
   },
 
-  /** 游客/未绑定账号触发受保护操作：引导骨架在通用 guest-login-flow，本页保留原操作语义。 */
+  /**
+   * 游客/未绑定账号触发受保护操作：引导骨架在通用 guest-login-flow，本页保留原操作语义。
+   * BUG-04.2（审计 2026-10-12）：对照 pages/profile 同名方法补 openingActionLock——begin()
+   * 的身份快照往返窗口内无锁，已登录双击「发布机会」双开编辑器（两次 begin 生成不同
+   * token → 不同 resume 上下文，仅靠导航去重拦不住），游客路径更会连建两个身份会话
+   * token（第二个覆盖第一个）。实例锁 + data 标志在首个 await 前同步置位；ready/sheet/
+   * unavailable 各自复位，access 转交授权页时保持锁到 onShow 复位，防止授权页底下重复触发。
+   */
   async openProtected(destination: string, action: ProtectedActionKey) {
+    if (this.openingActionLock || this.data.openingAction) {
+      return
+    }
+    this.openingActionLock = true
+    this.setData({ openingAction: true })
     this.refreshOnReturn = true
     this.resumeDestination = destination
     const result = await this.requireGuestLoginFlow().begin({
@@ -1019,8 +1041,14 @@ Page({
         this.resumeDestination = ''
         this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
       }
+      if (result.outcome !== 'access') {
+        this.openingActionLock = false
+        this.setData({ openingAction: false })
+      }
       return
     }
+    this.openingActionLock = false
+    this.setData({ openingAction: false })
     // B1 双保险：auth-intent:* 哨兵不是页面路径，ready 时按恢复语义执行并同步
     // 登录态（decision.ready 蕴含 snapshot.authenticated），避免跳非法页面静默
     // 失败或落回游客占位屏。
@@ -1050,6 +1078,9 @@ Page({
   onLoginSheetDismiss() {
     this.requireGuestLoginFlow().dismiss()
     this.resumeDestination = ''
+    // BUG-04.2：游客放弃弹层即放弃挂起意图，动作锁同步释放。
+    this.openingActionLock = false
+    this.setData({ openingAction: false })
   },
 
   /** 恢复弹层前的原意图：普通目的地直接跳转，筛选/我的项目哨兵则回到对应 pill 态。 */

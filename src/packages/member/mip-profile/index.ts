@@ -73,6 +73,10 @@ Page({
     if (this.navigationTimer !== undefined) {
       clearTimeout(this.navigationTimer)
       this.navigationTimer = undefined
+      // BUG-08:待返回定时器被取消而页面未出栈时(如保存后 300ms 内切后台再回来),
+      // 同步放开保存锁,避免按钮永久 loading;请求在途时没有定时器,不走到这里,
+      // saving 继续拦截二次提交。
+      this.setData({ saving: false })
     }
   },
 
@@ -244,11 +248,16 @@ Page({
         profileVisibility: snapshot.profile.visibility,
       })
       wx.showToast({ title: '资料已保存', icon: 'success' })
+      // BUG-08:成功后进入「toast 展示 300ms 再返回」窗口,期间保持 saving=true,
+      // 否则按钮 loading 解除但页面还在,再点保存会发起第二次真实写入;
+      // 页面即将出栈,成功路径不复位 saving,由导航收尾或 clearNavigationTimer 兜底。
       if (this.data.token) {
         wx.navigateBack({
           delta: 1,
           fail: () => wx.redirectTo({
             url: `/packages/member/mip-access/index?token=${encodeURIComponent(this.data.token)}`,
+            // 返回与跳授权页都失败、页面被迫留下时才放开锁,让用户可以重试。
+            fail: () => this.setData({ saving: false }),
           }),
         })
       }
@@ -265,8 +274,7 @@ Page({
     }
     catch (error) {
       this.showEditorMessage(error instanceof Error ? error.message : '资料保存失败，请重试。')
-    }
-    finally {
+      // BUG-08:仅失败/异常路径复位保存锁;成功路径页面即将离开,保持锁定。
       this.setData({ saving: false })
     }
   },

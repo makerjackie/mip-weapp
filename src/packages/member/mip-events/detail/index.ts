@@ -264,7 +264,11 @@ Page({
       this.applyEvent(cached)
     }
     if (inviteRef) {
+      // BUG-12.2（审计 2026-10-12）：loadInvitationScene 内部成功后会 loadEvent({force:true})，
+      // 外层再无条件 loadEvent 会把同一活动并发请求两次（多耗一次详情子查询与云存储临时
+      // 链接批取）。邀请路径统一交给 loadInvitationScene，失败兜底见其 catch。
       void this.loadInvitationScene(inviteRef)
+      return
     }
     void this.loadEvent()
   },
@@ -356,6 +360,10 @@ Page({
   },
 
   async loadInvitationScene(scene: string) {
+    // BUG-12.2：onLoad 后微信会紧跟 onShow；eventId 已随 query 写入而 loadEvent 尚未启动，
+    // 不占用 loadingEvent 的话 onShow 的 30s 复验会立刻再发一次详情请求。邀请解析窗口内
+    // 持有该标志挡住复验，随后由内部/兜底的 loadEvent 在 finally 按最新 seq 复位。
+    this.loadingEvent = true
     this.setData({ state: 'loading', message: '' })
     try {
       const resolved = await mipEventsModule.resolveInvitationScene(scene)
@@ -369,6 +377,10 @@ Page({
     catch {
       if (this.data.eventId) {
         this.entryScene = ''
+        // BUG-12.2 兜底：onLoad 在 inviteRef 路径不再无条件 loadEvent，邀请解析失败时这里
+        // 必须自行加载，否则无缓存的详情页会停在 loading。先加载后提示，避免提示被
+        // applyEvent 的 message 复位清掉（loadEvent 内部自捕获，不会向外抛错）。
+        await this.loadEvent({ force: true })
         this.setData({ message: '活动邀请无效或已失效，已按普通活动打开。' })
         return
       }
@@ -749,16 +761,28 @@ Page({
     }
   },
 
-  /** MIW-53：主按钮只剩「立刻报名」，走 J1-01 游客登录门禁后进入报名页。 */
-  handlePrimary() {
+  /**
+   * MIW-53：主按钮只剩「立刻报名」，走 J1-01 游客登录门禁后进入报名页。
+   * BUG-04.1（审计 2026-10-12）：requireAuthIntent 的 begin() 要等一次身份快照网络往返，
+   * 期间守卫读到的 busy 仍为 false，双击会两次 begin 双双 ready → 报名页叠两层（两次
+   * 生成的 token 不同、URL 相同，仅靠导航去重拦不住）。复用本页唯一的动作闩锁 busy
+   * （主按钮已绑 loading="{{busy}}"），在首个 await 前同步置位，finally 复位；游客路径
+   * begin 短路返回 sheet，弹层幂等行为不变。
+   */
+  async handlePrimary() {
     if (this.data.busy || this.data.primaryAction !== 'register') {
       return
     }
-    void this.requireAuthIntent('register').then((allowed: boolean) => {
+    this.setData({ busy: true })
+    try {
+      const allowed = await this.requireAuthIntent('register')
       if (allowed) {
         this.openRegistration()
       }
-    })
+    }
+    finally {
+      this.setData({ busy: false })
+    }
   },
 
   openRegistration() {
@@ -771,12 +795,21 @@ Page({
     caseNavigateTo({ url: `/packages/member/mip-events/registration/index?eventId=${encodeURIComponent(this.data.eventId)}${invitation}${checkIn}` })
   },
 
-  openParticipants() {
-    void this.requireAuthIntent('participants').then((allowed: boolean) => {
+  /** BUG-04.1：同 handlePrimary——参与人数入口在身份检查往返窗口内无锁，双击双开参与人页。 */
+  async openParticipants() {
+    if (this.data.busy) {
+      return
+    }
+    this.setData({ busy: true })
+    try {
+      const allowed = await this.requireAuthIntent('participants')
       if (allowed) {
         this.openParticipantsNow()
       }
-    })
+    }
+    finally {
+      this.setData({ busy: false })
+    }
   },
 
   openParticipantsNow() {

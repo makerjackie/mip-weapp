@@ -70,6 +70,7 @@ Page({
     checkInResumeState: 'none' as 'none' | 'checking' | 'ready' | 'pending',
     checkInResumeMessage: '',
     paying: false,
+    accessing: false,
     submittingRefund: false,
     message: '',
   },
@@ -263,7 +264,7 @@ Page({
 
   async requestPayment() {
     const order = this.data.order
-    if (!order || !this.data.paymentPending || this.data.paying) {
+    if (!order || !this.data.paymentPending || this.data.paying || this.data.accessing) {
       return
     }
     if (!this.data.paymentEnabled) {
@@ -271,6 +272,11 @@ Page({
       return
     }
     this.resumePayment = true
+    // BUG-04.3（审计 2026-10-12）：beginProtectedAction 的身份快照往返期间无锁（paying
+    // 只在 performPayment 才置位），身份不完整时双击会把授权页叠两层。对照 mip-growth
+    // confirmPurchase 的 accessing 闩锁：进入即置位，begin 失败/不 ready/异常路径统一在
+    // finally 复位。
+    this.setData({ accessing: true })
     try {
       const session = await mipIdentityModule.beginProtectedAction({
         action: order.orderType === 'EVENT'
@@ -293,6 +299,9 @@ Page({
     catch {
       this.resumePayment = false
       this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
+    }
+    finally {
+      this.setData({ accessing: false })
     }
   },
 
@@ -359,6 +368,11 @@ Page({
       return
     }
     this.resumeRefund = true
+    // BUG-09.1（审计 2026-10-12）：原实现到弹窗确认后才置 submittingRefund，
+    // beginProtectedAction 往返窗口内双击会弹两个 showModal，第二个 fail 被 catch 吞掉后
+    // 还显示误导性的「身份状态暂时无法确认」。锁提前到入口，覆盖身份检查与确认弹窗全程；
+    // 取消弹窗、确认提交、异常路径都在 finally 复位。退款幂等仍由 refundKey 保证（未改动）。
+    this.setData({ submittingRefund: true })
     try {
       const session = await mipIdentityModule.beginProtectedAction({
         action: 'INTERACT',
@@ -369,19 +383,34 @@ Page({
         return
       }
       this.resumeRefund = false
-      await this.confirmAndSubmitRefund()
+      await this.runRefundConfirmation(order)
     }
     catch {
       this.resumeRefund = false
       this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
     }
+    finally {
+      this.setData({ submittingRefund: false })
+    }
   },
 
+  /** onShow 授权恢复后的直达入口；与 requestRefund 共用弹窗与提交，同样全程持有锁。 */
   async confirmAndSubmitRefund() {
     const order = this.data.order
     if (!order || !this.data.refundable || this.data.submittingRefund) {
       return
     }
+    this.setData({ submittingRefund: true })
+    try {
+      await this.runRefundConfirmation(order)
+    }
+    finally {
+      this.setData({ submittingRefund: false })
+    }
+  },
+
+  /** 确认弹窗 + 提交换款；调用方必须已持有 submittingRefund 锁（BUG-09.1）。 */
+  async runRefundConfirmation(order: CommerceOrder) {
     const confirmation = await wx.showModal({
       title: '申请退款',
       content: '确认提交退款申请？提交后可在订单详情查看进度。',
@@ -391,7 +420,7 @@ Page({
     if (!confirmation.confirm) {
       return
     }
-    this.setData({ submittingRefund: true, message: '' })
+    this.setData({ message: '' })
     try {
       await mipCommerceModule.requestRefund({
         orderId: order.id,
@@ -408,9 +437,6 @@ Page({
         : '退款提交结果暂时无法确认，已重新查询订单状态。'
       await this.load()
       this.setData({ message })
-    }
-    finally {
-      this.setData({ submittingRefund: false })
     }
   },
 

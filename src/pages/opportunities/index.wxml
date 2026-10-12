@@ -263,7 +263,7 @@
       <view class="opportunities-chip-hit" aria-role="radio" aria-checked="{{status === 'COMPLETED'}}" data-status="COMPLETED" bind:tap="changeStatus"><view wx:if="{{status === 'COMPLETED'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand px-2 text-[28rpx] font-medium text-on-brand">已结束</view><view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-2 text-[28rpx] font-medium text-muted">已结束</view></view>
       <view class="opportunities-chip-hit" aria-role="radio" aria-checked="{{status === 'MINE'}}" data-status="MINE" bind:tap="changeStatus"><view wx:if="{{status === 'MINE'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand px-2 text-[28rpx] font-medium text-on-brand">我的项目</view><view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-2 text-[28rpx] font-medium text-muted">我的项目</view></view>
       <view class="flex-1" />
-      <view class="opportunities-chip-hit" aria-role="button" bind:tap="publish"><view class="flex h-[56rpx] items-center gap-2 rounded-[16rpx] bg-brand px-2 text-[28rpx] font-medium text-on-brand active:bg-brand-active"><image class="h-[28rpx] w-[28rpx]" src="/assets/figma/opportunities/publish-plus.svg" mode="aspectFit" /><text>发布机会</text></view></view>
+      <view class="opportunities-chip-hit {{openingAction ? 'opacity-60' : ''}}" aria-role="button" aria-disabled="{{openingAction}}" bind:tap="publish"><view class="flex h-[56rpx] items-center gap-2 rounded-[16rpx] bg-brand px-2 text-[28rpx] font-medium text-on-brand active:bg-brand-active"><image class="h-[28rpx] w-[28rpx]" src="/assets/figma/opportunities/publish-plus.svg" mode="aspectFit" /><text>发布机会</text></view></view>
     </view>
 
     <!-- 筛选面板打开时（人才合作）列表区域让位，确认后再回到结果。 -->
@@ -277,7 +277,7 @@
          the centred stack on figma's integer x (centres at 188, not 187.5). -->
     <view wx:elif="{{!authenticated}}" class="mt-[84rpx] flex translate-x-[1rpx] flex-col items-center">
       <image class="h-[360rpx] w-[360rpx]" src="/assets/figma/opportunities/guest-mystery-box.png" mode="aspectFill" />
-      <view class="mt-4 flex h-[80rpx] w-[372rpx] items-center justify-center rounded-full border border-canvas bg-brand text-[32rpx] font-medium text-on-brand" aria-role="button" bind:tap="openLogin">玩家登录</view>
+      <view class="mt-4 flex h-[80rpx] w-[372rpx] items-center justify-center rounded-full border border-canvas bg-brand text-[32rpx] font-medium text-on-brand {{openingAction ? 'opacity-60' : ''}}" aria-role="button" aria-disabled="{{openingAction}}" bind:tap="openLogin">玩家登录</view>
       <view class="mt-[78rpx] text-[32rpx] font-medium leading-[44rpx] text-ink" aria-role="button" bind:tap="openBecomePlayerUnlock">去成为玩家解锁权限></view>
     </view>
     <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><mip-empty-state title="暂时无法加载内容" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
@@ -286,7 +286,7 @@
       <image class="h-[360rpx] w-[360rpx]" src="/assets/figma/opportunities/guest-mystery-box.png" mode="aspectFill" />
       <view class="mt-4 text-center text-[32rpx] font-medium leading-[44rpx] text-ink">欢迎发布项目机会，有匹配的资源</view>
       <view class="text-center text-[32rpx] font-medium leading-[44rpx] text-ink">或人才MIP将主动联系你</view>
-      <view class="mt-[48rpx] flex h-[80rpx] w-[372rpx] items-center justify-center rounded-full border border-canvas bg-brand text-[32rpx] font-medium text-on-brand" aria-role="button" bind:tap="publish">发布机会</view>
+      <view class="mt-[48rpx] flex h-[80rpx] w-[372rpx] items-center justify-center rounded-full border border-canvas bg-brand text-[32rpx] font-medium text-on-brand {{openingAction ? 'opacity-60' : ''}}" aria-role="button" aria-disabled="{{openingAction}}" bind:tap="publish">发布机会</view>
     </view>
     <!-- journey-review J2-05：普通用户平台机会为空时的默认空态（带筛选时保留可操作的清筛选空态）。 -->
     <view wx:elif="{{mode === 'opportunities' && !opportunities.length && !hasAppliedFilters}}" class="mt-[84rpx] flex flex-col items-center">

@@ -59,7 +59,12 @@ Page({
       return
     }
     this.loading = true
-    this.setData({ state: 'loading', message: '' })
+    // BUG-10.3（审计 2026-10-12）：onShow 会重复触发 load；已有内容时保持 ready
+    // 后台刷新（同 orders 页口径），避免从公开档案返回时整屏闪骨架、滚动位置重置。
+    // 失败路径下方本来就保留旧内容只写 message，成功后整体替换。
+    this.setData(this.data.state === 'ready' && this.data.people.length
+      ? { message: '' }
+      : { state: 'loading', message: '' })
     try {
       const page = await opportunityModule.listCooperators(this.data.id)
       this.setData({

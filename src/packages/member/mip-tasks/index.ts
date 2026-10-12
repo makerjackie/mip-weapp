@@ -46,6 +46,8 @@ Page({
     filter: 'pending' as 'pending' | 'ended',
     nextCursor: '',
     loadingMore: false,
+    /** BUG-05：mutation 回包前 status 仍是 AVAILABLE，双击会重复提交；进行中的任务 id 锁住第二次 tap。 */
+    completingId: '',
     message: '',
   },
   requestSeq: 0,
@@ -174,7 +176,11 @@ Page({
       this.openTask(event)
       return
     }
-    this.setData({ message: '' })
+    // BUG-05：completingId 必须在首个 await 前同步置位，锁住 mutation+刷新回包前的第二次 tap（对齐 mip-events/mine 的 cancelingId 模式）。
+    if (this.data.completingId) {
+      return
+    }
+    this.setData({ completingId: taskId, message: '' })
     try {
       const result = await mipTasksModule.mutation.completeTask(taskId)
       wx.showToast({ title: result.submissionStatus === 'pending_review' ? '已提交，等待审批' : '任务已完成', icon: 'success' })
@@ -182,6 +188,9 @@ Page({
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '任务提交失败' })
+    }
+    finally {
+      this.setData({ completingId: '' })
     }
   },
 

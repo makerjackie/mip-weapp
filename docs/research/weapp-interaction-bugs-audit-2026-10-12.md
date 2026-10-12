@@ -24,6 +24,27 @@
 | BUG-11 | P2 | 已成功正文被失败刷新整页替换成错误态（mip-card / 任务详情，违反 AGENTS.md §11） | 疑似 |
 | BUG-12 | P3 | 其它低危：首页公告双请求、inviteRef 双请求、名片下载静默吞点击、城市选择双击连退、选择器受控回环丢更新、growth 无 seq | 疑似 |
 
+## 修复记录（2026-10-12，本分支）
+
+全部 12 类 bug 已修复并通过 `pnpm verify` + `pnpm admin:web:verify`（typecheck / eslint / vitest 1664 用例 / 构建 / 服务器契约 / 文档链接全绿）。改动仅涉及 `src/`（小程序侧）与 `tests/`，未触碰 admin-web、packages/admin-contracts、cloudfunctions、database。
+
+- **BUG-01**：`mip-detail-row`、`mip-form-field-row`、`mip-order-card` 根节点改 `catch:tap`（无包装用法，安全）；`mip-tag-chip`、`mip-attend-pill` 有 13+ 处包装用法依赖原生冒泡，改为自定义事件改名 `select`（`triggerEvent('tap')` → `triggerEvent('select')`），案例编辑器热门城市绑定同步改 `bind:select`。守卫测试：`tests/mip-tap-single-fire.test.ts`。
+- **BUG-02**：`caseNavigateTo`/`caseRedirectTo` 增加"同 URL 600ms 去重窗，失败清窗立即可重试"，返回类型改为 `Promise<void>`；15 处 tap 触发的裸 `wx.navigateTo` 收口到 `caseNavigateTo`（badges/tasks/growth/card-edit/两个编辑器/access/admin×4）。测试：`tests/navigation.test.ts`。
+- **BUG-03**：`leaveSecondaryPage` 增加 600ms 防重窗，`navigateBack` 失败清窗。
+- **BUG-04**：四处动作锁——活动详情复用 `busy`（授权往返前置位，主按钮 loading 生效）；机会页 `openProtected` 照抄 profile 的 `openingActionLock`（access 转交期间保持锁到 onShow）；订单详情支付补 `accessing` 闩锁（对照 mip-growth），退款锁提前到 `requestRefund` 入口覆盖身份检查与弹窗全程；分会 `selectingId` 提前到 `selectBranch` 入口。
+- **BUG-05**：任务列表 `completingId` 闩锁（首个 await 前置位，finally 复位）。
+- **BUG-06**：活动列表非追加加载发起时同步复位 `loadingMore`（supersede 在途 append 的三条竞态序列均有测试锁定）。
+- **BUG-07**：语音页——`finishingRecording` in-flight 锁 + 进入确认态清 message；processing 态删除入口拦截（不弹窗）+ `confirmRecording` 跳转前复核 state；onShow 录音存活时重启计时器。
+- **BUG-08**：保存成功后保持 `saving=true` 直到 `navigateBack` 真正执行，仅失败路径复位；`clearNavigationTimer` 取消定时器时兜底放开锁。
+- **BUG-09**：退款弹窗全程持锁（含 onShow 恢复直达入口，抽 `runRefundConfirmation` 共用）；海报保存 `posterSaving` 锁 + 按钮 loading/disabled。
+- **BUG-10**：公告列表 `requestSeq` 代际 + `refreshing` 门 + Map 按 id 去重；我的活动 append 按 registrationId 去重；合作伙伴页 ready 态保内容后台刷新；growth `loadMembershipActions` 补 seq 守卫；城市选择 `pickedLabel` 一次性锁；catalog/industry 选择器 `emittedSelectedIds` 镜像修复受控回环丢更新（对外 API 不变）。
+- **BUG-11**：mip-card / 任务详情刷新失败保留已成功正文（仅 message 提示，空内容才整页 error）；名片下载按钮 `disabled` 绑定 `drawingShare`，分享图渲染中点保存给 toast 反馈。
+- **BUG-12**：首页公告等身份"落地"后按最终口径只发一次（`loadSnapshot` 并发去重复用同一飞行，无串行等待）；inviteRef 进入只发一次 `loadEvent`（失败路径兜底加载 + 挡住 onShow 抢跑窗口）。
+
+新增回归测试：`tests/mip-tap-single-fire.test.ts`、`tests/mip-interaction-bugfix-bug04.test.ts`、`tests/mip-interaction-bugfix-bug05-06.test.ts`、`tests/mip-interaction-bugfix-bug10-12.test.ts`、`tests/mip-profile-save-lock.test.ts`，并扩充 `navigation.test.ts`、`navigation-leave.test.ts`、`mip-ai-voice-page.test.ts`、`mip-card-edit-save.test.ts`、`mip-growth-task-return.test.ts`、`mip-case-editor-visual.test.ts`。
+
+仍需真机验证（模拟器/单测无法覆盖真实转场与系统行为）：双击设置页各行（BUG-01）、双击列表卡/返回按钮（BUG-02/03）、双击报名/发布机会/继续支付/申请退款/设为主分会（BUG-04）、真机录音三项（BUG-07）、双击保存（BUG-08）。
+
 ---
 
 ## P0：单击必现的双触发

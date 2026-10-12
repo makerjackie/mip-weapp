@@ -37,7 +37,7 @@
         <t-button block variant="outline" loading="{{posterBusy}}" disabled="{{event.status !== 'PUBLISHED'}}" bind:tap="createStaticCheckInPoster">静态海报</t-button>
         <t-button block theme="primary" loading="{{posterBusy}}" disabled="{{event.status !== 'PUBLISHED'}}" bind:tap="createRotatingCheckInPoster">{{posterMode === 'ROTATING' ? '刷新短时码' : '生成短时码'}}</t-button>
       </view>
-      <view wx:if="{{posterPath}}" class="mt-3"><t-button block variant="outline" disabled="{{posterExpired}}" bind:tap="saveCheckInPoster">保存到相册</t-button></view>
+      <view wx:if="{{posterPath}}" class="mt-3"><t-button block variant="outline" loading="{{posterSaving}}" disabled="{{posterExpired || posterSaving}}" bind:tap="saveCheckInPoster">保存到相册</t-button></view>
       <view wx:if="{{event.status !== 'PUBLISHED'}}" class="mt-2 text-[22rpx] text-muted">只有已发布活动可以生成签到海报。</view>
     </view>
     <view wx:elif="{{!canRoster}}" class="mt-5 rounded-[24rpx] bg-panel px-4 py-4 text-[24rpx] text-muted">当前账号只有活动查看权限，没有名单或签到操作权限。</view>

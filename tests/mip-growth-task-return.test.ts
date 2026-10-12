@@ -15,6 +15,10 @@ const tasks = vi.hoisted(() => ({
   listTasks: vi.fn(),
   completeTask: vi.fn(),
 }))
+const navigation = vi.hoisted(() => ({
+  caseNavigateTo: vi.fn(),
+  caseRedirectTo: vi.fn(),
+}))
 
 vi.mock('../src/modules/mip-growth/client', () => ({ mipGrowthModule: growth }))
 vi.mock('../src/modules/mip-commerce/client', () => ({ mipCommerceModule: commerce }))
@@ -28,7 +32,7 @@ vi.mock('../src/modules/mip-tasks', () => ({
   mipTasksModule: { query: { listTasks: tasks.listTasks }, mutation: { completeTask: tasks.completeTask } },
   rewardExperienceStarIndexes: vi.fn(() => []),
 }))
-vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn(), caseRedirectTo: vi.fn() }))
+vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: navigation.caseNavigateTo, caseRedirectTo: navigation.caseRedirectTo }))
 
 interface PageDefinition {
   data: Record<string, unknown>
@@ -101,7 +105,8 @@ describe('growth and task return flow', () => {
     // MIW-27：经验值详情改为独立明细页跳转，不再原地展开与滚动定位。
     const instance = page(growthDefinition)
     callPage(instance, 'openExperienceDetails')
-    expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/packages/member/mip-experience-details/index' })
+    // BUG-02：跳转统一走带防重锁的 caseNavigateTo。
+    expect(navigation.caseNavigateTo).toHaveBeenCalledWith({ url: '/packages/member/mip-experience-details/index' })
     expect(wx.pageScrollTo).not.toHaveBeenCalled()
   })
 
@@ -158,7 +163,7 @@ describe('growth and task return flow', () => {
     instance.data.tasks = [{ id: 'task-1', status: 'AVAILABLE', attachmentRequired: true }]
     await callPage(instance, 'completeTask', { currentTarget: { dataset: { id: 'task-1' } } })
     expect(tasks.completeTask).not.toHaveBeenCalled()
-    expect(wx.navigateTo).toHaveBeenCalledWith({ url: '/packages/member/mip-tasks/detail/index?taskId=task-1' })
+    expect(navigation.caseNavigateTo).toHaveBeenCalledWith({ url: '/packages/member/mip-tasks/detail/index?taskId=task-1' })
   })
 
   it('still completes tasks without an attachment from the list', async () => {
@@ -168,7 +173,7 @@ describe('growth and task return flow', () => {
     instance.loadTasks = vi.fn().mockResolvedValue(undefined)
     await callPage(instance, 'completeTask', { currentTarget: { dataset: { id: 'task-2' } } })
     expect(tasks.completeTask).toHaveBeenCalledWith('task-2')
-    expect(wx.navigateTo).not.toHaveBeenCalled()
+    expect(navigation.caseNavigateTo).not.toHaveBeenCalled()
   })
   it('loads each status from the server and ignores a previous tabs late response', async () => {
     const old = deferred<{ items: Array<{ id: string, status: string, name: string }> }>()

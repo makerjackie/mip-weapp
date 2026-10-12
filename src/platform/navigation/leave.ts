@@ -15,7 +15,11 @@ export function leaveSecondaryPage(tabUrl: string, fallbackTabUrl = '/pages/inde
   }
   lastLeaveAt = now
   if (canNavigateBack()) {
-    wx.navigateBack({ fail: () => { lastLeaveAt = 0 } })
+    wx.navigateBack({
+      fail: () => {
+        lastLeaveAt = 0
+      },
+    })
     return
   }
   const url = tabUrl.startsWith('/') ? tabUrl : `/${tabUrl}`

@@ -1,9 +1,12 @@
 import { canNavigateBack, leaveSecondaryPage } from '@weapp/platform/navigation'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+// BUG-03：leaveSecondaryPage 带 600ms 模块级防重窗（双击返回只退一层）。
+// 用互不重叠的时间基准隔离各用例，避免上一用例的窗口吞掉本用例的调用。
 describe('leaveSecondaryPage', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('navigates back when the page stack is deeper than one', () => {
@@ -11,6 +14,7 @@ describe('leaveSecondaryPage', () => {
     const navigateBack = vi.fn()
     const switchTab = vi.fn()
     vi.stubGlobal('wx', { navigateBack, switchTab })
+    vi.spyOn(Date, 'now').mockImplementation(() => 1_000)
 
     leaveSecondaryPage('/pages/profile/index')
 
@@ -24,6 +28,7 @@ describe('leaveSecondaryPage', () => {
     const navigateBack = vi.fn()
     const switchTab = vi.fn()
     vi.stubGlobal('wx', { navigateBack, switchTab })
+    vi.spyOn(Date, 'now').mockImplementation(() => 10_000)
 
     leaveSecondaryPage('/pages/profile/index')
 
@@ -43,6 +48,7 @@ describe('leaveSecondaryPage', () => {
       }
     })
     vi.stubGlobal('wx', { navigateBack: vi.fn(), switchTab })
+    vi.spyOn(Date, 'now').mockImplementation(() => 20_000)
 
     leaveSecondaryPage('/pages/profile/index', '/pages/index/index')
 

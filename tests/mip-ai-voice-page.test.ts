@@ -168,4 +168,82 @@ describe('AI voice note page', () => {
     expect(instance.recording).toBe(false)
     expect(mocks.recorderCancel).toHaveBeenCalledTimes(1)
   })
+
+  it('ignores a second finish tap while the first stop is still in flight (BUG-07.1)', async () => {
+    const instance = await loadedPage()
+    await instance.startRecording()
+    // 模拟 stop() 回包慢(平台 onStop 异步):两次 tap 都发生在 resolve 之前。
+    let resolveStop!: (value: VoiceRecordingResult) => void
+    mocks.recorderStop.mockImplementation(() => new Promise<VoiceRecordingResult>((resolve) => {
+      resolveStop = resolve
+    }))
+    const first = instance.finishRecording()
+    const second = instance.finishRecording()
+    // 第二次 tap 必须被 in-flight 锁吞掉:只允许一次 recorder.stop,
+    // 否则第二次 stop 被 recorder 同步 reject,把「当前没有进行中的录音」写进确认页。
+    expect(mocks.recorderStop).toHaveBeenCalledTimes(1)
+    resolveStop({ filePath: 'wxfile://usr/mip-ai-voice.mp3', durationMs: 5000 })
+    await Promise.all([first, second])
+    expect(instance.data.state).toBe('review')
+    expect(instance.data.durationText).toBe('00:05')
+    // 成功路径显式清空 message:确认页不得残留错误文案。
+    expect(instance.data.message).toBe('')
+    expect(instance.recording).toBe(false)
+    expect(instance.finishingRecording).toBe(false)
+  })
+
+  it('keeps the delete entry inert while the AI flow is processing (BUG-07.2)', async () => {
+    const instance = await loadedPage()
+    instance.data.state = 'review'
+    instance.recordingResult = { filePath: 'wxfile://usr/mip-ai-voice.mp3', durationMs: 1000 }
+    mocks.createVoiceDraftFromRecording.mockImplementation(() => new Promise(() => {}))
+    void instance.confirmRecording()
+    expect(instance.data.state).toBe('processing')
+    // processing 态点「删除重录」:不弹删除确认弹窗。
+    instance.askDeleteRecording()
+    expect(instance.data.deleteDialogOpen).toBe(false)
+    // 极端时序:弹窗已开时流程切入 processing,确认删除也只关弹窗、不丢弃录音。
+    instance.setData({ deleteDialogOpen: true })
+    instance.confirmDeleteRecording()
+    expect(instance.data.deleteDialogOpen).toBe(false)
+    expect(instance.data.state).toBe('processing')
+    expect(mocks.recorderCancel).not.toHaveBeenCalled()
+  })
+
+  it('discards the draft instead of redirecting when the page left processing (BUG-07.2)', async () => {
+    const instance = await loadedPage()
+    instance.data.state = 'review'
+    instance.recordingResult = { filePath: 'wxfile://usr/mip-ai-voice.mp3', durationMs: 1000 }
+    let resolveDraft!: (draft: { id: string }) => void
+    mocks.createVoiceDraftFromRecording.mockImplementation(() => new Promise((resolve) => {
+      resolveDraft = resolve
+    }))
+    const pending = instance.confirmRecording()
+    expect(instance.data.state).toBe('processing')
+    // 等待期间页面状态被复位(如用户已删除重录):草稿返回时不得再强制跳编辑器。
+    instance.data.state = 'ready'
+    resolveDraft({ id: '20000000-0000-4000-8000-000000000002' })
+    await pending
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+  })
+
+  it('restarts the elapsed timer on show while the recording is still alive (BUG-07.3)', async () => {
+    const instance = await loadedPage()
+    vi.useFakeTimers()
+    try {
+      await instance.startRecording()
+      mocks.recorderElapsed.mockReturnValue(3000)
+      // onHide 停表;回到前台时录音仍存活(recorder.recording()=true),
+      // 计时器必须重启,否则 elapsedText 冻结、页面与 recorder 失联。
+      instance.onHide()
+      instance.onShow()
+      vi.advanceTimersByTime(250)
+      expect(instance.data.elapsedText).toBe('00:03')
+      expect(instance.data.state).toBe('recording')
+      instance.stopElapsedTimer()
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
 })
