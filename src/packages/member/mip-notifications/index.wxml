@@ -26,4 +26,7 @@
     <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
     <app-page-exit />
   </block>
+  <!-- MIW-40 S8（站内信侧）：点开机会类通知（tap 手势内）触发订阅授权引导层，
+       为合作邀请/感兴趣共用模板补授权额度；展示节奏仍按机会 ID 由 guide-policy 记账。 -->
+  <mip-subscription-guide id="opportunity-subscribe-guide" template-key="OPPORTUNITY_NOTICE" opportunity-id="{{subscribeGuideOpportunityId}}" />
 </view>

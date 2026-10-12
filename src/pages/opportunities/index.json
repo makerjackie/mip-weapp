@@ -19,6 +19,7 @@
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-icon": "/components/mip-icon/index",
     "mip-pill-button": "/components/mip-pill-button/index",
-    "mip-login-sheet": "/components/mip-login-sheet/index"
+    "mip-login-sheet": "/components/mip-login-sheet/index",
+    "mip-subscription-guide": "/components/mip-subscription-guide/index"
   }
 }

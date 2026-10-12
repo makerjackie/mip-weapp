@@ -43,6 +43,13 @@ beforeAll(async () => {
   })
   await import('../src/pages/opportunities/index')
   vi.unstubAllGlobals()
+  // MIW-40 S8 列表侧：机会 tab onShow 消费发布 pending 时读存储；默认空存储=无 pending。
+  const storage = new Map<string, unknown>()
+  vi.stubGlobal('wx', {
+    getStorageSync: (key: string) => storage.get(key),
+    setStorageSync: (key: string, value: unknown) => { storage.set(key, value) },
+    removeStorageSync: (key: string) => { storage.delete(key) },
+  })
 })
 
 describe('page loading and profile interaction regressions', () => {
@@ -108,6 +115,27 @@ describe('page loading and profile interaction regressions', () => {
     await instance.onShow()
     expect(instance.loadContent).toHaveBeenCalledWith(true, { preserveContent: true })
     expect(instance.refreshOnReturn).toBe(false)
+  })
+
+  it('consumes the publish pending guide and paces by opportunity on the discovery page', async () => {
+    const instance = page(discovery)
+    instance.loadCatalogs = vi.fn()
+    instance.refreshAuthState = vi.fn()
+    instance.loadContent = vi.fn()
+    const guideCheck = vi.fn()
+    instance.selectComponent = vi.fn(() => ({ check: guideCheck }))
+    await instance.onShow()
+    expect(guideCheck).not.toHaveBeenCalled()
+    // 编辑器写入的 pending（机会 ID + 写入时间）在 TTL 内 → 消费并弹引导层。
+    instance.data.subscribeGuideOpportunityId = ''
+    const storage = (globalThis as { wx: { setStorageSync: (k: string, v: unknown) => void } }).wx
+    storage.setStorageSync('mip:opportunity-subscribe-guide:pending:v1', JSON.stringify({ id: 'opp-pending-1', at: Date.now() }))
+    await instance.onShow()
+    expect(guideCheck).toHaveBeenCalledWith('opp-pending-1')
+    expect(instance.data.subscribeGuideOpportunityId).toBe('opp-pending-1')
+    // 消费后 pending 已清除：再次 onShow 不重复弹。
+    await instance.onShow()
+    expect(guideCheck).toHaveBeenCalledTimes(1)
   })
 
   it('selects the cooperation list on arrival and ignores unknown tab values', () => {

@@ -43,11 +43,12 @@ Component({
      * 想合作名单弹层关闭后调用；时机全部顺延到当前动作完成之后。
      * S8（发布时机）：列表页传入刚发布的机会 ID 覆盖 property（列表场景无单条详情 ID），
      * 节奏键仍是同一机会 ID，列表弹过 24h 内进详情不再重复。
+     * 返回本次是否弹出了引导层（HIDDEN 时 false），供调用方决定是否让路（站内信跳转）。
      */
-    check(opportunityId?: string) {
+    check(opportunityId?: string): boolean {
       const key = (opportunityId || '').trim() || this.data.opportunityId.trim()
       if (!key || this.data.requesting) {
-        return
+        return false
       }
       const outcome = evaluateSubscriptionGuide(this.data.record, {
         templateKey: this.data.templateKey,
@@ -57,11 +58,12 @@ Component({
       })
       if (outcome.presentation === 'HIDDEN') {
         this.setData({ visible: false, mode: '', message: '' })
-        return
+        return false
       }
       this.data.record = recordGuideShown(this.data.record, key, Date.now())
       wx.setStorageSync(GUIDE_STORAGE_KEY, this.data.record)
       this.setData({ visible: true, mode: outcome.presentation, message: '' })
+      return true
     },
 
     /** S4/S5/S6：原生面板入口；REJECTED 就地切手动开启文案，ACCEPTED/BANNED 收层。 */

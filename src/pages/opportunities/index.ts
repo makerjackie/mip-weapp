@@ -17,6 +17,7 @@ import { cooperationModule } from '../../modules/mip-cooperation'
 import { mergeCooperationTalents } from '../../modules/mip-cooperation/validation'
 import { createMipGuestLoginFlow } from '../../modules/mip-identity'
 import { mipIdentityModule } from '../../modules/mip-identity/client'
+import { GUIDE_PENDING_STORAGE_KEY, readPendingGuideOpportunity } from '../../modules/mip-messaging/guide-policy'
 import { groupedCityBranches, opportunityModule, opportunityTypeLabel } from '../../modules/mip-opportunities'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
 import { clearPageMedia, updatePageMedia } from '../../platform/storage/component-media'
@@ -229,6 +230,8 @@ Page({
     moreFiltersOpen: false,
     /** journey-review J3-01：导航栏下方的运营 Banner 位（后台可配置，未配置不占位）。 */
     banners: [] as MipPublicBanner[],
+    /** MIW-40 S8（列表侧）：发布成功回本页时待弹订阅引导的机会 ID。 */
+    subscribeGuideOpportunityId: '',
     catalog: { branches: [], cityTags: [], industryGroups: [], industryTags: [], abilityTags: [] } as OpportunityCatalog,
     cityOptions: [nationwideOption] as CityOption[],
     cityGroups: [] as CatalogSelectorGroup[],
@@ -357,6 +360,20 @@ Page({
     if (this.data.state !== 'ready' || refreshIsDue || refreshOnReturn) {
       void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
     }
+    // MIW-40 S8（列表侧）：新建机会发布成功回本页（上级页面）时消费 pending，
+    // 弹订阅授权引导层；详情页与本页共用 guide-policy 的按机会记账（24h 一次）。
+    this.checkSubscriptionGuidePending()
+  },
+
+  /** S8 列表侧消费：pending 带机会 ID 与 10 分钟 TTL，错过窗口静默丢弃（详情页兜底时机不依赖它）。 */
+  checkSubscriptionGuidePending() {
+    const pendingOpportunityId = readPendingGuideOpportunity(wx.getStorageSync(GUIDE_PENDING_STORAGE_KEY), Date.now())
+    if (!pendingOpportunityId) {
+      return
+    }
+    wx.removeStorageSync(GUIDE_PENDING_STORAGE_KEY)
+    this.setData({ subscribeGuideOpportunityId: pendingOpportunityId })
+    this.selectComponent('#opportunity-subscribe-guide')?.check(pendingOpportunityId)
   },
 
   onUnload() {

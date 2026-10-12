@@ -204,6 +204,16 @@ Page({
       }
       const route = item.target?.route
       if (route && isTrustedInboxRoute(route)) {
+        // MIW-40 S8（站内信侧）：点开机会类通知在 tap 手势内触发订阅授权引导层，
+        // 为合作邀请/感兴趣共用的 OPPORTUNITY_NOTICE 模板池补额度；引导层弹出时
+        // 本次不跳转（同一机会 24h 一次，节奏由 guide-policy 记账），下次点行照常进详情。
+        if (item.target?.type === 'OPPORTUNITY' && item.target.id) {
+          const guide = this.selectComponent('#opportunity-subscribe-guide')
+          const guideShown = guide?.check(item.target.id) === true
+          if (guideShown) {
+            return
+          }
+        }
         await caseNavigateTo({ url: route }).catch(() => undefined)
       }
     }
