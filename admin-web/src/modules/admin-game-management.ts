@@ -359,6 +359,12 @@ export function explainGameMutation(
     }
     return null
   }
+  if (action === 'mip.admin.game.seasons.save') {
+    const startsAt = text(values.startsAt)
+    const endsAt = text(values.endsAt)
+    if (startsAt && endsAt && new Date(endsAt).getTime() <= new Date(startsAt).getTime()) return '赛季结束时间必须晚于开始时间'
+    return null
+  }
   if (action === 'mip.admin.game.blindBoxes.catalogs.save') {
     if (Number(values.drawCostCoin) < 1 || Number(values.dailyDrawLimit) < 1 || Number(values.pityThreshold) < 1) {
       return '单次游戏币、每日次数上限、保底次数至少为 1'
@@ -455,8 +461,8 @@ function matchSaveDefinition(source: Record<string, unknown>) {
     { name: 'seasonId', label: '赛季 ID', kind: 'text', hidden: true },
     { name: 'weekStart', label: '周开始日期', kind: 'date', required: true },
     { name: 'weekEnd', label: '周结束日期', kind: 'date', required: true, extra: '周赛按完整一周配置：周结束日期 = 周开始日期 + 6 天' },
-    { name: 'teamAId', label: '战队 A', kind: 'select', required: true, options },
-    { name: 'teamBId', label: '战队 B', kind: 'select', required: true, options },
+    { name: 'teamAId', label: '战队 A', kind: 'select', required: true, options, emptyHint: '暂无可选战队。战队在本页战队列表中创建，并需保持启用状态' },
+    { name: 'teamBId', label: '战队 B', kind: 'select', required: true, options, emptyHint: '暂无可选战队。战队在本页战队列表中创建，并需保持启用状态' },
   ], { seasonId: text(record(source.season).id), weekStart: '', weekEnd: '', teamAId: options[0]?.value || '', teamBId: options[1]?.value || '' })
 }
 
@@ -494,7 +500,7 @@ function cardSaveDefinition(targetId: string, source: Record<string, unknown>, c
     { name: 'name', label: '卡片名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '说明', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'rarity', label: '稀有度', kind: 'select', required: true, options: rarityOptions },
-    { name: 'weight', label: '权重', kind: 'integer', required: true },
+    { name: 'weight', label: '权重', kind: 'integer', required: true, min: 1 },
     { name: 'stockTotal', label: '总库存', kind: 'integer', required: true },
     { name: 'displayOrder', label: '展示顺序', kind: 'integer', required: true },
   ], {

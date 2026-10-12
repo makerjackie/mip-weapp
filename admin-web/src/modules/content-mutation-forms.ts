@@ -333,7 +333,10 @@ const idField = (key: string, label: string, required = true): ContentMutationFi
 const userPickerField = (key: string, label: string, required = true): ContentMutationField => ({ ...idField(key, label, required), remoteUserSearch: true })
 const catalogPickerField = (key: string, label: string, action: string, required = true): ContentMutationField => ({ ...idField(key, label, required), optionsAction: action })
 const versionField = (): ContentMutationField => ({ key: 'expectedVersion', label: '记录版本', kind: 'integer', required: true })
-const scopeFields = (): ContentMutationField[] => [selectField('scopeType', '作用范围', ['PLATFORM', 'BRANCH']), { ...idField('branchId', '服务器', false), visibleWhen: { path: 'scopeType', value: 'BRANCH' }, requiredWhen: { path: 'scopeType', values: ['BRANCH'] }, optionsAction: 'mip.admin.branches.list', emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' }]
+// Linkage paths are form-root relative. Forms embedding these fields inside a
+// group (the opportunity draft) must pass the group prefix so the renderer
+// resolves the controlling value at draft.scopeType instead of the root.
+const scopeFields = (pathPrefix = ''): ContentMutationField[] => [selectField('scopeType', '作用范围', ['PLATFORM', 'BRANCH']), { ...idField('branchId', '服务器', false), visibleWhen: { path: pathPrefix ? `${pathPrefix}.scopeType` : 'scopeType', value: 'BRANCH' }, requiredWhen: { path: pathPrefix ? `${pathPrefix}.scopeType` : 'scopeType', values: ['BRANCH'] }, optionsAction: 'mip.admin.branches.list', emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' }]
 const reasonField = (label = '处理原因'): ContentMutationField => areaField('reason', label, 300)
 
 function groupField(key: string, label: string, fields: readonly ContentMutationField[]): ContentMutationField {
@@ -418,7 +421,7 @@ const CONTENT_MUTATION_FORMS: readonly ContentMutationFormDefinition[] = [
   {
     action: 'mip.admin.opportunities.save', capability: 'opportunities.moderate', resource: '机会',
     inputKeys: ['opportunityId', 'expectedVersion', 'draft'], idempotencyRequired: false,
-    fields: [idField('opportunityId', '机会', false), { ...versionField(), required: false }, groupField('draft', '机会草稿', [idField('ownerUserId', '发布人'), ...scopeFields(), { ...textField('title', '机会标题', 120), placeholder: '如：寻找联名咖啡品牌' }, { ...idField('coverAssetId', '机会封面', false), assetPurpose: 'OPPORTUNITY_COVER' }, { ...textField('valueSummary', '机会价值', 240), placeholder: '一句话说明合作价值' }, { ...textField('targetSummary', '合作目标', 500, false), placeholder: '想找什么样的合作方' }, areaField('description', '机会说明', 6_000, false), { ...idField('cityTagId', '城市标签', false), hidden: true }, groupField('commercialTerms', '商业条件', [{ key: 'minAmountCents', label: '最低价值（万元）', kind: 'money', valueScale: 1000000, required: false }, { key: 'maxAmountCents', label: '最高价值（万元）', kind: 'money', valueScale: 1000000, required: false }, { key: 'locations', label: '合作地点', kind: 'group', required: true }]), { key: 'roleKeys', label: '合作角色', kind: 'select', options: OPPORTUNITY_ROLES }, { key: 'tagIds', label: '行业标签', kind: 'multi-select', required: false, optionsAction: 'mip.admin.opportunities.options', optionsKey: 'tags', emptyHint: '暂无可选行业标签，可先不选择' }, { key: 'deadlineAt', label: '截止时间', kind: 'datetime', required: false }])],
+    fields: [idField('opportunityId', '机会', false), { ...versionField(), required: false }, groupField('draft', '机会草稿', [idField('ownerUserId', '发布人'), ...scopeFields('draft'), { ...textField('title', '机会标题', 120), placeholder: '如：寻找联名咖啡品牌' }, { ...idField('coverAssetId', '机会封面', false), assetPurpose: 'OPPORTUNITY_COVER' }, { ...textField('valueSummary', '机会价值', 240), placeholder: '一句话说明合作价值' }, { ...textField('targetSummary', '合作目标', 500, false), placeholder: '想找什么样的合作方' }, areaField('description', '机会说明', 6_000, false), { ...idField('cityTagId', '城市标签', false), hidden: true }, groupField('commercialTerms', '商业条件', [{ key: 'minAmountCents', label: '最低价值（万元）', kind: 'money', valueScale: 1000000, required: false }, { key: 'maxAmountCents', label: '最高价值（万元）', kind: 'money', valueScale: 1000000, required: false }, { key: 'locations', label: '合作地点', kind: 'group', required: true }]), { key: 'roleKeys', label: '合作角色', kind: 'select', options: OPPORTUNITY_ROLES }, { key: 'tagIds', label: '行业标签', kind: 'multi-select', required: false, optionsAction: 'mip.admin.opportunities.options', optionsKey: 'tags', emptyHint: '暂无可选行业标签，可先不选择' }, { key: 'deadlineAt', label: '截止时间', kind: 'datetime', required: false }])],
   },
   { action: 'mip.admin.opportunities.publish', capability: 'opportunities.moderate', resource: '机会', inputKeys: ['opportunityId', 'expectedVersion'], idempotencyRequired: false, fields: [idField('opportunityId', '机会'), versionField()] },
   { action: 'mip.admin.opportunities.end', capability: 'opportunities.moderate', resource: '机会', inputKeys: ['opportunityId', 'expectedVersion'], idempotencyRequired: false, fields: [idField('opportunityId', '机会'), versionField()] },
@@ -576,7 +579,8 @@ function validateCommercialTerms(value: unknown): CommercialTerms | null | undef
   assertKeys(terms, ['currency', 'amountUnit', 'minAmountCents', 'maxAmountCents', 'locations'])
   const min = optionalInteger(terms.minAmountCents, '最低金额')
   const max = optionalInteger(terms.maxAmountCents, '最高金额')
-  if (min !== undefined && min < 0 || max !== undefined && max < 0 || min !== undefined && max !== undefined && min > max) throw invalid('商业金额无效')
+  if (min !== undefined && min < 0 || max !== undefined && max < 0) throw invalid('商业金额不能为负数')
+  if (min !== undefined && max !== undefined && min > max) throw invalid('最低价值不能高于最高价值')
   const locations = terms.locations === undefined ? [] : Array.isArray(terms.locations) ? terms.locations.map(location => {
     const item = record(location)
     const type = enumValue(item.type, ['CITY', 'NATIONAL', 'REMOTE'], '合作地点') as CommercialLocation['type']

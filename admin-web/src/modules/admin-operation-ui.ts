@@ -216,16 +216,16 @@ function emptyFieldValue(field: OperationField): unknown {
 }
 
 /**
- * Field paths whose options source follows another field (optionsActionByValue).
- * When that controlling field changes, the dependent selection is stale and
- * callers should reset it.
+ * Field paths whose options source follows another field (optionsActionByValue
+ * or optionsFilter). When that controlling field changes, the dependent
+ * selection is stale and callers should reset it.
  */
 export function fieldsControlledBy(fields: readonly OperationField[], controller: string, prefix = ''): string[] {
   const result: string[] = []
   for (const field of fields) {
     const key = fieldKey(field)
     const path = prefix && key ? `${prefix}.${key}` : key
-    if (path && field.optionsActionByValue?.path === controller) result.push(path)
+    if (path && (field.optionsActionByValue?.path === controller || field.optionsFilter?.path === controller)) result.push(path)
     if (field.fields && path) result.push(...fieldsControlledBy(field.fields, controller, path))
   }
   return result

@@ -218,3 +218,14 @@ describe('R2 novice walkthrough fixes', () => {
     assert.equal(explainGameMutation(members, { memberRefs: ['p1.a'], captainRef: 'p1.b' }), '队长必须在战队成员名单中，请调整名单或更换队长')
   })
 })
+
+describe('R3 novice walkthrough fixes', () => {
+  it('bounds card weight to a minimum of one and explains season date order', () => {
+    const card = createGameMutationDefinition('mip.admin.game.blindBoxes.cards.save', '', {})
+    assert.equal(card.fields.find(field => field.name === 'weight')?.min, 1)
+    const season = createGameMutationDefinition('mip.admin.game.seasons.save', '', {})
+    assert.equal(explainGameMutation(season, { startsAt: '2030-06-01T00:00:00Z', endsAt: '2030-05-01T00:00:00Z' }), '赛季结束时间必须晚于开始时间')
+    const match = createGameMutationDefinition('mip.admin.game.matches.save', '', { season })
+    assert.ok((match.fields.find(field => field.name === 'teamAId') as { emptyHint?: string }).emptyHint?.includes('战队'))
+  })
+})

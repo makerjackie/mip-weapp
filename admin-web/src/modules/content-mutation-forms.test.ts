@@ -6,6 +6,7 @@ import {
   validateContentMutation,
 } from './content-mutation-forms.ts'
 import { label } from './admin-read-formatters.ts'
+import { operationFieldVisible } from './admin-operation-ui.ts'
 
 const uuid = '11111111-1111-4111-8111-111111111111'
 const profileRef = `p1.${'a'.repeat(16)}.${'b'.repeat(48)}.${'c'.repeat(22)}`
@@ -184,13 +185,15 @@ describe('R2 novice walkthrough fixes', () => {
   })
 
   it('marks the scope branch field as linked and conditionally required across content forms', () => {
-    for (const action of ['mip.admin.announcements.save', 'mip.admin.messageCampaigns.save', 'mip.admin.messageTemplates.save', 'mip.admin.opportunities.save'] as const) {
+    for (const action of ['mip.admin.announcements.save', 'mip.admin.messageCampaigns.save', 'mip.admin.messageTemplates.save'] as const) {
       const form = getContentMutationForm(action)
       const flat = [...form.fields, ...(form.fields.find(field => field.key === 'draft')?.fields || [])]
       const branchId = flat.find(field => field.key === 'branchId')
       assert.deepEqual(branchId?.visibleWhen, { path: 'scopeType', value: 'BRANCH' }, action)
       assert.deepEqual(branchId?.requiredWhen, { path: 'scopeType', values: ['BRANCH'] }, action)
     }
+    // the opportunity form nests scope fields inside the draft group, so its
+    // linkage paths are draft-relative (asserted separately in the R3 suite)
   })
 
   it('clearing the announcement association never dead-ends the save', () => {
@@ -225,5 +228,42 @@ describe('R2 novice walkthrough fixes', () => {
     const contentId = getContentMutationForm('mip.admin.knowledge.products.save').fields.find(field => field.key === 'contentId') as { optionsAction?: string, emptyHint?: string }
     assert.equal(contentId.optionsAction, 'mip.admin.knowledge.list')
     assert.ok(contentId.emptyHint?.includes('新建内容'))
+  })
+})
+
+describe('R3 novice walkthrough fixes', () => {
+  it('resolves the opportunity scope linkage inside the draft group', () => {
+    const draft = getContentMutationForm('mip.admin.opportunities.save').fields.find(field => field.key === 'draft')
+    const branchId = (draft?.fields || []).find(field => field.key === 'branchId')
+    assert.ok(branchId, 'opportunity draft must define branchId')
+    assert.equal(branchId.visibleWhen?.path, 'draft.scopeType')
+    assert.equal(branchId.requiredWhen?.path, 'draft.scopeType')
+    // the nested linkage resolves against draft.scopeType, not the form root
+    assert.equal(operationFieldVisible(branchId, { draft: { scopeType: 'BRANCH' } }), true)
+    assert.equal(operationFieldVisible(branchId, { scopeType: 'BRANCH', draft: { scopeType: 'PLATFORM' } }), false)
+    // top-level scope fields (announcements, messages, templates) keep root paths
+    const announcementBranch = getContentMutationForm('mip.admin.announcements.save').fields.find(field => field.key === 'branchId')
+    assert.equal(announcementBranch?.visibleWhen?.path, 'scopeType')
+  })
+
+  it('still submits a server-scoped opportunity end to end', () => {
+    const result = validateContentMutation('mip.admin.opportunities.save', {
+      draft: {
+        ownerUserId: 'user-1', scopeType: 'BRANCH', branchId: 'branch-1', title: '联名咖啡',
+        valueSummary: '品牌曝光', roleKeys: ['connector'], tagIds: [], commercialTerms: { locations: [] },
+      },
+    })
+    assert.equal(result.ok, true)
+  })
+
+  it('names reversed commercial amounts instead of a generic error', () => {
+    const result = validateContentMutation('mip.admin.opportunities.save', {
+      draft: {
+        ownerUserId: 'user-1', scopeType: 'PLATFORM', title: '联名咖啡', valueSummary: '品牌曝光',
+        roleKeys: ['connector'], tagIds: [],
+        commercialTerms: { minAmountCents: 1_000_000, maxAmountCents: 500_000, locations: [] },
+      },
+    })
+    assert.equal(result.ok === false && result.errors.form, '最低价值不能高于最高价值')
   })
 })

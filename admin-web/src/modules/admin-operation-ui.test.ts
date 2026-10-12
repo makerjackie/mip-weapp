@@ -170,3 +170,13 @@ describe('R2 novice walkthrough fixes', () => {
     assert.deepEqual(fieldsControlledBy(fields, 'other'), [])
   })
 })
+
+describe('R3 novice walkthrough fixes', () => {
+  it('treats optionsFilter-linked pickers as dependent on their controller', () => {
+    const fields: OperationField[] = [
+      { name: 'roleKey', label: '角色', kind: 'select', options: [] },
+      { name: 'roleTemplateId', label: '岗位模板', kind: 'select', optionsAction: 'mip.admin.roles.templates.list', optionsFilter: { path: 'roleKey', key: 'baseRoleKey' } },
+    ]
+    assert.deepEqual(fieldsControlledBy(fields, 'roleKey'), ['roleTemplateId'])
+  })
+})
