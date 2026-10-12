@@ -64,8 +64,7 @@
         "packages/member/mip-events/detail/index",
         "packages/member/mip-events/participants/index",
         "packages/member/mip-opportunities/detail/index",
-        "packages/member/mip-cases/detail/index",
-        "packages/member/mip-growth/index"
+        "packages/member/mip-cases/detail/index"
       ],
       "reason": "Share sheet behavior is device/WeChat-client only when enabled"
     },
@@ -134,8 +133,7 @@
       "routes": [
         "packages/admin/event-console/index",
         "packages/member/mip-card/index",
-        "packages/member/mip-events/detail/index",
-        "packages/member/mip-growth/index"
+        "packages/member/mip-events/detail/index"
       ],
       "reason": "wx.saveImageToPhotosAlbum 的相册权限和保存结果需要真机验证"
     },
@@ -1283,8 +1281,6 @@
       "readyAssertion": "state === 'ready'",
       "deviceRequired": [
         "phone-auth",
-        "photo-save",
-        "share",
         "wechat-pay"
       ]
     },

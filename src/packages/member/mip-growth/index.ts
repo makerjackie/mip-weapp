@@ -1,7 +1,6 @@
 import type { MembershipPlan, MembershipPlanId } from '../../../modules/mip-commerce'
 import type { GrowthLevel, GrowthSnapshot } from '../../../modules/mip-growth'
 import type { UserTaskCard } from '../../../modules/mip-tasks'
-import { brand } from '../../../config/brand'
 import { runtimeConfig } from '../../../config/runtime'
 import { MipCommerceError } from '../../../modules/mip-commerce'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
@@ -29,38 +28,6 @@ const MEMBERSHIP_PURCHASE_NOTICES = [
   '三、订单修改',
   '支付前可关闭本弹层放弃本次开通；未支付订单不显示在订单列表。若支付状态待确认，请勿重复付款。',
 ].join('\n')
-
-const POSTER_WIDTH = 375
-const POSTER_HEIGHT = 560
-
-interface Canvas2dNode {
-  width: number
-  height: number
-  createImage: () => WechatMiniprogram.Image
-  getContext: (type: '2d') => WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D
-  requestAnimationFrame?: (callback: () => void) => number
-}
-
-function loadCanvasImage(canvas: Canvas2dNode, source: string) {
-  return new Promise<WechatMiniprogram.Image>((resolve, reject) => {
-    const image = canvas.createImage()
-    image.onload = () => resolve(image)
-    image.onerror = reject
-    image.src = source
-  })
-}
-
-function decodeQueryValue(value: string | undefined) {
-  if (typeof value !== 'string' || !value || value.length > 768) {
-    return ''
-  }
-  try {
-    return decodeURIComponent(value).slice(0, 512)
-  }
-  catch {
-    return ''
-  }
-}
 
 function planValidityText(plan: MembershipPlan) {
   return `开通之日起 ${plan.durationDays} 天 · 到期自动关闭权益`
@@ -131,12 +98,6 @@ Page({
     membershipState: 'loading' as 'loading' | 'player' | 'guest' | 'pending' | 'error',
     membershipValidityText: '',
     renewWindowOpen: false,
-    invitationReady: false,
-    invitationMessage: '',
-    invitationSourceName: '',
-    invitationSourceAvatar: '',
-    posterBusy: false,
-    posterPath: '',
     // MIW-65：开通/续费确认弹层（原会员订单确认页收敛于此，不新增路由）。
     purchaseDialogVisible: false,
     purchaseDialogTitle: '确认开通会员',
@@ -150,31 +111,22 @@ Page({
     paymentEnabled: runtimeConfig.paymentMode !== 'disabled',
     paying: false,
     accessing: false,
-    invitationResolving: false,
     purchaseMessage: '',
     message: '',
   },
-  shareInvitationToken: '',
-  incomingInvitationToken: '',
-  invitationGuestRecorded: false,
   resumePlanId: '' as MembershipPlanId | '',
   checkoutKey: '',
   checkoutPlanId: '' as MembershipPlanId | '',
   growthRequestSeq: 0,
   tasksRequestSeq: 0,
   // BUG-10.4（审计 2026-10-12）：会员态加载补序列守卫（对齐 growthRequestSeq/tasksRequestSeq），
-  // onShow 与下拉刷新并发双跑时后写胜出，避免文案回跳与并发 createMembershipInvitation。
+  // onShow 与下拉刷新并发双跑时后写胜出，避免会员文案回跳。
   membershipRequestSeq: 0,
 
-  onLoad(query: Record<string, string | undefined> = {}) {
+  onLoad() {
     const cached = mipGrowthModule.peekSnapshot()
     if (cached) {
       this.presentSnapshot(cached)
-    }
-    // MIW-27 第二轮：会员邀请落地（分享卡/小程序码）自会员方案页迁至本页。
-    this.incomingInvitationToken = decodeQueryValue(query.invitationToken)
-    if (!this.incomingInvitationToken && query.scene) {
-      void this.resolveIncomingInvitation(query.scene)
     }
   },
 
@@ -202,7 +154,7 @@ Page({
   },
 
   async loadMembershipActions() {
-    // BUG-10.4：整段绑定代际号，两个 await（权益 + 邀请码）之后的写入都要复核代际。
+    // BUG-10.4：整段绑定代际号，await（权益）之后的写入都要复核代际。
     const requestSeq = ++this.membershipRequestSeq
     let membership
     try {
@@ -212,13 +164,11 @@ Page({
       if (requestSeq !== this.membershipRequestSeq) {
         return
       }
-      this.shareInvitationToken = ''
       this.setData({
         isPlayer: false,
         membershipState: 'error',
         membershipValidityText: '',
         renewWindowOpen: false,
-        invitationReady: false,
       })
       return
     }
@@ -228,35 +178,22 @@ Page({
     // MIW-27 第二轮：首笔付费等待管理后台审核。玩家等级页如实展示「审核中」，
     // 不给第二次下单入口；同意后的会员态由服务端投影决定。
     if (membership.kind === 'PENDING') {
-      this.shareInvitationToken = ''
       this.setData({
         isPlayer: false,
         membershipState: 'pending',
         membershipValidityText: '入会审核中，管理后台通过后生效',
         renewWindowOpen: false,
-        invitationReady: false,
       })
       return
     }
     if (membership.kind !== 'PLAYER') {
-      this.shareInvitationToken = ''
       this.setData({
         isPlayer: false,
         membershipState: 'guest',
         // J1-06 开通态：新玩家加入页固定展示「有效期一年」（M1 00:45:19）。
         membershipValidityText: '有效期一年',
         renewWindowOpen: false,
-        invitationReady: false,
-        invitationSourceName: '',
-        invitationSourceAvatar: '',
       })
-      // 受邀嘉宾进入本页即上报邀请凭证；资格校验与幂等在服务端完成，失败不影响页面。
-      if (this.incomingInvitationToken && !this.invitationGuestRecorded) {
-        this.invitationGuestRecorded = true
-        mipCommerceModule
-          .recordMembershipInvitationGuest(this.incomingInvitationToken)
-          .catch(() => {})
-      }
       return
     }
     this.setData({
@@ -265,25 +202,7 @@ Page({
       // J4-03 续费态：有效期至:2026.08.08（figma 1948:14079）。
       membershipValidityText: `有效期至:${formatDottedDate(membership.membershipEndsAt)}`,
       renewWindowOpen: withinRenewalWindow(membership.membershipEndsAt),
-      invitationReady: false,
-      invitationSourceName: membership.invitationAttribution?.displayName || '',
-      invitationSourceAvatar: membership.invitationAttribution?.avatarUrl || '',
     })
-    try {
-      const invitation = await mipCommerceModule.createMembershipInvitation()
-      if (requestSeq !== this.membershipRequestSeq) {
-        return
-      }
-      this.shareInvitationToken = invitation.token
-      this.setData({ invitationReady: true })
-    }
-    catch {
-      if (requestSeq !== this.membershipRequestSeq) {
-        return
-      }
-      this.shareInvitationToken = ''
-      this.setData({ invitationReady: false, invitationMessage: '邀请暂时不可用，请稍后重试。' })
-    }
   },
 
   async onPullDownRefresh() {
@@ -447,8 +366,7 @@ Page({
     if (!planId
       || !this.data.plansVerified
       || this.data.paying
-      || this.data.accessing
-      || this.data.invitationResolving) {
+      || this.data.accessing) {
       return
     }
     if (!this.data.paymentEnabled) {
@@ -491,7 +409,6 @@ Page({
       const outcome = await mipCommerceModule.purchase({
         planId,
         idempotencyKey: this.checkoutKey,
-        invitationToken: this.incomingInvitationToken || undefined,
       })
       if (outcome.kind === 'CANCELLED') {
         // 明确取消后才开启新的购买尝试；未知错误要保留原订单幂等键以便恢复。
@@ -514,144 +431,6 @@ Page({
     }
     finally {
       this.setData({ paying: false })
-    }
-  },
-
-  async resolveIncomingInvitation(sceneValue: string) {
-    const scene = decodeQueryValue(sceneValue)
-    if (!/^[\w-]{32}$/.test(scene)) {
-      this.setData({ invitationMessage: '会员邀请无效或已失效。' })
-      return
-    }
-    this.setData({ invitationResolving: true, invitationMessage: '' })
-    try {
-      const invitation = await mipCommerceModule.resolveMembershipInvitationScene(scene)
-      this.incomingInvitationToken = invitation.token
-      this.setData({ invitationMessage: '已识别好友的会员邀请。' })
-    }
-    catch {
-      this.incomingInvitationToken = ''
-      this.setData({ invitationMessage: '会员邀请无效或已失效。' })
-    }
-    finally {
-      this.setData({ invitationResolving: false })
-    }
-  },
-
-  copyInvitation() {
-    if (!this.shareInvitationToken) {
-      this.setData({ invitationMessage: '邀请信息暂时不可用，请稍后重试。' })
-      return
-    }
-    const path = `/packages/member/mip-growth/index?source=member-copy&invitationToken=${encodeURIComponent(this.shareInvitationToken)}`
-    wx.setClipboardData({
-      data: ['MIP 会员邀请', '打开 MIP 小程序查看会员方案。', `小程序路径：${path}`].join('\n'),
-      success: () => wx.showToast({ title: '邀请文案已复制', icon: 'success' }),
-    })
-  },
-
-  async createInvitationPoster() {
-    if (this.data.posterBusy) {
-      return
-    }
-    this.setData({ posterBusy: true, invitationMessage: '' })
-    try {
-      const credential = await mipCommerceModule.createMembershipInvitationCode()
-      const posterPath = await this.drawInvitationPoster(credential.codeUrl)
-      this.setData({ posterPath })
-    }
-    catch (error) {
-      const code = error instanceof MipCommerceError ? error.code : ''
-      this.setData({
-        invitationMessage: code === 'MEMBERSHIP_INVITATION_CODE_UNAVAILABLE'
-          ? '小程序码服务尚未配置，可使用微信分享或复制邀请文案。'
-          : '邀请海报生成失败，请稍后重试。',
-      })
-    }
-    finally {
-      this.setData({ posterBusy: false })
-    }
-  },
-
-  async drawInvitationPoster(codeUrl: string) {
-    const node = await new Promise<Canvas2dNode>((resolve, reject) => {
-      this.createSelectorQuery()
-        .select('#mip-growth-invitation-canvas')
-        .fields({ node: true, size: true })
-        .exec((results) => {
-          const result = results?.[0] as { node?: Canvas2dNode } | undefined
-          result?.node ? resolve(result.node) : reject(new Error('邀请海报画布不可用'))
-        })
-    })
-    const ratio = wx.getWindowInfo().pixelRatio || 1
-    node.width = POSTER_WIDTH * ratio
-    node.height = POSTER_HEIGHT * ratio
-    const context = node.getContext('2d')
-    context.scale(ratio, ratio)
-    context.fillStyle = '#FCDF03'
-    context.fillRect(0, 0, POSTER_WIDTH, POSTER_HEIGHT)
-    context.fillStyle = '#080808'
-    context.font = '700 38px sans-serif'
-    context.fillText('MIP', 28, 60)
-    context.font = '700 24px sans-serif'
-    context.fillText('会员邀请', 28, 108)
-    context.font = '400 15px sans-serif'
-    context.fillText('扫码查看会员方案', 28, 142)
-    context.fillStyle = '#FFFFFF'
-    context.fillRect(28, 174, 319, 306)
-    const codeImage = await loadCanvasImage(node, codeUrl)
-    context.drawImage(codeImage, 75, 198, 225, 225)
-    context.fillStyle = '#080808'
-    context.font = '600 15px sans-serif'
-    context.textAlign = 'center'
-    context.fillText('使用微信扫码打开 MIP 小程序', POSTER_WIDTH / 2, 454)
-    context.textAlign = 'start'
-    context.font = '400 12px sans-serif'
-    context.fillText('和朋友一起，探索更多可能', 28, 524)
-    if (node.requestAnimationFrame) {
-      await new Promise<void>(resolve => node.requestAnimationFrame?.(resolve))
-    }
-    return new Promise<string>((resolve, reject) => {
-      wx.canvasToTempFilePath({
-        canvas: node,
-        fileType: 'png',
-        destWidth: POSTER_WIDTH * ratio,
-        destHeight: POSTER_HEIGHT * ratio,
-        success: result => resolve(result.tempFilePath),
-        fail: reject,
-      })
-    })
-  },
-
-  previewInvitationPoster() {
-    if (this.data.posterPath) {
-      wx.previewImage({ current: this.data.posterPath, urls: [this.data.posterPath] })
-    }
-  },
-
-  async saveInvitationPoster() {
-    if (!this.data.posterPath || this.data.posterBusy) {
-      return
-    }
-    try {
-      await wx.saveImageToPhotosAlbum({ filePath: this.data.posterPath })
-      wx.showToast({ title: '已保存到相册', icon: 'success' })
-    }
-    catch {
-      this.setData({ invitationMessage: '保存失败，请检查相册权限后重试。' })
-    }
-  },
-
-  onShareAppMessage() {
-    const invitation = this.shareInvitationToken
-      ? `&invitationToken=${encodeURIComponent(this.shareInvitationToken)}`
-      : ''
-    return {
-      title: 'MIP 会员方案',
-      // MIW-27 第二轮：邀请卡片先统一用品牌默认封面图。
-      imageUrl: brand.opportunityDefaultCoverPath,
-      // MIW-65：邀请落地自会员方案页改为本页。
-      path: `/packages/member/mip-growth/index?source=growth-share${invitation}`,
     }
   },
 })

@@ -3,9 +3,6 @@ import type {
   CommerceOrder,
   CommerceOrderPage,
   MembershipBenefitsSnapshot,
-  MembershipInvitation,
-  MembershipInvitationCode,
-  MembershipInvitationGuestRecord,
   MembershipPlan,
   RefundId,
   RefundIntent,
@@ -86,22 +83,6 @@ export function createMipCommerceGateway(
 
     getMembershipBenefits() {
       return commerce<MembershipBenefitsSnapshot>('getMembershipBenefits', {}, true)
-    },
-
-    createMembershipInvitation() {
-      return commerce<MembershipInvitation>('createMembershipInvitation')
-    },
-
-    createMembershipInvitationCode() {
-      return commerce<MembershipInvitationCode>('createMembershipInvitationCode')
-    },
-
-    resolveMembershipInvitationScene(scene) {
-      return commerce<MembershipInvitation>('resolveMembershipInvitationScene', { scene })
-    },
-
-    recordMembershipInvitationGuest(invitationToken) {
-      return commerce<MembershipInvitationGuestRecord>('recordMembershipInvitationGuest', { invitationToken })
     },
 
     createCheckout(intent) {

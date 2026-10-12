@@ -133,22 +133,6 @@ export function createMipCommerceModule(
       return gateway.listOrderPage(filter)
     },
 
-    createMembershipInvitation() {
-      return gateway.createMembershipInvitation()
-    },
-
-    createMembershipInvitationCode() {
-      return gateway.createMembershipInvitationCode()
-    },
-
-    resolveMembershipInvitationScene(scene: string) {
-      return gateway.resolveMembershipInvitationScene(scene)
-    },
-
-    recordMembershipInvitationGuest(invitationToken: string) {
-      return gateway.recordMembershipInvitationGuest(invitationToken)
-    },
-
     async purchase(intent: CheckoutIntent) {
       if (options.paymentMode === 'disabled') {
         throw new Error('PAYMENT_UNAVAILABLE')

@@ -79,7 +79,9 @@ const tabBarJson = JSON.parse(read('dist/custom-tab-bar/index.json'))
 const appJson = JSON.parse(read('dist/app.json'))
 const growthJson = JSON.parse(read('dist/packages/member/mip-growth/index.json'))
 const homeJson = JSON.parse(read('dist/pages/index/index.json'))
-const components = { ...growthJson.usingComponents, ...homeJson.usingComponents }
+// MIW-75：等级页邀请面板下线后不再引用 t-button，改用支付结果页校验 TDesign button 自动引入。
+const paymentResultJson = JSON.parse(read('dist/packages/member/payment-result/index.json'))
+const components = { ...growthJson.usingComponents, ...homeJson.usingComponents, ...paymentResultJson.usingComponents }
 
 assertBuiltComponentTargets()
 // Fixed action bars keep a hue-neutral translucent glass (user sign-off 2026-10-11:

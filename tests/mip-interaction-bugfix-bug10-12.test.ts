@@ -31,7 +31,6 @@ const identityClient = vi.hoisted(() => ({
 const opportunities = vi.hoisted(() => ({ list: vi.fn(), listCooperators: vi.fn() }))
 const commerce = vi.hoisted(() => ({
   getMembershipBenefits: vi.fn(),
-  createMembershipInvitation: vi.fn(),
   peekPlans: vi.fn(() => []),
 }))
 const growthClient = vi.hoisted(() => ({ peekSnapshot: vi.fn(), getSnapshot: vi.fn() }))
@@ -307,7 +306,6 @@ describe('BUG-10.3 cooperators repeat onShow keeps ready', () => {
 describe('BUG-10.4 membership actions sequence guard', () => {
   beforeEach(() => {
     commerce.getMembershipBenefits.mockReset()
-    commerce.createMembershipInvitation.mockReset().mockResolvedValue({ token: 'invite-token' })
   })
 
   it('keeps the newest membership projection when an older concurrent request finishes last', async () => {
@@ -325,7 +323,6 @@ describe('BUG-10.4 membership actions sequence guard', () => {
     await olderRun
     expect(instance.data.membershipState).toBe('player')
     expect(instance.data.isPlayer).toBe(true)
-    expect(instance.data.invitationReady).toBe(true)
   })
 })
 

@@ -28,10 +28,6 @@ function gateway(overrides: Partial<CommerceGateway> = {}): CommerceGateway {
   return {
     listPlans: vi.fn(async () => [plan]),
     getMembershipBenefits: vi.fn(async () => guest),
-    createMembershipInvitation: vi.fn(),
-    createMembershipInvitationCode: vi.fn(),
-    resolveMembershipInvitationScene: vi.fn(),
-    recordMembershipInvitationGuest: vi.fn(async () => ({ recorded: true, inviterUserId: 'inviter-1' })),
     createCheckout: vi.fn(),
     createPayment: vi.fn(),
     getOrder: vi.fn(),

@@ -25,7 +25,7 @@
 | 公开浏览与活动分享 / A5 | 冷启动不闪门禁、活动先展示、邀请引用跨身份流程、无效邀请降级、拒绝手机号不循环、弹窗延后 | implemented | verified-local + external-wait | 已覆盖公开路由、匿名快照、显式身份建立、inviteRef 持久化与并发恢复保护、服务端报名归因和弹窗延后；仍需正式 AppID 真机确认冷启动、分享面板和拒绝手机号后的完整链路 |
 | 分会与档案 / N4 | 主分会、城市/行业目录、公司/组织经历、隐私 | implemented | verified-local + external-wait | 服务端档案与共用选择器已有测试；正式目录和隐私真机旅程待验 |
 | 谁看过我 / N7 | 幂等访问、累计、最新优先、未读、本人可见 | implemented | verified-local + evidence-missing | 迁移、服务端合同和页面已存在；缺可提交运行时闭环 |
-| 会员与邀请 / N1、#55 | 可配置方案、玩家权益、会员期邀请归因、续费 | implemented | verified-local + external-wait | commerce/ledger 和邀请 token 测试已覆盖；正式分享、扫码和支付待验 |
+| 会员与邀请 / N1、#55 | 可配置方案、玩家权益、续费（MIW-75：邀请载体整体下线，服务端归因模型保留兼容历史数据） | implemented | verified-local + external-wait | commerce/ledger 测试已覆盖；正式支付待验 |
 | 统一订单 / #56 | 会员、活动、内容订单及服务端使用状态 | implemented | verified-local + external-wait | `mip_orders`、商品快照、状态投影和退款边界已覆盖；正式支付/退款待验 |
 | 活动目录 / B1–B8 | Banner、近期/往期、城市/日期/搜索、卡片、分享、详情入口 | implemented | verified-local + external-wait | 页面、服务端查询和日期范围测试已覆盖。2026-10 起「往期」由后台配置回顾条目驱动（`mip.events.recaps` + `mip_videos` 视频号目标，迁移 103 `mip_video_recap_channels`）：dto/gateway/module/页面契约与 admin-api、admin-web 用例已覆盖；正式素材、真机 `wx.openChannelsActivity` 跳转、日历和分享待验 |
 | 活动详情 / C1–C7 | 图文媒体、电话、地图、指引链接、分享、参与人、报名恢复；底部 sticky 两态（MIW-53：未报名=客服+转发+立刻报名，其余=客服+转发双胶囊）；邀请来源、活动签到、活动变更模块已按 2026-10-08 客户口径删除；「主办方」Tab 改为后台配置的主办方介绍富文本（C1/TC-C-01，迁移 102 `organizer_introduction`，不再展示主办方资料卡） | implemented | verified-local + external-wait | 富内容、媒体排序、指引按钮显隐与 web-view 跳转合同已覆盖；两态 sticky 已本机截图比对 figma 1818_17142/3319_5944；主办方介绍后台编辑→小程序展示链路已合同+仓库测试覆盖；地图、拨号、码图需真机 |
