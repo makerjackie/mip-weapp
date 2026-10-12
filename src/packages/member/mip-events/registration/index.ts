@@ -5,6 +5,8 @@ import { decodeInvitationToken, MipEventsError, publicEventTypeLabel } from '../
 import { mipCheckInResumeStore, mipEventsModule, mipRegistrationDraftStore } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
+import { requestEntrySubscription } from '../../../../modules/mip-messaging/entry-subscription'
+import { GUIDE_EVENT_REGISTER_KEY } from '../../../../modules/mip-messaging/guide-policy'
 import { showErrorFeedback } from '../../../../platform/feedback/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { formatChineseDateTime, formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
@@ -401,6 +403,10 @@ Page({
     if (!event || this.data.busy || !this.validate()) {
       return
     }
+    // MIW-77：订阅授权不做开屏弹层/常驻模块（设计稿无此形态），只在「提交报名」
+    // tap 手势内同步拉起原生活动提醒面板（validate 全同步，手势上下文未断）。
+    // 节奏 24h 一次、已入账/总是拒绝静默跳过；面板结果与失败都不拦截报名。
+    void requestEntrySubscription('EVENT_REMINDER', GUIDE_EVENT_REGISTER_KEY)
     const answers = answersFromFields(this.data.fields)
     if (!this.submissionIdempotencyKey) {
       this.submissionIdempotencyKey = requestKey(this.data.editing ? 'event-registration-update' : 'event-registration')

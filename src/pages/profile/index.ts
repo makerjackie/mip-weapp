@@ -18,14 +18,8 @@ import { mipGrowthModule } from '../../modules/mip-growth/client'
 import { createMipGuestLoginFlow, evaluateAccess } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../modules/mip-messaging/client'
-import {
-  evaluateSubscriptionGuide,
-  GUIDE_HEARTS_ENTRY_KEY,
-  GUIDE_RECORD_STORAGE_KEY,
-  normalizeGuideRecord,
-  recordGuideDecision,
-  recordGuideShown,
-} from '../../modules/mip-messaging/guide-policy'
+import { requestEntrySubscription } from '../../modules/mip-messaging/entry-subscription'
+import { GUIDE_HEARTS_ENTRY_KEY } from '../../modules/mip-messaging/guide-policy'
 import { opportunityModule, opportunityTypeLabel } from '../../modules/mip-opportunities'
 import { canManageEvents, hasCapability, membershipPresentation } from '../../modules/mip-shell'
 import { getLoadingDiagnostics, recordLoadingFailure } from '../../platform/cloudbase/loading-diagnostics'
@@ -834,37 +828,16 @@ Page({
   },
 
   /**
-   * MIW-74 心动值入口前置订阅授权：页内「接收心动提醒」按钮已移除，入口 tap 是唯一授权时机。
-   * 节奏复用机会引导层 policy（同一动作键 24h 一次、ACCEPTED/BANNED 终态隐藏）；
-   * 与机会层 D4「拒绝后只出手动文案」不同——入口没有手动按钮兜底，软拒绝 24h 后重问
-   * （传 rejectionCap 封顶值使其不再隐藏），用户勾选「总是拒绝」后平台回 BANNED 即永久停问。
-   * 游客先过登录门禁，不在登录前拉起授权；面板拉起失败不拦截进入。
+   * MIW-74 心动值入口前置订阅授权：入口 tap 是唯一授权时机（MIW-77 口径的唯一合法
+   * 形态——原生面板在用户点击的业务按钮手势内拉起，不做页面常驻模块）。
+   * 节奏由 entry-subscription 共享实现判定（同一动作键 24h 一次、ACCEPTED/BANNED
+   * 终态隐藏、软拒绝 24h 后重问）。游客先过登录门禁，不在登录前拉起授权。
    */
   async requestHeartsEntrySubscription() {
-    const templateKey = 'HEART_RECEIVED'
-    if (!this.data.authenticated || !mipMessagingModule.subscriptionCapability(templateKey).available) {
+    if (!this.data.authenticated) {
       return
     }
-    const record = normalizeGuideRecord(wx.getStorageSync(GUIDE_RECORD_STORAGE_KEY))
-    const outcome = evaluateSubscriptionGuide(record, {
-      templateKey,
-      opportunityId: GUIDE_HEARTS_ENTRY_KEY,
-      now: Date.now(),
-      capabilityAvailable: true,
-      rejectionCap: Number.MAX_SAFE_INTEGER,
-    })
-    if (outcome.presentation === 'HIDDEN') {
-      return
-    }
-    // 先记展示节奏再拉面板：面板中途失败也保持 24h 一次，不连环打扰。
-    const shown = recordGuideShown(record, GUIDE_HEARTS_ENTRY_KEY, Date.now())
-    try {
-      const result = await mipMessagingModule.requestWechatSubscription(templateKey)
-      wx.setStorageSync(GUIDE_RECORD_STORAGE_KEY, recordGuideDecision(shown, templateKey, result.decision))
-    }
-    catch {
-      wx.setStorageSync(GUIDE_RECORD_STORAGE_KEY, shown)
-    }
+    await requestEntrySubscription('HEART_RECEIVED', GUIDE_HEARTS_ENTRY_KEY)
   },
   openGrowth() { void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE') },
   openBadges() { void this.openProtected('/packages/member/mip-badges/index', 'VIEW_RESTRICTED_PROFILE') },

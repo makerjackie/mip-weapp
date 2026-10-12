@@ -8,7 +8,6 @@
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "mip-icon": "/components/mip-icon/index",
-    "mip-subscription-guide": "/components/mip-subscription-guide/index"
+    "mip-icon": "/components/mip-icon/index"
   }
 }

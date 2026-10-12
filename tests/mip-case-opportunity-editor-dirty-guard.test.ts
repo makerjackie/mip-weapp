@@ -13,6 +13,7 @@ const { saveOpportunity, saveSuperCase } = vi.hoisted(() => ({
 vi.mock('../src/modules/mip-ai/client', () => ({ mipAiModule: {} }))
 vi.mock('../src/modules/mip-ai/editor-loader', () => ({ loadAiEditorDraft: vi.fn() }))
 vi.mock('../src/modules/mip-media/client', () => ({ mipMediaModule: {} }))
+vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: { subscriptionCapability: vi.fn(() => ({ available: false })), requestWechatSubscription: vi.fn() } }))
 vi.mock('../src/modules/mip-cases', () => ({ superCaseModule: { get: vi.fn(), save: saveSuperCase } }))
 vi.mock('../src/modules/mip-opportunities', () => ({
   opportunityModule: { get: vi.fn(), getCatalogs: vi.fn(), save: saveOpportunity },
@@ -261,7 +262,8 @@ describe('MIP opportunity editor dirty back-guard (MIP-4)', () => {
     expect(saveOpportunity).toHaveBeenCalledTimes(1)
     expect(page.dirty).toBe(false)
     expect(disableAlertBeforeUnload).toHaveBeenCalledTimes(1)
-    expect(setStorageSync).toHaveBeenCalled()
+    // MIW-77：发布成功不再写订阅引导 pending（落地页弹层已删），save 不触碰 storage。
+    expect(setStorageSync).not.toHaveBeenCalled()
     expect(showToast).toHaveBeenCalledWith({ title: '机会已发布', icon: 'success' })
 
     vi.advanceTimersByTime(600)

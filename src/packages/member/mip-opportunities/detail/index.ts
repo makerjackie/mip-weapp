@@ -3,7 +3,6 @@ import type { OpportunityDetail } from '../../../../modules/mip-opportunities'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { GUIDE_PENDING_STORAGE_KEY, readPendingGuideOpportunity } from '../../../../modules/mip-messaging/guide-policy'
 import {
   journeyStatusOf,
   opportunityModule,
@@ -88,7 +87,6 @@ Page({
         roleNames: item.roles.map(key => cooperationRoles.find(role => role.key === key)?.name || key),
         message: '',
       })
-      this.checkSubscriptionGuide()
     }
     catch (error) {
       this.setData(this.data.item
@@ -159,25 +157,6 @@ Page({
     if (item && item.status !== 'ENDED' && (item.canEdit || item.mine)) {
       caseNavigateTo({ url: `/packages/member/mip-opportunities/editor/index?id=${encodeURIComponent(this.data.id)}` })
     }
-  },
-
-  /**
-   * MIW-40 订阅授权引导层（发布人侧）：仅在 item.mine 时检查；组件内部还有
-   * 模板/节奏门控（guide-policy）。两个时机都顺延到当前动作完成后：
-   * 详情加载完成（S1，编辑返回与「想跟TA合作」页返回经 onShow→load 复用，S2）。
-   * G1 后名单是独立页面，页内弹层关闭时机（S3）随之移除——从名单页返回走 S2。
-   * 引导层非原生面板，无需手势上下文；原生面板只在层内按钮 tap 中触发。
-   * S8：发布成功 redirectTo 详情（无上级页面）时本页是落地页——只清 pending，
-   * 展示沿用 S1 检查，避免同一机会连续弹两次。
-   */
-  checkSubscriptionGuide() {
-    if (readPendingGuideOpportunity(wx.getStorageSync(GUIDE_PENDING_STORAGE_KEY), Date.now())) {
-      wx.removeStorageSync(GUIDE_PENDING_STORAGE_KEY)
-    }
-    if (!this.data.item?.mine) {
-      return
-    }
-    this.selectComponent('#opportunity-subscribe-guide')?.check()
   },
 
   async cooperationIntent() {

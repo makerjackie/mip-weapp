@@ -55,24 +55,18 @@ worker 仅通过内部 HMAC 调用，不开放客户端权限，不安装高频�
 
 ## 档案感兴趣提醒
 
-2026-09-22 J4-02：`PROFILE` 来源的感兴趣关系通过现有 outbox 投影为站内消息「有人对你感兴趣」，并请求 `WECHAT_SUBSCRIPTION` 渠道的 `PROFILE_INTEREST` 模板（逻辑字段 `title`、`status`、`receivedAt`）。档案本人可在自己的档案页主动授权提醒；客户端、通知 API 与 worker 必须配置同一真实模板。未配置模板或没有可消费授权时只保留站内信，不回退成已送达，也不阻断表态。其他来源继续使用现有通知渠道。
+2026-09-22 J4-02：`PROFILE` 来源的感兴趣关系通过现有 outbox 投影为站内消息「有人对你感兴趣」，并请求 `WECHAT_SUBSCRIPTION` 渠道的 `PROFILE_INTEREST` 模板（逻辑字段 `title`、`status`、`receivedAt`）。档案本人的授权额度由业务按钮 tap 前置授权统一收集（见下节）；客户端、通知 API 与 worker 必须配置同一真实模板。未配置模板或没有可消费授权时只保留站内信，不回退成已送达，也不阻断表态。其他来源继续使用现有通知渠道。
 
 此代码路径不证明真实微信送达；真实模板配置、用户手势授权及投递结果仍需真机和生产回读验证。
 
-## 机会发布人订阅引导
+## 业务按钮 tap 前置订阅授权
 
-MIW-40（2026-10-05）：机会场景使用单一逻辑模板键 `OPPORTUNITY_NOTICE`；W26 模板获批后如需拆分多键，只改模板配置与组件入参，不改架构。引导层（`mip-subscription-guide` 组件，挂载点：发布/新建机会进入编辑器时前置弹出（节奏键 `GUIDE_PUBLISH_ENTRY_KEY`，24h 一次）、机会详情页 S1、机会 tab 落地页 S8 列表侧消费发布 pending、站内信页点开机会类通知时触发）只做授权收集，不做投递。模板未配置时客户端整层不渲染，服务端照常只写站内消息，不创建外部任务。
+MIW-77（2026-10-13，客户拍板）：订阅授权不再做成任何页面形态——设计稿没有开屏弹层或常驻模块，MIW-40 的引导层组件（`mip-subscription-guide`）与页内提示卡（`mip-subscription-prompt`）全部删除，机会详情/机会 tab 落地页/编辑器进入/站内信页的自动弹出与通知行点击拦截（S8 发布 pending 机制随之删除）一并移除。授权只在用户点击的业务按钮 tap 手势内经共享入口 `mip-messaging/entry-subscription`（`requestEntrySubscription`）同步拉起原生订阅面板，当前入口：
 
-MIW-67（2026-10-12）：机会动态的 projector 投递分支已接入——合作意向（`opportunity.cooperation_changed`）与机会来源的感兴趣（`profile.interest_changed` 的 `OPPORTUNITY` 分支）外部投递从客服消息改为 `WECHAT_SUBSCRIPTION` 渠道的 `OPPORTUNITY_NOTICE` 模板，逻辑字段 `title`（机会名，超长或缺名回退为动态短语）、`status`、`receivedAt`；引荐与合作卡/超级案例/档案来源的感兴趣维持既有渠道。发布人无可用授权时任务按 worker 既有可重试上限（5 次）收敛为失败，站内信始终无条件落库，不回退成已送达，也不阻断表态；`OPPORTUNITY_NOTICE` 模板未配置时 `publishMessage` 丢弃 external，同样只保留站内信。
+- 「确认发布」（机会编辑器 `save`，模板 `OPPORTUNITY_NOTICE`，节奏键 `GUIDE_PUBLISH_ENTRY_KEY`）；
+- 「提交报名」（活动报名页 `submit`，模板 `EVENT_REMINDER`，节奏键 `GUIDE_EVENT_REGISTER_KEY`）；
+- 「我的」心动值入口（`openStat`，模板 `HEART_RECEIVED`，节奏键 `GUIDE_HEARTS_ENTRY_KEY`，MIW-74 引入、MIW-77 收敛到同一实现）。
 
-MIW-67 后续（2026-10-12）：`OPPORTUNITY_NOTICE` 改绑自有模板「合作邀请发起提醒」（一次性订阅），字段扩为 4 个——`title`（事件名称=机会名，回退口径不变）、`initiator`（发起人=表态用户昵称，缺名回退「有人」）、`status`（备注=动作短语：收到新的合作意向/收到新的感兴趣标记）、`receivedAt`（发起时间）。两个通知函数的 `templateFieldContracts` 与 projector 载荷同步；切换模板只需改 `MIP_SUBSCRIBE_TEMPLATES_JSON` 的 templateId/fields 并重部署，用户侧需按新模板重新授权一次（额度按模板分开）。
+展示节奏仍由纯函数 `guide-policy` 判定：同一动作键 24 小时内最多拉起 1 次；软拒绝 24h 后重问（入口没有手动开启兜底按钮，故不做「拒绝封顶」隐藏）；`BANNED`（拒绝且不再询问）与已入账（`ACCEPTED`）终态后静默跳过——`BANNED` 经既有 `recordSubscriptionDecision` 触发服务端 `revokeGrants`；微信订阅授权为一次性额度，重复收集以服务端 `mip_notification_grants` 为唯一事实源，客户端不预测余额。授权调用在表单校验之后、任何 `await` 之前发起，保证原生面板处于 tap 手势上下文；面板被拒绝或拉起失败都不拦截业务动作（发布/报名照常），站内信无条件落库，缺授权只影响微信补充送达。
 
-语义口径（2026-10-12 客户拍板）：**「心动」只指活动现场投心动票**——`EVENT_HEART` 投影走 `HEART_RECEIVED` 模板，站内信行类型 `HEART`（心动通知）。**「感兴趣」族**——机会合作意向（`OPPORTUNITY`）、机会/合作卡/超级案例被标记感兴趣（`PROFILE_INTEREST`）、嘉宾/玩家档案被标记感兴趣——站内信统一呈现为「感兴趣通知」，推送统一走「合作邀请发起提醒」（`OPPORTUNITY_NOTICE`，档案分支原先使用未配置的 `PROFILE_INTEREST` 模板键、静默只发站内信，已改绑）；`PROFILE_INTEREST` 模板契约随之退役。
-
-展示节奏由纯函数 `guide-policy` 判定：同一机会 24 小时内最多展示 1 次；原生面板拒绝累计满 3 次后不再展示；`BANNED`（拒绝且不再询问）永久隐藏，并经既有 `recordSubscriptionDecision` 触发服务端 `revokeGrants`。已入账（`ACCEPTED`）后不再重复引导——微信订阅授权为一次性额度，重复收集以服务端 `mip_notification_grants` 为唯一事实源，客户端不预测余额。
-
-触发时机全部顺延到当前动作完成之后，不抢占手势：进入自己机会详情加载完成后；编辑返回（编辑入口本身不拦截，经 `onShow`→`load` 复用同一检查入口）；想合作名单弹层关闭后（当前详情页该弹层仅访客视角可打开，发布人侧名单入口接入后该时机自动生效）；发布成功后（见下）。拒绝过一次后，引导层只保留手动开启文案（右上角「···」→「设置」→「订阅消息」），不再重复拉起原生面板；手动开启无法由服务端入账，这是平台限制下的既定口径，文案引导不改变授权事实。
-
-发布时机（S8）：编辑器发布成功（仅 `publish` 且 `PUBLISHED`）时写入本地 pending（`{id, at}`，TTL 10 分钟）；发布者落地页一次性消费——「我的机会」列表 `onShow` 是主落点（发布入口均从该页进入），消费后以机会 ID 为节奏键弹出引导层，随后进详情不再重复弹；发布成功 `redirectTo` 详情（无上级页面）时详情页只清 pending，展示仍由既有检查负责。错过落地窗口即静默过期，回退到进详情的既有时机。跳台页不作为落点：它没有发布入口，且主包不引入 tdesign 弹层。
-
-节奏记录（展示时间、拒绝计数、终态决策）与发布 pending 只存客户端本地 storage，带限长/形状清洗与 TTL，不作为授权凭证；真机原生面板表现、真实模板触达与授权消费为 external-wait（依赖 W26 模板审批与配置）。
+档案自视页的「接收感兴趣提醒」提示卡随组件删除，不再补位：`PROFILE_INTEREST` 模板键已退役（2026-10-12 语义口径），档案来源感兴趣推送已改绑 `OPPORTUNITY_NOTICE`，授权额度由上述三个业务入口统一收集。节奏记录只存客户端本地 storage，带限长/形状清洗，不作为授权凭证；真机原生面板表现、真实模板触达与授权消费为 external-wait（依赖模板审批与配置）。
