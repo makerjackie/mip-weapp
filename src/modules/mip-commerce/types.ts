@@ -35,29 +35,12 @@ export interface MembershipPlan {
 export interface CheckoutIntent {
   planId: MembershipPlanId
   idempotencyKey: string
-  invitationToken?: string
-}
-
-export interface MembershipInvitation {
-  token: string
-  expiresAt: string
-}
-
-export interface MembershipInvitationCode {
-  codeUrl: string
-  expiresAt: string
 }
 
 export interface MembershipInvitationAttribution {
   sourceType: 'PLATFORM' | 'USER'
   displayName: string
   avatarUrl?: string
-}
-
-/** 嘉宾阶段邀请关系的服务端回执（重复上报幂等，不重写既有关系）。 */
-export interface MembershipInvitationGuestRecord {
-  recorded: boolean
-  inviterUserId: string
 }
 
 export interface CommerceOrder {
@@ -224,11 +207,6 @@ export interface CommerceOrderPage {
 export interface CommerceGateway {
   listPlans: () => Promise<MembershipPlan[]>
   getMembershipBenefits: () => Promise<MembershipBenefitsSnapshot>
-  createMembershipInvitation: () => Promise<MembershipInvitation>
-  createMembershipInvitationCode: () => Promise<MembershipInvitationCode>
-  resolveMembershipInvitationScene: (scene: string) => Promise<MembershipInvitation>
-  /** 被邀请人以嘉宾身份进入会员页时上报邀请凭证；资格与幂等由服务端裁决。 */
-  recordMembershipInvitationGuest: (invitationToken: string) => Promise<MembershipInvitationGuestRecord>
   createCheckout: (intent: CheckoutIntent) => Promise<CommerceOrder>
   createPayment: (orderId: OrderId) => Promise<WechatPaymentParameters>
   getOrder: (orderId: OrderId) => Promise<CommerceOrder>

@@ -444,7 +444,6 @@ describe('mip-weapp UI runtime contract', () => {
     expect(contract.routes.find(route => route.path === 'packages/member/mip-events/detail/index')?.deviceRequired)
       .toContain('video-channel')
     expect(byId.get('photo-save')?.routes).toEqual(expect.arrayContaining([
-      'packages/member/mip-growth/index',
       'packages/admin/event-console/index',
       'packages/member/mip-events/detail/index',
     ]))
@@ -453,9 +452,10 @@ describe('mip-weapp UI runtime contract', () => {
       'packages/admin/event-registrations/index',
     ]))
     expect(byId.get('subscription-message')?.routes).toContain('packages/member/mip-events/registration/index')
-    expect(byId.get('share')?.routes).toContain('packages/member/mip-growth/index')
+    // MIW-75：会员邀请载体下线，等级页不再声明 share/photo-save 真机能力。
+    expect(byId.get('share')?.routes).not.toContain('packages/member/mip-growth/index')
     expect(contract.routes.find(route => route.path === 'packages/member/mip-growth/index')?.deviceRequired)
-      .toContain('share')
+      .toEqual(['phone-auth', 'wechat-pay'])
     expect(byId.get('task-template')?.routes).toEqual(['packages/member/mip-tasks/detail/index'])
   })
 

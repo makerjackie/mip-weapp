@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { withinRenewalWindow } from '../src/packages/member/mip-growth/renewal-window'
 
 describe('MIP growth player actions', () => {
-  it('reuses the membership invitation and purchases through the in-page confirm dialog', () => {
+  it('purchases and renews through the in-page confirm dialog', () => {
     const script = fs.readFileSync(
       path.join(process.cwd(), 'src/packages/member/mip-growth/index.ts'),
       'utf8',
@@ -19,7 +19,6 @@ describe('MIP growth player actions', () => {
     )
 
     expect(script).toContain('mipCommerceModule.getMembershipBenefits()')
-    expect(script).toContain('mipCommerceModule.createMembershipInvitation()')
     expect(script).toContain('membership.membershipEndsAt')
     expect(script).toContain('mipTasksModule.query.listTasks(undefined, 4, force)')
     // MIW-65：会员方案页/订单确认页下线，开通与续费共用本页确认弹层后直接拉起支付。
@@ -27,7 +26,6 @@ describe('MIP growth player actions', () => {
     expect(script).toMatch(/confirmPurchase\(\)[\s\S]{0,900}performPurchase\(planId\)/)
     expect(script).toContain('mipCommerceModule.purchase({')
     expect(script).toContain('plansVerified')
-    expect(script).toContain('invitationToken=')
     expect(script).not.toContain('requestPayment')
     expect(template).toContain('id="growth-purchase-dialog"')
     expect(template).toContain('id="growth-purchase-confirm"')
@@ -36,17 +34,17 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('data-source="join"')
     expect(template).toContain('data-source="renew"')
     expect(template).toContain('《会员服务协议》')
-    expect(template).toContain('openType="share"')
-    expect(template).toContain('邀请加入')
     expect(template).toContain('立即续费')
     expect(template).toContain('立即加入')
-    // MIW-27 第二轮：邀请分享卡片图片暂用品牌默认封面。
-    expect(script).toContain('imageUrl: brand.opportunityDefaultCoverPath')
-    // MIW-27：已加入会员态由 isPlayer 控制整块操作栏；未进续费窗口时「邀请加入」
-    // 黄底 primary 全宽，进窗口后退居左侧黑底黄字（secondary），宽度让位给「立即续费」。
-    expect(template).toContain('wx:if="{{isPlayer}}"')
-    expect(template).toContain('variant="{{renewWindowOpen ? \'secondary\' : \'primary\'}}"')
-    expect(template).toContain('class="{{renewWindowOpen ? \'min-w-0 flex-1\' : \'w-full\'}}"')
+    // MIW-75：会员邀请载体（分享/复制文案/海报）整体下线；玩家操作栏仅剩续费——
+    // 到期前 3 个月窗口内展示全宽「立即续费」，窗口外不放任何常驻操作。
+    expect(template).not.toContain('邀请加入')
+    expect(template).not.toContain('open-type="share"')
+    expect(template).not.toContain('openType="share"')
+    expect(template).not.toContain('生成邀请海报')
+    expect(template).not.toContain('复制邀请文案')
+    expect(template).toContain('wx:if="{{isPlayer && renewWindowOpen}}"')
+    expect(template).toContain('label="立即续费"')
     expect(template).toContain('{{membershipValidityText}}')
     expect(template).toContain('wx:for="{{tasks}}"')
     // 最新 J1-06 原型：可执行任务使用黄底胶囊，完成态与未开放态保持区分。
@@ -101,7 +99,7 @@ describe('MIP growth player actions', () => {
     expect(script).toContain('renewWindowOpen: withinRenewalWindow(membership.membershipEndsAt)')
     expect(script).toContain('\'有效期一年\'')
     expect(script).toMatch(/有效期至:\$\{formatDottedDate\(membership\.membershipEndsAt\)\}/)
-    expect(template).toContain('wx:if="{{renewWindowOpen}}"')
+    expect(template).toContain('wx:if="{{isPlayer && renewWindowOpen}}"')
     // 页面本体不写死金额（终审 C7：金额由服务端方案快照经确认弹层展示）。
     expect(template).not.toContain('6600')
     expect(template).not.toContain('¥')

@@ -9,7 +9,6 @@ const growth = vi.hoisted(() => ({
 }))
 const commerce = vi.hoisted(() => ({
   getMembershipBenefits: vi.fn(),
-  createMembershipInvitation: vi.fn(),
 }))
 const tasks = vi.hoisted(() => ({
   listTasks: vi.fn(),
