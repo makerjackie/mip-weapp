@@ -68,16 +68,18 @@ if (result.status !== 0) {
 
 const compiledAppJson = readJson(path.join(stagingDir, 'app.json'))
 normalizeSubpackageNpmComponentReferences(stagingDir, compiledAppJson)
-// 上传源大小门是 2048KB，全量 vendor 树（~1.7MB）必然超限；按可达性裁掉未用组件。
-// 嵌套依赖树整棵保留（裸 require 探不到，删了会复发 MIW-79 的 TDesign 内联渲染）。
-const pruneSummary = pruneUnreachableNpmFiles(stagingDir)
-console.log(`[build] pruned ${pruneSummary.removedFiles.length} unreachable npm files, saved ${(pruneSummary.bytesSaved / 1024).toFixed(0)}KB`)
 fs.rmSync(stagingProjectConfigPath, { force: true })
 const stagedNpm = path.join(stagingDir, 'miniprogram_npm')
 const currentNpm = path.join(outputDir, 'miniprogram_npm')
 if (!fs.existsSync(stagedNpm) && fs.existsSync(currentNpm)) {
   fs.cpSync(currentNpm, stagedNpm, { recursive: true })
 }
+// 裁剪必须在 npm 落位之后：weapp-vite 命中 npm 缓存时会跳过 emit（staging 里没有
+// miniprogram_npm，靠上面的 fallback 从旧 dist 复制）。上传源大小门是 2048KB，全量
+// vendor 树（~1.7MB）必然超限；按可达性裁掉未用组件。嵌套依赖树整棵保留（裸 require
+// 探不到，删了会复发 MIW-79 的 TDesign 内联渲染）。
+const pruneSummary = pruneUnreachableNpmFiles(stagingDir)
+console.log(`[build] pruned ${pruneSummary.removedFiles.length} unreachable npm files, saved ${(pruneSummary.bytesSaved / 1024).toFixed(0)}KB`)
 fs.mkdirSync(outputDir, { recursive: true })
 synchronizeDirectory(stagingDir, outputDir)
 fs.copyFileSync(path.join(stagingDir, 'app.json'), path.join(outputDir, 'app.json'))
