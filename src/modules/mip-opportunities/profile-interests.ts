@@ -27,7 +27,7 @@ const invalidResponse = () => new MipOpportunityError('INVALID_RESPONSE', '感�
 // G3（审计 2026-10-09）：邀请来源标注（figma 2189_43192「邀请人Bear + 头像」）。
 // 口径对齐 mip-cooperation responseAuthorInviter：未知键拒绝、畸形整页拒绝；
 // 服务端判定 USER/PLATFORM，无归档时服务端省略该字段。
-function parseProfileInterestInviter(value: unknown): OpportunityCooperatorInviter {
+export function parseProfileInterestInviter(value: unknown): OpportunityCooperatorInviter {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw invalidResponse()
   }

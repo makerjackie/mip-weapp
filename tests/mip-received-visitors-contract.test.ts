@@ -17,6 +17,25 @@ describe('visitor service to client contract', () => {
     expect(page.items[0]).toMatchObject({ kind: 'VISITOR', actor: { nickname: '访客甲', userKind: 'PLAYER' }, visitCount: 3, unread: true })
   })
 
+  it('carries the server inviter annotation through to the visitor actor (MIW-85)', () => {
+    const base = { visitCount: 1, unread: false, lastVisitedAt: '2026-10-08T11:01:57.348Z' }
+    const page = parseReceivedVisitors({
+      unreadCount: 0,
+      items: [{ profileRef: 'p1.inviter-carried', nickname: '访客乙', userKind: 'GUEST', ...base, inviter: { sourceType: 'USER', displayName: '铭龙' } }],
+    })
+    expect(page.items[0].actor.inviter).toEqual({ sourceType: 'USER', displayName: '铭龙' })
+    const bare = parseReceivedVisitors({
+      unreadCount: 0,
+      items: [{ profileRef: 'p1.inviter-omitted', nickname: '访客丙', userKind: 'GUEST', ...base }],
+    })
+    expect(bare.items[0].actor.inviter).toBeUndefined()
+    // 畸形 inviter 复用 parseProfileInterestInviter 的受控错误（同口径文案），不泄漏 TypeError。
+    expect(() => parseReceivedVisitors({
+      unreadCount: 0,
+      items: [{ profileRef: 'p1.inviter-malformed', nickname: '访客丁', userKind: 'GUEST', ...base, inviter: { sourceType: 'USER' } }],
+    })).toThrow('感兴趣名单返回的数据格式不正确')
+  })
+
   it('rejects malformed data with a controlled error instead of leaking a TypeError', () => {
     for (const value of [undefined, {}, { items: [null], unreadCount: 0 }, { items: [{}], unreadCount: 0 }]) {
       expect(() => parseReceivedVisitors(value)).toThrow('访客服务返回的数据格式不正确')

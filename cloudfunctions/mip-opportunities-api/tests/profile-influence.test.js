@@ -236,6 +236,37 @@ describe('profile influence lists', () => {
     assert.equal(gated.items[0].actor.inviter.avatarUrl, undefined)
   })
 
+  // MIW-85：玩家（ACTIVE 会员）互动过/心动值卡不下发邀请人（INVITER-02）——门控压在归档
+  // SQL 上，stub 模拟门控后真实库回空并锁 SQL 形状防回退；真实过滤语义由 trial 冒烟验证。
+  it('gates inviter annotation for players on interaction and heart lists', async () => {
+    const inviterSqls = []
+    const database = {
+      async query(sql) {
+        if (sql.includes('WITH co_attendance AS')) {
+          return [actorRow({ relation_id: relationId, interaction_count: 2, event_id: eventId, event_title: '城市交流会' })]
+        }
+        if (sql.includes('FROM mip_profile_interests interest')) {
+          return [actorRow({ relation_id: relationId, source_type: 'PROFILE', source_label: '公开档案' })]
+        }
+        if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_user_badge_equipment') || sql.includes('FROM mip_growth_levels')) return []
+        if (sql.includes('FROM mip_event_invitation_attributions')) {
+          inviterSqls.push(sql)
+          return []
+        }
+        throw new Error(`unexpected query: ${sql}`)
+      },
+    }
+    const interactions = await listInfluenceInteractions(database, caller, { limit: 20 })
+    assert.equal(interactions.items[0].actor.inviter, undefined)
+    const interests = await listActiveInfluenceInterests(database, caller, { limit: 20 })
+    assert.equal(interests.items[0].actor.inviter, undefined)
+    for (const sql of inviterSqls) {
+      assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_membership_entitlements membership/)
+      assert.match(sql, /membership\.status = 'ACTIVE'\s+AND membership\.starts_at <= UTC_TIMESTAMP\(3\)\s+AND membership\.ends_at > UTC_TIMESTAMP\(3\)/)
+      assert.match(sql, /ORDER BY attribution\.captured_at DESC, attribution\.registration_id DESC/)
+    }
+  })
+
   it('round-trips guest pagination without putting a raw user id in the cursor', async () => {
     const database = {
       async query() {

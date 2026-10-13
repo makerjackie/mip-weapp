@@ -1,6 +1,6 @@
 import type { ReceivedInteractionPage, ReceivedVisitor } from './types'
 import { MipOpportunityError } from './error'
-import { parsePublicPersonDetails } from './profile-interests'
+import { parseProfileInterestInviter, parsePublicPersonDetails } from './profile-interests'
 
 /** The visitor service returns flat public profiles, unlike other interaction lists. */
 export function parseReceivedVisitors(value: unknown): ReceivedInteractionPage {
@@ -43,6 +43,9 @@ export function parseReceivedVisitors(value: unknown): ReceivedInteractionPage {
         avatarUrl: typeof row.avatarUrl === 'string' ? row.avatarUrl : undefined,
         headline: typeof row.headline === 'string' ? row.headline : undefined,
         userKind: row.userKind === 'PLAYER' ? 'PLAYER' : 'GUEST',
+        // MIW-85：访客卡 footer 邀请人与互动过/心动列表同口径（服务端 actor.inviter），
+        // 服务端已做玩家门控与最近一次归档判定，无归档省略不造值。
+        ...(row.inviter === undefined ? {} : { inviter: parseProfileInterestInviter(row.inviter) }),
       },
       visitCount: Number(row.visitCount),
       lastVisitedAt: row.lastVisitedAt,
