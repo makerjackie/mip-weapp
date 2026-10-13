@@ -51,8 +51,10 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('{{membershipValidityText}}')
     expect(template).toContain('wx:for="{{tasks}}"')
     // 最新 J1-06 原型：可执行任务使用黄底胶囊，完成态与未开放态保持区分。
-    // MIW-84：SHARE 动作按钮先于普通胶囊分支，AVAILABLE 普通胶囊成为 wx:elif。
-    expect(template).toContain('wx:elif="{{item.status === \'AVAILABLE\'}}"')
+    // MIW-84：SHARE 按钮先渲染；AVAILABLE 胶囊仅在配置了 PAGE_JUMP 时出现（未配置=无动作，
+    // 不能落入灰态 else 分支），非 AVAILABLE 状态保留灰态状态文案。
+    expect(template).toContain('wx:elif="{{item.status === \'AVAILABLE\' && item.actionType === \'PAGE_JUMP\'}}"')
+    expect(template).toContain('wx:elif="{{item.status !== \'AVAILABLE\'}}"')
     expect(template).toContain('growth-task-action border border-black bg-brand text-on-brand')
     const taskAction = styles.match(/\.growth-task-action\s*\{([^}]+)\}/)?.[1]
     expect(taskAction).toContain('height: 52rpx')
