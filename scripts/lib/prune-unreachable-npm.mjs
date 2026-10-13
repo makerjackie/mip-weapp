@@ -55,3 +55,20 @@ export function pruneUnreachableNpmFiles(distRoot) {
   removeEmptyDirs(npmRoot)
   return { removedFiles, bytesSaved }
 }
+
+/**
+ * MIW-79 守门：npm 缓存命中会跳过 emit、build.mjs 的 fallback 只兜顶层目录，
+ * 嵌套依赖树缺失时全部 TDesign 组件内联渲染，且主包因缺内容「恰好合规」地
+ * 通过体积门。构建必须在这里失败，而不是把坏 dist 发出去。
+ */
+export function assertNestedVendorTreePresent(distRoot) {
+  const nestedRoot = path.join(distRoot, 'miniprogram_npm', 'tdesign-miniprogram', 'miniprogram_npm')
+  const entries = fs.existsSync(nestedRoot) ? fs.readdirSync(nestedRoot) : []
+  if (entries.length === 0) {
+    throw new Error(
+      '构建产物缺嵌套 vendor 依赖树（miniprogram_npm/tdesign-miniprogram/miniprogram_npm/），'
+      + '全部 TDesign 组件会内联渲染。npm 缓存可能跳过了 emit：'
+      + '先删除 node_modules/weapp-vite/.cache 再重新构建（MIW-79）。',
+    )
+  }
+}

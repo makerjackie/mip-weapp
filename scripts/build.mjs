@@ -6,7 +6,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { getProject, readJson } from './lib/project.mjs'
-import { pruneUnreachableNpmFiles } from './lib/prune-unreachable-npm.mjs'
+import { assertNestedVendorTreePresent, pruneUnreachableNpmFiles } from './lib/prune-unreachable-npm.mjs'
 import { normalizeSubpackageNpmComponentReferences } from './lib/subpackage-npm-references.mjs'
 
 const example = getProject()
@@ -80,6 +80,7 @@ if (!fs.existsSync(stagedNpm) && fs.existsSync(currentNpm)) {
 // 探不到，删了会复发 MIW-79 的 TDesign 内联渲染）。
 const pruneSummary = pruneUnreachableNpmFiles(stagingDir)
 console.log(`[build] pruned ${pruneSummary.removedFiles.length} unreachable npm files, saved ${(pruneSummary.bytesSaved / 1024).toFixed(0)}KB`)
+assertNestedVendorTreePresent(stagingDir)
 fs.mkdirSync(outputDir, { recursive: true })
 synchronizeDirectory(stagingDir, outputDir)
 fs.copyFileSync(path.join(stagingDir, 'app.json'), path.join(outputDir, 'app.json'))

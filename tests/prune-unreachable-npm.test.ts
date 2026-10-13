@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { pruneUnreachableNpmFiles } from '../scripts/lib/prune-unreachable-npm.mjs'
+import { assertNestedVendorTreePresent, pruneUnreachableNpmFiles } from '../scripts/lib/prune-unreachable-npm.mjs'
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-prune-npm-'))
@@ -64,5 +64,13 @@ describe('prune unreachable npm files', () => {
 
     expect(fs.existsSync(path.join(item.dist, 'miniprogram_npm/tdesign-miniprogram/miniprogram_npm/tslib/tslib.js')))
       .toBe(true)
+  })
+
+  it('build gate passes on a healthy tree and fails when the nested tree is missing', () => {
+    const item = fixture()
+    expect(() => assertNestedVendorTreePresent(item.dist)).not.toThrow()
+
+    fs.rmSync(path.join(item.dist, 'miniprogram_npm/tdesign-miniprogram/miniprogram_npm'), { recursive: true })
+    expect(() => assertNestedVendorTreePresent(item.dist)).toThrow(/嵌套 vendor 依赖树/)
   })
 })
