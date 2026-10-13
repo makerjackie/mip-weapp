@@ -43,8 +43,12 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('邀请入会')
     expect(template).not.toContain('邀请加入')
     expect(template).toContain('openType="share"')
-    expect(template).not.toContain('open-type="share"')
     expect(script).toMatch(/onShareAppMessage\(\)[\s\S]{0,200}MEMBERSHIP_INVITE_SHARE_TITLE/)
+    // MIW-84：任务卡上后台配置的 SHARE 动作按钮（原生 button open-type=share，转发内容固定邀请语境）；
+    // 会员「邀请入会」走 mip-pill-button 组件透传（openType），原生 open-type=share 全页仅任务卡一处。
+    const shareButtons = template.match(/<button[^>]*open-type="share"[^>]*>/g) || []
+    expect(shareButtons).toHaveLength(1)
+    expect(shareButtons[0]).toContain('item.actionType === \'SHARE\'')
     expect(template).not.toContain('生成邀请海报')
     expect(template).not.toContain('复制邀请文案')
     expect(template).toContain('wx:if="{{membershipState === \'player\'}}"')
@@ -56,7 +60,8 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('{{membershipValidityText}}')
     expect(template).toContain('wx:for="{{tasks}}"')
     // 最新 J1-06 原型：可执行任务使用黄底胶囊，完成态与未开放态保持区分。
-    expect(template).toContain('wx:if="{{item.status === \'AVAILABLE\'}}"')
+    // MIW-84：SHARE 动作按钮先于普通胶囊分支，AVAILABLE 普通胶囊成为 wx:elif。
+    expect(template).toContain('wx:elif="{{item.status === \'AVAILABLE\'}}"')
     expect(template).toContain('growth-task-action border border-black bg-brand text-on-brand')
     const taskAction = styles.match(/\.growth-task-action\s*\{([^}]+)\}/)?.[1]
     expect(taskAction).toContain('height: 52rpx')

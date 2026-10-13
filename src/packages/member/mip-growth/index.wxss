@@ -158,3 +158,14 @@
   line-height: 34rpx;
   border-radius: 9999rpx;
 }
+
+/* MIW-84：SHARE 任务卡的原生转发按钮——去 WeChat button 默认样式后复用上方胶囊规格。 */
+.growth-task-share {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+
+.growth-task-share::after {
+  border: none;
+}

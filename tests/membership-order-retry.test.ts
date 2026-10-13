@@ -16,6 +16,7 @@ vi.mock('../src/modules/mip-shell', () => ({ createIntentKey: intent.create, for
 vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: navigation.navigate,
   caseRedirectTo: navigation.redirect,
+  caseOpenRoute: vi.fn(),
 }))
 
 interface PageDefinition {

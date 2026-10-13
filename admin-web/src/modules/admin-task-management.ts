@@ -21,11 +21,30 @@ import {
   record,
   valueOf,
 } from './admin-read-formatters.ts'
+import runtimePages from '../../../config/runtime-pages.json' with { type: 'json' }
 
 const TASK_EXPORT_FILE_NAME = /^[A-Za-z0-9._-]+\.xlsx$/
 const TASK_EXPORT_MAX_BYTES = 8 * 1024 * 1024
 const TASK_EXPORT_MAX_ROWS = 5000
 const BASE64_PATTERN = /^[A-Za-z0-9+/]*={0,2}$/
+
+/** MIW-84：任务点击动作（玩家端「去完成」行为；等级任务无提交核验，动作即全部交互）。 */
+const TASK_ACTION_TYPE_OPTIONS = [
+  { value: '', label: '未配置（卡片不可点）' },
+  { value: 'PAGE_JUMP', label: '跳转页面' },
+  { value: 'SHARE', label: '触发分享' },
+]
+
+interface RuntimePageRoute { path: string, name: string, tab?: boolean, query?: string[] }
+
+/** MIW-84：跳转目标页白名单——构建期取自 runtime-pages.json，
+ *  排除 admin 包与必须带 query 参数才可达的页面；tab 页标注（小程序端 switchTab、不带参）。 */
+const TASK_JUMP_TARGET_OPTIONS = (runtimePages.routes as RuntimePageRoute[])
+  .filter(route => !route.path.startsWith('packages/admin/') && !(route.query && route.query.length > 0))
+  .map(route => ({
+    value: route.path,
+    label: `${route.name}${route.tab ? '（Tab 页）' : ''} · ${route.path}`,
+  }))
 
 function canonicalBase64(value: string) {
   return Boolean(value)
@@ -412,6 +431,8 @@ export function createTaskMutationDefinition(
       { name: 'starLevel', label: '星级', kind: 'select', required: true, options: [1, 2, 3, 4, 5].map(level => ({ value: String(level), label: `${level} 星` })) },
       { name: 'purpose', label: '任务目的', kind: 'textarea', required: true, maxLength: 500, wide: true },
       { name: 'completionCriteria', label: '完成标准', kind: 'textarea', required: true, maxLength: 1000, wide: true },
+      { name: 'actionType', label: '点击动作（玩家端「去完成」行为）', kind: 'select', options: TASK_ACTION_TYPE_OPTIONS, extra: '等级任务不提交核验；未配置的任务卡在玩家端不可点' },
+      { name: 'actionTarget', label: '目标页面', kind: 'select', options: TASK_JUMP_TARGET_OPTIONS, wide: true, requiredWhen: { path: 'actionType', values: ['PAGE_JUMP'] }, visibleWhen: { path: 'actionType', value: 'PAGE_JUMP' }, emptyHint: '暂无可选页面（白名单来自 runtime-pages.json）' },
       { name: 'periodStartAt', label: '周期开始', kind: 'datetime' },
       { name: 'periodEndAt', label: '周期结束', kind: 'datetime' },
       { name: 'weeklyDeliverAt', label: '周送达时间（北京时间）', kind: 'time' },
@@ -432,6 +453,8 @@ export function createTaskMutationDefinition(
       starLevel: String(integer(task.starLevel) || 1),
       purpose: String(task.purpose || ''),
       completionCriteria: String(task.completionCriteria || ''),
+      actionType: String(task.actionType || ''),
+      actionTarget: String(task.actionTarget || ''),
       periodStartAt: String(task.periodStartAt || ''),
       periodEndAt: String(task.periodEndAt || ''),
       weeklyDeliverAt: String(task.weeklyDeliverAt || ''),
@@ -570,6 +593,13 @@ export function buildTaskMutationInput(
     const assignedOwnerId = identifier(values.assignedOwnerId)
     const applicableServers = identifiers(values.applicableServers || [], true)
     if (!purpose || !completionCriteria || !assignedOwnerId || !applicableServers) return null
+    // MIW-84：点击动作——PAGE_JUMP 必须选白名单内的目标页；SHARE/未配置不带目标。
+    const actionType = ['PAGE_JUMP', 'SHARE'].includes(String(values.actionType)) ? String(values.actionType) : ''
+    let actionTarget = ''
+    if (actionType === 'PAGE_JUMP') {
+      actionTarget = text(values.actionTarget, 128)
+      if (!actionTarget || actionTarget.includes('?') || !TASK_JUMP_TARGET_OPTIONS.some(option => option.value === actionTarget)) return null
+    }
     const input: AdminRequestInput = {
       task: {
         name,
@@ -589,6 +619,8 @@ export function buildTaskMutationInput(
         assignedOwnerId,
         applicableServers,
         rewardConfig,
+        actionType: actionType || null,
+        actionTarget: actionTarget || null,
       },
     }
     if (taskId) {
