@@ -18,7 +18,21 @@
   border-radius: 50% 50% 0 0 / 100% 100% 0 0;
 }
 
-/* MIW-27：按钮中心与 EXP 进度条中心（py-6 48 + mt-16 + 104.2 + 28 + 7.8 + 6 = 210rpx）
+/* MIW-83：贴着弧形过渡的黄色勾边（figma 3984:8075）——超宽椭圆顶弧，中段隐入
+   深色弧内、两端沉入页面底色，与 hero 曲线叠出细亮线。 */
+.growth-hero-curve-line {
+  position: absolute;
+  bottom: -300rpx;
+  left: 50%;
+  width: 1600rpx;
+  height: 304rpx;
+  pointer-events: none;
+  border-top: 3rpx solid rgb(252 223 3 / 75%);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+
+/* MIW-27：按钮中心与 XP 进度条中心（py-6 48 + mt-16 + 104.2 + 28 + 7.8 + 6 = 210rpx）
    同一水平线，并较原右上角胶囊放大一档（figma 1948:14177 入口样式沿用）。 */
 .growth-experience-link {
   position: absolute;
@@ -29,50 +43,69 @@
   font-size: 24rpx;
   font-weight: 600;
   line-height: 34rpx;
-  background: var(--color-brand);
+  background: transparent;
   border: 2rpx solid var(--color-on-brand);
   border-radius: 9999rpx;
 }
 
-/* Latest role-flows J1-06 / J4-03: all three labels sit on one baseline. */
-.growth-level-scale {
+/* MIW-83 GROWTH-01：档位横滑条（figma 3984:8403）——swiper previous/next-margin
+   224rpx 让邻档标签中心落在距屏幕边约 37px 处（档距 ≈151px，与设计稿一致）。 */
+.growth-tier-area {
   position: relative;
-  height: 64rpx;
-  margin-top: 26rpx;
+  margin-top: 16rpx;
 }
 
-.growth-level-point {
-  position: absolute;
-  bottom: 0;
+.growth-tier-swiper {
+  height: 64rpx;
+}
+
+.growth-tier-label {
   display: flex;
   gap: 8rpx;
   align-items: center;
-  font-size: 20rpx;
+  justify-content: center;
+  height: 100%;
   font-weight: 600;
-  line-height: 28rpx;
   color: var(--color-brand);
   white-space: nowrap;
 }
 
-.growth-level-point--first {
-  left: 36rpx;
+.growth-tier-label--current {
+  font-size: 24rpx;
+  line-height: 34rpx;
 }
 
-.growth-level-point--middle {
-  left: 50%;
-  transform: translateX(-50%);
+.growth-tier-label--side {
+  font-size: 20rpx;
+  line-height: 28rpx;
+  opacity: 0.65;
 }
 
-.growth-level-point--last {
-  right: 36rpx;
-}
-
-.growth-level-lock {
+.growth-tier-lock {
   display: flex;
   align-items: center;
 }
 
-/* Source task rows are 351 x 67px, with a distinct 12px EXP label / 18px amount. */
+/* 档位条下沿的黄色轨道细线（设计稿标签行随弧线排布）。 */
+.growth-tier-arc {
+  position: absolute;
+  top: -10rpx;
+  left: 50%;
+  width: 1600rpx;
+  height: 310rpx;
+  pointer-events: none;
+  border-top: 3rpx solid rgb(252 223 3 / 35%);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+
+/* MIW-83 GROWTH-02：权益面板高度随档位行数过渡（原型 .28s ease）。 */
+.growth-benefits {
+  overflow: hidden;
+  transition: min-height 0.28s ease;
+}
+
+/* Source task rows are 351 x 67px, with a distinct 12px XP label / 18px amount. */
 .growth-task-card {
   box-sizing: border-box;
   display: grid;

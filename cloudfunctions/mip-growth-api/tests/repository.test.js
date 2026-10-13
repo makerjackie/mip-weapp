@@ -34,8 +34,8 @@ test('returns the full active level ladder and earning rules from server facts',
       }
       if (sql.includes('FROM mip_growth_level_benefits')) {
         return [
-          { level_id: 'level-2', name: '活动新权益', status: 'ACTIVE' },
-          { level_id: 'level-2', name: '已停用权益', status: 'INACTIVE' },
+          { level_id: 'level-2', name: '活动新权益', description: '报名参与官方副本', status: 'ACTIVE' },
+          { level_id: 'level-2', name: '已停用权益', description: '', status: 'INACTIVE' },
         ]
       }
       if (sql.includes('FROM mip_growth_rules')) {
@@ -50,7 +50,7 @@ test('returns the full active level ladder and earning rules from server facts',
   const result = await createGrowthRepository(database).getSnapshot('wx-app', input.userId)
   assert.deepEqual(result.levels.map(level => level.levelKey), ['starter', 'active'])
   assert.deepEqual(result.levels[0].benefits, [])
-  assert.deepEqual(result.levels[1].benefits, ['活动新权益'])
+  assert.deepEqual(result.levels[1].benefits, [{ name: '活动新权益', description: '报名参与官方副本' }])
   assert.equal(result.currentLevel.levelKey, 'active')
   assert.deepEqual(result.earningRules.map(rule => rule.ruleKey), ['event_attended'])
   assert.ok(queries.some(item => item.sql.includes("status = 'ACTIVE'")
@@ -76,7 +76,7 @@ test('falls back to legacy level benefits only when no benefit relation exists',
     },
   }
   const result = await createGrowthRepository(database).getSnapshot('wx-app', input.userId)
-  assert.deepEqual(result.currentLevel.benefits, ['兼容权益'])
+  assert.deepEqual(result.currentLevel.benefits, [{ name: '兼容权益' }])
 })
 
 test('records a capped award and account update in one transaction', async () => {

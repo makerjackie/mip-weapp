@@ -29,7 +29,7 @@ function createGrowthRepository(database, options = {}) {
         [appId],
       ),
       database.query(
-        `SELECT relation.level_id, benefit.name, benefit.status
+        `SELECT relation.level_id, benefit.name, benefit.description, benefit.status
          FROM mip_growth_level_benefits relation
          INNER JOIN mip_growth_benefits benefit
            ON benefit.app_id = relation.app_id AND benefit.id = relation.benefit_id
@@ -57,8 +57,11 @@ function createGrowthRepository(database, options = {}) {
       const related = benefitsByLevel.get(level.id)
       return {
         ...level,
+        // MIW-83：权益对象化（name + description）随快照下发，空说明不下发字段。
         benefits_json: related
-          ? JSON.stringify(related.filter(item => item.status === 'ACTIVE').map(item => item.name))
+          ? JSON.stringify(related.filter(item => item.status === 'ACTIVE').map(item => (
+            item.description ? { name: item.name, description: item.description } : { name: item.name }
+          )))
           : level.benefits_json,
       }
     })

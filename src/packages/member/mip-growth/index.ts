@@ -1,6 +1,7 @@
 import type { MembershipPlan, MembershipPlanId } from '../../../modules/mip-commerce'
-import type { GrowthLevel, GrowthSnapshot } from '../../../modules/mip-growth'
+import type { GrowthSnapshot } from '../../../modules/mip-growth'
 import type { UserTaskCard } from '../../../modules/mip-tasks'
+import type { GrowthBenefitSlotView, GrowthTierView } from './tiers'
 import { runtimeConfig } from '../../../config/runtime'
 import { MipCommerceError } from '../../../modules/mip-commerce'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
@@ -12,9 +13,21 @@ import { mipTasksModule } from '../../../modules/mip-tasks/client'
 import { caseNavigateTo, caseRedirectTo } from '../../../platform/navigation/client'
 import { formatLocalDate } from '../../../utils/date'
 import { withinRenewalWindow } from './renewal-window'
+import { benefitPanelMinHeight, benefitSlots, deriveTierStartIndexes, selectedTierIndexFor, tierViews } from './tiers'
 
 /** MIW-27：经验值详情独立页（figma 1948:14177 经验值明细）。 */
 const EXPERIENCE_DETAILS_PAGE = '/packages/member/mip-experience-details/index'
+
+/**
+ * MIW-83 GROWTH-06 D4：「邀请入会」为本期轻量微信分享（mip-pill-button openType="share"）；
+ * 完整邀请系统（海报/凭证/邀请人归属）另卡。落地页用主包首页。
+ */
+const MEMBERSHIP_INVITE_SHARE_TITLE = '邀请你加入 MIP 玩家会员，一起解锁专属权益'
+const MEMBERSHIP_INVITE_SHARE_PATH = '/pages/index/index'
+
+/** MIW-83 GROWTH-04 D5：任务全量展示——分页游标聚合（服务端页大小 20，防御上限 10 页）。 */
+const TASK_PAGE_SIZE = 20
+const TASK_PAGE_LIMIT = 10
 
 /** MIW-65：会员方案页/订单确认页下线后，本页为唯一开通面；协议沿用既有会员服务协议文档。 */
 const MEMBERSHIP_AGREEMENT_URL = '/packages/member/user-agreement/index?document=membership'
@@ -42,35 +55,30 @@ interface GrowthTaskView extends UserTaskCard {
   actionText: string
 }
 
-/** figma 1948_14079: three-point level scale under the hero — first level, middle milestone (locked), last level. */
-interface LevelScaleView {
-  leftText: string
-  centerText: string
-  rightText: string
-  centerLocked: boolean
-}
-
-function levelScaleView(levels: GrowthLevel[], currentLevelNumber: number): LevelScaleView | null {
-  if (levels.length < 3) {
-    return null
-  }
-  const last = levels.length
-  const center = Math.floor((last - 1) / 2) + 1
-  return {
-    leftText: 'Lv.1',
-    centerText: `Lv.${center}`,
-    rightText: `Lv.${last}`,
-    centerLocked: center > currentLevelNumber,
-  }
-}
-
-function growthPresentation(snapshot: GrowthSnapshot) {
+/**
+ * MIW-83 GROWTH-01/02：权益差异档位 + 跟随档位的权益区（figma 3984:8958 系列）。
+ * preferredTierIndex 保留用户已滑到的档位（会员态落定刷新锁定旗标时不回跳）。
+ */
+function growthPresentation(snapshot: GrowthSnapshot, isPlayer: boolean, preferredTierIndex = -1) {
   const currentIndex = snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id)
   const currentLevelNumber = Math.max(1, currentIndex + 1)
+  const tiers = tierViews(
+    deriveTierStartIndexes(snapshot.levels),
+    currentLevelNumber,
+    isPlayer,
+  )
+  const fallbackTierIndex = selectedTierIndexFor(tiers, currentLevelNumber)
+  const tierIndex = tiers[preferredTierIndex] ? preferredTierIndex : fallbackTierIndex
+  const tierLevel = snapshot.levels[tiers[tierIndex].startIndex]
+  const tierBenefits = benefitSlots(tierLevel.benefits)
   return {
     currentLevelNumber,
     nextLevelThreshold: snapshot.nextLevel?.minimumExperience || 0,
-    levelScale: levelScaleView(snapshot.levels, currentLevelNumber),
+    tiers,
+    tierIndex,
+    tierBenefits,
+    tierBenefitCount: tierLevel.benefits.length,
+    tierBenefitsMinHeight: benefitPanelMinHeight(tierBenefits.length),
   }
 }
 
@@ -90,7 +98,16 @@ Page({
     snapshot: null as GrowthSnapshot | null,
     currentLevelNumber: 1,
     nextLevelThreshold: 0,
-    levelScale: null as LevelScaleView | null,
+    // MIW-83 GROWTH-01/02：档位轮播 + 跟随档位的权益区。
+    tiers: [] as GrowthTierView[],
+    tierIndex: 0,
+    tierBenefits: [] as GrowthBenefitSlotView[],
+    tierBenefitCount: 0,
+    tierBenefitsMinHeight: 238,
+    // MIW-83 GROWTH-02：权益详情弹层（「Lv.N 解锁权益：{description}」，原型参考项）。
+    benefitSheetVisible: false,
+    benefitSheetTitle: '',
+    benefitSheetBody: '',
     tasksState: 'loading' as 'loading' | 'ready' | 'empty' | 'error',
     tasks: [] as GrowthTaskView[],
     tasksMessage: '',
@@ -184,6 +201,7 @@ Page({
         membershipValidityText: '入会审核中，管理后台通过后生效',
         renewWindowOpen: false,
       })
+      this.refreshTierPresentation()
       return
     }
     if (membership.kind !== 'PLAYER') {
@@ -194,6 +212,7 @@ Page({
         membershipValidityText: '有效期一年',
         renewWindowOpen: false,
       })
+      this.refreshTierPresentation()
       return
     }
     this.setData({
@@ -203,6 +222,18 @@ Page({
       membershipValidityText: `有效期至:${formatDottedDate(membership.membershipEndsAt)}`,
       renewWindowOpen: withinRenewalWindow(membership.membershipEndsAt),
     })
+    this.refreshTierPresentation()
+  },
+
+  /**
+   * MIW-83 GROWTH-01：会员态落定后刷新档位锁定旗标（非会员全锁、会员按等级解锁），
+   * 保留用户已滑到的档位；无快照（快照未返回/用例直调）时静默跳过。
+   */
+  refreshTierPresentation() {
+    if (!this.data.snapshot) {
+      return
+    }
+    this.setData(growthPresentation(this.data.snapshot, this.data.isPlayer, this.data.tierIndex))
   },
 
   async onPullDownRefresh() {
@@ -231,7 +262,7 @@ Page({
       this.setData({
         state: 'ready',
         snapshot,
-        ...growthPresentation(snapshot),
+        ...growthPresentation(snapshot, this.data.isPlayer),
         message: '',
       })
     }
@@ -249,7 +280,7 @@ Page({
     this.setData({
       state: 'ready',
       snapshot,
-      ...growthPresentation(snapshot),
+      ...growthPresentation(snapshot, this.data.isPlayer),
     })
   },
 
@@ -259,11 +290,21 @@ Page({
       this.setData({ tasksState: 'loading', tasksMessage: '' })
     }
     try {
-      const page = await mipTasksModule.query.listTasks(undefined, 4, force)
-      if (requestSeq !== this.tasksRequestSeq) {
-        return
+      // MIW-83 GROWTH-04（D5）：取消「前 4 条」上限，游标聚合全量任务，页面自然滚动浏览。
+      const items: UserTaskCard[] = []
+      let cursor: string | undefined
+      for (let page = 0; page < TASK_PAGE_LIMIT; page += 1) {
+        const result = await mipTasksModule.query.listTasks(cursor, TASK_PAGE_SIZE, force)
+        if (requestSeq !== this.tasksRequestSeq) {
+          return
+        }
+        items.push(...result.items)
+        if (!result.nextCursor) {
+          break
+        }
+        cursor = result.nextCursor
       }
-      const tasks = page.items.map(taskView)
+      const tasks = items.map(taskView)
       this.setData({
         tasksState: tasks.length ? 'ready' : 'empty',
         tasks,
@@ -291,6 +332,54 @@ Page({
   /** MIW-27：经验值详情跳转独立明细页（figma 1948:14177），不再原地展开滚动。 */
   openExperienceDetails() {
     void caseNavigateTo({ url: EXPERIENCE_DETAILS_PAGE })
+  },
+
+  /**
+   * MIW-83 GROWTH-01：手指拖动档位条由 swiper 原生跟随（lv 数字随手滑动），
+   * 松手落定后按新档位联动权益区（含面板高度过渡）。
+   */
+  onTierChange(event: { detail: { current?: number } }) {
+    const index = Number(event.detail.current)
+    if (!Number.isInteger(index) || !this.data.snapshot || !this.data.tiers[index]) {
+      return
+    }
+    if (index === this.data.tierIndex) {
+      return
+    }
+    this.setData(growthPresentation(this.data.snapshot, this.data.isPlayer, index))
+  },
+
+  /**
+   * MIW-83 GROWTH-02：权益点按弹详情（原型参考项「Lv.N 解锁权益：{description}」）；
+   * 占位槽与空说明权益不弹。
+   */
+  openBenefitDetail(event: WechatMiniprogram.TouchEvent) {
+    const name = String(event.currentTarget.dataset.name || '')
+    const description = String(event.currentTarget.dataset.description || '')
+    if (!description) {
+      return
+    }
+    const tier = this.data.tiers[this.data.tierIndex]
+    this.setData({
+      benefitSheetVisible: true,
+      benefitSheetTitle: name,
+      benefitSheetBody: `Lv.${tier ? tier.levelNumber : this.data.currentLevelNumber} 解锁权益：${description}`,
+    })
+  },
+
+  handleBenefitSheetVisibility(event: { detail: { visible?: boolean } }) {
+    if (!event.detail.visible) {
+      this.setData({ benefitSheetVisible: false })
+    }
+  },
+
+  closeBenefitSheet() {
+    this.setData({ benefitSheetVisible: false })
+  },
+
+  /** MIW-83 GROWTH-06 D4：会员操作栏「邀请入会」经 open-type="share" 触发的分享卡片。 */
+  onShareAppMessage(): { title: string, path: string } {
+    return { title: MEMBERSHIP_INVITE_SHARE_TITLE, path: MEMBERSHIP_INVITE_SHARE_PATH }
   },
 
   /** J1-06/J4-03：开通与续费共用确认弹层（原会员订单确认页收敛于此）。 */

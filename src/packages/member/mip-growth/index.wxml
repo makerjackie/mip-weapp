@@ -6,11 +6,16 @@
     <view class="growth-hero relative h-[284rpx] overflow-hidden bg-brand px-5 py-6 text-on-brand">
       <image class="growth-hero-art" mode="aspectFit" src="/packages/member/assets/figma/growth/hero-character.png" />
       <view class="growth-hero-curve" />
+      <!-- MIW-83：弧线过渡沿曲线的黄色勾边（figma 3984:8075 Ellipse 30 描边）。 -->
+      <view class="growth-hero-curve-line" aria-hidden="true" />
       <!-- MIW-27：经验值详情改为跳转独立明细页（figma 1948:14177），按钮与进度条同一水平线。 -->
       <view class="growth-experience-link" aria-role="button" aria-label="经验值详情" bind:tap="openExperienceDetails">经验值详情</view>
       <view class="relative z-10 ml-[8rpx] mt-[16rpx]">
-        <view class="text-[96rpx] font-bold leading-[104.2rpx]">Lv.{{currentLevelNumber}}</view>
-        <view class="text-[20rpx] font-semibold leading-[28rpx]">EXP: {{snapshot.account.experienceBalance}}<text wx:if="{{nextLevelThreshold}}"> I {{nextLevelThreshold}}</text></view>
+        <!-- MIW-83 GROWTH-05：会员显示 Lv 大字；非会员该行为留白占位（figma 3984:8075/8182
+             头部仅 XP 行 + 进度条 + 有效期，与会员帧同高对齐）。 -->
+        <view wx:if="{{isPlayer}}" id="growth-level-badge" class="text-[96rpx] font-bold leading-[104.2rpx]">Lv.{{currentLevelNumber}}</view>
+        <view wx:else class="h-[104.2rpx]" aria-hidden="true"></view>
+        <view class="text-[20rpx] font-semibold leading-[28rpx]">XP: {{snapshot.account.experienceBalance}}<text wx:if="{{nextLevelThreshold}}"> I {{nextLevelThreshold}}</text></view>
         <view wx:if="{{nextLevelThreshold}}" class="relative mt-[7.8rpx] h-[12rpx] w-[300rpx] max-w-full rounded-full bg-panel-raised">
           <view class="absolute left-[4rpx] top-[4rpx] h-[4rpx] rounded-full bg-brand" style="width:{{snapshot.levelProgressPercent}}%;max-width:calc(100% - 8rpx)" />
         </view>
@@ -20,40 +25,44 @@
       </view>
     </view>
 
-    <!-- Latest role-flows J1-06 / J4-03: level milestones share a baseline below the curved hero. -->
-    <view wx:if="{{levelScale}}" class="growth-level-scale">
-      <view class="growth-level-point growth-level-point--first">{{levelScale.leftText}}</view>
-      <view class="growth-level-point growth-level-point--middle">
-        <view wx:if="{{levelScale.centerLocked}}" class="growth-level-lock"><mip-icon name="lock-fill" size="{{10}}" color="var(--color-brand)" /></view>
-        <text>{{levelScale.centerText}}</text>
-      </view>
-      <view class="growth-level-point growth-level-point--last">{{levelScale.rightText}}</view>
+    <!-- MIW-83 GROWTH-01：权益差异档位横滑（figma 3984:8403 档位条）——swiper 原生手指跟随，
+         选中档居中放大、邻档贴边缩小、锁定档带黄锁；bindchange 联动下方权益区。 -->
+    <view wx:if="{{tiers.length}}" class="growth-tier-area" aria-label="等级权益档位，可左右滑动切换">
+      <view class="growth-tier-arc" aria-hidden="true" />
+      <swiper class="growth-tier-swiper" current="{{tierIndex}}" previous-margin="224rpx" next-margin="224rpx" bindchange="onTierChange">
+        <swiper-item wx:for="{{tiers}}" wx:key="levelNumber">
+          <view id="growth-tier-label-{{item.levelNumber}}" class="growth-tier-label {{index === tierIndex ? 'growth-tier-label--current' : 'growth-tier-label--side'}}">
+            <view wx:if="{{item.locked}}" class="growth-tier-lock"><mip-icon name="lock-fill" size="{{index === tierIndex ? 12 : 9}}" color="var(--color-brand)" /></view>
+            <text>Lv.{{item.levelNumber}}</text>
+          </view>
+        </swiper-item>
+      </swiper>
     </view>
 
-    <!-- figma 1948_14079: benefits panel (12,199) 351×119 — title 16px semibold at panel
-         (12,12); four 40px gift circles on an 88px pitch at panel y46, labels 12px at y44. -->
-    <view class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-3 pb-3 pt-3">
-      <view class="whitespace-nowrap text-[32rpx] font-semibold leading-[44.8rpx]">可享 {{snapshot.currentLevel.benefits.length}} 项权益</view>
-      <view wx:if="{{snapshot.currentLevel.benefits.length}}" class="mt-[23rpx] grid grid-cols-4 gap-x-2 gap-y-4">
-        <view wx:for="{{snapshot.currentLevel.benefits}}" wx:key="*this" class="min-w-0">
-          <view class="mx-auto flex h-[80rpx] w-[80rpx] items-center justify-center rounded-full bg-brand"><view class="mt-[-2rpx]"><mip-icon name="gift" color="var(--color-on-brand)" /></view></view>
-          <view class="mt-[8rpx] break-words text-center text-[24rpx] font-medium leading-[33.6rpx]">{{item}}</view>
+    <!-- MIW-83 GROWTH-02：权益卡跟随所选档位（figma 3984:8075 面板 12,287 351×119）——
+         标题计数黄色强调；固定 4 列，具名不足 4 槽以「脑暴中...」橄榄圆补位（3984:8403）；
+         点按具名权益弹详情；min-height 随行数 .28s 过渡。 -->
+    <view id="growth-benefits-panel" class="growth-benefits mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-3 pb-3 pt-3" style="min-height:{{tierBenefitsMinHeight}}rpx">
+      <view class="whitespace-nowrap text-[32rpx] font-semibold leading-[44.8rpx]">可享<text id="growth-benefit-count" class="text-[44rpx] font-semibold text-brand">{{tierBenefitCount}}</text>项权益</view>
+      <view class="mt-[23rpx] grid grid-cols-4 gap-x-2 gap-y-4">
+        <view wx:for="{{tierBenefits}}" wx:key="key" id="growth-benefit-slot-{{index}}" class="min-w-0" aria-role="button" aria-label="{{item.pending ? '权益脑暴中' : item.name}}" data-name="{{item.name}}" data-description="{{item.description}}" data-pending="{{item.pending}}" bind:tap="openBenefitDetail">
+          <view class="mx-auto flex h-[80rpx] w-[80rpx] items-center justify-center rounded-full {{item.pending ? 'bg-[#a79401]' : 'bg-brand'}}"><view class="mt-[-2rpx]"><mip-icon name="gift" color="var(--color-on-brand)" /></view></view>
+          <view class="mt-[8rpx] break-words text-center text-[24rpx] font-medium leading-[33.6rpx]">{{item.name}}</view>
         </view>
       </view>
-      <view wx:else class="mt-2 text-[24rpx] leading-[34rpx] text-muted">当前等级暂未配置权益。</view>
     </view>
 
     <view aria-label="正在加载" aria-busy="true" wx:if="{{tasksState === 'loading'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view wx:elif="{{tasksState === 'error'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[24rpx]">成长任务暂时无法加载</view><view class="mt-2 text-[22rpx] text-muted">{{tasksMessage}}</view><view class="mt-3 flex min-h-[88rpx] items-center text-[22rpx] text-brand" aria-role="button" bind:tap="loadTasks">重新加载</view></view>
     <view wx:elif="{{tasksState === 'empty'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5 text-[22rpx] text-muted">暂无可完成的成长任务。</view>
     <view wx:else class="mx-3 mt-[24rpx] flex flex-col gap-[24rpx]">
-      <!-- figma 3296:5808 经验任务卡：任务名 12px + 说明 10px + 「+ EXP N」黄字 + 右侧胶囊。 -->
+      <!-- MIW-83 GROWTH-04（D5）：后台配置的任务全量展示，页面自然滚动；卡内布局不变。 -->
       <view wx:for="{{tasks}}" wx:key="id" class="growth-task-card active:bg-panel-muted" aria-role="button" aria-label="{{item.name}}，奖励 {{item.rewardExperience}} 经验" data-id="{{item.id}}" bind:tap="openTask">
         <view class="min-w-0 flex-1">
           <view class="truncate text-[24rpx] font-medium leading-[33.6rpx]">{{item.name}}</view>
           <view wx:if="{{item.content}}" class="mt-[6rpx] truncate text-[20rpx] leading-[28rpx] text-muted">{{item.content}}</view>
         </view>
-        <view class="growth-task-reward"><text>+ EXP</text><text class="growth-task-reward__amount">{{item.rewardExperience}}</text></view>
+        <view class="growth-task-reward"><text>+ XP</text><text class="growth-task-reward__amount">{{item.rewardExperience}}</text></view>
         <view wx:if="{{item.status === 'AVAILABLE'}}" class="growth-task-action border border-black bg-brand text-on-brand">{{item.actionText}}</view>
         <view wx:elif="{{item.status === 'COMPLETED'}}" class="growth-task-action bg-canvas text-brand">{{item.actionText}}</view>
         <view wx:else class="growth-task-action bg-canvas text-muted">{{item.actionText}}</view>
@@ -63,7 +72,7 @@
     <view wx:if="{{message}}" class="mx-3 mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
   </block>
 
-  <!-- J1-06 开通态：无有效会员时底部仅「立即加入」，弹层确认后直接拉起微信支付（MIW-65）。 -->
+  <!-- J1-06 开通态（D2）：无有效会员时底部仅「立即加入」，弹层确认后直接拉起微信支付（MIW-65）。 -->
   <mip-sticky-actions wx:if="{{membershipState === 'guest'}}">
     <view id="growth-join-actions" slot="actions" class="flex h-[80rpx] w-full items-center px-2">
       <mip-pill-button class="w-full" label="立即加入" withIcon data-source="join" bind:tap="openPurchaseDialog">
@@ -83,15 +92,34 @@
     </view>
   </mip-sticky-actions>
 
-  <!-- J4-03 续费态（figma 2165:17142 / 1948:14079）：到期前 3 个月窗口内展示全宽
-       「立即续费」，经确认弹层直接拉起微信支付（MIW-65）；会员邀请载体已随 MIW-75 下线。 -->
-  <mip-sticky-actions wx:if="{{isPlayer && renewWindowOpen}}">
-    <view id="growth-member-actions" slot="actions" class="flex h-[80rpx] w-full items-center px-2">
-      <mip-pill-button class="w-full" label="立即续费" withIcon data-source="renew" bind:tap="openPurchaseDialog">
+  <!-- MIW-83 GROWTH-06（D3/D4）：会员操作栏回归「邀请入会」——mip-pill-button openType="share"
+       渲染原生转发按钮，内容由 onShareAppMessage 提供；续费窗口内并排「立即续费」为主。 -->
+  <mip-sticky-actions wx:if="{{membershipState === 'player'}}">
+    <view id="growth-member-actions" slot="actions" class="flex h-[80rpx] w-full items-center gap-[16rpx] px-2">
+      <mip-pill-button id="growth-invite-button" class="{{renewWindowOpen ? 'flex-1' : 'w-full'}}" label="邀请入会" withIcon variant="{{renewWindowOpen ? 'secondary' : 'primary'}}" openType="share">
+        <mip-icon slot="icon" name="share-circle" size="{{15}}" color="{{renewWindowOpen ? 'var(--color-brand)' : 'var(--color-on-brand)' }}" />
+      </mip-pill-button>
+      <mip-pill-button wx:if="{{renewWindowOpen}}" id="growth-renew-button" class="flex-1" label="立即续费" withIcon data-source="renew" bind:tap="openPurchaseDialog">
         <t-icon slot="icon" name="card" size="30rpx" color="var(--color-on-brand)" />
       </mip-pill-button>
     </view>
   </mip-sticky-actions>
+
+  <!-- MIW-83 GROWTH-02：权益详情弹层（原型参考项「Lv.N 解锁权益：{description}」）。 -->
+  <t-popup
+    visible="{{benefitSheetVisible}}"
+    placement="bottom"
+    close-on-overlay-click="{{true}}"
+    bind:visible-change="handleBenefitSheetVisibility"
+  >
+    <view id="growth-benefit-sheet" class="box-border w-full max-w-full rounded-t-[16rpx] bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+24rpx)] pt-4 text-ink">
+      <view class="text-[32rpx] font-semibold leading-[44.8rpx]">{{benefitSheetTitle}}</view>
+      <view class="mt-3 whitespace-pre-wrap text-[24rpx] leading-[34rpx] text-muted">{{benefitSheetBody}}</view>
+      <view class="mt-4">
+        <mip-pill-button id="growth-benefit-sheet-confirm" class="w-full" label="知道了" bind:tap="closeBenefitSheet" />
+      </view>
+    </view>
+  </t-popup>
 
   <!-- MIW-65：开通/续费确认弹层（原会员订单确认页 J1-07 收敛于此，无新增路由）。 -->
   <t-popup
