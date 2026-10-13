@@ -1,5 +1,7 @@
 export type UserTaskStatus = 'AVAILABLE' | 'COMPLETED' | 'ENDED' | 'PENDING_REVIEW' | 'NOT_STARTED'
 export type TaskCompletionResult = 'SUCCESS' | 'FAILED' | 'PENDING'
+/** 任务卡点击动作（后台按任务配置；未配置 = 整卡不可点）。 */
+export type UserTaskActionType = 'PAGE_JUMP' | 'SHARE'
 
 export interface UserTaskCard {
   id: string
@@ -9,6 +11,10 @@ export interface UserTaskCard {
   attachmentRequired: boolean
   endsAt: string
   hasTemplate: boolean
+  /** 点击动作类型（后台配置；缺省 = 未配置、整卡不可点）。 */
+  actionType?: UserTaskActionType
+  /** PAGE_JUMP 的目标页路径（存储口径同 runtime-pages.json：不带前导 /、禁 query）。 */
+  actionTarget?: string
   version: number
   status: UserTaskStatus
   submissionStatus?: string

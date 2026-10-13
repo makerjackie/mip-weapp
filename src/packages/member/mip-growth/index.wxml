@@ -54,7 +54,16 @@
           <view wx:if="{{item.content}}" class="mt-[6rpx] truncate text-[20rpx] leading-[28rpx] text-muted">{{item.content}}</view>
         </view>
         <view class="growth-task-reward"><text>+ EXP</text><text class="growth-task-reward__amount">{{item.rewardExperience}}</text></view>
-        <view wx:if="{{item.status === 'AVAILABLE'}}" class="growth-task-action border border-black bg-brand text-on-brand">{{item.actionText}}</view>
+        <!-- MIW-84：SHARE 任务的转发按钮——open-type=share 原生拉起转发面板，catch:tap 阻断整卡 openTask。 -->
+        <button
+          wx:if="{{item.status === 'AVAILABLE' && item.actionType === 'SHARE'}}"
+          class="growth-task-action growth-task-share border border-black bg-brand text-on-brand"
+          open-type="share"
+          aria-role="button"
+          aria-label="{{item.actionText}}"
+          catch:tap="handleTaskShareTap"
+        >{{item.actionText}}</button>
+        <view wx:elif="{{item.status === 'AVAILABLE'}}" class="growth-task-action border border-black bg-brand text-on-brand">{{item.actionText}}</view>
         <view wx:elif="{{item.status === 'COMPLETED'}}" class="growth-task-action bg-canvas text-brand">{{item.actionText}}</view>
         <view wx:else class="growth-task-action bg-canvas text-muted">{{item.actionText}}</view>
       </view>

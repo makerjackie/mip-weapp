@@ -2,7 +2,7 @@ import {
   getCustomNavigationStatusBarHeight,
 } from '@weapp/platform/navigation'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { caseNavigateTo, caseRedirectTo } from '../src/platform/navigation/client'
+import { caseNavigateTo, caseOpenRoute, caseRedirectTo } from '../src/platform/navigation/client'
 import { leaveSecondaryPage } from '../src/platform/navigation/leave'
 
 describe('custom navigation content inset', () => {
@@ -106,6 +106,49 @@ describe('navigation double-tap dedupe', () => {
     caseRedirectTo({ url: '/packages/member/mip-ai/voice/index' })
 
     expect(redirectTo).toHaveBeenCalledTimes(1)
+  })
+})
+
+// MIW-84：任务配置跳转目标页——tab 页走 switchTab，普通页入栈。
+describe('caseOpenRoute splits tab and regular task jump targets', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('switches to the primary tab for tab-bar targets', () => {
+    const switchTab = vi.fn()
+    const navigateTo = vi.fn()
+    vi.stubGlobal('wx', { switchTab, navigateTo })
+
+    caseOpenRoute('/pages/events/index')
+
+    expect(switchTab).toHaveBeenCalledWith({ url: '/pages/events/index' })
+    expect(navigateTo).not.toHaveBeenCalled()
+  })
+
+  it('normalizes relative tab targets before switching', () => {
+    const switchTab = vi.fn()
+    vi.stubGlobal('wx', { switchTab, navigateTo: vi.fn() })
+
+    caseOpenRoute('pages/profile/index')
+
+    expect(switchTab).toHaveBeenCalledWith({ url: '/pages/profile/index' })
+  })
+
+  it('pushes regular member-package targets with navigateTo', async () => {
+    const switchTab = vi.fn()
+    const navigateTo = vi.fn((options: { complete?: () => void }) => {
+      options.complete?.()
+    })
+    vi.stubGlobal('wx', { switchTab, navigateTo })
+
+    await caseOpenRoute('packages/member/mip-events/detail/index')
+
+    expect(navigateTo).toHaveBeenCalledWith(expect.objectContaining({
+      url: '/packages/member/mip-events/detail/index',
+    }))
+    expect(switchTab).not.toHaveBeenCalled()
   })
 })
 

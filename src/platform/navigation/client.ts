@@ -83,6 +83,26 @@ export function caseSwitchPrimary(url: string) {
   return wx.switchTab({ url: caseRoute(url) })
 }
 
+// app.json tabBar 页清单（custom 自绘 tabbar，与 src/app.json 同步维护）。
+// tab 页只能 switchTab，且微信不支持带 query 参数跳转。
+const PRIMARY_TAB_ROUTES = Object.freeze(new Set([
+  '/pages/index/index',
+  '/pages/events/index',
+  '/pages/opportunities/index',
+  '/pages/profile/index',
+]))
+
+// MIW-84：按任务配置的点击动作目标页分流——tab 页走主 Tab，普通页入栈。
+// 目标路径来自后台白名单（config/runtime-pages.json），不带 query。
+export function caseOpenRoute(url: string): Promise<void> {
+  const route = caseRoute(url)
+  if (PRIMARY_TAB_ROUTES.has(route)) {
+    caseSwitchPrimary(route)
+    return Promise.resolve()
+  }
+  return caseNavigateTo({ url })
+}
+
 export function syncCaseNavigation(page: TabPageHandle, route: string) {
   syncCustomTabBar(page, route)
 }

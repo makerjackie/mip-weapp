@@ -17,6 +17,7 @@ const tasks = vi.hoisted(() => ({
 const navigation = vi.hoisted(() => ({
   caseNavigateTo: vi.fn(),
   caseRedirectTo: vi.fn(),
+  caseOpenRoute: vi.fn(),
 }))
 
 vi.mock('../src/modules/mip-growth/client', () => ({ mipGrowthModule: growth }))
@@ -31,7 +32,7 @@ vi.mock('../src/modules/mip-tasks', () => ({
   mipTasksModule: { query: { listTasks: tasks.listTasks }, mutation: { completeTask: tasks.completeTask } },
   rewardExperienceStarIndexes: vi.fn(() => []),
 }))
-vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: navigation.caseNavigateTo, caseRedirectTo: navigation.caseRedirectTo }))
+vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: navigation.caseNavigateTo, caseRedirectTo: navigation.caseRedirectTo, caseOpenRoute: navigation.caseOpenRoute }))
 
 interface PageDefinition {
   data: Record<string, unknown>
@@ -145,6 +146,48 @@ describe('growth and task return flow', () => {
     older.resolve({ items: [{ id: 'old', status: 'AVAILABLE', name: '旧任务' }] })
     await first
     expect((instance.data.tasks as Array<{ id: string }>).map(item => item.id)).toEqual(['new'])
+  })
+
+  // MIW-84：等级任务点击动作由后台配置驱动，不再进入任务详情页。
+  it('jumps PAGE_JUMP tasks to their configured target instead of the detail page', () => {
+    const instance = page(growthDefinition)
+    instance.data.tasks = [
+      { id: 'task-jump', status: 'AVAILABLE', actionType: 'PAGE_JUMP', actionTarget: 'pages/events/index', name: '出席活动' },
+    ]
+    callPage(instance, 'openTask', { currentTarget: { dataset: { id: 'task-jump' } } })
+    expect(navigation.caseOpenRoute).toHaveBeenCalledWith('/pages/events/index')
+    expect(navigation.caseNavigateTo).not.toHaveBeenCalled()
+  })
+
+  it('does not navigate for SHARE tasks (forwarding is raised by the card share button)', () => {
+    const instance = page(growthDefinition)
+    instance.data.tasks = [
+      { id: 'task-share', status: 'AVAILABLE', actionType: 'SHARE', name: '邀请入会' },
+    ]
+    callPage(instance, 'openTask', { currentTarget: { dataset: { id: 'task-share' } } })
+    expect(navigation.caseOpenRoute).not.toHaveBeenCalled()
+    expect(navigation.caseNavigateTo).not.toHaveBeenCalled()
+  })
+
+  it('keeps unconfigured and finished task cards non-clickable', () => {
+    const instance = page(growthDefinition)
+    instance.data.tasks = [
+      { id: 'task-plain', status: 'AVAILABLE', name: '未配置动作' },
+      { id: 'task-done', status: 'COMPLETED', actionType: 'PAGE_JUMP', actionTarget: 'pages/events/index', name: '已完成' },
+    ]
+    callPage(instance, 'openTask', { currentTarget: { dataset: { id: 'task-plain' } } })
+    callPage(instance, 'openTask', { currentTarget: { dataset: { id: 'task-done' } } })
+    expect(navigation.caseOpenRoute).not.toHaveBeenCalled()
+  })
+
+  it('returns the fixed membership invite share payload for SHARE tasks', () => {
+    const instance = page(growthDefinition)
+    const share = callPage(instance, 'onShareAppMessage') as { title: string, path: string }
+    expect(share.title).toContain('邀请')
+    expect(share.path).toBe('/pages/index/index')
+    const template = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxml'), 'utf8')
+    expect(template).toContain('open-type="share"')
+    expect(template).toContain('item.actionType === \'SHARE\'')
   })
 
   it('does not present a purchase action when membership status is unknown', async () => {

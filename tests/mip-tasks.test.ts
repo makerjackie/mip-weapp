@@ -154,6 +154,31 @@ describe('MIP tasks public client', () => {
     await expect(gateway.getTask(task.id)).resolves.toMatchObject({ status: 'ENDED', periodEndAt: '2026-09-21T02:30:00.000Z' })
   })
 
+  // MIW-84：任务点击动作随卡片下发（PAGE_JUMP 带目标页；SHARE 不带；未配置两字段皆缺省）。
+  it('renders configured task click actions end to end', async () => {
+    const row = {
+      id: task.id,
+      name: task.name,
+      content: task.content,
+      reward_experience: 20,
+      attachment_required: 1,
+      version: 2,
+      ends_at: '2026-10-20T02:30:00.000Z',
+    }
+    let response = userTaskDto({ ...row, action_type: 'PAGE_JUMP', action_target: 'pages/events/index' }, true)
+    const gateway = createMipTasksGateway({ invoke: async request => ({ ok: true, data: request.action === 'listTasks' ? { items: [response] } : response }) })
+    await expect(gateway.listTasks()).resolves.toMatchObject({ items: [{
+      actionType: 'PAGE_JUMP',
+      actionTarget: 'pages/events/index',
+    }] })
+    response = userTaskDto({ ...row, action_type: 'SHARE' }, true)
+    await expect(gateway.getTask(task.id)).resolves.toMatchObject({ actionType: 'SHARE' })
+    expect(await gateway.getTask(task.id)).not.toHaveProperty('actionTarget')
+    response = userTaskDto({ ...row }, true)
+    await expect(gateway.getTask(task.id)).resolves.toMatchObject({ status: 'AVAILABLE' })
+    expect(await gateway.getTask(task.id)).not.toHaveProperty('actionType')
+  })
+
   it('preserves business errors and rejects malformed service data', async () => {
     const conflictGateway = createMipTasksGateway({
       async invoke() {
@@ -173,6 +198,16 @@ describe('MIP tasks public client', () => {
         return { ok: true, data: { ...task, hasTemplate: true } }
       },
     })
+    const actionTargetWithoutType = createMipTasksGateway({
+      async invoke() {
+        return { ok: true, data: { ...task, actionTarget: 'pages/events/index' } }
+      },
+    })
+    const pageJumpWithoutTarget = createMipTasksGateway({
+      async invoke() {
+        return { ok: true, data: { ...task, actionType: 'PAGE_JUMP' } }
+      },
+    })
 
     await expect(conflictGateway.completeTask(task.id)).rejects.toMatchObject({
       name: 'MipTasksError',
@@ -184,6 +219,14 @@ describe('MIP tasks public client', () => {
       retryable: true,
     })
     await expect(malformedTask.getTask(task.id)).rejects.toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+      retryable: true,
+    })
+    await expect(actionTargetWithoutType.getTask(task.id)).rejects.toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+      retryable: true,
+    })
+    await expect(pageJumpWithoutTarget.getTask(task.id)).rejects.toMatchObject({
       code: 'SERVICE_UNAVAILABLE',
       retryable: true,
     })

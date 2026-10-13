@@ -29,6 +29,7 @@ const MUTATION_INPUT_KEYS = Object.freeze({
 const TASK_INPUT_KEYS = Object.freeze(new Set([
   'name', 'content', 'rewardExperience', 'attachmentRequired', 'assignmentMode',
   'endsAt', 'templateAssetId', 'eligibleLevelIds', 'starLevel', 'purpose', 'completionCriteria', 'periodStartAt', 'periodEndAt', 'weeklyDeliverAt', 'assignedOwnerId', 'applicableServers', 'rewardConfig',
+  'actionType', 'actionTarget',
 ]))
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 const SIGNED_KEYS = new Set([
