@@ -133,13 +133,8 @@
         <view wx:if="{{growthState === 'loading'}}" class="profile-level-loading" />
         <view wx:else class="profile-level-experience">成长数据暂时不可用</view>
       </view>
-      <view wx:else class="profile-membership-card" bind:tap="openMembership">
-        <view>
-          <view class="profile-membership-label">{{membershipLabel}}</view>
-          <view class="profile-membership-description">{{membershipDescription}}</view>
-        </view>
-        <view class="profile-membership-action">查看会员</view>
-      </view>
+      <!-- MIW-81：嘉宾等非玩家同用 mip-level-banner——等级位「立即解锁」、经验 0/100，整卡点击进会员页。 -->
+      <mip-level-banner wx:else class="profile-level-banner" level="立即解锁" current="{{0}}" target="{{100}}" aria-role="button" aria-label="查看会员" bind:tap="openMembership" />
     </view>
 
     <mip-stat-header

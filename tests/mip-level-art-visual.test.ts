@@ -28,6 +28,18 @@ describe('MIP level artwork presentation', () => {
     expect(bannerStyles).toContain('.mip-level-banner__base {')
   })
 
+  it('renders the unlock-now banner for non-player members instead of the copy card (MIW-81)', () => {
+    const markup = read('src/pages/profile/index.wxml')
+
+    // 嘉宾变体复用同一组件：等级位「立即解锁」、经验 0/100，整卡点击进会员页（openMembership）。
+    expect(markup).toContain('wx:else class="profile-level-banner"')
+    expect(markup).toContain('level="立即解锁"')
+    expect(markup).toContain('current="{{0}}" target="{{100}}"')
+    expect(markup).toContain('bind:tap="openMembership"')
+    expect(markup).not.toContain('profile-membership-card')
+    expect(markup).not.toContain('当前没有有效会员权益')
+  })
+
   it('keeps the growth illustration proportional and the experience control accessible', () => {
     const markup = read('src/packages/member/mip-growth/index.wxml')
 
