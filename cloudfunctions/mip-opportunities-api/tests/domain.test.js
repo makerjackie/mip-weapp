@@ -68,12 +68,46 @@ test('opportunity descriptions are optional without weakening other required fie
   }
   assert.equal(normalizeOpportunity({ ...draft, description: '说'.repeat(6000) }).description.length, 6000)
   assert.throws(() => normalizeOpportunity({ ...draft, description: '说'.repeat(6001) }), /VALIDATION_FAILED/)
-  for (const field of ['title', 'valueSummary', 'targetSummary']) {
+  for (const field of ['title', 'targetSummary']) {
     assert.throws(() => normalizeOpportunity({ ...draft, description: '', [field]: ' ' }), /VALIDATION_FAILED/)
   }
   // MIW-50（2026-10-07 客户确认）：小程序表单不再提供「合作角色」编辑项，允许空角色；
   // 非法 role key 仍拒绝。
   assert.deepEqual(normalizeOpportunity({ ...draft, description: '', roleKeys: [] }).roleKeys, [])
+})
+
+test('opportunity value summary is optional and commercial terms valueMode is enforced', () => {
+  const draft = {
+    title: '项目', targetSummary: '寻找合作方',
+    scopeType: 'PLATFORM', roleKeys: ['strategist'], publish: true,
+  }
+  // MIW-89：价值金额选填，留空以 '' 落库（列 NOT NULL）。
+  for (const valueSummary of ['', '  ', undefined]) {
+    assert.equal(normalizeOpportunity({ ...draft, valueSummary }).valueSummary, '')
+  }
+  assert.equal(normalizeOpportunity({ ...draft, valueSummary: '面谈' }).valueSummary, '面谈')
+  // 千单位单值（SINGLE）必须 min=max；面谈（NEGOTIATION）金额必空；非法模式拒绝。
+  const terms = { currency: 'CNY', amountUnit: 'CNY_CENTS', locations: [] }
+  assert.equal(normalizeOpportunity({
+    ...draft, valueSummary: '',
+    commercialTerms: { ...terms, valueMode: 'SINGLE', minAmountCents: 500000, maxAmountCents: 500000 },
+  }).commercialTerms.valueMode, 'SINGLE')
+  assert.throws(() => normalizeOpportunity({
+    ...draft, commercialTerms: { ...terms, valueMode: 'SINGLE', minAmountCents: 500000, maxAmountCents: 600000 },
+  }), /VALIDATION_FAILED/)
+  assert.equal(normalizeOpportunity({
+    ...draft, commercialTerms: { ...terms, valueMode: 'NEGOTIATION' },
+  }).commercialTerms.minAmountCents, null)
+  assert.throws(() => normalizeOpportunity({
+    ...draft, commercialTerms: { ...terms, valueMode: 'NEGOTIATION', minAmountCents: 100 },
+  }), /VALIDATION_FAILED/)
+  assert.throws(() => normalizeOpportunity({
+    ...draft, commercialTerms: { ...terms, valueMode: 'QIAN', minAmountCents: 100, maxAmountCents: 100 },
+  }), /VALIDATION_FAILED/)
+  // 未声明 valueMode 时保持既有区间语义。
+  assert.equal(normalizeOpportunity({
+    ...draft, commercialTerms: { ...terms, minAmountCents: 100, maxAmountCents: 900 },
+  }).commercialTerms.valueMode, 'RANGE')
 })
 
 test('opportunity catalog exposes non-selectable industry parents only as groups', async () => {

@@ -57,6 +57,31 @@ for (const status of ['PUBLISHED', 'UNPUBLISHED', 'ENDED']) {
   })
 }
 
+test('create flow persists an empty value summary and keeps NEGOTIATION terms ACTIVE', async () => {
+  const f = fixture()
+  const result = await saveOpportunity(f.db, { async assertSafe() {} }, caller, {
+    draft: {
+      title: '资源合作', valueSummary: '', targetSummary: '寻找伙伴',
+      roleKeys: ['strategist'], typeKeys: ['COMPANY'], publish: true,
+      commercialTerms: {
+        currency: 'CNY', amountUnit: 'CNY_CENTS', valueMode: 'NEGOTIATION',
+        minAmountCents: null, maxAmountCents: null, locations: [],
+      },
+    },
+    idempotencyKey: 'journey-create-negotiation',
+  })
+  assert.equal(result.status, 'PUBLISHED')
+  assert.equal(result.version, 1)
+  const insert = f.calls.find(call => call.sql.includes('INSERT INTO mip_opportunities'))
+  assert.ok(insert, 'expected opportunity insert')
+  // MIW-89：价值金额选填，留空以 '' 落库（列 NOT NULL）。
+  assert.ok(insert.params.includes(''), 'expected empty value_summary param')
+  const terms = f.calls.find(call => call.sql.includes('INSERT INTO mip_opportunity_commercial_terms'))
+  assert.ok(terms, 'expected commercial terms upsert')
+  assert.ok(terms.params.includes('NEGOTIATION'))
+  assert.ok(terms.sql.includes("'ACTIVE'"))
+})
+
 test('non-empty detail projects saved region and the exact three opportunity types', async () => {
   const f = fixture()
   const result = await getOpportunity(f.db, caller, id)

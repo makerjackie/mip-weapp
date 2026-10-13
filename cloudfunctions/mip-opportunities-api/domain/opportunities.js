@@ -115,7 +115,8 @@ function normalizeDraft(value = {}) {
     id: value.id && uuid(value.id) ? value.id : null,
     expectedVersion: value.expectedVersion === undefined ? null : Number(value.expectedVersion),
     title: stringValue(value.title, 120, 'VALIDATION_FAILED'),
-    valueSummary: stringValue(value.valueSummary, 240, 'VALIDATION_FAILED'),
+    // MIW-89：价值金额转选填（面谈/千单位双模式），留空以 '' 落库（列 NOT NULL）。
+    valueSummary: stringValue(value.valueSummary, 240, 'VALIDATION_FAILED', false),
     targetSummary: stringValue(value.targetSummary, 500, 'VALIDATION_FAILED'),
     description: stringValue(value.description, 6000, 'VALIDATION_FAILED', false),
     regionText: stringValue(value.regionText, 60, 'VALIDATION_FAILED', false),
