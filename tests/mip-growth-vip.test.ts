@@ -20,7 +20,9 @@ describe('MIP growth player actions', () => {
 
     expect(script).toContain('mipCommerceModule.getMembershipBenefits()')
     expect(script).toContain('membership.membershipEndsAt')
-    expect(script).toContain('mipTasksModule.query.listTasks(undefined, 4, force)')
+    // MIW-83 D5：任务全量展示——游标聚合全部分页（页大小 20，防御上限 10 页）。
+    expect(script).toContain('mipTasksModule.query.listTasks(cursor, TASK_PAGE_SIZE, force)')
+    expect(script).toContain('const TASK_PAGE_LIMIT = 10')
     // MIW-65：会员方案页/订单确认页下线，开通与续费共用本页确认弹层后直接拉起支付。
     expect(script).toMatch(/openPurchaseDialog\(event[\s\S]{0,200}purchaseDialogVisible: true/)
     expect(script).toMatch(/confirmPurchase\(\)[\s\S]{0,900}performPurchase\(planId\)/)
@@ -36,14 +38,20 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('《会员服务协议》')
     expect(template).toContain('立即续费')
     expect(template).toContain('立即加入')
-    // MIW-75：会员邀请载体（分享/复制文案/海报）整体下线；玩家操作栏仅剩续费——
-    // 到期前 3 个月窗口内展示全宽「立即续费」，窗口外不放任何常驻操作。
+    // MIW-83 D4：会员操作栏回归轻量「邀请入会」——原生转发按钮 + onShareAppMessage；
+    // 完整邀请载体（海报/复制文案）仍不在本页。
+    expect(template).toContain('邀请入会')
     expect(template).not.toContain('邀请加入')
+    expect(template).toContain('openType="share"')
     expect(template).not.toContain('open-type="share"')
-    expect(template).not.toContain('openType="share"')
+    expect(script).toMatch(/onShareAppMessage\(\)[\s\S]{0,200}MEMBERSHIP_INVITE_SHARE_TITLE/)
     expect(template).not.toContain('生成邀请海报')
     expect(template).not.toContain('复制邀请文案')
-    expect(template).toContain('wx:if="{{isPlayer && renewWindowOpen}}"')
+    expect(template).toContain('wx:if="{{membershipState === \'player\'}}"')
+    expect(template).toContain('id="growth-invite-button"')
+    // 续费窗口内才是双按钮组合：邀请入会（次）+ 立即续费（主）。
+    expect(template).toContain('id="growth-renew-button"')
+    expect(template).toContain('wx:if="{{renewWindowOpen}}"')
     expect(template).toContain('label="立即续费"')
     expect(template).toContain('{{membershipValidityText}}')
     expect(template).toContain('wx:for="{{tasks}}"')
@@ -94,12 +102,13 @@ describe('MIP growth player actions', () => {
       'utf8',
     )
 
-    // figma 2165:17142：「立即续费」仅到期前 3 个月展示（到期时间为服务端会员事实）。
+    // figma 2165:17142：「立即续费」仅到期前 3 个月展示（到期时间为服务端会员事实）；
+    // MIW-83 双按钮组合中同样以 renewWindowOpen 为闸。
     expect(script).toContain('import { withinRenewalWindow } from \'./renewal-window\'')
     expect(script).toContain('renewWindowOpen: withinRenewalWindow(membership.membershipEndsAt)')
     expect(script).toContain('\'有效期一年\'')
     expect(script).toMatch(/有效期至:\$\{formatDottedDate\(membership\.membershipEndsAt\)\}/)
-    expect(template).toContain('wx:if="{{isPlayer && renewWindowOpen}}"')
+    expect(template).toContain('wx:if="{{renewWindowOpen}}"')
     // 页面本体不写死金额（终审 C7：金额由服务端方案快照经确认弹层展示）。
     expect(template).not.toContain('6600')
     expect(template).not.toContain('¥')
@@ -143,13 +152,15 @@ describe('MIP growth player actions', () => {
       'utf8',
     )
 
-    expect(pageConfig).toContain('"navigationBarTitleText": "玩家等级"')
+    expect(pageConfig).toContain('"navigationBarTitleText": "玩家会籍"')
     expect(pageConfig).toContain('"navigationBarBackgroundColor": "#FCDF03"')
     expect(pageConfig).toContain('"navigationBarTextStyle": "black"')
     expect(pageConfig).toContain('"backgroundColor": "#FCDF03"')
-    expect(template).toContain('EXP: {{snapshot.account.experienceBalance}}')
+    expect(template).toContain('XP: {{snapshot.account.experienceBalance}}')
     expect(template).toContain('{{nextLevelThreshold}}')
-    expect(template).toContain('可享 {{snapshot.currentLevel.benefits.length}} 项权益')
+    // MIW-83 GROWTH-02：权益计数跟随所选档位，黄色数字强调（figma 3984:8403 可享N项权益）。
+    expect(template).toContain('可享<text id="growth-benefit-count"')
+    expect(template).toContain('{{tierBenefitCount}}')
     expect(template).not.toContain('requestPayment')
   })
 

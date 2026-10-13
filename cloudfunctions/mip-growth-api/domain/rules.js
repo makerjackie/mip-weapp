@@ -121,13 +121,28 @@ function supportedMetric(metric) {
   return metric === 'EXPERIENCE' || metric === 'CONTRIBUTION' || metric === 'COIN'
 }
 
+// MIW-83：权益统一为 { name, description? } 对象；legacy 内联字符串与关联表对象双态归一。
+function benefitsDto(value) {
+  return jsonArray(value)
+    .map((entry) => {
+      if (typeof entry === 'string' && entry) return { name: entry }
+      if (entry && typeof entry === 'object' && typeof entry.name === 'string' && entry.name) {
+        return typeof entry.description === 'string' && entry.description
+          ? { name: entry.name, description: entry.description }
+          : { name: entry.name }
+      }
+      return null
+    })
+    .filter(Boolean)
+}
+
 function levelDto(row) {
   return {
     id: row.id,
     levelKey: row.level_key,
     name: row.name,
     minimumExperience: Number(row.minimum_experience),
-    benefits: jsonArray(row.benefits_json),
+    benefits: benefitsDto(row.benefits_json),
     status: row.status,
   }
 }
@@ -146,6 +161,7 @@ function jsonArray(value) {
 module.exports = {
   accountDto,
   balanceField,
+  benefitsDto,
   levelDto,
   levelSnapshot,
   projectAward,

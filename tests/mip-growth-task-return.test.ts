@@ -118,7 +118,8 @@ describe('growth and task return flow', () => {
     callPage(instance, 'onShow')
     await vi.waitFor(() => expect((instance.data.snapshot as ReturnType<typeof snapshot>).account.experienceBalance).toBe(20))
     expect(growth.getSnapshot).toHaveBeenCalledWith({ force: true })
-    expect(tasks.listTasks).toHaveBeenCalledWith(undefined, 4, true)
+    // MIW-83 D5：任务全量展示——首页 20 条起步，后续页按 nextCursor 游标聚合。
+    expect(tasks.listTasks).toHaveBeenCalledWith(undefined, 20, true)
   })
 
   it('keeps the newest growth response when an older refresh completes later', async () => {

@@ -4,12 +4,18 @@ export type GrowthLevelId = Brand<string, 'GrowthLevelId'>
 export type GrowthRuleId = Brand<string, 'GrowthRuleId'>
 export type GrowthMetric = 'EXPERIENCE' | 'CONTRIBUTION' | 'COIN'
 
+/** MIW-83：权益对象化，description 供权益详情弹层展示；空说明由服务端省略。 */
+export interface GrowthLevelBenefit {
+  name: string
+  description?: string
+}
+
 export interface GrowthLevel {
   id: GrowthLevelId
   levelKey: string
   name: string
   minimumExperience: number
-  benefits: string[]
+  benefits: GrowthLevelBenefit[]
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
 }
 
