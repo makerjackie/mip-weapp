@@ -163,14 +163,28 @@ describe('MIP cooperation discovery experience', () => {
     { items: [{ ...talent(), userId: '40000000-0000-4000-8000-000000000002' }] },
     { items: [talent({ talentKey: '40000000-0000-4000-8000-000000000002' })] },
     { items: [talent({ profileRef: 'public-user-id' })] },
-    { items: [talent({ cards: [] })] },
     { items: [talent({ cards: [{ ...talent().cards[0], roleKey: 'owner' }] })] },
     { items: [talent({ cards: [{ ...talent().cards[0], abilityScores: { unknown: 5 } }] })] },
+    { items: [talent({ cards: [{ ...talent().cards[0], id: '30000000-0000-4000-8000-000000000002' }, talent().cards[0]] })] },
     { items: [talent(), talent()] },
     { items: [talent(), talent({ talentKey: `mctk1.${'D'.repeat(43)}` })] },
     { items: [talent()], nextCursor: 'legacy-cursor' },
   ])('rejects a malformed talent page without returning partial items', (value) => {
     expect(() => parseCooperationTalentPage(value)).toThrow('人才服务返回了无效响应')
+  })
+
+  // MIW-80 回归：MIW-78 名单册以用户锚定，无发布卡的 ACTIVE 用户 cards 为空数组。
+  // 客户端此前仍要求 cards.length >= 1，首页含任一无卡用户即整页解析失败（机会-人才合作无法加载）。
+  it('accepts active users without published cards alongside carded talents', () => {
+    const page = parseCooperationTalentPage({
+      items: [
+        talent({ cards: [] }),
+        talent({ talentKey: `mctk1.${'D'.repeat(43)}`, profileRef: secondProfileRef }),
+      ],
+    })
+    expect(page.items).toHaveLength(2)
+    expect(page.items[0].cards).toEqual([])
+    expect(page.items[1].cards).toHaveLength(1)
   })
 
   it('deduplicates a talent repeated by a later page and rejects profile collisions', () => {

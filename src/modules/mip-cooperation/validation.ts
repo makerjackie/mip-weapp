@@ -362,10 +362,11 @@ function responseTalent(value: unknown): CooperationTalentSummary {
   )
   const talentKey = responseText(source.talentKey, 64, true)
   const profileRef = responseText(source.profileRef, 200, true)
+  // MIW-80：名单册（MIW-78 起）以用户锚定，无发布卡的 ACTIVE 用户 cards 为空数组；
+  // 卡片 roleKey 唯一（共 6 角色）即单用户上限 6 张。
   if (!/^mctk1\.[\w-]{43}$/.test(talentKey)
     || !/^p1\.[\w-]{16}\.[\w-]{48}\.[\w-]{22}$/.test(profileRef)
     || !Array.isArray(source.cards)
-    || source.cards.length < 1
     || source.cards.length > 6) {
     return invalidTalentResponse()
   }
