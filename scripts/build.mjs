@@ -6,6 +6,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { getProject, readJson } from './lib/project.mjs'
+import { pruneUnreachableNpmFiles } from './lib/prune-unreachable-npm.mjs'
 import { normalizeSubpackageNpmComponentReferences } from './lib/subpackage-npm-references.mjs'
 
 const example = getProject()
@@ -67,6 +68,10 @@ if (result.status !== 0) {
 
 const compiledAppJson = readJson(path.join(stagingDir, 'app.json'))
 normalizeSubpackageNpmComponentReferences(stagingDir, compiledAppJson)
+// 上传源大小门是 2048KB，全量 vendor 树（~1.7MB）必然超限；按可达性裁掉未用组件。
+// 嵌套依赖树整棵保留（裸 require 探不到，删了会复发 MIW-79 的 TDesign 内联渲染）。
+const pruneSummary = pruneUnreachableNpmFiles(stagingDir)
+console.log(`[build] pruned ${pruneSummary.removedFiles.length} unreachable npm files, saved ${(pruneSummary.bytesSaved / 1024).toFixed(0)}KB`)
 fs.rmSync(stagingProjectConfigPath, { force: true })
 const stagedNpm = path.join(stagingDir, 'miniprogram_npm')
 const currentNpm = path.join(outputDir, 'miniprogram_npm')
