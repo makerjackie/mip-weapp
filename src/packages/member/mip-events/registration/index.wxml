@@ -7,11 +7,6 @@
       <view class="mx-auto flex h-[88rpx] w-[88rpx] items-center justify-center rounded-full bg-brand-soft"><mip-icon name="check" size="{{24}}" color="var(--color-brand)" /></view>
       <view class="mt-5 text-[32rpx] font-bold">{{resultTitle}}</view>
       <view class="mt-3 text-[24rpx] leading-6 text-muted">{{resultDescription}}</view>
-      <view wx:if="{{event.invitationAttribution}}" class="mt-5 flex min-h-[96rpx] items-center gap-3 rounded-[16rpx] bg-brand-soft px-4 text-left">
-        <image wx:if="{{event.invitationAttribution.avatarUrl}}" class="h-[64rpx] w-[64rpx] rounded-full" mode="aspectFill" src="{{event.invitationAttribution.avatarUrl}}" />
-        <view wx:else class="flex h-[64rpx] w-[64rpx] items-center justify-center rounded-full bg-panel"><image class="h-[46rpx] w-[46rpx]" mode="aspectFit" src="/assets/brand/mip-logo-yellow.png" /></view>
-        <view><view class="text-[20rpx] text-muted">邀请来源</view><view class="mt-1 text-[24rpx] font-semibold">{{event.invitationAttribution.displayName}}</view></view>
-      </view>
       <view wx:if="{{canContinueCheckIn}}" class="mt-6"><t-button block size="large" theme="primary" bind:tap="continueCheckIn">继续签到</t-button></view>
       <view wx:elif="{{resumeCheckIn && orderId}}" class="mt-6"><t-button block size="large" theme="primary" loading="{{checkingRegistration}}" bind:tap="retryRegistration">重新核对报名</t-button></view>
       <view wx:if="{{orderId}}" class="mt-3"><t-button block variant="{{canContinueCheckIn ? 'outline' : 'base'}}" size="large" theme="{{canContinueCheckIn ? 'default' : 'primary'}}" bind:tap="openOrder">查看订单详情</t-button></view>

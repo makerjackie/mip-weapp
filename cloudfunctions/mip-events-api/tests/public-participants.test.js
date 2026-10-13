@@ -136,6 +136,43 @@ test('public participant list filters server-side and returns no private registr
   assert.doesNotMatch(serialized, /answers|ticket|phone|openid/i)
 })
 
+// MIW-85 INVITER-02：玩家（ACTIVE 会员）参与人卡不下发邀请人——曾有历史归档也不显示。
+// stub 模拟门控后真实库回空，同时锁归档 SQL 的门控/tie-break 形状防回退。
+test('player participants carry no inviter annotation even with past invitation archives', async () => {
+  let inviterSql = ''
+  const database = {
+    async one() {
+      return { id: '20000000-0000-4000-8000-000000000001' }
+    },
+    async query(sql) {
+      if (sql.includes('GROUP BY is_player')) return [{ is_player: 0, total: 1 }]
+      if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_growth_levels') || sql.includes('mip_user_badge_equipment')) return []
+      if (sql.includes('mip_event_invitation_attributions')) {
+        inviterSql = sql
+        return []
+      }
+      return [{
+        user_id: userId,
+        nickname: '玩家参与人',
+        visibility_json: '{}',
+        is_player: 1,
+        heart_relation: null,
+      }]
+    },
+  }
+  const result = await listPublicParticipants(database, {
+    appId,
+    userId: viewerUserId,
+    eventId: '20000000-0000-4000-8000-000000000001',
+    profileRefSecret: pepper,
+  })
+  assert.match(inviterSql, /NOT EXISTS \(\s*SELECT 1 FROM mip_membership_entitlements membership/)
+  assert.match(inviterSql, /membership\.status = 'ACTIVE'\s+AND membership\.starts_at <= UTC_TIMESTAMP\(3\)\s+AND membership\.ends_at > UTC_TIMESTAMP\(3\)/)
+  assert.match(inviterSql, /ORDER BY attribution\.captured_at DESC, attribution\.registration_id DESC/)
+  assert.equal(result.items.length, 1)
+  assert.equal('inviter' in result.items[0], false)
+})
+
 test('anonymous public participant list keeps the original public range', async () => {
   let participantSql = ''
   const database = {

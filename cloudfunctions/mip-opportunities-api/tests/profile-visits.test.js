@@ -200,6 +200,40 @@ describe('profile visits', () => {
     assert.equal(noArchive.items[0].inviter, undefined)
   })
 
+  // MIW-85：玩家（ACTIVE 会员）访客卡不下发邀请人（INVITER-02）——门控压在归档 SQL 上，
+  // stub 模拟门控后真实库回空并锁 SQL 形状防回退；到期后归档回行即恢复显示（同上方用例）。
+  it('sends the player gate and deterministic tie-break in the visitor inviter query', async () => {
+    const visitRow = {
+      visit_id: visitId,
+      visitor_id: visitorId,
+      last_visited_at: '2026-08-24T03:00:00.000Z',
+      has_unread: 1,
+      visitor_nickname: '访客甲',
+      visitor_headline: '公开介绍',
+      visibility_json: '{}',
+      is_player: 1,
+    }
+    const inviterSqls = []
+    const database = {
+      async query(sql, params) {
+        if (sql.includes('FROM mip_profiles profile') || sql.includes('FROM mip_user_badge_equipment') || sql.includes('FROM mip_growth_levels')) return []
+        if (sql.includes('FROM mip_event_invitation_attributions')) {
+          inviterSqls.push(sql)
+          // 归档查询按当前页访客过滤（appId + 页内 visitor_id），门控不引入新参数。
+          assert.deepEqual(params, [appId, visitorId, appId, visitorId])
+          return []
+        }
+        return [visitRow]
+      },
+      async one(sql) { return { count: sql.includes('visit.read_at IS NULL') ? 1 : 7 } },
+    }
+    const result = await listProfileVisitors(database, owner, { limit: 20 })
+    assert.equal(result.items[0].inviter, undefined)
+    assert.match(inviterSqls[0], /NOT EXISTS \(\s*SELECT 1 FROM mip_membership_entitlements membership/)
+    assert.match(inviterSqls[0], /membership\.status = 'ACTIVE'\s+AND membership\.starts_at <= UTC_TIMESTAMP\(3\)\s+AND membership\.ends_at > UTC_TIMESTAMP\(3\)/)
+    assert.match(inviterSqls[0], /ORDER BY attribution\.captured_at DESC, attribution\.registration_id DESC/)
+  })
+
   it('merges repeated visits by the same user onto one ordered card with the aggregated count', async () => {
     // MIW-74：SQL 层按人聚合后每人只回一行（最近一次事实 + 次数）；
     // 这里验证 DTO 直接透传聚合口径，不再按次摊平。

@@ -68,6 +68,10 @@ function publicHeartInviter(row) {
 }
 
 // 批量取用户的最近邀请归档（每人取 captured_at 最新一条），供人才列表合并。
+// MIW-85：玩家（ACTIVE 会员）一律不下发邀请人（INVITER-02，含 PLATFORM 标注）——门控压在
+// 「每人最新一条」子查询上，与本域 profile-influence.js 的 activeMembershipSql 同表达式
+// （读时判定，会员到期/退款即恢复嘉宾口径）；同毫秒并列归档按 registration_id DESC
+// 确定性取胜者。与 mip-events-api 同名实现同口径，两边同步维护（勿单边改）。
 async function loadHeartInviters(database, appId, userIds) {
   if (!userIds.length) return new Map()
   const rows = await database.query(
@@ -77,10 +81,17 @@ async function loadHeartInviters(database, appId, userIds) {
             inviter_avatar.cloud_file_id AS inviter_avatar_file_id
      FROM mip_event_invitation_attributions attribution
      INNER JOIN (
-       SELECT guest_user_id, MAX(captured_at) AS captured_at
-       FROM mip_event_invitation_attributions
-       WHERE app_id = ? AND guest_user_id IN (${userIds.map(() => '?').join(', ')})
-       GROUP BY guest_user_id
+       SELECT recent.guest_user_id, MAX(recent.captured_at) AS captured_at
+       FROM mip_event_invitation_attributions recent
+       WHERE recent.app_id = ? AND recent.guest_user_id IN (${userIds.map(() => '?').join(', ')})
+         AND NOT EXISTS (
+           SELECT 1 FROM mip_membership_entitlements membership
+           WHERE membership.app_id = recent.app_id AND membership.user_id = recent.guest_user_id
+             AND membership.status = 'ACTIVE'
+             AND membership.starts_at <= UTC_TIMESTAMP(3)
+             AND membership.ends_at > UTC_TIMESTAMP(3)
+         )
+       GROUP BY recent.guest_user_id
      ) latest ON latest.guest_user_id = attribution.guest_user_id
        AND latest.captured_at = attribution.captured_at
      LEFT JOIN mip_profiles inviter_profile
@@ -90,10 +101,10 @@ async function loadHeartInviters(database, appId, userIds) {
        ON inviter_avatar.app_id = inviter_profile.app_id
          AND inviter_avatar.id = inviter_profile.avatar_asset_id AND inviter_avatar.status = 'READY'
      WHERE attribution.app_id = ? AND attribution.guest_user_id IN (${userIds.map(() => '?').join(', ')})
-     ORDER BY attribution.captured_at DESC`,
+     ORDER BY attribution.captured_at DESC, attribution.registration_id DESC`,
     [appId, ...userIds, appId, ...userIds],
   )
-  // 最新一条胜出：同人同毫秒多条归档时按 captured_at DESC 保留首条。
+  // 最新一条胜出：同人同毫秒多条归档按 captured_at DESC、registration_id DESC 保留首条。
   const byUser = new Map()
   for (const row of rows) {
     if (!byUser.has(row.guest_user_id)) byUser.set(row.guest_user_id, publicHeartInviter(row))

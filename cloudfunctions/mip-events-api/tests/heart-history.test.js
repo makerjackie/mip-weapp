@@ -204,6 +204,42 @@ describe('MIP heart history', () => {
     assert.equal(person.badges, undefined)
   })
 
+  // MIW-85：玩家（ACTIVE 会员）一律不下发邀请人（INVITER-02）——门控压在归档 SQL 上，
+  // stub 不执行 SQL，这里锁「SQL 形状 + 门控生效即无 inviter 字段」的接线；
+  // 真实过滤语义由 trial 真库冒烟验证。
+  it('gates inviter annotation for players and keeps the latest-archive tie-break', async () => {
+    const inviterSqls = []
+    const database = archivedRows => ({
+      async one() { return { total_count: 1, unread_count: 0, read_through_at: '2026-09-22T09:00:00.000Z' } },
+      async query(sql) {
+        if (/FROM mip_event_hearts/.test(sql)) return [heartRow()]
+        if (/mip_user_badge_equipment|FROM mip_growth_levels|FROM mip_profiles profile/.test(sql)) return []
+        if (/mip_event_invitation_attributions/.test(sql)) {
+          inviterSqls.push(sql)
+          return archivedRows
+        }
+        return []
+      },
+    })
+    // 门控生效：真实库对 ACTIVE 会员整人排除（USER 与 PLATFORM 归档都取不到），inviter 整体缺省。
+    const gated = await listHeartHistory(database([]), { appId, userId, kind: 'RECEIVED', profileRefSecret })
+    assert.equal(gated.items[0].person.inviter, undefined)
+    assert.match(inviterSqls[0], /NOT EXISTS \(\s*SELECT 1 FROM mip_membership_entitlements membership/)
+    assert.match(inviterSqls[0], /membership\.status = 'ACTIVE'\s+AND membership\.starts_at <= UTC_TIMESTAMP\(3\)\s+AND membership\.ends_at > UTC_TIMESTAMP\(3\)/)
+    assert.match(inviterSqls[0], /ORDER BY attribution\.captured_at DESC, attribution\.registration_id DESC/)
+    // INVITER-01：两条归档（先李慕白、后王二）取最新——真实 SQL 按 captured_at DESC 回行，首条胜出。
+    const latest = await listHeartHistory(database([
+      { guest_user_id: otherUserId, invitation_source_type: 'USER', inviter_nickname: '王二', inviter_visibility_json: {}, inviter_avatar_file_id: '' },
+      { guest_user_id: otherUserId, invitation_source_type: 'USER', inviter_nickname: '李慕白', inviter_visibility_json: {}, inviter_avatar_file_id: '' },
+    ]), { appId, userId, kind: 'RECEIVED', profileRefSecret })
+    assert.equal(latest.items[0].person.inviter.displayName, '王二')
+    // 会员到期/退款（读时判定）：门控放行、归档回行，邀请人恢复显示。
+    const recovered = await listHeartHistory(database([
+      { guest_user_id: otherUserId, invitation_source_type: 'PLATFORM' },
+    ]), { appId, userId, kind: 'RECEIVED', profileRefSecret })
+    assert.deepEqual(recovered.items[0].person.inviter, { sourceType: 'PLATFORM', displayName: 'MIP 平台' })
+  })
+
   it('marks only received hearts through the load watermark without changing relationship time', async () => {
     const calls = []
     const tx = {
