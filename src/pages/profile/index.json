@@ -1,10 +1,10 @@
 {
   "navigationBarTitleText": "我的",
-  "navigationBarBackgroundColor": "#080808",
+  "navigationBarBackgroundColor": "#202020",
   "navigationBarTextStyle": "white",
   "backgroundColor": "#080808",
   "backgroundColorContent": "#040404",
-  "backgroundColorTop": "#080808",
+  "backgroundColorTop": "#202020",
   "backgroundColorBottom": "#080808",
   "enablePullDownRefresh": true,
   "usingComponents": {
