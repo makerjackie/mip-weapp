@@ -2,6 +2,18 @@
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const TYPES = new Set(['CITY', 'NATIONAL', 'REMOTE'])
+// MIW-89（2026-10-13 产品对齐）：与 mip-opportunities-api 同口径的价值模式。
+//   RANGE        既有万元区间（默认，存量行）；
+//   SINGLE       小程序千单位单值（min = max = 千 × 100,000 分）；
+//   NEGOTIATION  面谈（金额必空，行保持 ACTIVE，展示「面谈」）。
+const VALUE_MODES = new Set(['RANGE', 'SINGLE', 'NEGOTIATION'])
+const QIAN_CENTS = 100000
+
+function normalizeValueMode(value) {
+  const valueMode = value === undefined || value === null || value === '' ? 'RANGE' : value
+  if (!VALUE_MODES.has(valueMode)) throw validationError()
+  return valueMode
+}
 
 function normalizeCommercialTerms(value) {
   if (value === undefined) return undefined
@@ -15,9 +27,12 @@ function normalizeCommercialTerms(value) {
     if (!Number.isSafeInteger(result) || result < 0) throw validationError()
     return result
   }
+  const valueMode = normalizeValueMode(value.valueMode)
   const minAmountCents = parseAmount(value.minAmountCents)
   const maxAmountCents = parseAmount(value.maxAmountCents)
   if (minAmountCents !== null && maxAmountCents !== null && minAmountCents > maxAmountCents) throw validationError()
+  if (valueMode === 'SINGLE' && (minAmountCents === null || minAmountCents !== maxAmountCents)) throw validationError()
+  if (valueMode === 'NEGOTIATION' && (minAmountCents !== null || maxAmountCents !== null)) throw validationError()
   if (!Array.isArray(value.locations) || value.locations.length > 16) throw validationError()
   const seen = new Set()
   const locations = value.locations.map(location => {
@@ -29,7 +44,7 @@ function normalizeCommercialTerms(value) {
     seen.add(key)
     return { type: location.type, ...(cityTagId ? { cityTagId } : {}) }
   })
-  return { currency: 'CNY', amountUnit: 'CNY_CENTS', minAmountCents, maxAmountCents, locations }
+  return { currency: 'CNY', amountUnit: 'CNY_CENTS', valueMode, minAmountCents, maxAmountCents, locations }
 }
 
 function validationError() {
@@ -38,8 +53,10 @@ function validationError() {
   return error
 }
 
-function display(min, max) {
+function display(min, max, valueMode = 'RANGE') {
   const money = value => `¥${(Number(value) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  if (valueMode === 'NEGOTIATION') return '面谈'
+  if (valueMode === 'SINGLE') return `${Number(min) / QIAN_CENTS} 千`
   if (min == null && max == null) return ''
   if (min === max) return money(min)
   if (min == null) return `至 ${money(max)}`
@@ -51,12 +68,14 @@ function dto(term, locations) {
   const locationDto = locations.map(location => location.location_type === 'CITY'
     ? { type: 'CITY', cityTagId: location.city_tag_id, cityName: location.city_name || '' }
     : { type: location.location_type })
+  const valueMode = normalizeValueMode(term?.value_mode)
   return {
     currency: term?.currency || 'CNY',
     amountUnit: term?.amount_unit || 'CNY_CENTS',
+    valueMode,
     minAmountCents: term?.min_amount_cents == null ? undefined : Number(term.min_amount_cents),
     maxAmountCents: term?.max_amount_cents == null ? undefined : Number(term.max_amount_cents),
-    amountDisplay: display(term?.min_amount_cents, term?.max_amount_cents),
+    amountDisplay: display(term?.min_amount_cents, term?.max_amount_cents, valueMode),
     locations: locationDto,
     locationDisplay: locationDto.map(location => location.type === 'CITY' ? location.cityName : location.type === 'NATIONAL' ? '全国' : '远程').filter(Boolean).join('、'),
   }
@@ -65,7 +84,7 @@ function dto(term, locations) {
 async function load(database, appId, opportunityId) {
   const [term, locations] = await Promise.all([
     database.one(
-      `SELECT currency, amount_unit, min_amount_cents, max_amount_cents
+      `SELECT currency, amount_unit, value_mode, min_amount_cents, max_amount_cents
        FROM mip_opportunity_commercial_terms
        WHERE app_id = ? AND opportunity_id = ? AND status = 'ACTIVE'`,
       [appId, opportunityId],
@@ -88,7 +107,7 @@ async function loadMany(database, appId, opportunityIds) {
   const placeholders = ids.map(() => '?').join(', ')
   const [terms, locations] = await Promise.all([
     database.query(
-      `SELECT opportunity_id, currency, amount_unit, min_amount_cents, max_amount_cents
+      `SELECT opportunity_id, currency, amount_unit, value_mode, min_amount_cents, max_amount_cents
        FROM mip_opportunity_commercial_terms
        WHERE app_id = ? AND status = 'ACTIVE' AND opportunity_id IN (${placeholders})`,
       [appId, ...ids],
@@ -121,22 +140,24 @@ async function sync(tx, appId, opportunityId, terms, version) {
   if (terms === null) {
     await tx.query(
       `UPDATE mip_opportunity_commercial_terms
-       SET min_amount_cents = NULL, max_amount_cents = NULL, status = 'INACTIVE', version = ?
+       SET min_amount_cents = NULL, max_amount_cents = NULL, value_mode = 'RANGE', status = 'INACTIVE', version = ?
        WHERE app_id = ? AND opportunity_id = ?`,
       [version, appId, opportunityId],
     )
     return
   }
+  const valueMode = normalizeValueMode(terms.valueMode)
   await tx.query(
     `INSERT INTO mip_opportunity_commercial_terms
-       (app_id, opportunity_id, currency, amount_unit, min_amount_cents, max_amount_cents, status, version)
-     VALUES (?, ?, 'CNY', 'CNY_CENTS', ?, ?, 'ACTIVE', ?)
+       (app_id, opportunity_id, currency, amount_unit, value_mode, min_amount_cents, max_amount_cents, status, version)
+     VALUES (?, ?, 'CNY', 'CNY_CENTS', ?, ?, ?, 'ACTIVE', ?)
      ON DUPLICATE KEY UPDATE
+       value_mode = VALUES(value_mode),
        min_amount_cents = VALUES(min_amount_cents),
        max_amount_cents = VALUES(max_amount_cents),
        status = 'ACTIVE',
        version = VALUES(version)`,
-    [appId, opportunityId, terms.minAmountCents, terms.maxAmountCents, version],
+    [appId, opportunityId, valueMode, terms.minAmountCents, terms.maxAmountCents, version],
   )
   for (const [sortOrder, location] of terms.locations.entries()) {
     const cityTagId = location.cityTagId || null
@@ -149,4 +170,4 @@ async function sync(tx, appId, opportunityId, terms, version) {
   }
 }
 
-module.exports = { load, loadMany, normalizeCommercialTerms, sync }
+module.exports = { dto, load, loadMany, normalizeCommercialTerms, sync }

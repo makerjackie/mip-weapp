@@ -1,7 +1,12 @@
 import type { BranchId, CooperationRoleKey } from '../src/modules/mip'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { normalizeOpportunityDraft, normalizeOpportunityFilter } from '../src/modules/mip-opportunities/validation'
+import {
+  normalizeOpportunityCommercialTerms,
+  normalizeOpportunityDraft,
+  normalizeOpportunityFilter,
+  parseOpportunityDetail,
+} from '../src/modules/mip-opportunities/validation'
 
 describe('MIP opportunity contracts', () => {
   it('enforces the identity full-access contract on protected server writes', () => {
@@ -107,13 +112,83 @@ describe('MIP opportunity contracts', () => {
     // New typing is limited to 300 in the UI; previously saved long descriptions remain editable.
     expect(normalizeOpportunityDraft({ ...draft, description: '说'.repeat(6000) }).description).toHaveLength(6000)
     expect(() => normalizeOpportunityDraft({ ...draft, description: '说'.repeat(6001) })).toThrow('机会说明格式不正确')
-    for (const field of ['title', 'valueSummary', 'targetSummary']) {
+    for (const field of ['title', 'targetSummary']) {
       expect(() => normalizeOpportunityDraft({ ...draft, [field]: ' ' })).toThrow()
     }
     // MIW-50（2026-10-07 客户确认）：小程序表单不再提供「合作角色」编辑项，
     // 新增机会允许空角色（服务端同步放开）；非法 key 仍拒绝。
     expect(normalizeOpportunityDraft({ ...draft, roleKeys: [] }).roleKeys).toEqual([])
     expect(() => normalizeOpportunityDraft({ ...draft, roleKeys: ['owner' as CooperationRoleKey] })).toThrow('合作角色不正确')
+  })
+
+  it('makes the value summary optional and enforces commercial terms value modes', () => {
+    const draft = {
+      title: '项目',
+      targetSummary: '寻找合作方',
+      scopeType: 'PLATFORM' as const,
+      roleKeys: ['strategist'] as CooperationRoleKey[],
+      industryTagIds: [],
+      abilityTagIds: [],
+      publish: true,
+    }
+    // MIW-89：价值金额选填，留空归一化为空串（列 NOT NULL）。
+    for (const valueSummary of ['', '  ', undefined]) {
+      expect(normalizeOpportunityDraft({ ...draft, valueSummary }).valueSummary).toBe('')
+    }
+    const terms = { currency: 'CNY', amountUnit: 'CNY_CENTS', locations: [] } as const
+    // 千单位单值（SINGLE）必须 min=max；面谈（NEGOTIATION）金额必空；非法模式拒绝。
+    expect(normalizeOpportunityCommercialTerms({
+      ...terms,
+      valueMode: 'SINGLE',
+      minAmountCents: 500000,
+      maxAmountCents: 500000,
+    })?.valueMode).toBe('SINGLE')
+    expect(() => normalizeOpportunityCommercialTerms({
+      ...terms,
+      valueMode: 'SINGLE',
+      minAmountCents: 500000,
+      maxAmountCents: 600000,
+    })).toThrow()
+    expect(() => normalizeOpportunityCommercialTerms({ ...terms, valueMode: 'SINGLE' })).toThrow()
+    expect(normalizeOpportunityCommercialTerms({
+      ...terms,
+      valueMode: 'NEGOTIATION',
+      minAmountCents: null,
+      maxAmountCents: null,
+    })?.valueMode).toBe('NEGOTIATION')
+    expect(() => normalizeOpportunityCommercialTerms({
+      ...terms,
+      valueMode: 'NEGOTIATION',
+      minAmountCents: 100,
+    })).toThrow()
+    expect(() => normalizeOpportunityCommercialTerms({ ...terms, valueMode: 'QIAN' })).toThrow()
+    // 未声明 valueMode 时保持既有区间语义。
+    expect(normalizeOpportunityCommercialTerms({
+      ...terms,
+      minAmountCents: 100,
+      maxAmountCents: 900,
+    })?.valueMode).toBe('RANGE')
+  })
+
+  it('parses server value modes without breaking legacy responses', () => {
+    const terms = {
+      currency: 'CNY',
+      amountUnit: 'CNY_CENTS',
+      amountDisplay: '',
+      locationDisplay: '',
+      locations: [],
+    }
+    expect(parseOpportunityDetail({
+      id: 'op-1',
+      commercialTerms: { ...terms, valueMode: 'NEGOTIATION', amountDisplay: '面谈' },
+    }).commercialTerms?.valueMode).toBe('NEGOTIATION')
+    expect(parseOpportunityDetail({
+      id: 'op-1',
+      commercialTerms: { ...terms, valueMode: 'SINGLE', minAmountCents: 500000, maxAmountCents: 500000, amountDisplay: '5 千' },
+    }).commercialTerms?.valueMode).toBe('SINGLE')
+    // 旧服务端无 valueMode → RANGE；非法值按服务端无效响应拒绝。
+    expect(parseOpportunityDetail({ id: 'op-1', commercialTerms: terms }).commercialTerms?.valueMode).toBe('RANGE')
+    expect(() => parseOpportunityDetail({ id: 'op-1', commercialTerms: { ...terms, valueMode: 'QIAN' } })).toThrow()
   })
 
   it('keeps the migration isolated and reversible', () => {

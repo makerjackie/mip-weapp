@@ -171,6 +171,12 @@ describe('MIP admin XLSX', () => {
     assert.equal(row['合作角色'], '皮条客、老保姆')
     assert.equal(row['引荐数量'], '0')
     assert.equal(exportedRow('OPPORTUNITIES', { commercialTerms: { minAmountCents: null } })['最低金额（万元）'], '')
+    // MIW-89：小程序千单位单值（SINGLE，min=max cents）导出时两列同值（千 × 100,000 分 = 0.5 万元）
+    const single = exportedRow('OPPORTUNITIES', {
+      commercialTerms: { minAmountCents: 500000, maxAmountCents: 500000, currency: 'CNY', locations: [] },
+    })
+    assert.equal(single['最低金额（万元）'], '0.5')
+    assert.equal(single['最高金额（万元）'], '0.5')
   })
 
   it('uses yuan for order and roster ledgers and includes readable feedback without losing raw answers', () => {

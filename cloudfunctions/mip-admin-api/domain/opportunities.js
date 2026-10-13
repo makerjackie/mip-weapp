@@ -611,7 +611,8 @@ function normalizeOpportunityDraft(value) {
     scopeType,
     branchId: scopeType === 'BRANCH' ? requiredId(value.branchId, '城市分会') : null,
     title: text(value.title, 120, { required: true, label: '机会标题' }),
-    valueSummary: text(value.valueSummary, 240, { required: true, label: '机会价值' }),
+    // MIW-89：价值金额转选填（面谈/千单位双模式），留空以 '' 落库（列 NOT NULL）。
+    valueSummary: text(value.valueSummary, 240, { label: '机会价值' }),
     // MIW-50 三端对齐：上限取会员端服务端口径（targetSummary 500 / description 6000），
     // 小程序历史数据（旧口径更长）在管理后台编辑保存不再被拒。
     targetSummary: text(value.targetSummary, 500),

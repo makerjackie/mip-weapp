@@ -29,6 +29,8 @@ export function OpportunityEditFormPage() {
         ...(key === 'branchId' ? { optionsAction, optionsKey: 'branches' } : {}),
         ...(key === 'tagIds' ? { kind: 'multi-select', optionsAction, optionsKey: 'tags' } : {}),
         ...(['minAmountCents', 'maxAmountCents'].includes(key) ? { kind: 'money', valueScale: 1000000, label: key === 'minAmountCents' ? '最低价值（万元）' : '最高价值（万元）' } : {}),
+        // MIW-89：千单位单值输入（1 千 = 100,000 分）
+        ...(key === 'singleAmountCents' ? { kind: 'money', valueScale: 100000, label: '价值金额（千）' } : {}),
         ...(key === 'locations' ? { kind: 'commercial-locations', fields: undefined, required: false } : {}),
       }
     })

@@ -60,6 +60,44 @@ function matchCity(value: string, options: readonly OpportunityTextCityOption[])
   return options.find(option => option.id && normalizeCity(option.label) === normalized)
 }
 
+/**
+ * MIW-89（2026-10-13 产品对齐）：从粘贴/AI 价值文本推导价值模式提示，
+ * 供编辑器把「面谈 / 千单位单值」结构化填入模式行；无金额语义返回 undefined（忽略文本）。
+ */
+export type OpportunityValueHint = { kind: 'NEGOTIATION' } | { kind: 'QIAN', qian: number }
+
+const negotiationValuePattern = /面谈|面议/
+const qianValuePattern = /(\d+(?:\.\d+)?)\s*[千k]/i
+const wanValuePattern = /(\d+(?:\.\d+)?)\s*[万w]/i
+const yuanValuePattern = /(\d+(?:\.\d+)?)\s*(?:元|块)/
+
+function roundToTenth(value: number) {
+  return Math.round(value * 10) / 10
+}
+
+export function opportunityValueHintFromText(value: string): OpportunityValueHint | undefined {
+  const text = value.replace(/\s/g, '')
+  if (!text) {
+    return undefined
+  }
+  if (negotiationValuePattern.test(text)) {
+    return { kind: 'NEGOTIATION' }
+  }
+  const wan = wanValuePattern.exec(text)
+  if (wan) {
+    return { kind: 'QIAN', qian: roundToTenth(Number(wan[1]) * 10) }
+  }
+  const qian = qianValuePattern.exec(text)
+  if (qian) {
+    return { kind: 'QIAN', qian: roundToTenth(Number(qian[1])) }
+  }
+  const yuan = yuanValuePattern.exec(text)
+  if (yuan) {
+    return { kind: 'QIAN', qian: roundToTenth(Number(yuan[1]) / 1000) }
+  }
+  return undefined
+}
+
 export function parseOpportunityText(
   source: string,
   cityOptions: readonly OpportunityTextCityOption[],

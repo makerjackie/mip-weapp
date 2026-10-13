@@ -56,11 +56,16 @@ export interface OpportunityLocation {
   cityTagId?: string
 }
 
+export type OpportunityValueMode = 'RANGE' | 'SINGLE' | 'NEGOTIATION'
+
 export interface OpportunityCommercialTerms {
   currency: 'CNY'
   amountUnit: 'CNY_CENTS'
-  minAmountCents?: number
-  maxAmountCents?: number
+  /** MIW-89：RANGE=万元区间（默认/存量），SINGLE=千单位单值（min=max），NEGOTIATION=面谈（金额空）。 */
+  valueMode?: OpportunityValueMode
+  /** NEGOTIATION 提交时金额为 null（服务端归一化为空）。 */
+  minAmountCents?: number | null
+  maxAmountCents?: number | null
   amountDisplay?: string
   locationDisplay?: string
   locations: OpportunityLocation[]

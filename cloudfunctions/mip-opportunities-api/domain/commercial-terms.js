@@ -3,6 +3,12 @@
 const { uuid } = require('./common')
 
 const LOCATION_TYPES = new Set(['CITY', 'NATIONAL', 'REMOTE'])
+// MIW-89（2026-10-13 产品对齐）：价值金额双模式。
+//   RANGE        既有万元区间（默认，存量行与 admin 端）；
+//   SINGLE       小程序千单位单值（min = max = 千 × 100,000 分）；
+//   NEGOTIATION  面谈（金额必空，行保持 ACTIVE，展示「面谈」）。
+const VALUE_MODES = new Set(['RANGE', 'SINGLE', 'NEGOTIATION'])
+const QIAN_CENTS = 100000
 
 function amount(value) {
   if (value === undefined || value === null || value === '') return null
@@ -11,15 +17,28 @@ function amount(value) {
   return parsed
 }
 
+function normalizeValueMode(value) {
+  const valueMode = value === undefined || value === null || value === '' ? 'RANGE' : value
+  if (!VALUE_MODES.has(valueMode)) throw new Error('VALIDATION_FAILED')
+  return valueMode
+}
+
 function normalizeCommercialTerms(value) {
   if (value === undefined) return undefined
   if (value === null) return null
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('VALIDATION_FAILED')
   if (value.currency !== undefined && value.currency !== 'CNY') throw new Error('VALIDATION_FAILED')
   if (value.amountUnit !== undefined && value.amountUnit !== 'CNY_CENTS') throw new Error('VALIDATION_FAILED')
+  const valueMode = normalizeValueMode(value.valueMode)
   const minAmountCents = amount(value.minAmountCents)
   const maxAmountCents = amount(value.maxAmountCents)
   if (minAmountCents !== null && maxAmountCents !== null && minAmountCents > maxAmountCents) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  if (valueMode === 'SINGLE' && (minAmountCents === null || minAmountCents !== maxAmountCents)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  if (valueMode === 'NEGOTIATION' && (minAmountCents !== null || maxAmountCents !== null)) {
     throw new Error('VALIDATION_FAILED')
   }
   if (!Array.isArray(value.locations) || value.locations.length > 16) throw new Error('VALIDATION_FAILED')
@@ -35,14 +54,20 @@ function normalizeCommercialTerms(value) {
     seen.add(key)
     return { type: location.type, ...(cityTagId ? { cityTagId } : {}) }
   })
-  return { currency: 'CNY', amountUnit: 'CNY_CENTS', minAmountCents, maxAmountCents, locations }
+  return { currency: 'CNY', amountUnit: 'CNY_CENTS', valueMode, minAmountCents, maxAmountCents, locations }
 }
 
 function money(cents) {
   return `¥${(Number(cents) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-function amountDisplay(terms) {
+function qianDisplay(cents) {
+  return `${Number(cents) / QIAN_CENTS} 千`
+}
+
+function amountDisplay(terms, valueMode = 'RANGE') {
+  if (valueMode === 'NEGOTIATION') return '面谈'
+  if (valueMode === 'SINGLE') return qianDisplay(terms.minAmountCents)
   if (terms.minAmountCents === null && terms.maxAmountCents === null) return ''
   if (terms.minAmountCents === terms.maxAmountCents) return money(terms.minAmountCents)
   if (terms.minAmountCents === null) return `至 ${money(terms.maxAmountCents)}`
@@ -54,15 +79,17 @@ function termsDto(row, locations) {
   const locationDto = locations.map(location => location.location_type === 'CITY'
     ? { type: 'CITY', city: { id: location.city_tag_id, key: location.city_key, label: location.city_label } }
     : { type: location.location_type })
+  const valueMode = normalizeValueMode(row?.value_mode)
   const terms = {
     currency: row?.currency || 'CNY',
     amountUnit: row?.amount_unit || 'CNY_CENTS',
+    valueMode,
     minAmountCents: row?.min_amount_cents == null ? undefined : Number(row.min_amount_cents),
     maxAmountCents: row?.max_amount_cents == null ? undefined : Number(row.max_amount_cents),
     amountDisplay: row ? amountDisplay({
       minAmountCents: row.min_amount_cents == null ? null : Number(row.min_amount_cents),
       maxAmountCents: row.max_amount_cents == null ? null : Number(row.max_amount_cents),
-    }) : '',
+    }, valueMode) : '',
     locations: locationDto,
     locationDisplay: locationDto.map(location => location.type === 'CITY' ? (location.city?.label || '') : location.type === 'NATIONAL' ? '全国' : '远程').filter(Boolean).join('、'),
   }
@@ -90,7 +117,7 @@ async function loadCommercialTerms(database, appId, ids) {
   const placeholders = ids.map(() => '?').join(', ')
   const [termRows, locationRows] = await Promise.all([
     optionalQuery(database,
-      `SELECT app_id, opportunity_id, currency, amount_unit, min_amount_cents, max_amount_cents
+      `SELECT app_id, opportunity_id, currency, amount_unit, value_mode, min_amount_cents, max_amount_cents
        FROM mip_opportunity_commercial_terms
        WHERE app_id = ? AND status = 'ACTIVE' AND opportunity_id IN (${placeholders})`,
       [appId, ...ids],
@@ -138,22 +165,24 @@ async function syncCommercialTerms(tx, appId, opportunityId, terms, version) {
   if (terms === null) {
     await tx.query(
       `UPDATE mip_opportunity_commercial_terms
-       SET min_amount_cents = NULL, max_amount_cents = NULL, status = 'INACTIVE', version = ?
+       SET min_amount_cents = NULL, max_amount_cents = NULL, value_mode = 'RANGE', status = 'INACTIVE', version = ?
        WHERE app_id = ? AND opportunity_id = ?`,
       [version, appId, opportunityId],
     )
     return
   }
+  const valueMode = normalizeValueMode(terms.valueMode)
   await tx.query(
     `INSERT INTO mip_opportunity_commercial_terms (
-       app_id, opportunity_id, currency, amount_unit, min_amount_cents, max_amount_cents, status, version
-     ) VALUES (?, ?, 'CNY', 'CNY_CENTS', ?, ?, 'ACTIVE', ?)
+       app_id, opportunity_id, currency, amount_unit, value_mode, min_amount_cents, max_amount_cents, status, version
+     ) VALUES (?, ?, 'CNY', 'CNY_CENTS', ?, ?, ?, 'ACTIVE', ?)
      ON DUPLICATE KEY UPDATE
+       value_mode = VALUES(value_mode),
        min_amount_cents = VALUES(min_amount_cents),
        max_amount_cents = VALUES(max_amount_cents),
        status = 'ACTIVE',
        version = VALUES(version)`,
-    [appId, opportunityId, terms.minAmountCents, terms.maxAmountCents, version],
+    [appId, opportunityId, valueMode, terms.minAmountCents, terms.maxAmountCents, version],
   )
   for (const [sortOrder, location] of terms.locations.entries()) {
     const cityTagId = location.cityTagId || null

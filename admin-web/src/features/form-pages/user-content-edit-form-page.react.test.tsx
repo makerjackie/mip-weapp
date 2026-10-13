@@ -116,7 +116,7 @@ describe('independent opportunity editor', () => {
     render(<QueryClientProvider client={new QueryClient()}><App><OpportunityEditFormPage /></App></QueryClientProvider>)
     await select('发布人', '验收发布人')
     fill('机会名称', '演示合作机会')
-    fill('价值金额或价值说明', '仅供验收')
+    // MIW-89：价值金额与价值说明均可留空，价值由商业条件结构化表达。
     await select('合作角色', '狗策划')
     fireEvent.click(await screen.findByText('死美工', { selector: '.ant-select-item-option-content' }))
     fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
@@ -124,7 +124,7 @@ describe('independent opportunity editor', () => {
     expect(state.request).toHaveBeenCalledWith('mip.admin.opportunities.save', {
       idempotencyKey: expect.any(String),
       draft: {
-        ownerUserId: 'user-demo', scopeType: 'PLATFORM', title: '演示合作机会', valueSummary: '仅供验收',
+        ownerUserId: 'user-demo', scopeType: 'PLATFORM', title: '演示合作机会', valueSummary: undefined,
         targetSummary: undefined, description: undefined, cityTagId: undefined, coverAssetId: null, deadlineAt: undefined,
         commercialTerms: undefined, roleKeys: ['strategist', 'visual_designer'], tagIds: [],
       },
