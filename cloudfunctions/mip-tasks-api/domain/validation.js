@@ -30,6 +30,7 @@ function normalizeTask(value) {
   const extensions = normalizeTaskExtensions(value)
   return {
     ...extensions,
+    ...normalizeTaskAction(value),
     name,
     content,
     rewardExperience,
@@ -39,6 +40,19 @@ function normalizeTask(value) {
     templateAssetId: value.templateAssetId ? requiredId(value.templateAssetId) : null,
     eligibleLevelIds,
   }
+}
+
+// MIW-84：任务点击动作（后台按任务配置玩家端「去完成」的行为）。
+// PAGE_JUMP 必须带目标页路径（存储口径同 config/runtime-pages.json：剥前导 /、禁 query）；
+// SHARE 不带目标；两者都缺省 = 未配置（玩家端整卡不可点）。
+function normalizeTaskAction(value) {
+  const actionType = boundedText(value.actionType || '', 16).toUpperCase()
+  if (actionType && !['PAGE_JUMP', 'SHARE'].includes(actionType)) throw new Error('VALIDATION_FAILED')
+  const actionTarget = boundedText(value.actionTarget || '', 128).replace(/^\/+/, '')
+  if (actionTarget && actionTarget.includes('?')) throw new Error('VALIDATION_FAILED')
+  if (actionType === 'PAGE_JUMP' && !actionTarget) throw new Error('VALIDATION_FAILED')
+  if (actionTarget && actionType !== 'PAGE_JUMP') throw new Error('VALIDATION_FAILED')
+  return { actionType: actionType || null, actionTarget: actionTarget || null }
 }
 
 function normalizeEligibleLevelIds(value) {
@@ -173,6 +187,7 @@ module.exports = {
   normalizeAssignmentInput,
   normalizeMemberFilters,
   normalizeTask,
+  normalizeTaskAction,
   normalizeTaskFilters,
   pageLimit,
   requiredId,

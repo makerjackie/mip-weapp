@@ -15,7 +15,7 @@ const {
   userTaskDto,
 } = require('../domain/repository')
 const { createTaskService } = require('../domain/service')
-const { normalizeCompletionFilters, normalizeTask } = require('../domain/validation')
+const { normalizeCompletionFilters, normalizeTask, normalizeTaskAction } = require('../domain/validation')
 const { buildTaskWorkbook, safeCell } = require('../domain/workbook')
 const { createProfileRef } = require('../lib/profile-ref')
 const { createUserTaskCursor, readUserTaskCursor } = require('../lib/user-task-cursor')
@@ -51,6 +51,8 @@ test('task input only accepts bounded server-owned reward configuration', () => 
     rewardExperience: 20,
     attachmentRequired: true,
   }), {
+    actionType: null,
+    actionTarget: null,
     name: '提交合作记录',
     content: '上传一张合作记录图片。',
     rewardExperience: 20,
@@ -75,6 +77,24 @@ test('task input only accepts bounded server-owned reward configuration', () => 
   }), /VALIDATION_FAILED/)
   assert.throws(() => normalizeTask({ name: '任务', content: '内容', rewardExperience: -1 }), /VALIDATION_FAILED/)
   assert.throws(() => normalizeCompletionFilters({ resultStatus: 'UNKNOWN' }), /VALIDATION_FAILED/)
+})
+
+// MIW-84：点击动作契约——PAGE_JUMP 必带目标、SHARE 必不带、存储口径剥前导 / 禁 query。
+test('task click actions normalize to a paired type/target pair', () => {
+  assert.deepEqual(normalizeTaskAction({ actionType: 'page_jump', actionTarget: '/pages/events/index' }), {
+    actionType: 'PAGE_JUMP',
+    actionTarget: 'pages/events/index',
+  })
+  assert.deepEqual(normalizeTaskAction({ actionType: 'SHARE', actionTarget: '' }), {
+    actionType: 'SHARE',
+    actionTarget: null,
+  })
+  assert.deepEqual(normalizeTaskAction({}), { actionType: null, actionTarget: null })
+  assert.throws(() => normalizeTaskAction({ actionType: 'PAGE_JUMP', actionTarget: '' }), /VALIDATION_FAILED/)
+  assert.throws(() => normalizeTaskAction({ actionType: 'PAGE_JUMP', actionTarget: '   ' }), /VALIDATION_FAILED/)
+  assert.throws(() => normalizeTaskAction({ actionType: 'SHARE', actionTarget: 'pages/events/index' }), /VALIDATION_FAILED/)
+  assert.throws(() => normalizeTaskAction({ actionType: 'PAGE_JUMP', actionTarget: 'pages/events/index?from=task' }), /VALIDATION_FAILED/)
+  assert.throws(() => normalizeTaskAction({ actionType: 'URL' }), /VALIDATION_FAILED/)
 })
 
 test('completion writes one immutable fact and awards the task reward once', async () => {

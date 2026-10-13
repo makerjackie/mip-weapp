@@ -1430,6 +1430,18 @@
       ],
       "sqlSha256": "2b26732c717ec9f29640d01ff237dc8706c928f4bb008b4a88ba07c0e49b0c81",
       "rollbackSha256": "cd9037b767e1311b1c6bd21ba50846ef1cdd09c0a510994952c05463df1bddc5"
+    },
+    {
+      "version": "20261014010000",
+      "name": "mip_task_card_actions",
+      "sql": "database/mysql/mip/109_task_card_actions.sql",
+      "rollback": "database/mysql/mip/rollback/109_task_card_actions.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_task_cards"
+      ],
+      "sqlSha256": "30d7d7e77f7da4eba79ccdc11d9249167c15ef02f7af14a21c1bc5a2718fd354",
+      "rollbackSha256": "2ac97cc57db3944c4d3ab4fa454534ec34675cc3a5549aeebe781593800adea3"
     }
   ]
 }
