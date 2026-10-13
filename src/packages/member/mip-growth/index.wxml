@@ -3,7 +3,7 @@
   <view id="mip-growth-error-state" wx:elif="{{state === 'error'}}" class="px-3 pt-3"><mip-empty-state title="暂时无法加载成长记录" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="loadGrowth" /></view>
   <block wx:else>
     <!-- Keep the original illustration at its intrinsic aspect ratio; controls stay live. -->
-    <view class="growth-hero relative h-[284rpx] overflow-hidden bg-brand px-5 py-6 text-on-brand">
+    <view class="growth-hero relative overflow-hidden bg-brand px-5 py-6 text-on-brand {{isPlayer ? 'h-[284rpx]' : 'growth-hero--boxed h-[410rpx]'}}">
       <image class="growth-hero-art" mode="aspectFit" src="/packages/member/assets/figma/growth/hero-character.png" />
       <view class="growth-hero-curve" />
       <!-- MIW-83：弧线过渡沿曲线的黄色勾边（figma 3984:8075 Ellipse 30 描边）。 -->
@@ -11,10 +11,11 @@
       <!-- MIW-27：经验值详情改为跳转独立明细页（figma 1948:14177），按钮与进度条同一水平线。 -->
       <view class="growth-experience-link" aria-role="button" aria-label="经验值详情" bind:tap="openExperienceDetails">经验值详情</view>
       <view class="relative z-10 ml-[8rpx] mt-[16rpx]">
-        <!-- MIW-83 GROWTH-05：会员显示 Lv 大字；非会员该行为留白占位（figma 3984:8075/8182
-             头部仅 XP 行 + 进度条 + 有效期，与会员帧同高对齐）。 -->
+        <!-- MIW-83 GROWTH-05/D1：会员显示 Lv 大字；非会员显示问号箱子（figma 3984:8761，
+             Douglas 2026-10-13 确认恢复）。页面帧无箱子放置节点，按设计节点原值 115px
+             （230rpx）落位、hero 加高至 410rpx，XP 行随箱子下移、胶囊跟随进度条中心。 -->
         <view wx:if="{{isPlayer}}" id="growth-level-badge" class="text-[96rpx] font-bold leading-[104.2rpx]">Lv.{{currentLevelNumber}}</view>
-        <view wx:else class="h-[104.2rpx]" aria-hidden="true"></view>
+        <image wx:else id="growth-mystery-box" class="growth-mystery-box" mode="aspectFit" src="/packages/member/assets/figma/growth/mystery-box.png" aria-hidden="true" />
         <view class="text-[20rpx] font-semibold leading-[28rpx]">XP: {{snapshot.account.experienceBalance}}<text wx:if="{{nextLevelThreshold}}"> I {{nextLevelThreshold}}</text></view>
         <view wx:if="{{nextLevelThreshold}}" class="relative mt-[7.8rpx] h-[12rpx] w-[300rpx] max-w-full rounded-full bg-panel-raised">
           <view class="absolute left-[4rpx] top-[4rpx] h-[4rpx] rounded-full bg-brand" style="width:{{snapshot.levelProgressPercent}}%;max-width:calc(100% - 8rpx)" />

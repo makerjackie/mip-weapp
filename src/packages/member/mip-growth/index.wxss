@@ -48,6 +48,20 @@
   border-radius: 9999rpx;
 }
 
+/* MIW-83 GROWTH-05/D1（2026-10-13 恢复）：非会员头部问号箱子（figma 3984:8761）
+   替代 Lv 大字位，按设计节点原值 115px（230rpx）落位——素材自带透明内边距，
+   可见箱体约 87px；hero 同步加高（284→410rpx），胶囊跟随下移后的
+   XP 进度条中心（48+16+230+28+7.8+6 = 335.8rpx）。 */
+.growth-mystery-box {
+  display: block;
+  width: 230rpx;
+  height: 230rpx;
+}
+
+.growth-hero--boxed .growth-experience-link {
+  top: 309rpx;
+}
+
 /* MIW-83 GROWTH-01：档位横滑条（figma 3984:8403）——swiper previous/next-margin
    224rpx 让邻档标签中心落在距屏幕边约 37px 处（档距 ≈151px，与设计稿一致）。 */
 .growth-tier-area {
