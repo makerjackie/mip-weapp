@@ -1,6 +1,6 @@
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../../../modules/mip'
 import type { AiDraftId } from '../../../../modules/mip-ai'
-import type { OpportunityCatalog, OpportunityDetail, OpportunityLocationType, OpportunityProjectStatus, OpportunityTypeKey } from '../../../../modules/mip-opportunities'
+import type { OpportunityCatalog, OpportunityCommercialTerms, OpportunityDetail, OpportunityLocationType, OpportunityProjectStatus, OpportunityTypeKey } from '../../../../modules/mip-opportunities'
 import type { OpportunityTextDraft } from '../../../../modules/mip-opportunities/text-parser'
 import { brand } from '../../../../config/brand'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
@@ -11,7 +11,7 @@ import { requestEntrySubscription } from '../../../../modules/mip-messaging/entr
 import { GUIDE_PUBLISH_ENTRY_KEY } from '../../../../modules/mip-messaging/guide-policy'
 import { journeyStatusOf, opportunityModule, opportunityProjectStatusOptions, opportunityTypeOptions } from '../../../../modules/mip-opportunities'
 import { parseOpportunityAiDraft } from '../../../../modules/mip-opportunities/ai-draft'
-import { parseOpportunityText } from '../../../../modules/mip-opportunities/text-parser'
+import { opportunityValueHintFromText, parseOpportunityText } from '../../../../modules/mip-opportunities/text-parser'
 import { chooseSingleImage } from '../../../../platform/wechat/image-upload'
 
 interface RoleOption { key: CooperationRoleKey, name: string, selected: boolean }
@@ -21,6 +21,16 @@ interface CityOption { id: string, label: string }
 type OpportunityEditorMode = 'CREATE' | 'DRAFT' | 'PUBLISHED'
 /** journey-review J4-04 ⑥：顶层可见范围两选项。 */
 type VisibilityChoice = 'PLATFORM' | 'INTERNAL'
+/** MIW-89：价值金额模式行；''=未选择（选填），AMOUNT=千单位单值输入。 */
+type ValueModeChoice = '' | 'NEGOTIATION' | 'AMOUNT'
+
+/** 千 → 分（1 千 = 100,000 分）；输入至多 8 位整数 + 1 位小数，且必须大于 0。 */
+const QIAN_CENTS = 100000
+const VALUE_QIAN_PATTERN = /^\d{1,8}(?:\.\d)?$/
+
+function validValueQian(value: string) {
+  return VALUE_QIAN_PATTERN.test(value.trim()) && Number(value) > 0
+}
 
 const cityPriority = ['深圳', '北京', '上海', '成都', '广州', '中国香港', '中国澳门', '海外']
 
@@ -101,7 +111,6 @@ Page({
     /** journey-review J4-04 ⑤：主营地区（选填），示例「南山十亩地」。 */
     regionText: '',
     titleError: '',
-    valueSummaryError: '',
     targetSummaryError: '',
     playersOnly: false,
     scopeType: 'PLATFORM' as 'PLATFORM' | 'BRANCH',
@@ -109,8 +118,14 @@ Page({
     branchIndex: 0,
     cityTagId: '',
     cityIndex: 0,
-    minAmountYuan: '',
-    maxAmountYuan: '',
+    // MIW-89：价值金额双模式（面谈 / 千单位单值，选填）。
+    valueMode: '' as ValueModeChoice,
+    valueQian: '',
+    valueAmountError: '',
+    // MIW-50 口径：存量 RANGE 区间与旧价值文本原样带回，新 UI 不提供编辑入口。
+    legacyRangeMinCents: undefined as number | undefined,
+    legacyRangeMaxCents: undefined as number | undefined,
+    hadCommercialTerms: false,
     locationTypes: [] as OpportunityLocationType[],
     locationCityTagIds: [] as string[],
     coverAssetId: '',
@@ -147,6 +162,8 @@ Page({
   // 返回守卫状态：dirty=有未保存修改，alertArmed=已注册原生返回确认（MIP-4，与合作卡编辑器对称）
   dirty: false,
   alertArmed: false,
+  // MIW-89：加载时的模式快照，用于区分「存量 RANGE 未触碰（原样带回）」与「用户取消模式（显式清空）」。
+  valueModeAtLoad: '' as ValueModeChoice,
 
   onLoad(options: Record<string, string | undefined>) {
     const id = String(options.id || '') as OpportunityId | ''
@@ -226,13 +243,14 @@ Page({
           : -1
         this.setData({
           ...(parsed.draft.title ? { title: parsed.draft.title } : {}),
-          ...(parsed.draft.valueSummary ? { valueSummary: parsed.draft.valueSummary } : {}),
           ...(parsed.draft.targetSummary ? { targetSummary: parsed.draft.targetSummary } : {}),
           ...(parsed.draft.description ? { description: parsed.draft.description } : {}),
           ...(cityIndex >= 0 ? { cityTagId: parsed.draft.cityTagId, cityIndex } : {}),
           confirmedAiDraftId: aiSource.confirmation.draftId,
           confirmedAiDraftVersion: aiSource.confirmation.expectedVersion,
         })
+        // MIW-89：AI 价值文本转为面谈/千单位模式行（OPPVAL-05），不再回填文本框。
+        this.applyValueHint(parsed.draft.valueSummary)
       }
       this.setData({ state: 'ready' })
       if (aiSource) {
@@ -260,6 +278,12 @@ Page({
       ? 'UNPUBLISHED'
       : journeyStatus === 'ENDED' ? 'ENDED' : 'RECRUITING'
     const typeKeys = new Set(detail?.typeKeys || [])
+    // MIW-89：存量模式映射回模式行；RANGE（含仅地点）不选中、金额区间原样带回。
+    const valueMode: ValueModeChoice = terms?.valueMode === 'NEGOTIATION'
+      ? 'NEGOTIATION'
+      : terms?.valueMode === 'SINGLE' ? 'AMOUNT' : ''
+    const legacySingle = terms?.valueMode === 'SINGLE' && terms.minAmountCents !== undefined
+    this.valueModeAtLoad = valueMode
     this.setData({
       catalog,
       cityOptions,
@@ -272,13 +296,16 @@ Page({
       description: detail?.description || '',
       regionText: detail?.regionText || '',
       titleError: '',
-      valueSummaryError: '',
+      valueAmountError: '',
       targetSummaryError: '',
       playersOnly: detail?.playersOnly === true,
       scopeType: detail?.branchId ? 'BRANCH' : 'PLATFORM',
       cityTagId: detail?.city?.id || '',
-      minAmountYuan: terms?.minAmountCents === undefined ? '' : String(terms.minAmountCents / 100),
-      maxAmountYuan: terms?.maxAmountCents === undefined ? '' : String(terms.maxAmountCents / 100),
+      valueMode,
+      valueQian: legacySingle ? String(terms!.minAmountCents! / QIAN_CENTS) : '',
+      legacyRangeMinCents: !valueMode && terms ? terms.minAmountCents ?? undefined : undefined,
+      legacyRangeMaxCents: !valueMode && terms ? terms.maxAmountCents ?? undefined : undefined,
+      hadCommercialTerms: Boolean(terms) || locationTypes.length > 0 || locationCityTagIds.length > 0,
       locationTypes,
       locationCityTagIds,
       coverAssetId: detail?.coverAssetId || '',
@@ -301,15 +328,53 @@ Page({
 
   updateText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
-    if (!['title', 'valueSummary', 'targetSummary', 'description', 'regionText'].includes(field)) {
+    if (!['title', 'targetSummary', 'description', 'regionText'].includes(field)) {
       return
     }
     this.dismissSaveError()
     this.touch()
     this.setData({
       [field]: event.detail.value,
-      ...(['title', 'valueSummary', 'targetSummary'].includes(field) ? { [`${field}Error`]: '' } : {}),
+      ...(['title', 'targetSummary'].includes(field) ? { [`${field}Error`]: '' } : {}),
     })
+  },
+
+  /** MIW-89：价值模式单选行（可再点取消）；切走金额模式时清掉金额报错。 */
+  chooseValueMode(event: WechatMiniprogram.TouchEvent) {
+    const mode = String(event.currentTarget.dataset.mode || '') as ValueModeChoice
+    if (mode !== 'NEGOTIATION' && mode !== 'AMOUNT') {
+      return
+    }
+    this.dismissSaveError()
+    this.touch()
+    this.setData({
+      valueMode: this.data.valueMode === mode ? '' : mode,
+      ...(this.data.valueMode === mode || mode === 'NEGOTIATION' ? { valueAmountError: '' } : {}),
+    })
+  },
+
+  /** MIW-89：千单位金额输入；直接输入也视为选择「具体金额」模式。 */
+  updateValueQian(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.dismissSaveError()
+    this.touch()
+    this.setData({ valueMode: 'AMOUNT', valueQian: event.detail.value, valueAmountError: '' })
+  },
+
+  /** MIW-89：拦截金额输入区 tap 冒泡，避免点输入框时把「具体金额」行切走。 */
+  noopValueInputTap() {},
+
+  /** MIW-89（OPPVAL-05）：粘贴/AI 价值文本 → 面谈或千单位模式行；无法识别时忽略。 */
+  applyValueHint(text?: string) {
+    if (!text) {
+      return
+    }
+    const hint = opportunityValueHintFromText(text)
+    if (hint?.kind === 'NEGOTIATION') {
+      this.setData({ valueMode: 'NEGOTIATION', valueAmountError: '' })
+    }
+    else if (hint?.kind === 'QIAN' && hint.qian > 0) {
+      this.setData({ valueMode: 'AMOUNT', valueQian: String(hint.qian), valueAmountError: '' })
+    }
   },
 
   /**
@@ -379,12 +444,13 @@ Page({
     this.touch()
     this.setData({
       ...(draft.title ? { title: draft.title, titleError: '' } : {}),
-      ...(draft.valueSummary ? { valueSummary: draft.valueSummary, valueSummaryError: '' } : {}),
       ...(draft.targetSummary ? { targetSummary: draft.targetSummary, targetSummaryError: '' } : {}),
       ...(draft.description ? { description: draft.description } : {}),
       ...(cityIndex >= 0 ? { cityTagId: draft.cityTagId, cityIndex } : {}),
       message: '',
     })
+    // MIW-89：价值文本转面谈/千单位模式行（OPPVAL-05），不再回填文本框。
+    this.applyValueHint(draft.valueSummary)
   },
 
   changeCity(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -487,17 +553,20 @@ Page({
 
   validateRequiredFields() {
     const titleError = this.data.title.trim() ? '' : '请输入机会名称。'
-    const valueSummaryError = this.data.valueSummary.trim() ? '' : '请输入价值金额或价值说明。'
+    // MIW-89：价值金额选填；只有选择「具体金额」时才校验千单位数字。
+    const valueAmountError = this.data.valueMode === 'AMOUNT' && !validValueQian(this.data.valueQian)
+      ? '请输入正确的价值金额（单位：千）。'
+      : ''
     const targetSummaryError = this.data.targetSummary.trim() ? '' : '请输入寻找合作方的说明。'
     const firstIssue = [
       { message: titleError, selector: '#opportunity-field-title' },
-      { message: valueSummaryError, selector: '#opportunity-field-value-summary' },
+      { message: valueAmountError, selector: '#opportunity-field-value-summary' },
       { message: targetSummaryError, selector: '#opportunity-field-target-summary' },
     ].find(issue => issue.message)
 
     this.setData({
       titleError,
-      valueSummaryError,
+      valueAmountError,
       targetSummaryError,
       message: '',
     })
@@ -530,13 +599,48 @@ Page({
     void requestEntrySubscription('OPPORTUNITY_NOTICE', GUIDE_PUBLISH_ENTRY_KEY)
     this.setData({ saving: true, message: '' })
     try {
-      const minAmountCents = this.data.minAmountYuan.trim() ? Math.round(Number(this.data.minAmountYuan) * 100) : undefined
-      const maxAmountCents = this.data.maxAmountYuan.trim() ? Math.round(Number(this.data.maxAmountYuan) * 100) : undefined
       const structuredLocations = [
         ...this.data.locationCityTagIds.map(cityTagId => ({ type: 'CITY' as const, cityTagId })),
         ...this.data.locationTypes.map(type => ({ type })),
       ]
-      const hasCommercialTerms = structuredLocations.length > 0 || minAmountCents !== undefined || maxAmountCents !== undefined
+      // MIW-89：价值金额按模式行组装结构化语义——
+      //   NEGOTIATION → 金额空、行保持 ACTIVE；AMOUNT → 千 ×100,000 落 min=max（SINGLE）；
+      //   未选择：存量 RANGE/仅地点原样带回（valueModeAtLoad 也为空），用户主动取消则显式清空。
+      let commercialTerms: OpportunityCommercialTerms | null | undefined
+      if (this.data.valueMode === 'NEGOTIATION') {
+        commercialTerms = {
+          currency: 'CNY',
+          amountUnit: 'CNY_CENTS',
+          valueMode: 'NEGOTIATION',
+          minAmountCents: null,
+          maxAmountCents: null,
+          locations: structuredLocations,
+        }
+      }
+      else if (this.data.valueMode === 'AMOUNT') {
+        const qianCents = Math.round(Number(this.data.valueQian) * QIAN_CENTS)
+        commercialTerms = {
+          currency: 'CNY',
+          amountUnit: 'CNY_CENTS',
+          valueMode: 'SINGLE',
+          minAmountCents: qianCents,
+          maxAmountCents: qianCents,
+          locations: structuredLocations,
+        }
+      }
+      else if (this.data.hadCommercialTerms && this.valueModeAtLoad === '') {
+        commercialTerms = {
+          currency: 'CNY',
+          amountUnit: 'CNY_CENTS',
+          valueMode: 'RANGE',
+          minAmountCents: this.data.legacyRangeMinCents,
+          maxAmountCents: this.data.legacyRangeMaxCents,
+          locations: structuredLocations,
+        }
+      }
+      else if (this.data.hadCommercialTerms) {
+        commercialTerms = null
+      }
       const result = await opportunityModule.save({
         id: this.data.id || undefined,
         expectedVersion: this.data.id ? this.data.version : undefined,
@@ -549,11 +653,7 @@ Page({
         scopeType: this.data.scopeType,
         branchId: this.data.branchId || undefined,
         cityTagId: this.data.cityTagId || undefined,
-        ...(hasCommercialTerms
-          ? {
-              commercialTerms: { currency: 'CNY' as const, amountUnit: 'CNY_CENTS' as const, minAmountCents, maxAmountCents, locations: structuredLocations },
-            }
-          : {}),
+        ...(commercialTerms === undefined ? {} : { commercialTerms }),
         coverAssetId: this.data.coverAssetId || undefined,
         roleKeys: this.data.roleOptions.filter(item => item.selected).map(item => item.key),
         typeKeys: this.data.typeOptions.filter(item => item.selected).map(item => item.key),

@@ -309,7 +309,7 @@
             <mip-opportunity-card
               title="{{item.title}}"
               cover-url="{{item.coverUrl || ''}}"
-              value-text="{{item.valueSummary}}"
+              value-text="{{item.valueSummary || '面谈'}}"
               city-text="{{item.cityLabel || ''}}"
               location-text="{{item.cityLabel || item.branchName || '全国'}}"
               target-text="{{item.targetSummary}}"
@@ -329,7 +329,7 @@
             <mip-opportunity-card
               title="{{item.title}}"
               cover-url="{{item.coverUrl || ''}}"
-              value-text="{{item.valueSummary}}"
+              value-text="{{item.valueSummary || '面谈'}}"
               city-text="{{item.cityLabel || ''}}"
               location-text="{{item.cityLabel || item.branchName || '全国'}}"
               target-text="{{item.targetSummary}}"

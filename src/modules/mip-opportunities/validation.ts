@@ -10,6 +10,7 @@ import type {
   OpportunityPage,
   OpportunityTag,
   OpportunityTypeKey,
+  OpportunityValueMode,
   PublicPerson,
   PublicProfileAggregate,
   PublicProfileBadge,
@@ -52,6 +53,19 @@ function profileRefs(value: unknown) {
 
 const locationTypes = new Set<OpportunityLocationType>(['CITY', 'NATIONAL', 'REMOTE'])
 
+// MIW-89（2026-10-13 产品对齐）：RANGE=万元区间（默认/存量），SINGLE=千单位单值，NEGOTIATION=面谈。
+const valueModes = new Set<OpportunityValueMode>(['RANGE', 'SINGLE', 'NEGOTIATION'])
+
+function parseValueMode(value: unknown, invalidMessage: string): OpportunityValueMode {
+  if (value === undefined || value === null || value === '') {
+    return 'RANGE'
+  }
+  if (typeof value !== 'string' || !valueModes.has(value as OpportunityValueMode)) {
+    throw new Error(invalidMessage)
+  }
+  return value as OpportunityValueMode
+}
+
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('人才服务返回了无效响应')
@@ -89,8 +103,15 @@ export function normalizeOpportunityCommercialTerms(value: unknown): Opportunity
   }
   const minAmountCents = cents(source.minAmountCents, '最低金额')
   const maxAmountCents = cents(source.maxAmountCents, '最高金额')
+  const valueMode = parseValueMode(source.valueMode, '价值模式格式不正确')
   if (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents) {
     throw new Error('金额区间格式不正确')
+  }
+  if (valueMode === 'SINGLE' && (minAmountCents === undefined || minAmountCents !== maxAmountCents)) {
+    throw new Error('价值金额格式不正确')
+  }
+  if (valueMode === 'NEGOTIATION' && (minAmountCents !== undefined || maxAmountCents !== undefined)) {
+    throw new Error('面谈模式不能填写金额')
   }
   if (!Array.isArray(source.locations) || source.locations.length > 16) {
     throw new Error('合作范围格式不正确')
@@ -116,6 +137,7 @@ export function normalizeOpportunityCommercialTerms(value: unknown): Opportunity
   return {
     currency: 'CNY',
     amountUnit: 'CNY_CENTS',
+    valueMode,
     ...(minAmountCents === undefined ? {} : { minAmountCents }),
     ...(maxAmountCents === undefined ? {} : { maxAmountCents }),
     amountDisplay: '',
@@ -141,7 +163,8 @@ export function normalizeOpportunityDraft(value: OpportunityDraft): OpportunityD
   return {
     ...value,
     title: text(value.title, 120, '机会标题'),
-    valueSummary: text(value.valueSummary, 240, '机会价值'),
+    // MIW-89：价值金额转选填（面谈/千单位双模式），留空以 '' 提交（服务端列 NOT NULL）。
+    valueSummary: text(value.valueSummary, 240, '机会价值', false),
     targetSummary: text(value.targetSummary, 500, '寻找内容'),
     description: text(value.description, 6000, '机会说明', false),
     scopeType,
@@ -196,6 +219,8 @@ function parseOpportunityCommercialTerms(value: unknown): OpportunityCommercialT
   const terms = record(value)
   const minAmountCents = cents(terms.minAmountCents, '最低金额')
   const maxAmountCents = cents(terms.maxAmountCents, '最高金额')
+  // 旧服务端无 valueMode → RANGE；非法值按服务端无效响应拒绝。
+  const valueMode = parseValueMode(terms.valueMode, '机会服务返回了无效响应')
   if (terms.currency !== 'CNY' || terms.amountUnit !== 'CNY_CENTS'
     || typeof terms.amountDisplay !== 'string' || typeof terms.locationDisplay !== 'string'
     || !Array.isArray(terms.locations)
@@ -231,6 +256,7 @@ function parseOpportunityCommercialTerms(value: unknown): OpportunityCommercialT
   return {
     currency: 'CNY',
     amountUnit: 'CNY_CENTS',
+    valueMode,
     ...(minAmountCents === undefined ? {} : { minAmountCents }),
     ...(maxAmountCents === undefined ? {} : { maxAmountCents }),
     amountDisplay: terms.amountDisplay,

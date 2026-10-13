@@ -35,10 +35,28 @@
         <input class="mt-2 box-border h-[92rpx] w-full max-w-full rounded-[16rpx] bg-panel px-[16rpx] text-[28rpx]" value="{{title}}" maxlength="120" placeholder="请输入名称，让人一听就了解这是什么事" aria-label="机会名称，必填" data-field="title" bindinput="updateText" />
         <view wx:if="{{titleError}}" class="mt-2 text-[22rpx] text-danger" aria-live="polite">{{titleError}}</view>
       </view>
+      <!-- MIW-89（2026-10-13 产品对齐）：价值金额改「面谈 / 千单位单值」双模式且选填。
+           语义由服务端结构化落库（value_mode），不再使用自由文本；存量 RANGE 区间与
+           旧价值文本编辑时原样带回，不在本表单展示。 -->
       <view id="opportunity-field-value-summary">
-        <view class="flex items-center gap-[8rpx] text-[32rpx] font-medium leading-[44rpx]"><image class="h-[32rpx] w-[32rpx]" src="/assets/figma/opportunities/money-cny-circle.svg" mode="aspectFit" /><text>价值金额</text></view>
-        <textarea class="mt-2 box-border h-[92rpx] min-h-[92rpx] w-full max-w-full rounded-[16rpx] bg-panel px-[16rpx] py-3 text-[28rpx]" value="{{valueSummary}}" maxlength="240" placeholder="请输入价值金额，让参与者跃跃欲试" aria-label="价值金额或价值说明，必填" data-field="valueSummary" bindinput="updateText" />
-        <view wx:if="{{valueSummaryError}}" class="mt-2 text-[22rpx] text-danger" aria-live="polite">{{valueSummaryError}}</view>
+        <view class="flex items-center gap-[8rpx] text-[32rpx] font-medium leading-[44rpx]"><image class="h-[32rpx] w-[32rpx]" src="/assets/figma/opportunities/money-cny-circle.svg" mode="aspectFit" /><text>价值金额（选填）</text></view>
+        <view class="mt-2 flex flex-col gap-3">
+          <view class="flex min-h-[92rpx] items-center gap-[16rpx] rounded-[16rpx] bg-panel px-[16rpx]" aria-role="radio" aria-checked="{{valueMode === 'NEGOTIATION'}}" aria-label="面谈" data-mode="NEGOTIATION" bind:tap="chooseValueMode">
+            <view wx:if="{{valueMode === 'NEGOTIATION'}}" class="flex h-[48rpx] w-[48rpx] shrink-0 items-center justify-center rounded-full bg-brand"><mip-icon name="check" size="{{12}}" color="var(--color-on-brand)" /></view>
+            <view wx:else class="box-border h-[40rpx] w-[40rpx] shrink-0 rounded-full border-[2rpx] border-solid border-brand" />
+            <text class="text-[28rpx]">面谈</text>
+          </view>
+          <view class="flex min-h-[92rpx] items-center gap-[16rpx] rounded-[16rpx] bg-panel px-[16rpx]" aria-role="radio" aria-checked="{{valueMode === 'AMOUNT'}}" aria-label="具体金额，单位千" data-mode="AMOUNT" bind:tap="chooseValueMode">
+            <view wx:if="{{valueMode === 'AMOUNT'}}" class="flex h-[48rpx] w-[48rpx] shrink-0 items-center justify-center rounded-full bg-brand"><mip-icon name="check" size="{{12}}" color="var(--color-on-brand)" /></view>
+            <view wx:else class="box-border h-[40rpx] w-[40rpx] shrink-0 rounded-full border-[2rpx] border-solid border-brand" />
+            <text class="shrink-0 text-[28rpx]">具体金额</text>
+            <view class="ml-auto flex min-w-0 items-center gap-[8rpx]" catch:tap="noopValueInputTap">
+              <input class="box-border h-[60rpx] w-[200rpx] rounded-[12rpx] bg-canvas px-[12rpx] text-right text-[28rpx]" type="digit" value="{{valueQian}}" maxlength="10" placeholder="请输入" aria-label="价值金额，选填，单位千" bindinput="updateValueQian" />
+              <text class="shrink-0 text-[28rpx] text-muted">千</text>
+            </view>
+          </view>
+        </view>
+        <view wx:if="{{valueAmountError}}" class="mt-2 text-[22rpx] text-danger" aria-live="polite">{{valueAmountError}}</view>
       </view>
       <view id="opportunity-field-city">
         <view class="flex items-center gap-[8rpx] text-[32rpx] font-medium leading-[44rpx]"><image class="h-[32rpx] w-[32rpx]" src="/assets/figma/opportunities/city-building.svg" mode="aspectFit" /><text>主营城市</text></view>
