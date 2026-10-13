@@ -351,6 +351,34 @@ test('cooperation talent roster includes users without published cards or profil
   assert.deepEqual(withoutCards.cards, [])
 })
 
+test('cooperation talent roster SQL keeps join aliases unique', async () => {
+  const calls = []
+  await listCooperationTalents({
+    async one() { throw new Error('unexpected one') },
+    async query(sql) {
+      calls.push({ sql })
+      if (sql.includes('FROM mip_tags t')) return []
+      if (sql.includes('FROM mip_users u')) return []
+      throw new Error(`unexpected query: ${sql}`)
+    },
+  }, {
+    appId,
+    userId: null,
+    profileRefSecret: secret,
+  }, { limit: 10 })
+  const main = calls.find(call => call.sql.includes('WITH snapshot AS'))
+  assert.ok(main, 'talent roster main query expected')
+  // 只检查最外层查询段的 JOIN 别名：CTE 子作用域内的同名别名在 MySQL 合法，
+  // 但外层重复（如 MIW-78 内联时留下的两个 LEFT JOIN mip_profiles p）会直接
+  // 报 Not unique table/alias，把整个名单册页打成 SERVICE_UNAVAILABLE。
+  const outerStart = main.sql.indexOf('INNER JOIN talent_page')
+  assert.ok(outerStart > 0, 'outer talent_page join expected')
+  const outer = main.sql.slice(outerStart)
+  const aliases = [...outer.matchAll(/\bJOIN\s+mip_\w+\s+([A-Za-z_]\w*)/g)].map(match => match[1])
+  assert.ok(aliases.includes('p'), 'profiles alias expected in talent joins')
+  assert.equal(new Set(aliases).size, aliases.length, `duplicate join alias in talent SQL: ${aliases.join(', ')}`)
+})
+
 test('cooperation talent cursor keeps the original snapshot and applies to the immutable user keyset', async () => {
   const context = {
     appId,

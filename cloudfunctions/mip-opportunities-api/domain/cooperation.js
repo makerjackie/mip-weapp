@@ -448,7 +448,6 @@ const talentUserFields = `
  *  覆盖 talent_page 并通过 SQL 隔离检查）；卡片为可选项，行业 / 头像 / 分会沿用名单卡展示口径。 */
 const talentUserJoins = `
   LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
-  LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
   LEFT JOIN mip_city_branches branch
     ON branch.app_id = u.app_id AND branch.id = u.primary_branch_id AND branch.status = 'ACTIVE'
   LEFT JOIN mip_media_assets avatar
