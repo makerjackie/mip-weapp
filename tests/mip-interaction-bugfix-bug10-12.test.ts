@@ -72,6 +72,7 @@ vi.mock('../src/platform/wechat/image-upload', () => ({ chooseSingleImage: vi.fn
 vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: vi.fn(),
   caseRedirectTo: vi.fn(),
+  caseOpenRoute: vi.fn(),
   caseSwitchPrimary: vi.fn(),
   syncCaseNavigation: vi.fn(),
 }))

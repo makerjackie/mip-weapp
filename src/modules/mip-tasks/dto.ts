@@ -3,6 +3,7 @@ import { MipTasksError } from './types'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const USER_TASK_STATUSES = new Set(['AVAILABLE', 'COMPLETED', 'ENDED', 'PENDING_REVIEW', 'NOT_STARTED'])
+const USER_TASK_ACTION_TYPES = new Set(['PAGE_JUMP', 'SHARE'])
 const COMPLETION_RESULTS = new Set(['SUCCESS', 'FAILED', 'PENDING'])
 const IMAGE_CONTENT_TYPES = new Set(['image/jpeg', 'image/png'])
 
@@ -109,6 +110,8 @@ function parseUserTaskCard(value: unknown, detail: boolean): UserTaskCard {
     'attachmentRequired',
     'endsAt',
     'hasTemplate',
+    'actionType',
+    'actionTarget',
     'version',
     'status',
     'completion',
@@ -134,11 +137,16 @@ function parseUserTaskCard(value: unknown, detail: boolean): UserTaskCard {
   ])
   const status = enumString(item.status, USER_TASK_STATUSES) as UserTaskCard['status']
   const hasTemplate = booleanValue(item.hasTemplate)
+  // MIW-84：点击动作成对下发（actionTarget 仅随 PAGE_JUMP 出现，且不带前导 / 与 query）。
+  const actionType = item.actionType === undefined ? undefined : enumString(item.actionType, USER_TASK_ACTION_TYPES) as UserTaskCard['actionType']
+  const actionTarget = item.actionTarget === undefined ? undefined : boundedString(item.actionTarget, 128)
   const completion = item.completion === undefined ? undefined : parseCompletionSummary(item.completion)
   const template = item.template === undefined ? undefined : parseTemplate(item.template)
   if ((['COMPLETED', 'PENDING_REVIEW'].includes(status) || item.submissionStatus === 'rejected') !== Boolean(completion)
     || (!hasTemplate && template)
-    || (detail && hasTemplate && !template)) {
+    || (detail && hasTemplate && !template)
+    || (actionTarget !== undefined) !== (actionType === 'PAGE_JUMP')
+    || (actionTarget !== undefined && (actionTarget.startsWith('/') || actionTarget.includes('?')))) {
     invalidResponse()
   }
   return {
@@ -149,6 +157,8 @@ function parseUserTaskCard(value: unknown, detail: boolean): UserTaskCard {
     attachmentRequired: booleanValue(item.attachmentRequired),
     endsAt: isoString(item.endsAt, true),
     hasTemplate,
+    ...(actionType !== undefined ? { actionType } : {}),
+    ...(actionTarget !== undefined ? { actionTarget } : {}),
     version: safeInteger(item.version, 1, Number.MAX_SAFE_INTEGER),
     status,
     ...(item.submissionStatus !== undefined ? { submissionStatus: boundedString(item.submissionStatus, 32) } : {}),

@@ -38,8 +38,11 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('立即加入')
     // MIW-75：会员邀请载体（分享/复制文案/海报）整体下线；玩家操作栏仅剩续费——
     // 到期前 3 个月窗口内展示全宽「立即续费」，窗口外不放任何常驻操作。
+    // MIW-84：唯一例外是任务卡上后台配置的 SHARE 动作按钮（转发内容固定为邀请语境）。
     expect(template).not.toContain('邀请加入')
-    expect(template).not.toContain('open-type="share"')
+    const shareButtons = template.match(/<button[^>]*open-type="share"[^>]*>/g) || []
+    expect(shareButtons).toHaveLength(1)
+    expect(shareButtons[0]).toContain('item.actionType === \'SHARE\'')
     expect(template).not.toContain('openType="share"')
     expect(template).not.toContain('生成邀请海报')
     expect(template).not.toContain('复制邀请文案')
@@ -48,7 +51,10 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('{{membershipValidityText}}')
     expect(template).toContain('wx:for="{{tasks}}"')
     // 最新 J1-06 原型：可执行任务使用黄底胶囊，完成态与未开放态保持区分。
-    expect(template).toContain('wx:if="{{item.status === \'AVAILABLE\'}}"')
+    // MIW-84：SHARE 按钮先渲染；AVAILABLE 胶囊仅在配置了 PAGE_JUMP 时出现（未配置=无动作，
+    // 不能落入灰态 else 分支），非 AVAILABLE 状态保留灰态状态文案。
+    expect(template).toContain('wx:elif="{{item.status === \'AVAILABLE\' && item.actionType === \'PAGE_JUMP\'}}"')
+    expect(template).toContain('wx:elif="{{item.status !== \'AVAILABLE\'}}"')
     expect(template).toContain('growth-task-action border border-black bg-brand text-on-brand')
     const taskAction = styles.match(/\.growth-task-action\s*\{([^}]+)\}/)?.[1]
     expect(taskAction).toContain('height: 52rpx')

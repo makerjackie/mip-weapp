@@ -388,11 +388,12 @@ function createTaskRepository(database, options = {}) {
         await tx.query(
           `INSERT INTO mip_task_cards (
              id, app_id, name, content, reward_experience, attachment_required,
-             assignment_mode, ends_at, template_asset_id, status, created_by_user_id
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)`,
+             assignment_mode, ends_at, template_asset_id, action_type, action_target,
+             status, created_by_user_id
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)`,
           [taskId, caller.appId, draft.name, draft.content, draft.rewardExperience,
             draft.attachmentRequired ? 1 : 0, draft.assignmentMode, draft.endsAt,
-            draft.templateAssetId, caller.userId],
+            draft.templateAssetId, draft.actionType, draft.actionTarget, caller.userId],
         )
       }
       else {
@@ -408,10 +409,12 @@ function createTaskRepository(database, options = {}) {
         const result = await tx.query(
           `UPDATE mip_task_cards SET name = ?, content = ?, reward_experience = ?,
              attachment_required = ?, assignment_mode = ?, ends_at = ?, template_asset_id = ?,
+             action_type = ?, action_target = ?,
              version = version + 1
            WHERE app_id = ? AND id = ? AND version = ?`,
           [draft.name, draft.content, draft.rewardExperience, draft.attachmentRequired ? 1 : 0,
-            draft.assignmentMode, draft.endsAt, draft.templateAssetId, caller.appId, taskId, version],
+            draft.assignmentMode, draft.endsAt, draft.templateAssetId,
+            draft.actionType, draft.actionTarget, caller.appId, taskId, version],
         )
         if (Number(result.affectedRows) !== 1) throw new Error('CONFLICT')
       }
@@ -1015,6 +1018,8 @@ function userTaskDto(row, includeTemplateUrl = false) {
     attachmentRequired: Boolean(row.attachment_required),
     endsAt: iso(row.ends_at),
     hasTemplate: Boolean(row.template_asset_id),
+    actionType: row.action_type || undefined,
+    actionTarget: row.action_target || undefined,
     purpose: row.purpose || '',
     completionStandard: row.completion_criteria || '',
     starLevel: Number(row.star_level || 0),
@@ -1056,6 +1061,8 @@ function adminTaskDto(row, includeTemplateUrl = false, eligibleLevels = []) {
     applicableServers: parseJson(row.applicable_servers_json, []),
     rewardConfig: parseJson(row.reward_config_json, null),
     assignmentMode: row.assignment_mode || 'ALL',
+    actionType: row.action_type || '',
+    actionTarget: row.action_target || '',
     assignmentCount: Number(row.assignment_count || 0),
     eligibleLevels,
     endsAt: iso(row.ends_at),

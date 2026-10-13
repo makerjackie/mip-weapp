@@ -168,6 +168,63 @@ describe('admin task management', () => {
         periodStartAt: '', periodEndAt: '', weeklyDeliverAt: '',
         assignedOwnerId: TASK_ID, applicableServers: [],
         rewardConfig: { experience: { enabled: true, amount: 30 }, contribution: { enabled: false, amount: 0 }, bonus: { enabled: false, amount: 0 } },
+        actionType: null, actionTarget: null,
+      },
+      taskId: TASK_ID,
+      expectedVersion: 3,
+    })
+
+    // MIW-84：点击动作——PAGE_JUMP 必须选白名单目标页；SHARE 不带目标；越界目标拒绝提交。
+    const jumpSource = {
+      ...source,
+      task: { ...source.task, actionType: 'PAGE_JUMP', actionTarget: 'pages/events/index' },
+    }
+    const jump = createTaskMutationDefinition('mip.admin.tasks.save', TASK_ID, jumpSource)
+    assert.deepEqual(buildTaskMutationInput(jump, jump.values), {
+      task: {
+        name: '早会复盘', content: '提交本周复盘', rewardExperience: 30,
+        attachmentRequired: true, assignmentMode: 'SELECTED', endsAt: '',
+        templateAssetId: ASSET_ID, eligibleLevelIds: [LEVEL_ID],
+        starLevel: 1, purpose: '交付复盘', completionCriteria: '提交截图',
+        periodStartAt: '', periodEndAt: '', weeklyDeliverAt: '',
+        assignedOwnerId: TASK_ID, applicableServers: [],
+        rewardConfig: { experience: { enabled: true, amount: 30 }, contribution: { enabled: false, amount: 0 }, bonus: { enabled: false, amount: 0 } },
+        actionType: 'PAGE_JUMP', actionTarget: 'pages/events/index',
+      },
+      taskId: TASK_ID,
+      expectedVersion: 3,
+    })
+    assert.equal(buildTaskMutationInput(jump, { ...jump.values, actionTarget: 'packages/admin/tasks/index' }), null)
+    assert.equal(buildTaskMutationInput(jump, { ...jump.values, actionTarget: 'pages/events/index?from=task' }), null)
+    assert.equal(buildTaskMutationInput(jump, { ...jump.values, actionTarget: '' }), null)
+    const share = createTaskMutationDefinition('mip.admin.tasks.save', TASK_ID, {
+      ...source,
+      task: { ...source.task, actionType: 'SHARE', actionTarget: 'pages/events/index' },
+    })
+    assert.deepEqual(buildTaskMutationInput(share, share.values), {
+      task: {
+        name: '早会复盘', content: '提交本周复盘', rewardExperience: 30,
+        attachmentRequired: true, assignmentMode: 'SELECTED', endsAt: '',
+        templateAssetId: ASSET_ID, eligibleLevelIds: [LEVEL_ID],
+        starLevel: 1, purpose: '交付复盘', completionCriteria: '提交截图',
+        periodStartAt: '', periodEndAt: '', weeklyDeliverAt: '',
+        assignedOwnerId: TASK_ID, applicableServers: [],
+        rewardConfig: { experience: { enabled: true, amount: 30 }, contribution: { enabled: false, amount: 0 }, bonus: { enabled: false, amount: 0 } },
+        actionType: 'SHARE', actionTarget: null,
+      },
+      taskId: TASK_ID,
+      expectedVersion: 3,
+    })
+    assert.deepEqual(buildTaskMutationInput(share, { ...share.values, actionType: 'URL' }), {
+      task: {
+        name: '早会复盘', content: '提交本周复盘', rewardExperience: 30,
+        attachmentRequired: true, assignmentMode: 'SELECTED', endsAt: '',
+        templateAssetId: ASSET_ID, eligibleLevelIds: [LEVEL_ID],
+        starLevel: 1, purpose: '交付复盘', completionCriteria: '提交截图',
+        periodStartAt: '', periodEndAt: '', weeklyDeliverAt: '',
+        assignedOwnerId: TASK_ID, applicableServers: [],
+        rewardConfig: { experience: { enabled: true, amount: 30 }, contribution: { enabled: false, amount: 0 }, bonus: { enabled: false, amount: 0 } },
+        actionType: null, actionTarget: null,
       },
       taskId: TASK_ID,
       expectedVersion: 3,

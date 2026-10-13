@@ -9,12 +9,20 @@ import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { createIntentKey, formatCny } from '../../../modules/mip-shell'
 import { mipTasksModule } from '../../../modules/mip-tasks/client'
-import { caseNavigateTo, caseRedirectTo } from '../../../platform/navigation/client'
+import { caseNavigateTo, caseOpenRoute, caseRedirectTo } from '../../../platform/navigation/client'
 import { formatLocalDate } from '../../../utils/date'
 import { withinRenewalWindow } from './renewal-window'
 
 /** MIW-27：经验值详情独立页（figma 1948:14177 经验值明细）。 */
 const EXPERIENCE_DETAILS_PAGE = '/packages/member/mip-experience-details/index'
+
+/**
+ * MIW-84：任务卡 SHARE 动作触发转发（后台配置 actionType='SHARE'）。
+ * 本期分享内容固定邀请语境（与 MIW-83「邀请入会」同一落地页与文案；命名对齐便于合并去重）；
+ * 按任务可配分享标题/路径列后续卡。落地页用主包首页。
+ */
+const MEMBERSHIP_INVITE_SHARE_TITLE = '邀请你加入 MIP 玩家会员，一起解锁专属权益'
+const MEMBERSHIP_INVITE_SHARE_PATH = '/pages/index/index'
 
 /** MIW-65：会员方案页/订单确认页下线后，本页为唯一开通面；协议沿用既有会员服务协议文档。 */
 const MEMBERSHIP_AGREEMENT_URL = '/packages/member/user-agreement/index?document=membership'
@@ -281,11 +289,26 @@ Page({
     }
   },
 
+  /**
+   * MIW-84：任务卡点击动作由后台配置驱动（actionType），不再进入任务详情页提交/核验。
+   * PAGE_JUMP → 目标页（tab 页 switchTab / 普通页 navigateTo）；SHARE → 由卡内 open-type=share
+   * 按钮原生拉起转发（本 handler 被 catch 拦截，不会走到）；未配置或非 AVAILABLE 整卡不可点。
+   */
   openTask(event: WechatMiniprogram.TouchEvent) {
     const taskId = String(event.currentTarget.dataset.id || '')
-    if (taskId) {
-      void caseNavigateTo({ url: `/packages/member/mip-tasks/detail/index?taskId=${taskId}` })
+    const task = this.data.tasks.find(item => item.id === taskId)
+    if (!task || task.status !== 'AVAILABLE' || task.actionType !== 'PAGE_JUMP' || !task.actionTarget) {
+      return
     }
+    void caseOpenRoute(`/${task.actionTarget}`)
+  },
+
+  /** MIW-84：SHARE 任务卡的转发按钮（open-type=share 原生拉起面板，catch 仅阻断整卡 openTask）。 */
+  handleTaskShareTap() {},
+
+  /** MIW-84：SHARE 任务/邀请语境的转发内容（本期固定，裁决 2026-10-14）。 */
+  onShareAppMessage(): { title: string, path: string } {
+    return { title: MEMBERSHIP_INVITE_SHARE_TITLE, path: MEMBERSHIP_INVITE_SHARE_PATH }
   },
 
   /** MIW-27：经验值详情跳转独立明细页（figma 1948:14177），不再原地展开滚动。 */
