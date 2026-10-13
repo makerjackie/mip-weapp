@@ -148,11 +148,12 @@ describe('R1 novice walkthrough fixes', () => {
     assert.ok(sourceId?.optionsAction === 'mip.admin.knowledge.list' && (sourceId as { emptyHint?: string }).emptyHint?.includes('新建信息源'))
   })
 
-  it('marks opportunity title and value summary as required like the server does', () => {
+  it('marks opportunity title as required and the value summary optional (MIW-89)', () => {
     const draft = getContentMutationForm('mip.admin.opportunities.save').fields.find(field => field.key === 'draft')
     const nested = draft?.fields || []
     assert.equal(nested.find(field => field.key === 'title')?.required, true)
-    assert.equal(nested.find(field => field.key === 'valueSummary')?.required, true)
+    // MIW-89：价值金额转选填（面谈/千单位双模式），价值说明仅作存量文本保留。
+    assert.equal(nested.find(field => field.key === 'valueSummary')?.required, false)
   })
 
   it('bounds ability score inputs to the 0-5 server range', () => {
@@ -265,5 +266,61 @@ describe('R3 novice walkthrough fixes', () => {
       },
     })
     assert.equal(result.ok === false && result.errors.form, '最低价值不能高于最高价值')
+  })
+
+  it('normalizes MIW-89 value modes and folds the qian single amount into min=max cents', () => {
+    const single = validateContentMutation('mip.admin.opportunities.save', {
+      draft: {
+        ownerUserId: 'user-1', scopeType: 'PLATFORM', title: '联名咖啡', valueSummary: '',
+        roleKeys: ['connector'], tagIds: [],
+        commercialTerms: { valueMode: 'SINGLE', singleAmountCents: 500000, locations: [] },
+      },
+    })
+    assert.equal(single.ok, true)
+    if (!single.ok) return
+    // 千 → 分（×100,000），singleAmountCents 只是表单字段，不提交服务端。
+    assert.deepEqual((single.input.draft as { commercialTerms: Record<string, unknown> }).commercialTerms, {
+      currency: 'CNY', amountUnit: 'CNY_CENTS', valueMode: 'SINGLE',
+      minAmountCents: 500000, maxAmountCents: 500000, locations: [],
+    })
+    // 千单位单值要求 min=max；面谈金额必空；非法模式拒绝。
+    for (const [terms, message] of [
+      [{ valueMode: 'SINGLE', minAmountCents: 100, maxAmountCents: 200, locations: [] }, '千单位单值要求最低与最高价值一致'],
+      [{ valueMode: 'SINGLE', minAmountCents: 100, locations: [] }, '千单位单值要求最低与最高价值一致'],
+      [{ valueMode: 'NEGOTIATION', minAmountCents: 100, locations: [] }, '面谈模式不能填写金额'],
+      [{ valueMode: 'NEGOTIATION', singleAmountCents: 100, locations: [] }, '面谈模式不能填写金额'],
+      [{ valueMode: 'QIAN', locations: [] }, '价值模式无效'],
+    ] as Array<[Record<string, unknown>, string]>) {
+      const result = validateContentMutation('mip.admin.opportunities.save', {
+        draft: {
+          ownerUserId: 'user-1', scopeType: 'PLATFORM', title: '联名咖啡', valueSummary: '',
+          roleKeys: ['connector'], tagIds: [], commercialTerms: terms,
+        },
+      })
+      assert.equal(result.ok === false && result.errors.form, message, JSON.stringify(terms))
+    }
+    // 未声明模式保持区间语义（默认 RANGE），金额可空。
+    const legacy = validateContentMutation('mip.admin.opportunities.save', {
+      draft: {
+        ownerUserId: 'user-1', scopeType: 'PLATFORM', title: '联名咖啡', valueSummary: '',
+        roleKeys: ['connector'], tagIds: [],
+        commercialTerms: { minAmountCents: 100, maxAmountCents: 200, locations: [] },
+      },
+    })
+    assert.equal(legacy.ok, true)
+    if (!legacy.ok) return
+    assert.equal((legacy.input.draft as { commercialTerms: { valueMode: string } }).commercialTerms.valueMode, 'RANGE')
+  })
+
+  it('keeps an empty opportunity value summary valid now that the amount is optional (MIW-89)', () => {
+    const result = validateContentMutation('mip.admin.opportunities.save', {
+      draft: {
+        ownerUserId: 'user-1', scopeType: 'PLATFORM', title: '联名咖啡', valueSummary: '',
+        roleKeys: ['connector'], tagIds: [],
+      },
+    })
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal((result.input.draft as { valueSummary: string }).valueSummary, undefined)
   })
 })

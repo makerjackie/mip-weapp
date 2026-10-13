@@ -30,8 +30,12 @@ it('maps the actual opportunity response with separate money and value-descripti
   const dto = await serializedOpportunity()
   const page = await loadOpportunities({ query: '', status: '', cursor: '', limit: 20, filters: { section: 'opportunities' } },
     async <T>() => ({ items: [dto, { ...dto, id: 'empty-money', commercialTerms: { ...dto.commercialTerms, minAmountCents: null, maxAmountCents: null } },
-      { ...dto, id: 'zero-money', commercialTerms: { ...dto.commercialTerms, minAmountCents: 0, maxAmountCents: 0 } }], nextCursor: null }) as T)
-  assert.deepEqual(page.sections[0].rows.map(row => [row.value, row.valueSummary]), [['0 ～ 2.5', '完整价值'], ['—', '完整价值'], ['0', '完整价值']])
+      { ...dto, id: 'zero-money', commercialTerms: { ...dto.commercialTerms, minAmountCents: 0, maxAmountCents: 0 } },
+      // MIW-89：结构化模式直接采用服务端展示（面谈 / X 千）。
+      { ...dto, id: 'single-money', commercialTerms: { ...dto.commercialTerms, valueMode: 'SINGLE', minAmountCents: 500000, maxAmountCents: 500000, amountDisplay: '5 千' } },
+      { ...dto, id: 'negotiation-money', commercialTerms: { ...dto.commercialTerms, valueMode: 'NEGOTIATION', minAmountCents: null, maxAmountCents: null, amountDisplay: '面谈' } }], nextCursor: null }) as T)
+  assert.deepEqual(page.sections[0].rows.map(row => [row.value, row.valueSummary]),
+    [['0 ～ 2.5', '完整价值'], ['—', '完整价值'], ['0', '完整价值'], ['5 千', '完整价值'], ['面谈', '完整价值']])
   assert.equal(page.sections[0].columns.find(column => column.key === 'valueSummary')?.label, '价值说明')
 })
 
@@ -47,9 +51,54 @@ describe('opportunity read/edit/save contract', () => {
     assert.deepEqual(result.input.draft, {
       ownerUserId: 'owner-a', scopeType: 'PLATFORM', title: '非空合作机会', valueSummary: '完整价值',
       targetSummary: '未改目标', description: '第一段\n第二段', cityTagId: undefined, coverAssetId: null,
-      commercialTerms: { currency: 'CNY', amountUnit: 'CNY_CENTS', minAmountCents: 0, maxAmountCents: 2500000,
+      commercialTerms: { currency: 'CNY', amountUnit: 'CNY_CENTS', valueMode: 'RANGE', minAmountCents: 0, maxAmountCents: 2500000,
         locations: [{ type: 'CITY', cityTagId: cityId }, { type: 'REMOTE' }] },
       roleKeys: ['connector', 'strategist'], tagIds: ['tag-a'], deadlineAt: '2026-12-01T00:00:00.000Z',
+    })
+  })
+
+  it('round trips MIW-89 value modes: SINGLE folds into the qian input, NEGOTIATION carries the mode', async () => {
+    const repository = createAdminPrdExtensions({
+      one: async (sql: string) => sql.includes('mip_opportunity_commercial_terms')
+        ? { value_mode: 'SINGLE', min_amount_cents: 500000, max_amount_cents: 500000, currency: 'CNY', amount_unit: 'CNY_CENTS' }
+        : { id: 'opportunity-a', owner_user_id: 'owner-a', title: '非空合作机会', value_summary: '',
+            target_summary: '', description: '', scope_type: 'PLATFORM', role_keys: '',
+            tag_ids: '', status: 'DRAFT', content_safety_status: 'APPROVED', version: 3, deadline_at: null },
+      query: async (sql: string) => sql.includes('mip_opportunity_locations') ? [] : [],
+    })
+    const dto = await repository.getOpportunityDetail('wx-test', 'opportunity-a')
+    const values = opportunityEditorValues(dto)
+    const draft = values.draft as Record<string, unknown>
+    const terms = draft.commercialTerms as Record<string, unknown>
+    // SINGLE 行回填到千单位输入（singleAmountCents），万元区间保持空。
+    assert.equal(terms.valueMode, 'SINGLE')
+    assert.equal(terms.singleAmountCents, 500000)
+    assert.equal(terms.minAmountCents, 500000)
+    const result = validateContentMutation('mip.admin.opportunities.save', contentFormValues('mip.admin.opportunities.save', values, 'single'))
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual((result.input.draft as { commercialTerms: Record<string, unknown> }).commercialTerms, {
+      currency: 'CNY', amountUnit: 'CNY_CENTS', valueMode: 'SINGLE',
+      minAmountCents: 500000, maxAmountCents: 500000, locations: [],
+    })
+
+    const negotiationRepository = createAdminPrdExtensions({
+      one: async (sql: string) => sql.includes('mip_opportunity_commercial_terms')
+        ? { value_mode: 'NEGOTIATION', min_amount_cents: null, max_amount_cents: null, currency: 'CNY', amount_unit: 'CNY_CENTS' }
+        : { id: 'opportunity-a', owner_user_id: 'owner-a', title: '非空合作机会', value_summary: '',
+            target_summary: '', description: '', scope_type: 'PLATFORM', role_keys: '',
+            tag_ids: '', status: 'DRAFT', content_safety_status: 'APPROVED', version: 3, deadline_at: null },
+      query: async (sql: string) => sql.includes('mip_opportunity_locations') ? [] : [],
+    })
+    const negotiationValues = opportunityEditorValues(await negotiationRepository.getOpportunityDetail('wx-test', 'opportunity-a'))
+    const negotiationTerms = (negotiationValues.draft as Record<string, unknown>).commercialTerms as Record<string, unknown>
+    assert.equal(negotiationTerms.valueMode, 'NEGOTIATION')
+    const negotiationResult = validateContentMutation('mip.admin.opportunities.save', contentFormValues('mip.admin.opportunities.save', negotiationValues, 'negotiation'))
+    assert.equal(negotiationResult.ok, true)
+    if (!negotiationResult.ok) return
+    assert.deepEqual((negotiationResult.input.draft as { commercialTerms: Record<string, unknown> }).commercialTerms, {
+      currency: 'CNY', amountUnit: 'CNY_CENTS', valueMode: 'NEGOTIATION',
+      minAmountCents: null, maxAmountCents: null, locations: [],
     })
   })
 

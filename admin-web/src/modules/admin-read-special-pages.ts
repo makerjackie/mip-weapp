@@ -305,6 +305,10 @@ function canRead(access: AdminReadAccess | undefined, capability: string, scopeT
 }
 function opportunityValueInWan(value: unknown) {
   const terms = record(value)
+  // MIW-89：结构化价值模式直接用服务端展示（面谈 / X 千）；万元区间保持原列口径。
+  if (terms.valueMode === 'NEGOTIATION' || terms.valueMode === 'SINGLE') {
+    return String(terms.amountDisplay || '—')
+  }
   const min = terms.minAmountCents, max = terms.maxAmountCents
   const display = (amount: unknown) => Number.isSafeInteger(amount) ? (Number(amount) / 1000000).toLocaleString('zh-CN', { maximumFractionDigits: 6 }) : '不限'
   return min === null || min === undefined ? max === null || max === undefined ? '—' : `≤ ${display(max)}`

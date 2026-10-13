@@ -18,10 +18,15 @@ export function opportunityEditorValues(payload: unknown): OperationValues {
   if (item.commercialTerms) {
     const terms = record(item.commercialTerms)
     if (!Array.isArray(terms.locations)) throw new Error('机会商业条件不完整，请重新加载。')
+    // MIW-89：价值模式原样带回；SINGLE 行同时回填千单位输入（千 = 分 ÷ 100,000）。
     draft.commercialTerms = {
       currency: 'CNY', amountUnit: 'CNY_CENTS',
+      ...(terms.valueMode ? { valueMode: terms.valueMode } : {}),
       minAmountCents: terms.minAmountCents ?? null,
       maxAmountCents: terms.maxAmountCents ?? null,
+      ...(terms.valueMode === 'SINGLE' && terms.minAmountCents !== undefined && terms.minAmountCents !== null
+        ? { singleAmountCents: terms.minAmountCents }
+        : {}),
       locations: terms.locations.map(location => {
         const value = record(location)
         return value.type === 'CITY' ? { type: value.type, cityTagId: value.cityTagId } : { type: value.type }

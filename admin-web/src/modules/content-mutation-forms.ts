@@ -199,8 +199,12 @@ interface CommercialLocation {
 interface CommercialTerms {
   currency?: 'CNY'
   amountUnit?: 'CNY_CENTS'
+  /** MIW-89：RANGE=万元区间（默认），SINGLE=千单位单值（min=max），NEGOTIATION=面谈（金额空）。 */
+  valueMode?: 'RANGE' | 'SINGLE' | 'NEGOTIATION'
   minAmountCents?: number | null
   maxAmountCents?: number | null
+  /** 仅表单字段：SINGLE 模式的千单位输入（千 × 100,000 = 分），不提交服务端。 */
+  singleAmountCents?: number | null
   locations: CommercialLocation[]
 }
 
@@ -212,7 +216,8 @@ interface OpportunityInput {
     scopeType: ScopeType
     branchId?: string
     title: string
-    valueSummary: string
+    /** MIW-89：价值金额选填；留空提交 undefined（服务端落 ''）。 */
+    valueSummary?: string
     targetSummary?: string
     description?: string
     cityTagId?: string
@@ -422,7 +427,7 @@ const CONTENT_MUTATION_FORMS: readonly ContentMutationFormDefinition[] = [
   {
     action: 'mip.admin.opportunities.save', capability: 'opportunities.moderate', resource: '机会',
     inputKeys: ['opportunityId', 'expectedVersion', 'draft'], idempotencyRequired: false,
-    fields: [idField('opportunityId', '机会', false), { ...versionField(), required: false }, groupField('draft', '机会草稿', [idField('ownerUserId', '发布人'), ...scopeFields('draft'), { ...textField('title', '机会名称', 120), placeholder: '请输入名称，让人一听就了解这是什么事' }, { ...idField('coverAssetId', '机会封面', false), assetPurpose: 'OPPORTUNITY_COVER' }, { ...textField('valueSummary', '价值金额或价值说明', 240), placeholder: '请输入价值金额，让参与者跃跃欲试' }, { ...textField('targetSummary', '寻找合作方', 500, false), placeholder: '示例：我要寻找IDG或同级别投资机构的FA' }, areaField('description', '展开讲讲', 6_000, false), { ...idField('cityTagId', '城市标签', false), hidden: true }, groupField('commercialTerms', '商业条件', [{ key: 'minAmountCents', label: '最低价值（万元）', kind: 'money', valueScale: 1000000, required: false }, { key: 'maxAmountCents', label: '最高价值（万元）', kind: 'money', valueScale: 1000000, required: false }, { key: 'locations', label: '合作地点', kind: 'group', required: true }]), { key: 'roleKeys', label: '合作角色', kind: 'select', options: OPPORTUNITY_ROLES }, { key: 'tagIds', label: '行业标签', kind: 'multi-select', required: false, optionsAction: 'mip.admin.opportunities.options', optionsKey: 'tags', emptyHint: '暂无可选行业标签，可先不选择' }, { key: 'deadlineAt', label: '截止时间', kind: 'datetime', required: false }])],
+    fields: [idField('opportunityId', '机会', false), { ...versionField(), required: false }, groupField('draft', '机会草稿', [idField('ownerUserId', '发布人'), ...scopeFields('draft'), { ...textField('title', '机会名称', 120), placeholder: '请输入名称，让人一听就了解这是什么事' }, { ...idField('coverAssetId', '机会封面', false), assetPurpose: 'OPPORTUNITY_COVER' }, { ...textField('valueSummary', '价值说明（选填）', 240, false), placeholder: '存量机会的历史价值说明原样保留，新价值请使用下方商业条件' }, { ...textField('targetSummary', '寻找合作方', 500, false), placeholder: '示例：我要寻找IDG或同级别投资机构的FA' }, areaField('description', '展开讲讲', 6_000, false), { ...idField('cityTagId', '城市标签', false), hidden: true }, groupField('commercialTerms', '商业条件', [{ key: 'valueMode', label: '价值模式', kind: 'select', required: false, options: [{ value: 'RANGE', label: '万元区间' }, { value: 'SINGLE', label: '千（单值）' }, { value: 'NEGOTIATION', label: '面谈' }] }, { key: 'minAmountCents', label: '最低价值（万元）', kind: 'money', valueScale: 1000000, required: false }, { key: 'maxAmountCents', label: '最高价值（万元）', kind: 'money', valueScale: 1000000, required: false }, { key: 'singleAmountCents', label: '价值金额（千）', kind: 'money', valueScale: 100000, required: false }, { key: 'locations', label: '合作地点', kind: 'group', required: true }]), { key: 'roleKeys', label: '合作角色', kind: 'select', options: OPPORTUNITY_ROLES }, { key: 'tagIds', label: '行业标签', kind: 'multi-select', required: false, optionsAction: 'mip.admin.opportunities.options', optionsKey: 'tags', emptyHint: '暂无可选行业标签，可先不选择' }, { key: 'deadlineAt', label: '截止时间', kind: 'datetime', required: false }])],
   },
   { action: 'mip.admin.opportunities.publish', capability: 'opportunities.moderate', resource: '机会', inputKeys: ['opportunityId', 'expectedVersion'], idempotencyRequired: false, fields: [idField('opportunityId', '机会'), versionField()] },
   { action: 'mip.admin.opportunities.end', capability: 'opportunities.moderate', resource: '机会', inputKeys: ['opportunityId', 'expectedVersion'], idempotencyRequired: false, fields: [idField('opportunityId', '机会'), versionField()] },
@@ -570,17 +575,30 @@ function validateOpportunity(input: Record<string, unknown>): OpportunityInput {
   const commercialTerms = validateCommercialTerms(draft.commercialTerms)
   // MIW-50 三端对齐：targetSummary 500 / description 6000 取会员端服务端口径，
   // 小程序历史数据在管理后台编辑保存不再被拒。
-  return { ...optionalIdVersion(input, 'opportunityId'), draft: { ownerUserId: requiredId(draft.ownerUserId, '发布人'), ...scope(draft), title: requiredText(draft.title, 120, '机会标题'), valueSummary: requiredText(draft.valueSummary, 240, '机会价值'), targetSummary: optionalText(draft.targetSummary, 500), description: optionalText(draft.description, 6_000), cityTagId: optionalId(draft.cityTagId), ...(Object.hasOwn(draft, 'coverAssetId') ? { coverAssetId: optionalId(draft.coverAssetId) || null } : {}), commercialTerms, roleKeys: roles as OpportunityRole[], tagIds, deadlineAt: optionalDateTime(draft.deadlineAt, '截止时间') } }
+  return { ...optionalIdVersion(input, 'opportunityId'), draft: { ownerUserId: requiredId(draft.ownerUserId, '发布人'), ...scope(draft), title: requiredText(draft.title, 120, '机会标题'), valueSummary: optionalText(draft.valueSummary, 240), targetSummary: optionalText(draft.targetSummary, 500), description: optionalText(draft.description, 6_000), cityTagId: optionalId(draft.cityTagId), ...(Object.hasOwn(draft, 'coverAssetId') ? { coverAssetId: optionalId(draft.coverAssetId) || null } : {}), commercialTerms, roleKeys: roles as OpportunityRole[], tagIds, deadlineAt: optionalDateTime(draft.deadlineAt, '截止时间') } }
 }
 
 function validateCommercialTerms(value: unknown): CommercialTerms | null | undefined {
   if (value === undefined) return undefined
   if (value === null) return null
   const terms = record(value)
-  assertKeys(terms, ['currency', 'amountUnit', 'minAmountCents', 'maxAmountCents', 'locations'])
-  const min = optionalInteger(terms.minAmountCents, '最低金额')
-  const max = optionalInteger(terms.maxAmountCents, '最高金额')
-  if (min !== undefined && min < 0 || max !== undefined && max < 0) throw invalid('商业金额不能为负数')
+  assertKeys(terms, ['currency', 'amountUnit', 'valueMode', 'minAmountCents', 'maxAmountCents', 'singleAmountCents', 'locations'])
+  // MIW-89：未声明模式按 RANGE 处理；SINGLE 用千单位单值（min=max=千×100,000 分），NEGOTIATION 金额必空。
+  const valueMode = terms.valueMode === undefined || terms.valueMode === null || terms.valueMode === ''
+    ? 'RANGE'
+    : enumValue(terms.valueMode, ['RANGE', 'SINGLE', 'NEGOTIATION'], '价值模式')
+  let min = optionalInteger(terms.minAmountCents, '最低金额')
+  let max = optionalInteger(terms.maxAmountCents, '最高金额')
+  const single = optionalInteger(terms.singleAmountCents, '价值金额')
+  if (min !== undefined && min < 0 || max !== undefined && max < 0 || single !== undefined && single < 0) throw invalid('商业金额不能为负数')
+  if (valueMode === 'SINGLE') {
+    if (single !== undefined) {
+      min = single
+      max = single
+    }
+    if (min === undefined || min !== max) throw invalid('千单位单值要求最低与最高价值一致')
+  }
+  if (valueMode === 'NEGOTIATION' && (min !== undefined || max !== undefined || single !== undefined)) throw invalid('面谈模式不能填写金额')
   if (min !== undefined && max !== undefined && min > max) throw invalid('最低价值不能高于最高价值')
   const locations = terms.locations === undefined ? [] : Array.isArray(terms.locations) ? terms.locations.map(location => {
     const item = record(location)
@@ -591,7 +609,7 @@ function validateCommercialTerms(value: unknown): CommercialTerms | null | undef
     return cityTagId ? { type, cityTagId } : { type }
   }) : (() => { throw invalid('合作地点无效') })()
   if (locations.length > 16) throw invalid('合作地点过多')
-  return { currency: 'CNY', amountUnit: 'CNY_CENTS', minAmountCents: min ?? null, maxAmountCents: max ?? null, locations }
+  return { currency: 'CNY', amountUnit: 'CNY_CENTS', valueMode, minAmountCents: min ?? null, maxAmountCents: max ?? null, locations }
 }
 
 function validateUserContent(input: Record<string, unknown>): UserContentSaveInput {

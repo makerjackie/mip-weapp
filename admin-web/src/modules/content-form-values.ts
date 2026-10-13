@@ -49,7 +49,12 @@ export function contentFormValues(action: ContentMutationAction, values: Operati
   if (action === 'mip.admin.opportunities.save') {
     const draft = record(next.draft)
     const terms = record(draft.commercialTerms)
-    if ([terms.minAmountCents, terms.maxAmountCents].every(value => value === undefined || value === null || value === '') && (!Array.isArray(terms.locations) || terms.locations.length === 0)) draft.commercialTerms = next.opportunityId ? null : undefined
+    // MIW-89：未选价值模式且金额/地点全空才视为「清空商业条件」；
+    // 面谈/千单位等结构化模式即使金额为空也要提交，避免把模式抹成 null。
+    const amountsEmpty = [terms.minAmountCents, terms.maxAmountCents, terms.singleAmountCents].every(value => value === undefined || value === null || value === '')
+    const locationsEmpty = !Array.isArray(terms.locations) || terms.locations.length === 0
+    const modeChosen = terms.valueMode !== undefined && terms.valueMode !== '' && terms.valueMode !== null
+    if (amountsEmpty && locationsEmpty && !modeChosen) draft.commercialTerms = next.opportunityId ? null : undefined
     next.draft = draft
   }
   if (action === 'mip.admin.userContent.save') next.draft = buildUserContentDraft(next)

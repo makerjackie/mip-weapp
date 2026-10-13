@@ -241,6 +241,36 @@ describe('admin detail views', () => {
     assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[1].action, '更新机会')
   })
 
+  it('shows the server value-mode display for qian and negotiation opportunities (MIW-89)', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const base = {
+      id: 'opportunity-1', title: '寻找品牌合作伙伴', ownerNickname: '林晓', scopeType: 'PLATFORM',
+      valueSummary: '', targetSummary: '完成首期合作', description: '', roleKeys: [], tags: [], referralCount: 0,
+      deadlineAt: null, contentSafetyStatus: 'APPROVED', publishedAt: null, updatedAt: null, status: 'DRAFT',
+      history: [],
+    }
+    const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
+      'mip.admin.opportunities.get': {
+        ...base,
+        commercialTerms: { valueMode: 'NEGOTIATION', minAmountCents: null, maxAmountCents: null, amountDisplay: '面谈', locationDisplay: '' },
+      },
+      'mip.admin.opportunityComments.get': { settings: null, comments: [], reports: [] },
+    }, calls))
+    const fields = detail.sections.find(section => section.title === '机会信息')?.fields || []
+    // 服务端 amountDisplay 已按 value_mode 生成「面谈 / X 千」，详情页原样透出。
+    assert.equal(fields.find(item => item.label === '金额说明')?.value, '面谈')
+
+    const qianDetail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
+      'mip.admin.opportunities.get': {
+        ...base,
+        commercialTerms: { valueMode: 'SINGLE', minAmountCents: 500000, maxAmountCents: 500000, amountDisplay: '5 千', locationDisplay: '' },
+      },
+      'mip.admin.opportunityComments.get': { settings: null, comments: [], reports: [] },
+    }, calls))
+    const qianFields = qianDetail.sections.find(section => section.title === '机会信息')?.fields || []
+    assert.equal(qianFields.find(item => item.label === '金额说明')?.value, '5 千')
+  })
+
   it('does not request opportunity comments without comment access', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
