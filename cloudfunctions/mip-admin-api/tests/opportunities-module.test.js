@@ -438,6 +438,63 @@ describe('admin opportunities deep module', () => {
     )
   })
 
+  it('persists an empty value summary and normalized value modes for qian or negotiation terms', async () => {
+    const repo = repository()
+    repo.roleBindings = [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: BRANCH_A }]
+    const service = opportunities(repo)
+
+    // MIW-89：价值金额选填，留空以 '' 传给仓储层（列 NOT NULL）。
+    const saved = await service.saveOpportunity(caller, {
+      opportunityId: OPPORTUNITY_ID,
+      expectedVersion: 4,
+      draft: opportunityDraft({ valueSummary: '' }),
+    })
+    assert.equal(saved.version, 5)
+    const emptyWrite = repo.calls.find(call => call.type === 'save').input
+    assert.equal(emptyWrite.draft.valueSummary, '')
+
+    repo.calls.length = 0
+    await service.saveOpportunity(caller, {
+      opportunityId: OPPORTUNITY_ID,
+      expectedVersion: 5,
+      draft: opportunityDraft({
+        valueSummary: '',
+        commercialTerms: {
+          valueMode: 'SINGLE', minAmountCents: 500000, maxAmountCents: 500000, locations: [],
+        },
+      }),
+    })
+    const singleWrite = repo.calls.find(call => call.type === 'save').input
+    assert.deepEqual(singleWrite.draft.commercialTerms, {
+      currency: 'CNY', amountUnit: 'CNY_CENTS', valueMode: 'SINGLE',
+      minAmountCents: 500000, maxAmountCents: 500000, locations: [],
+    })
+
+    // 面谈金额必空；非法模式与不一致金额仍拒绝。
+    await assert.rejects(
+      () => service.saveOpportunity(caller, {
+        opportunityId: OPPORTUNITY_ID,
+        expectedVersion: 6,
+        draft: opportunityDraft({
+          valueSummary: '',
+          commercialTerms: { valueMode: 'NEGOTIATION', minAmountCents: 100, maxAmountCents: 100, locations: [] },
+        }),
+      }),
+      error => error?.code === 'VALIDATION_FAILED',
+    )
+    await assert.rejects(
+      () => service.saveOpportunity(caller, {
+        opportunityId: OPPORTUNITY_ID,
+        expectedVersion: 6,
+        draft: opportunityDraft({
+          valueSummary: '',
+          commercialTerms: { valueMode: 'QIAN', minAmountCents: 100, maxAmountCents: 100, locations: [] },
+        }),
+      }),
+      error => error?.code === 'VALIDATION_FAILED',
+    )
+  })
+
   it('preserves lifecycle version, reason, scoped audit, and platform-only archive contracts', async () => {
     const repo = repository()
     const service = opportunities(repo)
