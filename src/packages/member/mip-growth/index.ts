@@ -341,11 +341,6 @@ Page({
   /** MIW-84：SHARE 任务卡的转发按钮（open-type=share 原生拉起面板，catch 仅阻断整卡 openTask）。 */
   handleTaskShareTap() {},
 
-  /** MIW-84：SHARE 任务/邀请语境的转发内容（本期固定，裁决 2026-10-14）。 */
-  onShareAppMessage(): { title: string, path: string } {
-    return { title: MEMBERSHIP_INVITE_SHARE_TITLE, path: MEMBERSHIP_INVITE_SHARE_PATH }
-  },
-
   /** MIW-27：经验值详情跳转独立明细页（figma 1948:14177），不再原地展开滚动。 */
   openExperienceDetails() {
     void caseNavigateTo({ url: EXPERIENCE_DETAILS_PAGE })
@@ -394,7 +389,7 @@ Page({
     this.setData({ benefitSheetVisible: false })
   },
 
-  /** MIW-83 GROWTH-06 D4：会员操作栏「邀请入会」经 open-type="share" 触发的分享卡片。 */
+  /** MIW-83 GROWTH-06 D4 / MIW-84：会员操作栏「邀请入会」与任务卡 SHARE 动作共用同一邀请分享卡片（本期固定语境，裁决 2026-10-14）。 */
   onShareAppMessage(): { title: string, path: string } {
     return { title: MEMBERSHIP_INVITE_SHARE_TITLE, path: MEMBERSHIP_INVITE_SHARE_PATH }
   },
