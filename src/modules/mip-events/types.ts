@@ -179,6 +179,7 @@ export interface EventChangeSummary {
 
 export interface MipEventDetail extends MipEventListItem {
   organizer?: EventOrganizer
+  /** MIW-85：报名页「邀请来源」展示已按客户口径下线；服务端仍下发、DTO 门放行，客户端不再渲染。 */
   invitationAttribution?: EventInvitationAttribution
   description: string
   /** 后台「主办方介绍」图文富文本（小程序需求 C1）；主办方 Tab 原样展示，未配置时缺省。 */

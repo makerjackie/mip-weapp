@@ -46,6 +46,9 @@ describe('event registration experience', () => {
     expect(registrationView).toContain('event.coverUrl')
     expect(registrationView).not.toContain('event.address')
     expect(registrationView).not.toContain('报名资料')
+    // MIW-85：报名页「邀请来源」按客户口径下线（MIW-53 详情页同款删除）；服务端字段保留，仅展示移除。
+    expect(registrationView).not.toContain('邀请来源')
+    expect(registrationView).not.toContain('invitationAttribution')
   })
 
   it('shows registration failures in the current viewport and keeps the message near the form start', () => {
