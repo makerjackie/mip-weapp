@@ -131,6 +131,7 @@ function errorResponse(error) {
     CONTENT_SAFETY_UNAVAILABLE: '内容检查服务暂不可用，请稍后重新发布',
     CONTENT_REFUND_NOT_AVAILABLE: '内容已访问或已超过可退款时间',
     DEMO_ORDER: '演示订单不支持退款',
+    EVENT_REFUND_CHECKIN_ACTIVE: '该报名已签到，签到后退款仅平台超级管理员可执行',
     INSUFFICIENT_BALANCE: '调整后余额不能小于零',
     PHONE_ENCRYPTION_NOT_CONFIGURED: '手机号服务尚未配置',
     PHONE_CIPHERTEXT_INVALID: '手机号数据无法读取',
