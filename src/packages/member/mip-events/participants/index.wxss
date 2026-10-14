@@ -75,6 +75,36 @@
   text-align: center;
 }
 
+/* MIW-114：跨 tab 心动状态提示——已投出后除「我的心动」tab 外恒驻（未投/取消/受限自动
+   隐藏）。被投红心虽四 tab 随卡渲染，但被投者不在当前列表（另一身份 tab / 对我心动的
+   未互投者 / 分页之外）时本行是唯一回答「我有没有投、投给了谁」的入口；整行可点，
+   触控高度按本页 88rpx 标准。 */
+.participants-heart-hint {
+  display: flex;
+  column-gap: 8rpx;
+  align-items: center;
+  min-height: 88rpx;
+  padding: 0 24rpx;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: var(--color-ink);
+  background: var(--color-brand-soft);
+  border-radius: 16rpx;
+}
+
+.participants-heart-hint__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.participants-heart-hint__action {
+  flex: 0 0 auto;
+  color: var(--color-brand);
+}
+
 .participants-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -180,6 +210,14 @@
     font-size: 14px;
   }
 
+  .participants-heart-hint {
+    min-height: 48px;
+    padding: 0 12px;
+    margin-top: 8px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+
   .participants-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
@@ -266,6 +304,14 @@
     min-height: 32px;
     padding: 0 12px;
     font-size: 14px;
+  }
+
+  .participants-heart-hint {
+    min-height: 48px;
+    padding: 0 12px;
+    margin-top: 8px;
+    font-size: 14px;
+    border-radius: 8px;
   }
 
   .participants-grid {
