@@ -102,6 +102,11 @@ describe('MIP event participant visual hierarchy', () => {
     expect(template).toContain('participant-card__heart')
     expect(template).toContain('catch:tap="toggleHeartVote"')
     expect(template).toContain('heart.target && heart.target.profileRef === item.profileRef')
+    // MIW-101：四 tab 卡片右上角恒渲染红心入口（不再以 heartTicket/heartState 作渲染门槛），
+    // 点按乐观翻转同帧弹跳；未签到者（无凭证）由 aria 与 toast 就地解释规则。
+    expect(template).not.toContain('wx:if="{{item.heartTicket')
+    expect(template).toContain('participant-card__heart--pulse')
+    expect(template).toContain('签到后可被心动')
     // MIW-17 G3：原型已投红心为 record 红 #FF2238（非 danger #FF4D5E）。
     expect(template).toContain('name="heart-filled" size="18px" color="var(--mip-record)"')
     expect(template).toContain('name="heart" size="18px" color="var(--color-muted)"')
@@ -116,6 +121,8 @@ describe('MIP event participant visual hierarchy', () => {
       'position': 'absolute',
       'pointer-events': 'auto',
     })
+    // MIW-101：点选弹跳动画只挂在 pulse 类（heartPulseRef 命中该卡），页面加载不重播。
+    expect(stylesheet.toResult().css).toContain('@keyframes participant-heart-pop')
     // figma 1818_17230：56px 头像带白色描边环——由统一嘉宾卡组件 avatar-ring 承载。
     const ring = declarations(rule(stylesheetOf('src/components/talent-card/index.wxss'), '.mip-talent-card__figure-avatar--ring', true))
     expect(String(ring['border'] || '')).toContain('var(--color-ink)')
