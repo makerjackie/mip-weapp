@@ -17,7 +17,7 @@ describe('MIP growth', () => {
     // GROWTH-05/D1：会员 Lv 大字；非会员问号箱子（figma 3984:8761）替代 Lv 位，hero 加高。
     expect(page).toContain('wx:if="{{isPlayer}}" id="growth-level-badge"')
     expect(page).toContain('id="growth-mystery-box"')
-    expect(page).toContain('/packages/member/assets/figma/growth/mystery-box.webp')
+    expect(page).toContain('/packages/member/assets/figma/growth/mystery-box.png')
     expect(page).toContain('growth-hero--boxed h-[410rpx]')
     expect(controller).toContain('deriveTierStartIndexes(snapshot.levels)')
     expect(page).not.toContain('等级与权益')
