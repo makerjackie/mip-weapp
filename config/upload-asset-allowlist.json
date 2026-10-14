@@ -1,0 +1,38 @@
+[
+  {
+    "path": "/packages/member/assets/generated/badges/*",
+    "reason": "MIW-100 同族盘点（2026-10-14）：成长徽章兜底图仅动态引用（badgeArtFallback），服务端 imageUrl 缺失时体验版无图；待独立任务静态锚点化或转网络资源"
+  },
+  {
+    "path": "/assets/badges/profile-complete.png",
+    "reason": "MIW-100 同族盘点（2026-10-14）：徽章兜底图（主包），同 generated/badges 条目"
+  },
+  {
+    "path": "/packages/member/assets/figma/guests/*",
+    "reason": "MIW-100 同族盘点（2026-10-14）：访客徽章/邀请熊走 {{}} 插值（badge-{{key}}.png 等）；静态引用的 badge-heart-fill 不受影响"
+  },
+  {
+    "path": "/packages/member/assets/figma/coop/card-*",
+    "reason": "MIW-100 同族盘点（2026-10-14）：合作身份卡面按动态 key 引用"
+  },
+  {
+    "path": "/assets/mip/coop-card-*",
+    "reason": "MIW-100 同族盘点（2026-10-14）：合作身份卡面（主包副本）按动态 key 引用"
+  },
+  {
+    "path": "/packages/member/assets/figma/coop/coop-avatar.png",
+    "reason": "MIW-100 同族盘点（2026-10-14）：合作头像兜底图纯动态引用"
+  },
+  {
+    "path": "/assets/brand/*",
+    "reason": "MIW-100 同族盘点（2026-10-14）：品牌默认图（分享/封面对兜底）仅 TS 引用；设备上分享缩略图静默退默认截图"
+  },
+  {
+    "path": "/assets/figma/profile/avatar.png",
+    "reason": "MIW-100 同族盘点（2026-10-14）：默认头像兜底图纯动态引用"
+  },
+  {
+    "path": "/packages/member/assets/figma/cases/case-hero.webp",
+    "reason": "MIW-100 同族盘点（2026-10-14）：案例头图兜底纯动态引用"
+  }
+]
