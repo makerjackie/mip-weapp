@@ -16,7 +16,9 @@ const patterns = [
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    if (['node_modules', 'dist', 'coverage', '.git', '.weapp-vite', '.tmp', '.screenshots', '.wrangler', '.worktrees'].includes(entry.name)) {
+    // .notma/.claude 是并行任务工作树容器（同 .worktrees）：各工作树在自己根目录独立
+    // 跑本门禁，其 WIP 内容不应连带打红主仓。
+    if (['node_modules', 'dist', 'coverage', '.git', '.weapp-vite', '.tmp', '.screenshots', '.wrangler', '.worktrees', '.notma', '.claude'].includes(entry.name)) {
       return []
     }
     if (entry.name === 'pnpm-lock.yaml') {

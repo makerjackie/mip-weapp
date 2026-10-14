@@ -1,6 +1,7 @@
 import type { IdentityAccessSnapshot, MipProfileSnapshot, PublicMipProfile } from '../../../modules/mip-identity'
 import { resolveIconColor } from '../../../components/mip-icon/colors'
 import { ICONS } from '../../../components/mip-icon/icons'
+import { memberCardArt } from '../../../config/card-art'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 
@@ -17,9 +18,10 @@ interface Canvas2dNode {
 interface CardTheme {
   key: CardStyleKey
   label: string
-  // WXML 卡面/缩略图按 styleKey 静态引用底图（ignoreUploadUnusedFiles 探不到动态绑定，
-  // 见 index.wxml 注释）；asset 仅供 canvas 画图与 onShareAppMessage 兜底图使用。
+  // 卡面/缩略图均为静态托管 CDN PNG（src/config/card-art.ts）：WXML 直接绑定 asset/thumb，
+  // 不存在上传剔除与设备 webp 解码问题；加载期间以 background 纯色垫底。
   asset: string
+  thumb: string
   background: string
   foreground: string
   muted: string
@@ -55,7 +57,8 @@ const themes: Record<CardStyleKey, CardTheme> = {
   PINK: {
     key: 'PINK',
     label: '暖色',
-    asset: '/packages/member/assets/figma/profile/card-bg-a.webp',
+    asset: memberCardArt.PINK.asset,
+    thumb: memberCardArt.PINK.thumb,
     background: '#FF5F6D',
     foreground: '#080808',
     muted: '#4A2326',
@@ -64,7 +67,8 @@ const themes: Record<CardStyleKey, CardTheme> = {
   BLUE: {
     key: 'BLUE',
     label: '蓝色',
-    asset: '/packages/member/assets/figma/profile/card-bg-b.webp',
+    asset: memberCardArt.BLUE.asset,
+    thumb: memberCardArt.BLUE.thumb,
     background: '#403BDA',
     foreground: '#FFFFFF',
     muted: '#E4E3FF',
@@ -73,18 +77,20 @@ const themes: Record<CardStyleKey, CardTheme> = {
   WHITE: {
     key: 'WHITE',
     label: '浅色',
-    asset: '/packages/member/assets/figma/profile/card-bg-c.webp',
+    asset: memberCardArt.WHITE.asset,
+    thumb: memberCardArt.WHITE.thumb,
     background: '#F5F4F0',
     foreground: '#080808',
     muted: '#575757',
     codeBackground: '#FFFFFF',
   },
   // figma 1735_3369: 品牌色卡为 #fde104 实底 + 吉祥物 hard-light，WXSS 无法可靠表达，
-  // 预烘成 card-bg-d-yellow.webp（702×492），背景色仅作加载垫底。
+  // 预烘成 card-bg-d-yellow.png（702×492），背景色仅作加载垫底。
   YELLOW: {
     key: 'YELLOW',
     label: '品牌色',
-    asset: '/packages/member/assets/figma/profile/card-bg-d-yellow.webp',
+    asset: memberCardArt.YELLOW.asset,
+    thumb: memberCardArt.YELLOW.thumb,
     background: '#FDE104',
     foreground: '#080808',
     muted: '#514A10',
