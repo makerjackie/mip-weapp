@@ -959,10 +959,11 @@ function opportunityNoticeExternal(title, statusText, receivedAtValue, initiator
 
 async function projectCooperation(database, event) {
   assertAggregate(event, 'OPPORTUNITY_COOPERATION')
-  const row = await database.one(`SELECT intent.status, intent.version, intent.opportunity_id, o.owner_user_id, o.title, intent.activated_at, actor.nickname AS actor_nickname
+  const row = await database.one(`SELECT intent.status, intent.version, intent.opportunity_id, o.owner_user_id, o.title, intent.activated_at, actor_profile.nickname AS actor_nickname
     FROM mip_opportunity_cooperations intent
     JOIN mip_opportunities o ON o.app_id = intent.app_id AND o.id = intent.opportunity_id AND o.status IN ('PUBLISHED', 'ENDED')
     JOIN mip_users actor ON actor.app_id = intent.app_id AND actor.id = intent.user_id AND actor.status = 'ACTIVE'
+    LEFT JOIN mip_profiles actor_profile ON actor_profile.app_id = actor.app_id AND actor_profile.user_id = actor.id
     JOIN mip_users owner ON owner.app_id = o.app_id AND owner.id = o.owner_user_id AND owner.status = 'ACTIVE'
     WHERE intent.app_id = ? AND intent.id = ? AND NOT EXISTS (
       SELECT 1 FROM mip_user_blocks block WHERE block.app_id = intent.app_id AND block.status = 'ACTIVE'
@@ -1029,10 +1030,12 @@ async function projectReferral(database, event) {
 async function projectInterest(database, event) {
   assertAggregate(event, 'PROFILE_INTEREST')
   const row = await database.one(
-    `SELECT i.status, i.version, i.actor_user_id, i.target_user_id, i.source_type, i.source_id, i.updated_at, opportunity.title AS opportunity_title, actor.nickname AS actor_nickname
+    `SELECT i.status, i.version, i.actor_user_id, i.target_user_id, i.source_type, i.source_id, i.updated_at, opportunity.title AS opportunity_title, actor_profile.nickname AS actor_nickname
      FROM mip_profile_interests i
      INNER JOIN mip_users actor
        ON actor.app_id = i.app_id AND actor.id = i.actor_user_id AND actor.status = 'ACTIVE'
+     LEFT JOIN mip_profiles actor_profile
+       ON actor_profile.app_id = actor.app_id AND actor_profile.user_id = actor.id
      INNER JOIN mip_users recipient
        ON recipient.app_id = i.app_id AND recipient.id = i.target_user_id AND recipient.status = 'ACTIVE'
      LEFT JOIN mip_opportunities opportunity
