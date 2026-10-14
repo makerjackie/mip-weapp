@@ -162,21 +162,33 @@ function memoryStorage(options = {}) {
 describe('MIP admin XLSX', () => {
   it('preserves opportunity full text, every location, zero and optional amounts in ten-thousand yuan', () => {
     const row = exportedRow('OPPORTUNITIES', { id: 'op-a', description: '第一段\n第二段  ',
-      commercialTerms: { minAmountCents: 0, maxAmountCents: 1250000, currency: 'CNY', locations: [{ type: 'CITY', cityName: '广州' }, { type: 'REMOTE' }] },
+      commercialTerms: { valueMode: 'RANGE', minAmountCents: 0, maxAmountCents: 1250000, currency: 'CNY', locations: [{ type: 'CITY', cityName: '广州' }, { type: 'REMOTE' }] },
       roleKeys: ['connector', 'delivery_lead'], tags: ['教育'], referralCount: 0 })
     assert.equal(row['机会全文'], '第一段\n第二段  ')
     assert.equal(row['合作地区'], '广州、远程')
     assert.equal(row['最低金额（万元）'], '0')
     assert.equal(row['最高金额（万元）'], '1.25')
+    // MIW-94（DEF-11）：价值两列与 admin-web 列表同口径（区间行=万元区间，紧随金额两列之后）
+    assert.equal(row['价值模式'], '区间')
+    assert.equal(row['价值展示'], '0 ～ 1.25')
     assert.equal(row['合作角色'], '皮条客、老保姆')
     assert.equal(row['引荐数量'], '0')
     assert.equal(exportedRow('OPPORTUNITIES', { commercialTerms: { minAmountCents: null } })['最低金额（万元）'], '')
+    assert.equal(exportedRow('OPPORTUNITIES', { commercialTerms: { minAmountCents: null } })['价值展示'], '—')
     // MIW-89：小程序千单位单值（SINGLE，min=max cents）导出时两列同值（千 × 100,000 分 = 0.5 万元）
     const single = exportedRow('OPPORTUNITIES', {
-      commercialTerms: { minAmountCents: 500000, maxAmountCents: 500000, currency: 'CNY', locations: [] },
+      commercialTerms: { valueMode: 'SINGLE', minAmountCents: 500000, maxAmountCents: 500000, currency: 'CNY', locations: [] },
     })
     assert.equal(single['最低金额（万元）'], '0.5')
     assert.equal(single['最高金额（万元）'], '0.5')
+    assert.equal(single['价值模式'], '单值（千）')
+    assert.equal(single['价值展示'], '5 千')
+    // MIW-94（DEF-11）：面谈行价值信息不再丢失（价值模式/展示均非空）
+    const negotiation = exportedRow('OPPORTUNITIES', {
+      commercialTerms: { valueMode: 'NEGOTIATION', minAmountCents: null, maxAmountCents: null, currency: 'CNY', locations: [] },
+    })
+    assert.equal(negotiation['价值模式'], '面谈')
+    assert.equal(negotiation['价值展示'], '面谈')
   })
 
   it('uses yuan for order and roster ledgers and includes readable feedback without losing raw answers', () => {
