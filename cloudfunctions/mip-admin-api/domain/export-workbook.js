@@ -4,6 +4,7 @@ const { decryptPhone } = require('../lib/phone')
 const { buildXlsx } = require('../lib/xlsx')
 const { feedbackDisplayFields } = require('./event-feedback-display')
 const { CARD_TYPES } = require('./cooperation-cards')
+const { valueDisplay, valueModeLabel } = require('./opportunity-commercial-terms')
 
 const definitions = Object.freeze({
   USERS: {
@@ -69,7 +70,9 @@ const definitions = Object.freeze({
       ['id', '机会编号'], ['title', '标题'], ['ownerNickname', '发布人'],
       ['scopeType', '可见范围'], ['branchName', '分会'], ['locationDisplay', '合作地区'], ['status', '状态'],
       ['valueSummary', '价值说明'], ['targetSummary', '合作目标'], ['description', '机会全文'],
-      ['minimumAmountWan', '最低金额（万元）'], ['maximumAmountWan', '最高金额（万元）'], ['currency', '币种'],
+      ['minimumAmountWan', '最低金额（万元）'], ['maximumAmountWan', '最高金额（万元）'],
+      // MIW-94（DEF-11）：新列紧随金额两列之后（不插入两列中间），与 admin-web 列表价值同口径。
+      ['valueModeLabel', '价值模式'], ['valueDisplay', '价值展示'], ['currency', '币种'],
       ['roleNames', '合作角色'], ['tags', '标签'], ['referralCount', '引荐数量'], ['coverUrl', '封面地址'],
       ['contentSafetyStatus', '内容安全状态'], ['deadlineAt', '截止时间'], ['publishedAt', '发布时间'],
       ['endedAt', '结束时间'], ['moderatedAt', '处理时间'], ['moderationReason', '处理原因'],
@@ -140,6 +143,8 @@ function workbookForExport(input) {
       refundedAmountYuan: money(source.refundedAmountCents, 100, true),
       minimumAmountWan: money(source.commercialTerms?.minAmountCents, 1000000),
       maximumAmountWan: money(source.commercialTerms?.maxAmountCents, 1000000),
+      valueModeLabel: valueModeLabel(source.commercialTerms?.valueMode),
+      valueDisplay: valueDisplay(source.commercialTerms?.minAmountCents, source.commercialTerms?.maxAmountCents, source.commercialTerms?.valueMode),
       currency: source.commercialTerms?.currency || source.currency,
       locationDisplay: source.commercialTerms?.locationDisplay || source.commercialTerms?.locations?.map(location =>
         location.type === 'NATIONAL' ? '全国' : location.type === 'REMOTE' ? '远程' : location.cityName || '').filter(Boolean).join('、') || source.cityName,
