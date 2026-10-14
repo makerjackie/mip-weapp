@@ -37,6 +37,12 @@ describe('MIP received interaction client flow', () => {
     // J3-06 互动过口径 = 同场签到（双方都签到，只报名不算），空态文案不得回到心动语义。
     expect(view).toContain('与你同场签到过活动的用户会显示在这里。')
     expect(view).not.toContain('有效心动会显示在这里')
+    // MIW-95（验收 DEF-12，MIW-74 口径收口）：访客死分支零残留——所有现役入口均带
+    // scope=influence 走网格（×N + 未读点），非 influence 默认列表不渲染访问次数/访问时间。
+    expect(page).not.toContain('lastVisitedAt')
+    expect(page).not.toContain('访问了你的公开档案')
+    expect(view).not.toContain('item.detailText')
+    expect(view).not.toContain('item.updatedText')
     // MIW-52/59 竖版卡契约：影响力与心动值分支都走统一嘉宾卡 grid 壳，
     // Lv/三标签行/一句话介绍/勋章全由服务端事实渲染（服务端未返回即留空，不造值）。
     for (const attr of ['layout="grid"', 'level-text="{{item.levelText}}"', 'tags="{{item.profileTags}}"', 'supporting-text="{{item.actorHeadline}}"', 'medals="{{item.medals}}"']) {

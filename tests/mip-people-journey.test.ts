@@ -453,6 +453,9 @@ describe('journey-review WS-PEOPLE · 影响力四列表 + 心动值（J3-05/06/
     const influenceGrid = visitorView.slice(visitorView.indexOf('journey-review J3-05/06/08'), visitorView.indexOf('journey-review J3-07'))
     expect(influenceGrid).not.toContain('updatedText')
     expect(instance.categoryCache.VISITOR.items[0]).toMatchObject({ actorName: '菠萝大凤梨', messageId: 'v1', viewKey: 'visitor-v1', countBadge: '×2' })
+    // RV-02（MIW-95/DEF-12）：任何分支不渲染访问时间——presenter 不再产出访问次数/时间文案，
+    // visitCount 只剩 ×N 角标一个消费方。
+    expect(instance.categoryCache.VISITOR.items[0]).toMatchObject({ detailText: '', updatedText: '' })
   })
 
   // review 补强：心动值页两 tab 切换与默认落点行为。
