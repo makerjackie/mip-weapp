@@ -121,6 +121,21 @@ function interactionVisible(event: MipEventDetail) {
   return Boolean(event.canInteract) && Boolean(event.interactionSummary)
 }
 
+/**
+ * MIW-103：早到扫码不再报错。服务端 CHECKIN_NOT_OPEN 携带 opensAt（开始前 6 小时起），
+ * 据此生成详情页「活动未开始」引导文案；时间缺失时退化为不带时间的通用提示。
+ */
+function checkinNoticeFromDetails(kind: 'NOT_OPEN' | 'EXPIRED', details: Record<string, unknown> | null) {
+  if (kind === 'NOT_OPEN') {
+    const opensAt = Date.parse(String(details?.opensAt || ''))
+    const opensText = Number.isFinite(opensAt) ? formatChineseMonthDayTime(new Date(opensAt)) : ''
+    return opensText
+      ? `活动未开始，${opensText}起可现场扫码签到（开始前 6 小时开放）。`
+      : '活动未开始，开始前 6 小时起可现场扫码签到。'
+  }
+  return '现场活动码已过期，请向工作人员获取最新活动码。'
+}
+
 function compactEventTime(startsAt: string, endsAt: string) {
   const startsDay = formatChineseMonthDay(startsAt)
   const endsDay = formatChineseMonthDay(endsAt)
@@ -179,6 +194,10 @@ Page({
       backgroundColor: 'rgba(8, 8, 8, 0.7)',
     },
     hasCheckInIntent: false,
+    // MIW-103：扫码签到被服务端判定为「活动未开始/码过期」时的页内引导横幅；
+    // NOT_OPEN 态在 onShow 重试（用户在开放点后回到页面即自动补签）。
+    checkinNotice: '',
+    checkinNoticeKind: '' as '' | 'NOT_OPEN' | 'EXPIRED',
     onlineMode: false,
     onlineUrl: '',
     guideMode: false,
@@ -278,6 +297,12 @@ Page({
 
   onShow() {
     this.refreshCheckInIntent()
+    // MIW-103：早到扫码停在「活动未开始」横幅后，用户在开放点（开始前 6 小时）之后
+    // 回到本页即自动补签；凭证过期的横幅（EXPIRED）不重试，只引导重扫。
+    if (this.data.checkinNoticeKind === 'NOT_OPEN' && this.data.hasCheckInIntent
+      && this.data.state === 'ready' && !this.data.busy) {
+      void this.attemptAutoCheckIn()
+    }
     if (!this.loadingEvent && this.data.eventId) {
       // MIW-36：cache-and-revalidate——30s 内回到本页直接应用模块缓存（心动页已把
       // getHeart/setHeart 的服务端计数回填进缓存），不再每次 onShow 丢弃缓存强刷全部
@@ -335,7 +360,7 @@ Page({
     try {
       const outcome = await mipEventsModule.checkIn(intent.resumeToken)
       mipCheckInResumeStore.clear(String(outcome.eventId))
-      this.setData({ hasCheckInIntent: false })
+      this.setData({ hasCheckInIntent: false, checkinNotice: '', checkinNoticeKind: '' })
       wx.showToast({ title: '签到成功', icon: 'success' })
       await this.loadEvent({ force: true })
     }
@@ -356,11 +381,46 @@ Page({
         })
         return
       }
-      // 其余校验失败不打断浏览：签到意图保留，重新扫码进入本页即可再次自动签到。
+      // MIW-103：早到扫码（开始前 6 小时之外）给出「活动未开始」页内引导而非报错；
+      // 码过期则提示找工作人员换新码并清掉失效意图。其余校验失败仍不打断浏览：
+      // 签到意图保留，重新扫码进入本页即可再次自动签到。
+      if (error instanceof MipEventsError && error.code === 'CHECKIN_NOT_OPEN') {
+        this.setData({
+          checkinNotice: checkinNoticeFromDetails('NOT_OPEN', error.details),
+          checkinNoticeKind: 'NOT_OPEN',
+        })
+        return
+      }
+      if (error instanceof MipEventsError && error.code === 'CHECKIN_EXPIRED') {
+        this.clearCheckInIntent(eventId, 'EXPIRED')
+        return
+      }
+      if (this.data.checkinNoticeKind === 'NOT_OPEN' && error instanceof MipEventsError
+        && /活动码|凭证|失效|签到时间|token|credential/i.test(error.message)) {
+        // 签到意图超过 30 分钟本地有效期后重试会拿到凭证失效：海报码本身没过期，
+        // 文案引导重扫同一张码，而不是误导用户去找工作人员换码。
+        mipCheckInResumeStore.clear(eventId)
+        this.setData({
+          hasCheckInIntent: false,
+          checkinNotice: '签到等待超时，请重新扫描现场活动码完成签到。',
+          checkinNoticeKind: 'EXPIRED',
+        })
+        return
+      }
     }
     finally {
       this.setData({ busy: false })
     }
+  },
+
+  /** MIW-103：清除签到意图并把横幅切到对应文案（EXPIRED = 引导重扫）。 */
+  clearCheckInIntent(eventId: string, kind: 'NOT_OPEN' | 'EXPIRED') {
+    mipCheckInResumeStore.clear(eventId)
+    this.setData({
+      hasCheckInIntent: false,
+      checkinNotice: checkinNoticeFromDetails(kind, null),
+      checkinNoticeKind: kind,
+    })
   },
 
   async loadInvitationScene(scene: string) {
@@ -443,6 +503,10 @@ Page({
     const hasCheckInIntent = shouldClearCheckInIntent
       ? false
       : Boolean(mipCheckInResumeStore.peek(String(event.id)))
+    // MIW-103：签到意图随报名态收敛失效时，「活动未开始」横幅同步撤下，避免死提示。
+    const checkinNoticeReset = shouldClearCheckInIntent || (!hasCheckInIntent && this.data.checkinNoticeKind !== '')
+      ? { checkinNotice: '', checkinNoticeKind: '' as const }
+      : {}
     const action = primaryAction(event)
     const onlineUrl = safeHttpsEventUrl(event.onlineUrl)
     const guideUrl = safeHttpsEventUrl(event.guideUrl)
@@ -496,6 +560,7 @@ Page({
       guideUrl,
       hasCoordinates: Number.isFinite(event.latitude) && Number.isFinite(event.longitude),
       hasCheckInIntent,
+      ...checkinNoticeReset,
       message: this.onlineRequested && !onlineUrl ? '当前暂不能进入线上活动。' : this.guideRequested && !guideUrl ? '当前暂无路线指引。' : '',
     })
     updateComponentMedia(this, 'event.coverUrl', event.coverUrl || '')

@@ -73,7 +73,14 @@ function errorResponse(error) {
   if (error instanceof DomainError) {
     return {
       ok: false,
-      error: { code: error.code, message: error.message, retryable: error.retryable === true },
+      error: {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable === true,
+        // MIW-103：CHECKIN_NOT_OPEN 附带 opensAt/startsAt，供客户端渲染
+        // 「活动未开始」引导；无 details 的错误保持既有报文形状。
+        ...(error.details ? { details: error.details } : {}),
+      },
     }
   }
   const diagnostic = error?.posterDiagnostic

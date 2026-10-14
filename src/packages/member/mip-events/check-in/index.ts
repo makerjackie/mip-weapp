@@ -4,6 +4,7 @@ import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
+import { formatChineseMonthDayTime } from '../../../../utils/date'
 
 function decoded(value: string) {
   try {
@@ -12,6 +13,14 @@ function decoded(value: string) {
   catch {
     return ''
   }
+}
+
+/** MIW-103：CHECKIN_NOT_OPEN 详情里的 opensAt（开始前 6 小时起）转中文提示；缺失时退化为通用文案。 */
+function checkInNotOpenMessage(details: Record<string, unknown> | null) {
+  const opensAt = Date.parse(String(details?.opensAt || ''))
+  return Number.isFinite(opensAt)
+    ? `活动未开始，${formatChineseMonthDayTime(new Date(opensAt))}起可现场扫码签到（开始前 6 小时开放）。`
+    : '活动未开始，开始前 6 小时起可现场扫码签到。'
 }
 
 function scanTokenFromResult(...values: Array<string | undefined>) {
@@ -38,7 +47,7 @@ function scanTokenFromResult(...values: Array<string | undefined>) {
 
 Page({
   data: {
-    state: 'idle' as 'idle' | 'checking' | 'success' | 'registration-required' | 'registration-pending' | 'error',
+    state: 'idle' as 'idle' | 'checking' | 'success' | 'registration-required' | 'registration-pending' | 'not-open' | 'error',
     eventId: '',
     hasScanToken: false,
     checkedInAt: '',
@@ -150,6 +159,29 @@ Page({
         await this.recoverCheckInAccess()
         return
       }
+      // MIW-103：活动未开始是可预期的正常状态，给引导态而不是错误态；签到意图保留，
+      // not-open 态出口是「查看活动详情/重新扫码」，重扫或经报名续签（resumeCheckIn=1
+      // 自动 confirmCheckIn）回本页即可补签，详情页同款横幅到点也会自动补签。
+      if (error instanceof MipEventsError && error.code === 'CHECKIN_NOT_OPEN') {
+        this.retainCheckInIntent()
+        this.setData({
+          state: 'not-open',
+          message: checkInNotOpenMessage(error.details),
+        })
+        return
+      }
+      if (error instanceof MipEventsError && error.code === 'CHECKIN_EXPIRED') {
+        mipCheckInResumeStore.clear(this.data.eventId || undefined)
+        this.scanToken = ''
+        this.resumeToken = ''
+        this.resolvedScene = null
+        this.setData({
+          hasScanToken: false,
+          state: 'error',
+          message: '现场活动码已过期，请向工作人员获取最新活动码。',
+        })
+        return
+      }
       if (error instanceof MipEventsError && error.code === 'REGISTRATION_REQUIRED') {
         this.retainCheckInIntent()
         this.setData({
@@ -258,6 +290,16 @@ Page({
 
   openMyEvents() {
     caseNavigateTo({ url: '/packages/member/mip-events/mine/index' })
+  },
+
+  /** MIW-103：活动未开始时引导用户先浏览活动详情，开放后再回来签到。 */
+  openEventDetail() {
+    if (!this.data.eventId) {
+      return
+    }
+    caseNavigateTo({
+      url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(this.data.eventId)}`,
+    })
   },
 
   openInteraction() {

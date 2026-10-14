@@ -26,7 +26,7 @@ it('writes the user scan transition and outbox atomically with the same immutabl
           valid_until: new Date('2026-08-24T09:00:00.000Z'),
         }
       }
-      if (sql.includes('FROM mip_events')) return { id: eventId }
+      if (sql.includes('FROM mip_events')) return { id: eventId, starts_at: new Date('2026-08-24T08:30:00.000Z') }
       if (sql.includes('FROM mip_event_registrations')) {
         return { id: registrationId, event_id: eventId, user_id: userId, status: 'REGISTERED', version: 2 }
       }

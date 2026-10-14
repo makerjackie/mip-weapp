@@ -85,7 +85,10 @@ describe('MIP check-in scene', () => {
         index += 1
         if (index === 1) {
           assert.match(sql, /scan_key/)
-          assert.match(sql, /valid_from <= \? AND valid_until >= \?/)
+          // MIW-103：解析不再过滤 valid_from（早到扫码也要能进活动详情页），
+          // 仅保留 valid_until 过滤拦已过期码。
+          assert.match(sql, /status = 'ACTIVE' AND valid_until >= \?/)
+          assert.doesNotMatch(sql, /valid_from <=/)
           assert.equal(params[0], 'wx-app')
           return {
             event_id: '10000000-0000-4000-8000-000000000001',
@@ -93,7 +96,7 @@ describe('MIP check-in scene', () => {
             valid_until: '2026-08-25T10:00:00.000Z',
           }
         }
-        return { id: '10000000-0000-4000-8000-000000000001' }
+        return { id: '10000000-0000-4000-8000-000000000001', starts_at: '2026-08-24T07:00:00.000Z' }
       },
     }
     const scene = 's1.abcdefghijk.lmnopqrstuv'
@@ -109,10 +112,13 @@ describe('MIP check-in scene', () => {
       eventId: resolved.eventId,
       validFrom: resolved.validFrom,
       validUntil: resolved.validUntil,
+      checkinOpensAt: resolved.checkinOpensAt,
     }, {
       eventId: '10000000-0000-4000-8000-000000000001',
       validFrom: '2026-08-24T02:00:00.000Z',
       validUntil: '2026-08-24T03:30:00.000Z',
+      // 开始前 6 小时 = 01:00 开放签到。
+      checkinOpensAt: '2026-08-24T01:00:00.000Z',
     })
     assert.match(resolved.resumeToken, /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/)
     assert.equal(resolved.resumeToken.includes(scene), false)
@@ -132,6 +138,56 @@ describe('MIP check-in scene', () => {
     assert.throws(() => parseCheckInToken('bad.scene'), error => error.code === 'VALIDATION_FAILED')
   })
 
+  it('still resolves the scene before the credential opens so early scans land on the event detail page (MIW-103)', async () => {
+    let index = 0
+    const database = {
+      async one(sql, params) {
+        index += 1
+        if (index === 1) {
+          assert.doesNotMatch(String(sql), /valid_from <=/)
+          // appId + scan_key + token_hash + valid_until 占位。
+          assert.equal(params.length, 4)
+          return {
+            event_id: '10000000-0000-4000-8000-000000000001',
+            valid_from: '2026-08-24T02:00:00.000Z',
+            valid_until: '2026-08-24T10:00:00.000Z',
+          }
+        }
+        return { id: '10000000-0000-4000-8000-000000000001', starts_at: '2026-08-24T07:00:00.000Z' }
+      },
+    }
+    const resolved = await resolveCheckInScene(database, {
+      appId: 'wx-app',
+      userId: USER_ID,
+      callerKey: CALLER_KEY,
+      scene: 's1.abcdefghijk.lmnopqrstuv',
+      tokenSecret: TOKEN_SECRET,
+      // now (01:00) 早于 valid_from（02:00）：解析必须放行，签到时间窗交给 checkIn 判定。
+      now: new Date('2026-08-24T01:00:00.000Z'),
+    })
+    assert.equal(resolved.eventId, '10000000-0000-4000-8000-000000000001')
+    assert.equal(resolved.checkinOpensAt, '2026-08-24T01:00:00.000Z')
+  })
+
+  it('rejects the scene once the credential has expired', async () => {
+    const database = {
+      async one() {
+        return null
+      },
+    }
+    await assert.rejects(
+      resolveCheckInScene(database, {
+        appId: 'wx-app',
+        userId: USER_ID,
+        callerKey: CALLER_KEY,
+        scene: 's1.abcdefghijk.lmnopqrstuv',
+        tokenSecret: TOKEN_SECRET,
+        now: new Date('2026-08-26T00:00:00.000Z'),
+      }),
+      error => error.code === 'VALIDATION_FAILED' && /活动码无效或已失效/.test(error.message),
+    )
+  })
+
   it('rejects a tampered, expired, cross-AppID, or cross-caller resume token before touching data', async () => {
     let index = 0
     const database = {
@@ -144,7 +200,7 @@ describe('MIP check-in scene', () => {
               valid_from: '2026-08-24T02:00:00.000Z',
               valid_until: '2026-08-24T05:00:00.000Z',
             }
-          : { id: '10000000-0000-4000-8000-000000000001' }
+          : { id: '10000000-0000-4000-8000-000000000001', starts_at: '2026-08-24T05:00:00.000Z' }
       },
     }
     const resolved = await resolveCheckInScene(database, {
@@ -199,7 +255,7 @@ describe('MIP check-in scene', () => {
               valid_from: '2026-08-24T02:00:00.000Z',
               valid_until: '2026-08-24T05:00:00.000Z',
             }
-          : { id: '10000000-0000-4000-8000-000000000001' }
+          : { id: '10000000-0000-4000-8000-000000000001', starts_at: '2026-08-24T05:00:00.000Z' }
       },
     }, {
       appId: 'wx-app',

@@ -284,6 +284,86 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
     expect(checkInStore.clear).not.toHaveBeenCalled()
   })
 
+  it('shows an activity-not-started notice instead of an error when scanning before the window opens (MIW-103)', async () => {
+    const page = createPage()
+    eventsModule.resolveCheckInScene.mockResolvedValueOnce({
+      eventId: EVENT_ID,
+      resumeToken: RESUME_TOKEN,
+      validFrom: '2026-12-12T09:30:00+08:00',
+      validUntil: CHECK_IN_INTENT.validUntil,
+      checkinOpensAt: '2026-12-12T09:30:00+08:00',
+    })
+    checkInStore.save.mockReturnValueOnce(CHECK_IN_INTENT)
+    eventsModule.getEvent.mockResolvedValue(attendedEvent({ registrationStatus: 'REGISTERED' }))
+    eventsModule.checkIn.mockRejectedValueOnce(new MipEventsError(
+      'CHECKIN_NOT_OPEN',
+      '活动未开始，签到尚未开放',
+      false,
+      { opensAt: '2026-12-12T09:30:00+08:00', startsAt: '2026-12-12T10:00:00+08:00' },
+    ))
+
+    await callPage(page, 'loadCheckInScene', SCAN_SCENE)
+    await flushAsync()
+
+    expect(page.data.state).toBe('ready')
+    expect(page.data.checkinNoticeKind).toBe('NOT_OPEN')
+    expect(page.data.checkinNotice).toContain('活动未开始')
+    expect(page.data.checkinNotice).toContain('12月12日 09:30')
+    expect(page.data.hasCheckInIntent).toBe(true)
+    expect(checkInStore.clear).not.toHaveBeenCalled()
+    expect(showToast).not.toHaveBeenCalledWith({ title: '签到成功', icon: 'success' })
+  })
+
+  it('retries the blocked check-in when the user returns after the window opens (MIW-103)', async () => {
+    const page = createPage({
+      state: 'ready',
+      eventId: EVENT_ID,
+      hasCheckInIntent: true,
+      checkinNotice: '活动未开始，12月12日 09:30起可现场扫码签到（开始前 6 小时开放）。',
+      checkinNoticeKind: 'NOT_OPEN',
+    })
+    eventsModule.getEvent
+      .mockResolvedValueOnce(attendedEvent({ registrationStatus: 'REGISTERED' }))
+      .mockResolvedValueOnce(attendedEvent({ registrationStatus: 'ATTENDED' }))
+    eventsModule.checkIn.mockResolvedValueOnce({
+      eventId: EVENT_ID,
+      registrationId: 'reg-1',
+      status: 'ATTENDED',
+      checkedInAt: '2026-12-12T10:01:00+08:00',
+      idempotent: false,
+    })
+
+    callPage(page, 'onShow')
+    await flushAsync()
+
+    expect(eventsModule.checkIn).toHaveBeenCalledWith(RESUME_TOKEN)
+    expect(showToast).toHaveBeenCalledWith({ title: '签到成功', icon: 'success' })
+    expect(page.data.checkinNotice).toBe('')
+    expect(page.data.checkinNoticeKind).toBe('')
+  })
+
+  it('asks the staff for a fresh code and drops the intent when the scan code has expired (MIW-103)', async () => {
+    const page = createPage()
+    eventsModule.resolveCheckInScene.mockResolvedValueOnce({
+      eventId: EVENT_ID,
+      resumeToken: RESUME_TOKEN,
+      validFrom: '2026-12-12T09:30:00+08:00',
+      validUntil: CHECK_IN_INTENT.validUntil,
+    })
+    checkInStore.save.mockReturnValueOnce(CHECK_IN_INTENT)
+    eventsModule.getEvent.mockResolvedValue(attendedEvent({ registrationStatus: 'REGISTERED' }))
+    eventsModule.checkIn.mockRejectedValueOnce(new MipEventsError('CHECKIN_EXPIRED', '现场活动码已过期，请向工作人员获取最新活动码'))
+
+    await callPage(page, 'loadCheckInScene', SCAN_SCENE)
+    await flushAsync()
+
+    expect(page.data.state).toBe('ready')
+    expect(page.data.checkinNoticeKind).toBe('EXPIRED')
+    expect(page.data.checkinNotice).toContain('已过期')
+    expect(page.data.hasCheckInIntent).toBe(false)
+    expect(checkInStore.clear).toHaveBeenCalledWith(EVENT_ID)
+  })
+
   it('caps the auth-driven auto check-in retry at one attempt when identity and event states split', async () => {
     const page = createPage()
     eventsModule.resolveCheckInScene.mockResolvedValueOnce({

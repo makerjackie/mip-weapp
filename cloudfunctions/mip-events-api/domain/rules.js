@@ -3,11 +3,14 @@
 const { effectivePolicyCapabilities, templateAllowsBinding } = require('../lib/role-template-policy')
 
 class DomainError extends Error {
-  constructor(code, message, retryable = false) {
+  constructor(code, message, retryable = false, details = null) {
     super(message)
     this.name = 'DomainError'
     this.code = code
     this.retryable = retryable
+    // MIW-103：CHECKIN_NOT_OPEN 需要携带 opensAt/startsAt，客户端据此渲染
+    // 「活动未开始」引导而不是通用错误；其余错误保持 details 为 null 不下发。
+    this.details = details && typeof details === 'object' ? details : null
   }
 }
 
@@ -84,6 +87,21 @@ function assertCanCancel(status) {
   }
 }
 
+// MIW-103（产品口径 2026-10-14，同日修订为 6 小时）：签到在活动开始前 6 小时开放，
+// 此前扫码（签到海报落在活动详情页）必须得到「活动未开始」引导而不是错误。
+// STATIC 海报码 valid_from（= 开始前 6 小时）恰为开放点；ROTATING 现场码以自身
+// valid_from 为准。凭证 valid_from 只约束现场码本身的 issuing 窗口。
+const checkInOpensBeforeStartMs = 6 * 60 * 60 * 1000
+
+function checkInOpensAt(event) {
+  return new Date(asDate(event.starts_at, 'DATA_INTEGRITY').getTime() - checkInOpensBeforeStartMs)
+}
+
+function rulesIso(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isFinite(date.getTime()) ? date.toISOString() : ''
+}
+
 function assertCheckInAllowed({ event, registration, credential, now = new Date() }) {
   if (!registration || ['CANCELLED', 'REJECTED'].includes(registration.status)) {
     throw new DomainError('REGISTRATION_REQUIRED', '请先完成活动报名')
@@ -98,9 +116,22 @@ function assertCheckInAllowed({ event, registration, credential, now = new Date(
     throw new DomainError('VALIDATION_FAILED', '活动码无效')
   }
   const timestamp = asDate(now).getTime()
-  if (timestamp < asDate(credential.valid_from).getTime()
-    || timestamp > asDate(credential.valid_until).getTime()) {
-    throw new DomainError('CONFLICT', '当前不在签到时间内')
+  // 开放时间取「开始前 6 小时」与凭证自身 valid_from 的较晚者：STATIC 海报码
+  // （valid_from = 开始前 6 小时）恰为开放点；ROTATING 现场码若晚于该点
+  // 生成（或时钟偏移）则以凭证实际生效时间为准。
+  const opensAt = Math.max(
+    asDate(credential.valid_from, 'DATA_INTEGRITY').getTime(),
+    checkInOpensAt(event).getTime(),
+  )
+  const opensIso = rulesIso(new Date(opensAt))
+  if (timestamp < opensAt) {
+    throw new DomainError('CHECKIN_NOT_OPEN', '活动未开始，签到尚未开放', false, {
+      opensAt: opensIso,
+      startsAt: rulesIso(asDate(event.starts_at, 'DATA_INTEGRITY')),
+    })
+  }
+  if (timestamp > asDate(credential.valid_until).getTime()) {
+    throw new DomainError('CHECKIN_EXPIRED', '现场活动码已过期，请向工作人员获取最新活动码')
   }
   if (credential.event_id !== registration.event_id || credential.event_id !== event.id) {
     throw new DomainError('VALIDATION_FAILED', '活动码与报名活动不一致')
@@ -247,6 +278,7 @@ module.exports = {
   assertCanCancel,
   assertCheckInAllowed,
   capacityStatuses,
+  checkInOpensAt,
   decideRegistration,
   grantsCapability,
   parseFeedbackAnswers,

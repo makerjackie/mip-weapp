@@ -30,7 +30,7 @@
 | 活动目录 / B1–B8 | Banner、近期/往期、城市/日期/搜索、卡片、分享、详情入口 | implemented | verified-local + external-wait | 页面、服务端查询和日期范围测试已覆盖。2026-10 起「往期」由后台配置回顾条目驱动（`mip.events.recaps` + `mip_videos` 视频号目标，迁移 103 `mip_video_recap_channels`）：dto/gateway/module/页面契约与 admin-api、admin-web 用例已覆盖；正式素材、真机 `wx.openChannelsActivity` 跳转、日历和分享待验 |
 | 活动详情 / C1–C7 | 图文媒体、电话、地图、指引链接、分享、参与人、报名恢复；底部 sticky 两态（MIW-53：未报名=客服+转发+立刻报名，其余=客服+转发双胶囊）；邀请来源、活动签到、活动变更模块已按 2026-10-08 客户口径删除；「主办方」Tab 改为后台配置的主办方介绍富文本（C1/TC-C-01，迁移 102 `organizer_introduction`，不再展示主办方资料卡） | implemented | verified-local + external-wait | 富内容、媒体排序、指引按钮显隐与 web-view 跳转合同已覆盖；两态 sticky 已本机截图比对 figma 1818_17142/3319_5944；主办方介绍后台编辑→小程序展示链路已合同+仓库测试覆盖；地图、拨号、码图需真机 |
 | 付费报名 / C8 | 订单意图、支付参数、ledger、报名确认和退款 | implemented | verified-local + external-wait | 本地事务与错误状态已覆盖；正式商户、回调、查单和真机支付待验 |
-| 扫码签到 / D1–D4 | scene、登录/报名/支付恢复、资格复核、签到海报 | implemented | verified-local + external-wait | 服务端签名、过期和幂等合同已覆盖；真实码、扫码、Canvas 和相册待验 |
+| 扫码签到 / D1–D4 | scene、登录/报名/支付恢复、资格复核、签到海报；签到开始前 6 小时开放，早到扫码详情页「活动未开始」引导、站内扫码引导态（MIW-103） | implemented | verified-local + external-wait | 服务端签名、过期、幂等与时间窗合同已覆盖；真实码、扫码、Canvas 和相册待验 |
 | 心动与反馈 / D5–D8 | 单关系、双列表、已签到反馈和通知 | implemented | verified-local + external-wait | 关系、反馈和站内 outbox 已覆盖；订阅模板和真机通知待验 |
 | 机会目录与详情 / E1–E4 | 状态、筛选、人才范围、详情、发布和最多 8 人团队 | implemented | verified-local + evidence-missing | 页面、服务端列表、团队和 profile reference 测试已覆盖；缺当前完整运行证据 |
 | 引荐与兴趣 / E5–E7 | 唯一关系、替换/取消、公开档案、站内通知 | implemented | verified-local + external-wait | 服务端关系和屏蔽复核已覆盖；微信补充通知待验 |

@@ -81,30 +81,72 @@ describe('MIP event registration rules', () => {
 })
 
 describe('MIP event check-in and feedback rules', () => {
-  it('requires a matching active credential in its time window', () => {
+  // MIW-103：活动 05:00 开始 → 签到 2026-08-23 23:00（开始前 6 小时）开放；凭证
+  // valid_from 晚于该点（改期后的旧海报、现场轮换码）时以凭证生效时间为准。
+  const checkInEvent = { id: 'event-1', starts_at: '2026-08-24T05:00:00.000Z' }
+  const openCredential = {
+    event_id: 'event-1',
+    status: 'ACTIVE',
+    valid_from: '2026-08-24T03:00:00.000Z',
+    valid_until: '2026-08-24T06:00:00.000Z',
+  }
+
+  it('allows check-in from 6 hours before start until the credential expires', () => {
+    // 04:45 在凭证生效（03:00）之后、过期（06:00）之前。
     assert.doesNotThrow(() => assertCheckInAllowed({
-      event: { id: 'event-1' },
+      event: checkInEvent,
       registration: { event_id: 'event-1', status: 'REGISTERED' },
-      credential: {
-        event_id: 'event-1',
-        status: 'ACTIVE',
-        valid_from: '2026-08-24T03:00:00.000Z',
-        valid_until: '2026-08-24T05:00:00.000Z',
-      },
-      now,
+      credential: openCredential,
+      now: new Date('2026-08-24T04:45:00.000Z'),
+    }))
+    // 凭证生效早于 6 小时点时，由 6 小时口径兜底：04:45 已过开放点（23:00）。
+    assert.doesNotThrow(() => assertCheckInAllowed({
+      event: checkInEvent,
+      registration: { event_id: 'event-1', status: 'REGISTERED' },
+      credential: { ...openCredential, valid_from: '2026-08-23T20:00:00.000Z' },
+      now: new Date('2026-08-24T04:45:00.000Z'),
     }))
     assert.throws(() => assertCheckInAllowed({
-      event: { id: 'event-1' },
+      event: checkInEvent,
       registration: { event_id: 'event-1', status: 'PAYMENT_PENDING' },
-      credential: { event_id: 'event-1', status: 'ACTIVE', valid_from: now, valid_until: now },
+      credential: { ...openCredential, valid_from: now, valid_until: now },
       now,
     }), error => error.code === 'REGISTRATION_PENDING')
     assert.throws(() => assertCheckInAllowed({
-      event: { id: 'event-1' },
+      event: checkInEvent,
       registration: null,
-      credential: { event_id: 'event-1', status: 'ACTIVE', valid_from: now, valid_until: now },
+      credential: { ...openCredential, valid_from: now, valid_until: now },
       now,
     }), error => error.code === 'REGISTRATION_REQUIRED')
+  })
+
+  it('reports CHECKIN_NOT_OPEN with structured times when scanning before the window opens', () => {
+    // 22:00 早于开放点 23:00（开始前 6 小时）：凭证（valid_from 20:00 已生效）也必须拦下。
+    assert.throws(() => assertCheckInAllowed({
+      event: checkInEvent,
+      registration: { event_id: 'event-1', status: 'REGISTERED' },
+      credential: { ...openCredential, valid_from: '2026-08-23T20:00:00.000Z' },
+      now: new Date('2026-08-23T22:00:00.000Z'),
+    }), error => error.code === 'CHECKIN_NOT_OPEN'
+      && error.details.opensAt === '2026-08-23T23:00:00.000Z'
+      && error.details.startsAt === '2026-08-24T05:00:00.000Z')
+    // 现场轮换码晚于规则点生成（04:40 签发）：以凭证生效时间为准。
+    assert.throws(() => assertCheckInAllowed({
+      event: checkInEvent,
+      registration: { event_id: 'event-1', status: 'REGISTERED' },
+      credential: { ...openCredential, valid_from: '2026-08-24T04:40:00.000Z' },
+      now: new Date('2026-08-24T04:35:00.000Z'),
+    }), error => error.code === 'CHECKIN_NOT_OPEN'
+      && error.details.opensAt === '2026-08-24T04:40:00.000Z')
+  })
+
+  it('reports CHECKIN_EXPIRED once the credential window has passed', () => {
+    assert.throws(() => assertCheckInAllowed({
+      event: checkInEvent,
+      registration: { event_id: 'event-1', status: 'REGISTERED' },
+      credential: openCredential,
+      now: new Date('2026-08-24T06:01:00.000Z'),
+    }), error => error.code === 'CHECKIN_EXPIRED')
   })
 
   it('normalizes feedback without exposing it through public rules', () => {
