@@ -1,106 +1,87 @@
 # 测试与生产环境方案
 
-本页记录环境隔离方案及落地前提，不表示资源已创建或部署已完成。核对日期：2026-09-27。实际发布和目标环境的当前状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 及目标回读证据为准。
+本页记录 2026-10-15 拍板的测试/生产环境方向与落地前提。方案描述不表示任何新资源已创建或清洗已完成；实际状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 与目标环境回读证据为准。不把真实 AppID、EnvID、VPC、UIN、runtime 用户或密钥写入文档。
 
-## 当前状态
+## 已拍板的方向（2026-10-15）
 
-- 本机配置为单目标 `MIP_DEPLOYMENT_STAGE=staging`、`MIP_CATALOG_STAGE=TEST`、`MIP_PAYMENT_MODE=test`。
-- 本轮尚未创建第二套 CloudBase、数据库或管理后台环境。
-- 小程序从构建配置注入固定 CloudBase EnvID，没有应用内环境切换开关，也没有按 `develop`、`trial`、`release` 自动选择环境的逻辑。
-- 当前管理后台发布命令固定指向 `mip-admin-web`，Wrangler 配置只有一套 D1 绑定。
-- `miptest.01mvp.com` 是静态验收报告站，不能视为第二套可操作管理后台。
-- 本轮取消体验版上传；环境规划和后台验收不构成上传、正式发布或新建资源的完成证据。
+现有全部资源原地转正式生产；测试环境全部新建。同实例多库（schema）方案作为成本约束下的选择：第二个 CloudBase 环境需要第二份包年费用，排除。CloudBase 托管 MySQL 同实例多逻辑库、函数按用量计费不按个数、Cloudflare Pages/D1 免费层，均为既有核对结论（2026-09-27 只读检查）。
 
-## 隔离方案选择
-
-两个独立 CloudBase 环境不是技术上的必要条件。CloudBase 托管 MySQL 支持同实例的多个逻辑数据库（schema）；可以在同一环境内分别承载测试和生产数据。独立 CloudBase 环境则提供更强的资源与运维边界。
-
-| 方案 | 隔离范围 | 适用场景 |
+| 资源 | 生产（现有资源原地） | 测试（全部新建） |
 | --- | --- | --- |
-| 同 CloudBase 环境、两个 MySQL schema | 数据、runtime 账号、应用函数与配置分别隔离；计算资源和环境管理凭据仍共享 | 作为控制资源成本的过渡方案，需先完成下述工程改造 |
-| 两个独立 CloudBase 环境 | 数据、云函数、存储、资源容量和环境凭据分别隔离 | 正式运营更重视测试误操作、资源争用和故障隔离时采用 |
+| CloudBase 环境 | 现有唯一 EnvID | 同一环境内共享 |
+| MySQL 库 | 现有默认库；发布前完成数据清洗（清单另行核对确认） | 同实例第二库；只执行迁移与正式配置导入 |
+| 云函数名 | 现有默认 `mip-*-api`（正式版已烘焙，不可变更） | `MIP_*_FUNCTION_NAME` 全套显式覆盖为 `mip-t-*`（21 个，含支付三函数与调度器） |
+| runtime MySQL 账号 | 现有账号 | 第二派生账号，只授测试库 `mip_*` 表级权限 |
+| 对象前缀 | `mip/` | 独立测试前缀，各套函数只写自己的前缀 |
+| 管理后台 | 现有域名与 CloudBase 直连入口，不动 | `admin-test.mip.cool`：新 Pages 项目、新 D1、独立会话/HMAC 密钥 |
+| 小程序 | 正式版（构建自生产目录） | 开发版/体验版（构建自测试目录，烘焙 `mip-t-*`） |
+| stage/catalog/payment | `production` / `LIVE` / 支付独立验收后 `live` | `test` 或 `staging` / `TEST` / `disabled` 或 `test` |
 
-同环境方案不等于零成本，也不保证总费用一定更低；实际费用取决于共享实例用量。无论选择哪一种，都不能只改 `MIP_DEPLOYMENT_STAGE` 或数据库 URI，却复用同一套函数配置。
+安全默认随之反转：`src/config/defaults.ts` 的兜底函数名应改为指向 `mip-t-*`，使「未配置环境的误构建」打向不存在的测试函数（响亮失败）而不是生产。两份目标目录都必须显式写全 21 个函数名，不依赖 defaults 兜底。
 
-### 当前核对依据与限制
+## 支付环境切分
 
-2026-09-27 已通过仓库 `config/mcporter.json` 包装器执行只读检查：数据库列表返回一个现有业务库及系统库；当前管理连接具有建库所需的 CREATE 能力，业务 runtime 则仅持有现有业务库的精确表级权限。没有执行建库、修改权限或写入第二库，故不把只读结果当成第二库已经创建或端到端验证成功。
+微信支付没有沙箱。`MIP_PAYMENT_MODE=test` 与 `live` 使用同一 `subMchId` 真实扣款；`test` 仅把支付记录的 provider 记为 `TEST`（`cloudfunctions/mip-cloudpay/domain/payment.js`）。商户绑定是 AppID/环境级资源，两套函数共享绑定，差异化只靠各自注入的 `subMchId`。
 
-官方 [CloudBase MySQL 管理 SDK](https://docs.cloudbase.net/api-reference/manager/node/mysql) 提供 `describeClusterDatabases`、按 `Db` 查询表和授权，以及 SQL 执行入口；当前 MCP 的查询和 DDL 接口支持 `dbInstance.schema`。这些是 CloudBase 托管 MySQL 的能力，不能用普通腾讯云 MySQL 或微搭私有部署的文档替代。第二库的实际创建、连接、迁移和权限拒绝测试仍应在分库实施阶段核对目标后完成。
+- 自动切换口径：支付旋钮（`MIP_PAYMENT_MODE`、`WECHAT_PAY_MERCHANT_ID`、`--confirm-live`）属于各目标目录 env 配置；生产发布链在支付验收通过前保持 `disabled`，通过后由发布命令自动追加 `--confirm-live`。不存在需要人工切换的运行时开关。
+- 测试环境支付三选一：① 同一商户号 + TEST 目录价（真实小额、`refunds:run` 可退，能测全链路）；② 客户第二商户号绑定同一环境、测试目录配置其 mchid（资金面完全隔离）；③ 测试目录 `disabled` + 管理端免费补录（零资金流，测不到支付链路）。
 
-### 两种方案共同的配置边界
+## 数据清洗与初始化
 
-| 项目 | 测试环境 | 生产环境 |
-| --- | --- | --- |
-| stage | 当前保留 `staging` | `production` |
-| catalog | `TEST` | 正式目录 `LIVE` |
-| payment | `test` 或 `disabled` | 默认 `disabled`，正式支付独立验收后才启用 `live` |
-| 演示数据 | 满足 staging 确认条件时允许 | 禁止 demo seed 和 QA 夹具 |
-| 管理后台 | 独立 Pages 项目、域名、D1、会话密钥和 HMAC | 另一套独立资源与密钥 |
-| 小程序连接 | 构建时固定测试目标 | 构建时固定生产目标 |
+生产库在正式发布前完成一次清洗，口径：
 
-生产初始化只执行经过验证的迁移和正式配置导入，不复制 demo 用户、合成签到、测试订单或测试权益。若未来需要迁移真实数据，应另行按 [DEPLOYMENT.md](../DEPLOYMENT.md) 和 [IDENTITY_MIGRATION.md](../IDENTITY_MIGRATION.md) 备份、校验和执行。
+- 下架全部演示种子活动（`seed.demo.json` 标记 `replaceBeforeProduction: true` 的固定 ID 资源：演示用户、演示分支、演示会员方案、演示活动、演示 banner/公告）。
+- 清理测试期活动草稿、测试报名/签到/订单；真实用户的历史保留。涉及资金的状态（PAID/REFUND_PENDING）先对账再处置。
+- 生产初始化不复制演示用户、合成签到、测试订单或测试权益；正式配置导入沿用 [DEPLOYMENT.md](../DEPLOYMENT.md) 与 [IDENTITY_MIGRATION.md](../IDENTITY_MIGRATION.md) 的备份校验流程。
 
-### 同环境分库需先完成的工程改造
+测试库只执行迁移与正式配置导入；`seed:demo` 允许在测试库运行（`--confirm-demo`，staging 条件下追加 `--confirm-staging-demo`）。不做常态化的生产→测试数据复制：手机号/UnionID 加密 pepper 按目标派生，生产副本的身份字段在测试环境不可解密，复制只产生不可验证登录的摆设数据。
 
-当前代码还不能仅靠修改 URI 安全运行同环境双 schema。具体入口如下：
+清洗执行规则：资金与权限相关处置先逐项人工确认；写库走 `runStatement` 并回读 `rowsAffected`；删除前完成仓库外逻辑备份；状态不可逆操作优先走管理端操作以保留审计。
 
-- 云部署脚本（`scripts/deploy-functions.mjs`）：`targetSchema` 从 CloudBase 默认实例信息读取，并拒绝 URI 中不同的 schema。需要增加显式的部署目标库及其核对，保留环境、stage、生产确认门禁，不能简单删除校验。
-- runtime 账号派生（`scripts/lib/mysql-privilege-assert.mjs`）与 project:init（`scripts/project-init.mjs`）：当前 `runtimeUserForEnvironment` 只使用 EnvID，同环境会得到同一账号。需要分别派生测试/生产账号，精确授予各自库内的业务表权限，验证不能跨库读写。
-- 表级授权收敛（`scripts/converge-mip-runtime-grants.mjs`）：当前校验环境派生账号；需一并接受已确认的库和账号组合，不授予跨库、schema ALL 或全局权限。
-- 迁移执行器（`scripts/apply-mip-schema.mjs`）：当前 SQL 调用不传 `dbInstance.schema`，依赖默认库。迁移、备份、seed、owner bootstrap 及云端验收都需要贯穿同一显式库目标和回读核对；建库属于独立基础设施步骤，不塞进只允许 `mip_*` 表的业务迁移。
-- 函数名配置（`scripts/lib/mip-function-names.mjs`）：已支持独立函数名，但还需分别配置测试/生产整套函数及内部调用、支付回调和调度目标；不能轮流更新同名函数的数据库 URI。
-- 媒体继续使用带 stage 的独立对象前缀，各套函数只写自己的前缀。后台 BFF、D1 会话、域名、服务端 HMAC/加密/会话密钥及构建目标也要分别配置，不能因为共享 CloudBase EnvID 而合并。
+## 工程改造清单（测试环境落地前提）
 
-同一实例仍共享 CPU、连接容量和生命周期，环境级管理凭据也不是两个 schema 间的安全边界。测试压测、实例维护和误用管理凭据仍可能影响生产。应用运行账号的隔离不能替代这些限制。
+现有代码还不能仅靠配置运行同环境双库，以下改造在测试环境创建前完成：
 
-### 构建与配置隔离
+- 目标库显式化：`deploy-functions`、`apply-mip-schema`、备份、seed、grants、`verify-cloud`、owner bootstrap 全链传显式 schema 并增加确认参数；当前 targetSchema 从实例默认库推断（`scripts/deploy-functions.mjs`）。
+- runtime 账号派生加库维度：`runtimeUserForEnvironment(envId)` 改为 (envId, schema) 派生；调用点为 `deploy-functions.mjs`、`converge-mip-runtime-grants.mjs`、`verify-cloud.mjs`、`project-init.mjs`。两账号各自只授本库表级权限，既有表级精确授权断言天然校验跨库隔离。
+- env 目录加载器：`loadCaseEnv`（`scripts/lib/example-cloudbase.mjs`）与 `weapp-vite.config.ts` 支持 `MIP_ENV_DIR`，目标配置目录（gitignore）各持 `.env.local` 与 `.env.secrets.local`。
+- ops 编排脚本：`--target=test|production` 串联 迁移 dry-run → apply → project:init → grants → cloud:deploy（自动拼接全部 `--confirm-*`，production 追加 `--confirm-production`）→ `cloud:verify`；owner bootstrap 与支付验收不进自动链。
+- admin 拆分：`admin-web/wrangler.toml` 拆两份（项目名/D1/绑定，现 `deploy:pages` 硬编码项目名）；测试端 `MIP_ADMIN_UPSTREAM_URL` 指向 `mip-t-admin-api`；测试函数集的 `MIP_ADMIN_WEB_LOGIN_CONFIRM_URL` 必须显式指向测试域名（部署脚本默认值只对生产正确）。
+- 媒体与订阅消息：媒体前缀按 stage 注入；订阅模板为 AppID 级资源，两套函数共享同一批模板，模板层无法隔离，测试环境默认站内信兜底。
 
-第一阶段使用两个独立工作目录，从同一个已验证提交构建。每个目录分别保存被 Git 忽略的 `.env.local` 与 `.env.secrets.local`，并使用各自的构建产物和开发者工具项目。生产凭证不得复制进测试目录，也不得进入小程序包、验收网站或 Git。
+## 构建与配置隔离
 
-现有加载器并不支持仅新增 `.env.production` 就自动切换：
+两份 gitignore 的目标配置目录对应两个构建目标；正式版从生产目录构建上传，体验版从测试目录构建上传。体验版标签不保证连接测试环境——烘焙的函数名才决定目标，构建后核对产物内的函数名常量。每次上传前完整 `pnpm verify:all` 门禁不变。
 
-- 云脚本读取 `.env.secrets.local`、`.env.local`，再叠加进程环境；本地两个文件中的非空冲突会报错，但 shell 变量仍可能覆盖文件值。
-- 小程序构建读取 `.env.local`，再叠加进程环境；CloudBase EnvID、函数名、目录和支付模式成为构建常量；schema 与连接凭据只留在服务端。
-- 操作前必须核对最终解析的目标配置，不能只看目录名或体验版标签。使用干净进程环境，避免继承上一套环境的变量。
+CI 不自动部署生产：API Key 的 CAM 权限边界是既有现状，生产部署保持本机 Device Flow 授权与人工触发；自动化到「一条命令按目标目录跑完整链」为止。
 
-同一 AppID 的测试包与生产包必须分别构建和验证；“体验版”本身不保证连接测试环境。每次上传仍须通过完整 `pnpm verify:all`，并按已授权的上传与发布范围执行。后续若增加统一环境选择入口，应一次性选择完整配置并验证 EnvID、schema、stage、函数名、目录、支付、runtime 用户及后台回调的一致性；目前尚未实现该入口。
+## 管理后台隔离
 
-### 管理后台隔离
+`admin.mip.cool` 与 CloudBase 直连入口为生产后台，域名不动。测试后台 `admin-test.mip.cool`：新 Pages 项目 + 新 D1 + 独立 `MIP_WEB_ALLOWED_ORIGIN`、会话密钥、登录/QR HMAC；BFF `MIP_ADMIN_UPSTREAM_URL` 指向测试函数集的 `mip-t-admin-api`；云函数侧登录确认 URL 对应测试域名。两端 HMAC 同环境内对应、不跨环境复用。测试后台的登录与授权不能作为生产授权。配置细节见 [admin-web/README.md](../../admin-web/README.md)。
 
-两套后台的 `MIP_ADMIN_UPSTREAM_URL` 分别指向各自的 `mip-admin-api`。各自配置精确的 `MIP_WEB_ALLOWED_ORIGIN`、独立 D1 登录状态和会话密钥；查询、登录确认及小程序码 HMAC 在同一环境两端对应，但不跨环境复用。
-
-云函数的 `MIP_ADMIN_WEB_LOGIN_CONFIRM_URL` 必须显式指向对应后台。现有部署脚本默认使用当前后台域名，创建第二后台时不能直接沿用默认值。现有 `deploy:pages` 项目名和 Wrangler D1 绑定也必须先拆分配置，不能直接执行旧命令并认为已发布到第二环境。
-
-后台登录、角色授权和撤销分别验收，测试后台的登录状态不能作为生产授权。配置细节见 [admin-web/README.md](../../admin-web/README.md)。
-
-## 同一微信成为两套应用的管理员
+## 每套部署目标独立完成 owner 引导
 
 这里指 MIP 应用的 `PLATFORM_OWNER`，不是微信公众平台管理员，也不是腾讯云资源管理员。
 
-每套部署目标都独立完成以下步骤。下列现有命令适用于独立 CloudBase 环境；同环境双 schema 必须先补齐上文的目标库传递，不能直接照抄并假定已选择第二库：
-
-1. 用户通过连接该环境的小程序真实登录，完成手机号授权、昵称、主分会及当前协议。即使微信账号相同，另一环境仍需建立自己的可信身份和资料记录；不复制 OpenID 绑定，也不把 demo 账号提升为管理员。
-2. 维护者在该工作目录的本地配置中设置 `MIP_OWNER_PHONE`，使用该环境自己的手机号加密密钥和 AppID 配置。
-3. 先验证目标凭证，再执行现有引导命令。下列尖括号均为占位值，不应将真实标识写进文档：
+1. 用户通过连接该目标的小程序真实登录，完成手机号授权、昵称、主分会与当前协议；不复制 OpenID 绑定，不把 demo 账号提升为管理员。
+2. 维护者在目标目录本地配置设置 `MIP_OWNER_PHONE`。
+3. 先验证目标凭证，再执行引导：
 
 ```bash
 pnpm cloud:status
-pnpm admin:bootstrap -- --confirm-env=<该环境的精确EnvID> --confirm-owner
+pnpm admin:bootstrap -- --confirm-env=<该目标的精确EnvID> --confirm-owner
 ```
 
-4. 脚本通过当前 AppID 范围的手机号哈希定位唯一 ACTIVE、非 demo 用户，复核资料与协议，授予平台 owner，然后读回角色并写审计。候选缺失或不唯一时停止，不改用伪造身份或跳过资格检查。
-5. 用户打开对应环境后台，在该环境小程序的“现场工作台 → 确认网页登录”中输入六位登录码并确认；最后检查操作权限及审计。
+4. 脚本以 AppID 范围手机号哈希定位唯一 ACTIVE 非 demo 用户，复核资料与协议后授予 owner 并读回角色、写审计；候选缺失或不唯一时停止。
+5. 用户在对应目标的后台完成「现场工作台 → 确认网页登录」六位码确认，检查操作权限与审计。
 
-现有 owner 脚本要求精确 EnvID 和 `--confirm-owner`，尚无单独的 `--confirm-production` 参数。生产引导需在明确授权、核对目标后执行；不要虚构一个当前脚本不会检查的确认参数。生产云函数部署则已有 stage 检查和 `--confirm-production` 门禁，详见部署手册。
+生产引导需明确授权并核对目标；不要虚构脚本不检查的确认参数。生产云函数部署已有 stage 检查与 `--confirm-production` 门禁。
 
 ## 实现入口
 
 - 云配置加载器（`scripts/lib/example-cloudbase.mjs`）
 - [小程序构建配置](../../weapp-vite.config.ts) 与 [运行配置](../../src/config/runtime.ts)
-- 云函数部署脚本（`scripts/deploy-functions.mjs`）
-- owner 引导脚本（`scripts/bootstrap-owner.mjs`） 与 资格/授权查询（`scripts/lib/mip-owner-bootstrap.mjs`）
+- 云函数部署脚本（`scripts/deploy-functions.mjs`）、支付部署（`scripts/deploy-payment-function.mjs`）
+- owner 引导脚本（`scripts/bootstrap-owner.mjs`）
 - [后台发布命令](../../admin-web/package.json) 与 [Wrangler 配置](../../admin-web/wrangler.toml)
 - [云开发规范](../CLOUDBASE.md)、[部署手册](../DEPLOYMENT.md)、[运营手册](../OPERATIONS.md)
-
-CloudBase 官方的[环境配置概述](https://docs.cloudbase.net/envconfig/intro)说明了环境级安全来源、API Key、调用限制和网关鉴权的配置入口；以上资源拆分和发布门禁是本项目的实施方案，不代表第二环境已存在。
