@@ -37,7 +37,7 @@ describe('MIP cooperation role visual component', () => {
     expect(Object.keys(cooperationCardVariants).sort()).toEqual(Object.keys(bakedVariants).sort())
     for (const [variantKey, expected] of Object.entries(bakedVariants)) {
       expect(cooperationCardVariants[variantKey]).toMatchObject(expected)
-      expect(cooperationCardVariants[variantKey].image).toBe(`/assets/mip/coop-card-${variantKey}@3x.png`)
+      expect(cooperationCardVariants[variantKey].image).toBe(`/assets/mip/coop-card-${variantKey}.webp`)
     }
     expect(Object.values(variantByRoleKey).sort()).toEqual(Object.keys(bakedVariants).sort())
 
@@ -48,7 +48,7 @@ describe('MIP cooperation role visual component', () => {
         roleKey: role.key,
         variant: variantKey,
         name: bakedVariants[variantKey].name,
-        image: `/assets/mip/coop-card-${variantKey}@3x.png`,
+        image: `/assets/mip/coop-card-${variantKey}.webp`,
         bg: bakedVariants[variantKey].bg,
         light: bakedVariants[variantKey].light,
         goal: role.targetDirection,
@@ -58,7 +58,9 @@ describe('MIP cooperation role visual component', () => {
       const assetPath = `src${view.image}`
       expect(existsSync(new URL(`../${assetPath}`, import.meta.url))).toBe(true)
       const bytes = readFileSync(new URL(`../${assetPath}`, import.meta.url))
-      expect(bytes.subarray(1, 4).toString('ascii')).toBe('PNG')
+      // 无损 webp 魔法头：RIFF....WEBP（MIW-100 尺寸优化由 PNG 无损转 webp，位图零差异）。
+      expect(bytes.subarray(0, 4).toString('ascii')).toBe('RIFF')
+      expect(bytes.subarray(8, 12).toString('ascii')).toBe('WEBP')
     }
   })
 

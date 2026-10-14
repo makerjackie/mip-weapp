@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/assets/figma/profile/avatar.png",
+    "reason": "fixture-only（MIW-100 盘点 2026-10-14）：无任何运行时渲染点，仅 config/ui-fidelity-screens.json 的 avatarUrl 数据引用；本地截图基线用，不进上传包"
+  },
+  {
+    "path": "/packages/member/assets/figma/coop/coop-avatar.png",
+    "reason": "fixture-only（MIW-100 盘点 2026-10-14）：无任何运行时渲染点，仅 config/ui-fidelity-screens.json 数据引用；运行时用的是静态引用的 coop-avatars.webp"
+  }
+]

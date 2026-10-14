@@ -17,8 +17,9 @@ interface Canvas2dNode {
 interface CardTheme {
   key: CardStyleKey
   label: string
+  // WXML 卡面/缩略图按 styleKey 静态引用底图（ignoreUploadUnusedFiles 探不到动态绑定，
+  // 见 index.wxml 注释）；asset 仅供 canvas 画图与 onShareAppMessage 兜底图使用。
   asset: string
-  thumbAsset: string
   background: string
   foreground: string
   muted: string
@@ -55,7 +56,6 @@ const themes: Record<CardStyleKey, CardTheme> = {
     key: 'PINK',
     label: '暖色',
     asset: '/packages/member/assets/figma/profile/card-bg-a.webp',
-    thumbAsset: '/packages/member/assets/figma/profile/card-bg-a.webp',
     background: '#FF5F6D',
     foreground: '#080808',
     muted: '#4A2326',
@@ -65,7 +65,6 @@ const themes: Record<CardStyleKey, CardTheme> = {
     key: 'BLUE',
     label: '蓝色',
     asset: '/packages/member/assets/figma/profile/card-bg-b.webp',
-    thumbAsset: '/packages/member/assets/figma/profile/card-bg-b.webp',
     background: '#403BDA',
     foreground: '#FFFFFF',
     muted: '#E4E3FF',
@@ -75,7 +74,6 @@ const themes: Record<CardStyleKey, CardTheme> = {
     key: 'WHITE',
     label: '浅色',
     asset: '/packages/member/assets/figma/profile/card-bg-c.webp',
-    thumbAsset: '/packages/member/assets/figma/profile/card-bg-c.webp',
     background: '#F5F4F0',
     foreground: '#080808',
     muted: '#575757',
@@ -87,7 +85,6 @@ const themes: Record<CardStyleKey, CardTheme> = {
     key: 'YELLOW',
     label: '品牌色',
     asset: '/packages/member/assets/figma/profile/card-bg-d-yellow.webp',
-    thumbAsset: '/packages/member/assets/figma/profile/card-thumb-yellow.png',
     background: '#FDE104',
     foreground: '#080808',
     muted: '#514A10',

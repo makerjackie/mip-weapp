@@ -29,4 +29,8 @@
       </view>
     </view>
   </view>
+  <!-- 默认封面对静态预载锚点（MIW-100 同族）：fallbackCoverUrl 经 {{}} 动态绑定，上传依赖
+       分析探不到会被剔出体验版；静态引用保证 /assets/brand/mip-opportunity-default.jpg
+       打进主包（机会编辑页 defaultCoverUrl 同用此文件）。 -->
+  <image aria-hidden="true" class="fixed left-[-9999rpx] top-0 h-[2rpx] w-[2rpx] opacity-0" src="/assets/brand/mip-opportunity-default.jpg" />
 </view>

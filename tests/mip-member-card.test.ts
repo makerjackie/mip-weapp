@@ -43,7 +43,21 @@ describe('MIP member card', () => {
     expect(view).not.toContain('{{gender}}')
     expect(page).not.toContain('性别 ·')
     // 样式缩略图与设计稿一致用 IMAGE FILL（aspectFill），避免 1053×738 底图被挤压变形。
-    expect(view).toContain(`mode="aspectFill" src="{{item.thumbAsset}}"`)
+    expect(view).toContain('mode="aspectFill"')
+    // MIW-100（2026-10-14）：project.config.json 开着 ignoreUploadUnusedFiles，上传依赖
+    // 分析探不到 {{}} 动态绑定，纯动态引用的底图会被剔除出体验版（真机显纯色、工具正常）。
+    // 四张卡面底图与缩略图必须保持 WXML 静态引用，禁止回退为 src="{{theme.asset}}"。
+    for (const asset of [
+      'card-bg-a.webp',
+      'card-bg-b.webp',
+      'card-bg-c.webp',
+      'card-bg-d-yellow.webp',
+      'card-thumb-yellow.png',
+    ]) {
+      expect(view).toContain(`src="/packages/member/assets/figma/profile/${asset}"`)
+    }
+    expect(view).not.toContain('src="{{theme.asset}}"')
+    expect(view).not.toContain('src="{{item.thumbAsset}}"')
     expect(view).toContain('下载名片')
     expect(page).toContain('/packages/member/mip-public-profile/index?profileRef=')
     for (const field of ['realName', 'wechat', 'email', 'address']) {

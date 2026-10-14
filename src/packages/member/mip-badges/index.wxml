@@ -68,6 +68,21 @@
       </view>
     </view>
     <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] border border-line bg-panel px-4 py-3 text-[22rpx] text-muted">{{message}}</view>
+
+    <!-- 徽章兜底图静态预载锚点（MIW-100 同族）：badgeArtFallback 的本地兜底图（含
+         profile-complete）只经 {{}} 动态绑定渲染，ignoreUploadUnusedFiles 的上传依赖
+         分析探不到，纯动态引用会被剔出体验版。此处静态引用保证打包（mip-badge-detail/
+         mip-public-profile/profile 同享包内文件），offscreen 渲染顺带预热解码缓存。
+         增删兜底图须同步 src/config/mip-badge-art.ts。 -->
+    <view aria-hidden="true" class="fixed left-[-9999rpx] top-0 h-0 w-0 overflow-hidden">
+      <image class="h-[2rpx] w-[2rpx]" src="/packages/member/assets/generated/badges/badge-collaboration.webp" />
+      <image class="h-[2rpx] w-[2rpx]" src="/packages/member/assets/generated/badges/badge-attendance.webp" />
+      <image class="h-[2rpx] w-[2rpx]" src="/packages/member/assets/generated/badges/badge-growth.webp" />
+      <image class="h-[2rpx] w-[2rpx]" src="/packages/member/assets/generated/badges/badge-connection-builder.webp" />
+      <image class="h-[2rpx] w-[2rpx]" src="/packages/member/assets/generated/badges/badge-creative-strategist.webp" />
+      <image class="h-[2rpx] w-[2rpx]" src="/packages/member/assets/generated/badges/badge-delivery-leader.webp" />
+      <image class="h-[2rpx] w-[2rpx]" src="/assets/badges/profile-complete.png" />
+    </view>
   </view>
   <view class="px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)]"><app-page-exit label="返回我的" tab-url="/pages/profile/index" /></view>
 </view>
