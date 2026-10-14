@@ -14,6 +14,7 @@ import { cooperationRoles } from '../../config/mip-catalogs'
 import { superCaseModule } from '../../modules/mip-cases'
 import { cooperationModule } from '../../modules/mip-cooperation'
 import { mipEventsModule } from '../../modules/mip-events/client'
+import { levelNumberOf } from '../../modules/mip-growth'
 import { mipGrowthModule } from '../../modules/mip-growth/client'
 import { createMipGuestLoginFlow, evaluateAccess } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
@@ -441,12 +442,13 @@ Page({
   },
 
   applyGrowth(snapshot: Awaited<ReturnType<typeof mipGrowthModule.getSnapshot>>) {
-    // 等级序号按等级表位置推导，与 packages/member/mip-growth 的 growthPresentation 同规则；
-    // 横幅与昵称旁徽标统一展示 Lv.数字（设计稿 level-banner-mine.png），等级名不在我的页露出。
+    // 等级号与 packages/member/mip-growth 的 growthPresentation 同规则（MIW-104：服务端
+    // levelNumber 优先、位置序数兜底）；横幅与昵称旁徽标统一展示 Lv.数字（设计稿
+    // level-banner-mine.png），等级名不在我的页露出。
     const currentIndex = snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id)
     this.setData({
       growthState: 'ready',
-      levelBannerText: `Lv.${Math.max(1, currentIndex + 1)}`,
+      levelBannerText: `Lv.${levelNumberOf(snapshot.currentLevel, currentIndex)}`,
       growthProgress: snapshot.levelProgressPercent,
       growthNextText: snapshot.nextLevel
         ? `距 ${snapshot.nextLevel.name} 还需 ${snapshot.experienceToNextLevel || 0} 经验值`

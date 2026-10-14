@@ -1,5 +1,6 @@
 import type { GrowthLevel } from '../src/modules/mip-growth'
 import { describe, expect, it } from 'vitest'
+import { levelNumberOf } from '../src/modules/mip-growth'
 import {
   benefitPanelMinHeight,
   benefitSlots,
@@ -10,11 +11,13 @@ import {
 
 // MIW-83 GROWTH-01/02：档位是前端纯派生——相邻等级权益名列表完全相同才并档，
 // 档位标签取段首等级号；权益区跟随档位并按 4 列补「脑暴中...」占位。
+// MIW-104：档位等级号改读服务端 levelNumber（跳号 1/3/5/8/…/60），缺省回退位置序数。
 
-function level(levelKey: string, minimumExperience: number, benefitNames: string[]): GrowthLevel {
+function level(levelKey: string, minimumExperience: number, benefitNames: string[], levelNumber?: number): GrowthLevel {
   return {
     id: levelKey as GrowthLevel['id'],
     levelKey,
+    ...(levelNumber !== undefined ? { levelNumber } : {}),
     name: levelKey,
     minimumExperience,
     benefits: benefitNames.map(name => ({ name })),
@@ -40,7 +43,7 @@ describe('growth benefit tier derivation', () => {
     const starts = deriveTierStartIndexes(levels)
     expect(starts).toEqual([0, 2, 4])
 
-    const memberTiers = tierViews(starts, 4, true)
+    const memberTiers = tierViews(starts, levels, 4, true)
     expect(memberTiers).toEqual([
       { levelNumber: 1, startIndex: 0, locked: false },
       { levelNumber: 3, startIndex: 2, locked: false },
@@ -51,21 +54,39 @@ describe('growth benefit tier derivation', () => {
     expect(selectedTierIndexFor(memberTiers, 4)).toBe(1)
   })
 
+  it('uses server levelNumber for skip-numbered tiers and locks by business number', () => {
+    // MIW-104：线上 12 档跳号（1/3/5/8/10/12/15/20/30/40/50/60），档位标签 = 档首业务号，
+    // 锁定比较也用业务号（当前 Lv.8 → 8 以下档解锁、10 及以上锁定）。
+    const numbers = [1, 3, 5, 8, 10, 12, 15, 20, 30, 40, 50, 60]
+    const levels = numbers.map((number, index) => level(`lv${String(number).padStart(2, '0')}`, index * 100, index % 2 === 0 ? ['权益甲'] : ['权益甲', '权益乙'], number))
+    const tiers = tierViews(deriveTierStartIndexes(levels), levels, 8, true)
+    expect(tiers.map(tier => tier.levelNumber)).toEqual(numbers)
+    expect(tiers.map(tier => tier.locked)).toEqual(numbers.map(number => number > 8))
+  })
+
+  it('falls back to snapshot position when server levelNumber is missing', () => {
+    // 旧云函数（未部署 levelNumber）新客户端：位置序数兜底，形状与 MIW-83 行为一致。
+    const levels = ladderFixture()
+    const tiers = tierViews(deriveTierStartIndexes(levels), levels, 4, true)
+    expect(tiers.map(tier => tier.levelNumber)).toEqual([1, 3, 5])
+    expect(tiers.every(tier => !tier.locked || tier.levelNumber > 4)).toBe(true)
+  })
+
   it('locks every tier for non-members and defaults the selection to the first tier', () => {
     const levels = ladderFixture()
-    const tiers = tierViews(deriveTierStartIndexes(levels), 1, false)
+    const tiers = tierViews(deriveTierStartIndexes(levels), levels, 1, false)
     expect(tiers.every(tier => tier.locked)).toBe(true)
     expect(selectedTierIndexFor(tiers, 1)).toBe(0)
   })
 
   it('still derives one tier for a single-level snapshot', () => {
     const levels = [level('L1', 0, ['新手任务'])]
-    const tiers = tierViews(deriveTierStartIndexes(levels), 1, true)
+    const tiers = tierViews(deriveTierStartIndexes(levels), levels, 1, true)
     expect(tiers).toEqual([{ levelNumber: 1, startIndex: 0, locked: false }])
   })
 
   it('derives every tier of a twelve-tier ladder from merged level runs', () => {
-    // 等级号 = 快照位置（index+1），档位标签取档首位置：12 档 × 每档 2 级。
+    // 档位标签取档首位置：12 档 × 每档 2 级（无 levelNumber 时的位置序数口径）。
     const tierHeads = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23]
     const levels = tierHeads.flatMap((head, index) => {
       const benefits = index % 2 === 0 ? ['权益甲'] : ['权益甲', '权益乙']
@@ -76,7 +97,7 @@ describe('growth benefit tier derivation', () => {
     })
     const starts = deriveTierStartIndexes(levels)
     expect(starts).toEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22])
-    expect(tierViews(starts, 24, true).map(tier => tier.levelNumber)).toEqual(tierHeads)
+    expect(tierViews(starts, levels, 24, true).map(tier => tier.levelNumber)).toEqual(tierHeads)
   })
 
   it('does not merge adjacent levels when only benefit order differs', () => {
@@ -85,6 +106,20 @@ describe('growth benefit tier derivation', () => {
       level('L2', 50, ['乙', '甲']),
     ]
     expect(deriveTierStartIndexes(levels)).toEqual([0, 1])
+  })
+})
+
+describe('levelNumberOf (MIW-104 level number resolution)', () => {
+  it('prefers the server-provided levelNumber over the snapshot position', () => {
+    expect(levelNumberOf({ levelNumber: 60 }, 3)).toBe(60)
+    expect(levelNumberOf({ levelNumber: 1 }, 0)).toBe(1)
+  })
+
+  it('falls back to the 1-based snapshot position for missing or invalid numbers', () => {
+    expect(levelNumberOf(undefined, 1)).toBe(2)
+    expect(levelNumberOf({}, 4)).toBe(5)
+    expect(levelNumberOf({ levelNumber: 0 }, 0)).toBe(1)
+    expect(levelNumberOf({ levelNumber: Number.NaN }, 2)).toBe(3)
   })
 })
 

@@ -66,7 +66,7 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
     planMutation.mutate({ planId: plan.id, run: () => api.savePlanPrice(plan.id, plan.version, cents, crypto.randomUUID()) })
   }
   const edit = (item: ConfigurationItem | null, demo = false) => {
-    const draft = configurationDraft(kind, item, demo)
+    const draft = configurationDraft(kind, item, demo, kind === 'levels' ? (items.data?.items || []).map(level => String(level.levelKey || '')) : [])
     if (!item && kind === 'levels') draft.minimumExperience = Math.max(0, ...(items.data?.items.map(level => Number(level.minimumExperience)) || [])) + 500
     setEditing({ kind, item, draft }); form.resetFields(); form.setFieldsValue(draft)
   }

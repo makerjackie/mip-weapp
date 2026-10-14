@@ -46,9 +46,18 @@ export function membershipConfiguration(request: AdminRequest) {
     savePlanPrice: (planId: string, expectedVersion: number, priceCents: number, idempotencyKey: string) => request('mip.admin.membershipPlans.save', { planId, expectedVersion, priceCents, idempotencyKey }),
   }
 }
-export function configurationDraft(kind: ConfigurationKind, item: ConfigurationItem | null, demo = false): Record<string, unknown> {
+// MIW-104：等级的 levelKey 按 lvNN 约定生成（服务端等级号解析的事实源，见
+// mip-growth-api levelDto / 两份 public-person-details）。取现有 lvNN 之外的最小
+// 未用号；历史随机 key 不参与，运营仍可在库里改。
+function nextLevelKey(existingLevelKeys: readonly string[]): string {
+  const used = new Set(existingLevelKeys.map(key => (/^lv0*(\d{1,4})$/i.exec(String(key).trim()) || [])[1]).filter(Boolean).map(Number))
+  let candidate = 1
+  while (used.has(candidate) && candidate < 9999) candidate += 1
+  return `lv${String(candidate).padStart(2, '0')}`
+}
+export function configurationDraft(kind: ConfigurationKind, item: ConfigurationItem | null, demo = false, existingLevelKeys: readonly string[] = []): Record<string, unknown> {
   if (item) return { ...item, benefitIds: Array.isArray(item.benefits) ? item.benefits.map((benefit: { id: string }) => benefit.id) : [] }
-  const key = crypto.randomUUID().replaceAll('-', '').slice(0, 16)
+  const key = kind === 'levels' ? nextLevelKey(existingLevelKeys) : crypto.randomUUID().replaceAll('-', '').slice(0, 16)
   return { name: demo ? ({ levels: '演示·探索者', benefits: '演示·社区交流资料', badges: '演示·热心伙伴', rules: '演示奖励' })[kind] : '',
     description: demo ? '用于演示，可由管理员修改或停用，不代表正式服务承诺。' : '',
     status: 'DRAFT', sortOrder: 0, levelKey: key, key, minimumExperience: 0, benefitIds: [], displayBadge: '', iconName: '', imageUrl: '', imageAssetId: '', acquireCondition: '', category: 'IDENTITY', placeholderShape: 'CIRCLE' }

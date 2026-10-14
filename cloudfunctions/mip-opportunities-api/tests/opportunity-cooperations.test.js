@@ -97,7 +97,11 @@ test('cooperator list enriches public person details and inviter annotations for
         identity_status: '创业者', introduction: '帮助团队建立设计系统', experience_balance: 100 }]
     }
     if (sql.includes('FROM mip_growth_levels')) {
-      return [{ id: 'lv1', name: '初识', minimum_experience: 0, status: 'ACTIVE' }, { id: 'lv2', name: '共建', minimum_experience: 100, status: 'ACTIVE' }]
+      // MIW-104：lvNN key → 业务等级号（跳号档位下他人徽标显示业务号而非位置序数）。
+      return [
+        { id: 'lv1', level_key: 'lv01', display_badge: 'Lv.1', name: '初识', minimum_experience: 0, status: 'ACTIVE' },
+        { id: 'lv2', level_key: 'lv03', display_badge: 'Lv.3', name: '共建', minimum_experience: 100, status: 'ACTIVE' },
+      ]
     }
     if (sql.includes('FROM mip_event_invitation_attributions')) {
       return [{ guest_user_id: caller.userId, invitation_source_type: 'USER', inviter_nickname: 'Bear',
@@ -115,7 +119,7 @@ test('cooperator list enriches public person details and inviter annotations for
     industryLabel: '软件',
     identityStatus: '创业者',
     introduction: '帮助团队建立设计系统',
-    level: { number: 2, name: '共建' },
+    level: { number: 3, name: '共建' },
     badges: [],
     inviter: { sourceType: 'USER', displayName: 'Bear', avatarUrl: 'cloud://bear' },
   })

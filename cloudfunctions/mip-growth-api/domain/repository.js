@@ -22,7 +22,7 @@ function createGrowthRepository(database, options = {}) {
         [appId, userId],
       ),
       database.query(
-        `SELECT id, level_key, name, minimum_experience, benefits_json, status
+        `SELECT id, level_key, name, minimum_experience, benefits_json, display_badge, status
          FROM mip_growth_levels
          WHERE app_id = ? AND status = 'ACTIVE'
          ORDER BY minimum_experience, id`,

@@ -13,10 +13,19 @@ export interface GrowthLevelBenefit {
 export interface GrowthLevel {
   id: GrowthLevelId
   levelKey: string
+  /** MIW-104：服务端按 level_key lvNN 约定解析的业务等级号（跳号如 1/3/5/8/…/60）；旧云函数缺省时客户端回退位置序数。 */
+  levelNumber?: number
   name: string
   minimumExperience: number
   benefits: GrowthLevelBenefit[]
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
+}
+
+/** MIW-104：等级号统一取值——服务端 levelNumber 优先，缺省回退快照位置序数（1-based）。 */
+export function levelNumberOf(level: Pick<GrowthLevel, 'levelNumber'> | undefined, fallbackPosition: number): number {
+  return Number.isFinite(level?.levelNumber) && Number(level?.levelNumber) >= 1
+    ? Number(level?.levelNumber)
+    : Math.max(1, fallbackPosition + 1)
 }
 
 export interface GrowthRule {

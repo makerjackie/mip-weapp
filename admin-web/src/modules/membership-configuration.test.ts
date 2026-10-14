@@ -23,6 +23,16 @@ describe('membership configuration contracts', () => {
     assert.equal(demoMembershipAgreement.isDemo, true)
     assert.match(demoMembershipAgreement.body, /不作为正式会员服务承诺/)
   })
+  it('generates lvNN level keys for new levels, skipping taken numbers (MIW-104)', () => {
+    // 等级号事实源 = level_key 的 lvNN 约定（服务端 levelDto / public-person-details 解析）。
+    assert.equal(configurationDraft('levels', null, false, ['lv01', 'lv03', 'lv05']).levelKey, 'lv02')
+    assert.equal(configurationDraft('levels', null, false, ['lv01', 'lv02', 'lv03']).levelKey, 'lv04')
+    // 历史随机 hex key 不占号；缺省（未传现有 key）从 lv01 起。
+    assert.equal(configurationDraft('levels', null, false, ['a3f10c2e11ab30f5']).levelKey, 'lv01')
+    assert.equal(configurationDraft('levels', null, false).levelKey, 'lv01')
+    // 非等级类配置保持随机 key，不受 lvNN 约定影响。
+    assert.notEqual(configurationDraft('benefits', null, false, ['lv01']).key, 'lv02')
+  })
   it('preserves existing level benefit associations when editing', () => {
     const draft = configurationDraft('levels', { id: 'level', name: '等级', version: 0, status: 'ACTIVE', benefits: [{ id: 'benefit' }] })
     assert.deepEqual(draft.benefitIds, ['benefit'])
