@@ -55,7 +55,7 @@ describe('account settings logout interaction', () => {
     expect(instance.data.localLogoutState).toBe('idle')
   })
 
-  it('opens one confirmation for repeated taps and blocks logout during account closure', async () => {
+  it('opens one confirmation for repeated taps', async () => {
     let resolve!: (result: { confirm: boolean }) => void
     api.showModal.mockReturnValue(new Promise((done) => {
       resolve = done
@@ -67,8 +67,6 @@ describe('account settings logout interaction', () => {
     resolve({ confirm: false })
     await pending
 
-    instance.data.closureState = 'processing'
-    await instance.signOutLocally()
     expect(api.showModal).toHaveBeenCalledOnce()
     expect(api.signOut).not.toHaveBeenCalled()
   })

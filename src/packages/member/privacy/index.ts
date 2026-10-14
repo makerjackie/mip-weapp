@@ -1,43 +1,23 @@
-import {
-  accountClosureConfirmationPhrase,
-  createAccountClosureRequestTracker,
-  MipIdentityGatewayError,
-} from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipLocalSession } from '../../../modules/mip-identity/local-session-client'
 import { mipGlobalAccessGuard } from '../../../modules/mip-identity/runtime'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 
+// MIW-93：注销入口本轮下线（DEF-07），页面只保留退出登录与账号状态展示；
+// 服务端 identity-api 的 account-closure 能力保留（供支持/应急场景），无入口即不可达。
 Page({
   data: {
-    state: 'loading' as 'loading' | 'ready' | 'processing' | 'success' | 'blocked' | 'conflict' | 'error',
-    closureState: 'idle' as 'idle' | 'confirming' | 'processing' | 'failed',
+    state: 'loading' as 'loading' | 'ready' | 'success' | 'error',
     localLogoutState: 'idle' as 'idle' | 'confirming' | 'processing',
-    confirmationPhrase: '',
-    requiredConfirmationPhrase: accountClosureConfirmationPhrase,
     userVersion: 0,
-    closedAt: '',
     message: '',
   },
-  closureRequest: null as ReturnType<typeof createAccountClosureRequestTracker> | null,
 
   onLoad() {
-    // WeChat deep-clones free Page fields during instantiation, so create the stateful tracker afterwards.
-    this.closureRequest = createAccountClosureRequestTracker()
     void this.loadAccountState()
   },
 
-  accountClosureRequest() {
-    if (!this.closureRequest) {
-      this.closureRequest = createAccountClosureRequestTracker()
-    }
-    return this.closureRequest
-  },
-
   async loadAccountState() {
-    if (this.data.closureState === 'processing') {
-      return
-    }
     this.setData({ state: 'loading', message: '' })
     try {
       const snapshot = await mipIdentityModule.loadSnapshot()
@@ -46,13 +26,11 @@ Page({
         return
       }
       if (snapshot.userStatus === 'CLOSED') {
-        this.accountClosureRequest().reset()
-        this.setData({ state: 'success', closureState: 'idle', userVersion: snapshot.userVersion })
+        this.setData({ state: 'success', userVersion: snapshot.userVersion })
         return
       }
       this.setData({
         state: 'ready',
-        closureState: 'idle',
         userVersion: snapshot.userVersion,
         message: '',
       })
@@ -101,8 +79,7 @@ Page({
   },
 
   async signOutLocally() {
-    if (this.data.localLogoutState !== 'idle'
-      || this.data.closureState !== 'idle') {
+    if (this.data.localLogoutState !== 'idle') {
       return
     }
     this.setData({ localLogoutState: 'confirming', message: '' })
@@ -126,90 +103,6 @@ Page({
     }
     finally {
       this.setData({ localLogoutState: 'idle' })
-    }
-  },
-
-  startAccountClosure() {
-    if (!['ready', 'blocked', 'conflict'].includes(this.data.state)
-      || this.data.closureState !== 'idle'
-      || this.data.localLogoutState !== 'idle') {
-      return
-    }
-    this.accountClosureRequest().reset()
-    this.setData({
-      closureState: 'confirming',
-      confirmationPhrase: '',
-      message: '',
-    })
-  },
-
-  updateConfirmationPhrase(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    if (this.data.closureState === 'processing') {
-      return
-    }
-    this.accountClosureRequest().reset()
-    this.setData({ confirmationPhrase: event.detail.value, message: '' })
-  },
-
-  cancelAccountClosure() {
-    if (this.data.closureState === 'processing') {
-      return
-    }
-    this.accountClosureRequest().reset()
-    this.setData({ closureState: 'idle', confirmationPhrase: '', message: '' })
-  },
-
-  async submitAccountClosure() {
-    if (!['confirming', 'failed'].includes(this.data.closureState)) {
-      return
-    }
-    if (this.data.confirmationPhrase.trim() !== accountClosureConfirmationPhrase) {
-      this.setData({ closureState: 'failed', message: `请输入“${accountClosureConfirmationPhrase}”` })
-      return
-    }
-    this.setData({ state: 'processing', closureState: 'processing', message: '' })
-    try {
-      const result = await mipIdentityModule.closeAccount({
-        confirmationPhrase: accountClosureConfirmationPhrase,
-        expectedVersion: this.data.userVersion,
-        idempotencyKey: this.accountClosureRequest().current(),
-      })
-      this.accountClosureRequest().reset()
-      this.setData({
-        state: 'success',
-        closureState: 'idle',
-        confirmationPhrase: '',
-        userVersion: result.version,
-        closedAt: result.closedAt,
-        message: '',
-      })
-    }
-    catch (error) {
-      const message = error instanceof Error ? error.message : '账号注销失败，请重试。'
-      try {
-        const snapshot = await mipIdentityModule.loadSnapshot()
-        if (snapshot.userStatus === 'CLOSED') {
-          this.accountClosureRequest().reset()
-          this.setData({
-            state: 'success',
-            closureState: 'idle',
-            confirmationPhrase: '',
-            userVersion: snapshot.userVersion,
-            message: '',
-          })
-          return
-        }
-        this.setData({ userVersion: snapshot.userVersion })
-      }
-      catch {}
-      const state = error instanceof MipIdentityGatewayError
-        ? error.code === 'ACCOUNT_CLOSURE_PENDING_SETTLEMENT'
-          ? 'blocked'
-          : error.code === 'ACCOUNT_CLOSURE_CONFLICT'
-            ? 'conflict'
-            : 'ready'
-        : 'ready'
-      this.setData({ state, closureState: 'failed', message })
     }
   },
 })
