@@ -40,6 +40,16 @@
     </scroll-view>
   </view>
 
+  <!-- MIW-114：跨 tab 心动状态恒驻提示——已投出且当前不在「我的心动」tab 时恒驻一行，
+       回答「我有没有投、投给了谁」：被投红心虽随卡渲染（四 tab 同口径），但被投者不在
+       当前列表（另一身份 tab / 对我心动的未互投者 / 分页之外）时卡片不可见，本行是唯一
+       恒驻答案；点按直达「我的心动」。未投/取消/受限（heart.target 空）自动隐藏。 -->
+  <view wx:if="{{heartState === 'ready' && heart.target && activeView !== 'SENT'}}" class="participants-heart-hint" aria-role="button" aria-label="已心动{{heart.target.nickname || '未公开姓名'}}，点按查看我的心动" bind:tap="changeView" data-view="SENT">
+    <t-icon name="heart-filled" size="14px" color="var(--mip-record)" />
+    <text class="participants-heart-hint__name">已心动：{{heart.target.nickname || '未公开姓名'}}</text>
+    <text class="participants-heart-hint__action">查看</text>
+  </view>
+
   <view wx:if="{{(activeView === 'PUBLIC' && state === 'loading') || (activeView !== 'PUBLIC' && heartState === 'loading')}}" class="participants-grid participants-grid--loading">
     <view class="participant-card participant-card--loading"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="participant-card participant-card--loading"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>

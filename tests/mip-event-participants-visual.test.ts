@@ -128,6 +128,29 @@ describe('MIP event participant visual hierarchy', () => {
     expect(String(ring['border'] || '')).toContain('var(--color-ink)')
   })
 
+  it('keeps a cross-tab sent-heart hint answering who I voted for outside the sent tab', () => {
+    // MIW-114：被投红心四 tab 随卡渲染（heart.target 同口径），但被投者不在当前列表时
+    // （另一身份 tab / 对我心动的未互投者 / 分页之外），恒驻提示行是唯一回答
+    // 「我有没有投、投给了谁」的入口；点按直达「我的心动」，已投 tab 内不再重复。
+    expect(template).toContain('participants-heart-hint')
+    expect(template).toContain('heartState === \'ready\' && heart.target && activeView !== \'SENT\'')
+    expect(template).toContain('已心动：{{heart.target.nickname || \'未公开姓名\'}}')
+    expect(template).toContain('name="heart-filled" size="14px" color="var(--mip-record)"')
+    expect(template).toContain('aria-label="已心动{{heart.target.nickname || \'未公开姓名\'}}，点按查看我的心动"')
+    // 整行直达「我的心动」tab（复用 changeView 路由，不新增页面方法）。
+    expect(template).toContain('bind:tap="changeView" data-view="SENT"')
+    expect(declarations(rule(stylesheet, '.participants-heart-hint', true))).toMatchObject({
+      'min-height': '88rpx',
+      'background': 'var(--color-brand-soft)',
+    })
+    // 桌面断点对齐本页 48px 触控标准。
+    for (const params of ['(min-width: 600px) and (max-width: 959px)', '(min-width: 960px)']) {
+      expect(declarations(rule(media(stylesheet, params), '.participants-heart-hint'))).toMatchObject({
+        'min-height': '48px',
+      })
+    }
+  })
+
   it('uses compact visual pills without shrinking their phone hit targets', () => {
     expect(declarations(rule(stylesheet, '.participants-filter-target', true))).toMatchObject({
       'display': 'flex',
