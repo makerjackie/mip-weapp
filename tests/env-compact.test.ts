@@ -97,7 +97,7 @@ describe('local environment compaction', () => {
     const deploy = fs.readFileSync(path.join(repositoryRoot, 'scripts/deploy-functions.mjs'), 'utf8')
     const projectInit = fs.readFileSync(path.join(repositoryRoot, 'scripts/project-init.mjs'), 'utf8')
     expect(init).toContain('path.join(root, \'.env.secrets.local\')')
-    expect(deploy).toContain('path.join(root, \'.env.secrets.local\')')
+    expect(deploy).toContain('path.join(resolveEnvDir(root), \'\.env\.secrets\.local\')')
     expect(projectInit).toContain('compactEnvDocuments(serializeEnv(nextEnv, envTemplate), secretsSource)')
   })
 })

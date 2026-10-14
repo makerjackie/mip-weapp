@@ -1,5 +1,6 @@
 import type { MipGrowthGateway } from './types'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
+import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../../platform/cloudbase/client'
 import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import { MipGrowthError } from './types'
@@ -10,7 +11,10 @@ interface Envelope<T> {
   error?: { code?: string, message?: string, retryable?: boolean }
 }
 
-export const MIP_GROWTH_FUNCTION_NAME = 'mip-growth-api'
+// The build injects the target suite's growth function name; resolving it from
+// runtimeConfig (like the messaging gateway) keeps test builds on mip-t-* and
+// production builds on the existing suite. (MIW-111)
+export const MIP_GROWTH_FUNCTION_NAME = runtimeConfig.cloudbase.growthFunctionName
 
 const retryableReadActions = new Set([
   'getSnapshot',

@@ -26,7 +26,7 @@ describe('MIP notification function boundary', () => {
     const runtime = read('src/config/runtime.ts')
     const gateway = read('src/modules/mip-messaging/cloudbase-gateway.ts')
     const build = read('weapp-vite.config.ts')
-    expect(defaults).toContain('notificationsFunctionName: \'mip-notifications-api\'')
+    expect(defaults).toContain('notificationsFunctionName: \'mip-t-notifications-api\'')
     expect(runtime).toContain('notificationsFunctionName: __MIP_NOTIFICATIONS_FUNCTION_NAME__')
     expect(gateway).toContain('runtimeConfig.cloudbase.notificationsFunctionName')
     expect(gateway).not.toContain('mip-notification-worker')

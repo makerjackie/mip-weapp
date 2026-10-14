@@ -21,9 +21,68 @@ function parseEnv(filePath: string) {
 
 const root = import.meta.dirname
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as { version: string }
+const rootEnv = parseEnv(path.join(root, '.env.local'))
+// MIP_ENV_DIR selects the target-configuration directory (envs/prod, envs/test);
+// process env wins so orchestrators stay explicit. Function names, EnvID,
+// payment mode, and catalog stage are baked from the selected directory only.
+const envDirSetting = String(process.env.MIP_ENV_DIR || rootEnv.MIP_ENV_DIR || '').trim()
+const envDir = envDirSetting
+  ? (path.isAbsolute(envDirSetting) ? envDirSetting : path.resolve(root, envDirSetting))
+  : root
+if (envDirSetting && !fs.existsSync(path.join(envDir, '.env.local'))) {
+  throw new Error(`MIP_ENV_DIR target has no .env.local: ${envDirSetting}`)
+}
 const env = {
-  ...parseEnv(path.join(root, '.env.local')),
+  ...(envDir === root ? rootEnv : parseEnv(path.join(envDir, '.env.local'))),
   ...process.env,
+}
+
+// Direction-B guard rails (MIW-111): defaults now point at the not-yet-deployed
+// test suite, so a production-semantics build must never rely on them.
+const clientFunctionDefaults = {
+  __MIP_IDENTITY_FUNCTION_NAME__: 'mip-t-identity-api',
+  __MIP_MEDIA_FUNCTION_NAME__: 'mip-t-media-api',
+  __MIP_EVENTS_FUNCTION_NAME__: 'mip-t-events-api',
+  __MIP_OPPORTUNITIES_FUNCTION_NAME__: 'mip-t-opportunities-api',
+  __MIP_COMMUNITY_FUNCTION_NAME__: 'mip-t-community-api',
+  __MIP_COMMERCE_FUNCTION_NAME__: 'mip-t-commerce-api',
+  __MIP_ADMIN_FUNCTION_NAME__: 'mip-t-admin-api',
+  __MIP_GROWTH_FUNCTION_NAME__: 'mip-t-growth-api',
+  __MIP_GAME_FUNCTION_NAME__: 'mip-t-game-api',
+  __MIP_TASKS_FUNCTION_NAME__: 'mip-t-tasks-api',
+  __MIP_BANNERS_FUNCTION_NAME__: 'mip-t-banners-api',
+  __MIP_AI_FUNCTION_NAME__: 'mip-t-ai-api',
+  __MIP_NOTIFICATIONS_FUNCTION_NAME__: 'mip-t-notifications-api',
+  __MIP_PAY_FUNCTION_NAME__: 'mip-t-cloudpay',
+} as const
+const productionIntent = String(env.MIP_PAYMENT_MODE || '').toLowerCase() === 'live'
+  || String(env.MIP_CATALOG_STAGE || '').toUpperCase() === 'LIVE'
+  || String(env.MIP_DEPLOYMENT_STAGE || '').toLowerCase() === 'production'
+if (productionIntent) {
+  const envKeys = {
+    __MIP_IDENTITY_FUNCTION_NAME__: 'MIP_IDENTITY_FUNCTION_NAME',
+    __MIP_MEDIA_FUNCTION_NAME__: 'MIP_MEDIA_FUNCTION_NAME',
+    __MIP_EVENTS_FUNCTION_NAME__: 'MIP_EVENTS_FUNCTION_NAME',
+    __MIP_OPPORTUNITIES_FUNCTION_NAME__: 'MIP_OPPORTUNITIES_FUNCTION_NAME',
+    __MIP_COMMUNITY_FUNCTION_NAME__: 'MIP_COMMUNITY_FUNCTION_NAME',
+    __MIP_COMMERCE_FUNCTION_NAME__: 'MIP_COMMERCE_FUNCTION_NAME',
+    __MIP_ADMIN_FUNCTION_NAME__: 'MIP_ADMIN_FUNCTION_NAME',
+    __MIP_GROWTH_FUNCTION_NAME__: 'MIP_GROWTH_FUNCTION_NAME',
+    __MIP_GAME_FUNCTION_NAME__: 'MIP_GAME_FUNCTION_NAME',
+    __MIP_TASKS_FUNCTION_NAME__: 'MIP_TASKS_FUNCTION_NAME',
+    __MIP_BANNERS_FUNCTION_NAME__: 'MIP_BANNERS_FUNCTION_NAME',
+    __MIP_AI_FUNCTION_NAME__: 'MIP_AI_FUNCTION_NAME',
+    __MIP_NOTIFICATIONS_FUNCTION_NAME__: 'MIP_NOTIFICATIONS_FUNCTION_NAME',
+    __MIP_PAY_FUNCTION_NAME__: 'MIP_PAY_FUNCTION_NAME',
+  } as const
+  const missing = Object.entries(envKeys)
+    .filter(([defineKey, envKey]) => !String(env[envKey] || '').trim())
+    .map(([, envKey]) => envKey)
+  if (missing.length) {
+    throw new Error(
+      `Production-semantics build (payment/catalog/stage) must not rely on test fallbacks; configure explicitly: ${missing.join(', ')}`,
+    )
+  }
 }
 
 const aliases = {
@@ -69,20 +128,20 @@ export default defineConfig({
     __BUILD_SHA__: JSON.stringify(env.BUILD_SHA || 'development'),
     __CLOUDBASE_ENV_ID__: JSON.stringify(env.CLOUDBASE_ENV_ID || ''),
     __CLOUDBASE_RESOURCE_APP_ID__: JSON.stringify(env.CLOUDBASE_RESOURCE_APP_ID || ''),
-    __MIP_IDENTITY_FUNCTION_NAME__: JSON.stringify(env.MIP_IDENTITY_FUNCTION_NAME || 'mip-identity-api'),
-    __MIP_MEDIA_FUNCTION_NAME__: JSON.stringify(env.MIP_MEDIA_FUNCTION_NAME || 'mip-media-api'),
-    __MIP_EVENTS_FUNCTION_NAME__: JSON.stringify(env.MIP_EVENTS_FUNCTION_NAME || 'mip-events-api'),
-    __MIP_OPPORTUNITIES_FUNCTION_NAME__: JSON.stringify(env.MIP_OPPORTUNITIES_FUNCTION_NAME || 'mip-opportunities-api'),
-    __MIP_COMMUNITY_FUNCTION_NAME__: JSON.stringify(env.MIP_COMMUNITY_FUNCTION_NAME || 'mip-community-api'),
-    __MIP_COMMERCE_FUNCTION_NAME__: JSON.stringify(env.MIP_COMMERCE_FUNCTION_NAME || 'mip-commerce-api'),
-    __MIP_ADMIN_FUNCTION_NAME__: JSON.stringify(env.MIP_ADMIN_FUNCTION_NAME || 'mip-admin-api'),
-    __MIP_GROWTH_FUNCTION_NAME__: JSON.stringify(env.MIP_GROWTH_FUNCTION_NAME || 'mip-growth-api'),
-    __MIP_GAME_FUNCTION_NAME__: JSON.stringify(env.MIP_GAME_FUNCTION_NAME || 'mip-game-api'),
-    __MIP_TASKS_FUNCTION_NAME__: JSON.stringify(env.MIP_TASKS_FUNCTION_NAME || 'mip-tasks-api'),
-    __MIP_BANNERS_FUNCTION_NAME__: JSON.stringify(env.MIP_BANNERS_FUNCTION_NAME || 'mip-banners-api'),
-    __MIP_AI_FUNCTION_NAME__: JSON.stringify(env.MIP_AI_FUNCTION_NAME || 'mip-ai-api'),
-    __MIP_NOTIFICATIONS_FUNCTION_NAME__: JSON.stringify(env.MIP_NOTIFICATIONS_FUNCTION_NAME || 'mip-notifications-api'),
-    __MIP_PAY_FUNCTION_NAME__: JSON.stringify(env.MIP_PAY_FUNCTION_NAME || 'mip-cloudpay'),
+    __MIP_IDENTITY_FUNCTION_NAME__: JSON.stringify(env.MIP_IDENTITY_FUNCTION_NAME || clientFunctionDefaults.__MIP_IDENTITY_FUNCTION_NAME__),
+    __MIP_MEDIA_FUNCTION_NAME__: JSON.stringify(env.MIP_MEDIA_FUNCTION_NAME || clientFunctionDefaults.__MIP_MEDIA_FUNCTION_NAME__),
+    __MIP_EVENTS_FUNCTION_NAME__: JSON.stringify(env.MIP_EVENTS_FUNCTION_NAME || clientFunctionDefaults.__MIP_EVENTS_FUNCTION_NAME__),
+    __MIP_OPPORTUNITIES_FUNCTION_NAME__: JSON.stringify(env.MIP_OPPORTUNITIES_FUNCTION_NAME || clientFunctionDefaults.__MIP_OPPORTUNITIES_FUNCTION_NAME__),
+    __MIP_COMMUNITY_FUNCTION_NAME__: JSON.stringify(env.MIP_COMMUNITY_FUNCTION_NAME || clientFunctionDefaults.__MIP_COMMUNITY_FUNCTION_NAME__),
+    __MIP_COMMERCE_FUNCTION_NAME__: JSON.stringify(env.MIP_COMMERCE_FUNCTION_NAME || clientFunctionDefaults.__MIP_COMMERCE_FUNCTION_NAME__),
+    __MIP_ADMIN_FUNCTION_NAME__: JSON.stringify(env.MIP_ADMIN_FUNCTION_NAME || clientFunctionDefaults.__MIP_ADMIN_FUNCTION_NAME__),
+    __MIP_GROWTH_FUNCTION_NAME__: JSON.stringify(env.MIP_GROWTH_FUNCTION_NAME || clientFunctionDefaults.__MIP_GROWTH_FUNCTION_NAME__),
+    __MIP_GAME_FUNCTION_NAME__: JSON.stringify(env.MIP_GAME_FUNCTION_NAME || clientFunctionDefaults.__MIP_GAME_FUNCTION_NAME__),
+    __MIP_TASKS_FUNCTION_NAME__: JSON.stringify(env.MIP_TASKS_FUNCTION_NAME || clientFunctionDefaults.__MIP_TASKS_FUNCTION_NAME__),
+    __MIP_BANNERS_FUNCTION_NAME__: JSON.stringify(env.MIP_BANNERS_FUNCTION_NAME || clientFunctionDefaults.__MIP_BANNERS_FUNCTION_NAME__),
+    __MIP_AI_FUNCTION_NAME__: JSON.stringify(env.MIP_AI_FUNCTION_NAME || clientFunctionDefaults.__MIP_AI_FUNCTION_NAME__),
+    __MIP_NOTIFICATIONS_FUNCTION_NAME__: JSON.stringify(env.MIP_NOTIFICATIONS_FUNCTION_NAME || clientFunctionDefaults.__MIP_NOTIFICATIONS_FUNCTION_NAME__),
+    __MIP_PAY_FUNCTION_NAME__: JSON.stringify(env.MIP_PAY_FUNCTION_NAME || clientFunctionDefaults.__MIP_PAY_FUNCTION_NAME__),
     __MIP_PAYMENT_MODE__: JSON.stringify(env.MIP_PAYMENT_MODE || 'disabled'),
     __MIP_CATALOG_STAGE__: JSON.stringify(env.MIP_CATALOG_STAGE || 'TEST'),
     __MIP_SUBSCRIBE_TEMPLATES_JSON__: JSON.stringify(env.MIP_SUBSCRIBE_TEMPLATES_JSON || ''),
