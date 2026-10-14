@@ -19,9 +19,9 @@ function memberCardCdnUrl(file: string) {
 }
 
 export const memberCardArt: Record<MemberCardStyleKey, { asset: string, thumb: string }> = {
-  PINK: { asset: memberCardCdnUrl('card-bg-a.png'), thumb: memberCardCdnUrl('card-bg-a.png') },
-  BLUE: { asset: memberCardCdnUrl('card-bg-b.png'), thumb: memberCardCdnUrl('card-bg-b.png') },
-  WHITE: { asset: memberCardCdnUrl('card-bg-c.png'), thumb: memberCardCdnUrl('card-bg-c.png') },
-  // YELLOW 缩略用专用烘焙 thumb（card-thumb-yellow.png），与卡面 d 图不同源（figma 口径）。
-  YELLOW: { asset: memberCardCdnUrl('card-bg-d-yellow.png'), thumb: memberCardCdnUrl('card-thumb-yellow.png') },
+  PINK: { asset: memberCardCdnUrl('card-bg-a.jpg'), thumb: memberCardCdnUrl('card-bg-a.jpg') },
+  BLUE: { asset: memberCardCdnUrl('card-bg-b.jpg'), thumb: memberCardCdnUrl('card-bg-b.jpg') },
+  WHITE: { asset: memberCardCdnUrl('card-bg-c.jpg'), thumb: memberCardCdnUrl('card-bg-c.jpg') },
+  // YELLOW 缩略用专用烘焙 thumb（card-thumb-yellow.png，带透明边缘），与卡面 d 图不同源（figma 口径）。
+  YELLOW: { asset: memberCardCdnUrl('card-bg-d-yellow.jpg'), thumb: memberCardCdnUrl('card-thumb-yellow.png') },
 }

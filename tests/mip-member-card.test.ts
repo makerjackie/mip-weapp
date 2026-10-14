@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -75,18 +76,22 @@ describe('MIP member card', () => {
     expect(entry).toContain('readProfileCardScene')
   })
 
-  it('keeps member card art on the CDN as PNG and out of the package', () => {
+  it('keeps member card art on the CDN as device-safe images under the 150KB budget and out of the package', () => {
     // 真机 image 解码器不支持 VP8L/ALPH webp，包内图经上传依赖分析后真机也不可达
-    // （见上一用例注释）；卡面素材必须以 PNG 放 assets/cdn（不进 src/，否则会进分包），
-    // 由 pnpm cloud:cdn-assets:deploy 上传 mip-admin-console/mip-weapp-assets/ 前缀，
-    // 经 admin 网关域访问（默认托管域 tcloudbaseapp.com 对部分出口区域回 418）。
+    // （见上一用例注释）；卡面素材放 assets/cdn（不进 src/，否则会进分包），由
+    // pnpm cloud:cdn-assets:deploy 上传 mip-admin-console/mip-weapp-assets/ 前缀，经
+    // admin 网关域访问（默认托管域 tcloudbaseapp.com 对部分出口区域回 418）。
+    // 卡面为无透明 JPG（≤150KB/张，用户预算 2026-10-14），黄色缩略为带透明的 PNG。
     const cardArt = source('src/config/card-art.ts')
     expect(cardArt).toContain('mip-weapp-assets/member-card/')
     expect(cardArt).toContain('brand.adminConsoleDomain')
-    for (const asset of ['card-bg-a.png', 'card-bg-b.png', 'card-bg-c.png', 'card-bg-d-yellow.png', 'card-thumb-yellow.png']) {
+    for (const asset of ['card-bg-a.jpg', 'card-bg-b.jpg', 'card-bg-c.jpg', 'card-bg-d-yellow.jpg']) {
       const bytes = fs.readFileSync(path.join(root, 'assets/cdn/member-card/v1', asset))
-      expect(bytes.subarray(1, 4).toString('ascii')).toBe('PNG')
+      expect(bytes.length).toBeLessThanOrEqual(150 * 1024)
+      expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xFF, 0xD8, 0xFF]))
     }
+    const thumb = fs.readFileSync(path.join(root, 'assets/cdn/member-card/v1', 'card-thumb-yellow.png'))
+    expect(thumb.subarray(1, 4).toString('ascii')).toBe('PNG')
     // 素材源文件不得回流 src/（会被打进分包且真机不可渲染）。
     const profileAssets = fs.readdirSync(path.join(root, 'src/packages/member/assets/figma/profile'))
     expect(profileAssets.filter(file => /^card-(?:bg|thumb)/.test(file))).toEqual([])
