@@ -11,14 +11,16 @@ export interface CooperationCardVariant {
 /**
  * 六角色烘焙卡（references/wechat-component-contracts.md）。
  *  image 只能用 <image> 承载，WXSS background-image 不行；bg 仅作底图加载前的垫底色。
+ *  图必须保持 PNG（@3x）：无损 webp（VP8L）DevTools 能渲染但真机 image 解码失败，
+ *  卡片只剩 bg 垫底色（MIW-100→MIW-112 事故回退）；有损 webp 需过像素保真门再议。
  */
 export const cooperationCardVariants: Record<string, CooperationCardVariant> = {
-  'dogplaner': { image: '/assets/mip/coop-card-dogplaner.webp', bg: '#7b00ff', light: '#f2e5ff', name: '狗策划 DOGPLANER' },
-  'upstart': { image: '/assets/mip/coop-card-upstart.webp', bg: '#7a2900', light: '#fadab3', name: '暴发户 UPSTART' },
-  'design-slave': { image: '/assets/mip/coop-card-design-slave.webp', bg: '#04a44f', light: '#e5fff1', name: '死美工 Design Slave' },
-  'pimp': { image: '/assets/mip/coop-card-pimp.webp', bg: '#df07a9', light: '#ffe5f9', name: '皮条客 pimp' },
-  'business-man': { image: '/assets/mip/coop-card-business-man.webp', bg: '#ff5500', light: '#ffeee5', name: '生意佬 business man' },
-  'old-nanny': { image: '/assets/mip/coop-card-old-nanny.webp', bg: '#1a71ff', light: '#e5efff', name: '老保姆 old nanny' },
+  'dogplaner': { image: '/assets/mip/coop-card-dogplaner@3x.png', bg: '#7b00ff', light: '#f2e5ff', name: '狗策划 DOGPLANER' },
+  'upstart': { image: '/assets/mip/coop-card-upstart@3x.png', bg: '#7a2900', light: '#fadab3', name: '暴发户 UPSTART' },
+  'design-slave': { image: '/assets/mip/coop-card-design-slave@3x.png', bg: '#04a44f', light: '#e5fff1', name: '死美工 Design Slave' },
+  'pimp': { image: '/assets/mip/coop-card-pimp@3x.png', bg: '#df07a9', light: '#ffe5f9', name: '皮条客 pimp' },
+  'business-man': { image: '/assets/mip/coop-card-business-man@3x.png', bg: '#ff5500', light: '#ffeee5', name: '生意佬 business man' },
+  'old-nanny': { image: '/assets/mip/coop-card-old-nanny@3x.png', bg: '#1a71ff', light: '#e5efff', name: '老保姆 old nanny' },
 }
 
 /** 产品角色 key → 设计变种 key。 */
