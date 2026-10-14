@@ -9,7 +9,6 @@ import type {
 export const MIP_ACCESS_PAGE_PATH = '/packages/member/mip-access/index'
 
 export const MIP_PUBLIC_ROUTES = [
-  'pages/index/index',
   'pages/events/index',
   'packages/member/mip-events/detail/index',
   'packages/member/mip-events/participants/index',

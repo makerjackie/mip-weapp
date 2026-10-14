@@ -74,7 +74,7 @@ describe('free offline event mutation runtime contract', () => {
   it('fails closed when any exact mutation step binding drifts', () => {
     const driftCases = [
       {
-        contract: contractWithStep('member-event-detail', { route: 'pages/index/index' }),
+        contract: contractWithStep('member-event-detail', { route: 'pages/opportunities/index' }),
         message: 'member-event-detail route changed unexpectedly',
       },
       {
@@ -216,7 +216,7 @@ describe('free offline event mutation runtime contract', () => {
       'packages/member/mip-events/registration/index',
     )).toBe('matched')
     expect(runtimeRouteDisposition(
-      'pages/index/index',
+      'pages/opportunities/index',
       'packages/member/mip-events/registration/index',
     )).toBe('failed')
   })
@@ -258,7 +258,7 @@ describe('free offline event mutation runtime contract', () => {
   it('does not retry an authoritative route that redirects somewhere unexpected', async () => {
     const expectedRoute = 'packages/member/mip-events/mine/index'
     const wrongPage = {
-      path: '/pages/index/index',
+      path: '/pages/opportunities/index',
       waitForRendered: vi.fn(),
     }
     const miniProgram = {
@@ -271,7 +271,7 @@ describe('free offline event mutation runtime contract', () => {
       label: 'external-cancel-registration',
       selector: '#mip-events-mine-page',
       url: `/${expectedRoute}`,
-    })).rejects.toThrow('opened unexpected route pages/index/index')
+    })).rejects.toThrow('opened unexpected route pages/opportunities/index')
     expect(miniProgram.reLaunch).toHaveBeenCalledOnce()
     expect(wrongPage.waitForRendered).not.toHaveBeenCalled()
   })

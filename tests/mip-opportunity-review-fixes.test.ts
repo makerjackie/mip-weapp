@@ -160,7 +160,6 @@ describe('MIP opportunity review fixes', () => {
     expect(instance.data.appliedFilterChips).toEqual([{ key: 'branch', label: '深圳' }])
   })
   const discovery = source('src/pages/opportunities/index.wxml')
-  const home = source('src/pages/index/index.wxml')
   const profile = source('src/pages/profile/index.wxml')
   const editorScript = source('src/packages/member/mip-opportunities/editor/index.ts')
   const editorView = source('src/packages/member/mip-opportunities/editor/index.wxml')
@@ -240,16 +239,14 @@ describe('MIP opportunity review fixes', () => {
     // 卡片取值链：regionText 优先 → locationText（调用方 locationDisplay 兜底）→ cityText。
     expect(cardScript).toContain(`regionText: { type: String, value: '' }`)
     expect(card).toContain('地区：{{regionText || locationText || cityText}}')
-    // 详情/机会 Tab/首页信息流/我的页都透传 regionText，服务端将来回传即生效。
+    // 详情/机会 Tab/我的页都透传 regionText，服务端将来回传即生效。
     // 2026-10-07：mine 列表页删除后，档案页「相关机会」栏即为本人视角列表。
     expect(detail).toContain(`region-text="{{item.regionText || ''}}"`)
     expect(discovery).toContain(`region-text="{{item.regionText || ''}}"`)
-    expect(home).toContain(`region-text="{{item.regionText || ''}}"`)
     expect(profile).toContain(`region-text="{{item.regionText || ''}}"`)
     // 无数据时不劣化：城市名兜底链保持现状。
     expect(detail).toContain(`location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}"`)
     expect(discovery).toContain(`location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}"`)
-    expect(home).toContain(`location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}"`)
     expect(profile).toContain(`location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}"`)
   })
 
@@ -282,12 +279,11 @@ describe('MIP opportunity review fixes', () => {
       (instance.data.opportunities as Array<Record<string, unknown>>).map(item => item.avatarViews),
     ).toEqual([[], ['u1', 'u2'], [], []])
     // 源码级：机会 Tab / 我的页改绑保底字段，详情底部合作头像同口径加固；
-    // 首页信息流不传 avatars（组件默认 []）；组件契约保持 type: Array 不动。
+    // 组件契约保持 type: Array 不动。
     expect(discovery).toContain('avatars="{{item.avatarViews}}"')
     expect(discovery).not.toContain('avatars="{{item.avatars}}"')
     expect(profile).toContain('avatars="{{item.avatarViews}}"')
     expect(profile).not.toContain('avatars="{{item.avatars}}"')
-    expect(home).not.toContain('avatars="{{item.avatars}}"')
     expect(detailScript).toContain('cooperationAvatars: Array.isArray(item.avatars)')
     // figma 机会详情（访客视角）：底部聚合头像改由共享 mip-attend-pill 承载，页面不再内联手拼头像组。
     const cooperationActions = detail.slice(detail.indexOf('id="opportunity-cooperation-actions"'))

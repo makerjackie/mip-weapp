@@ -63,7 +63,6 @@ function assertBuiltComponentTargets() {
 
 const appWxss = read('dist/app.wxss')
 const growthWxml = read('dist/packages/member/mip-growth/index.wxml')
-const homeWxml = read('dist/pages/index/index.wxml')
 const adminWxml = read('dist/packages/admin/dashboard/index.wxml')
 const privacyWxml = read('dist/packages/member/privacy/index.wxml')
 const privacyPolicyWxml = read('dist/packages/member/privacy-policy/index.wxml')
@@ -78,10 +77,9 @@ const tabBarWxss = read('dist/custom-tab-bar/index.wxss')
 const tabBarJson = JSON.parse(read('dist/custom-tab-bar/index.json'))
 const appJson = JSON.parse(read('dist/app.json'))
 const growthJson = JSON.parse(read('dist/packages/member/mip-growth/index.json'))
-const homeJson = JSON.parse(read('dist/pages/index/index.json'))
 // MIW-75：等级页邀请面板下线后不再引用 t-button，改用支付结果页校验 TDesign button 自动引入。
 const paymentResultJson = JSON.parse(read('dist/packages/member/payment-result/index.json'))
-const components = { ...growthJson.usingComponents, ...homeJson.usingComponents, ...paymentResultJson.usingComponents }
+const components = { ...growthJson.usingComponents, ...paymentResultJson.usingComponents }
 
 assertBuiltComponentTargets()
 // Fixed action bars keep a hue-neutral translucent glass (user sign-off 2026-10-11:
@@ -152,7 +150,6 @@ assert(
   'Member pages must load presentation seams directly instead of relying on a subpackage common export',
 )
 assert(!growthWxml.includes('pb-[calc('), 'Tailwind arbitrary safe-area class was not transformed')
-assert(homeWxml.includes('mip-home-page'), 'Runtime-stable MIP home selector is missing')
 assert(growthWxml.includes('mip-growth-page'), 'Runtime-stable MIP growth selector is missing')
 assert(adminWxml.includes('admin-dashboard-page'), 'Runtime-stable admin selector is missing')
 assert(privacyWxml.includes('privacy-account-page'), 'Runtime-stable privacy selector is missing')

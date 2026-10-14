@@ -22,7 +22,7 @@ Page({
     try {
       const snapshot = await mipIdentityModule.loadSnapshot()
       if (!snapshot.authenticated) {
-        mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
+        mipGlobalAccessGuard.enterTarget({ path: 'pages/events/index' })
         return
       }
       if (snapshot.userStatus === 'CLOSED') {
@@ -95,7 +95,7 @@ Page({
 
       this.setData({ localLogoutState: 'processing' })
       mipLocalSession.signOut()
-      mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
+      mipGlobalAccessGuard.enterTarget({ path: 'pages/events/index' })
       wx.showToast({ title: '已退出登录', icon: 'success' })
     }
     catch {

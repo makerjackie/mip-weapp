@@ -139,7 +139,7 @@ describe('MIP local logout flow', () => {
     })
     const token = restored.prepareProtectedAction({
       action: 'ENTER_APP',
-      source: { navigation: 'reLaunch', route: '/pages/index/index' },
+      source: { navigation: 'reLaunch', route: '/pages/events/index' },
     })
     const callsBeforeAccessPage = gateway.getAccessSnapshot.mock.calls.length
 
@@ -311,7 +311,7 @@ describe('MIP local logout flow', () => {
     identity.signOutLocally()
     const token = identity.prepareProtectedAction({
       action: 'ENTER_APP',
-      source: { navigation: 'reLaunch', route: '/pages/index/index' },
+      source: { navigation: 'reLaunch', route: '/pages/events/index' },
     })
 
     const pending = identity.signIn(token)
@@ -335,7 +335,7 @@ describe('MIP local logout flow', () => {
     const identity = createMipIdentityModule(gateway, { token: () => 'agreement-race' })
     const token = identity.prepareProtectedAction({
       action: 'ENTER_APP',
-      source: { navigation: 'reLaunch', route: '/pages/index/index' },
+      source: { navigation: 'reLaunch', route: '/pages/events/index' },
     })
 
     const pending = identity.acceptAgreements(token, { agreements: [] })
@@ -359,7 +359,7 @@ describe('MIP local logout flow', () => {
     const identity = createMipIdentityModule(gateway, { token: () => 'phone-race' })
     const token = identity.prepareProtectedAction({
       action: 'ENTER_APP',
-      source: { navigation: 'reLaunch', route: '/pages/index/index' },
+      source: { navigation: 'reLaunch', route: '/pages/events/index' },
     })
 
     const pending = identity.bindWechatPhone(token, 'wechat-phone-code')

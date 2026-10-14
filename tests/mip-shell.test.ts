@@ -93,13 +93,9 @@ describe('MIP shell presentation', () => {
   })
 
   it('keeps city branch discovery public and leaves mutation gating to the branch page', () => {
-    const homeSource = readFileSync(new URL('../src/pages/index/index.ts', import.meta.url), 'utf8')
-    const start = homeSource.indexOf('openBranches() {')
-    const end = homeSource.indexOf('\n  },', start)
-    const openBranches = homeSource.slice(start, end)
+    const profileSource = readFileSync(new URL('../src/pages/profile/index.ts', import.meta.url), 'utf8')
 
-    expect(openBranches).toContain('caseNavigateTo')
-    expect(openBranches).toContain('/packages/member/mip-branches/index')
-    expect(openBranches).not.toContain('beginProtectedAction')
+    expect(profileSource).toContain('openBranches() { caseNavigateTo({ url: \'/packages/member/mip-branches/index\' }) }')
+    expect(profileSource).not.toMatch(/openBranches[\s\S]{0,120}beginProtectedAction/)
   })
 })

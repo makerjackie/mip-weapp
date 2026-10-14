@@ -1,7 +1,6 @@
 {
   "$schema": "https://vite.icebreaker.top/app.json",
   "pages": [
-    "pages/index/index",
     "pages/events/index",
     "pages/opportunities/index",
     "pages/profile/index"
@@ -11,8 +10,6 @@
       "root": "packages/member",
       "pages": [
         "about/index",
-        "announcement-detail/index",
-        "announcements/index",
         "bind-phone/index",
         "help/index",
         "mip-access/index",
@@ -86,12 +83,6 @@
     "backgroundColor": "#080808",
     "borderStyle": "black",
     "list": [
-      {
-        "pagePath": "pages/index/index",
-        "text": "发现",
-        "iconPath": "assets/tab/home.png",
-        "selectedIconPath": "assets/tab/home-active.png"
-      },
       {
         "pagePath": "pages/events/index",
         "text": "活动",

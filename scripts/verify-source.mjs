@@ -130,7 +130,6 @@ const scriptsWithDeviceAuth = walk('scripts')
 assertSourceComponentReachability(appJson)
 assert(Number(projectConfig.libVersion.replaceAll('.', '')) >= 3152, 'Mini Program base library must be >= 3.15.2')
 for (const route of [
-  'pages/index/index',
   'pages/events/index',
   'pages/opportunities/index',
   'pages/profile/index',

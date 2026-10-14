@@ -5,18 +5,6 @@
   "namespace": "mip",
   "routes": [
     {
-      "name": "首页",
-      "pathName": "pages/index/index"
-    },
-    {
-      "name": "公告",
-      "pathName": "packages/member/announcements/index"
-    },
-    {
-      "name": "公告详情",
-      "pathName": "packages/member/announcement-detail/index"
-    },
-    {
       "name": "线下活动",
       "pathName": "pages/events/index"
     },

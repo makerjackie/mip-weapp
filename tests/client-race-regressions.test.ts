@@ -2,10 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMipGrowthModule } from '../src/modules/mip-growth'
 
 const homeMocks = vi.hoisted(() => ({
-  listAnnouncements: vi.fn(),
-  listBanners: vi.fn(),
   listEvents: vi.fn(),
-  listOpportunities: vi.fn(),
   loadBranches: vi.fn(),
   loadIdentity: vi.fn(),
 }))
@@ -15,16 +12,7 @@ const paymentMocks = vi.hoisted(() => ({
   listPlans: vi.fn(),
   reconcile: vi.fn(),
 }))
-const matchingMocks = vi.hoisted(() => ({
-  listMatchingResults: vi.fn(),
-}))
 
-vi.mock('../src/modules/mip-announcements', () => ({
-  mipAnnouncementsModule: { list: homeMocks.listAnnouncements },
-}))
-vi.mock('../src/modules/mip-banners', () => ({
-  mipBannerModule: { listActive: homeMocks.listBanners },
-}))
 vi.mock('../src/modules/mip-events/client', () => ({
   mipCheckInResumeStore: { peek: vi.fn() },
   mipEventsModule: {
@@ -42,16 +30,6 @@ vi.mock('../src/modules/mip-identity/client', () => ({
     loadSnapshot: homeMocks.loadIdentity,
     peekSnapshot: vi.fn(),
   },
-}))
-vi.mock('../src/modules/mip-opportunities', () => ({
-  opportunityModule: {
-    list: homeMocks.listOpportunities,
-    listMatchingResults: matchingMocks.listMatchingResults,
-    listMatchingRequests: vi.fn(),
-    listMine: vi.fn(),
-  },
-  retainMatchingFeedbackIntent: vi.fn(),
-  retainMatchingRequestIntent: vi.fn(),
 }))
 vi.mock('../src/modules/mip-commerce/client', () => ({
   mipCommerceModule: {
@@ -81,7 +59,6 @@ interface PageDefinition {
 }
 
 let capturedPage: PageDefinition
-let homePage: PageDefinition
 let paymentResultPage: PageDefinition
 
 function deferred<T>() {
@@ -114,19 +91,15 @@ beforeAll(async () => {
   vi.stubGlobal('Page', (definition: PageDefinition) => {
     capturedPage = definition
   })
-  await import('../src/pages/index/index')
-  homePage = capturedPage
   await import('../src/packages/member/payment-result/index')
   paymentResultPage = capturedPage
 })
 
 beforeEach(() => {
-  homeMocks.listAnnouncements.mockReset()
   paymentMocks.getOrder.mockReset()
   paymentMocks.listOrders.mockReset()
   paymentMocks.listPlans.mockReset().mockResolvedValue([])
   paymentMocks.reconcile.mockReset()
-  matchingMocks.listMatchingResults.mockReset()
 })
 
 describe('module request ordering', () => {
@@ -151,23 +124,6 @@ describe('module request ordering', () => {
 })
 
 describe('page request ordering', () => {
-  it('keeps the branch announcement when the initial unscoped response finishes last', async () => {
-    const unscoped = deferred<{ items: Array<{ id: string, isPinned: boolean }> }>()
-    const branch = deferred<{ items: Array<{ id: string, isPinned: boolean }> }>()
-    homeMocks.listAnnouncements.mockReturnValueOnce(unscoped.promise).mockReturnValueOnce(branch.promise)
-    const page = createPage(homePage)
-
-    const unscopedRun = callPage(page, 'loadAnnouncements') as Promise<unknown>
-    page.data.primaryBranchId = 'branch-1'
-    const branchRun = callPage(page, 'loadAnnouncements', 'branch-1') as Promise<unknown>
-    branch.resolve({ items: [{ id: 'branch-announcement', isPinned: true }] })
-    await branchRun
-    unscoped.resolve({ items: [{ id: 'platform-announcement', isPinned: true }] })
-    await unscopedRun
-
-    expect(page.data.announcement).toEqual(expect.objectContaining({ id: 'branch-announcement' }))
-  })
-
   it('shows the paid order without waiting for order lists or plan requests', async () => {
     paymentMocks.listPlans.mockReturnValue(new Promise(() => {}))
     const order = { id: 'order-1', status: 'PAID', orderType: 'CONTENT', amountCents: 10, resourceId: 'content-1' }

@@ -13,7 +13,7 @@ import {
 } from 'weapp-ide-cli'
 
 const appIdPattern = /^wx[0-9a-f]{16}$/i
-const defaultRequiredRoutes = ['pages/index/index']
+const defaultRequiredRoutes = ['pages/events/index']
 const settingsStorageHash = createHash('md5').update('reduxPersist:settings').digest('hex')
 const settingsStorageFileNames = [
   `localstorage_${settingsStorageHash}.json`,

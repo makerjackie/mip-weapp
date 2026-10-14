@@ -5,7 +5,7 @@
   <mip-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载账号状态" description="{{message}}" action-text="重新加载" bind:action="loadAccountState" />
   <view wx:elif="{{state === 'success'}}">
     <mip-empty-state title="账号已注销" description="公开资料与可撤销状态已关闭。订单、支付、退款、活动记录和审计记录按规则保留。" />
-    <app-page-exit always label="返回首页" tab-url="/pages/index/index" />
+    <app-page-exit always label="返回首页" tab-url="/pages/events/index" />
   </view>
   <block wx:else>
     <view>

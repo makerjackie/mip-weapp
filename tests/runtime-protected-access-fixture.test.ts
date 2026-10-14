@@ -16,8 +16,8 @@ const accessRoute = contract.routes.find((route: { path: string }) => (
 const privacyRoute = contract.routes.find((route: { path: string }) => (
   route.path === 'packages/member/privacy/index'
 ))
-const homeRoute = contract.routes.find((route: { path: string }) => (
-  route.path === 'pages/index/index'
+const landingRoute = contract.routes.find((route: { path: string }) => (
+  route.path === 'pages/events/index'
 ))
 
 function createFixtureRuntime(
@@ -26,11 +26,11 @@ function createFixtureRuntime(
 ) {
   let currentPage: Record<string, unknown>
   let signOutTapCount = 0
-  const homePage = {
-    path: homeRoute.path,
+  const landingPage = {
+    path: landingRoute.path,
     data: vi.fn(async () => ({ state: 'ready' })),
     renderedNodes: vi.fn(async (selector: string, options: { routeOnly: boolean }) => {
-      expect(selector).toBe(homeRoute.selector)
+      expect(selector).toBe(landingRoute.selector)
       expect(options).toEqual({ routeOnly: true })
       return [{ top: 0, bottom: 812, left: 0, right: 375, width: 375, height: 812 }]
     }),
@@ -78,7 +78,7 @@ function createFixtureRuntime(
       state: 'ready',
       token,
     }), () => {
-      currentPage = homePage
+      currentPage = landingPage
       if (options.restoreTapError) {
         throw options.restoreTapError
       }
@@ -99,8 +99,8 @@ function createFixtureRuntime(
         currentPage = privacyPage
         return { path: 'transitioning' }
       }
-      expect(url).toBe(`/${homeRoute.path}`)
-      currentPage = homePage
+      expect(url).toBe(`/${landingRoute.path}`)
+      currentPage = landingPage
       return { path: 'transitioning' }
     }),
     currentPage: vi.fn(async () => currentPage),
@@ -113,7 +113,7 @@ function createFixtureRuntime(
     restoreWxMethod: vi.fn(async () => undefined),
     systemInfo: vi.fn(async () => ({ windowHeight: 812, windowWidth: 375 })),
   }
-  return { accessPage, homePage, miniProgram, privacyPage }
+  return { accessPage, landingPage, miniProgram, privacyPage }
 }
 
 describe('runtime protected access fixture', () => {
@@ -122,7 +122,7 @@ describe('runtime protected access fixture', () => {
       'Runtime navigation representative loading did not render: Runtime fixture expected rendered packages/member/mip-growth/index:#mip-growth-page, received packages/member/mip-growth/index',
     ))).toBe(true)
     expect(isRecoverableRuntimeRenderError(new Error(
-      'Runtime fixture expected rendered packages/member/mip-growth/index:#mip-growth-page, received pages/index/index',
+      'Runtime fixture expected rendered packages/member/mip-growth/index:#mip-growth-page, received pages/opportunities/index',
     ))).toBe(false)
     expect(isRecoverableRuntimeRenderError(new Error('connection failed'))).toBe(false)
   })
@@ -130,11 +130,11 @@ describe('runtime protected access fixture', () => {
   it('repeats a safe navigation when logic changes route before the rendered tree catches up', async () => {
     let navigationCount = 0
     const transitionPage = {
-      path: homeRoute.path,
+      path: landingRoute.path,
       renderedNodes: vi.fn(async () => []),
     }
     const renderedPage = {
-      path: homeRoute.path,
+      path: landingRoute.path,
       renderedNodes: vi.fn(async () => [{ width: 375, height: 812 }]),
     }
     const miniProgram = {
@@ -149,7 +149,7 @@ describe('runtime protected access fixture', () => {
 
     await expect(navigateFreshRuntimeRoute(
       miniProgram,
-      homeRoute,
+      landingRoute,
       'home probe',
       navigate,
       50,
@@ -157,7 +157,7 @@ describe('runtime protected access fixture', () => {
     expect(navigate).toHaveBeenCalledTimes(2)
     expect(transitionPage.renderedNodes).toHaveBeenCalled()
     expect(renderedPage.renderedNodes).toHaveBeenCalledWith(
-      homeRoute.selector,
+      landingRoute.selector,
       { routeOnly: true },
     )
   })
@@ -165,20 +165,20 @@ describe('runtime protected access fixture', () => {
   it('relaunches a tab route once when its path is ready but its root is not rendered', async () => {
     let recovered = false
     const transitionPage = {
-      path: `/${homeRoute.path}`,
+      path: `/${landingRoute.path}`,
       renderedNodes: vi.fn(async () => []),
     }
     const renderedPage = {
-      path: `/${homeRoute.path}`,
+      path: `/${landingRoute.path}`,
       renderedNodes: vi.fn(async () => [{ width: 375, height: 812 }]),
     }
     const miniProgram = {
       switchTab: vi.fn(async (url: string) => {
-        expect(url).toBe(`/${homeRoute.path}`)
+        expect(url).toBe(`/${landingRoute.path}`)
         return transitionPage
       }),
       reLaunch: vi.fn(async (url: string) => {
-        expect(url).toBe(`/${homeRoute.path}`)
+        expect(url).toBe(`/${landingRoute.path}`)
         recovered = true
         return renderedPage
       }),
@@ -187,29 +187,29 @@ describe('runtime protected access fixture', () => {
 
     await expect(navigateFreshRuntimeTab(
       miniProgram,
-      homeRoute,
+      landingRoute,
       'home tab probe',
       1,
     )).resolves.toBe(renderedPage)
     expect(miniProgram.switchTab).toHaveBeenCalledOnce()
     expect(miniProgram.reLaunch).toHaveBeenCalledOnce()
     expect(transitionPage.renderedNodes).toHaveBeenCalledWith(
-      homeRoute.selector,
+      landingRoute.selector,
       { routeOnly: true },
     )
     expect(renderedPage.renderedNodes).toHaveBeenCalledWith(
-      homeRoute.selector,
+      landingRoute.selector,
       { routeOnly: true },
     )
   })
 
   it('does not relaunch a tab when navigation reaches a different route', async () => {
     const tabRoute = contract.routes.find((route: { path: string, tab?: boolean }) => (
-      route.tab && route.path !== homeRoute.path
+      route.tab && route.path !== landingRoute.path
     ))
     expect(tabRoute).toBeDefined()
     const wrongPage = {
-      path: '/pages/index/index',
+      path: '/pages/opportunities/index',
       renderedNodes: vi.fn(async () => []),
     }
     const miniProgram = {
@@ -223,7 +223,7 @@ describe('runtime protected access fixture', () => {
       tabRoute,
       'wrong tab probe',
       1,
-    )).rejects.toThrow('received pages/index/index')
+    )).rejects.toThrow('received pages/opportunities/index')
     expect(miniProgram.reLaunch).not.toHaveBeenCalled()
   })
 
@@ -241,7 +241,7 @@ describe('runtime protected access fixture', () => {
         expectedNextRequirement: 'AUTHENTICATED',
         restoreSelector: '#mip-access-sign-in',
         restoreHandler: 'signIn',
-        restoreRoute: homeRoute.path,
+        restoreRoute: landingRoute.path,
       },
     })
     expect(accessRoute.queryFixture).toBeUndefined()
@@ -281,13 +281,13 @@ describe('runtime protected access fixture', () => {
       selector: '#mip-access-sign-in',
       duration: 0,
     })
-    expect(runtime.miniProgram.reLaunch).toHaveBeenNthCalledWith(2, `/${homeRoute.path}`)
+    expect(runtime.miniProgram.reLaunch).toHaveBeenNthCalledWith(2, `/${landingRoute.path}`)
     const restoreTapOrder = runtime.accessPage.element.tap.mock.invocationCallOrder[0]
     const freshReloadOrder = runtime.miniProgram.reLaunch.mock.invocationCallOrder[1]
     expect(runtime.miniProgram.currentPage.mock.invocationCallOrder.some(
       callOrder => callOrder > restoreTapOrder && callOrder < freshReloadOrder,
     )).toBe(true)
-    expect(runtime.homePage.data).toHaveBeenCalled()
+    expect(runtime.landingPage.data).toHaveBeenCalled()
   })
 
   it('restores the signed-in server identity when intent validation fails after local logout', async () => {
@@ -302,7 +302,7 @@ describe('runtime protected access fixture', () => {
 
     expect(runtime.privacyPage.element.tap).toHaveBeenCalledOnce()
     expect(runtime.accessPage.element.tap).toHaveBeenCalledOnce()
-    expect(runtime.homePage.data).toHaveBeenCalled()
+    expect(runtime.landingPage.data).toHaveBeenCalled()
     expect(runtime.miniProgram.restoreWxMethod).toHaveBeenCalledWith('showModal')
   })
 
@@ -324,7 +324,7 @@ describe('runtime protected access fixture', () => {
     expect(runtime.privacyPage.element.tap).toHaveBeenCalledTimes(2)
     expect(runtime.miniProgram.restoreWxMethod).toHaveBeenCalledWith('showModal')
     await resolved.restore()
-    expect(runtime.homePage.data).toHaveBeenCalled()
+    expect(runtime.landingPage.data).toHaveBeenCalled()
   })
 
   it('accepts element destruction when the rendered sign-in tap already changed route', async () => {
@@ -341,7 +341,7 @@ describe('runtime protected access fixture', () => {
 
     await expect(resolved.restore()).resolves.toBeUndefined()
     expect(runtime.accessPage.element.tap).toHaveBeenCalledOnce()
-    expect(runtime.homePage.data).toHaveBeenCalled()
+    expect(runtime.landingPage.data).toHaveBeenCalled()
   })
 
   it('locks source and restore actions to visible native wrappers without handler fallback', () => {
@@ -385,7 +385,7 @@ describe('runtime protected access fixture', () => {
     expect(verifier).toContain('export async function navigateFreshRuntimeRoute(')
     expect(verifier).toContain('render recovery')
     expect(pageAudit).toContain('|| isRecoverableRuntimeRenderError(error)')
-    expect(verifier).toContain('const returned = await waitForCurrentRuntimeRoute(miniProgram, homeRoute)')
+    expect(verifier).toContain('const returned = await waitForCurrentRuntimeRoute(miniProgram, eventsRoute)')
     expect(resolver).not.toContain('.callMethod(')
   })
 })

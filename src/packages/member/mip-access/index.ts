@@ -272,14 +272,14 @@ Page({
     if (this.data.token) {
       mipIdentityModule.cancel(this.data.token)
     }
-    mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
+    mipGlobalAccessGuard.enterTarget({ path: 'pages/events/index' })
   },
 
   navigateToSource(context: AccessReturnContext | null, action: string) {
     if (!context || context.navigation === 'navigateBack') {
       const fallbackUrl = context
-        ? accessReturnUrl(context, action || undefined) || '/pages/index/index'
-        : '/pages/index/index'
+        ? accessReturnUrl(context, action || undefined) || '/pages/events/index'
+        : '/pages/events/index'
       wx.navigateBack({
         delta: 1,
         fail: () => wx.reLaunch({ url: fallbackUrl }),
@@ -287,9 +287,9 @@ Page({
       return
     }
     const resumeAction = action === 'ENTER_APP' ? undefined : action
-    const url = accessReturnUrl(context, resumeAction) || '/pages/index/index'
+    const url = accessReturnUrl(context, resumeAction) || '/pages/events/index'
     if (context.navigation === 'switchTab') {
-      wx.switchTab({ url: context.route || '/pages/index/index' })
+      wx.switchTab({ url: context.route || '/pages/events/index' })
       return
     }
     if (context.navigation === 'reLaunch') {
@@ -298,7 +298,7 @@ Page({
     }
     wx.redirectTo({
       url,
-      fail: () => wx.reLaunch({ url: '/pages/index/index' }),
+      fail: () => wx.reLaunch({ url: '/pages/events/index' }),
     })
   },
 })

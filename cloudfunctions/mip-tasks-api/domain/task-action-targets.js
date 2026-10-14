@@ -7,8 +7,6 @@
 // 云函数无法读取仓库配置文件，故以常量承载；tests/mip-task-action-whitelist.test.ts
 // 按同一过滤规则派生期望集合并与这里逐项比对，配置漂移时测试红提示同步本文件。
 const TASK_JUMP_TARGET_WHITELIST = [
-  'pages/index/index',
-  'packages/member/announcements/index',
   'pages/events/index',
   'pages/profile/index',
   'packages/member/mip-visibility-settings/index',

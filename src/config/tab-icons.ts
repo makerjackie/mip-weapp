@@ -38,16 +38,6 @@ const TAB_ICON_PARTS: Record<string, TabIconPart> = {
 }
 
 const TAB_ICON_COMPOSITIONS: Record<string, { off: TabIconNode[], on: TabIconNode[] }> = {
-  发现: {
-    off: [
-      { name: 'smileys-13-12', x: 3, y: 3, w: 22, h: 22 },
-      { name: 'smileys-13-12-2', x: 10, y: 10, w: 8.2, h: 8.2 },
-    ],
-    on: [
-      { name: 'smileys-13-2-2', x: 3, y: 3, w: 22, h: 22 },
-      { name: 'smileys-13-12-2', x: 10, y: 10, w: 8.2, h: 8.2 },
-    ],
-  },
   活动: {
     off: [
       { name: 'tab-note-outline', x: 3.5, y: 3.5, w: 21, h: 21 },

@@ -1,14 +1,12 @@
 // 交互类 Bug 修复回归（审计 2026-10-12，docs/research/weapp-interaction-bugs-audit-2026-10-12.md）：
-// BUG-10.1 公告触底+下拉交错重复项 / BUG-10.2 我的活动追加去重 / BUG-10.3 合作伙伴页
+// BUG-10.2 我的活动追加去重 / BUG-10.3 合作伙伴页
 // onShow 闪骨架 / BUG-10.4 growth 会员态无 seq / BUG-11.1 名片刷新失败整页错误 /
 // BUG-11.2 任务详情提交后刷新失败整页错误 / BUG-11.3 名片下载静默吞点击 /
-// BUG-12.1 首页冷启动公告双请求与内容跳变。
 import fs from 'node:fs'
 import path from 'node:path'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MipOpportunityError } from '../src/modules/mip-opportunities/error'
 
-const announcementsModule = vi.hoisted(() => ({ list: vi.fn(), peekList: vi.fn() }))
 const bannersModule = vi.hoisted(() => ({ listActive: vi.fn() }))
 const eventsClient = vi.hoisted(() => ({
   listEvents: vi.fn(),
@@ -40,7 +38,6 @@ const tasksModule = vi.hoisted(() => ({
   saveTemplateImage: vi.fn(),
 }))
 
-vi.mock('../src/modules/mip-announcements', () => ({ mipAnnouncementsModule: announcementsModule }))
 vi.mock('../src/modules/mip-banners', () => ({ mipBannerModule: bannersModule }))
 vi.mock('../src/modules/mip-events/client', () => ({
   mipCheckInResumeStore: { clear: vi.fn() },
@@ -121,9 +118,6 @@ beforeAll(async () => {
     current = definition
   })
   current = undefined
-  await import('../src/packages/member/announcements/index')
-  definitions.announcements = current as PageDefinition
-  current = undefined
   await import('../src/packages/member/mip-events/mine/index')
   definitions.mine = current as PageDefinition
   current = undefined
@@ -138,81 +132,6 @@ beforeAll(async () => {
   current = undefined
   await import('../src/packages/member/mip-tasks/detail/index')
   definitions.taskDetail = current as PageDefinition
-  current = undefined
-  await import('../src/pages/index/index')
-  definitions.home = current as PageDefinition
-})
-
-describe('BUG-10.1 announcements list race', () => {
-  beforeEach(() => {
-    announcementsModule.peekList.mockReset().mockReturnValue(undefined)
-    announcementsModule.list.mockReset()
-  })
-
-  function summary(id: string) {
-    return {
-      id,
-      title: `公告${id}`,
-      summary: '',
-      isPinned: false,
-      publishedAt: '2026-10-01T08:00:00.000Z',
-      scopeType: 'PLATFORM',
-      targetType: 'ARTICLE',
-      targetId: '',
-    }
-  }
-
-  it('drops the stale loadMore append when a pull refresh reset the whole page', async () => {
-    // 机制：loadMore（旧游标）在途时下拉刷新整表重置（代际 +1），
-    // 旧结果返回后按代际作废，不再拼接到新首页尾部造成 wx:key="id" 重复。
-    const staleAppend = deferred<{ items: Array<ReturnType<typeof summary>>, nextCursor?: string }>()
-    announcementsModule.list
-      .mockResolvedValueOnce({ items: [summary('a1'), summary('a2')], nextCursor: 'cursor-1' })
-      .mockReturnValueOnce(staleAppend.promise)
-      .mockResolvedValueOnce({ items: [summary('a0')], nextCursor: 'cursor-2' })
-    const instance = page('announcements')
-    await callPage(instance, 'loadAnnouncements')
-    const appendRun = callPage(instance, 'loadMore') as Promise<void>
-    expect(instance.data.loadingMore).toBe(true)
-    const refreshRun = callPage(instance, 'onPullDownRefresh') as Promise<void>
-    await refreshRun
-    staleAppend.resolve({ items: [summary('a2'), summary('a3')] })
-    await appendRun
-    const ids = (instance.data.items as Array<{ id: string }>).map(item => item.id)
-    expect(ids).toEqual(['a0'])
-    expect(new Set(ids).size).toBe(ids.length)
-    expect(instance.data.loadingMore).toBe(false)
-    expect(instance.data.state).toBe('ready')
-  })
-
-  it('dedupes by id when the append window overlaps the already loaded page', async () => {
-    announcementsModule.list
-      .mockResolvedValueOnce({ items: [summary('a1'), summary('a2')], nextCursor: 'cursor-1' })
-      .mockResolvedValueOnce({ items: [summary('a2'), summary('a3')], nextCursor: '' })
-    const instance = page('announcements')
-    await callPage(instance, 'loadAnnouncements')
-    await callPage(instance, 'loadMore')
-    const ids = (instance.data.items as Array<{ id: string }>).map(item => item.id)
-    expect(ids).toEqual(['a1', 'a2', 'a3'])
-  })
-
-  it('does not start a new append with the old cursor while a refresh is in flight', async () => {
-    // 机制：refreshing 挡住「整表刷新在途时用旧游标发起新追加」的窗口（对齐 orders 页）。
-    const refresh = deferred<{ items: Array<ReturnType<typeof summary>>, nextCursor?: string }>()
-    announcementsModule.list
-      .mockResolvedValueOnce({ items: [summary('a1'), summary('a2')], nextCursor: 'cursor-1' })
-      .mockReturnValueOnce(refresh.promise)
-    const instance = page('announcements')
-    await callPage(instance, 'loadAnnouncements')
-    const refreshRun = callPage(instance, 'loadAnnouncements', true) as Promise<void>
-    expect(instance.data.refreshing).toBe(true)
-    await callPage(instance, 'loadMore')
-    expect(announcementsModule.list).toHaveBeenCalledTimes(2)
-    refresh.resolve({ items: [summary('a0')], nextCursor: 'cursor-2' })
-    await refreshRun
-    expect(instance.data.refreshing).toBe(false)
-    expect((instance.data.items as Array<{ id: string }>).map(item => item.id)).toEqual(['a0'])
-  })
 })
 
 describe('BUG-10.2 my-events append dedupe', () => {
@@ -430,56 +349,5 @@ describe('BUG-11.2 task detail refresh keeps content', () => {
     await callPage(instance, 'loadTask')
     expect(instance.data.state).toBe('error')
     expect(instance.data.message).toBe('加载失败')
-  })
-})
-
-describe('BUG-12.1 home cold start issues one announcement request', () => {
-  beforeEach(() => {
-    announcementsModule.peekList.mockReset().mockReturnValue(undefined)
-    announcementsModule.list.mockReset().mockResolvedValue({ items: [] })
-    bannersModule.listActive.mockReset().mockResolvedValue([])
-    eventsClient.listEvents.mockReset().mockResolvedValue({ items: [] })
-    eventsClient.peekEvents.mockReset().mockReturnValue(undefined)
-    eventsClient.listMyRegistrations.mockReset()
-    identityClient.branches.load.mockReset().mockResolvedValue({ branches: [] })
-    identityClient.branches.peek.mockReset().mockReturnValue(undefined)
-    identityClient.identity.loadSnapshot.mockReset()
-    identityClient.identity.peekSnapshot.mockReset().mockReturnValue(undefined)
-    opportunities.list.mockReset().mockResolvedValue({ items: [] })
-  })
-
-  it('waits for identity settlement and issues exactly one branch-scoped request', async () => {
-    // 机制：公告请求等身份「落地」（复用 loadIdentity 已发起的同一飞行，不新增请求），
-    // 分会变化时 applyIdentity 发出唯一一次正确口径请求，settleAnnouncements 跳过补发。
-    const identity = deferred<{ primaryBranchId?: string }>()
-    identityClient.identity.loadSnapshot.mockReturnValue(identity.promise)
-    announcementsModule.list.mockResolvedValue({ items: [{ id: 'branch-announcement', isPinned: true }] })
-    const instance = page('home')
-    const discover = callPage(instance, 'loadDiscover') as Promise<void>
-    identity.resolve({ primaryBranchId: 'branch-1' })
-    await discover
-    expect(announcementsModule.list).toHaveBeenCalledTimes(1)
-    expect(announcementsModule.list).toHaveBeenCalledWith({ branchId: 'branch-1', limit: 5 })
-    expect((instance.data.announcement as { id: string }).id).toBe('branch-announcement')
-  })
-
-  it('issues one city-wide request when identity settles without a primary branch', async () => {
-    const identity = deferred<{ primaryBranchId?: string }>()
-    identityClient.identity.loadSnapshot.mockReturnValue(identity.promise)
-    const instance = page('home')
-    const discover = callPage(instance, 'loadDiscover') as Promise<void>
-    identity.resolve({})
-    await discover
-    expect(announcementsModule.list).toHaveBeenCalledTimes(1)
-    expect(announcementsModule.list).toHaveBeenCalledWith({ branchId: undefined, limit: 5 })
-  })
-
-  it('falls back to one city-wide request when identity fails', async () => {
-    identityClient.identity.loadSnapshot.mockRejectedValue(new Error('offline'))
-    const instance = page('home')
-    await callPage(instance, 'loadDiscover')
-    expect(announcementsModule.list).toHaveBeenCalledTimes(1)
-    expect(announcementsModule.list).toHaveBeenCalledWith({ branchId: undefined, limit: 5 })
-    expect(instance.data.state).toBe('ready')
   })
 })

@@ -26,7 +26,7 @@ describe('MIP messaging', () => {
       dedupeKey: 'unsafe-route',
     })).toThrow('INBOX_TARGET_INVALID')
     expect(isTrustedInboxRoute('/packages/member/mip-opportunities/detail/index?id=opportunity-1')).toBe(true)
-    expect(isTrustedInboxRoute('/pages/index/index?next=https://example.com')).toBe(false)
+    expect(isTrustedInboxRoute('/pages/unknown/index?next=https://example.com')).toBe(false)
     const profileRef = `p1.${'a'.repeat(16)}.${'b'.repeat(48)}.${'c'.repeat(22)}`
     expect(buildInboxTarget('PROFILE', profileRef).route)
       .toBe(`/packages/member/mip-public-profile/index?profileRef=${profileRef}`)

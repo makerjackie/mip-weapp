@@ -187,7 +187,6 @@ describe('mip-weapp UI runtime contract', () => {
       expect(fs.existsSync(wxmlFile), `missing WXML for ${route.path}`).toBe(true)
       expect(fs.readFileSync(wxmlFile, 'utf8')).toContain(`id="${route.selector.slice(1)}"`)
     }
-    expect(contract.routes.find(route => route.path === 'pages/index/index')?.selector).toBe('#mip-home-page')
     expect(contract.routes.find(route => route.path === 'packages/member/mip-growth/index')?.selector).toBe('#mip-growth-page')
     expect(contract.routes.find(route => route.path === 'pages/profile/index')?.selector).toBe('#mip-account-page')
   })
@@ -277,11 +276,10 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).not.toMatch(/routeCount\s*===\s*\d+/)
   })
 
-  it('covers four tabs, secondary return, deep links, and representative states', () => {
+  it('covers three tabs, secondary return, deep links, and representative states', () => {
     const tabs = contract.routes.filter(route => route.tab).map(route => route.path).sort()
     expect(tabs).toEqual([
       'pages/events/index',
-      'pages/index/index',
       'pages/opportunities/index',
       'pages/profile/index',
     ].sort())
@@ -477,7 +475,7 @@ describe('mip-weapp UI runtime contract', () => {
           sourceSelector: '#privacy-sign-out',
           expectedIntentAction: 'ENTER_APP',
           restoreSelector: '#mip-access-sign-in',
-          restoreRoute: 'pages/index/index',
+          restoreRoute: 'pages/events/index',
         })
         expect(route.queryFixture).toBeUndefined()
         continue

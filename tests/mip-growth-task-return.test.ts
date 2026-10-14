@@ -185,7 +185,7 @@ describe('growth and task return flow', () => {
     const instance = page(growthDefinition)
     const share = callPage(instance, 'onShareAppMessage') as { title: string, path: string }
     expect(share.title).toContain('邀请')
-    expect(share.path).toBe('/pages/index/index')
+    expect(share.path).toBe('/pages/events/index')
     const template = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxml'), 'utf8')
     expect(template).toContain('open-type="share"')
     expect(template).toContain('item.actionType === \'SHARE\'')
