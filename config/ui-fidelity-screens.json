@@ -1994,53 +1994,53 @@
         "theme": {
           "key": "PINK",
           "label": "暖色",
-          "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
-          "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+          "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png",
           "background": "#FF5F6D",
           "foreground": "#080808",
           "muted": "#4A2326",
-          "codeBackground": "#FFFFFF"
+          "codeBackground": "#FFFFFF",
+          "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png"
         },
         "themeOptions": [
           {
             "key": "PINK",
             "label": "暖色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png",
             "background": "#FF5F6D",
             "foreground": "#080808",
             "muted": "#4A2326",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png"
           },
           {
             "key": "BLUE",
             "label": "蓝色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png",
             "background": "#403BDA",
             "foreground": "#FFFFFF",
             "muted": "#E4E3FF",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png"
           },
           {
             "key": "WHITE",
             "label": "浅色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png",
             "background": "#F5F4F0",
             "foreground": "#080808",
             "muted": "#575757",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png"
           },
           {
             "key": "YELLOW",
             "label": "品牌色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-d-yellow.png",
             "background": "#FDE104",
             "foreground": "#080808",
             "muted": "#514A10",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-thumb-yellow.png"
           }
         ],
         "nickname": "戴永明",
@@ -2087,53 +2087,53 @@
         "theme": {
           "key": "BLUE",
           "label": "蓝色",
-          "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
-          "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+          "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png",
           "background": "#403BDA",
           "foreground": "#FFFFFF",
           "muted": "#E4E3FF",
-          "codeBackground": "#FFFFFF"
+          "codeBackground": "#FFFFFF",
+          "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png"
         },
         "themeOptions": [
           {
             "key": "PINK",
             "label": "暖色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png",
             "background": "#FF5F6D",
             "foreground": "#080808",
             "muted": "#4A2326",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png"
           },
           {
             "key": "BLUE",
             "label": "蓝色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png",
             "background": "#403BDA",
             "foreground": "#FFFFFF",
             "muted": "#E4E3FF",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png"
           },
           {
             "key": "WHITE",
             "label": "浅色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png",
             "background": "#F5F4F0",
             "foreground": "#080808",
             "muted": "#575757",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png"
           },
           {
             "key": "YELLOW",
             "label": "品牌色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-d-yellow.png",
             "background": "#FDE104",
             "foreground": "#080808",
             "muted": "#514A10",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-thumb-yellow.png"
           }
         ],
         "nickname": "戴永明",
@@ -2180,53 +2180,53 @@
         "theme": {
           "key": "WHITE",
           "label": "浅色",
-          "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
-          "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+          "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png",
           "background": "#F5F4F0",
           "foreground": "#080808",
           "muted": "#575757",
-          "codeBackground": "#FFFFFF"
+          "codeBackground": "#FFFFFF",
+          "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png"
         },
         "themeOptions": [
           {
             "key": "PINK",
             "label": "暖色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png",
             "background": "#FF5F6D",
             "foreground": "#080808",
             "muted": "#4A2326",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png"
           },
           {
             "key": "BLUE",
             "label": "蓝色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png",
             "background": "#403BDA",
             "foreground": "#FFFFFF",
             "muted": "#E4E3FF",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png"
           },
           {
             "key": "WHITE",
             "label": "浅色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png",
             "background": "#F5F4F0",
             "foreground": "#080808",
             "muted": "#575757",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png"
           },
           {
             "key": "YELLOW",
             "label": "品牌色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-d-yellow.png",
             "background": "#FDE104",
             "foreground": "#080808",
             "muted": "#514A10",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-thumb-yellow.png"
           }
         ],
         "nickname": "戴永明",
@@ -2273,53 +2273,53 @@
         "theme": {
           "key": "YELLOW",
           "label": "品牌色",
-          "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
-          "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
+          "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-d-yellow.png",
           "background": "#FDE104",
           "foreground": "#080808",
           "muted": "#514A10",
-          "codeBackground": "#FFFFFF"
+          "codeBackground": "#FFFFFF",
+          "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-thumb-yellow.png"
         },
         "themeOptions": [
           {
             "key": "PINK",
             "label": "暖色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png",
             "background": "#FF5F6D",
             "foreground": "#080808",
             "muted": "#4A2326",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png"
           },
           {
             "key": "BLUE",
             "label": "蓝色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png",
             "background": "#403BDA",
             "foreground": "#FFFFFF",
             "muted": "#E4E3FF",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png"
           },
           {
             "key": "WHITE",
             "label": "浅色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png",
             "background": "#F5F4F0",
             "foreground": "#080808",
             "muted": "#575757",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png"
           },
           {
             "key": "YELLOW",
             "label": "品牌色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-d-yellow.png",
             "background": "#FDE104",
             "foreground": "#080808",
             "muted": "#514A10",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-thumb-yellow.png"
           }
         ],
         "nickname": "戴永明",
@@ -2366,53 +2366,53 @@
         "theme": {
           "key": "YELLOW",
           "label": "品牌色",
-          "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
-          "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
+          "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-d-yellow.png",
           "background": "#FDE104",
           "foreground": "#080808",
           "muted": "#514A10",
-          "codeBackground": "#FFFFFF"
+          "codeBackground": "#FFFFFF",
+          "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-thumb-yellow.png"
         },
         "themeOptions": [
           {
             "key": "PINK",
             "label": "暖色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png",
             "background": "#FF5F6D",
             "foreground": "#080808",
             "muted": "#4A2326",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-a.png"
           },
           {
             "key": "BLUE",
             "label": "蓝色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png",
             "background": "#403BDA",
             "foreground": "#FFFFFF",
             "muted": "#E4E3FF",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-b.png"
           },
           {
             "key": "WHITE",
             "label": "浅色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png",
             "background": "#F5F4F0",
             "foreground": "#080808",
             "muted": "#575757",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-c.png"
           },
           {
             "key": "YELLOW",
             "label": "品牌色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
+            "asset": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-bg-d-yellow.png",
             "background": "#FDE104",
             "foreground": "#080808",
             "muted": "#514A10",
-            "codeBackground": "#FFFFFF"
+            "codeBackground": "#FFFFFF",
+            "thumb": "https://admin.mip.cool/mip-weapp-assets/member-card/v1/card-thumb-yellow.png"
           }
         ],
         "nickname": "戴永明",

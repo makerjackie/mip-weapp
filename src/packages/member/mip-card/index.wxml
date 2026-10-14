@@ -8,16 +8,10 @@
     </view>
 
     <view class="relative h-[492rpx] w-full overflow-hidden rounded-[32rpx]" style="background: {{theme.background}}; color: {{theme.foreground}};">
-      <!-- 设计稿对卡面图用 width/height 100% 拉伸（含 164×80 的 b/c 源图），故用默认 scaleToFill。 -->
-      <!-- 四张底图必须在 WXML 静态引用（MIW-100）：project.config.json 开着
-           ignoreUploadUnusedFiles，上传依赖分析探不到 {{theme.asset}} 动态绑定，
-           纯动态引用的底图会被剔除出体验版（真机显纯色、工具本地预览正常）。
-           样式键是客户端闭集（themes map），按 key 分支与按 asset 渲染等价；
-           canvas 画图与分享图仍走 TS 的 theme.asset，文件已因这里的静态引用保留在包内。 -->
-      <image wx:if="{{styleKey === 'PINK'}}" class="absolute inset-0 h-full w-full" src="/packages/member/assets/figma/profile/card-bg-a.webp" />
-      <image wx:elif="{{styleKey === 'BLUE'}}" class="absolute inset-0 h-full w-full" src="/packages/member/assets/figma/profile/card-bg-b.webp" />
-      <image wx:elif="{{styleKey === 'WHITE'}}" class="absolute inset-0 h-full w-full" src="/packages/member/assets/figma/profile/card-bg-c.webp" />
-      <image wx:elif="{{styleKey === 'YELLOW'}}" class="absolute inset-0 h-full w-full" src="/packages/member/assets/figma/profile/card-bg-d-yellow.webp" />
+      <!-- 设计稿对卡面图用 width/height 100% 拉伸，故用默认 scaleToFill（底图宽高比与卡面一致，无变形）。
+           卡面/缩略均为静态托管 CDN PNG（src/config/card-art.ts，动态绑定即可，无上传剔除/
+           设备 webp 解码问题）；加载期间露出 theme.background 纯色垫底，网络失败时保持纯色。 -->
+      <image class="absolute inset-0 h-full w-full" src="{{theme.asset}}" />
       <view class="absolute left-[24rpx] top-[24rpx] max-w-[420rpx] truncate text-[40rpx] leading-[56rpx] font-medium">{{nickname}}</view>
       <view wx:if="{{companyName}}" class="absolute left-[24rpx] top-[88rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">{{companyName}}</view>
       <view wx:if="{{roleTitle}}" class="absolute left-[24rpx] top-[130rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">{{roleTitle}}</view>
@@ -54,11 +48,8 @@
     <!-- figma 1732_20401: 样式缩略 82×40（设计稿缩略图为 IMAGE FILL = aspectFill），无选中描边与文案；访客视角（2165_17277）无样式选择。 -->
     <view wx:if="{{!isGuest}}" class="mt-[22rpx] grid grid-cols-4 gap-2">
       <view wx:for="{{themeOptions}}" wx:key="key" class="relative h-[80rpx] overflow-hidden rounded-[8rpx]" style="background: {{item.background}};" data-key="{{item.key}}" bind:tap="chooseStyle">
-        <!-- 缩略图同上必须静态引用；YELLOW 缩略用专用烘焙 thumb（card-thumb-yellow.png），与卡面 d 图不同源。 -->
-        <image wx:if="{{item.key === 'PINK'}}" class="absolute inset-0 h-full w-full" mode="aspectFill" src="/packages/member/assets/figma/profile/card-bg-a.webp" />
-        <image wx:elif="{{item.key === 'BLUE'}}" class="absolute inset-0 h-full w-full" mode="aspectFill" src="/packages/member/assets/figma/profile/card-bg-b.webp" />
-        <image wx:elif="{{item.key === 'WHITE'}}" class="absolute inset-0 h-full w-full" mode="aspectFill" src="/packages/member/assets/figma/profile/card-bg-c.webp" />
-        <image wx:elif="{{item.key === 'YELLOW'}}" class="absolute inset-0 h-full w-full" mode="aspectFill" src="/packages/member/assets/figma/profile/card-thumb-yellow.png" />
+        <!-- 缩略同卡面走 CDN PNG（YELLOW 用专用烘焙 thumb，与卡面 d 图不同源）。 -->
+        <image class="absolute inset-0 h-full w-full" mode="aspectFill" src="{{item.thumb}}" />
       </view>
     </view>
 

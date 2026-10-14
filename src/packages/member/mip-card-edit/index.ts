@@ -1,4 +1,5 @@
 import type { EditableProfileOrganization } from '../../../modules/mip-identity'
+import { memberCardArt } from '../../../config/card-art'
 import {
   appendEditableOrganization,
   createEditableOrganizations,
@@ -31,6 +32,7 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     profileVersion: 0,
+    previewCardBgUrl: memberCardArt.YELLOW.asset,
     previewNickname: 'MIP 成员',
     previewInitial: 'M',
     previewFallbackName: 'MIP 成员',
