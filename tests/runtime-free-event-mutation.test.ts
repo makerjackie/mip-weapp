@@ -455,7 +455,7 @@ describe('free event runtime evidence summaries', () => {
   })
 
   it('records exact authoritative facts without profile, phone, body, or participant refs', () => {
-    const sensitiveValues = ['测试昵称', '18819253403', 'profile-secret', 'participant-secret', 'marker-body']
+    const sensitiveValues = ['测试昵称', '13798316515', 'profile-secret', 'participant-secret', 'marker-body']
     const summaries = [
       summarizeEventDetail({
         state: 'ready',

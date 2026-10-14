@@ -1,6 +1,6 @@
 export const mipOperationsConfig = {
   replaceBeforeProduction: true,
-  supportPhone: '18819253403',
+  supportPhone: '13798316515',
   videoChannelFinderUserName: '',
   homeBanner: {
     imagePath: '',

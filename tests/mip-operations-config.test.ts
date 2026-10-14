@@ -8,7 +8,7 @@ const root = process.cwd()
 describe('replaceable MIP operations configuration', () => {
   it('keeps support contacts and promotional content in one replaceable config', () => {
     expect(mipOperationsConfig.replaceBeforeProduction).toBe(true)
-    expect(mipOperationsConfig.supportPhone).toBe('18819253403')
+    expect(mipOperationsConfig.supportPhone).toBe('13798316515')
     expect(mipOperationsConfig).toHaveProperty('videoChannelFinderUserName')
     expect(mipOperationsConfig.homeBanner).toHaveProperty('imagePath')
     // MIW-49：超级案例 banner 统一品牌图，封面兜底配置随案例管理一起移除。

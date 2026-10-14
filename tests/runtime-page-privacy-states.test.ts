@@ -15,9 +15,9 @@ const contract = JSON.parse(read('config/runtime-pages.json'))
 
 describe('runtime page privacy and normal unavailable states', () => {
   it('distinguishes public UUIDs from phone numbers without exempting arbitrary ID text', () => {
-    const uuid = 'abcdefab-abcd-5abc-a123-18819253403a'
+    const uuid = 'abcdefab-abcd-5abc-a123-13798316515a'
     expect(() => assertNoSensitivePageData({ catalog: { cityTags: [{ id: uuid }] } }, 'catalog', contract.sensitivePatterns)).not.toThrow()
-    for (const data of [{ id: '18819253403' }, { note: uuid }, { phoneNumber: uuid }, { id: `call ${uuid}` }]) {
+    for (const data of [{ id: '13798316515' }, { note: uuid }, { phoneNumber: uuid }, { id: `call ${uuid}` }]) {
       expect(() => assertNoSensitivePageData(data, 'catalog', contract.sensitivePatterns)).toThrow('page data contains sensitive values')
     }
   })
@@ -28,7 +28,7 @@ describe('runtime page privacy and normal unavailable states', () => {
     }, 'packages/admin/event-registrations/index', contract.sensitivePatterns)).not.toThrow()
     expect(() => assertNoSensitivePageData({
       canViewSensitiveRoster: true,
-      items: [{ id: 'registration-1', phoneNumber: '18819253403' }],
+      items: [{ id: 'registration-1', phoneNumber: '13798316515' }],
     }, 'packages/admin/event-registrations/index', contract.sensitivePatterns)).toThrow('page data contains sensitive values')
   })
 
@@ -49,11 +49,11 @@ describe('runtime page privacy and normal unavailable states', () => {
     const card = contract.routes.find((route: { path: string }) => route.path === 'packages/member/mip-card/index')
     expect(card.allowedSensitivePaths).toEqual(['phone'])
     expect(() => assertNoSensitivePageData({
-      phone: '18819253403',
-      nested: { phone: '18819253403' },
+      phone: '13798316515',
+      nested: { phone: '13798316515' },
     }, card.path, contract.sensitivePatterns, card.allowedSensitivePaths)).toThrow('page data contains sensitive values')
     expect(() => assertNoSensitivePageData({
-      phone: '18819253403',
+      phone: '13798316515',
       phoneMasked: '188****3403',
     }, card.path, contract.sensitivePatterns, card.allowedSensitivePaths)).not.toThrow()
   })

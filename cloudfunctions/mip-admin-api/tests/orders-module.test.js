@@ -122,7 +122,7 @@ function orderDetailRow(overrides = {}) {
     },
     buyer: {
       nickname: '用户', kind: 'PLAYER', accountStatus: 'ACTIVE',
-      branchName: '广州分会', cityName: '广州', phoneNumber: '18819253403',
+      branchName: '广州分会', cityName: '广州', phoneNumber: '13798316515',
       userId: 'private-user-id',
     },
     productSnapshot: {
@@ -208,7 +208,7 @@ describe('admin orders deep module', () => {
     assert.equal(repo.audits.at(-1).resourceId, 'order-a')
     assert.doesNotMatch(
       JSON.stringify(detail),
-      /private-user-id|18819253403|private-prepay-id|private-callback-key|merchantSecret|private-operator-id|private-entitlement-id/,
+      /private-user-id|13798316515|private-prepay-id|private-callback-key|merchantSecret|private-operator-id|private-entitlement-id/,
     )
 
     repo.roleBindings = [{ roleKey: 'EVENT_STAFF', scopeType: 'EVENT', scopeId: EVENT_ID }]
