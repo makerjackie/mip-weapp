@@ -519,7 +519,9 @@ function profileOpportunity(value: unknown): PublicProfileOpportunity {
   return {
     id: responseId(source.id) as PublicProfileOpportunity['id'],
     title: responseText(source.title, 120, true),
-    valueSummary: responseText(source.valueSummary, 240, true),
+    // MIW-90：MIW-89 后机会价值转选填（面谈模式 value_summary 可空），空价值文本
+    // 不得拒绝整页档案；展示回退链 `valueSummary || '面谈'` 兜底。
+    valueSummary: responseText(source.valueSummary, 240),
     targetSummary: responseText(source.targetSummary, 500, true),
     referralCount: Number(source.referralCount),
     cooperationCount: Number.isInteger(source.cooperationCount) && Number(source.cooperationCount) >= 0 ? Number(source.cooperationCount) : 0,
