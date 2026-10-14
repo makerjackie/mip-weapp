@@ -1690,6 +1690,13 @@ function canEditRegistration(event, registrationStatus, now = new Date()) {
   return event.status === 'PUBLISHED' && Number.isFinite(startsAt) && timestamp < startsAt
 }
 
+// MIW-91（DEF-02/DEF-05 裁决）：「公开给参与人」开关已从客户端删除，写路径统一默认公开（opt-out）：
+// shareProfile 缺省或 true 视为公开；仅显式 false 视为隐藏（兼容存量客户端显式上报）。
+// 容量与占座判断不看 share_profile；读回 DTO 仍返回真实列值。
+function isSharedProfilePublic(value) {
+  return value !== false
+}
+
 function registrationEditView(event, registration, now = new Date()) {
   const parsedAnswers = parseJson(registration.answers_json, {})
   const answers = parsedAnswers && typeof parsedAnswers === 'object' && !Array.isArray(parsedAnswers)
@@ -1759,7 +1766,7 @@ async function updateRegistration(db, {
         formVersion,
         expectedVersion,
         answers: submittedAnswers,
-        shareProfile: input.shareProfile === true,
+        shareProfile: isSharedProfilePublic(input.shareProfile),
       },
     })
     if (claim.replay) {
@@ -1800,7 +1807,7 @@ async function updateRegistration(db, {
        WHERE app_id = ? AND event_id = ? AND user_id = ? AND id = ? AND version = ?`,
       [
         JSON.stringify(answers),
-        input.shareProfile === true ? 1 : 0,
+        isSharedProfilePublic(input.shareProfile) ? 1 : 0,
         Number(event.form_version),
         appId,
         eventId,
@@ -1817,7 +1824,7 @@ async function updateRegistration(db, {
       version: expectedVersion + 1,
       form_version: Number(event.form_version),
       answers_json: answers,
-      share_profile: input.shareProfile === true ? 1 : 0,
+      share_profile: isSharedProfilePublic(input.shareProfile) ? 1 : 0,
     }, now)
     await writeAudit(tx, {
       appId,
@@ -1831,7 +1838,7 @@ async function updateRegistration(db, {
         fromVersion: expectedVersion,
         toVersion: expectedVersion + 1,
         formVersion: Number(event.form_version),
-        shareProfile: input.shareProfile === true,
+        shareProfile: isSharedProfilePublic(input.shareProfile),
       },
     })
     await completeIdempotency(tx, claim, { appId, userId, operation, response: result })
@@ -1899,7 +1906,7 @@ async function createRegistration(db, {
       userId,
       operation: 'event.register',
       key: input.idempotencyKey,
-      request: { eventId, formVersion, answers: submittedAnswers, shareProfile: input.shareProfile === true },
+      request: { eventId, formVersion, answers: submittedAnswers, shareProfile: isSharedProfilePublic(input.shareProfile) },
     })
     if (claim.replay && !(claim.replay.kind === 'PAYMENT_REQUIRED'
       && new Date(claim.replay.holdExpiresAt).getTime() <= now.getTime())) {
@@ -1982,7 +1989,7 @@ async function createRegistration(db, {
         `UPDATE mip_event_registrations SET answers_json = ?, form_version = ?, share_profile = ?,
            version = version + 1
          WHERE app_id = ? AND id = ? AND order_id = ? AND status = 'PAYMENT_PENDING' AND version = ?`,
-        [JSON.stringify(answers), formVersion, input.shareProfile === true ? 1 : 0,
+        [JSON.stringify(answers), formVersion, isSharedProfilePublic(input.shareProfile) ? 1 : 0,
           appId, existing.id, existing.order_id, existing.version],
       )
       if (Number(registrationUpdated?.affectedRows) !== 1) {
@@ -2059,7 +2066,7 @@ async function createRegistration(db, {
           nextStatus,
           JSON.stringify(answers),
           formVersion,
-          input.shareProfile === true ? 1 : 0,
+          isSharedProfilePublic(input.shareProfile) ? 1 : 0,
           ticketHash,
           nextStatus === 'WAITLISTED' ? now : null,
           nextStatus === 'REGISTERED' ? now : null,
@@ -2083,7 +2090,7 @@ async function createRegistration(db, {
           nextStatus,
           JSON.stringify(answers),
           formVersion,
-          input.shareProfile === true ? 1 : 0,
+          isSharedProfilePublic(input.shareProfile) ? 1 : 0,
           ticketHash,
           nextStatus === 'WAITLISTED' ? now : null,
           nextStatus === 'REGISTERED' ? now : null,
@@ -2107,7 +2114,7 @@ async function createRegistration(db, {
       action: 'EVENT_REGISTRATION_SUBMITTED',
       resourceType: 'EVENT_REGISTRATION',
       resourceId: registrationId,
-      metadata: { status: nextStatus, shareProfile: input.shareProfile === true },
+      metadata: { status: nextStatus, shareProfile: isSharedProfilePublic(input.shareProfile) },
     })
     await writeOutbox(tx, {
       appId,

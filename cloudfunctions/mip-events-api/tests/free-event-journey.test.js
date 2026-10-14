@@ -58,7 +58,7 @@ describe('free event registration journey', () => {
         eventId,
         formVersion: 1,
         answers: {},
-        shareProfile: true,
+        // MIW-91：客户端不再发送 shareProfile，缺省即公开。
         idempotencyKey: 'free-event-registration-1',
       },
       now,
@@ -82,6 +82,8 @@ describe('free event registration journey', () => {
     assert.ok(registrationWrite)
     assert.equal(registrationWrite.params[4], null)
     assert.equal(registrationWrite.params[5], 'REGISTERED')
+    // MIW-91：缺省 shareProfile 落 share_profile=1（默认公开，公开名单/头像墙可计入）。
+    assert.equal(registrationWrite.params[8], 1)
     assert.equal(typeof registrationWrite.params[9], 'string')
     assert.equal(registrationWrite.params[9].length, 64)
     assert.equal(fixture.calls.some(call => call.sql.includes('INSERT INTO mip_orders')), false)
@@ -90,5 +92,30 @@ describe('free event registration journey', () => {
     assert.equal(attribution.params[4], 'PLATFORM')
     const outbox = fixture.calls.find(call => call.sql.includes('INSERT INTO mip_outbox_events'))
     assert.equal(outbox.params[4], 'event.registration_confirmed')
+  })
+
+  it('keeps a registration hidden only when a legacy client explicitly reports shareProfile false', async () => {
+    const fixture = freeEventDatabase()
+    await createRegistration(fixture.database, {
+      appId,
+      userId,
+      input: {
+        eventId,
+        formVersion: 1,
+        answers: {},
+        shareProfile: false,
+        idempotencyKey: 'free-event-registration-hidden-1',
+      },
+      now,
+      resolveUserKind: async () => 'GUEST',
+      participationAccessPolicy: {
+        async requireAccess(queryable) {
+          return { id: userId, queryable }
+        },
+      },
+    })
+    const registrationWrite = fixture.calls.find(call => call.sql.includes('INSERT INTO mip_event_registrations'))
+    assert.ok(registrationWrite)
+    assert.equal(registrationWrite.params[8], 0)
   })
 })
