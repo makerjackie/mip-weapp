@@ -31,6 +31,9 @@ cloudfunctions/*/node_modules/
 # env files and private DevTools config
 .env
 .env*.local
+# per-target local secrets under envs/ never enter Git; templates stay tracked
+envs/*/.env.local
+envs/*/.env.secrets.local
 project.private.config.json
 .devtools/
 
