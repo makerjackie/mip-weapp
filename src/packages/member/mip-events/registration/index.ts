@@ -8,7 +8,8 @@ import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-id
 import { requestEntrySubscription } from '../../../../modules/mip-messaging/entry-subscription'
 import { GUIDE_EVENT_REGISTER_KEY } from '../../../../modules/mip-messaging/guide-policy'
 import { showErrorFeedback } from '../../../../platform/feedback/client'
-import { caseNavigateTo } from '../../../../platform/navigation/client'
+import { caseNavigateTo, caseRedirectTo } from '../../../../platform/navigation/client'
+import { canNavigateBack } from '../../../../platform/navigation/leave'
 import { clearPageMedia, updatePageMedia } from '../../../../platform/storage/component-media'
 import { formatChineseDateTime, formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
 
@@ -453,6 +454,22 @@ Page({
           try {
             const payment = await mipCommerceModule.payOrder(result.orderId)
             if (payment.kind === 'CONFIRMED') {
+              // MIW-106（客户口径 2026-10-14）：报名支付成功直接 toast「支付成功」并返回
+              // 活动详情页（onShow 缓存已被 register() 失效，回页即呈现已报名态），不再停在
+              // 结果态等手动返回。签到续办流除外：结果态「继续签到」是唯一动线，自动返回会
+              // 迫使用户重新扫码。state 先置 submitted，避免 finally 的 persistDraft 把已完成
+              // 的报名回写成草稿。
+              if (!this.data.resumeCheckIn) {
+                this.setData({
+                  state: 'submitted',
+                  resultTitle: '支付成功',
+                  resultDescription: '支付已确认，活动报名资格已生效。',
+                  orderId: result.orderId,
+                })
+                wx.showToast({ title: '支付成功', icon: 'success' })
+                this.returnToEventDetail()
+                return
+              }
               const registrationReady = await this.registrationReadyForCheckIn()
               resultTitle = registrationReady ? '报名成功' : '支付已确认'
               resultDescription = registrationReady
@@ -667,6 +684,15 @@ Page({
     caseNavigateTo({
       url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}&resumeCheckIn=1`,
     })
+  },
+
+  /** MIW-106：支付成功返回活动详情页；分享直达报名页（无返回栈）时落地到详情页。 */
+  returnToEventDetail() {
+    if (canNavigateBack()) {
+      wx.navigateBack()
+      return
+    }
+    caseRedirectTo({ url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(this.data.eventId)}` })
   },
 
   openMine() {

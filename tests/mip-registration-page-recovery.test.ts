@@ -11,6 +11,9 @@ const mocks = vi.hoisted(() => ({
   saveDraft: vi.fn(),
   removeDraft: vi.fn(),
   scroll: vi.fn(),
+  toast: vi.fn(),
+  navigateBack: vi.fn(),
+  redirectTo: vi.fn(),
 }))
 vi.mock('../src/modules/mip-events/client', () => ({
   mipEventsModule: { getEvent: mocks.getEvent, getMyRegistration: mocks.getMyRegistration, register: mocks.register },
@@ -24,10 +27,14 @@ vi.mock('../src/modules/mip-identity/client', () => ({
   mipBranchesModule: {},
 }))
 vi.mock('../src/platform/feedback/client', () => ({ showErrorFeedback: vi.fn() }))
-vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn() }))
+vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn(), caseRedirectTo: mocks.redirectTo }))
 vi.mock('../src/platform/storage/component-media', () => ({ updatePageMedia: vi.fn(), clearPageMedia: vi.fn() }))
 
 let definition: Record<string, any>
+// MIW-106 review：页面栈用可变量注入而不是测试内 vi.stubGlobal 覆盖——后者会
+// 永久替换同文件后续用例的栈，无栈兜底用例之后的用例再依赖双页栈会静默踩错。
+const registrationStack = () => [{ route: 'packages/member/mip-events/registration/index' }, { route: 'packages/member/mip-events/detail/index' }]
+let currentPages = registrationStack()
 function page() {
   const instance = Object.create(definition)
   instance.data = structuredClone(definition.data)
@@ -43,11 +50,13 @@ beforeAll(async () => {
   vi.stubGlobal('Page', (value: Record<string, any>) => {
     definition = value
   })
-  vi.stubGlobal('wx', { pageScrollTo: mocks.scroll, setNavigationBarTitle: vi.fn() })
+  vi.stubGlobal('wx', { pageScrollTo: mocks.scroll, setNavigationBarTitle: vi.fn(), showToast: mocks.toast, navigateBack: mocks.navigateBack })
+  vi.stubGlobal('getCurrentPages', () => currentPages)
   await import('../src/packages/member/mip-events/registration/index')
 })
 beforeEach(() => {
   vi.clearAllMocks()
+  currentPages = registrationStack()
   mocks.getEvent.mockResolvedValue(event)
   mocks.getMyRegistration.mockResolvedValue(null)
   mocks.loadSnapshot.mockResolvedValue({ userId: 'u1', profile: { nickname: '新昵称' }, phoneBound: true })
@@ -169,6 +178,69 @@ describe('registration page recovery', () => {
     expect(instance.data.resultDescription).toContain('支付结果正在确认')
     expect(instance.data.resultDescription).not.toContain('订单尚未支付')
     expect(instance.data.canContinueCheckIn).toBe(false)
+  })
+  it('returns to the event detail with a paid toast after a confirmed payment (MIW-106)', async () => {
+    const instance = page()
+    instance.data.eventId = 'e1'
+    await instance.loadEvent()
+    instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '参加交流' } })
+    const draftsAfterFill = mocks.saveDraft.mock.calls.length
+    const registrationsAfterLoad = mocks.getMyRegistration.mock.calls.length
+    mocks.register.mockResolvedValue({
+      kind: 'PAYMENT_REQUIRED',
+      status: 'PAYMENT_PENDING',
+      registrationId: 'r1',
+      orderId: 'o1',
+      amountCents: 100,
+      currency: 'CNY',
+      holdExpiresAt: '2026-10-01T00:00:00.000Z',
+      paymentAvailable: true,
+    })
+    mocks.payOrder.mockResolvedValue({ kind: 'CONFIRMED', order: { id: 'o1', status: 'PAID' } })
+
+    await instance.submit()
+
+    expect(mocks.toast).toHaveBeenCalledWith({ title: '支付成功', icon: 'success' })
+    expect(mocks.navigateBack).toHaveBeenCalledTimes(1)
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    // 早退不重查报名资格；state 已置 submitted，finally 的 persistDraft 不回写已完成报名的草稿。
+    expect(mocks.getMyRegistration.mock.calls.length).toBe(registrationsAfterLoad)
+    expect(mocks.saveDraft.mock.calls.length).toBe(draftsAfterFill)
+  })
+  it('keeps the check-in resume result view instead of auto-returning (MIW-106)', async () => {
+    const instance = page()
+    instance.data.eventId = 'e1'
+    instance.data.resumeCheckIn = true
+    await instance.loadEvent()
+    instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '参加交流' } })
+    mocks.getMyRegistration.mockResolvedValue({ status: 'REGISTERED' })
+    mocks.register.mockResolvedValue({
+      kind: 'PAYMENT_REQUIRED',
+      status: 'PAYMENT_PENDING',
+      registrationId: 'r1',
+      orderId: 'o1',
+      amountCents: 100,
+      currency: 'CNY',
+      holdExpiresAt: '2026-10-01T00:00:00.000Z',
+      paymentAvailable: true,
+    })
+    mocks.payOrder.mockResolvedValue({ kind: 'CONFIRMED', order: { id: 'o1', status: 'PAID' } })
+
+    await instance.submit()
+
+    expect(mocks.toast).not.toHaveBeenCalled()
+    expect(mocks.navigateBack).not.toHaveBeenCalled()
+    expect(instance.data.state).toBe('submitted')
+    expect(instance.data.resultTitle).toBe('报名成功')
+    expect(instance.data.canContinueCheckIn).toBe(true)
+  })
+  it('falls back to the detail page when there is no stack to pop', async () => {
+    currentPages = [{ route: 'packages/member/mip-events/registration/index' }]
+    const instance = page()
+    instance.data.eventId = 'e1'
+    instance.returnToEventDetail()
+    expect(mocks.navigateBack).not.toHaveBeenCalled()
+    expect(mocks.redirectTo).toHaveBeenCalledWith({ url: '/packages/member/mip-events/detail/index?eventId=e1' })
   })
   it('blocks retry after the event closes', async () => {
     mocks.getEvent.mockResolvedValue({ ...event, canRegister: false })
