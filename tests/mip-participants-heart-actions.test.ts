@@ -6,7 +6,8 @@ import { MipEventsError } from '../src/modules/mip-events'
 // participants 页（J2-02 卡片右上角心形）上。MIW-101：交互契约升级为「乐观先行」——
 // 点按即本地翻转红心（目标/徽标/toast 即时），服务端同步由单飞 worker 串行消化，
 // 失败回滚到最后一次服务端事实；覆盖 restricted/error/loading/无凭证/乐观先行/
-// 在途合并/改选取消/CONFLICT 回刷/身份受限/失败回滚十类交互事实。
+// 在途合并/换投计数守恒/乱序旧快照丢弃/改选取消/CONFLICT 回刷/身份受限/失败回滚
+// 十二类交互事实。
 
 const eventsModule = vi.hoisted(() => ({
   listHeartCandidates: vi.fn(),
@@ -215,6 +216,66 @@ describe('MIP participants heart actions', () => {
     expect(eventsModule.setHeart).toHaveBeenLastCalledWith(EVENT_ID, 'ticket-bob', 4)
     expect((page.data.heart as HeartState).target?.profileRef).toBe('profile.bob')
     expect((page.data.heart as HeartState).version).toBe(5)
+  })
+
+  it('keeps the badge steady when switching the optimistic target', async () => {
+    // 已投 alice（服务端计数 1）再换投 bob：仍是一票，乐观徽标不得闪成 2。
+    const alice = candidate('alice')
+    const bob = candidate('bob')
+    eventsModule.setHeart.mockResolvedValue({
+      ...heart(4, { ...bob, participantRef: 'ticket-bob' }),
+      counts: { myInterestCount: 1, receivedInterestCount: 2 },
+    })
+    const { page, call } = mount({
+      heartState: 'ready',
+      eventId: EVENT_ID,
+      heart: { ...heart(3, alice), counts: { myInterestCount: 1, receivedInterestCount: 2 } },
+      candidates: [alice, bob],
+      items: [],
+      displayItems: [
+        { profileRef: 'profile.alice', heartTicket: 'alice' },
+        { profileRef: 'profile.bob', heartTicket: 'ticket-bob' },
+      ],
+    })
+
+    await call('toggleHeartVote', heartTap('profile.bob'))
+
+    expect((page.data.heart as HeartState).target?.profileRef).toBe('profile.bob')
+    expect(page.data.heartMineCount).toBe(1)
+    expect(eventsModule.setHeart).toHaveBeenCalledWith(EVENT_ID, 'ticket-bob', 3)
+  })
+
+  it('drops a stale heart snapshot that lands after a newer server fact', async () => {
+    // 在途写回包（v4，投票后事实）先落地，并发读回包（v3，写提交前快照）后到：
+    // 旧快照被丢弃，红心与版本不被读回退（MIW-101「数据同步」问题）。
+    let resolveWrite!: (value: HeartState) => void
+    let resolveLoad!: (value: HeartState) => void
+    eventsModule.setHeart.mockImplementationOnce(() => new Promise<HeartState>((resolve) => {
+      resolveWrite = resolve
+    }))
+    eventsModule.getHeart.mockImplementationOnce(() => new Promise<HeartState>((resolve) => {
+      resolveLoad = resolve
+    }))
+    eventsModule.listHeartCandidates.mockResolvedValue([candidate('p1')])
+    const { page, call } = mount({
+      heartState: 'ready',
+      eventId: EVENT_ID,
+      heart: heart(3),
+      candidates: [candidate('p1')],
+      items: [],
+      displayItems: [{ profileRef: 'profile.p1', heartTicket: 'ticket-p1' }],
+    })
+
+    const vote = call('toggleHeartVote', heartTap('profile.p1'))
+    const load = call('loadHeartState')
+    resolveWrite({ ...heart(4, candidate('p1')), counts: { myInterestCount: 1, receivedInterestCount: 0 } })
+    await vote
+    resolveLoad(heart(3))
+    await load
+
+    expect((page.data.heart as HeartState).version).toBe(4)
+    expect((page.data.heart as HeartState).target?.profileRef).toBe('profile.p1')
+    expect(page.data.heartState).toBe('ready')
   })
 
   it('votes with the heart ticket and applies the server-authoritative state', async () => {

@@ -343,6 +343,12 @@ Page({
     if (requestSeq !== undefined && requestSeq !== this.heartRequestSeq) {
       return
     }
+    // MIW-101：服务端 version 随每次心动写入单调 +1（event-service setHeart），低版本必是
+    // 旧快照。在途写回包（较新事实）可能先于并发读回包（旧快照，如下拉刷新恰逢投票）
+    // 到达——丢弃旧快照，防止红心凭空消失、回滚基准（lastServerHeart）倒退。
+    if (this.lastServerHeart && heart.version < this.lastServerHeart.version) {
+      return
+    }
     // MIW-101：记录最后一次服务端事实，作为乐观更新失败的回滚基准。
     this.lastServerHeart = heart
     const patch: Record<string, unknown> = {
@@ -500,7 +506,9 @@ Page({
     if (!candidate) {
       return
     }
-    // 乐观先行：目标红心立即变色弹跳、「我的心动」徽标 ±1、toast 即时。
+    // 乐观先行：目标红心立即变色弹跳、「我的心动」徽标即时到位、toast 即时。
+    // 徽标增量 = 新意图票数 − 原服务端票数：换投（A→B）仍是一票不加不减，仅新投/取消 ±1，
+    // 否则换投瞬间徽标闪成 2、服务端事实到达又弹回 1。
     const prevHeart = this.data.heart
     const nextTarget = voted ? undefined : { ...candidate, selected: true }
     this.applyOptimisticHeart({
@@ -508,7 +516,12 @@ Page({
       ...(nextTarget ? { target: nextTarget } : {}),
       received: prevHeart?.received || [],
       counts: prevHeart?.counts
-        ? { ...prevHeart.counts, myInterestCount: Math.max(0, prevHeart.counts.myInterestCount + (voted ? -1 : 1)) }
+        ? {
+            ...prevHeart.counts,
+            myInterestCount: Math.max(0, prevHeart.counts.myInterestCount
+            + (nextTarget ? 1 : 0)
+            - (prevHeart.target ? 1 : 0)),
+          }
         : undefined,
       version: prevHeart?.version || 0,
       updatedAt: prevHeart?.updatedAt,
