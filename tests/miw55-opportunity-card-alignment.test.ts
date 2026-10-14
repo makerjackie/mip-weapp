@@ -135,6 +135,56 @@ describe('MIW-55 opportunity card alignment', () => {
     expect(() => parsePublicProfileAggregate({ ...base, opportunities: [], referrals: [{ id: 'broken' }] })).toThrow()
   })
 
+  it('parses negotiation-only opportunities without valueSummary as empty (MIW-90)', () => {
+    const base = {
+      profile: {
+        profileRef: 'p1.abcdef123456',
+        nickname: '大鹅飞飞',
+        isSelf: false,
+        userKind: 'PLAYER',
+        joinedAt: '2026-01-01T00:00:00.000Z',
+      },
+      cooperationCards: [],
+      superCases: [],
+      interestActive: false,
+    }
+    const negotiationOnly = {
+      id: '60000000-0000-4000-8000-000000000003',
+      title: '面谈机会',
+      targetSummary: '面谈后确定合作金额',
+      referralCount: 2,
+      status: 'PUBLISHED',
+      publishedAt: '2026-01-06T13:00:00.000Z',
+    }
+
+    // PPVS-01：MIW-89 后价值金额转选填（面谈模式 value_summary 可空），发布与引荐
+    // 两条聚合路径遇到空/缺失价值文本都不再拒绝整页档案，解析为 ''。
+    const aggregate = parsePublicProfileAggregate({
+      ...base,
+      opportunities: [{ ...negotiationOnly, valueSummary: null }],
+      referrals: [negotiationOnly],
+    })
+    expect(aggregate.opportunities[0]).toMatchObject({ title: '面谈机会', valueSummary: '' })
+    expect(aggregate.referrals[0]).toMatchObject({ id: negotiationOnly.id, valueSummary: '' })
+
+    // PPVS-02 回归：带价值文本（RANGE/单值）的机会回读不受影响。
+    expect(parsePublicProfileAggregate({
+      ...base,
+      opportunities: [{ ...negotiationOnly, valueSummary: '1.5万起' }],
+      referrals: [],
+    }).opportunities[0].valueSummary).toBe('1.5万起')
+
+    // 真必填语义只对 title 保留，不随本次放开。
+    expect(() => parsePublicProfileAggregate({
+      ...base,
+      opportunities: [{ ...negotiationOnly, title: '' }],
+    })).toThrow()
+
+    // 展示回退链不变：发布/引荐两处卡片都由 `valueSummary || '面谈'` 兜底空串。
+    const profilePage = source('src/packages/member/mip-public-profile/index.wxml')
+    expect(profilePage.match(/value-text="\{\{item\.valueSummary \|\| '面谈'\}\}"/g)).toHaveLength(2)
+  })
+
   it('selects type keys and returns avatars from the public profile aggregate', () => {
     const discoveryDomain = source('cloudfunctions/mip-opportunities-api/domain/discovery.js')
     expect(discoveryDomain).toContain('o.type_keys_json')

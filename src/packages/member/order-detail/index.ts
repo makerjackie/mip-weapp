@@ -329,7 +329,7 @@ Page({
             eventId: order.resourceId as EventId,
             formVersion: registration.formVersion,
             answers: registration.answers,
-            shareProfile: registration.shareProfile,
+            // MIW-91：不再回传 shareProfile，服务端写路径默认公开（opt-out）。
             idempotencyKey: createIntentKey('event-payment-resume'),
           })
           if (renewed.kind !== 'PAYMENT_REQUIRED' || renewed.orderId !== order.id) {

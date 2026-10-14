@@ -55,7 +55,8 @@ describe('received interactions failure recovery', () => {
     mocks.list.mockResolvedValueOnce(parseReceivedVisitors({ items: [{ profileRef: 'public-ref', nickname: '访客甲', visitCount: 3, lastVisitedAt: '2026-09-12T03:00:00Z', unread: true }], unreadCount: 1, totalViewCount: 3 }))
     await p.loadCategory('VISITOR', true)
     expect(p.data.state).toBe('ready')
-    expect(p.data.items).toEqual([expect.objectContaining({ actorName: '访客甲', messageId: 'public-ref', unread: false, detailText: '访问了你的公开档案 3 次' })])
+    // MIW-95（DEF-12）：访问次数文案 detailText 死分支断言已删，只 pin 现役字段。
+    expect(p.data.items).toEqual([expect.objectContaining({ actorName: '访客甲', messageId: 'public-ref', unread: false })])
     expect(p.data.totalViewCount).toBe(3)
   })
 

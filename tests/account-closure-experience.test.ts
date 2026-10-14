@@ -10,31 +10,28 @@ function read(relativePath: string) {
 }
 
 describe('account closure experience', () => {
-  it('provides loading, failure, typed confirmation, processing, and success states', () => {
+  it('hides the closure entry and dialog while keeping the closed-account tombstone (MIW-93, DEF-07)', () => {
     const page = read('src/packages/member/privacy/index.ts')
     const template = read('src/packages/member/privacy/index.wxml')
+    const config = JSON.parse(read('src/packages/member/privacy/index.json'))
 
-    expect(page).toContain('state: \'loading\'')
-    expect(page).toContain('closureState: \'idle\'')
-    expect(page).toContain('closureState: \'processing\'')
-    expect(page).toContain('closureState: \'failed\'')
-    expect(page).toContain('state: \'success\'')
-    expect(page).toContain('state: \'processing\'')
-    expect(page).toContain('? \'blocked\'')
-    expect(page).toContain('? \'conflict\'')
-    expect(page).toContain('error.code === \'ACCOUNT_CLOSURE_PENDING_SETTLEMENT\'')
-    expect(page).toContain('wx.showModal')
-    expect(page).toContain('createAccountClosureRequestTracker')
-    expect(page).toContain('idempotencyKey: this.accountClosureRequest().current()')
-    expect(page).toContain('closureRequest: null as ReturnType<typeof createAccountClosureRequestTracker> | null')
-    expect(template).toContain('输入“{{requiredConfirmationPhrase}}”')
+    // 注销入口本轮下线：设置页不渲染注销按钮与确认弹层，页面处理器不留死代码。
+    expect(template).not.toContain('注销账号')
+    expect(template).not.toContain('startAccountClosure')
+    expect(template).not.toContain('<t-dialog')
+    expect(page).not.toContain('closeAccount')
+    expect(page).not.toContain('closureState')
+    expect(page).not.toContain('confirmationPhrase')
+    expect(page).not.toContain('accountClosureConfirmationPhrase')
+    expect(page).not.toContain('createAccountClosureRequestTracker')
+    expect(config.usingComponents['t-dialog']).toBeUndefined()
+    expect(read('src/packages/member/privacy/index.json')).not.toContain('tdesign-miniprogram/dialog')
+    // 服务端 account-closure 能力保留（支持/应急场景）：被服务端关闭的账号打开设置页仍呈现墓碑。
+    expect(page).toContain('userStatus === \'CLOSED\'')
     expect(template).toContain('账号已注销')
-    expect(template).toContain('订单、支付、退款、活动和审计记录按规则保留')
-    expect(template).toContain('loading: closureState === \'processing\'')
-    expect(template).toContain('<t-dialog')
-    expect(template).toContain('bind:close="cancelAccountClosure"')
-    expect(template).not.toContain('id="privacy-closure-processing"')
-    expect(page.slice(page.indexOf('async submitAccountClosure()'))).not.toContain('wx.showModal')
+    expect(template).toContain('订单、支付、退款、活动记录和审计记录按规则保留')
+    // 退出登录流保持原行为（确认弹窗，非注销）。
+    expect(page).toContain('wx.showModal')
   })
 
   it('presents account actions as settings instead of data-category explanations', () => {
@@ -74,10 +71,10 @@ describe('account closure experience', () => {
     }
   })
 
-  it('keeps closure behind the MIP identity API and does not call legacy membership functions', () => {
+  it('keeps the server closure capability behind the MIP identity API and off the settings page', () => {
     const page = read('src/packages/member/privacy/index.ts')
     const gateway = read('src/modules/mip-identity/gateway.ts')
-    expect(page).toContain('mipIdentityModule.closeAccount')
+    expect(page).not.toContain('closeAccount')
     expect(gateway).toContain('call(transport, \'closeAccount\', input)')
     expect(gateway).toContain('contractVersion: MIP_IDENTITY_CONTRACT_VERSION')
     expect(`${page}\n${gateway}`).not.toMatch(/membership-(?:api|admin|payment)/)

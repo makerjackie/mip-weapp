@@ -68,7 +68,6 @@ describe('registration page recovery', () => {
     const second = instance.submit()
     expect(instance.data.busy).toBe(true)
     instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '提交时更改' } })
-    instance.onShareProfileChange({ detail: { value: true } })
     expect(instance.data.fields[0].value).toBe('参加交流')
     expect(instance.submissionIdempotencyKey).not.toBe('')
     resolveInvitation()
@@ -78,8 +77,9 @@ describe('registration page recovery', () => {
       eventId: 'e1',
       formVersion: 2,
       answers: { reason: '参加交流', choice: '' },
-      shareProfile: false,
     }))
+    // MIW-91：提交 payload 不再包含 shareProfile（开关已下线，服务端默认公开）。
+    expect(mocks.register.mock.calls[0][0]).not.toHaveProperty('shareProfile')
     expect(instance.data.state).toBe('submitted')
     expect(instance.data.resultTitle).toBe('报名成功')
     expect(instance.data.busy).toBe(false)
@@ -104,25 +104,23 @@ describe('registration page recovery', () => {
   it('refreshes a first-registration schema conflict while preserving compatible answers', async () => {
     const instance = page()
     instance.data.eventId = 'e1'
-    await instance.recoverUpdateConflict({ reason: '保留内容', choice: '已删除选项' }, true)
+    await instance.recoverUpdateConflict({ reason: '保留内容', choice: '已删除选项' })
     expect(instance.data.state).toBe('ready')
     expect(instance.data.editing).toBe(false)
     expect(instance.data.event.formVersion).toBe(2)
     expect(instance.data.fields[0].value).toBe('保留内容')
     expect(instance.data.fields[1].value).toBe('')
     expect(instance.data.fields[1].selectedIndex).toBe(-1)
-    expect(instance.data.shareProfile).toBe(true)
   })
   it('opens pending-payment forms even though new registrations are disabled', async () => {
     mocks.getEvent.mockResolvedValue({ ...event, canRegister: false })
-    mocks.getMyRegistration.mockResolvedValue({ status: 'PAYMENT_PENDING', version: 4, formVersion: 1, answers: { reason: '原内容' }, shareProfile: true, canEdit: false })
+    mocks.getMyRegistration.mockResolvedValue({ status: 'PAYMENT_PENDING', version: 4, formVersion: 1, answers: { reason: '原内容' }, canEdit: false })
     const instance = page()
     instance.data.eventId = 'e1'
     await instance.loadEvent()
     expect(instance.data.state).toBe('ready')
     expect(instance.data.editing).toBe(false)
     expect(instance.data.fields[0].value).toBe('原内容')
-    expect(instance.data.shareProfile).toBe(true)
   })
   it('shows an explicit unpaid state when payment is cancelled', async () => {
     const instance = page()

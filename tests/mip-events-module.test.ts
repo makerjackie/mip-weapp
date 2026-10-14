@@ -70,7 +70,6 @@ function createGateway() {
       version: input.expectedVersion + 1,
       formVersion: input.formVersion,
       answers: input.answers,
-      shareProfile: input.shareProfile,
       canEdit: true,
     })),
     cancelRegistration: vi.fn(async () => ({
@@ -250,16 +249,16 @@ describe('MIP events client module', () => {
       eventId,
       formVersion: 1,
       answers: { role: '参与者' },
-      shareProfile: false,
     })
     expect(result).toMatchObject({ kind: 'PAYMENT_REQUIRED', status: 'PAYMENT_PENDING' })
     expect(gateway.register).toHaveBeenCalledWith(expect.objectContaining({
       eventId,
       formVersion: 1,
       answers: { role: '参与者' },
-      shareProfile: false,
       idempotencyKey: expect.stringMatching(/^event-registration-/),
     }))
+    // MIW-91：提交 payload 不再包含 shareProfile，公开与否由服务端默认公开语义决定。
+    expect(gateway.register.mock.calls[0][0]).not.toHaveProperty('shareProfile')
     expect(gateway.register.mock.calls[0][0]).not.toHaveProperty('amountCents')
   })
 
@@ -316,7 +315,6 @@ describe('MIP events client module', () => {
       version: 4,
       formVersion: 1,
       answers: { role: '嘉宾' },
-      shareProfile: false,
       canEdit: true,
     })
     const module = createMipEventsModule(gateway)
@@ -326,7 +324,6 @@ describe('MIP events client module', () => {
       formVersion: 2,
       expectedVersion: 4,
       answers: { role: '玩家' },
-      shareProfile: true,
     })).resolves.toMatchObject({ version: 5, formVersion: 2 })
     expect(gateway.updateRegistration).toHaveBeenCalledWith(expect.objectContaining({
       eventId,
@@ -334,6 +331,7 @@ describe('MIP events client module', () => {
       expectedVersion: 4,
       idempotencyKey: expect.stringMatching(/^event-registration-update-/),
     }))
+    expect(gateway.updateRegistration.mock.calls[0][0]).not.toHaveProperty('shareProfile')
   })
 
   it('validates feedback locally while leaving attendance authorization to the server', async () => {

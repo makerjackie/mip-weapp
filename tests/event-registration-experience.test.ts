@@ -36,12 +36,14 @@ describe('event registration experience', () => {
     expect(registration).not.toMatch(/amountCents\s*:/)
   })
 
-  it('keeps registration task-focused and makes public profile sharing explicit opt-in', () => {
+  it('keeps registration task-focused without the removed share-profile switch', () => {
     const registration = read('src/packages/member/mip-events/registration/index.ts')
     const registrationView = read('src/packages/member/mip-events/registration/index.wxml')
 
-    expect(registration).toContain('shareProfile: false')
-    expect(registration).toContain('shareProfile: this.data.shareProfile')
+    // MIW-91（DEF-02/DEF-05）：「公开给参与人」开关已整体下线——页面不再持有
+    // shareProfile 状态、处理器、payload 与草稿字段；服务端写路径默认公开（opt-out）。
+    expect(registration).not.toContain('shareProfile')
+    expect(registrationView).not.toContain('shareProfile')
     expect(registrationView).toContain('wx:for="{{fields}}"')
     expect(registrationView).toContain('event.coverUrl')
     expect(registrationView).not.toContain('event.address')
@@ -71,7 +73,6 @@ describe('event registration experience', () => {
     expect(registration).toContain(': -1')
     expect(registration).toContain('mipEventsModule.getMyRegistration(this.data.eventId)')
     expect(registration).toContain('fieldsFromAnswers(event, editing || resumingPayment ? registration?.answers : undefined)')
-    expect(registration).toContain('shareProfile: editing || resumingPayment ? registration?.shareProfile === true : false')
     expect(registrationView).toContain('{{editing ? \'修改报名信息\' : \'报名信息\'}}')
     expect(registration).toContain('payLabel: editing ? \'保存修改\' : event.accessType === \'PAID\' ? \'立即支付\' : \'提交报名\'')
     expect(registrationView).toContain('{{item.selectedLabel}}')
@@ -86,7 +87,7 @@ describe('event registration experience', () => {
     expect(registration).toContain('mipEventsModule.updateRegistration')
     expect(registration).toContain('expectedVersion: registration.version')
     expect(registration).toContain('idempotencyKey: this.submissionIdempotencyKey')
-    expect(registration).toContain('recoverUpdateConflict(answers, this.data.shareProfile)')
+    expect(registration).toContain('recoverUpdateConflict(answers)')
     expect(registration).toContain('{ ...(registration?.answers || {}), ...draftAnswers }')
     expect(registration).toContain('当前填写内容已保留，请确认后重新保存')
     // figma 3591_36185 我的活动：卡片上没有修改报名入口，编辑只从活动详情页进入。

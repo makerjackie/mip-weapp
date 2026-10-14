@@ -94,7 +94,7 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
 
   return {
     sections: [
-      ...(canReadOpportunities && (!selected || selected === 'opportunities') ? [{ title: '机会', error: record(opportunityPayload).loadError as string | undefined, rows: opportunityRows, columns: columns([['title', '标题'], ['owner', '发布人'], ['value', '价值（万元）'], ['valueSummary', '价值说明'], ['location', '城市与服务器'], ['publishedAt', '发布时间'], ['target', '目标'], ['roles', '合作角色'], ['referrals', '引荐数'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) }] : []),
+      ...(canReadOpportunities && (!selected || selected === 'opportunities') ? [{ title: '机会', error: record(opportunityPayload).loadError as string | undefined, rows: opportunityRows, columns: columns([['title', '标题'], ['owner', '发布人'], ['value', '价值'], ['valueSummary', '价值说明'], ['location', '城市与服务器'], ['publishedAt', '发布时间'], ['target', '目标'], ['roles', '合作角色'], ['referrals', '引荐数'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) }] : []),
       ...(canReadContent && (!selected || selected === 'content') ? [{ title: '用户内容', error: record(contentPayload).loadError as string | undefined, rows: contentRows, columns: columns([['title', '标题'], ['kind', '内容类型'], ['owner', '发布人'], ['location', '城市与服务器'], ['summary', '摘要'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) }] : []),
       ...(!selected || selected === 'matching' ? [{ title: '撮合设置', rows: settings.scopeKey ? [{
         scope: scopeLabel(settings.scopeType),

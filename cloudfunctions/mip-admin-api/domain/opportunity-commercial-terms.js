@@ -64,6 +64,29 @@ function display(min, max, valueMode = 'RANGE') {
   return `${money(min)} - ${money(max)}`
 }
 
+// MIW-94（DEF-11）：导出「价值模式 / 价值展示」两列与 admin-web 列表同口径——
+// SINGLE/NEGOTIATION 复用上方 display（「X 千」/「面谈」），RANGE 沿用列表的万元区间口径（≤/≥/～）。
+const VALUE_MODE_LABELS = new Map([['RANGE', '区间'], ['SINGLE', '单值（千）'], ['NEGOTIATION', '面谈']])
+
+function valueModeLabel(valueMode) {
+  return VALUE_MODE_LABELS.get(normalizeValueMode(valueMode))
+}
+
+function valueDisplay(minAmountCents, maxAmountCents, valueMode = 'RANGE') {
+  const mode = normalizeValueMode(valueMode)
+  if (mode !== 'RANGE') return display(minAmountCents, maxAmountCents, mode)
+  const wan = value => Number.isSafeInteger(Number(value))
+    ? (Number(value) / 1000000).toLocaleString('zh-CN', { maximumFractionDigits: 6 })
+    : '不限'
+  const min = minAmountCents == null ? null : Number(minAmountCents)
+  const max = maxAmountCents == null ? null : Number(maxAmountCents)
+  if (min === null && max === null) return '—'
+  if (min === null) return `≤ ${wan(max)}`
+  if (max === null) return `≥ ${wan(min)}`
+  if (min === max) return wan(min)
+  return `${wan(min)} ～ ${wan(max)}`
+}
+
 function dto(term, locations) {
   const locationDto = locations.map(location => location.location_type === 'CITY'
     ? { type: 'CITY', cityTagId: location.city_tag_id, cityName: location.city_name || '' }
@@ -170,4 +193,4 @@ async function sync(tx, appId, opportunityId, terms, version) {
   }
 }
 
-module.exports = { dto, load, loadMany, normalizeCommercialTerms, sync }
+module.exports = { dto, load, loadMany, normalizeCommercialTerms, sync, valueDisplay, valueModeLabel }

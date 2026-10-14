@@ -19,7 +19,7 @@ beforeAll(async () => {
 })
 beforeEach(() => {
   vi.clearAllMocks()
-  mocks.getMyRegistration.mockResolvedValue({ status: 'PAYMENT_PENDING', orderId: 'o1', formVersion: 2, answers: { reason: '原内容' }, shareProfile: false })
+  mocks.getMyRegistration.mockResolvedValue({ status: 'PAYMENT_PENDING', orderId: 'o1', formVersion: 2, answers: { reason: '原内容' } })
   mocks.register.mockResolvedValue({ kind: 'PAYMENT_REQUIRED', orderId: 'o1' })
   mocks.payOrder.mockResolvedValue({ kind: 'CANCELLED' })
 })
@@ -32,7 +32,9 @@ function page() {
 describe('event order payment resumption', () => {
   it('renews the existing registration before paying its order', async () => {
     await page().performPayment()
-    expect(mocks.register).toHaveBeenCalledWith(expect.objectContaining({ eventId: 'e1', formVersion: 2, answers: { reason: '原内容' }, shareProfile: false }))
+    expect(mocks.register).toHaveBeenCalledWith(expect.objectContaining({ eventId: 'e1', formVersion: 2, answers: { reason: '原内容' } }))
+    // MIW-91：续支付重建不再回传 shareProfile，服务端默认公开。
+    expect(mocks.register.mock.calls[0][0]).not.toHaveProperty('shareProfile')
     expect(mocks.register.mock.invocationCallOrder[0]).toBeLessThan(mocks.payOrder.mock.invocationCallOrder[0]!)
     expect(mocks.payOrder).toHaveBeenCalledWith('o1')
   })

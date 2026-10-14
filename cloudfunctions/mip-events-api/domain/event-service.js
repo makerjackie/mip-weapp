@@ -1435,26 +1435,8 @@ async function listPublicParticipants(db, {
   }
 
   const blockFilter = mutualBlockFilter(userId, 'r.user_id', 'r.app_id')
-  const heartRelationSelect = userId
-    ? `,
-       CASE
-         WHEN viewer_sent_heart.id IS NOT NULL AND participant_sent_heart.id IS NOT NULL THEN 'MUTUAL'
-         WHEN viewer_sent_heart.id IS NOT NULL THEN 'SENT'
-         WHEN participant_sent_heart.id IS NOT NULL THEN 'RECEIVED'
-         ELSE NULL
-       END AS heart_relation`
-    : ''
-  const heartRelationJoins = userId
-    ? `LEFT JOIN mip_event_hearts viewer_sent_heart
-       ON viewer_sent_heart.app_id = r.app_id AND viewer_sent_heart.event_id = r.event_id
-         AND viewer_sent_heart.voter_user_id = ? AND viewer_sent_heart.target_user_id = r.user_id
-         AND viewer_sent_heart.status = 'ACTIVE'
-     LEFT JOIN mip_event_hearts participant_sent_heart
-       ON participant_sent_heart.app_id = r.app_id AND participant_sent_heart.event_id = r.event_id
-         AND participant_sent_heart.voter_user_id = r.user_id AND participant_sent_heart.target_user_id = ?
-         AND participant_sent_heart.status = 'ACTIVE'`
-    : ''
-  const heartRelationParams = userId ? [userId, userId] : []
+  // MIW-96：名单条目不再计算/下发 heart_relation——MIW-73 移除消费方后该字段
+  // 只是每行两次 LEFT JOIN 的死载荷；心动交互走独立的 heart 接口，不受影响。
   const membershipExists = `EXISTS(
     SELECT 1 FROM mip_membership_entitlements entitlement
     WHERE entitlement.app_id = r.app_id AND entitlement.user_id = r.user_id
@@ -1536,7 +1518,7 @@ async function listPublicParticipants(db, {
                 AND industry_profile_tag.relation = 'PRIMARY_INDUSTRY'
               ORDER BY industry_tag.sort_order, industry_tag.id
               LIMIT 1
-            ) AS primary_industry_label${heartRelationSelect}
+            ) AS primary_industry_label
      FROM mip_event_registrations r
      INNER JOIN mip_users u ON u.app_id = r.app_id AND u.id = r.user_id AND u.status = 'ACTIVE'
      INNER JOIN mip_profiles p ON p.app_id = r.app_id AND p.user_id = r.user_id
@@ -1544,11 +1526,10 @@ async function listPublicParticipants(db, {
        ON avatar.app_id = p.app_id AND avatar.id = p.avatar_asset_id AND avatar.status = 'READY'
      LEFT JOIN mip_city_branches branch
        ON branch.app_id = u.app_id AND branch.id = u.primary_branch_id AND branch.status = 'ACTIVE'
-     ${heartRelationJoins}
      WHERE ${clauses.join(' AND ')}
      ORDER BY r.registered_at DESC, r.id DESC
      LIMIT ?`,
-    [...heartRelationParams, ...params, pageLimit + 1],
+    [...params, pageLimit + 1],
   )
   const pageRows = rows.slice(0, pageLimit)
   const kindTotalRows = await db.query(
@@ -1577,7 +1558,6 @@ async function listPublicParticipants(db, {
       const allowed = publicVisibility(row.visibility_json)
       return {
         profileRef: createProfileRef({ appId, userId: row.user_id }, profileRefSecret),
-        ...(['SENT', 'RECEIVED', 'MUTUAL'].includes(row.heart_relation) ? { heartRelation: row.heart_relation } : {}),
         ...(allowed.nickname && row.nickname ? { nickname: row.nickname } : {}),
         ...(allowed.avatar && row.avatar_file_id ? { avatarUrl: row.avatar_file_id } : {}),
         userKind: Number(row.is_player) === 1 ? 'PLAYER' : 'GUEST',
@@ -1690,6 +1670,13 @@ function canEditRegistration(event, registrationStatus, now = new Date()) {
   return event.status === 'PUBLISHED' && Number.isFinite(startsAt) && timestamp < startsAt
 }
 
+// MIW-91（DEF-02/DEF-05 裁决）：「公开给参与人」开关已从客户端删除，写路径统一默认公开（opt-out）：
+// shareProfile 缺省或 true 视为公开；仅显式 false 视为隐藏（兼容存量客户端显式上报）。
+// 容量与占座判断不看 share_profile；读回 DTO 仍返回真实列值。
+function isSharedProfilePublic(value) {
+  return value !== false
+}
+
 function registrationEditView(event, registration, now = new Date()) {
   const parsedAnswers = parseJson(registration.answers_json, {})
   const answers = parsedAnswers && typeof parsedAnswers === 'object' && !Array.isArray(parsedAnswers)
@@ -1759,7 +1746,7 @@ async function updateRegistration(db, {
         formVersion,
         expectedVersion,
         answers: submittedAnswers,
-        shareProfile: input.shareProfile === true,
+        shareProfile: isSharedProfilePublic(input.shareProfile),
       },
     })
     if (claim.replay) {
@@ -1800,7 +1787,7 @@ async function updateRegistration(db, {
        WHERE app_id = ? AND event_id = ? AND user_id = ? AND id = ? AND version = ?`,
       [
         JSON.stringify(answers),
-        input.shareProfile === true ? 1 : 0,
+        isSharedProfilePublic(input.shareProfile) ? 1 : 0,
         Number(event.form_version),
         appId,
         eventId,
@@ -1817,7 +1804,7 @@ async function updateRegistration(db, {
       version: expectedVersion + 1,
       form_version: Number(event.form_version),
       answers_json: answers,
-      share_profile: input.shareProfile === true ? 1 : 0,
+      share_profile: isSharedProfilePublic(input.shareProfile) ? 1 : 0,
     }, now)
     await writeAudit(tx, {
       appId,
@@ -1831,7 +1818,7 @@ async function updateRegistration(db, {
         fromVersion: expectedVersion,
         toVersion: expectedVersion + 1,
         formVersion: Number(event.form_version),
-        shareProfile: input.shareProfile === true,
+        shareProfile: isSharedProfilePublic(input.shareProfile),
       },
     })
     await completeIdempotency(tx, claim, { appId, userId, operation, response: result })
@@ -1899,7 +1886,7 @@ async function createRegistration(db, {
       userId,
       operation: 'event.register',
       key: input.idempotencyKey,
-      request: { eventId, formVersion, answers: submittedAnswers, shareProfile: input.shareProfile === true },
+      request: { eventId, formVersion, answers: submittedAnswers, shareProfile: isSharedProfilePublic(input.shareProfile) },
     })
     if (claim.replay && !(claim.replay.kind === 'PAYMENT_REQUIRED'
       && new Date(claim.replay.holdExpiresAt).getTime() <= now.getTime())) {
@@ -1982,7 +1969,7 @@ async function createRegistration(db, {
         `UPDATE mip_event_registrations SET answers_json = ?, form_version = ?, share_profile = ?,
            version = version + 1
          WHERE app_id = ? AND id = ? AND order_id = ? AND status = 'PAYMENT_PENDING' AND version = ?`,
-        [JSON.stringify(answers), formVersion, input.shareProfile === true ? 1 : 0,
+        [JSON.stringify(answers), formVersion, isSharedProfilePublic(input.shareProfile) ? 1 : 0,
           appId, existing.id, existing.order_id, existing.version],
       )
       if (Number(registrationUpdated?.affectedRows) !== 1) {
@@ -2059,7 +2046,7 @@ async function createRegistration(db, {
           nextStatus,
           JSON.stringify(answers),
           formVersion,
-          input.shareProfile === true ? 1 : 0,
+          isSharedProfilePublic(input.shareProfile) ? 1 : 0,
           ticketHash,
           nextStatus === 'WAITLISTED' ? now : null,
           nextStatus === 'REGISTERED' ? now : null,
@@ -2083,7 +2070,7 @@ async function createRegistration(db, {
           nextStatus,
           JSON.stringify(answers),
           formVersion,
-          input.shareProfile === true ? 1 : 0,
+          isSharedProfilePublic(input.shareProfile) ? 1 : 0,
           ticketHash,
           nextStatus === 'WAITLISTED' ? now : null,
           nextStatus === 'REGISTERED' ? now : null,
@@ -2107,7 +2094,7 @@ async function createRegistration(db, {
       action: 'EVENT_REGISTRATION_SUBMITTED',
       resourceType: 'EVENT_REGISTRATION',
       resourceId: registrationId,
-      metadata: { status: nextStatus, shareProfile: input.shareProfile === true },
+      metadata: { status: nextStatus, shareProfile: isSharedProfilePublic(input.shareProfile) },
     })
     await writeOutbox(tx, {
       appId,

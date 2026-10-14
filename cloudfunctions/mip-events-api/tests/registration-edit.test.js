@@ -213,6 +213,34 @@ describe('MIP registration mutation', () => {
     assert.equal(calls.some(call => call.sql.includes('mip_outbox_events')), false)
   })
 
+  // MIW-91（DEF-02/DEF-05）：「公开给参与人」开关已下线，写路径默认公开（opt-out）。
+  it('defaults a missing shareProfile to public on update', async () => {
+    const { database, calls } = updateDatabase()
+    await updateRegistration(database, {
+      appId: 'wx-app',
+      userId: 'user-1',
+      participationAccessPolicy: { requireAccess: async () => ({}) },
+      input: updateInput({ shareProfile: undefined, idempotencyKey: 'share-default-public' }),
+      now,
+    })
+    const update = calls.find(call => call.kind === 'query' && call.sql.includes('UPDATE mip_event_registrations SET'))
+    assert.equal(update.params[1], 1)
+  })
+
+  it('keeps only an explicit shareProfile false hidden on update', async () => {
+    const { database, calls } = updateDatabase()
+    const result = await updateRegistration(database, {
+      appId: 'wx-app',
+      userId: 'user-1',
+      participationAccessPolicy: { requireAccess: async () => ({}) },
+      input: updateInput({ shareProfile: false, idempotencyKey: 'share-explicit-hidden' }),
+      now,
+    })
+    const update = calls.find(call => call.kind === 'query' && call.sql.includes('UPDATE mip_event_registrations SET'))
+    assert.equal(update.params[1], 0)
+    assert.equal(result.shareProfile, false)
+  })
+
   it('rejects every non-editable registration status', async () => {
     for (const status of ['ATTENDED', 'CANCELLED', 'REJECTED', 'PAYMENT_PENDING', 'CANCELLATION_PENDING']) {
       const { database } = updateDatabase({ registration: registrationRow({ status }) })

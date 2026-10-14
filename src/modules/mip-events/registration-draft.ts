@@ -6,7 +6,6 @@ interface RegistrationDraft {
   eventId: string
   registrationVersion: number | null
   answers: Record<string, string | boolean>
-  shareProfile: boolean
   savedAt: number
 }
 
@@ -23,7 +22,6 @@ export function createRegistrationDraftStore(storage: {
             item && typeof item.userId === 'string' && typeof item.eventId === 'string'
             && typeof item.savedAt === 'number' && item.savedAt <= now() && now() - item.savedAt < MAX_AGE_MS
             && (item.registrationVersion === null || Number.isInteger(item.registrationVersion))
-            && typeof item.shareProfile === 'boolean'
             && item.answers && typeof item.answers === 'object' && !Array.isArray(item.answers)
             && Object.values(item.answers).every(answer => typeof answer === 'string' || typeof answer === 'boolean'))
         : []
