@@ -512,8 +512,76 @@ describe('admin repository persistence contracts', () => {
       reason: '运营强制退款', idempotencyKey: 'admin-event-refund',
       authorizedScope: { scopeType: 'EVENT', scopeId: 'event-a', branchId: 'branch-a' },
       audit: () => audit(),
-    }), /INVALID_STATE/)
+    }), /EVENT_REFUND_CHECKIN_ACTIVE/)
     assert.equal(writes.length, 0)
+  })
+
+  it('revokes the active check-in inside the transaction when a super admin forces the refund', async () => {
+    const writes = []
+    let nextId = 0
+    const repository = createAdminRepository(transactionDatabase({
+      async one(sql) {
+        if (sql.includes('FROM mip_orders')) {
+          return {
+            id: 'order-a', user_id: 'buyer-a', order_type: 'EVENT', resource_id: 'event-a',
+            amount_cents: 12000, status: 'PAID', version: 4, product_snapshot_json: '{}',
+          }
+        }
+        if (sql.includes('FROM mip_events')) return { id: 'event-a', branch_id: 'branch-a' }
+        if (sql.includes('FROM mip_event_registrations') && sql.includes('order_id = ?')) {
+          return { id: 'registration-a', user_id: 'buyer-a', status: 'ATTENDED', version: 3 }
+        }
+        if (sql.includes('FROM mip_event_registrations')) {
+          return { id: 'registration-a', user_id: 'buyer-a', status: 'REGISTERED', version: 4 }
+        }
+        if (sql.includes('FROM mip_event_checkins')) return { id: 'checkin-a', version: 1 }
+        if (sql.includes('FROM mip_event_checkin_transitions')) {
+          return { id: 'transition-checked-in' }
+        }
+        if (sql.includes('FROM mip_refunds') && sql.includes('idempotency_key')) return null
+        if (sql.includes('COALESCE(SUM(amount_cents)')) return { refunded: 0 }
+        return null
+      },
+      async query(sql, params) { writes.push({ sql, params }); return { affectedRows: 1 } },
+    }), {
+      id: () => `00000000-0000-4000-8000-${String(++nextId).padStart(12, '0')}`,
+      now: () => new Date('2026-08-25T00:00:00.000Z'),
+    })
+    const result = await repository.submitRefund({
+      appId: 'wx-app', actorUserId: 'admin-user', orderId: 'order-a',
+      reason: '运营强制退款', idempotencyKey: 'admin-event-refund-checkedin',
+      superAdminException: true,
+      authorizedScope: { scopeType: 'EVENT', scopeId: 'event-a', branchId: 'branch-a' },
+      audit: (refundId, amountCents, extras = {}) => audit({
+        action: 'admin.refunds.submit', resourceType: 'REFUND', resourceId: refundId,
+        metadata: { amountCents, ...extras },
+      }),
+    })
+    assert.equal(result.amountCents, 12000)
+    assert.equal(result.status, 'PENDING')
+    const sql = writes.map(write => write.sql).join('\n')
+    assert.ok(sql.includes("SET status = 'REVOKED'"), 'check-in must be revoked')
+    assert.ok(sql.includes("SET status = 'REGISTERED'"), 'registration restored before refund flow')
+    assert.ok(sql.includes('INSERT INTO mip_event_checkin_transitions'))
+    const transitionInsert = writes.find(write => write.sql.includes('INSERT INTO mip_event_checkin_transitions'))
+    assert.equal(transitionInsert.params[6], 'REVOKED')
+    assert.equal(transitionInsert.params[9], 'transition-checked-in')
+    assert.equal(transitionInsert.params[11], 'ADMIN')
+    assert.ok(sql.includes("status = 'CANCELLATION_PENDING'"))
+    assert.ok(sql.includes("UPDATE mip_orders SET status = 'REFUND_PENDING'"))
+    assert.ok(sql.includes('INSERT INTO mip_refunds'))
+    const outboxEvents = writes.filter(write => write.sql.includes('INSERT INTO mip_outbox_events'))
+    assert.deepEqual(outboxEvents.map(write => write.params[4]), [
+      'event.checkin_revoked', 'event.registration_refund_requested', 'admin.refund_requested',
+    ])
+    const revokedOutbox = outboxEvents[0]
+    assert.equal(revokedOutbox.params[2], 'EVENT_CHECKIN_TRANSITION')
+    assert.equal(JSON.parse(revokedOutbox.params[6]).reversalOfTransitionId, 'transition-checked-in')
+    const auditWrite = writes.find(write => write.sql.includes('INSERT INTO mip_audit_logs'))
+    assert.equal(JSON.parse(auditWrite.params[8]).checkinRevoked, true)
+    const revokeUpdate = writes.find(write => write.sql.includes("SET status = 'REVOKED'"))
+    assert.equal(revokeUpdate.params[2], '运营强制退款')
+    assert.equal(revokeUpdate.params[2].length <= 120, true)
   })
 
   it('approves a reviewed registration only after locked capacity and hold checks', async () => {

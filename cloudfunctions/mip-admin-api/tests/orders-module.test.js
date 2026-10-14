@@ -436,12 +436,49 @@ describe('admin orders deep module', () => {
     assert.equal(Object.hasOwn(captured, 'refundId'), false)
     assert.equal(captured.reason, '用户申请退款')
     assert.equal(captured.authorization.capability, 'refunds.submit')
+    assert.equal(captured.superAdminException, false)
     assert.deepEqual(captured.authorizedScope, {
       scopeType: 'PLATFORM', scopeId: null, branchId: null,
     })
     assert.deepEqual(captured.audit('refund-server', 12000).metadata, {
       orderId: 'order-a', amountCents: 12000, reasonLength: 6,
     })
+    assert.deepEqual(captured.audit('refund-server', 12000, { checkinRevoked: true }).metadata, {
+      orderId: 'order-a', amountCents: 12000, reasonLength: 6, checkinRevoked: true,
+    })
+  })
+
+  it('grants the check-in refund exception only to platform owners', async () => {
+    const cases = [
+      [{ roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }, true],
+      [{ roleKey: 'PLATFORM_FINANCE', scopeType: 'PLATFORM', scopeId: null }, false],
+      [
+        [{ roleKey: 'PLATFORM_FINANCE', scopeType: 'PLATFORM', scopeId: null },
+          { roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }],
+        true,
+      ],
+    ]
+    for (const [bindings, expected] of cases) {
+      let captured
+      const repo = repository({
+        async submitRefund(input) {
+          repo.refundWrites += 1
+          captured = input
+          return {
+            id: 'refund-server', orderId: input.orderId,
+            amountCents: 12000, status: 'PENDING', idempotent: false,
+          }
+        },
+      })
+      repo.roleBindings = Array.isArray(bindings) && bindings.every(item => item?.roleKey)
+        ? bindings
+        : [bindings]
+      const service = orders(repo)
+      await service.submitRefund(caller, {
+        orderId: 'order-a', reason: '测试退款', idempotencyKey: `exception-${expected}`,
+      })
+      assert.equal(captured.superAdminException, expected)
+    }
   })
 
   it('preserves demo and scope failures without dispatching or widening permissions', async () => {

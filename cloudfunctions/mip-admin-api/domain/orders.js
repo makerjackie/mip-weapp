@@ -4,6 +4,7 @@ const {
   CAPABILITIES,
   authorize,
   firstGrant,
+  isValidRoleBinding,
   visibilityForCapability,
 } = require('./capabilities')
 const { decodeCursor } = require('./pagination')
@@ -123,15 +124,16 @@ function createAdminOrders({
       orderId,
       reason,
       idempotencyKey,
+      superAdminException: isSuperAdmin(context.bindings),
       authorization: access.mutationAuthorization(grant, CAPABILITIES.REFUNDS_SUBMIT),
       authorizedScope: scope,
-      audit: (refundId, amountCents) => access.audit(context, grant, {
+      audit: (refundId, amountCents, extras = {}) => access.audit(context, grant, {
         scopeType: scope.scopeType,
         scopeId: scope.scopeId,
         action: 'admin.refunds.submit',
         resourceType: 'REFUND',
         resourceId: refundId,
-        metadata: { orderId, amountCents, reasonLength: reason.length },
+        metadata: { orderId, amountCents, reasonLength: reason.length, ...extras },
       }),
     })
     return {
@@ -358,6 +360,10 @@ async function dispatchRefundSafely(dispatchProviderRefund, appId, refundId) {
   catch {
     return { status: 'PENDING_RETRY' }
   }
+}
+
+function isSuperAdmin(bindings) {
+  return bindings.some(binding => isValidRoleBinding(binding) && binding.roleKey === 'PLATFORM_OWNER')
 }
 
 function pageResult(value) {

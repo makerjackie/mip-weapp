@@ -367,6 +367,7 @@ function createAdminOrderRepository(database, options = {}) {
       let currentScope = { scopeType: 'PLATFORM', scopeId: null, branchId: null }
       let eventRegistration = null
       let activeEventCheckin = null
+      let checkinRevoked = false
       if (order.order_type === 'EVENT') {
         currentScope = eventScopeFromRow(event, order.resource_id)
         eventRegistration = await tx.one(
@@ -380,7 +381,21 @@ function createAdminOrderRepository(database, options = {}) {
            WHERE app_id = ? AND event_id = ? AND registration_id = ? AND status = 'ACTIVE' FOR UPDATE`,
           [input.appId, order.resource_id, eventRegistration.id],
         )
-        if (activeEventCheckin) throw codeError('INVALID_STATE')
+        if (activeEventCheckin) {
+          // Q-ADMIN-03：开始后/签到后退款例外仅超管（原因与审计必填）。例外在同一事务里
+          // 先撤销签到（ATTENDED→REGISTERED），后续复用 REGISTERED 的退款取消流程，
+          // 退款确认侧（payment-ledger）无需感知签到状态。
+          if (!input.superAdminException) throw codeError('EVENT_REFUND_CHECKIN_ACTIVE')
+          await revokeCheckedInRegistration(tx, input, eventRegistration, activeEventCheckin,
+            order.resource_id)
+          eventRegistration = await tx.one(
+            `SELECT id, user_id, status, version FROM mip_event_registrations
+             WHERE app_id = ? AND id = ? FOR UPDATE`,
+            [input.appId, eventRegistration.id],
+          )
+          if (!eventRegistration) throw codeError('INVALID_STATE')
+          checkinRevoked = true
+        }
       }
       assertScope(authorization, currentScope)
       if (input.authorizedScope && !sameScope(currentScope, input.authorizedScope)) {
@@ -542,7 +557,8 @@ function createAdminOrderRepository(database, options = {}) {
           },
         })
       }
-      await writeAudit(tx, input.audit(refundId, amount))
+      await writeAudit(tx, input.audit(refundId, amount,
+        checkinRevoked ? { checkinRevoked: true } : {}))
       await writeOutbox(tx, {
         id: id(),
         appId: input.appId,
@@ -597,6 +613,83 @@ function createAdminOrderRepository(database, options = {}) {
       await writeAudit(tx, input.audit)
       return { id: input.refundId, status: refund.status }
     })
+  }
+
+  // 超管签到后退款例外：在同一事务里把已签到报名恢复为 REGISTERED（对齐
+  // repositories/events.js undoCheckIn 的状态机与 outbox 契约，projector 依赖
+  // REVOKED transition 必须回指 CHECKED_IN 记录）。任何 CAS 失败都回滚整个退款事务。
+  async function revokeCheckedInRegistration(tx, input, registration, checkin, eventId) {
+    const recordedTransition = await tx.one(
+      `SELECT id FROM mip_event_checkin_transitions
+       WHERE app_id = ? AND checkin_id = ? AND transition_type = 'CHECKED_IN'
+         AND checkin_version = ?`,
+      [input.appId, checkin.id, checkin.version],
+    )
+    if (!recordedTransition) throw codeError('CONFLICT')
+    const revokeReason = String(input.reason || '').slice(0, 120)
+    const revokedAt = now()
+    const transitionId = id()
+    const checkinVersion = Number(checkin.version) + 1
+    const registrationVersion = Number(registration.version) + 1
+    const revoked = await tx.query(
+      `UPDATE mip_event_checkins SET status = 'REVOKED', revoked_at = ?,
+         revoked_by_user_id = ?, revoke_reason = ?, version = version + 1
+       WHERE app_id = ? AND id = ? AND version = ? AND status = 'ACTIVE'`,
+      [revokedAt, input.actorUserId, revokeReason, input.appId, checkin.id, checkin.version],
+    )
+    if (Number(revoked.affectedRows) !== 1) throw codeError('CONFLICT')
+    const restored = await tx.query(
+      `UPDATE mip_event_registrations SET status = 'REGISTERED', version = version + 1
+       WHERE app_id = ? AND id = ? AND version = ? AND status = 'ATTENDED'`,
+      [input.appId, registration.id, registration.version],
+    )
+    if (Number(restored.affectedRows) !== 1) throw codeError('CONFLICT')
+    await writeCheckInTransition(tx, {
+      id: transitionId,
+      appId: input.appId,
+      checkinId: checkin.id,
+      registrationId: registration.id,
+      eventId,
+      userId: registration.user_id,
+      transitionType: 'REVOKED',
+      checkinVersion,
+      registrationVersion,
+      reversalOfTransitionId: recordedTransition.id,
+      actorUserId: input.actorUserId,
+      source: 'ADMIN',
+      revokeReason,
+      occurredAt: revokedAt,
+    })
+    await writeOutbox(tx, {
+      id: transitionId,
+      appId: input.appId,
+      aggregateType: 'EVENT_CHECKIN_TRANSITION',
+      aggregateId: transitionId,
+      eventType: 'event.checkin_revoked',
+      sourceVersion: registrationVersion,
+      payload: {
+        eventId,
+        registrationId: registration.id,
+        userId: registration.user_id,
+        checkinId: checkin.id,
+        reversalOfTransitionId: recordedTransition.id,
+      },
+    })
+  }
+
+  async function writeCheckInTransition(tx, transition) {
+    await tx.query(
+      `INSERT INTO mip_event_checkin_transitions (
+        id, app_id, checkin_id, registration_id, event_id, user_id,
+        transition_type, checkin_version, registration_version,
+        reversal_of_transition_id, actor_user_id, source, revoke_reason, occurred_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [transition.id, transition.appId, transition.checkinId, transition.registrationId,
+        transition.eventId, transition.userId, transition.transitionType,
+        transition.checkinVersion, transition.registrationVersion,
+        transition.reversalOfTransitionId || null, transition.actorUserId || null,
+        transition.source, transition.revokeReason || null, transition.occurredAt],
+    )
   }
 
   return {
