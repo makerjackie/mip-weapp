@@ -910,7 +910,9 @@ describe('self cooperation notifications', () => {
     const result = await projectEvent({ async one(sql, params) {
       assert.match(sql, /mip_opportunity_cooperations/)
       assert.match(sql, /mip_user_blocks/)
-      assert.match(sql, /o\.title, intent\.activated_at, actor\.nickname AS actor_nickname/)
+      assert.match(sql, /o\.title, intent\.activated_at, actor_profile\.nickname AS actor_nickname/)
+      // MIW-107 回归：昵称在 mip_profiles，不在 mip_users；profile 缺席不得阻断通知。
+      assert.match(sql, /LEFT JOIN mip_profiles actor_profile ON actor_profile\.app_id = actor\.app_id AND actor_profile\.user_id = actor\.id/)
       assert.deepEqual(params, [event.app_id, event.aggregate_id])
       return {
         status: 'ACTIVE',
