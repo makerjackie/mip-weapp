@@ -39,6 +39,9 @@
         <view class="absolute left-[24rpx] top-[238rpx] w-[288rpx] text-[20rpx] leading-[28rpx] text-muted">{{item.intro}}</view>
         <image class="absolute left-[16rpx] top-[318rpx] h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/bear.png" />
         <image wx:if="{{item.inviter}}" class="absolute left-[172rpx] top-[312rpx] h-[52rpx] w-[152rpx]" src="/packages/member/assets/figma/guests/inviter-bear.webp" />
+        <!-- invite-by-bear 静态引用（MIW-100 同族）：{{item.inviterImg}} 插值探不到上传依赖分析；
+             已知值走静态 src，未知值保留动态兜底。 -->
+        <image wx:elif="{{item.inviterImg === 'invite-by-bear'}}" class="absolute left-[184rpx] top-[312rpx] h-[48rpx] w-[144rpx]" src="/packages/member/assets/figma/guests/invite-by-bear.png" />
         <image wx:elif="{{item.inviterImg}}" class="absolute left-[184rpx] top-[312rpx] h-[48rpx] w-[144rpx]" src="/packages/member/assets/figma/guests/{{item.inviterImg}}.png" />
         <view wx:if="{{item.dot}}" class="absolute h-[16rpx] w-[16rpx] rounded-full bg-[#ff2238]" style="left:{{item.dot.leftRpx}}rpx;top:{{item.dot.topRpx}}rpx"></view>
       </view>

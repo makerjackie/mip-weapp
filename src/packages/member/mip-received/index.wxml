@@ -59,8 +59,14 @@
         <view wx:for="{{items}}" wx:key="viewKey" class="relative h-[374rpx] overflow-hidden rounded-[16rpx] bg-panel">
           <view class="absolute left-[16rpx] top-[16rpx] flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[20rpx] font-semibold leading-[28rpx] text-brand">{{item.guestLevel}}</view>
           <image class="absolute left-[114rpx] top-[16rpx] h-[112rpx] w-[112rpx] rounded-full" mode="aspectFill" src="{{item.actorAvatarUrl}}" />
-          <image wx:if="{{item.guestBadge === 'heart-line' || item.guestBadge === 'heart-fill'}}" class="absolute left-[284rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-{{item.guestBadge}}.png" />
-          <image wx:if="{{item.guestBadge === 'endorse' || item.guestBadge === 'endorse-light' || item.guestBadge === 'emblem-dark' || item.guestBadge === 'emblem-crimson'}}" class="absolute left-[276rpx] top-[16rpx] h-[44rpx] w-[48rpx]" src="/packages/member/assets/figma/guests/badge-{{item.guestBadge}}.png" />
+          <!-- 访客徽章底图静态引用（MIW-100 同族）：ignoreUploadUnusedFiles 的上传依赖分析
+               探不到 {{}} 插值，纯动态引用的徽章图会被剔出体验版；键集与下方计数分支一致。 -->
+          <image wx:if="{{item.guestBadge === 'heart-line'}}" class="absolute left-[284rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-heart-line.png" />
+          <image wx:elif="{{item.guestBadge === 'heart-fill'}}" class="absolute left-[284rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-heart-fill.png" />
+          <image wx:elif="{{item.guestBadge === 'endorse'}}" class="absolute left-[276rpx] top-[16rpx] h-[44rpx] w-[48rpx]" src="/packages/member/assets/figma/guests/badge-endorse.png" />
+          <image wx:elif="{{item.guestBadge === 'endorse-light'}}" class="absolute left-[276rpx] top-[16rpx] h-[44rpx] w-[48rpx]" src="/packages/member/assets/figma/guests/badge-endorse-light.png" />
+          <image wx:elif="{{item.guestBadge === 'emblem-dark'}}" class="absolute left-[276rpx] top-[16rpx] h-[44rpx] w-[48rpx]" src="/packages/member/assets/figma/guests/badge-emblem-dark.png" />
+          <image wx:elif="{{item.guestBadge === 'emblem-crimson'}}" class="absolute left-[276rpx] top-[16rpx] h-[44rpx] w-[48rpx]" src="/packages/member/assets/figma/guests/badge-emblem-crimson.png" />
           <view wx:if="{{item.guestBadgeCount && (item.guestBadge === 'heart-line' || item.guestBadge === 'heart-fill')}}" class="absolute left-[284rpx] top-[49rpx] w-[40rpx] text-center text-[20rpx] font-semibold leading-[28rpx] text-[#ff2238]">{{item.guestBadgeCount}}</view>
           <view wx:elif="{{item.guestBadgeCount}}" class="absolute left-[276rpx] top-[65rpx] w-[48rpx] text-center text-[20rpx] font-semibold leading-[28rpx] text-ink">{{item.guestBadgeCount}}</view>
           <view class="absolute left-0 top-[144rpx] w-full text-center text-[32rpx] font-medium leading-[44.8rpx]">{{item.actorName}}</view>
