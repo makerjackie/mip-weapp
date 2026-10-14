@@ -271,21 +271,19 @@
     {
       "id": "disabled",
       "route": "packages/member/privacy/index",
-      "scrollIntoView": "#privacy-closure-card",
+      "scrollIntoView": "#privacy-sign-out",
       "patch": {
         "state": "ready",
-        "closureState": "processing",
-        "confirmationPhrase": "",
-        "requiredConfirmationPhrase": "注销账号"
+        "localLogoutState": "confirming"
       },
       "dataAssertions": [
         {
-          "path": "closureState",
-          "equals": "processing"
+          "path": "localLogoutState",
+          "equals": "confirming"
         }
       ],
       "visibleAssertion": {
-        "selector": "#privacy-account-page #privacy-closure-dialog"
+        "selector": "#privacy-account-page #privacy-sign-out"
       }
     }
   ],
