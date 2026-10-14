@@ -179,12 +179,23 @@ const DEFAULT_PRIVILEGES = ['SELECT', 'INSERT', 'UPDATE']
 
 const HARMLESS_PRIVILEGES = new Set(['USAGE'])
 
-export function runtimeUserForEnvironment(envId) {
+// The instance-default schema keeps the historical envId-only fingerprint so the
+// existing production runtime account stays the derived value; a distinct schema
+// (same-instance second logical database) salts the fingerprint into a separate
+// account whose grants are confined to that schema.
+export function runtimeUserForEnvironment(envId, schema) {
   const normalized = String(envId || '').trim()
   if (!/^[\w-]{3,128}$/.test(normalized)) {
     throw new Error('Invalid environment for runtime MySQL user')
   }
-  const fingerprint = createHash('sha256').update(normalized).digest('hex').slice(0, 12)
+  const schemaName = String(schema || '').trim()
+  if (schemaName && !/^[\w-]{1,64}$/.test(schemaName)) {
+    throw new Error('Invalid schema for runtime MySQL user')
+  }
+  const fingerprint = createHash('sha256')
+    .update(schemaName ? `${normalized}:${schemaName}` : normalized)
+    .digest('hex')
+    .slice(0, 12)
   return `mip_${fingerprint}`
 }
 

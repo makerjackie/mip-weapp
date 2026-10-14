@@ -19,9 +19,29 @@ export function parseEnv(filePath) {
   }, {})
 }
 
+// MIP_ENV_DIR selects a target-configuration directory (e.g. envs/test or envs/prod)
+// that owns both env files for this run. Process env wins so orchestrators stay
+// explicit; the repo-root .env.local value is a convenience for humans only.
+export function resolveEnvDir(caseRoot) {
+  const configured = String(
+    process.env.MIP_ENV_DIR
+    || parseEnv(path.join(caseRoot, '.env.local')).MIP_ENV_DIR
+    || '',
+  ).trim()
+  if (!configured) {
+    return caseRoot
+  }
+  const resolved = path.isAbsolute(configured) ? configured : path.resolve(caseRoot, configured)
+  if (!fs.existsSync(path.join(resolved, '.env.local'))) {
+    throw new Error(`MIP_ENV_DIR target has no .env.local: ${configured}`)
+  }
+  return resolved
+}
+
 export function loadCaseEnv(caseRoot) {
-  const secrets = parseEnv(path.join(caseRoot, '.env.secrets.local'))
-  const local = parseEnv(path.join(caseRoot, '.env.local'))
+  const envDir = resolveEnvDir(caseRoot)
+  const secrets = parseEnv(path.join(envDir, '.env.secrets.local'))
+  const local = parseEnv(path.join(envDir, '.env.local'))
   for (const [key, value] of Object.entries(secrets)) {
     if (String(value).trim() && String(local[key] || '').trim() && String(value).trim() !== String(local[key]).trim()) {
       throw new Error(`${key} differs between .env.secrets.local and .env.local`)
@@ -32,6 +52,19 @@ export function loadCaseEnv(caseRoot) {
     ...local,
     ...process.env,
   }
+}
+
+// CloudBase MCP MySQL tools accept dbInstance.schema; passing it routes runQuery
+// and runStatement to an explicit logical database instead of the instance default.
+export function mysqlDbInstanceArg(schema) {
+  const schemaName = String(schema || '').trim()
+  if (!schemaName) {
+    return {}
+  }
+  if (!/^[\w-]{1,64}$/.test(schemaName)) {
+    throw new Error('CloudBase MySQL schema must be a plain identifier')
+  }
+  return { dbInstance: { schema: schemaName } }
 }
 
 function workspaceRoot(caseRoot) {
