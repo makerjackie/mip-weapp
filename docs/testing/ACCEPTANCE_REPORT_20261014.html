@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIP 小程序验收报告 · 2026-10-14</title>
+<style>
+  :root{
+    --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; --card:#ffffff;
+    --green:#16a34a; --green-bg:#f0fdf4; --amber:#d97706; --amber-bg:#fffbeb;
+    --red:#dc2626; --red-bg:#fef2f2; --purple:#7c3aed; --purple-bg:#f5f3ff;
+    --slate:#475569; --slate-bg:#f1f5f9; --blue:#1a71ff; --blue-bg:#eff6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;color:var(--ink);background:var(--bg);line-height:1.65;font-size:14px}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  header.hero{background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;border-radius:14px;padding:28px 30px;margin-bottom:24px}
+  header.hero h1{margin:0 0 6px;font-size:24px}
+  header.hero .sub{opacity:.85;font-size:13px}
+  .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:16px;font-size:12.5px}
+  .meta div{background:rgba(255,255,255,.08);border-radius:8px;padding:8px 12px}
+  .meta b{opacity:.7;font-weight:500;display:block;font-size:11px}
+  h2{font-size:18px;margin:36px 0 12px;padding-left:10px;border-left:4px solid var(--blue)}
+  h3{font-size:15px;margin:20px 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:center}
+  .stat .n{font-size:26px;font-weight:700}
+  .stat .l{font-size:12px;color:var(--muted)}
+  .badge{display:inline-block;font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap;vertical-align:middle}
+  .b-pass{color:var(--green);background:var(--green-bg);border:1px solid #bbf7d0}
+  .b-cond{color:var(--amber);background:var(--amber-bg);border:1px solid #fde68a}
+  .b-fail{color:var(--red);background:var(--red-bg);border:1px solid #fecaca}
+  .b-pending{color:var(--slate);background:var(--slate-bg);border:1px solid #cbd5e1}
+  .b-na{color:var(--muted);background:#f8fafc;border:1px solid var(--line)}
+  .b-callout{color:var(--purple);background:var(--purple-bg);border:1px solid #ddd6fe}
+  .b-e2e{color:var(--blue);background:var(--blue-bg);border:1px solid #bfdbfe}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px}
+  th{background:#f1f5f9;text-align:left;font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  code{background:#f1f5f9;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:11.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
+  .notes{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .evi{color:var(--muted);font-size:11.5px;margin-top:5px;word-break:break-all}
+  .legend span{margin-right:14px;display:inline-block;margin-bottom:6px}
+  ul{margin:6px 0;padding-left:20px}
+  li{margin:3px 0}
+  .def{border-left:4px solid var(--red)}
+  .def.p2{border-left-color:var(--amber)}
+  .def.p3{border-left-color:#94a3b8}
+  .def.callout{border-left-color:var(--purple)}
+  .def .tag{font-weight:700;margin-right:8px}
+  .footer{color:var(--muted);font-size:12px;margin-top:32px;border-top:1px solid var(--line);padding-top:14px}
+  .ok-ico{color:var(--green);font-weight:700}
+  .warn-ico{color:var(--amber);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>MIP 小程序验收报告</h1>
+  <div class="sub">依据《验收测试计划与用例（用户旅程优先版）》（docs/testing/ACCEPTANCE_TEST_PLAN_20261013.md）· 执行日期 2026-10-14</div>
+  <div class="meta">
+    <div><b>代码基线</b>main <code style="background:rgba(255,255,255,.12);border-color:transparent;color:#fff">46eb7f82</code>（= origin/main，MIW-83/84/85/89 已合并）</div>
+    <div><b>体验版</b>0.2.0.20261014.1（交付会话上传，verify:all 门禁后）</div>
+    <div><b>环境</b>CloudBase staging（.env.local 指定）；开发者工具已登录、服务端口 62842</div>
+    <div><b>执行方式</b>门禁独立复跑 + 运行时合同（55 路由）+ 7 路并行代码级核对（逐条 file:line 取证）+ 交付会话 E2E/部署记录引用</div>
+  </div>
+</header>
+
+<h2>结论总览</h2>
+<div class="stats">
+  <div class="stat"><div class="n ok-ico">全绿</div><div class="l">verify:all 独立复跑<br>（270 文件/1709 项 + web 177 项）</div></div>
+  <div class="stat"><div class="n ok-ico">48 / 4 / 3</div><div class="l">运行时合同 通过/失败/等待<br>与 MIW-79 基线一致，无新增回归</div></div>
+  <div class="stat"><div class="n" style="color:var(--blue)">8 + 1</div><div class="l">Part A 旅程通过<br>（8 通过 + 1 有条件）</div></div>
+  <div class="stat"><div class="n" style="color:var(--red)">2</div><div class="l">P1 缺陷<br>（MIW-89 回归 / 开关缺失）</div></div>
+  <div class="stat"><div class="n" style="color:var(--amber)">4</div><div class="l">P2 缺陷</div></div>
+  <div class="stat"><div class="n" style="color:var(--purple)">3</div><div class="l">口径待裁决<br>（计划与实现冲突）</div></div>
+  <div class="stat"><div class="n" style="color:var(--slate)">9</div><div class="l">真机专项待办</div></div>
+</div>
+
+<div class="card">
+  <b>总结论：</b>本轮迭代（MIW-50..89 合并后基线，含本批 MIW-83/84/85/89）服务端裁决、身份门禁、订阅收敛（MIW-77）、锁定口径（MIW-70/78/80/81）、心动票规则、本批四卡新口径（档位横滑 / 任务动作后台可配 / 邀请人最近一次+玩家不显示 / 价值金额双模式）在代码级与运行时证据下均验收通过；交付会话管线（合并 → 迁移 → 全量部署 → 聚焦 E2E 10/10 → 体验版）完整可追溯。<b>发现 2 个 P1 缺陷</b>（均为本批/近期改动引入，建议修复后随下批小版本跟进）：<b>①</b> MIW-89 回归——发布「面谈」机会后发布者公开档案整页打不开；<b>②</b> 报名页「公开给参与人」开关无 UI。另有 4 个 P2、4 个 P3、3 个计划/实现口径冲突待产品拍板，以及 9 项真机专项待人工执行。开发者工具结果不冒充真机结论，真机项全部如实标注。
+</div>
+
+<h2>图例</h2>
+<div class="card legend">
+  <span><span class="badge b-pass">✅ 通过</span>静态/工具证据确认符合</span>
+  <span><span class="badge b-e2e">✅ 含 E2E</span>另有运行时/聚焦 E2E 佐证</span>
+  <span><span class="badge b-cond">⚠️ 有条件通过</span>主链路符合，带已归因缺口</span>
+  <span><span class="badge b-fail">❌ 失败</span>存在缺陷（见缺陷清单）</span>
+  <span><span class="badge b-pending">⏳ 需真机/人工</span>计划规定真机项，工具不作数</span>
+  <span><span class="badge b-na">➖ 不适用</span>本轮明确不执行</span>
+  <span><span class="badge b-callout">📋 口径待裁决</span>计划与实现冲突，需产品拍板</span>
+</div>
+
+<h2>A. 交付管线与质量门禁</h2>
+<table>
+  <tr><th style="width:230px">验收项</th><th style="width:90px">结果</th><th>要点与证据</th></tr>
+  <tr>
+    <td>交付会话（sess_1b229be0）管线<br><span class="notes">MIW-83/84/85/89 合并→迁移→部署→发布</span></td>
+    <td><span class="badge b-pass">✅ PASS</span></td>
+    <td>四支分支合入 main（<code>1e6fb44a</code>/<code>40a438bf</code>/<code>82f403d3</code>/<code>9f7f5aab</code>），冲突三处消解（onShareAppMessage 去重 <code>1c63efba</code>、迁移 108→109 重编号 + lock 注册 <code>0bf884b7</code>）；staging 备份先行（154 表 5138 行 row-count-verified）后迁移 108/109 应用、存量 action 列全 NULL 无回填；16 核心云函数部署 verified + cloud:verify 全绿；admin-web BFF Active + 静态 14/14 字节 VERIFIED（入口 <code>index-B5VlXNzm.js</code> 双入口一致）；聚焦 E2E（automator + staging 真库）10/10；体验版 0.2.0.20261014.1 上传；notma 四任务置 done。<span class="evi">证据：docs/testing/MIW-83-84-85-89_BATCH_ACCEPTANCE.md、docs/mip/PROJECT_STATUS.md（2026-10-14 段）</span></td>
+  </tr>
+  <tr>
+    <td>pnpm verify:all（本轮独立复跑）</td>
+    <td><span class="badge b-pass">✅ PASS</span></td>
+    <td>小程序全门禁绿：toolchain / architecture / security / isolation / typecheck / lint / stylelint / docs:check；vitest <b>270 文件 1709 项全过</b>；build 成功（含嵌套 vendor 树 <code>dist/miniprogram_npm/tdesign-miniprogram/miniprogram_npm/</code> 断言）；体积预算门主包 1.11MB &lt; 2048KB；verify:analyze / verify:build / verify:server 全过。admin-web 独立门禁：<b>28 文件 177 项 + 构建 + 响应式合同</b>全过。<span class="evi">日志：.tmp/verify-all-acceptance-20261014.log（exit 0）</span></td>
+  </tr>
+  <tr>
+    <td>pnpm runtime:preflight</td>
+    <td><span class="badge b-pass">✅ PASS</span></td>
+    <td>真实 AppID、app.json 与 conditions 55 路由完整、devtoolsLoggedIn=true、servicePortEnabled=true（62842）。</td>
+  </tr>
+  <tr>
+    <td>pnpm test:runtime（全量路由合同）</td>
+    <td><span class="badge b-cond">⚠️ 与基线一致</span></td>
+    <td>55 路由：<b>48 passed / 4 failed / 3 external-wait</b>（证据目录 <code>.tmp/runtime-evidence/2026-10-14-acceptance/</code>，含逐状态截图）。4 个 failed 全部为交付基线已归因项：managed-events、mip-access、mip-ai-voice（MIW-79 基线一致）、mip-profile-interests（数据条件非回归：门控代码自 <code>f7328fa5</code> 未变，置顶人才档案 visibility_json.influence=false 为目标侧正确拒绝，该路由契约声明 blocked 为定义态）。3 个 external-wait 为数据夹具等待（event-console / event-registrations 依赖 managed-events 夹具、cases/detail 需真实案例 fixture），符合 RUNTIME_ACCEPTANCE.md 约定。<b>无新增回归。</b></td>
+  </tr>
+  <tr>
+    <td>git diff --check / 工作区</td>
+    <td><span class="badge b-pass">✅ 干净</span></td>
+    <td>main 与 origin/main 同步于 46eb7f82，无未提交源码改动（仅本报告与验收临时产物）。</td>
+  </tr>
+</table>
+
+<h2>B. Part A · 用户旅程（UF-01 → UF-15）</h2>
+<table>
+  <tr><th style="width:70px">用例</th><th style="width:200px">旅程</th><th style="width:62px">优先级</th><th style="width:108px">判定</th><th>结果与证据</th></tr>
+  <tr><td>UF-01</td><td>后台创建活动 → 小程序列表</td><td>P0</td><td><span class="badge b-pass">✅ 通过</span></td>
+    <td>状态机/可见性（服务端 SQL 裁决，下架直链 404）、城市筛选（含无城市活动可见 MIW-79 修复）、日历黄点（与可报名谓词同源）、标题搜索、近期/已结束互斥、富文本插图 cloud:// 水合，全部符合。<span class="evi">event-service.js:1030-1034,1071-1076,1174-1215,1321-1328；rich-text-area.tsx:105-127；admin-detail-actions.tsx:72-82</span>
+    <div class="notes">📋 详情第三 tab 实际文案「报名须知」，计划写「温馨提示」（计划滞后，见 F 节）。</div></td></tr>
+  <tr><td>UF-02</td><td>游客 → 登录 → 资料 → 嘉宾</td><td>P0</td><td><span class="badge b-pending">⏳ 真机终验</span></td>
+    <td>代码级全部符合：游客浏览不拦（公开路由清单）、mip-login-sheet 两按钮文案逐字一致、门禁顺序 登录→协议→手机号→资料（首个未满足项驱动、不重复已完成步骤）、pendingResume 回原意图（失败即丢弃意图须重新确认）、loginSheetRestoreFirst 老账号变体、授权失败两条文案逐字一致、资料字段（昵称必填/头像选择器/行业单选/一句话 ≤300 计数）。手机号授权步骤必须真机完成终验。<span class="evi">access-flow.ts:11-45,144-156；guest-login-flow.ts:88-89,132-146,169-236,282-288；mip-login-sheet/index.wxml:6-33；mip-profile/index.wxml:104,120,170</span></td></tr>
+  <tr><td>UF-03</td><td>嘉宾浏览 → 分享 → 报名免费活动</td><td>P0</td><td><span class="badge b-fail">❌ DEF-02</span></td>
+    <td>分享面板（默认无常驻、点转发才弹、#1a71ff 分享文案、四行复制）、sticky 两态、邀请归属（服务端 INSERT IGNORE attributions + 名单卡渲染）、动态表单 + 草稿恢复、取消报名免费即时（释放占位+候补晋升）均符合。<b>❌ 「公开给参与人」开关无 UI</b>：<code>onShareProfileChange</code> 处理器存在但 wxml 全文无绑定，新报名 shareProfile 恒 false，头像墙/公开名单展示受阻（详见缺陷 DEF-02）。保存相册/转发/订阅拉起为真机项。<span class="evi">detail/index.wxml:127-133,149-173；detail/index.ts:620-690；event-service.js:1842-1877,2380-2408；registration/index.ts:378 + index.wxml（无绑定）</span></td></tr>
+  <tr><td>UF-04</td><td>付费活动 → 支付 → 订单 → 退款</td><td>P0</td><td><span class="badge b-pending">⏳ 真机终验</span></td>
+    <td>服务端闭环符合：报名先建待支付 + 15 分钟座位保留（holdExpiresAt，续期不超上限）；支付确认由回调/ledger 决定（requestPayment 成功 ≠ 权益生效）；MEMBER_INCLUDED 玩家活动嘉宾报名服务端拒绝「仅限玩家报名」；退款幂等链（<code>event-refund:{registrationId}</code>，重试链重放不重复退款）；订单列表待支付隐藏、八态文案齐备。收银台与到账必须真机，本轮不执行支付。<span class="evi">event-service.js:1654-1660,1968-2046,864-912；mip-payment-ledger/domain/ledger.js:79-130；rules.js:54-56</span></td></tr>
+  <tr><td>UF-05</td><td>签到码 → 扫码签到 → 解锁</td><td>P0</td><td><span class="badge b-cond">⚠️ 有条件</span></td>
+    <td>静态口径全部符合：静态码窗口（开始前 6h ~ 结束后 24h）、短时码 5 分钟 + 生成即吊销旧码、扫码自动签到 + 幂等（ATTENDED 直接返回 + 幂等键）、未报名保留签到意图 + 30 分钟续签（双端 TTL 一致）、超期拒绝、blocked 文案逐字一致、「与你互动」0/0 也显示、后台手工签到/撤销（撤销原因必填）。<b>❌ DEF-03：admin-web 无短时码入口</b>（ROTATING 服务端能力完整但 Web 调用固定 STATIC；小程序现场工作台可生成），UF-05#6 经现场工作台可执行。扫码动作需真机。<span class="evi">event-service.js:3246-3260,2530-2555,135-184；rules.js:87-108；checkin-qrcode-button.tsx:7,24；packages/admin/event-console/index.ts:189-212</span></td></tr>
+  <tr><td>UF-06</td><td>心动票 + 参与人档案</td><td>P0</td><td><span class="badge b-e2e">✅ 通过</span></td>
+    <td>1 票/改投/取消（DB 唯一约束 + 乐观锁 + 写路径复检）、候选须本场已签到、未签到 restricted（toast 文案逐字）、参与人四 tab + 计数 + 搜索、竖版卡统一规格（Lv→头像→名称→三标签→一句话两行省略→勋章≤3→邀请人仅嘉宾，无 MIW-73 关系行）、心动值跨场聚合、被投通知红点，全部服务端裁决。<span class="evi">event-service.js:2877-2908,2987-3087,2850-2875；public-person-details.js:121-159；talent-card/index.wxml:1-42；heart-history.js:57-85</span>
+    <div class="notes">⚠️ DEF-13：服务端仍为每条名单计算下发无人消费的 heart_relation（性能噪声）。红点即时性（30s 节流）与真机投票操作留人工。</div></td></tr>
+  <tr><td>UF-07</td><td>活动反馈</td><td>P0</td><td><span class="badge b-pass">✅ 通过</span></td>
+    <td>必填双端校验（评分 1-5 / 推荐 / 六角色≥1 / 加入意愿 / 花名册授权）、缺项就地 scroll 定位、再次进入回读、版本化覆盖更新（UNIQUE + expectedVersion CAS，不产生重复反馈）、后台明细 + 导出，全部符合。<span class="evi">feedback/index.ts:234-270,369-414,429；event-service.js:3111-3197,3292-3350；rules.js:130-187；sensitive-export-button.tsx:96-124</span></td></tr>
+  <tr><td>UF-08</td><td>嘉宾 × 机会锁定口径</td><td>P0</td><td><span class="badge b-pass">✅ 通过</span></td>
+    <td>MIW-70 口径完整：嘉宾/未登录两子页均 Mystery Box 锁定、未登录另有「玩家登录」胶囊、解锁入口过门禁进等级页、发布机会不限身份（服务端仅要求登录+协议+手机+资料）、我的项目本人可见含已下架、他人永不可见（详情兜底 NOT_FOUND）。<span class="evi">opportunities/index.wxml:280-284,309,318；index.ts:1026-1036,1099-1104,1126-1128；mip-opportunities-api/lib/auth.js:127-174；opportunities.js:456-457,466</span></td></tr>
+  <tr><td>UF-09</td><td>玩家双列表 + 人才筛选</td><td>P0</td><td><span class="badge b-pass">✅ 通过</span></td>
+    <td>机会卡要素（黄标类型/价值/城市/+N 想合作/状态 pill）、人才横版卡（无 MIP 后缀城市、六角色 footer、勋章≤3）、名单册全量 ACTIVE（无卡用户「MIP 用户」占位不报错，MIW-80 客户端放宽 <code>cards:[]</code>）、筛选体系（行业二级页 ≤8「已选 n/8」、组合清除、按钮两态）、拉黑双向互斥、游标分页去重 + 错误重试，全部符合；MIW-85 邀请人口径接入。<span class="evi">cooperation.js:271,502-533,616-650；mip-cooperation/validation.ts:365-385,402-422；common.js:51-65；talent-cursor.js；opportunities/index.wxml:112,228,246</span></td></tr>
+  <tr><td>UF-10</td><td>我想合作 → 通知链路</td><td>P0</td><td><span class="badge b-fail">❌ DEF-04</span></td>
+    <td>意向/取消按钮态、+N 胶囊头像、边界（本人 CONFLICT / 已结束 CONFLICT / 下架不可见）、名单页最近意向排最前、站内信 + 订阅四字段（新增意向时）符合。<b>❌ 取消合作意向无任何状态变化通知</b>：projector 仅 status=ACTIVE 投影，取消返回 FACT_NO_LONGER_CURRENT，UF-10#5「A2 收到状态变化通知」不成立（详见 DEF-04）。订阅推送需真机。<span class="evi">opportunity-cooperations.js:50-131；mip-outbox-worker/domain/projector.js:962-979；mip-opportunity-cooperators/index.wxml:11-14</span></td></tr>
+  <tr><td>UF-11</td><td>合作卡（AI 语音 + 手动）</td><td>P0</td><td><span class="badge b-pending">⏳ 真机终验</span></td>
+    <td>手动链路代码级符合（编辑器、删除弹窗「删除合作卡」+「角色名 · 定位语」16 字截断）；录音/麦克风授权/转写回填为真机项（MIW-71 已修 ASR 打包与看门狗）。<span class="evi">profile/index.ts:81-85,891-913</span></td></tr>
+  <tr><td>UF-12</td><td>超级案例增删改查</td><td>P1</td><td><span class="badge b-pass">✅ 通过</span></td>
+    <td>多项目编辑器、档案黄点时间线、公开档案紧凑行卡、编辑回读、删除弹窗（「删除超级案例」+卡片标识）、独立案例列表页已下线（MIW-54，路由契约无入口）。<span class="evi">mip-cases/editor|detail；profile/index.ts:891-913</span></td></tr>
+  <tr><td>UF-13</td><td>往期活动 → 视频号</td><td>P1</td><td><span class="badge b-pass">✅ 通过</span></td>
+    <td>数据源 = mip_videos 回顾条目（非已结束活动）、admin sph 前缀校验（<code>^sph[A-Za-z0-9]+$</code>）、空态「暂无往期活动」、下架即消失、跳转实现（openChannelsUserProfile/Activity）在位；跳转成功需真机。<span class="evi">event-service.js:597-620；pages/events/index.ts:143-147,208-220；platform/wechat/channels.ts:55-60；mip-admin-api/domain/videos.js:17-18</span></td></tr>
+  <tr><td>UF-14</td><td>会员引导转化（含 MIW-83/84 新口径）</td><td>P1</td><td><span class="badge b-e2e">✅ 通过</span></td>
+    <td>MIW-83：档位横滑（swiper + 相邻同权益合并 + 问号箱子锁定 + 权益跟随）、任务全量游标聚合、非会员头部问号箱子，聚焦 E2E 佐证（档位合并/锁定/权益槽位）。MIW-84：任务三分流（PAGE_JUMP switchTab 落地活动 Tab、SHARE open-type=share + 固定邀请 payload、未配置不可点、COMPLETED/ENDED 灰态），E2E 10/10 佐证；迁移 109 + 服务端归一化在位。立即加入弹层（服务端方案快照/购买须知/协议链接）、协议返回弹层仍在，符合；确认支付本轮不点击。等级横幅三态（MIW-81）符合。<span class="evi">mip-growth/index.wxml:31-41,70-80,136-181；mip-growth/tiers.ts:31-65；mip-growth/index.ts:289-325,332-395,422-462；platform/navigation/client.ts:87-105；database/mysql/mip/109_task_card_actions.sql</span>
+    <div class="notes">📋 DEF-08：计划 UF-14#6（玩家无邀请入口/续费全宽）为 MIW-83 有意变更前的旧口径，计划未同步（见 F 节）。</div></td></tr>
+  <tr><td>UF-15</td><td>开通/续费支付链路</td><td>P0</td><td><span class="badge b-na">➖ 本轮不适用</span></td>
+    <td>按计划本轮不测付费开通（A2 由后台补录），完整用例保留 WEAPP_TEST_CASES.md；灰度演练对应 MIW-88 另行安排。</td></tr>
+</table>
+
+<h2>C. Part B · 传统功能用例</h2>
+
+<h3>TC-IDT 身份与门禁 <span class="badge b-cond">⚠️ 有条件通过</span></h3>
+<div class="card">
+  <ul>
+    <li><span class="ok-ico">✓</span> TC-IDT-101/102/103/104/105/106/108 符合：公开路由清单覆盖活动列表/详情/往期/参与人；受保护动作统一 openProtected → 半屏弹层；门禁按首个未满足项驱动、已完成步骤不重复（服务端快照下发 agreements/phoneBound/profile）；授权失败文案逐字一致；换绑双路径（微信/短信）且服务端单行 UPDATE 不合并账号、验证码错误码齐全；资料乐观锁保存回读；现场工作台入口由服务端 grants 投影（<code>admin:enter</code>）+ 二次门禁。<span class="evi">access-flow.ts:11-45；guest-login-flow.ts:88-89；bind-phone/index.ts:94-238；identity repository.js:675-693；profile/index.ts:391,961-962</span></li>
+    <li><span class="warn-ico">▲</span> <b>📋 DEF-07（TC-IDT-107）</b>：注销后同 OpenID 重登命中墓碑返回原 CLOSED 账号且永不新建（服务端刻意设计 + 测试固化），与计划「重新登录为全新身份」冲突，需产品拍板（详见缺陷清单）。</li>
+    <li class="notes">备注：参与人页心动投票对未签到只 toast 不弹登录层（门禁本质是签到，服务端口径优先，低危口径差）。</li>
+  </ul>
+</div>
+
+<h3>TC-EVT 活动 <span class="badge b-cond">⚠️ 有条件通过</span></h3>
+<div class="card">
+  <ul>
+    <li><span class="ok-ico">✓</span> TC-EVT-101/104/105/108/110/111/112/113/115 符合：骨架屏→数据、(starts_at,id) 游标去重、错误重试；无城市活动筛选不排除（MIW-79）；富文本插图水合；参与人数胶囊规则（0 隐藏 / 1 人=头像+1人参加 / ≤3 全员+N人参加 / &gt;3 前 3 头像++N，MIW-73）；审核制 APPROVAL→待确认→后台通过/驳回；满员三策略服务端裁决（候补 WAITLISTED / 拒绝 CONFLICT / 超售放行，后台互斥校验）；报名草稿恢复；改报版本冲突保留提示；已报名（含待支付/审核/候补/已签到）详情底部只剩客服+转发双胶囊、无邀请来源/签到/变更模块（MIW-53）。<span class="evi">event-service.js:1107-1112,1188-1215,1284-1289,1333-1367；rules.js:60-77；mip-activity-card/model.ts:13-48；mine/index.wxml:17-19</span></li>
+    <li><span class="warn-ico">▲</span> <b>❌ DEF-02</b>（关联 TC-EVT-108/109）：「公开给参与人」开关缺失（同 UF-03）。</li>
+    <li><span class="warn-ico">▲</span> <b>❌ DEF-06（TC-EVT-114）</b>：我的活动仅「待参加/已参加」两 tab——服务端 HISTORY 分类/计数完整但 wxml 无入口（注释标 figma 3591_36185 有意移除）；「待支付卡提示行」符合（「支付确认前不会生成报名资格。」）。</li>
+    <li><span class="warn-ico">▲</span> <b>📋 DEF-05（TC-EVT-108）</b>：参与人数口径计划（报名口径，含隐藏/取消处理中）与代码（f4311b32 起公开口径 <code>share_profile=1 AND REGISTERED/ATTENDED</code>，有合同测试锁死）相反，需产品拍板（详见缺陷清单）。</li>
+    <li class="notes">文案小差：详情第三 tab「报名须知」vs 计划「温馨提示」；「待参加」vs「待参与」；结果页「报名待确认」vs 列表卡「待审核」。</li>
+  </ul>
+</div>
+
+<h3>TC-OPP 项目机会 <span class="badge b-cond">⚠️ 有条件通过</span></h3>
+<div class="card">
+  <ul>
+    <li><span class="ok-ico">✓</span> TC-OPP-101/102/103/105/106/107/108/109/110 符合：发布校验（价值金额已转选填、AMOUNT 模式才校验千数字）；字段清单（无合作角色/保存草稿按钮、可见范围平台公开/仅玩家）；返回守卫「机会尚未保存…」；编辑直接保存成功回详情页（无中间页）；卡片五态（0 想合作只有黄标无胶囊、下架置灰）；下架仅自己可见（listMine 含 UNPUBLISHED、公开流与详情双拦截）；仅玩家内部机会服务端 journey-access 裁决；长按删除弹窗「删除机会」+16 字截断标识；我想合作子栏无删除入口。<span class="evi">opportunities/editor/index.ts:553-575,687-714,199；validation.ts:166-167；opportunities.js:31-36,456-457,473-492,856-865；journey-access.js:31-42；profile/index.ts:905-909</span></li>
+    <li><span class="warn-ico">▲</span> <b>❌ DEF-01（P1）</b>：MIW-89 回归——公开档案解析把 valueSummary 当必填，发布「面谈」机会后公开档案整页打不开（详见缺陷清单）。</li>
+    <li class="notes">备注：编辑器顶部存在 app-page-exit「取消」页面退出控件（非表单动作按钮），TC-OPP-102「无取消按钮」按表单动作区口径成立。</li>
+  </ul>
+</div>
+
+<h3>TC-TAL 人才合作 <span class="badge b-pass">✅ 通过</span></h3>
+<div class="card">
+  <ul>
+    <li><span class="ok-ico">✓</span> TC-TAL-101/102/103/104/105/106 符合：UI 锁（Mystery Box）+ 服务端 <code>canBrowseTalents</code>/journey-access 双保险；无卡用户「MIP 用户」占位正常渲染整页不报错（MIW-80）；六角色文案三端一致（小程序 catalog / admin-web / admin-api 导出）；邀请人 MIW-85 新口径（最近一次活动邀请人 + 玩家一律不下发，两份云函数副本逐字同步）；筛选组合与「已选 n/8」；拉黑双向互斥（NOT EXISTS 双向）。<span class="evi">journey-access.js:4-14；cooperation.js:271,502-533；public-person-details.js:75-113 与 events 侧 121-159（parity 测试钉住）；mip-catalogs.ts:155-241；admin-prd-extensions.js:310-311</span></li>
+    <li class="notes">文案小差：服务端下发「MIP 平台」→ 卡面渲染「MIP 平台邀请」（计划写「MIP平台邀请」，空格差）；组件内无空格兜底常量为死代码。</li>
+  </ul>
+</div>
+
+<h3>TC-PRF 我的（档案/统计/成长） <span class="badge b-cond">⚠️ 有条件通过</span></h3>
+<div class="card">
+  <ul>
+    <li><span class="ok-ico">✓</span> TC-PRF-101/103/104/105/107/108/111/112 符合：档案头全字段（等级 chip 玩家 Lv.N/嘉宾、第一佩戴勋章、主分会点击进分会页、档案待完善）；横幅三态（MIW-81）；统计四卡 + 心动值入口 tap 拉订阅 + 红点进入清除；访客按人聚合 ×N、无访问时间（MIW-74，现役 influence 入口）；三栏管理 + 删除弹窗分类型；勋章未获授整枚置灰、佩戴≤3、locked 无佩戴按钮、长按排序；经验值规则+明细游标；站内信四类归并、进入即全部已读、行点击直达不被订阅拦截（MIW-77）。<span class="evi">profile/index.wxml:89-150；profile/index.ts:806-837,891-913；mip-received/index.ts:170-187；mip-badges/index.wxss:128-131；mip-notifications/index.ts:97-121,190-220</span></li>
+    <li><span class="warn-ico">▲</span> <b>📋 DEF-09（TC-PRF-110）</b>：MIW-84 只改等级页任务；NPC 任务列表 mip-tasks 仍保留详情+「完成/上传并完成」提交核验入口，与批次文档「详情页能力保留但无入口」表述冲突，需澄清范围。</li>
+    <li><span class="warn-ico">▲</span> <b>⚠️ DEF-12（P3）</b>：访客卡「访问了你的公开档案 N 次」文案与 lastVisitedAt 仅存在于非 influence 死分支，若被触达违背 MIW-74。</li>
+    <li class="notes">备注：未登录我的页四入口网格仍渲染（逐项过登录门禁，J1-08 有意设计，非「整页引导」字面）；红点清除最迟 30s 节流/下拉刷新。</li>
+  </ul>
+</div>
+
+<h3>TC-CARD 名片 <span class="badge b-cond">⚠️ 有条件通过</span></h3>
+<div class="card">
+  <ul>
+    <li><span class="ok-ico">✓</span> TC-CARD-201/202/203/204/205/206 实现链路符合：四套模板服务端白名单（YELLOW 黄底素材 702×492 在位）；填了即上卡/清空即下卡（visibility 由内容派生，无独立隐私开关层 MIW-69）、卡面无性别行；卡面字段+超宽截断+空值回退字段名占位（编辑页）；必填校验「请先编辑名片，补充…」；canvas 702×492 + 保存相册 + 名片码 scene 解码回公开档案；guest=1 视图形态（无样式选择、底栏「登录制作我的名片」）。保存相册/扫码需真机终验。<span class="evi">profile-card-settings.js:2,9-10；mip-card/index.ts:28-29,32-38,133-147,199-203,364-374,562-593；mip-card-edit/index.ts:290-299；profile-card-code.js:100-102；mip-public-profile/index.ts:144-150</span></li>
+    <li><span class="warn-ico">▲</span> <b>⚠️ DEF-10（P3）</b>：<code>?guest=1</code> 访客名片视图不可达——全仓无入口生成该链接（代码注释自认路由缺口），仅能手工拼 URL。</li>
+    <li class="notes">备注：卡面底图 scaleToFill 拉伸（设计稿口径注释），PINK/BLUE/WHITE 源图非原比，观感是否变形需真机比对。</li>
+  </ul>
+</div>
+
+<h3>TC-ORD 订单 <span class="badge b-pass">✅ 通过</span></h3>
+<div class="card">
+  <ul>
+    <li><span class="ok-ico">✓</span> TC-ORD-101/102/103/104 符合：四筛选 tab + 待支付服务端统一隐藏（<code>NOT IN ('CREATED','PAYMENT_CREATED')</code>）；八态文案全量（待支付→支付确认中→已支付→退款处理中→部分退款/已退款/支付失败/已关闭）；退款入口在活动详情（与 UF-04 一致）、幂等键 + 重试链 + 已签到拦截 + EVENT 单禁止独立退款；支付结果页按订单权威状态（reconcile + classifyPaymentResult）+ 1.5s 轮询 + 重查按钮。<span class="evi">orders/index.ts:133-137；commerce repository.js:645,672-685；presentation.ts:19-83；event-service.js:864-912,2276-2280；payment-result/index.ts:75-113,238-248</span></li>
+    <li class="notes">文案口径：支付取消时注册结果页标题「报名待支付」（「支付已取消」仅在描述文案）；订单详情时间线为状态+时间行（无步骤条组件）。</li>
+  </ul>
+</div>
+
+<h3>TC-NTF 消息与订阅 <span class="badge b-cond">⚠️ 有条件通过</span></h3>
+<div class="card">
+  <ul>
+    <li><span class="ok-ico">✓</span> TC-NTF-201/202 符合：全库 requestSubscribeMessage 仅一处封装、全 App 仅 3 个业务入口在 tap 处理器内拉起（确认发布 / 提交报名 / 心动值入口；CHECKIN_RESULT 为既定例外）；无开屏弹、无常驻提示卡、站内信页无拦截弹层；同一动作 24h 一次、软拒绝 24h 后再问、BANNED（总是拒绝）终态永久、<code>void</code> 直发不阻塞业务；站内信无条件先落库（INSERT 后才建 delivery task）。<span class="evi">wechat-subscription.ts:46；mip-opportunities/editor/index.ts:599；registration/index.ts:416；profile/index.ts:811；entry-subscription.ts:12-45；guide-policy.ts:44-99；notification-worker/repository.js:35-95</span></li>
+    <li><span class="warn-ico">▲</span> <b>⚠️ 取消心动无通知</b>（并入 DEF-04 口径确认）：projector 仅 ACTIVE 投影，TC-NTF-202 字面含「取消心动」需产品确认。</li>
+    <li class="notes">备注：app onShow 有 GROWTH_LEVEL_UP/OPERATIONS 运营消息弹窗（非订阅弹层，验收时勿误报 MIW-77）。</li>
+  </ul>
+</div>
+
+<h3>TC-ADM 后台造数与联动 <span class="badge b-cond">⚠️ 有条件通过</span></h3>
+<div class="card">
+  <ul>
+    <li><span class="ok-ico">✓</span> TC-ADM-301/303/304/305/306/307/308/309 符合：活动表单全字段（富文本插图上传、免费/付费/玩家专属、自动/审核、候补与超售互斥、名额）；名单 9 种状态文案 + 确认签到/撤销（原因必填 120 字）+ 审核 + 补录报名（仅免费/玩家专属）+ 导出；补录会员 1/3/6/12 月 + 原因必填（grant 唤醒 outbox 同步权益）；入会审核队列（PENDING→审核/复议）；往期回顾 sph 校验；机会状态操作（发布/恢复招募/重新招募/结束/下架）+ 合作卡/案例管理 + 创建入口；Banner ≤5 + 排序；用户详情心动明细 tab + 活动心动统计。<span class="evi">admin-event-mutation-forms.ts:106-132,179；admin-row-operations.ts:88-108；operation-model.ts:297-350；admin-video-management.ts:7-29；admin-detail-actions.tsx:238-259；admin-banner-management.ts:91,182；user-profile-page.tsx:65-67</span></li>
+    <li><span class="warn-ico">▲</span> <b>❌ DEF-03（TC-ADM-302）</b>：admin-web 签到二维码固定 STATIC，无短时码入口（服务端 ROTATING 完整，小程序现场工作台可生成）。</li>
+    <li><span class="warn-ico">▲</span> <b>⚠️ DEF-11（P2）</b>：MIW-89 机会 XLSX 导出与列表口径不一致（NEGOTIATION 导出空串非「面谈」），列表列头未更新。</li>
+    <li><span class="warn-ico">▲</span> <b>⚠️ DEF-15（P3）</b>：任务 actionTarget 服务端不校验白名单成员资格（仅 admin-web 构建期约束）。</li>
+  </ul>
+</div>
+
+<h2>D. 缺陷清单</h2>
+<table>
+  <tr><th style="width:84px">编号/级别</th><th style="width:230px">标题</th><th>说明与证据</th><th style="width:230px">建议</th></tr>
+  <tr><td><span class="badge b-fail">DEF-01 · P1</span></td><td>MIW-89 回归：发布「面谈」机会后公开档案整页打不开</td>
+    <td>公开档案 <code>profileOpportunity</code> 解析器把 valueSummary 当必填（<code>responseText(...,240,true)</code> 抛「人才服务返回了无效响应」）；MIW-89 后服务端允许 value_summary 为空（选填、NEGOTIATION 模式不填文本、保存无兜底、聚合 DTO 原样下发）。任何用户发布面谈-only 机会后，其公开档案（合作卡/案例/机会聚合）对所有访客 parse error。机会 Tab/详情的 lax 解析不受影响。<span class="evi">src/modules/mip-opportunities/validation.ts:522；mip-opportunities-api/domain/discovery.js:318；domain/opportunities.js:119</span></td>
+    <td>profileOpportunity 的 valueSummary 改选填（展示回退链已有 amountDisplay||valueSummary||面谈）；补公开档案含空 valueSummary 的正向合同用例。</td></tr>
+  <tr><td><span class="badge b-fail">DEF-02 · P1</span></td><td>报名页「公开给参与人」开关无 UI（处理器成死代码）</td>
+    <td>registration/index.ts:378 <code>onShareProfileChange</code> 处理器与 shareProfile 状态链完整，但 index.wxml 全文无任何绑定（唯一 switch 是动态表单布尔字段）。新报名 shareProfile 恒 false；叠加公开计数口径（DEF-05）后新报名者不计入头像墙/公开名单，UF-03#8、TC-EVT-108/109 实测受阻。<span class="evi">registration/index.ts:159,252,378,435,453；index.wxml（无绑定）</span></td>
+    <td>报名表单补渲染开关绑定 onShareProfileChange；或产品确认下线该开关并同步计划。</td></tr>
+  <tr><td><span class="badge b-fail">DEF-03 · P2</span></td><td>admin-web 无短时码（ROTATING 5 分钟）生成入口</td>
+    <td>签到二维码按钮固定请求 STATIC（不传 mode）；ROTATING 服务端能力完整（300000ms TTL + 生成事务内吊销旧码），仅小程序现场工作台可生成。UF-05#6 / TC-ADM-302 的「后台生成短时码」在 Web 后台无法执行。<span class="evi">checkin-qrcode-button.tsx:7,24；mip-admin-api/domain/event-runtime.js:38-44,87-90；packages/admin/event-console/index.ts:189-212</span></td>
+    <td>checkin-qrcode-button 增加静态/短时模式切换与刷新。</td></tr>
+  <tr><td><span class="badge b-fail">DEF-04 · P2</span></td><td>取消合作意向 / 取消心动无状态变化通知</td>
+    <td>outbox projector 仅对 status=ACTIVE 投影消息，取消返回 FACT_NO_LONGER_CURRENT 不产生任何站内信/推送（notification-worker 亦无补偿路径）。UF-10#5「A2 收到状态变化通知」与 TC-NTF-202 取消心动分支不成立。<span class="evi">mip-outbox-worker/domain/projector.js:962-979（cooperation）,700-704（heart）</span></td>
+    <td>产品确认取消是否需通知；若需要，projector 补 CANCELLED 分支消息。</td></tr>
+  <tr><td><span class="badge b-fail">DEF-06 · P2</span></td><td>我的活动无「历史」分类入口</td>
+    <td>服务端 HISTORY 分类/计数完整、页面 changeCategory 支持，但 wxml 仅渲染 待参加/已参加 两 tab（注释标 figma 3591_36185 有意移除）。TC-EVT-114 三分类与 UF-03#9「历史可见」无法在界面完成。<span class="evi">mine/index.wxml:2-7；event-service.js:2153-2165,2227-2240；mine/index.ts:139-153</span></td>
+    <td>产品拍板：恢复历史入口或更新计划/设计依据。</td></tr>
+  <tr><td><span class="badge b-cond">DEF-11 · P2</span></td><td>MIW-89 机会 XLSX 导出与列表口径不一致</td>
+    <td>导出仅「最低/最高金额（万元）」两列：SINGLE→万元数值（5 千→0.5）、NEGOTIATION→空串（价值说明已转选填，导出后价值信息可能全失），非「面谈/X 千」同口径；列表列头仍为「价值（万元）」未随 MIW-89 更新。<span class="evi">export-workbook.js:70-72,141-142；export.test.js:174-179；admin-read-special-pages.ts:97,308-314</span></td>
+    <td>导出补 valueMode/展示列（面谈/X 千），列头同步 MIW-89。</td></tr>
+  <tr><td><span class="badge b-pending">DEF-10 · P3</span></td><td>访客名片视图 ?guest=1 不可达</td>
+    <td>mip-card 支持 guest=1 形态但全仓无入口生成该链接，名片码扫码落地公开档案页（代码注释自认路由缺口）。<span class="evi">mip-card/index.ts:193；profile-card-code.js:100-102</span></td>
+    <td>确认该形态是否保留；保留则补分享/扫码入口。</td></tr>
+  <tr><td><span class="badge b-pending">DEF-12 · P3</span></td><td>访客卡死分支违背 MIW-74（访问时间）</td>
+    <td>「访问了你的公开档案 N 次」文案与 lastVisitedAt 只在非 influence 默认分支渲染；所有现役入口走 influence grid；死分支被触达会显示访问时间。<span class="evi">mip-received/index.ts:182,185；index.wxml:167,170</span></td>
+    <td>删除死分支或把文案/×N 移入 grid。</td></tr>
+  <tr><td><span class="badge b-pending">DEF-13 · P3</span></td><td>公开参与人名单仍下发 heart_relation 死载荷</td>
+    <td>MIW-73 移除卡面关系行后前端无消费方，服务端每条名单仍多两个 LEFT JOIN 计算并下发 heart_relation（含 types 定义）。<span class="evi">event-service.js:1438-1457,1580；types.ts:73</span></td>
+    <td>服务端停发并同步 types/测试。</td></tr>
+  <tr><td><span class="badge b-pending">DEF-15 · P3</span></td><td>任务 actionTarget 服务端不校验白名单</td>
+    <td>白名单约束仅在 admin-web 构建期；mip-tasks-api validation 只校验格式（非空/无 ?/枚举），内部管理通道可写入任意无参路径致小程序跳转死页。风险低（入口单一）。<span class="evi">mip-tasks-api/domain/validation.js:46-56；admin-task-management.ts:42-47,596-602</span></td>
+    <td>服务端补 config/runtime-pages.json 白名单同源校验。</td></tr>
+  <tr><td><span class="badge b-callout">DEF-05 · 口径</span></td><td>参与人数两套口径：计划与代码相反</td>
+    <td>计划 1.4：列表数字=报名口径（REGISTERED+取消处理中+已签到，含隐藏资料者），头像墙=公开口径；代码自 f4311b32（2026-10-09）三处统一为公开口径（<code>share_profile=1 AND REGISTERED/ATTENDED</code>）且有合同测试锁死。计划成文晚于该提交。<span class="evi">ACCEPTANCE_TEST_PLAN_20261013.md:62；event-service.js:1118-1123,1244-1249,2184-2189；participant-count-consistency.test.js:47-53</span></td>
+    <td>产品拍板：代码为准则更新计划 1.4/UF-03#8；计划为准则属功能回归需修复。</td></tr>
+  <tr><td><span class="badge b-callout">DEF-07 · 口径</span></td><td>注销后同 OpenID 重登不产生全新身份</td>
+    <td>注销将 identity_key 换墓碑并保留 closed_identity_key，重登命中墓碑返回原 CLOSED 账号，ensureUser 对墓碑永不新建（测试固化「never creates a new account」），全线 FORBIDDEN。与计划 TC-IDT-107「重新登录为全新身份」冲突——现实现为反小号重进的刻意设计。<span class="evi">identity repository.js:30-62；account-closure.js:321-322；account-closure.test.js:250</span></td>
+    <td>产品确认语义：永久封存则改计划文案；需全新身份则属服务端改造。</td></tr>
+  <tr><td><span class="badge b-callout">DEF-08 · 计划滞后</span></td><td>UF-14#6 旧口径：玩家邀请入口/续费全宽</td>
+    <td>MIW-83 有意恢复等级页「邀请入会」分享按钮（裁决记录在代码注释与批次文档），续费窗口内「立即续费」为并排半宽；计划 UF-14#6（无邀请入口/全宽续费/窗口外无常驻操作）未同步。<span class="evi">mip-growth/index.wxml:107-118；mip-growth/index.ts:21-26；MIW-83-84-85-89_BATCH_ACCEPTANCE.md:7</span></td>
+    <td>更新计划 UF-14#6 为 MIW-83 新口径。</td></tr>
+  <tr><td><span class="badge b-callout">DEF-09 · 范围澄清</span></td><td>MIW-84 范围：NPC 任务列表仍保留提交核验入口</td>
+    <td>MIW-84 只改等级页任务三分流；mip-tasks 列表仍有详情跳转 +「完成/上传并完成」提交核验操作条，与批次文档「详情页能力保留但无入口」表述冲突。若新口径仅限等级页则文档需澄清；若全局下线则为功能缺口。<span class="evi">mip-tasks/index.wxml:56-60；index.ts:144-166</span></td>
+    <td>交付方/产品澄清 MIW-84 范围并同步文档。</td></tr>
+</table>
+
+<h2>E. 真机专项待办（计划第 5 节，逐项待人工执行）</h2>
+<div class="card">
+  <ol style="margin:4px 0;padding-left:22px">
+    <li>手机号一键授权与换绑（UF-02 / TC-IDT-104/105）</li>
+    <li>付费活动报名支付与取消退款（UF-04）</li>
+    <li>扫现场签到码自动签到 + 短时码失效（UF-05；短时码经小程序现场工作台生成，admin-web 入口缺口见 DEF-03）</li>
+    <li>心动票投票/改投/取消真机操作（UF-06）</li>
+    <li>订阅消息三入口：确认发布 / 提交报名 / 心动值入口（UF-03/10、TC-NTF）</li>
+    <li>AI 语音创建合作卡：麦克风授权、录音、转写回填（UF-11）</li>
+    <li>往期活动跳视频号（UF-13）</li>
+    <li>活动分享海报/二维码保存相册、名片保存相册、名片码扫码（UF-03 / TC-CARD）</li>
+    <li>MIW-84 SHARE 任务的转发面板真机目检（批次文档遗留项）；邀请链路三场景待 MIW-87 落地后专项</li>
+  </ol>
+  <div class="notes">按计划第 6 节：涉及支付/手机号/订阅/扫码/录音的结论以真机证据为准，开发者工具通过不记为通过——本报告未将任何工具结果冒充真机结论。</div>
+</div>
+
+<h2>F. 计划文档滞后项（建议更新 ACCEPTANCE_TEST_PLAN）</h2>
+<div class="card">
+  <ul>
+    <li>TC-OPP-101「价值金额当前为必填」→ MIW-89 已落地选填双模式（第 4 节已预告，正文未同步）。</li>
+    <li>TC-EVT-105 详情第三 tab「温馨提示」→ 实际为「报名须知」（空态/内容链路完整）。</li>
+    <li>UF-03#2 分享面板「两行」描述 → 实际「分享活动」卡含三按钮（微信分享/复制链接/下载二维码）+「分享文案」卡，能力全覆盖。</li>
+    <li>TC-PRF-102「整页登录引导」→ 实为登录 hero + 各入口逐项过登录门禁（J1-08 设计）。</li>
+    <li>UF-14#6 → MIW-83 新口径（见 DEF-08）；UF-10#5 / TC-NTF-202 取消分支 → 见 DEF-04。</li>
+  </ul>
+</div>
+
+<h2>G. 验收口径声明</h2>
+<div class="card">
+  <ul>
+    <li>本报告为<b>代理执行</b>的验收：门禁独立复跑 + 开发者工具运行时合同 + 7 路并行代码级核对（每条结论附 file:line 证据）。P1 发现均经原始证据二次抽查核实（responseText required 语义、wxml 无绑定、ROTATING 无调用方、projector 取消分支）。</li>
+    <li>计划标注 [真机] 的用例一律记 ⏳ 待办，不在本报告判定为通过或失败。</li>
+    <li>运行时 4 个失败项沿用交付基线的归因记录（3 项 MIW-79 基线 + 1 项数据条件非回归），本轮独立复跑未发现新增回归。</li>
+    <li>报告中不含 AppID、EnvID、OpenID 等敏感标识；运行时截图证据保留于 <code>.tmp/runtime-evidence/2026-10-14-acceptance/</code>（git 忽略目录）。</li>
+  </ul>
+</div>
+
+<div class="footer">
+  MIP 小程序验收报告 · 生成于 2026-10-14 · 基线 main 46eb7f82 · 体验版 0.2.0.20261014.1 · 计划基线文档 docs/testing/ACCEPTANCE_TEST_PLAN_20261013.md<br>
+  关联交付记录：docs/testing/MIW-83-84-85-89_BATCH_ACCEPTANCE.md · docs/mip/PROJECT_STATUS.md
+</div>
+
+</div>
+</body>
+</html>

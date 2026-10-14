@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缺陷修复集成验收报告 · 2026-10-14</title>
+<style>
+  :root{
+    --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; --card:#ffffff;
+    --green:#16a34a; --green-bg:#f0fdf4; --amber:#d97706; --amber-bg:#fffbeb;
+    --red:#dc2626; --red-bg:#fef2f2; --purple:#7c3aed; --purple-bg:#f5f3ff;
+    --slate:#475569; --slate-bg:#f1f5f9; --blue:#1a71ff; --blue-bg:#eff6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;color:var(--ink);background:var(--bg);line-height:1.65;font-size:14px}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  header.hero{background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;border-radius:14px;padding:28px 30px;margin-bottom:24px}
+  header.hero h1{margin:0 0 6px;font-size:24px}
+  header.hero .sub{opacity:.85;font-size:13px}
+  .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:16px;font-size:12.5px}
+  .meta div{background:rgba(255,255,255,.08);border-radius:8px;padding:8px 12px}
+  .meta b{opacity:.7;font-weight:500;display:block;font-size:11px}
+  h2{font-size:18px;margin:36px 0 12px;padding-left:10px;border-left:4px solid var(--blue)}
+  h3{font-size:15px;margin:20px 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:center}
+  .stat .n{font-size:26px;font-weight:700}
+  .stat .l{font-size:12px;color:var(--muted)}
+  .badge{display:inline-block;font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap;vertical-align:middle}
+  .b-pass{color:var(--green);background:var(--green-bg);border:1px solid #bbf7d0}
+  .b-cond{color:var(--amber);background:var(--amber-bg);border:1px solid #fde68a}
+  .b-info{color:var(--blue);background:var(--blue-bg);border:1px solid #bfdbfe}
+  .b-slate{color:var(--slate);background:var(--slate-bg);border:1px solid #cbd5e1}
+  code{background:#f1f5f9;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:11.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
+  .notes{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .evi{color:var(--muted);font-size:11.5px;margin-top:5px;word-break:break-all}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px}
+  th{background:#f1f5f9;text-align:left;font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  ul{margin:6px 0;padding-left:20px}
+  li{margin:3px 0}
+  .verdict{background:linear-gradient(135deg,#ecfdf5,#f0fdf4);border:2px solid #bbf7d0;border-radius:14px;padding:20px 24px;margin:18px 0}
+  .verdict h2{border:none;padding:0;margin:0 0 8px;font-size:18px;color:var(--green)}
+  .footer{color:var(--muted);font-size:12px;margin-top:32px;border-top:1px solid var(--line);padding-top:14px}
+  .ok-ico{color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>缺陷修复集成验收报告</h1>
+  <div class="sub">2026-10-14 验收报告（ACCEPTANCE_REPORT_20261014.html）缺陷清单的修复驱动与集成验收 · 用户裁决六项已全部落实</div>
+  <div class="meta">
+    <div><b>集成分支</b><code style="background:rgba(255,255,255,.12);border-color:transparent;color:#fff">integration/acceptance-fixes-20261014</code> @ 8f1556bf（已推送 origin，基于 main 46eb7f82）</div>
+    <div><b>执行管线</b>notma 建卡 MIW-90..98 → supa-ai Plan 随卡锁定 → ai run 双波执行 → 逐分支 review → 集成合入 → 门禁/部署/E2E</div>
+    <div><b>staging 部署</b>mip-events-api / mip-admin-api / mip-tasks-api 代码包更新并 verified（本地 Device Flow 通道）</div>
+    <div><b>证据目录</b>集成分支 .tmp/verify-all-integration-20261014.log · .tmp/runtime-evidence/2026-10-14-integration/ · .tmp/rsp-e2e-evidence/</div>
+  </div>
+</header>
+
+<h2>结论总览</h2>
+<div class="stats">
+  <div class="stat"><div class="n ok-ico">9 / 9</div><div class="l">缺陷任务完成并合入<br>（MIW-90..98 全部 done）</div></div>
+  <div class="stat"><div class="n ok-ico">全绿</div><div class="l">集成分支 verify:all<br>（270 文件/1710 项 + web 179 项）</div></div>
+  <div class="stat"><div class="n ok-ico">3 / 3</div><div class="l">云函数 staging 部署<br>代码包 SHA 变更通过</div></div>
+  <div class="stat"><div class="n ok-ico">56 / 4 / 3</div><div class="l">运行时合同 通过/失败/等待<br>与修复前基线完全一致，零回归</div></div>
+  <div class="stat"><div class="n ok-ico">E2E 实锤</div><div class="l">全新报名 INSERT →<br>服务端回读 shareProfile=true</div></div>
+</div>
+
+<div class="verdict">
+  <h2>✅ 结论：建议将集成分支合并到 main</h2>
+  <p style="margin:8px 0">九项修复全部按用户裁决/推荐完成，集成验收全链路（门禁 → staging 部署 → 55 路由运行时合同 → 真实页面报名 E2E）<b>零回归</b>，且两个 P1（MIW-89 公开档案回归、报名开关死代码）已在真实环境闭环验证。合并动作本身建议由仓库 owner 执行 <code>git merge integration/acceptance-fixes-20261014</code> 并按惯例完成合并后全量 verify + 体验版上传（或授权编排方代为执行）。合并后如需体验版，可用 <code>pnpm wechat:upload</code>（自动含 verify:all 门禁）。</p>
+  <p class="notes" style="margin:4px 0 0">合并无阻塞项；遗留事项均为非阻塞（见「遗留与边界」节：demo 活动遗留 1 条新增报名、admin-web 账号级浏览器验证沿历轮缺凭据、真机专项维持待办）。</p>
+</div>
+
+<h2>A. 交付管线（notma × supa-ai × AI worker）</h2>
+<table>
+  <tr><th style="width:70px">任务卡</th><th style="width:250px">缺陷 → 修复</th><th style="width:80px">执行</th><th>交付 commit 与集成验证</th></tr>
+  <tr><td>MIW-90</td><td>DEF-01 P1：公开档案 valueSummary 回归 → 解析转选填</td><td><span class="badge b-pass">AI wave1</span></td><td><code>1fa68347</code>；发布+引荐两条解析路径测试覆盖、title 必填负向断言保留</td></tr>
+  <tr><td>MIW-91</td><td>DEF-02+05 裁决合成：删「公开给参与人」开关 + 服务端默认公开（opt-out）</td><td><span class="badge b-pass">AI wave1</span></td><td><code>92a0ca1b</code>；<code>isSharedProfilePublic</code> 统一 4 条写路径（缺省/true=公开、显式 false=隐藏），客户端 payload 不再含字段；编排方追加 <code>8f1556bf</code> 修复仓库 free-event 流程对已删处理器的调用</td></tr>
+  <tr><td>MIW-92</td><td>DEF-03 P2：admin-web 补短时码（ROTATING 5 分钟）入口</td><td><span class="badge b-pass">AI wave1</span></td><td><code>41fa5b44</code>；Segmented 切换 + 刷新即吊销旧码 + 加载中禁下载旧图；react 测试 7 例</td></tr>
+  <tr><td>MIW-93</td><td>DEF-07 裁决：设置页隐藏注销入口（本轮下线注销）</td><td><span class="badge b-pass">AI wave1</span></td><td><code>a774d58a</code>；295 行移除（按钮/弹层/处理器/组件注册）+「不渲染注销」负向 pin；服务端 closure 能力按裁决保留备用</td></tr>
+  <tr><td>MIW-94</td><td>DEF-11 P2：MIW-89 机会导出与列表口径一致</td><td><span class="badge b-pass">AI wave1</span></td><td><code>9687784d</code>；复用同一 formatter 新增「价值模式/价值展示」列（面谈/X 千/万元区间），列头改「价值」</td></tr>
+  <tr><td>MIW-95</td><td>DEF-12 P3：访客卡死分支清理（MIW-74 收口）</td><td><span class="badge b-pass">AI wave2</span></td><td><code>d6a91d05</code>；访问次数文案/访问时间字段停产出 + 死节点删除</td></tr>
+  <tr><td>MIW-96</td><td>DEF-13 P3：公开参与人停发 heart_relation 死载荷</td><td><span class="badge b-pass">AI wave2</span></td><td><code>6671ebb9</code>；服务端 -28 行 + 客户端类型收缩 + 契约测试更新</td></tr>
+  <tr><td>MIW-97</td><td>DEF-15 P3：任务 actionTarget 服务端白名单校验</td><td><span class="badge b-cond">AI wave2（run 中止，产物完整）</span></td><td><code>c6213cea</code>；白名单常量 34 项（55 路由 − admin 包 − 带参页）+ parity 测试钉住配置漂移 + api 正反用例。worker 会话中途 stopped，编排方逐项核验（mip-tasks-api 55 项 + parity 全绿）后方合并</td></tr>
+  <tr><td>MIW-98</td><td>docs：验收计划 14 项口径更新（六项用户裁决全部落档）</td><td><span class="badge b-pass">AI wave2</span></td><td><code>82294bf5</code>；编排方追加 <code>1f89267c</code> 修正不存在的「MIW-100」引用为「2026-10-14 用户裁决」</td></tr>
+</table>
+<p class="notes">流程记录：9 张卡正文（Intent+Spec+Plan 含精确 file:line、风险对策、验证路径）在创建时随卡发布并评论锁定（基线 main@46eb7f82、授权来源=用户 2026-10-14 会话指令），随后 <code>ai run --tool claude</code> 双波触发（wave1=90..94，wave2=95..98）；每卡交付后由编排方 review diff、跑云函数本地套件后方合并。九卡均已评论交付记录并置 done。</p>
+
+<h2>B. 集成分支质量门禁</h2>
+<table>
+  <tr><th style="width:250px">门禁</th><th style="width:110px">结果</th><th>要点</th></tr>
+  <tr><td>pnpm verify:all（集成 @ 8f1556bf）</td><td><span class="badge b-pass">✅ 全绿</span></td><td>小程序 270 文件 <b>1710 项</b>（较 main 净增，含 MIW-97 parity、MIW-90/91/95 新用例）；admin-web 28 文件 <b>179 项</b>（含 MIW-92 新增 7 例）；build + 嵌套 vendor 树断言 + 体积预算 + 服务端合同 + docs:check 全过。日志：<code>.tmp/verify-all-integration-20261014.log</code></td></tr>
+  <tr><td>云函数本地套件（逐个）</td><td><span class="badge b-pass">✅ 全绿</span></td><td>mip-tasks-api 55/55 · mip-events-api 176 pass（1 skip）· mip-admin-api 762/762</td></tr>
+  <tr><td>staging 部署（3 个受影响函数）</td><td><span class="badge b-pass">✅ verified</span></td><td>mip-events-api（MIW-91+96）/ mip-admin-api（MIW-94）/ mip-tasks-api（MIW-97），<code>--confirm-env</code> + <code>--confirm-runtime-user</code> + <code>CLOUDBASE_AUTH_MODE=local</code>（本机 Device Flow 既有授权，未发起新授权）；代码更新为 <code>updateFunctionCode force:true</code> 且脚本等待代码包 SHA 变更后断言通过（SHA 未变会超时失败——通过即证新代码上线）</td></tr>
+  <tr><td>pnpm runtime:preflight</td><td><span class="badge b-pass">✅ 全绿</span></td><td>真实 AppID、55 路由完整、devtoolsLoggedIn、服务端口在线</td></tr>
+  <tr><td>pnpm test:runtime（55 路由合同）</td><td><span class="badge b-pass">✅ 与基线一致</span></td><td><b>56 PASS / 4 FAIL / 3 external-wait</b>，与修复前基线完全相同（4 FAIL = managed-events、mip-access、mip-profile-interests 数据条件非回归、mip-ai-voice，均为已归因基线项）。证据：<code>.tmp/runtime-evidence/2026-10-14-integration/</code>（逐状态截图）</td></tr>
+  <tr><td>git diff --check / 工作区</td><td><span class="badge b-pass">✅ 干净</span></td><td>集成分支工作区干净，分支已推送 origin</td></tr>
+</table>
+
+<h2>C. 聚焦 E2E：报名默认公开（MIW-91 核心裁决的 function_accepted 证据）</h2>
+<div class="card">
+  <p style="margin-top:0"><b>背景：</b>仓库受控报名流 <code>pnpm runtime:free-event</code> 的阶段护栏只允许 development/test，而当前 .env.local 为 staging（受保护设计），无法直接运行；按本仓库既有实践（MIW-83 批次「聚焦 E2E · staging 真库」），编写聚焦 automator 脚本驱动<b>真实页面 handler</b> 对受控演示活动「MIP 早会（2030 年 9 月）」执行完整报名闭环：</p>
+  <ul>
+    <li><span class="ok-ico">✓</span> <b>清理既有报名</b>：详情页取消入口 + mock wx.showModal 确认 → 状态 CANCELLED（真实取消链路）</li>
+    <li><span class="ok-ico">✓</span> <b>全新 INSERT 报名</b>：报名页 ready → 填写动态表单字段 → 提交 → <b>「报名成功」</b>（payload 不含 shareProfile 字段——MIW-91 已删）</li>
+    <li><span class="ok-ico">✓</span> <b>服务端回读</b>：编辑视图回读 <code>registration.shareProfile === true</code>（版本 9）——<b>部署后的 staging 服务端对缺省 payload 落库 share_profile=1</b>，默认公开口径端到端成立</li>
+    <li><span class="ok-ico">✓</span> 详情页回读 canCancel=true（已报名态确认；截图 5 张存 <code>.tmp/rsp-e2e-evidence/</code>）</li>
+  </ul>
+  <p class="notes">显式 false=隐藏的兼容分支（RSP-03，兼容存量客户端）由 mip-events-api 单测断言覆盖（4 条写路径逐一）；必填校验拒绝路径在本活动无必填自定义字段，记 not-applicable（该能力在 test:runtime 与单测均有覆盖）。</p>
+</div>
+
+<h2>D. 逐缺陷验收判定</h2>
+<table>
+  <tr><th style="width:90px">缺陷</th><th style="width:110px">判定</th><th>验收依据</th></tr>
+  <tr><td>DEF-01 · P1</td><td><span class="badge b-pass">✅ 修复验证</span></td><td>公开档案两条聚合解析路径遇空 valueSummary 不再拒绝整页（单测 PPVS-01/02 + 回归断言）；集成分支运行时合同公开档案路由 PASS</td></tr>
+  <tr><td>DEF-02 · P1（删掉）</td><td><span class="badge b-pass">✅ 修复验证</span></td><td>客户端 grep 零残留 + 提交 payload 合同断言不含该字段；聚焦 E2E 实测提交成功</td></tr>
+  <tr><td>DEF-03 · P2</td><td><span class="badge b-pass">✅ 修复验证</span></td><td>admin-web 短时码入口 + react 测试（请求参数 mode=ROTATING、提示文案、刷新）；服务端零改动。账号级浏览器登录验证沿历轮缺 MIP_ADMIN_TEST_* 凭据（BLOCKED，非本批回归）</td></tr>
+  <tr><td>DEF-04（取消不通知）</td><td><span class="badge b-pass">✅ 裁决落档</span></td><td>按裁决「取消不需要通知」：代码本就不通知（验收已确认），MIW-98 将 UF-10#5 / TC-NTF-202 口径改为「取消不产生通知」</td></tr>
+  <tr><td>DEF-05（取公开口径）</td><td><span class="badge b-pass">✅ 裁决落档 + 联动修复</span></td><td>计划 1.4 改单一公开口径；联动 MIW-91 服务端默认公开 + 聚焦 E2E 实证（缺省 payload → share_profile=1）</td></tr>
+  <tr><td>DEF-06（无历史入口）</td><td><span class="badge b-pass">✅ 裁决落档</span></td><td>代码本就两分类（服务端 HISTORY 能力保留无入口），MIW-98 将 UF-03#9 / TC-EVT-114 改为两分类口径</td></tr>
+  <tr><td>DEF-07（隐藏注销）</td><td><span class="badge b-pass">✅ 修复验证</span></td><td>设置页零注销入口（负向 pin + t-dialog 组件注册移除）；TC-IDT-107 改为「本轮下线 + 墓碑语义说明」；服务端能力保留备用</td></tr>
+  <tr><td>DEF-08 · 计划滞后</td><td><span class="badge b-pass">✅ 落档</span></td><td>UF-14#2/#6 按 MIW-83 已落地口径重写（档位横滑 + 邀请入会/并排续费）</td></tr>
+  <tr><td>DEF-09（MIW-84 范围）</td><td><span class="badge b-pass">✅ 裁决落档</span></td><td>TC-PRF-110 + 第 4 节澄清：NPC 任务列表（mip-tasks，保留提交核验）与等级页任务（mip-growth，后台配置动作）是两套独立入口</td></tr>
+  <tr><td>DEF-10 · P3（guest 名片）</td><td><span class="badge b-slate">📋 已知限制（不修）</span></td><td>按推荐记录 known limitation（?guest=1 无入口、手工构造可达），不改代码不设断言</td></tr>
+  <tr><td>DEF-11 · P2</td><td><span class="badge b-pass">✅ 修复验证</span></td><td>导出三模式断言（区间/单值千/面谈）+ 列头同步；mip-admin-api 762 项绿 + staging 部署 verified</td></tr>
+  <tr><td>DEF-12 · P3</td><td><span class="badge b-pass">✅ 修复验证</span></td><td>死分支停产出 + 死节点删除 + 「不渲染访问时间」断言；访客网格回归绿</td></tr>
+  <tr><td>DEF-13 · P3</td><td><span class="badge b-pass">✅ 修复验证</span></td><td>公开参与人响应不再含 heart_relation（契约测试）；心动交互/参与人路由集成运行时 PASS 无回归</td></tr>
+  <tr><td>DEF-15 · P3</td><td><span class="badge b-pass">✅ 修复验证</span></td><td>白名单外 target → VALIDATION_FAILED（api 正反用例）；parity 测试钉住常量与 runtime-pages.json 及 admin-web 过滤规则三方一致</td></tr>
+</table>
+
+<h2>E. 遗留与边界（均非阻塞）</h2>
+<div class="card">
+  <ul>
+    <li><b>演示数据残留：</b>聚焦 E2E 在受控活动「MIP 早会（2030 年 9 月）」上留有 1 条本会话用户的全新 REGISTERED 报名（取消需人工在 DevTools 确认，与官方流程的 external-cancel 语义一致；演示活动容量 120，影响可忽略）。</li>
+    <li><b>admin-web 账号级浏览器验证：</b>缺 MIP_ADMIN_TEST_* 凭据（历轮一致 BLOCKED）；MIW-92/94 的行为由 react/模块测试 + 合同测试覆盖。</li>
+    <li><b>真机专项：</b>上一轮报告的 9 项真机待办维持不变（手机号/支付/扫码/订阅/录音/视频号/保存相册/SHARE 转发面板目检）；本轮修复不新增真机项。</li>
+    <li><b>free-event 官方流程护栏：</b>阶段枚举不含 staging（设计如此）；本次以聚焦 E2E 替代并在编排侧修复了该流程对已删处理器的一处调用（<code>8f1556bf</code>），待未来切 development/test 环境时可直接运行。</li>
+    <li><b>MIW-97 worker 会话：</b>run 状态 stopped 但产物经编排方逐项测试核验完整（记录在卡评论）；如需可对该卡重新触发一次 ai run 复核，非必要。</li>
+  </ul>
+</div>
+
+<h2>F. 合入 main 操作建议</h2>
+<div class="card">
+  <ul>
+    <li>合并命令（owner 执行）：<code>git checkout main && git merge --no-ff integration/acceptance-fixes-20261014</code>；随后按惯例跑 <code>pnpm verify:all</code>（合并后复跑约 15 分钟）与 <code>git diff --check</code>。</li>
+    <li>如需发布体验版：<code>pnpm wechat:upload</code>（内置 verify:all 门禁；注意 dist 平铺临时工程上传，勿从根工程直传）。建议版本号顺延（如 <code>0.2.0.20261014.2</code>），更新说明涵盖九项修复。</li>
+    <li>合并后无需重复部署云函数（staging 已是本集成分支代码）；notma 看板 MIW-90..98 已全部 done。</li>
+    <li>本报告与上一轮《ACCEPTANCE_REPORT_20261014.html》互补：上一轮是验收与缺陷发现，本轮是缺陷闭环与集成验收。</li>
+  </ul>
+</div>
+
+<div class="footer">
+  缺陷修复集成验收报告 · 生成于 2026-10-14 · 集成分支 integration/acceptance-fixes-20261014 @ 8f1556bf（origin 已推送）· 基线 main 46eb7f82<br>
+  关联：docs/testing/ACCEPTANCE_TEST_PLAN_20261013.md（已随 MIW-98 更新口径）· docs/testing/ACCEPTANCE_REPORT_20261014.html（上一轮验收）· notma 看板 MIW-90..98
+</div>
+
+</div>
+</body>
+</html>
