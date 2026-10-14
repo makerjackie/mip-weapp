@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
+import { describe, expect, it } from 'vitest'
 
 const repoRoot = path.resolve(import.meta.dirname, '..')
 

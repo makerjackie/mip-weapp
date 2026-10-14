@@ -55,7 +55,6 @@ if (!fs.existsSync(path.join(envDir, '.env.local'))) {
 }
 
 const targetEnv = parseEnv(path.join(envDir, '.env.local'))
-const secretsEnv = parseEnv(path.join(envDir, '.env.secrets.local'))
 const envId = String(process.env.CLOUDBASE_ENV_ID || targetEnv.CLOUDBASE_ENV_ID || '').trim()
 const schemaName = String(process.env.MIP_DB_SCHEMA || targetEnv.MIP_DB_SCHEMA || '').trim()
 const deploymentStage = String(process.env.MIP_DEPLOYMENT_STAGE || targetEnv.MIP_DEPLOYMENT_STAGE || '').trim().toLowerCase()
@@ -92,15 +91,15 @@ const childEnv = {
   MIP_CATALOG_STAGE: catalogStage,
 }
 
-const schemaFlags = schemaName ? ['--confirm-schema=' + schemaName] : []
+const schemaFlags = schemaName ? [`--confirm-schema=${schemaName}`] : []
 const steps = [
   {
     name: `migrations dry-run (${targetName})`,
-    command: ['node', 'scripts/apply-mip-schema.mjs', '--dry-run', '--confirm-env=' + envId, '--confirm-prefix=mip_', ...schemaFlags],
+    command: ['node', 'scripts/apply-mip-schema.mjs', '--dry-run', `--confirm-env=${envId}`, '--confirm-prefix=mip_', ...schemaFlags],
   },
   {
     name: `migrations apply (${targetName})`,
-    command: ['node', 'scripts/apply-mip-schema.mjs', '--confirm-env=' + envId, '--confirm-prefix=mip_', ...schemaFlags],
+    command: ['node', 'scripts/apply-mip-schema.mjs', `--confirm-env=${envId}`, '--confirm-prefix=mip_', ...schemaFlags],
   },
   {
     name: `project init (${targetName})`,
@@ -109,10 +108,10 @@ const steps = [
   {
     name: `runtime grants (${targetName})`,
     command: () => {
-      const flags = ['--confirm-env=' + envId, ...schemaFlags]
+      const flags = [`--confirm-env=${envId}`, ...schemaFlags]
       const pin = runtimeUserPin || derivedRuntimeUserHint()
       if (pin) {
-        flags.push('--confirm-runtime-user=' + pin)
+        flags.push(`--confirm-runtime-user=${pin}`)
       }
       return ['node', 'scripts/converge-mip-runtime-grants.mjs', ...flags]
     },
@@ -120,10 +119,10 @@ const steps = [
   {
     name: `cloud deploy (${targetName})`,
     command: () => {
-      const flags = ['--confirm-env=' + envId, ...schemaFlags]
+      const flags = [`--confirm-env=${envId}`, ...schemaFlags]
       const pin = runtimeUserPin || derivedRuntimeUserHint()
       if (pin) {
-        flags.push('--confirm-runtime-user=' + pin)
+        flags.push(`--confirm-runtime-user=${pin}`)
       }
       if (targetName === 'production') {
         flags.push('--confirm-production')
@@ -136,7 +135,7 @@ const steps = [
   },
   {
     name: `cloud verify (${targetName})`,
-    command: ['node', 'scripts/verify-cloud.mjs', '--confirm-env=' + envId, ...schemaFlags],
+    command: ['node', 'scripts/verify-cloud.mjs', `--confirm-env=${envId}`, ...schemaFlags],
   },
 ]
 

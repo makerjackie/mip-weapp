@@ -75,9 +75,8 @@ if (productionIntent) {
     __MIP_NOTIFICATIONS_FUNCTION_NAME__: 'MIP_NOTIFICATIONS_FUNCTION_NAME',
     __MIP_PAY_FUNCTION_NAME__: 'MIP_PAY_FUNCTION_NAME',
   } as const
-  const missing = Object.entries(envKeys)
-    .filter(([defineKey, envKey]) => !String(env[envKey] || '').trim())
-    .map(([, envKey]) => envKey)
+  const missing = Object.values(envKeys)
+    .filter(envKey => !String(env[envKey] || '').trim())
   if (missing.length) {
     throw new Error(
       `Production-semantics build (payment/catalog/stage) must not rely on test fallbacks; configure explicitly: ${missing.join(', ')}`,

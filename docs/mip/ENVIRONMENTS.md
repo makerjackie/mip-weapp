@@ -47,7 +47,7 @@
 - env 目录加载器：`loadCaseEnv`（`scripts/lib/example-cloudbase.mjs`）与 `weapp-vite.config.ts` 支持 `MIP_ENV_DIR`，目标配置目录（gitignore）各持 `.env.local` 与 `.env.secrets.local`。
 - ops 编排脚本：`--target=test|production` 串联 迁移 dry-run → apply → project:init → grants → cloud:deploy（自动拼接全部 `--confirm-*`，production 追加 `--confirm-production`）→ `cloud:verify`；owner bootstrap 与支付验收不进自动链。
 - admin 拆分：`admin-web/wrangler.toml` 拆两份（项目名/D1/绑定，现 `deploy:pages` 硬编码项目名）；测试端 `MIP_ADMIN_UPSTREAM_URL` 指向 `mip-t-admin-api`；测试函数集的 `MIP_ADMIN_WEB_LOGIN_CONFIRM_URL` 必须显式指向测试域名（部署脚本默认值只对生产正确）。
-- 媒体与订阅消息：媒体前缀按 stage 注入；订阅模板为 AppID 级资源，两套函数共享同一批模板，模板层无法隔离，测试环境默认站内信兜底。
+- 媒体与订阅消息：媒体前缀已按 stage 注入（`mip-media-api/domain/service.js` 的 `mip/${stage}/...` 对象键，2026-10-15 核验，无需改造）；订阅模板为 AppID 级资源，两套函数共享同一批模板，模板层无法隔离，测试环境默认站内信兜底。既有栈转 production 后历史对象仍留 `mip/staging/` 前缀，按行内 key 精确读取、无跨读风险；测试环境继续写 `mip/staging/` 与其存量共存，key 内含随机 assetId 无碰撞面。
 
 ## 构建与配置隔离
 
