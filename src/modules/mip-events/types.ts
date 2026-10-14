@@ -234,7 +234,6 @@ export interface RegistrationIntent {
   eventId: EventId
   formVersion: number
   answers: Record<string, string | boolean>
-  shareProfile: boolean
   invitationToken?: string
   idempotencyKey?: string
 }
@@ -245,7 +244,9 @@ export interface MyEventRegistration {
   version: number
   formVersion: number
   answers: Record<string, string | boolean>
-  shareProfile: boolean
+  // MIW-91：「公开给参与人」开关已下线，客户端不再发送 shareProfile；服务端写路径
+  // 默认公开（缺省/true=1，显式 false=0）。此字段仅为回读服务端真实列值保留。
+  shareProfile?: boolean
   canEdit: boolean
 }
 
@@ -254,7 +255,6 @@ export interface RegistrationUpdateIntent {
   formVersion: number
   expectedVersion: number
   answers: Record<string, string | boolean>
-  shareProfile: boolean
   idempotencyKey?: string
 }
 

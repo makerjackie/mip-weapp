@@ -156,7 +156,6 @@ Page({
     registration: null as MyEventRegistration | null,
     fields: [] as RegistrationFieldView[],
     editing: false,
-    shareProfile: false,
     busy: false,
     resultTitle: '',
     resultDescription: '',
@@ -249,7 +248,6 @@ Page({
       eventId: this.data.eventId,
       registrationVersion: this.data.registration?.version ?? null,
       answers: answersFromFields(this.data.fields),
-      shareProfile: this.data.shareProfile,
     })
   },
 
@@ -299,7 +297,6 @@ Page({
         registration: editing || resumingPayment ? registration : null,
         fields: fieldsFromAnswers(event, editing || resumingPayment ? registration?.answers : undefined),
         editing,
-        shareProfile: editing || resumingPayment ? registration?.shareProfile === true : false,
         cancellationText: event.cancellationDeadline
           ? `${formatChineseDateTime(event.cancellationDeadline)} 前可申请取消`
           : '是否可以取消以活动当前状态为准',
@@ -316,7 +313,7 @@ Page({
       }
       const draft = mipRegistrationDraftStore.load(this.draftUserId, this.data.eventId, this.data.registration?.version ?? null)
       if (draft) {
-        this.setData({ fields: fieldsFromAnswers(event, draft.answers), shareProfile: draft.shareProfile, message: '已恢复未提交的报名信息，请核对后提交。' })
+        this.setData({ fields: fieldsFromAnswers(event, draft.answers), message: '已恢复未提交的报名信息，请核对后提交。' })
       }
     }
     catch (error) {
@@ -367,15 +364,6 @@ Page({
       : field)
     this.submissionIdempotencyKey = ''
     this.setData({ fields, message: '' })
-    this.persistDraft()
-  },
-
-  onShareProfileChange(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
-    if (this.data.busy) {
-      return
-    }
-    this.submissionIdempotencyKey = ''
-    this.setData({ shareProfile: event.detail.value, message: '' })
     this.persistDraft()
   },
 
@@ -432,7 +420,6 @@ Page({
           formVersion: event.formVersion,
           expectedVersion: registration.version,
           answers,
-          shareProfile: this.data.shareProfile,
           idempotencyKey: this.submissionIdempotencyKey,
         })
         this.submissionIdempotencyKey = ''
@@ -450,7 +437,6 @@ Page({
         eventId: this.data.eventId,
         formVersion: event.formVersion,
         answers,
-        shareProfile: this.data.shareProfile,
         invitationToken: this.data.invitationToken || undefined,
         idempotencyKey: this.submissionIdempotencyKey,
       })
@@ -513,7 +499,7 @@ Page({
     }
     catch (error) {
       if (error instanceof MipEventsError && error.code === 'CONFLICT') {
-        await this.recoverUpdateConflict(answers, this.data.shareProfile)
+        await this.recoverUpdateConflict(answers)
       }
       else if (error instanceof MipEventsError && ['AUTH_REQUIRED', 'AGREEMENT_REQUIRED', 'PHONE_REQUIRED', 'PROFILE_REQUIRED'].includes(error.code)) {
         try {
@@ -608,7 +594,6 @@ Page({
 
   async recoverUpdateConflict(
     draftAnswers: Record<string, string | boolean>,
-    draftShareProfile: boolean,
   ) {
     this.submissionIdempotencyKey = ''
     try {
@@ -631,7 +616,6 @@ Page({
         event,
         registration: editing || resumingPayment ? registration : null,
         fields: fieldsFromAnswers(event, { ...(registration?.answers || {}), ...draftAnswers }),
-        shareProfile: draftShareProfile,
         editing,
         accessText: registrationAccessText(event),
         priceText: registrationPriceText(event),

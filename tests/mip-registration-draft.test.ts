@@ -10,7 +10,7 @@ describe('registration draft recovery', () => {
       value = undefined
     } }
     const store = createRegistrationDraftStore(storage, () => 100)
-    store.save({ userId: 'u1', eventId: 'e1', registrationVersion: null, answers: { reason: '报名内容', consent: true }, shareProfile: false })
+    store.save({ userId: 'u1', eventId: 'e1', registrationVersion: null, answers: { reason: '报名内容', consent: true } })
     const restored = createRegistrationDraftStore(storage, () => 200)
     expect(restored.load('u1', 'e1', null)?.answers).toEqual({ reason: '报名内容', consent: true })
     expect(restored.load('u2', 'e1', null)).toBeNull()
@@ -18,6 +18,18 @@ describe('registration draft recovery', () => {
     expect(restored.load('u1', 'e1', 2)).toBeNull()
     restored.remove('u1', 'e1')
     expect(restored.load('u1', 'e1', null)).toBeNull()
+  })
+
+  it('still restores legacy drafts saved with the removed shareProfile field (MIW-91)', () => {
+    let value: unknown
+    const store = createRegistrationDraftStore({ read: () => value, write: (_key, next) => {
+      value = next
+    }, clear: () => {
+      value = undefined
+    } }, () => 100)
+    // MIW-91 前的存量草稿带 shareProfile 键；校验只看已知字段，多余键不阻断恢复。
+    value = [{ userId: 'u1', eventId: 'e1', registrationVersion: null, answers: { reason: '旧草稿' }, shareProfile: false, savedAt: 100 }]
+    expect(store.load('u1', 'e1', null)?.answers).toEqual({ reason: '旧草稿' })
   })
 
   it('expires personal answers and ignores corrupt storage', () => {
@@ -28,7 +40,7 @@ describe('registration draft recovery', () => {
     }, clear: () => {
       value = undefined
     } }, () => now)
-    store.save({ userId: 'u1', eventId: 'e1', registrationVersion: 3, answers: { reason: '内容' }, shareProfile: true })
+    store.save({ userId: 'u1', eventId: 'e1', registrationVersion: 3, answers: { reason: '内容' } })
     now += 7 * 24 * 60 * 60 * 1000
     expect(store.load('u1', 'e1', 3)).toBeNull()
     value = [{ userId: 'u1', eventId: 'e1', savedAt: now, answers: null }]

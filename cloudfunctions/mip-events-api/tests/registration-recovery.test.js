@@ -63,6 +63,8 @@ for (const replay of [false, true]) {
     assert.equal(f.calls.some(c => c.sql.includes('INSERT INTO mip_orders')), false)
     const registrationUpdate = f.calls.find(c => c.sql.includes('UPDATE mip_event_registrations'))
     assert.equal(registrationUpdate.params[5], 'original-order')
+    // MIW-91：支付占位重建时客户端不再发送 shareProfile，缺省落 share_profile=1。
+    assert.equal(registrationUpdate.params[2], 1)
     assert.doesNotMatch(registrationUpdate.sql, /SET order_id/)
   })
 }
