@@ -13,7 +13,7 @@
 const MAX_MEDALS = 3
 const MAX_TAGS = 3
 const PLATFORM_INVITER_NAME = 'MIP平台'
-const PLATFORM_INVITER_AVATAR = '/assets/brand/mip-logo-yellow.png'
+const PLATFORM_INVITER_AVATAR = '/assets/brand/mip-default-invite-avatar.png'
 
 interface TalentMedal {
   id: string

@@ -79,3 +79,8 @@
     </view>
   </view>
 </view>
+<!-- 平台邀请人头像静态预载锚点（MIW-105）：index.ts 的 PLATFORM_INVITER_AVATAR 默认值经 {{}}
+     动态绑定，ignoreUploadUnusedFiles 的上传依赖分析探不到，纯动态引用会被剔出体验版
+     （现象=工具正常、真机缺图）；静态引用保证 /assets/brand/mip-default-invite-avatar.png
+     打进主包，横版/竖版右下角平台头像共用此文件。 -->
+<image aria-hidden="true" class="mip-talent-card__preload-anchor" src="/assets/brand/mip-default-invite-avatar.png" />

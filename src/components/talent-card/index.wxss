@@ -427,3 +427,14 @@
   height: 40rpx;
   box-shadow: none;
 }
+
+/* 平台邀请人头像预载锚点（见 wxml 尾部注释）：离屏零尺寸，不参与布局与交互。 */
+.mip-talent-card__preload-anchor {
+  position: fixed;
+  left: -9999rpx;
+  top: 0;
+  width: 2rpx;
+  height: 2rpx;
+  opacity: 0;
+  pointer-events: none;
+}

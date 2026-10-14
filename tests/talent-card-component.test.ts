@@ -87,8 +87,13 @@ describe('talent-card component contract', () => {
   it('shows the platform inviter with platform name and system avatar fallback', () => {
     expect(component).toContain('inviterKind: { type: String, value: \'PLAYER\' }')
     expect(component).toContain('PLATFORM_INVITER_NAME = \'MIP平台\'')
-    expect(component).toContain('PLATFORM_INVITER_AVATAR = \'/assets/brand/mip-logo-yellow.png\'')
+    expect(component).toContain('PLATFORM_INVITER_AVATAR = \'/assets/brand/mip-default-invite-avatar.png\'')
     expect(template).toContain('邀请人{{inviter.name}}')
+    // MIW-105：头像默认值只经 {{}} 动态绑定，ignoreUploadUnusedFiles 探不到会剔出体验版；
+    // wxml 必须保留静态预载锚点（MIW-100 同族），否则工具正常、真机缺图。
+    expect(template).toContain('src="/assets/brand/mip-default-invite-avatar.png"')
+    expect(template).toContain('mip-talent-card__preload-anchor')
+    expect(styles).toContain('.mip-talent-card__preload-anchor')
   })
 
   it('falls back to target text only when no inviter is known', () => {
