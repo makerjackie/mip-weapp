@@ -1435,26 +1435,8 @@ async function listPublicParticipants(db, {
   }
 
   const blockFilter = mutualBlockFilter(userId, 'r.user_id', 'r.app_id')
-  const heartRelationSelect = userId
-    ? `,
-       CASE
-         WHEN viewer_sent_heart.id IS NOT NULL AND participant_sent_heart.id IS NOT NULL THEN 'MUTUAL'
-         WHEN viewer_sent_heart.id IS NOT NULL THEN 'SENT'
-         WHEN participant_sent_heart.id IS NOT NULL THEN 'RECEIVED'
-         ELSE NULL
-       END AS heart_relation`
-    : ''
-  const heartRelationJoins = userId
-    ? `LEFT JOIN mip_event_hearts viewer_sent_heart
-       ON viewer_sent_heart.app_id = r.app_id AND viewer_sent_heart.event_id = r.event_id
-         AND viewer_sent_heart.voter_user_id = ? AND viewer_sent_heart.target_user_id = r.user_id
-         AND viewer_sent_heart.status = 'ACTIVE'
-     LEFT JOIN mip_event_hearts participant_sent_heart
-       ON participant_sent_heart.app_id = r.app_id AND participant_sent_heart.event_id = r.event_id
-         AND participant_sent_heart.voter_user_id = r.user_id AND participant_sent_heart.target_user_id = ?
-         AND participant_sent_heart.status = 'ACTIVE'`
-    : ''
-  const heartRelationParams = userId ? [userId, userId] : []
+  // MIW-96：名单条目不再计算/下发 heart_relation——MIW-73 移除消费方后该字段
+  // 只是每行两次 LEFT JOIN 的死载荷；心动交互走独立的 heart 接口，不受影响。
   const membershipExists = `EXISTS(
     SELECT 1 FROM mip_membership_entitlements entitlement
     WHERE entitlement.app_id = r.app_id AND entitlement.user_id = r.user_id
@@ -1536,7 +1518,7 @@ async function listPublicParticipants(db, {
                 AND industry_profile_tag.relation = 'PRIMARY_INDUSTRY'
               ORDER BY industry_tag.sort_order, industry_tag.id
               LIMIT 1
-            ) AS primary_industry_label${heartRelationSelect}
+            ) AS primary_industry_label
      FROM mip_event_registrations r
      INNER JOIN mip_users u ON u.app_id = r.app_id AND u.id = r.user_id AND u.status = 'ACTIVE'
      INNER JOIN mip_profiles p ON p.app_id = r.app_id AND p.user_id = r.user_id
@@ -1544,11 +1526,10 @@ async function listPublicParticipants(db, {
        ON avatar.app_id = p.app_id AND avatar.id = p.avatar_asset_id AND avatar.status = 'READY'
      LEFT JOIN mip_city_branches branch
        ON branch.app_id = u.app_id AND branch.id = u.primary_branch_id AND branch.status = 'ACTIVE'
-     ${heartRelationJoins}
      WHERE ${clauses.join(' AND ')}
      ORDER BY r.registered_at DESC, r.id DESC
      LIMIT ?`,
-    [...heartRelationParams, ...params, pageLimit + 1],
+    [...params, pageLimit + 1],
   )
   const pageRows = rows.slice(0, pageLimit)
   const kindTotalRows = await db.query(
@@ -1577,7 +1558,6 @@ async function listPublicParticipants(db, {
       const allowed = publicVisibility(row.visibility_json)
       return {
         profileRef: createProfileRef({ appId, userId: row.user_id }, profileRefSecret),
-        ...(['SENT', 'RECEIVED', 'MUTUAL'].includes(row.heart_relation) ? { heartRelation: row.heart_relation } : {}),
         ...(allowed.nickname && row.nickname ? { nickname: row.nickname } : {}),
         ...(allowed.avatar && row.avatar_file_id ? { avatarUrl: row.avatar_file_id } : {}),
         userKind: Number(row.is_player) === 1 ? 'PLAYER' : 'GUEST',
