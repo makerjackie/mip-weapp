@@ -606,7 +606,6 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
         detail: { value: action.value },
       })
     }
-    await callBoundHandler(page, 'onShareProfileChange', { detail: { value: false } })
     const mutation = mutationAttempt(report, persist, 'register-free-event', { eventId: options.eventId })
     await callBoundHandler(page, 'submit')
     const submitted = await waitForData(page, value => value?.state === 'submitted', { label: step.id })
