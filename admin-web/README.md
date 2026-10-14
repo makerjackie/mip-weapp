@@ -79,6 +79,16 @@ BFF 不接受浏览器直接提交 `appId` 或 `openId`。CloudBase 侧只在小
 
 Cloudflare Pages 的项目配置在 `wrangler.toml`；从仓库根目录执行 `pnpm --dir admin-web deploy:pages`。自定义域名需要在 Cloudflare Pages 项目中绑定，首次绑定和 DNS 状态以 Cloudflare 控制台为准。
 
+### 测试后台（第二个 Pages 项目，MIW-111 方向 B）
+
+生产项目 `mip-admin-web`（admin.mip.cool）保持不动。测试后台 `admin-test.mip.cool` 是独立的第二个 Pages 项目：
+
+1. 在 Cloudflare 新建 Pages 项目（如 `mip-admin-web-test`）与第二个 D1（如 `mip-admin-auth-test`），按编号顺序执行 `migrations/` 内全部迁移。
+2. 复制 `wrangler.test.example.toml` 为 `wrangler.test.toml`（Git 忽略），替换 D1 `database_id`。
+3. 为测试项目配置独立的一整套密钥：`MIP_WEB_SESSION_SECRET`、登录确认/小程序码/管理请求三把 HMAC、`MIP_ADMIN_UPSTREAM_URL`（指向测试函数集 `mip-t-admin-api` 的 CloudBase HTTP 入口）、`MIP_WEB_ALLOWED_ORIGIN=https://admin-test.mip.cool`。任何密钥值不得与生产复用。
+4. 部署：`MIP_ADMIN_PAGES_PROJECT=mip-admin-web-test pnpm --dir admin-web deploy:pages -- --config wrangler.test.toml`（项目名默认值仍是生产 `mip-admin-web`，不设置时行为不变）。
+5. 测试后台的登录与授权不能作为生产授权；测试 D1 会话与生产 D1 完全隔离。
+
 当前浏览器界面只显示数字登录码并轮询同源 BFF，不接收可信身份字段或原始 scene。CloudBase 在执行前持久消费一次性 nonce；Web BFF 只允许契约清单中已审核且具有领域持久幂等保护的 mutation，其余写操作默认拒绝。素材上传使用独立路由，但复用同一会话、来源校验和服务端 HMAC principal，浏览器不会接收密钥。页面按当前账号 capability 显示操作入口，写操作均要求明确确认且不会自动重试。
 
 官方能力依据：Cloudflare Pages Functions 支持 [D1 binding 与 secret](https://developers.cloudflare.com/pages/functions/bindings/)，D1 支持 [prepared statement 与条件写入](https://developers.cloudflare.com/d1/worker-api/prepared-statements/)；CloudBase 官方支持用 [HTTP 访问服务把 HTTPS 路由映射到云函数](https://docs.cloudbase.net/service/access-cloud-function)。

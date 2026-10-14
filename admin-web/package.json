@@ -18,7 +18,7 @@
     "verify": "pnpm lint && pnpm typecheck:test && pnpm test && pnpm build && pnpm verify:responsive",
     "preview": "vite preview",
     "verify:responsive": "node scripts/verify-responsive.mjs",
-    "deploy:pages": "pnpm build && wrangler pages deploy dist --project-name=mip-admin-web",
+    "deploy:pages": "pnpm build && wrangler pages deploy dist --project-name=${MIP_ADMIN_PAGES_PROJECT:-mip-admin-web}",
     "build:cloudbase": "pnpm build && node scripts/build-cloudbase.mjs"
   },
   "dependencies": {

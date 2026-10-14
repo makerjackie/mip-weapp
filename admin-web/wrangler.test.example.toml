@@ -1,0 +1,13 @@
+# 测试后台第二个 Cloudflare Pages 项目的配置模板（MIW-111 方向 B）。
+# 复制为 admin-web/wrangler.test.toml（已被 Git 忽略）并替换 D1 database_id。
+# 生产项目继续使用 wrangler.toml；本项目部署 admin-test.mip.cool，绑定独立的
+# 第二个 D1（mip-admin-auth-test）与独立会话/HMAC 密钥，不与生产复用任何值。
+name = "mip-admin-web-test"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-08-27"
+
+[[d1_databases]]
+binding = "MIP_ADMIN_AUTH_DB"
+database_name = "mip-admin-auth-test"
+database_id = "REPLACE_WITH_TEST_D1_DATABASE_ID"
+migrations_dir = "migrations"
