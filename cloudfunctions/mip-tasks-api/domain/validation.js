@@ -2,6 +2,8 @@
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+const { isTaskJumpTargetAllowed } = require('./task-action-targets')
+
 function requiredId(value) {
   const result = typeof value === 'string' ? value.trim() : ''
   if (!UUID_PATTERN.test(result)) throw new Error('VALIDATION_FAILED')
@@ -44,6 +46,8 @@ function normalizeTask(value) {
 
 // MIW-84：任务点击动作（后台按任务配置玩家端「去完成」的行为）。
 // PAGE_JUMP 必须带目标页路径（存储口径同 config/runtime-pages.json：剥前导 /、禁 query）；
+// MIW-97：目标页还必须命中服务端白名单（与 admin-web 构建期过滤同源），挡住
+// 内部管理通道写入格式合法但小程序端不可达的路径；
 // SHARE 不带目标；两者都缺省 = 未配置（玩家端整卡不可点）。
 function normalizeTaskAction(value) {
   const actionType = boundedText(value.actionType || '', 16).toUpperCase()
@@ -52,6 +56,7 @@ function normalizeTaskAction(value) {
   if (actionTarget && actionTarget.includes('?')) throw new Error('VALIDATION_FAILED')
   if (actionType === 'PAGE_JUMP' && !actionTarget) throw new Error('VALIDATION_FAILED')
   if (actionTarget && actionType !== 'PAGE_JUMP') throw new Error('VALIDATION_FAILED')
+  if (actionType === 'PAGE_JUMP' && !isTaskJumpTargetAllowed(actionTarget)) throw new Error('VALIDATION_FAILED')
   return { actionType: actionType || null, actionTarget: actionTarget || null }
 }
 
