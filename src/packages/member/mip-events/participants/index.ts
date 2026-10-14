@@ -115,6 +115,47 @@ function privateViewData(
   }
 }
 
+/**
+ * MIW-101：由 (heart, candidates) 统一推导心动视图面——乐观态与服务端态共用同一推导，
+ * 不出现双口径。徽标计数取 heart.counts（服务端事实；乐观态为「上次服务端计数 ± 本地意图」）。
+ */
+function deriveHeartViewPatch(
+  heart: HeartState,
+  candidates: HeartCandidate[],
+  scope: { items: ParticipantView[], activeView: ParticipantViewMode, keyword: string },
+): Record<string, unknown> {
+  const markedCandidates = candidates.map(candidate => ({
+    ...candidate,
+    selected: Boolean(heart.targetRef) && heart.target?.profileRef === candidate.profileRef,
+  }))
+  const sentItems = heart.target
+    ? [presentHeartCandidate(heart.target)]
+    : []
+  const receivedItems = heart.received
+    .map(candidate => presentHeartCandidate(candidate))
+  const patch: Record<string, unknown> = {
+    candidates: markedCandidates,
+    sentItems,
+    receivedItems,
+    heartMineCount: heart.counts?.myInterestCount ?? 0,
+    heartReceivedCount: heart.counts?.receivedInterestCount ?? 0,
+  }
+  if (scope.activeView !== 'PUBLIC') {
+    Object.assign(patch, privateViewData(scope.activeView, sentItems, receivedItems, scope.keyword))
+  }
+  else {
+    // 公开列表的心动票凭证随候选集回填（先到者的已映射凭证不覆盖），保持卡片红心与可投状态同步。
+    const items = scope.items.map(item => ({
+      ...item,
+      heartTicket: item.heartTicket
+        ?? markedCandidates.find(candidate => candidate.profileRef === item.profileRef)?.participantRef,
+    }))
+    patch.items = items
+    patch.displayItems = items
+  }
+  return patch
+}
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
@@ -139,13 +180,20 @@ Page({
     activeKeyword: '',
     nextCursor: '',
     loadingMore: false,
-    savingHeart: false,
+    /** MIW-101：最近一次乐观点按的 profileRef——红心弹跳动画只在该卡播放一次，服务端事实到达后清除。 */
+    heartPulseRef: '',
     message: '',
     heartMessage: '',
   },
   requestSeq: 0,
   heartRequestSeq: 0,
   hasShown: false,
+  /** MIW-101：心动写同步单飞 worker 状态（非渲染数据）——同一时刻至多一个 setHeart 在途。 */
+  heartSyncing: false,
+  heartSyncQueued: false,
+  heartSyncDesired: undefined as string | null | undefined,
+  /** MIW-101：最后一次服务端心动事实——乐观更新失败时的回滚基准。 */
+  lastServerHeart: null as HeartState | null,
 
   onLoad(query: Record<string, string | undefined>) {
     // journey-review J2-02：四 tab（嘉宾/玩家/我的心动/对我心动），默认 tab 由入口决定
@@ -277,17 +325,7 @@ Page({
       }
       if (isEventAccessRequirementError(error)
         || (error instanceof MipEventsError && error.code === 'FORBIDDEN')) {
-        this.setData({
-          heartState: 'restricted',
-          heart: null,
-          candidates: [],
-          sentItems: [],
-          receivedItems: [],
-          heartMineCount: 0,
-          heartReceivedCount: 0,
-          displayItems: this.data.activeView === 'PUBLIC' ? this.data.displayItems : [],
-          heartMessage: '',
-        })
+        this.markHeartRestricted()
         return
       }
       this.setData({
@@ -305,54 +343,122 @@ Page({
     if (requestSeq !== undefined && requestSeq !== this.heartRequestSeq) {
       return
     }
-    const markedCandidates = candidates.map(candidate => ({
-      ...candidate,
-      selected: Boolean(heart.targetRef) && heart.target?.profileRef === candidate.profileRef,
-    }))
-    const sentItems = heart.target
-      ? [presentHeartCandidate(heart.target)]
-      : []
-    const receivedItems = heart.received
-      .map(candidate => presentHeartCandidate(candidate))
+    // MIW-101：记录最后一次服务端事实，作为乐观更新失败的回滚基准。
+    this.lastServerHeart = heart
     const patch: Record<string, unknown> = {
       heartState: 'ready',
       heart,
-      candidates: markedCandidates,
-      sentItems,
-      receivedItems,
-      // 徽标只认服务端计数（REQUIREMENTS：不以列表长度重算统计）。
-      heartMineCount: heart.counts?.myInterestCount ?? 0,
-      heartReceivedCount: heart.counts?.receivedInterestCount ?? 0,
       heartMessage: '',
+      heartPulseRef: '',
+      ...deriveHeartViewPatch(heart, candidates, {
+        items: this.data.items,
+        activeView: this.data.activeView,
+        keyword: this.data.activeKeyword,
+      }),
     }
     if (heart.counts) {
       // 回填详情胶囊（MIW-36）：返回详情页 onShow 应用缓存即见最新计数，免整页强刷。
+      // 乐观态不回填——详情胶囊缓存只认服务端计数。
       mipEventsModule.patchEventInteractionSummary(this.data.eventId, heart.counts)
     }
-    if (this.data.activeView !== 'PUBLIC') {
-      Object.assign(patch, privateViewData(
-        this.data.activeView,
-        sentItems,
-        receivedItems,
-        this.data.activeKeyword,
-      ))
-    }
-    else {
-      // 公开列表的心动票凭证随候选集刷新，保持卡片红心与可投状态同步。
-      const items = this.data.items.map(item => ({
-        ...item,
-        heartTicket: markedCandidates.find(candidate => candidate.profileRef === item.profileRef)?.participantRef,
-      }))
-      patch.items = items
-      patch.displayItems = items
-    }
     this.setData(patch)
+  },
+
+  /** MIW-101：乐观应用本地投票意图——红心/徽标/心动 tab 即时翻转，不等数据库链路。 */
+  applyOptimisticHeart(heart: HeartState, profileRef: string) {
+    this.setData({
+      heart,
+      heartPulseRef: profileRef,
+      ...deriveHeartViewPatch(heart, this.data.candidates, {
+        items: this.data.items,
+        activeView: this.data.activeView,
+        keyword: this.data.activeKeyword,
+      }),
+    })
+  },
+
+  /** 未签到/身份受限时心动面整体转为不可操作态（loadHeartState 与写同步 worker 共用口径）。 */
+  markHeartRestricted() {
+    this.setData({
+      heartState: 'restricted',
+      heart: null,
+      candidates: [],
+      sentItems: [],
+      receivedItems: [],
+      heartMineCount: 0,
+      heartReceivedCount: 0,
+      heartPulseRef: '',
+      displayItems: this.data.activeView === 'PUBLIC' ? this.data.displayItems : [],
+      heartMessage: '',
+    })
+  },
+
+  /** MIW-101：回滚到最后一次服务端心动事实（详情胶囊缓存不动——它只认服务端计数）。 */
+  restoreServerHeartView() {
+    if (!this.lastServerHeart) {
+      return
+    }
+    this.applyHeartState(this.lastServerHeart, this.data.candidates)
+  },
+
+  /**
+   * MIW-101：心动写同步单飞 worker——同一时刻至多一个 setHeart 在途，同步期间的
+   * 连续点按合并为「最新意图」，由在途轮次结束后继续消化。成功以服务端事实校准；
+   * CONFLICT 回刷；受限转 restricted；其余失败在无排队意图时回滚并提示。
+   */
+  async pumpHeartSync() {
+    if (this.heartSyncing) {
+      return
+    }
+    this.heartSyncing = true
+    try {
+      while (this.heartSyncQueued) {
+        this.heartSyncQueued = false
+        const desired = this.heartSyncDesired
+        this.heartSyncDesired = undefined
+        try {
+          const heart = await mipEventsModule.setHeart(
+            this.data.eventId,
+            desired ?? null,
+            this.data.heart?.version,
+          )
+          this.applyHeartState(heart, this.data.candidates)
+        }
+        catch (error) {
+          if (error instanceof MipEventsError && error.code === 'CONFLICT') {
+            // 版本漂移：以服务端事实为准回刷，用户可再点。
+            await this.loadHeartState()
+            continue
+          }
+          if (isEventAccessRequirementError(error)
+            || (error instanceof MipEventsError && error.code === 'FORBIDDEN')) {
+            this.markHeartRestricted()
+            wx.showToast({ title: '完成签到后可参与心动互动。', icon: 'none' })
+            continue
+          }
+          // 无更新意图排队才回滚；否则保留乐观态交给下一轮同步裁决。
+          if (!this.heartSyncQueued) {
+            this.restoreServerHeartView()
+          }
+          wx.showToast({ title: error instanceof Error && error.message ? error.message : '心动状态保存失败，请稍后重试。', icon: 'none' })
+        }
+      }
+    }
+    finally {
+      this.heartSyncing = false
+    }
+    // 关闭「最后一次 while 判空与 syncing 复位之间落点」的窗口：仍有排队意图则续跑。
+    if (this.heartSyncQueued) {
+      await this.pumpHeartSync()
+    }
   },
 
   /**
    * journey-review J2-02：心动票直接落在参与人卡右上角——灰描边未投可点、点中变红
    * 实心、再点取消；每场仅 1 票，切换目标由服务端改选（单行 UPDATE）。
-   * 未签到会话（restricted）灰心不可点，仅提示。
+   * MIW-101：点击先本地乐观翻转（红心变色弹跳 + 徽标 ±1 + toast 即时反馈），服务端
+   * 同步交给单飞 worker 串行跟进。名单内未签到者（无凭证）点按就地解释规则，不发
+   * 注定失败的服务端调用；未签到会话（restricted）灰心不可点，仅提示。
    */
   async toggleHeartVote(event: WechatMiniprogram.TouchEvent) {
     if (this.data.heartState === 'restricted') {
@@ -365,42 +471,54 @@ Page({
       void this.loadHeartState()
       return
     }
-    if (this.data.heartState !== 'ready' || this.data.savingHeart) {
+    if (this.data.heartState !== 'ready') {
+      wx.showToast({ title: '心动功能加载中，请稍候。', icon: 'none' })
       return
     }
     const profileRef = String(event.currentTarget.dataset.profileRef || '')
-    const ticket = this.data.displayItems.find(item => item.profileRef === profileRef)?.heartTicket
+    const displayItem = this.data.displayItems.find(item => item.profileRef === profileRef)
+    const ticket = displayItem?.heartTicket
       || this.data.candidates.find(candidate => candidate.profileRef === profileRef)?.participantRef
-    if (!ticket) {
+    const voted = this.data.heart?.target?.profileRef === profileRef
+    if (!voted && !ticket) {
+      // REQUIREMENTS §5：只能心动同场已签到的其他参与人——就地解释，不发起注定失败的请求。
+      wx.showToast({ title: '只能心动同场已签到的其他参与人。', icon: 'none' })
       return
     }
-    const voted = this.data.heart?.target?.profileRef === profileRef
-    this.setData({ savingHeart: true })
-    try {
-      const heart = await mipEventsModule.setHeart(
-        this.data.eventId,
-        voted ? null : ticket,
-        this.data.heart?.version,
-      )
-      this.applyHeartState(heart, this.data.candidates)
-      wx.showToast({ title: voted ? '已取消心动' : '已心动', icon: 'success' })
+    const candidate = (voted ? this.data.heart?.target : undefined)
+      || this.data.candidates.find(item => item.profileRef === profileRef)
+      || this.data.heart?.received.find(item => item.profileRef === profileRef)
+      || (displayItem
+        ? {
+            participantRef: ticket || '',
+            profileRef,
+            nickname: displayItem.displayName,
+            ...(displayItem.avatarUrl ? { avatarUrl: displayItem.avatarUrl } : {}),
+            selected: true,
+          }
+        : undefined)
+    if (!candidate) {
+      return
     }
-    catch (error) {
-      if (error instanceof MipEventsError && error.code === 'CONFLICT') {
-        await this.loadHeartState()
-        return
-      }
-      if (isEventAccessRequirementError(error)
-        || (error instanceof MipEventsError && error.code === 'FORBIDDEN')) {
-        this.setData({ heartState: 'restricted' })
-        wx.showToast({ title: '完成签到后可参与心动互动。', icon: 'none' })
-        return
-      }
-      wx.showToast({ title: error instanceof Error && error.message ? error.message : '心动状态保存失败，请稍后重试。', icon: 'none' })
-    }
-    finally {
-      this.setData({ savingHeart: false })
-    }
+    // 乐观先行：目标红心立即变色弹跳、「我的心动」徽标 ±1、toast 即时。
+    const prevHeart = this.data.heart
+    const nextTarget = voted ? undefined : { ...candidate, selected: true }
+    this.applyOptimisticHeart({
+      targetRef: nextTarget?.profileRef,
+      ...(nextTarget ? { target: nextTarget } : {}),
+      received: prevHeart?.received || [],
+      counts: prevHeart?.counts
+        ? { ...prevHeart.counts, myInterestCount: Math.max(0, prevHeart.counts.myInterestCount + (voted ? -1 : 1)) }
+        : undefined,
+      version: prevHeart?.version || 0,
+      updatedAt: prevHeart?.updatedAt,
+    }, profileRef)
+    wx.showToast({ title: voted ? '已取消心动' : '已心动', icon: 'success' })
+    // 服务端同步：单飞 worker 串行消化最新意图（连续点按合并为最后一次目标）。
+    // 凭证以展示层 heartTicket（候选集同源）优先，与投票入口判定同口径。
+    this.heartSyncQueued = true
+    this.heartSyncDesired = voted ? null : ticket
+    await this.pumpHeartSync()
   },
 
   onSearchInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {

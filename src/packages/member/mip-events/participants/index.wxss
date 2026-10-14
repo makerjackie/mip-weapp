@@ -117,6 +117,30 @@
   pointer-events: auto;
 }
 
+/* MIW-101：点选红心的即时弹跳反馈——乐观翻转同帧触发（heartPulseRef 命中该卡才挂类，
+   服务端事实到达后清除），页面加载/切 tab 重渲染不重播。 */
+.participant-card__heart--pulse {
+  animation: participant-heart-pop 360ms ease-out;
+}
+
+@keyframes participant-heart-pop {
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.32);
+  }
+
+  70% {
+    transform: scale(0.94);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
 @media (min-width: 600px) and (max-width: 959px) {
   .participants-toolbar {
     display: grid;
