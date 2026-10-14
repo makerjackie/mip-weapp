@@ -89,6 +89,41 @@ function normalizeTalentFilter(value = {}) {
   }
 }
 
+// MIW-99：能力选择 6 个 ABILITY 标签（mip_tags 种子行，稳定 key 即六项能力维度）
+// 自 MIW-78 起按客户指定六角色文案展示（皮条客/生意佬/暴发户/狗策划/死美工/老保姆），
+// 与六角色一一对应。人才名单册的能力筛选因此按「用户发布的合作卡角色」匹配——
+// 档案 mip_profile_tags 旧挂载的编辑入口已移除、与发布卡角色脱节（档案挂生意佬、
+// 角标却是皮条客），继续按它筛会返回角标非所选角色的用户。未映射的 ABILITY 标签
+// （后台未来新增）保持档案标签匹配兜底，尊重 $.abilities 可见性。
+const ABILITY_TAG_ROLE_KEYS = {
+  business_development: 'connector',
+  resource_integration: 'business_builder',
+  capital_operation: 'capital_operator',
+  strategy_planning: 'strategist',
+  visual_design: 'visual_designer',
+  delivery_management: 'delivery_lead',
+}
+
+async function resolveAbilityTagRoleKeys(database, appId, abilityTagIds) {
+  const rows = await database.query(
+    `SELECT t.id, t.tag_key
+     FROM mip_tags t
+     WHERE t.app_id = ? AND t.kind = 'ABILITY' AND t.enabled = 1
+       AND t.id IN (${abilityTagIds.map(() => '?').join(', ')})`,
+    [appId, ...abilityTagIds],
+  )
+  const selected = new Set(abilityTagIds)
+  const roleKeys = new Set()
+  const unmappedTagIds = []
+  for (const row of rows) {
+    if (!selected.has(row.id)) continue
+    const roleKey = ABILITY_TAG_ROLE_KEYS[row.tag_key]
+    if (roleKey) roleKeys.add(roleKey)
+    else unmappedTagIds.push(row.id)
+  }
+  return { roleKeys: [...roleKeys].sort(), unmappedTagIds: unmappedTagIds.sort() }
+}
+
 function talentFilterContext(appId, viewerId, filter) {
   return {
     appId,
@@ -565,22 +600,37 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
       )`)
     params.push(...filter.industryTagIds)
   }
-  // 能力口径：档案 ABILITY 标签，尊重 $.abilities 可见性。
+  // 能力口径（MIW-99）：六维能力标签按客户文案对应六角色，筛「发布卡角色」；
+  // 未映射标签退回档案 ABILITY 标签匹配，尊重 $.abilities 可见性。
   if (filter.abilityTagIds.length) {
-    where.push(`COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.abilities')), 'true') <> 'false'
-      AND EXISTS (
-        SELECT 1 FROM mip_profile_tags ability_filter
-        INNER JOIN mip_tags ability_filter_tag
-          ON ability_filter_tag.app_id = ability_filter.app_id
-            AND ability_filter_tag.id = ability_filter.tag_id
-            AND ability_filter_tag.kind = 'ABILITY'
-            AND ability_filter_tag.enabled = 1
-        WHERE ability_filter.app_id = u.app_id
-          AND ability_filter.user_id = u.id
-          AND ability_filter.relation = 'ABILITY'
-          AND ability_filter.tag_id IN (${filter.abilityTagIds.map(() => '?').join(', ')})
+    const { roleKeys, unmappedTagIds } = await resolveAbilityTagRoleKeys(database, caller.appId, filter.abilityTagIds)
+    if (roleKeys.length) {
+      where.push(`EXISTS (
+        SELECT 1 FROM mip_cooperation_cards ability_role_filter
+        WHERE ability_role_filter.app_id = u.app_id
+          AND ability_role_filter.owner_user_id = u.id
+          AND ability_role_filter.status = 'PUBLISHED'
+          AND ability_role_filter.published_at <= snapshot.snapshot_at
+          AND ability_role_filter.role_key IN (${roleKeys.map(() => '?').join(', ')})
       )`)
-    params.push(...filter.abilityTagIds)
+      params.push(...roleKeys)
+    }
+    if (unmappedTagIds.length) {
+      where.push(`COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.abilities')), 'true') <> 'false'
+        AND EXISTS (
+          SELECT 1 FROM mip_profile_tags ability_filter
+          INNER JOIN mip_tags ability_filter_tag
+            ON ability_filter_tag.app_id = ability_filter.app_id
+              AND ability_filter_tag.id = ability_filter.tag_id
+              AND ability_filter_tag.kind = 'ABILITY'
+              AND ability_filter_tag.enabled = 1
+          WHERE ability_filter.app_id = u.app_id
+            AND ability_filter.user_id = u.id
+            AND ability_filter.relation = 'ABILITY'
+            AND ability_filter.tag_id IN (${unmappedTagIds.map(() => '?').join(', ')})
+        )`)
+      params.push(...unmappedTagIds)
+    }
   }
   const rows = await database.query(
     `WITH snapshot AS (
