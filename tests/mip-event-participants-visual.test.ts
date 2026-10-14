@@ -128,27 +128,18 @@ describe('MIP event participant visual hierarchy', () => {
     expect(String(ring['border'] || '')).toContain('var(--color-ink)')
   })
 
-  it('keeps a cross-tab sent-heart hint answering who I voted for outside the sent tab', () => {
-    // MIW-114：被投红心四 tab 随卡渲染（heart.target 同口径），但被投者不在当前列表时
-    // （另一身份 tab / 对我心动的未互投者 / 分页之外），恒驻提示行是唯一回答
-    // 「我有没有投、投给了谁」的入口；点按直达「我的心动」，已投 tab 内不再重复。
-    expect(template).toContain('participants-heart-hint')
-    expect(template).toContain('heartState === \'ready\' && heart.target && activeView !== \'SENT\'')
-    expect(template).toContain('已心动：{{heart.target.nickname || \'未公开姓名\'}}')
-    expect(template).toContain('name="heart-filled" size="14px" color="var(--mip-record)"')
-    expect(template).toContain('aria-label="已心动{{heart.target.nickname || \'未公开姓名\'}}，点按查看我的心动"')
-    // 整行直达「我的心动」tab（复用 changeView 路由，不新增页面方法）。
-    expect(template).toContain('bind:tap="changeView" data-view="SENT"')
-    expect(declarations(rule(stylesheet, '.participants-heart-hint', true))).toMatchObject({
-      'min-height': '88rpx',
-      'background': 'var(--color-brand-soft)',
-    })
-    // 桌面断点对齐本页 48px 触控标准。
-    for (const params of ['(min-width: 600px) and (max-width: 959px)', '(min-width: 960px)']) {
-      expect(declarations(rule(media(stylesheet, params), '.participants-heart-hint'))).toMatchObject({
-        'min-height': '48px',
-      })
-    }
+  it('expresses the sent heart only as the per-card lit corner across all four tabs', () => {
+    // MIW-118（owner 撤销 MIW-114）：已投状态唯一表达是卡片右上角红心随卡点亮——
+    // heart.target 同口径在嘉宾/玩家/我的心动/对我心动四个 tab 生效（同一 corner 节点，
+    // 不分 tab 重复渲染）；设计稿无顶部提示条，不得再加横幅/通知类冗余入口。
+    expect(template).not.toContain('participants-heart-hint')
+    expect(template).not.toContain('已心动：')
+    // 四 tab 共用同一张卡与同一 corner 红心（wx:for 单节点，无按 tab 分支）。
+    expect(template.match(/slot="corner"/g)).toHaveLength(1)
+    expect(template).toContain('heart.target && heart.target.profileRef === item.profileRef')
+    // tab 切换只换数据源（changeKind/changeView），红心判点亮表达式不随 tab 变化。
+    expect(page).toContain('changeKind')
+    expect(page).toContain('changeView')
   })
 
   it('uses compact visual pills without shrinking their phone hit targets', () => {
