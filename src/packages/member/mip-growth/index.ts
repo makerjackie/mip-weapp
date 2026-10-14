@@ -26,7 +26,7 @@ const EXPERIENCE_DETAILS_PAGE = '/packages/member/mip-experience-details/index'
  * 按任务可配分享标题/路径列后续卡。
  */
 const MEMBERSHIP_INVITE_SHARE_TITLE = '邀请你加入 MIP 玩家会员，一起解锁专属权益'
-const MEMBERSHIP_INVITE_SHARE_PATH = '/pages/index/index'
+const MEMBERSHIP_INVITE_SHARE_PATH = '/pages/events/index'
 
 /** MIW-83 GROWTH-04 D5：任务全量展示——分页游标聚合（服务端页大小 20，防御上限 10 页）。 */
 const TASK_PAGE_SIZE = 20

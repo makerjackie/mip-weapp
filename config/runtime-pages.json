@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 55,
+  "routeCount": 52,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
@@ -421,65 +421,6 @@
   ],
   "routes": [
     {
-      "id": "U01",
-      "name": "首页",
-      "path": "pages/index/index",
-      "selector": "#mip-home-page",
-      "group": "public",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'",
-      "tab": true
-    },
-    {
-      "id": "M27",
-      "name": "公告",
-      "path": "packages/member/announcements/index",
-      "selector": "#member-announcements-page",
-      "group": "public",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "empty",
-        "error"
-      ],
-      "acceptStates": [
-        "ready",
-        "empty"
-      ],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "M28",
-      "name": "公告详情",
-      "path": "packages/member/announcement-detail/index",
-      "selector": "#member-announcement-detail-page",
-      "group": "public",
-      "kind": "data",
-      "states": [
-        "loading",
-        "ready",
-        "error"
-      ],
-      "readyAssertion": "state === 'ready'",
-      "query": [
-        "announcementId"
-      ],
-      "queryFixture": {
-        "sourceRoute": "packages/member/announcements/index",
-        "dataPath": "items",
-        "values": {
-          "announcementId": "id"
-        }
-      }
-    },
-    {
       "id": "U03",
       "name": "线下活动",
       "path": "pages/events/index",
@@ -875,7 +816,7 @@
         "expectedNextRequirement": "AUTHENTICATED",
         "restoreSelector": "#mip-access-sign-in",
         "restoreHandler": "signIn",
-        "restoreRoute": "pages/index/index"
+        "restoreRoute": "pages/events/index"
       },
       "deviceRequired": [
         "phone-auth"

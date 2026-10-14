@@ -3,7 +3,7 @@ import { leaveSecondaryPage } from '@weapp/platform/navigation'
 Component({
   properties: {
     label: { type: String, value: '返回' },
-    tabUrl: { type: String, value: '/pages/index/index' },
+    tabUrl: { type: String, value: '/pages/events/index' },
     primary: { type: Boolean, value: false },
     managed: { type: Boolean, value: false },
     always: { type: Boolean, value: false },

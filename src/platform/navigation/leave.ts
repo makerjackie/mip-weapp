@@ -8,7 +8,7 @@ const LEAVE_DEDUPE_WINDOW_MS = 600
 
 let lastLeaveAt = 0
 
-export function leaveSecondaryPage(tabUrl: string, fallbackTabUrl = '/pages/index/index') {
+export function leaveSecondaryPage(tabUrl: string, fallbackTabUrl = '/pages/events/index') {
   const now = Date.now()
   if (now - lastLeaveAt < LEAVE_DEDUPE_WINDOW_MS) {
     return

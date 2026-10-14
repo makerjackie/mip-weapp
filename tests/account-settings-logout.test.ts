@@ -49,7 +49,7 @@ describe('account settings logout interaction', () => {
     await instance.signOutLocally()
 
     expect(api.signOut).toHaveBeenCalledOnce()
-    expect(api.enterTarget).toHaveBeenCalledWith({ path: 'pages/index/index' })
+    expect(api.enterTarget).toHaveBeenCalledWith({ path: 'pages/events/index' })
     expect(api.signOut.mock.invocationCallOrder[0]).toBeLessThan(api.enterTarget.mock.invocationCallOrder[0])
     expect(api.showToast).toHaveBeenCalledWith({ title: '已退出登录', icon: 'success' })
     expect(instance.data.localLogoutState).toBe('idle')

@@ -424,7 +424,7 @@ function validateRuntimeContract(runtimePages) {
       assert(protectedAccessFixture.expectedNextRequirement === 'AUTHENTICATED', 'Protected access fixture must prove the signed-out access state')
       assert(protectedAccessFixture.restoreSelector === '#mip-access-sign-in', 'Protected access fixture restore selector is invalid')
       assert(protectedAccessFixture.restoreHandler === 'signIn', 'Protected access fixture restore handler is invalid')
-      assert(protectedAccessFixture.restoreRoute === 'pages/index/index', 'Protected access fixture restore route is invalid')
+      assert(protectedAccessFixture.restoreRoute === 'pages/events/index', 'Protected access fixture restore route is invalid')
       const sourceRoute = routesByPath.get(protectedAccessFixture.sourceRoute)
       const restoreRoute = routesByPath.get(protectedAccessFixture.restoreRoute)
       assert(sourceRoute && !(sourceRoute.query || []).length, 'Protected access fixture source route must be query-free')
@@ -490,12 +490,11 @@ function validateRuntimeContract(runtimePages) {
   }
 
   const tabRoutes = runtimePages.routes.filter(route => route.tab)
-  assert(tabRoutes.length === 4, `Runtime contract must declare four primary tabs, got ${tabRoutes.length}`)
+  assert(tabRoutes.length === 3, `Runtime contract must declare three primary tabs, got ${tabRoutes.length}`)
   assert(
     JSON.stringify(tabRoutes.map(route => route.path).sort())
     === JSON.stringify([
       'pages/events/index',
-      'pages/index/index',
       'pages/opportunities/index',
       'pages/profile/index',
     ].sort()),
@@ -1808,21 +1807,21 @@ async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatt
     report.navigation.tabs.push({ route: route.path, status: settled.status, state: settled.state })
   }
 
-  const homeRoute = runtimePages.routes.find(route => route.path === 'pages/index/index')
+  const eventsRoute = runtimePages.routes.find(route => route.path === 'pages/events/index')
   const returnRoute = runtimePages.routes.find(route => route.path === 'packages/member/help/index')
-  assert(homeRoute && returnRoute, 'Runtime navigation contract is missing home/help')
+  assert(eventsRoute && returnRoute, 'Runtime navigation contract is missing events/help')
   await navigateFreshRuntimeRoute(
     miniProgram,
-    homeRoute,
-    'return flow home',
-    () => miniProgram.reLaunch('/pages/index/index'),
+    eventsRoute,
+    'return flow events',
+    () => miniProgram.reLaunch('/pages/events/index'),
   )
   await retry('open secondary page', () => miniProgram.navigateTo('/packages/member/help/index'))
   await waitForCurrentRuntimeRoute(miniProgram, returnRoute)
   await retry('navigate back', () => miniProgram.navigateBack())
-  const returned = await waitForCurrentRuntimeRoute(miniProgram, homeRoute)
+  const returned = await waitForCurrentRuntimeRoute(miniProgram, eventsRoute)
   report.navigation.back = {
-    status: returned.path === 'pages/index/index' ? 'passed' : 'failed',
+    status: returned.path === 'pages/events/index' ? 'passed' : 'failed',
     from: returnRoute.path,
     to: String(returned.path || ''),
   }

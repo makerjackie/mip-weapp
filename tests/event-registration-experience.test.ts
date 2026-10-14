@@ -170,23 +170,17 @@ describe('event registration experience', () => {
     expect(entry).toContain('expectedVersion: event.expectedVersion')
   })
 
-  it('uses the configured MIP logo and image-led event cards on the discover page', () => {
-    const home = read('src/pages/index/index.wxml')
-    const homePage = read('src/pages/index/index.ts')
+  it('uses the configured MIP logo and image-led event cards on the events page', () => {
+    const eventsView = read('src/pages/events/index.wxml')
     const eventsPage = read('src/pages/events/index.ts')
     const eventCard = read('src/components/mip-activity-card/index.wxml')
 
     expect(read('src/config/brand.ts')).toContain('/assets/brand/mip-logo-yellow.png')
-    expect(home).toContain('src="{{logoPath}}"')
     expect(fs.existsSync(path.join(root, 'src/assets/brand/mip-logo-yellow.png'))).toBe(true)
-    expect(home).toContain('<mip-activity-card')
-    expect(home).toContain('<mip-opportunity-card')
-    expect(home).toContain('cover-url="{{item.coverUrl || \'\'}}"')
+    expect(eventsView).toContain('<mip-activity-card')
     expect(eventCard).toContain('src="{{displayCoverUrl}}"')
     expect(read('src/components/mip-activity-card/index.ts')).toContain('value?.coverUrl')
     expect(eventCard).toContain('count-text="{{event.countText || \'\'}}"')
-    expect(homePage).toContain('mipEventsModule.listEvents')
-    expect(homePage).toContain('items.slice(0, 3).map(presentEventCard)')
     expect(eventsPage).toContain('feed.items.map(presentEventCard)')
   })
 

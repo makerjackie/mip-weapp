@@ -251,11 +251,6 @@
       "reason": "活动原生日期选择完成按钮文字参考色（fixture-gated）"
     },
     {
-      "file": "src/pages/index/index.json",
-      "value": "#040404",
-      "reason": "WeChat scroll container requires an opaque near-canvas #040404 (verify-build contract)"
-    },
-    {
       "file": "src/pages/events/index.json",
       "value": "#040404",
       "reason": "WeChat scroll container requires an opaque near-canvas #040404 (verify-build contract)"

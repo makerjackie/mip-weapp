@@ -53,7 +53,7 @@ Page({
         return
       }
       if (!snapshot.authenticated) {
-        mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
+        mipGlobalAccessGuard.enterTarget({ path: 'pages/events/index' })
         return
       }
       // Access snapshots omit private contact data; only the caller's profile exposes its masked phone.

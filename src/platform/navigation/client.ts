@@ -86,7 +86,7 @@ export function caseSwitchPrimary(url: string) {
 // app.json tabBar 页清单（custom 自绘 tabbar，与 src/app.json 同步维护）。
 // tab 页只能 switchTab，且微信不支持带 query 参数跳转。
 const PRIMARY_TAB_ROUTES = Object.freeze(new Set([
-  '/pages/index/index',
+  '/pages/events/index',
   '/pages/events/index',
   '/pages/opportunities/index',
   '/pages/profile/index',

@@ -565,12 +565,12 @@ describe('MIP resumable identity access', () => {
       storage: memory.storage,
     })
     const token = module.prepareProtectedAction(createMipGlobalAccessIntent({
-      path: 'pages/index/index',
+      path: 'pages/events/index',
     }))
 
     await expect(module.complete(token)).resolves.toMatchObject({
       navigation: 'reLaunch',
-      route: '/pages/index/index',
+      route: '/pages/events/index',
     })
     expect(memory.value()).toBeUndefined()
   })
@@ -613,7 +613,7 @@ describe('MIP global access guard', () => {
     expect(isMipGlobalAccessExemptRoute('/packages/member/privacy-policy/index')).toBe(true)
     expect(isMipGlobalAccessExemptRoute('/packages/admin/web-login-confirm/index')).toBe(true)
     expect(isMipGlobalAccessExemptRoute('/packages/member/privacy/index')).toBe(false)
-    expect(isMipGlobalAccessExemptRoute('/pages/index/index')).toBe(false)
+    expect(isMipGlobalAccessExemptRoute('/pages/events/index')).toBe(false)
   })
 
   it('leaves the signed-out my page visible so its actions can show the phone sheet', async () => {
@@ -642,7 +642,7 @@ describe('MIP global access guard', () => {
       navigateBack,
     })
 
-    expect(guard.ensureLaunch({ path: 'pages/index/index' })).toBe('EXEMPT')
+    expect(guard.ensureLaunch({ path: 'pages/events/index' })).toBe('EXEMPT')
     expect(reLaunch).not.toHaveBeenCalled()
     expect(guard.leaveDocument()).toBe('BACK')
     expect(navigateBack).toHaveBeenCalledOnce()

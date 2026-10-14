@@ -3,7 +3,6 @@
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const MINIPROGRAM_PATH_ALLOWLIST = Object.freeze({
-  '/pages/index/index': Object.freeze([]),
   '/pages/events/index': Object.freeze([]),
   '/pages/opportunities/index': Object.freeze([]),
   '/pages/profile/index': Object.freeze([]),
@@ -13,7 +12,6 @@ const MINIPROGRAM_PATH_ALLOWLIST = Object.freeze({
   '/packages/member/mip-events/detail/index': Object.freeze(['eventId']),
   '/packages/member/mip-opportunities/detail/index': Object.freeze(['id']),
   '/packages/member/mip-cases/detail/index': Object.freeze(['id']),
-  '/packages/member/announcement-detail/index': Object.freeze(['announcementId']),
 })
 
 function requiredId(value) {

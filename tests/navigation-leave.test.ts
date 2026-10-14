@@ -50,9 +50,9 @@ describe('leaveSecondaryPage', () => {
     vi.stubGlobal('wx', { navigateBack: vi.fn(), switchTab })
     vi.spyOn(Date, 'now').mockImplementation(() => 20_000)
 
-    leaveSecondaryPage('/pages/profile/index', '/pages/index/index')
+    leaveSecondaryPage('/pages/profile/index', '/pages/opportunities/index')
 
     expect(switchTab).toHaveBeenCalledTimes(2)
-    expect(switchTab).toHaveBeenLastCalledWith({ url: '/pages/index/index' })
+    expect(switchTab).toHaveBeenLastCalledWith({ url: '/pages/opportunities/index' })
   })
 })

@@ -37,10 +37,8 @@ describe('MIP event experience contracts', () => {
 
   it('revalidates cached activity feeds when a page returns to the foreground', () => {
     const eventPage = source('src/pages/events/index.ts')
-    const discoverPage = source('src/pages/index/index.ts')
 
     expect(eventPage).toContain('force: options.force === true || Boolean(cached)')
-    expect(discoverPage).toContain('force: options.force === true || Boolean(cached)')
   })
 
   it('accepts only HTTPS online activity addresses in the client entry', () => {

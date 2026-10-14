@@ -25,7 +25,7 @@ function selectedIndex(value: string) {
 Component({
   data: {
     selected: 0,
-    value: 'pages/index/index',
+    value: 'pages/events/index',
     tabs,
     unreadCount: 0,
   },

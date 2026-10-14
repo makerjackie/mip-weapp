@@ -15,7 +15,7 @@ export const MIP_GLOBAL_ACCESS_EXEMPT_ROUTES = [
   'packages/admin/web-login-confirm/index',
 ] as const
 
-const MIP_HOME_ROUTE = 'pages/index/index'
+const MIP_HOME_ROUTE = 'pages/events/index'
 
 export interface MipGlobalAccessTarget {
   path?: string
