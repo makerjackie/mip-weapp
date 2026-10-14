@@ -10,6 +10,7 @@ import {
   callCloudbase,
   cloudFunctionResult,
   loadCaseEnv,
+  mysqlDbInstanceArg,
   sqlLiteral,
 } from './lib/example-cloudbase.mjs'
 import {
@@ -42,6 +43,15 @@ const deploymentStage = String(env.MIP_DEPLOYMENT_STAGE || '').trim().toLowerCas
 const functionNames = resolveMipFunctionNames(env)
 const coreManifest = createMipCoreFunctionManifest(functionNames)
 const confirmedEnv = process.argv.find(value => value.startsWith('--confirm-env='))?.slice('--confirm-env='.length)
+const configuredSchemaName = String(env.MIP_DB_SCHEMA || '').trim()
+const confirmedSchema = process.argv.find(value => value.startsWith('--confirm-schema='))?.slice('--confirm-schema='.length) || ''
+if (configuredSchemaName && confirmedSchema && configuredSchemaName !== confirmedSchema) {
+  throw new Error('MIP_DB_SCHEMA and --confirm-schema disagree on the target schema')
+}
+// Verification must see the same logical database the functions were deployed
+// against; a second schema is only verifiable when explicitly confirmed.
+const verifiedSchema = configuredSchemaName || confirmedSchema || ''
+const dbInstanceArg = mysqlDbInstanceArg(verifiedSchema)
 
 if (!envId || confirmedEnv !== envId || !/^wx[0-9a-f]{16}$/i.test(appId)) {
   throw new Error('MIP cloud verification requires configured EnvID/AppID and --confirm-env=<exact EnvID>')
@@ -63,6 +73,7 @@ const tableInventory = callCloudbase(root, 'queryMysqlDatabase', {
   action: 'runQuery',
   sql: `SELECT table_name AS tableName FROM information_schema.tables
     WHERE table_schema = DATABASE() AND table_name IN (${tableNamesSql})`,
+  ...dbInstanceArg,
 })
 const foundTables = new Set(collectFieldValues(tableInventory, ['tableName', 'table_name']))
 const missingTables = requiredTables.filter(table => !foundTables.has(table))
@@ -72,6 +83,7 @@ if (missingTables.length) {
 const membershipChainInvariant = assertMembershipChainInvariant(callCloudbase(root, 'queryMysqlDatabase', {
   action: 'runQuery',
   sql: MIP_MEMBERSHIP_CHAIN_INVARIANT_SQL,
+  ...dbInstanceArg,
 }))
 
 const coreDetails = new Map()
@@ -284,7 +296,10 @@ function assertRuntimeAccount(referenceDetail) {
   }
   const user = decodeURIComponent(parsed.username)
   const schema = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
-  const expectedUser = String(env.MIP_DB_RUNTIME_USER || runtimeUserForEnvironment(envId)).trim()
+  const expectedUser = String(
+    env.MIP_DB_RUNTIME_USER
+    || runtimeUserForEnvironment(envId, verifiedSchema && verifiedSchema === schema ? schema : undefined),
+  ).trim()
   if (parsed.protocol !== 'mysql:'
     || !parsed.hostname
     || !parsed.password

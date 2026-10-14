@@ -88,10 +88,60 @@ function sanitizedDiagnostic(value) {
   return result
 }
 
+// Auto-routing source for MIP_DB_SCHEMA: same precedence as loadCaseEnv
+// (process env wins, then the MIP_ENV_DIR target's .env.local). Cached per
+// process; schema names are not secrets so .env.local is the canonical home.
+let routedTargetSchemaCache
+function routedTargetSchema(caseRoot) {
+  if (routedTargetSchemaCache !== undefined) {
+    return routedTargetSchemaCache
+  }
+  const rootLocal = parseEnv(path.join(caseRoot, '.env.local'))
+  const dirSetting = String(process.env.MIP_ENV_DIR || rootLocal.MIP_ENV_DIR || '').trim()
+  const dir = dirSetting
+    ? (path.isAbsolute(dirSetting) ? dirSetting : path.resolve(caseRoot, dirSetting))
+    : caseRoot
+  const local = dir === caseRoot ? rootLocal : parseEnv(path.join(dir, '.env.local'))
+  routedTargetSchemaCache = String(process.env.MIP_DB_SCHEMA || local.MIP_DB_SCHEMA || '').trim()
+  return routedTargetSchemaCache
+}
+
+// When MIP_DB_SCHEMA is configured, every unqualified mip_* query or statement
+// is routed to that logical database. Instance-scoped probes (information_schema
+// privileges, VERSION()) keep instance-wide visibility; an explicit dbInstance
+// argument from the caller always wins.
+function autoSchemaArgs(caseRoot, tool, args) {
+  if (!args || typeof args !== 'object' || Array.isArray(args)) {
+    return args
+  }
+  if (tool !== 'queryMysqlDatabase' && tool !== 'manageMysqlDatabase') {
+    return args
+  }
+  if (args.action !== 'runQuery' && args.action !== 'runStatement') {
+    return args
+  }
+  if (args.dbInstance) {
+    return args
+  }
+  const schemaName = routedTargetSchema(caseRoot)
+  if (!schemaName) {
+    return args
+  }
+  if (!/^[\w-]{1,64}$/.test(schemaName)) {
+    throw new Error('MIP_DB_SCHEMA must be a plain schema identifier')
+  }
+  const sql = String(args.sql || '')
+  if (/information_schema\s*\./i.test(sql) || /SELECT\s+VERSION\(\)/i.test(sql)) {
+    return args
+  }
+  return { ...args, dbInstance: { schema: schemaName } }
+}
+
 export function callCloudbase(caseRoot, tool, args, timeout = 120000) {
+  const routedArgs = autoSchemaArgs(caseRoot, tool, args)
   let response
   try {
-    response = callCloudbaseMcp(workspaceRoot(caseRoot), tool, args, timeout)
+    response = callCloudbaseMcp(workspaceRoot(caseRoot), tool, routedArgs, timeout)
   }
   catch (error) {
     throw new Error(`CloudBase ${tool} failed: ${sanitizedDiagnostic(error instanceof Error ? error.message : error).trim()}`)

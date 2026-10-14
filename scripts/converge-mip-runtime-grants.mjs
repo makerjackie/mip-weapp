@@ -24,11 +24,16 @@ const confirmedEnv = argumentValue('--confirm-env=')
 const runtimeUser = String(env.MIP_DB_RUNTIME_USER || runtimeUserForEnvironment(envId)).trim()
 const confirmedRuntimeUser = argumentValue('--confirm-runtime-user=')
 const connectionUri = String(env.MIP_DB_CONNECTION_URI || '').trim()
+const configuredSchemaName = String(env.MIP_DB_SCHEMA || '').trim()
+const confirmedSchema = argumentValue('--confirm-schema=')
+if (configuredSchemaName && confirmedSchema && configuredSchemaName !== confirmedSchema) {
+  throw new Error('MIP_DB_SCHEMA and --confirm-schema disagree on the target schema')
+}
 
 if (!envId || confirmedEnv !== envId) {
   throw new Error('MIP grant convergence requires --confirm-env=<exact CLOUDBASE_ENV_ID>')
 }
-if (runtimeUser !== runtimeUserForEnvironment(envId) || confirmedRuntimeUser !== runtimeUser) {
+if (confirmedRuntimeUser !== runtimeUser) {
   throw new Error('MIP grant convergence requires --confirm-runtime-user=<exact environment-scoped user>')
 }
 
@@ -46,6 +51,16 @@ if (parsedConnection.protocol !== 'mysql:'
   || !parsedConnection.hostname
   || !/^[\w-]+$/.test(schema)) {
   throw new Error('MIP_DB_CONNECTION_URI does not match the confirmed MIP runtime account')
+}
+// The connection schema decides which derivation is legitimate: the instance
+// default keeps the envId-only account; a confirmed second schema must use the
+// schema-salted account so two logical databases never share a runtime user.
+const confirmedTargetSchema = confirmedSchema || configuredSchemaName || ''
+const expectedUser = confirmedTargetSchema === schema && confirmedTargetSchema
+  ? runtimeUserForEnvironment(envId, schema)
+  : runtimeUserForEnvironment(envId)
+if (runtimeUser !== expectedUser) {
+  throw new Error('MIP grant convergence requires the schema-scoped runtime user; pass --confirm-schema=<exact schema> for a second logical database')
 }
 
 bindAndRequireMysqlEnvironment(root, envId)

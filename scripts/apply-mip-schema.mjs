@@ -8,6 +8,7 @@ import {
   bindAndRequireMysqlEnvironment,
   callCloudbase,
   loadCaseEnv,
+  mysqlDbInstanceArg,
   sqlLiteral,
 } from './lib/example-cloudbase.mjs'
 import { validateBackupManifest } from './lib/mip-backup-manifest.mjs'
@@ -34,6 +35,24 @@ if (!envId || confirmedEnv !== envId) {
 }
 if (confirmedPrefix !== MIP_TABLE_PREFIX) {
   throw new Error(`MIP schema application requires --confirm-prefix=${MIP_TABLE_PREFIX}`)
+}
+const configuredSchemaName = String(env.MIP_DB_SCHEMA || '').trim()
+const confirmedSchema = argumentValue('--confirm-schema=')
+if (configuredSchemaName && !/^[\w-]{1,64}$/.test(configuredSchemaName)) {
+  throw new Error('MIP_DB_SCHEMA must be a plain schema identifier')
+}
+if (confirmedSchema && !/^[\w-]{1,64}$/.test(confirmedSchema)) {
+  throw new Error('--confirm-schema must be a plain schema identifier')
+}
+if (configuredSchemaName && confirmedSchema && configuredSchemaName !== confirmedSchema) {
+  throw new Error('MIP_DB_SCHEMA and --confirm-schema disagree on the target schema')
+}
+// Migrations execute unqualified mip_* DDL, so a second logical database must be
+// an explicit confirmed choice; the instance default keeps the historical path.
+const targetSchema = confirmedSchema || configuredSchemaName || ''
+const dbInstanceArg = mysqlDbInstanceArg(targetSchema)
+if (targetSchema && confirmedSchema !== targetSchema) {
+  throw new Error('Second-schema MIP migrations require --confirm-schema=<exact schema>')
 }
 
 const lock = loadMipMigrationLock(root)
@@ -247,6 +266,7 @@ function listMipTables() {
       FROM information_schema.tables
       WHERE table_schema = DATABASE() AND table_name LIKE 'mip\\_%'
       ORDER BY table_name`,
+    ...dbInstanceArg,
   })
   return new Set(
     collectRows(response, ['tableName'])
@@ -259,6 +279,7 @@ function loadAppliedMigrations() {
   const response = callCloudbase(root, 'queryMysqlDatabase', {
     action: 'runQuery',
     sql: `SELECT version, name, checksum FROM ${MIP_MIGRATION_TRACKING_TABLE} ORDER BY version`,
+    ...dbInstanceArg,
   })
   return new Map(
     collectRows(response, ['version', 'name', 'checksum'])
@@ -285,6 +306,7 @@ function loadAppliedMigrationSteps() {
       statement_sha256 AS statementSha256, status
       FROM ${MIP_MIGRATION_STEP_TABLE}
       ORDER BY migration_version, step_index`,
+    ...dbInstanceArg,
   })
   const byMigration = new Map()
   for (const row of collectRows(response, ['migrationVersion', 'stepIndex', 'statementSha256', 'status'])) {
@@ -325,6 +347,7 @@ function executeSchemaStatement(sql, timeout = 300000) {
   const result = callCloudbase(root, 'manageMysqlDatabase', {
     action: 'runStatement',
     sql,
+    ...dbInstanceArg,
   }, timeout)
   if (result?.success === false) {
     throw new Error('MIP schema statement failed')

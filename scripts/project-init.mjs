@@ -104,7 +104,13 @@ if (envId) {
   nextEnv.CLOUDBASE_ENV_ID = envId
 }
 if (nextEnv.CLOUDBASE_ENV_ID) {
-  nextEnv.MIP_DB_RUNTIME_USER = runtimeUserForEnvironment(nextEnv.CLOUDBASE_ENV_ID)
+  // A project pinned to an explicit second schema derives its own runtime
+  // account; the instance default keeps the historical envId-only account.
+  const schemaName = String(nextEnv.MIP_DB_SCHEMA || '').trim()
+  nextEnv.MIP_DB_RUNTIME_USER = runtimeUserForEnvironment(
+    nextEnv.CLOUDBASE_ENV_ID,
+    schemaName || undefined,
+  )
 }
 if (!dryRun) {
   const secretsPath = path.join(root, '.env.secrets.local')

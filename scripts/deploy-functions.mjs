@@ -27,6 +27,8 @@ import {
   callCloudbase,
   cloudFunctionResult,
   loadCaseEnv,
+  mysqlDbInstanceArg,
+  resolveEnvDir,
 } from './lib/example-cloudbase.mjs'
 import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
 import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
@@ -80,7 +82,20 @@ const adminWebLoginConfirmUrl = exactHttpsEndpoint(
 const adminWebLoginMigrationUrl = env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL
   ? exactHttpsEndpoint(env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL, 'MIP_ADMIN_WEB_LOGIN_MIGRATION_URL')
   : 'https://admin.mip.cool/api/internal/auth/challenge/confirm'
-const databaseRuntimeUser = String(env.MIP_DB_RUNTIME_USER || runtimeUserForEnvironment(envId)).trim()
+// Explicit target schema (same-instance second logical database). Empty keeps the
+// historical instance-default deployment used by the existing production stack.
+const configuredSchemaName = String(env.MIP_DB_SCHEMA || '').trim()
+const confirmedSchema = argumentValue('--confirm-schema=')
+if (confirmedSchema && !/^[\w-]{1,64}$/.test(confirmedSchema)) {
+  throw new Error('--confirm-schema must be a plain schema identifier')
+}
+if (configuredSchemaName && !/^[\w-]{1,64}$/.test(configuredSchemaName)) {
+  throw new Error('MIP_DB_SCHEMA must be a plain schema identifier')
+}
+if (configuredSchemaName && confirmedSchema && configuredSchemaName !== confirmedSchema) {
+  throw new Error('MIP_DB_SCHEMA and --confirm-schema disagree on the target schema')
+}
+const databaseRuntimeUser = String(env.MIP_DB_RUNTIME_USER || '').trim()
 const confirmedRuntimeUser = argumentValue('--confirm-runtime-user=')
 const allowedAppIds = String(env.MIP_ALLOWED_APP_IDS || appId)
   .split(',')
@@ -133,9 +148,8 @@ if (deploymentStage === 'staging'
   && (configuredTestMembershipHmac.length < 32 || /[\r\n]/.test(configuredTestMembershipHmac))) {
   throw new Error('Staging TEST membership maintenance requires a configured MIP_TEST_MEMBERSHIP_HMAC_SECRET with at least 32 single-line characters')
 }
-if (databaseRuntimeUser !== runtimeUserForEnvironment(envId)
-  || confirmedRuntimeUser !== databaseRuntimeUser) {
-  throw new Error('MIP deployment requires the environment-scoped runtime user and --confirm-runtime-user=<exact user>')
+if (databaseRuntimeUser && confirmedRuntimeUser !== databaseRuntimeUser) {
+  throw new Error('MIP deployment requires --confirm-runtime-user=<configured MIP_DB_RUNTIME_USER>')
 }
 if (unionIdRebindEnabled && String(env.MIP_UNION_IDENTITY_PEPPER || '').length < 32) {
   throw new Error('MIP_UNION_ID_REBIND_ENABLED requires the migration source MIP_UNION_IDENTITY_PEPPER')
@@ -226,7 +240,6 @@ if (paymentMode === 'disabled') {
 }
 
 const requiredTables = Object.keys(RUNTIME_TABLE_PRIVILEGES)
-assertRequiredTablesExist(requiredTables)
 
 let connectionUri = configuredOrExistingValue('MIP_DB_CONNECTION_URI', existingDetails)
 let credentialSource = connectionUri ? (env.MIP_DB_CONNECTION_URI ? 'configured' : 'existing-mip-function') : ''
@@ -234,17 +247,34 @@ if (connectionUri && !validMysqlUri(connectionUri)) {
   throw new Error('MIP_DB_CONNECTION_URI is not a complete MySQL URI')
 }
 
-const targetSchema = String(findString(target.mysql, ['schema', 'database', 'dbname']) || '').trim()
-if (!/^[\w-]+$/.test(targetSchema)) {
+const instanceSchema = String(findString(target.mysql, ['schema', 'database', 'dbname']) || '').trim()
+if (!/^[\w-]+$/.test(instanceSchema)) {
   throw new Error('CloudBase MySQL schema could not be resolved safely')
+}
+const effectiveSchema = confirmedSchema || configuredSchemaName || instanceSchema
+if (!/^[\w-]{1,64}$/.test(effectiveSchema)) {
+  throw new Error('CloudBase MySQL target schema is invalid')
+}
+// A non-default schema must always be confirmed explicitly; deployments that
+// only set MIP_DB_SCHEMA without the matching --confirm-schema flag stop here.
+if (effectiveSchema !== instanceSchema && confirmedSchema !== effectiveSchema) {
+  throw new Error('Second-schema MIP deployment requires --confirm-schema=<exact schema>')
+}
+const nonDefaultSchema = effectiveSchema !== instanceSchema
+const runtimeAccountName = databaseRuntimeUser
+  || runtimeUserForEnvironment(envId, nonDefaultSchema ? effectiveSchema : undefined)
+if (runtimeAccountName !== runtimeUserForEnvironment(envId, nonDefaultSchema ? effectiveSchema : undefined)
+  || confirmedRuntimeUser !== runtimeAccountName) {
+  throw new Error('MIP deployment requires the schema-scoped runtime user and --confirm-runtime-user=<exact user>')
 }
 const configuredSchema = connectionUri
   ? decodeURIComponent(new URL(connectionUri).pathname.replace(/^\//, ''))
-  : targetSchema
-if (configuredSchema !== targetSchema) {
+  : effectiveSchema
+if (configuredSchema !== effectiveSchema) {
   throw new Error('MIP runtime connection must use the confirmed CloudBase MySQL schema')
 }
-const runtimeAccount = parseGrantee(databaseRuntimeUser, '%')
+assertRequiredTablesExist(requiredTables, nonDefaultSchema ? effectiveSchema : '')
+const runtimeAccount = parseGrantee(runtimeAccountName, '%')
 const accountSnapshot = loadRuntimeAccountSnapshot(root, runtimeAccount)
 const accountClaim = assertRuntimeAccountClaimable({
   ...accountSnapshot,
@@ -267,7 +297,7 @@ if (!connectionUri) {
   runMysqlStatements([
     `CREATE USER ${runtimeAccount} IDENTIFIED BY '${password}'`,
   ])
-  connectionUri = `mysql://${encodeURIComponent(databaseRuntimeUser)}:${encodeURIComponent(password)}@${address}/${encodeURIComponent(targetSchema)}`
+  connectionUri = `mysql://${encodeURIComponent(runtimeAccountName)}:${encodeURIComponent(password)}@${address}/${encodeURIComponent(effectiveSchema)}`
   persistLocalRuntimeConnection(connectionUri)
   credentialSource = 'provisioned-least-privilege'
 }
@@ -282,7 +312,7 @@ if (parsedConnection.protocol !== 'mysql:'
   || !/^[\w.-]+$/.test(runtimeUserName)) {
   throw new Error('MIP runtime MySQL connection is incomplete')
 }
-if (runtimeUserName !== databaseRuntimeUser) {
+if (runtimeUserName !== runtimeAccountName) {
   throw new Error('MIP_DB_CONNECTION_URI must use the dedicated MIP_DB_RUNTIME_USER account')
 }
 
@@ -591,6 +621,7 @@ const artifact = {
   directMipSourcesOnly: true,
   persistence: 'cloudbase-mysql',
   credentialSource,
+  targetSchemaMode: nonDefaultSchema ? 'explicit-schema' : 'instance-default',
   paymentMode,
   catalogStage,
   deploymentStage,
@@ -670,7 +701,9 @@ function persistLocalRuntimeConnection(value) {
   if (!validMysqlUri(value) || /[\r\n]/.test(value)) {
     throw new Error('Generated MIP runtime connection is invalid')
   }
-  const envPath = path.join(root, '.env.secrets.local')
+  // Under MIP_ENV_DIR the target directory owns this deployment's secrets file;
+  // the repo-root copy belongs to the other target and must stay untouched.
+  const envPath = path.join(resolveEnvDir(root), '.env.secrets.local')
   const current = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : ''
   const line = `MIP_DB_CONNECTION_URI=${value}`
   const next = /^MIP_DB_CONNECTION_URI=.*$/m.test(current)
@@ -729,7 +762,7 @@ function sanitizedManagementMessage(value) {
   let result = String(value || '').slice(0, 1000)
   result = result.replace(/mysql:\/\/[^\s"']+/gi, 'mysql://[redacted]')
   result = result.replace(/wx[0-9a-f]{16}/gi, '[redacted-appid]')
-  for (const sensitive of [envId, appId, vpcId, subnetId, databaseRuntimeUser, env.MIP_SMS_SECRET_ID, env.MIP_SMS_SECRET_KEY].filter(Boolean)) {
+  for (const sensitive of [envId, appId, vpcId, subnetId, runtimeAccountName, env.MIP_SMS_SECRET_ID, env.MIP_SMS_SECRET_KEY].filter(Boolean)) {
     result = result.replaceAll(sensitive, '[redacted-id]')
   }
   return result
@@ -749,12 +782,13 @@ function collectDiagnosticStrings(value, output) {
   }
 }
 
-function assertRequiredTablesExist(tableNames) {
+function assertRequiredTablesExist(tableNames, schema) {
   const quoted = tableNames.map(name => `'${name.replaceAll('\'', '\'\'')}'`).join(', ')
   const result = callCloudbase(root, 'queryMysqlDatabase', {
     action: 'runQuery',
     sql: `SELECT table_name AS tableName FROM information_schema.tables
       WHERE table_schema = DATABASE() AND table_name IN (${quoted})`,
+    ...mysqlDbInstanceArg(schema),
   })
   const found = new Set(collectFieldValues(result, ['tableName', 'table_name']))
   const missing = tableNames.filter(name => !found.has(name))
