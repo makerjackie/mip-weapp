@@ -33,6 +33,8 @@
   <view id="mip-login-sheet-dismiss" class="mip-login-sheet__ghost" aria-role="button" aria-disabled="{{busy}}" bind:tap="onDismiss">暂不授权，返回原页面</view>
   <!-- 品牌 logo 静态预载锚点（MIW-100 同族）：logoPath 默认值经 {{}} 动态绑定，上传依赖
        分析探不到会被剔出体验版；静态引用保证 /assets/brand/mip-logo-yellow.png 打进主包
-       （mip-events 分享缩略图与 talent-card 平台邀请人头像同用此文件）。 -->
+       （mip-events 分享缩略图与 talent-card 平台邀请人头像同用此文件）。
+       隐藏样式来自全局工具类（app.wxss），本组件 json 必须保持 styleIsolation
+       apply-shared，否则锚点裸渲染成默认 320x240 大图（MIW-112 修复）。 -->
   <image aria-hidden="true" class="fixed left-[-9999rpx] top-0 h-[2rpx] w-[2rpx] opacity-0" src="/assets/brand/mip-logo-yellow.png" />
 </view>
