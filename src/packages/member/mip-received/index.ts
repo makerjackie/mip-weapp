@@ -171,6 +171,9 @@ function present(item: ReceivedInteraction, index: number, viewer: { name: strin
     // journey-review J3-08（QT 终审）：访客卡不显示访问时间。
     // MIW-74：服务端已按人聚合（visitCount = 全部来访次数），同一人不再摊平多张卡；
     // 同日重复来访走 GUEST/INTERACTION 同款右上角 ×N 角标（countBadge）。
+    // MIW-95（验收 DEF-12）：非 influence 默认列表渲染路径已删——访问次数文案与
+    // 访问时间字段不再产出（唯一消费方是已删除的默认列表节点），访客现役
+    // 唯一形态 = 影响力网格（每人一卡 + ×N + 未读点）；服务端 DTO 字段照旧不收缩。
     return {
       viewKey: `visitor-${item.actor.profileRef}`,
       kind: item.kind,
@@ -179,10 +182,10 @@ function present(item: ReceivedInteraction, index: number, viewer: { name: strin
       ...cardBase(item.actor),
       statusText: item.actor.userKind === 'PLAYER' ? '玩家' : '嘉宾',
       sourceText: '公开档案',
-      detailText: `访问了你的公开档案 ${item.visitCount} 次`,
+      detailText: '',
       countBadge: item.visitCount > 1 ? `×${item.visitCount}` : '',
       note: '',
-      updatedText: formatChineseMonthDayTime(item.lastVisitedAt),
+      updatedText: '',
       navigationUrl: profileUrl(item.actor.profileRef),
     }
   }
