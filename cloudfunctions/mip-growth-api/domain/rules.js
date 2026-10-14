@@ -60,6 +60,19 @@ function balanceField(metric) {
   throw new Error('GROWTH_RULE_NOT_AVAILABLE')
 }
 
+// MIW-104：等级号唯一事实 = level_key 的 lvNN 约定（admin-web 新建等级按此生成）；
+// display_badge（"Lv.N"）次之；两者都解析不出（历史随机 key/演示数据）回退快照位置序数。
+// 与 mip-events-api / mip-opportunities-api 的 public-person-details 同口径，三处同步维护。
+function parseLevelNumber(levelKey, displayBadge) {
+  const key = typeof levelKey === 'string' ? /^lv0*(\d{1,4})$/i.exec(levelKey.trim()) : null
+  if (key && Number(key[1]) >= 1) return Number(key[1])
+  const badge = typeof displayBadge === 'string'
+    ? /^lv\.?\s*0*(\d{1,4})(?:\s|$)/i.exec(displayBadge.trim())
+    : null
+  if (badge && Number(badge[1]) >= 1) return Number(badge[1])
+  return null
+}
+
 function levelSnapshot(account, levels, rules = []) {
   const active = levels
     .filter(level => level.status === 'ACTIVE')
@@ -75,14 +88,14 @@ function levelSnapshot(account, levels, rules = []) {
   const next = active[currentIndex + 1]
   const dto = {
     account: accountDto(account),
-    currentLevel: levelDto(current),
-    levels: active.map(levelDto),
+    currentLevel: levelDto(current, currentIndex),
+    levels: active.map((level, index) => levelDto(level, index)),
     earningRules: rules.filter(rule => supportedMetric(rule.metric)).map(ruleDto),
     levelProgressPercent: 100,
   }
   if (next) {
     const span = Number(next.minimum_experience) - Number(current.minimum_experience)
-    dto.nextLevel = levelDto(next)
+    dto.nextLevel = levelDto(next, currentIndex + 1)
     dto.experienceToNextLevel = Math.max(0, Number(next.minimum_experience) - experience)
     dto.levelProgressPercent = Math.max(0, Math.min(100, Math.floor(
       (experience - Number(current.minimum_experience)) / span * 100,
@@ -136,10 +149,12 @@ function benefitsDto(value) {
     .filter(Boolean)
 }
 
-function levelDto(row) {
+function levelDto(row, position = 0) {
   return {
     id: row.id,
     levelKey: row.level_key,
+    // MIW-104：等级号随快照下发（跳号等级如 1/3/5/8/…/60），客户端不再按位置派生。
+    levelNumber: parseLevelNumber(row.level_key, row.display_badge) ?? position + 1,
     name: row.name,
     minimumExperience: Number(row.minimum_experience),
     benefits: benefitsDto(row.benefits_json),

@@ -1,12 +1,15 @@
 import type { GrowthLevel, GrowthLevelBenefit } from '../../../modules/mip-growth'
+import { levelNumberOf } from '../../../modules/mip-growth'
 
 /**
  * MIW-83 GROWTH-01：等级权益差异档位视图。
  * 档位是前端纯派生——快照 levels（minimumExperience 升序）中「权益名列表完全相同」的
  * 相邻等级合并为一档，档位标签取该档首个等级号（L1 起，无 L0）。
+ * MIW-104：档位等级号改读服务端 levelNumber（跳号如 1/3/5/8/…/60），缺省回退位置序数；
+ * 锁定比较随之用业务等级号（与门槛排序同序，仅数字跳号）。
  */
 export interface GrowthTierView {
-  /** 档首等级号（1-based，直接用于 Lv.N 标签）。 */
+  /** 档首等级号（服务端 levelNumber，兜底位置序数；直接用于 Lv.N 标签）。 */
   levelNumber: number
   /** 该档首个等级在 snapshot.levels 中的下标，权益区取 levels[startIndex].benefits。 */
   startIndex: number
@@ -43,14 +46,18 @@ export function deriveTierStartIndexes(levels: readonly GrowthLevel[]): number[]
 
 export function tierViews(
   tierStartIndexes: readonly number[],
+  levels: readonly GrowthLevel[],
   currentLevelNumber: number,
   isPlayer: boolean,
 ): GrowthTierView[] {
-  return tierStartIndexes.map(startIndex => ({
-    levelNumber: startIndex + 1,
-    startIndex,
-    locked: !isPlayer || startIndex + 1 > currentLevelNumber,
-  }))
+  return tierStartIndexes.map((startIndex) => {
+    const levelNumber = levelNumberOf(levels[startIndex], startIndex)
+    return {
+      levelNumber,
+      startIndex,
+      locked: !isPlayer || levelNumber > currentLevelNumber,
+    }
+  })
 }
 
 /** 会员默认选中「包含当前等级」的档位；非会员（全部锁定）落在 L1 起始档。 */

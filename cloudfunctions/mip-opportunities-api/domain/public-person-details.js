@@ -24,7 +24,7 @@ async function loadPublicPersonDetails(database, appId, userIds) {
       [appId, ...userIds],
     ),
     loadPublicBadges(database, appId, userIds),
-    database.query(`SELECT id, name, minimum_experience, status FROM mip_growth_levels
+    database.query(`SELECT id, level_key, display_badge, name, minimum_experience, status FROM mip_growth_levels
       WHERE app_id = ? AND status = 'ACTIVE' ORDER BY minimum_experience, id`, [appId]),
   ])
   return new Map(rows.map((row) => {
@@ -42,13 +42,27 @@ async function loadPublicPersonDetails(database, appId, userIds) {
 
 // Same ACTIVE, minimum-experience ordering and zero-base requirement as growth levelSnapshot.
 // Do not manufacture a level when the user has no growth account or configuration is incomplete.
+// MIW-104：等级号不再按位置序数（index+1），改读 level_key 的 lvNN 约定（display_badge
+// 次之、位置序数兜底），与 mip-growth-api levelDto 同口径——跳号等级（1/3/5/8/…/60）
+// 的他人徽标因此显示业务等级号。三处同步维护（勿单边改）。
+function parseLevelNumber(levelKey, displayBadge) {
+  const key = typeof levelKey === 'string' ? /^lv0*(\d{1,4})$/i.exec(levelKey.trim()) : null
+  if (key && Number(key[1]) >= 1) return Number(key[1])
+  const badge = typeof displayBadge === 'string'
+    ? /^lv\.?\s*0*(\d{1,4})(?:\s|$)/i.exec(displayBadge.trim())
+    : null
+  if (badge && Number(badge[1]) >= 1) return Number(badge[1])
+  return null
+}
+
 function publicLevel(experience, levels) {
   if (experience === null || experience === undefined || !Number.isFinite(Number(experience))) return {}
   const active = levels.filter(level => level.status === 'ACTIVE')
     .sort((left, right) => Number(left.minimum_experience) - Number(right.minimum_experience))
   if (!active.length || Number(active[0].minimum_experience) !== 0) return {}
   const index = active.reduce((current, level, position) => Number(level.minimum_experience) <= Number(experience) ? position : current, 0)
-  return { level: { number: index + 1, name: active[index].name } }
+  const matched = active[index]
+  return { level: { number: parseLevelNumber(matched.level_key, matched.display_badge) ?? index + 1, name: matched.name } }
 }
 
 // 邀请人标注（人才/嘉宾卡 footer 右：用户最近一次活动归档）：USER=玩家邀请人
@@ -121,7 +135,7 @@ async function loadPublicLevel(database, appId, userId) {
        WHERE growth.app_id = ? AND growth.user_id = ?`,
       [appId, userId],
     ),
-    database.query(`SELECT id, name, minimum_experience, status FROM mip_growth_levels
+    database.query(`SELECT id, level_key, display_badge, name, minimum_experience, status FROM mip_growth_levels
       WHERE app_id = ? AND status = 'ACTIVE' ORDER BY minimum_experience, id`, [appId]),
   ])
   return publicLevel(accounts[0]?.experience_balance, levels).level

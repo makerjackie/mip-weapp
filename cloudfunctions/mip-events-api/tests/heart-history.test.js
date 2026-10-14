@@ -139,8 +139,8 @@ describe('MIP heart history', () => {
         }
         if (/FROM mip_growth_levels/.test(sql)) {
           return [
-            { id: 'lv1', name: '初识', minimum_experience: 0, status: 'ACTIVE' },
-            { id: 'lv2', name: '同行', minimum_experience: 100, status: 'ACTIVE' },
+            { id: 'lv1', level_key: 'lv01', display_badge: 'Lv.1', name: '初识', minimum_experience: 0, status: 'ACTIVE' },
+            { id: 'lv2', level_key: 'lv03', display_badge: 'Lv.3', name: '同行', minimum_experience: 100, status: 'ACTIVE' },
           ]
         }
         if (/FROM mip_profiles profile/.test(sql)) {
@@ -171,7 +171,7 @@ describe('MIP heart history', () => {
     assert.equal(person.cityName, '广州')
     assert.equal(person.industryLabel, '智能硬件')
     assert.equal(person.identityStatus, '品牌主理人')
-    assert.deepEqual(person.level, { number: 2, name: '同行' })
+    assert.deepEqual(person.level, { number: 3, name: '同行' })
     assert.deepEqual(person.badges, [{ id: 'badge-1', name: '主理人', imageUrl: 'https://cdn/badge.png' }])
     assert.deepEqual(person.inviter, { sourceType: 'USER', displayName: '李慕白', avatarUrl: 'cloud://mip/inviter.png' })
     assert.equal(JSON.stringify(result).includes(otherUserId), false)

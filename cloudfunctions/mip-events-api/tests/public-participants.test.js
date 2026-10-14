@@ -37,9 +37,10 @@ test('public participant list filters server-side and returns no private registr
         }]
       }
       if (sql.includes('FROM mip_growth_levels')) {
+        // MIW-104：lvNN key → 业务等级号。
         return [
-          { id: 'level-1', name: '新手', minimum_experience: 0, status: 'ACTIVE' },
-          { id: 'level-2', name: '进阶', minimum_experience: 100, status: 'ACTIVE' },
+          { id: 'level-1', level_key: 'lv01', display_badge: 'Lv.1', name: '新手', minimum_experience: 0, status: 'ACTIVE' },
+          { id: 'level-2', level_key: 'lv03', display_badge: 'Lv.3', name: '进阶', minimum_experience: 100, status: 'ACTIVE' },
         ]
       }
       if (sql.includes('mip_user_badge_equipment')) {
@@ -117,7 +118,7 @@ test('public participant list filters server-side and returns no private registr
   assert.equal(result.items[0].industryLabel, '视觉设计')
   assert.equal(result.items[0].identityStatus, '设计师')
   assert.equal(result.items[0].introduction, '设计十年')
-  assert.deepEqual(result.items[0].level, { number: 2, name: '进阶' })
+  assert.deepEqual(result.items[0].level, { number: 3, name: '进阶' })
   assert.deepEqual(result.items[0].badges, [{ id: 'badge-1', name: '金徽', imageUrl: 'cloud://badge' }])
   assert.deepEqual(result.items[0].inviter, { sourceType: 'USER', displayName: '邀请人甲', avatarUrl: 'cloud://inviter' })
   assert.deepEqual(result.kindTotals, { PLAYER: 2, GUEST: 1 })

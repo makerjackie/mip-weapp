@@ -5,6 +5,7 @@ import type { GrowthBenefitSlotView, GrowthTierView } from './tiers'
 import { runtimeConfig } from '../../../config/runtime'
 import { MipCommerceError } from '../../../modules/mip-commerce'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
+import { levelNumberOf } from '../../../modules/mip-growth'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
@@ -63,9 +64,11 @@ interface GrowthTaskView extends UserTaskCard {
  */
 function growthPresentation(snapshot: GrowthSnapshot, isPlayer: boolean, preferredTierIndex = -1) {
   const currentIndex = snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id)
-  const currentLevelNumber = Math.max(1, currentIndex + 1)
+  // MIW-104：等级号读服务端 levelNumber（跳号 1/3/5/8/…/60），旧云函数缺省回退位置序数。
+  const currentLevelNumber = levelNumberOf(snapshot.currentLevel, currentIndex)
   const tiers = tierViews(
     deriveTierStartIndexes(snapshot.levels),
+    snapshot.levels,
     currentLevelNumber,
     isPlayer,
   )
