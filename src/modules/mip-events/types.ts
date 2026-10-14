@@ -323,6 +323,8 @@ export interface CheckInScene {
   resumeToken: string
   validFrom: string
   validUntil: string
+  /** MIW-103：签到开放时间（开始前 6 小时起），早到扫码时驱动详情页「活动未开始」引导。 */
+  checkinOpensAt?: string
 }
 
 export interface CheckInPosterCredential {
@@ -493,15 +495,19 @@ export interface MipEventsGateway {
 export class MipEventsError extends Error {
   readonly code: string
   readonly retryable: boolean
+  /** MIW-103：服务端结构化补充信息（如 CHECKIN_NOT_OPEN 的 opensAt/startsAt）。 */
+  readonly details: Record<string, unknown> | null
 
   constructor(
     code: string,
     message: string,
     retryable = false,
+    details: Record<string, unknown> | null = null,
   ) {
     super(message)
     this.name = 'MipEventsError'
     this.code = code
     this.retryable = retryable
+    this.details = details
   }
 }

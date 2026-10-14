@@ -8,6 +8,7 @@ const {
   assertCheckInAllowed,
   cancellableRegistrationStatuses,
   capacityStatuses,
+  checkInOpensAt,
   decideRegistration,
   grantsCapability,
   parseFeedbackAnswers,
@@ -2515,7 +2516,8 @@ async function checkIn(db, {
       throw new DomainError('VALIDATION_FAILED', '签到恢复凭证与活动不一致')
     }
     const event = await tx.one(
-      `SELECT id FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
+      // MIW-103：starts_at 供 assertCheckInAllowed 推导「开始前 6 小时」签到开放点。
+      `SELECT id, starts_at FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
       [appId, credential.event_id],
     )
     const registration = await tx.one(
@@ -2629,15 +2631,19 @@ async function resolveCheckInScene(db, {
 }) {
   const parsedToken = parseCheckInToken(scene)
   const lookup = checkInCredentialQuery(parsedToken)
+  // MIW-103：不再用 valid_from <= now 拦截早到扫码。签到海报码落在活动详情页，
+  // 提前到达的用户应正常进入详情页浏览/报名，真正的签到时间窗（开始前 6 小时）
+  // 由 checkIn 的 assertCheckInAllowed 判定并下发 CHECKIN_NOT_OPEN。仅保留
+  // valid_until 过滤：活动结束超过凭证期的码仍按无效处理。
   const credential = await db.one(
-    `${lookup.sql} AND status = 'ACTIVE' AND valid_from <= ? AND valid_until >= ?`,
-    [appId, ...lookup.params, now, now],
+    `${lookup.sql} AND status = 'ACTIVE' AND valid_until >= ?`,
+    [appId, ...lookup.params, now],
   )
   if (!credential) {
     throw new DomainError('VALIDATION_FAILED', '活动码无效或已失效')
   }
   const event = await db.one(
-    `SELECT id FROM mip_events WHERE app_id = ? AND id = ? AND status = 'PUBLISHED'`,
+    `SELECT id, starts_at FROM mip_events WHERE app_id = ? AND id = ? AND status = 'PUBLISHED'`,
     [appId, credential.event_id],
   )
   if (!event) {
@@ -2657,6 +2663,8 @@ async function resolveCheckInScene(db, {
     resumeToken: resume.token,
     validFrom: iso(credential.valid_from),
     validUntil: iso(resume.expiresAt),
+    // 早到扫码时客户端据此在详情页展示「活动未开始，XX 起可签到」引导。
+    checkinOpensAt: iso(checkInOpensAt(event)),
   }
 }
 

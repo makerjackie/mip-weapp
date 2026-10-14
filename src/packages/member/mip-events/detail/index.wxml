@@ -35,6 +35,10 @@
           </view>
         </view>
 
+        <!-- MIW-103：早到扫签到码（开始前 6 小时之外）不再整页报错，改为页内引导——
+             活动未开始时提示开放时间，码过期时提示找工作人员换新码；均不阻断浏览与报名。 -->
+        <view wx:if="{{checkinNotice}}" aria-role="alert" class="mt-3 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] leading-[30rpx] text-brand">{{checkinNotice}}</view>
+
         <!-- figma 1861_17860: 351x110 card, header at y7, avatars on a 56px pitch.
              figma 1818_17142: with 与你互动 below, the two cards fuse into one
              surface (top corners here, bottom corners on the interaction card). -->

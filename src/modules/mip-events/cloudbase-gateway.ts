@@ -42,7 +42,7 @@ import { MipEventsError } from './types'
 interface Envelope<T> {
   ok: boolean
   data?: T
-  error?: { code?: string, message?: string, retryable?: boolean }
+  error?: { code?: string, message?: string, retryable?: boolean, details?: Record<string, unknown> }
 }
 
 const readActions = new Set([
@@ -77,6 +77,9 @@ function unwrap<T>(value: unknown): T {
       envelope.error?.code || 'SERVICE_UNAVAILABLE',
       envelope.error?.message || '活动服务请求失败',
       envelope.error?.retryable === true,
+      envelope.error?.details && typeof envelope.error.details === 'object'
+        ? envelope.error.details
+        : null,
     )
   }
   return envelope.data as T
