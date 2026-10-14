@@ -97,6 +97,22 @@ test('task click actions normalize to a paired type/target pair', () => {
   assert.throws(() => normalizeTaskAction({ actionType: 'URL' }), /VALIDATION_FAILED/)
 })
 
+// MIW-97：PAGE_JUMP 目标页必须命中服务端白名单（与 admin-web 构建期过滤同源）——
+// 白名单内放行、admin 包 / 带参页 / 未收录路径一律 VALIDATION_FAILED。
+test('page jump target must be in the server-side whitelist', () => {
+  for (const target of ['pages/events/index', 'pages/opportunities/index', 'packages/member/mip-tasks/index']) {
+    assert.equal(normalizeTaskAction({ actionType: 'PAGE_JUMP', actionTarget: `/${target}` }).actionTarget, target)
+  }
+  for (const target of [
+    'packages/admin/dashboard/index',
+    'packages/member/mip-events/detail/index',
+    'packages/member/mip-tasks/detail/index',
+    'pages/nonexistent/index',
+  ]) {
+    assert.throws(() => normalizeTaskAction({ actionType: 'PAGE_JUMP', actionTarget: target }), /VALIDATION_FAILED/)
+  }
+})
+
 test('completion writes one immutable fact and awards the task reward once', async () => {
   const writes = []
   let completion = null
