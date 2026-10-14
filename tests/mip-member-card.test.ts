@@ -81,4 +81,17 @@ describe('MIP member card', () => {
     expect(entry).toContain('createProfileCardCode')
     expect(entry).toContain('readProfileCardScene')
   })
+
+  it('keeps card background webp free of alpha/lossless variants the device decoder cannot render', () => {
+    // 真机 image 解码器不支持 VP8L 无损 webp（MIW-112 六卡事故），而 webp 透明通道（ALPH）
+    // 的 alpha 平面同样走无损编码：VP8X+ALPH 卡面在真机整体解码失败，只剩 theme.background
+    // 纯色垫底（DevTools 内置完整 libwebp，本地一切正常）。卡面底图必须保持无 alpha 的
+    // 普通有损 VP8；拍平 alpha 时合成色用 themes 各自的 background 垫底色。
+    for (const asset of ['card-bg-a.webp', 'card-bg-b.webp', 'card-bg-c.webp', 'card-bg-d-yellow.webp']) {
+      const bytes = fs.readFileSync(path.join(root, 'src/packages/member/assets/figma/profile', asset))
+      expect(bytes.subarray(0, 4).toString('ascii')).toBe('RIFF')
+      expect(bytes.subarray(8, 12).toString('ascii')).toBe('WEBP')
+      expect(bytes.subarray(12, 16).toString('ascii')).toBe('VP8 ')
+    }
+  })
 })

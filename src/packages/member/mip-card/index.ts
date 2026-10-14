@@ -51,6 +51,9 @@ const AVATAR = { x: 438, y: 24, size: 240 }
 const CODE = { x: 558, y: 348, size: 120 }
 // figma 1735_3369：品牌色卡的头像环 2px、名片码描边 1px，均为 #fcdf03。
 const CARD_RING_COLOR = '#fcdf03'
+// 卡面底图必须是无 alpha 的普通有损 VP8 webp：真机解码器不支持 VP8L/ALPH（透明通道的
+// alpha 平面走无损编码），VP8X 卡面在真机只剩 background 纯色垫底（DevTools 正常）。
+// 守卫见 tests/mip-member-card.test.ts；拍平 alpha 时合成色 = 各主题 background。
 const themes: Record<CardStyleKey, CardTheme> = {
   PINK: {
     key: 'PINK',
