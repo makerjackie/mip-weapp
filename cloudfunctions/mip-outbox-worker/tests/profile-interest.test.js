@@ -81,8 +81,9 @@ describe('profile interest outbox projection', () => {
     assert.deepEqual(result.notifications, [{
       recipientUserId: TARGET_ID,
       messageType: 'PROFILE_INTEREST',
-      title: '机会收到新的关注',
-      body: '你的机会收到新的感兴趣标记。',
+      // MIW-115：站内信标题/正文呈现发起人昵称（谁点的）。
+      title: '张三对你的机会感兴趣',
+      body: '张三对你的机会标记了感兴趣。',
       dedupeKey: `outbox:${OUTBOX_ID}:opportunity-interest`,
       targetType: 'OPPORTUNITY',
       targetId: SOURCE_ID,
@@ -120,7 +121,10 @@ describe('profile interest outbox projection', () => {
         return currentRelationship({ actor_nickname: '   ' })
       },
     }, outboxEvent)
+    // MIW-115：昵称缺失时站内信与推送模板一并回退「有人」。
     assert.deepEqual(result.notifications[0].external.fields.initiator, '有人')
+    assert.equal(result.notifications[0].title, '有人对你的机会感兴趣')
+    assert.equal(result.notifications[0].body, '有人对你的机会标记了感兴趣。')
   })
 
   it('keeps direct public-profile interest bound to the current target profile', async () => {
@@ -135,7 +139,9 @@ describe('profile interest outbox projection', () => {
     assert.equal(result.reason, 'PROJECTED')
     assert.equal(result.notifications.length, 1)
     assert.equal(result.notifications[0].recipientUserId, TARGET_ID)
-    assert.equal(result.notifications[0].title, '有人对你感兴趣')
+    // MIW-115：档案感兴趣站内信呈现发起人昵称。
+    assert.equal(result.notifications[0].title, '张三对你感兴趣')
+    assert.equal(result.notifications[0].body, '张三对你的档案标记了感兴趣，打开小程序查看。')
     // 客户口径：档案感兴趣同属「合作邀请发起提醒」模板族，不再使用 PROFILE_INTEREST 模板键。
     assert.deepEqual(result.notifications[0].external, {
       channel: 'WECHAT_SUBSCRIPTION', templateKey: 'OPPORTUNITY_NOTICE',

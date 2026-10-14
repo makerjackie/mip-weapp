@@ -936,6 +936,11 @@ function boundedText(value, limit) {
   return normalized.length <= limit ? normalized : ''
 }
 
+// MIW-115：感兴趣/合作站内信正文呈现发起人昵称（谁点的）；昵称缺失或空白回退「有人」。
+function actorName(nickname) {
+  return boundedText(nickname, 64) || '有人'
+}
+
 /**
  * MIW-67：机会发布人侧动态改走订阅消息渠道（OPPORTUNITY_NOTICE），消费发布人
  * 授权入账的一次性额度；无授权（GRANT_UNAVAILABLE）按 worker 既有重试上限收敛，
@@ -973,8 +978,9 @@ async function projectCooperation(database, event) {
   if (!row || row.status !== 'ACTIVE' || Number(row.version) !== Number(event.source_version)) {
     return projection([], [], 'FACT_NO_LONGER_CURRENT')
   }
+  const actor = actorName(row.actor_nickname)
   return projection([message(event, row.owner_user_id, 'cooperation', {
-    messageType: 'OPPORTUNITY', title: '有人想与你合作', body: '你发布的机会收到新的合作意向。',
+    messageType: 'OPPORTUNITY', title: `${actor}想与你合作`, body: `${actor}对你的机会发起了合作意向。`,
     targetType: 'OPPORTUNITY', targetId: row.opportunity_id,
     external: opportunityNoticeExternal(row.title, '收到新的合作意向', row.activated_at, row.actor_nickname),
   })], [], 'PROJECTED')
@@ -1080,11 +1086,13 @@ async function projectInterest(database, event) {
   if (!row || row.status !== 'ACTIVE' || Number(row.version) !== Number(event.source_version)) {
     return projection([], [], 'FACT_NO_LONGER_CURRENT')
   }
+  // MIW-115：标题与正文带发起人昵称（谁点的），昵称缺失回退「有人」。
+  const actor = actorName(row.actor_nickname)
   const labels = {
-    OPPORTUNITY: ['opportunity-interest', '机会收到新的关注', '你的机会收到新的感兴趣标记。'],
-    COOPERATION_CARD: ['cooperation-interest', '合作卡收到新的关注', '你的合作卡收到新的感兴趣标记。'],
-    SUPER_CASE: ['case-interest', '超级案例收到新的关注', '你的超级案例收到新的感兴趣标记。'],
-    PROFILE: ['profile-interest', '有人对你感兴趣', '有人对你感兴趣，打开小程序查看。'],
+    OPPORTUNITY: ['opportunity-interest', `${actor}对你的机会感兴趣`, `${actor}对你的机会标记了感兴趣。`],
+    COOPERATION_CARD: ['cooperation-interest', `${actor}对你的合作卡感兴趣`, `${actor}对你的合作卡标记了感兴趣。`],
+    SUPER_CASE: ['case-interest', `${actor}对你的超级案例感兴趣`, `${actor}对你的超级案例标记了感兴趣。`],
+    PROFILE: ['profile-interest', `${actor}对你感兴趣`, `${actor}对你的档案标记了感兴趣，打开小程序查看。`],
   }
   const label = labels[row.source_type]
   if (!label) return projection([], [], 'FACT_NO_LONGER_CURRENT')

@@ -926,6 +926,9 @@ describe('self cooperation notifications', () => {
     } }, { ...event, payload_json: { recipientUserId: 'untrusted' } })
     assert.equal(result.notifications[0].recipientUserId, 'publisher')
     assert.equal(result.notifications[0].dedupeKey, `outbox:${event.id}:cooperation`)
+    // MIW-115：合作意向站内信标题/正文呈现发起人昵称（谁点的）。
+    assert.equal(result.notifications[0].title, '张三想与你合作')
+    assert.equal(result.notifications[0].body, '张三对你的机会发起了合作意向。')
     // MIW-67：合作意向消费发布人 OPPORTUNITY_NOTICE 订阅额度，不再走客服消息。
     assert.deepEqual(result.notifications[0].external, {
       channel: 'WECHAT_SUBSCRIPTION',
