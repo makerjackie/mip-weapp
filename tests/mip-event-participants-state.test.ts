@@ -96,7 +96,6 @@ describe('MIP event participant private heart state', () => {
     const publicParticipant: PublicEventParticipant = {
       profileRef: 'p1.public',
       nickname: '公开参与人',
-      heartRelation: 'MUTUAL',
       level: { number: 2, name: '进阶' },
       badges: [{ id: 'badge-star', name: '之星' }],
       inviter: { sourceType: 'USER' as const, displayName: '邀请人甲', avatarUrl: 'https://cdn/a.png' },
@@ -153,8 +152,8 @@ describe('MIP event participant private heart state', () => {
   })
 
   it('switches the pills between the four tabs and derives the entry tab from the route', () => {
-    const sentItems = [{ profileRef: 'p1.sent', displayName: '已选择', kindLabel: '', metaText: '', introductionText: '', heartRelation: 'SENT' }]
-    const receivedItems = [{ profileRef: 'p1.received', displayName: '对我心动', kindLabel: '', metaText: '', introductionText: '', heartRelation: 'RECEIVED' }]
+    const sentItems = [{ profileRef: 'p1.sent', displayName: '已选择', kindLabel: '', metaText: '', introductionText: '' }]
+    const receivedItems = [{ profileRef: 'p1.received', displayName: '对我心动', kindLabel: '', metaText: '', introductionText: '' }]
     const page = createPage({
       eventId: '60000000-0000-4000-8000-000000000001',
       heartState: 'ready',

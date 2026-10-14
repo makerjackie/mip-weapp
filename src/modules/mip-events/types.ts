@@ -70,7 +70,6 @@ export interface EventParticipantPreview {
 
 export interface PublicEventParticipant {
   profileRef: string
-  heartRelation?: 'SENT' | 'RECEIVED' | 'MUTUAL'
   nickname?: string
   avatarUrl?: string
   userKind?: 'PLAYER' | 'GUEST'

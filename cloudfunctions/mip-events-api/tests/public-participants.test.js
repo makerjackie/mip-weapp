@@ -62,19 +62,10 @@ test('public participant list filters server-side and returns no private registr
       assert.match(sql, /blocker_user_id = r\.user_id AND visibility_block\.blocked_user_id = \?/)
       assert.match(sql, /ORDER BY r\.registered_at DESC, r\.id DESC/)
       assert.match(sql, /r\.id AS registration_id/)
-      assert.match(sql, /viewer_sent_heart\.app_id = r\.app_id/)
-      assert.match(sql, /viewer_sent_heart\.event_id = r\.event_id/)
-      assert.match(sql, /viewer_sent_heart\.voter_user_id = \?/)
-      assert.match(sql, /viewer_sent_heart\.target_user_id = r\.user_id/)
-      assert.match(sql, /participant_sent_heart\.voter_user_id = r\.user_id/)
-      assert.match(sql, /participant_sent_heart\.target_user_id = \?/)
-      assert.match(sql, /participant_sent_heart\.app_id = r\.app_id/)
-      assert.match(sql, /participant_sent_heart\.event_id = r\.event_id/)
-      assert.equal((sql.match(/\.status = 'ACTIVE'/g) || []).length >= 2, true)
+      // MIW-96：名单 SQL 不再 JOIN mip_event_hearts 计算 heart_relation 死载荷。
+      assert.doesNotMatch(sql, /mip_event_hearts|heart_relation/i)
       assert.doesNotMatch(sql, /answers_json|phone_ciphertext|ticket_hash|identity_key/i)
       assert.deepEqual(parameters, [
-        viewerUserId,
-        viewerUserId,
         appId,
         '20000000-0000-4000-8000-000000000001',
         viewerUserId,
@@ -91,7 +82,6 @@ test('public participant list filters server-side and returns no private registr
         branch_name: '深圳分会',
         branch_city_name: '深圳',
         is_player: 1,
-        heart_relation: 'SENT',
         answers_json: '{"private":true}',
         ticket_hash: 'secret',
       }]
@@ -111,7 +101,6 @@ test('public participant list filters server-side and returns no private registr
     'badges',
     'cityName',
     'headline',
-    'heartRelation',
     'identityStatus',
     'industryLabel',
     'introduction',
@@ -122,7 +111,8 @@ test('public participant list filters server-side and returns no private registr
     'profileRef',
     'userKind',
   ])
-  assert.equal(result.items[0].heartRelation, 'SENT')
+  // HR-01（MIW-96）：契约负向断言——响应不再下发 heart_relation。
+  assert.equal(result.items[0].heartRelation, undefined)
   assert.equal(result.items[0].cityName, '深圳')
   assert.equal(result.items[0].industryLabel, '视觉设计')
   assert.equal(result.items[0].identityStatus, '设计师')
@@ -133,6 +123,7 @@ test('public participant list filters server-side and returns no private registr
   assert.deepEqual(result.kindTotals, { PLAYER: 2, GUEST: 1 })
   const serialized = JSON.stringify(result)
   assert.equal(serialized.includes(userId), false)
+  assert.equal(serialized.includes('heartRelation'), false)
   assert.doesNotMatch(serialized, /answers|ticket|phone|openid/i)
 })
 
@@ -156,7 +147,6 @@ test('player participants carry no inviter annotation even with past invitation 
         nickname: '玩家参与人',
         visibility_json: '{}',
         is_player: 1,
-        heart_relation: null,
       }]
     },
   }
@@ -194,42 +184,6 @@ test('anonymous public participant list keeps the original public range', async 
 
   assert.equal(participantSql.includes('mip_user_blocks'), false)
   assert.equal(participantSql.includes('mip_event_hearts'), false)
-})
-
-test('public participant heart relation is caller-relative and omits absent relations', async () => {
-  const relationships = ['RECEIVED', 'MUTUAL', null, 'OTHER_USERS']
-  const database = {
-    async one() {
-      return { id: '20000000-0000-4000-8000-000000000001' }
-    },
-    async query(sql, parameters) {
-      if (sql.includes('GROUP BY is_player')) return [{ is_player: 1, total: 0 }, { is_player: 0, total: 4 }]
-      // MIW-73：公开详情/勋章/等级/邀请人批量补齐与本测试无关，静默返回空。
-      if (/mip_profiles profile|mip_growth_levels|mip_user_badge_equipment|mip_event_invitation_attributions/.test(sql)) return []
-      assert.equal((sql.match(/mip_event_hearts/g) || []).length, 2)
-      assert.deepEqual(parameters.slice(0, 2), [viewerUserId, viewerUserId])
-      return relationships.map((heart_relation, index) => ({
-        user_id: `10000000-0000-4000-8000-${String(index + 10).padStart(12, '0')}`,
-        nickname: `参与人 ${index + 1}`,
-        visibility_json: '{}',
-        is_player: 0,
-        heart_relation,
-      }))
-    },
-  }
-
-  const result = await listPublicParticipants(database, {
-    appId,
-    userId: viewerUserId,
-    eventId: '20000000-0000-4000-8000-000000000001',
-    profileRefSecret: pepper,
-  })
-
-  assert.equal(result.items[0].heartRelation, 'RECEIVED')
-  assert.equal(result.items[1].heartRelation, 'MUTUAL')
-  assert.equal('heartRelation' in result.items[2], false)
-  assert.equal('heartRelation' in result.items[3], false)
-  assert.equal(JSON.stringify(result).includes('user_id'), false)
 })
 
 test('public participant list applies visible keyword, player filter, and a stable cursor on the server', async () => {
