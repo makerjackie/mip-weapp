@@ -147,7 +147,7 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
             parent_selectable: 0,
             parent_enabled: 1,
           },
-          { id: abilityId, kind: 'ABILITY', selectable: 1, parent_id: null, parent_kind: null, parent_parent_id: null, parent_selectable: 0, parent_enabled: 1 },
+          { id: abilityId, kind: 'ABILITY', selectable: 1, tag_key: 'business_development', parent_id: null, parent_kind: null, parent_parent_id: null, parent_selectable: 0, parent_enabled: 1 },
         ]
       }
       if (sql.includes('FROM mip_users u')) return rows
@@ -220,19 +220,22 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
   assert.equal((listCall.sql.match(/c\.role_key = \?/g) || []).length, 1)
   assert.match(listCall.sql, /FROM mip_profile_tags industry_filter/)
   assert.match(listCall.sql, /industry_filter\.user_id = u\.id/)
-  assert.match(listCall.sql, /FROM mip_profile_tags ability_filter/)
-  assert.match(listCall.sql, /ability_filter\.relation = 'ABILITY'/)
+  // MIW-99：能力标签按客户文案映射六角色，筛「发布卡角色」而非档案标签。
+  assert.match(listCall.sql, /FROM mip_cooperation_cards ability_role_filter/)
+  assert.match(listCall.sql, /ability_role_filter\.status = 'PUBLISHED'/)
+  assert.match(listCall.sql, /ability_role_filter\.published_at <= snapshot\.snapshot_at/)
+  assert.match(listCall.sql, /ability_role_filter\.role_key IN \(\?\)/)
   assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.talentSearch'\)/)
   assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.primaryBranch'\)/)
   assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.industry'\)/)
-  assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.abilities'\)/)
+  assert.doesNotMatch(listCall.sql, /ability_filter/)
   assert.deepEqual(listCall.params, [
     appId,
     '%品牌=_10=%%', '%品牌=_10=%%', '%品牌=_10=%%', '%品牌=_10=%%', '%品牌=_10=%%',
     branchId,
     'strategist',
     industryId,
-    abilityId,
+    'connector',
     appId,
   ])
   assert.equal(result.items.length, 1)
@@ -283,6 +286,62 @@ test('cooperation talent discovery uses a frozen user keyset and aggregates all 
     createdAt: '2026-06-24T08:00:00.000Z',
     userId: firstOwnerId,
   })
+})
+
+// MIW-99：未映射六角色的 ABILITY 标签（后台未来新增）保持档案标签匹配兜底，
+// 尊重 $.abilities 可见性。
+test('cooperation talent ability filter falls back to profile tags for unmapped ability tags', async () => {
+  const calls = []
+  await listCooperationTalents({
+    async one() { throw new Error('unexpected one') },
+    async query(sql, params) {
+      calls.push({ sql, params })
+      if (sql.includes('FROM mip_tags t')) {
+        return [
+          { id: abilityId, kind: 'ABILITY', selectable: 1, tag_key: 'custom_ability', parent_id: null, parent_kind: null, parent_parent_id: null, parent_selectable: 0, parent_enabled: 1 },
+        ]
+      }
+      if (sql.includes('FROM mip_users u')) return []
+      throw new Error(`unexpected query: ${sql}`)
+    },
+  }, {
+    appId,
+    userId: null,
+    profileRefSecret: secret,
+  }, { abilityTagIds: [abilityId] })
+  const listCall = calls.find(call => call.sql.includes('FROM mip_users u'))
+  assert.match(listCall.sql, /FROM mip_profile_tags ability_filter/)
+  assert.match(listCall.sql, /ability_filter\.relation = 'ABILITY'/)
+  assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.abilities'\)/)
+  assert.doesNotMatch(listCall.sql, /ability_role_filter/)
+  assert.deepEqual(listCall.params, [appId, abilityId, appId])
+})
+
+test('cooperation talent ability filter mixes role matching with profile-tag fallback', async () => {
+  const calls = []
+  const unmappedAbilityId = '22000000-0000-4000-8000-000000000009'
+  await listCooperationTalents({
+    async one() { throw new Error('unexpected one') },
+    async query(sql, params) {
+      calls.push({ sql, params })
+      if (sql.includes('FROM mip_tags t')) {
+        return [
+          { id: abilityId, kind: 'ABILITY', selectable: 1, tag_key: 'resource_integration', parent_id: null, parent_kind: null, parent_parent_id: null, parent_selectable: 0, parent_enabled: 1 },
+          { id: unmappedAbilityId, kind: 'ABILITY', selectable: 1, tag_key: 'custom_ability', parent_id: null, parent_kind: null, parent_parent_id: null, parent_selectable: 0, parent_enabled: 1 },
+        ]
+      }
+      if (sql.includes('FROM mip_users u')) return []
+      throw new Error(`unexpected query: ${sql}`)
+    },
+  }, {
+    appId,
+    userId: null,
+    profileRefSecret: secret,
+  }, { abilityTagIds: [abilityId, unmappedAbilityId] })
+  const listCall = calls.find(call => call.sql.includes('FROM mip_users u'))
+  assert.match(listCall.sql, /ability_role_filter\.role_key IN \(\?\)/)
+  assert.match(listCall.sql, /FROM mip_profile_tags ability_filter/)
+  assert.deepEqual(listCall.params, [appId, 'business_builder', unmappedAbilityId, appId])
 })
 
 // MIW-78 名单册：名单覆盖全部 ACTIVE 用户——无发布卡、只有草稿卡或无档案的用户也在列，
