@@ -22,28 +22,28 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', '.tmp'])
 // references/wechat-component-contracts.md — CooperationCard baked variants.
 const COOPERATION_VARIANTS = {
   'dogplaner': {
-    image: 'coop-card-dogplaner@3x.png',
+    image: 'coop-card-dogplaner.webp',
     bg: '#7b00ff',
     name: '#f2e5ff',
   },
   'upstart': {
-    image: 'coop-card-upstart@3x.png',
+    image: 'coop-card-upstart.webp',
     bg: '#7a2900',
     name: '#fadab3',
   },
   'design-slave': {
-    image: 'coop-card-design-slave@3x.png',
+    image: 'coop-card-design-slave.webp',
     bg: '#04a44f',
     name: '#e5fff1',
   },
-  'pimp': { image: 'coop-card-pimp@3x.png', bg: '#df07a9', name: '#ffe5f9' },
+  'pimp': { image: 'coop-card-pimp.webp', bg: '#df07a9', name: '#ffe5f9' },
   'business-man': {
-    image: 'coop-card-business-man@3x.png',
+    image: 'coop-card-business-man.webp',
     bg: '#ff5500',
     name: '#ffeee5',
   },
   'old-nanny': {
-    image: 'coop-card-old-nanny@3x.png',
+    image: 'coop-card-old-nanny.webp',
     bg: '#1a71ff',
     name: '#e5efff',
   },

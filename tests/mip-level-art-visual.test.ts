@@ -43,7 +43,7 @@ describe('MIP level artwork presentation', () => {
   it('keeps the growth illustration proportional and the experience control accessible', () => {
     const markup = read('src/packages/member/mip-growth/index.wxml')
 
-    expect(markup).toContain('src="/packages/member/assets/figma/growth/hero-character.png"')
+    expect(markup).toContain('src="/packages/member/assets/figma/growth/hero-character.webp"')
     expect(markup).toContain('mode="aspectFit"')
     expect(markup).toContain('aria-label="经验值详情"')
     expect(markup).not.toContain('hero-bg.webp')

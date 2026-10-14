@@ -31,11 +31,11 @@
        {{}} 动态绑定（model.ts 闭集 map），上传依赖分析探不到会被剔出体验版；此处静态
        引用保证打包，增删角色须同步 model.ts。 -->
   <view aria-hidden="true" class="fixed left-[-9999rpx] top-0 h-0 w-0 overflow-hidden">
-    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-dogplaner@3x.png" />
-    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-upstart@3x.png" />
-    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-design-slave@3x.png" />
-    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-pimp@3x.png" />
-    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-business-man@3x.png" />
-    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-old-nanny@3x.png" />
+    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-dogplaner.webp" />
+    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-upstart.webp" />
+    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-design-slave.webp" />
+    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-pimp.webp" />
+    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-business-man.webp" />
+    <image class="h-[2rpx] w-[2rpx]" src="/assets/mip/coop-card-old-nanny.webp" />
   </view>
 </view>

@@ -4,7 +4,7 @@
   <block wx:else>
     <!-- Keep the original illustration at its intrinsic aspect ratio; controls stay live. -->
     <view class="growth-hero relative overflow-hidden bg-brand px-5 py-6 text-on-brand {{isPlayer ? 'h-[284rpx]' : 'growth-hero--boxed h-[410rpx]'}}">
-      <image class="growth-hero-art" mode="aspectFit" src="/packages/member/assets/figma/growth/hero-character.png" />
+      <image class="growth-hero-art" mode="aspectFit" src="/packages/member/assets/figma/growth/hero-character.webp" />
       <view class="growth-hero-curve" />
       <!-- MIW-83：弧线过渡沿曲线的黄色勾边（figma 3984:8075 Ellipse 30 描边）。 -->
       <view class="growth-hero-curve-line" aria-hidden="true" />
@@ -15,7 +15,7 @@
              Douglas 2026-10-13 确认恢复）。页面帧无箱子放置节点，按设计节点原值 115px
              （230rpx）落位、hero 加高至 410rpx，XP 行随箱子下移、胶囊跟随进度条中心。 -->
         <view wx:if="{{isPlayer}}" id="growth-level-badge" class="text-[96rpx] font-bold leading-[104.2rpx]">Lv.{{currentLevelNumber}}</view>
-        <image wx:else id="growth-mystery-box" class="growth-mystery-box" mode="aspectFit" src="/packages/member/assets/figma/growth/mystery-box.png" aria-hidden="true" />
+        <image wx:else id="growth-mystery-box" class="growth-mystery-box" mode="aspectFit" src="/packages/member/assets/figma/growth/mystery-box.webp" aria-hidden="true" />
         <view class="text-[20rpx] font-semibold leading-[28rpx]">XP: {{snapshot.account.experienceBalance}}<text wx:if="{{nextLevelThreshold}}"> I {{nextLevelThreshold}}</text></view>
         <view wx:if="{{nextLevelThreshold}}" class="relative mt-[7.8rpx] h-[12rpx] w-[300rpx] max-w-full rounded-full bg-panel-raised">
           <view class="absolute left-[4rpx] top-[4rpx] h-[4rpx] rounded-full bg-brand" style="width:{{snapshot.levelProgressPercent}}%;max-width:calc(100% - 8rpx)" />
