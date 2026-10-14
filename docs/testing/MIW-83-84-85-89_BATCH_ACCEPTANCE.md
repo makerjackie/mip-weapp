@@ -42,7 +42,7 @@
 - [ ] AVAILABLE + PAGE_JUMP（→活动 Tab）：点击整卡落在 `pages/events/index`（switchTab）
 - [ ] AVAILABLE + SHARE：卡内胶囊为转发按钮，点击拉起转发面板（onShareAppMessage 固定邀请文案，真机目检）
 - [ ] AVAILABLE + 未配置：整卡不可点、不渲染胶囊；COMPLETED/ENDED 灰态不可点
-- [ ] 等级页点击任务不再进入任务详情页（提交/核验入口移除；详情页能力保留但无入口）
+- [ ] 等级页点击任务不再进入任务详情页（提交/核验入口移除。注意口径：MIW-84 仅改**会员等级页**任务；NPC 任务列表 mip-tasks 是另一套独立入口、保留提交/上传核验，两者是两回事——2026-10-14 DEF-09 裁决）
 
 ### MIW-85 邀请人展示
 
