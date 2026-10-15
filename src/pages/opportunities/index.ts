@@ -17,7 +17,7 @@ import { cooperationModule } from '../../modules/mip-cooperation'
 import { mergeCooperationTalents } from '../../modules/mip-cooperation/validation'
 import { createMipGuestLoginFlow } from '../../modules/mip-identity'
 import { mipIdentityModule } from '../../modules/mip-identity/client'
-import { groupedCityBranches, opportunityModule, opportunityTypeLabel } from '../../modules/mip-opportunities'
+import { opportunityModule, opportunityTypeLabel } from '../../modules/mip-opportunities'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
 import { clearPageMedia, updatePageMedia } from '../../platform/storage/component-media'
 
@@ -93,6 +93,8 @@ function yuanFromCents(value: number) {
 function appliedFilterPresentation(input: {
   mode: PageMode
   cityOptions: CityOption[]
+  regionViews: Array<{ id: BranchId | '', label: string }>
+  selectedRegionBranchId: string
   selectedCityTagId: string
   selectedCooperationBranchId: string
   selectedRoleKey: '' | CooperationRoleKey
@@ -103,18 +105,14 @@ function appliedFilterPresentation(input: {
   selectedMaxAmountCents?: number
 }) {
   const chips: AppliedFilterChip[] = []
-  const cityId = input.mode === 'opportunities'
-    ? input.selectedCityTagId
-    : input.selectedCooperationBranchId
+  const cityId = input.selectedCityTagId
   const cityLabel = cityId ? input.cityOptions.find(item => item.id === cityId)?.label : undefined
-  const selectedLocation = input.selectedLocationTypes[0]
-  const locationFilterLabel = input.mode === 'cooperation'
-    ? (cityLabel || '全国')
-    : selectedLocation === 'REMOTE'
-      ? '远程'
-      : selectedLocation === 'CITY'
-        ? (cityLabel || '城市')
-        : selectedLocation === 'NATIONAL' ? '全国' : '不限'
+  const regionLabel = (ids: string) => input.regionViews.find(item => item.id === ids)?.label
+  // MIW-120 左上角常驻地区切换：标签只表达地区（分会），地点 preset 语义由 chips 行表达。
+  const branchId = input.mode === 'cooperation'
+    ? input.selectedCooperationBranchId
+    : input.selectedRegionBranchId
+  const locationFilterLabel = (branchId && regionLabel(branchId)) || '全国'
 
   if (input.mode === 'opportunities') {
     const locationLabels = input.selectedLocationTypes.map(type => (
@@ -126,9 +124,12 @@ function appliedFilterPresentation(input: {
     else if (cityLabel) {
       chips.push({ key: 'location', label: cityLabel })
     }
+    if (input.selectedRegionBranchId) {
+      chips.push({ key: 'branch', label: regionLabel(input.selectedRegionBranchId) || '地区' })
+    }
   }
-  else if (cityLabel) {
-    chips.push({ key: 'branch', label: cityLabel })
+  else if (input.selectedCooperationBranchId) {
+    chips.push({ key: 'branch', label: regionLabel(input.selectedCooperationBranchId) || '地区' })
   }
 
   const roleName = cooperationRoles.find(item => item.key === input.selectedRoleKey)?.name
@@ -179,21 +180,39 @@ function amountRange(minimum: string, maximum: string) {
   return { minAmountCents, maxAmountCents }
 }
 
-function cityOptionsFor(mode: PageMode, catalog: OpportunityCatalog): CityOption[] {
-  const branchGroup = groupedCityBranches(catalog.branches, catalog.cityTags)[0]
-  return mode === 'cooperation'
-    ? [nationwideOption, ...(branchGroup?.options || [])]
-    : [nationwideOption, ...catalog.cityTags.map(item => ({
-        id: item.id,
-        label: item.label,
-        popular: item.popular,
-      }))]
+/** 筛选页「合作地点-城市」选项（项目机会 tab 专用；远程/全国是 preset，不进城市列表）。 */
+function cityOptionsFor(catalog: OpportunityCatalog): CityOption[] {
+  return [nationwideOption, ...catalog.cityTags.map(item => ({
+    id: item.id,
+    label: item.label,
+    popular: item.popular,
+  }))]
 }
 
-function cityGroupsFor(mode: PageMode, cityOptions: CityOption[]): CatalogSelectorGroup[] {
+/**
+ * MIW-120 左上角地区切换：选项 = 全国 + ACTIVE 分会城市（来源 = 管理后台分会目录）。
+ * 同城市有多个 ACTIVE 分会时以「城市 · 分会名」区分，单分会城市只显示城市名。
+ */
+function regionViewsFor(catalog: OpportunityCatalog): Array<{ id: BranchId | '', label: string }> {
+  const cityBranchCounts = catalog.branches.reduce((counts, branch) => {
+    counts.set(branch.cityName, (counts.get(branch.cityName) || 0) + 1)
+    return counts
+  }, new Map<string, number>())
+  return [
+    { id: '' as BranchId | '', label: '全国' },
+    ...catalog.branches.map(branch => ({
+      id: branch.id,
+      label: (cityBranchCounts.get(branch.cityName) || 0) > 1 && branch.name !== branch.cityName
+        ? `${branch.cityName} · ${branch.name}`
+        : branch.cityName,
+    })),
+  ]
+}
+
+function cityGroupsFor(cityOptions: CityOption[]): CatalogSelectorGroup[] {
   return [{
-    id: mode === 'cooperation' ? 'city-branches' : 'cities',
-    label: mode === 'cooperation' ? '城市分会' : '城市',
+    id: 'cities',
+    label: '城市',
     options: cityOptions.slice(1),
   }]
 }
@@ -235,9 +254,13 @@ Page({
     citySelectionIds: [] as string[],
     cityIndex: 0,
     draftOpportunityCityTagId: '',
-    draftCooperationBranchId: '' as '' | BranchId,
     selectedCityTagId: '',
+    /** MIW-120 左上角地区切换（项目机会 tab）：分会归属过滤，选中即时生效，不经筛选页草稿。 */
+    selectedRegionBranchId: '' as '' | BranchId,
     selectedCooperationBranchId: '' as '' | BranchId,
+    /** MIW-120 左上角地区切换 picker 数据（两 tab 共用一套分会城市选项）。 */
+    regionViews: [{ id: '', label: '全国' }] as Array<{ id: BranchId | '', label: string }>,
+    regionIndex: 0,
     roleOptions: allRoleOptions,
     draftRoleKey: '' as '' | CooperationRoleKey,
     selectedRoleKey: '' as '' | CooperationRoleKey,
@@ -259,7 +282,7 @@ Page({
     selectedMaxAmountCents: undefined as number | undefined,
     abilityOptions: [] as TagView[],
     hasAppliedFilters: false,
-    locationFilterLabel: '不限',
+    locationFilterLabel: '全国',
     appliedFilterCount: 0,
     appliedFilterChips: [] as AppliedFilterChip[],
     opportunities: [] as OpportunityCardView[],
@@ -275,6 +298,8 @@ Page({
     logoPath: brand.logoPath,
   },
   requestSequence: 0,
+  /** MIW-120：默认地区（用户主分会）只落一次；首次进页在目录就绪后补一次列表刷新。 */
+  regionDefaultApplied: false,
   resumeDestination: '',
   lastSuccessfulRefreshAt: 0,
   refreshOnReturn: false,
@@ -347,7 +372,13 @@ Page({
     }
     this.resumeDestination = ''
     if (!this.data.catalog.cityTags.length) {
-      void this.loadCatalogs()
+      // MIW-120：默认地区依赖分会目录与身份快照，目录就绪后若落了默认地区则补一次列表刷新
+      // （与活动页 initializeDefaultCity → loadEvents 的先后序一致）。
+      void this.loadCatalogs().then((defaultApplied) => {
+        if (defaultApplied) {
+          void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
+        }
+      })
     }
     void this.refreshAuthState()
     void this.loadBanners()
@@ -393,16 +424,19 @@ Page({
   async loadCatalogs() {
     try {
       const catalog = await opportunityModule.getCatalogs()
-      const cityOptions = cityOptionsFor(this.data.mode, catalog)
-      const draftCityId = this.data.mode === 'cooperation'
-        ? this.data.draftCooperationBranchId
-        : this.data.draftOpportunityCityTagId
-      this.setData({
+      const cityOptions = cityOptionsFor(catalog)
+      const draftCityId = this.data.draftOpportunityCityTagId
+      const regionViews = regionViewsFor(catalog)
+      const patch: Record<string, unknown> = {
         catalog,
         cityOptions,
-        cityGroups: cityGroupsFor(this.data.mode, cityOptions),
+        cityGroups: cityGroupsFor(cityOptions),
         citySelectionIds: draftCityId ? [draftCityId] : [],
         cityIndex: Math.max(0, cityOptions.findIndex(item => item.id === draftCityId)),
+        regionViews,
+        regionIndex: Math.max(0, regionViews.findIndex(item => item.id === (this.data.mode === 'cooperation'
+          ? this.data.selectedCooperationBranchId
+          : this.data.selectedRegionBranchId))),
         abilityOptions: catalog.abilityTags.map(item => ({
           id: item.id,
           label: item.label,
@@ -410,10 +444,30 @@ Page({
         })),
         draftIndustryViews: draftIndustryViewsOf(catalog, this.data.draftIndustryTagIds),
         popularIndustryOptions: catalogSelectorView(catalog.industryGroups, this.data.draftIndustryTagIds).popularOptions,
-      }, () => this.refreshAppliedFilterPresentation())
+      }
+      // MIW-120 默认地区 = 用户主分会（审核/运营在后台「变更服务器」设置）；只落一次，
+      // 主分会不在 ACTIVE 目录时保持全国。两个 tab 同落，保证跨 tab 口径一致。
+      let defaultApplied = false
+      if (!this.regionDefaultApplied) {
+        this.regionDefaultApplied = true
+        try {
+          const snapshot = mipIdentityModule.peekSnapshot() || await mipIdentityModule.loadSnapshot()
+          const primaryBranchId = snapshot?.primaryBranchId
+          if (primaryBranchId && catalog.branches.some(branch => branch.id === primaryBranchId)) {
+            patch.selectedRegionBranchId = primaryBranchId
+            patch.selectedCooperationBranchId = primaryBranchId
+            patch.regionIndex = Math.max(0, regionViews.findIndex(item => item.id === primaryBranchId))
+            defaultApplied = true
+          }
+        }
+        catch {}
+      }
+      this.setData(patch, () => this.refreshAppliedFilterPresentation())
+      return defaultApplied
     }
     catch {
       // Filtering remains optional when the replaceable catalog is unavailable.
+      return false
     }
   },
 
@@ -450,6 +504,8 @@ Page({
           status: this.data.status as OpportunityFilter['status'],
           keyword: this.data.keyword,
           cityTagId: this.data.selectedCityTagId || undefined,
+          // MIW-120 左上角地区切换：分会归属过滤（服务端包容平台级机会，全国可见）。
+          branchId: this.data.selectedRegionBranchId || undefined,
           locationTypes: this.data.selectedLocationTypes,
           minAmountCents: this.data.selectedMinAmountCents,
           maxAmountCents: this.data.selectedMaxAmountCents,
@@ -568,10 +624,8 @@ Page({
     if (!['opportunities', 'cooperation'].includes(mode) || mode === this.data.mode) {
       return
     }
-    const cityOptions = cityOptionsFor(mode, this.data.catalog)
-    const cityId = mode === 'cooperation'
-      ? this.data.selectedCooperationBranchId
-      : this.data.selectedCityTagId
+    const cityOptions = cityOptionsFor(this.data.catalog)
+    const cityId = this.data.selectedCityTagId
     const selectedLocationPreset = locationPreset(this.data.selectedLocationTypes)
     // figma 2917_4875：能力筛选同时服务两个 tab，跨 tab 与 keyword/行业口径一致。
     const hasAppliedFilters = Boolean(
@@ -579,7 +633,9 @@ Page({
       || this.data.selectedRoleKey
       || this.data.selectedIndustryTagIds.length
       || this.data.selectedAbilityTagIds.length
-      || (mode === 'cooperation' ? this.data.selectedCooperationBranchId : this.data.selectedCityTagId)
+      || this.data.selectedCityTagId
+      || this.data.selectedRegionBranchId
+      || this.data.selectedCooperationBranchId
       || (mode === 'opportunities' && (
         this.data.selectedLocationTypes.length
         || this.data.selectedMinAmountCents !== undefined
@@ -589,12 +645,14 @@ Page({
     this.setData({
       mode,
       cityOptions,
-      cityGroups: cityGroupsFor(mode, cityOptions),
+      cityGroups: cityGroupsFor(cityOptions),
       citySelectionIds: cityId ? [cityId] : [],
       cityIndex: Math.max(0, cityOptions.findIndex(item => item.id === cityId)),
+      regionIndex: Math.max(0, this.data.regionViews.findIndex(item => item.id === (
+        mode === 'cooperation' ? this.data.selectedCooperationBranchId : this.data.selectedRegionBranchId
+      ))),
       keywordInput: this.data.keyword,
       draftOpportunityCityTagId: this.data.selectedCityTagId,
-      draftCooperationBranchId: this.data.selectedCooperationBranchId,
       draftRoleKey: this.data.selectedRoleKey,
       ...this.draftIndustryPatch(this.data.catalog, [...this.data.selectedIndustryTagIds]),
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
@@ -663,21 +721,33 @@ Page({
     if (!option) {
       return
     }
+    this.setData({
+      cityIndex,
+      citySelectionIds: cityId ? [cityId] : [],
+      draftOpportunityCityTagId: option.id,
+      draftLocationTypes: ['CITY'] as OpportunityLocationType[],
+      draftLocationPreset: 'CITY' as LocationPreset,
+      filterOpen: true,
+    })
+  },
+
+  /**
+   * MIW-120 左上角地区切换：系统 picker 选中即生效——项目机会按分会归属过滤（平台机会
+   * 全国可见），人才合作按人的主分会严格过滤；不经筛选页草稿，立即刷新当前 tab 列表。
+   */
+  onRegionPicked(event: WechatMiniprogram.CustomEvent<{ value: number | string }>) {
+    const index = Number(event.detail.value) || 0
+    const option = this.data.regionViews[index]
+    if (!option) {
+      return
+    }
+    const branchId = (option.id || '') as '' | BranchId
     this.setData(this.data.mode === 'cooperation'
-      ? {
-          cityIndex,
-          citySelectionIds: cityId ? [cityId] : [],
-          draftCooperationBranchId: option.id as '' | BranchId,
-          filterOpen: true,
-        }
-      : {
-          cityIndex,
-          citySelectionIds: cityId ? [cityId] : [],
-          draftOpportunityCityTagId: option.id,
-          draftLocationTypes: ['CITY'] as OpportunityLocationType[],
-          draftLocationPreset: 'CITY' as LocationPreset,
-          filterOpen: true,
-        })
+      ? { regionIndex: index, selectedCooperationBranchId: branchId }
+      : { regionIndex: index, selectedRegionBranchId: branchId }, () => {
+      this.refreshAppliedFilterPresentation()
+      void this.loadContent(true)
+    })
   },
 
   /** 人才合作筛选已选行业 pill 的统一草稿同步（draft ids + 展示视图 + 热门快选选中态）。 */
@@ -746,9 +816,7 @@ Page({
       return
     }
     if (!this.data.filterOpen) {
-      const cityId = this.data.mode === 'cooperation'
-        ? this.data.selectedCooperationBranchId
-        : this.data.selectedCityTagId
+      const cityId = this.data.selectedCityTagId
       const selectedLocationPreset = locationPreset(this.data.selectedLocationTypes)
       this.setData({
         filterOpen: true,
@@ -759,7 +827,6 @@ Page({
           || this.data.selectedMaxAmountCents !== undefined,
         ),
         draftOpportunityCityTagId: this.data.selectedCityTagId,
-        draftCooperationBranchId: this.data.selectedCooperationBranchId,
         draftRoleKey: this.data.selectedRoleKey,
         ...this.draftIndustryPatch(this.data.catalog, [...this.data.selectedIndustryTagIds]),
         draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
@@ -777,13 +844,10 @@ Page({
       })
       return
     }
-    const cityId = this.data.mode === 'cooperation'
-      ? this.data.selectedCooperationBranchId
-      : this.data.selectedCityTagId
+    const cityId = this.data.selectedCityTagId
     this.setData({
       filterOpen: false,
       draftOpportunityCityTagId: this.data.selectedCityTagId,
-      draftCooperationBranchId: this.data.selectedCooperationBranchId,
       draftRoleKey: this.data.selectedRoleKey,
       ...this.draftIndustryPatch(this.data.catalog, [...this.data.selectedIndustryTagIds]),
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
@@ -858,14 +922,13 @@ Page({
   },
 
   resetFilters() {
-    const cityOptions = cityOptionsFor(this.data.mode, this.data.catalog)
+    const cityOptions = cityOptionsFor(this.data.catalog)
     this.setData({
       cityIndex: 0,
       cityOptions,
-      cityGroups: cityGroupsFor(this.data.mode, cityOptions),
+      cityGroups: cityGroupsFor(cityOptions),
       citySelectionIds: [],
       draftOpportunityCityTagId: '',
-      draftCooperationBranchId: '',
       draftRoleKey: '',
       ...this.draftIndustryPatch(this.data.catalog, []),
       draftAbilityTagIds: [],
@@ -893,9 +956,8 @@ Page({
     const selectedCityTagId = this.data.mode === 'opportunities'
       ? this.data.draftLocationPreset === 'CITY' ? this.data.draftOpportunityCityTagId : ''
       : this.data.selectedCityTagId
-    const selectedCooperationBranchId = this.data.mode === 'cooperation'
-      ? this.data.draftCooperationBranchId
-      : this.data.selectedCooperationBranchId
+    // MIW-120：地区由左上角 picker 即时生效，筛选页确定/清除不覆盖地区选择。
+    const selectedCooperationBranchId = this.data.selectedCooperationBranchId
     // figma 2917_4875：人才合作面板同样提交能力筛选，两个 tab 共用能力草稿口径。
     const selectedAbilityTagIds = this.data.draftAbilityTagIds
     const selectedLocationTypes = this.data.mode === 'opportunities'
@@ -910,6 +972,8 @@ Page({
     const presentation = appliedFilterPresentation({
       mode: this.data.mode,
       cityOptions: this.data.cityOptions,
+      regionViews: this.data.regionViews,
+      selectedRegionBranchId: this.data.selectedRegionBranchId,
       selectedCityTagId,
       selectedCooperationBranchId,
       selectedRoleKey: this.data.draftRoleKey,
@@ -940,18 +1004,20 @@ Page({
   },
 
   clearAppliedFilters() {
-    const cityOptions = cityOptionsFor(this.data.mode, this.data.catalog)
+    const cityOptions = cityOptionsFor(this.data.catalog)
     this.setData({
       keywordInput: '',
       keyword: '',
       cityOptions,
-      cityGroups: cityGroupsFor(this.data.mode, cityOptions),
+      cityGroups: cityGroupsFor(cityOptions),
       cityIndex: 0,
       citySelectionIds: [],
       draftOpportunityCityTagId: '',
-      draftCooperationBranchId: '',
       selectedCityTagId: '',
+      // MIW-120：清除筛选一并回到全国（左上角地区恢复第一项）。
+      selectedRegionBranchId: '',
       selectedCooperationBranchId: '',
+      regionIndex: 0,
       draftRoleKey: '',
       selectedRoleKey: '',
       ...this.draftIndustryPatch(this.data.catalog, []),
@@ -967,7 +1033,7 @@ Page({
       selectedMaxAmountCents: undefined,
       abilityOptions: this.data.abilityOptions.map(item => ({ ...item, selected: false })),
       hasAppliedFilters: false,
-      locationFilterLabel: this.data.mode === 'cooperation' ? '全国' : '不限',
+      locationFilterLabel: '全国',
       appliedFilterCount: 0,
       appliedFilterChips: [],
       filterOpen: false,
@@ -981,6 +1047,8 @@ Page({
     const presentation = appliedFilterPresentation({
       mode: this.data.mode,
       cityOptions: this.data.cityOptions,
+      regionViews: this.data.regionViews,
+      selectedRegionBranchId: this.data.selectedRegionBranchId,
       selectedCityTagId: this.data.selectedCityTagId,
       selectedCooperationBranchId: this.data.selectedCooperationBranchId,
       selectedRoleKey: this.data.selectedRoleKey,

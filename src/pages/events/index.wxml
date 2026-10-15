@@ -1,10 +1,13 @@
 <view id="mip-events-page" class="mip-member-page mip-member-tab-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] text-ink">
   <app-top-safe-area id="events-status-bar" />
   <view id="events-custom-navigation" class="box-border flex h-[88rpx] items-center pr-[200rpx]">
-    <view id="events-city-select" class="flex h-[88rpx] max-w-[360rpx] min-w-0 items-center gap-1 text-[28rpx] font-semibold" aria-role="button" bind:tap="selectCity">
-      <text class="min-w-0 truncate text-[34rpx]">{{selectedCity || '全部城市'}}</text>
-      <mip-icon class="shrink-0" name="chevron-down-1-15" size="{{10}}" color="var(--color-ink)" />
-    </view>
+    <!-- MIW-120 左上角地区切换：系统原生 picker 滚动选择（分会增多不溢出），选项=全国+ACTIVE 分会城市。 -->
+    <picker id="events-city-select" class="flex h-[88rpx] max-w-[360rpx] min-w-0 items-center" mode="selector" range="{{cityOptions}}" value="{{cityIndex}}" aria-label="当前地区：{{selectedCity || '全国'}}，点按选择地区" bindchange="onCityPicked">
+      <view class="flex h-[88rpx] max-w-[360rpx] min-w-0 items-center gap-1 text-[28rpx] font-semibold">
+        <text class="min-w-0 truncate text-[34rpx]">{{selectedCity || '全国'}}</text>
+        <mip-icon class="shrink-0" name="chevron-down-1-15" size="{{10}}" color="var(--color-ink)" />
+      </view>
+    </picker>
   </view>
 
   <swiper wx:if="{{banners.length}}" class="mt-2 h-[298rpx] overflow-hidden rounded-[16rpx] bg-panel" autoplay="{{banners.length > 1}}" circular="{{banners.length > 1}}" indicator-dots="{{banners.length > 1}}" interval="4500" duration="400">

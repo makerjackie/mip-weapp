@@ -149,6 +149,8 @@ describe('MIP opportunity review fixes', () => {
   it('does not count the empty nationwide catalog option as an applied filter', () => {
     const instance = discoveryPage()
     instance.data.cityOptions = [{ id: '', label: '全国' }, { id: 'city-sz', label: '深圳' }]
+    // MIW-120：左上角地区切换后，分会 chip 的文案从 regionViews 解析（cityOptions 只剩城市地点 preset）。
+    instance.data.regionViews = [{ id: '', label: '全国' }, { id: 'city-sz', label: '深圳' }]
     for (const mode of ['opportunities', 'cooperation']) {
       instance.data.mode = mode
       instance.refreshAppliedFilterPresentation()

@@ -108,7 +108,8 @@ describe('page loading and profile interaction regressions', () => {
     const instance = page(discovery)
     instance.data.state = 'ready'
     instance.lastSuccessfulRefreshAt = Date.now()
-    instance.loadCatalogs = vi.fn()
+    // MIW-120：onShow 现在消费 loadCatalogs 的返回值（是否落了默认地区），stub 要兑现 Promise。
+    instance.loadCatalogs = vi.fn().mockResolvedValue(false)
     instance.refreshAuthState = vi.fn()
     instance.loadContent = vi.fn()
     await instance.onShow()

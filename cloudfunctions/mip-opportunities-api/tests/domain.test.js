@@ -220,6 +220,23 @@ test('opportunity role filter produces one app-scoped EXISTS clause', async () =
   assert.deepEqual(calls[0].params, ['trusted-app', 'PUBLISHED', null, null, 'strategist'])
 })
 
+test('region branch filter keeps platform-owned opportunities visible in every region', async () => {
+  // MIW-120 左上角地区切换：分会过滤是包容匹配（平台机会全国可见），镜像活动 feed 口径。
+  const calls = []
+  await listOpportunities({
+    async query(sql, params) {
+      calls.push({ sql, params })
+      return []
+    },
+  }, {
+    appId: 'trusted-app',
+    profileRefSecret: 'profile-reference-secret',
+  }, { branchId: id })
+  assert.equal(calls.length, 1)
+  assert.match(calls[0].sql, /o\.branch_id = \? OR o\.branch_id IS NULL/)
+  assert.deepEqual(calls[0].params, ['trusted-app', 'PUBLISHED', null, null, id])
+})
+
 test('archived opportunity drafts stay outside owner and detail APIs', async () => {
   const calls = []
   const mine = await listMine({

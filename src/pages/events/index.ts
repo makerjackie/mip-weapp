@@ -44,6 +44,9 @@ Page({
     events: [] as (EventCardView | RecapCardView)[],
     banners: [] as EventBannerView[],
     cities: [] as string[],
+    // MIW-120 左上角地区切换：系统 picker 滚动选择，首项「全国」=清除城市过滤。
+    cityOptions: ['全国'] as string[],
+    cityIndex: 0,
     selectedCity: '',
     searchInput: '',
     activeQuery: '',
@@ -129,7 +132,8 @@ Page({
         )
         const selectedCity = resolvePrimaryBranchCity(snapshot.primaryBranchId, branchSnapshot.branches)
         if (selectedCity && !this.cityManuallySelected) {
-          this.setData({ selectedCity })
+          const cityOptions = ['全国', ...this.data.cities]
+          this.setData({ selectedCity, cityIndex: Math.max(0, cityOptions.indexOf(selectedCity)) })
         }
       }
       catch {}
@@ -195,9 +199,12 @@ Page({
       ? [...this.data.events, ...events.filter(item => !this.data.events.some(current => current.id === item.id))]
       : events
     updatePageMedia(this, 'events', merged)
+    const cities = feed.cities || []
     this.setData({
       state: 'ready',
-      cities: feed.cities || [],
+      cities,
+      cityOptions: ['全国', ...cities],
+      cityIndex: Math.max(0, ['全国', ...cities].indexOf(this.data.selectedCity)),
       nextCursor: feed.nextCursor || '',
       loadingMore: false,
       message: '',
@@ -282,21 +289,14 @@ Page({
     void this.loadEvents()
   },
 
-  selectCity() {
-    const choices = ['全部城市', ...this.data.cities]
-    if (choices.length === 1) {
-      wx.showToast({ title: '暂无可选城市', icon: 'none' })
-      return
-    }
-    wx.showActionSheet({
-      itemList: choices,
-      success: ({ tapIndex }) => {
-        const selectedCity = tapIndex === 0 ? '' : choices[tapIndex]
-        this.cityManuallySelected = true
-        this.setData({ selectedCity, nextCursor: '' })
-        void this.loadEvents()
-      },
-    })
+  // MIW-120 左上角地区切换：旧 actionSheet 菜单的 itemList 上限 6 项，分会增多会溢出；
+  // 改用系统原生 picker 滚动选择，选中即按地区过滤刷新。
+  onCityPicked(event: WechatMiniprogram.CustomEvent<{ value: number | string }>) {
+    const index = Number(event.detail.value) || 0
+    const selectedCity = index === 0 ? '' : this.data.cityOptions[index] || ''
+    this.cityManuallySelected = true
+    this.setData({ selectedCity, cityIndex: index, nextCursor: '' })
+    void this.loadEvents()
   },
 
   onSearchInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
