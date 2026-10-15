@@ -9,11 +9,9 @@ const membershipPlanCacheKey = [
   'mip:commerce-plans:v1',
   runtimeConfig.appNamespace,
   runtimeConfig.cloudbase.envId || 'disabled',
-  runtimeConfig.catalogStage,
 ].join(':')
 
 const membershipPlanCache = createMembershipPlanCache({
-  catalogStage: runtimeConfig.catalogStage,
   storage: {
     read: () => typeof wx === 'undefined' ? undefined : wx.getStorageSync(membershipPlanCacheKey) as unknown,
     write: value => typeof wx === 'undefined' ? undefined : wx.setStorageSync(membershipPlanCacheKey, value),
@@ -41,8 +39,6 @@ export const mipCommerceModule = createMipCommerceModule(
   cloudbaseMipCommerceGateway,
   wechatMipPaymentAdapter,
   {
-    paymentMode: runtimeConfig.paymentMode,
-    catalogStage: runtimeConfig.catalogStage,
     planCache: membershipPlanCache,
   },
 )

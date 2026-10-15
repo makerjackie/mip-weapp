@@ -1,6 +1,6 @@
 import type { EventId, OrderId } from '../../../modules/mip'
 import type { CommerceOrder, MembershipPlan } from '../../../modules/mip-commerce'
-import { runtimeConfig } from '../../../config/runtime'
+import { MipCommerceError } from '../../../modules/mip-commerce'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { MipEventsError } from '../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../modules/mip-events/client'
@@ -66,7 +66,8 @@ Page({
     statusDanger: false,
     paymentPending: false,
     refundable: false,
-    paymentEnabled: runtimeConfig.paymentMode !== 'disabled',
+    // MIW-119：初值乐观，真实可用性由入口预取的支付能力快照与服务端裁决修正。
+    paymentEnabled: true,
     paymentUnavailableText: '会员支付尚未配置',
     checkInResumeState: 'none' as 'none' | 'checking' | 'ready' | 'pending',
     checkInResumeMessage: '',
@@ -84,6 +85,10 @@ Page({
     const orderId = String(query.orderId || '') as OrderId
     this.refundKey = createIntentKey('order-refund')
     this.setData({ orderId })
+    // MIW-119：入口即预取支付能力，支付点击零环境往返；disabled 前置置灰。
+    void mipCommerceModule.ensurePaymentCapability()
+      .then(capabilities => this.setData({ paymentEnabled: capabilities.available }))
+      .catch(() => {})
   },
 
   onShow() {
@@ -356,7 +361,8 @@ Page({
         this.setData({ message: error.message })
         return
       }
-      const unavailable = error instanceof Error && error.message === 'PAYMENT_UNAVAILABLE'
+      // MIW-119：可用性错误来自服务端 envelope，按 code 匹配（message 是人话文案）。
+      const unavailable = error instanceof MipCommerceError && error.code === 'PAYMENT_UNAVAILABLE'
       this.setData({ message: unavailable ? `${this.data.paymentUnavailableText}。` : '暂时无法发起支付，请稍后重试。' })
     }
     finally {
@@ -437,7 +443,7 @@ Page({
       await this.load()
     }
     catch (error) {
-      const unavailable = error instanceof Error && error.message === 'PAYMENT_UNAVAILABLE'
+      const unavailable = error instanceof MipCommerceError && error.code === 'PAYMENT_UNAVAILABLE'
       const message = unavailable
         ? '退款服务尚未配置。'
         : '退款提交结果暂时无法确认，已重新查询订单状态。'

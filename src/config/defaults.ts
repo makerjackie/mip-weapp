@@ -23,6 +23,4 @@ export const defaults = {
   paymentFunctionName: 'mip-t-cloudpay',
   paymentCallbackFunctionName: 'mip-t-cloudpay-callback',
   ledgerFunctionName: 'mip-t-payment-ledger',
-  paymentMode: 'disabled',
-  catalogStage: 'TEST',
 } as const

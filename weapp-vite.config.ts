@@ -141,8 +141,8 @@ export default defineConfig({
     __MIP_AI_FUNCTION_NAME__: JSON.stringify(env.MIP_AI_FUNCTION_NAME || clientFunctionDefaults.__MIP_AI_FUNCTION_NAME__),
     __MIP_NOTIFICATIONS_FUNCTION_NAME__: JSON.stringify(env.MIP_NOTIFICATIONS_FUNCTION_NAME || clientFunctionDefaults.__MIP_NOTIFICATIONS_FUNCTION_NAME__),
     __MIP_PAY_FUNCTION_NAME__: JSON.stringify(env.MIP_PAY_FUNCTION_NAME || clientFunctionDefaults.__MIP_PAY_FUNCTION_NAME__),
-    __MIP_PAYMENT_MODE__: JSON.stringify(env.MIP_PAYMENT_MODE || 'disabled'),
-    __MIP_CATALOG_STAGE__: JSON.stringify(env.MIP_CATALOG_STAGE || 'TEST'),
+    // MIW-119：MIP_PAYMENT_MODE / MIP_CATALOG_STAGE 不再 define 进客户端；
+    // env 仅在上方 productionIntent 生产语义护栏里消费。
     __MIP_SUBSCRIBE_TEMPLATES_JSON__: JSON.stringify(env.MIP_SUBSCRIBE_TEMPLATES_JSON || ''),
     __MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS__: JSON.stringify(env.MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS || ''),
   },
