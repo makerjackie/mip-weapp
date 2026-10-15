@@ -86,7 +86,9 @@
     "seed:demo": "node scripts/seed-demo.mjs --confirm-demo",
     "admin:bootstrap": "node scripts/bootstrap-owner.mjs",
     "release:verify": "node scripts/release-verify.mjs",
-    "postinstall": "wv prepare"
+    "postinstall": "wv prepare",
+    "release:trial": "node scripts/release.mjs trial",
+    "release:prod": "node scripts/release.mjs prod"
   },
   "dependencies": {
     "@mip/admin-contracts": "workspace:*",
