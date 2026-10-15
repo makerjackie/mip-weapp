@@ -7,9 +7,12 @@
 //   node scripts/ops.mjs --target=test        # second schema + mip-t-* suite
 //   node scripts/ops.mjs --target=production  # existing default suite
 //
-// Chain: migration dry-run → migration apply → project:init → runtime grants →
-// cloud function deploy → cloud verification. Owner bootstrap and payment
-// acceptance stay manual and are intentionally NOT part of this chain.
+// Chain: migration dry-run → migration apply → project:init →
+// cloud function deploy → runtime grants → cloud verification. Deploy precedes
+// grants because a fresh target's runtime connection URI is provisioned (and
+// persisted into the target's .env.secrets.local) by deploy-functions itself.
+// Owner bootstrap and payment acceptance stay manual and are intentionally
+// NOT part of this chain.
 //
 // This script performs no cloud calls of its own; it only refuses to start when
 // the target directory is missing, incomplete, or internally inconsistent.
@@ -106,17 +109,6 @@ const steps = [
     command: ['node', 'scripts/project-init.mjs'],
   },
   {
-    name: `runtime grants (${targetName})`,
-    command: () => {
-      const flags = [`--confirm-env=${envId}`, ...schemaFlags]
-      const pin = runtimeUserPin || derivedRuntimeUserHint()
-      if (pin) {
-        flags.push(`--confirm-runtime-user=${pin}`)
-      }
-      return ['node', 'scripts/converge-mip-runtime-grants.mjs', ...flags]
-    },
-  },
-  {
     name: `cloud deploy (${targetName})`,
     command: () => {
       const flags = [`--confirm-env=${envId}`, ...schemaFlags]
@@ -131,6 +123,17 @@ const steps = [
         flags.push('--confirm-live')
       }
       return ['node', 'scripts/deploy-functions.mjs', ...flags]
+    },
+  },
+  {
+    name: `runtime grants (${targetName})`,
+    command: () => {
+      const flags = [`--confirm-env=${envId}`, ...schemaFlags]
+      const pin = runtimeUserPin || derivedRuntimeUserHint()
+      if (pin) {
+        flags.push(`--confirm-runtime-user=${pin}`)
+      }
+      return ['node', 'scripts/converge-mip-runtime-grants.mjs', ...flags]
     },
   },
   {
