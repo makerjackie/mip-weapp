@@ -30,6 +30,14 @@ MIP_ENV_DIR=envs/test pnpm build
 
 不设置 `MIP_ENV_DIR` 时回落到仓库根 `.env.local`（当前指向现有生产环境）。
 
+一次性基建动作（如新建测试函数绑 VPC 需要 VPC 资源授权）经 CAM 子用户通道执行：
+
+```bash
+./scripts/deploy-as-deployer.sh node scripts/ops.mjs --target=test
+```
+
+密钥存于仓库根 `.env.secrets.local`（本地、600、gitignore），仅该包装脚本显式激活。
+
 ## 红线
 
 - 生产凭证不得复制进测试目录，任何凭证不得进入 Git、小程序包或验收站。
