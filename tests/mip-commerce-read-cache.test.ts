@@ -26,6 +26,11 @@ const guest: MembershipBenefitsSnapshot = {
 
 function gateway(overrides: Partial<CommerceGateway> = {}): CommerceGateway {
   return {
+    describePaymentCapabilities: vi.fn(async () => ({
+      mode: 'test' as const,
+      catalogStage: 'TEST' as const,
+      available: true,
+    })),
     listPlans: vi.fn(async () => [plan]),
     getMembershipBenefits: vi.fn(async () => guest),
     createCheckout: vi.fn(),
@@ -69,15 +74,14 @@ describe('MIP commerce read cache', () => {
       clear: vi.fn(() => { stored = undefined }),
     }
     const cache = createMembershipPlanCache({
-      catalogStage: 'TEST',
       storage,
       now: () => 1_000,
       maxStaleMs: 200,
     })
     expect(cache.peek()).toEqual([plan])
+    expect(cache.stage()).toBe('TEST')
 
     const expired = createMembershipPlanCache({
-      catalogStage: 'TEST',
       storage: {
         ...storage,
         read: () => ({ version: 1, catalogStage: 'TEST', cachedAt: 700, plans: [plan] }),
@@ -87,6 +91,45 @@ describe('MIP commerce read cache', () => {
     })
     expect(expired.peek()).toBeUndefined()
     expect(storage.clear).toHaveBeenCalled()
+  })
+
+  it('rejects payloads whose stage is unknown or internally inconsistent', () => {
+    const cache = createMembershipPlanCache({ now: () => 1_000 })
+    // 混 stage 列表：服务端不会产出，缓存拒绝整份写入。
+    expect(cache.prime([
+      plan,
+      { ...plan, id: 'plan-2' as MembershipPlan['id'], catalogStage: 'LIVE' },
+    ])).toEqual([])
+    expect(cache.peek()).toBeUndefined()
+
+    // 空列表且无既有快照：没有可信 stage，不落缓存。
+    expect(cache.prime([])).toEqual([])
+    expect(cache.peek()).toBeUndefined()
+  })
+
+  it('follows the server-declared stage when the environment switches', () => {
+    let stored: unknown = {
+      version: 1,
+      catalogStage: 'TEST',
+      cachedAt: 1_000,
+      plans: [plan],
+    }
+    const cache = createMembershipPlanCache({
+      storage: {
+        read: () => stored,
+        write: (value) => { stored = value },
+        clear: () => { stored = undefined },
+      },
+      now: () => 1_100,
+    })
+    // MIW-119：云端切 LIVE 后，服务端列表整体变为 LIVE——缓存跟随服务端，不再对照烘焙值。
+    const livePlan = { ...plan, id: 'plan-live' as MembershipPlan['id'], catalogStage: 'LIVE' as const }
+    expect(cache.prime([livePlan])).toEqual([livePlan])
+    expect(cache.stage()).toBe('LIVE')
+
+    // 空列表沿用现有快照 stage，用于覆写旧 stage 残留。
+    expect(cache.prime([])).toEqual([])
+    expect(cache.stage()).toBe('LIVE')
   })
 
   it('shows cached plans without transport and refreshes them only when requested', async () => {
@@ -99,7 +142,6 @@ describe('MIP commerce read cache', () => {
       plans: [cachedPlan],
     }
     const planCache = createMembershipPlanCache({
-      catalogStage: 'TEST',
       storage: {
         read: () => stored,
         write: (value) => { stored = value },
@@ -109,8 +151,6 @@ describe('MIP commerce read cache', () => {
     })
     const readPlans = vi.fn(async () => [refreshedPlan])
     const module = createMipCommerceModule(gateway({ listPlans: readPlans }), payment, {
-      paymentMode: 'disabled',
-      catalogStage: 'TEST',
       planCache,
     })
 
@@ -127,10 +167,7 @@ describe('MIP commerce read cache', () => {
     const readBenefits = vi.fn(() => new Promise<MembershipBenefitsSnapshot>((resolve) => {
       resolveRead = resolve
     }))
-    const module = createMipCommerceModule(gateway({ getMembershipBenefits: readBenefits }), payment, {
-      paymentMode: 'disabled',
-      catalogStage: 'TEST',
-    })
+    const module = createMipCommerceModule(gateway({ getMembershipBenefits: readBenefits }), payment)
 
     const first = module.getMembershipBenefits()
     const second = module.getMembershipBenefits({ force: true })
@@ -148,5 +185,29 @@ describe('MIP commerce read cache', () => {
 
     module.clearUserCache()
     expect(module.peekMembershipBenefits()).toBeUndefined()
+  })
+
+  it('prefetches payment capabilities once per module generation', async () => {
+    const readCapabilities = vi.fn(async () => ({
+      mode: 'test' as const,
+      catalogStage: 'TEST' as const,
+      available: true,
+    }))
+    const module = createMipCommerceModule(gateway({ describePaymentCapabilities: readCapabilities }), payment)
+
+    const first = module.ensurePaymentCapability()
+    const second = module.ensurePaymentCapability()
+    expect(readCapabilities).toHaveBeenCalledTimes(1)
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      { mode: 'test', catalogStage: 'TEST', available: true },
+      { mode: 'test', catalogStage: 'TEST', available: true },
+    ])
+    expect(module.peekPaymentCapability()).toMatchObject({ available: true })
+    await module.ensurePaymentCapability()
+    expect(readCapabilities).toHaveBeenCalledTimes(1)
+
+    // force 读走新请求并覆盖快照。
+    await module.ensurePaymentCapability({ force: true })
+    expect(readCapabilities).toHaveBeenCalledTimes(2)
   })
 })

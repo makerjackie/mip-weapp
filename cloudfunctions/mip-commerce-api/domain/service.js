@@ -28,7 +28,18 @@ function createCommerceService(options) {
     return repository.getMembershipBenefits(caller)
   }
 
+  // MIW-119：支付能力由服务端声明，客户端不再烘焙模式；入口页提前预取，
+  // 支付时刻零额外往返（快照只影响提前展示，最终裁决仍在上面的支付动作里）。
+  function describePaymentCapabilities() {
+    return {
+      mode: paymentMode,
+      catalogStage,
+      available: paymentMode !== 'disabled',
+    }
+  }
+
   function createCheckout(caller, value) {
+    if (paymentMode === 'disabled') throw new Error('PAYMENT_UNAVAILABLE')
     const input = checkoutInput(value)
     const attribution = membershipAttribution(caller, input.invitationToken, invitationSecret, now())
     return repository.createCheckout(caller, { ...input, attribution, catalogStage }, {
@@ -144,6 +155,7 @@ function createCommerceService(options) {
   }
 
   function requestRefund(caller, value) {
+    if (paymentMode === 'disabled') throw new Error('PAYMENT_UNAVAILABLE')
     const input = refundInput(value)
     return repository.requestRefund(caller, input, {
       refundId: createId(),
@@ -155,6 +167,7 @@ function createCommerceService(options) {
   return {
     createCheckout,
     createKnowledgeCheckout,
+    describePaymentCapabilities,
     createMembershipInvitation,
     createMembershipInvitationCode,
     getMembershipBenefits,

@@ -22,12 +22,12 @@ let launchRestore: Promise<ReturnType<typeof mipGlobalAccessGuard.ensureLaunch>>
 let launchRestoreConsumed = false
 
 const freeEventRuntimeAcceptanceStorageKey = 'mip:internal:free-event-runtime-acceptance:v1'
+// MIW-119：支付模式与目录 stage 不再烘焙进 bundle，验收握手只锚定
+// build/env/mode——stage 与支付模式的安全断言由构建护栏与函数侧 env 校验承担。
 const runtimeAcceptance = Object.freeze({
   buildSha: __BUILD_SHA__,
-  catalogStage: runtimeConfig.catalogStage,
   cloudbaseEnvId: runtimeConfig.cloudbase.envId,
   cloudbaseMode: runtimeConfig.cloudbase.mode,
-  paymentMode: runtimeConfig.paymentMode,
 })
 
 App({

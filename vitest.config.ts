@@ -39,8 +39,6 @@ export default defineConfig({
     __MIP_AI_FUNCTION_NAME__: JSON.stringify('mip-t-ai-api'),
     __MIP_NOTIFICATIONS_FUNCTION_NAME__: JSON.stringify('mip-t-notifications-api'),
     __MIP_PAY_FUNCTION_NAME__: JSON.stringify('mip-t-cloudpay'),
-    __MIP_PAYMENT_MODE__: JSON.stringify('disabled'),
-    __MIP_CATALOG_STAGE__: JSON.stringify('TEST'),
     __MIP_SUBSCRIBE_TEMPLATES_JSON__: JSON.stringify(''),
     __MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS__: JSON.stringify(''),
   },

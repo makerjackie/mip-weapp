@@ -180,7 +180,6 @@ async function readRuntimeAttestation(miniProgram, env, buildSha) {
       appId: env.MINI_PROGRAM_APP_ID,
       buildSha,
       envId: env.CLOUDBASE_ENV_ID,
-      paymentMode: env.MIP_PAYMENT_MODE,
     })
   }
   finally {
@@ -193,10 +192,8 @@ async function readRuntimeAcceptanceStorage(miniProgram) {
   return value && typeof value === 'object'
     ? {
         buildSha: value.buildSha,
-        catalogStage: value.catalogStage,
         cloudbaseEnvId: value.cloudbaseEnvId,
         cloudbaseMode: value.cloudbaseMode,
-        paymentMode: value.paymentMode,
       }
     : null
 }

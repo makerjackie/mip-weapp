@@ -5,6 +5,7 @@ export type EntitlementId = Brand<string, 'EntitlementId'>
 export type RefundId = Brand<string, 'RefundId'>
 
 export type CatalogStage = 'TEST' | 'LIVE'
+export type PaymentMode = 'disabled' | 'test' | 'live'
 export type MembershipPlanStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE'
 export type OrderType = 'MEMBERSHIP' | 'EVENT' | 'CONTENT'
 export type OrderStatus
@@ -204,7 +205,16 @@ export interface CommerceOrderPage {
   nextCursor?: string
 }
 
+// MIW-119：支付能力由服务端声明（describePaymentCapabilities），入口页提前预取，
+// 支付时刻零环境往返；快照只影响提前展示，支付动作仍由服务端最终裁决。
+export interface PaymentCapabilities {
+  mode: PaymentMode
+  catalogStage: CatalogStage
+  available: boolean
+}
+
 export interface CommerceGateway {
+  describePaymentCapabilities: () => Promise<PaymentCapabilities>
   listPlans: () => Promise<MembershipPlan[]>
   getMembershipBenefits: () => Promise<MembershipBenefitsSnapshot>
   createCheckout: (intent: CheckoutIntent) => Promise<CommerceOrder>
