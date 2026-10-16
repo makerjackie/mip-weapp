@@ -6,6 +6,7 @@ import { isIP } from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { resolveAdminLoginCallbacks } from './lib/admin-login-target.mjs'
 import { roleTemplateBindingFlag } from './lib/admin-role-template-deployment.mjs'
 import {
   assertFunctionSecurityRulesConverged,
@@ -72,16 +73,8 @@ const knowledgeWebviewAllowedHosts = exactHostnameList(env.MIP_KNOWLEDGE_WEBVIEW
 const unionIdRebindEnabled = String(env.MIP_UNION_ID_REBIND_ENABLED || 'false').trim().toLowerCase() === 'true'
 const exportMaxRows = Number(env.MIP_EXPORT_MAX_ROWS || 5_000)
 const exportMaxBytes = Number(env.MIP_EXPORT_MAX_BYTES || 8 * 1024 * 1024)
-const adminWebLoginConfirmUrl = exactHttpsEndpoint(
-  env.MIP_ADMIN_WEB_LOGIN_CONFIRM_URL
-  || 'https://mipmini.01mvp.com/api/internal/auth/challenge/confirm',
-  'MIP_ADMIN_WEB_LOGIN_CONFIRM_URL',
-)
-// CloudBase generates 9xxxxx codes / z_ tokens; without this callback the
-// miniprogram confirmation is routed to the legacy backend and rejected there.
-const adminWebLoginMigrationUrl = env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL
-  ? exactHttpsEndpoint(env.MIP_ADMIN_WEB_LOGIN_MIGRATION_URL, 'MIP_ADMIN_WEB_LOGIN_MIGRATION_URL')
-  : 'https://admin.mip.cool/api/internal/auth/challenge/confirm'
+const { confirmUrl: adminWebLoginConfirmUrl, migrationUrl: adminWebLoginMigrationUrl }
+  = resolveAdminLoginCallbacks(env, functionNames.admin)
 // Explicit target schema (same-instance second logical database). Empty keeps the
 // historical instance-default deployment used by the existing production stack.
 const configuredSchemaName = String(env.MIP_DB_SCHEMA || '').trim()
@@ -877,19 +870,6 @@ function validMysqlUri(value) {
   }
   catch {
     return false
-  }
-}
-
-function exactHttpsEndpoint(value, key) {
-  try {
-    const endpoint = new URL(String(value || '').trim())
-    if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.hash) {
-      throw new Error('invalid')
-    }
-    return endpoint.toString()
-  }
-  catch {
-    throw new Error(`${key} must be an absolute HTTPS URL without credentials or fragment`)
   }
 }
 

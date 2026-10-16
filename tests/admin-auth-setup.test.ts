@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { it } from 'vitest'
-import { assertAuthGrants, assertAuthOwnership, expectedAuthGrants, readAuthMigrations, validateAuthJournal } from '../scripts/lib/admin-auth-setup.mjs'
+import { assertAuthGrants, assertAuthOwnership, authRuntimeUser, expectedAuthGrants, readAuthMigrations, validateAuthJournal } from '../scripts/lib/admin-auth-setup.mjs'
 
 const own = { exists: true, users: [{ User: 'runtime', Host: '%' }], user: 'runtime', owner: 'env:schema:runtime', expectedOwner: 'env:schema:runtime', password: 'synthetic-only' }
 function grants() {
@@ -18,6 +18,25 @@ it('existing schema or runtime identity requires exact bound ownership and saved
   assert.throws(() => assertAuthOwnership({ ...own, password: undefined }))
   assert.throws(() => assertAuthOwnership({ ...own, users: [{ User: 'runtime', Host: 'localhost' }] }))
   assert.doesNotThrow(() => assertAuthOwnership({ ...own, owner: undefined, exists: false, users: [], password: undefined }))
+})
+it('derives a distinct least-privilege runtime user per auth schema and keeps the production identity stable', () => {
+  assert.equal(authRuntimeUser('env-1'), authRuntimeUser('env-1', 'mip_admin_auth'))
+  assert.notEqual(authRuntimeUser('env-1'), authRuntimeUser('env-1', 'mip_test_admin_auth'))
+  assert.notEqual(authRuntimeUser('env-1', 'mip_test_admin_auth'), authRuntimeUser('env-2', 'mip_test_admin_auth'))
+  for (const user of [authRuntimeUser('env-1'), authRuntimeUser('env-1', 'mip_test_admin_auth')]) {
+    assert.match(user, /^mipauth_[0-9a-f]{12}$/)
+  }
+})
+it('binds expected grants to the selected auth schema', () => {
+  assert.equal(expectedAuthGrants().length, expectedAuthGrants('mip_admin_auth').length)
+  assert.ok(expectedAuthGrants('mip_test_admin_auth').every(grant => grant.startsWith('mip_test_admin_auth.')))
+  const testTables = expectedAuthGrants('mip_test_admin_auth').map((value) => {
+    const [target, PRIVILEGE_TYPE] = value.split(':')
+    const [TABLE_SCHEMA, TABLE_NAME] = target.split('.')
+    return { TABLE_SCHEMA, TABLE_NAME, PRIVILEGE_TYPE, IS_GRANTABLE: 'NO' }
+  })
+  assert.doesNotThrow(() => assertAuthGrants({ ...grants(), tables: testTables, schema: 'mip_test_admin_auth' }))
+  assert.throws(() => assertAuthGrants({ ...grants(), tables: testTables }))
 })
 it('grants require the complete exact table privilege set with no broader authority', () => {
   assert.doesNotThrow(() => assertAuthGrants(grants()))

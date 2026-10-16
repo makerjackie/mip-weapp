@@ -36,7 +36,7 @@ node scripts/admin-cert-renewal.mjs status \
 ## 继续开发与测试前的边界
 
 - 本轮未重新发布活动界面。测试站现有静态产物对应 `bad246c3` 加测试 checkout 的部署参数化改动，入口记录在首次绑定报告中；合并 Git 的活动代码不会自动更新网站。后续活动代码通过完整 `pnpm verify:all` 后，按测试目标同步部署 BFF 与静态入口，再逐文件核对线上清单。
-- 并行任务已将测试部署参数化与 Cloudflare 退役提交为 `feature/test-admin-cloudbase` 的 `5ec31031`。本轮收尾观察到主 checkout 正合入该提交，`pnpm-lock.yaml` 尚有冲突；本次没有改动它的 index、合并状态或工作文件。本交付保留截至 `ff1a3d8e` 的已提交主线，未混入这份尚在处理的功能合并。接手时先完成并行合并，再 `git fetch origin`、`git merge origin/codex/test-admin-renewal-20261016`，保留两边意图。部署前核对参数化已合入且目标为测试，不直接照生产默认命令运行。
+- 本交付分支已合入 `feature/test-admin-cloudbase` 的 `5ec31031`（测试部署参数化与旧部署入口清理），并保留截至 `ff1a3d8e` 的已提交主线。主 checkout 仍有另一任务的合并现场，本次未改动它的 index 或工作文件；接手时先完成该合并，再 fetch 并合入 `origin/codex/test-admin-renewal-20261016`。随后核对目标配置，不能按生产默认命令更新测试后台。
 - 测试 `mip-t-admin-api` 的 `MIP_ADMIN_WEB_LOGIN_CONFIRM_URL` **和** `MIP_ADMIN_WEB_LOGIN_MIGRATION_URL` 都应为 `https://test.admin.mip.cool/api/internal/auth/challenge/confirm`。`9xxxxx` / `z_` 测试命名空间会走 migration 回调；不能只检查主回调。
 - 尚缺本机 `MIP_ADMIN_TEST_PHONE` / `MIP_ADMIN_TEST_PASSWORD`，完整账号级 `verify-admin-cloudbase` 为 BLOCKED；先由测试管理员通过测试小程序确认登录并本人设置密码，不复制生产密码或哈希。测试小程序确认、二维码扫码、登录后非空业务数据和活动完整功能均需另行验收。
 - 活动验收须对照 PRD/原型实际操作创建、编辑、富文本与媒体、地点选择、报名与订单等范围；自动化脚本、静态检查和证书验收不能代替功能/真机验收。按用户要求保留 UI 对照和每项 PASS/FAIL/BLOCKED 报告。

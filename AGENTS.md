@@ -21,7 +21,7 @@
 - `src/modules/mip-admin` 运营领域
 - `src/platform` / `src/shared` 平台原语（已从共享包内联）
 - `src/config` 品牌、功能开关、运行时
-- `admin-web` React Web 管理后台（独立构建；CloudBase 静态托管/云函数部署，Cloudflare 保留至迁移验收确认）
+- `admin-web` React Web 管理后台（独立构建；CloudBase 静态托管/云函数部署）
 - `packages/admin-contracts` 两端共用的 AdminRequest v1 中立契约
 - `cloudfunctions` 与 `database/mysql` 服务端事实
 - `.agents/skills` 任务技能
@@ -100,6 +100,7 @@ API Key 是日常通道，Device Flow 是部署高权限通道。只有创建、
 | 会员领域           | `mip-membership-domain` |
 | 部署运营           | `mip-operations`        |
 | Web 后台更新与发布 | `mip-admin-release`     |
+| 微信小程序发布     | `mip-release`           |
 | 运行时验收         | `weapp-runtime-qa`      |
 
 ## 13. 禁止

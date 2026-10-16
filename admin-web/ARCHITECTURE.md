@@ -2,13 +2,13 @@
 
 ## 定位
 
-`admin-web/` 是纯客户端 React 管理界面和同源 BFF，当前有 CloudBase 云函数/认证 MySQL adapter，迁移期保留 Cloudflare Pages/Worker/D1 adapter。它不重写 MIP 领域模型，也不让浏览器计算会员、活动资格、订单、支付、权限或审计事实。平台状态见项目状态，后续局部重构按 [EXECUTION_PLAN.md](EXECUTION_PLAN.md) 推进，不将计划中的接口当作已实现。
+`admin-web/` 是纯客户端 React 管理界面和同源 BFF，运行于 CloudBase：静态托管 + BFF 云函数 + 认证 MySQL adapter。它不重写 MIP 领域模型，也不让浏览器计算会员、活动资格、订单、支付、权限或审计事实。平台状态见项目状态，后续局部重构按 [EXECUTION_PLAN.md](EXECUTION_PLAN.md) 推进，不将计划中的接口当作已实现。
 
 ```text
 pages
   → React adapters / features
     → modules + services
-      → same-origin BFF (CloudBase / retained Cloudflare adapter)
+      → same-origin BFF (CloudBase function)
         → signed AdminRequest v1
           → mip-admin-api AdminApplication.execute
             → domain modules / mip_* MySQL / outbox / media / export
@@ -24,7 +24,7 @@ pages
 | `src/modules` | 既有渠道中立 read model、detail、mutation definition 和 validator | React、DOM、Ant Design、浏览器会话 |
 | `src/services` | AdminApiClient、同源 BFF transport、显式 demo adapter | 领域状态机和权限推断 |
 | `server` | 会话、来源校验、限流、HMAC transport、请求 allowlist | 业务资格、金额、状态决定 |
-| `functions` | Cloudflare Pages Function 薄 adapter | 页面逻辑或领域规则 |
+| `cloudbase` | CloudBase HTTP 网关入口薄 adapter（`index.ts`），转成标准 `Request` 后复用同一 BFF | 页面逻辑或领域规则 |
 
 ## 深模块、interface、seam 与 adapter
 
@@ -38,7 +38,7 @@ pages
 
 ## Router 与 URL state
 
-TanStack Router 使用 hash history，保持 Cloudflare Pages 静态回退简单，并兼容现有分享链接。一级页面使用稳定路径：
+TanStack Router 使用 hash history，保持静态托管的 SPA 回退简单，并兼容现有分享链接。一级页面使用稳定路径：
 
 `/overview`、`/users`、`/cards`、`/events`、`/orders`、`/tasks`、`/banners`、`/videos`、`/media`、`/game`、`/opportunities`、`/growth`、`/permissions`、`/admin-accounts`、`/audit-logs`、`/messages`、`/knowledge`、`/operations`。
 
@@ -67,7 +67,7 @@ interface AdminRequest<A extends AdminOperationAction> {
 }
 ```
 
-action、query/mutation 分类、Web 暴露范围、mutation 字段白名单和幂等策略均由 `mip-admin-api` 生成到 `@mip/admin-contracts`；React adapter、Cloudflare BFF 与 CloudBase Web 入口消费同一份事实。业务 `action` 字段必须留在 `input` 内；顶层 action 只用于路由。浏览器只调用同源 BFF；`VITE_MIP_ADMIN_API_URL` 只能是以 `/` 开头的同源路径，默认使用 `/api/admin`，不得配置完整 URL 或跨源地址。媒体上传使用同源 `/api/media/image`，浏览器不得直接调用 CloudBase 或携带服务器密钥。
+action、query/mutation 分类、Web 暴露范围、mutation 字段白名单和幂等策略均由 `mip-admin-api` 生成到 `@mip/admin-contracts`；React adapter、BFF 与 CloudBase Web 入口消费同一份事实。业务 `action` 字段必须留在 `input` 内；顶层 action 只用于路由。浏览器只调用同源 BFF；`VITE_MIP_ADMIN_API_URL` 只能是以 `/` 开头的同源路径，默认使用 `/api/admin`，不得配置完整 URL 或跨源地址。媒体上传使用同源 `/api/media/image`，浏览器不得直接调用 CloudBase 或携带服务器密钥。
 
 ## BFF 路由
 
@@ -83,7 +83,7 @@ action、query/mutation 分类、Web 暴露范围、mutation 字段白名单和�
 | `POST /api/admin` | 浏览器 | 转发精确 allowlist 内的 AdminRequest v1 |
 | `POST /api/media/image` | 浏览器 | 转发受控图片上传请求 |
 
-Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的 `mip-admin-api` 通过 `MIP_ADMIN_WEB_BFF_HMAC_SECRET` 验签；两个变量必须保存同一个密钥值。登录确认使用独立的 `MIP_ADMIN_WEB_LOGIN_HMAC_SECRET`，动态小程序码生成使用 `MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET`；三个 HMAC 信任域必须互不复用。
+BFF 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的 `mip-admin-api` 通过 `MIP_ADMIN_WEB_BFF_HMAC_SECRET` 验签；两个变量必须保存同一个密钥值。登录确认使用独立的 `MIP_ADMIN_WEB_LOGIN_HMAC_SECRET`，动态小程序码生成使用 `MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET`；三个 HMAC 信任域必须互不复用。
 
 ## 权限与服务端事实
 
@@ -101,7 +101,7 @@ Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的
 - `CONFLICT`：刷新当前资源并要求重新确认。
 - 5xx/网络：保留页面上下文，允许手动重试。
 
-小程序确认登录使用 5 分钟有效的单次 challenge、浏览器 verifier 和认证存储原子确认；CloudBase 使用认证 MySQL adapter，保留的 Cloudflare 使用 D1 adapter。数字码为该方式的默认入口，可选动态小程序码图片不持久化，React 不持久化或接收原始 scene。每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，同一客户端 IP 在 10 分钟内最多创建 30 个 challenge，认证存储只保存 HMAC 限流键。challenge IP 计数表不可用时该限流自动旁路，不阻断小程序确认流程。
+小程序确认登录使用 5 分钟有效的单次 challenge、浏览器 verifier 和认证存储原子确认；认证存储使用 MySQL adapter（`sqliteQueries` 仅供本地 SQLite 认证测试使用）。数字码为该方式的默认入口，可选动态小程序码图片不持久化，React 不持久化或接收原始 scene。每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，同一客户端 IP 在 10 分钟内最多创建 30 个 challenge，认证存储只保存 HMAC 限流键。challenge IP 计数表不可用时该限流自动旁路，不阻断小程序确认流程。
 
 可选密码登录沿用相同可信身份，使用独立的账号与来源计数，计数不可用时失败关闭。BFF 私有身份查询不在浏览器 action allowlist 内，只能经签名与防重放校验后向云端读取当前账号的验证手机号；浏览器仅得到掩码。两种方式都签发 AES-GCM `HttpOnly` 8 小时会话并逐请求验证对应认证存储的 session ID；密码版本改变使旧密码会话失效。参见 [ADR 0007](../docs/adr/0007-optional-admin-password-login.md)。
 
@@ -113,16 +113,9 @@ Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的
 4. 运行时：1280×720、1440×900、390×844；验证无根级横向溢出、导航和主要交互可达。
 5. 视觉：同一视口、同一状态下把 Workbuddy 与实现截图组成左右对照，再做 P0/P1/P2 修复循环。
 
-## Cloudflare 部署
+## CloudBase 部署
 
-- Vite 输出 `dist/`，路由使用 `/#/...`，不需要服务器 SPA 回退。`public/404.html` 禁用 Pages 默认回退；不得添加 `/* /index.html 200`，否则缺失 JS 可能被当成 HTML 成功响应缓存并造成白屏。`public/_headers` 保持安全头。
-- 静态资源使用 `max-age=0, must-revalidate`，保留 ETag 条件请求，避免缺失资源的错误响应继承一年缓存。
-- 部署后除首页外，还要确认不存在的 `/assets/*.js` 返回 HTTP 404；构建检查不能代替线上状态码验证。
-- `functions/api/[[path]].ts` 复用 `server/admin-bff.ts`。
-- `wrangler.toml` 与现有 Pages 项目 `mip-admin-web`、D1 binding 继续复用。
-- 自定义域名 `mipmini.01mvp.com` 的 DNS、密钥、生产变量和外部账号不由本次代码迁移自动变更。
-
-
-## CloudBase 并行迁移
-
-后台已增加 CloudBase 同源运行入口；前端静态托管，BFF 云函数，认证存储为独立 MySQL schema，业务仍由原 `mip-admin-api` 鉴权。发布与回滚见 [CloudBase 运行说明](cloudbase/README.md)。Cloudflare 的部署适配器暂时保留，用户确认后才下线；新旧登录会话和密码存储不实时同步。
+- Vite 输出 `dist/`，路由使用 `/#/...`。前端静态上传到隔离前缀（生产 `mip-admin-console/`，测试 `mip-admin-console-test/`），`/` 路由指向该前缀。
+- 部署后除首页外，还要确认不存在的 `/assets/*.js` 返回 HTTP 404（由 BFF 内置的严格 `/assets` 处理器负责）；构建检查不能代替线上状态码验证。
+- CloudBase HTTP 网关入口 `cloudbase/index.ts` 复用 `server/admin-bff.ts`；发布与回滚见 [CloudBase 运行说明](cloudbase/README.md)。
+- 生产入口 `admin.mip.cool`，测试入口 `test.admin.mip.cool`；两者的函数名、静态前缀、认证 schema 与密钥完全独立，由目标目录的 `MIP_ADMIN_*` 配置选择。

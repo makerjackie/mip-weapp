@@ -1,13 +1,13 @@
 ---
 name: mip-operations
-description: Use for owner bootstrap, demo seed, CloudBase deploy, MySQL schema, or operator-console work in mip-weapp.
+description: Use for owner bootstrap, demo seed, business CloudBase functions, or MySQL schema operations in mip-weapp. Web admin updates, deployment, DNS, and certificates use mip-admin-release.
 ---
 
 # Membership operations
 
 ## Trigger
 
-部署云函数、建库、seed、owner 授权、运营后台、退款、名册导出。
+部署业务云函数、建库、seed、owner 授权、退款、名册导出。Web 后台发布与域名/证书维护按 [mip-admin-release](../mip-admin-release/SKILL.md) 执行。
 
 ## Scope
 

@@ -4,7 +4,7 @@
 
 ## 已拍板的方向（2026-10-15）
 
-现有全部资源原地转正式生产；测试环境全部新建。同实例多库（schema）方案作为成本约束下的选择：第二个 CloudBase 环境需要第二份包年费用，排除。CloudBase 托管 MySQL 同实例多逻辑库、函数按用量计费不按个数、Cloudflare Pages/D1 免费层，均为既有核对结论（2026-09-27 只读检查）。
+现有全部资源原地转正式生产；测试环境全部新建。同实例多库（schema）方案作为成本约束下的选择：第二个 CloudBase 环境需要第二份包年费用，排除。资源成本与实例能力的历史核对见 Git 记录；两套管理后台统一使用 CloudBase。
 
 | 资源 | 生产（现有资源原地） | 测试（全部新建） |
 | --- | --- | --- |
@@ -13,7 +13,7 @@
 | 云函数名 | 现有默认 `mip-*-api`（正式版已烘焙，不可变更） | `MIP_*_FUNCTION_NAME` 全套显式覆盖为 `mip-t-*`（21 个，含支付三函数与调度器） |
 | runtime MySQL 账号 | 现有账号 | 第二派生账号，只授测试库 `mip_*` 表级权限 |
 | 对象前缀 | `mip/` | 独立测试前缀，各套函数只写自己的前缀 |
-| 管理后台 | 现有域名与 CloudBase 直连入口，不动 | `test.admin.mip.cool`：CloudBase 同构第二后台（2026-10-16 改判，替代本页早先的 Cloudflare Pages 方向）；新静态前缀、新 BFF 函数、测试专用认证 schema、独立密钥 |
+| 管理后台 | 现有域名与 CloudBase 直连入口，不动 | `test.admin.mip.cool`：CloudBase 同构第二后台；新静态前缀、新 BFF 函数、测试专用认证 schema、独立密钥 |
 | 小程序 | 正式版（构建自生产目录） | 开发版/体验版（构建自测试目录，烘焙 `mip-t-*`） |
 | stage/catalog/payment | `production` / `LIVE` / 支付独立验收后 `live` | `test` 或 `staging` / `TEST` / `disabled` 或 `test` |
 
@@ -57,7 +57,7 @@ CI 不自动部署生产：API Key 的 CAM 权限边界是既有现状，生产�
 
 ## 管理后台隔离
 
-`admin.mip.cool` 与 CloudBase 直连入口为生产后台，域名不动。测试后台 `test.admin.mip.cool` 走 CloudBase 同构路线（2026-10-16 拍板，替代 2026-10-15 的 Cloudflare Pages 方向 B）：独立静态前缀 + 独立 BFF 云函数 + 测试专用认证 schema + 独立 `MIP_WEB_ALLOWED_ORIGIN`、会话密钥、登录/QR HMAC；BFF `MIP_ADMIN_UPSTREAM_URL` 指向测试函数集的 `mip-t-admin-api`；云函数侧登录确认 URL 对应测试域名。两端 HMAC 同环境内对应、不跨环境复用。测试后台的登录与授权不能作为生产授权；测试认证数据与生产认证库完全隔离。部署对象清单与脚本改造约束见 [ADMIN_TEST_BACKEND_HANDOFF.md](ADMIN_TEST_BACKEND_HANDOFF.md)。
+`admin.mip.cool` 与 CloudBase 直连入口为生产后台，域名不动。测试后台 `test.admin.mip.cool` 走 CloudBase 同构路线：独立静态前缀 + 独立 BFF 云函数 + 测试专用认证 schema + 独立 `MIP_WEB_ALLOWED_ORIGIN`、会话密钥、登录/QR HMAC；BFF `MIP_ADMIN_UPSTREAM_URL` 指向测试函数集的 `mip-t-admin-api`；云函数侧登录确认 URL 对应测试域名。两端 HMAC 同环境内对应、不跨环境复用。测试后台的登录与授权不能作为生产授权；测试认证数据与生产认证库完全隔离。资源边界和后续接手见 [ADMIN_TEST_DOMAIN_HANDOFF.md](ADMIN_TEST_DOMAIN_HANDOFF.md)，发布步骤见 [mip-admin-release](../../.agents/skills/mip-admin-release/SKILL.md)。
 
 ## 每套部署目标独立完成 owner 引导
 
@@ -83,5 +83,5 @@ pnpm admin:bootstrap -- --confirm-env=<该目标的精确EnvID> --confirm-owner
 - [小程序构建配置](../../weapp-vite.config.ts) 与 [运行配置](../../src/config/runtime.ts)
 - 云函数部署脚本（`scripts/deploy-functions.mjs`）、支付部署（`scripts/deploy-payment-function.mjs`）
 - owner 引导脚本（`scripts/bootstrap-owner.mjs`）
-- [后台发布命令](../../admin-web/package.json) 与 [Wrangler 配置](../../admin-web/wrangler.toml)
+- [后台发布入口](../../admin-web/README.md) 与 [CloudBase 后台运行说明](../../admin-web/cloudbase/README.md)
 - [云开发规范](../CLOUDBASE.md)、[部署手册](../DEPLOYMENT.md)、[运营手册](../OPERATIONS.md)

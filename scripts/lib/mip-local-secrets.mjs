@@ -244,8 +244,6 @@ export function compactEnvDocuments(localSource, secretsSource = '') {
     ['MIP_EXPORT_MAX_ROWS', '5000'],
     ['MIP_EXPORT_MAX_BYTES', '8388608'],
     ['MIP_UNION_ID_REBIND_ENABLED', 'false'],
-    ['MIP_ADMIN_WEB_LOGIN_CONFIRM_URL', 'https://mipmini.01mvp.com/api/internal/auth/challenge/confirm'],
-    ['MIP_ADMIN_WEB_LOGIN_MIGRATION_URL', 'https://admin.mip.cool/api/internal/auth/challenge/confirm'],
   ])
   const functionDefaults = new Map([
     ['MIP_IDENTITY_FUNCTION_NAME', 'mip-identity-api'],

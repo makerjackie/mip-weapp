@@ -1,10 +1,10 @@
 # 管理后台自定义域名
 
-适用于把用户指定的子域名接入已有 CloudBase 后台。沿用已验证的运行包，不因为绑域名再次部署无关函数、上传小程序或关闭旧平台。
+适用于把用户指定的子域名接入已有 CloudBase 后台。沿用已验证的运行包；域名接入与应用代码更新分别验收。
 
 ## DNS 归属与目标选择
 
-`mip.cool` 的域名管理与权威 DNS 均在**阿里云**，解析入口为 [mip.cool 解析控制台](https://dnsnext.console.aliyun.com/authoritative/domains/mip.cool)。证书在腾讯云 SSL，服务在 CloudBase HTTP 网关；不要去 DNSPod、Cloudflare 或旧服务器增加解析。执行前回读 NS，确认归属没有变化。
+`mip.cool` 的域名管理与权威 DNS 均在**阿里云**，解析入口为 [mip.cool 解析控制台](https://dnsnext.console.aliyun.com/authoritative/domains/mip.cool)。证书在腾讯云 SSL，服务在 CloudBase HTTP 网关。执行前回读 NS，确认归属没有变化，再在阿里云修改所属记录。
 
 两套后台可以共享同一个 CloudBase EnvID，但必须按域名选择各自资源：
 
@@ -50,7 +50,7 @@
 4. 用 `queryEnv(domains)` 确认目标 host 未存在后，`envDomainManagement(create)` 只追加该 host；回读 `ENABLE`。平台安全域名与 BFF 的 Origin 允许列表是两个配置项。
 5. 以平台创建后返回的 `Cname` 为 DNS 目标，添加精确子域名 CNAME；不要猜目标或用重定向记录代替绑定。先确保目标证书与路由就绪，再切换 DNS。用权威 DNS 和递归 DNS 分别回读，预留旧缓存传播时间。
 
-正式后台已有默认网关发布目标时保留它。独立测试后台若部署脚本及 private target 已明确选择测试域名，则沿用该测试目标，不改成正式默认网关。若本次同时调整 challenge 回调，核对目标配置目录的 `MIP_ADMIN_WEB_LOGIN_CONFIRM_URL` / `MIP_ADMIN_WEB_LOGIN_MIGRATION_URL` 及目标 admin-api 回读，保留正式后台与旧站各自的回调分流；仅改云端会被后续部署覆盖。绑定域名或回读配置不证明微信确认成功。
+正式后台已有默认网关发布目标时保留它。独立测试后台若部署脚本及 private target 已明确选择测试域名，则沿用该测试目标，不改成正式默认网关。若本次同时调整 challenge 回调，核对目标配置目录的 `MIP_ADMIN_WEB_LOGIN_CONFIRM_URL` / `MIP_ADMIN_WEB_LOGIN_MIGRATION_URL` 及目标 admin-api 回读，保持正式与测试回调各自对应本目标；仅改云端会被后续部署覆盖。绑定域名或回读配置不证明微信确认成功。
 
 ## 验证与留证
 

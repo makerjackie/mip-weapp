@@ -1,11 +1,9 @@
 import process from 'node:process'
+import { exactAdminOrigin } from './lib/admin-login-target.mjs'
 import { loadCaseEnv } from './lib/example-cloudbase.mjs'
 
 const env = loadCaseEnv(process.cwd())
-const origin = new URL(env.MIP_ADMIN_TEST_ORIGIN || 'https://mipmini.01mvp.com').origin
-if (!origin.startsWith('https://') && !/^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin)) {
-  throw new Error('Use HTTPS or a loopback test server')
-}
+const origin = exactAdminOrigin(env.MIP_ADMIN_TEST_ORIGIN, { allowLoopback: true })
 if (!env.MIP_ADMIN_TEST_PHONE || !env.MIP_ADMIN_TEST_PASSWORD) {
   throw new Error('Configure MIP_ADMIN_TEST_PHONE and MIP_ADMIN_TEST_PASSWORD in ignored .env.secrets.local')
 }

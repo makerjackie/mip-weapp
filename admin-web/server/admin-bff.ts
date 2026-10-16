@@ -14,7 +14,7 @@ import {
   readAdminMediaUploadRequest,
 } from './admin-media-upload.ts'
 
-export type { D1DatabaseBinding } from './auth-database.ts'
+export type { SqliteDatabaseBinding } from './auth-database.ts'
 
 export interface AdminBffEnv {
   MIP_ADMIN_AUTH_DB?: AdminAuthDatabase

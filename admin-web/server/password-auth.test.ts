@@ -4,13 +4,13 @@ import { pbkdf2Sync } from 'node:crypto'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync } from 'node:fs'
 import { createPasswordAuth, normalizeLoginPhone, passwordAuthDiagnostic } from './password-auth.ts'
-import { createAdminBff, canonicalJson, type D1DatabaseBinding } from './admin-bff.ts'
+import { createAdminBff, canonicalJson, type SqliteDatabaseBinding } from './admin-bff.ts'
 const principal = { appId: 'wx-test-auth', openId: 'test-bound-principal' }
 const password = 'synthetic-password-2030'
 function setup() {
   const sqlite = new DatabaseSync(':memory:')
   for (const file of ['0001_web_login_challenges.sql', '0002_web_login_rate_limits.sql', '0003_web_login_ip_rate_limits.sql', '0004_password_auth.sql']) sqlite.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), 'utf8'))
-  const database: D1DatabaseBinding = { prepare(sql) {
+  const database: SqliteDatabaseBinding = { prepare(sql) {
     let values: unknown[] = []
     const statement = { bind(...input: unknown[]) { values = input; return statement },
       async first<T>() { return (sqlite.prepare(sql).get(...values as never[]) || null) as T | null },

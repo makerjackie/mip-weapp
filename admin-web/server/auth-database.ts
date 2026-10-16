@@ -5,15 +5,15 @@ export interface AuthStatement {
   first: <T>() => Promise<T | null>
   run: () => Promise<AuthRunResult>
 }
-export interface D1DatabaseBinding { prepare: (query: string) => AuthStatement }
+export interface SqliteDatabaseBinding { prepare: (query: string) => AuthStatement }
 export interface AuthOperationDatabase { statement: (operation: AuthOperation) => AuthStatement }
-export type AdminAuthDatabase = D1DatabaseBinding | AuthOperationDatabase
-export type AuthOperation = keyof typeof d1Queries
+export type AdminAuthDatabase = SqliteDatabaseBinding | AuthOperationDatabase
+export type AuthOperation = keyof typeof sqliteQueries
 export function authStatement(database: AdminAuthDatabase, operation: AuthOperation): AuthStatement {
-  return 'statement' in database ? database.statement(operation) : database.prepare(d1Queries[operation])
+  return 'statement' in database ? database.statement(operation) : database.prepare(sqliteQueries[operation])
 }
-// Preserve the original D1 statements so the existing deployment remains a rollback target.
-export const d1Queries = {
+// SQLite statements support hermetic authentication tests; CloudBase uses the MySQL adapter.
+export const sqliteQueries = {
   purgeLoginIpLimits: `DELETE FROM mip_admin_web_login_ip_limits WHERE window_started_at < ?1`,
   purgeChallenges: `DELETE FROM mip_admin_web_login_challenges WHERE expires_at < ?1`,
   insertChallenge: `INSERT INTO mip_admin_web_login_challenges

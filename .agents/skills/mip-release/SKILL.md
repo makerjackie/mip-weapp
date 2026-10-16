@@ -1,9 +1,11 @@
 ---
 name: mip-release
-description: MIP 双环境部署与生产发布全流程 runbook：从预检、云端部署、构建上传、提审到发布后验证，含防呆清单与踩坑录。任何部署/发版动作前先读本文，按阶段推进不漏项。
+description: MIP 微信小程序双环境发布与相关业务云函数部署：预检、构建上传、提审和发布后验证。发布 admin-web、后台域名或证书维护使用 mip-admin-release。
 ---
 
 # MIP 部署与发布 Runbook（双环境 · 防呆版）
+
+Web 管理后台更新按 [mip-admin-release](../mip-admin-release/SKILL.md) 执行。后台发布不自动触发本 skill 的微信上传、提审或真实支付步骤。
 
 环境事实：同一 CloudBase 环境，两套 MySQL 库 + 两套函数名。**生产 = `mip-*`（envs/prod）；测试 = `mip-t-*` + `mip_test` 库（envs/test）**。函数名/EnvID 构建期焊进包；支付模式与会员目录已服务端化（MIW-119），可热切不发版。
 

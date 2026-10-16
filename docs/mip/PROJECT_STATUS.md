@@ -1,5 +1,7 @@
 # MIP 当前状态
 
+2026-10-16（后台发布方法清理）：Web 更新统一使用仓库 [mip-admin-release](../../.agents/skills/mip-admin-release/SKILL.md)，正式/测试均为 CloudBase，域名与 DNS 在阿里云，证书与网关在腾讯云；小程序发布另走 mip-release。已合入测试部署参数化，删除旧 Pages/Wrangler 部署入口、依赖和一次性迁移脚本，纠正运行手册发布顺序与默认登录目标，保留本地 SQLite 测试和显式历史回调。历史报告的旧待办已标退役。本轮仅做仓库清理，未重新部署或下线任何云资源。检查与交付边界见[流程清理记录](evidence/admin-release-workflow-cleanup-20261016/README.md)。
+
 2026-10-16（测试后台证书自动续期与 Git 集成）：共用 `mip-admin-cert-renewer` 源码，为 `test.admin.mip.cool` 部署独立 `mip-t-admin-cert-renewer` / `MIPTestAdminCertRenewerRole` / `mip-t-admin-cert-daily`，不连接 MySQL、不配置 VPC、禁止 SDK 直调与 HTTP 入口。账号自有 CLS 日志保留 7 天；处理 TCB 服务归属主题导致的 SCF 创建失败并精确清理未使用资源，新增归属检查。实际 timer canary 在 10:26:41 UTC 成功（offset=480，COS_CREATE_ONLY），每日北京时间 11:17 / UTC 03:17 OPEN；仅 FORCE 一次真实免费签发，旧证书 `bcL4Ap00` → 新证书 `bcOr1nou`，10:30:45 UTC 记录 RENEWED，可信 TLS 指纹匹配，有效至 2027-01-14 08:59:59 UTC，无 pending。生产续期代码/配置/timer 及其他网关域名回读未变。公开 HTTPS 8/8 与静态字节 14/14 通过；完整 `pnpm verify:all` 通过（小程序 274 文件/1770 测试，Web 合同 294 + React 182）。保留本地活动线与远端环境线，未混入 `.worktrees/test-admin` 并行未提交改动；本轮没有重新发布活动 UI。账号密码与测试小程序真机确认仍待验收，告警接收未实测。见[续期验收](evidence/admin-test-renewal-20261016/README.md)与[简明交接](ADMIN_TEST_DOMAIN_HANDOFF.md)。
 
 2026-10-16 测试后台域名绑定：`https://test.admin.mip.cool/` 已绑定独立免费 DV 证书并通过可信 TLS、HTTP 307 跳转、测试静态清单 14/14 字节和三种浏览器视口验收；阿里云负责域名及 DNS，用户原 CNAME 保留，已加本次 SSL TXT。测试 `mip-t-admin-api` 的 migration 登录回调从正式域名纠正为测试域名，测试本机配置同步，两端 HMAC 配对回读一致；正式网关入口和三条路由保留。完整密码验收因缺少本机测试账号 BLOCKED，微信真机确认 NOT_RUN，新测试域名自动续期未启用。证书有效期与详细证据见[测试域名验收](evidence/admin-test-domain-20261016/README.md)；经验已固化到 `mip-admin-release` skill。

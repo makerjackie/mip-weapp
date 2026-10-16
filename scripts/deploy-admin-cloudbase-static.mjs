@@ -4,11 +4,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import {
-  CLOUDFLARE_METADATA_BASENAMES,
   collectHostingListing,
   hostingFileCount,
   hostingKeysOutsidePrefix,
   hostingMetadataLeaks,
+  LEGACY_HOSTING_METADATA_BASENAMES,
   manifestListingGaps,
   sha256File,
   treeGapsAgainstListing,
@@ -18,9 +18,15 @@ import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
-const prefix = 'mip-admin-console/'
+// Production keeps the proven `mip-admin-console/`; the test backend selects an
+// isolated prefix (e.g. `mip-admin-console-test/`) via MIP_ADMIN_CONSOLE_PREFIX.
+const consolePrefix = String(env.MIP_ADMIN_CONSOLE_PREFIX || 'mip-admin-console').trim()
+if (!/^[a-z0-9-]{1,64}$/.test(consolePrefix)) {
+  throw new Error('MIP_ADMIN_CONSOLE_PREFIX must be a plain identifier')
+}
+const prefix = `${consolePrefix}/`
 resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
-if (!env.CLOUDBASE_ENV_ID || !process.argv.includes(`--confirm-env=${env.CLOUDBASE_ENV_ID}`) || !process.argv.includes('--confirm-prefix=mip-admin-console/')) {
+if (!env.CLOUDBASE_ENV_ID || !process.argv.includes(`--confirm-env=${env.CLOUDBASE_ENV_ID}`) || !process.argv.includes(`--confirm-prefix=${prefix}`)) {
   throw new Error('Exact CloudBase environment and static prefix confirmations required')
 }
 const source = path.join(root, 'admin-web/dist')
@@ -54,7 +60,7 @@ try {
   }
   const metadataLeaks = hostingMetadataLeaks(listing, prefix)
   if (metadataLeaks.length) {
-    throw new Error(`Cloudflare metadata or source map published under ${prefix}: ${metadataLeaks.join(', ')}`)
+    throw new Error(`Foreign host metadata or source map published under ${prefix}: ${metadataLeaks.join(', ')}`)
   }
   const gaps = manifestListingGaps(manifest, listing, prefix)
   if (gaps.length) {
@@ -110,10 +116,10 @@ try {
   }
 
   const localMetadataLeaks = manifest.map(file => file.path).filter((relative) => {
-    return relative.endsWith('.map') || CLOUDFLARE_METADATA_BASENAMES.includes(relative.split('/').at(-1))
+    return relative.endsWith('.map') || LEGACY_HOSTING_METADATA_BASENAMES.includes(relative.split('/').at(-1))
   })
   if (localMetadataLeaks.length) {
-    throw new Error(`Built assets contain Cloudflare metadata or source maps: ${localMetadataLeaks.join(', ')}`)
+    throw new Error(`Built assets contain foreign host metadata or source maps: ${localMetadataLeaks.join(', ')}`)
   }
   save('verified.private.json', {
     prefix,
@@ -134,7 +140,7 @@ try {
     directoryTopUps,
     perFileVerified: manifest.length,
     status: 'VERIFIED',
-    cloudflareUnchanged: true,
+    legacyHostingUnchanged: true,
     sharedRootUnchanged: true,
     evidence: path.relative(root, evidence),
   }))
@@ -149,7 +155,7 @@ function copyBuiltAssets(directory, destination) {
     if (entry.isSymbolicLink() || entry.name.startsWith('.') || /(?:\.env|\.pem|\.key)$/i.test(entry.name)) {
       throw new Error('Unexpected private or linked file in frontend build')
     }
-    // Vite may emit source maps locally; never publish those or Cloudflare metadata.
+    // Vite may emit source maps locally; never publish those or deployment metadata.
     if (entry.name.endsWith('.map') || ['_headers', '_redirects', '_worker.js', '_routes.json'].includes(entry.name)) {
       continue
     }

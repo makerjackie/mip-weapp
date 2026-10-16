@@ -107,7 +107,7 @@ it('keeps directory marker keys out of file counts and prefix assertions', () =>
   assert.deepEqual(hostingKeysOutsidePrefix({ files: [{ key: 'other-prefix/leak.js', bytes: 3 }] }, 'mip-admin-console/'), ['other-prefix/leak.js'])
 })
 
-it('flags Cloudflare metadata and source maps but tolerates legacy static assets', () => {
+it('flags legacy hosting metadata and source maps but tolerates legacy static assets', () => {
   const listing = parseHostingListingPage({ data: { files: [
     { key: 'mip-admin-console/_headers', bytes: 10 },
     { key: 'mip-admin-console/assets/app.js.map', bytes: 10 },

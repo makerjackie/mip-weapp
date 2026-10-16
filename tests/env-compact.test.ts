@@ -42,8 +42,9 @@ describe('local environment compaction', () => {
     expect(result.local).toContain('MIP_CATALOG_STAGE=TEST')
     expect(result.local).toContain('MIP_DEPLOYMENT_STAGE=development')
     expect(result.local).not.toContain('MIP_UNION_ID_REBIND_ENABLED=false')
-    expect(result.local).not.toContain('MIP_ADMIN_WEB_LOGIN_CONFIRM_URL=')
-    expect(result.local).not.toContain('MIP_ADMIN_WEB_LOGIN_MIGRATION_URL=')
+    // Explicit callbacks, including legacy overrides, must survive compaction.
+    expect(result.local).toContain('MIP_ADMIN_WEB_LOGIN_CONFIRM_URL=https://mipmini.01mvp.com/api/internal/auth/challenge/confirm')
+    expect(result.local).toContain('MIP_ADMIN_WEB_LOGIN_MIGRATION_URL=https://admin.mip.cool/api/internal/auth/challenge/confirm')
     expect(result.local).not.toContain('UNKNOWN_EMPTY=')
   })
 

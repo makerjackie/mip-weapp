@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { createMysqlAuthDatabase, type MysqlAuthConnection } from './mysql-auth-database.ts'
-import { authStatement, d1Queries, type AuthOperation } from './auth-database.ts'
+import { authStatement, sqliteQueries, type AuthOperation } from './auth-database.ts'
 
 function setup(steps: { sql: RegExp; values?: unknown[]; result?: unknown; error?: Error }[]) {
   const lifecycle: string[] = []
@@ -22,11 +22,11 @@ function setup(steps: { sql: RegExp; values?: unknown[]; result?: unknown; error
   return { database: createMysqlAuthDatabase({ async getConnection() { return connection } }), lifecycle }
 }
 describe('MySQL auth persistence transaction boundaries', () => {
-  it('preserves every original D1 operation without translating SQL', () => {
-    for (const name of Object.keys(d1Queries) as AuthOperation[]) {
+  it('supports every SQLite test operation without translating SQL', () => {
+    for (const name of Object.keys(sqliteQueries) as AuthOperation[]) {
       let query = ''
       authStatement({ prepare(sql) { query = sql; return {} as never } }, name)
-      assert.equal(query, d1Queries[name])
+      assert.equal(query, sqliteQueries[name])
     }
   })
   it('serializes rate-limit increments under a row lock and preserves active window', async () => {

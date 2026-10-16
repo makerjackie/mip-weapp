@@ -1,5 +1,7 @@
 # MIW-45..50 批次验收 Checklist（2026-10-07）
 
+> 历史验收快照：下文 Pages/Wrangler 的待办已退役，不再执行登录或部署命令。当前后台发布统一按 [mip-admin-release](../../.agents/skills/mip-admin-release/SKILL.md)；本记录的历史检查结果保持原样。
+
 本批次覆盖 5 个 review 状态任务合并、部署与端到端验收：MIW-45（automator native input 视口测量修复）、MIW-46（admin 静态托管回读兼容 cloudbase-mcp 2.32.3）、MIW-48（人才档案合作卡编辑样式对齐设计稿）、MIW-49（我的-超级案例时间线修复）、MIW-50（我的机会编辑/返回流与保存校验修复）。
 部署目标为 `.env.local` 指定的 CloudBase 环境（staging：`cloud1-d2gm0vloa9e1b4f31`）。
 

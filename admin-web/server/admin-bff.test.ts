@@ -4,7 +4,7 @@ import {
   canonicalJson,
   createAdminBff,
   type AdminBffEnv,
-  type D1DatabaseBinding,
+  type SqliteDatabaseBinding,
 } from './admin-bff.ts'
 import { REVIEWED_ADMIN_MUTATIONS, WEB_ADMIN_QUERY_ACTIONS } from './admin-mutation-contract.ts'
 import {
@@ -13,7 +13,7 @@ import {
 } from './admin-media-upload.ts'
 
 const NOW = Date.UTC(2030, 0, 1)
-const ORIGIN = 'https://mipmini.01mvp.com'
+const ORIGIN = 'https://admin.example.test'
 const SESSION_SECRET = 'session-encryption-secret-that-is-long-enough-for-tests'
 const LOGIN_SECRET = 'login-confirm-secret-that-is-long-enough-for-tests'
 const QR_SECRET = 'login-qr-secret-that-is-long-enough-for-tests'
@@ -157,7 +157,7 @@ interface IpLimitRow {
   hit_count: number
 }
 
-class MemoryD1 implements D1DatabaseBinding {
+class MemoryAuthDatabase implements SqliteDatabaseBinding {
   readonly sessions = new Map<string, Record<string, unknown>>()
   readonly rows = new Map<string, Row>()
   readonly limits = new Map<string, LimitRow>()
@@ -286,7 +286,7 @@ function NumberOrString(value: unknown) {
   return typeof value === 'number' ? value : String(value)
 }
 
-const env = (database = new MemoryD1()): AdminBffEnv => ({
+const env = (database = new MemoryAuthDatabase()): AdminBffEnv => ({
   MIP_ADMIN_AUTH_DB: database,
   MIP_ADMIN_UPSTREAM_URL: 'https://cloud.example.test/mip-admin-api',
   MIP_ADMIN_UPSTREAM_HMAC_SECRET: 'upstream-hmac-secret-that-is-long-enough-for-tests',
@@ -370,7 +370,7 @@ async function tokenLoginConfirmationBody(
 
 const noLoginQrCode = async () => ''
 
-async function confirmedLogin(fetchMock: FetchMock, database = new MemoryD1(), overrides: Partial<AdminBffEnv> = {}) {
+async function confirmedLogin(fetchMock: FetchMock, database = new MemoryAuthDatabase(), overrides: Partial<AdminBffEnv> = {}) {
   const bff = createAdminBff({ ...env(database), ...overrides }, {
     fetch: fetchMock,
     generateLoginQrCode: noLoginQrCode,
@@ -503,7 +503,7 @@ describe('Admin Web BFF', () => {
     const fetchMock = fetchQueue(new Response(JSON.stringify({ ok: true, data: { enabled: true } }), {
       headers: { 'content-type': 'application/json' },
     }))
-    const { bff, exchange, challengeCookie, sessionCookie } = await confirmedLogin(fetchMock, new MemoryD1(), { MIP_WEB_SINGLE_COOKIE_RESPONSE: 'true' })
+    const { bff, exchange, challengeCookie, sessionCookie } = await confirmedLogin(fetchMock, new MemoryAuthDatabase(), { MIP_WEB_SINGLE_COOKIE_RESPONSE: 'true' })
     assert.equal(exchange.headers.getSetCookie().length, 1)
     assert.ok(exchange.headers.getSetCookie()[0].startsWith('mip_admin_session='))
     const request = () => new Request(`${ORIGIN}/api/admin`, {
@@ -584,7 +584,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('returns an ephemeral mini-program code without exposing its challenge token', async () => {
-    const database = new MemoryD1()
+    const database = new MemoryAuthDatabase()
     const imageBase64 = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString('base64')
     const fetchMock = fetchQueue(new Response(JSON.stringify({
       ok: true,
@@ -638,7 +638,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('confirms the same one-time challenge by its mini-program scene token', async () => {
-    const database = new MemoryD1()
+    const database = new MemoryAuthDatabase()
     const bff = createAdminBff(env(database), {
       generateLoginQrCode: noLoginQrCode,
       now: () => NOW,
@@ -716,7 +716,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('maps a challenge-status database outage to an auth-unavailable 503', async () => {
-    const base = new MemoryD1()
+    const base = new MemoryAuthDatabase()
     const database = {
       prepare: (query: string) => {
         if (query.includes('FROM mip_admin_web_login_challenges') && query.includes('SELECT')) {
@@ -724,7 +724,7 @@ describe('Admin Web BFF', () => {
         }
         return base.prepare(query)
       },
-    } as unknown as MemoryD1
+    } as unknown as MemoryAuthDatabase
     const bff = createAdminBff(env(database), {
       fetch: fetchQueue(), generateLoginQrCode: noLoginQrCode, now: () => NOW,
     })
@@ -760,7 +760,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('atomically locks each trusted AppID and principal after five failed codes for five minutes', async () => {
-    const database = new MemoryD1()
+    const database = new MemoryAuthDatabase()
     let now = NOW
     const bff = createAdminBff(env(database), { generateLoginQrCode: noLoginQrCode, now: () => now })
     const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
@@ -808,7 +808,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('caps login-challenge creation at 30 codes per client IP every 10 minutes', async () => {
-    const database = new MemoryD1()
+    const database = new MemoryAuthDatabase()
     let now = NOW
     const bff = createAdminBff(env(database), { generateLoginQrCode: noLoginQrCode, now: () => now })
     const request = (ip: string) => bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
@@ -838,7 +838,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('keeps issuing login codes when the IP limit table is unavailable', async () => {
-    const database = new MemoryD1()
+    const database = new MemoryAuthDatabase()
     const original = database.prepare.bind(database)
     database.prepare = (query: string) => {
       if (query.includes('mip_admin_web_login_ip_limits')) throw new Error('IP_LIMITS_MISSING')
@@ -854,7 +854,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('clears expired challenges before issuing a new six-digit code', async () => {
-    const database = new MemoryD1()
+    const database = new MemoryAuthDatabase()
     let now = NOW
     const bff = createAdminBff(env(database), { generateLoginQrCode: noLoginQrCode, now: () => now })
     const request = () => bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
@@ -1063,7 +1063,7 @@ describe('Admin Web BFF', () => {
 
   it('rejects mutation requests without a valid idempotency key and never retries upstream', async () => {
     const fetchMock = fetchQueue()
-    const database = new MemoryD1()
+    const database = new MemoryAuthDatabase()
     const { bff, sessionCookie } = await confirmedLogin(fetchMock, database)
     const request = (action: string, idempotencyKey?: unknown) => new Request(`${ORIGIN}/api/admin`, {
       method: 'POST',
@@ -1201,7 +1201,7 @@ describe('Admin Web BFF', () => {
 
 
 describe('migration challenge namespaces', () => {
-  it('keeps Cloudflare and CloudBase six-digit codes and QR tokens disjoint', async () => {
+  it('keeps the legacy backend and CloudBase six-digit codes and QR tokens disjoint', async () => {
     for (const namespace of ['', 'cloudbase']) {
       let token = ''
       const bff = createAdminBff({...env(), MIP_WEB_LOGIN_NAMESPACE:namespace}, {now:()=>NOW, generateLoginQrCode:async value=>{ token=value; return 'data:image/png;base64,eA==' }})
@@ -1217,19 +1217,19 @@ describe('migration challenge namespaces', () => {
 
 describe('additional admin origins', () => {
   it('accepts only exact configured origins and preserves the existing origin', async () => {
-    const custom = 'https://mipadmin.01mvp.com'
-    const bff = createAdminBff({ ...env(new MemoryD1()), MIP_WEB_ADDITIONAL_ORIGINS: custom }, { generateLoginQrCode: noLoginQrCode, now: () => NOW })
+    const custom = 'https://admin-alias.example.test'
+    const bff = createAdminBff({ ...env(new MemoryAuthDatabase()), MIP_WEB_ADDITIONAL_ORIGINS: custom }, { generateLoginQrCode: noLoginQrCode, now: () => NOW })
     for (const origin of [ORIGIN, custom]) {
       const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, { method: 'POST', headers: { origin } }))
       assert.equal(response.status, 201)
     }
-    for (const origin of ['https://attacker.example', `${custom}.attacker.example`, 'http://mipadmin.01mvp.com', 'null']) {
+    for (const origin of ['https://attacker.example', `${custom}.attacker.example`, 'http://admin-alias.example.test', 'null']) {
       const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, { method: 'POST', headers: { origin } }))
       assert.equal(response.status, 403)
     }
   })
   it('fails closed for malformed additional origins', async () => {
-    const bff = createAdminBff({ ...env(new MemoryD1()), MIP_WEB_ADDITIONAL_ORIGINS: 'https://mipadmin.01mvp.com/path' })
+    const bff = createAdminBff({ ...env(new MemoryAuthDatabase()), MIP_WEB_ADDITIONAL_ORIGINS: 'https://admin-alias.example.test/path' })
     const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, { method: 'POST', headers: { origin: ORIGIN } }))
     assert.equal(response.status, 403)
   })

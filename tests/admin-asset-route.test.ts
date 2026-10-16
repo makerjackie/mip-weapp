@@ -14,3 +14,12 @@ it('refuses routes owned by another app, including more specific paths', () => {
   }
   assert.throws(() => adminAssetRoute([], 'admin.example', 'mip-admin-web-api'), /root ownership/)
 })
+it('accepts a target-specific isolated static prefix for the test console', () => {
+  const testRoot = { Domain: 'test.admin.example', Path: '/', UpstreamResourceType: 'STATIC_STORE', UpstreamResourceName: 'staticstore', PathRewrite: { StaticStorePrefix: '/mip-admin-console-test' } }
+  assert.deepEqual(
+    adminAssetRoute([testRoot], 'test.admin.example', 'mip-t-admin-web-api', '/mip-admin-console-test'),
+    { action: 'createRoute', targetName: 'mip-t-admin-web-api', path: '/assets', domain: 'test.admin.example', upstreamResourceType: 'SCF', auth: false, enablePathTransmission: true },
+  )
+  // The production prefix must not satisfy a test-prefixed deployment.
+  assert.throws(() => adminAssetRoute([testRoot], 'test.admin.example', 'mip-t-admin-web-api'), /root ownership/)
+})

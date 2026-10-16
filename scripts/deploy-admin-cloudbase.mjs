@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto'
-/** Parallel CloudBase deployment. Does not change Cloudflare or production DNS. */
+/** Parallel CloudBase deployment. Does not change other hosting or production DNS. */
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { adminAssetRoute } from './lib/admin-asset-route.mjs'
+import { AUTH_SCHEMA, authRuntimeUser } from './lib/admin-auth-setup.mjs'
 import { environmentVariables, functionDetail } from './lib/ai-draft-provider-cloud.mjs'
 import { assertFunctionSecurityRulesConverged, assertNoTimerTriggers, parseFunctionSecurityRules, updateMipFunctionInvocationRule } from './lib/cloud-function-safety.mjs'
 import { parseMcpOutput, runMcporter } from './lib/cloudbase-mcp-runner.mjs'
@@ -14,7 +15,18 @@ import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
 resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
-const name = 'mip-admin-web-api'
+// Target selection keeps production defaults byte-for-byte identical; the test
+// backend overrides these via its envs/test config. No guard is relaxed by naming.
+const name = String(env.MIP_ADMIN_WEB_FUNCTION_NAME || 'mip-admin-web-api').trim()
+const upstreamFunctionName = String(env.MIP_ADMIN_UPSTREAM_FUNCTION_NAME || 'mip-admin-api').trim()
+const authSchema = String(env.MIP_ADMIN_AUTH_SCHEMA || AUTH_SCHEMA).trim()
+const consolePrefix = String(env.MIP_ADMIN_CONSOLE_PREFIX || 'mip-admin-console').trim()
+if (!/^[a-z][a-z0-9-]{0,59}$/.test(name)
+  || !/^[a-z][a-z0-9-]{0,59}$/.test(upstreamFunctionName)
+  || !/^\w{1,64}$/.test(authSchema)
+  || !/^[a-z0-9-]{1,64}$/.test(consolePrefix)) {
+  throw new Error('Invalid MIP admin deploy target configuration')
+}
 if (!env.CLOUDBASE_ENV_ID || !process.argv.includes(`--confirm-env=${env.CLOUDBASE_ENV_ID}`) || !process.argv.includes(`--confirm-function=${name}`)) {
   throw new Error('Exact deployment confirmations required')
 }
@@ -33,14 +45,17 @@ function get(functionName) {
   }
   return normalizeFunctionDetail(response)
 }
-const admin = get('mip-admin-api')
+const admin = get(upstreamFunctionName)
 const upstream = environmentVariables(admin)
 const routes = callCloudbase(root, 'queryGateway', { action: 'listRoutes' }).data.routes
-const api = routes.find(r => r.UpstreamResourceName === 'mip-admin-api' && r.DomainType === 'HTTPSERVICE' && r.IsDefault)
+const api = routes.find(r => r.UpstreamResourceName === upstreamFunctionName && r.DomainType === 'HTTPSERVICE' && r.IsDefault)
 if (!api) {
-  throw new Error('Existing default admin upstream route required')
+  throw new Error(`Existing default HTTP route to the admin upstream (${upstreamFunctionName}) is required`)
 }
 const upstreamOrigin = `https://${api.Domain}`
+// Browser-facing origin: the default gateway origin in production, or an explicit
+// custom domain for this deployment (e.g. the test console). The BFF still reaches
+// its upstream over the default gateway origin discovered above.
 const origin = env.MIP_ADMIN_WEB_CLOUDBASE_ORIGIN || upstreamOrigin
 const targetUrl = new URL(origin)
 if (targetUrl.origin !== origin || targetUrl.protocol !== 'https:') {
@@ -48,16 +63,13 @@ if (targetUrl.origin !== origin || targetUrl.protocol !== 'https:') {
 }
 const targetDomain = targetUrl.hostname
 const routePath = '/api'
-if (origin !== upstreamOrigin) {
-  throw new Error('Use the existing default HTTP gateway origin for this parallel deployment')
-}
-const staticPrefix = '/mip-admin-console'
+const staticPrefix = `/${consolePrefix}`
 const rootRoute = routes.find(r => r.Domain === targetDomain && r.Path === '/')
 if (rootRoute && rootRoute.UpstreamResourceName !== name && !(rootRoute.UpstreamResourceType === 'STATIC_STORE' && rootRoute.PathRewrite?.StaticStorePrefix === staticPrefix)) {
   throw new Error('Gateway root belongs to another application')
 }
 if (rootRoute) {
-  adminAssetRoute(routes, targetDomain, name)
+  adminAssetRoute(routes, targetDomain, name, staticPrefix)
 }
 const region = env.MIP_SCF_REGION || env.CLOUDBASE_REGION || targetEnvironment.Region || targetEnvironment.region || api.Domain.match(/\.([a-z]{2,12}-[a-z0-9-]+)\.app\.tcloudbase\.com$/)?.[1]
 if (!region || !/^[a-z]+-[a-z0-9-]+$/.test(region)) {
@@ -67,8 +79,8 @@ const occupied = routes.find(r => r.Domain === targetDomain && r.Path === routeP
 if (occupied) {
   throw new Error('Default gateway root is occupied; refuse to replace another service')
 }
-const user = `mipauth_${createHash('sha256').update(env.CLOUDBASE_ENV_ID).digest('hex').slice(0, 12)}`
-if (env.MIP_ADMIN_AUTH_SCHEMA_OWNER !== `${env.CLOUDBASE_ENV_ID}:mip_admin_auth:${user}`) {
+const user = authRuntimeUser(env.CLOUDBASE_ENV_ID, authSchema)
+if (env.MIP_ADMIN_AUTH_SCHEMA_OWNER !== `${env.CLOUDBASE_ENV_ID}:${authSchema}:${user}`) {
   throw new Error('Auth schema ownership missing')
 }
 if (!env.MIP_ADMIN_AUTH_DB_PASSWORD || !env.MIP_ADMIN_AUTH_SESSION_SECRET || env.MIP_ADMIN_AUTH_SESSION_SECRET.length < 32) {
@@ -77,7 +89,7 @@ if (!env.MIP_ADMIN_AUTH_DB_PASSWORD || !env.MIP_ADMIN_AUTH_SESSION_SECRET || env
 const uri = new URL(upstream.MIP_DB_CONNECTION_URI)
 uri.username = user
 uri.password = env.MIP_ADMIN_AUTH_DB_PASSWORD
-uri.pathname = '/mip_admin_auth'
+uri.pathname = `/${authSchema}`
 const variables = {
   MIP_ADMIN_AUTH_MYSQL_URI: uri.toString(),
   MIP_WEB_SESSION_SECRET: env.MIP_ADMIN_AUTH_SESSION_SECRET,
@@ -160,7 +172,7 @@ if (latestRoot && latestRoot.UpstreamResourceName !== name && !(latestRoot.Upstr
 management('callCloudApi', { service: 'tcb', action: latestRoot ? 'ModifyHTTPServiceRoute' : 'CreateHTTPServiceRoute', params: { EnvId: env.CLOUDBASE_ENV_ID, Domain: { Domain: targetDomain, Routes: [{ Path: '/', UpstreamResourceType: 'STATIC_STORE', UpstreamResourceName: 'staticstore', PathRewrite: { StaticStorePrefix: staticPrefix }, EnablePathTransmission: false, EnableAuth: false, Enable: true }] } } })
 // This app's bundled static handler supplies MIME-aware 404s. Shared static
 // hosting SPA fallback settings remain untouched.
-management('manageGateway', adminAssetRoute(callCloudbase(root, 'queryGateway', { action: 'listRoutes' }).data.routes, targetDomain, name))
+management('manageGateway', adminAssetRoute(callCloudbase(root, 'queryGateway', { action: 'listRoutes' }).data.routes, targetDomain, name, staticPrefix))
 const final = callCloudbase(root, 'queryGateway', { action: 'listRoutes' }).data.routes
 if (!final.some(r => r.Domain === targetDomain && r.Path === '/assets' && r.UpstreamResourceName === name && r.UpstreamResourceType === 'SCF' && r.Enable && r.EnablePathTransmission && !r.EnableAuth)) {
   throw new Error('Asset route readback failed')
@@ -177,7 +189,7 @@ if (!final.some(r => r.Domain === targetDomain && r.Path === '/' && r.UpstreamRe
   throw new Error('Static prefix route readback failed')
 }
 fs.writeFileSync(path.join(staging, 'target.private.json'), JSON.stringify({ origin, functionName: name }), { mode: 0o600 })
-console.log(JSON.stringify({ functionName: name, active: true, clientInvocation: false, timers: 0, cloudflareUnchanged: true, privateTarget: path.relative(root, path.join(staging, 'target.private.json')) }))
+console.log(JSON.stringify({ functionName: name, active: true, clientInvocation: false, timers: 0, legacyHostingUnchanged: true, privateTarget: path.relative(root, path.join(staging, 'target.private.json')) }))
 
 async function waitActive(matches = () => true) {
   for (let attempt = 0; attempt < 45; attempt++) {

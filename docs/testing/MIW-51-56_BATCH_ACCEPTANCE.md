@@ -1,5 +1,7 @@
 # MIW-51..56 批次验收 Checklist（2026-10-08）
 
+> 历史验收快照：下文 Pages/Wrangler 的待办已退役，不再执行登录或部署命令。当前后台发布统一按 [mip-admin-release](../../.agents/skills/mip-admin-release/SKILL.md)；本记录的历史检查结果保持原样。
+
 本批次覆盖 6 个 review 状态任务合并、部署与端到端验收：MIW-51（我的页玩家等级 Lv.数字横幅与间距）、MIW-52（竖版用户卡四处列表统一 + 心动值列表按人聚合）、MIW-53（活动详情吸底栏两态/主办方介绍后台可配/下线活动变更模块）、MIW-54（合作卡/超级案例/机会删除弹窗带对象标识 + 下线超级案例孤儿列表页）、MIW-55（机会卡片三列表面对齐 Figma 状态）、MIW-56（AI 语音草稿误报修复 + mip-dialog 确认键文案修复）。
 部署目标为 `.env.local` 指定的 CloudBase 环境（staging：`cloud1-d2gm0vloa9e1b4f31`）。
 

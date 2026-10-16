@@ -1,6 +1,6 @@
 ---
 name: mip-admin-release
-description: 更新、部署本仓库的 CloudBase Web 管理后台，绑定自定义域名、阿里云 DNS 与腾讯云 SSL 证书，并验证实际入口对应的运行产物。用于发布 admin-web、接入测试后台域名、核对线上版本或排查部署后白屏；不自动上传微信版本或下线 Cloudflare。
+description: 拉取、更新并部署本仓库的 CloudBase Web 管理后台，验证线上版本，维护阿里云 DNS、腾讯云 SSL 与证书自动续期。适用于 admin.mip.cool 和 test.admin.mip.cool；微信小程序发布使用 mip-release。
 ---
 
 # MIP 管理后台发布
@@ -11,16 +11,17 @@ description: 更新、部署本仓库的 CloudBase Web 管理后台，绑定自�
 
 先读根 `AGENTS.md`、`admin-web/AGENTS.md`、[文档入口](../../../docs/README.md)、[CloudBase 运行说明](../../../admin-web/cloudbase/README.md)及[当前状态](../../../docs/mip/PROJECT_STATUS.md)。云资源边界见 [CLOUDBASE.md](../../../docs/CLOUDBASE.md)。
 
-- `admin-web/dist/` → 独立静态前缀 `mip-admin-console/` → 网关 `/`。
-- `.tmp/admin-cloudbase-function/` → `mip-admin-web-api` → 同源 `/api` **及 `/assets`**。
-- BFF → HTTPS `mip-admin-api`；需要发布的其他业务函数由本次 diff 和调用链决定。
-- 原域名可能仍经 Cloudflare 跳转；“CloudBase 入口工作”不等于“Cloudflare 已下线”。
+- `admin-web/dist/` → 目标后台的隔离静态前缀 → 网关 `/`。
+- `.tmp/admin-cloudbase-function/` → 目标 BFF → 同源 `/api` **及 `/assets`**。
+- BFF → HTTPS 目标 admin-api；需要发布的其他业务函数由本次 diff 和调用链决定。
+
+当前发布平台只有 **CloudBase**。先显式选择 `MIP_ENV_DIR=envs/prod` 或 `MIP_ENV_DIR=envs/test`（也可使用已核实的独立 checkout 配置目录），再核对[目标资源表](references/custom-domain.md#dns-归属与目标选择)。`MIP_ADMIN_WEB_CLOUDBASE_ORIGIN`、`MIP_ADMIN_WEB_FUNCTION_NAME`、`MIP_ADMIN_UPSTREAM_FUNCTION_NAME`、`MIP_ADMIN_AUTH_SCHEMA` 与 `MIP_ADMIN_CONSOLE_PREFIX` 必须属于同一目标；不凭当前终端默认配置决定生产或测试。
 
 需要绑定独立后台域名时，按[自定义域名流程](references/custom-domain.md)完成证书、网关、DNS 与登录来源的闭环。`mip.cool` 域名与 DNS 在阿里云；证书和 HTTP 网关在腾讯云。先区分正式后台与测试后台的函数、静态前缀和认证库；同一个 EnvID 不能证明它们是同一套后台。
 
 需要启用或维护 HTTPS 自动续期时，按[证书自动续期流程](references/certificate-renewal.md)复用同一套源码、按正式/测试目标配置各自的云端任务与专用权限，并取得 timer、CA 签发及真实 TLS 的运行证据。日常发布不覆盖该任务。
 
-需要排查密码或小程序登录码时，按[登录链路验证](references/login-verification.md)分别核对认证存储、回调分流及真实客户端确认；旧站密码和新站密码不能默认视为已同步。
+需要排查密码或小程序登录码时，按[登录链路验证](references/login-verification.md)核对目标认证存储、两条回调及真实客户端确认；正式与测试后台的密码、会话与管理授权独立。
 
 目标环境、阶段、完整 HTTPS origin、runtime 用户及测试账号从仓库本机配置和目标环境回读确定，不硬编码历史环境 ID、域名、账号、提交或资产数量。用户提供的测试域名缺字时，核对配置中的真实 origin，不能猜测或创建新网关。
 
@@ -50,7 +51,7 @@ description: 更新、部署本仓库的 CloudBase Web 管理后台，绑定自�
 已有网站的滚动发布：
 
 1. 通过完整门禁生成真实模式 `admin-web/dist/`；执行 `node admin-web/scripts/build-cloudbase.mjs`。
-2. 将已校验的上一版 BFF `public/assets` 中新包缺少的不可变哈希资产保留到 `.tmp/admin-cloudbase-function/public/assets/`。同路径字节不同立即停止排查；不覆盖新 `index.html`、服务端代码或配置，不带 source map/私钥/Cloudflare 元数据。优先依据上一版实际入口及资产清单，避免无限累加过期包。
+2. 将已校验的上一版 BFF `public/assets` 中新包缺少的不可变哈希资产保留到 `.tmp/admin-cloudbase-function/public/assets/`。同路径字节不同立即停止排查；不覆盖新 `index.html`、服务端代码或配置，不带 source map、私钥或部署元数据。优先依据上一版实际入口及资产清单，避免无限累加过期包。
 3. 业务源码有变化时，在切换依赖它的前端前部署明确的兼容业务函数：
 
    ```bash
@@ -61,8 +62,8 @@ description: 更新、部署本仓库的 CloudBase Web 管理后台，绑定自�
 4. 先发布兼容 BFF，确认 Active、配置与代码，再上传新静态入口：
 
    ```bash
-   node scripts/deploy-admin-cloudbase.mjs --confirm-env=<目标环境> --confirm-function=mip-admin-web-api
-   node scripts/deploy-admin-cloudbase-static.mjs --confirm-env=<目标环境> --confirm-prefix=mip-admin-console/
+   MIP_ENV_DIR=<已核实的目标配置目录> node scripts/deploy-admin-cloudbase.mjs --confirm-env=<目标环境> --confirm-function=<目标BFF>
+   MIP_ENV_DIR=<相同目标配置目录> node scripts/deploy-admin-cloudbase-static.mjs --confirm-env=<目标环境> --confirm-prefix=<目标静态前缀>/
    ```
 
    production 必须依现有脚本追加 `--confirm-production`。静态脚本只操作隔离前缀，不删除历史文件或修改共享托管根配置。初次部署另按运行说明准备认证 schema 与路由；日常更新不重复建库/迁移账号。
@@ -95,12 +96,12 @@ node --experimental-strip-types scripts/verify-admin-cloudbase.mjs --origin=<相
 
 在实际部署 URL 重新加载页面并真实登录；核对 DOM 中加载的入口 JS 与清单一致，确认正文是真实业务数据。检查受影响列表/筛选、控制台错误，按 admin-web 规则验证桌面及手机视口（1280×720、1440×900、390×844，无页面横向溢出），保存本机截图并恢复临时视口。
 
-CloudBase 自身测试域名提示与浏览器证书安全警告不同；后者按工具规则交给用户处理。微信扫码/确认码登录、支付等必须分别记录真机边界。回读登录分流配置只证明配置存在，不证明微信确认成功；普通发布不重复改 challenge 命名空间/QR 环境或退役旧平台。
+CloudBase 自身测试域名提示与浏览器证书安全警告不同；后者按工具规则交给用户处理。微信扫码/确认码登录、支付等必须分别记录真机边界。回读登录分流配置只证明配置存在，不证明微信确认成功；普通发布不重复改 challenge 命名空间或 QR 环境。
 
 ## 交付
 
 动态事实仅更新 `docs/mip/PROJECT_STATUS.md` 和对应 `docs/mip/evidence/`；skill/运行手册只记录可复用流程。报告包括发布提交、平台包 SHA/文件匹配、当前入口、真实 HTTPS/浏览器结果及阻塞项。入库前去除环境 ID、身份、凭证、Cookie 和个人字段；日志/配置/带私人数据截图留本机。
 
-用中文说明实际访问是否是本次版本，并给出正确链接；Cloudflare 直连、别名跳转和旧站保留要分别说明。文档或 skill 提交不会改变线上运行代码，也不自动触发再次部署。
+用中文说明实际访问是否是本次版本，并给出对应的正式或测试链接。文档或 skill 提交不会改变线上运行代码，也不自动触发再次部署。
 
 本流程的原始运行证据：[2026-10-09 发布记录](../../../docs/mip/evidence/admin-release-20261009/README.md)。其中原生健康探针为 BLOCKED，不是“所有检查都成功”的样板。
