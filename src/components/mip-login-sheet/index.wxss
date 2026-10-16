@@ -60,6 +60,31 @@
   white-space: pre-line;
 }
 
+/* MIW-121 协议勾选行：22rpx 弱化文案 + 品牌色链接，压缩副标题与主按钮之间的间距。 */
+.mip-login-sheet__consent {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 24rpx;
+}
+
+.mip-login-sheet__consent-row {
+  display: flex;
+  gap: 8rpx;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.mip-login-sheet__consent-text {
+  font-size: 22rpx;
+  line-height: 40rpx;
+  color: var(--color-muted, #b3b3b3);
+  text-align: left;
+}
+
+.mip-login-sheet__consent-link {
+  color: var(--color-brand, #fcdf03);
+}
+
 .mip-login-sheet__btn {
   display: flex;
   align-items: center;

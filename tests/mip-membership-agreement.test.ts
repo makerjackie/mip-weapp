@@ -21,4 +21,12 @@ describe('membership agreement response contract', () => {
     } })
     expect((await gateway.getMembershipAgreement('user')).body).toBe('后台正文')
   })
+  it('requests the privacy policy document for the privacy page (MIW-121)', async () => {
+    const gateway = createMipIdentityGateway({ invoke: async (request) => {
+      expect(request.action).toBe('getMembershipAgreement')
+      expect(request.input).toEqual({ document: 'privacy' })
+      return { ok: true, data: { title: '隐私政策', body: '后台隐私正文', isDemo: false, version: 5, updatedAt: '2026-10-16' } }
+    } })
+    expect(await gateway.getMembershipAgreement('privacy')).toEqual({ title: '隐私政策', body: '后台隐私正文', isDemo: false, version: 5, updatedAt: '2026-10-16' })
+  })
 })

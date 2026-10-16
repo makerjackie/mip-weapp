@@ -387,11 +387,14 @@ describe('event registration experience', () => {
 
     expect(detailConfig.usingComponents).toHaveProperty('mip-login-sheet')
     expect(detailView).toContain('visible="{{loginSheetOpen}}"')
-    expect(sheetView).toContain('open-type="getPhoneNumber"')
+    // MIW-121：open-type 随协议勾选门控置空，未勾选不拉起原生授权。
+    expect(sheetView).toContain('open-type="{{agreed ? \'getPhoneNumber\' : \'\'}}"')
+    expect(sheetView).toContain('我已阅读并同意')
     expect(sheetView).toContain('授权手机号')
     expect(sheetView).toContain('将获取你微信绑定的手机号，用于确认身份')
     expect(sheetView).toContain('微信手机号授权')
     expect(sheetView).toContain('暂不授权，返回原页面')
+    expect(sheetLogic).toContain('assertConsented()')
     expect(sheetLogic).toContain('triggerEvent(\'phone\', event.detail)')
     expect(sheetLogic).toContain('triggerEvent(\'dismiss\')')
 

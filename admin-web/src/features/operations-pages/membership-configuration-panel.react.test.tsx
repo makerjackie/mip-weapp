@@ -56,6 +56,17 @@ describe('membership configuration UI', () => {
     await waitFor(() => expect(state.request).toHaveBeenCalledWith('mip.admin.membershipAgreement.save', expect.objectContaining({ document: 'user', expectedVersion: 2 })))
   })
 
+  // MIW-121：隐私政策成为第四种可编辑文档，走同一份带版本表单。
+  it('loads and saves the separately editable privacy policy', async () => {
+    state.tab = 'privacy-policy'
+    state.request.mockResolvedValue({ title: '隐私政策（演示）', body: '隐私条款', isDemo: true, version: 4 })
+    mount()
+    await screen.findByDisplayValue('隐私政策（演示）')
+    expect(state.request).toHaveBeenCalledWith('mip.admin.membershipAgreement.get', { document: 'privacy' })
+    fireEvent.click(screen.getByRole('button', { name: '保存并生效' }))
+    await waitFor(() => expect(state.request).toHaveBeenCalledWith('mip.admin.membershipAgreement.save', expect.objectContaining({ document: 'privacy', expectedVersion: 4 })))
+  })
+
   it('does not carry membership text into the user agreement when switching tabs', async () => {
     state.request.mockImplementation(async (_action: string, input?: { document?: string }) => ({
       title: input?.document === 'user' ? '用户协议独立正文' : '会员协议独立正文',

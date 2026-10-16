@@ -474,3 +474,22 @@ describe('MIP profile input', () => {
     ])
   })
 })
+
+describe('MIP configurable agreement documents', () => {
+  it('serves the privacy document through the same whitelist and rejects unknown documents', async () => {
+    const reads = []
+    const repository = {
+      getMembershipAgreement: async (appId, document) => {
+        reads.push({ appId, document })
+        return { title: '隐私政策', body: '后台正文', isDemo: false, version: 2, updatedAt: '' }
+      },
+    }
+    const service = createIdentityService({ repository, agreements: defaultAgreements })
+    const agreement = await service.getMembershipAgreement(caller, { document: 'privacy' })
+    assert.equal(agreement.body, '后台正文')
+    assert.deepEqual(reads, [{ appId: caller.appId, document: 'privacy' }])
+    // 动作分发是非 async 箭头函数、同步 throw，rejects 断言需先过 promise 边界。
+    await assert.rejects(() => Promise.resolve().then(() => service.getMembershipAgreement(caller, { document: 'secret' })), /VALIDATION_FAILED/)
+    assert.equal(reads.length, 1)
+  })
+})

@@ -6,7 +6,7 @@ const { confirmProfileAiDraft } = require('./ai-confirmation')
 const { createAccountClosureRepository } = require('./account-closure')
 
 // 与 domain/service.js 的 AGREEMENT_DOCUMENTS 一一对应；后台按同一 setting_key 落库。
-const SETTING_KEYS = { membership: 'MEMBERSHIP_AGREEMENT', user: 'USER_AGREEMENT', 'experience-rules': 'EXPERIENCE_RULES_TEXT' }
+const SETTING_KEYS = { membership: 'MEMBERSHIP_AGREEMENT', user: 'USER_AGREEMENT', privacy: 'PRIVACY_POLICY', 'experience-rules': 'EXPERIENCE_RULES_TEXT' }
 
 function createIdentityRepository(database, options = {}) {
   const id = options.id || randomUUID
@@ -658,7 +658,7 @@ function createIdentityRepository(database, options = {}) {
     loadFacts,
     loadPublicProfile,
     async getMembershipAgreement(appId, document = 'membership') {
-      const fallbackTitles = { membership: '会员服务协议', user: '用户使用协议', 'experience-rules': '经验值规则说明' }
+      const fallbackTitles = { membership: '会员服务协议', user: '用户使用协议', privacy: '隐私政策', 'experience-rules': '经验值规则说明' }
       const settingKey = SETTING_KEYS[document] || 'MEMBERSHIP_AGREEMENT'
       const row = await database.one("SELECT value_json, version, updated_at FROM mip_app_settings WHERE app_id = ? AND setting_key = ?", [appId, settingKey])
       const value = row ? (typeof row.value_json === 'string' ? JSON.parse(row.value_json) : row.value_json) : {}

@@ -15,6 +15,14 @@
   <view wx:elif="{{restoreFirst}}" class="mip-login-sheet__sub">将使用你当前的微信账号恢复原有身份；未绑定手机号时会再向你授权</view>
   <view wx:else class="mip-login-sheet__sub">将获取你微信绑定的手机号，用于确认身份
 昵称与头像无需授权，在「编辑信息」中由你主动填写</view>
+  <!-- MIW-121 协议勾选：授权/登录前强制同意；链接 catch:tap 跳协议页，不关弹层、返回后勾选保留。 -->
+  <checkbox-group class="mip-login-sheet__consent" bindchange="onConsentChange">
+    <label class="mip-login-sheet__consent-row" aria-role="checkbox" aria-checked="{{agreed}}" aria-label="同意服务协议与隐私政策">
+      <checkbox value="agreed" checked="{{agreed}}" color="#FCDF03" />
+      <view class="mip-login-sheet__consent-text">我已阅读并同意<text class="mip-login-sheet__consent-link" catch:tap="openUserAgreement">《服务协议》</text>与<text class="mip-login-sheet__consent-link" catch:tap="openPrivacyPolicy">《隐私政策》</text></view>
+    </label>
+  </checkbox-group>
+  <!-- 未勾选时 open-type 置空退化为普通按钮：点击只走 onAuthTap 提示，不拉起原生授权。 -->
   <button
     wx:if="{{restoreFirst}}"
     id="mip-login-sheet-auth"
@@ -25,9 +33,10 @@
   <button
     wx:else
     id="mip-login-sheet-auth"
-    open-type="getPhoneNumber"
+    open-type="{{agreed ? 'getPhoneNumber' : ''}}"
     disabled="{{busy}}"
     class="mip-login-sheet__btn"
+    bind:tap="onAuthTap"
     bind:getphonenumber="onPhone"
   >{{busy ? '正在授权' : '微信手机号授权'}}</button>
   <view id="mip-login-sheet-dismiss" class="mip-login-sheet__ghost" aria-role="button" aria-disabled="{{busy}}" bind:tap="onDismiss">暂不授权，返回原页面</view>

@@ -65,6 +65,21 @@ describe('configurable membership agreement', () => {
     } }, {})
     assert.equal((await repo.getMembershipAgreement('app', 'user')).body, draft.body)
   })
+  it('stores the privacy policy as its own document and audits the dedicated resource (MIW-121)', async () => {
+    const calls = []
+    const privacyDraft = { title: '隐私政策', body: '一、信息处理范围\n二、信息使用', isDemo: false }
+    await service([grant], calls).saveMembershipAgreement({}, { document: 'privacy', expectedVersion: 2, draft: privacyDraft, idempotencyKey: 'retry-privacy' })
+    assert.equal(calls[0].document, 'privacy')
+    assert.equal(calls[0].audit.resourceId, 'PRIVACY_POLICY')
+    assert.deepEqual(calls[0].draft, privacyDraft)
+    const repo = createMembershipContentRepository({ one: async (_sql, params) => {
+      assert.deepEqual(params, ['app', 'PRIVACY_POLICY'])
+      return { value_json: privacyDraft, version: 4 }
+    } }, {})
+    const stored = await repo.getMembershipAgreement('app', 'privacy')
+    assert.equal(stored.body, privacyDraft.body)
+    assert.equal(stored.version, 4)
+  })
   it('stores the experience rules text as its own document and audits the dedicated resource', async () => {
     const calls = []
     const rulesDraft = { title: '经验值规则说明', body: '一、每日签到\n二、活动奖励', isDemo: true }
