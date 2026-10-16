@@ -123,7 +123,10 @@
     <tr><td>测试 <code>test.admin.mip.cool</code></td><td>本轮构建已部署，静态 15 文件字节 VERIFIED；登录 BLOCKED</td></tr>
     <tr><td>仓库</td><td>本地分叉已收敛；两条并行 AI 工作线（环境分离+证书续期、Cloudflare 清理）已合入；提交并推送 <code>origin/main</code></td></tr>
     <tr><td>未纳入本结论</td><td>原生 <code>Invoke</code> 健康探针 CAM 拒绝（历轮同噪音）；生产数据清洗（等 Douglas 确认）</td></tr>
-  </table>
+  </table>  <h2>11. 后续修复：上传封面偶发「素材服务暂不可用」</h2>
+  <p><b>原因</b>：管理员上传图片的链路是 浏览器 → 同源 BFF → <code>mip-admin-api</code> → 转发 <code>mip-media-api</code>（写 COS + 微信图片安全检查 + MySQL）。该链路任一环节的<b>瞬时抖动</b>（函数冷启动、COS/微信检查、MySQL 空闲唤醒）都会返回可重试的错误码（<code>SERVICE_UNAVAILABLE</code> / <code>MEDIA_DISPATCH_UNAVAILABLE</code> / <code>UPLOAD_FAILED</code> / <code>IMAGE_SAFETY_UNAVAILABLE</code>），且两端都把真实原因<b>吞掉</b>只留一句通用文案，所以表现为“有时候”失败、且无法定位。</p>
+  <p><b>修复</b>：在管理端上传的唯一入口自动<b>重试一次</b>（800ms 退避）——仅对可重试/瞬时错误，校验类错误（尺寸/格式/权限）不重试。重试会生成新的幂等键，最坏只留一个可被 <code>cleanupOrphans</code> 回收的孤儿素材。已加单测（瞬时失败→重试成功；非瞬时→不重试），并部署到两个环境。</p>
+
 </main>
 </body>
 </html>

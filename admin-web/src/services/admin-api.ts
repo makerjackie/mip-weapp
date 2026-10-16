@@ -11,6 +11,7 @@ import {
   type AdminMediaFile,
   type AdminMediaPurpose,
   type AdminMediaUploadResult,
+  type PreparedAdminMediaUpload,
 } from '../modules/admin-media-upload.ts'
 
 export interface AdminLoginChallenge {
@@ -44,6 +45,15 @@ const runtimeEnvironment = (import.meta as ImportMeta & {
 const AUTH_REQUEST_TIMEOUT_MS = 15_000
 const ADMIN_REQUEST_TIMEOUT_MS = 15_000
 const MEDIA_UPLOAD_TIMEOUT_MS = 70_000
+// 素材链路（admin-api → mip-media-api → COS/微信安全检查/MySQL）的偶发瞬时失败会以这些码返回，
+// 属于「重试即可大概率成功」；自动重试一次，用户不必手动重传。
+const TRANSIENT_MEDIA_CODES = new Set([
+  'SERVICE_UNAVAILABLE',
+  'MEDIA_DISPATCH_UNAVAILABLE',
+  'UPLOAD_FAILED',
+  'IMAGE_SAFETY_UNAVAILABLE',
+  'UPSTREAM_TIMEOUT',
+])
 
 export class AdminApiClient {
   readonly baseUrl: string
@@ -197,6 +207,25 @@ export class AdminApiClient {
   async uploadImage(file: AdminMediaFile, purpose: AdminMediaPurpose): Promise<AdminMediaUploadResult> {
     if (!this.configured) throw new AdminApiClientError('API_NOT_CONFIGURED', '尚未配置管理 API')
     const prepared = await prepareAdminMediaUpload(file, purpose)
+    return this.sendMediaUpload(prepared, 2)
+  }
+
+  private async sendMediaUpload(prepared: PreparedAdminMediaUpload, attemptsLeft: number): Promise<AdminMediaUploadResult> {
+    try {
+      return await this.sendMediaUploadOnce(prepared)
+    }
+    catch (error) {
+      // 仅对可重试/瞬时错误重试一次；重试会生成新的幂等键，万一首次其实已成功，最坏只留一个可被 cleanupOrphans 回收的孤儿素材。
+      if (attemptsLeft > 1 && error instanceof AdminApiClientError
+        && (error.retryable || TRANSIENT_MEDIA_CODES.has(error.code))) {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        return this.sendMediaUpload(prepared, attemptsLeft - 1)
+      }
+      throw error
+    }
+  }
+
+  private async sendMediaUploadOnce(prepared: PreparedAdminMediaUpload): Promise<AdminMediaUploadResult> {
     let response: Response
     try {
       response = await fetchWithTimeout('/api/media/image', {

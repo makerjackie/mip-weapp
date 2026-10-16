@@ -71,4 +71,31 @@ describe('admin media API client', () => {
       (error: unknown) => error instanceof AdminApiClientError && error.code === 'INVALID_RESPONSE',
     )
   })
+
+  it('retries once on a transient media failure, then succeeds', async () => {
+    let calls = 0
+    globalThis.fetch = async () => {
+      calls += 1
+      if (calls === 1) {
+        return Response.json(
+          { ok: false, error: { code: 'SERVICE_UNAVAILABLE', message: '素材服务暂时不可用', retryable: true } },
+          { status: 503 },
+        )
+      }
+      return Response.json({ ok: true, data: { assetId, imageUrl: 'cloud://env.mip/mip/live/app/banners/image.png' } })
+    }
+    const result = await new AdminApiClient('/api/admin').uploadImage(pngFile(), 'BANNER')
+    assert.equal(calls, 2)
+    assert.equal(result.assetId, assetId)
+  })
+
+  it('does not retry a non-transient media failure', async () => {
+    let calls = 0
+    globalThis.fetch = async () => {
+      calls += 1
+      return Response.json({ ok: false, error: { code: 'FORBIDDEN', message: '当前用途无权限', retryable: false } }, { status: 403 })
+    }
+    await assert.rejects(() => new AdminApiClient('/api/admin').uploadImage(pngFile(), 'BANNER'))
+    assert.equal(calls, 1)
+  })
 })
