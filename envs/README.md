@@ -7,7 +7,7 @@
 ```
 envs/
   prod/   生产目标（现有 CloudBase 环境 + 默认 mip-* 函数集 + admin.mip.cool）
-  test/   测试目标（同实例第二库 + mip-t-* 函数集 + admin-test.mip.cool）
+  test/   测试目标（同实例第二库 + mip-t-* 函数集 + test.admin.mip.cool）
 ```
 
 每个目标目录内放置两份被 Git 忽略的文件（模板见各自 `env.example`）：

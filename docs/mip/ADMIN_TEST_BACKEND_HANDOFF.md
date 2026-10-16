@@ -1,6 +1,6 @@
 # 测试环境管理后台部署交接（MIW-111）
 
-写作目的：把两套环境的现状与边界讲清楚，供接手同事部署测试环境管理后台（`admin-test.mip.cool`）前建立完整认知。本文不锁定具体操作手法——仓库已有经过多轮验证的发布 runbook（见 §7 索引）；接手人按 runbook 流程 + 本文 §5 的目标对象清单执行即可。
+写作目的：把两套环境的现状与边界讲清楚，供接手同事部署测试环境管理后台（`test.admin.mip.cool`）前建立完整认知。本文不锁定具体操作手法——仓库已有经过多轮验证的发布 runbook（见 §7 索引）；接手人按 runbook 流程 + 本文 §5 的目标对象清单执行即可。
 
 权威关系：环境方向以 [ENVIRONMENTS.md](ENVIRONMENTS.md) 为准，动态状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准。本文是 2026-10-16 的交接快照，不复制会变化的数量（文中数字均标注截至日期）。
 
@@ -53,7 +53,7 @@ Cloudflare 仅剩残留角色：临时别名 `mipadmin.01mvp.com` 的 302 跳转
 
 2026-10-16 拍板：测试后台走 **CloudBase 同构路线**（与生产同架构、不同命名与密钥），替代 2026-10-15 记录的「新 Cloudflare Pages 项目 + 新 D1」方案；`admin-web/wrangler.test.example.toml` 不再用于本路线。
 
-服务端侧的登录链路配置已就位：`envs/test` 的 `MIP_ADMIN_WEB_LOGIN_CONFIRM_URL` 已显式指向 `https://admin-test.mip.cool/api/internal/auth/challenge/confirm`（云函数部署脚本默认值只对生产正确，这里是显式覆盖）。
+服务端侧的登录链路配置已就位：`envs/test` 的 `MIP_ADMIN_WEB_LOGIN_CONFIRM_URL` 已显式指向 `https://test.admin.mip.cool/api/internal/auth/challenge/confirm`（云函数部署脚本默认值只对生产正确，这里是显式覆盖）。
 
 ## 5. 测试后台目标对象清单（部署范围）
 
@@ -61,14 +61,14 @@ Cloudflare 仅剩残留角色：临时别名 `mipadmin.01mvp.com` 的 302 跳转
 
 | 对象 | 生产现状 | 测试目标 |
 | --- | --- | --- |
-| 入口域名 | `admin.mip.cool`（DIRECT 绑网关） | `admin-test.mip.cool`（DIRECT 绑同一网关；DNS 与证书按 custom-domain 流程首次配置） |
+| 入口域名 | `admin.mip.cool`（DIRECT 绑网关） | `test.admin.mip.cool`（DIRECT 绑同一网关；DNS 与证书按 custom-domain 流程首次配置。多级子域名：`admin.mip.cool` 的证书不覆盖它，需为该域名单独签发） |
 | 网关路由 | 默认域与 admin.mip.cool：`/`→STATIC_STORE（`StaticStorePrefix=/mip-admin-console`），`/api`、`/assets`→`mip-admin-web-api` | **仅在 admin-test 域名上**配同构三条路由：`/`→测试静态前缀；`/api`、`/assets`→测试 BFF。不得改动默认网关域和 admin.mip.cool 上的任何生产路由 |
 | 静态前缀 | `mip-admin-console/` | `mip-admin-console-test/`（独立隔离前缀） |
 | BFF 函数 | `mip-admin-web-api` | `mip-t-admin-web-api`（进测试函数命名集） |
 | 认证 schema | `mip_admin_auth` + 专用账号 | `mip_test_admin_auth` + 独立派生账号 |
 | 业务上游 | `mip-admin-api` | `mip-t-admin-api`（已上线） |
 | 密钥 | 一套 | **全新一套**：会话密封、登录确认 HMAC、小程序码 HMAC、BFF↔admin-api HMAC（`MIP_ADMIN_WEB_BFF_HMAC_SECRET` 与 BFF 侧 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 同值异名）、认证库密码 |
-| Origin 白名单 | 生产域名 | `MIP_WEB_ALLOWED_ORIGIN=https://admin-test.mip.cool` |
+| Origin 白名单 | 生产域名 | `MIP_WEB_ALLOWED_ORIGIN=https://test.admin.mip.cool` |
 
 登录链路（部署完成后闭环）：测试小程序（烘焙 `mip-t-*`）请求 `mip-t-admin-api` → 测试 BFF 签发六位码 → 运营在 admin-test 输入确认 → 云函数按 `MIP_ADMIN_WEB_LOGIN_CONFIRM_URL` 回调测试域名完成交换。测试后台的 challenge、会话、密码全部落测试认证 schema，与生产完全隔离；测试后台的登录与授权不能作为生产授权。
 
@@ -84,6 +84,7 @@ Cloudflare 仅剩残留角色：临时别名 `mipadmin.01mvp.com` 的 302 跳转
 4. **生产保护红线**：静态上传只进测试前缀；网关改动只落 admin-test 域名；不触碰 `mip-admin-console/`、`mip-admin-web-api`、`mip_admin_auth`、admin.mip.cool 路由、Cloudflare 残留入口。
 5. **验收口径**：发布快照过 `pnpm verify:all`（前端 `VITE_MIP_ADMIN_DEMO_MODE=false`）；三层证据（函数/配置回读、真实 HTTPS、浏览器桌面+手机视口）按 runbook 留证；微信确认登录与扫码需真机单独记录；失败项如实记 BLOCKED，不以单项成功替代整链验收。
 6. **证书**：admin.mip.cool 用腾讯云免费证书（生产已有独立自动续期任务，日常发布不覆盖它）。测试域名的证书与续期按 custom-domain 与 renewal 流程处理；注意证书预检 PASS 不等于已签发。
+7. **域名草名变更**：2026-10-16 交接时域名由草名 `admin-test.mip.cool` 定为 `test.admin.mip.cool`。早前快照（2026-10-15 的状态记录、`admin-web/README.md` 历史章节、`admin-web/wrangler.test.example.toml` 注释）仍会出现旧草名，以本文 §5 为准。已上线的测试函数 env 若烘焙了旧 confirm URL，随测试后台部署一并按既有 config-update 守卫更新（以目标函数 env 回读为准，不凭文档假定）。
 
 ## 7. 权威文档索引
 
