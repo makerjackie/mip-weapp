@@ -1,5 +1,7 @@
 # MIP 当前状态
 
+2026-10-16（测试管理员开通与密码验收）：用户本人完成测试注册、手机号授权和主分会选择后，受控初始化开通测试 `PLATFORM_OWNER` 并记录审计；复用已登录开发者工具，核对真实微信身份与目标注册用户一致，通过现有工作台完成 BFF challenge 确认并按授权首次绑定指定密码。`test.admin.mip.cool` 的 Computer Use 密码登录、刷新保持会话、非空用户列表（1 行）、活动页访问和退出均通过；HTTPS 认证/只读检查 14/14 通过，含错误密码、Origin、cookie 和退出重放。没有部署源码、复制生产认证数据或向生产写入；开发者工具确认不记作手机扫码，0 活动的空态不代表活动创建验收。后续正常密码登录无需重复首次确认。详见[账号验收记录](evidence/admin-test-account-20261016/README.md)。
+
 2026-10-16（测试账号与数据隔离核查）：实际回读确认测试业务库 `mip_test`、后台认证库 `mip_test_admin_auth` 与生产分开；四个 runtime 账号仅获授各自库的表权限，无 schema/global 特权或继承角色，16 个测试核心函数均 Active 且连接测试库，函数依赖无生产引用，两条登录回调、静态前缀及 BFF 路由均按目标隔离。底层 CloudBase/MySQL 实例与微信 AppID 仍共享，生产 admin-api 与测试核心函数的 stage 均为 staging，不宣称物理隔离或生产发布验收。测试库初始为空，给定手机号尚未真实注册；仅补 1 个“测试分会”及 SYSTEM 审计，账号/密码尚未创建，等待真实测试小程序注册。详见[隔离与账号前置条件](evidence/admin-test-isolation-20261016/README.md)。
 
 2026-10-16（后台发布方法清理）：Web 更新统一使用仓库 [mip-admin-release](../../.agents/skills/mip-admin-release/SKILL.md)，正式/测试均为 CloudBase，域名与 DNS 在阿里云，证书与网关在腾讯云；小程序发布另走 mip-release。已合入测试部署参数化，删除旧 Pages/Wrangler 部署入口、依赖和一次性迁移脚本，纠正运行手册发布顺序与默认登录目标，保留本地 SQLite 测试和显式历史回调。历史报告的旧待办已标退役。本轮仅做仓库清理，未重新部署或下线任何云资源。检查与交付边界见[流程清理记录](evidence/admin-release-workflow-cleanup-20261016/README.md)。

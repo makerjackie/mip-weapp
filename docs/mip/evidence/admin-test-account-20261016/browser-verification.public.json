@@ -1,0 +1,22 @@
+{
+  "origin": "https://test.admin.mip.cool",
+  "observedAt": "2026-10-16T13:34:58.209Z",
+  "tool": "Computer Use / Chrome",
+  "passwordLogin": true,
+  "realDataMode": true,
+  "overviewUserCount": 1,
+  "overviewEventCount": 0,
+  "reloadSessionPreserved": true,
+  "usersPageNonemptyRows": 1,
+  "userPhoneMasked": true,
+  "selectedTestBranchVisible": true,
+  "eventsPageAccessible": true,
+  "eventsPageRecords": 0,
+  "newEventControlVisible": true,
+  "logoutRequiresLogin": true,
+  "businessWrites": false,
+  "limitations": [
+    "Events page access and empty state were checked; activity creation/editing and payments were not exercised.",
+    "WeChat confirmation used the authenticated DevTools test Mini Program and its existing workbench handler; it was not a phone scan."
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "origin": "https://test.admin.mip.cool",
+  "observedAt": "2026-10-16T13:33:10.360Z",
+  "checks": [
+    {
+      "id": "real-wechat-confirmation",
+      "status": "PASS",
+      "httpStatus": 200,
+      "at": "2026-10-16T13:33:07.849Z"
+    },
+    {
+      "id": "challenge-authenticated",
+      "status": "PASS",
+      "at": "2026-10-16T13:33:07.851Z"
+    },
+    {
+      "id": "wechat-admin-session",
+      "status": "PASS",
+      "httpStatus": 200,
+      "at": "2026-10-16T13:33:08.407Z"
+    },
+    {
+      "id": "recent-wechat-password-status",
+      "status": "PASS",
+      "httpStatus": 200,
+      "at": "2026-10-16T13:33:08.786Z"
+    },
+    {
+      "id": "initial-password-bound",
+      "status": "PASS",
+      "httpStatus": 200,
+      "at": "2026-10-16T13:33:10.039Z"
+    },
+    {
+      "id": "wechat-session-logout",
+      "status": "PASS",
+      "httpStatus": 200,
+      "at": "2026-10-16T13:33:10.360Z"
+    }
+  ],
+  "passed": true
+}

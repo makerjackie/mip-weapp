@@ -1,0 +1,19 @@
+{
+  "observedAt": "2026-10-16T13:34:00.136Z",
+  "testBusinessSchema": "mip_test",
+  "testAuthSchema": "mip_test_admin_auth",
+  "active": true,
+  "primaryBranchSelected": true,
+  "selectedBranchActive": true,
+  "roles": [
+    {
+      "role_key": "PLATFORM_OWNER",
+      "scope_type": "PLATFORM",
+      "status": "ACTIVE"
+    }
+  ],
+  "counts": {
+    "bootstrapAuditRecords": 1,
+    "targetPasswordCredentials": 1
+  }
+}
