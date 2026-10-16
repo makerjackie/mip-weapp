@@ -1,5 +1,5 @@
 import { prepareApp } from './bootstrap'
-import { runtimeConfig } from './config/runtime'
+import { isTestEnvironment, runtimeConfig } from './config/runtime'
 import { mipCheckInResumeStore } from './modules/mip-events/client'
 import { mipIdentityModule } from './modules/mip-identity/client'
 import { registerMipLocalUserCache } from './modules/mip-identity/local-session'
@@ -46,6 +46,10 @@ App({
       wx.setStorageSync(freeEventRuntimeAcceptanceStorageKey, { ...runtimeAcceptance })
     }
     prepareApp()
+    if (isTestEnvironment()) {
+      // 测试包明确提示当前环境，避免把测试数据当生产数据。
+      wx.showToast({ title: '当前为测试环境', icon: 'none', duration: 3000 })
+    }
     mipCheckInResumeStore.prune()
     launchRestore = mipGlobalAccessGuard.restore(options)
     void launchRestore.catch(() => undefined)

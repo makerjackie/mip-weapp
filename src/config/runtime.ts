@@ -54,3 +54,9 @@ export const runtimeConfig = {
     cloudbase: baseConfig.cloudbase.mode === 'disabled',
   },
 } as const
+
+// 测试环境标识：测试包在构建期烘焙 `mip-t-*` 函数名（见 envs/test），生产包为 `mip-*`。
+// 仅用于界面提示，不作为任何业务/权限判断依据（服务端才是最终事实）。
+export function isTestEnvironment(): boolean {
+  return runtimeConfig.cloudbase.eventsFunctionName.startsWith('mip-t-')
+}
