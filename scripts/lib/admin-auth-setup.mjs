@@ -10,12 +10,19 @@ export const AUTH_TABLES = [
   'mip_admin_web_password_limits',
   'mip_admin_web_credential_audit',
 ]
-export function expectedAuthGrants() {
+// The default schema keeps the proven production runtime identity (envId only).
+// A non-default schema (e.g. the test auth schema on the same instance) derives a
+// distinct least-privilege account so the two environments never share a user.
+export function authRuntimeUser(envId, schema = AUTH_SCHEMA) {
+  const salt = schema === AUTH_SCHEMA ? envId : `${envId}:${schema}`
+  return `mipauth_${createHash('sha256').update(salt).digest('hex').slice(0, 12)}`
+}
+export function expectedAuthGrants(schema = AUTH_SCHEMA) {
   return AUTH_TABLES.flatMap(table => (table.endsWith('_audit')
     ? ['SELECT', 'INSERT']
     : table.endsWith('_credentials')
       ? ['SELECT', 'INSERT', 'UPDATE']
-      : ['SELECT', 'INSERT', 'UPDATE', 'DELETE']).map(privilege => `${AUTH_SCHEMA}.${table}:${privilege}`)).sort()
+      : ['SELECT', 'INSERT', 'UPDATE', 'DELETE']).map(privilege => `${schema}.${table}:${privilege}`)).sort()
 }
 export function assertAuthOwnership({ exists, users, owner, expectedOwner, user, password }) {
   if (owner && owner !== expectedOwner) {
@@ -34,11 +41,11 @@ export function assertAuthOwnership({ exists, users, owner, expectedOwner, user,
     throw new Error('Existing auth runtime password is missing; refusing credential replacement')
   }
 }
-export function assertAuthGrants({ tables, schemas, globals, roles = [], exact = true }) {
+export function assertAuthGrants({ tables, schemas, globals, roles = [], exact = true, schema = AUTH_SCHEMA }) {
   if (roles.length || schemas.length || globals.some(row => row.PRIVILEGE_TYPE !== 'USAGE' || row.IS_GRANTABLE === 'YES')) {
     throw new Error('Auth runtime has global, schema, or role privileges')
   }
-  const expected = expectedAuthGrants()
+  const expected = expectedAuthGrants(schema)
   const actual = tables.map((row) => {
     if (row.IS_GRANTABLE === 'YES') {
       throw new Error('Auth runtime may grant privileges')

@@ -34,8 +34,6 @@ cloudfunctions/*/node_modules/
 # per-target local secrets under envs/ never enter Git; templates stay tracked
 envs/*/.env.local
 envs/*/.env.secrets.local
-# second Pages project config carries the real test D1 id
-admin-web/wrangler.test.toml
 project.private.config.json
 .devtools/
 
@@ -55,7 +53,6 @@ tmp/
 .grok/
 .codex/
 .zcode/
-.wrangler/
 .claude/
 .pipeline/
 .notma/

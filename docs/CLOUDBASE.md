@@ -128,4 +128,4 @@ CLOUDBASE_AUTH_MODE=local pnpm cloud:verify -- --confirm-env=<EnvID>
 
 ## Web 管理后台 CloudBase 运行入口
 
-管理后台可整体运行于 CloudBase：`admin-web/dist` 上传独立静态前缀，HTTP 网关 `/api` 路由到 `mip-admin-web-api`，后者调用已有 `mip-admin-api`。密码、会话、登录限流和认证审计使用独立 `mip_admin_auth` MySQL schema 与专用最小权限账号，不与业务表迁移混用。初始化、部署、验证和并行微信确认流程见 [运行说明](../admin-web/cloudbase/README.md)。迁移期保留 Cloudflare 适配器、旧数据和原域名，确认后才下线；两个认证库不实时同步，密码更新以实际使用入口为准。
+管理后台可整体运行于 CloudBase：`admin-web/dist` 上传独立静态前缀，HTTP 网关 `/api` 路由到 `mip-admin-web-api`，后者调用已有 `mip-admin-api`。密码、会话、登录限流和认证审计使用独立 `mip_admin_auth` MySQL schema 与专用最小权限账号，不与业务表迁移混用。初始化、部署、验证和并行微信确认流程见 [运行说明](../admin-web/cloudbase/README.md)。生产与测试使用独立的静态前缀、BFF 函数与认证 schema；两套认证库不实时同步，密码更新以实际使用入口为准。

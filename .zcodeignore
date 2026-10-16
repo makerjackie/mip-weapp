@@ -50,7 +50,6 @@ tmp/
 .grok/
 .codex/
 .zcode/
-.wrangler/
 .claude/
 .pipeline/
 .notma/
