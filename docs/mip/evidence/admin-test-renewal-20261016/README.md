@@ -27,6 +27,8 @@
 
 ## 源码门禁与同步范围
 
+交付分支 `codex/test-admin-renewal-20261016`；主 checkout 另有 `5ec31031` 的并行合并现场，因此不改其 index、不强行快进 main。本分支通过无文件差异的合并保留截至 `ff1a3d8e` 的主线提交历史；本报告对应本分支受验收快照，不覆盖另一任务的 Cloudflare 退役/部署参数化验收。
+
 集成工作区保留本地活动开发线与远端环境/支付开发线；没有 reset、强推或代提另一工作区的未提交改动。完整 `TZ=UTC pnpm verify:all` 通过：小程序 274 文件 / 1770 测试、服务端合同、Web Node 合同 294 测试、React 28 文件 / 182 测试、两端构建及 responsive contract。续期 native node 测试 14 项通过，skill 结构校验和文档链接检查通过。
 
 另修复两份 QA 脚本的既有 lint 问题，并保留 Playwright `innerText()` 的可见文本语义；未执行这两个有业务写入的 E2E 脚本。三处日期测试改为按机器本地时区计算展示期望，保留原 timestamp 及断言，没有靠指定时区掩盖失败。
