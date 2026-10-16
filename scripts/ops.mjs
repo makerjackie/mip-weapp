@@ -19,6 +19,7 @@
 
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { parseEnv } from './lib/example-cloudbase.mjs'
@@ -95,14 +96,20 @@ const childEnv = {
 }
 
 const schemaFlags = schemaName ? [`--confirm-schema=${schemaName}`] : []
+const opsBackupDir = path.join(os.homedir(), 'Backups', 'mip-weapp', `ops-${targetName}-${new Date().toISOString().replaceAll(':', '').replaceAll('.', '-')}`)
+const backupManifest = path.join(opsBackupDir, 'manifest.json')
 const steps = [
   {
     name: `migrations dry-run (${targetName})`,
     command: ['node', 'scripts/apply-mip-schema.mjs', '--dry-run', `--confirm-env=${envId}`, '--confirm-prefix=mip_', ...schemaFlags],
   },
   {
+    name: `pre-apply backup (${targetName})`,
+    command: ['node', 'scripts/backup-cloudbase-mysql.mjs', `--confirm-env=${envId}`, `--output=${opsBackupDir}`],
+  },
+  {
     name: `migrations apply (${targetName})`,
-    command: ['node', 'scripts/apply-mip-schema.mjs', `--confirm-env=${envId}`, '--confirm-prefix=mip_', ...schemaFlags],
+    command: ['node', 'scripts/apply-mip-schema.mjs', `--confirm-env=${envId}`, '--confirm-prefix=mip_', `--backup-manifest=${backupManifest}`, ...schemaFlags],
   },
   {
     name: `project init (${targetName})`,

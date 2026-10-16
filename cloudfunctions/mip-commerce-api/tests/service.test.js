@@ -36,6 +36,7 @@ describe('mip commerce service', () => {
     let captured
     const service = createCommerceService({
       catalogStage: 'TEST',
+      paymentMode: 'test',
       createId: idFactory(),
       now: () => new Date('2026-08-24T00:00:00.000Z'),
       repository: {
@@ -213,6 +214,7 @@ describe('mip commerce service', () => {
     let captured
     const service = createCommerceService({
       catalogStage: 'TEST',
+      paymentMode: 'test',
       createId: idFactory(),
       repository: {
         async requestRefund(caller, input, generated, amountResolver) {
@@ -233,5 +235,64 @@ describe('mip commerce service', () => {
       reason: '取消购买',
     })
     assert.equal(typeof captured.amountResolver, 'function')
+  })
+
+  it('declares payment capabilities from its own deployment environment', () => {
+    for (const paymentMode of ['disabled', 'test', 'live']) {
+      const service = createCommerceService({
+        catalogStage: paymentMode === 'live' ? 'LIVE' : 'TEST',
+        paymentMode,
+        repository: {},
+      })
+      assert.deepEqual(service.describePaymentCapabilities({ appId: 'app', identityKey: 'identity' }), {
+        mode: paymentMode,
+        catalogStage: paymentMode === 'live' ? 'LIVE' : 'TEST',
+        available: paymentMode !== 'disabled',
+      })
+    }
+  })
+
+  it('rejects checkout before any storage touch when payment is disabled', () => {
+    let touched = false
+    const service = createCommerceService({
+      catalogStage: 'TEST',
+      paymentMode: 'disabled',
+      repository: {
+        createCheckout() {
+          touched = true
+          return {}
+        },
+      },
+    })
+    assert.throws(
+      () => service.createCheckout({ appId: 'app', identityKey: 'identity' }, {
+        planId: '20000000-0000-4000-8000-000000000001',
+        idempotencyKey: 'checkout-1',
+      }),
+      /PAYMENT_UNAVAILABLE/,
+    )
+    assert.equal(touched, false)
+  })
+
+  it('rejects refund requests before any storage touch when payment is disabled', () => {
+    let touched = false
+    const service = createCommerceService({
+      catalogStage: 'TEST',
+      paymentMode: 'disabled',
+      repository: {
+        requestRefund() {
+          touched = true
+          return {}
+        },
+      },
+    })
+    assert.throws(
+      () => service.requestRefund({ appId: 'app', identityKey: 'identity' }, {
+        orderId: '30000000-0000-4000-8000-000000000001',
+        idempotencyKey: 'refund-1',
+      }),
+      /PAYMENT_UNAVAILABLE/,
+    )
+    assert.equal(touched, false)
   })
 })

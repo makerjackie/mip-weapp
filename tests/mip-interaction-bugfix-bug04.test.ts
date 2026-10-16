@@ -34,6 +34,7 @@ const identityModule = vi.hoisted(() => ({
 }))
 const branchesModule = vi.hoisted(() => ({ load: vi.fn(), setPrimaryBranch: vi.fn() }))
 const commerceModule = vi.hoisted(() => ({
+  ensurePaymentCapability: vi.fn(async () => ({ mode: 'test', catalogStage: 'TEST', available: true })),
   getOrder: vi.fn(),
   listPlans: vi.fn(),
   reconcile: vi.fn(),

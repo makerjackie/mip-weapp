@@ -339,17 +339,14 @@ describe('free offline event mutation runtime contract', () => {
       account: { miniProgram: { appId, envVersion: 'develop' } },
       app: {
         buildSha: 'runtime-build-1',
-        catalogStage: 'TEST',
         cloudbaseEnvId: envId,
         cloudbaseMode: 'direct',
-        paymentMode: 'disabled',
       },
       health: { ok: true, data: { persistence: 'cloudbase-mysql', service: 'mip-events-api' } },
     }, {
       appId,
       buildSha: 'runtime-build-1',
       envId,
-      paymentMode: 'disabled',
     })).toMatchObject({
       appIdMatched: true,
       buildShaMatched: true,
@@ -361,7 +358,7 @@ describe('free offline event mutation runtime contract', () => {
       account: { miniProgram: { appId: 'wxabcdef0123456789', envVersion: 'develop' } },
       app: {},
       health: {},
-    }, { appId, buildSha: 'runtime-build-1', envId, paymentMode: 'disabled' }))
+    }, { appId, buildSha: 'runtime-build-1', envId }))
       .toThrow('opened DevTools AppID')
 
     const details = Object.fromEntries(['events', 'community', 'admin'].map(role => [role, {
@@ -423,10 +420,8 @@ describe('free event runtime evidence summaries', () => {
     expect(appSource).toContain('const runtimeAcceptance = Object.freeze({')
     expect([...acceptanceValueSource.matchAll(/^\s{2}(\w+):/gm)].map(match => match[1])).toEqual([
       'buildSha',
-      'catalogStage',
       'cloudbaseEnvId',
       'cloudbaseMode',
-      'paymentMode',
     ])
     expect(appSource).toContain('buildSha: __BUILD_SHA__')
     expect(appSource).toContain('runtimeAcceptance: { ...runtimeAcceptance }')

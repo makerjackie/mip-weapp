@@ -2,7 +2,6 @@ import type { MembershipPlan, MembershipPlanId } from '../../../modules/mip-comm
 import type { GrowthSnapshot } from '../../../modules/mip-growth'
 import type { UserTaskCard } from '../../../modules/mip-tasks'
 import type { GrowthBenefitSlotView, GrowthTierView } from './tiers'
-import { runtimeConfig } from '../../../config/runtime'
 import { MipCommerceError } from '../../../modules/mip-commerce'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { levelNumberOf } from '../../../modules/mip-growth'
@@ -130,7 +129,8 @@ Page({
     noticesText: MEMBERSHIP_PURCHASE_NOTICES,
     plansLoading: false,
     plansVerified: false,
-    paymentEnabled: runtimeConfig.paymentMode !== 'disabled',
+    // MIW-119：初值乐观，真实可用性由入口预取的支付能力快照与服务端裁决修正。
+    paymentEnabled: true,
     paying: false,
     accessing: false,
     purchaseMessage: '',
@@ -157,6 +157,10 @@ Page({
     void this.loadGrowth(true)
     void this.loadMembershipActions()
     void this.loadTasks(true)
+    // MIW-119：入口即预取支付能力，支付点击零环境往返；disabled 前置置灰。
+    void mipCommerceModule.ensurePaymentCapability()
+      .then(capabilities => this.setData({ paymentEnabled: capabilities.available }))
+      .catch(() => {})
     // 身份门槛（登录/协议/手机号）经 mip-access 完成后回本页恢复购买意图。
     const resume = mipIdentityModule.consumePendingResume('packages/member/mip-growth/index')
     if (resume?.action === 'PURCHASE_MEMBERSHIP' && this.resumePlanId) {

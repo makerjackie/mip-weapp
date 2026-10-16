@@ -1,12 +1,12 @@
 import type { OrderId } from '../mip'
 import type { MembershipPlanCache } from './plan-cache'
 import type {
-  CatalogStage,
   CheckoutIntent,
   CommerceGateway,
   CommerceOrderFilter,
   MembershipBenefitsSnapshot,
   PaymentAdapter,
+  PaymentCapabilities,
   RefundId,
   RefundIntent,
 } from './types'
@@ -17,22 +17,25 @@ interface CommerceReadOptions {
   force?: boolean
 }
 
+// MIW-119：模块不再持有构建期烘焙的 paymentMode/catalogStage。
+// 支付可用性与目录 stage 一律由服务端裁决（describePaymentCapabilities /
+// listPlans / 支付动作本身），客户端只做提前预取与展示。
 interface MipCommerceModuleOptions {
-  paymentMode: 'disabled' | 'test' | 'live'
-  catalogStage: CatalogStage
   planCache?: MembershipPlanCache
 }
 
 export function createMipCommerceModule(
   gateway: CommerceGateway,
   payment: PaymentAdapter,
-  options: MipCommerceModuleOptions,
+  options: MipCommerceModuleOptions = {},
 ) {
-  const planCache = options.planCache || createMembershipPlanCache({ catalogStage: options.catalogStage })
+  const planCache = options.planCache || createMembershipPlanCache()
   let planRequest: Promise<Awaited<ReturnType<CommerceGateway['listPlans']>>> | null = null
   let membershipBenefits: MembershipBenefitsSnapshot | undefined
   let membershipBenefitsRequest: Promise<MembershipBenefitsSnapshot> | null = null
   let membershipBenefitsGeneration = 0
+  let paymentCapability: PaymentCapabilities | undefined
+  let paymentCapabilityRequest: Promise<PaymentCapabilities> | null = null
 
   function clearUserCache() {
     membershipBenefitsGeneration += 1
@@ -60,6 +63,39 @@ export function createMipCommerceModule(
       return planCache.peek()
     },
 
+    async ensurePaymentCapability(readOptions: CommerceReadOptions = {}): Promise<PaymentCapabilities> {
+      const force = readOptions.force ?? false
+      if (!force && paymentCapability !== undefined) {
+        return paymentCapability
+      }
+      if (paymentCapabilityRequest) {
+        return paymentCapabilityRequest
+      }
+      const request = gateway.describePaymentCapabilities().then((capabilities) => {
+        paymentCapability = capabilities
+        // 能力快照常先于套餐列表返回：stage 已切换时先丢弃旧 stage 残留缓存，
+        // 避免列表页闪现切换前的套餐。
+        const cachedStage = planCache.stage()
+        if (cachedStage && cachedStage !== capabilities.catalogStage) {
+          planCache.clear()
+        }
+        return capabilities
+      })
+      paymentCapabilityRequest = request
+      try {
+        return await request
+      }
+      finally {
+        if (paymentCapabilityRequest === request) {
+          paymentCapabilityRequest = null
+        }
+      }
+    },
+
+    peekPaymentCapability() {
+      return paymentCapability
+    },
+
     async listPlans(readOptions: CommerceReadOptions = {}) {
       const cached = planCache.peek()
       if (!readOptions.force && cached !== undefined) {
@@ -68,12 +104,7 @@ export function createMipCommerceModule(
       if (planRequest) {
         return planRequest
       }
-      const request = gateway.listPlans().then((plans) => {
-        const activePlans = plans.filter(
-          plan => plan.catalogStage === options.catalogStage && plan.status === 'ACTIVE',
-        )
-        return planCache.prime(activePlans)
-      })
+      const request = gateway.listPlans().then(plans => planCache.prime(plans))
       planRequest = request
       try {
         return await request
@@ -134,9 +165,6 @@ export function createMipCommerceModule(
     },
 
     async purchase(intent: CheckoutIntent) {
-      if (options.paymentMode === 'disabled') {
-        throw new Error('PAYMENT_UNAVAILABLE')
-      }
       const order = await gateway.createCheckout(intent)
       const result = await requestPayment(order)
       clearUserCache()
@@ -144,9 +172,6 @@ export function createMipCommerceModule(
     },
 
     async payOrder(orderId: OrderId) {
-      if (options.paymentMode === 'disabled') {
-        throw new Error('PAYMENT_UNAVAILABLE')
-      }
       const order = await gateway.getOrder(orderId)
       const result = await requestPayment(order)
       clearUserCache()
@@ -160,9 +185,6 @@ export function createMipCommerceModule(
     },
 
     requestRefund(intent: RefundIntent) {
-      if (options.paymentMode === 'disabled') {
-        throw new Error('PAYMENT_UNAVAILABLE')
-      }
       return gateway.requestRefund(intent).then((result) => {
         clearUserCache()
         return result
@@ -170,9 +192,6 @@ export function createMipCommerceModule(
     },
 
     submitRefund(refundId: RefundId) {
-      if (options.paymentMode === 'disabled') {
-        throw new Error('PAYMENT_UNAVAILABLE')
-      }
       return gateway.submitRefund(refundId).then((result) => {
         clearUserCache()
         return result

@@ -58,7 +58,7 @@ pnpm cloud:ai-avatar-provider:verify -- \
   --confirm-function=mip-ai-avatar-provider
 ```
 
-10. 配置支付后，执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker` 部署三个支付函数；`MIP_PAYMENT_MODE=live` 时必须追加 `--confirm-live`，测试/生产目录和商户配置必须隔离。
+10. 配置支付后，执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker` 部署三个支付函数；`MIP_PAYMENT_MODE=live` 时必须追加 `--confirm-live`，测试/生产目录和商户配置必须隔离。部署完成后切换支付模式无需重发代码：`pnpm cloud:switch-payment -- --confirm-env=<EnvID> --mode=test|live|disabled`（live 或 LIVE 目录必须追加 `--confirm-live`）直接改写目标函数环境变量；目标值与 env 目录同源，`MIP_CATALOG_STAGE` 恒取 env 目录，省略 `--mode` 时按目录当前值做漂移校正。脚本逐函数「读现网 env → 只覆写支付键 → 回读断言其余键逐字节不变」，支持 `--dry-run` 预览差异；切换窗口为秒级，建议在支付静默窗口执行，完成后以 `pnpm cloud:verify` 复核。小程序端不烘焙支付模式，页面在启动时通过 `describePaymentCapabilities` 预取支付能力（MIW-119），无需随切换发版。
 11. 在本机 `.env.local` 写入空仓库示例对应的 `MIP_OWNER_PHONE`，确认该号码已通过当前 AppID 的微信真机流程绑定，并完成昵称、主分会和当前全部协议；再执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner。脚本只以身份服务的 AppID 范围哈希定位唯一 ACTIVE 非 demo 用户，不输出号码、哈希或用户 ID；可追加 `--user-id=<用户 UUID>` 做严格一致性确认。
 12. 部署后或发现 outbox 积压时，运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 做一次受控处理；退款停留在活动状态时，运行 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。两个命令都读取已部署函数配置完成 HMAC 调用，不打印密钥。
 13. 微信后台配置服务器域名、与 `MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS` 完全一致的业务域名、用户隐私协议，完成上传与提审。
