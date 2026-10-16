@@ -81,6 +81,8 @@ Cloudflare Pages 的项目配置在 `wrangler.toml`；从仓库根目录执行 `
 
 ### 测试后台（第二个 Pages 项目，MIW-111 方向 B）
 
+> **2026-10-16 改判**：测试后台改走 CloudBase 同构路线（与生产后台同架构、不同命名与密钥），本节的 Cloudflare Pages 方案保留为历史参考，不再作为部署路径。对象清单与脚本改造约束见 [docs/mip/ADMIN_TEST_BACKEND_HANDOFF.md](../docs/mip/ADMIN_TEST_BACKEND_HANDOFF.md)。
+
 生产项目 `mip-admin-web`（admin.mip.cool）保持不动。测试后台 `admin-test.mip.cool` 是独立的第二个 Pages 项目：
 
 1. 在 Cloudflare 新建 Pages 项目（如 `mip-admin-web-test`）与第二个 D1（如 `mip-admin-auth-test`），按编号顺序执行 `migrations/` 内全部迁移。
