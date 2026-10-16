@@ -1,0 +1,80 @@
+{
+  "observedAt": "2026-10-16T09:44:58.581Z",
+  "domain": "test.admin.mip.cool",
+  "certificateId": "bcL4Ap00",
+  "protocol": "HTTP_TO_HTTPS",
+  "status": "SUCCESS",
+  "dnsStatus": "OK",
+  "platformCnameDnsStatus": "OK",
+  "cname": "test.admin.mip.cool.tcbaccess.tencentcloudbase.com",
+  "routes": [
+    {
+      "path": "/",
+      "type": "STATIC_STORE",
+      "upstream": "staticstore",
+      "staticPrefix": "/mip-admin-console-test",
+      "pathTransmission": false
+    },
+    {
+      "path": "/api",
+      "type": "SCF",
+      "upstream": "mip-t-admin-web-api",
+      "pathTransmission": true
+    },
+    {
+      "path": "/assets",
+      "type": "SCF",
+      "upstream": "mip-t-admin-web-api",
+      "pathTransmission": true
+    }
+  ],
+  "otherGatewayDomainsPreserved": true,
+  "authSchema": "mip_test_admin_auth",
+  "callbacks": {
+    "confirm": "https://test.admin.mip.cool/api/internal/auth/challenge/confirm",
+    "migration": "https://test.admin.mip.cool/api/internal/auth/challenge/confirm",
+    "hmacPairMatches": true
+  },
+  "dns": {
+    "NS": {
+      "status": 0,
+      "answers": [
+        {
+          "name": "mip.cool.",
+          "type": 2,
+          "TTL": 21600,
+          "data": "dns23.hichina.com."
+        },
+        {
+          "name": "mip.cool.",
+          "type": 2,
+          "TTL": 21600,
+          "data": "dns24.hichina.com."
+        }
+      ]
+    },
+    "CNAME": {
+      "status": 0,
+      "answers": [
+        {
+          "name": "test.admin.mip.cool.",
+          "type": 5,
+          "TTL": 600,
+          "data": "test.admin.mip.cool.tcbaccess.tencentcloudbase.com."
+        }
+      ]
+    },
+    "TXT": {
+      "status": 0,
+      "answers": [
+        {
+          "name": "_dnsauth.test.admin.mip.cool.",
+          "type": 16,
+          "TTL": 600,
+          "data": "202610160932294535x2kcibafe0zoid93uw1c2mof5ks"
+        }
+      ]
+    }
+  },
+  "automaticRenewalForThisDomain": "NOT_ENABLED"
+}

@@ -1,0 +1,68 @@
+{
+  "observedAt": "2026-10-16T10:31:26.456Z",
+  "origin": "https://test.admin.mip.cool",
+  "checks": [
+    {
+      "id": "tls:hostname-trust-validity",
+      "status": "PASS",
+      "certificate": {
+        "authorized": true,
+        "commonName": "test.admin.mip.cool",
+        "subjectAltName": "DNS:test.admin.mip.cool",
+        "issuer": "TrustAsia DV TLS RSA CA 2024",
+        "validFrom": "Oct 16 09:00:00 2026 GMT",
+        "validTo": "Jan 14 08:59:59 2027 GMT",
+        "fingerprint256": "84:AB:6D:88:34:00:42:6A:BE:2B:37:2F:1F:DD:39:F8:F5:BE:07:DB:5C:B4:FD:91:83:F5:6A:12:CF:7B:FE:E8"
+      }
+    },
+    {
+      "id": "http:redirect-to-https",
+      "status": "PASS",
+      "httpStatus": 307
+    },
+    {
+      "id": "static:missing-asset-404",
+      "status": "PASS",
+      "httpStatus": 404
+    },
+    {
+      "id": "auth:anonymous-admin-rejected",
+      "status": "PASS",
+      "httpStatus": 401
+    },
+    {
+      "id": "auth:foreign-origin-rejected",
+      "status": "PASS",
+      "httpStatus": 403
+    },
+    {
+      "id": "auth:challenge-created",
+      "status": "PASS",
+      "httpStatus": 201,
+      "responseKeys": [
+        "state",
+        "code",
+        "expiresAt",
+        "pollAfterMs"
+      ],
+      "testNamespace": true
+    },
+    {
+      "id": "auth:challenge-cookie-protection",
+      "status": "PASS"
+    },
+    {
+      "id": "auth:challenge-pending",
+      "status": "PASS",
+      "httpStatus": 200,
+      "challengeState": "PENDING"
+    }
+  ],
+  "passwordLogin": "BLOCKED_MISSING_TEST_ACCOUNT",
+  "wechatDeviceConfirmation": "NOT_RUN",
+  "businessWrites": false,
+  "limitations": [
+    "One expiring authentication challenge was created; no administrator principal was fabricated.",
+    "No password or production account was copied."
+  ]
+}

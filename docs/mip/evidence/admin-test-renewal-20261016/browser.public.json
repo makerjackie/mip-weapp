@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-16T10:33:05.259Z",
+  "entry": "https://test.admin.mip.cool/assets/index-dbH29RjD.js",
+  "horizontalOverflow": false,
+  "origin": "https://test.admin.mip.cool",
+  "title": "MIP 运营管理",
+  "viewport": {
+    "height": 840,
+    "width": 1465
+  },
+  "authenticated": false,
+  "passwordLogin": "NOT_RUN",
+  "observedPage": "LOGIN_DIALOG"
+}

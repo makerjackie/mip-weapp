@@ -7,7 +7,7 @@
 ```
 envs/
   prod/   生产目标（现有 CloudBase 环境 + 默认 mip-* 函数集 + admin.mip.cool）
-  test/   测试目标（同实例第二库 + mip-t-* 函数集 + admin-test.mip.cool）
+  test/   测试目标（同实例第二库 + mip-t-* 函数集 + test.admin.mip.cool）
 ```
 
 每个目标目录内放置两份被 Git 忽略的文件（模板见各自 `env.example`）：
@@ -29,6 +29,14 @@ MIP_ENV_DIR=envs/test pnpm build
 ```
 
 不设置 `MIP_ENV_DIR` 时回落到仓库根 `.env.local`（当前指向现有生产环境）。
+
+一次性基建动作（如新建测试函数绑 VPC 需要 VPC 资源授权）经 CAM 子用户通道执行：
+
+```bash
+./scripts/deploy-as-deployer.sh node scripts/ops.mjs --target=test
+```
+
+密钥存于仓库根 `.env.secrets.local`（本地、600、gitignore），仅该包装脚本显式激活。
 
 ## 红线
 

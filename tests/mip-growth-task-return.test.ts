@@ -8,6 +8,7 @@ const growth = vi.hoisted(() => ({
   listEntries: vi.fn(),
 }))
 const commerce = vi.hoisted(() => ({
+  ensurePaymentCapability: vi.fn(async () => ({ mode: 'test', catalogStage: 'TEST', available: true })),
   getMembershipBenefits: vi.fn(),
 }))
 const tasks = vi.hoisted(() => ({

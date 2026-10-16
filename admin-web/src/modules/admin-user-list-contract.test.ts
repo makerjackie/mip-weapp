@@ -23,7 +23,7 @@ it('renders the actual serialized user-list projection with industry, profession
   assert.equal(page.sections[0].rows[0].profession, '创业者')
   assert.equal(page.sections[0].rows[0].contribution, '0')
   assert.equal(page.sections[0].rows[0].membership, '有效')
-  assert.match(String(page.sections[0].rows[0].expiresAt), /2031/)
+  assert.ok(String(page.sections[0].rows[0].expiresAt).includes(String(new Date('2031-01-01T00:00:00Z').getFullYear())))
   assert.equal(page.sections[0].rows[0].avatarUrl, 'https://example.com/avatar.png')
 })
 

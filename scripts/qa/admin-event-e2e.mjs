@@ -11,9 +11,9 @@
 //
 // Exit code is non-zero when any check fails, so it can gate a release.
 
+import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import path from 'node:path'
 import { loadCaseEnv } from '../lib/example-cloudbase.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -45,12 +45,19 @@ async function raw(pathname, body) {
     const index = pair.indexOf('=')
     cookies.set(pair.slice(0, index), pair.slice(index + 1))
   }
-  if (!response.ok) throw new Error(`HTTP ${response.status} for ${pathname}`)
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${pathname}`)
+  }
   return response.json()
 }
-const admin = (action, input, idempotencyKey) => raw('/api/admin', {
-  contractVersion: 1, action, input, ...(idempotencyKey ? { idempotencyKey } : {}),
-})
+function admin(action, input, idempotencyKey) {
+  return raw('/api/admin', {
+    contractVersion: 1,
+    action,
+    input,
+    ...(idempotencyKey ? { idempotencyKey } : {}),
+  })
+}
 const newKey = prefix => `qa-${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
 const results = []
@@ -66,7 +73,9 @@ async function check(name, fn) {
   }
 }
 function assert(condition, message) {
-  if (!condition) throw new Error(message)
+  if (!condition) {
+    throw new Error(message)
+  }
 }
 
 const created = { eventId: null, eventVersion: null, tagId: null, tagVersion: null }
@@ -102,13 +111,32 @@ try {
   const title = `QA活动E2E${Math.floor(Math.random() * 900 + 100)}`
   const description = '<h2>活动亮点</h2><p style="text-align:center"><strong>加粗</strong> <em>斜体</em> <u>下划线</u></p><ul><li>列表一</li></ul>'
   const draft = () => ({
-    scopeType: 'PLATFORM', branchId: null, title, summary: 'QA 端到端自测（可归档）',
-    description, contentMedia: [], organizerIntroduction: '<p>主办方<strong>介绍</strong></p>', notices: '<p>报名<u>须知</u></p>',
-    coverAssetId: null, eventTypeKey: 'general', eventMode: 'OFFLINE', accessType: 'FREE', registrationPolicy: 'AUTO',
-    startsAt: '2031-05-01T02:00:00.000Z', endsAt: '2031-05-01T04:00:00.000Z',
-    registrationDeadline: null, cancellationDeadline: null,
-    venueName: 'QA场地', address: '', cityName: '深圳', capacity: null, waitlistEnabled: false, oversellEnabled: false,
-    priceCents: 0, registrationSchema: [], tagIds: created.tagId ? [created.tagId] : [],
+    scopeType: 'PLATFORM',
+    branchId: null,
+    title,
+    summary: 'QA 端到端自测（可归档）',
+    description,
+    contentMedia: [],
+    organizerIntroduction: '<p>主办方<strong>介绍</strong></p>',
+    notices: '<p>报名<u>须知</u></p>',
+    coverAssetId: null,
+    eventTypeKey: 'general',
+    eventMode: 'OFFLINE',
+    accessType: 'FREE',
+    registrationPolicy: 'AUTO',
+    startsAt: '2031-05-01T02:00:00.000Z',
+    endsAt: '2031-05-01T04:00:00.000Z',
+    registrationDeadline: null,
+    cancellationDeadline: null,
+    venueName: 'QA场地',
+    address: '',
+    cityName: '深圳',
+    capacity: null,
+    waitlistEnabled: false,
+    oversellEnabled: false,
+    priceCents: 0,
+    registrationSchema: [],
+    tagIds: created.tagId ? [created.tagId] : [],
   })
 
   await check('create event with rich text + tag', async () => {
@@ -179,13 +207,18 @@ catch (error) {
   console.log(`  FAIL  login -> ${String(error?.message || error)}`)
 }
 finally {
-  try { await raw('/api/auth/logout') } catch { /* best effort */ }
+  try {
+    await raw('/api/auth/logout')
+  }
+  catch { /* best effort */ }
 }
 
 const failed = results.filter(item => !item.ok)
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`)
 if (failed.length) {
   console.log('failed checks:')
-  for (const item of failed) console.log(`  - ${item.name}: ${item.detail}`)
+  for (const item of failed) {
+    console.log(`  - ${item.name}: ${item.detail}`)
+  }
 }
 process.exit(failed.length ? 1 : 0)

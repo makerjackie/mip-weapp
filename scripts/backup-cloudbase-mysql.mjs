@@ -44,19 +44,30 @@ fs.mkdirSync(path.join(partialDirectory, 'data'), { mode: 0o700 })
 
 const startedAt = new Date().toISOString()
 const target = bindAndRequireMysqlEnvironment(root, envId)
-const schemaName = findString(target.mysql, new Set(['schema', 'database', 'databasename']))
+const instanceSchema = findString(target.mysql, new Set(['schema', 'database', 'databasename']))
+// MIP_DB_SCHEMA selects a second logical database (MIW-111 direction B); the
+// instance default keeps the historical behavior.
+const schemaName = String(env.MIP_DB_SCHEMA || '').trim() || instanceSchema
+if (schemaName && !/^[\w-]{1,64}$/.test(schemaName)) {
+  throw new Error('MIP_DB_SCHEMA must be a plain schema identifier')
+}
+console.log(`[database-backup] schema: ${schemaName}`)
 const environmentFingerprint = sha256(envId).slice(0, 16)
 
 console.log(`[database-backup] target verified (${environmentFingerprint})`)
 console.log(`[database-backup] writing outside repository: ${outputDirectory}`)
 
+const schemaLiteral = `'${String(schemaName).replaceAll('`', '')}'`
+function withSchema(sql) {
+  return sql.replaceAll('%SCHEMA%', schemaLiteral)
+}
 const metadataQueries = {
   tables: `SELECT table_name, table_type, engine, version, row_format, table_rows,
       avg_row_length, data_length, max_data_length, index_length, data_free,
       auto_increment, create_time, update_time, check_time, table_collation,
       checksum, create_options, table_comment
     FROM information_schema.tables
-    WHERE table_schema = DATABASE()
+    WHERE table_schema = %SCHEMA%
     ORDER BY table_name`,
   columns: `SELECT table_name, column_name, ordinal_position, column_default,
       is_nullable, data_type, character_maximum_length, character_octet_length,
@@ -64,33 +75,33 @@ const metadataQueries = {
       collation_name, column_type, column_key, extra, privileges, column_comment,
       generation_expression
     FROM information_schema.columns
-    WHERE table_schema = DATABASE()
+    WHERE table_schema = %SCHEMA%
     ORDER BY table_name, ordinal_position`,
   statistics: `SELECT table_name, non_unique, index_name, seq_in_index, column_name,
       collation, cardinality, sub_part, packed, nullable, index_type, comment,
       index_comment, is_visible, expression
     FROM information_schema.statistics
-    WHERE table_schema = DATABASE()
+    WHERE table_schema = %SCHEMA%
     ORDER BY table_name, index_name, seq_in_index`,
   table_constraints: `SELECT constraint_name, table_name, constraint_type,
       enforced
     FROM information_schema.table_constraints
-    WHERE table_schema = DATABASE()
+    WHERE table_schema = %SCHEMA%
     ORDER BY table_name, constraint_name`,
   key_column_usage: `SELECT constraint_name, table_name, column_name,
       ordinal_position, position_in_unique_constraint, referenced_table_name,
       referenced_column_name
     FROM information_schema.key_column_usage
-    WHERE table_schema = DATABASE()
+    WHERE table_schema = %SCHEMA%
     ORDER BY table_name, constraint_name, ordinal_position`,
   referential_constraints: `SELECT constraint_name, unique_constraint_name,
       match_option, update_rule, delete_rule, table_name, referenced_table_name
     FROM information_schema.referential_constraints
-    WHERE constraint_schema = DATABASE()
+    WHERE constraint_schema = %SCHEMA%
     ORDER BY table_name, constraint_name`,
   check_constraints: `SELECT constraint_name, check_clause
     FROM information_schema.check_constraints
-    WHERE constraint_schema = DATABASE()
+    WHERE constraint_schema = %SCHEMA%
     ORDER BY constraint_name`,
   triggers: `SELECT trigger_name, event_manipulation, event_object_table,
       action_order, action_condition, action_statement, action_orientation,
@@ -98,7 +109,7 @@ const metadataQueries = {
       action_reference_old_row, action_reference_new_row, created, sql_mode,
       definer, character_set_client, collation_connection, database_collation
     FROM information_schema.triggers
-    WHERE trigger_schema = DATABASE()
+    WHERE trigger_schema = %SCHEMA%
     ORDER BY event_object_table, trigger_name`,
   routines: `SELECT routine_name, routine_type, data_type, routine_body,
       routine_definition, external_language, parameter_style, is_deterministic,
@@ -106,7 +117,7 @@ const metadataQueries = {
       routine_comment, definer, character_set_client, collation_connection,
       database_collation
     FROM information_schema.routines
-    WHERE routine_schema = DATABASE()
+    WHERE routine_schema = %SCHEMA%
     ORDER BY routine_name`,
   events: `SELECT event_name, definer, time_zone, event_body, event_definition,
       event_type, execute_at, interval_value, interval_field, sql_mode,
@@ -114,13 +125,13 @@ const metadataQueries = {
       last_executed, event_comment, originator, character_set_client,
       collation_connection, database_collation
     FROM information_schema.events
-    WHERE event_schema = DATABASE()
+    WHERE event_schema = %SCHEMA%
     ORDER BY event_name`,
 }
 
 const metadata = {}
 for (const [name, sql] of Object.entries(metadataQueries)) {
-  metadata[name] = queryRowsPaged(sql)
+  metadata[name] = queryRowsPaged(withSchema(sql))
   writeJson(path.join(partialDirectory, 'schema', `${name}.json`), metadata[name])
   console.log(`[database-backup] schema ${name}: ${metadata[name].length}`)
 }

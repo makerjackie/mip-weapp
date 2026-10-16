@@ -4,6 +4,7 @@ import type {
   CommerceOrderPage,
   MembershipBenefitsSnapshot,
   MembershipPlan,
+  PaymentCapabilities,
   RefundId,
   RefundIntent,
   WechatPaymentParameters,
@@ -77,6 +78,10 @@ export function createMipCommerceGateway(
     transport.invoke(functionNames.payment, action, data, false)
 
   return {
+    describePaymentCapabilities() {
+      return commerce<PaymentCapabilities>('describePaymentCapabilities', {}, true)
+    },
+
     listPlans() {
       return commerce<MembershipPlan[]>('listPlans', {}, true)
     },

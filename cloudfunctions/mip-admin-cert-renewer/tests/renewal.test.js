@@ -16,6 +16,25 @@ const config = readConfig({
   MIP_ADMIN_CERT_STATE_BUCKET: 'private-1234567890', MIP_ADMIN_CERT_HOSTING_BUCKET: 'static-1234567890',
   MIP_ADMIN_CERT_TRIGGER_SECRET: 'a'.repeat(64), MIP_ADMIN_CERT_GENERATION: 'b'.repeat(32),
 })
+test('test renewal uses its own function, timer and exact test routes', () => {
+  const testConfig = readConfig({
+    MIP_ADMIN_CERT_DOMAIN: 'test.admin.example.test', MIP_ADMIN_CERT_ENV_ID: config.envId, MIP_ADMIN_CERT_REGION: config.region,
+    MIP_ADMIN_CERT_STATE_BUCKET: config.stateBucket, MIP_ADMIN_CERT_HOSTING_BUCKET: config.hostingBucket,
+    MIP_ADMIN_CERT_TRIGGER_SECRET: config.secret, MIP_ADMIN_CERT_GENERATION: config.generation,
+  })
+  assert.equal(testConfig.functionName, 'mip-t-admin-cert-renewer')
+  assert.equal(testConfig.triggerName, 'mip-t-admin-cert-daily')
+  assert.equal(testConfig.staticPrefix, 'mip-admin-console-test')
+  const f = fixture()
+  f.domain.Domain = testConfig.domain
+  assert.throws(() => domainConfig({ Domains: [f.domain] }, testConfig), /DOMAIN_ROUTES_INVALID/)
+  f.domain.Routes[0].PathRewrite.StaticStorePrefix = '/mip-admin-console-test'
+  for (const route of f.domain.Routes.slice(1)) route.UpstreamResourceName = 'mip-t-admin-web-api'
+  assert.equal(domainConfig({ Domains: [f.domain] }, testConfig).Domain, testConfig.domain)
+  assert.throws(() => domainConfig({ Domains: [f.domain] }, config), /DOMAIN_READBACK_INVALID/)
+  assert.throws(() => verifyRequest(signRequest(config, { timestamp: now }), testConfig, now), /FORBIDDEN/)
+  assert.throws(() => verifyRequest({ Type: 'Timer', TriggerName: config.triggerName, Message: JSON.stringify(signRequest(testConfig)) }, testConfig, now), /FORBIDDEN/)
+})
 function fixture({ due = true, signed = false, state = null, applyError = false, tlsValid = true } = {}) {
   let stored = state && structuredClone(state)
   const writes = [], calls = []

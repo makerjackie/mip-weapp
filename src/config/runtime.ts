@@ -3,16 +3,6 @@ import { brand } from './brand'
 import { defaults } from './defaults'
 
 export type CloudbaseMode = 'disabled' | 'direct' | 'shared'
-export type PaymentMode = 'disabled' | 'test' | 'live'
-export type CatalogStage = 'TEST' | 'LIVE'
-
-function paymentMode(value: string): PaymentMode {
-  return value === 'test' || value === 'live' ? value : 'disabled'
-}
-
-function catalogStage(value: string): CatalogStage {
-  return value === 'LIVE' ? 'LIVE' : 'TEST'
-}
 
 function hostnameList(value: string) {
   return value.split(',').map(item => item.trim().toLowerCase()).filter(Boolean)
@@ -28,7 +18,9 @@ const baseConfig = createRuntimeConfig({
   cloudbaseFunctionName: __MIP_IDENTITY_FUNCTION_NAME__ || defaults.identityFunctionName,
 })
 
-const resolvedPaymentMode = paymentMode(__MIP_PAYMENT_MODE__ || defaults.paymentMode)
+// MIW-119：支付模式与目录 stage 不再烘焙进客户端；运行时行为一律以服务端
+// describePaymentCapabilities / 支付动作为准。构建期 env 只保留给
+// weapp-vite.config.ts 的 productionIntent 生产语义护栏。
 
 export const runtimeConfig = {
   appName: baseConfig.app.name,
@@ -56,12 +48,9 @@ export const runtimeConfig = {
     notificationsFunctionName: __MIP_NOTIFICATIONS_FUNCTION_NAME__ || defaults.notificationsFunctionName,
     paymentFunctionName: __MIP_PAY_FUNCTION_NAME__ || defaults.paymentFunctionName,
   },
-  paymentMode: resolvedPaymentMode,
-  catalogStage: catalogStage(__MIP_CATALOG_STAGE__ || defaults.catalogStage),
   subscribeTemplatesJson: __MIP_SUBSCRIBE_TEMPLATES_JSON__,
   knowledgeWebviewAllowedHosts: hostnameList(__MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS__),
   unconfigured: {
     cloudbase: baseConfig.cloudbase.mode === 'disabled',
-    payment: resolvedPaymentMode === 'disabled',
   },
 } as const

@@ -17,7 +17,7 @@ import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
 const root = path.resolve(import.meta.dirname, '..')
 const require = createRequire(import.meta.url)
 const { createCloudApi } = require('../cloudfunctions/mip-admin-cert-renewer/cloud-api.js')
-const { domainConfig, signRequest, readConfig } = require('../cloudfunctions/mip-admin-cert-renewer/renewal.js')
+const { domainConfig, signRequest, readConfig, renewalTarget } = require('../cloudfunctions/mip-admin-cert-renewer/renewal.js')
 const { oneShotCron } = require('../cloudfunctions/mip-message-scheduler/lib/trigger-controller.js')
 
 const env = loadCaseEnv(root)
@@ -28,8 +28,9 @@ if (!['prepare', 'logs', 'role', 'deploy', 'pause', 'canary', 'activate', 'check
 }
 const argument = name => args.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3)
 const domain = argument('domain')
-if (!/^admin\.[a-z0-9.-]+$/.test(domain || '') || argument('confirm-env') !== env.CLOUDBASE_ENV_ID
-  || argument('confirm-function') !== 'mip-admin-cert-renewer') {
+const target = renewalTarget(domain)
+if (argument('confirm-env') !== env.CLOUDBASE_ENV_ID
+  || argument('confirm-function') !== target.functionName) {
   throw new Error('Exact domain, environment and dedicated function confirmations required')
 }
 resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, args)
@@ -67,7 +68,8 @@ const gateway = unwrap(call('tcb', 'DescribeHTTPServiceRoute', { EnvId: config.e
 domainConfig(gateway, config)
 privateJson('gateway.private.json', gateway)
 const files = ['index.js', 'cloud-api.js', 'renewal.js', 'package.json']
-const source = path.join(root, 'cloudfunctions', config.functionName)
+// Both isolated jobs use the same reviewed source; never duplicate runtime code.
+const source = path.join(root, 'cloudfunctions', 'mip-admin-cert-renewer')
 const marker = createHash('sha256').update(files.map(file => `${file}\0${fs.readFileSync(path.join(source, file), 'utf8')}`).join('\0')).digest('hex')
 const report = { function: config.functionName, domain, role: config.roleName, policyFingerprint: exactPolicyFingerprint(renewalPolicy(config)), sourceFingerprint: marker, databaseAccess: false }
 
@@ -237,7 +239,7 @@ else {
 
 function getFunction() {
   try {
-    return functionDetail(call('scf', 'GetFunction', { FunctionName: 'mip-admin-cert-renewer', Namespace: env.CLOUDBASE_ENV_ID, ShowCode: 'FALSE' }))
+    return functionDetail(call('scf', 'GetFunction', { FunctionName: target.functionName, Namespace: env.CLOUDBASE_ENV_ID, ShowCode: 'FALSE' }))
   }
   catch (error) {
     if (/not found|not exist|resourcenotfound/i.test(error.message)) {

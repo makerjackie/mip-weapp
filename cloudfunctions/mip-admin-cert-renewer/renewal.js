@@ -5,7 +5,21 @@ const { createHmac, timingSafeEqual, X509Certificate } = require('node:crypto')
 const DAY = 86400000
 const CHALLENGE_PREFIX = '/.well-known/pki-validation/'
 
+function renewalTarget(domain) {
+  if (!/^(?:test\.)?admin\.[a-z0-9](?:[a-z0-9.-]*[a-z0-9])$/.test(domain || '')) throw new Error('CERT_CONFIG_INVALID')
+  const test = domain.startsWith('test.admin.')
+  return Object.freeze({
+    staticPrefix: test ? 'mip-admin-console-test' : 'mip-admin-console',
+    functionName: test ? 'mip-t-admin-cert-renewer' : 'mip-admin-cert-renewer',
+    triggerName: test ? 'mip-t-admin-cert-daily' : 'mip-admin-cert-daily',
+    bffFunctionName: test ? 'mip-t-admin-web-api' : 'mip-admin-web-api',
+    roleName: test ? 'MIPTestAdminCertRenewerRole' : 'MIPAdminCertRenewerRole',
+    policyName: test ? 'MIPTestAdminCertRenewerPolicy' : 'MIPAdminCertRenewerPolicy',
+  })
+}
+
 function readConfig(env = process.env) {
+  const target = renewalTarget(env.MIP_ADMIN_CERT_DOMAIN)
   const config = {
     domain: env.MIP_ADMIN_CERT_DOMAIN,
     envId: env.MIP_ADMIN_CERT_ENV_ID,
@@ -14,13 +28,12 @@ function readConfig(env = process.env) {
     hostingBucket: env.MIP_ADMIN_CERT_HOSTING_BUCKET,
     secret: env.MIP_ADMIN_CERT_TRIGGER_SECRET,
     generation: env.MIP_ADMIN_CERT_GENERATION,
-    staticPrefix: 'mip-admin-console',
-    functionName: 'mip-admin-cert-renewer',
-    triggerName: 'mip-admin-cert-daily',
+    staticPrefix: target.staticPrefix,
+    functionName: target.functionName,
+    triggerName: target.triggerName,
     renewBeforeDays: 30,
   }
-  if (!/^admin\.[a-z0-9](?:[a-z0-9.-]*[a-z0-9])$/.test(config.domain || '')
-    || !/^[a-z][a-z0-9-]{3,63}$/.test(config.envId || '')
+  if (!/^[a-z][a-z0-9-]{3,63}$/.test(config.envId || '')
     || !/^ap-[a-z]+$/.test(config.region || '')
     || !/^[a-z0-9-]{3,64}-\d{5,20}$/.test(config.stateBucket || '')
     || !/^[a-z0-9-]{3,64}-\d{5,20}$/.test(config.hostingBucket || '')
@@ -69,7 +82,7 @@ function domainConfig(value, config) {
   if (routes.size !== 3 || root?.UpstreamResourceType !== 'STATIC_STORE' || root?.UpstreamResourceName !== 'staticstore'
     || root?.PathRewrite?.StaticStorePrefix !== `/${config.staticPrefix}`
     || ['/api', '/assets'].some(path => routes.get(path)?.UpstreamResourceType !== 'SCF'
-      || routes.get(path)?.UpstreamResourceName !== 'mip-admin-web-api' || !routes.get(path)?.EnablePathTransmission)
+      || routes.get(path)?.UpstreamResourceName !== renewalTarget(config.domain).bffFunctionName || !routes.get(path)?.EnablePathTransmission)
     || [...routes.values()].some(route => !route.Enable || !route.EnableSafeDomain || route.EnableAuth)) {
     throw new Error('DOMAIN_ROUTES_INVALID')
   }
@@ -209,4 +222,4 @@ async function renewCertificate({ config, cloud, store, readTls, readChallenge, 
   return { status: 'RENEWED', ...expected }
 }
 
-module.exports = { readConfig, signRequest, verifyRequest, domainConfig, replacementConfig, unchangedDomain, certificateInfo, fileChallenge, publicCertificate, renewCertificate }
+module.exports = { renewalTarget, readConfig, signRequest, verifyRequest, domainConfig, replacementConfig, unchangedDomain, certificateInfo, fileChallenge, publicCertificate, renewCertificate }

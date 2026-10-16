@@ -17,6 +17,7 @@
 | 组件画布 | [design-system/canvas.html](design-system/canvas.html) | 设计系统全量组件的可视化预览、属性与变种（浏览用快照，事实来源为 `.agents/skills/mip-design-system`） |
 | 当前架构 | [ARCHITECTURE.md](ARCHITECTURE.md) | 小程序、Web、服务端和共享契约边界 |
 | 产品要求 | [mip/REQUIREMENTS.md](mip/REQUIREMENTS.md) | 业务规则和已确认范围 |
+| 测试后台交接 | [mip/ADMIN_TEST_DOMAIN_HANDOFF.md](mip/ADMIN_TEST_DOMAIN_HANDOFF.md) | 域名、证书续期与后续开发/验收的接手入口 |
 | 当前状态 | [mip/PROJECT_STATUS.md](mip/PROJECT_STATUS.md) | 当前数量、部署状态、阻塞和下一步 |
 | 后台产品验收 | [admin-web/ACCEPTANCE.md](../admin-web/ACCEPTANCE.md) | Web 后台唯一逐项验收标准，含来源取舍与可编辑边界 |
 | 后台执行计划 | [admin-web/EXECUTION_PLAN.md](../admin-web/EXECUTION_PLAN.md) | 工作包、依赖、维护约束、测试和模型交接；不另定义验收规则 |

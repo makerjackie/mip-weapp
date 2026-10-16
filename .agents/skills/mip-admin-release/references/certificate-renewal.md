@@ -1,14 +1,23 @@
 # 后台 HTTPS 证书自动续期
 
-本仓库的续期实现为独立 `mip-admin-cert-renewer`，每天检查目标管理域名的当前证书。剩余有效期不超过 30 天时，通过腾讯云 `ApplyCertificate` 申请免费的 TrustAsia C1 DV 证书，自动写入 FILE 域名验证文件，等待 CA 签发后只更新该域名的 `CertId`。必须回读网关和真实 TLS 指纹一致，才能记录成功。真实 SSL DTO 的 `DvAuthDetail.DvAuths[].Domain` 是完整域名，`DvAuthDomain` 可能只有根域名；验证完整域名并拒绝其他域名，不能把根域名字段当作完整域名。
+本仓库共用 `cloudfunctions/mip-admin-cert-renewer/` 源码，按目标域名部署独立任务，每天检查当前证书。剩余有效期不超过 30 天时，通过腾讯云 `ApplyCertificate` 申请免费的 TrustAsia C1 DV 证书，自动写入 FILE 域名验证文件，等待 CA 签发后只更新该域名的 `CertId`。必须回读网关和真实 TLS 指纹一致，才能记录成功。真实 SSL DTO 的 `DvAuthDetail.DvAuths[].Domain` 是完整域名，`DvAuthDomain` 可能只有根域名；验证完整域名并拒绝其他域名，不能把根域名字段当作完整域名。
 
 官方免费续期实际上是签发新证书：[ApplyCertificate](https://cloud.tencent.com/document/api/400/41678)。第三方 DNS 不使用 `DNS_AUTO`；本实现通过公开站点的验证文件完成认证，保留既有阿里云 DNS、HTTP→HTTPS 与后台来源保护。默认测试域名有使用限制，不作为永久生产备用域名。
 
+## 正式与测试目标
+
+| 目标域名 | 函数 / timer | 专用角色 / 策略 | 静态前缀 / BFF |
+| --- | --- | --- | --- |
+| `admin.mip.cool` | `mip-admin-cert-renewer` / `mip-admin-cert-daily` | `MIPAdminCertRenewerRole` / `MIPAdminCertRenewerPolicy` | `mip-admin-console` / `mip-admin-web-api` |
+| `test.admin.mip.cool` | `mip-t-admin-cert-renewer` / `mip-t-admin-cert-daily` | `MIPTestAdminCertRenewerRole` / `MIPTestAdminCertRenewerPolicy` | `mip-admin-console-test` / `mip-t-admin-web-api` |
+
+代码中的 `renewalTarget(domain)` 是目标映射的唯一事实源。两套任务共用源码、分别部署，HMAC、generation、日志、状态及申请记录按域名隔离；不创建第二份函数源码目录，也不为了测试扩大正式任务的权限。SCF 控制命令的 `--confirm-function` 必须匹配所选目标。通过已核实的 `MIP_ENV_DIR` 选择测试配置，不能只替换命令中的域名。相同 CloudBase EnvID 下，正式任务和测试任务仍是独立资源。
+
 ## 权限与状态
 
-- 专用 `MIPAdminCertRenewerRole` 只信任 SCF，关联 `MIPAdminCertRenewerPolicy`；不修改共享角色。
+- 所选目标的专用角色只信任 SCF，唯一关联对应专用策略；不修改另一套任务或共享角色。
 - SSL 免费申请是操作级权限；读取、检查验证需要覆盖本账号未来新证书 ID。TCB 修改限定当前环境，源码另外校验精确管理域名及既有三个路由。COS 限定私有状态对象及后台前缀内的 CA 验证目录。
-- SCF 创建还需要日志主题/日志集元数据读取。专用 CLS 日志保留 7 天，写入仅授权该专用主题；没有日志搜索、修改、删除权限。不要绑定 `queryEnv.LogServices` 里已失效的旧主题，必须验证真实 CLS 主题与日志集的对应关系。
+- SCF 创建还需要日志主题/日志集元数据读取。专用 CLS 日志保留 7 天，写入仅授权该专用主题；没有日志搜索、修改、删除权限。不要绑定 `queryEnv.LogServices` 里已失效的旧主题，必须验证真实 CLS 主题与日志集的对应关系，且 `AssumerName` 为空、`AssumerUin` 为 0（账号自有资源）。CloudBase Device Flow 仍可能返回 TCB 委托凭证，创建的服务归属主题即使 ID 对应，SCF 也可能拒绝并报 `ClsLogSetId & ClsTopicId not matched`；此时在已登录的 CLS 控制台创建同名、7 天保留、单分区且关闭自动分裂/索引/匿名上传的专用资源，再用 `logs` 精确回读。不要修改共享日志或扩大运行角色。
 - 运行凭证取自本次 SCF invocation 的临时凭证，不部署本机 API Key、SecretId/SecretKey、浏览器会话或阿里云密钥。
 - 日常状态读取用 `DescribeCertificate`；该接口不返回 PEM。只有待替换证书签发后才调用 `DescribeCertificateDetail` 获取公钥证书并计算指纹；详情响应也含私钥，严禁记录、持久化或输出原始响应。详见[官方详情接口](https://cloud.tencent.com/document/product/400/41673)。
 - SDK 客户端调用禁止，无 HTTP 入口；timer 参数有独立 HMAC。申请前通过 COS `x-cos-forbid-overwrite:true` 原子写入该旧证书的永久申请记录，防止并发或重试消耗重复额度。运行时检查状态桶未开启版本控制，canary 必须实测同名第二次写入被拒绝。仅持久化 `applying` 不能防止多实例竞争；CloudBase 的 SCF 并发设置接口可能返回 `FailedOperation.UpdateFunctionConfiguration`，不能靠忽略该错误宣称单并发。
@@ -19,7 +28,7 @@
 ## 首次启用
 
 1. 使用仓库 Node/pnpm，审计并保留无关修改，通过 `pnpm verify:all`。检查当前域名为 DIRECT、HTTP_TO_HTTPS、正常启用，`/` 指向管理后台静态前缀，`/api`、`/assets` 指向既有 BFF。
-2. 从 `queryEnv` 读取资源归属、区域和两个 COS bucket；不复制历史标识。以下命令的所有阶段都需要 `--domain=<管理域名> --confirm-env=<已核实环境> --confirm-function=mip-admin-cert-renewer`，production 追加 `--confirm-production`：
+2. 从 `queryEnv` 读取资源归属、区域和两个 COS bucket；不复制历史标识。以下命令的所有阶段都需要 `--domain=<管理域名> --confirm-env=<已核实环境> --confirm-function=<上表目标函数>`，production 追加 `--confirm-production`：
 
    ```bash
    node scripts/admin-cert-renewal.mjs prepare <上述确认参数>
@@ -39,7 +48,7 @@
 
    若角色已创建，但 API Key 无权读取 CAM，可在控制台读取角色归属、角色 ID、完整信任 JSON、唯一关联策略及其完整当前 JSON，保存到专用 `.tmp/admin-cert-renewal-<域名>/role-console.private.json`。结构为 `{source:"TENCENT_CAM_CONSOLE",observedAt:<ISO时间>,roleName,roleId,resourceUin,trust,policy,attachedPolicies:[{policyName,policyId}]}`。`role` / `deploy` 追加 `--verified-role-file=<此私有文件>`；脚本要求 30 分钟内的精确回读，拒绝权限漂移。该方式只替代 CAM 读取，不修改权限或绕过云端授权。
 3. `deploy` 以原始 SCF CreateFunction 从首次创建即绑定专用角色，禁止 MCP 注入共享 TCB 角色；CloudBase 创建接口须传 `Stamp: "MINI_QCBASE"`（[官方依赖资源接口说明](https://cloud.tencent.com/document/product/876/34808)），缺失时会报 `InvalidParameterValue.Stamp`，不能误判为权限不足。GetFunction 不接受此参数。若返回 RequestId 后回读为 `CreateFailed`，查看私有 `StatusReasons`：`cls:DescribeTopics` 权限错误须核对专用角色日志元数据权限；`ClsLogSetId & ClsTopicId not matched` 须回读真实 CLS 对应关系。账户 Device Flow 不替代执行角色权限。仅对精确匹配本机原创建 ZIP 标记、无触发器的失败创建，保存配置与该 ZIP 后恢复；平台不允许下载 `CreateFailed` 的代码包，此例外不得用于 Active。下载最终 ZIP 后检查平台摘要及全部运行文件字节。现有部署先暂停该专用 timer 并回读；保存旧代码与配置，再重新走 canary。
-4. 使用配置的 `MIP_SCF_TIMER_UTC_OFFSET_MINUTES` 排一个两分钟后的单次 CANARY；首次先按官方 UTC 配置 `0`，以实际执行验证时区。等私有 COS `lastCanary` 出现匹配 generation、实际执行时间与 `guard: COS_CREATE_ONLY`，再执行：
+4. 使用配置的 `MIP_SCF_TIMER_UTC_OFFSET_MINUTES` 排一个两分钟后的单次 CANARY；先核对同环境已有的真实 canary 凭据，配置 cron 使用的时区偏移；它与函数进程的默认 UTC/TZ 是两回事，不能从函数时间推断 timer 时区。没有可信凭据时逐次以单次 canary 校准；候选计划未实际执行前，不启用每日任务。等私有 COS `lastCanary` 出现匹配 generation、实际执行时间与 `guard: COS_CREATE_ONLY`，再执行：
 
    ```bash
    node scripts/admin-cert-renewal.mjs activate <上述确认参数>

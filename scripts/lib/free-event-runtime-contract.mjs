@@ -469,8 +469,8 @@ export function validateRuntimeAttestation(actual, expected) {
   invariant(app.buildSha === expected.buildSha, 'The opened DevTools is not running the freshly built mutation runner bundle')
   invariant(app.cloudbaseEnvId === expected.envId, 'The running Mini Program CloudBase EnvID does not match --confirm-env')
   invariant(['direct', 'shared'].includes(app.cloudbaseMode), 'The running Mini Program has CloudBase disabled')
-  invariant(app.catalogStage === 'TEST', 'The running Mini Program catalog is not TEST')
-  invariant(app.paymentMode === expected.paymentMode && app.paymentMode !== 'live', 'The running Mini Program payment mode is unsafe')
+  // MIW-119：支付模式与目录 stage 不再烘焙进 bundle，bundle 侧握手只锚定 build/env/mode。
+  // 变异安全由 harness env 门（disabled|test）+ buildSha 锁定 + 下方函数侧 env 校验共同承担。
   invariant(health.ok === true, 'The running Mini Program could not reach the events health endpoint')
   invariant(
     health.data?.service === 'mip-events-api' && health.data?.persistence === 'cloudbase-mysql',
@@ -479,12 +479,10 @@ export function validateRuntimeAttestation(actual, expected) {
   return {
     appIdMatched: true,
     buildShaMatched: true,
-    catalogStage: app.catalogStage,
     cloudbaseEnvMatched: true,
     cloudbaseMode: app.cloudbaseMode,
     envVersion: miniProgram.envVersion,
     eventsHealth: 'cloudbase-mysql',
-    paymentMode: app.paymentMode,
   }
 }
 

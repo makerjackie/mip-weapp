@@ -1,0 +1,32 @@
+{
+  "function": "mip-t-admin-cert-renewer",
+  "domain": "test.admin.mip.cool",
+  "role": "MIPTestAdminCertRenewerRole",
+  "policyFingerprint": "d92c3d11eebc0b03",
+  "sourceFingerprint": "242602607ce63d33122992c7a05e6597d5dc9b0dd97bfc078271618d4a8cbe3a",
+  "databaseAccess": false,
+  "status": "READBACK",
+  "triggers": [
+    {
+      "TriggerName": "mip-t-admin-cert-daily",
+      "TriggerDesc": "{\"cron\":\"0 17 11 * * * *\"}",
+      "Enable": 1
+    }
+  ],
+  "lastCheck": {
+    "checkedAt": "2026-10-16T10:30:45.113Z",
+    "status": "RENEWED"
+  },
+  "lastCanary": {
+    "checkedAt": "2026-10-16T10:26:41.558Z",
+    "guard": "COS_CREATE_ONLY"
+  },
+  "lastSuccess": {
+    "certificateId": "bcOr1nou",
+    "verifiedAt": "2026-10-16T10:30:45.113Z",
+    "fingerprint256": "84:AB:6D:88:34:00:42:6A:BE:2B:37:2F:1F:DD:39:F8:F5:BE:07:DB:5C:B4:FD:91:83:F5:6A:12:CF:7B:FE:E8",
+    "validTo": "Jan 14 08:59:59 2027 GMT"
+  },
+  "pending": false,
+  "reconciliationRequired": false
+}

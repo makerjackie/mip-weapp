@@ -20,8 +20,6 @@ declare const __MIP_BANNERS_FUNCTION_NAME__: string
 declare const __MIP_AI_FUNCTION_NAME__: string
 declare const __MIP_NOTIFICATIONS_FUNCTION_NAME__: string
 declare const __MIP_PAY_FUNCTION_NAME__: string
-declare const __MIP_PAYMENT_MODE__: string
-declare const __MIP_CATALOG_STAGE__: string
 declare const __MIP_SUBSCRIBE_TEMPLATES_JSON__: string
 declare const __MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS__: string
 interface SharedWxCloud extends WxCloud {

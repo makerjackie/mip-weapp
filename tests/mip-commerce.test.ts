@@ -7,9 +7,11 @@ import type {
 } from '../src/modules/mip-commerce'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  createMembershipPlanCache,
   createMipCommerceGateway,
   createMipCommerceModule,
   interpretClientPayment,
+  MipCommerceError,
 } from '../src/modules/mip-commerce'
 
 const plan: MembershipPlan = {
@@ -46,8 +48,13 @@ describe('MIP membership commerce', () => {
     expect(interpretClientPayment('ACCEPTED', order('PAID')).kind).toBe('CONFIRMED')
   })
 
-  it('fails closed when payment is disabled and reconciles when enabled', async () => {
+  it('delegates payment availability to the server and reconciles payment outcomes', async () => {
     const gateway = {
+      describePaymentCapabilities: vi.fn(async () => ({
+        mode: 'live' as const,
+        catalogStage: 'LIVE' as const,
+        available: true,
+      })),
       listPlans: vi.fn(async () => [plan]),
       getMembershipBenefits: vi.fn(async () => ({
         kind: 'GUEST' as const,
@@ -71,45 +78,99 @@ describe('MIP membership commerce', () => {
       submitRefund: vi.fn(async () => ({ status: 'PROVIDER_CREATED' })),
     } satisfies CommerceGateway
     const payment: PaymentAdapter = { request: vi.fn(async () => 'ACCEPTED') }
-    const disabledModule = createMipCommerceModule(gateway, payment, {
-      paymentMode: 'disabled',
-      catalogStage: 'TEST',
+    // MIW-119：模块本地不再短路支付——disabled 拒绝由服务端 createCheckout 给出。
+    const disabledGateway = {
+      ...gateway,
+      describePaymentCapabilities: vi.fn(async () => ({
+        mode: 'disabled' as const,
+        catalogStage: 'TEST' as const,
+        available: false,
+      })),
+      createCheckout: vi.fn(async () => {
+        throw new MipCommerceError('PAYMENT_UNAVAILABLE', '当前环境未开启微信支付')
+      }),
+    } satisfies CommerceGateway
+    const module = createMipCommerceModule(gateway, payment)
+    await expect(module.ensurePaymentCapability()).resolves.toMatchObject({
+      mode: 'live',
+      available: true,
     })
-    await expect(disabledModule.purchase({
+    await expect(createMipCommerceModule(disabledGateway, payment).purchase({
       planId: plan.id,
       idempotencyKey: 'purchase-1',
-    })).rejects.toThrow('PAYMENT_UNAVAILABLE')
-    expect(() => disabledModule.requestRefund({
-      orderId: order('PAID').id,
-      idempotencyKey: 'refund-1',
-    })).toThrow('PAYMENT_UNAVAILABLE')
-    await expect(createMipCommerceModule(gateway, payment, {
-      paymentMode: 'test',
-      catalogStage: 'TEST',
-    }).purchase({ planId: plan.id, idempotencyKey: 'purchase-1' })).resolves.toMatchObject({
+    })).rejects.toMatchObject({ code: 'PAYMENT_UNAVAILABLE' })
+    await expect(module.purchase({ planId: plan.id, idempotencyKey: 'purchase-1' })).resolves.toMatchObject({
       kind: 'CONFIRMED',
     })
-    await expect(createMipCommerceModule(gateway, payment, {
-      paymentMode: 'test',
-      catalogStage: 'TEST',
-    }).payOrder(order('CREATED').id)).resolves.toMatchObject({ kind: 'CONFIRMED' })
+    await expect(module.payOrder(order('CREATED').id)).resolves.toMatchObject({ kind: 'CONFIRMED' })
 
     gateway.reconcileOrder.mockClear()
     payment.request.mockResolvedValueOnce('CANCELLED')
-    await expect(createMipCommerceModule(gateway, payment, {
-      paymentMode: 'test',
-      catalogStage: 'TEST',
-    }).payOrder(order('CREATED').id)).resolves.toMatchObject({ kind: 'CANCELLED' })
+    await expect(module.payOrder(order('CREATED').id)).resolves.toMatchObject({ kind: 'CANCELLED' })
     expect(gateway.reconcileOrder).not.toHaveBeenCalled()
 
     gateway.reconcileOrder.mockRejectedValueOnce(new Error('PAYMENT_QUERY_UNAVAILABLE'))
-    await expect(createMipCommerceModule(gateway, payment, {
-      paymentMode: 'test',
-      catalogStage: 'TEST',
-    }).purchase({ planId: plan.id, idempotencyKey: 'purchase-2' })).resolves.toMatchObject({
+    await expect(module.purchase({ planId: plan.id, idempotencyKey: 'purchase-2' })).resolves.toMatchObject({
       kind: 'PENDING',
       order: { id: order('CREATED').id },
     })
+  })
+
+  it('caches the capability snapshot per module and clears stale-stage plan cache', async () => {
+    let capabilityStage = 'TEST'
+    const gateway = {
+      describePaymentCapabilities: vi.fn(async () => ({
+        mode: 'test' as const,
+        catalogStage: capabilityStage as 'TEST' | 'LIVE',
+        available: true,
+      })),
+      listPlans: vi.fn(async () => [plan]),
+      getMembershipBenefits: vi.fn(async () => ({
+        kind: 'GUEST' as const,
+        status: 'NONE' as const,
+        benefits: [] as [],
+        history: [],
+      })),
+      createCheckout: vi.fn(async () => order('CREATED')),
+      createPayment: vi.fn(async () => ({
+        timeStamp: '1',
+        nonceStr: 'nonce',
+        package: 'prepay_id=test',
+        signType: 'RSA' as const,
+        paySign: 'signature',
+      })),
+      getOrder: vi.fn(async () => order('CREATED')),
+      reconcileOrder: vi.fn(async () => order('PAID')),
+      listOrders: vi.fn(async () => []),
+      listOrderPage: vi.fn(async () => ({ items: [] })),
+      requestRefund: vi.fn(async () => ({ refundId: 'refund-1' as never, status: 'PENDING' })),
+      submitRefund: vi.fn(async () => ({ status: 'PROVIDER_CREATED' })),
+    } satisfies CommerceGateway
+    const payment: PaymentAdapter = { request: vi.fn(async () => 'ACCEPTED') }
+    const writes: unknown[] = []
+    const module = createMipCommerceModule(gateway, payment, {
+      planCache: createMembershipPlanCache({
+        storage: {
+          read: () => undefined,
+          write: value => writes.push(value),
+          clear: () => {},
+        },
+      }),
+    })
+    // 预置一个 TEST 快照（列表先行返回，随后能力快照报告已切到 LIVE）。
+    await module.listPlans()
+    expect(module.peekPlans()).toEqual([plan])
+    expect(gateway.describePaymentCapabilities).not.toHaveBeenCalled()
+    capabilityStage = 'LIVE'
+    await module.ensurePaymentCapability()
+    // stage 切换触发旧缓存清除；下一次 peek 回源而非读旧 stage 残留。
+    expect(module.peekPlans()).toBeUndefined()
+
+    // 二次调用复用快照，不重复请求。
+    await module.ensurePaymentCapability()
+    expect(gateway.describePaymentCapabilities).toHaveBeenCalledTimes(1)
+    expect(module.peekPaymentCapability()).toMatchObject({ catalogStage: 'LIVE' })
+    expect(writes.length).toBeGreaterThan(0)
   })
 
   it('routes commerce and payment calls through separate mip functions', async () => {

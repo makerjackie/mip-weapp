@@ -1,0 +1,47 @@
+[
+  {
+    "requested": {
+      "width": 1280,
+      "height": 720
+    },
+    "observed": {
+      "entry": [
+        "/assets/index-dbH29RjD.js"
+      ],
+      "height": 720,
+      "scrollWidth": 1280,
+      "width": 1280
+    },
+    "overflow": false
+  },
+  {
+    "requested": {
+      "width": 1440,
+      "height": 900
+    },
+    "observed": {
+      "entry": [
+        "/assets/index-dbH29RjD.js"
+      ],
+      "height": 900,
+      "scrollWidth": 1440,
+      "width": 1440
+    },
+    "overflow": false
+  },
+  {
+    "requested": {
+      "width": 390,
+      "height": 844
+    },
+    "observed": {
+      "entry": [
+        "/assets/index-dbH29RjD.js"
+      ],
+      "height": 844,
+      "scrollWidth": 390,
+      "width": 390
+    },
+    "overflow": false
+  }
+]

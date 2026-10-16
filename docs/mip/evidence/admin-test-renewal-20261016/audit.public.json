@@ -1,0 +1,28 @@
+{
+  "observedAt": "2026-10-16T10:30:59.630Z",
+  "production": {
+    "configurationUnchanged": true,
+    "sourceUnchanged": true,
+    "timersUnchanged": true
+  },
+  "otherDomainsUnchanged": true,
+  "test": {
+    "status": "Active",
+    "role": "MIPTestAdminCertRenewerRole",
+    "runtime": "Nodejs20.19",
+    "codeSha256": "4067bfe308009ea94db78d450be88fe1eb8f38c651004c25db45010281bf526b",
+    "matchingFiles": 4,
+    "sourceFingerprint": "242602607ce63d33122992c7a05e6597d5dc9b0dd97bfc078271618d4a8cbe3a",
+    "hasVpc": false,
+    "httpEntry": false,
+    "sdkClientInvoke": false,
+    "databaseAccess": false,
+    "timer": {
+      "name": "mip-t-admin-cert-daily",
+      "cron": "0 17 11 * * * *",
+      "enable": "OPEN",
+      "scheduleUtc": "03:17 daily",
+      "cronUtcOffsetMinutes": 480
+    }
+  }
+}

@@ -107,7 +107,8 @@ describe('MIP event check-in page not-open guidance (MIW-103)', () => {
 
     expect(page.data.state).toBe('not-open')
     expect(page.data.message).toContain('活动未开始')
-    expect(page.data.message).toContain('12月12日 09:30')
+    const localOpening = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date('2026-12-12T09:30:00+08:00'))
+    expect(page.data.message).toContain(localOpening)
     expect(page.data.eventId).toBe(EVENT_ID)
     // 签到意图保留：开放后回本页「确认签到」即可补签。
     expect(checkInStore.save).toHaveBeenCalled()

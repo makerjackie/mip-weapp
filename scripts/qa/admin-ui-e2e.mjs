@@ -9,17 +9,18 @@
 //
 // Requires the ignored .env.secrets.local to define MIP_ADMIN_TEST_PHONE / MIP_ADMIN_TEST_PASSWORD.
 
-import process from 'node:process'
-import path from 'node:path'
 import fs from 'node:fs'
-import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
+import path from 'node:path'
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { loadCaseEnv } from '../lib/example-cloudbase.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const adminWebDir = path.join(root, 'admin-web')
 const require = createRequire(path.join(adminWebDir, 'package.json'))
 const { chromium } = require('@playwright/test')
+
 const env = loadCaseEnv(root)
 const flag = name => process.argv.find(arg => arg.startsWith(`${name}=`))?.slice(name.length + 1)
 const origin = new URL(flag('--origin') || env.MIP_ADMIN_TEST_ORIGIN || 'https://admin.mip.cool').origin
@@ -32,7 +33,7 @@ if (!env.MIP_ADMIN_TEST_PHONE || !env.MIP_ADMIN_TEST_PASSWORD) {
 fs.mkdirSync(shotsDir, { recursive: true })
 
 const results = []
-const record = (name, ok, detail = '') => {
+function record(name, ok, detail = '') {
   results.push({ name, ok, detail })
   console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`)
 }
@@ -41,7 +42,11 @@ const browser = await chromium.launch()
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const consoleErrors = []
-  context.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()) })
+  context.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text())
+    }
+  })
   context.on('pageerror', error => consoleErrors.push(String(error.message || error)))
 
   const login = await context.request.post(`${origin}/api/auth/password/login`, {
@@ -54,6 +59,8 @@ try {
   const page = await context.newPage()
   await page.goto(`${origin}/#/events`, { waitUntil: 'networkidle', timeout: 45_000 })
   await page.waitForSelector('.ant-layout, main, #root > *', { timeout: 20_000 })
+  // Playwright checks visible UI text; this is not a DOM innerText property.
+  // eslint-disable-next-line unicorn/prefer-dom-node-text-content
   const bodyText = await page.locator('body').innerText()
   record('events list renders', /活动/.test(bodyText), `${bodyText.replace(/\s+/g, ' ').slice(0, 60)}…`)
   await page.screenshot({ path: path.join(shotsDir, 'events-list-1440.png'), fullPage: true })
@@ -63,6 +70,7 @@ try {
   if (hasRow) {
     await row.click({ timeout: 5_000 }).catch(() => {})
     await page.waitForTimeout(1_200)
+    // eslint-disable-next-line unicorn/prefer-dom-node-text-content -- Playwright visible UI assertion
     const detailText = await page.locator('body').innerText()
     record('event detail surfaces participation/roster', /参与情况|报名与参与人|活动信息/.test(detailText))
     await page.screenshot({ path: path.join(shotsDir, 'event-detail-1440.png'), fullPage: true })
@@ -78,7 +86,7 @@ try {
   record('mobile 390px has no horizontal overflow', overflow <= 2, `overflow ${overflow}px`)
   await page.screenshot({ path: path.join(shotsDir, 'events-list-390.png'), fullPage: true })
 
-  const benign = /favicon|manifest|ResizeObserver loop|Download the React DevTools|the server responded with a status of 40[0-9]/
+  const benign = /favicon|manifest|ResizeObserver loop|Download the React DevTools|the server responded with a status of 40\d/
   const realErrors = consoleErrors.filter(text => !benign.test(text))
   record('no unexpected console errors', realErrors.length === 0, realErrors.slice(0, 2).join(' | '))
 }
