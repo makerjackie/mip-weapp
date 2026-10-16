@@ -139,12 +139,27 @@ export function RemoteCatalogSelect({
     if (demoMode) { setCreateError('演示模式不会新建标签'); return }
     setCreating(true)
     setCreateError('')
+    const kind = createKind || 'TAG'
     try {
       const definition = createAdminEventMutationDefinition('mip.admin.events.catalog.save', '')
-      const built = validateAdminEventMutationInput(definition, { kind: createKind || 'TAG', name })
+      const built = validateAdminEventMutationInput(definition, { kind, name })
       if (!built.ok) { setCreateError(built.errors[0]?.message || '名称无效'); return }
-      const result = await request<Record<string, unknown>>('mip.admin.events.catalog.save', built.input)
-      const createdId = String(result?.catalogId || result?.id || '')
+      const created = await request<Record<string, unknown>>('mip.admin.events.catalog.save', {
+        ...(built.input as Record<string, unknown>),
+        idempotencyKey: `web-catalog-${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`,
+      })
+      const createdId = String(created?.id || created?.catalogId || '')
+      const createdVersion = Number(created?.version)
+      // 服务端新建目录项默认 INACTIVE；立即启用才能出现在可选项里并用于当前活动（原型「新建并选中」）。
+      if (createdId && Number.isInteger(createdVersion)) {
+        await request('mip.admin.events.catalog.changeStatus', {
+          kind,
+          catalogId: createdId,
+          expectedVersion: createdVersion,
+          status: 'ACTIVE',
+          idempotencyKey: `web-catalog-activate-${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`,
+        })
+      }
       setCreateOpen(false)
       setNewName('')
       setReloadKey(current => current + 1)
@@ -154,8 +169,8 @@ export function RemoteCatalogSelect({
       }
       void message.success('已新建并选中')
     }
-    catch {
-      setCreateError('新建失败，请重试')
+    catch (reason) {
+      setCreateError(reason instanceof Error ? reason.message : '新建失败，请重试')
     }
     finally {
       setCreating(false)
