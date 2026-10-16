@@ -18,7 +18,7 @@
   <!-- MIW-121 协议勾选：授权/登录前强制同意；链接 catch:tap 跳协议页，不关弹层、返回后勾选保留。 -->
   <checkbox-group class="mip-login-sheet__consent" bindchange="onConsentChange">
     <label class="mip-login-sheet__consent-row" aria-role="checkbox" aria-checked="{{agreed}}" aria-label="同意服务协议与隐私政策">
-      <checkbox value="agreed" checked="{{agreed}}" color="#FCDF03" />
+      <checkbox class="mip-login-sheet__consent-checkbox" value="agreed" checked="{{agreed}}" color="#FCDF03" />
       <view class="mip-login-sheet__consent-text">我已阅读并同意<text class="mip-login-sheet__consent-link" catch:tap="openUserAgreement">《服务协议》</text>与<text class="mip-login-sheet__consent-link" catch:tap="openPrivacyPolicy">《隐私政策》</text></view>
     </label>
   </checkbox-group>
