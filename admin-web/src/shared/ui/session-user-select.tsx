@@ -1,12 +1,25 @@
-import { Select, Spin } from 'antd'
+import { App, Input, Modal, Select, Spin } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminSession } from '../../app/session-provider'
+import { createAdminEventMutationDefinition, validateAdminEventMutationInput } from '../../modules/admin-event-mutation-forms'
 import type { AdminOperationAction } from '../../domain/contracts'
 import type { AdminRequestInput } from '../../domain/contracts'
 
 interface UserOption {
   value: string
   label: string
+}
+
+/**
+ * 演示模式没有后端目录，返回一小组样例选项，仅用于本地视觉评审（与原型示例一致）。
+ * 真实运行永远走后端目录；此处不会影响生产。
+ */
+function demoCatalogOptions(action: string, input: Record<string, unknown>): UserOption[] {
+  if (action !== 'mip.admin.events.catalog.list') return []
+  const kind = String(input.kind || '')
+  if (kind === 'TAG') return ['早会', '集会', '沙龙', '路演'].map(name => ({ value: name, label: name }))
+  if (kind === 'TYPE') return ['早会', '沙龙', '路演', '工作坊'].map(name => ({ value: name, label: name }))
+  return []
 }
 
 function catalogOptions(payload: unknown, optionsKey?: string, filter?: { key: string; value: string }, valueKey = 'id'): UserOption[] {
@@ -33,6 +46,10 @@ export function RemoteCatalogSelect({
   placeholder,
   optionsKey,
   multiple,
+  variant,
+  allowCreate,
+  createKind,
+  createMaxLength,
   filter,
   input,
   valueKey,
@@ -46,22 +63,43 @@ export function RemoteCatalogSelect({
   placeholder?: string
   optionsKey?: string
   multiple?: boolean
+  /** Pills render a selectable chip group instead of a dropdown (原型活动标签样式). */
+  variant?: 'select' | 'pills'
+  /** Pills only: show「＋ 新建」to create a catalog entry inline. */
+  allowCreate?: boolean
+  createKind?: string
+  createMaxLength?: number
   filter?: { key: string; value: string }
   input?: AdminRequestInput
   valueKey?: string
   /** Shown when the catalog loads but has no entries, telling operators where options come from. */
   emptyHint?: string
 }) {
-  const { request } = useAdminSession()
+  const { request, demoMode, hasCapability } = useAdminSession()
+  const { message } = App.useApp()
   const [options, setOptions] = useState<UserOption[]>([])
   const [failed, setFailed] = useState(false)
   const [policyDisabled, setPolicyDisabled] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
   const filterKey = filter?.key, filterValue = filter?.value
   const inputKey = JSON.stringify(input || {})
+  const canCreate = Boolean(allowCreate) && hasCapability?.('events.catalog.manage') === true
 
   useEffect(() => {
     let active = true
     const timer = setTimeout(() => {
+      if (demoMode) {
+        // 演示模式：直接给样例选项，避免本地预览显示“目录加载失败”（真实运行永远走后端目录）。
+        if (!active) return
+        setOptions(demoCatalogOptions(action, JSON.parse(inputKey) as Record<string, unknown>))
+        setFailed(false)
+        setPolicyDisabled(false)
+        return
+      }
       setFailed(false)
       void (async () => {
         let payload = await request<Record<string, unknown>>(action as AdminOperationAction, JSON.parse(inputKey))
@@ -87,12 +125,108 @@ export function RemoteCatalogSelect({
         .catch(() => { if (active) setFailed(true) })
     }, 0)
     return () => { active = false; clearTimeout(timer) }
-  }, [action, optionsKey, request, filterKey, filterValue, inputKey, valueKey])
+  }, [action, optionsKey, request, demoMode, filterKey, filterValue, inputKey, valueKey, reloadKey])
 
   const merged = useMemo(() => {
     const values = Array.isArray(value) ? value : value ? [value] : []
     return [...values.filter(item => !options.some(option => option.value === item)).map(item => ({ value: item, label: '已选项（等待目录核对）' })), ...options]
   }, [options, value])
+
+  const handleCreate = async () => {
+    const name = newName.trim()
+    if (!name) { setCreateError('请输入名称'); return }
+    if (createMaxLength && name.length > createMaxLength) { setCreateError(`名称不能超过 ${createMaxLength} 个字`); return }
+    if (demoMode) { setCreateError('演示模式不会新建标签'); return }
+    setCreating(true)
+    setCreateError('')
+    try {
+      const definition = createAdminEventMutationDefinition('mip.admin.events.catalog.save', '')
+      const built = validateAdminEventMutationInput(definition, { kind: createKind || 'TAG', name })
+      if (!built.ok) { setCreateError(built.errors[0]?.message || '名称无效'); return }
+      const result = await request<Record<string, unknown>>('mip.admin.events.catalog.save', built.input)
+      const createdId = String(result?.catalogId || result?.id || '')
+      setCreateOpen(false)
+      setNewName('')
+      setReloadKey(current => current + 1)
+      if (createdId) {
+        const current = Array.isArray(value) ? value : value ? [value] : []
+        onChange?.(multiple ? [...current, createdId] : createdId)
+      }
+      void message.success('已新建并选中')
+    }
+    catch {
+      setCreateError('新建失败，请重试')
+    }
+    finally {
+      setCreating(false)
+    }
+  }
+
+  if (variant === 'pills') {
+    const values = Array.isArray(value) ? value : value ? [value] : []
+    const createLabel = createKind === 'TYPE' ? '＋ 新建类型' : '＋ 新建标签'
+    return (
+      <>
+        <div className="catalog-pills" id={id} role="group">
+          {failed ? <span className="catalog-pills__hint">目录加载失败，请稍后重试</span> : null}
+          {!failed && !merged.length ? <span className="catalog-pills__hint">{emptyHint || '暂无可选项'}</span> : null}
+          {!failed && merged.map(option => {
+            const active = values.includes(option.value)
+            return (
+              <button
+                type="button"
+                key={option.value}
+                className={`catalog-pill${active ? ' is-active' : ''}`}
+                aria-pressed={active}
+                disabled={disabled || policyDisabled}
+                onClick={() => {
+                  if (disabled || policyDisabled) return
+                  if (!multiple) {
+                    onChange?.(active ? '' : option.value)
+                    return
+                  }
+                  onChange?.(active ? values.filter(item => item !== option.value) : [...values, option.value])
+                }}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+          {canCreate ? (
+            <button
+              type="button"
+              className="catalog-pill catalog-pill--create"
+              disabled={disabled || policyDisabled}
+              onClick={() => { setCreateOpen(true); setCreateError('') }}
+            >
+              {createLabel}
+            </button>
+          ) : null}
+        </div>
+        {canCreate ? (
+          <Modal
+            title={createLabel.replace('＋ ', '新建')}
+            open={createOpen}
+            onCancel={() => setCreateOpen(false)}
+            onOk={() => void handleCreate()}
+            okText="新建并选中"
+            cancelText="取消"
+            confirmLoading={creating}
+            destroyOnHidden
+          >
+            <Input
+              value={newName}
+              maxLength={createMaxLength}
+              placeholder={createMaxLength ? `名称（不超过 ${createMaxLength} 个字）` : '名称'}
+              onChange={event => setNewName(event.target.value)}
+              onPressEnter={() => void handleCreate()}
+            />
+            {createError ? <div className="catalog-pills__hint" style={{ color: '#ff4d4f', marginTop: 8 }}>{createError}</div> : null}
+          </Modal>
+        ) : null}
+      </>
+    )
+  }
 
   return (
     <Select

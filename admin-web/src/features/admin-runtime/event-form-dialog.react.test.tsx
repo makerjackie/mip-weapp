@@ -50,6 +50,9 @@ describe('event form submission through the actual dialog', () => {
     const definition = createAdminEventMutationDefinition('mip.admin.events.save', '')
     const values = {
       ...definition.values,
+      // 活动介绍是所见即所得编辑器（TipTap contenteditable），无法用 fireEvent.change 注入；
+      // 这里以预置值验证「提交管线」，编辑器自身行为由 rich-text-area.react.test.tsx 覆盖。
+      description: '一起交流产品想法',
       startsAt: '2030-09-20T10:00:00+08:00',
       endsAt: '2030-09-20T12:00:00+08:00',
       capacity: 20,
@@ -62,15 +65,16 @@ describe('event form submission through the actual dialog', () => {
         submitted(buildEventMutationInput('mip.admin.events.save', normalized))
       }} />)
     for (const [label, value] of [
-      ['活动名称', '活动全流程验证'], ['活动摘要', '现场交流'], ['活动介绍', '一起交流产品想法'],
-      ['活动地点', '交流室'], ['城市', '深圳'],
+      ['活动名称', '活动全流程验证'],
+      ['场地地址文案', '交流室'], ['城市', '深圳'],
     ]) {
       fireEvent.change(screen.getByLabelText(label!), { target: { value } })
     }
     fireEvent.click(screen.getByRole('button', { name: '确认提交' }))
     await waitFor(() => expect(submitted).toHaveBeenCalledTimes(1))
     expect(submitted.mock.calls[0]?.[0]).toMatchObject({ draft: {
-      title: '活动全流程验证', summary: '现场交流', description: '一起交流产品想法',
+      // 摘要已从表单隐藏：留空时由活动介绍自动截取。
+      title: '活动全流程验证', summary: '一起交流产品想法', description: '一起交流产品想法',
       venueName: '交流室', cityName: '深圳', capacity: 20, accessType: 'FREE',
       startsAt: '2030-09-20T02:00:00.000Z', endsAt: '2030-09-20T04:00:00.000Z',
       // 报名字段编辑入口已下线：预置的已有配置必须原样保留提交，不被清空

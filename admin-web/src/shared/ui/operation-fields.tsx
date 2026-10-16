@@ -33,13 +33,13 @@ export function controlFor(field: OperationField, values?: OperationValues) {
     const action = field.optionsActionByValue.actions[String(values?.[field.optionsActionByValue.path] || '')]
     return action ? <RemoteCatalogSelect action={action} input={['mip.admin.branches.list', 'mip.admin.events.list'].includes(action) ? { purpose: 'ROLE_SCOPE' } : undefined} emptyHint={field.emptyHint} /> : <Input disabled placeholder="平台范围" />
   }
-  if (field.optionsAction) return <RemoteCatalogSelect action={field.optionsAction} input={field.optionsInput} valueKey={field.optionsValueKey} optionsKey={field.optionsKey} multiple={field.kind === 'multi-select'} filter={field.optionsFilter ? { key: field.optionsFilter.key, value: String(values?.[field.optionsFilter.path] || '') } : undefined} emptyHint={field.emptyHint} />
+  if (field.optionsAction) return <RemoteCatalogSelect action={field.optionsAction} input={field.optionsInput} valueKey={field.optionsValueKey} optionsKey={field.optionsKey} multiple={field.kind === 'multi-select'} variant={field.variant} allowCreate={field.allowCreate} createKind={field.createKind} createMaxLength={field.createMaxLength} filter={field.optionsFilter ? { key: field.optionsFilter.key, value: String(values?.[field.optionsFilter.path] || '') } : undefined} emptyHint={field.emptyHint} />
   if (field.kind === 'select') return <Select options={options} allowClear={!field.required} placeholder={field.placeholder || '请选择'} notFoundContent={options.length === 0 && field.emptyHint ? field.emptyHint : undefined} />
   if (field.kind === 'multi-select') return <Select mode="multiple" options={options} placeholder={field.placeholder || '请选择'} notFoundContent={options.length === 0 && field.emptyHint ? field.emptyHint : undefined} />
   if (field.assetPurpose) {
     const purpose = field.assetPurpose as AdminMediaPurpose
     if (field.kind === 'asset-list' || field.kind === 'id-list') return <AssetListUploader purpose={purpose} maxCount={12} />
-    return <AssetUploader purpose={purpose} />
+    return <AssetUploader purpose={purpose} placeholder={field.placeholder} />
   }
   if (field.kind === 'textarea' || TEXTAREA_LIKE_KINDS.includes(field.kind)) {
     return <Input.TextArea rows={4} maxLength={field.maxLength} showCount={Boolean(field.maxLength)} placeholder={field.placeholder} />

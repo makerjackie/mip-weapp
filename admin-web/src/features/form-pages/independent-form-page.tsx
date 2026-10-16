@@ -24,6 +24,8 @@ export interface IndependentFormPageConfig {
   action: AdminOperationAction
   idempotencyKey: string
   capability: string
+  /** Primary submit button label; defaults to「确认提交」。 */
+  submitLabel?: string
   textAssist?: { suggest: (text: string) => OperationValues }
   privateDraft?: { load: () => Promise<OperationValues | null>; save: (values: OperationValues) => Promise<OperationValues> }
   preview?: {
@@ -264,7 +266,7 @@ export function IndependentFormPage({ config, loadDetail }: {
           }}>重新读取冲突版本</Button>}
         </Space> : null}
         <Space size={12} style={{ marginTop: 24 }}>
-          <Button type="primary" htmlType="submit" form="independent-form" loading={loading} disabled={draftSaving || Boolean(conflict)}>确认提交</Button>
+          <Button type="primary" htmlType="submit" form="independent-form" loading={loading} disabled={draftSaving || Boolean(conflict)}>{config.submitLabel || '确认提交'}</Button>
           {config.privateDraft ? <Button loading={draftSaving} disabled={loading || Boolean(conflict)} onClick={async () => {
             if (savingDraft.current || submitting.current) return
             savingDraft.current = true

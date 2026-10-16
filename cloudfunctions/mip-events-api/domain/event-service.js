@@ -563,8 +563,9 @@ function rewriteExpiringRichImageUrls(value, assetRows) {
       continue
     }
     const httpsBase = `https://${parsed[1]}.tcb.qcloud.la/${parsed[2]}`
+    // 查询串在 markdown `)`、HTML 属性引号/尖括号或空白处终止，避免把 `">` 一起吞掉。
     rewritten = rewritten.replace(
-      new RegExp(`${escapeRegExpLike(httpsBase)}(?:\\?[^)\\s]*)?`, 'g'),
+      new RegExp(`${escapeRegExpLike(httpsBase)}(?:\\?[^)\\s"'<>]*)?`, 'g'),
       fileId,
     )
   }

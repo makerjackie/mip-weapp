@@ -39,6 +39,12 @@ export interface OperationField {
   optionsKey?: string
   optionsFilter?: { path: string; key: string }
   optionsActionByValue?: { path: string; actions: Record<string, string> }
+  /** Catalog control style: dropdown (default) or selectable pill group. */
+  variant?: 'select' | 'pills'
+  /** Pills only: show「＋ 新建」to create a catalog entry inline. */
+  allowCreate?: boolean
+  createKind?: string
+  createMaxLength?: number
   valueScale?: number
   readOnly?: boolean
   readOnlyReason?: string

@@ -80,7 +80,7 @@ describe('membership configuration UI', () => {
     mount()
     await screen.findByText('活动参与')
     fireEvent.click(screen.getByRole('button', { name: /编\s*辑/ }))
-    await screen.findByPlaceholderText('上传勋章图片后自动填入')
+    await screen.findByText('上传勋章图片后自动填入')
     expect(screen.getByLabelText('勋章图片 HTTPS 地址')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('获得条件'), { target: { value: '由运营人工授予年度志愿者' } })
     fireEvent.mouseDown(screen.getByLabelText('分类'))

@@ -294,8 +294,8 @@ async function loadEventDetail(
       title: '活动信息',
       fields: fields([
         ['摘要', text(event.summary)],
-        ['活动说明', text(event.description)],
-        ['活动须知', text(event.notices)],
+        ['活动介绍', text(event.description)],
+        ['报名须知', text(event.notices)],
         ['活动方式', codeLabel(event.eventMode)],
         ['活动类型', event.accessType === 'PAID' ? '付费' : codeLabel(event.accessType)],
         ['价格', money(event.priceCents, 'CNY')],

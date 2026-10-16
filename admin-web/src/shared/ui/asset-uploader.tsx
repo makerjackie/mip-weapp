@@ -1,5 +1,5 @@
 import { UploadOutlined } from '@ant-design/icons'
-import { Button, Input, Tag, Upload, message as staticMessage } from 'antd'
+import { Button, Tag, Upload, message as staticMessage } from 'antd'
 import { useEffect, useState } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import { AdminMediaUploadError, type AdminMediaFile, type AdminMediaPurpose } from '../../modules/admin-media-upload'
@@ -117,37 +117,50 @@ export function AssetUploader({
     }
   }
 
+  const uploadTrigger = (labelText: string) => (
+    <Upload
+      accept=".png,.jpg,.jpeg"
+      showUploadList={false}
+      customRequest={handleUpload}
+      disabled={disabled || uploading}
+    >
+      <Button icon={<UploadOutlined />} size="small" loading={uploading} disabled={disabled}>
+        {uploading ? '上传中…' : labelText}
+      </Button>
+    </Upload>
+  )
+
   return (
     <div className="asset-uploader">
-      <Input
-        value={value ? '已选择图片' : ''}
-        placeholder={placeholder}
-        readOnly
-        disabled={disabled || uploading}
-        addonAfter={
-          <Upload
-            accept=".png,.jpg,.jpeg"
-            showUploadList={false}
-            customRequest={handleUpload}
-            disabled={disabled || uploading}
-          >
-            <Button icon={<UploadOutlined />} size="small" type="text" loading={uploading} disabled={disabled}>
-              {uploading ? '上传中' : '上传'}
-            </Button>
-          </Upload>
-        }
-      />
       {previewUrl ? (
-        <div className="asset-uploader__preview">
-          <img src={previewUrl} alt="预览" style={{ maxWidth: 200, maxHeight: 120, borderRadius: 8 }} />
-          <Button size="small" type="link" danger disabled={disabled || uploading} onClick={() => { onChange?.(''); setUploadedAsset(null) }}>移除</Button>
+        <div className="asset-uploader__cover">
+          <img src={previewUrl} alt="预览" />
+          <div className="asset-uploader__cover-actions">
+            {uploadTrigger('重新上传')}
+            <Button size="small" type="text" danger disabled={disabled || uploading} onClick={() => { onChange?.(''); setUploadedAsset(null) }}>移除</Button>
+          </div>
         </div>
       ) : value ? (
-        <div className="asset-uploader__preview">
-          <span className="asset-uploader__saved">已保存素材，可重新上传覆盖</span>
-          <Button size="small" type="link" danger disabled={disabled || uploading} onClick={() => { onChange?.(''); setUploadedAsset(null) }}>清除</Button>
+        <div className="asset-uploader__cover asset-uploader__cover--saved">
+          <span className="asset-uploader__saved">已保存封面，可重新上传覆盖</span>
+          <div className="asset-uploader__cover-actions">
+            {uploadTrigger('重新上传')}
+            <Button size="small" type="text" danger disabled={disabled || uploading} onClick={() => { onChange?.(''); setUploadedAsset(null) }}>清除</Button>
+          </div>
         </div>
-      ) : null}
+      ) : (
+        <Upload.Dragger
+          accept=".png,.jpg,.jpeg"
+          showUploadList={false}
+          customRequest={handleUpload}
+          disabled={disabled || uploading}
+          className="asset-dragger"
+        >
+          <p className="asset-dragger__icon"><UploadOutlined /></p>
+          <p className="asset-dragger__text">{uploading ? '上传中…' : (placeholder || '点击或拖拽上传图片')}</p>
+          <p className="asset-dragger__hint">支持 JPG、PNG，单张不超过 1MB</p>
+        </Upload.Dragger>
+      )}
     </div>
   )
 }

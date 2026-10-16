@@ -15,8 +15,16 @@ export function EventEditFormPage() {
   const params = useParams({ from: '/events/$eventId/edit' }) as { eventId?: string }
   const eventId = params.eventId === 'new' ? '' : (params.eventId || '')
   const { draftId } = useSearch({ from: '/events/$eventId/edit' }) as { draftId?: string }
-  const { request } = useAdminSession()
+  const { request, demoMode, session } = useAdminSession()
   const drafts = useMemo(() => eventPrivateDrafts(request, eventId), [request, eventId])
+
+  // 归属默认：分会管理员默认选中其所属分会；平台管理员默认「平台（所有分会）」。
+  const defaultScope = useMemo(() => {
+    const grant = session?.capabilities?.find(item => item.capability === 'events.write' && item.scopeType === 'BRANCH' && item.scopeId)
+    return grant?.scopeId
+      ? { scopeType: 'BRANCH', branchId: String(grant.scopeId) }
+      : { scopeType: 'PLATFORM', branchId: '' }
+  }, [session])
 
   const config = EVENT_MUTATION_CONFIGS['mip.admin.events.save']
   const definition = useMemo(
@@ -33,12 +41,14 @@ export function EventEditFormPage() {
     title: eventId ? '编辑活动' : '新建活动',
     description: config.description,
     fields: definition.fields,
-    values: definition.values,
+    values: { ...definition.values, ...(eventId ? {} : defaultScope) },
     backTarget: '/events',
     action: 'mip.admin.events.save',
+    submitLabel: eventId ? '保存活动' : '创建活动',
     idempotencyKey,
     capability: config.capability,
-    privateDraft: { ...drafts, load: () => drafts.load(draftId) },
+    // 演示模式没有后端草稿；返回 null 避免本地预览出现“草稿读取失败”噪音。
+    privateDraft: { ...drafts, load: () => (demoMode ? Promise.resolve(null) : drafts.load(draftId)) },
     buildInput: (values: OperationValues) => {
       const result = validateAdminEventMutationInput(
         { ...definition, values: { ...definition.values, ...values } },

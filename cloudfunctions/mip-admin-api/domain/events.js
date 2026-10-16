@@ -16,6 +16,7 @@ const {
   text,
 } = require('./validation')
 const { decryptPhone } = require('../lib/phone')
+const { richTextToPlainText, assertRichTextSafe } = require('./rich-text')
 const { normalizeRegistrationSchema } = require('./registration-schema')
 const { eventOperationPolicy } = require('./event-policy')
 
@@ -151,6 +152,10 @@ function createAdminEvents({
       grant = authorize(context.bindings, CAPABILITIES.EVENTS_WRITE, scope)
     }
     const draft = normalizeEventDraft(input.draft)
+    // 新建活动名称按原型约束 ≤20 字；编辑维持 120 上限以兼容历史长标题（不静默截断）。
+    if (!input.eventId && draft.title.length > 20) {
+      throw new AdminError('VALIDATION_FAILED', '活动名称最多 20 个字符')
+    }
     const cloneSourceEventId = input.cloneSourceEventId ? requiredId(input.cloneSourceEventId, '来源活动') : null
     if (cloneSourceEventId) {
       if (input.eventId) throw new AdminError('VALIDATION_FAILED', '仅新活动可以使用复制来源')
@@ -165,9 +170,10 @@ function createAdminEvents({
     const checkedContentSafetyStatus = await contentSafety({
       title: draft.title,
       summary: draft.summary,
-      description: draft.description,
-      organizerIntroduction: draft.organizerIntroduction,
-      notices: draft.notices,
+      // 送审用纯文本，避免把 HTML 标签喂给 msgSecCheck。
+      description: richTextToPlainText(draft.description),
+      organizerIntroduction: richTextToPlainText(draft.organizerIntroduction),
+      notices: richTextToPlainText(draft.notices),
     }, caller)
     const contentSafetyStatus = ['PASSED', 'REJECTED', 'ERROR'].includes(checkedContentSafetyStatus)
       ? checkedContentSafetyStatus
@@ -221,9 +227,9 @@ function createAdminEvents({
     const checkedContentSafetyStatus = await contentSafety({
       title,
       summary: source.summary,
-      description: source.description,
-      organizerIntroduction: source.organizer_introduction || '',
-      notices: source.notices,
+      description: richTextToPlainText(source.description),
+      organizerIntroduction: richTextToPlainText(source.organizer_introduction || ''),
+      notices: richTextToPlainText(source.notices),
     }, caller)
     const contentSafetyStatus = ['PASSED', 'REJECTED', 'ERROR'].includes(checkedContentSafetyStatus)
       ? checkedContentSafetyStatus
@@ -710,11 +716,12 @@ function normalizeEventDraft(value) {
     branchId: value.scopeType === 'BRANCH' ? requiredId(value.branchId, '城市分会') : null,
     title: text(value.title, 120, { required: true, label: '活动名称' }),
     summary: text(value.summary, 300, { required: true, label: '活动摘要' }),
-    description: text(value.description, 20_000, { required: true, label: '活动介绍' }),
+    // 三个图文字段以「受限 HTML」存储（与小程序 rich-content 白名单对齐）；这里拒绝可执行标记。
+    description: assertRichTextSafe(text(value.description, 20_000, { required: true, label: '活动介绍' }), '活动介绍'),
     // 小程序需求 C1：详情页「主办方」Tab 展示后台配置的主办方介绍（图文富文本），可选。
-    organizerIntroduction: text(value.organizerIntroduction, 20_000),
+    organizerIntroduction: assertRichTextSafe(text(value.organizerIntroduction, 20_000), '主办方介绍'),
     contentMedia: normalizedContentMedia,
-    notices: text(value.notices, 5_000),
+    notices: assertRichTextSafe(text(value.notices, 5_000), '报名须知'),
     coverAssetId: coverAssetId || null,
     eventTypeKey: stableKey(value.eventTypeKey || 'general', '活动类型', 64),
     eventMode,

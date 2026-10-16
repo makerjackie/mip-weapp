@@ -167,6 +167,7 @@ Page({
     event: null as (Omit<MipEventDetail, 'organizer' | 'description' | 'organizerIntroduction'> & { hasDescription?: boolean }) | null,
     descriptionNodes: [] as ReturnType<typeof eventRichTextNodes>,
     organizerIntroductionNodes: [] as ReturnType<typeof eventRichTextNodes>,
+    noticesNodes: [] as ReturnType<typeof eventRichTextNodes>,
     hasDescription: false,
     startsText: '',
     endsText: '',
@@ -519,6 +520,7 @@ Page({
       organizer: _retiredOrganizer,
       description: richDescription,
       organizerIntroduction: richOrganizerIntroduction,
+      notices: richNotices,
       ...eventWithoutRichText
     } = event
     const normalizedEvent = {
@@ -537,6 +539,7 @@ Page({
       descriptionNodes: eventRichTextNodes(richDescription || ''),
       // 小程序需求 C1（TC-C-01）：主办方 Tab 与后台配置的主办方介绍一致，原样渲染富文本。
       organizerIntroductionNodes: eventRichTextNodes(richOrganizerIntroduction || ''),
+      noticesNodes: eventRichTextNodes(richNotices || ''),
       // figma 1861_17860 shows the compact range ("12月12日 10:00-12:00") on the
       // date row; compactEventTime already folds same-day and multi-day forms.
       startsText: compactEventTime(event.startsAt, event.endsAt) || formatChineseDateTime(event.startsAt),
@@ -566,7 +569,7 @@ Page({
     updateComponentMedia(this, 'event.coverUrl', event.coverUrl || '')
     updateComponentMedia(this, 'event.participantPreview', event.participantPreview || [])
     updateComponentMedia(this, 'event.contentMedia', contentMedia)
-    this.hydrateRichTextMedia(richDescription || '', richOrganizerIntroduction || '')
+    this.hydrateRichTextMedia(richDescription || '', richOrganizerIntroduction || '', richNotices || '')
   },
 
   /**
@@ -574,10 +577,11 @@ Page({
    * 本地下载管道：先按原始 markdown 渲染文本（未解析图先隐藏），解析完成后把 cloud://
    * 替换成 wxfile:// 本地路径再重建节点，避免把云存储 ID 或短时效签名直链直接喂给 rich-text。
    */
-  hydrateRichTextMedia(description: string, organizerIntroduction: string) {
+  hydrateRichTextMedia(description: string, organizerIntroduction: string, notices = '') {
     const fileIds = [...new Set([
       ...extractRichTextCloudImageIds(description),
       ...extractRichTextCloudImageIds(organizerIntroduction),
+      ...extractRichTextCloudImageIds(notices),
     ])]
     if (!fileIds.length) {
       return
@@ -598,15 +602,23 @@ Page({
       if (!localPaths.size) {
         return
       }
-      const substitute = (markdown: string) => markdown.replace(
-        /!\[([^\]]{0,120})\]\((cloud:\/\/[^)\s]+)\)/g,
-        (whole, alt: string, fileId: string) => localPaths.get(fileId) ? `![${alt}](${localPaths.get(fileId)})` : whole,
-      )
+      const substitute = (content: string) => content
+        // 新格式：受限 HTML 的 <img src="cloud://…">
+        .replace(
+          /src\s*=\s*"(cloud:\/\/[^"]+)"/gi,
+          (whole, fileId: string) => localPaths.get(fileId) ? `src="${localPaths.get(fileId)}"` : whole,
+        )
+        // 存量格式：markdown 图片语法
+        .replace(
+          /!\[([^\]]{0,120})\]\((cloud:\/\/[^)\s]+)\)/g,
+          (whole, alt: string, fileId: string) => localPaths.get(fileId) ? `![${alt}](${localPaths.get(fileId)})` : whole,
+        )
       this.setData({
         descriptionNodes: eventRichTextNodes(substitute(description)),
         ...(organizerIntroduction
           ? { organizerIntroductionNodes: eventRichTextNodes(substitute(organizerIntroduction)) }
           : {}),
+        ...(notices ? { noticesNodes: eventRichTextNodes(substitute(notices)) } : {}),
       })
     }).catch(() => {
       // 解析失败保持已渲染的文本内容，不阻塞详情页。

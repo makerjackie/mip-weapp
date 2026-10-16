@@ -76,6 +76,14 @@ export interface EventMutationFieldConfig {
   advanced?: boolean
   /** Money unit scale: 100 = cents, 1_000_000 = 万元. */
   valueScale?: number
+  /** Catalog control style: dropdown (default) or selectable pill group. */
+  variant?: 'select' | 'pills'
+  /** Pills only: show「＋ 新建」to create a catalog entry inline via `mip.admin.events.catalog.save`. */
+  allowCreate?: boolean
+  /** Catalog kind created inline (e.g. TAG/TYPE). */
+  createKind?: string
+  /** Max characters for the inline-created catalog name. */
+  createMaxLength?: number
 }
 
 export interface EventMutationActionConfig {
@@ -97,39 +105,45 @@ export interface AdminEventMutationDefinition<Action extends AdminEventMutationA
 
 const option = (value: string, label: string): EventMutationFieldOption => ({ value, label })
 
+// 字段顺序按原型的主流程排布：名称 → 封面 → 标签 → 费用 → 场地/时间 → 图文；
+// 内部模型字段（范围/服务器/活动类型/报名方式/满员策略/坐标）与选填项收进「高级设置」。
 const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'cloneSourceEventId', label: '复制来源', kind: 'text', hidden: true },
   { key: 'eventId', label: '活动标识', kind: 'text', hidden: true },
   { key: 'expectedVersion', label: '记录版本', kind: 'number', hidden: true },
-  { key: 'scopeType', label: '活动范围', kind: 'select', options: [option('PLATFORM', '平台'), option('BRANCH', '服务器')] },
-  { key: 'branchId', label: '服务器', kind: 'text', visibleWhen: { path: 'scopeType', value: 'BRANCH' }, requiredWhen: { path: 'scopeType', values: ['BRANCH'] }, optionsAction: 'mip.admin.branches.list', optionsInput: { purpose: 'EVENT_EDIT' }, emptyHint: '暂无可选服务器。服务器在「权限」页的「新建服务器」中创建' },
-  { key: 'title', label: '活动名称', kind: 'text', required: true, maxLength: 120, placeholder: '如：周末城市漫步·第 3 期' },
-  { key: 'summary', label: '活动摘要', kind: 'textarea', required: false, maxLength: 300, placeholder: '一句话介绍活动（选填）', extra: '选填。不填时将自动截取活动介绍的开头，小程序列表不直接展示摘要' },
-  { key: 'description', label: '活动介绍', kind: 'rich-text', required: true, maxLength: 20_000, placeholder: '介绍活动亮点、流程与注意事项；可用「# 大标题」「- 列表」，支持插入图片' },
-  { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list', assetPurpose: 'EVENT_CONTENT' },
-  { key: 'organizerIntroduction', label: '主办方介绍', kind: 'rich-text', maxLength: 20_000, placeholder: '介绍主办方或主理人背景；支持标题、列表与插图' },
-  { key: 'notices', label: '活动说明', kind: 'rich-text', maxLength: 5_000, placeholder: '报名须知、注意事项等；支持标题、列表与插图' },
-  { key: 'coverAssetId', label: '活动封面', kind: 'asset', assetPurpose: 'EVENT_COVER' },
-  { key: 'eventTypeKey', label: '活动类型', kind: 'text', maxLength: 64, optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TYPE', selectable: true }, optionsValueKey: 'key', emptyHint: '暂无可选活动类型。可在「活动」页的「新建活动目录」中添加类型；不选择时默认为「活动」' },
-  { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true }, emptyHint: '暂无可选标签。可在「活动」页的「新建活动目录」中添加标签' },
+  // 原型/PRD 要求活动名称最多 20 字；历史超长标题不截断，编辑时原值可见可存、只是不能继续加长。
+  { key: 'title', label: '活动名称', kind: 'text', required: true, maxLength: 20, wide: true, placeholder: '最多 20 字，如：周末城市漫步·第 3 期' },
+  // 活动范围/分会归属是真实业务归属，放主流程；默认值按当前账号授权范围注入（见 event-edit-form-page）。
+  { key: 'scopeType', label: '活动范围', kind: 'select', options: [option('PLATFORM', '平台（所有分会）'), option('BRANCH', '指定分会')] },
+  { key: 'branchId', label: '所属分会', kind: 'text', visibleWhen: { path: 'scopeType', value: 'BRANCH' }, requiredWhen: { path: 'scopeType', values: ['BRANCH'] }, optionsAction: 'mip.admin.branches.list', optionsInput: { purpose: 'EVENT_EDIT' }, emptyHint: '暂无可选分会。分会在「权限」页的「新建服务器」中创建' },
+  { key: 'coverAssetId', label: '封面', kind: 'asset', assetPurpose: 'EVENT_COVER', wide: true, placeholder: '点击或拖拽上传活动封面' },
+  { key: 'tagIds', label: '活动标签（可多选）', kind: 'multi-select', variant: 'pills', allowCreate: true, createKind: 'TAG', createMaxLength: 5, optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true }, emptyHint: '暂无可选标签。可点「＋ 新建标签」创建' },
+  { key: 'accessType', label: '费用类型', kind: 'select', options: [option('FREE', '免费'), option('MEMBER_INCLUDED', '会员权益'), option('PAID', '付费')] },
+  { key: 'priceCents', label: '金额（元）', kind: 'money', valueScale: 100, required: true, visibleWhen: { path: 'accessType', value: 'PAID' }, placeholder: '如 199.00' },
   { key: 'eventMode', label: '活动方式', kind: 'select', options: [option('OFFLINE', '线下'), option('ONLINE', '线上'), option('HYBRID', '混合')] },
-  { key: 'accessType', label: '收费类型', kind: 'select', options: [option('FREE', '免费'), option('MEMBER_INCLUDED', '会员权益'), option('PAID', '付费')] },
-  { key: 'registrationPolicy', label: '报名方式', kind: 'select', options: [option('AUTO', '自动确认'), option('APPROVAL', '审核确认')] },
-  { key: 'startsAt', label: '开始时间', kind: 'datetime', required: true },
-  { key: 'endsAt', label: '结束时间', kind: 'datetime', required: true },
-  { key: 'registrationDeadline', label: '报名截止时间', kind: 'datetime', advanced: true, extra: '选填。不填则报名持续到活动开始' },
-  { key: 'cancellationDeadline', label: '取消截止时间', kind: 'datetime', advanced: true, extra: '选填。在此时间前成员可自主取消报名' },
-  { key: 'venueName', label: '活动地点', kind: 'text', maxLength: 160, requiredWhen: { path: 'eventMode', values: ['OFFLINE', 'HYBRID'] }, placeholder: '如：上海·徐汇 XX 空间' },
+  { key: 'venueName', label: '场地地址文案', kind: 'text', maxLength: 160, requiredWhen: { path: 'eventMode', values: ['OFFLINE', 'HYBRID'] }, placeholder: '如：上海·徐汇 XX 空间' },
   { key: 'address', label: '详细地址', kind: 'text', maxLength: 300, placeholder: '街道门牌号，方便成员找路' },
   { key: 'cityName', label: '城市', kind: 'text', maxLength: 80, placeholder: '如：上海' },
+  { key: 'guideUrl', label: '场地跳转链接（选填）', kind: 'text', maxLength: 1_024, placeholder: 'https:// 开头，成员点击可查看场地/路线说明' },
+  { key: 'startsAt', label: '开始时间', kind: 'datetime', required: true },
+  { key: 'endsAt', label: '结束时间', kind: 'datetime', required: true },
+  { key: 'onlineUrl', label: '线上地址', kind: 'text', maxLength: 1_024, visibleWhen: { path: 'eventMode', value: ['ONLINE', 'HYBRID'] }, placeholder: 'https:// 开头的直播/会议链接' },
+  { key: 'description', label: '活动介绍', kind: 'rich-text', required: true, maxLength: 20_000, wide: true, placeholder: '介绍活动亮点、流程与注意事项；可加粗、斜体、下划线，支持列表、对齐与插图' },
+  { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list', assetPurpose: 'EVENT_CONTENT', wide: true },
+  { key: 'organizerIntroduction', label: '主办方介绍', kind: 'rich-text', maxLength: 20_000, wide: true, placeholder: '介绍主办方或主理人背景；可加粗、斜体、下划线，支持列表、对齐与插图' },
+  { key: 'notices', label: '报名须知', kind: 'rich-text', maxLength: 5_000, wide: true, placeholder: '报名须知、注意事项等；可加粗、斜体、下划线，支持列表、对齐与插图' },
+  // —— 高级设置（选填 / 内部模型字段） ——
+  // 摘要不是业务必填；列表 DTO 需要非空，故留空自动从活动介绍截取（编辑时保留原值），不对运营展示。
+  { key: 'summary', label: '活动摘要', kind: 'textarea', required: false, maxLength: 300, hidden: true },
+  { key: 'eventTypeKey', label: '活动类型', kind: 'text', maxLength: 64, advanced: true, optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TYPE', selectable: true }, optionsValueKey: 'key', emptyHint: '暂无可选活动类型。可在「活动」页的「新建活动目录」中添加类型；不选择时默认为「活动」' },
+  { key: 'registrationPolicy', label: '报名方式', kind: 'select', advanced: true, options: [option('AUTO', '自动确认'), option('APPROVAL', '审核确认')] },
+  { key: 'registrationDeadline', label: '报名截止时间', kind: 'datetime', advanced: true, extra: '选填。不填则报名持续到活动开始' },
+  { key: 'cancellationDeadline', label: '取消截止时间', kind: 'datetime', advanced: true, extra: '选填。在此时间前成员可自主取消报名' },
+  { key: 'capacity', label: '活动名额', kind: 'number', advanced: true, placeholder: '留空表示不限名额' },
+  { key: 'waitlistEnabled', label: '满员进入候补', kind: 'checkbox', advanced: true, extra: '名额报满后，新报名自动进入候补名单（不勾选则名额报满后拒绝报名）' },
+  { key: 'oversellEnabled', label: '允许超售', kind: 'checkbox', advanced: true, visibleWhen: { path: 'waitlistEnabled', value: false }, extra: '名额报满后仍继续接受报名（忽略名额上限）；付费活动不支持' },
   { key: 'latitude', label: '位置纬度', kind: 'number', advanced: true, extra: '选填，用于小程序活动详情页的「导航」按钮（打开地图）。获取方式：微信里打开该位置卡片，或在高德/腾讯地图搜索地点后复制坐标；须与经度成对填写。示例：31.230416' },
   { key: 'longitude', label: '位置经度', kind: 'number', advanced: true, extra: '选填，与纬度成对填写。示例：121.473701' },
-  { key: 'onlineUrl', label: '线上地址', kind: 'text', maxLength: 1_024, visibleWhen: { path: 'eventMode', value: ['ONLINE', 'HYBRID'] }, placeholder: 'https:// 开头的直播/会议链接' },
-  { key: 'guideUrl', label: '路线指引链接', kind: 'text', maxLength: 1_024, advanced: true, placeholder: 'https:// 开头，成员点击可查看路线说明' },
-  { key: 'capacity', label: '活动名额', kind: 'number', placeholder: '留空表示不限名额' },
-  { key: 'waitlistEnabled', label: '满员进入候补', kind: 'checkbox', extra: '名额报满后，新报名自动进入候补名单（不勾选则名额报满后拒绝报名）' },
-  { key: 'oversellEnabled', label: '允许超售', kind: 'checkbox', visibleWhen: { path: 'waitlistEnabled', value: false }, extra: '名额报满后仍继续接受报名（忽略名额上限）；付费活动不支持' },
-  { key: 'priceCents', label: '金额（元）', kind: 'money', valueScale: 100, required: true, visibleWhen: { path: 'accessType', value: 'PAID' }, placeholder: '如 199.00' },
   // 报名字段编辑入口已按产品决策下线：字段保持 hidden，编辑已有活动时
   // definition.values 携带服务端已存的配置原样提交，不会被清空；新建活动为空数组
   // （报名页退回基础字段）。小程序报名页仍消费这份配置。
@@ -494,7 +508,7 @@ function eventDraft(values: EventMutationValues) {
     description,
     contentMedia: eventMedia(values.contentMedia),
     organizerIntroduction: optionalText(values.organizerIntroduction, '主办方介绍', 20_000),
-    notices: optionalText(values.notices, '活动说明', 5_000),
+    notices: optionalText(values.notices, '报名须知', 5_000),
     coverAssetId: asset(values.coverAssetId, '活动封面素材 ID'),
     eventTypeKey: values.eventTypeKey === undefined || values.eventTypeKey === '' ? 'general' : (() => {
       const key = text(values.eventTypeKey, '活动类型标识', 64)

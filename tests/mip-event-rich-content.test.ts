@@ -45,4 +45,45 @@ describe('MIP event rich content', () => {
     ])
     expect(extractRichTextCloudImageIds('没有插图')).toEqual([])
   })
+
+  it('parses restricted HTML with inline emphasis and alignment', () => {
+    const nodes = eventRichTextNodes('<p style="text-align:center">居中 <strong>加粗</strong> <em>斜体</em> <u>下划线</u></p>')
+    expect(nodes).toHaveLength(1)
+    const [paragraph] = nodes
+    expect(paragraph.name).toBe('p')
+    expect(paragraph.attrs?.style).toContain('text-align:center')
+    const names = paragraph.children?.map(child => child.name).filter(Boolean)
+    expect(names).toEqual(['strong', 'em', 'u'])
+    expect(paragraph.children?.[1].children?.[0].text).toBe('加粗')
+    expect(paragraph.children?.[3].children?.[0].text).toBe('斜体')
+  })
+
+  it('parses restricted HTML headings, lists and approved images', () => {
+    const nodes = eventRichTextNodes('<h1>标题</h1><ul><li>第一项</li><li>第二项</li></ul><img src="https://cdn.example.com/x.png" alt="图">')
+    expect(nodes.map(node => node.name)).toEqual(['h2', 'ul', 'img'])
+    expect(nodes[1].children).toHaveLength(2)
+    expect(nodes[2].attrs?.src).toBe('https://cdn.example.com/x.png')
+  })
+
+  it('drops unsafe HTML tags, attributes and image sources', () => {
+    const nodes = eventRichTextNodes('<p onclick="alert(1)">安全<script>alert(1)</script><img src="javascript:alert(1)"></p>')
+    const json = JSON.stringify(nodes)
+    expect(json).not.toContain('onclick')
+    expect(json).not.toContain('<script>')
+    expect(nodes.every(node => node.name !== 'img')).toBe(true)
+  })
+
+  it('collects cloud image ids from HTML img sources', () => {
+    const html = '<p>介绍</p><img src="cloud://cloud1-env.636c-prefix/mip/a.png"><img src="cloud://cloud1-env.636c-prefix/mip/b.png"><img src="cloud://cloud1-env.636c-prefix/mip/a.png">'
+    expect(extractRichTextCloudImageIds(html)).toEqual([
+      'cloud://cloud1-env.636c-prefix/mip/a.png',
+      'cloud://cloud1-env.636c-prefix/mip/b.png',
+    ])
+  })
+
+  it('hides raw cloud:// HTML images until hydration', () => {
+    const nodes = eventRichTextNodes('<p>前文</p><img src="cloud://cloud1-env.636c-prefix/mip/a.png"><p>后文</p>')
+    expect(nodes.every(node => node.name !== 'img')).toBe(true)
+    expect(JSON.stringify(nodes)).not.toContain('cloud://')
+  })
 })

@@ -152,24 +152,29 @@ button, input, select, textarea { font: inherit; }
 .login-challenge__qr { display: block; width: min(220px, 72vw); height: auto; border-radius: 8px; background: #fff; }
 .event-checkin-qr { display: block; width: min(280px, 100%); height: auto; }
 
-/* 轻量富文本编辑器（活动介绍/主办方介绍/活动说明）：工具栏 + 深底实时预览，
+/* 富文本编辑器（活动介绍/主办方介绍/报名须知）：TipTap 所见即所得，工具栏 + 白底编辑区，
    预览配色对齐小程序活动详情的 rich-text 展示。 */
-.rich-text-area{border:1px solid #d9d9d9; border-radius:8px; overflow:hidden;}
-.rich-text-area__toolbar{display:flex; gap:6px; align-items:center; flex-wrap:wrap; padding:6px 8px; background:#fafafa; border-bottom:1px solid #d9d9d9;}
+.rich-text-area{border:1px solid #d9d9d9; border-radius:8px; overflow:hidden; background:#fff;}
+.rich-text-area__toolbar{display:flex; gap:4px; align-items:center; flex-wrap:wrap; padding:6px 8px; background:#fafafa; border-bottom:1px solid #d9d9d9;}
+.rich-text-area__divider{width:1px; height:18px; margin:0 2px; background:#e5e5e5;}
 .rich-text-area__count{margin-left:auto; color:#999; font-size:12px;}
+.rich-text-area__count.is-over{color:#ff4d4f;}
 .rich-text-area__error{padding:4px 10px; color:#ff4d4f; font-size:12px; background:#fff2f0;}
-.rich-text-area .ant-input{border:none; border-radius:0;}
-.rich-text-area .ant-input:focus{box-shadow:none;}
-.rich-text-area__preview{border-top:1px dashed #e5e5e5; background:#141414; color:#b3b3b3;}
-.rich-text-area__preview summary{cursor:pointer; padding:6px 10px; font-size:12px; color:#666; user-select:none;}
-.rich-text-area__rendered{padding:4px 14px 14px; font-size:13px; line-height:1.75; max-height:320px; overflow:auto;}
-.rich-text-area__rendered h2{font-size:19px; font-weight:700; color:#fff; margin:16px 0 8px;}
-.rich-text-area__rendered h3{font-size:17px; font-weight:700; color:#fff; margin:14px 0 8px;}
-.rich-text-area__rendered ul{margin:8px 0; padding-left:20px;}
-.rich-text-area__rendered li{margin:5px 0;}
-.rich-text-area__rendered img{display:block; width:100%; margin:14px 0 6px; border-radius:8px;}
-.rich-text-area__rendered p{margin:8px 0;}
-.rich-text-area__rendered .empty{color:#666;}
+/* 作者样式会覆盖 UA 的 [hidden]{display:none}，这里显式隐藏富文本插图的原生文件控件。 */
+.rich-text-area > input[type="file"]{display:none;}
+.rich-text-editor{position:relative; padding:10px 12px;}
+.rich-text-editor__placeholder{position:absolute; top:10px; left:12px; right:12px; color:#bfbfbf; pointer-events:none;}
+.rich-text-editor__content{outline:none; min-height:120px; font-size:14px; line-height:1.75; color:var(--mip-ink, #222); overflow-wrap:anywhere;}
+.rich-text-editor__content:focus{outline:none;}
+.rich-text-editor__content p{margin:8px 0;}
+.rich-text-editor__content h1{font-size:20px; font-weight:700; margin:16px 0 8px;}
+.rich-text-editor__content h2{font-size:17px; font-weight:700; margin:14px 0 8px;}
+.rich-text-editor__content ul,.rich-text-editor__content ol{margin:8px 0; padding-left:22px;}
+.rich-text-editor__content li{margin:5px 0;}
+.rich-text-editor__content img{display:block; max-width:100%; margin:12px 0; border-radius:8px;}
+.rich-text-editor__image-wrap{display:block;}
+.rich-text-editor__image-placeholder{display:inline-block; padding:6px 10px; border-radius:6px; background:#f2f4f7; color:#8c8c8c; font-size:12px;}
+.rich-text-editor__content p.is-editor-empty:first-child::before{content:attr(data-placeholder); color:#bfbfbf; float:left; height:0; pointer-events:none;}
 .login-challenge__fallback { display: grid; gap: 4px; place-items: center; width: 100%; padding-top: 10px; border-top: 1px solid #cfe0f8; }
 .login-challenge strong { color: var(--mip-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 32px; letter-spacing: .18em; }
 .independent-form-card { max-width: 960px; margin: 0 auto; }
@@ -182,6 +187,22 @@ button, input, select, textarea { font: inherit; }
 .asset-uploader__full { color: var(--mip-muted); font-size: 12px; }
 .asset-uploader__saved { color: var(--mip-muted); font-size: 12px; }
 .asset-uploader__saved-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.asset-uploader__cover { position: relative; max-width: 360px; border: 1px solid var(--mip-line); border-radius: 10px; overflow: hidden; background: #fafafa; }
+.asset-uploader__cover img { display: block; width: 100%; max-height: 220px; object-fit: cover; }
+.asset-uploader__cover-actions { display: flex; gap: 8px; align-items: center; padding: 8px; border-top: 1px solid var(--mip-line); }
+.asset-uploader__cover--saved { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+.asset-dragger.ant-upload-drag { border: 1px dashed #c9d3e0; background: #fafbff; border-radius: 10px; }
+.asset-dragger .ant-upload-btn { padding: 18px 0 !important; }
+.asset-dragger__icon { font-size: 22px; color: var(--mip-primary); margin: 0 0 6px; }
+.asset-dragger__text { margin: 0; font-size: 13px; color: var(--mip-ink, #333); }
+.asset-dragger__hint { margin: 4px 0 0; font-size: 12px; color: var(--mip-muted); }
+.catalog-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.catalog-pill { border: 1px solid var(--mip-line); background: #fff; color: var(--mip-ink, #333); border-radius: 99px; padding: 5px 14px; font-size: 13px; cursor: pointer; transition: all .12s; }
+.catalog-pill:hover:not(:disabled) { border-color: var(--mip-primary); color: var(--mip-primary); }
+.catalog-pill.is-active { border-color: var(--mip-primary); background: var(--mip-primary); color: #fff; }
+.catalog-pill.catalog-pill--create { border-style: dashed; color: var(--mip-primary); }
+.catalog-pill:disabled { opacity: .5; cursor: not-allowed; }
+.catalog-pills__hint { font-size: 12px; color: var(--mip-muted); }
 
 .mobile-navigation .ant-drawer-header { background: linear-gradient(135deg, #347ce9, #1d4eb8); border-bottom: 0; }
 .mobile-navigation .ant-drawer-title { min-width: 0; }
@@ -248,3 +269,12 @@ button, input, select, textarea { font: inherit; }
 @media (max-width: 767px) { .user-profile-layout { grid-template-columns: minmax(0, 1fr); } }
 .event-mobile-preview { width: min(100%, 375px); margin: 0 auto; background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; overflow: hidden; overflow-wrap: anywhere; }
 .event-mobile-preview__cover { min-height: 180px; display: grid; place-items: center; background: #f5f5f5; color: #666; }
+.event-mobile-preview__empty { margin: 8px 0; color: #999; font-size: 13px; }
+.event-mobile-preview__rich { font-size: 14px; line-height: 1.75; color: #333; overflow-wrap: anywhere; }
+.event-mobile-preview__rich p { margin: 8px 0; }
+.event-mobile-preview__rich h1 { font-size: 20px; font-weight: 700; margin: 16px 0 8px; }
+.event-mobile-preview__rich h2 { font-size: 17px; font-weight: 700; margin: 14px 0 8px; }
+.event-mobile-preview__rich h3 { font-size: 15px; font-weight: 700; margin: 12px 0 6px; }
+.event-mobile-preview__rich ul, .event-mobile-preview__rich ol { margin: 8px 0; padding-left: 22px; }
+.event-mobile-preview__rich li { margin: 5px 0; }
+.event-mobile-preview__rich img { display: block; max-width: 100%; margin: 12px 0; border-radius: 8px; }

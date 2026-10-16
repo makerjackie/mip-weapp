@@ -271,7 +271,7 @@ async function loadEvents(
       })),
       columns: columns([
         ['title', '活动名称'], ['tags', '标签'], ['time', '开始时间'], ['endTime', '结束时间'], ['createdAt', '创建时间'], ['location', '城市与服务器'],
-        ['access', '活动类型'], ['registrations', '报名人数'], ['attended', '签到人数'], ['state', '状态'],
+        ['access', '活动金额'], ['registrations', '报名人数'], ['attended', '签到人数'], ['state', '状态'],
       ]),
     }, policyPayload ? {
       key: 'policy',

@@ -1,7 +1,30 @@
-import { Button, Input, type InputRef } from 'antd'
-import { useRef, useState } from 'react'
+import {
+  AlignCenterOutlined,
+  AlignLeftOutlined,
+  BoldOutlined,
+  ItalicOutlined,
+  OrderedListOutlined,
+  PictureOutlined,
+  RedoOutlined,
+  UnderlineOutlined,
+  UndoOutlined,
+  UnorderedListOutlined,
+} from '@ant-design/icons'
+import { Button, Tooltip } from 'antd'
+import { EditorContent, NodeViewWrapper, ReactNodeViewRenderer, useEditor, type NodeViewProps } from '@tiptap/react'
+import Image from '@tiptap/extension-image'
+import TextAlign from '@tiptap/extension-text-align'
+import StarterKit from '@tiptap/starter-kit'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminMediaFile } from '../../modules/admin-media-upload'
+import {
+  normalizeRichTextToHtml,
+  richTextIsEmpty,
+  richTextSignature,
+  richTextToPlainText,
+} from '../../modules/rich-text-html'
+import { sanitizeRichTextHtml } from './rich-text-sanitize'
 
 /**
  * Safely access the admin session. Returns null outside a SessionProvider
@@ -16,15 +39,58 @@ function useOptionalSession() {
   }
 }
 
+/** cloud:// fileID → 本会话上传时拿到的本地 blob 预览；节点视图用它把稳定引用渲染成图。 */
+const RichTextImageResolver = createContext<Record<string, string>>({})
+
+function RichTextImageView({ node }: NodeViewProps) {
+  const resolved = useContext(RichTextImageResolver)
+  const src = String(node.attrs.src || '')
+  const preview = src.startsWith('cloud://') ? resolved[src] : src
+  if (!preview) {
+    return <NodeViewWrapper as="span" className="rich-text-editor__image-placeholder">图片（保存后在活动页显示）</NodeViewWrapper>
+  }
+  return <NodeViewWrapper as="span" className="rich-text-editor__image-wrap">
+    <img src={preview} alt={String(node.attrs.alt || '')} className="rich-text-editor__image" />
+  </NodeViewWrapper>
+}
+
+const RestrictedImage = Image.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(RichTextImageView)
+  },
+})
+
+function ToolButton({ active, disabled, title, onClick, children }: {
+  active?: boolean
+  disabled?: boolean
+  title: string
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <Tooltip title={title}>
+      <Button
+        size="small"
+        type={active ? 'primary' : 'text'}
+        disabled={disabled}
+        aria-label={title}
+        aria-pressed={active || undefined}
+        // Keep the editor selection: clicking a toolbar button must not blur the contenteditable.
+        onMouseDown={event => event.preventDefault()}
+        onClick={onClick}
+      >
+        {children}
+      </Button>
+    </Tooltip>
+  )
+}
+
 /**
- * 轻量富文本编辑器：所见即所得预览 + 受限标记语法。
+ * 可见即所得的受限富文本编辑器（TipTap）。
  *
- * 语法与小程序端解析器（src/modules/mip-events/rich-content.ts · eventRichTextNodes）逐条对齐：
- *   `# 大标题` / `## 小标题` / `- 列表项` / `![图片说明](cloud://…)`（独占一行）/ 普通文本行。
- * 不支持其它 Markdown 语法——超出部分小程序端会按普通文本展示，因此工具栏只提供上述五种操作。
- * 插图走活动素材上传通道（mip.admin.media.uploadImage），插入稳定 cloud:// fileID；
- * 小程序详情页会把它解析成本地临时路径再渲染。服务端返回的签名直链只有 10 分钟时效，
- * 持久化后必挂，仅用于本编辑器本次会话的预览。
+ * 工具栏与原型一致：加粗 / 斜体 / 下划线 / 列表 / 左对齐 / 居中 / 插图，另保留大、小标题
+ * （存量内容与小程序解析器都在用，属有意增强）。schema 只放白名单节点，输出再经
+ * sanitizeRichTextHtml 净化后回写表单；插图走活动素材通道并持久化 cloud:// 稳定引用。
  */
 export function RichTextArea({
   id,
@@ -35,7 +101,6 @@ export function RichTextArea({
   disabled,
   rows = 8,
 }: {
-  /** Form.Item injects the label-associated id; pass it through to the textarea. */
   id?: string
   value?: string
   onChange?: (value: string) => void
@@ -47,51 +112,74 @@ export function RichTextArea({
   const session = useOptionalSession()
   const client = session?.client
   const demoMode = session?.demoMode ?? false
-  /** AntD types omit resizableTextArea; this is the underlying <textarea> used for cursor math. */
-  const areaRef = useRef<HTMLTextAreaElement | null>(null)
-  const setArea = (instance: InputRef | null) => {
-    areaRef.current = (instance as unknown as { resizableTextArea?: { textArea: HTMLTextAreaElement } })?.resizableTextArea?.textArea ?? null
-  }
   const fileRef = useRef<HTMLInputElement>(null)
+  const onChangeRef = useRef(onChange)
+  // 忽略编辑器初始化时的那次 update，避免打开表单就被判「已修改」或把值改写成 HTML。
+  const emitReady = useRef(false)
+  const valueRef = useRef(value)
+  useEffect(() => {
+    onChangeRef.current = onChange
+    valueRef.current = value
+  }, [onChange, value])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
-  /** cloud:// fileID → 上传时返回的短时效签名直链，只服务本次会话的预览渲染。 */
-  const [previewImages, setPreviewImages] = useState<Record<string, string>>({})
+  const [focused, setFocused] = useState(false)
+  const [previews, setPreviews] = useState<Record<string, string>>({})
 
-  const emit = (next: string) => onChange?.(maxLength ? next.slice(0, maxLength) : next)
+  const editor = useEditor({
+    editable: !disabled,
+    shouldRerenderOnTransaction: true,
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [1, 2] },
+        code: false,
+        codeBlock: false,
+        blockquote: false,
+        horizontalRule: false,
+        strike: false,
+        link: false,
+      }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      RestrictedImage.configure({ inline: false, allowBase64: false }),
+    ],
+    content: normalizeRichTextToHtml(value),
+    editorProps: {
+      attributes: {
+        ...(id ? { id } : {}),
+        class: 'rich-text-editor__content',
+        ...(placeholder ? { 'data-placeholder': placeholder } : {}),
+        ...(maxLength ? { 'aria-label': placeholder || '富文本内容' } : {}),
+      },
+    },
+    onFocus: () => setFocused(true),
+    onBlur: () => setFocused(false),
+    onUpdate: ({ editor }) => {
+      const html = sanitizeRichTextHtml(editor.getHTML())
+      // 与外部值等价（含存量 markdown 归一化）时不冒泡，避免把打开表单当成一次修改。
+      if (!emitReady.current || richTextSignature(html) === richTextSignature(valueRef.current)) return
+      onChangeRef.current?.(richTextIsEmpty(html) ? '' : html)
+    },
+  }, [])
 
-  /** 把片段插入光标处（无光标则追加到末尾），并保证前后各一个空行（块级语法要求独占一行）。 */
-  const insertBlock = (snippet: string) => {
-    const el = areaRef.current
-    const current = String(value || '')
-    if (!el) { emit(`${current}${current && !current.endsWith('\n') ? '\n' : ''}${snippet}\n`); return }
-    const start = el.selectionStart ?? current.length
-    const end = el.selectionEnd ?? current.length
-    const before = current.slice(0, start)
-    const after = current.slice(end)
-    const pad = (text: string) => text && !text.endsWith('\n') ? `${text}\n` : text
-    const next = `${pad(before)}${snippet}\n${after.startsWith('\n') || !after ? after : `\n${after}`}`
-    emit(next)
-    requestAnimationFrame(() => {
-      const at = pad(before).length + snippet.length + 1
-      el.focus()
-      el.setSelectionRange(at, at)
-    })
-  }
+  useEffect(() => { emitReady.current = true }, [])
 
-  const wrapSelection = (prefix: string) => {
-    const el = areaRef.current
-    const current = String(value || '')
-    if (!el) { emit(`${current}${prefix}`); return }
-    const start = el.selectionStart ?? current.length
-    const lineStart = current.lastIndexOf('\n', start - 1) + 1
-    emit(`${current.slice(0, lineStart)}${prefix}${current.slice(lineStart)}`)
-    requestAnimationFrame(() => {
-      const at = lineStart + prefix.length
-      el.focus()
-      el.setSelectionRange(at, at)
-    })
-  }
+  useEffect(() => {
+    editor?.setEditable(!disabled)
+  }, [editor, disabled])
+
+  // 外部值（草稿恢复 / 冲突核对）变化时同步进编辑器，避免光标被无谓打断。
+  useEffect(() => {
+    if (!editor) return
+    if (richTextSignature(editor.getHTML()) === richTextSignature(value)) return
+    editor.commands.setContent(normalizeRichTextToHtml(value), { emitUpdate: false })
+  }, [editor, value])
+
+  // 本会话上传的本地 blob 预览在卸载时回收。
+  useEffect(() => () => {
+    for (const url of Object.values(previews)) {
+      if (url.startsWith('blob:')) URL.revokeObjectURL(url)
+    }
+  }, [previews])
 
   const handlePickImage = async (file: File) => {
     if (!client) { setUploadError('当前环境无法上传图片'); return }
@@ -108,84 +196,54 @@ export function RichTextArea({
         setUploadError('图片上传结果缺少稳定引用，请重试')
         return
       }
-      if (/^https:\/\//.test(result.imageUrl) && !result.imageUrl.includes('@')) {
-        setPreviewImages(current => ({ ...current, [stableRef]: result.imageUrl }))
-      }
-      insertBlock(`![图片](${stableRef})`)
+      const previewUrl = URL.createObjectURL(file)
+      setPreviews(current => ({ ...current, [stableRef]: previewUrl }))
+      editor?.chain().focus().setImage({ src: stableRef, alt: '活动图片' }).run()
     }
-    catch { setUploadError('图片上传失败，请重试') }
-    finally { setUploading(false) }
+    catch {
+      setUploadError('图片上传失败，请重试')
+    }
+    finally {
+      setUploading(false)
+    }
   }
+
+  const plainText = richTextToPlainText(value)
+  const overLimit = Boolean(maxLength && plainText.length > maxLength)
 
   return (
     <div className="rich-text-area" data-disabled={disabled || undefined}>
       <div className="rich-text-area__toolbar" role="toolbar" aria-label="富文本工具栏">
-        <Button size="small" disabled={disabled} onClick={() => wrapSelection('# ')}># 大标题</Button>
-        <Button size="small" disabled={disabled} onClick={() => wrapSelection('## ')}>## 小标题</Button>
-        <Button size="small" disabled={disabled} onClick={() => wrapSelection('- ')}>- 列表</Button>
-        <Button size="small" disabled={disabled || uploading} loading={uploading}
-          onClick={() => fileRef.current?.click()}>🖼 插入图片</Button>
-        <span className="rich-text-area__count">{String(value || '').length}{maxLength ? ` / ${maxLength}` : ''}</span>
+        <ToolButton title="大标题" disabled={disabled} active={editor?.isActive('heading', { level: 1 })} onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}>H1</ToolButton>
+        <ToolButton title="小标题" disabled={disabled} active={editor?.isActive('heading', { level: 2 })} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>H2</ToolButton>
+        <span className="rich-text-area__divider" aria-hidden />
+        <ToolButton title="加粗" disabled={disabled} active={editor?.isActive('bold')} onClick={() => editor?.chain().focus().toggleBold().run()}><BoldOutlined /></ToolButton>
+        <ToolButton title="斜体" disabled={disabled} active={editor?.isActive('italic')} onClick={() => editor?.chain().focus().toggleItalic().run()}><ItalicOutlined /></ToolButton>
+        <ToolButton title="下划线" disabled={disabled} active={editor?.isActive('underline')} onClick={() => editor?.chain().focus().toggleUnderline().run()}><UnderlineOutlined /></ToolButton>
+        <ToolButton title="项目符号列表" disabled={disabled} active={editor?.isActive('bulletList')} onClick={() => editor?.chain().focus().toggleBulletList().run()}><UnorderedListOutlined /></ToolButton>
+        <ToolButton title="编号列表" disabled={disabled} active={editor?.isActive('orderedList')} onClick={() => editor?.chain().focus().toggleOrderedList().run()}><OrderedListOutlined /></ToolButton>
+        <span className="rich-text-area__divider" aria-hidden />
+        <ToolButton title="左对齐" disabled={disabled} active={editor?.isActive({ textAlign: 'left' })} onClick={() => editor?.chain().focus().setTextAlign('left').run()}><AlignLeftOutlined /></ToolButton>
+        <ToolButton title="居中" disabled={disabled} active={editor?.isActive({ textAlign: 'center' })} onClick={() => editor?.chain().focus().setTextAlign('center').run()}><AlignCenterOutlined /></ToolButton>
+        <ToolButton title="插入图片" disabled={disabled || uploading} onClick={() => fileRef.current?.click()}><PictureOutlined /></ToolButton>
+        <span className="rich-text-area__divider" aria-hidden />
+        <ToolButton title="撤销" disabled={disabled || !editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()}><UndoOutlined /></ToolButton>
+        <ToolButton title="重做" disabled={disabled || !editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()}><RedoOutlined /></ToolButton>
+        <span className={`rich-text-area__count${overLimit ? ' is-over' : ''}`}>{plainText.length}{maxLength ? ` / ${maxLength}` : ''}</span>
       </div>
       {uploadError ? <div className="rich-text-area__error" role="alert">{uploadError}</div> : null}
-      <Input.TextArea
-        ref={setArea}
-        id={id}
-        value={value}
-        onChange={event => emit(event.target.value)}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        disabled={disabled}
-        rows={rows}
-      />
+      <RichTextImageResolver.Provider value={previews}>
+        <div className="rich-text-editor" style={{ minHeight: `${rows * 24}px` }}>
+          {!focused && richTextIsEmpty(value) && placeholder ? <span className="rich-text-editor__placeholder">{placeholder}</span> : null}
+          <EditorContent editor={editor} />
+        </div>
+      </RichTextImageResolver.Provider>
       <input ref={fileRef} type="file" accept="image/png,image/jpeg" hidden
         onChange={event => {
           const file = event.target.files?.[0]
           event.target.value = ''
           if (file) void handlePickImage(file)
         }} />
-      <details className="rich-text-area__preview">
-        <summary>实时预览（成员在小程序中看到的效果）</summary>
-        {/* 预览 HTML 由本文件内的 escapeHtml + renderPreview 生成，输入均经转义，无用户可控的原始 HTML。 */}
-        <div className="rich-text-area__rendered" dangerouslySetInnerHTML={{ __html: renderPreview(String(value || ''), previewImages) }} />
-      </details>
     </div>
   )
-}
-
-function escapeHtml(text: string) {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
-
-/** 与小程序 eventRichTextNodes 同规则的预览渲染（仅用于管理后台预览）。
- *  cloud:// 插图引用经 previewImages 映射成本次会话的签名直链预览；没有映射时退化为占位说明。 */
-export function renderPreview(value: string, previewImages: Record<string, string> = {}): string {
-  const lines = String(value || '').replace(/\r\n?/g, '\n').split('\n')
-  const html: string[] = []
-  let list: string[] = []
-  const flushList = () => {
-    if (list.length) { html.push(`<ul>${list.join('')}</ul>`); list = [] }
-  }
-  for (const rawLine of lines) {
-    const line = rawLine.trim()
-    if (!line) { flushList(); continue }
-    const image = /^!\[([^\]]{0,120})\]\(([^)]+)\)$/.exec(line)
-    if (image) {
-      flushList()
-      const source = image[2].trim()
-      const cloudPreview = source.startsWith('cloud://') ? previewImages[source] : undefined
-      const safe = cloudPreview && /^https:\/\//.test(cloudPreview) && !cloudPreview.includes('@')
-        ? cloudPreview
-        : /^https:\/\//.test(source) && !source.includes('@') ? source : ''
-      html.push(safe ? `<img src="${escapeHtml(safe)}" alt="${escapeHtml(image[1])}" />` : `<p>🖼 ${escapeHtml(image[1] || '图片（链接暂不可显示）')}</p>`)
-      continue
-    }
-    if (line.startsWith('## ')) { flushList(); html.push(`<h3>${escapeHtml(line.slice(3))}</h3>`); continue }
-    if (line.startsWith('# ')) { flushList(); html.push(`<h2>${escapeHtml(line.slice(2))}</h2>`); continue }
-    if (line.startsWith('- ')) { list.push(`<li>${escapeHtml(line.slice(2))}</li>`); continue }
-    flushList()
-    html.push(`<p>${escapeHtml(line)}</p>`)
-  }
-  flushList()
-  return html.join('') || '<p class="empty">暂无内容</p>'
 }

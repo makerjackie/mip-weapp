@@ -102,7 +102,7 @@
         </view>
 
         <view wx:else class="mt-3 rounded-[16rpx] bg-panel px-4 py-4">
-          <view wx:if="{{event.notices}}" class="whitespace-pre-wrap text-[24rpx] leading-7 text-muted">{{event.notices}}</view>
+          <rich-text wx:if="{{noticesNodes.length}}" class="mip-event-rich-content text-[24rpx] leading-7 text-muted" nodes="{{noticesNodes}}" />
           <view wx:else class="py-4 text-[24rpx] text-muted">暂无报名须知。</view>
         </view>
 
