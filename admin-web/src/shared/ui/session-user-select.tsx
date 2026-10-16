@@ -136,6 +136,7 @@ export function RemoteCatalogSelect({
     const name = newName.trim()
     if (!name) { setCreateError('请输入名称'); return }
     if (createMaxLength && name.length > createMaxLength) { setCreateError(`名称不能超过 ${createMaxLength} 个字`); return }
+    if (merged.some(option => option.label === name)) { setCreateError('该名称已存在，请直接选择'); return }
     if (demoMode) { setCreateError('演示模式不会新建标签'); return }
     setCreating(true)
     setCreateError('')

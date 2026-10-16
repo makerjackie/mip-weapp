@@ -10,9 +10,10 @@ import {
   UndoOutlined,
   UnorderedListOutlined,
 } from '@ant-design/icons'
-import { Button, Tooltip } from 'antd'
+import { App, Button, Tooltip } from 'antd'
+import type { Editor } from '@tiptap/core'
 import { EditorContent, NodeViewWrapper, ReactNodeViewRenderer, useEditor, type NodeViewProps } from '@tiptap/react'
-import Image from '@tiptap/extension-image'
+import TiptapImage from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
 import StarterKit from '@tiptap/starter-kit'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -39,6 +40,71 @@ function useOptionalSession() {
   }
 }
 
+/** 从剪贴板/拖拽的数据里挑出图片文件。 */
+function imageFilesFromTransfer(transfer: DataTransfer | null): File[] {
+  if (!transfer) return []
+  if (transfer.files && transfer.files.length) {
+    return Array.from(transfer.files).filter(file => file.type.startsWith('image/'))
+  }
+  const files: File[] = []
+  for (const item of Array.from(transfer.items || [])) {
+    if (item.kind === 'file' && item.type.startsWith('image/')) {
+      const file = item.getAsFile()
+      if (file) files.push(file)
+    }
+  }
+  return files
+}
+
+function loadImageFile(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const image = new Image()
+    image.onload = () => { URL.revokeObjectURL(url); resolve(image) }
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片无法读取')) }
+    image.src = url
+  })
+}
+
+const MAX_UPLOAD_EDGE = 1600
+const DIRECT_UPLOAD_BYTES = 700 * 1024
+
+/**
+ * 大图先在前端等比缩到 1600px 内并转 JPEG（质量 0.85），把 1MB 原图压到几百 KB，
+ * 避免经 BFF base64 传输时的 7–8 秒等待；小图原样上传。
+ */
+async function toUploadFile(file: File): Promise<{ media: AdminMediaFile; previewUrl: string }> {
+  if (!file.type.startsWith('image/')) throw new Error('仅支持图片文件')
+  const original = URL.createObjectURL(file)
+  try {
+    if (file.size <= DIRECT_UPLOAD_BYTES && (file.type === 'image/jpeg' || file.type === 'image/png')) {
+      const image = await loadImageFile(file)
+      if (image.width <= MAX_UPLOAD_EDGE && image.height <= MAX_UPLOAD_EDGE) {
+        return { media: file, previewUrl: original }
+      }
+    }
+    const image = await loadImageFile(file)
+    const scale = Math.min(1, MAX_UPLOAD_EDGE / Math.max(image.width, image.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(image.width * scale))
+    canvas.height = Math.max(1, Math.round(image.height * scale))
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('图片处理失败')
+    context.drawImage(image, 0, 0, canvas.width, canvas.height)
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(result => resolve(result), 'image/jpeg', 0.85))
+    if (!blob) throw new Error('图片处理失败')
+    URL.revokeObjectURL(original)
+    return {
+      media: { name: `${file.name.replace(/\.[^.]+$/, '')}.jpg`, size: blob.size, type: 'image/jpeg', arrayBuffer: () => blob.arrayBuffer() },
+      previewUrl: URL.createObjectURL(blob),
+    }
+  }
+  catch (error) {
+    URL.revokeObjectURL(original)
+    throw error
+  }
+}
+
 /** cloud:// fileID → 本会话上传时拿到的本地 blob 预览；节点视图用它把稳定引用渲染成图。 */
 const RichTextImageResolver = createContext<Record<string, string>>({})
 
@@ -54,15 +120,16 @@ function RichTextImageView({ node }: NodeViewProps) {
   </NodeViewWrapper>
 }
 
-const RestrictedImage = Image.extend({
+const RestrictedImage = TiptapImage.extend({
   addNodeView() {
     return ReactNodeViewRenderer(RichTextImageView)
   },
 })
 
-function ToolButton({ active, disabled, title, onClick, children }: {
+function ToolButton({ active, disabled, loading, title, onClick, children }: {
   active?: boolean
   disabled?: boolean
+  loading?: boolean
   title: string
   onClick: () => void
   children: ReactNode
@@ -73,6 +140,7 @@ function ToolButton({ active, disabled, title, onClick, children }: {
         size="small"
         type={active ? 'primary' : 'text'}
         disabled={disabled}
+        loading={loading}
         aria-label={title}
         aria-pressed={active || undefined}
         // Keep the editor selection: clicking a toolbar button must not blur the contenteditable.
@@ -89,7 +157,8 @@ function ToolButton({ active, disabled, title, onClick, children }: {
  * 可见即所得的受限富文本编辑器（TipTap）。
  *
  * 工具栏与原型一致：加粗 / 斜体 / 下划线 / 列表 / 左对齐 / 居中 / 插图，另保留大、小标题
- * （存量内容与小程序解析器都在用，属有意增强）。schema 只放白名单节点，输出再经
+ * （存量内容与小程序解析器都在用，属有意增强）。插图支持三种入口：工具栏选择、剪贴板粘贴、
+ * 拖拽文件；上传时立即给出反馈，大图前端先压缩再传。schema 只放白名单节点，输出再经
  * sanitizeRichTextHtml 净化后回写表单；插图走活动素材通道并持久化 cloud:// 稳定引用。
  */
 export function RichTextArea({
@@ -112,19 +181,47 @@ export function RichTextArea({
   const session = useOptionalSession()
   const client = session?.client
   const demoMode = session?.demoMode ?? false
+  const { message } = App.useApp()
   const fileRef = useRef<HTMLInputElement>(null)
   const onChangeRef = useRef(onChange)
   // 忽略编辑器初始化时的那次 update，避免打开表单就被判「已修改」或把值改写成 HTML。
   const emitReady = useRef(false)
   const valueRef = useRef(value)
-  useEffect(() => {
-    onChangeRef.current = onChange
-    valueRef.current = value
-  }, [onChange, value])
+  const editorRef = useRef<Editor | null>(null)
+  const uploadRef = useRef<(files: File[]) => void>(() => {})
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [focused, setFocused] = useState(false)
   const [previews, setPreviews] = useState<Record<string, string>>({})
+
+  const uploadImages = (files: File[]) => {
+    if (!files.length) return
+    if (!client) { setUploadError('当前环境无法上传图片'); return }
+    if (demoMode) { setUploadError('演示模式不会上传图片'); return }
+    const feedbackKey = 'rich-text-image-upload'
+    setUploading(true)
+    setUploadError('')
+    void message.loading({ content: files.length > 1 ? `正在上传 ${files.length} 张图片…` : '正在上传图片…', key: feedbackKey, duration: 0 })
+    void (async () => {
+      try {
+        for (const file of files) {
+          const prepared = await toUploadFile(file)
+          const result = await client.uploadImage(prepared.media, 'EVENT_CONTENT')
+          const stableRef = result.cloudFileId
+          if (!stableRef) throw new Error('图片上传结果缺少稳定引用，请重试')
+          setPreviews(current => ({ ...current, [stableRef]: prepared.previewUrl }))
+          editorRef.current?.chain().focus().setImage({ src: stableRef, alt: '活动图片' }).run()
+        }
+        void message.success({ content: '图片已插入', key: feedbackKey, duration: 1.6 })
+      }
+      catch (reason) {
+        void message.error({ content: reason instanceof Error ? reason.message : '图片上传失败，请重试', key: feedbackKey, duration: 2.6 })
+      }
+      finally {
+        setUploading(false)
+      }
+    })()
+  }
 
   const editor = useEditor({
     editable: !disabled,
@@ -150,6 +247,21 @@ export function RichTextArea({
         ...(placeholder ? { 'data-placeholder': placeholder } : {}),
         ...(maxLength ? { 'aria-label': placeholder || '富文本内容' } : {}),
       },
+      handlePaste: (_view, event) => {
+        const files = imageFilesFromTransfer(event.clipboardData)
+        if (!files.length) return false
+        event.preventDefault()
+        uploadRef.current(files)
+        return true
+      },
+      handleDrop: (_view, event, _slice, moved) => {
+        if (moved) return false
+        const files = imageFilesFromTransfer(event.dataTransfer)
+        if (!files.length) return false
+        event.preventDefault()
+        uploadRef.current(files)
+        return true
+      },
     },
     onFocus: () => setFocused(true),
     onBlur: () => setFocused(false),
@@ -161,7 +273,17 @@ export function RichTextArea({
     },
   }, [])
 
+  useEffect(() => {
+    onChangeRef.current = onChange
+    valueRef.current = value
+  }, [onChange, value])
+
   useEffect(() => { emitReady.current = true }, [])
+
+  useEffect(() => {
+    editorRef.current = editor
+    uploadRef.current = uploadImages
+  })
 
   useEffect(() => {
     editor?.setEditable(!disabled)
@@ -181,33 +303,6 @@ export function RichTextArea({
     }
   }, [previews])
 
-  const handlePickImage = async (file: File) => {
-    if (!client) { setUploadError('当前环境无法上传图片'); return }
-    if (demoMode) { setUploadError('演示模式不会上传图片'); return }
-    setUploading(true)
-    setUploadError('')
-    try {
-      const mediaFile: AdminMediaFile = {
-        name: file.name, size: file.size, type: file.type, arrayBuffer: () => file.arrayBuffer(),
-      }
-      const result = await client.uploadImage(mediaFile, 'EVENT_CONTENT')
-      const stableRef = result.cloudFileId
-      if (!stableRef) {
-        setUploadError('图片上传结果缺少稳定引用，请重试')
-        return
-      }
-      const previewUrl = URL.createObjectURL(file)
-      setPreviews(current => ({ ...current, [stableRef]: previewUrl }))
-      editor?.chain().focus().setImage({ src: stableRef, alt: '活动图片' }).run()
-    }
-    catch {
-      setUploadError('图片上传失败，请重试')
-    }
-    finally {
-      setUploading(false)
-    }
-  }
-
   const plainText = richTextToPlainText(value)
   const overLimit = Boolean(maxLength && plainText.length > maxLength)
 
@@ -225,7 +320,7 @@ export function RichTextArea({
         <span className="rich-text-area__divider" aria-hidden />
         <ToolButton title="左对齐" disabled={disabled} active={editor?.isActive({ textAlign: 'left' })} onClick={() => editor?.chain().focus().setTextAlign('left').run()}><AlignLeftOutlined /></ToolButton>
         <ToolButton title="居中" disabled={disabled} active={editor?.isActive({ textAlign: 'center' })} onClick={() => editor?.chain().focus().setTextAlign('center').run()}><AlignCenterOutlined /></ToolButton>
-        <ToolButton title="插入图片" disabled={disabled || uploading} onClick={() => fileRef.current?.click()}><PictureOutlined /></ToolButton>
+        <ToolButton title="插入图片（也可直接粘贴或拖入图片）" disabled={disabled || uploading} loading={uploading} onClick={() => fileRef.current?.click()}><PictureOutlined /></ToolButton>
         <span className="rich-text-area__divider" aria-hidden />
         <ToolButton title="撤销" disabled={disabled || !editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()}><UndoOutlined /></ToolButton>
         <ToolButton title="重做" disabled={disabled || !editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()}><RedoOutlined /></ToolButton>
@@ -238,11 +333,11 @@ export function RichTextArea({
           <EditorContent editor={editor} />
         </div>
       </RichTextImageResolver.Provider>
-      <input ref={fileRef} type="file" accept="image/png,image/jpeg" hidden
+      <input ref={fileRef} type="file" accept="image/png,image/jpeg" multiple hidden
         onChange={event => {
-          const file = event.target.files?.[0]
+          const files = Array.from(event.target.files || [])
           event.target.value = ''
-          if (file) void handlePickImage(file)
+          uploadImages(files)
         }} />
     </div>
   )

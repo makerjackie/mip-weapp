@@ -129,7 +129,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'endsAt', label: '结束时间', kind: 'datetime', required: true },
   { key: 'onlineUrl', label: '线上地址', kind: 'text', maxLength: 1_024, visibleWhen: { path: 'eventMode', value: ['ONLINE', 'HYBRID'] }, placeholder: 'https:// 开头的直播/会议链接' },
   { key: 'description', label: '活动介绍', kind: 'rich-text', required: true, maxLength: 20_000, wide: true, placeholder: '介绍活动亮点、流程与注意事项；可加粗、斜体、下划线，支持列表、对齐与插图' },
-  { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list', assetPurpose: 'EVENT_CONTENT', wide: true },
+  { key: 'contentMedia', label: '活动介绍图库（可选）', kind: 'asset-list', assetPurpose: 'EVENT_CONTENT', wide: true, advanced: true, extra: '可选：追加的正文图片。活动介绍里的插图直接在编辑器中「插入图片」或粘贴/拖入即可。' },
   { key: 'organizerIntroduction', label: '主办方介绍', kind: 'rich-text', maxLength: 20_000, wide: true, placeholder: '介绍主办方或主理人背景；可加粗、斜体、下划线，支持列表、对齐与插图' },
   { key: 'notices', label: '报名须知', kind: 'rich-text', maxLength: 5_000, wide: true, placeholder: '报名须知、注意事项等；可加粗、斜体、下划线，支持列表、对齐与插图' },
   // —— 高级设置（选填 / 内部模型字段） ——
@@ -142,8 +142,8 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'capacity', label: '活动名额', kind: 'number', advanced: true, placeholder: '留空表示不限名额' },
   { key: 'waitlistEnabled', label: '满员进入候补', kind: 'checkbox', advanced: true, extra: '名额报满后，新报名自动进入候补名单（不勾选则名额报满后拒绝报名）' },
   { key: 'oversellEnabled', label: '允许超售', kind: 'checkbox', advanced: true, visibleWhen: { path: 'waitlistEnabled', value: false }, extra: '名额报满后仍继续接受报名（忽略名额上限）；付费活动不支持' },
-  { key: 'latitude', label: '位置纬度', kind: 'number', advanced: true, extra: '选填，用于小程序活动详情页的「导航」按钮（打开地图）。获取方式：微信里打开该位置卡片，或在高德/腾讯地图搜索地点后复制坐标；须与经度成对填写。示例：31.230416' },
-  { key: 'longitude', label: '位置经度', kind: 'number', advanced: true, extra: '选填，与纬度成对填写。示例：121.473701' },
+  // 原型创建页没有坐标字段；保留一个整体化的选填入口，仅用于小程序详情页「导航」。
+  { key: 'locationCoords', label: '地图坐标（选填）', kind: 'text', maxLength: 64, advanced: true, placeholder: '如 31.230416,121.473701', extra: '选填。在地图 App 长按地点复制坐标，把「纬度,经度」粘贴到这里；用于小程序详情页的「导航」按钮。不填则不显示导航。' },
   // 报名字段编辑入口已按产品决策下线：字段保持 hidden，编辑已有活动时
   // definition.values 携带服务端已存的配置原样提交，不会被清空；新建活动为空数组
   // （报名页退回基础字段）。小程序报名页仍消费这份配置。
@@ -447,6 +447,17 @@ function registrationSchema(value: unknown) {
   return result
 }
 
+/** 解析「纬度,经度」整体输入；留空表示不设坐标（不静默改写成 0）。 */
+function parseLocationCoords(value: unknown): { latitude: number | null, longitude: number | null } {
+  const raw = String(value ?? '').trim()
+  if (!raw) return { latitude: null, longitude: null }
+  const parts = raw.split(/[,，;；\s]+/).map(part => part.trim()).filter(Boolean)
+  if (parts.length !== 2) throw new FormValidationError('locationCoords', '坐标格式应为「纬度,经度」，例如 31.230416,121.473701')
+  const latitude = finiteNumber(parts[0], '纬度', -90, 90)
+  const longitude = finiteNumber(parts[1], '经度', -180, 180)
+  return { latitude, longitude }
+}
+
 function eventDraft(values: EventMutationValues) {
   const startsAt = requiredDate(values.startsAt, '开始时间')
   const endsAt = requiredDate(values.endsAt, '结束时间')
@@ -485,9 +496,7 @@ function eventDraft(values: EventMutationValues) {
   if ((eventMode === 'ONLINE' || eventMode === 'HYBRID') && !onlineUrl.startsWith('https://')) throw new FormValidationError('onlineUrl', '线上地址必须使用 HTTPS')
   const guideUrl = optionalText(values.guideUrl, '路线指引链接', 1_024)
   if (guideUrl && !/^https:\/\/\S+$/.test(guideUrl)) throw new FormValidationError('guideUrl', '路线指引链接必须是以 https:// 开头的完整链接')
-  const latitude = values.latitude === undefined || values.latitude === '' ? null : finiteNumber(values.latitude, '纬度', -90, 90)
-  const longitude = values.longitude === undefined || values.longitude === '' ? null : finiteNumber(values.longitude, '经度', -180, 180)
-  if ((latitude === null) !== (longitude === null)) throw new FormValidationError('latitude', '活动地点坐标不完整')
+  const { latitude, longitude } = parseLocationCoords(values.locationCoords)
   const capacity = values.capacity === undefined || values.capacity === '' || values.capacity === null ? null : integer(values.capacity, '活动名额', 1)
   const registrationDeadline = optionalDate(values.registrationDeadline, '报名截止时间')
   const cancellationDeadline = optionalDate(values.cancellationDeadline, '取消截止时间')

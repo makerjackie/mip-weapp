@@ -154,12 +154,22 @@ describe('novice-friendly event form contracts', () => {
     assert.ok(draft.summary.length <= 300)
   })
 
-  it('marks latitude/longitude as advanced optional fields with guidance', () => {
+  it('exposes a single advanced optional 地图坐标 field with guidance', () => {
     const fields = EVENT_MUTATION_CONFIGS['mip.admin.events.save'].fields
-    const latitude = fields.find(field => field.key === 'latitude')
-    const longitude = fields.find(field => field.key === 'longitude')
-    assert.ok(latitude && latitude.advanced && !latitude.required && (latitude.extra || '').includes('导航'))
-    assert.ok(longitude && longitude.advanced && !longitude.required)
+    const coords = fields.find(field => field.key === 'locationCoords')
+    assert.ok(coords && coords.advanced && !coords.required && (coords.extra || '').includes('导航'))
+    assert.ok(!fields.some(field => field.key === 'latitude' || field.key === 'longitude'))
+  })
+
+  it('parses 纬度,经度 into server latitude/longitude and rejects malformed input', () => {
+    const withCoords = buildEventMutationInput('mip.admin.events.save', { ...baseEvent, locationCoords: '31.230416, 121.473701' }) as { draft: Record<string, unknown> }
+    assert.equal(withCoords.draft.latitude, 31.230416)
+    assert.equal(withCoords.draft.longitude, 121.473701)
+    const empty = buildEventMutationInput('mip.admin.events.save', baseEvent) as { draft: Record<string, unknown> }
+    assert.equal(empty.draft.latitude, null)
+    assert.equal(empty.draft.longitude, null)
+    assert.equal(buildEventMutationInput('mip.admin.events.save', { ...baseEvent, locationCoords: '31.23' }), null)
+    assert.equal(buildEventMutationInput('mip.admin.events.save', { ...baseEvent, locationCoords: 'abc,def' }), null)
   })
 
   it('keeps price in yuan behind the paid gate', () => {
