@@ -198,6 +198,7 @@ describe('admin repository persistence contracts', () => {
     assert.match(captured.sql, /ORDER BY rf\.created_at DESC, rf\.id DESC LIMIT 1\) = \?/)
     assert.match(captured.sql, /o\.created_at >= \?/)
     assert.match(captured.sql, /o\.created_at <= \?/)
+    assert.match(captured.sql, /AS event_active_checkin/)
     assert.ok(captured.params.includes('%用户%'))
     assert.deepEqual(page.items[0], {
       id: 'order-a', nickname: '用户', orderType: 'EVENT',
@@ -207,6 +208,7 @@ describe('admin repository persistence contracts', () => {
       status: 'PARTIALLY_REFUNDED', refundStatus: 'SUCCEEDED', refundId: 'refund-a',
       paidAt: '2026-08-20T02:00:00.000Z', createdAt: '2026-08-19T02:00:00.000Z',
       version: 3, providerTransactionIdMasked: 'WX-T…0001', branchId: 'branch-a', demoOrder: false,
+      eventCheckinActive: false,
     })
     assert.equal(Object.hasOwn(page.items[0], 'merchantOrderNo'), false)
     assert.equal(Object.hasOwn(page.items[0], 'userId'), false)

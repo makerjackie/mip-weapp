@@ -98,6 +98,14 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     const order = record(view.source?.order)
     const allowed = Array.isArray(order.availableRefundActions) ? order.availableRefundActions : []
     if (allowed.includes('SUBMIT_REFUND')) actions.push(button('mip.admin.refunds.submit', '提交退款', id, 'refunds.submit'))
+    else {
+      const blocked = (Array.isArray(order.blockedRefundActions) ? order.blockedRefundActions : [])
+        .map(item => record(item))
+        .find(item => item.action === 'SUBMIT_REFUND')
+      if (blocked && hasCapability('refunds.submit')) {
+        actions.push(<Button key="refund-blocked" disabled>{String(blocked.message || '当前状态不可退款')}</Button>)
+      }
+    }
     if (allowed.includes('RETRY_REFUND') && typeof order.refundId === 'string') actions.push(button('mip.admin.refunds.retry', '重试退款', order.refundId, 'refunds.submit'))
   }
   else if (route === 'tasks') {

@@ -86,8 +86,9 @@ function createAdminEventRuntimeRepository(database, dependencies) {
       if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || time >= new Date(end.getTime() + 86400000)) throw codeError('EVENT_ENDED')
       const validFrom = input.mode === 'ROTATING' ? time : new Date(start.getTime() - 21600000)
       const validUntil = input.mode === 'ROTATING' ? new Date(Math.min(time.getTime() + 300000, end.getTime() + 86400000)) : new Date(end.getTime() + 86400000)
-      if (input.mode === 'ROTATING') await tx.query(`UPDATE mip_event_checkin_credentials SET status = 'REVOKED', revoked_at = ?
-        WHERE app_id = ? AND event_id = ? AND mode = 'ROTATING' AND status = 'ACTIVE' AND valid_until > ?`, [time, input.appId, input.eventId, time])
+      // 刷新（重新下发）时吊销同模式下旧的生效凭证，保证任一时刻同模式只有一个可用码。
+      await tx.query(`UPDATE mip_event_checkin_credentials SET status = 'REVOKED', revoked_at = ?
+        WHERE app_id = ? AND event_id = ? AND mode = ? AND status = 'ACTIVE' AND valid_until > ?`, [time, input.appId, input.eventId, input.mode, time])
       const credentialId = id(); const scanKey = bytes(8).toString('base64url'); const secret = bytes(8).toString('base64url')
       await tx.query(`INSERT INTO mip_event_checkin_credentials
         (id, app_id, event_id, scan_key, mode, token_hash, valid_from, valid_until, created_by_user_id)

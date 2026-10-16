@@ -110,7 +110,10 @@ function createAdminOrderRepository(database, options = {}) {
         (SELECT r.status FROM mip_refunds r WHERE r.app_id = o.app_id AND r.order_id = o.id
           ORDER BY r.created_at DESC, r.id DESC LIMIT 1) AS refund_status,
         (SELECT r.id FROM mip_refunds r WHERE r.app_id = o.app_id AND r.order_id = o.id
-          ORDER BY r.created_at DESC, r.id DESC LIMIT 1) AS refund_id
+          ORDER BY r.created_at DESC, r.id DESC LIMIT 1) AS refund_id,
+        (SELECT COUNT(*) FROM mip_event_registrations reg
+          JOIN mip_event_checkins cin ON cin.app_id = reg.app_id AND cin.registration_id = reg.id AND cin.status = 'ACTIVE'
+          WHERE reg.app_id = o.app_id AND reg.order_id = o.id) AS event_active_checkin
        FROM mip_orders o
        LEFT JOIN mip_profiles p ON p.app_id = o.app_id AND p.user_id = o.user_id
        LEFT JOIN mip_membership_plans mp ON mp.app_id = o.app_id AND mp.id = o.membership_plan_id
@@ -195,7 +198,10 @@ function createAdminOrderRepository(database, options = {}) {
         (SELECT r.status FROM mip_refunds r WHERE r.app_id = o.app_id AND r.order_id = o.id
           ORDER BY r.created_at DESC, r.id DESC LIMIT 1) AS refund_status,
         (SELECT r.id FROM mip_refunds r WHERE r.app_id = o.app_id AND r.order_id = o.id
-          ORDER BY r.created_at DESC, r.id DESC LIMIT 1) AS refund_id
+          ORDER BY r.created_at DESC, r.id DESC LIMIT 1) AS refund_id,
+        (SELECT COUNT(*) FROM mip_event_registrations reg
+          JOIN mip_event_checkins cin ON cin.app_id = reg.app_id AND cin.registration_id = reg.id AND cin.status = 'ACTIVE'
+          WHERE reg.app_id = o.app_id AND reg.order_id = o.id) AS event_active_checkin
        FROM mip_orders o
        INNER JOIN mip_users buyer ON buyer.app_id = o.app_id AND buyer.id = o.user_id
        LEFT JOIN mip_profiles p ON p.app_id = o.app_id AND p.user_id = o.user_id
@@ -744,6 +750,7 @@ function orderFromRow(row) {
     providerTransactionIdMasked: row.provider_transaction_id ? maskIdentifier(row.provider_transaction_id) : null,
     branchId: row.branch_id || null,
     demoOrder: json(row.product_snapshot_json, {}).demo === true,
+    eventCheckinActive: Number(row.event_active_checkin || 0) > 0,
     ...(row.order_type === 'CONTENT' ? { contentRefundEligible: contentRefundEligible(row) } : {}),
   }
 }

@@ -10,11 +10,14 @@ const PUBLISHED_LOCKED_FIELDS = Object.freeze(['scopeType', 'branchId', 'eventMo
 function eventOperationPolicy(event, can) {
   const actions = []
   if (can('events.write')) {
-    actions.push('mip.admin.events.clone', 'mip.admin.events.tags.replace', 'mip.admin.events.checkinQrcode.get')
+    actions.push('mip.admin.events.clone', 'mip.admin.events.tags.replace')
     if (EDITABLE_EVENT_STATUSES.includes(event.status)) actions.push('mip.admin.events.save')
     if (EVENT_TRANSITIONS[event.status]?.length) actions.push('mip.admin.events.changeStatus')
     if (event.status === 'DRAFT') actions.push('mip.admin.events.archive')
   }
+  // 签到码下发要求 events.checkin.manage（与服务端 event-runtime.getCheckinQrcode 的能力校验一致），
+  // 不随 events.write 暴露，避免出现看得见却调用失败的按钮。
+  if (can('events.checkin.manage')) actions.push('mip.admin.events.checkinQrcode.get')
   if (event.status === 'PUBLISHED' && can('events.registrations.manage')) actions.push('mip.admin.events.participants.import')
   if (event.status === 'PUBLISHED' && can('communications.publish')) actions.push('mip.admin.communications.publishEventReminder')
   return { availableActions: actions, allowedStatuses: EVENT_TRANSITIONS[event.status] || [],

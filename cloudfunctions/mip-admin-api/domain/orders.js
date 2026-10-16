@@ -202,12 +202,23 @@ function projectOrder(item, bindings) {
   }
   catch {}
   const availableRefundActions = []
-  if (canRefund
-    && !item.demoOrder
-    && ['PAID', 'PARTIALLY_REFUNDED'].includes(item.status)
+  const blockedRefundActions = []
+  const refundEligible = ['PAID', 'PARTIALLY_REFUNDED'].includes(item.status)
     && (item.orderType !== 'CONTENT' || item.contentRefundEligible)
-    && Number(item.refundedAmountCents) < Number(item.amountCents)) {
+    && Number(item.refundedAmountCents) < Number(item.amountCents)
+  // 与服务端退款事务保持同一口径（repositories/orders.js submitRefund）：活动订单若存在
+  // 生效中的签到，非平台超管不提供提交退款入口，避免出现必然失败的按钮。
+  const checkinBlocksRefund = item.orderType === 'EVENT' && item.eventCheckinActive === true
+    && !isSuperAdmin(bindings)
+  if (canRefund && !item.demoOrder && refundEligible && !checkinBlocksRefund) {
     availableRefundActions.push('SUBMIT_REFUND')
+  }
+  else if (canRefund && !item.demoOrder && refundEligible && checkinBlocksRefund) {
+    blockedRefundActions.push({
+      action: 'SUBMIT_REFUND',
+      code: 'EVENT_REFUND_CHECKIN_ACTIVE',
+      message: '该报名已签到，退款仅限平台超管处理',
+    })
   }
   if (canRefund
     && item.status === 'REFUND_PENDING'
@@ -232,6 +243,7 @@ function projectOrder(item, bindings) {
     refundStatus: item.refundStatus,
     refundId: item.refundId,
     availableRefundActions,
+    blockedRefundActions,
     paidAt: item.paidAt,
     createdAt: item.createdAt,
     version: item.version,

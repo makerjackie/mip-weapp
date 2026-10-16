@@ -764,7 +764,6 @@ function createAdminPrdExtensions(database, options = {}) {
       eventTitle: row.event_title,
       branchId: row.branch_id || null,
       branchName: row.branch_name || '',
-      userId: row.user_id,
       nickname: row.nickname || '未填写昵称',
       cityName: row.city_name || '',
       status: row.abnormal_reason ? 'ABNORMAL' : row.status,

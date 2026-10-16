@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { it } from 'node:test'
-import { feedbackFields } from './event-feedback.ts'
+import { feedbackDisplayComplete, feedbackFields } from './event-feedback.ts'
 import { loadAdminDetail } from './admin-details.ts'
 const require = createRequire(import.meta.url)
 const { createAdminEventRuntimeRepository } = require('../../../cloudfunctions/mip-admin-api/domain/repositories/event-runtime.js')
@@ -27,6 +27,9 @@ it('renders the actual non-empty repository feedback serialization including pri
 it('does not invent feedback answers for legacy rows', () => {
   assert.deepEqual(feedbackFields({ body: '历史全文' }), { wouldRecommend: '—', capabilityRoles: '—', resources: '历史全文', joinMipIntent: '—', discoverySource: '—', rosterConsent: '—' })
 })
-it('rejects a non-empty feedback response missing the server display contract', () => {
-  assert.throws(() => feedbackFields({ answers: { recommendation: 'RECOMMEND' } }), /合同不完整/)
+it('degrades gracefully instead of throwing when a non-empty feedback response is missing the server display contract', () => {
+  const incomplete = { answers: { recommendation: 'RECOMMEND' } }
+  assert.equal(feedbackDisplayComplete(incomplete), false)
+  assert.equal(feedbackFields(incomplete).wouldRecommend, '—')
+  assert.equal(feedbackDisplayComplete({ body: '历史全文' }), true)
 })

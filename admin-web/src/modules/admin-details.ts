@@ -5,7 +5,7 @@ import {
   type TaskDetailLoadOptions,
 } from './admin-task-management.ts'
 import { loadBannerDetail } from './admin-banner-management.ts'
-import { feedbackFields } from './event-feedback.ts'
+import { feedbackDisplayComplete, feedbackFields } from './event-feedback.ts'
 import { campaignAudienceLabel, label } from './admin-read-formatters.ts'
 import {
   loadGameCatalogDetail,
@@ -312,6 +312,7 @@ async function loadEventDetail(
     },
     {
       title: '参与情况',
+      ...(insights.loadFailed ? { error: '统计数据加载失败，请重试；活动资料已成功加载。' } : {}),
       metrics: fields([
         ['有效报名', numberText(participation.effectiveRegistrationCount)],
         ['已签到', numberText(participation.checkedInCount)],
@@ -351,6 +352,8 @@ async function loadEventDetail(
         refundedAmount: item.refundedAmountCents === undefined ? '—' : money(item.refundedAmountCents, item.currency),
         state: item.status === 'ABNORMAL' && item.registrationStatus
           ? `异常（${codeLabel(item.registrationStatus)}）` : codeLabel(item.status),
+        source: item.source === 'ADMIN' ? '运营补录' : '用户报名',
+        roleMark: text(item.roleMark),
         abnormalReason: text(item.abnormalReason),
         detailLinks: [
           ...(typeof item.userDetailId === 'string' ? [{ route: 'users' as const, id: item.userDetailId, label: '用户档案' }] : []),
@@ -358,7 +361,7 @@ async function loadEventDetail(
         ],
         rowActions: eventRegistrationRowActions(eventId, item),
       })),
-      columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['paymentStatus', '支付状态'], ['paidAmount', '实付金额'], ['refundedAmount', '已退款'], ['checkedInAt', '签到时间'], ['state', '报名状态'], ['abnormalReason', '异常原因']]),
+      columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['source', '来源'], ['roleMark', '角色标记'], ['paymentStatus', '支付状态'], ['paidAmount', '实付金额'], ['refundedAmount', '已退款'], ['checkedInAt', '签到时间'], ['state', '报名状态'], ['abnormalReason', '异常原因']]),
       pager: {
         key: 'eventRoster',
         query: rosterFilters.query,
@@ -376,7 +379,11 @@ async function loadEventDetail(
   if (options.includeEventFeedback) {
     sections.push({
       title: '活动反馈明细',
-      ...(feedbackPage.loadFailed ? { error: '反馈明细加载失败，请重试。' } : {}),
+      ...(feedbackPage.loadFailed
+        ? { error: '反馈明细加载失败，请重试。' }
+        : feedbackRows.some(item => !feedbackDisplayComplete(item))
+          ? { error: '部分反馈字段缺失，已按占位显示；请刷新后重试。' }
+          : {}),
       rows: feedbackRows.map(item => ({
         nickname: text(item.nickname),
         submittedAt: dateTime(item.submittedAt),
