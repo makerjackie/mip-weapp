@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MIP 活动模块 W05 + 浏览器 UI 自动化 · 阶段报告 2026-10-16</title>
+<style>
+  :root { --ink:#111; --muted:#6b7280; --line:#e5e7eb; --ok:#0a7d43; --warn:#a16207; --bad:#b91c1c; --bg:#fafafa; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; }
+  main { max-width:1040px; margin:0 auto; padding:40px 24px 80px; }
+  h1 { font-size:26px; margin:0 0 4px; }
+  h2 { font-size:19px; margin:34px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  h3 { font-size:15px; margin:20px 0 6px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  table { width:100%; border-collapse:collapse; margin:8px 0 4px; background:#fff; font-size:14px; }
+  th,td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#f3f4f6; font-weight:600; }
+  code { background:#f3f4f6; padding:1px 5px; border-radius:4px; font-size:13px; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+  .p-ok { background:#e7f6ee; color:var(--ok); }
+  .p-warn { background:#fdf3e2; color:var(--warn); }
+  .p-bad { background:#fdeaea; color:var(--bad); }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .grid{grid-template-columns:1fr;} }
+  figure { margin:0; }
+  figure img { width:100%; border:1px solid var(--line); border-radius:8px; background:#fff; }
+  figcaption { color:var(--muted); font-size:13px; margin-top:6px; }
+  .note { background:#fff; border:1px solid var(--line); border-left:3px solid var(--warn); padding:10px 14px; border-radius:6px; margin:12px 0; }
+  ul { margin:6px 0; padding-left:22px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>MIP 活动模块 W05 + 浏览器 UI 自动化 · 阶段报告</h1>
+  <p class="sub">2026-10-16 · 范围：活动模块联动（E06–E09 审计/修复）、退款入口、L2/L3 自动化，并统一整合两个并行 AI 的工作与双环境分离。</p>
+
+  <h2>1. 一句话结论</h2>
+  <p>本轮修掉活动链路里 4 个“看得见但会失败/误判”的真实缺陷，建立了可重复的 <b>L2 已部署 API E2E</b> 与 <b>L3 Playwright 浏览器 E2E</b>；同时把两条并行工作线（测试环境分离/证书续期、Cloudflare 清理）与本地分叉一并整合进 <code>main</code>。双环境门禁全绿，测试后台已部署本轮构建并通过资产字节校验；<b>测试后台登录闭环仍 BLOCKED</b>（缺测试管理员账号）。</p>
+
+  <h2>2. 本轮交付与验证</h2>
+  <table>
+    <tr><th>项</th><th>结果</th><th>证据</th></tr>
+    <tr><td>本地门禁 <code>pnpm verify</code></td><td><span class="pill p-ok">PASS</span></td><td>712 owned sources / 300 test files；architecture、lint、docs:check 全过</td></tr>
+    <tr><td>Web 门禁 <code>pnpm admin:web:verify</code></td><td><span class="pill p-ok">PASS</span></td><td>28 test files / 182 React tests + build + responsive</td></tr>
+    <tr><td>L2 已部署 API E2E（生产 <code>admin.mip.cool</code>）</td><td><span class="pill p-ok">12/12</span></td><td><code>scripts/qa/admin-event-e2e.mjs</code></td></tr>
+    <tr><td>L3 浏览器 UI E2E（Playwright）</td><td><span class="pill p-ok">5/5</span></td><td><code>scripts/qa/admin-ui-e2e.mjs</code> + 截图</td></tr>
+    <tr><td>测试后台部署（<code>test.admin.mip.cool</code>）</td><td><span class="pill p-ok">VERIFIED</span></td><td>BFF <code>mip-t-admin-web-api</code>；静态前缀 <code>mip-admin-console-test/</code> 15 文件字节匹配；入口 <code>index-DF4g-W8w.js</code></td></tr>
+    <tr><td>测试后台登录闭环</td><td><span class="pill p-bad">BLOCKED</span></td><td>缺测试管理员账号 → <code>/api/auth/password/login</code> 401</td></tr>
+    <tr><td>真机项（扫码签到、支付、小程序）</td><td><span class="pill p-warn">NOT RUN</span></td><td>需真机/体验版</td></tr>
+  </table>
+
+  <h2>3. 修复明细（含“为什么”）</h2>
+  <table>
+    <tr><th>缺陷</th><th>现象</th><th>修复</th></tr>
+    <tr><td>退款入口不认识签到状态</td><td>已签到活动的已支付订单，非超管仍看到「提交退款」，点了必然被事务拒绝（<code>EVENT_REFUND_CHECKIN_ACTIVE</code>）</td><td>入口投影改为与退款事务同口径：非超管 + 生效签到 → 不给入口，改为返回 <code>blockedRefundActions</code> 原因；界面显示禁用按钮并给出原因</td></tr>
+    <tr><td>反馈合同缺失会整页报错</td><td>反馈响应非空但缺 <code>displayFields</code> 时抛错，整个活动抽屉变错误页</td><td>降级占位 + 区块提示，不再拖垮整页（“可选请求失败不得让已成功正文变整页错误”）</td></tr>
+    <tr><td>签到码按钮能力不一致</td><td>动作投影按 <code>events.write</code> 暴露签到码，实际动作要求 <code>events.checkin.manage</code> → 看得见但会失败</td><td>投影改为 <code>events.checkin.manage</code>，与动作自身校验一致</td></tr>
+    <tr><td>签到码刷新不吊销旧码</td><td>仅 ROTATING 吊销旧码；STATIC 反复下发会同时存在多个有效码</td><td>同模式重新下发时吊销旧的有效码</td></tr>
+    <tr><td>全量名单泄漏 <code>userId</code></td><td><code>rosterAll</code> 返回原始 <code>userId</code>，与 <code>roster</code> 脱敏不一致</td><td>移除 <code>userId</code>，与单场名单口径一致</td></tr>
+  </table>
+
+  <h2>4. 你走查用：本轮改动页面</h2>
+  <table>
+    <tr><th>页面 / 区域</th><th>改动</th><th>怎么看</th></tr>
+    <tr><td>活动列表 → 活动详情抽屉 ·「报名与参与人」</td><td>新增「来源」（用户报名/运营补录）、「角色标记」两列</td><td>打开任一活动，看名单表头</td></tr>
+    <tr><td>活动详情抽屉 ·「活动反馈明细」</td><td>字段缺失时降级为占位并在区块顶部提示，不再整页报错</td><td>正常数据下应无提示；异常数据不再白屏</td></tr>
+    <tr><td>活动详情抽屉 ·「参与情况」</td><td>统计读取失败时显示“统计数据加载失败，请重试”，而非静默显示 —</td><td>断网/接口失败时可见</td></tr>
+    <tr><td>订单详情 · 动作栏</td><td>已签到活动的非超管：不再有「提交退款」，改为禁用按钮 + 原因文案</td><td>找一笔已签到活动订单查看</td></tr>
+    <tr><td>活动创建/编辑表单</td><td>「地图坐标」字段整块隐藏（代码保留，客户有需求再启用）</td><td>表单里不再出现坐标/拾取器</td></tr>
+  </table>
+
+  <h2>5. 截图（L3 浏览器 E2E，生产入口）</h2>
+  <div class="grid">
+    <figure><img src="shots/events-list-1440.png" alt="活动列表 1440" /><figcaption>活动列表 · 1440×900</figcaption></figure>
+    <figure><img src="shots/event-detail-1440.png" alt="活动详情 1440" /><figcaption>活动详情抽屉 · 1440×900</figcaption></figure>
+    <figure><img src="shots/events-list-390.png" alt="活动列表 390" /><figcaption>活动列表 · 390×844（无横向溢出）</figcaption></figure>
+  </div>
+
+  <h2>6. 并行工作整合（两条 AI 线 + 本地分叉）</h2>
+  <ul>
+    <li><b>测试/生产环境分离 + 证书续期</b>：<code>envs/{prod,test}</code> 目标目录、<code>MIP_ENV_DIR</code> 加载器、<code>ops.mjs --target</code> 编排、<code>release:prod</code>/<code>release:trial</code> 通道；证书续期参数化支持 <code>test.admin.mip.cool</code>（测试专用函数/角色/前缀）。</li>
+    <li><b>Cloudflare 清理</b>：删除 <code>wrangler*.toml</code>、<code>public/_headers</code>、旧迁移脚本与 <code>deploy:pages</code>/wrangler 依赖；文档统一为 CloudBase 同构口径；守卫常量 <code>CLOUDFLARE_*</code> → <code>LEGACY_HOSTING_*</code>。</li>
+    <li><b>本地分叉收敛</b>：本地 <code>main</code> 与 <code>origin/main</code> 分叉（本地 12 / 远端 10），仅 <code>PROJECT_STATUS.md</code> 冲突，已保留两侧条目合并；随后合入 Cloudflare 清理分支（<code>pnpm-lock.yaml</code> 冲突以重建 lock 解决）。合并后修复 3 处门禁回归（环境文档父路径链接、部署脚本 eslint）。</li>
+    <li>汇总分支提交：<code>ff1a3d8e</code>（merge origin/main）→ <code>80bba8e2</code>（merge Cloudflare 清理）→ <code>a00d6486</code>（门禁修复）。</li>
+  </ul>
+
+  <h2>7. 阻塞与下一步</h2>
+  <div class="note"><b>测试后台登录闭环 BLOCKED</b>：需要先在测试环境做 owner 引导，并由测试管理员用测试小程序确认登录、设置密码，之后才能跑测试后台的 L2/L3。测试环境函数/域名/静态资产已就绪（本轮构建入口 <code>index-DF4g-W8w.js</code>）。</div>
+  <ul>
+    <li>待你：在测试环境完成 owner 引导 + 测试管理员设密（或授权我用 CloudBase 执行 bootstrap）。</li>
+    <li>待你：是否把本地 <code>main</code>（领先 <code>origin/main</code> 16）推送到远端。</li>
+    <li>我接着做：W05 剩余（E06 支付/签到筛选与导出、E09 下钻、E08 补签原因）、P5 单元回归测试、测试后台 L2/L3 全量验收。</li>
+    <li>真机项（扫码签到、支付、小程序体验版）单列，不混入本次结论。</li>
+  </ul>
+</main>
+</body>
+</html>
