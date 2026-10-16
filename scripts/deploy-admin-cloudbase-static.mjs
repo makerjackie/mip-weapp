@@ -4,11 +4,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import {
-  LEGACY_HOSTING_METADATA_BASENAMES,
   collectHostingListing,
   hostingFileCount,
   hostingKeysOutsidePrefix,
   hostingMetadataLeaks,
+  LEGACY_HOSTING_METADATA_BASENAMES,
   manifestListingGaps,
   sha256File,
   treeGapsAgainstListing,

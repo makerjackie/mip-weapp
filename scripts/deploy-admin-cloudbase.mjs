@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { adminAssetRoute } from './lib/admin-asset-route.mjs'
-import { authRuntimeUser, AUTH_SCHEMA } from './lib/admin-auth-setup.mjs'
+import { AUTH_SCHEMA, authRuntimeUser } from './lib/admin-auth-setup.mjs'
 import { environmentVariables, functionDetail } from './lib/ai-draft-provider-cloud.mjs'
 import { assertFunctionSecurityRulesConverged, assertNoTimerTriggers, parseFunctionSecurityRules, updateMipFunctionInvocationRule } from './lib/cloud-function-safety.mjs'
 import { parseMcpOutput, runMcporter } from './lib/cloudbase-mcp-runner.mjs'
@@ -23,7 +23,7 @@ const authSchema = String(env.MIP_ADMIN_AUTH_SCHEMA || AUTH_SCHEMA).trim()
 const consolePrefix = String(env.MIP_ADMIN_CONSOLE_PREFIX || 'mip-admin-console').trim()
 if (!/^[a-z][a-z0-9-]{0,59}$/.test(name)
   || !/^[a-z][a-z0-9-]{0,59}$/.test(upstreamFunctionName)
-  || !/^[A-Za-z0-9_]{1,64}$/.test(authSchema)
+  || !/^\w{1,64}$/.test(authSchema)
   || !/^[a-z0-9-]{1,64}$/.test(consolePrefix)) {
   throw new Error('Invalid MIP admin deploy target configuration')
 }

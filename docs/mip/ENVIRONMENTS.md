@@ -83,5 +83,5 @@ pnpm admin:bootstrap -- --confirm-env=<该目标的精确EnvID> --confirm-owner
 - [小程序构建配置](../../weapp-vite.config.ts) 与 [运行配置](../../src/config/runtime.ts)
 - 云函数部署脚本（`scripts/deploy-functions.mjs`）、支付部署（`scripts/deploy-payment-function.mjs`）
 - owner 引导脚本（`scripts/bootstrap-owner.mjs`）
-- [后台发布命令](../../admin-web/package.json) 与 [CloudBase 后台部署脚本](../../scripts/deploy-admin-cloudbase.mjs)
+- 后台发布命令（`admin-web/package.json`）与 CloudBase 后台部署脚本（`scripts/deploy-admin-cloudbase.mjs`）
 - [云开发规范](../CLOUDBASE.md)、[部署手册](../DEPLOYMENT.md)、[运营手册](../OPERATIONS.md)

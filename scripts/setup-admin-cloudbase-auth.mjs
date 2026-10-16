@@ -13,7 +13,7 @@ resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
 // Target authentication schema: production keeps the proven `mip_admin_auth`; the
 // test backend selects `mip_test_admin_auth` via MIP_ADMIN_AUTH_SCHEMA.
 const schema = String(env.MIP_ADMIN_AUTH_SCHEMA || AUTH_SCHEMA).trim()
-if (!/^[A-Za-z0-9_]{1,64}$/.test(schema)) {
+if (!/^\w{1,64}$/.test(schema)) {
   throw new Error('MIP_ADMIN_AUTH_SCHEMA must be a plain identifier')
 }
 if (!env.CLOUDBASE_ENV_ID || !process.argv.includes(`--confirm-env=${env.CLOUDBASE_ENV_ID}`) || !process.argv.includes(`--confirm-schema=${schema}`)) {
