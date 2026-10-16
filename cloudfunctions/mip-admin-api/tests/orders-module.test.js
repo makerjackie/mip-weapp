@@ -351,6 +351,35 @@ describe('admin orders deep module', () => {
     assert.equal(operationsPage.items.every(item => item.availableRefundActions.length === 0), true)
   })
 
+  it('withholds submit-refund from non-owners when the event order has an active check-in', async () => {
+    const checkedInEvent = orderRow({
+      id: 'order-event', orderType: 'EVENT', resourceId: 'event-a', resourceType: 'EVENT',
+      resourceTitle: '交流活动', status: 'PAID', eventCheckinActive: true,
+    })
+    const repo = repository({
+      async listOrders() {
+        repo.listReads += 1
+        return { items: [checkedInEvent], nextCursor: null }
+      },
+    })
+    const service = orders(repo)
+
+    // Non-owner (default binding): no doomed button; the projection carries the server reason.
+    const financePage = await service.listOrders(caller)
+    assert.deepEqual(financePage.items[0].availableRefundActions, [])
+    assert.deepEqual(financePage.items[0].blockedRefundActions, [{
+      action: 'SUBMIT_REFUND', code: 'EVENT_REFUND_CHECKIN_ACTIVE',
+      message: '该报名已签到，退款仅限平台超管处理',
+    }])
+    assert.equal(Object.hasOwn(financePage.items[0], 'eventCheckinActive'), false)
+
+    // Platform owner keeps the check-in exception path (MIW-108).
+    repo.roleBindings = [{ roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }]
+    const ownerPage = await service.listOrders(caller)
+    assert.deepEqual(ownerPage.items[0].availableRefundActions, ['SUBMIT_REFUND'])
+    assert.deepEqual(ownerPage.items[0].blockedRefundActions, [])
+  })
+
   it('uses identical validated filters for lists and exports and rejects time conflicts before reads', async () => {
     let captured
     const repo = repository({

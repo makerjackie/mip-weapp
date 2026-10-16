@@ -42,6 +42,7 @@
   <table>
     <tr><th>项</th><th>结果</th><th>证据</th></tr>
     <tr><td>本地门禁 <code>pnpm verify</code></td><td><span class="pill p-ok">PASS</span></td><td>712 owned sources / 300 test files；architecture、lint、docs:check 全过</td></tr>
+    <tr><td>云函数回归 <code>mip-admin-api</code></td><td><span class="pill p-ok">765/765</span></td><td>含新增退款入口投影回归（签到阻断 / 超管例外）</td></tr>
     <tr><td>Web 门禁 <code>pnpm admin:web:verify</code></td><td><span class="pill p-ok">PASS</span></td><td>28 test files / 182 React tests + build + responsive</td></tr>
     <tr><td>L2 已部署 API E2E（生产 <code>admin.mip.cool</code>）</td><td><span class="pill p-ok">12/12</span></td><td><code>scripts/qa/admin-event-e2e.mjs</code></td></tr>
     <tr><td>L3 浏览器 UI E2E（Playwright）</td><td><span class="pill p-ok">5/5</span></td><td><code>scripts/qa/admin-ui-e2e.mjs</code> + 截图</td></tr>
@@ -85,14 +86,43 @@
     <li>汇总分支提交：<code>ff1a3d8e</code>（merge origin/main）→ <code>80bba8e2</code>（merge Cloudflare 清理）→ <code>a00d6486</code>（门禁修复）。</li>
   </ul>
 
-  <h2>7. 阻塞与下一步</h2>
-  <div class="note"><b>测试后台登录闭环 BLOCKED</b>：需要先在测试环境做 owner 引导，并由测试管理员用测试小程序确认登录、设置密码，之后才能跑测试后台的 L2/L3。测试环境函数/域名/静态资产已就绪（本轮构建入口 <code>index-DF4g-W8w.js</code>）。</div>
+  <h2>7. 我需要你做的（两件事）</h2>
+  <div class="note"><b>① 测试后台登录闭环 BLOCKED</b>：需要在测试环境做 owner 引导，并由测试管理员用<b>测试小程序</b>确认登录、设置密码；之后我才能跑测试后台的 L2/L3。测试环境的函数/域名/静态资产已就绪（本轮构建入口 <code>index-DF4g-W8w.js</code>）。或者你授权我用 CloudBase 直接执行 owner bootstrap。</div>
+  <div class="note"><b>② 推送</b>：本次提交完成后我会把本地 <code>main</code> 推送到 <code>origin/main</code>（按你的指示）。</div>
+
+  <h2>8. 怎么验证（你走查 + 自动化命令）</h2>
   <ul>
-    <li>待你：在测试环境完成 owner 引导 + 测试管理员设密（或授权我用 CloudBase 执行 bootstrap）。</li>
-    <li>待你：是否把本地 <code>main</code>（领先 <code>origin/main</code> 16）推送到远端。</li>
-    <li>我接着做：W05 剩余（E06 支付/签到筛选与导出、E09 下钻、E08 补签原因）、P5 单元回归测试、测试后台 L2/L3 全量验收。</li>
-    <li>真机项（扫码签到、支付、小程序体验版）单列，不混入本次结论。</li>
+    <li>你走查：见第 4 节改动页面清单，按顺序点开活动详情 / 订单详情即可。</li>
+    <li>自动化（每次部署后我跑，也可你手动跑）：
+      <ul>
+        <li><code>node scripts/qa/admin-event-e2e.mjs --origin=https://admin.mip.cool</code>（L2，已部署 API 端到端）</li>
+        <li><code>node scripts/qa/admin-ui-e2e.mjs --origin=https://admin.mip.cool</code>（L3，浏览器 UI + 截图）</li>
+        <li>切换环境：命令前加 <code>MIP_ENV_DIR=envs/test</code> 即指向测试后台。</li>
+      </ul>
+    </li>
+    <li>本地门禁：<code>TZ=Asia/Shanghai pnpm verify:all</code>（本轮：mip-admin-api 765 例、root 712 源/300 文件、admin-web 182 例，全绿）。</li>
   </ul>
+
+  <h2>9. 我还没做完的（剩余工作清单，按优先级）</h2>
+  <table>
+    <tr><th>项</th><th>现状</th><th>为什么还没做</th></tr>
+    <tr><td>E06 名单「支付状态 / 签到状态」筛选</td><td>服务端目前仅支持 query + 报名状态 + 时间区间；界面只有一个「状态」下拉</td><td>需要新的多条件筛选 UI（pager 现只支持单状态下拉），改动面涉及类型/抽屉/loader/路由与测试，需单独一轮</td></tr>
+    <tr><td>E06 名单导出跟随支付/签到筛选</td><td>导出已跟随 query/status</td><td>依赖上一条筛选先落地</td></tr>
+    <tr><td>E08 补签（人工签到）原因</td><td>撤销签到有原因；人工签到无原因输入（审计仅服务端）</td><td>需 服务端 + 动作契约（requiredInputKeys/optionalInputKeys）+ 生成契约 + 表单 联动，属契约级改动</td></tr>
+    <tr><td>E09 统计下钻（名单/心动明细）</td><td>已修「统计失败不再静默」；但指标卡不能点进明细</td><td><code>mip.admin.events.hearts.list</code> / <code>rosterAll</code> 目前无前端消费，需新交互</td></tr>
+    <tr><td>E09 访问/分享指标</td><td>服务端已如实标注 <code>NOT_TRACKED</code></td><td>需埋点，属产品级缺口</td></tr>
+    <tr><td>E09 比率口径（Q-ADMIN-04）</td><td>签到率/提交率有硬编码分母</td><td>等业务口径确认</td></tr>
+    <tr><td>真机项</td><td>未跑</td><td>扫码签到、支付、小程序体验版需真机/体验版，单列不混入本结论</td></tr>
+  </table>
+
+  <h2>10. 环境与仓库状态</h2>
+  <table>
+    <tr><th>对象</th><th>状态</th></tr>
+    <tr><td>生产 <code>admin.mip.cool</code></td><td>本轮构建上线（<code>index-DF4g-W8w.js</code>），L2 12/12、L3 5/5</td></tr>
+    <tr><td>测试 <code>test.admin.mip.cool</code></td><td>本轮构建已部署，静态 15 文件字节 VERIFIED；登录 BLOCKED</td></tr>
+    <tr><td>仓库</td><td>本地分叉已收敛；两条并行 AI 工作线（环境分离+证书续期、Cloudflare 清理）已合入；提交并推送 <code>origin/main</code></td></tr>
+    <tr><td>未纳入本结论</td><td>原生 <code>Invoke</code> 健康探针 CAM 拒绝（历轮同噪音）；生产数据清洗（等 Douglas 确认）</td></tr>
+  </table>
 </main>
 </body>
 </html>
