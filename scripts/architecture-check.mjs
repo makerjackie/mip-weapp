@@ -18,7 +18,7 @@ function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     // .notma/.claude 是并行任务工作树容器（同 .worktrees）：各工作树在自己根目录独立
     // 跑本门禁，其 WIP 内容不应连带打红主仓。
-    if (['node_modules', 'dist', 'coverage', '.git', '.weapp-vite', '.tmp', '.screenshots', '.wrangler', '.worktrees', '.notma', '.claude', 'diff-work'].includes(entry.name)) {
+    if (['node_modules', 'dist', 'coverage', '.git', '.weapp-vite', '.tmp', '.screenshots', '.worktrees', '.notma', '.claude', 'diff-work'].includes(entry.name)) {
       return []
     }
     if (entry.name === 'pnpm-lock.yaml') {

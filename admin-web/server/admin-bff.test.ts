@@ -1201,7 +1201,7 @@ describe('Admin Web BFF', () => {
 
 
 describe('migration challenge namespaces', () => {
-  it('keeps Cloudflare and CloudBase six-digit codes and QR tokens disjoint', async () => {
+  it('keeps the legacy backend and CloudBase six-digit codes and QR tokens disjoint', async () => {
     for (const namespace of ['', 'cloudbase']) {
       let token = ''
       const bff = createAdminBff({...env(), MIP_WEB_LOGIN_NAMESPACE:namespace}, {now:()=>NOW, generateLoginQrCode:async value=>{ token=value; return 'data:image/png;base64,eA==' }})

@@ -17,9 +17,9 @@ node admin-web/scripts/build-cloudbase.mjs
 - `MIP_WEB_ALLOWED_ORIGIN`：默认 HTTPS origin，不带路径、查询或 hash。临时域名并行访问时，使用 `MIP_WEB_ADDITIONAL_ORIGINS` 配置以逗号分隔的精确 origin 白名单；不支持通配符，Cookie 仍按访问域名隔离。
 - 函数不配置定时器，必须关闭客户端 SDK 调用权限。登录限流优先读取平台每次调用注入的 `context.environment` JSON 中的 `TCB_SOURCE_IP` / `WX_CLIENTIP` / `WX_CLIENTIPV6`（兼容旧 `context.environ`），再读取 HTTP 网关构造的 `requestContext.sourceIp` / `requestContext.identity.sourceIp` 或平台 `context.clientIP` / `context.sourceIp`；所有候选均校验 IP 格式，不信任客户端 IP headers，也不读取可能残留上次身份的 `process.env` / `getWXContext()`。解析格式遵循 [CloudBase 官方 Node SDK parseContext](https://github.com/TencentCloudBase/node-sdk/blob/master/src/cloudbase.ts)。未提供可信 IP 时使用 BFF 原有共享 unknown bucket，需在发布验收中确认正常网关不会落入此兜底。
 
-使用默认 `app.tcloudbase.com` HTTP 网关：`/api` 路由到该函数，所属 `/assets` 路由到同一函数的严格资源处理器，`/` 路由到 CloudBase 静态托管，并设置 `PathRewrite.StaticStorePrefix=/mip-admin-console`。前端资产只上传到既有托管的 `mip-admin-console/` 隔离前缀，不覆盖共享托管根目录。为临时同源验收，可将 `/` 指向该函数，用打包内的 `public/` 返回同一份前端产物；不依赖 Cloudflare。事件函数不适合长期高流量静态资源托管。
+使用默认 `app.tcloudbase.com` HTTP 网关：`/api` 路由到该函数，所属 `/assets` 路由到同一函数的严格资源处理器，`/` 路由到 CloudBase 静态托管，并设置 `PathRewrite.StaticStorePrefix=/mip-admin-console`。前端资产只上传到既有托管的 `mip-admin-console/` 隔离前缀，不覆盖共享托管根目录。为临时同源验收，可将 `/` 指向该函数，用打包内的 `public/` 返回同一份前端产物。事件函数不适合长期高流量静态资源托管。
 
-部署后必须实测单 Cookie 兼容模式下的会话凭证到达浏览器、登录/退出/改密码、可信 IP 限流、源站 origin 防护、真实业务接口与静态资源 MIME；本地协议测试不能代替网关验收。正式域名切换与 Cloudflare 下线单独执行，保留旧平台直至用户确认。
+部署后必须实测单 Cookie 兼容模式下的会话凭证到达浏览器、登录/退出/改密码、可信 IP 限流、源站 origin 防护、真实业务接口与静态资源 MIME；本地协议测试不能代替网关验收。正式域名切换与旧平台下线单独执行。
 
 平台 event 协议参考：https://docs.cloudbase.net/service/access-cloud-function
 
@@ -34,13 +34,9 @@ node admin-web/scripts/build-cloudbase.mjs
    node scripts/setup-admin-cloudbase-auth.mjs --confirm-env=<ENV_ID> --confirm-schema=mip_admin_auth --apply
    ```
 
-2. 迁移本地已配置管理员。脚本先通过旧后台真实登录和服务端身份核验，再创建同一身份的认证记录；不复制旧会话、不新增业务权限。其他管理员需单独经过绑定核验，不能仅凭任意手机号授予管理员资格。
+2. 管理员认证记录已在并行迁移期建立；新管理员通过后台自身的小程序确认登录与密码设置进入，不新增业务权限。历史的一次性旧平台迁移脚本已退役。
 
-   ```bash
-   node scripts/migrate-admin-cloudbase-account.mjs --confirm-env=<ENV_ID> --confirm-account=configured-administrator
-   ```
-
-3. 执行 `pnpm verify:all`，构建真实模式前端，上传到既有静态托管的隔离前缀。部署脚本仅快照 `admin-web/dist/`，使用 `manageHosting upload` 直接上传，无云端安装和构建，拒绝链接和密钥文件，并跳过正常构建生成的 source map；上传后下载该前缀，逐文件核对大小和 SHA-256，全部匹配才报完成。不会上传仓库或环境文件、删除旧资产、修改共享根目录或改变 Cloudflare。
+3. 执行 `pnpm verify:all`，构建真实模式前端，上传到既有静态托管的隔离前缀。部署脚本仅快照 `admin-web/dist/`，使用 `manageHosting upload` 直接上传，无云端安装和构建，拒绝链接和密钥文件，并跳过正常构建生成的 source map；上传后下载该前缀，逐文件核对大小和 SHA-256，全部匹配才报完成。不会上传仓库或环境文件、删除旧资产或修改共享托管根配置。
 
    ```bash
    VITE_MIP_ADMIN_DEMO_MODE=false pnpm admin:web:build
@@ -66,7 +62,7 @@ node admin-web/scripts/build-cloudbase.mjs
 
    脚本使用本地已配置测试账号，检查登录、会话、退出、来源限制及审查过的只读业务操作；不代表所有新增/编辑/上传/支付业务写入均已通过。静态资源上传和回读成功也不代表 BFF、Cookie、权限或业务验收通过。
 
-静态发布证据保存在 `.tmp/admin-cloudbase-static/`；函数目标记录在 `.tmp/admin-cloudbase-deploy/target.private.json`，均不提交。保留 Cloudflare Pages、D1、旧域名及登录确认路由，用户确认前不删除、不关停。回滚先恢复可用的旧后台入口，并保证旧 challenge 回调仍可达；不要把新旧认证数据库当作实时同步。用户确认后再安排正式域名切换、过期 challenge 排空和旧服务下线。
+静态发布证据保存在 `.tmp/admin-cloudbase-static/`；函数目标记录在 `.tmp/admin-cloudbase-deploy/target.private.json`，均不提交。旧域名及登录确认路由按切换计划保留。回滚先恢复可用的旧后台入口，并保证旧 challenge 回调仍可达；不要把新旧认证数据库当作实时同步。切换确认后再安排过期 challenge 排空和旧服务下线。
 
 ## 本轮已知限制
 
@@ -74,7 +70,7 @@ node admin-web/scripts/build-cloudbase.mjs
 
 ### 事件网关的 Cookie 限制
 
-实测本环境网关会把多个 `Set-Cookie` 合并成最后一条，不能仅靠本地 `multiValueHeaders` 单测判断成功。CloudBase runtime 启用单 Cookie 响应：微信确认交换只下发会话 Cookie，退出只清除会话 Cookie。已消费的 challenge 由服务端拒绝重用，浏览器残留的挑战 Cookie 最多五分钟自然过期，不承载运营权限。Cloudflare 保留原多 Cookie 行为。部署后必须验证“创建挑战 → 受信确认 → HTTP 交换收到 session Cookie → 查询运营会话 → 退出后旧会话被拒绝”。
+实测本环境网关会把多个 `Set-Cookie` 合并成最后一条，不能仅靠本地 `multiValueHeaders` 单测判断成功。CloudBase runtime 启用单 Cookie 响应：微信确认交换只下发会话 Cookie，退出只清除会话 Cookie。已消费的 challenge 由服务端拒绝重用，浏览器残留的挑战 Cookie 最多五分钟自然过期，不承载运营权限。部署后必须验证“创建挑战 → 受信确认 → HTTP 交换收到 session Cookie → 查询运营会话 → 退出后旧会话被拒绝”。
 
 ### 首次密码登录等待
 

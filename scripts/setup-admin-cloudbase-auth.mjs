@@ -1,20 +1,25 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 /** Create the dedicated authentication schema. Never modifies the business schema. */
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
-import { assertAuthGrants, assertAuthOwnership, AUTH_SCHEMA, AUTH_TABLES, readAuthMigrations, validateAuthJournal } from './lib/admin-auth-setup.mjs'
-import { bindAndRequireMysqlEnvironment, callCloudbase, loadCaseEnv, sqlLiteral } from './lib/example-cloudbase.mjs'
+import { assertAuthGrants, assertAuthOwnership, AUTH_SCHEMA, AUTH_TABLES, authRuntimeUser, readAuthMigrations, validateAuthJournal } from './lib/admin-auth-setup.mjs'
+import { bindAndRequireMysqlEnvironment, callCloudbase, loadCaseEnv, resolveEnvDir, sqlLiteral } from './lib/example-cloudbase.mjs'
 import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
 resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
-if (!env.CLOUDBASE_ENV_ID || !process.argv.includes(`--confirm-env=${env.CLOUDBASE_ENV_ID}`) || !process.argv.includes('--confirm-schema=mip_admin_auth')) {
+// Target authentication schema: production keeps the proven `mip_admin_auth`; the
+// test backend selects `mip_test_admin_auth` via MIP_ADMIN_AUTH_SCHEMA.
+const schema = String(env.MIP_ADMIN_AUTH_SCHEMA || AUTH_SCHEMA).trim()
+if (!/^[A-Za-z0-9_]{1,64}$/.test(schema)) {
+  throw new Error('MIP_ADMIN_AUTH_SCHEMA must be a plain identifier')
+}
+if (!env.CLOUDBASE_ENV_ID || !process.argv.includes(`--confirm-env=${env.CLOUDBASE_ENV_ID}`) || !process.argv.includes(`--confirm-schema=${schema}`)) {
   throw new Error('Exact environment and auth schema confirmation required')
 }
-const schema = AUTH_SCHEMA
-const user = `mipauth_${createHash('sha256').update(env.CLOUDBASE_ENV_ID).digest('hex').slice(0, 12)}`
+const user = authRuntimeUser(env.CLOUDBASE_ENV_ID, schema)
 const migrationDirectory = path.join(root, 'admin-web/migrations/mysql')
 const migrations = readAuthMigrations(fs.readdirSync(migrationDirectory).filter(name => name.endsWith('.sql')).map(name => ({ name, source: fs.readFileSync(path.join(migrationDirectory, name), 'utf8') })))
 const tables = AUTH_TABLES
@@ -37,7 +42,7 @@ function write(sql) {
   }
 }
 const exists = query(`SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=${sqlLiteral(schema)}`).length > 0
-const file = path.join(root, '.env.secrets.local')
+const file = path.join(resolveEnvDir(root), '.env.secrets.local')
 let secretText = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''
 const identity = env.MIP_ADMIN_AUTH_SCHEMA_OWNER
 const users = query(`SELECT User, Host FROM mysql.user WHERE User=${sqlLiteral(user)}`)
@@ -53,7 +58,7 @@ function grants() {
   }
 }
 if (users.length) {
-  assertAuthGrants({ ...grants(), exact: false })
+  assertAuthGrants({ ...grants(), exact: false, schema })
 }
 function persist(key, value) {
   secretText = secretText.replace(new RegExp(`^${key}=.*(?:\\r?\\n|$)`, 'gm'), '')
@@ -89,7 +94,7 @@ for (const table of tables) {
   const permissions = table.endsWith('_audit') ? 'SELECT,INSERT' : table.endsWith('_credentials') ? 'SELECT,INSERT,UPDATE' : 'SELECT,INSERT,UPDATE,DELETE'
   write(`GRANT ${permissions} ON \`${schema}\`.\`${table}\` TO ${sqlLiteral(user)}@'%'`)
 }
-assertAuthGrants(grants())
+assertAuthGrants({ ...grants(), schema })
 if (validateAuthJournal(migrations, query(`SELECT version,checksum FROM \`${schema}\`.mip_admin_web_schema_migrations ORDER BY version`)).length) {
   throw new Error('Auth migration journal readback is incomplete')
 }

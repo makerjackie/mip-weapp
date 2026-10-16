@@ -6,7 +6,9 @@ import fs from 'node:fs'
 // `data.result` and leave `data.files` empty (their normalizer expects an
 // array). Older versions returned the flat file array directly. Both shapes
 // must keep verifying; only the fallback may announce a degradation.
-export const CLOUDFLARE_METADATA_BASENAMES = ['_headers', '_redirects', '_worker.js', '_routes.json']
+// Files emitted by other static hosts that must never be published into a
+// CloudBase hosting prefix or bundled into the BFF's static handler.
+export const LEGACY_HOSTING_METADATA_BASENAMES = ['_headers', '_redirects', '_worker.js', '_routes.json']
 
 function truthyFlag(value) {
   return value === true || String(value).trim().toLowerCase() === 'true'
@@ -106,7 +108,7 @@ export function hostingMetadataLeaks(listing, prefix) {
         return false
       }
       const relative = key.slice(prefix.length)
-      return relative.endsWith('.map') || CLOUDFLARE_METADATA_BASENAMES.includes(relative.split('/').at(-1))
+      return relative.endsWith('.map') || LEGACY_HOSTING_METADATA_BASENAMES.includes(relative.split('/').at(-1))
     })
 }
 

@@ -12,7 +12,7 @@
 Web 页面 (admin-web/src/features/*-pages)
   → React adapter (app, shared/ui)
     → 既有 modules/services
-      → 同源 Cloudflare BFF
+      → 同源 BFF（CloudBase 云函数）
         → AdminRequest v1 → mip-admin-api
           → mip_* MySQL / mip/ 对象存储
 ```
