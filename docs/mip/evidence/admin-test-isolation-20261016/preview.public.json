@@ -1,0 +1,39 @@
+{
+  "sourceCommit": "667087ad85dbe02046ad66a5478a2e6415d3cb9c",
+  "target": "test",
+  "fullGate": "PASS",
+  "rootTests": 1788,
+  "webContractTests": 294,
+  "webReactTests": 182,
+  "onlyTestIdentityAndAdminFunctions": true,
+  "nestedTDesignRuntimePresent": true,
+  "previewCreated": true,
+  "qrMimeType": "image/jpeg",
+  "qrSizeBytes": 47752,
+  "qrRetainedPrivately": true,
+  "uploadSourceCommonJsSha256": "c92d24f4368f33dffa42550d15a01ea92a9b6ea2078f45386f3995448ccb7156",
+  "verifyAllLogSha256": "ab4ca478482a07b77356f1261046372b29c2ab322356609a5138d7af311bef60",
+  "platformSize": {
+    "total": 3163522,
+    "packages": [
+      {
+        "name": "TOTAL",
+        "size": 3163522
+      },
+      {
+        "name": "main",
+        "size": 1728062
+      },
+      {
+        "name": "/packages/admin/",
+        "size": 137775
+      },
+      {
+        "name": "/packages/member/",
+        "size": 1297685
+      }
+    ]
+  },
+  "deviceRegistrationVerified": false,
+  "adminPasswordLoginVerified": false
+}

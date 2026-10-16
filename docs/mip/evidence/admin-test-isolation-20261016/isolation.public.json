@@ -1,0 +1,118 @@
+{
+  "observedAt": "2026-10-16T11:02:07.348Z",
+  "sharedCloudBaseEnvironment": true,
+  "sharedMysqlInstance": true,
+  "businessDatabaseSeparated": true,
+  "adminAuthDatabaseSeparated": true,
+  "runtimeDatabaseUsersDistinct": true,
+  "runtimeGrants": [
+    {
+      "target": "test-business",
+      "onlyOwnTables": true,
+      "schemaWideGrants": false,
+      "privilegedGlobalGrants": false,
+      "inheritedRoles": 0
+    },
+    {
+      "target": "production-business",
+      "onlyOwnTables": true,
+      "schemaWideGrants": false,
+      "privilegedGlobalGrants": false,
+      "inheritedRoles": 0
+    },
+    {
+      "target": "test-auth",
+      "onlyOwnTables": true,
+      "schemaWideGrants": false,
+      "privilegedGlobalGrants": false,
+      "inheritedRoles": 0
+    },
+    {
+      "target": "production-auth",
+      "onlyOwnTables": true,
+      "schemaWideGrants": false,
+      "privilegedGlobalGrants": false,
+      "inheritedRoles": 0
+    }
+  ],
+  "independentKeys": {
+    "identity": true,
+    "phoneEncryption": true,
+    "bffSession": true,
+    "bffHmac": true
+  },
+  "testCoreFunctions": {
+    "count": 16,
+    "allActive": true,
+    "allUseTestDatabase": true,
+    "productionFunctionReferences": 0
+  },
+  "loginCallbacks": {
+    "primaryTargetsTest": true,
+    "compatibilityTargetsTest": true
+  },
+  "originIsolation": {
+    "productionAllowsTest": false,
+    "testAllowsProduction": false
+  },
+  "routes": [
+    {
+      "domain": "test.admin.mip.cool",
+      "path": "/",
+      "function": "staticstore",
+      "kind": "STATIC_STORE",
+      "staticPrefix": "/mip-admin-console-test"
+    },
+    {
+      "domain": "test.admin.mip.cool",
+      "path": "/api",
+      "function": "mip-t-admin-web-api",
+      "kind": "SCF"
+    },
+    {
+      "domain": "test.admin.mip.cool",
+      "path": "/assets",
+      "function": "mip-t-admin-web-api",
+      "kind": "SCF"
+    },
+    {
+      "domain": "admin.mip.cool",
+      "path": "/",
+      "function": "staticstore",
+      "kind": "STATIC_STORE",
+      "staticPrefix": "/mip-admin-console"
+    },
+    {
+      "domain": "admin.mip.cool",
+      "path": "/api",
+      "function": "mip-admin-web-api",
+      "kind": "SCF"
+    },
+    {
+      "domain": "admin.mip.cool",
+      "path": "/assets",
+      "function": "mip-admin-web-api",
+      "kind": "SCF"
+    }
+  ],
+  "paymentMode": "disabled",
+  "testAccount": {
+    "status": "WAITING_FOR_REAL_WECHAT_REGISTRATION",
+    "created": false,
+    "verifiedPhoneMatchCount": 0,
+    "counts": {
+      "activeAdminBindings": 0,
+      "activeBranches": 1,
+      "directoryAuditRecords": 1,
+      "passwordCredentials": 0,
+      "registeredUsers": 0
+    }
+  },
+  "writes": {
+    "testBranchCreated": true,
+    "testAuditCreated": true,
+    "productionWrites": 0,
+    "adminRoleChanges": 0,
+    "passwordWrites": 0
+  }
+}
