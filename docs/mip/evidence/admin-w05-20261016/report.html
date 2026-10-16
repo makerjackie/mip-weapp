@@ -44,10 +44,11 @@
     <tr><td>本地门禁 <code>pnpm verify</code></td><td><span class="pill p-ok">PASS</span></td><td>712 owned sources / 300 test files；architecture、lint、docs:check 全过</td></tr>
     <tr><td>云函数回归 <code>mip-admin-api</code></td><td><span class="pill p-ok">765/765</span></td><td>含新增退款入口投影回归（签到阻断 / 超管例外）</td></tr>
     <tr><td>Web 门禁 <code>pnpm admin:web:verify</code></td><td><span class="pill p-ok">PASS</span></td><td>28 test files / 182 React tests + build + responsive</td></tr>
-    <tr><td>L2 已部署 API E2E（生产 <code>admin.mip.cool</code>）</td><td><span class="pill p-ok">12/12</span></td><td><code>scripts/qa/admin-event-e2e.mjs</code></td></tr>
-    <tr><td>L3 浏览器 UI E2E（Playwright）</td><td><span class="pill p-ok">5/5</span></td><td><code>scripts/qa/admin-ui-e2e.mjs</code> + 截图</td></tr>
+    <tr><td>L2 已部署 API E2E · 生产 <code>admin.mip.cool</code></td><td><span class="pill p-ok">12/12</span></td><td><code>scripts/qa/admin-event-e2e.mjs</code></td></tr>
+    <tr><td>L3 浏览器 UI E2E · 生产</td><td><span class="pill p-ok">5/5</span></td><td>登录/列表/详情/390 无溢出/console 无错 + 截图</td></tr>
+    <tr><td>L3 浏览器 UI E2E · 测试 <code>test.admin.mip.cool</code></td><td><span class="pill p-ok">5/5</span></td><td>同上；测试管理员账号 <code>18819253403</code> 已可登录</td></tr>
+    <tr><td>L2 API E2E · 测试</td><td><span class="pill p-warn">11/12</span></td><td>唯一失败＝测试后端函数 <code>mip-t-admin-api</code> 落后于生产（缺 ≤20 字标题/地点校验），非前端缺陷</td></tr>
     <tr><td>测试后台部署（<code>test.admin.mip.cool</code>）</td><td><span class="pill p-ok">VERIFIED</span></td><td>BFF <code>mip-t-admin-web-api</code>；静态前缀 <code>mip-admin-console-test/</code> 15 文件字节匹配；入口 <code>index-DF4g-W8w.js</code></td></tr>
-    <tr><td>测试后台登录闭环</td><td><span class="pill p-bad">BLOCKED</span></td><td>缺测试管理员账号 → <code>/api/auth/password/login</code> 401</td></tr>
     <tr><td>真机项（扫码签到、支付、小程序）</td><td><span class="pill p-warn">NOT RUN</span></td><td>需真机/体验版</td></tr>
   </table>
 
@@ -87,7 +88,7 @@
   </ul>
 
   <h2>7. 我需要你做的（两件事）</h2>
-  <div class="note"><b>① 测试后台登录闭环 BLOCKED</b>：需要在测试环境做 owner 引导，并由测试管理员用<b>测试小程序</b>确认登录、设置密码；之后我才能跑测试后台的 L2/L3。测试环境的函数/域名/静态资产已就绪（本轮构建入口 <code>index-DF4g-W8w.js</code>）。或者你授权我用 CloudBase 直接执行 owner bootstrap。</div>
+  <div class="note"><b>① 测试后台业务函数需同步到生产版本</b>：测试管理员账号 <code>18819253403</code> 已可登录；测试后台的 admin-web 层（BFF <code>mip-t-admin-web-api</code> + 静态资产）已部署，L3 <b>5/5</b> 通过。但业务函数 <code>mip-t-admin-api</code> 落后于生产（L2 唯一失败项＝≤20 字标题/地点校验）。同步它需要测试库连接串 <code>MIP_DB_CONNECTION_URI</code>（本机 <code>envs/test/.env.secrets.local</code> 缺失）。请提供该连接串，或授权/执行 <code>node scripts/ops.mjs --target=test</code> 把测试函数集更新到当前版本。</div>
   <div class="note"><b>② 推送</b>：本次提交完成后我会把本地 <code>main</code> 推送到 <code>origin/main</code>（按你的指示）。</div>
 
   <h2>8. 怎么验证（你走查 + 自动化命令）</h2>
