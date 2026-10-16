@@ -27,6 +27,18 @@ it('rejects wrong resource MIME even with the expected bytes', async () => {
   await assert.rejects(verifyLiveAssets({ origin, manifest, fetchImpl: async (url: string) => url === `${origin}/` ? response(html, 'text/html') : response(js, 'text/html') }), /MIME mismatch/)
 })
 
+it('checks a selected test deployment without accepting a production manifest', async () => {
+  const expectedPrefix = 'mip-admin-console-test/'
+  const testManifest = { ...manifest, prefix: expectedPrefix }
+  const fetchImpl = async (url: string) => url === `${origin}/` ? response(html, 'text/html') : response(js, 'text/javascript')
+  assert.equal((await verifyLiveAssets({ origin, manifest: testManifest, expectedPrefix, fetchImpl })).filesMatched, 2)
+  await assert.rejects(verifyLiveAssets({ origin, manifest, expectedPrefix, fetchImpl }), /Unexpected hosting prefix/)
+  await assert.rejects(verifyLiveAssets({ origin, manifest: testManifest, fetchImpl }), /Unexpected hosting prefix/)
+  for (const prefix of ['../outside/', 'mip-admin-console/nested/', '/mip-admin-console/', 'mip-admin-console']) {
+    assert.throws(() => validateManifest({ ...manifest, prefix }, prefix), /plain directory/)
+  }
+})
+
 it('rejects path traversal and metadata in a hosting manifest', () => {
   for (const path of ['../outside.js', 'assets/../outside.js', 'assets/%2e%2e/outside.js', '/outside.js', 'assets/private.key', 'assets/source.js.map', '_worker.js']) {
     assert.throws(() => validateManifest({ ...manifest, files: [...manifest.files, file(path, js)] }))

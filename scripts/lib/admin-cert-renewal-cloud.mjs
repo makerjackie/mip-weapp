@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 import { camPolicyDocument, camRoleInfo, canonicalJson, parsePolicyDocument, schedulerTrustPolicy } from './message-scheduler-cloud.mjs'
 
 const require = createRequire(import.meta.url)
-const { readConfig } = require('../../cloudfunctions/mip-admin-cert-renewer/renewal.js')
+const { readConfig, renewalTarget } = require('../../cloudfunctions/mip-admin-cert-renewer/renewal.js')
 
 export function renewalCron(value) {
   if (typeof value !== 'string') {
@@ -39,7 +39,8 @@ export function renewalCloudConfig(env, info, domain, secret, generation, logOve
     || (env.CLOUDBASE_RESOURCE_UIN && env.CLOUDBASE_RESOURCE_UIN !== resourceUin)) {
     throw new Error('Certificate renewal resource identity is invalid')
   }
-  return { ...runtime, environment, resourceUin, logTopicId: log.TopicId, logsetId: log.LogsetId, roleName: 'MIPAdminCertRenewerRole', policyName: 'MIPAdminCertRenewerPolicy' }
+  const target = renewalTarget(domain)
+  return { ...runtime, environment, resourceUin, logTopicId: log.TopicId, logsetId: log.LogsetId, roleName: target.roleName, policyName: target.policyName }
 }
 
 export function renewalPolicy(config, { includeLogs = true, includeClaims = true, includeCertificateDetail = true } = {}) {
@@ -144,12 +145,15 @@ export function ensureRenewalRole(config, callCam, { allowLogPermissions = false
 }
 
 export async function ensureRenewalLogs(config, cloud) {
+  // SCF cannot bind a service-owned TCB topic even when its IDs match.
+  // Device Flow may still yield delegated TCB credentials for CLS creation.
+  const selfOwned = item => !item.AssumerName && !Number(item.AssumerUin || 0)
   const name = `mip-admin-cert-${config.domain.replaceAll('.', '-')}`
   const sets = await cloud('cls', 'DescribeLogsets', { Filters: [{ Key: 'logsetName', Values: [name] }], Limit: 100 })
   if (!Array.isArray(sets.Logsets)) {
     throw new TypeError('Dedicated log inventory unavailable')
   }
-  const exactSets = sets.Logsets.filter(item => item.LogsetName === name)
+  const exactSets = sets.Logsets.filter(item => item.LogsetName === name && selfOwned(item))
   if (exactSets.length > 1) {
     throw new Error('Dedicated logset ambiguous')
   }
@@ -161,7 +165,7 @@ export async function ensureRenewalLogs(config, cloud) {
   if (!Array.isArray(topics.Topics)) {
     throw new TypeError('Dedicated topic inventory unavailable')
   }
-  const matches = topics.Topics.filter(item => item.TopicName === config.functionName)
+  const matches = topics.Topics.filter(item => item.TopicName === config.functionName && selfOwned(item))
   if (matches.length > 1) {
     throw new Error('Dedicated log topic ambiguous')
   }
@@ -171,7 +175,8 @@ export async function ensureRenewalLogs(config, cloud) {
   const logTopicId = matches[0]?.TopicId || (await cloud('cls', 'CreateTopic', { LogsetId: logsetId, TopicName: config.functionName, PartitionCount: 1, AutoSplit: false, Period: 7, StorageType: 'hot', Describes: 'MIP admin certificate renewal only; no business data', BizType: 0 })).TopicId
   const actual = await cloud('cls', 'DescribeTopics', { Filters: [{ Key: 'topicId', Values: [logTopicId] }] })
   if (actual.Topics?.length !== 1 || actual.Topics[0].TopicId !== logTopicId || actual.Topics[0].LogsetId !== logsetId
-    || actual.Topics[0].TopicName !== config.functionName || actual.Topics[0].Period !== 7 || !actual.Topics[0].Status) {
+    || actual.Topics[0].TopicName !== config.functionName || actual.Topics[0].Period !== 7 || !actual.Topics[0].Status
+    || !selfOwned(actual.Topics[0])) {
     throw new Error('Dedicated log topic readback failed')
   }
   return { domain: config.domain, envId: config.envId, region: config.region, resourceUin: config.resourceUin, logsetId, logTopicId, period: 7, observedAt: new Date().toISOString() }

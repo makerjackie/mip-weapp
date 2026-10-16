@@ -1,12 +1,21 @@
 # 后台 HTTPS 证书自动续期
 
-本仓库的续期实现为独立 `mip-admin-cert-renewer`，每天检查目标管理域名的当前证书。剩余有效期不超过 30 天时，通过腾讯云 `ApplyCertificate` 申请免费的 TrustAsia C1 DV 证书，自动写入 FILE 域名验证文件，等待 CA 签发后只更新该域名的 `CertId`。必须回读网关和真实 TLS 指纹一致，才能记录成功。真实 SSL DTO 的 `DvAuthDetail.DvAuths[].Domain` 是完整域名，`DvAuthDomain` 可能只有根域名；验证完整域名并拒绝其他域名，不能把根域名字段当作完整域名。
+本仓库共用 `cloudfunctions/mip-admin-cert-renewer/` 源码，按目标域名部署独立任务，每天检查当前证书。剩余有效期不超过 30 天时，通过腾讯云 `ApplyCertificate` 申请免费的 TrustAsia C1 DV 证书，自动写入 FILE 域名验证文件，等待 CA 签发后只更新该域名的 `CertId`。必须回读网关和真实 TLS 指纹一致，才能记录成功。真实 SSL DTO 的 `DvAuthDetail.DvAuths[].Domain` 是完整域名，`DvAuthDomain` 可能只有根域名；验证完整域名并拒绝其他域名，不能把根域名字段当作完整域名。
 
 官方免费续期实际上是签发新证书：[ApplyCertificate](https://cloud.tencent.com/document/api/400/41678)。第三方 DNS 不使用 `DNS_AUTO`；本实现通过公开站点的验证文件完成认证，保留既有阿里云 DNS、HTTP→HTTPS 与后台来源保护。默认测试域名有使用限制，不作为永久生产备用域名。
 
+## 正式与测试目标
+
+| 目标域名 | 函数 / timer | 专用角色 / 策略 | 静态前缀 / BFF |
+| --- | --- | --- | --- |
+| `admin.mip.cool` | `mip-admin-cert-renewer` / `mip-admin-cert-daily` | `MIPAdminCertRenewerRole` / `MIPAdminCertRenewerPolicy` | `mip-admin-console` / `mip-admin-web-api` |
+| `test.admin.mip.cool` | `mip-t-admin-cert-renewer` / `mip-t-admin-cert-daily` | `MIPTestAdminCertRenewerRole` / `MIPTestAdminCertRenewerPolicy` | `mip-admin-console-test` / `mip-t-admin-web-api` |
+
+代码中的 `renewalTarget(domain)` 是目标映射的唯一事实源。两套任务共用源码、分别部署，HMAC、generation、日志、状态及申请记录按域名隔离；不创建第二份函数源码目录，也不为了测试扩大正式任务的权限。SCF 控制命令的 `--confirm-function` 必须匹配所选目标。通过已核实的 `MIP_ENV_DIR` 选择测试配置，不能只替换命令中的域名。相同 CloudBase EnvID 下，正式任务和测试任务仍是独立资源。
+
 ## 权限与状态
 
-- 专用 `MIPAdminCertRenewerRole` 只信任 SCF，关联 `MIPAdminCertRenewerPolicy`；不修改共享角色。
+- 所选目标的专用角色只信任 SCF，唯一关联对应专用策略；不修改另一套任务或共享角色。
 - SSL 免费申请是操作级权限；读取、检查验证需要覆盖本账号未来新证书 ID。TCB 修改限定当前环境，源码另外校验精确管理域名及既有三个路由。COS 限定私有状态对象及后台前缀内的 CA 验证目录。
 - SCF 创建还需要日志主题/日志集元数据读取。专用 CLS 日志保留 7 天，写入仅授权该专用主题；没有日志搜索、修改、删除权限。不要绑定 `queryEnv.LogServices` 里已失效的旧主题，必须验证真实 CLS 主题与日志集的对应关系。
 - 运行凭证取自本次 SCF invocation 的临时凭证，不部署本机 API Key、SecretId/SecretKey、浏览器会话或阿里云密钥。
@@ -19,7 +28,7 @@
 ## 首次启用
 
 1. 使用仓库 Node/pnpm，审计并保留无关修改，通过 `pnpm verify:all`。检查当前域名为 DIRECT、HTTP_TO_HTTPS、正常启用，`/` 指向管理后台静态前缀，`/api`、`/assets` 指向既有 BFF。
-2. 从 `queryEnv` 读取资源归属、区域和两个 COS bucket；不复制历史标识。以下命令的所有阶段都需要 `--domain=<管理域名> --confirm-env=<已核实环境> --confirm-function=mip-admin-cert-renewer`，production 追加 `--confirm-production`：
+2. 从 `queryEnv` 读取资源归属、区域和两个 COS bucket；不复制历史标识。以下命令的所有阶段都需要 `--domain=<管理域名> --confirm-env=<已核实环境> --confirm-function=<上表目标函数>`，production 追加 `--confirm-production`：
 
    ```bash
    node scripts/admin-cert-renewal.mjs prepare <上述确认参数>

@@ -25,6 +25,22 @@ it('renewal policy isolates state and verification objects; only free issuance i
   assert.deepEqual(statements.find(item => item.action.includes('cls:pushLog')).resource, ['qcs::cls:ap-shanghai:uin/12345678901:topic/00000000-0000-0000-0000-000000000002'])
   assert.ok(!JSON.stringify(statements).includes('SearchLog'))
 })
+it('test renewal has an independent role and cannot write production validation or state objects', () => {
+  const testConfig = renewalCloudConfig({ CLOUDBASE_ENV_ID: config.envId }, {
+    EnvId: config.envId,
+    Region: config.region,
+    UserInfo: { Uin: config.resourceUin, AppId: '1234567890' },
+    Storages: [{ Bucket: config.stateBucket, Region: config.region }],
+    StaticStorages: [{ Bucket: config.hostingBucket, Region: config.region }],
+    LogServices: [{ LogsetId: config.logsetId, TopicId: config.logTopicId, Region: config.region }],
+  }, 'test.admin.example.test', 'c'.repeat(64), 'd'.repeat(32))
+  assert.equal(testConfig.roleName, 'MIPTestAdminCertRenewerRole')
+  assert.equal(testConfig.policyName, 'MIPTestAdminCertRenewerPolicy')
+  const resources = renewalPolicy(testConfig).statement.flatMap(item => item.resource)
+  assert.ok(resources.some(value => value.endsWith('/mip-admin-console-test/.well-known/pki-validation/*')))
+  assert.ok(resources.some(value => value.endsWith('/admin-cert-renewal/test.admin.example.test/state.json')))
+  assert.ok(resources.every(value => !value.includes('/mip-admin-console/') && !value.includes('/admin-cert-renewal/admin.example.test/')))
+})
 it('log permission migration only upgrades the exact previously isolated policy with explicit scope', () => {
   let policy = renewalPolicy(config, { includeLogs: false })
   const writes: string[] = []
@@ -143,7 +159,10 @@ it('dedicated log creation verifies the selected topic without rewriting existin
   const topic = { TopicId: config.logTopicId, LogsetId: config.logsetId, TopicName: config.functionName, Period: 7, Status: true }
   const cloud = async (_service: string, action: string) => {
     if (action === 'DescribeLogsets') {
-      return { Logsets: [{ LogsetId: config.logsetId, LogsetName: 'mip-admin-cert-admin-example-test' }] }
+      return { Logsets: [
+        { LogsetId: 'service-owned', LogsetName: 'mip-admin-cert-admin-example-test', AssumerName: 'TCB', AssumerUin: 10000 },
+        { LogsetId: config.logsetId, LogsetName: 'mip-admin-cert-admin-example-test', AssumerName: '', AssumerUin: 0 },
+      ] }
     }
     if (action === 'DescribeTopics') {
       return { Topics: [topic] }
@@ -153,6 +172,21 @@ it('dedicated log creation verifies the selected topic without rewriting existin
   const logs = await ensureRenewalLogs(config, cloud)
   assert.equal(logs.logTopicId, config.logTopicId)
   assert.equal(logs.period, 7)
+})
+it('rejects a service-owned topic even when its name and IDs match', async () => {
+  const cloud = async (_service: string, action: string) => {
+    if (action === 'DescribeLogsets') {
+      return { Logsets: [{ LogsetId: config.logsetId, LogsetName: 'mip-admin-cert-admin-example-test' }] }
+    }
+    if (action === 'CreateTopic') {
+      return { TopicId: config.logTopicId }
+    }
+    if (action === 'DescribeTopics') {
+      return { Topics: [{ TopicId: config.logTopicId, LogsetId: config.logsetId, TopicName: config.functionName, Period: 7, Status: true, AssumerName: 'TCB', AssumerUin: 10000 }] }
+    }
+    throw new Error('Unexpected mutation')
+  }
+  await assert.rejects(ensureRenewalLogs(config, cloud), /readback failed/)
 })
 it('unexpected log retention is rejected before any write', async () => {
   const cloud = async (_service: string, action: string) => {

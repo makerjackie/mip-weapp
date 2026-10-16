@@ -11,8 +11,9 @@ import { loadCaseEnv } from './lib/example-cloudbase.mjs'
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 const mimeByExtension = { '.html': /text\/html/, '.js': /(?:javascript|ecmascript)/, '.css': /text\/css/, '.png': /image\/png/, '.jpg': /image\/jpeg/, '.jpeg': /image\/jpeg/, '.webp': /image\/webp/, '.svg': /image\/svg\+xml/ }
 
-export function validateManifest(manifest) {
-  assert.equal(manifest?.prefix, 'mip-admin-console/', 'Unexpected hosting prefix')
+export function validateManifest(manifest, expectedPrefix = 'mip-admin-console/') {
+  assert.match(expectedPrefix, /^[a-z0-9-]{1,64}\/$/, 'Expected hosting prefix must be a plain directory')
+  assert.equal(manifest?.prefix, expectedPrefix, 'Unexpected hosting prefix')
   assert.ok(Array.isArray(manifest.files) && manifest.files.length > 0, 'Manifest files required')
   const seen = new Set()
   for (const file of manifest.files) {
@@ -29,8 +30,8 @@ export function validateManifest(manifest) {
   return manifest.files
 }
 
-export async function verifyLiveAssets({ origin, manifest, fetchImpl = fetch }) {
-  const files = validateManifest(manifest)
+export async function verifyLiveAssets({ origin, manifest, expectedPrefix, fetchImpl = fetch }) {
+  const files = validateManifest(manifest, expectedPrefix)
   const checked = []
   let entry
   for (const file of files) {
@@ -89,7 +90,8 @@ async function main(args) {
   assert.ok(target.protocol === 'https:' && target.origin === values.origin, 'Exact HTTPS origin required')
   assert.equal(values.origin, env.MIP_ADMIN_WEB_CLOUDBASE_ORIGIN, 'Origin differs from configured CloudBase admin target')
   const output = requireLocalReport(root, values.output)
-  const report = await verifyLiveAssets({ origin: values.origin, manifest: JSON.parse(fs.readFileSync(path.resolve(root, values.manifest), 'utf8')) })
+  const consolePrefix = String(env.MIP_ADMIN_CONSOLE_PREFIX || 'mip-admin-console').trim()
+  const report = await verifyLiveAssets({ origin: values.origin, expectedPrefix: `${consolePrefix}/`, manifest: JSON.parse(fs.readFileSync(path.resolve(root, values.manifest), 'utf8')) })
   fs.mkdirSync(path.dirname(output), { recursive: true })
   fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 })
   console.log(JSON.stringify({ staticAssetsVerified: true, filesMatched: report.filesMatched, entry: report.entry, report: path.relative(root, output) }))

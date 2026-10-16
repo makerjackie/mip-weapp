@@ -1,6 +1,6 @@
 ---
 name: mip-admin-release
-description: 更新、部署本仓库的 CloudBase Web 管理后台，并验证实际访问的运行产物是否对应目标代码。用于拉取最新后台、发布 admin-web、核对线上版本或排查部署后白屏；不自动上传微信版本或下线 Cloudflare。
+description: 更新、部署本仓库的 CloudBase Web 管理后台，绑定自定义域名、阿里云 DNS 与腾讯云 SSL 证书，并验证实际入口对应的运行产物。用于发布 admin-web、接入测试后台域名、核对线上版本或排查部署后白屏；不自动上传微信版本或下线 Cloudflare。
 ---
 
 # MIP 管理后台发布
@@ -16,7 +16,7 @@ description: 更新、部署本仓库的 CloudBase Web 管理后台，并验证�
 - BFF → HTTPS `mip-admin-api`；需要发布的其他业务函数由本次 diff 和调用链决定。
 - 原域名可能仍经 Cloudflare 跳转；“CloudBase 入口工作”不等于“Cloudflare 已下线”。
 
-需要绑定独立后台域名时，按[自定义域名流程](references/custom-domain.md)完成证书、网关、DNS 与登录来源的闭环。保留默认 CloudBase 发布 origin，自定义域名作为同一套产物的额外入口。
+需要绑定独立后台域名时，按[自定义域名流程](references/custom-domain.md)完成证书、网关、DNS 与登录来源的闭环。`mip.cool` 域名与 DNS 在阿里云；证书和 HTTP 网关在腾讯云。先区分正式后台与测试后台的函数、静态前缀和认证库；同一个 EnvID 不能证明它们是同一套后台。
 
 需要启用或维护 HTTPS 自动续期时，按[证书自动续期流程](references/certificate-renewal.md)配置独立云端任务，并取得 timer、CA 签发及真实 TLS 的运行证据。日常发布不覆盖该任务。
 
