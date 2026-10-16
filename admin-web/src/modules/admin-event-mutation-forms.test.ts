@@ -154,10 +154,10 @@ describe('novice-friendly event form contracts', () => {
     assert.ok(draft.summary.length <= 300)
   })
 
-  it('exposes a single advanced optional 地图坐标 field with guidance', () => {
+  it('keeps 地图坐标 hidden for now but parses it for compatibility', () => {
     const fields = EVENT_MUTATION_CONFIGS['mip.admin.events.save'].fields
     const coords = fields.find(field => field.key === 'locationCoords')
-    assert.ok(coords && coords.advanced && !coords.required && (coords.extra || '').includes('导航'))
+    assert.ok(coords && coords.hidden && !coords.required)
     assert.ok(!fields.some(field => field.key === 'latitude' || field.key === 'longitude'))
   })
 
