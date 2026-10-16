@@ -85,7 +85,11 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
       button('mip.admin.events.tags.replace', '活动标签', id, 'events.catalog.manage'),
       button('mip.admin.communications.publishEventReminder', '发布提醒', id, 'communications.publish'),
       button('mip.admin.events.participants.import', '补录报名', id, 'events.registrations.manage'),
-      <CheckinQrcodeButton key="checkin-qrcode" eventId={id} request={request} hasCapability={hasCapability} />,
+      // 服务端只在 PUBLISHED 活动下发签到码（其余状态返回 INVALID_STATE），
+      // 非发布态不显示按钮，避免“看得见却点不动”。
+      eventStatus === 'PUBLISHED'
+        ? <CheckinQrcodeButton key="checkin-qrcode" eventId={id} request={request} hasCapability={hasCapability} />
+        : null,
     )
     if (hasCapability('exports.create') && hasCapability('events.roster.read')) actions.push(
       <SensitiveExportButton key="event-roster-export" kind="eventRoster" eventId={id} query={String(record(view.source?.rosterFilters).query || '')} status={String(record(view.source?.rosterFilters).status || '')} />,
