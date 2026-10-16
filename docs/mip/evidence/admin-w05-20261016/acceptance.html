@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MIP 活动模块 · 验收指引（人工走查）2026-10-16</title>
+<style>
+  :root { --ink:#111; --muted:#6b7280; --line:#e5e7eb; --ok:#0a7d43; --warn:#a16207; --bad:#b91c1c; --bg:#fafafa; --accent:#1d4ed8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif; }
+  main { max-width:1080px; margin:0 auto; padding:40px 24px 90px; }
+  h1 { font-size:26px; margin:0 0 4px; }
+  h2 { font-size:19px; margin:34px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .sub { color:var(--muted); margin:0 0 18px; }
+  table { width:100%; border-collapse:collapse; margin:8px 0 4px; background:#fff; font-size:14px; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#f3f4f6; font-weight:600; }
+  code { background:#f3f4f6; padding:1px 5px; border-radius:4px; font-size:13px; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+  .p-ok { background:#e7f6ee; color:var(--ok); }
+  .p-bad { background:#fdeaea; color:var(--bad); }
+  .p-warn { background:#fdf3e2; color:var(--warn); }
+  .card { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin:12px 0; }
+  .item { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin:14px 0; }
+  .item h3 { margin:0 0 8px; font-size:16px; }
+  .ba { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:8px 0; }
+  @media (max-width:760px){ .ba{grid-template-columns:1fr;} }
+  .before,.after { border-radius:6px; padding:9px 12px; font-size:14px; }
+  .before { background:#fdeaea; border:1px solid #f3c6c6; }
+  .after { background:#e7f6ee; border:1px solid #bfe6cf; }
+  .before b,.after b { display:block; font-size:12px; letter-spacing:.05em; margin-bottom:3px; }
+  .before b { color:var(--bad); } .after b { color:var(--ok); }
+  .steps { margin:8px 0 0; padding-left:20px; }
+  .expect { margin-top:8px; padding:8px 12px; background:#eef2ff; border-left:3px solid var(--accent); border-radius:5px; font-size:14px; }
+  figure { margin:0; }
+  figure img { width:100%; border:1px solid var(--line); border-radius:8px; background:#fff; }
+  figcaption { color:var(--muted); font-size:13px; margin-top:6px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .grid{grid-template-columns:1fr;} }
+  ul { margin:6px 0; padding-left:22px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>MIP 活动模块 · 验收指引（人工走查）</h1>
+  <p class="sub">2026-10-16 · 逐项列出「修改前 / 修改后 / 操作步骤 / 期望结果」。配套：<a href="report.html">阶段报告 report.html</a>。</p>
+
+  <h2>0. 三步开始验收</h2>
+  <div class="card">
+    <ol class="steps">
+      <li><b>打开</b>（两环境已一致，任选其一）：生产 <code>https://admin.mip.cool/#/events</code> · 测试 <code>https://test.admin.mip.cool/#/events</code></li>
+      <li><b>登录</b>：账号 <code>18819253403</code>（密码用你提供的那份，本文不写入，避免入库）。</li>
+      <li><b>对照</b>下面第 2 节的 A–F 逐项走查；每项给了「修改前 vs 修改后」和期望结果。</li>
+    </ol>
+  </div>
+
+  <h2>1. 环境与结果</h2>
+  <table>
+    <tr><th>环境</th><th>地址</th><th>L2（API）</th><th>L3（浏览器）</th></tr>
+    <tr><td>生产</td><td><code>admin.mip.cool</code></td><td><span class="pill p-ok">12/12</span></td><td><span class="pill p-ok">5/5</span></td></tr>
+    <tr><td>测试</td><td><code>test.admin.mip.cool</code></td><td><span class="pill p-ok">12/12</span></td><td><span class="pill p-ok">5/5</span></td></tr>
+  </table>
+
+  <h2>2. 验收清单（A–F）</h2>
+
+  <div class="item">
+    <h3>A. 订单详情 · 已签到活动订单的「退款入口」</h3>
+    <div class="ba">
+      <div class="before"><b>修改前</b>非平台超管在「已签到」的活动订单上仍看到「提交退款」；点了必然被服务端拒绝（<code>EVENT_REFUND_CHECKIN_ACTIVE</code>），等于白点一次。</div>
+      <div class="after"><b>修改后</b>不再显示「提交退款」，改为<b>禁用按钮 + 原因</b>：「该报名已签到，退款仅限平台超管处理」。</div>
+    </div>
+    <ol class="steps">
+      <li>进入「订单管理」列表，筛选/找到一笔 <b>活动订单</b>，且该用户报名状态为<b>已签到</b>。</li>
+      <li>打开该订单详情，看右侧/底部动作栏。</li>
+    </ol>
+    <div class="expect"><b>期望：</b>动作栏没有可点的「提交退款」；若有按钮，是<b>灰色禁用</b>并带原因文案。<b>边界：</b>平台超管（PLATFORM_OWNER）在该单上仍可「提交退款」（保持原例外能力）。</div>
+  </div>
+
+  <div class="item">
+    <h3>B. 活动详情 ·「报名与参与人」名单</h3>
+    <div class="ba">
+      <div class="before"><b>修改前</b>列：姓名 / 城市 / 手机状态 / 报名时间 / 支付状态 / 实付金额 / 已退款 / 签到时间 / 报名状态 / 异常原因。</div>
+      <div class="after"><b>修改后</b>新增两列：<b>来源</b>（用户报名 / 运营补录）、<b>角色标记</b>。</div>
+    </div>
+    <ol class="steps">
+      <li>「活动管理」列表 → 点开任一活动 → 详情抽屉里找到「报名与参与人」区块。</li>
+    </ol>
+    <div class="expect"><b>期望：</b>表头能看到「来源」和「角色标记」；「来源」对普通报名显示「用户报名」。</div>
+  </div>
+
+  <div class="item">
+    <h3>C. 活动详情 ·「活动反馈明细」健壮性</h3>
+    <div class="ba">
+      <div class="before"><b>修改前</b>反馈接口若返回非空但缺少展示字段，会抛错，<b>整个活动抽屉变成错误页</b>。</div>
+      <div class="after"><b>修改后</b>反馈区降级为占位并只在区块顶部提示「部分反馈字段缺失，已按占位显示…」，<b>正文与其它区块照常显示</b>。</div>
+    </div>
+    <ol class="steps"><li>正常数据下打开活动详情，确认抽屉整体正常、反馈区无异常提示即可。</li></ol>
+    <div class="expect"><b>期望：</b>正常态无提示、页面不报错；异常数据（我不会构造：只由自动化的合同测试覆盖）也不会拖垮整页。</div>
+  </div>
+
+  <div class="item">
+    <h3>D. 活动详情 ·「参与情况」统计失败可见</h3>
+    <div class="ba">
+      <div class="before"><b>修改前</b>统计接口失败时静默显示一堆「—」，看起来像“没有数据”。</div>
+      <div class="after"><b>修改后</b>区块顶部显示「统计数据加载失败，请重试；活动资料已成功加载。」</div>
+    </div>
+    <ol class="steps"><li>正常态打开活动详情即可（失败态较难手工触发）。</li></ol>
+    <div class="expect"><b>期望：</b>正常态无提示；有数据时数值正常显示。</div>
+  </div>
+
+  <div class="item">
+    <h3>E. 活动创建 / 编辑表单 ·「地图坐标」</h3>
+    <div class="ba">
+      <div class="before"><b>修改前</b>表单里有「地图坐标（选填）」字段和一个「打开坐标拾取器」链接。</div>
+      <div class="after"><b>修改后</b>整块隐藏（代码保留，客户有需求再启用）。</div>
+    </div>
+    <ol class="steps"><li>「活动管理」→ 新建活动 / 编辑活动 → 浏览整个表单。</li></ol>
+    <div class="expect"><b>期望：</b>找不到任何坐标/地图字段（编辑历史活动时，已存坐标不会显示、也不会被清空）。</div>
+  </div>
+
+  <div class="item">
+    <h3>F. 活动名称与富文本（回归确认）</h3>
+    <div class="ba">
+      <div class="before"><b>既有规则</b>新建活动名称 ≤20 字；描述必填；富文本支持加粗/斜体/下划线/列表/对齐/插图。</div>
+      <div class="after"><b>回归</b>以上保持；测试环境此前后端落后，现已同步，与生产一致。</div>
+    </div>
+    <ol class="steps">
+      <li>新建活动，输入 21 字名称 → 保存被拒（提示“活动名称最多 20 个字符”）。</li>
+      <li>描述留空 → 被拒。</li>
+      <li>在描述里加粗/加列表/居中/插图 → 保存 → 重新打开，格式保持。</li>
+    </ol>
+    <div class="expect"><b>期望：</b>三项均符合。两个环境行为一致。</div>
+  </div>
+
+  <h2>3. 自动化验收（我跑，或你跑）</h2>
+  <ul>
+    <li><code>node scripts/qa/admin-event-e2e.mjs --origin=https://test.admin.mip.cool</code> → <span class="pill p-ok">12/12</span></li>
+    <li><code>node scripts/qa/admin-ui-e2e.mjs --origin=https://test.admin.mip.cool</code> → <span class="pill p-ok">5/5</span></li>
+    <li>把 <code>--origin</code> 换成 <code>https://admin.mip.cool</code> 即验生产。</li>
+  </ul>
+
+  <h2>4. 现状截图（测试环境）</h2>
+  <div class="grid">
+    <figure><img src="shots-test/events-list-1440.png" alt="活动列表" /><figcaption>活动列表（点开行进入详情抽屉）</figcaption></figure>
+    <figure><img src="shots-test/event-detail-1440.png" alt="活动详情" /><figcaption>活动详情抽屉（含「报名与参与人」与统计区块）</figcaption></figure>
+    <figure><img src="shots-test/events-list-390.png" alt="活动列表 390" /><figcaption>移动端 390×844（无横向溢出）</figcaption></figure>
+  </div>
+
+  <h2>5. 不在本次人工验收范围</h2>
+  <ul>
+    <li>真机项：扫码签到、微信支付、小程序体验版 —— 需真机，单列。</li>
+    <li>未完成项（E06 支付/签到筛选与导出、E08 补签原因、E09 统计下钻/埋点）—— 见 <a href="report.html">阶段报告</a>第 9 节。</li>
+  </ul>
+</main>
+</body>
+</html>
