@@ -44,7 +44,7 @@ export function EventEditFormPage() {
     values: { ...definition.values, ...(eventId ? {} : defaultScope) },
     backTarget: '/events',
     action: 'mip.admin.events.save',
-    submitLabel: eventId ? '保存活动' : '创建活动',
+    submitLabel: eventId ? '保存活动' : '保存并预览',
     idempotencyKey,
     capability: config.capability,
     // 演示模式没有后端草稿；返回 null 避免本地预览出现“草稿读取失败”噪音。
@@ -62,6 +62,23 @@ export function EventEditFormPage() {
       render: (values) => <EventMobilePreview values={values} />,
       capability: config.capability,
     },
+    // 新建保存为草稿后，直接在预览弹窗里提供「发布活动」，省掉“回列表→打开→再发布”。
+    // 发布前必须先看到手机预览，符合验收 E03。
+    ...(eventId ? {} : {
+      publish: {
+        action: 'mip.admin.events.changeStatus' as const,
+        label: '发布活动',
+        doneMessage: '活动已发布',
+        buildInput: (result: unknown) => {
+          const saved = result && typeof result === 'object' ? result as { id?: unknown, version?: unknown } : {}
+          const savedId = typeof saved.id === 'string' ? saved.id : ''
+          const version = Number(saved.version)
+          return savedId && Number.isInteger(version)
+            ? { eventId: savedId, expectedVersion: version, status: 'PUBLISHED' }
+            : null
+        },
+      },
+    }),
   }
 
   const loadDetail = useCallback(async () => {

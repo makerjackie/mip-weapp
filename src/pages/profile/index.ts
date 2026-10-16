@@ -11,6 +11,7 @@ import type {
 import type { OpportunitySummary } from '../../modules/mip-opportunities'
 import { badgeArtUrl } from '../../config/mip-badge-art'
 import { cooperationRoles } from '../../config/mip-catalogs'
+import { isTestEnvironment } from '../../config/runtime'
 import { superCaseModule } from '../../modules/mip-cases'
 import { cooperationModule } from '../../modules/mip-cooperation'
 import { mipEventsModule } from '../../modules/mip-events/client'
@@ -93,6 +94,7 @@ Page({
     })
   },
   data: {
+    testEnvironment: isTestEnvironment(),
     state: 'loading' as 'loading' | 'ready' | 'error',
     identityState: 'loading' as 'loading' | 'ready' | 'error',
     initialSectionsState: 'loading' as 'loading' | 'ready' | 'error',

@@ -1,1 +1,2 @@
 <view class="top-safe-area" style="height: {{height}}px;" aria-hidden="true" />
+<view wx:if="{{testEnvironment}}" aria-label="测试环境" style="position:fixed;left:16rpx;bottom:calc(env(safe-area-inset-bottom) + 132rpx);z-index:9999;padding:2rpx 14rpx;border-radius:999rpx;background:#fcdf03;color:#1a1a1a;font-size:20rpx;line-height:28rpx;font-weight:600;">测试环境</view>

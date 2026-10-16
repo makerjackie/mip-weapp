@@ -1,8 +1,10 @@
 import { getCustomNavigationStatusBarHeight } from '@weapp/platform/navigation'
+import { isTestEnvironment } from '../../config/runtime'
 
 Component({
   data: {
     height: getCustomNavigationStatusBarHeight(),
+    testEnvironment: isTestEnvironment(),
   },
 
   lifetimes: {

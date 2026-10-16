@@ -32,6 +32,13 @@ export interface IndependentFormPageConfig {
     render: (values: OperationValues) => React.ReactNode
     capability?: string
   }
+  /** 保存成功后不直接返回列表，而是打开预览并允许就地发布（满足「发布前必须预览」）。 */
+  publish?: {
+    action: AdminOperationAction
+    label?: string
+    doneMessage: string
+    buildInput: (saveResult: unknown) => Record<string, unknown> | null
+  }
 }
 
 function isVersionConflict(reason: unknown): boolean {
@@ -55,6 +62,8 @@ export function IndependentFormPage({ config, loadDetail }: {
   const [loading, setLoading] = useState(false)
   const [detailLoading, setDetailLoading] = useState(Boolean(loadDetail))
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [savedForPublish, setSavedForPublish] = useState<{ result: unknown } | null>(null)
+  const [publishing, setPublishing] = useState(false)
   const [assistOpen, setAssistOpen] = useState(false)
   const [assistText, setAssistText] = useState('')
   const [error, setError] = useState('')
@@ -162,11 +171,18 @@ export function IndependentFormPage({ config, loadDetail }: {
       if (!submission.current || submission.current.payload !== payload) {
         submission.current = { payload, key: submission.current ? `web-form-${crypto.randomUUID()}` : config.idempotencyKey }
       }
-      await request(config.action, { ...input, idempotencyKey: submission.current.key })
+      const result = await request(config.action, { ...input, idempotencyKey: submission.current.key })
       if (epoch !== recordEpoch.current) return
       await queryClient.invalidateQueries()
       dirty.current = false
       submitting.current = false
+      if (config.publish) {
+        // 新建即草稿：保存后立即打开手机预览，用户可在预览里一键发布。
+        setSavedForPublish({ result })
+        setPreviewOpen(true)
+        void message.success('已保存草稿，请预览后发布')
+        return
+      }
       void message.success(`${config.title}已提交`)
       void returnToList()
     }
@@ -203,6 +219,28 @@ export function IndependentFormPage({ config, loadDetail }: {
     setConflict(null)
     setError('')
     void message.info('已载入最新版本，请核对表单后确认提交。')
+  }
+
+  const publishNow = async () => {
+    if (!savedForPublish || !config.publish) return
+    const input = config.publish.buildInput(savedForPublish.result)
+    if (!input) {
+      void message.error('无法发布：缺少活动标识或版本，请到列表打开该活动后发布')
+      return
+    }
+    setPublishing(true)
+    try {
+      await request(config.publish.action, { ...input, idempotencyKey: `web-form-publish-${crypto.randomUUID()}` } as never)
+      await queryClient.invalidateQueries()
+      void message.success(config.publish.doneMessage)
+      void returnToList()
+    }
+    catch (reason) {
+      void message.error(humanizeError(reason))
+    }
+    finally {
+      setPublishing(false)
+    }
   }
 
   return (
@@ -317,7 +355,12 @@ export function IndependentFormPage({ config, loadDetail }: {
           title="手机端预览"
           open={previewOpen}
           onCancel={() => setPreviewOpen(false)}
-          footer={null}
+          footer={savedForPublish && config.publish
+            ? [
+                <Button key="later" disabled={publishing} onClick={() => void returnToList()}>稍后发布</Button>,
+                <Button key="publish" type="primary" loading={publishing} onClick={() => void publishNow()}>{config.publish.label || '发布'}</Button>,
+              ]
+            : null}
           width={420}
         >
           {config.preview.render(normalizeOperationValues(fields, form.getFieldsValue(), loadedValues))}
