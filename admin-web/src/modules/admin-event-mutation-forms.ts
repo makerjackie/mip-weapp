@@ -70,6 +70,8 @@ export interface EventMutationFieldConfig {
   placeholder?: string
   /** Helper text under the control explaining the value's origin. */
   extra?: string
+  /** Optional external helper link rendered next to `extra` (opens in a new tab). */
+  helpLink?: { href: string, label: string }
   /** Empty-catalog hint telling operators where options come from. */
   emptyHint?: string
   /** Tucks the field into the collapsed「高级设置」section. */
@@ -143,7 +145,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'waitlistEnabled', label: '满员进入候补', kind: 'checkbox', advanced: true, extra: '名额报满后，新报名自动进入候补名单（不勾选则名额报满后拒绝报名）' },
   { key: 'oversellEnabled', label: '允许超售', kind: 'checkbox', advanced: true, visibleWhen: { path: 'waitlistEnabled', value: false }, extra: '名额报满后仍继续接受报名（忽略名额上限）；付费活动不支持' },
   // 原型创建页没有坐标字段；保留一个整体化的选填入口，仅用于小程序详情页「导航」。
-  { key: 'locationCoords', label: '地图坐标（选填）', kind: 'text', maxLength: 64, advanced: true, placeholder: '如 31.230416,121.473701', extra: '选填。在地图 App 长按地点复制坐标，把「纬度,经度」粘贴到这里；用于小程序详情页的「导航」按钮。不填则不显示导航。' },
+  { key: 'locationCoords', label: '地图坐标（选填）', kind: 'text', maxLength: 64, advanced: true, placeholder: '如 31.230416,121.473701', extra: '选填。用于小程序详情页「导航」。在地图上拾取点后复制「纬度,经度」粘贴到这里；不填则不显示导航。', helpLink: { href: 'https://lbs.qq.com/getPoint/', label: '打开坐标拾取器' } },
   // 报名字段编辑入口已按产品决策下线：字段保持 hidden，编辑已有活动时
   // definition.values 携带服务端已存的配置原样提交，不会被清空；新建活动为空数组
   // （报名页退回基础字段）。小程序报名页仍消费这份配置。

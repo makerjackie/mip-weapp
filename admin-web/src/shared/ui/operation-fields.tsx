@@ -81,6 +81,14 @@ export function OperationFields({ fields, form, prefix = [] }: {
     // Selects have no typing surface; asking to「填写」one sends novices hunting for an input box.
     const selectLike = field.kind === 'select' || field.kind === 'multi-select' || field.kind === 'profile-ref-list'
       || Boolean(field.optionsAction || field.optionsActionByValue || field.remoteUserSearch)
+    const extraText = field.extra || field.readOnlyReason
+      || (TEXTAREA_LIKE_KINDS.includes(field.kind) && field.kind !== 'profile-ref-list' && !field.assetPurpose ? '每行填写一项' : undefined)
+    const extra = extraText || field.helpLink
+      ? <>
+        {extraText}
+        {field.helpLink ? <> {extraText ? ' ' : ''}<a href={field.helpLink.href} target="_blank" rel="noreferrer">{field.helpLink.label}</a></> : null}
+      </>
+      : undefined
     return (
       <Form.Item
         className={wide ? 'mutation-field--wide' : undefined}
@@ -89,7 +97,7 @@ export function OperationFields({ fields, form, prefix = [] }: {
         label={checkbox ? undefined : field.label}
         valuePropName={checkbox ? 'checked' : 'value'}
         rules={operationFieldRequired(field, watchedValues) ? [{ required: true, message: `${selectLike ? '请选择' : '请填写'}${field.label}` }] : undefined}
-        extra={field.extra || field.readOnlyReason || (TEXTAREA_LIKE_KINDS.includes(field.kind) && field.kind !== 'profile-ref-list' && !field.assetPurpose ? '每行填写一项' : undefined)}
+        extra={extra}
       >
         {cloneElement(controlFor(field, watchedValues), { disabled: field.readOnly || undefined })}
       </Form.Item>

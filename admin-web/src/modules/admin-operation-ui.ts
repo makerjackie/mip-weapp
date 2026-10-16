@@ -52,6 +52,8 @@ export interface OperationField {
   placeholder?: string
   /** Helper text rendered under the control explaining where the value comes from. */
   extra?: string
+  /** Optional external helper link shown next to the extra text (opens in a new tab). */
+  helpLink?: { href: string, label: string }
   /** Shown when a remote options list loads successfully but has no entries yet. */
   emptyHint?: string
   /** Tucks the field into the collapsed「高级设置」section; only for optional fields. */
