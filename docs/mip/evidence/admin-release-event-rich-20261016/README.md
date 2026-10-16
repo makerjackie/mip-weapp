@@ -32,6 +32,17 @@
 - 富文本回读：活动介绍、报名须知以受限 HTML（`strong`/`em`/`u`/`text-align`）持久化成功。
 - 测试对象：一条 QA 命名的 DRAFT 活动（本机映射，可删除）；未发通知、未涉支付。
 
+## 修复与二次发布（用户报告「新建标签失败」）
+
+用户实测发现内联「新建并选中」失败。自查根因两处：
+
+1. `mip.admin.events.catalog.save` 是 mutation，客户端会把 `idempotencyKey` 从 input 提到请求顶层；内联创建没有传，BFF 以 `IDEMPOTENCY_KEY_REQUIRED` 拒绝。
+2. 服务端新建目录项状态为 `INACTIVE`，而可选项列表按 `status=ACTIVE` 过滤，新标签不会出现也无法用于活动。
+
+修复：内联创建补幂等键，并在创建成功后再调 `mip.admin.events.catalog.changeStatus` 启用（`version` 来自创建响应）；失败时透出服务端信息。提交 `df3de52e`。
+
+二次发布：静态 15 文件 VERIFIED，公开入口字节 15/15，新入口 `/assets/index-BUwiWcwA.js`；`verify-admin-cloudbase` 68 项通过。API 层边界自测（`create→activate→selectable`、重名/超 5 字/空名/空介绍/21 字标题/非 HTTPS 链接/付费无金额 均按预期拒绝）通过；QA 目录项用后归档清理。
+
 ## 边界与待办
 
 - 小程序端改动**未上传体验版**；在体验版更新前，新写的富文本在旧版小程序会按普通文本渲染（标签可见）。跨端展示需随后上传体验版验证。
