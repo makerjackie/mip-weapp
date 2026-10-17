@@ -231,7 +231,7 @@ describe('admin task management', () => {
       kind: 'multi-select',
       options: [{ value: LEVEL_ID, label: '成长会员 · 100 经验' }],
       wide: true,
-      emptyHint: '暂无可选等级。等级在「成长与勋章」页的会员配置中维护',
+      emptyHint: '暂无可选等级。等级在「等级管理」页的等级配置中维护',
     })
     assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.label, '任务模板图片')
     assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.hidden, undefined)

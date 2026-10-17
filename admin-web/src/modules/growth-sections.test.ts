@@ -27,12 +27,37 @@ it('round trips a nonempty approval repository DTO into the page and sends only 
 it('queries only the selected ledger, retains server pagination and does not filter an ID search out of the current page', async () => {
   const calls: unknown[] = []
   const page = await loadGrowth({ query: 'entry-a', status: '', cursor: 'cursor-a', limit: 20, filters: { section: 'entries', metric: 'EXPERIENCE', createdFrom: '2030-01-01T00:00:00Z' } }, async (action, input) => {
-    calls.push({ action, input }); return { items: [{ id: 'entry-a', userId: 'user-a', nickname: '林', metric: 'EXPERIENCE', deltaValue: 2, balanceBefore: 0, balanceAfter: 2, sourceEventType: 'event.checked_in' }], nextCursor: 'cursor-b' } as never
+    calls.push({ action, input }); return { items: [{ id: 'entry-a', userId: 'user-a', nickname: '林', metric: 'EXPERIENCE', deltaValue: 2, balanceAfter: 2, sourceEventType: 'event.checked_in' }], nextCursor: 'cursor-b' } as never
   })
   assert.equal(calls.length, 1)
   assert.deepEqual(calls[0], { action: 'mip.admin.growth.entries', input: { filters: { metric: 'EXPERIENCE', createdFrom: '2030-01-01T00:00:00Z', query: 'entry-a' }, limit: 20, cursor: 'cursor-a' } })
-  assert.equal(page.sections[0].rows[0].user, '林')
+  // MIW-129 H3：流水号/玩家 ID 独立成列；行缺 balanceBefore 时由余额与变动推导。
+  assert.equal(page.sections[0].rows[0].entryNo, 'entry-a')
+  assert.equal(page.sections[0].rows[0].playerId, 'user-a')
+  assert.equal(page.sections[0].rows[0].before, '0')
+  assert.equal(page.sections[0].rows[0].after, '2')
   assert.equal(page.nextCursor, 'cursor-b')
+})
+it('renders the contribution ledger with behavior labels and related-business links for confirmed semantics', async () => {
+  const taskRow = { txnNo: 'txn-a', userId: 'user-a', nickname: '林晓', behavior: 'TASK_COMPLETED', behaviorLabel: '完成 NPC 任务', deltaValue: 5, relatedBusiness: 'submission-a', createdAt: '2030-03-01T00:00:00.000Z' }
+  const page = await loadGrowth({ query: '', status: '', cursor: null, limit: 20, filters: { section: 'contributionTransactions' } }, async () => ({
+    items: [
+      taskRow,
+      { txnNo: 'txn-b', userId: 'user-b', nickname: '陈默', behavior: 'EVENT_CHECKIN', behaviorLabel: '参加活动及签到', deltaValue: 2, relatedBusiness: 'event-a', createdAt: '2030-03-02T00:00:00.000Z' },
+    ],
+    nextCursor: null,
+  }) as never)
+  const [assembledTaskRow, eventRow] = page.sections[0].rows
+  assert.equal(page.sections[0].title, '贡献值流水')
+  assert.deepEqual(page.sections[0].columns.map(column => column.label), ['流水号', '用户', '行为', '变动值', '关联业务', '时间'])
+  assert.equal(assembledTaskRow.behavior, '完成 NPC 任务')
+  assert.equal(assembledTaskRow.related, 'submission-a')
+  assert.deepEqual(assembledTaskRow.detailLinks, [{ route: 'taskCompletions', id: 'submission-a', label: '关联业务' }])
+  // MIW-129 H4：活动签到类编号语义待联调，只展示编号不提供跳转。
+  assert.equal(eventRow.related, 'event-a')
+  assert.deepEqual(eventRow.detailLinks, [])
+  const readonly = await loadGrowth({ query: '', status: '', cursor: null, limit: 20, filters: { section: 'contributionTransactions' } }, async () => ({ items: [taskRow], nextCursor: null }) as never, { hasCapability: capability => capability === 'growth.read' })
+  assert.deepEqual(readonly.sections[0].rows[0].detailLinks, [])
 })
 it('keeps a failed section visible and never substitutes an empty-success result', async () => {
   const page = await loadGrowth({ query: '', status: '', cursor: null, limit: 20, filters: { section: 'contributionTransactions' } }, async () => { throw new Error('TEMPORARY_FAILURE') })
@@ -57,6 +82,10 @@ it('renders actual serialized entitlement ledger content, grantor and order and 
   const page = await loadGrowth(query, async () => payload)
   const row = page.sections[0].rows[0]
   assert.equal(row.content, '12 个月'); assert.equal(row.order, 'MIP20300101001'); assert.equal(row.grantor, '周宁')
+  // MIW-129 H1：用户列展示用户标识，昵称独立成列；会籍类型按设计稿显示「玩家会籍」。
+  assert.equal(row.user, 'user-a'); assert.equal(row.nickname, '林晓')
+  assert.equal(row.type, '玩家会籍')
+  assert.deepEqual(page.sections[0].columns.map(column => column.label), ['权益流水号', '用户', '昵称', '权益类型', '权益内容', '关联订单号', '发放人', '发放时间'])
   assert.deepEqual(row.detailLinks, [{ route: 'users', id: 'user-a', label: '用户档案' }, { route: 'orders', id: 'order-a', label: '关联订单' }])
   const readonly = await loadGrowth(query, async () => payload, { hasCapability: capability => capability === 'memberships.read' })
   assert.deepEqual(readonly.sections[0].rows[0].detailLinks, [])

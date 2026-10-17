@@ -3,12 +3,15 @@ import {
   BulbOutlined,
   CalendarOutlined,
   CheckSquareOutlined,
+  CrownOutlined,
   FileSearchOutlined,
+  GoldOutlined,
   MessageOutlined,
   PictureOutlined,
   RiseOutlined,
   SafetyCertificateOutlined,
   ShoppingCartOutlined,
+  ThunderboltOutlined,
   UploadOutlined,
   UserOutlined,
   TrophyOutlined,
@@ -16,6 +19,7 @@ import {
 } from '@ant-design/icons'
 import type { ReactNode } from 'react'
 
+// MIW-129：原 /growth 从侧栏与类型中移除，旧链接经路由重定向进入 /levels。
 export type AdminRoutePath =
   | '/overview'
   | '/users'
@@ -28,7 +32,10 @@ export type AdminRoutePath =
   | '/media'
   | '/game'
   | '/opportunities'
-  | '/growth'
+  | '/levels'
+  | '/experience'
+  | '/contribution'
+  | '/entitlements'
   | '/permissions'
   | '/admin-accounts'
   | '/audit-logs'
@@ -40,7 +47,7 @@ export interface AdminNavigationItem {
   path: AdminRoutePath
   label: string
   description: string
-  group: '工作台' | '业务管理' | '会员运营' | '平台设置'
+  group: '工作台' | '业务管理' | '成长体系' | '平台设置'
   icon: ReactNode
   capabilities: string[]
   requireAny?: boolean
@@ -58,7 +65,11 @@ export const adminNavigation: AdminNavigationItem[] = [
   { path: '/media', label: '素材上传', description: '上传并复用受控运营素材', group: '业务管理', icon: <UploadOutlined />, capabilities: ['banners.manage', 'events.write', 'events.recaps.manage', 'opportunities.moderate', 'userContent.moderate', 'tasks.manage'], requireAny: true },
   { path: '/game', label: '战队管理', description: '管理赛季、战队、赛况、排行和盲盒', group: '业务管理', icon: <TrophyOutlined />, capabilities: ['game.manage'] },
   { path: '/opportunities', label: '机会与内容', description: '管理机会、合作内容和治理记录', group: '业务管理', icon: <BulbOutlined />, capabilities: ['opportunities.moderate', 'userContent.moderate'], requireAny: true },
-  { path: '/growth', label: '成长与勋章', description: '查看等级、权益、流水和勋章', group: '会员运营', icon: <RiseOutlined />, capabilities: ['growth.read', 'growth.adjust', 'badges.manage'], requireAny: true },
+  // MIW-129：原「成长与勋章」按设计稿拆为「成长体系」组四个独立菜单页。
+  { path: '/levels', label: '等级管理', description: '管理等级门槛、等级权益、等级变更和勋章目录', group: '成长体系', icon: <RiseOutlined />, capabilities: ['growth.read', 'badges.manage'], requireAny: true },
+  { path: '/experience', label: '经验值管理', description: '查询经验值流水和成长奖励规则', group: '成长体系', icon: <ThunderboltOutlined />, capabilities: ['growth.read'] },
+  { path: '/contribution', label: '贡献值管理', description: '查询贡献值流水和贡献值规则', group: '成长体系', icon: <GoldOutlined />, capabilities: ['growth.read'] },
+  { path: '/entitlements', label: '权益管理', description: '查询权益流水、入会审核和会员方案', group: '成长体系', icon: <CrownOutlined />, capabilities: ['memberships.read'] },
   { path: '/permissions', label: '权限管理', description: '管理运营成员、角色策略和服务器', group: '平台设置', icon: <SafetyCertificateOutlined />, capabilities: ['roles.change', 'branches.manage', 'audit.read'], requireAny: true },
   { path: '/admin-accounts', label: '后台账号', description: '管理后台运营账号、角色和状态', group: '平台设置', icon: <UserOutlined />, capabilities: ['roles.change'] },
   { path: '/audit-logs', label: '审计日志', description: '查询完整操作审计记录', group: '平台设置', icon: <FileSearchOutlined />, capabilities: ['audit.read'] },

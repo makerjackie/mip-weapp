@@ -505,7 +505,7 @@ export function createTaskMutationDefinition(
       { name: 'attachmentRequired', label: '完成时必须上传附件', kind: 'checkbox', wide: true },
       { name: 'endsAt', label: '截止时间', kind: 'datetime' },
       { name: 'templateAssetId', label: '任务模板图片', kind: 'text', wide: true, assetPurpose: 'TASK_TEMPLATE', extra: '选填。上传模板后，成员可在任务详情中下载' },
-      { name: 'eligibleLevelIds', label: '可参与等级（不选择表示不限）', kind: 'multi-select', options: levelOptions, wide: true, emptyHint: '暂无可选等级。等级在「成长与勋章」页的会员配置中维护' },
+      { name: 'eligibleLevelIds', label: '可参与等级（不选择表示不限）', kind: 'multi-select', options: levelOptions, wide: true, emptyHint: '暂无可选等级。等级在「等级管理」页的等级配置中维护' },
       { name: 'starLevel', label: '星级', kind: 'select', required: true, options: [1, 2, 3, 4, 5].map(level => ({ value: String(level), label: `${level} 星` })) },
       { name: 'purpose', label: '任务目的', kind: 'textarea', required: true, maxLength: 500, wide: true },
       { name: 'completionCriteria', label: '完成标准', kind: 'textarea', required: true, maxLength: 1000, wide: true },

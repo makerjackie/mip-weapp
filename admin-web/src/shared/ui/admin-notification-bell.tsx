@@ -15,7 +15,7 @@ export interface AdminNotificationItem {
 // 后续由概览待办同源数据或新的待办契约注入 items，结构不变。
 const sampleNotificationItems: AdminNotificationItem[] = [
   { key: 'task-approval', title: 'NPC 任务待审批', description: '任务管理 · 待审批', target: '/tasks' },
-  { key: 'growth-expiring', title: '权益即将到期', description: '成长与勋章 · 30 日内到期', target: '/growth' },
+  { key: 'growth-expiring', title: '权益即将到期', description: '权益管理 · 30 日内到期', target: '/entitlements' },
   { key: 'event-payment-exception', title: '活动支付异常', description: '订单管理 · 支付异常', target: '/orders' },
 ]
 
