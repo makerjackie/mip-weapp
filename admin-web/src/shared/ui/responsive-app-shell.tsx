@@ -9,7 +9,9 @@ import {
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Avatar, Badge, Button, Drawer, Dropdown, Grid, Layout, Menu, Result, Space, Tag, type MenuProps } from 'antd'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { adminNavigation, navigationByPath, type AdminRoutePath } from '../../app/navigation'
+// MIW-132：侧栏渲染走收敛后的 adminSidebarNavigation；页签与高亮解析仍用全量 adminNavigation，
+// 保证直达被移出侧栏的页面（名片、知识库、运营记录）时上下文正确。
+import { adminNavigation, adminSidebarNavigation, navigationByPath, type AdminRoutePath } from '../../app/navigation'
 import { useAdminSession } from '../../app/session-provider'
 import { ErrorState, LoadingState } from './feedback-states'
 import { AdminLoginDialog } from './admin-login-dialog'
@@ -89,12 +91,12 @@ export function ResponsiveAppShell() {
   }
 
   const visibleNavigation = useMemo(() => {
-    if (demoMode) return adminNavigation
-    if (!session?.enabled) return adminNavigation.filter(item => item.path === '/overview')
-    const visible = adminNavigation.filter(item => item.requireAny
+    if (demoMode) return adminSidebarNavigation
+    if (!session?.enabled) return adminSidebarNavigation.filter(item => item.path === '/overview')
+    const visible = adminSidebarNavigation.filter(item => item.requireAny
       ? item.capabilities.some(hasCapability)
       : item.capabilities.every(hasCapability))
-    return visible.length ? visible : adminNavigation.slice(0, 1)
+    return visible.length ? visible : adminSidebarNavigation.slice(0, 1)
   }, [demoMode, hasCapability, session])
 
   const items = useMemo<MenuProps['items']>(() => {
