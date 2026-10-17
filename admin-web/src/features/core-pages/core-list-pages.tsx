@@ -15,6 +15,7 @@ import {
   type AdminReadPage,
   type AdminTableRow,
 } from '../../modules/admin-read-pages'
+import { normalizePlayerStatusFilter } from '../../modules/admin-read-formatters'
 import type { AdminRowOperation } from '../../modules/admin-row-operations'
 import {
   DataTable,
@@ -48,6 +49,7 @@ const dimensionByRoute: Record<CoreListRoute, { field: string; label: string; op
     options: [
       { value: 'PLAYER', label: '玩家' },
       { value: 'GUEST', label: '嘉宾' },
+      { value: 'NORMAL', label: '普通用户' },
     ],
   },
   events: {
@@ -149,7 +151,7 @@ function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreList
             onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, industryId: String(value || '') }, cursor: undefined, page: undefined })} /></Form.Item>
           <Form.Item label="职业身份"><RemoteCatalogSelect action="mip.admin.users.list" input={{ purpose: 'FILTER_OPTIONS' }} optionsKey="identities" value={props.search.filters?.identityStatus || ''} placeholder="全部职业身份"
             onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, identityStatus: String(value || '') }, cursor: undefined, page: undefined })} /></Form.Item>
-          <Form.Item label="权益状态"><Select aria-label="权益状态" value={props.search.filters?.playerLifecycle || ''} options={[{ value: '', label: '全部权益状态' }, { value: 'CURRENT', label: '当前有效' }, { value: 'FORMER', label: '曾开通，当前无效' }, { value: 'NEVER', label: '从未开通' }]}
+          <Form.Item label="权益状态"><Select aria-label="权益状态" value={normalizePlayerStatusFilter(props.search.filters?.playerLifecycle) || ''} options={[{ value: '', label: '全部权益状态' }, { value: 'ACTIVE', label: '生效中' }, { value: 'EXPIRING_THIS_MONTH', label: '本月到期' }, { value: 'NEXT_MONTH', label: '下个月到期' }, { value: 'EXPIRED', label: '已到期未续费' }]}
             onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, playerLifecycle: value }, cursor: undefined, page: undefined })} /></Form.Item>
           <Form.Item label="时间类型"><Select aria-label="时间类型" value={props.search.filters?.timeKind || 'REGISTERED'} options={[{ value: 'REGISTERED', label: '注册时间' }, { value: 'EXPIRY', label: '会籍到期时间' }]}
             onChange={value => props.onSearchChange({ ...props.search, filters: { ...props.search.filters, timeKind: value, createdFrom: '', createdTo: '', expiresFrom: '', expiresTo: '' }, cursor: undefined, page: undefined })} /></Form.Item>
@@ -205,6 +207,15 @@ export function CoreListPageView({
   const pageDefinition = pageDefinitions[route]
   const readDefinition = getAdminReadRouteDefinition(route)
   const pageNumber = search.page && search.page > 1 ? search.page : 1
+  // MIW-124：身份「普通用户」与权益到期分档由 Web 层在当前页结果内收口，需向运营注明口径。
+  const usersWebFilterNote = route === 'users'
+    ? [
+      search.filters?.kind === 'NORMAL' ? '「普通用户」筛选由服务网关在当前页结果内应用，结果可能不完整。' : '',
+      ['EXPIRING_THIS_MONTH', 'NEXT_MONTH', 'ACTIVE'].includes(normalizePlayerStatusFilter(search.filters?.playerLifecycle))
+        ? '「玩家权益状态」到期分档在当前页结果内应用，结果可能不完整。'
+        : '',
+    ].join('')
+    : ''
   const headerActions = useMemo(() => {
     if (route === 'events' && (canWriteEvents || canManageEventCatalog)) {
       return (
@@ -236,7 +247,11 @@ export function CoreListPageView({
           icon={<DownloadOutlined />}
           onClick={() => onSensitiveExport({
             kind: route,
-            filters: { query: search.q || '', status: search.status || '', filters: search.filters },
+            filters: {
+              query: search.q || '',
+              status: search.status || '',
+              filters: route === 'users' ? serverUserExportFilters(search.filters) : search.filters,
+            },
           })}
         >
           {route === 'users' ? '导出用户' : '导出订单'}
@@ -285,6 +300,10 @@ export function CoreListPageView({
         onRefresh={onRetry}
       />
 
+      {usersWebFilterNote ? (
+        <Typography.Text type="secondary" role="note">{usersWebFilterNote}</Typography.Text>
+      ) : null}
+
       {page?.summary?.length ? (
         <section className="metric-grid core-summary-grid" aria-label="订单汇总">
           {page.summary.map(item => <MetricCard key={item.label} label={item.label} value={item.value} />)}
@@ -303,7 +322,9 @@ export function CoreListPageView({
                 rows={section.rows}
                 columns={section.columns}
                 loading={refreshing}
-                onView={section.detailTarget === null ? undefined : openDetail}
+                // MIW-124：用户列表按原型口径不设操作列，整行点击进入用户档案。
+                onView={route === 'users' ? undefined : section.detailTarget === null ? undefined : openDetail}
+                onRowClick={route === 'users' ? openDetail : undefined}
                 renderActions={route === 'events' && onMutation
                   ? row => renderEventRowActions(row, {
                     canManageEventCatalog: Boolean(canManageEventCatalog),
@@ -338,6 +359,28 @@ export function CoreListPageView({
 }
 
 const eventMutationActions = new Set<string>(EVENT_MUTATION_ACTIONS)
+
+// MIW-124：导出走服务端枚举。到期分档映射回 CURRENT/FORMER/NEVER；
+// 「普通用户」暂无服务端参数，导出侧不携带该筛选（结果可能偏大，待服务端支持后收口）；
+// timeKind 是列表的展示口径切换，不属于导出契约字段。
+function serverUserExportFilters(filters: Record<string, string> | undefined): Record<string, string> | undefined {
+  if (!filters) return filters
+  const result: Record<string, string> = { ...filters }
+  delete result.timeKind
+  if (filters.kind === 'PLAYER' || filters.kind === 'GUEST') {
+    result.kind = filters.kind
+  }
+  else {
+    delete result.kind
+  }
+  const key = normalizePlayerStatusFilter(filters.playerLifecycle)
+  const lifecycle = key === 'ACTIVE' || key === 'EXPIRING_THIS_MONTH' || key === 'NEXT_MONTH'
+    ? 'CURRENT'
+    : key === 'EXPIRED' ? 'FORMER' : key === 'NEVER' ? 'NEVER' : ''
+  if (lifecycle) result.playerLifecycle = lifecycle
+  else delete result.playerLifecycle
+  return result
+}
 
 function renderEventRowActions(
   row: AdminTableRow,

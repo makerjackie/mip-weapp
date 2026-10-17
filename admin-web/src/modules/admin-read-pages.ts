@@ -20,9 +20,12 @@ import {
   formatDateTime,
   label,
   money,
+  normalizePlayerStatusFilter,
   numberLabel,
   options,
   pageValue,
+  playerStatusFilterLabel,
+  playerStatusLabel,
   record,
   roleLabel,
   scopeLabel,
@@ -189,31 +192,43 @@ export async function loadAdminReadPage(
 }
 
 async function loadUsers(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
-  const page = pageValue(await request('mip.admin.users.list', listInput(query,
-    access?.hasCapability('users.phone.read') ? { includePhone: true } : {})))
+  const filters = query.filters ?? {}
+  // MIW-124 C2：「普通用户」走 Web 契约 identity=NORMAL（BFF 层实现「既非玩家也非嘉宾」语义）；
+  // PLAYER/GUEST 仍使用服务端原生 kind 参数。
+  const identity = filters.kind === 'NORMAL' ? 'NORMAL' : ''
+  const kind = filters.kind === 'PLAYER' || filters.kind === 'GUEST' ? filters.kind : ''
+  // MIW-124 C4：到期分档映射回服务端 CURRENT/FORMER/NEVER；CURRENT 细分档在当前页结果内收口。
+  const statusFilter = normalizePlayerStatusFilter(filters.playerLifecycle)
+  const upstreamLifecycle = statusFilter === 'ACTIVE' || statusFilter === 'EXPIRING_THIS_MONTH' || statusFilter === 'NEXT_MONTH'
+    ? 'CURRENT'
+    : statusFilter === 'EXPIRED'
+      ? 'FORMER'
+      : statusFilter === 'NEVER' ? 'NEVER' : ''
+  const expectedStatus = playerStatusFilterLabel(filters.playerLifecycle)
+  const page = pageValue(await request('mip.admin.users.list', listInput({
+    ...query,
+    filters: { ...filters, kind, identity, playerLifecycle: upstreamLifecycle },
+  }, access?.hasCapability('users.phone.read') ? { includePhone: true } : {})))
   return {
     sections: [{
       rows: page.items.map(item => ({
         detailId: valueOf(item, 'id', 'userId'),
         name: valueOf(item, 'nickname', 'name', 'displayName'),
         avatarUrl: valueOf(item, 'avatarUrl'),
-        headline: valueOf(item, 'headline', 'companyName'),
-        identity: label(valueOf(item, 'kind')),
+        role: label(valueOf(item, 'kind')),
         phone: item.phoneNumberMasked || (typeof item.phoneNumber === 'string' ? item.phoneNumber.replace(/(\d{3})\d{4}(\d{4})$/, '$1****$2') : item.phoneBound === true ? '已绑定' : '未绑定'),
         industry: valueOf(item, 'industryNames'),
         profession: valueOf(item, 'identityStatus'),
-        branch: valueOf(item, 'branchName', 'cityName'),
         level: valueOf(item, 'levelName'),
         contribution: numberLabel(item.contribution),
-        membership: item.kind === 'PLAYER' ? '有效' : item.latestEntitlementEndsAt ? '当前无效' : '未开通',
+        playerStatus: playerStatusLabel(item),
         createdAt: formatDateTime(item.createdAt),
         expiresAt: formatDateTime(item.latestEntitlementEndsAt),
-        state: label(valueOf(item, 'status', 'membershipStatus')),
-      })),
+      })).filter(row => !expectedStatus || row.playerStatus === expectedStatus),
       columns: columns([
-        ['avatarUrl', '头像'], ['name', '姓名'], ['headline', '简介'], ['identity', '会员身份'], ['phone', '手机'],
-        ['industry', '行业'], ['profession', '职业身份'], ['branch', '所属服务器'], ['level', '等级'],
-        ['contribution', '贡献'], ['membership', '权益状态'], ['createdAt', '注册时间'], ['expiresAt', '会籍到期'], ['state', '账号状态'],
+        ['avatarUrl', '头像'], ['name', '昵称'], ['phone', '手机号'], ['role', '当前角色'], ['industry', '行业'],
+        ['profession', '当前身份'], ['level', '用户等级'], ['contribution', '贡献值'], ['playerStatus', '玩家权益状态'],
+        ['createdAt', '用户注册时间'], ['expiresAt', '玩家到期时间'],
       ]),
     }],
     nextCursor: page.nextCursor,
