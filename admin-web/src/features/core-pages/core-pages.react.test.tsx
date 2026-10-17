@@ -94,6 +94,20 @@ describe('core admin pages', () => {
     expect(page.sections[0].rows[0].detailId).toBe('USR-1001')
   })
 
+  it('keeps the demo order columns aligned with the design, including payment and completion times', () => {
+    const page = createCoreDemoReadPage('orders', {
+      query: '',
+      status: '',
+      cursor: null,
+      limit: 20,
+    })
+    expect(page.sections[0].columns.map(column => column.label)).toEqual([
+      '订单号', '用户', '订单类型', '订单内容', '金额', '支付时间', '完成时间', '创建时间', '状态',
+    ])
+    expect(page.sections[0].rows[0]).toMatchObject({ id: 'ORD-20300018', paidAt: '2030-02-16 14:25', completedAt: '2030-02-16 14:25' })
+    expect(page.sections[0].rows[2]).toMatchObject({ id: 'ORD-20300020', paidAt: '', completedAt: '' })
+  })
+
   it('keeps event policy and catalog operations reachable with their server-projected context', async () => {
     const user = userEvent.setup()
     const onMutation = vi.fn()

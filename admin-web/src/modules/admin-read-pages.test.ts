@@ -84,6 +84,7 @@ describe('admin read pages', () => {
         items: [{
           merchantOrderNoMasked: 'MIP…0001', nickname: '林晓', orderType: 'EVENT',
           resourceTitle: 'MIP 早会', resourceBranchName: '深圳服务器', amountCents: 18800, currency: 'CNY',
+          paidAt: '2030-03-01T01:30:00.000Z',
           createdAt: '2030-03-01T01:00:00.000Z', status: 'PAID',
         }],
         nextCursor: null,
@@ -96,6 +97,12 @@ describe('admin read pages', () => {
     assert.equal(page.sections[0].rows[0].branch, '深圳服务器')
     assert.equal(page.sections[0].rows[0].id, 'MIP…0001')
     assert.equal(page.sections[0].rows[0].amount, '¥188.00')
+    assert.equal(page.sections[0].rows[0].paidAt, new Date('2030-03-01T01:30:00.000Z').toLocaleString('zh-CN', { hour12: false }))
+    // completedAt 尚未由服务端列表返回，保持留空展示，等待联调补齐。
+    assert.equal(page.sections[0].rows[0].completedAt, '—')
+    assert.deepEqual(page.sections[0].columns.map(column => column.label), [
+      '订单号', '用户', '订单类型', '订单内容', '活动服务器', '金额', '支付时间', '完成时间', '创建时间', '状态',
+    ])
     assert.deepEqual(page.summary?.map(item => item.value), ['3', '2', '¥376.00', '¥0.00'])
   })
 

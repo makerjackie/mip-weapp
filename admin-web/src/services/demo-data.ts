@@ -17,10 +17,11 @@ export const demo = {
     { id: 'EVT-20300321', title: 'MIP 早会｜品牌与产品实践', time: '2030-03-21 10:00–12:00', location: '深圳市福田区深南大道 6008 号', registrations: 24, status: '报名中' },
     { id: 'EVT-20300328', title: 'MIP 早会｜团队执行与项目复盘', time: '2030-03-28 10:00–12:00', location: '深圳市福田区金田路 3037 号', registrations: 18, status: '草稿' },
   ],
+  // 支付/完成时间口径：会费订单完成时间=支付成功时间；活动订单完成时间=活动开始时间（2030-03-14 早会）。
   orders: [
-    { id: 'ORD-20300018', user: '林晓', type: '年度会员', amount: '¥6,000.00', status: '已支付', createdAt: '2030-02-16 14:20' },
-    { id: 'ORD-20300019', user: '陈默', type: 'MIP 早会门票', amount: '¥199.00', status: '待确认', createdAt: '2030-02-18 09:12' },
-    { id: 'ORD-20300020', user: '周宁', type: '活动门票', amount: '¥299.00', status: '已关闭', createdAt: '2030-02-18 08:48' },
+    { id: 'ORD-20300018', user: '林晓', type: '年度会员', amount: '¥6,000.00', status: '已支付', paidAt: '2030-02-16 14:25', completedAt: '2030-02-16 14:25', createdAt: '2030-02-16 14:20' },
+    { id: 'ORD-20300019', user: '陈默', type: 'MIP 早会门票', amount: '¥199.00', status: '待确认', paidAt: '', completedAt: '2030-03-14 10:00', createdAt: '2030-02-18 09:12' },
+    { id: 'ORD-20300020', user: '周宁', type: '活动门票', amount: '¥299.00', status: '已关闭', paidAt: '', completedAt: '', createdAt: '2030-02-18 08:48' },
   ],
   tasks: [
     { name: 'MIP 早会复盘', reward: '30', assignment: '指定成员', assigned: '24', completed: '18', endsAt: '2030-03-31 18:00', updatedAt: '2030-03-22 11:20', state: '已发布' },
