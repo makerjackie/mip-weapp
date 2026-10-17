@@ -986,6 +986,37 @@ describe('Admin Web BFF', () => {
     assert.equal(fetchMock.calls.length, 0)
   })
 
+  it('maps the audit list type filter onto the contract vocabulary and drops empty or unknown values', async () => {
+    const fetchMock = fetchQueue(...Array.from({ length: 4 }, () => new Response(JSON.stringify({
+      ok: true,
+      data: { items: [], nextCursor: null },
+    }), { status: 200, headers: { 'content-type': 'application/json' } })))
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const submit = (input: Record<string, unknown>) => bff.handle(new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST',
+      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({ contractVersion: 1, action: 'mip.admin.audit.list', input }),
+    }))
+
+    for (const input of [
+      { filters: { query: 'ops', status: '', type: 'LOGIN' } },
+      { filters: { type: 'OPERATION' } },
+      { filters: { type: '' } },
+      { filters: { type: 'UNKNOWN', query: '活动' } },
+    ]) {
+      const response = await submit(input)
+      assert.equal(response.status, 200)
+      await response.json()
+    }
+
+    assert.deepEqual(fetchMock.calls.map(([, init]) => JSON.parse(String(init?.body)).request.input.filters), [
+      { query: 'ops', status: '', type: 'LOGIN' },
+      { type: 'OPERATION' },
+      {},
+      { query: '活动' },
+    ])
+  })
+
   it('rejects malformed game queries before signing the upstream envelope', async () => {
     const fetchMock = fetchQueue()
     const { bff, sessionCookie } = await confirmedLogin(fetchMock)

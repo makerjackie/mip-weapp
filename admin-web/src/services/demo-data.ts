@@ -48,4 +48,11 @@ export const demo = {
     { title: 'MIP 服务器运营手册', type: '运营文档', status: '已发布', updatedAt: '2030-02-15' },
     { title: '活动主持人与签到规范', type: '流程文档', status: '草稿', updatedAt: '2030-02-12' },
   ],
+  // MIW-131：登录记录演示数据。服务端登录审计事件（type=LOGIN）待联调，
+  // 演示模式先按契约字段展示 2 成功 1 失败的最小样例。
+  auditLoginRecords: [
+    { loginAccount: 'admin', createdAt: '2030-03-20 09:12', result: 'SUCCESS', ip: '203.0.113.24', device: 'Chrome 138 · macOS', failureReason: '' },
+    { loginAccount: 'ops.futian', createdAt: '2030-03-20 10:05', result: 'SUCCESS', ip: '198.51.100.7', device: 'Edge 136 · Windows', failureReason: '' },
+    { loginAccount: 'ops.futian', createdAt: '2030-03-20 10:08', result: 'FAILURE', ip: '198.51.100.7', device: 'Edge 136 · Windows', failureReason: '密码错误' },
+  ],
 } as const

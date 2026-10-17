@@ -1,4 +1,5 @@
 import type { AdminRequestInput } from '../domain/contracts'
+import { ADMIN_AUDIT_EVENT_TYPES, type AdminAuditEventType } from '@mip/admin-contracts'
 import type {
   AdminListQuery,
   AdminListRoute,
@@ -6,6 +7,7 @@ import type {
   AdminReadAccess,
   AdminReadRouteDefinition,
   AdminRequest,
+  AdminTableRow,
 } from './admin-read-contracts.ts'
 import {
   accessLabel,
@@ -157,7 +159,20 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
     searchPlaceholder: '搜索操作者或业务对象',
     statusOptions: [...commonStatus],
     paginated: true,
+    filterDimensions: [{ key: 'type', urlParam: 'type' }],
   },
+}
+
+/** 审计日志页「类型」筛选（全部|操作|登录），取值来自平台中立契约词表。 */
+export const auditTypeFilterOptions: Array<{ value: AdminAuditEventType | ''; label: string }> = [
+  { value: '', label: '全部' },
+  { value: 'OPERATION', label: '操作' },
+  { value: 'LOGIN', label: '登录' },
+]
+
+function auditListType(query: AdminListQuery): AdminAuditEventType | '' {
+  const type = String(query.filters?.type || '')
+  return (ADMIN_AUDIT_EVENT_TYPES as readonly string[]).includes(type) ? type as AdminAuditEventType : ''
 }
 
 export function getAdminReadRouteDefinition(route: AdminListRoute) {
@@ -466,6 +481,21 @@ async function loadAdminAccounts(query: AdminListQuery, request: AdminRequest): 
 
 async function loadAuditLogs(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
   const payload = pageValue(await request('mip.admin.audit.list', listInput(query)))
+  if (auditListType(query) === 'LOGIN') {
+    // MIW-131：登录记录视图。服务端登录审计事件（type=LOGIN）待联调；行装配按契约
+    // 字段读取并兼容 metadata 兜底，结果未知的记录不假报成功或失败。
+    return {
+      sections: [{
+        title: '登录记录',
+        rows: payload.items.map(auditLoginRow),
+        columns: columns([
+          ['account', '登录账号'], ['createdAt', '时间'], ['result', '结果'],
+          ['ip', 'IP'], ['device', '设备'], ['failureReason', '失败原因'],
+        ]),
+      }],
+      nextCursor: payload.nextCursor,
+    }
+  }
   return {
     sections: [{
       rows: payload.items.map(item => ({
@@ -480,6 +510,26 @@ async function loadAuditLogs(query: AdminListQuery, request: AdminRequest): Prom
       columns: columns([['actor', '操作者'], ['role', '角色'], ['scope', '服务器'], ['action', '操作'], ['resource', '模块'], ['resourceId', '业务对象'], ['createdAt', '时间']]),
     }],
     nextCursor: payload.nextCursor,
+  }
+}
+
+function auditLoginRow(item: AdminTableRow): AdminTableRow {
+  const meta = record(item.metadata)
+  const field = (...keys: string[]) => {
+    for (const key of keys) {
+      if (valueOf(item, key) !== '—') return valueOf(item, key)
+      if (valueOf(meta, key) !== '—') return valueOf(meta, key)
+    }
+    return '—'
+  }
+  const result = String(item.result ?? meta.result ?? '').toUpperCase()
+  return {
+    account: field('loginAccount', 'actorNickname', 'actorName'),
+    createdAt: formatDateTime(item.createdAt),
+    result: result === 'SUCCESS' ? '成功' : result === 'FAILURE' ? '失败' : '—',
+    ip: field('ip'),
+    device: field('device'),
+    failureReason: field('failureReason'),
   }
 }
 

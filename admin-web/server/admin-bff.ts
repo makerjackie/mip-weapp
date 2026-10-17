@@ -1,5 +1,6 @@
 import { authStatement, type AdminAuthDatabase, type AuthRunResult } from './auth-database.ts'
 import { createPasswordAuth, PasswordAuthError, passwordAuthDiagnostic, type PasswordSession } from './password-auth.ts'
+import { ADMIN_AUDIT_EVENT_TYPES, type AdminAuditEventType } from '@mip/admin-contracts'
 import type { AdminApiResponse, AdminRequest } from '../src/domain/contracts'
 import {
   REVIEWED_ADMIN_MUTATION_ACTIONS,
@@ -384,10 +385,13 @@ export function createAdminBff(
 
     // Honor the server-generated idempotency policy: operations that declare
     // forwardIdempotencyKey=false must not receive a browser-controlled key.
+    const normalizedRequest = isQuery && adminRequest.action === 'mip.admin.audit.list'
+      ? withAuditListTypeFilter(adminRequest)
+      : adminRequest
     const forwardedRequest = isMutation
       && REVIEWED_ADMIN_MUTATION_FORWARD_IDEMPOTENCY.get(adminRequest.action) !== true
       ? { ...adminRequest, idempotencyKey: `web-bff-${randomToken(deps.crypto, 24)}` }
-      : adminRequest
+      : normalizedRequest
 
     return forwardTrustedAdminRequest(forwardedRequest, session, { retryable: isQuery })
   }
@@ -1004,6 +1008,18 @@ function dateOnly(value: unknown) {
 
 function opaqueCursor(value: unknown) {
   return typeof value === 'string' && value.length > 0 && value.length <= 512 && /^[A-Za-z0-9_-]+$/.test(value)
+}
+
+// MIW-131：审计列表「类型」筛选的 BFF 映射。登录审计（LOGIN）的服务端事件源
+// 待联调；这里只放行契约词表内的取值，空值与未知值不下传，其余字段原样转发。
+function withAuditListTypeFilter(adminRequest: AdminRequest): AdminRequest {
+  const filters = adminRequest.input.filters
+  if (!plainRecord(filters) || typeof filters.type !== 'string') return adminRequest
+  const type = ADMIN_AUDIT_EVENT_TYPES.includes(filters.type as AdminAuditEventType) ? filters.type : ''
+  const nextFilters = { ...filters }
+  if (type) nextFilters.type = type
+  else delete nextFilters.type
+  return { ...adminRequest, input: { ...adminRequest.input, filters: nextFilters } }
 }
 
 function validBannerQueryInput(action: string, input: AdminRequest['input']) {

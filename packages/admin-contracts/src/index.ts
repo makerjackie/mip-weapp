@@ -3,6 +3,12 @@ import type { AdminOperationAction } from './generated/admin-operation-contract.
 export const ADMIN_REQUEST_CONTRACT_VERSION = 1 as const
 
 export {
+  ADMIN_AUDIT_EVENT_TYPES,
+  type AdminAuditEventType,
+  type AdminLoginAuditRecord,
+} from './audit-records.ts'
+
+export {
   ADMIN_OPERATION_CONTRACT,
   ADMIN_WEB_OPERATION_CONTRACT,
   type AdminMutationAction,
