@@ -74,6 +74,14 @@ const taskEditRoute = createRoute({
   component: routeComponents['/tasks/$taskId/edit'],
 })
 
+// MIW-130：NPC任务（提交与审批记录）独立路由，不进入侧栏导航。
+const taskApprovalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/task-approval',
+  validateSearch,
+  component: routeComponents['/task-approval'],
+})
+
 const opportunityEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/opportunities/$opportunityId/edit',
@@ -107,6 +115,7 @@ const routeTree = rootRoute.addChildren([
   ...pageRoutes,
   eventEditRoute,
   taskEditRoute,
+  taskApprovalRoute,
   opportunityEditRoute,
   knowledgeEditRoute,
   userContentEditRoute,
