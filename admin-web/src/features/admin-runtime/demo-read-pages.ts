@@ -71,7 +71,8 @@ function unfilteredDemoPage(route: AdminListRoute, section: string): AdminReadPa
     { title: '盲盒目录', columns: columns([['name', '目录'], ['cost', '抽取消耗'], ['cards', '卡片数'], ['stock', '剩余库存'], ['version', '版本'], ['state', '状态']]), detailTarget: 'gameCatalogs' },
   ])
   if (route === 'opportunities') return empty([
-    { title: '机会', columns: columns([['title', '标题'], ['publisher', '发布人'], ['type', '类型'], ['updatedAt', '更新时间'], ['state', '状态']]), detailTarget: 'opportunities' },
+    // MIW-127：机会分区列与服务端 loadOpportunities 的 7 列设计稿口径一致（演示模式暂无机会行）。
+    { title: '机会', columns: columns([['title', '项目名称'], ['owner', '发布人'], ['value', '价值金额（万元）'], ['city', '主营城市'], ['referrals', '想引荐数'], ['state', '状态'], ['publishedAt', '发布时间']]), detailTarget: 'opportunities' },
     { title: '用户内容', columns: columns([['title', '标题'], ['author', '作者'], ['type', '类型'], ['updatedAt', '更新时间'], ['state', '状态']]), detailTarget: 'userContent' },
   ])
   if (route === 'growth') {

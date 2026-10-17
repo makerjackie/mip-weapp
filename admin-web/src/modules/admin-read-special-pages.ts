@@ -4,7 +4,6 @@ import { opportunityQueryFilters } from './opportunity-query.ts'
 import { growthSections } from './growth-sections.ts'
 import type { AdminOperationAction, AdminRequestInput } from '../domain/contracts.ts'
 import {
-  arrayCodeLabel,
   arrayLabel,
   booleanLabel,
   columns,
@@ -55,20 +54,17 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
     canReadMatching && (!selected || selected === 'matching') ? request('mip.admin.matching.get', {}).catch(() => null) : null,
   ])
   const opportunityItems = pageValue(opportunityPayload).items
+  // MIW-127：列表收敛为设计稿 7 列；移除的目标/合作角色/内容安全/价值说明/更新时间
+  // 均已在详情抽屉「机会信息」分区保留。
   const opportunityRows = opportunityItems.map(item => ({
     detailId: valueOf(item, 'id', 'opportunityId'),
     title: valueOf(item, 'title'),
     owner: valueOf(item, 'ownerNickname'),
-    location: String(record(item.commercialTerms).locationDisplay || [item.cityName, item.branchName].filter(Boolean).join(' · ') || scopeLabel(item.scopeType)),
     value: opportunityValueInWan(item.commercialTerms),
-    valueSummary: valueOf(item, 'valueSummary'),
-    publishedAt: formatDateTime(item.publishedAt),
-    target: valueOf(item, 'targetSummary'),
-    roles: arrayCodeLabel(item.roleKeys),
+    city: String(record(item.commercialTerms).locationDisplay || item.cityName || scopeLabel(item.scopeType)),
     referrals: numberLabel(item.referralCount),
-    safety: label(valueOf(item, 'contentSafetyStatus')),
-    updatedAt: formatDateTime(item.updatedAt),
-    state: label(valueOf(item, 'status')),
+    state: opportunityStatusLabel(item.status),
+    publishedAt: formatDateTime(item.publishedAt),
   }))
   const contentRows = pageValue(contentPayload).items.map(item => {
     const owner = record(item.owner)
@@ -94,7 +90,7 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
 
   return {
     sections: [
-      ...(canReadOpportunities && (!selected || selected === 'opportunities') ? [{ title: '机会', error: record(opportunityPayload).loadError as string | undefined, rows: opportunityRows, columns: columns([['title', '标题'], ['owner', '发布人'], ['value', '价值'], ['valueSummary', '价值说明'], ['location', '城市与服务器'], ['publishedAt', '发布时间'], ['target', '目标'], ['roles', '合作角色'], ['referrals', '引荐数'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) }] : []),
+      ...(canReadOpportunities && (!selected || selected === 'opportunities') ? [{ title: '机会', error: record(opportunityPayload).loadError as string | undefined, rows: opportunityRows, columns: columns([['title', '项目名称'], ['owner', '发布人'], ['value', '价值金额（万元）'], ['city', '主营城市'], ['referrals', '想引荐数'], ['state', '状态'], ['publishedAt', '发布时间']]) }] : []),
       ...(canReadContent && (!selected || selected === 'content') ? [{ title: '用户内容', error: record(contentPayload).loadError as string | undefined, rows: contentRows, columns: columns([['title', '标题'], ['kind', '内容类型'], ['owner', '发布人'], ['location', '城市与服务器'], ['summary', '摘要'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) }] : []),
       ...(!selected || selected === 'matching' ? [{ title: '撮合设置', rows: settings.scopeKey ? [{
         scope: scopeLabel(settings.scopeType),
@@ -302,6 +298,17 @@ function communityReportDetail(item: Record<string, unknown>): RecordDetail {
 
 function canRead(access: AdminReadAccess | undefined, capability: string, scopeType?: string) {
   return !access || access.hasCapability(capability, scopeType)
+}
+
+// MIW-127：机会状态文案按设计稿在机会页面内局部映射（列表列、状态筛选、详情抽屉共用）。
+// 不改 admin-read-formatters 的全局表——其他页面仍显示「已发布 / 已结束」。
+const OPPORTUNITY_STATUS_LABELS: Record<string, string> = {
+  DRAFT: '草稿', PUBLISHED: '招募中', ENDED: '已完成', UNPUBLISHED: '已下架', ARCHIVED: '已归档',
+}
+
+export function opportunityStatusLabel(value: unknown) {
+  const key = String(value ?? '')
+  return OPPORTUNITY_STATUS_LABELS[key] || label(value)
 }
 function opportunityValueInWan(value: unknown) {
   const terms = record(value)

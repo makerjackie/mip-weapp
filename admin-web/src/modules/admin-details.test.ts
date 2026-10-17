@@ -273,8 +273,15 @@ describe('admin detail views', () => {
         commercialTerms: { amountDisplay: '面议' }, deadlineAt: '2030-03-31T00:00:00.000Z', contentSafetyStatus: 'APPROVED',
         publishedAt: '2030-03-01T00:00:00.000Z', updatedAt: '2030-03-02T00:00:00.000Z', status: 'PUBLISHED',
         teamMembers: [{ nickname: '周宁', branchName: '福田分会' }],
-        history: [{ action: 'admin.opportunities.publish', actorNickname: '运营账号', createdAt: '2030-03-01T00:00:00.000Z' },
-          { action: 'OPPORTUNITY_UPDATED', actorNickname: '发布人', createdAt: '2030-03-02T00:00:00.000Z' }],
+        history: [{ action: 'admin.opportunities.publish', actorNickname: '运营账号', createdAt: '2030-03-01T00:00:00.000Z', metadata: { fromStatus: 'DRAFT', toStatus: 'PUBLISHED' } },
+          { action: 'OPPORTUNITY_UPDATED', actorNickname: '发布人', createdAt: '2030-03-02T00:00:00.000Z', metadata: { fromStatus: 'PUBLISHED', toStatus: 'ENDED' } }],
+      },
+      'mip.admin.opportunities.referrals': {
+        items: [
+          { id: 'referral-2', status: 'ACTIVE', actorNickname: '陈默', createdAt: '2030-03-02T00:00:00.000Z' },
+          { id: 'referral-1', status: 'ACTIVE', actorNickname: '周宁', createdAt: '2030-03-01T00:00:00.000Z' },
+        ],
+        nextCursor: null,
       },
       'mip.admin.opportunityComments.get': {
         settings: { commentsEnabled: true, reviewsEnabled: true, callsEnabled: false, moderationMode: 'REVIEW' },
@@ -285,13 +292,25 @@ describe('admin detail views', () => {
 
     assert.deepEqual(calls, [
       { action: 'mip.admin.opportunities.get', input: { opportunityId: 'opportunity-1' } },
+      { action: 'mip.admin.opportunities.referrals', input: { opportunityId: 'opportunity-1', limit: 20 } },
       { action: 'mip.admin.opportunityComments.get', input: { opportunityId: 'opportunity-1' } },
     ])
     assert.equal(detail.title, '寻找品牌合作伙伴')
+    // MIW-127：机会状态文案在机会页面内局部映射。
+    assert.equal(detail.status, '招募中')
     assert.equal(detail.sections.find(section => section.title === '机会信息')?.fields?.find(item => item.label === '合作角色')?.value, '狗策划')
     assert.equal(detail.sections.find(section => section.title === '评论与评价')?.rows?.[0].body, '愿意沟通')
     assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[0].action, '发布机会')
+    assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[0].toStatus, '招募中')
     assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[1].action, '更新机会')
+    assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[1].toStatus, '已完成')
+    // MIW-127：想推荐名单按服务端倒序透出；服务端暂未投影引荐人 userId，先显示「—」。
+    const referralRows = detail.sections.find(section => section.title === '想推荐名单')?.rows || []
+    assert.deepEqual(referralRows.map(row => [row.detailId, row.userId, row.nickname]), [
+      ['referral-2', '—', '陈默'],
+      ['referral-1', '—', '周宁'],
+    ])
+    assert.notEqual(referralRows[0].createdAt, '—')
   })
 
   it('shows the server value-mode display for qian and negotiation opportunities (MIW-89)', async () => {
@@ -328,10 +347,12 @@ describe('admin detail views', () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
       'mip.admin.opportunities.get': opportunityDetailResponse(),
+      'mip.admin.opportunities.referrals': { items: [], nextCursor: null },
     }, calls), { includeOpportunityComments: false })
 
     assert.deepEqual(calls, [
       { action: 'mip.admin.opportunities.get', input: { opportunityId: 'opportunity-1' } },
+      { action: 'mip.admin.opportunities.referrals', input: { opportunityId: 'opportunity-1', limit: 20 } },
     ])
     assert.equal(
       detail.sections.find(section => section.title === '评论数据')?.fields?.find(field => field.label === '数据权限')?.value,
@@ -353,12 +374,54 @@ describe('admin detail views', () => {
 
     assert.deepEqual(calls.map(call => call.action), [
       'mip.admin.opportunities.get',
+      'mip.admin.opportunities.referrals',
       'mip.admin.opportunityComments.get',
     ])
     assert.equal(
       detail.sections.find(section => section.title === '评论数据')?.fields?.find(field => field.label === '数据权限')?.value,
       '当前账号不可查看',
     )
+  })
+
+  it('degrades the referral list to a section error without losing opportunity facts', async () => {
+    const request: AdminDetailRequest = async <T>(action: string) => {
+      if (action === 'mip.admin.opportunities.referrals') {
+        throw Object.assign(new Error('引荐名单暂不可用'), { code: 'UPSTREAM_ERROR' })
+      }
+      return opportunityDetailResponse() as unknown as T
+    }
+
+    const detail = await loadAdminDetail('opportunities', 'opportunity-1', request)
+
+    assert.equal(detail.sections.find(section => section.title === '想推荐名单')?.error, '引荐名单暂不可用')
+    assert.equal(detail.status, '招募中')
+    assert.equal(detail.sections.find(section => section.title === '机会信息')?.fields?.find(item => item.label === '发布人')?.value, '林晓')
+  })
+
+  it('shows the referral list permission note instead of an error when access is forbidden', async () => {
+    const request: AdminDetailRequest = async <T>(action: string) => {
+      if (action === 'mip.admin.opportunities.referrals') {
+        throw Object.assign(new Error('当前账号不可查看引荐名单'), { code: 'FORBIDDEN' })
+      }
+      return opportunityDetailResponse() as unknown as T
+    }
+
+    const detail = await loadAdminDetail('opportunities', 'opportunity-1', request)
+
+    assert.equal(detail.sections.find(section => section.title === '想推荐名单')?.error, undefined)
+    assert.equal(
+      detail.sections.find(section => section.title === '想推荐名单')?.fields?.find(field => field.label === '数据权限')?.value,
+      '当前账号不可查看',
+    )
+  })
+
+  it('labels ended opportunities with the page-local wording (MIW-127)', async () => {
+    const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
+      'mip.admin.opportunities.get': { ...opportunityDetailResponse(), status: 'ENDED' },
+      'mip.admin.opportunities.referrals': { items: [], nextCursor: null },
+    }, []), { includeOpportunityComments: false })
+
+    assert.equal(detail.status, '已完成')
   })
 
   for (const failure of [

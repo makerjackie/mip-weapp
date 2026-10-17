@@ -152,8 +152,19 @@ describe('admin read pages', () => {
     assert.deepEqual(calls[0].input, { cursor: undefined, limit: 20, filters: { query: '', status: '' } })
     assert.deepEqual(calls[1].input, { query: '', status: 'ALL', limit: 20 })
     assert.equal(page.sections.length, 4)
+    // MIW-127：机会分区收敛为设计稿 7 列，状态文案用机会页局部映射。
+    assert.deepEqual(page.sections[0].columns.map(column => column.label), [
+      '项目名称', '发布人', '价值金额（万元）', '主营城市', '想引荐数', '状态', '发布时间',
+    ])
+    assert.equal(page.sections[0].rows[0].title, '寻找品牌合作伙伴')
+    assert.equal(page.sections[0].rows[0].city, '深圳')
     assert.equal(page.sections[0].rows[0].referrals, '4')
-    assert.equal(page.sections[0].rows[0].roles, '策略策划')
+    assert.equal(page.sections[0].rows[0].state, '招募中')
+    assert.equal(page.sections[0].rows[0].target, undefined)
+    assert.equal(page.sections[0].rows[0].roles, undefined)
+    assert.equal(page.sections[0].rows[0].valueSummary, undefined)
+    assert.equal(page.sections[0].rows[0].safety, undefined)
+    assert.equal(page.sections[0].rows[0].updatedAt, undefined)
     assert.equal(page.sections[1].rows[0].detailId, 'COOPERATION_CARD:content-1')
     assert.equal(page.sections[2].rows[0].provider, '仅本地服务')
     assert.equal(page.nextCursor, 'next')

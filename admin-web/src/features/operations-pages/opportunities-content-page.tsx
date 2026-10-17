@@ -2,6 +2,7 @@ import { Button, Form, Input, Select, Space } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { useNavigate } from '@tanstack/react-router'
 import { getAdminReadRouteDefinition } from '../../modules/admin-read-pages'
+import { opportunityStatusLabel } from '../../modules/admin-read-special-pages'
 import { OperationsReadPage } from './operations-read-page'
 import type { OperationsPageState } from './types'
 import { SessionUserSelect } from '../../shared/ui/session-user-select'
@@ -14,13 +15,17 @@ export function OpportunitiesContentPage(props: OperationsPageState) {
   const changeFilter = (key: string, value: string) => props.onFilterChange({ ...props.query, filters: { ...props.query.filters, [key]: value } })
   const timeType = props.query.filters?.timeType || 'published'
   const section = props.query.filters?.section || 'opportunities'
+  // MIW-127：机会分区用机会页局部状态文案（招募中 / 已完成），提交给服务端的仍是状态码。
+  const statusOptions = section === 'opportunities'
+    ? definition.statusOptions.map(option => ({ ...option, label: opportunityStatusLabel(option.value) }))
+    : definition.statusOptions
   return (
     <OperationsReadPage
       {...props}
       title="机会与内容"
       description="查看机会、用户内容、撮合和评论事实"
       searchPlaceholder={definition.searchPlaceholder}
-      statusOptions={definition.statusOptions}
+      statusOptions={statusOptions}
       paginated={definition.paginated}
       timeRangeFields={section === 'opportunities' ? { from: `${timeType}From`, to: `${timeType}To`, label: '时间范围' } : undefined}
       amountRangeFields={section === 'opportunities' ? { min: 'minAmountCents', max: 'maxAmountCents', label: '价值（万元）', scale: 1000000 } : undefined}
