@@ -230,7 +230,7 @@ describe('core admin pages', () => {
       />,
     )
     expect(screen.getByText('暂无会籍趋势')).toBeInTheDocument()
-    expect(screen.getByText(/其余类别将在后续分期接入/)).toBeInTheDocument()
+    expect(screen.getByText(/其余类别将在后续分期开放/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /订单查询/ }))
     expect(onNavigate).toHaveBeenCalledWith('/orders')
   })

@@ -106,12 +106,12 @@ export function OverviewPageView({
         <div className="overview-focus-grid">
           <Card className="core-panel" title="会籍购买与续费趋势" variant="borderless" extra={<Tag>{data.period}</Tag>}>
             {data.playerTrend.available && data.playerTrend.months.length ? <Suspense fallback={<LoadingState />}><PurchaseChart months={data.playerTrend.months} /></Suspense>
-              : <EmptyState title="暂无会籍趋势" description="按月的新增玩家与续费趋势暂未提供，待服务端接入后展示。" />}
+              : <EmptyState title="暂无会籍趋势" description="当前范围暂无可展示的按月新增与续费趋势。" />}
             {data.purchaseTrend?.rows.length ? <Collapse ghost items={[{ key: 'daily', label: `查看逐日明细（${data.purchaseTrend.rows.length} 天）`, children: <div className="overview-trend-details"><DataTable label="会籍购买与续费逐日明细" rows={data.purchaseTrend.rows} columns={[{ key: 'date', label: '日期' }, { key: 'initial', label: '首次购买' }, { key: 'firstRenewal', label: '首次续费' }, { key: 'repeatRenewal', label: '再次续费' }, { key: 'paidAmount', label: '实付（元）' }]} /></div> }]} /> : null}
           </Card>
           <Card className="core-panel overview-workbench" title="运营待办" variant="borderless">
             {attention.length ? <ul className="overview-attention">{attention.map(item => <li key={item.target}><Button type="text" block onClick={() => onNavigate(item.target)}><span>{item.label}</span><strong>{item.value}</strong><ArrowRightOutlined /></Button></li>)}</ul> : <div className="overview-clear"><CheckCircleOutlined /><strong>{data.attention.length ? '当前没有待办' : '暂无待办数据'}</strong><span>{data.attention.length ? '已统计的待办均为 0 条' : '暂无可显示的待办数据'}</span></div>}
-            <p className="overview-attention-note">到期提醒、审核与发送类待办按 PRD 分为 8 类，其余类别将在后续分期接入。</p>
+            <p className="overview-attention-note">运营待办共分 8 类，当前展示到期、审核与发送类，其余类别将在后续分期开放。</p>
             {data.attention.some(item => item.value === '0') ? <div className="overview-checked-items">{data.attention.filter(item => item.value === '0').map(item => <span key={item.target}><CheckCircleOutlined />{item.label}：0</span>)}</div> : null}
             <div className="overview-shortcuts"><h2>常用入口</h2>{quickActions.map(item => <Button key={item.target} onClick={() => onNavigate(item.target)}>{item.label}<ArrowRightOutlined /></Button>)}{!quickActions.length ? <span>暂无可用入口</span> : null}</div>
           </Card>
