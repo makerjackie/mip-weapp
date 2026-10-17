@@ -67,6 +67,12 @@ const eventEditRoute = createRoute({
   component: routeComponents['/events/$eventId/edit'],
 })
 
+const eventSettingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/events/settings',
+  component: routeComponents['/events/settings'],
+})
+
 const taskEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tasks/$taskId/edit',
@@ -106,6 +112,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   ...pageRoutes,
   eventEditRoute,
+  eventSettingsRoute,
   taskEditRoute,
   opportunityEditRoute,
   knowledgeEditRoute,

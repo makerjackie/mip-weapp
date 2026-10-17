@@ -3,7 +3,8 @@ import type {
   AdminReadPage,
   AdminTableRow,
 } from '../../modules/admin-read-pages'
-import { labels } from '../../modules/admin-read-formatters'
+import { label, labels } from '../../modules/admin-read-formatters'
+import { eventCatalogRowActions } from '../../modules/admin-row-operations'
 import { demo } from '../../services/demo-data'
 import type { AdminOverviewView } from './overview-model'
 
@@ -22,6 +23,16 @@ export function createCoreDemoReadPage(route: DemoCoreRoute, query: AdminListQue
       rows: filterDemoRows(section.rows, query),
     })),
   }
+}
+
+/** MIW-126：活动设置页的演示标签目录，行走与真实 catalog.list 相同的装配。 */
+export function createCoreDemoEventTagCatalog(): AdminTableRow[] {
+  return demo.eventTags.map(item => ({
+    detailId: item.id,
+    name: item.name,
+    state: label(item.status),
+    rowActions: eventCatalogRowActions({ ...item }),
+  }))
 }
 
 export function createCoreDemoOverview(): AdminOverviewView {

@@ -1,8 +1,9 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { App } from 'antd'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AdminReadPage } from '../../modules/admin-read-pages'
-import { createCoreDemoReadPage } from './core-demo-adapter'
+import { createCoreDemoEventTagCatalog, createCoreDemoReadPage } from './core-demo-adapter'
 import { CoreListPageView } from './core-list-pages'
 import { mapAdminOverview } from './overview-model'
 import { OverviewPageView } from './overview-page'
@@ -92,6 +93,146 @@ describe('core admin pages', () => {
     })
     expect(page.sections[0].rows).toHaveLength(1)
     expect(page.sections[0].rows[0].detailId).toBe('USR-1001')
+  })
+
+  it('builds demo tag rows with server-shaped catalog operations for the settings page', () => {
+    const rows = createCoreDemoEventTagCatalog()
+    expect(rows.map(row => row.name)).toEqual(['早会', '集会', '沙龙'])
+    expect(rows[0].rowActions?.map(operation => operation.label)).toEqual(['编辑', '停用', '归档'])
+    expect(rows[2].rowActions?.map(operation => operation.label)).toEqual(['编辑', '启用', '归档'])
+  })
+
+  it('shows only design-approved status options and hides draft/archived rows and the inline tag section', async () => {
+    const user = userEvent.setup()
+    const page: AdminReadPage = {
+      sections: [
+        {
+          key: 'events',
+          title: '活动',
+          rows: [
+            { detailId: 'e-1', title: '已发布活动', state: '已发布' },
+            { detailId: 'e-2', title: '草稿活动', state: '草稿' },
+            { detailId: 'e-3', title: '已下架活动', state: '已下架' },
+            { detailId: 'e-4', title: '已归档活动', state: '已归档' },
+          ],
+          columns: [{ key: 'title', label: '活动名称' }, { key: 'state', label: '状态' }],
+        },
+        { key: 'policy', title: '活动政策', detailTarget: null, rows: [{ cancellation: '24 小时' }], columns: [{ key: 'cancellation', label: '默认取消提前时间' }] },
+        { key: 'event-types', title: '活动类型', detailTarget: null, rows: [{ name: '工作坊', state: '启用' }], columns: [{ key: 'name', label: '名称' }] },
+        { key: 'event-tags', title: '活动标签', detailTarget: null, rows: [{ name: '早会', state: '启用' }], columns: [{ key: 'name', label: '名称' }] },
+      ],
+      nextCursor: null,
+    }
+    const { container } = render(
+      <CoreListPageView route="events" search={{}} page={page} onSearchChange={vi.fn()} onOpenDetail={vi.fn()} />,
+    )
+    expect(screen.getByText('已发布活动')).toBeInTheDocument()
+    expect(screen.getByText('已下架活动')).toBeInTheDocument()
+    expect(screen.queryByText('草稿活动')).toBeNull()
+    expect(screen.queryByText('已归档活动')).toBeNull()
+    expect(screen.getByText('活动政策')).toBeInTheDocument()
+    expect(screen.getByText('活动类型')).toBeInTheDocument()
+    expect(screen.queryByText('活动标签')).toBeNull()
+
+    await user.click(within(container.querySelector('.filter-bar__status') as HTMLElement).getByRole('combobox'))
+    await screen.findAllByRole('option')
+    // antd 的 role=option 走 aria-label 且被虚拟列表截断，这里断言实际渲染的选项内容。
+    const optionLabels = Array.from(document.querySelectorAll('.ant-select-dropdown .ant-select-item-option-content'))
+      .map(node => node.textContent)
+    expect(optionLabels).toEqual(['全部状态', '已发布', '已结束', '已取消'])
+  })
+
+  it('opens the tag settings page from the 设置 action when catalog management is allowed', async () => {
+    const user = userEvent.setup()
+    const onNavigateToSettings = vi.fn()
+    const { rerender } = render(
+      <CoreListPageView
+        route="events"
+        search={{}}
+        page={{ sections: [{ rows: [], columns: [{ key: 'title', label: '活动名称' }] }], nextCursor: null }}
+        canManageEventCatalog
+        onNavigateToSettings={onNavigateToSettings}
+        onSearchChange={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /设\s*置/ }))
+    expect(onNavigateToSettings).toHaveBeenCalledTimes(1)
+    rerender(
+      <CoreListPageView
+        route="events"
+        search={{}}
+        page={{ sections: [{ rows: [], columns: [{ key: 'title', label: '活动名称' }] }], nextCursor: null }}
+        onNavigateToSettings={onNavigateToSettings}
+        onSearchChange={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: '设置' })).toBeNull()
+  })
+
+  it('offers inline checkin qrcode download on published rows and downloads the fetched static code', async () => {
+    const user = userEvent.setup()
+    const downloaded: HTMLAnchorElement[] = []
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      downloaded.push(this)
+    })
+    const request = vi.fn().mockResolvedValue({
+      eventId: 'e-1', mode: 'STATIC', validUntil: null, qrCodeDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
+    })
+    const page: AdminReadPage = {
+      sections: [{
+        key: 'events',
+        title: '活动',
+        rows: [
+          { detailId: 'e-1', title: '已发布活动', state: '已发布' },
+          { detailId: 'e-2', title: '已结束活动', state: '已结束' },
+        ],
+        columns: [{ key: 'title', label: '活动名称' }, { key: 'state', label: '状态' }],
+      }],
+      nextCursor: null,
+    }
+    render(
+      <App>
+        <CoreListPageView
+          route="events"
+          search={{}}
+          page={page}
+          canManageCheckin
+          request={request}
+          onMutation={vi.fn()}
+          onSearchChange={vi.fn()}
+          onOpenDetail={vi.fn()}
+        />
+      </App>,
+    )
+    try {
+      expect(screen.getAllByRole('button', { name: '下载签到二维码' })).toHaveLength(1)
+      await user.click(screen.getByRole('button', { name: '下载签到二维码' }))
+      await waitFor(() => expect(request).toHaveBeenCalledWith('mip.admin.events.checkinQrcode.get', { eventId: 'e-1', mode: 'STATIC' }))
+      await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(1))
+      expect(downloaded[0]?.getAttribute('download')).toBe('活动签到码-e-1.png')
+      expect(downloaded[0]?.href).toBe('data:image/png;base64,iVBORw0KGgo=')
+    }
+    finally {
+      anchorClick.mockRestore()
+    }
+  })
+
+  it('hides the inline checkin download without checkin capability or request access', () => {
+    const page: AdminReadPage = {
+      sections: [{
+        key: 'events',
+        title: '活动',
+        rows: [{ detailId: 'e-1', title: '已发布活动', state: '已发布' }],
+        columns: [{ key: 'title', label: '活动名称' }, { key: 'state', label: '状态' }],
+      }],
+      nextCursor: null,
+    }
+    render(
+      <CoreListPageView route="events" search={{}} page={page} onMutation={vi.fn()} onSearchChange={vi.fn()} onOpenDetail={vi.fn()} />,
+    )
+    expect(screen.queryByRole('button', { name: '下载签到二维码' })).toBeNull()
   })
 
   it('keeps event policy and catalog operations reachable with their server-projected context', async () => {

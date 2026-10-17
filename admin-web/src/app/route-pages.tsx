@@ -65,6 +65,7 @@ import type { AdminOperationRow } from '../modules/admin-row-operations'
 import { downloadTaskCompletionExport, exportTaskCompletions } from '../modules/admin-task-management'
 import { DetailDrawer, PermissionGuard, type BatchAction } from '../shared/ui'
 import { EventEditFormPage } from '../features/form-pages/event-edit-form-page'
+import { EventSettingsPage } from '../features/core-pages/event-settings-page'
 import { TaskEditFormPage } from '../features/form-pages/task-edit-form-page'
 import { OpportunityEditFormPage } from '../features/form-pages/opportunity-edit-form-page'
 import { KnowledgeEditFormPage } from '../features/form-pages/knowledge-edit-form-page'
@@ -80,6 +81,7 @@ export function OverviewRoutePage() {
 
 export function UsersRoutePage() { return <CoreRoutePage route="users" /> }
 export function EventsRoutePage() { return <CoreRoutePage route="events" /> }
+export function EventSettingsRoutePage() { return <EventSettingsPage /> }
 export function OrdersRoutePage() { return <CoreRoutePage route="orders" /> }
 
 function CoreRoutePage({ route }: { route: CoreRoute }) {
@@ -532,6 +534,7 @@ export const routeComponents = {
   '/users/$userId': UserProfilePage,
   '/cards': ProfileCardsPage,
   '/events': EventsRoutePage,
+  '/events/settings': EventSettingsRoutePage,
   '/orders': OrdersRoutePage,
   '/tasks': TasksRoutePage,
   '/banners': BannersRoutePage,
