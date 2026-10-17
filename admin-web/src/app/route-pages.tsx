@@ -28,6 +28,7 @@ import {
   type OperationsPageState,
   type OperationsWriteIntent,
 } from '../features/operations-pages'
+import { TaskApprovalPage, useTaskApprovalPage } from '../features/operations-pages/task-approval-page'
 import {
   KnowledgePage,
   MessagesPage,
@@ -219,6 +220,71 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
     <PermissionGuard capabilities={operationRouteCapabilities[route]} requireAny={operationRouteCapabilities[route].length > 1}>
       {page}
       <RouteDetailLayer detail={detail} onMediaUpload={() => void navigate({ to: '/media', search: { tab: 'BANNER' } })} />
+    </PermissionGuard>
+  )
+}
+
+/** MIW-130：NPC任务（提交与审批记录）独立页，聚合跨任务完成记录；不进入侧栏导航。 */
+export function TaskApprovalRoutePage() {
+  const { demoMode, hasCapability } = useAdminSession()
+  const { launch } = useAdminOperations()
+  const search = useRouteSearch()
+  const updateSearch = useUpdateSearch()
+  const [cursorStack, setCursorStack] = useState<Array<string | null>>([])
+  const detail = useAdminDetail()
+  const result = useTaskApprovalPage(listQuery(search))
+  const onWrite = demoMode || hasCapability('tasks.manage')
+    ? (intent: OperationsWriteIntent) => void launch(intent.action, intent.targetId, detail.view, {
+      values: intent.values,
+      expectedVersion: intent.expectedVersion,
+      allowedCapabilities: intent.allowedCapabilities,
+    })
+    : undefined
+  const goPreviousPage = useCallback(() => {
+    const previous = cursorStack[cursorStack.length - 1] ?? null
+    const page = (search.page || 2) - 1
+    setCursorStack(stack => stack.slice(0, -1))
+    void updateSearch({ ...search, cursor: previous || undefined, page: page > 1 ? page : undefined })
+  }, [cursorStack, search, updateSearch])
+  const state: OperationsPageState = {
+    page: result.data || null,
+    query: listQuery(search),
+    loading: result.loading,
+    refreshing: result.refreshing,
+    error: result.errorMessage,
+    demoMode,
+    hasPreviousPage: Boolean(search.page && search.page > 1) && cursorStack.length > 0,
+    onFilterChange: value => {
+      setCursorStack([])
+      const filters = value.filters && Object.keys(value.filters).length > 0 ? value.filters : undefined
+      void updateSearch({
+        q: value.query || undefined,
+        status: value.status || undefined,
+        filters,
+        limit: search.limit,
+        tab: search.tab,
+        cursor: undefined,
+        page: undefined,
+      })
+    },
+    onRefresh: () => void result.refetch(),
+    onPreviousPage: cursorStack.length > 0 ? goPreviousPage : undefined,
+    onNextPage: cursor => {
+      setCursorStack(stack => [...stack, search.cursor || null])
+      void updateSearch({ ...search, cursor, page: (search.page || 1) + 1 })
+    },
+    onOpenDetail: intent => detail.openDetail(intent.route, intent.id),
+    onWrite,
+    canCapability: hasCapability,
+    onPageSizeChange: size => {
+      setCursorStack([])
+      void updateSearch({ ...search, limit: size, cursor: undefined, page: undefined })
+    },
+  }
+  return (
+    <PermissionGuard capabilities={['tasks.manage']}>
+      <TaskApprovalPage {...state} />
+      <RouteDetailLayer detail={detail} />
     </PermissionGuard>
   )
 }
@@ -538,6 +604,7 @@ export const routeComponents = {
   '/events/settings': EventSettingsRoutePage,
   '/orders': OrdersRoutePage,
   '/tasks': TasksRoutePage,
+  '/task-approval': TaskApprovalRoutePage,
   '/banners': BannersRoutePage,
   '/videos': VideosPage,
   '/videos/$videoId/edit': VideoEditPage,

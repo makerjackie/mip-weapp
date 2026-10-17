@@ -169,7 +169,7 @@ export async function loadTaskManagementPage(
   ])
   const taskPage = pageValue(taskPayload)
   const completionPage = pageValue(completionPayload)
-  const ownerNames = new Map(catalogOptions(record(editorOptionsPayload).owners).map(option => [option.value, option.label]))
+  const ownerNames = ownerNameMap(editorOptionsPayload)
   return {
     sections: [
       {
@@ -204,6 +204,10 @@ function catalogOptions(value: unknown) {
   return Array.isArray(value) ? value.map(record).filter(item => identifier(item.id)).map(item => ({ value: String(item.id), label: String(item.name || item.id) })) : []
 }
 
+function ownerNameMap(payload: unknown) {
+  return new Map(catalogOptions(record(payload).owners).map(option => [option.value, option.label]))
+}
+
 export async function loadTaskEligibleLevels(request: AdminRequest): Promise<TaskEligibleLevel[]> {
   const value = await request('mip.admin.tasks.eligibleLevels.list')
   if (!Array.isArray(value)) throw new Error('INVALID_TASK_LEVELS')
@@ -230,7 +234,7 @@ export async function loadTaskDetail(
     request('mip.admin.tasks.editorOptions').catch(() => ({})),
   ])
   const task = record(taskValue)
-  const ownerNames = new Map(catalogOptions(record(editorOptionsPayload).owners).map(option => [option.value, option.label]))
+  const ownerNames = ownerNameMap(editorOptionsPayload)
   const assignedOwnerLabel = task.assignedOwnerName
     ? String(task.assignedOwnerName)
     : task.assignedOwnerId && ownerNames.get(String(task.assignedOwnerId))
@@ -397,6 +401,80 @@ export async function loadTaskCompletionDetail(
       ]),
     }],
     source: { completion },
+  }
+}
+
+/** MIW-130：NPC任务页（提交与审批记录）的审批状态筛选——提交人|任务名称聚合自跨任务完成记录列表。 */
+export const TASK_APPROVAL_STATUS_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '', label: '全部状态' },
+  { value: 'pending_review', label: '待审批' },
+  { value: 'approved', label: '已通过' },
+  { value: 'rejected', label: '已退回' },
+  { value: 'reward_failed', label: '奖励失败' },
+]
+
+const TASK_APPROVAL_STAR_LABELS: Record<string, string> = { 1: '一星', 2: '二星', 3: '三星', 4: '四星', 5: '五星' }
+
+export function taskApprovalStarLabel(value: unknown) {
+  const level = Number(value)
+  return Number.isSafeInteger(level) && level >= 1 && level <= 5
+    ? TASK_APPROVAL_STAR_LABELS[String(level)]
+    : '—'
+}
+
+/** 跨任务聚合完成记录：服务端已支持 submissionStatus/query 筛选与游标分页；星级仅能在当前页行上过滤。 */
+export async function loadTaskApprovalPage(
+  query: AdminListQuery,
+  request: AdminRequest,
+): Promise<AdminReadPage> {
+  const submissionStatus = TASK_APPROVAL_STATUS_OPTIONS.some(option => option.value !== '' && option.value === query.status)
+    ? query.status
+    : ''
+  const [completionPayload, editorOptionsPayload] = await Promise.all([
+    request('mip.admin.tasks.completions.list', {
+      filters: { query: query.query, submissionStatus },
+      limit: query.limit,
+      cursor: query.cursor || undefined,
+    }),
+    request('mip.admin.tasks.editorOptions').catch(() => ({})),
+  ])
+  const completionPage = pageValue(completionPayload)
+  return buildTaskApprovalPage(completionPage.items, completionPage.nextCursor, ownerNameMap(editorOptionsPayload))
+}
+
+export function buildTaskApprovalPage(
+  items: AdminTableRow[],
+  nextCursor: string | null,
+  ownerNames: Map<string, string> = new Map(),
+): AdminReadPage {
+  return {
+    sections: [{
+      rows: items.map(item => taskApprovalListRow(item, ownerNames)),
+      columns: columns([
+        ['member', '提交人'], ['task', '任务名称'], ['starLevel', '星级'], ['attachment', '附件'],
+        ['reviewedBy', '审批人'], ['state', '审批状态'], ['rewardResult', '奖励结果'],
+      ]),
+      detailTarget: 'taskApprovals',
+    }],
+    nextCursor,
+  }
+}
+
+function taskApprovalListRow(item: AdminTableRow, ownerNames: Map<string, string>) {
+  const attachment = record(item.attachment)
+  const reviewerId = String(item.reviewedBy || '')
+  return {
+    detailId: valueOf(item, 'id', 'submissionId', 'completionId'),
+    rowActions: taskCompletionRowActions(item),
+    member: valueOf(item, 'nickname'),
+    task: valueOf(item, 'taskName'),
+    starLevel: taskApprovalStarLabel(item.starLevel),
+    attachment: Object.keys(attachment).length ? '已上传' : '未上传',
+    reviewedBy: reviewerId
+      ? String(item.reviewedByName || '') || ownerNames.get(reviewerId) || '—'
+      : '—',
+    state: submissionStatusLabel(item.submissionStatus),
+    rewardResult: rewardResultDisplay(item.rewardResult),
   }
 }
 

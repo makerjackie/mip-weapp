@@ -55,6 +55,28 @@ export const demo = {
     { task: 'MIP 早会复盘', member: '林晓', reward: '30', completedAt: '2030-03-22 10:36', state: '成功' },
     { task: 'MIP 早会复盘', member: '陈默', reward: '30', completedAt: '2030-03-21 17:08', state: '成功' },
   ],
+  // MIW-130：NPC任务页演示数据，按服务端任务完成记录 DTO 形态呈现提交与审批结构（待联调）。
+  // id 使用合法 UUID 以复用真实行操作；演示模式不会提交写操作。真实数据走 mip.admin.tasks.completions.list。
+  taskApprovals: [
+    {
+      id: '30000000-0000-4000-8000-000000000011', taskName: 'MIP 早会复盘', nickname: '林晓', starLevel: 3,
+      submissionStatus: 'pending_review', rewardExperience: 30, completedAt: '2030-03-22T10:36:00.000Z',
+      attachment: { url: '', contentType: 'image/jpeg', bytes: 204800 }, rewardResult: {}, canReview: true,
+    },
+    {
+      id: '30000000-0000-4000-8000-000000000012', taskName: '会员合作机会跟进', nickname: '陈默', starLevel: 4,
+      submissionStatus: 'approved', reviewedBy: '30000000-0000-4000-8000-000000000099', reviewedByName: '笨笨老大',
+      reviewedAt: '2030-03-21T18:00:00.000Z', rewardExperience: 50, completedAt: '2030-03-21T17:08:00.000Z',
+      attachment: { url: '', contentType: 'image/png', bytes: 102400 },
+      rewardResult: { experience: { amount: 50, status: 'SUCCESS' } },
+    },
+    {
+      id: '30000000-0000-4000-8000-000000000013', taskName: 'MIP 早会复盘', nickname: '周宁', starLevel: 2,
+      submissionStatus: 'reward_failed', reviewedBy: '30000000-0000-4000-8000-000000000099', reviewedByName: '笨笨老大',
+      reviewedAt: '2030-03-20T09:40:00.000Z', rewardExperience: 30, completedAt: '2030-03-20T09:12:00.000Z',
+      rewardResult: { error: '奖励发放失败，可重试' }, retryLog: [{ at: '2030-03-20T10:00:00.000Z' }], canReview: true,
+    },
+  ],
   // MIW-27 第二轮：入会审核队列演示数据。targetId 对应上方演示用户，decision 为空表示待审核。
   membershipApprovals: [
     { id: 'MAP-20300021', targetId: 'USR-1002', user: '周宁', playerNumber: 'M000000002', plan: '年度会员', amount: '¥6,600.00', paidAt: '2030-03-20 15:42', requestedAt: '2030-03-20 15:43', state: '待处理', status: 'PENDING', chainVersion: 3, decision: '' },

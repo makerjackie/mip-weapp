@@ -211,4 +211,45 @@ describe('second-batch operations pages', () => {
     fireEvent.click(screen.getByRole('button', { name: /复制/ }))
     expect(onCopyAssetId).toHaveBeenCalledWith('123e4567-e89b-42d3-a456-426614174000')
   })
+
+  it('adds current-page task filters for star level, owner, and reward type', async () => {
+    const onFilterChange = vi.fn()
+    const taskSections = [{
+      title: '任务',
+      rows: [
+        { detailId: 'task-1', name: '早会复盘', starLevel: '3', assignedOwner: '笨笨老大', rewardConfig: '经验值 30 / 贡献值 5', state: '已发布' },
+        { detailId: 'task-2', name: '机会跟进', starLevel: '5', assignedOwner: '周宁', rewardConfig: '奖金（线下） 100', state: '草稿' },
+      ],
+      columns: [{ key: 'name', label: '任务名称' }, { key: 'starLevel', label: '星级' }, { key: 'assignedOwner', label: '负责人' }, { key: 'rewardConfig', label: '奖励分项' }, { key: 'state', label: '状态' }],
+    }]
+    const { rerender } = render(<TaskManagementPage {...pageState({
+      sections: taskSections,
+      nextCursor: null,
+    }, { onFilterChange, onOpenDetail: vi.fn() })} />)
+
+    expect(screen.queryByText('当前页过滤')).toBeNull()
+    await userEvent.click(screen.getAllByRole('combobox')[1])
+    await userEvent.click(await screen.findByText('三星', { selector: '.ant-select-item-option-content' }))
+    expect(onFilterChange).toHaveBeenLastCalledWith({ query: '', status: '', filters: { starLevel: '3' } })
+
+    await userEvent.click(screen.getAllByRole('combobox')[2])
+    expect(await screen.findByText('笨笨老大', { selector: '.ant-select-item-option-content' })).toBeTruthy()
+    await userEvent.click(screen.getByText('周宁', { selector: '.ant-select-item-option-content' }))
+    expect(onFilterChange).toHaveBeenLastCalledWith({ query: '', status: '', filters: { assignedOwner: '周宁' } })
+
+    await userEvent.click(screen.getAllByRole('combobox')[3])
+    await userEvent.click(await screen.findByText('奖金', { selector: '.ant-select-item-option-content' }))
+    expect(onFilterChange).toHaveBeenLastCalledWith({ query: '', status: '', filters: { rewardType: 'bonus' } })
+
+    rerender(<TaskManagementPage {...pageState({
+      sections: taskSections,
+      nextCursor: null,
+    }, {
+      onFilterChange,
+      onOpenDetail: vi.fn(),
+      query: { query: '', status: '', filters: { starLevel: '3', assignedOwner: '笨笨老大', rewardType: 'experience' } },
+    })} />)
+    expect(screen.getByText('当前页过滤')).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: '查看' }).length).toBe(1)
+  })
 })
