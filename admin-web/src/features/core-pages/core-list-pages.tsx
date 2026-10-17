@@ -1,4 +1,4 @@
-import { DownloadOutlined, PlusOutlined } from '@ant-design/icons'
+import { DownloadOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons'
 import { Button, Form, Select, Space, Typography } from 'antd'
 import { useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
@@ -9,13 +9,16 @@ import {
   EVENT_MUTATION_CONFIGS,
   type AdminEventMutationAction,
 } from '../../modules/admin-event-mutation-forms'
+import { labels, options } from '../../modules/admin-read-formatters'
 import {
   getAdminReadRouteDefinition,
   type AdminListRoute,
   type AdminReadPage,
+  type AdminRequest,
   type AdminTableRow,
 } from '../../modules/admin-read-pages'
 import { normalizePlayerStatusFilter } from '../../modules/admin-read-formatters'
+import { CheckinQrcodeDownloadLink } from '../admin-runtime/checkin-qrcode-download'
 import type { AdminRowOperation } from '../../modules/admin-row-operations'
 import {
   DataTable,
@@ -76,6 +79,22 @@ const amountRangeByRoute: Partial<Record<CoreListRoute, { min: string; max: stri
   events: { min: 'priceMinCents', max: 'priceMaxCents', label: '价格（元）' },
 }
 
+// MIW-126：活动列表状态筛选按设计稿收敛为四个选项；草稿与已归档行不进列表。
+// 契约查询暂不支持排除状态，由前端在行装配处过滤（BFF/云函数待联调后再收敛到服务端）。
+const eventListStatusOptions = [{ value: '', label: '全部状态' }, ...options(['PUBLISHED', 'ENDED', 'CANCELLED'])]
+const hiddenEventListStatusLabels = new Set([labels.DRAFT, labels.ARCHIVED])
+const eventTagSectionTitle = '活动标签'
+
+/** 隐藏草稿/已归档活动行，并移除内嵌「活动标签」分区（标签管理入口移至「设置」页）。 */
+function filterEventListSections(sections: AdminReadPage['sections']) {
+  return sections
+    .filter(section => section.title !== eventTagSectionTitle)
+    .map(section => section.detailTarget === null ? section : {
+      ...section,
+      rows: section.rows.filter(row => !hiddenEventListStatusLabels.has(String(row.state || ''))),
+    })
+}
+
 const pageDefinitions: Record<CoreListRoute, {
   title: string
   description: string
@@ -119,7 +138,7 @@ export function OrdersPage(props: CoreListPageProps) {
 }
 
 function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreListRoute }) {
-  const { hasCapability, hasCapabilityAtScope } = useAdminSession()
+  const { hasCapability, hasCapabilityAtScope, request } = useAdminSession()
   const navigate = useNavigate()
   const query = useCoreReadPage(route, props.search)
   const definition = pageDefinitions[route]
@@ -160,6 +179,9 @@ function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreList
         canWriteEvents={hasCapability(EVENT_MUTATION_CONFIGS['mip.admin.events.save'].capability)}
         canWriteEventPolicy={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.policy.save'].capability, 'PLATFORM')}
         canManageEventCatalog={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.catalog.save'].capability, 'PLATFORM')}
+        canManageCheckin={hasCapability('events.checkin.manage')}
+        request={request}
+        onNavigateToSettings={() => void navigate({ to: '/events/settings' })}
         onNavigateToForm={(path, entityId) => {
           const paramName = path.match(/\$(\w+)/)?.[1] || 'entityId'
           void navigate({ to: path as never, params: { [paramName]: entityId } as never })
@@ -181,7 +203,10 @@ export function CoreListPageView({
   canWriteEvents,
   canWriteEventPolicy,
   canManageEventCatalog,
+  canManageCheckin,
+  request,
   onNavigateToForm,
+  onNavigateToSettings,
   onRetry,
   extraFilterSlots,
   onSearchChange,
@@ -200,7 +225,10 @@ export function CoreListPageView({
   canWriteEvents?: boolean
   canWriteEventPolicy?: boolean
   canManageEventCatalog?: boolean
+  canManageCheckin?: boolean
+  request?: AdminRequest
   onNavigateToForm?: (path: string, entityId: string) => void
+  onNavigateToSettings?: () => void
   onRetry?: () => void
   extraFilterSlots?: React.ReactNode
 }) {
@@ -237,6 +265,9 @@ export function CoreListPageView({
               新建活动目录
             </Button>
           ) : null}
+          {canManageEventCatalog && onNavigateToSettings ? (
+            <Button icon={<SettingOutlined />} onClick={() => onNavigateToSettings()}>设置</Button>
+          ) : null}
         </Space>
       )
     }
@@ -259,7 +290,7 @@ export function CoreListPageView({
       )
     }
     return null
-  }, [canExport, canManageEventCatalog, canWriteEvents, onMutation, onNavigateToForm, onSensitiveExport, route, search.q, search.status, search.filters])
+  }, [canExport, canManageEventCatalog, canWriteEvents, onMutation, onNavigateToForm, onNavigateToSettings, onSensitiveExport, route, search.q, search.status, search.filters])
 
   function openDetail(row: AdminTableRow) {
     const id = String(row.detailId || '')
@@ -273,7 +304,7 @@ export function CoreListPageView({
       <FilterBar
         value={{ q: search.q || '', status: search.status || '', filters: search.filters }}
         placeholder={readDefinition.searchPlaceholder}
-        statusOptions={readDefinition.statusOptions}
+        statusOptions={route === 'events' ? eventListStatusOptions : readDefinition.statusOptions}
         loading={loading}
         timeRangeFields={route === 'users' && search.filters?.timeKind === 'EXPIRY' ? { from: 'expiresFrom', to: 'expiresTo', label: '会籍到期时间' } : timeRangeByRoute[route]}
         amountRangeFields={amountRangeByRoute[route]}
@@ -314,7 +345,7 @@ export function CoreListPageView({
       {!loading && error ? <ErrorState description={error} onRetry={onRetry} /> : null}
       {page ? (
         <div className="core-list-sections">
-          {page.sections.map((section, index) => (
+          {(route === 'events' ? filterEventListSections(page.sections) : page.sections).map((section, index) => (
             <section key={`${section.title || pageDefinition.title}-${index}`} className="core-list-section">
               {section.title ? <Typography.Title level={2}>{section.title}</Typography.Title> : null}
               <DataTable
@@ -329,6 +360,8 @@ export function CoreListPageView({
                   ? row => renderEventRowActions(row, {
                     canManageEventCatalog: Boolean(canManageEventCatalog),
                     canWriteEventPolicy: Boolean(canWriteEventPolicy),
+                    canManageCheckin: Boolean(canManageCheckin),
+                    request,
                     onMutation,
                   })
                   : undefined}
@@ -387,13 +420,15 @@ function renderEventRowActions(
   options: {
     canManageEventCatalog: boolean
     canWriteEventPolicy: boolean
+    canManageCheckin: boolean
+    request?: AdminRequest
     onMutation: NonNullable<CoreListPageCallbacks['onMutation']>
   },
 ) {
   const operations = Array.isArray(row.rowActions)
     ? row.rowActions.filter(isEventRowOperation)
     : []
-  return operations.flatMap(operation => {
+  const buttons = operations.flatMap(operation => {
     const allowed = operation.action === 'mip.admin.events.policy.save'
       ? options.canWriteEventPolicy
       : operation.action.startsWith('mip.admin.events.catalog.')
@@ -417,6 +452,17 @@ function renderEventRowActions(
       </Button>
     )]
   })
+  // MIW-126：已发布活动提供行内快捷下载；服务端仅对 PUBLISHED 活动下发签到码。
+  if (options.canManageCheckin && options.request && row.detailId && row.state === labels.PUBLISHED) {
+    buttons.push(
+      <CheckinQrcodeDownloadLink
+        key={`checkin-qrcode-${String(row.detailId)}`}
+        eventId={String(row.detailId)}
+        request={options.request}
+      />,
+    )
+  }
+  return buttons
 }
 
 function isEventRowOperation(value: unknown): value is AdminRowOperation & { action: AdminEventMutationAction } {

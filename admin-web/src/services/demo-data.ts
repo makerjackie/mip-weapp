@@ -35,6 +35,12 @@ export const demo = {
     { id: 'EVT-20300321', title: 'MIP 早会｜品牌与产品实践', time: '2030-03-21 10:00–12:00', location: '深圳市福田区深南大道 6008 号', registrations: 24, status: '报名中' },
     { id: 'EVT-20300328', title: 'MIP 早会｜团队执行与项目复盘', time: '2030-03-28 10:00–12:00', location: '深圳市福田区金田路 3037 号', registrations: 18, status: '草稿' },
   ],
+  // MIW-126：活动设置页的演示标签目录，名称与 RemoteCatalogSelect 的演示标签同口径。
+  eventTags: [
+    { id: 'CAT-TAG-1', kind: 'TAG', name: '早会', description: '早会类活动标签', status: 'ACTIVE', version: 3, sortOrder: 10, usageCount: 12 },
+    { id: 'CAT-TAG-2', kind: 'TAG', name: '集会', description: '', status: 'ACTIVE', version: 1, sortOrder: 20, usageCount: 4 },
+    { id: 'CAT-TAG-3', kind: 'TAG', name: '沙龙', description: '', status: 'INACTIVE', version: 2, sortOrder: 30, usageCount: 0 },
+  ],
   orders: [
     { id: 'ORD-20300018', user: '林晓', type: '年度会员', amount: '¥6,000.00', status: '已支付', createdAt: '2030-02-16 14:20' },
     { id: 'ORD-20300019', user: '陈默', type: 'MIP 早会门票', amount: '¥199.00', status: '待确认', createdAt: '2030-02-18 09:12' },
