@@ -325,5 +325,5 @@ export interface MipIdentityGateway {
 
 export interface MembershipAgreement { title: string, body: string, isDemo: boolean, version: number, updatedAt: string }
 
-/** 后台可配置的整段文档：两份协议 + 经验值规则说明（MIW-27）。 */
-export type AgreementDocument = 'membership' | 'user' | 'experience-rules'
+/** 后台可配置的整段文档：两份协议 + 隐私政策（MIW-121）+ 经验值规则说明（MIW-27）。 */
+export type AgreementDocument = 'membership' | 'user' | 'privacy' | 'experience-rules'

@@ -5,6 +5,7 @@ const { AdminError, text } = require('./validation')
 const DOCUMENT_KINDS = {
   membership: { settingKey: 'MEMBERSHIP_AGREEMENT', operation: 'membership.agreement.save', resource: 'MEMBERSHIP_AGREEMENT' },
   user: { settingKey: 'USER_AGREEMENT', operation: 'user.agreement.save', resource: 'USER_AGREEMENT' },
+  privacy: { settingKey: 'PRIVACY_POLICY', operation: 'privacy.policy.save', resource: 'PRIVACY_POLICY' },
   'experience-rules': { settingKey: 'EXPERIENCE_RULES_TEXT', operation: 'experience.rules.save', resource: 'EXPERIENCE_RULES_TEXT' },
 }
 function documentKind(value = 'membership') {

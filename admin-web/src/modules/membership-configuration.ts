@@ -1,7 +1,7 @@
 import type { AdminRequest } from './admin-read-contracts'
 export type ConfigurationKind = 'levels' | 'benefits' | 'rules' | 'badges'
 export interface ConfigurationItem { id: string; name: string; version: number; status: string; [key: string]: unknown }
-export type AgreementDocument = 'membership' | 'user' | 'experience-rules'
+export type AgreementDocument = 'membership' | 'user' | 'privacy' | 'experience-rules'
 export interface MembershipAgreement { title: string; body: string; isDemo: boolean; version: number; updatedAt: string | null }
 // MIW-35：会员方案改价。名称/时长/上下架只读，后台仅允许调整 priceCents。
 export interface MembershipPlan { id: string; planKey: string; catalogStage: 'TEST' | 'LIVE'; name: string; durationDays: number; priceCents: number; currency: string; status: string; version: number; updatedAt: string | null }
@@ -22,6 +22,11 @@ export const demoMembershipAgreement = {
 export const demoUserAgreement = {
   title: '用户使用协议（演示）', isDemo: true,
   body: '【演示内容，仅供测试，不作为正式服务条款】\n\n一、服务范围\n本小程序提供资料展示、社区活动、项目机会与成长任务。具体功能以页面及管理员配置为准。\n\n二、使用规范\n请使用本人账号，尊重他人，不提交违法、侵权或泄露他人隐私的内容。\n\n三、演示配置\n标注演示的权益与奖励仅供体验，可由管理员修改。任务提交后以服务端记录及审核结果为准，不承诺现金收益。\n\n四、账号与反馈\n你可以在设置中修改资料与隐私、退出登录或申请注销；问题可通过小程序客服反馈。正式上线前请替换为确认后的服务主体、联系方式与服务条款。',
+}
+// MIW-121：隐私政策后台可配置；演示文案与小程序 privacy-policy 页内置兜底逐字一致。
+export const demoPrivacyAgreement = {
+  title: '隐私政策（演示）', isDemo: true,
+  body: '【演示内容，仅供测试，不作为正式隐私政策】\n\n一、信息处理范围\n仅在使用对应功能时处理微信身份标识、你主动提交的档案与联系方式、活动与互动记录，以及订单、支付和退款状态。\n\n二、信息使用\n相关信息用于登录识别、提供会员与活动服务、处理订单、保障账号安全和响应客服请求，不用于与当前服务无关的用途。\n\n三、公开范围\n手机号、微信身份标识、订单信息和报名答案不会在公开档案中展示。档案中的可公开内容由你在公开设置中管理。\n\n四、授权与第三方服务\n手机号、支付、订阅消息、相册、录音等微信能力只在你主动操作时申请。支付与消息服务会按功能需要由微信及相应服务提供方处理。\n\n五、保存与注销\n退出登录只清除本机登录状态。注销账号后，公开资料和可撤销状态会关闭；订单、支付、退款、活动和审计记录按适用规则保留。\n\n六、你的权利\n你可以管理档案公开范围和屏蔽列表。数据副本、更正或其他隐私请求可通过小程序客服提交。正式上线前请替换为确认后的隐私政策全文。',
 }
 // MIW-27：经验值详情-规则详情页签展示的整段文本（membership-content 第三种文档）。
 export const demoExperienceRules = {

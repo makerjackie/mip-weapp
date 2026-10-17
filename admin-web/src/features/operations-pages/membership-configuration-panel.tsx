@@ -3,7 +3,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Checkbox, Form, Input, InputNumber, Modal, Select, Space, Spin, Tabs, Tag, Typography } from 'antd'
 import { useAdminSession } from '../../app/session-provider'
-import { configurationDraft, demoExperienceRules, demoMembershipAgreement, demoUserAgreement, membershipConfiguration, planPriceCents, planPriceYuan, type AgreementDocument, type ConfigurationItem, type ConfigurationKind, type MembershipPlan } from '../../modules/membership-configuration'
+import { configurationDraft, demoExperienceRules, demoMembershipAgreement, demoPrivacyAgreement, demoUserAgreement, membershipConfiguration, planPriceCents, planPriceYuan, type AgreementDocument, type ConfigurationItem, type ConfigurationKind, type MembershipPlan } from '../../modules/membership-configuration'
 import { AssetUploader } from '../../shared/ui/asset-uploader'
 import { MediaPreviewProvider } from '../../shared/ui/media-preview-provider'
 const labels: Record<ConfigurationKind, string> = { levels: '等级门槛', benefits: '等级权益', rules: '成长奖励规则', badges: '勋章定义' }
@@ -11,10 +11,11 @@ const statuses = [{ value: 'DRAFT', label: '草稿' }, { value: 'ACTIVE', label:
 const badgeCategories = [{ value: 'IDENTITY', label: '身份勋章' }, { value: 'HONOR', label: '荣誉勋章' }]
 // MIW-35：会员方案页签——只改价格；名称、时长、状态由服务端展示为只读事实。
 const planStageLabels: Record<MembershipPlan['catalogStage'], string> = { TEST: '测试', LIVE: '正式' }
-// 文档页签：两份协议 + 经验值规则说明（MIW-27），共用同一份带版本的后台表单。
+// 文档页签：两份协议 + 隐私政策（MIW-121）+ 经验值规则说明（MIW-27），共用同一份带版本的后台表单。
 const documentTabs: Array<{ key: string; label: string; document: AgreementDocument; demo: { title: string; body: string; isDemo: boolean } }> = [
   { key: 'agreement', label: '会员服务协议', document: 'membership', demo: demoMembershipAgreement },
   { key: 'user-agreement', label: '用户使用协议', document: 'user', demo: demoUserAgreement },
+  { key: 'privacy-policy', label: '隐私政策', document: 'privacy', demo: demoPrivacyAgreement },
   { key: 'experience-rules', label: '经验值规则说明', document: 'experience-rules', demo: demoExperienceRules },
 ]
 export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void }) {

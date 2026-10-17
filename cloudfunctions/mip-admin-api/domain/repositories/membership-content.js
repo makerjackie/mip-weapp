@@ -6,6 +6,7 @@ const { AdminError } = require('../validation')
 const DOCUMENT_KINDS = {
   membership: { settingKey: 'MEMBERSHIP_AGREEMENT', operation: 'membership.agreement.save' },
   user: { settingKey: 'USER_AGREEMENT', operation: 'user.agreement.save' },
+  privacy: { settingKey: 'PRIVACY_POLICY', operation: 'privacy.policy.save' },
   'experience-rules': { settingKey: 'EXPERIENCE_RULES_TEXT', operation: 'experience.rules.save' },
 }
 function createMembershipContentRepository(database, { lockMutation, assertScope, writeAudit }) {

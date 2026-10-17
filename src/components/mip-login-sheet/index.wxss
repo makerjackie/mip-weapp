@@ -60,6 +60,41 @@
   white-space: pre-line;
 }
 
+/* MIW-121 协议勾选行：22rpx 弱化文案 + 品牌色链接，压缩副标题与主按钮之间的间距。 */
+.mip-login-sheet__consent {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 24rpx;
+}
+
+.mip-login-sheet__consent-row {
+  display: flex;
+  gap: 8rpx;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* 原生 checkbox 默认约 44.8rpx，压到与 22rpx 文案同级的视觉尺寸；
+   transform 不收缩布局盒，负外边距收回缩放后的空隙。
+   原生视觉块不居中于布局盒（flex-start 下实测中心偏下约 4px），
+   -6rpx 顶边距把勾选块拉回与首行文字光学对齐。 */
+.mip-login-sheet__consent-checkbox {
+  margin: -6rpx -8rpx 0 0;
+  transform: scale(0.68);
+  transform-origin: center;
+}
+
+.mip-login-sheet__consent-text {
+  font-size: 22rpx;
+  line-height: 40rpx;
+  color: var(--color-muted, #b3b3b3);
+  text-align: left;
+}
+
+.mip-login-sheet__consent-link {
+  color: var(--color-brand, #fcdf03);
+}
+
 .mip-login-sheet__btn {
   display: flex;
   align-items: center;
