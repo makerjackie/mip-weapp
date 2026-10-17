@@ -135,6 +135,17 @@ describe('second-batch operations pages', () => {
     }))
   })
 
+  it('maps the opportunity status filter to page-local wording while submitting codes (MIW-127)', async () => {
+    const onFilterChange = vi.fn()
+    render(<OpportunitiesContentPage {...pageState({ sections: [], nextCursor: null }, {
+      onFilterChange,
+      query: { query: '', status: '', filters: { section: 'opportunities' } },
+    })} />)
+    await userEvent.click(screen.getAllByRole('combobox')[0])
+    await userEvent.click(await screen.findByText('招募中'))
+    expect(onFilterChange).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'PUBLISHED', filters: { section: 'opportunities' } }))
+  })
+
   it('keeps opportunity and growth write actions as exact service actions', async () => {
     const opportunityWrite = vi.fn()
     const { unmount } = render(

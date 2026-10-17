@@ -7,6 +7,7 @@ import {
 import { loadBannerDetail } from './admin-banner-management.ts'
 import { feedbackDisplayComplete, feedbackFields } from './event-feedback.ts'
 import { campaignAudienceLabel, label } from './admin-read-formatters.ts'
+import { opportunityStatusLabel } from './admin-read-special-pages.ts'
 import {
   loadGameCatalogDetail,
   loadGameSeasonDetail,
@@ -640,6 +641,8 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
 
 async function loadOpportunityDetail(opportunityId: string, request: AdminDetailRequest, options: AdminDetailOptions): Promise<AdminDetailView> {
   const opportunity = record(await request('mip.admin.opportunities.get', { opportunityId }))
+  // 想推荐名单与评论互不依赖，先行并行读取；读取失败由分区自行降级，不会 reject。
+  const referralSection = opportunityReferralSection(opportunityId, request)
   let commentState: AdminDetailRow | null = null
   if (options.includeOpportunityComments !== false) {
     try {
@@ -677,6 +680,7 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
     rows: team.map(item => ({ name: text(item.nickname), branch: text(item.branchName) })),
     columns: columns([['name', '姓名'], ['branch', '所属服务器']]),
   })
+  sections.push(await referralSection)
   if (commentState) {
     sections.push({
       title: '评论设置',
@@ -713,8 +717,9 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
     title: '操作记录',
     rows: records(opportunity.history).map(item => {
       const metadata = record(item.metadata)
+      // 状态变更沿用机会页面局部文案（招募中 / 已完成），与抽屉顶部状态一致。
       return { action: codeLabel(item.action), actor: text(item.actorNickname), createdAt: dateTime(item.createdAt),
-        fromStatus: codeLabel(metadata.fromStatus), toStatus: codeLabel(metadata.toStatus),
+        fromStatus: opportunityStatusLabel(metadata.fromStatus), toStatus: opportunityStatusLabel(metadata.toStatus),
         summary: text(metadata.summary) }
     }),
     columns: columns([['action', '操作'], ['actor', '操作人'], ['createdAt', '时间'],
@@ -724,9 +729,38 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
     route: 'opportunities',
     title: `${text(opportunity.title, '机会详情')}${opportunity.deleted ? '（已删除）' : ''}`,
     subtitle: [text(opportunity.ownerNickname, ''), text(opportunity.cityName, '')].filter(Boolean).join(' · '),
-    status: opportunity.deleted ? '已删除' : codeLabel(opportunity.status),
+    status: opportunity.deleted ? '已删除' : opportunityStatusLabel(opportunity.status),
     sections,
     source: { opportunity, commentState: commentState || {} },
+  }
+}
+
+// MIW-127：想推荐名单复用 mip.admin.opportunities.referrals（服务端按操作时间倒序返回）。
+// 名单是机会详情的补充信息：读取失败降级为分区错误提示，不拖垮抽屉其他分区；
+// 无查看权限时与评论区同口径，只显示数据权限说明。
+async function opportunityReferralSection(opportunityId: string, request: AdminDetailRequest): Promise<AdminDetailSection> {
+  const section: AdminDetailSection = {
+    title: '想推荐名单',
+    columns: columns([['userId', '用户 ID'], ['nickname', '昵称'], ['createdAt', '操作时间']]),
+  }
+  try {
+    const page = record(await request('mip.admin.opportunities.referrals', { opportunityId, limit: 20 }))
+    return {
+      ...section,
+      // 服务端暂未投影引荐人 userId，联调前「用户 ID」显示「—」；昵称取引荐意向提交人。
+      rows: pageRecords(page).map(item => ({
+        detailId: text(item.id),
+        userId: text(item.userId || item.actorUserId),
+        nickname: text(item.actorNickname),
+        createdAt: dateTime(item.createdAt),
+      })),
+    }
+  }
+  catch (error) {
+    if (errorCode(error) === 'FORBIDDEN') {
+      return { title: '想推荐名单', fields: fields([['数据权限', '当前账号不可查看']]) }
+    }
+    return { ...section, error: error instanceof Error ? error.message : '想推荐名单暂不可用，请重试。' }
   }
 }
 
