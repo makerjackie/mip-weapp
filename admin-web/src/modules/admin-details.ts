@@ -119,21 +119,31 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
   const growth = record(user.growth)
   const counts = record(user.counts)
   const influence = record(user.influence)
+  const industryLabels = records(user.tags)
+    .filter(tag => tag.kind === 'INDUSTRY' || tag.kind === 'PRIMARY_INDUSTRY')
+    .map(tag => text(tag.label, '')).filter(Boolean)
   const sections: AdminDetailSection[] = [{
     title: '基本信息',
     fields: fields([
       ['身份', codeLabel(user.kind)],
       ['账号状态', codeLabel(user.status)],
       ['手机状态', user.phoneBound === true ? '已绑定' : '未绑定'],
+      ['绑定微信', user.wechatBound === true ? '已绑定' : user.wechatBound === false ? '未绑定' : '—'],
+      ['真实姓名', text(user.realName)],
       ['所属服务器', text(user.branchName)],
       ['城市', text(user.cityName)],
+      ['注册时间', dateTime(user.createdAt)],
+      ['更新时间', dateTime(user.updatedAt)],
       ['资料版本', numberText(user.profileVersion)],
       ['用户版本', numberText(user.userVersion)],
-      ['简介', text(user.headline)],
-      ['个人介绍', text(user.introduction)],
-      ['真实姓名', text(user.realName)],
+    ]),
+  }, {
+    title: '职业信息',
+    fields: fields([
+      ['行业', industryLabels.join('、') || '—'],
       ['职业身份', text(user.identityStatus)],
-      ['注册时间', dateTime(user.createdAt)],
+      ['一句话介绍', text(user.headline)],
+      ['个人介绍', text(user.introduction)],
     ]),
   }]
   if (Object.keys(membership).length || membershipDetail.chainVersion !== undefined) {
