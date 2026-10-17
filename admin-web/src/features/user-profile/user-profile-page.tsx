@@ -74,8 +74,9 @@ function UserProfileContent() {
     void query.refetch()
     if (recordTabs.has(tab)) void related.refetch()
     if (tab === 'growth') {
-      if (summaries.data) void summaries.refetch()
-      if (canManageBadges && badges.data) void badges.refetch()
+      // 失败的概要没有 data，重试不能被 data 条件挡住。
+      void summaries.refetch()
+      if (canManageBadges) void badges.refetch()
     }
   }
   const logCursor = search.filters?.logCursor

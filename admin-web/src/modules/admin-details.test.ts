@@ -73,7 +73,8 @@ describe('admin detail views', () => {
         companies: [{ name: '远岸咨询', role: '顾问' }], organizations: [{ name: '设计师协会', role: '会员' }],
         tags: [
           { kind: 'ABILITY', relation: 'ABILITY', label: '资源整合' },
-          { kind: 'PRIMARY_INDUSTRY', relation: 'PRIMARY_INDUSTRY', label: '企业服务' },
+          // kind 只能是 INDUSTRY；主要行业由 relation=PRIMARY_INDUSTRY 表达（001_foundation.sql CHECK）。
+          { kind: 'INDUSTRY', relation: 'PRIMARY_INDUSTRY', label: '企业服务' },
           { kind: 'INDUSTRY', relation: 'INDUSTRY', label: '品牌咨询' },
         ],
         roles: [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', grantedAt: '2030-01-15T00:00:00.000Z' }],

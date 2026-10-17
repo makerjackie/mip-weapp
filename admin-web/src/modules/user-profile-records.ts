@@ -15,18 +15,42 @@ export async function loadUserProfileRecords(userId: string, tab: UserRecordTab,
     if (related.section !== tab || !Array.isArray(related[tab])) throw new Error('关联记录字段不完整，请重新加载。')
     return { sections: userRelatedSections(related), nextCursor: typeof related.nextCursor === 'string' ? related.nextCursor : null }
   }
-  const [historyValue, logsValue] = await Promise.all([
-    request('mip.admin.cards.history', { cardId: userId, limit: 20, ...(query.cursor ? { cursor: query.cursor } : {}) }),
-    request('mip.admin.users.operationLogs.list', { userId, limit: 20, ...(query.logCursor ? { cursor: query.logCursor } : {}) }),
+  // 操作记录 Tab：资料历史在前、操作日志在后；两个来源独立降级，互不拖垮。
+  const [history, logs] = await Promise.all([
+    loadUserHistoryPart(userId, query.cursor, request),
+    loadUserLogPart(userId, query.logCursor, request),
   ])
-  const historyPage = record(historyValue)
-  const logsPage = record(logsValue)
-  if (!Array.isArray(historyPage.items) || !Array.isArray(logsPage.items)) throw new Error('档案记录字段不完整，请重新加载。')
-  const historySections = historyPage.items.map(record).map(item => ({ title: `资料版本 ${item.version} · ${dateTime(item.createdAt)}`, fields: cardHistoryFields(record(item.snapshot)) }))
   return {
-    sections: [...historySections, userLogSection(logsPage.items.map(record))],
-    nextCursor: cursorOf(historyPage),
-    logNextCursor: cursorOf(logsPage),
+    sections: [...history.sections, ...logs.sections],
+    nextCursor: history.nextCursor,
+    logNextCursor: logs.nextCursor,
+  }
+}
+
+interface UserRecordPart { sections: AdminDetailSection[]; nextCursor: string | null }
+
+async function loadUserHistoryPart(userId: string, cursor: string | undefined, request: AdminRequest): Promise<UserRecordPart> {
+  try {
+    const page = record(await request('mip.admin.cards.history', { cardId: userId, limit: 20, ...(cursor ? { cursor } : {}) }))
+    if (!Array.isArray(page.items)) throw new Error('资料历史字段不完整')
+    return {
+      sections: page.items.map(record).map(item => ({ title: `资料版本 ${item.version} · ${dateTime(item.createdAt)}`, fields: cardHistoryFields(record(item.snapshot)) })),
+      nextCursor: cursorOf(page),
+    }
+  }
+  catch {
+    return { sections: [{ title: '资料历史', error: '资料历史读取失败，请刷新重试。' }], nextCursor: null }
+  }
+}
+
+async function loadUserLogPart(userId: string, cursor: string | undefined, request: AdminRequest): Promise<UserRecordPart> {
+  try {
+    const page = record(await request('mip.admin.users.operationLogs.list', { userId, limit: 20, ...(cursor ? { cursor } : {}) }))
+    if (!Array.isArray(page.items)) throw new Error('操作日志字段不完整')
+    return { sections: [userLogSection(page.items.map(record))], nextCursor: cursorOf(page) }
+  }
+  catch {
+    return { sections: [{ title: '用户操作日志', error: '操作日志读取失败，请刷新重试。' }], nextCursor: null }
   }
 }
 

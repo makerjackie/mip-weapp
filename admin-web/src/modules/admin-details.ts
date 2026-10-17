@@ -119,8 +119,9 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
   const growth = record(user.growth)
   const counts = record(user.counts)
   const influence = record(user.influence)
+  // 行业标签在 mip_tags.kind 上是 INDUSTRY；PRIMARY_INDUSTRY 是 mip_profile_tags.relation 的取值。
   const industryLabels = records(user.tags)
-    .filter(tag => tag.kind === 'INDUSTRY' || tag.kind === 'PRIMARY_INDUSTRY')
+    .filter(tag => tag.kind === 'INDUSTRY')
     .map(tag => text(tag.label, '')).filter(Boolean)
   const sections: AdminDetailSection[] = [{
     title: '基本信息',
