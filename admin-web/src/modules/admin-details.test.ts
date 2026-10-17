@@ -62,6 +62,59 @@ describe('admin detail views', () => {
     assert.equal(detail.title, '林晓')
   })
 
+  it('splits the user detail into basic and career sections for the six-tab profile (MIW-125)', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('users', 'user-1', requestWith({
+      'mip.admin.users.get': {
+        id: 'user-1', nickname: '林晓', kind: 'PLAYER', status: 'ACTIVE', phoneBound: true, wechatBound: true,
+        realName: '林晓', branchName: '福田分会', cityName: '深圳', identityStatus: '创业者',
+        headline: '品牌顾问', introduction: '专注品牌策略',
+        createdAt: '2030-01-01T00:00:00.000Z', updatedAt: '2030-02-01T00:00:00.000Z', profileVersion: 6, userVersion: 9,
+        companies: [{ name: '远岸咨询', role: '顾问' }], organizations: [{ name: '设计师协会', role: '会员' }],
+        tags: [
+          { kind: 'ABILITY', relation: 'ABILITY', label: '资源整合' },
+          // kind 只能是 INDUSTRY；主要行业由 relation=PRIMARY_INDUSTRY 表达（001_foundation.sql CHECK）。
+          { kind: 'INDUSTRY', relation: 'PRIMARY_INDUSTRY', label: '企业服务' },
+          { kind: 'INDUSTRY', relation: 'INDUSTRY', label: '品牌咨询' },
+        ],
+        roles: [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', grantedAt: '2030-01-15T00:00:00.000Z' }],
+      },
+    }, calls), { includeUserMembership: false })
+
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.users.get'])
+    const basic = detail.sections.find(section => section.title === '基本信息')
+    const career = detail.sections.find(section => section.title === '职业信息')
+    const fieldOf = (section: typeof basic, label: string) => section?.fields?.find(item => item.label === label)?.value
+    // 基础信息：身份/账号/手机/绑定微信/服务器/城市/时间与版本，职业字段一律不在此处。
+    assert.equal(fieldOf(basic, '身份'), '玩家')
+    assert.equal(fieldOf(basic, '账号状态'), '启用')
+    assert.equal(fieldOf(basic, '手机状态'), '已绑定')
+    assert.equal(fieldOf(basic, '绑定微信'), '已绑定')
+    assert.equal(fieldOf(basic, '所属服务器'), '福田分会')
+    assert.equal(fieldOf(basic, '城市'), '深圳')
+    assert.equal(fieldOf(basic, '注册时间'), new Date('2030-01-01T00:00:00.000Z').toLocaleString('zh-CN', { hour12: false }))
+    assert.equal(fieldOf(basic, '资料版本'), '6')
+    assert.equal(fieldOf(basic, '一句话介绍'), undefined)
+    assert.equal(fieldOf(basic, '职业身份'), undefined)
+    // 职业信息：行业来自标签、职业身份、介绍与任职/标签数据。
+    assert.equal(fieldOf(career, '行业'), '企业服务、品牌咨询')
+    assert.equal(fieldOf(career, '职业身份'), '创业者')
+    assert.equal(fieldOf(career, '一句话介绍'), '品牌顾问')
+    assert.equal(fieldOf(career, '个人介绍'), '专注品牌策略')
+    assert.ok(detail.sections.some(section => section.title === '任职信息'))
+    assert.ok(detail.sections.some(section => section.title === '标签'))
+    assert.ok(detail.sections.some(section => section.title === '运营角色'))
+  })
+
+  it('shows wechat binding as unknown until the server reports it (MIW-125, 待联调)', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('users', 'user-1', requestWith({
+      'mip.admin.users.get': { id: 'user-1', nickname: '林晓', kind: 'PLAYER', status: 'ACTIVE' },
+    }, calls), { includeUserMembership: false })
+
+    assert.equal(detail.sections.find(section => section.title === '基本信息')?.fields?.find(item => item.label === '绑定微信')?.value, '—')
+  })
+
   it('aggregates event detail, insights and roster from their read actions', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const detail = await loadAdminDetail('events', 'event-1', requestWith({

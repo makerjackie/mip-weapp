@@ -121,21 +121,32 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
   const influence = record(user.influence)
   // MIW-124：非玩家用户的所属服务器不外显，档案与详情统一显示「—」。
   const branchDisplay = user.kind === 'PLAYER' ? text(user.branchName) : '—'
+  // 行业标签在 mip_tags.kind 上是 INDUSTRY；PRIMARY_INDUSTRY 是 mip_profile_tags.relation 的取值。
+  const industryLabels = records(user.tags)
+    .filter(tag => tag.kind === 'INDUSTRY')
+    .map(tag => text(tag.label, '')).filter(Boolean)
   const sections: AdminDetailSection[] = [{
     title: '基本信息',
     fields: fields([
       ['身份', codeLabel(user.kind)],
       ['账号状态', codeLabel(user.status)],
       ['手机状态', user.phoneBound === true ? '已绑定' : '未绑定'],
+      ['绑定微信', user.wechatBound === true ? '已绑定' : user.wechatBound === false ? '未绑定' : '—'],
+      ['真实姓名', text(user.realName)],
       ['所属服务器', branchDisplay],
       ['城市', text(user.cityName)],
+      ['注册时间', dateTime(user.createdAt)],
+      ['更新时间', dateTime(user.updatedAt)],
       ['资料版本', numberText(user.profileVersion)],
       ['用户版本', numberText(user.userVersion)],
-      ['简介', text(user.headline)],
-      ['个人介绍', text(user.introduction)],
-      ['真实姓名', text(user.realName)],
+    ]),
+  }, {
+    title: '职业信息',
+    fields: fields([
+      ['行业', industryLabels.join('、') || '—'],
       ['职业身份', text(user.identityStatus)],
-      ['注册时间', dateTime(user.createdAt)],
+      ['一句话介绍', text(user.headline)],
+      ['个人介绍', text(user.introduction)],
     ]),
   }]
   if (Object.keys(membership).length || membershipDetail.chainVersion !== undefined) {
