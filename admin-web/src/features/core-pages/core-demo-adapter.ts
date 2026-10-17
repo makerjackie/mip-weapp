@@ -29,17 +29,18 @@ export function createCoreDemoOverview(): AdminOverviewView {
     period: '2030 年 2 月',
     asOf: '演示数据',
     metrics: [
-      { label: '用户总数', value: demo.dashboard.users.toLocaleString('zh-CN'), detail: '演示数据' },
-      { label: '有效会员', value: demo.dashboard.activeMembers.toLocaleString('zh-CN'), detail: '会员权益有效' },
-      { label: '近期活动', value: demo.dashboard.upcomingEvents.toLocaleString('zh-CN'), detail: '未来 30 天' },
-      { label: '待处理订单', value: demo.dashboard.pendingOrders.toLocaleString('zh-CN'), detail: '需要运营跟进' },
+      { label: '当前玩家', value: demo.dashboard.currentPlayers.toLocaleString('zh-CN'), detail: '较上一周期 +12.6%', trend: 'up' },
+      { label: '首年续费', value: demo.dashboard.firstYearRenewals.toLocaleString('zh-CN'), detail: '较上一周期 +8.4%', trend: 'up' },
+      { label: '本月新增玩家', value: demo.dashboard.newPlayersThisMonth.toLocaleString('zh-CN'), detail: '较上一周期 +9.8%', trend: 'up' },
+      { label: '缴费金额', value: `¥${(demo.dashboard.paidAmountCents / 100).toLocaleString('zh-CN')}`, detail: '较上一周期 -3.1%', trend: 'down' },
     ],
-    playerTrend: { available: false, points: [] },
-    attention: [{
-      label: '待处理订单',
-      value: demo.dashboard.pendingOrders.toLocaleString('zh-CN'),
-      target: '/orders',
-    }],
+    playerTrend: { available: true, months: demo.dashboard.playerTrendMonths.map(month => ({ ...month })) },
+    attention: [
+      { label: '30 日内到期会员', value: '1', target: '/users' },
+      { label: '待审核报名', value: '1', target: '/events' },
+      { label: '待验收任务', value: '1', target: '/task-approval' },
+      { label: '消息发送失败', value: '1', target: '/operations' },
+    ],
     activity: demo.dashboard.activity.map((item, index) => ({
       detailId: `demo-activity-${index + 1}`,
       title: item.title,

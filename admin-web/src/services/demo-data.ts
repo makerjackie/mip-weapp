@@ -1,6 +1,21 @@
 export const demo = {
   dashboard: {
-    users: 1284, activeMembers: 436, upcomingEvents: 12, pendingOrders: 8,
+    currentPlayers: 1286, firstYearRenewals: 328, newPlayersThisMonth: 86, paidAmountCents: 12860000,
+    // MIW-123：按月玩家趋势演示数据，生产契约 playerTrend 字段待服务端联调。
+    playerTrendMonths: [
+      { month: '2029-03', newPlayers: 42, firstRenewal: 18, nextRenewal: 6 },
+      { month: '2029-04', newPlayers: 48, firstRenewal: 22, nextRenewal: 7 },
+      { month: '2029-05', newPlayers: 45, firstRenewal: 20, nextRenewal: 8 },
+      { month: '2029-06', newPlayers: 52, firstRenewal: 26, nextRenewal: 9 },
+      { month: '2029-07', newPlayers: 61, firstRenewal: 31, nextRenewal: 11 },
+      { month: '2029-08', newPlayers: 58, firstRenewal: 28, nextRenewal: 10 },
+      { month: '2029-09', newPlayers: 67, firstRenewal: 34, nextRenewal: 12 },
+      { month: '2029-10', newPlayers: 72, firstRenewal: 37, nextRenewal: 13 },
+      { month: '2029-11', newPlayers: 69, firstRenewal: 35, nextRenewal: 12 },
+      { month: '2029-12', newPlayers: 78, firstRenewal: 41, nextRenewal: 14 },
+      { month: '2030-01', newPlayers: 74, firstRenewal: 38, nextRenewal: 13 },
+      { month: '2030-02', newPlayers: 86, firstRenewal: 44, nextRenewal: 15 },
+    ],
     activity: [
       { title: 'MIP 早会｜城市增长与资源协作', meta: '2030-03-14 10:00 · 深圳福田', status: '已发布' },
       { title: 'MIP 早会｜品牌与产品实践', meta: '2030-03-21 10:00 · 深圳福田', status: '报名中' },

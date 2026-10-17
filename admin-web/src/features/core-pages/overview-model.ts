@@ -1,4 +1,4 @@
-import type { AdminRequestInput } from '../../domain/contracts'
+import type { AdminOverviewPlayerTrend, AdminRequestInput } from '../../domain/contracts'
 import type { AdminRequest } from '../../modules/admin-read-pages'
 
 export interface AdminOverviewMetric {
@@ -19,7 +19,7 @@ export interface AdminOverviewActivityRow {
 export interface AdminOverviewAttentionItem {
   label: string
   value: string
-  target: '/users' | '/events' | '/orders' | '/tasks'
+  target: '/users' | '/events' | '/orders' | '/tasks' | '/operations' | '/task-approval'
 }
 
 export interface AdminOverviewPurchasePoint {
@@ -34,10 +34,7 @@ export interface AdminOverviewView {
   period: string
   asOf: string
   metrics: AdminOverviewMetric[]
-  playerTrend: {
-    available: boolean
-    points: Array<{ label: string; value: number }>
-  }
+  playerTrend: AdminOverviewPlayerTrend
   purchaseTrend?: { available: boolean; points?: AdminOverviewPurchasePoint[]; rows: Array<{ [key: string]: unknown; date: string; initial: string; firstRenewal: string; repeatRenewal: string; paidAmount: string }> }
   attention: AdminOverviewAttentionItem[]
   activity: AdminOverviewActivityRow[]
@@ -59,17 +56,18 @@ export function mapAdminOverview(value: unknown): AdminOverviewView {
     period: dateRange(period.startAt, period.endAt),
     asOf: formatDate(data.asOf, '数据时间未提供'),
     metrics: [
+      metric('当前玩家', membership.currentPlayers, '当前可见范围'),
+      metric('首年续费', purchases.firstRenewals, '所选时间范围'),
+      metric('本月新增玩家', people.newAccounts, '所选时间范围'),
+      moneyMetric('缴费金额', purchases.eligiblePaidAmount),
       metric('用户总数', people.activeAccounts, '当前可见范围'),
-      metric('有效会员', membership.currentPlayers, '付费权益有效'),
       metric('活动总数', events.totalEvents, '当前可见范围'),
       metric('有效报名', events.effectiveRegistrations, '所选时间范围'),
-      metric('新增用户', people.newAccounts, '所选时间范围'),
       metric('已完善档案', people.profiledUsers, '当前可见范围'),
       metric('30 日互动玩家', people.interactingPlayers30d, '最近 30 日'),
       metric('访客次数', people.recordedProfileVisits, '所选时间范围'),
       metric('访客人数', people.distinctProfileVisitors, '所选时间范围'),
       metric('首次会籍购买', record(membership.purchaseFlow).initialPurchases, '所选时间范围'),
-      metric('首次续费', record(membership.purchaseFlow).firstRenewals, '所选时间范围'),
       metric('再次续费', record(membership.purchaseFlow).repeatRenewals, '所选时间范围'),
       metric('机会总数', record(data.opportunities).totalOpportunities, '当前可见范围'),
       metric('招募中机会', record(data.opportunities).publishedOpportunities, '当前可见范围'),
@@ -79,19 +77,18 @@ export function mapAdminOverview(value: unknown): AdminOverviewView {
       metric('已发布任务', record(data.tasks).publishedTasks, '当前可见范围'),
       metric('成功完成任务', record(data.tasks).successfulCompletions, '所选时间范围'),
       metric('任务发放经验', record(data.tasks).awardedExperience, '所选时间范围'),
-      moneyMetric('会籍实付金额', purchases.eligiblePaidAmount),
       metric('活动缴费订单', record(events.financials).paidOrders, '所选时间范围'),
       moneyMetric('活动实付金额', record(events.financials).grossAmount),
       moneyMetric('活动退款金额', record(events.financials).refundedAmount),
       moneyMetric('活动净收入', record(events.financials).netAmount),
     ],
-    // The current neutral overview contract has no player-count time series;
-    // purchase/registration series are not a player-count trend and must not be substituted.
-    playerTrend: { available: false, points: [] },
+    playerTrend: playerTrend(data.playerTrend),
     purchaseTrend: purchaseTrend(purchases),
     attention: [
       attention('30 日内到期会员', membership.expiringPlayers30d, '/users'),
       attention('待审核报名', events.pendingReviewRegistrations, '/events'),
+      attention('待验收任务', record(data.tasks).pendingReview, '/task-approval'),
+      attention('消息发送失败', record(data.messaging).deliveryFailed, '/operations'),
     ].filter((item): item is AdminOverviewAttentionItem => item !== null),
     activity: Array.isArray(operations.activity)
       ? operations.activity.map((item, index) => {
@@ -122,7 +119,38 @@ function purchaseTrend(purchases: Record<string, unknown>): NonNullable<AdminOve
 
 function moneyMetric(label: string, source: unknown): AdminOverviewMetric {
   const value = record(source)
-  return { label, value: value.availability === 'AVAILABLE' && typeof value.amountCents === 'number' && Number.isSafeInteger(value.amountCents) ? `¥${(value.amountCents / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—', detail: value.availability === 'AVAILABLE' ? '所选时间范围 · 人民币' : availabilityLabel(value.availability) }
+  if (value.availability !== 'AVAILABLE' || typeof value.amountCents !== 'number' || !Number.isSafeInteger(value.amountCents)) {
+    return { label, value: '—', detail: availabilityLabel(value.availability), trend: 'neutral' }
+  }
+  const amount = `¥${(value.amountCents / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  // 金额环比字段待服务端联调；缺失时保持金额与统计范围，不虚构对比。
+  const comparison = record(value.comparison)
+  const delta = Number(comparison.deltaAmountCents)
+  if (comparison.availability !== 'AVAILABLE' || !Number.isFinite(delta)) {
+    return { label, value: amount, detail: '所选时间范围 · 人民币', trend: 'neutral' }
+  }
+  const formatted = `¥${(Math.abs(delta) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return {
+    label,
+    value: amount,
+    detail: delta === 0 ? '与上一周期持平' : `较上一周期 ${delta > 0 ? '+' : '-'}${formatted}`,
+    trend: delta > 0 ? 'up' : delta < 0 ? 'down' : 'neutral',
+  }
+}
+
+function playerTrend(source: unknown): AdminOverviewPlayerTrend {
+  const value = record(source)
+  const months = Array.isArray(value.months)
+    ? (value.months as unknown[]).map(item => {
+        const month = record(item)
+        const count = (key: string) => {
+          const parsed = Number(month[key])
+          return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : 0
+        }
+        return { month: String(month.month || ''), newPlayers: count('newPlayers'), firstRenewal: count('firstRenewal'), nextRenewal: count('nextRenewal') }
+      }).filter(month => /^(\d{4})-(0[1-9]|1[0-2])$/.test(month.month))
+    : []
+  return { available: value.available === true && months.length > 0, months }
 }
 
 function metric(label: string, source: unknown, fallbackDetail: string): AdminOverviewMetric {

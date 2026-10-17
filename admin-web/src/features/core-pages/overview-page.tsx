@@ -8,7 +8,7 @@ import {
   SafetyCertificateOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
-import { Alert, Button, Card, Collapse, DatePicker, Segmented, Select, Space, Tabs, Tag } from 'antd'
+import { Alert, Button, Card, Collapse, DatePicker, Select, Space, Tabs, Tag } from 'antd'
 import { lazy, Suspense, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import type { AdminRequestInput } from '../../domain/contracts'
@@ -49,10 +49,9 @@ export function OverviewPage({ onNavigate }: OverviewPageProps) {
   }), [preset, branchId, range])
   const query = useAdminOverview(input)
   const quickActions: Array<{ label: string; target: CoreNavigationTarget }> = []
-  if (hasCapability('users.read')) quickActions.push({ label: '用户管理', target: '/users' })
-  if (hasCapability('events.read')) quickActions.push({ label: '活动管理', target: '/events' })
-  if (hasCapability('orders.read')) quickActions.push({ label: '订单管理', target: '/orders' })
-  if (hasCapability('operations.exceptions.read')) quickActions.push({ label: '运营记录', target: '/operations' })
+  if (hasCapability('events.write')) quickActions.push({ label: '创建活动', target: '/events/new/edit' })
+  if (hasCapability('tasks.manage')) quickActions.push({ label: 'NPC 任务', target: '/task-approval' })
+  if (hasCapability('orders.read')) quickActions.push({ label: '订单查询', target: '/orders' })
   return (
     <PermissionGuard capabilities={['admin.dashboard']}>
       <OverviewPageView
@@ -90,7 +89,6 @@ export function OverviewPageView({
   onNavigate: (target: CoreNavigationTarget) => void
   onRetry?: () => void
 }) {
-  const [trendMode, setTrendMode] = useState<'count' | 'amount'>('count')
   const [showAllActivity, setShowAllActivity] = useState(false)
   const groups = data ? groupOverviewMetrics(data.metrics) : []
   const attention = data?.attention.filter(item => item.value !== '0') || []
@@ -107,14 +105,13 @@ export function OverviewPageView({
         </section>
         <div className="overview-focus-grid">
           <Card className="core-panel" title="会籍购买与续费趋势" variant="borderless" extra={<Tag>{data.period}</Tag>}>
-            {data.purchaseTrend?.available && data.purchaseTrend.rows.length ? <>
-              <div className="overview-chart-toolbar"><Segmented aria-label="趋势指标" value={trendMode} onChange={value => setTrendMode(value as 'count' | 'amount')} options={[{ value: 'count', label: '购买次数' }, { value: 'amount', label: '实付金额' }]} /><span>{trendMode === 'count' ? '单位：次' : '单位：元'}</span></div>
-              <Suspense fallback={<LoadingState />}><PurchaseChart points={data.purchaseTrend.points || []} mode={trendMode} /></Suspense>
-              <Collapse ghost items={[{ key: 'daily', label: `查看逐日明细（${data.purchaseTrend.rows.length} 天）`, children: <div className="overview-trend-details"><DataTable label="会籍购买与续费逐日明细" rows={data.purchaseTrend.rows} columns={[{ key: 'date', label: '日期' }, { key: 'initial', label: '首次购买' }, { key: 'firstRenewal', label: '首次续费' }, { key: 'repeatRenewal', label: '再次续费' }, { key: 'paidAmount', label: '实付（元）' }]} /></div> }]} />
-            </> : <EmptyState title="暂无会籍趋势" description="当前范围暂无可展示的会籍购买记录。" />}
+            {data.playerTrend.available && data.playerTrend.months.length ? <Suspense fallback={<LoadingState />}><PurchaseChart months={data.playerTrend.months} /></Suspense>
+              : <EmptyState title="暂无会籍趋势" description="当前范围暂无可展示的按月新增与续费趋势。" />}
+            {data.purchaseTrend?.rows.length ? <Collapse ghost items={[{ key: 'daily', label: `查看逐日明细（${data.purchaseTrend.rows.length} 天）`, children: <div className="overview-trend-details"><DataTable label="会籍购买与续费逐日明细" rows={data.purchaseTrend.rows} columns={[{ key: 'date', label: '日期' }, { key: 'initial', label: '首次购买' }, { key: 'firstRenewal', label: '首次续费' }, { key: 'repeatRenewal', label: '再次续费' }, { key: 'paidAmount', label: '实付（元）' }]} /></div> }]} /> : null}
           </Card>
           <Card className="core-panel overview-workbench" title="运营待办" variant="borderless">
             {attention.length ? <ul className="overview-attention">{attention.map(item => <li key={item.target}><Button type="text" block onClick={() => onNavigate(item.target)}><span>{item.label}</span><strong>{item.value}</strong><ArrowRightOutlined /></Button></li>)}</ul> : <div className="overview-clear"><CheckCircleOutlined /><strong>{data.attention.length ? '当前没有待办' : '暂无待办数据'}</strong><span>{data.attention.length ? '已统计的待办均为 0 条' : '暂无可显示的待办数据'}</span></div>}
+            <p className="overview-attention-note">运营待办共分 8 类，当前展示到期、审核与发送类，其余类别将在后续分期开放。</p>
             {data.attention.some(item => item.value === '0') ? <div className="overview-checked-items">{data.attention.filter(item => item.value === '0').map(item => <span key={item.target}><CheckCircleOutlined />{item.label}：0</span>)}</div> : null}
             <div className="overview-shortcuts"><h2>常用入口</h2>{quickActions.map(item => <Button key={item.target} onClick={() => onNavigate(item.target)}>{item.label}<ArrowRightOutlined /></Button>)}{!quickActions.length ? <span>暂无可用入口</span> : null}</div>
           </Card>
@@ -123,7 +120,6 @@ export function OverviewPageView({
         <Card className="core-panel overview-activity" title="最近动态" variant="borderless" extra={data.activity.length > 6 ? <Button type="link" onClick={() => setShowAllActivity(value => !value)}>{showAllActivity ? '收起动态' : `查看全部（${data.activity.length}）`}</Button> : undefined}>
           {activity.length ? <ul className="overview-activity-list">{activity.map(item => <li key={item.detailId}><span className="overview-activity-icon"><FileSearchOutlined /></span><div><strong>{item.title}</strong><small>{item.meta}</small></div><Tag>{item.state}</Tag></li>)}</ul> : <EmptyState title="暂无系统动态" description="当前范围没有可显示的业务记录。" />}
         </Card>
-        {!data.playerTrend.available ? <p className="overview-data-note">玩家增长趋势暂无数据，暂不展示。</p> : null}
       </> : null}
     </>
   )
