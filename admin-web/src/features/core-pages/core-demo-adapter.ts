@@ -136,6 +136,8 @@ function demoOrdersPage(): AdminReadPage {
         { key: 'type', label: '订单类型' },
         { key: 'resource', label: '订单内容' },
         { key: 'amount', label: '金额' },
+        { key: 'paidAt', label: '支付时间' },
+        { key: 'completedAt', label: '完成时间' },
         { key: 'createdAt', label: '创建时间' },
         { key: 'state', label: '状态' },
       ],

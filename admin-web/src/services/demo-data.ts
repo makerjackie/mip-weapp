@@ -41,10 +41,11 @@ export const demo = {
     { id: 'CAT-TAG-2', kind: 'TAG', name: '集会', description: '', status: 'ACTIVE', version: 1, sortOrder: 20, usageCount: 4 },
     { id: 'CAT-TAG-3', kind: 'TAG', name: '沙龙', description: '', status: 'INACTIVE', version: 2, sortOrder: 30, usageCount: 0 },
   ],
+  // 支付/完成时间口径：会费订单完成时间=支付成功时间；活动订单完成时间=活动开始时间（2030-03-14 早会）。
   orders: [
-    { id: 'ORD-20300018', user: '林晓', type: '年度会员', amount: '¥6,000.00', status: '已支付', createdAt: '2030-02-16 14:20' },
-    { id: 'ORD-20300019', user: '陈默', type: 'MIP 早会门票', amount: '¥199.00', status: '待确认', createdAt: '2030-02-18 09:12' },
-    { id: 'ORD-20300020', user: '周宁', type: '活动门票', amount: '¥299.00', status: '已关闭', createdAt: '2030-02-18 08:48' },
+    { id: 'ORD-20300018', user: '林晓', type: '年度会员', amount: '¥6,000.00', status: '已支付', paidAt: '2030-02-16 14:25', completedAt: '2030-02-16 14:25', createdAt: '2030-02-16 14:20' },
+    { id: 'ORD-20300019', user: '陈默', type: 'MIP 早会门票', amount: '¥199.00', status: '待确认', paidAt: '', completedAt: '2030-03-14 10:00', createdAt: '2030-02-18 09:12' },
+    { id: 'ORD-20300020', user: '周宁', type: '活动门票', amount: '¥299.00', status: '已关闭', paidAt: '', completedAt: '', createdAt: '2030-02-18 08:48' },
   ],
   tasks: [
     { name: 'MIP 早会复盘', reward: '30', assignment: '指定成员', assigned: '24', completed: '18', endsAt: '2030-03-31 18:00', updatedAt: '2030-03-22 11:20', state: '已发布' },
