@@ -2,7 +2,7 @@ import type { AdminListQuery, AdminTableColumn, AdminTableRow } from './admin-re
 
 export const labels: Record<string, string> = {
   ACTIVE: '启用', BLOCKED: '已限制', CLOSED: '已关闭', INACTIVE: '停用', REVOKED: '已撤销',
-  PLAYER: '玩家', GUEST: '嘉宾', PLATFORM: '平台', BRANCH: '服务器', EVENT: '活动', OPPORTUNITY: '机会',
+  PLAYER: '玩家', GUEST: '嘉宾', NORMAL: '普通用户', PLATFORM: '平台', BRANCH: '服务器', EVENT: '活动', OPPORTUNITY: '机会',
   DRAFT: '草稿', READY: '待发布', PUBLISHED: '已发布', UNPUBLISHED: '已下架',
   CANCELLED: '已取消', ENDED: '已结束', ARCHIVED: '已归档', WITHDRAWN: '已撤回',
   CREATED: '待支付', PAYMENT_CREATED: '支付处理中', PAID: '已支付', FAILED: '失败',
@@ -226,4 +226,50 @@ export function campaignAudienceLabel(campaign: Record<string, unknown>) {
   const selected = Array.isArray(campaign.recipientRefs) ? campaign.recipientRefs.length : 0
   if (selected) return `指定 ${selected} 人`
   return Number(campaign.recipientCount) > 0 ? `指定 ${Number(campaign.recipientCount)} 人` : '指定用户'
+}
+
+// MIW-124：玩家权益到期分档展示口径。CURRENT 按 expiresAt 细分（30 日内=本月到期、
+// 下个自然月=下个月到期、其余=生效中）；FORMER=已到期未续费；NEVER=「—」。
+export const playerStatusLabels: Record<string, string> = {
+  ACTIVE: '生效中', EXPIRING_THIS_MONTH: '本月到期', NEXT_MONTH: '下个月到期', EXPIRED: '已到期未续费',
+}
+
+export function normalizePlayerStatusFilter(value: unknown): string {
+  const key = String(value || '')
+  // 服务端 CURRENT/FORMER/NEVER 枚举兼容：按新分档映射展示。
+  if (key === 'CURRENT') return 'ACTIVE'
+  if (key === 'FORMER') return 'EXPIRED'
+  return key
+}
+
+export function playerStatusFilterLabel(value: unknown): string {
+  const key = normalizePlayerStatusFilter(value)
+  return playerStatusLabels[key] || (key === 'NEVER' ? '—' : '')
+}
+
+export function currentPlayerStatusLabel(expiresAt: unknown, now = Date.now()): string {
+  const time = new Date(String(expiresAt || '')).getTime()
+  if (!expiresAt || Number.isNaN(time)) return playerStatusLabels.ACTIVE
+  if (time - now <= EXPIRING_WINDOW_MS) return playerStatusLabels.EXPIRING_THIS_MONTH
+  if (isNextCalendarMonth(time, now)) return playerStatusLabels.NEXT_MONTH
+  return playerStatusLabels.ACTIVE
+}
+
+export function playerStatusLabel(item: AdminTableRow, now = Date.now()): string {
+  if (item.kind === 'PLAYER') return currentPlayerStatusLabel(item.latestEntitlementEndsAt, now)
+  // FORMER：有玩家历史（玩家号、首次成为玩家时间或有效会籍时长）但当前无效；NEVER：从未开通。
+  const hasPlayerHistory = (item.firstPlayerAt !== undefined && item.firstPlayerAt !== null && item.firstPlayerAt !== '')
+    || (item.playerNumber !== undefined && item.playerNumber !== null)
+    || Number(item.totalValidMembershipSeconds) > 0
+  return hasPlayerHistory ? playerStatusLabels.EXPIRED : '—'
+}
+
+const EXPIRING_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
+
+function isNextCalendarMonth(time: number, now: number) {
+  const expires = new Date(time)
+  const anchor = new Date(now)
+  anchor.setDate(1)
+  anchor.setMonth(anchor.getMonth() + 1)
+  return expires.getFullYear() === anchor.getFullYear() && expires.getMonth() === anchor.getMonth()
 }

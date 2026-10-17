@@ -119,13 +119,15 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
   const growth = record(user.growth)
   const counts = record(user.counts)
   const influence = record(user.influence)
+  // MIW-124：非玩家用户的所属服务器不外显，档案与详情统一显示「—」。
+  const branchDisplay = user.kind === 'PLAYER' ? text(user.branchName) : '—'
   const sections: AdminDetailSection[] = [{
     title: '基本信息',
     fields: fields([
       ['身份', codeLabel(user.kind)],
       ['账号状态', codeLabel(user.status)],
       ['手机状态', user.phoneBound === true ? '已绑定' : '未绑定'],
-      ['所属服务器', text(user.branchName)],
+      ['所属服务器', branchDisplay],
       ['城市', text(user.cityName)],
       ['资料版本', numberText(user.profileVersion)],
       ['用户版本', numberText(user.userVersion)],
@@ -190,7 +192,7 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
   return {
     route: 'users',
     title: text(user.nickname, '用户详情'),
-    subtitle: [text(user.branchName, ''), text(user.cityName, '')].filter(Boolean).join(' · '),
+    subtitle: [user.kind === 'PLAYER' ? text(user.branchName, '') : '', text(user.cityName, '')].filter(Boolean).join(' · '),
     status: codeLabel(user.kind),
     sections,
     source: { user, membership: membershipDetail },

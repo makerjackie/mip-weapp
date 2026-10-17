@@ -22,10 +22,13 @@ export const demo = {
       { title: 'MIP 早会｜团队执行与项目复盘', meta: '2030-03-28 10:00 · 深圳福田', status: '草稿' },
     ],
   },
+  // MIW-124：用户演示数据按生产列表口径（当前角色/玩家权益状态分档）；USR-1004 为普通用户，
+  // 用于验证「身份=普通用户」筛选链路。非玩家所属服务器按口径显示「—」。
   users: [
-    { id: 'USR-1001', name: '林晓', company: '远岸品牌咨询', role: '策略策划', phone: '188****3403', status: '有效会员', branch: '深圳福田' },
-    { id: 'USR-1002', name: '周宁', company: '新域投资', role: '资本合作', phone: '139****2811', status: '嘉宾', branch: '香港' },
-    { id: 'USR-1003', name: '陈默', company: '木棉设计', role: '视觉设计', phone: '186****9077', status: '有效会员', branch: '中山' },
+    { id: 'USR-1001', name: '林晓', phone: '188****3403', role: '玩家', industry: '品牌咨询', profession: '策略策划', level: 'Lv.8', contribution: '3.28K', playerStatus: '生效中', createdAt: '2029-06-12 10:24', expiresAt: '2030-05-18 23:59', branch: '深圳福田' },
+    { id: 'USR-1002', name: '周宁', phone: '139****2811', role: '嘉宾', industry: '投资', profession: '资本合作', level: 'Lv.3', contribution: '620', playerStatus: '—', createdAt: '2029-11-02 18:40', expiresAt: '—', branch: '—' },
+    { id: 'USR-1003', name: '陈默', phone: '186****9077', role: '玩家', industry: '设计', profession: '视觉设计', level: 'Lv.5', contribution: '1.6K', playerStatus: '本月到期', createdAt: '2030-01-20 09:05', expiresAt: '2030-03-02 23:59', branch: '中山' },
+    { id: 'USR-1004', name: '苏蔓', phone: '137****5520', role: '普通用户', industry: '消费品牌', profession: '品牌主理人', level: 'Lv.1', contribution: '80', playerStatus: '—', createdAt: '2030-02-14 20:12', expiresAt: '—', branch: '—' },
   ],
   events: [
     { id: 'EVT-20300314', title: 'MIP 早会｜城市增长与资源协作', time: '2030-03-14 10:00–12:00', location: '深圳市福田区福华三路 118 号', registrations: 36, status: '已发布' },

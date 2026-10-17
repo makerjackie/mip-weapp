@@ -24,7 +24,8 @@ describe('core admin pages', () => {
       sections: [{ rows: [{ name: '赵', detailId: 'user-z' }, { name: '阿', detailId: 'user-a' }], columns: [{ key: 'name', label: '姓名' }] }], nextCursor: 'more',
     }} onSearchChange={() => {}} onOpenDetail={() => {}} />)
     await user.click(screen.getByRole('columnheader', { name: '姓名' }))
-    expect(screen.getAllByRole('row').slice(1).map(row => row.textContent)).toEqual(['赵查看', '阿查看'])
+    // 用户列表按原型口径无操作列，行内只有数据本身。
+    expect(screen.getAllByRole('row').slice(1).map(row => row.textContent)).toEqual(['赵', '阿'])
   })
   it('maps the authoritative overview without inventing a player trend', () => {
     const view = mapAdminOverview({
@@ -119,7 +120,8 @@ describe('core admin pages', () => {
     await user.click(screen.getByRole('button', { name: /筛\s*选/ }))
     await waitFor(() => expect(onSearchChange).toHaveBeenCalledWith(expect.objectContaining({ q: '林晓', cursor: undefined, page: undefined })))
 
-    await user.click(screen.getByRole('button', { name: '查看' }))
+    // 整行点击进入用户档案（原型口径：无操作列）。
+    await user.click(screen.getByText('林晓'))
     expect(onOpenDetail).toHaveBeenCalledWith(expect.objectContaining({ route: 'users', id: 'user-1' }))
 
     await user.click(screen.getByRole('button', { name: '下一页' }))
@@ -135,6 +137,24 @@ describe('core admin pages', () => {
     })
     expect(page.sections[0].rows).toHaveLength(1)
     expect(page.sections[0].rows[0].detailId).toBe('USR-1001')
+  })
+
+  it('renders the prototype user list columns and filters demo users by identity and expiry buckets', () => {
+    const page = createCoreDemoReadPage('users', { query: '', status: '', cursor: null, limit: 20 })
+    expect(page.sections[0].columns.map(column => column.label)).toEqual([
+      '头像', '昵称', '手机号', '当前角色', '行业', '当前身份', '用户等级', '贡献值', '玩家权益状态', '用户注册时间', '玩家到期时间',
+    ])
+    expect(page.sections[0].rows.map(row => row.playerStatus)).toEqual(['生效中', '—', '本月到期', '—'])
+
+    const normal = createCoreDemoReadPage('users', { query: '', status: '', cursor: null, limit: 20, filters: { kind: 'NORMAL' } })
+    expect(normal.sections[0].rows.map(row => row.detailId)).toEqual(['USR-1004'])
+    expect(normal.sections[0].rows[0].role).toBe('普通用户')
+
+    const expiring = createCoreDemoReadPage('users', { query: '', status: '', cursor: null, limit: 20, filters: { playerLifecycle: 'EXPIRING_THIS_MONTH' } })
+    expect(expiring.sections[0].rows.map(row => row.detailId)).toEqual(['USR-1003'])
+
+    const guest = createCoreDemoReadPage('users', { query: '', status: '', cursor: null, limit: 20, filters: { kind: 'GUEST' } })
+    expect(guest.sections[0].rows.map(row => row.detailId)).toEqual(['USR-1002'])
   })
 
   it('keeps event policy and catalog operations reachable with their server-projected context', async () => {

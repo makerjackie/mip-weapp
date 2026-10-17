@@ -13,6 +13,7 @@ export function DataTable({
   rows,
   columns,
   onView,
+  onRowClick,
   renderActions,
   selectable,
   batchActions,
@@ -24,6 +25,7 @@ export function DataTable({
   rows: AdminTableRow[]
   columns: AdminTableColumn[]
   onView?: (row: AdminTableRow) => void
+  onRowClick?: (row: AdminTableRow) => void
   renderActions?: (row: AdminTableRow) => React.ReactNode
   selectable?: boolean
   batchActions?: readonly BatchAction[]
@@ -97,6 +99,14 @@ export function DataTable({
         scroll={{ x: 'max-content' }}
         locale={{ emptyText: <EmptyState /> }}
         rowSelection={selectionConfig}
+        onRow={onRowClick ? (row): React.HTMLAttributes<HTMLTableRowElement> => ({
+          onClick: () => onRowClick(row),
+          onKeyDown: event => {
+            if (event.key === 'Enter' || event.key === ' ') onRowClick(row)
+          },
+          tabIndex: 0,
+          style: { cursor: 'pointer' },
+        }) : undefined}
       />
       {batchActions?.length ? (
         <BatchActionBar
