@@ -30,7 +30,7 @@ it('retains every secondary metric including future unclassified metrics', () =>
   const data = mapAdminOverview({})
   data.metrics.push({ label: '新增指标', value: '—', detail: '暂未统计' })
   expect(groupOverviewMetrics(data.metrics).flatMap(group => group.metrics)).toHaveLength(data.metrics.length - 4)
-  expect(groupOverviewMetrics(data.metrics).at(-1)?.metrics[0].label).toBe('新增指标')
+  expect(groupOverviewMetrics(data.metrics).at(-1)?.metrics.at(-1)?.label).toBe('新增指标')
 })
 
 it('shows four headline cards and lets operators inspect grouped values and pending work', async () => {

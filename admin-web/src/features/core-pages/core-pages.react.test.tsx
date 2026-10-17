@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AdminReadPage } from '../../modules/admin-read-pages'
-import { createCoreDemoReadPage } from './core-demo-adapter'
+import { createCoreDemoOverview, createCoreDemoReadPage } from './core-demo-adapter'
 import { CoreListPageView } from './core-list-pages'
 import { mapAdminOverview } from './overview-model'
 import { OverviewPageView } from './overview-page'
@@ -30,10 +30,15 @@ describe('core admin pages', () => {
     const view = mapAdminOverview({
       asOf: '2030-03-01T00:00:00.000Z',
       period: { startAt: '2030-02-01T00:00:00.000Z', endAt: '2030-02-28T00:00:00.000Z' },
-      people: { activeAccounts: count(1284, 84) },
-      membership: { currentPlayers: count(436, 12), expiringPlayers30d: count(9, 1) },
+      people: { newAccounts: count(84, 6) },
+      membership: {
+        currentPlayers: count(1284, 84),
+        expiringPlayers30d: count(9, 1),
+        purchaseFlow: { availability: 'AVAILABLE', firstRenewals: count(328, 25) },
+      },
       events: { totalEvents: count(12, 2), effectiveRegistrations: count(96, 8), pendingReviewRegistrations: count(4, 0) },
       tasks: { pendingReview: count(3, 0) },
+      messaging: { deliveryFailed: count(2, 1) },
       operations: {
         activity: [{
           id: 'activity-1',
@@ -44,18 +49,56 @@ describe('core admin pages', () => {
         }],
       },
     })
-    expect(view.metrics.slice(0, 4).map(item => item.value)).toEqual(['1,284', '436', '12', '96'])
-    expect(view.metrics.slice(4).every(item => item.value === '—')).toBe(true)
-    expect(view.playerTrend).toEqual({ available: false, points: [] })
-    expect(view.attention.map(item => item.label)).toEqual(['30 日内到期会员', '待审核报名'])
+    expect(view.metrics.slice(0, 4).map(item => item.label)).toEqual(['当前玩家', '首年续费', '本月新增玩家', '缴费金额'])
+    expect(view.metrics.slice(0, 4).map(item => item.value)).toEqual(['1,284', '328', '84', '—'])
+    expect(view.metrics.find(item => item.label === '活动总数')).toMatchObject({ value: '12', trend: 'up' })
+    expect(view.metrics.find(item => item.label === '有效报名')).toMatchObject({ value: '96', trend: 'up' })
+    expect(view.metrics.find(item => item.label === '用户总数')?.value).toBe('—')
+    expect(view.playerTrend).toEqual({ available: false, months: [] })
+    expect(view.attention.map(item => item.label)).toEqual(['30 日内到期会员', '待审核报名', '待验收任务', '消息发送失败'])
+    expect(view.attention.map(item => item.target)).toEqual(['/users', '/events', '/task-approval', '/operations'])
     expect(view.activity[0]).toMatchObject({ title: 'MIP 早会', state: '活动报名' })
+  })
+  it('maps the monthly player trend only when the payload carries valid months', () => {
+    const absent = mapAdminOverview({})
+    expect(absent.playerTrend).toEqual({ available: false, months: [] })
+    const view = mapAdminOverview({
+      playerTrend: {
+        available: true,
+        months: [
+          { month: '2030-01', newPlayers: 74, firstRenewal: 38, nextRenewal: 13 },
+          { month: '2030-02', newPlayers: 86, firstRenewal: 44, nextRenewal: 15 },
+        ],
+      },
+    })
+    expect(view.playerTrend.available).toBe(true)
+    expect(view.playerTrend.months).toEqual([
+      { month: '2030-01', newPlayers: 74, firstRenewal: 38, nextRenewal: 13 },
+      { month: '2030-02', newPlayers: 86, firstRenewal: 44, nextRenewal: 15 },
+    ])
+    expect(mapAdminOverview({ playerTrend: { available: true, months: [{ month: '2030-13', newPlayers: 1 }] } }).playerTrend.available).toBe(false)
   })
   it('shows authoritative purchase buckets and monetary units while keeping restricted metrics unknown', () => {
     const view = mapAdminOverview({ membership: { purchaseFlow: { availability: 'AVAILABLE', eligiblePaidAmount: { availability: 'AVAILABLE', amountCents: 1990 }, series: [{ bucketStartDate: '2030-01-01', initialPurchaseCount: 1, firstRenewalCount: 0, repeatRenewalCount: 2, eligiblePaidAmountCents: 1990 }] } }, events: { financials: { netAmount: { availability: 'RESTRICTED', amountCents: null } } } })
-    expect(view.metrics.find(item => item.label === '会籍实付金额')?.value).toBe('¥19.90')
+    expect(view.metrics.find(item => item.label === '缴费金额')?.value).toBe('¥19.90')
     expect(view.metrics.find(item => item.label === '活动净收入')?.value).toBe('—')
     expect(view.purchaseTrend?.rows).toEqual([{ date: '2030-01-01', initial: '1', firstRenewal: '0', repeatRenewal: '2', paidAmount: '19.90' }])
     expect(view.playerTrend.available).toBe(false)
+  })
+  it('keeps the paid amount comparison a server fact instead of a client calculation', () => {
+    const compared = mapAdminOverview({ membership: { purchaseFlow: { eligiblePaidAmount: { availability: 'AVAILABLE', amountCents: 12860000, comparison: { availability: 'AVAILABLE', previousAmountCents: 13280000, deltaAmountCents: -420000 } } } } })
+    expect(compared.metrics.find(item => item.label === '缴费金额')).toMatchObject({ value: '¥128,600.00', detail: '较上一周期 -¥4,200.00', trend: 'down' })
+    const flat = mapAdminOverview({ membership: { purchaseFlow: { eligiblePaidAmount: { availability: 'AVAILABLE', amountCents: 12860000 } } } })
+    expect(flat.metrics.find(item => item.label === '缴费金额')).toMatchObject({ value: '¥128,600.00', detail: '所选时间范围 · 人民币', trend: 'neutral' })
+  })
+  it('keeps demo overview fixtures aligned with the PRD headline cards', () => {
+    const view = createCoreDemoOverview()
+    expect(view.metrics.map(item => item.label)).toEqual(['当前玩家', '首年续费', '本月新增玩家', '缴费金额'])
+    expect(view.metrics.map(item => item.value)).toEqual(['1,286', '328', '86', '¥128,600'])
+    expect(view.playerTrend.available).toBe(true)
+    expect(view.playerTrend.months).toHaveLength(12)
+    expect(view.playerTrend.months.at(-1)).toMatchObject({ month: '2030-02', newPlayers: 86 })
+    expect(view.attention.map(item => item.label)).toEqual(['30 日内到期会员', '待审核报名', '待验收任务', '消息发送失败'])
   })
 
   it('exposes URL search, detail and cursor pagination through callbacks', async () => {
@@ -182,13 +225,14 @@ describe('core admin pages', () => {
     render(
       <OverviewPageView
         data={data}
-        quickActions={[{ label: '用户管理', target: '/users' }]}
+        quickActions={[{ label: '订单查询', target: '/orders' }]}
         onNavigate={onNavigate}
       />,
     )
-    expect(screen.getByText('玩家增长趋势暂无数据，暂不展示。')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /用户管理/ }))
-    expect(onNavigate).toHaveBeenCalledWith('/users')
+    expect(screen.getByText('暂无会籍趋势')).toBeInTheDocument()
+    expect(screen.getByText(/其余类别将在后续分期接入/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /订单查询/ }))
+    expect(onNavigate).toHaveBeenCalledWith('/orders')
   })
 })
 

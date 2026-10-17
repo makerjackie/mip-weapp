@@ -75,7 +75,8 @@ type OperationsRoute = 'tasks' | 'banners' | 'game' | 'opportunities' | 'growth'
 
 export function OverviewRoutePage() {
   const navigate = useNavigate()
-  return <OverviewPage onNavigate={target => void navigate({ to: target })} />
+  // /task-approval、/events/new/edit 页面由对应工作包注册路由；概览先按运行时路径跳转（MIW-123）。
+  return <OverviewPage onNavigate={target => void navigate({ to: target as never })} />
 }
 
 export function UsersRoutePage() { return <CoreRoutePage route="users" /> }

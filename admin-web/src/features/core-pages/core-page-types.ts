@@ -41,4 +41,4 @@ export interface CoreListPageCallbacks {
   onSensitiveExport?: (intent: CorePageExportIntent) => void
 }
 
-export type CoreNavigationTarget = '/users' | '/events' | '/orders' | '/tasks' | '/operations'
+export type CoreNavigationTarget = '/users' | '/events' | '/orders' | '/tasks' | '/operations' | '/task-approval' | '/events/new/edit'
