@@ -82,6 +82,47 @@ export const demo = {
     { id: 'MAP-20300021', targetId: 'USR-1002', user: '周宁', playerNumber: 'M000000002', plan: '年度会员', amount: '¥6,600.00', paidAt: '2030-03-20 15:42', requestedAt: '2030-03-20 15:43', state: '待处理', status: 'PENDING', chainVersion: 3, decision: '' },
     { id: 'MAP-20300022', targetId: 'USR-1003', user: '陈默', playerNumber: 'M000000003', plan: '季度会员', amount: '¥1,880.00', paidAt: '2030-03-18 11:05', requestedAt: '2030-03-18 11:06', state: '已驳回', status: 'REJECTED', chainVersion: 5, decision: '驳回：线下支付未确认' },
   ],
+  // MIW-129：成长体系四页演示数据。行键与 loadGrowth 装配列一致；关联业务跳转
+  // 仅覆盖已确认语义（任务/机会），活动签到类只展示编号（待联调）。
+  growth: {
+    levels: [
+      { levelKey: 'Lv.1', name: '启程', threshold: '0', benefitCount: '1', users: '86', state: '启用' },
+      { levelKey: 'Lv.5', name: '同行', threshold: '5000', benefitCount: '3', users: '42', state: '启用' },
+      { levelKey: 'Lv.8', name: '主理', threshold: '20000', benefitCount: '5', users: '12', state: '草稿' },
+    ],
+    transitions: [
+      { user: '林晓', direction: 'Lv.5 同行 → Lv.8 主理', experience: '19800 → 20100', source: '活动签到', createdAt: '2030-03-20 10:30' },
+    ],
+    badges: [
+      { name: '活动参与', description: '完成活动参与记录', shape: '圆形', updatedAt: '2030-03-01 09:00', state: '启用' },
+      { name: '荣誉志愿者', description: '年度志愿服务', shape: '六边形', updatedAt: '2030-02-11 16:20', state: '启用' },
+    ],
+    awards: [
+      { user: '林晓', badge: '活动参与', reason: '完成个人资料', awardedAt: '2030-03-01 10:00', equipped: '开启', state: '启用' },
+    ],
+    entries: [
+      { entryNo: 'GE-20300001', playerId: 'USR-1001', source: '活动签到', delta: '10', before: '19,790', after: '19,800', createdAt: '2030-03-20 10:30' },
+      { entryNo: 'GE-20300002', playerId: 'USR-1003', source: '任务', delta: '30', before: '4,120', after: '4,150', createdAt: '2030-03-21 17:08' },
+      { entryNo: 'GE-20300003', playerId: 'USR-1002', source: '人工冲正', delta: '-50', before: '1,050', after: '1,000', createdAt: '2030-03-22 09:15' },
+    ],
+    rules: [
+      { name: '完成活动签到', metric: '经验值', delta: '10', dailyLimit: '20', source: '活动签到', scope: '平台', effective: '长期有效', state: '启用' },
+      { name: '完善资料', metric: '经验值', delta: '50', dailyLimit: '—', source: '其他业务记录', scope: '平台', effective: '长期有效', state: '启用' },
+    ],
+    contributionRules: [
+      { behavior: '参加活动及签到', rewardExp: '2', rewardLimit: '每日最多 3', scope: '全部服务器', effective: '长期有效', state: '启用' },
+      { behavior: '完成 NPC 任务', rewardExp: '5', rewardLimit: '—', scope: '深圳', effective: '2030-01-01 08:00 – 2030-12-31 23:59', state: '启用' },
+    ],
+    contributionTransactions: [
+      { txnNo: 'CT-20300011', user: '林晓', behavior: '参加活动及签到', delta: '2', related: 'EVT-20300314', createdAt: '2030-03-14 10:35' },
+      { txnNo: 'CT-20300012', user: '陈默', behavior: '完成 NPC 任务', delta: '5', related: '30000000-0000-4000-8000-000000000011', detailLinks: [{ route: 'taskCompletions', id: '30000000-0000-4000-8000-000000000011', label: '关联业务' }], createdAt: '2030-03-21 17:08' },
+      { txnNo: 'CT-20300013', user: '周宁', behavior: '引荐项目机会', delta: '20', related: 'OPP-20300007', detailLinks: [{ route: 'opportunities', id: 'OPP-20300007', label: '关联业务' }], createdAt: '2030-03-19 15:00' },
+    ],
+    entitlements: [
+      { entitlementNo: 'ENT-20300031', user: 'USR-1001', nickname: '林晓', type: '玩家会籍', content: '12 个月', order: 'MIP20300101001', grantor: '周宁', detailLinks: [{ route: 'users', id: 'USR-1001', label: '用户档案' }], grantedAt: '2030-01-01 08:00' },
+      { entitlementNo: 'ENT-20300032', user: 'USR-1003', nickname: '陈默', type: '经验值', content: '手工调整 +100', order: '—', grantor: '笨笨老大', detailLinks: [{ route: 'users', id: 'USR-1003', label: '用户档案' }], grantedAt: '2030-03-05 14:20' },
+    ],
+  },
   roles: [
     { name: '平台管理员', members: 2, scope: '平台', capabilities: '全部运营权限' },
     { name: '服务器运营成员', members: 8, scope: '服务器', capabilities: '活动、用户、消息' },

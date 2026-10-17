@@ -167,7 +167,7 @@ describe('R1 novice walkthrough fixes', () => {
 
   it('guides badge selection when the badge catalog is empty', () => {
     const badgeId = getContentMutationForm('mip.admin.badges.grant').fields.find(field => field.key === 'badgeId')
-    assert.ok((badgeId as { emptyHint?: string }).emptyHint?.includes('成长与勋章'))
+    assert.ok((badgeId as { emptyHint?: string }).emptyHint?.includes('等级管理'))
   })
 })
 

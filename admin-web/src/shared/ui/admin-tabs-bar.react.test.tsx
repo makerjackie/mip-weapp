@@ -11,7 +11,7 @@ function Harness() {
   const pathname = useRouterState({ select: state => state.location.pathname }) as AdminRoutePath
   const current = navigationByPath.get(pathname) || navigationByPath.get('/overview')!
   const navigate = useNavigate()
-  const others = (['/overview', '/users', '/events', '/growth'] as const).filter(path => path !== pathname)
+  const others = (['/overview', '/users', '/events', '/levels'] as const).filter(path => path !== pathname)
   return (
     <>
       <AdminTabsBar current={current} />
@@ -25,7 +25,7 @@ function Harness() {
 
 async function setup(initialPath: string) {
   const root = createRootRoute({ component: Harness })
-  const routes = (['/overview', '/users', '/events', '/growth'] as const).map(path => createRoute({
+  const routes = (['/overview', '/users', '/events', '/levels'] as const).map(path => createRoute({
     getParentRoute: () => root,
     path,
     component: () => <p>{`页面${path}`}</p>,
@@ -53,8 +53,8 @@ describe('admin tabs bar', () => {
     expect(screen.getByRole('button', { name: '用户管理' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('button', { name: '活动管理' })).not.toHaveAttribute('aria-current')
 
-    await userEvent.click(screen.getByRole('button', { name: '前往成长与勋章' }))
-    await waitFor(() => expect(router.state.location.pathname).toBe('/growth'))
+    await userEvent.click(screen.getByRole('button', { name: '前往等级管理' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/levels'))
     expect(screen.getAllByRole('button', { name: '活动管理' })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: '用户管理' })).toHaveLength(1)
   })
@@ -87,10 +87,10 @@ describe('admin tabs bar', () => {
     const { router } = await setup('/events')
     await userEvent.click(screen.getByRole('button', { name: '前往用户管理' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/users'))
-    await userEvent.click(screen.getByRole('button', { name: '前往成长与勋章' }))
-    await waitFor(() => expect(router.state.location.pathname).toBe('/growth'))
+    await userEvent.click(screen.getByRole('button', { name: '前往等级管理' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/levels'))
 
-    await userEvent.click(screen.getByRole('button', { name: '关闭页签：成长与勋章' }))
+    await userEvent.click(screen.getByRole('button', { name: '关闭页签：等级管理' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/users'))
     expect(screen.getByRole('button', { name: '用户管理' })).toHaveAttribute('aria-current', 'page')
   })

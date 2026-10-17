@@ -88,6 +88,20 @@ const taskApprovalRoute = createRoute({
   component: routeComponents['/task-approval'],
 })
 
+// MIW-129：成长体系拆分后，旧「成长与勋章」链接重定向到等级管理，避免收藏断链。
+const growthRedirectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/growth',
+  beforeLoad: () => { throw redirect({ to: '/levels' }) },
+})
+
+// MIW-129 H2：权益发放表单页，从权益管理页头部进入，不进入侧栏导航。
+const entitlementGrantRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/entitlements/grant',
+  component: routeComponents['/entitlements/grant'],
+})
+
 const opportunityEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/opportunities/$opportunityId/edit',
@@ -123,6 +137,8 @@ const routeTree = rootRoute.addChildren([
   eventSettingsRoute,
   taskEditRoute,
   taskApprovalRoute,
+  growthRedirectRoute,
+  entitlementGrantRoute,
   opportunityEditRoute,
   knowledgeEditRoute,
   userContentEditRoute,

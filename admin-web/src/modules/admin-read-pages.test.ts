@@ -183,7 +183,7 @@ describe('admin read pages', () => {
       'mip.admin.growth.levels': { items: [{ name: '成长会员', levelKey: 'LEVEL_1', minimumExperience: 100, displayBadge: '资料完善', benefits: [{ name: '活动优先报名' }], legacyBenefits: [], currentUserCount: 20, currentUserPercentage: 50, version: 1, status: 'ACTIVE' }] },
       'mip.admin.growth.benefits': { items: [{ name: '活动优先报名', description: '优先报名活动', sortOrder: 1, version: 1, status: 'ACTIVE' }] },
       'mip.admin.growth.rules': { items: [{ name: '完成签到', metric: 'EXPERIENCE', deltaValue: 10, dailyLimitValue: 20, sourceEventType: 'event.checked_in', scopeType: 'PLATFORM', scopeId: null, effectiveFrom: null, effectiveTo: null, version: 1, status: 'ACTIVE' }] },
-      'mip.admin.growth.entries': { items: [{ nickname: '林晓', metric: 'EXPERIENCE', deltaValue: 10, balanceBefore: 20, balanceAfter: 30, sourceEventType: 'event.checked_in', adjustmentReason: '', createdAt: '2030-03-01T00:00:00.000Z' }] },
+      'mip.admin.growth.entries': { items: [{ id: 'entry-a', userId: 'user-a', nickname: '林晓', metric: 'EXPERIENCE', deltaValue: 10, balanceBefore: 20, balanceAfter: 30, sourceEventType: 'event.checked_in', adjustmentReason: '', createdAt: '2030-03-01T00:00:00.000Z' }] },
       'mip.admin.growth.levelTransitions': { items: [{ nickname: '林晓', fromLevel: null, toLevel: { name: '成长会员' }, experienceBefore: 90, experienceAfter: 100, sourceEventType: 'event.checked_in', createdAt: '2030-03-01T00:00:00.000Z' }] },
       'mip.admin.badges.list': { items: [{ name: '资料完善', key: 'profile-complete', description: '完成资料', placeholderShape: 'HEXAGON', version: 1, updatedAt: '2030-03-01T00:00:00.000Z', status: 'ACTIVE' }] },
       'mip.admin.badges.awards': { items: [{ nickname: '林晓', badgeName: '资料完善', awardReason: '完成个人资料', awardedAt: '2030-03-01T00:00:00.000Z', equipped: true, status: 'ACTIVE' }] },
@@ -195,8 +195,14 @@ describe('admin read pages', () => {
 
     assert.deepEqual(calls.map(call => call.action), ['mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules', 'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions', 'mip.admin.badges.list', 'mip.admin.badges.awards', 'mip.admin.entitlements.transactions.list', 'mip.admin.membershipApprovals.list', 'mip.admin.contribution.rules.list', 'mip.admin.contribution.transactions.list'])
     assert.equal(page.sections.length, 11)
-    assert.equal(page.sections[0].rows[0].benefits, '活动优先报名')
-    assert.equal(page.sections[3].rows[0].balance, '20 → 30')
+    // MIW-129：等级/经验值流水列按设计稿收敛（权益数、变动前/变动后分列）。
+    assert.deepEqual(page.sections[0].columns.map(column => column.label), ['等级', '名称', '经验值门槛', '权益数', '用户数', '状态'])
+    assert.equal(page.sections[0].rows[0].benefitCount, '1')
+    assert.deepEqual(page.sections[3].columns.map(column => column.label), ['流水号', '玩家 ID', '来源', '变动值', '变动前', '变动后', '时间'])
+    assert.equal(page.sections[3].rows[0].entryNo, 'entry-a')
+    assert.equal(page.sections[3].rows[0].playerId, 'user-a')
+    assert.equal(page.sections[3].rows[0].before, '20')
+    assert.equal(page.sections[3].rows[0].after, '30')
     assert.equal(page.sections[3].rows[0].source, '活动签到')
     assert.equal(page.sections[5].rows[0].shape, '六边形')
     assert.equal(page.sections[6].rows[0].reason, '完成个人资料')
@@ -223,7 +229,7 @@ describe('admin read pages', () => {
       'mip.admin.contribution.rules.list',
       'mip.admin.contribution.transactions.list',
     ])
-    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '成长流水', '等级变更', '贡献值规则', '贡献值流水'])
+    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '经验值流水', '等级变更', '贡献值规则', '贡献值流水'])
   })
 
   it('loads operations records without deriving queue or moderation state in the browser', async () => {

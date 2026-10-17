@@ -76,10 +76,17 @@ function unfilteredDemoPage(route: AdminListRoute, section: string, type: string
     { title: '用户内容', columns: columns([['title', '标题'], ['author', '作者'], ['type', '类型'], ['updatedAt', '更新时间'], ['state', '状态']]), detailTarget: 'userContent' },
   ])
   if (route === 'growth') {
+    // MIW-129：成长体系四页共用 demo 装配，分区列与服务端 loadGrowth 保持一致。
     const sections: AdminReadPage['sections'] = [
-      { title: '等级', rows: [], columns: columns([['name', '等级'], ['minimum', '最低经验'], ['benefits', '权益'], ['state', '状态']]), detailTarget: null },
-      { title: '成长流水', rows: [], columns: columns([['user', '用户'], ['change', '变动'], ['reason', '原因'], ['createdAt', '时间']]), detailTarget: null },
-      { title: '徽章', rows: [], columns: columns([['name', '徽章'], ['holderCount', '持有人数'], ['state', '状态']]), detailTarget: null },
+      { title: '等级', rows: demo.growth.levels.map(item => ({ ...item })), columns: columns([['levelKey', '等级'], ['name', '名称'], ['threshold', '经验值门槛'], ['benefitCount', '权益数'], ['users', '用户数'], ['state', '状态']]), detailTarget: null },
+      { title: '等级变更', rows: demo.growth.transitions.map(item => ({ ...item })), columns: columns([['user', '用户'], ['direction', '等级变化'], ['experience', '经验变化'], ['source', '来源事件'], ['createdAt', '时间']]), detailTarget: null },
+      { title: '经验值流水', rows: demo.growth.entries.map(item => ({ ...item })), columns: columns([['entryNo', '流水号'], ['playerId', '玩家 ID'], ['source', '来源'], ['delta', '变动值'], ['before', '变动前'], ['after', '变动后'], ['createdAt', '时间']]), detailTarget: null },
+      { title: '成长规则', rows: demo.growth.rules.map(item => ({ ...item })), columns: columns([['name', '规则'], ['metric', '指标'], ['delta', '增量'], ['dailyLimit', '每日上限'], ['source', '来源事件'], ['scope', '作用范围'], ['effective', '生效区间'], ['state', '状态']]), detailTarget: null },
+      { title: '勋章目录', rows: demo.growth.badges.map(item => ({ ...item })), columns: columns([['name', '勋章'], ['description', '说明'], ['shape', '图形'], ['updatedAt', '更新时间'], ['state', '状态']]), detailTarget: null },
+      { title: '勋章获得记录', rows: demo.growth.awards.map(item => ({ ...item })), columns: columns([['user', '用户'], ['badge', '勋章'], ['reason', '原因'], ['awardedAt', '获得时间'], ['equipped', '佩戴'], ['state', '状态']]), detailTarget: null },
+      { title: '贡献值规则', rows: demo.growth.contributionRules.map(item => ({ ...item })), columns: columns([['behavior', '行为'], ['rewardExp', '贡献奖励'], ['rewardLimit', '上限'], ['scope', '范围'], ['effective', '生效期'], ['state', '状态']]), detailTarget: null },
+      { title: '贡献值流水', rows: demo.growth.contributionTransactions.map(item => ({ ...item })), columns: columns([['txnNo', '流水号'], ['user', '用户'], ['behavior', '行为'], ['delta', '变动值'], ['related', '关联业务'], ['createdAt', '时间']]), detailTarget: null },
+      { title: '权益流水', rows: demo.growth.entitlements.map(item => ({ ...item })), columns: columns([['entitlementNo', '权益流水号'], ['user', '用户'], ['nickname', '昵称'], ['type', '权益类型'], ['content', '权益内容'], ['order', '关联订单号'], ['grantor', '发放人'], ['grantedAt', '发放时间']]), detailTarget: null },
       // MIW-27 第二轮：入会审核队列演示数据。行内「审核/复议」打开与真实队列相同的决策弹窗，
       // 演示模式不会提交写操作；行形态（列、链版本预填）与服务端 loadGrowth 保持一致。
       {
@@ -106,9 +113,16 @@ function unfilteredDemoPage(route: AdminListRoute, section: string, type: string
         detailTarget: null,
       },
     ]
-    const bySection: Record<string, string> = { levels: '等级', entries: '成长流水', badges: '徽章', membershipApprovals: '入会审核' }
+    const bySection: Record<string, string> = {
+      levels: '等级', transitions: '等级变更', badges: '勋章目录', awards: '勋章获得记录',
+      entries: '经验值流水', rules: '成长规则',
+      contributionRules: '贡献值规则', contributionTransactions: '贡献值流水',
+      entitlements: '权益流水', membershipApprovals: '入会审核',
+    }
+    // 四个页面都会固定分区；无分区调用保留一页一份的紧凑概览，便于演示模式总览。
+    const overviewTitles = ['等级', '经验值流水', '贡献值流水', '权益流水']
     return {
-      sections: sections.filter(item => !section || item.title === bySection[section]),
+      sections: sections.filter(item => section ? item.title === bySection[section] : overviewTitles.includes(item.title || '')),
       nextCursor: null,
     }
   }

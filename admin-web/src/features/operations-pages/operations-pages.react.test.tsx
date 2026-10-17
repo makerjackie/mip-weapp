@@ -1,10 +1,16 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { App } from 'antd'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AdminMediaFile } from '../../modules/admin-media-upload'
 import type { AdminReadPage, AdminTableRow } from '../../modules/admin-read-pages'
+import { EntitlementGrantPage } from './entitlement-grant-page'
 import { GameManagementPage } from './game-management-page'
-import { GrowthBadgesPage } from './growth-badges-page'
+import { GrowthContributionPage } from './growth-contribution-page'
+import { GrowthEntitlementsPage } from './growth-entitlements-page'
+import { GrowthExperiencePage } from './growth-experience-page'
+import { GrowthLevelsPage } from './growth-levels-page'
 import { MediaUploadPage } from './media-upload-page'
 import { OpportunitiesContentPage } from './opportunities-content-page'
 import { TaskManagementPage } from './task-management-page'
@@ -13,7 +19,11 @@ import type { OperationsPageState } from './types'
 vi.mock('./membership-configuration-panel', () => ({ MembershipConfigurationPanel: () => null }))
 
 const mockNavigate = vi.fn()
-const session = vi.hoisted(() => ({ request: async () => ({ items: [] }), hasCapability: () => true }))
+const session = vi.hoisted(() => ({
+  request: vi.fn(async () => ({ items: [] })),
+  hasCapability: () => true,
+  demoMode: false,
+}))
 vi.mock('../../app/session-provider', () => ({ useAdminSession: () => ({
   ...session,
 }) }))
@@ -59,7 +69,7 @@ function pageState(page: AdminReadPage, overrides: Partial<OperationsPageState> 
 }
 
 describe('second-batch operations pages', () => {
-  it.each([TaskManagementPage, GrowthBadgesPage])('only exposes supported basic filters on %s', async (Page) => {
+  it.each([TaskManagementPage])('only exposes supported basic filters on %s', async (Page) => {
     const onFilterChange = vi.fn()
     const onRefresh = vi.fn()
     render(<Page {...pageState({ sections: [], nextCursor: null }, { onFilterChange, onRefresh })} />)
@@ -161,11 +171,79 @@ describe('second-batch operations pages', () => {
     expect(mockNavigate.mock.calls.at(-1)?.[0].search({ q: '当前内容', filters: { ownerUserId: 'owner-a' } })).toEqual({ kind: 'SUPER_CASE', returnSearch: { q: '当前内容', filters: { ownerUserId: 'owner-a', section: 'content' } } })
     unmount()
 
+    // MIW-129：等级管理页保留授予勋章入口；成长数据调整改由权益发放页承接。
     const growthWrite = vi.fn()
-    render(<GrowthBadgesPage {...pageState({ sections: [], nextCursor: null }, { onWrite: growthWrite })} />)
+    render(<GrowthLevelsPage {...pageState({ sections: [], nextCursor: null }, { onWrite: growthWrite, canCapability: () => true })} />)
     await userEvent.click(screen.getByRole('button', { name: /运营操作/ }))
-    await userEvent.click(await screen.findByText('调整成长数据'))
-    expect(growthWrite).toHaveBeenCalledWith({ action: 'mip.admin.growth.adjust' })
+    await userEvent.click(await screen.findByText('授予勋章'))
+    expect(growthWrite).toHaveBeenCalledWith({ action: 'mip.admin.badges.grant' })
+  })
+
+  it('hides badge sections from operators without badges.manage (MIW-129)', async () => {
+    render(<GrowthLevelsPage {...pageState({ sections: [], nextCursor: null }, { canCapability: capability => capability === 'growth.read' })} />)
+    await userEvent.click(screen.getByRole('combobox', { name: '等级管理分区' }))
+    expect(await screen.findByText('等级变更', { selector: '.ant-select-item-option-content' })).toBeInTheDocument()
+    expect(screen.queryByText('勋章目录', { selector: '.ant-select-item-option-content' })).not.toBeInTheDocument()
+  })
+
+  it('navigates from entitlements to the standalone grant page and back (MIW-129)', async () => {
+    const onWrite = vi.fn()
+    render(<GrowthEntitlementsPage {...pageState({ sections: [], nextCursor: null }, { onWrite, canCapability: () => true })} />)
+    fireEvent.click(screen.getByRole('button', { name: /发放权益/ }))
+    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: '/entitlements/grant' }))
+  })
+
+  it('switches contribution behaviors to server codes and keeps the rules section reachable (MIW-129)', async () => {
+    const onFilterChange = vi.fn()
+    render(<GrowthContributionPage {...pageState({ sections: [], nextCursor: null }, {
+      onFilterChange,
+      query: { query: '', status: '', filters: { section: 'contributionTransactions' } },
+    })} />)
+    // 组合框顺序：状态、分区、行为、服务器、每页（与 FilterBar 渲染顺序一致）。
+    await userEvent.click(screen.getAllByRole('combobox')[2])
+    await userEvent.click(await screen.findByText('引荐机会', { selector: '.ant-select-item-option-content' }))
+    expect(onFilterChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      filters: expect.objectContaining({ section: 'contributionTransactions', behavior: 'OPPORTUNITY_REFERRAL' }),
+    }))
+  })
+
+  it('maps experience source filters onto existing source events (MIW-129)', async () => {
+    const onFilterChange = vi.fn()
+    render(<GrowthExperiencePage {...pageState({ sections: [], nextCursor: null }, {
+      onFilterChange,
+      query: { query: '', status: '', filters: { section: 'entries' } },
+    })} />)
+    // 组合框顺序：状态、分区、来源、服务器、每页。
+    await userEvent.click(screen.getAllByRole('combobox')[2])
+    await userEvent.click(await screen.findByText('人工冲正', { selector: '.ant-select-item-option-content' }))
+    expect(onFilterChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      filters: expect.objectContaining({ section: 'entries', sourceEventType: 'ADMIN_ADJUSTMENT' }),
+    }))
+  })
+
+  it('blocks the grant form submit in demo mode instead of calling the service (MIW-129)', async () => {
+    session.demoMode = true
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    try {
+      render(
+        <App>
+          <QueryClientProvider client={client}>
+            <EntitlementGrantPage />
+          </QueryClientProvider>
+        </App>,
+      )
+      // 演示模式：用户从演示目录选择，提交被拦截并提示。
+      await userEvent.click(screen.getAllByRole('combobox')[0])
+      await userEvent.click(await screen.findByText(/林晓/, { selector: '.ant-select-item-option-content' }))
+      await userEvent.type(screen.getByLabelText('发放数值'), '20')
+      await userEvent.type(screen.getByLabelText('发放原因'), '线下活动补录')
+      fireEvent.click(screen.getByRole('button', { name: '确认发放' }))
+      expect(await screen.findByText('演示模式不会提交写操作')).toBeInTheDocument()
+      expect(session.request).not.toHaveBeenCalledWith('mip.admin.growth.adjust', expect.anything())
+    }
+    finally {
+      session.demoMode = false
+    }
   })
 
   it('validates upload metadata and exposes upload and copy callbacks', async () => {
