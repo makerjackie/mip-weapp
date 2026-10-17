@@ -1,5 +1,4 @@
 import {
-  BellOutlined,
   LoginOutlined,
   LockOutlined,
   LogoutOutlined,
@@ -8,13 +7,15 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { Avatar, Badge, Breadcrumb, Button, Drawer, Dropdown, Grid, Layout, Menu, Result, Space, Tag, type MenuProps } from 'antd'
+import { Avatar, Badge, Button, Drawer, Dropdown, Grid, Layout, Menu, Result, Space, Tag, type MenuProps } from 'antd'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { adminNavigation, navigationByPath, type AdminRoutePath } from '../../app/navigation'
 import { useAdminSession } from '../../app/session-provider'
 import { ErrorState, LoadingState } from './feedback-states'
 import { AdminLoginDialog } from './admin-login-dialog'
+import { AdminNotificationBell } from './admin-notification-bell'
 import { AdminPasswordDialog } from './admin-password-dialog'
+import { AdminTabsBar } from './admin-tabs-bar'
 
 const { Header, Sider, Content } = Layout
 
@@ -159,13 +160,13 @@ export function ResponsiveAppShell() {
 
       <Layout className="admin-main">
         <Header className="admin-topbar">
-          <Space size={12}>
+          <div className="admin-topbar__leading">
             {mobile ? <Button type="text" aria-label="打开导航" icon={<MenuOutlined />} onClick={() => setNavigationOpen(true)} /> : null}
-            <Breadcrumb items={[{ title: '运营管理' }, { title: current.label }]} />
-          </Space>
+            <AdminTabsBar current={current} />
+          </div>
           <Space size={8}>
-            {demoMode ? <Tag color="gold">演示数据</Tag> : error?.code === 'AUTH_REQUIRED' ? <Tag>需要登录</Tag> : <Badge status={session?.enabled ? 'success' : 'default'} text={session?.enabled ? '真实数据' : '未连接'} />}
-            {session?.enabled ? <Button type="text" aria-label="消息管理" icon={<BellOutlined />} onClick={() => void navigate({ to: '/messages' })} /> : null}
+            {demoMode ? <Tag color="gold">演示数据</Tag> : error?.code === 'AUTH_REQUIRED' ? <Tag>需要登录</Tag> : <Badge className="admin-topbar__session-status" status={session?.enabled ? 'success' : 'default'} text={session?.enabled ? '真实数据' : '未连接'} />}
+            {session?.enabled ? <AdminNotificationBell /> : null}
             <Button type="text" aria-label="刷新会话" loading={loading} icon={<ReloadOutlined />} onClick={() => void refreshSession()} />
             {session?.enabled ? (
               <Dropdown menu={{ items: accountItems }} trigger={['click']}>
