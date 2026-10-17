@@ -402,7 +402,9 @@ async function listOpportunities(database, caller, rawFilter) {
   }
   if (filter.branchId) {
     if (!uuid(filter.branchId)) throw new Error('VALIDATION_FAILED')
-    where.push('o.branch_id = ?')
+    // MIW-120 左上角地区切换：机会广场按分会地区过滤时，未归属分会的平台级机会对所有
+    // 地区可见（镜像活动 feed「未填城市的活动全国可见」口径），避免平台内容被地区过滤掉。
+    where.push('(o.branch_id = ? OR o.branch_id IS NULL)')
     params.push(filter.branchId)
   }
   if (filter.roleKey) {
