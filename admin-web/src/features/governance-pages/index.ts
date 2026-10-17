@@ -1,3 +1,4 @@
+export { AuditLogsPage } from './audit-logs-page'
 export {
   GovernancePage,
   KnowledgePage,

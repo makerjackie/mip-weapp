@@ -355,6 +355,52 @@ describe('admin read pages', () => {
     assert.equal(page.sections[0].rows[1].resource, '勋章')
   })
 
+  it('loads login records with login columns when the type filter is LOGIN', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('auditLogs', { query: '', status: '', cursor: null, limit: 20, filters: { type: 'LOGIN' } }, requestWith({
+      'mip.admin.audit.list': {
+        items: [{
+          loginAccount: 'ops.futian', createdAt: '2030-03-20T10:05:00.000Z',
+          result: 'SUCCESS', ip: '198.51.100.7', device: 'Edge 136 · Windows',
+        }, {
+          actorNickname: 'ops.futian', createdAt: '2030-03-20T10:08:00.000Z',
+          metadata: { loginAccount: 'ops.futian', result: 'FAILURE', ip: '198.51.100.7', device: 'Edge 136 · Windows', failureReason: '密码错误' },
+        }],
+        nextCursor: null,
+      },
+    }, calls))
+
+    assert.equal(calls[0].action, 'mip.admin.audit.list')
+    assert.deepEqual((calls[0].input as { filters: Record<string, string> }).filters.type, 'LOGIN')
+    assert.equal(page.sections.length, 1)
+    assert.equal(page.sections[0].title, '登录记录')
+    assert.deepEqual(page.sections[0].columns.map(column => column.label), ['登录账号', '时间', '结果', 'IP', '设备', '失败原因'])
+    assert.deepEqual(page.sections[0].rows[0], {
+      account: 'ops.futian', createdAt: page.sections[0].rows[0].createdAt, result: '成功',
+      ip: '198.51.100.7', device: 'Edge 136 · Windows', failureReason: '—',
+    })
+    assert.equal(page.sections[0].rows[1].account, 'ops.futian')
+    assert.equal(page.sections[0].rows[1].result, '失败')
+    assert.equal(page.sections[0].rows[1].failureReason, '密码错误')
+  })
+
+  it('keeps operation audit columns when the type filter is absent or OPERATION', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('auditLogs', { query: '', status: '', cursor: null, limit: 20, filters: { type: 'OPERATION' } }, requestWith({
+      'mip.admin.audit.list': {
+        items: [{
+          actorNickname: '管理员', effectiveRole: 'PLATFORM_OWNER', scopeName: '平台',
+          action: 'admin.badge.update', resourceType: 'BADGE', resourceId: 'badge-001',
+          createdAt: '2030-03-20T10:05:00.000Z',
+        }],
+        nextCursor: null,
+      },
+    }, calls))
+
+    assert.deepEqual((calls[0].input as { filters: Record<string, string> }).filters.type, 'OPERATION')
+    assert.deepEqual(page.sections[0].columns.map(column => column.label), ['操作者', '角色', '服务器', '操作', '模块', '业务对象', '时间'])
+  })
+
   it('passes filter parameters through to action input for events list', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const filterQuery: AdminListQuery = {

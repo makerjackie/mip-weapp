@@ -3,7 +3,7 @@ import { labels } from '../../modules/admin-read-formatters'
 import { demo } from '../../services/demo-data'
 
 export function createDemoReadPage(route: AdminListRoute, query: AdminListQuery): AdminReadPage {
-  const page = unfilteredDemoPage(route, query.filters?.section || '')
+  const page = unfilteredDemoPage(route, query.filters?.section || '', query.filters?.type || '')
   const text = query.query.toLocaleLowerCase('zh-CN')
   const expectedStatus = query.status ? (labels[query.status] || query.status) : ''
   return {
@@ -16,7 +16,7 @@ export function createDemoReadPage(route: AdminListRoute, query: AdminListQuery)
   }
 }
 
-function unfilteredDemoPage(route: AdminListRoute, section: string): AdminReadPage {
+function unfilteredDemoPage(route: AdminListRoute, section: string, type: string): AdminReadPage {
   if (route === 'tasks') return {
     sections: [
       {
@@ -118,6 +118,26 @@ function unfilteredDemoPage(route: AdminListRoute, section: string): AdminReadPa
     { title: '运营异常', columns: columns([['title', '异常'], ['resource', '资源'], ['updatedAt', '更新时间'], ['state', '状态']]), detailTarget: null },
     { title: '运营待办', columns: columns([['title', '待办'], ['owner', '负责人'], ['updatedAt', '更新时间'], ['state', '状态']]), detailTarget: null },
   ])
+  if (route === 'auditLogs') {
+    // MIW-131：登录记录演示数据按 type=LOGIN 视图装配，列与真实装配一致。
+    if (type === 'LOGIN') return {
+      sections: [{
+        title: '登录记录',
+        rows: demo.auditLoginRecords.map((item, index) => ({
+          detailId: `demo-audit-login-${index + 1}`,
+          account: item.loginAccount,
+          createdAt: item.createdAt,
+          result: item.result === 'FAILURE' ? '失败' : '成功',
+          ip: item.ip,
+          device: item.device,
+          failureReason: item.failureReason || '—',
+        })),
+        columns: columns([['account', '登录账号'], ['createdAt', '时间'], ['result', '结果'], ['ip', 'IP'], ['device', '设备'], ['failureReason', '失败原因']]),
+      }],
+      nextCursor: null,
+    }
+    return empty([{ title: '操作审计', columns: columns([['actor', '操作者'], ['action', '操作'], ['resource', '模块'], ['createdAt', '时间']]), detailTarget: null }])
+  }
   return empty([{ columns: columns([['title', '记录']]), detailTarget: null }])
 }
 

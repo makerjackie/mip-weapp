@@ -28,4 +28,25 @@ describe('demo read pages', () => {
     const levels = createDemoReadPage('growth', { query: '', status: '', cursor: null, limit: 20, filters: { section: 'levels' } })
     expect(levels.sections.map(section => section.title)).toEqual(['等级'])
   })
+
+  it('serves the login-record demo fixture with the login column set for type=LOGIN', () => {
+    const page = createDemoReadPage('auditLogs', { query: '', status: '', cursor: null, limit: 20, filters: { type: 'LOGIN' } })
+    expect(page.sections).toHaveLength(1)
+    expect(page.sections[0].title).toBe('登录记录')
+    expect(page.sections[0].columns.map(column => column.label)).toEqual(['登录账号', '时间', '结果', 'IP', '设备', '失败原因'])
+    expect(page.sections[0].rows).toHaveLength(3)
+    const [first, second, failed] = page.sections[0].rows
+    expect(first.result).toBe('成功')
+    expect(first.account).toBe('admin')
+    expect(second.result).toBe('成功')
+    expect(failed.result).toBe('失败')
+    expect(failed.failureReason).toBe('密码错误')
+    expect(failed.ip).toBe('198.51.100.7')
+  })
+
+  it('keeps the audit-logs demo page on operation columns without the LOGIN type filter', () => {
+    const page = createDemoReadPage('auditLogs', { query: '', status: '', cursor: null, limit: 20 })
+    expect(page.sections[0].columns.map(column => column.label)).toEqual(['操作者', '操作', '模块', '时间'])
+    expect(page.sections[0].rows).toHaveLength(0)
+  })
 })

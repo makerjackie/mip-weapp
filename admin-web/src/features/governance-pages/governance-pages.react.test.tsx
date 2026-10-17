@@ -1,6 +1,8 @@
+import userEvent from '@testing-library/user-event'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getAdminReadRouteDefinition, type AdminReadPage } from '../../modules/admin-read-pages'
+import { AuditLogsPage } from './audit-logs-page'
 import {
   KnowledgePage,
   MessagesPage,
@@ -269,5 +271,24 @@ describe('governance React pages', () => {
       targetId: 'report-1',
       values: { reportId: 'report-1', expectedVersion: 4, outcome: 'RESOLVED', reason: '' },
     })
+  })
+
+  it('switches the audit-logs type filter to LOGIN through the filter callback', async () => {
+    const onFilterChange = vi.fn()
+    render(
+      <AuditLogsPage
+        page={{ sections: [{ title: '登录记录', rows: [], columns: [{ key: 'account', label: '登录账号' }] }], nextCursor: null }}
+        query={{ query: '', status: '', filters: {} }}
+        onFilterChange={onFilterChange}
+        onRefresh={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('columnheader', { name: '登录账号' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '类型' })).toBeInTheDocument()
+    expect(screen.getByText('全部')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('combobox', { name: '类型' }))
+    await userEvent.click(await screen.findByText('登录'))
+    expect(onFilterChange).toHaveBeenCalledWith({ query: '', status: '', filters: { type: 'LOGIN' } })
   })
 })
