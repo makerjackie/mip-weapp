@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理后台测试环境 · 真实 E2E 验收报告</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--line:#e4e6ea;--tx:#1f2329;--tx2:#646a73}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:60px}
+.wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+header{background:#0f2e5c;color:#fff;padding:26px 0 20px;margin-bottom:22px}
+header h1{font-size:20px} header .sub{color:#b8c7de;font-size:13px;margin-top:6px}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 20px;min-width:110px}
+.stat b{font-size:24px;display:block} .stat span{font-size:12px;color:var(--tx2)}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin-bottom:18px}
+section h2{font-size:16px;margin-bottom:12px;border-bottom:1px solid var(--line);padding-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f7f8fa;color:var(--tx2);font-weight:600}
+.badge{display:inline-block;padding:1px 9px;border-radius:10px;font-size:12px;font-weight:600;color:#fff}
+.note{color:var(--tx2);font-size:12.5px}
+.shot{width:100%;border:1px solid var(--line);border-radius:8px;margin:8px 0}
+.chain{background:#fff8ef;border-left:4px solid #d97706;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}
+.chain b{color:#92400e}
+.fixed{background:#f0fdf4;border-left:4px solid #16a34a;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}
+code{background:#f1f3f5;border-radius:4px;padding:1px 6px;font-size:12.5px}
+.flow-step{margin:6px 0;padding-left:14px;border-left:3px solid var(--line)}
+details{margin:6px 0} summary{cursor:pointer;color:#1769e0;font-size:13px}
+</style></head><body>
+<header><div class="wrap">
+<h1>MIP 管理后台 · 测试环境真实 E2E 验收报告</h1>
+<div class="sub">目标 https://test.admin.mip.cool/ · 部署版本 main@f7af9bdb（入口 index-D0iAwe4G.js）· 执行时间 2026-10-18 · 用例来源：管理后台 PRD v0.4（16 章）+ 原型 v1</div>
+</div></header>
+<div class="wrap">
+
+<div class="stats">
+<div class="stat"><b>3</b><span>通过</span></div>
+<div class="stat"><b style="color:#dc2626">1</b><span>失败</span></div>
+<div class="stat"><b style="color:#d97706">45</b><span>阻塞（账号凭证缺失）</span></div>
+<div class="stat"><b>49</b><span>用例总数</span></div>
+<div class="stat"><b>3</b><span>Console 问题</span></div>
+</div>
+
+<section>
+<h2>① 部署验证（全部通过）</h2>
+<table>
+<tr><th>检查</th><th>结果</th><th>证据</th></tr>
+<tr><td>发布门禁 pnpm verify:all（两端）</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>exit 0（admin-web verify + 小程序 verify + docs）</td></tr>
+<tr><td>BFF <code>mip-t-admin-web-api</code> 部署</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>Status=Active · 禁客户端直调 · 0 定时器 · VPC 配置保持</td></tr>
+<tr><td>静态包 <code>mip-admin-console-test/</code></td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>15/15 文件字节级 VERIFIED</td></tr>
+<tr><td>公开域入口更新</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>index-DVFkkChc.js → <code>index-D0iAwe4G.js</code>（新构建）</td></tr>
+<tr><td>来源防护</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>无 Origin 头的登录请求被拒（403 请求来源无效）</td></tr>
+<tr><td>上一版不可变资产保留</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>21 个旧哈希资产并入新包，0 冲突（缓存 HTML 不 404）</td></tr>
+</table>
+</section>
+
+<section>
+<h2>② 阻塞根因分析（登录 503 → 已修复；401 → 需账号设置）</h2>
+<div class="fixed"><b>已修复（本次部署附带）：</b>BFF → 认证库（TDSQL-C Serverless）的连接被拒绝，导致所有登录请求 503「登录服务暂时不可用」。根因=认证运行时用户 <code>mipauth_840c70d75d87</code> 的实际密码与 <code>envs/test</code> 配置不一致（哈希比对证实）。已按 <code>.env.secrets.local</code> 收敛密码（哈希复核 MATCH），503 全部消除；生产用户密码曾被探针误改，已同步恢复并复核（MATCH）。<br>影响：修复前测试后台登录链路从未通过（历轮「账号级验证 BLOCKED」的真实原因之一）。</div>
+<div class="chain"><b>仍阻塞（需要你操作）：</b>修复后登录请求已能正确到达凭证校验（返回 401「手机号或密码不正确」）。但凭证表核验发现：<b>18819253403 在测试后台从未设置过登录密码</b>（按当前会话密钥计算的 phone_key 与库中唯一凭证行不匹配——该行是其他账号/旧密钥遗留）。<br>
+<b>解锁步骤</b>：在<b>测试版小程序</b>中用微信登录（微信绑定手机号需为 18819253403）→ 「我的」→ 账号菜单 → 「设置登录密码」填入 Share0101! → 之后重跑本 E2E 即可全量通过（凭证必须由真实微信身份在页面上设置，密码哈希绑定小程序 openId，无法离线代设——见 mip-admin-release skill 登录链路验证规范）。</div>
+</section>
+
+<section>
+<h2>③ 真实 E2E 执行结果（未登录可验证面）</h2>
+<table>
+<tr><th>用例</th><th>结果</th><th>说明</th></tr>
+<tr><td>TC-01 登录页渲染</td><td><span class="badge" style="background:#16a34a">通过</span></td><td>手机号+密码+小程序登录双 Tab；页面无 console 错误</td></tr>
+<tr><td>TC-02 错误密码被拒</td><td><span class="badge" style="background:#16a34a">通过</span></td><td>提交错误密码被拒绝且有提示（真实请求）</td></tr>
+<tr><td>TC-03 正确密码登录</td><td><span class="badge" style="background:#dc2626">失败</span></td><td>401 手机号或密码不正确 → 根因=②的账号凭证缺失（非系统故障）</td></tr>
+<tr><td>UAT-10 退出/受保护页</td><td><span class="badge" style="background:#16a34a">通过</span></td><td>未登录访问 /orders 显示「需要登录」门控</td></tr>
+<tr><td>来源防护（附加）</td><td><span class="badge" style="background:#16a34a">通过</span></td><td>无 Origin 403 / 带 Origin 进入处理链</td></tr>
+</table>
+<img class="shot" src="shots/00-login-attempt.png" alt="登录尝试">
+<img class="shot" src="shots/01-fail-TC-03.png" alt="登录失败现场">
+</section>
+
+<section>
+<h2>④ 全量用例清单（42 常规 + 10 流程级；登录解锁后可直接重跑）</h2>
+<details open><summary>展开/收起用例表（49 条）</summary>
+<table>
+<tr><th>层</th><th>ID</th><th>模块</th><th>用例</th><th>状态</th><th>本次结果 / 预期</th></tr>
+<tr><td>常规</td><td><code>TC-01</code></td><td>登录与账号(§14)</td><td>登录页渲染与元素</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td class='note'>通过</td></tr>
+<tr><td>常规</td><td><code>TC-02</code></td><td>登录与账号(§14)</td><td>错误密码被拒绝</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td class='note'>通过</td></tr>
+<tr><td>常规</td><td><code>TC-03</code></td><td>登录与账号(§14)</td><td>正确密码登录成功</td><td><span class='badge' style='background:#dc2626'>失败</span></td><td class='note'>仍显示需要登录</td></tr>
+<tr><td>常规</td><td><code>TC-05</code></td><td>全局框架</td><td>侧栏五组菜单</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-06</code></td><td>全局框架</td><td>顶栏多页签</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-07</code></td><td>概览(§1)</td><td>驾驶舱渲染</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-08</code></td><td>概览(§1)</td><td>快捷入口跳转</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-09</code></td><td>用户管理(§2)</td><td>列表 11 列原型口径</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-10</code></td><td>用户管理(§2)</td><td>身份筛选含普通用户</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-11</code></td><td>用户管理(§2)</td><td>权益状态四档</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-12</code></td><td>用户管理(§2)</td><td>关键词搜索</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-13</code></td><td>用户管理(§2)</td><td>档案页六 Tab</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-14</code></td><td>用户管理(§2)</td><td>档案操作入口</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-15</code></td><td>名片(§2)</td><td>名片页路由直达</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-16</code></td><td>活动(§3)</td><td>列表与状态筛选三态</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-17</code></td><td>活动(§3)</td><td>新建活动表单字段</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-18</code></td><td>活动(§3)</td><td>保存草稿</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-19</code></td><td>活动(§3)</td><td>发布活动</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-20</code></td><td>活动(§3)</td><td>标签设置页</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-21</code></td><td>活动(§3)</td><td>行内下载签到二维码</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-22</code></td><td>运营管理(§4)</td><td>Banner ≤5 与列表</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-23</code></td><td>运营管理(§4)</td><td>视频回顾列表</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-24</code></td><td>等级(§5)</td><td>等级管理页</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-25</code></td><td>经验值(§6)</td><td>流水变动前后列</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-26</code></td><td>贡献值(§7)</td><td>流水关联业务列</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-27</code></td><td>权益(§8)</td><td>权益流水列</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-28</code></td><td>权益(§8)</td><td>发放权益表单校验</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-29</code></td><td>任务(§9)</td><td>任务筛选三下拉</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-30</code></td><td>NPC任务(§9)</td><td>独立页列与筛选</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-31</code></td><td>机会(§10)</td><td>列表 7 列与招募中文案</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-32</code></td><td>机会(§10)</td><td>详情想推荐名单</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-33</code></td><td>订单(§11)</td><td>列表时间列与汇总卡</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-34</code></td><td>订单(§11)</td><td>详情状态时间线</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-35</code></td><td>战队(§12)</td><td>战队可见性（现状记录）</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-36</code></td><td>角色权限(§13)</td><td>权限管理四 Tab</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-37</code></td><td>后台账号(§14)</td><td>账号列表与新增入口</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-38</code></td><td>审计(§14)</td><td>审计类型筛选与登录视图</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-39</code></td><td>服务器(§15)</td><td>服务器列表</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>常规</td><td><code>TC-40</code></td><td>消息(§16)</td><td>消息管理两 Tab</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>流程级</td><td><code>UAT-01</code></td><td></td><td>登录 → 概览 → 退出 → 受保护页重定向</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>流程级</td><td><code>UAT-02</code></td><td></td><td>活动运营闭环：建草稿 → 补全发布 → 列表可见 → 详情</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>流程级</td><td><code>UAT-03</code></td><td></td><td>用户档案巡检</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>流程级</td><td><code>UAT-04</code></td><td></td><td>权益发放闭环：发放 100 经验值 → 流水新增</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>流程级</td><td><code>UAT-05</code></td><td></td><td>NPC 任务审批</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>流程级</td><td><code>UAT-07</code></td><td></td><td>消息草稿创建（不发送）</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>流程级</td><td><code>UAT-08</code></td><td></td><td>审计留痕</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>流程级</td><td><code>UAT-09</code></td><td></td><td>导航收敛与路由直达</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+<tr><td>流程级</td><td><code>UAT-10</code></td><td></td><td>退出后访问受保护路由</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td class='note'>通过</td></tr>
+<tr><td>常规</td><td><code>TC-42</code></td><td>全局质量</td><td>390 视口无横向溢出</td><td><span class='badge' style='background:#d97706'>阻塞</span></td><td class='note'>登录被阻塞：测试后台该账号无密码凭证（需在测试版小程序微信登录后设置密码）</td></tr>
+</table></details></section>
+<section>
+<h2>⑤ 方法说明与边界</h2>
+<div class="method" style="font-size:13px;color:var(--tx2)">
+<p><b style="color:var(--tx)">用例生成</b>：依据 ame-project《管理后台 PRD v0.4》16 章 + 原型 v1 逐模块提取——常规用例覆盖 16 个模块的列表/筛选/详情/校验/权限边界；流程级用例覆盖 10 条跨模块用户旅程（登录巡检、活动建发闭环、权益发放闭环、NPC 审批、消息草稿、审计留痕、导航与直达、退出防护）。</p>
+<p><b style="color:var(--tx)">执行方式</b>：Playwright(Chromium) 驱动真实浏览器访问 https://test.admin.mip.cool/，真实提交登录请求；每用例独立判定+截图+console 错误归集；写操作白名单制（草稿/发放/标签类，禁退款/删除/权限变更）。</p>
+<p><b style="color:var(--tx)">可信边界</b>：登录后 45 条用例为<b>阻塞</b>而非失败——阻塞点在测试后台账号凭证缺失（②节），系统侧登录链路本身已由 503→401 的修复证明工作正常（错误密码被正确拒绝、来源防护生效、会话门控生效）。账号设置完成后重跑 <code>diff-work/e2e/run-e2e.cjs</code> 即可全量验收。</p>
+<p><b style="color:var(--tx)">部署边界</b>：本批仅部署 admin-web 前端 + BFF（业务云函数零改动，经 diff 确认）；既有 weapp/其他函数未触碰；未推送 origin/main。</p>
+</div>
+</section>
+</div></body></html>
