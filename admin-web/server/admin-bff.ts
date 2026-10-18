@@ -1,5 +1,6 @@
 import { authStatement, type AdminAuthDatabase, type AuthRunResult } from './auth-database.ts'
 import { createPasswordAuth, PasswordAuthError, passwordAuthDiagnostic, type PasswordSession } from './password-auth.ts'
+import { ADMIN_AUDIT_EVENT_TYPES, type AdminAuditEventType, ADMIN_USERS_IDENTITY_FILTER_VALUES } from '@mip/admin-contracts'
 import type { AdminApiResponse, AdminRequest } from '../src/domain/contracts'
 import {
   REVIEWED_ADMIN_MUTATION_ACTIONS,
@@ -381,15 +382,34 @@ export function createAdminBff(
       && !validExportLifecycleInput(adminRequest.input)) {
       return adminError('VALIDATION_FAILED', '运营请求包含未开放字段', 400)
     }
+    const identityFilter = adminRequest.action === 'mip.admin.users.list'
+      ? usersIdentityFilter(adminRequest.input)
+      : ''
+    if (identityFilter === undefined) {
+      return adminError('VALIDATION_FAILED', '运营请求包含未开放字段', 400)
+    }
 
     // Honor the server-generated idempotency policy: operations that declare
     // forwardIdempotencyKey=false must not receive a browser-controlled key.
+    const normalizedRequest = isQuery && adminRequest.action === 'mip.admin.audit.list'
+      ? withAuditListTypeFilter(adminRequest)
+      : adminRequest
     const forwardedRequest = isMutation
       && REVIEWED_ADMIN_MUTATION_FORWARD_IDEMPOTENCY.get(adminRequest.action) !== true
       ? { ...adminRequest, idempotencyKey: `web-bff-${randomToken(deps.crypto, 24)}` }
-      : adminRequest
+      : normalizedRequest
 
-    return forwardTrustedAdminRequest(forwardedRequest, session, { retryable: isQuery })
+    // MIW-124：identity=NORMAL（普通用户=既非玩家也非嘉宾）是 Web 契约筛选，不向上游转发，
+    // 由 BFF 对返回的当前页结果按该语义过滤。
+    const isUsersNormalIdentity = identityFilter === 'NORMAL'
+    return forwardTrustedAdminRequest(
+      isUsersNormalIdentity ? withoutUsersIdentityFilter(forwardedRequest) : forwardedRequest,
+      session,
+      {
+        retryable: isQuery,
+        ...(isUsersNormalIdentity ? { transformPayload: filterUsersNormalIdentityPayload } : {}),
+      },
+    )
   }
 
   async function generateLoginQrCode(challengeToken: string): Promise<string> {
@@ -466,7 +486,7 @@ export function createAdminBff(
   async function forwardTrustedAdminRequest(
     adminRequest: AdminRequest | { contractVersion: 1; action: 'mip.admin.webAuth.identity'; input: Record<string, never> },
     session: Pick<SessionClaims, 'appId' | 'openId'>,
-    options: { media?: boolean; retryable: boolean },
+    options: { media?: boolean; retryable: boolean; transformPayload?: (payload: unknown) => unknown },
   ): Promise<Response> {
     const unsigned = {
       transport: WEB_BFF_TRANSPORT,
@@ -498,7 +518,8 @@ export function createAdminBff(
     if (!isAdminResponse(payload)) {
       return adminError('SERVICE_UNAVAILABLE', '运营服务返回格式无效', 502, options.retryable)
     }
-    return json(payload, upstream.ok ? 200 : upstream.status, { 'cache-control': 'no-store' })
+    const transformed = options.transformPayload ? options.transformPayload(payload) : payload
+    return json(transformed, upstream.ok ? 200 : upstream.status, { 'cache-control': 'no-store' })
   }
 
   async function sessionFromRequest(request: Request) {
@@ -1006,6 +1027,18 @@ function opaqueCursor(value: unknown) {
   return typeof value === 'string' && value.length > 0 && value.length <= 512 && /^[A-Za-z0-9_-]+$/.test(value)
 }
 
+// MIW-131：审计列表「类型」筛选的 BFF 映射。登录审计（LOGIN）的服务端事件源
+// 待联调；这里只放行契约词表内的取值，空值与未知值不下传，其余字段原样转发。
+function withAuditListTypeFilter(adminRequest: AdminRequest): AdminRequest {
+  const filters = adminRequest.input.filters
+  if (!plainRecord(filters) || typeof filters.type !== 'string') return adminRequest
+  const type = ADMIN_AUDIT_EVENT_TYPES.includes(filters.type as AdminAuditEventType) ? filters.type : ''
+  const nextFilters = { ...filters }
+  if (type) nextFilters.type = type
+  else delete nextFilters.type
+  return { ...adminRequest, input: { ...adminRequest.input, filters: nextFilters } }
+}
+
 function validBannerQueryInput(action: string, input: AdminRequest['input']) {
   if (action === 'mip.admin.banners.session') return Object.keys(input).length === 0
   if (action === 'mip.admin.banners.get') {
@@ -1119,6 +1152,43 @@ function validExportLifecycleInput(input: AdminRequest['input']) {
 
 function validSecret(value: string | undefined) {
   return typeof value === 'string' && value.length >= 32
+}
+
+// MIW-124：用户列表「身份=普通用户」为 Web 契约筛选（语义=既非玩家也非嘉宾）。上游暂以
+// kind=PLAYER|GUEST 投影角色，BFF 不向上游转发该参数，并对返回的当前页结果按该语义过滤；
+// 服务端角色标识落地前，生产数据在该筛选下可能为空结果。
+const USERS_IDENTITY_FILTER_VALUES = new Set<string>(ADMIN_USERS_IDENTITY_FILTER_VALUES)
+
+/** 返回 ''=未携带、'NORMAL'=需要 BFF 过滤、undefined=非法取值。 */
+function usersIdentityFilter(input: AdminRequest['input']): string | undefined {
+  const filters = input.filters
+  if (!filters || typeof filters !== 'object' || Array.isArray(filters)) return ''
+  const value = (filters as Record<string, unknown>).identity
+  if (value === undefined || value === '') return ''
+  return typeof value === 'string' && USERS_IDENTITY_FILTER_VALUES.has(value) ? value : undefined
+}
+
+function withoutUsersIdentityFilter(request: AdminRequest): AdminRequest {
+  const filters = request.input.filters
+  if (!filters || typeof filters !== 'object' || Array.isArray(filters)) return request
+  const rest = { ...(filters as Record<string, unknown>) }
+  delete rest.identity
+  return { ...request, input: { ...request.input, filters: rest } }
+}
+
+function filterUsersNormalIdentityPayload(payload: unknown): unknown {
+  const data = payload && typeof payload === 'object' && !Array.isArray(payload)
+    && (payload as { data?: unknown }).data
+  const source = data && typeof data === 'object' && !Array.isArray(data)
+    ? data as { items?: unknown }
+    : null
+  if (!source || !Array.isArray(source.items)) return payload
+  const items = source.items.filter((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return true
+    const kind = String((item as Record<string, unknown>).kind ?? '')
+    return kind !== 'PLAYER' && kind !== 'GUEST'
+  })
+  return { ...(payload as Record<string, unknown>), data: { ...source, items } }
 }
 
 function absoluteHttpsUrl(value: string | undefined) {

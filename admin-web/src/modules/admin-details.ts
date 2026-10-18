@@ -7,6 +7,7 @@ import {
 import { loadBannerDetail } from './admin-banner-management.ts'
 import { feedbackDisplayComplete, feedbackFields } from './event-feedback.ts'
 import { campaignAudienceLabel, label } from './admin-read-formatters.ts'
+import { opportunityStatusLabel } from './admin-read-special-pages.ts'
 import {
   loadGameCatalogDetail,
   loadGameSeasonDetail,
@@ -119,21 +120,34 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
   const growth = record(user.growth)
   const counts = record(user.counts)
   const influence = record(user.influence)
+  // MIW-124：非玩家用户的所属服务器不外显，档案与详情统一显示「—」。
+  const branchDisplay = user.kind === 'PLAYER' ? text(user.branchName) : '—'
+  // 行业标签在 mip_tags.kind 上是 INDUSTRY；PRIMARY_INDUSTRY 是 mip_profile_tags.relation 的取值。
+  const industryLabels = records(user.tags)
+    .filter(tag => tag.kind === 'INDUSTRY')
+    .map(tag => text(tag.label, '')).filter(Boolean)
   const sections: AdminDetailSection[] = [{
     title: '基本信息',
     fields: fields([
       ['身份', codeLabel(user.kind)],
       ['账号状态', codeLabel(user.status)],
       ['手机状态', user.phoneBound === true ? '已绑定' : '未绑定'],
-      ['所属服务器', text(user.branchName)],
+      ['绑定微信', user.wechatBound === true ? '已绑定' : user.wechatBound === false ? '未绑定' : '—'],
+      ['真实姓名', text(user.realName)],
+      ['所属服务器', branchDisplay],
       ['城市', text(user.cityName)],
+      ['注册时间', dateTime(user.createdAt)],
+      ['更新时间', dateTime(user.updatedAt)],
       ['资料版本', numberText(user.profileVersion)],
       ['用户版本', numberText(user.userVersion)],
-      ['简介', text(user.headline)],
-      ['个人介绍', text(user.introduction)],
-      ['真实姓名', text(user.realName)],
+    ]),
+  }, {
+    title: '职业信息',
+    fields: fields([
+      ['行业', industryLabels.join('、') || '—'],
       ['职业身份', text(user.identityStatus)],
-      ['注册时间', dateTime(user.createdAt)],
+      ['一句话介绍', text(user.headline)],
+      ['个人介绍', text(user.introduction)],
     ]),
   }]
   if (Object.keys(membership).length || membershipDetail.chainVersion !== undefined) {
@@ -190,7 +204,7 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
   return {
     route: 'users',
     title: text(user.nickname, '用户详情'),
-    subtitle: [text(user.branchName, ''), text(user.cityName, '')].filter(Boolean).join(' · '),
+    subtitle: [user.kind === 'PLAYER' ? text(user.branchName, '') : '', text(user.cityName, '')].filter(Boolean).join(' · '),
     status: codeLabel(user.kind),
     sections,
     source: { user, membership: membershipDetail },
@@ -640,6 +654,8 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
 
 async function loadOpportunityDetail(opportunityId: string, request: AdminDetailRequest, options: AdminDetailOptions): Promise<AdminDetailView> {
   const opportunity = record(await request('mip.admin.opportunities.get', { opportunityId }))
+  // 想推荐名单与评论互不依赖，先行并行读取；读取失败由分区自行降级，不会 reject。
+  const referralSection = opportunityReferralSection(opportunityId, request)
   let commentState: AdminDetailRow | null = null
   if (options.includeOpportunityComments !== false) {
     try {
@@ -677,6 +693,7 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
     rows: team.map(item => ({ name: text(item.nickname), branch: text(item.branchName) })),
     columns: columns([['name', '姓名'], ['branch', '所属服务器']]),
   })
+  sections.push(await referralSection)
   if (commentState) {
     sections.push({
       title: '评论设置',
@@ -713,8 +730,9 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
     title: '操作记录',
     rows: records(opportunity.history).map(item => {
       const metadata = record(item.metadata)
+      // 状态变更沿用机会页面局部文案（招募中 / 已完成），与抽屉顶部状态一致。
       return { action: codeLabel(item.action), actor: text(item.actorNickname), createdAt: dateTime(item.createdAt),
-        fromStatus: codeLabel(metadata.fromStatus), toStatus: codeLabel(metadata.toStatus),
+        fromStatus: opportunityStatusLabel(metadata.fromStatus), toStatus: opportunityStatusLabel(metadata.toStatus),
         summary: text(metadata.summary) }
     }),
     columns: columns([['action', '操作'], ['actor', '操作人'], ['createdAt', '时间'],
@@ -724,9 +742,38 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
     route: 'opportunities',
     title: `${text(opportunity.title, '机会详情')}${opportunity.deleted ? '（已删除）' : ''}`,
     subtitle: [text(opportunity.ownerNickname, ''), text(opportunity.cityName, '')].filter(Boolean).join(' · '),
-    status: opportunity.deleted ? '已删除' : codeLabel(opportunity.status),
+    status: opportunity.deleted ? '已删除' : opportunityStatusLabel(opportunity.status),
     sections,
     source: { opportunity, commentState: commentState || {} },
+  }
+}
+
+// MIW-127：想推荐名单复用 mip.admin.opportunities.referrals（服务端按操作时间倒序返回）。
+// 名单是机会详情的补充信息：读取失败降级为分区错误提示，不拖垮抽屉其他分区；
+// 无查看权限时与评论区同口径，只显示数据权限说明。
+async function opportunityReferralSection(opportunityId: string, request: AdminDetailRequest): Promise<AdminDetailSection> {
+  const section: AdminDetailSection = {
+    title: '想推荐名单',
+    columns: columns([['userId', '用户 ID'], ['nickname', '昵称'], ['createdAt', '操作时间']]),
+  }
+  try {
+    const page = record(await request('mip.admin.opportunities.referrals', { opportunityId, limit: 20 }))
+    return {
+      ...section,
+      // 服务端暂未投影引荐人 userId，联调前「用户 ID」显示「—」；昵称取引荐意向提交人。
+      rows: pageRecords(page).map(item => ({
+        detailId: text(item.id),
+        userId: text(item.userId || item.actorUserId),
+        nickname: text(item.actorNickname),
+        createdAt: dateTime(item.createdAt),
+      })),
+    }
+  }
+  catch (error) {
+    if (errorCode(error) === 'FORBIDDEN') {
+      return { title: '想推荐名单', fields: fields([['数据权限', '当前账号不可查看']]) }
+    }
+    return { ...section, error: error instanceof Error ? error.message : '想推荐名单暂不可用，请重试。' }
   }
 }
 

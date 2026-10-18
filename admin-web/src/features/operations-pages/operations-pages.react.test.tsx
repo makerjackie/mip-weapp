@@ -1,10 +1,16 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { App } from 'antd'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AdminMediaFile } from '../../modules/admin-media-upload'
 import type { AdminReadPage, AdminTableRow } from '../../modules/admin-read-pages'
+import { EntitlementGrantPage } from './entitlement-grant-page'
 import { GameManagementPage } from './game-management-page'
-import { GrowthBadgesPage } from './growth-badges-page'
+import { GrowthContributionPage } from './growth-contribution-page'
+import { GrowthEntitlementsPage } from './growth-entitlements-page'
+import { GrowthExperiencePage } from './growth-experience-page'
+import { GrowthLevelsPage } from './growth-levels-page'
 import { MediaUploadPage } from './media-upload-page'
 import { OpportunitiesContentPage } from './opportunities-content-page'
 import { TaskManagementPage } from './task-management-page'
@@ -13,7 +19,11 @@ import type { OperationsPageState } from './types'
 vi.mock('./membership-configuration-panel', () => ({ MembershipConfigurationPanel: () => null }))
 
 const mockNavigate = vi.fn()
-const session = vi.hoisted(() => ({ request: async () => ({ items: [] }), hasCapability: () => true }))
+const session = vi.hoisted(() => ({
+  request: vi.fn(async () => ({ items: [] })),
+  hasCapability: () => true,
+  demoMode: false,
+}))
 vi.mock('../../app/session-provider', () => ({ useAdminSession: () => ({
   ...session,
 }) }))
@@ -59,7 +69,7 @@ function pageState(page: AdminReadPage, overrides: Partial<OperationsPageState> 
 }
 
 describe('second-batch operations pages', () => {
-  it.each([TaskManagementPage, GrowthBadgesPage])('only exposes supported basic filters on %s', async (Page) => {
+  it.each([TaskManagementPage])('only exposes supported basic filters on %s', async (Page) => {
     const onFilterChange = vi.fn()
     const onRefresh = vi.fn()
     render(<Page {...pageState({ sections: [], nextCursor: null }, { onFilterChange, onRefresh })} />)
@@ -135,6 +145,17 @@ describe('second-batch operations pages', () => {
     }))
   })
 
+  it('maps the opportunity status filter to page-local wording while submitting codes (MIW-127)', async () => {
+    const onFilterChange = vi.fn()
+    render(<OpportunitiesContentPage {...pageState({ sections: [], nextCursor: null }, {
+      onFilterChange,
+      query: { query: '', status: '', filters: { section: 'opportunities' } },
+    })} />)
+    await userEvent.click(screen.getAllByRole('combobox')[0])
+    await userEvent.click(await screen.findByText('招募中'))
+    expect(onFilterChange).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'PUBLISHED', filters: { section: 'opportunities' } }))
+  })
+
   it('keeps opportunity and growth write actions as exact service actions', async () => {
     const opportunityWrite = vi.fn()
     const { unmount } = render(
@@ -150,11 +171,79 @@ describe('second-batch operations pages', () => {
     expect(mockNavigate.mock.calls.at(-1)?.[0].search({ q: '当前内容', filters: { ownerUserId: 'owner-a' } })).toEqual({ kind: 'SUPER_CASE', returnSearch: { q: '当前内容', filters: { ownerUserId: 'owner-a', section: 'content' } } })
     unmount()
 
+    // MIW-129：等级管理页保留授予勋章入口；成长数据调整改由权益发放页承接。
     const growthWrite = vi.fn()
-    render(<GrowthBadgesPage {...pageState({ sections: [], nextCursor: null }, { onWrite: growthWrite })} />)
+    render(<GrowthLevelsPage {...pageState({ sections: [], nextCursor: null }, { onWrite: growthWrite, canCapability: () => true })} />)
     await userEvent.click(screen.getByRole('button', { name: /运营操作/ }))
-    await userEvent.click(await screen.findByText('调整成长数据'))
-    expect(growthWrite).toHaveBeenCalledWith({ action: 'mip.admin.growth.adjust' })
+    await userEvent.click(await screen.findByText('授予勋章'))
+    expect(growthWrite).toHaveBeenCalledWith({ action: 'mip.admin.badges.grant' })
+  })
+
+  it('hides badge sections from operators without badges.manage (MIW-129)', async () => {
+    render(<GrowthLevelsPage {...pageState({ sections: [], nextCursor: null }, { canCapability: capability => capability === 'growth.read' })} />)
+    await userEvent.click(screen.getByRole('combobox', { name: '等级管理分区' }))
+    expect(await screen.findByText('等级变更', { selector: '.ant-select-item-option-content' })).toBeInTheDocument()
+    expect(screen.queryByText('勋章目录', { selector: '.ant-select-item-option-content' })).not.toBeInTheDocument()
+  })
+
+  it('navigates from entitlements to the standalone grant page and back (MIW-129)', async () => {
+    const onWrite = vi.fn()
+    render(<GrowthEntitlementsPage {...pageState({ sections: [], nextCursor: null }, { onWrite, canCapability: () => true })} />)
+    fireEvent.click(screen.getByRole('button', { name: /发放权益/ }))
+    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: '/entitlements/grant' }))
+  })
+
+  it('switches contribution behaviors to server codes and keeps the rules section reachable (MIW-129)', async () => {
+    const onFilterChange = vi.fn()
+    render(<GrowthContributionPage {...pageState({ sections: [], nextCursor: null }, {
+      onFilterChange,
+      query: { query: '', status: '', filters: { section: 'contributionTransactions' } },
+    })} />)
+    // 组合框顺序：状态、分区、行为、服务器、每页（与 FilterBar 渲染顺序一致）。
+    await userEvent.click(screen.getAllByRole('combobox')[2])
+    await userEvent.click(await screen.findByText('引荐机会', { selector: '.ant-select-item-option-content' }))
+    expect(onFilterChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      filters: expect.objectContaining({ section: 'contributionTransactions', behavior: 'OPPORTUNITY_REFERRAL' }),
+    }))
+  })
+
+  it('maps experience source filters onto existing source events (MIW-129)', async () => {
+    const onFilterChange = vi.fn()
+    render(<GrowthExperiencePage {...pageState({ sections: [], nextCursor: null }, {
+      onFilterChange,
+      query: { query: '', status: '', filters: { section: 'entries' } },
+    })} />)
+    // 组合框顺序：状态、分区、来源、服务器、每页。
+    await userEvent.click(screen.getAllByRole('combobox')[2])
+    await userEvent.click(await screen.findByText('人工冲正', { selector: '.ant-select-item-option-content' }))
+    expect(onFilterChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      filters: expect.objectContaining({ section: 'entries', sourceEventType: 'ADMIN_ADJUSTMENT' }),
+    }))
+  })
+
+  it('blocks the grant form submit in demo mode instead of calling the service (MIW-129)', async () => {
+    session.demoMode = true
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    try {
+      render(
+        <App>
+          <QueryClientProvider client={client}>
+            <EntitlementGrantPage />
+          </QueryClientProvider>
+        </App>,
+      )
+      // 演示模式：用户从演示目录选择，提交被拦截并提示。
+      await userEvent.click(screen.getAllByRole('combobox')[0])
+      await userEvent.click(await screen.findByText(/林晓/, { selector: '.ant-select-item-option-content' }))
+      await userEvent.type(screen.getByLabelText('发放数值'), '20')
+      await userEvent.type(screen.getByLabelText('发放原因'), '线下活动补录')
+      fireEvent.click(screen.getByRole('button', { name: '确认发放' }))
+      expect(await screen.findByText('演示模式不会提交写操作')).toBeInTheDocument()
+      expect(session.request).not.toHaveBeenCalledWith('mip.admin.growth.adjust', expect.anything())
+    }
+    finally {
+      session.demoMode = false
+    }
   })
 
   it('validates upload metadata and exposes upload and copy callbacks', async () => {
@@ -199,5 +288,46 @@ describe('second-batch operations pages', () => {
     expect(onUpload).toHaveBeenCalledWith(file, 'BANNER')
     fireEvent.click(screen.getByRole('button', { name: /复制/ }))
     expect(onCopyAssetId).toHaveBeenCalledWith('123e4567-e89b-42d3-a456-426614174000')
+  })
+
+  it('adds current-page task filters for star level, owner, and reward type', async () => {
+    const onFilterChange = vi.fn()
+    const taskSections = [{
+      title: '任务',
+      rows: [
+        { detailId: 'task-1', name: '早会复盘', starLevel: '3', assignedOwner: '笨笨老大', rewardConfig: '经验值 30 / 贡献值 5', state: '已发布' },
+        { detailId: 'task-2', name: '机会跟进', starLevel: '5', assignedOwner: '周宁', rewardConfig: '奖金（线下） 100', state: '草稿' },
+      ],
+      columns: [{ key: 'name', label: '任务名称' }, { key: 'starLevel', label: '星级' }, { key: 'assignedOwner', label: '负责人' }, { key: 'rewardConfig', label: '奖励分项' }, { key: 'state', label: '状态' }],
+    }]
+    const { rerender } = render(<TaskManagementPage {...pageState({
+      sections: taskSections,
+      nextCursor: null,
+    }, { onFilterChange, onOpenDetail: vi.fn() })} />)
+
+    expect(screen.queryByText('当前页过滤')).toBeNull()
+    await userEvent.click(screen.getAllByRole('combobox')[1])
+    await userEvent.click(await screen.findByText('三星', { selector: '.ant-select-item-option-content' }))
+    expect(onFilterChange).toHaveBeenLastCalledWith({ query: '', status: '', filters: { starLevel: '3' } })
+
+    await userEvent.click(screen.getAllByRole('combobox')[2])
+    expect(await screen.findByText('笨笨老大', { selector: '.ant-select-item-option-content' })).toBeTruthy()
+    await userEvent.click(screen.getByText('周宁', { selector: '.ant-select-item-option-content' }))
+    expect(onFilterChange).toHaveBeenLastCalledWith({ query: '', status: '', filters: { assignedOwner: '周宁' } })
+
+    await userEvent.click(screen.getAllByRole('combobox')[3])
+    await userEvent.click(await screen.findByText('奖金', { selector: '.ant-select-item-option-content' }))
+    expect(onFilterChange).toHaveBeenLastCalledWith({ query: '', status: '', filters: { rewardType: 'bonus' } })
+
+    rerender(<TaskManagementPage {...pageState({
+      sections: taskSections,
+      nextCursor: null,
+    }, {
+      onFilterChange,
+      onOpenDetail: vi.fn(),
+      query: { query: '', status: '', filters: { starLevel: '3', assignedOwner: '笨笨老大', rewardType: 'experience' } },
+    })} />)
+    expect(screen.getByText('当前页过滤')).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: '查看' }).length).toBe(1)
   })
 })

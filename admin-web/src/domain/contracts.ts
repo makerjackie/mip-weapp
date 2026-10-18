@@ -2,6 +2,8 @@ export {
   ADMIN_REQUEST_CONTRACT_VERSION,
   createAdminRequest,
   type AdminOperationAction,
+  type AdminOverviewPlayerTrend,
+  type AdminOverviewPlayerTrendMonth,
   type AdminRequest,
   type AdminRequestInput,
 } from '@mip/admin-contracts'

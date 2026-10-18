@@ -18,19 +18,13 @@ const documentTabs: Array<{ key: string; label: string; document: AgreementDocum
   { key: 'privacy-policy', label: '隐私政策', document: 'privacy', demo: demoPrivacyAgreement },
   { key: 'experience-rules', label: '经验值规则说明', document: 'experience-rules', demo: demoExperienceRules },
 ]
-export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void }) {
+export function MembershipConfigurationPanel({ onSaved, tabs, title = '会员内容配置' }: { onSaved: () => void; tabs?: readonly string[]; title?: string }) {
   const session = useAdminSession()
   const api = useMemo(() => membershipConfiguration(session.request), [session.request])
   const cache = useQueryClient()
   const { message } = App.useApp()
   const navigate = useNavigate()
   const search = useRouterState({ select: state => state.location.search as Record<string, unknown> })
-  const tab = typeof search.tab === 'string' && (search.tab in labels || search.tab === 'plans' || documentTabs.some(item => item.key === search.tab)) ? search.tab : 'levels'
-  const documentTab = documentTabs.find(item => item.key === tab)
-  const isAgreement = Boolean(documentTab)
-  const document = documentTab?.document ?? 'membership'
-  const demoAgreement = documentTab?.demo ?? demoMembershipAgreement
-  const setTab = (tab: string) => void navigate({ to: '/growth', search: { ...search, tab } })
   const [editing, setEditing] = useState<{ kind: ConfigurationKind; item: ConfigurationItem | null; draft: Record<string, unknown> } | null>(null)
   const formName = useId()
   const [form] = Form.useForm()
@@ -39,6 +33,18 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
   const readable = !session.demoMode && session.hasCapabilityAtScope('growth.read', 'PLATFORM')
   const configurable = readable && session.hasCapabilityAtScope('growth.configure', 'PLATFORM')
   const badgeWritable = readable && session.hasCapabilityAtScope('badges.manage', 'PLATFORM')
+  // MIW-129：成长体系拆分后，等级/勋章/权益页各自挂载本页相关的页签；不传 tabs 时保持全部页签。
+  const availableTabs = [
+    ...Object.entries(labels).filter(([key]) => key !== 'badges' || badgeWritable).map(([key, label]) => ({ key, label })),
+    { key: 'plans', label: '会员方案' },
+    ...documentTabs.map(({ key, label }) => ({ key, label })),
+  ].filter(item => !tabs || tabs.includes(item.key))
+  const tab = typeof search.tab === 'string' && availableTabs.some(item => item.key === search.tab) ? search.tab : availableTabs[0]?.key || 'levels'
+  const documentTab = documentTabs.find(item => item.key === tab)
+  const isAgreement = Boolean(documentTab)
+  const document = documentTab?.document ?? 'membership'
+  const demoAgreement = documentTab?.demo ?? demoMembershipAgreement
+  const setTab = (tab: string) => void navigate({ search: { ...search, tab } as never })
   const kind = tab in labels ? tab as ConfigurationKind : 'levels'
   const items = useQuery({ queryKey: [...key, kind], enabled: readable && !isAgreement && (kind !== 'badges' || badgeWritable), queryFn: () => api.list(kind) })
   const benefits = useQuery({ queryKey: [...key, 'benefit-options'], enabled: configurable && tab === 'levels', queryFn: () => api.list('benefits') })
@@ -76,10 +82,10 @@ export function MembershipConfigurationPanel({ onSaved }: { onSaved: () => void 
   const mediaUrls = Object.fromEntries((items.data?.items || [])
     .filter(item => item.imageAssetId && typeof item.imagePreviewUrl === 'string' && item.imagePreviewUrl)
     .map(item => [String(item.imageAssetId), String(item.imagePreviewUrl)]))
-  return <Card style={{ marginBottom: 24 }} title="会员内容配置">
+  return <Card style={{ marginBottom: 24 }} title={title}>
     <MediaPreviewProvider existingUrls={mediaUrls}>
     <Typography.Paragraph type="secondary">等级、权益和勋章由管理员维护。任务的奖励金额、经验值和贡献值请在“任务管理”中编辑；下方“成长奖励规则”管理已有行为事件的奖励。修改不追溯改写已发放记录。</Typography.Paragraph>
-    <Tabs activeKey={tab} onChange={setTab} items={[...Object.entries(labels).filter(([key]) => key !== 'badges' || badgeWritable).map(([key, label]) => ({ key, label })), { key: 'plans', label: '会员方案' }, ...documentTabs.map(({ key, label }) => ({ key, label }))]} />
+    <Tabs activeKey={tab} onChange={setTab} items={availableTabs} />
     {tab === 'plans' ? plans.isPending ? <Spin /> : plans.error ? <Alert type="error" title={plans.error.message} action={<Button onClick={() => void plans.refetch()}>重试</Button>} /> : <>
       <Alert type="info" showIcon title="价格保存后立即对之后的新订单生效；已支付订单的金额与快照不变。测试与正式方案相互独立，修改测试方案不影响正式下单。" style={{ marginBottom: 16 }} />
       <div style={{ display: 'grid', gap: 12 }}>

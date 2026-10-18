@@ -62,6 +62,59 @@ describe('admin detail views', () => {
     assert.equal(detail.title, '林晓')
   })
 
+  it('splits the user detail into basic and career sections for the six-tab profile (MIW-125)', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('users', 'user-1', requestWith({
+      'mip.admin.users.get': {
+        id: 'user-1', nickname: '林晓', kind: 'PLAYER', status: 'ACTIVE', phoneBound: true, wechatBound: true,
+        realName: '林晓', branchName: '福田分会', cityName: '深圳', identityStatus: '创业者',
+        headline: '品牌顾问', introduction: '专注品牌策略',
+        createdAt: '2030-01-01T00:00:00.000Z', updatedAt: '2030-02-01T00:00:00.000Z', profileVersion: 6, userVersion: 9,
+        companies: [{ name: '远岸咨询', role: '顾问' }], organizations: [{ name: '设计师协会', role: '会员' }],
+        tags: [
+          { kind: 'ABILITY', relation: 'ABILITY', label: '资源整合' },
+          // kind 只能是 INDUSTRY；主要行业由 relation=PRIMARY_INDUSTRY 表达（001_foundation.sql CHECK）。
+          { kind: 'INDUSTRY', relation: 'PRIMARY_INDUSTRY', label: '企业服务' },
+          { kind: 'INDUSTRY', relation: 'INDUSTRY', label: '品牌咨询' },
+        ],
+        roles: [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', grantedAt: '2030-01-15T00:00:00.000Z' }],
+      },
+    }, calls), { includeUserMembership: false })
+
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.users.get'])
+    const basic = detail.sections.find(section => section.title === '基本信息')
+    const career = detail.sections.find(section => section.title === '职业信息')
+    const fieldOf = (section: typeof basic, label: string) => section?.fields?.find(item => item.label === label)?.value
+    // 基础信息：身份/账号/手机/绑定微信/服务器/城市/时间与版本，职业字段一律不在此处。
+    assert.equal(fieldOf(basic, '身份'), '玩家')
+    assert.equal(fieldOf(basic, '账号状态'), '启用')
+    assert.equal(fieldOf(basic, '手机状态'), '已绑定')
+    assert.equal(fieldOf(basic, '绑定微信'), '已绑定')
+    assert.equal(fieldOf(basic, '所属服务器'), '福田分会')
+    assert.equal(fieldOf(basic, '城市'), '深圳')
+    assert.equal(fieldOf(basic, '注册时间'), new Date('2030-01-01T00:00:00.000Z').toLocaleString('zh-CN', { hour12: false }))
+    assert.equal(fieldOf(basic, '资料版本'), '6')
+    assert.equal(fieldOf(basic, '一句话介绍'), undefined)
+    assert.equal(fieldOf(basic, '职业身份'), undefined)
+    // 职业信息：行业来自标签、职业身份、介绍与任职/标签数据。
+    assert.equal(fieldOf(career, '行业'), '企业服务、品牌咨询')
+    assert.equal(fieldOf(career, '职业身份'), '创业者')
+    assert.equal(fieldOf(career, '一句话介绍'), '品牌顾问')
+    assert.equal(fieldOf(career, '个人介绍'), '专注品牌策略')
+    assert.ok(detail.sections.some(section => section.title === '任职信息'))
+    assert.ok(detail.sections.some(section => section.title === '标签'))
+    assert.ok(detail.sections.some(section => section.title === '运营角色'))
+  })
+
+  it('shows wechat binding as unknown until the server reports it (MIW-125, 待联调)', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('users', 'user-1', requestWith({
+      'mip.admin.users.get': { id: 'user-1', nickname: '林晓', kind: 'PLAYER', status: 'ACTIVE' },
+    }, calls), { includeUserMembership: false })
+
+    assert.equal(detail.sections.find(section => section.title === '基本信息')?.fields?.find(item => item.label === '绑定微信')?.value, '—')
+  })
+
   it('aggregates event detail, insights and roster from their read actions', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const detail = await loadAdminDetail('events', 'event-1', requestWith({
@@ -220,8 +273,15 @@ describe('admin detail views', () => {
         commercialTerms: { amountDisplay: '面议' }, deadlineAt: '2030-03-31T00:00:00.000Z', contentSafetyStatus: 'APPROVED',
         publishedAt: '2030-03-01T00:00:00.000Z', updatedAt: '2030-03-02T00:00:00.000Z', status: 'PUBLISHED',
         teamMembers: [{ nickname: '周宁', branchName: '福田分会' }],
-        history: [{ action: 'admin.opportunities.publish', actorNickname: '运营账号', createdAt: '2030-03-01T00:00:00.000Z' },
-          { action: 'OPPORTUNITY_UPDATED', actorNickname: '发布人', createdAt: '2030-03-02T00:00:00.000Z' }],
+        history: [{ action: 'admin.opportunities.publish', actorNickname: '运营账号', createdAt: '2030-03-01T00:00:00.000Z', metadata: { fromStatus: 'DRAFT', toStatus: 'PUBLISHED' } },
+          { action: 'OPPORTUNITY_UPDATED', actorNickname: '发布人', createdAt: '2030-03-02T00:00:00.000Z', metadata: { fromStatus: 'PUBLISHED', toStatus: 'ENDED' } }],
+      },
+      'mip.admin.opportunities.referrals': {
+        items: [
+          { id: 'referral-2', status: 'ACTIVE', actorNickname: '陈默', createdAt: '2030-03-02T00:00:00.000Z' },
+          { id: 'referral-1', status: 'ACTIVE', actorNickname: '周宁', createdAt: '2030-03-01T00:00:00.000Z' },
+        ],
+        nextCursor: null,
       },
       'mip.admin.opportunityComments.get': {
         settings: { commentsEnabled: true, reviewsEnabled: true, callsEnabled: false, moderationMode: 'REVIEW' },
@@ -232,13 +292,25 @@ describe('admin detail views', () => {
 
     assert.deepEqual(calls, [
       { action: 'mip.admin.opportunities.get', input: { opportunityId: 'opportunity-1' } },
+      { action: 'mip.admin.opportunities.referrals', input: { opportunityId: 'opportunity-1', limit: 20 } },
       { action: 'mip.admin.opportunityComments.get', input: { opportunityId: 'opportunity-1' } },
     ])
     assert.equal(detail.title, '寻找品牌合作伙伴')
+    // MIW-127：机会状态文案在机会页面内局部映射。
+    assert.equal(detail.status, '招募中')
     assert.equal(detail.sections.find(section => section.title === '机会信息')?.fields?.find(item => item.label === '合作角色')?.value, '狗策划')
     assert.equal(detail.sections.find(section => section.title === '评论与评价')?.rows?.[0].body, '愿意沟通')
     assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[0].action, '发布机会')
+    assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[0].toStatus, '招募中')
     assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[1].action, '更新机会')
+    assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[1].toStatus, '已完成')
+    // MIW-127：想推荐名单按服务端倒序透出；服务端暂未投影引荐人 userId，先显示「—」。
+    const referralRows = detail.sections.find(section => section.title === '想推荐名单')?.rows || []
+    assert.deepEqual(referralRows.map(row => [row.detailId, row.userId, row.nickname]), [
+      ['referral-2', '—', '陈默'],
+      ['referral-1', '—', '周宁'],
+    ])
+    assert.notEqual(referralRows[0].createdAt, '—')
   })
 
   it('shows the server value-mode display for qian and negotiation opportunities (MIW-89)', async () => {
@@ -275,10 +347,12 @@ describe('admin detail views', () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
       'mip.admin.opportunities.get': opportunityDetailResponse(),
+      'mip.admin.opportunities.referrals': { items: [], nextCursor: null },
     }, calls), { includeOpportunityComments: false })
 
     assert.deepEqual(calls, [
       { action: 'mip.admin.opportunities.get', input: { opportunityId: 'opportunity-1' } },
+      { action: 'mip.admin.opportunities.referrals', input: { opportunityId: 'opportunity-1', limit: 20 } },
     ])
     assert.equal(
       detail.sections.find(section => section.title === '评论数据')?.fields?.find(field => field.label === '数据权限')?.value,
@@ -300,12 +374,54 @@ describe('admin detail views', () => {
 
     assert.deepEqual(calls.map(call => call.action), [
       'mip.admin.opportunities.get',
+      'mip.admin.opportunities.referrals',
       'mip.admin.opportunityComments.get',
     ])
     assert.equal(
       detail.sections.find(section => section.title === '评论数据')?.fields?.find(field => field.label === '数据权限')?.value,
       '当前账号不可查看',
     )
+  })
+
+  it('degrades the referral list to a section error without losing opportunity facts', async () => {
+    const request: AdminDetailRequest = async <T>(action: string) => {
+      if (action === 'mip.admin.opportunities.referrals') {
+        throw Object.assign(new Error('引荐名单暂不可用'), { code: 'UPSTREAM_ERROR' })
+      }
+      return opportunityDetailResponse() as unknown as T
+    }
+
+    const detail = await loadAdminDetail('opportunities', 'opportunity-1', request)
+
+    assert.equal(detail.sections.find(section => section.title === '想推荐名单')?.error, '引荐名单暂不可用')
+    assert.equal(detail.status, '招募中')
+    assert.equal(detail.sections.find(section => section.title === '机会信息')?.fields?.find(item => item.label === '发布人')?.value, '林晓')
+  })
+
+  it('shows the referral list permission note instead of an error when access is forbidden', async () => {
+    const request: AdminDetailRequest = async <T>(action: string) => {
+      if (action === 'mip.admin.opportunities.referrals') {
+        throw Object.assign(new Error('当前账号不可查看引荐名单'), { code: 'FORBIDDEN' })
+      }
+      return opportunityDetailResponse() as unknown as T
+    }
+
+    const detail = await loadAdminDetail('opportunities', 'opportunity-1', request)
+
+    assert.equal(detail.sections.find(section => section.title === '想推荐名单')?.error, undefined)
+    assert.equal(
+      detail.sections.find(section => section.title === '想推荐名单')?.fields?.find(field => field.label === '数据权限')?.value,
+      '当前账号不可查看',
+    )
+  })
+
+  it('labels ended opportunities with the page-local wording (MIW-127)', async () => {
+    const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
+      'mip.admin.opportunities.get': { ...opportunityDetailResponse(), status: 'ENDED' },
+      'mip.admin.opportunities.referrals': { items: [], nextCursor: null },
+    }, []), { includeOpportunityComments: false })
+
+    assert.equal(detail.status, '已完成')
   })
 
   for (const failure of [

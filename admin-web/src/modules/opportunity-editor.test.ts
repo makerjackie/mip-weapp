@@ -26,7 +26,7 @@ export async function serializedOpportunity() {
   return repository.getOpportunityDetail('wx-test', 'opportunity-a')
 }
 
-it('maps the actual opportunity response with separate money and value-description columns', async () => {
+it('maps the actual opportunity response money column and keeps value description in the detail drawer', async () => {
   const dto = await serializedOpportunity()
   const page = await loadOpportunities({ query: '', status: '', cursor: '', limit: 20, filters: { section: 'opportunities' } },
     async <T>() => ({ items: [dto, { ...dto, id: 'empty-money', commercialTerms: { ...dto.commercialTerms, minAmountCents: null, maxAmountCents: null } },
@@ -34,9 +34,12 @@ it('maps the actual opportunity response with separate money and value-descripti
       // MIW-89：结构化模式直接采用服务端展示（面谈 / X 千）。
       { ...dto, id: 'single-money', commercialTerms: { ...dto.commercialTerms, valueMode: 'SINGLE', minAmountCents: 500000, maxAmountCents: 500000, amountDisplay: '5 千' } },
       { ...dto, id: 'negotiation-money', commercialTerms: { ...dto.commercialTerms, valueMode: 'NEGOTIATION', minAmountCents: null, maxAmountCents: null, amountDisplay: '面谈' } }], nextCursor: null }) as T)
-  assert.deepEqual(page.sections[0].rows.map(row => [row.value, row.valueSummary]),
-    [['0 ～ 2.5', '完整价值'], ['—', '完整价值'], ['0', '完整价值'], ['5 千', '完整价值'], ['面谈', '完整价值']])
-  assert.equal(page.sections[0].columns.find(column => column.key === 'valueSummary')?.label, '价值说明')
+  assert.deepEqual(page.sections[0].rows.map(row => row.value),
+    ['0 ～ 2.5', '—', '0', '5 千', '面谈'])
+  // MIW-127：列表收敛为设计稿 7 列；价值说明改由详情抽屉「机会信息」分区承载。
+  assert.deepEqual(page.sections[0].columns.map(column => column.key),
+    ['title', 'owner', 'value', 'city', 'referrals', 'state', 'publishedAt'])
+  assert.equal(page.sections[0].rows[0].valueSummary, undefined)
 })
 
 describe('opportunity read/edit/save contract', () => {

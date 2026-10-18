@@ -7,7 +7,7 @@ import { userProfileHref } from '../modules/user-profile-records'
 import { App, Button, Space } from 'antd'
 import { OperationsReadPage } from '../features/operations-pages/operations-read-page'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ComponentType } from 'react'
 import { useAdminSession } from './session-provider'
 import type { AdminListSearch } from './router'
 import {
@@ -21,14 +21,20 @@ import {
 import {
   BannerManagementPage,
   GameManagementPage,
-  GrowthBadgesPage,
+  GrowthContributionPage,
+  GrowthEntitlementsPage,
+  GrowthExperiencePage,
+  GrowthLevelsPage,
   MediaUploadPage,
   OpportunitiesContentPage,
   TaskManagementPage,
+  EntitlementGrantPage,
   type OperationsPageState,
   type OperationsWriteIntent,
 } from '../features/operations-pages'
+import { TaskApprovalPage, useTaskApprovalPage } from '../features/operations-pages/task-approval-page'
 import {
+  AuditLogsPage,
   KnowledgePage,
   MessagesPage,
   OperationsPage,
@@ -65,21 +71,24 @@ import type { AdminOperationRow } from '../modules/admin-row-operations'
 import { downloadTaskCompletionExport, exportTaskCompletions } from '../modules/admin-task-management'
 import { DetailDrawer, PermissionGuard, type BatchAction } from '../shared/ui'
 import { EventEditFormPage } from '../features/form-pages/event-edit-form-page'
+import { EventSettingsPage } from '../features/core-pages/event-settings-page'
 import { TaskEditFormPage } from '../features/form-pages/task-edit-form-page'
 import { OpportunityEditFormPage } from '../features/form-pages/opportunity-edit-form-page'
 import { KnowledgeEditFormPage } from '../features/form-pages/knowledge-edit-form-page'
 import { UserContentEditFormPage } from '../features/form-pages/user-content-edit-form-page'
 
 type CoreRoute = 'users' | 'events' | 'orders'
-type OperationsRoute = 'tasks' | 'banners' | 'game' | 'opportunities' | 'growth' | 'adminAccounts' | 'auditLogs'
+type OperationsRoute = 'tasks' | 'banners' | 'game' | 'opportunities' | 'adminAccounts' | 'auditLogs'
 
 export function OverviewRoutePage() {
   const navigate = useNavigate()
-  return <OverviewPage onNavigate={target => void navigate({ to: target })} />
+  // /task-approval、/events/new/edit 页面由对应工作包注册路由；概览先按运行时路径跳转（MIW-123）。
+  return <OverviewPage onNavigate={target => void navigate({ to: target as never })} />
 }
 
 export function UsersRoutePage() { return <CoreRoutePage route="users" /> }
 export function EventsRoutePage() { return <CoreRoutePage route="events" /> }
+export function EventSettingsRoutePage() { return <EventSettingsPage /> }
 export function OrdersRoutePage() { return <CoreRoutePage route="orders" /> }
 
 function CoreRoutePage({ route }: { route: CoreRoute }) {
@@ -140,9 +149,138 @@ export function TasksRoutePage() { return <OperationsRoutePage route="tasks" /> 
 export function BannersRoutePage() { return <OperationsRoutePage route="banners" /> }
 export function GameRoutePage() { return <OperationsRoutePage route="game" /> }
 export function OpportunitiesRoutePage() { return <OperationsRoutePage route="opportunities" /> }
-export function GrowthRoutePage() { return <OperationsRoutePage route="growth" /> }
 export function AdminAccountsRoutePage() { return <OperationsRoutePage route="adminAccounts" /> }
 export function AuditLogsRoutePage() { return <OperationsRoutePage route="auditLogs" /> }
+
+// MIW-129：成长体系四页拆分。查询仍走 growth 分区装配（loadGrowth + growth-sections），
+// 页面壳只固定默认分区、入口能力和本页可见分区；各分区缺省时由页面组件回落到主分区。
+export function LevelsRoutePage() {
+  return <GrowthSplitRoutePage
+    component={GrowthLevelsPage}
+    defaultSection="levels"
+    capabilities={['growth.read', 'badges.manage']}
+    writeCapabilities={['badges.manage']}
+  />
+}
+
+export function ExperienceRoutePage() {
+  return <GrowthSplitRoutePage
+    component={GrowthExperiencePage}
+    defaultSection="entries"
+    entryFilters={{ metric: 'EXPERIENCE' }}
+    capabilities={['growth.read']}
+    writeCapabilities={[]}
+  />
+}
+
+export function ContributionRoutePage() {
+  return <GrowthSplitRoutePage
+    component={GrowthContributionPage}
+    defaultSection="contributionTransactions"
+    capabilities={['growth.read']}
+    writeCapabilities={[]}
+  />
+}
+
+export function EntitlementsRoutePage() {
+  return <GrowthSplitRoutePage
+    component={GrowthEntitlementsPage}
+    defaultSection="entitlements"
+    capabilities={['memberships.read']}
+    writeCapabilities={['memberships.adjust']}
+  />
+}
+
+/** MIW-129 H2：独立发放表单页；提交动作由页面按权益类型选择，路由只做能力入口。 */
+export function EntitlementGrantRoutePage() {
+  return (
+    <PermissionGuard capabilities={['growth.adjust', 'memberships.adjust']} requireAny>
+      <EntitlementGrantPage />
+    </PermissionGuard>
+  )
+}
+
+interface GrowthSplitRouteProps {
+  component: ComponentType<OperationsPageState>
+  defaultSection: string
+  /** 页面口径固定的查询参数（如经验值页 metric=EXPERIENCE），优先于 URL 筛选。 */
+  entryFilters?: Record<string, string>
+  capabilities: string[]
+  writeCapabilities: string[]
+}
+
+function GrowthSplitRoutePage({ component: Page, defaultSection, entryFilters, capabilities, writeCapabilities }: GrowthSplitRouteProps) {
+  const { demoMode, hasCapability } = useAdminSession()
+  const { launch } = useAdminOperations()
+  const navigate = useNavigate()
+  const search = useRouteSearch()
+  const updateSearch = useUpdateSearch()
+  const [cursorStack, setCursorStack] = useState<Array<string | null>>([])
+  const detail = useAdminDetail()
+  const baseQuery = listQuery(search)
+  const query = {
+    ...baseQuery,
+    filters: {
+      ...baseQuery.filters,
+      ...(entryFilters || {}),
+      section: baseQuery.filters?.section || defaultSection,
+    },
+  }
+  const result = useAdminReadPage('growth', query)
+  const canWrite = demoMode || writeCapabilities.some(hasCapability)
+  const onWrite = canWrite ? (intent: OperationsWriteIntent) => void launch(intent.action, intent.targetId, detail.view, {
+    values: intent.values,
+    expectedVersion: intent.expectedVersion,
+    allowedCapabilities: intent.allowedCapabilities,
+  }) : undefined
+  const goPreviousPage = useCallback(() => {
+    const previous = cursorStack[cursorStack.length - 1] ?? null
+    const page = (search.page || 2) - 1
+    setCursorStack(stack => stack.slice(0, -1))
+    void updateSearch({ ...search, cursor: previous || undefined, page: page > 1 ? page : undefined })
+  }, [cursorStack, search, updateSearch])
+  const state: OperationsPageState = {
+    page: result.data || null,
+    query,
+    loading: result.loading,
+    refreshing: result.refreshing,
+    error: result.errorMessage,
+    demoMode,
+    hasPreviousPage: Boolean(search.page && search.page > 1) && cursorStack.length > 0,
+    onFilterChange: value => {
+      setCursorStack([])
+      const filters = value.filters && Object.keys(value.filters).length > 0 ? value.filters : undefined
+      void updateSearch({
+        q: value.query || undefined,
+        status: value.status || undefined,
+        filters,
+        limit: search.limit,
+        tab: search.tab,
+        cursor: undefined,
+        page: undefined,
+      })
+    },
+    onRefresh: () => void result.refetch(),
+    onPreviousPage: cursorStack.length > 0 ? goPreviousPage : undefined,
+    onNextPage: cursor => {
+      setCursorStack(stack => [...stack, search.cursor || null])
+      void updateSearch({ ...search, cursor, page: (search.page || 1) + 1 })
+    },
+    onOpenDetail: intent => detail.openDetail(intent.route, intent.id),
+    onWrite,
+    canCapability: hasCapability,
+    onPageSizeChange: size => {
+      setCursorStack([])
+      void updateSearch({ ...search, limit: size, cursor: undefined, page: undefined })
+    },
+  }
+  return (
+    <PermissionGuard capabilities={capabilities} requireAny={capabilities.length > 1}>
+      <Page {...state} />
+      <RouteDetailLayer detail={detail} onMediaUpload={() => void navigate({ to: '/media', search: { tab: 'BANNER' } })} />
+    </PermissionGuard>
+  )
+}
 
 function OperationsRoutePage({ route }: { route: OperationsRoute }) {
   const { demoMode, hasCapability } = useAdminSession()
@@ -209,13 +347,76 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
           : route === 'adminAccounts' ? <OperationsReadPage {...state} title="后台账号" description="管理已注册用户的后台权限" searchPlaceholder="搜索姓名或账号标识"
               statusOptions={getAdminReadRouteDefinition(route).statusOptions} paginated
               actions={canWrite ? <Button type="primary" onClick={() => onWrite?.({ action: 'mip.admin.adminAccounts.create' })}>新增后台账号</Button> : null} />
-            : route === 'auditLogs' ? <OperationsReadPage {...state} title="操作审计" description="查看后台操作记录" searchPlaceholder="搜索操作或资源"
-                statusOptions={getAdminReadRouteDefinition(route).statusOptions} paginated />
-              : <GrowthBadgesPage {...state} />
+            : <AuditLogsPage {...state} />
   return (
     <PermissionGuard capabilities={operationRouteCapabilities[route]} requireAny={operationRouteCapabilities[route].length > 1}>
       {page}
       <RouteDetailLayer detail={detail} onMediaUpload={() => void navigate({ to: '/media', search: { tab: 'BANNER' } })} />
+    </PermissionGuard>
+  )
+}
+
+/** MIW-130：NPC任务（提交与审批记录）独立页，聚合跨任务完成记录；不进入侧栏导航。 */
+export function TaskApprovalRoutePage() {
+  const { demoMode, hasCapability } = useAdminSession()
+  const { launch } = useAdminOperations()
+  const search = useRouteSearch()
+  const updateSearch = useUpdateSearch()
+  const [cursorStack, setCursorStack] = useState<Array<string | null>>([])
+  const detail = useAdminDetail()
+  const result = useTaskApprovalPage(listQuery(search))
+  const onWrite = demoMode || hasCapability('tasks.manage')
+    ? (intent: OperationsWriteIntent) => void launch(intent.action, intent.targetId, detail.view, {
+      values: intent.values,
+      expectedVersion: intent.expectedVersion,
+      allowedCapabilities: intent.allowedCapabilities,
+    })
+    : undefined
+  const goPreviousPage = useCallback(() => {
+    const previous = cursorStack[cursorStack.length - 1] ?? null
+    const page = (search.page || 2) - 1
+    setCursorStack(stack => stack.slice(0, -1))
+    void updateSearch({ ...search, cursor: previous || undefined, page: page > 1 ? page : undefined })
+  }, [cursorStack, search, updateSearch])
+  const state: OperationsPageState = {
+    page: result.data || null,
+    query: listQuery(search),
+    loading: result.loading,
+    refreshing: result.refreshing,
+    error: result.errorMessage,
+    demoMode,
+    hasPreviousPage: Boolean(search.page && search.page > 1) && cursorStack.length > 0,
+    onFilterChange: value => {
+      setCursorStack([])
+      const filters = value.filters && Object.keys(value.filters).length > 0 ? value.filters : undefined
+      void updateSearch({
+        q: value.query || undefined,
+        status: value.status || undefined,
+        filters,
+        limit: search.limit,
+        tab: search.tab,
+        cursor: undefined,
+        page: undefined,
+      })
+    },
+    onRefresh: () => void result.refetch(),
+    onPreviousPage: cursorStack.length > 0 ? goPreviousPage : undefined,
+    onNextPage: cursor => {
+      setCursorStack(stack => [...stack, search.cursor || null])
+      void updateSearch({ ...search, cursor, page: (search.page || 1) + 1 })
+    },
+    onOpenDetail: intent => detail.openDetail(intent.route, intent.id),
+    onWrite,
+    canCapability: hasCapability,
+    onPageSizeChange: size => {
+      setCursorStack([])
+      void updateSearch({ ...search, limit: size, cursor: undefined, page: undefined })
+    },
+  }
+  return (
+    <PermissionGuard capabilities={['tasks.manage']}>
+      <TaskApprovalPage {...state} />
+      <RouteDetailLayer detail={detail} />
     </PermissionGuard>
   )
 }
@@ -504,7 +705,6 @@ const operationRouteCapabilities: Record<OperationsRoute, string[]> = {
   banners: ['banners.manage'],
   game: ['game.manage'],
   opportunities: ['opportunities.moderate', 'userContent.moderate'],
-  growth: ['growth.read', 'growth.adjust', 'badges.manage', 'memberships.read'],
   adminAccounts: ['roles.change'],
   auditLogs: ['audit.read'],
 }
@@ -514,7 +714,6 @@ const operationRouteWriteCapabilities: Record<OperationsRoute, string[]> = {
   banners: ['banners.manage'],
   game: ['game.manage'],
   opportunities: ['opportunities.moderate', 'userContent.moderate'],
-  growth: ['growth.adjust', 'badges.manage', 'memberships.adjust'],
   adminAccounts: ['roles.change'],
   auditLogs: [],
 }
@@ -532,15 +731,21 @@ export const routeComponents = {
   '/users/$userId': UserProfilePage,
   '/cards': ProfileCardsPage,
   '/events': EventsRoutePage,
+  '/events/settings': EventSettingsRoutePage,
   '/orders': OrdersRoutePage,
   '/tasks': TasksRoutePage,
+  '/task-approval': TaskApprovalRoutePage,
   '/banners': BannersRoutePage,
   '/videos': VideosPage,
   '/videos/$videoId/edit': VideoEditPage,
   '/media': MediaRoutePage,
   '/game': GameRoutePage,
   '/opportunities': OpportunitiesRoutePage,
-  '/growth': GrowthRoutePage,
+  '/levels': LevelsRoutePage,
+  '/experience': ExperienceRoutePage,
+  '/contribution': ContributionRoutePage,
+  '/entitlements': EntitlementsRoutePage,
+  '/entitlements/grant': EntitlementGrantRoutePage,
   '/permissions': PermissionsRoutePage,
   '/admin-accounts': AdminAccountsRoutePage,
   '/audit-logs': AuditLogsRoutePage,

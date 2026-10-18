@@ -1,4 +1,5 @@
 import type { AdminRequestInput } from '../domain/contracts'
+import { ADMIN_AUDIT_EVENT_TYPES, type AdminAuditEventType } from '@mip/admin-contracts'
 import type {
   AdminListQuery,
   AdminListRoute,
@@ -6,6 +7,7 @@ import type {
   AdminReadAccess,
   AdminReadRouteDefinition,
   AdminRequest,
+  AdminTableRow,
 } from './admin-read-contracts.ts'
 import {
   accessLabel,
@@ -20,9 +22,12 @@ import {
   formatDateTime,
   label,
   money,
+  normalizePlayerStatusFilter,
   numberLabel,
   options,
   pageValue,
+  playerStatusFilterLabel,
+  playerStatusLabel,
   record,
   roleLabel,
   scopeLabel,
@@ -157,7 +162,20 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
     searchPlaceholder: '搜索操作者或业务对象',
     statusOptions: [...commonStatus],
     paginated: true,
+    filterDimensions: [{ key: 'type', urlParam: 'type' }],
   },
+}
+
+/** 审计日志页「类型」筛选（全部|操作|登录），取值来自平台中立契约词表。 */
+export const auditTypeFilterOptions: Array<{ value: AdminAuditEventType | ''; label: string }> = [
+  { value: '', label: '全部' },
+  { value: 'OPERATION', label: '操作' },
+  { value: 'LOGIN', label: '登录' },
+]
+
+function auditListType(query: AdminListQuery): AdminAuditEventType | '' {
+  const type = String(query.filters?.type || '')
+  return (ADMIN_AUDIT_EVENT_TYPES as readonly string[]).includes(type) ? type as AdminAuditEventType : ''
 }
 
 export function getAdminReadRouteDefinition(route: AdminListRoute) {
@@ -189,31 +207,43 @@ export async function loadAdminReadPage(
 }
 
 async function loadUsers(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
-  const page = pageValue(await request('mip.admin.users.list', listInput(query,
-    access?.hasCapability('users.phone.read') ? { includePhone: true } : {})))
+  const filters = query.filters ?? {}
+  // MIW-124 C2：「普通用户」走 Web 契约 identity=NORMAL（BFF 层实现「既非玩家也非嘉宾」语义）；
+  // PLAYER/GUEST 仍使用服务端原生 kind 参数。
+  const identity = filters.kind === 'NORMAL' ? 'NORMAL' : ''
+  const kind = filters.kind === 'PLAYER' || filters.kind === 'GUEST' ? filters.kind : ''
+  // MIW-124 C4：到期分档映射回服务端 CURRENT/FORMER/NEVER；CURRENT 细分档在当前页结果内收口。
+  const statusFilter = normalizePlayerStatusFilter(filters.playerLifecycle)
+  const upstreamLifecycle = statusFilter === 'ACTIVE' || statusFilter === 'EXPIRING_THIS_MONTH' || statusFilter === 'NEXT_MONTH'
+    ? 'CURRENT'
+    : statusFilter === 'EXPIRED'
+      ? 'FORMER'
+      : statusFilter === 'NEVER' ? 'NEVER' : ''
+  const expectedStatus = playerStatusFilterLabel(filters.playerLifecycle)
+  const page = pageValue(await request('mip.admin.users.list', listInput({
+    ...query,
+    filters: { ...filters, kind, identity, playerLifecycle: upstreamLifecycle },
+  }, access?.hasCapability('users.phone.read') ? { includePhone: true } : {})))
   return {
     sections: [{
       rows: page.items.map(item => ({
         detailId: valueOf(item, 'id', 'userId'),
         name: valueOf(item, 'nickname', 'name', 'displayName'),
         avatarUrl: valueOf(item, 'avatarUrl'),
-        headline: valueOf(item, 'headline', 'companyName'),
-        identity: label(valueOf(item, 'kind')),
+        role: label(valueOf(item, 'kind')),
         phone: item.phoneNumberMasked || (typeof item.phoneNumber === 'string' ? item.phoneNumber.replace(/(\d{3})\d{4}(\d{4})$/, '$1****$2') : item.phoneBound === true ? '已绑定' : '未绑定'),
         industry: valueOf(item, 'industryNames'),
         profession: valueOf(item, 'identityStatus'),
-        branch: valueOf(item, 'branchName', 'cityName'),
         level: valueOf(item, 'levelName'),
         contribution: numberLabel(item.contribution),
-        membership: item.kind === 'PLAYER' ? '有效' : item.latestEntitlementEndsAt ? '当前无效' : '未开通',
+        playerStatus: playerStatusLabel(item),
         createdAt: formatDateTime(item.createdAt),
         expiresAt: formatDateTime(item.latestEntitlementEndsAt),
-        state: label(valueOf(item, 'status', 'membershipStatus')),
-      })),
+      })).filter(row => !expectedStatus || row.playerStatus === expectedStatus),
       columns: columns([
-        ['avatarUrl', '头像'], ['name', '姓名'], ['headline', '简介'], ['identity', '会员身份'], ['phone', '手机'],
-        ['industry', '行业'], ['profession', '职业身份'], ['branch', '所属服务器'], ['level', '等级'],
-        ['contribution', '贡献'], ['membership', '权益状态'], ['createdAt', '注册时间'], ['expiresAt', '会籍到期'], ['state', '账号状态'],
+        ['avatarUrl', '头像'], ['name', '昵称'], ['phone', '手机号'], ['role', '当前角色'], ['industry', '行业'],
+        ['profession', '当前身份'], ['level', '用户等级'], ['contribution', '贡献值'], ['playerStatus', '玩家权益状态'],
+        ['createdAt', '用户注册时间'], ['expiresAt', '玩家到期时间'],
       ]),
     }],
     nextCursor: page.nextCursor,
@@ -317,12 +347,15 @@ async function loadOrders(query: AdminListQuery, request: AdminRequest): Promise
         resource: valueOf(item, 'resourceTitle', 'title'),
         branch: valueOf(item, 'resourceBranchName'),
         amount: money(item.amountCents, item.currency),
+        paidAt: formatDateTime(item.paidAt),
+        completedAt: formatDateTime(item.completedAt),
         createdAt: formatDateTime(item.createdAt),
         state: label(valueOf(item, 'status')),
       })),
       columns: columns([
         ['id', '订单号'], ['user', '用户'], ['type', '订单类型'], ['resource', '订单内容'],
-        ['branch', '活动服务器'], ['amount', '金额'], ['createdAt', '创建时间'], ['state', '状态'],
+        ['branch', '活动服务器'], ['amount', '金额'], ['paidAt', '支付时间'], ['completedAt', '完成时间'],
+        ['createdAt', '创建时间'], ['state', '状态'],
       ]),
     }],
     nextCursor: page.nextCursor,
@@ -466,6 +499,21 @@ async function loadAdminAccounts(query: AdminListQuery, request: AdminRequest): 
 
 async function loadAuditLogs(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
   const payload = pageValue(await request('mip.admin.audit.list', listInput(query)))
+  if (auditListType(query) === 'LOGIN') {
+    // MIW-131：登录记录视图。服务端登录审计事件（type=LOGIN）待联调；行装配按契约
+    // 字段读取并兼容 metadata 兜底，结果未知的记录不假报成功或失败。
+    return {
+      sections: [{
+        title: '登录记录',
+        rows: payload.items.map(auditLoginRow),
+        columns: columns([
+          ['account', '登录账号'], ['createdAt', '时间'], ['result', '结果'],
+          ['ip', 'IP'], ['device', '设备'], ['failureReason', '失败原因'],
+        ]),
+      }],
+      nextCursor: payload.nextCursor,
+    }
+  }
   return {
     sections: [{
       rows: payload.items.map(item => ({
@@ -480,6 +528,26 @@ async function loadAuditLogs(query: AdminListQuery, request: AdminRequest): Prom
       columns: columns([['actor', '操作者'], ['role', '角色'], ['scope', '服务器'], ['action', '操作'], ['resource', '模块'], ['resourceId', '业务对象'], ['createdAt', '时间']]),
     }],
     nextCursor: payload.nextCursor,
+  }
+}
+
+function auditLoginRow(item: AdminTableRow): AdminTableRow {
+  const meta = record(item.metadata)
+  const field = (...keys: string[]) => {
+    for (const key of keys) {
+      if (valueOf(item, key) !== '—') return valueOf(item, key)
+      if (valueOf(meta, key) !== '—') return valueOf(meta, key)
+    }
+    return '—'
+  }
+  const result = String(item.result ?? meta.result ?? '').toUpperCase()
+  return {
+    account: field('loginAccount', 'actorNickname', 'actorName'),
+    createdAt: formatDateTime(item.createdAt),
+    result: result === 'SUCCESS' ? '成功' : result === 'FAILURE' ? '失败' : '—',
+    ip: field('ip'),
+    device: field('device'),
+    failureReason: field('failureReason'),
   }
 }
 

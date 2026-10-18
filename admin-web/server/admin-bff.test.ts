@@ -544,6 +544,39 @@ describe('Admin Web BFF', () => {
     assert.equal(JSON.stringify(upstreamBody).includes(LOGIN_SECRET), false)
   })
 
+  it('applies users.list identity=NORMAL on the returned page and rejects unknown identity values', async () => {
+    const fetchMock = fetchQueue(new Response(JSON.stringify({
+      ok: true,
+      data: {
+        items: [{ id: 'u-player', kind: 'PLAYER' }, { id: 'u-guest', kind: 'GUEST' }, { id: 'u-normal', kind: 'NORMAL' }],
+        nextCursor: 'next-1',
+      },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }))
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST',
+      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({ contractVersion: 1, action: 'mip.admin.users.list', input: { filters: { identity: 'NORMAL' } } }),
+    }))
+
+    assert.equal(response.status, 200)
+    const payload = await response.json()
+    assert.deepEqual(payload.data.items.map((item: { id: string }) => item.id), ['u-normal'])
+    assert.equal(payload.data.nextCursor, 'next-1')
+    // identity=NORMAL 是 Web 契约筛选（既非玩家也非嘉宾），不向上游转发。
+    const upstreamBody = JSON.parse(fetchMock.calls[0][1]?.body as string)
+    assert.equal(upstreamBody.request.input.filters.identity, undefined)
+
+    const invalid = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST',
+      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({ contractVersion: 1, action: 'mip.admin.users.list', input: { filters: { identity: 'GUEST' } } }),
+    }))
+    assert.equal(invalid.status, 400)
+    assert.equal((await invalid.json()).error.code, 'VALIDATION_FAILED')
+    assert.equal(fetchMock.calls.length, 1)
+  })
+
   it('keeps the challenge pending until a trusted mini-program administrator confirms it', async () => {
     const bff = createAdminBff(env(), { generateLoginQrCode: noLoginQrCode, now: () => NOW })
     const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
@@ -984,6 +1017,37 @@ describe('Admin Web BFF', () => {
       assert.equal((await response.json()).error.code, 'VALIDATION_FAILED')
     }
     assert.equal(fetchMock.calls.length, 0)
+  })
+
+  it('maps the audit list type filter onto the contract vocabulary and drops empty or unknown values', async () => {
+    const fetchMock = fetchQueue(...Array.from({ length: 4 }, () => new Response(JSON.stringify({
+      ok: true,
+      data: { items: [], nextCursor: null },
+    }), { status: 200, headers: { 'content-type': 'application/json' } })))
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const submit = (input: Record<string, unknown>) => bff.handle(new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST',
+      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({ contractVersion: 1, action: 'mip.admin.audit.list', input }),
+    }))
+
+    for (const input of [
+      { filters: { query: 'ops', status: '', type: 'LOGIN' } },
+      { filters: { type: 'OPERATION' } },
+      { filters: { type: '' } },
+      { filters: { type: 'UNKNOWN', query: '活动' } },
+    ]) {
+      const response = await submit(input)
+      assert.equal(response.status, 200)
+      await response.json()
+    }
+
+    assert.deepEqual(fetchMock.calls.map(([, init]) => JSON.parse(String(init?.body)).request.input.filters), [
+      { query: 'ops', status: '', type: 'LOGIN' },
+      { type: 'OPERATION' },
+      {},
+      { query: '活动' },
+    ])
   })
 
   it('rejects malformed game queries before signing the upstream envelope', async () => {

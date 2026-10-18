@@ -31,10 +31,10 @@ import userEvent from '@testing-library/user-event'
 it('shows the empty-catalog guidance on static selects and multi-selects', async () => {
   const user = userEvent.setup()
   render(<MutationDialog open title="任务" description="" fields={[
-    { name: 'eligibleLevelIds', label: '可参与等级', kind: 'multi-select', options: [], emptyHint: '暂无可选等级。等级在「成长与勋章」页的会员配置中维护' },
+    { name: 'eligibleLevelIds', label: '可参与等级', kind: 'multi-select', options: [], emptyHint: '暂无可选等级。等级在「等级管理」页的等级配置中维护' },
   ]} values={{ eligibleLevelIds: [] }} onCancel={() => {}} onSubmit={() => {}} />)
   await user.click(screen.getByRole('combobox'))
-  expect(await screen.findByText('暂无可选等级。等级在「成长与勋章」页的会员配置中维护')).toBeInTheDocument()
+  expect(await screen.findByText('暂无可选等级。等级在「等级管理」页的等级配置中维护')).toBeInTheDocument()
 })
 
 it('enforces requiredWhen against the current form values', async () => {

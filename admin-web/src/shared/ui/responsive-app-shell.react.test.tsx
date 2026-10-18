@@ -48,7 +48,7 @@ function setup(authenticated = false, capabilities: string[] = []) {
 describe('web login entry', () => {
   it.each([
     ['/events/new/edit', '活动管理', 'events.read'],
-    ['/userContent/content-a/edit', '机会与内容', 'userContent.moderate'],
+    ['/userContent/content-a/edit', '机会管理', 'userContent.moderate'],
   ])('keeps the correct navigation context on %s', async (pathname, label, capability) => {
     routeState.pathname = pathname
     setup(true, [capability])
@@ -57,6 +57,16 @@ describe('web login entry', () => {
     const navigation = screen.queryByRole('button', { name: '打开导航' })
     if (navigation) await userEvent.click(navigation)
     expect(await screen.findByRole('menuitem', { name: new RegExp(label) })).toHaveClass('ant-menu-item-selected')
+  })
+
+  it('keeps pages removed from the sidebar (MIW-132) out of the menu', async () => {
+    routeState.pathname = '/knowledge'
+    setup(true, ['knowledge.manage'])
+    await screen.findByText('已登录的运营页面')
+    const navigation = screen.queryByRole('button', { name: '打开导航' })
+    if (navigation) await userEvent.click(navigation)
+    expect(await screen.findByRole('menuitem', { name: /网站概览/ })).toBeVisible()
+    expect(screen.queryByRole('menuitem', { name: /知识库/ })).not.toBeInTheDocument()
   })
 
   it('defaults to password login and only requests a numeric code when selected', async () => {

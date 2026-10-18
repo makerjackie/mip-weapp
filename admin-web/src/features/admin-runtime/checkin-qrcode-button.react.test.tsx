@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { App } from 'antd'
 import { afterEach, expect, it, vi } from 'vitest'
 import { CheckinQrcodeButton } from './checkin-qrcode-button'
+import { CheckinQrcodeDownloadLink } from './checkin-qrcode-download'
 
 afterEach(cleanup)
 const png = 'data:image/png;base64,iVBORw0KGgo='
@@ -83,4 +84,45 @@ it('requires checkin capability rather than general event editing permission', (
   render(<App><CheckinQrcodeButton eventId="event-1" request={request} hasCapability={value => value === 'events.write'} /></App>)
   expect(screen.queryByRole('button', { name: '签到二维码' })).toBeNull()
   expect(request).not.toHaveBeenCalled()
+})
+
+it('downloads the fetched static code straight from the list-row link', async () => {
+  const downloaded: HTMLAnchorElement[] = []
+  const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+    downloaded.push(this)
+  })
+  const request = vi.fn().mockResolvedValue(staticResponse)
+  try {
+    render(<App><CheckinQrcodeDownloadLink eventId="event-1" request={request} /></App>)
+    fireEvent.click(screen.getByRole('button', { name: '下载签到二维码' }))
+    await waitFor(() => expect(request).toHaveBeenCalledWith('mip.admin.events.checkinQrcode.get', { eventId: 'event-1', mode: 'STATIC' }))
+    await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(1))
+    expect(downloaded[0]?.getAttribute('download')).toBe('活动签到码-event-1.png')
+    expect(downloaded[0]?.href).toBe(png)
+    expect(screen.queryByRole('img', { name: '本场活动签到二维码' })).toBeNull()
+  }
+  finally {
+    anchorClick.mockRestore()
+  }
+})
+
+it.each([
+  { ...staticResponse, eventId: 'other-event' },
+  { downloadUrl: 'https://example.com/unsupported-contract.png' },
+  new Error('生成失败'),
+])('surfaces a failure instead of downloading when the row request is unusable', async result => {
+  const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  anchorClick.mockClear()
+  const request = vi.fn()
+  if (result instanceof Error) request.mockRejectedValueOnce(result)
+  else request.mockResolvedValueOnce(result)
+  try {
+    render(<App><CheckinQrcodeDownloadLink eventId="event-1" request={request} /></App>)
+    fireEvent.click(screen.getByRole('button', { name: '下载签到二维码' }))
+    await screen.findByText(result instanceof Error ? '生成失败' : '签到二维码暂不可用，请稍后重试')
+    expect(anchorClick).not.toHaveBeenCalled()
+  }
+  finally {
+    anchorClick.mockRestore()
+  }
 })

@@ -84,6 +84,7 @@ describe('admin read pages', () => {
         items: [{
           merchantOrderNoMasked: 'MIP…0001', nickname: '林晓', orderType: 'EVENT',
           resourceTitle: 'MIP 早会', resourceBranchName: '深圳服务器', amountCents: 18800, currency: 'CNY',
+          paidAt: '2030-03-01T01:30:00.000Z',
           createdAt: '2030-03-01T01:00:00.000Z', status: 'PAID',
         }],
         nextCursor: null,
@@ -96,6 +97,12 @@ describe('admin read pages', () => {
     assert.equal(page.sections[0].rows[0].branch, '深圳服务器')
     assert.equal(page.sections[0].rows[0].id, 'MIP…0001')
     assert.equal(page.sections[0].rows[0].amount, '¥188.00')
+    assert.equal(page.sections[0].rows[0].paidAt, new Date('2030-03-01T01:30:00.000Z').toLocaleString('zh-CN', { hour12: false }))
+    // completedAt 尚未由服务端列表返回，保持留空展示，等待联调补齐。
+    assert.equal(page.sections[0].rows[0].completedAt, '—')
+    assert.deepEqual(page.sections[0].columns.map(column => column.label), [
+      '订单号', '用户', '订单类型', '订单内容', '活动服务器', '金额', '支付时间', '完成时间', '创建时间', '状态',
+    ])
     assert.deepEqual(page.summary?.map(item => item.value), ['3', '2', '¥376.00', '¥0.00'])
   })
 
@@ -152,8 +159,19 @@ describe('admin read pages', () => {
     assert.deepEqual(calls[0].input, { cursor: undefined, limit: 20, filters: { query: '', status: '' } })
     assert.deepEqual(calls[1].input, { query: '', status: 'ALL', limit: 20 })
     assert.equal(page.sections.length, 4)
+    // MIW-127：机会分区收敛为设计稿 7 列，状态文案用机会页局部映射。
+    assert.deepEqual(page.sections[0].columns.map(column => column.label), [
+      '项目名称', '发布人', '价值金额（万元）', '主营城市', '想引荐数', '状态', '发布时间',
+    ])
+    assert.equal(page.sections[0].rows[0].title, '寻找品牌合作伙伴')
+    assert.equal(page.sections[0].rows[0].city, '深圳')
     assert.equal(page.sections[0].rows[0].referrals, '4')
-    assert.equal(page.sections[0].rows[0].roles, '策略策划')
+    assert.equal(page.sections[0].rows[0].state, '招募中')
+    assert.equal(page.sections[0].rows[0].target, undefined)
+    assert.equal(page.sections[0].rows[0].roles, undefined)
+    assert.equal(page.sections[0].rows[0].valueSummary, undefined)
+    assert.equal(page.sections[0].rows[0].safety, undefined)
+    assert.equal(page.sections[0].rows[0].updatedAt, undefined)
     assert.equal(page.sections[1].rows[0].detailId, 'COOPERATION_CARD:content-1')
     assert.equal(page.sections[2].rows[0].provider, '仅本地服务')
     assert.equal(page.nextCursor, 'next')
@@ -165,7 +183,7 @@ describe('admin read pages', () => {
       'mip.admin.growth.levels': { items: [{ name: '成长会员', levelKey: 'LEVEL_1', minimumExperience: 100, displayBadge: '资料完善', benefits: [{ name: '活动优先报名' }], legacyBenefits: [], currentUserCount: 20, currentUserPercentage: 50, version: 1, status: 'ACTIVE' }] },
       'mip.admin.growth.benefits': { items: [{ name: '活动优先报名', description: '优先报名活动', sortOrder: 1, version: 1, status: 'ACTIVE' }] },
       'mip.admin.growth.rules': { items: [{ name: '完成签到', metric: 'EXPERIENCE', deltaValue: 10, dailyLimitValue: 20, sourceEventType: 'event.checked_in', scopeType: 'PLATFORM', scopeId: null, effectiveFrom: null, effectiveTo: null, version: 1, status: 'ACTIVE' }] },
-      'mip.admin.growth.entries': { items: [{ nickname: '林晓', metric: 'EXPERIENCE', deltaValue: 10, balanceBefore: 20, balanceAfter: 30, sourceEventType: 'event.checked_in', adjustmentReason: '', createdAt: '2030-03-01T00:00:00.000Z' }] },
+      'mip.admin.growth.entries': { items: [{ id: 'entry-a', userId: 'user-a', nickname: '林晓', metric: 'EXPERIENCE', deltaValue: 10, balanceBefore: 20, balanceAfter: 30, sourceEventType: 'event.checked_in', adjustmentReason: '', createdAt: '2030-03-01T00:00:00.000Z' }] },
       'mip.admin.growth.levelTransitions': { items: [{ nickname: '林晓', fromLevel: null, toLevel: { name: '成长会员' }, experienceBefore: 90, experienceAfter: 100, sourceEventType: 'event.checked_in', createdAt: '2030-03-01T00:00:00.000Z' }] },
       'mip.admin.badges.list': { items: [{ name: '资料完善', key: 'profile-complete', description: '完成资料', placeholderShape: 'HEXAGON', version: 1, updatedAt: '2030-03-01T00:00:00.000Z', status: 'ACTIVE' }] },
       'mip.admin.badges.awards': { items: [{ nickname: '林晓', badgeName: '资料完善', awardReason: '完成个人资料', awardedAt: '2030-03-01T00:00:00.000Z', equipped: true, status: 'ACTIVE' }] },
@@ -177,8 +195,14 @@ describe('admin read pages', () => {
 
     assert.deepEqual(calls.map(call => call.action), ['mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules', 'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions', 'mip.admin.badges.list', 'mip.admin.badges.awards', 'mip.admin.entitlements.transactions.list', 'mip.admin.membershipApprovals.list', 'mip.admin.contribution.rules.list', 'mip.admin.contribution.transactions.list'])
     assert.equal(page.sections.length, 11)
-    assert.equal(page.sections[0].rows[0].benefits, '活动优先报名')
-    assert.equal(page.sections[3].rows[0].balance, '20 → 30')
+    // MIW-129：等级/经验值流水列按设计稿收敛（权益数、变动前/变动后分列）。
+    assert.deepEqual(page.sections[0].columns.map(column => column.label), ['等级', '名称', '经验值门槛', '权益数', '用户数', '状态'])
+    assert.equal(page.sections[0].rows[0].benefitCount, '1')
+    assert.deepEqual(page.sections[3].columns.map(column => column.label), ['流水号', '玩家 ID', '来源', '变动值', '变动前', '变动后', '时间'])
+    assert.equal(page.sections[3].rows[0].entryNo, 'entry-a')
+    assert.equal(page.sections[3].rows[0].playerId, 'user-a')
+    assert.equal(page.sections[3].rows[0].before, '20')
+    assert.equal(page.sections[3].rows[0].after, '30')
     assert.equal(page.sections[3].rows[0].source, '活动签到')
     assert.equal(page.sections[5].rows[0].shape, '六边形')
     assert.equal(page.sections[6].rows[0].reason, '完成个人资料')
@@ -205,7 +229,7 @@ describe('admin read pages', () => {
       'mip.admin.contribution.rules.list',
       'mip.admin.contribution.transactions.list',
     ])
-    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '成长流水', '等级变更', '贡献值规则', '贡献值流水'])
+    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '经验值流水', '等级变更', '贡献值规则', '贡献值流水'])
   })
 
   it('loads operations records without deriving queue or moderation state in the browser', async () => {
@@ -335,6 +359,52 @@ describe('admin read pages', () => {
     assert.equal(page.sections[0].rows[0].resource, '管理会话')
     assert.equal(page.sections[0].rows[1].action, '勋章 · 更新')
     assert.equal(page.sections[0].rows[1].resource, '勋章')
+  })
+
+  it('loads login records with login columns when the type filter is LOGIN', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('auditLogs', { query: '', status: '', cursor: null, limit: 20, filters: { type: 'LOGIN' } }, requestWith({
+      'mip.admin.audit.list': {
+        items: [{
+          loginAccount: 'ops.futian', createdAt: '2030-03-20T10:05:00.000Z',
+          result: 'SUCCESS', ip: '198.51.100.7', device: 'Edge 136 · Windows',
+        }, {
+          actorNickname: 'ops.futian', createdAt: '2030-03-20T10:08:00.000Z',
+          metadata: { loginAccount: 'ops.futian', result: 'FAILURE', ip: '198.51.100.7', device: 'Edge 136 · Windows', failureReason: '密码错误' },
+        }],
+        nextCursor: null,
+      },
+    }, calls))
+
+    assert.equal(calls[0].action, 'mip.admin.audit.list')
+    assert.deepEqual((calls[0].input as { filters: Record<string, string> }).filters.type, 'LOGIN')
+    assert.equal(page.sections.length, 1)
+    assert.equal(page.sections[0].title, '登录记录')
+    assert.deepEqual(page.sections[0].columns.map(column => column.label), ['登录账号', '时间', '结果', 'IP', '设备', '失败原因'])
+    assert.deepEqual(page.sections[0].rows[0], {
+      account: 'ops.futian', createdAt: page.sections[0].rows[0].createdAt, result: '成功',
+      ip: '198.51.100.7', device: 'Edge 136 · Windows', failureReason: '—',
+    })
+    assert.equal(page.sections[0].rows[1].account, 'ops.futian')
+    assert.equal(page.sections[0].rows[1].result, '失败')
+    assert.equal(page.sections[0].rows[1].failureReason, '密码错误')
+  })
+
+  it('keeps operation audit columns when the type filter is absent or OPERATION', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('auditLogs', { query: '', status: '', cursor: null, limit: 20, filters: { type: 'OPERATION' } }, requestWith({
+      'mip.admin.audit.list': {
+        items: [{
+          actorNickname: '管理员', effectiveRole: 'PLATFORM_OWNER', scopeName: '平台',
+          action: 'admin.badge.update', resourceType: 'BADGE', resourceId: 'badge-001',
+          createdAt: '2030-03-20T10:05:00.000Z',
+        }],
+        nextCursor: null,
+      },
+    }, calls))
+
+    assert.deepEqual((calls[0].input as { filters: Record<string, string> }).filters.type, 'OPERATION')
+    assert.deepEqual(page.sections[0].columns.map(column => column.label), ['操作者', '角色', '服务器', '操作', '模块', '业务对象', '时间'])
   })
 
   it('passes filter parameters through to action input for events list', async () => {

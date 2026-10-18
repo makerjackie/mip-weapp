@@ -67,11 +67,39 @@ const eventEditRoute = createRoute({
   component: routeComponents['/events/$eventId/edit'],
 })
 
+const eventSettingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/events/settings',
+  component: routeComponents['/events/settings'],
+})
+
 const taskEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tasks/$taskId/edit',
   validateSearch: validateEditorSearch,
   component: routeComponents['/tasks/$taskId/edit'],
+})
+
+// MIW-130：NPC任务（提交与审批记录）独立路由，不进入侧栏导航。
+const taskApprovalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/task-approval',
+  validateSearch,
+  component: routeComponents['/task-approval'],
+})
+
+// MIW-129：成长体系拆分后，旧「成长与勋章」链接重定向到等级管理，避免收藏断链。
+const growthRedirectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/growth',
+  beforeLoad: () => { throw redirect({ to: '/levels' }) },
+})
+
+// MIW-129 H2：权益发放表单页，从权益管理页头部进入，不进入侧栏导航。
+const entitlementGrantRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/entitlements/grant',
+  component: routeComponents['/entitlements/grant'],
 })
 
 const opportunityEditRoute = createRoute({
@@ -106,7 +134,11 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   ...pageRoutes,
   eventEditRoute,
+  eventSettingsRoute,
   taskEditRoute,
+  taskApprovalRoute,
+  growthRedirectRoute,
+  entitlementGrantRoute,
   opportunityEditRoute,
   knowledgeEditRoute,
   userContentEditRoute,

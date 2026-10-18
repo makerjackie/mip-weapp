@@ -10,7 +10,10 @@ import {
   loadTaskCompletionDetail,
   loadTaskDetail,
   loadTaskEligibleLevels,
+  loadTaskApprovalPage,
   loadTaskManagementPage,
+  buildTaskApprovalPage,
+  taskApprovalStarLabel,
   explainTaskAssignment,
 } from './admin-task-management.ts'
 
@@ -131,6 +134,79 @@ describe('admin task management', () => {
     ])
   })
 
+  it('loads the cross-task approval list with a guarded submission status filter', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadTaskApprovalPage({
+      query: '复盘', status: 'pending_review', cursor: 'approval-cursor', limit: 20,
+    }, requestWith({
+      'mip.admin.tasks.completions.list': {
+        items: [
+          {
+            id: COMPLETION_ID, taskName: '早会复盘', nickname: '林晓', starLevel: 3,
+            submissionStatus: 'pending_review', completedAt: '2030-03-02T00:00:00.000Z',
+            attachment: { url: '', contentType: 'image/jpeg', bytes: 1200 }, rewardResult: {}, canReview: true,
+          },
+          {
+            id: LEVEL_ID, taskName: '机会跟进', nickname: '陈默', starLevel: 0,
+            submissionStatus: 'reward_failed', reviewedBy: TASK_ID,
+            rewardResult: { error: '奖励发放失败，可重试' }, canReview: true,
+          },
+        ],
+        nextCursor: 'next-approval-cursor',
+      },
+      'mip.admin.tasks.editorOptions': { owners: [{ id: TASK_ID, name: '笨笨老大' }] },
+    }, calls))
+
+    assert.deepEqual(calls, [
+      { action: 'mip.admin.tasks.completions.list', input: { filters: { query: '复盘', submissionStatus: 'pending_review' }, limit: 20, cursor: 'approval-cursor' } },
+      { action: 'mip.admin.tasks.editorOptions', input: {} },
+    ])
+    const section = page.sections[0]
+    assert.equal(section.detailTarget, 'taskApprovals')
+    assert.deepEqual(section.columns.map(column => column.label), ['提交人', '任务名称', '星级', '附件', '审批人', '审批状态', '奖励结果'])
+    assert.equal(page.nextCursor, 'next-approval-cursor')
+    const [pending, failed] = section.rows
+    assert.equal(pending.member, '林晓')
+    assert.equal(pending.starLevel, '三星')
+    assert.equal(pending.attachment, '已上传')
+    assert.equal(pending.reviewedBy, '—')
+    assert.equal(pending.state, '待审批')
+    assert.deepEqual((pending.rowActions ?? []).map(operation => operation.action), [
+      'mip.admin.tasks.submissions.approve', 'mip.admin.tasks.submissions.reject',
+    ])
+    assert.equal(failed.starLevel, '—')
+    assert.equal(failed.attachment, '未上传')
+    assert.equal(failed.reviewedBy, '笨笨老大')
+    assert.equal(failed.state, '奖励发放失败')
+    assert.equal(failed.rewardResult, '奖励发放失败，可重试')
+    assert.deepEqual((failed.rowActions ?? []).map(operation => operation.action), [
+      'mip.admin.tasks.submissions.retryReward',
+    ])
+  })
+
+  it('ignores unknown approval statuses and builds demo rows from completion records', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    await loadTaskApprovalPage({ query: '', status: 'BOGUS', cursor: null, limit: 20 }, requestWith({
+      'mip.admin.tasks.completions.list': { items: [], nextCursor: null },
+      'mip.admin.tasks.editorOptions': {},
+    }, calls))
+    assert.deepEqual(calls, [
+      { action: 'mip.admin.tasks.completions.list', input: { filters: { query: '', submissionStatus: '' }, limit: 20, cursor: undefined } },
+      { action: 'mip.admin.tasks.editorOptions', input: {} },
+    ])
+    const built = buildTaskApprovalPage([{
+      id: COMPLETION_ID, taskName: '早会复盘', nickname: '周宁', starLevel: 5,
+      submissionStatus: 'approved', reviewedBy: 'not-in-catalog', reviewedByName: '笨笨老大',
+      rewardResult: { experience: { amount: 30, status: 'OFFLINE_PENDING' } },
+    }], null)
+    assert.equal(built.sections[0].rows[0].starLevel, '五星')
+    assert.equal(built.sections[0].rows[0].state, '已通过')
+    assert.equal(built.sections[0].rows[0].reviewedBy, '笨笨老大')
+    assert.equal(built.sections[0].rows[0].rewardResult, '经验值 30（待线下发放）')
+    assert.equal(taskApprovalStarLabel(6), '—')
+    assert.equal(taskApprovalStarLabel(undefined), '—')
+  })
+
   it('provides typed forms and exact business inputs for all task mutations', () => {
     assert.equal(ADMIN_TASK_MUTATION_ACTIONS.length, 10)
     const source = {
@@ -155,7 +231,7 @@ describe('admin task management', () => {
       kind: 'multi-select',
       options: [{ value: LEVEL_ID, label: '成长会员 · 100 经验' }],
       wide: true,
-      emptyHint: '暂无可选等级。等级在「成长与勋章」页的会员配置中维护',
+      emptyHint: '暂无可选等级。等级在「等级管理」页的等级配置中维护',
     })
     assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.label, '任务模板图片')
     assert.equal(save.fields.find(field => field.name === 'templateAssetId')?.hidden, undefined)

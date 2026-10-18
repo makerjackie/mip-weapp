@@ -3,7 +3,8 @@ import type {
   AdminReadPage,
   AdminTableRow,
 } from '../../modules/admin-read-pages'
-import { labels } from '../../modules/admin-read-formatters'
+import { label, labels, playerStatusFilterLabel } from '../../modules/admin-read-formatters'
+import { eventCatalogRowActions } from '../../modules/admin-row-operations'
 import { demo } from '../../services/demo-data'
 import type { AdminOverviewView } from './overview-model'
 
@@ -24,22 +25,33 @@ export function createCoreDemoReadPage(route: DemoCoreRoute, query: AdminListQue
   }
 }
 
+/** MIW-126：活动设置页的演示标签目录，行走与真实 catalog.list 相同的装配。 */
+export function createCoreDemoEventTagCatalog(): AdminTableRow[] {
+  return demo.eventTags.map(item => ({
+    detailId: item.id,
+    name: item.name,
+    state: label(item.status),
+    rowActions: eventCatalogRowActions({ ...item }),
+  }))
+}
+
 export function createCoreDemoOverview(): AdminOverviewView {
   return {
     period: '2030 年 2 月',
     asOf: '演示数据',
     metrics: [
-      { label: '用户总数', value: demo.dashboard.users.toLocaleString('zh-CN'), detail: '演示数据' },
-      { label: '有效会员', value: demo.dashboard.activeMembers.toLocaleString('zh-CN'), detail: '会员权益有效' },
-      { label: '近期活动', value: demo.dashboard.upcomingEvents.toLocaleString('zh-CN'), detail: '未来 30 天' },
-      { label: '待处理订单', value: demo.dashboard.pendingOrders.toLocaleString('zh-CN'), detail: '需要运营跟进' },
+      { label: '当前玩家', value: demo.dashboard.currentPlayers.toLocaleString('zh-CN'), detail: '较上一周期 +12.6%', trend: 'up' },
+      { label: '首年续费', value: demo.dashboard.firstYearRenewals.toLocaleString('zh-CN'), detail: '较上一周期 +8.4%', trend: 'up' },
+      { label: '本月新增玩家', value: demo.dashboard.newPlayersThisMonth.toLocaleString('zh-CN'), detail: '较上一周期 +9.8%', trend: 'up' },
+      { label: '缴费金额', value: `¥${(demo.dashboard.paidAmountCents / 100).toLocaleString('zh-CN')}`, detail: '较上一周期 -3.1%', trend: 'down' },
     ],
-    playerTrend: { available: false, points: [] },
-    attention: [{
-      label: '待处理订单',
-      value: demo.dashboard.pendingOrders.toLocaleString('zh-CN'),
-      target: '/orders',
-    }],
+    playerTrend: { available: true, months: demo.dashboard.playerTrendMonths.map(month => ({ ...month })) },
+    attention: [
+      { label: '30 日内到期会员', value: '1', target: '/users' },
+      { label: '待审核报名', value: '1', target: '/events' },
+      { label: '待验收任务', value: '1', target: '/task-approval' },
+      { label: '消息发送失败', value: '1', target: '/operations' },
+    ],
     activity: demo.dashboard.activity.map((item, index) => ({
       detailId: `demo-activity-${index + 1}`,
       title: item.title,
@@ -55,21 +67,30 @@ function demoUsersPage(): AdminReadPage {
       rows: demo.users.map(item => ({
         detailId: item.id,
         name: item.name,
-        headline: item.company,
-        identity: item.status,
+        avatarUrl: '—',
+        role: item.role,
         phone: item.phone,
-        branch: item.branch,
-        level: item.role,
+        industry: item.industry,
+        profession: item.profession,
+        level: item.level,
+        contribution: item.contribution,
+        playerStatus: item.playerStatus,
+        createdAt: item.createdAt,
+        expiresAt: item.expiresAt,
         state: '启用',
       })),
       columns: [
-        { key: 'name', label: '姓名' },
-        { key: 'headline', label: '简介' },
-        { key: 'identity', label: '身份' },
-        { key: 'phone', label: '手机状态' },
-        { key: 'branch', label: '所属服务器' },
-        { key: 'level', label: '等级' },
-        { key: 'state', label: '账号状态' },
+        { key: 'avatarUrl', label: '头像' },
+        { key: 'name', label: '昵称' },
+        { key: 'phone', label: '手机号' },
+        { key: 'role', label: '当前角色' },
+        { key: 'industry', label: '行业' },
+        { key: 'profession', label: '当前身份' },
+        { key: 'level', label: '用户等级' },
+        { key: 'contribution', label: '贡献值' },
+        { key: 'playerStatus', label: '玩家权益状态' },
+        { key: 'createdAt', label: '用户注册时间' },
+        { key: 'expiresAt', label: '玩家到期时间' },
       ],
     }],
     nextCursor: null,
@@ -115,6 +136,8 @@ function demoOrdersPage(): AdminReadPage {
         { key: 'type', label: '订单类型' },
         { key: 'resource', label: '订单内容' },
         { key: 'amount', label: '金额' },
+        { key: 'paidAt', label: '支付时间' },
+        { key: 'completedAt', label: '完成时间' },
         { key: 'createdAt', label: '创建时间' },
         { key: 'state', label: '状态' },
       ],
@@ -123,12 +146,17 @@ function demoOrdersPage(): AdminReadPage {
   }
 }
 
-function filterDemoRows(rows: AdminTableRow[], query: Pick<AdminListQuery, 'query' | 'status'>) {
+function filterDemoRows(rows: AdminTableRow[], query: AdminListQuery) {
   const keyword = query.query.trim().toLocaleLowerCase('zh-CN')
   const expectedStatus = labels[query.status] || query.status
+  // MIW-124：身份筛选含「普通用户」（NORMAL），权益状态按到期分档标签匹配。
+  const expectedRole = query.filters?.kind ? label(query.filters.kind) : ''
+  const expectedPlayerStatus = playerStatusFilterLabel(query.filters?.playerLifecycle)
   return rows.filter((row) => {
     const values = Object.values(row).map(value => String(value))
     return (!keyword || values.some(value => value.toLocaleLowerCase('zh-CN').includes(keyword)))
       && (!expectedStatus || values.includes(expectedStatus))
+      && (!expectedRole || row.role === expectedRole)
+      && (!expectedPlayerStatus || row.playerStatus === expectedPlayerStatus)
   })
 }
