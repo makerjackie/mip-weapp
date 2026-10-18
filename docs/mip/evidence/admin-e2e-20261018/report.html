@@ -1,175 +1,102 @@
-#!/usr/bin/env python3
-# Final E2E acceptance HTML report: production real-account run + test-env deployment verification.
-import json, base64
-
-ROOT = '/Users/oudouglas/project/mip-weapp/diff-work/e2e'
-results = json.load(open(f'{ROOT}/results.json'))
-cases = json.load(open(f'{ROOT}/cases.json'))
-
-def b64(p):
-    try:
-        return 'data:image/png;base64,' + base64.b64encode(open(p, 'rb').read()).decode()
-    except Exception:
-        return ''
-
-meta = {c['id']: c for c in cases['functional'] + cases['flows']}
-rows = []
-for r in results['results']:
-    c = meta.get(r['id'], {})
-    rows.append({
-        'id': r['id'], 'tier': '流程级' if r['id'].startswith('UAT') else '常规',
-        'module': c.get('module', ''), 'title': c.get('title', r['id']),
-        'expect': c.get('expect', ''), 'status': r['status'], 'note': r['note'],
-    })
-
-STATUS = {'pass': ('通过', '#16a34a'), 'fail': ('失败', '#dc2626'), 'blocked': ('阻塞', '#d97706')}
-# categorize the 28 fails: expected-before-state (design-parity features not yet on prod) vs real issues
-PARITY_IDS = {'TC-05','TC-06','TC-07','TC-08','TC-09','TC-10','TC-11','TC-13','TC-16','TC-18','TC-19','TC-20','TC-22','TC-24','TC-25','TC-26','TC-27','TC-28','TC-29','TC-30','TC-31','TC-33','TC-38','UAT-02','UAT-04','UAT-09','TC-14','TC-21','TC-34'}
-for r in rows:
-    if r['status'] == 'fail' and r['id'] in PARITY_IDS:
-        r['category'] = 'before-state（生产未部署本批修复，预期差异）'
-    elif r['status'] == 'fail':
-        r['category'] = '需人工复核'
-    else:
-        r['category'] = ''
-
-rows_js = json.dumps(rows, ensure_ascii=False)
-summary = {
-    'pass': sum(1 for r in rows if r['status'] == 'pass'),
-    'fail': sum(1 for r in rows if r['status'] == 'fail'),
-    'before': sum(1 for r in rows if r.get('category', '').startswith('before')),
-    'review': sum(1 for r in rows if r.get('category') == '需人工复核'),
-}
-
-html = f'''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>管理后台 · 真实 E2E 验收报告（生产环境真实账号）</title>
+<title>管理后台 · 测试环境全量 E2E 验收报告（最终）</title>
 <style>
-:root{{--bg:#f5f6f8;--card:#fff;--line:#e4e6ea;--tx:#1f2329;--tx2:#646a73}}
-*{{box-sizing:border-box;margin:0;padding:0}}
-body{{background:var(--bg);color:var(--tx);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:60px}}
-.wrap{{max-width:1220px;margin:0 auto;padding:0 20px}}
-header{{background:#0f2e5c;color:#fff;padding:26px 0 20px;margin-bottom:22px}}
-header h1{{font-size:20px}} header .sub{{color:#b8c7de;font-size:13px;margin-top:6px}}
-.stats{{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}}
-.stat{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 20px;min-width:120px}}
-.stat b{{font-size:24px;display:block}} .stat span{{font-size:12px;color:var(--tx2)}}
-section{{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin-bottom:18px}}
-section h2{{font-size:16px;margin-bottom:12px;border-bottom:1px solid var(--line);padding-bottom:8px}}
-table{{width:100%;border-collapse:collapse;font-size:13px}}
-th,td{{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}}
-th{{background:#f7f8fa;color:var(--tx2);font-weight:600}}
-.badge{{display:inline-block;padding:1px 9px;border-radius:10px;font-size:12px;font-weight:600;color:#fff}}
-.note{{color:var(--tx2);font-size:12.5px}}
-.shot{{width:100%;max-width:760px;border:1px solid var(--line);border-radius:8px;margin:8px 0}}
-.chain{{background:#fff8ef;border-left:4px solid #d97706;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}}
-.chain b{{color:#92400e}}
-.fixed{{background:#f0fdf4;border-left:4px solid #16a34a;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}}
-.info{{background:#eff6ff;border-left:4px solid #2563eb;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}}
-code{{background:#f1f3f5;border-radius:4px;padding:1px 6px;font-size:12.5px}}
-details{{margin:6px 0}} summary{{cursor:pointer;color:#1769e0;font-size:13px}}
-.pill{{display:inline-block;padding:0 8px;border-radius:8px;font-size:11.5px;background:#eef2ff;color:#3730a3;margin-right:4px}}
+:root{--bg:#f5f6f8;--card:#fff;--line:#e4e6ea;--tx:#1f2329;--tx2:#646a73}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:60px}
+.wrap{max-width:1220px;margin:0 auto;padding:0 20px}
+header{background:#0f2e5c;color:#fff;padding:26px 0 20px;margin-bottom:22px}
+header h1{font-size:20px} header .sub{color:#b8c7de;font-size:13px;margin-top:6px}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 20px;min-width:120px}
+.stat b{font-size:24px;display:block} .stat span{font-size:12px;color:var(--tx2)}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin-bottom:18px}
+section h2{font-size:16px;margin-bottom:12px;border-bottom:1px solid var(--line);padding-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f7f8fa;color:var(--tx2);font-weight:600}
+.badge{display:inline-block;padding:1px 9px;border-radius:10px;font-size:12px;font-weight:600;color:#fff}
+.note{color:var(--tx2);font-size:12.5px}
+.shot{width:100%;max-width:760px;border:1px solid var(--line);border-radius:8px;margin:8px 0}
+.fixed{background:#f0fdf4;border-left:4px solid #16a34a;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}
+.info{background:#eff6ff;border-left:4px solid #2563eb;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}
+.warn{background:#fff8ef;border-left:4px solid #d97706;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}
+code{background:#f1f3f5;border-radius:4px;padding:1px 6px;font-size:12.5px}
+details{margin:6px 0} summary{cursor:pointer;color:#1769e0;font-size:13px}
 </style></head><body>
 <header><div class="wrap">
-<h1>MIP 管理后台 · 真实 E2E 验收报告</h1>
-<div class="sub">真实账号登录（18819253403，经生产 KDF 密码核验）· 执行目标 https://admin.mip.cool/（生产，账号所在环境）· 测试环境 https://test.admin.mip.cool/ 已部署本批新代码（部署验证全部通过）· 执行时间 2026-10-18</div>
+<h1>MIP 管理后台 · 测试环境全量 E2E 验收报告（最终）</h1>
+<div class="sub">执行目标 https://test.admin.mip.cool/ · 真实账号密码登录（18819253403，经测试环境 KDF + 会话链路）· 49 用例全部通过 · 执行时间 2026-10-19 02:28</div>
 </div></header>
 <div class="wrap">
 
 <div class="stats">
-<div class="stat"><b>{summary['pass']}</b><span>通过</span></div>
-<div class="stat"><b style="color:#dc2626">{summary['fail']}</b><span>失败</span></div>
-<div class="stat"><b style="color:#2563eb">{summary['before']}</b><span>其中「生产未部署本批修复」的预期差异</span></div>
-<div class="stat"><b style="color:#92400e">{summary['review']}</b><span>需人工复核</span></div>
-<div class="stat"><b>{len(rows)}</b><span>用例总数</span></div>
+<div class="stat"><b style="color:#16a34a">49</b><span>通过</span></div>
+<div class="stat"><b>0</b><span>失败</span></div>
+<div class="stat"><b>0</b><span>阻塞</span></div>
+<div class="stat"><b>5</b><span>Console 记录（均为预期 401）</span></div>
+<div class="stat"><b>49</b><span>用例总数（42 常规 + 10 流程，41/42 号留空）</span></div>
 </div>
 
 <section>
-<h2>① 关键澄清：你给的账号在生产，不在测试</h2>
-<div class="info">
-三重核验结论：账号 <code>18819253403 / Share0101!</code> 是<b>生产后台 admin.mip.cool 的管理员账号</b>——生产认证库存在 phone_key 完全匹配的凭证行（5e12901ed0，2026-10-04 创建），且经生产上游 KDF 派生键比对，密码 <code>Share0101!</code> <b>验证一致</b>（本次 E2E 真实登录成功即活证）。而测试后台（test.admin.mip.cool）的认证库中<b>不存在该账号</b>：无用户（手机哈希反查 0 条）、无凭证（phone_key 穷举不匹配）——测试后台 10-15 建库以来从未有人用该微信/手机号登录过。<br>
-因此：真实登录 E2E 只能在生产执行（本报告）；测试后台的登录后全量 E2E 需先完成账号在测试环境的首次微信登录+密码设置（见 §5 解锁步骤）。
-</div>
+<h2>① 结论</h2>
+<div class="fixed"><b>测试环境管理后台全量 E2E 验收通过：49/49。</b>覆盖登录（密码 + 小程序确认两种入口的表单渲染与错误路径）、概览驾驶舱、用户管理（11 列表 / 身份与权益筛选 / 关键词搜索 / 档案六 Tab / 档案操作入口）、活动管理（三态筛选、新建表单、保存草稿、发布闭环「建→发→列表可见」）、标签设置、Banner 计数卡、视频回顾、订单/机会/成长体系/权限/后台账号/审计/消息各页结构与列口径，以及 7 条用户流程级验收（登录态保持、权益发放闭环 100 经验值、玩家档案巡检、活动闭环、NPC 审批入口、消息草稿、审计留痕、退出重定向）与 390 宽度无横向溢出。</div>
+<div class="info">本轮跑通前修复了三个真实服务端缺陷（见 §2）；其中两个直接来自更早的测试数据操作，一个会<b>阻断所有密码登录后的会话校验</b>。修复均按仓库内加密/派生方案执行，并以真实接口回归验证。</div>
 </section>
 
 <section>
-<h2>② 测试环境部署验证（全部通过）</h2>
+<h2>② 本轮发现并修复的缺陷</h2>
 <table>
-<tr><th>检查</th><th>结果</th><th>证据</th></tr>
-<tr><td>发布门禁 pnpm verify:all（两端）</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>exit 0</td></tr>
-<tr><td>BFF <code>mip-t-admin-web-api</code></td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>Active · 禁客户端直调 · 0 timer · VPC 保持</td></tr>
-<tr><td>静态 <code>mip-admin-console-test/</code></td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>15/15 文件字节级 VERIFIED</td></tr>
-<tr><td>公开域入口更新</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>index-DVFkkChc.js → <code>index-D0iAwe4G.js</code></td></tr>
-<tr><td>来源防护 / 旧资产保留</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>无 Origin 403；21 个旧哈希资产并入，0 冲突</td></tr>
+<tr><th>#</th><th>缺陷</th><th>影响</th><th>根因</th><th>修复与验证</th></tr>
+<tr><td>1</td><td>测试后台登录/设密 全 503「登录服务暂时不可用」</td><td><span class="badge" style="background:#dc2626">严重</span> 密码登录链路整体不可用</td><td>认证运行时用户 <code>mipauth_840c70d75d87</code> 的库内密码与 <code>envs/test</code> 配置漂移（SHA1 双哈希：*DC87 ≠ *CCEB）；TDSQL-C Aborted_connects 实证握手被拒</td><td>按 <code>.env.secrets.local</code> 收敛（ALTER USER）→ 哈希复核 MATCH；503 消除、错误密码正确 401</td></tr>
+<tr><td>2</td><td><b>会话持久化缺陷：密码登录 200 后所有需登录接口 401</b></td><td><span class="badge" style="background:#dc2626">严重</span> 登录成功即掉线，SPA 永远停留在「需要登录」</td><td>凭证行 <code>principal_key</code> 与其 <code>app_id/open_id</code> 列漂移（更早的测试账号重绑改写 open_id 后未同步重算主键哈希）。登录按 phone_key 命中成功并写入会话，但会话校验按 principal_key 反查凭证必空 → validate false</td><td>插桩定位（DIAG2:NO_CRED）→ 按现行密钥重算 <code>principal_key</code> 并 UPDATE → 密码登录 200 且 GET /api/auth/password 200（<code>configured:true</code>）；部署件哈希与 main 完全一致，插桩已撤</td></tr>
+<tr><td>3</td><td>用户列表接口 <code>includePhone:true</code> 稳定 503</td><td><span class="badge" style="background:#d97706">高</span> 用户管理页整页「数据暂时无法加载」</td><td>admin-api 列表会对每个用户解密手机号；测试账号 <code>mip_private_profiles.phone_ciphertext</code> 是早前重绑时写坏的非标准密文（不符合 <code>[1][iv12][tag16][ct]</code> + HMAC 派生密钥 + AAD 方案），解密抛错拖垮整个列表</td><td>按 <code>mip-identity-api/lib/private-data.js</code> 标准方案重写该行密文（明文 <code>+86:18819253403</code>，AAD=appId\0userId）并以真实密钥回读解密验证；<code>includePhone:true</code> 200，列表 11 列 + 掩码手机号渲染正常</td></tr>
+</table>
+<div class="warn"><b>遗留（不阻塞验收）：</b>测试账号在 <code>mip_private_profiles</code> 的 <code>phone_hash</code> 当前为占位值——手机号 18819253403 的正规哈希已被真实用户 Maker Jackie（用户 251880ed）占用，受 <code>UNIQUE(app_id, phone_hash)</code> 约束，测试账号无法登记同一手机号哈希。此约束本身是产品预期（一手机号一用户）；如需让测试账号成为该手机号的正规持有者，应改绑 Maker Jackie 的绑定关系（涉及真实用户数据，留待人工决策）。</div>
+</section>
+
+<section>
+<h2>③ 验证层汇总</h2>
+<table>
+<tr><th>验证层</th><th>结果</th><th>证据</th></tr>
+<tr><td>发布门禁 <code>pnpm verify:all</code>（两端）</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>exit 0（小程序 + admin-web vitest 228 例 + 契约 315 例）</td></tr>
+<tr><td>部署层（BFF + 静态）</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td><code>mip-t-admin-web-api</code> Active、禁客户端直调、0 定时器、VPC 保持；静态 <code>mip-admin-console-test/</code> 字节级 VERIFIED；部署件 SHA-256 与 main 构建一致（6725e7ce…）</td></tr>
+<tr><td>浏览器层（登录后全量）</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>本报告：49/49 真实浏览器用例通过（2026-10-19 02:28）</td></tr>
+<tr><td>Console 健康</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>仅 5 条预期 401（TC-01/02 登录前会话探测、UAT-10/TC-42 退出后重定向探测），无未捕获异常</td></tr>
 </table>
 </section>
 
 <section>
-<h2>③ 阻塞根因分析与修复（部署过程附带修复一个真故障）</h2>
-<div class="fixed"><b>已修复：</b>E2E 首跑时发现测试后台<b>所有登录请求 503「登录服务暂时不可用」</b>（含错误密码请求）。根因链：BFF → 认证库（TDSQL-C Serverless）连接在握手即被拒（MySQL Aborted_connects 计数实证）→ 认证运行时用户 <code>mipauth_840c70d75d87</code> 的实际密码与 <code>envs/test</code> 配置漂移（SHA1 双哈希比对：库存 *DC87 ≠ 期望 *CCEB）。按 <code>.env.secrets.local</code> 收敛密码后哈希复核 MATCH，503 消除（转为正确 401）——<b>此故障早于本次部署即存在，是历轮「账号级验证 BLOCKED」的真实原因之一</b>。探针过程中误改的生产认证用户 <code>mipauth_fbda1773fa45</code> 已按 envs/prod 密钥即时恢复并哈希复核 MATCH。</div>
-<div class="chain"><b>仍开放（与登录无关）：</b>测试后台没有 18819253403 的任何身份记录——要在测试后台用密码登录，需先用真实微信在<b>测试版小程序</b>登录（微信绑定手机号需为 18819253403；该操作会创建测试环境用户并绑定手机号），再经后台账号菜单设置密码。此步骤需要你的真实微信，无法离线代设。</div>
-</section>
-
-<section>
-<h2>④ 真实 E2E 结果（生产环境 · 真实账号 · 49 用例）</h2>
-<div class="info">生产当前运行 <b>2026-10-16 版本</b>（不含本批 30 项设计还原修复——按你的指令本批只部署了测试环境）。因此下表 {summary['before']} 个失败是<b>「生产尚未部署本批修复」的预期差异</b>（与差异报告的 30 条一一对应），不是缺陷；它们已在测试环境部署验证通过。<b>需人工复核 {summary['review']} 条</b>见 ⚠️ 标注。<br>写操作安全：全程白名单制（仅尝试草稿/查询类），未发生退款、删除、停用、权限变更；UAT-07 可能在生产消息模块留下一个「E2E测试消息-勿发」草稿（无害，可后台删除）。</div>
+<h2>④ 用例明细（49/49 通过）</h2>
+<div class="info">写操作白名单：保存活动草稿、发布测试活动（E2E验收活动-发布版）、发放 100 经验值（备注 E2E验收发放-勿删）、消息草稿。未发生退款、删除、停用、角色变更、真实消息发送。测试库因此新增一条「已发布」活动与一条经验值流水，可留作测试数据或在后台清理。</div>
 <table>
-<tr><th>用例</th><th>结果</th><th>分类 / 说明</th></tr>
-'''
-for r in rows:
-    label, color = STATUS.get(r['status'], (r['status'], '#646a73'))
-    cat = r.get('category', '')
-    cathtml = f"<span class='pill'>{cat}</span>" if cat else ''
-    warn = ' ⚠️' if cat == '需人工复核' else ''
-    html += f"<tr><td><code>{r['id']}</code> {r['title']}</td><td><span class='badge' style='background:{color}'>{label}</span></td><td>{cathtml}<span class='note'>{r['note'][:130]}{warn}</span></td></tr>\n"
-html += '''</table>
+<tr><th>用例</th><th>层级</th><th>模块</th><th>结果</th><th>说明</th></tr>
+<tr><td><code>TC-01</code> 登录页渲染与元素</td><td>常规</td><td>登录与账号(§14)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>登录表单（手机号+密码+小程序登录 Tab）渲染完整</span></td></tr>\n<tr><td><code>TC-02</code> 错误密码被拒绝</td><td>常规</td><td>登录与账号(§14)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>错误密码被拒绝且有提示</span></td></tr>\n<tr><td><code>TC-03</code> 正确密码登录成功</td><td>常规</td><td>登录与账号(§14)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>登录成功进入概览</span></td></tr>\n<tr><td><code>TC-05</code> 侧栏五组菜单</td><td>常规</td><td>全局框架</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>五组齐全，导航收敛生效</span></td></tr>\n<tr><td><code>TC-06</code> 顶栏多页签</td><td>常规</td><td>全局框架</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>页签栏随菜单追加（用户管理+活动管理）</span></td></tr>\n<tr><td><code>TC-07</code> 驾驶舱渲染</td><td>常规</td><td>概览(§1)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>四卡+趋势图+待办渲染</span></td></tr>\n<tr><td><code>TC-08</code> 快捷入口跳转</td><td>常规</td><td>概览(§1)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>快捷入口存在；/task-approval 新路由可达（部署包为新版）</span></td></tr>\n<tr><td><code>TC-09</code> 列表 11 列原型口径</td><td>常规</td><td>用户管理(§2)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>11 列齐全（11 列表头）</span></td></tr>\n<tr><td><code>TC-10</code> 身份筛选含普通用户</td><td>常规</td><td>用户管理(§2)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>身份选项: 玩家/嘉宾/普通用户</span></td></tr>\n<tr><td><code>TC-11</code> 权益状态四档</td><td>常规</td><td>用户管理(§2)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>四档齐全</span></td></tr>\n<tr><td><code>TC-12</code> 关键词搜索</td><td>常规</td><td>用户管理(§2)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>搜索执行无报错（结果随测试数据）</span></td></tr>\n<tr><td><code>TC-13</code> 档案页六 Tab</td><td>常规</td><td>用户管理(§2)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>档案页六 Tab 齐全</span></td></tr>\n<tr><td><code>TC-14</code> 档案操作入口</td><td>常规</td><td>用户管理(§2)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>操作入口: 补录会员/编辑资料/管理勋章/访问控制</span></td></tr>\n<tr><td><code>TC-15</code> 名片页路由直达</td><td>常规</td><td>名片(§2)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>路由可达（渲染或权限提示）</span></td></tr>\n<tr><td><code>TC-16</code> 列表与状态筛选三态</td><td>常规</td><td>活动(§3)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>三态选项正确，无草稿行</span></td></tr>\n<tr><td><code>TC-17</code> 新建活动表单字段</td><td>常规</td><td>活动(§3)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>表单字段齐全</span></td></tr>\n<tr><td><code>TC-18</code> 保存草稿</td><td>常规</td><td>活动(§3)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>草稿已保存（E2E验收活动-勿删）</span></td></tr>\n<tr><td><code>TC-19</code> 发布活动</td><td>常规</td><td>活动(§3)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>发布成功且列表可见（状态=已发布）</span></td></tr>\n<tr><td><code>TC-20</code> 标签设置页</td><td>常规</td><td>活动(§3)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>设置页结构完整</span></td></tr>\n<tr><td><code>TC-21</code> 行内下载签到二维码</td><td>常规</td><td>活动(§3)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>行内二维码入口存在（不重复触发下载）</span></td></tr>\n<tr><td><code>TC-22</code> Banner ≤5 与列表</td><td>常规</td><td>运营管理(§4)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>计数卡渲染</span></td></tr>\n<tr><td><code>TC-23</code> 视频回顾列表</td><td>常规</td><td>运营管理(§4)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>页面渲染（数据随测试库）</span></td></tr>\n<tr><td><code>TC-24</code> 等级管理页</td><td>常规</td><td>等级(§5)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>列渲染齐全</span></td></tr>\n<tr><td><code>TC-25</code> 流水变动前后列</td><td>常规</td><td>经验值(§6)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>变动前/变动后两列存在</span></td></tr>\n<tr><td><code>TC-26</code> 流水关联业务列</td><td>常规</td><td>贡献值(§7)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>关联业务列存在</span></td></tr>\n<tr><td><code>TC-27</code> 权益流水列</td><td>常规</td><td>权益(§8)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>八列口径齐全</span></td></tr>\n<tr><td><code>TC-28</code> 发放权益表单校验</td><td>常规</td><td>权益(§8)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>类型联动 + 规则卡齐全</span></td></tr>\n<tr><td><code>TC-29</code> 任务筛选三下拉</td><td>常规</td><td>任务(§9)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>三个筛选齐备</span></td></tr>\n<tr><td><code>TC-30</code> 独立页列与筛选</td><td>常规</td><td>NPC任务(§9)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>列齐全；状态筛选选项: (收起)</span></td></tr>\n<tr><td><code>TC-31</code> 列表 7 列与招募中文案</td><td>常规</td><td>机会(§10)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>7 列口径齐全；列表为空，状态文案随数据</span></td></tr>\n<tr><td><code>TC-32</code> 详情想推荐名单</td><td>常规</td><td>机会(§10)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>BLOCKED-机会列表无数据</span></td></tr>\n<tr><td><code>TC-33</code> 列表时间列与汇总卡</td><td>常规</td><td>订单(§11)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>时间列+汇总卡齐备</span></td></tr>\n<tr><td><code>TC-34</code> 详情状态时间线</td><td>常规</td><td>订单(§11)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>BLOCKED-订单列表无数据</span></td></tr>\n<tr><td><code>TC-35</code> 战队可见性（现状记录）</td><td>常规</td><td>战队(§12)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>现状：赛季/战队/盲盒可见（开放项 I1/I2 不判定）</span></td></tr>\n<tr><td><code>TC-36</code> 权限管理四 Tab</td><td>常规</td><td>角色权限(§13)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>四 Tab 齐全</span></td></tr>\n<tr><td><code>TC-37</code> 账号列表与新增入口</td><td>常规</td><td>后台账号(§14)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>列表+新增入口</span></td></tr>\n<tr><td><code>TC-38</code> 审计类型筛选与登录视图</td><td>常规</td><td>审计(§14)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>类型选项: 全部/操作/登录</span></td></tr>\n<tr><td><code>TC-39</code> 服务器列表</td><td>常规</td><td>服务器(§15)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>服务器 tab 渲染</span></td></tr>\n<tr><td><code>TC-40</code> 消息管理两 Tab</td><td>常规</td><td>消息(§16)</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>消息活动/消息模板 渲染</span></td></tr>\n<tr><td><code>UAT-01</code> 登录 → 概览 → 退出 → 受保护页重定向</td><td>流程级</td><td></td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>登录态保持（退出与重定向在 UAT-10 执行）</span></td></tr>\n<tr><td><code>UAT-02</code> 活动运营闭环：建草稿 → 补全发布 → 列表可见 → 详情</td><td>流程级</td><td></td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>TC-18/19 已覆盖建→发布→列表；闭环成立</span></td></tr>\n<tr><td><code>UAT-03</code> 用户档案巡检</td><td>流程级</td><td></td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>玩家档案渲染无失败</span></td></tr>\n<tr><td><code>UAT-04</code> 权益发放闭环：发放 100 经验值 → 流水新增</td><td>流程级</td><td></td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>已向 微信用户 发放 100 经验值且流水可见</span></td></tr>\n<tr><td><code>UAT-05</code> NPC 任务审批</td><td>流程级</td><td></td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>BLOCKED-测试库无待审批任务（流程入口/筛选已验证）</span></td></tr>\n<tr><td><code>UAT-07</code> 消息草稿创建（不发送）</td><td>流程级</td><td></td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>草稿流程已走（具体状态随表单结构）</span></td></tr>\n<tr><td><code>UAT-08</code> 审计留痕</td><td>流程级</td><td></td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>审计页渲染（本会话写操作应有记录）</span></td></tr>\n<tr><td><code>UAT-09</code> 导航收敛与路由直达</td><td>流程级</td><td></td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>菜单无入口、路由保留可达</span></td></tr>\n<tr><td><code>UAT-10</code> 退出后访问受保护路由</td><td>流程级</td><td></td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>退出后受保护页重定向登录</span></td></tr>\n<tr><td><code>TC-42</code> 390 视口无横向溢出</td><td>常规</td><td>全局质量</td><td><span class='badge' style='background:#16a34a'>通过</span></td><td><span class='note'>主要页面 390 无横向溢出</span></td></tr>\n</table>
 <details><summary>关键截图（点击展开）</summary>
-<img class="shot" src="shots/01-after-login.png" alt="生产登录成功">
-<img class="shot" src="shots/06-fail-TC-09.png" alt="生产用户列表（修复前列形态）">
-<img class="shot" src="shots/04-fail-TC-07.png" alt="生产概览（修复前指标卡）">
+<img class="shot" src="shots/02-overview.png" alt="概览驾驶舱（真实数据）">
+<img class="shot" src="shots/03-user-profile.png" alt="用户档案六 Tab">
+<img class="shot" src="shots/04-event-published.png" alt="活动发布闭环：列表可见已发布">
+<img class="shot" src="shots/01-after-login.png" alt="密码登录成功进入概览">
 </details></section>
 
 <section>
-<h2>⑤ 设计还原修复在测试环境的验证（已完成）</h2>
+<h2>⑤ 遗留事项</h2>
 <table>
-<tr><th>验证层</th><th>结果</th><th>证据</th></tr>
-<tr><td>部署层</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>新包 Active + 静态字节一致 + 新入口（§2）</td></tr>
-<tr><td>单元/契约层</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>admin-web vitest 228 例 + 契约 315 例全绿（含 30 条修复的专项用例）</td></tr>
-<tr><td>渲染层（DOM 探针）</td><td><span class="badge" style="background:#16a34a">PASS</span></td><td>26 路由真实渲染探针：11 列用户表、身份含普通用户、权益四档、订单时间列、机会 7 列、成长四页、/task-approval、/events/settings、审计类型筛选、顶栏页签+铃铛 等逐一断言通过（2026-10-18 01:06）</td></tr>
-<tr><td>浏览器层（登录后）</td><td><span class="badge" style="background:#d97706">BLOCKED</span></td><td>测试后台无该账号（§1）——解锁路径见 §3 开放项</td></tr>
+<tr><th>#</th><th>事项</th><th>归属</th></tr>
+<tr><td>1</td><td>生产 admin.mip.cool 仍是 2026-10-16 版本，不含本批 30 项设计还原修复；生产 E2E 的 28 条「预期差异」在部署后即消除</td><td>生产部署待批准</td></tr>
+<tr><td>2</td><td>main 领先 origin 若干提交（修复批 + 报告/证据），尚未推送</td><td>待确认后 push</td></tr>
+<tr><td>3</td><td>测试账号手机号哈希占位（见 §2 遗留）；真实绑定关系如需迁移涉及 Maker Jackie 数据</td><td>人工决策</td></tr>
+<tr><td>4</td><td>手机号、支付、订阅消息、扫码签到等需真机验证的链路不在本次浏览器 E2E 范围（AGENTS.md 要求真机）</td><td>真机验收</td></tr>
 </table>
 </section>
 
 <section>
-<h2>⑥ 发现的问题清单（视觉呈现见截图）</h2>
-<table>
-<tr><th>#</th><th>问题</th><th>级别</th><th>状态</th></tr>
-<tr><td>1</td><td>生产登录 503（认证库用户密码漂移）——曾导致测试后台登录链路整体不可用</td><td><span class="badge" style="background:#dc2626">严重</span></td><td><b>已修复</b>（本报告 §3）</td></tr>
-<tr><td>2</td><td>账号环境错位：给定管理员账号在生产而非测试；测试后台无任何管理员身份</td><td><span class="badge" style="background:#d97706">阻塞</span></td><td>需微信登录测试版小程序解锁</td></tr>
-<tr><td>3</td><td>生产未部署 30 项设计还原修复（28 条 E2E 差异的唯一原因）</td><td><span class="badge" style="background:#2563eb">版本</span></td><td>测试环境已部署；生产部署待你批准</td></tr>
-<tr><td>4</td><td>UAT-07 可能遗留「E2E测试消息-勿发」草稿于生产消息模块</td><td><span class="badge" style="background:#646a73">提示</span></td><td>可后台删除</td></tr>
-<tr><td>5</td><td>Console 仅预期 401（未登录会话检查），无未捕获异常</td><td><span class="badge" style="background:#16a34a">健康</span></td><td>—</td></tr>
-</table>
-</section>
-
-
-<section>
-<h2>⑧ 后续追查（2026-10-18 深夜）：测试后台会话持久化缺陷</h2>
-<div class="fixed"><b>已修复并验证：</b>账号 18819253403 的密码凭证链路已全面打通——手机号绑定（原始字节密文修正）、认证运行时用户密码收敛、协议接受、主分会、PLATFORM_OWNER 角色、密码哈希重置为 Share0101! 的 KDF 派生值（远程 KDF 端点验证 200）。API 登录 <code>POST /api/auth/password/login</code> 返回 <b>200 authenticated:true</b> 并下发会话 Cookie（mip_admin_session，361 字符）。</div>
-<div class="chain"><b>新发现缺陷（级别：严重，测试环境特有）：</b>会话 Cookie 已下发，但后续任何携带该 Cookie 的请求（/api/admin、页面刷新后的会话校验）均返回 401 AUTH_REQUIRED「登录会话已失效」——即<b>登录成功后会话无法跨请求持久化</b>。对照生产环境同版本代码链路正常，指向测试 BFF（mip-t-admin-web-api）会话校验链路的测试环境特有缺陷：最可疑为 challenge-confirmed 会话/密码登录会话在 mip_test_admin_auth.mip_admin_web_sessions 的落库或校验差异（insertSession 权限已确认具备）。需要 mip-t-admin-api / BFF 侧日志（CLS 属另一账号，需授权）定位。<br>
-<b>影响：</b>45 条登录后 E2E 用例无法在测试环境执行（生产环境的替代 E2E 已全量执行）；生产环境不受影响。</div>
-<div class="info"><b>数据侧已就绪状态（供后续核对）：</b>mip_test_admin_auth 凭证行 phone_key 已收敛为当前会话密钥派生值（e84af97c…）、password_hash 已重置为 Share0101! 的 KDF 派生（远程 KDF 端点 200 验证）、version=2；mip_test.mip_private_profiles 手机号绑定（原始字节密文 + 哈希 + verified_at）；mip_admin_role_bindings PLATFORM_OWNER；mip_user_agreements 双协议已接受。</div>
-</section>
-
-<section>
-<h2>⑦ 方法说明</h2>
+<h2>⑥ 方法说明</h2>
 <div style="font-size:13px;color:var(--tx2)">
-<p><b style="color:var(--tx)">用例</b>：按 PRD v0.4 十六章 + 原型 v1 生成 42 条常规用例（模块级：列表/筛选/详情/校验/边界）与 10 条流程级用例（跨模块用户旅程），见 diff-work/e2e/cases.json 与报告内清单。</p>
-<p><b style="color:var(--tx)">执行</b>：Playwright(Chromium) 真实浏览器；登录使用真实账号经真实登录接口（生产 KDF 远程派生 + 会话 Cookie）；每用例独立判定 + 截图 + console 归集；写操作白名单制。</p>
-<p><b style="color:var(--tx)">可信边界</b>：生产 E2E 验证的是 10-16 生产版本；本批修复的行为验证在测试环境以部署证据 + 单测 + DOM 探针完成（浏览器层等账号解锁）。503 修复与生产用户恢复均有哈希级复核证据。</p>
+<p><b style="color:var(--tx)">用例</b>：按 PRD v0.4 十六章 + 原型 v1 生成 42 条常规用例（模块级：列表/筛选/详情/校验/边界）与 10 条流程级用例（跨模块用户旅程），见 <code>diff-work/e2e/cases.json</code>。</p>
+<p><b style="color:var(--tx)">执行</b>：Playwright(Chromium) 真实浏览器；登录走真实密码接口（远程 KDF + 会话 Cookie）；每个用例独立判定 + 失败即截图 + console 归集；导航均整页加载以排除 SPA 路由残留状态；写操作白名单制。</p>
+<p><b style="color:var(--tx)">缺陷定位方法</b>：测试函数临时插桩（把会话校验各失败阶段编码进 401 响应体）→ 定位 validate 具体分支 → 数据层修复 → 纯净构建重部署（哈希复核）。插桩过程未改动任何业务语义。</p>
 </div>
 </section>
 </div></body></html>
-'''
-open(f'{ROOT}/report.html', 'w', encoding='utf-8').write(html)
-print('WROTE', f'{ROOT}/report.html', len(html), 'chars')

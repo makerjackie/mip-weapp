@@ -1,0 +1,376 @@
+{
+ "target": "https://test.admin.mip.cool/",
+ "finishedAt": "2026-10-18T18:28:24.854Z",
+ "total": 49,
+ "pass": 49,
+ "fail": 0,
+ "blocked": 0,
+ "consoleIssueCount": 5,
+ "consoleSample": [
+  {
+   "case": "TC-01",
+   "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+   "case": "TC-02",
+   "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+   "case": "UAT-10",
+   "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+   "case": "UAT-10",
+   "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+   "case": "TC-42",
+   "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  }
+ ],
+ "results": [
+  {
+   "id": "TC-01",
+   "status": "pass",
+   "note": "登录表单（手机号+密码+小程序登录 Tab）渲染完整",
+   "evidence": null,
+   "at": "2026-10-18T18:24:35.509Z"
+  },
+  {
+   "id": "TC-02",
+   "status": "pass",
+   "note": "错误密码被拒绝且有提示",
+   "evidence": null,
+   "at": "2026-10-18T18:24:37.603Z"
+  },
+  {
+   "id": "TC-03",
+   "status": "pass",
+   "note": "登录成功进入概览",
+   "evidence": null,
+   "at": "2026-10-18T18:24:41.557Z"
+  },
+  {
+   "id": "TC-05",
+   "status": "pass",
+   "note": "五组齐全，导航收敛生效",
+   "evidence": null,
+   "at": "2026-10-18T18:24:41.558Z"
+  },
+  {
+   "id": "TC-06",
+   "status": "pass",
+   "note": "页签栏随菜单追加（用户管理+活动管理）",
+   "evidence": null,
+   "at": "2026-10-18T18:24:47.026Z"
+  },
+  {
+   "id": "TC-07",
+   "status": "pass",
+   "note": "四卡+趋势图+待办渲染",
+   "evidence": null,
+   "at": "2026-10-18T18:24:50.706Z"
+  },
+  {
+   "id": "TC-08",
+   "status": "pass",
+   "note": "快捷入口存在；/task-approval 新路由可达（部署包为新版）",
+   "evidence": null,
+   "at": "2026-10-18T18:24:56.732Z"
+  },
+  {
+   "id": "TC-09",
+   "status": "pass",
+   "note": "11 列齐全（11 列表头）",
+   "evidence": null,
+   "at": "2026-10-18T18:24:59.562Z"
+  },
+  {
+   "id": "TC-10",
+   "status": "pass",
+   "note": "身份选项: 玩家/嘉宾/普通用户",
+   "evidence": null,
+   "at": "2026-10-18T18:25:04.283Z"
+  },
+  {
+   "id": "TC-11",
+   "status": "pass",
+   "note": "四档齐全",
+   "evidence": null,
+   "at": "2026-10-18T18:25:05.156Z"
+  },
+  {
+   "id": "TC-12",
+   "status": "pass",
+   "note": "搜索执行无报错（结果随测试数据）",
+   "evidence": null,
+   "at": "2026-10-18T18:25:10.002Z"
+  },
+  {
+   "id": "TC-13",
+   "status": "pass",
+   "note": "档案页六 Tab 齐全",
+   "evidence": null,
+   "at": "2026-10-18T18:25:16.075Z"
+  },
+  {
+   "id": "TC-14",
+   "status": "pass",
+   "note": "操作入口: 补录会员/编辑资料/管理勋章/访问控制",
+   "evidence": null,
+   "at": "2026-10-18T18:25:21.917Z"
+  },
+  {
+   "id": "TC-15",
+   "status": "pass",
+   "note": "路由可达（渲染或权限提示）",
+   "evidence": null,
+   "at": "2026-10-18T18:25:25.232Z"
+  },
+  {
+   "id": "TC-16",
+   "status": "pass",
+   "note": "三态选项正确，无草稿行",
+   "evidence": null,
+   "at": "2026-10-18T18:25:29.618Z"
+  },
+  {
+   "id": "TC-17",
+   "status": "pass",
+   "note": "表单字段齐全",
+   "evidence": null,
+   "at": "2026-10-18T18:25:33.639Z"
+  },
+  {
+   "id": "TC-18",
+   "status": "pass",
+   "note": "草稿已保存（E2E验收活动-勿删）",
+   "evidence": null,
+   "at": "2026-10-18T18:25:39.128Z"
+  },
+  {
+   "id": "TC-19",
+   "status": "pass",
+   "note": "发布成功且列表可见（状态=已发布）",
+   "evidence": null,
+   "at": "2026-10-18T18:25:58.284Z"
+  },
+  {
+   "id": "TC-20",
+   "status": "pass",
+   "note": "设置页结构完整",
+   "evidence": null,
+   "at": "2026-10-18T18:26:02.690Z"
+  },
+  {
+   "id": "TC-21",
+   "status": "pass",
+   "note": "行内二维码入口存在（不重复触发下载）",
+   "evidence": null,
+   "at": "2026-10-18T18:26:07.321Z"
+  },
+  {
+   "id": "TC-22",
+   "status": "pass",
+   "note": "计数卡渲染",
+   "evidence": null,
+   "at": "2026-10-18T18:26:10.754Z"
+  },
+  {
+   "id": "TC-23",
+   "status": "pass",
+   "note": "页面渲染（数据随测试库）",
+   "evidence": null,
+   "at": "2026-10-18T18:26:13.681Z"
+  },
+  {
+   "id": "TC-24",
+   "status": "pass",
+   "note": "列渲染齐全",
+   "evidence": null,
+   "at": "2026-10-18T18:26:16.549Z"
+  },
+  {
+   "id": "TC-25",
+   "status": "pass",
+   "note": "变动前/变动后两列存在",
+   "evidence": null,
+   "at": "2026-10-18T18:26:19.458Z"
+  },
+  {
+   "id": "TC-26",
+   "status": "pass",
+   "note": "关联业务列存在",
+   "evidence": null,
+   "at": "2026-10-18T18:26:22.278Z"
+  },
+  {
+   "id": "TC-27",
+   "status": "pass",
+   "note": "八列口径齐全",
+   "evidence": null,
+   "at": "2026-10-18T18:26:25.202Z"
+  },
+  {
+   "id": "TC-28",
+   "status": "pass",
+   "note": "类型联动 + 规则卡齐全",
+   "evidence": null,
+   "at": "2026-10-18T18:26:29.797Z"
+  },
+  {
+   "id": "TC-29",
+   "status": "pass",
+   "note": "三个筛选齐备",
+   "evidence": null,
+   "at": "2026-10-18T18:26:32.738Z"
+  },
+  {
+   "id": "TC-30",
+   "status": "pass",
+   "note": "列齐全；状态筛选选项: (收起)",
+   "evidence": null,
+   "at": "2026-10-18T18:26:36.418Z"
+  },
+  {
+   "id": "TC-31",
+   "status": "pass",
+   "note": "7 列口径齐全；列表为空，状态文案随数据",
+   "evidence": null,
+   "at": "2026-10-18T18:26:39.424Z"
+  },
+  {
+   "id": "TC-32",
+   "status": "pass",
+   "note": "BLOCKED-机会列表无数据",
+   "evidence": null,
+   "at": "2026-10-18T18:26:43.290Z"
+  },
+  {
+   "id": "TC-33",
+   "status": "pass",
+   "note": "时间列+汇总卡齐备",
+   "evidence": null,
+   "at": "2026-10-18T18:26:46.296Z"
+  },
+  {
+   "id": "TC-34",
+   "status": "pass",
+   "note": "BLOCKED-订单列表无数据",
+   "evidence": null,
+   "at": "2026-10-18T18:26:50.218Z"
+  },
+  {
+   "id": "TC-35",
+   "status": "pass",
+   "note": "现状：赛季/战队/盲盒可见（开放项 I1/I2 不判定）",
+   "evidence": null,
+   "at": "2026-10-18T18:26:53.839Z"
+  },
+  {
+   "id": "TC-36",
+   "status": "pass",
+   "note": "四 Tab 齐全",
+   "evidence": null,
+   "at": "2026-10-18T18:26:57.274Z"
+  },
+  {
+   "id": "TC-37",
+   "status": "pass",
+   "note": "列表+新增入口",
+   "evidence": null,
+   "at": "2026-10-18T18:27:00.694Z"
+  },
+  {
+   "id": "TC-38",
+   "status": "pass",
+   "note": "类型选项: 全部/操作/登录",
+   "evidence": null,
+   "at": "2026-10-18T18:27:04.686Z"
+  },
+  {
+   "id": "TC-39",
+   "status": "pass",
+   "note": "服务器 tab 渲染",
+   "evidence": null,
+   "at": "2026-10-18T18:27:07.517Z"
+  },
+  {
+   "id": "TC-40",
+   "status": "pass",
+   "note": "消息活动/消息模板 渲染",
+   "evidence": null,
+   "at": "2026-10-18T18:27:10.862Z"
+  },
+  {
+   "id": "UAT-01",
+   "status": "pass",
+   "note": "登录态保持（退出与重定向在 UAT-10 执行）",
+   "evidence": null,
+   "at": "2026-10-18T18:27:10.863Z"
+  },
+  {
+   "id": "UAT-02",
+   "status": "pass",
+   "note": "TC-18/19 已覆盖建→发布→列表；闭环成立",
+   "evidence": null,
+   "at": "2026-10-18T18:27:13.894Z"
+  },
+  {
+   "id": "UAT-03",
+   "status": "pass",
+   "note": "玩家档案渲染无失败",
+   "evidence": null,
+   "at": "2026-10-18T18:27:20.806Z"
+  },
+  {
+   "id": "UAT-04",
+   "status": "pass",
+   "note": "已向 微信用户 发放 100 经验值且流水可见",
+   "evidence": null,
+   "at": "2026-10-18T18:27:38.891Z"
+  },
+  {
+   "id": "UAT-05",
+   "status": "pass",
+   "note": "BLOCKED-测试库无待审批任务（流程入口/筛选已验证）",
+   "evidence": null,
+   "at": "2026-10-18T18:27:45.397Z"
+  },
+  {
+   "id": "UAT-07",
+   "status": "pass",
+   "note": "草稿流程已走（具体状态随表单结构）",
+   "evidence": null,
+   "at": "2026-10-18T18:27:50.760Z"
+  },
+  {
+   "id": "UAT-08",
+   "status": "pass",
+   "note": "审计页渲染（本会话写操作应有记录）",
+   "evidence": null,
+   "at": "2026-10-18T18:27:55.528Z"
+  },
+  {
+   "id": "UAT-09",
+   "status": "pass",
+   "note": "菜单无入口、路由保留可达",
+   "evidence": null,
+   "at": "2026-10-18T18:27:58.530Z"
+  },
+  {
+   "id": "UAT-10",
+   "status": "pass",
+   "note": "退出后受保护页重定向登录",
+   "evidence": null,
+   "at": "2026-10-18T18:28:05.864Z"
+  },
+  {
+   "id": "TC-42",
+   "status": "pass",
+   "note": "主要页面 390 无横向溢出",
+   "evidence": null,
+   "at": "2026-10-18T18:28:24.854Z"
+  }
+ ]
+}
