@@ -45,7 +45,19 @@
 - [x] `pnpm release:trial -- --desc "活动详情富文本渲染修复：管理后台富文本（居中标题/列表/行内样式/插图）原样渲染，清除死空白与误显示空态文案"`
 - [x] 内置门禁：verify:all 全绿 + 烘焙断言（trial 包仅含 mip-t-*）+ dist 平铺上传 → **体验版 0.2.0.20261019 上传成功**（主包 1.7MB / member 1.2MB / admin 134.5KB）
 - [ ] MP 后台「体验版」指向确认 + 真机扫码走查（人工边界：真机项外部等待）
-- [ ] 说明：体验版按仓库红线指向测试环境（mip_test 库，支付禁用）；正式环境发版走 `release:prod`（提审阶段）
+- [ ] 说明：体验版按仓库红线指向测试环境（mip_test 库）；正式环境发版走 `release:prod`（提审阶段）
+
+## F2. 微信支付切换正式环境（测试后端热切换，2026-10-19 追加指令）
+
+- [x] 前置确认：测试/生产支付函数为两套独立部署（`mip-t-*` vs `mip-*`），切换只影响测试后端；商户号取正式商户 `1739928668`（与生产一致，即「正式环境」口径）
+- [x] `envs/test/.env.local`：`MIP_PAYMENT_MODE` disabled→live、`WECHAT_PAY_MERCHANT_ID` 补正式商户号（原为空）
+- [x] 部署测试支付三件套（此前从未部署）：`mip-t-cloudpay` / `mip-t-cloudpay-callback` / `mip-t-refund-worker` 全部 verified（deploy-payment-function.mjs --confirm-live）
+- [x] 热切换核心函数：`switch-payment-mode.mjs --mode=live --confirm-live` → events/commerce/ledger 更新并回读收敛，community/admin 已同目录值，ledger 的测试会员 HMAC 按 live 规则移除
+- [x] `verify-cloud.mjs`（envs/test）全绿；独立回读断言：6 个承载支付键函数全部 `mode=live` 且 `Active/Available`
+- [x] 生产未受影响：生产支付函数（`mip-cloudpay` 等）与本轮操作无交集（不同函数名），生产目录本就 mode=live
+- [ ] **购买前置**：mip_test 库 `mip_membership_plans` 当前 0 条——需在测试后台「会员方案」创建 ACTIVE（TEST 目录）方案后购买闭环才可走通
+- [ ] 真机验证：真实微信支付一笔（live 扣款+到账+可退）+ 支付回调，属真机外部边界；若发起支付报商户绑定错误，需在 CloudBase 控制台确认环境已绑定商户号 1739928668
+- [x] 回滚方式：`MIP_ENV_DIR=envs/test node scripts/switch-payment-mode.mjs --confirm-env=<EnvID> --mode=test`（或 disabled，可逆、不发版）
 
 ## G. 文档与状态
 
