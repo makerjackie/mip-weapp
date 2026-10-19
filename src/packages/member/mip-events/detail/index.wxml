@@ -91,7 +91,7 @@
               <view wx:if="{{item.caption}}" class="mt-3 text-[24rpx] leading-[33.6rpx] text-muted">{{item.caption}}</view>
             </view>
           </view>
-          <view wx:if="{{!hasDescription && !event.contentMedia.length}}" class="py-4 text-[24rpx] text-muted">暂无活动介绍。</view>
+          <view wx:if="{{!event.hasDescription && !event.contentMedia.length}}" class="py-4 text-[24rpx] text-muted">暂无活动介绍。</view>
         </view>
 
         <!-- 小程序需求 C1：主办方 Tab 展示后台配置的主办方介绍富文本（图文），前台原样渲染；
