@@ -1,0 +1,94 @@
+{
+  "desktop": {
+    "rows": 4,
+    "columns": [
+      4,
+      4,
+      4,
+      4
+    ],
+    "images": [
+      {
+        "src": "shots/before-profile.png",
+        "ok": true
+      },
+      {
+        "src": "shots/after-profile.png",
+        "ok": true
+      },
+      {
+        "src": "shots/prototype-profile.png",
+        "ok": true
+      },
+      {
+        "src": "shots/figma-profile.png",
+        "ok": true
+      },
+      {
+        "src": "shots/before-talent.png",
+        "ok": true
+      },
+      {
+        "src": "shots/after-talent.png",
+        "ok": true
+      },
+      {
+        "src": "shots/prototype-talent.png",
+        "ok": true
+      },
+      {
+        "src": "shots/figma-talent.png",
+        "ok": true
+      },
+      {
+        "src": "shots/before-events.png",
+        "ok": true
+      },
+      {
+        "src": "shots/after-events.png",
+        "ok": true
+      },
+      {
+        "src": "shots/prototype-events.png",
+        "ok": true
+      },
+      {
+        "src": "shots/figma-events.png",
+        "ok": true
+      },
+      {
+        "src": "shots/before-growth.png",
+        "ok": true
+      },
+      {
+        "src": "shots/after-growth.png",
+        "ok": true
+      },
+      {
+        "src": "shots/prototype-growth.png",
+        "ok": true
+      },
+      {
+        "src": "shots/figma-growth.png",
+        "ok": true
+      },
+      {
+        "src": "shots/industry-full-library.png",
+        "ok": true
+      },
+      {
+        "src": "shots/industry-services.png",
+        "ok": true
+      },
+      {
+        "src": "shots/date-confirmed.png",
+        "ok": true
+      }
+    ],
+    "overflow": false
+  },
+  "mobile": {
+    "pageOverflow": false,
+    "columnsScroll": true
+  }
+}

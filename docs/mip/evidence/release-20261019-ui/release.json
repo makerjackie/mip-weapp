@@ -1,0 +1,69 @@
+{
+  "status": "uploaded-awaiting-public-platform-trial-selection",
+  "sourceCommit": "eb008005e6528645f7ddc8ab56552470db3d86e7",
+  "website": {
+    "origin": "https://mip-review.01mvp.com/",
+    "deployment": "586009ef",
+    "customDomainStatus": "active",
+    "httpsFilesMatched": 21,
+    "fourColumns": [
+      4,
+      4,
+      4,
+      4
+    ],
+    "desktop": "passed",
+    "mobile": "passed",
+    "legacyMiptestChanged": false,
+    "rawOperationalDataPublished": false
+  },
+  "miniProgram": {
+    "version": "0.2.0.20261019.4",
+    "uploaded": true,
+    "target": "test",
+    "functionPrefix": "mip-t-",
+    "paymentMode": "disabled",
+    "platformMainPackageBytes": 1750270,
+    "verifyAllPassed": true,
+    "miniTests": 1805,
+    "webReactTests": 243,
+    "webNodeTests": 325,
+    "trialSelection": "requires user in WeChat public platform",
+    "productionClientReleased": false
+  },
+  "production": {
+    "cloudVerified": true,
+    "functionsVerified": 19,
+    "membershipChainsVerified": 24,
+    "leastPrivilege": true,
+    "protectedInvocationRules": true,
+    "newDemoSeed": false,
+    "cloudSecretsRotated": false,
+    "localConfigurationRecovered": [
+      "MIP_WECHAT_APP_SECRET",
+      "MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS",
+      "MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS",
+      "MIP_PAYMENT_MODE"
+    ],
+    "paymentMode": "live",
+    "identityStageCorrection": {
+      "status": "verified",
+      "target": "production",
+      "function": "mip-identity-api",
+      "onlyChangedKey": "MIP_DEPLOYMENT_STAGE",
+      "before": "staging",
+      "after": "production",
+      "effect": "new profile-card QR codes target release, not trial",
+      "otherEnvironmentValuesPreserved": true,
+      "codeAndRuntimePreserved": true,
+      "rollbackConfigSaved": true,
+      "realDeviceQrScan": "pending",
+      "healthVerified": true,
+      "permissionRulePreserved": true
+    }
+  },
+  "limitations": [
+    "Public platform browser access blocked by site-safety policy; trial selection is not verified",
+    "iPhone native gestures and payment still require device acceptance"
+  ]
+}

@@ -35,6 +35,10 @@ description: Use for owner bootstrap, demo seed, CloudBase deploy, MySQL schema,
 
 确认目标 EnvID 和 deployment stage。历史 legacy member schema 不属于 MIP 操作路径。不要对生产跑 demo seed。不要给通知 worker 安装 5 分钟定时器：它会阻止 Serverless MySQL 暂停，按 CCU 消耗额度。
 
+生产清理保留 `mip_users` 的封禁/审计占位时，必须同时保留其 `mip_membership_chains` 行；chain 是事务并发元数据，不是会籍权益。清理后校验 users 与 chains 一对一、无缺失/孤儿。历史缺失只通过现有 `scripts/reconcile-membership-chains.mjs` 幂等补齐并回读，不能恢复订单、权益或解除封禁。
+
+同一 AppID 的体验版切到独立测试库前，核对生产 identity 的 `MIP_DEPLOYMENT_STAGE=production`：名片码依此选择 `release`，历史 `staging` 会选择 `trial` 并跨环境。只修正已证明错误的函数配置，保存回滚及完整回读，不批量重写其他函数或迁移既有素材；历史二维码另做真机验收。
+
 ## Forbidden
 
 自动授权、把环境 ID 写入验收产物、跳过确认参数、把高频 MySQL 定时触发器部署到共享个人环境。

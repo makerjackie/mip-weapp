@@ -1,0 +1,15 @@
+{
+  "status": "verified",
+  "target": "production",
+  "function": "mip-identity-api",
+  "onlyChangedKey": "MIP_DEPLOYMENT_STAGE",
+  "before": "staging",
+  "after": "production",
+  "effect": "new profile-card QR codes target release, not trial",
+  "otherEnvironmentValuesPreserved": true,
+  "codeAndRuntimePreserved": true,
+  "rollbackConfigSaved": true,
+  "realDeviceQrScan": "pending",
+  "healthVerified": true,
+  "permissionRulePreserved": true
+}

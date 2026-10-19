@@ -1,0 +1,20 @@
+{
+  "status": "verified",
+  "target": "production",
+  "before": {
+    "userCount": 24,
+    "chainCount": 18,
+    "missingChains": 6,
+    "orphanChains": 0
+  },
+  "after": {
+    "userCount": 24,
+    "chainCount": 24,
+    "missingChains": 0,
+    "orphanChains": 0
+  },
+  "missingChainsReconciled": 6,
+  "blockedAccounts": 6,
+  "ordersEntitlementsAndRolesUnchanged": true,
+  "scope": "transaction concurrency metadata only; no membership grant, order recovery, account unblock or role change"
+}

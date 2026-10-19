@@ -1,5 +1,8 @@
 # MIP 当前状态
 
+2026-10-19 对外验收交付：分享页 https://mip-review.01mvp.com/ 独立Cloudflare Pages部署（21公开文件HTTPS逐一匹配、四列与桌面/手机检查通过），旧miptest站点未改。源码eb008005已推送；release:trial完整verify:all通过后上传0.2.0.20261019.4（mip-t-*测试环境、支付禁用、平台主包1750270字节）。公众平台选为体验版因浏览器安全策略限制仍需用户操作，未提交审核/发布正式版。生产备份后补齐6个封禁演示账号的并发控制链，24用户/24链，订单/权益/角色数量不变、封禁保留；完整cloud:verify通过，本机缺失验证配置从现有生产配置恢复，未改云端密钥或域名白名单，生产支付保持LIVE；生产identity旧staging标记已单键改production，新名片码指向正式版，其他环境变量/代码/运行时/权限不变且健康回读通过，历史名片码待真机复测。[发布证据](evidence/release-20261019-ui/README.md)。
+
+
 2026-10-19 行业目录与功能复核：以飞书2026-09-26 revision62为来源，仅向 mip_test 补齐11类/121子行业（132行），真实小程序回读全量目录，生产未改。角色标签icon区恢复16px及4px间距；日期入口改原稿网格日历与4px间距，整块可点。修复跨年活动省略年份、目录刷新失效展开，以及原有设备时区与服务端北京时间不一致；活动相关时间与日历今天统一UTC+08:00。新增日期草稿确认/取消、业务时区和跨年测试。完整verify:all通过（小程序1805、Web React243、Web Node325），runtime:preflight通过；主包含依赖1354935字节，未上传/发布，真机手势待测。[完整行业清单与功能复核](evidence/ui-parity-20261019/catalog-and-function-audit.md)，[本轮验证](evidence/ui-parity-20261019/function-audit-verification.json)。
 
 
