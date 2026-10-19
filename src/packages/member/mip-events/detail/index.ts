@@ -168,7 +168,6 @@ Page({
     descriptionNodes: [] as ReturnType<typeof eventRichTextNodes>,
     organizerIntroductionNodes: [] as ReturnType<typeof eventRichTextNodes>,
     noticesNodes: [] as ReturnType<typeof eventRichTextNodes>,
-    hasDescription: false,
     startsText: '',
     endsText: '',
     shareTimeText: '',

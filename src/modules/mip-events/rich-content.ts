@@ -171,18 +171,70 @@ function readTag(html: string, start: number): ParsedTag {
 }
 
 interface ParseFrame {
-  node: EventRichTextNode
+  /** 关闭标签匹配用的名字；li 内扁平化的段落也用 'p' 参与配对。 */
+  name: string
+  /** 该层写入的节点；透明层（li 内扁平化段落）为 null，只借 container 写入。 */
+  node: EventRichTextNode | null
   container: EventRichTextNode[]
 }
 
 function closeTag(stack: ParseFrame[], rawTag: string): void {
   const name = normalizeTagName(rawTag)
   for (let index = stack.length - 1; index > 0; index -= 1) {
-    if (stack[index].node.name === name) {
+    if (stack[index].name === name) {
       stack.length = index
       return
     }
   }
+}
+
+/** 标题与段落携带编辑器设置的块级对齐（TipTap TextAlign 对 heading/paragraph 生效）。 */
+function alignmentFor(name: string, source: string | undefined): string {
+  if (name === 'p' || /^h[2-6]$/.test(name)) {
+    return alignmentStyle(source)
+  }
+  return ''
+}
+
+/** 节点子树里是否有可见内容（非空白文本或图片）；空段落/空列表按不可见处理。 */
+function richTextHasContent(node: EventRichTextNode): boolean {
+  if (node.type === 'text') {
+    return Boolean(node.text && node.text.trim())
+  }
+  if (node.name === 'img') {
+    return true
+  }
+  return (node.children || []).some(richTextHasContent)
+}
+
+/**
+ * 裁剪纯装饰性空块：编辑器（TipTap）会在列表后留下尾随空段落、空列表项等，
+ * 微信 rich-text 没有 margin 折叠，这些节点会渲染成成片的死空白。
+ * 块级容器里的零散空白文本一并裁掉；块内部的空白文本（如加粗与斜体之间的空格）
+ * 原样保留，否则行内混排会黏成一团。
+ */
+function pruneDecorativeEmpties(nodes: EventRichTextNode[], keepSpaces = false): EventRichTextNode[] {
+  const cleaned: EventRichTextNode[] = []
+  for (const node of nodes) {
+    if (node.type === 'text') {
+      if (keepSpaces || (node.text && node.text.trim())) {
+        cleaned.push(node)
+      }
+      continue
+    }
+    if (node.name === 'br' && keepSpaces) {
+      cleaned.push(node)
+      continue
+    }
+    if (!richTextHasContent(node)) {
+      continue
+    }
+    if (node.children?.length) {
+      node.children = pruneDecorativeEmpties(node.children, true)
+    }
+    cleaned.push(node)
+  }
+  return cleaned
 }
 
 /**
@@ -191,7 +243,7 @@ function closeTag(stack: ParseFrame[], rawTag: string): void {
  */
 function htmlToNodes(html: string): EventRichTextNode[] {
   const root: EventRichTextNode[] = []
-  const stack: ParseFrame[] = [{ node: { children: root }, container: root }]
+  const stack: ParseFrame[] = [{ name: '#root', node: null, container: root }]
   const push = (node: EventRichTextNode): void => {
     stack[stack.length - 1].container.push(node)
   }
@@ -238,14 +290,31 @@ function htmlToNodes(html: string): EventRichTextNode[] {
       continue
     }
     const name = normalizeTagName(tag)
-    const style = `${BLOCK_STYLE[name] || ''}${INLINE_STYLE[name] || ''}${name === 'p' ? alignmentStyle(attribute(parsed.attrs, 'style')) : ''}`
+    const alignment = alignmentFor(name, attribute(parsed.attrs, 'style'))
+    const parent = stack[stack.length - 1]
+    // 编辑器（TipTap）把列表项内容包在 <p> 里（<li><p>…</p></li>）；微信 rich-text
+    // 无 margin 折叠，li+p 两层块级 margin 会叠加成虚胖间距。把段落扁平化进列表项：
+    // 对齐转移到 li，同一条目里的多段落用 <br> 连接。
+    if (name === 'p' && parent.name === 'li' && parent.node) {
+      const listItem = parent.node
+      if (alignment) {
+        listItem.attrs = { ...listItem.attrs, style: `${listItem.attrs?.style || ''}${alignment}` }
+      }
+      const container = listItem.children as EventRichTextNode[]
+      if (container.some(richTextHasContent)) {
+        container.push({ name: 'br', attrs: {} })
+      }
+      stack.push({ name: 'p', node: null, container })
+      continue
+    }
+    const style = `${BLOCK_STYLE[name] || ''}${INLINE_STYLE[name] || ''}${alignment}`
     const node: EventRichTextNode = { name, attrs: style ? { style } : {}, children: [] }
     push(node)
     if (!parsed.selfClosing) {
-      stack.push({ node, container: node.children as EventRichTextNode[] })
+      stack.push({ name, node, container: node.children as EventRichTextNode[] })
     }
   }
-  return root
+  return pruneDecorativeEmpties(root)
 }
 
 /** 存量 markdown 子集（`# `/`## `/`- `/`![]()`）解析，保持历史内容可读。 */
@@ -313,5 +382,6 @@ export function eventRichTextNodes(value: string): EventRichTextNode[] {
   if (!source.trim()) {
     return []
   }
-  return isRichTextHtml(source) ? htmlToNodes(source.slice(0, 60_000)) : legacyMarkdownNodes(source)
+  const nodes = isRichTextHtml(source) ? htmlToNodes(source.slice(0, 60_000)) : legacyMarkdownNodes(source)
+  return pruneDecorativeEmpties(nodes)
 }

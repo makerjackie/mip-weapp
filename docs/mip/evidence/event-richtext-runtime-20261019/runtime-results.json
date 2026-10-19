@@ -1,0 +1,343 @@
+{
+  "eventId": "b245b6da-9336-4ac0-9566-0ab2c85176f8",
+  "at": "2026-10-19T03:33:41.193Z",
+  "nodes": {
+    "intro": [
+      {
+        "name": "h3",
+        "attrs": {
+          "style": "margin:16px 0 8px;font-size:18px;font-weight:700;color:#ffffff;text-align:center;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "活动亮点"
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "这是验收正文第一段，验证普通段落与换行。"
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "name": "strong",
+            "attrs": {
+              "style": "font-weight:700;"
+            },
+            "children": [
+              {
+                "type": "text",
+                "text": "加粗文本"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " 与 "
+          },
+          {
+            "name": "em",
+            "attrs": {
+              "style": "font-style:italic;"
+            },
+            "children": [
+              {
+                "type": "text",
+                "text": "斜体文本"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " 与 "
+          },
+          {
+            "name": "u",
+            "attrs": {
+              "style": "text-decoration:underline;"
+            },
+            "children": [
+              {
+                "type": "text",
+                "text": "下划线文本"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "要点一：富文本列表"
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "要点二：小程序渲染"
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "要点三：三种行内样式"
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "步骤一：后台编辑"
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "步骤二：小程序查看"
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;text-align:center;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "——居中对齐的段落——"
+          }
+        ]
+      },
+      {
+        "name": "img",
+        "attrs": {
+          "src": "http://tmp/zwfMy38DZiny689b5cd679580706eaea132ca67ff4b3.png",
+          "alt": "活动图片",
+          "style": "display:block;width:100%;margin:14px 0 6px;border-radius:8px;",
+          "mode": "widthFix"
+        }
+      }
+    ],
+    "org": [
+      {
+        "name": "h3",
+        "attrs": {
+          "style": "margin:16px 0 8px;font-size:18px;font-weight:700;color:#ffffff;text-align:center;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "MIP 主理人团队"
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "name": "strong",
+            "attrs": {
+              "style": "font-weight:700;"
+            },
+            "children": [
+              {
+                "type": "text",
+                "text": "主办方"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "：深圳城市社群，定期举办线下活动。"
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "已举办 300+ 场活动"
+          }
+        ]
+      },
+      {
+        "name": "p",
+        "attrs": {
+          "style": "margin:8px 0;line-height:1.75;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "覆盖 5 座城市"
+          }
+        ]
+      }
+    ],
+    "notices": [
+      {
+        "name": "ol",
+        "attrs": {
+          "style": "margin:8px 0;padding-left:22px;color:#b3b3b3;"
+        },
+        "children": [
+          {
+            "name": "li",
+            "attrs": {
+              "style": "margin:5px 0;line-height:1.7;"
+            },
+            "children": [
+              {
+                "type": "text",
+                "text": "请提前 10 分钟到场签到"
+              }
+            ]
+          },
+          {
+            "name": "li",
+            "attrs": {
+              "style": "margin:5px 0;line-height:1.7;"
+            },
+            "children": [
+              {
+                "name": "u",
+                "attrs": {
+                  "style": "text-decoration:underline;"
+                },
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "迟到 15 分钟不可入场"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "li",
+            "attrs": {
+              "style": "margin:5px 0;line-height:1.7;"
+            },
+            "children": [
+              {
+                "type": "text",
+                "text": "活动照片将用于社群宣传"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "name": "R1 详情页打开（真实测试环境）",
+      "ok": true,
+      "detail": "state=ready eventId=b245b6da-9336-4ac0-9566-0ab2c85176f8"
+    },
+    {
+      "name": "R2 居中标题保留 text-align",
+      "ok": true,
+      "detail": "style=margin:16px 0 8px;font-size:18px;font-weight:700;color:#ffffff;text-align:center;"
+    },
+    {
+      "name": "R3 空段落/空列表不进节点",
+      "ok": true,
+      "detail": "nodes intro=10 org=4 notices=1"
+    },
+    {
+      "name": "R4 列表项扁平化（无 li>p 双重间距）",
+      "ok": true,
+      "detail": "list=ol items=3 nestedP=false"
+    },
+    {
+      "name": "R5 插图已水合为本地路径",
+      "ok": true,
+      "detail": "src=http://tmp/zwfMy38DZiny689b5cd679580706eaea132ca67ff4b3.png…"
+    },
+    {
+      "name": "R6 渲染 WXML 含对齐样式",
+      "ok": true,
+      "detail": "wxml 13172B, text-align:center found"
+    },
+    {
+      "name": "R7-intro 截图",
+      "ok": true,
+      "detail": ".tmp/e2e-richtext/runtime/tab-intro.png"
+    },
+    {
+      "name": "R7-organizer 截图",
+      "ok": true,
+      "detail": ".tmp/e2e-richtext/runtime/tab-organizer.png"
+    },
+    {
+      "name": "R7-notice 截图",
+      "ok": true,
+      "detail": ".tmp/e2e-richtext/runtime/tab-notice.png"
+    },
+    {
+      "name": "R9-pre negative setData 生效",
+      "ok": true,
+      "detail": "hasDescription=false nodes=0"
+    },
+    {
+      "name": "R9 无介绍时空态文案出现",
+      "ok": true,
+      "detail": "event.hasDescription=false → 暂无活动介绍"
+    },
+    {
+      "name": "R8 活动介绍整页长图",
+      "ok": true,
+      "detail": ".tmp/e2e-richtext/runtime/richtext-intro-fullpage-fullpage.png"
+    }
+  ]
+}

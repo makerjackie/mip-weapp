@@ -1,0 +1,51 @@
+{
+  "title": "富文本渲染验收1052",
+  "steps": [
+    {
+      "name": "A1 登录测试后台",
+      "ok": true,
+      "detail": "https://test.admin.mip.cool"
+    },
+    {
+      "name": "A2 打开新建活动表单",
+      "ok": true,
+      "detail": "/events → 新建活动"
+    },
+    {
+      "name": "A3 基础字段填写",
+      "ok": true,
+      "detail": "title=富文本渲染验收1052 线下/深圳 2030-01-15 10:00:00"
+    },
+    {
+      "name": "A4 活动介绍富文本编辑",
+      "ok": true,
+      "detail": "H2居中标题+行内样式+两种列表+居中段落"
+    },
+    {
+      "name": "A5 编辑器插图上传",
+      "ok": true,
+      "detail": "settled=\"图片已插入\" editor imgs=1"
+    },
+    {
+      "name": "A6 主办方介绍富文本",
+      "ok": true,
+      "detail": "H2居中+加粗+列表"
+    },
+    {
+      "name": "A7 报名须知富文本",
+      "ok": true,
+      "detail": "编号列表+下划线"
+    },
+    {
+      "name": "A8 草稿保存+预览打开",
+      "ok": true,
+      "detail": "保存草稿 → 手机预览"
+    },
+    {
+      "name": "A9 活动发布",
+      "ok": true,
+      "detail": "预览页一键发布成功（活动已发布）"
+    }
+  ],
+  "at": "2026-10-19T02:52:35.899Z"
+}
