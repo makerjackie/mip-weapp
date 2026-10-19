@@ -18,7 +18,7 @@ Page({
     message: '',
     loginSheetOpen: false,
     loginSheetBusy: false,
-    loginSheetSubtitle: '将获取你微信绑定的手机号，用于换绑确认\n换绑成功后，新手机号替代原手机号用于登录与通知',
+    loginSheetSubtitle: '将获取你的手机号，用于换绑确认\n换绑成功后，新手机号替代原手机号用于登录与通知',
   },
   countdownTimer: undefined as ReturnType<typeof setInterval> | undefined,
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
@@ -112,7 +112,7 @@ Page({
       const cancelled = /cancel|deny|denied/i.test(String(event.detail.errMsg || ''))
       this.setData({ loginSheetOpen: false })
       wx.showToast({
-        title: cancelled ? '你已取消手机号授权，可以稍后再完成。' : '手机号授权必须在微信真机完成。',
+        title: cancelled ? '你已取消手机号授权，可以稍后再完成。' : '手机号授权需在手机上完成。',
         icon: 'none',
       })
       return

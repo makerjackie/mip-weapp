@@ -6,7 +6,7 @@
   <block wx:else>
     <view>
       <!-- journey-review J5-02 绑定手机（QS 三级页自拟承接，2026-09-21 走查拍板）：
-           单表单双路径——微信一键获取（手机号快速验证，免短信直接换绑）+
+           单表单双路径——一键获取（手机号快速验证，免短信直接换绑；MIW-124 去微信字样）+
            手动输入其他手机号 + 短信验证码（发送与验证均由身份域校验）。 -->
       <view class="flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel pl-[24rpx] pr-[24rpx]">
         <view class="text-[28rpx] font-medium leading-[40rpx]">当前手机号</view>
@@ -31,9 +31,9 @@
         <view
           class="flex h-[92rpx] w-[224rpx] shrink-0 items-center justify-center text-[28rpx] font-medium text-brand active:opacity-70"
           aria-role="button"
-          aria-label="微信一键获取"
+          aria-label="一键获取"
           bind:tap="openWechatBind"
-        >微信一键获取</view>
+        >一键获取</view>
       </view>
 
       <view class="mt-[16rpx] flex h-[92rpx] items-center rounded-[16rpx] bg-panel pl-[24rpx] pr-[24rpx]">

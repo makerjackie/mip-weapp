@@ -44,7 +44,7 @@ export function createMipIdentityCloudbaseTransport(
   return {
     async invoke(request) {
       if (request.action === 'bindWechatPhone' && isDevToolsRuntime()) {
-        throw new Error('手机号授权必须在微信真机完成。')
+        throw new Error('手机号授权需在手机上完成。')
       }
       try {
         const result = await measureLoading('identity.request', () => retryTransport(async () => {

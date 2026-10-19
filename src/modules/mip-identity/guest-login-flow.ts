@@ -15,7 +15,7 @@ import { mipAccessPageUrl } from './access-flow'
  * 游客触发受保护操作（报名、分享、互动、进入受限页等）时按序补齐：
  * 1. 未登录或未绑手机号 → 本页弹出 `mip-login-sheet`（唯一弹窗授权项；MIW-20 起单主按钮）；
  * 2. 已绑手机号的退出账号 → 主按钮先按 OpenID 恢复会话直接完成登录，不重复授权手机号；
- *    服务端确认未绑时，主按钮切回「微信手机号授权」形态再弹原生授权；
+ *    服务端确认未绑时，主按钮切回「手机号快捷登录」形态再弹原生授权；
  * 3. 新账号授权手机号后 → 跳「填写信息」（mip-profile）补昵称/头像，完成或关闭都回原页；
  * 4. 其余未完成项（协议等）→ 交给 mip-access 页自完成；
  * 5. 全部就绪 → 在原页就地继续受保护操作，不丢失上下文。
@@ -86,7 +86,7 @@ type MipGuestLoginIdentity = Pick<
 >
 
 const PHONE_CANCELLED_MESSAGE = '你已取消手机号授权，可以稍后再完成。'
-const PHONE_NATIVE_ONLY_MESSAGE = '手机号授权必须在微信真机完成。'
+const PHONE_NATIVE_ONLY_MESSAGE = '手机号授权需在手机上完成。'
 const PHONE_BIND_FAILED_MESSAGE = '手机号绑定失败，请重试。'
 const SIGN_IN_FAILED_MESSAGE = '登录失败，请稍后重试。'
 
@@ -207,7 +207,7 @@ export function createMipGuestLoginFlow(
       }
     },
 
-    /** `mip-login-sheet` 的「使用当前微信账号重新登录」：已绑手机号的账号不重复授权。 */
+    /** `mip-login-sheet` 的「快捷登录」：已绑手机号的账号不重复授权。 */
     async signIn(): Promise<MipGuestLoginOutcome | null> {
       const token = host.getAuthToken()
       if (!token || busy) {

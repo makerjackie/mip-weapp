@@ -385,7 +385,7 @@ describe('MIP identity v1 client contract', () => {
       contractVersion: 1,
       action: 'bindWechatPhone',
       input: { code: 'simulator-phone-code' },
-    })).rejects.toThrow('手机号授权必须在微信真机完成。')
+    })).rejects.toThrow('手机号授权需在手机上完成。')
     expect(cloudHarness.callFunction).not.toHaveBeenCalled()
   })
 

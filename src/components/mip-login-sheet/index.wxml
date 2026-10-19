@@ -1,6 +1,8 @@
 <!-- journey-review login-sheet（2026-09-21 终审；MIW-20 合并双按钮为单按钮）：
      游客触发需身份操作时的手机号授权弹层。手机号是唯一弹窗授权项；
      昵称/头像由用户在「编辑信息」主动填写。
+     MIW-124：审核驳回——手机号授权弹层不得出现「微信」字样等混淆腾讯官方的元素；
+     本组件文案一律用「手机号快捷登录 / 快捷登录」等中性表述，勿回加微信品牌词。
      restore-first：退出过的老账号点主按钮先按 OpenID 恢复会话（已绑手机号直接完成登录、
      不弹原生授权）；服务端确认未绑后由页面切回手机号授权形态。 -->
 <view wx:if="{{visible}}" class="mip-login-sheet__scrim" bind:tap="onDismiss"></view>
@@ -12,8 +14,8 @@
   <view class="mip-login-sheet__title">授权手机号</view>
   <!-- subtitle 传入时整体覆盖副标题（J5-02 换绑变体，\n 换行）；缺省保持终审文案逐字不变。 -->
   <view wx:if="{{subtitle}}" class="mip-login-sheet__sub">{{subtitle}}</view>
-  <view wx:elif="{{restoreFirst}}" class="mip-login-sheet__sub">将使用你当前的微信账号恢复原有身份；未绑定手机号时会再向你授权</view>
-  <view wx:else class="mip-login-sheet__sub">将获取你微信绑定的手机号，用于确认身份
+  <view wx:elif="{{restoreFirst}}" class="mip-login-sheet__sub">将使用你当前的账号恢复原有身份；未绑定手机号时会再向你授权</view>
+  <view wx:else class="mip-login-sheet__sub">将获取你的手机号，用于确认身份
 昵称与头像无需授权，在「编辑信息」中由你主动填写</view>
   <!-- MIW-121 协议勾选：授权/登录前强制同意；链接 catch:tap 跳协议页，不关弹层、返回后勾选保留。 -->
   <checkbox-group class="mip-login-sheet__consent" bindchange="onConsentChange">
@@ -29,7 +31,7 @@
     disabled="{{busy}}"
     class="mip-login-sheet__btn"
     bind:tap="onSignIn"
-  >{{busy ? '正在登录' : '使用当前微信账号登录'}}</button>
+  >{{busy ? '正在登录' : '快捷登录'}}</button>
   <button
     wx:else
     id="mip-login-sheet-auth"
@@ -38,7 +40,7 @@
     class="mip-login-sheet__btn"
     bind:tap="onAuthTap"
     bind:getphonenumber="onPhone"
-  >{{busy ? '正在授权' : '微信手机号授权'}}</button>
+  >{{busy ? '正在授权' : '手机号快捷登录'}}</button>
   <view id="mip-login-sheet-dismiss" class="mip-login-sheet__ghost" aria-role="button" aria-disabled="{{busy}}" bind:tap="onDismiss">暂不授权，返回原页面</view>
   <!-- 品牌 logo 静态预载锚点（MIW-100 同族）：logoPath 默认值经 {{}} 动态绑定，上传依赖
        分析探不到会被剔出体验版；静态引用保证 /assets/brand/mip-logo-yellow.png 打进主包

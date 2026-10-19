@@ -243,7 +243,7 @@ Page({
       this.setData({
         message: /cancel|deny/i.test(String(event.detail.errMsg || ''))
           ? '你已取消手机号授权，绑定状态未变更。'
-          : '手机号授权必须在微信真机完成。',
+          : '手机号授权需在手机上完成。',
       })
       return
     }

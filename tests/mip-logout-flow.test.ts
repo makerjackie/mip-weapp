@@ -472,7 +472,7 @@ describe('MIP local logout flow', () => {
     expect(access).toContain('mipIdentityModule.signIn(this.data.token)')
     expect(accessTemplate).toContain('id="mip-access-sign-in"')
     expect(accessTemplate).toContain('bind:tap="signIn"')
-    expect(accessTemplate).toContain('>微信登录</t-button>')
+    expect(accessTemplate).toContain('>快捷登录</t-button>')
     expect(messagingClient).toContain('registerMipLocalUserCache(() => {')
     expect(messagingClient).toContain('mipMessagingModule.invalidate()')
     expect(messagingClient).toContain('mipPopupMessagePresenter.invalidate()')
