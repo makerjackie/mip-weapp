@@ -64,3 +64,11 @@
 - [x] 修复报告 `report.html` + 运行时/admin 证据入库本目录
 - [x] `docs/mip/PROJECT_STATUS.md` 记录本批
 - [ ] 提审材料（人工阶段）：演示视频/截图/隐私指引，见 mip-release skill 阶段 3
+
+## H. 正式版 1.2.0 发布（生产环境包 + 生产微信支付，2026-10-19 夜）
+
+- [x] 生产支付红线核对：`envs/prod` 本就 mode=live + catalog=LIVE + 正式商户 1739928668；LIVE 目录 ACTIVE 方案在库（`annual_live "MIP 玩家" ¥6600/年`，经生产连接默认库直查确认；同实例另一 schema 为 mip_test）
+- [x] `pnpm release:prod -- --version 1.2.0`：上传前 verify:all 全绿、烘焙核对通过（mip-*；dist 复核 `mip-identity-api`=1 / `mip-t-identity-api`=0）、平铺通道上传成功
+- [x] 发布后生产 `verify-cloud.mjs` 复验全绿
+- [ ] 提审（人工）：mp.weixin.qq.com → 版本管理 → 开发版本 1.2.0 → 提交审核（向导：平台规则→安全测试→接口未配置勾选→隐私指引；演示视频 ~/Downloads/MIP-YANSHOU-VIDEO.mp4、截图 .tmp/review-shots/）
+- [ ] 审核通过后全量发布（人工）；发布后真机验证一笔 live 支付与会员到账
