@@ -49,7 +49,7 @@ describe('journey-review WS-SETTINGS', () => {
     expect(template).toContain('换绑新手机号')
     expect(template).toContain('placeholder="请输入新的手机号"')
     expect(template).toContain('maxlength="11"')
-    expect(template).toContain('微信一键获取')
+    expect(template).toContain('一键获取')
     expect(template).toContain('placeholder="请输入短信验证码"')
     expect(template).toContain('maxlength="6"')
     expect(template).toContain('获取验证码')
@@ -62,7 +62,7 @@ describe('journey-review WS-SETTINGS', () => {
     expect(config.usingComponents['mip-login-sheet']).toBe('/components/mip-login-sheet/index')
     // 换绑弹层副标题逐字（\n 换行由 login-sheet 的 pre-line 渲染）。
     expect(page).toContain(
-      '\'将获取你微信绑定的手机号，用于换绑确认\\n换绑成功后，新手机号替代原手机号用于登录与通知\'',
+      '\'将获取你的手机号，用于换绑确认\\n换绑成功后，新手机号替代原手机号用于登录与通知\'',
     )
     // 路径 A：code 换绑走身份域模块，结果由服务端决定；成功 toast + 返回账号设置。
     expect(page).toContain('mipIdentityModule.rebindWechatPhone(code)')

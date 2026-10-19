@@ -164,7 +164,7 @@ describe('universal guest login flow (MIW-20)', () => {
     const flow = createMipGuestLoginFlow(page, fake)
 
     await flow.phone({ detail: { errMsg: 'getPhoneNumber:fail no permission' } })
-    expect(page.notices).toEqual(['手机号授权必须在微信真机完成。'])
+    expect(page.notices).toEqual(['手机号授权需在手机上完成。'])
     expect(fake.bindWechatPhone).not.toHaveBeenCalled()
 
     await flow.phone({ detail: { errMsg: 'getPhoneNumber:fail user deny' } })

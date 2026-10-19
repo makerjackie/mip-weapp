@@ -71,8 +71,8 @@ describe('login sheet subtitle override (journey-review J5-02 variant)', () => {
     const view = read('src/components/mip-login-sheet/index.wxml')
     // 只有一个主按钮：恢复形态先按 OpenID 恢复会话，未绑时由页面切回手机号授权形态。
     expect(view).toContain('<button\n    wx:if="{{restoreFirst}}"')
-    expect(view).toContain('使用当前微信账号登录')
-    expect(view).toContain('将使用你当前的微信账号恢复原有身份；未绑定手机号时会再向你授权')
+    expect(view).toContain('快捷登录')
+    expect(view).toContain('将使用你当前的账号恢复原有身份；未绑定手机号时会再向你授权')
     expect(view).not.toContain('使用当前微信账号重新登录')
     expect(view).not.toContain('mip-login-sheet__signin')
     // MIW-121：手机号授权形态保留原 id；open-type 随勾选置空，未勾选时不拉起原生授权。
@@ -97,7 +97,7 @@ describe('login sheet subtitle override (journey-review J5-02 variant)', () => {
 
   it('keeps the verbatim default copy when no subtitle is passed', () => {
     const view = read('src/components/mip-login-sheet/index.wxml')
-    expect(view).toContain('<view wx:else class="mip-login-sheet__sub">将获取你微信绑定的手机号，用于确认身份\n昵称与头像无需授权，在「编辑信息」中由你主动填写</view>')
+    expect(view).toContain('<view wx:else class="mip-login-sheet__sub">将获取你的手机号，用于确认身份\n昵称与头像无需授权，在「编辑信息」中由你主动填写</view>')
   })
 
   it('renders the passed subtitle in place of the default copy', () => {

@@ -138,7 +138,7 @@ describe('SMS phone-rebinding contract and lifecycle', () => {
   it('preserves user input on conflicts and disabled transport never starts a false cooldown', async () => {
     const p = page()
     p.data.smsCode = '123456'
-    request.mockRejectedValueOnce(new Error('短信验证尚未开通，可使用微信一键获取换绑'))
+    request.mockRejectedValueOnce(new Error('短信验证尚未开通，可使用一键获取换绑'))
     await p.requestSmsCode()
     expect(p.data.sendCountdown).toBe(0)
     expect(p.data.sendingSms).toBe(false)

@@ -21,7 +21,7 @@ const errorMessages = {
   PROFILE_CARD_OPENAPI_UNAVAILABLE: '个人名片码暂时不可用',
   PROFILE_CARD_STORAGE_INVALID_RESPONSE: '个人名片码暂时不可用',
   PROFILE_CARD_STORAGE_UNAVAILABLE: '个人名片码暂时不可用',
-  SMS_DISABLED: '短信验证尚未开通，可使用微信一键获取换绑',
+  SMS_DISABLED: '短信验证尚未开通，可使用一键获取换绑',
   SMS_SEND_FAILED: '短信发送尚未确认，请稍后重试',
   SMS_RATE_LIMITED: '验证码发送过于频繁，请稍后重试',
   SMS_CODE_INVALID: '短信验证码不正确',

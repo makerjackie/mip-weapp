@@ -10,7 +10,7 @@ import { caseNavigateTo } from '../../../platform/navigation/client'
 const requirementCopy = {
   AUTHENTICATED: {
     title: '登录账号',
-    description: '登录后可以继续使用当前微信账号对应的会员与活动服务。',
+    description: '登录后可以继续使用当前账号对应的会员与活动服务。',
   },
   AGREEMENTS: {
     title: '确认协议',
@@ -201,7 +201,7 @@ Page({
       this.setData({
         message: cancelled
           ? '你已取消手机号授权，可以稍后再完成。'
-          : '手机号授权必须在微信真机完成。',
+          : '手机号授权需在手机上完成。',
       })
       return
     }
