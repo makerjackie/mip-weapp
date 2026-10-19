@@ -5,7 +5,10 @@ const { describe, it } = require('node:test')
 const {
   MEDIA_ADMIN_OPERATION,
   MEDIA_ADMIN_PURPOSE_CAPABILITIES,
+  MEDIA_ADMIN_TEMPURLS_OPERATION,
+  TEMPURLS_MAX_FILE_IDS,
   createAdminMedia,
+  normalizeTempUrlsInput,
 } = require('../domain/media')
 const {
   MEDIA_ADMIN_PURPOSE_CAPABILITIES: CLIENT_PURPOSE_CAPABILITIES,
@@ -99,5 +102,80 @@ describe('admin media adapter authorization', () => {
       error => error.code === 'PURPOSE_INVALID',
     )
     assert.equal(invoked, false)
+  })
+
+  it('resolves temp urls for any single MEDIA capability and returns only https entries', async () => {
+    const calls = []
+    const adapter = createAdminMedia({
+      access: accessWith([platformBinding(['users.fields.edit', 'events.write'])]),
+      client: {
+        async execute() {},
+        async tempFileUrls(input) {
+          calls.push(input)
+          return { urls: {
+            'cloud://a.png': 'https://tmp/a?sign=x',
+            'cloud://b.png': 'http://tmp/insecure',
+            'cloud://c.png': 'javascript:alert(1)',
+          } }
+        },
+      },
+    })
+    const result = await adapter.tempMediaFileUrls(caller, {
+      fileIds: [' cloud://a.png ', 'cloud://a.png', 'cloud://b.png'],
+    })
+    // 输入去重保序转发；输出双保险只留 https 临时地址。
+    assert.deepEqual(calls, [{
+      appId: 'wx-server-app',
+      actorUserId,
+      fileIds: ['cloud://a.png', 'cloud://b.png'],
+    }])
+    assert.deepEqual(result, { urls: { 'cloud://a.png': 'https://tmp/a?sign=x' } })
+  })
+
+  it('denies temp urls when no binding carries any MEDIA purpose capability', async () => {
+    let invoked = false
+    const adapter = createAdminMedia({
+      access: accessWith([platformBinding(['events.read', 'users.fields.edit'])]),
+      client: {
+        async execute() {},
+        async tempFileUrls() { invoked = true },
+      },
+    })
+    await assert.rejects(
+      () => adapter.tempMediaFileUrls(caller, { fileIds: ['cloud://a.png'] }),
+      error => error.code === 'FORBIDDEN',
+    )
+    assert.equal(invoked, false)
+  })
+
+  it('rejects invalid temp-url input before capability and transport', async () => {
+    let invoked = false
+    const adapter = createAdminMedia({
+      access: accessWith([platformBinding(['events.read'])]),
+      client: {
+        async execute() {},
+        async tempFileUrls() { invoked = true },
+      },
+    })
+    const cases = [
+      {},
+      { fileIds: [] },
+      { fileIds: Array.from({ length: TEMPURLS_MAX_FILE_IDS + 1 }, (_, index) => `cloud://a${index}.png`) },
+      { fileIds: ['https://tmp.example/a.png'] },
+      { fileIds: ['cloud://a.png', 42] },
+      { fileIds: ['cloud://a.png'], extra: true },
+    ]
+    for (const input of cases) {
+      await assert.rejects(
+        () => adapter.tempMediaFileUrls(caller, input),
+        error => error.code === 'VALIDATION_FAILED',
+      )
+    }
+    assert.equal(invoked, false)
+    assert.equal(MEDIA_ADMIN_TEMPURLS_OPERATION, 'mip.admin.media.tempUrls')
+    assert.deepEqual(
+      normalizeTempUrlsInput({ fileIds: [' cloud://a.png ', 'cloud://a.png'] }),
+      ['cloud://a.png'],
+    )
   })
 })

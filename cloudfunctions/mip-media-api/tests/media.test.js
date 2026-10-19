@@ -691,4 +691,62 @@ describe('MIP media orphan maintenance', () => {
       now: () => request.timestamp,
     }), /MEDIA_CLEANUP_FORBIDDEN/)
   })
+
+  it('resolves owned fileIDs to https temp URLs with a 600s maxAge and drops the rest', async () => {
+    const ownedId = `cloud://env.mip/${buildObjectKey({ appId: APP_ID, userId: USER_ID, purpose: 'OPPORTUNITY_COVER', assetId: ASSET_ID, extension: 'png', env: environment() })}`
+    const foreignId = `cloud://env.mip/${buildObjectKey({ appId: 'wx9999999999999999', userId: USER_ID, purpose: 'OPPORTUNITY_COVER', assetId: ASSET_ID, extension: 'png', env: environment() })}`
+    const failingId = `cloud://env.mip/${buildObjectKey({ appId: APP_ID, userId: USER_ID, purpose: 'OPPORTUNITY_COVER', assetId: '33333333-3333-4333-8333-333333333333', extension: 'jpg', env: environment() })}`
+    const calls = []
+    const cloud = {
+      async getTempFileURL(input) {
+        calls.push(input)
+        return {
+          fileList: [
+            { fileID: ownedId, tempFileURL: 'https://tmp.example/owned.png?sign=x' },
+            { fileID: failingId, tempFileURL: '' },
+            { fileID: foreignId, tempFileURL: 'https://tmp.example/foreign.png' },
+          ],
+        }
+      },
+    }
+    const service = createMediaService({
+      database: { one: async () => null },
+      cloud,
+      checker: async () => ({ ok: true }),
+      env: environment(),
+      id: () => ASSET_ID,
+    })
+    const result = await service.tempFileUrls({ appId: APP_ID, userId: USER_ID }, {
+      fileIds: [ownedId, foreignId, failingId],
+    })
+    // 归属不符的 fileID 根本不进 getTempFileURL；解析失败（非 https）的条目如实缺席。
+    assert.deepEqual(calls, [{ fileList: [ownedId, failingId], maxAge: 600 }])
+    assert.deepEqual(result, { urls: { [ownedId]: 'https://tmp.example/owned.png?sign=x' } })
+  })
+
+  it('rejects invalid temp-url input and resolves nothing for fully foreign fileIDs', async () => {
+    const foreignId = `cloud://env.mip/${buildObjectKey({ appId: 'wx9999999999999999', userId: USER_ID, purpose: 'OPPORTUNITY_COVER', assetId: ASSET_ID, extension: 'png', env: environment() })}`
+    const calls = []
+    const service = createMediaService({
+      database: { one: async () => null },
+      cloud: {
+        async getTempFileURL(input) {
+          calls.push(input)
+          return { fileList: [] }
+        },
+      },
+      checker: async () => ({ ok: true }),
+      env: environment(),
+      id: () => ASSET_ID,
+    })
+    const caller = { appId: APP_ID, userId: USER_ID }
+    await assert.rejects(() => service.tempFileUrls(caller, { fileIds: [] }), /FILEIDS_INVALID/)
+    await assert.rejects(() => service.tempFileUrls(caller, {
+      fileIds: Array.from({ length: 31 }, (_, index) => `cloud://env.mip/a${index}.png`),
+    }), /FILEIDS_INVALID/)
+    await assert.rejects(() => service.tempFileUrls(caller, { fileIds: ['https://tmp.example/a.png'] }), /FILEIDS_INVALID/)
+    const result = await service.tempFileUrls(caller, { fileIds: [foreignId] })
+    assert.deepEqual(result, { urls: {} })
+    assert.equal(calls.length, 0)
+  })
 })

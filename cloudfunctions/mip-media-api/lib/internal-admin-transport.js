@@ -1,6 +1,6 @@
 'use strict'
 
-const { mediaUploadBindingAllows } = require('./admin-upload-authorization')
+const { mediaReadBindingAllows, mediaUploadBindingAllows } = require('./admin-upload-authorization')
 
 const { createHmac, timingSafeEqual } = require('node:crypto')
 const {
@@ -14,6 +14,10 @@ const MEDIA_ADMIN_TRANSPORT = 'MIP_MEDIA_ADMIN_V1'
 const MEDIA_ADMIN_PROTOCOL = 'mip-media-admin/v1'
 const MAX_CLOCK_SKEW_MS = 60_000
 const MEDIA_ADMIN_ACTION = 'admin.uploadImage'
+const MEDIA_ADMIN_TEMPURLS_ACTION = 'admin.tempFileURL'
+const MEDIA_ADMIN_READ_CAPABILITY = 'media.read'
+const TEMPURLS_MAX_FILE_IDS = 30
+const TEMPURLS_MAX_FILE_ID_LENGTH = 1024
 const MEDIA_ADMIN_PURPOSE_CAPABILITIES = Object.freeze({
   BANNER: 'banners.manage',
   EVENT_CONTENT: 'events.write',
@@ -51,13 +55,14 @@ function verifyMediaAdminRequest(
     if (!SIGNED_KEYS.has(key)) throw new Error('AUTH_REQUIRED')
     signed[key] = item
   }
-  const capability = mediaCapabilityForInput(signed.input)
+  const isRead = signed.action === MEDIA_ADMIN_TEMPURLS_ACTION
+  const capability = isRead ? MEDIA_ADMIN_READ_CAPABILITY : mediaCapabilityForInput(signed.input)
   if (!hasExactKeys(signed, SIGNED_KEYS)
     || typeof value.signature !== 'string'
     || !/^[a-f0-9]{64}$/.test(value.signature)
     || signed.transport !== MEDIA_ADMIN_TRANSPORT
     || signed.protocol !== MEDIA_ADMIN_PROTOCOL
-    || signed.action !== MEDIA_ADMIN_ACTION
+    || (signed.action !== MEDIA_ADMIN_ACTION && !isRead)
     || signed.capability !== capability
     || !Number.isSafeInteger(signed.timestamp)
     || typeof now !== 'function'
@@ -78,7 +83,8 @@ function verifyMediaAdminRequest(
   if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
     throw new Error('AUTH_REQUIRED')
   }
-  inspectAdminImageInput(signed.input)
+  if (isRead) inspectAdminTempUrlsInput(signed.input)
+  else inspectAdminImageInput(signed.input)
   return signed
 }
 
@@ -99,7 +105,9 @@ async function assertMediaAdminCapability(database, request) {
        AND binding.status = 'ACTIVE'`,
     [request.appId, request.actorUserId],
   )
-  if (!(Array.isArray(rows) && rows.some(row => mediaUploadBindingAllows(row, request.capability)))) {
+  if (!(Array.isArray(rows) && rows.some(row => (request.action === MEDIA_ADMIN_TEMPURLS_ACTION
+    ? mediaReadBindingAllows(row)
+    : mediaUploadBindingAllows(row, request.capability))))) {
     throw new Error('FORBIDDEN')
   }
 }
@@ -113,7 +121,8 @@ function createInternalMediaHandler({
   sourceFunction = 'mip-admin-api',
   now = Date.now,
 } = {}) {
-  if (!service || typeof service.uploadImage !== 'function' || typeof failure !== 'function') {
+  if (!service || typeof service.uploadImage !== 'function'
+    || typeof service.tempFileUrls !== 'function' || typeof failure !== 'function') {
     throw new Error('MEDIA_INTERNAL_HANDLER_CONFIG_INVALID')
   }
   return async function handle(event = {}) {
@@ -125,9 +134,10 @@ function createInternalMediaHandler({
         now,
       })
       await assertMediaAdminCapability(database, request)
+      const handler = request.action === MEDIA_ADMIN_TEMPURLS_ACTION ? service.tempFileUrls : service.uploadImage
       return {
         ok: true,
-        data: await service.uploadImage({
+        data: await handler({
           appId: request.appId,
           userId: request.actorUserId,
         }, request.input),
@@ -189,6 +199,23 @@ function mediaCapabilityForInput(input) {
     : undefined
 }
 
+function inspectAdminTempUrlsInput(input) {
+  if (!isPlainRecord(input) || !hasExactKeys(input, new Set(['fileIds']))) {
+    throw new Error('FILEIDS_INVALID')
+  }
+  const fileIds = input.fileIds
+  if (!Array.isArray(fileIds) || fileIds.length < 1 || fileIds.length > TEMPURLS_MAX_FILE_IDS) {
+    throw new Error('FILEIDS_INVALID')
+  }
+  for (const item of fileIds) {
+    const fileId = typeof item === 'string' ? item.trim() : ''
+    if (!/^cloud:\/\/\S{1,1016}$/.test(fileId) || fileId.length > TEMPURLS_MAX_FILE_ID_LENGTH) {
+      throw new Error('FILEIDS_INVALID')
+    }
+  }
+  return true
+}
+
 
 function hasExactKeys(value, allowed) {
   const keys = Reflect.ownKeys(value)
@@ -223,10 +250,12 @@ module.exports = {
   MEDIA_ADMIN_PROTOCOL,
   MEDIA_ADMIN_PURPOSE_CAPABILITIES,
   MEDIA_ADMIN_TRANSPORT,
+  MEDIA_ADMIN_TEMPURLS_ACTION,
   MEDIA_ADMIN_UPLOAD_POLICIES,
   assertMediaAdminCapability,
   createInternalMediaHandler,
   inspectAdminImageInput,
+  inspectAdminTempUrlsInput,
   signMediaAdminRequest,
   verifyMediaAdminRequest,
 }

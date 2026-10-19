@@ -376,3 +376,5 @@ button, input, select, textarea { font: inherit; }
 .event-mobile-preview__schema-title { font-weight: 600; color: #595959; }
 .event-mobile-preview__schema-list { margin: 6px 0 0; padding-left: 18px; }
 .event-mobile-preview__schema-list li { margin: 2px 0; }
+
+.event-mobile-preview__image-placeholder { display: block; margin: 12px 0; padding: 12px; border: 1px dashed #d9d9d9; border-radius: 8px; color: #999; font-size: 13px; text-align: center; }

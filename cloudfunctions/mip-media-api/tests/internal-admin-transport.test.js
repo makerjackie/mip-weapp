@@ -7,10 +7,12 @@ const {
   MEDIA_ADMIN_ACTION,
   MEDIA_ADMIN_PROTOCOL,
   MEDIA_ADMIN_PURPOSE_CAPABILITIES,
+  MEDIA_ADMIN_TEMPURLS_ACTION,
   MEDIA_ADMIN_TRANSPORT,
   assertMediaAdminCapability,
   createInternalMediaHandler,
   inspectAdminImageInput,
+  inspectAdminTempUrlsInput,
   signMediaAdminRequest,
   verifyMediaAdminRequest,
 } = require('../lib/internal-admin-transport')
@@ -37,6 +39,22 @@ function request(input = { purpose: 'EVENT_COVER', imageBase64: pngBase64() }) {
     capability: MEDIA_ADMIN_PURPOSE_CAPABILITIES[input.purpose],
     action: MEDIA_ADMIN_ACTION,
     input,
+    sourceFunction: 'mip-admin-api',
+  }
+  return { ...value, signature: signMediaAdminRequest(value, SECRET) }
+}
+
+function readRequest(fileIds = ['cloud://miptemplate.x0001/mip/production/a/asset.png']) {
+  const value = {
+    transport: MEDIA_ADMIN_TRANSPORT,
+    protocol: MEDIA_ADMIN_PROTOCOL,
+    timestamp: NOW,
+    nonce: 'nonce-abcdefghijklmnopqrstuvwxyz',
+    appId: APP_ID,
+    actorUserId: USER_ID,
+    capability: 'media.read',
+    action: MEDIA_ADMIN_TEMPURLS_ACTION,
+    input: { fileIds },
     sourceFunction: 'mip-admin-api',
   }
   return { ...value, signature: signMediaAdminRequest(value, SECRET) }
@@ -130,6 +148,9 @@ describe('MIP media internal admin transport', () => {
           calls.push({ caller, input })
           return { assetId: 'asset-a', purpose: input.purpose }
         },
+        async tempFileUrls() {
+          return { urls: {} }
+        },
       },
       database: {
         async query() {
@@ -148,5 +169,73 @@ describe('MIP media internal admin transport', () => {
       caller: { appId: APP_ID, userId: USER_ID },
       input: value.input,
     }])
+  })
+
+  it('authenticates the read-only tempFileURL action and binds it to media.read', () => {
+    const valid = readRequest()
+    assert.equal(verify(valid).action, MEDIA_ADMIN_TEMPURLS_ACTION)
+    assert.equal(verify(valid).capability, 'media.read')
+    for (const forged of [
+      { ...valid, capability: 'events.write' },
+      { ...valid, action: 'admin.deleteFile' },
+      { ...valid, input: { fileIds: [] } },
+      { ...valid, input: { fileIds: ['https://evil.example/a.png'] } },
+      { ...valid, input: { fileIds: Array.from({ length: 31 }, (_, index) => `cloud://env/bucket/a${index}.png`) } },
+      { ...valid, input: { fileIds: ['cloud://env/bucket/a.png'], extra: true } },
+    ]) {
+      assert.throws(() => verify(forged), /AUTH_REQUIRED|FILEIDS_INVALID/)
+    }
+    assert.equal(inspectAdminTempUrlsInput({ fileIds: ['cloud://env/bucket/a.png'] }), true)
+  })
+
+  it('authorizes the read action with any single MEDIA purpose capability', async () => {
+    for (const policyCapabilities of [['events.write'], ['banners.manage'], ['events.write', 'users.fields.edit']]) {
+      await assert.doesNotReject(() => assertMediaAdminCapability({
+        async query() {
+          return [{
+            role_key: 'PLATFORM_OPERATIONS',
+            scope_type: 'PLATFORM', scope_id: '00000000-0000-0000-0000-000000000000',
+            policy_capabilities_json: JSON.stringify(policyCapabilities),
+          }]
+        },
+      }, readRequest()))
+    }
+    await assert.rejects(() => assertMediaAdminCapability({
+      async query() {
+        return [{
+          role_key: 'PLATFORM_OPERATIONS',
+          scope_type: 'PLATFORM', scope_id: '00000000-0000-0000-0000-000000000000',
+          policy_capabilities_json: JSON.stringify(['users.fields.edit']),
+        }]
+      },
+    }, readRequest()), /FORBIDDEN/)
+  })
+
+  it('dispatches the read action to tempFileUrls with the verified caller and fileIds', async () => {
+    const calls = []
+    const fileIds = ['cloud://env/bucket/a.png', 'cloud://env/bucket/b.png']
+    const handler = createInternalMediaHandler({
+      service: {
+        async uploadImage() {
+          throw new Error('UPLOAD_MUST_NOT_BE_CALLED')
+        },
+        async tempFileUrls(caller, input) {
+          calls.push({ caller, input })
+          return { urls: { [fileIds[0]]: 'https://tmp/a.png' } }
+        },
+      },
+      database: {
+        async query() {
+          return [{ role_key: 'PLATFORM_OWNER', scope_type: 'PLATFORM', scope_id: '00000000-0000-0000-0000-000000000000', policy_capabilities_json: null }]
+        },
+      },
+      secret: SECRET,
+      allowedAppIds: new Set([APP_ID]),
+      now: () => NOW,
+      failure(error) { return { ok: false, error: { code: error.message } } },
+    })
+    const result = await handler(readRequest(fileIds))
+    assert.deepEqual(result, { ok: true, data: { urls: { [fileIds[0]]: 'https://tmp/a.png' } } })
+    assert.deepEqual(calls, [{ caller: { appId: APP_ID, userId: USER_ID }, input: { fileIds } }])
   })
 })

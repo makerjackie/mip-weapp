@@ -132,6 +132,9 @@ const adminWebQueryActions = Object.freeze([
 
   // P2 new query actions
   'mip.admin.adminAccounts.loginRecords',
+
+  // Media read-side query actions
+  'mip.admin.media.tempUrls',
 ])
 
 const adminWebMutationPolicies = Object.freeze([

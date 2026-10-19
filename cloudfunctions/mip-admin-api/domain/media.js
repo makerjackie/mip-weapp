@@ -1,9 +1,10 @@
 'use strict'
 
-const { CAPABILITIES, firstGrant } = require('./capabilities')
+const { CAPABILITIES, firstAnyGrant, firstGrant } = require('./capabilities')
 const { AdminError } = require('./validation')
 
 const MEDIA_ADMIN_OPERATION = 'mip.admin.media.uploadImage'
+const MEDIA_ADMIN_TEMPURLS_OPERATION = 'mip.admin.media.tempUrls'
 const MEDIA_ADMIN_PURPOSE_CAPABILITIES = Object.freeze({
   BANNER: CAPABILITIES.BANNERS_MANAGE,
   EVENT_CONTENT: CAPABILITIES.EVENTS_WRITE,
@@ -16,6 +17,9 @@ const MEDIA_ADMIN_PURPOSE_CAPABILITIES = Object.freeze({
   BADGE_IMAGE: CAPABILITIES.BADGES_MANAGE,
 })
 const UPLOAD_INPUT_KEYS = new Set(['purpose', 'imageBase64'])
+const TEMPURLS_INPUT_KEYS = new Set(['fileIds'])
+const TEMPURLS_MAX_FILE_IDS = 30
+const TEMPURLS_MAX_FILE_ID_LENGTH = 1024
 
 function createAdminMedia({ access, client } = {}) {
   if (!access || typeof access.session !== 'function' || !client || typeof client.execute !== 'function') {
@@ -38,7 +42,58 @@ function createAdminMedia({ access, client } = {}) {
     })
   }
 
-  return Object.freeze({ uploadMediaImage })
+  // 只读解析：具备任一 MEDIA 用途能力即可读；归属与时效由 mip-media-api 裁决。
+  async function tempMediaFileUrls(caller, input) {
+    const context = await access.session(caller)
+    const fileIds = normalizeTempUrlsInput(input)
+    firstAnyGrant(context.bindings, Object.values(MEDIA_ADMIN_PURPOSE_CAPABILITIES))
+    const result = await client.tempFileUrls({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      fileIds,
+    })
+    return { urls: sanitizeTempUrls(result) }
+  }
+
+  return Object.freeze({ tempMediaFileUrls, uploadMediaImage })
+}
+
+function normalizeTempUrlsInput(input) {
+  if (!isPlainRecord(input) || !hasExactKeys(input, TEMPURLS_INPUT_KEYS)) {
+    throw new AdminError('VALIDATION_FAILED', '图片地址解析参数无效')
+  }
+  const raw = input.fileIds
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > TEMPURLS_MAX_FILE_IDS) {
+    throw new AdminError('VALIDATION_FAILED', `fileIds 数量须为 1-${TEMPURLS_MAX_FILE_IDS}`)
+  }
+  const seen = new Set()
+  const fileIds = []
+  for (const item of raw) {
+    const fileId = typeof item === 'string' ? item.trim() : ''
+    if (!/^cloud:\/\/\S{1,1016}$/.test(fileId) || fileId.length > TEMPURLS_MAX_FILE_ID_LENGTH) {
+      throw new AdminError('VALIDATION_FAILED', 'fileID 格式无效')
+    }
+    if (!seen.has(fileId)) {
+      seen.add(fileId)
+      fileIds.push(fileId)
+    }
+  }
+  return fileIds
+}
+
+// 双保险：即使内部通道返回了意外形态，也只把 https 临时地址透传给调用方。
+function sanitizeTempUrls(result) {
+  const source = result && typeof result === 'object' && result.urls && typeof result.urls === 'object'
+    ? result.urls
+    : {}
+  const urls = {}
+  for (const [fileId, url] of Object.entries(source)) {
+    if (typeof fileId === 'string' && fileId.startsWith('cloud://')
+      && typeof url === 'string' && url.startsWith('https://')) {
+      urls[fileId] = url
+    }
+  }
+  return urls
 }
 
 function normalizeUploadInput(input) {
@@ -70,6 +125,9 @@ function isPlainRecord(value) {
 module.exports = {
   MEDIA_ADMIN_OPERATION,
   MEDIA_ADMIN_PURPOSE_CAPABILITIES,
+  MEDIA_ADMIN_TEMPURLS_OPERATION,
+  TEMPURLS_MAX_FILE_IDS,
   createAdminMedia,
+  normalizeTempUrlsInput,
   normalizeUploadInput,
 }

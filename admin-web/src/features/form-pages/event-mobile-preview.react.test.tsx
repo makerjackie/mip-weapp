@@ -1,10 +1,23 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MediaPreviewProvider } from '../../shared/ui/media-preview-provider'
 import { EventMobilePreview } from './event-mobile-preview'
 
-afterEach(cleanup)
+// 会话可按用例注入：client 未设置时视同无会话（存量 cloud:// 解析不发起请求）。
+const sessionState = vi.hoisted(() => ({
+  client: undefined as { tempUrls: (fileIds: string[]) => Promise<Record<string, string>> } | undefined,
+  demoMode: false,
+}))
+vi.mock('../../app/session-provider', () => ({
+  useAdminSession: () => (sessionState.client ? { client: sessionState.client, demoMode: sessionState.demoMode } : null),
+}))
+
+afterEach(() => {
+  cleanup()
+  sessionState.client = undefined
+  sessionState.demoMode = false
+})
 
 describe('event preview online access', () => {
   it('does not promise a venue link that an offline save discards', () => {
@@ -100,5 +113,41 @@ describe('event preview detail fidelity', () => {
     expect(screen.getByText('公司（必填）')).toBeInTheDocument()
     expect(screen.getByText('赛道：AI / 硬件')).toBeInTheDocument()
     expect(screen.getByText('报名页收集字段（详情页不展示）')).toBeInTheDocument()
+  })
+})
+
+describe('event preview legacy cloud images (MIW-125)', () => {
+  const legacyDescription = '<p>存量介绍</p><img src="cloud://legacy-a.png" alt="现场">'
+
+  it('resolves existing cloud:// references through the read-only action and renders the real image', async () => {
+    const tempUrls = vi.fn(async (fileIds: string[]) => ({
+      [fileIds[0]]: 'https://tmp.example/legacy-a.png?sign=x',
+    }))
+    sessionState.client = { tempUrls }
+    render(<EventMobilePreview values={{ description: legacyDescription }} />)
+    const image = await screen.findByRole('img', { name: '现场' })
+    expect(image).toHaveAttribute('src', 'https://tmp.example/legacy-a.png?sign=x')
+    expect(tempUrls).toHaveBeenCalledWith(['cloud://legacy-a.png'])
+    expect(screen.queryByText('插图保存后在活动页显示')).not.toBeInTheDocument()
+  })
+
+  it('keeps an honest placeholder and the rest of the preview when resolution fails', async () => {
+    sessionState.client = { tempUrls: vi.fn(async () => { throw new Error('SERVICE_UNAVAILABLE') }) }
+    render(<EventMobilePreview values={{ description: legacyDescription, title: '存量活动' }} />)
+    const placeholder = await screen.findByText('插图保存后在活动页显示')
+    expect(placeholder).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: '现场' })).not.toBeInTheDocument()
+    // 解析失败不阻断预览：标题与其余正文照常展示。
+    expect(screen.getByText('存量活动')).toBeInTheDocument()
+    expect(screen.getByText('存量介绍')).toBeInTheDocument()
+  })
+
+  it('skips resolution in demo mode without faking images', async () => {
+    const tempUrls = vi.fn()
+    sessionState.client = { tempUrls }
+    sessionState.demoMode = true
+    render(<EventMobilePreview values={{ description: legacyDescription }} />)
+    await waitFor(() => expect(screen.getByText('插图保存后在活动页显示')).toBeInTheDocument())
+    expect(tempUrls).not.toHaveBeenCalled()
   })
 })

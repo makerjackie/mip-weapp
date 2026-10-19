@@ -239,6 +239,18 @@ function firstGrant(bindings, capability) {
   return binding
 }
 
+/** 任一能力命中即可（读侧「具备任一 MEDIA 用途能力」口径）。 */
+function firstAnyGrant(bindings, capabilities) {
+  const binding = bindings.find(item => isValidRoleBinding(item)
+    && capabilities.some(capability => capabilitiesForBinding(item).includes(capability)))
+  if (!binding) {
+    const error = new Error('FORBIDDEN')
+    error.code = 'FORBIDDEN'
+    throw error
+  }
+  return binding
+}
+
 function capabilitySnapshot(bindings) {
   const entries = []
   const seen = new Set()
@@ -278,6 +290,7 @@ module.exports = {
   capabilitiesForBinding,
   capabilitySnapshot,
   coversScope,
+  firstAnyGrant,
   firstGrant,
   isValidRoleBinding,
   roleCapabilities,

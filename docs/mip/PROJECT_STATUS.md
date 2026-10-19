@@ -24,6 +24,8 @@
 
 2026-10-16 测试后台域名绑定：`https://test.admin.mip.cool/` 已绑定独立免费 DV 证书并通过可信 TLS、HTTP 307 跳转、测试静态清单 14/14 字节和三种浏览器视口验收；阿里云负责域名及 DNS，用户原 CNAME 保留，已加本次 SSL TXT。测试 `mip-t-admin-api` 的 migration 登录回调从正式域名纠正为测试域名，测试本机配置同步，两端 HMAC 配对回读一致；正式网关入口和三条路由保留。完整密码验收因缺少本机测试账号 BLOCKED，微信真机确认 NOT_RUN，新测试域名自动续期未启用。证书有效期与详细证据见[测试域名验收](evidence/admin-test-domain-20261016/README.md)；经验已固化到 `mip-admin-release` skill。
 
+2026-10-19 MIW-125 存量 cloud:// 富文本插图 Web 解析（分支 `MIW-125/feat/admin-media-temp-urls`）：浏览器无法渲染存量活动富文本里的 cloud:// fileID（MIW-122 只解决本会话上传图的 blob 预览），新增只读解析链 `mip.admin.media.tempUrls`（QUERY，管理合同第 241 个 operation）：admin-web 预览与编辑器批量提取存量 cloud:// 引用（30 个/批）→ BFF 透传 → mip-admin-api 会话+任一 MEDIA 用途能力门禁（新增 `firstAnyGrant` any-of 变体）→ 既有 HMAC 内部通道（action `admin.tempFileURL`、capability `media.read`）→ mip-media-api 逐条 appId HMAC 归属校验后 `getTempFileURL({ maxAge: 600 })`，仅收 https 条目、归属不符与失败条目如实缺席。600s 签名直链仅内存态：不落库、不进导出/复制内容，无数据库改动与迁移，小程序端零改动（自有 cloud:// 下载管道）。admin-web 解析失败保持诚实占位（预览「插图暂不可预览」、编辑器原占位），demoMode 不发请求不伪造图片，本会话上传图的本地 blob 预览优先于服务端解析。门禁：mip-admin-api 771、mip-media-api 37、admin-web 合同 322 + vitest 234、根 weapp 1795 全绿，`pnpm admin:web:verify` 与 `pnpm verify` 通过。证据边界：真实登录（非演示模式）浏览器冒烟——含存量 cloud:// 插图的活动预览出真图、构造解析失败验占位如实——留 external-wait；生产 `getTempFileURL` 成功事实待双函数部署后回读。
+
 2026-10-16 活动富文本（所见即所得）与原型对齐表单发布到现有环境，供用户自测：本地提交 `7d9486df`（未推送）。**范围**：admin-web 采用 TipTap 受限富文本（加粗/斜体/下划线/列表/对齐/插图，DOMPurify 写入+渲染双重净化）、手机预览富文本+参与人、拖拽封面、标签胶囊+内置新建、活动范围/所属分会回主流程并按账号授权默认、活动摘要隐藏（留空自动生成）、活动名称 20 字规则、字段顺序对齐原型、列表「活动金额」列；小程序 `rich-content` 兼容受限 HTML 与存量 markdown、报名须知富文本化、HTML 插图水合；云函数 `mip-admin-api`（`domain/rich-text.js` 富文本护栏 + 送审剥标签）与 `mip-events-api`（签名直链重写兼容 HTML `<img>`）。无迁移。**发布**：`mip-admin-api`/`mip-events-api` 代码包 SHA 与本地一致并含上述标记；`mip-admin-web-api` Active/禁客户端直调/0 timer/Cloudflare 未动，打包并入上一版不可变 `/assets`；静态隔离前缀 15 文件 VERIFIED；公开入口域数字节 15/15 一致，新入口 `index-DA1pfRDB.js`；`verify-admin-cloudbase` 68 项通过；`admin.mip.cool` 已提供新入口。**自测**（本机管理员测试账号）：登录/会话/活动列表/退出、新建活动、20 字与摘要必填规则命中、富文本回读持久化均通过。**BLOCKED**：原生 `Invoke` 健康探针 CAM 拒绝（历轮同噪音），以配置/代码包回读与真实 HTTP 代替。**待办**：小程序体验版未上传（上传前新富文本在旧版小程序按普通文本渲染）；真机与退款入口（只审计未修）另计。证据见 [活动富文本发布记录](evidence/admin-release-event-rich-20261016/README.md)。
 2026-10-16 测试后台路线改判与部署交接（MIW-111）：`test.admin.mip.cool`（交接时定名，草名 `admin-test.mip.cool` 废弃）由 Cloudflare Pages 方向 B 改为 **CloudBase 同构路线**（同环境新静态前缀 + 新 BFF 函数 `mip-t-admin-web-api` + 测试专用认证 schema + 独立密钥，上游 `mip-t-admin-api` 已在线；理由：生产后台 2026-10-09 已整体迁 CloudBase，不为测试后台把正在退役的 Cloudflare 引回）。交接文档落盘 [ADMIN_TEST_BACKEND_HANDOFF.md](ADMIN_TEST_BACKEND_HANDOFF.md)（两套环境/两库现状 + 目标对象清单 + 脚本硬编码约束：`deploy-admin-cloudbase.mjs` 仅允许默认网关 origin、函数名/schema 断言硬编码，需先参数化再部署；ENVIRONMENTS.md 与 admin-web/README.md 已同步标注）。部署执行交接给同事，方法不锁定；待办不变：脚本参数化 → 建 schema/函数/前缀 → test.admin 域名 DIRECT 绑定与证书（多级子域名需单独签发）→ 三层验收（测试账号 `MIP_ADMIN_TEST_*` 先配齐，生产历轮 BLOCKED 缺口不带到测试后台）。
 
@@ -143,7 +145,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 52 条小程序路由（用户分包 44 条）、111 个锁定迁移、240 个渠道中立管理 operation（105 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 105 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 52 条小程序路由（用户分包 44 条）、111 个锁定迁移、241 个渠道中立管理 operation（106 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 106 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -269,8 +271,8 @@ MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示�
 | --- | --- | --- |
 | 小程序路由 | 52 条：3 条主包、44 条用户分包、5 条管理分包（含网页登录确认页）；2026-10-14 MIW-102 下线「发现」首页与公告列表/详情 3 条、2026-10-12 MIW-76 下线旧活动互动页 1 条、同日 MIW-65 下线会员方案/会员权益/会员订单确认 3 条、2026-10-09 审计修复 G1 新增想跟TA合作页 1 条、2026-10-08 MIW-54 下线超级案例孤儿列表页 1 条、2026-10-07 MIW-49 新增城市选择页 1 条、此前 MIW-42 删除机会死页 3 条、MIW-44 下线知识/游戏/盲盒 9 条 | `config/runtime-pages.json`、`src/app.json` |
 | 数据库 | 111 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
-| 管理合同 | 240 个 operation：105 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
-| Web 开放范围 | 105 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| 管理合同 | 241 个 operation：106 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| Web 开放范围 | 106 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 24 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
 | 调度 | 消息和知识采集各有独立 scheduler；均不属于数据库核心函数 | `mip-message-scheduler`、`mip-knowledge-scheduler` 及部署脚本 |
 | Web 页面 | 15 个一级页面、13 类详情 | `admin-web/src/` 的路由与页面合同 |

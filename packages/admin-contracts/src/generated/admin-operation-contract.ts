@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 240,
+  "operationCount": 241,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -1670,6 +1670,14 @@ export const ADMIN_OPERATION_CONTRACT = {
       "idempotencyKeyRequired": null
     },
     {
+      "action": "mip.admin.media.tempUrls",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
       "action": "mip.admin.dashboard",
       "kind": "QUERY",
       "authentication": "REQUIRED",
@@ -1930,7 +1938,7 @@ export const ADMIN_OPERATION_CONTRACT = {
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 240,
+  "operationCount": 241,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -4552,6 +4560,16 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       ],
       "optionalInputKeys": [],
       "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.media.tempUrls",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
       "forwardIdempotencyKey": false
     },
     {

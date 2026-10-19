@@ -9,6 +9,10 @@ const {
 const MEDIA_ADMIN_TRANSPORT = 'MIP_MEDIA_ADMIN_V1'
 const MEDIA_ADMIN_PROTOCOL = 'mip-media-admin/v1'
 const MEDIA_ADMIN_ACTION = 'admin.uploadImage'
+const MEDIA_ADMIN_TEMPURLS_ACTION = 'admin.tempFileURL'
+const MEDIA_ADMIN_READ_CAPABILITY = 'media.read'
+const TEMPURLS_MAX_FILE_IDS = 30
+const TEMPURLS_MAX_FILE_ID_LENGTH = 1024
 const DEFAULT_TIMEOUT_MS = 45_000
 const MAX_TIMEOUT_MS = 50_000
 const MAX_IMAGE_BYTES = 1024 * 1024
@@ -54,46 +58,86 @@ function createMediaAdminClient(options = {}) {
     async execute({ appId, actorUserId, action, input = {} } = {}) {
       if (action !== MEDIA_ADMIN_OPERATION) throw codedError('MEDIA_OPERATION_NOT_ALLOWED')
       const image = inspectImageInput(input)
-      if (!configured || typeof now !== 'function' || typeof nonce !== 'function') {
-        throw codedError('MEDIA_DISPATCH_CONFIG_REQUIRED')
-      }
-      if (!trustedIdentifier(appId, 64) || !uuid(actorUserId)) {
-        throw codedError('AUTH_REQUIRED')
-      }
-      const timestamp = Number(now())
-      const requestNonce = nonce()
-      if (!Number.isSafeInteger(timestamp) || !/^[A-Za-z0-9_-]{24,128}$/.test(requestNonce)) {
-        throw codedError('MEDIA_DISPATCH_CONFIG_REQUIRED')
-      }
-      const request = {
-        transport: MEDIA_ADMIN_TRANSPORT,
-        protocol: MEDIA_ADMIN_PROTOCOL,
-        timestamp,
-        nonce: requestNonce,
+      return invokeSigned({
         appId,
         actorUserId,
         capability: image.capability,
         action: MEDIA_ADMIN_ACTION,
         input: { purpose: input.purpose, imageBase64: input.imageBase64 },
-        sourceFunction,
-      }
-      request.signature = signMediaAdminRequest(request, options.secret)
-      let response
-      try {
-        response = await invokeWithTimeout(
-          options.cloud.callFunction({ name: functionName, data: request }),
-          timeoutMs,
-        )
-      }
-      catch {
-        throw codedError('MEDIA_DISPATCH_UNAVAILABLE')
-      }
-      if (response?.result?.ok !== true) {
-        throw codedError(publicErrorCode(response?.result?.error?.code))
-      }
-      return response.result.data
+      })
+    },
+    // 只读解析：复用同一 HMAC 通道，媒体归属/时效校验在 mip-media-api 侧。
+    async tempFileUrls({ appId, actorUserId, fileIds } = {}) {
+      const normalized = inspectTempUrlsInput(fileIds)
+      return invokeSigned({
+        appId,
+        actorUserId,
+        capability: MEDIA_ADMIN_READ_CAPABILITY,
+        action: MEDIA_ADMIN_TEMPURLS_ACTION,
+        input: { fileIds: normalized },
+      })
     },
   })
+
+  async function invokeSigned({ appId, actorUserId, capability, action, input }) {
+    if (!configured || typeof now !== 'function' || typeof nonce !== 'function') {
+      throw codedError('MEDIA_DISPATCH_CONFIG_REQUIRED')
+    }
+    if (!trustedIdentifier(appId, 64) || !uuid(actorUserId)) {
+      throw codedError('AUTH_REQUIRED')
+    }
+    const timestamp = Number(now())
+    const requestNonce = nonce()
+    if (!Number.isSafeInteger(timestamp) || !/^[A-Za-z0-9_-]{24,128}$/.test(requestNonce)) {
+      throw codedError('MEDIA_DISPATCH_CONFIG_REQUIRED')
+    }
+    const request = {
+      transport: MEDIA_ADMIN_TRANSPORT,
+      protocol: MEDIA_ADMIN_PROTOCOL,
+      timestamp,
+      nonce: requestNonce,
+      appId,
+      actorUserId,
+      capability,
+      action,
+      input,
+      sourceFunction,
+    }
+    request.signature = signMediaAdminRequest(request, options.secret)
+    let response
+    try {
+      response = await invokeWithTimeout(
+        options.cloud.callFunction({ name: functionName, data: request }),
+        timeoutMs,
+      )
+    }
+    catch {
+      throw codedError('MEDIA_DISPATCH_UNAVAILABLE')
+    }
+    if (response?.result?.ok !== true) {
+      throw codedError(publicErrorCode(response?.result?.error?.code))
+    }
+    return response.result.data
+  }
+}
+
+function inspectTempUrlsInput(fileIds) {
+  if (!Array.isArray(fileIds) || fileIds.length < 1 || fileIds.length > TEMPURLS_MAX_FILE_IDS) {
+    throw codedError('VALIDATION_FAILED')
+  }
+  const seen = new Set()
+  const normalized = []
+  for (const item of fileIds) {
+    const fileId = typeof item === 'string' ? item.trim() : ''
+    if (!/^cloud:\/\/\S{1,1016}$/.test(fileId) || fileId.length > TEMPURLS_MAX_FILE_ID_LENGTH) {
+      throw codedError('VALIDATION_FAILED')
+    }
+    if (!seen.has(fileId)) {
+      seen.add(fileId)
+      normalized.push(fileId)
+    }
+  }
+  return normalized
 }
 
 function inspectImageInput(input) {
@@ -248,6 +292,8 @@ module.exports = {
   MAX_TIMEOUT_MS,
   MEDIA_ADMIN_ACTION,
   MEDIA_ADMIN_OPERATION,
+  MEDIA_ADMIN_READ_CAPABILITY,
+  MEDIA_ADMIN_TEMPURLS_ACTION,
   MEDIA_ADMIN_PROTOCOL,
   MEDIA_ADMIN_PURPOSE_CAPABILITIES,
   MEDIA_ADMIN_TRANSPORT,

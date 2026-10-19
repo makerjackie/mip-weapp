@@ -75,6 +75,17 @@ function assertOwnedMipFile({ appId, objectKey, fileId, env = process.env }) {
   return true
 }
 
+/** 布尔版归属判定：临时地址解析对非本 app 的 fileID 静默剔除，不当作错误。 */
+function fileBelongsToApp({ appId, fileId, env = process.env }) {
+  try {
+    assertOwnedMipFile({ appId, objectKey: cloudObjectKey(fileId), fileId, env })
+    return true
+  }
+  catch {
+    return false
+  }
+}
+
 async function deleteOwnedFile(cloud, input) {
   if (typeof cloud?.deleteFile !== 'function') return false
   try {
@@ -456,7 +467,32 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
     return { scanned: leased.length, deleted, failed }
   }
 
-  return { cleanupOrphans, health, uploadImage }
+  // 只读解析（admin 通道）：600s 与 admin-media-projection 一致；仅回 https 临时地址，
+  // 归属不符/解析失败的条目直接缺席，不做整单失败。
+  async function tempFileUrls(caller, input) {
+    const raw = input && Array.isArray(input.fileIds) ? input.fileIds : []
+    const fileIds = raw.map(item => (typeof item === 'string' ? item.trim() : ''))
+    if (fileIds.length < 1 || fileIds.length > 30
+      || fileIds.some(fileId => !/^cloud:\/\/\S{1,1016}$/.test(fileId))) {
+      throw new Error('FILEIDS_INVALID')
+    }
+    const owned = [...new Set(fileIds)]
+      .filter(fileId => fileBelongsToApp({ appId: caller.appId, fileId, env }))
+    if (!owned.length) return { urls: {} }
+    const result = await cloud.getTempFileURL({ fileList: owned, maxAge: 600 })
+    const ownedSet = new Set(owned)
+    const urls = {}
+    for (const item of result?.fileList || []) {
+      if (typeof item?.fileID === 'string' && ownedSet.has(item.fileID)
+        && typeof item?.tempFileURL === 'string'
+        && /^https:\/\//.test(item.tempFileURL)) {
+        urls[item.fileID] = item.tempFileURL
+      }
+    }
+    return { urls }
+  }
+
+  return { cleanupOrphans, health, tempFileUrls, uploadImage }
 }
 
 function configuredCapabilityAllows(row, capability) {
@@ -484,4 +520,5 @@ module.exports = {
   createMediaService,
   deleteOwnedFile,
   deploymentStage,
+  fileBelongsToApp,
 }

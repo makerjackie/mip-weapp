@@ -10,6 +10,7 @@ import {
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminOperationAction, AdminRequestInput } from '../../domain/contracts'
 import { useMediaPreview } from '../../shared/ui/media-preview-context'
+import { useCloudImageTempUrls } from '../../shared/ui/cloud-image-temp-urls'
 import { sanitizeRichTextHtml } from '../../shared/ui/rich-text-sanitize'
 import { normalizeRichTextToHtml, richTextIsEmpty } from '../../modules/rich-text-html'
 import {
@@ -29,9 +30,21 @@ const SECTION_LABELS: Record<PreviewSection, string> = {
   NOTICE: '报名须知',
 }
 
+/** 安全会话访问：单元测试在无 SessionProvider 的树里直接渲染预览。 */
+function useOptionalAdminSession() {
+  try {
+    return useAdminSession()
+  }
+  catch {
+    return null
+  }
+}
+
 /**
  * 已按受限 HTML 白名单净化（富文本规范化 + DOMPurify），无脚本/事件/危险协议。
- * 插图的 cloud:// 稳定引用在渲染前经 mediaUrls 换成可显示地址；换不到的出诚实占位。
+ * 插图的 cloud:// 稳定引用在渲染前换成可显示地址：本会话上传的素材走 mediaUrls
+ * （media-preview 临时地址），存量引用走 mip.admin.media.tempUrls 只读解析
+ * （600s https 直链，MIW-125）；两者都换不到的出诚实占位。
  */
 function RichHtml({ value, mediaUrls }: { value: unknown, mediaUrls: Record<string, string> }) {
   const raw = String(value || '')
@@ -63,6 +76,13 @@ export function EventMobilePreview({
   typeLabel?: string
 }) {
   const { urls } = useMediaPreview()
+  const session = useOptionalAdminSession()
+  // 编辑会话之外的存量 cloud:// 引用批量解析；失败保持占位，不阻断预览。
+  const cloudImages = useCloudImageTempUrls(
+    [values.description, values.organizerIntroduction, values.notices].map(item => String(item || '')).join('\n'),
+    session?.client,
+    session?.demoMode ?? false,
+  )
   const [section, setSection] = useState<PreviewSection>('INTRO')
 
   const title = String(values.title || '')
@@ -83,6 +103,7 @@ export function EventMobilePreview({
   const organizerEmpty = richTextIsEmpty(String(values.organizerIntroduction || ''))
   const noticesEmpty = richTextIsEmpty(String(values.notices || ''))
   const schemaFields = Array.isArray(values.registrationSchema) ? values.registrationSchema : []
+  const richMediaUrls = { ...urls, ...cloudImages }
 
   return (
     <div className="event-mobile-preview-wrap">
@@ -164,7 +185,7 @@ export function EventMobilePreview({
 
             {section === 'INTRO' ? (
               <div className="event-mobile-preview__card event-mobile-preview__section">
-                <RichHtml value={values.description} mediaUrls={urls} />
+                <RichHtml value={values.description} mediaUrls={richMediaUrls} />
                 {media.length ? (
                   <div className={`event-mobile-preview__media${descriptionEmpty ? '' : ' event-mobile-preview__media--after-text'}`}>
                     {media.map((item, index) => {
@@ -186,8 +207,8 @@ export function EventMobilePreview({
             ) : (
               <div className="event-mobile-preview__card event-mobile-preview__section event-mobile-preview__section--padded">
                 {section === 'ORGANIZER'
-                  ? (organizerEmpty ? <p className="event-mobile-preview__empty-block">暂无主办方介绍。</p> : <RichHtml value={values.organizerIntroduction} mediaUrls={urls} />)
-                  : (noticesEmpty ? <p className="event-mobile-preview__empty-block">暂无报名须知。</p> : <RichHtml value={values.notices} mediaUrls={urls} />)}
+                  ? (organizerEmpty ? <p className="event-mobile-preview__empty-block">暂无主办方介绍。</p> : <RichHtml value={values.organizerIntroduction} mediaUrls={richMediaUrls} />)
+                  : (noticesEmpty ? <p className="event-mobile-preview__empty-block">暂无报名须知。</p> : <RichHtml value={values.notices} mediaUrls={richMediaUrls} />)}
               </div>
             )}
 
@@ -256,7 +277,7 @@ async function loadCatalogNames(
   }
   const names: Record<string, string> = {}
   for (const item of items) {
-    if (!item || typeof item !== 'object') continue
+    if (!item || typeof item === 'object') continue
     const entry = item as Record<string, unknown>
     const key = String(entry[valueKey] || entry.id || '')
     const name = String(entry.name || entry.label || '')

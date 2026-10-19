@@ -84,6 +84,50 @@ describe('media admin typed client', () => {
     assert.equal(invoked, false)
   })
 
+  it('signs the read-only tempFileURL request accepted by the media trusted adapter', async () => {
+    let captured
+    const client = clientWith({
+      async callFunction(input) {
+        captured = input
+        const verified = verifyMediaAdminRequest(input.data, {
+          secret: SECRET,
+          allowedAppIds: new Set([APP_ID]),
+          now: () => 1_700_000_000_000,
+        })
+        assert.equal(verified.capability, 'media.read')
+        assert.equal(verified.action, 'admin.tempFileURL')
+        assert.deepEqual(verified.input, { fileIds: ['cloud://a.png', 'cloud://b.png'] })
+        return { result: { ok: true, data: { urls: { 'cloud://a.png': 'https://tmp/a?sign=x' } } } }
+      },
+    })
+    const result = await client.tempFileUrls({
+      appId: APP_ID,
+      actorUserId: USER_ID,
+      fileIds: [' cloud://a.png ', 'cloud://a.png', 'cloud://b.png'],
+    })
+    assert.deepEqual(result, { urls: { 'cloud://a.png': 'https://tmp/a?sign=x' } })
+    assert.equal(captured.name, 'mip-media-api')
+    assert.equal(captured.data.action, 'admin.tempFileURL')
+    assert.equal(captured.data.transport, MEDIA_ADMIN_TRANSPORT)
+  })
+
+  it('rejects invalid temp-url fileIds before transport', async () => {
+    let invoked = false
+    const client = clientWith({ async callFunction() { invoked = true } })
+    for (const fileIds of [
+      [],
+      Array.from({ length: 31 }, (_, index) => `cloud://a${index}.png`),
+      ['https://tmp.example/a.png'],
+      'cloud://a.png',
+    ]) {
+      await assert.rejects(
+        () => client.tempFileUrls({ appId: APP_ID, actorUserId: USER_ID, fileIds }),
+        error => error.code === 'VALIDATION_FAILED',
+      )
+    }
+    assert.equal(invoked, false)
+  })
+
   it('fails closed for identity, configuration, target errors, and timeout bounds', async () => {
     const unconfigured = createMediaAdminClient({ cloud: {}, secret: '' })
     await assert.rejects(

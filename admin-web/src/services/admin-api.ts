@@ -13,6 +13,10 @@ import {
   type AdminMediaUploadResult,
   type PreparedAdminMediaUpload,
 } from '../modules/admin-media-upload.ts'
+import {
+  ADMIN_MEDIA_TEMP_URLS_ACTION,
+  isHttpsTempUrl,
+} from '../modules/admin-media-temp-urls.ts'
 
 export interface AdminLoginChallenge {
   state: 'PENDING'
@@ -208,6 +212,19 @@ export class AdminApiClient {
     if (!this.configured) throw new AdminApiClientError('API_NOT_CONFIGURED', '尚未配置管理 API')
     const prepared = await prepareAdminMediaUpload(file, purpose)
     return this.sendMediaUpload(prepared, 2)
+  }
+
+  /** 把存量 cloud:// fileID 解析成 600s 临时地址（只读动作，失败条目服务端已缺席）。 */
+  async tempUrls(fileIds: readonly string[]): Promise<Record<string, string>> {
+    if (!this.configured) throw new AdminApiClientError('API_NOT_CONFIGURED', '尚未配置管理 API')
+    const result = await this.request<{ urls?: Record<string, unknown> }>(ADMIN_MEDIA_TEMP_URLS_ACTION, { fileIds: [...fileIds] })
+    const urls: Record<string, string> = {}
+    for (const [fileId, url] of Object.entries(result?.urls || {})) {
+      if (typeof fileId === 'string' && fileId.startsWith('cloud://') && isHttpsTempUrl(url)) {
+        urls[fileId] = url
+      }
+    }
+    return urls
   }
 
   private async sendMediaUpload(prepared: PreparedAdminMediaUpload, attemptsLeft: number): Promise<AdminMediaUploadResult> {
