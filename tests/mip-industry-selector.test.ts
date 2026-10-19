@@ -15,7 +15,7 @@ const componentConfig = JSON.parse(read('src/components/mip-industry-selector/in
 
 describe('mip-industry-selector 业务组件', () => {
   it('复用 catalog-selector 纯函数与 mip-tag-chip 设计系统组件', () => {
-    expect(componentScript).toContain('import { catalogSelectorView, toggleCatalogSelection } from \'../catalog-selector/model\'')
+    expect(componentScript).toContain('import { catalogSelectorView, expandedCatalogGroup, toggleCatalogSelection } from \'../catalog-selector/model\'')
     expect(componentConfig.usingComponents['mip-tag-chip']).toBe('/components/mip-tag-chip/index')
     expect(componentTemplate).toContain('<mip-tag-chip label="{{item.label}}" active="{{item.selected}}" />')
   })
@@ -48,7 +48,7 @@ describe('mip-industry-selector 业务组件', () => {
     const profileTemplate = read('src/packages/member/mip-profile/index.wxml')
     const profileConfig = JSON.parse(read('src/packages/member/mip-profile/index.json'))
     expect(profileConfig.usingComponents['mip-industry-selector']).toBe('/components/mip-industry-selector/index')
-    expect(profileTemplate).toContain('<mip-industry-selector groups="{{industryGroups}}" selected-ids="{{selectedIndustryIds}}" multiple="{{false}}"')
+    expect(profileTemplate).toContain('<mip-industry-selector groups="{{industryGroups}}" selected-ids="{{draftIndustryIds}}" multiple="{{false}}"')
     expect(profileTemplate).toContain('bind:change="changeIndustry"')
   })
 

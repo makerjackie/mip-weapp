@@ -1,9 +1,9 @@
 /* Keep the crown inside the hero while the lower body sits behind its curve. */
 .growth-hero-art {
   position: absolute;
-  right: 36rpx;
+  right: 0;
   bottom: -8rpx;
-  width: 350rpx;
+  width: 374rpx;
   height: 310rpx;
   pointer-events: none;
 }
@@ -32,11 +32,10 @@
   transform: translateX(-50%);
 }
 
-/* MIW-27：按钮中心与 XP 进度条中心（py-6 48 + mt-16 + 104.2 + 28 + 7.8 + 6 = 210rpx）
-   同一水平线，并较原右上角胶囊放大一档（figma 1948:14177 入口样式沿用）。 */
+/* 原型 1948:14079：经验入口位于人物右上，避免占用等级/进度条；仍跳转独立明细页。 */
 .growth-experience-link {
   position: absolute;
-  top: 183rpx;
+  top: 12rpx;
   right: 16rpx;
   z-index: 20;
   padding: 8rpx 20rpx;
@@ -67,6 +66,7 @@
 .growth-tier-area {
   position: relative;
   margin-top: 16rpx;
+  overflow: hidden;
 }
 
 .growth-tier-swiper {

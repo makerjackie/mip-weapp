@@ -1,0 +1,59 @@
+{
+  "status": "verified",
+  "target": "test",
+  "source": "Feishu industry catalog snapshot 2026-09-26 revision 62",
+  "sourceSha256": "6c33a8c86c63575ea2ee4802b1c9627b0e28f6381ea3cd09cdea33bbfcb698dd",
+  "groups": 11,
+  "selectable": 121,
+  "popular": 13,
+  "newRows": 132,
+  "existingRowsPreserved": 0,
+  "productionWrites": 0,
+  "otherCatalogWrites": 0,
+  "groupsDetail": [
+    {
+      "name": "互联网/AI",
+      "count": 17
+    },
+    {
+      "name": "电子/通信/半导体",
+      "count": 7
+    },
+    {
+      "name": "服务业",
+      "count": 14
+    },
+    {
+      "name": "消费品/批发/零售",
+      "count": 10
+    },
+    {
+      "name": "房地产/建筑",
+      "count": 12
+    },
+    {
+      "name": "制造业",
+      "count": 17
+    },
+    {
+      "name": "汽车",
+      "count": 8
+    },
+    {
+      "name": "交通运输/物流",
+      "count": 10
+    },
+    {
+      "name": "能源/化工/环保",
+      "count": 12
+    },
+    {
+      "name": "金融",
+      "count": 10
+    },
+    {
+      "name": "政府/非盈利机构/其他",
+      "count": 4
+    }
+  ]
+}

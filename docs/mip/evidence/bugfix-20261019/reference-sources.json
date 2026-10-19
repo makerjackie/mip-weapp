@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-10-19",
+  "repository": "https://github.com/douglas-ou/mip-minip-dev",
+  "remoteHead": "cb5956bcc547046d0ad4568a1175131e82c04021",
+  "priorSnapshotCommit": "cb5956bcc547046d0ad4568a1175131e82c04021",
+  "headChanged": false,
+  "figma": {
+    "fileKey": "zo5RsWtzNWvhk6d5P53eCL",
+    "directExportDate": "2026-08-25",
+    "liveCurrentVersion": "unverified-bridge-unavailable"
+  },
+  "screens": {
+    "profile": {
+      "prototypeSource": "pages/1774_41767_代表行业.html",
+      "prototypeSha256": "0220479082bbfa2d0fcec5f1f4d5da84b540b9cee84839025544427d23f3e310",
+      "figmaNode": "2917:4785",
+      "figmaSource": "docs/mip/evidence/figma-2026-08-25/industry-filter-2917-4785.png",
+      "figmaImageSha256": "79e7f64155303923297bb7b3cd0d62c1ece1b0792c58e0ab570c2e5a016462db",
+      "finding": "原型有全屏分组、底部清除/确定。当前交互已补；选项来自真实后台目录，示例文案、系统栏和数据状态不作为逐像素通过。"
+    },
+    "growth": {
+      "prototypeSource": "role-flows/prototype.html?scene=member-renew",
+      "prototypeSha256": "e8582895f561e9e9695e2baf7d615d99408a0b8a4b855f760305ff8ce7cd9bf3",
+      "figmaNode": "1948:14079",
+      "figmaSource": "docs/mip/evidence/figma-2026-08-25/growth-1948-14079.png",
+      "figmaImageSha256": "e67f2ec2f3420ecc4d2a7a26f6b437aec2eed4c4038fa576436b2d7f44060943",
+      "finding": "第 3、4 列都是玩家续费示例；第 1、2 列是本地受控会籍状态，数据不同。修复仅证明裁切生效，不等于该页所有角色、等级和真机手势已验收。"
+    },
+    "events": {
+      "prototypeSource": "pages/1819_17664_活动-首页-a.html",
+      "prototypeSha256": "4ff50d432dd52798c7d2899b78b892bfcd8610b54aee33fea8c62b7e9bc7e3cd",
+      "figmaNode": "1819:17664",
+      "figmaSource": "docs/mip/evidence/figma-2026-08-25/events-1819-17664.png",
+      "figmaImageSha256": "32c92cad40daf26b2e0ab98802b5c12ef00605f5cbecfa3feb5b3c4992cb61c6",
+      "finding": "仍有位置差异：原稿标签在封面右下角，当前修复在标题下方。当前只完成“后台标签可见”，不标为标签位置完全还原。原稿的“仅玩家”也有访问资格语义，不能把所有后台标签强行当作资格。"
+    },
+    "talent": {
+      "prototypeSource": "role-flows/prototype.html?scene=talent-player",
+      "prototypeSha256": "e5e8c945da054a3a08b069c166bc3917343733c57f5706c416b629d7c2f75fa9",
+      "figmaNode": "1768:37534",
+      "figmaSource": "docs/mip/evidence/figma-2026-08-25/talent-cooperation-1768-37534.png",
+      "figmaImageSha256": "fe1f53bb2e66f2a49ad3402cc957e2235fde068fb7ab9a385b226966f9bbbfc0",
+      "finding": "原稿底栏是“左角色标签＋右邀请人和头像”，没有额外筛选提示行；原型将搜索占位由“活动名称”修正为“玩家名称”。六大角色图标尚未提供，当前卡片不能签为全部视觉还原。"
+    }
+  }
+}

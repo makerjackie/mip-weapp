@@ -11,7 +11,7 @@ import { showErrorFeedback } from '../../../../platform/feedback/client'
 import { caseNavigateTo, caseRedirectTo } from '../../../../platform/navigation/client'
 import { canNavigateBack } from '../../../../platform/navigation/leave'
 import { clearPageMedia, updatePageMedia } from '../../../../platform/storage/component-media'
-import { formatChineseDateTime, formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
+import { formatBusinessDateTime as formatChineseDateTime, formatBusinessMonthDay as formatChineseMonthDay, formatBusinessMonthDayTime as formatChineseMonthDayTime, formatBusinessTime as formatLocalTime } from '../../../../utils/business-date'
 
 interface RegistrationFieldView extends RegistrationField {
   value: string

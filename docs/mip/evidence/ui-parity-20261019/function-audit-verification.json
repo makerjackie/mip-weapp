@@ -1,0 +1,54 @@
+{
+  "status": "passed-with-device-acceptance-pending",
+  "miniProgram": {
+    "testFiles": 278,
+    "tests": 1805,
+    "passed": true,
+    "mainPackageBytes": 1354935,
+    "memberPackageBytes": 1934648,
+    "adminPackageBytes": 541504
+  },
+  "runtimePreflight": "passed",
+  "realCatalog": {
+    "groups": 11,
+    "selectable": 121,
+    "source": "real test service response, not local fixture"
+  },
+  "dateFilter": {
+    "query": {
+      "dateFilter": "CUSTOM",
+      "date": "2026-12-12",
+      "cityName": "深圳",
+      "query": "反人性"
+    },
+    "returned": [
+      "MIP反人性早会第328场"
+    ],
+    "excluded": "MIP反人性早会第329场",
+    "display": "12月12日 10:00-12:00",
+    "deviceTimezone": "America/New_York"
+  },
+  "roleIcon": {
+    "computedWidth": "16px",
+    "boxSizing": "border-box",
+    "textOffsetPx": 20
+  },
+  "productionWrites": 0,
+  "clientUploaded": false,
+  "released": false,
+  "deviceAcceptance": "pending",
+  "fullLog": ".tmp/ui-audit-20261019/verify-final.log",
+  "web": {
+    "reactFiles": 33,
+    "reactTests": 243,
+    "nodeTests": 325,
+    "passed": true,
+    "buildPassed": true,
+    "responsiveContract": "passed"
+  },
+  "report": {
+    "columns": 4,
+    "desktop": "passed",
+    "mobile": "passed"
+  }
+}

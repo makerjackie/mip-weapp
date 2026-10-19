@@ -11,6 +11,9 @@
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "mip-icon": "/components/mip-icon/index"
-  }
+    "mip-icon": "/components/mip-icon/index",
+    "mip-nav-bar": "/components/mip-nav-bar/index",
+    "app-top-safe-area": "/components/top-safe-area/index"
+  },
+  "navigationStyle": "custom"
 }

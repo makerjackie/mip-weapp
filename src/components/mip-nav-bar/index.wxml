@@ -15,7 +15,7 @@
       aria-label="返回"
       bind:tap="handleBack"
     >
-      <mip-icon name="nav-back" size="{{8}}" color="var(--color-ink)" />
+      <mip-icon name="nav-back" size="{{13}}" color="var(--color-ink)" />
     </view>
     <text wx:if="{{title}}" class="mip-nav-bar__title">{{title}}</text>
     <view

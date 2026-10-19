@@ -78,7 +78,8 @@ describe('MIP design token mirror for mip-icon', () => {
     const shipped = new Set(Object.keys(ICONS))
     expect([...referenced].filter(name => !shipped.has(name)).sort()).toEqual([])
     expect([...shipped].filter(name => !referenced.has(name)).sort()).toEqual([])
+    // Includes two complete source Figma role icons (previously omitted).
     // Package-size guard: the registry is a main-package asset (was 417KB at 444 glyphs).
-    expect(fs.statSync(path.join(root, 'src/components/mip-icon/icons.ts')).size).toBeLessThan(24 * 1024)
+    expect(fs.statSync(path.join(root, 'src/components/mip-icon/icons.ts')).size).toBeLessThan(32 * 1024)
   })
 })

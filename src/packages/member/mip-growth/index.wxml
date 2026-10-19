@@ -3,7 +3,7 @@
   <view id="mip-growth-error-state" wx:elif="{{state === 'error'}}" class="px-3 pt-3"><mip-empty-state title="暂时无法加载成长记录" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="loadGrowth" /></view>
   <block wx:else>
     <!-- Keep the original illustration at its intrinsic aspect ratio; controls stay live. -->
-    <view class="growth-hero relative overflow-hidden bg-brand px-5 py-6 text-on-brand {{isPlayer ? 'h-[284rpx]' : 'growth-hero--boxed h-[410rpx]'}}">
+    <view class="growth-hero relative overflow-hidden bg-brand px-5 pb-4 pt-6 text-on-brand {{isPlayer ? 'h-[284rpx]' : 'growth-hero--boxed h-[410rpx]'}}">
       <image class="growth-hero-art" mode="aspectFit" src="/packages/member/assets/figma/growth/hero-character.png" />
       <view class="growth-hero-curve" />
       <!-- MIW-83：弧线过渡沿曲线的黄色勾边（figma 3984:8075 Ellipse 30 描边）。 -->

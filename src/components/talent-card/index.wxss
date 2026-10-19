@@ -5,6 +5,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   overflow: hidden;
   background: transparent;
 }
@@ -13,6 +14,7 @@
   box-sizing: border-box;
   display: flex;
   gap: 24rpx;
+  align-items: center;
   min-height: 172rpx;
   padding: 24rpx;
   background: var(--color-panel);
@@ -22,6 +24,7 @@
 .mip-talent-card__bottom {
   box-sizing: border-box;
   display: flex;
+  flex-wrap: wrap;
   gap: 16rpx;
   align-items: center;
   justify-content: space-between;
@@ -130,12 +133,12 @@
   white-space: nowrap;
 }
 
-/* 一句话介绍：最多两行，超出省略（与竖版卡 supporting 同口径）。 */
+/* 横版简介单行省略，与人才合作列表设计一致。 */
 .mip-talent-card__supporting {
   display: -webkit-box;
   margin-top: 8rpx;
   overflow: hidden;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   font-size: 20rpx;
   line-height: 28rpx;
   color: var(--color-muted);
@@ -145,6 +148,7 @@
 
 .mip-talent-card__roles {
   display: flex;
+  flex-wrap: wrap;
   gap: 8rpx;
   min-width: 0;
   overflow: hidden;
@@ -157,7 +161,8 @@
   align-items: center;
   height: 32rpx;
   padding: 0 8rpx;
-  background: var(--color-tag-player);
+  background: var(--color-brand);
+  border: 1rpx solid var(--color-canvas);
   border-radius: 8rpx;
 }
 
@@ -437,4 +442,21 @@
   height: 2rpx;
   pointer-events: none;
   opacity: 0;
+}
+
+.mip-talent-card__role-tag--icon {
+  position: relative;
+  padding-left: 40rpx;
+}
+
+.mip-talent-card__role-icon {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32rpx;
+  background: var(--color-panel);
+  border-right: 1rpx solid var(--color-canvas);
+  border-radius: 6rpx 0 0 6rpx;
 }

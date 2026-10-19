@@ -8,6 +8,7 @@ Component({
     active: { type: Boolean, value: false },
     disabled: { type: Boolean, value: false },
     block: { type: Boolean, value: false },
+    large: { type: Boolean, value: false },
   },
   methods: {
     handleTap() {

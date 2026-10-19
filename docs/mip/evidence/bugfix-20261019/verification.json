@@ -1,0 +1,43 @@
+{
+  "baseline": "cb1c4203",
+  "clientDelivery": "local-only-not-uploaded",
+  "verification": {
+    "command": "TZ=Asia/Shanghai pnpm verify:all",
+    "exitCode": 0,
+    "weappTests": 1798,
+    "webReactTests": 243,
+    "webNodeTests": 325,
+    "runtimePreflight": "passed",
+    "diffCheck": "passed"
+  },
+  "runtime": {
+    "viewportWidth": 390,
+    "growthTierArea": {
+      "left": 0,
+      "right": 390,
+      "width": 390,
+      "overflow": "hidden"
+    },
+    "industryDraft": {
+      "before": [
+        "ai"
+      ],
+      "afterSelectionDraft": [
+        "retail"
+      ],
+      "afterSelectionCommitted": [
+        "ai"
+      ],
+      "afterConfirm": [
+        "retail"
+      ]
+    },
+    "screenshots": "DevTools with local controlled display data; no cloud fixture writes"
+  },
+  "pending": [
+    "six role icons from designer",
+    "iPhone gesture retest",
+    "client upload/release",
+    "scope clarification for test data outside project opportunities"
+  ]
+}

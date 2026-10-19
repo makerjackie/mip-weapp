@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   catalogSelectorView,
+  expandedCatalogGroup,
   selectedCatalogIds,
   toggleCatalogSelection,
 } from '../src/components/catalog-selector/model'
@@ -133,4 +134,24 @@ describe('shared catalog selector', () => {
     expect(view).toContain('aria-pressed="true"')
     expect(view).toContain('已选')
   })
+})
+
+it('keeps popular choices in their groups when the popular section is hidden', () => {
+  const groups = [{ id: 'ai', label: '互联网/AI', options: [
+    { id: 'hot', label: '人工智能', popular: true },
+    { id: 'other', label: '软件服务' },
+  ] }]
+  const view = catalogSelectorView(groups, ['hot'], false)
+  expect(view.viewGroups[0]?.options.map(option => option.id)).toEqual(['hot', 'other'])
+  expect(view.viewGroups[0]?.options[0]?.selected).toBe(true)
+})
+
+it('recovers a removed expanded group when the server catalog refreshes', () => {
+  const refreshed = catalogSelectorView([
+    ...groups,
+    { id: 'new-group', label: '新分类', options: [{ id: 'new-child', label: '新行业' }] },
+  ], ['new-child'], false).viewGroups
+  expect(expandedCatalogGroup(refreshed, 'removed-group')).toBe('new-group')
+  expect(expandedCatalogGroup(refreshed, 'industry-a')).toBe('industry-a')
+  expect(expandedCatalogGroup([], 'removed-group')).toBe('')
 })

@@ -4,7 +4,7 @@ import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
-import { formatChineseMonthDayTime } from '../../../../utils/date'
+import { formatBusinessMonthDayTime as formatChineseMonthDayTime } from '../../../../utils/business-date'
 
 function decoded(value: string) {
   try {

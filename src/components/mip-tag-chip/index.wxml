@@ -1,5 +1,5 @@
 <view
-  class="mip-tag-chip {{active ? 'mip-tag-chip--active' : ''}} {{disabled ? 'mip-tag-chip--disabled' : ''}} {{block ? 'mip-tag-chip--block' : ''}}"
+  class="mip-tag-chip {{active ? 'mip-tag-chip--active' : ''}} {{disabled ? 'mip-tag-chip--disabled' : ''}} {{block ? 'mip-tag-chip--block' : ''}} {{large ? 'mip-tag-chip--large' : ''}}"
   aria-role="button"
   aria-disabled="{{disabled}}"
   bind:tap="handleTap"

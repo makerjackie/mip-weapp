@@ -1,0 +1,3 @@
+.industry-accordion--plain { padding-top: 24rpx; }
+.industry-accordion--plain .industry-accordion__heading { min-height: 88rpx; }
+.industry-accordion--plain .industry-accordion__options { padding: 24rpx 0 32rpx; }

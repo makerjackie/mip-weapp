@@ -11,7 +11,7 @@ import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { peekCloudFileUrls, resolveCloudFileUrls } from '../../../../platform/storage/cloud-media'
 import { clearComponentMedia, updateComponentMedia } from '../../../../platform/storage/component-media'
 import { openWechatChannelsDestination } from '../../../../platform/wechat/channels'
-import { formatChineseDateTime, formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
+import { formatBusinessDateTime as formatChineseDateTime, formatBusinessMonthDay as formatChineseMonthDay, formatBusinessMonthDayTime as formatChineseMonthDayTime, formatBusinessTime as formatLocalTime } from '../../../../utils/business-date'
 
 const POSTER_WIDTH = 375
 const POSTER_HEIGHT = 560

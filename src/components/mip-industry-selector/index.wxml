@@ -21,29 +21,29 @@
     </view>
   </block>
 
-  <view wx:if="{{accordion && viewGroups.length}}" class="mt-3 overflow-hidden rounded-[8rpx] border border-line">
+  <view wx:if="{{accordion && viewGroups.length}}" class="industry-accordion {{plain ? 'industry-accordion--plain' : 'mt-3 overflow-hidden rounded-[8rpx] border border-line'}}">
     <block wx:for="{{viewGroups}}" wx:for-item="group" wx:key="id">
       <view
-        class="flex min-h-[88rpx] items-center gap-2 border-b border-line px-3"
+        class="industry-accordion__heading flex min-h-[88rpx] items-center gap-2 {{plain ? '' : 'border-b border-line px-3'}}"
         data-group-id="{{group.id}}"
         aria-role="button"
         aria-expanded="{{expandedGroupId === group.id}}"
         bind:tap="onGroupToggle"
       >
-        <text class="min-w-0 flex-1 truncate text-[24rpx]">{{group.label}}</text>
+        <text class="min-w-0 flex-1 truncate {{plain ? 'text-[32rpx] font-semibold' : 'text-[24rpx]'}}">{{group.label}}</text>
         <t-icon name="{{expandedGroupId === group.id ? 'chevron-up' : 'chevron-down'}}" size="28rpx" color="var(--color-muted)" />
       </view>
-      <view wx:if="{{expandedGroupId === group.id}}" class="flex flex-wrap gap-2 border-b border-line bg-panel-raised px-3 py-3">
+      <view wx:if="{{expandedGroupId === group.id}}" class="industry-accordion__options flex flex-wrap gap-2 {{plain ? '' : 'border-b border-line bg-panel-raised px-3 py-3'}}">
         <view
           wx:for="{{group.options}}"
           wx:for-item="option"
           wx:key="id"
           data-id="{{option.id}}"
-          aria-role="checkbox"
+          aria-role="{{multiple ? 'checkbox' : 'radio'}}"
           aria-checked="{{option.selected}}"
           bind:tap="onChipTap"
         >
-          <mip-tag-chip label="{{option.label}}" active="{{option.selected}}" />
+          <mip-tag-chip label="{{option.label}}" active="{{option.selected}}" large="{{plain}}" />
         </view>
       </view>
     </block>
@@ -62,7 +62,7 @@
           aria-checked="{{option.selected}}"
           bind:tap="onChipTap"
         >
-          <mip-tag-chip label="{{option.label}}" active="{{option.selected}}" />
+          <mip-tag-chip label="{{option.label}}" active="{{option.selected}}" large="{{plain}}" />
         </view>
       </view>
     </block>

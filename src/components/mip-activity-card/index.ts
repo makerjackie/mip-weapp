@@ -11,9 +11,12 @@ Component({
     displayCoverUrl: '',
     displayParticipants: [],
     recapBusy: false,
+    displayTags: [] as string[],
   },
   observers: {
-    event(value: { coverUrl?: string, participantPreview?: unknown[] }) {
+    event(value: { coverUrl?: string, participantPreview?: unknown[], tags?: string[], accessLabel?: string, eventTypeLabel?: string, statusLabel?: string }) {
+      const reserved = new Set([value?.accessLabel, value?.eventTypeLabel, value?.statusLabel])
+      this.setData({ displayTags: [...new Set(value?.tags || [])].filter(tag => !!tag && !reserved.has(tag)) })
       updateComponentMedia(this, 'displayCoverUrl', value?.coverUrl || '')
       updateComponentMedia(this, 'displayParticipants', value?.participantPreview || [])
     },

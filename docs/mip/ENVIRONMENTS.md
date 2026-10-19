@@ -85,3 +85,5 @@ pnpm admin:bootstrap -- --confirm-env=<该目标的精确EnvID> --confirm-owner
 - owner 引导脚本（`scripts/bootstrap-owner.mjs`）
 - 后台发布命令（`admin-web/package.json`）与 CloudBase 后台部署脚本（`scripts/deploy-admin-cloudbase.mjs`）
 - [云开发规范](../CLOUDBASE.md)、[部署手册](../DEPLOYMENT.md)、[运营手册](../OPERATIONS.md)
+
+清理时按每个业务资源自身的来源判定归属，不能因为它引用了演示图片或目录就级联删除该业务资源。外键保留检查之外，还要检查订单的多态 `resource_id`，保留真实支付的完整关联。被真实业务复用的目录/素材保留；合成账号可保留不可登录的审计占位。云文件先备份并验哈希，再逐 Key 删除；`queryStorage info` 的泛化错误不证明文件不存在，应列出父目录并核对完整 Key，目录中其他文件不属于删除授权。

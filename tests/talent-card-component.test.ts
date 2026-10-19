@@ -32,10 +32,10 @@ describe('talent-card component contract', () => {
     expect(template).toContain('mip-talent-card__bottom')
     expect(template).not.toContain('roleTags')
     expect(template).not.toContain('mip-talent-card__kind')
-    // 角色只渲染后台配置名（黄色小标签，狗 icon 暂不做）；一句话介绍两行截断。
-    expect(template).toContain('wx:for="{{roleNames}}"')
+    // 角色名仍来自后台；已确认的狗/钱袋原始矢量随标签展示；一句话介绍两行截断。
+    expect(template).toContain('wx:for="{{displayRoles}}"')
     expect(styles).toContain('-webkit-line-clamp: 2')
-    expect(styles).toContain('background: var(--color-tag-player)')
+    expect(styles).toContain('background: var(--color-brand)')
     // 最新稿（1768:37534）：三标签行 24rpx 灰（#b3b3b3），城市标签不带 MIP 后缀由调用方裁剪。
     expect(styles).toMatch(/\.mip-talent-card__tag\s*\{[^}]*font-size: 24rpx;[^}]*color: var\(--color-muted\);/)
     expect(styles).toMatch(/\.mip-talent-card__tag-divider\s*\{[^}]*background: var\(--color-muted\);/)

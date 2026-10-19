@@ -1,0 +1,40 @@
+{
+  "status": "verified",
+  "at": "2026-10-19T16:12:06.450Z",
+  "orderId": "f4c2e2b4-9cbe-4093-bd34-411f4366968c",
+  "account": "铭龙",
+  "synthetic": true,
+  "realCharge": false,
+  "refundIssued": false,
+  "order": {
+    "before": "PAID",
+    "after": "CLOSED",
+    "historyPreserved": true
+  },
+  "entitlement": {
+    "before": "ACTIVE",
+    "after": "REVOKED"
+  },
+  "chainVersion": {
+    "before": 2,
+    "after": 3
+  },
+  "accountStatusUnchanged": true,
+  "adminRolesUnchanged": true,
+  "adminRolesCount": 3,
+  "otherUserOrdersUnchanged": true,
+  "otherUserOrdersCount": 13,
+  "additionalRowsDeleted": 0,
+  "testDatabaseWrites": 0,
+  "backupSha256": "c77fdbda2b2f41b9ecc33f24480fee2f7fb480da5be95c3eaeccacce166bd6d7",
+  "audited": true,
+  "adminReadback": {
+    "action": "mip.admin.memberships.get",
+    "ok": true,
+    "accountStatus": "ACTIVE",
+    "membershipActive": false,
+    "entitlementStatuses": [
+      "REVOKED"
+    ]
+  }
+}

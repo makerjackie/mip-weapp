@@ -32,3 +32,8 @@
 .mip-tag-chip--active .mip-tag-chip__label {
   color: var(--mip-text-on-brand);
 }
+
+.mip-tag-chip--large .mip-tag-chip__label {
+  font-size: 28rpx;
+  line-height: 40rpx;
+}

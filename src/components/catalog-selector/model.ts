@@ -26,6 +26,7 @@ export function selectedCatalogIds(
 export function catalogSelectorView(
   groups: readonly CatalogSelectorGroup[],
   selectedIds: readonly string[],
+  showPopular = true,
 ) {
   const selected = new Set(selectedIds)
   const projectOption = (option: CatalogSelectorOption): CatalogSelectorViewOption => ({
@@ -40,7 +41,7 @@ export function catalogSelectorView(
     .map(group => ({
       ...group,
       options: group.options
-        .filter(option => !option.popular)
+        .filter(option => !showPopular || !option.popular)
         .map(projectOption),
     }))
     .filter(group => group.options.length > 0)
@@ -70,4 +71,11 @@ export function toggleCatalogSelection(
     return { selectedIds: [...selectedIds], limited: true }
   }
   return { selectedIds: [...selectedIds, id], limited: false }
+}
+
+/** A catalog refresh must not leave the accordion pointing at a removed group. */
+export function expandedCatalogGroup(groups: readonly CatalogSelectorViewGroup[], currentId: string) {
+  return groups.find(group => group.id === currentId)?.id
+    || groups.find(group => group.options.some(option => option.selected))?.id
+    || groups[0]?.id || ''
 }

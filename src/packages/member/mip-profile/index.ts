@@ -10,6 +10,7 @@ import {
   groupProfileIndustries,
 } from '../../../modules/mip-identity/tag-catalog'
 import { mipMediaModule } from '../../../modules/mip-media/client'
+import { leaveSecondaryPage } from '../../../platform/navigation/client'
 import { profileSaveValidationMessage } from './save-intent'
 
 Page({
@@ -46,6 +47,7 @@ Page({
     selectedIndustryIds: [] as string[],
     industryIndex: 0,
     industryCatalogExpanded: false,
+    draftIndustryIds: [] as string[],
     // 能力标签属于合作卡属性，此处仅回传存量，不再提供编辑入口。
     abilityTagIds: [] as string[],
     saving: false,
@@ -189,18 +191,41 @@ Page({
     }
   },
 
+  goBack() {
+    leaveSecondaryPage('/pages/profile/index')
+  },
+
   changeIndustry(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
-    const selectedIndustryIds = event.detail.selectedIds.slice(0, 1)
+    this.setData({ draftIndustryIds: event.detail.selectedIds.slice(0, 1) })
+  },
+
+  toggleCatalog() {
+    if (this.data.industryCatalogExpanded) {
+      this.closeIndustryPicker()
+      return
+    }
+    this.setData({
+      draftIndustryIds: this.data.selectedIndustryIds.slice(),
+      industryCatalogExpanded: true,
+    })
+  },
+
+  clearIndustryDraft() {
+    this.setData({ draftIndustryIds: [] })
+  },
+
+  closeIndustryPicker() {
+    this.setData({ industryCatalogExpanded: false })
+  },
+
+  confirmIndustryPicker() {
+    const selectedIndustryIds = this.data.draftIndustryIds.slice(0, 1)
     const industryId = selectedIndustryIds[0] || ''
     this.setData({
       selectedIndustryIds,
       industryIndex: Math.max(0, this.data.industryOptions.findIndex(item => item.id === industryId)),
       industryCatalogExpanded: false,
     })
-  },
-
-  toggleCatalog() {
-    this.setData({ industryCatalogExpanded: !this.data.industryCatalogExpanded })
   },
 
   async saveProfile() {

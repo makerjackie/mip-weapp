@@ -171,7 +171,7 @@ describe('MIP growth player actions', () => {
     expect(template).not.toContain('requestPayment')
   })
 
-  it('moves the experience details entry beside the progress bar and opens its own page', () => {
+  it('keeps experience details above the character and opens its own page', () => {
     const script = fs.readFileSync(
       path.join(process.cwd(), 'src/packages/member/mip-growth/index.ts'),
       'utf8',
@@ -193,10 +193,10 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('bind:tap="openExperienceDetails"')
     expect(template).not.toContain('growth-details-section')
 
-    // 按钮中心对齐 EXP 进度条中心（48 + 16 + 104.2 + 28 + 7.8 + 6 = 210rpx），
+    // 本轮按 mip-dev 原稿恢复右上角经验入口，避开等级和进度条，
     // 并较原右上角胶囊放大一档（24rpx 字号 + 8×20rpx 内边距）。
     const link = styles.match(/\.growth-experience-link\s*\{([^}]+)\}/)?.[1]
-    expect(link).toContain('top: 183rpx')
+    expect(link).toContain('top: 12rpx')
     expect(link).toContain('padding: 8rpx 20rpx')
     expect(link).toContain('font-size: 24rpx')
 

@@ -73,7 +73,7 @@ describe('MIP cooperation discovery experience', () => {
   it('aligns the cooperation filter shell with the latest figma frames', () => {
     const componentTemplate = read('src/pages/opportunities/index.wxml')
     const page = read('src/pages/opportunities/index.ts')
-    expect(componentTemplate).toContain('placeholder="搜索"')
+    expect(componentTemplate).toContain('placeholder="搜索玩家名称"')
     expect(componentTemplate).toContain(`color="{{filterOpen ? 'var(--color-brand)' : 'var(--color-muted)'}}"`)
     expect(componentTemplate).toContain(`{{filterOpen ? 'text-brand' : 'text-muted'}}`)
     expect(componentTemplate).not.toContain('{{appliedFilterCount}}')

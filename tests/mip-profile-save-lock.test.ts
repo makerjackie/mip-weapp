@@ -82,3 +82,31 @@ describe('profile save lock during the delayed back window (BUG-08)', () => {
     expect(page.data.message).toBe('VERSION_CONFLICT')
   })
 })
+
+describe('profile industry draft interaction', () => {
+  it('commits only on confirm and discards an unconfirmed choice on reopen', () => {
+    const page = createPage({
+      industryOptions: [{ id: '', label: '未选择' }, { id: 'ai', label: '人工智能' }, { id: 'retail', label: '零售' }],
+      selectedIndustryIds: ['ai'],
+      industryIndex: 1,
+    })
+    const invoke = (method: string, ...args: unknown[]) => Reflect.apply(page[method] as (...args: unknown[]) => void, page, args)
+    invoke('toggleCatalog')
+    invoke('changeIndustry', { detail: { selectedIds: ['retail'] } })
+    expect(page.data.selectedIndustryIds).toEqual(['ai'])
+    expect(page.data.industryCatalogExpanded).toBe(true)
+    invoke('closeIndustryPicker')
+    invoke('toggleCatalog')
+    expect(page.data.draftIndustryIds).toEqual(['ai'])
+    invoke('changeIndustry', { detail: { selectedIds: ['retail'] } })
+    invoke('confirmIndustryPicker')
+    expect(page.data.selectedIndustryIds).toEqual(['retail'])
+    expect(page.data.industryIndex).toBe(2)
+    invoke('toggleCatalog')
+    invoke('clearIndustryDraft')
+    expect(page.data.selectedIndustryIds).toEqual(['retail'])
+    invoke('confirmIndustryPicker')
+    expect(page.data.selectedIndustryIds).toEqual([])
+    expect(page.data.industryIndex).toBe(0)
+  })
+})

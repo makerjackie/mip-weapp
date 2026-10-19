@@ -6,7 +6,7 @@ import { mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { caseNavigateTo, caseRedirectTo } from '../../../../platform/navigation/client'
-import { formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
+import { formatBusinessMonthDay as formatChineseMonthDay, formatBusinessMonthDayTime as formatChineseMonthDayTime, formatBusinessTime as formatLocalTime } from '../../../../utils/business-date'
 
 type PageState = 'loading' | 'ready' | 'access' | 'blocked' | 'error' | 'conflict'
 type Recommendation = EventFeedbackAnswers['recommendation'] | ''

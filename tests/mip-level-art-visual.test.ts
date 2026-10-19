@@ -47,7 +47,7 @@ describe('MIP level artwork presentation', () => {
     expect(markup).toContain('mode="aspectFit"')
     expect(markup).toContain('aria-label="经验值详情"')
     expect(markup).not.toContain('hero-bg.webp')
-    expect(markup).toContain('bg-brand px-5 py-6 text-on-brand')
+    expect(markup).toContain('bg-brand px-5 pb-4 pt-6 text-on-brand')
     expect(markup).toContain('relative z-10')
   })
 })

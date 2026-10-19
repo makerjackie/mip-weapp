@@ -22,7 +22,7 @@ describe('MIP profile Figma structure', () => {
     expect(view).toMatch(/data-profile-basic-row="nickname"[^>]+min-h-\[92rpx\][^>]*>[\s\S]*?<input[^>]+text-right[^>]+placeholder="请输入您的昵称"/)
     expect(view).not.toContain('data-profile-basic-row="realName"')
     expect(view).not.toContain('名片内容随下方资料实时更新')
-    expect(view).toContain('wx:if="{{industryCatalogExpanded}}"')
+    expect(view).toContain('wx:if="{{industryCatalogExpanded && !figmaLayout}}"')
     expect(page).toContain('industryCatalogExpanded: false')
     expect(page).toContain('toggleCatalog()')
     // 主城市分会由管理后台配置；能力标签/身份说明/补充介绍不再在本页编辑。

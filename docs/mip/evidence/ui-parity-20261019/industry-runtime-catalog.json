@@ -1,0 +1,679 @@
+{
+  "target": "test",
+  "source": "actual profile page after listProfileTags response",
+  "groups": [
+    {
+      "id": "9eb76155-6390-5b83-ac11-0a99408d3a8c",
+      "label": "互联网/AI",
+      "options": [
+        {
+          "id": "9f2be99b-0b65-5ef8-aae8-e2c88db93475",
+          "label": "互联网",
+          "popular": true
+        },
+        {
+          "id": "476450b0-22cd-57e5-aa2d-a0382162082d",
+          "label": "电子商务",
+          "popular": false
+        },
+        {
+          "id": "5ab9fa33-dc62-522f-a004-6b85a31280c4",
+          "label": "计算机软件",
+          "popular": false
+        },
+        {
+          "id": "d4b51dee-07b0-5612-a99a-4d4ef3a6411a",
+          "label": "生活服务(O2O)",
+          "popular": false
+        },
+        {
+          "id": "0f4ce335-d4a1-5309-a0c4-60b649c44584",
+          "label": "企业服务",
+          "popular": false
+        },
+        {
+          "id": "4b5c7ef2-d3de-5347-a4b4-5d7074a1a878",
+          "label": "医疗健康",
+          "popular": false
+        },
+        {
+          "id": "5bcee9cf-7f66-5352-ac9f-796da6668d03",
+          "label": "游戏",
+          "popular": false
+        },
+        {
+          "id": "3e0038ba-df7b-5ce7-a83b-a6470d821b34",
+          "label": "社交网络与媒体",
+          "popular": true
+        },
+        {
+          "id": "0cc05234-981d-59b4-a795-7ca7dfe7bf6c",
+          "label": "人工智能",
+          "popular": true
+        },
+        {
+          "id": "44370c92-1c49-56c0-abc6-e110c32a325d",
+          "label": "云计算",
+          "popular": false
+        },
+        {
+          "id": "e549785a-2d70-5866-a9ff-c25ba59e838e",
+          "label": "在线教育",
+          "popular": false
+        },
+        {
+          "id": "acb21249-5fad-57d3-a2cf-7cf718c8a7a6",
+          "label": "计算机服务",
+          "popular": false
+        },
+        {
+          "id": "b470ef44-32ec-5e36-a40d-700c9291936f",
+          "label": "大数据",
+          "popular": false
+        },
+        {
+          "id": "414cb2bf-a726-596a-a2a4-924a6c2934c6",
+          "label": "广告营销",
+          "popular": true
+        },
+        {
+          "id": "c2113755-62fc-5d1e-ad2c-7d1efb3f4ec6",
+          "label": "物联网",
+          "popular": false
+        },
+        {
+          "id": "b93eb015-ce4d-5682-aa31-ced64db73ede",
+          "label": "新零售",
+          "popular": true
+        },
+        {
+          "id": "bf830082-2867-5597-ae71-7a3108ae63a2",
+          "label": "信息安全",
+          "popular": false
+        }
+      ]
+    },
+    {
+      "id": "7a982771-3c17-5a0b-aeb8-e4a5510267f2",
+      "label": "电子/通信/半导体",
+      "options": [
+        {
+          "id": "0dde6462-a115-54de-a915-d35564d6fd05",
+          "label": "半导体/芯片",
+          "popular": false
+        },
+        {
+          "id": "e7ddd8cc-7ee1-531c-a509-10523cd654f0",
+          "label": "电子/硬件开发",
+          "popular": false
+        },
+        {
+          "id": "41ef34d2-6901-59d4-a505-5236b41ade2f",
+          "label": "通信/网络设备",
+          "popular": false
+        },
+        {
+          "id": "656e2a71-e477-5e1a-af70-f3a34aafe65c",
+          "label": "智能硬件/消费电子",
+          "popular": false
+        },
+        {
+          "id": "82f87e59-85b3-5dd1-a87d-4a2633f2cbbf",
+          "label": "运营商/增值服务",
+          "popular": false
+        },
+        {
+          "id": "fa020766-daf5-5926-abb6-75a22e6501d2",
+          "label": "计算机硬件",
+          "popular": false
+        },
+        {
+          "id": "478ac4e5-38bc-51a2-a2ca-6660a6e41b75",
+          "label": "电子/半导体/集成电路",
+          "popular": false
+        }
+      ]
+    },
+    {
+      "id": "1af9d5b8-708a-5bd0-a39a-47aea427b162",
+      "label": "服务业",
+      "options": [
+        {
+          "id": "341a14e2-34cc-52a6-aa17-6cec349a0c80",
+          "label": "餐饮",
+          "popular": true
+        },
+        {
+          "id": "5c43c8e2-bea4-5195-a165-df49754c3ef8",
+          "label": "美容",
+          "popular": false
+        },
+        {
+          "id": "cc2af2b0-9bb3-5b43-a252-208828bf6347",
+          "label": "美发",
+          "popular": false
+        },
+        {
+          "id": "3bc1e0e1-1001-5445-ac48-fe1c1d93159d",
+          "label": "酒店/民宿",
+          "popular": false
+        },
+        {
+          "id": "a60b4be8-1361-5a9c-a4be-9ffadb440a39",
+          "label": "休闲/娱乐",
+          "popular": true
+        },
+        {
+          "id": "655a6b22-22a8-5ebe-ad62-cb4d6595a492",
+          "label": "运动/健身",
+          "popular": true
+        },
+        {
+          "id": "4044653a-9880-52fc-a10d-68bb38c6b9f7",
+          "label": "保健/养生",
+          "popular": false
+        },
+        {
+          "id": "0c616e2b-cb34-5254-af8e-1cf3b828ac6b",
+          "label": "家政服务",
+          "popular": false
+        },
+        {
+          "id": "655a4c21-fd84-5f3c-aee8-61749339e2a8",
+          "label": "旅游/景区",
+          "popular": true
+        },
+        {
+          "id": "9a1bdf73-0e23-58ea-adcd-b0fe78ca0f65",
+          "label": "婚庆/摄影",
+          "popular": false
+        },
+        {
+          "id": "22f15c8a-533c-5e79-a77d-c65b3739b260",
+          "label": "宠物服务",
+          "popular": false
+        },
+        {
+          "id": "9ca47e66-c9a8-50aa-a1ae-5e0ff0ca3778",
+          "label": "回收/维修",
+          "popular": false
+        },
+        {
+          "id": "ab657e1c-7b32-508f-a370-8f4bcf182766",
+          "label": "美容/美发",
+          "popular": false
+        },
+        {
+          "id": "87d3fbb7-f4c9-5a68-ab8b-d3d9e9678e0f",
+          "label": "其他生活服务",
+          "popular": false
+        }
+      ]
+    },
+    {
+      "id": "cc81a886-368a-53a7-a259-8ae185e5c951",
+      "label": "消费品/批发/零售",
+      "options": [
+        {
+          "id": "1178de4d-6178-5237-aa51-e132cf87ad3e",
+          "label": "批发/零售",
+          "popular": false
+        },
+        {
+          "id": "12fe087c-c1f5-5db7-a35c-742096f6d42a",
+          "label": "进出口贸易",
+          "popular": true
+        },
+        {
+          "id": "de3edcfb-ce8d-5b0e-a4be-45a1ba09193e",
+          "label": "食品/饮料/烟酒",
+          "popular": false
+        },
+        {
+          "id": "ce8cc802-7f39-5cfe-ac79-571845164e50",
+          "label": "服装/纺织",
+          "popular": false
+        },
+        {
+          "id": "65b2fcd7-2466-5b9c-a91a-c630dc87f1ff",
+          "label": "家具/家居",
+          "popular": false
+        },
+        {
+          "id": "b987e750-6933-5329-a0c7-d772882e6605",
+          "label": "家用电器",
+          "popular": false
+        },
+        {
+          "id": "aec55624-7e02-51df-a25b-05ea4c10721a",
+          "label": "日化",
+          "popular": false
+        },
+        {
+          "id": "f715243a-4cd1-589a-ac82-e1821b0962fe",
+          "label": "珠宝/首饰",
+          "popular": false
+        },
+        {
+          "id": "0ab4157f-90f4-557a-a74d-1e6360e060b1",
+          "label": "家具/家电/家居",
+          "popular": false
+        },
+        {
+          "id": "eb4a07e8-8498-5af2-a965-4ff3d4fa4e50",
+          "label": "其他消费品",
+          "popular": false
+        }
+      ]
+    },
+    {
+      "id": "9309f7c2-b951-5ca1-aa81-439f87bc48cd",
+      "label": "房地产/建筑",
+      "options": [
+        {
+          "id": "b9bbdf63-a033-50e4-aabc-1a98d147e344",
+          "label": "装修装饰",
+          "popular": false
+        },
+        {
+          "id": "558b73a0-2515-543f-a763-599a49b19fb1",
+          "label": "房屋建筑工程",
+          "popular": false
+        },
+        {
+          "id": "8e2b642d-5e9e-5c73-acab-923c6b8e6ff8",
+          "label": "土木工程",
+          "popular": false
+        },
+        {
+          "id": "33888549-4587-5f44-a1a4-e8d3f184b8df",
+          "label": "机电工程",
+          "popular": false
+        },
+        {
+          "id": "17ccb18c-2f5a-5cb9-ac0b-40b57b023e6e",
+          "label": "物业管理",
+          "popular": false
+        },
+        {
+          "id": "0f86a11e-8311-5775-a22b-9c6cdf5ddc13",
+          "label": "房地产中介/租赁",
+          "popular": false
+        },
+        {
+          "id": "cfa11657-3b48-5a4f-a3fb-586b10fdc12d",
+          "label": "建筑材料",
+          "popular": false
+        },
+        {
+          "id": "c730f550-1a81-59a2-aaee-a4d7346f3287",
+          "label": "房地产开发经营",
+          "popular": false
+        },
+        {
+          "id": "87d0e5a6-ccb8-5961-abe0-ab854a62947d",
+          "label": "建筑设计",
+          "popular": false
+        },
+        {
+          "id": "bc260d80-c3a9-58b1-a342-0b3663bd1b04",
+          "label": "建筑工程咨询服务",
+          "popular": false
+        },
+        {
+          "id": "86d76361-d263-5b16-a233-4bb32b35f65b",
+          "label": "土地与公共设施管理",
+          "popular": false
+        },
+        {
+          "id": "bdec052b-fe65-5816-a777-3cd01e5af555",
+          "label": "工程施工",
+          "popular": false
+        }
+      ]
+    },
+    {
+      "id": "d7481079-a68a-581e-a289-e6283381d910",
+      "label": "制造业",
+      "options": [
+        {
+          "id": "de78b7bd-44f2-587d-ac1b-9f785051f8ff",
+          "label": "通用设备",
+          "popular": false
+        },
+        {
+          "id": "11f47e38-7265-524e-a837-6dcb4daab974",
+          "label": "专用设备",
+          "popular": false
+        },
+        {
+          "id": "006f441c-b044-5d91-aa6b-4cee5ca4a744",
+          "label": "电气机械/器材",
+          "popular": false
+        },
+        {
+          "id": "b3c79a16-f206-539b-a4fd-a2438f7b7d72",
+          "label": "金属制品",
+          "popular": false
+        },
+        {
+          "id": "1e691e3f-89d0-56c8-a80c-d4f7391b99ae",
+          "label": "非金属矿物制品",
+          "popular": false
+        },
+        {
+          "id": "372e630f-abad-5c06-a46f-db6f56d89748",
+          "label": "橡胶/塑料制品",
+          "popular": false
+        },
+        {
+          "id": "90becbdb-6616-57e7-adf6-d0c0aa8fddec",
+          "label": "化学原料/化学制品",
+          "popular": false
+        },
+        {
+          "id": "7b01886b-2d11-5d6a-aa9b-594495cbf2c9",
+          "label": "仪器仪表",
+          "popular": false
+        },
+        {
+          "id": "2abd6fbb-8920-5411-ad2e-88a7e423d017",
+          "label": "自动化设备",
+          "popular": false
+        },
+        {
+          "id": "53f95b92-2c01-5b55-ae68-a2ba9a06b3ab",
+          "label": "印刷/包装/造纸",
+          "popular": false
+        },
+        {
+          "id": "a1adb8eb-e452-5190-aeb1-b5bae25a45ff",
+          "label": "铁路/船舶/航空/航天制造",
+          "popular": false
+        },
+        {
+          "id": "1ca0f2fc-f66d-577c-a214-e903a2901a46",
+          "label": "计算机/通信/其他电子设备",
+          "popular": false
+        },
+        {
+          "id": "421849f1-6774-5204-a289-caea16b5d52d",
+          "label": "新材料",
+          "popular": false
+        },
+        {
+          "id": "ba2a9661-4432-55d9-ac7c-733bf32fd7a9",
+          "label": "机械设备/机电/重工",
+          "popular": false
+        },
+        {
+          "id": "4188fe4c-7cbd-5bf1-a9d7-16f8baa85c59",
+          "label": "仪器仪表/工业自动化",
+          "popular": false
+        },
+        {
+          "id": "59eaaecb-e273-5e1e-abed-c6d552f171ff",
+          "label": "原材料及加工/模具",
+          "popular": false
+        },
+        {
+          "id": "b90743e2-7ec9-591b-a81e-fdf135d8158b",
+          "label": "其他制造业",
+          "popular": false
+        }
+      ]
+    },
+    {
+      "id": "e8ada306-128c-5545-a4ac-d2baaaf3c418",
+      "label": "汽车",
+      "options": [
+        {
+          "id": "9f837e31-0196-5afd-a1b5-39cb8748b224",
+          "label": "新能源汽车",
+          "popular": false
+        },
+        {
+          "id": "a12c26a5-70e6-55d4-ae2e-12c5826a6793",
+          "label": "汽车智能网联",
+          "popular": false
+        },
+        {
+          "id": "72e643e5-974c-5a92-a7ed-e016563f28f6",
+          "label": "汽车经销商",
+          "popular": false
+        },
+        {
+          "id": "34c4def0-0967-5d19-aab9-21afa9243a91",
+          "label": "汽车后市场",
+          "popular": false
+        },
+        {
+          "id": "19709f6a-3551-5c44-aec7-414b7480ec04",
+          "label": "汽车研发/制造",
+          "popular": false
+        },
+        {
+          "id": "d3965337-d7be-53bc-aa3d-2af8d063368a",
+          "label": "汽车零部件",
+          "popular": false
+        },
+        {
+          "id": "5f1f2d58-d259-51ee-ac40-794adb1a1657",
+          "label": "摩托车/自行车制造",
+          "popular": false
+        },
+        {
+          "id": "d988c53e-2483-5cf8-a1a3-d2b6e1697b03",
+          "label": "4S店/后市场",
+          "popular": false
+        }
+      ]
+    },
+    {
+      "id": "880b4572-b625-5f87-ad9f-8303c513da54",
+      "label": "交通运输/物流",
+      "options": [
+        {
+          "id": "4e10dfa2-25e1-5c31-a6bb-2fbf99d83a59",
+          "label": "即时配送",
+          "popular": false
+        },
+        {
+          "id": "92e808bc-7bde-57f3-a3bb-084aec7ad331",
+          "label": "快递",
+          "popular": false
+        },
+        {
+          "id": "cc025f3c-744e-5aa3-acd7-a0f787b0ea15",
+          "label": "公路物流",
+          "popular": false
+        },
+        {
+          "id": "626c7054-d896-5d5b-a445-8455696cd40e",
+          "label": "同城货运",
+          "popular": false
+        },
+        {
+          "id": "10a8577c-dda5-58b9-ac7a-2cd8942a403c",
+          "label": "跨境物流",
+          "popular": false
+        },
+        {
+          "id": "d9076aa1-137f-59eb-a2e4-a684e9c83f45",
+          "label": "装卸搬运和仓储业",
+          "popular": false
+        },
+        {
+          "id": "2b30bf4f-af10-575d-ace2-be3cee3b06fb",
+          "label": "客运服务",
+          "popular": false
+        },
+        {
+          "id": "3a0fac9b-2ac5-52a9-ad4a-c59190bc4299",
+          "label": "港口/铁路/公路/机场",
+          "popular": false
+        },
+        {
+          "id": "25b0051d-6f0c-5037-ab15-a63804a35172",
+          "label": "交通/运输",
+          "popular": false
+        },
+        {
+          "id": "150e788c-a503-5fc5-a8e1-05b5de2d6373",
+          "label": "物流/仓储",
+          "popular": false
+        }
+      ]
+    },
+    {
+      "id": "004ab3de-bb3a-5f7f-aa6d-c9781fb29bd0",
+      "label": "能源/化工/环保",
+      "options": [
+        {
+          "id": "c910d378-8826-5d48-a01e-171535d851ad",
+          "label": "光伏",
+          "popular": false
+        },
+        {
+          "id": "3916db91-1285-5850-a364-f2feebcf033d",
+          "label": "储能",
+          "popular": false
+        },
+        {
+          "id": "93389a51-403e-5bd7-a6c0-8bfb9eca4a99",
+          "label": "动力电池",
+          "popular": false
+        },
+        {
+          "id": "d9851083-b200-5484-a16d-34206441c0dc",
+          "label": "风电",
+          "popular": false
+        },
+        {
+          "id": "ff48d1ec-757b-5ed9-aa5a-2c1090bffd31",
+          "label": "其他新能源",
+          "popular": false
+        },
+        {
+          "id": "814a18a3-e801-585e-aa2d-586852fcc8c8",
+          "label": "环保",
+          "popular": false
+        },
+        {
+          "id": "b352a049-bf9e-5323-a99e-89a83b7b1fb3",
+          "label": "化工",
+          "popular": false
+        },
+        {
+          "id": "1e848e62-3afc-5fa1-a387-829ac090f448",
+          "label": "电力/热力/燃气/水利",
+          "popular": false
+        },
+        {
+          "id": "ebaf21c1-ab59-51f2-abff-110957bbbc45",
+          "label": "石油/石化",
+          "popular": false
+        },
+        {
+          "id": "f242742b-1fa6-5ed6-a77d-ed571e627b16",
+          "label": "矿产/地质",
+          "popular": false
+        },
+        {
+          "id": "5c2f95d0-e043-576c-ad9f-f618346bc3e5",
+          "label": "采掘/冶炼",
+          "popular": false
+        },
+        {
+          "id": "e25ace19-0e03-5cc6-ade7-a7c018ee74fa",
+          "label": "新能源",
+          "popular": true
+        }
+      ]
+    },
+    {
+      "id": "a45b9f00-4fd7-5f97-ac7d-8e47d532d3c8",
+      "label": "金融",
+      "options": [
+        {
+          "id": "6361526f-030a-550b-af47-bda3af9f8016",
+          "label": "互联网金融",
+          "popular": false
+        },
+        {
+          "id": "972484c0-ab35-5519-af22-b2eb2236f7db",
+          "label": "银行",
+          "popular": false
+        },
+        {
+          "id": "0c48c487-b997-53db-a058-9c5606107dd7",
+          "label": "投资/融资",
+          "popular": true
+        },
+        {
+          "id": "26657d7d-5588-5431-a864-ce6df5029370",
+          "label": "证券/期货",
+          "popular": true
+        },
+        {
+          "id": "cd978647-aba0-5079-a85f-814082f3d282",
+          "label": "基金",
+          "popular": false
+        },
+        {
+          "id": "1d1c1a9d-5dd4-59aa-a6f5-08f05377dbb5",
+          "label": "保险",
+          "popular": false
+        },
+        {
+          "id": "9d0fdf28-1562-52dd-acd2-4df5e0ca3985",
+          "label": "租赁/拍卖/典当/担保",
+          "popular": false
+        },
+        {
+          "id": "bcae1ea6-c851-5784-ae84-d4e9d47c95ac",
+          "label": "信托",
+          "popular": false
+        },
+        {
+          "id": "ebae82a3-5a48-5d59-a154-bc5437709b18",
+          "label": "财富管理",
+          "popular": false
+        },
+        {
+          "id": "c6e77189-67b7-58e5-a214-0efb4f20ae2e",
+          "label": "其他金融业",
+          "popular": false
+        }
+      ]
+    },
+    {
+      "id": "5fe344f2-f541-5e96-ac48-cd017b0cc0f2",
+      "label": "政府/非盈利机构/其他",
+      "options": [
+        {
+          "id": "4250f60a-3f3b-5a97-a029-cf6347fe39da",
+          "label": "农/林/牧/渔",
+          "popular": false
+        },
+        {
+          "id": "ad34f56f-9f9e-5b5d-a28e-c8ac23013cbf",
+          "label": "非盈利机构",
+          "popular": false
+        },
+        {
+          "id": "e1e1f3a6-234b-5091-a197-ab8deb7aa1c4",
+          "label": "政府/公共事业",
+          "popular": false
+        },
+        {
+          "id": "40b133de-2bc3-506f-ae67-aecde08c35c1",
+          "label": "其他行业",
+          "popular": false
+        }
+      ]
+    }
+  ],
+  "groupCount": 11,
+  "selectableCount": 121
+}

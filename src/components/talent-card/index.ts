@@ -48,9 +48,16 @@ Component({
   data: {
     displayMedals: [] as TalentMedal[],
     displayTags: [] as string[],
+    displayRoles: [] as { label: string, icon: string }[],
     inviter: { name: '', avatarUrl: '' },
   },
   observers: {
+    roleNames(roleNames: string[]) {
+      this.setData({ displayRoles: (Array.isArray(roleNames) ? roleNames : []).filter(Boolean).map(label => ({
+        label,
+        icon: label === '狗策划' ? 'dog' : label === '暴发户' ? 'money' : '',
+      })) })
+    },
     'medals, inviterName, inviterAvatarUrl, inviterKind': function (
       medals: TalentMedal[],
       inviterName: string,

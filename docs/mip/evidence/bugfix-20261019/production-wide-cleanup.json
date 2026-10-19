@@ -1,0 +1,196 @@
+{
+  "status": "verified",
+  "backup": {
+    "tables": 154,
+    "rows": 6084,
+    "consistency": "row-count-verified"
+  },
+  "deletedRows": 667,
+  "deletedTables": 71,
+  "deletions": {
+    "mip_announcements": 2,
+    "mip_banners": 4,
+    "mip_blind_box_cards": 3,
+    "mip_cooperation_cards": 6,
+    "mip_delivery_tasks": 24,
+    "mip_event_changes": 21,
+    "mip_event_checkin_transitions": 1,
+    "mip_event_content_media": 1,
+    "mip_event_feedback": 1,
+    "mip_event_invitation_attributions": 1,
+    "mip_event_tag_assignments": 7,
+    "mip_game_ranking_entries": 5,
+    "mip_game_team_memberships": 3,
+    "mip_game_weekly_matches": 1,
+    "mip_growth_accounts": 6,
+    "mip_knowledge_products": 1,
+    "mip_matching_feedback": 1,
+    "mip_membership_chains": 6,
+    "mip_membership_entitlements": 3,
+    "mip_message_campaigns": 2,
+    "mip_opportunity_comment_calls": 1,
+    "mip_opportunity_comment_reports": 1,
+    "mip_opportunity_comment_settings": 1,
+    "mip_opportunity_commercial_terms": 4,
+    "mip_opportunity_cooperations": 8,
+    "mip_opportunity_locations": 6,
+    "mip_opportunity_roles": 9,
+    "mip_opportunity_tags": 6,
+    "mip_opportunity_team_members": 1,
+    "mip_profile_card_history": 10,
+    "mip_profile_interests": 10,
+    "mip_profile_tags": 16,
+    "mip_profile_visits": 177,
+    "mip_profiles": 6,
+    "mip_referral_intents": 2,
+    "mip_super_cases": 3,
+    "mip_task_assignments": 3,
+    "mip_task_completions": 3,
+    "mip_user_badge_equipment": 3,
+    "mip_user_blocks": 1,
+    "mip_user_opportunity_preferences": 1,
+    "mip_blind_box_catalogs": 1,
+    "mip_event_checkins": 1,
+    "mip_event_tags": 13,
+    "mip_game_ranking_snapshots": 2,
+    "mip_game_teams": 2,
+    "mip_growth_entries": 7,
+    "mip_inbox_messages": 38,
+    "mip_knowledge_contents": 5,
+    "mip_matching_results": 2,
+    "mip_opportunity_comments": 1,
+    "mip_task_cards": 8,
+    "mip_user_badge_profiles": 1,
+    "mip_user_badges": 3,
+    "mip_event_checkin_credentials": 2,
+    "mip_event_registrations": 1,
+    "mip_game_seasons": 1,
+    "mip_knowledge_categories": 2,
+    "mip_knowledge_sources": 1,
+    "mip_matching_requests": 1,
+    "mip_events": 11,
+    "mip_opportunities": 12,
+    "mip_orders": 3,
+    "mip_media_assets": 17,
+    "mip_badges": 1,
+    "mip_event_types": 1,
+    "mip_growth_level_benefits": 13,
+    "mip_outbox_events": 137,
+    "mip_videos": 1,
+    "mip_growth_benefits": 5,
+    "mip_growth_levels": 3
+  },
+  "demoUsersBlocked": 6,
+  "realUserAccountsPreserved": 18,
+  "financialRecordsPreserved": 20,
+  "financialRecordsUnchanged": false,
+  "membershipEntitlementsPreserved": 5,
+  "storage": {
+    "backedUpAndHashChecked": 17,
+    "deleted": 17,
+    "readbackFilesAbsent": 17
+  },
+  "adminSmoke": [
+    {
+      "action": "mip.admin.users.list",
+      "ok": true,
+      "count": 20
+    },
+    {
+      "action": "mip.admin.events.list",
+      "ok": true,
+      "count": 3
+    },
+    {
+      "action": "mip.admin.orders.list",
+      "ok": true,
+      "count": 20
+    },
+    {
+      "action": "mip.admin.opportunities.list",
+      "ok": true,
+      "count": 20
+    },
+    {
+      "action": "mip.admin.banners.list",
+      "ok": true,
+      "count": 1
+    },
+    {
+      "action": "mip.admin.growth.levels",
+      "ok": true,
+      "count": 12
+    }
+  ],
+  "pending": {
+    "realFinancialHistory": "preserved including 98 CNY refund pending",
+    "unpaidOrClosedOrderHistory": "preserved; not deleted while provider reconciliation is unresolved"
+  },
+  "testDatabaseWrites": 0,
+  "retiredMetadata": {
+    "manifests": 17,
+    "testPlan": 1,
+    "plans": [
+      {
+        "plan_key": "annual_live",
+        "status": "ACTIVE"
+      },
+      {
+        "plan_key": "annual_test",
+        "status": "INACTIVE"
+      }
+    ]
+  },
+  "approvedFinancialRecordCorrection": {
+    "count": 1,
+    "syntheticOrder": "PAID -> CLOSED",
+    "realCharge": false,
+    "refundIssued": false,
+    "detail": "legacy-membership-revocation.json"
+  },
+  "approvedEntitlementRevocation": {
+    "count": 1,
+    "status": "ACTIVE -> REVOKED",
+    "historyPreserved": true
+  },
+  "legacyMembershipRevocation": {
+    "status": "verified",
+    "at": "2026-10-19T16:12:06.450Z",
+    "orderId": "f4c2e2b4-9cbe-4093-bd34-411f4366968c",
+    "account": "铭龙",
+    "synthetic": true,
+    "realCharge": false,
+    "refundIssued": false,
+    "order": {
+      "before": "PAID",
+      "after": "CLOSED",
+      "historyPreserved": true
+    },
+    "entitlement": {
+      "before": "ACTIVE",
+      "after": "REVOKED"
+    },
+    "chainVersion": {
+      "before": 2,
+      "after": 3
+    },
+    "accountStatusUnchanged": true,
+    "adminRolesUnchanged": true,
+    "adminRolesCount": 3,
+    "otherUserOrdersUnchanged": true,
+    "otherUserOrdersCount": 13,
+    "additionalRowsDeleted": 0,
+    "testDatabaseWrites": 0,
+    "backupSha256": "c77fdbda2b2f41b9ecc33f24480fee2f7fb480da5be95c3eaeccacce166bd6d7",
+    "audited": true,
+    "adminReadback": {
+      "action": "mip.admin.memberships.get",
+      "ok": true,
+      "accountStatus": "ACTIVE",
+      "membershipActive": false,
+      "entitlementStatuses": [
+        "REVOKED"
+      ]
+    }
+  }
+}

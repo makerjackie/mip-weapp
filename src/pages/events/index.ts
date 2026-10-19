@@ -18,18 +18,19 @@ import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
 import { clearPageMedia, updatePageMedia } from '../../platform/storage/component-media'
+import { businessCalendarDate } from '../../utils/business-date'
 import { formatChineseMonthDay, formatLocalDate, parseLocalDate } from '../../utils/date'
 
 type EventBannerView = MipPublicBanner
 
 function rollingCalendarBoundary(yearOffset: number) {
-  const today = new Date()
+  const today = businessCalendarDate()
   return new Date(today.getFullYear() + yearOffset, yearOffset < 0 ? 0 : 11, yearOffset < 0 ? 1 : 31).getTime()
 }
 
 // MIW-37 figma 1819_17793: 稿内「今天」之前的日期为 #4c4c4c 不可选，起始边界即今天零点。
 function startOfToday() {
-  const today = new Date()
+  const today = businessCalendarDate()
   return new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
 }
 
@@ -54,8 +55,8 @@ Page({
     customDateLabel: '',
     cityNoticeVisible: false,
     calendarVisible: false,
-    calendarYear: new Date().getFullYear(),
-    calendarMonth: new Date().getMonth() + 1,
+    calendarYear: businessCalendarDate().getFullYear(),
+    calendarMonth: businessCalendarDate().getMonth() + 1,
     calendarWeekdays,
     calendarWeeks: [] as EventCalendarWeek[],
     calendarSelected: '',
@@ -330,7 +331,7 @@ Page({
 
   showCalendar() {
     const base = this.data.selectedDate ? parseLocalDate(this.data.selectedDate) : null
-    const today = new Date()
+    const today = businessCalendarDate()
     this.setData({
       calendarVisible: true,
       calendarYear: base ? base.getFullYear() : today.getFullYear(),
@@ -425,7 +426,7 @@ Page({
       return
     }
     // MIW-37 figma 1819_17793: 只有选中「今天」时标签才带「今天」，其他日期直接显示「M月D日」。
-    const label = selectedDate === formatLocalDate(new Date()) ? '今天' : formatChineseMonthDay(value)
+    const label = selectedDate === formatLocalDate(businessCalendarDate()) ? '今天' : formatChineseMonthDay(value)
     this.setData({
       calendarVisible: false,
       selectedDate,

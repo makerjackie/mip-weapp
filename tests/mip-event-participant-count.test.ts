@@ -1,7 +1,8 @@
 import type { EventParticipantPreview, MipEventListItem } from '../src/modules/mip-events'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { presentEventCard } from '../src/components/mip-activity-card/model'
+import { eventScheduleText, presentEventCard } from '../src/components/mip-activity-card/model'
+import { parseEventFeedResult } from '../src/modules/mip-events/dto'
 
 /**
  * 参与人数展示合同（MIW-73）：服务端保证 registrationCount 与头像预览同是公开参与者口径
@@ -79,4 +80,31 @@ describe('event card participant pill rendering contract (MIW-73)', () => {
     expect(previewTemplate).not.toContain('plusLabel')
     expect(previewTemplate).not.toContain('remainText')
   })
+})
+
+describe('configured event tags reach the feed card', () => {
+  it('keeps labels from a nonempty server feed through the parser and presentation', () => {
+    const response = parseEventFeedResult({ items: [eventWith({ tags: ['人工智能', '资源链接'] })] })
+    const card = presentEventCard(response.items[0]!)
+    expect(card.tags).toEqual(['人工智能', '资源链接'])
+    const template = readFileSync('src/components/mip-activity-card/index.wxml', 'utf8')
+    expect(template).toContain('wx:for="{{displayTags}}"')
+    expect(template).toContain('label="{{item}}"')
+    expect(template.indexOf('wx:for="{{displayTags}}"')).toBeLessThan(template.indexOf('{{event.title}}', template.indexOf('variant === \'feed\'')))
+  })
+})
+
+describe('event card schedule', () => {
+  it('shows the local day and both endpoints, including the day on overnight events', () => {
+    const start = new Date(2026, 11, 12, 10).toISOString()
+    expect(eventScheduleText(start, new Date(2026, 11, 12, 12).toISOString(), new Date(2026, 0, 1))).toBe('12月12日 10:00-12:00')
+    expect(eventScheduleText(start, new Date(2026, 11, 13, 1).toISOString(), new Date(2026, 0, 1))).toBe('12月12日 10:00-12月13日 01:00')
+  })
+})
+
+it('retains years on historical, future and cross-year schedules', () => {
+  const now = new Date(2026, 0, 1)
+  expect(eventScheduleText(new Date(2027, 0, 2, 10).toISOString(), undefined, now)).toBe('2027年1月2日 10:00')
+  expect(eventScheduleText(new Date(2025, 0, 2, 10).toISOString(), undefined, now)).toBe('2025年1月2日 10:00')
+  expect(eventScheduleText(new Date(2026, 11, 31, 23).toISOString(), new Date(2027, 0, 1, 1).toISOString(), now)).toBe('12月31日 23:00-2027年1月1日 01:00')
 })

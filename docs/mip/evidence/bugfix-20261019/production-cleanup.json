@@ -1,0 +1,72 @@
+{
+  "status": "verified",
+  "deleted": 8,
+  "totalRowsPreserved": 69,
+  "unrelatedProjectsUnchanged": 61,
+  "rows": [
+    {
+      "audit_count": 1,
+      "id": "138b70b5-cc5d-4f52-abed-d531fc2ee65f",
+      "snapshot_count": 1,
+      "status": "ARCHIVED",
+      "title": "演示·验收社区内容共创",
+      "version": 26
+    },
+    {
+      "audit_count": 1,
+      "id": "62000000-0000-4000-8000-000000000001",
+      "snapshot_count": 1,
+      "status": "ARCHIVED",
+      "title": "寻找企业服务渠道合作伙伴",
+      "version": 30
+    },
+    {
+      "audit_count": 1,
+      "id": "62000000-0000-4000-8000-000000000002",
+      "snapshot_count": 1,
+      "status": "ARCHIVED",
+      "title": "联合打造城市品牌视觉系统",
+      "version": 30
+    },
+    {
+      "audit_count": 1,
+      "id": "62000000-0000-4000-8000-000000000003",
+      "snapshot_count": 1,
+      "status": "ARCHIVED",
+      "title": "寻找消费品牌项目投资合作",
+      "version": 30
+    },
+    {
+      "audit_count": 1,
+      "id": "69a47e5a-b690-4e2f-b53b-ddb838a51196",
+      "snapshot_count": 1,
+      "status": "ARCHIVED",
+      "title": "演示·新增发布验收",
+      "version": 3
+    },
+    {
+      "audit_count": 1,
+      "id": "8f1febff-b480-4961-8dda-3863c289b16c",
+      "snapshot_count": 1,
+      "status": "ARCHIVED",
+      "title": "【测试勿参与】CUA常用机会20261001",
+      "version": 9
+    },
+    {
+      "audit_count": 1,
+      "id": "e842d0d7-144a-44c5-a21a-102199b13a89",
+      "snapshot_count": 1,
+      "status": "ARCHIVED",
+      "title": "测试-找技术合伙人",
+      "version": 9
+    },
+    {
+      "audit_count": 1,
+      "id": "fa927000-0000-4000-8000-000000000003",
+      "snapshot_count": 1,
+      "status": "ARCHIVED",
+      "title": "[DEMO QA] 暂时下架的合作机会",
+      "version": 2
+    }
+  ]
+}

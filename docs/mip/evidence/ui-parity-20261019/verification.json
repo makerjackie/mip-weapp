@@ -1,0 +1,107 @@
+{
+  "status": "passed-with-listed-material-and-device-gaps",
+  "miniProgram": {
+    "tests": 1805,
+    "passed": true,
+    "buildPassed": true,
+    "mainPackageBytes": 1354935
+  },
+  "web": {
+    "passed": true,
+    "reactFiles": 33,
+    "reactTests": 243,
+    "nodeTests": 325,
+    "build": true,
+    "responsiveContract": true
+  },
+  "runtime": {
+    "preflight": "passed",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "pages": [
+      "profile industry dialog",
+      "talent player list",
+      "growth player/renew state",
+      "event feed"
+    ],
+    "profileDraftSelection": "selected industry unchanged before confirm, committed only after confirm",
+    "deviceGestureRetest": "pending",
+    "completeIndustryCatalog": {
+      "groups": 11,
+      "selectable": 121,
+      "source": "test service response"
+    },
+    "dateFilter": "2026-12-12 confirmed; one matching server event, displayed in UTC+08:00"
+  },
+  "localComparisonFixtures": true,
+  "figmaLayout": false,
+  "serverTestFeed": [
+    {
+      "title": "MIP反人性早会第328场",
+      "hasCover": true,
+      "tags": [
+        "沙龙"
+      ],
+      "location": "深圳 · 新洲二街海松大厦A座1706室"
+    },
+    {
+      "title": "MIP反人性早会第329场",
+      "hasCover": true,
+      "tags": [
+        "沙龙"
+      ],
+      "location": "深圳 · 新洲二街海松大厦A座1706室"
+    }
+  ],
+  "industryDraftConfirmed": true,
+  "productionWrites": 0,
+  "upload": false,
+  "deviceGestureRetest": "pending",
+  "report": {
+    "columns": 4,
+    "rows": 4,
+    "allImagesLoaded": true,
+    "desktopPageOverflow": false,
+    "mobilePageOverflow": false,
+    "mobileColumnsScrollable": true
+  },
+  "sourceSha256": {
+    "src/components/catalog-selector/model.ts": "348056e5e22bb922f3191ec0b7257619698a3dc324cb4b33624947ba9e4a4549",
+    "src/components/mip-activity-card/index.ts": "c224db6aecee55df11d051e54bc7b7180bc60b886e7cba8c3f1335317009ddc6",
+    "src/components/mip-activity-card/index.wxml": "83b614df464df67b4415d9d2029dbe4e4e570cec0cf9d78e7fca3812aee46419",
+    "src/components/mip-activity-card/model.ts": "1931b4cad4e38962966835dd7f2b5a370d5db7c8e846a5ba28b706ada2fc89c4",
+    "src/components/mip-icon/icons.ts": "d10859e38e14692701180186a51494225f14074ad276bf4997b24d7090dddf74",
+    "src/components/mip-industry-selector/index.ts": "1844aa7b524cfa2ae00ce6c19a97199dfd6240bc5295ac97484c4f347a1165d3",
+    "src/components/mip-industry-selector/index.wxml": "dca82f59cffc8cc47f056429bea21cdefef4314f48826dc85a1bf562247083d3",
+    "src/components/mip-nav-bar/index.wxml": "c452740595a356a9d9c4b30bce3f299dc68f4975c18d5e2b47c4c655c91c7163",
+    "src/components/mip-tag-chip/index.ts": "3be2aba60d41210a64383288fb0d749e11d9d8e9bd2dcd36f8377f861691b260",
+    "src/components/mip-tag-chip/index.wxml": "8bc6b245fd5fe89f13cf03bef7b4854c33b4f0ea7652e6ab77b6024290f4364c",
+    "src/components/mip-tag-chip/index.wxss": "22334ea7c506cbd2c67ac320b406925ad3994636b6b106ba1b532931dd5cf1ca",
+    "src/components/talent-card/index.json": "60d43515fd431319e24b1eba27b085ab7cfc78074c84694f81a12670abe5f469",
+    "src/components/talent-card/index.ts": "d170a408c59bfc373c3ad2ca04cc6b8ff7f0e744aacc84d4a09afca9e3d5f57b",
+    "src/components/talent-card/index.wxml": "59c744bb98554edb6d63c7be8a3aa281e38d6e637d727150ab457c2447177e74",
+    "src/components/talent-card/index.wxss": "050701ac61dcbc0449ce12df1c3ec70aa8a9e0a6f8c4d1c6a96da39d5f1a113e",
+    "src/packages/member/mip-growth/index.wxml": "72ac453f4e54611cc80399cddb1b25f93e993f349f7cedc4066c0f38c32adf6d",
+    "src/packages/member/mip-growth/index.wxss": "aa98fbfaeae9c16dd02fbe43f6766ea0b255f589dd59b69fbe3d4e94077bd013",
+    "src/packages/member/mip-profile/index.json": "ea7fa2ff62702e3407b744383090104db25efdc9dedc95dae059cfd00a2e2f7a",
+    "src/packages/member/mip-profile/index.ts": "64ad6bbd73717f8fd220615feb2bf99ac75b6e936752f0451dd607666fcfb69b",
+    "src/packages/member/mip-profile/index.wxml": "2f0599d637908cc3f0708cdafea265116291920dc5a7ccfb96b88ff5336274fe",
+    "src/pages/opportunities/index.wxml": "e0e7e3ecde693048f6235fca971bd21515c1fc0a41b062a659d8907e8f29165b",
+    "tests/mip-catalog-selector.test.ts": "b7e2fb4c6c9b0535ac0898de2434c440d5658133b5d0f8b19a407c23f0d586aa",
+    "tests/mip-cooperation-discovery.test.ts": "3a7177851c1625877eeae30e8a2085c8904114f6ecdb871d4a317b1873e9ee36",
+    "tests/mip-design-tokens.test.ts": "ff5a6f1a1b9e35d6228edc054c223473fa0dd0a6a59c09a06accd2d48e4f170b",
+    "tests/mip-event-discovery-filters.test.ts": "b10caee53cff3caeb60315ec4dfe0f94412f2cbae870af35b88a3d0984811c7e",
+    "tests/mip-event-participant-count.test.ts": "b8233f65b362afc5890a0c2e31be730697ec41149d572e1d5c589c4ce549e1a1",
+    "tests/mip-growth-vip.test.ts": "5fbe173487827a5668db2908035381a6ec249167ca041d021cca97d1cd1ff105",
+    "tests/mip-industry-selector.test.ts": "499f36be58bb1f59cfdcacf2d0d7696e0af8e7646655fdbe5da5d33f93a7d6e8",
+    "tests/mip-level-art-visual.test.ts": "acbd8fe402ca8b1c1a34bc925f9e44538eabd422627699905310577494cb84d1",
+    "tests/mip-opportunity-journey-review.test.ts": "2a354783cda1b4510bd7fdd5aba40f5c408d1342148a42ff73fa6b2127530b69",
+    "tests/mip-profile-figma-layout.test.ts": "37b867ff14681f8e8b8dccc7b1e70d0276c7a261e8e4bd232af39549169aefb4",
+    "tests/mip-profile-save-lock.test.ts": "227295e19e54ebc71ab42fc2d4f190b65539b02dc54f744bb87d7d53f9d9e26b",
+    "tests/talent-card-component.test.ts": "4f7c720dc137884cff3c18c4632f6880004ff53ee4a1bdf6e34fc6f7eb286614",
+    "src/components/mip-industry-selector/index.wxss": "e852c2104a0f4156676d4f0b2de419c0f7e2a1c03cf3351f0149c85867014134"
+  },
+  "latestFunctionAudit": "function-audit-verification.json"
+}

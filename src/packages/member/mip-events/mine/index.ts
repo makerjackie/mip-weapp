@@ -7,7 +7,7 @@ import type {
 import { MipEventsError } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { caseNavigateTo, caseSwitchPrimary } from '../../../../platform/navigation/client'
-import { formatChineseDateTime } from '../../../../utils/date'
+import { formatBusinessDateTime as formatChineseDateTime } from '../../../../utils/business-date'
 import { resolveMyRegistrationCategory } from './category'
 
 interface RegistrationView extends RegistrationSummary {

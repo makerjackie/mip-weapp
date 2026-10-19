@@ -1,5 +1,5 @@
 import type { CatalogSelectorGroup } from '../catalog-selector/model'
-import { catalogSelectorView, toggleCatalogSelection } from '../catalog-selector/model'
+import { catalogSelectorView, expandedCatalogGroup, toggleCatalogSelection } from '../catalog-selector/model'
 
 /** 行业选择业务组件：填写信息(单选)、人才筛选(多选)、机会筛选(手风琴)共用。 */
 Component({
@@ -10,6 +10,7 @@ Component({
     maxCount: { type: Number, value: 1 },
     showPopular: { type: Boolean, value: true },
     accordion: { type: Boolean, value: false },
+    plain: { type: Boolean, value: false },
     clearLabel: { type: String, value: '' },
   },
 
@@ -26,19 +27,20 @@ Component({
   },
 
   observers: {
-    'groups, selectedIds': function (groups: CatalogSelectorGroup[], selectedIds: string[]) {
-      this.present(groups, selectedIds)
+    'groups, selectedIds, showPopular': function (groups: CatalogSelectorGroup[], selectedIds: string[], showPopular: boolean) {
+      this.present(groups, selectedIds, showPopular)
     },
   },
 
   methods: {
-    present(groups: CatalogSelectorGroup[], selectedIds: string[]) {
-      const view = catalogSelectorView(Array.isArray(groups) ? groups : [], Array.isArray(selectedIds) ? selectedIds : [])
+    present(groups: CatalogSelectorGroup[], selectedIds: string[], showPopular = true) {
+      const view = catalogSelectorView(Array.isArray(groups) ? groups : [], Array.isArray(selectedIds) ? selectedIds : [], showPopular)
       // BUG-10.6：observer 走到这说明宿主已回写 props，镜像同步为最新属性值（含宿主侧的清空/单选替换）。
       this.setData({
         viewGroups: view.viewGroups,
         popularOptions: view.popularOptions,
         emittedSelectedIds: (Array.isArray(selectedIds) ? selectedIds : []).slice(),
+        expandedGroupId: expandedCatalogGroup(view.viewGroups, this.data.expandedGroupId),
       })
     },
 

@@ -1,6 +1,6 @@
 import type { EventRecapCard, EventVideoRecap, MipEventListItem } from '../../modules/mip-events'
 import { publicEventTypeLabel } from '../../modules/mip-events'
-import { formatChineseDateTime } from '../../utils/date'
+import { businessCalendarDate, formatBusinessDateTime as formatChineseDateTime, formatBusinessMonthDayTime as formatChineseMonthDayTime, formatBusinessDate as formatLocalDate, formatBusinessTime as formatLocalTime } from '../../utils/business-date'
 
 export interface EventCardView extends MipEventListItem {
   startsText: string
@@ -55,11 +55,26 @@ function statusLabel(event: MipEventListItem) {
   return ''
 }
 
+/** Keep compact current-year dates without making historical or future events ambiguous. */
+export function eventScheduleText(startsAt: string, endsAt?: string, now = new Date()) {
+  const dateTime = (value: string) => businessCalendarDate(value).getFullYear() === businessCalendarDate(now).getFullYear()
+    ? formatChineseMonthDayTime(value)
+    : formatChineseDateTime(value)
+  const start = dateTime(startsAt)
+  if (!endsAt) {
+    return start
+  }
+  const end = formatLocalDate(endsAt) === formatLocalDate(startsAt)
+    ? formatLocalTime(endsAt)
+    : dateTime(endsAt)
+  return `${start}-${end}`
+}
+
 export function presentEventCard(event: MipEventListItem): EventCardView {
   return {
     ...event,
     coverUrl: event.coverUrl || '',
-    startsText: formatChineseDateTime(event.startsAt),
+    startsText: eventScheduleText(event.startsAt, event.endsAt),
     accessLabel: accessLabel(event),
     statusLabel: statusLabel(event),
     countText: participantCountText(event),

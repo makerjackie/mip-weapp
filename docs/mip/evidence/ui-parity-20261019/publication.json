@@ -1,0 +1,82 @@
+{
+  "reviewedBy": "Codex",
+  "scope": "user-authorized client-facing visual report; prototype/example profiles only; no raw operational data",
+  "approvedImages": [
+    {
+      "file": "shots/before-profile.png",
+      "sha256": "17247e717de7601e64e42c56e172737b6a969bbd1f8bcb6d1155116ad37a2dd8"
+    },
+    {
+      "file": "shots/after-profile.png",
+      "sha256": "756c6a566fb93b5cac89006530a11f43de7892eeef367d712e14fee316c422cc"
+    },
+    {
+      "file": "shots/prototype-profile.png",
+      "sha256": "0220479082bbfa2d0fcec5f1f4d5da84b540b9cee84839025544427d23f3e310"
+    },
+    {
+      "file": "shots/figma-profile.png",
+      "sha256": "79e7f64155303923297bb7b3cd0d62c1ece1b0792c58e0ab570c2e5a016462db"
+    },
+    {
+      "file": "shots/before-talent.png",
+      "sha256": "7d8d7027922cc954a234436c0859384db2bb34b0473c50f140470c2ceedc98be"
+    },
+    {
+      "file": "shots/after-talent.png",
+      "sha256": "41fcae9bd12ab7533559f68425dffcfd573ed56378a856a4fdc4ea3cc2554731"
+    },
+    {
+      "file": "shots/prototype-talent.png",
+      "sha256": "e5e8c945da054a3a08b069c166bc3917343733c57f5706c416b629d7c2f75fa9"
+    },
+    {
+      "file": "shots/figma-talent.png",
+      "sha256": "fe1f53bb2e66f2a49ad3402cc957e2235fde068fb7ab9a385b226966f9bbbfc0"
+    },
+    {
+      "file": "shots/before-events.png",
+      "sha256": "d15b9d3953cf54283b8b02669ea4e196996dd7b856a8b01aea3cf9cc10ea5d2f"
+    },
+    {
+      "file": "shots/after-events.png",
+      "sha256": "9343a9e34b231eb0b1e0a6ba61d22c975a1bddefc8579344533f78ca1d20cbde"
+    },
+    {
+      "file": "shots/prototype-events.png",
+      "sha256": "4ff50d432dd52798c7d2899b78b892bfcd8610b54aee33fea8c62b7e9bc7e3cd"
+    },
+    {
+      "file": "shots/figma-events.png",
+      "sha256": "32c92cad40daf26b2e0ab98802b5c12ef00605f5cbecfa3feb5b3c4992cb61c6"
+    },
+    {
+      "file": "shots/before-growth.png",
+      "sha256": "cae09902ef0554caa2325a040b2535bdf0eb4207808a3e5d232489b6873a52fd"
+    },
+    {
+      "file": "shots/after-growth.png",
+      "sha256": "12297e708f19e987c371928a267391f06fb26d1acbf4f435ad6472ad88ad2871"
+    },
+    {
+      "file": "shots/prototype-growth.png",
+      "sha256": "e8582895f561e9e9695e2baf7d615d99408a0b8a4b855f760305ff8ce7cd9bf3"
+    },
+    {
+      "file": "shots/figma-growth.png",
+      "sha256": "e67f2ec2f3420ecc4d2a7a26f6b437aec2eed4c4038fa576436b2d7f44060943"
+    },
+    {
+      "file": "shots/industry-full-library.png",
+      "sha256": "8718b8448db390ca7addf44d88ce922bc7f9b7e69ff1410e12d2ca23f68723f7"
+    },
+    {
+      "file": "shots/industry-services.png",
+      "sha256": "e88ef80a98cb66e62e652514bdfbb03ec4fe7a6cc48cdac4e994c300e4a940da"
+    },
+    {
+      "file": "shots/date-confirmed.png",
+      "sha256": "9343a9e34b231eb0b1e0a6ba61d22c975a1bddefc8579344533f78ca1d20cbde"
+    }
+  ]
+}
