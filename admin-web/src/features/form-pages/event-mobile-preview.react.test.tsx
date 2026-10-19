@@ -1,5 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
+import { MediaPreviewProvider } from '../../shared/ui/media-preview-provider'
 import { EventMobilePreview } from './event-mobile-preview'
 
 afterEach(cleanup)
@@ -7,11 +9,96 @@ afterEach(cleanup)
 describe('event preview online access', () => {
   it('does not promise a venue link that an offline save discards', () => {
     render(<EventMobilePreview values={{ eventMode: 'OFFLINE', onlineUrl: 'https://example.com/venue' }} />)
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '进入线上活动' })).not.toBeInTheDocument()
   })
 
   it('shows the HTTPS online link for hybrid activities', () => {
     render(<EventMobilePreview values={{ eventMode: 'HYBRID', onlineUrl: 'https://example.com/meeting' }} />)
-    expect(screen.getByRole('link', { name: '线上活动链接' })).toHaveAttribute('href', 'https://example.com/meeting')
+    expect(screen.getByRole('link', { name: '进入线上活动' })).toHaveAttribute('href', 'https://example.com/meeting')
+  })
+
+  it('never renders a non-HTTPS online link the save would reject', () => {
+    render(<EventMobilePreview values={{ eventMode: 'ONLINE', onlineUrl: 'http://example.com/meeting' }} />)
+    expect(screen.queryByRole('link', { name: '进入线上活动' })).not.toBeInTheDocument()
+  })
+})
+
+describe('event preview detail fidelity', () => {
+  it('mirrors the mini program info card: folded time, location fallback and price row', () => {
+    render(<EventMobilePreview values={{
+      title: 'MIP 早会第 328 场',
+      startsAt: '2026-11-06T02:00:00.000Z',
+      endsAt: '2026-11-06T04:00:00.000Z',
+      cityName: '上海',
+      venueName: '徐汇某空间',
+      accessType: 'PAID',
+      priceCents: 58900,
+    }} />)
+    expect(screen.getByText('MIP 早会第 328 场')).toBeInTheDocument()
+    // 与小程序 compactEventTime 同口径：同日折叠为「M月D日 HH:mm-HH:mm」（本地时区）。
+    const start = new Date('2026-11-06T02:00:00.000Z')
+    const end = new Date('2026-11-06T04:00:00.000Z')
+    const clock = (value: Date) => `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`
+    const monthDay = `${start.getMonth() + 1}月${start.getDate()}日`
+    expect(screen.getByText(`${monthDay} ${clock(start)}-${clock(end)}`)).toBeInTheDocument()
+    expect(screen.getByText('上海 · 徐汇某空间')).toBeInTheDocument()
+    // 付费活动：角标「仅玩家」+ 右上价格位（整数元不带小数）。
+    expect(screen.getByText('仅玩家')).toBeInTheDocument()
+    expect(screen.getByText('¥')).toBeInTheDocument()
+    expect(screen.getByText('589')).toBeInTheDocument()
+  })
+
+  it('labels free and member-included access like the detail page', () => {
+    render(<EventMobilePreview values={{ accessType: 'MEMBER_INCLUDED' }} />)
+    expect(screen.getByText('玩家活动')).toBeInTheDocument()
+    expect(screen.queryByText('¥')).not.toBeInTheDocument()
+  })
+
+  it('maps the default event type key to the public「活动」chip', () => {
+    render(<EventMobilePreview values={{ eventTypeKey: 'general' }} />)
+    expect(screen.getByText('活动')).toBeInTheDocument()
+  })
+
+  it('switches content sections through the detail page tabs', async () => {
+    const user = userEvent.setup()
+    render(<EventMobilePreview values={{ description: '<p>正文介绍</p>', organizerIntroduction: '<p>主办方背景</p>' }} />)
+    expect(screen.getByText('正文介绍')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: '主办方' }))
+    expect(screen.getByText('主办方背景')).toBeInTheDocument()
+    expect(screen.queryByText('正文介绍')).not.toBeInTheDocument()
+  })
+
+  it('never renders a raw cloud:// image the browser cannot decode', () => {
+    render(<EventMobilePreview values={{ description: '<p>图</p><img src="cloud://env/a.jpg" alt="活动图片">' }} />)
+    expect(screen.getByText('插图保存后在活动页显示')).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: '活动图片' })).not.toBeInTheDocument()
+  })
+
+  it('shows rich text cloud images once this session can resolve their addresses', () => {
+    render(
+      <MediaPreviewProvider existingUrls={{ 'cloud://env/a.jpg': 'blob:preview-a' }}>
+        <EventMobilePreview values={{ description: '<p>图</p><img src="cloud://env/a.jpg" alt="活动图片">' }} />
+      </MediaPreviewProvider>,
+    )
+    expect(screen.getByRole('img', { name: '活动图片' })).toHaveAttribute('src', 'blob:preview-a')
+    expect(screen.queryByText('插图保存后在活动页显示')).not.toBeInTheDocument()
+  })
+
+  it('shows honest empty states for pre-creation participants', () => {
+    render(<EventMobilePreview values={{}} />)
+    expect(screen.getByText('参与人数0')).toBeInTheDocument()
+    expect(screen.getByText('暂无公开参与者资料')).toBeInTheDocument()
+  })
+
+  it('keeps the schema fields out of the phone frame but annotates them below', () => {
+    render(<EventMobilePreview values={{
+      registrationSchema: [
+        { key: 'company', label: '公司', type: 'TEXT', required: true },
+        { key: 'track', label: '赛道', type: 'SELECT', options: ['AI', '硬件'] },
+      ],
+    }} />)
+    expect(screen.getByText('公司（必填）')).toBeInTheDocument()
+    expect(screen.getByText('赛道：AI / 硬件')).toBeInTheDocument()
+    expect(screen.getByText('报名页收集字段（详情页不展示）')).toBeInTheDocument()
   })
 })

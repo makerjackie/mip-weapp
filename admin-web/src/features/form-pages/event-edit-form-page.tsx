@@ -5,7 +5,7 @@ import type { AdminRequestInput, AdminOperationAction } from '../../domain/contr
 import type { OperationValues } from '../../modules/admin-operation-ui'
 import { createAdminEventMutationDefinition, validateAdminEventMutationInput, EVENT_MUTATION_CONFIGS } from '../../modules/admin-event-mutation-forms'
 import { loadEventDetailForForm } from './event-form-loader'
-import { EventMobilePreview } from './event-mobile-preview'
+import { EventMobilePreviewWithData } from './event-mobile-preview'
 import { eventPrivateDrafts } from '../../modules/event-private-drafts'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
 
@@ -59,7 +59,7 @@ export function EventEditFormPage() {
         : { ok: false, errors: Object.fromEntries(result.errors.map(error => [error.field, error.message])) }
     },
     preview: {
-      render: (values) => <EventMobilePreview values={values} />,
+      render: (values) => <EventMobilePreviewWithData values={values} />,
       capability: config.capability,
     },
     // 新建保存为草稿后，直接在预览弹窗里提供「发布活动」，省掉“回列表→打开→再发布”。

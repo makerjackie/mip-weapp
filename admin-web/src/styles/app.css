@@ -286,14 +286,93 @@ button, input, select, textarea { font: inherit; }
 .user-profile-layout > *, .user-profile-main { min-width: 0; }
 .user-profile-layout .detail-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 767px) { .user-profile-layout { grid-template-columns: minmax(0, 1fr); } }
-.event-mobile-preview { width: min(100%, 375px); margin: 0 auto; background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; overflow: hidden; overflow-wrap: anywhere; }
-.event-mobile-preview__cover { min-height: 180px; display: grid; place-items: center; background: #f5f5f5; color: #666; }
-.event-mobile-preview__empty { margin: 8px 0; color: #999; font-size: 13px; }
-.event-mobile-preview__rich { font-size: 14px; line-height: 1.75; color: #333; overflow-wrap: anywhere; }
-.event-mobile-preview__rich p { margin: 8px 0; }
-.event-mobile-preview__rich h1 { font-size: 20px; font-weight: 700; margin: 16px 0 8px; }
-.event-mobile-preview__rich h2 { font-size: 17px; font-weight: 700; margin: 14px 0 8px; }
-.event-mobile-preview__rich h3 { font-size: 15px; font-weight: 700; margin: 12px 0 6px; }
-.event-mobile-preview__rich ul, .event-mobile-preview__rich ol { margin: 8px 0; padding-left: 22px; }
-.event-mobile-preview__rich li { margin: 5px 0; }
-.event-mobile-preview__rich img { display: block; max-width: 100%; margin: 12px 0; border-radius: 8px; }
+/* —— 活动手机预览：逐段还原小程序「活动详情」页（figma 1861_17860 / 1818_17142）。
+   尺寸全部换算自小程序 rpx（750rpx = 375px，1rpx = 0.5px）；颜色取自小程序
+   src/app.css 的设计 token（canvas #080808 / panel #202020 / brand #fcdf03 …）。
+   富文本内部样式对齐 src/modules/mip-events/rich-content.ts 的 BLOCK_STYLE。 —— */
+.event-mobile-preview-wrap { min-width: 0; }
+.event-preview-modal { max-width: calc(100vw - 16px); }
+.event-preview-modal .ant-modal-body { padding-top: 12px; }
+.event-mobile-preview {
+  width: 375px;
+  max-width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #080808;
+  border: 1px solid #333;
+  border-radius: 16px;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  color: #fff;
+  overflow-wrap: anywhere;
+}
+.event-mobile-preview__screen { position: relative; max-height: min(648px, calc(100vh - 220px)); overflow-y: auto; }
+.event-mobile-preview__cover { display: block; width: 100%; height: 211px; object-fit: cover; background: #202020; }
+.event-mobile-preview__cover-fallback { position: relative; display: grid; place-items: center; height: 180px; background: #4d4400; }
+.event-mobile-preview__cover-icon { font-size: 40px; color: #fcdf03; }
+.event-mobile-preview__cover-note { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font-size: 10px; color: rgb(255 255 255 / 55%); }
+.event-mobile-preview__body { position: relative; z-index: 1; padding: 0 12px 80px; }
+.event-mobile-preview__card { background: #202020; border-radius: 8px; }
+/* 封面与信息卡的 -28rpx 叠压 */
+.event-mobile-preview__info { position: relative; box-sizing: border-box; min-height: 126px; margin-top: -14px; padding: 12px; }
+.event-mobile-preview__info-main { display: flex; min-width: 0; flex-direction: column; padding-right: 76px; }
+.event-mobile-preview__chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.event-mobile-preview__chip { display: inline-flex; flex: none; align-items: center; height: 16px; padding: 0 6px; font-size: 10px; font-weight: 500; line-height: 14px; color: #b3b3b3; background: #242424; border: 1px solid transparent; border-radius: 4px; }
+.event-mobile-preview__chip--type { color: #080808; background: #80ccff; border-color: #4b90bf; }
+.event-mobile-preview__chip--access { color: #080808; background: #fde104; border-color: #d0b801; }
+.event-mobile-preview__title { margin-top: 8px; overflow: hidden; font-size: 16px; font-weight: 500; line-height: 22px; white-space: nowrap; text-overflow: ellipsis; }
+.event-mobile-preview__meta-row { display: flex; gap: 6px; align-items: center; height: 18px; margin-top: 12px; }
+.event-mobile-preview__meta-row--location { margin-top: 8px; }
+.event-mobile-preview__meta-icon { flex: none; font-size: 14px; color: #fcdf03; }
+.event-mobile-preview__meta-text { min-width: 0; flex: 1; overflow: hidden; font-size: 12px; line-height: 17px; white-space: nowrap; text-overflow: ellipsis; }
+.event-mobile-preview__info-aside { position: absolute; top: 12px; right: 12px; display: flex; width: 76px; flex-direction: column; align-items: flex-end; }
+.event-mobile-preview__guide { display: flex; flex-direction: column; align-items: center; color: #fcdf03; text-decoration: none; }
+.event-mobile-preview__guide-icon { font-size: 20px; }
+.event-mobile-preview__guide-label { margin-top: 2px; font-size: 10px; line-height: 14px; }
+.event-mobile-preview__guide + .event-mobile-preview__price { margin-top: 6px; }
+.event-mobile-preview__price { display: flex; align-items: baseline; color: #fcdf03; }
+.event-mobile-preview__price-symbol { font-size: 12px; font-weight: 600; line-height: 17px; }
+.event-mobile-preview__price-amount { font-size: 24px; font-weight: 600; line-height: 34px; }
+.event-mobile-preview__participants { margin-top: 12px; padding: 7px 12px 12px; }
+.event-mobile-preview__participants-header { display: flex; height: 17px; align-items: center; justify-content: space-between; }
+.event-mobile-preview__participants-count { font-size: 12px; font-weight: 500; line-height: 17px; color: #fde104; }
+.event-mobile-preview__participants-capacity { font-size: 10px; font-weight: 400; }
+.event-mobile-preview__participants-more { display: flex; gap: 4px; align-items: center; font-size: 12px; line-height: 17px; color: #8e8e93; }
+.event-mobile-preview__participants-chevron { font-size: 8px; }
+.event-mobile-preview__participants-empty { margin: 8px 0 0; font-size: 11px; color: #b3b3b3; }
+.event-mobile-preview__tabs { display: flex; gap: 8px; margin-top: 12px; }
+.event-mobile-preview__tab { display: flex; height: 28px; align-items: center; padding: 0 8px; font-size: 14px; font-weight: 500; line-height: 20px; color: #8e8e93; background: #202020; border: 0; border-radius: 8px; cursor: pointer; }
+.event-mobile-preview__tab.is-active { color: #080808; background: #fde104; }
+.event-mobile-preview__section { margin-top: 12px; padding: 12px; }
+.event-mobile-preview__section--padded { padding: 16px; }
+.event-mobile-preview__empty-block { margin: 0; padding: 16px 0; font-size: 12px; color: #b3b3b3; }
+.event-mobile-preview__section--padded .event-mobile-preview__empty-block { padding: 0; }
+/* 富文本：容器 12px/28px #b3b3b3，内部块级样式与小程序 BLOCK_STYLE 一致 */
+.event-mobile-preview__rich { font-size: 12px; line-height: 28px; color: #b3b3b3; }
+.event-mobile-preview__rich p { margin: 8px 0; line-height: 1.75; }
+.event-mobile-preview__rich h1, .event-mobile-preview__rich h2 { margin: 20px 0 8px; font-size: 20px; font-weight: 700; line-height: 1.4; color: #fff; }
+.event-mobile-preview__rich h3 { margin: 16px 0 8px; font-size: 18px; font-weight: 700; line-height: 1.4; color: #fff; }
+.event-mobile-preview__rich ul { margin: 8px 0; padding-left: 20px; }
+.event-mobile-preview__rich ol { margin: 8px 0; padding-left: 22px; }
+.event-mobile-preview__rich li { margin: 5px 0; line-height: 1.7; }
+.event-mobile-preview__rich img { display: block; width: 100%; margin: 14px 0 6px; border-radius: 8px; }
+/* 富文本插图引用解析不到可看地址时的诚实占位（不渲染必然裂图的直链）。 */
+.event-mobile-preview__rich .event-mobile-preview__img-pending { display: grid; place-items: center; height: 56px; margin: 14px 0 6px; font-size: 11px; color: #8e8e93; background: #242424; border: 1px dashed #333; border-radius: 8px; }
+.event-mobile-preview__media { display: flex; flex-direction: column; gap: 12px; }
+.event-mobile-preview__media--after-text { margin-top: 12px; }
+.event-mobile-preview__media-item { margin: 0; }
+.event-mobile-preview__media-item img { display: block; width: 100%; background: #242424; }
+.event-mobile-preview__media-missing { display: grid; place-items: center; height: 56px; font-size: 11px; color: #b3b3b3; background: #242424; border-radius: 8px; }
+.event-mobile-preview__media-caption { margin-top: 12px; font-size: 12px; line-height: 17px; color: #b3b3b3; }
+.event-mobile-preview__online { display: flex; height: 40px; align-items: center; justify-content: center; margin-top: 12px; font-size: 14px; color: #fcdf03; text-decoration: none; border: 1px solid #fcdf03; border-radius: 8px; }
+/* 吸底玻璃操作条（mip-liquid-glass：8% 中性白 + backdrop blur），预览内不可交互 */
+.event-mobile-preview__bottombar { position: sticky; bottom: 0; z-index: 5; display: flex; gap: 12px; align-items: center; width: calc(100% - 24px); height: 56px; margin: 0 auto; padding: 0 12px; background: rgb(255 255 255 / 8%); border: 1px solid rgb(255 255 255 / 14%); border-radius: 999px; backdrop-filter: blur(20px) saturate(150%); }
+.event-mobile-preview__dock-action { display: flex; flex: none; width: 60px; height: 44px; align-items: center; justify-content: center; }
+.event-mobile-preview__dock-surface { display: flex; width: 100%; height: 40px; align-items: center; justify-content: center; background: #202020; border: 1px solid #000; border-radius: 999px; }
+.event-mobile-preview__dock-icon { font-size: 24px; color: #fff; }
+.event-mobile-preview__dock-primary { display: flex; flex: 1; height: 44px; min-width: 0; align-items: center; justify-content: center; }
+.event-mobile-preview__dock-primary-surface { display: flex; width: 100%; height: 40px; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: #080808; background: #fcdf03; border: 1px solid #000; border-radius: 999px; }
+/* 手机屏外的运营注记：报名字段属于报名页，不属于详情页，移出手机框如实说明 */
+.event-mobile-preview__schema-note { max-width: 375px; margin: 12px auto 0; font-size: 12px; color: #8c8c8c; }
+.event-mobile-preview__schema-title { font-weight: 600; color: #595959; }
+.event-mobile-preview__schema-list { margin: 6px 0 0; padding-left: 18px; }
+.event-mobile-preview__schema-list li { margin: 2px 0; }
