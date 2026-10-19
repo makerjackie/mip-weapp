@@ -353,6 +353,7 @@ export function IndependentFormPage({ config, loadDetail }: {
       {config.preview ? (
         <Modal
           title="手机端预览"
+          className="event-preview-modal"
           open={previewOpen}
           onCancel={() => setPreviewOpen(false)}
           footer={savedForPublish && config.publish

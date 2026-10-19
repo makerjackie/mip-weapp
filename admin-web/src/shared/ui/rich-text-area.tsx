@@ -19,6 +19,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminMediaFile } from '../../modules/admin-media-upload'
+import { useMediaPreview } from './media-preview-context'
 import {
   normalizeRichTextToHtml,
   richTextIsEmpty,
@@ -182,6 +183,9 @@ export function RichTextArea({
   const client = session?.client
   const demoMode = session?.demoMode ?? false
   const { message } = App.useApp()
+  // 上传成功的「稳定引用 → 本地预览」同时登记进表单级媒体映射，手机预览弹层据此刻换
+  // 富文本里的 cloud:// 引用；不在 Provider 树内时 remember 是空实现，行为不变。
+  const { remember } = useMediaPreview()
   const fileRef = useRef<HTMLInputElement>(null)
   const onChangeRef = useRef(onChange)
   // 忽略编辑器初始化时的那次 update，避免打开表单就被判「已修改」或把值改写成 HTML。
@@ -210,6 +214,7 @@ export function RichTextArea({
           const stableRef = result.cloudFileId
           if (!stableRef) throw new Error('图片上传结果缺少稳定引用，请重试')
           setPreviews(current => ({ ...current, [stableRef]: prepared.previewUrl }))
+          remember(stableRef, prepared.previewUrl)
           editorRef.current?.chain().focus().setImage({ src: stableRef, alt: '活动图片' }).run()
         }
         void message.success({ content: '图片已插入', key: feedbackKey, duration: 1.6 })
@@ -296,12 +301,15 @@ export function RichTextArea({
     editor.commands.setContent(normalizeRichTextToHtml(value), { emitUpdate: false })
   }, [editor, value])
 
-  // 本会话上传的本地 blob 预览在卸载时回收。
+  // 本会话上传的本地 blob 预览只在编辑器最终卸载时回收；不能以 previews 为清理依赖，
+  // 否则每传一张图就会把上一张的 blob 提前吊销（编辑器与预览弹层一起裂图）。
+  const previewsRef = useRef(previews)
+  useEffect(() => { previewsRef.current = previews }, [previews])
   useEffect(() => () => {
-    for (const url of Object.values(previews)) {
+    for (const url of Object.values(previewsRef.current)) {
       if (url.startsWith('blob:')) URL.revokeObjectURL(url)
     }
-  }, [previews])
+  }, [])
 
   const plainText = richTextToPlainText(value)
   const overLimit = Boolean(maxLength && plainText.length > maxLength)
