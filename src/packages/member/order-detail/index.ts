@@ -362,8 +362,10 @@ Page({
         return
       }
       // MIW-119：可用性错误来自服务端 envelope，按 code 匹配（message 是人话文案）。
+      // MIW-123：PAYMENT_UNAVAILABLE 是 provider 拒绝/下发失败，不是「未配置」；
+      // 未配置态由入口 paymentEnabled 预检拦截并使用 paymentUnavailableText。
       const unavailable = error instanceof MipCommerceError && error.code === 'PAYMENT_UNAVAILABLE'
-      this.setData({ message: unavailable ? `${this.data.paymentUnavailableText}。` : '暂时无法发起支付，请稍后重试。' })
+      this.setData({ message: unavailable ? '支付服务暂时不可用，请稍后重试。' : '暂时无法发起支付，请稍后重试。' })
     }
     finally {
       this.setData({ paying: false })

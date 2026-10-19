@@ -13,6 +13,10 @@ const {
 } = require('./membership-locks')
 
 const manualReviewChangeCode = 'MANUAL_REVIEW_CHANGE'
+// MIW-123：微信统一下单同一商户订单号只能成功提交一次（OUT_TRADE_NO_USED），取消支付后的
+// 重试靠复用已签发的调起参数（prepay_id 自签发起 2 小时内可重复拉起收银台）。窗口取 110
+// 分钟，给回调链路与设备时钟留偏差余量，避免把已过期的参数复用给收银台。
+const reusablePaymentWindowMs = 110 * 60 * 1000
 
 function assertPaymentMatches(order, value) {
   if (!order) {
@@ -122,6 +126,9 @@ async function getPayableOrder(db, input, options = {}) {
 }
 
 async function markPaymentCreated(db, input) {
+  // MIW-123：签发即落库完整调起参数（外层附带签发商户号），供取消支付后的重试复用。
+  const payment = assertIssuedPayment(input)
+  const paymentJson = JSON.stringify({ merchantId: String(input.merchantId || ''), payment })
   return db.transaction(async (tx) => {
     const order = await tx.one(
       `SELECT o.* FROM mip_orders o
@@ -140,10 +147,10 @@ async function markPaymentCreated(db, input) {
     }
     await tx.query(
       `INSERT INTO mip_payment_attempts (
-        id, app_id, order_id, provider, prepay_id, request_hash, status
-      ) VALUES (?, ?, ?, ?, ?, ?, 'PARAMETERS_ISSUED')
+        id, app_id, order_id, provider, prepay_id, payment_json, request_hash, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PARAMETERS_ISSUED')
       ON DUPLICATE KEY UPDATE
-        prepay_id = VALUES(prepay_id), status = 'PARAMETERS_ISSUED',
+        prepay_id = VALUES(prepay_id), payment_json = VALUES(payment_json), status = 'PARAMETERS_ISSUED',
         last_error_code = NULL, version = version + 1`,
       [
         input.attemptId,
@@ -151,6 +158,7 @@ async function markPaymentCreated(db, input) {
         order.id,
         input.provider,
         input.prepayId || null,
+        paymentJson,
         input.requestHash,
       ],
     )
@@ -165,6 +173,58 @@ async function markPaymentCreated(db, input) {
     }
     return { status: 'PAYMENT_CREATED' }
   })
+}
+
+function assertIssuedPayment(value) {
+  const payment = value?.payment
+  if (!payment
+    || typeof payment.timeStamp !== 'string' || !payment.timeStamp
+    || typeof payment.nonceStr !== 'string' || !payment.nonceStr
+    || typeof payment.package !== 'string' || !/^prepay_id=.+/.test(payment.package)
+    || typeof payment.signType !== 'string' || !payment.signType
+    || typeof payment.paySign !== 'string' || !payment.paySign) {
+    throw new Error('PAYMENT_PARAMS_INVALID')
+  }
+  return payment
+}
+
+// MIW-123：返回窗口期内已签发、尚未消费的调起参数，供取消支付后的重试直接拉起收银台。
+// 只认下单方本人（identity_key 联查）、PAYMENT_CREATED 状态与窗口期内的最新一次签发；
+// 参数外层的签发商户号由调用方（mip-cloudpay）与当前配置比对后才允许复用。
+async function getReusablePayment(db, input, options = {}) {
+  const now = options.now || (() => new Date())
+  const order = await db.one(
+    `SELECT o.* FROM mip_orders o
+     JOIN mip_user_identities i
+       ON i.app_id = o.app_id AND i.user_id = o.user_id
+      AND i.provider = 'WECHAT_MINIPROGRAM' AND i.identity_key = ?
+     WHERE o.app_id = ? AND o.id = ?`,
+    [input.identityKey, input.appId, input.orderId],
+  )
+  if (!order || order.status !== 'PAYMENT_CREATED') {
+    return null
+  }
+  const attempt = await db.one(
+    `SELECT payment_json, provider, created_at
+       FROM mip_payment_attempts
+      WHERE app_id = ? AND order_id = ?
+        AND status = 'PARAMETERS_ISSUED'
+        AND payment_json IS NOT NULL
+        AND created_at > ?
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [input.appId, input.orderId, new Date(now().getTime() - reusablePaymentWindowMs)],
+  )
+  const stored = parseJson(attempt?.payment_json)
+  if (!stored || !stored.merchantId || !stored.payment) {
+    return null
+  }
+  return {
+    payment: stored.payment,
+    merchantId: String(stored.merchantId),
+    provider: attempt.provider,
+    issuedAt: attempt.created_at instanceof Date ? attempt.created_at.toISOString() : attempt.created_at,
+  }
 }
 
 async function applyPaymentCallback(db, input, options = {}) {
@@ -1432,6 +1492,7 @@ module.exports = {
   applyRefundCallback,
   assertPaymentMatches,
   getPayableOrder,
+  getReusablePayment,
   getRefundRequest,
   getRefundRequestForProvider,
   listPendingRefunds,

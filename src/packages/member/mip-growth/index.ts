@@ -530,10 +530,12 @@ Page({
       })
     }
     catch (error) {
+      // MIW-123：PAYMENT_UNAVAILABLE 可能来自 provider 拒绝（如签发参数过期）而非「未配置」，
+      // 文案与未配置态（confirmPurchase 的 paymentEnabled 预检）区分开。
       const code = error instanceof MipCommerceError ? error.code : ''
       this.setData({
         purchaseMessage: code === 'PAYMENT_UNAVAILABLE'
-          ? '会员支付尚未配置。'
+          ? '会员支付暂不可用，请稍后重试。'
           : '暂时无法发起支付，请稍后重试。',
       })
     }

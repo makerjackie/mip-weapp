@@ -120,6 +120,41 @@ describe('mip payment ledger internal authentication', () => {
     }), 'app-1')
   })
 
+  it('signs the reusable payment payload fields end to end (MIW-123)', () => {
+    const payment = {
+      timeStamp: '1777000000',
+      nonceStr: 'provider-nonce',
+      package: 'prepay_id=provider-prepay',
+      signType: 'RSA',
+      paySign: 'provider-signature',
+    }
+    const event = {
+      action: 'markPaymentCreated',
+      appId: 'app-1',
+      signedAt: now,
+      nonce: 'nonce-1',
+      orderId: 'order-1',
+      identityKey: 'identity-1',
+      merchantOrderNo: 'MIP1',
+      amountCents: 9900,
+      currency: 'CNY',
+      attemptId: 'attempt-1',
+      requestHash: 'a'.repeat(64),
+      prepayId: 'provider-prepay',
+      provider: 'WECHAT_PAY',
+      merchantId: '1234567890',
+      payment,
+    }
+    event.signature = sign(event)
+    event.payment = { ...payment, paySign: 'tampered' }
+    assert.throws(() => assertInternalRequest(event, {
+      allowedAppIds: new Set(['app-1']),
+      secrets: [secret],
+      now: () => now,
+    }), /FORBIDDEN/)
+    assert.deepEqual(signedPayload({ action: 'getReusablePayment' }), { action: 'getReusablePayment' })
+  })
+
   it('signs every field that selects an Owner TEST membership operation', () => {
     const event = {
       action: 'grantOwnerTestMembership',

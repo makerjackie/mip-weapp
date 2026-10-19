@@ -32,6 +32,20 @@ function createPaymentService(options) {
     if (!['CREATED', 'PAYMENT_CREATED'].includes(order.status)) {
       throw new Error('INVALID_PAYMENT_ORDER')
     }
+    // MIW-123：微信统一下单对同一商户订单号只允许成功提交一次（OUT_TRADE_NO_USED），
+    // 取消支付后的重试必须复用窗口期内已签发的调起参数，而不是再次下单。签发商户号与
+    // 当前配置不一致（切换商户/支付模式）时放弃复用，落回原下单路径。
+    if (order.status === 'PAYMENT_CREATED') {
+      const reusable = await options.callLedger('getReusablePayment', {
+        orderId: order.id,
+        identityKey: caller.identityKey,
+        paymentMode: config.paymentMode,
+      })
+      const reused = reusableIssuedPayment(reusable, config.merchantId)
+      if (reused) {
+        return { payment: reused }
+      }
+    }
     const result = await options.cloudPay.unifiedOrder({
       envId: config.envId,
       functionName: config.callbackFunction,
@@ -59,6 +73,8 @@ function createPaymentService(options) {
         .digest('hex'),
       prepayId: payment.package.slice('prepay_id='.length),
       provider: config.paymentMode === 'test' ? 'TEST' : 'WECHAT_PAY',
+      merchantId: config.merchantId,
+      payment,
     })
     return { payment }
   }
@@ -203,6 +219,20 @@ function assertPayableOrder(order) {
   }
 }
 
+// MIW-123：校验账本回传的历史签发参数，签发商户号不一致（切换商户/支付模式）或参数
+// 结构不再有效时不复用，交由调用方落回统一-下单路径。
+function reusableIssuedPayment(attempt, merchantId) {
+  if (!attempt || attempt.merchantId !== merchantId) {
+    return null
+  }
+  try {
+    return normalizePayment(attempt.payment)
+  }
+  catch {
+    return null
+  }
+}
+
 function assertRefund(refund) {
   if (!uuidValue(refund?.id)
     || !validMerchantReference(refund?.merchantOrderNo, 32)
@@ -326,6 +356,7 @@ module.exports = {
   normalizePayment,
   paymentRecord,
   refundRecord,
+  reusableIssuedPayment,
   successful,
   validMerchantReference,
 }

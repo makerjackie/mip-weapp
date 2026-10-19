@@ -1442,6 +1442,18 @@
       ],
       "sqlSha256": "30d7d7e77f7da4eba79ccdc11d9249167c15ef02f7af14a21c1bc5a2718fd354",
       "rollbackSha256": "2ac97cc57db3944c4d3ab4fa454534ec34675cc3a5549aeebe781593800adea3"
+    },
+    {
+      "version": "20261019010000",
+      "name": "mip_payment_attempt_payment_json",
+      "sql": "database/mysql/mip/110_payment_attempt_payment_json.sql",
+      "rollback": "database/mysql/mip/rollback/110_payment_attempt_payment_json.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_payment_attempts"
+      ],
+      "sqlSha256": "c385e238788f865295000ce1ce526aeb06983183a851b4e72e1a533aa07ff5b6",
+      "rollbackSha256": "51815d3883b341cf31ef4f5a8bcd0eb6c1f86438728ffe422995150ecaf56bcb"
     }
   ]
 }

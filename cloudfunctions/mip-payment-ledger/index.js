@@ -46,6 +46,7 @@ const outboxWakeup = createOutboxWakeup({
 })
 const handlers = Object.freeze(Object.assign(Object.create(null), {
   getPayableOrder: (db, event, appId) => ledger.getPayableOrder(db, { ...event, appId }),
+  getReusablePayment: (db, event, appId) => ledger.getReusablePayment(db, { ...event, appId }),
   markPaymentCreated: (db, event, appId) => ledger.markPaymentCreated(db, { ...event, appId }),
   applyPaymentCallback: (db, event, appId) => ledger.applyPaymentCallback(db, { ...event, appId }),
   getRefundRequest: (db, event, appId) => ledger.getRefundRequest(db, { ...event, appId }),

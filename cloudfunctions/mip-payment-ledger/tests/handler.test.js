@@ -6,6 +6,7 @@ const { describe, it } = require('node:test')
 
 const legalActions = [
   'getPayableOrder',
+  'getReusablePayment',
   'markPaymentCreated',
   'applyPaymentCallback',
   'getRefundRequest',
@@ -94,6 +95,17 @@ describe('mip payment ledger action dispatch', () => {
       assert.equal(Object.hasOwn(handlers, action), true)
       assert.equal(typeof handlers[action], 'function')
     }
+  })
+
+  it('keeps every handler inside the internal-auth signed-field registry', () => {
+    // MIW-123 防线：校验端按注册表白名单过滤签名字段，新增 action 若漏登记，
+    // 单测全绿但现网跨函数调用会直接 FORBIDDEN。两个方向都必须闭合。
+    const { ledgerFunction } = loadHandlerWithTrustedAuth()
+    const { signedPayload } = require('../lib/internal-auth')
+    for (const action of legalActions) {
+      assert.doesNotThrow(() => signedPayload({ action }), `missing registry entry: ${action}`)
+    }
+    assert.deepEqual(Object.keys(ledgerFunction._test.handlers).sort(), [...legalActions].sort())
   })
 
   it('keeps health outside the signed business action table', () => {
