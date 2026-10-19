@@ -19,6 +19,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminMediaFile } from '../../modules/admin-media-upload'
+import { useCloudImageTempUrls } from './cloud-image-temp-urls'
 import {
   normalizeRichTextToHtml,
   richTextIsEmpty,
@@ -305,6 +306,8 @@ export function RichTextArea({
 
   const plainText = richTextToPlainText(value)
   const overLimit = Boolean(maxLength && plainText.length > maxLength)
+  // 存量 cloud:// 引用经服务端解析显示真图；本会话上传的本地 blob 预览优先。
+  const resolvedImages = useCloudImageTempUrls(value, client, demoMode)
 
   return (
     <div className="rich-text-area" data-disabled={disabled || undefined}>
@@ -327,7 +330,7 @@ export function RichTextArea({
         <span className={`rich-text-area__count${overLimit ? ' is-over' : ''}`}>{plainText.length}{maxLength ? ` / ${maxLength}` : ''}</span>
       </div>
       {uploadError ? <div className="rich-text-area__error" role="alert">{uploadError}</div> : null}
-      <RichTextImageResolver.Provider value={previews}>
+      <RichTextImageResolver.Provider value={{ ...resolvedImages, ...previews }}>
         <div className="rich-text-editor" style={{ minHeight: `${rows * 24}px` }}>
           {!focused && richTextIsEmpty(value) && placeholder ? <span className="rich-text-editor__placeholder">{placeholder}</span> : null}
           <EditorContent editor={editor} />

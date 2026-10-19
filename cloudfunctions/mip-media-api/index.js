@@ -27,6 +27,7 @@ const messages = {
   IMAGE_INVALID: '图片格式无效，请选择 PNG 或 JPEG 图片',
   IMAGE_SAFETY_UNAVAILABLE: '图片安全检查暂时不可用，请稍后重试',
   IMAGE_TOO_LARGE: '图片过大，请压缩后重试',
+  FILEIDS_INVALID: '图片地址解析参数无效',
   MEDIA_CLEANUP_CONFIG_REQUIRED: '素材清理尚未配置',
   MEDIA_CLEANUP_FORBIDDEN: '素材清理请求无效',
   MEDIA_CLEANUP_INVALID: '素材清理参数无效',

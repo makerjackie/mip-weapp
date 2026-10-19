@@ -297,3 +297,4 @@ button, input, select, textarea { font: inherit; }
 .event-mobile-preview__rich ul, .event-mobile-preview__rich ol { margin: 8px 0; padding-left: 22px; }
 .event-mobile-preview__rich li { margin: 5px 0; }
 .event-mobile-preview__rich img { display: block; max-width: 100%; margin: 12px 0; border-radius: 8px; }
+.event-mobile-preview__image-placeholder { display: block; margin: 12px 0; padding: 12px; border: 1px dashed #d9d9d9; border-radius: 8px; color: #999; font-size: 13px; text-align: center; }

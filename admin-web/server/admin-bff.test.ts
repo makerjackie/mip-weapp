@@ -111,6 +111,7 @@ function reviewedQueryInput(action: string) {
     seasonId: '30000000-0000-4000-8000-000000000001', teamId: '30000000-0000-4000-8000-000000000002', query: '', limit: 30,
   }
   if (action === 'mip.admin.game.blindBoxes.cards.list') return { catalogId: '30000000-0000-4000-8000-000000000005' }
+  if (action === 'mip.admin.media.tempUrls') return { fileIds: ['cloud://env.mip/mip/live/app/banners/image.png'] }
   return action === 'mip.admin.exports.status'
     ? { ticketId: 'ticket-a', token: EXPORT_TOKEN }
     : {}
@@ -920,7 +921,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('forwards every explicitly reviewed query action', async () => {
-    assert.equal(REVIEWED_QUERY_ACTIONS.length, 105)
+    assert.equal(REVIEWED_QUERY_ACTIONS.length, 106)
     const fetchMock = fetchQueue(...REVIEWED_QUERY_ACTIONS.map(action => new Response(JSON.stringify({
       ok: true,
       data: { action },

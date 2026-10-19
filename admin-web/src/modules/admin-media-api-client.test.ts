@@ -98,4 +98,36 @@ describe('admin media API client', () => {
     await assert.rejects(() => new AdminApiClient('/api/admin').uploadImage(pngFile(), 'BANNER'))
     assert.equal(calls, 1)
   })
+
+  it('resolves legacy cloud ids through the read-only temp urls action and keeps only https entries (MIW-125)', async () => {
+    const captured: { url: string; init: RequestInit } = { url: '', init: {} }
+    globalThis.fetch = async (input, init) => {
+      captured.url = String(input)
+      captured.init = init || {}
+      return Response.json({
+        ok: true,
+        data: {
+          urls: {
+            'cloud://a.png': 'https://tmp.example/a.png?sign=x',
+            'cloud://bad.png': 'http://tmp.example/bad.png',
+            'cloud://evil.png': 'javascript:alert(1)',
+          },
+        },
+      })
+    }
+    const urls = await new AdminApiClient('/api/admin').tempUrls(['cloud://a.png', 'cloud://bad.png', 'cloud://evil.png'])
+    assert.deepEqual(urls, { 'cloud://a.png': 'https://tmp.example/a.png?sign=x' })
+    assert.equal(captured.url, '/api/admin')
+    assert.equal(captured.init.method, 'POST')
+    assert.equal(captured.init.credentials, 'same-origin')
+    const body = JSON.parse(String(captured.init.body))
+    assert.equal(body.action, 'mip.admin.media.tempUrls')
+    assert.deepEqual(body.input, { fileIds: ['cloud://a.png', 'cloud://bad.png', 'cloud://evil.png'] })
+    assert.doesNotMatch(JSON.stringify(captured), /secret|signature|principal/i)
+  })
+
+  it('rejects the temp urls action before transport when the client is not configured', async () => {
+    const unconfigured = new AdminApiClient('')
+    await assert.rejects(() => unconfigured.tempUrls(['cloud://a.png']), error => error instanceof AdminApiClientError)
+  })
 })

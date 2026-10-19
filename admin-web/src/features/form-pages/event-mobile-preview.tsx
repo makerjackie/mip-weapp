@@ -1,19 +1,39 @@
 import { Button, Card, Image, Tag, Typography } from 'antd'
 import { CalendarOutlined, EnvironmentOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons'
+import { useAdminSession } from '../../app/session-provider'
 import { useMediaPreview } from '../../shared/ui/media-preview-context'
+import { useCloudImageTempUrls } from '../../shared/ui/cloud-image-temp-urls'
 import { sanitizeRichTextHtml } from '../../shared/ui/rich-text-sanitize'
 import { normalizeRichTextToHtml, richTextIsEmpty } from '../../modules/rich-text-html'
+import { substituteRichTextCloudImages } from '../../modules/admin-media-temp-urls'
 import { formatDateTime } from '../../modules/admin-read-formatters'
 
-function RichHtml({ value, empty }: { value: unknown, empty: string }) {
+/** 安全会话访问：单元测试在无 SessionProvider 的树里直接渲染预览。 */
+function useOptionalAdminSession() {
+  try {
+    return useAdminSession()
+  }
+  catch {
+    return null
+  }
+}
+
+function RichHtml({ value, empty, resolved = {} }: { value: unknown, empty: string, resolved?: Record<string, string> }) {
   const raw = String(value || '')
   if (richTextIsEmpty(raw)) return <p className="event-mobile-preview__empty">{empty}</p>
-  const html = sanitizeRichTextHtml(normalizeRichTextToHtml(raw))
-  // 已按受限 HTML 白名单净化（富文本规范化 + DOMPurify），无脚本/事件/危险协议。
+  // 先替换存量 cloud:// 插图（真图/诚实占位），再按受限 HTML 白名单净化，无脚本/事件/危险协议。
+  const html = sanitizeRichTextHtml(substituteRichTextCloudImages(normalizeRichTextToHtml(raw), resolved))
   return <div className="event-mobile-preview__rich" dangerouslySetInnerHTML={{ __html: html }} />
 }
 
 export function EventMobilePreview({ values }: { values: Record<string, unknown> }) {
+  const session = useOptionalAdminSession()
+  // 编辑会话之外的存量 cloud:// 引用批量解析；失败保持占位，不阻断预览。
+  const resolvedImages = useCloudImageTempUrls(
+    [values.description, values.organizerIntroduction, values.notices].map(item => String(item || '')).join('\n'),
+    session?.client,
+    session?.demoMode ?? false,
+  )
   const { urls } = useMediaPreview()
   const title = String(values.title || '活动名称')
   const coverUrl = urls[String(values.coverAssetId || '')]
@@ -37,7 +57,7 @@ export function EventMobilePreview({ values }: { values: Record<string, unknown>
         <p className="event-mobile-preview__empty">报名开放后，这里会显示已报名成员。</p>
       </Card>
       <Card size="small" title="活动介绍" style={{ marginTop: 12 }}>
-        <RichHtml value={values.description} empty="暂无活动介绍" />
+        <RichHtml value={values.description} empty="暂无活动介绍" resolved={resolvedImages} />
         {media.map((item, index) => {
           const asset = item && typeof item === 'object' ? item as Record<string, unknown> : {}
           const url = urls[String(asset.assetId || '')]
@@ -45,10 +65,10 @@ export function EventMobilePreview({ values }: { values: Record<string, unknown>
         })}
       </Card>
       <Card size="small" title="主办方介绍" style={{ marginTop: 12 }}>
-        <RichHtml value={values.organizerIntroduction} empty="暂无主办方介绍" />
+        <RichHtml value={values.organizerIntroduction} empty="暂无主办方介绍" resolved={resolvedImages} />
       </Card>
       <Card size="small" title="报名须知" style={{ marginTop: 12 }}>
-        <RichHtml value={values.notices} empty="暂无报名须知" />
+        <RichHtml value={values.notices} empty="暂无报名须知" resolved={resolvedImages} />
       </Card>
       {fields.length ? <Card size="small" title="报名需填写" style={{ marginTop: 12 }}>{fields.map((item, index) => {
         const field = item && typeof item === 'object' ? item as Record<string, unknown> : {}
