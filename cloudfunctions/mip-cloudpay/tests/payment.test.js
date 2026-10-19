@@ -81,6 +81,77 @@ describe('mip CloudPay adapter', () => {
     assert.equal(JSON.stringify(calls).includes(caller.openId), false)
   })
 
+  it('reuses the issued payment parameters for an unpaid order instead of re-submitting the same out_trade_no (MIW-123)', async () => {
+    const providerCalls = []
+    const ledgerCalls = []
+    const issued = {
+      timeStamp: '1777000000',
+      nonceStr: 'provider-nonce',
+      package: 'prepay_id=provider-prepay',
+      signType: 'RSA',
+      paySign: 'provider-signature',
+    }
+    const service = createPaymentService({
+      config: config(),
+      nonce: () => 'nonce',
+      async callLedger(action, input) {
+        ledgerCalls.push({ action, input })
+        if (action === 'getPayableOrder') {
+          return {
+            id: orderId, status: 'PAYMENT_CREATED', description: '活动',
+            merchantOrderNo: 'MIPEVENT', amountCents: 9900, currency: 'CNY',
+          }
+        }
+        if (action === 'getReusablePayment') {
+          return { payment: issued, merchantId: '1234567890', provider: 'WECHAT_PAY' }
+        }
+        throw new Error('unexpected ledger call')
+      },
+      cloudPay: { unifiedOrder: async () => { providerCalls.push('unifiedOrder') } },
+    })
+    const result = await service.createPayment(caller, { orderId })
+    assert.deepEqual(result, { payment: issued })
+    assert.deepEqual(ledgerCalls.map(call => call.action), ['getPayableOrder', 'getReusablePayment'])
+    assert.equal(providerCalls.length, 0)
+  })
+
+  it('falls back to unified order when the issued parameters belong to another merchant (MIW-123)', async () => {
+    const ledgerCalls = []
+    const issued = {
+      timeStamp: '1777000000',
+      nonceStr: 'provider-nonce',
+      package: 'prepay_id=provider-prepay',
+      signType: 'RSA',
+      paySign: 'provider-signature',
+    }
+    const service = createPaymentService({
+      config: config(),
+      nonce: () => 'nonce',
+      async callLedger(action, input) {
+        ledgerCalls.push({ action, input })
+        if (action === 'getPayableOrder') {
+          return {
+            id: orderId, status: 'PAYMENT_CREATED', description: '活动',
+            merchantOrderNo: 'MIPEVENT', amountCents: 9900, currency: 'CNY',
+          }
+        }
+        if (action === 'getReusablePayment') {
+          return { payment: issued, merchantId: '9999999999', provider: 'WECHAT_PAY' }
+        }
+        return { status: 'PAYMENT_CREATED' }
+      },
+      cloudPay: {
+        async unifiedOrder() {
+          return { payment: issued }
+        },
+      },
+    })
+    await service.createPayment(caller, { orderId })
+    const issuedCall = ledgerCalls.find(call => call.action === 'markPaymentCreated')
+    assert.equal(issuedCall.input.merchantId, '1234567890')
+    assert.deepEqual(issuedCall.input.payment, issued)
+  })
+
   it('allows a ledger-authorized partial refund without client amount', async () => {
     const providerCalls = []
     const service = createPaymentService({
