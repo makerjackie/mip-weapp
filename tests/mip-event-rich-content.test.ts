@@ -86,4 +86,48 @@ describe('MIP event rich content', () => {
     expect(nodes.every(node => node.name !== 'img')).toBe(true)
     expect(JSON.stringify(nodes)).not.toContain('cloud://')
   })
+
+  // 以下样例取自测试环境真实入库内容（管理后台 TipTap 编辑器「保存并预览→发布」产出，
+  // 见 worktree .tmp/e2e-richtext 的 admin E2E 证据），保证解析口径跟编辑器实际输出一致。
+  it('keeps alignment on editor headings and drops decorative empty blocks', () => {
+    // 真实样例：居中 H2 标题 + 尾随空段落 + 列表后的空列表残影
+    const html = '<h2 style="text-align:center">MIP 主理人团队</h2><p></p><p><strong>主办方</strong>：深圳城市社群。</p><ul><li><p></p></li></ul><p>已举办 300+ 场活动</p><ul><li><p></p></li></ul><p></p>'
+    const nodes = eventRichTextNodes(html)
+    expect(nodes.map(node => node.name)).toEqual(['h3', 'p', 'p'])
+    // 编辑器对标题的对齐必须保留（此前只保留 p 的对齐，居中标题被丢掉）
+    expect(nodes[0].attrs?.style).toContain('text-align:center')
+    expect(nodes[0].children?.[0].text).toBe('MIP 主理人团队')
+    // 尾随空段落与空列表不再渲染成死空白
+    expect(JSON.stringify(nodes)).not.toContain('<empty>')
+    expect(nodes[nodes.length - 1].children?.[0].text).toBe('已举办 300+ 场活动')
+  })
+
+  it('flattens editor list items wrapped in paragraphs into plain list items', () => {
+    // TipTap 列表项真实输出 <li><p>…</p></li>；li+p 双层 margin 在 rich-text 里叠加成虚胖间距
+    const html = '<ol><li><p>请提前 10 分钟到场签到</p></li><li><p><u>迟到 15 分钟不可入场</u></p></li><li><p>活动照片将用于社群宣传</p></li></ol><p></p><p></p>'
+    const [list] = eventRichTextNodes(html)
+    expect(list.name).toBe('ol')
+    expect(list.children).toHaveLength(3)
+    for (const item of list.children || []) {
+      expect(item.name).toBe('li')
+      // 扁平化后列表项直接是行内内容，不再嵌套 p
+      expect(item.children?.every(child => child.name !== 'p')).toBe(true)
+      expect(item.attrs?.style || '').not.toContain('margin:8px')
+    }
+    expect(list.children?.[1].children?.[0].name).toBe('u')
+  })
+
+  it('joins multi-paragraph list items with a line break and keeps the item alignment', () => {
+    const html = '<ul><li><p style="text-align:center">第一段</p><p>第二段</p></li></ul>'
+    const [list] = eventRichTextNodes(html)
+    const [item] = list.children || []
+    expect(item.children?.map(child => child.name ?? 'text')).toEqual(['text', 'br', 'text'])
+    expect(item.attrs?.style).toContain('text-align:center')
+  })
+
+  it('keeps spaces between inline styles when pruning empty blocks', () => {
+    const html = '<p><strong>加粗文本</strong> 与 <em>斜体文本</em> 与 <u>下划线文本</u></p><p></p>'
+    const [paragraph] = eventRichTextNodes(html)
+    expect(paragraph.children?.filter(child => child.type === 'text').map(child => child.text)).toEqual([' 与 ', ' 与 '])
+  })
 })

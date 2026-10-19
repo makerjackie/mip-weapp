@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>活动详情富文本渲染修复 · 端到端验收报告</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--line:#e4e6ea;--tx:#1f2329;--tx2:#646a73}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:60px}
+.wrap{max-width:1220px;margin:0 auto;padding:0 20px}
+header{background:#0f2e5c;color:#fff;padding:26px 0 20px;margin-bottom:22px}
+header h1{font-size:20px} header .sub{color:#b8c7de;font-size:13px;margin-top:6px}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 20px;min-width:120px}
+.stat b{font-size:24px;display:block} .stat span{font-size:12px;color:var(--tx2)}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin-bottom:18px}
+section h2{font-size:16px;margin-bottom:12px;border-bottom:1px solid var(--line);padding-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f7f8fa;color:var(--tx2);font-weight:600}
+.badge{display:inline-block;padding:1px 9px;border-radius:10px;font-size:12px;font-weight:600;color:#fff}
+.note{color:var(--tx2);font-size:12.5px}
+.shot{width:100%;max-width:420px;border:1px solid var(--line);border-radius:8px;margin:8px 0}
+.shot-wide{width:100%;max-width:760px;border:1px solid var(--line);border-radius:8px;margin:8px 0}
+.pair{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.pair>div{flex:1 1 320px;max-width:460px}
+.pair .cap{font-size:12.5px;color:var(--tx2);margin-top:2px}
+.fixed{background:#f0fdf4;border-left:4px solid #16a34a;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}
+.info{background:#eff6ff;border-left:4px solid #2563eb;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}
+.warn{background:#fff8ef;border-left:4px solid #d97706;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13.5px}
+code{background:#f1f3f5;border-radius:4px;padding:1px 6px;font-size:12.5px;word-break:break-all}
+pre{background:#0d1117;color:#c9d1d9;border-radius:8px;padding:12px 14px;font-size:12px;overflow:auto;margin:8px 0;line-height:1.6}
+.badge.pass{background:#16a34a}.badge.fail{background:#dc2626}
+.tag{display:inline-block;background:#eef2ff;color:#4338ca;border-radius:6px;padding:1px 8px;font-size:12px;margin-right:6px}
+</style></head><body>
+<header><div class="wrap">
+<h1>活动详情富文本渲染修复 · 端到端验收报告</h1>
+<div class="sub">分支 fix/event-detail-richtext-render（基于 main 5d99b889）· 2026-10-19 · 测试环境（test.admin.mip.cool + CloudBase 测试环境 + 微信开发者工具真实运行时）</div>
+</div></header>
+<div class="wrap">
+
+<div class="stats">
+<div class="stat"><b style="color:#16a34a">35/35</b><span>端到端用例通过（9 admin + 14 合同 + 12 运行时）</span></div>
+<div class="stat"><b>4+1</b><span>修复缺陷（解析器 4 项 + 详情页空态条件）</span></div>
+<div class="stat"><b>≈150px</b><span>消除死空白（同内容页面高度 1318px → 1165px）</span></div>
+<div class="stat"><b style="color:#16a34a">PASS</b><span>pnpm verify:all（双端门禁，admin-web 228 测试）</span></div>
+</div>
+
+<section>
+<h2>① 结论</h2>
+<div class="fixed"><b>活动详情三个富文本区块（活动介绍 / 主办方介绍 / 报名须知）在新版管理后台富文本编辑器输出下的渲染缺陷已修复并通过三层端到端验收。</b>验收链路覆盖「真实编辑器编写 → 服务端存储 → 事件云函数投影 → 小程序真实运行时渲染」全链路：用 Playwright 驱动线上测试后台、经 TipTap 编辑器制作覆盖全部工具栏能力的活动并发布（含编辑器内图片上传），再用微信开发者工具自动化装载测试环境构建、以真实云函数数据渲染详情页并逐 Tab 截图比对。</div>
+<div class="info">缺陷根因不在两端白名单本身，而在<b>编辑器真实输出形态与小程序解析器假设的偏差</b>：TipTap 把对齐写到标题上、把列表项内容包在 <code>&lt;p&gt;</code> 里、并在内容尾部留下空段落/空列表残影；小程序 rich-text 组件没有 margin 折叠，这些差异被放大成肉眼可见的错位与死空白。另发现一处详情页空态条件读错字段的存量 bug（有介绍也显示「暂无活动介绍」）。</div>
+</section>
+
+<section>
+<h2>② 缺陷定位（修复前，main@5d99b889）</h2>
+<p>以下样例取自测试环境真实入库内容（管理后台 TipTap 编辑器产出，见 §3 A4–A7）：</p>
+<pre>&lt;h2 style="text-align:center"&gt;活动亮点&lt;/h2&gt;&lt;p&gt;&lt;/p&gt;&lt;p&gt;这是验收正文第一段…&lt;/p&gt;
+&lt;ol&gt;&lt;li&gt;&lt;p&gt;请提前 10 分钟到场签到&lt;/p&gt;&lt;/li&gt;&lt;li&gt;&lt;p&gt;&lt;u&gt;迟到 15 分钟不可入场&lt;/u&gt;&lt;/p&gt;&lt;/li&gt;…&lt;/ol&gt;&lt;p&gt;&lt;/p&gt;&lt;p&gt;&lt;/p&gt;</pre>
+<table>
+<tr><th>#</th><th>缺陷</th><th>根因（小程序侧）</th><th>用户可见症状</th></tr>
+<tr><td>D1</td><td>标题对齐丢失</td><td><code>rich-content.ts</code> 只对 <code>p</code> 保留 text-align，编辑器（TextAlign 对 heading/paragraph 生效）写出的 <code>&lt;h2 style="text-align:center"&gt;</code> 对齐被丢弃</td><td>运营设置了居中的栏目标题在详情页全部左对齐</td></tr>
+<tr><td>D2</td><td>列表项间距虚胖</td><td>TipTap 列表项是 <code>&lt;li&gt;&lt;p&gt;…&lt;/p&gt;&lt;/li&gt;</code>，解析后 li（margin 5px）与 p（margin 8px）两层块级 margin 在 rich-text（无折叠）中叠加</td><td>每个列表条目上下多出 ~16px 空隙，列表松散</td></tr>
+<tr><td>D3</td><td>死空白 / 孤儿列表符号</td><td>编辑器在列表后必然留下尾随空段落，另产生 <code>&lt;ul&gt;&lt;li&gt;&lt;p&gt;&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;</code> 空列表残影；空块未裁剪，rich-text 逐块渲染 margin</td><td>内容尾部成片空白；页面上出现孤立的「•」「1.」符号行</td></tr>
+<tr><td>D4</td><td>「暂无活动介绍。」误显示</td><td>详情页 WXML 空态条件读顶层 <code>hasDescription</code>，而 <code>applyEvent</code> 只写入了 <code>event.hasDescription</code>，顶层字段永远是初始值 false</td><td>只要活动介绍图库为空，有介绍内容也会在正文下方多出一句「暂无活动介绍。」</td></tr>
+</table>
+<div class="pair">
+<div><img class="shot-wide" src="shots/before-intro-fullpage.png" alt="修复前活动介绍整页"><div class="cap">修复前（main 构建真实运行时）：标题左对齐、正文下方的孤立「•」「1.」、图片下方的「暂无活动介绍。」、多处死空白</div></div>
+<div><img class="shot-wide" src="shots/after-intro-fullpage.png" alt="修复后活动介绍整页"><div class="cap">修复后（本分支同数据同环境）：居中标题、无孤儿符号、空态文案消失、页面高度 1318px → 1165px</div></div>
+</div>
+</section>
+
+<section>
+<h2>③ 修复内容（4 文件，+122/−9）</h2>
+<table>
+<tr><th>文件</th><th>改动</th></tr>
+<tr><td><code>src/modules/mip-events/rich-content.ts</code></td><td>① 标题（h1–h6 归一化后）与段落同样保留编辑器对齐；② <code>&lt;li&gt;&lt;p&gt;</code> 扁平化进列表项（对齐转移到 li，同条目多段落以 <code>&lt;br&gt;</code> 连接），消除双层 margin；③ 新增 <code>pruneDecorativeEmpties</code> 裁掉空段落/空列表/空行内节点，块内行间空格与换行原样保留；④ 解析产出统一走裁剪（markdown 存量路径同样受益）</td></tr>
+<tr><td><code>src/packages/member/mip-events/detail/index.wxml</code></td><td>空态条件改读 <code>event.hasDescription</code>（修复 D4）</td></tr>
+<tr><td><code>src/packages/member/mip-events/detail/index.ts</code></td><td>删除从未被写入的死字段 <code>data.hasDescription</code></td></tr>
+<tr><td><code>tests/mip-event-rich-content.test.ts</code></td><td>新增 4 组合同测试，样例直接取自测试环境真实入库 HTML（居中标题+空块裁剪 / 列表项扁平化 / 多段落 li / 行间空格保真）</td></tr>
+</table>
+<div class="info"><b>双端联动排查结论</b>：admin-web 手机预览（<code>event-mobile-preview.tsx</code>）是浏览器原生 HTML 渲染，无解析器复刻，上述偏差只在小程序侧显形，管理后台无需同步修改；服务端（<code>mip-events-api</code> 投影、<code>mip-admin-api</code> 富文本护栏）行为核对无偏差。列表符号（• / 数字编号）经真实运行时验证 rich-text 可正常渲染，无需自行合成。</div>
+</section>
+
+<section>
+<h2>④ 第一层 E2E：真实管理后台编辑与发布（Playwright → test.admin.mip.cool，9/9）</h2>
+<table>
+<tr><th>用例</th><th>结果</th><th>说明</th></tr>
+<tr><td>A1 登录测试后台</td><td><span class="badge pass">PASS</span></td><td>真实手机号+密码（BFF 冷启动等待）</td></tr>
+<tr><td>A2 打开新建活动表单</td><td><span class="badge pass">PASS</span></td><td>侧边栏「活动管理」→「新建活动」</td></tr>
+<tr><td>A3 基础字段填写</td><td><span class="badge pass">PASS</span></td><td>标题/线下/城市/起止时间（showTime 面板「确定」提交）</td></tr>
+<tr><td>A4 活动介绍富文本编辑</td><td><span class="badge pass">PASS</span></td><td>TipTap：居中 H2 标题 + 加粗/斜体/下划线混排 + 项目符号列表 + 编号列表 + 居中段落</td></tr>
+<tr><td>A5 编辑器插图上传</td><td><span class="badge pass">PASS</span></td><td>工具栏插图 → media 通道上传 → 编辑器出现图片节点（持久化 cloud:// 稳定引用）</td></tr>
+<tr><td>A6 主办方介绍富文本</td><td><span class="badge pass">PASS</span></td><td>居中 H2 + 加粗 + 项目符号列表</td></tr>
+<tr><td>A7 报名须知富文本</td><td><span class="badge pass">PASS</span></td><td>编号列表 + 下划线</td></tr>
+<tr><td>A8 草稿保存+预览打开</td><td><span class="badge pass">PASS</span></td><td>「保存并预览」→ 手机端预览弹窗</td></tr>
+<tr><td>A9 活动发布</td><td><span class="badge pass">PASS</span></td><td>预览页一键发布「活动已发布」，DB 复核 PUBLISHED</td></tr>
+</table>
+<div class="pair">
+<div><img class="shot" src="shots/admin-intro-editor.png" alt="编辑器实况"><div class="cap">真实 TipTap 编辑器：居中 H2 + 行内样式混排 + 两种列表 + 居中段落（A4）</div></div>
+<div><img class="shot" src="shots/admin-mobile-preview.png" alt="手机预览"><div class="cap">保存并预览：手机端预览弹窗（A8，发布前必经）</div></div>
+</div>
+<p class="note">发布产物入库复核：description / organizer_introduction / notices 均为受限 HTML，活动介绍含 <code>cloud://</code> 稳定插图引用——即 §2 缺陷样例的数据来源。</p>
+</section>
+
+<section>
+<h2>⑤ 第二层：解析器合同测试（vitest，14/14）</h2>
+<table>
+<tr><th>用例</th><th>结果</th></tr>
+<tr><td>存量 markdown：标题/列表/HTTPS 图（回归）</td><td><span class="badge pass">PASS</span></td></tr>
+<tr><td>不安全标记降级与非法图片协议拦截（回归 ×4）</td><td><span class="badge pass">PASS</span></td></tr>
+<tr><td>受限 HTML 行内样式与对齐 / 白名单外丢弃（回归 ×3）</td><td><span class="badge pass">PASS</span></td></tr>
+<tr><td>cloud:// 水合前后隐藏与批量去重（回归 ×4）</td><td><span class="badge pass">PASS</span></td></tr>
+<tr><td><span class="tag">新增</span>居中标题保留对齐 + 尾随空段/空列表裁剪（真实入库样例）</td><td><span class="badge pass">PASS</span></td></tr>
+<tr><td><span class="tag">新增</span>列表项扁平化（li 内无嵌套 p，下划线保留）</td><td><span class="badge pass">PASS</span></td></tr>
+<tr><td><span class="tag">新增</span>同一条目多段落以 br 连接且对齐转移到 li</td><td><span class="badge pass">PASS</span></td></tr>
+<tr><td><span class="tag">新增</span>裁剪空块时行间空格保真（加粗 与 斜体 不黏连）</td><td><span class="badge pass">PASS</span></td></tr>
+</table>
+<p class="note">命令 <code>npx vitest run tests/mip-event-rich-content.test.ts</code>；关联套件 <code>tests/event-registration-experience.test.ts</code> 21/21 同步通过。</p>
+</section>
+
+<section>
+<h2>⑥ 第三层 E2E：小程序真实运行时（微信开发者工具自动化 + 测试环境构建，12/12）</h2>
+<p>宿主工程同步本分支 <code>dist</code>（<code>MIP_ENV_DIR=envs/test</code> 构建烘焙测试环境），automator 打开真实活动 <code>富文本渲染验收1052</code>（PUBLISHED，含全部格式与 cloud:// 插图）：</p>
+<table>
+<tr><th>用例</th><th>结果</th><th>断言</th></tr>
+<tr><td>R1 详情页打开（真实测试环境）</td><td><span class="badge pass">PASS</span></td><td>state=ready 且 eventId 命中</td></tr>
+<tr><td>R2 居中标题保留 text-align</td><td><span class="badge pass">PASS</span></td><td>h3 节点 style 含 <code>text-align:center</code>（修复前缺失）</td></tr>
+<tr><td>R3 空段落/空列表不进节点</td><td><span class="badge pass">PASS</span></td><td>intro=10 / org=4 / notices=1，无空 children 节点</td></tr>
+<tr><td>R4 列表项扁平化</td><td><span class="badge pass">PASS</span></td><td>ol 3 个 li，无嵌套 p（修复前 nestedP=true）</td></tr>
+<tr><td>R5 插图已水合为本地路径</td><td><span class="badge pass">PASS</span></td><td>cloud:// → <code>http://tmp/….png</code>（本地下载管道）</td></tr>
+<tr><td>R6 渲染 WXML 含对齐样式</td><td><span class="badge pass">PASS</span></td><td>页面渲染产物含 <code>text-align:center</code></td></tr>
+<tr><td>R7-intro / organizer / notice 三 Tab 截图</td><td><span class="badge pass">PASS</span></td><td>逐 Tab 整帧截图（下方展示）</td></tr>
+<tr><td>R9 负例：无介绍时空态文案出现</td><td><span class="badge pass">PASS</span></td><td><code>event.hasDescription=false</code> → 「暂无活动介绍」仍正常出现（空态分支未破坏）</td></tr>
+<tr><td>R8 活动介绍整页长图</td><td><span class="badge pass">PASS</span></td><td>滚动截帧+拼接，363×1165</td></tr>
+</table>
+<div class="pair">
+<div><img class="shot" src="shots/after-tab-notice.png" alt="报名须知渲染"><div class="cap">报名须知：编号列表 1./2./3. 正常渲染（rich-text 原生符号），下划线保留——扁平化后无虚胖间距</div></div>
+<div><img class="shot" src="shots/after-tab-organizer.png" alt="主办方渲染"><div class="cap">主办方介绍：居中标题（修复前左对齐）+ 加粗「主办方」+ 列表条目</div></div>
+</div>
+<div class="pair">
+<div><img class="shot" src="shots/after-tab-intro-empty.png" alt="负例空态"><div class="cap">负例 R9：清空介绍后「暂无活动介绍」正常出现，空态分支未破坏</div></div>
+<div><img class="shot" src="shots/admin-event-form.png" alt="活动表单"><div class="cap">后台新建活动表单全貌（原型对齐版，含三个富文本字段）</div></div>
+</div>
+<p class="note">运行时证据：JSON 节点数据与逐步断言见 <code>runtime-results.json</code>；修复前基线断言见 <code>before-checks.json</code>（centeredHeadingLost=true / noticesNestedP=true）。</p>
+</section>
+
+<section>
+<h2>⑦ 门禁与提交</h2>
+<table>
+<tr><th>检查</th><th>结果</th></tr>
+<tr><td><code>pnpm verify</code>（小程序：lint + tsc + vitest + 构建 + dist 健康断言）</td><td><span class="badge pass">PASS</span></td></tr>
+<tr><td><code>pnpm admin:web:verify</code>（admin-web：lint + tsc + 33 文件 228 测试 + 构建 + 响应式契约）</td><td><span class="badge pass">PASS</span></td></tr>
+<tr><td><code>pnpm verify:all</code>（顺序执行两者）</td><td><span class="badge pass">PASS</span></td></tr>
+<tr><td><code>git diff --check</code></td><td><span class="badge pass">PASS</span></td></tr>
+</table>
+<div class="warn"><b>仍需真机/生产环境</b>：列表符号与对齐在真机 rich-text 的表现（开发者工具模拟器已验证）、支付/手机号路径不在本轮范围；小程序体验版尚未重新上传——上传前旧版小程序会把新富文本按普通文本渲染（既有已知项，见 PROJECT_STATUS 2026-10-16）。可选后续：管理后台写入侧顺手裁掉尾随空段（纯增益，非必需）。</div>
+</section>
+
+</div>
+</body></html>
