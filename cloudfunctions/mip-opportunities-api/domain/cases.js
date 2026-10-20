@@ -309,17 +309,20 @@ async function getSuperCase(database, caller, id) {
   }
 }
 
-async function assertReferences(tx, caller, draft) {
+async function assertReferences(tx, caller, draft, stored = null) {
   const tagPairs = [
     ...draft.projects.map(project => project.cityTagId).filter(Boolean)
       .map(id => [id, 'CITY']),
-    ...(draft.industryTagId ? [[draft.industryTagId, 'INDUSTRY']] : []),
+    ...(draft.industryTagId && draft.industryTagId !== stored?.industry_tag_id ? [[draft.industryTagId, 'INDUSTRY']] : []),
   ]
   if (tagPairs.length) {
     const rows = await tx.query(
-      `SELECT id, kind FROM mip_tags
-       WHERE app_id = ? AND id IN (${tagPairs.map(() => '?').join(', ')})
-         AND enabled = 1 AND selectable = 1`,
+      `SELECT t.id, t.kind FROM mip_tags t
+       LEFT JOIN mip_tags parent ON parent.app_id = t.app_id AND parent.id = t.parent_id
+       WHERE t.app_id = ? AND t.id IN (${tagPairs.map(() => '?').join(', ')})
+         AND t.enabled = 1 AND t.selectable = 1
+         AND (t.kind <> 'INDUSTRY' OR (parent.kind = 'INDUSTRY'
+           AND parent.parent_id IS NULL AND parent.selectable = 0 AND parent.enabled = 1)) FOR SHARE`,
       [caller.appId, ...tagPairs.map(([id]) => id)],
     )
     const byId = new Map(rows.map(row => [row.id, row.kind]))
@@ -361,12 +364,11 @@ async function saveSuperCase(database, contentSafety, caller, input) {
     request: aiConfirmation ? { draft, aiConfirmation } : draft,
   }, async (tx) => {
     await lockActiveContributor(tx, caller)
-    await assertReferences(tx, caller, draft)
     const id = draft.id || randomUUID()
     let existing = null
     if (draft.id) {
       existing = await tx.one(
-        `SELECT owner_user_id, status, version, published_at, projects FROM mip_super_cases
+        `SELECT owner_user_id, status, version, published_at, projects, industry_tag_id FROM mip_super_cases
          WHERE app_id = ? AND id = ? FOR UPDATE`,
         [caller.appId, draft.id],
       )
@@ -375,6 +377,7 @@ async function saveSuperCase(database, contentSafety, caller, input) {
       if (existing.status === 'ARCHIVED') throw new Error('FORBIDDEN')
       if (Number(existing.version) !== draft.expectedVersion) throw new Error('CONFLICT')
     }
+    await assertReferences(tx, caller, draft, existing)
     // 旧客户端/管理端只提交平铺字段时，平铺值映射为第一个项目，保留已存的其余项目。
     const projects = draft.legacyFlatOnly && existing
       ? [draft.projects[0], ...parseStoredProjects(existing.projects).slice(1)]

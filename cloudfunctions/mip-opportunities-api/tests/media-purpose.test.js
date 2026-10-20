@@ -12,6 +12,22 @@ const MEDIA_ID = '33333333-3333-4333-8333-333333333333'
 const caller = { appId: APP_ID, userId: USER_ID }
 
 describe('opportunity and super-case media ownership', () => {
+  it('preserves a stored case industry but validates active parents for newly selected industries', async () => {
+    const draft = { projects: [], industryTagId: COVER_ID, mediaAssetIds: [] }
+    let reads = 0
+    const tx = { async query(sql, params) {
+      reads += 1
+      assert.match(sql, /parent\.enabled = 1/)
+      assert.match(sql, /t\.enabled = 1/)
+      assert.deepEqual(params, [APP_ID, COVER_ID])
+      return []
+    } }
+    await assertCaseReferences(tx, caller, draft, { industry_tag_id: COVER_ID })
+    assert.equal(reads, 0)
+    await assert.rejects(() => assertCaseReferences(tx, caller, draft), /VALIDATION_FAILED/)
+    assert.equal(reads, 1)
+  })
+
   it('requires an owned READY OPPORTUNITY_COVER for opportunity saves', async () => {
     const tx = {
       async one(sql, params) {

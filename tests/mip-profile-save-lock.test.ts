@@ -89,6 +89,7 @@ describe('profile industry draft interaction', () => {
       industryOptions: [{ id: '', label: '未选择' }, { id: 'ai', label: '人工智能' }, { id: 'retail', label: '零售' }],
       selectedIndustryIds: ['ai'],
       industryIndex: 1,
+      industryCatalogAvailable: true,
     })
     const invoke = (method: string, ...args: unknown[]) => Reflect.apply(page[method] as (...args: unknown[]) => void, page, args)
     invoke('toggleCatalog')
@@ -108,5 +109,83 @@ describe('profile industry draft interaction', () => {
     invoke('confirmIndustryPicker')
     expect(page.data.selectedIndustryIds).toEqual([])
     expect(page.data.industryIndex).toBe(0)
+  })
+})
+
+describe('profile retains historical industries', () => {
+  const snapshot = {
+    profile: {
+      version: 8,
+      nickname: '测试用户',
+      realName: '',
+      gender: 'UNKNOWN',
+      careerIdentityKey: '',
+      identityStatus: '',
+      headline: '',
+      introduction: '',
+      companies: [],
+      organizations: [],
+      visibility: {},
+      abilityTagIds: [],
+      primaryIndustryTagId: 'retained',
+      primaryIndustryLabel: '电子通讯',
+    },
+  }
+  const activeTags = [
+    { id: 'group', kind: 'INDUSTRY', label: '互联网', key: 'internet', selectable: false },
+    { id: 'ai', kind: 'INDUSTRY', label: '人工智能', key: 'ai', parentId: 'group', selectable: true, popular: true },
+  ]
+  const invoke = (page: Definition, method: string, ...args: unknown[]) => Reflect.apply(page[method] as (...args: unknown[]) => unknown, page, args)
+
+  it('shows a stored disabled value without making it newly selectable, and saves it after editing another field', async () => {
+    identity.loadSnapshot.mockResolvedValue(snapshot)
+    identity.listProfileTags.mockResolvedValue(activeTags)
+    identity.saveProfile.mockResolvedValue(savedProfileSnapshot())
+    const page = createPage()
+    await invoke(page, 'loadProfile')
+    expect(page.data.state).toBe('ready')
+    expect(page.data.industryOptions).toEqual([
+      { id: '', label: '未选择' },
+      { id: 'ai', label: '互联网 · 人工智能' },
+      { id: 'retained', label: '电子通讯（已停用）' },
+    ])
+    expect(JSON.stringify(page.data.industryGroups)).not.toContain('retained')
+    invoke(page, 'toggleCatalog')
+    invoke(page, 'confirmIndustryPicker')
+    invoke(page, 'updateText', { currentTarget: { dataset: { field: 'nickname' } }, detail: { value: '新昵称' } })
+    await invoke(page, 'saveProfile')
+    expect(identity.saveProfile).toHaveBeenCalledWith(expect.objectContaining({ nickname: '新昵称', primaryIndustryTagId: 'retained' }))
+    invoke(page, 'onHide')
+  })
+
+  it('clears only after explicit confirmation, or replaces the history with an active choice', async () => {
+    for (const selection of [[], ['ai']]) {
+      identity.loadSnapshot.mockResolvedValue(snapshot)
+      identity.listProfileTags.mockResolvedValue(activeTags)
+      identity.saveProfile.mockResolvedValue(savedProfileSnapshot())
+      const page = createPage()
+      await invoke(page, 'loadProfile')
+      invoke(page, 'toggleCatalog')
+      invoke(page, 'changeIndustry', { detail: { selectedIds: selection } })
+      invoke(page, 'confirmIndustryPicker')
+      await invoke(page, 'saveProfile')
+      expect(identity.saveProfile).toHaveBeenLastCalledWith(expect.objectContaining({ primaryIndustryTagId: selection[0] || null }))
+      invoke(page, 'onHide')
+    }
+  })
+
+  it('keeps the existing industry and other fields editable when the optional catalog request fails', async () => {
+    identity.loadSnapshot.mockResolvedValue(snapshot)
+    identity.listProfileTags.mockRejectedValue(new Error('目录不可用'))
+    identity.saveProfile.mockResolvedValue(savedProfileSnapshot())
+    const page = createPage()
+    await invoke(page, 'loadProfile')
+    expect(page.data.state).toBe('ready')
+    expect(page.data.message).toContain('已保留原行业')
+    invoke(page, 'toggleCatalog')
+    expect(page.data.industryCatalogExpanded).toBe(false)
+    await invoke(page, 'saveProfile')
+    expect(identity.saveProfile).toHaveBeenCalledWith(expect.objectContaining({ primaryIndustryTagId: 'retained' }))
+    invoke(page, 'onHide')
   })
 })

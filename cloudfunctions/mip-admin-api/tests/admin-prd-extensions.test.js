@@ -159,6 +159,7 @@ describe('admin PRD extension persistence', () => {
     assert.deepEqual(result.owners, [{ id: 'owner-a', nickname: '负责人', branchName: '深圳分会' }])
     assert.deepEqual(result.cities, [{ id: 'city-a', label: '深圳' }])
     assert.deepEqual(result.tags, [{ id: 'tag-a', kind: 'INDUSTRY', label: '企业服务' }])
+    assert.match(calls.find(call => call.sql.includes('FROM mip_tags')).sql, /parent\.enabled = 1/)
     assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_city_branches')).params, ['wx-app', 'branch-a'])
     assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app', 'branch-a', '', '', '', '', ''])
 
@@ -234,8 +235,12 @@ describe('admin PRD extension persistence', () => {
         return null
       },
       async query(sql, params) {
-        if (sql.includes('SELECT id, kind FROM mip_tags')) {
+        if (sql.includes('SELECT t.id, t.kind FROM mip_tags')) {
           reads.push(sql)
+          assert.match(sql, /parent\.enabled = 1/)
+          assert.match(sql, /retained\.opportunity_id = \?/)
+          assert.match(sql, /retained\.relation = 'INDUSTRY'/)
+          assert.equal(params.at(-1), null)
           return [{ id: 'tag-a', kind: 'INDUSTRY' }]
         }
         writes.push({ sql, params })

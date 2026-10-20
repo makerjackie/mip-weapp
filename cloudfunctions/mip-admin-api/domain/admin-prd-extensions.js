@@ -294,10 +294,13 @@ function createAdminPrdExtensions(database, options = {}) {
         [appId, ...ownerAccess.params, input.query || '', input.query || '', input.query || '', input.selectedUserId || '', input.selectedUserId || ''],
       ),
       database.query(
-        `SELECT id, kind, label, popular, sort_order FROM mip_tags
-         WHERE app_id = ? AND enabled = 1 AND selectable = 1
-           AND kind IN ('CITY', 'INDUSTRY', 'ABILITY')
-         ORDER BY kind, popular DESC, sort_order, id`,
+        `SELECT t.id, t.kind, t.label, t.popular, t.sort_order FROM mip_tags t
+         LEFT JOIN mip_tags parent ON parent.app_id = t.app_id AND parent.id = t.parent_id
+         WHERE t.app_id = ? AND t.enabled = 1 AND t.selectable = 1
+           AND (t.kind IN ('CITY', 'ABILITY') OR (t.kind = 'INDUSTRY'
+             AND parent.kind = 'INDUSTRY' AND parent.parent_id IS NULL
+             AND parent.selectable = 0 AND parent.enabled = 1))
+         ORDER BY t.kind, t.popular DESC, t.sort_order, t.id`,
         [appId],
       ),
     ])
@@ -384,9 +387,18 @@ function createAdminPrdExtensions(database, options = {}) {
       let selectedTags = []
       if (input.draft.tagIds.length) {
         selectedTags = await tx.query(
-          `SELECT id, kind FROM mip_tags WHERE app_id = ? AND id IN (${placeholders(input.draft.tagIds)})
-             AND kind IN ('INDUSTRY', 'ABILITY') AND enabled = 1 AND selectable = 1 FOR SHARE`,
-          [input.appId, ...input.draft.tagIds],
+          `SELECT t.id, t.kind FROM mip_tags t
+           LEFT JOIN mip_tags parent ON parent.app_id = t.app_id AND parent.id = t.parent_id
+           WHERE t.app_id = ? AND t.id IN (${placeholders(input.draft.tagIds)})
+             AND ((t.kind = 'ABILITY' AND t.enabled = 1 AND t.selectable = 1)
+               OR (t.kind = 'INDUSTRY'
+                 AND ((t.enabled = 1 AND t.selectable = 1 AND parent.kind = 'INDUSTRY'
+                   AND parent.parent_id IS NULL AND parent.selectable = 0 AND parent.enabled = 1) OR EXISTS (
+                   SELECT 1 FROM mip_opportunity_tags retained
+                   WHERE retained.app_id = t.app_id AND retained.opportunity_id = ?
+                     AND retained.tag_id = t.id AND retained.relation = 'INDUSTRY'
+                 )))) FOR SHARE`,
+          [input.appId, ...input.draft.tagIds, input.opportunityId || null],
         )
         if (new Set(selectedTags.map(row => row.id)).size !== input.draft.tagIds.length) throw codeError('VALIDATION_FAILED')
       }

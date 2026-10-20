@@ -409,6 +409,7 @@ describe('profile and primary branch transaction', () => {
           return [{
             id: industryId,
             kind: 'INDUSTRY',
+            enabled: 1,
             selectable: 1,
             parent_id: '21900000-0000-4000-8000-000000000001',
             parent_kind: 'INDUSTRY',
@@ -457,6 +458,7 @@ describe('profile and primary branch transaction', () => {
             if (sql.includes('SELECT version, avatar_asset_id, visibility_json FROM mip_profiles')) {
               return { version: 1, avatar_asset_id: null, visibility_json: {} }
             }
+            if (sql.includes('SELECT tag_id FROM mip_profile_tags')) return null
             throw new Error(`unexpected one: ${sql}`)
           },
           async query(sql) {

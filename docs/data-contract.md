@@ -19,7 +19,7 @@
 | `mip_city_branches` / `mip_branch_memberships` | 城市分会、成员归属和有效期 | `mip-admin-api`、身份领域 |
 | `mip_profiles` / `mip_private_profiles` | 公开资料与加密私密资料 | `mip-identity-api`、受控管理动作 |
 | `mip_agreement_acceptances` | 协议版本、来源和接受时间 | `mip-identity-api` |
-| `mip_tags` / `mip_profile_tags` | 标签目录和用户标签关系 | 身份/机会领域 |
+| `mip_tags` / `mip_profile_tags` | 标签目录和用户标签关系 | 身份/机会领域；平台超级管理员维护行业目录 |
 | `mip_admin_role_bindings` / `mip_user_access_controls` | 角色绑定、allow/block 控制 | `mip-admin-api` |
 | `mip_app_settings` | App-scoped 运行设置 | `mip-admin-api` |
 | `mip_idempotency_keys` | 业务 mutation 的请求 hash、状态和响应 | 各领域事务 |
@@ -134,3 +134,7 @@
 ### 个人资料与名片联系方式
 
 身份服务的 `getProfile` 只向当前用户返回本人联系方式 DTO；手机号同时提供本人名片预览所需原值、脱敏值和绑定状态。`getPublicProfile` 永远不返回手机号、微信号、邮箱或地址。`updateCard` 在一个事务内保存姓名、公司、组织、联系方式和名片公开范围，服务端负责版本校验与加密保存。
+
+## 行业目录与历史选择
+
+行业采用不可选的一级分类和可选的二级行业。平台超级管理员可维护名称、归属、热门、排序及启停，保留稳定 ID 和审计。停用行业或其一级分类只限制新选择，不删除既有个人资料、机会或案例的引用；已有行业仍按隐私规则展示，编辑其他字段可保留原值。服务端只允许保留当前对象已有的停用行业，不能把其他用户或对象的历史值用于新选择。个人资料保存省略 `primaryIndustryTagId` 时保留原值，显式 `null` 清除；客户端不得把目录缺项或目录请求失败转换为清空意图。

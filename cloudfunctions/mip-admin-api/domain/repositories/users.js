@@ -275,7 +275,8 @@ function createAdminUserRepository(database, options) {
          FROM mip_profile_tags relation
          INNER JOIN mip_tags tag
            ON tag.app_id = relation.app_id AND tag.id = relation.tag_id
-         WHERE relation.app_id = ? AND relation.user_id = ? AND tag.enabled = 1
+         WHERE relation.app_id = ? AND relation.user_id = ?
+           AND (relation.relation = 'PRIMARY_INDUSTRY' OR tag.enabled = 1)
          ORDER BY relation.relation, tag.sort_order, tag.id`,
         [appId, userId],
       ),

@@ -12,7 +12,7 @@ async function loadPublicPersonDetails(database, appId, userIds) {
               branch.city_name, growth.experience_balance,
               (SELECT tag.label FROM mip_profile_tags selected
                INNER JOIN mip_tags tag ON tag.app_id = selected.app_id AND tag.id = selected.tag_id
-                 AND tag.kind = 'INDUSTRY' AND tag.enabled = 1
+                 AND tag.kind = 'INDUSTRY'
                WHERE selected.app_id = profile.app_id AND selected.user_id = profile.user_id
                  AND selected.relation = 'PRIMARY_INDUSTRY' ORDER BY tag.id LIMIT 1) AS industry_label
        FROM mip_profiles profile

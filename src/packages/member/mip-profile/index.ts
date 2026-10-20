@@ -46,6 +46,7 @@ Page({
     industryGroups: [] as CatalogSelectorGroup[],
     selectedIndustryIds: [] as string[],
     industryIndex: 0,
+    industryCatalogAvailable: false,
     industryCatalogExpanded: false,
     draftIndustryIds: [] as string[],
     // 能力标签属于合作卡属性，此处仅回传存量，不再提供编辑入口。
@@ -96,7 +97,11 @@ Page({
           aiMessage = error instanceof Error ? error.message : 'AI 草稿加载失败'
         }
       }
-      const tags = await mipIdentityModule.listProfileTags()
+      let industryCatalogAvailable = true
+      const tags = await mipIdentityModule.listProfileTags().catch(() => {
+        industryCatalogAvailable = false
+        return []
+      })
       const industryOptions = [
         { id: '', label: '未选择' },
         ...flattenProfileIndustries(tags).map(tag => ({ id: tag.id, label: tag.displayLabel })),
@@ -111,6 +116,13 @@ Page({
         })),
       }))
       const primaryIndustryId = snapshot.profile.primaryIndustryTagId || ''
+      // Retained values are display-only: never add disabled industries to picker groups.
+      if (primaryIndustryId && !industryOptions.some(item => item.id === primaryIndustryId)) {
+        industryOptions.push({
+          id: primaryIndustryId,
+          label: `${snapshot.profile.primaryIndustryLabel || '已保存的行业'}${industryCatalogAvailable ? '（已停用）' : ''}`,
+        })
+      }
       const aiFields = aiSource?.fields || {}
       const companies = aiOrganizations(aiFields, 'companies')
       const organizations = aiOrganizations(aiFields, 'organizations')
@@ -137,8 +149,9 @@ Page({
         industryGroups,
         selectedIndustryIds: primaryIndustryId ? [primaryIndustryId] : [],
         industryIndex: Math.max(0, industryOptions.findIndex(item => item.id === primaryIndustryId)),
+        industryCatalogAvailable,
         abilityTagIds: snapshot.profile.abilityTagIds,
-        message: aiMessage,
+        message: [aiMessage, !industryCatalogAvailable ? '行业目录暂时加载失败，已保留原行业，可继续保存其他资料。' : ''].filter(Boolean).join(' '),
       })
     }
     catch (error) {
@@ -204,6 +217,10 @@ Page({
       this.closeIndustryPicker()
       return
     }
+    if (!this.data.industryCatalogAvailable) {
+      this.showEditorMessage('行业目录暂时不可用，请重新加载资料后选择。')
+      return
+    }
     this.setData({
       draftIndustryIds: this.data.selectedIndustryIds.slice(),
       industryCatalogExpanded: true,
@@ -245,7 +262,6 @@ Page({
 
     this.setData({ saving: true, message: '' })
     try {
-      const selectedIndustry = this.data.industryOptions[this.data.industryIndex]
       // 主城市分会由管理后台在开通会员时配置，此页不再提交；载荷不带分会
       // 字段时服务端保留用户现有分会不变。
       const snapshot = await mipIdentityModule.saveProfile({
@@ -261,7 +277,7 @@ Page({
         companies: this.data.companies,
         organizations: this.data.organizations,
         visibility: this.data.profileVisibility,
-        primaryIndustryTagId: selectedIndustry?.id || undefined,
+        primaryIndustryTagId: this.data.selectedIndustryIds[0] || null,
         abilityTagIds: this.data.abilityTagIds,
         aiConfirmation: this.data.aiConfirmation || undefined,
       })

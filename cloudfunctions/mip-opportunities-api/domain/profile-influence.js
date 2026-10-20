@@ -335,7 +335,7 @@ async function listInfluenceInteractions(database, caller, input = {}) {
     OR (${searchable('industry')} AND EXISTS (
       SELECT 1 FROM mip_profile_tags industry_link
       INNER JOIN mip_tags industry ON industry.app_id = industry_link.app_id
-        AND industry.id = industry_link.tag_id AND industry.kind = 'INDUSTRY' AND industry.enabled = 1
+        AND industry.id = industry_link.tag_id AND industry.kind = 'INDUSTRY'
       WHERE industry_link.app_id = peer.app_id AND industry_link.user_id = peer.id
         AND industry_link.relation = 'PRIMARY_INDUSTRY' AND industry.label LIKE ? ESCAPE '='
     ))

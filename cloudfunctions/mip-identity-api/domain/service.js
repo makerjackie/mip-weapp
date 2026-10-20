@@ -365,6 +365,7 @@ function profileDto(facts, options = {}) {
   }
   // 主城市分会由管理后台在开通会员时配置，不再作为用户端资料完善度门槛。
   const profileTags = facts.profileTags || []
+  const primaryIndustry = profileTags.find(tag => tag.relation === 'PRIMARY_INDUSTRY')
   return {
     exists: Boolean(profile),
     version: Number(profile?.version || 0),
@@ -381,7 +382,8 @@ function profileDto(facts, options = {}) {
     companies: jsonArray(profile?.companies_json),
     organizations: jsonArray(profile?.organizations_json),
     visibility: visibility(profile?.visibility_json),
-    primaryIndustryTagId: profileTags.find(tag => tag.relation === 'PRIMARY_INDUSTRY')?.tag_id,
+    primaryIndustryTagId: primaryIndustry?.tag_id,
+    ...(primaryIndustry?.label ? { primaryIndustryLabel: primaryIndustry.label } : {}),
     abilityTagIds: profileTags
       .filter(tag => tag.relation === 'ABILITY')
       .map(tag => tag.tag_id),
@@ -506,9 +508,9 @@ function normalizeProfileInput(value) {
   const companies = organizations(value.companies)
   const organizationList = organizations(value.organizations)
   const abilityTagIds = uniqueIds(value.abilityTagIds, 12)
-  const primaryIndustryTagId = value.primaryIndustryTagId
-    ? String(value.primaryIndustryTagId)
-    : undefined
+  const primaryIndustryTagId = value.primaryIndustryTagId === undefined
+    ? undefined
+    : (value.primaryIndustryTagId ? String(value.primaryIndustryTagId) : null)
   const primaryBranchId = value.primaryBranchId ? String(value.primaryBranchId) : undefined
   const expectedUserVersion = value.expectedUserVersion === undefined
     ? undefined

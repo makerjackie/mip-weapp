@@ -284,7 +284,6 @@ const cardFrom = `
           ON selected_tag.app_id = selected_industry.app_id
             AND selected_tag.id = selected_industry.tag_id
             AND selected_tag.kind = 'INDUSTRY'
-            AND selected_tag.enabled = 1
         WHERE selected_industry.app_id = c.app_id
           AND selected_industry.user_id = c.owner_user_id
           AND selected_industry.relation = 'PRIMARY_INDUSTRY'
@@ -292,8 +291,7 @@ const cardFrom = `
   LEFT JOIN mip_tags industry
     ON industry.app_id = primary_industry.app_id
       AND industry.id = primary_industry.tag_id
-      AND industry.kind = 'INDUSTRY'
-      AND industry.enabled = 1`
+      AND industry.kind = 'INDUSTRY'`
 
 const cardSelect = `SELECT ${cardFields} ${cardFrom}`
 
@@ -498,7 +496,6 @@ const talentUserJoins = `
           ON selected_tag.app_id = selected_industry.app_id
             AND selected_tag.id = selected_industry.tag_id
             AND selected_tag.kind = 'INDUSTRY'
-            AND selected_tag.enabled = 1
         WHERE selected_industry.app_id = u.app_id
           AND selected_industry.user_id = u.id
           AND selected_industry.relation = 'PRIMARY_INDUSTRY'
@@ -507,7 +504,6 @@ const talentUserJoins = `
     ON industry.app_id = primary_industry.app_id
       AND industry.id = primary_industry.tag_id
       AND industry.kind = 'INDUSTRY'
-      AND industry.enabled = 1
   LEFT JOIN mip_cooperation_cards c
     ON c.app_id = u.app_id AND c.owner_user_id = u.id
       AND c.status = 'PUBLISHED' AND c.published_at <= talent_page.snapshot_at`

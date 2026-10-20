@@ -616,7 +616,7 @@ async function assertReferences(tx, caller, draft, stored = null) {
   if (!tagsUnchanged) {
     const expectedTags = [
       ...(draft.cityTagId && draft.cityTagId !== (stored?.city_tag_id || null) ? [[draft.cityTagId, 'CITY']] : []),
-      ...draft.industryTagIds.map(id => [id, 'INDUSTRY']),
+      ...draft.industryTagIds.filter(id => !storedTags?.INDUSTRY.includes(id)).map(id => [id, 'INDUSTRY']),
       ...draft.abilityTagIds.map(id => [id, 'ABILITY']),
     ]
     await assertSelectableTags(tx, caller.appId, expectedTags)

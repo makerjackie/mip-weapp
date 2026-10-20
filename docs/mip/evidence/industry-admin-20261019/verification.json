@@ -1,5 +1,5 @@
 {
-  "status": "local-verified; pending-user-policy; not-deployed",
+  "status": "local-verified; policy-confirmed; cloud-release-in-progress",
   "verifyAll": "passed",
   "focusedServerContracts": 30,
   "webIndustryModuleContracts": 4,
@@ -13,9 +13,12 @@
   "databaseMigrationApplied": false,
   "productionWrites": 0,
   "miniProgramUploadedThisFeature": false,
-  "pendingDecision": "Retain historical selections when an industry or its parent group is disabled",
-  "miniProgramTests": 1808,
+  "pendingDecision": null,
+  "miniProgramTests": 1811,
   "webNodeTests": 329,
   "webReactTests": 247,
-  "verificationLog": ".tmp/industry-config-20261019/verify-all-green.log"
+  "verificationLog": ".tmp/industry-config-20261019/verify-all-history.log",
+  "confirmedPolicy": "Disable restricts new choices; historical selections and references are retained; disabling a parent hides children without deleting them",
+  "profileIndustryOmission": "preserve; explicit null clears",
+  "runtimePreflight": "passed"
 }

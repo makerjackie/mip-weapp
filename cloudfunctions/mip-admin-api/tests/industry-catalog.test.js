@@ -12,7 +12,7 @@ const tagId = '33333333-3333-4333-8333-333333333333'
 function service(roleKey, overrides = {}) {
   const repository = {
     resolveUser: async () => ({ id: caller.userId, status: 'ACTIVE', agreementsAccepted: true, phoneBound: true, profileComplete: true }),
-    listRoleBindings: async () => [{ roleKey, scopeType: 'PLATFORM', scopeId: null, status: 'ACTIVE' }],
+    listRoleBindings: async () => [{ roleKey, scopeType: roleKey === 'BRANCH_ADMIN' ? 'BRANCH' : 'PLATFORM', scopeId: roleKey === 'BRANCH_ADMIN' ? groupId : null, status: 'ACTIVE' }],
     listIndustryCatalog: async appId => ({ appId, items: [] }),
     saveIndustryTag: async input => input,
     changeIndustryTagStatus: async input => input,

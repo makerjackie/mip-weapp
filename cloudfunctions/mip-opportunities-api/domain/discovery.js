@@ -48,7 +48,6 @@ const profileSelect = `
           ON selected_tag.app_id = selected_industry.app_id
             AND selected_tag.id = selected_industry.tag_id
             AND selected_tag.kind = 'INDUSTRY'
-            AND selected_tag.enabled = 1
         WHERE selected_industry.app_id = u.app_id
           AND selected_industry.user_id = u.id
           AND selected_industry.relation = 'PRIMARY_INDUSTRY'
@@ -56,8 +55,7 @@ const profileSelect = `
   LEFT JOIN mip_tags industry
     ON industry.app_id = primary_industry.app_id
       AND industry.id = primary_industry.tag_id
-      AND industry.kind = 'INDUSTRY'
-      AND industry.enabled = 1`
+      AND industry.kind = 'INDUSTRY'`
 
 function limit(value, fallback = 20) {
   const parsed = Number(value)
@@ -182,8 +180,9 @@ async function loadProfileTags(database, appId, userIds) {
   const rows = await database.query(
     `SELECT pt.user_id, pt.relation, t.id, t.tag_key, t.label
      FROM mip_profile_tags pt
-     INNER JOIN mip_tags t ON t.app_id = pt.app_id AND t.id = pt.tag_id AND t.enabled = 1
+     INNER JOIN mip_tags t ON t.app_id = pt.app_id AND t.id = pt.tag_id
      WHERE pt.app_id = ? AND pt.user_id IN (${userIds.map(() => '?').join(', ')})
+       AND (pt.relation = 'PRIMARY_INDUSTRY' OR t.enabled = 1)
        AND pt.relation IN ('PRIMARY_INDUSTRY', 'ABILITY')
      ORDER BY pt.user_id, pt.relation, t.sort_order, t.id`,
     [appId, ...userIds],
@@ -268,7 +267,7 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
               cover.cloud_file_id AS cover_file_id
        FROM mip_super_cases c
        LEFT JOIN mip_tags city ON city.app_id = c.app_id AND city.id = c.city_tag_id AND city.enabled = 1
-       LEFT JOIN mip_tags industry ON industry.app_id = c.app_id AND industry.id = c.industry_tag_id AND industry.enabled = 1
+       LEFT JOIN mip_tags industry ON industry.app_id = c.app_id AND industry.id = c.industry_tag_id
        LEFT JOIN mip_media_assets cover
          ON cover.app_id = c.app_id AND cover.id = c.cover_asset_id AND cover.status = 'READY'
        WHERE c.app_id = ? AND c.owner_user_id = ? AND c.status = 'PUBLISHED'

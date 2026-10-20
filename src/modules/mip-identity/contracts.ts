@@ -138,6 +138,7 @@ export interface MipProfileSnapshot {
   organizations: ProfileOrganization[]
   visibility: ProfileVisibility
   primaryIndustryTagId?: string
+  primaryIndustryLabel?: string
   abilityTagIds: string[]
   privateContact?: ProfilePrivateContact
   complete: boolean
@@ -216,7 +217,8 @@ export interface ProfileUpdateInput {
   companies: ProfileOrganization[]
   organizations: ProfileOrganization[]
   visibility: ProfileVisibility
-  primaryIndustryTagId?: string
+  /** Omitted keeps the stored industry; null explicitly clears it. */
+  primaryIndustryTagId?: string | null
   abilityTagIds: string[]
   aiConfirmation?: AiDraftSourceConfirmation
 }

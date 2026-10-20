@@ -200,10 +200,11 @@ function createIdentityRepository(database, options = {}) {
         [appId, userId],
       ),
       database.query(
-        `SELECT pt.tag_id, pt.relation
+        `SELECT pt.tag_id, pt.relation, t.label
          FROM mip_profile_tags pt
          INNER JOIN mip_tags t ON t.app_id = pt.app_id AND t.id = pt.tag_id
-         WHERE pt.app_id = ? AND pt.user_id = ? AND t.enabled = 1`,
+         WHERE pt.app_id = ? AND pt.user_id = ?
+           AND (pt.relation = 'PRIMARY_INDUSTRY' OR t.enabled = 1)`,
         [appId, userId],
       ),
       database.query(
@@ -264,7 +265,8 @@ function createIdentityRepository(database, options = {}) {
       `SELECT pt.relation, t.label
        FROM mip_profile_tags pt
        INNER JOIN mip_tags t ON t.app_id = pt.app_id AND t.id = pt.tag_id
-       WHERE pt.app_id = ? AND pt.user_id = ? AND t.enabled = 1
+       WHERE pt.app_id = ? AND pt.user_id = ?
+         AND (pt.relation = 'PRIMARY_INDUSTRY' OR t.enabled = 1)
          AND pt.relation IN ('PRIMARY_INDUSTRY', 'ABILITY')
        ORDER BY pt.relation, t.sort_order, t.id`,
       [appId, userId],
@@ -375,7 +377,7 @@ function createIdentityRepository(database, options = {}) {
       }
 
       const selections = [input.primaryIndustryTagId, ...input.abilityTagIds].filter(Boolean)
-      await assertTagSelections(tx, appId, input.primaryIndustryTagId, input.abilityTagIds, selections)
+      await assertTagSelections(tx, appId, userId, input.primaryIndustryTagId, input.abilityTagIds, selections)
 
       if (current) {
         const currentVisibility = current.visibility_json && typeof current.visibility_json === 'string'
@@ -436,7 +438,7 @@ function createIdentityRepository(database, options = {}) {
 
       await tx.query(
         `DELETE FROM mip_profile_tags
-         WHERE app_id = ? AND user_id = ? AND relation IN ('PRIMARY_INDUSTRY', 'ABILITY')`,
+         WHERE app_id = ? AND user_id = ? AND relation IN (${input.primaryIndustryTagId === undefined ? "'ABILITY'" : "'PRIMARY_INDUSTRY', 'ABILITY'"})`,
         [appId, userId],
       )
       if (input.primaryIndustryTagId) {
@@ -710,19 +712,19 @@ function iso(value) {
   return Number.isNaN(result.getTime()) ? '' : result.toISOString()
 }
 
-async function assertTagSelections(tx, appId, primaryIndustryTagId, abilityTagIds, selections) {
+async function assertTagSelections(tx, appId, userId, primaryIndustryTagId, abilityTagIds, selections) {
   if (!selections.length) {
     return
   }
   const placeholders = selections.map(() => '?').join(', ')
   const rows = await tx.query(
-    `SELECT t.id, t.kind, t.selectable, t.parent_id,
+    `SELECT t.id, t.kind, t.enabled, t.selectable, t.parent_id,
             parent.kind AS parent_kind, parent.parent_id AS parent_parent_id,
             parent.selectable AS parent_selectable, parent.enabled AS parent_enabled
      FROM mip_tags t
      LEFT JOIN mip_tags parent
        ON parent.app_id = t.app_id AND parent.id = t.parent_id
-     WHERE t.app_id = ? AND t.id IN (${placeholders}) AND t.enabled = 1`,
+     WHERE t.app_id = ? AND t.id IN (${placeholders}) FOR SHARE`,
     [appId, ...selections],
   )
   const tags = new Map(rows.map(row => [row.id, row]))
@@ -732,12 +734,17 @@ async function assertTagSelections(tx, appId, primaryIndustryTagId, abilityTagId
   if (primaryIndustryTagId) {
     const primary = tags.get(primaryIndustryTagId)
     if (!isSelectableIndustry(primary)) {
-      throw new Error('PROFILE_TAG_INVALID')
+      if (primary?.kind !== 'INDUSTRY') throw new Error('PROFILE_TAG_INVALID')
+      // Only this user's existing primary industry may survive a catalog disable.
+      const retained = await tx.one(`SELECT tag_id FROM mip_profile_tags
+        WHERE app_id = ? AND user_id = ? AND relation = 'PRIMARY_INDUSTRY' AND tag_id = ?`,
+      [appId, userId, primaryIndustryTagId])
+      if (!retained) throw new Error('PROFILE_TAG_INVALID')
     }
   }
   if (abilityTagIds.some((tagId) => {
     const tag = tags.get(tagId)
-    return tag?.kind !== 'ABILITY' || Number(tag.selectable) !== 1
+    return tag?.kind !== 'ABILITY' || Number(tag.selectable) !== 1 || Number(tag.enabled) !== 1
   })) {
     throw new Error('PROFILE_TAG_INVALID')
   }
@@ -750,7 +757,7 @@ function isSelectableIndustry(tag) {
     && tag.parent_kind === 'INDUSTRY'
     && !tag.parent_parent_id
     && Number(tag.parent_selectable) === 0
-    && Number(tag.parent_enabled) === 1
+    && Number(tag.enabled) === 1 && Number(tag.parent_enabled) === 1
 }
 
 async function recordProfileCompletion(tx, appId, userId, primaryBranchId, createId) {
