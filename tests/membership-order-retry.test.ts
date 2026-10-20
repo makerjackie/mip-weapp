@@ -42,6 +42,8 @@ async function purchase(instance: PageDefinition) {
 }
 
 beforeAll(async () => {
+  // MIW-126：购买全程有支付 loading 反馈，测试环境补最小 wx 桩。
+  vi.stubGlobal('wx', { showLoading: vi.fn(), hideLoading: vi.fn() })
   vi.stubGlobal('Page', (value: PageDefinition) => {
     definition = value
   })

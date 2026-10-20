@@ -181,9 +181,12 @@ export interface RefundIntent {
   reason?: string
 }
 
+// MIW-126：PENDING 的 order 可为 null——收银台之后的 reconcile 与兜底回读都失败时，
+// 客户端拿不到任何订单快照事实；此时只报告「结果未确认」，由调用方用自己已知的
+// orderId 引导用户去结果页/订单页继续核对。绝不把收银台成功当成已支付。
 export type ClientPaymentOutcome
   = | { kind: 'CANCELLED' }
-    | { kind: 'PENDING', order: CommerceOrder }
+    | { kind: 'PENDING', order: CommerceOrder | null }
     | { kind: 'CONFIRMED', order: CommerceOrder }
 
 export interface WechatPaymentParameters {

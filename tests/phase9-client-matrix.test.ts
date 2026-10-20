@@ -261,8 +261,10 @@ describe('phase9 paid event server-authoritative contract', () => {
     expect(registration).toContain('mipCommerceModule.payOrder(result.orderId)')
     expect(registration).toContain('payment.kind === \'CONFIRMED\'')
     expect(registration).not.toMatch(/(?:amountCents|priceCents|currency)\s*:/)
-    expect(commerceModule).toContain('gateway.createPayment(order.id)')
-    expect(commerceModule).toContain('gateway.reconcileOrder(order.id)')
-    expect(commerceModule).toMatch(/catch \{[\s\S]*?interpretClientPayment\(requestResult, order\)/)
+    // MIW-126：拉起关键路径只保留 createPayment + requestPayment + reconcile；
+    // 结果解读（interpretClientPayment）只出现在收银台之后的 reconcile 兜底里。
+    expect(commerceModule).toContain('gateway.createPayment(orderId)')
+    expect(commerceModule).toContain('gateway.reconcileOrder(orderId)')
+    expect(commerceModule).toMatch(/catch \{[\s\S]*?interpretClientPayment\(requestResult, knownOrder\)/)
   })
 })

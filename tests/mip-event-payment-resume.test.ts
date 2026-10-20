@@ -12,6 +12,8 @@ vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: mocks.navi
 vi.mock('../src/platform/storage/component-media', () => ({ updatePageMedia: vi.fn(), clearPageMedia: vi.fn() }))
 let definition: Record<string, any>
 beforeAll(async () => {
+  // MIW-126：支付全程有 loading 反馈，测试环境补最小 wx 桩。
+  vi.stubGlobal('wx', { showLoading: vi.fn(), hideLoading: vi.fn() })
   vi.stubGlobal('Page', (value: Record<string, any>) => {
     definition = value
   })
@@ -36,7 +38,8 @@ describe('event order payment resumption', () => {
     // MIW-91：续支付重建不再回传 shareProfile，服务端默认公开。
     expect(mocks.register.mock.calls[0][0]).not.toHaveProperty('shareProfile')
     expect(mocks.register.mock.invocationCallOrder[0]).toBeLessThan(mocks.payOrder.mock.invocationCallOrder[0]!)
-    expect(mocks.payOrder).toHaveBeenCalledWith('o1')
+    // MIW-126：payOrder 第二参传入页面已持有的订单事实，拉起路径不再预读 getOrder。
+    expect(mocks.payOrder).toHaveBeenCalledWith('o1', expect.objectContaining({ id: 'o1' }))
   })
   it('requires the user to review the updated form before payment', async () => {
     mocks.register.mockRejectedValue(new MipEventsError('CONFLICT', '报名表已更新'))

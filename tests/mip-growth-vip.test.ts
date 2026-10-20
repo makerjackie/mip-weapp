@@ -25,7 +25,8 @@ describe('MIP growth player actions', () => {
     expect(script).toContain('const TASK_PAGE_LIMIT = 10')
     // MIW-65：会员方案页/订单确认页下线，开通与续费共用本页确认弹层后直接拉起支付。
     expect(script).toMatch(/openPurchaseDialog\(event[\s\S]{0,200}purchaseDialogVisible: true/)
-    expect(script).toMatch(/confirmPurchase\(\)[\s\S]{0,900}performPurchase\(planId\)/)
+    // MIW-126：confirmPurchase 与 performPurchase 之间加入支付 loading 反馈，窗口放宽。
+    expect(script).toMatch(/confirmPurchase\(\)[\s\S]{0,1600}performPurchase\(planId\)/)
     expect(script).toContain('mipCommerceModule.purchase({')
     expect(script).toContain('plansVerified')
     expect(script).not.toContain('requestPayment')

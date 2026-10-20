@@ -114,6 +114,95 @@ describe('MIP membership commerce', () => {
       kind: 'PENDING',
       order: { id: order('CREATED').id },
     })
+    // MIW-126：purchase 兜底用 createCheckout 已持有的订单事实，不再回读 getOrder。
+    expect(gateway.getOrder).not.toHaveBeenCalled()
+  })
+
+  it('keeps the payOrder launch path free of pre-payment order reads (MIW-126)', async () => {
+    const gateway = {
+      describePaymentCapabilities: vi.fn(async () => ({
+        mode: 'live' as const,
+        catalogStage: 'LIVE' as const,
+        available: true,
+      })),
+      listPlans: vi.fn(async () => [plan]),
+      getMembershipBenefits: vi.fn(async () => ({
+        kind: 'GUEST' as const,
+        status: 'NONE' as const,
+        benefits: [] as [],
+        history: [],
+      })),
+      createCheckout: vi.fn(async () => order('CREATED')),
+      createPayment: vi.fn(async () => ({
+        timeStamp: '1',
+        nonceStr: 'nonce',
+        package: 'prepay_id=test',
+        signType: 'RSA' as const,
+        paySign: 'signature',
+      })),
+      getOrder: vi.fn(async () => order('PAID')),
+      reconcileOrder: vi.fn(async () => order('PAID')),
+      listOrders: vi.fn(async () => []),
+      listOrderPage: vi.fn(async () => ({ items: [] })),
+      requestRefund: vi.fn(async () => ({ refundId: 'refund-1' as never, status: 'PENDING' })),
+      submitRefund: vi.fn(async () => ({ status: 'PROVIDER_CREATED' })),
+    } satisfies CommerceGateway
+    const payment: PaymentAdapter = { request: vi.fn(async () => 'ACCEPTED') }
+    const module = createMipCommerceModule(gateway, payment)
+    await expect(module.payOrder(order('CREATED').id, order('CREATED'))).resolves.toMatchObject({
+      kind: 'CONFIRMED',
+    })
+    // 拉起关键路径 = createPayment + requestPayment + reconcile；getOrder 只允许出现在兜底。
+    expect(gateway.createPayment).toHaveBeenCalledTimes(1)
+    expect(gateway.reconcileOrder).toHaveBeenCalledTimes(1)
+    expect(gateway.getOrder).not.toHaveBeenCalled()
+  })
+
+  it('reads the order only in the post-cashier fallback when no known order exists (MIW-126)', async () => {
+    const gateway = {
+      describePaymentCapabilities: vi.fn(async () => ({
+        mode: 'live' as const,
+        catalogStage: 'LIVE' as const,
+        available: true,
+      })),
+      listPlans: vi.fn(async () => [plan]),
+      getMembershipBenefits: vi.fn(async () => ({
+        kind: 'GUEST' as const,
+        status: 'NONE' as const,
+        benefits: [] as [],
+        history: [],
+      })),
+      createCheckout: vi.fn(async () => order('CREATED')),
+      createPayment: vi.fn(async () => ({
+        timeStamp: '1',
+        nonceStr: 'nonce',
+        package: 'prepay_id=test',
+        signType: 'RSA' as const,
+        paySign: 'signature',
+      })),
+      getOrder: vi.fn(async () => order('PAYMENT_CREATED')),
+      reconcileOrder: vi.fn(async () => {
+        throw new Error('PAYMENT_QUERY_UNAVAILABLE')
+      }),
+      listOrders: vi.fn(async () => []),
+      listOrderPage: vi.fn(async () => ({ items: [] })),
+      requestRefund: vi.fn(async () => ({ refundId: 'refund-1' as never, status: 'PENDING' })),
+      submitRefund: vi.fn(async () => ({ status: 'PROVIDER_CREATED' })),
+    } satisfies CommerceGateway
+    const payment: PaymentAdapter = { request: vi.fn(async () => 'ACCEPTED') }
+    const module = createMipCommerceModule(gateway, payment)
+    await expect(module.payOrder(order('CREATED').id)).resolves.toMatchObject({
+      kind: 'PENDING',
+      order: { id: order('CREATED').id },
+    })
+    expect(gateway.getOrder).toHaveBeenCalledTimes(1)
+
+    // reconcile 与兜底回读都失败：报告 PENDING 且不带订单快照，交由结果页继续核对。
+    gateway.getOrder.mockRejectedValueOnce(new Error('SERVICE_UNAVAILABLE'))
+    await expect(module.payOrder(order('CREATED').id)).resolves.toEqual({
+      kind: 'PENDING',
+      order: null,
+    })
   })
 
   it('caches the capability snapshot per module and clears stale-stage plan cache', async () => {

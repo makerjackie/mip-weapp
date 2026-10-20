@@ -97,6 +97,9 @@ beforeAll(async () => {
   vi.stubGlobal('wx', {
     showToast,
     showModal,
+    // MIW-126：继续支付全程有支付 loading 反馈。
+    showLoading: vi.fn(),
+    hideLoading: vi.fn(),
     setClipboardData: vi.fn(),
     getAccountInfoSync: () => ({ miniProgram: { envVersion: 'develop' } }),
   })

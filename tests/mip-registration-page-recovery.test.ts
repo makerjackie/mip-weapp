@@ -26,7 +26,7 @@ vi.mock('../src/modules/mip-identity/client', () => ({
   mipIdentityModule: { consumePendingResume: () => null, loadSnapshot: mocks.loadSnapshot, peekSnapshot: mocks.peekSnapshot },
   mipBranchesModule: {},
 }))
-vi.mock('../src/platform/feedback/client', () => ({ showErrorFeedback: vi.fn() }))
+vi.mock('../src/platform/feedback/client', () => ({ showErrorFeedback: vi.fn(), showPaymentLaunchFeedback: vi.fn(), hidePaymentLaunchFeedback: vi.fn() }))
 vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn(), caseRedirectTo: mocks.redirectTo }))
 vi.mock('../src/platform/storage/component-media', () => ({ updatePageMedia: vi.fn(), clearPageMedia: vi.fn() }))
 
@@ -50,7 +50,8 @@ beforeAll(async () => {
   vi.stubGlobal('Page', (value: Record<string, any>) => {
     definition = value
   })
-  vi.stubGlobal('wx', { pageScrollTo: mocks.scroll, setNavigationBarTitle: vi.fn(), showToast: mocks.toast, navigateBack: mocks.navigateBack })
+  // MIW-126：报名支付全程有 loading 反馈。
+  vi.stubGlobal('wx', { pageScrollTo: mocks.scroll, setNavigationBarTitle: vi.fn(), showToast: mocks.toast, navigateBack: mocks.navigateBack, showLoading: vi.fn(), hideLoading: vi.fn() })
   vi.stubGlobal('getCurrentPages', () => currentPages)
   await import('../src/packages/member/mip-events/registration/index')
 })
