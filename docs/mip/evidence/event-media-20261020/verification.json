@@ -1,0 +1,29 @@
+{
+  "sourceCommit": "4eef19fa",
+  "environment": "test",
+  "verifyAll": "passed",
+  "rootTests": 1815,
+  "rootSuites": 279,
+  "adminReactTests": 252,
+  "adminReactSuites": 34,
+  "serverMediaTests": 3,
+  "runtime": {
+    "checkoutRichText": "passed-real-test-data",
+    "publicMedia": "passed-real-wechat-invoke",
+    "crossEnvironmentMedia": "rejected-as-expected",
+    "imageHTTP": 200,
+    "imageType": "image/png",
+    "imageBytes": 403723
+  },
+  "deployment": {
+    "function": "mip-t-events-api",
+    "state": "Active",
+    "runtimeFilesMatched": 19,
+    "configurationUnchanged": true,
+    "permissionsUnchanged": true
+  },
+  "priceSwitch": "awaiting-user-confirmation",
+  "trialUpload": "pending",
+  "productionWrites": 0,
+  "cloudVerify": "passed"
+}
