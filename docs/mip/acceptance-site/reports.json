@@ -6,14 +6,14 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-20T06:29:46.440045+00:00",
-    "updatedAt": "2026-10-20T06:48:27.425941+00:00",
-    "verifiedAt": "2026-10-20T06:48:27.425941+00:00",
+    "updatedAt": "2026-10-20T07:41:58.785040+00:00",
+    "verifiedAt": "2026-10-20T07:41:58.785040+00:00",
     "submittedAt": "2026-10-20T06:32:38.178817Z",
-    "commit": "b038720414593200b0fa63a3fb1014ab1e93ae58",
-    "commitAt": "2026-10-20T02:33:29-04:00",
-    "environment": "测试验证通过 · 生产已同步",
-    "summary": "活动图文、玩家免费与订单显示已同步生产；原有票价和订单保持不变，生产支付仍为LIVE/live。生产环境代码包1.0.2已上传，尚未提审发布。",
-    "detail": "docs/mip/evidence/event-player-free-20261020/index.html",
+    "commit": "cee5eabec7f8b256cc96405e43a4e650dd267591",
+    "commitAt": "2026-10-20T03:34:00-04:00",
+    "environment": "生产包1.0.3已上传 · iPhone待复核",
+    "summary": "定位并修复生产早会主办方三图空白：富文本改用受控HTTPS图片；1.0.3已上传，待切换体验版并在iPhone复核。此前玩家免费、订单与生产同步证据保留。",
+    "detail": "docs/mip/evidence/event-richtext-ios-20261020/index.html",
     "files": [
       "docs/mip/evidence/event-player-free-20261020/order-after.png",
       "docs/mip/evidence/event-player-free-20261020/index.html",
@@ -27,9 +27,35 @@
       "docs/mip/evidence/event-player-free-20261020/admin-after.png",
       "docs/mip/evidence/event-media-20261020/before-checkout.png",
       "docs/mip/evidence/event-media-20261020/after-checkout.png",
-      "docs/mip/evidence/event-production-20261020/verification.json"
+      "docs/mip/evidence/event-production-20261020/verification.json",
+      "docs/mip/evidence/event-richtext-ios-20261020/index.html",
+      "docs/mip/evidence/event-richtext-ios-20261020/after-organizer-650.png",
+      "docs/mip/evidence/event-richtext-ios-20261020/after-organizer-1650.png",
+      "docs/mip/evidence/event-richtext-ios-20261020/verification.json",
+      "docs/mip/evidence/event-richtext-ios-20261020/before-intro-iphone.jpg",
+      "docs/mip/evidence/event-richtext-ios-20261020/after-organizer-1150.png",
+      "docs/mip/evidence/event-richtext-ios-20261020/before-organizer-iphone.jpg"
     ],
     "comparisons": [
+      {
+        "title": "新反馈：iPhone体验版主办方三张图片空白",
+        "context": "同一生产活动、同一份主办方内容。修改前为用户1206×2622 iPhone原图，修改后为开发工具390×844逻辑视口实拍；不同设备和滚动位置，不作像素对齐。修复后iPhone待复核。",
+        "before": {
+          "file": "docs/mip/evidence/event-richtext-ios-20261020/before-organizer-iphone.jpg",
+          "caption": "用户iPhone体验版：三图空白",
+          "source": "用户本轮原始截图，未编辑"
+        },
+        "after": {
+          "file": "docs/mip/evidence/event-richtext-ios-20261020/after-organizer-650.png",
+          "caption": "生产数据：富文本已实际显示图片",
+          "source": "开发工具实拍；3节点均为HTTPS，3图实际解码"
+        },
+        "prototype": {
+          "caption": "兼容修复，无新增视觉原型",
+          "reason": "依据微信rich-text官方组件约束修复：img仅支持网络图片。本次不宣称新增原型还原。",
+          "source": "https://developers.weixin.qq.com/miniprogram/dev/component/rich-text.html"
+        }
+      },
       {
         "title": "报名确认中的活动须知",
         "context": "同一历史测试样本，真实微信开发者工具截图；本项是内容渲染修复。",
@@ -89,15 +115,13 @@
       }
     ],
     "checks": [
-      "最终完整verify:all：小程序1821项、Web Node330项、界面测试253项；runtime:preflight通过。",
-      "生产154表/5626行稳定备份后追加玩家免费字段；3个存量开关默认关闭，活动票价、订单金额和原会员权益回读不变。",
-      "生产活动服务、管理API和Web BFF的20/167/26个运行文件逐一匹配；配置、权限、触发器不变，账本仍LIVE/live。",
-      "生产后台15个公开文件逐字节匹配，68项HTTPS检查、完整cloud:verify通过；1280/1440/390视口均正常。",
-      "生产微信开发者工具真实会话：非上传者成功读取并解码封面1图与主办方3图；正常详情页ready、旧客户端DTO兼容。",
-      "测试环境完整走通嘉宾¥19.90下单、开通测试权益后旧单原价、取消后玩家免费确认；幂等重复不新增支付订单。",
-      "测试后台开关保存、真正离页后新开页面回读通过；活动介绍3图、主办方1图、须知与报名页各2图正常。",
-      "生产环境微信代码包1.0.2上传成功，主包1,759,301字节；测试函数引用0。尚未提交审核或全量发布。"
+      "本轮生产客户端：3个主办方img由本地临时路径改为HTTPS，开发工具实际富文本截图已显示3图；标签重建正常。",
+      "本轮完整verify:all：小程序1825项、Web Node330项、Web界面253项通过；Node22.23.1。",
+      "本轮测试库多图回归：介绍3图、主办方1图、须知2图、报名页2图全部使用HTTPS；缓存过期、身份隔离与竞态回归通过。",
+      "本轮生产包1.0.3已上传；公众平台设为体验版未完成，修复后iPhone真机仍待复核。",
+      "此前生产库/服务/后台同步记录保留：3个存量活动默认关闭玩家免费，票价、订单金额和权益回读不变，账本LIVE/live；本轮未修改数据库、云函数或后台。",
+      "此前图片SDK读取/解码通过仅说明文件可读，不能用它证明iPhone富文本显示通过；本轮明确纠正这一验收边界。"
     ],
-    "limitations": "对照截图明确来自测试环境；生产界面和微信调用已另行只读验证，未创建生产测试活动或报名订单。生产4张活动图已验证非上传者可读，具体受影响用户的手机仍需回访；真实支付、回调、退款尚未验收。微信1.0.2已上传，未提审或全量发布。新开关和本次纠错没有对应的当前权威原型原图，第三列据实标明。"
+    "limitations": "体验版不会自动随上传更换：需在微信公众平台把1.0.3设为体验版。修复后iPhone、真实支付/回调/退款尚未验收。主办方修改前为用户真机图，修改后为生产数据的开发工具实拍，设备不同已明确标注。本次兼容修复无新增视觉原型。"
   }
 ]
