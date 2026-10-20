@@ -1,0 +1,31 @@
+{
+  "fileKey": "qqkbdlh4c4Swubum8S3F2f",
+  "retrievedAt": "2026-10-20T09:41:03.749703+00:00",
+  "frames": [
+    {
+      "nodeId": "3319:5944",
+      "name": "活动-首页-详情 (未签到)",
+      "screenshot": "prototype-unchecked-in.png",
+      "sha256": "a2e4efa344af33ab26b9f8baf604f5c183ab936a907ce36f0fd352fa2118c0ee"
+    },
+    {
+      "nodeId": "1818:17142",
+      "name": "活动详情（以签到）",
+      "screenshot": "prototype-checked-in.png",
+      "sha256": "0d3431e4e2428e308a633c617769cf2ab247cc76112e9f47b607e0005b6ff583"
+    }
+  ],
+  "staticAssets": [
+    {
+      "nodeId": "3319:5996",
+      "file": "src/packages/member/assets/figma/events/participants-chevron.svg",
+      "sha256": "786ae9ba8be7daac5a9793ef673733cdff8d6a86959210b8e801eb7b6d900429",
+      "intrinsicWidth": 16,
+      "intrinsicHeight": 16,
+      "rotationDegrees": -90,
+      "found": true
+    }
+  ],
+  "missingStaticAssets": 0,
+  "cancellationPlacement": "2026-10-20 用户已确认加入固定底栏，保留二次确认；以服务端canCancel/canRetryRefund控制"
+}

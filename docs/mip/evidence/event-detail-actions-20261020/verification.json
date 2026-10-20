@@ -1,0 +1,128 @@
+{
+  "verifiedAt": "2026-10-20T10:09:37.304560+00:00",
+  "sourceCommit": "e0f5bf2feef5169709804df2e2fadbe225c96a2c",
+  "gate": {
+    "command": "pnpm verify:all",
+    "exitCode": 0,
+    "sourceCommit": "e0f5bf2feef5169709804df2e2fadbe225c96a2c",
+    "passedAt": "2026-10-20T09:58:13.298743+00:00",
+    "miniTests": 1833,
+    "adminNodeTests": 331,
+    "adminReactTests": 258,
+    "upload": {
+      "version": "1.0.5",
+      "target": "production",
+      "exitCode": 0,
+      "receipt": "✔ upload",
+      "mainBytes": 1764413,
+      "totalBytes": 3211285,
+      "experienceSelection": "PENDING"
+    }
+  },
+  "testCancellation": {
+    "target": "TEST",
+    "checkedAt": "2026-10-20T10:04:36.231Z",
+    "realCloudData": true,
+    "productionWrites": 0,
+    "paymentRequests": 0,
+    "registered": true,
+    "registrationReadBackAfterSubmit": true,
+    "registeredVersion": 1,
+    "rects": [
+      {
+        "id": "mip-event-participants-more-label",
+        "dataset": {},
+        "left": 300,
+        "right": 348,
+        "top": 324,
+        "bottom": 342,
+        "width": 48,
+        "height": 18
+      },
+      {
+        "id": "mip-event-participants-more-chevron",
+        "dataset": {},
+        "left": 350,
+        "right": 366,
+        "top": 325,
+        "bottom": 341,
+        "width": 16,
+        "height": 16
+      },
+      {
+        "id": "mip-event-cancel-action",
+        "dataset": {},
+        "left": 173,
+        "right": 365,
+        "top": 667.5,
+        "bottom": 712.5,
+        "width": 192,
+        "height": 45
+      },
+      {
+        "id": "mip-event-bottom-actions",
+        "dataset": {},
+        "left": 12,
+        "right": 378,
+        "top": 661,
+        "bottom": 719,
+        "width": 366,
+        "height": 58
+      }
+    ],
+    "arrowCenterDifferencePx": 0,
+    "cancelInsideFixedBar": true,
+    "dismissKeptRegistration": true,
+    "cancelled": true,
+    "reopenedCancellationReadback": true,
+    "cancelledVersion": 2,
+    "confirmationResponse": "TEST automation-supplied showModal response; real native dialog display captured separately, native clicking PENDING",
+    "realPaymentRefund": "PENDING"
+  },
+  "nodeMeasurements": {
+    "checkedAt": "2026-10-20T10:08:29.626Z",
+    "target": "production",
+    "businessWrites": 0,
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "centerDifferencePx": 0,
+    "arrowWidth": 16,
+    "arrowHeight": 16,
+    "fixedBarBefore": {
+      "id": "mip-event-bottom-actions",
+      "dataset": {},
+      "left": 12,
+      "right": 378,
+      "top": 661,
+      "bottom": 719,
+      "width": 366,
+      "height": 58
+    },
+    "fixedBarAfter": {
+      "id": "mip-event-bottom-actions",
+      "dataset": {},
+      "left": 12,
+      "right": 378,
+      "top": 661,
+      "bottom": 719,
+      "width": 366,
+      "height": 58
+    },
+    "attemptedScrollTop": 1600,
+    "observedScrollTop": 570,
+    "fixedDuringLongScroll": true,
+    "scrollVerification": "observed"
+  },
+  "publicAfterScreenshot": {
+    "environment": "TEST",
+    "state": "unregistered",
+    "dataDiffersFromProductionBefore": true,
+    "source": "actual DevTools screenshot, inspected with no personal participant data"
+  },
+  "privateRegisteredScreenshots": "Actual TEST registered state and native dialog captured locally only; contain test account avatar/nickname and are excluded from public files",
+  "discardedProductionScreenshots": "New production screenshots did not agree with the current page data after project switching; repeated full compilation did not produce reliable screenshots. They are excluded from this report. Production visual acceptance remains PENDING on device.",
+  "realDevice": "PENDING: iPhone cancellation clicks, arrows, payment/refund",
+  "productionBusinessWrites": 0
+}

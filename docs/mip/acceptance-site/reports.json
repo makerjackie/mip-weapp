@@ -238,19 +238,26 @@
   {
     "id": "unified-release-20261020-v1",
     "requirement": "unified-release",
-    "title": "MIP 1.0.4：活动图文、支付反馈与后台统一发布",
+    "title": "MIP 1.0.5：活动图文、固定取消入口与后台统一发布",
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-20T09:31:37.528657+00:00",
-    "updatedAt": "2026-10-20T09:31:37.528657+00:00",
-    "verifiedAt": "2026-10-20T09:31:37.528657+00:00",
+    "updatedAt": "2026-10-20T10:09:37.304560+00:00",
+    "verifiedAt": "2026-10-20T10:09:37.304560+00:00",
     "submittedAt": "2026-10-20T09:31:37.528657+00:00",
-    "commit": "ef57257b494bcf450efa83146655d5e35b4de621",
-    "commitAt": "2026-10-20T05:21:14-04:00",
-    "environment": "生产小程序1.0.4已上传；测试/生产后台已发布",
-    "summary": "合并MIW-126及全部此前修复；生产包三张主办方图已实拍显示，双后台图片与压缩缓存复核通过。公众平台需确认设为体验版，真机支付待测。",
-    "detail": "docs/mip/evidence/unified-release-20261020/index.html",
+    "commit": "e0f5bf2feef5169709804df2e2fadbe225c96a2c",
+    "commitAt": "2026-10-20T05:54:33-04:00",
+    "environment": "生产包1.0.5已上传；TEST取消验证通过，真机待测",
+    "summary": "继续本轮反馈：允许取消/继续退款时加入固定底栏，保留二次确认；查看更多采用原稿16px箭头并居中。此前图文、玩家免费及后台修复全部包含。",
+    "detail": "docs/mip/evidence/event-detail-actions-20261020/index.html",
     "files": [
+      "docs/mip/evidence/event-detail-actions-20261020/after-detail.png",
+      "docs/mip/evidence/event-detail-actions-20261020/before-detail.png",
+      "docs/mip/evidence/event-detail-actions-20261020/figma-source.json",
+      "docs/mip/evidence/event-detail-actions-20261020/index.html",
+      "docs/mip/evidence/event-detail-actions-20261020/prototype-checked-in.png",
+      "docs/mip/evidence/event-detail-actions-20261020/prototype-unchecked-in.png",
+      "docs/mip/evidence/event-detail-actions-20261020/verification.json",
       "docs/mip/evidence/unified-release-20261020/index.html",
       "docs/mip/evidence/unified-release-20261020/mini-production-intro.png",
       "docs/mip/evidence/unified-release-20261020/mini-production-organizer-1150.png",
@@ -259,6 +266,43 @@
       "docs/mip/evidence/unified-release-20261020/verification.json"
     ],
     "comparisons": [
+      {
+        "title": "新反馈：参与人数“查看更多”箭头对齐",
+        "context": "左：1.0.4生产早会；中：新代码TEST免费活动；均为390×844逻辑视口，封面与数据不同。右：当前MIP原稿3319:5944（375×948）。生产新复拍有画面/数据不一致，已撤回，不能充当有效对照。",
+        "before": {
+          "file": "docs/mip/evidence/event-detail-actions-20261020/before-detail.png",
+          "caption": "修改前：旧裁切图标8px、基线偏移",
+          "source": "实际1.0.4生产包开发工具截图"
+        },
+        "after": {
+          "file": "docs/mip/evidence/event-detail-actions-20261020/after-detail.png",
+          "caption": "修改后：原稿16px箭头，文字中心对齐",
+          "source": "真实TEST，未报名状态；实测中心差0px"
+        },
+        "prototype": {
+          "file": "docs/mip/evidence/event-detail-actions-20261020/prototype-unchecked-in.png",
+          "caption": "当前权威原型原图",
+          "source": "https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=3319-5944"
+        }
+      },
+      {
+        "title": "新反馈：取消报名放入固定底栏",
+        "context": "原稿未定义已报名未签到的取消位置。用户本轮已确认补充固定底栏方案；不把原型未定义的状态宣称为原稿还原。",
+        "before": {
+          "caption": "原实现：取消入口在长图文末尾",
+          "reason": "已核对修改前WXML；未保留同一已报名状态的修改前实拍，不能用未报名截图冒充。",
+          "source": "修改前提交6ae523dc，详情页内容末尾t-button"
+        },
+        "after": {
+          "caption": "固定底栏显示取消报名／继续处理退款",
+          "reason": "真实TEST报名后已实拍按钮及原生弹窗；截图含测试账号个人资料，仅留本机。报名版本1→取消版本2，离页新开后回读通过；弹窗分支响应由自动化提供，真机点击待测。"
+        },
+        "prototype": {
+          "caption": "原图仅定义已签到时客服＋分享",
+          "file": "docs/mip/evidence/event-detail-actions-20261020/prototype-checked-in.png",
+          "source": "https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=1818-17142"
+        }
+      },
       {
         "title": "生产早会主办方图片",
         "context": "同一生产活动内容。左：用户iPhone体验版1206×2622原图；中：本轮1.0.4生产包开发工具390×844逻辑视口截图，设备与滚动位置不同，iPhone仍待复测。",
@@ -295,6 +339,12 @@
       }
     ],
     "checks": [
+      "1.0.5代码e0f5bf2f已推送main，生产包微信CLI上传成功，主包1,764,413字节",
+      "本轮完整verify:all通过：1833 / 331 / 258；runtime:preflight通过",
+      "权威Figma活动页与两张详情画框实时读取，原稿PNG和16px SVG摘要留档",
+      "真实TEST免费报名、固定取消入口实拍、取消/确认分支、新页面CANCELLED版本2回读通过；选择响应由自动化提供",
+      "原生确认弹窗展示已实拍；自动点击未能关闭弹窗，真实点击待iPhone复核",
+      "TEST箭头16×16px，文字与图标中心偏差0px；生产节点滚动570px后固定栏位置保持",
       "完整verify:all通过：1833 / 331 / 258；2382个源文件逐字节核对一致",
       "微信CLI上传1.0.4成功；生产函数名前缀、TDesign依赖树与2MB主包门禁通过",
       "生产早会详情ready、3张主办方图片实际出现在页面截图中",
@@ -302,6 +352,6 @@
       "线上gzip解压与原资源一致；重复访问静态传输0字节；生产Web默认版本2生效",
       "统一运行代码ef57257b已推送main；无生产业务数据写入"
     ],
-    "limitations": "公众平台需确认/设为体验版；iPhone图文及真实支付回调待验收。开发工具与单元测试不代替真机。全新后台首开仍有约3.3秒波动。"
+    "limitations": "公众平台需确认/设1.0.5为体验版。iPhone按钮与箭头、真实支付退款待验收。生产开发工具复拍画面与页面数据不一致，完整编译后仍不可靠，相关截图已撤回；公开after使用明确标注的TEST样本。确认弹窗选择由自动化提供，不冒充真机点击。此前全新后台首开仍有约3.3秒波动。"
   }
 ]
