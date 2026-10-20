@@ -38,7 +38,9 @@ function order(status: string, extra = {}) {
   }
 }
 beforeAll(async () => {
-  vi.stubGlobal('Page', (definition: Definition) => { captured = definition })
+  vi.stubGlobal('Page', (definition: Definition) => {
+    captured = definition
+  })
   await import('../src/packages/member/orders/index')
   list = captured
   await import('../src/packages/member/order-detail/index')
