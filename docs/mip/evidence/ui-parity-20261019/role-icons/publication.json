@@ -1,0 +1,34 @@
+{
+  "sourceCommit": "33aec8149308e9df8294f101205e8cece5cdf6a9",
+  "website": {
+    "origin": "https://mip-review.01mvp.com/",
+    "deploymentId": "93726406-2021-401d-a632-3a2c0cd04549",
+    "deploymentUrl": "https://93726406.mip-review.pages.dev",
+    "status": "success",
+    "httpsFilesMatched": 36,
+    "fourColumns": [
+      4,
+      4,
+      4,
+      4
+    ],
+    "roleSvgLinks": 12,
+    "originalPreviewLoaded": true,
+    "defaultViewport": {
+      "width": 925,
+      "height": 853,
+      "pageOverflow": false
+    },
+    "mobileViewport": {
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "comparisonColumnsScrollable": true
+    },
+    "oldMissingFourIconsClaimPresent": false
+  },
+  "miniProgramUploadThisIncrement": false,
+  "productionWrites": 0,
+  "originalScreenshotsRegenerated": false,
+  "navigation": "current version has three tabs; discovery deferred to next version by user"
+}
