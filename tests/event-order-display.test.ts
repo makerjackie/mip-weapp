@@ -6,7 +6,7 @@ vi.mock('../src/modules/mip-events/client', () => ({ mipEventsModule: {}, mipChe
 vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: {} }))
 vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: {} }))
 vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn(), caseRedirectTo: vi.fn() }))
-vi.mock('../src/platform/storage/component-media', () => ({ updatePageMedia: vi.fn(), clearPageMedia: vi.fn() }))
+vi.mock('../src/platform/storage/component-media', () => ({ updatePageMedia: (target: { setData: (patch: Record<string, unknown>) => void }, field: string, value: unknown) => target.setData({ [field]: value }), clearPageMedia: vi.fn() }))
 interface Definition { data: Record<string, unknown>, [key: string]: unknown }
 let captured: Definition
 let list: Definition

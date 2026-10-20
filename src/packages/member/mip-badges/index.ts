@@ -11,6 +11,7 @@ import {
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../platform/navigation/client'
+import { clearPageMedia, updatePageMedia } from '../../../platform/storage/component-media'
 
 type BadgeCategory = 'IDENTITY' | 'HONOR'
 
@@ -48,6 +49,11 @@ Page({
     void this.loadBadges()
   },
 
+  onUnload() {
+    this.loadSequence += 1
+    clearPageMedia(this)
+  },
+
   onShow() {
     if (this.data.state === 'ready' && !this.data.dirty) {
       void this.loadBadges()
@@ -79,7 +85,7 @@ Page({
     try {
       const [collection, identity] = await Promise.all([
         mipGrowthModule.listBadgeCollection(),
-        mipIdentityModule.loadSnapshot().catch(() => null),
+        mipIdentityModule.loadSnapshot({ maxAgeMs: 15_000 }).catch(() => null),
       ])
       if (!canApplyBadgeLoad(sequence, this.loadSequence, this.data.dirty, options.discardDraft)) {
         return
@@ -98,11 +104,12 @@ Page({
         version: collection.version,
         earnedCount: items.filter(item => item.earned).length,
         memberName: profile?.nickname || 'MIP 成员',
-        avatarUrl: profile?.avatarUrl || '',
+        avatarUrl: '',
         saving: false,
         dirty: false,
         message: '',
       })
+      updatePageMedia(this, 'avatarUrl', profile?.avatarUrl || '')
     }
     catch (error) {
       if (!canApplyBadgeLoad(sequence, this.loadSequence, this.data.dirty, options.discardDraft)) {

@@ -136,6 +136,7 @@ describe('page loading and profile interaction regressions', () => {
     })
     const instance = page(profile)
     instance.data.authenticated = true
+    instance.data.portfolioTab = 'opportunities'
     instance.changeOpportunitySubTab({ currentTarget: { dataset: { tab: 'COOPERATING' } } })
     await vi.waitFor(() => expect(instance.data.collaborationOpportunityState).toBe('ready'))
     expect(instance.data.opportunitySubTab).toBe('COOPERATING')
@@ -144,6 +145,24 @@ describe('page loading and profile interaction regressions', () => {
     expect(opportunities.listMyCooperations).toHaveBeenCalled()
     instance.changeOpportunitySubTab({ currentTarget: { dataset: { tab: 'unknown' } } })
     expect(instance.data.opportunitySubTab).toBe('COOPERATING')
+  })
+
+  it('loads only the visible portfolio and fetches hidden sections when selected', async () => {
+    const instance = page(profile)
+    instance.loadCooperation = vi.fn().mockResolvedValue(undefined)
+    instance.loadCases = vi.fn().mockResolvedValue(undefined)
+    instance.loadOpportunities = vi.fn().mockResolvedValue(undefined)
+    instance.loadCollaborationOpportunities = vi.fn().mockResolvedValue(undefined)
+    await instance.loadSelectedPortfolio()
+    expect(instance.loadCooperation).toHaveBeenCalledOnce()
+    expect(instance.loadCases).not.toHaveBeenCalled()
+    expect(instance.loadOpportunities).not.toHaveBeenCalled()
+    instance.changePortfolioTab({ currentTarget: { dataset: { tab: 'cases' } } })
+    expect(instance.loadCases).toHaveBeenCalledOnce()
+    instance.changePortfolioTab({ currentTarget: { dataset: { tab: 'opportunities' } } })
+    expect(instance.loadOpportunities).toHaveBeenCalledOnce()
+    instance.changeOpportunitySubTab({ currentTarget: { dataset: { tab: 'COOPERATING' } } })
+    expect(instance.loadCollaborationOpportunities).toHaveBeenCalledOnce()
   })
 
   it('starts the activity feed and banner together after the default city settles', async () => {

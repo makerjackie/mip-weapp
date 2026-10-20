@@ -41,7 +41,7 @@ describe('MIP commerce CloudBase media', () => {
     cloudHarness.getTempFileURL.mockResolvedValue({ fileList: [], errMsg: 'getTempFileURL:ok' })
   })
 
-  it('resolves nested event cover IDs before order data reaches a page', async () => {
+  it('returns nonempty order facts without waiting for cover downloads', async () => {
     await expect(cloudbaseMipCommerceTransport.invoke(
       'mip-commerce-api',
       'listOrders',
@@ -51,11 +51,9 @@ describe('MIP commerce CloudBase media', () => {
       ok: true,
       data: [{
         id: 'order-1',
-        event: { coverUrl: 'wxfile://tmp/event-cover.jpg' },
+        event: { coverUrl: 'cloud://mip-test/events/event-1/cover.jpg' },
       }],
     })
-    expect(cloudHarness.downloadFile).toHaveBeenCalledWith({
-      fileID: 'cloud://mip-test/events/event-1/cover.jpg',
-    })
+    expect(cloudHarness.downloadFile).not.toHaveBeenCalled()
   })
 })

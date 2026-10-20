@@ -19,6 +19,7 @@ import { protectedActionKeys } from './contracts'
 export const MIP_IDENTITY_ACCESS_STORAGE_KEY = 'mip.identity.access-state.v1'
 const MIP_IDENTITY_ACCESS_STORAGE_VERSION = 1
 const MAX_PERSISTED_INTENTS = 8
+const NAVIGATION_SNAPSHOT_MAX_AGE_MS = 15_000
 
 interface StoredIntent {
   intent: ProtectedActionIntent
@@ -164,6 +165,7 @@ export function createMipIdentityModule(
   const storage = options.storage
   const intents = new Map<string, StoredIntent>()
   let latestSnapshot: IdentityAccessSnapshot | undefined
+  let snapshotLoadedAt: number | undefined
   let pendingResume: StoredPendingResume | undefined
   let signedOut = false
   let localSessionGeneration = 0
@@ -179,6 +181,7 @@ export function createMipIdentityModule(
   }
 
   function beginSnapshotMutation() {
+    snapshotLoadedAt = undefined
     localSessionGeneration += 1
     return localSessionGeneration
   }
@@ -196,6 +199,7 @@ export function createMipIdentityModule(
       return currentLocalSnapshot()
     }
     latestSnapshot = snapshot
+    snapshotLoadedAt = now()
     return snapshot
   }
 
@@ -209,13 +213,24 @@ export function createMipIdentityModule(
     // Fence reads that started after the mutation began but before its result committed.
     localSessionGeneration += 1
     latestSnapshot = snapshot
+    snapshotLoadedAt = now()
     return true
   }
 
-  function loadSnapshot() {
+  function freshSnapshot(maxAgeMs = 0) {
+    const age = snapshotLoadedAt === undefined ? Infinity : now() - snapshotLoadedAt
+    return !signedOut && Number.isFinite(maxAgeMs) && maxAgeMs > 0 && age >= 0 && age < maxAgeMs ? latestSnapshot : undefined
+  }
+
+  /** A bounded display cache is opt-in; retries and foreground restores stay fresh. */
+  function loadSnapshot(readOptions: { maxAgeMs?: number } = {}) {
     if (signedOut) {
       latestSnapshot = signedOutSnapshot()
       return Promise.resolve(latestSnapshot)
+    }
+    const cached = freshSnapshot(readOptions.maxAgeMs)
+    if (cached) {
+      return Promise.resolve(cached)
     }
     const generation = localSessionGeneration
     if (!snapshotFlight || snapshotFlight.generation !== generation) {
@@ -226,7 +241,12 @@ export function createMipIdentityModule(
           generation,
         ),
       }
-      flight.promise = flight.promise.finally(() => {
+      flight.promise = flight.promise.catch((error: unknown) => {
+        if (generation === localSessionGeneration) {
+          snapshotLoadedAt = undefined
+        }
+        throw error
+      }).finally(() => {
         if (snapshotFlight === flight) {
           snapshotFlight = undefined
         }
@@ -410,9 +430,14 @@ export function createMipIdentityModule(
   return {
     prepareProtectedAction,
 
-    async beginProtectedAction(intent: ProtectedActionIntent): Promise<AccessSession> {
+    async beginProtectedAction(intent: ProtectedActionIntent, readOptions: { reuseRecent?: boolean } = {}): Promise<AccessSession> {
       const token = prepareProtectedAction(intent)
-      const started = await session(token)
+      // Only reuse a recent successful decision for navigation. Privileged entries,
+      // incomplete identities and explicit access retries always read the server.
+      const cached = readOptions.reuseRecent && intent.action !== 'ENTER_ADMIN' && !intent.requiredCapability
+        ? freshSnapshot(NAVIGATION_SNAPSHOT_MAX_AGE_MS)
+        : undefined
+      const started = await session(token, cached && evaluateAccess(cached, intent).ready ? cached : undefined)
       if (started.decision.ready) {
         intents.delete(token)
         persistAccessState()

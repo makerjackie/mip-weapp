@@ -154,7 +154,7 @@ export function createMipGuestLoginFlow(
         return { outcome: 'sheet' }
       }
       try {
-        const session = await identity.beginProtectedAction(intent)
+        const session = await identity.beginProtectedAction(intent, { reuseRecent: true })
         if (session.decision.ready) {
           return { outcome: 'ready', session }
         }

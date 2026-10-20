@@ -1,4 +1,4 @@
-export type LoadingStage = 'events.request' | 'identity.request' | 'identity.response' | 'opportunities.request' | 'opportunities.response' | 'banners.request' | 'media.download'
+export type LoadingStage = 'commerce.request' | 'events.request' | 'identity.request' | 'identity.response' | 'opportunities.request' | 'opportunities.response' | 'banners.request' | 'media.download'
 
 interface LoadingSample {
   stage: LoadingStage

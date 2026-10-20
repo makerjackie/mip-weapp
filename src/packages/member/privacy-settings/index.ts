@@ -17,7 +17,7 @@ Page({
   async load() {
     this.setData({ state: 'loading', message: '' })
     try {
-      const snapshot = await mipIdentityModule.loadSnapshot()
+      const snapshot = await mipIdentityModule.loadSnapshot({ maxAgeMs: 15_000 })
       if (!snapshot.authenticated || !snapshot.profile.exists) {
         throw new Error('请先登录并完善资料。')
       }

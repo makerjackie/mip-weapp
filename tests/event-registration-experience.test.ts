@@ -30,7 +30,7 @@ describe('event registration experience', () => {
 
     expect(events).toContain('/packages/member/mip-events/detail/index?eventId=')
     expect(detail).toContain('/packages/member/mip-events/registration/index?eventId=')
-    expect(registration).toContain('mipEventsModule.getEvent(this.data.eventId)')
+    expect(registration).toContain('mipEventsModule.getEvent(this.data.eventId, { progressiveMedia: true })')
     expect(registration).toContain('event.registrationSchema.map(field => initialField(field, answers[field.key]))')
     expect(registration).not.toContain('membershipModule')
     expect(registration).not.toMatch(/amountCents\s*:/)

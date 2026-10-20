@@ -213,7 +213,7 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
 
     expect(identityModule.beginProtectedAction).toHaveBeenCalledWith(expect.objectContaining({
       action: 'INTERACT',
-    }))
+    }), { reuseRecent: true })
     expect(page.data.loginSheetOpen).toBe(true)
     expect(showToast).not.toHaveBeenCalledWith({ title: '签到成功', icon: 'success' })
     expect(checkInStore.clear).not.toHaveBeenCalled()
@@ -231,7 +231,7 @@ describe('MIP event detail scan check-in (journey J0-01/J0-02)', () => {
     expect(navigateTo).not.toHaveBeenCalled()
     expect(identityModule.beginProtectedAction).toHaveBeenCalledWith(expect.objectContaining({
       source: expect.objectContaining({ query: { eventId: EVENT_ID, intent, inviteRef: 'public-invite-ref' } }),
-    }))
+    }), { reuseRecent: true })
   })
 
   it.each([
