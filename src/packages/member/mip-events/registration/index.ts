@@ -42,7 +42,7 @@ function initialField(field: RegistrationField, answer?: string | boolean): Regi
   }
 }
 
-function fieldsFromAnswers(event: MipEventDetail, answers: Record<string, string | boolean> = {}) {
+function fieldsFromAnswers(event: Pick<MipEventDetail, 'registrationSchema'>, answers: Record<string, string | boolean> = {}) {
   return event.registrationSchema.map(field => initialField(field, answers[field.key]))
 }
 
