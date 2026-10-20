@@ -62,24 +62,34 @@ function counterpart(overrides = {}) {
 }
 
 describe('admin user influence repository', () => {
-  it('summarizes the four current influence facts without bypassing privacy or blocks', async () => {
-    const counts = [3, 5, 7, 11, 13, 17]
+  it('summarizes attendance and heart facts separately without bypassing privacy or blocks', async () => {
+    const counts = [3, 5, 7, 11, 13, 17, 23]
     let index = 0
     const { calls, repository } = createFixture([], async () => ({ count: counts[index++], visit_count: 19 }))
 
     assert.deepEqual(await repository.getUserInfluenceSummary('wx-app', 'user-a'), {
       guestCount: 3,
-      interactionCount: 5,
+      interactionCount: 23,
+      interactiveUserCount: 23,
       interestCount: 7,
       visitorCount: 11,
       visitCount: 19, outgoingHeartCount: 13, incomingHeartCount: 5, referralCount: 17,
     })
-    assert.equal(calls.length, 6)
+    assert.equal(calls.length, 7)
     assert.match(calls[5].sql, /mip_referral_intents/)
     assert.deepEqual(calls[5].params, ['wx-app', 'user-a'])
     assert.match(calls[0].sql, /COUNT\(DISTINCT attribution\.guest_user_id\)/)
     assert.match(calls[0].sql, /attribution\.source_type = 'USER'/)
     assert.match(calls[0].sql, /registration\.share_profile = 1/)
+    assert.match(calls[0].sql, /registration\.status = 'ATTENDED'/)
+    assert.match(calls[0].sql, /checkin\.status = 'ACTIVE'/)
+    assert.match(calls[6].sql, /COUNT\(DISTINCT peer_checkin\.user_id\)/)
+    assert.match(calls[6].sql, /own_registration\.status = 'ATTENDED'/)
+    assert.match(calls[6].sql, /peer_registration\.status = 'ATTENDED' AND peer_registration\.share_profile = 1/)
+    assert.match(calls[6].sql, /peer_checkin\.user_id <> own_checkin\.user_id AND peer_checkin\.status = 'ACTIVE'/)
+    assert.match(calls[6].sql, /own_checkin\.status = 'ACTIVE'/)
+    assert.doesNotMatch(calls[6].sql, /mip_event_hearts/)
+    assert.deepEqual(calls[6].params, ['wx-app', 'user-a', 'user-a', 'user-a'])
     assert.match(calls[0].sql, /NOT EXISTS \([\s\S]*mip_membership_entitlements/)
     assert.match(calls[1].sql, /FROM mip_event_hearts heart/)
     assert.match(calls[1].sql, /heart\.status = 'ACTIVE'/)

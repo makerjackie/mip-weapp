@@ -10,7 +10,7 @@ export function userDashboardMetrics(payload: unknown): UserDashboardMetric[] {
   const business = (key: string) => count(counts.loadFailed ? null : counts[key])
   return [
     { key: 'invitations', label: '邀请嘉宾数', value: fact('guestCount', ' 人'), description: '服务端按邀请和活动参与事实去重。' },
-    { key: 'interactions', label: '互动用户数', value: fact('interactiveUserCount', ' 人'), description: '有效互动的去重人数；缺少已确认口径时不推算。' },
+    { key: 'interactions', label: '互动用户数', value: fact('interactiveUserCount', ' 人'), description: '双方在同一活动有效签到且报名为已签到的去重用户人数。' },
     { key: 'outgoing', label: '我的心动数', value: fact('outgoingHeartCount', ' 次'), description: '当前有效的主动活动心动票数，已撤销票不计入。' },
     { key: 'incoming', label: '对我心动数', value: fact('incomingHeartCount', ' 次'), description: '当前有效的收到活动心动票数，档案兴趣独立统计。' },
     { key: 'visits', label: '主页访客', value: `${fact('visitCount', ' 次')} / ${fact('visitorCount', ' 人')}`, description: '有效可见用户的访问次数与去重人数。' },
