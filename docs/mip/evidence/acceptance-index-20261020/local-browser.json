@@ -1,0 +1,30 @@
+{
+  "origin": "http://127.0.0.1:8794",
+  "checkedAt": "2026-10-20T10:40:47.008Z",
+  "checks": [
+    {
+      "width": 1440,
+      "reports": 5,
+      "homeDailyDetailNavigation": true,
+      "imagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "width": 1280,
+      "reports": 5,
+      "homeDailyDetailNavigation": true,
+      "imagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "reports": 5,
+      "homeDailyDetailNavigation": true,
+      "imagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    }
+  ]
+}

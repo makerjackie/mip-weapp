@@ -1,0 +1,30 @@
+{
+  "origin": "https://miptest.01mvp.com",
+  "checkedAt": "2026-10-20T10:47:46.412Z",
+  "checks": [
+    {
+      "width": 1440,
+      "reports": 5,
+      "homeDailyDetailNavigation": true,
+      "imagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "width": 1280,
+      "reports": 5,
+      "homeDailyDetailNavigation": true,
+      "imagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "reports": 5,
+      "homeDailyDetailNavigation": true,
+      "imagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    }
+  ]
+}
