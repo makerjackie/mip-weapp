@@ -19,6 +19,7 @@ import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { assertReleaseBuildMarker, assertReleaseSource, readReleaseSource } from './lib/release-provenance.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const devtoolsCli = '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
@@ -74,6 +75,14 @@ if (channel === 'prod' && !/^production$/i.test(readEnvValue(targetDir, 'MIP_DEP
 }
 
 console.log(`[release] 通道=${channel} 目标目录=${targetDir} 版本=${version}`)
+if (channel === 'prod') {
+  const fetched = spawnSync('git', ['fetch', 'origin', 'main'], { cwd: root, stdio: 'inherit' })
+  if (fetched.error || fetched.status !== 0) {
+    fail('无法更新 origin/main，已停止上传。')
+  }
+}
+const sourceSha = assertReleaseSource(readReleaseSource(root), { channel })
+console.log(`[release] 源码=${sourceSha}`)
 console.log(`[release] 上传前执行完整质量门禁（verify:all）。`)
 const verification = spawnSync('pnpm', ['verify:all'], { cwd: root, stdio: 'inherit', env: process.env })
 if (verification.error || verification.status !== 0) {
@@ -81,10 +90,11 @@ if (verification.error || verification.status !== 0) {
 }
 
 console.log(`[release] 从 ${targetDir} 构建。`)
+assertReleaseSource(readReleaseSource(root), { channel, expectedSha: sourceSha })
 const build = spawnSync('pnpm', ['build'], {
   cwd: root,
   stdio: 'inherit',
-  env: { ...process.env, MIP_ENV_DIR: targetDir },
+  env: { ...process.env, MIP_ENV_DIR: targetDir, BUILD_SHA: sourceSha },
 })
 if (build.error || build.status !== 0) {
   fail('构建失败。')
@@ -92,6 +102,8 @@ if (build.error || build.status !== 0) {
 
 // 烘焙核对：包内函数名前缀必须与通道一致（trial=mip-t-*，prod=mip-*）
 const common = fs.readFileSync(path.join(root, 'dist', 'common.js'), 'utf8')
+assertReleaseBuildMarker(common, sourceSha)
+assertReleaseSource(readReleaseSource(root), { channel, expectedSha: sourceSha })
 const hasTest = common.includes('mip-t-identity-api')
 const hasProd = common.includes('mip-identity-api')
 if (channel === 'trial' && (!hasTest || hasProd)) {
@@ -127,6 +139,17 @@ const upload = spawnSync(devtoolsCli, uploadArgs, { cwd: root, stdio: 'inherit' 
 if (upload.error || upload.status !== 0) {
   fail('上传失败。')
 }
+fs.writeFileSync(path.join(root, '.tmp', `release-${channel}-${version}.json`), `${JSON.stringify({
+  sourceSha,
+  version,
+  channel,
+  targetDir,
+  uploadedAt: new Date().toISOString(),
+  developmentUploadSucceeded: true,
+  trialAssignmentVerified: false,
+  reviewSubmitted: false,
+  publicReleased: false,
+}, null, 2)}\n`)
 
 if (channel === 'trial') {
   console.log(`
