@@ -22,7 +22,7 @@
     "configurationUnchanged": true,
     "permissionsUnchanged": true
   },
-  "priceSwitch": "awaiting-user-confirmation",
+  "priceSwitch": "confirmed and implemented in 6e97930c; final client 43624ed3, see event-player-free-20261020",
   "trialUpload": "PENDING: CLI did not return a completion receipt; no duplicate upload submitted",
   "productionWrites": 0,
   "cloudVerify": "passed",
@@ -32,5 +32,6 @@
     "result": "passed",
     "mainPackageBytes": 1758897,
     "qrStoredOutsideEvidence": true
-  }
+  },
+  "supersededBy": "../event-player-free-20261020/verification.json"
 }

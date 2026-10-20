@@ -15,12 +15,14 @@ describe('MIP event rich content', () => {
     expect(nodes[0].children?.[0].text).toBe('<script>alert(1)</script>')
   })
 
-  it('accepts locally resolved temp image paths after cloud file hydration', () => {
-    const nodes = eventRichTextNodes('![图片](wxfile://tmp_event-content-1.png)\n![图](http://tmp/preview.jpeg)')
-    expect(nodes.filter(node => node.name === 'img').map(node => node.attrs?.src)).toEqual([
-      'wxfile://tmp_event-content-1.png',
-      'http://tmp/preview.jpeg',
-    ])
+  it('rejects local paths that decode in image but fail inside native rich-text', () => {
+    const nodes = [
+      ...eventRichTextNodes('![图片](wxfile://tmp_event-content-1.png)\n![图](http://tmp/preview.jpeg)'),
+      ...eventRichTextNodes('<img src="wxfile://tmp/organizer.jpg"><p>主办方介绍</p>'),
+    ]
+    expect(nodes.filter(node => node.name === 'img')).toEqual([])
+    expect(JSON.stringify(nodes)).toContain('主办方介绍')
+    expect(JSON.stringify(nodes)).not.toMatch(/wxfile:|http:\/\/tmp\//)
   })
 
   it('still hides raw cloud file ids until the page hydrates them', () => {

@@ -1,0 +1,266 @@
+{
+  "environment": "PRODUCTION",
+  "verifiedAt": "2026-10-20T06:48:27.425941+00:00",
+  "sourceCommit": "b038720414593200b0fa63a3fb1014ab1e93ae58",
+  "migration": {
+    "version": "20261020020000",
+    "file": "112_event_member_free.sql",
+    "defaultOff": 3
+  },
+  "backup": {
+    "tableCount": 154,
+    "rowCount": 5626,
+    "consistency": "row-count-verified",
+    "startedAt": "2026-10-20T06:29:58.819Z",
+    "completedAt": "2026-10-20T06:41:01.415Z"
+  },
+  "dataPreserved": {
+    "environment": "PRODUCTION",
+    "checkedAt": "2026-10-20T06:46:59.624Z",
+    "checks": [
+      {
+        "collection": "events",
+        "count": 3,
+        "unchanged": true,
+        "sha256": "ab4ca9e57508585d3180f1c615bfe589008761c6c6314d2653607908db93349c"
+      },
+      {
+        "collection": "orders",
+        "count": 3,
+        "unchanged": true,
+        "sha256": "2b2d84baaf11900768d736a7338a1ec09de4cdf27254288b7ff0402e9bdde257"
+      },
+      {
+        "collection": "entitlements",
+        "count": 1,
+        "unchanged": true,
+        "sha256": "623cce7470e2fa2f5f5027a8c06389326769c641b02c2104c3c92257758c6f36"
+      }
+    ],
+    "memberFreeDefaults": {
+      "events": 3,
+      "defaultOff": 3
+    }
+  },
+  "paymentPreserved": [
+    {
+      "function": "mip-payment-ledger",
+      "codeAndConfigurationUnchanged": true,
+      "paymentMode": "live",
+      "catalogStage": "LIVE"
+    },
+    {
+      "function": "mip-cloudpay",
+      "codeAndConfigurationUnchanged": true,
+      "paymentMode": "live"
+    }
+  ],
+  "functions": [
+    {
+      "function": "mip-events-api",
+      "active": true,
+      "runtimeFilesMatched": 20,
+      "configurationUnchanged": true,
+      "allowedChangedKeys": [],
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "zipSha256": "6b82f0abb9f2c5f27ad5c470ccd3b99961b119d3b7f7b0b854fc2852ba9b1f45"
+    },
+    {
+      "function": "mip-admin-api",
+      "active": true,
+      "runtimeFilesMatched": 167,
+      "configurationUnchanged": true,
+      "allowedChangedKeys": [],
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "zipSha256": "af1e271e7ffedf2a1623283e5e8570d16382b59e81a513dddbaf96f43de46d02"
+    },
+    {
+      "function": "mip-admin-web-api",
+      "active": true,
+      "runtimeFilesMatched": 26,
+      "configurationUnchanged": true,
+      "allowedChangedKeys": [],
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "zipSha256": "a46a669f45cf8aad38d2bc5e6c353188d446916cb92c782037d06f49e0dd829b"
+    }
+  ],
+  "upload": {
+    "version": "1.0.2",
+    "environment": "PRODUCTION",
+    "sourceCommit": "b038720414593200b0fa63a3fb1014ab1e93ae58",
+    "fullVerifyAll": "passed",
+    "miniTests": 1821,
+    "webNodeTests": 330,
+    "webReactTests": 253,
+    "upload": "passed",
+    "testFunctionReferences": 0,
+    "mainPackageBytes": 1759301,
+    "totalPackageBytes": 3202327,
+    "submittedForReview": false,
+    "publishedOnline": false,
+    "developmentPreview": "generated",
+    "recordedAt": "2026-10-20T06:46:45.554870+00:00"
+  },
+  "native": {
+    "environment": "PRODUCTION",
+    "checkedAt": "2026-10-20T06:44:25.224Z",
+    "realWechatSession": true,
+    "registrationOrPaymentWrites": false,
+    "checks": [
+      {
+        "kind": "authoritative-detail",
+        "memberFreeDefault": false,
+        "priceCents": 9800,
+        "legacyDtoCompatible": true
+      },
+      {
+        "kind": "production-media",
+        "requested": 5,
+        "authorized": 4,
+        "decoded": [
+          {
+            "decoded": true,
+            "width": 1200,
+            "height": 1600
+          },
+          {
+            "decoded": true,
+            "width": 1200,
+            "height": 1600
+          },
+          {
+            "decoded": true,
+            "width": 709,
+            "height": 399
+          },
+          {
+            "decoded": true,
+            "width": 1200,
+            "height": 1600
+          }
+        ]
+      },
+      {
+        "kind": "production-native-page",
+        "state": "ready",
+        "titleLoaded": true
+      }
+    ]
+  },
+  "crossUserMedia": {
+    "environment": "PRODUCTION",
+    "readerIsNotUploader": true,
+    "realWechatImagesDecoded": true,
+    "referencedAssetCount": 5,
+    "authorizedEventImagesDecoded": 4,
+    "otherOwnerReferencedAssets": 5,
+    "otherOwnerDecodedEventImages": 4,
+    "excludedFromEventSigning": "organizer avatar; outside event media reference scope"
+  },
+  "webAssets": {
+    "count": 15,
+    "entry": "/assets/index-D1sL3TNI.js",
+    "allBytesMatched": true
+  },
+  "https": {
+    "checks": 68,
+    "modules": 14,
+    "passed": true
+  },
+  "webViewports": {
+    "checkedAt": "2026-10-20T06:45:02.249Z",
+    "businessWrites": false,
+    "results": [
+      {
+        "width": 1280,
+        "height": 720,
+        "overflow": false,
+        "memberFreeText": true,
+        "images": [
+          {
+            "decoded": true
+          },
+          {
+            "decoded": true
+          },
+          {
+            "decoded": true
+          },
+          {
+            "decoded": true
+          }
+        ],
+        "entry": [
+          "/assets/index-D1sL3TNI.js"
+        ],
+        "errors": []
+      },
+      {
+        "width": 1440,
+        "height": 900,
+        "overflow": false,
+        "memberFreeText": true,
+        "images": [
+          {
+            "decoded": true
+          },
+          {
+            "decoded": true
+          },
+          {
+            "decoded": true
+          },
+          {
+            "decoded": true
+          }
+        ],
+        "entry": [
+          "/assets/index-D1sL3TNI.js"
+        ],
+        "errors": []
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "overflow": false,
+        "memberFreeText": true,
+        "images": [
+          {
+            "decoded": true
+          },
+          {
+            "decoded": true
+          },
+          {
+            "decoded": true
+          },
+          {
+            "decoded": true
+          }
+        ],
+        "entry": [
+          "/assets/index-D1sL3TNI.js"
+        ],
+        "errors": []
+      }
+    ]
+  },
+  "cloud": {
+    "passed": true,
+    "tablesVerified": 152,
+    "functionsVerified": 19,
+    "membershipChainsVerified": 30,
+    "paymentMode": "live",
+    "leastPrivilege": true,
+    "timersAbsent": true
+  },
+  "preflight": true,
+  "limitations": [
+    "微信代码包已上传，未提审或全量发布。",
+    "微信运行证据来自开发者工具真实会话；特定用户手机与真实支付、回调、退款仍需真机验收。",
+    "没有向生产复制测试活动、测试权益、测试业务数据或禁用支付配置。"
+  ]
+}

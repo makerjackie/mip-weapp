@@ -11,6 +11,9 @@ interface CachedMediaUrl {
 
 const cache = new Map<string, CachedMediaUrl>()
 const downloads = new Map<string, Promise<string>>()
+// rich-text img supports network images only. Never share native image paths.
+const richTextCache = new Map<string, CachedMediaUrl>()
+const richTextRequests = new Map<string, Promise<string>>()
 let cacheGeneration = 0
 const maximumCachedFiles = 120
 const maximumConcurrentDownloads = 3
@@ -45,15 +48,15 @@ async function withDownloadSlot<T>(run: () => Promise<T>, background: boolean): 
   }
 }
 
-function cacheMediaFile(fileId: string, url: string, expiresAt = Number.POSITIVE_INFINITY) {
-  cache.delete(fileId)
-  cache.set(fileId, { url, expiresAt })
-  while (cache.size > maximumCachedFiles) {
-    const oldest = cache.keys().next().value
+function cacheMediaFile(fileId: string, url: string, expiresAt = Number.POSITIVE_INFINITY, target = cache) {
+  target.delete(fileId)
+  target.set(fileId, { url, expiresAt })
+  while (target.size > maximumCachedFiles) {
+    const oldest = target.keys().next().value
     if (typeof oldest !== 'string') {
       break
     }
-    cache.delete(oldest)
+    target.delete(oldest)
   }
 }
 
@@ -126,6 +129,54 @@ async function publicEventMedia(cloud: CaseCloudClient, fileIds: string[]) {
     }
   }
   return urls
+}
+
+/** HTTPS-only, server-authorized event images for native rich-text img nodes. */
+export async function resolveEventRichTextImageUrls(fileIds: string[], providedCloud?: CaseCloudClient): Promise<string[]> {
+  const generation = cacheGeneration
+  const urls = new Map<string, string>()
+  const missing: string[] = []
+  for (const fileId of new Set(fileIds)) {
+    if (!fileId.startsWith('cloud://')) {
+      continue
+    }
+    const entry = richTextCache.get(fileId)
+    if (entry && entry.expiresAt > Date.now()) {
+      urls.set(fileId, entry.url)
+      cacheMediaFile(fileId, entry.url, entry.expiresAt, richTextCache)
+    }
+    else {
+      richTextCache.delete(fileId)
+      if (!richTextRequests.has(fileId)) {
+        missing.push(fileId)
+      }
+    }
+  }
+  if (missing.length) {
+    const cloud = providedCloud || await requireCloudClient()
+    if (generation !== cacheGeneration) {
+      return fileIds.map(() => '')
+    }
+    const batch = missing.filter(fileId => !richTextRequests.has(fileId))
+    if (batch.length) {
+      const request = publicEventMedia(cloud, batch)
+      for (const fileId of batch) {
+        const flight = request.then((signed) => {
+          const url = signed.get(fileId) || ''
+          if (url && generation === cacheGeneration) {
+            cacheMediaFile(fileId, url, Date.now() + 8 * 60 * 1000, richTextCache)
+          }
+          return url
+        }).finally(() => {
+          if (richTextRequests.get(fileId) === flight) {
+            richTextRequests.delete(fileId)
+          }
+        })
+        richTextRequests.set(fileId, flight)
+      }
+    }
+  }
+  return Promise.all(fileIds.map(fileId => urls.get(fileId) || richTextRequests.get(fileId) || ''))
 }
 
 async function downloadCloudFile(cloud: CaseCloudClient, fileId: string, background: boolean): Promise<string> {
@@ -243,6 +294,8 @@ export function clearCloudMediaCache() {
   cacheGeneration += 1
   cache.clear()
   downloads.clear()
+  richTextCache.clear()
+  richTextRequests.clear()
 }
 
 export function getCloudMediaGeneration() {

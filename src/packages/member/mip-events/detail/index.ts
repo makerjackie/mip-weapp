@@ -5,7 +5,7 @@ import { brand } from '../../../../config/brand'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { decodeInvitationToken, eventInvitationPath, eventRichTextNodes, isEventAccessRequirementError, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
-import { clearEventRichContent, updateEventRichContent } from '../../../../modules/mip-events/rich-content-media'
+import { clearEventRichContent, refreshEventRichContent, updateEventRichContent } from '../../../../modules/mip-events/rich-content-media'
 import { createMipGuestLoginFlow } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
@@ -570,9 +570,8 @@ Page({
   },
 
   /**
-   * 富文本插图（description / organizerIntroduction 里的 cloud:// 引用）与封面走同一条
-   * 本地下载管道：先按原始 markdown 渲染文本（未解析图先隐藏），解析完成后把 cloud://
-   * 替换成 wxfile:// 本地路径再重建节点，避免把云存储 ID 或短时效签名直链直接喂给 rich-text。
+   * 富文本插图使用服务端授权的短时 HTTPS 地址。rich-text img 不支持普通
+   * image 使用的本地临时路径；先展示文字，签名完成后再补齐图片。
    */
   hydrateRichTextMedia(description: string, organizerIntroduction: string, notices = '') {
     updateEventRichContent(this, 'descriptionNodes', description)
@@ -672,6 +671,8 @@ Page({
       return
     }
     this.setData({ contentSection: section as 'INTRO' | 'ORGANIZER' | 'NOTICE' })
+    const field = section === 'INTRO' ? 'descriptionNodes' : section === 'ORGANIZER' ? 'organizerIntroductionNodes' : 'noticesNodes'
+    refreshEventRichContent(this, field)
   },
 
   handleShareVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {

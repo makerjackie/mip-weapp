@@ -21,6 +21,7 @@
 | 后台产品验收 | [admin-web/ACCEPTANCE.md](../admin-web/ACCEPTANCE.md) | Web 后台唯一逐项验收标准，含来源取舍与可编辑边界 |
 | 后台执行计划 | [admin-web/EXECUTION_PLAN.md](../admin-web/EXECUTION_PLAN.md) | 工作包、依赖、维护约束、测试和模型交接；不另定义验收规则 |
 | 全项目证据方法 | [mip/ACCEPTANCE.md](mip/ACCEPTANCE.md) | 静态、运行时、真机/生产证据层级，不另定义 Web 产品标准 |
+| 对外验收报告站 | [验收站维护规则](mip/acceptance-site/README.md) | miptest.01mvp.com 报告目录、草稿反馈、定稿冻结与版本留档 |
 | 覆盖追踪 | [mip/COVERAGE_MATRIX.md](mip/COVERAGE_MATRIX.md) | 实现状态与验证状态 |
 | 数据结构 | [`database/mysql/mip/`](../database/mysql/mip/) 与 [`migrations.lock.json`](../database/mysql/mip/migrations.lock.json) | 表、字段、索引、迁移顺序和校验和 |
 | 数据语义 | [data-contract.md](data-contract.md) | 数据归属、写入边界和隐私规则 |

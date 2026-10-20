@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>MIP · 逐页验收</title>
+    <style>
+      :root {
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --bg: #0d0f12;
+  --panel: #191c21;
+  --line: #343942;
+  --muted: #a8aeb8;
+  --text: #f4f4f5;
+  --accent: #fcdf03;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--bg);
+}
+button,
+select,
+textarea {
+  font: inherit;
+}
+button,
+select {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: inherit;
+  background: #242830;
+  padding: 7px 12px;
+}
+button {
+  cursor: pointer;
+}
+button:hover {
+  border-color: #a5abb5;
+}
+button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+[hidden] {
+  display: none !important;
+}
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 66px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  background: #111419f5;
+  backdrop-filter: blur(12px);
+}
+.brand {
+  white-space: nowrap;
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 800;
+}
+.brand span {
+  margin-left: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+.toolbar select {
+  min-width: 0;
+  max-width: 350px;
+  flex: 1;
+  font-size: 12px;
+}
+.toolbar .export {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 12px;
+}
+main {
+  max-width: 1000px;
+  padding: 20px 24px 245px;
+  margin: auto;
+}
+.page-heading {
+  margin-bottom: 17px;
+}
+.report-summary {
+  margin: 0 0 14px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.verification-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.heading-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+h1 {
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0;
+}
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  background: #333944;
+  color: #c3cad5;
+}
+.badge.pass {
+  background: #193827;
+  color: #a2e4b8;
+}
+.badge.needs-fix,
+.badge.failed {
+  background: #442823;
+  color: #ffb5a9;
+}
+.badge.scenario-pending {
+  background: #2a251c;
+  color: #edcf90;
+}
+.scenario-warning {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border-left: 3px solid #e5b95c;
+  color: #edcf90;
+  background: #2a251c;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.ai-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.next-step {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #c3cad5;
+}
+.comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+.pane {
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.pane-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+.pane-heading small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.shot {
+  width: 375px;
+  max-width: 100%;
+  margin: auto;
+  background: #080808;
+}
+.shot img {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: zoom-in;
+}
+.chrome-space {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 375 / 88;
+  padding: 8px;
+  color: #a7afbb;
+  background: repeating-linear-gradient(135deg, #252a32, #252a32 7px, #21262d 7px, #21262d 14px);
+  border-bottom: 1px dashed #535c6a;
+  font-size: 10px;
+  text-align: center;
+}
+.missing {
+  display: grid;
+  align-content: center;
+  text-align: center;
+  min-height: 400px;
+  padding: 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.continuation {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.continuation p {
+  margin: 0;
+  padding: 5px 12px 12px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.evidence {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.evidence summary {
+  width: fit-content;
+  cursor: pointer;
+}
+.evidence p {
+  margin: 9px 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.evidence a {
+  color: #e1cf78;
+}
+.review-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  border-top: 1px solid #4a505a;
+  padding: 12px max(24px, calc((100vw - 952px) / 2)) 10px;
+  background: #15191ff7;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 -12px 35px #0004;
+}
+.review-topline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.review-topline strong {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.verdicts {
+  display: flex;
+  gap: 5px;
+}
+.verdicts button {
+  min-height: 30px;
+  font-size: 11px;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+.verdicts button[aria-pressed='true'] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: #37321c;
+}
+.navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.navigation button {
+  font-size: 12px;
+}
+#counter {
+  color: var(--muted);
+  min-width: 43px;
+  text-align: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.previous-feedback {
+  margin-top: 8px;
+  color: #c8bc98;
+  font-size: 11px;
+  line-height: 1.5;
+  max-height: 58px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+#note {
+  display: block;
+  width: 100%;
+  min-height: 58px;
+  max-height: 115px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  background: #0f1217;
+  padding: 9px 11px;
+  margin-top: 9px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+#note::placeholder {
+  color: #747e8d;
+}
+.review-bottomline {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 6px;
+  color: #8791a0;
+  font-size: 10px;
+  line-height: 1.4;
+}
+#save-state.failed {
+  color: #ffd08c;
+}
+dialog {
+  width: min(920px, 96vw);
+  max-height: 93vh;
+  padding: 0 14px 14px;
+  color: var(--text);
+  background: #111419;
+  border: 1px solid #586171;
+  border-radius: 10px;
+}
+dialog::backdrop {
+  background: #000c;
+}
+.zoom-toolbar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  background: #111419;
+  font-size: 12px;
+}
+#zoom-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: auto;
+}
+@media (max-width: 720px) {
+  .toolbar {
+    gap: 8px;
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+  .brand span {
+    display: none;
+  }
+  .toolbar select {
+    max-width: none;
+  }
+  #progress {
+    display: none;
+  }
+  main {
+    padding: 16px 10px 260px;
+  }
+  h1 {
+    font-size: 16px;
+  }
+  .comparison {
+    gap: 8px;
+  }
+  .pane-heading {
+    padding: 9px 7px;
+    font-size: 12px;
+  }
+  .pane-heading small {
+    display: none;
+  }
+  .chrome-space {
+    font-size: 8px;
+    padding: 3px;
+  }
+  .review-panel {
+    padding: 10px 12px;
+  }
+  .review-topline {
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .navigation {
+    width: 100%;
+    justify-content: space-between;
+    order: -1;
+    margin: 0;
+  }
+  .review-bottomline span:last-child {
+    display: none;
+  }
+}
+
+.public-notice{font-size:13px;color:#555;line-height:1.6}.test-row{padding:12px 0;border-bottom:1px solid #ddd}.test-row p{margin:6px 0;white-space:pre-wrap}
+    </style>
+  </head>
+  <body>
+    <header class="toolbar">
+      <div class="brand">MIP <span>逐页验收</span></div>
+      <select id="jump" aria-label="跳转到页面"></select>
+      <span id="progress" class="muted"></span>
+      <button id="export" class="export">导出全部意见</button>
+    </header>
+    <main>
+<p class="public-notice">临时验收站 · 测试账号数据 / 演示配置。真实微信操作、模拟角色和服务端测试分别标明。意见只保存在你的浏览器，完成后请导出发回。</p>
+<details class="evidence"><summary>查看本轮测试结果与范围</summary><div id="public-test-results"></div></details>
+      <p id="report-summary" class="report-summary"></p>
+      <section class="page-heading">
+        <div class="heading-line">
+          <h1 id="page-title"></h1>
+        </div>
+        <div class="verification-strip" aria-label="AI 分项验证记录">
+          <span id="ai-state" class="badge"></span>
+          <span id="interaction-state" class="badge"></span>
+          <span id="scenario-state" class="badge"></span>
+          <span id="device-state" class="badge"></span>
+        </div>
+        <p id="scenario-warning" class="scenario-warning" role="status" hidden></p>
+        <p id="ai-note" class="ai-note"></p>
+        <p id="next-step" class="next-step"></p>
+      </section>
+      <div id="comparison" class="comparison"></div>
+      <details id="evidence" class="evidence">
+        <summary>查看核对细节与来源</summary>
+        <div id="evidence-content"></div>
+      </details>
+    </main>
+    <footer class="review-panel">
+      <div class="review-topline">
+        <strong>我的批注</strong>
+        <div id="verdicts" class="verdicts" aria-label="本页验收状态"></div>
+        <span class="navigation"
+          ><button id="previous" aria-label="上一页">← 上一页</button><span id="counter"></span
+          ><button id="next" aria-label="下一页">下一页 →</button></span
+        >
+      </div>
+      <div id="previous-feedback" class="previous-feedback" hidden></div>
+      <textarea id="note" aria-label="本页批注" placeholder="哪里需要调整？直接写在这里。" rows="2"></textarea>
+      <div class="review-bottomline">
+        <span id="save-state" role="status" aria-live="polite">意见自动保存在当前浏览器</span
+        ><span>输入时方向键不会翻页</span>
+      </div>
+    </footer>
+    <dialog id="zoom">
+      <div class="zoom-toolbar"><span id="zoom-label"></span><button id="close-zoom">关闭</button></div>
+      <img id="zoom-image" alt="截图大图" />
+    </dialog>
+    <script>
+      const report={"title":"MIP · 逐页验收","generatedAt":"2026-09-27T02:14:11.733Z","captureSet":"1da8437429547269","summary":{"total":43,"prototype":43,"actual":43,"passed":0,"knownIssues":0,"scenarioPending":3,"aiPending":36,"deviceOnly":0,"simulationReviewed":43},"source":{"commit":"cb5956b","url":"https://airdrop.z-h-ai.com/p/715a5d/"},"implementation":{"commit":"21a86131-local-qa-20260927","captureNotes":"本轮以测试数据库演示账号读取业务结果，并在开发者工具本机注入身份复现页面。模拟角色与历史真实会话分开标识；未完成的微信登录、手机号、支付、扫码和写入不认定通过。"},"roleProfiles":{"visitor":{"label":"游客（未登录）"},"new-user":{"label":"已授权新账号"},"ordinary":{"label":"普通用户（未签到/非玩家）"},"guest":{"label":"嘉宾（已签到/非玩家）"},"player":{"label":"玩家（有效会员）"},"player-renewal":{"label":"玩家（临期 3 个月内）"},"attendee":{"label":"本场已签到用户"},"authenticated":{"label":"已登录共享"},"owner":{"label":"本人档案"}},"previousFeedback":null,"steps":[{"id":"J0-01","name":"扫码直达活动详情 · 签到成功","expectedRole":"attendee","evidenceWarnings":["实际场景与原型尚未对齐。"],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated-mismatch"},"device":{"status":"pending","evidence":["真实微信身份、手机号、支付或扫码相关步骤仍需真机验证；本图只验证模拟状态。"]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J0-01","capturedAt":"2026-09-26T11:34:53.945Z","image":{"available":true,"width":375,"height":976,"sha256":"124bacdf49d35f37784eb13176cc8e153aa36719924473f3db0e44151149d65d","src":"assets/124bacdf49d35f37784eb13176cc8e153aa36719924473f3db0e44151149d65d.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":false,"capturedAt":"2026-09-26T16:16:06.615Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"c8e87986e99c3b1316ef390664cda53441e5dba7bc619cd1be3f7ed1e6c915e2","src":"assets/c8e87986e99c3b1316ef390664cda53441e5dba7bc619cd1be3f7ed1e6c915e2.png"}},"review":{"status":"data-mismatch","visualNotes":"已签到账号活动详情正常展示反馈与互动入口，但当前截图没有签到成功提示，不能替代扫码签到场景。","differences":["使用历史已签到测试记录；未实际扫码、执行签到写入或捕获成功 toast。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J0-02","name":"未登录扫码 · 先授权再签到","expectedRole":"visitor","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"pending","evidence":["真实微信身份、手机号、支付或扫码相关步骤仍需真机验证；本图只验证模拟状态。"]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J0-02","capturedAt":"2026-09-26T11:35:08.106Z","image":{"available":true,"width":375,"height":976,"sha256":"4c3f5c7f79221c79846581e8a44cff585387d8e55da25927d025c840809528cc","src":"assets/4c3f5c7f79221c79846581e8a44cff585387d8e55da25927d025c840809528cc.jpg"}},"actual":{"role":"visitor","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:00:52.656Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"ea161ba23bce72a9edf598727d0aa64a48bca7c5077427432cbb9b93d31de446","src":"assets/ea161ba23bce72a9edf598727d0aa64a48bca7c5077427432cbb9b93d31de446.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟游客授权层已逐图核对；品牌标识、说明、授权按钮和取消入口正常。","differences":["只复现本地授权引导画面，没有真实微信手机号授权或扫码签到。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J0-03","name":"活动反馈 · 签到后开放","expectedRole":"attendee","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"pending","evidence":["真实微信身份、手机号、支付或扫码相关步骤仍需真机验证；本图只验证模拟状态。"]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J0-03","capturedAt":"2026-09-26T11:35:12.402Z","image":{"available":true,"width":375,"height":1273,"sha256":"e7e00dd033cfa7df6ad1b32d3137b4fde49c5db910bfb2b97abc6d1992cd0c88","src":"assets/e7e00dd033cfa7df6ad1b32d3137b4fde49c5db910bfb2b97abc6d1992cd0c88.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:16:17.390Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"d44af8a3f2ef81d8b09ce6e0403d2370eadc8f972433795af285409ec120923f","src":"assets/d44af8a3f2ef81d8b09ce6e0403d2370eadc8f972433795af285409ec120923f.png"}},"review":{"status":"accepted-difference","visualNotes":"活动反馈首屏星级、推荐意愿、角色多选与保存按钮排版正常。","differences":["原型展示已填写选项，当前为空表单；活动为演示记录，未保存反馈，下半表单需滚动。"]},"additionalImages":[{"side":"prototype","label":"原型下半部分 · 补齐长页（与首图内容可能有重叠）","image":{"available":true,"width":360,"height":780,"sha256":"2d61573dc52814d40d4886b10e2787211985a6502d32ac7870f7b49e127f3339","src":"assets/2d61573dc52814d40d4886b10e2787211985a6502d32ac7870f7b49e127f3339.jpg"}}],"simulationReviewed":true},{"id":"J1-01","name":"活动详情 · 游客视角","expectedRole":"visitor","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J1-01","capturedAt":"2026-09-26T11:35:15.796Z","image":{"available":true,"width":375,"height":976,"sha256":"176d77acd58bbd1c20103c33116f74a417c355bdeda9b120779c03f92794fd3e","src":"assets/176d77acd58bbd1c20103c33116f74a417c355bdeda9b120779c03f92794fd3e.jpg"}},"actual":{"role":"visitor","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:00:28.038Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"4b7c04f94d5d948a934b3baee3845ce18c649dc16874e7c98a307a51a162819c","src":"assets/4b7c04f94d5d948a934b3baee3845ce18c649dc16874e7c98a307a51a162819c.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟游客详情页已逐图核对，信息卡、参与人、活动介绍与立即报名正常。","differences":["活动素材、人数为演示数据，增加系统日历入口；未提交真实报名。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J1-02","name":"手机号授权弹层","expectedRole":"visitor","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"pending","evidence":["真实微信身份、手机号、支付或扫码相关步骤仍需真机验证；本图只验证模拟状态。"]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J1-02","capturedAt":"2026-09-26T11:35:16.500Z","image":{"available":true,"width":375,"height":976,"sha256":"4c3f5c7f79221c79846581e8a44cff585387d8e55da25927d025c840809528cc","src":"assets/4c3f5c7f79221c79846581e8a44cff585387d8e55da25927d025c840809528cc.jpg"}},"actual":{"role":"visitor","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:00:40.034Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"ea161ba23bce72a9edf598727d0aa64a48bca7c5077427432cbb9b93d31de446","src":"assets/ea161ba23bce72a9edf598727d0aa64a48bca7c5077427432cbb9b93d31de446.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟手机号授权层与原型主要结构一致，按钮无明显遮挡或溢出。","differences":["仅本地模拟的授权引导，未调用微信手机号授权成功流程。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J1-03","name":"补充个人资料（新账号）","expectedRole":"new-user","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"pending","evidence":["真实微信身份、手机号、支付或扫码相关步骤仍需真机验证；本图只验证模拟状态。"]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J1-03","capturedAt":"2026-09-26T11:35:18.954Z","image":{"available":true,"width":375,"height":1046,"sha256":"304e64f901673c780dbad6229f0885a04be6795ff4af30feabe00f210cdefc06","src":"assets/304e64f901673c780dbad6229f0885a04be6795ff4af30feabe00f210cdefc06.jpg"}},"actual":{"role":"new-user","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:01:40.392Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"27af0f3437a7203c0c1b0dda5f9d247664b599301afde7ade4fc3f9cba9c329c","src":"assets/27af0f3437a7203c0c1b0dda5f9d247664b599301afde7ade4fc3f9cba9c329c.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟新账号资料表单已逐图核对，头像占位、基础信息、行业选择和保存按钮正常。","differences":["演示默认性别和身份标签已选，昵称与头像为空；没有执行实际注册写入。","行业改为选择入口，未把全部标签重复放在首屏。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J1-04","name":"机会 · 项目机会 · 游客视角","expectedRole":"visitor","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J1-04","capturedAt":"2026-09-26T11:35:21.526Z","image":{"available":true,"width":375,"height":840,"sha256":"1da836cec8215b8131eb04ecedaa15203b2cbf53fd9c055b7db1d4b489ee82d7","src":"assets/1da836cec8215b8131eb04ecedaa15203b2cbf53fd9c055b7db1d4b489ee82d7.jpg"}},"actual":{"role":"visitor","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:16:28.033Z","source":"simulated-role","chromeOmitted":false,"referenceChromeInsetCssPx":0,"image":{"available":true,"width":750,"height":1624,"sha256":"374083115269cb86ce7f3d15e961a95c78eb796ed0e2746a5edbd7ea75b57ee4","src":"assets/374083115269cb86ce7f3d15e961a95c78eb796ed0e2746a5edbd7ea75b57ee4.png"}},"review":{"status":"accepted-difference","visualNotes":"游客机会页重新核对：玩家登录与解锁入口、空态图、筛选区、底部导航均正常，无原先箭头实体显示。","differences":["运营 Banner 比原型多一块，登录区随之下移；活动内容由后台配置。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J1-05","name":"机会 · 人才合作 · 游客视角","expectedRole":"visitor","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J1-05","capturedAt":"2026-09-26T11:35:24.294Z","image":{"available":true,"width":375,"height":840,"sha256":"fb95bc549fa5ec282e1451b20ef702188deeaabff60882b29ccb69df68a285bb","src":"assets/fb95bc549fa5ec282e1451b20ef702188deeaabff60882b29ccb69df68a285bb.jpg"}},"actual":{"role":"visitor","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:01:17.749Z","source":"simulated-role","chromeOmitted":false,"referenceChromeInsetCssPx":0,"image":{"available":true,"width":750,"height":1624,"sha256":"f584a17404a99cf07f89398c27e3ce7832ec6eaaa6a68a6392ec722fead35c2e","src":"assets/f584a17404a99cf07f89398c27e3ce7832ec6eaaa6a68a6392ec722fead35c2e.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟游客人才合作页已逐图核对，登录按钮、解锁提示与空态显示正常。","differences":["仅本地模拟画面，未实际微信登录。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J1-06","name":"玩家等级 · 新玩家加入","expectedRole":"ordinary","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J1-06","capturedAt":"2026-09-26T11:35:25.003Z","image":{"available":true,"width":375,"height":894,"sha256":"f8c015eca1926f2f5c08a1bc28857e2a250327b6eee4612f237f2a73cefaf249","src":"assets/f8c015eca1926f2f5c08a1bc28857e2a250327b6eee4612f237f2a73cefaf249.jpg"}},"actual":{"role":"ordinary","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T15:52:12.351Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"f62661e4fadbe62623c5817bf6d1e186d88bf406662b84ab6bd51f3e77fa3a16","src":"assets/f62661e4fadbe62623c5817bf6d1e186d88bf406662b84ab6bd51f3e77fa3a16.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟普通用户画面已逐图核对；等级背景比例自然，权益图标与立即加入按钮无明显错位。","differences":["仅模拟角色视觉证据，不是真实微信普通账号验收。","等级、门槛、权益和任务数量取演示配置；实际增加全部任务和返回入口，原型展示四行任务。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J1-07","name":"加入玩家 · 订单确认页","expectedRole":"ordinary","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"pending","evidence":["真实微信身份、手机号、支付或扫码相关步骤仍需真机验证；本图只验证模拟状态。"]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J1-07","capturedAt":"2026-09-26T11:35:27.471Z","image":{"available":true,"width":375,"height":976,"sha256":"133ebbf79b1c62bcc02998dce1b81e901ca07b28cd46ace76c1026f2978501f5","src":"assets/133ebbf79b1c62bcc02998dce1b81e901ca07b28cd46ace76c1026f2978501f5.jpg"}},"actual":{"role":"ordinary","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T15:52:23.447Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"d7c882433b8280d751c2e7eb1f17983a28b9532fe016bcba683ca3f7d3001445","src":"assets/d7c882433b8280d751c2e7eb1f17983a28b9532fe016bcba683ca3f7d3001445.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟会员订单页已逐图核对，信息卡、金额与固定支付按钮布局正常。","differences":["仅模拟角色视觉证据；未执行真实支付。","实际价格6000与原型6600不同，来自演示商品配置；订单在提交后生成，未伪造原型订单号。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J1-08","name":"我的 · 游客视角","expectedRole":"visitor","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J1-08","capturedAt":"2026-09-26T11:35:30.322Z","image":{"available":true,"width":375,"height":840,"sha256":"fb09c8e681847d38c4f54af1d8f72966ba71fb6f0daaf147828a9672047b69ff","src":"assets/fb09c8e681847d38c4f54af1d8f72966ba71fb6f0daaf147828a9672047b69ff.jpg"}},"actual":{"role":"visitor","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:01:28.433Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"882f2d77a88edca810d65741d8f4de764ba43834f29398b7146b8107a88e3369","src":"assets/882f2d77a88edca810d65741d8f4de764ba43834f29398b7146b8107a88e3369.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟游客我的页面已逐图核对，登录注册、等级预览与四个功能入口正常。","differences":["仅本地模拟画面，未执行实际微信登录。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J2-01","name":"活动详情 · 普通用户视角","expectedRole":"ordinary","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J2-01","capturedAt":"2026-09-26T11:35:32.793Z","image":{"available":true,"width":375,"height":976,"sha256":"176d77acd58bbd1c20103c33116f74a417c355bdeda9b120779c03f92794fd3e","src":"assets/176d77acd58bbd1c20103c33116f74a417c355bdeda9b120779c03f92794fd3e.jpg"}},"actual":{"role":"ordinary","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-27T02:03:00.907Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"97ea2038f2f40f268c192998621126f7a179cb7274d0c45a6856085a0f42ed1a","src":"assets/97ea2038f2f40f268c192998621126f7a179cb7274d0c45a6856085a0f42ed1a.png"}},"review":{"status":"accepted-difference","visualNotes":"普通用户活动详情非空数据和立即报名按钮显示正常，参与人区与正文排版正常。","differences":["当前测试活动内容与原型不同；封面采用铺满裁切，左右文字有裁切，不是图片拉伸。未证明实际报名写入。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J2-02","name":"参与人列表 · 普通用户","expectedRole":"ordinary","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J2-02","capturedAt":"2026-09-26T11:36:00.082Z","image":{"available":true,"width":375,"height":840,"sha256":"959cdeeb9c48387faa4f70719f850447754bff75b54a93a7594b263bf9d3e403","src":"assets/959cdeeb9c48387faa4f70719f850447754bff75b54a93a7594b263bf9d3e403.jpg"}},"actual":{"role":"ordinary","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T15:52:46.062Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"610c52193ae9c7654684eb792a7b9ed4c9237702159294bbcf7aa14d07dd42ed","src":"assets/610c52193ae9c7654684eb792a7b9ed4c9237702159294bbcf7aa14d07dd42ed.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟普通用户参与人列表已核对；搜索、角色标签和双列卡片正常显示，无明显溢出。","differences":["只有两个演示玩家，原型展示五人；头像、简介和等级文案来自演示数据。","实际页有返回按钮，原型没有。仅模拟角色视觉证据。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J2-03","name":"玩家档案 · 普通用户","expectedRole":"ordinary","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"simulated-recorded","evidence":["loadProfile","changeSection:cases","changeSection:opportunities","普通用户测试角色；验证档案正文、锁定入口以及合作卡/案例/机会三个tab切换，不包含真实兴趣写入。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":false,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J2-03","capturedAt":"2026-09-26T11:36:01.971Z","image":{"available":true,"width":375,"height":840,"sha256":"f73e2bef56514b4b4ee47b09f1aae97f75fc13cb01d65f1eae4228740dde2575","src":"assets/f73e2bef56514b4b4ee47b09f1aae97f75fc13cb01d65f1eae4228740dde2575.jpg"}},"actual":{"role":"ordinary","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-27T01:53:42.407Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"ba5fbdfd9cbc6c52c95aa41de326342d940934407549bd5b2aaa48a7ff890897","src":"assets/ba5fbdfd9cbc6c52c95aa41de326342d940934407549bd5b2aaa48a7ff890897.png"}},"review":{"status":"accepted-difference","visualNotes":"普通用户档案操作条已显示；合作卡、计数、个人资料与按钮排版正常，独立核对当前截图未发现明显错位。","differences":["演示资料、单张合作卡与原型不同；本图仅证明入口显示，点击结果单独以交互记录为准。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J2-04","name":"解锁提示弹窗","expectedRole":"ordinary","evidenceWarnings":["实际场景与原型尚未对齐。"],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"simulated-recorded","evidence":["toggleInterest","CUA:取消","toggleInterest","CUA:确定","强制刷新普通用户身份后真实toggleInterest触发原生解锁提示；CUA确认文案与两个按钮，取消与确定均留在档案。automator主图不包含原生层，额外原生截图另审。"]},"scenario":{"status":"simulated-mismatch"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J2-04","capturedAt":"2026-09-26T11:36:03.991Z","image":{"available":true,"width":375,"height":840,"sha256":"6599fb85fff3f660b622dcc396123f76fd7e4a24f41cde5ed9f136b5fd4b81bd","src":"assets/6599fb85fff3f660b622dcc396123f76fd7e4a24f41cde5ed9f136b5fd4b81bd.jpg"}},"actual":{"role":"ordinary","roleMatches":true,"stateMatches":false,"capturedAt":"2026-09-27T01:53:47.180Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"ba5fbdfd9cbc6c52c95aa41de326342d940934407549bd5b2aaa48a7ff890897","src":"assets/ba5fbdfd9cbc6c52c95aa41de326342d940934407549bd5b2aaa48a7ff890897.png"}},"review":{"status":"data-mismatch","visualNotes":"已独立人工查看原生窗口，确认报名并签到任意一场MIP活动可解锁提示及取消/确定按钮正常；但公开自动截图不包含原生弹窗层，故保留公开画面对照待补。","differences":["原生完整窗口证据含IDE与本机信息，仅本地留存，不公开；不把档案主图冒充弹窗截图。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J2-05","name":"机会 · 项目机会 · 普通用户","expectedRole":"ordinary","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J2-05","capturedAt":"2026-09-26T11:36:06.138Z","image":{"available":true,"width":375,"height":840,"sha256":"414b55ae2a36ceb9cfdb1209b4e0c4f4110643c78d5aa83f033067f1db2eb8ce","src":"assets/414b55ae2a36ceb9cfdb1209b4e0c4f4110643c78d5aa83f033067f1db2eb8ce.jpg"}},"actual":{"role":"ordinary","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T15:53:08.715Z","source":"simulated-role","chromeOmitted":false,"referenceChromeInsetCssPx":0,"image":{"available":true,"width":750,"height":1624,"sha256":"3257202b2c36f0635687fcbed04241f9b4f9a71448b6707f089dfffe2ee227d2","src":"assets/3257202b2c36f0635687fcbed04241f9b4f9a71448b6707f089dfffe2ee227d2.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟普通用户机会空态已核对；筛选、分类、空态与TabBar均正常。","differences":["实际页有活动轮播banner，原型本图没有；空态核心状态一致。","仅模拟角色视觉证据。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J2-06","name":"我的项目空态","expectedRole":"ordinary","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J2-06","capturedAt":"2026-09-26T11:36:08.390Z","image":{"available":true,"width":375,"height":840,"sha256":"5a7e7d7069ef028025160262e9dba1fa2756218cd67336b9f3284ff83a0dfd85","src":"assets/5a7e7d7069ef028025160262e9dba1fa2756218cd67336b9f3284ff83a0dfd85.jpg"}},"actual":{"role":"ordinary","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T15:55:42.793Z","source":"simulated-role","chromeOmitted":false,"referenceChromeInsetCssPx":0,"image":{"available":true,"width":750,"height":1624,"sha256":"ddbe1d14dcdcf4419d06036c1b1def6937c027139faf6da1e0f083966fd55d6b","src":"assets/ddbe1d14dcdcf4419d06036c1b1def6937c027139faf6da1e0f083966fd55d6b.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟我的项目空态已逐图核对，黄色占位图、提示和发布机会按钮正常。","differences":["实际添加发布机会按钮，比原型仅提示文案多一个直接入口；横幅素材为演示配置。","仅模拟视觉证据。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J2-07","name":"机会 · 人才合作 · 普通用户","expectedRole":"ordinary","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J2-07","capturedAt":"2026-09-26T11:36:11.101Z","image":{"available":true,"width":375,"height":840,"sha256":"03edb7bd6c52b3e8633148d6e66fa9721b5547e30d9bb939c06b8e317986a6b3","src":"assets/03edb7bd6c52b3e8633148d6e66fa9721b5547e30d9bb939c06b8e317986a6b3.jpg"}},"actual":{"role":"ordinary","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:12:10.511Z","source":"simulated-role","chromeOmitted":false,"referenceChromeInsetCssPx":0,"image":{"available":true,"width":750,"height":1624,"sha256":"ba48899df189bad30e7f3212681fa8e5548ff48b5a68e744cbe55792323b86d2","src":"assets/ba48899df189bad30e7f3212681fa8e5548ff48b5a68e744cbe55792323b86d2.png"}},"review":{"status":"accepted-difference","visualNotes":"重拍的普通用户人才合作受限页正常，解锁按钮的HTML实体已修复为正常箭头。","differences":["仅本地模拟视觉复核，不代表真实会员购买通过。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J2-08","name":"活动报名 · 订单确认页","expectedRole":"ordinary","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"pending","evidence":["真实微信身份、手机号、支付或扫码相关步骤仍需真机验证；本图只验证模拟状态。"]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J2-08","capturedAt":"2026-09-26T11:36:14.794Z","image":{"available":true,"width":375,"height":976,"sha256":"252290eaf988e2c31eda73545a92ba5d2985cc713b78d1f1d8febed3df620347","src":"assets/252290eaf988e2c31eda73545a92ba5d2985cc713b78d1f1d8febed3df620347.jpg"}},"actual":{"role":"ordinary","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-27T02:03:43.007Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"d69a612614b9ce4b525a951bc87977d51fd0ce6fedf2e53c857ad03c21696260","src":"assets/d69a612614b9ce4b525a951bc87977d51fd0ce6fedf2e53c857ad03c21696260.png"}},"review":{"status":"accepted-difference","visualNotes":"收费订单页399元、立即支付及购买须知正常；重拍后顶部时间10:00–12:00与须知一致，先前时间矛盾已消除。","differences":["金额与活动内容来自演示收费活动，与原型示例不同；未创建支付订单或扣款。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J3-01","name":"机会 · 项目机会 · 嘉宾","expectedRole":"guest","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J3-01","capturedAt":"2026-09-26T11:36:16.498Z","image":{"available":true,"width":375,"height":840,"sha256":"349cd49a9a15d333233284284115c92952b2fd12dc2efe8eb41c15e42050e68b","src":"assets/349cd49a9a15d333233284284115c92952b2fd12dc2efe8eb41c15e42050e68b.jpg"}},"actual":{"role":"guest","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T15:56:24.551Z","source":"simulated-role","chromeOmitted":false,"referenceChromeInsetCssPx":0,"image":{"available":true,"width":750,"height":1624,"sha256":"d83e93c85ee23cda91b4ac7caa23e6a82725a161cb21b3cbd76eb0c0e4db94ab","src":"assets/d83e93c85ee23cda91b4ac7caa23e6a82725a161cb21b3cbd76eb0c0e4db94ab.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟嘉宾机会列表已核对，演示机会卡、封面和合作人数布局正常，无明显文字溢出。","differences":["内容与数量来自演示数据；仅模拟角色视觉证据。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J3-02","name":"机会 · 人才合作 · 嘉宾","expectedRole":"guest","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J3-02","capturedAt":"2026-09-26T11:36:17.216Z","image":{"available":true,"width":375,"height":840,"sha256":"03edb7bd6c52b3e8633148d6e66fa9721b5547e30d9bb939c06b8e317986a6b3","src":"assets/03edb7bd6c52b3e8633148d6e66fa9721b5547e30d9bb939c06b8e317986a6b3.jpg"}},"actual":{"role":"guest","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:12:33.897Z","source":"simulated-role","chromeOmitted":false,"referenceChromeInsetCssPx":0,"image":{"available":true,"width":750,"height":1624,"sha256":"5cb32725099091851d730f74938be875a0fa11e5ac4b8ed3ea536fc71ffd18b9","src":"assets/5cb32725099091851d730f74938be875a0fa11e5ac4b8ed3ea536fc71ffd18b9.png"}},"review":{"status":"accepted-difference","visualNotes":"重拍的嘉宾人才合作受限页正常，解锁按钮乱码已修复。","differences":["仅本地模拟视觉复核。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J3-03","name":"玩家档案 · 嘉宾视角","expectedRole":"guest","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J3-03","capturedAt":"2026-09-26T11:36:19.644Z","image":{"available":true,"width":375,"height":840,"sha256":"f73e2bef56514b4b4ee47b09f1aae97f75fc13cb01d65f1eae4228740dde2575","src":"assets/f73e2bef56514b4b4ee47b09f1aae97f75fc13cb01d65f1eae4228740dde2575.jpg"}},"actual":{"role":"guest","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:12:44.516Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"cbf7a6f631912f452ff84faaee3342dbcb3ae9896c7ab9bd088aa21dde47ee03","src":"assets/cbf7a6f631912f452ff84faaee3342dbcb3ae9896c7ab9bd088aa21dde47ee03.png"}},"review":{"status":"accepted-difference","visualNotes":"嘉宾档案已成功加载，头像、统计和合作卡正常；底部感兴趣入口按四角色权限模型隐藏。","differences":["原型画有我感兴趣按钮；当前已签到、非会员嘉宾按PRD四角色模型隐藏该入口，属于已说明的设计差异，仍可由产品复核。","普通未签到用户展示受限入口、有效玩家展示可操作入口；本页不是加载失败。","仅模拟角色视觉证据。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J3-04","name":"我的 · 嘉宾","expectedRole":"guest","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J3-04","capturedAt":"2026-09-26T11:36:22.219Z","image":{"available":true,"width":375,"height":1046,"sha256":"da200c14093679082f9a758edde383b1082d1211abc50bf9a3d7d420cc4d2d59","src":"assets/da200c14093679082f9a758edde383b1082d1211abc50bf9a3d7d420cc4d2d59.jpg"}},"actual":{"role":"guest","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T15:57:09.426Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"9540fcbdb1f30de3e18c9c0c81ea609ab20fe365d0418be4634376b4ca7f48fa","src":"assets/9540fcbdb1f30de3e18c9c0c81ea609ab20fe365d0418be4634376b4ca7f48fa.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟嘉宾本人档案已逐图核对，头像、统计、功能入口、合作卡和TabBar显示正常。","differences":["嘉宾没有有效会员权益，因此实际显示查看会员提示，而原型仍画黄色等级卡；此处忠实展示无会员服务端状态。","仅模拟角色视觉证据。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J3-04b","name":"站内信列表","expectedRole":"guest","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"simulated-recorded","evidence":["listInbox","markAllRead","listInbox reload","演示账号站内信读取；受控原子SQL已读后服务端回读和页面unreadCount为0，无黄色警告。未模拟通知送达与完整事务。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":false,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J3-04b","capturedAt":"2026-09-26T11:36:47.996Z","image":{"available":true,"width":375,"height":840,"sha256":"d95b412e7be8b1e6c3c07bfdc1f9e417d5425521543891d9eb5591215b30bed7","src":"assets/d95b412e7be8b1e6c3c07bfdc1f9e417d5425521543891d9eb5591215b30bed7.jpg"}},"actual":{"role":"guest","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-27T01:55:29.033Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"3315fda30659beda03d995c8a26f59c351f6fb9236a3a1cb5ed20088d1c75a29","src":"assets/3315fda30659beda03d995c8a26f59c351f6fb9236a3a1cb5ed20088d1c75a29.png"}},"review":{"status":"accepted-difference","visualNotes":"重新核对站内信：演示系统通知正常，之前只读测试导致的未读更新警告已消失。","differences":["当前仅一条系统通知，与原型多类消息数量不同。标记已读操作证据独立记录。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J3-05","name":"邀请列表","expectedRole":"guest","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"simulated-recorded","evidence":["loadCategory","read non-empty demo records","测试数据库演示记录非空读取正常；该类别界面无搜索入口，未计入搜索验收。访客已读使用受控单条测试记录SQL并回读，不代表完整事务验证。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":false,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J3-05","capturedAt":"2026-09-26T11:36:50.315Z","image":{"available":true,"width":375,"height":840,"sha256":"3d4bb782836e2ffc9e90a1e324bcbfab6055431d7077e4a94223a7cc7d06798f","src":"assets/3d4bb782836e2ffc9e90a1e324bcbfab6055431d7077e4a94223a7cc7d06798f.jpg"}},"actual":{"role":"guest","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-27T02:09:57.393Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"6f079a3693687a5ec06fcbbdbcbf51995ce50d14e039d9aeca371064e6253ff9","src":"assets/6f079a3693687a5ec06fcbbdbcbf51995ce50d14e039d9aeca371064e6253ff9.png"}},"review":{"status":"accepted-difference","visualNotes":"最终图已显示Lv.1等级角标、城市/行业/身份与两行简介，邀请人行正常；先前字段和等级缺口已补齐，当前排版无明显异常。","differences":["演示资料与原型人物、数量和等级不同；没有装备有效勋章时不显示勋章，是合法数据差异。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J3-06","name":"互动过列表","expectedRole":"guest","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J3-06","capturedAt":"2026-09-26T11:36:52.709Z","image":{"available":true,"width":375,"height":840,"sha256":"f259e6435142c462fbb06947a87b9d62acd5030ff40dca264de0991a034de0f5","src":"assets/f259e6435142c462fbb06947a87b9d62acd5030ff40dca264de0991a034de0f5.jpg"}},"actual":{"role":"guest","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:13:05.863Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"859782ce2f22d0ed1cc877011b0bf7050cb578d929f70adf51dd439c83c9d802","src":"assets/859782ce2f22d0ed1cc877011b0bf7050cb578d929f70adf51dd439c83c9d802.png"}},"review":{"status":"accepted-difference","visualNotes":"重拍后互动列表成功加载两个演示玩家，搜索与双列卡片正常。","differences":["原型为多条更丰富人物信息，实际演示数据只展示两人。","未执行真实扫码或线下互动，仅本地模拟视觉。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J3-07","name":"心动值（我的心动 / 对我心动）","expectedRole":"guest","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"pending","evidence":["真实微信身份、手机号、支付或扫码相关步骤仍需真机验证；本图只验证模拟状态。"]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J3-07","capturedAt":"2026-09-26T11:36:54.952Z","image":{"available":true,"width":375,"height":840,"sha256":"59efe1cb30acf50e1e9d7e6ac912d3fa0990ee27a0e683045d2f3d603c6089dc","src":"assets/59efe1cb30acf50e1e9d7e6ac912d3fa0990ee27a0e683045d2f3d603c6089dc.jpg"}},"actual":{"role":"guest","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T15:57:54.245Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"44e6cc1820d1670b12598f279bc825f85f7981ee175fa5922598aeaf975b19fd","src":"assets/44e6cc1820d1670b12598f279bc825f85f7981ee175fa5922598aeaf975b19fd.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟嘉宾心动列表已显示非空卡片，心形标记、活动跳转和订阅提醒布局正常。","differences":["演示数据为一条心动记录，原型展示多条；实际增加接收心动提醒操作和返回按钮。","只验证本地模拟画面，不代表微信订阅授权或真实通知成功。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J3-08","name":"访客列表","expectedRole":"guest","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"simulated-recorded","evidence":["loadCategory","read non-empty demo records","markDisplayedVisitorsRead","reload read state","测试数据库演示记录非空读取正常；该类别界面无搜索入口，未计入搜索验收。访客已读使用受控单条测试记录SQL并回读，不代表完整事务验证。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":false,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J3-08","capturedAt":"2026-09-26T11:36:57.106Z","image":{"available":true,"width":375,"height":840,"sha256":"66d1c5c5c2a19f6e5fc46c8f6779975ebf8daa3f9e283a34b896b1a3b4053042","src":"assets/66d1c5c5c2a19f6e5fc46c8f6779975ebf8daa3f9e283a34b896b1a3b4053042.jpg"}},"actual":{"role":"guest","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-27T02:10:08.223Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"721bcf4a1d96e64304aa7bd83a48a8bc7c0e227eb94a7c66298be28529d060c2","src":"assets/721bcf4a1d96e64304aa7bd83a48a8bc7c0e227eb94a7c66298be28529d060c2.png"}},"review":{"status":"accepted-difference","visualNotes":"最终文件独立重新读取已确认左上Lv.1、城市/行业/身份和两行简介，之前等级与资料字段缺口已补齐；仅含演示访客且无更新警告。","differences":["演示资料与原型人物、数量和等级不同；当前无已装备有效勋章，不将其不展示判为缺陷。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J3-09","name":"机会详情 · 非发布人视角","expectedRole":"guest","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J3-09","capturedAt":"2026-09-26T11:36:59.284Z","image":{"available":true,"width":375,"height":840,"sha256":"4d2361ec83d036dc6ba3dd859c0e6a3623dc7d41416bf7d8063d197d83c7b5f5","src":"assets/4d2361ec83d036dc6ba3dd859c0e6a3623dc7d41416bf7d8063d197d83c7b5f5.jpg"}},"actual":{"role":"guest","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T15:58:15.795Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"62348d8ce719e78471ec620e2663c739907866671fff0d2ce00be15fbbe0e480","src":"assets/62348d8ce719e78471ec620e2663c739907866671fff0d2ce00be15fbbe0e480.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟嘉宾机会详情已逐图核对，内容卡、发布人、团队成员和我想合作按钮正常。","differences":["演示机会内容不同于原型；本轮仅观察页面，没有实际发送合作请求。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J4-01","name":"机会 · 人才合作 · 玩家","expectedRole":"player","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J4-01","capturedAt":"2026-09-26T11:37:01.609Z","image":{"available":true,"width":375,"height":840,"sha256":"f59f02c3699d2f9c69a69a16af4b5a1c2f084bab148d7640e993ce1f8e481700","src":"assets/f59f02c3699d2f9c69a69a16af4b5a1c2f084bab148d7640e993ce1f8e481700.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:14:18.170Z","source":"simulated-role","chromeOmitted":false,"referenceChromeInsetCssPx":0,"image":{"available":true,"width":750,"height":1624,"sha256":"ceab7e76ee7c9e36eba7a844a22a3347c5530194d0d96e37b6f5fd0c95da9601","src":"assets/ceab7e76ee7c9e36eba7a844a22a3347c5530194d0d96e37b6f5fd0c95da9601.png"}},"review":{"status":"accepted-difference","visualNotes":"玩家人才列表非空，搜索、筛选、角色标签和卡片布局正常。","differences":["演示人员及数量与原型不同，未提供的等级和勋章信息不占位；仅审核当前列表画面。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J4-02","name":"人才档案 · 玩家视角","expectedRole":"player","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J4-02","capturedAt":"2026-09-26T11:37:02.328Z","image":{"available":true,"width":375,"height":840,"sha256":"f73e2bef56514b4b4ee47b09f1aae97f75fc13cb01d65f1eae4228740dde2575","src":"assets/f73e2bef56514b4b4ee47b09f1aae97f75fc13cb01d65f1eae4228740dde2575.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:14:28.847Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"e11b0d881d2ad4c3451b07adb574ed006ceecf4e4ebbd8987bdc89249677d7f0","src":"assets/e11b0d881d2ad4c3451b07adb574ed006ceecf4e4ebbd8987bdc89249677d7f0.png"}},"review":{"status":"accepted-difference","visualNotes":"玩家查看他人档案时感兴趣操作条正确显示；合作卡封面比例、目标与引荐内容正常。","differences":["实际演示账号只有一张合作卡，原型有两张；个人资料区因此提前出现。实际兴趣计数使用文字，原型还有头像叠放。未执行兴趣写入。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J4-02b","name":"对TA感兴趣列表","expectedRole":"player","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"simulated-recorded","evidence":["listPublicProfileInterests","read non-empty demo profile fields","测试数据库demo-only感兴趣名单非空；实际城市、行业/身份、简介从服务端映射读取。没有装备勋章则不虚构；仅列表读取验证。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":false,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J4-02b","capturedAt":"2026-09-26T11:37:04.637Z","image":{"available":true,"width":375,"height":840,"sha256":"3d31ca4409f2d5f44dafc27bb2286261442af389895fe234586899b1574be914","src":"assets/3d31ca4409f2d5f44dafc27bb2286261442af389895fe234586899b1574be914.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-27T02:09:39.926Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"35ccc986766dd53d9802473f33b80c80eff718f2f6b76e94c55ce152da59b7a3","src":"assets/35ccc986766dd53d9802473f33b80c80eff718f2f6b76e94c55ce152da59b7a3.png"}},"review":{"status":"accepted-difference","visualNotes":"最终演示感兴趣名单已显示Lv.1、城市/行业/身份与两行简介，卡片信息完整，先前字段与等级缺口已补齐。","differences":["名单为一条演示记录，与原型示例数量不同；没有装备有效勋章时不显示勋章。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J4-03","name":"玩家等级 · 续费态","expectedRole":"player-renewal","evidenceWarnings":["实际场景与原型尚未对齐。"],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"simulated-recorded","evidence":["renewMembership","订单确认页回读","临期身份和commerce到期日为本地一致投影；立即续费真实导航订单确认ready。邀请仍因测试适配不支持生成而未验证，付款未执行。"]},"scenario":{"status":"simulated-mismatch"},"device":{"status":"pending","evidence":["真实微信身份、手机号、支付或扫码相关步骤仍需真机验证；本图只验证模拟状态。"]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J4-03","capturedAt":"2026-09-26T11:37:06.945Z","image":{"available":true,"width":375,"height":894,"sha256":"9c67a87ac310d47fdb8d3407f95a7f1f78fa558604de774974223d69c8c964b6","src":"assets/9c67a87ac310d47fdb8d3407f95a7f1f78fa558604de774974223d69c8c964b6.jpg"}},"actual":{"role":"renewal","roleMatches":true,"stateMatches":false,"capturedAt":"2026-09-27T01:55:08.029Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"867889251a99bb20e8c8677e01bc67554b3dfd5c4741fa09064c865e0b03d25e","src":"assets/867889251a99bb20e8c8677e01bc67554b3dfd5c4741fa09064c865e0b03d25e.png"}},"review":{"status":"data-mismatch","visualNotes":"临期日期与立即续费按钮现已正确显示，另有订单页辅助图；但邀请暂不可用红条和禁用邀请按钮仍与原型不同，当前只证明续费入口场景。","differences":["等级、权益和任务为演示配置；邀请不可用属于测试调用限制还是功能问题需结合服务证据判定，不能忽略该红条。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J4-04","name":"机会发布 / 编辑页","expectedRole":"player","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J4-04","capturedAt":"2026-09-26T11:37:09.401Z","image":{"available":true,"width":375,"height":1273,"sha256":"55882f3e231a646b53d205b343150d8ee2cc39e3d4306981c657869e8fc5e7bf","src":"assets/55882f3e231a646b53d205b343150d8ee2cc39e3d4306981c657869e8fc5e7bf.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:15:01.187Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"5a27361782541e8d3d9db52281443f910251ed79575f94593ffaeca5e205d421","src":"assets/5a27361782541e8d3d9db52281443f910251ed79575f94593ffaeca5e205d421.png"}},"review":{"status":"accepted-difference","visualNotes":"机会发布表单已核对首屏：自动识别输入、必填标记、城市网格与固定发布按钮排版正常。","differences":["原型完整长图与实际首屏高度不同，下半表单仍须滚动。城市选项来自当前目录，未执行发布写入。"]},"additionalImages":[{"side":"prototype","label":"原型下半部分 · 补齐长页（与首图内容可能有重叠）","image":{"available":true,"width":360,"height":780,"sha256":"42f1e5da19ff5bfe446bcc3ad12e6c7bcf5ee910c4b956ded5c5141c40ee7f8f","src":"assets/42f1e5da19ff5bfe446bcc3ad12e6c7bcf5ee910c4b956ded5c5141c40ee7f8f.jpg"}}],"simulationReviewed":true},{"id":"J4-05","name":"机会详情 · 发布人视角（分享机会）","expectedRole":"player","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J4-05","capturedAt":"2026-09-26T11:37:30.716Z","image":{"available":true,"width":375,"height":840,"sha256":"867ec6c046e1a36169ccf2c9e073583b0afb7c137615b1d69c45948f586f40cd","src":"assets/867ec6c046e1a36169ccf2c9e073583b0afb7c137615b1d69c45948f586f40cd.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:15:12.003Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"9d2a1c1c4072fbc759d01fca433cb1bd699811e2c509da47ff467a5bfb88ebac","src":"assets/9d2a1c1c4072fbc759d01fca433cb1bd699811e2c509da47ff467a5bfb88ebac.png"}},"review":{"status":"accepted-difference","visualNotes":"本人已发布机会详情展示编辑与分享操作，卡片、简介、发布人及团队信息可读，无明显重叠或拉伸。","differences":["测试机会文案、封面和团队数据与原型不同，未执行编辑、分享或下架写入。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J4-06","name":"机会详情 · 发布人视角 · 不可点击状态","expectedRole":"player","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"simulated-recorded","evidence":["loadOpportunity","edit","真实测试库本人下架机会；下架操作条和分享禁用显示正确，点击编辑已进入编辑页并读取成功。首次冷查询较慢，延长等待后ready；未保存编辑。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":false,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J4-06","capturedAt":"2026-09-26T11:37:32.868Z","image":{"available":true,"width":375,"height":840,"sha256":"9a715b158b5d72416416aa075d86f2f409118c23628ad30772c9c3b35098269b","src":"assets/9a715b158b5d72416416aa075d86f2f409118c23628ad30772c9c3b35098269b.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-27T02:03:58.032Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"6e8b2d54038c6db66a1a8d95bd41948b04f144002816c8d9a175436754821e43","src":"assets/6e8b2d54038c6db66a1a8d95bd41948b04f144002816c8d9a175436754821e43.png"}},"review":{"status":"accepted-difference","visualNotes":"本人已下架的演示机会正常显示详情，编辑按钮可用、分享按钮灰显；与下架场景相符。","differences":["使用新建演示机会，文案与原型不同，未在此截图证明编辑或恢复发布写入。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J5-01","name":"账号设置","expectedRole":"authenticated","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"simulated-recorded","evidence":["startAccountClosure","cancelAccountClosure","signOutLocally/CUA取消","signOutLocally/CUA退出","readStorage signedOut","仅本机退出和注销取消流程。退出取消留设置页；确认后本地signedOut=true且进入登录引导页（不是首页）。未执行账号注销。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":false,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J5-01","capturedAt":"2026-09-26T11:37:35.317Z","image":{"available":true,"width":375,"height":840,"sha256":"8d9eddc831138c43efcc15443099df05910ebff64da39c4cf8ccfddef24f0d09","src":"assets/8d9eddc831138c43efcc15443099df05910ebff64da39c4cf8ccfddef24f0d09.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-27T01:57:55.279Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"c35cb613fb5a0d77af34865524354d99b6e9e8380ee2ec5ec4386ce52fc53941","src":"assets/c35cb613fb5a0d77af34865524354d99b6e9e8380ee2ec5ec4386ce52fc53941.png"}},"review":{"status":"accepted-difference","visualNotes":"设置首屏分组和单行项目正常，团队 PK 与帮助客服已进入设置页；间距无明显异常。","differences":["退出及注销位于下方，点击与确认结果以单独交互记录为准。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J5-02","name":"绑定手机 / 更换手机号","expectedRole":"authenticated","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"pending","evidence":["真实微信身份、手机号、支付或扫码相关步骤仍需真机验证；本图只验证模拟状态。"]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J5-02","capturedAt":"2026-09-26T11:37:37.774Z","image":{"available":true,"width":375,"height":840,"sha256":"e0834624f48ce345fdf0fd6cae21ea10f4e2f113548d07c56aa1c90981d2efce","src":"assets/e0834624f48ce345fdf0fd6cae21ea10f4e2f113548d07c56aa1c90981d2efce.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:15:34.029Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"80d1b05c3e80742b0dc68e0a2334d1fc687452d0bd52129b0b29efe14dc9597b","src":"assets/80d1b05c3e80742b0dc68e0a2334d1fc687452d0bd52129b0b29efe14dc9597b.png"}},"review":{"status":"accepted-difference","visualNotes":"手机号设置表单布局正常，输入、获取验证码与确认换绑按钮层次清晰。","differences":["测试身份仅模拟已绑定标识，不含真实手机号；手机号获取、短信与换绑必须真机验证。实际增加用途说明与返回入口。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J5-03","name":"隐私设置","expectedRole":"authenticated","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J5-03","capturedAt":"2026-09-26T11:37:40.571Z","image":{"available":true,"width":375,"height":840,"sha256":"ec5870442f400bab6b272725106522c2299c12cc83bd8837ffc52ff6f23dcde9","src":"assets/ec5870442f400bab6b272725106522c2299c12cc83bd8837ffc52ff6f23dcde9.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:15:44.728Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"0f93931075e2e9bfb4c24c7892f34af59e472db56597ba4912d185f51dfdbd5d","src":"assets/0f93931075e2e9bfb4c24c7892f34af59e472db56597ba4912d185f51dfdbd5d.png"}},"review":{"status":"accepted-difference","visualNotes":"隐私页两项开关及文案正常，当前开关为关闭状态，未见错位。","differences":["原型展示开启状态，实际展示测试账号当前配置；只读测试未验证切换后的持久化。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J5-04","name":"用户使用协议","expectedRole":"authenticated","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J5-04","capturedAt":"2026-09-26T11:37:42.719Z","image":{"available":true,"width":375,"height":840,"sha256":"f513a7492fb02a19e999cd2ef44a19ed7e27c801de4be5f16ddf4fda7c0c4284","src":"assets/f513a7492fb02a19e999cd2ef44a19ed7e27c801de4be5f16ddf4fda7c0c4284.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:15:55.436Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"e104612c6125fe20298abd7cf1af3c9f2d1e48fc95a4e660d809ebdc7b78c2e7","src":"assets/e104612c6125fe20298abd7cf1af3c9f2d1e48fc95a4e660d809ebdc7b78c2e7.png"}},"review":{"status":"accepted-difference","visualNotes":"用户协议页面演示标题、提示、版本和多段正文可读，明确标注仅供测试。","differences":["按用户授权使用后台可修改的演示协议，正文与原型占位文本不同，不作为正式条款验收。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J6-01","name":"本人档案 · 合作卡（长按删除）","expectedRole":"owner","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J6-01","capturedAt":"2026-09-26T11:37:45.184Z","image":{"available":true,"width":375,"height":1046,"sha256":"37e91ce566e5b42ab8268f09bac46a92f8fb99338e718969f8b6a66d3433bb59","src":"assets/37e91ce566e5b42ab8268f09bac46a92f8fb99338e718969f8b6a66d3433bb59.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:13:51.571Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"d01165c36bc15dc647d8db746a7226a30c730e02169fee07790ba5f6b41cbeab","src":"assets/d01165c36bc15dc647d8db746a7226a30c730e02169fee07790ba5f6b41cbeab.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟玩家本人合作卡页已逐图核对，等级背景比例正常，统计与功能入口无明显溢出。","differences":["演示账号数据、等级与合作卡和原型不同；本轮没有实际删除数据。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J6-02","name":"本人档案 · 超级案例（长按删除）","expectedRole":"owner","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J6-02","capturedAt":"2026-09-26T11:37:47.563Z","image":{"available":true,"width":375,"height":1046,"sha256":"c23682e18feda63f6537d5b49fa51a68f26198d8ff243d7b3106ffc4c317b99b","src":"assets/c23682e18feda63f6537d5b49fa51a68f26198d8ff243d7b3106ffc4c317b99b.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:02:22.160Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"8307d4f3bfb4d22b0d2042a594f69783e6d0aec2069d185d161fea5116b86bf4","src":"assets/8307d4f3bfb4d22b0d2042a594f69783e6d0aec2069d185d161fea5116b86bf4.png"}},"review":{"status":"accepted-difference","visualNotes":"模拟玩家本人案例页已逐图核对，案例时间线与文件夹图标正常。","differences":["演示账号只有一条案例；本轮没有实际删除案例。"]},"additionalImages":[],"simulationReviewed":true},{"id":"J6-03","name":"本人档案 · 相关机会（长按删除）","expectedRole":"owner","evidenceWarnings":[],"verification":{"visual":{"status":"simulated-reviewed"},"interaction":{"status":"pending","evidence":["本轮逐图检查与数据读取不代表已完成按钮写入或真实微信动作。"]},"scenario":{"status":"simulated"},"device":{"status":"unscoped","evidence":[]},"hasIssue":false,"aiPending":true,"deviceOnly":false,"nextStep":"本页已核对本地模拟画面；模拟角色记录与真实微信、手机号、支付和扫码验证分开统计。"},"prototype":{"sourceUrl":"https://airdrop.z-h-ai.com/p/715a5d/#J6-03","capturedAt":"2026-09-26T11:37:49.621Z","image":{"available":true,"width":375,"height":1046,"sha256":"34d3de24737df4c27dde185c6874a7e9315f1b26eb2410f2a4177814563f7cbf","src":"assets/34d3de24737df4c27dde185c6874a7e9315f1b26eb2410f2a4177814563f7cbf.jpg"}},"actual":{"role":"player","roleMatches":true,"stateMatches":true,"capturedAt":"2026-09-26T16:14:03.952Z","source":"simulated-role","chromeOmitted":true,"referenceChromeInsetCssPx":88,"image":{"available":true,"width":750,"height":1448,"sha256":"48509ee1d0c4d52ca03832fadfd56b83cb391919488cb107040e41e2aae2501a","src":"assets/48509ee1d0c4d52ca03832fadfd56b83cb391919488cb107040e41e2aae2501a.png"}},"review":{"status":"accepted-difference","visualNotes":"相关机会页非空列表显示正常，等级头图、计数卡、功能入口和黄色选中标签均无明显错位。","differences":["角色资料、机会封面及数量为演示数据。实际第二分类为我想合作，与原型引荐机会用语存在差异。首屏下方内容需滚动。"]},"additionalImages":[],"simulationReviewed":true}],"testResults":{"generatedAt":"2026-09-27T02:14:11.612Z","cases":[{"id":"database-1","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 1: 账户与资料状态","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-2","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 1: 会员权益映射","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-3","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 1: 无管理员权限","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-4","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 2: 账户与资料状态","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-5","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 2: 会员权益映射","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-6","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 2: 无管理员权限","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-7","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 3: 账户与资料状态","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-8","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 3: 会员权益映射","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-9","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 3: 无管理员权限","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-10","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 4: 账户与资料状态","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-11","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 4: 会员权益映射","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-12","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 4: 无管理员权限","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-13","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 5: 账户与资料状态","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-14","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 5: 会员权益映射","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-15","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 5: 无管理员权限","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-16","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 6: 账户与资料状态","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-17","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 6: 会员权益映射","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-18","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 6: 无管理员权限","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-19","stepIds":["J4-03"],"status":"pass","mode":"automated-contract","summary":"临期会员：权益边界","evidence":"在内存派生身份或权益时间窗口，运行领域服务边界断言。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-20","stepIds":[],"status":"pass","mode":"automated-contract","summary":"过期会员：权益边界","evidence":"在内存派生身份或权益时间窗口，运行领域服务边界断言。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-21","stepIds":[],"status":"pass","mode":"automated-contract","summary":"游客：未登录且无授权","evidence":"在内存派生身份或权益时间窗口，运行领域服务边界断言。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-22","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 1: 待处理任务返回","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-23","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 1: 已结束任务返回","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-24","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 1: 管理接口拒绝普通账号","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-25","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 4: 待处理任务返回","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-26","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 4: 已结束任务返回","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"database-27","stepIds":[],"status":"pass","mode":"test-account-service","summary":"演示账号 4: 管理接口拒绝普通账号","evidence":"读取实际测试数据库，在本机运行领域服务并断言结果。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"service-smoke-1","stepIds":[],"status":"pass","mode":"test-account-service","summary":"mip-identity-api · getAccessSnapshot","evidence":"本机调用服务，读取真实测试数据库，检查返回成功及结构。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"service-smoke-2","stepIds":[],"status":"pass","mode":"test-account-service","summary":"mip-commerce-api · listPlans","evidence":"本机调用服务，读取真实测试数据库，检查返回成功及结构。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"service-smoke-3","stepIds":[],"status":"pass","mode":"test-account-service","summary":"mip-growth-api · getSnapshot","evidence":"本机调用服务，读取真实测试数据库，检查返回成功及结构。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"service-smoke-4","stepIds":[],"status":"pass","mode":"test-account-service","summary":"mip-opportunities-api · listMine","evidence":"本机调用服务，读取真实测试数据库，检查返回成功及结构。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"service-smoke-5","stepIds":[],"status":"pass","mode":"test-account-service","summary":"mip-events-api · mip.events.mine","evidence":"本机调用服务，读取真实测试数据库，检查返回成功及结构。","limitations":["身份仅在本机注入，未使用该测试账号真实登录微信。","只读检查，不代表生产写入、真实支付、手机号或扫码完成。"]},{"id":"fixture-preparation","stepIds":["J3-05","J3-08","J4-06","J4-02b"],"status":"pass","mode":"test-account-service","summary":"隔离测试数据写入与回读","evidence":"在staging TEST环境为演示账号新增7条隔离记录，逐条回读均存在，覆盖感兴趣名单、访客、邀请归因和已下架机会。","limitations":["签到记录是测试数据，不是扫码测试通过。","该条仅证明数据准备，页面交互另行验收。"]},{"id":"cloud-health-final","stepIds":[],"status":"pass","mode":"devtools","summary":"机会云函数部署后真实微信SDK健康回读","evidence":"移除QA调用替身后，通过真实微信SDK调用health，返回ok=true及cloudbase-mysql。","limitations":["仅证明函数及数据库健康，不代表所有业务写入或真实账号登录验收。"]},{"id":"visual-J0-01","stepIds":["J0-01"],"status":"pending","mode":"simulated-role","summary":"J0-01 · 模拟画面视觉核对","evidence":"已签到账号活动详情正常展示反馈与互动入口，但当前截图没有签到成功提示，不能替代扫码签到场景。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","使用历史已签到测试记录；未实际扫码、执行签到写入或捕获成功 toast。"]},{"id":"visual-J0-02","stepIds":["J0-02"],"status":"pass","mode":"simulated-role","summary":"J0-02 · 模拟画面视觉核对","evidence":"模拟游客授权层已逐图核对；品牌标识、说明、授权按钮和取消入口正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","只复现本地授权引导画面，没有真实微信手机号授权或扫码签到。"]},{"id":"visual-J0-03","stepIds":["J0-03"],"status":"pass","mode":"simulated-role","summary":"J0-03 · 模拟画面视觉核对","evidence":"活动反馈首屏星级、推荐意愿、角色多选与保存按钮排版正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","原型展示已填写选项，当前为空表单；活动为演示记录，未保存反馈，下半表单需滚动。"]},{"id":"visual-J1-01","stepIds":["J1-01"],"status":"pass","mode":"simulated-role","summary":"J1-01 · 模拟画面视觉核对","evidence":"模拟游客详情页已逐图核对，信息卡、参与人、活动介绍与立即报名正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","活动素材、人数为演示数据，增加系统日历入口；未提交真实报名。"]},{"id":"visual-J1-02","stepIds":["J1-02"],"status":"pass","mode":"simulated-role","summary":"J1-02 · 模拟画面视觉核对","evidence":"模拟手机号授权层与原型主要结构一致，按钮无明显遮挡或溢出。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","仅本地模拟的授权引导，未调用微信手机号授权成功流程。"]},{"id":"visual-J1-03","stepIds":["J1-03"],"status":"pass","mode":"simulated-role","summary":"J1-03 · 模拟画面视觉核对","evidence":"模拟新账号资料表单已逐图核对，头像占位、基础信息、行业选择和保存按钮正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","演示默认性别和身份标签已选，昵称与头像为空；没有执行实际注册写入。","行业改为选择入口，未把全部标签重复放在首屏。"]},{"id":"visual-J1-04","stepIds":["J1-04"],"status":"pass","mode":"simulated-role","summary":"J1-04 · 模拟画面视觉核对","evidence":"游客机会页重新核对：玩家登录与解锁入口、空态图、筛选区、底部导航均正常，无原先箭头实体显示。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","运营 Banner 比原型多一块，登录区随之下移；活动内容由后台配置。"]},{"id":"visual-J1-05","stepIds":["J1-05"],"status":"pass","mode":"simulated-role","summary":"J1-05 · 模拟画面视觉核对","evidence":"模拟游客人才合作页已逐图核对，登录按钮、解锁提示与空态显示正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","仅本地模拟画面，未实际微信登录。"]},{"id":"visual-J1-06","stepIds":["J1-06"],"status":"pass","mode":"simulated-role","summary":"J1-06 · 模拟画面视觉核对","evidence":"模拟普通用户画面已逐图核对；等级背景比例自然，权益图标与立即加入按钮无明显错位。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","仅模拟角色视觉证据，不是真实微信普通账号验收。","等级、门槛、权益和任务数量取演示配置；实际增加全部任务和返回入口，原型展示四行任务。"]},{"id":"visual-J1-07","stepIds":["J1-07"],"status":"pass","mode":"simulated-role","summary":"J1-07 · 模拟画面视觉核对","evidence":"模拟会员订单页已逐图核对，信息卡、金额与固定支付按钮布局正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","仅模拟角色视觉证据；未执行真实支付。","实际价格6000与原型6600不同，来自演示商品配置；订单在提交后生成，未伪造原型订单号。"]},{"id":"visual-J1-08","stepIds":["J1-08"],"status":"pass","mode":"simulated-role","summary":"J1-08 · 模拟画面视觉核对","evidence":"模拟游客我的页面已逐图核对，登录注册、等级预览与四个功能入口正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","仅本地模拟画面，未执行实际微信登录。"]},{"id":"visual-J2-01","stepIds":["J2-01"],"status":"pass","mode":"simulated-role","summary":"J2-01 · 模拟画面视觉核对","evidence":"普通用户活动详情非空数据和立即报名按钮显示正常，参与人区与正文排版正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","当前测试活动内容与原型不同；封面采用铺满裁切，左右文字有裁切，不是图片拉伸。未证明实际报名写入。"]},{"id":"visual-J2-02","stepIds":["J2-02"],"status":"pass","mode":"simulated-role","summary":"J2-02 · 模拟画面视觉核对","evidence":"模拟普通用户参与人列表已核对；搜索、角色标签和双列卡片正常显示，无明显溢出。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","只有两个演示玩家，原型展示五人；头像、简介和等级文案来自演示数据。","实际页有返回按钮，原型没有。仅模拟角色视觉证据。"]},{"id":"visual-J2-03","stepIds":["J2-03"],"status":"pass","mode":"simulated-role","summary":"J2-03 · 模拟画面视觉核对","evidence":"普通用户档案操作条已显示；合作卡、计数、个人资料与按钮排版正常，独立核对当前截图未发现明显错位。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","演示资料、单张合作卡与原型不同；本图仅证明入口显示，点击结果单独以交互记录为准。"]},{"id":"interaction-J2-03","stepIds":["J2-03"],"status":"pass","mode":"simulated-role","summary":"J2-03 · 本地交互核对","evidence":"普通用户测试角色；验证档案正文、锁定入口以及合作卡/案例/机会三个tab切换，不包含真实兴趣写入。 loadProfile；changeSection:cases；changeSection:opportunities","limitations":["仅覆盖明确列出的操作和断言，不代表真实微信登录、付款、扫码或未执行的其他操作。"]},{"id":"visual-J2-04","stepIds":["J2-04"],"status":"pending","mode":"simulated-role","summary":"J2-04 · 模拟画面视觉核对","evidence":"已独立人工查看原生窗口，确认报名并签到任意一场MIP活动可解锁提示及取消/确定按钮正常；但公开自动截图不包含原生弹窗层，故保留公开画面对照待补。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","原生完整窗口证据含IDE与本机信息，仅本地留存，不公开；不把档案主图冒充弹窗截图。"]},{"id":"interaction-J2-04","stepIds":["J2-04"],"status":"pass","mode":"simulated-role","summary":"J2-04 · 本地交互核对","evidence":"强制刷新普通用户身份后真实toggleInterest触发原生解锁提示；CUA确认文案与两个按钮，取消与确定均留在档案。automator主图不包含原生层，额外原生截图另审。 toggleInterest；CUA:取消；toggleInterest；CUA:确定","limitations":["仅覆盖明确列出的操作和断言，不代表真实微信登录、付款、扫码或未执行的其他操作。"]},{"id":"visual-J2-05","stepIds":["J2-05"],"status":"pass","mode":"simulated-role","summary":"J2-05 · 模拟画面视觉核对","evidence":"模拟普通用户机会空态已核对；筛选、分类、空态与TabBar均正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","实际页有活动轮播banner，原型本图没有；空态核心状态一致。","仅模拟角色视觉证据。"]},{"id":"visual-J2-06","stepIds":["J2-06"],"status":"pass","mode":"simulated-role","summary":"J2-06 · 模拟画面视觉核对","evidence":"模拟我的项目空态已逐图核对，黄色占位图、提示和发布机会按钮正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","实际添加发布机会按钮，比原型仅提示文案多一个直接入口；横幅素材为演示配置。","仅模拟视觉证据。"]},{"id":"visual-J2-07","stepIds":["J2-07"],"status":"pass","mode":"simulated-role","summary":"J2-07 · 模拟画面视觉核对","evidence":"重拍的普通用户人才合作受限页正常，解锁按钮的HTML实体已修复为正常箭头。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","仅本地模拟视觉复核，不代表真实会员购买通过。"]},{"id":"visual-J2-08","stepIds":["J2-08"],"status":"pass","mode":"simulated-role","summary":"J2-08 · 模拟画面视觉核对","evidence":"收费订单页399元、立即支付及购买须知正常；重拍后顶部时间10:00–12:00与须知一致，先前时间矛盾已消除。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","金额与活动内容来自演示收费活动，与原型示例不同；未创建支付订单或扣款。"]},{"id":"visual-J3-01","stepIds":["J3-01"],"status":"pass","mode":"simulated-role","summary":"J3-01 · 模拟画面视觉核对","evidence":"模拟嘉宾机会列表已核对，演示机会卡、封面和合作人数布局正常，无明显文字溢出。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","内容与数量来自演示数据；仅模拟角色视觉证据。"]},{"id":"visual-J3-02","stepIds":["J3-02"],"status":"pass","mode":"simulated-role","summary":"J3-02 · 模拟画面视觉核对","evidence":"重拍的嘉宾人才合作受限页正常，解锁按钮乱码已修复。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","仅本地模拟视觉复核。"]},{"id":"visual-J3-03","stepIds":["J3-03"],"status":"pass","mode":"simulated-role","summary":"J3-03 · 模拟画面视觉核对","evidence":"嘉宾档案已成功加载，头像、统计和合作卡正常；底部感兴趣入口按四角色权限模型隐藏。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","原型画有我感兴趣按钮；当前已签到、非会员嘉宾按PRD四角色模型隐藏该入口，属于已说明的设计差异，仍可由产品复核。","普通未签到用户展示受限入口、有效玩家展示可操作入口；本页不是加载失败。","仅模拟角色视觉证据。"]},{"id":"visual-J3-04","stepIds":["J3-04"],"status":"pass","mode":"simulated-role","summary":"J3-04 · 模拟画面视觉核对","evidence":"模拟嘉宾本人档案已逐图核对，头像、统计、功能入口、合作卡和TabBar显示正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","嘉宾没有有效会员权益，因此实际显示查看会员提示，而原型仍画黄色等级卡；此处忠实展示无会员服务端状态。","仅模拟角色视觉证据。"]},{"id":"visual-J3-04b","stepIds":["J3-04b"],"status":"pass","mode":"simulated-role","summary":"J3-04b · 模拟画面视觉核对","evidence":"重新核对站内信：演示系统通知正常，之前只读测试导致的未读更新警告已消失。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","当前仅一条系统通知，与原型多类消息数量不同。标记已读操作证据独立记录。"]},{"id":"interaction-J3-04b","stepIds":["J3-04b"],"status":"pass","mode":"simulated-role","summary":"J3-04b · 本地交互核对","evidence":"演示账号站内信读取；受控原子SQL已读后服务端回读和页面unreadCount为0，无黄色警告。未模拟通知送达与完整事务。 listInbox；markAllRead；listInbox reload","limitations":["仅覆盖明确列出的操作和断言，不代表真实微信登录、付款、扫码或未执行的其他操作。"]},{"id":"visual-J3-05","stepIds":["J3-05"],"status":"pass","mode":"simulated-role","summary":"J3-05 · 模拟画面视觉核对","evidence":"最终图已显示Lv.1等级角标、城市/行业/身份与两行简介，邀请人行正常；先前字段和等级缺口已补齐，当前排版无明显异常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","演示资料与原型人物、数量和等级不同；没有装备有效勋章时不显示勋章，是合法数据差异。"]},{"id":"interaction-J3-05","stepIds":["J3-05"],"status":"pass","mode":"simulated-role","summary":"J3-05 · 本地交互核对","evidence":"测试数据库演示记录非空读取正常；该类别界面无搜索入口，未计入搜索验收。访客已读使用受控单条测试记录SQL并回读，不代表完整事务验证。 loadCategory；read non-empty demo records","limitations":["仅覆盖明确列出的操作和断言，不代表真实微信登录、付款、扫码或未执行的其他操作。"]},{"id":"visual-J3-06","stepIds":["J3-06"],"status":"pass","mode":"simulated-role","summary":"J3-06 · 模拟画面视觉核对","evidence":"重拍后互动列表成功加载两个演示玩家，搜索与双列卡片正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","原型为多条更丰富人物信息，实际演示数据只展示两人。","未执行真实扫码或线下互动，仅本地模拟视觉。"]},{"id":"visual-J3-07","stepIds":["J3-07"],"status":"pass","mode":"simulated-role","summary":"J3-07 · 模拟画面视觉核对","evidence":"模拟嘉宾心动列表已显示非空卡片，心形标记、活动跳转和订阅提醒布局正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","演示数据为一条心动记录，原型展示多条；实际增加接收心动提醒操作和返回按钮。","只验证本地模拟画面，不代表微信订阅授权或真实通知成功。"]},{"id":"visual-J3-08","stepIds":["J3-08"],"status":"pass","mode":"simulated-role","summary":"J3-08 · 模拟画面视觉核对","evidence":"最终文件独立重新读取已确认左上Lv.1、城市/行业/身份和两行简介，之前等级与资料字段缺口已补齐；仅含演示访客且无更新警告。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","演示资料与原型人物、数量和等级不同；当前无已装备有效勋章，不将其不展示判为缺陷。"]},{"id":"interaction-J3-08","stepIds":["J3-08"],"status":"pass","mode":"simulated-role","summary":"J3-08 · 本地交互核对","evidence":"测试数据库演示记录非空读取正常；该类别界面无搜索入口，未计入搜索验收。访客已读使用受控单条测试记录SQL并回读，不代表完整事务验证。 loadCategory；read non-empty demo records；markDisplayedVisitorsRead；reload read state","limitations":["仅覆盖明确列出的操作和断言，不代表真实微信登录、付款、扫码或未执行的其他操作。"]},{"id":"visual-J3-09","stepIds":["J3-09"],"status":"pass","mode":"simulated-role","summary":"J3-09 · 模拟画面视觉核对","evidence":"模拟嘉宾机会详情已逐图核对，内容卡、发布人、团队成员和我想合作按钮正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","演示机会内容不同于原型；本轮仅观察页面，没有实际发送合作请求。"]},{"id":"visual-J4-01","stepIds":["J4-01"],"status":"pass","mode":"simulated-role","summary":"J4-01 · 模拟画面视觉核对","evidence":"玩家人才列表非空，搜索、筛选、角色标签和卡片布局正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","演示人员及数量与原型不同，未提供的等级和勋章信息不占位；仅审核当前列表画面。"]},{"id":"visual-J4-02","stepIds":["J4-02"],"status":"pass","mode":"simulated-role","summary":"J4-02 · 模拟画面视觉核对","evidence":"玩家查看他人档案时感兴趣操作条正确显示；合作卡封面比例、目标与引荐内容正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","实际演示账号只有一张合作卡，原型有两张；个人资料区因此提前出现。实际兴趣计数使用文字，原型还有头像叠放。未执行兴趣写入。"]},{"id":"visual-J4-02b","stepIds":["J4-02b"],"status":"pass","mode":"simulated-role","summary":"J4-02b · 模拟画面视觉核对","evidence":"最终演示感兴趣名单已显示Lv.1、城市/行业/身份与两行简介，卡片信息完整，先前字段与等级缺口已补齐。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","名单为一条演示记录，与原型示例数量不同；没有装备有效勋章时不显示勋章。"]},{"id":"interaction-J4-02b","stepIds":["J4-02b"],"status":"pass","mode":"simulated-role","summary":"J4-02b · 本地交互核对","evidence":"测试数据库demo-only感兴趣名单非空；实际城市、行业/身份、简介从服务端映射读取。没有装备勋章则不虚构；仅列表读取验证。 listPublicProfileInterests；read non-empty demo profile fields","limitations":["仅覆盖明确列出的操作和断言，不代表真实微信登录、付款、扫码或未执行的其他操作。"]},{"id":"visual-J4-03","stepIds":["J4-03"],"status":"pending","mode":"simulated-role","summary":"J4-03 · 模拟画面视觉核对","evidence":"临期日期与立即续费按钮现已正确显示，另有订单页辅助图；但邀请暂不可用红条和禁用邀请按钮仍与原型不同，当前只证明续费入口场景。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","等级、权益和任务为演示配置；邀请不可用属于测试调用限制还是功能问题需结合服务证据判定，不能忽略该红条。"]},{"id":"interaction-J4-03","stepIds":["J4-03"],"status":"pass","mode":"simulated-role","summary":"J4-03 · 本地交互核对","evidence":"临期身份和commerce到期日为本地一致投影；立即续费真实导航订单确认ready。邀请仍因测试适配不支持生成而未验证，付款未执行。 renewMembership；订单确认页回读","limitations":["仅覆盖明确列出的操作和断言，不代表真实微信登录、付款、扫码或未执行的其他操作。"]},{"id":"visual-J4-04","stepIds":["J4-04"],"status":"pass","mode":"simulated-role","summary":"J4-04 · 模拟画面视觉核对","evidence":"机会发布表单已核对首屏：自动识别输入、必填标记、城市网格与固定发布按钮排版正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","原型完整长图与实际首屏高度不同，下半表单仍须滚动。城市选项来自当前目录，未执行发布写入。"]},{"id":"visual-J4-05","stepIds":["J4-05"],"status":"pass","mode":"simulated-role","summary":"J4-05 · 模拟画面视觉核对","evidence":"本人已发布机会详情展示编辑与分享操作，卡片、简介、发布人及团队信息可读，无明显重叠或拉伸。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","测试机会文案、封面和团队数据与原型不同，未执行编辑、分享或下架写入。"]},{"id":"visual-J4-06","stepIds":["J4-06"],"status":"pass","mode":"simulated-role","summary":"J4-06 · 模拟画面视觉核对","evidence":"本人已下架的演示机会正常显示详情，编辑按钮可用、分享按钮灰显；与下架场景相符。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","使用新建演示机会，文案与原型不同，未在此截图证明编辑或恢复发布写入。"]},{"id":"interaction-J4-06","stepIds":["J4-06"],"status":"pass","mode":"simulated-role","summary":"J4-06 · 本地交互核对","evidence":"真实测试库本人下架机会；下架操作条和分享禁用显示正确，点击编辑已进入编辑页并读取成功。首次冷查询较慢，延长等待后ready；未保存编辑。 loadOpportunity；edit","limitations":["仅覆盖明确列出的操作和断言，不代表真实微信登录、付款、扫码或未执行的其他操作。"]},{"id":"visual-J5-01","stepIds":["J5-01"],"status":"pass","mode":"simulated-role","summary":"J5-01 · 模拟画面视觉核对","evidence":"设置首屏分组和单行项目正常，团队 PK 与帮助客服已进入设置页；间距无明显异常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","退出及注销位于下方，点击与确认结果以单独交互记录为准。"]},{"id":"interaction-J5-01","stepIds":["J5-01"],"status":"pass","mode":"simulated-role","summary":"J5-01 · 本地交互核对","evidence":"仅本机退出和注销取消流程。退出取消留设置页；确认后本地signedOut=true且进入登录引导页（不是首页）。未执行账号注销。 startAccountClosure；cancelAccountClosure；signOutLocally/CUA取消；signOutLocally/CUA退出；readStorage signedOut","limitations":["仅覆盖明确列出的操作和断言，不代表真实微信登录、付款、扫码或未执行的其他操作。"]},{"id":"visual-J5-02","stepIds":["J5-02"],"status":"pass","mode":"simulated-role","summary":"J5-02 · 模拟画面视觉核对","evidence":"手机号设置表单布局正常，输入、获取验证码与确认换绑按钮层次清晰。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","测试身份仅模拟已绑定标识，不含真实手机号；手机号获取、短信与换绑必须真机验证。实际增加用途说明与返回入口。"]},{"id":"visual-J5-03","stepIds":["J5-03"],"status":"pass","mode":"simulated-role","summary":"J5-03 · 模拟画面视觉核对","evidence":"隐私页两项开关及文案正常，当前开关为关闭状态，未见错位。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","原型展示开启状态，实际展示测试账号当前配置；只读测试未验证切换后的持久化。"]},{"id":"visual-J5-04","stepIds":["J5-04"],"status":"pass","mode":"simulated-role","summary":"J5-04 · 模拟画面视觉核对","evidence":"用户协议页面演示标题、提示、版本和多段正文可读，明确标注仅供测试。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","按用户授权使用后台可修改的演示协议，正文与原型占位文本不同，不作为正式条款验收。"]},{"id":"visual-J6-01","stepIds":["J6-01"],"status":"pass","mode":"simulated-role","summary":"J6-01 · 模拟画面视觉核对","evidence":"模拟玩家本人合作卡页已逐图核对，等级背景比例正常，统计与功能入口无明显溢出。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","演示账号数据、等级与合作卡和原型不同；本轮没有实际删除数据。"]},{"id":"visual-J6-02","stepIds":["J6-02"],"status":"pass","mode":"simulated-role","summary":"J6-02 · 模拟画面视觉核对","evidence":"模拟玩家本人案例页已逐图核对，案例时间线与文件夹图标正常。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","演示账号只有一条案例；本轮没有实际删除案例。"]},{"id":"visual-J6-03","stepIds":["J6-03"],"status":"pass","mode":"simulated-role","summary":"J6-03 · 模拟画面视觉核对","evidence":"相关机会页非空列表显示正常，等级头图、计数卡、功能入口和黄色选中标签均无明显错位。","limitations":["结论仅限当前截图视觉，不是交互或真机通过。","角色资料、机会封面及数量为演示数据。实际第二分类为我想合作，与原型引荐机会用语存在差异。首屏下方内容需滚动。"]}]}};
+      /* global report */
+const $ = id => document.getElementById(id)
+const steps = report.steps
+const visualLabels = { 'simulated-reviewed': '视觉：模拟画面已核对', 'pending': '视觉：AI 待核对', 'pass': '视觉：已通过', 'needs-fix': '视觉：需调整', 'reviewed': '视觉：当前画面已核对', 'explained': '视觉：差异已说明' }
+const interactionLabels = { 'simulated-recorded': '交互：本地模拟已测', pending: '交互：AI 待补测', partial: '交互：部分已测', pass: '交互：已有验证记录', failed: '交互：有未解决问题' }
+const deviceLabels = { 'pending': '真机：待测', 'pass': '真机：已有验证记录', 'failed': '真机：有未解决问题', 'not-required': '真机：本项无专项', 'unscoped': '真机：范围未单列' }
+const feedbackLabels = { 'pass': '通过', 'needs-fix': '需调整', 'pending': '待确认' }
+const storageKey = `mip-review-v2-${report.source.commit}-${report.implementation.commit}-${report.captureSet}`
+let feedback = {}
+let storageWarning = ''
+let selected = steps.findIndex(step => step.id === location.hash.slice(1))
+if (selected < 0) {
+  selected = 0
+}
+try {
+  const saved = JSON.parse(localStorage.getItem(storageKey) || '{}')
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) {
+    throw new Error('Invalid feedback')
+  }
+  feedback = Object.fromEntries(Object.entries(saved).filter(([id, value]) => steps.some(step => step.id === id) && value && typeof value === 'object' && !Array.isArray(value)))
+}
+catch {
+  storageWarning = '浏览器存储不可用，请在离开前导出意见。'
+}
+
+function element(tag, text, className) {
+  const node = document.createElement(tag)
+  if (text !== undefined) {
+    node.textContent = text
+  }
+  if (className) {
+    node.className = className
+  }
+  return node
+}
+
+function roleName(value) {
+  return report.roleProfiles[value]?.label || value || '未登记'
+}
+function timestamp(value) {
+  return value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '未登记'
+}
+
+function openImage(image, label) {
+  $('zoom-image').src = image.src
+  $('zoom-image').alt = label
+  $('zoom-label').textContent = label
+  $('zoom').showModal()
+}
+
+function screenshot(image, label, chromeInset = 0) {
+  const box = element('div', undefined, 'shot')
+  if (!image.available) {
+    box.append(element('div', '截图尚未补齐\n本页不能判断通过', 'missing'))
+    return box
+  }
+  if (chromeInset) {
+    const space = element('div', '原生导航未入图 · 仅作内容对齐留白', 'chrome-space')
+    space.style.aspectRatio = `375 / ${chromeInset}`
+    box.append(space)
+  }
+  const img = element('img')
+  img.src = image.src
+  img.alt = label
+  img.onclick = () => openImage(image, label)
+  box.append(img)
+  return box
+}
+
+function pane(step, side) {
+  const record = step[side]
+  const title = side === 'prototype' ? '原型' : '实现截图 · ' + ({devtools: '开发者工具', device: '微信真机', 'simulated-role': '模拟角色'}[step.actual.source] || '来源待确认')
+  const box = element('section', undefined, 'pane')
+  const heading = element('div', undefined, 'pane-heading')
+  heading.append(element('strong', title), element('small', '点击查看大图'))
+  box.append(heading, screenshot(record.image, `${step.id} ${title}`, side === 'actual' && record.chromeOmitted ? record.referenceChromeInsetCssPx || 88 : 0))
+  for (const extra of step.additionalImages.filter(image => image.side === side || (side === 'actual' && !image.side))) {
+    const continuation = element('div', undefined, 'continuation')
+    continuation.append(element('p', extra.label || '下方补图（与首屏可能重叠）'), screenshot(extra.image, `${step.id} ${extra.label || '补图'}`))
+    box.append(continuation)
+  }
+  return box
+}
+
+function updateProgress() {
+  const count = Object.values(feedback).filter(value => value.status || value.note?.trim()).length
+  $('progress').textContent = `已写意见 ${count} / ${steps.length}`
+  $('save-state').textContent = storageWarning || '意见自动保存在当前浏览器'
+  $('save-state').classList.toggle('failed', Boolean(storageWarning))
+}
+
+function saveFeedback() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(feedback))
+    storageWarning = ''
+  }
+  catch {
+    storageWarning = '意见尚未保存到浏览器。输入仍在，请先导出再离开。'
+  }
+  updateProgress()
+}
+
+function showVerdicts() {
+  const id = steps[selected].id
+  $('verdicts').replaceChildren()
+  for (const [value, label] of Object.entries(feedbackLabels)) {
+    const button = element('button', label)
+    button.type = 'button'
+    button.setAttribute('aria-pressed', String(feedback[id]?.status === value))
+    button.onclick = () => {
+      feedback[id] = { ...feedback[id], status: value, at: new Date().toISOString() }
+      saveFeedback()
+      showVerdicts()
+    }
+    $('verdicts').append(button)
+  }
+}
+
+function showVerification(step) {
+  const v = step.verification
+  $('ai-state').textContent = visualLabels[v.visual.status]
+  $('ai-state').className = `badge ${v.visual.status}`
+  $('interaction-state').textContent = interactionLabels[v.interaction.status]
+  $('interaction-state').className = `badge ${v.interaction.status}`
+  $('scenario-state').textContent = v.scenario.status.startsWith('simulated') ? '场景：本地模拟' : v.scenario.status === 'matched' ? '场景：已对应' : '角色 / 数据：待补测'
+  $('scenario-state').className = `badge scenario-${v.scenario.status}`
+  $('device-state').textContent = v.deviceOnly ? '仅真机待测' : deviceLabels[v.device.status]
+  $('device-state').className = `badge ${v.device.status}`
+  $('scenario-warning').hidden = ['matched', 'simulated'].includes(v.scenario.status)
+  $('scenario-warning').textContent = step.actual.roleMatches === false
+    ? `目标为${roleName(step.expectedRole)}，当前截图为${roleName(step.actual.role)}。角色或数据覆盖待补，不等同于代码故障。`
+    : '目标场景或数据尚未完整复现，待 AI 补测；此状态不等同于代码故障。'
+  $('next-step').textContent = v.nextStep
+}
+
+function render() {
+  const step = steps[selected]
+  $('page-title').textContent = `${step.id} · ${step.name}`
+  showVerification(step)
+  $('ai-note').textContent = step.review.visualNotes || 'AI 尚未完成本页视觉核对。你可以直接留下界面意见。'
+  $('comparison').replaceChildren(pane(step, 'prototype'), pane(step, 'actual'))
+  $('jump').value = step.id
+  $('counter').textContent = `${selected + 1} / ${steps.length}`
+  $('previous').disabled = selected === 0
+  $('next').disabled = selected === steps.length - 1
+  $('note').value = feedback[step.id]?.note || ''
+  const previous = report.previousFeedback?.feedback?.[step.id]
+  $('previous-feedback').hidden = !previous
+  $('previous-feedback').textContent = previous
+    ? `上一轮意见（只读）：${feedbackLabels[previous.status] || '未标状态'}${previous.note ? ` · ${previous.note}` : ''}`
+    : ''
+  showVerdicts()
+  const detail = $('evidence-content')
+  detail.replaceChildren()
+  detail.append(element('p', `视觉结论：${step.review.visualNotes || '待 AI 核对'}`))
+  const differences = [...step.evidenceWarnings, ...(step.review.differences || [])]
+  if (differences.length) {
+    detail.append(element('p', differences.join('\n')))
+  }
+  detail.append(element('p', `原型角色：${roleName(step.expectedRole)} · 实际角色：${roleName(step.actual.role)}\n实际采集：${timestamp(step.actual.capturedAt)}\n实现版本：${report.implementation.commit}\n截图 SHA：${step.actual.image.sha256 || '无截图'}`))
+  const interactionHeading = step.verification.interaction.status === 'pending' ? '交互记录（尚未据此通过）' : '交互证据'
+  detail.append(element('p', `${interactionHeading}：\n${step.verification.interaction.evidence.join('\n') || '尚未记录，AI 继续补测。'}`))
+  detail.append(element('p', `真机范围与记录：\n${step.verification.device.evidence.join('\n') || (step.verification.device.status === 'not-required' ? '本项未列专项真机要求。' : '尚未单列具体项目；不自动视为通过或转交人工。')}\n截图核对不替代手机号、支付、扫码等真机验证。`))
+  if (/^https?:\/\//.test(step.prototype.sourceUrl || '')) {
+    const link = element('a', '打开原型与标注')
+    link.href = step.prototype.sourceUrl
+    link.target = '_blank'
+    link.rel = 'noreferrer'
+    detail.append(link)
+  }
+  $('evidence').open = false
+  updateProgress()
+}
+
+function select(index) {
+  if (index < 0 || index >= steps.length) {
+    return
+  }
+  selected = index
+  history.replaceState(null, '', `#${steps[index].id}`)
+  render()
+  window.scrollTo({ top: 0, behavior: 'instant' })
+}
+
+function exportFeedback() {
+  const body = JSON.stringify({ report: 'MIP 43-step parity', sourceCommit: report.source.commit, implementationCommit: report.implementation.commit, exportedAt: new Date().toISOString(), feedback }, null, 2)
+  const url = URL.createObjectURL(new Blob([body], { type: 'application/json' }))
+  const link = element('a')
+  link.href = url
+  link.download = `mip-43-step-feedback-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.append(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+for (const step of steps) {
+  const option = element('option', `${step.id} · ${step.name}`)
+  option.value = step.id
+  $('jump').append(option)
+}
+$('report-summary').textContent = `模拟画面已核对 43 页 · 已知问题 ${report.summary.knownIssues} 项 · 角色 / 数据待补 ${report.summary.scenarioPending} 项 · AI 继续补测 ${report.summary.aiPending} 项 · 仅真机待测 ${report.summary.deviceOnly} 项（分类可重叠）`
+$('jump').onchange = () => select(steps.findIndex(step => step.id === $('jump').value))
+$('previous').onclick = () => select(selected - 1)
+$('next').onclick = () => select(selected + 1)
+$('note').oninput = () => {
+  const id = steps[selected].id
+  feedback[id] = { ...feedback[id], note: $('note').value, at: new Date().toISOString() }
+  saveFeedback()
+}
+$('export').onclick = exportFeedback
+$('close-zoom').onclick = () => $('zoom').close()
+$('zoom').onclick = (event) => {
+  if (event.target === $('zoom')) {
+    $('zoom').close()
+  }
+}
+window.addEventListener('hashchange', () => {
+  const index = steps.findIndex(step => step.id === location.hash.slice(1))
+  if (index >= 0) {
+    select(index)
+  }
+})
+document.addEventListener('keydown', (event) => {
+  if (event.altKey || event.ctrlKey || event.metaKey || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName) || event.target.isContentEditable || $('zoom').open) {
+    return
+  }
+  if (['ArrowRight', 'ArrowDown'].includes(event.key)) {
+    event.preventDefault()
+    select(selected + 1)
+  }
+  if (['ArrowLeft', 'ArrowUp'].includes(event.key)) {
+    event.preventDefault()
+    select(selected - 1)
+  }
+})
+render()
+
+/* global report, element */
+const testModeLabels = { 'test-account-service': '测试账号 · 服务端', 'simulated-role': '模拟角色 · 页面', 'devtools': '开发者工具 · 真实会话', 'device': '微信真机', 'automated-contract': '自动化合同测试' }
+const testStatusLabels = { pass: '已通过', fail: '未通过', pending: '待测' }
+const testRoot = document.getElementById('public-test-results')
+const testCases = report.testResults.cases
+const passedCases = testCases.filter(item => item.status === 'pass').length
+testRoot.append(element('p', `本轮 ${testCases.length} 项记录，${passedCases} 项通过。服务端与模拟角色测试不替代真实微信登录、手机号、支付和扫码验收。`))
+for (const item of testCases) {
+  const row = element('div', undefined, 'test-row')
+  row.append(element('strong', `${testStatusLabels[item.status]} · ${testModeLabels[item.mode]} · ${item.summary}`))
+  if (item.stepIds.length) {
+    const links = element('p', '关联页面：')
+    for (const id of item.stepIds) {
+      const link = element('a', `${id} `)
+      link.href = `#${id}`
+      links.append(link)
+    }
+    row.append(links)
+  }
+  if (item.evidence) {
+    row.append(element('p', `证据：${item.evidence}`))
+  }
+  if (item.limitations?.length) {
+    row.append(element('p', `范围：${item.limitations.join('；')}`))
+  }
+  testRoot.append(row)
+}
+
+    </script>
+  </body>
+</html>
