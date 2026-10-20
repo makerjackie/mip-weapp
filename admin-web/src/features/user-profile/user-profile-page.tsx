@@ -62,7 +62,7 @@ function UserProfileContent() {
     metrics: [{ label: '持有勋章', value: String(badges.data.length) }],
     fields: [{ label: '勋章明细', value: badges.data.map(item => item.equipped ? `${item.badgeName}（佩戴中）` : item.badgeName).join('、') || '—' }],
   } : null, [badges.data])
-  const viewSections = tab === 'basic' ? sectionsFor(['基本信息', '运营角色'])
+  const viewSections = tab === 'basic' ? sectionsFor(['基本信息', '后台角色'])
     : tab === 'career' ? sectionsFor(['职业信息', '任职信息', '标签'])
       : tab === 'growth' ? [...sectionsFor(['成长数据']),
           ...(badgeSection ? [badgeSection] : badges.error ? [{ title: '徽章', error: '勋章记录读取失败，请刷新重试。' }] : []),

@@ -104,7 +104,7 @@ describe('admin detail views', () => {
     assert.equal(fieldOf(career, '个人介绍'), '专注品牌策略')
     assert.ok(detail.sections.some(section => section.title === '任职信息'))
     assert.ok(detail.sections.some(section => section.title === '标签'))
-    assert.ok(detail.sections.some(section => section.title === '运营角色'))
+    assert.ok(detail.sections.some(section => section.title === '后台角色'))
   })
 
   it('shows wechat binding as unknown until the server reports it (MIW-125, 待联调)', async () => {

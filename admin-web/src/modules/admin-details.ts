@@ -249,7 +249,7 @@ function appendUserCollections(sections: AdminDetailSection[], user: AdminDetail
   const roles = records(user.roles)
   if (roles.length) {
     sections.push({
-      title: '运营角色',
+      title: '后台角色',
       rows: roles.map(item => ({ role: codeLabel(item.roleKey), scope: codeLabel(item.scopeType), grantedAt: formatUserDateTime(item.grantedAt) })),
       columns: columns([['role', '角色'], ['scope', '作用范围'], ['grantedAt', '授权时间']]),
     })

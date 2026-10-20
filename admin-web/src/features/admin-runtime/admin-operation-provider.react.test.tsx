@@ -17,7 +17,7 @@ afterEach(cleanup)
 
 const { request, session } = vi.hoisted(() => ({ request: vi.fn(), session: { boundary: 'actor-a' } }))
 vi.mock('../../app/session-provider', () => ({
-  useAdminSession: () => ({ demoMode: false, hasCapability: () => true, request, sessionBoundary: session.boundary }),
+  useAdminSession: () => ({ demoMode: false, hasCapability: () => true, hasCapabilityAtScope: () => true, request, sessionBoundary: session.boundary }),
 }))
 vi.mock('../../shared/ui', async () => ({
   humanizeError: (await import('../../shared/ui/humanize-error')).humanizeError,
@@ -121,5 +121,24 @@ describe('event detail editing availability', () => {
     } else {
       expect(screen.queryByRole('button', { name: '结束活动' })).not.toBeInTheDocument()
     }
+  })
+})
+
+// 玩家身份和后台岗位是两条独立业务链，用户详情不能直接授予后台岗位。
+describe('user membership entry and separate staff configuration', () => {
+  it('opens the existing membership flow without offering a staff role action', async () => {
+    request.mockReset()
+    request.mockImplementation(async (action: string) => action === 'mip.admin.memberships.get' ? { chainVersion: 3 } : {})
+    render(<QueryClientProvider client={new QueryClient()}><App><AdminOperationProvider>
+      <AdminDetailActions route="users" id="user-a" view={{ route: 'users', title: '用户', subtitle: '', status: 'ACTIVE', sections: [] }} />
+    </AdminOperationProvider></App></QueryClientProvider>)
+    expect(screen.queryByRole('button', { name: '设置角色' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '补录会员' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '开通玩家权益' }))
+    await screen.findByText('保存表单')
+    fireEvent.click(screen.getByText('保存表单'))
+    fireEvent.click(screen.getByText('最终确认'))
+    await waitFor(() => expect(request).toHaveBeenCalledWith('mip.admin.memberships.grant', expect.objectContaining({ userId: 'user-a', durationMonths: 12 })))
+    expect(request.mock.calls.some(([action]) => action === 'mip.admin.roles.set')).toBe(false)
   })
 })

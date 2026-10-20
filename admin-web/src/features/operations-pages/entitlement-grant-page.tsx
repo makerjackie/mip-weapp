@@ -8,13 +8,13 @@ import { humanizeError, PageHeader, SessionUserSelect } from '../../shared/ui'
 import { demo } from '../../services/demo-data'
 
 // MIW-129 H2：独立发放页。经验值/贡献值复用 mip.admin.growth.adjust，
-// 玩家会籍复用与「用户档案 → 补录会员」相同的 mip.admin.memberships.grant。
+// 玩家会籍复用与「用户档案 → 开通玩家权益」相同的 mip.admin.memberships.grant。
 type GrantType = 'EXPERIENCE' | 'CONTRIBUTION' | 'MEMBERSHIP'
 
 const GRANT_TYPES: Array<{ value: GrantType; label: string; capability: string }> = [
   { value: 'EXPERIENCE', label: '经验值', capability: 'growth.adjust' },
   { value: 'CONTRIBUTION', label: '贡献值', capability: 'growth.adjust' },
-  { value: 'MEMBERSHIP', label: '玩家会籍', capability: 'memberships.adjust' },
+  { value: 'MEMBERSHIP', label: '玩家权益', capability: 'memberships.adjust' },
 ]
 
 const DURATION_OPTIONS = [1, 3, 6, 12].map(months => ({ value: months, label: `${months} 个月` }))
@@ -95,7 +95,7 @@ export function EntitlementGrantPage() {
     <>
       <PageHeader
         title="发放权益"
-        description="为用户发放经验值、贡献值或玩家会籍"
+        description="为用户发放经验值、贡献值或玩家权益"
         actions={<Button icon={<ArrowLeftOutlined />} disabled={submitting} onClick={() => void navigate({ to: '/entitlements' })}>返回权益流水</Button>}
       />
       <Card style={{ maxWidth: 720 }}>

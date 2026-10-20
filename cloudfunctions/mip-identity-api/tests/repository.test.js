@@ -581,3 +581,25 @@ describe('agreement acceptance isolation', () => {
     assert.equal(writes, 0)
   })
 })
+
+// Registration creates business identity only; staff grants have a separate audited owner.
+it('registers a new user without staff accounts, role bindings or player entitlements', async () => {
+  const writes = []
+  let created = false
+  const subject = { id: 'new-user', status: 'ACTIVE', primary_branch_id: null, version: 1, identity_id: 'new-identity', union_identity_key: null }
+  const repository = createIdentityRepository({
+    async one() { return created ? subject : null },
+    async transaction(work) {
+      return work({
+        async one(sql) { return sql.includes('FROM mip_user_identities') ? { id: 'new-identity', user_id: 'new-user', identity_key: 'identity-new', closed_identity_key: null, union_identity_key: null } : subject },
+        async query(sql, params) { writes.push({ sql, params }); if (sql.includes('INSERT INTO mip_users')) created = true; return { affectedRows: 1 } },
+      })
+    },
+  }, { id: () => 'new-user' })
+  const result = await repository.ensureUser({ appId: 'test-app', identityKey: 'identity-new' })
+  assert.equal(result.id, 'new-user')
+  assert.ok(writes.some(call => call.sql.includes('INSERT INTO mip_users')))
+  assert.ok(writes.some(call => call.sql.includes('identity.user_registered')))
+  assert.ok(writes.every(call => !/mip_admin_|mip_membership_entitlements/.test(call.sql)))
+  assert.deepEqual(require('../domain/capabilities').projectGrants([]), [])
+})
