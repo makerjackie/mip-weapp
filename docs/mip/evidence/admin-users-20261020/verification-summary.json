@@ -1,0 +1,209 @@
+{
+  "source": "af5cfbc70e09700649958d50c769381e8c7d18f7",
+  "status": "测试环境已部署；用户管理整体仍为partial，明确冲突待确认，外部/全角色验收待补",
+  "at": "2026-10-20T07:33:48.697865+00:00",
+  "checks": [
+    {
+      "item": "最终公开静态资源",
+      "result": "PASS",
+      "evidence": "发布完成后清单15/15逐字节通过，真实浏览器入口 /assets/index-BEbyJG4u.js；与最终构建一致。"
+    },
+    {
+      "item": "真实密码登录",
+      "result": "PASS",
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "真实平台管理员会话",
+      "result": "PASS",
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "非空用户列表",
+      "result": "PASS",
+      "rows": 2,
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "完整档案与验证字段",
+      "result": "PASS",
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "八项看板使用服务端新增事实",
+      "result": "PASS",
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "服务端分页前权益筛选 NEXT_MONTH",
+      "result": "PASS",
+      "rows": 1,
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "服务端分页前权益筛选 EXPIRING_THIS_MONTH",
+      "result": "PASS",
+      "rows": 0,
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "服务端分页前权益筛选 ACTIVE",
+      "result": "PASS",
+      "rows": 0,
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "服务端分页前权益筛选 EXPIRED",
+      "result": "PASS",
+      "rows": 0,
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "六种合作卡服务端配置",
+      "result": "PASS",
+      "existingCards": 6,
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "邀请筛选与分页接口",
+      "result": "PASS",
+      "rows": 0,
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "心动方向状态与时间筛选接口",
+      "result": "PASS",
+      "rows": 0,
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "非空单用户操作日志",
+      "result": "PASS",
+      "rows": 20,
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "服务端拒绝冻结自身",
+      "result": "PASS",
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "拒绝冻结后账号仍正常",
+      "result": "PASS",
+      "evidence": "真实测试HTTPS专项；2026-10-20T07:32:18.892Z"
+    },
+    {
+      "item": "资料已恢复原值并产生新版本",
+      "result": "PASS",
+      "evidence": "正常接口写入与独立回读；2026-10-20T07:20:08.479Z"
+    },
+    {
+      "item": "UI保存合作卡后独立请求回读",
+      "result": "PASS",
+      "evidence": "正常接口写入与独立回读；2026-10-20T07:20:08.479Z"
+    },
+    {
+      "item": "六种卡型正常接口保存及逐字段回读",
+      "result": "PASS",
+      "evidence": "正常接口写入与独立回读；2026-10-20T07:20:08.479Z"
+    },
+    {
+      "item": "案例草稿正常保存及服务端回读",
+      "result": "PASS",
+      "evidence": "正常接口写入与独立回读；2026-10-20T07:20:08.479Z"
+    },
+    {
+      "item": "同筛选非空Excel导出",
+      "result": "PASS",
+      "rowCount": 1,
+      "evidence": "真实导出与案例回读；2026-10-20T07:22:47.683Z"
+    },
+    {
+      "item": "案例UI编辑后独立请求版本回读",
+      "result": "PASS",
+      "evidence": "真实导出与案例回读；2026-10-20T07:22:47.683Z"
+    },
+    {
+      "item": "合作卡UI取消未写入且版本未变化",
+      "result": "PASS",
+      "evidence": "取消回读；2026-10-20T07:26:40.146Z"
+    },
+    {
+      "item": "完整工程门禁",
+      "result": "PASS",
+      "evidence": "af5cfbc7：pnpm verify:all，小程序1818、Web Node337、Web React256，以及服务端、类型、构建和响应式合同。可选MySQL测试的SKIP不作为数据库验收。"
+    },
+    {
+      "item": "公开HTTPS广泛只读检查",
+      "result": "PASS",
+      "evidence": "68/68、14模块；含真实登录、来源拒绝、错误密码、退出与旧Cookie拒绝；空分区仅证明空态。"
+    },
+    {
+      "item": "云函数代码与配置回读",
+      "result": "PASS",
+      "evidence": "测试API167文件、BFF33文件逐字节一致；SCF摘要通过；两函数Active；配置与原快照一致。"
+    },
+    {
+      "item": "三种CSS视口",
+      "result": "PASS",
+      "evidence": "1440×900 /1280×720 /390×844：根宽分别1423/1263/373；手机内容可以滚动到达。b994c909布局，af5cfbc7仅统计查询与提示修改。"
+    },
+    {
+      "item": "全角色、非空邀请/心动/同场互动",
+      "result": "PENDING",
+      "evidence": "当前平台管理员可验；没有伪造授权主体或写SQL生成关系。需要专用测试样本与正常业务旅程。"
+    },
+    {
+      "item": "小程序/真机同步与发布",
+      "result": "PENDING",
+      "evidence": "当前未上传微信版本，未做真机扫码签到、敏感绑定与公开案例媒体验收；不能用后台测试替代。"
+    },
+    {
+      "item": "真实网页资料编辑保存、版本8、离页重开、恢复原值版本9",
+      "result": "PASS"
+    },
+    {
+      "item": "合作卡完整多行文本与六项评分正常表单保存",
+      "result": "PASS"
+    },
+    {
+      "item": "合作卡取消后独立请求回读内容及版本未变化",
+      "result": "PASS"
+    },
+    {
+      "item": "案例全文UI编辑保存、返回所属用户案例页、离页重开",
+      "result": "PASS"
+    },
+    {
+      "item": "昵称非空搜索、无匹配空态、清除恢复两条列表",
+      "result": "PASS"
+    },
+    {
+      "item": "搜索框Tab键进入筛选控件",
+      "result": "PASS"
+    },
+    {
+      "item": "查看本轮浏览器控制台警告和错误0条",
+      "result": "PASS"
+    }
+  ],
+  "limits": [
+    "原始截图来自2026-10-20同一客户Workbuddy原型及真实测试后台。原型演示用户与测试账号不同；原图尺寸标在每列，未裁剪或拼造一致数据。",
+    "新增6张测试合作卡草稿、1个案例草稿；UI资料修改后恢复原值，版本7→8→9；案例UI修改版本1→2。未更改会员、余额、角色、主分会或支付事实。",
+    "测试与生产共用物理CloudBase环境和MySQL服务，但分别使用mip_test/mip_test_admin_auth与生产schema；这是逻辑隔离，不是独立物理实例。本轮只更新测试API、BFF和隔离静态前缀。",
+    "实测记录保留：部署切换期间有一次AUTH_UNAVAILABLE 503；后续68项复验通过不证明已定位该间歇错误根因。冻结自身的错误经现有API以HTTP200+ok:false/FORBIDDEN返回；最初验收脚本误期待HTTP403，已修正脚本，业务拒绝与账号ACTIVE均回读验证。",
+    "静态发布未结束时启动过一次资源校验，拿到旧清单与新入口而报摘要不符；这次检查无效，最终结论只使用发布完成后的同一清单逐文件校验。",
+    "Computer Use由AI执行，报告与原图供用户人工复核，不冒充客户签收或独立安全审计。",
+    "报告与截图含私人账号画面，仅本机保存；仓库只提交去身份化说明与验证摘要，未公开部署该报告。"
+  ],
+  "artifacts": {
+    "scfZipSha256": {
+      "testAdminApi": "3586a73a7ff22e4c5dfbdec5ee8bcd18ef73a5da6220b93cdb5d4dae35ac35a4",
+      "testAdminBff": "146735f0667945171cb8be0ec78bd8b5528017ea600f38fc603422b959740e04"
+    },
+    "publicEntry": "/assets/index-BEbyJG4u.js",
+    "staticFileCount": 15,
+    "apiRuntimeFiles": 167,
+    "bffRuntimeFiles": 33
+  }
+}
