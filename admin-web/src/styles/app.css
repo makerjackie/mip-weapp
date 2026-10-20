@@ -378,3 +378,36 @@ button, input, select, textarea { font: inherit; }
 .event-mobile-preview__schema-list li { margin: 2px 0; }
 
 .event-mobile-preview__image-placeholder { display: block; margin: 12px 0; padding: 12px; border: 1px dashed #d9d9d9; border-radius: 8px; color: #999; font-size: 13px; text-align: center; }
+
+/* User dossier follows the prototype: one identity/metrics sidebar and a six-tab work area. */
+.user-profile-sidebar .ant-card-body { padding: 24px 18px; }
+.user-profile-identity { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-bottom: 24px; }
+.user-profile-identity h2.ant-typography { margin: 0; max-width: 100%; overflow-wrap: anywhere; font-size: 20px; }
+.user-profile-dashboard-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--mip-line); padding-top: 20px; }
+.user-profile-dashboard-heading h3.ant-typography { font-size: 15px; margin: 0; }
+.user-profile-dashboard-heading .ant-typography-secondary { font-size: 12px; }
+.user-profile-dashboard { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 18px 0 24px; }
+.user-profile-dashboard > div { padding: 12px 8px; background: var(--mip-layout); border: 1px solid var(--mip-line); border-radius: var(--mip-radius); min-width: 0; }
+.user-profile-dashboard dd { margin: 0 0 6px; font-weight: 650; font-size: 16px; overflow-wrap: anywhere; }
+.user-profile-dashboard dt { font-size: 12px; color: var(--mip-muted); }
+.user-profile-content-card .detail-fields { grid-template-columns: minmax(0, 1fr); }
+.user-profile-content-card .detail-fields > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--mip-line); }
+.user-profile-content-card .detail-fields dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.user-profile-content-card .detail-fields dt { margin: 0; }
+.user-profile-main .ant-tabs-nav { margin-top: 20px; }
+@media (max-width: 767px) {
+  .user-profile-sidebar .ant-card-body, .user-profile-content-card .ant-card-body { padding: 16px; }
+  .user-profile-content-card .detail-fields > div { grid-template-columns: 100px minmax(0, 1fr); gap: 8px; }
+}
+
+.user-content-list { width: 100%; }
+.user-content-list .ant-card-head { flex-wrap: wrap; }
+.user-content-list .ant-card-head-title { white-space: normal; overflow-wrap: anywhere; }
+.user-content-list .ant-card-extra { max-width: 100%; }
+.user-cooperation-scores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+.user-cooperation-scores .ant-rate { font-size: 20px; white-space: nowrap; }
+.user-content-save-actions { margin-top: 16px; }
+@media (max-width: 767px) {
+  .user-cooperation-scores { grid-template-columns: minmax(0, 1fr); }
+  .user-content-list .ant-card-head-wrapper { flex-wrap: wrap; padding: 12px 0; gap: 8px; }
+}

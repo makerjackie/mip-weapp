@@ -238,15 +238,6 @@ export function CoreListPageView({
   const pageDefinition = pageDefinitions[route]
   const readDefinition = getAdminReadRouteDefinition(route)
   const pageNumber = search.page && search.page > 1 ? search.page : 1
-  // MIW-124：身份「普通用户」与权益到期分档由 Web 层在当前页结果内收口，需向运营注明口径。
-  const usersWebFilterNote = route === 'users'
-    ? [
-      search.filters?.kind === 'NORMAL' ? '「普通用户」筛选由服务网关在当前页结果内应用，结果可能不完整。' : '',
-      ['EXPIRING_THIS_MONTH', 'NEXT_MONTH', 'ACTIVE'].includes(normalizePlayerStatusFilter(search.filters?.playerLifecycle))
-        ? '「玩家权益状态」到期分档在当前页结果内应用，结果可能不完整。'
-        : '',
-    ].join('')
-    : ''
   const headerActions = useMemo(() => {
     if (route === 'events' && (canWriteEvents || canManageEventCatalog)) {
       return (
@@ -281,6 +272,8 @@ export function CoreListPageView({
         <Button
           type="primary"
           icon={<DownloadOutlined />}
+          disabled={route === 'users' && search.filters?.kind === 'NORMAL'}
+          title={route === 'users' && search.filters?.kind === 'NORMAL' ? '普通用户分类规则待确认，请先使用其他筛选条件。' : undefined}
           onClick={() => onSensitiveExport({
             kind: route,
             filters: {
@@ -320,6 +313,8 @@ export function CoreListPageView({
         dimensionLabel={dimensionByRoute[route].label}
         dimensionOptions={dimensionByRoute[route].options}
         extraFilterSlots={extraFilterSlots}
+        minutePrecision={route === 'users'}
+        beijingTime={route === 'users'}
         showPageSize
         pageSize={search.limit ?? 20}
         onPageSizeChange={size => onSearchChange({
@@ -339,10 +334,8 @@ export function CoreListPageView({
         onRefresh={onRetry}
       />
 
-      {usersWebFilterNote ? (
-        <Typography.Text type="secondary" role="note">{usersWebFilterNote}</Typography.Text>
-      ) : null}
 
+      {route === 'users' && search.filters?.kind === 'NORMAL' ? <Typography.Paragraph type="warning" role="note">普通用户分类规则尚未确认，当前筛选结果暂不完整；此条件下不能导出，请先使用其他筛选条件。</Typography.Paragraph> : null}
       {page?.summary?.length ? (
         <section className="metric-grid core-summary-grid" aria-label="订单汇总">
           {page.summary.map(item => <MetricCard key={item.label} label={item.label} value={item.value} />)}
@@ -401,9 +394,7 @@ export function CoreListPageView({
 
 const eventMutationActions = new Set<string>(EVENT_MUTATION_ACTIONS)
 
-// MIW-124：导出走服务端枚举。到期分档映射回 CURRENT/FORMER/NEVER；
-// 「普通用户」暂无服务端参数，导出侧不携带该筛选（结果可能偏大，待服务端支持后收口）；
-// timeKind 是列表的展示口径切换，不属于导出契约字段。
+// List and export preserve identical server filters. timeKind selects the UI date fields only.
 function serverUserExportFilters(filters: Record<string, string> | undefined): Record<string, string> | undefined {
   if (!filters) return filters
   const result: Record<string, string> = { ...filters }
@@ -414,10 +405,7 @@ function serverUserExportFilters(filters: Record<string, string> | undefined): R
   else {
     delete result.kind
   }
-  const key = normalizePlayerStatusFilter(filters.playerLifecycle)
-  const lifecycle = key === 'ACTIVE' || key === 'EXPIRING_THIS_MONTH' || key === 'NEXT_MONTH'
-    ? 'CURRENT'
-    : key === 'EXPIRED' ? 'FORMER' : key === 'NEVER' ? 'NEVER' : ''
+  const lifecycle = normalizePlayerStatusFilter(filters.playerLifecycle)
   if (lifecycle) result.playerLifecycle = lifecycle
   else delete result.playerLifecycle
   return result

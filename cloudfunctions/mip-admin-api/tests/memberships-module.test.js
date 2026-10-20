@@ -297,3 +297,11 @@ describe('admin membership service', () => {
     })
   })
 })
+
+it('denies a business user without an explicit staff role even when caller claims owner', async () => {
+  const repo = repository({ roleBindings: [] })
+  for (const action of [() => memberships(repo).getMembership(caller, { userId: USER_ID }), () => memberships(repo).grantMembership(caller, grantInput())]) {
+    await assert.rejects(action, error => error?.code === 'FORBIDDEN')
+  }
+  assert.equal(repo.calls.some(call => ['grantMembership', 'getMembership'].includes(call.type)), false)
+})

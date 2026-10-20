@@ -13,7 +13,7 @@ const { AdminError, expectedVersion, limit, requiredId, text } = require('./vali
 const { decryptPhone } = require('../lib/phone')
 const { createUserInfluenceService } = require('./user-influence')
 
-function createAdminUsers({ repository, access, phoneEncryptionKey }) {
+function createAdminUsers({ repository, access, phoneEncryptionKey, resolveUserAvatars }) {
   const { listUserInfluence } = createUserInfluenceService({ access, repository })
   async function listUsers(caller, input = {}) {
     const context = await access.session(caller)
@@ -64,7 +64,8 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
         metadata: { count: items.filter(item => item.phoneNumber).length, filters, cursor: Boolean(cursor) },
       }))
     }
-    return { items, nextCursor: page.nextCursor }
+    const result = { items, nextCursor: page.nextCursor }
+    return resolveUserAvatars ? resolveUserAvatars(result) : result
   }
 
   async function getUser(caller, input = {}) {
@@ -127,7 +128,16 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
       orders: (relatedRecords.orders || []).filter(row => allowed(CAPABILITIES.ORDERS_READ,
         row.orderType === 'EVENT' ? eventScope(row) : { scopeType: 'PLATFORM', scopeId: null })).map(row => ({ ...row, detailAllowed: true })),
     }
-    return { ...safe, primaryBranchOptions, relatedRecords: projected }
+    const canManageAccess = allowed(CAPABILITIES.USERS_CONTROL, scope)
+    const isCurrentUser = userId === context.caller.userId
+    const result = { ...safe, primaryBranchOptions, relatedRecords: projected, permissions: {
+      isCurrentUser,
+      editProfile: safe.status === 'ACTIVE' && allowed(CAPABILITIES.USERS_EDIT, scope),
+      changePrimaryBranch: safe.status === 'ACTIVE' && canChangePrimaryBranch,
+      freeze: safe.status === 'ACTIVE' && !isCurrentUser && canManageAccess,
+      unfreeze: safe.status === 'BLOCKED' && canManageAccess && Array.isArray(safe.controls) && safe.controls.includes('BLOCKLIST'),
+    } }
+    return resolveUserAvatars ? (await resolveUserAvatars({ items: [result] })).items[0] : result
   }
 
   async function updateUser(caller, input) {
@@ -192,6 +202,9 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
     const controlType = ['ALLOWLIST', 'BLOCKLIST'].includes(input.controlType) ? input.controlType : null
     if (!controlType || typeof input.active !== 'boolean') {
       throw new AdminError('VALIDATION_FAILED', '名单设置无效')
+    }
+    if (controlType === 'BLOCKLIST' && input.active && userId === context.caller.userId) {
+      throw new AdminError('FORBIDDEN', '不能冻结当前登录账号')
     }
     const reason = text(input.reason, 300, { required: true, label: '原因' })
     return repository.setUserControl({
@@ -288,7 +301,7 @@ function normalizeUserFilters(value) {
     createdFrom,
     createdTo,
   }
-  const playerLifecycle = ['CURRENT', 'FORMER', 'NEVER'].includes(filters.playerLifecycle)
+  const playerLifecycle = ['CURRENT', 'FORMER', 'NEVER', 'ACTIVE', 'EXPIRING_THIS_MONTH', 'NEXT_MONTH', 'EXPIRED'].includes(filters.playerLifecycle)
     ? filters.playerLifecycle
     : ''
   if (playerLifecycle) normalized.playerLifecycle = playerLifecycle

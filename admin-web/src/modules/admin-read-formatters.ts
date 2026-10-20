@@ -256,6 +256,7 @@ export function currentPlayerStatusLabel(expiresAt: unknown, now = Date.now()): 
 }
 
 export function playerStatusLabel(item: AdminTableRow, now = Date.now()): string {
+  if (typeof item.membershipStatus === 'string') return playerStatusLabels[item.membershipStatus] || '—'
   if (item.kind === 'PLAYER') return currentPlayerStatusLabel(item.latestEntitlementEndsAt, now)
   // FORMER：有玩家历史（玩家号、首次成为玩家时间或有效会籍时长）但当前无效；NEVER：从未开通。
   const hasPlayerHistory = (item.firstPlayerAt !== undefined && item.firstPlayerAt !== null && item.firstPlayerAt !== '')
@@ -272,4 +273,11 @@ function isNextCalendarMonth(time: number, now: number) {
   anchor.setDate(1)
   anchor.setMonth(anchor.getMonth() + 1)
   return expires.getFullYear() === anchor.getFullYear() && expires.getMonth() === anchor.getMonth()
+}
+
+/** Admin users operate on Beijing calendar dates independent of the operator's device timezone. */
+export function formatUserDateTime(value: unknown) {
+  if (!value) return '—'
+  const date = new Date(String(value))
+  return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(date).replaceAll('/', '-')
 }

@@ -52,8 +52,8 @@ describe('admin operation model', () => {
     {
       action: 'mip.admin.memberships.grant' as const,
       capability: 'memberships.adjust',
-      title: '补录会员',
-      description: '为该用户追加有效付费权益。提交前请确认会员时长和调整原因。',
+      title: '开通玩家权益',
+      description: '为该用户开通或延长玩家有效期。已有有效权益会追加时长；后台角色在后台账号中单独配置。',
       fields: [
         { name: 'expectedChainVersion', label: '会员链版本', kind: 'number', hidden: true },
         { name: 'durationMonths', label: '会员时长', kind: 'select', required: true, options: [

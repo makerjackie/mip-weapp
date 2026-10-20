@@ -1,0 +1,6 @@
+# Private local browser evidence; contains account identity. Never publish.
+report.html
+screenshots.json
+verification.public.json
+browser-console.private.json
+shots/

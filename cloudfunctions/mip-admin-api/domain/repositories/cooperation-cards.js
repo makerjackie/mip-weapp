@@ -23,7 +23,7 @@ function createCooperationCardRepository(database, options = {}) {
       return { id: row.id, userId, cardType, realName: row.card_real_name ?? row.real_name ?? '', gameName: row.card_game_name ?? row.nickname ?? '',
         cardSummary: row.positioning, targetSummary: row.target_summary, referralNeeded: row.referral_needed || '',
         quirks: row.quirks || '', rootCause: row.root_cause || '', prevention: row.prevention || '', cooperationValue: row.cooperation_value || '',
-        abilityScores: schema.scores.map((key, index) => ({ key, score: Number(scores[LEGACY_SCORE_KEYS[index]] || 1) })),
+        abilityScores: schema.scores.map((key, index) => ({ key, score: Number(scores[LEGACY_SCORE_KEYS[index]] ?? 0) })),
         menuFields: json(row.menu_fields_json), status: row.status, expectedVersion: Number(row.version), version: Number(row.version),
         modifiedBy: row.modified_by || '', modifiedAt: iso(row.updated_at) }
     })

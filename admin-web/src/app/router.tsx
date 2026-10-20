@@ -37,10 +37,11 @@ function validateSearch(search: Record<string, unknown>): AdminListSearch {
   }
 }
 
-function validateEditorSearch(search: Record<string, unknown>): { returnSearch?: AdminListSearch; kind?: string } {
+function validateEditorSearch(search: Record<string, unknown>): { returnSearch?: AdminListSearch; kind?: string; backUserId?: string } {
   return {
     returnSearch: search.returnSearch && typeof search.returnSearch === 'object' && !Array.isArray(search.returnSearch)
       ? validateSearch(search.returnSearch as Record<string, unknown>) : undefined,
+    backUserId: typeof search.backUserId === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(search.backUserId) ? search.backUserId : undefined,
     kind: ['COOPERATION_CARD', 'SUPER_CASE'].includes(String(search.kind)) ? String(search.kind) : undefined,
   }
 }

@@ -20,13 +20,14 @@ import {
   countLabel,
   filterRows,
   formatDateTime,
+  formatUserDateTime,
   label,
   money,
   normalizePlayerStatusFilter,
   numberLabel,
   options,
   pageValue,
-  playerStatusFilterLabel,
+
   playerStatusLabel,
   record,
   roleLabel,
@@ -212,17 +213,10 @@ async function loadUsers(query: AdminListQuery, request: AdminRequest, access?: 
   // PLAYER/GUEST 仍使用服务端原生 kind 参数。
   const identity = filters.kind === 'NORMAL' ? 'NORMAL' : ''
   const kind = filters.kind === 'PLAYER' || filters.kind === 'GUEST' ? filters.kind : ''
-  // MIW-124 C4：到期分档映射回服务端 CURRENT/FORMER/NEVER；CURRENT 细分档在当前页结果内收口。
-  const statusFilter = normalizePlayerStatusFilter(filters.playerLifecycle)
-  const upstreamLifecycle = statusFilter === 'ACTIVE' || statusFilter === 'EXPIRING_THIS_MONTH' || statusFilter === 'NEXT_MONTH'
-    ? 'CURRENT'
-    : statusFilter === 'EXPIRED'
-      ? 'FORMER'
-      : statusFilter === 'NEVER' ? 'NEVER' : ''
-  const expectedStatus = playerStatusFilterLabel(filters.playerLifecycle)
+  const playerLifecycle = normalizePlayerStatusFilter(filters.playerLifecycle)
   const page = pageValue(await request('mip.admin.users.list', listInput({
     ...query,
-    filters: { ...filters, kind, identity, playerLifecycle: upstreamLifecycle },
+    filters: { ...filters, kind, identity, playerLifecycle },
   }, access?.hasCapability('users.phone.read') ? { includePhone: true } : {})))
   return {
     sections: [{
@@ -237,9 +231,9 @@ async function loadUsers(query: AdminListQuery, request: AdminRequest, access?: 
         level: valueOf(item, 'levelName'),
         contribution: numberLabel(item.contribution),
         playerStatus: playerStatusLabel(item),
-        createdAt: formatDateTime(item.createdAt),
-        expiresAt: formatDateTime(item.latestEntitlementEndsAt),
-      })).filter(row => !expectedStatus || row.playerStatus === expectedStatus),
+        createdAt: formatUserDateTime(item.createdAt),
+        expiresAt: formatUserDateTime(item.latestEntitlementEndsAt),
+      })),
       columns: columns([
         ['avatarUrl', '头像'], ['name', '昵称'], ['phone', '手机号'], ['role', '当前角色'], ['industry', '行业'],
         ['profession', '当前身份'], ['level', '用户等级'], ['contribution', '贡献值'], ['playerStatus', '玩家权益状态'],

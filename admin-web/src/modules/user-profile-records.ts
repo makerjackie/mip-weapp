@@ -1,6 +1,6 @@
 import type { AdminRequest } from './admin-read-contracts'
 import { userRelatedSections, type AdminDetailRow, type AdminDetailSection } from './admin-details.ts'
-import { record, label as codeLabel, formatDateTime as dateTime, auditActionLabel } from './admin-read-formatters.ts'
+import { record, label as codeLabel, formatUserDateTime as dateTime, auditActionLabel } from './admin-read-formatters.ts'
 import { cardHistoryFields } from './admin-profile-cards.ts'
 const text = (value: unknown) => value === null || value === undefined ? '—' : String(value)
 

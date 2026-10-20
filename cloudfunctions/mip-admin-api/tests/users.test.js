@@ -392,3 +392,26 @@ describe('admin users module', () => {
     )
   })
 })
+
+it('refuses to freeze the currently signed-in operator before any access-control write', async () => {
+  const repo = repository()
+  let writes = 0
+  repo.setUserControl = async () => { writes += 1; return {} }
+  await assert.rejects(() => usersFor(repo).setUserControl(caller, {
+    userId: 'admin-user', controlType: 'BLOCKLIST', active: true, reason: '测试自身保护',
+  }), error => error?.code === 'FORBIDDEN' && /当前登录账号/.test(error.message))
+  assert.equal(writes, 0)
+})
+
+it('projects target-specific editing and freeze permissions without exposing caller identity', async () => {
+  const repo = repository()
+  repo.getUserDetail = async (_appId, userId) => ({ ...userRow(userId), controls: [] })
+  const users = usersFor(repo)
+  const self = await users.getUser(caller, { userId: 'admin-user' })
+  assert.equal(self.permissions.isCurrentUser, true)
+  assert.equal(self.permissions.freeze, false)
+  const target = await users.getUser(caller, { userId: 'target-user' })
+  assert.equal(target.permissions.isCurrentUser, false)
+  assert.equal(target.permissions.freeze, true)
+  assert.equal(target.permissions.changePrimaryBranch, false)
+})

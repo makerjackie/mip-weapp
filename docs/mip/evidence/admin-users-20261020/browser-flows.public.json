@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-20T07:31:13.216032+00:00",
+  "checks": [
+    {
+      "item": "真实网页资料编辑保存、版本8、离页重开、恢复原值版本9",
+      "result": "PASS"
+    },
+    {
+      "item": "合作卡完整多行文本与六项评分正常表单保存",
+      "result": "PASS"
+    },
+    {
+      "item": "合作卡取消后独立请求回读内容及版本未变化",
+      "result": "PASS"
+    },
+    {
+      "item": "案例全文UI编辑保存、返回所属用户案例页、离页重开",
+      "result": "PASS"
+    },
+    {
+      "item": "昵称非空搜索、无匹配空态、清除恢复两条列表",
+      "result": "PASS"
+    },
+    {
+      "item": "搜索框Tab键进入筛选控件",
+      "result": "PASS"
+    },
+    {
+      "item": "查看本轮浏览器控制台警告和错误0条",
+      "result": "PASS"
+    }
+  ],
+  "limits": [
+    "AI Computer Use, not independent human/client acceptance.",
+    "Identity and phone are private; screenshots remain local.",
+    "Not a complete RBAC, revoked-permission or Mini Program real-device acceptance."
+  ]
+}

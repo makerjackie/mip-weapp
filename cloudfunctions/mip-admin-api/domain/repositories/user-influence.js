@@ -20,13 +20,16 @@ function createUserInfluenceRepository(database, { iso, json }) {
         AND ((user_block.blocker_user_id = ? AND user_block.blocked_user_id = ${alias}.id)
           OR (user_block.blocker_user_id = ${alias}.id AND user_block.blocked_user_id = ?))
     )`
-    const [guests, interactions, interests, visitors] = await Promise.all([
+    const [guests, incoming, interests, visitors, outgoing, referrals, interactions] = await Promise.all([
       database.one(
         `SELECT COUNT(DISTINCT attribution.guest_user_id) AS count
          FROM mip_event_invitation_attributions attribution
          INNER JOIN mip_event_registrations registration
            ON registration.app_id = attribution.app_id
             AND registration.id = attribution.registration_id
+         INNER JOIN mip_event_checkins checkin
+           ON checkin.app_id = registration.app_id AND checkin.registration_id = registration.id
+            AND checkin.status = 'ACTIVE'
          INNER JOIN mip_users guest
            ON guest.app_id = attribution.app_id AND guest.id = attribution.guest_user_id
             AND guest.status = 'ACTIVE'
@@ -35,7 +38,7 @@ function createUserInfluenceRepository(database, { iso, json }) {
          WHERE attribution.app_id = ? AND attribution.source_type = 'USER'
            AND attribution.inviter_user_id = ?
            AND registration.share_profile = 1
-           AND registration.status IN ('REGISTERED', 'ATTENDED')
+           AND registration.status = 'ATTENDED'
            AND NOT ${activeMembershipSql('guest')}
            AND ${mutualBlock('guest')}`,
         [appId, userId, userId, userId],
@@ -65,7 +68,7 @@ function createUserInfluenceRepository(database, { iso, json }) {
         [appId, userId, userId, userId],
       ),
       database.one(
-        `SELECT COUNT(DISTINCT visit.visitor_user_id) AS count
+        `SELECT COUNT(DISTINCT visit.visitor_user_id) AS count, COUNT(*) AS visit_count
          FROM mip_profile_visits visit
          INNER JOIN mip_users visitor
            ON visitor.app_id = visit.app_id AND visitor.id = visit.visitor_user_id
@@ -76,12 +79,48 @@ function createUserInfluenceRepository(database, { iso, json }) {
            AND ${mutualBlock('visitor')}`,
         [appId, userId, userId, userId],
       ),
+      database.one(
+        `SELECT COUNT(*) AS count FROM mip_event_hearts heart
+         INNER JOIN mip_users target ON target.app_id = heart.app_id AND target.id = heart.target_user_id AND target.status = 'ACTIVE'
+         WHERE heart.app_id = ? AND heart.voter_user_id = ? AND heart.status = 'ACTIVE'
+           AND ${mutualBlock('target')}`, [appId, userId, userId, userId],
+      ),
+      database.one(
+        `SELECT COUNT(*) AS count FROM mip_referral_intents intent
+         WHERE intent.app_id = ? AND intent.actor_user_id = ?`, [appId, userId],
+      ),
+      // PROFILE_INFLUENCE.md: distinct co-attendees, independent of heart votes.
+      database.one(
+        `SELECT COUNT(DISTINCT peer_checkin.user_id) AS count
+         FROM mip_event_checkins own_checkin
+         INNER JOIN mip_event_registrations own_registration
+           ON own_registration.app_id = own_checkin.app_id AND own_registration.id = own_checkin.registration_id
+            AND own_registration.status = 'ATTENDED'
+         INNER JOIN mip_event_checkins peer_checkin
+           ON peer_checkin.app_id = own_checkin.app_id AND peer_checkin.event_id = own_checkin.event_id
+            AND peer_checkin.user_id <> own_checkin.user_id AND peer_checkin.status = 'ACTIVE'
+         INNER JOIN mip_event_registrations peer_registration
+           ON peer_registration.app_id = peer_checkin.app_id AND peer_registration.id = peer_checkin.registration_id
+            AND peer_registration.status = 'ATTENDED' AND peer_registration.share_profile = 1
+         INNER JOIN mip_users peer
+           ON peer.app_id = peer_checkin.app_id AND peer.id = peer_checkin.user_id AND peer.status = 'ACTIVE'
+         INNER JOIN mip_profiles peer_profile
+           ON peer_profile.app_id = peer.app_id AND peer_profile.user_id = peer.id
+         WHERE own_checkin.app_id = ? AND own_checkin.user_id = ? AND own_checkin.status = 'ACTIVE'
+           AND ${mutualBlock('peer')}`,
+        [appId, userId, userId, userId],
+      ),
     ])
     return {
       guestCount: Number(guests?.count || 0),
       interactionCount: Number(interactions?.count || 0),
+      interactiveUserCount: Number(interactions?.count || 0),
       interestCount: Number(interests?.count || 0),
       visitorCount: Number(visitors?.count || 0),
+      visitCount: Number(visitors?.visit_count || 0),
+      outgoingHeartCount: Number(outgoing?.count || 0),
+      incomingHeartCount: Number(incoming?.count || 0),
+      referralCount: Number(referrals?.count || 0),
     }
   }
 

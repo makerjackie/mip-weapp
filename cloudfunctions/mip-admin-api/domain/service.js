@@ -97,6 +97,7 @@ function createAdminService({
     setUserControl,
     updateUser,
   } = createAdminUsers({
+    resolveUserAvatars: resolveCardAvatars,
     access,
     phoneEncryptionKey,
     repository,
