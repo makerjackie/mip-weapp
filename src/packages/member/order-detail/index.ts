@@ -8,6 +8,7 @@ import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { createIntentKey, formatCny, planTitle, presentOrderServiceStatus, presentOrderStatus } from '../../../modules/mip-shell'
+import { hidePaymentLaunchFeedback, showPaymentLaunchFeedback } from '../../../platform/feedback/client'
 import { caseNavigateTo, caseRedirectTo } from '../../../platform/navigation/client'
 import { clearPageMedia, updatePageMedia } from '../../../platform/storage/component-media'
 import { formatBusinessDateTime as formatLocalDateTime } from '../../../utils/business-date'
@@ -288,6 +289,8 @@ Page({
     // confirmPurchase 的 accessing 闩锁：进入即置位，begin 失败/不 ready/异常路径统一在
     // finally 复位。
     this.setData({ accessing: true })
+    // MIW-126：tap 即全屏 loading（身份检查→取调起参数→收银台全程有反馈），mask 兜底防双击。
+    showPaymentLaunchFeedback()
     try {
       const session = await mipIdentityModule.beginProtectedAction({
         action: order.orderType === 'EVENT'
@@ -301,6 +304,7 @@ Page({
         },
       })
       if (!session.decision.ready) {
+        hidePaymentLaunchFeedback()
         caseNavigateTo({ url: mipAccessPageUrl(session.token) })
         return
       }
@@ -309,6 +313,7 @@ Page({
     }
     catch {
       this.resumePayment = false
+      hidePaymentLaunchFeedback()
       this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
     }
     finally {
@@ -322,6 +327,8 @@ Page({
       return
     }
     this.setData({ paying: true, message: '' })
+    // MIW-126：授权恢复直达本方法时没有入口 loading，这里统一补齐；全部出口在 finally 收起。
+    showPaymentLaunchFeedback()
     try {
       if (order.orderType === 'EVENT' && order.resourceId) {
         const registration = await mipEventsModule.getMyRegistration(order.resourceId as EventId)
@@ -343,13 +350,15 @@ Page({
           }
         }
       }
-      const outcome = await mipCommerceModule.payOrder(order.id)
+      // MIW-126：页面已持有服务端订单事实，随 payOrder 传入兜底解读；
+      // 拉起关键路径不再预读一次 getOrder（少一个云函数往返）。
+      const outcome = await mipCommerceModule.payOrder(order.id, order)
       if (outcome.kind === 'CANCELLED') {
         this.setData({ message: '支付已取消，订单状态未发生变化。' })
         return
       }
       caseRedirectTo({
-        url: `/packages/member/payment-result/index?orderId=${encodeURIComponent(outcome.order.id)}`,
+        url: `/packages/member/payment-result/index?orderId=${encodeURIComponent(outcome.order?.id || order.id)}`,
       })
     }
     catch (error) {
@@ -368,6 +377,7 @@ Page({
       this.setData({ message: unavailable ? '支付服务暂时不可用，请稍后重试。' : '暂时无法发起支付，请稍后重试。' })
     }
     finally {
+      hidePaymentLaunchFeedback()
       this.setData({ paying: false })
     }
   },

@@ -8,7 +8,7 @@ import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { requestEntrySubscription } from '../../../../modules/mip-messaging/entry-subscription'
 import { GUIDE_EVENT_REGISTER_KEY } from '../../../../modules/mip-messaging/guide-policy'
-import { showErrorFeedback } from '../../../../platform/feedback/client'
+import { hidePaymentLaunchFeedback, showErrorFeedback, showPaymentLaunchFeedback } from '../../../../platform/feedback/client'
 import { caseNavigateTo, caseRedirectTo } from '../../../../platform/navigation/client'
 import { canNavigateBack } from '../../../../platform/navigation/leave'
 import { clearPageMedia, updatePageMedia } from '../../../../platform/storage/component-media'
@@ -458,6 +458,9 @@ Page({
           ? '订单尚未支付，报名尚未生效。完成支付并确认报名资格后，报名才会生效。'
           : '支付服务尚未配置，报名尚未生效。'
         if (result.paymentAvailable) {
+          // MIW-126：报名单创建后进入支付段，tap 以来第一次有独立反馈的窗口；
+          // 全屏 loading 覆盖取调起参数→收银台全程，出口统一在 submit 的 finally 收起。
+          showPaymentLaunchFeedback()
           try {
             const payment = await mipCommerceModule.payOrder(result.orderId)
             if (payment.kind === 'CONFIRMED') {
@@ -473,6 +476,8 @@ Page({
                   resultDescription: '支付已确认，活动报名资格已生效。',
                   orderId: result.orderId,
                 })
+                // hideLoading 与 showToast 共用原生视图，先收 loading 再弹 toast。
+                hidePaymentLaunchFeedback()
                 wx.showToast({ title: '支付成功', icon: 'success' })
                 this.returnToEventDetail()
                 return
@@ -522,6 +527,8 @@ Page({
       }
     }
     catch (error) {
+      // toast 与 loading 共用原生视图，先收 loading 再弹错误反馈。
+      hidePaymentLaunchFeedback()
       if (error instanceof MipEventsError && error.code === 'CONFLICT') {
         await this.recoverUpdateConflict(answers)
       }
@@ -558,6 +565,7 @@ Page({
       }
     }
     finally {
+      hidePaymentLaunchFeedback()
       this.setData({ busy: false })
       this.persistDraft()
     }

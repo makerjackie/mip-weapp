@@ -10,6 +10,7 @@ import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { createIntentKey, formatCny } from '../../../modules/mip-shell'
 import { mipTasksModule } from '../../../modules/mip-tasks/client'
+import { hidePaymentLaunchFeedback, showPaymentLaunchFeedback } from '../../../platform/feedback/client'
 import { caseNavigateTo, caseOpenRoute, caseRedirectTo } from '../../../platform/navigation/client'
 import { formatLocalDate } from '../../../utils/date'
 import { withinRenewalWindow } from './renewal-window'
@@ -483,12 +484,15 @@ Page({
     }
     this.resumePlanId = planId
     this.setData({ accessing: true, purchaseMessage: '' })
+    // MIW-126：tap 即全屏 loading（身份检查→下单→取调起参数→收银台全程有反馈），mask 兜底防双击。
+    showPaymentLaunchFeedback()
     try {
       const session = await mipIdentityModule.beginProtectedAction({
         action: 'PURCHASE_MEMBERSHIP',
         source: { navigation: 'navigateBack' },
       })
       if (!session.decision.ready) {
+        hidePaymentLaunchFeedback()
         caseNavigateTo({ url: mipAccessPageUrl(session.token) })
         return
       }
@@ -497,6 +501,7 @@ Page({
     }
     catch {
       this.resumePlanId = '' as MembershipPlanId | ''
+      hidePaymentLaunchFeedback()
       this.setData({ purchaseMessage: '身份状态暂时无法确认，请稍后重试。' })
     }
     finally {
@@ -513,6 +518,8 @@ Page({
       this.checkoutKey = createIntentKey('membership-checkout')
     }
     this.setData({ paying: true, purchaseMessage: '' })
+    // MIW-126：授权恢复直达本方法时没有入口 loading，这里统一补齐；全部出口在 finally 收起。
+    showPaymentLaunchFeedback()
     try {
       const outcome = await mipCommerceModule.purchase({
         planId,
@@ -525,8 +532,14 @@ Page({
         return
       }
       // 账本确认和确认中都由结果页按订单 ID 回读，不能在未确认时直接呈现会员状态。
+      // purchase 始终持有 createCheckout 订单事实，order 为空理论不可达，防御性兜底。
+      const outcomeOrderId = outcome.order?.id
+      if (!outcomeOrderId) {
+        this.setData({ purchaseMessage: '支付结果待确认，请在「我的订单」查看状态。' })
+        return
+      }
       void caseRedirectTo({
-        url: `/packages/member/payment-result/index?orderId=${encodeURIComponent(outcome.order.id)}`,
+        url: `/packages/member/payment-result/index?orderId=${encodeURIComponent(outcomeOrderId)}`,
       })
     }
     catch (error) {
@@ -540,6 +553,7 @@ Page({
       })
     }
     finally {
+      hidePaymentLaunchFeedback()
       this.setData({ paying: false })
     }
   },
