@@ -6,14 +6,14 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-20T06:29:46.440045+00:00",
-    "updatedAt": "2026-10-20T07:41:58.785040+00:00",
-    "verifiedAt": "2026-10-20T07:41:58.785040+00:00",
+    "updatedAt": "2026-10-20T08:11:46.316956+00:00",
+    "verifiedAt": "2026-10-20T08:11:46.316956+00:00",
     "submittedAt": "2026-10-20T06:32:38.178817Z",
-    "commit": "cee5eabec7f8b256cc96405e43a4e650dd267591",
-    "commitAt": "2026-10-20T03:34:00-04:00",
-    "environment": "生产包1.0.3已上传 · iPhone待复核",
-    "summary": "定位并修复生产早会主办方三图空白：富文本改用受控HTTPS图片；1.0.3已上传，待切换体验版并在iPhone复核。此前玩家免费、订单与生产同步证据保留。",
-    "detail": "docs/mip/evidence/event-richtext-ios-20261020/index.html",
+    "commit": "96d6aeb009299d7627760c46eb484440428b66e4",
+    "commitAt": "2026-10-20T04:04:14-04:00",
+    "environment": "测试/生产后台已更新 · 小程序iPhone待复核",
+    "summary": "补查并修复后台：三栏各2图真实上传、保存重开、手机预览及小程序读取通过；修复加载时打字导致占位、签名不刷新。生产早会主办方3图配置正常。",
+    "detail": "docs/mip/evidence/admin-event-media-20261020/index.html",
     "files": [
       "docs/mip/evidence/event-player-free-20261020/order-after.png",
       "docs/mip/evidence/event-player-free-20261020/index.html",
@@ -34,9 +34,42 @@
       "docs/mip/evidence/event-richtext-ios-20261020/verification.json",
       "docs/mip/evidence/event-richtext-ios-20261020/before-intro-iphone.jpg",
       "docs/mip/evidence/event-richtext-ios-20261020/after-organizer-1150.png",
-      "docs/mip/evidence/event-richtext-ios-20261020/before-organizer-iphone.jpg"
+      "docs/mip/evidence/event-richtext-ios-20261020/before-organizer-iphone.jpg",
+      "docs/mip/evidence/admin-event-media-20261020/checkout-rich-images.png",
+      "docs/mip/evidence/admin-event-media-20261020/index.html",
+      "docs/mip/evidence/admin-event-media-20261020/preview-报名须知.png",
+      "docs/mip/evidence/admin-event-media-20261020/after-typing.png",
+      "docs/mip/evidence/admin-event-media-20261020/before-typing.png",
+      "docs/mip/evidence/admin-event-media-20261020/detail-organizer.png",
+      "docs/mip/evidence/admin-event-media-20261020/preview-活动介绍.png",
+      "docs/mip/evidence/admin-event-media-20261020/detail-intro-images.png",
+      "docs/mip/evidence/admin-event-media-20261020/upload-field-1.png",
+      "docs/mip/evidence/admin-event-media-20261020/detail-notices.png",
+      "docs/mip/evidence/admin-event-media-20261020/upload-field-2.png",
+      "docs/mip/evidence/admin-event-media-20261020/upload-field-3.png",
+      "docs/mip/evidence/admin-event-media-20261020/preview-主办方.png",
+      "docs/mip/evidence/admin-event-media-20261020/verification.json"
     ],
     "comparisons": [
+      {
+        "title": "补查后台：图片加载中继续输入文字",
+        "context": "同一TEST活动、同一份介绍、同一1440×900浏览器视口，元素原始截图；图片显示后元素增高。只读签名响应由自动化延迟以稳定复现，不修改服务端内容。",
+        "before": {
+          "file": "docs/mip/evidence/admin-event-media-20261020/before-typing.png",
+          "caption": "修改前：地址已返回仍停在占位",
+          "source": "真实TEST后台 · 相同输入操作"
+        },
+        "after": {
+          "file": "docs/mip/evidence/admin-event-media-20261020/after-typing.png",
+          "caption": "修改后：继续输入时三图正常加载",
+          "source": "真实TEST后台 · 新部署入口"
+        },
+        "prototype": {
+          "caption": "功能修复，无新增视觉原型",
+          "reason": "本项修复既有编辑器图片加载与签名时效，不改变视觉布局。",
+          "source": "2026-10-20 用户要求双端排查"
+        }
+      },
       {
         "title": "新反馈：iPhone体验版主办方三张图片空白",
         "context": "同一生产活动、同一份主办方内容。修改前为用户1206×2622 iPhone原图，修改后为开发工具390×844逻辑视口实拍；不同设备和滚动位置，不作像素对齐。修复后iPhone待复核。",
@@ -115,13 +148,15 @@
       }
     ],
     "checks": [
-      "本轮生产客户端：3个主办方img由本地临时路径改为HTTPS，开发工具实际富文本截图已显示3图；标签重建正常。",
-      "本轮完整verify:all：小程序1825项、Web Node330项、Web界面253项通过；Node22.23.1。",
-      "本轮测试库多图回归：介绍3图、主办方1图、须知2图、报名页2图全部使用HTTPS；缓存过期、身份隔离与竞态回归通过。",
-      "本轮生产包1.0.3已上传；公众平台设为体验版未完成，修复后iPhone真机仍待复核。",
-      "此前生产库/服务/后台同步记录保留：3个存量活动默认关闭玩家免费，票价、订单金额和权益回读不变，账本LIVE/live；本轮未修改数据库、云函数或后台。",
-      "此前图片SDK读取/解码通过仅说明文件可读，不能用它证明iPhone富文本显示通过；本轮明确纠正这一验收边界。"
+      "本轮后台：活动介绍、主办方介绍、报名须知各2图，真实UI上传→保存版本递增→关闭页面→新列表→新编辑页回读，6个稳定引用与3个预览Tab通过。",
+      "本轮后台：修复加载竞态、签名续期、临时失败重试与本地路径输入；真实浏览器推进8分钟后实际重新请求签名，6图仍显示。",
+      "本轮小程序：同一TEST活动三栏各2图，报名页2图使用HTTPS，开发工具真实富文本截图与读取通过；不等于iPhone真机。",
+      "本轮完整verify:all：小程序1825项、Web Node330项、Web界面258项通过；Node22.23.1。测试/生产BFF最终ZIP、静态字节、真实HTTPS及三视口浏览器通过，配置权限触发器不变。",
+      "本轮生产只读：早会主办方配置3图且后台3图加载正常；介绍与须知原本无插图。未向生产上传测试图、修改活动业务数据、支付或数据库。",
+      "上一轮生产客户端：主办方3个img改为HTTPS，开发工具富文本显示3图；生产包1.0.3已上传，公众平台设为体验版和修复后iPhone复核仍待完成。",
+      "此前玩家免费、订单与生产同步证据保留；存量活动默认关闭玩家免费，票价/订单金额/权益回读不变，账本LIVE/live。",
+      "此前图片SDK读取/解码仅证明文件可读，不能证明iPhone富文本显示；保留真实设备验收边界。"
     ],
-    "limitations": "体验版不会自动随上传更换：需在微信公众平台把1.0.3设为体验版。修复后iPhone、真实支付/回调/退款尚未验收。主办方修改前为用户真机图，修改后为生产数据的开发工具实拍，设备不同已明确标注。本次兼容修复无新增视觉原型。"
+    "limitations": "后台续签回归采用浏览器时钟推进8分钟，并实际请求服务端，不冒充自然等待。后台上传仅在TEST造数；生产只读业务验收。小程序仍需将1.0.3设为体验版并在iPhone复核；真实支付/回调/退款待测。本项无新增视觉原型，所有截图来源与视口差异已标明。"
   }
 ]
