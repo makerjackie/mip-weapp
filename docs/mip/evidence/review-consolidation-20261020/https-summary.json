@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-20T12:33:21.472Z",
+  "origin": "https://miptest.01mvp.com",
+  "verifiedFiles": 202,
+  "passed": true,
+  "implementationCommit": "e6702501",
+  "miptestDeployment": "c0a477d3-a3e5-4ab4-b611-203a6c48dd95",
+  "mipReviewDeployment": "126099b0-892c-40d5-bae6-6f6893bbfeb8"
+}

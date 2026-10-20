@@ -1,0 +1,602 @@
+{
+  "checkedAt": "2026-10-20T12:37:07.761Z",
+  "checks": [
+    {
+      "from": "https://mip-review.01mvp.com/",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": false
+    },
+    {
+      "from": "https://mip-review.01mvp.com/index.html",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": false
+    },
+    {
+      "from": "https://mip-review.01mvp.com/robots.txt",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/robots.txt",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/robots.txt",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/business-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/business-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/business-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/business.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/business.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/business.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/designer-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/designer-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/designer-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/designer.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/designer.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/designer.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/dog-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/dog-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/dog-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/dog.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/dog.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/dog.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/mip-six-role-vectors.zip",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/mip-six-role-vectors.zip",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/mip-six-role-vectors.zip",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/money-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/money-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/money-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/money.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/money.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/money.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/nanny-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/nanny-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/nanny-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/nanny.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/nanny.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/nanny.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/original-six-tags.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/original-six-tags.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/original-six-tags.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/pimp-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/pimp-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/pimp-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/pimp.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/pimp.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/pimp.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/role-icons/source.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/source.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/source.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/after-events.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-events.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-events.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/after-growth.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-growth.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-growth.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/after-profile.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-profile.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-profile.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/after-talent.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-talent.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-talent.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/before-events.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-events.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-events.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/before-growth.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-growth.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-growth.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/before-profile.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-profile.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-profile.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/before-talent.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-talent.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-talent.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/date-confirmed.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/date-confirmed.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/date-confirmed.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/figma-events.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-events.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-events.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/figma-growth.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-growth.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-growth.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/figma-profile.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-profile.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-profile.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/figma-talent.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-talent.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-talent.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/industry-full-library.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/industry-full-library.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/industry-full-library.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/industry-services.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/industry-services.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/industry-services.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/prototype-events.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-events.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-events.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/prototype-growth.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-growth.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-growth.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/prototype-profile.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-profile.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-profile.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://mip-review.01mvp.com/shots/prototype-talent.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-talent.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-talent.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": false
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/index.html",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": false
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/robots.txt",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/robots.txt",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/robots.txt",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/business-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/business-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/business-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/business.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/business.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/business.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/designer-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/designer-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/designer-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/designer.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/designer.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/designer.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/dog-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/dog-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/dog-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/dog.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/dog.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/dog.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/mip-six-role-vectors.zip",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/mip-six-role-vectors.zip",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/mip-six-role-vectors.zip",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/money-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/money-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/money-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/money.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/money.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/money.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/nanny-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/nanny-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/nanny-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/nanny.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/nanny.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/nanny.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/original-six-tags.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/original-six-tags.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/original-six-tags.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/pimp-tag.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/pimp-tag.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/pimp-tag.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/pimp.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/pimp.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/pimp.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/role-icons/source.svg",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/source.svg",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/role-icons/source.svg",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/after-events.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-events.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-events.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/after-growth.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-growth.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-growth.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/after-profile.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-profile.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-profile.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/after-talent.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-talent.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/after-talent.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/before-events.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-events.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-events.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/before-growth.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-growth.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-growth.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/before-profile.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-profile.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-profile.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/before-talent.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-talent.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/before-talent.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/date-confirmed.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/date-confirmed.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/date-confirmed.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/figma-events.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-events.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-events.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/figma-growth.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-growth.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-growth.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/figma-profile.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-profile.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-profile.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/figma-talent.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-talent.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/figma-talent.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/industry-full-library.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/industry-full-library.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/industry-full-library.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/industry-services.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/industry-services.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/industry-services.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/prototype-events.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-events.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-events.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/prototype-growth.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-growth.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-growth.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/prototype-profile.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-profile.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-profile.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    },
+    {
+      "from": "https://miptest.01mvp.com/legacy/20261019/shots/prototype-talent.png",
+      "to": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-talent.png",
+      "firstLocation": "https://miptest.01mvp.com/updates/2026-10-19/assets/shots/prototype-talent.png",
+      "cachedIntermediate": false,
+      "status": 301,
+      "originalAssetUnchanged": true
+    }
+  ],
+  "fragments": [
+    "#role-icons",
+    "#events"
+  ],
+  "passed": true
+}

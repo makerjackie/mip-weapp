@@ -26,3 +26,5 @@
 旧站切换使用 `node scripts/redirect-mip-review.mjs publish`：先验证真实miptest日期页全部功能锚点，并回读35个原始素材比对归档SHA，通过后再部署既有mip-review项目的跳转，不删除项目或改DNS。切换后检查旧首页、锚点、SVG及ZIP。规则来源：[Cloudflare Pages redirects](https://developers.cloudflare.com/pages/configuration/redirects/)。
 
 迁移后旧mip-review项目只维护跳转；后续报告只发布miptest，不用历史临时脚本覆盖旧项目。
+
+旧域名可能在Zone层缓存301，Pages部署完成不等于这些缓存已刷新。遇到旧Location时先核对真实CF-Cache-Status/Age及新部署域名；仅在权限允许时刷新本次涉及的具体URL，不清整Zone缓存。权限拒绝时保留旧入口到新日期页的兼容跳转，并验证最终地址、素材字节和手机锚点，不把缓存旧跳转误判为原HTML仍在发布。

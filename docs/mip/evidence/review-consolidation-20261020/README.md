@@ -13,4 +13,8 @@
 
 画面：[修改前](before-desktop.png) · [修改后桌面](after-desktop.png) · [修改后手机](after-phone.png)。本批为报告信息整理，无对应UI原型。
 
-发布、真实域名及旧入口回读结果待本批后续记录。
+实现提交：`e6702501`。miptest部署`c0a477d3-a3e5-4ab4-b611-203a6c48dd95`；mip-review跳转部署`126099b0-892c-40d5-bae6-6f6893bbfeb8`。真实域名202个公开文件逐字节一致，线上1440×1000/390×844的26张图片、完整目录、功能要点与展开交互通过，详见[HTTPS结果](https-summary.json)和[线上浏览器结果](live-browser.json)。
+
+两套旧入口共74条路径的最终地址与素材字节通过，手机四次锚点跳转通过，详见[旧链接结果](redirect-verification.json)。初次回读曾观察到旧域名缓存上一版301；尝试仅刷新37个具体旧URL时，现有Token被Cloudflare以401/10000 Authentication error拒绝，未扩大权限、改DNS或清全站缓存，也不将其记为刷新成功。后续正式回读74条路径均已直接指向新日期页或新素材地址（0条旧缓存中转）；兼容旧入口继续保留。
+
+完整`pnpm verify:all`通过：小程序1851项、后台合同338项、React262项，以及两端构建、源码/包体检查、文档和响应式检查。验收站专项9项、lint、git diff --check通过；补充文档后再次docs:check通过。未部署小程序/后台业务、上传新微信包或改生产数据。
