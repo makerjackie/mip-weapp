@@ -17,7 +17,9 @@ const verified = []
 await Promise.all(Array.from({ length: 5 }, async () => {
   while (queue.length) {
     const file = queue.shift()
-    const response = await fetch(new URL(`/${file}`, origin), { redirect: 'error', signal: AbortSignal.timeout(30000) })
+    // Pages canonically serves index.html at the directory URL.
+    const route = file.replace(/(^|\/)index\.html$/, '$1')
+    const response = await fetch(new URL(`/${route}`, origin), { redirect: 'error', signal: AbortSignal.timeout(30000) })
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${file}`)
     }
