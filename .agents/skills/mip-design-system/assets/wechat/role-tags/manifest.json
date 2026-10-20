@@ -1,0 +1,129 @@
+{
+  "date": "2026-10-19",
+  "fileKey": "qqkbdlh4c4Swubum8S3F2f",
+  "page": "机会",
+  "frame": {
+    "nodeId": "4197:38017",
+    "name": "标签在这里",
+    "size": [
+      375,
+      271
+    ]
+  },
+  "url": "https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=4197-38017",
+  "method": "Figma native SVG export; exact vector path selection, no tracing or redrawing",
+  "sourceSha256": "71635bfd0304d6abd508057b576268abc6a07a97271aee00f698e9f44b251a8d",
+  "scope": "Six role label icons only. Other screens keep their existing historical references.",
+  "runtimeColor": "Monochrome glyphs use the existing --color-brand token. Original SVG downloads preserve source colors.",
+  "roles": [
+    {
+      "key": "dog",
+      "label": "狗策划",
+      "glyph": "dog.svg",
+      "tag": "dog-tag.svg",
+      "viewBox": [
+        94,
+        112,
+        16,
+        16
+      ],
+      "glyphPathCount": 3,
+      "sourceChildIndices": [
+        15,
+        16,
+        17
+      ],
+      "sha256": "7dc7184229369e2e6dc668c93233904b5665de7e07ef53d1a698ae1a6343e787"
+    },
+    {
+      "key": "money",
+      "label": "暴发户",
+      "glyph": "money.svg",
+      "tag": "money-tag.svg",
+      "viewBox": [
+        156,
+        112,
+        16,
+        16
+      ],
+      "glyphPathCount": 4,
+      "sourceChildIndices": [
+        6,
+        7,
+        8,
+        9
+      ],
+      "sha256": "10f78ab78268c14220aff801d92a35870e0619a46c4390f834425d118d1b4813"
+    },
+    {
+      "key": "business",
+      "label": "生意佬",
+      "glyph": "business.svg",
+      "tag": "business-tag.svg",
+      "viewBox": [
+        218,
+        112,
+        16,
+        16
+      ],
+      "glyphPathCount": 3,
+      "sourceChildIndices": [
+        23,
+        24,
+        25
+      ],
+      "sha256": "d3b61cfcaa6757ee97b388fc891dff5948b4aa6a7d05d7c8f9e2f6410612f5e8"
+    },
+    {
+      "key": "pimp",
+      "label": "皮条客",
+      "glyph": "pimp.svg",
+      "tag": "pimp-tag.svg",
+      "viewBox": [
+        94,
+        136,
+        16,
+        16
+      ],
+      "glyphPathCount": 5,
+      "sourceChildIndices": [
+        31
+      ],
+      "sha256": "305b6a4ce07ff950cda49cd5fd20574b7ccf7bce2efae6fd6620b0d8b5fc5af6"
+    },
+    {
+      "key": "nanny",
+      "label": "老保姆",
+      "glyph": "nanny.svg",
+      "tag": "nanny-tag.svg",
+      "viewBox": [
+        156,
+        136,
+        16,
+        16
+      ],
+      "glyphPathCount": 4,
+      "sourceChildIndices": [
+        37
+      ],
+      "sha256": "aafe5df6aa30b7b0f439983e4c819e0a86a083ad8d7d3d6afe25d70bf8d50d9e"
+    },
+    {
+      "key": "designer",
+      "label": "死美工",
+      "glyph": "designer.svg",
+      "tag": "designer-tag.svg",
+      "viewBox": [
+        218,
+        136,
+        16,
+        16
+      ],
+      "glyphPathCount": 3,
+      "sourceChildIndices": [
+        43
+      ],
+      "sha256": "1860d8e7a113de2fe52f1a13270e6145dc23b878f93ea1def95b05321bd13dcc"
+    }
+  ]
+}

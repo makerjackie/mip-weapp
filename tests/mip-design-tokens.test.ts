@@ -78,8 +78,25 @@ describe('MIP design token mirror for mip-icon', () => {
     const shipped = new Set(Object.keys(ICONS))
     expect([...referenced].filter(name => !shipped.has(name)).sort()).toEqual([])
     expect([...shipped].filter(name => !referenced.has(name)).sort()).toEqual([])
-    // Includes two complete source Figma role icons (previously omitted).
+    // Six complete source Figma role glyphs; the four new SVGs add about 4KB.
     // Package-size guard: the registry is a main-package asset (was 417KB at 444 glyphs).
-    expect(fs.statSync(path.join(root, 'src/components/mip-icon/icons.ts')).size).toBeLessThan(32 * 1024)
+    expect(fs.statSync(path.join(root, 'src/components/mip-icon/icons.ts')).size).toBeLessThan(36 * 1024)
+  })
+
+  it('preserves all six original role vector paths and their 16px frames', () => {
+    const assetRoot = '.agents/skills/mip-design-system/assets/wechat/role-tags'
+    const manifest = JSON.parse(read(`${assetRoot}/manifest.json`)) as {
+      roles: { key: string, glyph: string, viewBox: number[], glyphPathCount: number }[]
+    }
+    expect(manifest.roles).toHaveLength(6)
+    for (const role of manifest.roles) {
+      const original = read(`${assetRoot}/${role.glyph}`)
+      const glyph = ICONS[`talent-role-${role.key}`]!
+      expect([glyph.w, glyph.h]).toEqual([16, 16])
+      expect(glyph.vb).toBe(role.viewBox.join(' '))
+      const paths = (svg: string) => [...svg.matchAll(/\bd="([^"]+)"/gu)].map(match => match[1])
+      expect(paths(glyph.body)).toEqual(paths(original))
+      expect(paths(glyph.body)).toHaveLength(role.glyphPathCount)
+    }
   })
 })

@@ -2,7 +2,7 @@
 name: mip-design-system
 description: Apply the MIP WeChat miniprogram design system when implementing, restoring, or reviewing MIP UI, components, pages, colors, typography, spacing, icons, or baked card assets.
 metadata:
-  version: "2026-09-26.1"
+  version: "2026-10-19.1"
   source_snapshot: "2026-09-09 15:16 worktree; base commit 889464a"
 ---
 
@@ -97,3 +97,13 @@ must be enforced in CI, call the same check script from the repository pipeline.
 `bell-notification` is the exact 24px SVG from upstream `cb5956b` (introduced by `6086f3e`), frame
 `3364:17173`, node `3364:16248`. The unread dot is 8px, `#ff1313`,
 without a number. This supplements the original 451-icon snapshot.
+
+## 2026-10-19 six role tag vector increment
+
+`assets/wechat/role-tags/source.svg` is the user supplied Figma native export
+from file `qqkbdlh4c4Swubum8S3F2f`, page 机会, frame `4197:38017` 标签在这里.
+All six small label icons are available; these are separate from the large
+cooperation card illustrations. `manifest.json` records each exact path selection
+and 16px viewBox. Standalone SVGs preserve original colors; the six `talent-role-*`
+registry entries use the existing monochrome brand token without changing paths.
+Do not infer that this icon increment supersedes other page baselines.

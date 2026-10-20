@@ -50,5 +50,13 @@
     "columns": 4,
     "desktop": "passed",
     "mobile": "passed"
+  },
+  "snapshotScope": "Historical verification before the six-role vector increment; upload=false/clientUploaded=false describe that audit stage, not the later development upload.",
+  "latestIconEvidence": "role-icons/verification.json",
+  "laterReleaseEvidence": "../release-20261019-ui/release.json",
+  "userDecision": {
+    "sameStateComparisonRedo": "waived by user",
+    "realDeviceAcceptance": "user will test later",
+    "trialSelection": "user will set later"
   }
 }

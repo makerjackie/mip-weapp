@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 const read = (path: string) => readFileSync(path, 'utf8')
 
@@ -32,13 +32,38 @@ describe('talent-card component contract', () => {
     expect(template).toContain('mip-talent-card__bottom')
     expect(template).not.toContain('roleTags')
     expect(template).not.toContain('mip-talent-card__kind')
-    // 角色名仍来自后台；已确认的狗/钱袋原始矢量随标签展示；一句话介绍两行截断。
+    // 角色名仍来自后台；六种角色随标签展示原始矢量；一句话介绍两行截断。
     expect(template).toContain('wx:for="{{displayRoles}}"')
     expect(styles).toContain('-webkit-line-clamp: 2')
     expect(styles).toContain('background: var(--color-brand)')
     // 最新稿（1768:37534）：三标签行 24rpx 灰（#b3b3b3），城市标签不带 MIP 后缀由调用方裁剪。
     expect(styles).toMatch(/\.mip-talent-card__tag\s*\{[^}]*font-size: 24rpx;[^}]*color: var\(--color-muted\);/)
     expect(styles).toMatch(/\.mip-talent-card__tag-divider\s*\{[^}]*background: var\(--color-muted\);/)
+  })
+
+  it('maps all six server role names and preserves unfamiliar roles without inventing an icon', async () => {
+    let definition: { observers: { roleNames: (this: { setData: (value: unknown) => void }, value: string[]) => void } } | undefined
+    vi.stubGlobal('Component', (value: typeof definition) => {
+      definition = value
+    })
+    try {
+      await import('../src/components/talent-card/index')
+      const setData = vi.fn()
+      definition!.observers.roleNames.call({ setData }, ['狗策划', '暴发户', '生意佬', '皮条客', '老保姆', '死美工', '新角色', '', 'toString'])
+      expect(setData).toHaveBeenCalledWith({ displayRoles: [
+        { label: '狗策划', icon: 'dog' },
+        { label: '暴发户', icon: 'money' },
+        { label: '生意佬', icon: 'business' },
+        { label: '皮条客', icon: 'pimp' },
+        { label: '老保姆', icon: 'nanny' },
+        { label: '死美工', icon: 'designer' },
+        { label: '新角色', icon: '' },
+        { label: 'toString', icon: '' },
+      ] })
+    }
+    finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('renders the horizontal inviter as a yellow suffix while the grid keeps its prefix', () => {

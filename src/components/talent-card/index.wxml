@@ -74,7 +74,11 @@
       <view wx:for="{{displayRoles}}" wx:key="label" class="mip-talent-card__role-tag {{item.icon ? 'mip-talent-card__role-tag--icon' : ''}}">
         <view wx:if="{{item.icon}}" class="mip-talent-card__role-icon">
           <mip-icon wx:if="{{item.icon === 'dog'}}" name="talent-role-dog" size="{{16}}" color="var(--color-brand)" />
-          <mip-icon wx:else name="talent-role-money" size="{{16}}" color="var(--color-brand)" />
+          <mip-icon wx:elif="{{item.icon === 'money'}}" name="talent-role-money" size="{{16}}" color="var(--color-brand)" />
+          <mip-icon wx:elif="{{item.icon === 'business'}}" name="talent-role-business" size="{{16}}" color="var(--color-brand)" />
+          <mip-icon wx:elif="{{item.icon === 'pimp'}}" name="talent-role-pimp" size="{{16}}" color="var(--color-brand)" />
+          <mip-icon wx:elif="{{item.icon === 'nanny'}}" name="talent-role-nanny" size="{{16}}" color="var(--color-brand)" />
+          <mip-icon wx:elif="{{item.icon === 'designer'}}" name="talent-role-designer" size="{{16}}" color="var(--color-brand)" />
         </view>
         <text class="mip-talent-card__role-label">{{item.label}}</text>
       </view>

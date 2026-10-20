@@ -10,7 +10,7 @@ pnpm test:runtime
 
 `project.private.config.json` 是本机忽略文件。新增路由后先运行 `pnpm setup:local`，由 `config/project.json` 重新生成完整 DevTools conditions；不要提交 AppID、查询参数或本机测试身份。
 
-检查四个主导航：发现、活动、机会、我的；同时检查会员、订单和四路由现场工作台等分包页面。现场工作台只覆盖 Web 登录确认、已授权活动、签到码与海报、名单与签到，不验证完整运营后台。`pnpm test:runtime` 必须让 `config/runtime-pages.json` 中的全部路由达到各自可执行的 `readyAssertion`，错误、无权限或冲突不能作为页面通过。
+检查本版本三个主导航：活动、机会、我的；“发现”由用户确认留到下个版本，本次不恢复。同时检查会员、订单和现场工作台等分包页面。现场工作台只覆盖 Web 登录确认、已授权活动、签到码与海报、名单与签到，不验证完整运营后台。`pnpm test:runtime` 必须让 `config/runtime-pages.json` 中的全部路由达到各自可执行的 `readyAssertion`，错误、无权限或冲突不能作为页面通过。
 
 带查询参数的页面必须从对应列表页动态取得真实业务 ID 或 `profileRef`。来源页没有符合条件的记录时，报告记为 `external-wait`，不能使用通用 UUID、不能跳过后记为通过。
 

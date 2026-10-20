@@ -67,6 +67,66 @@
       "sha256": "e67f2ec2f3420ecc4d2a7a26f6b437aec2eed4c4038fa576436b2d7f44060943"
     },
     {
+      "file": "role-icons/pimp.svg",
+      "sha256": "305b6a4ce07ff950cda49cd5fd20574b7ccf7bce2efae6fd6620b0d8b5fc5af6"
+    },
+    {
+      "file": "role-icons/pimp-tag.svg",
+      "sha256": "921ca7dcc84d50e127715e6bc62d2a1cec97365d1f466622237653ecedb6676f"
+    },
+    {
+      "file": "role-icons/money-tag.svg",
+      "sha256": "8a86f98acae36110a8355676e16b3f4fcbd46e30210174d44296e457f7ff0d77"
+    },
+    {
+      "file": "role-icons/designer.svg",
+      "sha256": "1860d8e7a113de2fe52f1a13270e6145dc23b878f93ea1def95b05321bd13dcc"
+    },
+    {
+      "file": "role-icons/designer-tag.svg",
+      "sha256": "b69e7cae1067e9bcc9d36edae31419dc4f2e242d16b3a3fa694175d6ed5b42e1"
+    },
+    {
+      "file": "role-icons/dog.svg",
+      "sha256": "7dc7184229369e2e6dc668c93233904b5665de7e07ef53d1a698ae1a6343e787"
+    },
+    {
+      "file": "role-icons/source.svg",
+      "sha256": "71635bfd0304d6abd508057b576268abc6a07a97271aee00f698e9f44b251a8d"
+    },
+    {
+      "file": "role-icons/dog-tag.svg",
+      "sha256": "545b433a843b8cf2f23d47e8beb94e36d5911b7527d4298a461e5edc1441efe1"
+    },
+    {
+      "file": "role-icons/business-tag.svg",
+      "sha256": "05c480fd83ede8a39944d933c5b375349876503ee3a7c0059145f1b076fcf0e2"
+    },
+    {
+      "file": "role-icons/nanny-tag.svg",
+      "sha256": "810c19b10a8ef325b83199c33c83e6f3531e8fa808d9631882f406aefb329167"
+    },
+    {
+      "file": "role-icons/nanny.svg",
+      "sha256": "aafe5df6aa30b7b0f439983e4c819e0a86a083ad8d7d3d6afe25d70bf8d50d9e"
+    },
+    {
+      "file": "role-icons/money.svg",
+      "sha256": "10f78ab78268c14220aff801d92a35870e0619a46c4390f834425d118d1b4813"
+    },
+    {
+      "file": "role-icons/business.svg",
+      "sha256": "d3b61cfcaa6757ee97b388fc891dff5948b4aa6a7d05d7c8f9e2f6410612f5e8"
+    },
+    {
+      "file": "role-icons/original-six-tags.png",
+      "sha256": "8acdb85ff8d0b5774108838c0d3187fd22cdab627e7bfb4a8bc3b4c9e8fb7739"
+    },
+    {
+      "file": "role-icons/mip-six-role-vectors.zip",
+      "sha256": "10c13ef96dd3ce59b3d6e6c0b9a51a64520d3764f03743be06e79302b27a460b"
+    },
+    {
       "file": "shots/industry-full-library.png",
       "sha256": "8718b8448db390ca7addf44d88ce922bc7f9b7e69ff1410e12d2ca23f68723f7"
     },

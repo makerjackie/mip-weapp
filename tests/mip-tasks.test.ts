@@ -156,6 +156,8 @@ describe('MIP tasks public client', () => {
 
   // MIW-84：任务点击动作随卡片下发（PAGE_JUMP 带目标页；SHARE 不带；未配置两字段皆缺省）。
   it('renders configured task click actions end to end', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-19T02:30:00.000Z'))
     const row = {
       id: task.id,
       name: task.name,

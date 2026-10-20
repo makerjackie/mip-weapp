@@ -14,6 +14,14 @@ const MAX_MEDALS = 3
 const MAX_TAGS = 3
 const PLATFORM_INVITER_NAME = 'MIP平台'
 const PLATFORM_INVITER_AVATAR = '/assets/brand/mip-default-invite-avatar.png'
+const ROLE_ICONS = new Map([
+  ['狗策划', 'dog'],
+  ['暴发户', 'money'],
+  ['生意佬', 'business'],
+  ['皮条客', 'pimp'],
+  ['老保姆', 'nanny'],
+  ['死美工', 'designer'],
+])
 
 interface TalentMedal {
   id: string
@@ -55,7 +63,7 @@ Component({
     roleNames(roleNames: string[]) {
       this.setData({ displayRoles: (Array.isArray(roleNames) ? roleNames : []).filter(Boolean).map(label => ({
         label,
-        icon: label === '狗策划' ? 'dog' : label === '暴发户' ? 'money' : '',
+        icon: ROLE_ICONS.get(label) ?? '',
       })) })
     },
     'medals, inviterName, inviterAvatarUrl, inviterKind': function (

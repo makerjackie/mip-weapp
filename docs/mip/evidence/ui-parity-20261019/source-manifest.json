@@ -31,5 +31,13 @@
     "date-confirmed.png": "9343a9e34b231eb0b1e0a6ba61d22c975a1bddefc8579344533f78ca1d20cbde",
     "figma-growth.png": "e67f2ec2f3420ecc4d2a7a26f6b437aec2eed4c4038fa576436b2d7f44060943"
   },
-  "latestAudit": "catalog-and-function-audit.md"
+  "latestAudit": "catalog-and-function-audit.md",
+  "roleIconIncrement": {
+    "fileKey": "qqkbdlh4c4Swubum8S3F2f",
+    "nodeId": "4197:38017",
+    "sourceSha256": "71635bfd0304d6abd508057b576268abc6a07a97271aee00f698e9f44b251a8d",
+    "manifest": "../../../../.agents/skills/mip-design-system/assets/wechat/role-tags/manifest.json",
+    "evidence": "role-icons/README.md",
+    "screenshotsRegenerated": false
+  }
 }

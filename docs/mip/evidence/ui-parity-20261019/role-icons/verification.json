@@ -1,0 +1,75 @@
+{
+  "status": "passed-with-user-device-acceptance-deferred",
+  "sourceFileKey": "qqkbdlh4c4Swubum8S3F2f",
+  "sourceNode": "4197:38017",
+  "originalVectorsFound": 6,
+  "runtimeRolesIntegrated": 6,
+  "originalPathTests": "passed",
+  "vectorRenderComparison": [
+    {
+      "role": "dog",
+      "normalizedBrandColorOnly": true,
+      "renderedPixelsIdentical": true
+    },
+    {
+      "role": "money",
+      "normalizedBrandColorOnly": true,
+      "renderedPixelsIdentical": true
+    },
+    {
+      "role": "business",
+      "normalizedBrandColorOnly": true,
+      "renderedPixelsIdentical": true
+    },
+    {
+      "role": "pimp",
+      "normalizedBrandColorOnly": true,
+      "renderedPixelsIdentical": true
+    },
+    {
+      "role": "nanny",
+      "normalizedBrandColorOnly": true,
+      "renderedPixelsIdentical": true
+    },
+    {
+      "role": "designer",
+      "normalizedBrandColorOnly": true,
+      "renderedPixelsIdentical": true
+    }
+  ],
+  "sameStateComparisonRedo": "waived-by-user",
+  "oldScreenshotsUnchanged": true,
+  "realDeviceAcceptance": "user-will-test-later",
+  "miniProgramUploadThisIncrement": false,
+  "previousDevelopmentVersion": "0.2.0.20261019.4",
+  "previousDevelopmentVersionContainsThisIncrement": false,
+  "productionWritesThisIncrement": 0,
+  "taskFixtureClockFix": "user-approved; fixture time fixed only, task expiry rules unchanged",
+  "navigation": {
+    "userConfirmedTabCount": 3,
+    "implementedTabCount": 3,
+    "discoveryPage": "next-version; do not restore this round"
+  },
+  "sourceSha256": {
+    "src/components/mip-icon/icons.ts": "d36f62c78185f0a96a619e267819ec62459b88e552bcdf132eff0fc06284306a",
+    "src/components/talent-card/index.ts": "6250ad187f6bb4645bbc394b54590286f298737f03300f91bede7f4aeed215dc",
+    "src/components/talent-card/index.wxml": "5293a7bf8cc7429880073362c1ef239f90a95ce8ea0b8731cd53d5ca0f1b8abd",
+    "tests/mip-tasks.test.ts": "7ac9f3f2f98977352dcb0d71d1148d2ece825c6c1aaabbdcdd628977ea6c143a"
+  },
+  "verifyAll": {
+    "passed": true,
+    "miniProgramTestFiles": 278,
+    "miniProgramTests": 1807,
+    "webReactTestFiles": 33,
+    "webReactTests": 243,
+    "webNodeTests": 325,
+    "buildPassed": true,
+    "responsiveContractPassed": true
+  },
+  "runtimePreflight": "passed",
+  "designSystemSot": "passed",
+  "mainPackageBytes": 1359207,
+  "memberPackageBytes": 1938920,
+  "adminPackageBytes": 545092,
+  "gitDiffCheck": "passed"
+}

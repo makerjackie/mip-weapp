@@ -103,5 +103,13 @@
     "tests/talent-card-component.test.ts": "4f7c720dc137884cff3c18c4632f6880004ff53ee4a1bdf6e34fc6f7eb286614",
     "src/components/mip-industry-selector/index.wxss": "e852c2104a0f4156676d4f0b2de419c0f7e2a1c03cf3351f0149c85867014134"
   },
-  "latestFunctionAudit": "function-audit-verification.json"
+  "latestFunctionAudit": "function-audit-verification.json",
+  "snapshotScope": "Historical verification before the six-role vector increment; upload=false/clientUploaded=false describe that audit stage, not the later development upload.",
+  "latestIconEvidence": "role-icons/verification.json",
+  "laterReleaseEvidence": "../release-20261019-ui/release.json",
+  "userDecision": {
+    "sameStateComparisonRedo": "waived by user",
+    "realDeviceAcceptance": "user will test later",
+    "trialSelection": "user will set later"
+  }
 }
