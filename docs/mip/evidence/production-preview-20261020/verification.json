@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-20T12:03:21.776Z",
+  "code": "baaf5521cbef92ce50cb58822076e9c077112014",
+  "rebuiltFromCurrentSource": true,
+  "buildMarkerMatches": true,
+  "productionEnvironmentMatches": true,
+  "productionFunctionsOnly": true,
+  "nestedDependenciesPresent": true,
+  "previewCommandExit": 0,
+  "qrGenerated": true,
+  "qrIsPublic": false,
+  "packageSize": {
+    "total": 3216046,
+    "packages": [
+      {
+        "name": "TOTAL",
+        "size": 3216046
+      },
+      {
+        "name": "main",
+        "size": 1766695
+      },
+      {
+        "name": "/packages/admin/",
+        "size": 138500
+      },
+      {
+        "name": "/packages/member/",
+        "size": 1310851
+      }
+    ]
+  },
+  "uploadedDevelopmentVersion": "1.0.6",
+  "trialAssignment": "PENDING platform readback",
+  "realDeviceAcceptance": "PENDING user test",
+  "newBusinessCloudDeployment": false,
+  "formalReviewOrPublication": false,
+  "runtimePreflightPassed": true
+}
