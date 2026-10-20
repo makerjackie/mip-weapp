@@ -1,0 +1,223 @@
+{
+  "checkedAt": "2026-10-20T12:15:46.258Z",
+  "checks": [
+    {
+      "file": "index.html",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/",
+      "bytesMatched": true
+    },
+    {
+      "file": "robots.txt",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/robots.txt",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/business-tag.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/business-tag.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/business.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/business.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/designer-tag.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/designer-tag.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/designer.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/designer.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/dog-tag.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/dog-tag.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/dog.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/dog.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/mip-six-role-vectors.zip",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/mip-six-role-vectors.zip",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/money-tag.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/money-tag.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/money.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/money.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/nanny-tag.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/nanny-tag.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/nanny.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/nanny.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/original-six-tags.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/original-six-tags.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/pimp-tag.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/pimp-tag.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/pimp.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/pimp.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "role-icons/source.svg",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/role-icons/source.svg",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/after-events.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/after-events.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/after-growth.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/after-growth.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/after-profile.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/after-profile.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/after-talent.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/after-talent.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/before-events.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/before-events.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/before-growth.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/before-growth.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/before-profile.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/before-profile.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/before-talent.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/before-talent.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/date-confirmed.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/date-confirmed.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/figma-events.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/figma-events.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/figma-growth.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/figma-growth.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/figma-profile.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/figma-profile.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/figma-talent.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/figma-talent.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/industry-full-library.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/industry-full-library.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/industry-services.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/industry-services.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/prototype-events.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/prototype-events.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/prototype-growth.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/prototype-growth.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/prototype-profile.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/prototype-profile.png",
+      "bytesMatched": true
+    },
+    {
+      "file": "shots/prototype-talent.png",
+      "status": 301,
+      "location": "https://miptest.01mvp.com/legacy/20261019/shots/prototype-talent.png",
+      "bytesMatched": true
+    }
+  ],
+  "fragmentPreserved": true,
+  "passed": true
+}

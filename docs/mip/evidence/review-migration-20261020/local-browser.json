@@ -1,0 +1,28 @@
+{
+  "origin": "http://127.0.0.1:8794",
+  "checkedAt": "2026-10-20T12:12:11.679Z",
+  "checks": [
+    {
+      "width": 1440,
+      "datesOrdered": true,
+      "sixGlyphs": true,
+      "originalPreview": true,
+      "svgAndZipDownloadsVerified": true,
+      "completeHistoricalReport": true,
+      "all20HistoricalImagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "datesOrdered": true,
+      "sixGlyphs": true,
+      "originalPreview": true,
+      "svgAndZipDownloadsVerified": false,
+      "completeHistoricalReport": true,
+      "all20HistoricalImagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    }
+  ]
+}

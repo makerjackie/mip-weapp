@@ -22,3 +22,5 @@
 迁入的旧报告用 `reportDate` 保留原页面日期；创建、提交和本次验证时间记录新站迁移行为，不伪造旧站的精确首次发布时间。`roleIcons`、`prototypePreview` 与 `downloads` 直接引用经过核对的原文件；原报告保持完整字节，旧原型不能冒充当前稿。
 
 旧站切换使用 `node scripts/redirect-mip-review.mjs publish`：先从真实miptest域名回读全部36个原始文件并比对归档SHA，全部匹配后才部署既有mip-review项目的跳转。切换后分别验证旧首页、锚点、SVG及ZIP下载仍到新站对应路径。规则来源：[Cloudflare Pages redirects](https://developers.cloudflare.com/pages/configuration/redirects/)。
+
+迁移后旧mip-review项目只维护跳转；后续新增或更新报告只发布miptest，不再用历史临时脚本覆盖旧项目。
