@@ -158,5 +158,81 @@
       "此前图片SDK读取/解码仅证明文件可读，不能证明iPhone富文本显示；保留真实设备验收边界。"
     ],
     "limitations": "后台续签回归采用浏览器时钟推进8分钟，并实际请求服务端，不冒充自然等待。后台上传仅在TEST造数；生产只读业务验收。小程序仍需将1.0.3设为体验版并在iPhone复核；真实支付/回调/退款待测。本项无新增视觉原型，所有截图来源与视口差异已标明。"
+  },
+  {
+    "id": "performance-20261020-v1",
+    "requirement": "加载性能与云端常驻",
+    "title": "数据库常开、关键函数常驻与后台资源提速",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-20T09:26:30.213239+00:00",
+    "updatedAt": "2026-10-20T09:26:30.213239+00:00",
+    "verifiedAt": "2026-10-20T09:26:30.213239+00:00",
+    "submittedAt": "2026-10-20T09:26:30.213239+00:00",
+    "commitAt": "2026-10-20T05:21:14-04:00",
+    "commit": "ef57257b494bcf450efa83146655d5e35b4de621",
+    "environment": "生产云端配置 + 测试/生产 Web；真机待测",
+    "summary": "数据库关闭30分钟空闲暂停；4个关键生产函数各1个常驻实例；后台静态传输减少约70%，缓存后刷新159ms。全新首开仍有3.3秒样本，未宣称稳定秒开。",
+    "files": [
+      "docs/mip/evidence/performance-20261020/README.md",
+      "docs/mip/evidence/performance-20261020/settings.public.json",
+      "docs/mip/evidence/performance-20261020/test-assets-after.public.json",
+      "docs/mip/evidence/performance-20261020/test-web-after.json",
+      "docs/mip/evidence/performance-20261020/warm-health.public.json",
+      "docs/mip/evidence/performance-20261020/web-after-desktop.png",
+      "docs/mip/evidence/performance-20261020/web-after-mobile.png",
+      "docs/mip/evidence/performance-20261020/web-after.json",
+      "docs/mip/evidence/performance-20261020/web-before-desktop.png",
+      "docs/mip/evidence/performance-20261020/web-before-mobile.png",
+      "docs/mip/evidence/performance-20261020/web-before.json"
+    ],
+    "comparisons": [
+      {
+        "title": "桌面真实画面",
+        "context": "https://admin.mip.cool，1440×900，真实未登录状态；画面不变，性能证据见网络记录和说明。",
+        "before": {
+          "file": "docs/mip/evidence/performance-20261020/web-before-desktop.png",
+          "caption": "修改前真实HTTPS画面",
+          "source": "https://admin.mip.cool"
+        },
+        "after": {
+          "file": "docs/mip/evidence/performance-20261020/web-after-desktop.png",
+          "caption": "修改后真实HTTPS画面",
+          "source": "https://admin.mip.cool"
+        },
+        "prototype": {
+          "caption": "本次无视觉原型变更",
+          "reason": "本批只改基础设施和资源传输，无对应新视觉原型，不以旧稿或自制图代替。"
+        }
+      },
+      {
+        "title": "手机视口真实画面",
+        "context": "https://admin.mip.cool，390×844，真实未登录状态；画面不变，性能证据见网络记录和说明。",
+        "before": {
+          "file": "docs/mip/evidence/performance-20261020/web-before-mobile.png",
+          "caption": "修改前真实HTTPS画面",
+          "source": "https://admin.mip.cool"
+        },
+        "after": {
+          "file": "docs/mip/evidence/performance-20261020/web-after-mobile.png",
+          "caption": "修改后真实HTTPS画面",
+          "source": "https://admin.mip.cool"
+        },
+        "prototype": {
+          "caption": "本次无视觉原型变更",
+          "reason": "本批只改基础设施和资源传输，无对应新视觉原型，不以旧稿或自制图代替。"
+        }
+      }
+    ],
+    "checks": [
+      "MySQL 自动暂停关闭、算力与其他策略回读保持一致",
+      "生产4个256MB实例均可用；旧Web版本常驻已退除，测试不收费常驻",
+      "两个BFF代码、ZIP及原有public文件逐字节核对，配置/权限/触发器保持",
+      "真实登录、生产3条/测试5条活动新请求读取通过",
+      "Web桌面/手机无横向溢出和pageerror；静态资源gzip、immutable缓存真实生效",
+      "最终完整verify:all通过：1833 / 331 / 258"
+    ],
+    "limitations": "全新浏览器首次访问仍有3.3秒样本，静态资源仍经事件函数；是否继续调整托管链路待用户确认。小程序真机加载时间待测；4个常驻实例闲置费约141.81元/月，数据库预计由现有套餐额度覆盖。",
+    "detail": "docs/mip/evidence/performance-20261020/README.md"
   }
 ]

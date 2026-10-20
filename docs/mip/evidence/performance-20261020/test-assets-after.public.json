@@ -1,0 +1,74 @@
+[
+  {
+    "path": "/assets/index-BwDCP-ZH.js",
+    "status": 200,
+    "encoding": "gzip",
+    "cache": "public, max-age=31536000, immutable",
+    "decodedMatches": true,
+    "decodedBytes": 623731,
+    "encodedBytes": 174178
+  },
+  {
+    "path": "/assets/rolldown-runtime-hePW80VL.js",
+    "status": 200,
+    "encoding": null,
+    "cache": "public, max-age=31536000, immutable",
+    "decodedMatches": true,
+    "decodedBytes": 716,
+    "encodedBytes": 716
+  },
+  {
+    "path": "/assets/react-Mefe_Tge.js",
+    "status": 200,
+    "encoding": "gzip",
+    "cache": "public, max-age=31536000, immutable",
+    "decodedMatches": true,
+    "decodedBytes": 189647,
+    "encodedBytes": 58976
+  },
+  {
+    "path": "/assets/router-query-C4zZBCHv.js",
+    "status": 200,
+    "encoding": "gzip",
+    "cache": "public, max-age=31536000, immutable",
+    "decodedMatches": true,
+    "decodedBytes": 112179,
+    "encodedBytes": 36038
+  },
+  {
+    "path": "/assets/charts-ipdpsvac.js",
+    "status": 200,
+    "encoding": "gzip",
+    "cache": "public, max-age=31536000, immutable",
+    "decodedMatches": true,
+    "decodedBytes": 378399,
+    "encodedBytes": 107255
+  },
+  {
+    "path": "/assets/ant-design-DAYYtirz.js",
+    "status": 200,
+    "encoding": "gzip",
+    "cache": "public, max-age=31536000, immutable",
+    "decodedMatches": true,
+    "decodedBytes": 1141188,
+    "encodedBytes": 359206
+  },
+  {
+    "path": "/assets/vendor-BNJSMXJr.js",
+    "status": 200,
+    "encoding": "gzip",
+    "cache": "public, max-age=31536000, immutable",
+    "decodedMatches": true,
+    "decodedBytes": 448585,
+    "encodedBytes": 140934
+  },
+  {
+    "path": "/assets/index-CEuNGjAE.css",
+    "status": 200,
+    "encoding": "gzip",
+    "cache": "public, max-age=31536000, immutable",
+    "decodedMatches": true,
+    "decodedBytes": 31503,
+    "encodedBytes": 6550
+  }
+]

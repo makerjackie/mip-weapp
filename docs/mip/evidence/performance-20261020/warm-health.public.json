@@ -1,0 +1,38 @@
+[
+  {
+    "functionName": "mip-identity-api",
+    "serverDurationMs": 115,
+    "invokeMs": 1765,
+    "ok": true
+  },
+  {
+    "functionName": "mip-identity-api",
+    "serverDurationMs": 5,
+    "invokeMs": 574,
+    "ok": true
+  },
+  {
+    "functionName": "mip-events-api",
+    "serverDurationMs": 36,
+    "invokeMs": 596,
+    "ok": true
+  },
+  {
+    "functionName": "mip-events-api",
+    "serverDurationMs": 4,
+    "invokeMs": 514,
+    "ok": true
+  },
+  {
+    "functionName": "mip-admin-api",
+    "serverDurationMs": 4,
+    "invokeMs": 1280,
+    "ok": true
+  },
+  {
+    "functionName": "mip-admin-api",
+    "serverDurationMs": 4,
+    "invokeMs": 3098,
+    "ok": true
+  }
+]

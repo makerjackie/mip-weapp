@@ -1,0 +1,350 @@
+{
+  "label": "after",
+  "target": "production",
+  "generatedAt": "2026-10-20T09:23:24.420Z",
+  "samples": [
+    {
+      "navigation": [
+        {
+          "ttfb": 652,
+          "dcl": 3325,
+          "load": 3326
+        }
+      ],
+      "overflow": false,
+      "resources": [
+        {
+          "path": "/assets/index-BwDCP-ZH.js",
+          "type": "script",
+          "duration": 686,
+          "transferBytes": 174478,
+          "encodedBodyBytes": 174178,
+          "decodedBodyBytes": 623731
+        },
+        {
+          "path": "/assets/rolldown-runtime-hePW80VL.js",
+          "type": "other",
+          "duration": 988,
+          "transferBytes": 1016,
+          "encodedBodyBytes": 716,
+          "decodedBodyBytes": 716
+        },
+        {
+          "path": "/assets/react-Mefe_Tge.js",
+          "type": "other",
+          "duration": 1212,
+          "transferBytes": 59276,
+          "encodedBodyBytes": 58976,
+          "decodedBodyBytes": 189647
+        },
+        {
+          "path": "/assets/router-query-C4zZBCHv.js",
+          "type": "other",
+          "duration": 1218,
+          "transferBytes": 36338,
+          "encodedBodyBytes": 36038,
+          "decodedBodyBytes": 112179
+        },
+        {
+          "path": "/assets/charts-ipdpsvac.js",
+          "type": "other",
+          "duration": 1070,
+          "transferBytes": 107555,
+          "encodedBodyBytes": 107255,
+          "decodedBodyBytes": 378399
+        },
+        {
+          "path": "/assets/ant-design-DAYYtirz.js",
+          "type": "other",
+          "duration": 1246,
+          "transferBytes": 359506,
+          "encodedBodyBytes": 359206,
+          "decodedBodyBytes": 1141188
+        },
+        {
+          "path": "/assets/vendor-BNJSMXJr.js",
+          "type": "other",
+          "duration": 1261,
+          "transferBytes": 141234,
+          "encodedBodyBytes": 140934,
+          "decodedBodyBytes": 448585
+        },
+        {
+          "path": "/assets/index-CEuNGjAE.css",
+          "type": "link",
+          "duration": 2611,
+          "transferBytes": 6850,
+          "encodedBodyBytes": 6550,
+          "decodedBodyBytes": 31503
+        },
+        {
+          "path": "/api/admin",
+          "type": "fetch",
+          "duration": 173,
+          "transferBytes": 394,
+          "encodedBodyBytes": 94,
+          "decodedBodyBytes": 94
+        },
+        {
+          "path": "/favicon.ico",
+          "type": "other",
+          "duration": 289,
+          "transferBytes": 765,
+          "encodedBodyBytes": 465,
+          "decodedBodyBytes": 465
+        }
+      ],
+      "loginVisible": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "errors": []
+    },
+    {
+      "navigation": [
+        {
+          "ttfb": 334,
+          "dcl": 1205,
+          "load": 1205
+        }
+      ],
+      "overflow": false,
+      "resources": [
+        {
+          "path": "/assets/index-BwDCP-ZH.js",
+          "type": "script",
+          "duration": 387,
+          "transferBytes": 174478,
+          "encodedBodyBytes": 174178,
+          "decodedBodyBytes": 623731
+        },
+        {
+          "path": "/assets/rolldown-runtime-hePW80VL.js",
+          "type": "other",
+          "duration": 169,
+          "transferBytes": 1016,
+          "encodedBodyBytes": 716,
+          "decodedBodyBytes": 716
+        },
+        {
+          "path": "/assets/router-query-C4zZBCHv.js",
+          "type": "other",
+          "duration": 279,
+          "transferBytes": 36338,
+          "encodedBodyBytes": 36038,
+          "decodedBodyBytes": 112179
+        },
+        {
+          "path": "/assets/react-Mefe_Tge.js",
+          "type": "other",
+          "duration": 338,
+          "transferBytes": 59276,
+          "encodedBodyBytes": 58976,
+          "decodedBodyBytes": 189647
+        },
+        {
+          "path": "/assets/charts-ipdpsvac.js",
+          "type": "other",
+          "duration": 391,
+          "transferBytes": 107555,
+          "encodedBodyBytes": 107255,
+          "decodedBodyBytes": 378399
+        },
+        {
+          "path": "/assets/ant-design-DAYYtirz.js",
+          "type": "other",
+          "duration": 810,
+          "transferBytes": 359506,
+          "encodedBodyBytes": 359206,
+          "decodedBodyBytes": 1141188
+        },
+        {
+          "path": "/assets/index-CEuNGjAE.css",
+          "type": "link",
+          "duration": 212,
+          "transferBytes": 6850,
+          "encodedBodyBytes": 6550,
+          "decodedBodyBytes": 31503
+        },
+        {
+          "path": "/assets/vendor-BNJSMXJr.js",
+          "type": "other",
+          "duration": 535,
+          "transferBytes": 141234,
+          "encodedBodyBytes": 140934,
+          "decodedBodyBytes": 448585
+        },
+        {
+          "path": "/api/admin",
+          "type": "fetch",
+          "duration": 201,
+          "transferBytes": 394,
+          "encodedBodyBytes": 94,
+          "decodedBodyBytes": 94
+        },
+        {
+          "path": "/favicon.ico",
+          "type": "other",
+          "duration": 388,
+          "transferBytes": 765,
+          "encodedBodyBytes": 465,
+          "decodedBodyBytes": 465
+        },
+        {
+          "path": "/favicon.ico",
+          "type": "other",
+          "duration": 388,
+          "transferBytes": 0,
+          "encodedBodyBytes": 465,
+          "decodedBodyBytes": 465
+        }
+      ],
+      "loginVisible": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "errors": []
+    },
+    {
+      "navigation": [
+        {
+          "ttfb": 183,
+          "dcl": 849,
+          "load": 849
+        }
+      ],
+      "overflow": false,
+      "resources": [
+        {
+          "path": "/assets/index-BwDCP-ZH.js",
+          "type": "script",
+          "duration": 329,
+          "transferBytes": 174478,
+          "encodedBodyBytes": 174178,
+          "decodedBodyBytes": 623731
+        },
+        {
+          "path": "/assets/rolldown-runtime-hePW80VL.js",
+          "type": "other",
+          "duration": 170,
+          "transferBytes": 1016,
+          "encodedBodyBytes": 716,
+          "decodedBodyBytes": 716
+        },
+        {
+          "path": "/assets/react-Mefe_Tge.js",
+          "type": "other",
+          "duration": 309,
+          "transferBytes": 59276,
+          "encodedBodyBytes": 58976,
+          "decodedBodyBytes": 189647
+        },
+        {
+          "path": "/assets/router-query-C4zZBCHv.js",
+          "type": "other",
+          "duration": 318,
+          "transferBytes": 36338,
+          "encodedBodyBytes": 36038,
+          "decodedBodyBytes": 112179
+        },
+        {
+          "path": "/assets/index-CEuNGjAE.css",
+          "type": "link",
+          "duration": 234,
+          "transferBytes": 6850,
+          "encodedBodyBytes": 6550,
+          "decodedBodyBytes": 31503
+        },
+        {
+          "path": "/assets/charts-ipdpsvac.js",
+          "type": "other",
+          "duration": 341,
+          "transferBytes": 107555,
+          "encodedBodyBytes": 107255,
+          "decodedBodyBytes": 378399
+        },
+        {
+          "path": "/assets/vendor-BNJSMXJr.js",
+          "type": "other",
+          "duration": 604,
+          "transferBytes": 141234,
+          "encodedBodyBytes": 140934,
+          "decodedBodyBytes": 448585
+        },
+        {
+          "path": "/assets/ant-design-DAYYtirz.js",
+          "type": "other",
+          "duration": 605,
+          "transferBytes": 359506,
+          "encodedBodyBytes": 359206,
+          "decodedBodyBytes": 1141188
+        },
+        {
+          "path": "/api/admin",
+          "type": "fetch",
+          "duration": 99,
+          "transferBytes": 394,
+          "encodedBodyBytes": 94,
+          "decodedBodyBytes": 94
+        },
+        {
+          "path": "/favicon.ico",
+          "type": "other",
+          "duration": 336,
+          "transferBytes": 765,
+          "encodedBodyBytes": 465,
+          "decodedBodyBytes": 465
+        },
+        {
+          "path": "/favicon.ico",
+          "type": "other",
+          "duration": 336,
+          "transferBytes": 0,
+          "encodedBodyBytes": 465,
+          "decodedBodyBytes": 465
+        }
+      ],
+      "loginVisible": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "errors": []
+    }
+  ],
+  "repeat": {
+    "navigation": [
+      {
+        "dcl": 159
+      }
+    ],
+    "assetTransferBytes": 0
+  },
+  "auth": {
+    "http": 200,
+    "reads": [
+      {
+        "action": "mip.admin.session",
+        "http": 200,
+        "ok": true,
+        "ms": 477
+      },
+      {
+        "action": "mip.admin.events.list",
+        "http": 200,
+        "ok": true,
+        "ms": 514,
+        "count": 3
+      },
+      {
+        "action": "mip.admin.events.list",
+        "http": 200,
+        "ok": true,
+        "ms": 616,
+        "count": 3
+      }
+    ]
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "verifiedAt": "2026-10-20T09:23:23.848Z",
+  "functions": [
+    {
+      "functionName": "mip-identity-api",
+      "defaultVersion": "1",
+      "status": "Active",
+      "memoryMB": 256,
+      "allocations": [
+        {
+          "version": "1",
+          "requested": 1,
+          "available": 1,
+          "status": "Done"
+        }
+      ],
+      "timers": 0
+    },
+    {
+      "functionName": "mip-events-api",
+      "defaultVersion": "1",
+      "status": "Active",
+      "memoryMB": 256,
+      "allocations": [
+        {
+          "version": "1",
+          "requested": 1,
+          "available": 1,
+          "status": "Done"
+        }
+      ],
+      "timers": 0
+    },
+    {
+      "functionName": "mip-admin-api",
+      "defaultVersion": "1",
+      "status": "Active",
+      "memoryMB": 256,
+      "allocations": [
+        {
+          "version": "1",
+          "requested": 1,
+          "available": 1,
+          "status": "Done"
+        }
+      ],
+      "timers": 0
+    },
+    {
+      "functionName": "mip-admin-web-api",
+      "defaultVersion": "2",
+      "status": "Active",
+      "memoryMB": 256,
+      "allocations": [
+        {
+          "version": "2",
+          "requested": 1,
+          "available": 1,
+          "status": "Done"
+        }
+      ],
+      "timers": 0,
+      "activePackageMatches": true
+    },
+    {
+      "functionName": "mip-t-admin-web-api",
+      "defaultVersion": "$LATEST",
+      "status": "Active",
+      "memoryMB": 256,
+      "allocations": [],
+      "timers": 0
+    }
+  ],
+  "database": {
+    "autoPause": "no",
+    "previousAutoPause": "yes",
+    "previousPauseSeconds": 1800,
+    "minCPU": 0.25,
+    "maxCPU": 0.5,
+    "otherStrategyFieldsPreserved": true
+  }
+}
