@@ -3,12 +3,12 @@ import { MipEventsError } from '../src/modules/mip-events'
 
 vi.mock('../src/config/runtime', () => ({ runtimeConfig: {} }))
 
-const mocks = vi.hoisted(() => ({ getMyRegistration: vi.fn(), register: vi.fn(), payOrder: vi.fn(), navigateTo: vi.fn() }))
+const mocks = vi.hoisted(() => ({ getMyRegistration: vi.fn(), register: vi.fn(), payOrder: vi.fn(), navigateTo: vi.fn(), redirectTo: vi.fn() }))
 vi.mock('../src/modules/mip-events/client', () => ({ mipEventsModule: { getMyRegistration: mocks.getMyRegistration, register: mocks.register }, mipCheckInResumeStore: {} }))
 vi.mock('../src/modules/mip-commerce/client', () => ({ mipCommerceModule: { payOrder: mocks.payOrder } }))
 vi.mock('../src/modules/mip-identity/client', () => ({ mipIdentityModule: {} }))
 vi.mock('../src/modules/mip-messaging/client', () => ({ mipMessagingModule: {} }))
-vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: mocks.navigateTo, caseRedirectTo: vi.fn() }))
+vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: mocks.navigateTo, caseRedirectTo: mocks.redirectTo }))
 vi.mock('../src/platform/storage/component-media', () => ({ updatePageMedia: vi.fn(), clearPageMedia: vi.fn() }))
 let definition: Record<string, any>
 beforeAll(async () => {
@@ -32,6 +32,36 @@ function page() {
   return instance
 }
 describe('event order payment resumption', () => {
+  it('shows masked feedback during a slow launch, prevents double submit and clears it on cancellation', async () => {
+    let finish!: (result: { kind: 'CANCELLED' }) => void
+    mocks.payOrder.mockReturnValue(new Promise(resolve => { finish = resolve }))
+    const instance = page()
+    instance.data.order.orderType = 'MEMBERSHIP'
+    const pending = instance.performPayment()
+    expect(wx.showLoading).toHaveBeenCalledWith({ title: '正在拉起支付…', mask: true })
+    expect(instance.data.paying).toBe(true)
+    await instance.performPayment()
+    expect(mocks.payOrder).toHaveBeenCalledTimes(1)
+    finish({ kind: 'CANCELLED' })
+    await pending
+    expect(wx.hideLoading).toHaveBeenCalledWith({ noConflict: true })
+    expect(instance.data.paying).toBe(false)
+    expect(instance.data.message).toContain('支付已取消')
+  })
+  it('clears launch feedback after a provider failure', async () => {
+    mocks.payOrder.mockRejectedValue(new Error('UNAVAILABLE'))
+    const instance = page()
+    await instance.performPayment()
+    expect(wx.hideLoading).toHaveBeenCalledWith({ noConflict: true })
+    expect(instance.data.paying).toBe(false)
+    expect(instance.data.message).toContain('暂时无法发起支付')
+  })
+  it('keeps the known order ID when both post-payment reads are unavailable', async () => {
+    mocks.payOrder.mockResolvedValue({ kind: 'PENDING', order: null })
+    await page().performPayment()
+    expect(mocks.redirectTo).toHaveBeenCalledWith({ url: '/packages/member/payment-result/index?orderId=o1' })
+    expect(wx.hideLoading).toHaveBeenCalledWith({ noConflict: true })
+  })
   it('renews the existing registration before paying its order', async () => {
     await page().performPayment()
     expect(mocks.register).toHaveBeenCalledWith(expect.objectContaining({ eventId: 'e1', formVersion: 2, answers: { reason: '原内容' } }))

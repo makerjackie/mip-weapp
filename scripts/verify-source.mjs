@@ -413,8 +413,10 @@ const commerceModule = read('src/modules/mip-commerce/module.ts')
 assert(commerceGateway.includes('createPayment(orderId)')
   && commerceGateway.includes('payment(\'createPayment\', { orderId })')
   && !commerceGateway.includes('amountCents'), 'Payment client must submit only the trusted order identity')
-assert(commerceModule.includes('return interpretClientPayment(requestResult, order)')
-  && commerceModule.includes('gateway.reconcileOrder(order.id)'), 'Client payment acceptance must remain pending until server reconciliation')
+assert(commerceModule.includes('return interpretClientPayment(requestResult, reconciled)')
+  && commerceModule.includes('gateway.reconcileOrder(orderId)')
+  && commerceModule.includes("return { kind: 'PENDING', order: null }")
+  && read('src/modules/mip-commerce/domain.ts').includes("order.status === 'PAID'"), 'Client payment acceptance must remain pending until server reconciliation')
 
 const migrations = loadMipMigrationLock(root)
 const nonRuntimeTables = new Set([
