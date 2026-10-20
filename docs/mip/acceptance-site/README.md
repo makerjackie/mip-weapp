@@ -17,10 +17,12 @@
 
 `submittedAt` 是该报告首次发布到验收站的时间，`verifiedAt` 是实际验证时间，`commitAt` 是代码提交时间，三者不得混用。草稿后续反馈只更新 `updatedAt`、结论与证据；首次提交时间不变。冻结后不能改标题、时间、结论、图片或锁文件来绕过约束。
 
-历史站在 `legacy/20260927/` 完整保留，属于历史模拟画面报告，不自动升级为当前真机/功能通过。用户2026-10-20已要求将 `mip-review.01mvp.com` 合并迁入本站：原站36个公开文件完整保存在 `legacy/20261019/`，通过archive.json逐文件摘要检查防止改写。原日期和旧原型身份保留，首页补10月19日入口；在新站全部文件验证后，旧域名通过既有Pages项目跳转到对应存档路径，不删除项目或改DNS。
+9月27日历史模拟画面报告仍保留在 `legacy/20260927/`，不自动升级为当前真机或功能通过。10月19日原 `mip-review.01mvp.com` 报告已按用户要求完整合入 `/updates/2026-10-19/`：功能说明、四组历史对照、三张补充实拍、行业目录、六角色图标与原始标签都在同页，不再提供“查看完整报告”或单独的19号legacy页面。
 
-迁入的旧报告用 `reportDate` 保留原页面日期；创建、提交和本次验证时间记录新站迁移行为，不伪造旧站的精确首次发布时间。`roleIcons`、`prototypePreview` 与 `downloads` 直接引用经过核对的原文件；原报告保持完整字节，旧原型不能冒充当前稿。
+`sections` 按功能列出标题、要点与图片；历史比较的 `references` 必须标注当时来源，不冒充当前权威原型。`roleIcons`、`prototypePreview`、`downloads` 直接引用经核对的原文件。`reportDate` 保留原页面日期；创建、提交和迁移验证时间记录新站行为，不伪造旧站精确首次发布时间。
 
-旧站切换使用 `node scripts/redirect-mip-review.mjs publish`：先从真实miptest域名回读全部36个原始文件并比对归档SHA，全部匹配后才部署既有mip-review项目的跳转。切换后分别验证旧首页、锚点、SVG及ZIP下载仍到新站对应路径。规则来源：[Cloudflare Pages redirects](https://developers.cloudflare.com/pages/configuration/redirects/)。
+原36个文件仅在源码 `legacy/20261019/` 保留完整字节，由 `archive.json` 逐文件摘要校验。公开素材发布至 `/updates/2026-10-19/assets/`，原HTML不再发布。旧域名首页及 `/legacy/20261019/` 入口直接跳到日期页，图标、截图和ZIP旧地址跳到新素材地址；原来的功能锚点保留。
 
-迁移后旧mip-review项目只维护跳转；后续新增或更新报告只发布miptest，不再用历史临时脚本覆盖旧项目。
+旧站切换使用 `node scripts/redirect-mip-review.mjs publish`：先验证真实miptest日期页全部功能锚点，并回读35个原始素材比对归档SHA，通过后再部署既有mip-review项目的跳转，不删除项目或改DNS。切换后检查旧首页、锚点、SVG及ZIP。规则来源：[Cloudflare Pages redirects](https://developers.cloudflare.com/pages/configuration/redirects/)。
+
+迁移后旧mip-review项目只维护跳转；后续报告只发布miptest，不用历史临时脚本覆盖旧项目。

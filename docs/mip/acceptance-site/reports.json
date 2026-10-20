@@ -505,25 +505,20 @@
     "id": "review-20261019-v1",
     "requirement": "mip-review-migration",
     "reportDate": "2026-10-19",
-    "title": "六角色图标、原型与历史界面对照",
-    "indexTitle": "六角色图标与原型",
+    "title": "行业、人才卡、活动日期与玩家会籍",
+    "indexTitle": "功能改动",
     "version": "migration-v1",
     "status": "draft",
     "createdAt": "2026-10-20T12:10:11.299478+00:00",
-    "updatedAt": "2026-10-20T12:10:11.299478+00:00",
+    "updatedAt": "2026-10-20T12:26:56.842591+00:00",
     "verifiedAt": "2026-10-20T12:10:11.299478+00:00",
     "submittedAt": "2026-10-20T12:10:11.299478+00:00",
     "commit": "cd834c854a1564fdf49d82b04398802bab957aa4",
     "commitAt": "2026-10-19T23:32:14-04:00",
     "environment": "2026-10-19原报告快照；本次为文件迁移",
-    "summary": "完整迁入mip-review公开原报告和六角色矢量，保留原型来源与原有验收边界。",
-    "highlights": [
-      "六枚角色标签图标已补齐：狗策划、暴发户、生意佬、皮条客、老保姆、死美工。",
-      "旧站的行业、人才卡、活动日期与玩家会籍历史对照已一并迁入。"
-    ],
-    "files": [
-      "docs/mip/acceptance-site/legacy/20261019/archive.json"
-    ],
+    "summary": "",
+    "highlights": [],
+    "files": [],
     "comparisons": [],
     "uiChange": false,
     "roleIcons": [
@@ -573,16 +568,226 @@
         "label": "原始画框 SVG"
       }
     ],
-    "archive": {
-      "file": "docs/mip/acceptance-site/legacy/20261019/index.html",
-      "label": "查看完整原报告与历史四列对照"
-    },
     "checks": [
       "原报告36个公开文件逐字节与旧站一致。",
       "六枚图标及原始Figma SVG摘要与原导出清单一致。",
-      "本次为迁移核对，不重做原业务测试。"
+      "本次为迁移核对，不重做原业务测试。",
+      "原报告四组对照、三张补充实拍、完整行业目录及六角色原稿合入同一日期页。"
     ],
     "limitations": "本页保留10月19日记录。历史四列未重拍，不包含后补的四枚图标；不能作为当前原型还原或真机验收通过的证明。",
-    "pendingSummary": "保留10月19日原结论；原四列未重拍，不包含后补四枚图标。真机及原生能力仍待复测。"
+    "pendingSummary": "保留10月19日原结论；原四列未重拍，不包含后补四枚图标。真机及原生能力仍待复测。",
+    "sections": [
+      {
+        "id": "profile",
+        "title": "个人资料：行业选择",
+        "highlights": [
+          "补齐测试环境的完整行业目录：11类、121项，主行业单选。",
+          "选择后点击确认才更新，取消保留原值；修复目录刷新后分类展开失效。"
+        ],
+        "comparisons": [
+          {
+            "title": "个人资料：行业选择 · 10月19日对照",
+            "context": "修改后为测试环境完整目录，参考稿仅画了部分行业，前后数据状态不同；后两列为当时参考稿，不作为当前原型验收。",
+            "before": {
+              "file": "docs/mip/acceptance-site/legacy/20261019/shots/before-profile.png",
+              "caption": "10月19日修改前"
+            },
+            "after": {
+              "file": "docs/mip/acceptance-site/legacy/20261019/shots/after-profile.png",
+              "caption": "10月19日修改后"
+            },
+            "references": [
+              {
+                "file": "docs/mip/acceptance-site/legacy/20261019/shots/prototype-profile.png",
+                "caption": "当时的 mip-dev 参考画面",
+                "label": "历史参考 · mip-dev"
+              },
+              {
+                "file": "docs/mip/acceptance-site/legacy/20261019/shots/figma-profile.png",
+                "caption": "当时的 Figma 视觉稿",
+                "label": "历史参考 · Figma"
+              }
+            ]
+          }
+        ],
+        "evidenceImages": [
+          {
+            "file": "docs/mip/acceptance-site/legacy/20261019/shots/industry-full-library.png",
+            "caption": "完整行业目录 · 真实测试环境"
+          },
+          {
+            "file": "docs/mip/acceptance-site/legacy/20261019/shots/industry-services.png",
+            "caption": "服务业 · 14个可选行业"
+          }
+        ]
+      },
+      {
+        "id": "talent",
+        "title": "人才合作：玩家卡片与六角色图标",
+        "highlights": [
+          "调整玩家卡片样式，接入狗策划、暴发户、生意佬、皮条客、老保姆、死美工六枚原始矢量图标。",
+          "角色名称由服务端数据映射；未知角色保留原文字。下方提供六图标及原始标签预览。"
+        ],
+        "comparisons": [
+          {
+            "title": "人才合作：玩家卡片与六角色图标 · 10月19日对照",
+            "context": "采用固定演示人物；这组历史截图未重拍，不包含后来补齐的四枚图标；后两列为当时参考稿，不作为当前原型验收。",
+            "before": {
+              "file": "docs/mip/acceptance-site/legacy/20261019/shots/before-talent.png",
+              "caption": "10月19日修改前"
+            },
+            "after": {
+              "file": "docs/mip/acceptance-site/legacy/20261019/shots/after-talent.png",
+              "caption": "10月19日修改后"
+            },
+            "references": [
+              {
+                "file": "docs/mip/acceptance-site/legacy/20261019/shots/prototype-talent.png",
+                "caption": "当时的 mip-dev 参考画面",
+                "label": "历史参考 · mip-dev"
+              },
+              {
+                "file": "docs/mip/acceptance-site/legacy/20261019/shots/figma-talent.png",
+                "caption": "当时的 Figma 视觉稿",
+                "label": "历史参考 · Figma"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "events",
+        "title": "活动：日期筛选、时间与封面标签",
+        "highlights": [
+          "日期先选择、确认后筛选；取消保留原条件，禁用日期不可选，默认显示近期活动。",
+          "活动时间和日历“今天”统一按北京时间，修复跨时区日期偏移及跨年日期遗漏年份。",
+          "封面角标展示后台配置的标签，相同标签去重。"
+        ],
+        "comparisons": [
+          {
+            "title": "活动：日期筛选、时间与封面标签 · 10月19日对照",
+            "context": "修改后为真实测试环境：确认12月12日后仅显示当天一场；修改前及参考稿显示两场；后两列为当时参考稿，不作为当前原型验收。",
+            "before": {
+              "file": "docs/mip/acceptance-site/legacy/20261019/shots/before-events.png",
+              "caption": "10月19日修改前"
+            },
+            "after": {
+              "file": "docs/mip/acceptance-site/legacy/20261019/shots/after-events.png",
+              "caption": "10月19日修改后"
+            },
+            "references": [
+              {
+                "file": "docs/mip/acceptance-site/legacy/20261019/shots/prototype-events.png",
+                "caption": "当时的 mip-dev 参考画面",
+                "label": "历史参考 · mip-dev"
+              },
+              {
+                "file": "docs/mip/acceptance-site/legacy/20261019/shots/figma-events.png",
+                "caption": "当时的 Figma 视觉稿",
+                "label": "历史参考 · Figma"
+              }
+            ]
+          }
+        ],
+        "evidenceImages": [
+          {
+            "file": "docs/mip/acceptance-site/legacy/20261019/shots/date-confirmed.png",
+            "caption": "确认日期后 · 真实服务端结果"
+          }
+        ]
+      },
+      {
+        "id": "growth",
+        "title": "玩家会籍：主视觉与经验详情入口",
+        "highlights": [
+          "调整主视觉、经验详情入口和内容边界。",
+          "会员权益、等级和任务继续读取后台数据；真机滑动效果待复测。"
+        ],
+        "comparisons": [
+          {
+            "title": "玩家会籍：主视觉与经验详情入口 · 10月19日对照",
+            "context": "前后对照采用相同玩家状态；后两列为当时参考稿，不作为当前原型验收。",
+            "before": {
+              "file": "docs/mip/acceptance-site/legacy/20261019/shots/before-growth.png",
+              "caption": "10月19日修改前"
+            },
+            "after": {
+              "file": "docs/mip/acceptance-site/legacy/20261019/shots/after-growth.png",
+              "caption": "10月19日修改后"
+            },
+            "references": [
+              {
+                "file": "docs/mip/acceptance-site/legacy/20261019/shots/prototype-growth.png",
+                "caption": "当时的 mip-dev 参考画面",
+                "label": "历史参考 · mip-dev"
+              },
+              {
+                "file": "docs/mip/acceptance-site/legacy/20261019/shots/figma-growth.png",
+                "caption": "当时的 Figma 视觉稿",
+                "label": "历史参考 · Figma"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "verify",
+        "title": "已验证与待复测",
+        "highlights": [
+          "10月19日记录：行业与日期的确认、取消及服务端筛选已核对，完整工程检查通过。",
+          "开发版本0.2.0.20261019.5当时已上传，包含全部六枚图标；设为体验版及真机测试仍需单独确认。",
+          "本次补全报告并迁入原图，未重新执行19号业务或真机验收。"
+        ]
+      }
+    ],
+    "catalog": {
+      "caption": "10月19日测试环境目录，来源为飞书行业库2026年9月26日导入快照，非实时同步。父分类用于分组，子行业可选；语义交叉项按原来源保留。",
+      "rows": [
+        [
+          "互联网/AI（17）",
+          "互联网、电子商务、计算机软件、生活服务(O2O)、企业服务、医疗健康、游戏、社交网络与媒体、人工智能、云计算、在线教育、计算机服务、大数据、广告营销、物联网、新零售、信息安全"
+        ],
+        [
+          "电子/通信/半导体（7）",
+          "半导体/芯片、电子/硬件开发、通信/网络设备、智能硬件/消费电子、运营商/增值服务、计算机硬件、电子/半导体/集成电路"
+        ],
+        [
+          "服务业（14）",
+          "餐饮、美容、美发、酒店/民宿、休闲/娱乐、运动/健身、保健/养生、家政服务、旅游/景区、婚庆/摄影、宠物服务、回收/维修、美容/美发、其他生活服务"
+        ],
+        [
+          "消费品/批发/零售（10）",
+          "批发/零售、进出口贸易、食品/饮料/烟酒、服装/纺织、家具/家居、家用电器、日化、珠宝/首饰、家具/家电/家居、其他消费品"
+        ],
+        [
+          "房地产/建筑（12）",
+          "装修装饰、房屋建筑工程、土木工程、机电工程、物业管理、房地产中介/租赁、建筑材料、房地产开发经营、建筑设计、建筑工程咨询服务、土地与公共设施管理、工程施工"
+        ],
+        [
+          "制造业（17）",
+          "通用设备、专用设备、电气机械/器材、金属制品、非金属矿物制品、橡胶/塑料制品、化学原料/化学制品、仪器仪表、自动化设备、印刷/包装/造纸、铁路/船舶/航空/航天制造、计算机/通信/其他电子设备、新材料、机械设备/机电/重工、仪器仪表/工业自动化、原材料及加工/模具、其他制造业"
+        ],
+        [
+          "汽车（8）",
+          "新能源汽车、汽车智能网联、汽车经销商、汽车后市场、汽车研发/制造、汽车零部件、摩托车/自行车制造、4S店/后市场"
+        ],
+        [
+          "交通运输/物流（10）",
+          "即时配送、快递、公路物流、同城货运、跨境物流、装卸搬运和仓储业、客运服务、港口/铁路/公路/机场、交通/运输、物流/仓储"
+        ],
+        [
+          "能源/化工/环保（12）",
+          "光伏、储能、动力电池、风电、其他新能源、环保、化工、电力/热力/燃气/水利、石油/石化、矿产/地质、采掘/冶炼、新能源"
+        ],
+        [
+          "金融（10）",
+          "互联网金融、银行、投资/融资、证券/期货、基金、保险、租赁/拍卖/典当/担保、信托、财富管理、其他金融业"
+        ],
+        [
+          "政府/非盈利机构/其他（4）",
+          "农/林/牧/渔、非盈利机构、政府/公共事业、其他行业"
+        ]
+      ]
+    }
   }
 ]

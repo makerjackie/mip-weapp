@@ -11,7 +11,7 @@ const origin = new URL(process.argv[2] || 'https://miptest.01mvp.com')
 if (origin.protocol !== 'https:' || origin.hostname !== 'miptest.01mvp.com') {
   throw new Error('Verify the configured acceptance origin only')
 }
-const files = fs.readdirSync(output, { recursive: true }).filter(name => fs.statSync(path.join(output, name)).isFile() && name !== '_headers')
+const files = fs.readdirSync(output, { recursive: true }).filter(name => fs.statSync(path.join(output, name)).isFile() && !['_headers', '_redirects'].includes(name))
 const queue = [...files]
 const verified = []
 await Promise.all(Array.from({ length: 5 }, async () => {

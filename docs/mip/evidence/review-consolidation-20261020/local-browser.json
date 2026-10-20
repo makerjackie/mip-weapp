@@ -1,0 +1,28 @@
+{
+  "origin": "http://127.0.0.1:8794",
+  "checkedAt": "2026-10-20T12:28:42.230Z",
+  "checks": [
+    {
+      "label": "desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "imageCount": 26,
+      "industryGroups": 11,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "label": "phone",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "imageCount": 26,
+      "industryGroups": 11,
+      "overflow": false,
+      "errors": []
+    }
+  ]
+}
