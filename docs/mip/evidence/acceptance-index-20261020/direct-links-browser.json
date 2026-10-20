@@ -1,0 +1,32 @@
+{
+  "origin": "https://miptest.01mvp.com",
+  "checkedAt": "2026-10-20T11:08:49.757Z",
+  "checks": [
+    {
+      "width": 1440,
+      "directReports": [
+        "/reports/mini-loading-20261020-v1/",
+        "/reports/unified-release-20261020-v1/",
+        "/reports/performance-20261020-v1/",
+        "/reports/admin-users-20261020-v1/",
+        "/reports/event-media-player-free-20261020-v1/"
+      ],
+      "dailySummaryButton": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "directReports": [
+        "/reports/mini-loading-20261020-v1/",
+        "/reports/unified-release-20261020-v1/",
+        "/reports/performance-20261020-v1/",
+        "/reports/admin-users-20261020-v1/",
+        "/reports/event-media-player-free-20261020-v1/"
+      ],
+      "dailySummaryButton": true,
+      "noOverflow": true,
+      "pageErrors": []
+    }
+  ]
+}
