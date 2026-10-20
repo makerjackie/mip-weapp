@@ -23,7 +23,14 @@
     "permissionsUnchanged": true
   },
   "priceSwitch": "awaiting-user-confirmation",
-  "trialUpload": "pending",
+  "trialUpload": "PENDING: CLI did not return a completion receipt; no duplicate upload submitted",
   "productionWrites": 0,
-  "cloudVerify": "passed"
+  "cloudVerify": "passed",
+  "preview": {
+    "kind": "development",
+    "environment": "test",
+    "result": "passed",
+    "mainPackageBytes": 1758897,
+    "qrStoredOutsideEvidence": true
+  }
 }
