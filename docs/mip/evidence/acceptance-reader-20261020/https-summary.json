@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-20T12:56:01.927Z",
+  "origin": "https://miptest.01mvp.com",
+  "verifiedFiles": 204,
+  "readerAssets": [
+    {
+      "file": "assets/acceptance-reader/reader.css",
+      "bytes": 5364,
+      "sha256": "9b92d78f73afcb3cf18648139f70ae6ccb6fc4b9a6226157574399daf6931ac8"
+    },
+    {
+      "file": "assets/acceptance-reader/reader.js",
+      "bytes": 2717,
+      "sha256": "35e61a9c1fb2c5ac137c79ae4465f3693eaa36eae836138d0f8b43270aebfb1a"
+    }
+  ],
+  "implementationCommit": "d8208faf4d9067b71926a15460364f2858626480",
+  "deployment": "410c2394-79ed-4626-b2ca-2756c60da64f",
+  "passed": true
+}

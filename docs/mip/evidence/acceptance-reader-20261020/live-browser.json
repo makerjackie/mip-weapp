@@ -1,0 +1,129 @@
+{
+  "origin": "https://miptest.01mvp.com",
+  "checkedAt": "2026-10-20T12:56:12.880Z",
+  "results": [
+    {
+      "day": "2026-10-19",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "anchor": "events",
+      "tocEntries": 9,
+      "images": 26,
+      "clipboard": true,
+      "deepLink": true,
+      "history": true,
+      "pageOverflow": false,
+      "errors": []
+    },
+    {
+      "day": "2026-10-20",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "anchor": "unified-release-20261020-v1-view-cc177dac",
+      "tocEntries": 14,
+      "images": 17,
+      "clipboard": true,
+      "deepLink": true,
+      "history": true,
+      "pageOverflow": false,
+      "errors": []
+    },
+    {
+      "day": "2026-10-19",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "anchor": "events",
+      "tocEntries": 9,
+      "images": 26,
+      "clipboard": true,
+      "deepLink": true,
+      "history": true,
+      "pageOverflow": false,
+      "errors": []
+    },
+    {
+      "day": "2026-10-20",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "anchor": "unified-release-20261020-v1-view-cc177dac",
+      "tocEntries": 14,
+      "images": 17,
+      "clipboard": true,
+      "deepLink": true,
+      "history": true,
+      "pageOverflow": false,
+      "errors": []
+    },
+    {
+      "day": "2026-10-19",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "anchor": "events",
+      "tocEntries": 9,
+      "images": 26,
+      "clipboard": true,
+      "deepLink": true,
+      "history": true,
+      "pageOverflow": false,
+      "errors": []
+    },
+    {
+      "day": "2026-10-20",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "anchor": "unified-release-20261020-v1-view-cc177dac",
+      "tocEntries": 14,
+      "images": 17,
+      "clipboard": true,
+      "deepLink": true,
+      "history": true,
+      "pageOverflow": false,
+      "errors": []
+    },
+    {
+      "day": "2026-10-19",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "anchor": "events",
+      "tocEntries": 9,
+      "images": 26,
+      "clipboard": true,
+      "deepLink": true,
+      "history": true,
+      "pageOverflow": false,
+      "errors": []
+    },
+    {
+      "day": "2026-10-20",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "anchor": "unified-release-20261020-v1-view-cc177dac",
+      "tocEntries": 14,
+      "images": 17,
+      "clipboard": true,
+      "deepLink": true,
+      "history": true,
+      "pageOverflow": false,
+      "errors": []
+    }
+  ],
+  "clipboardFallback": true,
+  "withoutJavaScript": true,
+  "passed": true
+}

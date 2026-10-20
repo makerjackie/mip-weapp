@@ -14,4 +14,8 @@
 
 画面：[修改前桌面](before-desktop.png) · [修改后桌面](after-desktop.png) · [修改前手机](before-phone.png) · [修改后手机](after-phone.png)。同为10月19日活动分项，来自真实验收站或本地待发布产物，原业务画面对照未重拍。
 
-完整`pnpm verify:all`通过：小程序1853项、后台合同338项、React262项，以及构建、源码、包体和响应式检查；随后验收站专项11项与改动文件lint再次通过。部署及真实HTTPS回读待本批后续记录。
+完整`pnpm verify:all`通过：小程序1853项、后台合同338项、React262项，以及构建、源码、包体和响应式检查；随后验收站专项11项与改动文件lint再次通过。实现提交`d8208faf4d9067b71926a15460364f2858626480`已推送main；miptest Production部署`410c2394-79ed-4626-b2ca-2756c60da64f`对应同一提交。
+
+真实域名204个公开文件逐字节一致，新增CSS/JS的MIME及摘要通过，详见[HTTPS结果](https-summary.json)。线上两天×四视口共8组交互、剪贴板读取、分享链接重载定位、浏览器返回、图片与无溢出检查通过，复制拒绝/无JavaScript回退同样通过，详见[线上浏览器结果](live-browser.json)。
+
+可直接分享[活动日期分项](https://miptest.01mvp.com/updates/2026-10-19/#events)和[六角色图标](https://miptest.01mvp.com/updates/2026-10-19/#role-icons)。只发布既有miptest项目；未改旧站跳转/DNS、上传微信包或部署业务服务。
