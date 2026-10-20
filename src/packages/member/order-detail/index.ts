@@ -10,7 +10,7 @@ import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { createIntentKey, formatCny, planTitle, presentOrderServiceStatus, presentOrderStatus } from '../../../modules/mip-shell'
 import { caseNavigateTo, caseRedirectTo } from '../../../platform/navigation/client'
 import { clearPageMedia, updatePageMedia } from '../../../platform/storage/component-media'
-import { formatLocalDateTime } from '../../../utils/date'
+import { formatBusinessDateTime as formatLocalDateTime } from '../../../utils/business-date'
 
 function statusDescription(order: CommerceOrder) {
   switch (order.status) {

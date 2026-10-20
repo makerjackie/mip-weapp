@@ -2,7 +2,7 @@ import type { CommerceOrder, MembershipPlan, OrderServiceStatus } from '../../..
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { formatCny, planTitle, presentOrderServiceStatus, presentOrderStatus } from '../../../modules/mip-shell'
 import { caseNavigateTo } from '../../../platform/navigation/client'
-import { formatLocalDateTime } from '../../../utils/date'
+import { formatBusinessDateTime as formatLocalDateTime } from '../../../utils/business-date'
 
 type OrderFilter = 'all' | Exclude<OrderServiceStatus, 'UNAVAILABLE'>
 
@@ -41,7 +41,12 @@ function presentOrder(order: CommerceOrder, plans: readonly MembershipPlan[]): D
     statusBrand: status.tone === 'brand',
     statusSuccess: status.tone === 'success',
     statusDanger: status.tone === 'danger',
-    amountLabel: isRefundedEvent ? '已退款' : order.orderType === 'EVENT' ? '实付款' : '订单金额',
+    amountLabel: isRefundedEvent
+      ? '已退款'
+      : order.orderType === 'EVENT'
+        && (order.paidAt || ['PAID', 'PARTIALLY_REFUNDED', 'REFUND_PENDING', 'REFUNDED'].includes(order.status))
+        ? '实付款'
+        : '订单金额',
     amountHighlight: order.orderType === 'EVENT',
   }
 }
