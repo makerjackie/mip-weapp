@@ -1,0 +1,64 @@
+{
+  "readOnly": true,
+  "editorImageCounts": [
+    2,
+    2,
+    2
+  ],
+  "previews": [
+    {
+      "tab": "活动介绍",
+      "images": [
+        {
+          "alt": "活动封面",
+          "decoded": true
+        },
+        {
+          "alt": "活动图片",
+          "decoded": true
+        },
+        {
+          "alt": "活动图片",
+          "decoded": true
+        }
+      ],
+      "placeholder": false
+    },
+    {
+      "tab": "主办方",
+      "images": [
+        {
+          "alt": "活动封面",
+          "decoded": true
+        },
+        {
+          "alt": "活动图片",
+          "decoded": true
+        },
+        {
+          "alt": "活动图片",
+          "decoded": true
+        }
+      ],
+      "placeholder": false
+    },
+    {
+      "tab": "报名须知",
+      "images": [
+        {
+          "alt": "活动封面",
+          "decoded": true
+        },
+        {
+          "alt": "活动图片",
+          "decoded": true
+        },
+        {
+          "alt": "活动图片",
+          "decoded": true
+        }
+      ],
+      "placeholder": false
+    }
+  ]
+}

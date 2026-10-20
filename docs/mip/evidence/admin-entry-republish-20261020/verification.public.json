@@ -1,0 +1,53 @@
+{
+  "verifiedAt": "2026-10-20T12:50:15.957207+00:00",
+  "environment": "test",
+  "runtimeSourceCommit": "141aca02a8952754c75252adde792b39c22f4b8c",
+  "runtimeCommitAt": "2026-10-20T08:18:35-04:00",
+  "beforeEntry": "/assets/index-BwDCP-ZH.js",
+  "afterEntry": "/assets/index-D3PBpp-G.js",
+  "completeGate": {
+    "miniProgramTests": 1850,
+    "webContractTests": 338,
+    "webReactTests": 262,
+    "finalResult": "PASS",
+    "initialAttempt": "STOPPED_AFTER_UI_TEST_TIMEOUT",
+    "retry": "same checks and timeouts; bounded native worker concurrency"
+  },
+  "https": {
+    "checks": 68,
+    "failures": 0,
+    "readOnlyModules": 14
+  },
+  "browser": {
+    "realTestSession": true,
+    "grantEntryVisible": true,
+    "oldRoleShortcutRemoved": true,
+    "durationAndRequiredReasonPresent": true,
+    "desktopAndMobileFormOpened": true,
+    "formCancelled": true,
+    "actualMembershipGranted": false,
+    "newMembershipIdentityClassificationImplemented": false
+  },
+  "releaseScope": {
+    "testBffAndStaticOnly": true,
+    "productionUpdated": false,
+    "businessApiUpdated": false,
+    "databaseOrAuthorizationChanged": false
+  },
+  "screenshots": {
+    "kind": "native browser screenshot crop of the complete action toolbar",
+    "cssViewport": {
+      "width": 1731,
+      "height": 896
+    },
+    "captureClip": {
+      "x": 450,
+      "y": 145,
+      "width": 880,
+      "height": 75
+    },
+    "personalAreaExcluded": true,
+    "fullOriginals": "private local files only"
+  },
+  "releaseCorrection": "Prebuilt explicit-demo-off bundle and the final gated build had different entry hashes. An initial BFF upload used the prebuilt bundle; before static switching it was rebuilt and uploaded again to match the final gated build. Old immutable assets were retained throughout. Only the final D3PBpp-G entry was switched live."
+}

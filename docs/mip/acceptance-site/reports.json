@@ -443,14 +443,14 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-20T07:59:14.868553+00:00",
-    "updatedAt": "2026-10-20T08:17:06.851306+00:00",
-    "verifiedAt": "2026-10-20T07:59:14.868553+00:00",
+    "updatedAt": "2026-10-20T12:50:15.957207+00:00",
+    "verifiedAt": "2026-10-20T12:50:15.957207+00:00",
     "submittedAt": "2026-10-20T07:59:14.868553+00:00",
-    "commit": "cda48f7fcc36b37f209cfbbf0b5ed4c8e8486c1c",
-    "commitAt": "2026-10-20T03:47:39-04:00",
-    "environment": "测试后台 · 权益入口与权限合同已验",
-    "summary": "玩家权益入口与后台角色分离已在测试后台验证；新增持续需求澄清文档，确认游客签到任意一场活动后成为嘉宾，会员权限仍GUEST/PLAYER。新的展示分类尚未实现和验收。",
-    "detail": "docs/mip/evidence/admin-player-access-20261020/index.html",
+    "commit": "141aca02a8952754c75252adde792b39c22f4b8c",
+    "commitAt": "2026-10-20T08:18:35-04:00",
+    "environment": "测试后台 · 新入口已重新发布并实测",
+    "summary": "修复测试网址仍加载旧构建的问题。刷新后从用户管理进入用户详情，点击蓝色“开通玩家权益”；桌面和手机表单打开/取消及服务端回读通过。未实际赠送会籍。",
+    "detail": "docs/mip/evidence/admin-entry-republish-20261020/index.html",
     "files": [
       "docs/mip/evidence/admin-player-access-20261020/index.html",
       "docs/mip/evidence/admin-player-access-20261020/toolbar-before.png",
@@ -460,44 +460,47 @@
       "docs/mip/evidence/admin-player-access-20261020/cancel-check.public.json",
       "docs/mip/evidence/admin-player-access-20261020/clarifications/index.html",
       "docs/mip/REQUIREMENT_CLARIFICATIONS.md",
-      "docs/mip/REQUIREMENTS.md"
+      "docs/mip/REQUIREMENTS.md",
+      "docs/mip/evidence/admin-entry-republish-20261020/README.md",
+      "docs/mip/evidence/admin-entry-republish-20261020/assets.public.json",
+      "docs/mip/evidence/admin-entry-republish-20261020/cancel-check.public.json",
+      "docs/mip/evidence/admin-entry-republish-20261020/cloud.public.json",
+      "docs/mip/evidence/admin-entry-republish-20261020/console.public.json",
+      "docs/mip/evidence/admin-entry-republish-20261020/event-regression.public.json",
+      "docs/mip/evidence/admin-entry-republish-20261020/index.html",
+      "docs/mip/evidence/admin-entry-republish-20261020/runtime-code.public.json",
+      "docs/mip/evidence/admin-entry-republish-20261020/toolbar-after.png",
+      "docs/mip/evidence/admin-entry-republish-20261020/toolbar-before.png",
+      "docs/mip/evidence/admin-entry-republish-20261020/verification.public.json",
+      "docs/mip/evidence/admin-entry-republish-20261020/viewports.public.json"
     ],
     "comparisons": [
       {
-        "title": "玩家权益发放入口与后台角色分离",
-        "context": "真实测试后台，同一账号、同一操作者、同一视口的完整工具栏局部截图；个人资料区域排除，完整原图留本机。工具栏不作为注册默认授权证明。",
+        "title": "测试网址的实际权益入口",
+        "context": "同一真实测试账号、同一操作者、1731×896 CSS视口，完整工具栏局部；个人区域排除，布局变化使操作栏纵向位置不同。此次恢复功能发布，不涉及新增原型。",
         "before": {
-          "file": "docs/mip/evidence/admin-player-access-20261020/toolbar-before.png",
-          "caption": "修改前：补录会员与设置角色并列，权益入口难辨",
-          "source": "本轮修改前，测试后台真实工具栏"
+          "file": "docs/mip/evidence/admin-entry-republish-20261020/toolbar-before.png",
+          "caption": "核查时：旧补录会员、设置角色入口",
+          "source": "当前问题修复前的真实测试网址"
         },
         "after": {
-          "file": "docs/mip/evidence/admin-player-access-20261020/toolbar-after.png",
-          "caption": "修改后：开通玩家权益主按钮，用户详情不再配置角色",
-          "source": "本轮发布后，测试后台真实工具栏"
-        },
-        "prototype": {
-          "caption": "本次甲方文字要求，无独立视觉原图",
-          "reason": "甲方要求玩家权益入口明确、新用户不能默认管理员、后台角色单独配置。没有提供此入口的对应新视觉原型，不用旧稿或自制图替代。",
-          "source": "2026-10-20 当前对话甲方反馈"
+          "file": "docs/mip/evidence/admin-entry-republish-20261020/toolbar-after.png",
+          "caption": "重新发布后：蓝色开通玩家权益",
+          "source": "最终发布后的真实测试网址"
         }
       }
     ],
     "checks": [
-      "完整verify:all通过：小程序1825、Web合同337、React257，另含服务端、类型、构建、文档与响应式合同。",
-      "注册/权限服务端专项29项、Web专项32项通过：注册不创建后台账号/角色绑定/会籍；无后台角色时服务端拒绝冒充管理员的请求。",
-      "实际测试库两个Owner绑定均晚于注册，均有显式admin.owner.bootstrap审计；没有把历史初始化误判成新用户自动授权。",
-      "真实网页的开通玩家权益入口可打开时长及必填原因表单；取消后独立HTTPS读取确认会员权益、链版本及后台角色不变。",
-      "最终HTTPS68项、14只读模块通过；15个公开静态资源字节一致；浏览器已展示新入口并移除用户详情设置角色按钮。",
-      "BFF34文件逐字节匹配本次构建，SCF摘要校验通过，配置/权限/触发器未改；API167运行文件仍与原包一致，本次未更新业务API或identity函数。",
-      "1440×900、1280×720、390×844根宽1423/1263/373，无整页横向溢出；手机滚动可到达开通入口。",
-      "2026-10-20文档澄清：核心身份口径同步需求基线、术语和验收标准；新增持续记录与交接入口。此项没有更新业务代码，原实际验证时间和代码SHA保持原值。"
+      "已从真实测试网址刷新确认新入口，会员时长与必填原因表单在桌面和手机均可打开。",
+      "输入原因后取消，独立请求回读权益、会员链版本和后台角色均未改变。",
+      "完整工程门禁、68项HTTPS及15个静态资源字节核对通过；BFF包匹配，业务API与配置、网关、权限保持原样。",
+      "三个桌面/手机尺寸无整页横向溢出；已有活动编辑器六图及三栏预览只读回归通过。"
     ],
     "limitations": "只更新测试后台，生产未更新。没有给真实账号追加不可撤销的会籍时长，也没有创建、扩大或撤销后台授权。真实微信新用户首次注册、实际人工发放及用户端权益回读未在本轮执行；代码合同、页面打开与取消不能冒充这些业务旅程通过。用户分类核心口径已在后续需求澄清中确认，展示分类、筛选及导出尚未实现和验收；签到撤销/会籍失效后的展示回退、主分会及其他未决项没有自动确认。",
     "indexTitle": "用户档案、合作卡与玩家权益入口",
     "highlights": [
-      "测试后台补齐用户档案与六种合作卡编辑。",
-      "“开通玩家权益”入口更清楚，后台角色独立配置。"
+      "修复测试后台仍加载旧包的问题，蓝色“开通玩家权益”入口现已上线。",
+      "用户详情、权益表单及已有活动三栏图文预览已回归；后台角色仍独立配置。"
     ],
     "pendingSummary": "生产尚未更新；新身份分类与例外规则、全角色、微信新注册及实际发放权益仍待确认或验收。"
   },
