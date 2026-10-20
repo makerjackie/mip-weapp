@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -107,6 +108,27 @@ describe('公开验收报告的版本与时间规则', () => {
     const daily = fs.readFileSync(path.join(f.root, '.tmp/mip-acceptance-site/updates/2026-10-20/index.html'), 'utf8')
     expect(daily).toContain('权威原型')
     expect(daily).toContain('当前设计原图')
+  })
+  it('迁移保留原日期、原报告字节和矢量资源路径，拒绝改写历史文件', () => {
+    const f = fixture()
+    const folder = path.join(f.root, 'docs/mip/acceptance-site/legacy/20261019')
+    fs.mkdirSync(path.join(folder, 'role-icons'), { recursive: true })
+    const original = '<html>原报告</html>'
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"></svg>'
+    const hash = (value: string) => createHash('sha256').update(value).digest('hex')
+    fs.writeFileSync(path.join(folder, 'index.html'), original)
+    fs.writeFileSync(path.join(folder, 'role-icons/dog.svg'), svg)
+    fs.writeFileSync(path.join(folder, 'archive.json'), JSON.stringify({ htmlSha256: hash(original), assets: { 'role-icons/dog.svg': hash(svg) } }))
+    f.write([f.report, { ...f.report, id: 'legacy-review', reportDate: '2026-10-19', updatedAt: '2026-10-21T00:00:00Z', title: '六角色历史原型', roleIcons: [{ label: '狗策划', file: 'docs/mip/acceptance-site/legacy/20261019/role-icons/dog.svg' }], archive: { file: 'docs/mip/acceptance-site/legacy/20261019/index.html', label: '完整原报告' } }])
+    f.run('build')
+    const home = fs.readFileSync(path.join(f.root, '.tmp/mip-acceptance-site/index.html'), 'utf8')
+    expect(home.indexOf('/updates/2026-10-20/')).toBeLessThan(home.indexOf('/updates/2026-10-19/'))
+    const daily = fs.readFileSync(path.join(f.root, '.tmp/mip-acceptance-site/updates/2026-10-19/index.html'), 'utf8')
+    expect(daily).toContain('/legacy/20261019/role-icons/dog.svg')
+    expect(daily).toContain('href="/legacy/20261019/"')
+    expect(fs.readFileSync(path.join(f.root, '.tmp/mip-acceptance-site/legacy/20261019/index.html'), 'utf8')).toBe(original)
+    fs.writeFileSync(path.join(folder, 'role-icons/dog.svg'), 'changed')
+    expect(() => f.run('build')).toThrow()
   })
   it('冻结后拒绝修改结论或证据图片，新版本能保留旧版本', () => {
     const f = fixture()

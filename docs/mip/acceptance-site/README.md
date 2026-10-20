@@ -17,4 +17,8 @@
 
 `submittedAt` 是该报告首次发布到验收站的时间，`verifiedAt` 是实际验证时间，`commitAt` 是代码提交时间，三者不得混用。草稿后续反馈只更新 `updatedAt`、结论与证据；首次提交时间不变。冻结后不能改标题、时间、结论、图片或锁文件来绕过约束。
 
-历史站在 `legacy/20260927/` 完整保留，属于历史模拟画面报告，不自动升级为当前真机/功能通过。`mip-review.01mvp.com` 的既有外发报告保持原样。
+历史站在 `legacy/20260927/` 完整保留，属于历史模拟画面报告，不自动升级为当前真机/功能通过。用户2026-10-20已要求将 `mip-review.01mvp.com` 合并迁入本站：原站36个公开文件完整保存在 `legacy/20261019/`，通过archive.json逐文件摘要检查防止改写。原日期和旧原型身份保留，首页补10月19日入口；在新站全部文件验证后，旧域名通过既有Pages项目跳转到对应存档路径，不删除项目或改DNS。
+
+迁入的旧报告用 `reportDate` 保留原页面日期；创建、提交和本次验证时间记录新站迁移行为，不伪造旧站的精确首次发布时间。`roleIcons`、`prototypePreview` 与 `downloads` 直接引用经过核对的原文件；原报告保持完整字节，旧原型不能冒充当前稿。
+
+旧站切换使用 `node scripts/redirect-mip-review.mjs publish`：先从真实miptest域名回读全部36个原始文件并比对归档SHA，全部匹配后才部署既有mip-review项目的跳转。切换后分别验证旧首页、锚点、SVG及ZIP下载仍到新站对应路径。规则来源：[Cloudflare Pages redirects](https://developers.cloudflare.com/pages/configuration/redirects/)。

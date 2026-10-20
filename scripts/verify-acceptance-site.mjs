@@ -28,7 +28,7 @@ await Promise.all(Array.from({ length: 5 }, async () => {
     if (!actual.equals(expected)) {
       throw new Error(`Public file differs: ${file}`)
     }
-    if (/\.(?:png|jpe?g|webp)$/.test(file) && !response.headers.get('content-type')?.startsWith('image/')) {
+    if (/\.(?:png|jpe?g|webp|svg)$/.test(file) && !response.headers.get('content-type')?.startsWith('image/')) {
       throw new Error(`Incorrect image MIME: ${file}`)
     }
     if (file.endsWith('.html') && !response.headers.get('content-type')?.includes('text/html')) {

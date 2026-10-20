@@ -500,5 +500,89 @@
       "“开通玩家权益”入口更清楚，后台角色独立配置。"
     ],
     "pendingSummary": "生产尚未更新；新身份分类与例外规则、全角色、微信新注册及实际发放权益仍待确认或验收。"
+  },
+  {
+    "id": "review-20261019-v1",
+    "requirement": "mip-review-migration",
+    "reportDate": "2026-10-19",
+    "title": "六角色图标、原型与历史界面对照",
+    "indexTitle": "六角色图标与原型",
+    "version": "migration-v1",
+    "status": "draft",
+    "createdAt": "2026-10-20T12:10:11.299478+00:00",
+    "updatedAt": "2026-10-20T12:10:11.299478+00:00",
+    "verifiedAt": "2026-10-20T12:10:11.299478+00:00",
+    "submittedAt": "2026-10-20T12:10:11.299478+00:00",
+    "commit": "cd834c854a1564fdf49d82b04398802bab957aa4",
+    "commitAt": "2026-10-19T23:32:14-04:00",
+    "environment": "2026-10-19原报告快照；本次为文件迁移",
+    "summary": "完整迁入mip-review公开原报告和六角色矢量，保留原型来源与原有验收边界。",
+    "highlights": [
+      "六枚角色标签图标已补齐：狗策划、暴发户、生意佬、皮条客、老保姆、死美工。",
+      "旧站的行业、人才卡、活动日期与玩家会籍历史对照已一并迁入。"
+    ],
+    "files": [
+      "docs/mip/acceptance-site/legacy/20261019/archive.json"
+    ],
+    "comparisons": [],
+    "uiChange": false,
+    "roleIcons": [
+      {
+        "label": "狗策划",
+        "file": "docs/mip/acceptance-site/legacy/20261019/role-icons/dog.svg",
+        "tagFile": "docs/mip/acceptance-site/legacy/20261019/role-icons/dog-tag.svg"
+      },
+      {
+        "label": "暴发户",
+        "file": "docs/mip/acceptance-site/legacy/20261019/role-icons/money.svg",
+        "tagFile": "docs/mip/acceptance-site/legacy/20261019/role-icons/money-tag.svg"
+      },
+      {
+        "label": "生意佬",
+        "file": "docs/mip/acceptance-site/legacy/20261019/role-icons/business.svg",
+        "tagFile": "docs/mip/acceptance-site/legacy/20261019/role-icons/business-tag.svg"
+      },
+      {
+        "label": "皮条客",
+        "file": "docs/mip/acceptance-site/legacy/20261019/role-icons/pimp.svg",
+        "tagFile": "docs/mip/acceptance-site/legacy/20261019/role-icons/pimp-tag.svg"
+      },
+      {
+        "label": "老保姆",
+        "file": "docs/mip/acceptance-site/legacy/20261019/role-icons/nanny.svg",
+        "tagFile": "docs/mip/acceptance-site/legacy/20261019/role-icons/nanny-tag.svg"
+      },
+      {
+        "label": "死美工",
+        "file": "docs/mip/acceptance-site/legacy/20261019/role-icons/designer.svg",
+        "tagFile": "docs/mip/acceptance-site/legacy/20261019/role-icons/designer-tag.svg"
+      }
+    ],
+    "prototypePreview": {
+      "file": "docs/mip/acceptance-site/legacy/20261019/role-icons/original-six-tags.png",
+      "caption": "Figma 原始 SVG 的六标签预览，非小程序截图",
+      "source": "https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=4197-38017"
+    },
+    "downloads": [
+      {
+        "file": "docs/mip/acceptance-site/legacy/20261019/role-icons/mip-six-role-vectors.zip",
+        "label": "下载六图标、六标签与原始画框"
+      },
+      {
+        "file": "docs/mip/acceptance-site/legacy/20261019/role-icons/source.svg",
+        "label": "原始画框 SVG"
+      }
+    ],
+    "archive": {
+      "file": "docs/mip/acceptance-site/legacy/20261019/index.html",
+      "label": "查看完整原报告与历史四列对照"
+    },
+    "checks": [
+      "原报告36个公开文件逐字节与旧站一致。",
+      "六枚图标及原始Figma SVG摘要与原导出清单一致。",
+      "本次为迁移核对，不重做原业务测试。"
+    ],
+    "limitations": "本页保留10月19日记录。历史四列未重拍，不包含后补的四枚图标；不能作为当前原型还原或真机验收通过的证明。",
+    "pendingSummary": "保留10月19日原结论；原四列未重拍，不包含后补四枚图标。真机及原生能力仍待复测。"
   }
 ]
