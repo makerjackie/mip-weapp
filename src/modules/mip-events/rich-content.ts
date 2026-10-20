@@ -31,11 +31,8 @@ function safeImageUrl(value: string): string {
   if (normalized.length > 2048) {
     return ''
   }
-  // 远程图仅放行 https；cloud:// 由详情页先走本地下载管道解析成 wxfile:// 临时路径
-  // （或开发者工具的 http://tmp/ 路径）后再进节点，未解析的 cloud:// 不直接渲染。
-  if (/^wxfile:\/\//.test(normalized) || /^http:\/\/tmp\//.test(normalized)) {
-    return normalized
-  }
+  // rich-text img only supports network images. Native image's local paths can
+  // decode successfully while still failing inside rich-text on iOS.
   if (!/^https:\/\/[A-Za-z0-9.-]+(?::\d{1,5})?(?:[/?#]|$)/.test(normalized)
     || /^https:\/\/[^/?#]*@/.test(normalized)) {
     return ''
@@ -43,7 +40,7 @@ function safeImageUrl(value: string): string {
   return normalized
 }
 
-/** 富文本里待解析的 cloud:// 插图引用（按出现顺序去重），详情页批量转本地路径后再渲染。 */
+/** 待解析的 cloud:// 插图引用，按顺序去重；签发短时 HTTPS 地址后再渲染。 */
 export function extractRichTextCloudImageIds(value: string): string[] {
   const ids: string[] = []
   const seen = new Set<string>()

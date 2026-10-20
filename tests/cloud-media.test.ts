@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   clearCloudMediaCache,
   resolveCloudFileUrls,
+  resolveEventRichTextImageUrls,
 } from '../src/platform/storage/cloud-media'
 
 vi.mock('../src/platform/cloudbase/client', () => ({
@@ -98,6 +99,50 @@ describe('CloudBase media URLs', () => {
     expect(result).toEqual({ imageUrl: 'wxfile://tmp/native-event.jpg' })
     expect(cloudDownload).toHaveBeenCalledWith({ fileID: 'cloud://media-test/native-event.jpg' })
     expect(getTempFileURL).not.toHaveBeenCalled()
+  })
+
+  it('uses separate HTTPS URLs for rich-text even when the same image has a cached native path', async () => {
+    const fileId = 'cloud://media-test/organizer.jpg'
+    const downloadFile = vi.fn(async () => ({ tempFilePath: 'wxfile://tmp/organizer.jpg', statusCode: 200 }))
+    const callFunction = vi.fn(async () => ({ result: { ok: true, data: { urls: { [fileId]: 'https://cdn.example/organizer.jpg?sign=fresh' } } } }))
+    const cloud = { downloadFile, callFunction } as unknown as CaseCloudClient
+    await expect(resolveCloudFileUrls(fileId, cloud)).resolves.toBe('wxfile://tmp/organizer.jpg')
+    await expect(resolveEventRichTextImageUrls([fileId], cloud)).resolves.toEqual(['https://cdn.example/organizer.jpg?sign=fresh'])
+    await expect(resolveCloudFileUrls(fileId, cloud)).resolves.toBe('wxfile://tmp/organizer.jpg')
+    expect(downloadFile).toHaveBeenCalledTimes(1)
+    await resolveEventRichTextImageUrls([fileId], cloud)
+    expect(callFunction).toHaveBeenCalledTimes(1)
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 9 * 60 * 1000)
+    try {
+      await resolveEventRichTextImageUrls([fileId], cloud)
+      expect(callFunction).toHaveBeenCalledTimes(2)
+    }
+    finally { clock.mockRestore() }
+  })
+
+  it('fails closed for unauthorized images and does not fall back to local files in rich-text', async () => {
+    const downloadFile = vi.fn()
+    const cloud = { downloadFile, callFunction: vi.fn(async () => ({ result: { ok: false } })) } as unknown as CaseCloudClient
+    await expect(resolveEventRichTextImageUrls(['cloud://media-test/private.jpg', 'wxfile://tmp/image.jpg'], cloud)).resolves.toEqual(['', ''])
+    expect(downloadFile).not.toHaveBeenCalled()
+  })
+
+  it('discards old identity cache entries and shares concurrent rich-text signing', async () => {
+    const fileId = 'cloud://media-test/event.jpg'
+    let finish!: (value: unknown) => void
+    const callFunction = vi.fn().mockReturnValueOnce(new Promise((resolve) => {
+      finish = resolve
+    })).mockResolvedValue({ result: { ok: true, data: { urls: { [fileId]: 'https://cdn.example/current.jpg' } } } })
+    const cloud = { callFunction } as unknown as CaseCloudClient
+    const first = resolveEventRichTextImageUrls([fileId], cloud)
+    const duplicate = resolveEventRichTextImageUrls([fileId], cloud)
+    expect(callFunction).toHaveBeenCalledTimes(1)
+    clearCloudMediaCache()
+    await expect(resolveEventRichTextImageUrls([fileId], cloud)).resolves.toEqual(['https://cdn.example/current.jpg'])
+    finish({ result: { ok: true, data: { urls: { [fileId]: 'https://cdn.example/old-user.jpg' } } } })
+    await Promise.all([first, duplicate])
+    await expect(resolveEventRichTextImageUrls([fileId], cloud)).resolves.toEqual(['https://cdn.example/current.jpg'])
+    expect(callFunction).toHaveBeenCalledTimes(2)
   })
 
   it('recovers private-storage public event images through the server and expires signed URLs', async () => {
