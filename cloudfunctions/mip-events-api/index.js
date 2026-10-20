@@ -3,6 +3,7 @@
 const cloud = require('wx-server-sdk')
 const { DomainError } = require('./domain/rules')
 const service = require('./domain/event-service')
+const { eventMediaUrls } = require('./domain/media')
 const { configuredAgreements, createParticipationAccessPolicy } = require('./domain/participation-access')
 const { identityKey, resolveMipUser, trustedWechatIdentity } = require('./lib/identity')
 const { createCheckInCodeAsset, createInvitationCodeAsset } = require('./lib/checkin-poster')
@@ -32,6 +33,7 @@ const outboxWakeup = createOutboxWakeup({
 const participationAccessPolicy = createParticipationAccessPolicy({ agreements: configuredAgreements() })
 
 const publicActions = new Set([
+  'mip.events.mediaUrls',
   'mip.events.list',
   'mip.events.calendarDates',
   'mip.events.discoveryFilters',
@@ -145,6 +147,8 @@ async function dispatch(event) {
     profileRefSecret: process.env.MIP_IDENTITY_PEPPER,
   }
   switch (action) {
+    case 'mip.events.mediaUrls':
+      return eventMediaUrls(mysqlDatabase(), cloud, { ...shared, fileIds: event.fileIds })
     case 'mip.events.list':
       return service.listEvents(mysqlDatabase(), { ...shared, query: event.query || {} })
     case 'mip.events.calendarDates':

@@ -1,4 +1,5 @@
 import type { CaseCloudClient } from '../cloudbase/client'
+import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../cloudbase/client'
 import { measureLoading } from '../cloudbase/loading-diagnostics'
 import { replaceCloudFileUrls } from './media-urls'
@@ -44,9 +45,9 @@ async function withDownloadSlot<T>(run: () => Promise<T>, background: boolean): 
   }
 }
 
-function cacheMediaFile(fileId: string, url: string) {
+function cacheMediaFile(fileId: string, url: string, expiresAt = Number.POSITIVE_INFINITY) {
   cache.delete(fileId)
-  cache.set(fileId, { url, expiresAt: Number.POSITIVE_INFINITY })
+  cache.set(fileId, { url, expiresAt })
   while (cache.size > maximumCachedFiles) {
     const oldest = cache.keys().next().value
     if (typeof oldest !== 'string') {
@@ -81,8 +82,54 @@ function isErrorDocumentPath(path: string) {
   return /\.(?:html?|json|txt|xml)(?:$|[?#])/i.test(path)
 }
 
+function cachedMedia(fileId: string) {
+  const entry = cache.get(fileId)
+  if (!entry || entry.expiresAt <= Date.now()) {
+    cache.delete(fileId)
+    return undefined
+  }
+  if (/^(?:wxfile:\/\/|http:\/\/tmp\/)/.test(entry.url)
+    && typeof wx !== 'undefined' && typeof wx.getFileSystemManager === 'function') {
+    try {
+      wx.getFileSystemManager().accessSync(entry.url)
+    }
+    catch {
+      cache.delete(fileId)
+      return undefined
+    }
+  }
+  return entry
+}
+
+async function publicEventMedia(cloud: CaseCloudClient, fileIds: string[]) {
+  const urls = new Map<string, string>()
+  for (let offset = 0; offset < fileIds.length; offset += 30) {
+    const batch = fileIds.slice(offset, offset + 30)
+    try {
+      const response = await cloud.callFunction({
+        name: runtimeConfig.cloudbase.eventsFunctionName,
+        data: { action: 'mip.events.mediaUrls', fileIds: batch },
+      })
+      const result = response.result as { ok?: boolean, data?: { urls?: Record<string, unknown> } } | undefined
+      if (result?.ok !== true) {
+        continue
+      }
+      for (const fileId of batch) {
+        const url = result.data?.urls?.[fileId]
+        if (typeof url === 'string' && /^https:\/\/[^\s/@]+(?:\/|$)/.test(url)) {
+          urls.set(fileId, url)
+        }
+      }
+    }
+    catch {
+      // A failed image read must not turn successful event/order content into an error.
+    }
+  }
+  return urls
+}
+
 async function downloadCloudFile(cloud: CaseCloudClient, fileId: string, background: boolean): Promise<string> {
-  const cached = cache.get(fileId)
+  const cached = cachedMedia(fileId)
   if (cached) {
     return cached.url
   }
@@ -95,7 +142,8 @@ async function downloadCloudFile(cloud: CaseCloudClient, fileId: string, backgro
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
         const result = await withDownloadSlot(() => cloud.downloadFile({ fileID: fileId }), background)
-        if (result.tempFilePath && !isErrorDocumentPath(result.tempFilePath)) {
+        if (result.tempFilePath && (result.statusCode === undefined || result.statusCode === 200)
+          && !isErrorDocumentPath(result.tempFilePath)) {
           if (generation === cacheGeneration) {
             cacheMediaFile(fileId, result.tempFilePath)
           }
@@ -143,7 +191,6 @@ async function downloadCloudFiles(cloud: CaseCloudClient, fileIds: string[], bac
 /** Resolves CloudBase file IDs to process-local files before native images render. */
 export async function resolveCloudFileUrls<T>(value: T, providedCloud?: CaseCloudClient, background = false): Promise<T> {
   const resolveGeneration = cacheGeneration
-  const now = Date.now()
   const fileIds = [...collectCloudFileIds(value)]
   if (!fileIds.length) {
     return value
@@ -152,8 +199,8 @@ export async function resolveCloudFileUrls<T>(value: T, providedCloud?: CaseClou
   const urls = new Map<string, string>()
   const missing: string[] = []
   for (const fileId of fileIds) {
-    const cached = cache.get(fileId)
-    if (cached && cached.expiresAt > now) {
+    const cached = cachedMedia(fileId)
+    if (cached) {
       urls.set(fileId, cached.url)
       cache.delete(fileId)
       cache.set(fileId, cached)
@@ -167,6 +214,13 @@ export async function resolveCloudFileUrls<T>(value: T, providedCloud?: CaseClou
   if (missing.length) {
     const cloud = providedCloud || await requireCloudClient()
     const localPaths = await measureLoading('media.download', () => downloadCloudFiles(cloud, missing, background))
+    const publicUrls = await publicEventMedia(cloud, missing.filter(fileId => !localPaths.has(fileId)))
+    for (const [fileId, url] of publicUrls) {
+      if (resolveGeneration === cacheGeneration) {
+        cacheMediaFile(fileId, url, Date.now() + 8 * 60 * 1000)
+      }
+      urls.set(fileId, url)
+    }
     for (const [fileId, localPath] of localPaths) {
       if (resolveGeneration === cacheGeneration) {
         cacheMediaFile(fileId, localPath)
@@ -175,7 +229,7 @@ export async function resolveCloudFileUrls<T>(value: T, providedCloud?: CaseClou
     }
 
     for (const fileId of missing) {
-      if (!localPaths.has(fileId)) {
+      if (!localPaths.has(fileId) && !publicUrls.has(fileId)) {
         // Broken downloads can contain an XML/HTML storage error document.
         urls.set(fileId, '')
       }
@@ -199,7 +253,7 @@ export function getCloudMediaGeneration() {
 export function peekCloudFileUrls<T>(value: T): T {
   const urls = new Map<string, string>()
   for (const fileId of collectCloudFileIds(value)) {
-    urls.set(fileId, cache.get(fileId)?.url || '')
+    urls.set(fileId, cachedMedia(fileId)?.url || '')
   }
   return replaceCloudFileUrls(value, urls)
 }

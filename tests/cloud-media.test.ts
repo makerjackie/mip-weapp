@@ -99,6 +99,42 @@ describe('CloudBase media URLs', () => {
     expect(cloudDownload).toHaveBeenCalledWith({ fileID: 'cloud://media-test/native-event.jpg' })
     expect(getTempFileURL).not.toHaveBeenCalled()
   })
+
+  it('recovers private-storage public event images through the server and expires signed URLs', async () => {
+    const fileID = 'cloud://media-test/public-event.png'
+    const downloadFile = vi.fn(async () => {
+      throw Object.assign(new Error('Permission denied'), { errCode: -502003 })
+    })
+    const callFunction = vi.fn(async () => ({ result: { ok: true, data: { urls: {
+      [fileID]: 'https://cdn.example/event.png?sign=fresh',
+      'cloud://media-test/unrequested.png': 'https://cdn.example/private.png',
+    } } } }))
+    const cloud = { downloadFile, callFunction } as unknown as CaseCloudClient
+    await expect(resolveCloudFileUrls({ coverUrl: fileID }, cloud)).resolves.toEqual({ coverUrl: 'https://cdn.example/event.png?sign=fresh' })
+    expect(callFunction).toHaveBeenCalledWith({ name: 'mip-t-events-api', data: { action: 'mip.events.mediaUrls', fileIds: [fileID] } })
+    await resolveCloudFileUrls(fileID, cloud)
+    expect(callFunction).toHaveBeenCalledTimes(1)
+    const now = Date.now()
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now + 9 * 60 * 1000)
+    try {
+      await resolveCloudFileUrls(fileID, cloud)
+      expect(callFunction).toHaveBeenCalledTimes(2)
+    }
+    finally { clock.mockRestore() }
+  })
+
+  it('redownloads an OS-removed temporary file instead of returning its stale cached path', async () => {
+    const accessSync = vi.fn()
+    vi.stubGlobal('wx', { getFileSystemManager: () => ({ accessSync }) })
+    const downloadFile = vi.fn(async () => ({ tempFilePath: 'wxfile://tmp/new-image.png', statusCode: 200 }))
+    const cloud = { downloadFile } as unknown as CaseCloudClient
+    await resolveCloudFileUrls('cloud://media-test/event.png', cloud)
+    accessSync.mockImplementation(() => {
+      throw new Error('ENOENT')
+    })
+    await resolveCloudFileUrls('cloud://media-test/event.png', cloud)
+    expect(downloadFile).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe('concurrent media loading', () => {

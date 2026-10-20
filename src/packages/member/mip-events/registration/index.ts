@@ -1,8 +1,9 @@
 import type { EventId, OrderId } from '../../../../modules/mip'
-import type { MipEventDetail, MyEventRegistration, RegistrationField } from '../../../../modules/mip-events'
+import type { eventRichTextNodes, MipEventDetail, MyEventRegistration, RegistrationField } from '../../../../modules/mip-events'
 import { mipCommerceModule } from '../../../../modules/mip-commerce/client'
 import { decodeInvitationToken, MipEventsError, publicEventTypeLabel } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule, mipRegistrationDraftStore } from '../../../../modules/mip-events/client'
+import { clearEventRichContent, updateEventRichContent } from '../../../../modules/mip-events/rich-content-media'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { requestEntrySubscription } from '../../../../modules/mip-messaging/entry-subscription'
@@ -127,7 +128,6 @@ interface OrderDerived {
   ticketPriceText: string
   totalSymbol: string
   totalAmount: string
-  noticesText: string
   payLabel: string
 }
 
@@ -140,7 +140,6 @@ function orderDerived(event: MipEventDetail, registration: MyEventRegistration |
     orderNumberText: orderIdText || '支付后生成',
     orderIdText,
     ...orderPriceTexts(event),
-    noticesText: event.notices || DEFAULT_PURCHASE_NOTICES,
     payLabel: editing ? '保存修改' : event.accessType === 'PAID' ? '立即支付' : '提交报名',
   }
 }
@@ -153,7 +152,7 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'blocked' | 'error' | 'submitted',
     eventId: '' as EventId,
-    event: null as (Omit<MipEventDetail, 'description' | 'organizerIntroduction'>) | null,
+    event: null as (Omit<MipEventDetail, 'description' | 'organizerIntroduction' | 'notices'>) | null,
     registration: null as MyEventRegistration | null,
     fields: [] as RegistrationFieldView[],
     editing: false,
@@ -180,7 +179,7 @@ Page({
     ticketPriceText: '',
     totalSymbol: '',
     totalAmount: '',
-    noticesText: '',
+    noticesNodes: [] as ReturnType<typeof eventRichTextNodes>,
     payLabel: '',
     figmaLayout: false,
   },
@@ -236,6 +235,7 @@ Page({
   },
 
   onUnload() {
+    clearEventRichContent(this)
     this.persistDraft()
     clearPageMedia(this)
   },
@@ -258,7 +258,7 @@ Page({
       const event = await mipEventsModule.getEvent(this.data.eventId)
       // MIW-79：富文本原始 markdown（可能含 cloud:// 插图引用）不进页面数据，
       // 页面只消费下方派生字段（noticesText/startsText/locationText 等）。
-      const { description: _richDescription, organizerIntroduction: _richOrganizerIntroduction, ...presentableEvent } = event
+      const { description: _richDescription, organizerIntroduction: _richOrganizerIntroduction, notices: _richNotices, ...presentableEvent } = event
       const presentedEvent = {
         ...presentableEvent,
         eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
@@ -308,6 +308,7 @@ Page({
       })
       // 封面与详情页同一条本地下载管道：cloud:// 先隐藏，解析成临时路径后再渲染。
       updatePageMedia(this, 'event.coverUrl', event.coverUrl || '')
+      updateEventRichContent(this, 'noticesNodes', event.notices || DEFAULT_PURCHASE_NOTICES)
       if (this.pendingAccessResume) {
         this.pendingAccessResume = false
         this.setData({ message: '身份已确认，请核对报名信息后提交。' })

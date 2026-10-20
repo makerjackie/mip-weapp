@@ -50,6 +50,8 @@ AI 草稿和数字分身分别使用不属于数据库业务清单的 `mip-ai-dr
 
 ## 数据和存储
 
+公开活动图片使用 `mip.events.mediaUrls` 读取短期地址作为原生下载被私有存储拒绝时的回退。服务端按当前 AppID、已发布活动的封面/正文/须知引用、公开回顾封面或本人历史活动订单核对每个文件；草稿和无关联文件不签名。存储桶继续保持私有，临时地址不落库，客户端在过期前重新解析，并检查本地临时文件是否仍存在。活动详情与报名订单确认页共用受限 HTML/Markdown 节点渲染，原始标签不作为普通文字展示。
+
 - 新业务只使用 `mip_*` 表，迁移记录写入 `mip_schema_migrations`；`database/mysql/mip/migrations.lock.json` 是迁移顺序、校验和和表清单的权威来源。
 - 订单统一使用 `mip_orders`：`order_type=MEMBERSHIP` 表示会员订单，`order_type=EVENT` 表示付费活动订单，`order_type=CONTENT` 表示单内容解锁订单。不要再建立第二套订单事实。
 - 对象存储 key 统一使用 `mip/` 前缀。数据库保存完整 `cloud://` 文件 ID、摘要、大小和业务外键，不保存临时 HTTPS URL。

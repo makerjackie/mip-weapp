@@ -1346,7 +1346,7 @@ async function getEvent(db, {
       imageUrl: item.cloud_file_id,
       caption: item.caption || '',
     })),
-    notices: row.notices || undefined,
+    notices: rewriteExpiringRichImageUrls(row.notices, contentAssetRows) || undefined,
     address: row.address || undefined,
     latitude: row.latitude === null ? undefined : Number(row.latitude),
     longitude: row.longitude === null ? undefined : Number(row.longitude),
