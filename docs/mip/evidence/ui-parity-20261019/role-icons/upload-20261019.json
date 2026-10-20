@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-20T03:31:58.739824+00:00",
+  "sourceCommit": "509a3667b166f2e92dbaf3e218db4ea89445a1ba",
+  "version": "0.2.0.20261019.5",
+  "channel": "trial",
+  "targetConfig": "envs/test",
+  "functionPrefix": "mip-t-",
+  "payment": "disabled",
+  "verifyAll": {
+    "passed": true,
+    "miniProgramTests": 1807,
+    "webReactTests": 243,
+    "webNodeTests": 325
+  },
+  "runtimePreflight": "passed",
+  "upload": {
+    "via": "logged-in WeChat DevTools CLI, flattened dist",
+    "exitCode": 0,
+    "platformUploadSucceeded": true,
+    "platformPackageBytes": {
+      "total": 3194537,
+      "main": 1754883,
+      "admin": 137952,
+      "member": 1301702
+    }
+  },
+  "bundleContainsAllSixRoleIcons": true,
+  "nestedVendorTreePresent": true,
+  "mappingAudit": "mapping-audit.json",
+  "experienceVersionSelection": "pending-user",
+  "realDeviceAcceptance": "pending-user",
+  "productionWrites": 0,
+  "originalComparisonScreenshotsRegenerated": false
+}

@@ -40,7 +40,7 @@
   "sameStateComparisonRedo": "waived-by-user",
   "oldScreenshotsUnchanged": true,
   "realDeviceAcceptance": "user-will-test-later",
-  "miniProgramUploadThisIncrement": false,
+  "miniProgramUploadThisIncrement": true,
   "previousDevelopmentVersion": "0.2.0.20261019.4",
   "previousDevelopmentVersionContainsThisIncrement": false,
   "productionWritesThisIncrement": 0,
@@ -71,5 +71,8 @@
   "mainPackageBytes": 1359207,
   "memberPackageBytes": 1938920,
   "adminPackageBytes": 545092,
-  "gitDiffCheck": "passed"
+  "gitDiffCheck": "passed",
+  "developmentVersion": "0.2.0.20261019.5",
+  "experienceVersionSelection": "pending-user",
+  "mappingAudit": "mapping-audit.json"
 }

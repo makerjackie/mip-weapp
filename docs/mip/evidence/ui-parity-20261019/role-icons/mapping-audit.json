@@ -1,0 +1,50 @@
+{
+  "checkedAt": "2026-10-20T03:24:00.713Z",
+  "method": "execute actual role catalog and talent component observer; assert original asset and static WXML icon references",
+  "passed": true,
+  "roles": [
+    {
+      "roleKey": "connector",
+      "roleName": "皮条客",
+      "icon": "talent-role-pimp",
+      "sourceGlyph": "pimp.svg"
+    },
+    {
+      "roleKey": "business_builder",
+      "roleName": "生意佬",
+      "icon": "talent-role-business",
+      "sourceGlyph": "business.svg"
+    },
+    {
+      "roleKey": "capital_operator",
+      "roleName": "暴发户",
+      "icon": "talent-role-money",
+      "sourceGlyph": "money.svg"
+    },
+    {
+      "roleKey": "strategist",
+      "roleName": "狗策划",
+      "icon": "talent-role-dog",
+      "sourceGlyph": "dog.svg"
+    },
+    {
+      "roleKey": "visual_designer",
+      "roleName": "死美工",
+      "icon": "talent-role-designer",
+      "sourceGlyph": "designer.svg"
+    },
+    {
+      "roleKey": "delivery_lead",
+      "roleName": "老保姆",
+      "icon": "talent-role-nanny",
+      "sourceGlyph": "nanny.svg"
+    }
+  ],
+  "sourceSha256": {
+    "src/config/mip-catalogs.ts": "9ab115dbeb9f2f4788217bb87d004cc02591406d7ad8050fcc3ea4c9efc6bd37",
+    "src/pages/opportunities/index.ts": "43f1ee86b00065a4f6bde85f3ece805f4920e539b17a6161d5824b2ca53d50f1",
+    "src/components/talent-card/index.ts": "6250ad187f6bb4645bbc394b54590286f298737f03300f91bede7f4aeed215dc",
+    "src/components/talent-card/index.wxml": "5293a7bf8cc7429880073362c1ef239f90a95ce8ea0b8731cd53d5ca0f1b8abd",
+    "src/components/mip-icon/icons.ts": "d36f62c78185f0a96a619e267819ec62459b88e552bcdf132eff0fc06284306a"
+  }
+}
