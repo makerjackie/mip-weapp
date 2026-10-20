@@ -34,6 +34,9 @@ await Promise.all(Array.from({ length: 5 }, async () => {
     if (file.endsWith('.html') && !response.headers.get('content-type')?.includes('text/html')) {
       throw new Error(`Incorrect HTML MIME: ${file}`)
     }
+    if ((file.endsWith('.css') && !response.headers.get('content-type')?.includes('text/css')) || (file.endsWith('.js') && !/javascript/.test(response.headers.get('content-type') || ''))) {
+      throw new Error(`Incorrect reader asset MIME: ${file}`)
+    }
     verified.push({ file, bytes: actual.length, sha256: createHash('sha256').update(actual).digest('hex') })
   }
 }))

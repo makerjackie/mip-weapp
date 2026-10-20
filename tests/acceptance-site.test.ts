@@ -18,6 +18,7 @@ function fixture() {
     fs.mkdirSync(path.join(root, dir), { recursive: true })
   }
   fs.copyFileSync('scripts/acceptance-site.mjs', path.join(root, 'scripts/acceptance-site.mjs'))
+  fs.cpSync('scripts/acceptance-reader', path.join(root, 'scripts/acceptance-reader'), { recursive: true })
   const image = 'docs/mip/evidence/example/image.png'
   fs.writeFileSync(path.join(root, image), 'reviewed-public-image')
   const report = {
@@ -108,6 +109,39 @@ describe('公开验收报告的版本与时间规则', () => {
     const daily = fs.readFileSync(path.join(f.root, '.tmp/mip-acceptance-site/updates/2026-10-20/index.html'), 'utf8')
     expect(daily).toContain('权威原型')
     expect(daily).toContain('当前设计原图')
+  })
+  it('画面对照直接可见，目录和复制链接指向唯一且稳定的锚点', () => {
+    const f = fixture()
+    f.run('build')
+    const dailyPath = path.join(f.root, '.tmp/mip-acceptance-site/updates/2026-10-20/index.html')
+    const daily = fs.readFileSync(dailyPath, 'utf8')
+    expect(daily).toContain('aria-label="本页目录"')
+    expect(daily).toContain('aria-label="跳转到验收项"')
+    expect(daily).toContain('data-copy-link')
+    expect(daily).toContain('/assets/acceptance-reader/reader.js')
+    expect(daily).toContain('/assets/acceptance-reader/reader.css')
+    expect(daily).toContain('class="comparison"')
+    expect(daily).not.toContain('<details')
+    expect(daily).not.toContain('查看画面对照')
+    const ids = [...daily.matchAll(/\bid="([^"]+)"/g)].map(match => match[1])
+    expect(new Set(ids).size).toBe(ids.length)
+    for (const match of daily.matchAll(/href="#([^"]+)"/g)) {
+      expect(ids).toContain(match[1])
+    }
+    const anchor = daily.match(/class="comparison" id="([^"]+)"/)![1]
+    f.write([{ ...f.report, comparisons: [{ ...f.report.comparisons[0], title: '新增加在前面的对照' }, ...f.report.comparisons] }])
+    f.run('build')
+    expect(fs.readFileSync(dailyPath, 'utf8')).toContain(`class="comparison" id="${anchor}"`)
+    expect(fs.existsSync(path.join(f.root, '.tmp/mip-acceptance-site/assets/acceptance-reader/reader.js'))).toBe(true)
+  })
+  it('冲突的目录锚点拒绝构建，避免分享链接定位到错误内容', () => {
+    const f = fixture()
+    f.write([{ ...f.report, sections: [{ id: 'same', title: '行业' }, { id: 'same', title: '日期' }] }])
+    expect(() => f.run('build')).toThrow()
+    f.write([{ ...f.report, sections: [{ id: 'profile', title: '行业', comparisons: [f.report.comparisons[0], f.report.comparisons[0]] }] }])
+    expect(() => f.run('build')).toThrow()
+    f.write([{ ...f.report, sections: [{ title: '缺少定位标识' }] }])
+    expect(() => f.run('build')).toThrow()
   })
   it('历史功能和图片合入日期页，旧入口仅跳转，原始归档仍不可改写', () => {
     const f = fixture()
