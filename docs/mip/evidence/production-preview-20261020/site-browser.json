@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-20T12:05:29.355Z",
+  "checks": [
+    {
+      "width": 1440,
+      "productionPreviewStatusShown": true,
+      "noPrivateQrOnSite": true,
+      "noOverflow": true
+    },
+    {
+      "width": 390,
+      "productionPreviewStatusShown": true,
+      "noPrivateQrOnSite": true,
+      "noOverflow": true
+    }
+  ]
+}
