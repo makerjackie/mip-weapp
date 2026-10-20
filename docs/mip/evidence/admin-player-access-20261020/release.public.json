@@ -1,0 +1,39 @@
+{
+  "at": "2026-10-20T08:03:19.653099+00:00",
+  "runtimeCommit": "cda48f7fcc36b37f209cfbbf0b5ed4c8e8486c1c",
+  "environment": "test",
+  "productionChanged": false,
+  "databaseOrRoleGrantsChanged": false,
+  "actualMembershipGrantExecuted": false,
+  "entry": "/assets/index-BDOCuDuJ.js",
+  "staticFilesMatched": 15,
+  "bffRuntimeFilesMatched": 34,
+  "apiRuntimeFilesMatched": 167,
+  "bffConfigurationUnchanged": true,
+  "businessApiCodeChanged": false,
+  "httpChecksPassed": 68,
+  "acceptanceSiteFilesVerified": 106,
+  "acceptanceSitePassed": true,
+  "browserProfileCssViewports": [
+    [
+      1440,
+      900,
+      1423
+    ],
+    [
+      1280,
+      720,
+      1263
+    ],
+    [
+      390,
+      844,
+      373
+    ]
+  ],
+  "publicReportMobileCssViewport": [
+    390,
+    844,
+    373
+  ]
+}

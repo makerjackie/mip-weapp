@@ -1,0 +1,48 @@
+{
+  "source": "cda48f7fcc36b37f209cfbbf0b5ed4c8e8486c1c",
+  "verifiedAt": "2026-10-20T07:59:14.868553+00:00",
+  "environment": "test",
+  "engineering": {
+    "rootTests": 1825,
+    "webNodeTests": 337,
+    "webReactTests": 257,
+    "verifyAllPassed": true
+  },
+  "httpChecks": 68,
+  "publicAssets": 15,
+  "bffRuntimeMatched": 34,
+  "apiRuntimeMatched": 167,
+  "readbackAfterCancel": {
+    "at": "2026-10-20T07:56:37.174Z",
+    "target": "test",
+    "membershipUnchanged": true,
+    "roleBindingsUnchanged": true,
+    "realMembershipGrant": false
+  },
+  "checks": [
+    "完整verify:all通过：小程序1825、Web合同337、React257，另含服务端、类型、构建、文档与响应式合同。",
+    "注册/权限服务端专项29项、Web专项32项通过：注册不创建后台账号/角色绑定/会籍；无后台角色时服务端拒绝冒充管理员的请求。",
+    "实际测试库两个Owner绑定均晚于注册，均有显式admin.owner.bootstrap审计；没有把历史初始化误判成新用户自动授权。",
+    "真实网页的开通玩家权益入口可打开时长及必填原因表单；取消后独立HTTPS读取确认会员权益、链版本及后台角色不变。",
+    "最终HTTPS68项、14只读模块通过；15个公开静态资源字节一致；浏览器已展示新入口并移除用户详情设置角色按钮。",
+    "BFF34文件逐字节匹配本次构建，SCF摘要校验通过，配置/权限/触发器未改；API167运行文件仍与原包一致，本次未更新业务API或identity函数。",
+    "1440×900、1280×720、390×844根宽1423/1263/373，无整页横向溢出；手机滚动可到达开通入口。"
+  ],
+  "limitations": "只更新测试后台，生产未更新。没有给真实账号追加不可撤销的会籍时长，也没有创建、扩大或撤销后台授权。真实微信新用户首次注册、实际人工发放及用户端权益回读未在本轮执行；代码合同、页面打开与取消不能冒充这些业务旅程通过。用户分类/主分会及其他未决项不因本轮反馈自动确认。",
+  "screenshots": {
+    "type": "native browser screenshot clip",
+    "clip": {
+      "x": 490,
+      "y": 140,
+      "width": 850,
+      "height": 120
+    },
+    "containsAllUserDetailActions": true,
+    "noRedrawingOrCompositing": true,
+    "privateFullScreenshotsRetained": true
+  },
+  "artifacts": {
+    "toolbar-before.png": "01a53f042c48cdd076e6c8b49a32c7d1ae2a23e4dac5a0dc64ee39ee8acb9ad0",
+    "toolbar-after.png": "9fc20a2cbe5b932b56747c4c1a0f410ed2b5bdb931f178bcdedaadf936c3947d"
+  }
+}

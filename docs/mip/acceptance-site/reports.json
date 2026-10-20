@@ -99,5 +99,60 @@
       "生产环境微信代码包1.0.2上传成功，主包1,759,301字节；测试函数引用0。尚未提交审核或全量发布。"
     ],
     "limitations": "对照截图明确来自测试环境；生产界面和微信调用已另行只读验证，未创建生产测试活动或报名订单。生产4张活动图已验证非上传者可读，具体受影响用户的手机仍需回访；真实支付、回调、退款尚未验收。微信1.0.2已上传，未提审或全量发布。新开关和本次纠错没有对应的当前权威原型原图，第三列据实标明。"
+  },
+  {
+    "id": "admin-users-20261020-v1",
+    "requirement": "admin-users",
+    "title": "用户管理：玩家权益与后台角色分离",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-20T07:59:14.868553+00:00",
+    "updatedAt": "2026-10-20T07:59:14.868553+00:00",
+    "verifiedAt": "2026-10-20T07:59:14.868553+00:00",
+    "submittedAt": "2026-10-20T07:59:14.868553+00:00",
+    "commit": "cda48f7fcc36b37f209cfbbf0b5ed4c8e8486c1c",
+    "commitAt": "2026-10-20T03:47:39-04:00",
+    "environment": "测试后台 · 权益入口与权限合同已验",
+    "summary": "开通玩家权益入口改为醒目主按钮，后台角色独立配置。注册不默认授予后台权限；现有测试管理员来源已查明。实际赠送和微信新用户首登仍待验。",
+    "detail": "docs/mip/evidence/admin-player-access-20261020/index.html",
+    "files": [
+      "docs/mip/evidence/admin-player-access-20261020/index.html",
+      "docs/mip/evidence/admin-player-access-20261020/toolbar-before.png",
+      "docs/mip/evidence/admin-player-access-20261020/toolbar-after.png",
+      "docs/mip/evidence/admin-player-access-20261020/verification.public.json",
+      "docs/mip/evidence/admin-player-access-20261020/role-audit.public.json",
+      "docs/mip/evidence/admin-player-access-20261020/cancel-check.public.json"
+    ],
+    "comparisons": [
+      {
+        "title": "玩家权益发放入口与后台角色分离",
+        "context": "真实测试后台，同一账号、同一操作者、同一视口的完整工具栏局部截图；个人资料区域排除，完整原图留本机。工具栏不作为注册默认授权证明。",
+        "before": {
+          "file": "docs/mip/evidence/admin-player-access-20261020/toolbar-before.png",
+          "caption": "修改前：补录会员与设置角色并列，权益入口难辨",
+          "source": "本轮修改前，测试后台真实工具栏"
+        },
+        "after": {
+          "file": "docs/mip/evidence/admin-player-access-20261020/toolbar-after.png",
+          "caption": "修改后：开通玩家权益主按钮，用户详情不再配置角色",
+          "source": "本轮发布后，测试后台真实工具栏"
+        },
+        "prototype": {
+          "caption": "本次甲方文字要求，无独立视觉原图",
+          "reason": "甲方要求玩家权益入口明确、新用户不能默认管理员、后台角色单独配置。没有提供此入口的对应新视觉原型，不用旧稿或自制图替代。",
+          "source": "2026-10-20 当前对话甲方反馈"
+        }
+      }
+    ],
+    "checks": [
+      "完整verify:all通过：小程序1825、Web合同337、React257，另含服务端、类型、构建、文档与响应式合同。",
+      "注册/权限服务端专项29项、Web专项32项通过：注册不创建后台账号/角色绑定/会籍；无后台角色时服务端拒绝冒充管理员的请求。",
+      "实际测试库两个Owner绑定均晚于注册，均有显式admin.owner.bootstrap审计；没有把历史初始化误判成新用户自动授权。",
+      "真实网页的开通玩家权益入口可打开时长及必填原因表单；取消后独立HTTPS读取确认会员权益、链版本及后台角色不变。",
+      "最终HTTPS68项、14只读模块通过；15个公开静态资源字节一致；浏览器已展示新入口并移除用户详情设置角色按钮。",
+      "BFF34文件逐字节匹配本次构建，SCF摘要校验通过，配置/权限/触发器未改；API167运行文件仍与原包一致，本次未更新业务API或identity函数。",
+      "1440×900、1280×720、390×844根宽1423/1263/373，无整页横向溢出；手机滚动可到达开通入口。"
+    ],
+    "limitations": "只更新测试后台，生产未更新。没有给真实账号追加不可撤销的会籍时长，也没有创建、扩大或撤销后台授权。真实微信新用户首次注册、实际人工发放及用户端权益回读未在本轮执行；代码合同、页面打开与取消不能冒充这些业务旅程通过。用户分类/主分会及其他未决项不因本轮反馈自动确认。"
   }
 ]
