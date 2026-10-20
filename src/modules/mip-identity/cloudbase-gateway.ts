@@ -56,7 +56,9 @@ export function createMipIdentityCloudbaseTransport(
         if (envelope && typeof envelope === 'object' && 'ok' in envelope && envelope.ok === false) {
           recordLoadingFailure('identity.response', 'error' in envelope ? envelope.error : undefined)
         }
-        return resolveCloudFileUrls(envelope, result.cloud)
+        // Access decisions must not wait for avatar downloads. Display pages hydrate
+        // the stable cloud references independently through updatePageMedia.
+        return request.action === 'getAccessSnapshot' ? envelope : resolveCloudFileUrls(envelope, result.cloud)
       }
       catch {
         throw new Error('身份服务暂时不可用，请稍后重试')

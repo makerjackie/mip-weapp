@@ -11,6 +11,7 @@ import {
 } from '../../../modules/mip-identity/tag-catalog'
 import { mipMediaModule } from '../../../modules/mip-media/client'
 import { leaveSecondaryPage } from '../../../platform/navigation/client'
+import { clearPageMedia, updatePageMedia } from '../../../platform/storage/component-media'
 import { profileSaveValidationMessage } from './save-intent'
 
 Page({
@@ -69,6 +70,7 @@ Page({
   },
 
   onUnload() {
+    clearPageMedia(this)
     this.clearNavigationTimer()
   },
 
@@ -86,7 +88,7 @@ Page({
   async loadProfile() {
     this.setData({ state: 'loading', message: '' })
     try {
-      const snapshot = await mipIdentityModule.loadSnapshot()
+      const snapshot = await mipIdentityModule.loadSnapshot({ maxAgeMs: 15_000 })
       let aiSource = null
       let aiMessage = ''
       if (this.data.aiDraftId) {
@@ -137,7 +139,7 @@ Page({
         gender: snapshot.profile.gender || 'UNKNOWN',
         careerIdentityKey: snapshot.profile.careerIdentityKey || '',
         avatarAssetId: snapshot.profile.avatarAssetId || '',
-        avatarUrl: snapshot.profile.avatarUrl || '',
+        avatarUrl: '',
         avatarPending: false,
         identityStatus: snapshot.profile.identityStatus,
         headline: aiText(aiFields, 'headline', 300) || snapshot.profile.headline,
@@ -153,6 +155,7 @@ Page({
         abilityTagIds: snapshot.profile.abilityTagIds,
         message: [aiMessage, !industryCatalogAvailable ? '行业目录暂时加载失败，已保留原行业，可继续保存其他资料。' : ''].filter(Boolean).join(' '),
       })
+      updatePageMedia(this, 'avatarUrl', snapshot.profile.avatarUrl || '')
     }
     catch (error) {
       this.setData({
@@ -190,6 +193,7 @@ Page({
     if (!avatarUrl || this.data.avatarUploading || this.data.saving) {
       return
     }
+    clearPageMedia(this)
     this.setData({ avatarUploading: true, message: '' })
     try {
       const asset = await mipMediaModule.uploadImageFromPath('AVATAR', avatarUrl)
@@ -284,10 +288,11 @@ Page({
       this.setData({
         profileVersion: snapshot.profile.version,
         avatarAssetId: snapshot.profile.avatarAssetId || '',
-        avatarUrl: snapshot.profile.avatarUrl || '',
+        avatarUrl: '',
         avatarPending: false,
         profileVisibility: snapshot.profile.visibility,
       })
+      updatePageMedia(this, 'avatarUrl', snapshot.profile.avatarUrl || '')
       wx.showToast({ title: '资料已保存', icon: 'success' })
       // BUG-08:成功后进入「toast 展示 300ms 再返回」窗口,期间保持 saving=true,
       // 否则按钮 loading 解除但页面还在,再点保存会发起第二次真实写入;

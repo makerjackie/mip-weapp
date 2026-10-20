@@ -115,7 +115,7 @@ describe('MIP opportunity review fixes', () => {
     expect(mocks.beginProtectedAction).toHaveBeenCalledWith(expect.objectContaining({
       action: 'EDIT_PROFILE',
       source: expect.objectContaining({ navigation: 'navigateBack', route: '/pages/opportunities/index' }),
-    }))
+    }), { reuseRecent: true })
   })
 
   it('returns from profile setup to the same opportunity action without discarding its intent', async () => {

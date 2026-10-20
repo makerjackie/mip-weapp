@@ -26,6 +26,7 @@ import { opportunityModule, opportunityTypeLabel } from '../../modules/mip-oppor
 import { canManageEvents, hasCapability, membershipPresentation } from '../../modules/mip-shell'
 import { getLoadingDiagnostics, recordLoadingFailure } from '../../platform/cloudbase/loading-diagnostics'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
+import { clearPageMedia, updatePageMedia } from '../../platform/storage/component-media'
 import { formatLocalDate } from '../../utils/date'
 
 type PortfolioTab = 'cooperation' | 'cases' | 'opportunities'
@@ -190,6 +191,8 @@ Page({
     return this.loadProfile({ force: true })
   },
 
+  onUnload() { clearPageMedia(this) },
+
   async onShow() {
     syncCaseNavigation(this, 'pages/profile/index')
     this.openingActionLock = false
@@ -267,7 +270,7 @@ Page({
     }
     let snapshot: IdentityAccessSnapshot
     try {
-      snapshot = await mipIdentityModule.loadSnapshot()
+      snapshot = await mipIdentityModule.loadSnapshot(options.force ? {} : { maxAgeMs: 15_000 })
       this.applyIdentity(snapshot)
     }
     catch (error) {
@@ -286,18 +289,12 @@ Page({
       this.setData({ identityState: 'error', message: '资料更新失败，已保留上次结果。' })
     }
     this.setData({ state: 'ready', initialSectionsState: 'loading' })
-    const collaborationOpportunitiesRequest = this.data.opportunitySubTab === 'COOPERATING'
-      ? this.loadCollaborationOpportunities()
-      : Promise.resolve()
     const sectionResults = await Promise.allSettled([
       this.loadBranch(snapshot, options),
       this.loadIndustry(snapshot),
       this.loadGrowth(snapshot, options),
       this.loadBadges(snapshot),
-      this.loadCooperation(),
-      this.loadCases(),
-      this.loadOpportunities(),
-      collaborationOpportunitiesRequest,
+      this.loadSelectedPortfolio(),
       this.loadInfluenceSummary(snapshot),
       this.loadNotificationUnread(snapshot, options),
     ])
@@ -385,7 +382,7 @@ Page({
       authenticated: snapshot.authenticated,
       nickname: snapshot.profile.nickname || '微信用户',
       nicknameInitial: (snapshot.profile.nickname || '微信用户').slice(0, 1),
-      avatarUrl: snapshot.profile.avatarUrl || '',
+      avatarUrl: '',
       headline: snapshot.profile.headline,
       identityStatus: snapshot.profile.identityStatus,
       profileComplete: snapshot.profile.complete,
@@ -395,6 +392,7 @@ Page({
       growthState: isPlayer ? this.data.growthState : 'hidden',
       message: '',
     })
+    updatePageMedia(this, 'avatarUrl', snapshot.profile.avatarUrl || '')
   },
 
   async loadBranch(snapshot: IdentityAccessSnapshot, options: { force?: boolean }) {
@@ -614,10 +612,23 @@ Page({
     }
   },
 
+  async loadSelectedPortfolio() {
+    if (this.data.portfolioTab === 'cooperation') {
+      return this.loadCooperation()
+    }
+    if (this.data.portfolioTab === 'cases') {
+      return this.loadCases()
+    }
+    return this.data.opportunitySubTab === 'COOPERATING'
+      ? this.loadCollaborationOpportunities()
+      : this.loadOpportunities()
+  },
+
   changePortfolioTab(event: WechatMiniprogram.TouchEvent) {
     const tab = String(event.currentTarget.dataset.tab || '') as PortfolioTab
-    if (['cooperation', 'cases', 'opportunities'].includes(tab)) {
+    if (['cooperation', 'cases', 'opportunities'].includes(tab) && tab !== this.data.portfolioTab) {
       this.setData({ portfolioTab: tab })
+      void this.loadSelectedPortfolio()
     }
   },
 
@@ -627,9 +638,7 @@ Page({
       return
     }
     this.setData({ opportunitySubTab: tab })
-    if (tab === 'COOPERATING' && this.data.collaborationOpportunityState === 'loading') {
-      void this.loadCollaborationOpportunities()
-    }
+    void this.loadSelectedPortfolio()
   },
 
   async loadMorePortfolio() {

@@ -42,7 +42,7 @@ function initialField(field: RegistrationField, answer?: string | boolean): Regi
   }
 }
 
-function fieldsFromAnswers(event: MipEventDetail, answers: Record<string, string | boolean> = {}) {
+function fieldsFromAnswers(event: Pick<MipEventDetail, 'registrationSchema'>, answers: Record<string, string | boolean> = {}) {
   return event.registrationSchema.map(field => initialField(field, answers[field.key]))
 }
 
@@ -192,6 +192,9 @@ Page({
   submissionIdempotencyKey: '',
   pendingAccessResume: false,
   draftUserId: '',
+  profileSummaryRequest: 0,
+  draftTouched: false,
+  draftRestored: false,
   invitationResolution: null as Promise<void> | null,
 
   onLoad(query: Record<string, string>) {
@@ -241,6 +244,7 @@ Page({
   },
 
   onUnload() {
+    this.profileSummaryRequest += 1
     clearEventRichContent(this)
     this.persistDraft()
     clearPageMedia(this)
@@ -261,22 +265,21 @@ Page({
   async loadEvent() {
     this.setData({ state: 'loading', message: '' })
     try {
-      const event = await mipEventsModule.getEvent(this.data.eventId)
+      const [event, registration] = await Promise.all([
+        mipEventsModule.getEvent(this.data.eventId, { progressiveMedia: true }),
+        mipEventsModule.getMyRegistration(this.data.eventId).catch((error: unknown) => {
+          if (isAccessRequired(error)) {
+            return null
+          }
+          throw error
+        }),
+      ])
       // MIW-79：富文本原始 markdown（可能含 cloud:// 插图引用）不进页面数据，
       // 页面只消费下方派生字段（noticesText/startsText/locationText 等）。
       const { description: _richDescription, organizerIntroduction: _richOrganizerIntroduction, notices: _richNotices, ...presentableEvent } = event
       const presentedEvent = {
         ...presentableEvent,
         eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
-      }
-      let registration: MyEventRegistration | null = null
-      try {
-        registration = await mipEventsModule.getMyRegistration(this.data.eventId)
-      }
-      catch (error) {
-        if (!isAccessRequired(error)) {
-          throw error
-        }
       }
       const editing = registration?.canEdit === true
       const resumingPayment = registration?.status === 'PAYMENT_PENDING'
@@ -296,7 +299,6 @@ Page({
         return
       }
       this.submissionIdempotencyKey = ''
-      await this.loadProfileSummary(true)
       wx.setNavigationBarTitle({ title: editing ? '修改报名' : '活动报名' })
       this.setData({
         state: 'ready',
@@ -313,19 +315,33 @@ Page({
         ...orderDerived(event, editing || resumingPayment ? registration : null, editing),
       })
       // 封面与详情页同一条本地下载管道：cloud:// 先隐藏，解析成临时路径后再渲染。
+      this.draftUserId = mipIdentityModule.peekSnapshot()?.userId || ''
+      this.restoreDraft()
+      void this.loadProfileSummary()
       updatePageMedia(this, 'event.coverUrl', event.coverUrl || '')
       updateEventRichContent(this, 'noticesNodes', event.notices || DEFAULT_PURCHASE_NOTICES)
       if (this.pendingAccessResume) {
         this.pendingAccessResume = false
         this.setData({ message: '身份已确认，请核对报名信息后提交。' })
       }
-      const draft = mipRegistrationDraftStore.load(this.draftUserId, this.data.eventId, this.data.registration?.version ?? null)
-      if (draft) {
-        this.setData({ fields: fieldsFromAnswers(event, draft.answers), message: '已恢复未提交的报名信息，请核对后提交。' })
-      }
     }
     catch (error) {
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '活动加载失败' })
+    }
+  },
+
+  restoreDraft() {
+    if (this.data.state !== 'ready' || !this.data.event || !this.draftUserId || this.draftRestored) {
+      return
+    }
+    this.draftRestored = true
+    if (this.draftTouched) {
+      this.persistDraft()
+      return
+    }
+    const draft = mipRegistrationDraftStore.load(this.draftUserId, this.data.eventId, this.data.registration?.version ?? null)
+    if (draft) {
+      this.setData({ fields: fieldsFromAnswers(this.data.event, draft.answers), message: '已恢复未提交的报名信息，请核对后提交。' })
     }
   },
 
@@ -339,6 +355,7 @@ Page({
       : field)
     this.submissionIdempotencyKey = ''
     this.setData({ fields, message: '' })
+    this.draftTouched = true
     this.persistDraft()
   },
 
@@ -359,6 +376,7 @@ Page({
       : field)
     this.submissionIdempotencyKey = ''
     this.setData({ fields, message: '' })
+    this.draftTouched = true
     this.persistDraft()
   },
 
@@ -372,6 +390,7 @@ Page({
       : field)
     this.submissionIdempotencyKey = ''
     this.setData({ fields, message: '' })
+    this.draftTouched = true
     this.persistDraft()
   },
 
@@ -572,8 +591,12 @@ Page({
   },
 
   async loadProfileSummary(force = false) {
+    const request = ++this.profileSummaryRequest
     try {
-      const snapshot = force ? await mipIdentityModule.loadSnapshot() : mipIdentityModule.peekSnapshot() || await mipIdentityModule.loadSnapshot()
+      const snapshot = force ? await mipIdentityModule.loadSnapshot() : await mipIdentityModule.loadSnapshot({ maxAgeMs: 15_000 })
+      if (request !== this.profileSummaryRequest) {
+        return
+      }
       this.draftUserId = snapshot.userId || ''
       let profileBranchText = snapshot.primaryBranchId ? '主分会已设置' : '主分会未设置'
       if (snapshot.primaryBranchId) {
@@ -582,13 +605,20 @@ Page({
         const branch = branchSnapshot.branches.find(item => item.id === snapshot.primaryBranchId)
         profileBranchText = branch ? `${branch.name} · ${branch.cityName}` : profileBranchText
       }
+      if (request !== this.profileSummaryRequest) {
+        return
+      }
       this.setData({
         profileNickname: snapshot.profile.nickname || '昵称未设置',
         profilePhoneText: snapshot.phoneBound ? '手机号已绑定' : '手机号未绑定',
         profileBranchText,
       })
+      this.restoreDraft()
     }
     catch {
+      if (request !== this.profileSummaryRequest) {
+        return
+      }
       this.setData({
         profileNickname: '资料尚未完成',
         profilePhoneText: '手机号状态待确认',

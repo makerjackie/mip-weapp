@@ -20,7 +20,7 @@ Page({
   async loadAccountState() {
     this.setData({ state: 'loading', message: '' })
     try {
-      const snapshot = await mipIdentityModule.loadSnapshot()
+      const snapshot = await mipIdentityModule.loadSnapshot({ maxAgeMs: 15_000 })
       if (!snapshot.authenticated) {
         mipGlobalAccessGuard.enterTarget({ path: 'pages/events/index' })
         return

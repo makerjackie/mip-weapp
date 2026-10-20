@@ -110,6 +110,7 @@ Page({
   },
 
   onUnload() {
+    this.requestSeq += 1
     clearPageMedia(this)
   },
 
@@ -126,22 +127,35 @@ Page({
     try {
       // getOrder resolves the order directly; listOrders() only returns the 30 most recent orders,
       // so looking the order up there made older orders impossible to open.
-      let [order, plans] = await Promise.all([
-        mipCommerceModule.getOrder(this.data.orderId),
-        mipCommerceModule.listPlans().catch(() => [] as MembershipPlan[]),
-      ])
-      if (presentOrderStatus(order.status).paymentPending) {
-        try {
-          order = await mipCommerceModule.reconcile(order.id)
-        }
-        catch {
-          // Keep the last server order fact visible while provider reconciliation is unavailable.
-        }
-      }
+      const order = await mipCommerceModule.getOrder(this.data.orderId)
       if (requestSeq !== this.requestSeq) {
         return
       }
-      this.applyOrder(order, plans)
+      let displayPlans: MembershipPlan[] = []
+      this.applyOrder(order, displayPlans)
+      if (order.orderType === 'MEMBERSHIP') {
+        void mipCommerceModule.listPlans().then((plans) => {
+          if (requestSeq === this.requestSeq) {
+            displayPlans = plans
+            const currentOrder = this.data.order || order
+            this.setData({
+              title: planTitle(currentOrder, plans),
+              productDescription: plans.find(plan => String(plan.id) === String(currentOrder.membershipPlanId))?.description || '',
+            })
+          }
+        }).catch(() => { /* Optional catalogue labels do not hide a real order. */ })
+      }
+      if (presentOrderStatus(order.status).paymentPending) {
+        try {
+          const reconciled = await mipCommerceModule.reconcile(order.id)
+          if (requestSeq === this.requestSeq) {
+            this.applyOrder(reconciled, displayPlans)
+          }
+        }
+        catch {
+          // Keep the server's pending status visible during provider recovery.
+        }
+      }
     }
     catch (error) {
       if (requestSeq !== this.requestSeq) {
@@ -326,6 +340,8 @@ Page({
     if (!order || !this.data.paymentPending || this.data.paying) {
       return
     }
+    // A late background reconciliation must not replace a new payment result.
+    this.requestSeq += 1
     this.setData({ paying: true, message: '' })
     // MIW-126：授权恢复直达本方法时没有入口 loading，这里统一补齐；全部出口在 finally 收起。
     showPaymentLaunchFeedback()

@@ -78,3 +78,21 @@ describe('order pagination and server filtering', () => {
     expect(instance.data.nextCursor).toBe('')
   })
 })
+
+it('reveals nonempty membership orders while the optional plan catalogue is still pending', async () => {
+  mocks.listOrderPage.mockResolvedValue({ items: [{ ...order('member-order'), orderType: 'MEMBERSHIP' }], nextCursor: '' })
+  mocks.listPlans.mockReturnValueOnce(new Promise(() => {}))
+  const instance = page()
+  await instance.loadOrders()
+  expect(instance.data.state).toBe('ready')
+  expect(instance.data.orders[0].id).toBe('member-order')
+  expect(instance.data).toMatchObject({ refreshing: false, loadingMore: false })
+})
+
+it('does not request membership plans for a content-only order list', async () => {
+  mocks.listOrderPage.mockResolvedValue({ items: [order('content-order')] })
+  const instance = page()
+  await instance.loadOrders()
+  expect(instance.data.orders).toHaveLength(1)
+  expect(mocks.listPlans).not.toHaveBeenCalled()
+})

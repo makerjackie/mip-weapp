@@ -268,3 +268,48 @@ describe('registration page recovery', () => {
     expect(mocks.scroll).toHaveBeenCalledWith({ selector: '#registration-field-1', duration: 200 })
   })
 })
+
+it('starts independent registration reads together and reveals the form before profile metadata', async () => {
+  let finishEvent!: (value: unknown) => void
+  const eventResponse = new Promise((resolve) => {
+    finishEvent = resolve
+  })
+  mocks.getEvent.mockReturnValueOnce(eventResponse)
+  const instance = page()
+  instance.data.eventId = 'event-1'
+  instance.loadProfileSummary = vi.fn(() => new Promise(() => {}))
+  const loading = instance.loadEvent()
+  expect(mocks.getMyRegistration).toHaveBeenCalledWith('event-1')
+  finishEvent(event)
+  await loading
+  expect(instance.data.state).toBe('ready')
+  expect(instance.data.fields).toHaveLength(2)
+  expect(mocks.getEvent).toHaveBeenCalledWith('event-1', { progressiveMedia: true })
+})
+
+it('keeps a saved draft available before slow profile metadata arrives', async () => {
+  mocks.loadDraft.mockReturnValueOnce({ answers: { reason: '已保存的报名说明' } })
+  const instance = page()
+  instance.data.eventId = 'event-1'
+  instance.loadProfileSummary = vi.fn(() => new Promise(() => {}))
+  await instance.loadEvent()
+  expect(instance.data.fields[0].value).toBe('已保存的报名说明')
+  expect(mocks.loadDraft).toHaveBeenCalledWith('u1', 'event-1', null)
+})
+
+it('does not overwrite newly typed answers when late identity metadata discovers an old draft', async () => {
+  let finishProfile!: (value: unknown) => void
+  mocks.peekSnapshot.mockReturnValueOnce(undefined)
+  mocks.loadSnapshot.mockReturnValueOnce(new Promise((resolve) => {
+    finishProfile = resolve
+  }))
+  const instance = page()
+  instance.data.eventId = 'event-1'
+  await instance.loadEvent()
+  instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '刚输入的新说明' } })
+  finishProfile({ userId: 'u1', profile: { nickname: '新昵称' }, phoneBound: true })
+  await vi.waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled())
+  expect(instance.data.fields[0].value).toBe('刚输入的新说明')
+  expect(mocks.saveDraft).toHaveBeenLastCalledWith(expect.objectContaining({ userId: 'u1', answers: expect.objectContaining({ reason: '刚输入的新说明' }) }))
+  expect(mocks.loadDraft).not.toHaveBeenCalled()
+})

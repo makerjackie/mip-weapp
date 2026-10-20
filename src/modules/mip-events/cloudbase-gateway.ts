@@ -96,7 +96,7 @@ async function callEvents<T>(action: string, data: Record<string, unknown> = {},
     }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }))
     const result = unwrap<T>(response.result)
     // Feed cards and configured recap cards localize images after displaying business data.
-    return action === 'mip.events.list' || action === 'mip.events.recaps' || progressiveMedia
+    return action === 'mip.events.list' || action === 'mip.events.recaps' || action === 'mip.events.mine' || progressiveMedia
       ? result
       : resolveCloudFileUrls(result)
   }

@@ -133,6 +133,46 @@ const protectedIntent = {
 }
 
 describe('MIP resumable identity access', () => {
+  it('reuses recent navigation reads, expires them and keeps explicit checks fresh', async () => {
+    let time = 1000
+    const ready = accessSnapshot({ agreements: [], phoneBound: true, profile: { ...accessSnapshot().profile, complete: true } })
+    const source = gateway(ready)
+    const module = createMipIdentityModule(source, { now: () => time })
+    await module.loadSnapshot()
+    await module.beginProtectedAction(protectedIntent, { reuseRecent: true })
+    await module.loadSnapshot({ maxAgeMs: 15_000 })
+    expect(source.getAccessSnapshot).toHaveBeenCalledOnce()
+    time += 15_000
+    await module.beginProtectedAction(protectedIntent, { reuseRecent: true })
+    expect(source.getAccessSnapshot).toHaveBeenCalledTimes(2)
+    await module.beginProtectedAction(protectedIntent)
+    expect(source.getAccessSnapshot).toHaveBeenCalledTimes(3)
+    await module.beginProtectedAction({ ...protectedIntent, action: 'ENTER_ADMIN' }, { reuseRecent: true })
+    expect(source.getAccessSnapshot).toHaveBeenCalledTimes(4)
+  })
+
+  it('refreshes incomplete identities and invalidates freshness after a failed explicit check', async () => {
+    const source = gateway()
+    const module = createMipIdentityModule(source)
+    await module.loadSnapshot()
+    await module.beginProtectedAction(protectedIntent, { reuseRecent: true })
+    expect(source.getAccessSnapshot).toHaveBeenCalledTimes(2)
+    source.getAccessSnapshot.mockRejectedValueOnce(new Error('offline'))
+    await expect(module.loadSnapshot()).rejects.toThrow('offline')
+    await module.loadSnapshot({ maxAgeMs: 15_000 })
+    expect(source.getAccessSnapshot).toHaveBeenCalledTimes(4)
+  })
+
+  it('never restores another user from the bounded cache after logout', async () => {
+    const source = gateway()
+    const module = createMipIdentityModule(source)
+    await module.loadSnapshot()
+    module.signOutLocally()
+    expect(await module.loadSnapshot({ maxAgeMs: 15_000 })).toMatchObject({ authenticated: false })
+    expect((await module.beginProtectedAction(protectedIntent, { reuseRecent: true })).decision.ready).toBe(false)
+    expect(source.getAccessSnapshot).toHaveBeenCalledOnce()
+  })
+
   it('coalesces concurrent snapshot reads into one request', async () => {
     let resolve!: (value: IdentityAccessSnapshot) => void
     const source = gateway()

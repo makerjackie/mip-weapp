@@ -2,6 +2,8 @@ import type { CommerceOrder, MembershipPlan, OrderServiceStatus } from '../../..
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { formatCny, planTitle, presentOrderServiceStatus, presentOrderStatus } from '../../../modules/mip-shell'
 import { caseNavigateTo } from '../../../platform/navigation/client'
+import { peekCloudFileUrls } from '../../../platform/storage/cloud-media'
+import { clearPageMedia, updatePageMedia } from '../../../platform/storage/component-media'
 import { formatBusinessDateTime as formatLocalDateTime } from '../../../utils/business-date'
 
 type OrderFilter = 'all' | Exclude<OrderServiceStatus, 'UNAVAILABLE'>
@@ -70,6 +72,11 @@ Page({
     void this.loadOrders()
   },
 
+  onUnload() {
+    this.requestSeq += 1
+    clearPageMedia(this)
+  },
+
   async loadOrders() {
     await this.fetchOrders(false)
   },
@@ -87,27 +94,39 @@ Page({
       return
     }
     const requestSeq = ++this.requestSeq
+    clearPageMedia(this)
     const filter = this.data.filter
     this.setData(append
       ? { loadingMore: true, message: '' }
       : { refreshing: true, loadingMore: false, message: '', state: this.data.state === 'ready' ? 'ready' : 'loading' })
     try {
-      const [page, plans] = await Promise.all([
-        mipCommerceModule.listOrderPage({
-          ...(filter === 'all' ? {} : { serviceStatus: filter }),
-          ...(append ? { cursor: this.data.nextCursor } : {}),
-        }),
-        append ? Promise.resolve(this.plans) : mipCommerceModule.listPlans().catch(() => [] as MembershipPlan[]),
-      ])
+      const page = await mipCommerceModule.listOrderPage({
+        ...(filter === 'all' ? {} : { serviceStatus: filter }),
+        ...(append ? { cursor: this.data.nextCursor } : {}),
+      })
       if (requestSeq !== this.requestSeq) {
         return
       }
-      this.plans = plans
-      const incoming = page.items.map(order => presentOrder(order, plans))
+      const incoming = page.items.map(order => presentOrder(order, this.plans))
       const orders = append
         ? [...new Map([...this.data.orders, ...incoming].map(order => [order.id, order])).values()]
         : incoming
-      this.setData({ state: 'ready', orders, nextCursor: page.nextCursor || '', message: '' })
+      this.setData({ state: 'ready', orders: peekCloudFileUrls(orders), nextCursor: page.nextCursor || '', message: '' })
+      orders.forEach((order, index) => {
+        if (order.event) {
+          updatePageMedia(this, `orders[${index}].event.coverUrl`, order.event.coverUrl || '')
+        }
+      })
+      // Event/content titles are already on their orders. Optional membership
+      // labels must not delay a nonempty order list or pagination controls.
+      if (orders.some(order => order.orderType === 'MEMBERSHIP') && !this.plans.length) {
+        void mipCommerceModule.listPlans().then((plans) => {
+          if (requestSeq === this.requestSeq) {
+            this.plans = plans
+            this.setData({ orders: this.data.orders.map(order => ({ ...order, title: planTitle(order, plans) })) })
+          }
+        }).catch(() => { /* Keep the order's existing fallback title. */ })
+      }
     }
     catch {
       if (requestSeq !== this.requestSeq) {

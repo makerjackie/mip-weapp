@@ -71,7 +71,7 @@ describe('my page native phone login entry (J1-02)', () => {
       expect(identity.beginProtectedAction).toHaveBeenCalledWith(expect.objectContaining({
         requirements: ['AUTHENTICATED', 'AGREEMENTS', 'PHONE', 'PROFILE'],
         source: expect.objectContaining({ route: '/pages/profile/index' }),
-      }))
+      }), { reuseRecent: true })
     },
   )
 
