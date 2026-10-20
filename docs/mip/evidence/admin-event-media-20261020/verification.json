@@ -1,0 +1,490 @@
+{
+  "sourceCommit": "96d6aeb009299d7627760c46eb484440428b66e4",
+  "verifiedAt": "2026-10-20T08:11:46.316956+00:00",
+  "environments": [
+    "TEST",
+    "PRODUCTION"
+  ],
+  "productionBusinessWrites": 0,
+  "databaseOrBusinessFunctionChanges": false,
+  "gates": {
+    "miniSuites": 281,
+    "miniTests": 1825,
+    "webNodeTests": 330,
+    "webReactSuites": 35,
+    "webReactTests": 258,
+    "fullVerifyAllPassed": true
+  },
+  "uploadAndReopen": {
+    "environment": "TEST",
+    "normalUploadUI": true,
+    "multiFilePerField": 2,
+    "fields": [
+      "description",
+      "organizerIntroduction",
+      "notices"
+    ],
+    "versionBefore": 2,
+    "versionAfter": 3,
+    "stableCloudReferences": 6,
+    "localOrBase64Persisted": 0,
+    "leaveAndFreshReopen": true,
+    "editorImagesLoaded": 6,
+    "previewTabsLoaded": 3,
+    "productionWrites": 0,
+    "viewports": [
+      {
+        "width": 1280,
+        "height": 720,
+        "overflow": false
+      },
+      {
+        "width": 1440,
+        "height": 900,
+        "overflow": false
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "overflow": false
+      }
+    ],
+    "consoleErrors": []
+  },
+  "typingBefore": {
+    "target": "TEST",
+    "continuedTypingDuringImageLoad": true,
+    "replies": [
+      {
+        "ok": true,
+        "count": 2
+      },
+      {
+        "ok": true,
+        "count": 1
+      },
+      {
+        "ok": true,
+        "count": 3
+      }
+    ],
+    "result": [
+      {
+        "images": [],
+        "placeholders": 3
+      },
+      {
+        "images": [],
+        "placeholders": 1
+      },
+      {
+        "images": [],
+        "placeholders": 2
+      }
+    ]
+  },
+  "typingAfter": {
+    "target": "TEST",
+    "continuedTypingDuringImageLoad": true,
+    "replies": [
+      {
+        "ok": true,
+        "count": 3
+      },
+      {
+        "ok": true,
+        "count": 1
+      },
+      {
+        "ok": true,
+        "count": 2
+      }
+    ],
+    "result": [
+      {
+        "images": [
+          {
+            "loaded": true
+          },
+          {
+            "loaded": true
+          },
+          {
+            "loaded": true
+          }
+        ],
+        "placeholders": 0
+      },
+      {
+        "images": [
+          {
+            "loaded": true
+          }
+        ],
+        "placeholders": 0
+      },
+      {
+        "images": [
+          {
+            "loaded": true
+          },
+          {
+            "loaded": true
+          }
+        ],
+        "placeholders": 0
+      }
+    ]
+  },
+  "browserTimeAdvance": {
+    "target": "TEST",
+    "browserClockAccelerated": true,
+    "advancedMinutes": 8,
+    "initialRequests": 3,
+    "requestsAfterRenewal": 6,
+    "imagesStillLoaded": 6,
+    "businessWrites": 0,
+    "consoleErrors": []
+  },
+  "miniTestData": {
+    "target": "TEST",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "realCloudData": true,
+    "checks": [
+      {
+        "field": "descriptionNodes",
+        "count": 2,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 702,
+            "height": 298
+          },
+          {
+            "width": 654,
+            "height": 366
+          }
+        ]
+      },
+      {
+        "field": "organizerIntroductionNodes",
+        "count": 2,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 702,
+            "height": 298
+          },
+          {
+            "width": 654,
+            "height": 366
+          }
+        ]
+      },
+      {
+        "field": "noticesNodes",
+        "count": 2,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 702,
+            "height": 298
+          },
+          {
+            "width": 654,
+            "height": 366
+          }
+        ]
+      },
+      {
+        "field": "noticesNodes",
+        "count": 2,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 702,
+            "height": 298
+          },
+          {
+            "width": 654,
+            "height": 366
+          }
+        ]
+      }
+    ]
+  },
+  "functions": [
+    {
+      "function": "mip-t-admin-web-api",
+      "active": true,
+      "runtimeFilesMatched": 35,
+      "configurationUnchanged": true,
+      "allowedChangedKeys": [],
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "zipSha256": "4d9bb3579aab689140f5fcd08deb7dd97c152281468cd5e357734495cabae8ea"
+    },
+    {
+      "function": "mip-admin-web-api",
+      "active": true,
+      "runtimeFilesMatched": 27,
+      "configurationUnchanged": true,
+      "allowedChangedKeys": [],
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "zipSha256": "6a2976d3e4da2a80b22f2fccd6dbb3267c4f124d6f258ce8ac95bfe264d42e09"
+    }
+  ],
+  "browser": {
+    "test": {
+      "target": "test",
+      "checkedAt": "2026-10-20T08:08:49.114Z",
+      "businessWrites": 0,
+      "results": [
+        {
+          "width": 1280,
+          "height": 720,
+          "entry": [
+            "/assets/index-BwDCP-ZH.js"
+          ],
+          "editorImagesLoaded": 6,
+          "previewTabs": [
+            [
+              "活动介绍",
+              2
+            ],
+            [
+              "主办方",
+              2
+            ],
+            [
+              "报名须知",
+              2
+            ]
+          ],
+          "overflow": false,
+          "consoleErrors": []
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "entry": [
+            "/assets/index-BwDCP-ZH.js"
+          ],
+          "editorImagesLoaded": 6,
+          "previewTabs": [
+            [
+              "活动介绍",
+              2
+            ],
+            [
+              "主办方",
+              2
+            ],
+            [
+              "报名须知",
+              2
+            ]
+          ],
+          "overflow": false,
+          "consoleErrors": []
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "entry": [
+            "/assets/index-BwDCP-ZH.js"
+          ],
+          "editorImagesLoaded": 6,
+          "previewTabs": [
+            [
+              "活动介绍",
+              2
+            ],
+            [
+              "主办方",
+              2
+            ],
+            [
+              "报名须知",
+              2
+            ]
+          ],
+          "overflow": false,
+          "consoleErrors": []
+        }
+      ]
+    },
+    "production": {
+      "target": "production",
+      "checkedAt": "2026-10-20T08:11:19.515Z",
+      "businessWrites": 0,
+      "results": [
+        {
+          "width": 1280,
+          "height": 720,
+          "entry": [
+            "/assets/index-BwDCP-ZH.js"
+          ],
+          "editorImagesLoaded": 3,
+          "previewTabs": [
+            [
+              "主办方",
+              3
+            ]
+          ],
+          "overflow": false,
+          "consoleErrors": []
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "entry": [
+            "/assets/index-BwDCP-ZH.js"
+          ],
+          "editorImagesLoaded": 3,
+          "previewTabs": [
+            [
+              "主办方",
+              3
+            ]
+          ],
+          "overflow": false,
+          "consoleErrors": []
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "entry": [
+            "/assets/index-BwDCP-ZH.js"
+          ],
+          "editorImagesLoaded": 3,
+          "previewTabs": [
+            [
+              "主办方",
+              3
+            ]
+          ],
+          "overflow": false,
+          "consoleErrors": []
+        }
+      ]
+    }
+  },
+  "https": {
+    "test": {
+      "checks": 68,
+      "allPassed": true,
+      "businessWrites": false
+    },
+    "production": {
+      "checks": 68,
+      "allPassed": true,
+      "businessWrites": false
+    }
+  },
+  "productionEvent": {
+    "productionWrites": 0,
+    "originalContentAndPriceUnchanged": true,
+    "title": "MIP反人性早会10月22日",
+    "counts": {
+      "description": 0,
+      "organizerIntroduction": 3,
+      "notices": 0
+    },
+    "editor": [
+      {
+        "images": [],
+        "placeholders": 0
+      },
+      {
+        "images": [
+          {
+            "loaded": true
+          },
+          {
+            "loaded": true
+          },
+          {
+            "loaded": true
+          }
+        ],
+        "placeholders": 0
+      },
+      {
+        "images": [],
+        "placeholders": 0
+      }
+    ],
+    "tempResponses": [
+      {
+        "action": "mip.admin.media.tempUrls",
+        "status": 200,
+        "ok": true,
+        "count": 3
+      }
+    ]
+  },
+  "limitations": [
+    "后台长时间停留回归使用浏览器时钟推进8分钟，并确实请求服务端重新签发，不冒充自然等待8分钟。",
+    "小程序截图为开发工具390×844逻辑视口；1.0.3修复后iPhone真机仍待复核。",
+    "未进行真实支付、回调或退款。"
+  ],
+  "serverBundleUnchanged": {
+    "test": true,
+    "production": true
+  },
+  "screenshots": [
+    {
+      "file": "after-typing.png",
+      "sha256": "dad3986b5301944cf75ba09e12ac1c323e4f5f561cacfa0382467893a4d23319"
+    },
+    {
+      "file": "before-typing.png",
+      "sha256": "6f04809f265d56113a92b45cf9a170929f50469b391d965efc36ef1c61b0b538"
+    },
+    {
+      "file": "checkout-rich-images.png",
+      "sha256": "30db41673a466912484ed3267ac439decaacf1b2bcd0f294c3225ff2236a786d"
+    },
+    {
+      "file": "detail-intro-images.png",
+      "sha256": "1e4aa0431d946d106c147db8db1ad9bc4853b7ae3ad1e3ca3e6a87d7b93d2a47"
+    },
+    {
+      "file": "detail-notices.png",
+      "sha256": "3ce08c6640475bf23eccacac6ba6242830d4738b21bf26ea3e4edfcdc72a98f8"
+    },
+    {
+      "file": "detail-organizer.png",
+      "sha256": "34b0cfc98ba576d067ca43e3a081d5f92b9747e9a1607022699d27ead1a092d8"
+    },
+    {
+      "file": "preview-主办方.png",
+      "sha256": "6e7acf43de3868dbadcc32f6df9ae7a68c94967d3559b94bfca1c7cf76a29c39"
+    },
+    {
+      "file": "preview-报名须知.png",
+      "sha256": "5b78eaa80abfb3326936a4a3bd9b4e8bdc1bbe3730b232f78a2b4a7f3a3698ea"
+    },
+    {
+      "file": "preview-活动介绍.png",
+      "sha256": "eb1252ec7e5524a63c95574912e07aa9b81ee32793c3d7c16a60cf3e597f7869"
+    },
+    {
+      "file": "upload-field-1.png",
+      "sha256": "dc55b35a2792b8f72704d5ebc6f0443a36e40798d6861bf2b3a4972f62acb872"
+    },
+    {
+      "file": "upload-field-2.png",
+      "sha256": "1d9955b73f9d586ace2b3755f12dc47a38d2b55c089d5e236a4805743c308d70"
+    },
+    {
+      "file": "upload-field-3.png",
+      "sha256": "b9325d6897cd9e3ca7927d0281c05a0d392435f16d29aaaa92c59f288533ed0e"
+    }
+  ]
+}

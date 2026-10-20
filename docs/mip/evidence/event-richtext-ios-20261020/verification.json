@@ -1,0 +1,165 @@
+{
+  "sourceCommit": "cee5eabec7f8b256cc96405e43a4e650dd267591",
+  "environment": "PRODUCTION",
+  "verifiedAt": "2026-10-20T07:41:58.785040+00:00",
+  "node": "22.23.1",
+  "uploadedVersion": "1.0.3",
+  "uploadSucceeded": true,
+  "setAsExperienceVersion": false,
+  "submittedForReview": false,
+  "publishedOnline": false,
+  "databaseOrCloudFunctionChanges": false,
+  "before": {
+    "environment": "PRODUCTION",
+    "title": "MIP反人性早会10月22日",
+    "descriptionImages": 0,
+    "organizerImages": 3,
+    "noticesImages": 0,
+    "renderedOrganizerImages": 3,
+    "localTempPaths": 3,
+    "httpsUrls": 0
+  },
+  "after": {
+    "environment": "PRODUCTION",
+    "title": "MIP反人性早会10月22日",
+    "descriptionImages": 0,
+    "organizerImages": 3,
+    "noticesImages": 0,
+    "renderedOrganizerImages": 3,
+    "localTempPaths": 0,
+    "httpsUrls": 3,
+    "imagesDecoded": [
+      {
+        "loaded": true,
+        "width": 1200,
+        "height": 1600
+      },
+      {
+        "loaded": true,
+        "width": 1200,
+        "height": 1600
+      },
+      {
+        "loaded": true,
+        "width": 1200,
+        "height": 1600
+      }
+    ],
+    "tabRecreated": true,
+    "source": "Real production data + DevTools native rich-text screenshots, not physical iPhone"
+  },
+  "testEnvironment": {
+    "target": "TEST",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "realCloudData": true,
+    "checks": [
+      {
+        "field": "descriptionNodes",
+        "count": 3,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 702,
+            "height": 298
+          },
+          {
+            "width": 654,
+            "height": 366
+          },
+          {
+            "width": 702,
+            "height": 394
+          }
+        ]
+      },
+      {
+        "field": "organizerIntroductionNodes",
+        "count": 1,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 702,
+            "height": 298
+          }
+        ]
+      },
+      {
+        "field": "noticesNodes",
+        "count": 2,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 654,
+            "height": 366
+          },
+          {
+            "width": 702,
+            "height": 394
+          }
+        ]
+      },
+      {
+        "field": "noticesNodes",
+        "count": 2,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 654,
+            "height": 366
+          },
+          {
+            "width": 702,
+            "height": 394
+          }
+        ]
+      }
+    ]
+  },
+  "gates": {
+    "miniSuites": 281,
+    "miniTests": 1825,
+    "webNodeTests": 330,
+    "webReactSuites": 34,
+    "webReactTests": 253,
+    "fullVerifyAllPassed": true
+  },
+  "officialConstraint": {
+    "url": "https://developers.weixin.qq.com/miniprogram/dev/component/rich-text.html",
+    "verifiedFromOfficialHtml": true,
+    "quote": "img 标签仅支持网络图片。"
+  },
+  "limits": [
+    "修改前是用户iPhone体验版截图，修改后是390×844开发工具生产实拍；不是同设备像素对比。",
+    "修复后iPhone真机待复核；需在公众平台将1.0.3设置为体验版，旧体验版不会因上传自动更换。",
+    "此前图片SDK解码成功不能代表rich-text真机显示；不沿用该错误验收结论。"
+  ],
+  "screenshots": [
+    {
+      "file": "after-organizer-1150.png",
+      "sha256": "367c352d44a5be9337dfcc211285d3630b02cb4865c7328d478124c318c5771a"
+    },
+    {
+      "file": "after-organizer-1650.png",
+      "sha256": "9c566d1ee5f969c30501ae5174f4c7fcf3d65f9f0a9afce5763c979c8afd2f73"
+    },
+    {
+      "file": "after-organizer-650.png",
+      "sha256": "9751a13cc72c88e5f90f7c99a86963759b0fc070d746a0cd6d2f65a2a105fa94"
+    },
+    {
+      "file": "before-intro-iphone.jpg",
+      "sha256": "0c1c6536ca1d5104d9c1663fc7a3e53978499cd6bdcb2e6b680b170136eac3a7"
+    },
+    {
+      "file": "before-organizer-iphone.jpg",
+      "sha256": "5d878751f87a1ae598caf66b17afb43efc5cc2dad6413a2281c85eddea400106"
+    }
+  ],
+  "qaArtifactFilesByteMatchedToUploadedArtifact": 482,
+  "mainPackageBytes": 1764355,
+  "totalPackageBytes": 3208043,
+  "testFunctionReferencesInProductionPackage": 0
+}

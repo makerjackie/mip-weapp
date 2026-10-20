@@ -78,6 +78,8 @@ describe('sanitizeRichTextHtml', () => {
     expect(cloud).toContain('src="cloud://env.mip/mip/staging/app/a.png"')
     const insecure = sanitizeRichTextHtml('<img src="http://insecure.example.com/x.jpg">')
     expect(insecure).not.toContain('<img')
+    expect(sanitizeRichTextHtml('<img src="wxfile://tmp/a.png">')).not.toContain('<img')
+    expect(sanitizeRichTextHtml('<img src="http://tmp/a.png">')).not.toContain('<img')
   })
 })
 
