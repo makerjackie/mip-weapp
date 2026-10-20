@@ -130,13 +130,13 @@ if (upload.error || upload.status !== 0) {
 
 if (channel === 'trial') {
   console.log(`
-[release] ✅ 体验版 ${version} 已上传（测试环境 mip-t-*）。
+[release] ✅ 开发版本 ${version} 已上传（测试环境 mip-t-*），尚未确认设为体验版。
 下一步：微信公众平台 → 版本管理 → 将该版本设为体验版（若非最新），扫码分发。
 提醒：测试环境数据独立（mip_test 库），支付禁用，可放心内测。`)
 }
 else {
   console.log(`
-[release] ✅ 正式版 ${version} 已上传（生产环境）。提审人工清单：
+[release] ✅ 开发版本 ${version} 已上传（连接生产环境），尚未提审或公开发布。提审人工清单：
 1. mp.weixin.qq.com → 版本管理 → 开发版本里找到 ${version} → 提交审核
 2. 向导确认链：勾选平台规则 → 下一步 → 安全测试继续提交 → 接口未配置（wx.getLocation 未使用，勾选后继续）→ 隐私指引继续提交
 3. 提审表单：类目/功能页面按默认；演示视频 ~/Downloads/MIP-YANSHOU-VIDEO.mp4；截图 .tmp/review-shots/
