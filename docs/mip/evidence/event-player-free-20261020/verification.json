@@ -1,4 +1,23 @@
 {
+  "browserSwitch": {
+    "target": "TEST",
+    "normalUI": true,
+    "steps": [
+      {
+        "checked": false,
+        "versionBefore": 4,
+        "versionAfter": 5,
+        "leaveAndReopen": true
+      },
+      {
+        "checked": true,
+        "versionBefore": 5,
+        "versionAfter": 6,
+        "leaveAndReopen": true
+      }
+    ],
+    "consoleErrors": []
+  },
   "captures": [
     {
       "file": "order-after.png",
@@ -22,9 +41,9 @@
       "file": "admin-mobile.png",
       "pixels": {
         "width": 390,
-        "height": 3492
+        "height": 4144
       },
-      "capturedAtUtc": "2026-10-20T06:07:31.867003+00:00",
+      "capturedAtUtc": "2026-10-20T06:22:04.916831+00:00",
       "source": "real TEST UI screenshot"
     },
     {
@@ -40,9 +59,9 @@
       "file": "admin-before.png",
       "pixels": {
         "width": 1440,
-        "height": 2701
+        "height": 2392
       },
-      "capturedAtUtc": "2026-10-20T06:05:01.236997+00:00",
+      "capturedAtUtc": "2026-10-20T05:52:24.389638+00:00",
       "source": "real TEST UI screenshot"
     },
     {
@@ -69,7 +88,7 @@
         "width": 1440,
         "height": 4647
       },
-      "capturedAtUtc": "2026-10-20T06:08:17.052025+00:00",
+      "capturedAtUtc": "2026-10-20T06:21:59.741953+00:00",
       "source": "real TEST UI screenshot"
     }
   ],
