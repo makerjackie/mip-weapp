@@ -111,6 +111,10 @@ pnpm cloud:auth:device -- --allow-device-auth
 
 ## 管控面部署路径
 
+### 已配置常驻实例的函数
+
+预置并发绑定已发布的数字版本，不能绑定 `$LATEST`。常驻函数的 `$DEFAULT` 因此指向数字版本；只更新 `$LATEST` 的代码或环境变量不会更新线上流量。核心函数和 Web BFF 发布脚本通过 `scripts/lib/provisioned-function-release.mjs` 检测既有常驻配置，在新版本 Active、预置实例 Done 后切换默认别名，再删除旧默认版本的预置实例，避免旧版本持续计费。没有既有常驻配置的函数不会自动开启付费实例。单独修改常驻函数配置的运营流程也必须完成相同的版本发布与切换，并核对活动别名的代码和配置；不能只验证 `$LATEST`。
+
 API Key 的临时 STS 无法执行所需 SCF action 时，在维护者明确授权后使用 Device Flow。不要给 `TCB_QcsRole` 添加 `scf:CreateFunction`，也不要在没有原始 VPC 错误时预授 `vpc:*`。需要重新部署时，从脚本覆盖代码、配置与权限，不在控制台手工补环境变量：
 
 ```bash

@@ -11,6 +11,7 @@ import { parseMcpOutput, runMcporter } from './lib/cloudbase-mcp-runner.mjs'
 import { assertExistingFunctionAfterCode, functionConfigurationSnapshot, planExistingFunctionConfigurationUpdate } from './lib/core-function-config-update.mjs'
 import { bindAndRequireCloudbaseEnvironment, callCloudbase, loadCaseEnv } from './lib/example-cloudbase.mjs'
 import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
+import { releaseProvisionedFunction } from './lib/provisioned-function-release.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
@@ -188,6 +189,7 @@ for (const route of routeBefore.filter(r => !(r.Domain === targetDomain && (r.Pa
 if (!final.some(r => r.Domain === targetDomain && r.Path === '/' && r.UpstreamResourceType === 'STATIC_STORE' && r.PathRewrite?.StaticStorePrefix === staticPrefix && r.Enable && !r.EnableAuth)) {
   throw new Error('Static prefix route readback failed')
 }
+await releaseProvisionedFunction({ functionName: name, namespace: env.CLOUDBASE_ENV_ID, call: (action, params) => management('callCloudApi', { service: 'scf', action, region, params }) })
 fs.writeFileSync(path.join(staging, 'target.private.json'), JSON.stringify({ origin, functionName: name }), { mode: 0o600 })
 console.log(JSON.stringify({ functionName: name, active: true, clientInvocation: false, timers: 0, legacyHostingUnchanged: true, privateTarget: path.relative(root, path.join(staging, 'target.private.json')) }))
 

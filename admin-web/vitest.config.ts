@@ -8,8 +8,9 @@ export default defineConfig({
   envDir: './src',
   test: {
     environment: 'jsdom',
-    // Ant Design DOM suites can stall under concurrent local builds.
-    maxWorkers: 2,
+    // Ant Design DOM suites can exceed the timeout when two workers compete
+    // for memory alongside local browser sessions. Keep this gate serial.
+    maxWorkers: 1,
     testTimeout: 120_000,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.react.test.{ts,tsx}'],

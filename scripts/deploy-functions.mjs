@@ -47,6 +47,7 @@ import {
   runtimeUserForEnvironment,
 } from './lib/mysql-privilege-assert.mjs'
 import { loadRuntimeAccountSnapshot } from './lib/mysql-runtime-account-snapshot.mjs'
+import { releaseProvisionedFunction } from './lib/provisioned-function-release.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
@@ -615,6 +616,7 @@ for (const spec of deploymentManifest) {
   else {
     disableClientInvocation(spec.name)
   }
+  await releaseProvisionedFunction({ functionName: spec.name, namespace: envId, call: (action, params) => callCloudbase(root, 'callCloudApi', { service: 'scf', action, region: scfRegion, params }) })
 }
 const artifact = {
   environmentVerified: true,

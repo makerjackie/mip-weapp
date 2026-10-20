@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { gunzipSync } from 'node:zlib'
 import { createHttpHandler, trustedGatewayIp } from './http-adapter.mjs'
 import { createStaticHandler } from './static-assets.mjs'
 
@@ -65,6 +66,30 @@ test('CloudBase JSON runtime context provides per-invocation trusted source IP',
   assert.equal(trustedGatewayIp(event(), { environment: JSON.stringify({ WX_CLIENTIPV6: '2001:db8::1' }) }), '2001:db8::1')
   assert.equal(trustedGatewayIp(event(), { environ: 'OTHER=value;TCB_SOURCE_IP=203.0.113.9;EMPTY=' }), '203.0.113.9')
   assert.equal(trustedGatewayIp(event(), {}), undefined)
+})
+
+test('gateway transports gzip assets intact, caches only hashed files and respects gzip rejection', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'mip-admin-compression-'))
+  try {
+    const source = 'export const label = "活动管理";\n'.repeat(200)
+    await writeFile(join(root, 'index-abcdefgh.js'), source)
+    await writeFile(join(root, 'config.json'), '{}')
+    const main = createHttpHandler({ origin, serveStatic: createStaticHandler(root) })
+    const result = await main(event({ path: '/index-abcdefgh.js', headers: { 'accept-encoding': 'br, gzip' } }))
+    assert.equal(result.headers['content-encoding'], 'gzip')
+    assert.equal(result.headers.vary, 'Accept-Encoding')
+    assert.equal(result.headers['cache-control'], 'public, max-age=31536000, immutable')
+    const bytes = Buffer.from(result.body, 'base64')
+    assert.equal(gunzipSync(bytes).toString(), source)
+    assert.equal(Number(result.headers['content-length']), bytes.length)
+    const head = await main(event({ path: '/index-abcdefgh.js', httpMethod: 'HEAD', headers: { 'accept-encoding': 'gzip' } }))
+    assert.equal(head.body, '')
+    assert.equal(head.headers['content-length'], result.headers['content-length'])
+    const plain = await main(event({ path: '/index-abcdefgh.js', headers: { 'accept-encoding': 'gzip;q=0, *;q=1' } }))
+    assert.equal(plain.headers['content-encoding'], undefined)
+    assert.equal(Buffer.from(plain.body, 'base64').toString(), source)
+    assert.equal((await main(event({ path: '/config.json' }))).headers['cache-control'], 'public, max-age=0, must-revalidate')
+  } finally { await rm(root, { recursive: true, force: true }) }
 })
 test('invalid platform IP never trusts spoofed headers or nested body context', () => {
   const spoofed = event({ headers: { 'x-forwarded-for': '203.0.113.4', 'x-real-ip': '203.0.113.4', 'cf-connecting-ip': '203.0.113.4', 'x-cloudbase-context': JSON.stringify({ TCB_SOURCE_IP: '203.0.113.4' }) }, body: JSON.stringify({ environment: { TCB_SOURCE_IP: '203.0.113.4' } }) })
