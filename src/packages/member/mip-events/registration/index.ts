@@ -62,28 +62,33 @@ function registrationAccessText(event: MipEventDetail) {
     return '玩家活动'
   }
   if (event.accessType === 'PAID') {
-    return '仅玩家'
+    return event.memberFree ? '玩家免费' : '付费活动'
   }
   return '免费活动'
 }
 
+function needsPayment(event: MipEventDetail) {
+  return event.accessType === 'PAID' && (event.registrationPriceCents ?? event.priceCents) > 0
+}
+
 function registrationPriceText(event: MipEventDetail) {
-  return event.accessType === 'PAID'
-    ? `¥${(event.priceCents / 100).toFixed(2)}`
+  return needsPayment(event)
+    ? `¥${((event.registrationPriceCents ?? event.priceCents) / 100).toFixed(2)}`
     : '免费'
 }
 
 /** Whole yuan prices drop the decimals (figma 1821_19274: ¥589). */
 function priceAmountText(event: MipEventDetail) {
-  const value = event.priceCents / 100
+  const value = (event.registrationPriceCents ?? event.priceCents) / 100
   return Number.isInteger(value) ? String(value) : value.toFixed(2)
 }
 
 /* Bottom-bar price follows the Figma frame: small currency symbol, large amount. */
 function registrationPriceParts(event: MipEventDetail) {
   return {
-    priceSymbol: event.accessType === 'PAID' ? '¥' : '',
-    priceAmount: event.accessType === 'PAID' ? priceAmountText(event) : '免费',
+    needsPayment: needsPayment(event),
+    priceSymbol: needsPayment(event) ? '¥' : '',
+    priceAmount: needsPayment(event) ? priceAmountText(event) : '免费',
   }
 }
 
@@ -100,7 +105,7 @@ function compactEventTime(startsAt: string, endsAt: string) {
 
 /** journey-review J2-08（figma 1821_19274）：订单确认页价格明细行。 */
 function orderPriceTexts(event: MipEventDetail) {
-  if (event.accessType === 'PAID') {
+  if (needsPayment(event)) {
     return {
       ticketPriceText: `¥${priceAmountText(event)}`,
       totalSymbol: '¥',
@@ -113,7 +118,7 @@ function orderPriceTexts(event: MipEventDetail) {
 
 const DEFAULT_PURCHASE_NOTICES = [
   '一、订单确认与支付',
-  '提交订单并成功支付后报名才会生效；未完成支付的订单不会保留名额，重新发起即重新创建。',
+  '免费报名提交后生效；付费报名以支付确认结果为准。未支付订单的名额占位超时释放，重新发起时以页面提示为准。',
   '二、支付方式',
   '微信支付。',
   '三、订单修改与退款',
@@ -137,10 +142,10 @@ function orderDerived(event: MipEventDetail, registration: MyEventRegistration |
     startsText: compactEventTime(event.startsAt, event.endsAt) || formatChineseDateTime(event.startsAt),
     locationText: [event.cityName, event.venueName, event.address].filter(Boolean).join(' · ')
       || (event.mode === 'ONLINE' ? '线上活动' : '地点待公布'),
-    orderNumberText: orderIdText || '支付后生成',
+    orderNumberText: orderIdText || (needsPayment(event) ? '提交后生成' : '无需支付'),
     orderIdText,
     ...orderPriceTexts(event),
-    payLabel: editing ? '保存修改' : event.accessType === 'PAID' ? '立即支付' : '提交报名',
+    payLabel: editing ? '保存修改' : needsPayment(event) ? '立即支付' : '提交报名',
   }
 }
 
@@ -172,6 +177,7 @@ Page({
     cancellationText: '',
     accessText: '',
     priceText: '',
+    needsPayment: false,
     startsText: '',
     locationText: '',
     orderNumberText: '',

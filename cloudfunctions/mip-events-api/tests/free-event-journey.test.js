@@ -9,7 +9,7 @@ const userId = '10000000-0000-4000-8000-000000000001'
 const eventId = '20000000-0000-4000-8000-000000000001'
 const now = new Date('2026-08-25T00:00:00.000Z')
 
-function freeEventDatabase() {
+function freeEventDatabase(overrides = {}) {
   const calls = []
   const event = {
     id: eventId,
@@ -26,6 +26,7 @@ function freeEventDatabase() {
     registration_policy: 'AUTO',
     capacity: 100,
     waitlist_enabled: 1,
+    ...overrides,
   }
   const tx = {
     async one(sql, params) {
@@ -119,3 +120,26 @@ describe('free event registration journey', () => {
     assert.equal(registrationWrite.params[8], 0)
   })
 })
+
+for (const userKind of ['PLAYER', 'GUEST']) {
+  it(`member-free paid event derives ${userKind} price from server identity`, async () => {
+    const f = freeEventDatabase({ access_type: 'PAID', member_free: 1, price_cents: 1990, currency: 'CNY', waitlist_enabled: 0 })
+    const outcome = await createRegistration(f.database, {
+      appId, userId, input: { eventId, formVersion: 1, answers: {}, idempotencyKey: `member-free-${userKind}` }, now,
+      resolveUserKind: async () => userKind,
+      participationAccessPolicy: { requireAccess: async () => ({ id: userId }) },
+      paymentAvailable: true,
+    })
+    const order = f.calls.find(c => c.sql.includes('INSERT INTO mip_orders'))
+    if (userKind === 'PLAYER') {
+      assert.equal(outcome.kind, 'REGISTERED')
+      assert.equal(order, undefined)
+      assert.equal(f.calls.some(c => c.sql.includes('INSERT INTO mip_event_seat_holds')), false)
+    } else {
+      assert.equal(outcome.kind, 'PAYMENT_REQUIRED')
+      assert.equal(order.params[6], 1990)
+      const snapshot = JSON.parse(order.params[8])
+      assert.equal(snapshot.priceCents, 1990)
+    }
+  })
+}

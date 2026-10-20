@@ -28,7 +28,7 @@ function accessLabel(event: MipEventListItem) {
     return '仅玩家'
   }
   if (event.accessType === 'PAID') {
-    return '付费活动'
+    return event.memberFree ? '玩家免费' : '付费活动'
   }
   return '免费活动'
 }

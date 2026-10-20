@@ -140,7 +140,8 @@ describe('admin event clone persistence', () => {
     assert.equal(insert.params[19].toISOString(), '2026-09-04T06:00:00.000Z')
     assert.equal(insert.params[26], 'https://example.test/event')
     assert.equal(insert.params[27], 'https://mp.weixin.qq.com/s/route-guide')
-    assert.equal(insert.params[32], JSON.stringify([{ key: 'company', type: 'TEXT' }]))
+    assert.equal(insert.params[31], 0)
+    assert.equal(insert.params[33], JSON.stringify([{ key: 'company', type: 'TEXT' }]))
     // 列与占位符逐位对齐（防止加列后 'DRAFT' 字面量错位到前一列）。
     const cloneInsert = /INSERT INTO mip_events\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/.exec(insert.sql)
     const cloneColumns = cloneInsert[1].split(',').map(value => value.trim())

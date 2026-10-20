@@ -296,7 +296,7 @@ function createAdminEventRepository(database, dependencies) {
     const rows = await database.query(
       `SELECT e.id, e.title, e.summary, e.scope_type, e.branch_id, b.name AS branch_name,
         e.status, e.content_safety_status, e.starts_at, e.ends_at, e.city_name,
-        e.event_type_key, e.access_type, e.price_cents, e.registration_policy,
+        e.event_type_key, e.access_type, e.price_cents, e.member_free, e.registration_policy,
         e.capacity, e.version, e.created_at,
         (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', tag.id, 'name', tag.name, 'status', tag.status))
          FROM mip_event_tag_assignments assignment INNER JOIN mip_event_tags tag
@@ -312,7 +312,7 @@ function createAdminEventRepository(database, dependencies) {
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql}
        GROUP BY e.id, e.title, e.summary, e.scope_type, e.branch_id, b.name, e.status,
         e.content_safety_status, e.starts_at, e.ends_at, e.city_name, e.event_type_key,
-        e.access_type, e.price_cents, e.registration_policy,
+        e.access_type, e.price_cents, e.member_free, e.registration_policy,
         e.capacity, e.version, e.created_at
        ORDER BY e.starts_at ${direction}, e.id ${direction} LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
@@ -334,6 +334,7 @@ function createAdminEventRepository(database, dependencies) {
       eventTypeKey: row.event_type_key,
       accessType: row.access_type,
       priceCents: Number(row.price_cents || 0),
+      memberFree: Number(row.member_free) === 1,
       registrationPolicy: row.registration_policy,
       capacity: row.capacity === null ? null : Number(row.capacity),
       registrationCount: Number(row.registration_count || 0),
@@ -354,7 +355,7 @@ function createAdminEventRepository(database, dependencies) {
         event_type_key, event_mode, access_type, registration_policy,
         starts_at, ends_at,
         registration_deadline, cancellation_deadline, venue_name, address, city_name,
-        latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, oversell_enabled, price_cents, registration_schema_json,
+        latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, oversell_enabled, price_cents, member_free, registration_schema_json,
         e.cover_asset_id, cover.cloud_file_id AS cover_file_id,
         e.status, e.content_safety_status, e.version
        FROM mip_events e
@@ -409,6 +410,7 @@ function createAdminEventRepository(database, dependencies) {
       waitlistEnabled: Number(row.waitlist_enabled) === 1,
       oversellEnabled: Number(row.oversell_enabled) === 1,
       priceCents: Number(row.price_cents || 0),
+      memberFree: Number(row.member_free) === 1,
       registrationSchema: json(row.registration_schema_json, []),
       tagIds: (await database.query(`SELECT tag_id FROM mip_event_tag_assignments
         WHERE app_id = ? AND event_id = ? AND status = 'ACTIVE' ORDER BY tag_id`, [appId, eventId])).map(tag => String(tag.tag_id)),
@@ -498,7 +500,7 @@ function createAdminEventRepository(database, dependencies) {
       if (input.eventId) {
         const current = await tx.one(
           `SELECT id, scope_type, branch_id, status, version, form_version,
-             registration_schema_json, cover_asset_id, access_type, registration_policy, event_mode
+             registration_schema_json, cover_asset_id, access_type, member_free, registration_policy, event_mode
            FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
           [input.appId, eventId],
         )
@@ -551,7 +553,7 @@ function createAdminEventRepository(database, dependencies) {
             starts_at = ?, ends_at = ?, registration_deadline = ?, cancellation_deadline = ?,
             venue_name = ?, address = ?, city_name = ?, latitude = ?, longitude = ?, capacity = ?,
             event_type_key = ?, event_mode = ?, access_type = ?, registration_policy = ?,
-            online_url = ?, guide_url = ?, waitlist_enabled = ?, oversell_enabled = ?, price_cents = ?,
+            online_url = ?, guide_url = ?, waitlist_enabled = ?, oversell_enabled = ?, price_cents = ?, member_free = ?,
             registration_schema_json = ?, form_version = ?,
             content_safety_status = ?, version = version + 1
            WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'UNPUBLISHED', 'PUBLISHED')`,
@@ -566,6 +568,7 @@ function createAdminEventRepository(database, dependencies) {
             input.draft.registrationPolicy, input.draft.onlineUrl || null,
             input.draft.guideUrl || null,
             input.draft.waitlistEnabled ? 1 : 0, input.draft.oversellEnabled ? 1 : 0, input.draft.priceCents,
+            input.draft.accessType === 'PAID' && (input.draft.memberFree ?? (Number(current.member_free) === 1)) ? 1 : 0,
             JSON.stringify(input.draft.registrationSchema), formVersion, input.contentSafetyStatus,
             input.appId, eventId, input.expectedVersion],
         )
@@ -587,8 +590,8 @@ function createAdminEventRepository(database, dependencies) {
             registration_policy,
             status, content_safety_status, starts_at, ends_at,
             registration_deadline, cancellation_deadline, venue_name, address, city_name,
-            latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, oversell_enabled, price_cents, currency, registration_schema_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
+            latitude, longitude, online_url, guide_url, capacity, waitlist_enabled, oversell_enabled, price_cents, member_free, currency, registration_schema_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CNY', ?)`,
           [eventId, input.appId, input.draft.scopeType, input.draft.branchId || null,
             input.actorUserId, input.draft.title, input.draft.summary, input.draft.description,
             input.draft.organizerIntroduction || null, input.draft.notices || null, input.draft.coverAssetId, input.draft.eventTypeKey, input.draft.eventMode,
@@ -601,6 +604,7 @@ function createAdminEventRepository(database, dependencies) {
             input.draft.latitude, input.draft.longitude, input.draft.onlineUrl || null,
             input.draft.guideUrl || null,
             input.draft.capacity, input.draft.waitlistEnabled ? 1 : 0, input.draft.oversellEnabled ? 1 : 0, input.draft.priceCents,
+            input.draft.accessType === 'PAID' && input.draft.memberFree ? 1 : 0,
             JSON.stringify(input.draft.registrationSchema || [])],
         )
       }
@@ -647,7 +651,7 @@ function createAdminEventRepository(database, dependencies) {
       const source = await tx.one(
         `SELECT e.id, e.scope_type, e.branch_id, e.title, e.summary, e.description, e.organizer_introduction, e.notices,
           e.cover_asset_id, cover.status AS cover_status, e.event_type_key, e.event_mode,
-          e.access_type, e.registration_policy,
+          e.access_type, e.member_free, e.registration_policy,
           e.starts_at, e.ends_at,
           e.registration_opens_at, e.registration_deadline, e.cancellation_deadline,
           e.venue_name, e.address, e.city_name, e.latitude, e.longitude, e.online_url, e.guide_url,
@@ -741,9 +745,9 @@ function createAdminEventRepository(database, dependencies) {
           status, content_safety_status, starts_at, ends_at,
           registration_opens_at, registration_deadline, cancellation_deadline,
           venue_name, address, city_name, latitude, longitude, online_url, guide_url, capacity,
-          waitlist_enabled, price_cents, currency, registration_schema_json,
+          waitlist_enabled, price_cents, member_free, currency, registration_schema_json,
           form_version, version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
         [eventId, input.appId, source.scope_type, source.branch_id || null, input.actorUserId,
           input.title, source.summary, source.description, source.organizer_introduction || null, source.notices || null,
           source.cover_status === 'READY' ? source.cover_asset_id : null,
@@ -753,6 +757,7 @@ function createAdminEventRepository(database, dependencies) {
           source.address || null, source.city_name || null, source.latitude ?? null,
           source.longitude ?? null, source.online_url || null, source.guide_url || null, source.capacity,
           Number(source.waitlist_enabled) === 1 ? 1 : 0, Number(source.price_cents || 0),
+          Number(source.member_free) === 1 ? 1 : 0,
           source.currency || 'CNY', JSON.stringify(json(source.registration_schema_json, []))],
       )
       await tx.query(

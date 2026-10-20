@@ -93,6 +93,14 @@ describe('MIP public event catalog and recap client contract', () => {
     vi.mocked(requireCloudClient).mockResolvedValue({ callFunction } as never)
   })
 
+  it('accepts server pricing and rejects malformed exemption fields', () => {
+    const quoted = { ...eventDetail(), accessType: 'PAID', priceCents: 1990, memberFree: true, registrationPriceCents: 0 }
+    expect(parseMipEventDetail(quoted)).toEqual(quoted)
+    for (const fields of [{ memberFree: 1 }, { registrationPriceCents: -1 }, { registrationPriceCents: 0.5 }]) {
+      expect(() => parseMipEventDetail({ ...quoted, ...fields })).toThrow()
+    }
+  })
+
   it('strictly parses the public list and detail DTOs', () => {
     expect(parseMipEventListItem(eventListItem())).toEqual(eventListItem())
     expect(parseEventFeedResult({ items: [eventListItem()], cities: ['深圳'] })).toEqual({
@@ -148,12 +156,13 @@ describe('MIP public event catalog and recap client contract', () => {
       name: 'mip-events-api',
       data: {
         action: 'mip.events.list',
+        eventPricingVersion: 1,
         query: { view: 'UPCOMING', dateFilter: 'RECENT' },
       },
     })
     expect(callFunction).toHaveBeenNthCalledWith(2, {
       name: 'mip-events-api',
-      data: { action: 'mip.events.detail', eventId },
+      data: { action: 'mip.events.detail', eventId, eventPricingVersion: 1 },
     })
   })
 

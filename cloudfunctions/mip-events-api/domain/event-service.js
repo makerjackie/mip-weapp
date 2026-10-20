@@ -532,6 +532,7 @@ function publicEventRow(row, previews = [], metadata = { tags: [], videoRecaps: 
     videoRecaps: metadata.videoRecaps,
     mode: row.event_mode,
     accessType: row.access_type,
+    memberFree: Number(row.member_free) === 1,
     startsAt: iso(row.starts_at),
     endsAt: iso(row.ends_at),
     cityName: row.city_name || undefined,
@@ -1239,6 +1240,7 @@ async function getEvent(db, {
        inviter_avatar.cloud_file_id AS inviter_avatar_file_id,
        r.status AS registration_status,
        registration_order.status AS order_status,
+       registration_order.amount_cents AS order_amount_cents,
        latest_refund.status AS refund_status,
        latest_refund.last_error_code AS refund_last_error_code,
        r.version AS registration_version,
@@ -1335,6 +1337,14 @@ async function getEvent(db, {
   const activeStatus = activeRegistrationStatuses.has(row.registration_status)
   const onlineUrl = registeredOnlineUrl(row)
   const guideUrl = publicGuideUrl(row)
+  // Quote is advisory; createRegistration rechecks membership under the transaction lock.
+  const userKind = row.access_type === 'PAID' && Number(row.member_free) === 1 && userId
+    ? await defaultResolveUserKind(db, appId, userId, now)
+    : 'GUEST'
+  const registrationPriceCents = activeStatus
+    ? Number(row.order_amount_cents || 0)
+    : row.access_type === 'PAID' && Number(row.member_free) === 1 && userKind === 'PLAYER'
+      ? 0 : Number(row.price_cents)
   return {
     ...publicEventRow(row, previews.get(eventId) || [], metadata.get(eventId)),
     description: rewriteExpiringRichImageUrls(row.description, contentAssetRows),
@@ -1358,6 +1368,7 @@ async function getEvent(db, {
     registrationDeadline: row.registration_deadline ? iso(row.registration_deadline) : undefined,
     cancellationDeadline: iso(cancellationDeadline) || undefined,
     priceCents: Number(row.price_cents),
+    registrationPriceCents,
     currency: row.currency,
     formVersion: Number(row.form_version),
     registrationSchema: normalizeRegistrationSchema(parseJson(row.registration_schema_json, [])),
@@ -1943,7 +1954,8 @@ async function createRegistration(db, {
     ])
     const userKind = await resolveUserKind(tx, appId, userId, now)
     const nextStatus = decideRegistration({
-      event,
+      // Renew the original payable order without changing its financial snapshot.
+      event: expiredPayment ? { ...event, member_free: 0 } : event,
       userKind,
       capacityCount: Number(capacity?.total || 0),
       activeHoldCount: Number(holds?.total || 0),

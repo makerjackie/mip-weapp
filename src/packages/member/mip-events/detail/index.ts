@@ -78,28 +78,25 @@ function accessText(event: MipEventDetail) {
     return '玩家活动'
   }
   if (event.accessType === 'PAID') {
-    return `¥${(event.priceCents / 100).toFixed(2)}`
+    return `¥${((event.registrationPriceCents ?? event.priceCents) / 100).toFixed(2)}`
   }
   return '免费活动'
 }
 
-/**
- * Access chip copy per figma 1861_17860: the chip names WHO may join (仅玩家)
- * while the price line separately shows the amount for PAID events.
- */
+/** Activity fee policy; per-user amounts come from the server quote. */
 function accessLabel(event: MipEventDetail) {
   if (event.accessType === 'MEMBER_INCLUDED') {
     return '玩家活动'
   }
   if (event.accessType === 'PAID') {
-    return '仅玩家'
+    return event.memberFree ? '玩家免费' : '付费活动'
   }
   return '免费活动'
 }
 
 /** Price amount without the ¥ sign; whole yuan prices drop the decimals (figma: ¥589). */
 function priceText(event: MipEventDetail) {
-  const value = event.priceCents / 100
+  const value = (event.registrationPriceCents ?? event.priceCents) / 100
   return Number.isInteger(value) ? String(value) : value.toFixed(2)
 }
 
@@ -175,6 +172,7 @@ Page({
     accessText: '',
     accessLabel: '',
     priceText: '',
+    needsPayment: false,
     interactionVisible: false,
     heartMineLabel: '我的心动',
     heartReceivedLabel: '对我心动',
@@ -546,6 +544,7 @@ Page({
       accessText: accessText(event),
       accessLabel: accessLabel(event),
       priceText: priceText(event),
+      needsPayment: event.accessType === 'PAID' && (event.registrationPriceCents ?? event.priceCents) > 0,
       // figma 1818_17142: the checked-in state fuses a 与你互动 card under the
       // participant card; MIW-28: shown for every attended viewer once the API
       // supplies interactionSummary (0/0 included).
@@ -1116,7 +1115,7 @@ Page({
         title: retryRefund ? '继续处理退款' : '取消报名',
         content: retryRefund
           ? '将继续查询或提交现有退款，不会重复创建退款。'
-          : currentEvent.accessType === 'PAID' ? '取消后将进入退款流程。' : '确认取消本次报名？',
+          : '确认取消本次报名？如有已支付订单，将按活动规则处理退款。',
         confirmText: retryRefund ? '继续处理' : '确认取消',
       })
       if (!modal.confirm) {

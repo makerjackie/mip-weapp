@@ -19,6 +19,13 @@ const baseEvent = {
 }
 
 describe('event mutation form contracts', () => {
+  it('saves the explicit paid exemption and clears it when changing to free', () => {
+    const paid = buildEventMutationInput('mip.admin.events.save', { ...baseEvent, accessType: 'PAID', priceCents: '1990', memberFree: true })
+    assert.equal((paid?.draft as { memberFree: boolean }).memberFree, true)
+    const free = buildEventMutationInput('mip.admin.events.save', { ...baseEvent, memberFree: true })
+    assert.equal((free?.draft as { memberFree: boolean }).memberFree, false)
+  })
+
   it('produces registration schemas accepted unchanged by the actual server validator', () => {
     const require = createRequire(import.meta.url)
     const { normalizeRegistrationSchema } = require('../../../cloudfunctions/mip-admin-api/domain/registration-schema.js')
@@ -62,7 +69,7 @@ describe('event mutation form contracts', () => {
         accessType: 'FREE', registrationPolicy: 'AUTO',
         startsAt: '2030-03-14T10:00:00+08:00', endsAt: '2030-03-14T12:00:00+08:00', registrationDeadline: null,
         cancellationDeadline: null, venueName: '福田会场', address: '福华三路', cityName: '深圳', latitude: null,
-        longitude: null, onlineUrl: null, guideUrl: null, capacity: 30, waitlistEnabled: false, oversellEnabled: false, priceCents: 0, registrationSchema: [],
+        longitude: null, onlineUrl: null, guideUrl: null, capacity: 30, waitlistEnabled: false, oversellEnabled: false, priceCents: 0, memberFree: false, registrationSchema: [],
       },
     })
     const updated = buildEventMutationInput('mip.admin.events.save', {

@@ -664,6 +664,12 @@ function normalizeEventDraft(value) {
   const accessType = ['FREE', 'MEMBER_INCLUDED', 'PAID'].includes(value.accessType) ? value.accessType : 'FREE'
   const registrationPolicy = ['AUTO', 'APPROVAL'].includes(value.registrationPolicy) ? value.registrationPolicy : 'AUTO'
   const priceCents = Number(value.priceCents || 0)
+  if (value.memberFree !== undefined && typeof value.memberFree !== 'boolean') {
+    throw new AdminError('VALIDATION_FAILED', '玩家免费开关无效')
+  }
+  if (value.memberFree === true && accessType !== 'PAID') {
+    throw new AdminError('VALIDATION_FAILED', '玩家免费仅适用于付费活动')
+  }
   const waitlistEnabled = value.waitlistEnabled === true
   const oversellEnabled = value.oversellEnabled === true
   if (waitlistEnabled && oversellEnabled) {
@@ -742,6 +748,7 @@ function normalizeEventDraft(value) {
     waitlistEnabled,
     oversellEnabled,
     priceCents,
+    ...(value.memberFree !== undefined ? { memberFree: value.memberFree } : {}),
     registrationSchema: normalizeRegistrationSchema(value.registrationSchema === undefined ? [] : value.registrationSchema),
     ...(Object.hasOwn(value, 'tagIds') ? { tagIds: normalizeEventTags(value.tagIds) } : {}),
   }

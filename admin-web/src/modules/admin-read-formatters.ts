@@ -212,8 +212,8 @@ export function blockersLabel(value: unknown) {
   return values.length ? values.join(' · ') : '—'
 }
 
-export function accessLabel(accessType: unknown, priceCents: unknown) {
-  return accessType === 'PAID' ? money(priceCents, 'CNY') : label(accessType)
+export function accessLabel(accessType: unknown, priceCents: unknown, memberFree = false) {
+  return accessType === 'PAID' ? `${money(priceCents, 'CNY')}${memberFree ? ' · 玩家免费' : ''}` : label(accessType)
 }
 
 export function label(value: unknown) {

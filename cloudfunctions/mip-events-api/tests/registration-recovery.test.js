@@ -143,3 +143,15 @@ it('allows unpaid registrations to release their order after the normal cancella
   assert.equal(result.refundRequired, false)
   assert.ok(f.calls.some(c => c.sql.includes("mip_orders SET status = 'CLOSED'")))
 })
+
+it('preserves an expired original payable order when membership now qualifies for exemption', async () => {
+  const f = fixture({ event: { member_free: 1, price_cents: 500 } })
+  const result = await createRegistration(f.db, {
+    appId: 'app', userId: 'user', input, now, participationAccessPolicy: policy,
+    resolveUserKind: async () => 'PLAYER', paymentAvailable: true,
+  })
+  assert.equal(result.kind, 'PAYMENT_REQUIRED')
+  assert.equal(result.orderId, 'original-order')
+  assert.equal(result.amountCents, 9900)
+  assert.equal(f.calls.some(c => /INSERT INTO mip_orders|UPDATE mip_orders/.test(c.sql)), false)
+})

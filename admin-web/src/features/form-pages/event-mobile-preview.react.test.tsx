@@ -37,6 +37,12 @@ describe('event preview online access', () => {
 })
 
 describe('event preview detail fidelity', () => {
+  it('shows the member exemption alongside the guest ticket price', () => {
+    render(<EventMobilePreview values={{ accessType: 'PAID', memberFree: true, priceCents: 1990 }} />)
+    expect(screen.getByText('玩家免费')).toBeInTheDocument()
+    expect(screen.getByText('19.90')).toBeInTheDocument()
+  })
+
   it('mirrors the mini program info card: folded time, location fallback and price row', () => {
     render(<EventMobilePreview values={{
       title: 'MIP 早会第 328 场',
@@ -55,8 +61,8 @@ describe('event preview detail fidelity', () => {
     const monthDay = `${start.getMonth() + 1}月${start.getDate()}日`
     expect(screen.getByText(`${monthDay} ${clock(start)}-${clock(end)}`)).toBeInTheDocument()
     expect(screen.getByText('上海 · 徐汇某空间')).toBeInTheDocument()
-    // 付费活动：角标「仅玩家」+ 右上价格位（整数元不带小数）。
-    expect(screen.getByText('仅玩家')).toBeInTheDocument()
+    // 付费活动：角标「付费活动」+ 右上价格位（整数元不带小数）。
+    expect(screen.getByText('付费活动')).toBeInTheDocument()
     expect(screen.getByText('¥')).toBeInTheDocument()
     expect(screen.getByText('589')).toBeInTheDocument()
   })

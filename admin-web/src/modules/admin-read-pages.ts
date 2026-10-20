@@ -294,7 +294,7 @@ async function loadEvents(
         endTime: formatDateTime(item.endsAt),
         createdAt: formatDateTime(item.createdAt),
         location: [item.cityName, item.branchName].filter(Boolean).join(' · ') || '—',
-        access: accessLabel(item.accessType, item.priceCents),
+        access: accessLabel(item.accessType, item.priceCents, item.memberFree === true),
         registrations: countLabel(item.registrationCount, item.capacity),
         attended: numberLabel(item.attendedCount),
         state: label(valueOf(item, 'status')),

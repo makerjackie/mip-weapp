@@ -65,7 +65,7 @@ function decideRegistration({ event, userKind, capacityCount, activeHoldCount, n
     if (full) {
       throw new DomainError('CONFLICT', '活动名额已满')
     }
-    return 'PAYMENT_PENDING'
+    return Number(event.member_free) === 1 && userKind === 'PLAYER' ? 'REGISTERED' : 'PAYMENT_PENDING'
   }
   if (full) {
     if (Number(event.waitlist_enabled) === 1) {

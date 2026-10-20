@@ -153,6 +153,7 @@ export interface MipEventListItem {
   videoRecaps: EventVideoRecap[]
   mode: EventMode
   accessType: EventAccessType
+  memberFree?: boolean
   startsAt: string
   endsAt: string
   cityName?: string
@@ -200,6 +201,8 @@ export interface MipEventDetail extends MipEventListItem {
   registrationDeadline?: string
   cancellationDeadline?: string
   priceCents: number
+  /** Server quote for this user; an existing active order retains its original amount. */
+  registrationPriceCents?: number
   currency: 'CNY'
   formVersion: number
   registrationSchema: RegistrationField[]

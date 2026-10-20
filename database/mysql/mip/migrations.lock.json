@@ -1466,6 +1466,18 @@
       ],
       "sqlSha256": "80c8de820e0b6d7d7d750317285185874943ecf8aaa2123218e3d5253819e6bb",
       "rollbackSha256": "3addf1331828b0585add7f3b1875a8c32fa5ecf2851c99f86d97b72e305bbcb1"
+    },
+    {
+      "version": "20261020020000",
+      "name": "mip_event_member_free",
+      "sql": "database/mysql/mip/112_event_member_free.sql",
+      "rollback": "database/mysql/mip/rollback/112_event_member_free.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_events"
+      ],
+      "sqlSha256": "ca8c544b1ce1570bf1dca43c1a941e5782e0d9bb0979caa3d35f9f5aa26a6235",
+      "rollbackSha256": "f20116f0c8d52fd00c056d7f64290a3c80e1907105afd0df5fa9a05171c1b277"
     }
   ]
 }

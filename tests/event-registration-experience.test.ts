@@ -74,7 +74,7 @@ describe('event registration experience', () => {
     expect(registration).toContain('mipEventsModule.getMyRegistration(this.data.eventId)')
     expect(registration).toContain('fieldsFromAnswers(event, editing || resumingPayment ? registration?.answers : undefined)')
     expect(registrationView).toContain('{{editing ? \'修改报名信息\' : \'报名信息\'}}')
-    expect(registration).toContain('payLabel: editing ? \'保存修改\' : event.accessType === \'PAID\' ? \'立即支付\' : \'提交报名\'')
+    expect(registration).toContain('payLabel: editing ? \'保存修改\' : needsPayment(event) ? \'立即支付\' : \'提交报名\'')
     expect(registrationView).toContain('{{item.selectedLabel}}')
     expect(registration).toContain('selectedIndex >= 0 ? field.options?.[selectedIndex] || \'请选择\' : \'请选择\'')
   })
@@ -426,7 +426,7 @@ describe('event registration experience', () => {
     // 终审 QO：订单确认页无补充填写项；仅当活动配置报名问题时才出现字段区。
     expect(registrationView).toContain('wx:if="{{fields.length > 0}}"')
     expect(registrationView).not.toContain('本场活动没有额外报名问题')
-    expect(registration).toContain('orderNumberText: orderIdText || \'支付后生成\'')
+    expect(registration).toContain('orderNumberText: orderIdText || (needsPayment(event) ? \'提交后生成\' : \'无需支付\')')
     expect(registration).toContain('updateEventRichContent(this, \'noticesNodes\', event.notices || DEFAULT_PURCHASE_NOTICES)')
   })
 })

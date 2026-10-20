@@ -116,7 +116,7 @@
 
     <view wx:if="{{!editing}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4 text-[20rpx] leading-6 text-muted">
       <view>{{cancellationText}}</view>
-      <view class="mt-2">提交{{event.accessType === 'PAID' ? '并支付' : '报名'}}表示已阅读并同意<text class="text-brand" bind:tap="openAgreement">《服务协议》</text>和<text class="text-brand" bind:tap="openPrivacy">《隐私政策》</text>。</view>
+      <view class="mt-2">提交{{needsPayment ? '并支付' : '报名'}}表示已阅读并同意<text class="text-brand" bind:tap="openAgreement">《服务协议》</text>和<text class="text-brand" bind:tap="openPrivacy">《隐私政策》</text>。</view>
     </view>
     <app-page-exit />
     <mip-sticky-actions>

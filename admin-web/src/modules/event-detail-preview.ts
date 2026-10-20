@@ -76,11 +76,11 @@ export function eventDetailLocationText(values: Record<string, unknown>): string
 }
 
 /**
- * 费用角标（figma 1861_17860）：角标说明「谁能参加」，付费金额单独展示在右上价格位。
+ * 费用角标展示活动收费规则，付费金额单独展示在右上价格位。
  */
-export function eventAccessChipLabel(accessType: unknown): string {
+export function eventAccessChipLabel(accessType: unknown, memberFree = false): string {
   if (accessType === 'MEMBER_INCLUDED') return '玩家活动'
-  if (accessType === 'PAID') return '仅玩家'
+  if (accessType === 'PAID') return memberFree ? '玩家免费' : '付费活动'
   return '免费活动'
 }
 

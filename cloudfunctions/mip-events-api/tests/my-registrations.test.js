@@ -119,7 +119,7 @@ describe('my event registrations', () => {
           },
         }],
         mode: 'OFFLINE',
-        accessType: 'PAID',
+        accessType: 'PAID', memberFree: false,
         startsAt: '2026-09-10T10:00:00.000Z',
         endsAt: '2026-09-10T12:00:00.000Z',
         cityName: '深圳',

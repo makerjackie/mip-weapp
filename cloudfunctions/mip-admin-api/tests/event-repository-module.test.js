@@ -117,7 +117,7 @@ function saveInput(draft) {
   }
 }
 
-function saveHarness({ status = 'PUBLISHED', capacityTotal = 0, schema = [], formVersion = 4 } = {}) {
+function saveHarness({ status = 'PUBLISHED', capacityTotal = 0, schema = [], formVersion = 4, member_free = 0, access_type = 'FREE' } = {}) {
   const calls = []
   const tx = {
     async one(sql, params) {
@@ -125,7 +125,7 @@ function saveHarness({ status = 'PUBLISHED', capacityTotal = 0, schema = [], for
       if (sql.includes('FROM mip_events')) return {
         id: EVENT_ID, scope_type: 'BRANCH', branch_id: 'branch-a', status,
         version: 2, form_version: formVersion, registration_schema_json: JSON.stringify(schema),
-        cover_asset_id: null, access_type: 'FREE', registration_policy: 'AUTO', event_mode: 'OFFLINE',
+        cover_asset_id: null, access_type, member_free, registration_policy: 'AUTO', event_mode: 'OFFLINE',
       }
       if (sql.includes('mip_event_seat_holds')) return { total: capacityTotal }
       return null
@@ -280,6 +280,7 @@ describe('admin event repository module', () => {
         eventTypeKey: 'workshop',
         accessType: 'PAID',
         priceCents: 2500,
+        memberFree: false,
         registrationPolicy: 'AUTO',
         capacity: 50,
         registrationCount: 12,
@@ -631,6 +632,18 @@ describe('admin event repository module', () => {
     assert.equal(calls.some(sql => sql.includes('UPDATE mip_events SET')), false)
     assert.equal(calls.some(sql => sql.includes("SET status = 'REMOVED'")), false)
   })
+
+  for (const [memberFree, expected] of [[undefined, 1], [false, 0], [true, 1]]) {
+    it(`preserves or explicitly changes member-free when saving published activity (${memberFree})`, async () => {
+      const { adapter, calls } = saveHarness({ member_free: 1, access_type: 'PAID' })
+      await adapter.saveEvent(saveInput(eventDraft({ accessType: 'PAID', priceCents: 3900,
+        ...(memberFree === undefined ? {} : { memberFree }) })))
+      const update = calls.find(call => call.sql?.includes('UPDATE mip_events SET'))
+      const index = (update.sql.slice(0, update.sql.indexOf('member_free = ?')).match(/\?/g) || []).length
+      assert.equal(update.params[index], expected)
+      assert.doesNotMatch(calls.map(call => call.sql || '').join('\n'), /UPDATE\s+mip_orders\b/i)
+    })
+  }
 
   it('allows published copy and price edits while preserving lifecycle, orders, form version, history, and outbox', async () => {
     const { adapter, calls } = saveHarness()

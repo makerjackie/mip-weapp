@@ -36,6 +36,18 @@ describe('MIP event registration rules', () => {
     assert.equal(decideRegistration({ event: event({ access_type: 'PAID' }), userKind: 'GUEST', capacityCount: 0, activeHoldCount: 0, now }), 'PAYMENT_PENDING')
   })
 
+  it('exempts only effective players when explicitly enabled and still enforces capacity', () => {
+    const decide = (overrides, userKind, capacityCount = 0, activeHoldCount = 0) => decideRegistration({
+      event: event({ access_type: 'PAID', member_free: 1, ...overrides }), userKind, capacityCount, activeHoldCount, now,
+    })
+    assert.equal(decide({}, 'PLAYER'), 'REGISTERED')
+    assert.equal(decide({}, 'GUEST'), 'PAYMENT_PENDING')
+    assert.equal(decide({ member_free: 0 }, 'PLAYER'), 'PAYMENT_PENDING')
+    assert.equal(decide({ member_free: undefined }, 'PLAYER'), 'PAYMENT_PENDING')
+    assert.throws(() => decide({ capacity: 1 }, 'PLAYER', 1), error => error.code === 'CONFLICT')
+    assert.throws(() => decide({ capacity: 1 }, 'PLAYER', 0, 1), error => error.code === 'CONFLICT')
+  })
+
   it('keeps accepting registrations past capacity when oversell is enabled', () => {
     assert.equal(
       decideRegistration({ event: event({ capacity: 1, oversell_enabled: 1 }), userKind: 'GUEST', capacityCount: 1, activeHoldCount: 0, now }),

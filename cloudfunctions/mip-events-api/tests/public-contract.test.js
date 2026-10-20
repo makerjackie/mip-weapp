@@ -321,3 +321,28 @@ it('keeps unpaid cancellation available after the formal cancellation deadline',
     assert.equal(result.canCancel, expected)
   }
 })
+
+for (const [memberFree, entitlement, registrationStatus, originalAmount, expected] of [
+  [0, true, null, null, 1990], [1, false, null, null, 1990], [1, true, null, null, 0],
+  [1, true, 'PAYMENT_PENDING', 9900, 9900], [0, false, 'REGISTERED', null, 0],
+]) {
+  it(`quotes authoritative price ${expected} while retaining active order amounts`, async () => {
+    const db = eventDatabase(eventRow({ access_type: 'PAID', price_cents: 1990, member_free: memberFree,
+      registration_status: registrationStatus, order_amount_cents: originalAmount }))
+    const originalOne = db.one
+    db.one = async (sql, params) => {
+      if (sql.includes('mip_membership_entitlements')) {
+        assert.deepEqual(params.slice(0, 2), ['wx-app', 'user'])
+        assert.match(sql, /ends_at > \?/)
+        return entitlement ? { id: 'entitlement' } : null
+      }
+      return originalOne(sql, params)
+    }
+    const result = await getEvent(db, { appId: 'wx-app', userId: 'user', eventId: 'event-1',
+      now: new Date('2026-08-24T00:00:00Z'), tokenSecret: '',
+      profileRefSecret: 'public-organizer-profile-ref-pepper-more-than-32-characters' })
+    assert.equal(result.registrationPriceCents, expected)
+    assert.equal(result.priceCents, 1990)
+    assert.equal(result.memberFree, memberFree === 1)
+  })
+}

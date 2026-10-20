@@ -45,6 +45,7 @@ export async function loadEventDetailForForm(eventId: string, request: AdminRequ
     onlineUrl: String(event.onlineUrl || ''),
     guideUrl: String(event.guideUrl || ''),
     capacity: event.capacity ?? '',
+    memberFree: event.memberFree === true,
     waitlistEnabled: event.waitlistEnabled === true,
     oversellEnabled: event.oversellEnabled === true,
     priceCents: String(event.priceCents ?? '0'),

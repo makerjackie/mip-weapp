@@ -124,7 +124,7 @@ export function EventMobilePreview({
               <div className="event-mobile-preview__info-main">
                 <div className="event-mobile-preview__chips">
                   <span className="event-mobile-preview__chip event-mobile-preview__chip--type">{typeLabel || miniEventTypeLabel(values.eventTypeKey)}</span>
-                  <span className="event-mobile-preview__chip event-mobile-preview__chip--access">{eventAccessChipLabel(accessType)}</span>
+                  <span className="event-mobile-preview__chip event-mobile-preview__chip--access">{eventAccessChipLabel(accessType, values.memberFree === true)}</span>
                   {branchName ? <span className="event-mobile-preview__chip">{branchName}</span> : null}
                   {tagLabels.map(label => <span key={label} className="event-mobile-preview__chip">{label}</span>)}
                 </div>

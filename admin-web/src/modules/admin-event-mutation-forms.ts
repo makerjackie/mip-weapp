@@ -121,6 +121,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'coverAssetId', label: '封面', kind: 'asset', assetPurpose: 'EVENT_COVER', wide: true, placeholder: '点击或拖拽上传活动封面' },
   { key: 'tagIds', label: '活动标签（可多选）', kind: 'multi-select', variant: 'pills', allowCreate: true, createKind: 'TAG', createMaxLength: 5, optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true }, emptyHint: '暂无可选标签。可点「＋ 新建标签」创建' },
   { key: 'accessType', label: '费用类型', kind: 'select', options: [option('FREE', '免费'), option('MEMBER_INCLUDED', '会员权益'), option('PAID', '付费')] },
+  { key: 'memberFree', label: '玩家免费', kind: 'checkbox', visibleWhen: { path: 'accessType', value: 'PAID' }, extra: '开启后，有效玩家免费报名，嘉宾按活动金额付费；已有订单金额不变。' },
   { key: 'priceCents', label: '金额（元）', kind: 'money', valueScale: 100, required: true, visibleWhen: { path: 'accessType', value: 'PAID' }, placeholder: '如 199.00' },
   { key: 'eventMode', label: '活动方式', kind: 'select', options: [option('OFFLINE', '线下'), option('ONLINE', '线上'), option('HYBRID', '混合')] },
   { key: 'venueName', label: '场地地址文案', kind: 'text', maxLength: 160, requiredWhen: { path: 'eventMode', values: ['OFFLINE', 'HYBRID'] }, placeholder: '如：上海·徐汇 XX 空间' },
@@ -545,6 +546,7 @@ function eventDraft(values: EventMutationValues) {
     waitlistEnabled,
     oversellEnabled,
     priceCents,
+    memberFree: accessType === 'PAID' && [true, 'true', 'on'].includes(values.memberFree as boolean | string),
     registrationSchema: registrationSchemaResult,
     ...(values.tagIds !== undefined ? { tagIds: tagIds(values.tagIds) } : {}),
   }

@@ -91,7 +91,7 @@ async function callEvents<T>(action: string, data: Record<string, unknown> = {},
       const cloud = await requireCloudClient()
       return cloud.callFunction({
         name: runtimeConfig.cloudbase.eventsFunctionName,
-        data: { action, ...data },
+        data: { action, ...data, ...(['mip.events.list', 'mip.events.detail', 'mip.events.mine'].includes(action) ? { eventPricingVersion: 1 } : {}) },
       })
     }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }))
     const result = unwrap<T>(response.result)

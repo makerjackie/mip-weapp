@@ -118,6 +118,22 @@ describe('admin events deep module', () => {
     })
   }
 
+  it('validates member-free configuration without coercing omitted legacy values', async () => {
+    const captured = []
+    const service = events(repository({ async saveEvent(input) { captured.push(input.draft) } }))
+    const paid = { accessType: 'PAID', priceCents: 1990 }
+    for (const memberFree of [true, false]) {
+      await service.saveEvent(caller, { draft: eventDraft({ ...paid, memberFree }) })
+      assert.equal(captured.at(-1).memberFree, memberFree)
+    }
+    await service.saveEvent(caller, { draft: eventDraft(paid) })
+    assert.equal(Object.hasOwn(captured.at(-1), 'memberFree'), false)
+    for (const memberFree of ['true', 1, null]) {
+      await assert.rejects(service.saveEvent(caller, { draft: eventDraft({ ...paid, memberFree }) }), error => error.code === 'VALIDATION_FAILED')
+    }
+    await assert.rejects(service.saveEvent(caller, { draft: eventDraft({ memberFree: true }) }), error => error.code === 'VALIDATION_FAILED')
+  })
+
   it('accepts the oversell full-capacity policy only for free events and never beside waitlist', async () => {
     let writes = 0
     const service = events(repository({ async saveEvent() { writes += 1 } }))

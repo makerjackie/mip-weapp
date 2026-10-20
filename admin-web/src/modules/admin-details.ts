@@ -313,6 +313,7 @@ async function loadEventDetail(
         ['活动方式', codeLabel(event.eventMode)],
         ['活动类型', event.accessType === 'PAID' ? '付费' : codeLabel(event.accessType)],
         ['价格', money(event.priceCents, 'CNY')],
+        ['玩家免费', event.memberFree === true ? '开启' : '关闭'],
         ['开始时间', dateTime(event.startsAt)],
         ['结束时间', dateTime(event.endsAt)],
         ['报名截止', dateTime(event.registrationDeadline)],

@@ -51,7 +51,7 @@ function uniqueText(values: Array<string | undefined>) {
 function present(item: RegistrationSummary): RegistrationView {
   const accessText = item.event.accessType === 'MEMBER_INCLUDED'
     ? '仅玩家'
-    : item.event.accessType === 'PAID' ? '付费' : '免费'
+    : item.event.accessType === 'PAID' ? (item.event.memberFree ? '玩家免费' : '付费') : '免费'
   const startsText = formatChineseDateTime(item.event.startsAt)
   return {
     ...item,

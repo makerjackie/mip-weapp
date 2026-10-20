@@ -29,6 +29,7 @@ const eventListKeys = [
   'videoRecaps',
   'mode',
   'accessType',
+  'memberFree',
   'startsAt',
   'endsAt',
   'cityName',
@@ -58,6 +59,7 @@ const eventDetailKeys = [
   'registrationDeadline',
   'cancellationDeadline',
   'priceCents',
+  'registrationPriceCents',
   'currency',
   'formVersion',
   'registrationSchema',
@@ -270,6 +272,7 @@ function validEventListFields(value: Record<string, unknown>) {
   && value.videoRecaps.every(item => Boolean(parseVideoRecap(item)))
   && ['OFFLINE', 'ONLINE', 'HYBRID'].includes(String(value.mode))
   && ['FREE', 'MEMBER_INCLUDED', 'PAID'].includes(String(value.accessType))
+  && (value.memberFree === undefined || typeof value.memberFree === 'boolean')
   && dateString(value.startsAt)
   && dateString(value.endsAt)
   && optionalString(value.cityName, 80)
@@ -396,6 +399,7 @@ export function parseMipEventDetail(value: unknown): MipEventDetail {
     || !optionalDate(value.registrationDeadline)
     || !optionalDate(value.cancellationDeadline)
     || !nonNegativeInteger(value.priceCents)
+    || !(value.registrationPriceCents === undefined || nonNegativeInteger(value.registrationPriceCents))
     || value.currency !== 'CNY'
     || !positiveInteger(value.formVersion)
     || !Array.isArray(value.registrationSchema)
