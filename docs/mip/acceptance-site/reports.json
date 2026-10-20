@@ -107,13 +107,13 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-20T07:59:14.868553+00:00",
-    "updatedAt": "2026-10-20T07:59:14.868553+00:00",
+    "updatedAt": "2026-10-20T08:17:06.851306+00:00",
     "verifiedAt": "2026-10-20T07:59:14.868553+00:00",
     "submittedAt": "2026-10-20T07:59:14.868553+00:00",
     "commit": "cda48f7fcc36b37f209cfbbf0b5ed4c8e8486c1c",
     "commitAt": "2026-10-20T03:47:39-04:00",
     "environment": "测试后台 · 权益入口与权限合同已验",
-    "summary": "开通玩家权益入口改为醒目主按钮，后台角色独立配置。注册不默认授予后台权限；现有测试管理员来源已查明。实际赠送和微信新用户首登仍待验。",
+    "summary": "玩家权益入口与后台角色分离已在测试后台验证；新增持续需求澄清文档，确认游客签到任意一场活动后成为嘉宾，会员权限仍GUEST/PLAYER。新的展示分类尚未实现和验收。",
     "detail": "docs/mip/evidence/admin-player-access-20261020/index.html",
     "files": [
       "docs/mip/evidence/admin-player-access-20261020/index.html",
@@ -121,7 +121,10 @@
       "docs/mip/evidence/admin-player-access-20261020/toolbar-after.png",
       "docs/mip/evidence/admin-player-access-20261020/verification.public.json",
       "docs/mip/evidence/admin-player-access-20261020/role-audit.public.json",
-      "docs/mip/evidence/admin-player-access-20261020/cancel-check.public.json"
+      "docs/mip/evidence/admin-player-access-20261020/cancel-check.public.json",
+      "docs/mip/evidence/admin-player-access-20261020/clarifications.html",
+      "docs/mip/REQUIREMENT_CLARIFICATIONS.md",
+      "docs/mip/REQUIREMENTS.md"
     ],
     "comparisons": [
       {
@@ -151,8 +154,9 @@
       "真实网页的开通玩家权益入口可打开时长及必填原因表单；取消后独立HTTPS读取确认会员权益、链版本及后台角色不变。",
       "最终HTTPS68项、14只读模块通过；15个公开静态资源字节一致；浏览器已展示新入口并移除用户详情设置角色按钮。",
       "BFF34文件逐字节匹配本次构建，SCF摘要校验通过，配置/权限/触发器未改；API167运行文件仍与原包一致，本次未更新业务API或identity函数。",
-      "1440×900、1280×720、390×844根宽1423/1263/373，无整页横向溢出；手机滚动可到达开通入口。"
+      "1440×900、1280×720、390×844根宽1423/1263/373，无整页横向溢出；手机滚动可到达开通入口。",
+      "2026-10-20文档澄清：核心身份口径同步需求基线、术语和验收标准；新增持续记录与交接入口。此项没有更新业务代码，原实际验证时间和代码SHA保持原值。"
     ],
-    "limitations": "只更新测试后台，生产未更新。没有给真实账号追加不可撤销的会籍时长，也没有创建、扩大或撤销后台授权。真实微信新用户首次注册、实际人工发放及用户端权益回读未在本轮执行；代码合同、页面打开与取消不能冒充这些业务旅程通过。用户分类/主分会及其他未决项不因本轮反馈自动确认。"
+    "limitations": "只更新测试后台，生产未更新。没有给真实账号追加不可撤销的会籍时长，也没有创建、扩大或撤销后台授权。真实微信新用户首次注册、实际人工发放及用户端权益回读未在本轮执行；代码合同、页面打开与取消不能冒充这些业务旅程通过。用户分类核心口径已在后续需求澄清中确认，展示分类、筛选及导出尚未实现和验收；签到撤销/会籍失效后的展示回退、主分会及其他未决项没有自动确认。"
   }
 ]
