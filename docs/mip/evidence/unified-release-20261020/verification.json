@@ -1,0 +1,249 @@
+{
+  "verifiedAt": "2026-10-20T09:31:37.528657+00:00",
+  "sourceCommit": "ef57257b494bcf450efa83146655d5e35b4de621",
+  "mergedBranch": "MIW-126/supa-ai",
+  "mergedBranchCommit": "fd1f9455af00eedf1f0a62f28059a06597f1bce0",
+  "fullGate": {
+    "command": "pnpm verify:all",
+    "exitCode": 0,
+    "miniTests": 1833,
+    "adminNodeTests": 331,
+    "adminReactTests": 258,
+    "sourceFilesByteMatched": 2382
+  },
+  "upload": {
+    "version": "1.0.4",
+    "target": "production",
+    "cliExitCode": 0,
+    "receipt": "✔ upload",
+    "mainPackageBytes": 1764377,
+    "totalBytes": 3210378,
+    "productionFunctionPrefixVerified": true,
+    "testFunctionPrefixAbsent": true,
+    "tdesignDependencyTreePresent": true,
+    "experienceVersionSelection": "PENDING: 微信公众平台确认或设为体验版"
+  },
+  "miniRuntime": {
+    "checkedAt": "2026-10-20T09:29:24.689Z",
+    "version": "1.0.4",
+    "environment": "production",
+    "runtime": "WeChat DevTools",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "activityReady": true,
+    "organizerImages": 3,
+    "allSourcesHttps": true,
+    "allImagesDecoded": true,
+    "dimensions": [
+      {
+        "width": 1200,
+        "height": 1600
+      },
+      {
+        "width": 1200,
+        "height": 1600
+      },
+      {
+        "width": 1200,
+        "height": 1600
+      }
+    ],
+    "businessWrites": 0,
+    "realIPhone": "PENDING",
+    "payment": "PENDING"
+  },
+  "backends": {
+    "test": {
+      "httpsChecks": 86,
+      "httpsPassed": true,
+      "browser": {
+        "target": "test",
+        "checkedAt": "2026-10-20T09:28:27.987Z",
+        "businessWrites": 0,
+        "results": [
+          {
+            "width": 1280,
+            "height": 720,
+            "entry": [
+              "/assets/index-BwDCP-ZH.js"
+            ],
+            "editorImagesLoaded": 6,
+            "previewTabs": [
+              [
+                "活动介绍",
+                2
+              ],
+              [
+                "主办方",
+                2
+              ],
+              [
+                "报名须知",
+                2
+              ]
+            ],
+            "overflow": false,
+            "consoleErrors": []
+          },
+          {
+            "width": 1440,
+            "height": 900,
+            "entry": [
+              "/assets/index-BwDCP-ZH.js"
+            ],
+            "editorImagesLoaded": 6,
+            "previewTabs": [
+              [
+                "活动介绍",
+                2
+              ],
+              [
+                "主办方",
+                2
+              ],
+              [
+                "报名须知",
+                2
+              ]
+            ],
+            "overflow": false,
+            "consoleErrors": []
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "entry": [
+              "/assets/index-BwDCP-ZH.js"
+            ],
+            "editorImagesLoaded": 6,
+            "previewTabs": [
+              [
+                "活动介绍",
+                2
+              ],
+              [
+                "主办方",
+                2
+              ],
+              [
+                "报名须知",
+                2
+              ]
+            ],
+            "overflow": false,
+            "consoleErrors": []
+          }
+        ]
+      },
+      "performance": {
+        "target": "test",
+        "checkedAt": "2026-10-20T09:27:32.677Z",
+        "entry": "/assets/index-BwDCP-ZH.js",
+        "uncompressedBytes": 623731,
+        "gzipBytes": 174178,
+        "reductionPercent": 72,
+        "explicitGzipRejectionRespected": true,
+        "hashedAssetImmutable": true,
+        "varyAcceptEncoding": true,
+        "browserSamples": [
+          {
+            "assetTransferBytes": 886253,
+            "assetDecodedBytes": 2925948
+          },
+          {
+            "assetTransferBytes": 0,
+            "assetDecodedBytes": 2925948
+          }
+        ],
+        "businessWrites": 0,
+        "gzipDecodedMatchesPublishedAsset": true
+      }
+    },
+    "production": {
+      "httpsChecks": 78,
+      "httpsPassed": true,
+      "browser": {
+        "target": "production",
+        "checkedAt": "2026-10-20T09:29:00.317Z",
+        "businessWrites": 0,
+        "results": [
+          {
+            "width": 1280,
+            "height": 720,
+            "entry": [
+              "/assets/index-BwDCP-ZH.js"
+            ],
+            "editorImagesLoaded": 3,
+            "previewTabs": [
+              [
+                "主办方",
+                3
+              ]
+            ],
+            "overflow": false,
+            "consoleErrors": []
+          },
+          {
+            "width": 1440,
+            "height": 900,
+            "entry": [
+              "/assets/index-BwDCP-ZH.js"
+            ],
+            "editorImagesLoaded": 3,
+            "previewTabs": [
+              [
+                "主办方",
+                3
+              ]
+            ],
+            "overflow": false,
+            "consoleErrors": []
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "entry": [
+              "/assets/index-BwDCP-ZH.js"
+            ],
+            "editorImagesLoaded": 3,
+            "previewTabs": [
+              [
+                "主办方",
+                3
+              ]
+            ],
+            "overflow": false,
+            "consoleErrors": []
+          }
+        ]
+      },
+      "performance": {
+        "target": "production",
+        "checkedAt": "2026-10-20T09:28:13.290Z",
+        "entry": "/assets/index-BwDCP-ZH.js",
+        "uncompressedBytes": 623731,
+        "gzipBytes": 174178,
+        "reductionPercent": 72,
+        "explicitGzipRejectionRespected": true,
+        "hashedAssetImmutable": true,
+        "varyAcceptEncoding": true,
+        "browserSamples": [
+          {
+            "assetTransferBytes": 886253,
+            "assetDecodedBytes": 2925948
+          },
+          {
+            "assetTransferBytes": 0,
+            "assetDecodedBytes": 2925948
+          }
+        ],
+        "businessWrites": 0,
+        "gzipDecodedMatchesPublishedAsset": true
+      }
+    }
+  },
+  "realDevicePayment": "PENDING",
+  "productionBusinessWrites": 0
+}

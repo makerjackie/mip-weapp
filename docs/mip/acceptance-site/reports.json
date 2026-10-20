@@ -234,5 +234,74 @@
     ],
     "limitations": "全新浏览器首次访问仍有3.3秒样本，静态资源仍经事件函数；是否继续调整托管链路待用户确认。小程序真机加载时间待测；4个常驻实例闲置费约141.81元/月，数据库预计由现有套餐额度覆盖。",
     "detail": "docs/mip/evidence/performance-20261020/README.md"
+  },
+  {
+    "id": "unified-release-20261020-v1",
+    "requirement": "unified-release",
+    "title": "MIP 1.0.4：活动图文、支付反馈与后台统一发布",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-20T09:31:37.528657+00:00",
+    "updatedAt": "2026-10-20T09:31:37.528657+00:00",
+    "verifiedAt": "2026-10-20T09:31:37.528657+00:00",
+    "submittedAt": "2026-10-20T09:31:37.528657+00:00",
+    "commit": "ef57257b494bcf450efa83146655d5e35b4de621",
+    "commitAt": "2026-10-20T05:21:14-04:00",
+    "environment": "生产小程序1.0.4已上传；测试/生产后台已发布",
+    "summary": "合并MIW-126及全部此前修复；生产包三张主办方图已实拍显示，双后台图片与压缩缓存复核通过。公众平台需确认设为体验版，真机支付待测。",
+    "detail": "docs/mip/evidence/unified-release-20261020/index.html",
+    "files": [
+      "docs/mip/evidence/unified-release-20261020/index.html",
+      "docs/mip/evidence/unified-release-20261020/mini-production-intro.png",
+      "docs/mip/evidence/unified-release-20261020/mini-production-organizer-1150.png",
+      "docs/mip/evidence/unified-release-20261020/mini-production-organizer-1650.png",
+      "docs/mip/evidence/unified-release-20261020/mini-production-organizer-650.png",
+      "docs/mip/evidence/unified-release-20261020/verification.json"
+    ],
+    "comparisons": [
+      {
+        "title": "生产早会主办方图片",
+        "context": "同一生产活动内容。左：用户iPhone体验版1206×2622原图；中：本轮1.0.4生产包开发工具390×844逻辑视口截图，设备与滚动位置不同，iPhone仍待复测。",
+        "before": {
+          "file": "docs/mip/evidence/event-richtext-ios-20261020/before-organizer-iphone.jpg",
+          "caption": "用户截图：三张图片空白",
+          "source": "用户本轮原图"
+        },
+        "after": {
+          "file": "docs/mip/evidence/unified-release-20261020/mini-production-organizer-650.png",
+          "caption": "1.0.4新包：图片在真实页面显示",
+          "source": "2026-10-20 微信开发者工具/生产数据"
+        },
+        "prototype": {
+          "caption": "兼容修复，无新增视觉原型",
+          "reason": "保持现有界面，仅修复内容与加载；无对应新原型，不补画。"
+        }
+      },
+      {
+        "title": "支付唤起链路与等待反馈",
+        "context": "MIW-126与补充回归；以下为行为对照，缺少真实手机收银台截图。",
+        "before": {
+          "caption": "额外订单查询后才唤起支付",
+          "reason": "源码对照：额外查询增加等待，缺少明确的支付唤起反馈；未保留真实手机修改前截图。"
+        },
+        "after": {
+          "caption": "直接创建支付，等待时显示遮罩",
+          "reason": "已通过慢请求、重复点击、取消、异常及待核验跳转回归；真实手机支付截图与到账仍PENDING。"
+        },
+        "prototype": {
+          "caption": "既有原生加载提示",
+          "reason": "仅用微信原生loading，不新增业务布局，无新视觉原型。"
+        }
+      }
+    ],
+    "checks": [
+      "完整verify:all通过：1833 / 331 / 258；2382个源文件逐字节核对一致",
+      "微信CLI上传1.0.4成功；生产函数名前缀、TDesign依赖树与2MB主包门禁通过",
+      "生产早会详情ready、3张主办方图片实际出现在页面截图中",
+      "测试/生产后台HTTPS、登录、三视口编辑器及预览图片通过",
+      "线上gzip解压与原资源一致；重复访问静态传输0字节；生产Web默认版本2生效",
+      "统一运行代码ef57257b已推送main；无生产业务数据写入"
+    ],
+    "limitations": "公众平台需确认/设为体验版；iPhone图文及真实支付回调待验收。开发工具与单元测试不代替真机。全新后台首开仍有约3.3秒波动。"
   }
 ]
