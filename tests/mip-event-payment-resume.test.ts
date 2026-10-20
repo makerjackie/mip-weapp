@@ -34,7 +34,9 @@ function page() {
 describe('event order payment resumption', () => {
   it('shows masked feedback during a slow launch, prevents double submit and clears it on cancellation', async () => {
     let finish!: (result: { kind: 'CANCELLED' }) => void
-    mocks.payOrder.mockReturnValue(new Promise(resolve => { finish = resolve }))
+    mocks.payOrder.mockReturnValue(new Promise((resolve) => {
+      finish = resolve
+    }))
     const instance = page()
     instance.data.order.orderType = 'MEMBERSHIP'
     const pending = instance.performPayment()
