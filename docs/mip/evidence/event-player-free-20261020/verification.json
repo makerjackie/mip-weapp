@@ -1,0 +1,265 @@
+{
+  "captures": [
+    {
+      "file": "order-after.png",
+      "pixels": {
+        "width": 594,
+        "height": 1284
+      },
+      "capturedAtUtc": "2026-10-20T06:15:49.030983+00:00",
+      "source": "real TEST UI screenshot"
+    },
+    {
+      "file": "detail-images.png",
+      "pixels": {
+        "width": 594,
+        "height": 1284
+      },
+      "capturedAtUtc": "2026-10-20T06:16:16.498849+00:00",
+      "source": "real TEST UI screenshot"
+    },
+    {
+      "file": "admin-mobile.png",
+      "pixels": {
+        "width": 390,
+        "height": 3492
+      },
+      "capturedAtUtc": "2026-10-20T06:07:31.867003+00:00",
+      "source": "real TEST UI screenshot"
+    },
+    {
+      "file": "order-before.png",
+      "pixels": {
+        "width": 594,
+        "height": 1284
+      },
+      "capturedAtUtc": "2026-10-20T06:15:43.967992+00:00",
+      "source": "real TEST UI screenshot"
+    },
+    {
+      "file": "admin-before.png",
+      "pixels": {
+        "width": 1440,
+        "height": 2701
+      },
+      "capturedAtUtc": "2026-10-20T06:05:01.236997+00:00",
+      "source": "real TEST UI screenshot"
+    },
+    {
+      "file": "checkout-images.png",
+      "pixels": {
+        "width": 594,
+        "height": 1284
+      },
+      "capturedAtUtc": "2026-10-20T06:16:22.431140+00:00",
+      "source": "real TEST UI screenshot"
+    },
+    {
+      "file": "player-free.png",
+      "pixels": {
+        "width": 594,
+        "height": 1284
+      },
+      "capturedAtUtc": "2026-10-20T06:11:03.752373+00:00",
+      "source": "real TEST UI screenshot"
+    },
+    {
+      "file": "admin-after.png",
+      "pixels": {
+        "width": 1440,
+        "height": 4647
+      },
+      "capturedAtUtc": "2026-10-20T06:08:17.052025+00:00",
+      "source": "real TEST UI screenshot"
+    }
+  ],
+  "source": {
+    "media": "4eef19fa",
+    "pricingAndAdmin": "6e97930c",
+    "clientFinal": "43624ed3"
+  },
+  "target": "TEST",
+  "clientVersion": "0.2.0.20261020.3",
+  "upload": "UPLOADED",
+  "experienceSetting": "UNVERIFIED",
+  "gates": {
+    "sourceCommit": "43624ed3",
+    "verifyAll": "passed",
+    "miniSuites": 280,
+    "miniTests": 1818,
+    "adminContractTests": 330,
+    "adminReactSuites": 34,
+    "adminReactTests": 253,
+    "tdesignNestedTree": true,
+    "runtimePreflight": "passed",
+    "productionWrites": 0
+  },
+  "cloudVerify": "passed",
+  "publicWebAssets": 15,
+  "httpsChecks": 68,
+  "browserViewports": [
+    [
+      1280,
+      720
+    ],
+    [
+      1440,
+      900
+    ],
+    [
+      390,
+      844
+    ]
+  ],
+  "database": {
+    "backupTables": 154,
+    "backupRows": 1181,
+    "migration": "20261020020000",
+    "existingEventsDefaultOff": 26
+  },
+  "runtime": {
+    "environment": "TEST",
+    "checks": [
+      "guest authoritative 1990 quote/order, actual payment not invoked",
+      "test-only normal admin membership grant and authoritative PLAYER readback",
+      "original guest order retains 1990 after membership grant; normal unpaid cancellation",
+      "PLAYER zero quote/confirmed/no payable order/idempotent; original order CLOSED unchanged; legacy DTO compatible"
+    ],
+    "realWechatSession": true,
+    "normalAdminService": true,
+    "actualPayment": false,
+    "productionWrites": 0
+  },
+  "images": {
+    "target": "TEST",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "realCloudData": true,
+    "checks": [
+      {
+        "field": "descriptionNodes",
+        "count": 3,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 702,
+            "height": 298
+          },
+          {
+            "width": 654,
+            "height": 366
+          },
+          {
+            "width": 702,
+            "height": 394
+          }
+        ]
+      },
+      {
+        "field": "organizerIntroductionNodes",
+        "count": 1,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 702,
+            "height": 298
+          }
+        ]
+      },
+      {
+        "field": "noticesNodes",
+        "count": 2,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 654,
+            "height": 366
+          },
+          {
+            "width": 702,
+            "height": 394
+          }
+        ]
+      },
+      {
+        "field": "noticesNodes",
+        "count": 2,
+        "allImagesDecoded": true,
+        "dimensions": [
+          {
+            "width": 654,
+            "height": 366
+          },
+          {
+            "width": 702,
+            "height": 394
+          }
+        ]
+      }
+    ]
+  },
+  "functions": [
+    {
+      "function": "mip-t-events-api",
+      "active": true,
+      "runtimeFilesMatched": 20,
+      "configurationUnchanged": false,
+      "allowedChangedKeys": [
+        "MIP_PAYMENT_MODE"
+      ],
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "zipSha256": "b2c40b70f10b99192ddb452f2f60a58313f334c8c31c0c0a754b56f20a783993"
+    },
+    {
+      "function": "mip-t-admin-api",
+      "active": true,
+      "runtimeFilesMatched": 167,
+      "configurationUnchanged": true,
+      "allowedChangedKeys": [],
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "zipSha256": "c4b0474fe32cba7da5a98173a0a0ec205c724cac7e3c2860b3c322df4f1d759d"
+    },
+    {
+      "function": "mip-t-admin-web-api",
+      "active": true,
+      "runtimeFilesMatched": 26,
+      "configurationUnchanged": true,
+      "allowedChangedKeys": [],
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "zipSha256": "a49e014c7149d6b6ed3fe67cb0bd6eba26d5289c1dbe4335cf47b73a9ae87158"
+    }
+  ],
+  "paymentConfiguration": {
+    "target": "TEST",
+    "function": "mip-t-events-api",
+    "changedKeys": [
+      "MIP_PAYMENT_MODE"
+    ],
+    "before": "live",
+    "after": "disabled",
+    "ledger": "disabled",
+    "allOtherConfigurationPreserved": true,
+    "codeUnchanged": true
+  },
+  "acceptanceEntry": {
+    "target": "TEST",
+    "paidActivityReadyForFreshRegistration": true,
+    "playerQuoteCents": 0,
+    "cta": "提交报名",
+    "automaticTestRegistrationCancelled": true,
+    "paidOrderWasClosedUnchanged": true,
+    "testMembership": "one month normal admin grant in test only"
+  },
+  "productionWrites": 0,
+  "limitations": [
+    "Affected user/device could not be identified; second-account and phone acceptance remain with user.",
+    "No actual WeChat charge, callback, refund, phone authorization or production acceptance performed.",
+    "Code upload succeeded; official experience-version selection has not been read back. Preview QR is development/test and is retained only in ignored local storage.",
+    "Screenshots use real test data. Existing example artwork is test content and does not identify actual activity guests."
+  ]
+}
