@@ -1,0 +1,61 @@
+{
+  "fileKey": "qqkbdlh4c4Swubum8S3F2f",
+  "nodeId": "4197:38017",
+  "whoamiSucceeded": true,
+  "seat": "Full",
+  "tier": "student",
+  "metadataSucceeded": true,
+  "designContextSucceeded": true,
+  "screenshotDownloaded": true,
+  "svgDownloads": [
+    {
+      "file": "imgGroup.svg",
+      "bytes": 1395,
+      "width": "14.3333",
+      "height": "14.3333",
+      "viewBox": "0 0 14.3333 14.3333",
+      "sha256": "1fa02e59be029b4aadfed131df8b481dc0041366df89e8bb4c3a8b054d4997fa"
+    },
+    {
+      "file": "imgPenDraw1.svg",
+      "bytes": 1428,
+      "width": "16",
+      "height": "16",
+      "viewBox": "0 0 16 16",
+      "sha256": "e95dd9275a0b81f16610922538c20ccb553d30f74852188480a1ab06054f9362"
+    },
+    {
+      "file": "imgLayer2.svg",
+      "bytes": 883,
+      "width": "13",
+      "height": "13",
+      "viewBox": "0 0 13 13",
+      "sha256": "bcc83fcfbcdd2fbb20d75b60c80d7a24c04e8c9044bf56e19005fa58c3f9c02f"
+    },
+    {
+      "file": "imgMoneyBagDollar1.svg",
+      "bytes": 3797,
+      "width": "16",
+      "height": "16",
+      "viewBox": "0 0 16 16",
+      "sha256": "af82000f14e37162ae95560c1772ad47abfa31794ce5d5f13d89a4dc638320f6"
+    },
+    {
+      "file": "imgPrivateIncognito11.svg",
+      "bytes": 1237,
+      "width": "16",
+      "height": "16",
+      "viewBox": "0 0 16 16",
+      "sha256": "41a97b690a851927fd8fc87cd1fec8044483ee4aa8d2d9524ecbe593482b5f83"
+    },
+    {
+      "file": "imgDog1.svg",
+      "bytes": 2568,
+      "width": "16",
+      "height": "16",
+      "viewBox": "0 0 16 16",
+      "sha256": "8ca6f684a067d71596db79b566eb8bfb90db13bffbf3a9faa840194508cfafc7"
+    }
+  ],
+  "figmaFileWrites": 0
+}

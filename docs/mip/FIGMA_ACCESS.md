@@ -8,6 +8,10 @@
 
 这证明浏览器原生矢量导出可行，不代表当前会话已连接官方 MCP，也不代表新文件全部页面都已下载或完成视觉验收。本机自建 `figma-bridge` 是另一个通道，使用时须先检查 bridge 在线及插件待命状态；不要把它与官方 MCP 共用端口当作同一服务。
 
+## 官方 MCP 已连接
+
+2026-10-19 用户完成登录后，已实测官方插件的 whoami、metadata、design context；成功读取上述六角色画框、尺寸和图层，并下载全部六枚 SVG 与原稿截图。当前席位为 Full / student，无需为本次读取额外购买账号。证据见[官方 MCP 连通性验证](evidence/figma-official-20261019/README.md)。本次没有修改 Figma 文件，也未重新生成同状态四列截图。
+
 ## 推荐连接方式
 
 在 Codex 的 Plugins 安装官方 Figma 插件，使用可访问该设计文件的 Figma 账号完成 OAuth 授权；确保文件所有者允许查看及导出。连接后先用 `whoami` 核对账号、团队与 seat，再读取目标节点和导出一张原稿作为连通性检查。官方远程端点为 `https://mcp.figma.com/mcp`，不要求安装 Figma 桌面版。
