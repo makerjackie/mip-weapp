@@ -10,7 +10,7 @@ import { defaultContentFormValues } from './content-form-helpers'
 
 export function UserContentEditFormPage() {
   const params = useParams({ from: '/userContent/$contentId/edit' }) as { contentId?: string }
-  const search = useSearch({ from: '/userContent/$contentId/edit' }) as { kind?: string }
+  const search = useSearch({ from: '/userContent/$contentId/edit' }) as { kind?: string; backUserId?: string }
   const rawContentId = params.contentId || ''
   const isNew = rawContentId === 'new' || !rawContentId
   const initialKind = search.kind === 'SUPER_CASE' ? 'SUPER_CASE' : 'COOPERATION_CARD'
@@ -30,7 +30,7 @@ export function UserContentEditFormPage() {
     description: '填写合作卡或超级案例内容。角色信息和能力评分根据内容类型动态展示。',
     fields,
     values,
-    backTarget: '/opportunities',
+    backTarget: search.backUserId ? `/users/${encodeURIComponent(search.backUserId)}` : '/opportunities',
     action: 'mip.admin.userContent.save',
     idempotencyKey,
     capability: 'userContent.moderate',

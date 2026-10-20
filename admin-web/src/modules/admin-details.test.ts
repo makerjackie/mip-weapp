@@ -46,7 +46,7 @@ describe('admin detail views', () => {
     assert.equal(detail.title, '林晓')
     assert.equal(detail.status, '玩家')
     assert.equal(detail.sections.find(section => section.title === '基本信息')?.fields?.find(item => item.label === '手机状态')?.value, '已绑定')
-    assert.equal(detail.sections.find(section => section.title === '会员权益')?.fields?.find(item => item.label === '会员链版本')?.value, '3')
+    assert.equal(detail.sections.find(section => section.title === '会员权益')?.fields?.find(item => item.label === '会员链版本')?.value, undefined)
     assert.equal(detail.sections.find(section => section.title === '业务记录')?.metrics?.find(item => item.label === '订单')?.value, '2')
     assert.deepEqual(detail.sections.find(section => section.title === '标签')?.rows,
       [{ type: '能力', relation: '能力', label: '资源整合' }, { type: '行业', relation: '主要行业', label: '企业服务' }])
@@ -87,13 +87,14 @@ describe('admin detail views', () => {
     const fieldOf = (section: typeof basic, label: string) => section?.fields?.find(item => item.label === label)?.value
     // 基础信息：身份/账号/手机/绑定微信/服务器/城市/时间与版本，职业字段一律不在此处。
     assert.equal(fieldOf(basic, '身份'), '玩家')
-    assert.equal(fieldOf(basic, '账号状态'), '启用')
+    assert.equal(fieldOf(basic, '账号状态'), '正常')
     assert.equal(fieldOf(basic, '手机状态'), '已绑定')
     assert.equal(fieldOf(basic, '绑定微信'), '已绑定')
     assert.equal(fieldOf(basic, '所属服务器'), '福田分会')
     assert.equal(fieldOf(basic, '城市'), '深圳')
-    assert.equal(fieldOf(basic, '注册时间'), new Date('2030-01-01T00:00:00.000Z').toLocaleString('zh-CN', { hour12: false }))
-    assert.equal(fieldOf(basic, '资料版本'), '6')
+    assert.equal(fieldOf(basic, '注册时间'), '2030-01-01 08:00')
+    assert.equal(fieldOf(basic, '资料版本'), undefined)
+    assert.equal(fieldOf(basic, '用户 ID'), 'user-1')
     assert.equal(fieldOf(basic, '一句话介绍'), undefined)
     assert.equal(fieldOf(basic, '职业身份'), undefined)
     // 职业信息：行业来自标签、职业身份、介绍与任职/标签数据。

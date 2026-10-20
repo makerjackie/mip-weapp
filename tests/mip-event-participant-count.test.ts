@@ -95,16 +95,16 @@ describe('configured event tags reach the feed card', () => {
 })
 
 describe('event card schedule', () => {
-  it('shows the local day and both endpoints, including the day on overnight events', () => {
-    const start = new Date(2026, 11, 12, 10).toISOString()
-    expect(eventScheduleText(start, new Date(2026, 11, 12, 12).toISOString(), new Date(2026, 0, 1))).toBe('12月12日 10:00-12:00')
-    expect(eventScheduleText(start, new Date(2026, 11, 13, 1).toISOString(), new Date(2026, 0, 1))).toBe('12月12日 10:00-12月13日 01:00')
+  it('shows the Beijing day and both endpoints, including the day on overnight events', () => {
+    const start = new Date('2026-12-12T10:00:00+08:00').toISOString()
+    expect(eventScheduleText(start, new Date('2026-12-12T12:00:00+08:00').toISOString(), new Date('2026-01-01T00:00:00+08:00'))).toBe('12月12日 10:00-12:00')
+    expect(eventScheduleText(start, new Date('2026-12-13T01:00:00+08:00').toISOString(), new Date('2026-01-01T00:00:00+08:00'))).toBe('12月12日 10:00-12月13日 01:00')
   })
 })
 
 it('retains years on historical, future and cross-year schedules', () => {
-  const now = new Date(2026, 0, 1)
-  expect(eventScheduleText(new Date(2027, 0, 2, 10).toISOString(), undefined, now)).toBe('2027年1月2日 10:00')
-  expect(eventScheduleText(new Date(2025, 0, 2, 10).toISOString(), undefined, now)).toBe('2025年1月2日 10:00')
-  expect(eventScheduleText(new Date(2026, 11, 31, 23).toISOString(), new Date(2027, 0, 1, 1).toISOString(), now)).toBe('12月31日 23:00-2027年1月1日 01:00')
+  const now = new Date('2026-01-01T00:00:00+08:00')
+  expect(eventScheduleText(new Date('2027-01-02T10:00:00+08:00').toISOString(), undefined, now)).toBe('2027年1月2日 10:00')
+  expect(eventScheduleText(new Date('2025-01-02T10:00:00+08:00').toISOString(), undefined, now)).toBe('2025年1月2日 10:00')
+  expect(eventScheduleText(new Date('2026-12-31T23:00:00+08:00').toISOString(), new Date('2027-01-01T01:00:00+08:00').toISOString(), now)).toBe('12月31日 23:00-2027年1月1日 01:00')
 })

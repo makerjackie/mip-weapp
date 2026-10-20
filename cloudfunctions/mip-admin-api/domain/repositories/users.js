@@ -77,12 +77,16 @@ function createAdminUserRepository(database, options) {
     if (filters.playerLifecycle === 'CURRENT') {
       clauses.push('COALESCE(player_entitlements.is_current_player, 0) = 1')
     }
-    if (filters.playerLifecycle === 'FORMER') {
+    if (filters.playerLifecycle === 'FORMER' || filters.playerLifecycle === 'EXPIRED') {
       clauses.push('(player_lifecycle.user_id IS NOT NULL OR player_entitlements.user_id IS NOT NULL)')
       clauses.push('COALESCE(player_entitlements.is_current_player, 0) = 0')
     }
     if (filters.playerLifecycle === 'NEVER') {
       clauses.push('player_lifecycle.user_id IS NULL AND player_entitlements.user_id IS NULL')
+    }
+    if (['ACTIVE', 'EXPIRING_THIS_MONTH', 'NEXT_MONTH'].includes(filters.playerLifecycle)) {
+      clauses.push(`${membershipStatusSql()} = ?`)
+      params.push(filters.playerLifecycle)
     }
     if (filters.controlType) {
       clauses.push(`EXISTS (SELECT 1 FROM mip_user_access_controls c
@@ -134,6 +138,7 @@ function createAdminUserRepository(database, options) {
         EXISTS (SELECT 1 FROM mip_membership_entitlements me
           WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
             AND me.starts_at <= UTC_TIMESTAMP(3) AND me.ends_at > UTC_TIMESTAMP(3)) AS is_player,
+        ${membershipStatusSql()} AS membership_status,
         player_lifecycle.player_number,
         COALESCE(player_lifecycle.first_player_at, player_entitlements.first_player_at) AS first_player_at,
         player_entitlements.latest_entitlement_ends_at,
@@ -168,6 +173,7 @@ function createAdminUserRepository(database, options) {
       id: row.id,
       status: row.status,
       kind: Number(row.is_player) === 1 ? 'PLAYER' : 'GUEST',
+      membershipStatus: row.membership_status,
       nickname: row.nickname || '未填写昵称',
       avatarUrl: row.avatar_url || '',
       headline: row.headline || '',
@@ -206,6 +212,7 @@ function createAdminUserRepository(database, options) {
         p.nickname, p.real_name, p.identity_status, p.headline, p.introduction, p.companies_json,
         p.organizations_json, p.visibility_json, p.version AS profile_version, media.cloud_file_id AS avatar_url,
         pp.phone_ciphertext, pp.phone_verified_at,
+        EXISTS (SELECT 1 FROM mip_user_identities identity_record WHERE identity_record.app_id = u.app_id AND identity_record.user_id = u.id AND identity_record.provider = 'WECHAT_MINIPROGRAM') AS wechat_bound,
         b.name AS branch_name, b.city_name,
         (SELECT GROUP_CONCAT(c.control_type ORDER BY c.control_type SEPARATOR ',')
           FROM mip_user_access_controls c
@@ -312,6 +319,7 @@ function createAdminUserRepository(database, options) {
       nickname: user.nickname || '未填写昵称',
       avatarUrl: user.avatar_url || '',
       realName: user.real_name || '',
+      wechatBound: Number(user.wechat_bound) === 1,
       identityStatus: user.identity_status || '',
       headline: user.headline || '',
       introduction: user.introduction || '',
@@ -633,3 +641,16 @@ function playerEntitlementSummaryCte() {
 }
 
 module.exports = { createAdminUserRepository }
+
+// Mutually exclusive calendar-month buckets, evaluated in Beijing time before pagination.
+// The same expression projects the row and filters list/export queries.
+function membershipStatusSql() {
+  const expiryMonth = "DATE_FORMAT(DATE_ADD(player_entitlements.latest_entitlement_ends_at, INTERVAL 8 HOUR), '%Y-%m')"
+  const currentMonth = "DATE_FORMAT(DATE_ADD(UTC_TIMESTAMP(3), INTERVAL 8 HOUR), '%Y-%m')"
+  const nextMonth = "DATE_FORMAT(DATE_ADD(DATE_ADD(UTC_TIMESTAMP(3), INTERVAL 8 HOUR), INTERVAL 1 MONTH), '%Y-%m')"
+  return `CASE WHEN COALESCE(player_entitlements.is_current_player, 0) = 1 THEN
+    CASE WHEN ${expiryMonth} = ${currentMonth} THEN 'EXPIRING_THIS_MONTH'
+      WHEN ${expiryMonth} = ${nextMonth} THEN 'NEXT_MONTH' ELSE 'ACTIVE' END
+    WHEN player_lifecycle.user_id IS NOT NULL OR player_entitlements.user_id IS NOT NULL THEN 'EXPIRED'
+    ELSE 'NEVER' END`
+}

@@ -6,7 +6,7 @@ import {
 } from './admin-task-management.ts'
 import { loadBannerDetail } from './admin-banner-management.ts'
 import { feedbackDisplayComplete, feedbackFields } from './event-feedback.ts'
-import { campaignAudienceLabel, label } from './admin-read-formatters.ts'
+import { campaignAudienceLabel, label, formatUserDateTime } from './admin-read-formatters.ts'
 import { opportunityStatusLabel } from './admin-read-special-pages.ts'
 import {
   loadGameCatalogDetail,
@@ -31,6 +31,7 @@ export interface AdminEventRosterPageQuery {
 
 export interface AdminDetailOptions {
   includeUserMembership?: boolean
+  includeUserPhone?: boolean
   includeEventRoster?: boolean
   includeEventFeedback?: boolean
   includeMessageDeliveryReviews?: boolean
@@ -108,11 +109,12 @@ export async function loadAdminDetail(
 }
 
 async function loadUserDetail(userId: string, request: AdminDetailRequest, options: AdminDetailOptions): Promise<AdminDetailView> {
-  const [userValue, membershipValue] = await Promise.all([
+  const [userValue, membershipValue, phoneValue] = await Promise.all([
     request('mip.admin.users.get', { userId, includePhone: false }),
     options.includeUserMembership === false
       ? Promise.resolve(null)
       : request('mip.admin.memberships.get', { userId }).catch(() => null),
+    options.includeUserPhone ? request('mip.admin.users.get', { userId, includePhone: true }).catch(() => null) : Promise.resolve(null),
   ])
   const user = record(userValue)
   const membershipDetail = record(membershipValue)
@@ -129,17 +131,18 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
   const sections: AdminDetailSection[] = [{
     title: '基本信息',
     fields: fields([
+      ['用户 ID', text(user.id)],
       ['身份', codeLabel(user.kind)],
-      ['账号状态', codeLabel(user.status)],
+      ['手机号', text(record(phoneValue).phoneNumberMasked, user.phoneBound === true ? '已绑定（当前不可查看）' : '未绑定')],
+      ['账号状态', user.status === 'ACTIVE' ? '正常' : user.status === 'BLOCKED' ? '已冻结' : codeLabel(user.status)],
       ['手机状态', user.phoneBound === true ? '已绑定' : '未绑定'],
       ['绑定微信', user.wechatBound === true ? '已绑定' : user.wechatBound === false ? '未绑定' : '—'],
       ['真实姓名', text(user.realName)],
       ['所属服务器', branchDisplay],
       ['城市', text(user.cityName)],
-      ['注册时间', dateTime(user.createdAt)],
-      ['更新时间', dateTime(user.updatedAt)],
-      ['资料版本', numberText(user.profileVersion)],
-      ['用户版本', numberText(user.userVersion)],
+      ['注册时间', formatUserDateTime(user.createdAt)],
+      ['更新时间', formatUserDateTime(user.updatedAt)],
+      ['玩家加入时间', formatUserDateTime(user.firstPlayerAt)],
     ]),
   }, {
     title: '职业信息',
@@ -154,10 +157,10 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest, optio
     sections.push({
       title: '会员权益',
       fields: fields([
-        ['权益状态', codeLabel(membership.status)],
-        ['生效时间', dateTime(membership.startsAt)],
-        ['到期时间', dateTime(membership.endsAt)],
-        ['会员链版本', numberText(membershipDetail.chainVersion)],
+        ['权益状态', membership.isCurrent === true ? '生效中' : membership.isScheduled === true ? '待生效' : membership.endsAt ? '已到期' : '—'],
+        ['生效时间', formatUserDateTime(membership.startsAt)],
+        ['到期时间', formatUserDateTime(membership.endsAt)],
+        ['首次加入时间', formatUserDateTime(user.firstPlayerAt)],
       ]),
     })
   }
@@ -247,7 +250,7 @@ function appendUserCollections(sections: AdminDetailSection[], user: AdminDetail
   if (roles.length) {
     sections.push({
       title: '运营角色',
-      rows: roles.map(item => ({ role: codeLabel(item.roleKey), scope: codeLabel(item.scopeType), grantedAt: dateTime(item.grantedAt) })),
+      rows: roles.map(item => ({ role: codeLabel(item.roleKey), scope: codeLabel(item.scopeType), grantedAt: formatUserDateTime(item.grantedAt) })),
       columns: columns([['role', '角色'], ['scope', '作用范围'], ['grantedAt', '授权时间']]),
     })
   }

@@ -1,7 +1,9 @@
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, DatePicker, Form, Input, InputNumber, Select, Space } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import { useEffect, useRef } from 'react'
+dayjs.extend(utc)
 
 export interface FilterBarValue {
   q: string
@@ -45,6 +47,8 @@ export function FilterBar({
   dimensionField,
   dimensionLabel,
   dimensionOptions,
+  minutePrecision = false,
+  beijingTime = false,
 }: {
   value: FilterBarValue
   placeholder: string
@@ -61,6 +65,8 @@ export function FilterBar({
   dimensionField?: string
   dimensionLabel?: string
   dimensionOptions?: Array<{ value: string; label: string }>
+  minutePrecision?: boolean
+  beijingTime?: boolean
 }) {
   const [form] = Form.useForm<FilterBarValue>()
   const syncedValue = useRef('')
@@ -102,8 +108,9 @@ export function FilterBar({
     if (!timeRangeFields) return
     const nextFilters = { ...filters }
     if (dates && dates[0] && dates[1]) {
-      nextFilters[timeRangeFields.from] = dates[0].startOf('day').toISOString()
-      nextFilters[timeRangeFields.to] = dates[1].endOf('day').toISOString()
+      const instant = (date: Dayjs) => beijingTime ? dayjs(`${date.format('YYYY-MM-DDTHH:mm:ss.SSS')}+08:00`) : date
+      nextFilters[timeRangeFields.from] = instant(dates[0]).startOf(minutePrecision ? 'minute' : 'day').toISOString()
+      nextFilters[timeRangeFields.to] = instant(dates[1]).endOf(minutePrecision ? 'minute' : 'day').toISOString()
     } else {
       delete nextFilters[timeRangeFields.from]
       delete nextFilters[timeRangeFields.to]
@@ -116,8 +123,8 @@ export function FilterBar({
     const fromRaw = typeof filters[timeRangeFields.from] === 'string' ? filters[timeRangeFields.from] as string : ''
     const toRaw = typeof filters[timeRangeFields.to] === 'string' ? filters[timeRangeFields.to] as string : ''
     if (!fromRaw || !toRaw) return undefined
-    const startDay = dayjs(fromRaw)
-    const endDay = dayjs(toRaw)
+    const startDay = beijingTime ? dayjs(fromRaw).utcOffset(480) : dayjs(fromRaw)
+    const endDay = beijingTime ? dayjs(toRaw).utcOffset(480) : dayjs(toRaw)
     return startDay.isValid() && endDay.isValid() ? [startDay, endDay] : undefined
   }
 
@@ -197,6 +204,8 @@ export function FilterBar({
           <DatePicker.RangePicker
             value={parseDateRange()}
             onChange={handleDateRangeChange}
+            showTime={minutePrecision ? { format: 'HH:mm' } : false}
+            format={minutePrecision ? 'YYYY-MM-DD HH:mm' : undefined}
             allowClear
           />
         </Form.Item>

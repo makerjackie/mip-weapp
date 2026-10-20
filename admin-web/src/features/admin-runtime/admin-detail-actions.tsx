@@ -20,7 +20,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
   onEditProfile?: () => void
   onEditBadges?: () => void
 }) {
-  const { hasCapability, request } = useAdminSession()
+  const { hasCapability, hasCapabilityAtScope, request } = useAdminSession()
   const { launch } = useAdminOperations()
   const navigate = useNavigate()
   const [taskExporting, setTaskExporting] = useState(false)
@@ -54,7 +54,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     actions.push(
       button('mip.admin.memberships.grant', '补录会员', id, 'memberships.adjust'),
       onEditProfile ? hasCapability('users.fields.edit') ? <Button key="edit-profile" onClick={onEditProfile}>编辑资料</Button> : null : button('mip.admin.users.update', '编辑资料', id, 'users.fields.edit'),
-      button('mip.admin.users.changePrimaryBranch', '变更服务器', id, 'users.fields.edit'),
+      hasCapabilityAtScope('users.fields.edit', 'PLATFORM') ? button('mip.admin.users.changePrimaryBranch', '变更服务器', id, 'users.fields.edit') : null,
       button('mip.admin.users.setControl', '访问控制', id, 'users.access.manage'),
       button('mip.admin.roles.set', '设置角色', id, 'roles.change'),
       onEditBadges ? hasCapability('badges.manage') ? <Button key="edit-badges" onClick={onEditBadges}>管理勋章</Button> : null : button('mip.admin.badges.grant', '授予勋章', id, 'badges.manage'),

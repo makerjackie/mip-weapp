@@ -8,9 +8,15 @@ function createProfileRecordsRepository(database) {
   async function listInvitedGuests(appId, userId, input) {
     // 活动邀请与会员邀请（MIW-27：嘉宾阶段记录的邀请关系）合并为同一邀请流水。
     const cursor = cursorPredicateFor('a.captured_at', input.cursor, 'createdAt', 'a.id')
+    const where = [], params = []
+    if (input.source) { where.push('a.source = ?'); params.push(input.source) }
+    if (input.eventId) { where.push('a.event_id = ?'); params.push(input.eventId) }
+    if (input.sinceTime) { where.push('a.captured_at >= ?'); params.push(input.sinceTime) }
+    if (input.untilTime) { where.push('a.captured_at <= ?'); params.push(input.untilTime) }
+    if (input.query) { where.push("LOCATE(?, COALESCE(p.nickname, '')) > 0"); params.push(input.query) }
     const rows = await database.query(
       `SELECT a.source, a.id, a.guest_user_id AS user_id, a.captured_at, a.event_id,
-        u.primary_branch_id, u.status AS user_status, p.nickname, e.title AS event_title,
+        u.primary_branch_id, u.status AS user_status, p.nickname, e.title AS event_title, e.branch_id AS event_branch_id,
         r.status AS registration_status, ${memberSql('u')} AS is_player
        FROM (
          SELECT 'EVENT' AS source, attr.registration_id AS id, attr.guest_user_id,
@@ -27,15 +33,15 @@ function createProfileRecordsRepository(database) {
        LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
        LEFT JOIN mip_events e ON e.app_id = ? AND e.id = a.event_id
        LEFT JOIN mip_event_registrations r ON r.app_id = ? AND r.id = a.id AND a.source = 'EVENT'
-       WHERE 1 = 1 ${cursor.sql}
+       WHERE 1 = 1 ${where.length ? `AND ${where.join(' AND ')}` : ''} ${cursor.sql}
        ORDER BY a.captured_at DESC, a.id DESC LIMIT ?`,
-      [appId, userId, appId, userId, appId, appId, appId, ...cursor.params, input.limit + 1],
+      [appId, userId, appId, userId, appId, appId, appId, ...params, ...cursor.params, input.limit + 1],
     )
     return pageRows(rows.map(row => ({
       id: row.id, source: row.source, userId: row.user_id, primaryBranchId: row.primary_branch_id,
       nickname: row.nickname || '未填写昵称', userStatus: row.user_status,
       kind: Number(row.is_player) ? 'PLAYER' : 'GUEST', eventId: row.event_id,
-      eventTitle: row.event_title, registrationStatus: row.registration_status, createdAt: iso(row.captured_at),
+      eventTitle: row.event_title, eventBranchId: row.event_branch_id || null, registrationStatus: row.registration_status, createdAt: iso(row.captured_at),
     })), input.limit, item => ({ createdAt: item.createdAt, id: item.id }))
   }
 
@@ -53,6 +59,8 @@ function createProfileRecordsRepository(database) {
     }
     if (input.eventId) { where.push('h.event_id = ?'); params.push(input.eventId) }
     if (input.sinceTime) { where.push('h.occurred_at >= ?'); params.push(input.sinceTime) }
+    if (input.untilTime) { where.push('h.occurred_at <= ?'); params.push(input.untilTime) }
+    if (input.query) { where.push("LOCATE(?, COALESCE(p.nickname, '')) > 0"); params.push(input.query) }
     const status = `CASE WHEN h.status = 'ACTIVE' AND (u.status <> 'ACTIVE' OR self_user.status <> 'ACTIVE') THEN 'INVALID' ELSE h.status END`
     if (input.status) { where.push(`${status} = ?`); params.push(input.status) }
     const cursor = cursorPredicateFor('h.occurred_at', input.cursor, 'createdAt', 'h.id')
@@ -60,7 +68,7 @@ function createProfileRecordsRepository(database) {
       `WITH history AS (SELECT fact.*, ROW_NUMBER() OVER (
          PARTITION BY fact.app_id, fact.heart_id, fact.target_user_id ORDER BY fact.source_version DESC, fact.id DESC
        ) AS position FROM mip_event_heart_history fact WHERE fact.app_id = ?)
-       SELECT h.id, h.event_id, e.title AS event_title, h.occurred_at, ${status} AS status,
+       SELECT h.id, h.event_id, e.title AS event_title, e.branch_id AS event_branch_id, h.occurred_at, ${status} AS status,
          CASE WHEN h.voter_user_id = ? THEN 'OUTGOING' ELSE 'INCOMING' END AS direction,
          u.id AS user_id, u.primary_branch_id, u.status AS user_status, p.nickname,
          ${memberSql('u')} AS is_player
@@ -78,7 +86,7 @@ function createProfileRecordsRepository(database) {
       nickname: row.nickname || (row.user_id ? '未填写昵称' : '历史对象未保留'),
       userStatus: row.user_status, kind: Number(row.is_player) ? 'PLAYER' : 'GUEST',
       direction: row.direction, status: row.status, eventId: row.event_id,
-      eventTitle: row.event_title, createdAt: iso(row.occurred_at), updatedAt: iso(row.occurred_at),
+      eventTitle: row.event_title, eventBranchId: row.event_branch_id || null, createdAt: iso(row.occurred_at), updatedAt: iso(row.occurred_at),
     })), input.limit, item => ({ createdAt: item.createdAt, id: item.id }))
   }
 

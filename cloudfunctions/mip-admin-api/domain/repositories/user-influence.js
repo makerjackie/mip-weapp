@@ -20,7 +20,7 @@ function createUserInfluenceRepository(database, { iso, json }) {
         AND ((user_block.blocker_user_id = ? AND user_block.blocked_user_id = ${alias}.id)
           OR (user_block.blocker_user_id = ${alias}.id AND user_block.blocked_user_id = ?))
     )`
-    const [guests, interactions, interests, visitors] = await Promise.all([
+    const [guests, interactions, interests, visitors, outgoing, referrals] = await Promise.all([
       database.one(
         `SELECT COUNT(DISTINCT attribution.guest_user_id) AS count
          FROM mip_event_invitation_attributions attribution
@@ -65,7 +65,7 @@ function createUserInfluenceRepository(database, { iso, json }) {
         [appId, userId, userId, userId],
       ),
       database.one(
-        `SELECT COUNT(DISTINCT visit.visitor_user_id) AS count
+        `SELECT COUNT(DISTINCT visit.visitor_user_id) AS count, COUNT(*) AS visit_count
          FROM mip_profile_visits visit
          INNER JOIN mip_users visitor
            ON visitor.app_id = visit.app_id AND visitor.id = visit.visitor_user_id
@@ -76,12 +76,26 @@ function createUserInfluenceRepository(database, { iso, json }) {
            AND ${mutualBlock('visitor')}`,
         [appId, userId, userId, userId],
       ),
+      database.one(
+        `SELECT COUNT(*) AS count FROM mip_event_hearts heart
+         INNER JOIN mip_users target ON target.app_id = heart.app_id AND target.id = heart.target_user_id AND target.status = 'ACTIVE'
+         WHERE heart.app_id = ? AND heart.voter_user_id = ? AND heart.status = 'ACTIVE'
+           AND ${mutualBlock('target')}`, [appId, userId, userId, userId],
+      ),
+      database.one(
+        `SELECT COUNT(*) AS count FROM mip_referral_intents intent
+         WHERE intent.app_id = ? AND intent.actor_user_id = ?`, [appId, userId],
+      ),
     ])
     return {
       guestCount: Number(guests?.count || 0),
       interactionCount: Number(interactions?.count || 0),
       interestCount: Number(interests?.count || 0),
       visitorCount: Number(visitors?.count || 0),
+      visitCount: Number(visitors?.visit_count || 0),
+      outgoingHeartCount: Number(outgoing?.count || 0),
+      incomingHeartCount: Number(interactions?.count || 0),
+      referralCount: Number(referrals?.count || 0),
     }
   }
 

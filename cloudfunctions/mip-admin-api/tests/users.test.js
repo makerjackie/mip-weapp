@@ -392,3 +392,13 @@ describe('admin users module', () => {
     )
   })
 })
+
+it('refuses to freeze the currently signed-in operator before any access-control write', async () => {
+  const repo = repository()
+  let writes = 0
+  repo.setUserControl = async () => { writes += 1; return {} }
+  await assert.rejects(() => usersFor(repo).setUserControl(caller, {
+    userId: 'admin-user', controlType: 'BLOCKLIST', active: true, reason: '测试自身保护',
+  }), error => error?.code === 'FORBIDDEN' && /当前登录账号/.test(error.message))
+  assert.equal(writes, 0)
+})

@@ -63,17 +63,20 @@ function counterpart(overrides = {}) {
 
 describe('admin user influence repository', () => {
   it('summarizes the four current influence facts without bypassing privacy or blocks', async () => {
-    const counts = [3, 5, 7, 11]
+    const counts = [3, 5, 7, 11, 13, 17]
     let index = 0
-    const { calls, repository } = createFixture([], async () => ({ count: counts[index++] }))
+    const { calls, repository } = createFixture([], async () => ({ count: counts[index++], visit_count: 19 }))
 
     assert.deepEqual(await repository.getUserInfluenceSummary('wx-app', 'user-a'), {
       guestCount: 3,
       interactionCount: 5,
       interestCount: 7,
       visitorCount: 11,
+      visitCount: 19, outgoingHeartCount: 13, incomingHeartCount: 5, referralCount: 17,
     })
-    assert.equal(calls.length, 4)
+    assert.equal(calls.length, 6)
+    assert.match(calls[5].sql, /mip_referral_intents/)
+    assert.deepEqual(calls[5].params, ['wx-app', 'user-a'])
     assert.match(calls[0].sql, /COUNT\(DISTINCT attribution\.guest_user_id\)/)
     assert.match(calls[0].sql, /attribution\.source_type = 'USER'/)
     assert.match(calls[0].sql, /registration\.share_profile = 1/)
@@ -83,7 +86,7 @@ describe('admin user influence repository', () => {
     assert.match(calls[2].sql, /FROM mip_profile_interests interest/)
     assert.match(calls[2].sql, /interest\.status = 'ACTIVE'/)
     assert.match(calls[3].sql, /COUNT\(DISTINCT visit\.visitor_user_id\)/)
-    for (const call of calls) {
+    for (const call of calls.slice(0, 5)) {
       assert.match(call.sql, /FROM mip_user_blocks user_block/)
       assert.match(call.sql, /user_block\.status = 'ACTIVE'/)
       assert.match(call.sql, /user_block\.blocker_user_id/)

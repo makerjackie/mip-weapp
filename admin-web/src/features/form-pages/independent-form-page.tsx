@@ -52,7 +52,7 @@ export function IndependentFormPage({ config, loadDetail }: {
 }) {
   const navigate = useNavigate()
   const search = useSearch({ strict: false }) as { returnSearch?: Record<string, unknown> }
-  const returnSearch = search.returnSearch || (config.action === 'mip.admin.userContent.save' ? { filters: { section: 'content' } } : {})
+  const returnSearch = search.returnSearch || (config.backTarget.startsWith('/users/') ? { tab: 'superCases' } : config.action === 'mip.admin.userContent.save' ? { filters: { section: 'content' } } : {})
   const returnToList = () => navigate({ to: config.backTarget, search: returnSearch as never })
   const { message } = App.useApp()
   const queryClient = useQueryClient()
