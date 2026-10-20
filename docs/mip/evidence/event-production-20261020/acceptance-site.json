@@ -1,0 +1,38 @@
+{
+  "project": "miptest",
+  "deploymentId": "c2489af5-3f67-4373-b780-5e21dfb28d78",
+  "createdAt": "2026-10-20T06:50:06.759261Z",
+  "origin": "https://miptest.01mvp.com",
+  "deploymentStatus": "success",
+  "reportStatus": "draft",
+  "verifiedAt": "2026-10-20T06:50:55.567Z",
+  "httpsFilesMatched": 99,
+  "publicManifestSha256": "2ca91dfbed9a512cacffda2dcbd46d9ad4b7a103591d1431676e2c8abef1a490",
+  "reportId": "event-media-player-free-20261020-v1",
+  "viewports": [
+    {
+      "width": 1440,
+      "comparisonRows": 3,
+      "imagesDecoded": 6,
+      "horizontalOverflow": false,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "comparisonRows": 3,
+      "imagesDecoded": 6,
+      "horizontalOverflow": false,
+      "pageErrors": []
+    }
+  ],
+  "historicalArchive": {
+    "originalImagesPreserved": 81,
+    "firstSelectedStepImagesDecoded": 2,
+    "brokenImages": 0
+  },
+  "rules": {
+    "default": "draft",
+    "sameRequirementFeedback": "update draft and preserve first submission time",
+    "finalizedOrShared": "freeze; later changes create a new version"
+  }
+}
