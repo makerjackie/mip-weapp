@@ -1,0 +1,100 @@
+[
+  {
+    "id": "event-media-player-free-20261020-v1",
+    "requirement": "event-media-player-free",
+    "title": "活动图文、玩家免费与订单显示",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-20T06:29:46.440045+00:00",
+    "updatedAt": "2026-10-20T06:29:46.440045+00:00",
+    "verifiedAt": "2026-10-20T06:22:04.916831+00:00",
+    "submittedAt": "2026-10-20T06:29:46.440045+00:00",
+    "commit": "43624ed3",
+    "commitAt": "2026-10-20T02:13:19-04:00",
+    "environment": "测试环境已验证",
+    "summary": "修复活动图片恢复与 HTML 标签显示；新增按活动配置的玩家免费规则，修正未付款订单金额标签和北京时间。",
+    "detail": "docs/mip/evidence/event-player-free-20261020/index.html",
+    "files": [
+      "docs/mip/evidence/event-player-free-20261020/order-after.png",
+      "docs/mip/evidence/event-player-free-20261020/index.html",
+      "docs/mip/evidence/event-player-free-20261020/detail-images.png",
+      "docs/mip/evidence/event-player-free-20261020/admin-mobile.png",
+      "docs/mip/evidence/event-player-free-20261020/order-before.png",
+      "docs/mip/evidence/event-player-free-20261020/admin-before.png",
+      "docs/mip/evidence/event-player-free-20261020/checkout-images.png",
+      "docs/mip/evidence/event-player-free-20261020/player-free.png",
+      "docs/mip/evidence/event-player-free-20261020/verification.json",
+      "docs/mip/evidence/event-player-free-20261020/admin-after.png",
+      "docs/mip/evidence/event-media-20261020/before-checkout.png",
+      "docs/mip/evidence/event-media-20261020/after-checkout.png"
+    ],
+    "comparisons": [
+      {
+        "title": "报名确认中的活动须知",
+        "context": "同一历史测试样本，真实微信开发者工具截图；本项是内容渲染修复。",
+        "before": {
+          "file": "docs/mip/evidence/event-media-20261020/before-checkout.png",
+          "caption": "修改前：HTML 标签直接显示",
+          "source": "真实测试环境 · 同一份须知"
+        },
+        "after": {
+          "file": "docs/mip/evidence/event-media-20261020/after-checkout.png",
+          "caption": "修改后：段落与列表正常显示",
+          "source": "真实测试环境 · 同一份须知"
+        },
+        "prototype": {
+          "caption": "本项无对应原型",
+          "reason": "该修复依据实际内容应正常渲染的要求，未提供对应页面的当前权威原型原图；不拿旧稿冒充。",
+          "source": "2026-10-20 用户确认的修复与收费规则"
+        }
+      },
+      {
+        "title": "活动配置：玩家免费",
+        "context": "相同管理员角色、1440×900视口；修改前是存量 ¥1.00 活动，修改后是新建 ¥19.90 测试活动，只比较配置能力，不能据此判断活动涨价。",
+        "before": {
+          "file": "docs/mip/evidence/event-player-free-20261020/admin-before.png",
+          "caption": "修改前：付费活动没有玩家免费开关",
+          "source": "真实测试后台 · 存量活动"
+        },
+        "after": {
+          "file": "docs/mip/evidence/event-player-free-20261020/admin-after.png",
+          "caption": "修改后：新增默认关闭的玩家免费配置",
+          "source": "真实测试后台 · 正常保存并离页重开回读"
+        },
+        "prototype": {
+          "caption": "本项无对应原型",
+          "reason": "新开关采用本次确认的产品规则，沿用既有后台表单。尚无该新功能的权威设计原图。",
+          "source": "2026-10-20 用户确认的修复与收费规则"
+        }
+      },
+      {
+        "title": "同一笔未付款关闭订单",
+        "context": "同一实际测试订单，金额均为 ¥19.90；图片只比较显示文案和北京时间，没有改价或实际收款。",
+        "before": {
+          "file": "docs/mip/evidence/event-player-free-20261020/order-before.png",
+          "caption": "修改前：误标实付款，显示设备当地时间",
+          "source": "微信开发者工具 · 390×844"
+        },
+        "after": {
+          "file": "docs/mip/evidence/event-player-free-20261020/order-after.png",
+          "caption": "修改后：订单金额，活动时间统一北京时间",
+          "source": "微信开发者工具 · 390×844"
+        },
+        "prototype": {
+          "caption": "本项无对应原型",
+          "reason": "本项按订单实际支付状态与活动北京时间纠错，未提供对应订单列表的当前权威原型原图。",
+          "source": "2026-10-20 用户确认的修复与收费规则"
+        }
+      }
+    ],
+    "checks": [
+      "完整 verify:all 通过：小程序1818项、Web Node330项、Web React253项。",
+      "测试 cloud:verify、68项 HTTPS 和15个 Web 资产字节核对通过。",
+      "真实嘉宾 ¥19.90 下单、开通测试权益后旧单原价、取消旧单后玩家免费且不生成支付单通过。",
+      "后台开关关闭/开启分别正常保存，真正离页后新编辑页回读，版本4→5→6。",
+      "活动介绍3图、主办方1图、须知2图和报名页2图实际解码通过。",
+      "订单列表/详情与我的活动检查非空数据，后台1280/1440/390视口通过。"
+    ],
+    "limitations": "其他用户账号与真机尚待验收；本轮图片上传者与微信读取者相同。实际支付、回调、退款未执行。测试开发版本0.2.0.20261020.3上传成功；公众平台设为体验版尚未回读。生产同步证据会另行登记，不能用本报告替代生产验证。"
+  }
+]
