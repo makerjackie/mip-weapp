@@ -65,7 +65,6 @@ export function safeRichImageUrl(value: string): string {
   const normalized = value.trim()
   if (!normalized || normalized.length > 2048) return ''
   if (/^cloud:\/\/[^\s]+$/i.test(normalized)) return normalized
-  if (/^wxfile:\/\//.test(normalized) || /^http:\/\/tmp\//.test(normalized)) return normalized
   if (/^https:\/\/[A-Za-z0-9.-]+(?::\d{1,5})?(?:[/?#]|$)/.test(normalized) && !/^https:\/\/[^/?#]*@/.test(normalized)) return normalized
   return ''
 }

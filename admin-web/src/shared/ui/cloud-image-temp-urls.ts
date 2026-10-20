@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { AdminApiClient } from '../../services/admin-api'
 import {
   batchRichTextCloudImageIds,
@@ -11,38 +11,76 @@ import { normalizeRichTextToHtml } from '../../modules/rich-text-html'
  *
  * - 演示模式不发起请求、不伪造图片（与目录名称解析同一降级口径）；
  * - 失败 fail-soft：吞掉错误保持占位，不阻断预览；
- * - 同一 fileID 会话内只解析一次，失败条目也不反复重试。
+ * - 只以图片引用集合为依赖，继续打字不会取消正在加载的图片；
+ * - 在 600s 签名过期前刷新；失败限速重试，后台标签回到前台时补刷新。
  */
 export function useCloudImageTempUrls(
   html: string | undefined,
   client: AdminApiClient | undefined,
   demoMode: boolean,
 ): Record<string, string> {
-  const [resolved, setResolved] = useState<Record<string, string>>({})
-  const attemptedRef = useRef<Set<string>>(new Set())
+  const [resolved, setResolved] = useState<{
+    client: AdminApiClient
+    imageKey: string
+    urls: Record<string, string>
+  }>()
+  const imageKey = JSON.stringify(extractRichTextCloudImageIds(normalizeRichTextToHtml(String(html || ''))))
 
   useEffect(() => {
     if (!client || demoMode) return
-    // 入参可能是存量 markdown，先归一化成受限 HTML 再提取 cloud:// 引用。
-    const pending = extractRichTextCloudImageIds(normalizeRichTextToHtml(String(html || '')))
-      .filter(fileId => !attemptedRef.current.has(fileId))
+    const pending: string[] = JSON.parse(imageKey)
     if (!pending.length) return
     let cancelled = false
-    void (async () => {
-      for (const batch of batchRichTextCloudImageIds(pending)) {
-        for (const fileId of batch) attemptedRef.current.add(fileId)
-        try {
-          const result = await client.tempUrls(batch)
-          if (cancelled || !Object.keys(result).length) continue
-          setResolved(current => ({ ...current, ...result }))
+    let loading = false
+    let refreshAt = 0
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const refresh = async () => {
+      if (cancelled || loading) return
+      loading = true
+      const urls: Record<string, string> = {}
+      try {
+        for (const batch of batchRichTextCloudImageIds(pending)) {
+          if (cancelled) return
+          try {
+            Object.assign(urls, await client.tempUrls(batch))
+          }
+          catch {
+            // 失败保持占位，不影响正文，也不把一次失败永久缓存。
+          }
         }
-        catch {
-          // 解析失败保持诚实占位；预览正文不受影响。
+        if (!cancelled) {
+          setResolved(current => {
+            // 初始失败仍是同一个空态，不重复重建预览里的 DOM。
+            if (!current && !Object.keys(urls).length) return current
+            if (current?.client === client && current.imageKey === imageKey
+              && Object.keys(current.urls).length === Object.keys(urls).length
+              && Object.entries(urls).every(([id, url]) => current.urls[id] === url)) return current
+            return { client, imageKey, urls }
+          })
+          const delay = pending.every(id => urls[id]) ? 8 * 60_000 : 30_000
+          refreshAt = Date.now() + delay
+          timer = setTimeout(() => { void refresh() }, delay)
         }
       }
-    })()
-    return () => { cancelled = true }
-  }, [client, demoMode, html])
+      finally {
+        loading = false
+      }
+    }
+    const resume = () => {
+      if (document.visibilityState === 'hidden' || Date.now() < refreshAt || loading) return
+      clearTimeout(timer)
+      void refresh()
+    }
+    void refresh()
+    window.addEventListener('focus', resume)
+    document.addEventListener('visibilitychange', resume)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+      window.removeEventListener('focus', resume)
+      document.removeEventListener('visibilitychange', resume)
+    }
+  }, [client, demoMode, imageKey])
 
-  return resolved
+  return !demoMode && resolved?.client === client && resolved?.imageKey === imageKey ? resolved.urls : {}
 }
