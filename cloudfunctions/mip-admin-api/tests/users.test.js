@@ -402,3 +402,16 @@ it('refuses to freeze the currently signed-in operator before any access-control
   }), error => error?.code === 'FORBIDDEN' && /当前登录账号/.test(error.message))
   assert.equal(writes, 0)
 })
+
+it('projects target-specific editing and freeze permissions without exposing caller identity', async () => {
+  const repo = repository()
+  repo.getUserDetail = async (_appId, userId) => ({ ...userRow(userId), controls: [] })
+  const users = usersFor(repo)
+  const self = await users.getUser(caller, { userId: 'admin-user' })
+  assert.equal(self.permissions.isCurrentUser, true)
+  assert.equal(self.permissions.freeze, false)
+  const target = await users.getUser(caller, { userId: 'target-user' })
+  assert.equal(target.permissions.isCurrentUser, false)
+  assert.equal(target.permissions.freeze, true)
+  assert.equal(target.permissions.changePrimaryBranch, false)
+})

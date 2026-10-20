@@ -49,12 +49,13 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     return <Button key={`form-${path}`} onClick={() => void navigate({ to: path as never, params: { [paramName]: entityId } as never, search: previous => ({ returnSearch: previous }) as never })}>{label}</Button>
   }
 
+  const userPermissions = record(record(view.source?.user).permissions)
   const actions: React.ReactNode[] = []
   if (route === 'users') {
     actions.push(
       button('mip.admin.memberships.grant', '补录会员', id, 'memberships.adjust'),
-      onEditProfile ? hasCapability('users.fields.edit') ? <Button key="edit-profile" onClick={onEditProfile}>编辑资料</Button> : null : button('mip.admin.users.update', '编辑资料', id, 'users.fields.edit'),
-      hasCapabilityAtScope('users.fields.edit', 'PLATFORM') ? button('mip.admin.users.changePrimaryBranch', '变更服务器', id, 'users.fields.edit') : null,
+      onEditProfile ? hasCapability('users.fields.edit') && userPermissions.editProfile !== false ? <Button key="edit-profile" onClick={onEditProfile}>编辑资料</Button> : null : button('mip.admin.users.update', '编辑资料', id, 'users.fields.edit'),
+      hasCapabilityAtScope('users.fields.edit', 'PLATFORM') && userPermissions.changePrimaryBranch !== false ? button('mip.admin.users.changePrimaryBranch', '变更服务器', id, 'users.fields.edit') : null,
       button('mip.admin.users.setControl', '访问控制', id, 'users.access.manage'),
       button('mip.admin.roles.set', '设置角色', id, 'roles.change'),
       onEditBadges ? hasCapability('badges.manage') ? <Button key="edit-badges" onClick={onEditBadges}>管理勋章</Button> : null : button('mip.admin.badges.grant', '授予勋章', id, 'badges.manage'),

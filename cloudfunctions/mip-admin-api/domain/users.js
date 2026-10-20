@@ -128,7 +128,15 @@ function createAdminUsers({ repository, access, phoneEncryptionKey, resolveUserA
       orders: (relatedRecords.orders || []).filter(row => allowed(CAPABILITIES.ORDERS_READ,
         row.orderType === 'EVENT' ? eventScope(row) : { scopeType: 'PLATFORM', scopeId: null })).map(row => ({ ...row, detailAllowed: true })),
     }
-    const result = { ...safe, primaryBranchOptions, relatedRecords: projected }
+    const canManageAccess = allowed(CAPABILITIES.USERS_CONTROL, scope)
+    const isCurrentUser = userId === context.caller.userId
+    const result = { ...safe, primaryBranchOptions, relatedRecords: projected, permissions: {
+      isCurrentUser,
+      editProfile: safe.status === 'ACTIVE' && allowed(CAPABILITIES.USERS_EDIT, scope),
+      changePrimaryBranch: safe.status === 'ACTIVE' && canChangePrimaryBranch,
+      freeze: safe.status === 'ACTIVE' && !isCurrentUser && canManageAccess,
+      unfreeze: safe.status === 'BLOCKED' && canManageAccess && Array.isArray(safe.controls) && safe.controls.includes('BLOCKLIST'),
+    } }
     return resolveUserAvatars ? (await resolveUserAvatars({ items: [result] })).items[0] : result
   }
 

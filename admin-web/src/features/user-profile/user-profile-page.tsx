@@ -85,7 +85,7 @@ function UserProfileContent() {
   return <>
     <PageHeader title="用户详情" description="查看用户档案与业务记录" actions={<Space wrap>
       <Button href="#/users">返回列表</Button>
-      {query.data && user.status !== 'CLOSED' && session?.actor?.id !== userId && hasCapability('users.access.manage') ? <Button danger={user.status !== 'BLOCKED'} onClick={() => void operations.launch('mip.admin.users.setControl', userId, query.data, { values: { controlType: 'BLOCKLIST', active: user.status !== 'BLOCKED', reason: '' } })}>{user.status === 'BLOCKED' ? '解冻用户' : '冻结用户'}</Button> : null}
+      {query.data && (record(user.permissions).freeze === true || record(user.permissions).unfreeze === true) ? <Button danger={user.status !== 'BLOCKED'} onClick={() => void operations.launch('mip.admin.users.setControl', userId, query.data, { values: { controlType: 'BLOCKLIST', active: user.status !== 'BLOCKED', reason: '' } })}>{user.status === 'BLOCKED' ? '解冻用户' : '冻结用户'}</Button> : null}
       <Button icon={<CopyOutlined />} onClick={() => { void navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}${userProfileHref(userId)}`).then(() => message.success('档案链接已复制')).catch(() => message.error('复制失败，请复制浏览器地址。')) }}>复制链接</Button>
       <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
     </Space>} />
