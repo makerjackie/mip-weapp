@@ -1,0 +1,39 @@
+{
+  "deployment": "b509f3c1",
+  "https": {
+    "checkedAt": "2026-10-20T13:38:00.772Z",
+    "origin": "https://miptest.01mvp.com",
+    "verifiedFiles": 222,
+    "passed": true,
+    "errors": []
+  },
+  "browser": {
+    "checkedAt": "2026-10-20T13:39:52.343Z",
+    "browser": "Codex in-app browser",
+    "layouts": [
+      {
+        "clientWidth": 1440,
+        "hasUserTrial": true,
+        "hasVersion": true,
+        "height": 900,
+        "images": true,
+        "scrollWidth": 1440,
+        "width": 1440
+      },
+      {
+        "clientWidth": 390,
+        "hasUserTrial": true,
+        "hasVersion": true,
+        "height": 844,
+        "images": true,
+        "scrollWidth": 390,
+        "width": 390
+      }
+    ],
+    "hashNavigationPassed": true,
+    "consoleErrors": 0,
+    "desktopFullPageVisuallyInspected": true,
+    "mobileVisuallyInspected": true,
+    "trialStateSource": "Direct user confirmation; no platform direct readback"
+  }
+}

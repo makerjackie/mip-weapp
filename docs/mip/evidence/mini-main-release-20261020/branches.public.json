@@ -1,0 +1,88 @@
+{
+  "merged": [
+    {
+      "branch": "MIW-126/supa-ai",
+      "sha": "fd1f9455af00eedf1f0a62f28059a06597f1bce0"
+    },
+    {
+      "branch": "MIW-79/supa-ai",
+      "sha": "cec8f738161b6d1163862b2821687046f61f8fe8"
+    },
+    {
+      "branch": "MIW-85/fix/inviter-latest-attribution",
+      "sha": "3701c309b257b8a021d96a9d8d7ed323e129ca4e"
+    },
+    {
+      "branch": "MIW-89/feat/opportunity-value-amount-modes",
+      "sha": "93b8a2b1704b7730d96331308bcd9517e4d6a9dd"
+    },
+    {
+      "branch": "codex/admin-users-prototype-20261020",
+      "sha": "63612a707bf9225be5c0d895418b06694630b809"
+    },
+    {
+      "branch": "codex/event-media-and-player-pricing",
+      "sha": "8a8eccadd86abb7c42b33006792eb945ba460fbf"
+    },
+    {
+      "branch": "codex/industry-catalog-admin",
+      "sha": "08a034a0ddd66a23d892ce8a94ce2b9174a59945"
+    },
+    {
+      "branch": "feature/admin-form-ux",
+      "sha": "61e751b0b2eab7356c7f11e0e154e9221418f31d"
+    },
+    {
+      "branch": "fix/card-bg-alpha-webp-device-decode",
+      "sha": "539a8794336541f470fb7d12c2d25ddd2331c7b5"
+    },
+    {
+      "branch": "fix/event-participant-count-consistency",
+      "sha": "f4311b32e013e75e6f3b84c56fedb97a7012f62f"
+    },
+    {
+      "branch": "fix/opportunity-audit-g1-g3-g4-f1",
+      "sha": "52284ee61df0650aed4226803b32369d1db9fbaa"
+    },
+    {
+      "branch": "integration/acceptance-fixes-20261014",
+      "sha": "8f1556bffa99dc7c24549170b97a7aef35bbab5d"
+    },
+    {
+      "branch": "worktree-ui-align-design",
+      "sha": "b11e0fa59a0865c53ac59027a3d88d8d16154ed2"
+    },
+    {
+      "branch": "wt-mip-weapp-admin",
+      "sha": "d94eee4773db9ff6c529eabc5e8c20f2ec778add"
+    }
+  ],
+  "preservedAsTags": [
+    {
+      "branch": "MIW-84/feat/growth-task-direct-jump",
+      "sourceCommit": "61d9c09dce927f0d9ec687a6384fd886e6f004a8",
+      "tag": "archive/20261020/miw84-growth-task-direct-jump",
+      "supersededImplementationOnMain": [
+        "78b4d866",
+        "05df5835",
+        "0bf884b7"
+      ]
+    },
+    {
+      "branch": "codex/test-admin-renewal-20261016",
+      "sourceCommit": "989925a0a94157a58d7a1974a4dd20fc82b6f84e",
+      "tag": "archive/20261020/test-admin-renewal",
+      "scope": "Historical account/isolation evidence and previously integrated runtime changes; preserved without replacing current source"
+    }
+  ],
+  "remoteHeads": [
+    "da8f14ad863878f07b799f0ae09f3908df22a509\trefs/heads/main"
+  ],
+  "localWorktreeBranchesRetained": [
+    "codex/admin-users-prototype-20261020",
+    "codex/mini-loading-performance",
+    "codex/miw126-release",
+    "codex/test-admin-renewal-20261016"
+  ],
+  "checkedAt": "2026-10-20T13:31:19.138030+00:00"
+}

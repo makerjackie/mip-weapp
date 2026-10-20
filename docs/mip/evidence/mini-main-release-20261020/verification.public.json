@@ -1,0 +1,95 @@
+{
+  "sourceCommit": "da8f14ad863878f07b799f0ae09f3908df22a509",
+  "originMain": "da8f14ad863878f07b799f0ae09f3908df22a509",
+  "onMain": true,
+  "sourceClean": true,
+  "clientDifferenceFromPreviousUploadedSource": [],
+  "previousSource": "b96f7c238143bdbb2d230784c6923c4e7538f7ee",
+  "previousUploadVersion": "1.0.6",
+  "requestedVersion": "1.2.3",
+  "freezeEntryVisibleOnTest": true,
+  "freezeReasonDialogOpenedAndCancelled": true,
+  "freezeWritesExecuted": false,
+  "trialAssignment": "USER_CONFIRMED: platform already defaulted to the current experience version",
+  "reviewSubmitted": false,
+  "publicReleased": false,
+  "intermediateUpload": {
+    "version": "1.2.2",
+    "issue": "Default development build marker; superseded by final version with automatic Git source provenance",
+    "useForReview": false
+  },
+  "qualityGateRecovery": {
+    "intermediateAttemptStoppedBeforeUpload": true,
+    "error": "Ant Design Form debounce callback after jsdom teardown: window is not defined",
+    "repair": "Cleanup and drain the documented 0/10 ms validation timers while jsdom is still alive; no errors suppressed",
+    "focusedRechecks": {
+      "runs": 2,
+      "testsPerRun": 12,
+      "passed": true
+    }
+  },
+  "checkedAt": "2026-10-20T13:31:34.486271+00:00",
+  "qualityGate": {
+    "fullVerifyAllPassed": true,
+    "miniTests": 1857,
+    "adminNodeTests": 338,
+    "adminReactTests": 262,
+    "responsivePassed": true
+  },
+  "uploadCommandExit": 0,
+  "uploadSuccessObserved": true,
+  "uploadedVersion": "1.2.3",
+  "uploadedAt": "2026-10-20T13:30:27.000Z",
+  "productionFunctionsOnly": true,
+  "sourceBuildMarkerMatches": true,
+  "nestedDependenciesPresent": true,
+  "runtimePreflightPassed": true,
+  "platformPackageSize": {
+    "total": 3216046,
+    "packages": [
+      {
+        "name": "TOTAL",
+        "size": 3216046
+      },
+      {
+        "name": "main",
+        "size": 1766695
+      },
+      {
+        "name": "/packages/admin/",
+        "size": 138500
+      },
+      {
+        "name": "/packages/member/",
+        "size": 1310851
+      }
+    ]
+  },
+  "distToUploadedFlat": {
+    "checkedFiles": 483,
+    "differences": []
+  },
+  "intermediateArtifactComparison": {
+    "checkedFiles": 483,
+    "normalizedOnlyFinalShaToDefaultMarker": true,
+    "differences": []
+  },
+  "cloudVerification": {
+    "passedAfterConnectionRebuild": true,
+    "initialError": "Cloud Function invocation evidence unavailable",
+    "cloudConfigurationChanged": false,
+    "businessWritesPerformed": false
+  },
+  "publicReleaseStatus": "Not submitted for review or publicly released; production-connected trial confirmed by user",
+  "serverCodeRedeployed": false,
+  "previewGenerated": true,
+  "previewIsTrialAssignment": false,
+  "previewIsPublic": false,
+  "trialAssignmentDirectReadback": false,
+  "trialUserConfirmation": {
+    "receivedAt": "2026-10-20T13:36:05.273914+00:00",
+    "text": "我发现它现在已经默认设置为体验版了，好像我并不需要到后台里头去设置",
+    "source": "Direct user reply to the 1.2.3 trial-assignment question"
+  },
+  "realDeviceAcceptance": "PENDING user testing"
+}

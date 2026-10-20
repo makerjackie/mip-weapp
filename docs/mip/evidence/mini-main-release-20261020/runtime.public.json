@@ -1,0 +1,89 @@
+{
+  "checkedAt": "2026-10-20T13:32:26.846Z",
+  "sourceSha": "da8f14ad863878f07b799f0ae09f3908df22a509",
+  "platform": "DevTools",
+  "realDevice": false,
+  "pages": [
+    {
+      "route": "pages/events/index",
+      "actualRoute": "pages/events/index",
+      "state": "ready",
+      "subsections": {},
+      "eventsCount": 1,
+      "itemsCount": null,
+      "ordersCount": null,
+      "opportunitiesCount": null,
+      "messagePresent": false,
+      "accessState": null
+    },
+    {
+      "route": "pages/profile/index",
+      "actualRoute": "pages/profile/index",
+      "state": "ready",
+      "subsections": {
+        "initialSectionsState": "ready",
+        "growthState": "hidden",
+        "badgeState": "ready",
+        "cooperationState": "ready"
+      },
+      "eventsCount": null,
+      "itemsCount": null,
+      "ordersCount": null,
+      "opportunitiesCount": 0,
+      "messagePresent": false,
+      "accessState": null
+    },
+    {
+      "route": "packages/member/orders/index",
+      "actualRoute": "packages/member/orders/index",
+      "state": "ready",
+      "subsections": {},
+      "eventsCount": null,
+      "itemsCount": null,
+      "ordersCount": 0,
+      "opportunitiesCount": null,
+      "messagePresent": false,
+      "accessState": null
+    },
+    {
+      "route": "packages/member/mip-growth/index",
+      "actualRoute": "packages/member/mip-growth/index",
+      "state": "ready",
+      "subsections": {
+        "tasksState": "ready",
+        "membershipState": "guest"
+      },
+      "eventsCount": null,
+      "itemsCount": null,
+      "ordersCount": null,
+      "opportunitiesCount": null,
+      "messagePresent": false,
+      "accessState": null
+    },
+    {
+      "route": "pages/opportunities/index",
+      "actualRoute": "pages/opportunities/index",
+      "state": "ready",
+      "subsections": {},
+      "eventsCount": null,
+      "itemsCount": null,
+      "ordersCount": null,
+      "opportunitiesCount": 0,
+      "messagePresent": false,
+      "accessState": null
+    }
+  ],
+  "businessMutations": false,
+  "runtimeBuildSha": "da8f14ad863878f07b799f0ae09f3908df22a509",
+  "runtimeBuildShaMatches": true,
+  "productionEnvironmentMatches": true,
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "exceptionCount": 0,
+  "finished": true,
+  "screenshotsVisuallyInspected": true,
+  "waitedForVisibleSubsections": true,
+  "screenshotsPublished": false
+}
