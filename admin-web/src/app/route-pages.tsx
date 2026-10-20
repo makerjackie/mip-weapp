@@ -72,6 +72,7 @@ import { downloadTaskCompletionExport, exportTaskCompletions } from '../modules/
 import { DetailDrawer, PermissionGuard, type BatchAction } from '../shared/ui'
 import { EventEditFormPage } from '../features/form-pages/event-edit-form-page'
 import { EventSettingsPage } from '../features/core-pages/event-settings-page'
+import { IndustrySettingsPage } from '../features/core-pages/industry-settings-page'
 import { TaskEditFormPage } from '../features/form-pages/task-edit-form-page'
 import { OpportunityEditFormPage } from '../features/form-pages/opportunity-edit-form-page'
 import { KnowledgeEditFormPage } from '../features/form-pages/knowledge-edit-form-page'
@@ -732,6 +733,7 @@ export const routeComponents = {
   '/cards': ProfileCardsPage,
   '/events': EventsRoutePage,
   '/events/settings': EventSettingsRoutePage,
+  '/users/industries': IndustrySettingsPage,
   '/orders': OrdersRoutePage,
   '/tasks': TasksRoutePage,
   '/task-approval': TaskApprovalRoutePage,

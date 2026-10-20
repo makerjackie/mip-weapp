@@ -1,0 +1,23 @@
+[
+  {
+    "height": 720,
+    "industryVisible": true,
+    "overflow": false,
+    "scrollWidth": 1280,
+    "width": 1280
+  },
+  {
+    "height": 900,
+    "industryVisible": true,
+    "overflow": false,
+    "scrollWidth": 1440,
+    "width": 1440
+  },
+  {
+    "height": 844,
+    "industryVisible": true,
+    "overflow": false,
+    "scrollWidth": 390,
+    "width": 390
+  }
+]

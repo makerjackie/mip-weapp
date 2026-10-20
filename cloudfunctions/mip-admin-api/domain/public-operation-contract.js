@@ -32,6 +32,7 @@ const adminWebQueryActions = Object.freeze([
   'mip.admin.audit.list',
   'mip.admin.users.list',
   'mip.admin.users.get',
+  'mip.admin.industries.list',
   'mip.admin.users.influence.list',
   'mip.admin.communityReports.list',
   'mip.admin.memberships.get',
@@ -150,6 +151,8 @@ const adminWebMutationPolicies = Object.freeze([
   domainIdempotentWebMutation('mip.admin.refunds.retry', ['refundId']),
 
   webMutation('mip.admin.users.update', ['userId', 'expectedVersion', 'fields']),
+  domainIdempotentWebMutation('mip.admin.industries.save', ['label', 'parentId', 'popular', 'sortOrder'], ['tagId', 'expectedVersion']),
+  domainIdempotentWebMutation('mip.admin.industries.changeStatus', ['tagId', 'expectedVersion', 'enabled']),
   webMutation('mip.admin.users.changePrimaryBranch', ['userId', 'targetBranchId', 'expectedVersion', 'reason']),
   webMutation('mip.admin.users.setControl', ['userId', 'controlType', 'active', 'reason']),
   domainIdempotentWebMutation('mip.admin.roles.set', ['userId', 'roleKey', 'active'], ['scopeId', 'branchId', 'roleTemplateId', 'reason']),

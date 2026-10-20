@@ -3,7 +3,7 @@
 
 export const ADMIN_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 241,
+  "operationCount": 244,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -135,6 +135,30 @@ export const ADMIN_OPERATION_CONTRACT = {
     },
     {
       "action": "mip.admin.rolePolicies.update",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.industries.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.industries.save",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.industries.changeStatus",
       "kind": "MUTATION",
       "authentication": "REQUIRED",
       "session": "REQUIRED",
@@ -1938,7 +1962,7 @@ export const ADMIN_OPERATION_CONTRACT = {
 
 export const ADMIN_WEB_OPERATION_CONTRACT = {
   "version": 1,
-  "operationCount": 241,
+  "operationCount": 244,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -2173,6 +2197,48 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.industries.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.industries.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "label",
+        "parentId",
+        "popular",
+        "sortOrder"
+      ],
+      "optionalInputKeys": [
+        "tagId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.industries.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "tagId",
+        "expectedVersion",
+        "enabled"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
     },
     {
       "action": "mip.admin.users.list",

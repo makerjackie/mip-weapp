@@ -18,7 +18,7 @@ export const RUNTIME_TABLE_PRIVILEGES = Object.freeze({
   mip_phone_sms_challenges: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_phone_sms_rate_limits: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_agreement_acceptances: Object.freeze(['SELECT', 'INSERT']),
-  mip_tags: Object.freeze(['SELECT']),
+  mip_tags: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_profile_tags: Object.freeze(['SELECT', 'INSERT', 'DELETE']),
   mip_admin_role_bindings: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_app_settings: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),

@@ -65,8 +65,8 @@ describe('Web BFF trusted query adapter', () => {
     const expectedMutations = adminWebOperationContract.operations
       .filter(operation => operation.webAllowed && operation.kind === 'MUTATION')
 
-    assert.equal(expectedQueries.length, 106)
-    assert.equal(expectedMutations.length, 123)
+    assert.equal(expectedQueries.length, 107)
+    assert.equal(expectedMutations.length, 125)
     assert.deepEqual([...WEB_BFF_QUERY_ACTIONS], expectedQueries.map(operation => operation.action))
     assert.deepEqual([...WEB_BFF_MUTATION_ACTIONS], expectedMutations.map(operation => operation.action))
     assert.deepEqual(
@@ -196,7 +196,7 @@ describe('Web BFF trusted query adapter', () => {
       }))
       assert.equal(result.ok, true, mutation.action)
     }
-    assert.equal(accepted.calls.length, 123)
+    assert.equal(accepted.calls.length, 125)
 
     const rejected = fixture()
     for (const mutation of WEB_BFF_REVIEWED_MUTATION_MANIFEST) {
@@ -227,7 +227,7 @@ describe('Web BFF trusted query adapter', () => {
       assert.equal(result.ok, true, mutation.action)
     }
 
-    assert.equal(calls.length, 123)
+    assert.equal(calls.length, 125)
     for (let index = 0; index < WEB_BFF_REVIEWED_MUTATION_MANIFEST.length; index += 1) {
       const mutation = WEB_BFF_REVIEWED_MUTATION_MANIFEST[index]
       assert.equal(
@@ -246,6 +246,8 @@ describe('Web BFF trusted query adapter', () => {
         'mip.admin.roles.update',
         'mip.admin.roles.copy',
         'mip.admin.roles.changeStatus',
+      'mip.admin.industries.save',
+      'mip.admin.industries.changeStatus',
         'mip.admin.memberships.grant',
         'mip.admin.membershipPlans.save',
         'mip.admin.entitlements.grant',

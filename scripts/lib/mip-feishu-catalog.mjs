@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto'
 
+// Feishu is an initial source, not an authority over subsequent owner edits.
+export function assertIndustryCatalogImportSafe(existingTags) {
+  if (existingTags.some(row => row.kind === 'INDUSTRY'
+    && (Number(row.version) > 1 || String(row.tag_key || '').startsWith('custom_')))) {
+    throw new Error('行业库已有超级管理员自定义配置，停止整库导入以防覆盖；请通过后台行业设置维护，其他目录需单独核对后更新')
+  }
+}
+
 function stableId(appId, key) {
   const hex = createHash('sha256').update(`${appId}\0feishu-catalog\0${key}`).digest('hex')
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`

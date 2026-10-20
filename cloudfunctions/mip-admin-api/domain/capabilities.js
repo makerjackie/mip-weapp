@@ -7,6 +7,7 @@ const CAPABILITIES = Object.freeze({
   USERS_PHONE_READ: 'users.phone.read',
   USERS_EDIT: 'users.fields.edit',
   USERS_CONTROL: 'users.access.manage',
+  INDUSTRIES_MANAGE: 'industries.manage',
   MEMBERSHIPS_READ: 'memberships.read',
   MEMBERSHIPS_ADJUST: 'memberships.adjust',
   EXPORT_CREATE: 'exports.create',

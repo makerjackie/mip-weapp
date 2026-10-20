@@ -1,5 +1,7 @@
 # MIP 当前状态
 
+2026-10-19 行业管理补齐（本地候选，尚未发布）：用户明确要求平台超级管理员自定义行业，已补入后台唯一验收标准 U10；新增用户管理→行业设置，支持两级目录、改名/归属/热门/排序/启停，事务内复核 owner/AppID/版本/幂等及 before/after 审计。追加迁移111（行业版本列）与最小 INSERT/UPDATE 权限清单；后台自定义后阻止旧飞书整库导入覆盖。个人资料读取停用行业后可能被清空的问题已提前向用户确认规则，推荐只限制新选择并保留历史；回答前不修改该保存规则、不云端部署。数据库迁移、生产、客户端上传均未执行。完整 `TZ=Asia/Shanghai pnpm verify:all` 已通过（小程序1808 / Web React247 / Web Node329）；草稿保存在 `codex/industry-catalog-admin`，尚未合并 main。本地非空夹具的编辑保存及重载、1280/1440/390视口通过，[本地证据](evidence/industry-admin-20261019/README.md)。官方 Figma MCP 已通过身份、节点及设计上下文读取，下载六枚SVG与截图，Full/student席位；[连通证据](evidence/figma-official-20261019/README.md)，没有修改原型文件。
+
 2026-10-19 对外验收交付：分享页 https://mip-review.01mvp.com/ 独立Cloudflare Pages部署（21公开文件HTTPS逐一匹配、四列与桌面/手机检查通过），旧miptest站点未改。源码eb008005已推送；release:trial完整verify:all通过后上传0.2.0.20261019.4（mip-t-*测试环境、支付禁用、平台主包1750270字节）。公众平台选为体验版因浏览器安全策略限制仍需用户操作，未提交审核/发布正式版。生产备份后补齐6个封禁演示账号的并发控制链，24用户/24链，订单/权益/角色数量不变、封禁保留；完整cloud:verify通过，本机缺失验证配置从现有生产配置恢复，未改云端密钥或域名白名单，生产支付保持LIVE；生产identity旧staging标记已单键改production，新名片码指向正式版，其他环境变量/代码/运行时/权限不变且健康回读通过，历史名片码待真机复测。[发布证据](evidence/release-20261019-ui/README.md)。
 
 
@@ -159,7 +161,7 @@
 
 当前产品形态为“小程序用户端 + 五路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 52 条小程序路由（用户分包 44 条）、111 个锁定迁移、241 个渠道中立管理 operation（106 查询、135 写）和 16 个数据库核心函数。Web 合同允许其中 106 个查询与 123 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
+仓库清单当前为 52 条小程序路由（用户分包 44 条）、112 个锁定迁移、244 个渠道中立管理 operation（107 查询、137 写）和 16 个数据库核心函数。Web 合同允许其中 107 个查询与 125 个受审 mutation。以上数字只描述当前代码合同，不自动证明每个 action 均有真实实现，更不证明运行时、云端或生产通过；部署与验收边界见下文。
 
 ## 后台完整整改执行 checkpoint
 
@@ -284,9 +286,9 @@ MIW-28 的三项质量跟进，产品口径不变（已签到 0/0 照常展示�
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
 | 小程序路由 | 52 条：3 条主包、44 条用户分包、5 条管理分包（含网页登录确认页）；2026-10-14 MIW-102 下线「发现」首页与公告列表/详情 3 条、2026-10-12 MIW-76 下线旧活动互动页 1 条、同日 MIW-65 下线会员方案/会员权益/会员订单确认 3 条、2026-10-09 审计修复 G1 新增想跟TA合作页 1 条、2026-10-08 MIW-54 下线超级案例孤儿列表页 1 条、2026-10-07 MIW-49 新增城市选择页 1 条、此前 MIW-42 删除机会死页 3 条、MIW-44 下线知识/游戏/盲盒 9 条 | `config/runtime-pages.json`、`src/app.json` |
-| 数据库 | 111 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
-| 管理合同 | 241 个 operation：106 查询、135 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
-| Web 开放范围 | 106 查询、123 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| 数据库 | 112 个追加迁移；目标清单为 152 张 runtime 表 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
+| 管理合同 | 244 个 operation：107 查询、137 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
+| Web 开放范围 | 107 查询、125 个受审 mutation | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | 云函数 | 24 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
 | 调度 | 消息和知识采集各有独立 scheduler；均不属于数据库核心函数 | `mip-message-scheduler`、`mip-knowledge-scheduler` 及部署脚本 |
 | Web 页面 | 15 个一级页面、13 类详情 | `admin-web/src/` 的路由与页面合同 |

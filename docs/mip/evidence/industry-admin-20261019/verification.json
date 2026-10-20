@@ -1,0 +1,21 @@
+{
+  "status": "local-verified; pending-user-policy; not-deployed",
+  "verifyAll": "passed",
+  "focusedServerContracts": 30,
+  "webIndustryModuleContracts": 4,
+  "webIndustryReactTests": 4,
+  "rootFocusedTests": 8,
+  "bffContractTests": 16,
+  "viewportChecks": "viewport-checks.json",
+  "localFixtureEditAndReload": "passed",
+  "figmaOfficialConnection": "verified in ../figma-official-20261019",
+  "cloudDeployment": false,
+  "databaseMigrationApplied": false,
+  "productionWrites": 0,
+  "miniProgramUploadedThisFeature": false,
+  "pendingDecision": "Retain historical selections when an industry or its parent group is disabled",
+  "miniProgramTests": 1808,
+  "webNodeTests": 329,
+  "webReactTests": 247,
+  "verificationLog": ".tmp/industry-config-20261019/verify-all-green.log"
+}

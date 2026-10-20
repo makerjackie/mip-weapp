@@ -73,6 +73,12 @@ const eventSettingsRoute = createRoute({
   component: routeComponents['/events/settings'],
 })
 
+const industrySettingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/users/industries',
+  component: routeComponents['/users/industries'],
+})
+
 const taskEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tasks/$taskId/edit',
@@ -135,6 +141,7 @@ const routeTree = rootRoute.addChildren([
   ...pageRoutes,
   eventEditRoute,
   eventSettingsRoute,
+  industrySettingsRoute,
   taskEditRoute,
   taskApprovalRoute,
   growthRedirectRoute,

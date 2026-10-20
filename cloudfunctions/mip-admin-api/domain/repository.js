@@ -25,6 +25,7 @@ const { createCooperationCardRepository } = require('./repositories/cooperation-
 const { createVideoRepository } = require('./repositories/videos')
 const { createDashboardOverviewRepository } = require('./repositories/dashboard-overview')
 const { createEventCatalogRepository } = require('./repositories/event-catalogs')
+const { createIndustryCatalogRepository } = require('./repositories/industry-catalog')
 const { createAdminEventRepository } = require('./repositories/events')
 const { createMembershipRepository } = require('./repositories/memberships')
 const { createGrowthOperationsRepository } = require('./repositories/growth-operations')
@@ -1387,6 +1388,7 @@ function createAdminRepository(database, options = {}) {
     ...adminAccountRepository,
     ...badgeAdminRepository,
     ...eventCatalogRepository,
+    ...createIndustryCatalogRepository(database, { createId: id, lockMutationAuthorization: lockMutation, assertMutationScope: assertScope, writeAudit }),
     ...eventInsightsRepository,
     ...eventRepository,
     ...eventRuntimeRepository,

@@ -1,5 +1,6 @@
 import type { AdminOperationAction, AdminRequestInput } from '../../domain/contracts'
 import type { AdminDetailView } from '../../modules/admin-details'
+import { ADMIN_INDUSTRY_MUTATION_ACTIONS, INDUSTRY_CAPABILITY, createIndustryMutationDefinition, type AdminIndustryMutationAction } from '../../modules/admin-industry-management'
 import {
   ADMIN_BANNER_MUTATION_ACTIONS,
   buildBannerMutationInput,
@@ -77,6 +78,7 @@ export type ReviewedOperationAction = BasicOperationAction
   | AdminTaskMutationAction
   | AdminBannerMutationAction
   | AdminGameMutationAction
+  | AdminIndustryMutationAction
 
 export interface OperationModel {
   action: ReviewedOperationAction
@@ -97,14 +99,16 @@ const contentActions = new Set<string>(ADMIN_CONTENT_MUTATION_ACTIONS)
 const taskActions = new Set<string>(ADMIN_TASK_MUTATION_ACTIONS)
 const bannerActions = new Set<string>(ADMIN_BANNER_MUTATION_ACTIONS)
 const gameActions = new Set<string>(ADMIN_GAME_MUTATION_ACTIONS)
+const industryActions = new Set<string>(ADMIN_INDUSTRY_MUTATION_ACTIONS)
 const basicActions = new Set<string>(BASIC_OPERATION_ACTIONS)
 
 export function isReviewedOperationAction(action: string): action is ReviewedOperationAction {
   return basicActions.has(action) || peopleActions.has(action) || eventActions.has(action) || contentActions.has(action)
-    || taskActions.has(action) || bannerActions.has(action) || gameActions.has(action)
+    || taskActions.has(action) || bannerActions.has(action) || gameActions.has(action) || industryActions.has(action)
 }
 
 export function operationCapability(action: ReviewedOperationAction) {
+  if (industryActions.has(action)) return INDUSTRY_CAPABILITY
   if (basicActions.has(action)) return basicOperationCapability(action as BasicOperationAction)
   if (peopleActions.has(action)) return ADMIN_PEOPLE_MUTATION_CONFIGS[action as AdminPeopleMutationAction].capability
   if (eventActions.has(action)) return eventMutationConfig(action as AdminEventMutationAction).capability
@@ -131,6 +135,11 @@ export async function createOperationModel(
     .find(section => section.title === sectionTitle)?.fields
     ?.find(field => field.label === label)?.value || ''
   const idempotencyKey = operationKey(action)
+
+  if (industryActions.has(action)) {
+    const definition = await createIndustryMutationDefinition(action as AdminIndustryMutationAction, targetId, launch, request)
+    return model(definition, definition.fields, definition.values, idempotencyKey, definition.buildInput, next => definition.buildInput(next) ? null : '请填写有效的名称、分类和排序')
+  }
 
   if (basicActions.has(action)) {
     return createBasicOperationModel(

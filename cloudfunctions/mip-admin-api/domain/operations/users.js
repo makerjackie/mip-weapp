@@ -3,6 +3,9 @@
 const { defineManifest, serviceOperation } = require('./manifest')
 
 module.exports = defineManifest('USERS', [
+  serviceOperation('mip.admin.industries.list', 'QUERY', 'listIndustryCatalog'),
+  serviceOperation('mip.admin.industries.save', 'MUTATION', 'saveIndustryTag'),
+  serviceOperation('mip.admin.industries.changeStatus', 'MUTATION', 'changeIndustryTagStatus'),
   serviceOperation('mip.admin.users.list', 'QUERY', 'listUsers'),
   serviceOperation('mip.admin.users.get', 'QUERY', 'getUser'),
   serviceOperation('mip.admin.users.influence.list', 'QUERY', 'listUserInfluence'),

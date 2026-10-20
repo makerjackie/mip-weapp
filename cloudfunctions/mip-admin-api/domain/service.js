@@ -9,6 +9,7 @@ const { createAdminAccess } = require('./access')
 const { createAdminCommunityGovernance } = require('./community-governance')
 const { createDashboardOverview } = require('./dashboard-overview')
 const { createEventCatalogAdmin } = require('./event-catalogs')
+const { createIndustryCatalogAdmin } = require('./industry-catalog')
 const { createAdminEvents } = require('./events')
 const { createAdminExports } = require('./exports')
 const { createAdminGovernance, PLATFORM_SCOPE_ID } = require('./governance')
@@ -470,6 +471,7 @@ function createAdminService({
     updateRoleCapabilityPolicy,
     }),
     USERS: freezeModule({
+      ...createIndustryCatalogAdmin({ access, repository }),
       listUsers,
       getUser,
       listUserInfluence,

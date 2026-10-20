@@ -4,7 +4,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { bindAndRequireMysqlEnvironment, callCloudbase, loadCaseEnv, sqlLiteral } from './lib/example-cloudbase.mjs'
 import { validateBackupManifest } from './lib/mip-backup-manifest.mjs'
-import { buildFeishuCatalog } from './lib/mip-feishu-catalog.mjs'
+import { assertIndustryCatalogImportSafe, buildFeishuCatalog } from './lib/mip-feishu-catalog.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
@@ -32,7 +32,7 @@ function readTags() {
   const rows = []
   let cursor = ''
   while (true) {
-    const page = query(`SELECT id, kind, label, tag_key, parent_id, selectable, popular, enabled FROM mip_tags
+    const page = query(`SELECT id, kind, label, tag_key, parent_id, selectable, popular, enabled, version FROM mip_tags
       WHERE app_id = ${appSql} ${cursor ? `AND id > ${sqlLiteral(cursor)}` : ''} ORDER BY id LIMIT 100`)
     rows.push(...page)
     if (page.length < 100) {
@@ -49,6 +49,7 @@ console.log(JSON.stringify({ mode: apply ? 'apply' : 'preview', tags: plan.tags.
 if (!apply) {
   process.exit(0)
 }
+assertIndustryCatalogImportSafe(existingTags)
 validateBackupManifest({ manifestPath: argument('--backup-manifest'), envId, repoRoot: root, maxAgeHours: 24 })
 const statements = []
 // Small batches fit the management API limits. Parents precede their children.

@@ -1454,6 +1454,18 @@
       ],
       "sqlSha256": "c385e238788f865295000ce1ce526aeb06983183a851b4e72e1a533aa07ff5b6",
       "rollbackSha256": "51815d3883b341cf31ef4f5a8bcd0eb6c1f86438728ffe422995150ecaf56bcb"
+    },
+    {
+      "version": "20261020010000",
+      "name": "mip_industry_catalog_version",
+      "sql": "database/mysql/mip/111_industry_catalog_version.sql",
+      "rollback": "database/mysql/mip/rollback/111_industry_catalog_version.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_tags"
+      ],
+      "sqlSha256": "80c8de820e0b6d7d7d750317285185874943ecf8aaa2123218e3d5253819e6bb",
+      "rollbackSha256": "3addf1331828b0585add7f3b1875a8c32fa5ecf2851c99f86d97b72e305bbcb1"
     }
   ]
 }

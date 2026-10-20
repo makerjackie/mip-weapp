@@ -179,9 +179,10 @@ function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreList
         canWriteEvents={hasCapability(EVENT_MUTATION_CONFIGS['mip.admin.events.save'].capability)}
         canWriteEventPolicy={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.policy.save'].capability, 'PLATFORM')}
         canManageEventCatalog={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.catalog.save'].capability, 'PLATFORM')}
+        canManageIndustries={hasCapabilityAtScope('industries.manage', 'PLATFORM')}
         canManageCheckin={hasCapability('events.checkin.manage')}
         request={request}
-        onNavigateToSettings={() => void navigate({ to: '/events/settings' })}
+        onNavigateToSettings={() => void navigate({ to: route === 'users' ? '/users/industries' : '/events/settings' })}
         onNavigateToForm={(path, entityId) => {
           const paramName = path.match(/\$(\w+)/)?.[1] || 'entityId'
           void navigate({ to: path as never, params: { [paramName]: entityId } as never })
@@ -203,6 +204,7 @@ export function CoreListPageView({
   canWriteEvents,
   canWriteEventPolicy,
   canManageEventCatalog,
+  canManageIndustries,
   canManageCheckin,
   request,
   onNavigateToForm,
@@ -225,6 +227,7 @@ export function CoreListPageView({
   canWriteEvents?: boolean
   canWriteEventPolicy?: boolean
   canManageEventCatalog?: boolean
+  canManageIndustries?: boolean
   canManageCheckin?: boolean
   request?: AdminRequest
   onNavigateToForm?: (path: string, entityId: string) => void
@@ -271,8 +274,10 @@ export function CoreListPageView({
         </Space>
       )
     }
-    if ((route === 'users' || route === 'orders') && canExport && onSensitiveExport) {
+    if ((route === 'users' || route === 'orders') && ((canExport && onSensitiveExport) || (route === 'users' && canManageIndustries))) {
       return (
+        <Space wrap>
+          {canExport && onSensitiveExport ? (
         <Button
           type="primary"
           icon={<DownloadOutlined />}
@@ -287,10 +292,13 @@ export function CoreListPageView({
         >
           {route === 'users' ? '导出用户' : '导出订单'}
         </Button>
+          ) : null}
+          {route === 'users' && canManageIndustries && onNavigateToSettings ? <Button icon={<SettingOutlined />} onClick={onNavigateToSettings}>行业设置</Button> : null}
+        </Space>
       )
     }
     return null
-  }, [canExport, canManageEventCatalog, canWriteEvents, onMutation, onNavigateToForm, onNavigateToSettings, onSensitiveExport, route, search.q, search.status, search.filters])
+  }, [canExport, canManageEventCatalog, canManageIndustries, canWriteEvents, onMutation, onNavigateToForm, onNavigateToSettings, onSensitiveExport, route, search.q, search.status, search.filters])
 
   function openDetail(row: AdminTableRow) {
     const id = String(row.detailId || '')

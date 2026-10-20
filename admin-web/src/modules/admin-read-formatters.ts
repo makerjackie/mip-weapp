@@ -42,7 +42,7 @@ export const capabilityLabels: Record<string, string> = {
   'exports.create': '创建导出', 'events.read': '查看活动', 'events.write': '管理活动',
   'events.roster.read': '查看报名名单', 'events.registrations.manage': '管理报名', 'events.checkin.manage': '管理签到',
   'events.checkin.undo': '撤销签到', 'events.team.manage': '管理活动团队',
-  'events.feedback.read': '查看活动反馈', 'events.catalog.manage': '管理活动目录',
+  'events.feedback.read': '查看活动反馈', 'events.catalog.manage': '管理活动目录', 'industries.manage': '管理行业目录',
   'events.recaps.manage': '管理活动回顾', 'announcements.manage': '管理公告', 'messages.manage': '管理消息',
   'messages.delivery.review': '审核消息投递', 'communications.publish': '发布通知', 'branches.manage': '管理服务器',
   'community.reports.manage': '管理社区举报', 'userContent.moderate': '审核用户内容',
@@ -191,7 +191,7 @@ export function auditActionLabel(value: unknown) {
   const tokens: Record<string, string> = {
     session: '登录会话', badge: '勋章', cards: '名片', history: '历史', profile_edit: '编辑资料', user_content: '用户内容',
     roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '服务器',
-    events: '活动', orders: '订单', refunds: '退款', messages: '消息', knowledge: '知识库', audit: '审计',
+    events: '活动', industries: '行业', status: '状态', change: '变更', orders: '订单', refunds: '退款', messages: '消息', knowledge: '知识库', audit: '审计',
     grant: '授权', revoke: '撤销', create: '创建', update: '更新', save: '保存', publish: '发布',
     withdraw: '撤回', archive: '归档', submit: '提交', changeStatus: '更改状态', view: '查看', enter: '进入',
   }
