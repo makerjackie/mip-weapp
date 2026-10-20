@@ -1,0 +1,30 @@
+{
+  "origin": "https://miptest.01mvp.com",
+  "checkedAt": "2026-10-20T11:45:36.337Z",
+  "checks": [
+    {
+      "width": 1440,
+      "oneDailyEntry": true,
+      "fiveChangesOnOnePage": true,
+      "noTrackingMetadata": true,
+      "noPrototypePlaceholders": true,
+      "nonUiChangesHaveNoImages": true,
+      "prototypeOnlyWhenImageExists": true,
+      "imagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "oneDailyEntry": true,
+      "fiveChangesOnOnePage": true,
+      "noTrackingMetadata": true,
+      "noPrototypePlaceholders": true,
+      "nonUiChangesHaveNoImages": true,
+      "prototypeOnlyWhenImageExists": true,
+      "imagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    }
+  ]
+}

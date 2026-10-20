@@ -1,0 +1,30 @@
+{
+  "origin": "http://127.0.0.1:8794",
+  "checkedAt": "2026-10-20T11:43:52.137Z",
+  "checks": [
+    {
+      "width": 1440,
+      "oneDailyEntry": true,
+      "fiveChangesOnOnePage": true,
+      "noTrackingMetadata": true,
+      "noPrototypePlaceholders": true,
+      "nonUiChangesHaveNoImages": true,
+      "prototypeOnlyWhenImageExists": true,
+      "imagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "oneDailyEntry": true,
+      "fiveChangesOnOnePage": true,
+      "noTrackingMetadata": true,
+      "noPrototypePlaceholders": true,
+      "nonUiChangesHaveNoImages": true,
+      "prototypeOnlyWhenImageExists": true,
+      "imagesDecoded": true,
+      "noOverflow": true,
+      "pageErrors": []
+    }
+  ]
+}
