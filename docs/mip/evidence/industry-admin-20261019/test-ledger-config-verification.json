@@ -1,0 +1,14 @@
+{
+  "target": "test",
+  "paymentMode": "disabled",
+  "testMembershipMaintenanceConfigured": true,
+  "environmentChangedKeys": [
+    "MIP_PAYMENT_MODE",
+    "MIP_TEST_MEMBERSHIP_HMAC_SECRET"
+  ],
+  "runtimeSourceFilesPreserved": 8,
+  "deploymentMarkerRefreshed": true,
+  "businessWrites": 0,
+  "productionPaymentConfigurationChanged": false,
+  "fullCloudVerification": "passed"
+}

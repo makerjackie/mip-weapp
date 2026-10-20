@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0.20261020.1",
+  "releaseCommit": "325a9c3e7367ca1443a7634dd78c5c6cd970175c",
+  "status": "uploaded",
+  "target": "test",
+  "functionPrefix": "mip-t-",
+  "database": "mip_test",
+  "paymentMode": "disabled",
+  "fullVerifyAllBeforeUpload": "passed",
+  "mainPackageBytes": 1754883,
+  "uploadChannel": "authenticated WeChat DevTools CLI; flat dist project",
+  "developmentPreviewGenerated": true,
+  "developmentPreviewUsesSameBuild": true,
+  "qrStoredOutsideRepository": true,
+  "experienceVersionSelected": false,
+  "experienceVersionSelection": "manual by user",
+  "submittedForReview": false,
+  "formalMiniProgramPublished": false,
+  "deviceAcceptance": "pending user"
+}

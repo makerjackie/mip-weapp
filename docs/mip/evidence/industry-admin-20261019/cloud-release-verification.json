@@ -1,5 +1,5 @@
 {
-  "releaseCommit": "08a034a0ddd66a23d892ce8a94ce2b9174a59945",
+  "releaseCommit": "325a9c3e7367ca1443a7634dd78c5c6cd970175c",
   "functions": [
     {
       "target": "test",
@@ -17,8 +17,8 @@
       "target": "test",
       "function": "mip-t-admin-web-api",
       "status": "Active",
-      "packageSha256": "0248f029c2377e6108e94f4257d34e2e8447a6d08f9e53e6700f60a12eef29ac",
-      "runtimeSourceFilesMatched": 15,
+      "packageSha256": "3d95a164e4f666297c58e209a18b25e618ee4a20bd01fd4451a1ddd7d821e2ac",
+      "runtimeSourceFilesMatched": 16,
       "mismatches": [],
       "configurationChangedKeys": [],
       "environmentChangedKeys": [
@@ -50,17 +50,68 @@
       "environmentChangedKeys": [],
       "permissionsPreserved": true,
       "triggersPreserved": true
+    },
+    {
+      "target": "production",
+      "function": "mip-admin-api",
+      "status": "Active",
+      "packageSha256": "eb1ff6e37e7722c73d555031195188bb4d884824b7ae17b196eb14a4bd2eca78",
+      "runtimeSourceFilesMatched": 167,
+      "mismatches": [],
+      "configurationChangedKeys": [],
+      "environmentChangedKeys": [],
+      "permissionsPreserved": true,
+      "triggersPreserved": true
+    },
+    {
+      "target": "production",
+      "function": "mip-admin-web-api",
+      "status": "Active",
+      "packageSha256": "9cfdebe6927adb54382b8ec5a773fe43a7943a4932501558dd14e6e8ffc14e8a",
+      "runtimeSourceFilesMatched": 16,
+      "mismatches": [],
+      "configurationChangedKeys": [],
+      "environmentChangedKeys": [
+        "MIP_ADMIN_WEB_CODE_SHA256"
+      ],
+      "permissionsPreserved": true,
+      "triggersPreserved": true
+    },
+    {
+      "target": "production",
+      "function": "mip-identity-api",
+      "status": "Active",
+      "packageSha256": "619060a5482f4e1ec668ad5f0e5838cb0cfda8f58af6c5471b186ec25a6ccd1c",
+      "runtimeSourceFilesMatched": 20,
+      "mismatches": [],
+      "configurationChangedKeys": [],
+      "environmentChangedKeys": [],
+      "permissionsPreserved": true,
+      "triggersPreserved": true
+    },
+    {
+      "target": "production",
+      "function": "mip-media-api",
+      "status": "Active",
+      "packageSha256": "8cf0f7fb26a90b760d5de34234468b228ef62188707e3d190ebbea84bcbb824c",
+      "runtimeSourceFilesMatched": 13,
+      "mismatches": [],
+      "configurationChangedKeys": [],
+      "environmentChangedKeys": [],
+      "permissionsPreserved": true,
+      "triggersPreserved": true
+    },
+    {
+      "target": "production",
+      "function": "mip-opportunities-api",
+      "status": "Active",
+      "packageSha256": "426fa4dd930aac343a882a59db7b2eeecd890c22b720e26b84a4fa01daa69730",
+      "runtimeSourceFilesMatched": 28,
+      "mismatches": [],
+      "configurationChangedKeys": [],
+      "environmentChangedKeys": [],
+      "permissionsPreserved": true,
+      "triggersPreserved": true
     }
-  ],
-  "environmentAclChanges": {
-    "mip-t-cloudpay": {
-      "before": {
-        "invoke": "auth.loginType != 'ANONYMOUS' && auth != null"
-      },
-      "after": {
-        "invoke": false
-      }
-    }
-  },
-  "environmentAclChangeReason": "Canonical test deployment disables direct client payment invocation for MIP_PAYMENT_MODE=disabled"
+  ]
 }

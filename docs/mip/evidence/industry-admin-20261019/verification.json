@@ -1,5 +1,5 @@
 {
-  "status": "test-deployed-and-runtime-verified; production-and-upload-await-confirmation",
+  "status": "test-and-production-backends-deployed; test-mini-program-uploaded; device-acceptance-pending",
   "verifyAll": "passed",
   "focusedServerContracts": 30,
   "webIndustryModuleContracts": 4,
@@ -11,29 +11,30 @@
   "figmaOfficialConnection": "verified in ../figma-official-20261019",
   "cloudDeployment": {
     "test": true,
-    "production": false
+    "production": true
   },
   "databaseMigrationApplied": {
-    "test": "20261020010000",
-    "production": false
+    "test": [
+      "20261020010000"
+    ],
+    "production": [
+      "20261019010000",
+      "20261020010000"
+    ]
   },
-  "productionWrites": 0,
-  "miniProgramUploadedThisFeature": false,
-  "pendingDecision": [
-    "test ledger configuration correction",
-    "web nonstandard response message handling"
-  ],
+  "miniProgramUploadedThisFeature": true,
+  "pendingDecision": null,
   "miniProgramTests": 1811,
   "webNodeTests": 329,
-  "webReactTests": 247,
-  "verificationLog": ".tmp/industry-config-20261019/verify-all-history.log",
+  "webReactTests": 252,
+  "verificationLog": ".tmp/industry-config-20261019/release-trial-approved.log",
   "confirmedPolicy": "Disable restricts new choices; historical selections and references are retained; disabling a parent hides children without deleting them",
   "profileIndustryOmission": "preserve; explicit null clears",
   "runtimePreflight": "passed",
-  "testCloudFullCheck": "BLOCKED: deployed mip-t-payment-ledger MIP_PAYMENT_MODE=live; configured test target=disabled",
+  "testCloudFullCheck": "passed",
   "webHTTPSChecks": 68,
   "webStaticAssetsVerified": 15,
-  "webLiveMutation": "save/readback/reload passed after one uncertain nonstandard response; first attempt did not write",
+  "webLiveMutation": "updated test fixture sort99993 ->99994; save, refresh and reopen readback passed; inactive fixtures retained",
   "miniProgramRuntime": "runtime-industry-retention.json",
   "productionBackup": {
     "completedAt": "2026-10-20T04:45:53.703Z",
@@ -42,8 +43,26 @@
     "rowCount": 5521,
     "businessWrites": 0
   },
-  "trialUploadStatus": "stopped before upload, no delayed upload process remains",
+  "trialUploadStatus": "uploaded 0.2.0.20261020.1; development preview generated; experience selection manual by user",
   "testFixtureCleanup": "two catalog records inactive; original profile industry restored; new inactive selection rejected",
-  "testPaymentLedgerChanged": false,
-  "testPaymentClientInvocation": "disabled by canonical test deployment boundary"
+  "testPaymentLedgerChanged": true,
+  "testPaymentClientInvocation": "disabled by canonical test deployment boundary",
+  "releaseCommit": "325a9c3e7367ca1443a7634dd78c5c6cd970175c",
+  "adminResponseFocusedTests": 27,
+  "newAdminResponseTests": 5,
+  "productionBusinessWrites": 0,
+  "productionCloudFullCheck": "passed",
+  "testPaymentMode": "disabled",
+  "productionPaymentMode": "live; configuration preserved",
+  "productionViewportChecks": "production-viewport-checks.json",
+  "productionIndustryItemsRead": 152,
+  "cloudRuntimePackagesMatched": 9,
+  "responseErrorHandling": "improved and regression tested; intermittent upstream cause unproven",
+  "productionLoginRouting": "original callback restored; migration URL and other config preserved; native health and complete cloud gate passed",
+  "miniProgramUpload": "mini-program-upload.json",
+  "protocol": "AGENTS.md prototype delivery section",
+  "remainingAcceptance": [
+    "user selects experience version",
+    "real-device acceptance"
+  ]
 }

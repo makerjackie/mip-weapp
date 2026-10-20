@@ -1,0 +1,7 @@
+{
+  "productionLedgerConfigurationPreserved": true,
+  "paymentMode": "live",
+  "catalogStage": "LIVE",
+  "deploymentStage": "production",
+  "businessWrites": 0
+}

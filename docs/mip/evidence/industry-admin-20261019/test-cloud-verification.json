@@ -1,0 +1,48 @@
+{
+  "environmentVerified": true,
+  "directMipFunctionsOnly": true,
+  "persistence": "cloudbase-mysql",
+  "mysqlVersion": "8.0.30-cynos-3.1.19.002",
+  "mysqlVersionGate": "8.0.22+",
+  "paymentMode": "disabled",
+  "functionsVerified": [
+    "mip-t-identity-api",
+    "mip-t-media-api",
+    "mip-t-events-api",
+    "mip-t-opportunities-api",
+    "mip-t-community-api",
+    "mip-t-commerce-api",
+    "mip-t-admin-api",
+    "mip-t-growth-api",
+    "mip-t-game-api",
+    "mip-t-tasks-api",
+    "mip-t-banners-api",
+    "mip-t-ai-api",
+    "mip-t-notifications-api",
+    "mip-t-payment-ledger",
+    "mip-t-notification-worker",
+    "mip-t-outbox-worker"
+  ],
+  "tablesVerified": 152,
+  "membershipChainsVerified": 2,
+  "membershipChainInvariant": "users-1:1-no-orphans",
+  "runtimeAccountLeastPrivilege": true,
+  "protectedFunctionsVerified": [
+    "mip-t-payment-ledger",
+    "mip-t-notification-worker",
+    "mip-t-outbox-worker",
+    "mip-t-cloudpay",
+    "mip-t-cloudpay-callback",
+    "mip-t-refund-worker"
+  ],
+  "disabledPaymentFunctionsProtected": [
+    "mip-t-cloudpay",
+    "mip-t-cloudpay-callback",
+    "mip-t-refund-worker"
+  ],
+  "functionTimersVerifiedAbsent": true,
+  "workerTimersVerifiedAbsent": true,
+  "outboxWakeupAuthenticated": true,
+  "ownerTestMembershipRestricted": true,
+  "verifiedAt": "2026-10-20T05:04:19.647Z"
+}

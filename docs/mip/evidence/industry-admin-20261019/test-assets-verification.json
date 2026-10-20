@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-20T04:46:44.969Z",
+  "generatedAt": "2026-10-20T05:07:50.989Z",
   "staticAssetsVerified": true,
   "filesMatched": 15,
-  "entry": "/assets/index-C1-2t-5s.js",
+  "entry": "/assets/index-BVuAu-ME.js",
   "files": [
     {
       "path": "/404.html",
@@ -23,9 +23,9 @@
       "matched": true
     },
     {
-      "path": "/assets/index-C1-2t-5s.js",
-      "bytes": 572548,
-      "sha256": "09f2cb45df2af8768f0057e040dd6f6790b16c2bc6b2444522a58814c7280158",
+      "path": "/assets/index-BVuAu-ME.js",
+      "bytes": 622772,
+      "sha256": "54125b1d095d77da22c0d6447e9b8d0eacf59de96f1700cbf4a682474f06ca9c",
       "matched": true
     },
     {
@@ -91,7 +91,7 @@
     {
       "path": "/",
       "bytes": 949,
-      "sha256": "64588bebd1abedbf9a90acc45ac7506ff350cc4e6dd59f4c9b37f0de5934a28c",
+      "sha256": "f72c62419eff922e6cb8880ebeff6e8c9e1ac18c27af4cd33daf2046fb73d42f",
       "matched": true
     }
   ],
