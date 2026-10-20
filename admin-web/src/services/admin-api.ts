@@ -1,4 +1,7 @@
 import {
+  ADMIN_WEB_OPERATION_CONTRACT,
+} from '@mip/admin-contracts'
+import {
   createAdminRequest,
   isAdminApiResponse,
   type AdminOperationAction,
@@ -49,6 +52,15 @@ const runtimeEnvironment = (import.meta as ImportMeta & {
 const AUTH_REQUEST_TIMEOUT_MS = 15_000
 const ADMIN_REQUEST_TIMEOUT_MS = 15_000
 const MEDIA_UPLOAD_TIMEOUT_MS = 70_000
+const ADMIN_MUTATION_ACTIONS = new Set<string>(ADMIN_WEB_OPERATION_CONTRACT.operations
+  .filter(operation => operation.kind === 'MUTATION')
+  .map(operation => operation.action))
+
+function invalidAdminResponse(action: AdminOperationAction) {
+  return new AdminApiClientError('INVALID_RESPONSE', ADMIN_MUTATION_ACTIONS.has(action)
+    ? '提交结果暂时无法确认，请刷新核对后重试'
+    : '数据暂时无法读取，请刷新后重试', true)
+}
 // 素材链路（admin-api → mip-media-api → COS/微信安全检查/MySQL）的偶发瞬时失败会以这些码返回，
 // 属于「重试即可大概率成功」；自动重试一次，用户不必手动重传。
 const TRANSIENT_MEDIA_CODES = new Set([
@@ -201,8 +213,8 @@ export class AdminApiClient {
       throw connectionError(error, 'SERVICE_UNAVAILABLE', '运营服务连接失败，请稍后重试')
     }
     let payload: unknown
-    try { payload = await response.json() } catch { throw new AdminApiClientError('INVALID_RESPONSE', '管理 API 返回格式无效') }
-    if (!isAdminApiResponse<T>(payload)) throw new AdminApiClientError('INVALID_RESPONSE', '管理 API 返回格式无效')
+    try { payload = await response.json() } catch { throw invalidAdminResponse(action) }
+    if (!isAdminApiResponse<T>(payload)) throw invalidAdminResponse(action)
     if (!payload.ok) throw new AdminApiClientError(payload.error?.code || 'SERVICE_UNAVAILABLE', payload.error?.message || '运营服务暂时不可用', payload.error?.retryable)
     if (!response.ok) throw new AdminApiClientError('HTTP_ERROR', `管理 API 请求失败（${response.status}）`, true)
     return payload.data as T

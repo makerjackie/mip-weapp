@@ -7,6 +7,41 @@ afterEach(() => {
 })
 
 describe('AdminApiClient network failures', () => {
+  it.each([
+    ['HTML gateway error', '<html>Bad Gateway</html>', 502],
+    ['nonstandard JSON', JSON.stringify({ errorCode: 'GATEWAY_ERROR' }), 200],
+  ])('reports an uncertain mutation without automatic resubmission: %s', async (_name, body, status) => {
+    const fetchMock = vi.fn(async () => new Response(body, { status }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(new AdminApiClient().request('mip.admin.industries.save', {
+      label: '验收行业', parentId: null, popular: false, sortOrder: 1, idempotencyKey: 'industry-save-qa',
+    })).rejects.toMatchObject({ code: 'INVALID_RESPONSE', message: '提交结果暂时无法确认，请刷新核对后重试', retryable: true })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves the same idempotency key when the operator retries an uncertain mutation', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('Bad Gateway', { status: 502 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { id: 'industry-qa', version: 2 } })))
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new AdminApiClient(), input = { tagId: 'industry-qa', expectedVersion: 1, enabled: false, idempotencyKey: 'industry-status-qa' }
+    await expect(client.request('mip.admin.industries.changeStatus', input)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await expect(client.request('mip.admin.industries.changeStatus', input)).resolves.toEqual({ id: 'industry-qa', version: 2 })
+    expect(fetchMock.mock.calls[0][1].body).toBe(fetchMock.mock.calls[1][1].body)
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).idempotencyKey).toBe('industry-status-qa')
+  })
+
+  it('keeps authoritative mutation errors intact', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: false, error: { code: 'CONFLICT', message: '记录已更新' } }), { status: 409 })))
+    await expect(new AdminApiClient().request('mip.admin.industries.changeStatus', { tagId: 'industry-qa', expectedVersion: 1, enabled: false, idempotencyKey: 'industry-status-qa' })).rejects.toMatchObject({ code: 'CONFLICT', message: '记录已更新' })
+  })
+
+  it('gives read failures a refresh message without claiming an uncertain write', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('Bad Gateway', { status: 502 })))
+    await expect(new AdminApiClient().request('mip.admin.industries.list')).rejects.toMatchObject({ code: 'INVALID_RESPONSE', message: '数据暂时无法读取，请刷新后重试' })
+  })
+
   it('accepts a bounded mini-program code image on the login challenge', async () => {
     const qrCodeDataUrl = `data:image/png;base64,${Buffer.from([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
