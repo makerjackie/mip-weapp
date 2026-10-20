@@ -1,0 +1,66 @@
+{
+  "releaseCommit": "08a034a0ddd66a23d892ce8a94ce2b9174a59945",
+  "functions": [
+    {
+      "target": "test",
+      "function": "mip-t-admin-api",
+      "status": "Active",
+      "packageSha256": "a29a9019dec351616f54a9acefc0334519ce0a6ab7f2784e29cb945c2ed324df",
+      "runtimeSourceFilesMatched": 167,
+      "mismatches": [],
+      "configurationChangedKeys": [],
+      "environmentChangedKeys": [],
+      "permissionsPreserved": true,
+      "triggersPreserved": true
+    },
+    {
+      "target": "test",
+      "function": "mip-t-admin-web-api",
+      "status": "Active",
+      "packageSha256": "0248f029c2377e6108e94f4257d34e2e8447a6d08f9e53e6700f60a12eef29ac",
+      "runtimeSourceFilesMatched": 15,
+      "mismatches": [],
+      "configurationChangedKeys": [],
+      "environmentChangedKeys": [
+        "MIP_ADMIN_WEB_CODE_SHA256"
+      ],
+      "permissionsPreserved": true,
+      "triggersPreserved": true
+    },
+    {
+      "target": "test",
+      "function": "mip-t-identity-api",
+      "status": "Active",
+      "packageSha256": "73b1beca19dcfbe169b79437cffb8160c36e6724f72ef650bdd328a39a35c562",
+      "runtimeSourceFilesMatched": 20,
+      "mismatches": [],
+      "configurationChangedKeys": [],
+      "environmentChangedKeys": [],
+      "permissionsPreserved": true,
+      "triggersPreserved": true
+    },
+    {
+      "target": "test",
+      "function": "mip-t-opportunities-api",
+      "status": "Active",
+      "packageSha256": "8a038edebacf9dee2cd88a9eac26034788c51fd3a357469780cd907f2e340f64",
+      "runtimeSourceFilesMatched": 28,
+      "mismatches": [],
+      "configurationChangedKeys": [],
+      "environmentChangedKeys": [],
+      "permissionsPreserved": true,
+      "triggersPreserved": true
+    }
+  ],
+  "environmentAclChanges": {
+    "mip-t-cloudpay": {
+      "before": {
+        "invoke": "auth.loginType != 'ANONYMOUS' && auth != null"
+      },
+      "after": {
+        "invoke": false
+      }
+    }
+  },
+  "environmentAclChangeReason": "Canonical test deployment disables direct client payment invocation for MIP_PAYMENT_MODE=disabled"
+}

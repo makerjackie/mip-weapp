@@ -1,5 +1,5 @@
 {
-  "status": "local-verified; policy-confirmed; cloud-release-in-progress",
+  "status": "test-deployed-and-runtime-verified; production-and-upload-await-confirmation",
   "verifyAll": "passed",
   "focusedServerContracts": 30,
   "webIndustryModuleContracts": 4,
@@ -9,16 +9,41 @@
   "viewportChecks": "viewport-checks.json",
   "localFixtureEditAndReload": "passed",
   "figmaOfficialConnection": "verified in ../figma-official-20261019",
-  "cloudDeployment": false,
-  "databaseMigrationApplied": false,
+  "cloudDeployment": {
+    "test": true,
+    "production": false
+  },
+  "databaseMigrationApplied": {
+    "test": "20261020010000",
+    "production": false
+  },
   "productionWrites": 0,
   "miniProgramUploadedThisFeature": false,
-  "pendingDecision": null,
+  "pendingDecision": [
+    "test ledger configuration correction",
+    "web nonstandard response message handling"
+  ],
   "miniProgramTests": 1811,
   "webNodeTests": 329,
   "webReactTests": 247,
   "verificationLog": ".tmp/industry-config-20261019/verify-all-history.log",
   "confirmedPolicy": "Disable restricts new choices; historical selections and references are retained; disabling a parent hides children without deleting them",
   "profileIndustryOmission": "preserve; explicit null clears",
-  "runtimePreflight": "passed"
+  "runtimePreflight": "passed",
+  "testCloudFullCheck": "BLOCKED: deployed mip-t-payment-ledger MIP_PAYMENT_MODE=live; configured test target=disabled",
+  "webHTTPSChecks": 68,
+  "webStaticAssetsVerified": 15,
+  "webLiveMutation": "save/readback/reload passed after one uncertain nonstandard response; first attempt did not write",
+  "miniProgramRuntime": "runtime-industry-retention.json",
+  "productionBackup": {
+    "completedAt": "2026-10-20T04:45:53.703Z",
+    "consistency": "row-count-verified",
+    "tableCount": 154,
+    "rowCount": 5521,
+    "businessWrites": 0
+  },
+  "trialUploadStatus": "stopped before upload, no delayed upload process remains",
+  "testFixtureCleanup": "two catalog records inactive; original profile industry restored; new inactive selection rejected",
+  "testPaymentLedgerChanged": false,
+  "testPaymentClientInvocation": "disabled by canonical test deployment boundary"
 }

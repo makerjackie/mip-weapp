@@ -1,0 +1,20 @@
+{
+  "newSelectionSavedAndReloaded": true,
+  "leafDisabledSelectionRetained": true,
+  "leafDisabledHiddenFromNewChoices": true,
+  "leafDisabledHistoricalLabelVisible": true,
+  "parentDisabledHiddenFromNewChoices": true,
+  "parentDisabledHistoricalLabelVisible": true,
+  "harnessSaveRecheck": "passed after full DevTools compile and new automator connection",
+  "parentAndLeafDisabledSaveVersionAdvancedFrom3To4": true,
+  "parentAndLeafDisabledSaveFreshReload": true,
+  "leafDisabledSaveFreshReload": true,
+  "leafDisabledSavedVersion": 5,
+  "parentOnlyDisabledNewChoiceHidden": true,
+  "parentOnlyDisabledHistoricalLabel": "行业维护验收项（网页验证）（已停用）",
+  "parentOnlyDisabledSaveFreshReload": true,
+  "parentOnlySavedVersion": 6,
+  "explicitClearAndOriginalRestored": true,
+  "explicitClearSavedVersion": 7,
+  "newDisabledSelectionRejectedAndReloadEmpty": true
+}
