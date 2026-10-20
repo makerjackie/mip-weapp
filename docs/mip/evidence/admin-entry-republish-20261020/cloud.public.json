@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-20T12:44:12.726Z",
+  "target": "test",
+  "checks": [
+    {
+      "function": "mip-t-admin-api",
+      "status": "Active",
+      "configurationUnchanged": true,
+      "aliasesUnchanged": true,
+      "provisionedConcurrencyUnchanged": true,
+      "archiveSha256": "3586a73a7ff22e4c5dfbdec5ee8bcd18ef73a5da6220b93cdb5d4dae35ac35a4",
+      "codeUpdated": false
+    },
+    {
+      "function": "mip-t-admin-web-api",
+      "status": "Active",
+      "configurationUnchanged": true,
+      "aliasesUnchanged": true,
+      "provisionedConcurrencyUnchanged": true,
+      "archiveSha256": "dd440218073734a52f58a0e0a140ceed7a3255123d59110484ed158ec13f0c02",
+      "codeUpdated": true
+    }
+  ],
+  "gatewayUnchanged": true
+}

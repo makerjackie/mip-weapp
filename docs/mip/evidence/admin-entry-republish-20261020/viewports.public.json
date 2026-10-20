@@ -1,0 +1,23 @@
+[
+  {
+    "grantEntry": true,
+    "height": 900,
+    "roleShortcut": false,
+    "scrollWidth": 1423,
+    "width": 1440
+  },
+  {
+    "grantEntry": true,
+    "height": 720,
+    "roleShortcut": false,
+    "scrollWidth": 1263,
+    "width": 1280
+  },
+  {
+    "grantEntry": true,
+    "height": 844,
+    "roleShortcut": false,
+    "scrollWidth": 373,
+    "width": 390
+  }
+]
