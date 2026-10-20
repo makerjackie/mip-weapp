@@ -86,7 +86,7 @@ API Key 是日常通道，Device Flow 是部署高权限通道。只有创建、
 
 ## 10. 设计
 
-[DESIGN.md](DESIGN.md)。品牌入口 `src/config/brand.ts`。
+[DESIGN.md](DESIGN.md)。其中指定的当前 Figma 是后续原型主要来源，不以旧 mip-dev 或旧 Figma 覆盖；发生冲突遵循第 0 节先确认。品牌入口 `src/config/brand.ts`。
 
 ## 11. 测试和验收
 

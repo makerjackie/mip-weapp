@@ -1,6 +1,8 @@
 # DESIGN
 
-MIP 的页面以最新 `role-flows` 画布及终审标注为依据，入口为[原型与实现对照](docs/mip/PROTOTYPE_PARITY_20260923.md)。组件和资产沿用 [MIP 设计系统](.agents/skills/mip-design-system/SKILL.md)；[Figma 页面映射](docs/mip/FIGMA_MAP.md)仅作历史节点溯源。最新已确认需求优先于旧原型，不把整张原型图或模拟系统栏打包进生产页面。
+MIP 后续页面原型以用户 2026-10-19 指定的 [Figma · MIP](https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972) 为主要视觉来源，file key 为 `qqkbdlh4c4Swubum8S3F2f`。入口节点只定位“我的”页面，不限制同文件的活动、机会等页面。最新已确认产品规则优先；与原稿有冲突时先确认，不为贴图改坏真实功能。旧 `mip-dev` / `role-flows` 和旧 Figma 仅作历史参考，不自动覆盖此文件。
+
+原型读取、导出与比对方式见 [Figma 访问说明](docs/mip/FIGMA_ACCESS.md)。历史流程记录见[原型与实现对照](docs/mip/PROTOTYPE_PARITY_20260923.md)；组件和资产沿用 [MIP 设计系统](.agents/skills/mip-design-system/SKILL.md)；[Figma 页面映射](docs/mip/FIGMA_MAP.md)仅作历史节点溯源。不把整张原型图或模拟系统栏打包进生产页面。
 
 ## 设计方向
 

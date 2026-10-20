@@ -1,11 +1,12 @@
 # SOT manifest
 
 - Skill: `mip-design-system`
-- Version: `2026-10-19.1`
+- Version: `2026-10-19.2`
 - Snapshot: 2026-09-09 15:16 worktree
 - Base commit: `922e431f2731cbde2b70cd481fae805fba482716` (business context;
   component updates were staged but not committed at capture time)
 - Runtime asset path in app projects: `/assets/mip/`
+- Current page design authority: repository `DESIGN.md`; this inventory retains its historical asset provenance. Version .2 changes precedence guidance only, not asset bytes.
 
 ## Canonical inventory
 

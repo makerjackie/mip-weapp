@@ -2,15 +2,17 @@
 name: mip-design-system
 description: Apply the MIP WeChat miniprogram design system when implementing, restoring, or reviewing MIP UI, components, pages, colors, typography, spacing, icons, or baked card assets.
 metadata:
-  version: "2026-10-19.1"
+  version: "2026-10-19.2"
   source_snapshot: "2026-09-09 15:16 worktree; base commit 889464a"
 ---
 
 # MIP Design System
 
 This directory is the component and asset reference, not the authority for
-business flows. Current user decisions, the repository `DESIGN.md`, and latest
-`role-flows` review annotations override conflicting older screen examples.
+business flows. Current user decisions and the primary Figma file designated in
+the repository `DESIGN.md` override older screen examples and `role-flows`.
+The latest Figma is not automatically a verified replacement for every asset:
+read/export the relevant frame and preserve its file key, node ID and checksum.
 The copied `references/DESIGN.md`, React/Tailwind source, icon registry, and
 baked PNG assets preserve the original visual snapshot. Native integration
 rules are in `references/wechat-component-contracts.md`. Upstream

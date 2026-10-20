@@ -1,6 +1,6 @@
 # 历史 Figma 页面映射
 
-本页保留旧节点与资产溯源，不作为当前页面或业务流程的优先依据。最新设计入口是 [role-flows 原型对照](PROTOTYPE_PARITY_20260923.md)，业务规则以 [REQUIREMENTS.md](REQUIREMENTS.md) 为准。旧“指定第三人引荐”、AI 入口和旧页面截图不覆盖新的终审标注。
+本页保留旧节点与资产溯源，不作为当前页面或业务流程的优先依据。当前主要 Figma 来源统一见 [DESIGN.md](../../DESIGN.md)，[role-flows 原型对照](PROTOTYPE_PARITY_20260923.md)保留历史流程审查记录，业务规则以 [REQUIREMENTS.md](REQUIREMENTS.md) 为准。下文节点属于旧文件，不可仅凭相同节点 ID 当作新文件已读取；旧导航和截图不覆盖已确认产品规则。
 
 历史设计文件：[MIP Copy](https://www.figma.com/design/zo5RsWtzNWvhk6d5P53eCL/MIP--Copy-?node-id=69-4972)，file key 为 `zo5RsWtzNWvhk6d5P53eCL`。2026-08-25 已通过 Figma MCP 读取页面层级、代表子节点 design context 和原始 frame 截图；27 张 375px 对照图与 SHA-256 清单保存在 [evidence/figma-2026-08-25](evidence/figma-2026-08-25)。
 
