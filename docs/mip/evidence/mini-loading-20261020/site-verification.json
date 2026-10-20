@@ -1,0 +1,57 @@
+{
+  "checkedAt": "2026-10-20T10:25:30.749Z",
+  "url": "https://miptest.01mvp.com/reports/mini-loading-20261020-v1/",
+  "httpsAndExactBytesVerified": true,
+  "filesChecked": 9,
+  "browserChecks": [
+    {
+      "width": 1440,
+      "route": "/",
+      "status": 200,
+      "overflow": false,
+      "images": 0,
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "route": "/reports/mini-loading-20261020-v1/",
+      "status": 200,
+      "overflow": false,
+      "images": 2,
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "route": "/evidence/mini-loading-20261020/index.html",
+      "status": 200,
+      "overflow": false,
+      "images": 2,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "route": "/",
+      "status": 200,
+      "overflow": false,
+      "images": 0,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "route": "/reports/mini-loading-20261020-v1/",
+      "status": 200,
+      "overflow": false,
+      "images": 2,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "route": "/evidence/mini-loading-20261020/index.html",
+      "status": 200,
+      "overflow": false,
+      "images": 2,
+      "errors": []
+    }
+  ],
+  "source": "first deployed report; final published metadata is rechecked after this record is saved"
+}

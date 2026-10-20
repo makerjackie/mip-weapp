@@ -353,5 +353,61 @@
       "统一运行代码ef57257b已推送main；无生产业务数据写入"
     ],
     "limitations": "公众平台需确认/设1.0.5为体验版。iPhone按钮与箭头、真实支付退款待验收。生产开发工具复拍画面与页面数据不一致，完整编译后仍不可靠，相关截图已撤回；公开after使用明确标注的TEST样本。确认弹窗选择由自动化提供，不冒充真机点击。此前全新后台首开仍有约3.3秒波动。"
+  },
+  {
+    "id": "mini-loading-20261020-v1",
+    "requirement": "mini-loading-performance",
+    "title": "小程序加载提速：活动、报名、订单与设置",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-20T10:23:34.084997+00:00",
+    "updatedAt": "2026-10-20T10:26:31.372957+00:00",
+    "verifiedAt": "2026-10-20T10:25:30.749Z",
+    "submittedAt": "2026-10-20T10:24:24.548797+00:00",
+    "commit": "b96f7c238143bdbb2d230784c6923c4e7538f7ee",
+    "commitAt": "2026-10-20T06:06:07-04:00",
+    "environment": "生产服务只读 · 1.0.6已上传 · 体验版绑定/真机待确认",
+    "summary": "减少重复身份请求与串行等待，表单和订单先显示、图片渐进加载、个人栏目按需读取。真实开发工具设置样本1.4→0.2秒，订单6→2.7秒；不宣称所有页面秒开。",
+    "detail": "docs/mip/evidence/mini-loading-20261020/index.html",
+    "files": [
+      "docs/mip/evidence/mini-loading-20261020/index.html",
+      "docs/mip/evidence/mini-loading-20261020/README.md",
+      "docs/mip/evidence/mini-loading-20261020/samples.json",
+      "docs/mip/evidence/mini-loading-20261020/verification.json",
+      "docs/mip/evidence/mini-loading-20261020/before-events.png",
+      "docs/mip/evidence/mini-loading-20261020/after-events.png",
+      "docs/mip/evidence/mini-loading-20261020/site-verification.json"
+    ],
+    "comparisons": [
+      {
+        "title": "相同活动列表的真实界面",
+        "context": "同一生产服务、同一活动、同一分会；390×844逻辑视口。时间和通知红点因采样时点不同，不作像素性能推断。",
+        "before": {
+          "file": "docs/mip/evidence/mini-loading-20261020/before-events.png",
+          "caption": "修改前真实开发工具界面",
+          "source": "生产服务只读，1.0.4原包"
+        },
+        "after": {
+          "file": "docs/mip/evidence/mini-loading-20261020/after-events.png",
+          "caption": "修改后真实开发工具界面",
+          "source": "生产服务只读；QA包与1.0.6运行文件已核对"
+        },
+        "prototype": {
+          "caption": "本轮无视觉原型变更",
+          "reason": "仅优化请求与加载时序，视觉稿不能证明速度；未制作或替换原型。",
+          "source": "2026-10-20 用户授权加载速度优化"
+        }
+      }
+    ],
+    "checks": [
+      "完整verify:all通过：小程序1845、后台接口331、React258；发布命令退出0。",
+      "设置样本1410→200ms；订单5974→2715ms；报名页1090ms，无生产写入。",
+      "活动列表495→554ms，本次未观察到提速；样本未严格控制缓存与冷启动，不代表真机P95。",
+      "非空订单、筛选翻页、报名字段、草稿与迟到回包有合同测试。",
+      "上传1.0.6：主包1,766,695字节，生产函数名烘焙、嵌套组件依赖及483运行文件核对通过。",
+      "没有部署云函数、改变数据库、增加付费实例、提审或全量发布。",
+      "验收站真实HTTPS、9项初次资源字节回读与1440/390浏览器画面通过，保留复核记录。"
+    ],
+    "limitations": "公众平台体验版绑定状态未回读。手机速度、真实报名提交、手机号和支付仍需真机；开发工具订单样本为空，非空由合同测试覆盖。"
   }
 ]

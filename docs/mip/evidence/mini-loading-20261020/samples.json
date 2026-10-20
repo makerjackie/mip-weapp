@@ -1,0 +1,258 @@
+{
+  "before": {
+    "checkedAt": "2026-10-20T09:59:27.654Z",
+    "build": "development",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rows": [
+      {
+        "page": "活动列表",
+        "ms": 495,
+        "state": "ready",
+        "items": 1
+      },
+      {
+        "page": "活动详情",
+        "ms": 1872,
+        "state": "ready"
+      }
+    ],
+    "diagnostics": [
+      {
+        "stage": "events.request",
+        "startedAt": 1792490363618,
+        "durationMs": 819,
+        "succeeded": true
+      },
+      {
+        "stage": "banners.request",
+        "startedAt": 1792490363550,
+        "durationMs": 2098,
+        "succeeded": true
+      },
+      {
+        "stage": "events.request",
+        "startedAt": 1792490366036,
+        "durationMs": 617,
+        "succeeded": true
+      }
+    ],
+    "source": "WeChat DevTools, production data, readonly",
+    "businessWrites": 0
+  },
+  "after": {
+    "checkedAt": "2026-10-20T10:09:22.990Z",
+    "build": "b7bd6910a34cea7d9eb5ab2f51dffbe781ee081f",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rows": [
+      {
+        "page": "活动列表",
+        "ms": 554,
+        "state": "ready",
+        "items": 1
+      },
+      {
+        "page": "活动详情",
+        "ms": 1745,
+        "state": "ready"
+      }
+    ],
+    "diagnostics": [
+      {
+        "stage": "events.request",
+        "startedAt": 1792490959294,
+        "durationMs": 785,
+        "succeeded": true
+      },
+      {
+        "stage": "events.request",
+        "startedAt": 1792490961290,
+        "durationMs": 509,
+        "succeeded": true
+      }
+    ],
+    "source": "WeChat DevTools, production data, readonly",
+    "businessWrites": 0
+  },
+  "navigationBefore": {
+    "checkedAt": "2026-10-20T10:00:38.764Z",
+    "runtime": "DevTools readonly production navigation, warm caches",
+    "authenticated": true,
+    "rows": [
+      {
+        "page": "openSettings",
+        "elapsedMs": 1410,
+        "state": "ready",
+        "identityRequests": 2,
+        "diagnostics": [
+          {
+            "stage": "identity.request",
+            "startedAt": 1792490438770,
+            "durationMs": 475,
+            "succeeded": true
+          },
+          {
+            "stage": "identity.request",
+            "startedAt": 1792490439471,
+            "durationMs": 559,
+            "succeeded": true
+          }
+        ]
+      },
+      {
+        "page": "openOrders",
+        "elapsedMs": 5974,
+        "state": "ready",
+        "items": 0,
+        "identityRequests": 2,
+        "diagnostics": [
+          {
+            "stage": "identity.request",
+            "startedAt": 1792490440196,
+            "durationMs": 523,
+            "succeeded": true
+          },
+          {
+            "stage": "identity.request",
+            "startedAt": 1792490440723,
+            "durationMs": 472,
+            "succeeded": true
+          },
+          {
+            "stage": "opportunities.request",
+            "startedAt": 1792490440725,
+            "durationMs": 711,
+            "succeeded": true
+          },
+          {
+            "stage": "opportunities.request",
+            "startedAt": 1792490440725,
+            "durationMs": 712,
+            "succeeded": true
+          },
+          {
+            "stage": "opportunities.request",
+            "startedAt": 1792490440725,
+            "durationMs": 837,
+            "succeeded": true
+          },
+          {
+            "stage": "opportunities.request",
+            "startedAt": 1792490440725,
+            "durationMs": 845,
+            "succeeded": true
+          },
+          {
+            "stage": "opportunities.request",
+            "startedAt": 1792490440725,
+            "durationMs": 896,
+            "succeeded": true
+          },
+          {
+            "stage": "events.request",
+            "startedAt": 1792490440725,
+            "durationMs": 1218,
+            "succeeded": true
+          }
+        ]
+      }
+    ]
+  },
+  "navigationAfter": {
+    "checkedAt": "2026-10-20T10:10:33.603Z",
+    "runtime": "DevTools readonly production navigation, warm caches",
+    "authenticated": true,
+    "rows": [
+      {
+        "page": "openSettings",
+        "elapsedMs": 200,
+        "state": "ready",
+        "identityRequests": 0,
+        "diagnostics": []
+      },
+      {
+        "page": "openOrders",
+        "elapsedMs": 2715,
+        "state": "ready",
+        "items": 0,
+        "identityRequests": 2,
+        "diagnostics": [
+          {
+            "stage": "identity.request",
+            "startedAt": 1792491034143,
+            "durationMs": 794,
+            "succeeded": true
+          },
+          {
+            "stage": "opportunities.request",
+            "startedAt": 1792491034950,
+            "durationMs": 551,
+            "succeeded": true
+          },
+          {
+            "stage": "opportunities.request",
+            "startedAt": 1792491034950,
+            "durationMs": 694,
+            "succeeded": true
+          },
+          {
+            "stage": "identity.request",
+            "startedAt": 1792491034948,
+            "durationMs": 707,
+            "succeeded": true
+          },
+          {
+            "stage": "opportunities.request",
+            "startedAt": 1792491034950,
+            "durationMs": 706,
+            "succeeded": true
+          },
+          {
+            "stage": "events.request",
+            "startedAt": 1792491034950,
+            "durationMs": 1009,
+            "succeeded": true
+          },
+          {
+            "stage": "commerce.request",
+            "startedAt": 1792491034933,
+            "durationMs": 2227,
+            "succeeded": true
+          }
+        ]
+      }
+    ]
+  },
+  "registrationAfter": {
+    "checkedAt": "2026-10-20T10:10:08.473Z",
+    "runtime": "DevTools readonly production registration page",
+    "state": "ready",
+    "elapsedMs": 1090,
+    "fields": 0,
+    "businessWrites": 0,
+    "diagnostics": [
+      {
+        "stage": "events.request",
+        "startedAt": 1792491007647,
+        "durationMs": 655,
+        "succeeded": true
+      },
+      {
+        "stage": "events.request",
+        "startedAt": 1792491007647,
+        "durationMs": 747,
+        "succeeded": true
+      }
+    ]
+  },
+  "notes": [
+    "真实开发工具、同一生产服务、只读、缓存与冷启动条件未严格控制，非真机P95。",
+    "订单样本为空；非空订单、报名字段、草稿和翻页由合同测试另行验证。",
+    "运行时b7bd6910与最终上传b96f7c23的483个运行文件逐字节比较：仅构建SHA标记不同，最终修正只收窄TypeScript输入类型。"
+  ]
+}

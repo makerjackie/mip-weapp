@@ -1,0 +1,31 @@
+{
+  "code": "b96f7c238143bdbb2d230784c6923c4e7538f7ee",
+  "verifiedAt": "2026-10-20T10:23:34.084997+00:00",
+  "version": "1.0.6",
+  "uploadObservedAt": "2026-10-20T10:22:22.160483+00:00",
+  "uploadCommandExit": 0,
+  "productionServices": true,
+  "mainPackageBytes": 1766695,
+  "nestedDependenciesPresent": true,
+  "qualityGate": {
+    "command": "TZ=Asia/Shanghai pnpm release:prod -- --version 1.0.6 --desc <release notes>",
+    "verifyAllPassed": true,
+    "miniProgramTests": 1845,
+    "adminNodeTests": 331,
+    "adminReactTests": 258
+  },
+  "artifactComparison": {
+    "checkedFiles": 483,
+    "normalizedBuildMarkerOnly": true,
+    "differences": [],
+    "uploadedBuild": "b96f7c238143bdbb2d230784c6923c4e7538f7ee",
+    "runtimeBuild": "b7bd6910a34cea7d9eb5ab2f51dffbe781ee081f",
+    "productionFunctionsOnly": true,
+    "nestedDependenciesPresent": true
+  },
+  "cloudConfigurationChanged": false,
+  "productionBusinessWrites": 0,
+  "trialAssignment": "PENDING platform readback; do not equate upload with trial assignment",
+  "realDeviceSpeed": "PENDING user trial",
+  "actualRegistrationAndPayment": "PENDING real device"
+}
