@@ -1,0 +1,10 @@
+{
+  "generated": true,
+  "api": "getwxacodeunlimit",
+  "envVersion": "trial",
+  "page": "pages/events/index",
+  "developmentUploadVersion": "1.2.4-test.1021",
+  "trialAssignmentVerified": false,
+  "deviceScanVerified": false,
+  "qrCommitted": false
+}

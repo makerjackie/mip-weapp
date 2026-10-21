@@ -1,0 +1,72 @@
+{
+  "sourceSha": "991796d78e0fe707b51eda2079b43175abcfa654",
+  "target": "TEST",
+  "functions": [
+    {
+      "function": "mip-t-admin-api",
+      "state": "Active",
+      "runtimeFilesMatched": 169,
+      "configurationChangedKeys": [],
+      "zipSha256": "27c49b6d362dc5071a320dee78aeef601b23ea8a437697764360e54b4470fc82"
+    },
+    {
+      "function": "mip-t-admin-web-api",
+      "state": "Active",
+      "runtimeFilesMatched": 38,
+      "configurationChangedKeys": [],
+      "zipSha256": "b96c4aeb3d353167bc98c10b4608724b973172be489c2fe427c8de578d484c59"
+    },
+    {
+      "function": "mip-t-banners-api",
+      "state": "Active",
+      "runtimeFilesMatched": 15,
+      "configurationChangedKeys": [],
+      "zipSha256": "36d6ff2ec9c583f8b252c5938e7fed6c9a9286ab2f90c4ecbb5f435465e24fa9"
+    },
+    {
+      "function": "mip-t-commerce-api",
+      "state": "Active",
+      "runtimeFilesMatched": 14,
+      "configurationChangedKeys": [],
+      "zipSha256": "bd685bf0d49bed980f8659a19f226f42700abe0700032933c3e2a99a99f61c72"
+    },
+    {
+      "function": "mip-t-events-api",
+      "state": "Active",
+      "runtimeFilesMatched": 21,
+      "configurationChangedKeys": [],
+      "zipSha256": "ed01fc3ec4bf7846aa8aff02e3ad68909a003189b70c07bacc6115e27e94957f"
+    },
+    {
+      "function": "mip-t-game-api",
+      "state": "Active",
+      "runtimeFilesMatched": 17,
+      "configurationChangedKeys": [],
+      "zipSha256": "0fc8ec2bcf634619d1adeffdf8ae21b442580f6b3861914cce36ded203bb687f"
+    },
+    {
+      "function": "mip-t-identity-api",
+      "state": "Active",
+      "runtimeFilesMatched": 22,
+      "configurationChangedKeys": [],
+      "zipSha256": "1e145a912426a6a66e2c58c4c431f573b221a32fe24e2856b1f614853d3ea1b9"
+    },
+    {
+      "function": "mip-t-opportunities-api",
+      "state": "Active",
+      "runtimeFilesMatched": 30,
+      "configurationChangedKeys": [],
+      "zipSha256": "87d0fe8cad35ccb249ceb420fae065dc6ac256bc0a25c6a5598c57bc7c74ea0b"
+    },
+    {
+      "function": "mip-t-tasks-api",
+      "state": "Active",
+      "runtimeFilesMatched": 22,
+      "configurationChangedKeys": [],
+      "zipSha256": "114d170435f99452b1d748ae9b2a6977f7c4f57b5863201c471c6d24a0067de6"
+    }
+  ],
+  "sourceBytesMatch": true,
+  "configurationPreserved": true,
+  "productionDeployment": false
+}

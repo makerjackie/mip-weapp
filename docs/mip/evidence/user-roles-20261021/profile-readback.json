@@ -1,0 +1,12 @@
+{
+  "environment": "TEST",
+  "actualWechatPrincipal": true,
+  "saveViaVisibleForm": true,
+  "leftPage": true,
+  "freshServerRead": true,
+  "profileVersionIncreased": true,
+  "requiredIndustryPersisted": true,
+  "reopenedPageReady": true,
+  "profileComplete": true,
+  "realDevice": false
+}

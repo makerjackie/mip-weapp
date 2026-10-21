@@ -1,0 +1,9 @@
+{
+  "environment": "TEST",
+  "realBrowserDownload": true,
+  "filter": "NORMAL",
+  "includePhone": false,
+  "dataRows": 2,
+  "allRolesNormal": true,
+  "syntheticFixturesOnly": true
+}

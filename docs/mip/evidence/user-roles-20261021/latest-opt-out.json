@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-10-21T10:24:44.142Z",
+  "environment": "TEST",
+  "method": "Current source repositories and SQL executed against real test database; fixture states are synthetic; no native WeChat or payment simulated as real",
+  "roles": [
+    {
+      "scenario": "ordinary",
+      "role": "NORMAL"
+    },
+    {
+      "scenario": "guest_yes",
+      "role": "GUEST"
+    },
+    {
+      "scenario": "guest_no",
+      "role": "GUEST"
+    },
+    {
+      "scenario": "player",
+      "role": "PLAYER"
+    },
+    {
+      "scenario": "expired_guest",
+      "role": "GUEST"
+    },
+    {
+      "scenario": "revoked_guest",
+      "role": "NORMAL"
+    },
+    {
+      "scenario": "hidden_guest",
+      "role": "GUEST"
+    }
+  ],
+  "participantCounts": {
+    "PLAYER": 1,
+    "GUEST": 6
+  },
+  "registeredOrdinaryListed": true,
+  "talentScenarios": [
+    "player",
+    "expired_guest"
+  ],
+  "privacyAndRevokedExcluded": true,
+  "readQueryCount": 13,
+  "assertedExactList": true,
+  "case": "latest-opt-out"
+}

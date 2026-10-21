@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-21T11:02:21.526Z",
+  "origin": "https://miptest.01mvp.com",
+  "verifiedFiles": 255,
+  "passed": true,
+  "errors": [],
+  "browser": {
+    "desktop": {
+      "width": 1440,
+      "overflow": false
+    },
+    "mobile": {
+      "width": 390,
+      "overflow": false
+    },
+    "loadedImages": 10,
+    "brokenImages": 0,
+    "anchorsValid": true,
+    "consoleErrors": 0
+  },
+  "deploymentUrl": "https://3cd8d711.miptest.pages.dev",
+  "notIncludedInPublishedSnapshot": true
+}

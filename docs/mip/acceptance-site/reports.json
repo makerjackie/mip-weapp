@@ -843,7 +843,7 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-20T16:40:26.925395+00:00",
-    "updatedAt": "2026-10-21T06:21:05.125635+00:00",
+    "updatedAt": "2026-10-21T11:00:41.841737Z",
     "verifiedAt": "2026-10-20T17:01:28.859447+00:00",
     "submittedAt": "2026-10-20T16:40:26.925395+00:00",
     "commit": "4bef32bb04aeb104cb0023f3f57d25172a182bff",
@@ -904,6 +904,120 @@
       "「项目机会」「人才合作」两个 Tab 都不再显示 Tab 下方的「深圳 ｜ 清除筛选」行。",
       "地区仍由左上角切换；清除筛选改用筛选面板里的「清除」或无结果时的「清除筛选」按钮。"
     ],
-    "pendingSummary": "待下一次体验版上传后在手机上复核；本次未上传小程序、未改服务端。"
+    "pendingSummary": "本项原画面验证使用注入样本；改动已包含在今日测试开发版本 1.2.4-test.1021 中，手机复核待用户确认。"
+  },
+  {
+    "id": "user-roles-20261021-v1",
+    "requirement": "user-roles-20261021",
+    "title": "用户角色、报名名单与花名册规则",
+    "indexTitle": "四项用户需求已更新到测试环境",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-21T10:58:46.322438Z",
+    "updatedAt": "2026-10-21T11:00:41.841737Z",
+    "verifiedAt": "2026-10-21T11:00:41.841737Z",
+    "submittedAt": "2026-10-21T10:58:46.322438Z",
+    "commit": "991796d78e0fe707b51eda2079b43175abcfa654",
+    "commitAt": "2026-10-21T06:37:26-04:00",
+    "environment": "测试后台 / 测试库 / 开发者工具真实云请求 · 真机待验",
+    "summary": "四项规则已实现并部署测试：角色正确区分、未签到报名人进入本场嘉宾名单、资料五项必填、人才合作按最新花名册授权筛选。生产未更新。",
+    "detail": "docs/mip/evidence/user-roles-20261021/README.md",
+    "files": [
+      "docs/mip/evidence/user-roles-20261021/last-checkin-revoked.json",
+      "docs/mip/evidence/user-roles-20261021/profile-negative.json",
+      "docs/mip/evidence/user-roles-20261021/trial-qr.json",
+      "docs/mip/evidence/user-roles-20261021/export.json",
+      "docs/mip/evidence/user-roles-20261021/admin-http.json",
+      "docs/mip/evidence/user-roles-20261021/README.md",
+      "docs/mip/evidence/user-roles-20261021/edited-old-feedback-wins.json",
+      "docs/mip/evidence/user-roles-20261021/profile-readback.json",
+      "docs/mip/evidence/user-roles-20261021/latest-opt-out.json",
+      "docs/mip/evidence/user-roles-20261021/live-domain.json",
+      "docs/mip/evidence/user-roles-20261021/newer-event-opt-in.json",
+      "docs/mip/evidence/user-roles-20261021/verification.json",
+      "docs/mip/evidence/user-roles-20261021/native-lists.json",
+      "docs/mip/evidence/user-roles-20261021/restored-baseline.json",
+      "docs/mip/evidence/user-roles-20261021/cloud-source.json",
+      "docs/mip/evidence/user-roles-20261021/shots/admin-users-before.png",
+      "docs/mip/evidence/user-roles-20261021/shots/admin-normal-mobile.png",
+      "docs/mip/evidence/user-roles-20261021/shots/admin-users-after.png",
+      "docs/mip/evidence/user-roles-20261021/shots/mini-ordinary-registered.png",
+      "docs/mip/evidence/user-roles-20261021/shots/mini-talents-after.png",
+      "docs/mip/evidence/user-roles-20261021/shots/admin-normal-export.png",
+      "docs/mip/evidence/user-roles-20261021/shots/mini-participants-after.png"
+    ],
+    "comparisons": [
+      {
+        "title": "后台当前角色",
+        "context": "同一真实测试后台、七个明确标记的合成用户、关键词验收1021、无角色筛选、1440×900。修改前非玩家都显示嘉宾；修改后普通用户和撤销最后签到者显示普通用户。无新增原型稿。",
+        "before": {
+          "file": "docs/mip/evidence/user-roles-20261021/shots/admin-users-before.png",
+          "caption": "修改前：普通用户和撤销签到者仍显示嘉宾",
+          "source": "部署前的真实测试后台"
+        },
+        "after": {
+          "file": "docs/mip/evidence/user-roles-20261021/shots/admin-users-after.png",
+          "caption": "修改后：普通用户、嘉宾、玩家按服务端事实显示",
+          "source": "新部署的真实测试后台"
+        }
+      }
+    ],
+    "highlights": [
+      "后台正确区分普通用户、嘉宾、玩家；未登录为匿名访客，不创建虚假后台用户。",
+      "报名成功、尚未签到的普通用户进入本场嘉宾名单，全局角色保持普通用户。",
+      "头像、昵称、行业、当前身份和一句话介绍必填，性别选填；历史缺项在下次报名等操作补齐。",
+      "人才合作显示有效玩家，以及已签到且最近同意加入花名册的嘉宾；后来拒绝会退出。"
+    ],
+    "checks": [
+      "保留付费审核和后台开通；权益到期、最后一次签到撤销后按事实回退，后台角色独立。",
+      "真实浏览器普通用户筛选及 Excel 下载通过；桌面与手机视口已检查。",
+      "真实测试库七种合成用户场景、跨活动与编辑反馈的最新授权规则通过。",
+      "最终测试包实际请求云函数，嘉宾名单六人/玩家一人，人才列表仅三位符合规则者；表单保存后离页重开和服务端回读通过。",
+      "完整门禁和线上后台 68 项检查通过；九个测试函数源码与运行产物核对一致。"
+    ],
+    "sections": [
+      {
+        "id": "user-roles-1021-verification",
+        "title": "验证结果与范围",
+        "highlights": [
+          "完整质量门禁通过，后台 HTTPS 68 项读取检查通过；浏览器普通用户筛选及真实 Excel 导出两条记录通过。",
+          "缺项提交被服务端拒绝，资料回滚不变；可见表单补齐保存后，离页重开和独立请求回读通过。",
+          "测试库合成数据验证了权益到期、签到撤销，以及最近拒绝、跨活动和编辑旧反馈的授权顺序；未代替真机授权、扫码签到和真实支付验收。"
+        ]
+      },
+      {
+        "id": "user-roles-1021-mini",
+        "title": "小程序：测试库合成样本实拍",
+        "highlights": [
+          "以下为开发者工具实拍，用户是测试库中的合成样本；列表来自已部署测试函数，没有注入页面列表或模拟云返回。真机待复测。"
+        ],
+        "evidenceImages": [
+          {
+            "file": "docs/mip/evidence/user-roles-20261021/shots/mini-ordinary-registered.png",
+            "caption": "报名未签到的普通用户出现在本场嘉宾名单"
+          },
+          {
+            "file": "docs/mip/evidence/user-roles-20261021/shots/mini-talents-after.png",
+            "caption": "人才列表只返回符合资格与最新授权的三位测试候选"
+          }
+        ]
+      },
+      {
+        "id": "user-roles-1021-admin",
+        "title": "后台筛选和手机布局",
+        "evidenceImages": [
+          {
+            "file": "docs/mip/evidence/user-roles-20261021/shots/admin-normal-export.png",
+            "caption": "普通用户筛选两条记录，实际导出 Excel 也是两条 NORMAL 记录"
+          },
+          {
+            "file": "docs/mip/evidence/user-roles-20261021/shots/admin-normal-mobile.png",
+            "caption": "390px 手机视口，页面无整体横向溢出"
+          }
+        ]
+      }
+    ],
+    "limitations": "合成数据验证不等于原生手机号授权、真实报名扫码签到或支付验收。已上传连接测试服务的开发版本 1.2.4-test.1021；体验版指向与手机扫描结果待用户确认。生产未更新，待用户测试批准。",
+    "pendingSummary": "请核对体验版 1.2.4-test.1021 的测试环境标识，并在手机复测四项流程；确认后再发生产。"
   }
 ]
