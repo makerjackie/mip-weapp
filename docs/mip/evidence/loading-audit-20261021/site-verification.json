@@ -1,19 +1,17 @@
 {
-  "checkedAt": "2026-10-21T13:19:56.497850+00:00",
+  "checkedAt": "2026-10-21T13:24:47.567686+00:00",
   "origin": "https://miptest.01mvp.com",
   "reportUrl": "https://miptest.01mvp.com/updates/2026-10-21/#mini-loading-20261020-v1",
-  "deploymentUrl": "https://361abd2b.miptest.pages.dev",
+  "deploymentUrl": "https://563685f0.miptest.pages.dev",
   "https": {
-    "checkedAt": "2026-10-21T13:19:11.396Z",
+    "checkedAt": "2026-10-21T13:24:13.191Z",
     "origin": "https://miptest.01mvp.com",
-    "verifiedFiles": 273,
+    "verifiedFiles": 437,
     "passed": true,
-    "initialTransportFailures": 34,
-    "targetedReadbackRetries": true,
     "errors": []
   },
   "browser": {
-    "checkedAt": "2026-10-21T13:19:05.167Z",
+    "checkedAt": "2026-10-21T13:23:23.284Z",
     "base": "https://miptest.01mvp.com",
     "rows": [
       {
@@ -80,5 +78,19 @@
   "miniProgramSourceSha": "1eab577c9981bda2fcda872c8715e3cece71a341",
   "miniProgramVersion": "1.2.6-perf.1021",
   "trialAssignmentVerified": false,
-  "realDeviceVerified": false
+  "realDeviceVerified": false,
+  "reportPipelineSourceSha": "b4e81d901ffcb8fa9b29df9d2a7f939a8e21c713",
+  "reportSourceBaseSha": "756151bd",
+  "reportInputHadDocumentationChanges": true,
+  "imagePreviews": {
+    "images": 166,
+    "optimized": 166,
+    "originalBytes": 32740641,
+    "previewBytes": 8018714
+  },
+  "siteFormatTests": {
+    "file": "tests/acceptance-site.test.ts",
+    "passed": 13
+  },
+  "originalRequestAndAcceptanceRendered": true
 }
