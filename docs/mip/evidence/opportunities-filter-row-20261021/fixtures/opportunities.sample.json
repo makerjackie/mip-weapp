@@ -1,0 +1,57 @@
+{
+  "state": "ready",
+  "authenticated": true,
+  "player": true,
+  "mode": "opportunities",
+  "status": "RECRUITING",
+  "keywordInput": "",
+  "keyword": "",
+  "filterOpen": false,
+  "industryPickerOpen": false,
+  "moreFiltersOpen": false,
+  "loadingMore": false,
+  "openingAction": false,
+  "message": "",
+  "regionViews": [
+    { "id": "", "label": "全国" },
+    { "id": "branch-sz", "label": "深圳" }
+  ],
+  "regionIndex": 1,
+  "selectedRegionBranchId": "branch-sz",
+  "locationFilterLabel": "深圳",
+  "hasAppliedFilters": true,
+  "appliedFilterCount": 1,
+  "appliedFilterChips": [{ "key": "branch", "label": "深圳" }],
+  "opportunities": [
+    {
+      "id": "sample-o1",
+      "title": "设计户外露营地整体视觉",
+      "coverUrl": "",
+      "status": "PUBLISHED",
+      "valueSummary": "15000",
+      "commercialTerms": { "amountDisplay": "¥15,000", "locationDisplay": "深圳" },
+      "city": { "label": "深圳" },
+      "branchName": "深圳",
+      "regionText": "",
+      "targetSummary": "露营地帐篷供应商",
+      "cooperationCount": 12,
+      "avatarViews": ["/assets/figma/profile/avatar.png", "/assets/figma/profile/guest-avatar.png"],
+      "typeTagViews": [{ "key": "PROJECT", "label": "项目" }]
+    },
+    {
+      "id": "sample-o2",
+      "title": "快闪店渠道合作",
+      "coverUrl": "",
+      "status": "PUBLISHED",
+      "valueSummary": "20000",
+      "commercialTerms": { "amountDisplay": "¥20,000", "locationDisplay": "深圳" },
+      "city": { "label": "深圳" },
+      "branchName": "深圳",
+      "regionText": "",
+      "targetSummary": "成熟的快闪店渠道方",
+      "cooperationCount": 7,
+      "avatarViews": ["/assets/figma/profile/avatar.png"],
+      "typeTagViews": [{ "key": "RESOURCE", "label": "资源" }]
+    }
+  ]
+}

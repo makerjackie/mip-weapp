@@ -1,0 +1,80 @@
+{
+  "task": "机会页移除「地区 + 清除筛选」行（项目机会 + 人才合作）",
+  "requestedAt": "2026-10-21",
+  "userRequest": "机会筛选和人才合作，都不需要这个地区的+清除筛选这一行。",
+  "baseline": "964916859d13d0da6402f962612ff8fa658dfb08",
+  "baselineAt": "2026-10-20T09:40:07-04:00",
+  "commit": "pending-user-confirmation",
+  "changedFiles": [
+    "src/pages/opportunities/index.wxml",
+    "src/pages/opportunities/index.ts",
+    "tests/mip-opportunity-figma-surfaces.test.ts"
+  ],
+  "crossSurfaceCheck": {
+    "adminWeb": "no corresponding filter-chip row or admin screen; unchanged",
+    "adminContracts": "unchanged",
+    "cloudfunctions": "unchanged",
+    "databaseMigrations": "none"
+  },
+  "unitTests": {
+    "targeted": {
+      "command": "npx vitest run tests/mip-opportunity-figma-surfaces.test.ts tests/mip-opportunity-review-fixes.test.ts tests/mip-region-switcher.test.ts tests/mip-cooperation-discovery.test.ts",
+      "files": 4,
+      "tests": 61,
+      "result": "passed",
+      "redGreen": "new WXML assertion fails against main@96491685 template (1 failed), passes after change"
+    }
+  },
+  "fullGate": {
+    "command": "TZ=Asia/Shanghai pnpm verify:all",
+    "status": "passed",
+    "finalRun": {
+      "exitCode": 0,
+      "weappTestFiles": 285,
+      "weappTests": 1857,
+      "webNodeTests": 338,
+      "webReactTestFiles": 36,
+      "webReactTests": 262,
+      "docsCheck": "passed",
+      "diffCheck": "passed",
+      "note": "first run failed only at docs:check because this verification.json did not exist yet; rerun after adding it passed end to end"
+    }
+  },
+  "build": {
+    "command": "pnpm build",
+    "mainPackage": "1.12 MB",
+    "memberPackage": "1.03 MB",
+    "adminPackage": "86.3 KB",
+    "tdesignNestedTree": "present",
+    "chipsRowInDist": 0
+  },
+  "runtimeEvidence": {
+    "tool": "scripts/fullpage-shot.mjs (WeChat DevTools automator)",
+    "environment": "TEST cloud environment (测试环境 badge visible); banner from real test config",
+    "viewport": "390x844 logical, 2x output (632px wide full-page stitch)",
+    "sampleData": "injected local fixtures (fixtures/*.sample.json) to put both tabs in region=深圳 filter state; no cloud writes; no real users",
+    "beforeBuild": "dist built from main@96491685 (edits stashed)",
+    "afterBuild": "dist built from working tree with this change",
+    "screenshots": {
+      "before-opportunities": { "file": "shots/before-opportunities.png", "size": "632x1502", "sha256Prefix": "45bbdceeab15961e", "scrollableLogicalPx": 83 },
+      "after-opportunities": { "file": "shots/after-opportunities.png", "size": "632x1417", "sha256Prefix": "cb2cd8a9ce0a1ab8", "scrollableLogicalPx": 30 },
+      "before-cooperation": { "file": "shots/before-cooperation.png", "size": "632x1368", "sha256Prefix": "edcbdbdb3f65292f", "scrollableLogicalPx": 0 },
+      "after-cooperation": { "file": "shots/after-cooperation.png", "size": "632x1368", "sha256Prefix": "d8e9bb9993a809f0", "scrollableLogicalPx": 0 }
+    },
+    "note": "cooperation tab already hid the row on main since eb008005 (2026-10-19); user's screenshot came from an older trial build (search placeholder still 搜索)."
+  },
+  "acceptanceSite": {
+    "reportId": "opportunities-filter-row-20261021-v1",
+    "localBuild": "node scripts/acceptance-site.mjs build → 8 reports",
+    "localCheck": "1440x900 + 390x844: HTTP 200, overflow 0, images 4/4 decoded, both comparison groups present, no prototype column, no page errors; home lists 2026-10-21 first",
+    "published": false,
+    "blocker": "wrangler OAuth token expired; cannot refresh non-interactively; no CLOUDFLARE_API_TOKEN available. Needs `npx wrangler@4 login` by the maintainer, then publish and read back https://miptest.01mvp.com/updates/2026-10-21/"
+  },
+  "notDone": [
+    "acceptance site not yet published (Cloudflare login required)",
+    "commit pending user confirmation",
+    "no WeChat trial/production upload in this task",
+    "no cloud function, admin-web or database deployment",
+    "real-device re-check pending next trial upload"
+  ]
+}

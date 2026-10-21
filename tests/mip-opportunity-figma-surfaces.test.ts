@@ -82,13 +82,19 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discovery).toContain('clear-label="不限"')
     expect(discovery).toContain('wx:if="{{moreFiltersOpen}}"')
     // MIW-120：左上角改为常驻地区切换（系统 picker，全国+分会城市，选中即过滤），
-    // 地点 preset 语义只保留在筛选页与已选 chips 行；清除筛选一并回到全国。
+    // 地点 preset 语义只保留在筛选页；清除筛选一并回到全国。
     expect(discovery).toContain('<picker wx:else id="opportunities-location-filter" mode="selector" range="{{regionViews}}" range-key="label"')
     expect(discovery).toContain('bindchange="onRegionPicked"')
     expect(discovery).toContain('id="opportunities-filter-entry"')
     expect(discoveryScript).toContain('const locationFilterLabel = (branchId && regionLabel(branchId)) || \'全国\'')
     expect(discoveryScript).toContain('locationFilterLabel: \'全国\'')
     expect(discoveryScript).toContain('branchId: this.data.selectedRegionBranchId || undefined')
+    // 2026-10-21 用户决定：项目机会与人才合作都不再渲染「已选 chips + 清除筛选」行；
+    // 清除入口只剩筛选面板「清除」与空态「清除筛选」，appliedFilterCount 仍驱动空态分支。
+    expect(discovery).not.toContain('wx:for="{{appliedFilterChips}}"')
+    expect(discovery).not.toContain('aria-label="清除筛选"')
+    expect(discovery.match(/action-text="清除筛选" bind:action="clearAppliedFilters"/g)).toHaveLength(2)
+    expect(discoveryScript).toContain('hasAppliedFilters: Boolean(this.data.keyword || presentation.appliedFilterCount)')
   })
 
   // MIW-31（figma 2917_4875 机会-人才合作筛选）：面板落在 tab+搜索行下方而非整页替换，

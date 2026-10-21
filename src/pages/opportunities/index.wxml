@@ -179,7 +179,7 @@
       </view>
       <!-- journey-review J1-05：游客点搜索/筛选先完成身份确认，列表本体对游客不可见。 -->
       <view wx:if="{{!authenticated}}" class="absolute inset-y-0 left-0 right-[176rpx]" aria-role="button" aria-label="登录后搜索玩家" bind:tap="openLogin" />
-      <!-- figma 1768_37534/2917_4875：筛选按钮两态——关闭灰、打开黄；已选事实由下方 chips 行表达。 -->
+      <!-- figma 1768_37534/2917_4875：筛选按钮两态——关闭灰、打开黄；已选事实在面板内表达（chips 行已按用户要求移除）。 -->
       <view id="opportunities-filter-toggle" class="relative flex h-[80rpx] w-[160rpx] shrink-0 items-center justify-center gap-1 rounded-[16rpx] bg-panel active:bg-panel-raised" aria-role="button" aria-label="{{filterOpen ? '关闭筛选' : '打开筛选'}}" aria-expanded="{{filterOpen}}" bind:tap="toggleFilters">
         <mip-icon name="filter-2" size="{{16}}" color="{{filterOpen ? 'var(--color-brand)' : 'var(--color-muted)'}}" /><text class="text-[32rpx] font-medium {{filterOpen ? 'text-brand' : 'text-muted'}}">筛选</text>
       </view>
@@ -256,11 +256,8 @@
       </view>
     </view>
 
-    <view wx:if="{{mode === 'opportunities' && appliedFilterChips.length && !filterOpen}}" class="mx-3 mt-2 flex min-h-[88rpx] items-center gap-2 overflow-hidden">
-      <scroll-view class="min-w-0 flex-1 whitespace-nowrap" scroll-x enhanced show-scrollbar="{{false}}"><view class="inline-flex gap-2 pr-2"><view wx:for="{{appliedFilterChips}}" wx:key="key" class="inline-flex h-[56rpx] items-center rounded-full bg-panel px-3 text-[22rpx] text-muted">{{item.label}}</view></view></scroll-view>
-      <view class="flex min-h-[88rpx] shrink-0 items-center px-2 text-[22rpx] text-brand" aria-role="button" aria-label="清除筛选" bind:tap="clearAppliedFilters">清除筛选</view>
-    </view>
-
+    <!-- 2026-10-21 用户决定：两个 Tab 都不再显示「已选筛选 chips + 清除筛选」行；地区已由左上角
+         picker 常驻表达，其余已选条件只在筛选面板内可见，清除走面板「清除」或空态「清除筛选」。 -->
     <view wx:if="{{mode === 'opportunities'}}" class="mx-3 mt-3 flex h-[56rpx] items-center gap-[12rpx]">
       <view class="opportunities-chip-hit" aria-role="radio" aria-checked="{{status === 'RECRUITING'}}" data-status="RECRUITING" bind:tap="changeStatus"><view wx:if="{{status === 'RECRUITING'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand px-2 text-[28rpx] font-medium text-on-brand">招募中</view><view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-2 text-[28rpx] font-medium text-muted">招募中</view></view>
       <view class="opportunities-chip-hit" aria-role="radio" aria-checked="{{status === 'COMPLETED'}}" data-status="COMPLETED" bind:tap="changeStatus"><view wx:if="{{status === 'COMPLETED'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand px-2 text-[28rpx] font-medium text-on-brand">已结束</view><view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-2 text-[28rpx] font-medium text-muted">已结束</view></view>

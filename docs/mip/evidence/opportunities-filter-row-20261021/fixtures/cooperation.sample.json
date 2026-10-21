@@ -1,0 +1,58 @@
+{
+  "state": "ready",
+  "authenticated": true,
+  "player": true,
+  "mode": "cooperation",
+  "keywordInput": "",
+  "keyword": "",
+  "filterOpen": false,
+  "industryPageOpen": false,
+  "loadingMore": false,
+  "openingAction": false,
+  "message": "",
+  "regionViews": [
+    { "id": "", "label": "全国" },
+    { "id": "branch-sz", "label": "深圳" }
+  ],
+  "regionIndex": 1,
+  "selectedCooperationBranchId": "branch-sz",
+  "locationFilterLabel": "深圳",
+  "hasAppliedFilters": true,
+  "appliedFilterCount": 1,
+  "appliedFilterChips": [{ "key": "branch", "label": "深圳" }],
+  "opportunities": [],
+  "cooperationTalents": [
+    {
+      "talentKey": "sample-t1",
+      "profileRef": "sample-p1",
+      "author": {
+        "nickname": "示例玩家 A",
+        "avatarUrl": "/assets/figma/profile/avatar.png",
+        "headline": "品牌主理人，AI 开发者"
+      },
+      "levelText": "Lv.3",
+      "profileTags": ["深圳", "互联网"],
+      "medals": [{ "id": "m1", "imageUrl": "/assets/figma/profile/badge.png" }],
+      "roleNames": [],
+      "inviterName": "MIP 平台",
+      "inviterAvatarUrl": "",
+      "inviterKind": "PLATFORM"
+    },
+    {
+      "talentKey": "sample-t2",
+      "profileRef": "sample-p2",
+      "author": {
+        "nickname": "示例玩家 B",
+        "avatarUrl": "/assets/figma/profile/guest-avatar.png",
+        "headline": "独立设计师"
+      },
+      "levelText": "Lv.1",
+      "profileTags": ["深圳", "文化创意"],
+      "medals": [],
+      "roleNames": ["皮条客"],
+      "inviterName": "示例玩家 A",
+      "inviterAvatarUrl": "/assets/figma/profile/avatar.png",
+      "inviterKind": "PLAYER"
+    }
+  ]
+}

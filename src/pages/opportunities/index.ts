@@ -108,7 +108,9 @@ function appliedFilterPresentation(input: {
   const cityId = input.selectedCityTagId
   const cityLabel = cityId ? input.cityOptions.find(item => item.id === cityId)?.label : undefined
   const regionLabel = (ids: string) => input.regionViews.find(item => item.id === ids)?.label
-  // MIW-120 左上角常驻地区切换：标签只表达地区（分会），地点 preset 语义由 chips 行表达。
+  // MIW-120 左上角常驻地区切换：标签只表达地区（分会）。chips 清单不再渲染成页面行
+  // （2026-10-21 用户要求两个 Tab 都去掉），只用来得出 appliedFilterCount / hasAppliedFilters
+  // 以区分「暂无数据」与「可清除筛选」两种空态。
   const branchId = input.mode === 'cooperation'
     ? input.selectedCooperationBranchId
     : input.selectedRegionBranchId

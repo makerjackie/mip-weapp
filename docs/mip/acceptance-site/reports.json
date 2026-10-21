@@ -835,5 +835,76 @@
       "冻结／解冻入口已有；本轮核对表单并取消，未改真实用户状态。"
     ],
     "pendingSummary": "体验版已由用户确认默认生效；手机图文、报名、订单和支付待测试，未提审或公开上线。"
+  },
+  {
+    "id": "opportunities-filter-row-20261021-v1",
+    "requirement": "opportunities-filter-row",
+    "title": "机会页：移除「地区 + 清除筛选」行",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-20T16:40:26.925395+00:00",
+    "updatedAt": "2026-10-20T17:01:28.859447+00:00",
+    "verifiedAt": "2026-10-20T17:01:28.859447+00:00",
+    "submittedAt": "2026-10-20T16:40:26.925395+00:00",
+    "commit": "964916859d13d0da6402f962612ff8fa658dfb08",
+    "commitAt": "2026-10-20T09:40:07-04:00",
+    "commitNote": "改动基于 main@96491685 的工作区完成并验证；提交 SHA 待用户确认提交后更新本字段",
+    "environment": "微信开发者工具模拟器 · 测试环境 · 列表为注入样本数据",
+    "summary": "按用户要求，机会页「项目机会」「人才合作」两个 Tab 都不再显示 Tab 下方的「深圳 ｜ 清除筛选」这一行。地区仍由左上角地区切换表达；需要清除筛选时使用筛选面板里的「清除」或无结果时的「清除筛选」按钮。筛选能力、服务端和后台均未改动。",
+    "detail": "docs/mip/evidence/opportunities-filter-row-20261021/README.md",
+    "files": [
+      "docs/mip/evidence/opportunities-filter-row-20261021/README.md",
+      "docs/mip/evidence/opportunities-filter-row-20261021/verification.json",
+      "docs/mip/evidence/opportunities-filter-row-20261021/shots/before-opportunities.png",
+      "docs/mip/evidence/opportunities-filter-row-20261021/shots/after-opportunities.png",
+      "docs/mip/evidence/opportunities-filter-row-20261021/shots/before-cooperation.png",
+      "docs/mip/evidence/opportunities-filter-row-20261021/shots/after-cooperation.png",
+      "docs/mip/evidence/opportunities-filter-row-20261021/fixtures/opportunities.sample.json",
+      "docs/mip/evidence/opportunities-filter-row-20261021/fixtures/cooperation.sample.json",
+      "docs/mip/REQUIREMENT_CLARIFICATIONS.md"
+    ],
+    "comparisons": [
+      {
+        "title": "项目机会 Tab（已选地区＝深圳）",
+        "context": "同一台开发者工具、测试环境、390×844 逻辑视口整页长图；两列注入相同样本列表并把地区设为「深圳」。Banner 为测试环境真实配置，卡片与头像为样本数据。本次为用户的产品决定，不涉及新原型，故不列原型列。",
+        "before": {
+          "file": "docs/mip/evidence/opportunities-filter-row-20261021/shots/before-opportunities.png",
+          "caption": "修改前：Tab 下方有「深圳 ｜ 清除筛选」行",
+          "source": "main@96491685 原样构建 · 开发者工具 · 测试环境"
+        },
+        "after": {
+          "file": "docs/mip/evidence/opportunities-filter-row-20261021/shots/after-opportunities.png",
+          "caption": "修改后：状态行直接接在 Tab 下，左上角仍显示「深圳」",
+          "source": "本次改动构建 · 开发者工具 · 测试环境"
+        }
+      },
+      {
+        "title": "人才合作 Tab（已选地区＝深圳）",
+        "context": "同一环境与样本。主分支在 10 月 19 日已不再对人才合作显示该行，所以这两张画面一致；用户看到的体验版来自更早的构建。本次把两个 Tab 的渲染来源一并删除，确保不会再出现。",
+        "before": {
+          "file": "docs/mip/evidence/opportunities-filter-row-20261021/shots/before-cooperation.png",
+          "caption": "修改前（主分支）：搜索与筛选行下方无该行",
+          "source": "main@96491685 原样构建 · 开发者工具 · 测试环境"
+        },
+        "after": {
+          "file": "docs/mip/evidence/opportunities-filter-row-20261021/shots/after-cooperation.png",
+          "caption": "修改后：画面一致，渲染代码已彻底移除",
+          "source": "本次改动构建 · 开发者工具 · 测试环境"
+        }
+      }
+    ],
+    "checks": [
+      "开发者工具同一视口、同一样本下，项目机会 Tab 的「深圳 ｜ 清除筛选」行消失，页面可滚高度减少约 52 逻辑像素，与被删行高度一致；人才合作 Tab 两列一致，均无该行。",
+      "新增模板契约测试：旧模板下失败、改后通过；相关 4 个测试文件 61 用例通过。",
+      "筛选面板「清除」与无结果空态「清除筛选」保留，并继续把地区回到全国；筛选请求参数、服务端合同、后台与数据库未改。",
+      "完整 verify:all 门禁通过（小程序 1857 用例、后台 Node 338、后台 React 262），git diff --check 干净；详见证据 verification.json。"
+    ],
+    "limitations": "仅开发者工具模拟器验证，列表为注入的样本数据，不是真实用户或真实机会；真机画面待下一次体验版上传后复核。本次未上传微信体验版/正式版，未部署云函数、后台或数据库。截图上「没有这个」标注落在搜索框附近，本次按文字说明只处理红框行，搜索框按原稿保留；如另有所指需单独确认。",
+    "indexTitle": "机会页去掉「地区 + 清除筛选」行",
+    "highlights": [
+      "「项目机会」「人才合作」两个 Tab 都不再显示 Tab 下方的「深圳 ｜ 清除筛选」行。",
+      "地区仍由左上角切换；清除筛选改用筛选面板里的「清除」或无结果时的「清除筛选」按钮。"
+    ],
+    "pendingSummary": "待下一次体验版上传后在手机上复核；本次未上传小程序、未改服务端。"
   }
 ]
