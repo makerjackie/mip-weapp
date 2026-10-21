@@ -1,0 +1,84 @@
+{
+  "checkedAt": "2026-10-21T13:19:56.497850+00:00",
+  "origin": "https://miptest.01mvp.com",
+  "reportUrl": "https://miptest.01mvp.com/updates/2026-10-21/#mini-loading-20261020-v1",
+  "deploymentUrl": "https://361abd2b.miptest.pages.dev",
+  "https": {
+    "checkedAt": "2026-10-21T13:19:11.396Z",
+    "origin": "https://miptest.01mvp.com",
+    "verifiedFiles": 273,
+    "passed": true,
+    "initialTransportFailures": 34,
+    "targetedReadbackRetries": true,
+    "errors": []
+  },
+  "browser": {
+    "checkedAt": "2026-10-21T13:19:05.167Z",
+    "base": "https://miptest.01mvp.com",
+    "rows": [
+      {
+        "route": "/",
+        "width": 1440,
+        "status": 200,
+        "overflow": false,
+        "images": 0,
+        "allImagesDecoded": true,
+        "pageErrors": 0
+      },
+      {
+        "route": "/updates/2026-10-21/",
+        "width": 1440,
+        "status": 200,
+        "overflow": false,
+        "images": 19,
+        "allImagesDecoded": true,
+        "pageErrors": 0
+      },
+      {
+        "route": "/reports/mini-loading-20261020-v1/",
+        "width": 1440,
+        "status": 200,
+        "overflow": false,
+        "images": 0,
+        "allImagesDecoded": true,
+        "pageErrors": 0
+      },
+      {
+        "route": "/",
+        "width": 390,
+        "status": 200,
+        "overflow": false,
+        "images": 0,
+        "allImagesDecoded": true,
+        "pageErrors": 0
+      },
+      {
+        "route": "/updates/2026-10-21/",
+        "width": 390,
+        "status": 200,
+        "overflow": false,
+        "images": 19,
+        "allImagesDecoded": true,
+        "pageErrors": 0
+      },
+      {
+        "route": "/reports/mini-loading-20261020-v1/",
+        "width": 390,
+        "status": 200,
+        "overflow": false,
+        "images": 0,
+        "allImagesDecoded": true,
+        "pageErrors": 0
+      }
+    ]
+  },
+  "temporaryNetworkSettingsRestored": {
+    "restored": true,
+    "sourceConfigUnchanged": true,
+    "proxySelectionsUnchanged": true
+  },
+  "miniProgramSourceSha": "1eab577c9981bda2fcda872c8715e3cece71a341",
+  "miniProgramVersion": "1.2.6-perf.1021",
+  "trialAssignmentVerified": false,
+  "realDeviceVerified": false
+}

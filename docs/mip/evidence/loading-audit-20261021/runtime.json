@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-10-21T13:02:06.474Z",
+  "environment": "TEST",
+  "source": "WeChat DevTools, actual cloud responses",
+  "realDevice": false,
+  "controlledBenchmark": false,
+  "rows": [
+    {
+      "page": "profile",
+      "state": "ready",
+      "elapsedMs": 370
+    },
+    {
+      "page": "badges",
+      "state": "empty",
+      "elapsedMs": 1398,
+      "count": 0
+    },
+    {
+      "page": "card-edit",
+      "state": "ready",
+      "elapsedMs": 761
+    },
+    {
+      "page": "experience",
+      "state": "ready",
+      "elapsedMs": 727,
+      "count": 0
+    },
+    {
+      "page": "notifications",
+      "state": "ready",
+      "elapsedMs": 359,
+      "count": 3
+    },
+    {
+      "page": "cooperation-detail",
+      "state": "ready",
+      "elapsedMs": 739
+    },
+    {
+      "page": "case-detail",
+      "state": "ready",
+      "elapsedMs": 744
+    },
+    {
+      "page": "opportunity-detail",
+      "state": "external-wait",
+      "reason": "no matching server record in current test list"
+    }
+  ],
+  "viewport": {
+    "width": 390,
+    "height": 844
+  }
+}

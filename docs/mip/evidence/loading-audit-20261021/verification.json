@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-21T13:11:50.588765+00:00",
+  "sourceSha": "1eab577c9981bda2fcda872c8715e3cece71a341",
+  "gate": {
+    "command": "pnpm release:trial (includes pnpm verify:all)",
+    "miniProgramTests": 1884,
+    "adminInterfaceTests": 339,
+    "adminReactTests": 262,
+    "passed": true
+  },
+  "targetedTests": {
+    "files": 8,
+    "tests": 92,
+    "passed": true
+  },
+  "audit": {
+    "registeredPageEntries": 52,
+    "main": 3,
+    "member": 44,
+    "onsiteAdmin": 5,
+    "changedPages": 7,
+    "scope": "source lifecycle/await entrypoint review, not all-route runtime acceptance"
+  },
+  "runtime": {
+    "environment": "TEST",
+    "realCloudResponses": true,
+    "realDevice": false,
+    "opportunityDetail": "external-wait: current test list has no matching record; nonempty contract test passed"
+  },
+  "package": {
+    "checkedAt": "2026-10-21T13:12:16.667Z",
+    "runtimeFilesChecked": 483,
+    "matchingAfterReleaseMetadataNormalization": true,
+    "differences": [],
+    "testFunctionsOnly": true,
+    "versionMarker": true,
+    "nestedTdesignPresent": true,
+    "normalization": "Only buildSha and appVersion properties in JavaScript"
+  },
+  "upload": {
+    "sourceSha": "1eab577c9981bda2fcda872c8715e3cece71a341",
+    "version": "1.2.6-perf.1021",
+    "channel": "trial",
+    "targetDir": "envs/test",
+    "uploadedAt": "2026-10-21T13:10:43.281Z",
+    "developmentUploadSucceeded": true,
+    "trialAssignmentVerified": false,
+    "reviewSubmitted": false,
+    "publicReleased": false,
+    "mainPackageBytes": 1766954,
+    "totalBytes": 3223731
+  },
+  "cloudResourceChanges": false,
+  "productionBusinessChanges": false,
+  "finalUploadedPackageRuntime": {
+    "checkedAt": "2026-10-21T13:12:20.290Z",
+    "sourceSha": "1eab577c9981bda2fcda872c8715e3cece71a341",
+    "version": "1.2.6-perf.1021",
+    "environment": "测试环境 · 开发版",
+    "settingsState": "ready",
+    "experienceState": "ready",
+    "rulesState": "ready",
+    "realDevice": false
+  }
+}
