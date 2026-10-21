@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-21T14:28:38.347Z",
+  "scope": "Acceptance report presentation only; existing product checks are retained as evidence, not rerun as a new product acceptance.",
+  "deploymentId": "153dfd49-6e19-44ea-aee9-5cfc419f1720",
+  "deploymentSourceSha": "444a42caa69c91b31db2d16587295866046fa592",
+  "reportDocsDirtyAtDeployment": true,
+  "https": {
+    "checkedAt": "2026-10-21T14:28:38.347Z",
+    "origin": "https://miptest.01mvp.com",
+    "verifiedFiles": 449,
+    "passed": true,
+    "retriedFiles": 1,
+    "errors": []
+  },
+  "browser": {
+    "desktopWidth": 1440,
+    "mobileWidth": 390,
+    "horizontalOverflow": false,
+    "primaryRequirementCount": 4,
+    "bodyCharacterCount": 640,
+    "decodedImages": 4,
+    "brokenInternalAnchors": 0,
+    "otherUpdatesLast": true,
+    "versionMentionCount": 1,
+    "toolbarPosterAndTestConfigurationDetailsRemoved": true
+  },
+  "checks": {
+    "acceptanceSiteTestsPassed": 14,
+    "eslintPassed": true,
+    "docsCheckPassed": true
+  },
+  "businessCodeChanged": false,
+  "newMiniUpload": false,
+  "businessProductionChanged": false,
+  "firstSubmissionPreserved": true,
+  "originalEvidencePreservedInRepository": true,
+  "httpsManifestSha256": "aeb595cb8ace6866f1098897bc818a658d6b72ac590917d611e9ae65e31760ce"
+}

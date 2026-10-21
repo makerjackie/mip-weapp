@@ -933,18 +933,18 @@
   {
     "id": "user-roles-20261021-v1",
     "requirement": "user-roles-20261021",
-    "title": "用户规则与测试体验修复",
-    "indexTitle": "用户规则及测试体验修复",
+    "title": "四项用户规则",
+    "indexTitle": "甲方要求与验收结果",
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-21T10:58:46.322438Z",
-    "updatedAt": "2026-10-21T13:34:44.418201+00:00",
+    "updatedAt": "2026-10-21T14:19:46.194426+00:00",
     "verifiedAt": "2026-10-21T13:34:44.418201+00:00",
     "submittedAt": "2026-10-21T10:58:46.322438Z",
     "commit": "3c2e7290f0493c36b7ad93b291c5d8bfcfaf48ad",
     "commitAt": "2026-10-21T09:24:48-04:00",
     "environment": "测试后台 / 测试库 / 开发者工具真实云请求 · 真机待验",
-    "summary": "四项用户规则与版本、海报、成长修复已保留；补齐小屏机会页操作栏、头像刷新和压缩预览。最新测试开发包1.2.7-test.1021已上传，生产未更新。",
+    "summary": "四项已实现并通过测试环境验证。",
     "detail": "docs/mip/evidence/user-roles-20261021/README.md",
     "files": [
       "docs/mip/evidence/user-roles-20261021/README.md",
@@ -993,27 +993,9 @@
       "docs/mip/evidence/user-roles-20261021/ui-polish/runtime-320.json",
       "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-before-320.png"
     ],
-    "comparisons": [
-      {
-        "title": "后台当前角色",
-        "context": "首轮角色修复时拍摄：同一真实测试后台、七个合成用户、关键词验收1021、无角色筛选、1440×900；当时尚未补齐成长配置。修改后普通用户和撤销最后签到者正确分类。后续等级配置修复另见本页反馈。",
-        "before": {
-          "file": "docs/mip/evidence/user-roles-20261021/shots/admin-users-before.png",
-          "caption": "修改前：普通用户和撤销签到者仍显示嘉宾",
-          "source": "部署前的真实测试后台"
-        },
-        "after": {
-          "file": "docs/mip/evidence/user-roles-20261021/shots/admin-users-after.png",
-          "caption": "修改后：普通用户、嘉宾、玩家按服务端事实显示",
-          "source": "新部署的真实测试后台"
-        }
-      }
-    ],
+    "comparisons": [],
     "highlights": [
-      "后台正确区分普通用户、嘉宾、玩家；未登录为匿名访客，不创建虚假后台用户。",
-      "报名成功、尚未签到的普通用户进入本场嘉宾名单，全局角色保持普通用户。",
-      "头像、昵称、行业、当前身份和一句话介绍必填，性别选填；历史缺项在下次报名等操作补齐。",
-      "人才合作显示有效玩家，以及已签到且最近同意加入花名册的嘉宾；后来拒绝会退出。"
+      "四项已实现并通过测试环境验证。"
     ],
     "checks": [
       "保留付费审核和后台开通；权益到期、最后一次签到撤销后按事实回退，后台角色独立。",
@@ -1024,171 +1006,69 @@
     ],
     "sections": [
       {
-        "id": "user-roles-1021-ui-polish",
-        "title": "本轮反馈：小屏操作、头像与验收网页",
+        "id": "user-roles-1021-roles",
+        "title": "1. 用户角色",
         "highlights": [
-          "机会页三个状态放入可横向滚动区域，筛选与发布保留在右侧；320px和390px实际运行检查都在屏内，状态切换、筛选开关、进入发布页正常。",
-          "切回「我的」不再先清空相同头像；最终包在每个尺寸各3轮切换/强制刷新均未出现头像清空写入，退出/移除头像回归通过。手机视觉仍待复测。",
-          "验收图片展示更小的WebP预览，点击仍看原图；本日开头列目标，末尾逐项对应验收标准和结果。原有用户规则、数据与加载优化保留。",
-          "完整门禁1887/339/262项通过；最终包设置页版本、源码和测试环境一致。1.2.7-test.1021已上传，体验版平台指向待用户扫码核对。"
+          "要求：匿名访客未登录；普通用户已登录未签到；嘉宾已报名签到；玩家持有有效权益。",
+          "结果：已实现。后台显示、筛选、导出及角色回退已验证。"
         ],
         "comparisons": [
           {
-            "title": "项目机会操作栏：320px手机",
-            "context": "相同320×568逻辑视口、默认字号、测试城市和真实测试账号。旧版1.2.5、新版1.2.7均连接测试服务；机会列表为空是实际服务返回。原生截图像素随模拟器缩放不同，逻辑尺寸已由运行时核对。原五项同排，现状态区可收缩/横滑，右侧操作保留。本批无新原型稿。",
+            "title": "后台当前角色",
+            "context": "同一测试后台、同一批合成样本；普通用户与嘉宾的显示已区分。",
             "before": {
-              "file": "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-before-320.png",
-              "caption": "修改前：五项控件同排、不能收缩",
-              "source": "旧测试包 · 微信开发者工具真实画面"
+              "file": "docs/mip/evidence/user-roles-20261021/shots/admin-users-before.png",
+              "caption": "修改前：普通用户和撤销签到者仍显示嘉宾",
+              "source": "部署前的真实测试后台"
             },
             "after": {
-              "file": "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-after-320.png",
-              "caption": "修改后：状态区可横滑，筛选和发布保持可用",
-              "source": "1.2.7-test.1021最终包 · 微信开发者工具"
-            }
-          },
-          {
-            "title": "项目机会操作栏：390px手机",
-            "context": "相同390×844逻辑视口、默认字号、测试城市和真实测试账号。旧版1.2.5、新版1.2.7均连接测试服务；机会列表为空是实际服务返回。原生截图像素随模拟器缩放不同，逻辑尺寸已由运行时核对。原五项同排，现状态区可收缩/横滑，右侧操作保留。本批无新原型稿。",
-            "before": {
-              "file": "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-before-390.png",
-              "caption": "修改前：五项控件同排、不能收缩",
-              "source": "旧测试包 · 微信开发者工具真实画面"
-            },
-            "after": {
-              "file": "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-after-390.png",
-              "caption": "修改后：状态区可横滑，筛选和发布保持可用",
-              "source": "1.2.7-test.1021最终包 · 微信开发者工具"
+              "file": "docs/mip/evidence/user-roles-20261021/shots/admin-users-after.png",
+              "caption": "修改后：普通用户、嘉宾、玩家按服务端事实显示",
+              "source": "新部署的真实测试后台"
             }
           }
         ]
       },
       {
-        "id": "user-roles-1021-feedback",
-        "title": "测试反馈：版本、海报与成长记录",
+        "id": "user-roles-1021-participants",
+        "title": "2. 活动嘉宾名单",
         "highlights": [
-          "设置页最底部新增版本号和数据环境，「关于 MIP」同步；优先使用微信安装版本，发布流程还会核对烘焙版本与上传版本一致。本节保留1.2.5首轮画面；最新1.2.7已包含该修复。",
-          "按用户确认，为 19 个缺封面的测试活动复用既有活动海报；名称保留测试标记，已有封面和生产活动不改。当前查询的 15 个公开活动都有封面，模拟器可见的 6 个活动图片正常。",
-          "成长页原先失败，因为测试库没有基础等级配置，返回 GROWTH_LEVEL_BASE_REQUIRED。已补齐当前公共配置中的 12 个等级、40 项等级权益和对应关联；没有修改用户积分。成长页及明细页实测正常打开，无流水时显示空记录。",
-          "合作卡与超级案例已实测加载成功且非空。开发者工具首次进入个人页约 4.34 秒出现合作卡，切超级案例约 0.59 秒；这些不是手机或冷启动性能基准，本次不宣称已提速。"
-        ],
-        "comparisons": [
-          {
-            "title": "设置页底部：版本与环境",
-            "context": "同一 390×844 模拟器、同一测试账号，均滚到设置页最底部。新栏改变上方内容的相对位置。依据本次用户决定新增，无新增原型稿；截图是开发版，体验版指向仍待手机核对。",
-            "before": {
-              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/settings-before-bottom.png",
-              "caption": "修改前：设置底部没有版本信息",
-              "source": "修改前真实测试环境 · 微信开发者工具"
-            },
-            "after": {
-              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/settings-after-bottom.png",
-              "caption": "修改后：版本 1.2.5-test.1021 与测试环境",
-              "source": "1.2.5-test.1021 最终包 · 微信开发者工具"
-            }
-          },
-          {
-            "title": "关于 MIP：上传版本与工程版本",
-            "context": "同一页面、同一视口。微信开发者工具不提供安装版本时，使用发布时烘焙的上传版本；手机显示需用户复核。",
-            "before": {
-              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/about-before.png",
-              "caption": "修改前：只显示工程版本 0.2.0",
-              "source": "修改前真实测试环境 · 微信开发者工具"
-            },
-            "after": {
-              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/about-after.png",
-              "caption": "修改后：与当前上传版本一致",
-              "source": "1.2.5-test.1021 最终包 · 微信开发者工具"
-            }
-          },
-          {
-            "title": "测试活动：补齐示例海报",
-            "context": "同一测试城市、同一批合成活动和相同视口。用户已确认复用现有海报，这不是每场活动新制作的专属海报；原有海报未替换。",
-            "before": {
-              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/events-before.png",
-              "caption": "修改前：测试活动封面为空",
-              "source": "修改前真实测试环境 · 微信开发者工具"
-            },
-            "after": {
-              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/events-after.png",
-              "caption": "修改后：复用现有海报显示封面",
-              "source": "1.2.5-test.1021 最终包 · 微信开发者工具"
-            }
-          },
-          {
-            "title": "玩家成长：缺配置错误恢复",
-            "context": "同一测试账号及模拟器。只补公共等级配置；测试账号权益为后台开通，无真实支付。经验值未改；没有用客户端假等级替代服务端数据。",
-            "before": {
-              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/growth-before.png",
-              "caption": "修改前：成长等级尚未配置，页面失败",
-              "source": "修改前真实测试环境 · 微信开发者工具"
-            },
-            "after": {
-              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/growth-after.png",
-              "caption": "修改后：真实返回 Lv.1、12 个等级和等级权益",
-              "source": "1.2.5-test.1021 最终包 · 微信开发者工具"
-            }
-          }
-        ],
-        "evidenceImages": [
-          {
-            "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/growth-entries-after.png",
-            "caption": "经验值明细真实加载成功，无流水时显示空记录"
-          }
-        ]
-      },
-      {
-        "id": "user-roles-1021-verification",
-        "title": "验证结果与范围",
-        "highlights": [
-          "完整质量门禁通过，后台 HTTPS 68 项读取检查通过；浏览器普通用户筛选及真实 Excel 导出两条记录通过。",
-          "缺项提交被服务端拒绝，资料回滚不变；可见表单补齐保存后，离页重开和独立请求回读通过。",
-          "测试库合成数据验证了权益到期、签到撤销，以及最近拒绝、跨活动和编辑旧反馈的授权顺序；未代替真机授权、扫码签到和真实支付验收。"
-        ]
-      },
-      {
-        "id": "user-roles-1021-mini",
-        "title": "小程序：测试库合成样本实拍",
-        "highlights": [
-          "以下为开发者工具实拍，用户是测试库中的合成样本；列表来自已部署测试函数，没有注入页面列表或模拟云返回。真机待复测。"
+          "要求：普通用户报名成功后，未签到也能出现在本场嘉宾名单。",
+          "结果：已实现。报名未签到样本已正常显示。"
         ],
         "evidenceImages": [
           {
             "file": "docs/mip/evidence/user-roles-20261021/shots/mini-ordinary-registered.png",
-            "caption": "报名未签到的普通用户出现在本场嘉宾名单"
-          },
-          {
-            "file": "docs/mip/evidence/user-roles-20261021/shots/mini-talents-after.png",
-            "caption": "人才列表只返回符合资格与最新授权的三位测试候选"
+            "caption": "报名未签到的普通用户已出现在本场嘉宾名单"
           }
         ]
       },
       {
-        "id": "user-roles-1021-admin",
-        "title": "后台筛选和手机布局",
+        "id": "user-roles-1021-profile",
+        "title": "3. 个人资料必填",
+        "highlights": [
+          "要求：头像、昵称、行业、当前身份和一句话介绍必填，性别选填。",
+          "结果：已实现。缺项拦截、保存及重新打开回读已验证。"
+        ]
+      },
+      {
+        "id": "user-roles-1021-talents",
+        "title": "4. 人才合作列表",
+        "highlights": [
+          "要求：显示有效玩家，以及已签到且最近同意加入花名册的嘉宾。",
+          "结果：已实现。嘉宾同意后可见、后来拒绝即退出，跨活动选择已验证。"
+        ],
         "evidenceImages": [
           {
-            "file": "docs/mip/evidence/user-roles-20261021/shots/admin-normal-export.png",
-            "caption": "普通用户筛选两条记录，实际导出 Excel 也是两条 NORMAL 记录"
-          },
-          {
-            "file": "docs/mip/evidence/user-roles-20261021/shots/admin-normal-mobile.png",
-            "caption": "390px 手机视口，页面无整体横向溢出"
+            "file": "docs/mip/evidence/user-roles-20261021/shots/mini-talents-after.png",
+            "caption": "仅显示符合资格及授权条件的测试用户"
           }
         ]
       }
     ],
     "limitations": "实际测试环境、开发者工具与合成样本证据分开记录。1.2.5 角色名单回归仍通过；版本栏、活动图片、成长页和空明细均已实际核对。开发工具曾出现 wx://not-found，完整编译、重连后重新验证；未把空白页面记为通过。手机、原生授权、扫码签到及真实支付未由这些证据替代。 本轮小屏/头像依据最终测试包的开发工具实际运行；旧包5次清空与新包3轮无清空执行次数不同，不作手机闪烁率结论。",
-    "pendingSummary": "最新测试开发包1.2.7-test.1021已上传；请在「我的 → 设置 → 最底部」核对版本和测试环境。体验版平台指向、手机小屏滑动与头像视觉、原生授权/签到/支付待复测；生产未更新。",
-    "downloads": [
-      {
-        "file": "docs/mip/evidence/user-roles-20261021/ui-polish/README.md",
-        "label": "本轮界面与报告交接"
-      },
-      {
-        "file": "docs/mip/evidence/user-roles-20261021/README.md",
-        "label": "查看交接文档"
-      }
-    ]
+    "pendingSummary": "手机流程待复测，生产未更新。",
+    "downloads": [],
+    "uiChange": false
   }
 ]

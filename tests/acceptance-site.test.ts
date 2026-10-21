@@ -83,6 +83,23 @@ describe('公开验收报告的版本与时间规则', () => {
     expect(html).toContain('<td>320px 可操作</td><td>待真机复测</td>')
   })
 
+  it('keeps client requirements prominent and minor updates last without removing earlier evidence', () => {
+    const f = fixture()
+    f.write([f.report, { ...f.report, id: 'minor-v1', title: '测试配置细节' }])
+    fs.writeFileSync(path.join(f.root, 'docs/mip/acceptance-site/daily-summaries.json'), JSON.stringify({
+      '2026-10-20': { summary: '目标：完成甲方要求', reportIds: ['first-v1'], pending: ['手机待复测'], otherUpdates: '加载修复 <已完成>' },
+    }))
+    f.run('build')
+    const output = path.join(f.root, '.tmp/mip-acceptance-site')
+    const daily = fs.readFileSync(path.join(output, 'updates/2026-10-20/index.html'), 'utf8')
+    expect(daily).toContain('已验证修复')
+    expect(daily).not.toContain('测试配置细节')
+    expect(daily.indexOf('手机待复测')).toBeLessThan(daily.indexOf('<b>其他优化：</b>'))
+    expect(daily).toContain('加载修复 &lt;已完成&gt;')
+    expect(fs.readFileSync(path.join(output, 'reports/minor-v1/index.html'), 'utf8')).toContain('测试配置细节')
+    expect(JSON.parse(fs.readFileSync(f.registry, 'utf8'))[0].submittedAt).toBe(f.report.submittedAt)
+  })
+
   it('日期倒序，追踪时间保留在源数据而不堆入页面', () => {
     const f = fixture()
     f.write([f.report, { ...f.report, id: 'second-v1', title: '后来的修复', updatedAt: '2026-10-21T00:00:00Z' }])

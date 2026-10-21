@@ -202,11 +202,20 @@ function dayAcceptance(day, digest) {
 const history = `<aside class="history"><h2>历史资料</h2><a href="/legacy/20260927/">9月27日逐页验收快照</a></aside>`
 for (const [day, items] of dayEntries) {
   const digest = dailySummaries[day] || {}
-  const pending = digest.pending || items.map(r => r.pendingSummary || r.limitations)
-  const body = `<header class="day-intro"><p class="muted">${escape(day)}</p><h1>${escape(digest.title || `${dayLabel(day)}更新与验收`)}</h1>${digest.summary ? `<p>${escape(digest.summary)}</p>` : ''}</header>${dayBrief(day, digest)}${items.map(r => `<section class="compact-section" id="${escape(r.id)}">${heading(2, r.indexTitle || r.title, r.id)}${reportContent(r)}</section>`).join('')}${dayAcceptance(day, digest)}<section class="pending" id="pending">${heading(2, '待确认与复测', 'pending')}<ul>${[...new Set(pending)].map(p => `<li>${escape(p)}</li>`).join('')}</ul></section>`
+  const selected = digest.reportIds
+    ? digest.reportIds.map((id) => {
+        const report = items.find(item => item.id === id)
+        if (!report) {
+          throw new Error(`Missing daily report: ${day}/${id}`)
+        }
+        return report
+      })
+    : items
+  const pending = digest.pending || selected.map(r => r.pendingSummary || r.limitations)
+  const body = `<header class="day-intro"><p class="muted">${escape(day)}</p><h1>${escape(digest.title || `${dayLabel(day)}更新与验收`)}</h1>${digest.summary ? `<p>${escape(digest.summary)}</p>` : ''}</header>${dayBrief(day, digest)}${selected.map(r => `<section class="compact-section" id="${escape(r.id)}">${heading(2, r.indexTitle || r.title, r.id)}${reportContent(r)}</section>`).join('')}${dayAcceptance(day, digest)}<section class="pending" id="pending">${heading(2, '待确认与复测', 'pending')}<ul>${[...new Set(pending)].map(p => `<li>${escape(p)}</li>`).join('')}</ul>${digest.otherUpdates ? `<p><b>其他优化：</b>${escape(digest.otherUpdates)}</p>` : ''}</section>`
   const dest = path.join(out, 'updates', day)
   fs.mkdirSync(dest, { recursive: true })
-  fs.writeFileSync(path.join(dest, 'index.html'), shell(`${day} 验收`, readerLayout(items, body, dayLabel(day)), true))
+  fs.writeFileSync(path.join(dest, 'index.html'), shell(`${day} 验收`, readerLayout(selected, body, dayLabel(day)), true))
 }
 const timeline = dayEntries.map(([day, items], index) => {
   const digest = dailySummaries[day] || {}
