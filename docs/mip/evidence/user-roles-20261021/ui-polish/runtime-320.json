@@ -1,0 +1,140 @@
+{
+  "checkedAt": "2026-10-21T13:33:16.754Z",
+  "environment": "TEST",
+  "realCloudRequests": true,
+  "realDevice": false,
+  "sourceSha": "3c2e7290f0493c36b7ad93b291c5d8bfcfaf48ad",
+  "version": "1.2.7-test.1021",
+  "testEnvironmentVisible": true,
+  "width": 320,
+  "initialGeometry": [
+    {
+      "left": 9,
+      "right": 311,
+      "top": 233,
+      "bottom": 270,
+      "width": 302,
+      "height": 37,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 9,
+      "right": 178,
+      "top": 233,
+      "bottom": 270,
+      "width": 169,
+      "height": 37,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 169,
+      "scrollHeight": 57
+    },
+    {
+      "left": 183,
+      "right": 233,
+      "top": 233,
+      "bottom": 270,
+      "width": 50,
+      "height": 37,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 238,
+      "right": 311,
+      "top": 233,
+      "bottom": 270,
+      "width": 73,
+      "height": 37,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 109,
+      "right": 165,
+      "top": 233,
+      "bottom": 270,
+      "width": 56,
+      "height": 37,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    }
+  ],
+  "selectedGeometry": [
+    {
+      "left": 9,
+      "right": 311,
+      "top": 233,
+      "bottom": 270,
+      "width": 302,
+      "height": 37,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 9,
+      "right": 178,
+      "top": 233,
+      "bottom": 270,
+      "width": 169,
+      "height": 37,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 169,
+      "scrollHeight": 57
+    },
+    {
+      "left": 183,
+      "right": 233,
+      "top": 233,
+      "bottom": 270,
+      "width": 50,
+      "height": 37,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 238,
+      "right": 311,
+      "top": 233,
+      "bottom": 270,
+      "width": 73,
+      "height": 37,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 109,
+      "right": 165,
+      "top": 233,
+      "bottom": 270,
+      "width": 56,
+      "height": 37,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    }
+  ],
+  "filterOpenClose": true,
+  "publishEditorOpened": true,
+  "statusSelected": "MINE",
+  "avatarRefreshes": 3,
+  "avatarEmptyWrites": 0,
+  "avatarWrites": 14
+}

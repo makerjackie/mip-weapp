@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-10-21T13:42:33.239050+00:00",
+  "deploymentId": "93117386-f67f-40cd-8db6-86bfc19a0ba1",
+  "deploymentSourceSha": "3c2e7290f0493c36b7ad93b291c5d8bfcfaf48ad",
+  "reportDocsDirtyAtDeployment": true,
+  "businessProductionChanged": false,
+  "https": {
+    "checkedAt": "2026-10-21T13:41:37.794402+00:00",
+    "origin": "https://miptest.01mvp.com",
+    "verifiedFiles": 449,
+    "passed": true,
+    "retriedFiles": 5,
+    "errors": [],
+    "initialUnmatchedFiles": 1,
+    "targetedReadbackRetries": true
+  },
+  "browser": {
+    "checkedAt": "2026-10-21T13:39:19.033995+00:00",
+    "origin": "https://miptest.01mvp.com",
+    "path": "/updates/2026-10-21/",
+    "desktop": {
+      "width": 1440,
+      "height": 900,
+      "horizontalOverflow": false
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "horizontalOverflow": false
+    },
+    "previewImages": 23,
+    "allPreviewImagesDecoded": true,
+    "originalImageLinksRetained": true,
+    "brokenInternalAnchors": 0,
+    "acceptanceCriteriaRows": 7,
+    "goalResultAcceptanceOrderVerified": true,
+    "latestVersionVisible": "1.2.7-test.1021"
+  },
+  "images": {
+    "images": 170,
+    "optimized": 170,
+    "originalBytes": 33617234,
+    "previewBytes": 8216460
+  },
+  "previewBytesReductionPercent": 75.56,
+  "networkCleanup": {
+    "taskOverridesAbsent": true,
+    "latestConfigurationPreserved": true,
+    "sourceChangedDuringTask": true,
+    "restoreBlockedBeforeMutation": true,
+    "explanation": "Configuration was updated during the task. Current runtime and source no longer contain the two temporary task overrides; latest user state was preserved without another reload."
+  },
+  "httpsManifestSha256": "c7e793dd1b58cd97e35ddba518a4124362d36b55770b6bec0a49b477de50391d"
+}

@@ -1,0 +1,140 @@
+{
+  "checkedAt": "2026-10-21T13:34:20.273Z",
+  "environment": "TEST",
+  "realCloudRequests": true,
+  "realDevice": false,
+  "sourceSha": "3c2e7290f0493c36b7ad93b291c5d8bfcfaf48ad",
+  "version": "1.2.7-test.1021",
+  "testEnvironmentVisible": true,
+  "width": 390,
+  "initialGeometry": [
+    {
+      "left": 12,
+      "right": 378,
+      "top": 307,
+      "bottom": 352,
+      "width": 366,
+      "height": 45,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 12,
+      "right": 208,
+      "top": 307,
+      "bottom": 352,
+      "width": 196,
+      "height": 45,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 200,
+      "scrollHeight": 65
+    },
+    {
+      "left": 214,
+      "right": 278,
+      "top": 307,
+      "bottom": 352,
+      "width": 64,
+      "height": 45,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 284,
+      "right": 378,
+      "top": 307,
+      "bottom": 352,
+      "width": 94,
+      "height": 45,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 140,
+      "right": 212,
+      "top": 307,
+      "bottom": 352,
+      "width": 72,
+      "height": 45,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    }
+  ],
+  "selectedGeometry": [
+    {
+      "left": 12,
+      "right": 378,
+      "top": 307,
+      "bottom": 352,
+      "width": 366,
+      "height": 45,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 12,
+      "right": 208,
+      "top": 307,
+      "bottom": 352,
+      "width": 196,
+      "height": 45,
+      "scrollLeft": 4,
+      "scrollTop": 0,
+      "scrollWidth": 200,
+      "scrollHeight": 65
+    },
+    {
+      "left": 214,
+      "right": 278,
+      "top": 307,
+      "bottom": 352,
+      "width": 64,
+      "height": 45,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 284,
+      "right": 378,
+      "top": 307,
+      "bottom": 352,
+      "width": 94,
+      "height": 45,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    },
+    {
+      "left": 136,
+      "right": 208,
+      "top": 307,
+      "bottom": 352,
+      "width": 72,
+      "height": 45,
+      "scrollLeft": 0,
+      "scrollTop": 0,
+      "scrollWidth": 0,
+      "scrollHeight": 0
+    }
+  ],
+  "filterOpenClose": true,
+  "publishEditorOpened": true,
+  "statusSelected": "MINE",
+  "avatarRefreshes": 3,
+  "avatarEmptyWrites": 0,
+  "avatarWrites": 16
+}

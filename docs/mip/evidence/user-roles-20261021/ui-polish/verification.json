@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-21T13:34:44.417772+00:00",
+  "upload": {
+    "sourceSha": "3c2e7290f0493c36b7ad93b291c5d8bfcfaf48ad",
+    "version": "1.2.7-test.1021",
+    "channel": "trial",
+    "targetDir": "envs/test",
+    "uploadedAt": "2026-10-21T13:32:27.971Z",
+    "developmentUploadSucceeded": true,
+    "trialAssignmentVerified": false,
+    "reviewSubmitted": false,
+    "publicReleased": false
+  },
+  "gates": {
+    "miniTests": 1887,
+    "adminNodeTests": 339,
+    "adminReactTests": 262,
+    "verifyAll": true,
+    "runtimePreflight": true,
+    "platformMainPackageBytes": 1767823
+  },
+  "baseline": {
+    "sourceSha": "f7933bea7227c45537c2b38608774523913e5a56",
+    "avatarClearWrites": 5,
+    "scope": "one development-tool switch and forced refresh; not a real-device flicker rate"
+  },
+  "finalRuntimeWidths": [
+    320,
+    390
+  ],
+  "realCloudRequests": true,
+  "realDevice": false,
+  "productionChanged": false
+}
