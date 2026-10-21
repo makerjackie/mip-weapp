@@ -123,7 +123,7 @@ export default defineConfig({
   define: {
     __APP_NAME__: JSON.stringify(env.MINI_PROGRAM_NAME || 'MIP'),
     __APP_NAMESPACE__: JSON.stringify(env.APP_NAMESPACE || 'mip'),
-    __APP_VERSION__: JSON.stringify(packageJson.version),
+    __APP_VERSION__: JSON.stringify(env.MIP_RELEASE_VERSION || packageJson.version),
     __BUILD_SHA__: JSON.stringify(env.BUILD_SHA || 'development'),
     __CLOUDBASE_ENV_ID__: JSON.stringify(env.CLOUDBASE_ENV_ID || ''),
     __CLOUDBASE_RESOURCE_APP_ID__: JSON.stringify(env.CLOUDBASE_RESOURCE_APP_ID || ''),

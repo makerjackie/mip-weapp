@@ -55,4 +55,8 @@
     </view>
     <app-page-exit label="返回我的" tab-url="/pages/profile/index" />
   </block>
+  <view id="settings-release-info" class="mt-[32rpx] px-[24rpx] py-[8rpx] text-center text-[24rpx] leading-[36rpx] text-muted" aria-role="button" aria-label="复制版本信息" bind:tap="copyVersion">
+    <view>版本 {{releaseVersion}}</view>
+    <view>{{releaseEnvironment}}</view>
+  </view>
 </view>

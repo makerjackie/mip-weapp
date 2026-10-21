@@ -13,6 +13,7 @@ import {
   mysqlDbInstanceArg,
   sqlLiteral,
 } from './lib/example-cloudbase.mjs'
+import { assertGrowthCatalogReadiness } from './lib/growth-catalog-readiness.mjs'
 import {
   assertMembershipChainInvariant,
   MIP_MEMBERSHIP_CHAIN_INVARIANT_SQL,
@@ -83,6 +84,13 @@ if (missingTables.length) {
 const membershipChainInvariant = assertMembershipChainInvariant(callCloudbase(root, 'queryMysqlDatabase', {
   action: 'runQuery',
   sql: MIP_MEMBERSHIP_CHAIN_INVARIANT_SQL,
+  ...dbInstanceArg,
+}))
+// Healthy functions and empty admin lists do not prove that the player growth page can open.
+assertGrowthCatalogReadiness(callCloudbase(root, 'queryMysqlDatabase', {
+  action: 'runQuery',
+  sql: `SELECT COUNT(*) AS activeLevelCount, MIN(minimum_experience) AS minimumExperience
+    FROM mip_growth_levels WHERE app_id = ${sqlLiteral(appId)} AND status = 'ACTIVE'`,
   ...dbInstanceArg,
 }))
 

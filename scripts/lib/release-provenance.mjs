@@ -26,8 +26,11 @@ export function assertReleaseSource(source, { channel, expectedSha } = {}) {
   return source.sha
 }
 
-export function assertReleaseBuildMarker(common, sha) {
+export function assertReleaseBuildMarker(common, sha, { version } = {}) {
   if (!common.includes(`buildSha:\`${sha}\``) && !common.includes(`buildSha:"${sha}"`)) {
     throw new Error('产物源码标记与发布提交不一致，停止上传。')
+  }
+  if (version && !common.includes(`appVersion:\`${version}\``) && !common.includes(`appVersion:${JSON.stringify(version)}`)) {
+    throw new Error('产物版本号与上传版本不一致，停止上传。')
   }
 }

@@ -94,7 +94,7 @@ assertReleaseSource(readReleaseSource(root), { channel, expectedSha: sourceSha }
 const build = spawnSync('pnpm', ['build'], {
   cwd: root,
   stdio: 'inherit',
-  env: { ...process.env, MIP_ENV_DIR: targetDir, BUILD_SHA: sourceSha },
+  env: { ...process.env, MIP_ENV_DIR: targetDir, BUILD_SHA: sourceSha, MIP_RELEASE_VERSION: version },
 })
 if (build.error || build.status !== 0) {
   fail('构建失败。')
@@ -102,7 +102,7 @@ if (build.error || build.status !== 0) {
 
 // 烘焙核对：包内函数名前缀必须与通道一致（trial=mip-t-*，prod=mip-*）
 const common = fs.readFileSync(path.join(root, 'dist', 'common.js'), 'utf8')
-assertReleaseBuildMarker(common, sourceSha)
+assertReleaseBuildMarker(common, sourceSha, { version })
 assertReleaseSource(readReleaseSource(root), { channel, expectedSha: sourceSha })
 const hasTest = common.includes('mip-t-identity-api')
 const hasProd = common.includes('mip-identity-api')

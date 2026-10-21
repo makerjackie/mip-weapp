@@ -26,6 +26,7 @@ description: Use for owner bootstrap, demo seed, CloudBase deploy, MySQL schema,
 3. seed 默认只允许 development/test，且 `is_demo=1`；MIP staging 仅在 TEST catalog、非 live payment、精确 EnvID 和 `--confirm-staging-demo` 同时满足时允许，production 禁止。
 4. owner bootstrap 拒绝 demo 身份，不打印 OpenID。
 5. 运营端变更走 admin API 与 RBAC，不要给客户端加管理 action。
+6. 建表不自动生成运营配置。测试库首次验收要核对成长等级、等级权益和实际玩家快照；缺基础配置时按已确认配置补齐并备份回读，不把空列表/健康检查当作功能通过。复制公共配置不包含用户、订单、积分流水或会员权益。
 
 ## Scripts
 

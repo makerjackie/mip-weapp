@@ -22,4 +22,9 @@ describe('release provenance safety', () => {
     expect(() => assertReleaseBuildMarker(`buildSha:\`${sha}\``, sha)).not.toThrow()
     expect(() => assertReleaseBuildMarker(`buildSha:"${sha}"`, sha)).not.toThrow()
   })
+  it('rejects a stale engineering version in a release artifact', () => {
+    const marker = `buildSha:"${sha}";appVersion:"0.2.0"`
+    expect(() => assertReleaseBuildMarker(marker, sha, { version: '1.2.5-test.1021' })).toThrow(/版本号/)
+    expect(() => assertReleaseBuildMarker(`buildSha:"${sha}";appVersion:\`1.2.5-test.1021\``, sha, { version: '1.2.5-test.1021' })).not.toThrow()
+  })
 })

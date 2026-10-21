@@ -47,6 +47,8 @@ MIP_ENV_DIR=envs/prod CLOUDBASE_AUTH_MODE=local node scripts/ops.mjs --target=pr
 - release 脚本内置：目录锁定（trial↔envs/test、prod↔envs/prod）→ `verify:all` 全绿门禁 → **烘焙函数名断言**（trial 包必须只含 mip-t-*，prod 包只含 mip-*）→ dist 平铺上传
 - 生产通道先 fetch，要求干净且与 `origin/main` 一致的 `main`；门禁及构建后再次核对提交未变化。脚本自动注入 `BUILD_SHA` 并核对产物的 `buildSha`，不能把默认 `development` 标记当成发布证据。上传回执保存在忽略目录 `.tmp/release-prod-<version>.json`。
 - 上传只产生开发版本。另行核实公众平台是否设为体验版、是否提审及是否公开发布，三者分别记录；CLI 成功和开发预览二维码都不能替代平台状态。若浏览器策略禁止访问公众平台，交接维护者操作，不换通道绕过禁令。
+- 设置和关于显示的版本必须对应上传版本：发布脚本通过 `MIP_RELEASE_VERSION` 烘焙并校验，运行时优先读取微信 `miniProgram.version`；工程 `package.json` 版本不能代替发包版本。测试环境依据烘焙的函数目标，不能用微信「体验版」标签推断。
+- 测试环境还须验证实际玩家成长页和 `getSnapshot`；`health` 正常、后台空列表成功不代表基础等级已配置。`cloud:verify` 会拒绝缺少 ACTIVE 零经验起始等级的库；不要用客户端假 Lv.1 掩盖配置缺失。
 - 版本号规则：体验版默认 `0.2.0.YYYYMMDD`；正式版必须显式 `--version` 且语义化（首发 1.0.0，后续 1.0.N）
 - 上传私钥缺失时走开发者工具 CLI（release 脚本通道）；私钥恢复后可回 `pnpm wechat:upload`
 

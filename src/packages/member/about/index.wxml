@@ -2,6 +2,7 @@
   <view class="mx-auto flex h-[132rpx] w-[132rpx] items-center justify-center rounded-[32rpx] bg-brand text-[48rpx] font-bold text-on-brand">{{markText}}</view>
   <view class="mt-6 text-[40rpx] font-bold">{{productName}}</view>
   <view class="mt-2 text-[22rpx] text-muted" bind:tap="copyVersion">{{versionText}}</view>
+  <view class="mt-1 text-[24rpx] text-muted">{{environmentText}}</view>
   <view class="mt-8 rounded-[32rpx] bg-panel px-5 py-6 text-left"><view class="text-[28rpx] font-semibold">产品说明</view><view class="mt-3 text-[24rpx] leading-7 text-muted">{{productName}} 是会员、城市分会、活动、机会与合作档案小程序。</view></view>
   <view class="mt-5 rounded-[24rpx] bg-panel px-5 py-5 text-left text-[22rpx] leading-6 text-muted">
     <view class="text-[24rpx] font-semibold text-ink">运营主体</view>

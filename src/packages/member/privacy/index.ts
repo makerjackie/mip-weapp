@@ -1,7 +1,9 @@
+import { isTestEnvironment, runtimeConfig } from '../../../config/runtime'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipLocalSession } from '../../../modules/mip-identity/local-session-client'
 import { mipGlobalAccessGuard } from '../../../modules/mip-identity/runtime'
 import { caseNavigateTo } from '../../../platform/navigation/client'
+import { readMiniProgramReleaseInfo } from '../../../platform/wechat/release-info'
 
 // MIW-93：注销入口本轮下线（DEF-07），页面只保留退出登录与账号状态展示；
 // 服务端 identity-api 的 account-closure 能力保留（供支持/应急场景），无入口即不可达。
@@ -11,10 +13,18 @@ Page({
     localLogoutState: 'idle' as 'idle' | 'confirming' | 'processing',
     userVersion: 0,
     message: '',
+    releaseVersion: '',
+    releaseEnvironment: '',
   },
 
   onLoad() {
+    const release = readMiniProgramReleaseInfo(runtimeConfig.appVersion, isTestEnvironment())
+    this.setData({ releaseVersion: release.version, releaseEnvironment: release.environmentText })
     void this.loadAccountState()
+  },
+
+  copyVersion() {
+    wx.setClipboardData({ data: `MIP v${this.data.releaseVersion} · ${this.data.releaseEnvironment}` })
   },
 
   async loadAccountState() {
