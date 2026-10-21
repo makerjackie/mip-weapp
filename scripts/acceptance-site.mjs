@@ -120,7 +120,16 @@ function imageDimensions(file) {
   }
   return dimensions.get(file)
 }
-const panel = (cell, label) => `<section class="panel"><b>${label}</b><p>${escape(cell.caption)}</p>${cell.file ? `<button type="button" class="image-preview-button" aria-haspopup="dialog"><img loading="lazy"${imageDimensions(cell.file)} data-full-src="${escape(asset(cell.file))}" src="${escape(asset(cell.file))}" alt="${escape(cell.caption)}"></button><noscript><a href="${escape(asset(cell.file))}">查看原图</a></noscript>` : `<p class="placeholder">${escape(cell.reason)}</p>`}${cell.source ? `<p class="muted">来源：${escape(cell.source)}</p>` : ''}</section>`
+function circleAttributes(cell) {
+  if (!cell.circles?.length) {
+    return ''
+  }
+  if (!Array.isArray(cell.circles) || cell.circles.length > 10 || cell.circles.some(c => ![c.x, c.y, c.width, c.height].every(Number.isFinite) || c.x < 0 || c.y < 0 || c.width <= 0 || c.height <= 0 || c.x + c.width > 100 || c.y + c.height > 100)) {
+    throw new Error('Invalid screenshot circle coordinates')
+  }
+  return ` data-image-circles="${escape(JSON.stringify(cell.circles))}"`
+}
+const panel = (cell, label) => `<section class="panel"><b>${label}</b><p>${escape(cell.caption)}</p>${cell.file ? `<button type="button" class="image-preview-button" aria-haspopup="dialog"><img loading="lazy"${imageDimensions(cell.file)}${circleAttributes(cell)} data-full-src="${escape(asset(cell.file))}" src="${escape(asset(cell.file))}" alt="${escape(cell.caption)}"></button><noscript><a href="${escape(asset(cell.file))}">查看原图</a></noscript>` : `<p class="placeholder">${escape(cell.reason)}</p>`}${cell.source ? `<p class="muted">来源：${escape(cell.source)}</p>` : ''}</section>`
 const highlights = report => (report.highlights?.length ? report.highlights : [report.summary]).filter(Boolean)
 const comparisonId = (report, comparison) => `${report.id}-view-${sha(comparison.title).slice(0, 8)}`
 const visibleComparisons = report => report.uiChange === false ? [] : (report.comparisons || []).filter(c => c.before.file || c.after.file)

@@ -126,6 +126,21 @@ describe('公开验收报告的版本与时间规则', () => {
     expect(fs.readFileSync(file, 'utf8')).toContain(`reader.css?v=${second}`)
   })
 
+  it('carries optional red-circle coordinates without modifying the screenshot', () => {
+    const f = fixture()
+    const original = fs.readFileSync(path.join(f.root, f.image))
+    const pair = { ...f.report.comparisons[0], after: { ...f.report.comparisons[0].after, circles: [{ x: 36, y: 37, width: 7, height: 42 }] } }
+    f.write([{ ...f.report, comparisons: [pair] }])
+    f.run('build')
+    const output = path.join(f.root, '.tmp/mip-acceptance-site')
+    const daily = fs.readFileSync(path.join(output, 'updates/2026-10-20/index.html'), 'utf8')
+    expect(daily).toContain('data-image-circles="[{&quot;x&quot;:36,&quot;y&quot;:37,&quot;width&quot;:7,&quot;height&quot;:42}]"')
+    expect(fs.readFileSync(path.join(output, 'evidence/example/image.png'))).toEqual(original)
+    pair.after.circles[0].width = 90
+    f.write([{ ...f.report, comparisons: [pair] }])
+    expect(() => f.run('build')).toThrow()
+  })
+
   it('日期倒序，追踪时间保留在源数据而不堆入页面', () => {
     const f = fixture()
     f.write([f.report, { ...f.report, id: 'second-v1', title: '后来的修复', updatedAt: '2026-10-21T00:00:00Z' }])

@@ -938,7 +938,7 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-21T10:58:46.322438Z",
-    "updatedAt": "2026-10-21T14:19:46.194426+00:00",
+    "updatedAt": "2026-10-21T15:00:07.240972+00:00",
     "verifiedAt": "2026-10-21T13:34:44.418201+00:00",
     "submittedAt": "2026-10-21T10:58:46.322438Z",
     "commit": "3c2e7290f0493c36b7ad93b291c5d8bfcfaf48ad",
@@ -1024,7 +1024,15 @@
             "after": {
               "file": "docs/mip/evidence/user-roles-20261021/shots/admin-users-after.png",
               "caption": "修改后：普通用户、嘉宾、玩家按服务端事实显示",
-              "source": "新部署的真实测试后台"
+              "source": "新部署的真实测试后台",
+              "circles": [
+                {
+                  "x": 36.1,
+                  "y": 37.3,
+                  "width": 7.1,
+                  "height": 42
+                }
+              ]
             }
           }
         ]

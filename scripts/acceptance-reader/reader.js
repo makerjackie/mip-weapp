@@ -95,10 +95,11 @@
   const viewer = document.createElement('dialog')
   viewer.className = 'image-viewer'
   viewer.setAttribute('aria-labelledby', 'image-viewer-caption')
-  viewer.innerHTML = '<div class="image-viewer-toolbar"><p id="image-viewer-caption"></p><button type="button" data-image-close aria-label="关闭图片预览">关闭</button><button type="button" data-image-zoom aria-pressed="false">放大</button></div><p class="image-viewer-message" role="status"></p><button type="button" data-image-retry hidden>重试</button><div class="image-viewer-stage" tabindex="0" aria-label="图片，可滚动查看"><img alt=""></div>'
+  viewer.innerHTML = '<div class="image-viewer-toolbar"><p id="image-viewer-caption"></p><button type="button" data-image-close aria-label="关闭图片预览">关闭</button><button type="button" data-image-zoom aria-pressed="false">放大</button></div><p class="image-viewer-message" role="status"></p><button type="button" data-image-retry hidden>重试</button><div class="image-viewer-stage" tabindex="0" aria-label="图片，可滚动查看；点击图片外空白处关闭"><div class="image-viewer-frame"><img alt=""></div></div>'
   document.body.append(viewer)
   const viewerImage = viewer.querySelector('img')
   const viewerStage = viewer.querySelector('.image-viewer-stage')
+  const viewerFrame = viewer.querySelector('.image-viewer-frame')
   const viewerMessage = viewer.querySelector('[role="status"]')
   const zoom = viewer.querySelector('[data-image-zoom]')
   const retry = viewer.querySelector('[data-image-retry]')
@@ -133,11 +134,18 @@
     zoom.textContent = enlarged ? '适应屏幕' : '放大'
   })
   viewer.querySelector('[data-image-close]').addEventListener('click', closeImage)
+  let blankPress = false
+  function outsideImage(event) {
+    return event.target === viewer || event.target === viewerStage
+  }
+  viewer.addEventListener('pointerdown', (event) => {
+    blankPress = outsideImage(event)
+  })
   viewer.addEventListener('click', (event) => {
-    const bounds = viewer.getBoundingClientRect()
-    if (event.target === viewer && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) {
+    if (blankPress && outsideImage(event)) {
       closeImage()
     }
+    blankPress = false
   })
   viewer.addEventListener('close', () => {
     document.documentElement.classList.remove('image-viewer-open')
@@ -146,9 +154,30 @@
     zoom.textContent = '放大'
     viewerImage.removeAttribute('src')
     viewerImage.style.width = ''
+    viewerFrame.querySelector('.image-circles')?.remove()
     opener?.focus({ preventScroll: true })
   })
   for (const image of reader.querySelectorAll('img')) {
+    if (image.dataset.imageCircles) {
+      const frame = document.createElement('span')
+      frame.className = 'image-marked-frame'
+      image.before(frame)
+      frame.append(image)
+      const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      overlay.classList.add('image-circles')
+      overlay.setAttribute('viewBox', '0 0 100 100')
+      overlay.setAttribute('preserveAspectRatio', 'none')
+      overlay.setAttribute('aria-hidden', 'true')
+      for (const { x, y, width, height } of JSON.parse(image.dataset.imageCircles)) {
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse')
+        for (const [key, value] of Object.entries({ cx: x + width / 2, cy: y + height / 2, rx: width / 2, ry: height / 2 })) {
+          circle.setAttribute(key, String(value))
+        }
+        circle.setAttribute('vector-effect', 'non-scaling-stroke')
+        overlay.append(circle)
+      }
+      frame.append(overlay)
+    }
     const trigger = image.closest('a, button') || image
     trigger.setAttribute('aria-haspopup', 'dialog')
     if (trigger === image) {
@@ -171,6 +200,10 @@
     opener = image.closest('a, button') || image
     fullSource = image.dataset.fullSrc || image.closest('a')?.href || image.src
     viewerImage.alt = image.alt
+    const circles = image.parentElement.querySelector('.image-circles')
+    if (circles) {
+      viewerFrame.append(circles.cloneNode(true))
+    }
     viewer.querySelector('#image-viewer-caption').textContent = image.alt || '图片预览'
     viewer.showModal()
     document.documentElement.classList.add('image-viewer-open')
