@@ -45,7 +45,7 @@ export async function optimizeAcceptanceImages(output) {
     const html = await fs.readFile(file, 'utf8')
     const directory = path.posix.dirname(`/${path.relative(output, file).split(path.sep).join('/')}`)
     const updated = html.replace(/<img\b[^>]*>/gi, (tag) => {
-      const source = tag.match(/\bsrc=(["'])(.*?)\1/i)
+      const source = tag.match(/\ssrc=(["'])(.*?)\1/i)
       if (!source || /^(?:[a-z]+:|\/\/|#)/i.test(source[2])) {
         return tag
       }
@@ -54,7 +54,7 @@ export async function optimizeAcceptanceImages(output) {
       if (!image) {
         return tag
       }
-      return tag.replace(source[0], `src="${image.src}"`)
+      return tag.replace(source[0], ` src="${image.src}"`)
         .replace(/\s(?:width|height)=["'][^"']*["']/gi, '')
         .replace(/\s*\/?>$/, ` width="${image.width}" height="${image.height}" decoding="async">`)
     })

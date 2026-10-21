@@ -94,10 +94,36 @@ describe('公开验收报告的版本与时间规则', () => {
     const daily = fs.readFileSync(path.join(output, 'updates/2026-10-20/index.html'), 'utf8')
     expect(daily).toContain('已验证修复')
     expect(daily).not.toContain('测试配置细节')
-    expect(daily.indexOf('手机待复测')).toBeLessThan(daily.indexOf('<b>其他优化：</b>'))
+    expect(daily.indexOf('手机待复测')).toBeLessThan(daily.indexOf('<h2>其他改进</h2>'))
     expect(daily).toContain('加载修复 &lt;已完成&gt;')
     expect(fs.readFileSync(path.join(output, 'reports/minor-v1/index.html'), 'utf8')).toContain('测试配置细节')
     expect(JSON.parse(fs.readFileSync(f.registry, 'utf8'))[0].submittedAt).toBe(f.report.submittedAt)
+  })
+
+  it('states concrete improvements separately and preserves full images for an in-page viewer', () => {
+    const f = fixture()
+    f.write([{ ...f.report, prototypePreview: { file: f.image, caption: '原型原图' } }])
+    fs.writeFileSync(path.join(f.root, 'docs/mip/acceptance-site/daily-summaries.json'), JSON.stringify({
+      '2026-10-20': { otherUpdates: ['消息点击后直接跳转', '设置底部显示当前版本号'] },
+    }))
+    f.run('build')
+    const daily = fs.readFileSync(path.join(f.root, '.tmp/mip-acceptance-site/updates/2026-10-20/index.html'), 'utf8')
+    expect(daily).toContain('<li>消息点击后直接跳转</li><li>设置底部显示当前版本号</li>')
+    expect(daily).toContain('class="image-preview-button" aria-haspopup="dialog"')
+    expect(daily).not.toContain('target="_blank"')
+    expect(daily).toContain('data-full-src="/evidence/example/image.png"')
+  })
+
+  it('changes reader asset URLs when the viewer runtime changes', () => {
+    const f = fixture()
+    f.run('build')
+    const file = path.join(f.root, '.tmp/mip-acceptance-site/updates/2026-10-20/index.html')
+    const first = fs.readFileSync(file, 'utf8').match(/reader\.js\?v=([a-f0-9]+)/)![1]
+    fs.appendFileSync(path.join(f.root, 'scripts/acceptance-reader/reader.js'), '\n// New viewer runtime\n')
+    f.run('build')
+    const second = fs.readFileSync(file, 'utf8').match(/reader\.js\?v=([a-f0-9]+)/)![1]
+    expect(second).not.toBe(first)
+    expect(fs.readFileSync(file, 'utf8')).toContain(`reader.css?v=${second}`)
   })
 
   it('日期倒序，追踪时间保留在源数据而不堆入页面', () => {

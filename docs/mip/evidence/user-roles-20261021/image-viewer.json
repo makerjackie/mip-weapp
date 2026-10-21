@@ -1,0 +1,49 @@
+{
+  "checkedAt": "2026-10-21T14:49:30.140622+00:00",
+  "scope": "Acceptance report viewer and improvement copy only",
+  "deploymentId": "9649f9ad-4bae-4adb-8326-a6d51d255706",
+  "deploymentSourceSha": "98af216633ca361d12300ab381fb675694f6a6af",
+  "dirtyAcceptanceSourceAtDeployment": true,
+  "https": {
+    "checkedAt": "2026-10-21T14:47:23.412Z",
+    "origin": "https://miptest.01mvp.com",
+    "verifiedFiles": 449,
+    "passed": true,
+    "retriedFiles": 0,
+    "errors": []
+  },
+  "checks": {
+    "acceptanceSiteTestsPassed": 16,
+    "eslintPassed": true,
+    "docsCheckPassed": true
+  },
+  "browser": {
+    "origin": "https://miptest.01mvp.com",
+    "desktopWidth": 1440,
+    "mobileWidth": 390,
+    "inPageOriginalPreview": true,
+    "zoomAndFit": true,
+    "closeButton": true,
+    "closeEscape": true,
+    "closeBackdrop": true,
+    "keyboardEnterOpensViewer": true,
+    "urlUnchangedWhileOpen": true,
+    "scrollPositionBefore": 299,
+    "scrollPositionAfterClose": 299,
+    "focusRestoredOnClose": true,
+    "scrollUnlockedAfterClose": true,
+    "mobileDialogFits": true,
+    "mobilePageOverflow": false,
+    "originalImageLoaded": true,
+    "previewImagesDecoded": 4,
+    "readerVersion": "deb538d4aceb9dbf",
+    "improvementResultItems": 4,
+    "realDevice": false
+  },
+  "loadingFailureRetry": "Implemented; network-failure runtime not exercised",
+  "cacheFix": "Reader JS/CSS carry content-version queries; image triggers are non-navigation buttons. Final live viewer was opened and verified after detecting an older cached script during the first readback.",
+  "originalEvidencePreserved": true,
+  "businessCodeChanged": false,
+  "businessProductionChanged": false,
+  "httpsManifestSha256": "8434667226d4592d3366993c23611a6cc2557094afdd0feca33ba7db5a20c79a"
+}
