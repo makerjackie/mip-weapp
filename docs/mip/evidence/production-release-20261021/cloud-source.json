@@ -1,0 +1,91 @@
+{
+  "checkedAt": "2026-10-21T15:30:00.354745+00:00",
+  "environment": "PRODUCTION",
+  "businessSourceCommit": "0b0086bd1a30c8ab3807175dd409d72ba27303e2",
+  "functions": [
+    {
+      "function": "mip-admin-api",
+      "state": "Active",
+      "runtimeFilesMatched": 169,
+      "configurationChangedKeys": [],
+      "activeVersion": "2",
+      "timers": 0,
+      "zipSha256": "0b8921335d6835ff77210d0e3bd09f88171266b3187bd3645f5df3ccbbbfeeb8"
+    },
+    {
+      "function": "mip-admin-web-api",
+      "state": "Active",
+      "runtimeFilesMatched": 32,
+      "configurationChangedKeys": [],
+      "activeVersion": "3",
+      "timers": 0,
+      "zipSha256": "3c5b784f69f0da23a3749db1fc7ae462ab20b28791cf261498e4514e19201c1a"
+    },
+    {
+      "function": "mip-banners-api",
+      "state": "Active",
+      "runtimeFilesMatched": 0,
+      "configurationChangedKeys": [],
+      "activeVersion": "$LATEST",
+      "timers": 0,
+      "zipSha256": "eabcd22871bcc55e5d15c7fac5bb485a029b130e717a2591771d3c6f502932e3"
+    },
+    {
+      "function": "mip-commerce-api",
+      "state": "Active",
+      "runtimeFilesMatched": 14,
+      "configurationChangedKeys": [],
+      "activeVersion": "$LATEST",
+      "timers": 0,
+      "zipSha256": "819ffcca60b36e054d3cdac11f88686233fa02ca9a9e08ab0d7a9ad4faad39e1"
+    },
+    {
+      "function": "mip-events-api",
+      "state": "Active",
+      "runtimeFilesMatched": 21,
+      "configurationChangedKeys": [],
+      "activeVersion": "2",
+      "timers": 0,
+      "zipSha256": "6cc0da29f51c4d9184f82783042e0b9bea149f7666b73e8067f2c6ecec4410e3"
+    },
+    {
+      "function": "mip-game-api",
+      "state": "Active",
+      "runtimeFilesMatched": 0,
+      "configurationChangedKeys": [],
+      "activeVersion": "$LATEST",
+      "timers": 0,
+      "zipSha256": "cc7d9bcfef0db1e8621410f59167bf603c653abaa688ba2f08ebece54929f06c"
+    },
+    {
+      "function": "mip-identity-api",
+      "state": "Active",
+      "runtimeFilesMatched": 22,
+      "configurationChangedKeys": [],
+      "activeVersion": "2",
+      "timers": 0,
+      "zipSha256": "c95c7764af918149e5d3ce8f6d41d920e7018f404d2fcf6f0b6192aa0b5c2177"
+    },
+    {
+      "function": "mip-opportunities-api",
+      "state": "Active",
+      "runtimeFilesMatched": 30,
+      "configurationChangedKeys": [],
+      "activeVersion": "$LATEST",
+      "timers": 0,
+      "zipSha256": "239ed4a4ce654bd1f59483a2094c9519ea43fcf9e8dedd80147440e01ea056bc"
+    },
+    {
+      "function": "mip-tasks-api",
+      "state": "Active",
+      "runtimeFilesMatched": 0,
+      "configurationChangedKeys": [],
+      "activeVersion": "$LATEST",
+      "timers": 0,
+      "zipSha256": "96d4aa518ae582654e64d1c9028438cfac618f70a07e929aee7965ef333fe47f"
+    }
+  ],
+  "sourceBytesMatch": true,
+  "configurationPreserved": true,
+  "updatedFunctions": 6
+}

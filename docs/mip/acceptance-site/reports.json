@@ -936,17 +936,26 @@
     "title": "四项用户规则",
     "indexTitle": "甲方要求与验收结果",
     "version": "v1",
-    "status": "draft",
+    "status": "final",
     "createdAt": "2026-10-21T10:58:46.322438Z",
-    "updatedAt": "2026-10-21T15:00:07.240972+00:00",
-    "verifiedAt": "2026-10-21T13:34:44.418201+00:00",
+    "updatedAt": "2026-10-21T15:40:12.510003+00:00",
+    "verifiedAt": "2026-10-21T15:40:12.510003+00:00",
     "submittedAt": "2026-10-21T10:58:46.322438Z",
     "commit": "3c2e7290f0493c36b7ad93b291c5d8bfcfaf48ad",
     "commitAt": "2026-10-21T09:24:48-04:00",
-    "environment": "测试后台 / 测试库 / 开发者工具真实云请求 · 真机待验",
-    "summary": "四项已实现并通过测试环境验证。",
+    "environment": "测试流程验证 / 正式后台及服务端已同步 / 生产体验版 1.2.8 已确认",
+    "summary": "四项已通过测试环境验证，后台及服务端已同步生产。",
     "detail": "docs/mip/evidence/user-roles-20261021/README.md",
     "files": [
+      "docs/mip/evidence/production-release-20261021/README.md",
+      "docs/mip/evidence/production-release-20261021/admin-http.json",
+      "docs/mip/evidence/production-release-20261021/assets.json",
+      "docs/mip/evidence/production-release-20261021/browser.json",
+      "docs/mip/evidence/production-release-20261021/cloud-source.json",
+      "docs/mip/evidence/production-release-20261021/event-detail-timing.json",
+      "docs/mip/evidence/production-release-20261021/native-production.json",
+      "docs/mip/evidence/production-release-20261021/upload.json",
+      "docs/mip/evidence/production-release-20261021/verification.json",
       "docs/mip/evidence/user-roles-20261021/README.md",
       "docs/mip/evidence/user-roles-20261021/admin-http.json",
       "docs/mip/evidence/user-roles-20261021/cloud-source.json",
@@ -983,26 +992,29 @@
       "docs/mip/evidence/user-roles-20261021/shots/mini-participants-after.png",
       "docs/mip/evidence/user-roles-20261021/shots/mini-talents-after.png",
       "docs/mip/evidence/user-roles-20261021/trial-qr.json",
-      "docs/mip/evidence/user-roles-20261021/verification.json",
-      "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-after-320.png",
-      "docs/mip/evidence/user-roles-20261021/ui-polish/runtime-390.json",
-      "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-after-390.png",
       "docs/mip/evidence/user-roles-20261021/ui-polish/README.md",
+      "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-after-320.png",
+      "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-after-390.png",
+      "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-before-320.png",
       "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-before-390.png",
-      "docs/mip/evidence/user-roles-20261021/ui-polish/verification.json",
       "docs/mip/evidence/user-roles-20261021/ui-polish/runtime-320.json",
-      "docs/mip/evidence/user-roles-20261021/ui-polish/opportunities-before-320.png"
+      "docs/mip/evidence/user-roles-20261021/ui-polish/runtime-390.json",
+      "docs/mip/evidence/user-roles-20261021/ui-polish/verification.json",
+      "docs/mip/evidence/user-roles-20261021/verification.json"
     ],
     "comparisons": [],
     "highlights": [
-      "四项已实现并通过测试环境验证。"
+      "四项已通过测试环境验证，后台及服务端已同步生产。",
+      "体验版 1.2.8 已由用户确认连接生产，微信正式版尚未发布。"
     ],
     "checks": [
       "保留付费审核和后台开通；权益到期、最后一次签到撤销后按事实回退，后台角色独立。",
       "真实浏览器普通用户筛选及 Excel 下载通过；桌面与手机视口已检查。",
       "真实测试库七种合成用户场景、跨活动与编辑反馈的最新授权规则通过。",
       "最终测试包实际请求云函数，嘉宾名单六人/玩家一人，人才列表仅三位符合规则者；表单保存后离页重开和服务端回读通过。",
-      "完整门禁和线上后台 68 项检查通过；九个测试函数源码与运行产物核对一致。"
+      "完整门禁和线上后台 68 项检查通过；九个测试函数源码与运行产物核对一致。",
+      "生产九个函数实际服务版本回读，六个更新包源码及配置一致；真实 HTTPS 15 个资源匹配，后台 14 模块 68 项读取通过。",
+      "生产后台普通用户/玩家非空列表、玩家权益表单打开取消及三视口通过。生产包 1.2.8 的版本、环境、活动列表及详情已实际打开；用户确认体验版 1.2.8 · 生产环境。"
     ],
     "sections": [
       {
@@ -1074,9 +1086,10 @@
         ]
       }
     ],
-    "limitations": "实际测试环境、开发者工具与合成样本证据分开记录。1.2.5 角色名单回归仍通过；版本栏、活动图片、成长页和空明细均已实际核对。开发工具曾出现 wx://not-found，完整编译、重连后重新验证；未把空白页面记为通过。手机、原生授权、扫码签到及真实支付未由这些证据替代。 本轮小屏/头像依据最终测试包的开发工具实际运行；旧包5次清空与新包3轮无清空执行次数不同，不作手机闪烁率结论。",
-    "pendingSummary": "手机流程待复测，生产未更新。",
+    "limitations": "实际测试环境、开发者工具与合成样本证据分开记录。1.2.5 角色名单回归仍通过；版本栏、活动图片、成长页和空明细均已实际核对。开发工具曾出现 wx://not-found，完整编译、重连后重新验证；未把空白页面记为通过。手机、原生授权、扫码签到及真实支付未由这些证据替代。 本轮小屏/头像依据最终测试包的开发工具实际运行；旧包5次清空与新包3轮无清空执行次数不同，不作手机闪烁率结论。 生产同步、正式包上传、用户确认体验版和微信公开发布分别记录；原生业务流程仍待手机复测。",
+    "pendingSummary": "原生授权、签到和支付待手机复测；微信正式版尚未发布。",
     "downloads": [],
-    "uiChange": false
+    "uiChange": false,
+    "frozenAt": "2026-10-21T15:42:04.090Z"
   }
 ]

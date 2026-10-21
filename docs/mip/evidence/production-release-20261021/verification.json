@@ -1,0 +1,41 @@
+{
+  "checkedAt": "2026-10-21T15:42:03.373644+00:00",
+  "businessSourceSha": "0b0086bd1a30c8ab3807175dd409d72ba27303e2",
+  "environment": "PRODUCTION",
+  "fullGate": {
+    "passed": true,
+    "miniTests": 1891,
+    "adminNodeTests": 339,
+    "adminReactTests": 262
+  },
+  "backup": {
+    "tableCount": 154,
+    "rowCount": 5776,
+    "consistency": "row-count-verified",
+    "transactionalSnapshot": false,
+    "exportConcurrency": 4,
+    "manifestSha256": "85ba962ebfe34d8fef68999e7bcd927ff0de6e68e175caf41c6974cc1c30f1c7"
+  },
+  "migration": "20261021010000",
+  "businessFunctionsUpdated": 5,
+  "webFunctionUpdated": true,
+  "activeSourceAndConfigVerified": true,
+  "staticFilesMatched": 15,
+  "adminHttpChecks": 68,
+  "adminHttpModules": 14,
+  "nativeProductionPackageVerified": true,
+  "userConfirmedTrialVersionAndEnvironment": true,
+  "publicMiniProgramReleased": false,
+  "reader": {
+    "redCircleUsesSeparateOverlay": true,
+    "originalScreenshotUnmodified": true,
+    "blankSpaceCloses": true,
+    "imageClickKeepsOpen": true,
+    "zoomKeepsImageReachable": true,
+    "localDesktopAndMobilePassed": true,
+    "siteTests": 17
+  },
+  "realDeviceBusinessAcceptance": "PENDING",
+  "activityPreviewVerified": true,
+  "activityEditorOpenedWithoutSaving": true
+}

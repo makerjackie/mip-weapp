@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-21T15:29:58.373Z",
+  "environment": "PRODUCTION",
+  "version": "1.2.8",
+  "actualCloudResponse": true,
+  "realDevice": false,
+  "coldStartBenchmark": false,
+  "samples": [
+    {
+      "navigationToReadyMs": 1966,
+      "hasDescription": true
+    },
+    {
+      "navigationToReadyMs": 1096,
+      "hasDescription": true
+    }
+  ],
+  "explanation": "Observed DevTools navigation only. First detail instance fetches authoritative detail; returning child pages may reuse a short cache. List returns cached content immediately and refreshes in background. No inference of real-device P95 or server cold start."
+}

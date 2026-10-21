@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-10-21T15:35:57.512Z",
+  "environment": "PRODUCTION",
+  "actualLoggedIn": true,
+  "roleListNonempty": true,
+  "grantFormOpenedAndCancelled": true,
+  "businessWrites": false,
+  "views": [
+    {
+      "documentWidth": 1425,
+      "entry": [
+        "/assets/index-BxitjAfN.js"
+      ],
+      "hasOrdinaryRole": true,
+      "hasPlayerRole": true,
+      "height": 900,
+      "width": 1440
+    },
+    {
+      "documentWidth": 1265,
+      "entry": [
+        "/assets/index-BxitjAfN.js"
+      ],
+      "hasOrdinaryRole": true,
+      "hasPlayerRole": true,
+      "height": 720,
+      "width": 1280
+    },
+    {
+      "documentWidth": 375,
+      "entry": [
+        "/assets/index-BxitjAfN.js"
+      ],
+      "hasOrdinaryRole": true,
+      "hasPlayerRole": true,
+      "height": 844,
+      "width": 390
+    }
+  ],
+  "eventEditorOpenedWithoutSaving": true,
+  "eventPreviewTabsChecked": [
+    "活动介绍",
+    "主办方",
+    "报名须知"
+  ],
+  "previewImageCounts": {
+    "intro": {
+      "decoded": 1,
+      "total": 1
+    },
+    "organizer": {
+      "decoded": 4,
+      "total": 4
+    }
+  }
+}

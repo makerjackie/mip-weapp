@@ -1,0 +1,73 @@
+{
+  "deploymentUrl": "https://e3b2087f.miptest.pages.dev",
+  "reportUrl": "https://miptest.01mvp.com/updates/2026-10-21/",
+  "https": {
+    "checkedAt": "2026-10-21T15:44:28.861Z",
+    "origin": "https://miptest.01mvp.com",
+    "verifiedFiles": 458,
+    "passed": true,
+    "retriedFiles": 0,
+    "errors": []
+  },
+  "browser": {
+    "checkedAt": "2026-10-21T15:48:32.314Z",
+    "origin": "https://miptest.01mvp.com",
+    "desktop": {
+      "width": 1440,
+      "height": 900,
+      "redCircleVisible": true,
+      "originalDecoded": true
+    },
+    "imageClickKeepsOpen": true,
+    "blankSpaceCloses": true,
+    "restoresPosition": true,
+    "urlUnchanged": true,
+    "scrollUnlocked": true,
+    "mobile": {
+      "documentWidth": 375,
+      "formalReleasePending": true,
+      "height": 844,
+      "images": [
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        }
+      ],
+      "productionConfirmed": true,
+      "width": 390,
+      "fit": {
+        "circles": 1,
+        "decoded": true,
+        "documentWidth": 390,
+        "height": 844,
+        "image": {
+          "height": 202.5,
+          "left": 33,
+          "top": 354.75,
+          "width": 324
+        },
+        "width": 390
+      },
+      "zoomPosition": {
+        "imageLeft": 33,
+        "scrollLeft": 0,
+        "stageLeft": 17
+      },
+      "blankSpaceCloses": true,
+      "urlUnchanged": true,
+      "scrollUnlocked": true
+    },
+    "readerVersion": "/assets/acceptance-reader/reader.js?v=93c592db61e12d0b"
+  },
+  "siteTests": 17,
+  "frozenReport": "user-roles-20261021-v1",
+  "scope": "Acceptance report publication only; production evidence is in sibling files."
+}

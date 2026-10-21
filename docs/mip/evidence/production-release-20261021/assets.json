@@ -1,0 +1,99 @@
+{
+  "generatedAt": "2026-10-21T15:30:42.014Z",
+  "staticAssetsVerified": true,
+  "filesMatched": 15,
+  "entry": "/assets/index-BxitjAfN.js",
+  "files": [
+    {
+      "path": "/404.html",
+      "bytes": 465,
+      "sha256": "cf81cd76f5d089408ef0d38c9caa98fc1fff0bbb8b01f92404edbde78c5d52b1",
+      "matched": true
+    },
+    {
+      "path": "/assets/ant-design-hCmoofmI.js",
+      "bytes": 1147345,
+      "sha256": "b970f584d9c646aae154ca89c21c64b64258f77927c64a57a0b3ce718e72c265",
+      "matched": true
+    },
+    {
+      "path": "/assets/charts-ipdpsvac.js",
+      "bytes": 378399,
+      "sha256": "965acef5f810cfd292764ef3f1dd786d5f71aa62641180ef07cd9eae62352d8f",
+      "matched": true
+    },
+    {
+      "path": "/assets/index-310xVTUa.css",
+      "bytes": 33757,
+      "sha256": "50e7a093b1882fd23abce727ab190e0b86ed4b278c8dc898b2eee4fcc4fb32a9",
+      "matched": true
+    },
+    {
+      "path": "/assets/index-BxitjAfN.js",
+      "bytes": 640219,
+      "sha256": "dda4a126bcc135578f856371e95e3cbd3a84033869a1987ac0111ad169088ee4",
+      "matched": true
+    },
+    {
+      "path": "/assets/overview-purchase-chart-B6H_6IJV.js",
+      "bytes": 1870,
+      "sha256": "50d527ef107fcddf72a5c27fa087fd206db027658fcc9852fce793d56f8de881",
+      "matched": true
+    },
+    {
+      "path": "/assets/react-Mefe_Tge.js",
+      "bytes": 189647,
+      "sha256": "53e857905a9e3cb132c11c752fe0b44ef37aa2dcd686c0bcbe64bf8e02a58812",
+      "matched": true
+    },
+    {
+      "path": "/assets/rolldown-runtime-hePW80VL.js",
+      "bytes": 716,
+      "sha256": "580ad8c58061a4dde99bde0a56905e382f0568516ee2f5b84dbfb52085709021",
+      "matched": true
+    },
+    {
+      "path": "/assets/router-query-C4zZBCHv.js",
+      "bytes": 112179,
+      "sha256": "bff0c71b4ab96d729ad553c06603a31aae80811d28f46c2d82b1768d80f0e93e",
+      "matched": true
+    },
+    {
+      "path": "/assets/vendor-CUb-vo8-.js",
+      "bytes": 450811,
+      "sha256": "6819f8653409eded93645654688d56fdb501efc9db5b730d524a91fbd0e99ec1",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-a.webp",
+      "bytes": 140004,
+      "sha256": "1ab64a12df8112941974e4e2721a011cf78a3f32e1815ff64c17efb1d8db61a6",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-b.webp",
+      "bytes": 8574,
+      "sha256": "de27e065fd47709ead4a853ea9f3aca691627efe11f4110ed71413c16014e5b9",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-c.webp",
+      "bytes": 10092,
+      "sha256": "06d2f07a7d2e2e753f88b8a7d8c134cdc83748ee74079c668c8fc1227b9fe464",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-d.webp",
+      "bytes": 5892,
+      "sha256": "51b455178bb51d295e852efde035b129cd4490db9e648d4c7e5d7f499b766b57",
+      "matched": true
+    },
+    {
+      "path": "/",
+      "bytes": 949,
+      "sha256": "b1c828c8d15faa094ae966b60531ef9c67da10e7b609119224ae92274b5f0074",
+      "matched": true
+    }
+  ],
+  "scope": "Public static bytes only; function source, authentication and browser acceptance require separate evidence."
+}

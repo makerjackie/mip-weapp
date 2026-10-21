@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-21T15:20:44.001Z",
+  "version": "1.2.8",
+  "sourceSha": "0b0086bd1a30c8ab3807175dd409d72ba27303e2",
+  "environment": "PRODUCTION",
+  "uploaded": true,
+  "runtimeFilesMatched": 483,
+  "onlyProductionFunctionNames": true,
+  "nestedTdesignTree": true,
+  "platformMainPackageBytes": 1767781,
+  "trialAssignmentVerified": true,
+  "reviewSubmitted": false,
+  "publicReleased": false,
+  "runtimePreflightPassed": true,
+  "trialAssignmentEvidence": {
+    "method": "user-reported real-device settings",
+    "answer": "已显示 1.2.8 · 生产环境",
+    "confirmedAt": "2026-10-21T15:37:18.087351+00:00",
+    "platformApiReadback": false
+  }
+}
