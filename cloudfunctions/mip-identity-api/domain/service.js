@@ -1,5 +1,8 @@
 'use strict'
 
+const { productRole } = require('../lib/product-role')
+const { missingProfileFields } = require('../lib/profile-readiness')
+
 const { projectGrants } = require('./capabilities')
 const { normalizeAiConfirmation } = require('./ai-confirmation')
 
@@ -67,6 +70,7 @@ function createIdentityService(options) {
   function anonymousSnapshot(currentAgreements) {
     return {
       authenticated: false,
+      productRole: 'ANONYMOUS',
       userVersion: 0,
       phoneBound: false,
       agreements: currentAgreements.map(agreement => ({ ...agreement, accepted: false })),
@@ -74,7 +78,7 @@ function createIdentityService(options) {
         exists: false, version: 0, nickname: '', realName: '', gender: 'UNKNOWN',
         careerIdentityKey: '', avatarBound: false, identityStatus: '', headline: '',
         introduction: '', companies: [], organizations: [], visibility: visibility('{}'),
-        abilityTagIds: [], complete: false, missingFields: ['NICKNAME'],
+        abilityTagIds: [], complete: false, missingFields: missingProfileFields(),
       },
       membership: { kind: 'GUEST', source: 'NONE' },
       grants: [],
@@ -340,6 +344,7 @@ function snapshotDto(facts, agreements, membership, profileRef) {
   ))
   return {
     authenticated: true,
+    productRole: productRole({ isPlayer: membership.kind === 'PLAYER', hasAttended: Number(facts.user.has_attended) === 1 }),
     userId: facts.user.id,
     ...(profileRef ? { profileRef } : {}),
     userVersion: Number(facts.user.version),
@@ -359,13 +364,12 @@ function snapshotDto(facts, agreements, membership, profileRef) {
 function profileDto(facts, options = {}) {
   const profile = facts.profile
   const nickname = typeof profile?.nickname === 'string' ? profile.nickname.trim() : ''
-  const missingFields = []
-  if (!nickname) {
-    missingFields.push('NICKNAME')
-  }
-  // 主城市分会由管理后台在开通会员时配置，不再作为用户端资料完善度门槛。
   const profileTags = facts.profileTags || []
   const primaryIndustry = profileTags.find(tag => tag.relation === 'PRIMARY_INDUSTRY')
+  const missingFields = missingProfileFields({
+    nickname, avatarReady: profile?.avatar_status === 'READY', industryBound: Boolean(primaryIndustry),
+    careerIdentityKey: profile?.career_identity_key, headline: profile?.headline,
+  })
   return {
     exists: Boolean(profile),
     version: Number(profile?.version || 0),

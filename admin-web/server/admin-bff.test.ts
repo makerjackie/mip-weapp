@@ -545,11 +545,11 @@ describe('Admin Web BFF', () => {
     assert.equal(JSON.stringify(upstreamBody).includes(LOGIN_SECRET), false)
   })
 
-  it('applies users.list identity=NORMAL on the returned page and rejects unknown identity values', async () => {
+  it('forwards legacy identity=NORMAL as kind=NORMAL before upstream pagination and rejects unknown identity values', async () => {
     const fetchMock = fetchQueue(new Response(JSON.stringify({
       ok: true,
       data: {
-        items: [{ id: 'u-player', kind: 'PLAYER' }, { id: 'u-guest', kind: 'GUEST' }, { id: 'u-normal', kind: 'NORMAL' }],
+        items: [{ id: 'u-normal', kind: 'NORMAL' }],
         nextCursor: 'next-1',
       },
     }), { status: 200, headers: { 'content-type': 'application/json' } }))
@@ -564,9 +564,10 @@ describe('Admin Web BFF', () => {
     const payload = await response.json()
     assert.deepEqual(payload.data.items.map((item: { id: string }) => item.id), ['u-normal'])
     assert.equal(payload.data.nextCursor, 'next-1')
-    // identity=NORMAL 是 Web 契约筛选（既非玩家也非嘉宾），不向上游转发。
+    // Classification happens in the server query before pagination, never in the BFF.
     const upstreamBody = JSON.parse(fetchMock.calls[0][1]?.body as string)
     assert.equal(upstreamBody.request.input.filters.identity, undefined)
+    assert.equal(upstreamBody.request.input.filters.kind, 'NORMAL')
 
     const invalid = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
       method: 'POST',

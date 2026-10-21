@@ -140,7 +140,7 @@ describe('admin repository persistence contracts', () => {
     }))
     const detail = await repository.getUserDetail('wx-app', 'user-a')
     assert.equal(detail.id, 'user-a')
-    assert.equal(detail.kind, 'GUEST')
+    assert.equal(detail.kind, 'NORMAL')
     assert.deepEqual(detail.counts, {
       registrations: 0, attended: 0, orders: 0, opportunities: 0, cooperationCards: 0, superCases: 0,
     })
@@ -166,7 +166,9 @@ describe('admin repository persistence contracts', () => {
       joinedWithinDays: 30,
     }, 20)
     assert.match(captured.sql, /pp\.phone_verified_at IS NOT NULL/)
-    assert.match(captured.sql, /u\.primary_branch_id IS NOT NULL/)
+    assert.match(captured.sql, /profile_avatar\.purpose = 'AVATAR'/)
+    assert.match(captured.sql, /p\.career_identity_key/)
+    assert.match(captured.sql, /profile_industry\.relation = 'PRIMARY_INDUSTRY'/)
     assert.match(captured.sql, /DATE_SUB\(UTC_TIMESTAMP\(3\), INTERVAL \? DAY\)/)
     assert.ok(captured.params.includes(30))
   })

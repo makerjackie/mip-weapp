@@ -35,7 +35,7 @@ beforeAll(async () => {
 
 function createPage(patch: Data = {}) {
   const value = Object.create(definition) as Definition & { setData: (patch: Data) => void }
-  value.data = structuredClone(definition.data)
+  value.data = { ...structuredClone(definition.data), avatarAssetId: 'avatar', selectedIndustryIds: ['industry'], careerIdentityKey: 'STUDENT', headline: '一句话介绍' }
   value.setData = key => Object.assign(value.data, key)
   Object.assign(value.data, patch)
   return value
@@ -116,12 +116,13 @@ describe('profile retains historical industries', () => {
   const snapshot = {
     profile: {
       version: 8,
+      avatarAssetId: 'avatar',
       nickname: '测试用户',
       realName: '',
       gender: 'UNKNOWN',
-      careerIdentityKey: '',
+      careerIdentityKey: 'STUDENT',
       identityStatus: '',
-      headline: '',
+      headline: '一句话介绍',
       introduction: '',
       companies: [],
       organizations: [],
@@ -158,8 +159,9 @@ describe('profile retains historical industries', () => {
     invoke(page, 'onHide')
   })
 
-  it('clears only after explicit confirmation, or replaces the history with an active choice', async () => {
+  it('requires an industry after clearing, or saves an active replacement', async () => {
     for (const selection of [[], ['ai']]) {
+      identity.saveProfile.mockClear()
       identity.loadSnapshot.mockResolvedValue(snapshot)
       identity.listProfileTags.mockResolvedValue(activeTags)
       identity.saveProfile.mockResolvedValue(savedProfileSnapshot())
@@ -169,7 +171,10 @@ describe('profile retains historical industries', () => {
       invoke(page, 'changeIndustry', { detail: { selectedIds: selection } })
       invoke(page, 'confirmIndustryPicker')
       await invoke(page, 'saveProfile')
-      expect(identity.saveProfile).toHaveBeenLastCalledWith(expect.objectContaining({ primaryIndustryTagId: selection[0] || null }))
+      if (selection.length) {
+        expect(identity.saveProfile).toHaveBeenLastCalledWith(expect.objectContaining({ primaryIndustryTagId: selection[0] }))
+      }
+      else { expect(identity.saveProfile).not.toHaveBeenCalled() }
       invoke(page, 'onHide')
     }
   })

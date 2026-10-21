@@ -45,10 +45,9 @@ export interface AdminOverviewPlayerTrend {
 }
 
 /**
- * 用户列表「身份」筛选的 Web 契约取值（MIW-124）。
- * NORMAL 语义=既非玩家也非嘉宾；上游 `mip.admin.users.list` 暂以 kind=PLAYER|GUEST 投影角色，
- * BFF 收到 `filters.identity=NORMAL` 时对当前页结果按该语义过滤，并不向上游转发该参数。
- * 服务端角色标识落地（Q-ADMIN-09）前，生产数据在该筛选下可能为空结果。
+ * 旧 Web 客户端的身份筛选兼容值。当前列表、详情与导出使用服务端 kind=NORMAL|GUEST|PLAYER。
+ * NORMAL 为无有效权益、无有效签到的已登录普通用户；GUEST 为有效签到过的非玩家。
+ * BFF 将 filters.identity=NORMAL 翻译为 kind=NORMAL，由数据库在分页前筛选。
  */
 export const ADMIN_USERS_IDENTITY_FILTER_VALUES = ['NORMAL'] as const
 export type AdminUsersIdentityFilter = (typeof ADMIN_USERS_IDENTITY_FILTER_VALUES)[number]

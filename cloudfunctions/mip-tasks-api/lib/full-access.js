@@ -1,5 +1,7 @@
 'use strict'
 
+const { profileCompleteSql } = require('./profile-readiness')
+
 const defaultAgreements = Object.freeze([
   Object.freeze({ key: 'SERVICE_AGREEMENT', version: 'draft-2026-08-24' }),
   Object.freeze({ key: 'PRIVACY_POLICY', version: 'draft-2026-08-24' }),
@@ -31,7 +33,7 @@ function configuredAgreements(source = process.env.MIP_AGREEMENTS_JSON) {
 async function assertFullAccessReady(database, caller, agreements = configuredAgreements()) {
   const facts = await database.one(
     `SELECT u.status, u.primary_branch_id, profile.nickname,
-            private_profile.phone_verified_at
+            private_profile.phone_verified_at, ${profileCompleteSql('u')} AS profile_complete
      FROM mip_users u
      LEFT JOIN mip_profiles profile
        ON profile.app_id = u.app_id AND profile.user_id = u.id
@@ -54,9 +56,7 @@ async function assertFullAccessReady(database, caller, agreements = configuredAg
     throw new Error('AGREEMENT_REQUIRED')
   }
   if (!facts.phone_verified_at) throw new Error('PHONE_REQUIRED')
-  if (!facts.primary_branch_id || typeof facts.nickname !== 'string' || !facts.nickname.trim()) {
-    throw new Error('PROFILE_REQUIRED')
-  }
+  if (Number(facts.profile_complete) !== 1) throw new Error('PROFILE_REQUIRED')
 }
 
 module.exports = { assertFullAccessReady, configuredAgreements, defaultAgreements }

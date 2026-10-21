@@ -123,7 +123,7 @@
           <image wx:if="{{avatarUrl}}" class="h-full w-full" mode="aspectFill" src="{{avatarUrl}}" />
           <t-icon wx:else name="user-avatar" size="56rpx" color="var(--color-muted)" />
         </button>
-        <view class="text-[24rpx] text-muted">{{avatarUploading ? '头像上传中' : avatarPending ? '保存后生效' : '更换头像'}}</view>
+        <view class="text-[24rpx] text-muted">{{avatarUploading ? '头像上传中' : avatarPending ? '保存后生效' : '更换头像'}} <text class="text-danger">*</text></view>
       </view>
       <view data-profile-basic-row="nickname" class="flex min-h-[92rpx] items-center border-t border-line px-3">
         <view class="w-[120rpx] shrink-0 text-[24rpx] font-medium">昵称 <text class="text-[22rpx] text-danger">*</text></view>
@@ -144,7 +144,7 @@
 
     <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">
       <mip-icon name="draft-line" size="{{15}}" color="var(--color-brand)" />
-      <text>代表行业</text>
+      <text>代表行业 <text class="text-danger">*</text></text>
     </view>
     <view class="mx-3 mt-3 overflow-hidden rounded-[16rpx] bg-panel">
       <view data-catalog="industry" class="flex min-h-[92rpx] items-center justify-between gap-3 px-3" bind:tap="toggleCatalog">
@@ -156,7 +156,7 @@
 
     <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">
       <mip-icon name="draft-line" size="{{15}}" color="var(--color-brand)" />
-      <text>当前身份状态</text>
+      <text>当前身份状态 <text class="text-danger">*</text></text>
     </view>
     <view class="mx-3 mt-3 flex flex-wrap gap-2">
       <view wx:for="{{careerIdentityOptions}}" wx:key="value" data-value="{{item.value}}" aria-role="radio" aria-checked="{{careerIdentityKey === item.value}}" bind:tap="chooseCareerIdentity">
@@ -166,7 +166,7 @@
 
     <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">
       <mip-icon name="survey-line" size="{{15}}" color="var(--color-brand)" />
-      <text>一句话介绍你的工作和背景</text>
+      <text>一句话介绍你的工作和背景 <text class="text-danger">*</text></text>
     </view>
     <view class="mx-3 mt-3 rounded-[16rpx] bg-panel px-3 py-3">
       <textarea aria-label="个人简介" class="block h-[176rpx] w-full max-w-full box-border bg-transparent text-[24rpx] leading-6" maxlength="300" value="{{headline}}" data-field="headline" bindinput="updateText" placeholder="例如：品牌主理人，寻找一起做项目的伙伴" placeholder-style="color:#B3B3B3" />

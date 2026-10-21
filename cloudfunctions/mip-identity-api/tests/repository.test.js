@@ -338,6 +338,8 @@ describe('profile and primary branch transaction', () => {
     let transactionCount = 0
     const tx = {
       async one(sql) {
+        if (sql.includes('AS profile_complete')) return { profile_complete: 1, version: 1 }
+        if (sql.includes('SELECT id FROM mip_outbox_events')) return null
         if (sql.includes('FROM mip_users')) {
           return { id: 'user-1', status: 'ACTIVE', primary_branch_id: null, version: 2 }
         }
@@ -395,6 +397,8 @@ describe('profile and primary branch transaction', () => {
     const industryId = '21000000-0000-4000-8000-000000000001'
     const tx = {
       async one(sql) {
+        if (sql.includes('AS profile_complete')) return { profile_complete: 1, version: 1 }
+        if (sql.includes('SELECT id FROM mip_outbox_events')) return null
         if (sql.includes('FROM mip_users')) {
           return { id: 'user-1', status: 'ACTIVE', primary_branch_id: null, version: 1 }
         }
@@ -591,7 +595,8 @@ it('registers a new user without staff accounts, role bindings or player entitle
     async one() { return created ? subject : null },
     async transaction(work) {
       return work({
-        async one(sql) { return sql.includes('FROM mip_user_identities') ? { id: 'new-identity', user_id: 'new-user', identity_key: 'identity-new', closed_identity_key: null, union_identity_key: null } : subject },
+        async one(sql) {
+        return sql.includes('FROM mip_user_identities') ? { id: 'new-identity', user_id: 'new-user', identity_key: 'identity-new', closed_identity_key: null, union_identity_key: null } : subject },
         async query(sql, params) { writes.push({ sql, params }); if (sql.includes('INSERT INTO mip_users')) created = true; return { affectedRows: 1 } },
       })
     },

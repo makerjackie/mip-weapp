@@ -119,7 +119,7 @@ export interface PublicMipProfile {
   primaryBranch?: { name: string, cityName: string }
 }
 
-export type ProfileMissingField = 'NICKNAME'
+export type ProfileMissingField = 'NICKNAME' | 'AVATAR' | 'PRIMARY_INDUSTRY' | 'CAREER_IDENTITY' | 'HEADLINE'
 
 export interface MipProfileSnapshot {
   exists: boolean
@@ -153,6 +153,7 @@ export interface MembershipAccessProjection {
 
 export interface IdentityAccessSnapshot {
   authenticated: boolean
+  productRole?: 'ANONYMOUS' | 'NORMAL' | 'GUEST' | 'PLAYER'
   userId?: UserId
   profileRef?: string
   userVersion: number

@@ -1478,6 +1478,18 @@
       ],
       "sqlSha256": "ca8c544b1ce1570bf1dca43c1a941e5782e0d9bb0979caa3d35f9f5aa26a6235",
       "rollbackSha256": "f20116f0c8d52fd00c056d7f64290a3c80e1907105afd0df5fa9a05171c1b277"
+    },
+    {
+      "version": "20261021010000",
+      "name": "mip_roster_consent_lookup",
+      "sql": "database/mysql/mip/113_roster_consent_lookup.sql",
+      "rollback": "database/mysql/mip/rollback/113_roster_consent_lookup.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_event_feedback"
+      ],
+      "sqlSha256": "9bf047d8a7d9b7a4f1270b20b4ba6abcd8c2e3f7f771303c178e62bcf41c94c3",
+      "rollbackSha256": "a169f3c0828653bf0397950fde22da900c5f07321ed8131528e45e0bffd90002"
     }
   ]
 }

@@ -399,16 +399,12 @@ export function createAdminBff(
       ? { ...adminRequest, idempotencyKey: `web-bff-${randomToken(deps.crypto, 24)}` }
       : normalizedRequest
 
-    // MIW-124：identity=NORMAL（普通用户=既非玩家也非嘉宾）是 Web 契约筛选，不向上游转发，
-    // 由 BFF 对返回的当前页结果按该语义过滤。
-    const isUsersNormalIdentity = identityFilter === 'NORMAL'
+    // Older clients use identity=NORMAL. Translate it into the database filter;
+    // filtering a fetched page would break pagination and export consistency.
     return forwardTrustedAdminRequest(
-      isUsersNormalIdentity ? withoutUsersIdentityFilter(forwardedRequest) : forwardedRequest,
+      identityFilter === 'NORMAL' ? withUsersNormalKind(forwardedRequest) : forwardedRequest,
       session,
-      {
-        retryable: isQuery,
-        ...(isUsersNormalIdentity ? { transformPayload: filterUsersNormalIdentityPayload } : {}),
-      },
+      { retryable: isQuery },
     )
   }
 
@@ -1159,7 +1155,7 @@ function validSecret(value: string | undefined) {
 // 服务端角色标识落地前，生产数据在该筛选下可能为空结果。
 const USERS_IDENTITY_FILTER_VALUES = new Set<string>(ADMIN_USERS_IDENTITY_FILTER_VALUES)
 
-/** 返回 ''=未携带、'NORMAL'=需要 BFF 过滤、undefined=非法取值。 */
+/** 返回 ''=未携带、'NORMAL'=旧客户端兼容筛选、undefined=非法取值。 */
 function usersIdentityFilter(input: AdminRequest['input']): string | undefined {
   const filters = input.filters
   if (!filters || typeof filters !== 'object' || Array.isArray(filters)) return ''
@@ -1168,27 +1164,10 @@ function usersIdentityFilter(input: AdminRequest['input']): string | undefined {
   return typeof value === 'string' && USERS_IDENTITY_FILTER_VALUES.has(value) ? value : undefined
 }
 
-function withoutUsersIdentityFilter(request: AdminRequest): AdminRequest {
-  const filters = request.input.filters
-  if (!filters || typeof filters !== 'object' || Array.isArray(filters)) return request
-  const rest = { ...(filters as Record<string, unknown>) }
-  delete rest.identity
-  return { ...request, input: { ...request.input, filters: rest } }
-}
-
-function filterUsersNormalIdentityPayload(payload: unknown): unknown {
-  const data = payload && typeof payload === 'object' && !Array.isArray(payload)
-    && (payload as { data?: unknown }).data
-  const source = data && typeof data === 'object' && !Array.isArray(data)
-    ? data as { items?: unknown }
-    : null
-  if (!source || !Array.isArray(source.items)) return payload
-  const items = source.items.filter((item) => {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) return true
-    const kind = String((item as Record<string, unknown>).kind ?? '')
-    return kind !== 'PLAYER' && kind !== 'GUEST'
-  })
-  return { ...(payload as Record<string, unknown>), data: { ...source, items } }
+function withUsersNormalKind(request: AdminRequest): AdminRequest {
+  const filters = { ...(request.input.filters as Record<string, unknown>) }
+  delete filters.identity
+  return { ...request, input: { ...request.input, filters: { ...filters, kind: 'NORMAL' } } }
 }
 
 function absoluteHttpsUrl(value: string | undefined) {

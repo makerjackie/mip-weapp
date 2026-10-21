@@ -35,6 +35,7 @@ const errorMessages = {
   PHONE_ENCRYPTION_NOT_CONFIGURED: '手机号服务尚未配置',
   PHONE_PERMISSION_REQUIRED: '手机号能力尚未开通，请联系管理员',
   PHONE_SERVICE_UNAVAILABLE: '手机号服务暂时不可用',
+  PROFILE_REQUIRED: '请补齐头像、昵称、代表行业、当前身份状态和一句话介绍，性别选填',
   PROFILE_TAG_INVALID: '资料标签不存在或当前不可用',
   PROFILE_AVATAR_INVALID: '头像素材不存在或当前不可用',
   CONTACT_SERVICE_UNAVAILABLE: '联系方式服务暂时不可用',

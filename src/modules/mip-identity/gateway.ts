@@ -83,6 +83,7 @@ function profile(value: unknown): MipProfileSnapshot {
 function snapshot(value: unknown): IdentityAccessSnapshot {
   if (!isRecord(value)
     || typeof value.authenticated !== 'boolean'
+    || (value.productRole !== undefined && !['ANONYMOUS', 'NORMAL', 'GUEST', 'PLAYER'].includes(String(value.productRole)))
     || !Number.isInteger(value.userVersion)
     || typeof value.phoneBound !== 'boolean'
     || !Array.isArray(value.agreements)

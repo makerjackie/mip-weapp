@@ -272,8 +272,6 @@ export function CoreListPageView({
         <Button
           type="primary"
           icon={<DownloadOutlined />}
-          disabled={route === 'users' && search.filters?.kind === 'NORMAL'}
-          title={route === 'users' && search.filters?.kind === 'NORMAL' ? '普通用户分类规则待确认，请先使用其他筛选条件。' : undefined}
           onClick={() => onSensitiveExport({
             kind: route,
             filters: {
@@ -335,7 +333,6 @@ export function CoreListPageView({
       />
 
 
-      {route === 'users' && search.filters?.kind === 'NORMAL' ? <Typography.Paragraph type="warning" role="note">普通用户分类规则尚未确认，当前筛选结果暂不完整；此条件下不能导出，请先使用其他筛选条件。</Typography.Paragraph> : null}
       {page?.summary?.length ? (
         <section className="metric-grid core-summary-grid" aria-label="订单汇总">
           {page.summary.map(item => <MetricCard key={item.label} label={item.label} value={item.value} />)}
@@ -399,7 +396,7 @@ function serverUserExportFilters(filters: Record<string, string> | undefined): R
   if (!filters) return filters
   const result: Record<string, string> = { ...filters }
   delete result.timeKind
-  if (filters.kind === 'PLAYER' || filters.kind === 'GUEST') {
+  if (['PLAYER', 'GUEST', 'NORMAL'].includes(filters.kind)) {
     result.kind = filters.kind
   }
   else {

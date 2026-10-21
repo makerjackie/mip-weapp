@@ -1045,7 +1045,7 @@ function booleanText(value: unknown) {
 const codeLabels: Record<string, string> = {
   ACTIVE: '启用', INACTIVE: '未生效', SCHEDULED: '待生效', PENDING: '待处理', EXPIRED: '已过期',
   REVOKED: '已撤销', REFUNDED: '已退款', BLOCKED: '已限制', CLOSED: '已关闭',
-  PLAYER: '玩家', GUEST: '嘉宾', PLATFORM: '平台', BRANCH: '服务器', EVENT: '活动',
+  PLAYER: '玩家', GUEST: '嘉宾', NORMAL: '普通用户', PLATFORM: '平台', BRANCH: '服务器', EVENT: '活动',
   DRAFT: '草稿', PUBLISHED: '已发布', UNPUBLISHED: '已下架', CANCELLED: '已取消', ENDED: '已结束', ARCHIVED: '已归档',
   FREE: '免费', MEMBER_INCLUDED: '会员权益', PAID: '已支付', OFFLINE: '线下', ONLINE: '线上', HYBRID: '线上与线下',
   CREATED: '待支付', PAYMENT_CREATED: '支付处理中', FAILED: '失败', REFUND_PENDING: '退款处理中', PARTIALLY_REFUNDED: '部分退款',

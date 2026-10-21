@@ -1,0 +1,1 @@
+ALTER TABLE mip_event_feedback DROP INDEX mip_event_feedback_consent_idx;

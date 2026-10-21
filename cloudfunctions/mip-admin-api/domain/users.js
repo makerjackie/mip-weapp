@@ -287,7 +287,7 @@ function normalizeUserFilters(value) {
     ...(expiresTo ? { expiresTo } : {}),
     query: text(filters.query, 80),
     status: ['ACTIVE', 'BLOCKED', 'CLOSED'].includes(filters.status) ? filters.status : '',
-    kind: ['PLAYER', 'GUEST'].includes(filters.kind) ? filters.kind : '',
+    kind: ['PLAYER', 'GUEST', 'NORMAL'].includes(filters.kind) ? filters.kind : '',
     branchId: filters.branchId ? requiredId(filters.branchId, '城市分会') : '',
     levelId: filters.levelId ? requiredId(filters.levelId, '成长等级') : '',
     controlType: ['ALLOWLIST', 'BLOCKLIST'].includes(filters.controlType) ? filters.controlType : '',

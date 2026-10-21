@@ -209,14 +209,11 @@ export async function loadAdminReadPage(
 
 async function loadUsers(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
   const filters = query.filters ?? {}
-  // MIW-124 C2：「普通用户」走 Web 契约 identity=NORMAL（BFF 层实现「既非玩家也非嘉宾」语义）；
-  // PLAYER/GUEST 仍使用服务端原生 kind 参数。
-  const identity = filters.kind === 'NORMAL' ? 'NORMAL' : ''
-  const kind = filters.kind === 'PLAYER' || filters.kind === 'GUEST' ? filters.kind : ''
+  const kind = ['PLAYER', 'GUEST', 'NORMAL'].includes(filters.kind) ? filters.kind : ''
   const playerLifecycle = normalizePlayerStatusFilter(filters.playerLifecycle)
   const page = pageValue(await request('mip.admin.users.list', listInput({
     ...query,
-    filters: { ...filters, kind, identity, playerLifecycle },
+    filters: { ...filters, kind, playerLifecycle },
   }, access?.hasCapability('users.phone.read') ? { includePhone: true } : {})))
   return {
     sections: [{

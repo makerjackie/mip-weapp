@@ -1,5 +1,7 @@
 'use strict'
 
+const { activePlayerSql, attendedEventSql } = require('../lib/product-role')
+
 const { randomUUID } = require('node:crypto')
 const { lockActiveContributor } = require('../lib/auth')
 const { createProfileRef } = require('../lib/profile-ref')
@@ -530,11 +532,18 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
   const cursor = filter.cursor
     ? readTalentCursor(filter.cursor, context, caller.profileRefSecret)
     : null
-  // 名单册（MIW-78）：名单覆盖全部 ACTIVE 用户，发布合作卡只是用户身上可选的展示层；
-  // 档案可见性（talentSearch 等开关）与拉黑口径保持不变。
+  // 2026-10-21: players, or checked-in guests whose latest roster choice is opt-in.
+  // Consent is global across feedback, including a later edit of an older event.
+  const eligibleTalent = `(${activePlayerSql()} OR (${attendedEventSql()}
+    AND (SELECT JSON_UNQUOTE(JSON_EXTRACT(consent.answers_json, '$.rosterConsent'))
+      FROM mip_event_feedback consent
+      WHERE consent.app_id = u.app_id AND consent.user_id = u.id
+        AND JSON_UNQUOTE(JSON_EXTRACT(consent.answers_json, '$.rosterConsent')) IN ('MATCH_OPPORTUNITIES', 'PRIVATE')
+      ORDER BY consent.updated_at DESC, consent.id DESC LIMIT 1) = 'MATCH_OPPORTUNITIES'))`
   const where = [
     'u.app_id = ?',
     "u.status = 'ACTIVE'",
+    eligibleTalent,
     'u.created_at <= snapshot.snapshot_at',
     "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.talentSearch')), 'true') <> 'false'",
   ]
@@ -547,6 +556,7 @@ async function listCooperationTalents(database, caller, rawFilter = {}) {
   const visibleWhere = [
     'u.app_id = ?',
     "u.status = 'ACTIVE'",
+    eligibleTalent,
     "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.talentSearch')), 'true') <> 'false'",
   ]
   const visibleParams = [caller.appId]

@@ -40,6 +40,7 @@ describe('commerce full access', () => {
           status: 'ACTIVE',
           primary_branch_id: 'branch-a',
           nickname: ' 玩家 ',
+          profile_complete: 1,
           phone_verified_at: new Date('2026-08-24T00:00:00.000Z'),
           agreement_0_accepted: 1,
         }

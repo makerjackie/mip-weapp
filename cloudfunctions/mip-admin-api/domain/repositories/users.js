@@ -1,5 +1,8 @@
 'use strict'
 
+const { activePlayerSql, attendedEventSql, productRole } = require('../../lib/product-role')
+const { profileCompleteSql } = require('../../lib/profile-readiness')
+
 const { cursorPredicateFor, pageRows } = require('../pagination')
 const { createUserInfluenceRepository } = require('./user-influence')
 
@@ -64,15 +67,10 @@ function createAdminUserRepository(database, options) {
       clauses.push('COALESCE(ga.experience_balance, 0) <= ?')
       params.push(filters.experienceMax)
     }
-    if (filters.kind === 'PLAYER') {
-      clauses.push(`EXISTS (SELECT 1 FROM mip_membership_entitlements me
-        WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
-          AND me.starts_at <= UTC_TIMESTAMP(3) AND me.ends_at > UTC_TIMESTAMP(3))`)
-    }
-    if (filters.kind === 'GUEST') {
-      clauses.push(`NOT EXISTS (SELECT 1 FROM mip_membership_entitlements me
-        WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
-          AND me.starts_at <= UTC_TIMESTAMP(3) AND me.ends_at > UTC_TIMESTAMP(3))`)
+    if (filters.kind === 'PLAYER') clauses.push(activePlayerSql())
+    if (filters.kind === 'GUEST' || filters.kind === 'NORMAL') {
+      clauses.push(`NOT ${activePlayerSql()}`)
+      clauses.push(`${filters.kind === 'NORMAL' ? 'NOT ' : ''}${attendedEventSql()}`)
     }
     if (filters.playerLifecycle === 'CURRENT') {
       clauses.push('COALESCE(player_entitlements.is_current_player, 0) = 1')
@@ -100,10 +98,10 @@ function createAdminUserRepository(database, options) {
       clauses.push('pp.phone_verified_at IS NULL')
     }
     if (filters.profileComplete === 'COMPLETE') {
-      clauses.push('u.primary_branch_id IS NOT NULL AND p.nickname IS NOT NULL AND TRIM(p.nickname) <> \'\'')
+      clauses.push(profileCompleteSql('u', 'p'))
     }
     if (filters.profileComplete === 'INCOMPLETE') {
-      clauses.push('(u.primary_branch_id IS NULL OR p.nickname IS NULL OR TRIM(p.nickname) = \'\')')
+      clauses.push(`NOT ${profileCompleteSql('u', 'p')}`)
     }
     if (filters.joinedWithinDays) {
       clauses.push('u.created_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY)')
@@ -128,6 +126,7 @@ function createAdminUserRepository(database, options) {
     const rows = await database.query(
       `${playerEntitlementSummaryCte()}
        SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
+        ${attendedEventSql()} AS has_attended,
         p.nickname, p.identity_status, p.headline, p.introduction, p.visibility_json, p.version AS profile_version, media.cloud_file_id AS avatar_url,
         (SELECT GROUP_CONCAT(DISTINCT tag.label ORDER BY tag.label SEPARATOR '、') FROM mip_profile_tags relation
           INNER JOIN mip_tags tag ON tag.app_id = relation.app_id AND tag.id = relation.tag_id
@@ -172,7 +171,7 @@ function createAdminUserRepository(database, options) {
     const items = rows.map(row => ({
       id: row.id,
       status: row.status,
-      kind: Number(row.is_player) === 1 ? 'PLAYER' : 'GUEST',
+      kind: productRole({ isPlayer: Number(row.is_player) === 1, hasAttended: Number(row.has_attended) === 1 }),
       membershipStatus: row.membership_status,
       nickname: row.nickname || '未填写昵称',
       avatarUrl: row.avatar_url || '',
@@ -208,6 +207,7 @@ function createAdminUserRepository(database, options) {
   async function getUserDetail(appId, userId) {
     const user = await database.one(
       `SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
+        ${attendedEventSql()} AS has_attended,
         u.created_at, u.updated_at,
         p.nickname, p.real_name, p.identity_status, p.headline, p.introduction, p.companies_json,
         p.organizations_json, p.visibility_json, p.version AS profile_version, media.cloud_file_id AS avatar_url,
@@ -315,7 +315,7 @@ function createAdminUserRepository(database, options) {
     return {
       id: user.id,
       status: user.status,
-      kind: activePlayer ? 'PLAYER' : 'GUEST',
+      kind: productRole({ isPlayer: activePlayer, hasAttended: Number(user.has_attended) === 1 }),
       nickname: user.nickname || '未填写昵称',
       avatarUrl: user.avatar_url || '',
       realName: user.real_name || '',

@@ -21,6 +21,21 @@ const secondOwnerId = '40000000-0000-4000-8000-000000000001'
 const secret = 'cooperation-profile-reference-secret-more-than-32-characters'
 const snapshotAt = '2026-08-25T08:00:00.000Z'
 
+test('talent eligibility checks active membership or attended opt-in guests before paging and rechecks current visibility', async () => {
+  let sql = ''
+  await listCooperationTalents({ async query(query) { sql = query; return [] } }, { appId, userId: null, profileRefSecret: secret })
+  assert.equal((sql.match(/FROM mip_event_feedback consent/g) || []).length, 2)
+  assert.equal((sql.match(/role_checkin\.status = 'ACTIVE'/g) || []).length, 2)
+  assert.equal((sql.match(/role_registration\.status = 'ATTENDED'/g) || []).length, 2)
+  assert.equal((sql.match(/ORDER BY consent\.updated_at DESC, consent\.id DESC LIMIT 1/g) || []).length, 2)
+  assert.equal((sql.match(/\) = 'MATCH_OPPORTUNITIES'/g) || []).length, 2)
+  assert.match(sql, /consent\.app_id = u\.app_id AND consent\.user_id = u\.id/)
+  assert.match(sql, /'MATCH_OPPORTUNITIES', 'PRIVATE'/)
+  assert.match(sql, /matching_users AS[\s\S]*FROM mip_event_feedback consent[\s\S]*talent_page AS/)
+  assert.match(sql, /talent_page\.owner_user_id = u\.id[\s\S]*FROM mip_event_feedback consent/)
+  assert.equal((sql.match(/\$\.talentSearch/g) || []).length, 2)
+})
+
 test('cooperation filters normalize keyword, role, city, industry, cursor, and limit', () => {
   const cursor = Buffer.from(JSON.stringify({
     timestamp: '2026-08-24T08:00:00.000Z',

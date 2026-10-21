@@ -106,6 +106,27 @@ function createFixture({ one, query, assertMutationScope, assertUserMutationScop
 }
 
 describe('admin user repository module', () => {
+  it('projects ordinary users, attended guests, and active players from server facts', async () => {
+    const { repository, calls } = createFixture({ query: async () => [
+      { ...userListRow('normal', '2026-10-21T00:00:00Z'), is_player: 0, has_attended: 0 },
+      { ...userListRow('guest', '2026-10-20T00:00:00Z'), is_player: 0, has_attended: 1 },
+      { ...userListRow('player', '2026-10-19T00:00:00Z'), is_player: 1, has_attended: 0 },
+    ] })
+    const page = await repository.listUsers('app', { platform: true }, {}, 20)
+    assert.deepEqual(page.items.map(row => row.kind), ['NORMAL', 'GUEST', 'PLAYER'])
+    for (const kind of ['NORMAL', 'GUEST', 'PLAYER']) {
+      await repository.listUsers('app', { platform: true }, { kind }, 20)
+      const query = calls.at(-1).sql
+      assert.match(query, /role_registration\.app_id = u\.app_id/)
+      if (kind !== 'PLAYER') {
+        assert.match(query, /AND NOT EXISTS \(SELECT 1 FROM mip_membership_entitlements role_membership/)
+        assert.match(query, kind === 'NORMAL'
+          ? /AND NOT EXISTS \(SELECT 1 FROM mip_event_registrations role_registration/
+          : /AND EXISTS \(SELECT 1 FROM mip_event_registrations role_registration/)
+      }
+    }
+  })
+
   it('keeps the extracted seam limited to the user repository methods', () => {
     const { repository } = createFixture()
     assert.deepEqual(Object.keys(repository).sort(), [
@@ -365,7 +386,7 @@ describe('admin user repository module', () => {
     assert.deepEqual(growthRead.params, ['wx-app', 'user-a'])
   })
 
-  it('keeps future and revoked entitlement projections as guests', async () => {
+  it('projects future and revoked entitlements without attendance as ordinary users', async () => {
     for (const entitlement of [
       {
         status: 'ACTIVE',
@@ -399,7 +420,7 @@ describe('admin user repository module', () => {
       })
 
       const detail = await repository.getUserDetail('wx-app', 'user-a')
-      assert.equal(detail.kind, 'GUEST')
+      assert.equal(detail.kind, 'NORMAL')
       assert.equal(detail.membership.status, entitlement.status)
       assert.equal(detail.membership.isCurrent, false)
       assert.equal(detail.membership.isScheduled, entitlement.status === 'ACTIVE')

@@ -80,6 +80,7 @@ function sanitizeIntent(intent: ProtectedActionIntent): ProtectedActionIntent {
 function signedOutSnapshot(): IdentityAccessSnapshot {
   return {
     authenticated: false,
+    productRole: 'ANONYMOUS',
     userVersion: 0,
     phoneBound: false,
     agreements: [],
@@ -104,7 +105,7 @@ function signedOutSnapshot(): IdentityAccessSnapshot {
       },
       abilityTagIds: [],
       complete: false,
-      missingFields: ['NICKNAME'],
+      missingFields: ['NICKNAME', 'AVATAR', 'PRIMARY_INDUSTRY', 'CAREER_IDENTITY', 'HEADLINE'],
     },
     membership: { kind: 'GUEST', source: 'NONE' },
     grants: [],

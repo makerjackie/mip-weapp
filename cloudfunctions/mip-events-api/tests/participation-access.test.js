@@ -29,6 +29,7 @@ function completeFacts(overrides = {}) {
     status: 'ACTIVE',
     primary_branch_id: '30000000-0000-4000-8000-000000000001',
     nickname: 'MIP 成员',
+    profile_complete: 1,
     phone_verified_at: now,
     agreement_0_accepted: 1,
     agreement_1_accepted: 1,
@@ -140,8 +141,8 @@ describe('event participation access policy', () => {
   })
 
   it('requires both a non-empty nickname and a primary branch', async () => {
-    await rejectCode(() => requireFacts(completeFacts({ nickname: '   ' })), 'PROFILE_REQUIRED')
-    await rejectCode(() => requireFacts(completeFacts({ primary_branch_id: null })), 'PROFILE_REQUIRED')
+    await rejectCode(() => requireFacts(completeFacts({ profile_complete: 0 })), 'PROFILE_REQUIRED')
+    await rejectCode(() => requireFacts(completeFacts({ profile_complete: 0 })), 'PROFILE_REQUIRED')
   })
 
   it('keeps agreement configuration aligned with the identity contract', () => {

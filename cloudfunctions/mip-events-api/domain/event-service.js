@@ -1448,8 +1448,7 @@ async function listPublicParticipants(db, {
   }
 
   const blockFilter = mutualBlockFilter(userId, 'r.user_id', 'r.app_id')
-  // MIW-96：名单条目不再计算/下发 heart_relation——MIW-73 移除消费方后该字段
-  // 只是每行两次 LEFT JOIN 的死载荷；心动交互走独立的 heart 接口，不受影响。
+  // 本场嘉宾含报名未签到的非玩家，签到互动资格仍单独校验。
   const membershipExists = `EXISTS(
     SELECT 1 FROM mip_membership_entitlements entitlement
     WHERE entitlement.app_id = r.app_id AND entitlement.user_id = r.user_id
@@ -1548,6 +1547,8 @@ async function listPublicParticipants(db, {
   const kindTotalRows = await db.query(
     `SELECT ${membershipExists} AS is_player, COUNT(*) AS total
      FROM mip_event_registrations r
+     INNER JOIN mip_users u ON u.app_id = r.app_id AND u.id = r.user_id AND u.status = 'ACTIVE'
+     INNER JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
      WHERE ${baseClauses.join(' AND ')}
      GROUP BY is_player`,
     baseParams,

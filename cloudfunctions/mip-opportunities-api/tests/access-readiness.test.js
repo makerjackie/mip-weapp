@@ -29,6 +29,7 @@ function readinessDatabase(overrides = {}) {
             user_status: 'ACTIVE',
             primary_branch_id: branchId,
             nickname: 'MIP 用户',
+            profile_complete: 1,
             phone_verified_at: '2026-08-24T00:00:00.000Z',
           }
         : overrides.facts
@@ -95,6 +96,7 @@ test('full readiness fails closed for inactive, phone-less, or incomplete users'
         user_status: 'CLOSED',
         primary_branch_id: branchId,
         nickname: 'MIP 用户',
+            profile_complete: 1,
         phone_verified_at: '2026-08-24T00:00:00.000Z',
       },
     }), caller, currentAgreements),
@@ -106,6 +108,7 @@ test('full readiness fails closed for inactive, phone-less, or incomplete users'
         user_status: 'ACTIVE',
         primary_branch_id: branchId,
         nickname: 'MIP 用户',
+            profile_complete: 1,
         phone_verified_at: null,
       },
     }), caller, currentAgreements),
@@ -121,6 +124,7 @@ test('full readiness fails closed for inactive, phone-less, or incomplete users'
     {
       user_status: 'ACTIVE',
       primary_branch_id: null,
+      profile_complete: 0,
       nickname: 'MIP 用户',
       phone_verified_at: '2026-08-24T00:00:00.000Z',
     },

@@ -28,6 +28,7 @@ describe('profile avatar binding', () => {
     let mediaChecked = false
     const tx = {
       async one(sql, params) {
+        if (sql.includes('AS profile_complete')) return { profile_complete: 1, version: 1 }
         if (sql.includes('FROM mip_users')) return { id: USER_ID, status: 'ACTIVE', version: 1, primary_branch_id: null }
         if (sql.includes('FROM mip_profiles')) return { version: 1, avatar_asset_id: null }
         if (sql.includes('FROM mip_media_assets')) {
@@ -56,6 +57,7 @@ describe('profile avatar binding', () => {
   it('rejects a forged or wrong-purpose avatar before updating the profile', async () => {
     const tx = {
       async one(sql) {
+        if (sql.includes('AS profile_complete')) return { profile_complete: 1, version: 1 }
         if (sql.includes('FROM mip_users')) return { id: USER_ID, status: 'ACTIVE', version: 1, primary_branch_id: null }
         if (sql.includes('FROM mip_profiles')) return { version: 1, avatar_asset_id: null }
         if (sql.includes('FROM mip_media_assets')) return null

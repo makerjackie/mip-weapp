@@ -1,5 +1,7 @@
 'use strict'
 
+const { profileCompleteSql } = require('./profile-readiness')
+
 const { createHmac } = require('node:crypto')
 
 const defaultAgreementRequirements = Object.freeze([
@@ -133,7 +135,7 @@ async function assertFullAccessReady(database, caller, agreementRequirements) {
   }
   const facts = await database.one(
     `SELECT u.status AS user_status, u.primary_branch_id,
-            p.nickname, private_profile.phone_verified_at
+            p.nickname, private_profile.phone_verified_at, ${profileCompleteSql('u', 'p')} AS profile_complete
      FROM mip_users u
      LEFT JOIN mip_profiles p
        ON p.app_id = u.app_id AND p.user_id = u.id
@@ -166,9 +168,7 @@ async function assertFullAccessReady(database, caller, agreementRequirements) {
   if (!facts.phone_verified_at) {
     throw new Error('PHONE_REQUIRED')
   }
-  if (typeof facts.nickname !== 'string'
-    || !facts.nickname.trim()
-    || !facts.primary_branch_id) {
+  if (Number(facts.profile_complete) !== 1) {
     throw new Error('PROFILE_REQUIRED')
   }
 }

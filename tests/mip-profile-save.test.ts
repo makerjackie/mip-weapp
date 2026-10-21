@@ -6,9 +6,18 @@ import { profileSaveValidationMessage } from '../src/packages/member/mip-profile
 const root = path.resolve(import.meta.dirname, '..')
 
 describe('MIP profile save intent', () => {
-  it('only requires a nickname to save the profile', () => {
-    expect(profileSaveValidationMessage({ nickname: '新昵称' })).toBe('')
-    expect(profileSaveValidationMessage({ nickname: '   ' })).toBe('请填写昵称。')
+  it('requires the five visible profile fields while leaving gender optional', () => {
+    const complete = { nickname: '新昵称', avatarAssetId: 'avatar', primaryIndustryTagId: 'industry', careerIdentityKey: 'STUDENT', headline: '在读学生，寻找合作伙伴' }
+    expect(profileSaveValidationMessage(complete)).toBe('')
+    for (const [field, message] of [
+      ['nickname', '请填写昵称。'],
+      ['avatarAssetId', '请选择并上传头像。'],
+      ['primaryIndustryTagId', '请选择代表行业。'],
+      ['careerIdentityKey', '请选择当前身份状态。'],
+      ['headline', '请填写一句话介绍你的工作和背景。'],
+    ]) {
+      expect(profileSaveValidationMessage({ ...complete, [field]: '   ' })).toBe(message)
+    }
   })
 
   it('round-trips full-replace fields the page no longer edits and never submits a branch', () => {

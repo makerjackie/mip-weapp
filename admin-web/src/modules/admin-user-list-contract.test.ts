@@ -6,6 +6,17 @@ import { loadAdminReadPage, type AdminRequest } from './admin-read-pages.ts'
 const require = createRequire(import.meta.url)
 const { createAdminUserRepository } = require('../../../cloudfunctions/mip-admin-api/domain/repositories/users.js')
 
+it('renders a nonempty serialized server page with all three persisted product roles and its cursor', async () => {
+  const request: AdminRequest = async <T>() => JSON.parse(JSON.stringify({ items: [
+    { id: 'ordinary', nickname: '普通用户样本', kind: 'NORMAL' },
+    { id: 'guest', nickname: '嘉宾样本', kind: 'GUEST' },
+    { id: 'player', nickname: '玩家样本', kind: 'PLAYER' },
+  ], nextCursor: 'server-cursor' })) as T
+  const page = await loadAdminReadPage('users', { query: '', status: '', cursor: null, limit: 20 }, request)
+  assert.deepEqual(page.sections[0].rows.map(row => row.role), ['普通用户', '嘉宾', '玩家'])
+  assert.equal(page.nextCursor, 'server-cursor')
+})
+
 it('renders the actual serialized user-list projection with the prototype column contract', async () => {
   const repository = createAdminUserRepository({ query: async () => [{
     id: 'user-a', status: 'ACTIVE', is_player: 1, nickname: '验收用户', identity_status: '创业者',
@@ -36,7 +47,7 @@ it('renders the actual serialized user-list projection with the prototype column
   assert.equal('state' in row, false)
 })
 
-it('maps identity=NORMAL to the web contract filter and player status buckets to server filters without losing expiry buckets', async () => {
+it('forwards NORMAL as the server role filter and player status buckets to server filters without losing expiry buckets', async () => {
   const captured: Array<Record<string, unknown>> = []
   const request: AdminRequest = async <T>(_action: string, input?: unknown) => {
     captured.push((input ?? {}) as Record<string, unknown>)
@@ -44,9 +55,8 @@ it('maps identity=NORMAL to the web contract filter and player status buckets to
   }
   const baseQuery = { query: '', status: '', cursor: null, limit: 20 }
   await loadAdminReadPage('users', { ...baseQuery, filters: { kind: 'NORMAL' } }, request)
-  assert.equal((captured[0].filters as Record<string, unknown>).identity, 'NORMAL')
-  // 服务端 kind 参数不携带 NORMAL：上游不再收到 kind 过滤。
-  assert.equal((captured[0].filters as Record<string, unknown>).kind, undefined)
+  assert.equal((captured[0].filters as Record<string, unknown>).kind, 'NORMAL')
+  assert.equal((captured[0].filters as Record<string, unknown>).identity, undefined)
 
   await loadAdminReadPage('users', { ...baseQuery, filters: { playerLifecycle: 'EXPIRING_THIS_MONTH' } }, request)
   assert.equal((captured[1].filters as Record<string, unknown>).playerLifecycle, 'EXPIRING_THIS_MONTH')

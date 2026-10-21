@@ -13,8 +13,10 @@ const input = { expectedVersion: 1, nickname: '新昵称', identityStatus: '', h
 
 function fixture({ enabled = 0, parentEnabled = 1, retained = true } = {}) {
   const calls = []
+  let industryBound = true
   const tx = {
     async one(sql, params) {
+        if (sql.includes('AS profile_complete')) return { profile_complete: industryBound ? 1 : 0, version: 1 }
       calls.push({ sql, params })
       if (sql.includes('FROM mip_users')) return { id: userId, status: 'ACTIVE', version: 1 }
       if (sql.includes('SELECT version, avatar_asset_id')) return { version: 1, avatar_asset_id: null, visibility_json: {} }
@@ -27,6 +29,8 @@ function fixture({ enabled = 0, parentEnabled = 1, retained = true } = {}) {
     },
     async query(sql, params) {
       calls.push({ sql, params })
+      if (sql.includes('DELETE FROM mip_profile_tags') && sql.includes("'PRIMARY_INDUSTRY'")) industryBound = false
+      if (sql.includes('INSERT INTO mip_profile_tags') && sql.includes("'PRIMARY_INDUSTRY'")) industryBound = true
       if (sql.includes('FROM mip_tags t')) {
         assert.deepEqual(params, [appId, tagId])
         assert.match(sql, /FOR SHARE/)
@@ -60,12 +64,13 @@ describe('retained industry choices', () => {
     assert.equal(calls.some(call => call.sql.includes('SELECT tag_id FROM mip_profile_tags')), false)
   })
 
-  it('preserves omitted industry fields from old clients, and clears only on explicit null', async () => {
+  it('preserves an omitted industry but rejects clearing a required industry', async () => {
     for (const primaryIndustryTagId of [undefined, null]) {
       const { repository, calls } = fixture()
       const normalized = normalizeProfileInput({ ...input, primaryIndustryTagId })
       assert.equal(normalized.primaryIndustryTagId, primaryIndustryTagId)
-      await repository.updateProfile(appId, userId, normalized)
+      if (primaryIndustryTagId === null) await assert.rejects(() => repository.updateProfile(appId, userId, normalized), /PROFILE_REQUIRED/)
+      else await repository.updateProfile(appId, userId, normalized)
       const deletion = calls.find(call => call.sql.includes('DELETE FROM mip_profile_tags'))
       assert.equal(deletion.sql.includes("'PRIMARY_INDUSTRY'"), primaryIndustryTagId === null)
       assert.equal(calls.some(call => call.sql.includes('INSERT INTO mip_profile_tags')), false)

@@ -254,7 +254,13 @@ Page({
       return
     }
     const nickname = this.data.nickname.trim()
-    const validationMessage = profileSaveValidationMessage({ nickname })
+    const validationMessage = profileSaveValidationMessage({
+      nickname,
+      avatarAssetId: this.data.avatarAssetId,
+      primaryIndustryTagId: this.data.selectedIndustryIds[0] || '',
+      careerIdentityKey: this.data.careerIdentityKey,
+      headline: this.data.headline,
+    })
     if (validationMessage) {
       this.showEditorMessage(validationMessage)
       return

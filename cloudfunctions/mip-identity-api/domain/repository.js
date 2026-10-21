@@ -1,4 +1,7 @@
 'use strict'
+
+const { attendedEventSql } = require('../lib/product-role')
+const { profileCompleteSql } = require('../lib/profile-readiness')
 const { loadProfileCardSettings } = require('./profile-card-settings')
 
 const { randomUUID } = require('node:crypto')
@@ -175,8 +178,8 @@ function createIdentityRepository(database, options = {}) {
   async function loadFacts(appId, userId) {
     const [user, profile, privateProfile, acceptances, profileTags, roles] = await Promise.all([
       database.one(
-        `SELECT id, status, primary_branch_id, version
-         FROM mip_users WHERE app_id = ? AND id = ?`,
+        `SELECT u.id, u.status, u.primary_branch_id, u.version, ${attendedEventSql()} AS has_attended
+         FROM mip_users u WHERE u.app_id = ? AND u.id = ?`,
         [appId, userId],
       ),
       database.one(
@@ -319,7 +322,6 @@ function createIdentityRepository(database, options = {}) {
       if (!user || user.status !== 'ACTIVE') {
         throw new Error('FORBIDDEN')
       }
-      let effectivePrimaryBranchId = user.primary_branch_id
       if (input.primaryBranchId) {
         if (Number(user.version) !== input.expectedUserVersion) {
           throw new Error('CONFLICT')
@@ -348,7 +350,6 @@ function createIdentityRepository(database, options = {}) {
             throw new Error('CONFLICT')
           }
         }
-        effectivePrimaryBranchId = input.primaryBranchId
       }
       const current = await tx.one(
         `SELECT version, avatar_asset_id, visibility_json FROM mip_profiles
@@ -460,7 +461,7 @@ function createIdentityRepository(database, options = {}) {
           'headline', headline, 'companies', companies_json, 'organizations', organizations_json,
           'identityStatus', identity_status, 'avatarAssetId', avatar_asset_id, 'visibility', visibility_json)
         FROM mip_profiles WHERE app_id = ? AND user_id = ?`, [appId, userId])
-      await recordProfileCompletion(tx, appId, userId, effectivePrimaryBranchId, id)
+      await recordProfileCompletion(tx, appId, userId, id, { required: true })
       await confirmProfileAiDraft(tx, {
         appId,
         userId,
@@ -644,7 +645,7 @@ function createIdentityRepository(database, options = {}) {
       if (Number(updateUser.affectedRows) !== 1) {
         throw new Error('CONFLICT')
       }
-      await recordProfileCompletion(tx, appId, userId, input.branchId, id)
+      await recordProfileCompletion(tx, appId, userId, id)
     })
   }
 
@@ -760,16 +761,15 @@ function isSelectableIndustry(tag) {
     && Number(tag.enabled) === 1 && Number(tag.parent_enabled) === 1
 }
 
-async function recordProfileCompletion(tx, appId, userId, primaryBranchId, createId) {
-  if (!primaryBranchId) {
-    return
-  }
+async function recordProfileCompletion(tx, appId, userId, createId, { required = false } = {}) {
   const profile = await tx.one(
-    `SELECT nickname, version FROM mip_profiles
-     WHERE app_id = ? AND user_id = ?`,
+    `SELECT profile.version, ${profileCompleteSql()} AS profile_complete
+     FROM mip_users u INNER JOIN mip_profiles profile ON profile.app_id = u.app_id AND profile.user_id = u.id
+     WHERE u.app_id = ? AND u.id = ?`,
     [appId, userId],
   )
-  if (!profile?.nickname?.trim()) {
+  if (Number(profile?.profile_complete) !== 1) {
+    if (required) throw new Error('PROFILE_REQUIRED')
     return
   }
   const existing = await tx.one(

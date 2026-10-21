@@ -386,7 +386,7 @@ Page({
       headline: snapshot.profile.headline,
       identityStatus: snapshot.profile.identityStatus,
       profileComplete: snapshot.profile.complete,
-      membershipLabel: membership.label,
+      membershipLabel: snapshot.productRole ? ({ ANONYMOUS: '匿名访客', NORMAL: '普通用户', GUEST: '嘉宾', PLAYER: '玩家' } as const)[snapshot.productRole] : membership.label,
       isPlayer,
       adminVisible: hasCapability(snapshot.grants, 'admin:enter') || canManageEvents(snapshot.grants),
       growthState: isPlayer ? this.data.growthState : 'hidden',

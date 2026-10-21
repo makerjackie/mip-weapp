@@ -1,5 +1,7 @@
 'use strict'
 
+const { profileCompleteSql } = require('../lib/profile-readiness')
+
 const defaultAgreements = Object.freeze([
   Object.freeze({
     key: 'SERVICE_AGREEMENT',
@@ -49,6 +51,7 @@ function createFullAccessPolicy(options = {}) {
     const row = await queryable.one(
       `SELECT u.id, u.status, u.primary_branch_id,
               profile.nickname, private_profile.phone_verified_at,
+              ${profileCompleteSql()} AS profile_complete,
               ${agreementFacts.sql}
        FROM mip_users u
        LEFT JOIN mip_profiles profile
@@ -99,11 +102,7 @@ function accessUser(row, agreements) {
     id: row.id,
     status: row.status,
     phoneBound: Boolean(row.phone_verified_at),
-    profileComplete: Boolean(
-      row.primary_branch_id
-      && typeof row.nickname === 'string'
-      && row.nickname.trim(),
-    ),
+    profileComplete: Number(row.profile_complete) === 1,
     agreementsAccepted: agreements.every(
       (_, index) => Number(row[`agreement_${index}_accepted`]) === 1,
     ),
