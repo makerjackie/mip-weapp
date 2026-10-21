@@ -68,6 +68,25 @@ describe('page loading and profile interaction regressions', () => {
     expect(instance.data.visitorUnreadCount).toBe(0)
   })
 
+  it('never clears a cached avatar while refreshing the same identity, but honors removal', async () => {
+    const instance = page(profile)
+    const avatar = 'https://example.test/avatar.jpg'
+    instance.data.avatarUrl = avatar
+    const patches: Record<string, unknown>[] = []
+    instance.setData = (patch: Record<string, unknown>) => {
+      patches.push(patch)
+      Object.assign(instance.data, patch)
+    }
+    const snapshot = { authenticated: true, membership: { kind: 'GUEST' }, grants: [], profile: { nickname: '测试', avatarUrl: avatar } }
+    instance.applyIdentity(snapshot)
+    instance.applyIdentity(snapshot)
+    await Promise.resolve()
+    expect(instance.data.avatarUrl).toBe(avatar)
+    expect(patches.some(patch => patch.avatarUrl === '')).toBe(false)
+    instance.applyIdentity({ ...snapshot, authenticated: false, profile: { nickname: '', avatarUrl: '' } })
+    expect(instance.data.avatarUrl).toBe('')
+  })
+
   it('opens a unified heart history from the heart statistic', async () => {
     const instance = page(profile)
     instance.openProtected = vi.fn()

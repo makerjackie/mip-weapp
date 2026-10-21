@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { optimizeAcceptanceImages } from './lib/acceptance-images.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const source = path.join(root, 'docs/mip/acceptance-site')
@@ -188,11 +189,21 @@ for (const report of sorted) {
   days.get(key).push(report)
 }
 const dayEntries = [...days].sort(([a], [b]) => b.localeCompare(a))
+function dayBrief(day, digest) {
+  if (!digest.goals?.length && !digest.acceptance?.length) {
+    return ''
+  }
+  const goals = digest.goals?.length ? `<section id="goals-${day}"><h2>今天要实现的目标</h2>${digest.request ? `<blockquote>${escape(digest.request)}</blockquote>` : ''}<ul>${digest.goals.map(goal => `<li>${escape(goal)}</li>`).join('')}</ul></section>` : ''
+  return `${goals}<h2>实现结果与证据</h2>`
+}
+function dayAcceptance(day, digest) {
+  return digest.acceptance?.length ? `<section id="acceptance-${day}"><h2>验收标准与结果</h2><table><thead><tr><th>验收标准</th><th>验收结果</th></tr></thead><tbody>${digest.acceptance.map(item => `<tr><td>${escape(item.criterion)}</td><td>${escape(item.result)}</td></tr>`).join('')}</tbody></table></section>` : ''
+}
 const history = `<aside class="history"><h2>历史资料</h2><a href="/legacy/20260927/">9月27日逐页验收快照</a></aside>`
 for (const [day, items] of dayEntries) {
   const digest = dailySummaries[day] || {}
   const pending = digest.pending || items.map(r => r.pendingSummary || r.limitations)
-  const body = `<header class="day-intro"><p class="muted">${escape(day)}</p><h1>${escape(digest.title || `${dayLabel(day)}更新与验收`)}</h1>${digest.summary ? `<p>${escape(digest.summary)}</p>` : ''}</header>${items.map(r => `<section class="compact-section" id="${escape(r.id)}">${heading(2, r.indexTitle || r.title, r.id)}${reportContent(r)}</section>`).join('')}<section class="pending" id="pending">${heading(2, '待确认与复测', 'pending')}<ul>${[...new Set(pending)].map(p => `<li>${escape(p)}</li>`).join('')}</ul></section>`
+  const body = `<header class="day-intro"><p class="muted">${escape(day)}</p><h1>${escape(digest.title || `${dayLabel(day)}更新与验收`)}</h1>${digest.summary ? `<p>${escape(digest.summary)}</p>` : ''}</header>${dayBrief(day, digest)}${items.map(r => `<section class="compact-section" id="${escape(r.id)}">${heading(2, r.indexTitle || r.title, r.id)}${reportContent(r)}</section>`).join('')}${dayAcceptance(day, digest)}<section class="pending" id="pending">${heading(2, '待确认与复测', 'pending')}<ul>${[...new Set(pending)].map(p => `<li>${escape(p)}</li>`).join('')}</ul></section>`
   const dest = path.join(out, 'updates', day)
   fs.mkdirSync(dest, { recursive: true })
   fs.writeFileSync(path.join(dest, 'index.html'), shell(`${day} 验收`, readerLayout(items, body, dayLabel(day)), true))
@@ -219,6 +230,8 @@ if (fs.existsSync(legacy)) {
     }
   }
 }
+const imageStats = await optimizeAcceptanceImages(out)
+console.log('Image previews:', imageStats.optimized, '/', imageStats.images, imageStats.originalBytes, '→', imageStats.previewBytes, 'bytes')
 fs.writeFileSync(path.join(out, '_redirects'), '/legacy/20261019/role-icons/* /updates/2026-10-19/assets/role-icons/:splat 301\n/legacy/20261019/shots/* /updates/2026-10-19/assets/shots/:splat 301\n/legacy/20261019/robots.txt /updates/2026-10-19/assets/robots.txt 301\n/legacy/20261019 /updates/2026-10-19/ 301\n/legacy/20261019/* /updates/2026-10-19/ 301\n')
 fs.writeFileSync(path.join(out, '_headers'), '/*\n  X-Robots-Tag: noindex, nofollow, noarchive\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  Cache-Control: no-cache\n')
 fs.writeFileSync(path.join(out, 'reports.json'), `${JSON.stringify(sorted, null, 2)}\n`)

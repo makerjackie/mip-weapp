@@ -382,7 +382,6 @@ Page({
       authenticated: snapshot.authenticated,
       nickname: snapshot.profile.nickname || '微信用户',
       nicknameInitial: (snapshot.profile.nickname || '微信用户').slice(0, 1),
-      avatarUrl: '',
       headline: snapshot.profile.headline,
       identityStatus: snapshot.profile.identityStatus,
       profileComplete: snapshot.profile.complete,

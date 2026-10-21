@@ -1,8 +1,10 @@
+import { Buffer } from 'node:buffer'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import sharp from 'sharp'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const sandboxes: string[] = []
@@ -18,9 +20,12 @@ function fixture() {
     fs.mkdirSync(path.join(root, dir), { recursive: true })
   }
   fs.copyFileSync('scripts/acceptance-site.mjs', path.join(root, 'scripts/acceptance-site.mjs'))
+  fs.mkdirSync(path.join(root, 'scripts/lib'), { recursive: true })
+  fs.copyFileSync('scripts/lib/acceptance-images.mjs', path.join(root, 'scripts/lib/acceptance-images.mjs'))
+  fs.symlinkSync(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir')
   fs.cpSync('scripts/acceptance-reader', path.join(root, 'scripts/acceptance-reader'), { recursive: true })
   const image = 'docs/mip/evidence/example/image.png'
-  fs.writeFileSync(path.join(root, image), 'reviewed-public-image')
+  fs.writeFileSync(path.join(root, image), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADUlEQVQImWP4////fwAJ+wP9CNHoHgAAAABJRU5ErkJggg==', 'base64'))
   const report = {
     id: 'first-v1',
     requirement: 'first',
@@ -47,6 +52,37 @@ function fixture() {
   return { root, report, registry, write, run, image }
 }
 describe('公开验收报告的版本与时间规则', () => {
+  it('publishes smaller previews while preserving original evidence and frozen hashes', async () => {
+    const f = fixture()
+    const original = await sharp({ create: { width: 1600, height: 10, channels: 3, background: '#202020' } }).png({ compressionLevel: 0 }).toBuffer()
+    fs.writeFileSync(path.join(f.root, f.image), original)
+    f.run('freeze', 'first-v1')
+    f.run('build')
+    const output = path.join(f.root, '.tmp/mip-acceptance-site')
+    expect(fs.readFileSync(path.join(output, 'evidence/example/image.png'))).toEqual(original)
+    const html = fs.readFileSync(path.join(output, 'updates/2026-10-20/index.html'), 'utf8')
+    expect(html).toContain('href="/evidence/example/image.png"')
+    expect(html).toMatch(/<img[^>]+src="\/assets\/optimized-images\/[a-f0-9]+\.webp"/)
+    expect(html).toContain('width="1280" height="8"')
+    const stats = JSON.parse(fs.readFileSync(path.join(output, 'image-optimization.json'), 'utf8'))
+    expect(stats.optimized).toBe(1)
+    expect(stats.previewBytes).toBeLessThan(stats.originalBytes / 2)
+    f.run('build')
+  }, 15_000)
+
+  it('presents goals before implementation and acceptance standards with their real outcomes', () => {
+    const f = fixture()
+    fs.writeFileSync(path.join(f.root, 'docs/mip/acceptance-site/daily-summaries.json'), JSON.stringify({
+      '2026-10-20': { request: '用户原话 <目标>', goals: ['小屏不溢出'], acceptance: [{ criterion: '320px 可操作', result: '待真机复测' }] },
+    }))
+    f.run('build')
+    const html = fs.readFileSync(path.join(f.root, '.tmp/mip-acceptance-site/updates/2026-10-20/index.html'), 'utf8')
+    expect(html).toContain('用户原话 &lt;目标&gt;')
+    expect(html.indexOf('今天要实现的目标')).toBeLessThan(html.indexOf('实现结果与证据'))
+    expect(html.indexOf('实现结果与证据')).toBeLessThan(html.indexOf('验收标准与结果'))
+    expect(html).toContain('<td>320px 可操作</td><td>待真机复测</td>')
+  })
+
   it('日期倒序，追踪时间保留在源数据而不堆入页面', () => {
     const f = fixture()
     f.write([f.report, { ...f.report, id: 'second-v1', title: '后来的修复', updatedAt: '2026-10-21T00:00:00Z' }])
@@ -194,7 +230,7 @@ describe('公开验收报告的版本与时间规则', () => {
     f.write(frozen)
     fs.writeFileSync(path.join(f.root, f.image), 'changed')
     expect(() => f.run('build')).toThrow()
-    fs.writeFileSync(path.join(f.root, f.image), 'reviewed-public-image')
+    fs.writeFileSync(path.join(f.root, f.image), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADUlEQVQImWP4////fwAJ+wP9CNHoHgAAAABJRU5ErkJggg==', 'base64'))
     f.write([...frozen, { ...f.report, id: 'first-v2', version: 'v2', previousVersion: 'first-v1' }])
     f.run('build')
     expect(fs.existsSync(path.join(f.root, '.tmp/mip-acceptance-site/reports/first-v1/index.html'))).toBe(true)

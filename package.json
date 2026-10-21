@@ -112,6 +112,7 @@
     "pixelmatch": "7.2.0",
     "pngjs": "7.0.0",
     "postcss": "^8.5.19",
+    "sharp": "0.35.4",
     "stylelint": "^17.14.0",
     "tailwindcss": "^4.3.3",
     "tencentcloud-sdk-nodejs-scf": "4.1.168",
