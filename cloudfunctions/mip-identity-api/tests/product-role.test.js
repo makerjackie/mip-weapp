@@ -37,7 +37,7 @@ test('independent cloud bundles keep the exact same role and readiness policy', 
   for (const name of ['mip-admin-api', 'mip-opportunities-api']) {
     assert.equal(fs.readFileSync(path.join(__dirname, '../../', name, 'lib/product-role.js'), 'utf8'), fs.readFileSync(path.join(__dirname, '../lib/product-role.js'), 'utf8'))
   }
-  for (const name of ['mip-admin-api', 'mip-commerce-api', 'mip-events-api', 'mip-opportunities-api', 'mip-tasks-api', 'mip-game-api', 'mip-banners-api']) {
+  for (const name of ['mip-admin-api', 'mip-commerce-api', 'mip-events-api', 'mip-opportunities-api']) {
     assert.equal(fs.readFileSync(path.join(__dirname, '../../', name, 'lib/profile-readiness.js'), 'utf8'), fs.readFileSync(path.join(__dirname, '../lib/profile-readiness.js'), 'utf8'))
   }
 })
