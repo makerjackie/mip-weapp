@@ -43,6 +43,29 @@ beforeEach(() => {
 })
 
 describe('card edit save publishes filled contacts', () => {
+  it('reveals the editable profile while the preview code is still pending', async () => {
+    let resolveCode!: (value: { codeUrl: string }) => void
+    identity.getMyProfileCardCode.mockReturnValueOnce(new Promise((resolve) => {
+      resolveCode = resolve
+    }))
+    identity.getProfile.mockResolvedValue({ version: 7, nickname: '成员', realName: '姓名', visibility: {}, companies: [], organizations: [] })
+    const page = createPage()
+    await page.load()
+    expect(page.data).toMatchObject({ state: 'ready', realName: '姓名', profileVersion: 7, previewCodeUrl: '' })
+    page.data.realName = '未保存的新名字'
+    resolveCode({ codeUrl: 'https://cdn/code.png' })
+    await vi.waitFor(() => expect(page.data.previewCodeUrl).toBe('https://cdn/code.png'))
+    expect(page.data.realName).toBe('未保存的新名字')
+  })
+
+  it('keeps the form when the preview code fails', async () => {
+    identity.getMyProfileCardCode.mockRejectedValueOnce(new Error('code unavailable'))
+    identity.getProfile.mockResolvedValue({ version: 7, nickname: '成员', realName: '姓名', visibility: {}, companies: [], organizations: [] })
+    const page = createPage()
+    await page.load()
+    expect(page.data).toMatchObject({ state: 'ready', realName: '姓名', message: '' })
+  })
+
   it('derives cardContacts visibility from value presence and passes the chosen avatar', async () => {
     identity.updateCard.mockResolvedValue({ profile: { version: 8, visibility: { cardContacts: { phone: true, wechat: true, email: true, address: false } } } })
     const page = createPage({

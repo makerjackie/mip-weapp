@@ -9,6 +9,8 @@ import {
   opportunityTypeLabel,
 } from '../../../../modules/mip-opportunities'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
+import { peekCloudFileUrls } from '../../../../platform/storage/cloud-media'
+import { clearPageMedia, updatePageMedia } from '../../../../platform/storage/component-media'
 import { formatLocalDateTime } from '../../../../utils/date'
 
 /**
@@ -37,6 +39,13 @@ Page({
   },
   resumeInteraction: '' as '' | 'cooperation',
 
+  requestSeq: 0,
+
+  onUnload() {
+    this.requestSeq += 1
+    clearPageMedia(this)
+  },
+
   onLoad(options: Record<string, string | undefined>) {
     const id = String(options.id || '') as OpportunityId
     this.setData({ id })
@@ -59,6 +68,7 @@ Page({
   },
 
   async load() {
+    const requestSeq = ++this.requestSeq
     if (!this.data.id) {
       this.setData({ state: 'error', message: '机会信息不完整' })
       return
@@ -67,7 +77,11 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const item = await opportunityModule.get(this.data.id)
+      const item = await opportunityModule.get(this.data.id, { progressiveMedia: true })
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
+      clearPageMedia(this)
       const journeyStatus = journeyStatusOf(item)
       const ownerBar: '' | OwnerBarMode = !item.mine
         ? ''
@@ -76,19 +90,24 @@ Page({
           : journeyStatus === 'ENDED' ? 'ended' : journeyStatus === 'DRAFT' ? 'draft' : 'active'
       this.setData({
         state: 'ready',
-        item,
+        item: peekCloudFileUrls(item),
         publishedText: formatLocalDateTime(item.publishedAt),
         // figma 1768_37369：找资源/找企业/找伙伴发布时单选，详情只挂一个类型标签。
         typeTagViews: (item.typeKeys || []).slice(0, 1).map(key => ({ key, label: opportunityTypeLabel(key) })),
         journeyStatus,
         ownerBar,
         // 运行时验收（2026-09-22）：服务端 avatars 形状不可信，保底数组后才绑给卡片 type: Array 属性。
-        cooperationAvatars: Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [],
+        cooperationAvatars: [],
         roleNames: item.roles.map(key => cooperationRoles.find(role => role.key === key)?.name || key),
         message: '',
       })
+      updatePageMedia(this, 'item.coverUrl', item.coverUrl || '')
+      updatePageMedia(this, 'cooperationAvatars', Array.isArray(item.avatars) ? item.avatars.filter(v => typeof v === 'string' && v) : [])
     }
     catch (error) {
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
       this.setData(this.data.item
         ? { message: '机会更新失败，已保留上次结果。' }
         : { state: 'error', message: error instanceof Error ? error.message : '机会加载失败' })

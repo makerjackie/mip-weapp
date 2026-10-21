@@ -286,7 +286,7 @@ describe('MIP opportunity review fixes', () => {
     expect(discovery).not.toContain('avatars="{{item.avatars}}"')
     expect(profile).toContain('avatars="{{item.avatarViews}}"')
     expect(profile).not.toContain('avatars="{{item.avatars}}"')
-    expect(detailScript).toContain('cooperationAvatars: Array.isArray(item.avatars)')
+    expect(detailScript).toContain('updatePageMedia(this, \'cooperationAvatars\', Array.isArray(item.avatars)')
     // figma 机会详情（访客视角）：底部聚合头像改由共享 mip-attend-pill 承载，页面不再内联手拼头像组。
     const cooperationActions = detail.slice(detail.indexOf('id="opportunity-cooperation-actions"'))
     expect(cooperationActions).toContain('<mip-attend-pill')

@@ -13,8 +13,8 @@ export const superCaseModule = {
     return callOpportunityApi<SuperCasePage>('listMySuperCases', { cursor, limit: 20 })
   },
 
-  get(id: SuperCaseId) {
-    return callOpportunityApi<SuperCaseDetail>('getSuperCase', { id })
+  get(id: SuperCaseId, options: { progressiveMedia?: boolean } = {}) {
+    return callOpportunityApi<SuperCaseDetail>('getSuperCase', { id }, options)
   },
 
   save(draft: SuperCaseDraft, idempotencyKey = createMutationKey('case-save')) {

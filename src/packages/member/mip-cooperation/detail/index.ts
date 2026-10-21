@@ -3,6 +3,8 @@ import type { CooperationCardDetail, CooperationRoleFieldValue } from '../../../
 import { cooperationAbilityDimensions, cooperationRoles } from '../../../../config/mip-catalogs'
 import { cooperationModule, normalizeCooperationCircles, normalizeCooperationQuirks } from '../../../../modules/mip-cooperation'
 import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigation/client'
+import { peekCloudFileUrls } from '../../../../platform/storage/cloud-media'
+import { clearPageMedia, updatePageMedia } from '../../../../platform/storage/component-media'
 
 interface AbilityView { key: string, label: string, score: number }
 
@@ -45,6 +47,13 @@ Page({
     message: '',
   },
 
+  requestSeq: 0,
+
+  onUnload() {
+    this.requestSeq += 1
+    clearPageMedia(this)
+  },
+
   onLoad(options: Record<string, string | undefined>) {
     this.setData({ id: String(options.id || '') as CooperationCardId })
     void this.load()
@@ -63,12 +72,17 @@ Page({
   },
 
   async load() {
+    const requestSeq = ++this.requestSeq
     if (!this.data.id) {
       this.setData({ state: 'error', message: '合作卡信息不完整' })
       return
     }
     try {
-      const item = await cooperationModule.get(this.data.id)
+      const item = await cooperationModule.get(this.data.id, { progressiveMedia: true })
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
+      clearPageMedia(this)
       const definition = cooperationRoles.find(role => role.key === item.roleKey)
       // figma 2704:13454：导航标题是角色名（狗策划），黑条「需要引荐」承载 roleFields.support。
       if (definition?.name) {
@@ -129,7 +143,7 @@ Page({
 
       this.setData({
         state: 'ready',
-        item,
+        item: peekCloudFileUrls(item),
         abilities,
         roleName: definition?.name || '合作角色',
         menuTitle,
@@ -138,13 +152,18 @@ Page({
         quirkRows,
         support,
         maxValue,
-        badgeUrl: item.author.badge?.imageUrl || '',
+        badgeUrl: '',
         authorLine: authorLineOf(item),
         message: '',
       })
+      updatePageMedia(this, 'item.author.avatarUrl', item.author.avatarUrl || '')
+      updatePageMedia(this, 'badgeUrl', item.author.badge?.imageUrl || '')
       wx.nextTick(() => this.drawRadar())
     }
     catch (error) {
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '合作卡加载失败' })
     }
   },

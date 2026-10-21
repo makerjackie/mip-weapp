@@ -8,8 +8,10 @@
     <view class="absolute bottom-0 h-[4rpx] w-1/2 bg-brand {{tab === 'rules' ? 'left-0' : 'left-1/2'}}" />
   </view>
 
-  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mx-3 mt-[24rpx]"><mip-empty-state title="暂时无法加载经验值详情" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="load" /></view>
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{tab === 'details' ? state === 'loading' : rulesState === 'loading'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{tab === 'details' && state === 'error'}}" class="mx-3 mt-[24rpx]"><mip-empty-state title="暂时无法加载经验值详情" description="{{message || '服务暂时不可用，请重新加载。'}}" action-text="重新加载" bind:action="load" /></view>
+
+  <view wx:elif="{{tab === 'rules' && rulesState === 'error'}}" class="mx-3 mt-[24rpx]"><mip-empty-state title="暂时无法加载规则说明" description="{{rulesMessage}}" action-text="重新加载" bind:action="retryRules" /></view>
 
   <!-- figma 1948_14177 经验值明细：351×67 卡（panel r8），任务名 12px medium + 时间 10px，
        右侧「+ EXP N」黄字（EXP 12px / 数字 16px）；卡间距 12px。 -->
@@ -38,6 +40,7 @@
     </view>
   </block>
 
-  <view wx:if="{{message && state !== 'error'}}" class="mx-3 mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
+  <view wx:if="{{tab === 'details' && message && state !== 'error'}}" class="mx-3 mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{message}}</view>
+  <view wx:if="{{tab === 'rules' && rulesMessage && rulesState !== 'error'}}" class="mx-3 mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[22rpx] text-brand">{{rulesMessage}}</view>
   <view class="mx-3"><app-page-exit /></view>
 </view>

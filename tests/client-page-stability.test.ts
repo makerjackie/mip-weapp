@@ -85,6 +85,40 @@ beforeEach(() => {
 })
 
 describe('client page request ordering', () => {
+  it('navigates immediately while an unread receipt is pending, and still opens during mark-all-read', async () => {
+    const read = deferred<{ readAt: string }>()
+    messagingMocks.markRead.mockReturnValue(read.promise)
+    const page = createPage(notificationPage)
+    const route = '/packages/member/mip-events/detail/index?eventId=event'
+    page.data.items = [{ ...inboxMessage('open'), target: { route } }]
+    page.data.unreadCount = 1
+    const event = { currentTarget: { dataset: { id: 'open' } } }
+    const opening = callPage(page, 'openMessage', event) as Promise<unknown>
+    expect(runtimeMocks.navigateTo).toHaveBeenCalledWith({ url: route })
+    expect(page.data.unreadCount).toBe(1)
+    await callPage(page, 'openMessage', event)
+    expect(runtimeMocks.navigateTo).toHaveBeenCalledOnce()
+    read.resolve({ readAt: '2026-10-21T00:00:00Z' })
+    await opening
+    expect(page.data.unreadCount).toBe(0)
+    page.data.markingAllRead = true
+    await callPage(page, 'openMessage', event)
+    expect(runtimeMocks.navigateTo).toHaveBeenCalledTimes(2)
+    expect(messagingMocks.markRead).toHaveBeenCalledOnce()
+  })
+
+  it('opens a target even when recording the read receipt fails', async () => {
+    messagingMocks.markRead.mockRejectedValueOnce(new Error('offline'))
+    const page = createPage(notificationPage)
+    const route = '/packages/member/order-detail/index?orderId=order'
+    page.data.items = [{ ...inboxMessage('failed'), target: { route } }]
+    page.data.unreadCount = 1
+    await callPage(page, 'openMessage', { currentTarget: { dataset: { id: 'failed' } } })
+    expect(runtimeMocks.navigateTo).toHaveBeenCalledWith({ url: route })
+    expect(page.data.unreadCount).toBe(1)
+    expect(page.data.message).toContain('未读状态更新失败')
+  })
+
   it('drops a superseded inbox append and latches unread message opening', async () => {
     const append = deferred<{ items: ReturnType<typeof inboxMessage>[], unreadCount: number, nextCursor: string }>()
     const refresh = deferred<{ items: ReturnType<typeof inboxMessage>[], unreadCount: number, nextCursor: string }>()

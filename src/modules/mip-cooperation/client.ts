@@ -73,8 +73,8 @@ export const cooperationModule = {
     pendingMinePage = undefined
   },
 
-  get(id: CooperationCardId) {
-    return callOpportunityApi<CooperationCardDetail>('getCooperationCard', { id })
+  get(id: CooperationCardId, options: { progressiveMedia?: boolean } = {}) {
+    return callOpportunityApi<CooperationCardDetail>('getCooperationCard', { id }, options)
   },
 
   save(draft: CooperationCardDraft, idempotencyKey = createMutationKey('cooperation-save')) {

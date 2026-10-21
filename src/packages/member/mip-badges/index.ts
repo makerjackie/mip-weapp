@@ -82,17 +82,21 @@ Page({
     if (!this.data.items.length) {
       this.setData({ state: 'loading', message: '' })
     }
+    // Header identity is optional; a slow avatar/name request must not hold the collection.
+    void mipIdentityModule.loadSnapshot({ maxAgeMs: 15_000 }).then((identity) => {
+      if (sequence !== this.loadSequence) {
+        return
+      }
+      this.setData({ memberName: identity.profile?.nickname || 'MIP 成员' })
+      updatePageMedia(this, 'avatarUrl', identity.profile?.avatarUrl || '')
+    }).catch(() => {})
     try {
-      const [collection, identity] = await Promise.all([
-        mipGrowthModule.listBadgeCollection(),
-        mipIdentityModule.loadSnapshot({ maxAgeMs: 15_000 }).catch(() => null),
-      ])
+      const collection = await mipGrowthModule.listBadgeCollection()
       if (!canApplyBadgeLoad(sequence, this.loadSequence, this.data.dirty, options.discardDraft)) {
         return
       }
       const selectedIds = orderedEquippedIds(collection.items)
       const items = presentBadges(collection.items, selectedIds)
-      const profile = identity?.profile
       this.setData({
         state: collection.items.length ? 'ready' : 'empty',
         items,
@@ -103,13 +107,10 @@ Page({
         maximumEquipped: collection.maximumEquipped || 3,
         version: collection.version,
         earnedCount: items.filter(item => item.earned).length,
-        memberName: profile?.nickname || 'MIP 成员',
-        avatarUrl: '',
         saving: false,
         dirty: false,
         message: '',
       })
-      updatePageMedia(this, 'avatarUrl', profile?.avatarUrl || '')
     }
     catch (error) {
       if (!canApplyBadgeLoad(sequence, this.loadSequence, this.data.dirty, options.discardDraft)) {

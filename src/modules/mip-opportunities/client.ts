@@ -67,8 +67,8 @@ export const opportunityModule = {
     }))
   },
 
-  async get(id: OpportunityId) {
-    return parseOpportunityDetail(await callOpportunityApi<OpportunityDetail>('getOpportunity', { id }))
+  async get(id: OpportunityId, options: { progressiveMedia?: boolean } = {}) {
+    return parseOpportunityDetail(await callOpportunityApi<OpportunityDetail>('getOpportunity', { id }, options))
   },
 
   async getPublicProfile(profileRef: string) {

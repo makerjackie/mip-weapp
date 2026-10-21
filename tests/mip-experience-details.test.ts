@@ -89,6 +89,44 @@ beforeEach(() => {
 })
 
 describe('member experience details page', () => {
+  it('reveals nonempty entries before slow rules and keeps them after rules failure', async () => {
+    const rules = deferred<ReturnType<typeof rulesDocument>>()
+    identity.getMembershipAgreement.mockReturnValueOnce(rules.promise)
+    const instance = page(definition)
+    const loading = callPage(instance, 'load') as Promise<void>
+    await vi.waitFor(() => expect(instance.data.state).toBe('ready'))
+    expect(instance.data).toMatchObject({ entries: [{ title: '早会签到', deltaValue: 10 }], rulesState: 'loading' })
+    rules.resolve(rulesDocument())
+    await loading
+    expect(instance.data.rulesState).toBe('ready')
+    const fresh = page(definition)
+    identity.getMembershipAgreement.mockRejectedValueOnce(new Error('rules unavailable'))
+    await callPage(fresh, 'load')
+    expect(fresh.data).toMatchObject({ state: 'ready', entries: [{ deltaValue: 10 }], rulesState: 'error' })
+    const calls = growth.listEntries.mock.calls.length
+    callPage(fresh, 'retryRules')
+    await vi.waitFor(() => expect(fresh.data.rulesState).toBe('ready'))
+    expect(growth.listEntries).toHaveBeenCalledTimes(calls)
+  })
+
+  it('shows rules when entries fail and ignores both responses after unload', async () => {
+    growth.listEntries.mockRejectedValueOnce(new Error('entries unavailable'))
+    const instance = page(definition)
+    await callPage(instance, 'load')
+    expect(instance.data).toMatchObject({ state: 'error', rulesState: 'ready', rulesDetail: { title: '经验值规则说明' } })
+    const rules = deferred<ReturnType<typeof rulesDocument>>()
+    const entries = deferred<ReturnType<typeof entryPage>>()
+    identity.getMembershipAgreement.mockReturnValueOnce(rules.promise)
+    growth.listEntries.mockReturnValueOnce(entries.promise)
+    const loading = callPage(instance, 'load') as Promise<void>
+    callPage(instance, 'onUnload')
+    const snapshot = structuredClone(instance.data)
+    rules.resolve(rulesDocument({ title: 'late' }))
+    entries.resolve(entryPage([entry({ ruleName: 'late' })]))
+    await loading
+    expect(instance.data).toEqual(snapshot)
+  })
+
   it('lands on the details tab and fetches the EXPERIENCE entry page from the server', async () => {
     const instance = page(definition)
     expect(instance.data.tab).toBe('details')

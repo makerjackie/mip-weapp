@@ -66,6 +66,7 @@ Page({
     saving: false,
     message: '',
   },
+  requestSeq: 0,
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
   onLoad() { void this.load() },
@@ -76,7 +77,10 @@ Page({
   },
 
   onHide() { this.clearNavigationTimer() },
-  onUnload() { this.clearNavigationTimer() },
+  onUnload() {
+    this.requestSeq += 1
+    this.clearNavigationTimer()
+  },
 
   clearNavigationTimer() {
     if (this.navigationTimer !== undefined) {
@@ -109,12 +113,19 @@ Page({
   },
 
   async load() {
+    const requestSeq = ++this.requestSeq
     this.setData({ state: 'loading', message: '' })
+    // The preview code can arrive later without blocking the editable profile.
+    void mipIdentityModule.getMyProfileCardCode().then((cardCode) => {
+      if (requestSeq === this.requestSeq) {
+        this.setData({ previewCodeUrl: cardCode.codeUrl })
+      }
+    }).catch(() => {})
     try {
-      const [profile, cardCode] = await Promise.all([
-        mipIdentityModule.getProfile(),
-        mipIdentityModule.getMyProfileCardCode().catch(() => ({ codeUrl: '' })),
-      ])
+      const profile = await mipIdentityModule.getProfile()
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
       const contact = profile.privateContact
       this.setData({
         state: 'ready',
@@ -123,7 +134,6 @@ Page({
         previewAvatarUrl: profile.avatarUrl || '',
         formAvatarUrl: profile.avatarUrl || '',
         avatarAssetId: profile.avatarAssetId || '',
-        previewCodeUrl: cardCode.codeUrl,
         realName: profile.realName,
         companies: createEditableOrganizations(profile.companies, () => nextExperienceId('companies')),
         organizations: createEditableOrganizations(profile.organizations, () => nextExperienceId('organizations')),
@@ -140,6 +150,9 @@ Page({
       this.syncPreview()
     }
     catch (error) {
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '名片设置加载失败' })
     }
   },

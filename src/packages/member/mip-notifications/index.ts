@@ -86,8 +86,10 @@ Page({
   },
   requestSeq: 0,
   openingMessageId: '' as InboxMessageId | '',
+  unloaded: false,
 
   onLoad() {
+    this.unloaded = false
     const cached = mipMessagingModule.peekInbox()
     if (cached) {
       this.applyPage(cached)
@@ -103,6 +105,7 @@ Page({
   },
 
   onUnload() {
+    this.unloaded = true
     this.requestSeq += 1
   },
 
@@ -190,29 +193,36 @@ Page({
   async openMessage(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '') as InboxMessageId
     const item = this.data.items.find(message => message.id === id)
-    if (!item || this.openingMessageId || this.data.markingAllRead || this.data.refreshing || this.data.loadingMore) {
+    if (!item || this.openingMessageId || this.data.refreshing || this.data.loadingMore) {
       return
     }
     this.openingMessageId = id
+    // Read receipts do not decide access to the destination. Start navigation on tap.
+    const route = item.target?.route
+    const navigation = route && isTrustedInboxRoute(route)
+      ? caseNavigateTo({ url: route }).catch(() => undefined)
+      : Promise.resolve()
     try {
-      if (!item.readAt) {
+      if (!item.readAt && !this.data.markingAllRead) {
         try {
           const result = await mipMessagingModule.markRead(id)
+          if (this.unloaded) {
+            return
+          }
           this.setData({
             unreadCount: Math.max(0, this.data.unreadCount - 1),
             items: this.data.items.map(message => message.id === id ? { ...message, readAt: result.readAt } : message),
           })
         }
         catch {
-          this.setData({ message: '消息已打开，但未读状态更新失败。' })
+          if (!this.unloaded) {
+            this.setData({ message: '未读状态更新失败，请稍后重试。' })
+          }
         }
-      }
-      const route = item.target?.route
-      if (route && isTrustedInboxRoute(route)) {
-        await caseNavigateTo({ url: route }).catch(() => undefined)
       }
     }
     finally {
+      await navigation
       if (this.openingMessageId === id) {
         this.openingMessageId = ''
       }

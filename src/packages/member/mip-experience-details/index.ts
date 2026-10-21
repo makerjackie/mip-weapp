@@ -29,6 +29,8 @@ Page({
     state: 'loading' as 'loading' | 'ready' | 'error',
     entries: [] as ExperienceEntryView[],
     rulesDetail: null as MembershipAgreement | null,
+    rulesState: 'loading' as 'loading' | 'ready' | 'error',
+    rulesMessage: '',
     nextCursor: '',
     loadingMore: false,
     message: '',
@@ -39,28 +41,30 @@ Page({
     void this.load()
   },
 
+  onUnload() {
+    this.requestSeq += 1
+  },
+
   onPullDownRefresh() {
-    void this.load().finally(() => wx.stopPullDownRefresh())
+    return this.load().finally(() => wx.stopPullDownRefresh())
   },
 
   /** wxml「重新加载」与下拉刷新共用；每次都回到第一页并重读规则文档（事件对象入参被忽略）。 */
   async load() {
     const requestSeq = ++this.requestSeq
+    this.setData({ loadingMore: false })
+    void this.loadRules(requestSeq)
     if (!this.data.entries.length) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const [page, rulesDetail] = await Promise.all([
-        mipGrowthModule.listEntries(undefined, 20, 'EXPERIENCE'),
-        mipIdentityModule.getMembershipAgreement('experience-rules'),
-      ])
+      const page = await mipGrowthModule.listEntries(undefined, 20, 'EXPERIENCE')
       if (requestSeq !== this.requestSeq) {
         return
       }
       this.setData({
         state: 'ready',
         entries: page.items.map(entryView),
-        rulesDetail,
         nextCursor: page.nextCursor || '',
         message: '',
       })
@@ -73,6 +77,30 @@ Page({
         ? { message: '经验值详情更新失败，已保留上次结果。' }
         : { state: 'error', message: error instanceof Error ? error.message : '经验值详情加载失败' })
     }
+  },
+
+  async loadRules(requestSeq: number) {
+    if (!this.data.rulesDetail) {
+      this.setData({ rulesState: 'loading', rulesMessage: '' })
+    }
+    try {
+      const rulesDetail = await mipIdentityModule.getMembershipAgreement('experience-rules')
+      if (requestSeq === this.requestSeq) {
+        this.setData({ rulesDetail, rulesState: 'ready', rulesMessage: '' })
+      }
+    }
+    catch {
+      if (requestSeq === this.requestSeq) {
+        this.setData({
+          rulesState: this.data.rulesDetail ? 'ready' : 'error',
+          rulesMessage: '规则说明暂时无法加载，请重试。',
+        })
+      }
+    }
+  },
+
+  retryRules() {
+    void this.loadRules(this.requestSeq)
   },
 
   async loadMore() {

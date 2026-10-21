@@ -2,6 +2,8 @@ import type { SuperCaseId } from '../../../../modules/mip'
 import type { SuperCaseDetail, SuperCaseProjectView } from '../../../../modules/mip-cases'
 import { superCaseModule } from '../../../../modules/mip-cases'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
+import { peekCloudFileUrls } from '../../../../platform/storage/cloud-media'
+import { clearPageMedia, updatePageMedia } from '../../../../platform/storage/component-media'
 
 interface CaseProjectView extends SuperCaseProjectView {
   startedOnText: string
@@ -35,28 +37,45 @@ Page({
     message: '',
   },
 
+  requestSeq: 0,
+
+  onUnload() {
+    this.requestSeq += 1
+    clearPageMedia(this)
+  },
+
   onLoad(options: Record<string, string | undefined>) {
     this.setData({ id: String(options.id || '') as SuperCaseId })
     void this.load()
   },
 
   async load() {
+    const requestSeq = ++this.requestSeq
     if (!this.data.id) {
       this.setData({ state: 'error', message: '案例信息不完整' })
       return
     }
     this.setData({ state: 'loading', message: '' })
     try {
-      const item = await superCaseModule.get(this.data.id)
+      const item = await superCaseModule.get(this.data.id, { progressiveMedia: true })
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
+      clearPageMedia(this)
       const presented = presentCase(item)
       this.setData({
         state: 'ready',
-        item: presented,
-        mediaUrls: presented.media.map(media => media.url).filter(Boolean),
+        item: peekCloudFileUrls(presented),
+        mediaUrls: [],
         message: '',
       })
+      presented.media.forEach((media, index) => updatePageMedia(this, `item.media[${index}].url`, media.url))
+      updatePageMedia(this, 'mediaUrls', presented.media.map(media => media.url).filter(Boolean))
     }
     catch (error) {
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '案例加载失败' })
     }
   },

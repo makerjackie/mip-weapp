@@ -50,7 +50,11 @@ function unwrap<T>(value: unknown, resultUnknown: boolean): T {
   return envelope.data as T
 }
 
-export async function callOpportunityApi<T>(action: string, data: Record<string, unknown> = {}) {
+export async function callOpportunityApi<T>(
+  action: string,
+  data: Record<string, unknown> = {},
+  options: { progressiveMedia?: boolean } = {},
+) {
   const resultUnknown = !readActions.has(action)
   try {
     const response = await measureLoading('opportunities.request', () => retryTransport(async () => {
@@ -61,7 +65,9 @@ export async function callOpportunityApi<T>(action: string, data: Record<string,
       })
     }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }))
     const result = unwrap<T>(response.result, resultUnknown)
-    return action === 'listOpportunities' ? result : await resolveCloudFileUrls(result)
+    return action === 'listOpportunities' || (readActions.has(action) && options.progressiveMedia)
+      ? result
+      : await resolveCloudFileUrls(result)
   }
   catch (error) {
     if (error instanceof MipOpportunityError) {
