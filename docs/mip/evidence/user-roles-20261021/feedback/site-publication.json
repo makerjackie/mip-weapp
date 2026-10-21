@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-21T12:24:33.732905+00:00",
+  "status": "PENDING",
+  "sourceSha": "f7933bea7227c45537c2b38608774523913e5a56",
+  "origin": "https://miptest.01mvp.com",
+  "localBuild": true,
+  "localViewports": [
+    1440,
+    390
+  ],
+  "localImages": 19,
+  "localHorizontalOverflow": false,
+  "deploymentAttempt": "FAILED_NETWORK",
+  "deploymentReadback": "FAILED_NETWORK",
+  "publicVerification": "NOT_COMPLETED",
+  "error": "TLS connection closed for Cloudflare API and public origin; browser ERR_CONNECTION_CLOSED",
+  "note": "Previous public report is historical. This record does not claim new report publication."
+}

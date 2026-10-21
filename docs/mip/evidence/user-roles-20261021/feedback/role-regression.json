@@ -1,0 +1,14 @@
+{
+  "environment": "TEST",
+  "buildSha": "f7933bea7227c45537c2b38608774523913e5a56",
+  "actualWechatPrincipal": true,
+  "realCloudFunctionRequests": true,
+  "syntheticListedUsers": true,
+  "participantGuestCount": 6,
+  "participantPlayerCount": 1,
+  "registeredOrdinaryVisible": true,
+  "talentCount": 3,
+  "ineligibleAndPrivateExcluded": true,
+  "readyPageScreenshots": true,
+  "realDevice": false
+}

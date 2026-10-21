@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-21T12:11:28.528Z",
+  "environment": "TEST",
+  "sourceSha": "f7933bea7227c45537c2b38608774523913e5a56",
+  "version": "1.2.5-test.1021",
+  "actualWechatPrincipal": true,
+  "realCloudRequests": true,
+  "realDevice": false,
+  "settings": {
+    "version": "1.2.5-test.1021",
+    "environment": "测试环境 · 开发版"
+  },
+  "growth": {
+    "state": "ready",
+    "levelCount": 12,
+    "currentLevel": 1,
+    "tasksState": "empty"
+  },
+  "growthEntries": {
+    "state": "ready",
+    "count": 0
+  },
+  "events": {
+    "visibleCount": 6,
+    "allHaveResolvedCover": true,
+    "firstImageWidth": 702,
+    "firstImageHeight": 298
+  },
+  "portfolio": {
+    "cooperationCount": 6,
+    "caseCount": 1,
+    "profileToCooperationReadyMs": 4338,
+    "caseTabToReadyMs": 589,
+    "timingScope": "DevTools on this Mac; not a real-device or cold-start benchmark"
+  },
+  "productionChanged": false
+}

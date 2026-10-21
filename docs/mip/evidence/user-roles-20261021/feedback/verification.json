@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-21T12:14:02.063023Z",
+  "sourceSha": "f7933bea7227c45537c2b38608774523913e5a56",
+  "environment": "TEST",
+  "fullGate": {
+    "passed": true,
+    "miniTests": 1870,
+    "adminNodeTests": 339,
+    "adminReactTests": 262
+  },
+  "runtimePreflight": true,
+  "cloudVerifyIncludingZeroExperienceBase": true,
+  "adminHttp": {
+    "passed": true,
+    "checks": 68
+  },
+  "platformMainPackageBytes": 1766436,
+  "upload": {
+    "sourceSha": "f7933bea7227c45537c2b38608774523913e5a56",
+    "version": "1.2.5-test.1021",
+    "channel": "trial",
+    "targetDir": "envs/test",
+    "uploadedAt": "2026-10-21T12:06:11.199Z",
+    "developmentUploadSucceeded": true,
+    "trialAssignmentVerified": false,
+    "reviewSubmitted": false,
+    "publicReleased": false
+  },
+  "backendCodeChanged": false,
+  "productionChanged": false,
+  "deviceAcceptance": "PENDING",
+  "note": "Growth and event-cover changes are test configuration/data repairs; no user balances, payments or production records modified."
+}

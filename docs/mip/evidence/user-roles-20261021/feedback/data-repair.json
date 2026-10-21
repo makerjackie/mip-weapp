@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-21T11:57:17.177Z",
+  "environment": "TEST",
+  "productionWrites": false,
+  "source": "Production public growth configuration; existing test event cover",
+  "growthLevels": 12,
+  "growthBenefits": 40,
+  "growthRelations": 40,
+  "baseExperience": 0,
+  "postersFilled": 19,
+  "userBalancesUnchanged": true,
+  "configSha256": "90a47b8c61b9ae00dca19689e6c46a3762e7e7cf2b633a4e4d8d326db6c1c8d3",
+  "backupSavedPrivately": true
+}

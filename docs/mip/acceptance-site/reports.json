@@ -843,7 +843,7 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-20T16:40:26.925395+00:00",
-    "updatedAt": "2026-10-21T11:00:41.841737Z",
+    "updatedAt": "2026-10-21T12:14:02.063023Z",
     "verifiedAt": "2026-10-20T17:01:28.859447+00:00",
     "submittedAt": "2026-10-20T16:40:26.925395+00:00",
     "commit": "4bef32bb04aeb104cb0023f3f57d25172a182bff",
@@ -904,52 +904,67 @@
       "「项目机会」「人才合作」两个 Tab 都不再显示 Tab 下方的「深圳 ｜ 清除筛选」行。",
       "地区仍由左上角切换；清除筛选改用筛选面板里的「清除」或无结果时的「清除筛选」按钮。"
     ],
-    "pendingSummary": "本项原画面验证使用注入样本；改动已包含在今日测试开发版本 1.2.4-test.1021 中，手机复核待用户确认。"
+    "pendingSummary": "本项原画面验证使用注入样本；改动已包含最新测试开发版本 1.2.5-test.1021，手机复核待用户确认。"
   },
   {
     "id": "user-roles-20261021-v1",
     "requirement": "user-roles-20261021",
-    "title": "用户角色、报名名单与花名册规则",
-    "indexTitle": "四项用户需求已更新到测试环境",
+    "title": "用户规则与测试体验修复",
+    "indexTitle": "用户规则及版本、海报、成长修复",
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-21T10:58:46.322438Z",
-    "updatedAt": "2026-10-21T11:00:41.841737Z",
-    "verifiedAt": "2026-10-21T11:00:41.841737Z",
+    "updatedAt": "2026-10-21T12:14:02.063023Z",
+    "verifiedAt": "2026-10-21T12:14:02.063023Z",
     "submittedAt": "2026-10-21T10:58:46.322438Z",
-    "commit": "991796d78e0fe707b51eda2079b43175abcfa654",
-    "commitAt": "2026-10-21T06:37:26-04:00",
+    "commit": "f7933bea7227c45537c2b38608774523913e5a56",
+    "commitAt": "2026-10-21T07:58:19-04:00",
     "environment": "测试后台 / 测试库 / 开发者工具真实云请求 · 真机待验",
-    "summary": "四项规则已实现并部署测试：角色正确区分、未签到报名人进入本场嘉宾名单、资料五项必填、人才合作按最新花名册授权筛选。生产未更新。",
+    "summary": "四项用户规则已更新，并修复测试反馈：设置底部显示实际版本、补测试活动封面和成长基础配置。最新测试开发版本 1.2.5-test.1021 已上传，生产未更新。",
     "detail": "docs/mip/evidence/user-roles-20261021/README.md",
     "files": [
-      "docs/mip/evidence/user-roles-20261021/last-checkin-revoked.json",
-      "docs/mip/evidence/user-roles-20261021/profile-negative.json",
-      "docs/mip/evidence/user-roles-20261021/trial-qr.json",
-      "docs/mip/evidence/user-roles-20261021/export.json",
-      "docs/mip/evidence/user-roles-20261021/admin-http.json",
       "docs/mip/evidence/user-roles-20261021/README.md",
+      "docs/mip/evidence/user-roles-20261021/admin-http.json",
+      "docs/mip/evidence/user-roles-20261021/cloud-source.json",
       "docs/mip/evidence/user-roles-20261021/edited-old-feedback-wins.json",
-      "docs/mip/evidence/user-roles-20261021/profile-readback.json",
+      "docs/mip/evidence/user-roles-20261021/export.json",
+      "docs/mip/evidence/user-roles-20261021/feedback/admin-http.json",
+      "docs/mip/evidence/user-roles-20261021/feedback/data-repair.json",
+      "docs/mip/evidence/user-roles-20261021/feedback/native-after.json",
+      "docs/mip/evidence/user-roles-20261021/feedback/requests.json",
+      "docs/mip/evidence/user-roles-20261021/feedback/role-regression.json",
+      "docs/mip/evidence/user-roles-20261021/feedback/shots/about-after.png",
+      "docs/mip/evidence/user-roles-20261021/feedback/shots/about-before.png",
+      "docs/mip/evidence/user-roles-20261021/feedback/shots/events-after.png",
+      "docs/mip/evidence/user-roles-20261021/feedback/shots/events-before.png",
+      "docs/mip/evidence/user-roles-20261021/feedback/shots/growth-after.png",
+      "docs/mip/evidence/user-roles-20261021/feedback/shots/growth-before.png",
+      "docs/mip/evidence/user-roles-20261021/feedback/shots/growth-entries-after.png",
+      "docs/mip/evidence/user-roles-20261021/feedback/shots/settings-after-bottom.png",
+      "docs/mip/evidence/user-roles-20261021/feedback/shots/settings-before-bottom.png",
+      "docs/mip/evidence/user-roles-20261021/feedback/verification.json",
+      "docs/mip/evidence/user-roles-20261021/last-checkin-revoked.json",
       "docs/mip/evidence/user-roles-20261021/latest-opt-out.json",
       "docs/mip/evidence/user-roles-20261021/live-domain.json",
-      "docs/mip/evidence/user-roles-20261021/newer-event-opt-in.json",
-      "docs/mip/evidence/user-roles-20261021/verification.json",
       "docs/mip/evidence/user-roles-20261021/native-lists.json",
+      "docs/mip/evidence/user-roles-20261021/newer-event-opt-in.json",
+      "docs/mip/evidence/user-roles-20261021/profile-negative.json",
+      "docs/mip/evidence/user-roles-20261021/profile-readback.json",
       "docs/mip/evidence/user-roles-20261021/restored-baseline.json",
-      "docs/mip/evidence/user-roles-20261021/cloud-source.json",
-      "docs/mip/evidence/user-roles-20261021/shots/admin-users-before.png",
+      "docs/mip/evidence/user-roles-20261021/shots/admin-normal-export.png",
       "docs/mip/evidence/user-roles-20261021/shots/admin-normal-mobile.png",
       "docs/mip/evidence/user-roles-20261021/shots/admin-users-after.png",
+      "docs/mip/evidence/user-roles-20261021/shots/admin-users-before.png",
       "docs/mip/evidence/user-roles-20261021/shots/mini-ordinary-registered.png",
+      "docs/mip/evidence/user-roles-20261021/shots/mini-participants-after.png",
       "docs/mip/evidence/user-roles-20261021/shots/mini-talents-after.png",
-      "docs/mip/evidence/user-roles-20261021/shots/admin-normal-export.png",
-      "docs/mip/evidence/user-roles-20261021/shots/mini-participants-after.png"
+      "docs/mip/evidence/user-roles-20261021/trial-qr.json",
+      "docs/mip/evidence/user-roles-20261021/verification.json"
     ],
     "comparisons": [
       {
         "title": "后台当前角色",
-        "context": "同一真实测试后台、七个明确标记的合成用户、关键词验收1021、无角色筛选、1440×900。修改前非玩家都显示嘉宾；修改后普通用户和撤销最后签到者显示普通用户。无新增原型稿。",
+        "context": "首轮角色修复时拍摄：同一真实测试后台、七个合成用户、关键词验收1021、无角色筛选、1440×900；当时尚未补齐成长配置。修改后普通用户和撤销最后签到者正确分类。后续等级配置修复另见本页反馈。",
         "before": {
           "file": "docs/mip/evidence/user-roles-20261021/shots/admin-users-before.png",
           "caption": "修改前：普通用户和撤销签到者仍显示嘉宾",
@@ -976,6 +991,80 @@
       "完整门禁和线上后台 68 项检查通过；九个测试函数源码与运行产物核对一致。"
     ],
     "sections": [
+      {
+        "id": "user-roles-1021-feedback",
+        "title": "测试反馈：版本、海报与成长记录",
+        "highlights": [
+          "设置页最底部新增版本号和数据环境，「关于 MIP」同步；优先使用微信安装版本，发布流程还会核对烘焙版本与上传版本一致。最新测试开发版本 1.2.5-test.1021 已上传。",
+          "按用户确认，为 19 个缺封面的测试活动复用既有活动海报；名称保留测试标记，已有封面和生产活动不改。当前查询的 15 个公开活动都有封面，模拟器可见的 6 个活动图片正常。",
+          "成长页原先失败，因为测试库没有基础等级配置，返回 GROWTH_LEVEL_BASE_REQUIRED。已补齐当前公共配置中的 12 个等级、40 项等级权益和对应关联；没有修改用户积分。成长页及明细页实测正常打开，无流水时显示空记录。",
+          "合作卡与超级案例已实测加载成功且非空。开发者工具首次进入个人页约 4.34 秒出现合作卡，切超级案例约 0.59 秒；这些不是手机或冷启动性能基准，本次不宣称已提速。"
+        ],
+        "comparisons": [
+          {
+            "title": "设置页底部：版本与环境",
+            "context": "同一 390×844 模拟器、同一测试账号，均滚到设置页最底部。新栏改变上方内容的相对位置。依据本次用户决定新增，无新增原型稿；截图是开发版，体验版指向仍待手机核对。",
+            "before": {
+              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/settings-before-bottom.png",
+              "caption": "修改前：设置底部没有版本信息",
+              "source": "修改前真实测试环境 · 微信开发者工具"
+            },
+            "after": {
+              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/settings-after-bottom.png",
+              "caption": "修改后：版本 1.2.5-test.1021 与测试环境",
+              "source": "1.2.5-test.1021 最终包 · 微信开发者工具"
+            }
+          },
+          {
+            "title": "关于 MIP：上传版本与工程版本",
+            "context": "同一页面、同一视口。微信开发者工具不提供安装版本时，使用发布时烘焙的上传版本；手机显示需用户复核。",
+            "before": {
+              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/about-before.png",
+              "caption": "修改前：只显示工程版本 0.2.0",
+              "source": "修改前真实测试环境 · 微信开发者工具"
+            },
+            "after": {
+              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/about-after.png",
+              "caption": "修改后：与当前上传版本一致",
+              "source": "1.2.5-test.1021 最终包 · 微信开发者工具"
+            }
+          },
+          {
+            "title": "测试活动：补齐示例海报",
+            "context": "同一测试城市、同一批合成活动和相同视口。用户已确认复用现有海报，这不是每场活动新制作的专属海报；原有海报未替换。",
+            "before": {
+              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/events-before.png",
+              "caption": "修改前：测试活动封面为空",
+              "source": "修改前真实测试环境 · 微信开发者工具"
+            },
+            "after": {
+              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/events-after.png",
+              "caption": "修改后：复用现有海报显示封面",
+              "source": "1.2.5-test.1021 最终包 · 微信开发者工具"
+            }
+          },
+          {
+            "title": "玩家成长：缺配置错误恢复",
+            "context": "同一测试账号及模拟器。只补公共等级配置；测试账号权益为后台开通，无真实支付。经验值未改；没有用客户端假等级替代服务端数据。",
+            "before": {
+              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/growth-before.png",
+              "caption": "修改前：成长等级尚未配置，页面失败",
+              "source": "修改前真实测试环境 · 微信开发者工具"
+            },
+            "after": {
+              "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/growth-after.png",
+              "caption": "修改后：真实返回 Lv.1、12 个等级和等级权益",
+              "source": "1.2.5-test.1021 最终包 · 微信开发者工具"
+            }
+          }
+        ],
+        "evidenceImages": [
+          {
+            "file": "docs/mip/evidence/user-roles-20261021/feedback/shots/growth-entries-after.png",
+            "caption": "经验值明细真实加载成功，无流水时显示空记录"
+          }
+        ]
+      },
       {
         "id": "user-roles-1021-verification",
         "title": "验证结果与范围",
@@ -1017,7 +1106,13 @@
         ]
       }
     ],
-    "limitations": "合成数据验证不等于原生手机号授权、真实报名扫码签到或支付验收。已上传连接测试服务的开发版本 1.2.4-test.1021；体验版指向与手机扫描结果待用户确认。生产未更新，待用户测试批准。",
-    "pendingSummary": "请核对体验版 1.2.4-test.1021 的测试环境标识，并在手机复测四项流程；确认后再发生产。"
+    "limitations": "实际测试环境、开发者工具与合成样本证据分开记录。1.2.5 角色名单回归仍通过；版本栏、活动图片、成长页和空明细均已实际核对。开发工具曾出现 wx://not-found，完整编译、重连后重新验证；未把空白页面记为通过。手机、原生授权、扫码签到及真实支付未由这些证据替代。",
+    "pendingSummary": "最新测试开发版本 1.2.5-test.1021 已上传；请重新打开体验版，在「我的 → 设置 → 最底部」核对版本和测试环境。平台体验版指向、手机原生流程与实际性能待用户复测；生产未更新。",
+    "downloads": [
+      {
+        "file": "docs/mip/evidence/user-roles-20261021/README.md",
+        "label": "查看交接文档"
+      }
+    ]
   }
 ]

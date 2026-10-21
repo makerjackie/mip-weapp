@@ -1,0 +1,61 @@
+{
+  "method": "Actual test WeChat principal in DevTools; wall-clock RPC timings, not a real-device benchmark",
+  "before": [
+    {
+      "action": "getSnapshot",
+      "ok": false,
+      "errorCode": "GROWTH_LEVEL_BASE_REQUIRED",
+      "milliseconds": 741
+    },
+    {
+      "action": "listEntries",
+      "ok": true,
+      "errorCode": null,
+      "milliseconds": 401
+    },
+    {
+      "action": "listBadgeCollection",
+      "ok": true,
+      "errorCode": null,
+      "milliseconds": 415
+    }
+  ],
+  "after": [
+    {
+      "action": "getSnapshot",
+      "ok": true,
+      "milliseconds": 1954,
+      "items": 0
+    },
+    {
+      "action": "listEntries",
+      "ok": true,
+      "milliseconds": 768,
+      "items": 0
+    },
+    {
+      "action": "listBadgeCollection",
+      "ok": true,
+      "milliseconds": 4627,
+      "items": 0
+    },
+    {
+      "action": "listMyCooperationCards",
+      "ok": true,
+      "milliseconds": 823,
+      "items": 6
+    },
+    {
+      "action": "listMySuperCases",
+      "ok": true,
+      "milliseconds": 541,
+      "items": 1
+    },
+    {
+      "action": "mip.events.list",
+      "ok": true,
+      "milliseconds": 5043,
+      "items": 15
+    }
+  ]
+}
