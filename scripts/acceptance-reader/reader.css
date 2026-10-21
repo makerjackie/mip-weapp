@@ -236,6 +236,7 @@ html.image-viewer-open {
   padding: 16px;
   overflow: auto;
   overscroll-behavior: contain;
+  overflow-anchor: none;
   place-items: center;
 }
 .image-viewer-stage img {
@@ -279,6 +280,7 @@ html.image-viewer-open {
 }
 .image-viewer-zoomed .image-viewer-stage {
   display: block;
+  place-items: start;
 }
 .image-viewer-zoomed img {
   max-width: none;
