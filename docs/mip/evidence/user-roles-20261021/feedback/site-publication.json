@@ -1,18 +1,32 @@
 {
-  "checkedAt": "2026-10-21T12:24:33.732905+00:00",
-  "status": "PENDING",
+  "checkedAt": "2026-10-21T12:55:38.720160+00:00",
+  "status": "VERIFIED",
   "sourceSha": "f7933bea7227c45537c2b38608774523913e5a56",
+  "reportDeploymentBaseSha": "add048a52b0b777400fb0d672dea9673c111043f",
+  "reportInputHadDocumentationChanges": true,
   "origin": "https://miptest.01mvp.com",
-  "localBuild": true,
-  "localViewports": [
-    1440,
-    390
-  ],
-  "localImages": 19,
-  "localHorizontalOverflow": false,
-  "deploymentAttempt": "FAILED_NETWORK",
-  "deploymentReadback": "FAILED_NETWORK",
-  "publicVerification": "NOT_COMPLETED",
-  "error": "TLS connection closed for Cloudflare API and public origin; browser ERR_CONNECTION_CLOSED",
-  "note": "Previous public report is historical. This record does not claim new report publication."
+  "reportUrl": "https://miptest.01mvp.com/updates/2026-10-21/#user-roles-1021-feedback",
+  "deploymentId": "22bbbd65-0455-4515-b5b3-39549c3c5ebb",
+  "deploymentReadback": true,
+  "https": {
+    "checkedAt": "2026-10-21T12:54:33.594Z",
+    "origin": "https://miptest.01mvp.com",
+    "verifiedFiles": 270,
+    "passed": true,
+    "initialTransportFailures": 44,
+    "finalRoundRetriedFiles": 1,
+    "targetedReadbackRetries": true,
+    "errors": []
+  },
+  "assetManifestSha256": "f0197a81935f8cf7297ab51542e9b0218e3092771bed4268779930c457670209",
+  "browserEvidence": "site-browser.json",
+  "temporaryTaskRoutesRestored": {
+    "restored": true,
+    "sourceConfigUnchanged": true,
+    "proxySelectionsUnchanged": true
+  },
+  "businessDeployment": false,
+  "newMiniProgramUpload": false,
+  "productionBusinessChanged": false,
+  "note": "Same October 21 draft and original submission time retained. Network interruptions resolved for task-scoped publication and verified reads; original local proxy configuration and node choices restored. Mini Program real-device acceptance remains pending."
 }

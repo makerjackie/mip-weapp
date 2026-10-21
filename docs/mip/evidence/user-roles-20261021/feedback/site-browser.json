@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-21T12:52:31.477476+00:00",
+  "url": "https://miptest.01mvp.com/updates/2026-10-21/#user-roles-1021-feedback",
+  "homepageEntryVerified": true,
+  "desktop": {
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": false,
+    "decodedImages": 19,
+    "brokenImages": 0,
+    "invalidHashLinks": 0
+  },
+  "mobile": {
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": false,
+    "decodedImages": 19,
+    "brokenImages": 0,
+    "directorySelectNavigation": true
+  },
+  "consoleErrors": [],
+  "note": "One image failed during initial loading; after verified HTTP readback and browser reload, all 19 images decoded successfully. Public report review does not replace Mini Program real-device acceptance."
+}
