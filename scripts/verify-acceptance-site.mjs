@@ -17,8 +17,9 @@ const verified = []
 await Promise.all(Array.from({ length: 5 }, async () => {
   while (queue.length) {
     const file = queue.shift()
-    // Pages canonically serves index.html at the directory URL.
-    const route = file.replace(/(^|\/)index\.html$/, '$1')
+    // Pages serves directory indexes and standalone HTML at clean URLs.
+    // Request that exact path so an expected .html redirect is not a failure.
+    const route = file.replace(/(^|\/)index\.html$/, '$1').replace(/\.html$/, '')
     const response = await fetch(new URL(`/${route}`, origin), { redirect: 'error', signal: AbortSignal.timeout(30000) })
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${file}`)

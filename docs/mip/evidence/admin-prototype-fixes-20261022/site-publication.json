@@ -1,0 +1,49 @@
+{
+  "checkedAt": "2026-10-22T16:52:11.723Z",
+  "status": "PASS",
+  "deploymentId": "91f5ecf7",
+  "origin": "https://miptest.01mvp.com",
+  "reportUrl": "https://miptest.01mvp.com/updates/2026-10-22/",
+  "questionsUrl": "https://miptest.01mvp.com/evidence/admin-prototype-fixes-20261022/review",
+  "runtimeSourceSha": "ba1889061013eeb731944c5874be82dbcab16c50",
+  "https": {
+    "matchedFiles": 540,
+    "matchedBytes": 46848337,
+    "checks": [
+      "HTTP success",
+      "exact published bytes",
+      "HTML/image/reader asset MIME"
+    ],
+    "manifestSha256": "91e0d7d682dcea042e0ac6d28b7fdb9e6ec11417a8d539f7290ae0ffe3720e4d"
+  },
+  "browser": {
+    "method": "CUA real published pages",
+    "desktopAndMobileVerified": true,
+    "publicImagePreviewVerified": true,
+    "outsideClickClosesImage": true,
+    "imageClickKeepsOpen": true,
+    "questionAnswersPersistAfterReload": true,
+    "testAnswersCleared": true,
+    "finalQuestionsDom": {
+      "checkedAt": "2026-10-22T16:55:14.027Z",
+      "contributionReadonly": true,
+      "overflow": false,
+      "questionCount": 11,
+      "selectedAnswers": 0,
+      "title": "MIP 后台规则待确认 · 2026-10-22",
+      "url": "https://miptest.01mvp.com/evidence/admin-prototype-fixes-20261022/review",
+      "viewport": {
+        "height": 720,
+        "width": 1280
+      }
+    }
+  },
+  "privacy": {
+    "publicComparisonGroups": 6,
+    "publicImages": 18,
+    "fullComparisonGroups": 11,
+    "fullReportLocalOnly": true,
+    "privateRawScreenshotsPublished": false
+  },
+  "scope": "Acceptance report publication only. Business changes were deployed to TEST; production was not deployed. Native WeChat/payment/task approval end-to-end flows remain outside this browser acceptance."
+}

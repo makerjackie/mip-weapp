@@ -1,0 +1,37 @@
+{
+  "label": "测试环境独立只读回读；原始响应仅保存在本机 private 文件",
+  "readOnlyBusinessActions": true,
+  "contribution": {
+    "label": "测试1022发放10后冲正10",
+    "entryCount": 2,
+    "grantCount": 1,
+    "reversalCount": 1,
+    "sameUser": true,
+    "reversalReferencesOriginalEntry": true,
+    "originalEntryFullyReversed": true,
+    "ledgerBalanceReturnedToZero": true,
+    "grantBalanceWasTen": true,
+    "netChangeZero": true,
+    "fullLedgerPageRead": true
+  },
+  "task": {
+    "label": "测试1022·审批筛选验收",
+    "matchingCount": 1,
+    "version": 2,
+    "latestSavedVersionConfirmed": true,
+    "draftConfirmed": true,
+    "approvalWorkflowConfirmed": true,
+    "pageJumpActionConfirmed": true,
+    "eventsPageTargetConfirmed": true,
+    "separateDetailRequestConfirmed": true
+  },
+  "opportunity": {
+    "label": "测试1022·后台原型核验",
+    "matchingCount": 1,
+    "version": 2,
+    "latestSavedVersionConfirmed": true,
+    "saveReadbackMarkerConfirmed": true,
+    "draftConfirmed": true,
+    "separateDetailRequestConfirmed": true
+  }
+}

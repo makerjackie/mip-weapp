@@ -1,0 +1,32 @@
+{
+  "verifiedAt": "2026-10-22T16:25:37.334881+00:00",
+  "functions": [
+    {
+      "function": "mip-t-admin-api",
+      "active": true,
+      "configurationUnchanged": true,
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "sourceFilesMatched": 170,
+      "codeSha256": "11ee894373e50df334ff2514701354970b9e5826739dc2e02348492c88bc742c"
+    },
+    {
+      "function": "mip-t-tasks-api",
+      "active": true,
+      "configurationUnchanged": true,
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "sourceFilesMatched": 22,
+      "codeSha256": "7757d70f74d70a2270ad2516c93957e6ca5f8ebdd09599ba3f3d2f662b90f6e5"
+    },
+    {
+      "function": "mip-t-admin-web-api",
+      "active": true,
+      "configurationUnchanged": true,
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true,
+      "sourceFilesMatched": 19,
+      "codeSha256": "2929d80e71a48abac6e340c7c351010c98993d34921c421fc6f562413c95e582"
+    }
+  ]
+}

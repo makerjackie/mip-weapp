@@ -1467,5 +1467,384 @@
         "label": "下载逐项审阅清单"
       }
     ]
+  },
+  {
+    "id": "admin-prototype-fixes-20261022-v1",
+    "requirement": "admin-prototype-fixes-20261022",
+    "title": "管理后台原型对齐与确定性修复",
+    "indexTitle": "甲方要求与验收结果",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-22T16:08:54.371442+00:00",
+    "updatedAt": "2026-10-22T16:38:01.545186+00:00",
+    "verifiedAt": "2026-10-22T16:38:01.545186+00:00",
+    "submittedAt": "2026-10-22T16:38:01.545186+00:00",
+    "commitAt": "2026-10-22T12:24:19-04:00",
+    "reportDate": "2026-10-22",
+    "commit": "ba1889061013eeb731944c5874be82dbcab16c50",
+    "environment": "TEST · https://test.admin.mip.cool/；本批不发布生产",
+    "summary": "明确缺陷已修复并部署测试后台；原型对照与待确认问题分开交付。",
+    "highlights": [
+      "明确缺陷已修复并部署测试后台；原型对照与待确认问题分开交付。"
+    ],
+    "comparisons": [],
+    "uiChange": false,
+    "sections": [
+      {
+        "id": "admin-fixes-1022-r01",
+        "title": "活动详情与创建",
+        "highlights": [
+          "要求：按原型整理活动图文、详情与创建流程。",
+          "结果（部分验证）：活动详情采用左封面、右资料与独立分区；介绍、主办方、须知各2图均显示，非空报名与反馈可读取。 活动列表优先显示状态、人数与费用，恢复草稿及归档可见；创建表单分组、保存、离页恢复及封面预览已实测。",
+          "边界：活动时区与反馈开关按原实现保留，待问题页确认。"
+        ],
+        "acceptanceStatus": "PARTIAL",
+        "comparisons": [
+          {
+            "title": "活动列表关键信息与设置",
+            "before": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/events-before.jpg",
+              "caption": "TEST · 1265×712",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "29a1c712a7e269a00467715ac3c349c616bc497ad9a7f162e01b77d196952bbe",
+              "width": 1265,
+              "height": 712,
+              "environment": "TEST",
+              "capturedAt": null,
+              "captureTimeNote": "精确拍摄时间未记录；不以文件修改时间代替"
+            },
+            "after": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/events-after.jpg",
+              "caption": "TEST · 1265×712",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "abfac147e432c4a5a510b73235051afcaa9e8c878ee85c7e119478981739043c",
+              "width": 1265,
+              "height": 712,
+              "environment": "TEST",
+              "capturedAt": "2026-10-22T16:27:48.396Z",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "prototype": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/events-prototype.jpg",
+              "caption": "演示数据 · 1280×720",
+              "source": "Workbuddy 详细需求工作稿 V0.4",
+              "sourceUrl": "https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/",
+              "sha256": "9c7e3d07ba46dd7b6d58ce664662cc5f9c6616c8df1b837a6977bce55857a8ab",
+              "width": 1280,
+              "height": 720,
+              "environment": "PROTOTYPE_DEMO",
+              "capturedAt": "2026-10-22T06:23:08.340621+00:00",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "context": "测试环境修改前后实拍；原型为演示数据，视口、样本与业务状态差异保留，不逐值比较。"
+          },
+          {
+            "title": "活动表单分组",
+            "before": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/event-create-before.jpg",
+              "caption": "TEST · 1265×712",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "3aaed192342425bb461222c6096de2715c914a544b9dd4fe65e9662aedb258db",
+              "width": 1265,
+              "height": 712,
+              "environment": "TEST",
+              "capturedAt": null,
+              "captureTimeNote": "精确拍摄时间未记录；不以文件修改时间代替"
+            },
+            "after": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/event-create-after.jpg",
+              "caption": "TEST · 1265×712",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "47e201bb5edab16093f4e81c58bfe63b72493bd80da12c9957a04deab16e6517",
+              "width": 1265,
+              "height": 712,
+              "environment": "TEST",
+              "capturedAt": "2026-10-22T16:26:27.356Z",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "prototype": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/event-create-prototype.jpg",
+              "caption": "演示数据 · 1280×720",
+              "source": "Workbuddy 详细需求工作稿 V0.4",
+              "sourceUrl": "https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/",
+              "sha256": "8338f97488727f56ff3a17022ad5660a4f2cb36ffbcd3225eb1d6d036a4ef3a9",
+              "width": 1280,
+              "height": 720,
+              "environment": "PROTOTYPE_DEMO",
+              "capturedAt": "2026-10-22T06:23:08.340621+00:00",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "context": "测试环境修改前后实拍；原型为演示数据，视口、样本与业务状态差异保留，不逐值比较。"
+          }
+        ]
+      },
+      {
+        "id": "admin-fixes-1022-r09",
+        "title": "机会详情",
+        "highlights": [
+          "要求：按原型提供分区详情并保留真实数据。",
+          "结果（已验证）：机会提供独立详情分区，已完成修改、离页及服务端刷新回读，金额保留真实单位。"
+        ],
+        "acceptanceStatus": "PASS",
+        "comparisons": [
+          {
+            "title": "机会列表金额单位",
+            "before": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/opportunities-before.jpg",
+              "caption": "TEST · 1280×720",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "ef43c301d3056f8f1caeb454a4368917f25533d43c0b3301fc74077733d8faf1",
+              "width": 1280,
+              "height": 720,
+              "environment": "TEST",
+              "capturedAt": null,
+              "captureTimeNote": "精确拍摄时间未记录；不以文件修改时间代替"
+            },
+            "after": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/opportunities-after.jpg",
+              "caption": "TEST · 1280×720",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "77ba5e747d6b4a6925d271f0a6741b70a464ef4507125a28a1504b48b986a3ff",
+              "width": 1280,
+              "height": 720,
+              "environment": "TEST",
+              "capturedAt": "2026-10-22T16:34:27.673Z",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "prototype": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/opportunities-prototype.jpg",
+              "caption": "演示数据 · 1280×720",
+              "source": "Workbuddy 详细需求工作稿 V0.4",
+              "sourceUrl": "https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/",
+              "sha256": "10a6a27cb2257ae8afce5e391844fec49db11ea06511327d8ef17b40c079501d",
+              "width": 1280,
+              "height": 720,
+              "environment": "PROTOTYPE_DEMO",
+              "capturedAt": "2026-10-22T06:23:08.340621+00:00",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "context": "测试环境修改前后实拍；原型为演示数据，视口、样本与业务状态差异保留，不逐值比较。"
+          },
+          {
+            "title": "机会独立详情与分区",
+            "before": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/opportunity-detail-before.jpg",
+              "caption": "TEST · 1280×720",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "3e28a347b240e91d9d3de57a05583a51f540aaccc4377d42f4b988775013ccaf",
+              "width": 1280,
+              "height": 720,
+              "environment": "TEST",
+              "capturedAt": null,
+              "captureTimeNote": "精确拍摄时间未记录；不以文件修改时间代替"
+            },
+            "after": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/opportunity-detail-after.jpg",
+              "caption": "TEST · 1265×712",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "f88752f983edf43a8447d32f9e0821fcdec732af835fd8630744ecff16b031f4",
+              "width": 1265,
+              "height": 712,
+              "environment": "TEST",
+              "capturedAt": "2026-10-22T16:35:05.403Z",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "prototype": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/opportunity-detail-prototype.jpg",
+              "caption": "演示数据 · 1280×720",
+              "source": "Workbuddy 详细需求工作稿 V0.4",
+              "sourceUrl": "https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/",
+              "sha256": "c815ffb461bdf215714323d536738c7b9c796823f8ee362063f3888447a11232",
+              "width": 1280,
+              "height": 720,
+              "environment": "PROTOTYPE_DEMO",
+              "capturedAt": "2026-10-22T06:23:08.340621+00:00",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "context": "测试环境修改前后实拍；原型为演示数据，视口、样本与业务状态差异保留，不逐值比较。"
+          }
+        ]
+      },
+      {
+        "id": "admin-fixes-1022-r05",
+        "title": "成长与权益流水",
+        "highlights": [
+          "要求：流水要便于识别用户与来源，并能查看完整记录。",
+          "结果（已验证）：经验与权益流水显示用户、来源和短编号；完整编号复制、详情和经验导出已实测。"
+        ],
+        "acceptanceStatus": "PASS",
+        "comparisons": [],
+        "uiChange": false
+      },
+      {
+        "id": "admin-fixes-1022-r04",
+        "title": "贡献值冲正",
+        "highlights": [
+          "要求：错误贡献值支持有记录的冲正。",
+          "结果（已验证）：贡献值已完成测试发放10、原额冲正10，原流水保留且不能重复冲正。"
+        ],
+        "acceptanceStatus": "PASS",
+        "comparisons": [],
+        "uiChange": false
+      },
+      {
+        "id": "admin-fixes-1022-r10",
+        "title": "等级逐行操作",
+        "highlights": [
+          "要求：等级列表提供编辑、权益与用户明细。",
+          "结果（已验证）：逐行编辑及权益入口可打开；Lv.1用户明细仅显示对应8人。未修改正式等级数值。",
+          "说明：正式等级与权益兑现方案仍待确认。"
+        ],
+        "acceptanceStatus": "PASS",
+        "comparisons": [
+          {
+            "title": "等级行操作入口",
+            "before": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/levels-before.jpg",
+              "caption": "TEST · 1265×712",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "96230345855881544b099506dc767f75fbbd2d3650f4f17efd36e91f85a41041",
+              "width": 1265,
+              "height": 712,
+              "environment": "TEST",
+              "capturedAt": null,
+              "captureTimeNote": "精确拍摄时间未记录；不以文件修改时间代替"
+            },
+            "after": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/levels-after.jpg",
+              "caption": "TEST · 1265×712",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "5d9255abeb9bfd8dc32b6022fb28118ea0f1fb3571cd380a6109530165980f5f",
+              "width": 1265,
+              "height": 712,
+              "environment": "TEST",
+              "capturedAt": "2026-10-22T16:32:58.416Z",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "prototype": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/levels-prototype.jpg",
+              "caption": "演示数据 · 1280×720",
+              "source": "Workbuddy 详细需求工作稿 V0.4",
+              "sourceUrl": "https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/",
+              "sha256": "f00cb4f4e528cc837be10d6cc10a95d305a1622e2e618ea74c6197cc96f5e79d",
+              "width": 1280,
+              "height": 720,
+              "environment": "PROTOTYPE_DEMO",
+              "capturedAt": "2026-10-22T06:23:08.340621+00:00",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "context": "测试环境修改前后实拍；原型为演示数据，视口、样本与业务状态差异保留，不逐值比较。"
+          }
+        ]
+      },
+      {
+        "id": "admin-fixes-1022-r11",
+        "title": "服务器与权限入口",
+        "highlights": [
+          "要求：服务器管理独立，人员授权与角色策略归位。",
+          "结果（已验证）：服务器与授权分为独立入口；服务器保存、离页回读及恢复原资料已完成。"
+        ],
+        "acceptanceStatus": "PASS",
+        "comparisons": [
+          {
+            "title": "服务器独立入口",
+            "before": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/servers-before.jpg",
+              "caption": "TEST · 1265×712",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "13c4e9c88784e64e618f1f56266862754640a8fcacd53186d6e4c571ed7b7491",
+              "width": 1265,
+              "height": 712,
+              "environment": "TEST",
+              "capturedAt": null,
+              "captureTimeNote": "精确拍摄时间未记录；不以文件修改时间代替"
+            },
+            "after": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/servers-after.jpg",
+              "caption": "TEST · 1280×720",
+              "source": "测试后台真实画面",
+              "sourceUrl": "https://test.admin.mip.cool/",
+              "sha256": "8d67dfee265720a2f1b66fc9fbb914bc224e436cf66beff6910d9adbe6b4e043",
+              "width": 1280,
+              "height": 720,
+              "environment": "TEST",
+              "capturedAt": "2026-10-22T16:34:30.099Z",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "prototype": {
+              "file": "docs/mip/evidence/admin-prototype-fixes-20261022/screenshots/servers-prototype.jpg",
+              "caption": "演示数据 · 1280×720",
+              "source": "Workbuddy 详细需求工作稿 V0.4",
+              "sourceUrl": "https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/",
+              "sha256": "f7465aa26ac56ff94332e7ab3e98acb53c692c450466f56e64c4a548e1261054",
+              "width": 1280,
+              "height": 720,
+              "environment": "PROTOTYPE_DEMO",
+              "capturedAt": "2026-10-22T06:23:08.340621+00:00",
+              "captureTimeNote": "来源记录的采集时间"
+            },
+            "context": "测试环境修改前后实拍；原型为演示数据，视口、样本与业务状态差异保留，不逐值比较。"
+          }
+        ]
+      },
+      {
+        "id": "admin-fixes-1022-r02",
+        "title": "统计名称",
+        "highlights": [
+          "要求：概览名称应符合服务端数据含义。",
+          "结果（已验证）：将实际注册数准确标为“新增用户”，复杂统计仍待确认。"
+        ],
+        "acceptanceStatus": "PASS",
+        "comparisons": [],
+        "uiChange": false
+      },
+      {
+        "id": "admin-fixes-1022-r03-r08",
+        "title": "任务筛选与保存",
+        "highlights": [
+          "要求：筛选覆盖全量数据，任务动作配置能保存。",
+          "结果（部分验证）：筛选在服务端分页前执行；真实测试任务的一星匹配、二星空态已核对，多页范围有合同回归。 任务点击动作与目标页面已保存后重新打开核对；历史直接完成流程保留。",
+          "边界：审批、派发和奖励完整用户端流程仍需真实业务复测。"
+        ],
+        "acceptanceStatus": "PARTIAL",
+        "comparisons": [],
+        "uiChange": false
+      },
+      {
+        "id": "admin-fixes-1022-r13",
+        "title": "审计可读性",
+        "highlights": [
+          "要求：操作与模块使用易读名称，同时保留原始码。",
+          "结果（已验证）：实际冲正记录显示中文操作和模块；详情保留原始代码、完整编号。",
+          "说明：未找到独立审计原型；完整前后对照保留在本机报告。"
+        ],
+        "acceptanceStatus": "PASS",
+        "comparisons": [],
+        "uiChange": false
+      }
+    ],
+    "pendingSummary": "11个业务决定集中在待确认问题页；未批准的规则未改动。；真实微信确认、扫码签到、视频号跳转与消息投递不作为本轮浏览器通过项。；仅测试环境，生产本轮不发布。",
+    "limitations": "11个业务决定集中在待确认问题页；未批准的规则未改动。；真实微信确认、扫码签到、视频号跳转与消息投递不作为本轮浏览器通过项。；仅测试环境，生产本轮不发布。",
+    "downloads": [
+      {
+        "file": "docs/mip/evidence/admin-prototype-fixes-20261022/review.html",
+        "label": "需要确认的问题"
+      },
+      {
+        "file": "docs/mip/evidence/admin-prototype-fixes-20261022/questions.json",
+        "label": "下载问题清单"
+      }
+    ]
   }
 ]

@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-22T16:41:13.280Z",
+  "origin": "https://admin.mip.cool",
+  "status": "PASS",
+  "baselineAt": "2026-10-22T15:07:10.760Z",
+  "before": {
+    "asset": "/assets/index-BxitjAfN.js",
+    "sha256": "dda4a126bcc135578f856371e95e3cbd3a84033869a1987ac0111ad169088ee4"
+  },
+  "after": {
+    "asset": "/assets/index-BxitjAfN.js",
+    "sha256": "dda4a126bcc135578f856371e95e3cbd3a84033869a1987ac0111ad169088ee4"
+  },
+  "entryPathUnchanged": true,
+  "entryBytesUnchanged": true,
+  "httpStatus": {
+    "html": 200,
+    "entry": 200
+  },
+  "method": "Unauthenticated read-only HTTPS GET; no-cache request; SHA-256 of decoded entry JavaScript bytes",
+  "scope": "Only the public entry path and entry JavaScript bytes are compared; this does not establish that production database, functions or all resources are unchanged."
+}

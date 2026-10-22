@@ -1,0 +1,253 @@
+{
+  "entry": "/assets/index-Dtu3XA75.js",
+  "checks": [
+    {
+      "page": "02-user-entitlement-entry-private",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "06-cover-restored-preview",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "06-event-create",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "24-servers",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "10-opportunity-detail-1440",
+      "viewport": [
+        1440,
+        900
+      ],
+      "overflow": false
+    },
+    {
+      "page": "10-opportunity-detail-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "24-servers-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "14-level-users-final-private",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "14-levels-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "17-entitlements-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "07-event-detail-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "15-experience",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "15-experience-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "05-events-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "07-event-detail-1440",
+      "viewport": [
+        1440,
+        900
+      ],
+      "overflow": false
+    },
+    {
+      "page": "26-audit-logs",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "19-tasks-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "16-contribution-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "23-permissions",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "09-opportunities-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "06-cover-saved-preview",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "10-opportunity-detail",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "07-event-detail",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "05-event-draft-visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "07-event-notices-pending",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "06-event-create-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "17-entitlements",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "09-opportunities-sample",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "14-levels",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    },
+    {
+      "page": "23-permissions-390",
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": false
+    },
+    {
+      "page": "05-events",
+      "viewport": [
+        1280,
+        720
+      ],
+      "overflow": false
+    }
+  ]
+}
