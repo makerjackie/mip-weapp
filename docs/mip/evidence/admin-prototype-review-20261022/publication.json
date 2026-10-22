@@ -1,0 +1,555 @@
+{
+  "deploymentUrl": "https://a2444948.miptest.pages.dev",
+  "reportUrl": "https://miptest.01mvp.com/updates/2026-10-22/",
+  "https": {
+    "checkedAt": "2026-10-22T06:26:22.406Z",
+    "origin": "https://miptest.01mvp.com",
+    "verifiedFiles": 504,
+    "passed": true,
+    "retriedFiles": 0,
+    "errors": []
+  },
+  "browser": {
+    "checkedAt": "2026-10-22T06:28:09.250Z",
+    "publicOrigin": "https://miptest.01mvp.com",
+    "desktop": {
+      "documentWidth": 1265,
+      "height": 720,
+      "images": [
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        },
+        {
+          "decoded": true
+        }
+      ],
+      "privateImagePaths": false,
+      "readerReady": true,
+      "width": 1280
+    },
+    "mobile": {
+      "documentWidth": 375,
+      "hash": "#audit-contribution",
+      "headingVisible": true,
+      "height": 844,
+      "width": 390
+    },
+    "modal": {
+      "decoded": true,
+      "open": true,
+      "blankSpaceCloses": true
+    },
+    "privateReview": {
+      "decisionPersists": true,
+      "notePersists": true,
+      "allDecisionsPending": true,
+      "allNotesEmpty": true,
+      "originalImagesUnmodified": true
+    },
+    "siteTests": 17,
+    "businessWritesExecuted": false
+  },
+  "captureManifest": [
+    {
+      "name": "01-overview.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T05:58:37.884845+00:00",
+      "sha256": "79c63deb918f853c45d9d66f034bf905177389765c962cb6f6b0d7f5a6daf0dc",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "02-users.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T05:59:12.918689+00:00",
+      "sha256": "6a4fde45aa2e25201209191846bbc844982ed88582d0f360392bb49e9c4e690b",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "03-user-detail.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T05:59:53.795408+00:00",
+      "sha256": "7cfc04a0b501f3abb0d6d130f6812135605c6263c9853370b51cc5622891b622",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "04-user-growth.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:00:09.597293+00:00",
+      "sha256": "0f78cfe156345221deb0aeeb95d38752969e7177affab5361a4d181ad65a3bb1",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "05-events.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:00:34.385557+00:00",
+      "sha256": "a31ba8b617fb42a1e25b84739342afcbecc16e33bba7feb37e6a88404b618f2e",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "06-event-create.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:00:58.935385+00:00",
+      "sha256": "973d0b7e3d8873628f03bb105e20d084692f3ba129dce105820d2c91f3475ef2",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "07-event-detail.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:01:57.647327+00:00",
+      "sha256": "0861dc34843dc4379b164d3ff790f1b6c4b58b622d4397516342ee37944de7b5",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "08-event-preview.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:02:50.928438+00:00",
+      "sha256": "c3c285c52e465deacf0ac0e7413875201288e4b4e924bc92e3a86d70d0e58e24",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "09-opportunities.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:03:05.810016+00:00",
+      "sha256": "7ba0c13dc47a19043b43fa4143b89105ecc8aee4bf918fdaba35cc330e4edab8",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "10-opportunity-detail.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:03:38.051154+00:00",
+      "sha256": "b9c6fc5da2543c54ba951a483fbcec98ac8f70392b12a1ac8d6bb985e7ea03f4",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "11-npc.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:04:51.929482+00:00",
+      "sha256": "0ad66ebaf2b0197087f8629dccf61b57428598c53a76ed9295c690c7338222b2",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "12-tasks.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:05:23.050022+00:00",
+      "sha256": "dcef05bedb5d1928b1c89a946471bb4ea78c6297ecae8d07e028b3ee7d066246",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "13-task-create.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:05:49.536857+00:00",
+      "sha256": "af7470046d49e1a248adf0a203c273f26bc092bd37346481ea4a0fba4e5529fa",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "14-levels.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:06:22.890748+00:00",
+      "sha256": "c52bed8a6f1b5c5c56d5b73d379b60b9fc4965ea9454da5c9d4b7ddf03190fc6",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "15-experience.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:06:24.316775+00:00",
+      "sha256": "313d91fbac52b762c8473c246a7032a8f1d57024deeb3ea68a260d7ce49a28a4",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "16-contribution.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:06:46.946858+00:00",
+      "sha256": "7a0ae75b9c680cdfa3731f803ffdfa2c59006a9c43812c4e98bdeeedfaebacca",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "17-entitlements.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:06:48.213220+00:00",
+      "sha256": "bf2f806e6758bb731b8278d7568e93c6b593b7876700c581d5a5369bf587ec1d",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "18-banners.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:12:04.708397+00:00",
+      "sha256": "74a45a5f6c279ea00c63e21b4aa092b9c3d2e497c8e8525ee7962d36ed2d0d58",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "19-videos.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:07:09.433340+00:00",
+      "sha256": "eaf5a96c00d4c2d576d720a9ce60aea2911d0b6f5ce3f4725a441effb96c548f",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "20-orders.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:07:26.863283+00:00",
+      "sha256": "43bafc1ac08391afb50830bc950d81e9691793312e880e10e10083de39f1da8f",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "21-order-detail.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:08:12.160364+00:00",
+      "sha256": "f61061c7ba9830cb7de6fa25581c8bbc8970aeff6d8cb4b83d15c94630dd94cb",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "22-teams.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:08:56.031703+00:00",
+      "sha256": "b18f107a61d4c2472c1cf5dc16c35d7df328c876cb22a404102a10d9a6e8f681",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "23-permissions.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:09:14.329401+00:00",
+      "sha256": "007aded72dcda0eafd50db8ce4cdbee0c56e051039089aa55535b06a354ca232",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "24-servers.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:09:31.146166+00:00",
+      "sha256": "369bee43740178cbd40df47d7a7a68a2f18e0f2a5f8ab879739b0c0a9331d2c8",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "25-accounts.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:09:32.709474+00:00",
+      "sha256": "d879c4098afa1bb96bc3a0af0ba355cd2cf9e3a717770b1da53a10f57db17643",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "26-audit-logs.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:09:51.586208+00:00",
+      "sha256": "170799868e19b4853ad89571bbe20bc1e32d7fc413f7a0681b9718281926f0b5",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "27-messages.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:10:18.320119+00:00",
+      "sha256": "e62eebf6c7eb1f3b9802fc8acb0ccc803086814e0d243d8f27fef06b210ab9f7",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "28-media.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:10:35.918516+00:00",
+      "sha256": "97b0a1d0d2b512284cbc46a702454c46e0ca954a17425e83cfe1cbe5c97452c6",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "29-mobile-events.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:11:37.265120+00:00",
+      "sha256": "e603f1a727d6aeb13312e821d8dd44ec3a6fd0104604815ef05df8a8b45db558",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "30-mobile-create.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:13:37.458975+00:00",
+      "sha256": "3df919776dcb29e8b6ee8e8c23b6bed984de23f562da5018edb0a9df9f5bbc84",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "31-wide-events.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:12:58.287587+00:00",
+      "sha256": "ac3fd37b057bc639fefb3946c32962fb53171d8e230a18eae3e69428800a4cf1",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "32-contribution-rules.png",
+      "category": "private-production",
+      "savedAt": "2026-10-22T06:16:48.703501+00:00",
+      "sha256": "99eb3aa366ea388f164dd6141e2dd2771c80c9c30dbcd5edec06169d7d25238e",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "01-overview.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T05:59:02.243320+00:00",
+      "sha256": "09950d80a2349217f62a58d7f9dfd3087c9c93f9bafa681ac4f06d7fdc109463",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "02-users.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T05:59:13.091087+00:00",
+      "sha256": "a14266359e625beb940d87e8b0b18409b1666c3cb2957feacb0bad1977ec4774",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "03-user-detail.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T05:59:54.011071+00:00",
+      "sha256": "4a575399240eda23616c6111242b58bea1181e471abe05226e13329a51e130ba",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "04-user-growth.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:00:09.707505+00:00",
+      "sha256": "554da913472e384ecf95d3b1e89b3ebbe923926d3e40fb62a54c88ef6cfa4384",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "05-events.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:00:34.725356+00:00",
+      "sha256": "9c7e3d07ba46dd7b6d58ce664662cc5f9c6616c8df1b837a6977bce55857a8ab",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "06-event-create.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:00:59.136580+00:00",
+      "sha256": "8338f97488727f56ff3a17022ad5660a4f2cb36ffbcd3225eb1d6d036a4ef3a9",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "07-event-detail.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:01:57.850012+00:00",
+      "sha256": "c7e02505fac2dc2cc7f0ab089548119aac82a29652a50fe92a8b8164d99d496c",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "08-event-preview.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:02:51.088007+00:00",
+      "sha256": "0e752274344b7ef95782921ee86f6b6d2362474e87f535ca871c651a009cc605",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "09-opportunities.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:03:24.104701+00:00",
+      "sha256": "10a6a27cb2257ae8afce5e391844fec49db11ea06511327d8ef17b40c079501d",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "10-opportunity-detail.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:03:38.187373+00:00",
+      "sha256": "c815ffb461bdf215714323d536738c7b9c796823f8ee362063f3888447a11232",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "11-npc.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:04:31.655705+00:00",
+      "sha256": "79468061bc0ad898dea585c87895c1d8655e36a4daa325b3f23509a99f369f0f",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "12-tasks.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:05:02.111691+00:00",
+      "sha256": "e73fd896d5a3c009b85ea99a5d2567436141fbb5fc1dae1249ebdeb6bcb21498",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "13-task-create.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:05:49.630898+00:00",
+      "sha256": "a2d298fa10143f430ca0ae4d7a5f25a9e7ea4d838e2653e1711940fdd40fece4",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "14-levels.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:06:08.181904+00:00",
+      "sha256": "f00cb4f4e528cc837be10d6cc10a95d305a1622e2e618ea74c6197cc96f5e79d",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "15-experience.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:06:24.114554+00:00",
+      "sha256": "009be9a447920f0e0f2551c0d65d9560b7742ce9274d9ffedf289d6d53b61f32",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "16-contribution.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:06:46.746621+00:00",
+      "sha256": "0cf44e6655140baab4d5458b5bce9b5231446174892c8cda00665f51c5548626",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "17-entitlements.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:06:48.011721+00:00",
+      "sha256": "830d8479a58580336697b2b0e1c270fcb4db9b6828af9b7ad772aef2f5094357",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "18-banners.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:07:05.688149+00:00",
+      "sha256": "9832fc4c187ce3a5bc15e2c52aa4f1c91dcd96f790fb83374000d88e07a629ec",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "19-videos.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:07:09.250759+00:00",
+      "sha256": "a8f60187467ca50ec5917d2dcd67983427e88e132a322f9420c1fd0103f74890",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "20-orders.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:07:26.660614+00:00",
+      "sha256": "58f6767a834eef8c133a3c802855f9c1e84ecfd0428b811682923c8bc194d117",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "21-order-detail.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:08:12.291991+00:00",
+      "sha256": "4838b6a44a59b70612d80db5550277ac48d3fa52d727389ab4797be4756b28d5",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "22-teams.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:08:55.824123+00:00",
+      "sha256": "ab966a587293eeecaf9e27fb8cfbe8bddee9e66bf267891759330bc28753540b",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "23-permissions.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:09:14.026729+00:00",
+      "sha256": "18c40be93c515335309d431894c5e38a0497301739e48b1b653658989df2eb08",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "24-servers.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:09:30.987317+00:00",
+      "sha256": "f7465aa26ac56ff94332e7ab3e98acb53c692c450466f56e64c4a548e1261054",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "25-accounts.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:09:32.507896+00:00",
+      "sha256": "3274b6bdd90320b6e174d2a9f839adc98db311d911d35bcae26ed7ec619d9fbf",
+      "width": 65536,
+      "height": 4292542531
+    },
+    {
+      "name": "27-messages-prd.png",
+      "category": "live-prototype-or-prd",
+      "savedAt": "2026-10-22T06:11:02.524626+00:00",
+      "sha256": "d83c80d478927014c263dabcd9053122781d12931bab960ba3f28fa64b858740",
+      "width": 65536,
+      "height": 4292542531
+    }
+  ],
+  "scope": "Documentation and review only. Recommendations are pending user approval."
+}

@@ -1,0 +1,386 @@
+{
+  "capturedAt": "2026-10-22T06:23:08.340621+00:00",
+  "businessCodeChanged": false,
+  "environment": "PRODUCTION read-only browsing",
+  "entryAsset": "/assets/index-BxitjAfN.js",
+  "sourceSha": "83a56f695a3a0df679c3d7d92e9d258b7ea16ccb",
+  "primarySource": "https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/",
+  "prototypeVersion": "Live Workbuddy title V0.4, 2026-08-22; accepted requirements and later confirmations take precedence",
+  "navigationModulesVisited": 19,
+  "productionStatesCaptured": 32,
+  "prototypeImagesCaptured": 26,
+  "currentPrdSectionsRead": 16,
+  "desktopViewport": [
+    1280,
+    720
+  ],
+  "additionalViewportSamples": [
+    [
+      1440,
+      900
+    ],
+    [
+      390,
+      844
+    ]
+  ],
+  "limitations": [
+    "READ_ONLY: normal login and read audit records may be written by server. No business save, publish, grant, refund, send, upload or permission mutations executed.",
+    "No full save/refresh/permission/payment/device acceptance; no complete accessibility certification.",
+    "Real and prototype records differ; do not compare example values as faults.",
+    "Private screenshots remain outside repository/public site."
+  ],
+  "findings": [
+    {
+      "id": "R01",
+      "category": "优先修复",
+      "title": "活动详情显示 HTML 源码",
+      "observation": "点击活动「查看」，活动介绍和报名须知显示 <img>、<p> 等源码；没有原型中的活动介绍、主办方、须知分区。编辑器和手机预览已存在，问题在查看详情。",
+      "recommendation": "将活动详情改为清晰分区并安全渲染图文；参与人、反馈独立可达。",
+      "criteria": "E02–E07",
+      "screen": "07-event-detail",
+      "code": "admin-web/src/modules/admin-details.ts:311",
+      "batch": "A"
+    },
+    {
+      "id": "R02",
+      "category": "优先修复",
+      "title": "概览“新增玩家”统计名实不符",
+      "observation": "实际画面显示当前玩家 5、本月新增玩家 19；代码把 people.newAccounts 映射为“本月新增玩家”，后端统计的是注册时间，不是新获玩家权益。待办也明确仅开放部分类型。",
+      "recommendation": "先修正指标名称或数据口径，再补原型要求的待办与下钻；无数据的趋势不画假曲线。",
+      "criteria": "D01–D03",
+      "screen": "01-overview",
+      "code": "admin-web/src/features/core-pages/overview-model.ts:61；cloudfunctions/mip-admin-api/domain/repositories/dashboard-overview.js:321",
+      "batch": "A"
+    },
+    {
+      "id": "R03",
+      "category": "优先修复",
+      "title": "部分筛选不能用于全量查找",
+      "observation": "任务的星级、负责人和奖励、NPC 审批星级仅过滤当前页，代码明确标注；经验流水虽然有服务器选择，服务端过滤归一化没有保留 serverId。",
+      "recommendation": "筛选、分页和导出统一走服务端语义；用多页、跨服务器非空数据验收。当前生产样本不足以实测全部跨页边界。",
+      "criteria": "G04、T03、R02",
+      "screen": "11-npc",
+      "code": "admin-web/src/features/operations-pages/task-approval-page.tsx:16；task-management-page.tsx:104；cloudfunctions/mip-admin-api/domain/growth.js:348",
+      "batch": "A"
+    },
+    {
+      "id": "R04",
+      "category": "较大缺口",
+      "title": "贡献值管理主要停留在只读查询",
+      "observation": "流水页缺时间筛选、导出；切到贡献规则仍没有新增、编辑、启停入口。当前列表为空，不把空态视为规则已可管理。",
+      "recommendation": "补齐规则配置和流水查询/导出/冲正；先在测试库准备正常非空场景。",
+      "criteria": "R03",
+      "screen": "32-contribution-rules",
+      "code": "admin-web/src/features/operations-pages/growth-contribution-page.tsx:29",
+      "batch": "B"
+    },
+    {
+      "id": "R05",
+      "category": "可用性差距",
+      "title": "成长与权益流水难以读懂和追溯",
+      "observation": "经验流水前两列铺满 UUID，较多来源显示“其他业务记录”；权益流水同样优先展示长编号，关键内容被挤到右侧。经验流水操作列无可见下钻。",
+      "recommendation": "姓名/业务摘要优先，短编号可复制；来源可读并能进入用户、任务、活动和原始流水。流水不直接编辑。",
+      "criteria": "G06、R02、R04",
+      "screen": "15-experience",
+      "code": "admin-web/src/modules/admin-read-special-pages.ts:160",
+      "batch": "C"
+    },
+    {
+      "id": "R06",
+      "category": "可用性差距",
+      "title": "活动列表的关键状态被挤出首屏",
+      "observation": "1280 和 1440 桌面中，时间列及创建时间占用大量宽度，状态/签到等需横滚；政策、类型目录和技术标识仍混在主列表下方。",
+      "recommendation": "优先展示名称、时间、金额、人数和状态；低频目录与政策收进设置，保留真实业务能力。",
+      "criteria": "E01、G06–G07",
+      "screen": "05-events",
+      "code": "admin-web/src/features/core-pages/core-list-pages.tsx",
+      "batch": "A"
+    },
+    {
+      "id": "R07",
+      "category": "需确认范围",
+      "title": "活动表单较长，仍有原型字段差异",
+      "observation": "图文编辑、图片上传、手机预览已有；标题/范围/大封面占用较多首屏。原型的“是否关联活动反馈”未在实际表单找到。活动时间按浏览器时区显示但页面未注明。",
+      "recommendation": "压缩首屏并分组；先确认反馈开关是否本期需要、运营时间是否统一北京时间，再实现对应规则。",
+      "criteria": "E02–E03",
+      "screen": "06-event-create",
+      "code": "admin-web/src/features/form-pages/independent-form-page.tsx",
+      "batch": "D"
+    },
+    {
+      "id": "R08",
+      "category": "流程需专项验证",
+      "title": "等级任务与 NPC 工作任务区分不清",
+      "observation": "NPC 列表中显示出席培训/早会等完成记录，星级、审批人、奖励结果为空；创建页同时出现“等级任务不提交核验”和负责人/星级/周期配置。尚未走通真实 NPC 派发审批。",
+      "recommendation": "明确两类任务入口、表单和列表口径；保留已有完成历史，再验证周期派发→附件→审批→奖励。不是判定奖励没有到账。",
+      "criteria": "T01–T05",
+      "screen": "12-tasks",
+      "code": "admin-web/src/modules/admin-task-management.ts:427",
+      "batch": "B"
+    },
+    {
+      "id": "R09",
+      "category": "可用性差距",
+      "title": "机会详情仍是长抽屉，金额表头不统一",
+      "observation": "原型是独立内容详情，实际为多块长抽屉；列表表头固定“万元”，但行里可出现“100 千”或“面谈”，与现有多种价值模式不一致。",
+      "recommendation": "详情按内容/引荐/记录分区；表头改为统一“价值金额”，每条保留真实单位。保留面谈和千单位的新规则。",
+      "criteria": "O01–O04",
+      "screen": "10-opportunity-detail",
+      "code": "admin-web/src/modules/admin-read-special-pages.ts:92",
+      "batch": "C"
+    },
+    {
+      "id": "R10",
+      "category": "可用性差距",
+      "title": "等级配置和人数查看入口不直观",
+      "observation": "编辑配置藏在顶部折叠区；主表操作列为空，人数是普通文字，未见按等级直接进入用户明细的入口；配置能力存在，不能说完全没实现。",
+      "recommendation": "等级行提供直接编辑/权益/用户入口，保留门槛与历史保护；正式数值和权益兑现另确认。",
+      "criteria": "R01、R05",
+      "screen": "14-levels",
+      "code": "admin-web/src/features/operations-pages/growth-levels-page.tsx:74",
+      "batch": "C"
+    },
+    {
+      "id": "R11",
+      "category": "信息架构差距",
+      "title": "角色、授权、服务器混在同一页面",
+      "observation": "原型分角色与权限、后台账号、服务器；实际权限页同时装运营成员、策略摘要、服务器和常驻岗位模板，开服务器入口出现在所有分区。",
+      "recommendation": "沿用现有权限模型，拆清角色岗位/人员授权/服务器的管理入口。账号与会员身份继续独立。",
+      "criteria": "A02–A05",
+      "screen": "23-permissions",
+      "code": "admin-web/src/features/operations-pages",
+      "batch": "C"
+    },
+    {
+      "id": "R12",
+      "category": "业务待确认",
+      "title": "笨笨团队与赛季战队不是同一模型",
+      "observation": "原型要求固定九队、负责人、人数上限和大本营；当前页面以赛季、排行、盲盒为主，且生产暂无赛季数据。此冲突已登记为 Q-ADMIN-02。",
+      "recommendation": "先决定固定团队与赛季参赛的关系；推荐分开建模并保留历史，不能只换页面名称。",
+      "criteria": "B01–B02、Q-ADMIN-02",
+      "screen": "22-teams",
+      "code": "docs/mip/REQUIREMENTS.md:277",
+      "batch": "D"
+    },
+    {
+      "id": "R13",
+      "category": "较小差距",
+      "title": "审计记录仍有内部术语",
+      "observation": "真实列表出现 ROLE_CAPABILITY_POLICY_LIST、paymentAttempts、detail 等技术词，业务对象常只有编号。记录确实存在，但运营难读。",
+      "recommendation": "改为可读操作名和对象名称，保留原始代码供技术排查。",
+      "criteria": "A04、G06",
+      "screen": "26-audit-logs",
+      "code": "admin-web/src/modules/admin-read-formatters.ts",
+      "batch": "C"
+    },
+    {
+      "id": "R14",
+      "category": "待非空验收",
+      "title": "视频和消息暂不能判断完整闭环",
+      "observation": "生产视频、消息批次为空；能够看到新增/模板等入口，只证明页面和入口存在，本轮没有创建、发布、发送或撤销。",
+      "recommendation": "下一轮在测试环境补非空样本，逐步验证保存回读、目标选择、发送/撤销及前台结果。",
+      "criteria": "C02、M01–M02",
+      "screen": "27-messages",
+      "code": "admin-web/ACCEPTANCE.md",
+      "batch": "B"
+    },
+    {
+      "id": "R15",
+      "category": "业务待确认",
+      "title": "退款、统计与权益兑现仍有未决边界",
+      "observation": "现有 Q-ADMIN-03/04/05/06/07/08 仍包含待确认内容。原型中的立即成为玩家、任意订单编辑等不能覆盖已确认审核和交易规则；Q-ADMIN-09 的旧未决行也未完全同步最新澄清。",
+      "recommendation": "只确认仍未决的边界；保留 10 月 21 日已确认的角色回退、花名册最新选择和五项资料规则。原型有按钮不代表应允许改支付事实。",
+      "criteria": "F03、D01、R01、U04",
+      "screen": "21-order-detail",
+      "code": "docs/mip/REQUIREMENTS.md:277；docs/mip/REQUIREMENT_CLARIFICATIONS.md",
+      "batch": "D"
+    }
+  ],
+  "modules": [
+    {
+      "id": "overview",
+      "name": "网站概览",
+      "assessment": "存在统计错误",
+      "finding": "R02",
+      "screen": "01-overview",
+      "prototypeSection": "dashboard"
+    },
+    {
+      "id": "users",
+      "name": "用户列表与独立档案",
+      "assessment": "主体接近；保存未复验",
+      "finding": "R05、R15",
+      "screen": "02-users",
+      "prototypeSection": "users"
+    },
+    {
+      "id": "events",
+      "name": "活动列表",
+      "assessment": "关键字段和设置需整理",
+      "finding": "R06",
+      "screen": "05-events",
+      "prototypeSection": "activity"
+    },
+    {
+      "id": "event-create",
+      "name": "创建/编辑与手机预览",
+      "assessment": "主要能力存在；字段需确认",
+      "finding": "R07",
+      "screen": "06-event-create",
+      "prototypeSection": "activity"
+    },
+    {
+      "id": "event-detail",
+      "name": "活动详情/参与人/反馈",
+      "assessment": "HTML 显示缺陷；非空名单/反馈待验",
+      "finding": "R01",
+      "screen": "07-event-detail",
+      "prototypeSection": "activity"
+    },
+    {
+      "id": "opportunities",
+      "name": "机会管理",
+      "assessment": "内容结构与单位需整理",
+      "finding": "R09",
+      "screen": "09-opportunities",
+      "prototypeSection": "opportunities"
+    },
+    {
+      "id": "npc",
+      "name": "NPC 审批",
+      "assessment": "仅当前页筛选；类型需区分",
+      "finding": "R03、R08",
+      "screen": "11-npc",
+      "prototypeSection": "tasks"
+    },
+    {
+      "id": "tasks",
+      "name": "任务配置",
+      "assessment": "字段较全；完整旅程未验",
+      "finding": "R03、R08",
+      "screen": "12-tasks",
+      "prototypeSection": "tasks"
+    },
+    {
+      "id": "levels",
+      "name": "等级与勋章",
+      "assessment": "能力存在；入口/下钻不直观",
+      "finding": "R10",
+      "screen": "14-levels",
+      "prototypeSection": "levels"
+    },
+    {
+      "id": "experience",
+      "name": "经验值管理",
+      "assessment": "服务器筛选缺口；流水难读",
+      "finding": "R03、R05",
+      "screen": "15-experience",
+      "prototypeSection": "experience"
+    },
+    {
+      "id": "contribution",
+      "name": "贡献值管理",
+      "assessment": "规则管理和流水工具缺口较大",
+      "finding": "R04",
+      "screen": "16-contribution",
+      "prototypeSection": "contribution"
+    },
+    {
+      "id": "entitlements",
+      "name": "权益管理",
+      "assessment": "流水及发放入口存在；过宽",
+      "finding": "R05、R15",
+      "screen": "17-entitlements",
+      "prototypeSection": "entitlements"
+    },
+    {
+      "id": "banners",
+      "name": "Banner 管理",
+      "assessment": "非空图片已显示；写入未验",
+      "finding": "无需重做主体",
+      "screen": "18-banners",
+      "prototypeSection": "operations"
+    },
+    {
+      "id": "videos",
+      "name": "视频回顾",
+      "assessment": "空数据；完整闭环待验",
+      "finding": "R14",
+      "screen": "19-videos",
+      "prototypeSection": "operations"
+    },
+    {
+      "id": "orders",
+      "name": "订单与退款",
+      "assessment": "读取和时间线存在；规则待确认",
+      "finding": "R15",
+      "screen": "20-orders",
+      "prototypeSection": "orders"
+    },
+    {
+      "id": "teams",
+      "name": "笨笨团队/战队",
+      "assessment": "模型差异大，需业务决定",
+      "finding": "R12",
+      "screen": "22-teams",
+      "prototypeSection": "teams"
+    },
+    {
+      "id": "permissions",
+      "name": "角色与权限",
+      "assessment": "多种管理对象混在一起",
+      "finding": "R11",
+      "screen": "23-permissions",
+      "prototypeSection": "roles"
+    },
+    {
+      "id": "accounts",
+      "name": "后台账号",
+      "assessment": "独立开通入口存在；授权未改",
+      "finding": "R11",
+      "screen": "25-accounts",
+      "prototypeSection": "admin-accounts"
+    },
+    {
+      "id": "servers",
+      "name": "服务器",
+      "assessment": "配置存在，入口藏在权限页",
+      "finding": "R11",
+      "screen": "24-servers",
+      "prototypeSection": "servers"
+    },
+    {
+      "id": "audit",
+      "name": "审计日志",
+      "assessment": "记录存在；技术文案较多",
+      "finding": "R13",
+      "screen": "26-audit-logs",
+      "prototypeSection": "roles"
+    },
+    {
+      "id": "messages",
+      "name": "消息管理",
+      "assessment": "列表/模板存在；非空发送待验",
+      "finding": "R14",
+      "screen": "27-messages",
+      "prototypeSection": "messages"
+    },
+    {
+      "id": "media",
+      "name": "素材上传",
+      "assessment": "上传表单存在，未上传文件",
+      "finding": "可后续补素材检索",
+      "screen": "28-media",
+      "prototypeSection": "operations"
+    },
+    {
+      "id": "mobile",
+      "name": "手机与宽屏抽查",
+      "assessment": "390 无整页横溢；筛选占首屏",
+      "finding": "后续折叠次要筛选",
+      "screen": "29-mobile-events",
+      "prototypeSection": "activity"
+    }
+  ]
+}
