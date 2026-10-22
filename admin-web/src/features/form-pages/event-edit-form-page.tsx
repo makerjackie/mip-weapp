@@ -89,7 +89,8 @@ export function EventEditFormPage() {
     if (!draft) return null
     if (draft.cloneSourceEventId) {
       const source = await loadEventDetailForForm(String(draft.cloneSourceEventId), request)
-      draft._mediaUrls = source?._mediaUrls
+      draft._mediaUrls = { ...(source?._mediaUrls as Record<string, string> || {}),
+        ...(draft._mediaUrls as Record<string, string> || {}) }
     }
     return draft
   }, [eventId, request, drafts, draftId])

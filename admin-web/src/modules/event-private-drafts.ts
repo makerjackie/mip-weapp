@@ -1,5 +1,6 @@
 import type { AdminRequest } from './admin-read-contracts'
 import type { OperationValues } from './admin-operation-ui'
+import { isHttpsTempUrl } from './admin-media-temp-urls.ts'
 
 export function eventPrivateDrafts(request: AdminRequest, eventId: string) {
   let submission: { payload: string; key: string } | null = null
@@ -9,7 +10,13 @@ export function eventPrivateDrafts(request: AdminRequest, eventId: string) {
     if (typeof row.draftId !== 'string' || !Number.isInteger(row.version) || !row.draftData || typeof row.draftData !== 'object' || Array.isArray(row.draftData)) throw new Error('活动草稿字段不完整')
     if ((row.eventId || '') !== eventId) throw new Error('草稿不属于当前活动')
     const fields = Object.fromEntries(Object.entries(row.draftData).filter(([key]) => !key.startsWith('_')))
-    return { ...fields, eventId, _draftId: row.draftId, _draftVersion: row.version }
+    const mediaUrls: Record<string, string> = {}
+    for (const item of Array.isArray(row.mediaPreviews) ? row.mediaPreviews : []) {
+      if (item && typeof item === 'object' && typeof item.assetId === 'string' && isHttpsTempUrl(item.imageUrl)) {
+        mediaUrls[item.assetId] = item.imageUrl
+      }
+    }
+    return { ...fields, eventId, _draftId: row.draftId, _draftVersion: row.version, _mediaUrls: mediaUrls }
   }
   return {
     load: async (draftId?: string) => parse(await request('mip.admin.events.drafts.get', { eventId: eventId || null, ...(draftId ? { draftId } : {}) })),

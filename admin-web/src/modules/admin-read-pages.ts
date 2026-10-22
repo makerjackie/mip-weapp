@@ -77,6 +77,7 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
       { key: 'createdTo', urlParam: 'createdTo' },
       { key: 'kind', urlParam: 'kind' },
       { key: 'branchId', urlParam: 'branchId' },
+      { key: 'levelId', urlParam: 'levelId' },
       { key: 'industryId', urlParam: 'industryId' },
       { key: 'identityStatus', urlParam: 'identityStatus' },
       { key: 'playerLifecycle', urlParam: 'playerLifecycle' },

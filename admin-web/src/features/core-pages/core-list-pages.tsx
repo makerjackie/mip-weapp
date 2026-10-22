@@ -9,7 +9,7 @@ import {
   EVENT_MUTATION_CONFIGS,
   type AdminEventMutationAction,
 } from '../../modules/admin-event-mutation-forms'
-import { labels, options } from '../../modules/admin-read-formatters'
+import { labels } from '../../modules/admin-read-formatters'
 import {
   getAdminReadRouteDefinition,
   type AdminListRoute,
@@ -79,20 +79,11 @@ const amountRangeByRoute: Partial<Record<CoreListRoute, { min: string; max: stri
   events: { min: 'priceMinCents', max: 'priceMaxCents', label: '价格（元）' },
 }
 
-// MIW-126：活动列表状态筛选按设计稿收敛为四个选项；草稿与已归档行不进列表。
-// 契约查询暂不支持排除状态，由前端在行装配处过滤（BFF/云函数待联调后再收敛到服务端）。
-const eventListStatusOptions = [{ value: '', label: '全部状态' }, ...options(['PUBLISHED', 'ENDED', 'CANCELLED'])]
-const hiddenEventListStatusLabels = new Set([labels.DRAFT, labels.ARCHIVED])
 const eventTagSectionTitle = '活动标签'
 
-/** 隐藏草稿/已归档活动行，并移除内嵌「活动标签」分区（标签管理入口移至「设置」页）。 */
+/** 标签管理保留在设置页；业务列表完整展示服务端已筛选的游标页。 */
 function filterEventListSections(sections: AdminReadPage['sections']) {
-  return sections
-    .filter(section => section.title !== eventTagSectionTitle)
-    .map(section => section.detailTarget === null ? section : {
-      ...section,
-      rows: section.rows.filter(row => !hiddenEventListStatusLabels.has(String(row.state || ''))),
-    })
+  return sections.filter(section => section.title !== eventTagSectionTitle)
 }
 
 const pageDefinitions: Record<CoreListRoute, {
@@ -298,7 +289,7 @@ export function CoreListPageView({
       <FilterBar
         value={{ q: search.q || '', status: search.status || '', filters: search.filters }}
         placeholder={readDefinition.searchPlaceholder}
-        statusOptions={route === 'events' ? eventListStatusOptions : readDefinition.statusOptions}
+        statusOptions={readDefinition.statusOptions}
         loading={loading}
         timeRangeFields={route === 'users' && search.filters?.timeKind === 'EXPIRY' ? { from: 'expiresFrom', to: 'expiresTo', label: '会籍到期时间' } : timeRangeByRoute[route]}
         amountRangeFields={amountRangeByRoute[route]}

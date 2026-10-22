@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Button, Card, Space } from 'antd'
+import { Button, Space } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import type { AdminListSearch } from '../../app/router'
@@ -27,19 +27,20 @@ function BusinessDetailPage({ route }: { route: 'events' | 'opportunities' }) {
   const { launch } = useAdminOperations()
   useEffect(() => { openDetail(route, id) }, [route, id, openDetail])
   const back = () => void navigate({ to: route === 'events' ? '/events' : '/opportunities', search: search.returnSearch || {} })
+  const source = detail.view?.source?.[route === 'events' ? 'event' : 'opportunity']
+  const coverUrl = source && typeof source === 'object' && 'coverUrl' in source && typeof source.coverUrl === 'string' ? source.coverUrl : ''
   return <PermissionGuard capabilities={[route === 'events' ? 'events.read' : 'opportunities.moderate']}>
     <PageHeader title={detail.view?.title || (route === 'events' ? '活动详情' : '机会详情')}
       description={detail.view?.subtitle || ''} actions={<Space wrap><Button onClick={back}>返回列表</Button><Button aria-label="刷新" icon={<ReloadOutlined />} loading={detail.loading} onClick={() => void detail.refreshDetail()}>刷新</Button></Space>} />
-    <Card>
-      <DetailSections open view={detail.view} loading={detail.loading || !detail.selection} error={detail.error}
-        onClose={back} {...sectionBatch} onRetry={() => void detail.refreshDetail()} onPagerChange={detail.changeDetailPage}
-        onNestedView={(target, row) => {
-          if (target === 'users') window.open(userProfileHref(String(row.detailId)), '_blank', 'noopener,noreferrer')
-          else nested.openDetail(target, String(row.detailId || ''))
-        }}
-        onRowAction={operation => void launch(operation.action, operation.targetId, detail.view, operation)}
-        actions={detail.view ? <AdminDetailActions route={route} id={id} view={detail.view} /> : null} />
-    </Card>
+    <DetailSections open view={detail.view} loading={detail.loading || !detail.selection} error={detail.error}
+      layoutVariant="cover-summary" summaryImageUrl={coverUrl}
+      onClose={back} {...sectionBatch} onRetry={() => void detail.refreshDetail()} onPagerChange={detail.changeDetailPage}
+      onNestedView={(target, row) => {
+        if (target === 'users') window.open(userProfileHref(String(row.detailId)), '_blank', 'noopener,noreferrer')
+        else nested.openDetail(target, String(row.detailId || ''))
+      }}
+      onRowAction={operation => void launch(operation.action, operation.targetId, detail.view, operation)}
+      actions={detail.view ? <AdminDetailActions route={route} id={id} view={detail.view} /> : null} />
     <DetailDrawer open={Boolean(nested.selection)} view={nested.view} loading={nested.loading} error={nested.error} onClose={nested.closeDetail}
       onRetry={() => void nested.refreshDetail()} onPagerChange={nested.changeDetailPage}
       onRowAction={operation => void launch(operation.action, operation.targetId, nested.view, operation)}

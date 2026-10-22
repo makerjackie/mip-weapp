@@ -35,8 +35,17 @@ function createEventDrafts({ access, repository }) {
     const selector = { ...(input.draftId ? { draftId: requiredId(input.draftId, '草稿') } : {}),
       ...(Object.hasOwn(input, 'eventId') ? { eventId: input.eventId ? requiredId(input.eventId, '活动') : null } : {}) }
     const draft = await repository.getEventDraft(context.caller.appId, context.caller.userId, selector)
-    if (draft?.eventId) await access.eventAuthorization(context, draft.eventId, CAPABILITIES.EVENTS_READ)
-    return draft
+    if (!draft) return null
+    // Reuse event-read authorization before exposing media already bound to an
+    // edited/copied event. A private draft's arbitrary asset IDs grant no access.
+    const eventIds = [...new Set([draft.eventId, draft.draftData?.cloneSourceEventId].filter(Boolean))]
+    for (const id of eventIds) {
+      await access.eventAuthorization(context, requiredId(id, '活动'), CAPABILITIES.EVENTS_READ)
+    }
+    const mediaPreviews = await repository.getEventDraftMedia(
+      context.caller.appId, context.caller.userId, draft.draftData, eventIds,
+    )
+    return { ...draft, mediaPreviews }
   }
   return { saveEventDraft, getEventDraft }
 }

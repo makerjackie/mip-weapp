@@ -73,7 +73,44 @@ function createEventDraftRepository(database, dependencies) {
     return { draftId: String(row.draft_id), eventId: row.event_uid || null,
       draftData: json(row.draft_data_json, {}), version: Number(row.version), updatedAt: iso(row.updated_at) }
   }
-  return { saveEventDraft, getEventDraft }
+
+  async function getEventDraftMedia(appId, actorUserId, draftData, authorizedEventIds = []) {
+    const validId = value => typeof value === 'string'
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    const coverId = validId(draftData?.coverAssetId) ? draftData.coverAssetId : null
+    const contentIds = [...new Set((Array.isArray(draftData?.contentMedia) ? draftData.contentMedia : [])
+      .slice(0, 12).map(item => item?.assetId).filter(validId))]
+    const ids = [...new Set([coverId, ...contentIds].filter(Boolean))]
+    if (!ids.length) return []
+    const eventIds = [...new Set(authorizedEventIds.filter(validId))]
+    const eventMatches = alias => eventIds.length ? `${alias}.id IN (${eventIds.map(() => '?').join(', ')})` : 'FALSE'
+    const rows = await database.query(
+      `SELECT asset.id, asset.cloud_file_id
+       FROM mip_media_assets asset
+       WHERE asset.app_id = ? AND asset.status = 'READY'
+         AND asset.id IN (${ids.map(() => '?').join(', ')})
+         AND (
+           (asset.purpose = 'EVENT_COVER' AND asset.id = ? AND
+             (asset.owner_user_id = ? OR EXISTS (
+               SELECT 1 FROM mip_events evt
+               WHERE evt.app_id = asset.app_id AND evt.cover_asset_id = asset.id
+                 AND ${eventMatches('evt')}
+             )))
+           OR (asset.purpose = 'EVENT_CONTENT' AND asset.id IN (${contentIds.length ? contentIds.map(() => '?').join(', ') : 'NULL'}) AND
+             (asset.owner_user_id = ? OR EXISTS (
+               SELECT 1 FROM mip_event_content_media media
+               INNER JOIN mip_events evt ON evt.app_id = media.app_id AND evt.id = media.event_id
+               WHERE media.app_id = asset.app_id AND media.media_asset_id = asset.id
+                 AND media.status = 'ACTIVE' AND ${eventMatches('evt')}
+             )))
+         )`,
+      [appId, ...ids, coverId, actorUserId, ...eventIds, ...contentIds, actorUserId, ...eventIds],
+    )
+    // Transient response only: application media projection signs imageUrl;
+    // neither this read nor the client writes signed URLs into draft_data_json.
+    return rows.map(row => ({ assetId: row.id, imageUrl: row.cloud_file_id }))
+  }
+  return { saveEventDraft, getEventDraft, getEventDraftMedia }
 }
 
 module.exports = { createEventDraftRepository }

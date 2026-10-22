@@ -21,3 +21,27 @@ it('uses the same request key for an ambiguous draft save, isolates records and 
   assert.notEqual(calls[1].idempotencyKey, calls[2].idempotencyKey)
   await assert.rejects(drafts.load('17'), /不属于当前活动/)
 })
+
+it('rehydrates saved asset previews from the read projection without persisting temporary URLs', async () => {
+  let stored: Record<string, unknown> = {}
+  const drafts = eventPrivateDrafts(async <T>(action: string, input?: AdminRequestInput) => {
+    if (action.endsWith('.save')) {
+      stored = structuredClone(input!.draftData as Record<string, unknown>)
+      return { draftId: '8', version: 1 } as T
+    }
+    return { draftId: '8', eventId: null, draftData: stored, version: 1, mediaPreviews: [
+      { assetId: 'cover', imageUrl: 'https://media.example/cover.png?sign=fresh' },
+      { assetId: 'body', imageUrl: 'https://media.example/body.png?sign=fresh' },
+      { assetId: 'unsafe', imageUrl: 'javascript:alert(1)' },
+      { assetId: 'unresolved', imageUrl: 'cloud://still-unresolved' },
+    ] } as T
+  }, '')
+  await drafts.save({ title: '重新打开', coverAssetId: 'cover', contentMedia: [{ assetId: 'body' }],
+    _mediaUrls: { cover: 'blob:local-upload' } })
+  const restored = await drafts.load('8')
+  assert.deepEqual(restored?._mediaUrls, { cover: 'https://media.example/cover.png?sign=fresh', body: 'https://media.example/body.png?sign=fresh' })
+  assert.equal(restored?.coverAssetId, 'cover')
+  await drafts.save(restored!)
+  assert.deepEqual(stored, { title: '重新打开', coverAssetId: 'cover', contentMedia: [{ assetId: 'body' }], eventId: '' })
+  assert.doesNotMatch(JSON.stringify(stored), /https:|blob:|mediaPreviews|_mediaUrls/)
+})

@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event'
 import { App } from 'antd'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AdminReadPage } from '../../modules/admin-read-pages'
+import { loadAdminReadPage, type AdminReadPage } from '../../modules/admin-read-pages'
 import { createCoreDemoEventTagCatalog, createCoreDemoOverview, createCoreDemoReadPage } from './core-demo-adapter'
 import { CoreListPageView } from './core-list-pages'
 import { mapAdminOverview } from './overview-model'
@@ -165,7 +165,7 @@ describe('core admin pages', () => {
     expect(rows[2].rowActions?.map(operation => operation.label)).toEqual(['编辑', '启用', '归档'])
   })
 
-  it('shows only design-approved status options and hides draft/archived rows and the inline tag section', async () => {
+  it('preserves all server-returned event statuses while keeping the inline tag section in settings', async () => {
     const user = userEvent.setup()
     const page: AdminReadPage = {
       sections: [
@@ -191,8 +191,8 @@ describe('core admin pages', () => {
     )
     expect(screen.getByText('已发布活动')).toBeInTheDocument()
     expect(screen.getByText('已下架活动')).toBeInTheDocument()
-    expect(screen.queryByText('草稿活动')).toBeNull()
-    expect(screen.queryByText('已归档活动')).toBeNull()
+    expect(screen.getByText('草稿活动')).toBeInTheDocument()
+    expect(screen.getByText('已归档活动')).toBeInTheDocument()
     expect(screen.queryByText('活动政策')).toBeNull()
     await user.click(screen.getByText('活动规则与类型设置'))
     expect(screen.getByText('活动政策')).toBeInTheDocument()
@@ -204,7 +204,23 @@ describe('core admin pages', () => {
     // antd 的 role=option 走 aria-label 且被虚拟列表截断，这里断言实际渲染的选项内容。
     const optionLabels = Array.from(document.querySelectorAll('.ant-select-dropdown .ant-select-item-option-content'))
       .map(node => node.textContent)
-    expect(optionLabels).toEqual(['全部状态', '已发布', '已结束', '已取消'])
+    expect(optionLabels).toEqual(['全部状态', '草稿', '已发布', '已下架', '已取消', '已结束', '已归档'])
+  })
+
+  it.each(['DRAFT', 'ARCHIVED'])('keeps a searched %s event visible and reachable with its server cursor', async status => {
+    const request = vi.fn().mockResolvedValue({ items: [{ id: 'saved-event', title: '测试活动保存回读', status, version: 1 }], nextCursor: 'event-next' })
+    const page = await loadAdminReadPage('events', { query: '测试活动保存回读', status, limit: 1, cursor: null }, request)
+    expect(request).toHaveBeenCalledWith('mip.admin.events.list', {
+      filters: { query: '测试活动保存回读', status }, limit: 1, cursor: undefined, sort: { field: 'startsAt', direction: 'ASC' },
+    })
+    const onOpenDetail = vi.fn()
+    const onSearchChange = vi.fn()
+    render(<CoreListPageView route="events" search={{ q: '测试活动保存回读', status }} page={page} onOpenDetail={onOpenDetail} onSearchChange={onSearchChange} />)
+    expect(screen.getByText('测试活动保存回读', { selector: 'td' })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: '查看' }))
+    expect(onOpenDetail).toHaveBeenCalledWith(expect.objectContaining({ route: 'events', id: 'saved-event' }))
+    fireEvent.click(screen.getByRole('button', { name: '下一页' }))
+    expect(onSearchChange).toHaveBeenCalledWith({ q: '测试活动保存回读', status, cursor: 'event-next', page: 2 })
   })
 
   it('opens the tag settings page from the 设置 action when catalog management is allowed', async () => {

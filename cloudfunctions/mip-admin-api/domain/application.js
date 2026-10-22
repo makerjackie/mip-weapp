@@ -21,6 +21,12 @@ function createAdminApplication({ service, assertPrincipal, projectMedia = async
     }
     const caller = assertPrincipal(principal)
     const result = await dispatcher.execute(caller, action, input)
+    if (action === 'mip.admin.events.drafts.get') {
+      if (!result.data) return result.data
+      // Private draft JSON is client-controlled. Only repository-authorized previews may be signed.
+      const { mediaPreviews } = await projectMedia({ mediaPreviews: result.data.mediaPreviews || [] })
+      return { ...result.data, mediaPreviews }
+    }
     return projectMedia(result.data)
   }
 

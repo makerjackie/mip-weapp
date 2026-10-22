@@ -8,6 +8,7 @@ import { ErrorState, LoadingState } from './feedback-states'
 import { RichTextContent } from './rich-text-content'
 import { StatusTag } from './status-tag'
 import { OVERLAY_Z_INDEX } from './overlay-z-index'
+import './detail-summary.css'
 
 type DetailSection = NonNullable<AdminDetailView>['sections'][number]
 
@@ -18,6 +19,9 @@ interface DetailSurfaceProps {
   error?: string
   onClose: () => void
   actions?: React.ReactNode
+  /** Only independent business detail pages opt into the prototype summary. */
+  layoutVariant?: 'standard' | 'cover-summary'
+  summaryImageUrl?: string
   onRowAction?: (operation: AdminRowOperation) => void
   onNestedView?: (target: AdminDetailRoute, row: AdminOperationRow) => void
   onPagerChange?: (pager: AdminDetailPager, direction: 'previous' | 'next' | 'search') => void
@@ -34,8 +38,12 @@ export function DetailDrawer(props: DetailSurfaceProps) {
 }
 
 /** Shared detail renderer used in drawers and the independent user profile route. */
-export function DetailSections({ view, loading, error, actions, onRowAction, onNestedView, onPagerChange, onRetry, batchActionsForSection, onSectionBatchAction }: DetailSurfaceProps) {
+export function DetailSections({ view, loading, error, actions, layoutVariant = 'standard', summaryImageUrl, onRowAction, onNestedView, onPagerChange, onRetry, batchActionsForSection, onSectionBatchAction }: DetailSurfaceProps) {
   const [selection, setSelection] = useState<Record<string, React.Key[]>>({})
+  const summarySection = layoutVariant === 'cover-summary'
+    ? view?.sections.find(section => !section.tab && section.fields?.length
+      && section.richText === undefined && !section.rows && !section.metrics && !section.pager)
+    : undefined
 
   const tabs = [...new Set(view?.sections.map(section => section.tab).filter((tab): tab is string => Boolean(tab)) || [])]
   // Operational data follows the primary content/participant sections.
@@ -45,6 +53,26 @@ export function DetailSections({ view, loading, error, actions, onRowAction, onN
     const keys = selection[section.title] ?? []
     const keySet = new Set(keys.map(String))
     const selectedRows = section.rows?.filter(row => keySet.has(stableRowKey(row, section.title))) ?? []
+    if (view && section === summarySection) {
+      const coverField = section.fields?.find(field => !field.hidden && field.kind === 'image')
+      const imageUrl = summaryImageUrl || coverField?.value || ''
+      const summaryFields = section.fields?.filter(field => !field.hidden && field !== coverField) ?? []
+      return <section className="detail-cover-summary" aria-label={section.title} key={section.title}>
+        <div className="detail-cover-summary__identity">
+          {/^https:\/\/[^\s]+$/.test(imageUrl)
+            ? <Image className="detail-cover-summary__cover" src={imageUrl} alt={`${view.title}封面`} />
+            : <div className="detail-cover-summary__empty">暂无封面</div>}
+          <strong className="detail-cover-summary__title">{view.title}</strong>
+          {view.status ? <StatusTag value={view.status} /> : null}
+        </div>
+        <div className="detail-cover-summary__information">
+          {section.error ? <ErrorState description={section.error} onRetry={onRetry} /> : null}
+          <dl className="detail-cover-summary__fields">
+            {summaryFields.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{renderFieldValue(field)}</dd></div>)}
+          </dl>
+        </div>
+      </section>
+    }
     return (
       <section className="detail-section" key={section.title}>
         <Typography.Title level={4}>{section.title}</Typography.Title>
@@ -149,7 +177,7 @@ export function DetailSections({ view, loading, error, actions, onRowAction, onN
       {!loading && error ? <ErrorState description={error} onRetry={onRetry} /> : null}
       {!error && view ? (
         <Space orientation="vertical" size={16} className="detail-sections">
-          {view.status ? <StatusTag value={view.status} /> : null}
+          {view.status && !summarySection ? <StatusTag value={view.status} /> : null}
           {view.sections.filter(section => !section.tab).map(renderSection)}
           {tabs.length ? <Tabs className="detail-content-tabs" key={`${view.route}:${String(view.source?.event && (view.source.event as Record<string, unknown>).id || view.title)}`} items={tabs.map(tab => ({ key: tab, label: tab, children: view.sections.filter(section => section.tab === tab).map(renderSection) }))} /> : null}
         </Space>
