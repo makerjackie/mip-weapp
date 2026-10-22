@@ -303,6 +303,7 @@ describe('admin growth deep module', () => {
     const cursor = encodeCursor({ createdAt: '2030-08-20T00:00:00.000Z', id: ENTRY_ID })
     const filters = {
       userId: ` ${USER_ID} `,
+      serverId: ` ${BRANCH_ID} `,
       metric: 'EXPERIENCE',
       sourceEventType: ' event.checked_in ',
       createdFrom: '2030-08-01T00:00:00.000Z',
@@ -317,6 +318,7 @@ describe('admin growth deep module', () => {
       { platform: false, branchIds: [BRANCH_ID], eventIds: [] },
       {
         userId: USER_ID,
+        serverId: BRANCH_ID,
         metric: 'EXPERIENCE',
         sourceEventType: 'event.checked_in',
         createdFrom: '2030-08-01 00:00:00.000',
@@ -335,6 +337,7 @@ describe('admin growth deep module', () => {
       error => error?.code === 'VALIDATION_FAILED',
     )
     assert.equal(repo.growthEntryReads, 1)
+    assert.throws(() => service.normalizeExportFilters({ serverId: 'invalid/id' }), error => error?.code === 'VALIDATION_FAILED')
     assert.throws(
       () => service.normalizeExportFilters({ metric: 'CLIENT_TRUSTED_VALUE' }),
       error => error?.code === 'VALIDATION_FAILED',

@@ -58,7 +58,7 @@ export function mapAdminOverview(value: unknown): AdminOverviewView {
     metrics: [
       metric('当前玩家', membership.currentPlayers, '当前可见范围'),
       metric('首年续费', purchases.firstRenewals, '所选时间范围'),
-      metric('本月新增玩家', people.newAccounts, '所选时间范围'),
+      metric('新增用户', people.newAccounts, '所选时间范围'),
       moneyMetric('缴费金额', purchases.eligiblePaidAmount),
       metric('用户总数', people.activeAccounts, '当前可见范围'),
       metric('活动总数', events.totalEvents, '当前可见范围'),

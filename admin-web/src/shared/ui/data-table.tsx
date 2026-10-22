@@ -1,4 +1,4 @@
-import { Button, Image, Space, Table, type TableColumnsType } from 'antd'
+import { Button, Image, Space, Table, Tooltip, Typography, type TableColumnsType } from 'antd'
 import { useMemo, useState } from 'react'
 import type { AdminTableColumn, AdminTableRow } from '../../modules/admin-read-pages'
 import type { OperationValues } from '../../modules/admin-operation-ui'
@@ -15,6 +15,7 @@ export function DataTable({
   onView,
   onRowClick,
   renderActions,
+  renderCell,
   selectable,
   batchActions,
   onBatchAction,
@@ -27,6 +28,7 @@ export function DataTable({
   onView?: (row: AdminTableRow) => void
   onRowClick?: (row: AdminTableRow) => void
   renderActions?: (row: AdminTableRow) => React.ReactNode
+  renderCell?: (value: unknown, row: AdminTableRow, column: AdminTableColumn) => React.ReactNode
   selectable?: boolean
   batchActions?: readonly BatchAction[]
   onBatchAction?: (action: BatchAction, selectedRows: AdminTableRow[], values: OperationValues) => Promise<void> | void
@@ -39,7 +41,17 @@ export function DataTable({
     title: column.label,
     dataIndex: column.key,
     key: column.key,
-    render: (value: unknown) => {
+    width: column.width,
+    fixed: column.fixed,
+    onCell: column.wrap ? () => ({ style: { whiteSpace: 'normal', overflowWrap: 'anywhere', maxWidth: column.width } }) : undefined,
+    render: (value: unknown, row) => {
+      const custom = renderCell?.(value, row, column)
+      if (custom !== undefined) return custom
+      if (column.format === 'identifier' && value && value !== '—') {
+        const full = String(value)
+        const short = full.length > 18 ? `${full.slice(0, 8)}…${full.slice(-6)}` : full
+        return <Tooltip title={full}><Typography.Text copyable={{ text: full, tooltips: ['复制完整编号', '已复制'] }}>{short}</Typography.Text></Tooltip>
+      }
       if (['status', 'state'].includes(column.key)) return <StatusTag value={value} />
       const url = typeof value === 'string' ? value : ''
       if (/^(imageUrl|coverUrl|iconUrl|avatarUrl)$/.test(column.key) && /^https:\/\//.test(url)) {

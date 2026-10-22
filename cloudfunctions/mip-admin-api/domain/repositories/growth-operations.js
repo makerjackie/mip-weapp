@@ -4,6 +4,7 @@ const { randomUUID, createHash } = require('node:crypto')
 const { claimOptional, complete } = require('../idempotency')
 const { cursorPredicateFor, pageRows } = require('../pagination')
 const { appendLevelTransition } = require('../level-transitions')
+const { attachGrowthEntryRelations } = require('./growth-entry-relations')
 
 const PLATFORM = { scopeType: 'PLATFORM', scopeId: null }
 const BEHAVIORS = Object.freeze({
@@ -98,8 +99,9 @@ function createGrowthOperationsRepository(database, options = {}) {
     if (input.filters.userId) { clauses.push('entry.user_id = ?'); params.push(input.filters.userId) }
     if (input.filters.serverId) { clauses.push('member.primary_branch_id = ?'); params.push(input.filters.serverId) }
     if (input.filters.sinceTime) { clauses.push('entry.created_at >= ?'); params.push(input.filters.sinceTime) }
+    if (input.filters.untilTime) { clauses.push('entry.created_at <= ?'); params.push(input.filters.untilTime) }
     if (input.filters.behavior) { clauses.push('entry.source_event_type = ?'); params.push(Object.keys(EVENT_BEHAVIORS).find(key => EVENT_BEHAVIORS[key] === input.filters.behavior) || input.filters.behavior) }
-    if (input.filters.query) { clauses.push('(profile.nickname LIKE ? OR entry.user_id = ? OR entry.id = ?)'); params.push(`%${input.filters.query}%`, input.filters.query, input.filters.query) }
+    if (input.filters.query) { clauses.push("(profile.nickname LIKE ? ESCAPE '\\\\' OR entry.user_id = ? OR entry.id = ?)"); params.push(`%${input.filters.query.replace(/[\\%_]/g, '\\$&')}%`, input.filters.query, input.filters.query) }
     const cursor = cursorPredicateFor('entry.created_at', input.cursor, 'createdAt', 'entry.id')
     const rows = await database.query(`SELECT entry.*, profile.nickname, member.primary_branch_id,
       (SELECT COALESCE(SUM(reversal.reversal_value), 0) FROM mip_contribution_reversals reversal
@@ -107,14 +109,15 @@ function createGrowthOperationsRepository(database, options = {}) {
       FROM mip_growth_entries entry JOIN mip_users member ON member.app_id = entry.app_id AND member.id = entry.user_id
       LEFT JOIN mip_profiles profile ON profile.app_id = entry.app_id AND profile.user_id = entry.user_id
       WHERE ${clauses.join(' AND ')}${cursor.sql} ORDER BY entry.created_at DESC, entry.id DESC LIMIT ?`, [...params, ...cursor.params, input.limit + 1])
-    return pageRows(rows.map(row => ({ id: row.id, txnNo: row.id, transactionNo: row.id, userId: row.user_id,
+    return pageRows(await attachGrowthEntryRelations(database, input.appId, rows.map(row => ({ id: row.id, txnNo: row.id, transactionNo: row.id, userId: row.user_id,
       nickname: row.nickname || '未填写昵称', behavior: EVENT_BEHAVIORS[row.source_event_type] || row.source_event_type,
       behaviorLabel: BEHAVIORS[EVENT_BEHAVIORS[row.source_event_type]] || row.source_event_type,
       deltaValue: Number(row.delta_value), contributionValue: Number(row.delta_value), balanceAfter: Number(row.balance_after),
       relatedBusiness: row.source_event_id, createdAt: iso(row.created_at), occurredAt: iso(row.created_at),
+      sourceEventType: row.source_event_type, adjustmentReason: row.adjustment_reason || '',
       serverId: row.primary_branch_id, reversedValue: Number(row.reversed_value || 0),
       result: Number(row.reversed_value) > 0 ? 'REVERSED' : 'SUCCESS',
-    })), input.limit, row => ({ createdAt: row.createdAt, id: row.id }))
+    }))), input.limit, row => ({ createdAt: row.createdAt, id: row.id }))
   }
 
   async function reverseContribution(input) {
@@ -122,10 +125,13 @@ function createGrowthOperationsRepository(database, options = {}) {
       const original = await tx.one(`SELECT * FROM mip_growth_entries WHERE app_id = ? AND id = ? AND metric = 'CONTRIBUTION' FOR SHARE`, [input.appId, input.originalTransactionNo])
       if (!original) fail('NOT_FOUND')
       if (Number(original.delta_value) <= 0) fail('INVALID_STATE')
-      const prior = await tx.one(`SELECT COALESCE(SUM(reversal_value), 0) AS total FROM mip_contribution_reversals
-        WHERE app_id = ? AND original_txn_no = ?`, [input.appId, original.id])
-      if (input.reversalValue > Number(original.delta_value) - Number(prior?.total || 0)) fail('REVERSAL_EXCEEDS_ORIGINAL')
+      // The writable account serializes different operators before either reversal limit is read.
+      // Keep the immutable ledger append-only; its runtime account has no UPDATE privilege.
       const account = await tx.one('SELECT contribution_balance, version FROM mip_growth_accounts WHERE app_id = ? AND user_id = ? FOR UPDATE', [input.appId, original.user_id])
+      // A locking read sees the preceding reversal even if authorization opened an older RR snapshot.
+      const prior = await tx.one(`SELECT COALESCE(SUM(reversal_value), 0) AS total FROM mip_contribution_reversals
+        WHERE app_id = ? AND original_txn_no = ? FOR SHARE`, [input.appId, original.id])
+      if (input.reversalValue > Number(original.delta_value) - Number(prior?.total || 0)) fail('REVERSAL_EXCEEDS_ORIGINAL')
       if (!account || Number(account.contribution_balance) < input.reversalValue) fail('INSUFFICIENT_BALANCE')
       const balanceAfter = Number(account.contribution_balance) - input.reversalValue
       const reversalId = id()

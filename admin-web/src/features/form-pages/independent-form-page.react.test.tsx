@@ -4,6 +4,7 @@ import { App } from 'antd'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { IndependentFormPageConfig } from './independent-form-page'
 import { IndependentFormPage } from './independent-form-page'
+import { EventFormFields } from './event-form-fields'
 
 const state = vi.hoisted(() => ({ request: vi.fn(), navigate: vi.fn(), search: {} as Record<string, unknown> }))
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => state.navigate, useSearch: () => state.search, useBlocker: () => ({ status: 'idle' }) }))
@@ -38,6 +39,36 @@ function mount(loadDetail: () => Promise<Record<string, unknown> | null>) {
 }
 
 describe('IndependentFormPage loaded-record submission', () => {
+  it('keeps grouped event fields, advanced settings and the loaded version in the normal submit path', async () => {
+    const groupedConfig: IndependentFormPageConfig = { ...config,
+      fields: [...config.fields,
+        { name: 'priceCents', label: '费用（元）', kind: 'money', required: true },
+        { name: 'startsAt', label: '开始时间', kind: 'datetime', required: true },
+        { name: 'description', label: '活动介绍', kind: 'textarea', required: true },
+        { name: 'capacity', label: '报名人数上限', kind: 'number', advanced: true },
+      ],
+      values: { title: '', expectedVersion: 8, priceCents: 1200, startsAt: '2031-10-02T02:00:00.000Z', description: '介绍正文', capacity: 25 },
+      renderFields: (fields, form) => <EventFormFields fields={fields} form={form} />,
+      buildInput: values => ({ ok: true, input: values }),
+    }
+    render(<QueryClientProvider client={new QueryClient()}><App><IndependentFormPage config={groupedConfig} /></App></QueryClientProvider>)
+    expect(screen.getByRole('region', { name: '基本信息' })).toContainElement(screen.getByLabelText('标题'))
+    expect(screen.getByRole('region', { name: '时间、地点与费用' })).toContainElement(screen.getByLabelText('费用（元）'))
+    expect(screen.getByRole('region', { name: '图文内容' })).toContainElement(screen.getByLabelText('活动介绍'))
+    fireEvent.click(screen.getByText('确认提交'))
+    await screen.findByText('请填写标题')
+    expect(state.request).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText('标题'), { target: { value: '分组后活动' } })
+    fireEvent.change(screen.getByLabelText('费用（元）'), { target: { value: '18.50' } })
+    fireEvent.click(screen.getByText('高级设置（选填）'))
+    fireEvent.change(screen.getByLabelText('报名人数上限'), { target: { value: '30' } })
+    fireEvent.click(screen.getByText('确认提交'))
+    await waitFor(() => expect(state.request).toHaveBeenCalledOnce())
+    expect(state.request.mock.calls[0]?.[1]).toMatchObject({ title: '分组后活动', priceCents: 1850,
+      startsAt: '2031-10-02T02:00:00.000Z', description: '介绍正文', capacity: 30, expectedVersion: 8,
+      idempotencyKey: expect.any(String),
+    })
+  })
   it('confirms dates with Enter without implicitly saving the whole record', async () => {
     const dateConfig: IndependentFormPageConfig = { ...config,
       fields: [...config.fields, { name: 'startsAt', label: '开始时间', kind: 'datetime', required: true }],

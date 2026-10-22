@@ -62,10 +62,13 @@ export interface AdminDetailField {
   value: string
   /** `image` renders an https value as a thumbnail; `link` as an external link; default is auto-detect. */
   kind?: 'text' | 'image' | 'link'
+  hidden?: boolean
 }
 
 export interface AdminDetailSection {
   title: string
+  tab?: string
+  richText?: string
   error?: string
   fields?: AdminDetailField[]
   metrics?: AdminDetailField[]
@@ -310,26 +313,18 @@ async function loadEventDetail(
     {
       title: '活动信息',
       fields: fields([
-        ['摘要', text(event.summary)],
-        ['活动介绍', text(event.description)],
-        ['报名须知', text(event.notices)],
-        ['活动方式', codeLabel(event.eventMode)],
-        ['活动类型', event.accessType === 'PAID' ? '付费' : codeLabel(event.accessType)],
+        ['费用类型', event.accessType === 'PAID' ? '付费' : codeLabel(event.accessType)],
         ['价格', money(event.priceCents, 'CNY')],
-        ['玩家免费', event.memberFree === true ? '开启' : '关闭'],
         ['开始时间', dateTime(event.startsAt)],
         ['结束时间', dateTime(event.endsAt)],
-        ['报名截止', dateTime(event.registrationDeadline)],
-        ['取消截止', dateTime(event.cancellationDeadline)],
         ['场地', text(event.venueName)],
         ['地址', text(event.address)],
-        ['城市', text(event.cityName)],
-        ['版本', numberText(event.version)],
+        ['服务器 / 城市', [text(event.branchName, ''), text(event.cityName, '')].filter(Boolean).join(' · ') || '—'],
         ['活动状态', codeLabel(event.status)],
       ]),
     },
     {
-      title: '参与情况',
+      title: '参与情况', tab: '运营数据',
       ...(insights.loadFailed ? { error: '统计数据加载失败，请重试；活动资料已成功加载。' } : {}),
       metrics: fields([
         ['有效报名', numberText(participation.effectiveRegistrationCount)],
@@ -342,7 +337,7 @@ async function loadEventDetail(
       ]),
     },
     {
-      title: '互动数据',
+      title: '互动数据', tab: '运营数据',
       metrics: fields([
         ['邀请报名', numberText(invitations.attributedRegistrationCount)],
         ['邀请人', numberText(invitations.distinctInviterCount)],
@@ -352,10 +347,21 @@ async function loadEventDetail(
       ]),
     },
   ]
-  sections.push(financialSection(financials), feedbackSection(feedback))
+  sections[0].fields!.push({ label: '版本', value: numberText(event.version), hidden: true })
+  if (typeof event.coverUrl === 'string' && /^https:\/\//.test(event.coverUrl)) sections[0].fields!.unshift({ label: '活动封面', value: event.coverUrl, kind: 'image' })
+  const content: AdminDetailSection[] = [
+    { title: '活动介绍', tab: '活动介绍', richText: String(event.description || '') },
+    { title: '主办方介绍', tab: '主办方介绍', richText: String(event.organizerIntroduction || '') },
+    { title: '报名须知', tab: '报名须知', richText: String(event.notices || '') },
+  ]
+  const gallery = records(event.contentMedia).filter(item => typeof item.imageUrl === 'string' && /^https:\/\//.test(item.imageUrl))
+  if (gallery.length) content[0].fields = gallery.map((item, index) => ({ label: text(item.caption, `正文图片 ${index + 1}`), value: String(item.imageUrl), kind: 'image' }))
+  sections.splice(1, 0, ...content)
+  sections.push({ title: '报名设置', tab: '运营数据', fields: fields([['活动方式', codeLabel(event.eventMode)], ['玩家免费', event.memberFree === true ? '开启' : '关闭'], ['报名截止', dateTime(event.registrationDeadline)], ['取消截止', dateTime(event.cancellationDeadline)], ['摘要', text(event.summary)]]) })
+  sections.push({ ...financialSection(financials), tab: '运营数据' }, { ...feedbackSection(feedback), tab: '运营数据' })
   if (options.includeEventRoster !== false) {
     sections.push({
-      title: '报名与参与人',
+      title: '报名与参与人', tab: '参与人',
       ...(rosterPage.loadFailed ? { error: '报名名单加载失败，请重试；活动资料已成功加载。' } : {}),
       rows: roster.map(item => ({
         registrationId: text(item.id, text(item.registrationId)),
@@ -396,7 +402,7 @@ async function loadEventDetail(
   }
   if (options.includeEventFeedback) {
     sections.push({
-      title: '活动反馈明细',
+      title: '活动反馈明细', tab: '活动反馈',
       ...(feedbackPage.loadFailed
         ? { error: '反馈明细加载失败，请重试。' }
         : feedbackRows.some(item => !feedbackDisplayComplete(item))
@@ -677,9 +683,6 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
       ['发布人', text(opportunity.ownerNickname)],
       ['作用范围', opportunity.scopeType === 'BRANCH' ? text(opportunity.branchName) : '平台'],
       ['合作地点', text(terms.locationDisplay || opportunity.cityName)],
-      ['价值说明', text(opportunity.valueSummary)],
-      ['合作目标', text(opportunity.targetSummary)],
-      ['详细说明', text(opportunity.description)],
       ['合作角色', codeArray(opportunity.roleKeys)],
       ['标签', arrayText(opportunity.tags)],
       ['金额说明', text(terms.amountDisplay)],
@@ -688,19 +691,22 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
       ['内容安全', codeLabel(opportunity.contentSafetyStatus)],
       ['发布时间', dateTime(opportunity.publishedAt)],
       ['更新时间', dateTime(opportunity.updatedAt)],
-      ['版本', numberText(opportunity.version)],
     ]),
   }]
+  sections[0].fields!.push({ label: '版本', value: numberText(opportunity.version), hidden: true })
+  sections.push({ title: '项目详情', tab: '项目详情', fields: fields([
+    ['价值说明', text(opportunity.valueSummary)], ['合作目标', text(opportunity.targetSummary)], ['详细说明', text(opportunity.description)],
+  ]) })
   const team = records(opportunity.teamMembers)
   sections.push({
-    title: '组队玩家',
+    title: '组队玩家', tab: '项目详情',
     rows: team.map(item => ({ name: text(item.nickname), branch: text(item.branchName) })),
     columns: columns([['name', '姓名'], ['branch', '所属服务器']]),
   })
-  sections.push(await referralSection)
+  sections.push({ ...await referralSection, tab: '想推荐名单' })
   if (commentState) {
     sections.push({
-      title: '评论设置',
+      title: '评论设置', tab: '评论与评价',
       fields: fields([
         ['评论', booleanText(settings.commentsEnabled)],
         ['项目评价', booleanText(settings.reviewsEnabled)],
@@ -709,7 +715,7 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
       ]),
     })
     sections.push({
-      title: '评论与评价',
+      title: '评论与评价', tab: '评论与评价',
       rows: records(commentState.comments).map(item => ({
         author: text(item.authorNickname),
         type: codeLabel(item.type),
@@ -722,16 +728,16 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
       columns: columns([['author', '提交人'], ['type', '类型'], ['body', '内容'], ['rating', '评分'], ['calls', '打 call'], ['createdAt', '时间'], ['state', '状态']]),
     })
     sections.push({
-      title: '评论举报',
+      title: '评论举报', tab: '评论与评价',
       rows: records(commentState.reports).map(item => ({ reporter: text(item.reporterNickname), category: codeLabel(item.category), description: text(item.description), createdAt: dateTime(item.createdAt), state: codeLabel(item.status) })),
       columns: columns([['reporter', '举报人'], ['category', '分类'], ['description', '说明'], ['createdAt', '时间'], ['state', '状态']]),
     })
   }
   else {
-    sections.push({ title: '评论数据', fields: fields([['数据权限', '当前账号不可查看']]) })
+    sections.push({ title: '评论数据', tab: '评论与评价', fields: fields([['数据权限', '当前账号不可查看']]) })
   }
   sections.push({
-    title: '操作记录',
+    title: '操作记录', tab: '操作记录',
     rows: records(opportunity.history).map(item => {
       const metadata = record(item.metadata)
       // 状态变更沿用机会页面局部文案（招募中 / 已完成），与抽屉顶部状态一致。

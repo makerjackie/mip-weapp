@@ -8,6 +8,10 @@ export type AdminTableRow = AdminOperationRow
 export interface AdminTableColumn {
   key: string
   label: string
+  width?: number
+  fixed?: 'left' | 'right'
+  wrap?: boolean
+  format?: 'identifier'
 }
 
 export interface AdminTableSection {
@@ -20,6 +24,7 @@ export interface AdminTableSection {
 }
 
 export interface AdminReadPage {
+  filterOptions?: Record<string, Array<{ value: string; label: string }>>
   creationAllowed?: boolean
   sections: AdminTableSection[]
   nextCursor: string | null

@@ -272,7 +272,7 @@ describe('R1 novice walkthrough fixes', () => {
 
   it('guides the tags.replace dialog to the catalog page when tags are empty', () => {
     const tagIds = EVENT_MUTATION_CONFIGS['mip.admin.events.tags.replace'].fields.find(field => field.key === 'tagIds')
-    assert.ok(tagIds?.emptyHint && tagIds.emptyHint.includes('新建活动目录'))
+    assert.ok(tagIds?.emptyHint && tagIds.emptyHint.includes('活动设置'))
   })
 })
 

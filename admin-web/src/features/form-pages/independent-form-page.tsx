@@ -1,5 +1,5 @@
 import { ArrowLeftOutlined, EyeOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Card, Form, Input, Modal, Space } from 'antd'
+import { Alert, App, Button, Card, Form, Input, Modal, Space, type FormInstance } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useBlocker, useNavigate, useSearch } from '@tanstack/react-router'
@@ -18,6 +18,7 @@ export interface IndependentFormPageConfig {
   title: string
   description: string
   fields: readonly OperationField[]
+  renderFields?: (fields: readonly OperationField[], form: FormInstance<OperationValues>) => React.ReactNode
   values: OperationValues
   backTarget: string
   buildInput: (values: OperationValues) => IndependentFormBuildResult
@@ -288,7 +289,7 @@ export function IndependentFormPage({ config, loadDetail }: {
             }
           }}
         >
-          <div className="mutation-grid"><OperationFields fields={fields} form={form} /></div>
+          <div className="mutation-grid">{config.renderFields ? config.renderFields(fields, form) : <OperationFields fields={fields} form={form} />}</div>
         </Form>
         {error ? <Alert type="error" showIcon message={error} description="请求结果不确定时，请先刷新并核对服务端记录。" style={{ marginTop: 16 }} /> : null}
         {conflict ? <Space wrap style={{ marginTop: 16 }}>

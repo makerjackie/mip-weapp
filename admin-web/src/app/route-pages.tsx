@@ -39,6 +39,7 @@ import {
   MessagesPage,
   OperationsPage,
   PermissionsPage,
+  ServersPage,
   type GovernanceMutationRequest,
   type GovernanceRoute,
 } from '../features/governance-pages'
@@ -47,8 +48,7 @@ import { useAdminDetail } from '../features/admin-runtime/use-admin-detail'
 import { useAdminOperations } from '../features/admin-runtime/admin-operation-provider'
 import { SensitiveExportButton } from '../features/admin-runtime/sensitive-export-button'
 import { useAdminReadPage } from '../features/admin-runtime/use-admin-read-page'
-import type { AdminDetailRoute, AdminDetailView } from '../modules/admin-details'
-type DetailSection = NonNullable<AdminDetailView>['sections'][number]
+import type { AdminDetailRoute } from '../modules/admin-details'
 import {
   ADMIN_MEDIA_PURPOSE_OPTIONS,
   ADMIN_MEDIA_PURPOSE_CAPABILITIES,
@@ -60,20 +60,16 @@ import {
 import { getAdminReadRouteDefinition, type AdminListQuery, type AdminTableRow } from '../modules/admin-read-pages'
 import { record } from '../modules/admin-read-formatters'
 import { nonEmptyString } from '../modules/admin-coercions'
-import { batchExtraFields, batchSummaryMessage, executeBatchAction } from '../modules/admin-batch-operations'
-import type { OperationField, OperationValues } from '../modules/admin-operation-ui'
-import {
-  ADMIN_EVENT_MUTATION_ACTIONS,
-  eventMutationConfig,
-  type AdminEventMutationAction,
-} from '../modules/admin-event-mutation-forms'
-import type { AdminOperationRow } from '../modules/admin-row-operations'
+import { batchSummaryMessage, executeBatchAction } from '../modules/admin-batch-operations'
+import type { OperationValues } from '../modules/admin-operation-ui'
+import { useDetailSectionBatch } from '../features/admin-runtime/use-detail-section-batch'
 import { downloadTaskCompletionExport, exportTaskCompletions } from '../modules/admin-task-management'
-import { DetailDrawer, PermissionGuard, type BatchAction } from '../shared/ui'
+import { DetailDrawer, PermissionGuard } from '../shared/ui'
 import { EventEditFormPage } from '../features/form-pages/event-edit-form-page'
 import { EventSettingsPage } from '../features/core-pages/event-settings-page'
 import { IndustrySettingsPage } from '../features/core-pages/industry-settings-page'
 import { TaskEditFormPage } from '../features/form-pages/task-edit-form-page'
+import { EventDetailPage, OpportunityDetailPage } from '../features/business-details/business-detail-page'
 import { OpportunityEditFormPage } from '../features/form-pages/opportunity-edit-form-page'
 import { KnowledgeEditFormPage } from '../features/form-pages/knowledge-edit-form-page'
 import { UserContentEditFormPage } from '../features/form-pages/user-content-edit-form-page'
@@ -93,6 +89,7 @@ export function EventSettingsRoutePage() { return <EventSettingsPage /> }
 export function OrdersRoutePage() { return <CoreRoutePage route="orders" /> }
 
 function CoreRoutePage({ route }: { route: CoreRoute }) {
+  const navigate = useNavigate()
   const { launch } = useAdminOperations()
   const search = useRouteSearch()
   const updateSearch = useUpdateSearch()
@@ -115,7 +112,8 @@ function CoreRoutePage({ route }: { route: CoreRoute }) {
     onSearchChange: (next: CorePageSearchState) => void changeSearch(next),
     onPreviousPage: cursorStack.length > 0 ? goPreviousPage : undefined,
     onOpenDetail: (intent: { route: AdminDetailRoute; id: string }) => intent.route === 'users'
-      ? window.open(userProfileHref(intent.id), '_blank', 'noopener,noreferrer') : detail.openDetail(intent.route, intent.id),
+      ? window.open(userProfileHref(intent.id), '_blank', 'noopener,noreferrer') : intent.route === 'events'
+        ? void navigate({ to: '/events/$eventId', params: { eventId: intent.id }, search: { returnSearch: search } }) : detail.openDetail(intent.route, intent.id),
     onMutation: (intent: CorePageMutationIntent) => void launch(intent.action, intent.targetId, null, {
       values: intent.values,
       expectedVersion: intent.expectedVersion,
@@ -333,7 +331,9 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
       setCursorStack(stack => [...stack, search.cursor || null])
       void updateSearch({ ...search, cursor, page: (search.page || 1) + 1 })
     },
-    onOpenDetail: intent => detail.openDetail(intent.route, intent.id),
+    onOpenDetail: intent => intent.route === 'opportunities'
+      ? void navigate({ to: '/opportunities/$opportunityId', params: { opportunityId: intent.id }, search: { returnSearch: search } })
+      : detail.openDetail(intent.route, intent.id),
     onWrite,
     canCapability: hasCapability,
     onPageSizeChange: size => {
@@ -476,7 +476,16 @@ export function MediaRoutePage() {
   )
 }
 
-export function PermissionsRoutePage() { return <GovernanceRoutePage route="permissions" /> }
+export function PermissionsRoutePage() {
+  const search = useRouteSearch()
+  const navigate = useNavigate()
+  const legacyServers = search.tab === 'branches'
+  useEffect(() => {
+    if (legacyServers) void navigate({ to: '/servers', search: { ...search, tab: undefined }, replace: true })
+  }, [legacyServers, navigate, search])
+  return legacyServers ? null : <GovernanceRoutePage route="permissions" />
+}
+export function ServersRoutePage() { return <GovernanceRoutePage route="servers" /> }
 export function MessagesRoutePage() { return <GovernanceRoutePage route="messages" /> }
 export function KnowledgeRoutePage() { return <GovernanceRoutePage route="knowledge" /> }
 export function OperationsLogRoutePage() { return <GovernanceRoutePage route="operations" /> }
@@ -489,10 +498,13 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
   const updateSearch = useUpdateSearch()
   const detail = useAdminDetail()
   const baseQuery = listQuery(search)
-  const query = route === 'messages'
+  const readRoute = route === 'servers' ? 'permissions' : route
+  const query = route === 'servers' || route === 'permissions'
+    ? { ...baseQuery, filters: { ...baseQuery.filters, section: route === 'servers' ? 'branches' : 'permissions' } }
+    : route === 'messages'
     ? { ...baseQuery, filters: { ...baseQuery.filters, section: search.tab === 'templates' ? 'templates' : 'campaigns' } }
     : route === 'knowledge' ? { ...baseQuery, filters: { ...baseQuery.filters, section: search.tab || 'contents' } } : baseQuery
-  const result = useAdminReadPage(route, query)
+  const result = useAdminReadPage(readRoute, query)
 
   const [cursorStack, setCursorStack] = useState<Array<string | null>>([])
   const nextPage = () => {
@@ -552,7 +564,9 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
 
   const common = {
     page: result.data || null,
-    routeDefinition: getAdminReadRouteDefinition(route),
+    routeDefinition: route === 'servers'
+      ? { ...getAdminReadRouteDefinition(readRoute), searchPlaceholder: '筛选服务器名称、城市或负责人', statusOptions: getAdminReadRouteDefinition(readRoute).statusOptions.filter(option => option.value !== 'REVOKED') }
+      : { ...getAdminReadRouteDefinition(readRoute), ...(route === 'permissions' ? { searchPlaceholder: '筛选运营成员或角色' } : {}) },
     filter: { q: query.query, status: query.status, filters: baseQuery.filters },
     activeTab: search.tab || '',
     loading: result.loading,
@@ -592,14 +606,15 @@ function GovernanceRoutePage({ route }: { route: GovernanceRoute }) {
     },
     onBatchAction: (action: string, rows: AdminTableRow[], values: OperationValues) => runBatchAction(action, rows, values),
   }
-  const page = route === 'permissions' ? <><PermissionsPage {...common} /><RoleTemplatesPanel /></>
-    : route === 'messages' ? <MessagesPage {...common} />
+  const page = route === 'permissions' ? <PermissionsPage {...common} sectionContent={{ policies: <RoleTemplatesPanel /> }} />
+    : route === 'servers' ? <ServersPage {...common} />
+      : route === 'messages' ? <MessagesPage {...common} />
       : route === 'knowledge' ? <KnowledgePage {...common} /> : <OperationsPage {...common} />
   const capabilities = governanceRouteCapabilities[route]
   return (
     <PermissionGuard capabilities={capabilities} requireAny={capabilities.length > 1}>
       {page}
-      {getAdminReadRouteDefinition(route).paginated ? <Space className="table-pagination" wrap aria-label="列表翻页">
+      {getAdminReadRouteDefinition(readRoute).paginated ? <Space className="table-pagination" wrap aria-label="列表翻页">
         <Button onClick={previousPage} disabled={!cursorStack.length || result.refreshing}>上一页</Button>
         <span>第 {search.page || 1} 页</span>
         <Button onClick={nextPage} disabled={!result.data?.nextCursor || result.refreshing}>下一页</Button>
@@ -614,29 +629,10 @@ function RouteDetailLayer({ detail, onMediaUpload }: {
   onMediaUpload?: () => void
 }) {
   const { message } = App.useApp()
-  const { demoMode, request, hasCapability } = useAdminSession()
+  const { demoMode, request } = useAdminSession()
   const handleRowAction = useDetailRowAction(detail.view)
   const selection = detail.selection
-  const sectionBatchActions = useCallback(
-    (section: DetailSection): readonly BatchAction[] => {
-      if (demoMode || !section.rows?.length) return []
-      const available = new Set<string>(section.rows.flatMap(row => row.rowActions?.map(operation => operation.action) ?? []))
-      return DETAIL_SECTION_BATCH.flatMap(([action, spec]) => {
-        if (!available.has(action) || !hasCapability(spec.capability)) return []
-        const fields = eventBatchFields(action as AdminEventMutationAction)
-        return [{ key: action, label: spec.label, fields: fields.length ? fields : undefined }]
-      })
-    },
-    [demoMode, hasCapability],
-  )
-  const runSectionBatch = async (action: BatchAction, rows: AdminOperationRow[], values: OperationValues) => {
-    if (demoMode) { void message.info('演示模式不会提交写操作'); return }
-    const summary = await executeBatchAction(action.key, rows, values, (operationAction, input) => request(operationAction, input))
-    await detail.refreshDetail()
-    const notice = batchSummaryMessage(summary)
-    if (notice.type === 'success') void message.success(notice.text)
-    else void message.warning(notice.text)
-  }
+  const sectionBatch = useDetailSectionBatch(detail.refreshDetail)
   const actions = selection && detail.view ? (
     <AdminDetailActions
       route={selection.route}
@@ -666,8 +662,7 @@ function RouteDetailLayer({ detail, onMediaUpload }: {
       onNestedView={(target, row) => target === 'users' ? window.open(userProfileHref(String(row.detailId)), '_blank', 'noopener,noreferrer') : detail.openDetail(target, String(row.detailId || ''))}
       onPagerChange={detail.changeDetailPage}
       onRetry={() => void detail.refreshDetail()}
-      batchActionsForSection={sectionBatchActions}
-      onSectionBatchAction={(section, action, rows, values) => runSectionBatch(action, rows, values)}
+      {...sectionBatch}
     />
   )
 }
@@ -691,16 +686,6 @@ function listQuery(search: AdminListSearch): AdminListQuery {
   }
 }
 
-/** Batch-capable row actions inside a detail drawer section, keyed by server action. */
-const DETAIL_SECTION_BATCH: ReadonlyArray<[string, { label: string, capability: string }]> = [
-  ['mip.admin.events.registrations.review', { label: '批量审核报名', capability: 'events.registrations.manage' }],
-]
-
-function eventBatchFields(action: AdminEventMutationAction): OperationField[] {
-  if (!(ADMIN_EVENT_MUTATION_ACTIONS as readonly string[]).includes(action)) return []
-  return batchExtraFields(eventMutationConfig(action).fields)
-}
-
 const operationRouteCapabilities: Record<OperationsRoute, string[]> = {
   tasks: ['tasks.manage'],
   banners: ['banners.manage'],
@@ -720,7 +705,8 @@ const operationRouteWriteCapabilities: Record<OperationsRoute, string[]> = {
 }
 
 const governanceRouteCapabilities: Record<GovernanceRoute, string[]> = {
-  permissions: ['roles.change', 'branches.manage', 'audit.read'],
+  permissions: ['roles.change', 'audit.read'],
+  servers: ['branches.manage'],
   messages: ['messages.manage'],
   knowledge: ['knowledge.manage'],
   operations: ['announcements.manage', 'community.reports.manage', 'operations.exceptions.read', 'messages.delivery.review'],
@@ -749,6 +735,7 @@ export const routeComponents = {
   '/entitlements': EntitlementsRoutePage,
   '/entitlements/grant': EntitlementGrantRoutePage,
   '/permissions': PermissionsRoutePage,
+  '/servers': ServersRoutePage,
   '/admin-accounts': AdminAccountsRoutePage,
   '/audit-logs': AuditLogsRoutePage,
   '/messages': MessagesRoutePage,
@@ -756,6 +743,8 @@ export const routeComponents = {
   '/operations': OperationsLogRoutePage,
   '/events/$eventId/edit': EventEditFormPage,
   '/tasks/$taskId/edit': TaskEditFormPage,
+  '/events/$eventId': EventDetailPage,
+  '/opportunities/$opportunityId': OpportunityDetailPage,
   '/opportunities/$opportunityId/edit': OpportunityEditFormPage,
   '/knowledge/$contentId/edit': KnowledgeEditFormPage,
   '/userContent/$contentId/edit': UserContentEditFormPage,

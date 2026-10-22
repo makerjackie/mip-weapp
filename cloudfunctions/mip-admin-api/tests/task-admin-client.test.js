@@ -142,3 +142,22 @@ it('authenticates the resolved WeChat identity for task safety and rejects tampe
   assert.equal(verifyTaskAdminRequest(captured, options).actorOpenId, 'trusted-wechat-openid')
   assert.throws(() => verifyTaskAdminRequest({ ...captured, actorOpenId: 'forged-openid' }, options), /AUTH_REQUIRED/)
 })
+
+
+it('preserves full-result task filters and click actions through the signed transport', async () => {
+  const calls = []
+  const client = clientWith({ async callFunction({ data }) {
+    calls.push(verifyTaskAdminRequest(data, {
+      secret: SECRET, allowedAppIds: new Set([APP_ID]), now: () => 1_700_000_000_000,
+    }))
+    return { result: { ok: true, data: { items: [] } } }
+  } })
+  const filters = { starLevel: '3', assignedOwnerId: USER_ID, rewardType: 'contribution', workflowMode: 'REVIEW' }
+  for (const action of ['mip.admin.tasks.list', 'mip.admin.tasks.completions.list', 'mip.admin.tasks.submissions.list', 'mip.admin.tasks.completions.export']) {
+    await client.execute({ appId: APP_ID, actorUserId: USER_ID, action, input: { filters } })
+    assert.deepEqual(calls.at(-1).input.filters, filters)
+  }
+  const task = { name: '查看活动', actionType: 'PAGE_JUMP', actionTarget: 'pages/events/index' }
+  await client.execute({ appId: APP_ID, actorUserId: USER_ID, action: 'mip.admin.tasks.save', input: { task, idempotencyKey: 'task-action-filter-save-1' } })
+  assert.deepEqual(calls.at(-1).input.task, task)
+})

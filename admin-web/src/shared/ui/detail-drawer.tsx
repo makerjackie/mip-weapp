@@ -1,10 +1,11 @@
-import { Button, Drawer, Image, Input, Select, Space, Table, Typography } from 'antd'
+import { Button, Drawer, Image, Input, Select, Space, Table, Tabs, Typography } from 'antd'
 import { useState } from 'react'
 import type { AdminDetailPager, AdminDetailRoute, AdminDetailView } from '../../modules/admin-details'
 import type { OperationValues } from '../../modules/admin-operation-ui'
 import type { AdminOperationRow, AdminRowOperation } from '../../modules/admin-row-operations'
 import { BatchActionBar, type BatchAction } from './batch-actions'
 import { ErrorState, LoadingState } from './feedback-states'
+import { RichTextContent } from './rich-text-content'
 import { StatusTag } from './status-tag'
 import { OVERLAY_Z_INDEX } from './overlay-z-index'
 
@@ -36,6 +37,111 @@ export function DetailDrawer(props: DetailSurfaceProps) {
 export function DetailSections({ view, loading, error, actions, onRowAction, onNestedView, onPagerChange, onRetry, batchActionsForSection, onSectionBatchAction }: DetailSurfaceProps) {
   const [selection, setSelection] = useState<Record<string, React.Key[]>>({})
 
+  const tabs = [...new Set(view?.sections.map(section => section.tab).filter((tab): tab is string => Boolean(tab)) || [])]
+  // Operational data follows the primary content/participant sections.
+  if (tabs.includes('运营数据')) tabs.push(...tabs.splice(tabs.indexOf('运营数据'), 1))
+  const renderSection = (section: DetailSection) => {
+    const sectionBatchActions = batchActionsForSection?.(section) ?? []
+    const keys = selection[section.title] ?? []
+    const keySet = new Set(keys.map(String))
+    const selectedRows = section.rows?.filter(row => keySet.has(stableRowKey(row, section.title))) ?? []
+    return (
+      <section className="detail-section" key={section.title}>
+        <Typography.Title level={4}>{section.title}</Typography.Title>
+        {section.error ? <ErrorState description={section.error} onRetry={onRetry} /> : null}
+        {section.pager?.searchable && onPagerChange ? <Space wrap style={{ marginBottom: 12 }}>
+          <Input.Search key={`${section.title}-${section.pager.query}`} aria-label={`搜索${section.title}`} placeholder={section.pager.placeholder} defaultValue={section.pager.query}
+            allowClear onSearch={query => onPagerChange({ ...section.pager!, query }, 'search')} />
+          {section.pager.statusOptions ? <Select aria-label={`${section.title}状态`} value={section.pager.status || ''} style={{ minWidth: 160 }} options={[{ value: '', label: '全部状态' }, ...section.pager.statusOptions]}
+            onChange={status => onPagerChange({ ...section.pager!, status }, 'search')} /> : null}
+        </Space> : null}
+        {section.richText !== undefined ? <RichTextContent value={section.richText} /> : null}
+        {section.fields?.length ? (
+          <dl className="detail-fields">
+            {section.fields.filter(field => !field.hidden).map(field => <div key={field.label}><dt>{field.label}</dt><dd>{renderFieldValue(field)}</dd></div>)}
+          </dl>
+        ) : null}
+        {section.metrics?.length ? (
+          <dl className="detail-metrics">
+            {section.metrics.map(metric => <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
+          </dl>
+        ) : null}
+        {section.rows?.length && section.columns?.length ? (
+          <>
+            <Table
+              size="small"
+              pagination={false}
+              rowKey={row => stableRowKey(row, section.title)}
+              rowSelection={sectionBatchActions.length
+                ? {
+                    selectedRowKeys: keys,
+                    onChange: (next: React.Key[]) => setSelection(current => ({ ...current, [section.title]: next })),
+                  }
+                : undefined}
+              columns={[
+                ...section.columns.map(column => ({
+                  title: column.label,
+                  dataIndex: column.key,
+                  key: column.key,
+                  render: (value: unknown) => ['status', 'state'].includes(column.key)
+                    ? <StatusTag value={value} />
+                    : String(value ?? '—'),
+                })),
+                ...((section.detailTarget && onNestedView) || (onNestedView && section.rows.some(row => row.detailLinks?.length)) || (onRowAction && section.rows.some(row => row.rowActions?.length))
+                  ? [{
+                      title: '操作',
+                      key: 'actions',
+                      fixed: 'right' as const,
+                      render: (_: unknown, row: AdminOperationRow) => (
+                        <Space size={4}>
+                          {section.detailTarget && onNestedView && row.detailId
+                            ? <Button type="link" size="small" onClick={() => onNestedView(section.detailTarget!, row)}>查看</Button>
+                            : null}
+                          {onNestedView ? row.detailLinks?.map(link => <Button type="link" size="small" key={`${link.route}-${link.id}`} onClick={() => onNestedView(link.route, { detailId: link.id })}>{link.label}</Button>) : null}
+                          {onRowAction ? row.rowActions?.map(operation => (
+                            <Button type="link" size="small" key={`${operation.action}-${operation.label}`} onClick={() => onRowAction(operation)}>{operation.label}</Button>
+                          )) : null}
+                        </Space>
+                      ),
+                    }]
+                  : []),
+              ]}
+              dataSource={section.rows}
+              scroll={{ x: 'max-content' }}
+            />
+            {sectionBatchActions.length ? (
+              <BatchActionBar
+                count={selectedRows.length}
+                actions={sectionBatchActions}
+                onRun={(action, values) => onSectionBatchAction?.(section, action, selectedRows, values)}
+                onClear={() => setSelection(current => ({ ...current, [section.title]: [] }))}
+              />
+            ) : null}
+          </>
+        ) : null}
+        {section.rows?.length === 0 && !section.error ? <Typography.Paragraph type="secondary">暂无记录</Typography.Paragraph> : null}
+        {section.pager ? (
+          <nav className="detail-section__pager" aria-label={`${section.title}分页`}>
+            <Space size={8}>
+              <Button
+                disabled={!section.pager.currentCursor || !onPagerChange}
+                onClick={() => onPagerChange?.(section.pager!, 'previous')}
+              >
+                上一页
+              </Button>
+              <Button
+                disabled={!section.pager.nextCursor || !onPagerChange}
+                onClick={() => onPagerChange?.(section.pager!, 'next')}
+              >
+                下一页
+              </Button>
+            </Space>
+          </nav>
+        ) : null}
+      </section>
+    )
+  }
+
   return (
     <>
       {actions ? <div className="detail-drawer__actions" aria-label="详情操作">{actions}</div> : null}
@@ -44,105 +150,8 @@ export function DetailSections({ view, loading, error, actions, onRowAction, onN
       {!error && view ? (
         <Space orientation="vertical" size={16} className="detail-sections">
           {view.status ? <StatusTag value={view.status} /> : null}
-          {view.sections.map((section) => {
-            const sectionBatchActions = batchActionsForSection?.(section) ?? []
-            const keys = selection[section.title] ?? []
-            const keySet = new Set(keys.map(String))
-            const selectedRows = section.rows?.filter(row => keySet.has(stableRowKey(row, section.title))) ?? []
-            return (
-              <section className="detail-section" key={section.title}>
-                <Typography.Title level={4}>{section.title}</Typography.Title>
-                {section.error ? <ErrorState description={section.error} onRetry={onRetry} /> : null}
-                {section.pager?.searchable && onPagerChange ? <Space wrap style={{ marginBottom: 12 }}>
-                  <Input.Search key={`${section.title}-${section.pager.query}`} aria-label={`搜索${section.title}`} placeholder={section.pager.placeholder} defaultValue={section.pager.query}
-                    allowClear onSearch={query => onPagerChange({ ...section.pager!, query }, 'search')} />
-                  {section.pager.statusOptions ? <Select aria-label={`${section.title}状态`} value={section.pager.status || ''} style={{ minWidth: 160 }} options={[{ value: '', label: '全部状态' }, ...section.pager.statusOptions]}
-                    onChange={status => onPagerChange({ ...section.pager!, status }, 'search')} /> : null}
-                </Space> : null}
-                {section.fields?.length ? (
-                  <dl className="detail-fields">
-                    {section.fields.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{renderFieldValue(field)}</dd></div>)}
-                  </dl>
-                ) : null}
-                {section.metrics?.length ? (
-                  <dl className="detail-metrics">
-                    {section.metrics.map(metric => <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
-                  </dl>
-                ) : null}
-                {section.rows?.length && section.columns?.length ? (
-                  <>
-                    <Table
-                      size="small"
-                      pagination={false}
-                      rowKey={row => stableRowKey(row, section.title)}
-                      rowSelection={sectionBatchActions.length
-                        ? {
-                            selectedRowKeys: keys,
-                            onChange: (next: React.Key[]) => setSelection(current => ({ ...current, [section.title]: next })),
-                          }
-                        : undefined}
-                      columns={[
-                        ...section.columns.map(column => ({
-                          title: column.label,
-                          dataIndex: column.key,
-                          key: column.key,
-                          render: (value: unknown) => ['status', 'state'].includes(column.key)
-                            ? <StatusTag value={value} />
-                            : String(value ?? '—'),
-                        })),
-                        ...((section.detailTarget && onNestedView) || (onNestedView && section.rows.some(row => row.detailLinks?.length)) || (onRowAction && section.rows.some(row => row.rowActions?.length))
-                          ? [{
-                              title: '操作',
-                              key: 'actions',
-                              fixed: 'right' as const,
-                              render: (_: unknown, row: AdminOperationRow) => (
-                                <Space size={4}>
-                                  {section.detailTarget && onNestedView && row.detailId
-                                    ? <Button type="link" size="small" onClick={() => onNestedView(section.detailTarget!, row)}>查看</Button>
-                                    : null}
-                                  {onNestedView ? row.detailLinks?.map(link => <Button type="link" size="small" key={`${link.route}-${link.id}`} onClick={() => onNestedView(link.route, { detailId: link.id })}>{link.label}</Button>) : null}
-                                  {onRowAction ? row.rowActions?.map(operation => (
-                                    <Button type="link" size="small" key={`${operation.action}-${operation.label}`} onClick={() => onRowAction(operation)}>{operation.label}</Button>
-                                  )) : null}
-                                </Space>
-                              ),
-                            }]
-                          : []),
-                      ]}
-                      dataSource={section.rows}
-                      scroll={{ x: 'max-content' }}
-                    />
-                    {sectionBatchActions.length ? (
-                      <BatchActionBar
-                        count={selectedRows.length}
-                        actions={sectionBatchActions}
-                        onRun={(action, values) => onSectionBatchAction?.(section, action, selectedRows, values)}
-                        onClear={() => setSelection(current => ({ ...current, [section.title]: [] }))}
-                      />
-                    ) : null}
-                  </>
-                ) : null}
-                {section.pager ? (
-                  <nav className="detail-section__pager" aria-label={`${section.title}分页`}>
-                    <Space size={8}>
-                      <Button
-                        disabled={!section.pager.currentCursor || !onPagerChange}
-                        onClick={() => onPagerChange?.(section.pager!, 'previous')}
-                      >
-                        上一页
-                      </Button>
-                      <Button
-                        disabled={!section.pager.nextCursor || !onPagerChange}
-                        onClick={() => onPagerChange?.(section.pager!, 'next')}
-                      >
-                        下一页
-                      </Button>
-                    </Space>
-                  </nav>
-                ) : null}
-              </section>
-            )
-          })}
+          {view.sections.filter(section => !section.tab).map(renderSection)}
+          {tabs.length ? <Tabs className="detail-content-tabs" key={`${view.route}:${String(view.source?.event && (view.source.event as Record<string, unknown>).id || view.title)}`} items={tabs.map(tab => ({ key: tab, label: tab, children: view.sections.filter(section => section.tab === tab).map(renderSection) }))} /> : null}
         </Space>
       ) : null}
     </>

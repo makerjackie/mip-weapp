@@ -357,6 +357,7 @@ function normalizeGrowthEntryFilters(value) {
   return {
     ...(query ? { query } : {}),
     userId: filters.userId ? requiredId(filters.userId, '用户') : '',
+    ...(filters.serverId ? { serverId: requiredId(filters.serverId, '服务器') } : {}),
     metric: filters.metric ? metric(filters.metric) : '',
     sourceEventType: filters.sourceEventType
       ? stableKey(filters.sourceEventType, '来源事件', 80)

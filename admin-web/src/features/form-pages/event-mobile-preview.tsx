@@ -277,7 +277,7 @@ async function loadCatalogNames(
   }
   const names: Record<string, string> = {}
   for (const item of items) {
-    if (!item || typeof item === 'object') continue
+    if (!item || typeof item !== 'object') continue
     const entry = item as Record<string, unknown>
     const key = String(entry[valueKey] || entry.id || '')
     const name = String(entry.name || entry.label || '')

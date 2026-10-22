@@ -29,6 +29,7 @@ const { createIndustryCatalogRepository } = require('./repositories/industry-cat
 const { createAdminEventRepository } = require('./repositories/events')
 const { createMembershipRepository } = require('./repositories/memberships')
 const { createGrowthOperationsRepository } = require('./repositories/growth-operations')
+const { attachGrowthEntryRelations } = require('./repositories/growth-entry-relations')
 const { createAdminOrderRepository } = require('./repositories/orders')
 const { createAdminPaymentAttemptRepository } = require('./repositories/payment-attempts')
 const { createMembershipContentRepository } = require('./repositories/membership-content')
@@ -1067,6 +1068,7 @@ function createAdminRepository(database, options = {}) {
     const params = [appId, ...users.params]
     if (filters.query) { clauses.push("(p.nickname LIKE ? ESCAPE '\\\\' OR ge.id = ? OR ge.user_id = ?)"); params.push(`%${escapeLike(filters.query)}%`, filters.query, filters.query) }
     if (filters.userId) { clauses.push('ge.user_id = ?'); params.push(filters.userId) }
+    if (filters.serverId) { clauses.push('u.primary_branch_id = ?'); params.push(filters.serverId) }
     if (filters.metric) { clauses.push('ge.metric = ?'); params.push(filters.metric) }
     if (filters.sourceEventType) { clauses.push('ge.source_event_type = ?'); params.push(filters.sourceEventType) }
     if (filters.createdFrom) { clauses.push('ge.created_at >= ?'); params.push(filters.createdFrom) }
@@ -1096,7 +1098,7 @@ function createAdminRepository(database, options = {}) {
         adjustmentReason: row.adjustment_reason || '',
         createdAt: iso(row.created_at),
       }))
-    return pageRows(items, pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
+    return pageRows(await attachGrowthEntryRelations(database, appId, items), pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
   }
 
   async function listUnifiedBenefitLedger(input) {

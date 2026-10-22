@@ -22,7 +22,9 @@ const EXPERIENCE_SOURCE_OPTIONS = [
   { value: 'task.completed', label: '任务' },
   { value: 'event.registered', label: '活动' },
   { value: 'event.checked_in', label: '签到' },
-  { value: 'ADMIN_ADJUSTMENT', label: '人工冲正' },
+  { value: 'ADMIN_ADJUSTMENT', label: '人工发放或调整' },
+  { value: 'event.checkin_revoked', label: '撤销签到' },
+  { value: 'profile.completed', label: '完善资料' },
 ]
 
 const SECTION_STATUS_OPTIONS: Record<string, Array<{ value: string; label: string }>> = {
@@ -55,14 +57,12 @@ export function GrowthExperiencePage(props: OperationsPageState) {
           {showLedgerFilters ? <Form.Item label="来源"><Select aria-label="经验值来源" style={{ minWidth: 130 }} value={props.query.filters?.sourceEventType || ''}
             options={EXPERIENCE_SOURCE_OPTIONS}
             onChange={sourceEventType => props.onFilterChange({ ...props.query, filters: { ...props.query.filters, sourceEventType } })} /></Form.Item> : null}
-          {/* 服务端 growth.entries 尚未提供服务器筛选（contribution 已支持 serverId），
-              先按同一参数名前进，待联调后生效。 */}
           {showLedgerFilters ? <Form.Item label="服务器"><RemoteCatalogSelect action="mip.admin.branches.list" input={{ purpose: 'USER_FILTER' }}
             value={props.query.filters?.serverId || ''} placeholder="全部授权服务器"
             onChange={serverId => props.onFilterChange({ ...props.query, filters: { ...props.query.filters, serverId: String(serverId || '') } })} /></Form.Item> : null}
         </>}
         actions={showLedgerFilters ? (
-          <SensitiveExportButton kind="growthEntries" query={props.query.query} status={props.query.status} filters={growthFiltersWithoutSection(props)} />
+          <SensitiveExportButton kind="growthEntries" label="导出经验值流水" query={props.query.query} status={props.query.status} filters={{ ...growthFiltersWithoutSection(props), metric: 'EXPERIENCE' }} />
         ) : null}
       />
     </>

@@ -11,6 +11,7 @@ import {
   PictureOutlined,
   RiseOutlined,
   SafetyCertificateOutlined,
+  ClusterOutlined,
   ShoppingCartOutlined,
   ThunderboltOutlined,
   UploadOutlined,
@@ -40,6 +41,7 @@ export type AdminRoutePath =
   | '/contribution'
   | '/entitlements'
   | '/permissions'
+  | '/servers'
   | '/admin-accounts'
   | '/audit-logs'
   | '/messages'
@@ -78,7 +80,8 @@ const adminItems: AdminNavigationItem[] = [
   { path: '/entitlements', label: '权益管理', description: '查询权益流水、入会审核和会员方案', group: '成长体系', icon: <CrownOutlined />, capabilities: ['memberships.read'] },
   // MIW-132：任务管理并入「成长体系」组，对齐原型。
   { path: '/tasks', label: '任务管理', description: '管理任务、成员分配和完成记录', group: '成长体系', icon: <CheckSquareOutlined />, capabilities: ['tasks.manage'] },
-  { path: '/permissions', label: '权限管理', description: '管理运营成员、角色策略和服务器', group: '系统管理', icon: <SafetyCertificateOutlined />, capabilities: ['roles.change', 'branches.manage', 'audit.read'], requireAny: true },
+  { path: '/permissions', label: '权限管理', description: '管理运营成员、角色策略和审计记录', group: '系统管理', icon: <SafetyCertificateOutlined />, capabilities: ['roles.change', 'audit.read'], requireAny: true },
+  { path: '/servers', label: '服务器管理', description: '管理服务器资料、负责人和启停状态', group: '系统管理', icon: <ClusterOutlined />, capabilities: ['branches.manage'] },
   { path: '/admin-accounts', label: '后台账号', description: '管理后台运营账号、角色和状态', group: '系统管理', icon: <UserOutlined />, capabilities: ['roles.change'] },
   { path: '/audit-logs', label: '审计日志', description: '查询完整操作审计记录', group: '系统管理', icon: <FileSearchOutlined />, capabilities: ['audit.read'] },
   { path: '/messages', label: '消息管理', description: '管理站内消息、模板和发送计划', group: '系统管理', icon: <MessageOutlined />, capabilities: ['messages.manage'] },

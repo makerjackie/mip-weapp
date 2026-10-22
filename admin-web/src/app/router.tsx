@@ -109,6 +109,19 @@ const entitlementGrantRoute = createRoute({
   component: routeComponents['/entitlements/grant'],
 })
 
+const eventDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/events/$eventId',
+  validateSearch: validateEditorSearch,
+  component: routeComponents['/events/$eventId'],
+})
+const opportunityDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/opportunities/$opportunityId',
+  validateSearch: validateEditorSearch,
+  component: routeComponents['/opportunities/$opportunityId'],
+})
+
 const opportunityEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/opportunities/$opportunityId/edit',
@@ -147,6 +160,8 @@ const routeTree = rootRoute.addChildren([
   taskApprovalRoute,
   growthRedirectRoute,
   entitlementGrantRoute,
+  eventDetailRoute,
+  opportunityDetailRoute,
   opportunityEditRoute,
   knowledgeEditRoute,
   userContentEditRoute,

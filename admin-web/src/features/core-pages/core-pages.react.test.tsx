@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from 'antd'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -51,7 +51,7 @@ describe('core admin pages', () => {
         }],
       },
     })
-    expect(view.metrics.slice(0, 4).map(item => item.label)).toEqual(['当前玩家', '首年续费', '本月新增玩家', '缴费金额'])
+    expect(view.metrics.slice(0, 4).map(item => item.label)).toEqual(['当前玩家', '首年续费', '新增用户', '缴费金额'])
     expect(view.metrics.slice(0, 4).map(item => item.value)).toEqual(['1,284', '328', '84', '—'])
     expect(view.metrics.find(item => item.label === '活动总数')).toMatchObject({ value: '12', trend: 'up' })
     expect(view.metrics.find(item => item.label === '有效报名')).toMatchObject({ value: '96', trend: 'up' })
@@ -95,7 +95,7 @@ describe('core admin pages', () => {
   })
   it('keeps demo overview fixtures aligned with the PRD headline cards', () => {
     const view = createCoreDemoOverview()
-    expect(view.metrics.map(item => item.label)).toEqual(['当前玩家', '首年续费', '本月新增玩家', '缴费金额'])
+    expect(view.metrics.map(item => item.label)).toEqual(['当前玩家', '首年续费', '新增用户', '缴费金额'])
     expect(view.metrics.map(item => item.value)).toEqual(['1,286', '328', '86', '¥128,600'])
     expect(view.playerTrend.available).toBe(true)
     expect(view.playerTrend.months).toHaveLength(12)
@@ -193,6 +193,8 @@ describe('core admin pages', () => {
     expect(screen.getByText('已下架活动')).toBeInTheDocument()
     expect(screen.queryByText('草稿活动')).toBeNull()
     expect(screen.queryByText('已归档活动')).toBeNull()
+    expect(screen.queryByText('活动政策')).toBeNull()
+    await user.click(screen.getByText('活动规则与类型设置'))
     expect(screen.getByText('活动政策')).toBeInTheDocument()
     expect(screen.getByText('活动类型')).toBeInTheDocument()
     expect(screen.queryByText('活动标签')).toBeNull()
@@ -313,7 +315,6 @@ describe('core admin pages', () => {
   })
 
   it('keeps event policy and catalog operations reachable with their server-projected context', async () => {
-    const user = userEvent.setup()
     const onMutation = vi.fn()
     const page: AdminReadPage = {
       sections: [
@@ -368,15 +369,17 @@ describe('core admin pages', () => {
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: /新建活动目录/ }))
+    expect(screen.queryByRole('button', { name: /新建活动目录/ })).toBeNull()
+    fireEvent.click(screen.getByText('活动规则与类型设置'))
+    fireEvent.click(screen.getByRole('button', { name: /新建活动目录/ }))
     expect(onMutation).toHaveBeenCalledWith({ action: 'mip.admin.events.catalog.save', targetId: '' })
-    await user.click(screen.getByRole('button', { name: '编辑政策' }))
+    fireEvent.click(screen.getByText('编辑政策'))
     expect(onMutation).toHaveBeenCalledWith({
       action: 'mip.admin.events.policy.save',
       targetId: '',
       values: { expectedVersion: 0, cancellationHoursBeforeStart: 24 },
     })
-    await user.click(screen.getByRole('button', { name: '编辑' }))
+    fireEvent.click(screen.getByText('编辑', { exact: true }))
     expect(onMutation).toHaveBeenLastCalledWith({
       action: 'mip.admin.events.catalog.save',
       targetId: 'catalog-1',

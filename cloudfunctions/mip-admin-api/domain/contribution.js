@@ -75,7 +75,8 @@ function normalizeContributionRule(input) {
 function readInput(input) {
   const source = input.filters || {}
   const filters = { query: text(source.query, 100), behavior: text(source.behavior, 128), status: text(source.status, 16),
-    userId: source.userId ? requiredId(source.userId) : '', serverId: source.serverId ? requiredId(source.serverId) : '', sinceTime: date(source.sinceTime) }
+    userId: source.userId ? requiredId(source.userId) : '', serverId: source.serverId ? requiredId(source.serverId) : '', sinceTime: date(source.sinceTime), untilTime: date(source.untilTime) }
+  if (filters.sinceTime && filters.untilTime && filters.sinceTime > filters.untilTime) throw new AdminError('VALIDATION_FAILED', '开始时间不能晚于结束时间')
   return { filters, limit: limit(input.limit), cursor: decodeCursor(input.cursor, ['createdAt', 'id']) }
 }
 module.exports = { createContribution, normalizeContributionRule, positiveInteger, date }

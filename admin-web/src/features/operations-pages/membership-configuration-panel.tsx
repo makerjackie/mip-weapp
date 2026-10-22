@@ -18,14 +18,14 @@ const documentTabs: Array<{ key: string; label: string; document: AgreementDocum
   { key: 'privacy-policy', label: '隐私政策', document: 'privacy', demo: demoPrivacyAgreement },
   { key: 'experience-rules', label: '经验值规则说明', document: 'experience-rules', demo: demoExperienceRules },
 ]
-export function MembershipConfigurationPanel({ onSaved, tabs, title = '会员内容配置' }: { onSaved: () => void; tabs?: readonly string[]; title?: string }) {
+export function MembershipConfigurationPanel({ onSaved, tabs, title = '会员内容配置', initialEdit, onEditorClosed }: { onSaved: () => void; tabs?: readonly string[]; title?: string; initialEdit?: { kind: ConfigurationKind; item: ConfigurationItem }; onEditorClosed?: () => void }) {
   const session = useAdminSession()
   const api = useMemo(() => membershipConfiguration(session.request), [session.request])
   const cache = useQueryClient()
   const { message } = App.useApp()
   const navigate = useNavigate()
   const search = useRouterState({ select: state => state.location.search as Record<string, unknown> })
-  const [editing, setEditing] = useState<{ kind: ConfigurationKind; item: ConfigurationItem | null; draft: Record<string, unknown> } | null>(null)
+  const [editing, setEditing] = useState<{ kind: ConfigurationKind; item: ConfigurationItem | null; draft: Record<string, unknown> } | null>(() => initialEdit ? { ...initialEdit, draft: configurationDraft(initialEdit.kind, initialEdit.item) } : null)
   const formName = useId()
   const [form] = Form.useForm()
   const [agreementForm] = Form.useForm()
@@ -39,7 +39,7 @@ export function MembershipConfigurationPanel({ onSaved, tabs, title = '会员内
     { key: 'plans', label: '会员方案' },
     ...documentTabs.map(({ key, label }) => ({ key, label })),
   ].filter(item => !tabs || tabs.includes(item.key))
-  const tab = typeof search.tab === 'string' && availableTabs.some(item => item.key === search.tab) ? search.tab : availableTabs[0]?.key || 'levels'
+  const tab = initialEdit?.kind || (typeof search.tab === 'string' && availableTabs.some(item => item.key === search.tab) ? search.tab : availableTabs[0]?.key || 'levels')
   const documentTab = documentTabs.find(item => item.key === tab)
   const isAgreement = Boolean(documentTab)
   const document = documentTab?.document ?? 'membership'
@@ -56,7 +56,7 @@ export function MembershipConfigurationPanel({ onSaved, tabs, title = '会员内
     return edit === undefined ? planPriceYuan(plan.priceCents) : edit
   }
   const mutation = useMutation({ mutationFn: (operation: () => Promise<unknown>) => operation(), onSuccess: async () => {
-    setEditing(null); await cache.invalidateQueries({ queryKey: key }); onSaved(); void message.success('已保存，用户端下次加载时生效')
+    setEditing(null); await cache.invalidateQueries({ queryKey: key }); onSaved(); onEditorClosed?.(); void message.success('已保存，用户端下次加载时生效')
   }, onError: error => { void message.error(error instanceof Error ? error.message : '保存失败') } })
   // 改价即时生效但只影响之后的新订单（下单时金额已快照），所以提示语与内容配置区分开。
   const planMutation = useMutation({
@@ -82,8 +82,8 @@ export function MembershipConfigurationPanel({ onSaved, tabs, title = '会员内
   const mediaUrls = Object.fromEntries((items.data?.items || [])
     .filter(item => item.imageAssetId && typeof item.imagePreviewUrl === 'string' && item.imagePreviewUrl)
     .map(item => [String(item.imageAssetId), String(item.imagePreviewUrl)]))
-  return <Card style={{ marginBottom: 24 }} title={title}>
-    <MediaPreviewProvider existingUrls={mediaUrls}>
+  return <MediaPreviewProvider existingUrls={mediaUrls}>
+    {!initialEdit ? <Card style={{ marginBottom: 24 }} title={title}>
     <Typography.Paragraph type="secondary">等级、权益和勋章由管理员维护。任务的奖励金额、经验值和贡献值请在“任务管理”中编辑；下方“成长奖励规则”管理已有行为事件的奖励。修改不追溯改写已发放记录。</Typography.Paragraph>
     <Tabs activeKey={tab} onChange={setTab} items={availableTabs} />
     {tab === 'plans' ? plans.isPending ? <Spin /> : plans.error ? <Alert type="error" title={plans.error.message} action={<Button onClick={() => void plans.refetch()}>重试</Button>} /> : <>
@@ -133,12 +133,13 @@ export function MembershipConfigurationPanel({ onSaved, tabs, title = '会员内
         {!items.error && !items.isPending && !items.data?.items.length && <Typography.Text type="secondary">暂无配置，可新建或填写演示示例。</Typography.Text>}
       </div>}
     </>}
-    <Modal title={editing ? `${editing.item ? '编辑' : '新建'}${labels[editing.kind]}` : ''} open={Boolean(editing)} onCancel={() => setEditing(null)} confirmLoading={mutation.isPending} onOk={() => void form.validateFields().then(values => {
+    </Card> : null}
+    <Modal title={editing ? `${editing.item ? '编辑' : '新建'}${labels[editing.kind]}` : ''} open={Boolean(editing)} onCancel={() => { setEditing(null); onEditorClosed?.() }} confirmLoading={mutation.isPending} onOk={() => void form.validateFields().then(values => {
       if (!editing) return
       const { kind, item, draft } = editing
       mutation.mutate(() => api.save(kind, item, { ...draft, ...values }, crypto.randomUUID()))
     }, () => undefined)}>
-      <Form name={`membership-config-${formName}`} form={form} layout="vertical">
+      <Form name={`membership-config-${formName}`} form={form} layout="vertical" initialValues={initialEdit ? configurationDraft(initialEdit.kind, initialEdit.item) : undefined}>
         <Form.Item name="name" label="名称" rules={[{ required: true, max: 80 }]}><Input /></Form.Item>
         {editing?.kind === 'levels' && <><Form.Item name="minimumExperience" label="最低经验值" extra="不同等级的门槛不能重复；必须保留一个启用的 0 经验等级。" rules={[{ required: true }]}><InputNumber min={0} precision={0} /></Form.Item><Form.Item name="benefitIds" label="包含权益"><Select mode="multiple" loading={benefits.isPending} options={benefits.data?.items.map(item => ({ value: item.id, label: `${item.name}${item.status !== 'ACTIVE' ? '（未启用）' : ''}` }))} /></Form.Item></>}
         {editing?.kind === 'rules' ? <><Form.Item name="deltaValue" label="每次奖励" rules={[{ required: true }]}><InputNumber min={1} precision={0} /></Form.Item><Form.Item name="dailyLimitValue" label="每日上限（留空不限）"><InputNumber min={0} precision={0} /></Form.Item><Alert type="info" showIcon title="规则详情页签的展示文本请在「经验值规则说明」页签中整段配置；此处仅维护奖励数值。" style={{ marginBottom: 16 }} /></> : <Form.Item name="sortOrder" label="排序（小的在前）"><InputNumber min={0} max={1000000} precision={0} /></Form.Item>}
@@ -151,5 +152,4 @@ export function MembershipConfigurationPanel({ onSaved, tabs, title = '会员内
       </Form>
     </Modal>
     </MediaPreviewProvider>
-  </Card>
 }

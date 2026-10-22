@@ -42,7 +42,7 @@ export function createCoreDemoOverview(): AdminOverviewView {
     metrics: [
       { label: '当前玩家', value: demo.dashboard.currentPlayers.toLocaleString('zh-CN'), detail: '较上一周期 +12.6%', trend: 'up' },
       { label: '首年续费', value: demo.dashboard.firstYearRenewals.toLocaleString('zh-CN'), detail: '较上一周期 +8.4%', trend: 'up' },
-      { label: '本月新增玩家', value: demo.dashboard.newPlayersThisMonth.toLocaleString('zh-CN'), detail: '较上一周期 +9.8%', trend: 'up' },
+      { label: '新增用户', value: demo.dashboard.newUsersThisMonth.toLocaleString('zh-CN'), detail: '较上一周期 +9.8%', trend: 'up' },
       { label: '缴费金额', value: `¥${(demo.dashboard.paidAmountCents / 100).toLocaleString('zh-CN')}`, detail: '较上一周期 -3.1%', trend: 'down' },
     ],
     playerTrend: { available: true, months: demo.dashboard.playerTrendMonths.map(month => ({ ...month })) },

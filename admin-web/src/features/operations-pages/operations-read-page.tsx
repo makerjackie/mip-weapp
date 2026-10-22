@@ -1,6 +1,8 @@
 import { Button, Space, Typography } from 'antd'
 import { LeftOutlined, RightOutlined } from '@ant-design/icons'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { isRecordDetail, type RecordDetail } from '../../modules/admin-record-detail'
+import { RecordDetailDialog } from '../../shared/ui/record-detail-dialog'
 import type { AdminDetailRoute } from '../../modules/admin-details'
 import type { AdminTableRow, AdminTableSection } from '../../modules/admin-read-pages'
 import type { AdminRowOperation } from '../../modules/admin-row-operations'
@@ -58,6 +60,7 @@ export function OperationsReadPage({
   onPageSizeChange,
   canCapability,
 }: OperationsReadPageProps) {
+  const [recordDetail, setRecordDetail] = useState<RecordDetail | null>(null)
   const filterValue = { q: query.query, status: query.status, filters: query.filters }
   const showPagination = Boolean(paginated && (hasPreviousPage || page?.nextCursor))
 
@@ -120,11 +123,12 @@ export function OperationsReadPage({
                   onView={detailRoute && onOpenDetail
                     ? row => onOpenDetail({ route: detailRoute, id: String(row.detailId), row })
                     : undefined}
-                  renderActions={onWrite || rowExtraActions || onOpenDetail ? (row) => {
+                  renderActions={onWrite || rowExtraActions || onOpenDetail || section.rows.some(row => isRecordDetail(row.rowDetail)) ? (row) => {
                     const operationActions = rowOperations(row, onWrite, canCapability)
                     const extra = rowExtraActions?.(row, section, index)
                     const links = onOpenDetail && row.detailLinks?.map(link => <Button type="link" size="small" key={`${link.route}:${link.id}`} onClick={() => onOpenDetail({ route: link.route, id: link.id, row })}>{link.label}</Button>)
-                    return operationActions || extra || links?.length ? <Space size={4} wrap>{links}{operationActions}{extra}</Space> : null
+                    const detail = row.rowDetail
+                    return operationActions || extra || links?.length || isRecordDetail(detail) ? <Space size={4} wrap>{links}{isRecordDetail(detail) ? <Button type="link" size="small" onClick={() => setRecordDetail(detail)}>查看详情</Button> : null}{operationActions}{extra}</Space> : null
                   } : undefined}
                 />}
               </section>
@@ -145,6 +149,7 @@ export function OperationsReadPage({
           ) : null}
         </Space>
       ) : null}
+      <RecordDetailDialog open={Boolean(recordDetail)} detail={recordDetail} onClose={() => setRecordDetail(null)} />
     </>
   )
 }

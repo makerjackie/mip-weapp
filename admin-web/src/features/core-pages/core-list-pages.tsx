@@ -1,5 +1,5 @@
 import { DownloadOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons'
-import { Button, Form, Select, Space, Typography } from 'antd'
+import { Button, Collapse, Form, Select, Space, Typography } from 'antd'
 import { useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { RemoteCatalogSelect } from '../../shared/ui/session-user-select'
@@ -237,6 +237,9 @@ export function CoreListPageView({
 }) {
   const pageDefinition = pageDefinitions[route]
   const readDefinition = getAdminReadRouteDefinition(route)
+  const eventSections = route === 'events' && page ? filterEventListSections(page.sections) : []
+  const eventSettings = eventSections.filter(section => section.detailTarget === null)
+  const visibleSections = route === 'events' ? eventSections.filter(section => section.detailTarget !== null) : page?.sections || []
   const pageNumber = search.page && search.page > 1 ? search.page : 1
   const headerActions = useMemo(() => {
     if (route === 'events' && (canWriteEvents || canManageEventCatalog)) {
@@ -249,14 +252,6 @@ export function CoreListPageView({
               onClick={() => onNavigateToForm?.('/events/$eventId/edit', 'new')}
             >
               新建活动
-            </Button>
-          ) : null}
-          {canManageEventCatalog ? (
-            <Button
-              icon={<PlusOutlined />}
-              onClick={() => onMutation?.({ action: 'mip.admin.events.catalog.save', targetId: '' })}
-            >
-              新建活动目录
             </Button>
           ) : null}
           {canManageEventCatalog && onNavigateToSettings ? (
@@ -289,7 +284,7 @@ export function CoreListPageView({
       )
     }
     return null
-  }, [canExport, canManageEventCatalog, canManageIndustries, canWriteEvents, onMutation, onNavigateToForm, onNavigateToSettings, onSensitiveExport, route, search.q, search.status, search.filters])
+  }, [canExport, canManageEventCatalog, canManageIndustries, canWriteEvents, onNavigateToForm, onNavigateToSettings, onSensitiveExport, route, search.q, search.status, search.filters])
 
   function openDetail(row: AdminTableRow) {
     const id = String(row.detailId || '')
@@ -343,13 +338,13 @@ export function CoreListPageView({
       {!loading && error ? <ErrorState description={error} onRetry={onRetry} /> : null}
       {page ? (
         <div className="core-list-sections">
-          {(route === 'events' ? filterEventListSections(page.sections) : page.sections).map((section, index) => (
+          {visibleSections.map((section, index) => (
             <section key={`${section.title || pageDefinition.title}-${index}`} className="core-list-section">
               {section.title ? <Typography.Title level={2}>{section.title}</Typography.Title> : null}
               <DataTable
                 label={section.title || pageDefinition.title}
                 rows={section.rows}
-                columns={section.columns}
+                columns={route === 'events' ? eventListColumns(section.columns) : section.columns}
                 loading={refreshing}
                 // MIW-124：用户列表按原型口径不设操作列，整行点击进入用户档案。
                 onView={route === 'users' ? undefined : section.detailTarget === null ? undefined : openDetail}
@@ -366,6 +361,19 @@ export function CoreListPageView({
               />
             </section>
           ))}
+          {route === 'events' && eventSettings.length ? <Collapse items={[{
+            key: 'event-settings', label: '活动规则与类型设置',
+            children: <Space orientation="vertical" className="detail-sections" size={16}>
+              {canManageEventCatalog && onMutation ? <Button icon={<PlusOutlined />} onClick={() => onMutation({ action: 'mip.admin.events.catalog.save', targetId: '' })}>新建活动目录</Button> : null}
+              {eventSettings.map(section => <section key={section.key || section.title}>
+                <Typography.Title level={4}>{section.title}</Typography.Title>
+                {section.error ? <ErrorState description={section.error} onRetry={onRetry} /> : null}
+                <DataTable label={section.title || '活动设置'} rows={section.rows} columns={section.columns} loading={refreshing} renderActions={onMutation ? row => renderEventRowActions(row, {
+                  canManageEventCatalog: Boolean(canManageEventCatalog), canWriteEventPolicy: Boolean(canWriteEventPolicy), canManageCheckin: false, request, onMutation,
+                }) : undefined} />
+              </section>)}
+            </Space>,
+          }]} /> : null}
         </div>
       ) : null}
 
@@ -464,4 +472,11 @@ function isEventRowOperation(value: unknown): value is AdminRowOperation & { act
   return typeof operation.action === 'string'
     && eventMutationActions.has(operation.action)
     && typeof operation.label === 'string'
+}
+
+/** Keep operational status/counts visible before secondary timestamps; every original column remains reachable. */
+function eventListColumns(columns: AdminReadPage['sections'][number]['columns']) {
+  const order = ['title', 'state', 'registrations', 'access', 'tags', 'time', 'endTime', 'location', 'attended', 'createdAt']
+  const widths: Record<string, number> = { title: 180, state: 90, registrations: 90, access: 110, tags: 100, time: 145, endTime: 145, location: 130, attended: 90, createdAt: 145 }
+  return [...columns].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key)).map(column => ({ ...column, width: widths[column.key], wrap: true }))
 }

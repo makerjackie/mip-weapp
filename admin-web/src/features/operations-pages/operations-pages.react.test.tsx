@@ -22,6 +22,7 @@ const mockNavigate = vi.fn()
 const session = vi.hoisted(() => ({
   request: vi.fn(async () => ({ items: [] })),
   hasCapability: () => true,
+  hasCapabilityAtScope: () => true,
   demoMode: false,
 }))
 vi.mock('../../app/session-provider', () => ({ useAdminSession: () => ({
@@ -215,7 +216,7 @@ describe('second-batch operations pages', () => {
     })} />)
     // 组合框顺序：状态、分区、来源、服务器、每页。
     await userEvent.click(screen.getAllByRole('combobox')[2])
-    await userEvent.click(await screen.findByText('人工冲正', { selector: '.ant-select-item-option-content' }))
+    await userEvent.click(await screen.findByText('人工发放或调整', { selector: '.ant-select-item-option-content' }))
     expect(onFilterChange).toHaveBeenLastCalledWith(expect.objectContaining({
       filters: expect.objectContaining({ section: 'entries', sourceEventType: 'ADMIN_ADJUSTMENT' }),
     }))
@@ -303,6 +304,7 @@ describe('second-batch operations pages', () => {
     const { rerender } = render(<TaskManagementPage {...pageState({
       sections: taskSections,
       nextCursor: null,
+      filterOptions: { assignedOwnerId: [{ value: 'owner-1', label: '笨笨老大' }, { value: 'owner-2', label: '周宁' }] },
     }, { onFilterChange, onOpenDetail: vi.fn() })} />)
 
     expect(screen.queryByText('当前页过滤')).toBeNull()
@@ -313,7 +315,7 @@ describe('second-batch operations pages', () => {
     await userEvent.click(screen.getAllByRole('combobox')[2])
     expect(await screen.findByText('笨笨老大', { selector: '.ant-select-item-option-content' })).toBeTruthy()
     await userEvent.click(screen.getByText('周宁', { selector: '.ant-select-item-option-content' }))
-    expect(onFilterChange).toHaveBeenLastCalledWith({ query: '', status: '', filters: { assignedOwner: '周宁' } })
+    expect(onFilterChange).toHaveBeenLastCalledWith({ query: '', status: '', filters: { assignedOwnerId: 'owner-2' } })
 
     await userEvent.click(screen.getAllByRole('combobox')[3])
     await userEvent.click(await screen.findByText('奖金', { selector: '.ant-select-item-option-content' }))
@@ -322,12 +324,13 @@ describe('second-batch operations pages', () => {
     rerender(<TaskManagementPage {...pageState({
       sections: taskSections,
       nextCursor: null,
+      filterOptions: { assignedOwnerId: [{ value: 'owner-1', label: '笨笨老大' }, { value: 'owner-2', label: '周宁' }] },
     }, {
       onFilterChange,
       onOpenDetail: vi.fn(),
-      query: { query: '', status: '', filters: { starLevel: '3', assignedOwner: '笨笨老大', rewardType: 'experience' } },
+      query: { query: '', status: '', filters: { starLevel: '3', assignedOwnerId: 'owner-1', rewardType: 'experience' } },
     })} />)
-    expect(screen.getByText('当前页过滤')).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: '查看' }).length).toBe(1)
+    expect(screen.queryByText('当前页过滤')).toBeNull()
+    expect(screen.getAllByRole('button', { name: '查看' }).length).toBe(taskSections[0].rows.length)
   })
 })

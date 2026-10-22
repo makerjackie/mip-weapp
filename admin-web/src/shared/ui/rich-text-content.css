@@ -1,0 +1,7 @@
+.rich-text-content { overflow-wrap: anywhere; line-height: 1.75; color: var(--mip-text); }
+.rich-text-content img { display: block; max-width: 100%; height: auto; margin: 12px 0; }
+.rich-text-content p { margin: 8px 0; }
+.rich-text-content ul, .rich-text-content ol { padding-left: 24px; }
+.rich-text-content__empty { color: var(--mip-muted); }
+.detail-content-tabs { width: 100%; min-width: 0; }
+.detail-section > .rich-text-content, .detail-section > .rich-text-content__empty { padding: 16px 18px; }

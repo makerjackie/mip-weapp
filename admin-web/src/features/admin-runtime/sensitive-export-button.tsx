@@ -29,8 +29,9 @@ const progressPercent: Record<SensitiveExportProgress, number> = {
   saving: 96,
 }
 
-export function SensitiveExportButton({ kind, query, status, filters, eventId, open: controlledOpen, hideTrigger = false, onOpenChange }: {
+export function SensitiveExportButton({ kind, label, query, status, filters, eventId, open: controlledOpen, hideTrigger = false, onOpenChange }: {
   kind: SensitiveExportKind
+  label?: string
   query: string
   status: string
   filters?: Record<string, unknown>
@@ -93,7 +94,7 @@ export function SensitiveExportButton({ kind, query, status, filters, eventId, o
     <>
       {!hideTrigger ? (
         <Button type="primary" icon={<DownloadOutlined />} onClick={() => { setInternalOpen(true); onOpenChange?.(true) }}>
-          {kind === 'users' ? '导出用户' : kind === 'opportunities' ? '导出机会' : kind === 'eventFeedback' ? '导出活动反馈' : kind === 'eventRoster' ? '导出报名名单' : kind === 'growthEntries' ? '导出成长流水' : '导出订单'}
+          {label || (kind === 'users' ? '导出用户' : kind === 'opportunities' ? '导出机会' : kind === 'eventFeedback' ? '导出活动反馈' : kind === 'eventRoster' ? '导出报名名单' : kind === 'growthEntries' ? '导出成长流水' : '导出订单')}
         </Button>
       ) : null}
       <Modal

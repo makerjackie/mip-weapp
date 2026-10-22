@@ -37,7 +37,7 @@ import {
   RecordDetailDialog,
 } from '../../shared/ui'
 
-export type GovernanceRoute = 'permissions' | 'messages' | 'knowledge' | 'operations'
+export type GovernanceRoute = 'permissions' | 'servers' | 'messages' | 'knowledge' | 'operations'
 
 export interface GovernanceFilterValue {
   q: string
@@ -74,6 +74,7 @@ export interface GovernancePageProps {
   onViewDetail?: (request: GovernanceDetailRequest) => void
   onMutationRequest?: (request: GovernanceMutationRequest) => void
   onBatchAction?: (action: string, rows: AdminTableRow[], values: OperationValues) => Promise<void> | void
+  sectionContent?: Record<string, ReactNode>
 }
 
 interface BatchSpec {
@@ -98,6 +99,7 @@ interface PageActionSpec {
   label: string
   action: AdminPeopleMutationAction | ContentMutationAction
   capability: string
+  section?: string
 }
 
 interface GovernancePageSpec {
@@ -117,13 +119,18 @@ const createAnnouncement = contentAction('mip.admin.announcements.save', '新建
 const pageSpecs: Record<GovernanceRoute, GovernancePageSpec> = {
   permissions: {
     title: '权限管理',
-    description: '查看运营成员、角色策略、服务器和审计记录。',
+    description: '管理人员授权、角色权限和审计记录。后台账号与服务器在独立入口管理。',
     sections: [
       { key: 'members', label: '运营成员' },
       { key: 'policies', label: '角色策略' },
-      { key: 'branches', label: '服务器' },
       { key: 'audit', label: '审计记录' },
     ],
+    actions: [],
+  },
+  servers: {
+    title: '服务器管理',
+    description: '管理服务器资料、负责人和启停状态。',
+    sections: [{ key: 'branches', label: '服务器' }],
     actions: [createBranch],
   },
   messages: {
@@ -194,6 +201,10 @@ export function PermissionsPage(props: GovernancePageProps) {
   return <GovernancePage route="permissions" {...props} />
 }
 
+export function ServersPage(props: GovernancePageProps) {
+  return <GovernancePage route="servers" {...props} />
+}
+
 export function MessagesPage(props: GovernancePageProps) {
   return <GovernancePage route="messages" {...props} />
 }
@@ -223,12 +234,29 @@ export function GovernancePage({
   onViewDetail,
   onMutationRequest,
   onBatchAction,
+  sectionContent,
 }: GovernancePageProps & { route: GovernanceRoute }) {
   const spec = pageSpecs[route]
   const navigate = useNavigate()
   const [recordDetail, setRecordDetail] = useState<RecordDetail | null>(null)
+  const tabItems = createTabItems({
+    route,
+    page,
+    spec,
+    demoMode,
+    canCapability,
+    onViewDetail,
+    onMutationRequest,
+    onBatchAction,
+    onOpenRecordDetail: setRecordDetail,
+    refreshing,
+    sectionContent,
+  })
+  const selectedTab = tabItems.some(item => item.key === activeTab)
+    ? activeTab
+    : tabItems[0]?.key
   const actions = onMutationRequest
-    ? spec.actions.filter(action => canCapability(action.capability))
+    ? spec.actions.filter(action => canCapability(action.capability) && (!action.section || action.section === selectedTab))
     : []
   const headerActions = demoMode || actions.length ? (
     <Space wrap>
@@ -256,21 +284,7 @@ export function GovernancePage({
       })}
     </Space>
   ) : undefined
-  const tabItems = createTabItems({
-    route,
-    page,
-    spec,
-    demoMode,
-    canCapability,
-    onViewDetail,
-    onMutationRequest,
-    onBatchAction,
-    onOpenRecordDetail: setRecordDetail,
-    refreshing,
-  })
-  const selectedTab = tabItems.some(item => item.key === activeTab)
-    ? activeTab
-    : tabItems[0]?.key
+
 
   return (
     <>
@@ -295,11 +309,11 @@ export function GovernancePage({
       ) : null}
       {page ? (
         <section aria-label={`${spec.title}分类`}>
-          <Tabs
+          {route === 'servers' ? tabItems[0]?.children : <Tabs
             activeKey={selectedTab}
             items={tabItems}
             onChange={onTabChange}
-          />
+          />}
         </section>
       ) : null}
       <RecordDetailDialog open={Boolean(recordDetail)} detail={recordDetail} onClose={() => setRecordDetail(null)} />
@@ -318,6 +332,7 @@ function createTabItems({
   onBatchAction,
   onOpenRecordDetail,
   refreshing,
+  sectionContent,
 }: {
   route: GovernanceRoute
   page: AdminReadPage | null
@@ -329,9 +344,13 @@ function createTabItems({
   onBatchAction?: GovernancePageProps['onBatchAction']
   onOpenRecordDetail?: (detail: RecordDetail) => void
   refreshing?: boolean
+  sectionContent?: Record<string, ReactNode>
 }): Array<{ key: string; label: string; children: ReactNode }> {
   if (!page) return []
-  const visibleSections = (route === 'messages' || route === 'knowledge')
+  const visibleSections = (route === 'permissions' || route === 'servers')
+    ? page.sections.map((section, index) => ({ ...section, key: section.key || ['members', 'policies', 'branches', 'audit'][index] }))
+      .filter(section => spec.sections.some(item => item.key === section.key))
+    : (route === 'messages' || route === 'knowledge')
     ? spec.sections.map((item, index) => page.sections.find(section => section.key === item.key) ?? (page.sections[index]?.key ? undefined : page.sections[index]) ?? { key: item.key, title: item.label, rows: [], columns: [] })
     : page.sections
   return visibleSections.map((section, index) => {
@@ -379,6 +398,7 @@ function createTabItems({
       key: sectionSpec.key,
       label: section.title || sectionSpec.label,
       children: (
+        <Space orientation="vertical" size={24} style={{ width: '100%' }}>
         <DataTable
           label={`${pageSpecs[route].title} - ${section.title || sectionSpec.label}`}
           rows={section.rows}
@@ -390,6 +410,8 @@ function createTabItems({
           batchActions={batchActions.length ? batchActions : undefined}
           onBatchAction={(batch, rows, values) => onBatchAction?.(batch.key, rows, values)}
         />
+        {sectionContent?.[sectionSpec.key]}
+        </Space>
       ),
     }
   })

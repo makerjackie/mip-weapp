@@ -209,6 +209,7 @@ describe('admin PRD query completion', () => {
     let captured
     const repository = createAdminRepository(database({
       async query(sql, params) {
+        if (sql.includes('LEFT JOIN mip_outbox_events source_event')) return []
         captured = { sql, params }
         return [{
           id: 'entry-a', user_id: 'user-a', nickname: '用户', source_event_id: 'registration-a', source_event_type: 'event.checked_in',

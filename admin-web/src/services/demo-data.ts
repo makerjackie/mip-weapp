@@ -1,6 +1,6 @@
 export const demo = {
   dashboard: {
-    currentPlayers: 1286, firstYearRenewals: 328, newPlayersThisMonth: 86, paidAmountCents: 12860000,
+    currentPlayers: 1286, firstYearRenewals: 328, newUsersThisMonth: 86, paidAmountCents: 12860000,
     // MIW-123：按月玩家趋势演示数据，生产契约 playerTrend 字段待服务端联调。
     playerTrendMonths: [
       { month: '2029-03', newPlayers: 42, firstRenewal: 18, nextRenewal: 6 },
@@ -60,19 +60,19 @@ export const demo = {
   taskApprovals: [
     {
       id: '30000000-0000-4000-8000-000000000011', taskName: 'MIP 早会复盘', nickname: '林晓', starLevel: 3,
-      submissionStatus: 'pending_review', rewardExperience: 30, completedAt: '2030-03-22T10:36:00.000Z',
+      workflowMode: 'REVIEW', submissionStatus: 'pending_review', rewardExperience: 30, completedAt: '2030-03-22T10:36:00.000Z',
       attachment: { url: '', contentType: 'image/jpeg', bytes: 204800 }, rewardResult: {}, canReview: true,
     },
     {
       id: '30000000-0000-4000-8000-000000000012', taskName: '会员合作机会跟进', nickname: '陈默', starLevel: 4,
-      submissionStatus: 'approved', reviewedBy: '30000000-0000-4000-8000-000000000099', reviewedByName: '笨笨老大',
+      workflowMode: 'REVIEW', submissionStatus: 'approved', reviewedBy: '30000000-0000-4000-8000-000000000099', reviewedByName: '笨笨老大',
       reviewedAt: '2030-03-21T18:00:00.000Z', rewardExperience: 50, completedAt: '2030-03-21T17:08:00.000Z',
       attachment: { url: '', contentType: 'image/png', bytes: 102400 },
       rewardResult: { experience: { amount: 50, status: 'SUCCESS' } },
     },
     {
       id: '30000000-0000-4000-8000-000000000013', taskName: 'MIP 早会复盘', nickname: '周宁', starLevel: 2,
-      submissionStatus: 'reward_failed', reviewedBy: '30000000-0000-4000-8000-000000000099', reviewedByName: '笨笨老大',
+      workflowMode: 'REVIEW', submissionStatus: 'reward_failed', reviewedBy: '30000000-0000-4000-8000-000000000099', reviewedByName: '笨笨老大',
       reviewedAt: '2030-03-20T09:40:00.000Z', rewardExperience: 30, completedAt: '2030-03-20T09:12:00.000Z',
       rewardResult: { error: '奖励发放失败，可重试' }, retryLog: [{ at: '2030-03-20T10:00:00.000Z' }], canReview: true,
     },

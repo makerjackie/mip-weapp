@@ -28,7 +28,7 @@ const TASK_EXPORT_MAX_BYTES = 8 * 1024 * 1024
 const TASK_EXPORT_MAX_ROWS = 5000
 const BASE64_PATTERN = /^[A-Za-z0-9+/]*={0,2}$/
 
-/** MIW-84：任务点击动作（玩家端「去完成」行为；等级任务无提交核验，动作即全部交互）。 */
+/** MIW-84：任务点击动作仅配置玩家端入口；是否提交审核由任务执行流程决定。 */
 const TASK_ACTION_TYPE_OPTIONS = [
   { value: '', label: '未配置（卡片不可点）' },
   { value: 'PAGE_JUMP', label: '跳转页面' },
@@ -83,6 +83,7 @@ export const ADMIN_TASK_MUTATION_ACTIONS = [
 export type AdminTaskMutationAction = typeof ADMIN_TASK_MUTATION_ACTIONS[number]
 
 export interface AdminTaskMutationDefinition {
+  taskWorkflowMode?: 'DIRECT' | 'REVIEW'
   action: AdminTaskMutationAction
   capability: 'tasks.manage'
   title: string
@@ -155,14 +156,15 @@ export async function loadTaskManagementPage(
   query: AdminListQuery,
   request: AdminRequest,
 ): Promise<AdminReadPage> {
+  const filters = taskQueryFilters(query)
   const [taskPayload, completionPayload, editorOptionsPayload] = await Promise.all([
     request('mip.admin.tasks.list', {
-      filters: { query: query.query, status: query.status },
+      filters: { query: query.query, status: query.status, ...filters },
       limit: query.limit,
       cursor: query.cursor || undefined,
     }),
     request('mip.admin.tasks.completions.list', {
-      filters: { query: query.query },
+      filters: { query: query.query, ...filters },
       limit: query.limit,
     }),
     request('mip.admin.tasks.editorOptions').catch(() => ({})),
@@ -171,12 +173,13 @@ export async function loadTaskManagementPage(
   const completionPage = pageValue(completionPayload)
   const ownerNames = ownerNameMap(editorOptionsPayload)
   return {
+    filterOptions: { assignedOwnerId: catalogOptions(record(editorOptionsPayload).owners) },
     sections: [
       {
         title: '任务',
         rows: taskPage.items.map(item => taskListRow(item, ownerNames)),
         columns: columns([
-          ['name', '任务名称'], ['reward', '经验奖励'], ['starLevel', '星级'],
+          ['name', '任务名称'], ['workflowMode', '执行方式'], ['reward', '经验奖励'], ['starLevel', '星级'],
           ['period', '周期'], ['assignedOwner', '负责人'], ['rewardConfig', '奖励分项'],
           ['assignment', '分配范围'], ['assigned', '已分配'], ['completed', '已完成'],
           ['endsAt', '截止时间'], ['updatedAt', '更新时间'], ['state', '状态'],
@@ -186,7 +189,7 @@ export async function loadTaskManagementPage(
         title: '近期完成记录',
         rows: completionPage.items.map(completionListRow),
         columns: columns([
-          ['task', '任务'], ['member', '成员'], ['reward', '经验奖励'],
+          ['task', '任务'], ['member', '成员'], ['workflowMode', '执行方式'], ['reward', '经验奖励'],
           ['completedAt', '完成时间'], ['state', '结果'],
         ]),
         detailTarget: 'taskCompletions',
@@ -194,6 +197,23 @@ export async function loadTaskManagementPage(
     ],
     nextCursor: taskPage.nextCursor,
   }
+}
+
+export const TASK_WORKFLOW_MODE_OPTIONS = [
+  { value: '', label: '全部执行方式' },
+  { value: 'REVIEW', label: '提交后审批' },
+  { value: 'DIRECT', label: '直接完成' },
+]
+
+function taskWorkflowModeLabel(value: unknown) {
+  return TASK_WORKFLOW_MODE_OPTIONS.find(item => item.value && item.value === value)?.label || '—'
+}
+
+function taskQueryFilters(query: AdminListQuery): Record<string, string> {
+  const filters = query.filters || {}
+  return Object.fromEntries(['starLevel', 'assignedOwnerId', 'rewardType', 'workflowMode']
+    .filter(key => filters[key])
+    .map(key => [key, filters[key]]))
 }
 
 export async function loadTaskEditorOptions(request: AdminRequest): Promise<Record<string, unknown>> {
@@ -267,6 +287,7 @@ export async function loadTaskDetail(
     {
       title: '任务信息',
       fields: detailFields([
+        ['执行方式', taskWorkflowModeLabel(task.workflowMode)],
         ['任务内容', task.content],
         ['经验奖励', numberLabel(task.rewardExperience)],
         ['需要附件', task.attachmentRequired === true ? '是' : '否'],
@@ -422,7 +443,7 @@ export function taskApprovalStarLabel(value: unknown) {
     : '—'
 }
 
-/** 跨任务聚合完成记录：服务端已支持 submissionStatus/query 筛选与游标分页；星级仅能在当前页行上过滤。 */
+/** 跨任务记录的全部筛选由服务端在游标分页前执行。 */
 export async function loadTaskApprovalPage(
   query: AdminListQuery,
   request: AdminRequest,
@@ -432,7 +453,7 @@ export async function loadTaskApprovalPage(
     : ''
   const [completionPayload, editorOptionsPayload] = await Promise.all([
     request('mip.admin.tasks.completions.list', {
-      filters: { query: query.query, submissionStatus },
+      filters: { query: query.query, submissionStatus, ...taskQueryFilters(query) },
       limit: query.limit,
       cursor: query.cursor || undefined,
     }),
@@ -451,7 +472,7 @@ export function buildTaskApprovalPage(
     sections: [{
       rows: items.map(item => taskApprovalListRow(item, ownerNames)),
       columns: columns([
-        ['member', '提交人'], ['task', '任务名称'], ['starLevel', '星级'], ['attachment', '附件'],
+        ['member', '提交人'], ['task', '任务名称'], ['workflowMode', '执行方式'], ['starLevel', '星级'], ['attachment', '附件'],
         ['reviewedBy', '审批人'], ['state', '审批状态'], ['rewardResult', '奖励结果'],
       ]),
       detailTarget: 'taskApprovals',
@@ -468,13 +489,16 @@ function taskApprovalListRow(item: AdminTableRow, ownerNames: Map<string, string
     rowActions: taskCompletionRowActions(item),
     member: valueOf(item, 'nickname'),
     task: valueOf(item, 'taskName'),
+    workflowMode: taskWorkflowModeLabel(item.workflowMode),
     starLevel: taskApprovalStarLabel(item.starLevel),
     attachment: Object.keys(attachment).length ? '已上传' : '未上传',
-    reviewedBy: reviewerId
+    reviewedBy: item.workflowMode === 'DIRECT' ? '无需审批' : reviewerId
       ? String(item.reviewedByName || '') || ownerNames.get(reviewerId) || '—'
       : '—',
-    state: submissionStatusLabel(item.submissionStatus),
-    rewardResult: rewardResultDisplay(item.rewardResult),
+    state: item.workflowMode === 'DIRECT' ? resultStatusLabel(item.resultStatus) : submissionStatusLabel(item.submissionStatus),
+    rewardResult: item.workflowMode === 'DIRECT' && item.resultStatus === 'SUCCESS'
+      ? `经验值 ${numberLabel(item.rewardExperience)}`
+      : rewardResultDisplay(item.rewardResult),
   }
 }
 
@@ -495,7 +519,9 @@ export function createTaskMutationDefinition(
           label: `${String(item.name || '未命名等级')} · ${numberLabel(item.minimumExperience)} 经验`,
         })).filter(item => identifier(item.value))
       : []
-    return definition(action, targetId ? '编辑任务' : '创建任务', '填写任务内容、经验奖励、参与范围和截止时间。任务模板图片可直接上传，成员完成任务时可下载使用。', [
+    const preserveDirect = Boolean(targetId && (task.workflowMode === 'DIRECT'
+      || (Object.hasOwn(task, 'rewardConfig') && task.rewardConfig === null)))
+    const form = definition(action, targetId ? '编辑任务' : '创建任务', '填写任务内容、经验奖励、参与范围和截止时间。任务模板图片可直接上传，成员完成任务时可下载使用。', [
       { name: 'name', label: '任务名称', kind: 'text', required: true, maxLength: 100 },
       { name: 'content', label: '任务内容', kind: 'textarea', required: true, maxLength: 5000, wide: true },
 
@@ -509,7 +535,7 @@ export function createTaskMutationDefinition(
       { name: 'starLevel', label: '星级', kind: 'select', required: true, options: [1, 2, 3, 4, 5].map(level => ({ value: String(level), label: `${level} 星` })) },
       { name: 'purpose', label: '任务目的', kind: 'textarea', required: true, maxLength: 500, wide: true },
       { name: 'completionCriteria', label: '完成标准', kind: 'textarea', required: true, maxLength: 1000, wide: true },
-      { name: 'actionType', label: '点击动作（玩家端「去完成」行为）', kind: 'select', options: TASK_ACTION_TYPE_OPTIONS, extra: '等级任务不提交核验；未配置的任务卡在玩家端不可点' },
+      { name: 'actionType', label: '点击动作（玩家端「去完成」行为）', kind: 'select', options: TASK_ACTION_TYPE_OPTIONS, extra: '仅设置点击卡片后的行为；不改变提交、审批和奖励流程' },
       { name: 'actionTarget', label: '目标页面', kind: 'select', options: TASK_JUMP_TARGET_OPTIONS, wide: true, requiredWhen: { path: 'actionType', values: ['PAGE_JUMP'] }, visibleWhen: { path: 'actionType', value: 'PAGE_JUMP' }, emptyHint: '暂无可选页面（白名单来自 runtime-pages.json）' },
       { name: 'periodStartAt', label: '周期开始', kind: 'datetime' },
       { name: 'periodEndAt', label: '周期结束', kind: 'datetime' },
@@ -538,8 +564,17 @@ export function createTaskMutationDefinition(
       weeklyDeliverAt: String(task.weeklyDeliverAt || ''),
       assignedOwnerId: String(task.assignedOwnerId || ''),
       applicableServers: Array.isArray(task.applicableServers) ? task.applicableServers : [],
-      rewardConfig: task.rewardConfig || { experience: { enabled: true, amount: integer(task.rewardExperience) || 1 }, contribution: { enabled: false, amount: 0 }, bonus: { enabled: false, amount: 0 } },
+      rewardConfig: preserveDirect ? null : task.rewardConfig || { experience: { enabled: true, amount: integer(task.rewardExperience) || 1 }, contribution: { enabled: false, amount: 0 }, bonus: { enabled: false, amount: 0 } },
     })
+    if (!preserveDirect) return { ...form, taskWorkflowMode: 'REVIEW' }
+    const reviewOnlyFields = new Set(['starLevel', 'purpose', 'completionCriteria', 'periodStartAt',
+      'periodEndAt', 'weeklyDeliverAt', 'assignedOwnerId', 'applicableServers', 'rewardConfig'])
+    const fields = form.fields.filter(field => !field.name || !reviewOnlyFields.has(field.name))
+    fields.splice(2, 0, { name: 'rewardExperience', label: '经验奖励', kind: 'number', required: true, min: 0, max: 1000000 })
+    return {
+      ...form, fields, taskWorkflowMode: 'DIRECT',
+      description: '此任务直接完成并发放经验奖励。编辑内容保留现有执行方式。',
+    }
   }
   if (action === 'mip.admin.tasks.assignMembers' || action === 'mip.admin.tasks.revokeMembers') {
     const members = Array.isArray(source.assignableMembers)
@@ -645,9 +680,12 @@ export function buildTaskMutationInput(
   if (action === 'mip.admin.tasks.save') {
     const name = text(values.name, 100)
     const content = text(values.content, 5000)
-    const rewardConfig = normalizeRewardValues(values.rewardConfig)
-    if (!rewardConfig) return null
-    const rewardExperience = rewardConfig.experience.enabled ? rewardConfig.experience.amount : 0
+    const preserveDirect = Boolean(taskId && definitionValue.taskWorkflowMode === 'DIRECT')
+    const rewardConfig = preserveDirect ? null : normalizeRewardValues(values.rewardConfig)
+    if (!preserveDirect && !rewardConfig) return null
+    const rewardExperience = preserveDirect
+      ? boundedInteger(values.rewardExperience, 0, 1_000_000)
+      : rewardConfig?.experience.enabled ? rewardConfig.experience.amount : 0
     const assignmentMode = ['ALL', 'SELECTED'].includes(String(values.assignmentMode))
       ? String(values.assignmentMode)
       : ''
@@ -657,20 +695,25 @@ export function buildTaskMutationInput(
     if (templateAssetId === null) return null
     const endsAt = isoDate(values.endsAt)
     if (endsAt === null) return null
-    const starLevel = boundedInteger(values.starLevel, 1, 5)
-    if (starLevel === null) return null
-    const purpose = text(values.purpose, 500)
-    const completionCriteria = text(values.completionCriteria, 1000)
-    const periodStartAt = isoDate(values.periodStartAt)
-    if (periodStartAt === null) return null
-    const periodEndAt = isoDate(values.periodEndAt)
-    if (periodEndAt === null) return null
-    if (periodStartAt && periodEndAt && new Date(periodStartAt) > new Date(periodEndAt)) return null
-    const weeklyDeliverAt = text(values.weeklyDeliverAt, 5)
-    if (weeklyDeliverAt && !/^([01]\d|2[0-3]):[0-5]\d$/.test(weeklyDeliverAt)) return null
-    const assignedOwnerId = identifier(values.assignedOwnerId)
-    const applicableServers = identifiers(values.applicableServers || [], true)
-    if (!purpose || !completionCriteria || !assignedOwnerId || !applicableServers) return null
+    let workflow: Record<string, unknown> = {}
+    if (!preserveDirect) {
+      const starLevel = boundedInteger(values.starLevel, 1, 5)
+      if (starLevel === null) return null
+      const purpose = text(values.purpose, 500)
+      const completionCriteria = text(values.completionCriteria, 1000)
+      const periodStartAt = isoDate(values.periodStartAt)
+      if (periodStartAt === null) return null
+      const periodEndAt = isoDate(values.periodEndAt)
+      if (periodEndAt === null) return null
+      if (periodStartAt && periodEndAt && new Date(periodStartAt) > new Date(periodEndAt)) return null
+      const weeklyDeliverAt = text(values.weeklyDeliverAt, 5)
+      if (weeklyDeliverAt && !/^([01]\d|2[0-3]):[0-5]\d$/.test(weeklyDeliverAt)) return null
+      const assignedOwnerId = identifier(values.assignedOwnerId)
+      const applicableServers = identifiers(values.applicableServers || [], true)
+      if (!purpose || !completionCriteria || !assignedOwnerId || !applicableServers) return null
+      workflow = { starLevel, purpose, completionCriteria, periodStartAt, periodEndAt,
+        weeklyDeliverAt, assignedOwnerId, applicableServers, rewardConfig }
+    }
     // MIW-84：点击动作——PAGE_JUMP 必须选白名单内的目标页；SHARE/未配置不带目标。
     const actionType = ['PAGE_JUMP', 'SHARE'].includes(String(values.actionType)) ? String(values.actionType) : ''
     let actionTarget = ''
@@ -688,15 +731,7 @@ export function buildTaskMutationInput(
         endsAt,
         templateAssetId: templateAssetId || null,
         eligibleLevelIds,
-        starLevel,
-        purpose,
-        completionCriteria,
-        periodStartAt,
-        periodEndAt,
-        weeklyDeliverAt,
-        assignedOwnerId,
-        applicableServers,
-        rewardConfig,
+        ...workflow,
         actionType: actionType || null,
         actionTarget: actionTarget || null,
       },
@@ -932,6 +967,7 @@ function taskListRow(item: AdminTableRow, ownerNames: Map<string, string> = new 
       : '—',
     period: formatDateTime(item.periodStartAt),
     assignedOwner,
+    workflowMode: taskWorkflowModeLabel(item.workflowMode),
     rewardConfig: rewardConfigDisplay(item.rewardConfig),
     assignment: assignmentModeLabel(item.assignmentMode),
     assigned: numberLabel(item.assignmentCount),
@@ -947,6 +983,7 @@ function completionListRow(item: AdminTableRow) {
     detailId: valueOf(item, 'id', 'completionId'),
     rowActions: taskCompletionRowActions(item),
     task: valueOf(item, 'taskName'),
+    workflowMode: taskWorkflowModeLabel(item.workflowMode),
     member: valueOf(item, 'nickname'),
     reward: numberLabel(item.rewardExperience),
     completedAt: formatDateTime(item.completedAt),
@@ -1027,7 +1064,8 @@ function isoDate(value: unknown): string | null {
   return Number.isFinite(date.getTime()) ? date.toISOString() : null
 }
 
-export function taskValidationMessage(values: OperationValues) {
+export function taskValidationMessage(values: OperationValues, definitionValue?: AdminTaskMutationDefinition) {
+  if (definitionValue?.taskWorkflowMode === 'DIRECT') return '请检查任务名称、内容、经验奖励和字段格式；经验奖励必须为 0 至 1000000 的整数。'
   const reward = values.rewardConfig as Record<string, { enabled?: boolean; amount?: number }> | undefined
   if (!reward || !Object.values(reward).some(item => item.enabled)) return '请至少启用一项奖励：经验值、贡献值或线下奖金。'
   if (Object.entries(reward).some(([kind, item]) => item.enabled && (!Number.isFinite(Number(item.amount)) || Number(item.amount) <= 0 || (kind !== 'bonus' && !Number.isInteger(Number(item.amount)))))) return '已启用的奖励必须填写正数，经验值和贡献值必须为整数。'

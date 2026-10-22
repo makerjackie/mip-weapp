@@ -15,6 +15,19 @@ const columns = [
 ]
 
 describe('DataTable batch actions', () => {
+  it('shortens long identifiers without changing the copied value or swallowing custom cells', async () => {
+    const user = userEvent.setup()
+    const clipboard = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue()
+    const identifier = 'ledger-12345678-90abcdef-123456'
+    render(<DataTable label="流水" rows={[{ id: identifier, name: '测试记录' }]}
+      columns={[{ key: 'id', label: '编号', format: 'identifier', width: 160 }, { key: 'name', label: '内容', wrap: true, width: 200 }]}
+      renderCell={(value, _row, column) => column.key === 'name' ? <strong>{String(value)}</strong> : undefined} />)
+    expect(screen.getByText('ledger-1…123456')).toBeInTheDocument()
+    expect(screen.getByText('测试记录').tagName).toBe('STRONG')
+    await user.click(screen.getByRole('button', { name: /复制完整编号/ }))
+    await waitFor(() => expect(clipboard).toHaveBeenCalledWith(identifier))
+    clipboard.mockRestore()
+  })
   it('confirms before running and keeps selection until the handler resolves', async () => {
     const onBatchAction = vi.fn().mockResolvedValue(undefined)
     render(

@@ -138,7 +138,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   // —— 高级设置（选填 / 内部模型字段） ——
   // 摘要不是业务必填；列表 DTO 需要非空，故留空自动从活动介绍截取（编辑时保留原值），不对运营展示。
   { key: 'summary', label: '活动摘要', kind: 'textarea', required: false, maxLength: 300, hidden: true },
-  { key: 'eventTypeKey', label: '活动类型', kind: 'text', maxLength: 64, advanced: true, optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TYPE', selectable: true }, optionsValueKey: 'key', emptyHint: '暂无可选活动类型。可在「活动」页的「新建活动目录」中添加类型；不选择时默认为「活动」' },
+  { key: 'eventTypeKey', label: '活动类型', kind: 'text', maxLength: 64, advanced: true, optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TYPE', selectable: true }, optionsValueKey: 'key', emptyHint: '暂无可选活动类型。可在「活动」页底部的「活动规则与类型设置」中添加类型；不选择时默认为「活动」' },
   { key: 'registrationPolicy', label: '报名方式', kind: 'select', advanced: true, options: [option('AUTO', '自动确认'), option('APPROVAL', '审核确认')] },
   { key: 'registrationDeadline', label: '报名截止时间', kind: 'datetime', advanced: true, extra: '选填。不填则报名持续到活动开始' },
   { key: 'cancellationDeadline', label: '取消截止时间', kind: 'datetime', advanced: true, extra: '选填。在此时间前成员可自主取消报名' },
@@ -215,7 +215,7 @@ const EVENT_MUTATION_CONFIGS = {
     fields: [
       { key: 'eventId', label: '活动标识', kind: 'text', required: true, hidden: true },
       { key: 'expectedVersion', label: '记录版本', kind: 'number', required: true, hidden: true },
-      { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true }, emptyHint: '暂无可选标签。可在「活动」页的「新建活动目录」中添加标签' },
+      { key: 'tagIds', label: '活动标签', kind: 'multi-select', optionsAction: 'mip.admin.events.catalog.list', optionsInput: { kind: 'TAG', selectable: true }, emptyHint: '暂无可选标签。可在「活动设置」页添加标签' },
     ],
   },
   'mip.admin.events.catalog.save': {

@@ -5,6 +5,7 @@ import type { AdminRequestInput, AdminOperationAction } from '../../domain/contr
 import type { OperationValues } from '../../modules/admin-operation-ui'
 import { createAdminEventMutationDefinition, validateAdminEventMutationInput, EVENT_MUTATION_CONFIGS } from '../../modules/admin-event-mutation-forms'
 import { loadEventDetailForForm } from './event-form-loader'
+import { EventFormFields } from './event-form-fields'
 import { EventMobilePreviewWithData } from './event-mobile-preview'
 import { eventPrivateDrafts } from '../../modules/event-private-drafts'
 import { IndependentFormPage, type IndependentFormPageConfig } from '../form-pages/independent-form-page'
@@ -41,6 +42,7 @@ export function EventEditFormPage() {
     title: eventId ? '编辑活动' : '新建活动',
     description: config.description,
     fields: definition.fields,
+    renderFields: (fields, form) => <EventFormFields fields={fields} form={form} />,
     values: { ...definition.values, ...(eventId ? {} : defaultScope) },
     backTarget: '/events',
     action: 'mip.admin.events.save',

@@ -304,6 +304,24 @@ function createTaskRepository(database, options = {}) {
       clauses.push('(task.name LIKE ? OR task.content LIKE ?)')
       params.push(`%${filters.query}%`, `%${filters.query}%`)
     }
+    if (filters.starLevel) {
+      clauses.push('task.star_level = ?')
+      params.push(filters.starLevel)
+    }
+    if (filters.assignedOwnerId) {
+      clauses.push('task.assigned_owner_id = ?')
+      params.push(filters.assignedOwnerId)
+    }
+    if (filters.rewardType) {
+      // The validated kind is only used to choose a fixed JSON path. Legacy tasks
+      // have no reward config and award their recorded experience directly.
+      const rewardPath = `$.${filters.rewardType}.enabled`
+      clauses.push(filters.rewardType === 'experience'
+        ? '(JSON_EXTRACT(task.reward_config_json, ?) = true OR (task.reward_config_json IS NULL AND task.reward_experience > 0))'
+        : 'JSON_EXTRACT(task.reward_config_json, ?) = true')
+      params.push(rewardPath)
+    }
+    if (filters.workflowMode) clauses.push(`task.reward_config_json IS ${filters.workflowMode === 'REVIEW' ? 'NOT ' : ''}NULL`)
     if (cursor) {
       clauses.push('(task.updated_at < ? OR (task.updated_at = ? AND task.id < ?))')
       params.push(cursor.at, cursor.at, cursor.id)
@@ -928,9 +946,27 @@ function completionWhere(appId, filters, cursor) {
     params.push(`%${filters.query}%`, `%${filters.query}%`)
   }
   if (filters.submissionStatus) {
-    clauses.push('completion.submission_status = ?')
+    clauses.push(`(CASE WHEN completion.reward_config_snapshot_json IS NOT NULL
+      THEN LOWER(COALESCE(NULLIF(completion.submission_status, ''), 'pending_review'))
+      WHEN completion.result_status = 'SUCCESS' THEN 'approved'
+      ELSE LOWER(COALESCE(NULLIF(completion.submission_status, ''), 'reward_failed')) END) = ?`)
     params.push(filters.submissionStatus)
   }
+  if (filters.starLevel) {
+    clauses.push('completion.star_level_snapshot = ?')
+    params.push(filters.starLevel)
+  }
+  if (filters.assignedOwnerId) {
+    clauses.push('completion.assigned_owner_id = ?')
+    params.push(filters.assignedOwnerId)
+  }
+  if (filters.rewardType) {
+    clauses.push(filters.rewardType === 'experience'
+      ? '(JSON_EXTRACT(completion.reward_config_snapshot_json, ?) = true OR (completion.reward_config_snapshot_json IS NULL AND completion.reward_experience > 0))'
+      : 'JSON_EXTRACT(completion.reward_config_snapshot_json, ?) = true')
+    params.push(`$.${filters.rewardType}.enabled`)
+  }
+  if (filters.workflowMode) clauses.push(`completion.reward_config_snapshot_json IS ${filters.workflowMode === 'REVIEW' ? 'NOT ' : ''}NULL`)
   if (filters.resultStatus) {
     clauses.push('completion.result_status = ?')
     params.push(filters.resultStatus)
@@ -1060,6 +1096,7 @@ function adminTaskDto(row, includeTemplateUrl = false, eligibleLevels = []) {
     assignedOwnerId: row.assigned_owner_id || '',
     applicableServers: parseJson(row.applicable_servers_json, []),
     rewardConfig: parseJson(row.reward_config_json, null),
+    workflowMode: row.reward_config_json ? 'REVIEW' : 'DIRECT',
     assignmentMode: row.assignment_mode || 'ALL',
     actionType: row.action_type || '',
     actionTarget: row.action_target || '',
@@ -1107,6 +1144,7 @@ function completionDto(row, alreadyCompleted) {
 function adminCompletionDto(row, includeAttachmentUrl = true) {
   return {
     ...workflowDto(row),
+    workflowMode: row.reward_config_snapshot_json ? 'REVIEW' : 'DIRECT',
     id: row.id,
     taskId: row.task_id,
     taskName: row.task_name_snapshot,

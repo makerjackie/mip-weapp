@@ -97,12 +97,12 @@ export function eventPriceText(priceCents: unknown): string {
  * 引用换成该地址；解析不到的整块换成诚实占位，不让浏览器渲染必然裂图的直链。
  * 输入必须是已净化（sanitizeRichTextHtml 之后）的受限 HTML，占位是固定字面量。
  */
-export function substituteRichTextCloudImages(html: string, resolve: (fileId: string) => string): string {
+export function substituteRichTextCloudImages(html: string, resolve: (fileId: string) => string, pendingText = '插图保存后在活动页显示'): string {
   return String(html || '').replace(/<img\b[^>]*>/gi, tag => {
     const src = /\bsrc\s*=\s*"([^"]*)"/i.exec(tag)?.[1] ?? ''
     if (!/^cloud:\/\//i.test(src)) return tag
     const resolved = resolve(src)
-    if (!resolved) return '<p class="event-mobile-preview__img-pending">插图保存后在活动页显示</p>'
+    if (!resolved) return `<p class="event-mobile-preview__img-pending">${pendingText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`
     return tag.replace(/\bsrc\s*=\s*"[^"]*"/i, `src="${resolved.replace(/"/g, '%22')}"`)
   })
 }

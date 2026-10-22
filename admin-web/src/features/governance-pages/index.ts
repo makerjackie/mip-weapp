@@ -5,6 +5,7 @@ export {
   MessagesPage,
   OperationsPage,
   PermissionsPage,
+  ServersPage,
   type GovernanceDetailRequest,
   type GovernanceFilterValue,
   type GovernanceMutationRequest,

@@ -2,15 +2,16 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MediaPreviewProvider } from '../../shared/ui/media-preview-provider'
-import { EventMobilePreview } from './event-mobile-preview'
+import { EventMobilePreview, EventMobilePreviewWithData } from './event-mobile-preview'
 
 // 会话可按用例注入：client 未设置时视同无会话（存量 cloud:// 解析不发起请求）。
 const sessionState = vi.hoisted(() => ({
   client: undefined as { tempUrls: (fileIds: string[]) => Promise<Record<string, string>> } | undefined,
   demoMode: false,
+  request: vi.fn(),
 }))
 vi.mock('../../app/session-provider', () => ({
-  useAdminSession: () => (sessionState.client ? { client: sessionState.client, demoMode: sessionState.demoMode } : null),
+  useAdminSession: () => (sessionState.client ? { client: sessionState.client, demoMode: sessionState.demoMode, request: sessionState.request } : null),
 }))
 
 afterEach(() => {
@@ -156,4 +157,19 @@ describe('event preview legacy cloud images (MIW-125)', () => {
     await waitFor(() => expect(screen.getByText('插图保存后在活动页显示')).toBeInTheDocument())
     expect(tempUrls).not.toHaveBeenCalled()
   })
+})
+
+
+it('resolves real nonempty catalog objects and subsequent pages into preview labels', async () => {
+  sessionState.client = { tempUrls: vi.fn().mockResolvedValue({}) }
+  sessionState.request.mockImplementation(async (action: string, input: Record<string, unknown>) => {
+    if (action === 'mip.admin.branches.list') return { items: [{ id: 'branch-1', name: '上海服务器' }] }
+    if (input.kind === 'TYPE') return { items: [{ key: 'type-1', name: '资源交流' }] }
+    return input.cursor ? { items: [{ id: 'tag-2', name: '集会' }] } : { items: [{ id: 'tag-1', name: '早会' }], nextCursor: 'next-page' }
+  })
+  render(<EventMobilePreviewWithData values={{ scopeType: 'BRANCH', branchId: 'branch-1', eventTypeKey: 'type-1', tagIds: ['tag-1', 'tag-2'] }} />)
+  expect(await screen.findByText('上海服务器')).toBeVisible()
+  expect(await screen.findByText('早会')).toBeVisible()
+  expect(await screen.findByText('集会')).toBeVisible()
+  expect(await screen.findByText('资源交流')).toBeVisible()
 })

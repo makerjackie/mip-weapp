@@ -14,6 +14,7 @@ import {
   campaignAudienceLabel,
   arrayLabel,
   auditActionLabel,
+  auditResourceLabel,
   blockersLabel,
   capabilityListLabel,
   columns,
@@ -360,11 +361,15 @@ async function loadOrders(query: AdminListQuery, request: AdminRequest): Promise
 }
 
 async function loadPermissions(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
+  const onlyBranches = query.filters?.section === 'branches'
+  const onlyPermissions = query.filters?.section === 'permissions'
+  const rowQuery = { ...query, filters: { ...query.filters } }
+  delete rowQuery.filters.section
   const [rolePayload, branchPayload, policyPayload, auditPayload] = await Promise.all([
-    canRead(access, 'roles.change') ? request('mip.admin.roles.list') : null,
-    canRead(access, 'branches.manage', 'PLATFORM') ? request('mip.admin.branches.list') : null,
-    canRead(access, 'roles.change', 'PLATFORM') ? request('mip.admin.rolePolicies.list') : null,
-    canRead(access, 'audit.read') ? request('mip.admin.audit.list', { limit: query.limit }) : null,
+    !onlyBranches && canRead(access, 'roles.change') ? request('mip.admin.roles.list') : null,
+    !onlyPermissions && canRead(access, 'branches.manage', 'PLATFORM') ? request('mip.admin.branches.list') : null,
+    !onlyBranches && canRead(access, 'roles.change', 'PLATFORM') ? request('mip.admin.rolePolicies.list') : null,
+    !onlyBranches && canRead(access, 'audit.read') ? request('mip.admin.audit.list', { limit: query.limit }) : null,
   ])
   const roles = filterRows(pageValue(rolePayload).items.map(item => ({
     detailId: valueOf(item, 'id', 'roleId'),
@@ -373,7 +378,7 @@ async function loadPermissions(query: AdminListQuery, request: AdminRequest, acc
     scope: valueOf(item, 'scopeName') !== '—' ? valueOf(item, 'scopeName') : scopeLabel(item.scopeType),
     grantedAt: formatDateTime(item.grantedAt),
     state: label(valueOf(item, 'status')),
-  })), query)
+  })), rowQuery)
   const branches = filterRows(pageValue(branchPayload).items.map(item => ({
     detailId: valueOf(item, 'id', 'branchId'),
     branchKey: valueOf(item, 'branchKey'),
@@ -387,7 +392,7 @@ async function loadPermissions(query: AdminListQuery, request: AdminRequest, acc
     blockers: blockersLabel(item.blockers),
     state: label(valueOf(item, 'status')),
     rowActions: branchRowActions(item),
-  })), query)
+  })), rowQuery)
   const policies = pageValue(policyPayload).items.map(item => ({
     role: roleLabel(valueOf(item, 'roleKey')),
     scope: scopeLabel(item.scopeType),
@@ -401,11 +406,11 @@ async function loadPermissions(query: AdminListQuery, request: AdminRequest, acc
   const audits = filterRows(pageValue(auditPayload).items.map(item => ({
     actor: valueOf(item, 'actorNickname') !== '—' ? valueOf(item, 'actorNickname') : '未知运营成员',
     action: auditActionLabel(valueOf(item, 'action')),
-    resource: label(valueOf(item, 'resourceType')),
+    resource: auditResourceLabel(valueOf(item, 'resourceType')),
     role: roleLabel(valueOf(item, 'effectiveRole')),
     scope: scopeLabel(item.scopeType),
     createdAt: formatDateTime(item.createdAt),
-  })), { ...query, status: '' })
+  })), { ...rowQuery, status: '' })
   return {
     sections: [
       rolePayload ? { key: 'members', title: '运营成员', rows: roles, columns: columns([['name', '姓名'], ['role', '角色'], ['scope', '作用范围'], ['grantedAt', '授权时间'], ['state', '状态']]) } : null,
@@ -512,14 +517,34 @@ async function loadAuditLogs(query: AdminListQuery, request: AdminRequest): Prom
         role: label(valueOf(item, 'effectiveRole', 'actorRoleKey')) || '—',
         scope: valueOf(item, 'scopeName') || label(valueOf(item, 'scopeType')) || '—',
         action: auditActionLabel(valueOf(item, 'action')),
-        resource: label(valueOf(item, 'resourceType')),
-        resourceId: valueOf(item, 'resourceId') || '—',
+        resource: auditResourceLabel(valueOf(item, 'resourceType')),
+        resourceId: auditObjectSummary(item),
+        rowDetail: {
+          title: '审计记录详情',
+          entries: [
+            { label: '操作', value: auditActionLabel(item.action) },
+            { label: '操作代码', value: String(valueOf(item, 'action')) },
+            { label: '业务对象', value: String(valueOf(item, 'resourceName', 'resourceTitle', 'resourceId')) },
+            { label: '完整编号', value: String(valueOf(item, 'resourceId')) },
+            { label: '模块', value: auditResourceLabel(item.resourceType) },
+            { label: '模块代码', value: String(valueOf(item, 'resourceType')) },
+            { label: '操作者', value: String(valueOf(item, 'actorNickname', 'actorName')) },
+            { label: '时间', value: formatDateTime(item.createdAt) },
+          ],
+        },
         createdAt: formatDateTime(item.createdAt),
       })),
       columns: columns([['actor', '操作者'], ['role', '角色'], ['scope', '服务器'], ['action', '操作'], ['resource', '模块'], ['resourceId', '业务对象'], ['createdAt', '时间']]),
     }],
     nextCursor: payload.nextCursor,
   }
+}
+
+function auditObjectSummary(item: AdminTableRow): string {
+  const name = valueOf(item, 'resourceName', 'resourceTitle')
+  if (name !== '—') return String(name)
+  const id = String(valueOf(item, 'resourceId'))
+  return id.length > 20 ? `${id.slice(0, 8)}…${id.slice(-6)}` : id
 }
 
 function auditLoginRow(item: AdminTableRow): AdminTableRow {

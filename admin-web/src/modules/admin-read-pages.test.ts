@@ -147,6 +147,30 @@ describe('admin read pages', () => {
     assert.deepEqual(page.sections.map(section => section.key), ['audit'])
   })
 
+  it('separates server reads from permission reads without widening platform scope or dropping versions', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const responses = {
+      'mip.admin.branches.list': { items: [{ id: 'branch-1', version: 7, name: '测试服务器', status: 'ACTIVE' }] },
+      'mip.admin.roles.list': { items: [] },
+      'mip.admin.rolePolicies.list': { items: [] },
+      'mip.admin.audit.list': { items: [] },
+    }
+    const serverQuery = { ...query, query: '', status: '', filters: { section: 'branches' } }
+    const serverPage = await loadAdminReadPage('permissions', serverQuery, requestWith(responses, calls), {
+      hasCapability: (capability, scope) => capability === 'branches.manage' && scope === 'PLATFORM',
+    })
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.branches.list'])
+    assert.deepEqual(serverPage.sections.map(section => section.key), ['branches'])
+    assert.equal(serverPage.sections[0].rows[0].rowActions?.[0]?.expectedVersion, 7)
+    calls.length = 0
+    const denied = await loadAdminReadPage('permissions', serverQuery, requestWith(responses, calls), { hasCapability: (_capability, scope) => scope !== 'PLATFORM' })
+    assert.equal(calls.length, 0)
+    assert.deepEqual(denied.sections, [])
+    const permissionPage = await loadAdminReadPage('permissions', { ...serverQuery, filters: { section: 'permissions' } }, requestWith(responses, calls))
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.roles.list', 'mip.admin.rolePolicies.list', 'mip.admin.audit.list'])
+    assert.deepEqual(permissionPage.sections.map(section => section.key), ['members', 'policies', 'audit'])
+  })
+
   it('loads opportunity content and matching facts without reusing the opportunity cursor', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const page = await loadAdminReadPage('opportunities', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
@@ -161,7 +185,7 @@ describe('admin read pages', () => {
     assert.equal(page.sections.length, 4)
     // MIW-127：机会分区收敛为设计稿 7 列，状态文案用机会页局部映射。
     assert.deepEqual(page.sections[0].columns.map(column => column.label), [
-      '项目名称', '发布人', '价值金额（万元）', '主营城市', '想引荐数', '状态', '发布时间',
+      '项目名称', '发布人', '价值金额', '主营城市', '想引荐数', '状态', '发布时间',
     ])
     assert.equal(page.sections[0].rows[0].title, '寻找品牌合作伙伴')
     assert.equal(page.sections[0].rows[0].city, '深圳')
@@ -198,9 +222,9 @@ describe('admin read pages', () => {
     // MIW-129：等级/经验值流水列按设计稿收敛（权益数、变动前/变动后分列）。
     assert.deepEqual(page.sections[0].columns.map(column => column.label), ['等级', '名称', '经验值门槛', '权益数', '用户数', '状态'])
     assert.equal(page.sections[0].rows[0].benefitCount, '1')
-    assert.deepEqual(page.sections[3].columns.map(column => column.label), ['流水号', '玩家 ID', '来源', '变动值', '变动前', '变动后', '时间'])
+    assert.deepEqual(page.sections[3].columns.map(column => column.label), ['用户', '来源', '变动值', '变动前', '变动后', '时间', '流水号'])
     assert.equal(page.sections[3].rows[0].entryNo, 'entry-a')
-    assert.equal(page.sections[3].rows[0].playerId, 'user-a')
+    assert.equal(page.sections[3].rows[0].userId, 'user-a')
     assert.equal(page.sections[3].rows[0].before, '20')
     assert.equal(page.sections[3].rows[0].after, '30')
     assert.equal(page.sections[3].rows[0].source, '活动签到')

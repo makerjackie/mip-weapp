@@ -163,7 +163,7 @@ describe('admin task management', () => {
     ])
     const section = page.sections[0]
     assert.equal(section.detailTarget, 'taskApprovals')
-    assert.deepEqual(section.columns.map(column => column.label), ['提交人', '任务名称', '星级', '附件', '审批人', '审批状态', '奖励结果'])
+    assert.deepEqual(section.columns.map(column => column.label), ['提交人', '任务名称', '执行方式', '星级', '附件', '审批人', '审批状态', '奖励结果'])
     assert.equal(page.nextCursor, 'next-approval-cursor')
     const [pending, failed] = section.rows
     assert.equal(pending.member, '林晓')
@@ -380,4 +380,54 @@ describe('R2 novice walkthrough fixes', () => {
     assert.equal(explainTaskAssignment({ assignMode: 'weekly', recipients: ['p1.x'], weeklyDeliverAt: '09:00', weeklyStartAt: '2030-01-06T00:00:00Z', weeklyEndAt: '2030-01-05T00:00:00Z' }), '周派发结束时间必须晚于开始时间')
     assert.equal(explainTaskAssignment({ assignMode: 'weekly', recipients: ['p1.x'], weeklyDeliverAt: '09:00', weeklyStartAt: '2030-01-06T00:00:00Z', weeklyEndAt: '2030-01-13T00:00:00Z' }), null)
   })
+})
+
+
+it('passes all task filters to the service and keeps the full owner catalog independent of the current page', async () => {
+  const calls: Array<{ action: string; input: unknown }> = []
+  const filters = { starLevel: '3', assignedOwnerId: TASK_ID, rewardType: 'bonus', workflowMode: 'REVIEW' }
+  const request = requestWith({
+    'mip.admin.tasks.list': { items: [{ id: TASK_ID, name: '任务', workflowMode: 'REVIEW' }], nextCursor: 'second' },
+    'mip.admin.tasks.completions.list': { items: [{ id: COMPLETION_ID, nickname: '历史用户', workflowMode: 'DIRECT', resultStatus: 'SUCCESS', rewardExperience: 25 }], nextCursor: 'next' },
+    'mip.admin.tasks.editorOptions': { owners: [{ id: LEVEL_ID, name: '下一页任务负责人' }] },
+  }, calls)
+  const page = await loadTaskManagementPage({ query: '任务', status: 'PUBLISHED', cursor: null, limit: 1, filters }, request)
+  assert.deepEqual(calls[0].input, { filters: { query: '任务', status: 'PUBLISHED', ...filters }, limit: 1, cursor: undefined })
+  assert.deepEqual(calls[1].input, { filters: { query: '任务', ...filters }, limit: 1 })
+  assert.deepEqual(page.filterOptions?.assignedOwnerId, [{ value: LEVEL_ID, label: '下一页任务负责人' }])
+  assert.equal(page.sections[0].rows[0].workflowMode, '提交后审批')
+  calls.length = 0
+  const approvals = await loadTaskApprovalPage({ query: '', status: '', cursor: 'cursor', limit: 1, filters }, request)
+  assert.deepEqual(calls[0].input, { filters: { query: '', submissionStatus: '', ...filters }, limit: 1, cursor: 'cursor' })
+  assert.equal(approvals.sections[0].rows[0].workflowMode, '直接完成')
+  assert.equal(approvals.sections[0].rows[0].rewardResult, '经验值 25')
+})
+
+
+it('preserves an existing direct-completion workflow while editing its content and zero experience reward', () => {
+  for (const task of [
+    { workflowMode: 'DIRECT', rewardConfig: null },
+    { rewardConfig: null }, // Compatible with the previous server DTO.
+  ]) {
+    const definition = createTaskMutationDefinition('mip.admin.tasks.save', TASK_ID, { task: {
+      ...task, id: TASK_ID, version: 3, name: '出席早会', content: '原内容', rewardExperience: 0,
+      assignmentMode: 'ALL', eligibleLevels: [], actionType: 'PAGE_JUMP', actionTarget: 'pages/events/index',
+    } })
+    assert.equal(definition.taskWorkflowMode, 'DIRECT')
+    assert.ok(definition.fields.some(field => field.name === 'rewardExperience'))
+    assert.ok(!definition.fields.some(field => field.name && ['rewardConfig', 'assignedOwnerId', 'starLevel'].includes(field.name)))
+    const input = buildTaskMutationInput(definition, { ...definition.values, content: '修改说明' })
+    assert.deepEqual(input, {
+      taskId: TASK_ID, expectedVersion: 3,
+      task: { name: '出席早会', content: '修改说明', rewardExperience: 0, attachmentRequired: false,
+        assignmentMode: 'ALL', endsAt: '', templateAssetId: null, eligibleLevelIds: [],
+        actionType: 'PAGE_JUMP', actionTarget: 'pages/events/index' },
+    })
+    assert.equal(buildTaskMutationInput(definition, { ...definition.values, rewardExperience: -1 }), null)
+    assert.equal(buildTaskMutationInput(definition, { ...definition.values, rewardExperience: 1.5 }), null)
+  }
+  const newTask = createTaskMutationDefinition('mip.admin.tasks.save', '', {})
+  assert.equal(newTask.taskWorkflowMode, 'REVIEW')
+  assert.ok(newTask.fields.some(field => field.name === 'rewardConfig'))
+  assert.equal(buildTaskMutationInput(newTask, { ...newTask.values, taskWorkflowMode: 'DIRECT' }), null)
 })

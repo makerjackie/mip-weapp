@@ -148,10 +148,18 @@ export function sourceEventLabel(value: unknown) {
   const code = String(value || '')
   const sourceLabels: Record<string, string> = {
     'event.checked_in': '活动签到',
+    'event.checkin_revoked': '撤销签到',
     'event.registered': '活动报名',
+    'event.guest_invited': '邀请嘉宾',
+    'game.guest_invited': '团队邀请嘉宾',
+    'task.completed': '完成任务',
+    'referral.confirmed': '引荐机会',
+    'opportunity.cooperation.completed': '完成机会合作',
     'profile.completed': '完善资料',
     'opportunity.published': '发布机会',
     'admin.adjusted': '人工调整',
+    ADMIN_ADJUSTMENT: '人工发放或调整',
+    CONTRIBUTION_REVERSAL: '贡献值冲正',
   }
   return sourceLabels[code] || (code ? '其他业务记录' : '—')
 }
@@ -190,12 +198,49 @@ export function auditActionLabel(value: unknown) {
   const parts = key.replace(/^admin\./, '').split('.').filter(Boolean)
   const tokens: Record<string, string> = {
     session: '登录会话', badge: '勋章', cards: '名片', history: '历史', profile_edit: '编辑资料', user_content: '用户内容',
-    roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '服务器',
+    roles: '角色', rolePolicies: '权限策略', role_capability_policies: '角色权限策略', users: '用户', memberships: '会员', branches: '服务器',
     events: '活动', industries: '行业', status: '状态', change: '变更', orders: '订单', refunds: '退款', messages: '消息', knowledge: '知识库', audit: '审计',
     grant: '授权', revoke: '撤销', create: '创建', update: '更新', save: '保存', publish: '发布',
     withdraw: '撤回', archive: '归档', submit: '提交', changeStatus: '更改状态', view: '查看', enter: '进入',
+    list: '列表', get: '详情', detail: '详情', paymentAttempts: '支付记录',
+    growth: '成长', rule: '规则', adjust: '调整', entitlements: '权益',
+    opportunities: '机会', tasks: '任务', videos: '视频', banners: 'Banner',
+    cooperation_cards: '合作卡', super_cases: '超级案例', profile: '档案', influence: '影响力',
+    policy: '政策', catalog: '类型', tags: '标签', replace: '更新', roster: '报名名单',
+    all: '全部', phone: '手机号', checkin: '签到', undo: '撤销', draft: '草稿', clone: '复制',
+    communications: '活动通知', message_templates: '消息模板', message_campaigns: '消息批次',
+    message_delivery_reviews: '投递复核', community_reports: '举报',
+    operational_exceptions: '运营异常', operations: '运营', queue: '待办',
+    export: '导出', request: '申请', download: '下载', reserve: '准备', consume: '完成',
+    membership: '会籍', agreement: '协议', plan: '方案', price: '价格',
+    approval: '审核', approvals: '审核记录', decide: '决定', timeline: '流水',
+    web_login: '网页登录', confirm: '确认', confirm_failed: '确认失败',
+    retry: '重试', delete: '删除', end: '结束', unpublish: '下架',
+    matching: '撮合', settings: '设置', opportunity_comments: '机会评论',
+    opportunity_comment_reports: '机会评论举报', close: '关闭', claim: '认领',
+    activate: '启用', deactivate: '停用', login: '登录', logout: '退出',
   }
   return parts.length ? parts.map(part => tokens[part] || part).join(' · ') : '—'
+}
+
+/** Translate only known resource codes; unknown codes stay available for diagnosis. */
+export function auditResourceLabel(value: unknown) {
+  const key = String(value || '')
+  const resources: Record<string, string> = {
+    CITY_BRANCH: '服务器', ADMIN_ROLE_BINDING: '运营授权', ROLE_CAPABILITY_POLICY: '角色权限策略',
+    AUDIT_LOG: '审计记录', OPERATIONAL_EXCEPTION: '运营异常', PAYMENT_ATTEMPT: '支付记录',
+    GROWTH_ENTRY: '成长流水', GROWTH_RULE: '成长规则', APP_SETTING: '应用设置',
+    MEMBERSHIP_PLAN: '会籍方案', MEMBERSHIP_CHAIN: '会籍记录', MEMBERSHIP_ENTITLEMENT: '玩家权益',
+    TASK: '任务', TASK_CARD: '任务配置', TASK_COMPLETION: '任务完成记录',
+    EVENT_REGISTRATION: '活动报名', EVENT_CHECKIN: '活动签到', EVENT_CATALOG: '活动类型',
+    MESSAGE_CAMPAIGN: '消息批次', MESSAGE_TEMPLATE: '消息模板', EXPORT: '数据导出',
+    INDUSTRY_TAG: '行业', USER_CONTENT: '用户内容',
+  }
+  if (key.endsWith('_LIST')) {
+    const base = key.slice(0, -5)
+    return resources[base] || labels[base] ? `${resources[base] || labels[base]}列表` : key
+  }
+  return resources[key] || labels[key] || key || '—'
 }
 
 export function blockersLabel(value: unknown) {

@@ -34,6 +34,9 @@ function unfilteredDemoPage(route: AdminListRoute, section: string, type: string
     ],
     nextCursor: null,
   }
+  if (route === 'permissions' && section === 'branches') return {
+    sections: [{ key: 'branches', title: '服务器', rows: [], columns: columns([['name', '服务器'], ['city', '城市'], ['state', '状态']]) }], nextCursor: null,
+  }
   if (route === 'permissions') return {
     sections: [{
       title: '运营成员',

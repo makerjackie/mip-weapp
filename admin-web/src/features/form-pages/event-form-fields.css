@@ -1,0 +1,6 @@
+.event-form-section { min-width: 0; }
+.event-form-section + .event-form-section { border-top: 1px solid var(--mip-line); padding-top: 20px; }
+.event-form-section .ant-form-item { margin-bottom: 16px; }
+.event-form-section .asset-uploader__cover { max-width: 280px; }
+.event-form-section .asset-uploader__cover img { max-height: 120px; }
+.event-form-section .ant-upload-drag .ant-upload { padding: 12px; }

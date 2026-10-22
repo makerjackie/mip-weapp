@@ -89,7 +89,7 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
 
   return {
     sections: [
-      ...(canReadOpportunities && (!selected || selected === 'opportunities') ? [{ title: '机会', error: record(opportunityPayload).loadError as string | undefined, rows: opportunityRows, columns: columns([['title', '项目名称'], ['owner', '发布人'], ['value', '价值金额（万元）'], ['city', '主营城市'], ['referrals', '想引荐数'], ['state', '状态'], ['publishedAt', '发布时间']]) }] : []),
+      ...(canReadOpportunities && (!selected || selected === 'opportunities') ? [{ title: '机会', error: record(opportunityPayload).loadError as string | undefined, rows: opportunityRows, columns: columns([['title', '项目名称'], ['owner', '发布人'], ['value', '价值金额'], ['city', '主营城市'], ['referrals', '想引荐数'], ['state', '状态'], ['publishedAt', '发布时间']]) }] : []),
       ...(canReadContent && (!selected || selected === 'content') ? [{ title: '用户内容', error: record(contentPayload).loadError as string | undefined, rows: contentRows, columns: columns([['title', '标题'], ['kind', '内容类型'], ['owner', '发布人'], ['location', '城市与服务器'], ['summary', '摘要'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) }] : []),
       ...(!selected || selected === 'matching' ? [{ title: '撮合设置', rows: settings.scopeKey ? [{
         scope: scopeLabel(settings.scopeType),
@@ -124,7 +124,7 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
     read('levels', canReadGrowth, 'mip.admin.growth.levels'),
     read('benefits', canReadGrowth, 'mip.admin.growth.benefits'),
     read('rules', canReadGrowth, 'mip.admin.growth.rules'),
-    read('entries', canReadGrowth, 'mip.admin.growth.entries', pagedInput),
+    read('entries', canReadGrowth, 'mip.admin.growth.entries', { ...pagedInput, filters: { ...pagedInput.filters, metric: 'EXPERIENCE' } }),
     read('transitions', canReadGrowth, 'mip.admin.growth.levelTransitions', pagedInput),
     read('badges', canReadBadges, 'mip.admin.badges.list'),
     read('awards', canReadBadges, 'mip.admin.badges.awards', {
@@ -145,7 +145,7 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
   // MIW-129：等级管理列收敛为设计稿口径（等级|名称|经验值门槛|权益数|用户数|状态）；
   // 展示徽章与用户占比仍在配置面板的等级卡片中可见。
   const levels = filterRows(pageValue(levelsPayload).items.map(item => ({
-    levelKey: valueOf(item, 'levelKey', 'name'), name: valueOf(item, 'name'), threshold: numberLabel(item.minimumExperience), benefitCount: numberLabel(Array.isArray(item.benefits) ? item.benefits.length : 0), users: numberLabel(item.currentUserCount), state: label(valueOf(item, 'status')),
+    levelItem: item, levelKey: valueOf(item, 'levelKey', 'name'), name: valueOf(item, 'name'), threshold: numberLabel(item.minimumExperience), benefitCount: numberLabel(Array.isArray(item.benefits) ? item.benefits.length : 0), users: numberLabel(item.currentUserCount), state: label(valueOf(item, 'status')),
   })), localQuery)
   const benefits = filterRows(pageValue(benefitsPayload).items.map(item => ({ name: valueOf(item, 'name'), description: valueOf(item, 'description'), sort: numberLabel(item.sortOrder), state: label(valueOf(item, 'status')) })), localQuery)
   const rules = filterRows(pageValue(rulesPayload).items.map(item => ({ name: valueOf(item, 'name', 'ruleKey'), metric: label(valueOf(item, 'metric')), delta: numberLabel(item.deltaValue), dailyLimit: numberLabel(item.dailyLimitValue), source: sourceEventLabel(item.sourceEventType), scope: scopeLabel(item.scopeType), effective: dateRange(item.effectiveFrom, item.effectiveTo), state: label(valueOf(item, 'status')) })), localQuery)
@@ -159,7 +159,10 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
       : after !== undefined && after !== null && delta !== undefined && delta !== null ? Number(after) - Number(delta) : undefined
     return {
       entryNo: valueOf(item, 'id', 'entryNo'),
-      playerId: valueOf(item, 'userId', 'playerId'),
+      user: valueOf(item, 'nickname') === '—' ? '未填写昵称' : valueOf(item, 'nickname'),
+      userId: valueOf(item, 'userId', 'playerId'),
+      detailLinks: growthRelatedLinks(item, access),
+      rowDetail: growthEntryDetail(item),
       source: sourceEventLabel(item.sourceEventType),
       delta: numberLabel(delta),
       before: numberLabel(before),
@@ -170,12 +173,20 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
   const transitions = filterRows(pageValue(transitionsPayload).items.map(item => { const from = record(item.fromLevel); const to = record(item.toLevel); return { user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'), direction: `${valueOf(from, 'name')} → ${valueOf(to, 'name')}`, experience: `${numberLabel(item.experienceBefore)} → ${numberLabel(item.experienceAfter)}`, source: sourceEventLabel(item.sourceEventType), createdAt: formatDateTime(item.createdAt) } }), serverQuery)
   const badges = filterRows(pageValue(badgesPayload).items.map(item => ({ name: valueOf(item, 'name'), description: valueOf(item, 'description'), shape: label(valueOf(item, 'placeholderShape')), updatedAt: formatDateTime(item.updatedAt), state: label(valueOf(item, 'status')) })), localQuery)
   const awards = filterRows(pageValue(awardsPayload).items.map(item => ({ user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'), badge: valueOf(item, 'badgeName'), reason: reasonLabel(item.awardReason), awardedAt: formatDateTime(item.awardedAt), equipped: booleanLabel(item.equipped), state: label(valueOf(item, 'status')) })), serverQuery)
-  // MIW-129 H1：权益管理列收敛为设计稿口径（权益流水号|用户|昵称|权益类型|权益内容|关联订单号|发放人|发放时间）；
-  // 有效期与来源保留在用户档案与订单详情中查看。
+  // 用户姓名优先展示；完整编号、来源和有效期保留在行详情中。
   const entitlementRows = filterRows(pageValue(entitlementsPayload).items.map(item => ({
     entitlementNo: valueOf(item, 'entitlementNo', 'id'),
-    user: typeof item.userId === 'string' && item.userId ? item.userId : '—',
-    nickname: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'),
+    user: valueOf(item, 'nickname') === '—' ? '未填写昵称' : valueOf(item, 'nickname'),
+    rowDetail: { title: '权益流水详情', entries: [
+      { label: '流水编号', value: String(valueOf(item, 'entitlementNo', 'id')) },
+      { label: '用户编号', value: String(valueOf(item, 'userId')) },
+      { label: '权益内容', value: String(valueOf(item, 'entitlementContent')) },
+      { label: '关联订单', value: String(valueOf(item, 'relatedOrderNo', 'relatedOrderId')) },
+      { label: '发放来源', value: item.source === 'SYSTEM' ? '系统发放' : '人工发放' },
+      { label: '发放人', value: String(valueOf(item, 'grantor')) },
+      { label: '发放时间', value: formatDateTime(item.grantedAt) },
+      { label: '权益有效期', value: item.startsAt || item.endsAt ? dateRange(item.startsAt, item.endsAt) : '—' },
+    ] } satisfies RecordDetail,
     type: entitlementTypeLabel(valueOf(item, 'entitlementType')),
     content: valueOf(item, 'entitlementContent'),
     order: valueOf(item, 'relatedOrderNo'),
@@ -209,6 +220,7 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
       : [],
   })), serverQuery)
   const contributionRuleRows = filterRows(pageValue(contributionRulesPayload).items.map(item => ({
+    ruleItem: item,
     behavior: valueOf(item, 'behaviorLabel', 'behavior'),
     rewardExp: numberLabel(item.rewardExp),
     rewardLimit: contributionLimit(item.rewardLimit),
@@ -216,15 +228,17 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
     effective: dateRange(item.effectiveFrom, item.effectiveTo),
     state: label(valueOf(item, 'status')),
   })), serverQuery)
-  // MIW-129 H4：贡献值流水补「关联业务」列。服务端 relatedBusiness=来源事件关联编号；
-  // 任务与机会行为可跳转对应详情，活动签到/邀请嘉宾的编号语义待联调确认前只展示编号。
+  // 来源事件编号保留在详情；跳转仅使用服务端确认过的业务对象关联。
   const contributionTxnRows = filterRows(pageValue(contributionTxnsPayload).items.map(item => ({
     txnNo: valueOf(item, 'txnNo', 'transactionNo', 'id'),
     user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'),
-    behavior: valueOf(item, 'behaviorLabel', 'behavior'),
+    behavior: contributionBehaviorLabel(item),
     delta: numberLabel(item.deltaValue),
     related: valueOf(item, 'relatedBusiness'),
-    detailLinks: contributionRelatedLinks(item, access),
+    result: Number(item.reversedValue) > 0 ? `已冲正 ${numberLabel(item.reversedValue)}` : '已入账',
+    reversibleValue: Math.max(0, Number(item.deltaValue) - Number(item.reversedValue || 0)),
+    detailLinks: growthRelatedLinks(item, access),
+    rowDetail: growthEntryDetail({ ...item, sourceEventType: item.sourceEventType || item.behavior, sourceEventId: item.relatedBusiness }),
     createdAt: formatDateTime(item.createdAt),
   })), serverQuery)
   const payloads = [levelsPayload, benefitsPayload, rulesPayload, entriesPayload, transitionsPayload, badgesPayload, awardsPayload, entitlementsPayload, membershipApprovalsPayload, contributionRulesPayload, contributionTxnsPayload]
@@ -232,14 +246,14 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest, a
     levelsPayload ? { title: '等级', rows: levels, columns: columns([['levelKey', '等级'], ['name', '名称'], ['threshold', '经验值门槛'], ['benefitCount', '权益数'], ['users', '用户数'], ['state', '状态']]) } : null,
     benefitsPayload ? { title: '等级权益', rows: benefits, columns: columns([['name', '权益'], ['description', '说明'], ['sort', '排序'], ['state', '状态']]) } : null,
     rulesPayload ? { title: '成长规则', rows: rules, columns: columns([['name', '规则'], ['metric', '指标'], ['delta', '增量'], ['dailyLimit', '每日上限'], ['source', '来源事件'], ['scope', '作用范围'], ['effective', '生效区间'], ['state', '状态']]) } : null,
-    entriesPayload ? { title: '经验值流水', rows: entries, columns: columns([['entryNo', '流水号'], ['playerId', '玩家 ID'], ['source', '来源'], ['delta', '变动值'], ['before', '变动前'], ['after', '变动后'], ['createdAt', '时间']]) } : null,
+    entriesPayload ? { title: '经验值流水', rows: entries, columns: growthLedgerColumns([['user', '用户'], ['source', '来源'], ['delta', '变动值'], ['before', '变动前'], ['after', '变动后'], ['createdAt', '时间'], ['entryNo', '流水号']]) } : null,
     transitionsPayload ? { title: '等级变更', rows: transitions, columns: columns([['user', '用户'], ['direction', '等级变化'], ['experience', '经验变化'], ['source', '来源事件'], ['createdAt', '时间']]) } : null,
     badgesPayload ? { title: '勋章目录', rows: badges, columns: columns([['name', '勋章'], ['description', '说明'], ['shape', '图形'], ['updatedAt', '更新时间'], ['state', '状态']]) } : null,
     awardsPayload ? { title: '勋章获得记录', rows: awards, columns: columns([['user', '用户'], ['badge', '勋章'], ['reason', '原因'], ['awardedAt', '获得时间'], ['equipped', '佩戴'], ['state', '状态']]) } : null,
-    entitlementsPayload ? { title: '权益流水', rows: entitlementRows, columns: columns([['entitlementNo', '权益流水号'], ['user', '用户'], ['nickname', '昵称'], ['type', '权益类型'], ['content', '权益内容'], ['order', '关联订单号'], ['grantor', '发放人'], ['grantedAt', '发放时间']]) } : null,
+    entitlementsPayload ? { title: '权益流水', rows: entitlementRows, columns: growthLedgerColumns([['user', '用户'], ['type', '权益类型'], ['content', '权益内容'], ['grantor', '发放人'], ['grantedAt', '发放时间'], ['order', '关联订单号'], ['entitlementNo', '权益流水号']]) } : null,
     membershipApprovalsPayload ? { title: '入会审核', rows: membershipApprovalRows, columns: columns([['user', '用户'], ['playerNumber', '玩家号'], ['plan', '方案'], ['amount', '金额'], ['paidAt', '支付时间'], ['requestedAt', '申请时间'], ['state', '状态'], ['decision', '审核结论']]) } : null,
     contributionRulesPayload ? { title: '贡献值规则', rows: contributionRuleRows, columns: columns([['behavior', '行为'], ['rewardExp', '贡献奖励'], ['rewardLimit', '上限'], ['scope', '范围'], ['effective', '生效期'], ['state', '状态']]) } : null,
-    contributionTxnsPayload ? { title: '贡献值流水', rows: contributionTxnRows, columns: columns([['txnNo', '流水号'], ['user', '用户'], ['behavior', '行为'], ['delta', '变动值'], ['related', '关联业务'], ['createdAt', '时间']]) } : null,
+    contributionTxnsPayload ? { title: '贡献值流水', rows: contributionTxnRows, columns: growthLedgerColumns([['user', '用户'], ['behavior', '行为'], ['delta', '变动值'], ['result', '处理结果'], ['createdAt', '时间'], ['txnNo', '流水号']]) } : null,
   ].filter(isSection)
   return { sections: sections.map((section, index) => {
     const visiblePayloads = payloads.filter(value => value !== null)
@@ -366,17 +380,42 @@ function entitlementTypeLabel(value: unknown) {
   return ENTITLEMENT_TYPE_LABELS[key] || label(value)
 }
 
-// MIW-129 H4：贡献值「关联业务」跳转。任务完成记录的关联编号是任务提交记录 ID，
-// 机会行为的关联编号是机会 ID；活动签到/邀请嘉宾的编号语义待联调确认前不提供跳转。
-function contributionRelatedLinks(item: AdminTableRow, access: AdminReadAccess | undefined) {
-  const related = String(valueOf(item, 'relatedBusiness') || '')
-  if (!related || related === '—') return []
-  const behavior = String(item.behavior || '')
-  const route = behavior === 'TASK_COMPLETED' ? 'taskCompletions' as const
-    : behavior === 'OPPORTUNITY_REFERRAL' || behavior === 'OPPORTUNITY_COOPERATION' ? 'opportunities' as const : null
-  if (!route) return []
-  const readable = canRead(access, route === 'taskCompletions' ? 'tasks.manage' : 'opportunities.moderate', 'PLATFORM')
-  return readable ? [{ route, id: related, label: '关联业务' }] : []
+function growthLedgerColumns(pairs: Array<[string, string]>) {
+  return columns(pairs).map(column => ['entryNo', 'txnNo', 'entitlementNo', 'order'].includes(column.key)
+    ? { ...column, width: 190, format: 'identifier' as const }
+    : { ...column, width: ['createdAt', 'grantedAt'].includes(column.key) ? 170 : undefined })
+}
+
+function contributionBehaviorLabel(item: AdminTableRow) {
+  const behavior = String(valueOf(item, 'behaviorLabel', 'behavior'))
+  return ['ADMIN_ADJUSTMENT', 'CONTRIBUTION_REVERSAL'].includes(behavior) ? sourceEventLabel(behavior) : behavior
+}
+
+function growthEntryDetail(item: AdminTableRow): RecordDetail {
+  return { title: '成长流水详情', entries: [
+    { label: '流水编号', value: String(valueOf(item, 'id', 'txnNo')) },
+    { label: '用户', value: String(valueOf(item, 'nickname')) },
+    { label: '用户编号', value: String(valueOf(item, 'userId')) },
+    { label: '来源', value: sourceEventLabel(item.sourceEventType) },
+    { label: '来源代码', value: String(valueOf(item, 'sourceEventType')) },
+    { label: '来源记录编号', value: String(valueOf(item, 'sourceEventId')) },
+    { label: '原始流水编号', value: String(valueOf(item, 'originalTransactionNo')) },
+    { label: '变动值', value: numberLabel(item.deltaValue) },
+    { label: '变动后', value: numberLabel(item.balanceAfter) },
+    { label: '调整原因', value: String(valueOf(item, 'adjustmentReason')) },
+    { label: '时间', value: formatDateTime(item.createdAt) },
+  ] }
+}
+
+function growthRelatedLinks(item: AdminTableRow, access: AdminReadAccess | undefined): NonNullable<AdminTableRow['detailLinks']> {
+  const links: Array<NonNullable<AdminTableRow['detailLinks']>[number]> = []
+  if (typeof item.userId === 'string' && item.userId && canRead(access, 'users.read', 'PLATFORM')) links.push({ route: 'users', id: item.userId, label: '用户档案' })
+  // Only use verified server-side relations; sourceEventId may be an outbox or transition id.
+  const related = record(item.relatedResource)
+  const route = related.kind === 'EVENT' ? 'events' : related.kind === 'TASK_COMPLETION' ? 'taskCompletions' : related.kind === 'TASK_SUBMISSION' ? 'taskApprovals' : related.kind === 'OPPORTUNITY' ? 'opportunities' : null
+  const capability = route === 'events' ? 'events.read' : route === 'opportunities' ? 'opportunities.moderate' : 'tasks.manage'
+  if (route && typeof related.id === 'string' && related.id && canRead(access, capability, 'PLATFORM')) links.push({ route, id: related.id, label: '关联业务' })
+  return links
 }
 
 // MIW-27 第二轮：审核结论列（决定人/意见随结论展示，便于复议前回溯线下沟通）。

@@ -1,6 +1,5 @@
-import { Form, Select, Typography } from 'antd'
+import { Form, Select } from 'antd'
 import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminListQuery, AdminReadPage, AdminTableRow } from '../../modules/admin-read-pages'
 import {
@@ -8,12 +7,12 @@ import {
   loadTaskApprovalPage,
   taskApprovalStarLabel,
   TASK_APPROVAL_STATUS_OPTIONS,
+  TASK_WORKFLOW_MODE_OPTIONS,
 } from '../../modules/admin-task-management'
 import { demo } from '../../services/demo-data'
 import { OperationsReadPage } from './operations-read-page'
 import type { OperationsPageState } from './types'
 
-// MIW-130：星级筛选服务端未提供查询参数，仅对当前页行数据过滤，需要配合「当前页过滤」提示。
 const TASK_APPROVAL_STAR_OPTIONS: Array<{ value: string; label: string }> = [
   { value: '', label: '全部星级' },
   ...[1, 2, 3, 4, 5].map(level => ({ value: String(level), label: taskApprovalStarLabel(level) })),
@@ -21,16 +20,11 @@ const TASK_APPROVAL_STAR_OPTIONS: Array<{ value: string; label: string }> = [
 
 export function TaskApprovalPage(props: OperationsPageState) {
   const starLevel = props.query.filters?.starLevel || ''
-  const page = useMemo(
-    () => filterCurrentApprovalRows(props.page, starLevel),
-    [props.page, starLevel],
-  )
   return (
     <OperationsReadPage
       {...props}
-      page={page}
       title="NPC任务"
-      description="提交与审批记录"
+      description="提交与审批记录；历史直接完成记录保留可查"
       searchPlaceholder="搜索提交人或任务"
       statusOptions={TASK_APPROVAL_STATUS_OPTIONS}
       paginated
@@ -44,7 +38,11 @@ export function TaskApprovalPage(props: OperationsPageState) {
             onChange={value => props.onFilterChange({ ...props.query, filters: { ...props.query.filters, starLevel: value } })}
           />
         </Form.Item>
-        {starLevel ? <Typography.Text type="secondary">当前页过滤</Typography.Text> : null}
+        <Form.Item label="执行方式">
+          <Select aria-label="记录执行方式" style={{ minWidth: 150 }} value={props.query.filters?.workflowMode || ''}
+            options={TASK_WORKFLOW_MODE_OPTIONS}
+            onChange={value => props.onFilterChange({ ...props.query, filters: { ...props.query.filters, workflowMode: value } })} />
+        </Form.Item>
       </>}
     />
   )
@@ -71,20 +69,10 @@ export function useTaskApprovalPage(query: AdminListQuery) {
 function createTaskApprovalDemoPage(query: AdminListQuery): AdminReadPage {
   const items = demo.taskApprovals
     .filter(item => !query.status || String(item.submissionStatus || '') === query.status)
+    .filter(item => !query.filters?.starLevel || String(item.starLevel) === query.filters.starLevel)
+    .filter(item => !query.filters?.workflowMode || item.workflowMode === query.filters.workflowMode)
     .map(item => ({ ...item }) as AdminTableRow)
   return buildTaskApprovalPage(items, null)
-}
-
-function filterCurrentApprovalRows(page: AdminReadPage | null, starLevel: string) {
-  if (!page || !starLevel) return page
-  const expected = taskApprovalStarLabel(starLevel)
-  return {
-    ...page,
-    sections: page.sections.map(section => ({
-      ...section,
-      rows: section.rows.filter(row => row.starLevel === expected),
-    })),
-  }
 }
 
 function errorMessage(error: unknown) {

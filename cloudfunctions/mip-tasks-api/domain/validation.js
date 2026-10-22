@@ -88,21 +88,46 @@ function normalizeTaskFilters(value = {}) {
   if (status && !['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'DELETED'].includes(status)) {
     throw new Error('VALIDATION_FAILED')
   }
-  return { status, query: boundedText(value.query, 80) }
+  const rewardType = boundedText(value.rewardType, 16)
+  if (rewardType && !['experience', 'contribution', 'bonus'].includes(rewardType)) throw new Error('VALIDATION_FAILED')
+  return {
+    status, query: boundedText(value.query, 80),
+    starLevel: optionalStarLevel(value.starLevel),
+    assignedOwnerId: value.assignedOwnerId ? requiredId(value.assignedOwnerId) : '',
+    rewardType, workflowMode: normalizeWorkflowMode(value.workflowMode),
+  }
 }
 
 function normalizeCompletionFilters(value = {}) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('VALIDATION_FAILED')
+  const taskFilters = normalizeTaskFilters({ starLevel: value.starLevel, assignedOwnerId: value.assignedOwnerId, rewardType: value.rewardType, workflowMode: value.workflowMode })
   const resultStatus = boundedText(value.resultStatus, 16).toUpperCase()
   if (resultStatus && !['SUCCESS', 'FAILED'].includes(resultStatus)) throw new Error('VALIDATION_FAILED')
   return {
     taskId: value.taskId ? requiredId(value.taskId) : '',
+    starLevel: taskFilters.starLevel,
+    assignedOwnerId: taskFilters.assignedOwnerId,
+    rewardType: taskFilters.rewardType,
+    workflowMode: taskFilters.workflowMode,
     query: boundedText(value.query, 80),
     resultStatus,
     submissionStatus: boundedText(value.submissionStatus, 32),
     completedFrom: optionalDate(value.completedFrom),
     completedUntil: optionalDate(value.completedUntil),
   }
+}
+
+function optionalStarLevel(value) {
+  if (value === undefined || value === null || value === '') return null
+  const level = Number(value)
+  if (!Number.isInteger(level) || level < 1 || level > 5) throw new Error('VALIDATION_FAILED')
+  return level
+}
+
+function normalizeWorkflowMode(value) {
+  const mode = boundedText(value, 16).toUpperCase()
+  if (mode && !['REVIEW', 'DIRECT'].includes(mode)) throw new Error('VALIDATION_FAILED')
+  return mode
 }
 
 function boundedText(value, maximum, required = false) {

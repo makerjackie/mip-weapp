@@ -1,4 +1,7 @@
-import { Button, Collapse, Dropdown, Space, type MenuProps } from 'antd'
+import { Button, Collapse, Descriptions, Dropdown, Modal, Space, Typography, type MenuProps } from 'antd'
+import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import type { ConfigurationItem } from '../../modules/membership-configuration'
 import { DownOutlined } from '@ant-design/icons'
 import { getAdminReadRouteDefinition } from '../../modules/admin-read-pages'
 import { options } from '../../modules/admin-read-formatters'
@@ -31,6 +34,9 @@ const badgeActions: Array<{ key: OperationsWriteAction; label: string; capabilit
 ]
 
 export function GrowthLevelsPage(props: OperationsPageState) {
+  const navigate = useNavigate()
+  const [editingLevel, setEditingLevel] = useState<ConfigurationItem | null>(null)
+  const [benefitLevel, setBenefitLevel] = useState<ConfigurationItem | null>(null)
   const definition = getAdminReadRouteDefinition('growth')
   // 与拆分前 growth 页一致：无读取能力的分区（如缺 badges.manage 的勋章分区）不出现在下拉中。
   const sections = LEVEL_SECTIONS.filter(section => {
@@ -67,6 +73,11 @@ export function GrowthLevelsPage(props: OperationsPageState) {
         paginated={selected === 'transitions' || selected === 'awards'}
         timeRangeFields={selected === 'transitions' ? { from: 'createdFrom', to: 'createdTo' } : undefined}
         extraFilterSlots={<GrowthSectionSelect sections={sections} page="等级管理" state={props} />}
+        rowExtraActions={row => selected === 'levels' && row.levelItem ? <Space size={0} wrap>
+          {(!props.canCapability || props.canCapability('growth.configure')) && !props.demoMode ? <Button type="link" size="small" onClick={() => setEditingLevel(row.levelItem as ConfigurationItem)}>编辑</Button> : null}
+          <Button type="link" size="small" onClick={() => setBenefitLevel(row.levelItem as ConfigurationItem)}>权益</Button>
+          {!props.canCapability || props.canCapability('users.read') ? <Button type="link" size="small" onClick={() => void navigate({ to: '/users', search: { status: 'ACTIVE', filters: { levelId: String((row.levelItem as ConfigurationItem).id) } } })}>用户明细</Button> : null}
+        </Space> : null}
         actions={available.length ? (
           <Space wrap>
             {props.onWrite ? (
@@ -77,6 +88,10 @@ export function GrowthLevelsPage(props: OperationsPageState) {
           </Space>
         ) : null}
       />
+      {editingLevel ? <MembershipConfigurationPanel key={`${editingLevel.id}:${editingLevel.version}`} onSaved={props.onRefresh} tabs={['levels', 'benefits']} initialEdit={{ kind: 'levels', item: editingLevel }} onEditorClosed={() => setEditingLevel(null)} /> : null}
+      <Modal open={Boolean(benefitLevel)} title={`${benefitLevel?.name || ''} · 等级权益`} footer={null} onCancel={() => setBenefitLevel(null)}>
+        {Array.isArray(benefitLevel?.benefits) && benefitLevel.benefits.length ? <Descriptions column={1} items={benefitLevel.benefits.map((benefit: Record<string, unknown>) => ({ key: String(benefit.id), label: String(benefit.name || '权益'), children: String(benefit.description || '暂无说明') }))} /> : <Typography.Paragraph type="secondary">当前等级尚未绑定权益。</Typography.Paragraph>}
+      </Modal>
     </>
   )
 }

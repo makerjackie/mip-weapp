@@ -111,7 +111,7 @@ describe('task approval page', () => {
     render(<TaskApprovalPage {...pageState({ onWrite })} />)
 
     expect(screen.getByText('NPC任务')).toBeTruthy()
-    expect(screen.getByText('提交与审批记录')).toBeTruthy()
+    expect(screen.getByText('提交与审批记录；历史直接完成记录保留可查')).toBeTruthy()
     const table = within(screen.getByLabelText('NPC任务'))
     for (const header of ['提交人', '任务名称', '星级', '附件', '审批人', '审批状态', '奖励结果']) {
       expect(table.getByText(header)).toBeTruthy()
@@ -135,7 +135,7 @@ describe('task approval page', () => {
     }))
   })
 
-  it('filters approval rows on the current page by star and flags it', async () => {
+  it('passes star selection to the query and renders the server page unchanged', async () => {
     const onFilterChange = vi.fn()
     const { rerender } = render(<TaskApprovalPage {...pageState({ onFilterChange })} />)
 
@@ -148,10 +148,10 @@ describe('task approval page', () => {
       onFilterChange,
       query: { query: '', status: '', filters: { starLevel: '3' } },
     })} />)
-    expect(screen.getByText('当前页过滤')).toBeTruthy()
+    expect(screen.queryByText('当前页过滤')).toBeNull()
     expect(screen.getByText('林晓')).toBeTruthy()
-    expect(screen.queryByText('陈默')).toBeNull()
-    expect(screen.queryByText('周宁')).toBeNull()
+    expect(screen.getByText('陈默')).toBeTruthy()
+    expect(screen.getByText('周宁')).toBeTruthy()
   })
 
   it('maps the approval status filter to server submission statuses', async () => {

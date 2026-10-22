@@ -41,4 +41,11 @@ describe('admin navigation consolidation (MIW-132)', () => {
     expect(routerPaths).not.toContain('/task-approval')
     expect(navigationByPath.get('/task-approval')).toBeDefined()
   })
+
+  it('keeps server management separately accessible with its existing capability', () => {
+    expect(routerPaths).toContain('/servers')
+    expect(sidebarPaths).toContain('/servers')
+    expect(navigationByPath.get('/servers')).toMatchObject({ label: '服务器管理', group: '系统管理', capabilities: ['branches.manage'] })
+    expect(navigationByPath.get('/permissions')?.capabilities).toEqual(['roles.change', 'audit.read'])
+  })
 })

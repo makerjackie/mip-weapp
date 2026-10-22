@@ -23,7 +23,7 @@ export function TaskEditFormPage() {
 
   const formConfig: IndependentFormPageConfig = {
     title: taskId ? '编辑任务' : '创建任务',
-    description: '填写任务内容、奖励、负责人和参与范围；可直接上传任务模板图片。',
+    description: baseDefinition.description,
     fields: baseDefinition.fields,
     values: baseDefinition.values,
     backTarget: '/tasks',
@@ -37,7 +37,7 @@ export function TaskEditFormPage() {
       )
       return input
         ? { ok: true, input }
-        : { ok: false, errors: { form: taskValidationMessage(values) } }
+        : { ok: false, errors: { form: taskValidationMessage(values, baseDefinition) } }
     },
   }
 

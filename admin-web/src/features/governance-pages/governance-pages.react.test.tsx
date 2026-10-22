@@ -8,6 +8,7 @@ import {
   MessagesPage,
   OperationsPage,
   PermissionsPage,
+  ServersPage,
   type GovernancePageProps,
 } from './governance-pages'
 
@@ -30,6 +31,32 @@ const commonProps = {
 afterEach(cleanup)
 
 describe('governance React pages', () => {
+  it('keeps servers in their independent page and role templates only in the policy tab', () => {
+    const page: AdminReadPage = { sections: [
+      { key: 'members', title: '运营成员', rows: [], columns: [] },
+      { key: 'policies', title: '角色策略', rows: [], columns: [] },
+      { key: 'branches', title: '服务器', rows: [{ name: '测试服务器', rowActions: [{ action: 'mip.admin.branches.update', label: '编辑服务器', targetId: 'branch-1', values: { branchId: 'branch-1', name: '测试服务器' }, expectedVersion: 7 }] }], columns: [{ key: 'name', label: '名称' }] },
+    ], nextCursor: null }
+    const props = { ...commonProps, page, routeDefinition: getAdminReadRouteDefinition('permissions'), onMutationRequest: vi.fn(), sectionContent: { policies: <div>岗位配置入口</div> } }
+    const view = render(<PermissionsPage {...props} activeTab="members" />)
+    expect(screen.queryByRole('button', { name: '新建服务器' })).not.toBeInTheDocument()
+    expect(screen.queryByText('岗位配置入口')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '服务器' })).not.toBeInTheDocument()
+    view.rerender(<PermissionsPage {...props} activeTab="policies" />)
+    expect(screen.getByText('岗位配置入口')).toBeVisible()
+    expect(screen.queryByRole('button', { name: '新建服务器' })).not.toBeInTheDocument()
+    view.rerender(<ServersPage {...props} activeTab="branches" />)
+    expect(screen.getByRole('button', { name: '新建服务器' })).toBeVisible()
+    expect(screen.queryByText('岗位配置入口')).not.toBeInTheDocument()
+    expect(screen.getByText('测试服务器')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: '新建服务器' }))
+    expect(props.onMutationRequest).toHaveBeenLastCalledWith({ action: 'mip.admin.branches.create', capability: 'branches.manage' })
+    fireEvent.click(screen.getByRole('button', { name: '编辑服务器' }))
+    expect(props.onMutationRequest).toHaveBeenLastCalledWith({ action: 'mip.admin.branches.update', capability: 'branches.manage', targetId: 'branch-1', values: { branchId: 'branch-1', name: '测试服务器' }, expectedVersion: 7 })
+    view.rerender(<ServersPage {...props} canCapability={() => false} />)
+    expect(screen.queryByRole('button', { name: '新建服务器' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '编辑服务器' })).not.toBeInTheDocument()
+  })
   it('opens a message detail using the server-projected campaign id', () => {
     const onViewDetail = vi.fn()
     const page: AdminReadPage = {
@@ -55,7 +82,7 @@ describe('governance React pages', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '查看' }))
+    fireEvent.click(screen.getByText('查看', { selector: 'button, button span' }).closest('button')!)
     expect(onViewDetail).toHaveBeenCalledWith({ route: 'messages', id: 'campaign-1' })
   })
 
@@ -92,12 +119,12 @@ describe('governance React pages', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '新建消息模板' }))
+    fireEvent.click(screen.getByText('新建消息模板', { selector: 'button, button span' }).closest('button')!)
     expect(onMutationRequest).toHaveBeenCalledWith({
       action: 'mip.admin.messageTemplates.save',
       capability: 'messages.manage',
     })
-    fireEvent.click(screen.getByRole('button', { name: '启用' }))
+    fireEvent.click(screen.getByText('启用', { selector: 'button, button span' }).closest('button')!)
     expect(onMutationRequest).toHaveBeenLastCalledWith({
       action: 'mip.admin.messageTemplates.activate',
       capability: 'messages.manage',
@@ -142,7 +169,7 @@ describe('governance React pages', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '更新策略' }))
+    fireEvent.click(screen.getByText('更新策略', { selector: 'button, button span' }).closest('button')!)
     expect(onMutationRequest).toHaveBeenCalledWith({
       action: 'mip.admin.rolePolicies.update',
       capability: 'roles.change',
@@ -247,7 +274,7 @@ describe('governance React pages', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '发布' }))
+    fireEvent.click(screen.getByText('发布', { selector: 'button, button span' }).closest('button')!)
     expect(onMutationRequest).toHaveBeenLastCalledWith({
       action: 'mip.admin.announcements.publish',
       capability: 'announcements.manage',
@@ -264,7 +291,7 @@ describe('governance React pages', () => {
         onMutationRequest={onMutationRequest}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: '结案' }))
+    fireEvent.click(screen.getByText('结案', { selector: 'button, button span' }).closest('button')!)
     expect(onMutationRequest).toHaveBeenLastCalledWith({
       action: 'mip.admin.communityReports.close',
       capability: 'community.reports.manage',

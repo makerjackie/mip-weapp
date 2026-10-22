@@ -20,19 +20,22 @@ const TASK_ADMIN_MUTATION_ACTIONS = Object.freeze(new Set([
 ]))
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 
+const TASK_FILTER_KEYS = ['status', 'query', 'starLevel', 'assignedOwnerId', 'rewardType', 'workflowMode']
+const COMPLETION_FILTER_KEYS = ['taskId', 'query', 'resultStatus', 'submissionStatus', 'completedFrom', 'completedUntil', 'starLevel', 'assignedOwnerId', 'rewardType', 'workflowMode']
+
 const OPERATION_SPECS = Object.freeze({
-  'mip.admin.tasks.submissions.list': spec('admin.listTaskSubmissions', ['filters', 'limit', 'cursor'], { filters: ['taskId', 'query', 'resultStatus', 'submissionStatus', 'completedFrom', 'completedUntil'] }),
+  'mip.admin.tasks.submissions.list': spec('admin.listTaskSubmissions', ['filters', 'limit', 'cursor'], { filters: COMPLETION_FILTER_KEYS }),
   'mip.admin.tasks.assignments.list': spec('admin.listAssignments', ['taskId', 'limit', 'cursor']),
   'mip.admin.tasks.submissions.approve': spec('admin.approveSubmission', ['submissionId', 'remark', 'idempotencyKey']),
   'mip.admin.tasks.submissions.reject': spec('admin.rejectSubmission', ['submissionId', 'remark', 'idempotencyKey']),
   'mip.admin.tasks.submissions.retryReward': spec('admin.retrySubmissionReward', ['submissionId', 'remark', 'idempotencyKey']),
   'mip.admin.tasks.assign': spec('admin.assignTask', ['taskId', 'expectedVersion', 'recipients', 'assignMode', 'weeklyDeliverAt', 'weeklyStartAt', 'weeklyEndAt', 'idempotencyKey']),
   'mip.admin.tasks.editorOptions': spec('admin.getEditorOptions', []),
-  'mip.admin.tasks.list': spec('admin.listTasks', ['filters', 'limit', 'cursor'], { filters: ['status', 'query'] }),
+  'mip.admin.tasks.list': spec('admin.listTasks', ['filters', 'limit', 'cursor'], { filters: TASK_FILTER_KEYS }),
   'mip.admin.tasks.get': spec('admin.getTask', ['taskId']),
   'mip.admin.tasks.eligibleLevels.list': spec('admin.listEligibleLevels', []),
   'mip.admin.tasks.save': spec('admin.saveTask', ['taskId', 'expectedVersion', 'task', 'idempotencyKey'], {
-    task: ['name', 'content', 'rewardExperience', 'attachmentRequired', 'assignmentMode', 'endsAt', 'templateAssetId', 'eligibleLevelIds', 'starLevel', 'purpose', 'completionCriteria', 'periodStartAt', 'periodEndAt', 'weeklyDeliverAt', 'assignedOwnerId', 'applicableServers', 'rewardConfig'],
+    task: ['name', 'content', 'rewardExperience', 'attachmentRequired', 'assignmentMode', 'endsAt', 'templateAssetId', 'eligibleLevelIds', 'starLevel', 'purpose', 'completionCriteria', 'periodStartAt', 'periodEndAt', 'weeklyDeliverAt', 'assignedOwnerId', 'applicableServers', 'rewardConfig', 'actionType', 'actionTarget'],
   }),
   'mip.admin.tasks.publish': spec('admin.publishTask', ['taskId', 'expectedVersion', 'idempotencyKey']),
   'mip.admin.tasks.unpublish': spec('admin.unpublishTask', ['taskId', 'expectedVersion', 'idempotencyKey']),
@@ -40,9 +43,9 @@ const OPERATION_SPECS = Object.freeze({
   'mip.admin.tasks.assignableMembers.list': spec('admin.listAssignableMembers', ['filters', 'limit', 'cursor'], { filters: ['taskId', 'query'] }),
   'mip.admin.tasks.assignMembers': spec('admin.assignMembers', ['taskId', 'memberRefs', 'expectedVersion', 'idempotencyKey']),
   'mip.admin.tasks.revokeMembers': spec('admin.revokeMembers', ['taskId', 'memberRefs', 'expectedVersion', 'idempotencyKey']),
-  'mip.admin.tasks.completions.list': spec('admin.listCompletions', ['filters', 'limit', 'cursor'], { filters: ['taskId', 'query', 'resultStatus', 'submissionStatus', 'completedFrom', 'completedUntil'] }),
+  'mip.admin.tasks.completions.list': spec('admin.listCompletions', ['filters', 'limit', 'cursor'], { filters: COMPLETION_FILTER_KEYS }),
   'mip.admin.tasks.completions.get': spec('admin.getCompletion', ['completionId']),
-  'mip.admin.tasks.completions.export': spec('admin.exportCompletions', ['filters'], { filters: ['taskId', 'query', 'resultStatus', 'submissionStatus', 'completedFrom', 'completedUntil'] }),
+  'mip.admin.tasks.completions.export': spec('admin.exportCompletions', ['filters'], { filters: COMPLETION_FILTER_KEYS }),
 })
 
 function spec(internalAction, inputKeys, nestedKeys = {}) {
