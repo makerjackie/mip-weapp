@@ -1,0 +1,147 @@
+{
+ "checkedAt": "2026-10-21T17:40:57.668Z",
+ "schema": "mip_test",
+ "events": [
+  {
+   "title": "富文本渲染验收1021",
+   "status": "PUBLISHED",
+   "registrations": [],
+   "feedback": [],
+   "expectedPublicParticipants": {
+    "GUEST": [],
+    "PLAYER": [],
+    "registeredNotCheckedIn": []
+   }
+  },
+  {
+   "title": "验收1021·角色与报名名单2",
+   "status": "PUBLISHED",
+   "registrations": [
+    {
+     "nickname": "验收1021·嘉宾保密",
+     "registrationStatus": "ATTENDED",
+     "shareProfile": 1,
+     "activeCheckins": 1,
+     "inactiveCheckins": 0,
+     "isPlayer": false
+    }
+   ],
+   "feedback": [
+    {
+     "nickname": "验收1021·嘉宾保密",
+     "rosterConsent": "PRIVATE",
+     "updatedAt": "2026-10-21 10:25:13.105"
+    }
+   ],
+   "expectedPublicParticipants": {
+    "GUEST": [
+     "验收1021·嘉宾保密"
+    ],
+    "PLAYER": [],
+    "registeredNotCheckedIn": []
+   }
+  },
+  {
+   "title": "验收1021·角色与报名名单1",
+   "status": "PUBLISHED",
+   "registrations": [
+    {
+     "nickname": "验收1021·到期嘉宾",
+     "registrationStatus": "ATTENDED",
+     "shareProfile": 1,
+     "activeCheckins": 1,
+     "inactiveCheckins": 0,
+     "isPlayer": false
+    },
+    {
+     "nickname": "验收1021·嘉宾保密",
+     "registrationStatus": "ATTENDED",
+     "shareProfile": 1,
+     "activeCheckins": 1,
+     "inactiveCheckins": 0,
+     "isPlayer": false
+    },
+    {
+     "nickname": "验收1021·嘉宾愿意",
+     "registrationStatus": "ATTENDED",
+     "shareProfile": 1,
+     "activeCheckins": 1,
+     "inactiveCheckins": 0,
+     "isPlayer": false
+    },
+    {
+     "nickname": "验收1021·撤销签到",
+     "registrationStatus": "REGISTERED",
+     "shareProfile": 1,
+     "activeCheckins": 0,
+     "inactiveCheckins": 1,
+     "isPlayer": false
+    },
+    {
+     "nickname": "验收1021·普通用户",
+     "registrationStatus": "REGISTERED",
+     "shareProfile": 1,
+     "activeCheckins": 0,
+     "inactiveCheckins": 0,
+     "isPlayer": false
+    },
+    {
+     "nickname": "验收1021·玩家",
+     "registrationStatus": "REGISTERED",
+     "shareProfile": 1,
+     "activeCheckins": 0,
+     "inactiveCheckins": 0,
+     "isPlayer": true
+    },
+    {
+     "nickname": "验收1021·隐藏人才",
+     "registrationStatus": "ATTENDED",
+     "shareProfile": 1,
+     "activeCheckins": 1,
+     "inactiveCheckins": 0,
+     "isPlayer": false
+    }
+   ],
+   "feedback": [
+    {
+     "nickname": "验收1021·嘉宾愿意",
+     "rosterConsent": "MATCH_OPPORTUNITIES",
+     "updatedAt": "2026-10-21 10:25:10.624"
+    },
+    {
+     "nickname": "验收1021·嘉宾保密",
+     "rosterConsent": "PRIVATE",
+     "updatedAt": "2026-10-21 10:25:02.027"
+    },
+    {
+     "nickname": "验收1021·到期嘉宾",
+     "rosterConsent": "MATCH_OPPORTUNITIES",
+     "updatedAt": "2026-10-20 10:08:33.213"
+    },
+    {
+     "nickname": "验收1021·隐藏人才",
+     "rosterConsent": "MATCH_OPPORTUNITIES",
+     "updatedAt": "2026-10-20 10:08:33.213"
+    }
+   ],
+   "expectedPublicParticipants": {
+    "GUEST": [
+     "验收1021·到期嘉宾",
+     "验收1021·嘉宾保密",
+     "验收1021·嘉宾愿意",
+     "验收1021·撤销签到",
+     "验收1021·普通用户",
+     "验收1021·隐藏人才"
+    ],
+    "PLAYER": [
+     "验收1021·玩家"
+    ],
+    "registeredNotCheckedIn": [
+     "验收1021·撤销签到",
+     "验收1021·普通用户",
+     "验收1021·玩家"
+    ]
+   }
+  }
+ ]
+}

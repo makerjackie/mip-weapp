@@ -1,0 +1,120 @@
+{
+  "schema": "mip-prereview-e2e/1",
+  "checkedAt": "2026-10-20T16:49:39.661Z",
+  "head": "b54d6896",
+  "uploadedSource": "da8f14ad",
+  "diffBase": "0870bdf5 (1.2.1 release record)",
+  "candidateVersion": "1.2.3",
+  "codeDiffUploadedVsHead": "empty (docs only)",
+  "gates": {
+    "G1": {
+      "status": "PASS",
+      "evidence": "git pull --ff-only: Already up to date; working tree clean; git diff da8f14ad..HEAD excluding docs = empty"
+    },
+    "G2": {
+      "status": "PASS",
+      "evidence": "pnpm verify:all real exit 0; mini 285 files/1857 tests; admin Node 338/338 (50 suites); admin React 36 files/262 tests; responsive contract passed; log .tmp/e2e-prereview-123/verify-all.log"
+    },
+    "G3": {
+      "status": "PASS",
+      "evidence": "git diff --check: no output"
+    },
+    "G4": {
+      "status": "PASS",
+      "evidence": "dist/miniprogram_npm/tdesign-miniprogram/miniprogram_npm present (4 nested); MIP build contract passed"
+    },
+    "G5": {
+      "status": "PASS",
+      "evidence": "main 1,363,568 B with reachable deps (<2,048 KB); member 1,949,615 B; admin 549,636 B; 1.2.3 platform main 1,766,695 B"
+    },
+    "G6": {
+      "status": "PASS",
+      "evidence": "src+dist: 手机号快捷登录 hit; 微信手机号授权/微信一键获取/绑定微信手机号/使用当前微信账号登录 = 0 hits each"
+    },
+    "G7": {
+      "status": "PASS",
+      "evidence": "pnpm runtime:preflight ok:true devtoolsLoggedIn servicePortEnabled routes complete"
+    },
+    "G8": {
+      "status": "FAIL-ENVIRONMENTAL",
+      "evidence": "test:runtime TEST env run1 {\"passed\":27,\"external-wait\":13,\"failed\":12} run2 {\"passed\":10,\"failed\":29,\"external-wait\":13}; 17 routes flipped pass->fail between identical-code runs; CloudBase metrics for 6 mip-t-* functions: FunctionError=0 FunctionTimeout=0 FunctionThrottle=0 over window; run2 cloud received ~13 invocations in 6 min => client-side DevTools cloud-session failure; baseline 2026-10-17 was 26/10/16",
+      "diffSurfaceRun1": {
+        "passed": [
+          "pages/events/index",
+          "pages/profile/index",
+          "pages/opportunities/index",
+          "packages/member/mip-events/detail/index",
+          "packages/member/mip-events/mine/index",
+          "packages/member/mip-events/check-in/index",
+          "packages/member/orders/index",
+          "packages/member/mip-profile/index",
+          "packages/member/privacy/index",
+          "packages/member/privacy-settings/index"
+        ],
+        "failedCodeLevel": [
+          {
+            "route": "packages/member/mip-events/registration/index",
+            "finding": "page data contains cloud:// at event.organizer.avatarUrl",
+            "cause": "b7bd6910 progressiveMedia:true skips resolveCloudFileUrls; page WXML never renders organizer/avatar",
+            "severity": "low-hygiene (env id already baked in package); not a WeChat review blocker",
+            "fix": "strip organizer (or avatarUrl) from presentableEvent, or resolve it"
+          }
+        ],
+        "failedTestData": [
+          {
+            "route": "packages/member/mip-growth/index",
+            "msg": "成长等级尚未配置 (server; TEST DB has no level config; production 1.2.3 DevTools check showed growth ready)"
+          },
+          {
+            "route": "packages/member/mip-card/index",
+            "msg": "暂无可用名片模板 (TEST DB)"
+          },
+          {
+            "route": "packages/member/mip-ai/voice/index",
+            "msg": "entry requires case/coop context (baseline)"
+          }
+        ],
+        "failedEnvironmental": [
+          "packages/member/mip-badges/index",
+          "packages/member/mip-experience-details/index",
+          "packages/member/mip-received/index",
+          "packages/member/mip-hearts/index",
+          "packages/member/mip-blocked/index",
+          "packages/member/mip-events/participants/index",
+          "packages/admin/managed-events/index",
+          "packages/member/mip-access/index (fixture source privacy not ready)",
+          "interaction opportunity-search-and-filter (guest gate while identity unavailable)"
+        ]
+      },
+      "representativeStates": "6/6 both runs",
+      "navigationRun2": "events ready, profile ready, opportunities error; back passed; deepLink event detail ready"
+    },
+    "G9": {
+      "status": "PASS",
+      "evidence": "MIP_ENV_DIR=envs/prod verify-cloud exit 0: schema, least-privilege grants, functions, health, protected invocation rules verified (after documented mcporter daemon restart; first attempt MCP error matched runbook symptom)"
+    },
+    "G10": {
+      "status": "PASS",
+      "evidence": "migrations.lock.json contains 110_payment_attempt_payment_json, 111_industry_catalog_version, 112_event_member_free; prod schema check passed in G9"
+    },
+    "TEST_cloud_verify": {
+      "status": "BLOCKED-LOCAL-CONFIG",
+      "evidence": "envs/test verify-cloud passed MySQL/schema/grants/per-function ACTIVE+MySQL-health+no-timers, then failed assertOwnerTestMembershipEnvironment: local envs/test/.env.local MIP_PAYMENT_MODE=live vs cloud test ledger disabled (changed 2026-10-20 by prior session); local-only drift, no production impact"
+    }
+  },
+  "realDevicePending": [
+    "F1 手机号快捷登录授权与文案",
+    "F2 iPhone 活动富文本图片实显",
+    "F3 真实报名（嘉宾付费/玩家免费）与取消二次确认",
+    "F4 真实微信支付+取消后重试复用+权益生效（可退）",
+    "F5 订阅消息",
+    "F6 分享面板",
+    "F7 滑动手势（行业选择/人才卡/会籍页）"
+  ],
+  "notes": [
+    "1.2.3 upload receipt .tmp/release-prod-1.2.3.json is on the releasing machine, not here; platform 开发版本 1.2.3 presence must be confirmed on mp.weixin.qq.com before submitting",
+    "HEAD b54d6896 is 1 docs commit ahead of origin/main (not pushed)",
+    "mcporter daemon restarted once (main repo only); 3 worktree daemons untouched",
+    "no business writes, no deploys, no config changes performed"
+  ]
+}

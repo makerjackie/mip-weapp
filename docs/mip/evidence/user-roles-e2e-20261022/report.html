@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用户角色四需求 · E2E 复测报告（2026-10-22）</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--line:#e4e6ea;--tx:#1f2329;--tx2:#646a73}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.75 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:60px}
+.wrap{max-width:1220px;margin:0 auto;padding:0 20px}
+header{background:#0f2e5c;color:#fff;padding:26px 0 20px;margin-bottom:22px}
+header h1{font-size:20px} header .sub{color:#b8c7de;font-size:13px;margin-top:6px}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 20px;min-width:130px}
+.stat b{font-size:24px;display:block} .stat span{font-size:12px;color:var(--tx2)}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin-bottom:18px}
+section h2{font-size:16px;margin-bottom:12px;border-bottom:1px solid var(--line);padding-bottom:8px}
+section h3{font-size:14px;margin:14px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f7f8fa;color:var(--tx2);font-weight:600}
+.badge{display:inline-block;padding:1px 9px;border-radius:10px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+.note{color:var(--tx2);font-size:12.5px;margin-top:8px}
+ul{padding-left:20px} li{margin:3px 0}
+code{background:#f1f2f4;border-radius:4px;padding:1px 6px;font-size:12.5px;overflow-wrap:anywhere}
+figure{margin:16px 0;text-align:center}
+figure img{max-width:100%;border:1px solid var(--line);border-radius:8px}
+figcaption{font-size:12.5px;color:var(--tx2);margin-top:6px;text-align:left}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:8px;padding:1px 10px;margin:2px 4px 2px 0;font-size:12.5px;background:#fafbfc}
+.warn{background:#fff8e6;border:1px solid #f0d9a0;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13px}
+.ok{color:#0a7d3b;font-weight:700}.pending{color:#b26a00;font-weight:700}
+@media (max-width:768px){
+ .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .tw table{min-width:100%}
+ td,th{overflow-wrap:anywhere}
+ .stats{gap:8px}.stat{min-width:104px;padding:10px 12px;flex:1 1 30%}
+ .stat b{font-size:18px}
+ section{padding:14px 14px}
+}
+</style></head><body>
+<header><div class="wrap">
+<h1>用户角色四需求 · E2E 复测报告</h1>
+<div class="sub">2026-10-22 · 执行者：ZCode（独立于实现者会话） · 环境：TEST（test.admin.mip.cool / 测试库 mip_test / 云函数 mip-t-*）· 只读验收，零业务写入</div>
+</div></header>
+<div class="wrap">
+
+<div class="stats">
+<div class="stat"><b class="ok">4/4</b><span>需求全部验证通过</span></div>
+<div class="stat"><b class="ok">26/26</b><span>真实后台 API + 真实库 SQL 检查</span></div>
+<div class="stat"><b>1682+</b><span>单测/合同用例全绿（直跑 1420 + 门禁 React 262）</span></div>
+<div class="stat"><b><span class=ok>通过</span></b><span>pnpm verify:all 完整门禁（退出码 0）</span></div>
+<div class="stat"><b>7</b><span>桌面/手机实拍截图</span></div>
+</div>
+
+<section>
+<h2>一、范围与结论</h2>
+<div class="tw"><table>
+<tr><th style="width:30%">需求</th><th>结论与关键证据</th></tr>
+<tr><td><b>R1</b> 后台用户管理正确显示四种角色<br><span class="note">匿名访客（未登录）/ 普通用户 / 嘉宾 / 玩家</span></td>
+<td><span class="badge" style="background:#0a7d3b">通过</span> 服务端 SQL 分页前推导 kind（NORMAL/GUEST/PLAYER）；真实测试库 7 名合成样本逐一与规则一致；<code>users.list</code> / <code>users.get</code> / 三种 kind 筛选 / 旧版 identity=NORMAL 兼容全部通过（13 项 API 检查 + 4 张实拍）。匿名访客不落库，后台列表无 ANONYMOUS 伪用户，符合澄清口径（Q-ADMIN-09）。</td></tr>
+<tr><td><b>R2</b> 报名成功未签到的普通用户进入活动参与人嘉宾列表</td>
+<td><span class="badge" style="background:#0a7d3b">通过</span> 服务端口径 <code>status IN ('REGISTERED','ATTENDED') AND share_profile=1</code>，userKind 仅按有效玩家权益划分；真实库「普通用户」（已报名、从未签到）与「撤销签到」（签到已撤销）均落在嘉宾页签，活动后台参与情况显示 玩家 1 / 嘉宾 6（5 项检查 + 2 张实拍）。</td></tr>
+<tr><td><b>R3</b> 登录后强制资料表单：除性别外全部必填</td>
+<td><span class="badge" style="background:#0a7d3b">通过</span>（服务端/表单层） 服务端五字段判定：昵称、头像(READY 资产)、代表行业(PRIMARY_INDUSTRY)、当前身份、一句话介绍；<code>profileCompleteSql</code> 不含性别。真实库 COMPLETE/INCOMPLETE 分区与 SQL 完全一致（1/8）；WXML 五行红色 * 、性别行无星号；保存校验恰好这五项。小程序真实页面保存流待 DevTools 重新登录后补测（见第六节）。</td></tr>
+<tr><td><b>R4</b> 人才合作列表只显示嘉宾（最新花名册选择=愿意）和玩家</td>
+<td><span class="badge" style="background:#0a7d3b">通过</span> 服务端谓词 <code>有效玩家 OR (已签到嘉宾 AND 最新反馈 rosterConsent='MATCH_OPPORTUNITIES')</code>，按 updated_at 取跨活动最新选择、隐私开关与屏蔽保留；真实库推导合格恰为 3 人：嘉宾愿意、到期嘉宾、玩家；嘉宾保密（最新=仅私密保存）、隐藏人才（talentSearch=false）、撤销签到/普通用户（非嘉宾非玩家）被排除（4 项检查）。</td></tr>
+</table></div>
+<div class="note">执行边界：消费者端小程序页面（活动参与人页、人才合作页、资料保存流）需要真实微信主体调用云函数，本机微信开发者工具登录态已失效（需用户扫码），本轮以「部署函数与 HEAD 源码一致性 + 同一 SQL 谓词在函数所读的真实测试库复现 + 部署函数行为断言（后台 API）+ 单测」四层替代；小程序真机/开发者工具页面实拍列为待复测。</div>
+</section>
+
+<section>
+<h2>二、代码与部署身份</h2>
+<ul>
+<li>基线：<code>git pull --rebase</code> 已执行，HEAD = <code>f97398cb</code>；本地领先 origin/main 仅 1 个 docs 提交（上一轮 E2E 文档的 rebase 版本），四需求相关代码与 origin/main <code>83a56f69</code> 完全一致；工作区仅本批证据目录未提交。</li>
+<li>四需求的实现提交为 <code>6a5ec139</code>（feat: align user roles, profile requirements and roster consent），含迁移 <code>113_roster_consent_lookup.sql</code>。</li>
+<li>已部署测试环境身份：自上一轮验证点 <code>991796d7</code> 以来 <code>git diff</code> 对 <code>cloudfunctions/</code>、<code>admin-web/</code>、<code>packages/admin-contracts/</code>、<code>database/</code>、<code>src/packages/member/mip-profile/</code> <b>均为空</b>；SCF 回读 5 个相关测试函数均 Active、ModTime 2026-10-21 18:16–18:18（上一轮部署窗口）后再无重部署 → <b>本轮测试到的服务端代码即 HEAD 代码</b>。</li>
+<li>测试数据库 <code>mip_test</code> 通过仓库只读通道（CloudBase MCP runQuery，SELECT-only 断言）访问；生产未做任何读写。</li>
+</ul>
+<div class="tw"><table>
+<tr><th>云函数（TEST）</th><th>状态</th><th>ModTime（本地时间）</th><th>CodeSize</th></tr>
+
+<tr><td>mip-t-admin-api</td><td>Active</td><td>2026-10-21 18:17:01</td><td>0</td></tr>
+<tr><td>mip-t-admin-web-api</td><td>Active</td><td>2026-10-21 18:18:35</td><td>0</td></tr>
+<tr><td>mip-t-events-api</td><td>Active</td><td>2026-10-21 18:16:45</td><td>0</td></tr>
+<tr><td>mip-t-identity-api</td><td>Active</td><td>2026-10-21 18:16:39</td><td>0</td></tr>
+<tr><td>mip-t-opportunities-api</td><td>Active</td><td>2026-10-21 18:16:50</td><td>0</td></tr>
+</table></div>
+</section>
+
+<section>
+<h2>三、合成样本事实矩阵（真实测试库 mip_test，只读推导）</h2>
+<p class="note">用与云函数逐字相同的 SQL 片段（product-role.js / profile-readiness.js / cooperation.js eligibleTalent）在真实库上推导；「人才合格」= 有效玩家 OR（已签到嘉宾 且 最新花名册选择=愿意）且未隐藏。</p>
+<div class="tw"><table>
+<tr><th>样本</th><th>当前角色</th><th>有效玩家权益</th><th>有效签到</th><th>最新花名册选择（跨活动）</th><th>人才搜索可见</th><th>人才合作应显示</th><th>资料完整</th><th>性别</th></tr>
+
+<tr><td>到期嘉宾</td>
+<td><span class="badge" style="background:#b26a00">嘉宾</span></td>
+<td><span style="color:#646a73">否</span></td><td><b style="color:#0a7d3b">是</b></td>
+<td>匹配合作机会（愿意）</td>
+<td><b style="color:#0a7d3b">是</b></td>
+<td><b style="color:#0a7d3b">是</b></td>
+<td><span style="color:#646a73">否</span></td>
+<td>null（选填）</td></tr>
+<tr><td>嘉宾保密</td>
+<td><span class="badge" style="background:#b26a00">嘉宾</span></td>
+<td><span style="color:#646a73">否</span></td><td><b style="color:#0a7d3b">是</b></td>
+<td>仅私密保存（不愿意）</td>
+<td><b style="color:#0a7d3b">是</b></td>
+<td><span style="color:#646a73">否</span></td>
+<td><span style="color:#646a73">否</span></td>
+<td>null（选填）</td></tr>
+<tr><td>嘉宾愿意</td>
+<td><span class="badge" style="background:#b26a00">嘉宾</span></td>
+<td><span style="color:#646a73">否</span></td><td><b style="color:#0a7d3b">是</b></td>
+<td>匹配合作机会（愿意）</td>
+<td><b style="color:#0a7d3b">是</b></td>
+<td><b style="color:#0a7d3b">是</b></td>
+<td><span style="color:#646a73">否</span></td>
+<td>null（选填）</td></tr>
+<tr><td>撤销签到</td>
+<td><span class="badge" style="background:#0f6fd6">普通用户</span></td>
+<td><span style="color:#646a73">否</span></td><td><span style="color:#646a73">否</span></td>
+<td>—</td>
+<td><b style="color:#0a7d3b">是</b></td>
+<td><span style="color:#646a73">否</span></td>
+<td><span style="color:#646a73">否</span></td>
+<td>null（选填）</td></tr>
+<tr><td>普通用户</td>
+<td><span class="badge" style="background:#0f6fd6">普通用户</span></td>
+<td><span style="color:#646a73">否</span></td><td><span style="color:#646a73">否</span></td>
+<td>—</td>
+<td><b style="color:#0a7d3b">是</b></td>
+<td><span style="color:#646a73">否</span></td>
+<td><span style="color:#646a73">否</span></td>
+<td>null（选填）</td></tr>
+<tr><td>玩家</td>
+<td><span class="badge" style="background:#0a7d3b">玩家</span></td>
+<td><b style="color:#0a7d3b">是</b></td><td><span style="color:#646a73">否</span></td>
+<td>—</td>
+<td><b style="color:#0a7d3b">是</b></td>
+<td><b style="color:#0a7d3b">是</b></td>
+<td><span style="color:#646a73">否</span></td>
+<td>null（选填）</td></tr>
+<tr><td>隐藏人才</td>
+<td><span class="badge" style="background:#b26a00">嘉宾</span></td>
+<td><span style="color:#646a73">否</span></td><td><b style="color:#0a7d3b">是</b></td>
+<td>匹配合作机会（愿意）</td>
+<td><span style="color:#646a73">否</span></td>
+<td><span style="color:#646a73">否</span></td>
+<td><span style="color:#646a73">否</span></td>
+<td>null（选填）</td></tr>
+</table></div>
+<div class="note">合成样本均无 READY 头像资产与行业标签（无微信身份的夹具特征），故「资料完整」全为否 —— 与 R3 谓词一致；性别存 null（选填）不影响任何资格判定。</div>
+</section>
+
+<section>
+<h2>四、活动「验收1021·角色与报名名单1」参与矩阵（真实库）</h2>
+<div class="tw"><table>
+<tr><th>样本</th><th>报名状态</th><th>有效签到</th><th>签到撤销</th><th>参与人列表应归入</th></tr>
+
+<tr><td>到期嘉宾</td>
+<td>已签到</td>
+<td><b style="color:#0a7d3b">是</b></td><td>—</td>
+<td><span class="badge" style="background:#b26a00">嘉宾</span></td></tr>
+<tr><td>嘉宾保密</td>
+<td>已签到</td>
+<td><b style="color:#0a7d3b">是</b></td><td>—</td>
+<td><span class="badge" style="background:#b26a00">嘉宾</span></td></tr>
+<tr><td>嘉宾愿意</td>
+<td>已签到</td>
+<td><b style="color:#0a7d3b">是</b></td><td>—</td>
+<td><span class="badge" style="background:#b26a00">嘉宾</span></td></tr>
+<tr><td>撤销签到</td>
+<td>已报名</td>
+<td><span style="color:#646a73">否</span></td><td>签到已撤销</td>
+<td><span class="badge" style="background:#b26a00">嘉宾</span></td></tr>
+<tr><td>普通用户</td>
+<td>已报名</td>
+<td><span style="color:#646a73">否</span></td><td>—</td>
+<td><span class="badge" style="background:#b26a00">嘉宾</span></td></tr>
+<tr><td>玩家</td>
+<td>已报名</td>
+<td><span style="color:#646a73">否</span></td><td>—</td>
+<td><span class="badge" style="background:#0a7d3b">玩家</span></td></tr>
+<tr><td>隐藏人才</td>
+<td>已签到</td>
+<td><b style="color:#0a7d3b">是</b></td><td>—</td>
+<td><span class="badge" style="background:#b26a00">嘉宾</span></td></tr>
+</table></div>
+<p class="note">消费者端公开参与人口径（mip-events-api listPublicParticipants）：分享档案 + REGISTERED/ATTENDED + 用户有效 + 有档案；<b>不要求签到</b>。「普通用户」（已报名未签到）与「撤销签到」归入嘉宾页签，玩家单独页签 → 预期 玩家 1 / 嘉宾 6，与后台「参与情况」实拍一致。</p>
+<h3>活动反馈 · 花名册选择（mip_event_feedback，真实库）</h3>
+<div class="tw"><table><tr><th>提交人</th><th>rosterConsent</th></tr>
+<tr><td>嘉宾愿意</td><td>匹配合作机会（愿意）</td></tr>
+<tr><td>嘉宾保密</td><td>仅私密保存（不愿意）</td></tr>
+<tr><td>到期嘉宾</td><td>匹配合作机会（愿意）</td></tr>
+<tr><td>隐藏人才</td><td>匹配合作机会（愿意）</td></tr></table></div>
+<div class="note">规则取「跨活动最新一次选择」：嘉宾保密在两个活动均为「仅私密保存」→ 不是人才；如其在更新活动中改选「愿意」，则以最新为准（该翻转行为由 opportunities-api 单测 ok 28-36 与上一轮「验收1021」编辑旧反馈/跨活动证据覆盖）。</div>
+</section>
+
+<section>
+<h2>五、真实测试后台 API + 真实库检查明细（26/26 通过）</h2>
+<p class="note">通道：HTTPS 密码登录 https://test.admin.mip.cool → /api/admin 只读查询 action（WEB_ADMIN_QUERY_ACTIONS 白名单断言，零写入）；期望值全部来自第三节的真实库推导，不做同义反复。</p>
+<div class="tw"><table>
+<tr><th style="width:22%">检查</th><th style="width:6%">需求</th><th style="width:8%">结果</th><th>证据摘要</th></tr>
+
+<tr><td>auth:password-login</td><td>G</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>HTTP 200</td></tr>
+<tr><td>auth:admin-enabled</td><td>G</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>enabled=true</td></tr>
+<tr><td>R1-API-01 users.list returns kind for every row</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>7 rows, kinds=[&quot;NORMAL&quot;,&quot;GUEST&quot;,&quot;PLAYER&quot;]</td></tr>
+<tr><td>R1-API-02 all 7 fixture users present and kind matches DB-derived role</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>普通用户=NORMAL, 嘉宾保密=GUEST, 嘉宾愿意=GUEST, 到期嘉宾=GUEST, 玩家=PLAYER, 撤销签到=NORMAL, 隐藏人才=GUEST</td></tr>
+<tr><td>R1-API-03 no ANONYMOUS label in backend list (anonymous is session-only, never a user row)</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>ANONYMOUS absent</td></tr>
+<tr><td>R1-API-04 filters.kind=NORMAL returns exactly the DB-derived NORMAL fixtures (server-side filter before pagination)</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>expected 2, got 2: 撤销签到,普通用户</td></tr>
+<tr><td>R1-API-04 filters.kind=GUEST returns exactly the DB-derived GUEST fixtures (server-side filter before pagination)</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>expected 4, got 4: 到期嘉宾,嘉宾保密,嘉宾愿意,隐藏人才</td></tr>
+<tr><td>R1-API-04 filters.kind=PLAYER returns exactly the DB-derived PLAYER fixtures (server-side filter before pagination)</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>expected 1, got 1: 玩家</td></tr>
+<tr><td>R1-API-05 NORMAL ∪ GUEST ∪ PLAYER partition the fixture set (no overlap, no omission)</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>union=7, all=7</td></tr>
+<tr><td>R1-API-06 users.get 嘉宾愿意 detail kind</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>kind=GUEST expected=GUEST</td></tr>
+<tr><td>R1-API-06 users.get 普通用户 detail kind</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>kind=NORMAL expected=NORMAL</td></tr>
+<tr><td>R1-API-06 users.get 玩家 detail kind</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>kind=PLAYER expected=PLAYER</td></tr>
+<tr><td>R1-API-06 users.get 撤销签到 detail kind</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>kind=NORMAL expected=NORMAL</td></tr>
+<tr><td>R1-API-07 legacy filters.identity=NORMAL is translated to kind=NORMAL by BFF</td><td>R1</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>撤销签到,普通用户</td></tr>
+<tr><td>R3-API-01 profileComplete=INCOMPLETE lists the fixtures lacking avatar/industry (5-field rule, gender ignored)</td><td>R3</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>7 incomplete fixtures (all have nickname/career/headline but no READY avatar + no PRIMARY_INDUSTRY)</td></tr>
+<tr><td>R3-API-02 profileComplete=COMPLETE excludes every incomplete fixture</td><td>R3</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>0 complete fixtures</td></tr>
+<tr><td>R3-API-03 whole-DB COMPLETE/INCOMPLETE partition matches SQL (1 complete, 8 incomplete active users)</td><td>R3</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>COMPLETE=1, INCOMPLETE=8</td></tr>
+<tr><td>R2-API-01 events.list finds fixture event 名单1</td><td>R2</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>3 fixture events, target found=true</td></tr>
+<tr><td>R2-API-02 roster lists all 7 fixture registrations</td><td>R2</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>撤销签到:REGISTERED, 玩家:REGISTERED, 嘉宾愿意:ATTENDED✓, 嘉宾保密:ATTENDED✓, 隐藏人才:ATTENDED✓, 到期嘉宾:ATTENDED✓, 普通用户:REGISTERED</td></tr>
+<tr><td>R2-API-03 普通用户 is REGISTERED with no check-in (and still a NORMAL role globally)</td><td>R2</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>registrationStatus=REGISTERED, checkedInAt=null, globalRole=NORMAL</td></tr>
+<tr><td>R2-API-04 roster registrationStatus/check-in match DB for every fixture row</td><td>R2</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>status + checkedInAt consistent with mip_event_registrations/mip_event_checkins</td></tr>
+<tr><td>R2-DB-01 consumer participants predicate (REGISTERED|ATTENDED, share_profile=1) yields GUEST=6 incl. 普通用户 &amp; 撤销签到, PLAYER=1</td><td>R2</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>GUEST=6, PLAYER=1, registered-not-checked-in=撤销签到,普通用户,玩家</td></tr>
+<tr><td>R4-API-01 feedbacks.list exposes rosterConsent per fixture and matches DB</td><td>R4</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>嘉宾愿意=MATCH_OPPORTUNITIES (label: 匹配合作机会), 嘉宾保密=PRIVATE (label: 仅私密保存), 到期嘉宾=MATCH_OPPORTUNITIES (label: 匹配合作机会), 隐藏人才=MATCH_OPPORTUNITIES (label: 匹配合作机会)</td></tr>
+<tr><td>R4-DB-01 eligibleTalent predicate on real DB → exactly 嘉宾愿意 + 到期嘉宾 + 玩家 (3); PRIVATE / hidden / revoked / ordinary excluded</td><td>R4</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>到期嘉宾, 嘉宾愿意, 玩家</td></tr>
+<tr><td>R4-DB-02 嘉宾保密 latest consent PRIVATE across both events → not a talent even though GUEST</td><td>R4</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>GUEST + PRIVATE ⇒ excluded</td></tr>
+<tr><td>R4-DB-03 玩家 is a talent without any feedback (active entitlement alone qualifies)</td><td>R4</td><td><span class="badge" style="background:#0a7d3b">PASS</span></td><td>PLAYER + no feedback ⇒ included</td></tr>
+</table></div>
+<p class="note">原始请求/响应记录：<code>.tmp/e2e-20261022/out/admin-live.json</code>（凭据与 Cookie 不落盘，用户 ID 仅以哈希出现）。</p>
+</section>
+
+<section>
+<h2>六、单测 / 合同层证据</h2>
+<div class="tw"><table>
+<tr><th>套件</th><th>方式</th><th>结果</th><th>失败</th><th>与四需求直接相关的代表用例</th></tr>
+<tr><td>mip-identity-api</td><td>node --test</td><td class="ok">111</td><td>0</td><td>product-role 四角色映射 / profile-readiness 五项必填且性别不参与 / 跨 bundle 规则副本一致</td></tr><tr><td>mip-admin-api</td><td>node --test</td><td class="ok">787</td><td>0</td><td>users.list 服务端 kind 过滤与投影 / profileComplete 过滤 / 用户详情 kind</td></tr><tr><td>mip-events-api</td><td>node --test</td><td class="ok">194 通过 + 1 跳过*</td><td>0</td><td>公开参与人口径（REGISTERED|ATTENDED）计数子查询对齐 / 玩家·嘉宾识别</td></tr><tr><td>mip-opportunities-api</td><td>node --test</td><td class="ok">167</td><td>0</td><td>人才资格（有效玩家或已签到+最新愿意）分页前过滤 / 冻结快照游标</td></tr><tr><td>admin-web 合同</td><td>node --test</td><td class="ok">339</td><td>0</td><td>kind=GUEST 转发 / legacy identity=NORMAL 兼容 / 三角色序列化投影</td></tr><tr><td>admin-web React</td><td>vitest（verify:all）</td><td class="ok">262</td><td>0</td><td>用户列表页面合同 / 角色标签渲染</td></tr><tr><td>小程序 profile/opportunities</td><td>vitest</td><td class="ok">16</td><td>0</td><td>五项必填、性别选填保存校验 / 行业保留 / 机会页人才列表合同</td></tr>
+</table></div>
+<ul>
+<li>规则源单测（identity）：<i>product role has four labels without granting membership or backend permissions</i>；<i>profile readiness requires exactly the five visible fields…</i>；<i>independent cloud bundles keep the exact same role and readiness policy</i>（admin/opportunities 等副本逐字节一致）。</li>
+<li>后台列表（admin-web）：<i>renders a nonempty serialized server page with all three persisted product roles…</i>；<i>forwards NORMAL as the server role filter…</i>。</li>
+<li>人才资格（opportunities）：<i>talent eligibility checks active membership or attended opt-in guests before paging and rechecks current visibility</i>。</li>
+<li>资料保存（小程序）：<i>requires the five visible profile fields while leaving gender optional</i>。</li>
+<li>* events-api 的 1 条跳过用例为「真实 MySQL 执行验证」（需 MIP_SQL_VERIFY_URI 直连）；本轮以同一谓词在真实测试库 runQuery 复现，等效覆盖。</li>
+</ul>
+<h3>R3 表单层（代码核对）</h3>
+<ul>
+<li><code>src/packages/member/mip-profile/index.wxml</code>：头像/昵称/代表行业/当前身份状态/一句话介绍 5 行各含 <code>text-danger *</code>；性别行无星号（L121-L172）。</li>
+<li><code>src/packages/member/mip-profile/save-intent.ts</code>：<code>profileSaveValidationMessage</code> 恰好校验 5 项，接口不含性别字段。</li>
+<li>服务端 <code>missingProfileFields</code> 返回 NICKNAME/AVATAR/PRIMARY_INDUSTRY/CAREER_IDENTITY/HEADLINE，缺任一保存被拒（identity 单测覆盖 PROFILE_REQUIRED 语义）。</li>
+</ul>
+</section>
+
+<section>
+<h2>七、界面实拍（真实测试后台 https://test.admin.mip.cool）</h2>
+
+<figure><img loading="lazy" src="shots/01-users-list-desktop-1440x900.png" alt="用户管理 · 桌面 1440×900：「当前角色」列按 服务端 kind 渲染 普通用户 / 嘉宾 / 玩家（TOP 页含真实账号，已按界面脱敏显示）"><figcaption>用户管理 · 桌面 1440×900：「当前角色」列按 服务端 kind 渲染 普通用户 / 嘉宾 / 玩家（TOP 页含真实账号，已按界面脱敏显示）</figcaption></figure>
+<figure><img loading="lazy" src="shots/02-users-list-search-fixtures-desktop.png" alt="搜索「验收1021」：7 条合成样本角色与数据库推导一致；到期嘉宾权益显示「已到期未续费」，角色回落为嘉宾"><figcaption>搜索「验收1021」：7 条合成样本角色与数据库推导一致；到期嘉宾权益显示「已到期未续费」，角色回落为嘉宾</figcaption></figure>
+<figure><img loading="lazy" src="shots/04-users-list-filter-guest-desktop.png" alt="身份=嘉宾 筛选：URL 携带 kind=GUEST，返回 4 条全部为嘉宾，服务端分页前过滤"><figcaption>身份=嘉宾 筛选：URL 携带 kind=GUEST，返回 4 条全部为嘉宾，服务端分页前过滤</figcaption></figure>
+<figure><img loading="lazy" src="shots/05-users-list-mobile-390x844.png" alt="手机视口 390×844：筛选表单堆叠，操作可用"><figcaption>手机视口 390×844：筛选表单堆叠，操作可用</figcaption></figure>
+<figure><img loading="lazy" src="shots/06-users-list-mobile-390x844-table.png" alt="手机视口 390×844：用户表格保留「当前角色」列，7 条角色正确"><figcaption>手机视口 390×844：用户表格保留「当前角色」列，7 条角色正确</figcaption></figure>
+<figure><img loading="lazy" src="shots/07-event-detail-participation-roster-desktop.png" alt="活动「验收1021·角色与报名名单1」参与情况：有效报名 7 / 已签到 4 / 玩家 1 / 嘉宾 6 —— 嘉宾 6 含 2 名已报名未签到的普通用户（R2）"><figcaption>活动「验收1021·角色与报名名单1」参与情况：有效报名 7 / 已签到 4 / 玩家 1 / 嘉宾 6 —— 嘉宾 6 含 2 名已报名未签到的普通用户（R2）</figcaption></figure>
+<figure><img loading="lazy" src="shots/08-event-detail-roster-table-desktop.png" alt="报名与参与人（未签到行有「签到」按钮、已签到行显示「撤销签到」）+ 活动反馈明细「花名册意愿」列：匹配合作机会 / 仅私密保存（R4 数据源）"><figcaption>报名与参与人（未签到行有「签到」按钮、已签到行显示「撤销签到」）+ 活动反馈明细「花名册意愿」列：匹配合作机会 / 仅私密保存（R4 数据源）</figcaption></figure>
+<div class="note">本批为功能规则变更，无新增原型稿，按长期规则不放原型对照列。截图含界面自带的脱敏手机号（+86 188****3403）；未提交二维码、凭证或完整身份编号。</div>
+</section>
+
+<section>
+<h2>八、门禁</h2>
+<ul>
+<li><code>pnpm verify:all</code>（小程序 16 步 + admin-web lint/typecheck/test/build/responsive）：<span class="ok">通过，退出码 0</span>；vitest 汇总 290 个测试文件通过。</li>
+<li>后台合同测试 339 项、React 262 项、五个云函数套件与小程序目标套件：全绿（明细见第六节）。</li>
+<li><code>git diff --check</code>：存在未提交证据文件（本批报告目录），无冲突标记。</li>
+<li>dist 健康：主包体积与嵌套 TDesign 依赖树断言由 <code>pnpm build/verify:build</code> 内置检查通过。</li>
+</ul>
+</section>
+
+<section>
+<h2>九、未覆盖 / 待验收（明确列出，不视为已通过）</h2>
+<ul>
+<li><span class="pending">待 DevTools 重新登录（用户扫码）</span>：小程序真实页面链路 —— 匿名访客强制流程（手机号/头像授权 → 资料表单缺项被拒 → 补齐保存 → 离页回读）、活动详情参与人嘉宾页签实拍、人才合作列表实拍。服务端已验证其数据与谓词，页面渲染逻辑由既有合同/单测覆盖。</li>
+<li><span class="pending">待真机</span>：手机号授权、扫码签到、支付成为玩家、订阅消息 —— 微信原生能力，本机不可替代（与本轮四需求改动无直接交集，沿用上一轮 REAL-DEVICE 清单）。</li>
+<li>本轮未做任何业务写入：签到撤销、反馈改选、权益到期等状态迁移路径依据上一轮「验收1021」变更类证据 + 本轮真实库终态断言 + 单测覆盖；如需在本轮重新逐键执行状态翻转，需用户授权写入操作。</li>
+<li>生产环境只读未触碰；生产包 1.2.8 与本轮 HEAD 的四需求代码一致（cloudfunctions/admin-web 零差异），无需重新发布。</li>
+</ul>
+</section>
+
+<section>
+<h2>十、方法说明</h2>
+<ul>
+<li>独立执行：本轮验收与实现会话（10-21）相互独立；期望值全部由本轮在真实测试库以服务端同源 SQL 独立推导，再与真实后台 API 返回对比，不引用旧报告结论作为通过依据。</li>
+<li>只读边界：所有 SQL 限 SELECT（脚本内断言），所有后台调用限 QUERY action；登录凭证、Session Cookie、数据库连接串不进入任何产物。</li>
+<li>证据文件：<code>fixture-matrix.json</code> / <code>event-matrix.json</code> / <code>admin-live.json</code> / <code>function-source.json</code>（保存在会话 .tmp，报告提交时摘要入档）。</li>
+</ul>
+</section>
+
+<div class="wrap"><p class="note">报告生成时间 2026-10-21T18:21:32.821Z · HEAD f97398cb59408c836aa1f615060cd84eb43f39e5</p></div>
+</div></body></html>

@@ -1,0 +1,402 @@
+{
+ "generatedAt": "2026-10-21T17:44:02.586Z",
+ "origin": "https://test.admin.mip.cool",
+ "environment": "TEST",
+ "businessWrites": false,
+ "checks": [
+  {
+   "id": "auth:password-login",
+   "requirement": "G",
+   "status": "pass",
+   "httpStatus": 200,
+   "summary": "HTTP 200"
+  },
+  {
+   "id": "auth:admin-enabled",
+   "requirement": "G",
+   "status": "pass",
+   "summary": "enabled=true"
+  },
+  {
+   "id": "R1-API-01 users.list returns kind for every row",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "7 rows, kinds=[\"NORMAL\",\"GUEST\",\"PLAYER\"]",
+   "rows": [
+    {
+     "nickname": "验收1021·普通用户",
+     "kind": "NORMAL",
+     "idHash": "f9a9b048cea5"
+    },
+    {
+     "nickname": "验收1021·嘉宾保密",
+     "kind": "GUEST",
+     "idHash": "e7a5b3ca5442"
+    },
+    {
+     "nickname": "验收1021·嘉宾愿意",
+     "kind": "GUEST",
+     "idHash": "3cc5995288a3"
+    },
+    {
+     "nickname": "验收1021·到期嘉宾",
+     "kind": "GUEST",
+     "idHash": "57dfa7c8b486"
+    },
+    {
+     "nickname": "验收1021·玩家",
+     "kind": "PLAYER",
+     "idHash": "e08375a01543"
+    },
+    {
+     "nickname": "验收1021·撤销签到",
+     "kind": "NORMAL",
+     "idHash": "f7c889e175fa"
+    },
+    {
+     "nickname": "验收1021·隐藏人才",
+     "kind": "GUEST",
+     "idHash": "77616271d0f2"
+    }
+   ]
+  },
+  {
+   "id": "R1-API-02 all 7 fixture users present and kind matches DB-derived role",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "普通用户=NORMAL, 嘉宾保密=GUEST, 嘉宾愿意=GUEST, 到期嘉宾=GUEST, 玩家=PLAYER, 撤销签到=NORMAL, 隐藏人才=GUEST",
+   "expected": {
+    "验收1021·到期嘉宾": "GUEST",
+    "验收1021·嘉宾保密": "GUEST",
+    "验收1021·嘉宾愿意": "GUEST",
+    "验收1021·撤销签到": "NORMAL",
+    "验收1021·普通用户": "NORMAL",
+    "验收1021·玩家": "PLAYER",
+    "验收1021·隐藏人才": "GUEST"
+   }
+  },
+  {
+   "id": "R1-API-03 no ANONYMOUS label in backend list (anonymous is session-only, never a user row)",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "ANONYMOUS absent"
+  },
+  {
+   "id": "R1-API-04 filters.kind=NORMAL returns exactly the DB-derived NORMAL fixtures (server-side filter before pagination)",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "expected 2, got 2: 撤销签到,普通用户",
+   "expected": [
+    "验收1021·撤销签到",
+    "验收1021·普通用户"
+   ],
+   "actual": [
+    "验收1021·撤销签到",
+    "验收1021·普通用户"
+   ]
+  },
+  {
+   "id": "R1-API-04 filters.kind=GUEST returns exactly the DB-derived GUEST fixtures (server-side filter before pagination)",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "expected 4, got 4: 到期嘉宾,嘉宾保密,嘉宾愿意,隐藏人才",
+   "expected": [
+    "验收1021·到期嘉宾",
+    "验收1021·嘉宾保密",
+    "验收1021·嘉宾愿意",
+    "验收1021·隐藏人才"
+   ],
+   "actual": [
+    "验收1021·到期嘉宾",
+    "验收1021·嘉宾保密",
+    "验收1021·嘉宾愿意",
+    "验收1021·隐藏人才"
+   ]
+  },
+  {
+   "id": "R1-API-04 filters.kind=PLAYER returns exactly the DB-derived PLAYER fixtures (server-side filter before pagination)",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "expected 1, got 1: 玩家",
+   "expected": [
+    "验收1021·玩家"
+   ],
+   "actual": [
+    "验收1021·玩家"
+   ]
+  },
+  {
+   "id": "R1-API-05 NORMAL ∪ GUEST ∪ PLAYER partition the fixture set (no overlap, no omission)",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "union=7, all=7"
+  },
+  {
+   "id": "R1-API-06 users.get 嘉宾愿意 detail kind",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "kind=GUEST expected=GUEST",
+   "idHash": "3cc5995288a3"
+  },
+  {
+   "id": "R1-API-06 users.get 普通用户 detail kind",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "kind=NORMAL expected=NORMAL",
+   "idHash": "f9a9b048cea5"
+  },
+  {
+   "id": "R1-API-06 users.get 玩家 detail kind",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "kind=PLAYER expected=PLAYER",
+   "idHash": "e08375a01543"
+  },
+  {
+   "id": "R1-API-06 users.get 撤销签到 detail kind",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "kind=NORMAL expected=NORMAL",
+   "idHash": "f7c889e175fa"
+  },
+  {
+   "id": "R1-API-07 legacy filters.identity=NORMAL is translated to kind=NORMAL by BFF",
+   "requirement": "R1",
+   "status": "pass",
+   "summary": "撤销签到,普通用户"
+  },
+  {
+   "id": "R3-API-01 profileComplete=INCOMPLETE lists the fixtures lacking avatar/industry (5-field rule, gender ignored)",
+   "requirement": "R3",
+   "status": "pass",
+   "summary": "7 incomplete fixtures (all have nickname/career/headline but no READY avatar + no PRIMARY_INDUSTRY)"
+  },
+  {
+   "id": "R3-API-02 profileComplete=COMPLETE excludes every incomplete fixture",
+   "requirement": "R3",
+   "status": "pass",
+   "summary": "0 complete fixtures"
+  },
+  {
+   "id": "R3-API-03 whole-DB COMPLETE/INCOMPLETE partition matches SQL (1 complete, 8 incomplete active users)",
+   "requirement": "R3",
+   "status": "pass",
+   "summary": "COMPLETE=1, INCOMPLETE=8",
+   "completeUserGender": [
+    "(n/a)"
+   ]
+  },
+  {
+   "id": "R2-API-01 events.list finds fixture event 名单1",
+   "requirement": "R2",
+   "status": "pass",
+   "summary": "3 fixture events, target found=true"
+  },
+  {
+   "id": "R2-API-02 roster lists all 7 fixture registrations",
+   "requirement": "R2",
+   "status": "pass",
+   "summary": "撤销签到:REGISTERED, 玩家:REGISTERED, 嘉宾愿意:ATTENDED✓, 嘉宾保密:ATTENDED✓, 隐藏人才:ATTENDED✓, 到期嘉宾:ATTENDED✓, 普通用户:REGISTERED"
+  },
+  {
+   "id": "R2-API-03 普通用户 is REGISTERED with no check-in (and still a NORMAL role globally)",
+   "requirement": "R2",
+   "status": "pass",
+   "summary": "registrationStatus=REGISTERED, checkedInAt=null, globalRole=NORMAL"
+  },
+  {
+   "id": "R2-API-04 roster registrationStatus/check-in match DB for every fixture row",
+   "requirement": "R2",
+   "status": "pass",
+   "summary": "status + checkedInAt consistent with mip_event_registrations/mip_event_checkins"
+  },
+  {
+   "id": "R2-DB-01 consumer participants predicate (REGISTERED|ATTENDED, share_profile=1) yields GUEST=6 incl. 普通用户 & 撤销签到, PLAYER=1",
+   "requirement": "R2",
+   "status": "pass",
+   "summary": "GUEST=6, PLAYER=1, registered-not-checked-in=撤销签到,普通用户,玩家"
+  },
+  {
+   "id": "R4-API-01 feedbacks.list exposes rosterConsent per fixture and matches DB",
+   "requirement": "R4",
+   "status": "pass",
+   "summary": "嘉宾愿意=MATCH_OPPORTUNITIES (label: 匹配合作机会), 嘉宾保密=PRIVATE (label: 仅私密保存), 到期嘉宾=MATCH_OPPORTUNITIES (label: 匹配合作机会), 隐藏人才=MATCH_OPPORTUNITIES (label: 匹配合作机会)"
+  },
+  {
+   "id": "R4-DB-01 eligibleTalent predicate on real DB → exactly 嘉宾愿意 + 到期嘉宾 + 玩家 (3); PRIVATE / hidden / revoked / ordinary excluded",
+   "requirement": "R4",
+   "status": "pass",
+   "summary": "到期嘉宾, 嘉宾愿意, 玩家",
+   "excluded": [
+    {
+     "nickname": "嘉宾保密",
+     "kind": "GUEST",
+     "latestRosterConsent": "PRIVATE",
+     "talentSearchVisible": true
+    },
+    {
+     "nickname": "撤销签到",
+     "kind": "NORMAL",
+     "latestRosterConsent": null,
+     "talentSearchVisible": true
+    },
+    {
+     "nickname": "普通用户",
+     "kind": "NORMAL",
+     "latestRosterConsent": null,
+     "talentSearchVisible": true
+    },
+    {
+     "nickname": "隐藏人才",
+     "kind": "GUEST",
+     "latestRosterConsent": "MATCH_OPPORTUNITIES",
+     "talentSearchVisible": false
+    }
+   ]
+  },
+  {
+   "id": "R4-DB-02 嘉宾保密 latest consent PRIVATE across both events → not a talent even though GUEST",
+   "requirement": "R4",
+   "status": "pass",
+   "summary": "GUEST + PRIVATE ⇒ excluded"
+  },
+  {
+   "id": "R4-DB-03 玩家 is a talent without any feedback (active entitlement alone qualifies)",
+   "requirement": "R4",
+   "status": "pass",
+   "summary": "PLAYER + no feedback ⇒ included"
+  }
+ ],
+ "requestLog": [
+  {
+   "route": "/api/auth/password/login",
+   "action": null,
+   "httpStatus": 200,
+   "ms": 5538
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.session",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 288
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 242
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 267
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 180
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 212
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.get",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 418
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.get",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 270
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.get",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 242
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.get",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 211
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 206
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 204
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 189
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 665
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.users.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 170
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.events.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 212
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.events.roster",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 196
+  },
+  {
+   "route": "/api/admin",
+   "action": "mip.admin.events.feedbacks.list",
+   "httpStatus": 200,
+   "ok": true,
+   "ms": 194
+  }
+ ],
+ "summary": {
+  "total": 26,
+  "pass": 26,
+  "fail": 0
+ }
+}
