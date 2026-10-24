@@ -530,6 +530,21 @@ Page({
           canContinueCheckIn,
         })
       }
+      else if (result.kind === 'REGISTERED' && !this.data.resumeCheckIn) {
+        // MIW-129（客户口径 2026-10-24）：报名直接成功（免费/玩家免费，服务端定价 0 也走
+        // REGISTERED）与支付成功（MIW-106）同口径——toast「报名成功」后立即返回活动详情页，
+        // 不停留在结果页；详情页 onShow 缓存已被 register() 失效，回页即呈现已报名态。
+        // 签到续办流除外：结果页「继续签到」是唯一动线。state 先置 submitted，避免
+        // finally 的 persistDraft 把已完成的报名回写成草稿。
+        this.setData({
+          state: 'submitted',
+          resultTitle: '报名成功',
+          resultDescription: '报名资格已确认。',
+          orderId: '',
+        })
+        wx.showToast({ title: '报名成功', icon: 'success' })
+        this.returnToEventDetail()
+      }
       else {
         const presentation = result.kind === 'REGISTERED'
           ? { title: '报名成功', description: '报名资格已确认。' }
