@@ -359,6 +359,21 @@ async function waitForData(page, predicate, options = {}) {
   throw new Error(`${options.label || 'Page data'} did not reach the required state${suffix}`)
 }
 
+/** 轮询当前页面路由直到匹配期望路由（MIW-129：报名成功自动返回详情页的证据）。 */
+async function waitForCurrentRoute(miniProgram, expectedRoute, options = {}) {
+  const deadline = Date.now() + (options.timeoutMs || automatedTimeoutMs)
+  let lastRoute = ''
+  while (Date.now() < deadline) {
+    const currentPage = await miniProgram.currentPage().catch(() => null)
+    lastRoute = normalizedRoute(currentPage?.path)
+    if (runtimeRouteDisposition(lastRoute, expectedRoute) === 'matched') {
+      return currentPage
+    }
+    await delay(200)
+  }
+  throw new Error(`${options.label || 'Current route'} did not reach ${expectedRoute} (last route: ${lastRoute || 'unknown'})`)
+}
+
 async function bindAuthoritativePage(miniProgram, page, expectedRoute, selector, label) {
   let currentPage = await miniProgram.currentPage().catch(() => page)
   let route = normalizedRoute(currentPage?.path)
@@ -605,13 +620,15 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
     }
     const mutation = mutationAttempt(report, persist, 'register-free-event', { eventId: options.eventId })
     await callBoundHandler(page, 'submit')
-    const submitted = await waitForData(page, value => value?.state === 'submitted', { label: step.id })
-    const summary = summarizeRegistrationSubmission(submitted)
-    confirmMutation(report, persist, mutation, { pageState: summary.state })
-    await captureEvidence({ miniProgram, outputDir, persist, step, label: 'submitted', state: summary })
-    if (summary.resultTitle !== '报名成功') {
-      runtimeFixtureMismatch(`Free AUTO registration did not become REGISTERED (${summary.resultTitle || 'unknown result'})`)
-    }
+    // MIW-129（客户口径 2026-10-24）：报名成功不再停留「报名成功」结果页——页面 toast
+    // 「报名成功」后立即自动返回活动详情页（reLaunch 打开的报名页无返回栈，走 redirectTo
+    // 详情页兜底）。以「当前路由回到详情页」作为自动返回证据；报名事实（REGISTERED、
+    // 可编辑、我的活动在册）由下方可编辑回读与 member-registration-fact 步骤确认。
+    const detailStep = contract.steps.find(candidate => candidate.id === 'member-event-detail')
+    invariant(Boolean(detailStep?.route), 'The runtime contract is missing the member-event-detail step route')
+    await waitForCurrentRoute(miniProgram, detailStep.route, { label: 'Auto return to event detail' })
+    confirmMutation(report, persist, mutation, { autoReturnedRoute: detailStep.route })
+    await captureEvidence({ miniProgram, outputDir, persist, step, label: 'returned-to-detail', state: { autoReturnedRoute: detailStep.route } })
     const editPage = await openEventPage(miniProgram, spec, options.eventId)
     const editable = await waitForData(editPage, value => value?.state === 'ready' && value.editing === true, { label: 'Edit submitted registration' })
     invariant(editable.registration?.canEdit === true, 'Submitted registration is not editable')
