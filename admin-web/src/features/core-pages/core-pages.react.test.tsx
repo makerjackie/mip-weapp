@@ -145,7 +145,7 @@ describe('core admin pages', () => {
     expect(page.sections[0].columns.map(column => column.label)).toEqual([
       '头像', '昵称', '手机号', '当前角色', '行业', '当前身份', '用户等级', '贡献值', '玩家权益状态', '用户注册时间', '玩家到期时间',
     ])
-    expect(page.sections[0].rows.map(row => row.playerStatus)).toEqual(['生效中', '—', '本月到期', '—'])
+    expect(page.sections[0].rows.map(row => row.playerStatus)).toEqual(['生效中', '—', '本月到期', '—', '—'])
 
     const normal = createCoreDemoReadPage('users', { query: '', status: '', cursor: null, limit: 20, filters: { kind: 'NORMAL' } })
     expect(normal.sections[0].rows.map(row => row.detailId)).toEqual(['USR-1004'])
@@ -156,6 +156,11 @@ describe('core admin pages', () => {
 
     const guest = createCoreDemoReadPage('users', { query: '', status: '', cursor: null, limit: 20, filters: { kind: 'GUEST' } })
     expect(guest.sections[0].rows.map(row => row.detailId)).toEqual(['USR-1002'])
+
+    // MIW-130：匿名访客演示行支持「身份=匿名访客」筛选。
+    const anonymous = createCoreDemoReadPage('users', { query: '', status: '', cursor: null, limit: 20, filters: { kind: 'ANONYMOUS' } })
+    expect(anonymous.sections[0].rows.map(row => row.detailId)).toEqual(['USR-1005'])
+    expect(anonymous.sections[0].rows[0].role).toBe('匿名访客')
   })
 
   it('builds demo tag rows with server-shaped catalog operations for the settings page', () => {

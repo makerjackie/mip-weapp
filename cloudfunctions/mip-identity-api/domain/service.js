@@ -342,9 +342,15 @@ function snapshotDto(facts, agreements, membership, profileRef) {
   const accepted = new Set((facts.acceptances || []).map(
     item => `${item.agreement_key}:${item.agreement_version}`,
   ))
+  const profile = profileDto(facts)
   return {
     authenticated: true,
-    productRole: productRole({ isPlayer: membership.kind === 'PLAYER', hasAttended: Number(facts.user.has_attended) === 1 }),
+    productRole: productRole({
+      isPlayer: membership.kind === 'PLAYER',
+      hasAttended: Number(facts.user.has_attended) === 1,
+      phoneBound: Boolean(facts.privateProfile?.phone_verified_at),
+      profileComplete: profile.complete,
+    }),
     userId: facts.user.id,
     ...(profileRef ? { profileRef } : {}),
     userVersion: Number(facts.user.version),
@@ -354,7 +360,7 @@ function snapshotDto(facts, agreements, membership, profileRef) {
       ...agreement,
       accepted: accepted.has(`${agreement.key}:${agreement.version}`),
     })),
-    profile: profileDto(facts),
+    profile,
     primaryBranchId: facts.user.primary_branch_id || undefined,
     membership,
     grants: projectGrants(facts.roles),

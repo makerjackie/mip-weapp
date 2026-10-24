@@ -20,10 +20,19 @@ function attendedEventSql(user = 'u') {
       AND role_registration.status = 'ATTENDED')`
 }
 
-function productRole({ authenticated = true, isPlayer = false, hasAttended = false } = {}) {
+function productRole({
+  authenticated = true,
+  phoneBound = true,
+  profileComplete = true,
+  isPlayer = false,
+  hasAttended = false,
+} = {}) {
   if (!authenticated) return 'ANONYMOUS'
   if (isPlayer) return 'PLAYER'
-  return hasAttended ? 'GUEST' : 'NORMAL'
+  if (hasAttended) return 'GUEST'
+  // 2026-10-24 用户口径：未登录，或已授权手机号但未完善资料，都展示为匿名访客。
+  if (!phoneBound || !profileComplete) return 'ANONYMOUS'
+  return 'NORMAL'
 }
 
 module.exports = { activePlayerSql, attendedEventSql, productRole }

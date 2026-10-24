@@ -21,6 +21,19 @@ test('product role has four labels without granting membership or backend permis
   assert.match(activePlayerSql(), /starts_at <= UTC_TIMESTAMP\(3\).*ends_at > UTC_TIMESTAMP\(3\)/s)
 })
 
+test('2026-10-24: unsigned-in or phone-bound-but-incomplete users stay anonymous visitors', () => {
+  // 未登录（未绑定手机号）即匿名访客；有效权益或有效签到优先于匿名访客。
+  assert.equal(productRole({ phoneBound: false, profileComplete: true }), 'ANONYMOUS')
+  // 已授权手机号但未完善资料仍是匿名访客。
+  assert.equal(productRole({ phoneBound: true, profileComplete: false }), 'ANONYMOUS')
+  assert.equal(productRole({ phoneBound: false, profileComplete: false }), 'ANONYMOUS')
+  // 付费与有效签到不回退为匿名访客（Q-ADMIN-09 有效权益优先）。
+  assert.equal(productRole({ isPlayer: true, phoneBound: false, profileComplete: false }), 'PLAYER')
+  assert.equal(productRole({ hasAttended: true, phoneBound: true, profileComplete: false }), 'GUEST')
+  // 完善资料后回到普通用户。
+  assert.equal(productRole({ phoneBound: true, profileComplete: true }), 'NORMAL')
+})
+
 test('profile readiness requires exactly the five visible fields and retains inactive industry references', () => {
   const complete = { nickname: '用户', avatarReady: true, industryBound: true, careerIdentityKey: 'STUDENT', headline: '介绍' }
   assert.deepEqual(missingProfileFields(complete), [])

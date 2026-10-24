@@ -106,23 +106,32 @@ function createFixture({ one, query, assertMutationScope, assertUserMutationScop
 }
 
 describe('admin user repository module', () => {
-  it('projects ordinary users, attended guests, and active players from server facts', async () => {
+  it('projects ordinary users, attended guests, active players and anonymous visitors from server facts', async () => {
     const { repository, calls } = createFixture({ query: async () => [
-      { ...userListRow('normal', '2026-10-21T00:00:00Z'), is_player: 0, has_attended: 0 },
-      { ...userListRow('guest', '2026-10-20T00:00:00Z'), is_player: 0, has_attended: 1 },
-      { ...userListRow('player', '2026-10-19T00:00:00Z'), is_player: 1, has_attended: 0 },
+      { ...userListRow('normal', '2026-10-21T00:00:00Z'), is_player: 0, has_attended: 0, phone_bound: 1, profile_complete: 1 },
+      { ...userListRow('guest', '2026-10-20T00:00:00Z'), is_player: 0, has_attended: 1, phone_bound: 1, profile_complete: 1 },
+      { ...userListRow('player', '2026-10-19T00:00:00Z'), is_player: 1, has_attended: 0, phone_bound: 1, profile_complete: 1 },
+      // MIW-130：未登录或已授权手机号但未完善资料都投影为匿名访客。
+      { ...userListRow('anonymous', '2026-10-18T00:00:00Z'), is_player: 0, has_attended: 0, phone_bound: 0, profile_complete: 0 },
     ] })
     const page = await repository.listUsers('app', { platform: true }, {}, 20)
-    assert.deepEqual(page.items.map(row => row.kind), ['NORMAL', 'GUEST', 'PLAYER'])
-    for (const kind of ['NORMAL', 'GUEST', 'PLAYER']) {
+    assert.deepEqual(page.items.map(row => row.kind), ['NORMAL', 'GUEST', 'PLAYER', 'ANONYMOUS'])
+    for (const kind of ['NORMAL', 'GUEST', 'PLAYER', 'ANONYMOUS']) {
       await repository.listUsers('app', { platform: true }, { kind }, 20)
       const query = calls.at(-1).sql
       assert.match(query, /role_registration\.app_id = u\.app_id/)
       if (kind !== 'PLAYER') {
         assert.match(query, /AND NOT EXISTS \(SELECT 1 FROM mip_membership_entitlements role_membership/)
-        assert.match(query, kind === 'NORMAL'
-          ? /AND NOT EXISTS \(SELECT 1 FROM mip_event_registrations role_registration/
-          : /AND EXISTS \(SELECT 1 FROM mip_event_registrations role_registration/)
+        assert.match(query, kind === 'GUEST'
+          ? /AND EXISTS \(SELECT 1 FROM mip_event_registrations role_registration/
+          : /AND NOT EXISTS \(SELECT 1 FROM mip_event_registrations role_registration/)
+      }
+      if (kind === 'NORMAL') {
+        assert.match(query, /pp\.phone_verified_at IS NOT NULL/)
+        assert.match(query, /AND \(COALESCE\(TRIM\(p\.nickname\), ''\) <> ''/)
+      }
+      if (kind === 'ANONYMOUS') {
+        assert.match(query, /pp\.phone_verified_at IS NULL OR NOT \(COALESCE\(TRIM\(p\.nickname\), ''\) <> ''/)
       }
     }
   })
@@ -410,7 +419,8 @@ describe('admin user repository module', () => {
               id: 'user-a', status: 'ACTIVE', primary_branch_id: null, user_version: 1,
               created_at: new Date('2026-01-01T00:00:00.000Z'), updated_at: new Date('2026-08-24T00:00:00.000Z'),
               nickname: '用户', headline: '', introduction: '', companies_json: '[]', organizations_json: '[]',
-              visibility_json: '{}', profile_version: 1, phone_verified_at: null,
+              visibility_json: '{}', profile_version: 1, phone_verified_at: new Date('2026-02-01T00:00:00.000Z'),
+              profile_complete: 1,
             }
           }
           if (sql.includes('FROM mip_membership_entitlements')) return entitlement

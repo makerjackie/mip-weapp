@@ -2,7 +2,7 @@ import type { AdminListQuery, AdminTableColumn, AdminTableRow } from './admin-re
 
 export const labels: Record<string, string> = {
   ACTIVE: '启用', BLOCKED: '已限制', CLOSED: '已关闭', INACTIVE: '停用', REVOKED: '已撤销',
-  PLAYER: '玩家', GUEST: '嘉宾', NORMAL: '普通用户', PLATFORM: '平台', BRANCH: '服务器', EVENT: '活动', OPPORTUNITY: '机会',
+  PLAYER: '玩家', GUEST: '嘉宾', NORMAL: '普通用户', ANONYMOUS: '匿名访客', PLATFORM: '平台', BRANCH: '服务器', EVENT: '活动', OPPORTUNITY: '机会',
   DRAFT: '草稿', READY: '待发布', PUBLISHED: '已发布', UNPUBLISHED: '已下架',
   CANCELLED: '已取消', ENDED: '已结束', ARCHIVED: '已归档', WITHDRAWN: '已撤回',
   CREATED: '待支付', PAYMENT_CREATED: '支付处理中', PAID: '已支付', FAILED: '失败',

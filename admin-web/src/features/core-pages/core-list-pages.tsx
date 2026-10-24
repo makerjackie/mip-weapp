@@ -53,6 +53,7 @@ const dimensionByRoute: Record<CoreListRoute, { field: string; label: string; op
       { value: 'PLAYER', label: '玩家' },
       { value: 'GUEST', label: '嘉宾' },
       { value: 'NORMAL', label: '普通用户' },
+      { value: 'ANONYMOUS', label: '匿名访客' },
     ],
   },
   events: {
@@ -395,7 +396,7 @@ function serverUserExportFilters(filters: Record<string, string> | undefined): R
   if (!filters) return filters
   const result: Record<string, string> = { ...filters }
   delete result.timeKind
-  if (['PLAYER', 'GUEST', 'NORMAL'].includes(filters.kind)) {
+  if (['PLAYER', 'GUEST', 'NORMAL', 'ANONYMOUS'].includes(filters.kind)) {
     result.kind = filters.kind
   }
   else {
