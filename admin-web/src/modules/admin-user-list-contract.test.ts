@@ -6,14 +6,15 @@ import { loadAdminReadPage, type AdminRequest } from './admin-read-pages.ts'
 const require = createRequire(import.meta.url)
 const { createAdminUserRepository } = require('../../../cloudfunctions/mip-admin-api/domain/repositories/users.js')
 
-it('renders a nonempty serialized server page with all three persisted product roles and its cursor', async () => {
+it('renders a nonempty serialized server page with all four persisted product roles and its cursor', async () => {
   const request: AdminRequest = async <T>() => JSON.parse(JSON.stringify({ items: [
     { id: 'ordinary', nickname: '普通用户样本', kind: 'NORMAL' },
     { id: 'guest', nickname: '嘉宾样本', kind: 'GUEST' },
     { id: 'player', nickname: '玩家样本', kind: 'PLAYER' },
+    { id: 'anonymous', nickname: '未填写昵称', kind: 'ANONYMOUS' },
   ], nextCursor: 'server-cursor' })) as T
   const page = await loadAdminReadPage('users', { query: '', status: '', cursor: null, limit: 20 }, request)
-  assert.deepEqual(page.sections[0].rows.map(row => row.role), ['普通用户', '嘉宾', '玩家'])
+  assert.deepEqual(page.sections[0].rows.map(row => row.role), ['普通用户', '嘉宾', '玩家', '匿名访客'])
   assert.equal(page.nextCursor, 'server-cursor')
 })
 
@@ -58,15 +59,19 @@ it('forwards NORMAL as the server role filter and player status buckets to serve
   assert.equal((captured[0].filters as Record<string, unknown>).kind, 'NORMAL')
   assert.equal((captured[0].filters as Record<string, unknown>).identity, undefined)
 
+  // MIW-130：匿名访客作为第四个身份筛选直达服务端。
+  await loadAdminReadPage('users', { ...baseQuery, filters: { kind: 'ANONYMOUS' } }, request)
+  assert.equal((captured[1].filters as Record<string, unknown>).kind, 'ANONYMOUS')
+
   await loadAdminReadPage('users', { ...baseQuery, filters: { playerLifecycle: 'EXPIRING_THIS_MONTH' } }, request)
-  assert.equal((captured[1].filters as Record<string, unknown>).playerLifecycle, 'EXPIRING_THIS_MONTH')
+  assert.equal((captured[2].filters as Record<string, unknown>).playerLifecycle, 'EXPIRING_THIS_MONTH')
   await loadAdminReadPage('users', { ...baseQuery, filters: { playerLifecycle: 'EXPIRED' } }, request)
-  assert.equal((captured[2].filters as Record<string, unknown>).playerLifecycle, 'EXPIRED')
+  assert.equal((captured[3].filters as Record<string, unknown>).playerLifecycle, 'EXPIRED')
   await loadAdminReadPage('users', { ...baseQuery, filters: { playerLifecycle: 'NEVER' } }, request)
-  assert.equal((captured[3].filters as Record<string, unknown>).playerLifecycle, 'NEVER')
+  assert.equal((captured[4].filters as Record<string, unknown>).playerLifecycle, 'NEVER')
   // 服务端旧枚举在 URL 中保留时仍按兼容映射工作。
   await loadAdminReadPage('users', { ...baseQuery, filters: { playerLifecycle: 'FORMER' } }, request)
-  assert.equal((captured[4].filters as Record<string, unknown>).playerLifecycle, 'EXPIRED')
+  assert.equal((captured[5].filters as Record<string, unknown>).playerLifecycle, 'EXPIRED')
 })
 
 it('preserves the server page and displays authoritative expiry buckets without filtering it again', async () => {

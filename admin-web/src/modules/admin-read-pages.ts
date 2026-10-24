@@ -211,7 +211,7 @@ export async function loadAdminReadPage(
 
 async function loadUsers(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
   const filters = query.filters ?? {}
-  const kind = ['PLAYER', 'GUEST', 'NORMAL'].includes(filters.kind) ? filters.kind : ''
+  const kind = ['PLAYER', 'GUEST', 'NORMAL', 'ANONYMOUS'].includes(filters.kind) ? filters.kind : ''
   const playerLifecycle = normalizePlayerStatusFilter(filters.playerLifecycle)
   const page = pageValue(await request('mip.admin.users.list', listInput({
     ...query,

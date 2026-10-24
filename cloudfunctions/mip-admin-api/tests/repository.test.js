@@ -111,16 +111,19 @@ describe('admin repository persistence contracts', () => {
 
   it('builds a user detail only from app-scoped MIP facts', async () => {
     const calls = []
+    // MIW-130：phone_verified_at 与 profile_complete 决定匿名访客/普通用户展示；未完善时为匿名访客。
+    let detailRow = {
+      id: 'user-a', status: 'ACTIVE', primary_branch_id: 'branch-a', user_version: 2,
+      created_at: new Date('2026-01-01T00:00:00.000Z'), updated_at: new Date('2026-08-24T00:00:00.000Z'),
+      nickname: '用户', headline: '', introduction: '', companies_json: '[]', organizations_json: '[]',
+      visibility_json: '{}', profile_version: 1, phone_verified_at: null, profile_complete: 0,
+      branch_name: '广州分会', city_name: '广州',
+    }
     const repository = createAdminRepository(transactionDatabase({
       async one(sql, params) {
         calls.push({ sql, params })
         if (sql.includes('FROM mip_users u')) {
-          return {
-            id: 'user-a', status: 'ACTIVE', primary_branch_id: 'branch-a', user_version: 2,
-            created_at: new Date('2026-01-01T00:00:00.000Z'), updated_at: new Date('2026-08-24T00:00:00.000Z'),
-            nickname: '用户', headline: '', introduction: '', companies_json: '[]', organizations_json: '[]',
-            visibility_json: '{}', profile_version: 1, phone_verified_at: null, branch_name: '广州分会', city_name: '广州',
-          }
+          return { ...detailRow }
         }
         if (sql.includes('LEFT JOIN mip_growth_accounts account')) {
           return {
@@ -140,7 +143,10 @@ describe('admin repository persistence contracts', () => {
     }))
     const detail = await repository.getUserDetail('wx-app', 'user-a')
     assert.equal(detail.id, 'user-a')
-    assert.equal(detail.kind, 'NORMAL')
+    assert.equal(detail.kind, 'ANONYMOUS')
+    detailRow = { ...detailRow, phone_verified_at: new Date(), profile_complete: 1 }
+    const completeDetail = await repository.getUserDetail('wx-app', 'user-a')
+    assert.equal(completeDetail.kind, 'NORMAL')
     assert.deepEqual(detail.counts, {
       registrations: 0, attended: 0, orders: 0, opportunities: 0, cooperationCards: 0, superCases: 0,
     })
@@ -148,6 +154,8 @@ describe('admin repository persistence contracts', () => {
     const growthSql = calls.find(call => call.sql.includes('LEFT JOIN mip_growth_accounts account'))?.sql || ''
     assert.match(growthSql, /coin_balance/)
     assert.match(growthSql, /COALESCE\(account\.experience_balance, 0\)/)
+    const detailSql = calls.find(call => call.sql.includes('FROM mip_users u'))?.sql || ''
+    assert.match(detailSql, /AS profile_complete/)
     assert.ok(calls.every(call => call.params[0] === 'wx-app'))
     assert.doesNotMatch(calls.map(call => call.sql).join('\n'), /\b(?:member|dating|sewing)_\w+/i)
   })
@@ -171,6 +179,28 @@ describe('admin repository persistence contracts', () => {
     assert.match(captured.sql, /profile_industry\.relation = 'PRIMARY_INDUSTRY'/)
     assert.match(captured.sql, /DATE_SUB\(UTC_TIMESTAMP\(3\), INTERVAL \? DAY\)/)
     assert.ok(captured.params.includes(30))
+  })
+
+  it('filters the anonymous-visitor and normal identity buckets on server facts', async () => {
+    const capturedList = []
+    const repository = createAdminRepository(transactionDatabase({
+      async query(sql, params) {
+        capturedList.push({ sql, params })
+        return []
+      },
+    }))
+    await repository.listUsers('wx-app', { platform: true, branchIds: [], eventIds: [] }, { kind: 'ANONYMOUS' }, 20)
+    await repository.listUsers('wx-app', { platform: true, branchIds: [], eventIds: [] }, { kind: 'NORMAL' }, 20)
+    const [anonymous, normal] = capturedList
+    // 匿名访客：排除有效权益与有效签到后，未绑定手机号或资料未完善。
+    assert.match(anonymous.sql, /NOT EXISTS \(SELECT 1 FROM mip_membership_entitlements role_membership/)
+    assert.match(anonymous.sql, /NOT EXISTS \(SELECT 1 FROM mip_event_registrations role_registration/)
+    assert.match(anonymous.sql, /pp\.phone_verified_at IS NULL OR NOT \(/)
+    // 普通用户：已登录（手机号已绑定）且资料完善，存在任一有效签到即不在此列。
+    assert.match(normal.sql, /AND NOT EXISTS \(SELECT 1 FROM mip_event_registrations role_registration/)
+    assert.match(normal.sql, /pp\.phone_verified_at IS NOT NULL/)
+    const profileClauses = normal.sql.match(/profile_avatar\.purpose = 'AVATAR'/g) || []
+    assert.ok(profileClauses.length >= 2)
   })
 
   it('filters orders by keyword, type, states and time while returning safe business resources', async () => {

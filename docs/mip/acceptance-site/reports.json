@@ -540,17 +540,17 @@
   {
     "id": "admin-users-20261020-v1",
     "requirement": "admin-users",
-    "title": "用户管理：玩家权益与后台角色分离",
+    "title": "用户管理：玩家权益入口与四类身份展示",
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-20T07:59:14.868553+00:00",
-    "updatedAt": "2026-10-20T12:50:15.957207+00:00",
-    "verifiedAt": "2026-10-20T12:50:15.957207+00:00",
+    "updatedAt": "2026-10-24T13:00:42.629830+00:00",
+    "verifiedAt": "2026-10-24T13:00:42.629830+00:00",
     "submittedAt": "2026-10-20T07:59:14.868553+00:00",
-    "commit": "141aca02a8952754c75252adde792b39c22f4b8c",
-    "commitAt": "2026-10-20T08:18:35-04:00",
-    "environment": "测试后台 · 新入口已重新发布并实测",
-    "summary": "修复测试网址仍加载旧构建的问题。刷新后从用户管理进入用户详情，点击蓝色“开通玩家权益”；桌面和手机表单打开/取消及服务端回读通过。未实际赠送会籍。",
+    "commit": "f3250bd5bcabbe49d5f845e614a057a09bd1e9a5",
+    "commitAt": "2026-10-24T20:59:42+08:00",
+    "environment": "本地完整验证 + 演示模式截图；测试/生产后台与云函数未部署",
+    "summary": "用户身份统一为匿名访客、普通用户、嘉宾、玩家四类：未绑定手机号，或已授权手机号但未完善资料的用户为匿名访客；付费与有效签到优先（玩家、嘉宾不因资料缺失回退）。后台用户列表、详情、身份筛选与导出及小程序「当前身份」按同一服务端规则实时计算。此前测试后台的入口修复（蓝色「开通玩家权益」）保留在同一报告。",
     "detail": "docs/mip/evidence/admin-entry-republish-20261020/index.html",
     "files": [
       "docs/mip/evidence/admin-player-access-20261020/index.html",
@@ -573,21 +573,37 @@
       "docs/mip/evidence/admin-entry-republish-20261020/toolbar-after.png",
       "docs/mip/evidence/admin-entry-republish-20261020/toolbar-before.png",
       "docs/mip/evidence/admin-entry-republish-20261020/verification.public.json",
-      "docs/mip/evidence/admin-entry-republish-20261020/viewports.public.json"
+      "docs/mip/evidence/admin-entry-republish-20261020/viewports.public.json",
+      "docs/mip/evidence/admin-user-roles-20261024/README.md",
+      "docs/mip/evidence/admin-user-roles-20261024/desktop-users-list.png",
+      "docs/mip/evidence/admin-user-roles-20261024/desktop-users-anonymous-filter.png",
+      "docs/mip/evidence/admin-user-roles-20261024/mobile-users-anonymous-filter.png"
     ],
     "comparisons": [
       {
-        "title": "测试网址的实际权益入口",
-        "context": "同一真实测试账号、同一操作者、1731×896 CSS视口，完整工具栏局部；个人区域排除，布局变化使操作栏纵向位置不同。此次恢复功能发布，不涉及新增原型。",
+        "title": "用户列表四类身份（演示模式）",
+        "context": "演示数据后台 1440×900 @2x 截图，2026-10-24。旧展示只有三类、手机号未绑定或资料未完善的用户一律显示「普通用户」，且没有公开的修改前截图（生产后台未部署新包），故修改前以说明占位；本图不含真实用户数据。",
         "before": {
-          "file": "docs/mip/evidence/admin-entry-republish-20261020/toolbar-before.png",
-          "caption": "核查时：旧补录会员、设置角色入口",
-          "source": "当前问题修复前的真实测试网址"
+          "reason": "旧后台身份列只显示普通用户/嘉宾/玩家三类，无「匿名访客」；修改前画面未公开。",
+          "caption": "旧后台身份列只有普通用户/嘉宾/玩家三类，无「匿名访客」"
         },
         "after": {
-          "file": "docs/mip/evidence/admin-entry-republish-20261020/toolbar-after.png",
-          "caption": "重新发布后：蓝色开通玩家权益",
-          "source": "最终发布后的真实测试网址"
+          "file": "docs/mip/evidence/admin-user-roles-20261024/desktop-users-list.png",
+          "caption": "演示模式用户列表：玩家、嘉宾、普通用户、匿名访客四类同表可见，「未填写昵称/未绑定」行为匿名访客",
+          "source": "admin-web demo 模式 /#/users，2026-10-24"
+        }
+      },
+      {
+        "title": "匿名访客身份筛选",
+        "context": "同一演示模式，身份筛选选择「匿名访客」并点击筛选后，列表仅剩匿名访客用户；桌面与 390px 手机视口均已实测。",
+        "before": {
+          "reason": "旧后台身份筛选无「匿名访客」选项。",
+          "caption": "旧后台身份筛选无「匿名访客」选项"
+        },
+        "after": {
+          "file": "docs/mip/evidence/admin-user-roles-20261024/desktop-users-anonymous-filter.png",
+          "caption": "身份=匿名访客筛选结果：仅匿名访客一行",
+          "source": "admin-web demo 模式，2026-10-24"
         }
       }
     ],
@@ -595,15 +611,26 @@
       "已从真实测试网址刷新确认新入口，会员时长与必填原因表单在桌面和手机均可打开。",
       "输入原因后取消，独立请求回读权益、会员链版本和后台角色均未改变。",
       "完整工程门禁、68项HTTPS及15个静态资源字节核对通过；BFF包匹配，业务API与配置、网关、权限保持原样。",
-      "三个桌面/手机尺寸无整页横向溢出；已有活动编辑器六图及三栏预览只读回归通过。"
+      "三个桌面/手机尺寸无整页横向溢出；已有活动编辑器六图及三栏预览只读回归通过。",
+      "四类身份判定为服务端实时投影（无存储角色列）：三个云函数共用逐字节一致的 productRole 规则并有 parity 测试。",
+      "只读统计回答「历史数据还是代码问题」：生产 34 名用户中 25 名（14 未绑定手机号 + 11 资料未完善）此前被显示为普通用户，属展示逻辑缺口而非历史数据，无需数据迁移。",
+      "完整小程序+服务端门禁与云函数测试通过（mip-admin-api 799、mip-identity-api 112、mip-opportunities-api 167、Web 350）；演示模式截图桌面与手机视口人工核对。"
     ],
-    "limitations": "只更新测试后台，生产未更新。没有给真实账号追加不可撤销的会籍时长，也没有创建、扩大或撤销后台授权。真实微信新用户首次注册、实际人工发放及用户端权益回读未在本轮执行；代码合同、页面打开与取消不能冒充这些业务旅程通过。用户分类核心口径已在后续需求澄清中确认，展示分类、筛选及导出尚未实现和验收；签到撤销/会籍失效后的展示回退、主分会及其他未决项没有自动确认。",
+    "limitations": "本轮只完成代码与本地验证：三个云函数与 admin-web 静态资源尚未部署到测试/生产，小程序未上传新包；真实后台列表与导出的四类身份、真机「当前身份」展示待部署后验收。没有给真实账号追加会籍或后台授权。真实微信新用户首次注册、实际人工发放权益未在本轮执行。",
     "indexTitle": "用户档案、合作卡与玩家权益入口",
     "highlights": [
       "修复测试后台仍加载旧包的问题，蓝色“开通玩家权益”入口现已上线。",
+      "用户身份按匿名访客/普通用户/嘉宾/玩家四类实时计算：未绑定手机号或资料未完善的用户不再显示为普通用户，后台筛选、导出与小程序「当前身份」口径一致。",
       "用户详情、权益表单及已有活动三栏图文预览已回归；后台角色仍独立配置。"
     ],
-    "pendingSummary": "生产尚未更新；新身份分类与例外规则、全角色、微信新注册及实际发放权益仍待确认或验收。"
+    "pendingSummary": "云函数与后台静态未部署，四类身份在测试/生产后台及真机均为待验收；生产尚未更新。微信新注册、实际发放权益及全角色旅程仍待确认或验收。",
+    "evidenceImages": [
+      {
+        "file": "docs/mip/evidence/admin-user-roles-20261024/mobile-users-anonymous-filter.png",
+        "caption": "390px 手机视口：匿名访客筛选与结果行",
+        "source": "admin-web demo 模式，2026-10-24"
+      }
+    ]
   },
   {
     "id": "review-20261019-v1",

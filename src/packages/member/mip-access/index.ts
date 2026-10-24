@@ -118,7 +118,10 @@ Page({
       nextRequirement: requirement,
       ready: session.decision.ready,
       agreements: session.snapshot.agreements,
-      membershipLabel: session.snapshot.membership.kind === 'PLAYER' ? '玩家' : '嘉宾',
+      // 产品称呼走服务端 productRole（Q-ADMIN-09 四角色）；缺省时按会员权限兜底。
+      membershipLabel: session.snapshot.productRole
+        ? ({ ANONYMOUS: '匿名访客', NORMAL: '普通用户', GUEST: '嘉宾', PLAYER: '玩家' } as const)[session.snapshot.productRole]
+        : session.snapshot.membership.kind === 'PLAYER' ? '玩家' : '嘉宾',
       authenticated: session.snapshot.authenticated,
       globalGate: session.intent.action === 'ENTER_APP',
       cancelLabel: session.intent.action === 'ENTER_APP' ? '退出小程序' : '取消',

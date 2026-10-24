@@ -24,11 +24,13 @@ export const demo = {
   },
   // MIW-124：用户演示数据按生产列表口径（当前角色/玩家权益状态分档）；USR-1004 为普通用户，
   // 用于验证「身份=普通用户」筛选链路。非玩家所属服务器按口径显示「—」。
+  // MIW-130：USR-1005 为匿名访客（未绑定手机号、资料未完善），验证四角色口径的「身份=匿名访客」筛选。
   users: [
     { id: 'USR-1001', name: '林晓', phone: '188****3403', role: '玩家', industry: '品牌咨询', profession: '策略策划', level: 'Lv.8', contribution: '3.28K', playerStatus: '生效中', createdAt: '2029-06-12 10:24', expiresAt: '2030-05-18 23:59', branch: '深圳福田' },
     { id: 'USR-1002', name: '周宁', phone: '139****2811', role: '嘉宾', industry: '投资', profession: '资本合作', level: 'Lv.3', contribution: '620', playerStatus: '—', createdAt: '2029-11-02 18:40', expiresAt: '—', branch: '—' },
     { id: 'USR-1003', name: '陈默', phone: '186****9077', role: '玩家', industry: '设计', profession: '视觉设计', level: 'Lv.5', contribution: '1.6K', playerStatus: '本月到期', createdAt: '2030-01-20 09:05', expiresAt: '2030-03-02 23:59', branch: '中山' },
     { id: 'USR-1004', name: '苏蔓', phone: '137****5520', role: '普通用户', industry: '消费品牌', profession: '品牌主理人', level: 'Lv.1', contribution: '80', playerStatus: '—', createdAt: '2030-02-14 20:12', expiresAt: '—', branch: '—' },
+    { id: 'USR-1005', name: '未填写昵称', phone: '未绑定', role: '匿名访客', industry: '—', profession: '—', level: '—', contribution: '0', playerStatus: '—', createdAt: '2030-03-01 09:30', expiresAt: '—', branch: '—' },
   ],
   events: [
     { id: 'EVT-20300314', title: 'MIP 早会｜城市增长与资源协作', time: '2030-03-14 10:00–12:00', location: '深圳市福田区福华三路 118 号', registrations: 36, status: '已发布' },

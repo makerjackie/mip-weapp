@@ -68,9 +68,16 @@ function createAdminUserRepository(database, options) {
       params.push(filters.experienceMax)
     }
     if (filters.kind === 'PLAYER') clauses.push(activePlayerSql())
-    if (filters.kind === 'GUEST' || filters.kind === 'NORMAL') {
+    if (['GUEST', 'NORMAL', 'ANONYMOUS'].includes(filters.kind)) {
       clauses.push(`NOT ${activePlayerSql()}`)
-      clauses.push(`${filters.kind === 'NORMAL' ? 'NOT ' : ''}${attendedEventSql()}`)
+      clauses.push(`${filters.kind === 'GUEST' ? '' : 'NOT '}${attendedEventSql()}`)
+    }
+    if (filters.kind === 'NORMAL') {
+      clauses.push('pp.phone_verified_at IS NOT NULL')
+      clauses.push(profileCompleteSql('u', 'p'))
+    }
+    if (filters.kind === 'ANONYMOUS') {
+      clauses.push(`(pp.phone_verified_at IS NULL OR NOT ${profileCompleteSql('u', 'p')})`)
     }
     if (filters.playerLifecycle === 'CURRENT') {
       clauses.push('COALESCE(player_entitlements.is_current_player, 0) = 1')
@@ -127,6 +134,8 @@ function createAdminUserRepository(database, options) {
       `${playerEntitlementSummaryCte()}
        SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
         ${attendedEventSql()} AS has_attended,
+        pp.phone_verified_at IS NOT NULL AS phone_bound,
+        ${profileCompleteSql('u', 'p')} AS profile_complete,
         p.nickname, p.identity_status, p.headline, p.introduction, p.visibility_json, p.version AS profile_version, media.cloud_file_id AS avatar_url,
         (SELECT GROUP_CONCAT(DISTINCT tag.label ORDER BY tag.label SEPARATOR '、') FROM mip_profile_tags relation
           INNER JOIN mip_tags tag ON tag.app_id = relation.app_id AND tag.id = relation.tag_id
@@ -171,7 +180,12 @@ function createAdminUserRepository(database, options) {
     const items = rows.map(row => ({
       id: row.id,
       status: row.status,
-      kind: productRole({ isPlayer: Number(row.is_player) === 1, hasAttended: Number(row.has_attended) === 1 }),
+      kind: productRole({
+        isPlayer: Number(row.is_player) === 1,
+        hasAttended: Number(row.has_attended) === 1,
+        phoneBound: Number(row.phone_bound) === 1,
+        profileComplete: Number(row.profile_complete) === 1,
+      }),
       membershipStatus: row.membership_status,
       nickname: row.nickname || '未填写昵称',
       avatarUrl: row.avatar_url || '',
@@ -208,6 +222,7 @@ function createAdminUserRepository(database, options) {
     const user = await database.one(
       `SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
         ${attendedEventSql()} AS has_attended,
+        ${profileCompleteSql('u', 'p')} AS profile_complete,
         u.created_at, u.updated_at,
         p.nickname, p.real_name, p.identity_status, p.headline, p.introduction, p.companies_json,
         p.organizations_json, p.visibility_json, p.version AS profile_version, media.cloud_file_id AS avatar_url,
@@ -315,7 +330,12 @@ function createAdminUserRepository(database, options) {
     return {
       id: user.id,
       status: user.status,
-      kind: productRole({ isPlayer: activePlayer, hasAttended: Number(user.has_attended) === 1 }),
+      kind: productRole({
+        isPlayer: activePlayer,
+        hasAttended: Number(user.has_attended) === 1,
+        phoneBound: Boolean(user.phone_verified_at),
+        profileComplete: Number(user.profile_complete) === 1,
+      }),
       nickname: user.nickname || '未填写昵称',
       avatarUrl: user.avatar_url || '',
       realName: user.real_name || '',
