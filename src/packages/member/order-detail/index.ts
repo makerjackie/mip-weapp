@@ -67,6 +67,11 @@ Page({
     statusDanger: false,
     paymentPending: false,
     refundable: false,
+    // MIW-128：活动订单的取消报名入口移到本页；可取消性由服务端 myRegistration 裁决。
+    eventCancelAvailable: false,
+    eventCancelRetryRefund: false,
+    eventRegistrationVersion: 0,
+    cancelingRegistration: false,
     // MIW-119：初值乐观，真实可用性由入口预取的支付能力快照与服务端裁决修正。
     paymentEnabled: true,
     paymentUnavailableText: '会员支付尚未配置',
@@ -201,6 +206,15 @@ Page({
       statusDanger: status.tone === 'danger',
       paymentPending: status.paymentPending,
       refundable: status.refundable && order.orderType !== 'EVENT',
+      // MIW-128：取消入口只属于活动订单；非活动订单清掉残留标记，活动订单随后由
+      // loadEventRegistration 按服务端裁决刷新。
+      ...(order.orderType === 'EVENT'
+        ? {}
+        : {
+            eventCancelAvailable: false,
+            eventCancelRetryRefund: false,
+            eventRegistrationVersion: 0,
+          }),
       paymentUnavailableText: order.orderType === 'EVENT'
         ? '活动支付尚未配置'
         : order.orderType === 'CONTENT' ? '内容支付尚未配置' : '会员支付尚未配置',
@@ -210,8 +224,89 @@ Page({
     })
     // 封面与详情页同一条本地下载管道：cloud:// 先隐藏，解析成临时路径后再渲染。
     updatePageMedia(this, 'eventCoverUrl', order.event?.coverUrl || '')
+    if (order.orderType === 'EVENT' && order.resourceId) {
+      void this.loadEventRegistration(order)
+    }
     if (order.orderType === 'EVENT' && order.status === 'PAID') {
       void this.refreshCheckInResume(order)
+    }
+  },
+
+  /** MIW-128：加载服务端裁决的报名可取消状态；失败只隐藏取消入口，不遮蔽订单正文。 */
+  async loadEventRegistration(order: CommerceOrder) {
+    const eventId = order.orderType === 'EVENT' ? order.resourceId || '' : ''
+    if (!eventId) {
+      return
+    }
+    try {
+      const registration = await mipEventsModule.getMyRegistration(eventId as EventId)
+      if (this.data.order?.id !== order.id) {
+        return
+      }
+      this.setData({
+        eventCancelAvailable: registration?.canCancel === true || registration?.canRetryRefund === true,
+        eventCancelRetryRefund: registration?.canRetryRefund === true,
+        eventRegistrationVersion: registration?.version || 0,
+      })
+    }
+    catch {
+      if (this.data.order?.id === order.id) {
+        this.setData({
+          eventCancelAvailable: false,
+          eventCancelRetryRefund: false,
+          eventRegistrationVersion: 0,
+        })
+      }
+    }
+  },
+
+  async cancelEventRegistration() {
+    const order = this.data.order
+    const eventId = this.data.eventId
+    const retryRefund = this.data.eventCancelRetryRefund
+    if (!order || !eventId || !this.data.eventCancelAvailable || this.data.cancelingRegistration) {
+      return
+    }
+    const version = this.data.eventRegistrationVersion
+    if (!Number.isInteger(version) || version < 1) {
+      this.setData({ message: '报名状态已变化，正在加载最新状态。' })
+      void this.loadEventRegistration(order)
+      return
+    }
+    this.setData({ cancelingRegistration: true })
+    try {
+      const modal = await wx.showModal({
+        title: retryRefund ? '继续处理退款' : '取消报名',
+        content: retryRefund
+          ? '将继续查询或提交现有退款，不会重复创建退款。'
+          : '确认取消本次报名？如有已支付订单，将按活动规则处理退款。',
+        confirmText: retryRefund ? '继续处理' : '确认取消',
+        cancelText: '取消',
+      })
+      if (!modal.confirm) {
+        return
+      }
+      const result = await mipEventsModule.cancelRegistration(eventId as EventId, version)
+      mipCheckInResumeStore.clear(eventId)
+      wx.showToast({
+        title: result.refundSubmission === 'SUBMITTED'
+          ? '退款已提交'
+          : result.refundRequired ? '退款申请已创建' : '报名已取消',
+        icon: result.refundSubmission === 'SUBMITTED' || !result.refundRequired ? 'success' : 'none',
+      })
+      await this.load()
+    }
+    catch (error) {
+      if (error instanceof MipEventsError && error.code === 'CONFLICT') {
+        await Promise.all([this.load(), this.loadEventRegistration(order)])
+        this.setData({ message: '报名状态已变化，已加载最新状态。' })
+      }
+      else {
+        this.setData({ message: error instanceof Error ? error.message : '暂时无法取消报名' })
+      }
+    }
+    finally {
+      this.setData({ cancelingRegistration: false })
     }
   },
 

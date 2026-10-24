@@ -126,34 +126,46 @@ describe('MIP registration edit eligibility', () => {
 })
 
 describe('MIP protected registration read', () => {
-  it('is app/user scoped and returns only the editable private snapshot', async () => {
-    let call
+  it('is app/user scoped and returns the editable snapshot with server-decided cancellation flags (MIW-128)', async () => {
+    const calls = []
     const result = await getMyRegistration({
       async one(sql, params) {
-        call = { sql, params }
-        return {
-          ...registrationRow(),
-          event_status: 'PUBLISHED',
-          registration_deadline: '2026-08-25T00:00:00.000Z',
-          starts_at: '2026-08-26T00:00:00.000Z',
-          user_id: 'must-not-leak',
-          openid: 'must-not-leak',
-          ticket_hash: 'must-not-leak',
+        calls.push({ sql, params })
+        if (sql.includes('FROM mip_event_registrations')) {
+          return {
+            ...registrationRow(),
+            event_status: 'PUBLISHED',
+            registration_deadline: '2026-08-25T00:00:00.000Z',
+            starts_at: '2026-08-26T00:00:00.000Z',
+            cancellation_deadline: '2026-08-25T12:00:00.000Z',
+            user_id: 'must-not-leak',
+            openid: 'must-not-leak',
+            ticket_hash: 'must-not-leak',
+          }
         }
+        return { value_json: null }
       },
     }, { appId: 'wx-app', userId: 'user-1', eventId: 'event-1', now })
 
-    assert.match(call.sql, /WHERE r\.app_id = \? AND r\.event_id = \? AND r\.user_id = \?/)
-    assert.deepEqual(call.params, ['wx-app', 'event-1', 'user-1'])
+    const registrationCall = calls.find(call => call.sql.includes('FROM mip_event_registrations'))
+    assert.match(registrationCall.sql, /WHERE r\.app_id = \? AND r\.event_id = \? AND r\.user_id = \?/)
+    assert.deepEqual(registrationCall.params, ['wx-app', 'event-1', 'user-1'])
+    assert.match(registrationCall.sql, /LEFT JOIN mip_orders registration_order/)
+    assert.match(registrationCall.sql, /LEFT JOIN mip_refunds latest_refund/)
     assert.deepEqual(Object.keys(result).sort(), [
       'answers',
+      'canCancel',
       'canEdit',
+      'canRetryRefund',
       'formVersion',
       'orderId',
       'shareProfile',
       'status',
       'version',
     ])
+    // PENDING_REVIEW 且未过取消截止 → 服务端裁决可取消；退款重试保持关闭。
+    assert.equal(result.canCancel, true)
+    assert.equal(result.canRetryRefund, false)
     assert.equal(JSON.stringify(result).includes('must-not-leak'), false)
   })
 

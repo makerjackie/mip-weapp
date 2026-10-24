@@ -131,9 +131,10 @@ describe('phase9 final gap contracts', () => {
 
   it('onsite roster latches confirmations and drops superseded responses', () => {
     const roster = read('src/packages/admin/event-registrations/index.ts')
-    const eventDetail = read('src/packages/member/mip-events/detail/index.ts')
+    // MIW-128：详情页取消入口移除后，确认弹窗闩锁的详情侧断言移到订单详情页。
+    const orderDetail = read('src/packages/member/order-detail/index.ts')
 
-    expect(eventDetail).toMatch(/busy: true[\s\S]*?showModal/)
+    expect(orderDetail).toMatch(/cancelingRegistration: true[\s\S]*?showModal/)
     expect(roster).toMatch(/this\.confirmationBusy = true[\s\S]*?showModal/)
     expect(roster).toContain('requestSeq: 0')
     expect(roster).toMatch(/if \(seq !== this\.requestSeq\)/)

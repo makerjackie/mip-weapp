@@ -222,8 +222,8 @@ describe('phase9 page double-click / stale / error recovery behavior', () => {
     const registration = read('src/packages/member/mip-events/registration/index.ts')
     const roster = read('src/packages/admin/event-registrations/index.ts')
 
-    expect(detail).toMatch(/if \(\(!currentEvent\?\.canCancel && !retryRefund\) \|\| this\.data\.busy\)/)
-    expect(detail).toMatch(/busy: true[\s\S]*?showModal[\s\S]*?finally[\s\S]*?busy: false/)
+    // MIW-128：详情页取消入口已移除（编排移至订单详情），不允许回归。
+    expect(detail).not.toContain('cancelRegistration')
     expect(registration).toMatch(/if \(!event \|\| this\.data\.busy \|\| !this\.validate\(\)\)/)
     expect(registration).toMatch(/busy: true[\s\S]*?mipEventsModule\.register[\s\S]*?finally[\s\S]*?busy: false/)
     expect(roster).toMatch(/this\.data\.processingId \|\| this\.confirmationBusy/)
