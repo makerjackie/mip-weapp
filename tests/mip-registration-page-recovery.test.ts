@@ -208,6 +208,41 @@ describe('registration page recovery', () => {
     expect(mocks.getMyRegistration.mock.calls.length).toBe(registrationsAfterLoad)
     expect(mocks.saveDraft.mock.calls.length).toBe(draftsAfterFill)
   })
+  it('returns to the event detail with a success toast after a direct registration (MIW-129)', async () => {
+    const instance = page()
+    instance.data.eventId = 'e1'
+    await instance.loadEvent()
+    instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '参加交流' } })
+    const draftsAfterFill = mocks.saveDraft.mock.calls.length
+    const registrationsAfterLoad = mocks.getMyRegistration.mock.calls.length
+    mocks.register.mockResolvedValue({ kind: 'REGISTERED', registrationId: 'r1', status: 'REGISTERED' })
+
+    await instance.submit()
+
+    expect(mocks.toast).toHaveBeenCalledWith({ title: '报名成功', icon: 'success' })
+    expect(mocks.navigateBack).toHaveBeenCalledTimes(1)
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(instance.data.state).toBe('submitted')
+    // 早退不重查报名资格；finally 的 persistDraft 不回写已完成报名的草稿。
+    expect(mocks.getMyRegistration.mock.calls.length).toBe(registrationsAfterLoad)
+    expect(mocks.saveDraft.mock.calls.length).toBe(draftsAfterFill)
+  })
+  it('keeps the check-in resume result view for a free registration too (MIW-129)', async () => {
+    const instance = page()
+    instance.data.eventId = 'e1'
+    instance.data.resumeCheckIn = true
+    await instance.loadEvent()
+    instance.onTextInput({ currentTarget: { dataset: { index: 0 } }, detail: { value: '参加交流' } })
+    mocks.register.mockResolvedValue({ kind: 'REGISTERED', registrationId: 'r1', status: 'REGISTERED' })
+
+    await instance.submit()
+
+    expect(mocks.toast).not.toHaveBeenCalled()
+    expect(mocks.navigateBack).not.toHaveBeenCalled()
+    expect(instance.data.state).toBe('submitted')
+    expect(instance.data.resultTitle).toBe('报名成功')
+    expect(instance.data.canContinueCheckIn).toBe(true)
+  })
   it('keeps the check-in resume result view instead of auto-returning (MIW-106)', async () => {
     const instance = page()
     instance.data.eventId = 'e1'
