@@ -1,5 +1,82 @@
 [
   {
+    "id": "event-cancel-entry-20261024-v1",
+    "requirement": "event-cancel-entry",
+    "title": "活动详情页取消报名入口移至订单详情",
+    "indexTitle": "活动取消报名入口调整：详情页不再显示，订单详情承接",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-24T12:10:51.547+00:00",
+    "updatedAt": "2026-10-24T12:10:51.547+00:00",
+    "verifiedAt": "2026-10-24T12:10:51.547+00:00",
+    "submittedAt": "2026-10-24T12:10:51.547+00:00",
+    "reportDate": "2026-10-24",
+    "commit": "62c87b71adb931af0052b49af8069b1fc465f1ed",
+    "commitAt": "2026-10-24T19:14:43+08:00",
+    "environment": "微信开发者工具 iPhone 12/13 (Pro) 390×844 · TEST 测试云环境 · 未上真机",
+    "summary": "活动详情页不再显示「取消报名」，取消报名入口移到订单详情页，是否可取消由服务端报名状态裁决。",
+    "highlights": [
+      "要求：活动详情页进去不再显示「取消报名」。结果：已报名外观下详情底栏只保留客服与分享两个入口，取消按钮及其页面逻辑已移除（开发者工具验证，真实已报名链路待真机）。",
+      "要求：取消的入口在订单详情。结果：活动订单详情新增「取消报名」卡片与按钮，可否取消由服务端 canCancel / canRetryRefund 裁决，取消结果以订单状态为准。",
+      "服务端 mip-events-api 已部署 TEST（GetFunction 回读 Active）；修改前后的开发者工具对照截图见下方证据。"
+    ],
+    "detail": "甲方要求（2026-10-24）：/supa-ai 活动模块详情页不需要显示取消报名，取消的入口在订单详情。实现见 commit 62c87b71。",
+    "files": [
+      "docs/mip/evidence/miw128-event-cancel-entry-20261024/README.md",
+      "docs/mip/evidence/miw128-event-cancel-entry-20261024/shots/00-event-detail-before-with-cancel-simulated.png",
+      "docs/mip/evidence/miw128-event-cancel-entry-20261024/shots/01-event-detail-unregistered.png",
+      "docs/mip/evidence/miw128-event-cancel-entry-20261024/shots/02-event-detail-registered-appearance-simulated.png",
+      "docs/mip/evidence/miw128-event-cancel-entry-20261024/shots/03-order-detail-cancel-entry-simulated.png"
+    ],
+    "comparisons": [
+      {
+        "title": "活动详情页：移除取消报名按钮",
+        "context": "同一 TEST 环境、同一 390×844 开发者工具视口。修改前为父提交构建的真实 bundle（页面 cancelRegistration 方法存在已验证），已报名外观用 setData 置为服务端裁决位（真实已报名链路因 TEST 图片安全检查通道故障与原生手机号授权限制未走通，见待复测）。修改后为本次提交构建的真实 bundle（cancelRegistration 方法已不存在已验证）。",
+        "before": {
+          "file": "docs/mip/evidence/miw128-event-cancel-entry-20261024/shots/00-event-detail-before-with-cancel-simulated.png",
+          "caption": "修改前：底栏客服 + 分享 + 红色「取消报名」",
+          "source": "旧版本真实 bundle · 已报名外观 setData 模拟"
+        },
+        "after": {
+          "file": "docs/mip/evidence/miw128-event-cancel-entry-20261024/shots/02-event-detail-registered-appearance-simulated.png",
+          "caption": "修改后：已报名外观底栏只留客服 + 分享，无取消入口",
+          "source": "新 bundle 真实界面 · 已报名外观 setData 模拟"
+        },
+        "prototype": {
+          "caption": "功能调整，无新增视觉原型",
+          "reason": "入口位置调整，不改变视觉布局；按 2026-10-20 规则纯功能迭代不列原型占位。",
+          "source": "2026-10-24 甲方要求"
+        }
+      },
+      {
+        "title": "订单详情页：新增取消报名入口",
+        "context": "同一 390×844 开发者工具视口。订单卡片与取消按钮为真实界面结构，订单数据用 setData 模拟（无真实支付订单可加载，订单号为演示数据）；真实订单上的取消操作待真机复测。",
+        "before": {
+          "caption": "修改前：订单详情无取消报名入口",
+          "reason": "该入口为本轮新增，修改前订单详情无此卡片，未单独留修改前截图。"
+        },
+        "after": {
+          "file": "docs/mip/evidence/miw128-event-cancel-entry-20261024/shots/03-order-detail-cancel-entry-simulated.png",
+          "caption": "修改后：活动订单详情显示活动信息卡片与「取消报名」按钮",
+          "source": "新 bundle 真实界面结构 · 订单数据 setData 模拟"
+        },
+        "prototype": {
+          "caption": "功能调整，无新增视觉原型",
+          "reason": "入口位置调整，不改变视觉布局；按 2026-10-20 规则纯功能迭代不列原型占位。",
+          "source": "2026-10-24 甲方要求"
+        }
+      }
+    ],
+    "uiChange": true,
+    "checks": [
+      "开发者工具：新构建详情页 cancelRegistration 方法已不存在（调用返回 not exists），渲染树无取消按钮节点；父提交旧构建同方法存在且按钮实测渲染于底栏第三位，作对照。",
+      "订单详情渲染文本包含取消报名入口卡片说明与「取消报名」按钮；7 项页面合同测试通过（canCancel 由服务端裁决、报名读取失败隐藏入口、版本冲突只重载不重写、非活动订单不显示入口等）。",
+      "dist wxml 检查：详情页 mip-event-cancel-action 0 次、订单详情 1 次；mip-events-api 已部署 TEST 并回读 Active。"
+    ],
+    "limitations": "真实已报名链路未走通：TEST 用户侧图片安全检查通道故障（IMAGE_SAFETY_UNAVAILABLE，2026-10-24 两次实测）叠加原生手机号授权无法由自动化驱动，已报名外观截图用 setData 模拟并已标注；订单详情截图使用模拟订单数据。两者均待 iPhone 真机复测；测试库为本轮联调给两个历史测试用户预置了资料行（不涉及订单与支付数据）。",
+    "pendingSummary": "开发者工具与 TEST 已验证；真实已报名链路与真实支付订单上的取消操作待 iPhone 真机复测；生产未同步。"
+  },
+  {
     "id": "event-media-player-free-20261020-v1",
     "requirement": "event-media-player-free",
     "title": "活动图文、玩家免费与订单显示",
