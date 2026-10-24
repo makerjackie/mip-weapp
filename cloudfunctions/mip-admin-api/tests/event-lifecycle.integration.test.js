@@ -25,9 +25,11 @@ function lifecycleDatabase() {
       }
       if (text.includes('SELECT r.status, r.order_id')) {
         return state.registration
-          ? { ...state.registration, event_status: state.event.status, registration_deadline: null, starts_at: state.event.starts_at }
+          ? { ...state.registration, event_status: state.event.status, registration_deadline: null, starts_at: state.event.starts_at, cancellation_deadline: state.event.cancellation_deadline ?? null }
           : null
       }
+      // MIW-128：myRegistration 现在并发读取取消政策（缺省 → 24 小时兜底）。
+      if (text.includes('FROM mip_app_settings')) return null
       if (text.includes('FROM mip_event_registrations')) return state.registration
       if (text.includes('FROM mip_event_checkin_transitions')) return state.transitions[0] ? { id: state.transitions[0][0] } : null
       if (text.includes('FROM mip_event_checkins')) return state.checkin

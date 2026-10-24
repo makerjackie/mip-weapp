@@ -250,6 +250,10 @@ export interface MyEventRegistration {
   // 默认公开（缺省/true=1，显式 false=0）。此字段仅为回读服务端真实列值保留。
   shareProfile?: boolean
   canEdit: boolean
+  // MIW-128：取消入口移到订单详情；是否可取消/继续退款由服务端裁决（与「我的活动」
+  // 列表同一规则链）。可选以兼容尚未重新部署的云函数版本，缺省按 false 处理。
+  canCancel?: boolean
+  canRetryRefund?: boolean
 }
 
 export interface RegistrationUpdateIntent {

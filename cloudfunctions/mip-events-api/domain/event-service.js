@@ -1711,23 +1711,56 @@ async function getMyRegistration(db, { appId, userId, eventId, now = new Date() 
   if (typeof eventId !== 'string' || !eventId) {
     throw new DomainError('VALIDATION_FAILED', '活动参数无效')
   }
-  const row = await db.one(
-    `SELECT r.status, r.order_id, r.version, r.form_version, r.answers_json, r.share_profile,
-            e.status AS event_status, e.registration_deadline, e.starts_at
-     FROM mip_event_registrations r
-     INNER JOIN mip_events e ON e.app_id = r.app_id AND e.id = r.event_id
-     WHERE r.app_id = ? AND r.event_id = ? AND r.user_id = ?
-     LIMIT 1`,
-    [appId, eventId, userId],
-  )
+  // MIW-128：取消报名入口移到订单详情后，myRegistration 需回传服务端裁决的
+  // canCancel / canRetryRefund（与「我的活动」列表同一条规则链），客户端不自行推导。
+  const [row, policy] = await Promise.all([
+    db.one(
+      `SELECT r.status, r.order_id, r.version, r.form_version, r.answers_json, r.share_profile,
+              e.status AS event_status, e.registration_deadline, e.starts_at, e.cancellation_deadline,
+              registration_order.status AS order_status,
+              latest_refund.status AS refund_status,
+              latest_refund.last_error_code AS refund_last_error_code
+       FROM mip_event_registrations r
+       INNER JOIN mip_events e ON e.app_id = r.app_id AND e.id = r.event_id
+       LEFT JOIN mip_orders registration_order
+         ON registration_order.app_id = r.app_id AND registration_order.id = r.order_id
+         AND registration_order.order_type = 'EVENT'
+       LEFT JOIN mip_refunds latest_refund
+         ON latest_refund.app_id = registration_order.app_id
+         AND latest_refund.order_id = registration_order.id
+         AND latest_refund.id = (
+           SELECT refund_row.id FROM mip_refunds refund_row
+           WHERE refund_row.app_id = registration_order.app_id
+             AND refund_row.order_id = registration_order.id
+           ORDER BY refund_row.created_at DESC, refund_row.id DESC LIMIT 1
+         )
+       WHERE r.app_id = ? AND r.event_id = ? AND r.user_id = ?
+       LIMIT 1`,
+      [appId, eventId, userId],
+    ),
+    db.one(
+      `SELECT value_json FROM mip_app_settings
+       WHERE app_id = ? AND setting_key = 'EVENT_REGISTRATION_POLICY'`,
+      [appId],
+    ),
+  ])
   if (!row) {
     return null
   }
-  return registrationEditView({
-    status: row.event_status,
-    registration_deadline: row.registration_deadline,
-    starts_at: row.starts_at,
-  }, row, now)
+  return {
+    ...registrationEditView({
+      status: row.event_status,
+      registration_deadline: row.registration_deadline,
+      starts_at: row.starts_at,
+    }, row, now),
+    canCancel: canCancelRegistration(row, row.status, now, eventCancellationHours(policy?.value_json)),
+    canRetryRefund: canRetryRegistrationRefund({
+      registration_status: row.status,
+      order_status: row.order_status,
+      refund_status: row.refund_status,
+      refund_last_error_code: row.refund_last_error_code,
+    }),
+  }
 }
 
 async function updateRegistration(db, {

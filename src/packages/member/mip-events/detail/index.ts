@@ -1096,60 +1096,6 @@ Page({
     })
   },
 
-  async cancelRegistration() {
-    const currentEvent = this.data.event
-    const retryRefund = currentEvent?.canRetryRefund === true
-    if ((!currentEvent?.canCancel && !retryRefund) || this.data.busy) {
-      return
-    }
-    const registrationVersion = currentEvent.registrationVersion
-    if (typeof registrationVersion !== 'number'
-      || !Number.isInteger(registrationVersion)
-      || registrationVersion < 1) {
-      this.setData({ message: '报名状态已变化，正在加载最新状态。' })
-      await this.loadEvent({ force: true })
-      return
-    }
-    this.setData({ busy: true, message: '' })
-    try {
-      const modal = await wx.showModal({
-        title: retryRefund ? '继续处理退款' : '取消报名',
-        content: retryRefund
-          ? '将继续查询或提交现有退款，不会重复创建退款。'
-          : '确认取消本次报名？如有已支付订单，将按活动规则处理退款。',
-        confirmText: retryRefund ? '继续处理' : '确认取消',
-      })
-      if (!modal.confirm) {
-        return
-      }
-      const result = await mipEventsModule.cancelRegistration(
-        this.data.eventId,
-        registrationVersion,
-      )
-      mipCheckInResumeStore.clear(String(this.data.eventId))
-      this.setData({ hasCheckInIntent: false })
-      wx.showToast({
-        title: result.refundSubmission === 'SUBMITTED'
-          ? '退款已提交'
-          : result.refundRequired ? '退款申请已创建' : '报名已取消',
-        icon: result.refundSubmission === 'SUBMITTED' || !result.refundRequired ? 'success' : 'none',
-      })
-      await this.loadEvent({ force: true })
-    }
-    catch (error) {
-      if (error instanceof MipEventsError && error.code === 'CONFLICT') {
-        await this.loadEvent({ force: true })
-        this.setData({ message: '报名状态已变化，已加载最新状态。' })
-      }
-      else {
-        this.setData({ message: error instanceof Error ? error.message : '暂时无法取消报名' })
-      }
-    }
-    finally {
-      this.setData({ busy: false })
-    }
-  },
-
   onShareAppMessage() {
     this.closeShare()
     if (this.data.outgoingInviteRef) {

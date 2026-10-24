@@ -119,22 +119,31 @@ describe('event registration experience', () => {
     expect(service).toContain('registrationVersion: Number(row.registration_version)')
   })
 
-  it('reuses the same cancellation orchestration for refund retry on both activity pages', () => {
+  it('keeps cancellation out of the event detail and orders it through the order detail (MIW-128)', () => {
     const detail = read('src/packages/member/mip-events/detail/index.ts')
     const detailView = read('src/packages/member/mip-events/detail/index.wxml')
     const mine = read('src/packages/member/mip-events/mine/index.ts')
     const mineView = read('src/packages/member/mip-events/mine/index.wxml')
+    const orderDetail = read('src/packages/member/order-detail/index.ts')
+    const orderDetailView = read('src/packages/member/order-detail/index.wxml')
 
-    expect(detail).toContain('currentEvent?.canRetryRefund === true')
-    expect(detail).toContain('currentEvent.registrationVersion')
-    expect(detail).toContain('error instanceof MipEventsError && error.code === \'CONFLICT\'')
-    expect(detail).toContain('await this.loadEvent({ force: true })')
-    expect(detailView).toContain('event.canRetryRefund')
-    expect(detailView).toContain('继续处理退款')
+    // MIW-128：活动详情页不再提供取消报名/继续处理退款入口。
+    expect(detail).not.toContain('cancelRegistration')
+    expect(detailView).not.toContain('取消报名')
+    expect(detailView).not.toContain('继续处理退款')
+    expect(detailView).not.toContain('event.canCancel')
+    expect(detailView).not.toContain('event.canRetryRefund')
+    // 取消编排保留在「我的活动」，并由订单详情页（服务端 myRegistration 裁决）承接入口。
     expect(mine).toContain('dataset.refundRetry === \'true\'')
     expect(mine).toContain('mipEventsModule.cancelRegistration')
     expect(mineView).toContain('data-refund-retry="{{item.canRetryRefund}}"')
     expect(mineView).toContain('{{item.canRetryRefund ? \'继续处理退款\' : \'取消报名\'}}')
+    expect(orderDetail).toContain('loadEventRegistration')
+    expect(orderDetail).toContain('mipEventsModule.cancelRegistration')
+    expect(orderDetail).toContain('error instanceof MipEventsError && error.code === \'CONFLICT\'')
+    expect(orderDetailView).toContain('wx:if="{{eventCancelAvailable}}"')
+    expect(orderDetailView).toContain('{{eventCancelRetryRefund ? \'继续处理退款\' : \'取消报名\'}}')
+    expect(orderDetailView).not.toContain('请前往“我的活动”处理')
   })
 
   it('keeps the design-styled cancel pill as the only registration action', () => {
@@ -158,12 +167,13 @@ describe('event registration experience', () => {
   })
 
   it('carries optimistic versions for cancellation and first or subsequent feedback saves', () => {
-    const detail = read('src/packages/member/mip-events/detail/index.ts')
+    // MIW-128：取消编排移到订单详情，乐观版本随入口走；反馈保存仍在 feedback 页。
+    const orderDetail = read('src/packages/member/order-detail/index.ts')
     const feedback = read('src/packages/member/mip-events/feedback/index.ts')
     const gateway = read('src/modules/mip-events/cloudbase-gateway.ts')
     const entry = read('cloudfunctions/mip-events-api/index.js')
 
-    expect(detail).toContain('currentEvent.registrationVersion')
+    expect(orderDetail).toContain('cancelRegistration(eventId as EventId, version)')
     expect(feedback).toContain('expectedVersion: this.data.feedback?.version || 0')
     expect(gateway).toContain('const { expectedVersion, ...feedback } = draft')
     expect(gateway).toMatch(/eventId,[\s\S]*expectedVersion,[\s\S]*draft: feedback/)
@@ -314,8 +324,8 @@ describe('event registration experience', () => {
     expect(primaryActionButton).toContain('aria-disabled="{{busy}}"')
     expect(primaryActionButton).not.toMatch(/\sdisabled=/)
     // 未报名态：客服/转发收窄为 120rpx 胶囊、主按钮占满剩余宽度；
-    // 无报名/取消/继续退款动作时：客服/转发平分宽度（figma 1818_17142）。
-    expect(detailView).toContain('{{primaryAction || event.canCancel || event.canRetryRefund ? \'w-[120rpx] shrink-0\' : \'min-w-0 flex-1\'}}')
+    // 无主按钮时：客服/转发平分宽度（figma 1818_17142；MIW-128 后取消入口不再占位）。
+    expect(detailView).toContain('{{primaryAction ? \'w-[120rpx] shrink-0\' : \'min-w-0 flex-1\'}}')
     expect(detailView).toContain('pb-[calc(env(safe-area-inset-bottom)+160rpx)]')
     expect(detailView).toContain('id="mip-event-bottom-actions"')
     expect(detailView).toContain('mip-member-fixed-inset fixed bottom-[env(safe-area-inset-bottom)]')
