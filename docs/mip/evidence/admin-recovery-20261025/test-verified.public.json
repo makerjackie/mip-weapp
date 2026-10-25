@@ -1,0 +1,15 @@
+{
+  "functionName": "mip-t-admin-web-api",
+  "activeVersion": "$LATEST",
+  "package": {
+    "sha256": "580d4e51a945d2bb98d2b9f7223d23adc2b09fe017913901cfb520f5077f2332",
+    "bytes": 1884930
+  },
+  "filesMatched": 18,
+  "configurationPreservedExceptBundleHash": true,
+  "permissionsUnchanged": true,
+  "triggersUnchanged": true,
+  "routesUnchanged": true,
+  "warmInstancesUnchanged": true,
+  "warmInstanceCount": 0
+}

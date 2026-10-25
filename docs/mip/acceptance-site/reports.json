@@ -1950,5 +1950,44 @@
         "label": "下载问题清单"
       }
     ]
+  },
+  {
+    "id": "admin-recovery-20261025-v1",
+    "requirement": "admin-access-recovery",
+    "title": "生产与测试后台访问恢复",
+    "indexTitle": "后台白屏修复结果",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-25T14:16:11.032836+00:00",
+    "updatedAt": "2026-10-25T14:16:11.032836+00:00",
+    "verifiedAt": "2026-10-25T14:16:11.032836+00:00",
+    "submittedAt": "2026-10-25T14:16:11.032836+00:00",
+    "commitAt": "2026-10-25T03:51:32+08:00",
+    "reportDate": "2026-10-25",
+    "commit": "437734b625ad64352e4a7786cdf6dab71fd11d3a",
+    "environment": "生产与测试 · 两个后台均已恢复",
+    "summary": "恢复两套管理后台访问，保留最新业务功能。",
+    "highlights": [
+      "要求：修复管理后台打开后白屏。",
+      "结果：已将首页与配套程序文件成套发布；生产、测试均通过真实登录、资源核验和关键页面回归。"
+    ],
+    "comparisons": [],
+    "uiChange": false,
+    "pendingSummary": "本轮没有重新上传小程序；微信授权、签到、支付及最新业务需求全流程仍需专项验收。",
+    "limitations": "仅发布链路恢复与关键页面回归，不代表所有业务流程已验收。",
+    "sections": [
+      {
+        "id": "admin-recovery-1025-validation",
+        "title": "验收结果",
+        "highlights": [
+          "两套后台均通过全部15个资源核验、68项认证与只读检查。",
+          "用户与活动列表、活动图文编辑、玩家权益表单正常；桌面和手机无整体横向溢出。",
+          "未更改会员、活动、订单数据，原有权限及常驻容量保留。"
+        ],
+        "acceptanceStatus": "PASS",
+        "comparisons": [],
+        "uiChange": false
+      }
+    ]
   }
 ]

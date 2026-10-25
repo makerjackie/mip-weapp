@@ -1,0 +1,99 @@
+{
+  "generatedAt": "2026-10-25T14:08:09.056Z",
+  "staticAssetsVerified": true,
+  "filesMatched": 15,
+  "entry": "/assets/index-CN2QNx2n.js",
+  "files": [
+    {
+      "path": "/",
+      "bytes": 949,
+      "sha256": "61f9b8475720e4fab2fcccaeb7b4b050e4d6088230be40ff698e952069157fa6",
+      "matched": true
+    },
+    {
+      "path": "/404.html",
+      "bytes": 465,
+      "sha256": "cf81cd76f5d089408ef0d38c9caa98fc1fff0bbb8b01f92404edbde78c5d52b1",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-a.webp",
+      "bytes": 140004,
+      "sha256": "1ab64a12df8112941974e4e2721a011cf78a3f32e1815ff64c17efb1d8db61a6",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-c.webp",
+      "bytes": 10092,
+      "sha256": "06d2f07a7d2e2e753f88b8a7d8c134cdc83748ee74079c668c8fc1227b9fe464",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-b.webp",
+      "bytes": 8574,
+      "sha256": "de27e065fd47709ead4a853ea9f3aca691627efe11f4110ed71413c16014e5b9",
+      "matched": true
+    },
+    {
+      "path": "/card-templates/card-bg-d.webp",
+      "bytes": 5892,
+      "sha256": "51b455178bb51d295e852efde035b129cd4490db9e648d4c7e5d7f499b766b57",
+      "matched": true
+    },
+    {
+      "path": "/assets/overview-purchase-chart-C7BVZrkA.js",
+      "bytes": 1870,
+      "sha256": "4d423032dd6789c1f606b72802547096a81736b0722f8bd6fc09c7f73b00dce1",
+      "matched": true
+    },
+    {
+      "path": "/assets/charts-ipdpsvac.js",
+      "bytes": 378399,
+      "sha256": "965acef5f810cfd292764ef3f1dd786d5f71aa62641180ef07cd9eae62352d8f",
+      "matched": true
+    },
+    {
+      "path": "/assets/index-CN2QNx2n.js",
+      "bytes": 661759,
+      "sha256": "fad277b928394f45b2bb076e33b0217335de717ca2eb5063777de9327b83bcac",
+      "matched": true
+    },
+    {
+      "path": "/assets/react-Mefe_Tge.js",
+      "bytes": 189647,
+      "sha256": "53e857905a9e3cb132c11c752fe0b44ef37aa2dcd686c0bcbe64bf8e02a58812",
+      "matched": true
+    },
+    {
+      "path": "/assets/ant-design-rFeoLOLM.js",
+      "bytes": 1148714,
+      "sha256": "f0ecf22a6106986b7e61978053f6c89187f77098c02a92fd9d3295e8252e8723",
+      "matched": true
+    },
+    {
+      "path": "/assets/rolldown-runtime-hePW80VL.js",
+      "bytes": 716,
+      "sha256": "580ad8c58061a4dde99bde0a56905e382f0568516ee2f5b84dbfb52085709021",
+      "matched": true
+    },
+    {
+      "path": "/assets/index-Dd_Rii21.css",
+      "bytes": 36125,
+      "sha256": "3c787cc40ffd4a36bd398bdbf674122c0fd36b8baeb422fe49af052636a1866f",
+      "matched": true
+    },
+    {
+      "path": "/assets/router-query-C4zZBCHv.js",
+      "bytes": 112179,
+      "sha256": "bff0c71b4ab96d729ad553c06603a31aae80811d28f46c2d82b1768d80f0e93e",
+      "matched": true
+    },
+    {
+      "path": "/assets/vendor-CUb-vo8-.js",
+      "bytes": 450811,
+      "sha256": "6819f8653409eded93645654688d56fdb501efc9db5b730d524a91fbd0e99ec1",
+      "matched": true
+    }
+  ],
+  "scope": "Public static bytes only; function source, authentication and browser acceptance require separate evidence."
+}

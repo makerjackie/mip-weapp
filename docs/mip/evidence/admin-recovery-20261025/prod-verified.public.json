@@ -1,0 +1,15 @@
+{
+  "functionName": "mip-admin-web-api",
+  "activeVersion": "4",
+  "package": {
+    "sha256": "d976f7838d799a1d13caf10c026b025e44cc8d936dc5cdc71aaca621e583635f",
+    "bytes": 2295726
+  },
+  "filesMatched": 21,
+  "configurationPreservedExceptBundleHash": true,
+  "permissionsUnchanged": true,
+  "triggersUnchanged": true,
+  "routesUnchanged": true,
+  "warmInstancesUnchanged": true,
+  "warmInstanceCount": 1
+}

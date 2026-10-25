@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-25T14:12:46.649Z",
+  "environment": "PRODUCTION",
+  "login": true,
+  "businessWrites": false,
+  "eventsListNonempty": true,
+  "eventDetails": true,
+  "detailImages": [
+    {
+      "loaded": true
+    }
+  ],
+  "eventEditOpenedAndCancelled": true,
+  "editorImages": [
+    {
+      "loaded": true
+    },
+    {
+      "loaded": true
+    },
+    {
+      "loaded": true
+    },
+    {
+      "loaded": true
+    }
+  ],
+  "userListNonempty": true,
+  "entitlementFormOpenedAndCancelled": true,
+  "viewports": [
+    {
+      "entry": [
+        "/assets/index-CN2QNx2n.js"
+      ],
+      "height": 720,
+      "overflow": false,
+      "rows": 21,
+      "width": 1280
+    },
+    {
+      "entry": [
+        "/assets/index-CN2QNx2n.js"
+      ],
+      "height": 900,
+      "overflow": false,
+      "rows": 21,
+      "width": 1440
+    },
+    {
+      "entry": [
+        "/assets/index-CN2QNx2n.js"
+      ],
+      "height": 844,
+      "overflow": false,
+      "rows": 21,
+      "width": 390
+    }
+  ]
+}

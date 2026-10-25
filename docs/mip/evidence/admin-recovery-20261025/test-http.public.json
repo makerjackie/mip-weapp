@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-10-25T14:08:05.539Z",
+  "environment": "test",
+  "checksPassed": 68,
+  "checksFailed": 0,
+  "modulesChecked": 14,
+  "businessWrites": false,
+  "passwordChanged": false,
+  "limitations": [
+    "HTTP authentication and read-model verification, not browser visual acceptance.",
+    "No business writes, refunds, exports, file uploads, or WeChat confirmation are exercised.",
+    "Empty sections prove empty-state transport only; section counts distinguish nonempty coverage."
+  ]
+}

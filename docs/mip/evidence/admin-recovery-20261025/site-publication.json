@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-25T14:18:48.255Z",
+  "deploymentId": "9226c69b",
+  "url": "https://miptest.01mvp.com/updates/2026-10-25/",
+  "status": "PASS",
+  "filesMatched": 560,
+  "bytesMatched": 48047705,
+  "fullManifestSha256": "3133780f050836953aa8840b96c9f7b293f238bc7ac249ab5af30f9d5c664449",
+  "byteAndMimeChecks": true,
+  "browser": {
+    "checkedAt": "2026-10-25T14:17:35.352Z",
+    "viewports": [
+      {
+        "height": 900,
+        "overflow": false,
+        "sections": [
+          "后台白屏修复结果",
+          "待确认与复测",
+          "其他改进"
+        ],
+        "title": "管理后台访问恢复",
+        "width": 1440
+      },
+      {
+        "height": 844,
+        "overflow": false,
+        "sections": [
+          "后台白屏修复结果",
+          "待确认与复测",
+          "其他改进"
+        ],
+        "title": "管理后台访问恢复",
+        "width": 390
+      }
+    ]
+  },
+  "scope": "Acceptance report publication only; business recovery is verified separately by target evidence."
+}

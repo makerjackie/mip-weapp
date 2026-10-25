@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-10-25T14:16:11.032836+00:00",
+  "sourceSha": "437734b625ad64352e4a7786cdf6dab71fd11d3a",
+  "scope": "BFF and isolated static prefixes only; no business functions, database migrations, WeChat package or paid capacity change",
+  "fullGate": {
+    "command": "TZ=Asia/Shanghai pnpm verify:all",
+    "exitCode": 0,
+    "rootTests": 1900,
+    "webContractTests": 350,
+    "webReactTests": 283
+  },
+  "targets": {
+    "test": {
+      "entry": "/assets/index-CN2QNx2n.js",
+      "assetsMatched": 15,
+      "httpChecksPassed": 68,
+      "modules": 14,
+      "browserLogin": true,
+      "entitlementFormOpenedAndCancelled": true,
+      "eventEditOpenedAndImagesDecoded": true,
+      "viewports": [
+        1280,
+        1440,
+        390
+      ]
+    },
+    "prod": {
+      "entry": "/assets/index-CN2QNx2n.js",
+      "assetsMatched": 15,
+      "httpChecksPassed": 68,
+      "modules": 14,
+      "browserLogin": true,
+      "entitlementFormOpenedAndCancelled": true,
+      "eventEditOpenedAndImagesDecoded": true,
+      "viewports": [
+        1280,
+        1440,
+        390
+      ]
+    }
+  }
+}
