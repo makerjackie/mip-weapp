@@ -1,8 +1,8 @@
 {
-  "checkedAt": "2026-10-27T09:46:49.661Z",
+  "checkedAt": "2026-10-27T10:27:30.505Z",
   "environment": "TEST",
-  "sourceSha": "170fa16969d0e93311f1c25e0657681b0f98643e",
-  "version": "1.2.10-test.1027",
+  "sourceSha": "2a22bdc96cc082cd5d190a2ba78a85b475803e9c",
+  "version": "1.2.11-test.1027",
   "productionWrites": false,
   "developmentUploadSucceeded": true,
   "trialAssignmentVerified": false,
@@ -25,7 +25,7 @@
     },
     {
       "id": 4,
-      "result": "Reproduced on 1.2.10: header/server 0, mounted tab 1. Earlier zero-state-only conclusion withdrawn. Active synchronization fix passes focused tests; fresh package and native 1-to-0 regression pending."
+      "result": "Reproduced old package: header/server 0, tab 1. Final 1.2.11 real TEST runtime: start with profile/tab 1, read inbox, navigate back, header/tab/server all 0. Supersedes the earlier zero-state-only conclusion."
     },
     {
       "id": 5,
@@ -53,8 +53,17 @@
     "No production deployment, data repair, payment or formal WeChat release.",
     "Pending payment fixture is synthetic TEST data; no payment was initiated."
   ],
-  "allFeedbackVerified": false,
-  "openIssues": [
-    4
-  ]
+  "openIssues": [],
+  "unreadBadgeRegression": {
+    "before": 1,
+    "after": 0,
+    "profileCleared": true,
+    "bottomTabCleared": true,
+    "serverCleared": true,
+    "source": "1.2.11-test.1027 TEST native runtime",
+    "buildSha": "2a22bdc96cc082cd5d190a2ba78a85b475803e9c"
+  },
+  "testFeedbackChecksPassed": true,
+  "userAcceptanceConfirmed": false,
+  "productionApprovalReceived": false
 }

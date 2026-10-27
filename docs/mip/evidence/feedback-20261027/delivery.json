@@ -1,21 +1,21 @@
 {
   "siteUrl": "https://miptest.01mvp.com/updates/2026-10-27/#feedback-20261027-v1",
-  "siteDeployment": "13f3d575",
-  "publicHttpsFilesVerified": 577,
+  "siteDeployment": "f0fe484e",
+  "publicHttpsFilesVerified": 581,
   "desktopWidth": 1440,
   "mobileWidth": 390,
   "release": {
-    "sourceSha": "170fa16969d0e93311f1c25e0657681b0f98643e",
-    "version": "1.2.10-test.1027",
+    "sourceSha": "2a22bdc96cc082cd5d190a2ba78a85b475803e9c",
+    "version": "1.2.11-test.1027",
     "channel": "trial",
     "targetDir": "envs/test",
-    "uploadedAt": "2026-10-27T09:42:33.742Z",
+    "uploadedAt": "2026-10-27T10:25:05.218Z",
     "developmentUploadSucceeded": true,
     "trialAssignmentVerified": false,
     "reviewSubmitted": false,
     "publicReleased": false
   },
-  "appCodeSourceSha": "170fa16969d0e93311f1c25e0657681b0f98643e",
+  "appCodeSourceSha": "2a22bdc96cc082cd5d190a2ba78a85b475803e9c",
   "publicReportFinalized": false,
   "productionPublished": false,
   "realDeviceVerified": false,
@@ -38,5 +38,20 @@
   "feedbackRevisionAtStart": 246,
   "feedbackRevisionAtFinalCheck": 247,
   "feedbackRequirementsUnchanged": true,
-  "finalSourceChange": "Image alt text and inline span formatting only"
+  "finalSourceChange": "Image alt text and inline span formatting only",
+  "unreadBadgeRegression": {
+    "before": 1,
+    "after": 0,
+    "profileCleared": true,
+    "bottomTabCleared": true,
+    "serverCleared": true,
+    "source": "1.2.11-test.1027 TEST native runtime",
+    "buildSha": "2a22bdc96cc082cd5d190a2ba78a85b475803e9c"
+  },
+  "supersededDevelopmentVersions": [
+    "1.2.9-test.1027",
+    "1.2.10-test.1027"
+  ],
+  "userAcceptanceConfirmed": false,
+  "productionApprovalReceived": false
 }

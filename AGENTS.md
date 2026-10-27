@@ -106,6 +106,7 @@ API Key 是日常通道，Device Flow 是部署高权限通道。只有创建、
 `pnpm verify` 只验证微信小程序与 CloudBase；`pnpm admin:web:verify` 独立验证 Web；`pnpm verify:all` 顺序执行两者。小程序 UI 还要 `pnpm runtime:preflight`；Web UI 要按 `admin-web/AGENTS.md` 验证桌面和手机视口；支付/手机号要真机。
 
 - 排查列表加载问题时，必须包含非空服务端响应到页面展示的合同测试；TypeScript 类型声明、空列表和重试成功不能代替真实字段结构校验。
+- 未读角标必须从真实非零状态验收到零，同时核对消息页、服务端和已挂载的底部 Tab 实际画面；初始就是零、接口成功或缓存清零不能替代该回归。跨页角标同步不能只依赖自定义 Tab 的 `pageLifetimes.show`，订阅状态变更时须在组件销毁后取消订阅。
 - 受保护页面的身份检查锁只覆盖身份决策，不覆盖后续列表；身份失败后的重试必须重新确认身份。可选目录或装饰性请求失败不得让已成功的正文变成整页错误。
 - 构建后检查 dist 健康：嵌套依赖树 `dist/miniprogram_npm/tdesign-miniprogram/miniprogram_npm/` 必须存在（`pnpm build` 已内置断言，缺失即失败）。若构建失败提示缺树，删 `node_modules/weapp-vite/.cache` 再 `pnpm build`——npm 缓存命中会跳过 emit，缺树时全部 TDesign 组件内联渲染（按钮变裸文字、弹层印在页面上，2026-10-13 MIW-79，详见 PROJECT_STATUS.md）。上传前用平台体积报告确认主包 < 2048KB。
 - 体验版上传用 dist 平铺临时工程，不要从根工程（`miniprogramRoot: dist/`）直传——直传报 800059 假缺文件。平铺工程会原样继承 dist 的好坏，上传前必须先做上一条的 dist 健康检查。

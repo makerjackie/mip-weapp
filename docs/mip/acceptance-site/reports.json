@@ -7,16 +7,16 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-27T09:41:39.856Z",
-    "updatedAt": "2026-10-27T10:12:18.549Z",
-    "verifiedAt": "2026-10-27T09:46:49.669Z",
+    "updatedAt": "2026-10-27T10:27:30.505Z",
+    "verifiedAt": "2026-10-27T10:27:30.505Z",
     "submittedAt": "2026-10-27T09:41:39.856Z",
     "reportDate": "2026-10-27",
-    "commit": "170fa16969d0e93311f1c25e0657681b0f98643e",
-    "commitAt": "2026-10-27T05:36:31-04:00",
+    "commit": "2a22bdc96cc082cd5d190a2ba78a85b475803e9c",
+    "commitAt": "2026-10-27T06:18:54-04:00",
     "environment": "TEST真实测试服务 · 微信开发者工具390×844 · 生产未更新",
-    "summary": "测试开发版1.2.10-test.1027连接TEST；体验版指派及真机结果另行核对，生产未更新。",
+    "summary": "测试开发版1.2.11-test.1027连接TEST；体验版指派及真机结果另行核对，生产未更新。",
     "highlights": [
-      "当前测试开发版1.2.10-test.1027连接TEST；消息底部角标补测发现残留，正在修复。生产未更新。"
+      "测试开发版1.2.11-test.1027连接TEST；生产未更新，等待本批验收确认。"
     ],
     "sections": [
       {
@@ -37,14 +37,31 @@
         "id": "feedback-1027-cooperation",
         "title": "3. 合作卡保存后展示",
         "highlights": [
-          "要求：保存后显示角色标签和公开合作卡。结果：点击“保存”即发布，人才列表和公开档案均已回读到；自动暂存与其余草稿仍保持私密。"
+          "要求：保存后显示角色标签和公开合作卡。结果：点击“保存”即发布，人才列表与公开档案均已回读到；历史草稿需本人重新保存，返回自动暂存的草稿仍保持私密。"
         ]
       },
       {
         "id": "feedback-1027-unread",
         "title": "4. 消息已读角标",
         "highlights": [
-          "要求：阅读消息后清除未读数。补测已复现：消息页和服务端已清零，但底部角标仍显示1；正在修复，原先仅核对0态的结论已撤回。"
+          "要求：阅读消息后清除未读数。结果：已复现并修复底部角标残留；真实测试从1条未读开始，阅读后消息页、服务端、“我的”和底部角标均为0，离页返回保持一致。"
+        ],
+        "uiChange": true,
+        "comparisons": [
+          {
+            "title": "消息已读后的底部角标",
+            "context": "相同TEST用户与390×844视口，均已完成消息阅读；左为旧测试包1.2.10残留1，右为最终测试包1.2.11清零。只裁切导航栏，不修改画面。",
+            "before": {
+              "file": "docs/mip/evidence/feedback-20261027/shots/unread-before.png",
+              "caption": "修改前：已读后底部仍显示1",
+              "source": "1.2.10 TEST开发者工具实拍"
+            },
+            "after": {
+              "file": "docs/mip/evidence/feedback-20261027/shots/unread-after.png",
+              "caption": "修改后：已读后底部清零",
+              "source": "1.2.11 TEST开发者工具，服务端同时回读为0"
+            }
+          }
         ]
       },
       {
@@ -140,7 +157,9 @@
       "docs/mip/evidence/feedback-20261027/shots/industry-prototype.png",
       "docs/mip/evidence/feedback-20261027/shots/profile-before.png",
       "docs/mip/evidence/feedback-20261027/shots/profile-after.png",
-      "docs/mip/evidence/feedback-20261027/shots/pending-registration.png"
+      "docs/mip/evidence/feedback-20261027/shots/pending-registration.png",
+      "docs/mip/evidence/feedback-20261027/shots/unread-before.png",
+      "docs/mip/evidence/feedback-20261027/shots/unread-after.png"
     ],
     "limitations": "微信内真实点击、消息角标及从复制链接唤起正确活动仍需手机复测；体验版未核实指派，未提审或正式发布。",
     "pendingSummary": "手机复测：复制链接唤起目标活动、消息角标与合作卡访客视角；开发版上传不等于已设体验版。生产等待本批验收确认。"

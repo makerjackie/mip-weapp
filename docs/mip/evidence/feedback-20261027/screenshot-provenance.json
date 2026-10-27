@@ -56,6 +56,14 @@
     {
       "file": "pending-mine-final.png",
       "sha256": "432bcfea2feab2b63e708687d6c77b1963dd1801b66522b77a91c1d3b3013df1"
+    },
+    {
+      "file": "unread-bug-after-read-1.2.10.png",
+      "sha256": "3a8b8cc9e64004e4a3aa9070d3c73e4640f2132dc97d056cc8c86bba8feb3bf0"
+    },
+    {
+      "file": "unread-after-1.2.11.png",
+      "sha256": "c3375325418337c2364cd7f5e604f233efd289489af964adbe92df84933acaa3"
     }
   ],
   "publishedCrops": [
@@ -107,6 +115,26 @@
         "top": 225,
         "width": 561,
         "height": 450
+      }
+    },
+    {
+      "published": "shots/unread-before.png",
+      "original": "unread-bug-after-read-1.2.10.png",
+      "rect": {
+        "left": 17,
+        "top": 1145,
+        "width": 561,
+        "height": 100
+      }
+    },
+    {
+      "published": "shots/unread-after.png",
+      "original": "unread-after-1.2.11.png",
+      "rect": {
+        "left": 17,
+        "top": 1145,
+        "width": 561,
+        "height": 100
       }
     }
   ]
