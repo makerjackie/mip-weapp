@@ -7,6 +7,8 @@ description: 更新、部署本仓库的 CloudBase Web 管理后台，绑定自�
 
 把本次目标代码发布到已配置的 CloudBase 后台，同时提供代码包、公开静态资源和真实浏览器证据。沿用现有脚本；创建本 skill 不代表授权任何后续部署，执行时按当次用户请求确定范围。
 
+遵循根 [测试验收与生产发布规则](../../../AGENTS.md#测试验收与生产发布用户2026-10-27确认)：本批先在测试环境复现、修复并交付测试验收页，等待用户确认该批通过后才进入生产。不得因测试部署完成或 `--confirm-production` 参数存在而自动接着部署生产；生产复验后提供独立报告并链接测试记录。
+
 ## 入口与范围
 
 先读根 `AGENTS.md`、`admin-web/AGENTS.md`、[文档入口](../../../docs/README.md)、[CloudBase 运行说明](../../../admin-web/cloudbase/README.md)及[当前状态](../../../docs/mip/PROJECT_STATUS.md)。云资源边界见 [CLOUDBASE.md](../../../docs/CLOUDBASE.md)。

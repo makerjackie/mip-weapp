@@ -2,6 +2,8 @@
 
 本页只维护可重复的部署步骤。当前环境已应用的迁移、权限、函数与验证结果见 [MIP 项目状态](mip/PROJECT_STATUS.md)；任何历史快照都不能替代目标环境的重新回读。不要把主账号长期密钥、真实 AppID、EnvID、VPC、子网、UIN、runtime 用户或 secret 写入文档。
 
+所有操作先遵循 [测试验收与生产发布规则](../AGENTS.md#测试验收与生产发布用户2026-10-27确认)。本批测试环境修复并提供验收页后，必须等待用户明确批准才能执行下列生产操作；先测试后生产是两个独立阶段，不能连续自动部署。命令中的目标确认参数只校验环境，不替代用户批准。生产实际复验完成后另给生产验收页并链接测试记录。
+
 从临时 AppID 切换到正式 MIP AppID 时，先准备空的新 CloudBase/MySQL 环境，再执行 [AppID 身份迁移](IDENTITY_MIGRATION.md) 中的备份、应用范围复制和身份衔接流程。当前 schema 不支持在同一个数据库中保留旧 AppID 数据并复制同主键的新 AppID 副本。正常开发与部署保持 `MIP_UNION_ID_REBIND_ENABLED=false`。
 
 1. 在 `.env.local` 配置 AppID、CloudBase EnvID、允许的 AppID、MIP runtime 配置、`MIP_WECHAT_APP_SECRET`（仅服务端）和明确的 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`。上传私钥路径 `MIP_WECHAT_CODE_UPLOAD_KEY_PATH` 也只保存在此文件。知识采集还必须配置 `MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS`，外部内容配置 `MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS`；二者均为逗号分隔的精确 DNS hostname，不接受通配符/IP，web-view 列表必须与微信公众平台业务域名一致。

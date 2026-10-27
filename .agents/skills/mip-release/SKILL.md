@@ -7,6 +7,8 @@ description: MIP 双环境部署与生产发布全流程 runbook：从预检、�
 
 环境事实：同一 CloudBase 环境，两套 MySQL 库 + 两套函数名。**生产 = `mip-*`（envs/prod）；测试 = `mip-t-*` + `mip_test` 库（envs/test）**。函数名/EnvID 构建期焊进包；支付模式与会员目录已服务端化（MIW-119），可热切不发版。
 
+执行前遵循根 [AGENTS 测试验收与生产发布规则](../../../AGENTS.md#测试验收与生产发布用户2026-10-27确认)。本批先在测试环境复现、修复、回归并提供测试验收页；停在用户确认点。用户明确批准本批上线后，才可继续任何生产部署/生产包上传/提审/正式发布。环境确认参数和自动化检查通过不能代替该批准；生产复验后另给生产验收页并链接测试记录。
+
 ## 快捷命令速查
 
 | 场景 | 命令 |
@@ -23,18 +25,22 @@ description: MIP 双环境部署与生产发布全流程 runbook：从预检、�
 ## 阶段 0 · 预检（每次部署/发版前，一项都不能跳）
 
 - [ ] `git status` 干净、`git log origin/main..HEAD` 为空（未推送的代码不发版）
-- [ ] 改动涉及云函数代码？→ 阶段 1 两环境都要跑（先 test 后 prod）
+- [ ] 改动涉及云函数代码？→ 阶段 1 先部署 test；生产部分留到用户明确批准本批上线后执行
 - [ ] 只改客户端？→ 跳过阶段 1 直接到阶段 2
 - [ ] 改了数据库（新迁移）？→ `ops.mjs` 链内置迁移+备份门禁，勿单独跑 apply
 - [ ] **判断包连哪个环境**：`grep -c "mip-t-identity-api" dist/common.js`（>0=测试包；0 且有 `mip-identity-api`=生产包）。微信"体验版/正式版"标签不算数。
 
-## 阶段 1 · 云端部署（顺序固定：先测试后生产）
+## 阶段 1 · 云端部署（测试与生产分开，之间必须经过用户验收确认）
 
 ```bash
 # 测试环境（函数已存在，标准身份即可）
 MIP_ENV_DIR=envs/test CLOUDBASE_AUTH_MODE=local node scripts/ops.mjs --target=test
+```
 
-# 测试验证通过后，生产（自动拼 --confirm-production/--confirm-live）
+测试部署后继续完成本批回归、测试包和测试验收页，等待用户明确确认本批通过并允许上线。不要把下面的生产命令接在测试命令之后自动执行。
+
+```bash
+# 仅在用户明确批准本批上线后执行；确认参数不等于用户批准
 MIP_ENV_DIR=envs/prod CLOUDBASE_AUTH_MODE=local node scripts/ops.mjs --target=production
 ```
 
@@ -44,6 +50,7 @@ MIP_ENV_DIR=envs/prod CLOUDBASE_AUTH_MODE=local node scripts/ops.mjs --target=pr
 
 ## 阶段 2 · 构建与上传
 
+- 用户确认前只允许连接测试环境的测试包；生产通道留待本批上线批准后。测试包上传和测试报告发布后先交付用户验收，不继续执行阶段 3/4。
 - release 脚本内置：目录锁定（trial↔envs/test、prod↔envs/prod）→ `verify:all` 全绿门禁 → **烘焙函数名断言**（trial 包必须只含 mip-t-*，prod 包只含 mip-*）→ dist 平铺上传
 - 生产通道先 fetch，要求干净且与 `origin/main` 一致的 `main`；门禁及构建后再次核对提交未变化。脚本自动注入 `BUILD_SHA` 并核对产物的 `buildSha`，不能把默认 `development` 标记当成发布证据。上传回执保存在忽略目录 `.tmp/release-prod-<version>.json`。
 - 上传只产生开发版本。另行核实公众平台是否设为体验版、是否提审及是否公开发布，三者分别记录；CLI 成功和开发预览二维码都不能替代平台状态。若浏览器策略禁止访问公众平台，交接维护者操作，不换通道绕过禁令。
@@ -61,6 +68,7 @@ MIP_ENV_DIR=envs/prod CLOUDBASE_AUTH_MODE=local node scripts/ops.mjs --target=pr
 
 ## 阶段 4 · 发布后验证（不过不算完）
 
+- [ ] 仅适用于本批已获用户上线批准的生产阶段；完成后另发生产验收页并链接测试验收记录，保持原测试证据
 - [ ] `MIP_ENV_DIR=envs/prod node scripts/verify-cloud.mjs --confirm-env=<EnvID>` 全绿
 - [ ] 真机：打开线上版走通登录 → 活动列表 → **一笔真实会员购买**（live 支付+到账；可退）
 - [ ] `docs/mip/PROJECT_STATUS.md` 记录本批（改了什么/门禁证据/遗留）
