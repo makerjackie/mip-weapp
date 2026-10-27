@@ -25,7 +25,7 @@
     },
     {
       "id": 4,
-      "result": "Synthetic unread message read; server, profile and tab count return to zero after leaving inbox."
+      "result": "Reproduced on 1.2.10: header/server 0, mounted tab 1. Earlier zero-state-only conclusion withdrawn. Active synchronization fix passes focused tests; fresh package and native 1-to-0 regression pending."
     },
     {
       "id": 5,
@@ -52,5 +52,9 @@
     "No real-device claim. Link launch, unread badges and visitor profile need phone retest.",
     "No production deployment, data repair, payment or formal WeChat release.",
     "Pending payment fixture is synthetic TEST data; no payment was initiated."
+  ],
+  "allFeedbackVerified": false,
+  "openIssues": [
+    4
   ]
 }

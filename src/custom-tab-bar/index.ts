@@ -22,6 +22,8 @@ function selectedIndex(value: string) {
   return index >= 0 ? index : 0
 }
 
+const unreadSubscriptions = new WeakMap<object, () => void>()
+
 Component({
   data: {
     selected: 0,
@@ -32,6 +34,10 @@ Component({
 
   lifetimes: {
     attached() {
+      unreadSubscriptions.get(this)?.()
+      unreadSubscriptions.set(this, mipMessagingModule.subscribeUnreadCount((unreadCount) => {
+        this.setData({ unreadCount })
+      }))
       const pages = getCurrentPages()
       const route = pages[pages.length - 1]?.route
       if (route) {
@@ -41,6 +47,10 @@ Component({
         })
       }
       void this.refreshUnreadCount()
+    },
+    detached() {
+      unreadSubscriptions.get(this)?.()
+      unreadSubscriptions.delete(this)
     },
   },
 

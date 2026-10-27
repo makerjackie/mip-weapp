@@ -13,6 +13,19 @@ export function createMipMessagingModule(
   let generation = 0
   let firstPageLimit = 0
   const unreadIds = new Set<InboxMessageId>()
+  const unreadListeners = new Set<(count: number) => void>()
+
+  function notifyUnreadCount() {
+    const count = firstPage?.unreadCount ?? 0
+    for (const listener of unreadListeners) {
+      try {
+        listener(count)
+      }
+      catch {
+        // A detached view must not turn a successful read mutation into a failure.
+      }
+    }
+  }
 
   async function listInbox(cursor?: string, options: { force?: boolean, limit?: number } = {}) {
     const limit = Math.min(30, Math.max(1, options.limit || 20))
@@ -39,6 +52,9 @@ export function createMipMessagingModule(
       firstPage = result
       firstPageLoadedAt = Date.now()
     }
+    if (loadGeneration === generation) {
+      notifyUnreadCount()
+    }
     return result
   }
 
@@ -51,6 +67,14 @@ export function createMipMessagingModule(
 
     peekUnreadCount() {
       return firstPage?.unreadCount
+    },
+
+    subscribeUnreadCount(listener: (count: number) => void) {
+      unreadListeners.add(listener)
+      listener(firstPage?.unreadCount ?? 0)
+      return () => {
+        unreadListeners.delete(listener)
+      }
     },
 
     async refreshUnreadCount(options: { force?: boolean, maxAgeMs?: number } = {}) {
@@ -78,6 +102,7 @@ export function createMipMessagingModule(
       }
       unreadIds.delete(messageId)
       firstPageLoadedAt = 0
+      notifyUnreadCount()
       return result
     },
 
@@ -97,6 +122,7 @@ export function createMipMessagingModule(
         }
       }
       firstPageLoadedAt = 0
+      notifyUnreadCount()
       return result
     },
 
@@ -118,6 +144,7 @@ export function createMipMessagingModule(
       firstPage = undefined
       firstPageLoadedAt = 0
       unreadIds.clear()
+      notifyUnreadCount()
     },
   }
 }
