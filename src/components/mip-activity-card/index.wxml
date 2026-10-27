@@ -17,7 +17,7 @@
     <event-participant-preview wx:if="{{event.registrationCount > 0}}" class="absolute bottom-2 left-2" participants="{{displayParticipants}}" count="{{event.registrationCount}}" count-text="{{event.countText || ''}}" />
     <view class="absolute bottom-2 right-2 flex max-w-[60%] flex-wrap justify-end gap-1">
       <mip-order-tag wx:if="{{event.accessLabel}}" label="{{event.accessLabel}}" />
-      <mip-order-tag wx:if="{{event.eventTypeLabel}}" label="{{event.eventTypeLabel}}" />
+      <mip-order-tag wx:if="{{displayEventType}}" label="{{displayEventType}}" />
       <mip-order-tag wx:for="{{displayTags}}" wx:key="*this" label="{{item}}" />
       <mip-order-tag wx:if="{{event.statusLabel}}" label="{{event.statusLabel}}" bg="var(--color-brand-soft)" border="transparent" color="var(--color-brand)" />
     </view>

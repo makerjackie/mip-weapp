@@ -146,6 +146,7 @@ function responseErrorCode(content) {
 function providerError(code) {
   const error = new Error('WECHAT_CODE_PROVIDER_UNAVAILABLE')
   error.errCode = /^\d{1,10}$/.test(String(code)) ? String(code) : 'UNKNOWN'
+  error.stage = ['NETWORK', 'INVALID_RESPONSE', 'UNAVAILABLE'].includes(code) ? code : 'PROVIDER'
   return error
 }
 

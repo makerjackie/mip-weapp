@@ -415,11 +415,11 @@ Page({
     try {
       const result = await cooperationModule.save({
         ...this.buildDraftPayload(),
-        publish: false,
+        publish: true,
       })
       this.setData({ id: result.id, version: result.version })
       this.markClean()
-      wx.showToast({ title: result.status === 'PUBLISHED' ? '合作卡已保存' : '草稿已保存', icon: 'success' })
+      wx.showToast({ title: '合作卡已保存并展示', icon: 'success' })
       this.clearNavigationTimer()
       this.navigationTimer = setTimeout(() => {
         this.navigationTimer = undefined

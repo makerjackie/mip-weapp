@@ -19,6 +19,7 @@ import { levelNumberOf } from '../../modules/mip-growth'
 import { mipGrowthModule } from '../../modules/mip-growth/client'
 import { createMipGuestLoginFlow, evaluateAccess } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
+import { careerIdentityOptions } from '../../modules/mip-identity/profile-options'
 import { mipMessagingModule } from '../../modules/mip-messaging/client'
 import { requestEntrySubscription } from '../../modules/mip-messaging/entry-subscription'
 import { GUIDE_HEARTS_ENTRY_KEY } from '../../modules/mip-messaging/guide-policy'
@@ -383,7 +384,7 @@ Page({
       nickname: snapshot.profile.nickname || '微信用户',
       nicknameInitial: (snapshot.profile.nickname || '微信用户').slice(0, 1),
       headline: snapshot.profile.headline,
-      identityStatus: snapshot.profile.identityStatus,
+      identityStatus: careerIdentityOptions.find(option => option.value === snapshot.profile.careerIdentityKey)?.label || '',
       profileComplete: snapshot.profile.complete,
       membershipLabel: snapshot.productRole ? ({ ANONYMOUS: '匿名访客', NORMAL: '普通用户', GUEST: '嘉宾', PLAYER: '玩家' } as const)[snapshot.productRole] : membership.label,
       isPlayer,

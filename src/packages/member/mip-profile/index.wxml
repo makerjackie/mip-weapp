@@ -154,6 +154,14 @@
 
     </view>
 
+    <view wx:if="{{popularIndustries.length}}" class="mx-3 mt-3">
+      <view class="flex flex-wrap gap-2">
+        <view wx:for="{{popularIndustries}}" wx:key="id" data-id="{{item.id}}" aria-role="radio" aria-checked="{{selectedIndustryIds[0] === item.id}}" bind:tap="choosePopularIndustry">
+          <mip-tag-chip label="{{item.label}}" active="{{selectedIndustryIds[0] === item.id}}" />
+        </view>
+      </view>
+    </view>
+
     <view class="mx-3 mt-5 flex items-center gap-2 text-[30rpx] font-semibold">
       <mip-icon name="draft-line" size="{{15}}" color="var(--color-brand)" />
       <text>当前身份状态 <text class="text-danger">*</text></text>

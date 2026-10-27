@@ -404,7 +404,7 @@ Page({
     if (!selectedDate || event.currentTarget.dataset.disabled) {
       return
     }
-    this.setData({ calendarSelected: selectedDate })
+    this.setData({ calendarSelected: this.data.calendarSelected === selectedDate ? '' : selectedDate })
     this.rebuildCalendar()
   },
 
@@ -421,17 +421,17 @@ Page({
   confirmCalendar() {
     const selectedDate = this.data.calendarSelected
     const value = selectedDate ? parseLocalDate(selectedDate) : null
-    if (!selectedDate || !value) {
+    if (selectedDate && !value) {
       wx.showToast({ title: '请选择有效日期', icon: 'none' })
       return
     }
     // MIW-37 figma 1819_17793: 只有选中「今天」时标签才带「今天」，其他日期直接显示「M月D日」。
-    const label = selectedDate === formatLocalDate(businessCalendarDate()) ? '今天' : formatChineseMonthDay(value)
+    const label = !value ? '' : selectedDate === formatLocalDate(businessCalendarDate()) ? '今天' : formatChineseMonthDay(value)
     this.setData({
       calendarVisible: false,
       selectedDate,
       customDateLabel: label,
-      dateFilter: 'CUSTOM',
+      dateFilter: selectedDate ? 'CUSTOM' : 'RECENT',
       nextCursor: '',
       message: '',
     })

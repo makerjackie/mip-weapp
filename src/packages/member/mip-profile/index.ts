@@ -45,6 +45,7 @@ Page({
     profileVisibility: null as ProfileVisibility | null,
     industryOptions: [] as Array<{ id: string, label: string }>,
     industryGroups: [] as CatalogSelectorGroup[],
+    popularIndustries: [] as Array<{ id: string, label: string }>,
     selectedIndustryIds: [] as string[],
     industryIndex: 0,
     industryCatalogAvailable: false,
@@ -149,6 +150,7 @@ Page({
         profileVisibility: snapshot.profile.visibility,
         industryOptions,
         industryGroups,
+        popularIndustries: flattenProfileIndustries(tags).filter(tag => tag.popular).map(tag => ({ id: tag.id, label: tag.label })),
         selectedIndustryIds: primaryIndustryId ? [primaryIndustryId] : [],
         industryIndex: Math.max(0, industryOptions.findIndex(item => item.id === primaryIndustryId)),
         industryCatalogAvailable,
@@ -233,6 +235,17 @@ Page({
 
   clearIndustryDraft() {
     this.setData({ draftIndustryIds: [] })
+  },
+
+  choosePopularIndustry(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!this.data.popularIndustries.some(tag => tag.id === id)) {
+      return
+    }
+    this.setData({
+      selectedIndustryIds: [id],
+      industryIndex: this.data.industryOptions.findIndex(tag => tag.id === id),
+    })
   },
 
   closeIndustryPicker() {

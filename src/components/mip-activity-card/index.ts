@@ -12,11 +12,16 @@ Component({
     displayParticipants: [],
     recapBusy: false,
     displayTags: [] as string[],
+    displayEventType: '',
   },
   observers: {
     event(value: { coverUrl?: string, participantPreview?: unknown[], tags?: string[], accessLabel?: string, eventTypeLabel?: string, statusLabel?: string }) {
-      const reserved = new Set([value?.accessLabel, value?.eventTypeLabel, value?.statusLabel])
-      this.setData({ displayTags: [...new Set(value?.tags || [])].filter(tag => !!tag && !reserved.has(tag)) })
+      const tags = [...new Set((value?.tags || []).map(tag => tag.trim()).filter(Boolean))]
+      const reserved = new Set([value?.accessLabel, value?.statusLabel])
+      this.setData({
+        displayTags: tags.filter(tag => !reserved.has(tag)),
+        displayEventType: tags.length ? '' : value?.eventTypeLabel || '',
+      })
       updateComponentMedia(this, 'displayCoverUrl', value?.coverUrl || '')
       updateComponentMedia(this, 'displayParticipants', value?.participantPreview || [])
     },

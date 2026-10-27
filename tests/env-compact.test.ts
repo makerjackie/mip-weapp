@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { loadCaseEnv } from '../scripts/lib/example-cloudbase.mjs'
 import {
   compactEnvDocuments,
@@ -12,6 +12,7 @@ import {
 const temporaryRoots: string[] = []
 
 afterEach(() => {
+  vi.unstubAllEnvs()
   for (const root of temporaryRoots.splice(0)) {
     fs.rmSync(root, { recursive: true, force: true })
   }
@@ -52,6 +53,8 @@ describe('local environment compaction', () => {
   })
 
   it('loads secrets, local config, and process overrides without exposing values in conflict errors', () => {
+    // This fixture owns its environment files, even when release:trial pins a target globally.
+    vi.stubEnv('MIP_ENV_DIR', '')
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-env-'))
     temporaryRoots.push(root)
     fs.writeFileSync(path.join(root, '.env.secrets.local'), 'MIP_IDENTITY_PEPPER=secret-one\n')

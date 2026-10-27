@@ -246,7 +246,11 @@ async function dispatch(event) {
         const url = await provider.generateUrlLink({ path: 'packages/member/mip-events/detail/index', query: `eventId=${encodeURIComponent(invitation.eventId)}&inviteRef=${encodeURIComponent(invitation.scene)}`, envVersion })
         return { url, inviteRef: invitation.scene, validUntil: invitation.validUntil }
       } catch (error) {
-        console.warn('[mip-event-link]', { code: /^\d+$/.test(String(error?.errCode)) ? String(error.errCode) : 'UNAVAILABLE' })
+        const stage = ['NETWORK', 'INVALID_RESPONSE', 'UNAVAILABLE', 'PROVIDER'].includes(error?.stage)
+          ? error.stage
+          : ['WECHAT_CODE_PROVIDER_CONFIG_REQUIRED', 'WECHAT_CODE_PROVIDER_APP_ID_MISMATCH'].includes(error?.message)
+              ? error.message : 'UNAVAILABLE'
+        console.warn('[mip-event-link]', { code: /^\d+$/.test(String(error?.errCode)) ? String(error.errCode) : 'UNAVAILABLE', stage })
         throw new DomainError('SHARE_LINK_UNAVAILABLE', '暂时无法生成报名链接，请使用微信分享或下载活动二维码', true)
       }
     }

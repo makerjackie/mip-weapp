@@ -48,7 +48,7 @@ describe('MIP cooperation card editor per the 2571:34139 mockup', () => {
     expect(view).toContain('bind:tap="changeRole"')
   })
 
-  it('keeps the single save capsule and publishes drafts from the detail page instead', () => {
+  it('keeps the single save capsule and a publish entry for previously saved drafts', () => {
     expect(view).toMatch(/保存[\s\S]*?bind:tap="saveCard"/)
     expect(view).toContain('mip-sticky-actions')
     expect(view).toContain('mip-pill-button')
