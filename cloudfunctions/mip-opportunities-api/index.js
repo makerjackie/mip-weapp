@@ -72,7 +72,10 @@ const {
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
-const contentSafety = createContentSafety(cloud)
+const contentSafety = createContentSafety(cloud, {
+  appId: process.env.MIP_WECHAT_APP_ID,
+  appSecret: process.env.MIP_WECHAT_APP_SECRET,
+})
 const matchingProvider = createMatchingProvider(cloud, {
   functionName: process.env.MIP_MATCHING_PROVIDER_FUNCTION_NAME,
   timeoutMs: process.env.MIP_MATCHING_PROVIDER_TIMEOUT_MS,

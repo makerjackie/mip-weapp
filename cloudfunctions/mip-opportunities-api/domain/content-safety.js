@@ -1,18 +1,24 @@
 'use strict'
 
+const { createWechatTextChecker } = require('../lib/wechat-content-checker')
+
 function createContentSafety(cloudClient, options = {}) {
+  const httpChecker = options.appId && options.appSecret
+    ? createWechatTextChecker({ appId: options.appId, appSecret: options.appSecret, ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) })
+    : null
   return {
     async assertSafe(caller, values) {
       const content = values.map(value => String(value || '').trim()).filter(Boolean).join('\n').slice(0, 4000)
       if (!content) return
       if (options.allowInTests && process.env.NODE_ENV === 'test') return
-      const checker = cloudClient?.openapi?.security?.msgSecCheck
+      if (httpChecker && caller.appId !== options.appId) throw unavailable('APP_ID_MISMATCH')
+      const checker = httpChecker || cloudClient?.openapi?.security?.msgSecCheck
       if (typeof checker !== 'function') {
         throw unavailable('CHECKER_UNAVAILABLE')
       }
       let response
       try {
-        response = await checker({ content, version: 2, scene: 2, openid: caller.openId })
+        response = await checker({ content, version: 2, scene: 2, openid: caller.openId }, caller)
       }
       catch (error) {
         const providerCode = safeProviderCode(error?.errCode ?? error?.errcode ?? error?.code ?? error?.cause?.code)
@@ -29,7 +35,7 @@ function createContentSafety(cloudClient, options = {}) {
 }
 
 const SAFE_PROVIDER_CODES = new Set([
-  'CHECKER_UNAVAILABLE', 'UPSTREAM_ERROR', 'ETIMEDOUT', 'ESOCKETTIMEDOUT',
+  'CHECKER_UNAVAILABLE', 'APP_ID_MISMATCH', 'UPSTREAM_ERROR', 'ETIMEDOUT', 'ESOCKETTIMEDOUT',
   'ECONNRESET', 'ECONNREFUSED', 'ENETUNREACH', 'EHOSTUNREACH', 'ENOTFOUND', 'EAI_AGAIN',
 ])
 

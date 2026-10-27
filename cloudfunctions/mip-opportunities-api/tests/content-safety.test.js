@@ -39,3 +39,23 @@ test('provider failure is distinguished from rejected content and only pass is a
   }
   await assert.doesNotReject(createContentSafety(client(async () => ({ errCode: 0, result: { suggest: 'pass' } }))).assertSafe(caller, ['demo']))
 })
+
+test('uses the configured app HTTP checker without falling back after failure or an app mismatch', async () => {
+  let legacyCalls = 0, httpCalls = 0
+  const legacy = client(async () => { legacyCalls += 1; return { errCode: 0, result: { suggest: 'pass' } } })
+  const options = { appId: 'wx-configured', appSecret: 'test-secret', fetchImpl: async (url, init) => {
+    httpCalls += 1
+    if (url.includes('/cgi-bin/token')) return { ok: true, json: async () => ({ access_token: 'test-token', expires_in: 7200 }) }
+    assert.deepEqual(JSON.parse(init.body), { content: '合作目标', version: 2, scene: 2, openid: caller.openId })
+    return { ok: true, json: async () => ({ errcode: 0, result: { suggest: 'pass' } }) }
+  } }
+  const safety = createContentSafety(legacy, options)
+  await assert.doesNotReject(safety.assertSafe({ ...caller, appId: options.appId }, ['合作目标']))
+  assert.equal(httpCalls, 2)
+  assert.equal(legacyCalls, 0)
+  await assert.rejects(safety.assertSafe({ ...caller, appId: 'wx-other' }, ['private']), error => error.providerCode === 'APP_ID_MISMATCH')
+  assert.equal(httpCalls, 2)
+  const failed = createContentSafety(legacy, { ...options, fetchImpl: async () => { throw Error('private-token') } })
+  await assert.rejects(failed.assertSafe({ ...caller, appId: options.appId }, ['private']), /CONTENT_SAFETY_UNAVAILABLE/)
+  assert.equal(legacyCalls, 0)
+})

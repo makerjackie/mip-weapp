@@ -556,7 +556,7 @@ try {
         console.log(`[mip-cloud-deploy] configuration already current ${spec.name}`)
       }
     }
-    if (['admin', 'events', 'media', 'tasks', 'banners'].includes(spec.role)) {
+    if (['admin', 'events', 'media', 'tasks', 'banners', 'opportunities'].includes(spec.role)) {
       await ensureWechatApiPublicNetwork(spec.name)
     }
     const codeUpdate = {
@@ -1011,6 +1011,8 @@ function environmentForRole(role, options) {
     },
     opportunities: {
       ...agreementEnvironment,
+      MIP_WECHAT_APP_ID: options.appId,
+      MIP_WECHAT_APP_SECRET: options.wechatAppSecret,
       MIP_MATCHING_INTERNAL_HMAC_SECRET: options.secrets.matchingInternalHmac,
       MIP_MATCHING_REFERENCE_SECRET: options.secrets.matchingReference,
       ...(options.matchingProviderFunction
