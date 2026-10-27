@@ -65,9 +65,14 @@ describe('MIP my-events category query', () => {
         registrationId: 'registration-1',
         status: 'PAYMENT_PENDING',
         event: {
-          id: 'event-1', title: '测试活动', startsAt: '2026-11-02T06:00:00Z',
-          accessType: 'PAID', eventTypeLabel: 'general', tags: ['早会'],
-          participantPreview: [], registrationCount: 0,
+          id: 'event-1',
+          title: '测试活动',
+          startsAt: '2026-11-02T06:00:00Z',
+          accessType: 'PAID',
+          eventTypeLabel: 'general',
+          tags: ['早会'],
+          participantPreview: [],
+          registrationCount: 0,
         },
       }],
     })
