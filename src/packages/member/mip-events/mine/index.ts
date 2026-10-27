@@ -4,7 +4,7 @@ import type {
   RegistrationStatus,
   RegistrationSummary,
 } from '../../../../modules/mip-events'
-import { MipEventsError } from '../../../../modules/mip-events'
+import { MipEventsError, publicEventTypeLabel } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { caseNavigateTo, caseSwitchPrimary } from '../../../../platform/navigation/client'
 import { formatBusinessDateTime as formatChineseDateTime } from '../../../../utils/business-date'
@@ -30,6 +30,7 @@ interface RegistrationCardView {
   registrationCount: number
   accessLabel: string
   eventTypeLabel: string
+  tags: string[]
   statusLabel: string
 }
 
@@ -70,7 +71,8 @@ function present(item: RegistrationSummary): RegistrationView {
       participantPreview: item.event.participantPreview,
       registrationCount: item.event.registrationCount,
       accessLabel: accessText,
-      eventTypeLabel: item.event.eventTypeLabel,
+      eventTypeLabel: publicEventTypeLabel(item.event.eventTypeLabel),
+      tags: item.event.tags,
       statusLabel: statusLabels[item.status],
     },
   }
