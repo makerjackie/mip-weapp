@@ -1,5 +1,151 @@
 [
   {
+    "id": "feedback-20261027-v1",
+    "requirement": "feishu-feedback-20261027",
+    "title": "甲方要求及结果",
+    "indexTitle": "甲方要求及结果",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-27T09:41:39.856Z",
+    "updatedAt": "2026-10-27T09:46:49.669Z",
+    "verifiedAt": "2026-10-27T09:46:49.669Z",
+    "submittedAt": "2026-10-27T09:41:39.856Z",
+    "reportDate": "2026-10-27",
+    "commit": "170fa16969d0e93311f1c25e0657681b0f98643e",
+    "commitAt": "2026-10-27T05:36:31-04:00",
+    "environment": "TEST真实测试服务 · 微信开发者工具390×844 · 生产未更新",
+    "summary": "测试开发版1.2.10-test.1027连接TEST；体验版指派及真机结果另行核对，生产未更新。",
+    "highlights": [
+      "测试开发版1.2.10-test.1027连接TEST；生产未更新，等待本批验收确认。"
+    ],
+    "sections": [
+      {
+        "id": "feedback-1027-tags",
+        "title": "1. 活动标签",
+        "highlights": [
+          "要求：后台设置的标签出现在活动卡片。结果：新标签优先展示，同步到“我的活动”；保存后离页重开、接口回读一致，不再重复旧类型。"
+        ]
+      },
+      {
+        "id": "feedback-1027-talents",
+        "title": "2. 人才合作名单",
+        "highlights": [
+          "要求：展示全部符合规则的玩家和嘉宾。结果：“全国”下已验证4位测试人才，超过原反馈的3位；地区筛选、隐私和屏蔽规则继续生效。"
+        ]
+      },
+      {
+        "id": "feedback-1027-cooperation",
+        "title": "3. 合作卡保存后展示",
+        "highlights": [
+          "要求：保存后显示角色标签和公开合作卡。结果：点击“保存”即发布，人才列表和公开档案均已回读到；自动暂存与其余草稿仍保持私密。"
+        ]
+      },
+      {
+        "id": "feedback-1027-unread",
+        "title": "4. 消息已读角标",
+        "highlights": [
+          "要求：阅读消息后清除未读数。结果：测试消息阅读后，服务端、“我的”和底部角标均为0，离页返回保持一致；本轮未复现残留。"
+        ]
+      },
+      {
+        "id": "feedback-1027-calendar",
+        "title": "5. 日期筛选取消",
+        "highlights": [
+          "要求：再次点击选中日期可取消。结果：已支持取消，点“确认”回到近期活动；直接关闭日历仍保留原筛选。"
+        ]
+      },
+      {
+        "id": "feedback-1027-share",
+        "title": "6. 复制小程序链接",
+        "highlights": [
+          "要求：复制可打开小程序的活动链接。结果：已修复误拒微信新链接域名的问题，真实接口与原生剪贴板均通过；手机唤起目标活动待复测。"
+        ]
+      },
+      {
+        "id": "feedback-1027-career",
+        "title": "7. 当前身份状态",
+        "highlights": [
+          "要求：“我的”在分会、行业后显示当前身份。结果：改为读取已保存的身份选项，已显示“斜杠青年”；他人档案继续遵守隐私设置。"
+        ],
+        "comparisons": [
+          {
+            "title": "当前身份显示",
+            "context": "真实TEST界面局部，仅修正字段取值，未调整布局；裁切隐藏头像与昵称。",
+            "before": {
+              "file": "docs/mip/evidence/feedback-20261027/shots/profile-before.png",
+              "caption": "修改前：身份状态缺失",
+              "source": "本批修复前TEST实拍"
+            },
+            "after": {
+              "file": "docs/mip/evidence/feedback-20261027/shots/profile-after.png",
+              "caption": "修改后：显示已保存身份",
+              "source": "本批TEST实拍"
+            }
+          }
+        ],
+        "uiChange": true
+      },
+      {
+        "id": "feedback-1027-industries",
+        "title": "8. 完整行业与热门入口",
+        "highlights": [
+          "要求：行业齐全，并显示热门行业。结果：保留11类、121项完整目录，补上13个真实热门行业快选；保存后新页面回读一致。"
+        ],
+        "comparisons": [
+          {
+            "title": "热门行业快选",
+            "context": "真实TEST截图裁切，保留原始截图；原型重复文案仅作布局示例，实际标签来自行业表。前后选择分别为“互联网”和“人工智能”。",
+            "before": {
+              "file": "docs/mip/evidence/feedback-20261027/shots/industry-before.png",
+              "caption": "修改前：只有行业选择框",
+              "source": "本批修复前TEST实拍"
+            },
+            "after": {
+              "file": "docs/mip/evidence/feedback-20261027/shots/industry-after.png",
+              "caption": "修改后：13项热门行业可直接选择",
+              "source": "TEST服务配置；保存后新页面回读通过"
+            },
+            "prototype": {
+              "file": "docs/mip/evidence/feedback-20261027/shots/industry-prototype.png",
+              "caption": "当前权威原型：行业下方有快选标签",
+              "source": "Figma qqkbdlh4c4Swubum8S3F2f / 1774:41143，2026-10-27读取"
+            }
+          }
+        ],
+        "uiChange": true
+      },
+      {
+        "id": "feedback-1027-registration",
+        "title": "9. 报名记录未显示",
+        "highlights": [
+          "要求：核对报名在各入口的展示。结果：生产反馈记录实际为待支付，尚未完成报名；测试已验证待支付在“我的活动”和后台可查、付款前不进公开参与名单，正常报名在三处均可见。"
+        ],
+        "evidenceImages": [
+          {
+            "file": "docs/mip/evidence/feedback-20261027/shots/pending-registration.png",
+            "caption": "测试样本：我的活动明确显示“待支付”",
+            "source": "TEST合成待支付状态，未发起或伪造真实付款；截图只保留该条记录"
+          }
+        ]
+      }
+    ],
+    "comparisons": [],
+    "uiChange": false,
+    "files": [
+      "docs/mip/evidence/feedback-20261027/README.md",
+      "docs/mip/evidence/feedback-20261027/verification.json",
+      "docs/mip/evidence/feedback-20261027/screenshot-provenance.json",
+      "docs/mip/evidence/feedback-20261027/shots/industry-before.png",
+      "docs/mip/evidence/feedback-20261027/shots/industry-after.png",
+      "docs/mip/evidence/feedback-20261027/shots/industry-prototype.png",
+      "docs/mip/evidence/feedback-20261027/shots/profile-before.png",
+      "docs/mip/evidence/feedback-20261027/shots/profile-after.png",
+      "docs/mip/evidence/feedback-20261027/shots/pending-registration.png"
+    ],
+    "limitations": "微信内真实点击、消息角标及从复制链接唤起正确活动仍需手机复测；体验版未核实指派，未提审或正式发布。",
+    "pendingSummary": "手机复测：复制链接唤起目标活动、消息角标与合作卡访客视角；开发版上传不等于已设体验版。生产等待本批验收确认。"
+  },
+  {
     "id": "event-cancel-entry-20261024-v1",
     "requirement": "event-cancel-entry",
     "title": "活动详情页取消报名入口移至订单详情",

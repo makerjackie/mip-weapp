@@ -1,0 +1,25 @@
+{
+  "origin": "https://miptest.01mvp.com",
+  "proof": [
+    {
+      "width": 1440,
+      "sections": 9,
+      "horizontalOverflow": false,
+      "modalImageDoesNotClose": true,
+      "escapeCloses": true,
+      "outsideCloses": true,
+      "hashNavigation": true,
+      "imagesDecode": true
+    },
+    {
+      "width": 390,
+      "sections": 9,
+      "horizontalOverflow": false,
+      "modalImageDoesNotClose": true,
+      "escapeCloses": true,
+      "outsideCloses": true,
+      "hashNavigation": true,
+      "imagesDecode": true
+    }
+  ]
+}

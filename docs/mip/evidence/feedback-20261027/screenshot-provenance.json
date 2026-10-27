@@ -1,0 +1,113 @@
+{
+  "capturedOn": "2026-10-27",
+  "environment": "TEST, WeChat DevTools",
+  "viewport": "390x844 logical pixels",
+  "processing": "Only rectangular crops to omit personal data; no text, controls or evidence repainted.",
+  "originalsRetainedPrivately": true,
+  "originals": [
+    {
+      "file": "industry-before.png",
+      "sha256": "572620dae262e530b37ed81bd8d549d1ae0623b5e36006ffecbae8cd999da31c"
+    },
+    {
+      "file": "industry-after.png",
+      "sha256": "88fc64e6a44adeb9eadf852682f0714f86150bfd1bce6b43c4f0c9ce4787ff33"
+    },
+    {
+      "file": "industry-prototype.png",
+      "sha256": "6e25a0ccceb5a7ea291e1e2118cc2981816130368fa0087625aef91a4741ff1b"
+    },
+    {
+      "file": "profile-before.png",
+      "sha256": "fd6cbee012be6ba5d02e5fefdd8ca19e51918e831a09a5ee11abd76f16f3eb0f"
+    },
+    {
+      "file": "profile-after.png",
+      "sha256": "ba1d246d8f797d8ff604204a851f91c2f5e12b6886b562c4d685e47720ed1b5a"
+    },
+    {
+      "file": "calendar-before.png",
+      "sha256": "b44433cfcca3b155b66498de4cd3ccab4293b50929d3aec39ad83dd5194069ac"
+    },
+    {
+      "file": "calendar-after.png",
+      "sha256": "121ac0539bf4ac1f0923d3f2f25e8bf3ca7562d87c81576e31b79aeb30afa6eb"
+    },
+    {
+      "file": "pending-mine-after.png",
+      "sha256": "2633960bf258c2a3595dc459101f0555c73315ac1101a603444a55a2460ae31a"
+    },
+    {
+      "file": "events-after.png",
+      "sha256": "ae1defe42e4506dc0cab34f31fe5a098add91fb232009a29e9751de381bcf994"
+    },
+    {
+      "file": "talents-after.png",
+      "sha256": "9713ffd30f6e35e90fc78aebb0a9f56907c73201bb85db97d1911682e9686605"
+    },
+    {
+      "file": "cooperation-before-save.png",
+      "sha256": "7f1c7d3a1ff74a6a2b9b547d5aa77babdc82b955818dd26385eac2b80e841d7a"
+    },
+    {
+      "file": "public-profile-after.png",
+      "sha256": "7dd787e732b89571918f57742dbecc36a5ff04a583a3bc7c3c07acc141d6d872"
+    },
+    {
+      "file": "pending-mine-final.png",
+      "sha256": "432bcfea2feab2b63e708687d6c77b1963dd1801b66522b77a91c1d3b3013df1"
+    }
+  ],
+  "publishedCrops": [
+    {
+      "published": "shots/industry-before.png",
+      "original": "industry-before.png",
+      "rect": {
+        "left": 17,
+        "top": 541,
+        "width": 561,
+        "height": 337
+      }
+    },
+    {
+      "published": "shots/industry-after.png",
+      "original": "industry-after.png",
+      "rect": {
+        "left": 17,
+        "top": 169,
+        "width": 561,
+        "height": 502
+      }
+    },
+    {
+      "published": "shots/profile-before.png",
+      "original": "profile-before.png",
+      "rect": {
+        "left": 155,
+        "top": 215,
+        "width": 420,
+        "height": 65
+      }
+    },
+    {
+      "published": "shots/profile-after.png",
+      "original": "profile-after.png",
+      "rect": {
+        "left": 155,
+        "top": 215,
+        "width": 420,
+        "height": 65
+      }
+    },
+    {
+      "published": "shots/pending-registration.png",
+      "original": "pending-mine-final.png",
+      "rect": {
+        "left": 17,
+        "top": 225,
+        "width": 561,
+        "height": 450
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-10-27T09:46:49.661Z",
+  "environment": "TEST",
+  "sourceSha": "170fa16969d0e93311f1c25e0657681b0f98643e",
+  "version": "1.2.10-test.1027",
+  "productionWrites": false,
+  "developmentUploadSucceeded": true,
+  "trialAssignmentVerified": false,
+  "reviewSubmitted": false,
+  "publicReleased": false,
+  "fullVerifyAllPassed": true,
+  "runtimePreflightPassed": true,
+  "checks": [
+    {
+      "id": 1,
+      "result": "Admin tag saved and reloaded; public list and my-activity card carry configured tags."
+    },
+    {
+      "id": 2,
+      "result": "Four eligible test talents visible with all regions and no role/industry filters."
+    },
+    {
+      "id": 3,
+      "result": "Real editor save changed DRAFT to PUBLISHED and incremented version; talent role and public profile include the saved card; other drafts stay private."
+    },
+    {
+      "id": 4,
+      "result": "Synthetic unread message read; server, profile and tab count return to zero after leaving inbox."
+    },
+    {
+      "id": 5,
+      "result": "Selected day toggles off; confirmation resets to recent events; closing preserves applied filter."
+    },
+    {
+      "id": 6,
+      "result": "Official WeChat URL Link generated; real native clipboard contains HTTPS wxmpurl.cn URL."
+    },
+    {
+      "id": 7,
+      "result": "Saved career identity is displayed in own profile; public privacy rules unchanged."
+    },
+    {
+      "id": 8,
+      "result": "121 selectable industries and 13 popular tags; quick pick saved and reread on a newly opened page."
+    },
+    {
+      "id": 9,
+      "result": "Read-only production diagnosis: payment pending and unpaid. TEST pending scenario appears in my activities/admin but not public participant list; registered scenario appears in all three."
+    }
+  ],
+  "limitations": [
+    "No real-device claim. Link launch, unread badges and visitor profile need phone retest.",
+    "No production deployment, data repair, payment or formal WeChat release.",
+    "Pending payment fixture is synthetic TEST data; no payment was initiated."
+  ]
+}

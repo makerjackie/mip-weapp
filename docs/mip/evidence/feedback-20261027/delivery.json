@@ -1,0 +1,42 @@
+{
+  "siteUrl": "https://miptest.01mvp.com/updates/2026-10-27/#feedback-20261027-v1",
+  "siteDeployment": "13f3d575",
+  "publicHttpsFilesVerified": 577,
+  "desktopWidth": 1440,
+  "mobileWidth": 390,
+  "release": {
+    "sourceSha": "170fa16969d0e93311f1c25e0657681b0f98643e",
+    "version": "1.2.10-test.1027",
+    "channel": "trial",
+    "targetDir": "envs/test",
+    "uploadedAt": "2026-10-27T09:42:33.742Z",
+    "developmentUploadSucceeded": true,
+    "trialAssignmentVerified": false,
+    "reviewSubmitted": false,
+    "publicReleased": false
+  },
+  "appCodeSourceSha": "170fa16969d0e93311f1c25e0657681b0f98643e",
+  "publicReportFinalized": false,
+  "productionPublished": false,
+  "realDeviceVerified": false,
+  "previewQrKeptPrivate": true,
+  "fullVerifyAllPassed": true,
+  "finalRuntimePreflightPassed": true,
+  "testFunctions": [
+    {
+      "role": "events",
+      "sourceSha": "d11d51cb856a262a033716aa6b28df33ad91cf0a",
+      "existingConfigurationPreserved": true
+    },
+    {
+      "role": "opportunities",
+      "sourceSha": "48ce45fc99918dd29af38ded316760df650d8e74",
+      "unrelatedConfigurationPreserved": true,
+      "configuredAppTextCheck": true
+    }
+  ],
+  "feedbackRevisionAtStart": 246,
+  "feedbackRevisionAtFinalCheck": 247,
+  "feedbackRequirementsUnchanged": true,
+  "finalSourceChange": "Image alt text and inline span formatting only"
+}
