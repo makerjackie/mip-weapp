@@ -109,4 +109,20 @@ describe('MIP WeChat code provider', () => {
   it('rejects an AppID mismatch before making an HTTP call', () => {
     assert.throws(() => createWechatCodeProvider({ appId: 'wx-other', expectedAppId: 'wx-real', appSecret: 'test-secret-value-123456', fetchImpl: async () => response(png) }), /APP_ID_MISMATCH/)
   })
+
+  it('accepts the current WeChat URL Link domain and rejects lookalikes or credential-bearing URLs', async () => {
+    for (const [url, allowed] of [
+      ['https://wxmpurl.cn/official-link', true],
+      ['https://wxmpurl.cn.evil.example/link', false],
+      ['https://evil-wxmpurl.cn/link', false],
+      ['http://wxmpurl.cn/link', false],
+      ['https://user:password@wxmpurl.cn/link', false],
+    ]) {
+      const provider = createWechatCodeProvider({ appId: 'wx-app', appSecret: 'test-secret-value-123456', fetchImpl: async endpoint => endpoint.includes('/cgi-bin/token')
+        ? response({ access_token: 'test-token-abcdefghijklmnopqrstuvwxyz', expires_in: 3600 })
+        : response({ errcode: 0, url_link: url }) })
+      if (allowed) assert.equal(await provider.generateUrlLink({ path: 'page', query: '', envVersion: 'develop' }), url)
+      else await assert.rejects(provider.generateUrlLink({ path: 'page', query: '' }), error => error.stage === 'LINK_HOST')
+    }
+  })
 })

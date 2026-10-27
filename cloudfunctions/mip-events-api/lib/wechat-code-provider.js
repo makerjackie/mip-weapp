@@ -2,6 +2,7 @@
 
 const MAX_BYTES = 2 * 1024 * 1024
 const TOKEN_REFRESH_CODES = new Set(['40001', '40014', '42001'])
+const WECHAT_LINK_HOSTS = new Set(['wxaurl.cn', 'wxaurl.com', 'wxmpurl.cn', 'mp.weixin.qq.com'])
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff])
 
@@ -26,12 +27,12 @@ function createWechatCodeProvider({ appId, appSecret, expectedAppId = appId, fet
         } catch { throw providerError('NETWORK') }
         const content = await responseBuffer(response, 32 * 1024)
         let payload
-        try { payload = JSON.parse(content.toString('utf8')) } catch { throw providerError('INVALID_RESPONSE') }
+        try { payload = JSON.parse(content.toString('utf8')) } catch { throw providerError('LINK_JSON') }
         if (TOKEN_REFRESH_CODES.has(String(payload.errcode)) && attempt === 0) { cache.expiresAt = 0; continue }
         if (!response.ok || (payload.errcode && payload.errcode !== 0)) throw providerError(String(payload.errcode || `HTTP_${response.status}`))
         let link
-        try { link = new URL(payload.url_link) } catch { throw providerError('INVALID_RESPONSE') }
-        if (link.protocol !== 'https:' || link.username || link.password || !['wxaurl.cn', 'wxaurl.com', 'mp.weixin.qq.com'].includes(link.hostname)) throw providerError('INVALID_RESPONSE')
+        try { link = new URL(payload.url_link) } catch { throw providerError('LINK_URL') }
+        if (link.protocol !== 'https:' || link.username || link.password || !WECHAT_LINK_HOSTS.has(link.hostname)) throw providerError('LINK_HOST')
         return link.toString()
       }
       throw providerError('UNAVAILABLE')
@@ -146,7 +147,7 @@ function responseErrorCode(content) {
 function providerError(code) {
   const error = new Error('WECHAT_CODE_PROVIDER_UNAVAILABLE')
   error.errCode = /^\d{1,10}$/.test(String(code)) ? String(code) : 'UNKNOWN'
-  error.stage = ['NETWORK', 'INVALID_RESPONSE', 'UNAVAILABLE'].includes(code) ? code : 'PROVIDER'
+  error.stage = ['NETWORK', 'INVALID_RESPONSE', 'UNAVAILABLE', 'LINK_JSON', 'LINK_URL', 'LINK_HOST'].includes(code) ? code : 'PROVIDER'
   return error
 }
 

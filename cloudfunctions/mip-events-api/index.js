@@ -246,7 +246,7 @@ async function dispatch(event) {
         const url = await provider.generateUrlLink({ path: 'packages/member/mip-events/detail/index', query: `eventId=${encodeURIComponent(invitation.eventId)}&inviteRef=${encodeURIComponent(invitation.scene)}`, envVersion })
         return { url, inviteRef: invitation.scene, validUntil: invitation.validUntil }
       } catch (error) {
-        const stage = ['NETWORK', 'INVALID_RESPONSE', 'UNAVAILABLE', 'PROVIDER'].includes(error?.stage)
+        const stage = ['NETWORK', 'INVALID_RESPONSE', 'UNAVAILABLE', 'PROVIDER', 'LINK_JSON', 'LINK_URL', 'LINK_HOST'].includes(error?.stage)
           ? error.stage
           : ['WECHAT_CODE_PROVIDER_CONFIG_REQUIRED', 'WECHAT_CODE_PROVIDER_APP_ID_MISMATCH'].includes(error?.message)
               ? error.message : 'UNAVAILABLE'
