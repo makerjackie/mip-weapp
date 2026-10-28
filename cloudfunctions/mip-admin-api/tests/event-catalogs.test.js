@@ -342,3 +342,12 @@ describe('admin event catalogs and video recaps', () => {
     )
   })
 })
+
+it('restricts tag colors to the fixed palette and preserves omitted values for old clients', () => {
+  const input = { kind: 'TAG', key: 'test', name: 'test', description: '', sortOrder: 0 }
+  for (const backgroundColor of ['#7acbff', '#fcdf03', '#18e779', '#ff4d5e']) {
+    for (const textColor of ['#000000', '#ffffff']) assert.equal(normalizeCatalogSave({ ...input, backgroundColor, textColor }).textColor, textColor)
+  }
+  assert.equal(Object.hasOwn(normalizeCatalogSave(input), 'backgroundColor'), false)
+  for (const colors of [{ backgroundColor: '#123456' }, { textColor: 'red' }, { kind: 'TYPE', backgroundColor: '#fcdf03' }]) assert.throws(() => normalizeCatalogSave({ ...input, ...colors }), { code: 'VALIDATION_FAILED' })
+})

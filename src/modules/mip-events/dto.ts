@@ -26,6 +26,7 @@ const eventListKeys = [
   'coverUrl',
   'eventTypeLabel',
   'tags',
+  'tagStyles',
   'videoRecaps',
   'mode',
   'accessType',
@@ -267,6 +268,7 @@ function validEventListFields(value: Record<string, unknown>) {
   && optionalString(value.coverUrl, 4096, true)
   && boundedString(value.eventTypeLabel, 80)
   && stringList(value.tags, 100, 80)
+  && (value.tagStyles === undefined || (Array.isArray(value.tagStyles) && value.tagStyles.length <= 100 && value.tagStyles.every(tag => record(tag) && onlyKeys(tag, ['name', 'backgroundColor', 'textColor']) && boundedString(tag.name, 80) && ['#7acbff', '#fcdf03', '#18e779', '#ff4d5e'].includes(String(tag.backgroundColor)) && ['#000000', '#ffffff'].includes(String(tag.textColor)))))
   && Array.isArray(value.videoRecaps)
   && value.videoRecaps.length <= 100
   && value.videoRecaps.every(item => Boolean(parseVideoRecap(item)))

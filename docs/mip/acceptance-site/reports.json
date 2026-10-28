@@ -1,5 +1,45 @@
 [
   {
+    "id": "admin-warm-ab-20261028-v1",
+    "requirement": "admin-first-load-comparison",
+    "title": "后台首次访问速度对比",
+    "indexTitle": "后台按需运行验证",
+    "version": "v1",
+    "status": "draft",
+    "createdAt": "2026-10-28T05:46:58.675747+00:00",
+    "updatedAt": "2026-10-28T06:32:33.003864+00:00",
+    "verifiedAt": "2026-10-28T06:32:04.319Z",
+    "submittedAt": "2026-10-28T05:46:58.675747+00:00",
+    "commitAt": "2026-10-28T01:14:47-04:00",
+    "reportDate": "2026-10-28",
+    "commit": "47e41191c57f4f9ba6aeb12e3af3c1ee8cacc127",
+    "environment": "生产 · 用户明确授权的临时常驻配置对比",
+    "summary": "完成两轮闲置间隔测速，保留按需运行，暂不迁移后台。",
+    "highlights": [
+      "要求：关闭常驻后，在间隔10分钟和30分钟时对比后台访问速度。",
+      "结果：4个常驻均已取消，先前真实登录和概览读取正常；间隔约11分钟后入口JS下载1.03秒，间隔约31分钟后1.99秒，均正常返回。"
+    ],
+    "comparisons": [],
+    "uiChange": false,
+    "pendingSummary": "尚无冷启动日志证明，不能确定历史卡顿原因；延时测试未包含登录和业务接口，整页可操作速度仍待验证。",
+    "limitations": "无请求间隔仅指本机测试，其他用户可能访问；单请求耗时不等于整页就绪时间。",
+    "sections": [
+      {
+        "id": "admin-warm-http",
+        "title": "已测结果",
+        "highlights": [
+          "开启常驻时（3次中位数）：入口JS下载0.812秒，首页0.255秒。",
+          "关闭后间隔约11分钟：入口JS下载1.030秒，首页0.444秒；均HTTP200。",
+          "关闭后再间隔约31分钟：入口JS下载1.989秒，首页0.616秒；均HTTP200。",
+          "第二轮入口JS比开启时中位数慢约1.18秒，但单次样本不能排除网络波动或证明发生冷启动。"
+        ],
+        "acceptanceStatus": "PARTIAL",
+        "comparisons": [],
+        "uiChange": false
+      }
+    ]
+  },
+  {
     "id": "feedback-20261027-v1",
     "requirement": "feishu-feedback-20261027",
     "title": "甲方要求及结果",

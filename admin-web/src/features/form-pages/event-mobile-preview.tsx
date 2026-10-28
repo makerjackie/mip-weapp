@@ -1,3 +1,5 @@
+import type { EventTagStyle } from '@mip/admin-contracts'
+import { eventTagStyle } from '@mip/admin-contracts'
 import { useEffect, useState } from 'react'
 import {
   CalendarOutlined,
@@ -8,17 +10,14 @@ import {
   ShareAltOutlined,
 } from '@ant-design/icons'
 import { useAdminSession } from '../../app/session-provider'
-import type { AdminOperationAction, AdminRequestInput } from '../../domain/contracts'
 import { useMediaPreview } from '../../shared/ui/media-preview-context'
 import { useCloudImageTempUrls } from '../../shared/ui/cloud-image-temp-urls'
 import { sanitizeRichTextHtml } from '../../shared/ui/rich-text-sanitize'
 import { normalizeRichTextToHtml, richTextIsEmpty } from '../../modules/rich-text-html'
 import {
-  eventAccessChipLabel,
   eventDetailLocationText,
   eventDetailTimeText,
   eventPriceText,
-  miniEventTypeLabel,
   substituteRichTextCloudImages,
 } from '../../modules/event-detail-preview'
 
@@ -64,12 +63,12 @@ function RichHtml({ value, mediaUrls }: { value: unknown, mediaUrls: Record<stri
 export function EventMobilePreview({
   values,
   tagLabels = [],
-  branchName = '',
-  typeLabel = '',
+  tagStyles = [],
 }: {
   values: Record<string, unknown>
   /** 已解析的活动标签名称（目录 id → 名称）；解析失败的 id 不展示。 */
   tagLabels?: string[]
+  tagStyles?: EventTagStyle[]
   /** 已解析的分会名称；解析失败不展示角标。 */
   branchName?: string
   /** 目录 TYPE 解析出的活动类型名；空值回落到内置映射。 */
@@ -123,10 +122,10 @@ export function EventMobilePreview({
             <div className="event-mobile-preview__card event-mobile-preview__info">
               <div className="event-mobile-preview__info-main">
                 <div className="event-mobile-preview__chips">
-                  <span className="event-mobile-preview__chip event-mobile-preview__chip--type">{typeLabel || miniEventTypeLabel(values.eventTypeKey)}</span>
-                  <span className="event-mobile-preview__chip event-mobile-preview__chip--access">{eventAccessChipLabel(accessType, values.memberFree === true)}</span>
-                  {branchName ? <span className="event-mobile-preview__chip">{branchName}</span> : null}
-                  {tagLabels.map(label => <span key={label} className="event-mobile-preview__chip">{label}</span>)}
+                  {tagLabels.map(label => {
+                    const tag = eventTagStyle(label, tagStyles.find(item => item.name === label))
+                    return <span key={label} className="event-mobile-preview__chip" style={{ backgroundColor: tag.backgroundColor, color: tag.textColor }}>{label}</span>
+                  })}
                 </div>
                 <div className="event-mobile-preview__title" title={title}>{title || '（未填写活动名称）'}</div>
                 <div className="event-mobile-preview__meta-row">
@@ -254,77 +253,32 @@ export function EventMobilePreview({
   )
 }
 
-interface CatalogNames { tagLabels: Record<string, string>, branchNames: Record<string, string>, typeNames: Record<string, string> }
-
-const EMPTY_CATALOG_NAMES: CatalogNames = { tagLabels: {}, branchNames: {}, typeNames: {} }
-
-/** 与表单目录控件同一批只读动作；全量翻页（封顶 100）后归约为 id/key → 名称。 */
-async function loadCatalogNames(
-  request: <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>,
-  action: AdminOperationAction,
-  input: AdminRequestInput,
-  valueKey: string,
-): Promise<Record<string, string>> {
-  let payload = await request<Record<string, unknown>>(action, input)
-  const items: unknown[] = Array.isArray(payload?.items) ? [...payload.items] : []
-  const seen = new Set<string>()
-  while (payload && typeof payload === 'object' && payload.nextCursor && seen.size < 100) {
-    const cursor = String(payload.nextCursor)
-    if (seen.has(cursor)) break
-    seen.add(cursor)
-    payload = await request<Record<string, unknown>>(action, { ...input, cursor })
-    if (Array.isArray(payload?.items)) items.push(...payload.items)
-  }
-  const names: Record<string, string> = {}
-  for (const item of items) {
-    if (!item || typeof item !== 'object') continue
-    const entry = item as Record<string, unknown>
-    const key = String(entry[valueKey] || entry.id || '')
-    const name = String(entry.name || entry.label || '')
-    if (key && name) names[key] = name
-  }
-  return names
-}
-
-/**
- * 预览容器：解析角标所需的目录名称（标签 / 活动类型 / 分会），失败时静默降级
- * （少一枚角标），不阻断预览。演示模式目录值本身就是名称，跳过解析。
- */
+/** Resolve names and fixed colors from the same active tag catalog as the form. */
 export function EventMobilePreviewWithData({ values }: { values: Record<string, unknown> }) {
   const { request, demoMode } = useAdminSession()
   const tagIds = Array.isArray(values.tagIds) ? values.tagIds.map(id => String(id || '').trim()).filter(Boolean) : []
-  const eventTypeKey = String(values.eventTypeKey || '').trim()
-  const branchId = String(values.scopeType) === 'BRANCH' ? String(values.branchId || '').trim() : ''
   const tagKey = tagIds.join(',')
-  const [names, setNames] = useState<CatalogNames>(EMPTY_CATALOG_NAMES)
-
+  const [catalog, setCatalog] = useState<Record<string, EventTagStyle>>({})
   useEffect(() => {
-    if (demoMode) return
     let active = true
-    const timer = setTimeout(() => {
-      if (tagKey) {
-        void loadCatalogNames(request, 'mip.admin.events.catalog.list', { kind: 'TAG', selectable: true }, 'id')
-          .then(tagLabels => { if (active) setNames(current => ({ ...current, tagLabels })) }).catch(() => {})
-      }
-      if (branchId) {
-        void loadCatalogNames(request, 'mip.admin.branches.list', { purpose: 'EVENT_EDIT' }, 'id')
-          .then(branchNames => { if (active) setNames(current => ({ ...current, branchNames })) }).catch(() => {})
-      }
-      if (eventTypeKey) {
-        void loadCatalogNames(request, 'mip.admin.events.catalog.list', { kind: 'TYPE', selectable: true }, 'key')
-          .then(typeNames => { if (active) setNames(current => ({ ...current, typeNames })) }).catch(() => {})
-      }
-    }, 0)
+    async function load() {
+      const result: Record<string, EventTagStyle> = {}
+      let cursor = ''
+      const seen = new Set<string>()
+      do {
+        const payload = await request<{ items: Array<Record<string, unknown>>, nextCursor?: string }>('mip.admin.events.catalog.list', { kind: 'TAG', selectable: true, ...(cursor ? { cursor } : {}) })
+        for (const entry of payload.items || []) {
+          if (entry.id && entry.name) result[String(entry.id)] = eventTagStyle(String(entry.name), { backgroundColor: String(entry.backgroundColor || ''), textColor: String(entry.textColor || '') })
+        }
+        cursor = String(payload.nextCursor || '')
+        if (seen.has(cursor)) break
+        seen.add(cursor)
+      } while (cursor && seen.size < 100)
+      if (active) setCatalog(result)
+    }
+    const timer = setTimeout(() => { if (!demoMode && tagKey) void load().catch(() => { if (active) setCatalog({}) }) }, 0)
     return () => { active = false; clearTimeout(timer) }
-  }, [request, demoMode, tagKey, branchId, eventTypeKey])
-
-  const branchName = branchId ? names.branchNames[branchId] || (demoMode ? branchId : '') : ''
-  return (
-    <EventMobilePreview
-      values={values}
-      branchName={branchName}
-      tagLabels={tagIds.map(id => names.tagLabels[id] || (demoMode ? id : '')).filter(Boolean)}
-      typeLabel={demoMode ? '' : names.typeNames[eventTypeKey] || ''}
-    />
-  )
+  }, [request, demoMode, tagKey])
+  const tags = tagIds.map(id => catalog[id] || (demoMode ? eventTagStyle(id) : null)).filter((tag): tag is EventTagStyle => Boolean(tag))
+  return <EventMobilePreview values={values} tagLabels={tags.map(tag => tag.name)} tagStyles={tags} />
 }

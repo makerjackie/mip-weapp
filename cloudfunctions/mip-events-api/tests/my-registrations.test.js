@@ -107,6 +107,7 @@ describe('my event registrations', () => {
         coverUrl: 'cloud://env.test/event.jpg',
         eventTypeLabel: '交流活动',
         tags: ['线下'],
+        tagStyles: [{ name: '线下', backgroundColor: '#7acbff', textColor: '#000000' }],
         videoRecaps: [{
           id: '40000000-0000-4000-8000-000000000001',
           title: '活动回顾',

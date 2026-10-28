@@ -152,6 +152,7 @@ export function eventCatalogRowActions(catalog: Record<string, unknown>): AdminR
         catalogId,
         expectedVersion,
         name: String(catalog.name || ''),
+        ...(kind === 'TAG' ? { backgroundColor: String(catalog.backgroundColor || '#7acbff'), textColor: String(catalog.textColor || '#000000') } : {}),
         description: String(catalog.description || ''),
         sortOrder,
       },

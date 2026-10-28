@@ -162,6 +162,7 @@ describe('event catalog repository', () => {
       tags: [{
         id: TAG_A_ID,
         key: 'networking',
+        backgroundColor: '#7acbff', textColor: '#000000',
         name: '商务交流',
         description: '交流类活动',
         sortOrder: 10,

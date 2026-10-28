@@ -1,3 +1,4 @@
+import { EVENT_TAG_BACKGROUNDS, EVENT_TAG_TEXT_COLORS } from '@mip/admin-contracts'
 import type { AdminRequestInput } from '../domain/contracts.ts'
 
 /** Actions that are currently exposed by the event operations service. */
@@ -229,6 +230,8 @@ const EVENT_MUTATION_CONFIGS = {
       { key: 'kind', label: '目录类型', kind: 'select', required: true, options: [option('TYPE', '活动类型'), option('TAG', '活动标签')] },
       { key: 'key', label: '目录标识', kind: 'text', maxLength: 64, hidden: true },
       { key: 'name', label: '目录名称', kind: 'text', required: true, extra: '标签类名称不能超过 5 个字，类型类不能超过 80 个字' },
+      { key: 'backgroundColor', label: '标签背景颜色', kind: 'select', visibleWhen: { path: 'kind', value: 'TAG' }, options: EVENT_TAG_BACKGROUNDS },
+      { key: 'textColor', label: '标签文字颜色', kind: 'select', visibleWhen: { path: 'kind', value: 'TAG' }, options: EVENT_TAG_TEXT_COLORS },
       { key: 'description', label: '目录说明', kind: 'textarea', maxLength: 300 },
       { key: 'sortOrder', label: '目录排序', kind: 'number', required: true, extra: '数字越小越靠前' },
     ],
@@ -589,14 +592,18 @@ function build(action: EventMutationAction, values: EventMutationValues): AdminR
     const name = text(values.name, '目录名称', kind === 'TAG' ? 5 : 80, true)
     const description = optionalText(values.description, '目录说明', 300)
     const sortOrder = integer(values.sortOrder, '目录排序')
+    const colors = kind === 'TAG' ? {
+      ...(values.backgroundColor ? { backgroundColor: enumValue(values.backgroundColor, '标签背景颜色', EVENT_TAG_BACKGROUNDS.map(item => item.value)) } : {}),
+      ...(values.textColor ? { textColor: enumValue(values.textColor, '标签文字颜色', EVENT_TAG_TEXT_COLORS.map(item => item.value)) } : {}),
+    } : {}
     if (catalogId) {
       if (expectedVersionValue === null || own(values, 'key')) throw new FormValidationError('expectedVersion', '编辑目录项字段无效')
-      return { kind, catalogId, expectedVersion: expectedVersionValue, name, description, sortOrder }
+      return { kind, catalogId, expectedVersion: expectedVersionValue, name, description, sortOrder, ...colors }
     }
     if (expectedVersionValue !== null) throw new FormValidationError('catalogId', '新建目录项不能提供记录版本')
     const key = text(values.key, '目录标识', 64, true)
     if (!stableKeyPattern.test(key)) throw new FormValidationError('key', '目录标识无效')
-    return { kind, key, name, description, sortOrder }
+    return { kind, key, name, description, sortOrder, ...colors }
   }
   if (action === 'mip.admin.events.catalog.changeStatus') return {
     kind: enumValue(values.kind, '目录类型', ['TYPE', 'TAG'] as const), catalogId: id(values.catalogId, '目录项'), expectedVersion: version(values.expectedVersion),
@@ -704,6 +711,8 @@ export function createAdminEventMutationDefinition<Action extends AdminEventMuta
     if (!targetId) {
       values.key = `web-${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
       values.sortOrder = 0
+      values.backgroundColor = EVENT_TAG_BACKGROUNDS[0].value
+      values.textColor = EVENT_TAG_TEXT_COLORS[0].value
     }
   }
   return {

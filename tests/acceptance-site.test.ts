@@ -52,6 +52,16 @@ function fixture() {
   return { root, report, registry, write, run, image }
 }
 describe('公开验收报告的版本与时间规则', () => {
+  it('links supplementary acceptance to an existing report and refuses unknown targets', () => {
+    const f = fixture()
+    f.write([{ ...f.report, relatedReports: ['older-v1'] }, { ...f.report, id: 'older-v1', title: '后台整改记录' }])
+    f.run('build')
+    const html = fs.readFileSync(path.join(f.root, '.tmp/mip-acceptance-site/reports/first-v1/index.html'), 'utf8')
+    expect(html).toContain('href="/reports/older-v1/">后台整改记录</a>')
+    f.write([{ ...f.report, relatedReports: ['missing-v1'] }])
+    expect(() => f.run('build')).toThrow(/Unknown related report/)
+  })
+
   it('keeps original feedback collapsed and escaped, with screenshots and one top-level source link', () => {
     const f = fixture()
     f.write([{ ...f.report, feedbackSource: { url: 'https://zhihui-ai.feishu.cn/wiki/source' }, sections: [{ id: 'feedback-one', title: '反馈一', highlights: ['修改成果'], originalFeedback: { quotes: ['原话 <script>alert(1)</script>'], note: '账号已脱敏', sourceUrl: 'https://zhihui-ai.feishu.cn/wiki/source#block-one', images: [{ file: f.image, caption: '甲方原始截图' }] } }] }])

@@ -9,11 +9,11 @@ beforeAll(async () => {
   })
   await import('../src/components/mip-activity-card/index')
 })
-it('uses configured tags in place of the legacy type while retaining legacy-only events and status', () => {
+it('renders exactly configured labels and fixed colors even when a label matches a former automatic chip', () => {
   const data: Record<string, unknown> = {}
   const instance = { setData: (patch: unknown) => Object.assign(data, patch) }
-  definition.observers.event.call(instance, { tags: ['早会', '早会', '已报名'], eventTypeLabel: 'MIP早会', statusLabel: '已报名' })
-  expect(data).toMatchObject({ displayTags: ['早会'], displayEventType: '' })
-  definition.observers.event.call(instance, { tags: [], eventTypeLabel: 'MIP早会' })
-  expect(data).toMatchObject({ displayTags: [], displayEventType: 'MIP早会' })
+  definition.observers.event.call(instance, { tags: ['test', 'test', '玩家免费'], tagStyles: [{ name: 'test', backgroundColor: '#ff4d5e', textColor: '#ffffff' }], eventTypeLabel: 'MIP早会', accessLabel: '玩家免费', statusLabel: '已报名' })
+  expect(data.displayTags).toEqual([{ name: 'test', backgroundColor: '#ff4d5e', textColor: '#ffffff' }, { name: '玩家免费', backgroundColor: '#7acbff', textColor: '#000000' }])
+  definition.observers.event.call(instance, { tags: [], eventTypeLabel: 'MIP早会', accessLabel: '玩家免费' })
+  expect(data.displayTags).toEqual([])
 })

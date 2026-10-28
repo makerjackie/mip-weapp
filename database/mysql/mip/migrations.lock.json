@@ -1490,6 +1490,18 @@
       ],
       "sqlSha256": "9bf047d8a7d9b7a4f1270b20b4ba6abcd8c2e3f7f771303c178e62bcf41c94c3",
       "rollbackSha256": "a169f3c0828653bf0397950fde22da900c5f07321ed8131528e45e0bffd90002"
+    },
+    {
+      "version": "20261028010000",
+      "name": "mip_event_tag_colors",
+      "sql": "database/mysql/mip/114_event_tag_colors.sql",
+      "rollback": "database/mysql/mip/rollback/114_event_tag_colors.sql",
+      "createsTables": [],
+      "altersTables": [
+        "mip_event_tags"
+      ],
+      "sqlSha256": "5e5dd077abf3556681ac215dd7b4d9c1df3b45b8744cb8986507cbb10247f836",
+      "rollbackSha256": "4c3d40489be77571a4459e21448c7ba5a98401fb3d3208e15ea52b5c416942a0"
     }
   ]
 }

@@ -89,7 +89,7 @@ describe('configured event tags reach the feed card', () => {
     expect(card.tags).toEqual(['人工智能', '资源链接'])
     const template = readFileSync('src/components/mip-activity-card/index.wxml', 'utf8')
     expect(template).toContain('wx:for="{{displayTags}}"')
-    expect(template).toContain('label="{{item}}"')
+    expect(template).toContain('label="{{item.name}}"')
     expect(template.indexOf('wx:for="{{displayTags}}"')).toBeLessThan(template.indexOf('{{event.title}}', template.indexOf('variant === \'feed\'')))
   })
 })

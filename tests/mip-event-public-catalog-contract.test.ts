@@ -101,6 +101,12 @@ describe('MIP public event catalog and recap client contract', () => {
     }
   })
 
+  it('accepts configured styles while rejecting arbitrary CSS in public DTOs', () => {
+    const tagStyles = [{ name: '创业', backgroundColor: '#fcdf03', textColor: '#000000' }]
+    expect(parseMipEventListItem({ ...eventListItem(), tagStyles }).tagStyles).toEqual(tagStyles)
+    expect(() => parseMipEventListItem({ ...eventListItem(), tagStyles: [{ ...tagStyles[0], backgroundColor: 'url(https://example.com)' }] })).toThrow()
+  })
+
   it('strictly parses the public list and detail DTOs', () => {
     expect(parseMipEventListItem(eventListItem())).toEqual(eventListItem())
     expect(parseEventFeedResult({ items: [eventListItem()], cities: ['深圳'] })).toEqual({
@@ -157,12 +163,13 @@ describe('MIP public event catalog and recap client contract', () => {
       data: {
         action: 'mip.events.list',
         eventPricingVersion: 1,
+        eventTagVersion: 1,
         query: { view: 'UPCOMING', dateFilter: 'RECENT' },
       },
     })
     expect(callFunction).toHaveBeenNthCalledWith(2, {
       name: 'mip-events-api',
-      data: { action: 'mip.events.detail', eventId, eventPricingVersion: 1 },
+      data: { action: 'mip.events.detail', eventId, eventPricingVersion: 1, eventTagVersion: 1 },
     })
   })
 

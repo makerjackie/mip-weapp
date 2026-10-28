@@ -54,7 +54,7 @@ function createEventCatalogRepository(database, dependencies) {
           [...params, pageLimit + 1],
         )
       : await database.query(
-          `SELECT catalog.id, catalog.tag_key AS catalog_key, catalog.name,
+          `SELECT catalog.id, catalog.tag_key AS catalog_key, catalog.name, catalog.background_color, catalog.text_color,
                   catalog.description, catalog.sort_order, catalog.status,
                   catalog.version, catalog.archived_at, catalog.created_at, catalog.updated_at,
                   COUNT(CASE WHEN assignment.status = 'ACTIVE' THEN 1 END) AS usage_count
@@ -82,7 +82,7 @@ function createEventCatalogRepository(database, dependencies) {
           [appId, catalogId],
         )
       : await adapter.one(
-          `SELECT catalog.id, catalog.tag_key AS catalog_key, catalog.name,
+          `SELECT catalog.id, catalog.tag_key AS catalog_key, catalog.name, catalog.background_color, catalog.text_color,
                   catalog.description, catalog.sort_order, catalog.status,
                   catalog.version, catalog.archived_at, catalog.created_at, catalog.updated_at,
                   (SELECT COUNT(*) FROM mip_event_tag_assignments assignment
@@ -101,7 +101,7 @@ function createEventCatalogRepository(database, dependencies) {
     )
     if (!event) return null
     const rows = await adapter.query(
-      `SELECT tag.id, tag.tag_key, tag.name, tag.description, tag.sort_order,
+      `SELECT tag.id, tag.tag_key, tag.name, tag.description, tag.sort_order, tag.background_color, tag.text_color,
               tag.status AS catalog_status,
               CASE WHEN assignment.status = 'ACTIVE' THEN 1 ELSE 0 END AS assignment_selected,
               CASE WHEN assignment.status = 'ACTIVE' THEN assignment.version ELSE NULL END AS assignment_version
@@ -202,9 +202,11 @@ function createEventCatalogRepository(database, dependencies) {
           : await tx.query(
               `UPDATE mip_event_tags
                SET name = ?, description = ?, sort_order = ?, updated_by_user_id = ?,
+                   background_color = COALESCE(?, background_color), text_color = COALESCE(?, text_color),
                    version = version + 1
                WHERE app_id = ? AND id = ? AND version = ? AND status <> 'ARCHIVED'`,
               [input.name, input.description, input.sortOrder, input.actorUserId,
+                input.backgroundColor || null, input.textColor || null,
                 input.appId, catalogId, input.expectedVersion],
             )
         if (Number(result?.affectedRows) !== 1) throw codeError('CONFLICT')
@@ -225,10 +227,10 @@ function createEventCatalogRepository(database, dependencies) {
             await tx.query(
               `INSERT INTO mip_event_tags (
                 id, app_id, tag_key, name, description, sort_order, status,
-                created_by_user_id, updated_by_user_id
-              ) VALUES (?, ?, ?, ?, ?, ?, 'INACTIVE', ?, ?)`,
+                background_color, text_color, created_by_user_id, updated_by_user_id
+              ) VALUES (?, ?, ?, ?, ?, ?, 'INACTIVE', ?, ?, ?, ?)`,
               [catalogId, input.appId, input.key, input.name, input.description,
-                input.sortOrder, input.actorUserId, input.actorUserId],
+                input.sortOrder, input.backgroundColor || '#7acbff', input.textColor || '#000000', input.actorUserId, input.actorUserId],
             )
           }
         }
@@ -467,6 +469,7 @@ function createEventCatalogRepository(database, dependencies) {
     return {
       id: String(row.id),
       kind,
+      ...(kind === 'TAG' ? { backgroundColor: row.background_color || '#7acbff', textColor: row.text_color || '#000000' } : {}),
       key: String(row.catalog_key),
       name: row.name || '',
       description: row.description || '',
@@ -509,6 +512,8 @@ function createEventCatalogRepository(database, dependencies) {
     const selected = Number(row.assignment_selected) === 1
     return {
       id: String(row.id),
+      backgroundColor: row.background_color || '#7acbff',
+      textColor: row.text_color || '#000000',
       key: String(row.tag_key),
       name: row.name || '',
       description: row.description || '',

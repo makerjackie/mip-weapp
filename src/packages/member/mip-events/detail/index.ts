@@ -1,6 +1,7 @@
 import type { EventId } from '../../../../modules/mip'
 import type { MipEventDetail } from '../../../../modules/mip-events'
 import type { MipGuestLoginProceedContext } from '../../../../modules/mip-identity'
+import { eventTagStyles } from '@mip/admin-contracts'
 import { brand } from '../../../../config/brand'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { decodeInvitationToken, eventInvitationPath, eventRichTextNodes, isEventAccessRequirementError, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
@@ -522,6 +523,7 @@ Page({
     const normalizedEvent = {
       ...eventWithoutRichText,
       eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
+      tagStyles: eventTagStyles(event.tags, event.tagStyles),
       coverUrl: peekCloudFileUrls(event.coverUrl || ''),
       contentMedia: peekCloudFileUrls(contentMedia),
       tags: event.tags || [],

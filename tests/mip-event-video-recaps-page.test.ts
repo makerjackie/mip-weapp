@@ -144,7 +144,7 @@ describe('MIP event video recap page', () => {
   it('renders catalog tags and recap controls without direct native API calls in the page', () => {
     const view = readFileSync(new URL('../src/packages/member/mip-events/detail/index.wxml', import.meta.url), 'utf8')
     const script = readFileSync(new URL('../src/packages/member/mip-events/detail/index.ts', import.meta.url), 'utf8')
-    expect(view).toContain('event.tags')
+    expect(view).toContain('event.tagStyles')
     expect(view).toContain('event.videoRecaps')
     expect(view).toContain('bind:tap="openVideoRecap"')
     expect(script).toContain('openWechatChannelsDestination(recap.destination)')

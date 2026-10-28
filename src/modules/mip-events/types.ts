@@ -1,3 +1,4 @@
+import type { EventTagStyle } from '@mip/admin-contracts'
 import type { BranchId, CooperationRoleKey, EventId, OrderId } from '../mip'
 
 export type EventScopeType = 'PLATFORM' | 'BRANCH'
@@ -150,6 +151,7 @@ export interface MipEventListItem {
   coverUrl?: string
   eventTypeLabel: string
   tags: string[]
+  tagStyles?: EventTagStyle[]
   videoRecaps: EventVideoRecap[]
   mode: EventMode
   accessType: EventAccessType

@@ -1,3 +1,4 @@
+import { EVENT_TAG_BACKGROUNDS, EVENT_TAG_TEXT_COLORS } from '@mip/admin-contracts'
 import { App, Input, Modal, Select, Spin } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminSession } from '../../app/session-provider'
@@ -83,6 +84,8 @@ export function RemoteCatalogSelect({
   const [reloadKey, setReloadKey] = useState(0)
   const [createOpen, setCreateOpen] = useState(false)
   const [newName, setNewName] = useState('')
+  const [backgroundColor, setBackgroundColor] = useState<string>(EVENT_TAG_BACKGROUNDS[0].value)
+  const [textColor, setTextColor] = useState<string>(EVENT_TAG_TEXT_COLORS[0].value)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
   const filterKey = filter?.key, filterValue = filter?.value
@@ -143,7 +146,7 @@ export function RemoteCatalogSelect({
     const kind = createKind || 'TAG'
     try {
       const definition = createAdminEventMutationDefinition('mip.admin.events.catalog.save', '')
-      const built = validateAdminEventMutationInput(definition, { kind, name })
+      const built = validateAdminEventMutationInput(definition, { kind, name, ...(kind === 'TAG' ? { backgroundColor, textColor } : {}) })
       if (!built.ok) { setCreateError(built.errors[0]?.message || '名称无效'); return }
       const created = await request<Record<string, unknown>>('mip.admin.events.catalog.save', {
         ...(built.input as Record<string, unknown>),
@@ -237,6 +240,11 @@ export function RemoteCatalogSelect({
               onChange={event => setNewName(event.target.value)}
               onPressEnter={() => void handleCreate()}
             />
+            {createKind !== 'TYPE' ? <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
+              <label>标签背景颜色 <Select aria-label="标签背景颜色" value={backgroundColor} options={[...EVENT_TAG_BACKGROUNDS]} onChange={setBackgroundColor} style={{ width: 110 }} /></label>
+              <label>标签文字颜色 <Select aria-label="标签文字颜色" value={textColor} options={[...EVENT_TAG_TEXT_COLORS]} onChange={setTextColor} style={{ width: 110 }} /></label>
+              <span style={{ backgroundColor, color: textColor, padding: '2px 8px', borderRadius: 4 }}>{newName || '标签预览'}</span>
+            </div> : null}
             {createError ? <div className="catalog-pills__hint" style={{ color: '#ff4d4f', marginTop: 8 }}>{createError}</div> : null}
           </Modal>
         ) : null}

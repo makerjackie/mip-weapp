@@ -8,22 +8,7 @@ export {
   type AdminLoginAuditRecord,
 } from './audit-records.ts'
 
-export {
-  ADMIN_OPERATION_CONTRACT,
-  ADMIN_WEB_OPERATION_CONTRACT,
-  type AdminMutationAction,
-  type AdminOperation,
-  type AdminOperationAction,
-  type AdminOperationContract,
-  type AdminOperationKind,
-  type AdminQueryAction,
-  type AdminWebAllowedOperation,
-  type AdminWebMutationAction,
-  type AdminWebOperation,
-  type AdminWebOperationAction,
-  type AdminWebOperationContract,
-  type AdminWebQueryAction,
-} from './generated/admin-operation-contract.ts'
+export { EVENT_TAG_BACKGROUNDS, EVENT_TAG_TEXT_COLORS, eventTagStyle, eventTagStyles } from './event-tag.ts'
 
 export type AdminRequestInput = Record<string, unknown>
 
@@ -89,3 +74,21 @@ export function createAdminRequest<TAction extends AdminOperationAction>(
     ? request
     : { ...request, idempotencyKey }
 }
+
+export type { EventTagStyle } from './event-tag.ts'
+export {
+  ADMIN_OPERATION_CONTRACT,
+  ADMIN_WEB_OPERATION_CONTRACT,
+  type AdminMutationAction,
+  type AdminOperation,
+  type AdminOperationAction,
+  type AdminOperationContract,
+  type AdminOperationKind,
+  type AdminQueryAction,
+  type AdminWebAllowedOperation,
+  type AdminWebMutationAction,
+  type AdminWebOperation,
+  type AdminWebOperationAction,
+  type AdminWebOperationContract,
+  type AdminWebQueryAction,
+} from './generated/admin-operation-contract.ts'

@@ -146,8 +146,9 @@ describe('MIP event discovery filter client', () => {
     expect(cardModel).toContain('formatLocalTime(endsAt)')
     expect(view).toContain('<mip-activity-card')
     expect(card).not.toContain('event.displayTags')
-    expect(card).toContain('event.accessLabel')
-    expect(card).toContain('displayEventType')
+    expect(card).not.toContain('event.accessLabel')
+    expect(card).not.toContain('displayEventType')
+    expect(card).toContain('item.backgroundColor')
     // MIW-11: the filter entry next to the search box is removed; catalogs stay server-side only.
     expect(view).not.toContain('打开活动筛选')
     expect(view).not.toContain('toggleRangePanel')

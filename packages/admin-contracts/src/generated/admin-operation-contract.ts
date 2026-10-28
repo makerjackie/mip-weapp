@@ -2621,7 +2621,9 @@ export const ADMIN_WEB_OPERATION_CONTRACT = {
       "optionalInputKeys": [
         "key",
         "catalogId",
-        "expectedVersion"
+        "expectedVersion",
+        "backgroundColor",
+        "textColor"
       ],
       "idempotencyKeyRequired": true,
       "forwardIdempotencyKey": false

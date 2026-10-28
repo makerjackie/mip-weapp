@@ -1,4 +1,6 @@
+import type { EventTagStyle } from '@mip/admin-contracts'
 import type { WechatChannelsDestination } from '../../platform/wechat/channels'
+import { eventTagStyles } from '@mip/admin-contracts'
 import { clearComponentMedia, updateComponentMedia } from '../../platform/storage/component-media'
 import { openWechatChannelsDestination } from '../../platform/wechat/channels'
 
@@ -11,17 +13,11 @@ Component({
     displayCoverUrl: '',
     displayParticipants: [],
     recapBusy: false,
-    displayTags: [] as string[],
-    displayEventType: '',
+    displayTags: [] as EventTagStyle[],
   },
   observers: {
-    event(value: { coverUrl?: string, participantPreview?: unknown[], tags?: string[], accessLabel?: string, eventTypeLabel?: string, statusLabel?: string }) {
-      const tags = [...new Set((value?.tags || []).map(tag => tag.trim()).filter(Boolean))]
-      const reserved = new Set([value?.accessLabel, value?.statusLabel])
-      this.setData({
-        displayTags: tags.filter(tag => !reserved.has(tag)),
-        displayEventType: tags.length ? '' : value?.eventTypeLabel || '',
-      })
+    event(value: { coverUrl?: string, participantPreview?: unknown[], tags?: string[], tagStyles?: EventTagStyle[], accessLabel?: string, eventTypeLabel?: string, statusLabel?: string }) {
+      this.setData({ displayTags: eventTagStyles(value?.tags || [], value?.tagStyles) })
       updateComponentMedia(this, 'displayCoverUrl', value?.coverUrl || '')
       updateComponentMedia(this, 'displayParticipants', value?.participantPreview || [])
     },

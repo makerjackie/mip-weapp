@@ -1,6 +1,7 @@
 'use strict'
 
 const { projectEventPricing } = require('./domain/pricing-contract')
+const { projectEventTags } = require('./domain/tag-contract')
 
 const cloud = require('wx-server-sdk')
 const { DomainError } = require('./domain/rules')
@@ -310,7 +311,7 @@ async function dispatch(event) {
 
 exports.main = async (event = {}) => {
   try {
-    const data = projectEventPricing(event.action, await dispatch(event), event.eventPricingVersion)
+    const data = projectEventTags(event.action, projectEventPricing(event.action, await dispatch(event), event.eventPricingVersion), event.eventTagVersion)
     await outboxWakeup.afterSuccessfulMutation({
       appId: trustedContextAppId(cloud.getWXContext(), allowedAppIds),
       action: String(event.action || ''),

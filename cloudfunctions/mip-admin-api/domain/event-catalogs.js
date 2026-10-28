@@ -17,9 +17,9 @@ const MUTABLE_STATUSES = new Set(['ACTIVE', 'INACTIVE'])
 const RECAP_PROVIDERS = new Set(['WECHAT_CHANNELS'])
 const RECAP_DESTINATION_KINDS = new Set(['PROFILE', 'ACTIVITY'])
 const LIST_CATALOG_KEYS = new Set(['kind', 'status', 'query', 'cursor', 'limit'])
-const SAVE_CATALOG_CREATE_KEYS = new Set(['kind', 'key', 'name', 'description', 'sortOrder'])
+const SAVE_CATALOG_CREATE_KEYS = new Set(['kind', 'key', 'name', 'description', 'sortOrder', 'backgroundColor', 'textColor'])
 const SAVE_CATALOG_UPDATE_KEYS = new Set([
-  'kind', 'catalogId', 'expectedVersion', 'name', 'description', 'sortOrder',
+  'kind', 'catalogId', 'expectedVersion', 'name', 'description', 'sortOrder', 'backgroundColor', 'textColor',
 ])
 const STATUS_CATALOG_KEYS = new Set(['kind', 'catalogId', 'expectedVersion', 'status'])
 const ARCHIVE_CATALOG_KEYS = new Set(['kind', 'catalogId', 'expectedVersion', 'reason'])
@@ -79,7 +79,7 @@ function createEventCatalogAdmin({ access, repository }) {
           created: !input.catalogId,
           kind: input.kind,
           key: input.key || null,
-          changedFields: ['name', 'description', 'sortOrder'],
+          changedFields: ['name', 'description', 'sortOrder', ...['backgroundColor', 'textColor'].filter(key => Object.hasOwn(input, key))],
         },
       }),
     })
@@ -303,12 +303,18 @@ function normalizeCatalogSave(value) {
   exactObject(
     value,
     updating ? SAVE_CATALOG_UPDATE_KEYS : SAVE_CATALOG_CREATE_KEYS,
-    [...(updating ? SAVE_CATALOG_UPDATE_KEYS : SAVE_CATALOG_CREATE_KEYS)],
+    [...(updating ? SAVE_CATALOG_UPDATE_KEYS : SAVE_CATALOG_CREATE_KEYS)].filter(key => !['backgroundColor', 'textColor'].includes(key)),
     '活动目录内容无效',
   )
   const kind = enumValue(value.kind, CATALOG_KINDS, '活动目录类型无效')
   if (kind === 'TAG' && /[<>\r\n]/.test(String(value.name || ''))) throw new AdminError('VALIDATION_FAILED', '活动标签必须为五字以内纯文本')
+  if (kind !== 'TAG' && (Object.hasOwn(value, 'backgroundColor') || Object.hasOwn(value, 'textColor'))) throw new AdminError('VALIDATION_FAILED', '仅活动标签支持颜色配置')
+  const colors = {}
+  for (const [key, allowed] of [['backgroundColor', new Set(['#7acbff', '#fcdf03', '#18e779', '#ff4d5e'])], ['textColor', new Set(['#000000', '#ffffff'])]]) {
+    if (Object.hasOwn(value, key)) colors[key] = enumValue(value[key], allowed, '标签颜色无效')
+  }
   return {
+    ...colors,
     kind,
     catalogId: updating ? requiredId(value.catalogId, '活动目录') : null,
     expectedVersion: updating ? expectedVersion(value.expectedVersion) : null,

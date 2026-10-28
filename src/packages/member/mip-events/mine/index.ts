@@ -31,6 +31,7 @@ interface RegistrationCardView {
   accessLabel: string
   eventTypeLabel: string
   tags: string[]
+  tagStyles?: RegistrationSummary['event']['tagStyles']
   statusLabel: string
 }
 
@@ -73,6 +74,7 @@ function present(item: RegistrationSummary): RegistrationView {
       accessLabel: accessText,
       eventTypeLabel: publicEventTypeLabel(item.event.eventTypeLabel),
       tags: item.event.tags,
+      tagStyles: item.event.tagStyles,
       statusLabel: statusLabels[item.status],
     },
   }

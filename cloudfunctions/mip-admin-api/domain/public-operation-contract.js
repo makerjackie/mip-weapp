@@ -171,7 +171,7 @@ const adminWebMutationPolicies = Object.freeze([
   webMutation('mip.admin.events.undoCheckIn', ['eventId', 'registrationId', 'expectedVersion', 'reason']),
   webMutation('mip.admin.events.policy.save', ['expectedVersion', 'cancellationHoursBeforeStart']),
   webMutation('mip.admin.events.tags.replace', ['eventId', 'expectedVersion', 'tagIds']),
-  webMutation('mip.admin.events.catalog.save', ['kind', 'name', 'description', 'sortOrder'], ['key', 'catalogId', 'expectedVersion']),
+  webMutation('mip.admin.events.catalog.save', ['kind', 'name', 'description', 'sortOrder'], ['key', 'catalogId', 'expectedVersion', 'backgroundColor', 'textColor']),
   webMutation('mip.admin.events.catalog.changeStatus', ['kind', 'catalogId', 'expectedVersion', 'status']),
   webMutation('mip.admin.events.catalog.archive', ['kind', 'catalogId', 'expectedVersion', 'reason']),
 

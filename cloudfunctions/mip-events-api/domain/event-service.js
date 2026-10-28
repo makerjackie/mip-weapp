@@ -457,15 +457,15 @@ function publicVideoRecapRow(row) {
 }
 
 async function loadPublicEventMetadata(db, { appId, eventIds }) {
-  const grouped = new Map(eventIds.map(eventId => [eventId, { tags: [], videoRecaps: [] }]))
+  const grouped = new Map(eventIds.map(eventId => [eventId, { tags: [], tagStyles: [], videoRecaps: [] }]))
   if (!eventIds.length) {
     return grouped
   }
   const placeholders = eventIds.map(() => '?').join(', ')
   const tagRows = await db.query(
-    `SELECT public_tag.event_id, public_tag.name
+    `SELECT public_tag.event_id, public_tag.name, public_tag.background_color, public_tag.text_color
      FROM (
-       SELECT assignment.event_id, tag.name,
+       SELECT assignment.event_id, tag.name, tag.background_color, tag.text_color,
               ROW_NUMBER() OVER (
                 PARTITION BY assignment.event_id
                 ORDER BY tag.sort_order, tag.name, tag.id
@@ -488,6 +488,7 @@ async function loadPublicEventMetadata(db, { appId, eventIds }) {
       && row.name
       && !metadata.tags.includes(row.name)) {
       metadata.tags.push(row.name)
+      metadata.tagStyles.push({ name: row.name, backgroundColor: row.background_color || '#7acbff', textColor: row.text_color || '#000000' })
     }
   }
   const recapRows = await db.query(
@@ -518,7 +519,7 @@ async function loadPublicEventMetadata(db, { appId, eventIds }) {
   return grouped
 }
 
-function publicEventRow(row, previews = [], metadata = { tags: [], videoRecaps: [] }) {
+function publicEventRow(row, previews = [], metadata = { tags: [], tagStyles: [], videoRecaps: [] }) {
   return {
     id: row.id,
     scopeType: row.scope_type,
@@ -529,6 +530,7 @@ function publicEventRow(row, previews = [], metadata = { tags: [], videoRecaps: 
     coverUrl: row.cover_file_id || undefined,
     eventTypeLabel: row.event_type_label || '活动',
     tags: metadata.tags,
+    tagStyles: metadata.tagStyles || [],
     videoRecaps: metadata.videoRecaps,
     mode: row.event_mode,
     accessType: row.access_type,

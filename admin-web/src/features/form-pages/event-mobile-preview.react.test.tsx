@@ -38,9 +38,9 @@ describe('event preview online access', () => {
 })
 
 describe('event preview detail fidelity', () => {
-  it('shows the member exemption alongside the guest ticket price', () => {
+  it('retains guest ticket price without an automatic exemption chip', () => {
     render(<EventMobilePreview values={{ accessType: 'PAID', memberFree: true, priceCents: 1990 }} />)
-    expect(screen.getByText('玩家免费')).toBeInTheDocument()
+    expect(screen.queryByText('玩家免费')).not.toBeInTheDocument()
     expect(screen.getByText('19.90')).toBeInTheDocument()
   })
 
@@ -63,20 +63,20 @@ describe('event preview detail fidelity', () => {
     expect(screen.getByText(`${monthDay} ${clock(start)}-${clock(end)}`)).toBeInTheDocument()
     expect(screen.getByText('上海 · 徐汇某空间')).toBeInTheDocument()
     // 付费活动：角标「付费活动」+ 右上价格位（整数元不带小数）。
-    expect(screen.getByText('付费活动')).toBeInTheDocument()
+    expect(screen.queryByText('付费活动')).not.toBeInTheDocument()
     expect(screen.getByText('¥')).toBeInTheDocument()
     expect(screen.getByText('589')).toBeInTheDocument()
   })
 
-  it('labels free and member-included access like the detail page', () => {
+  it('does not synthesize access chips when no labels are configured', () => {
     render(<EventMobilePreview values={{ accessType: 'MEMBER_INCLUDED' }} />)
-    expect(screen.getByText('玩家活动')).toBeInTheDocument()
+    expect(screen.queryByText('玩家活动')).not.toBeInTheDocument()
     expect(screen.queryByText('¥')).not.toBeInTheDocument()
   })
 
-  it('maps the default event type key to the public「活动」chip', () => {
+  it('does not synthesize a legacy type chip', () => {
     render(<EventMobilePreview values={{ eventTypeKey: 'general' }} />)
-    expect(screen.getByText('活动')).toBeInTheDocument()
+    expect(screen.queryByText('活动')).not.toBeInTheDocument()
   })
 
   it('switches content sections through the detail page tabs', async () => {
@@ -165,11 +165,11 @@ it('resolves real nonempty catalog objects and subsequent pages into preview lab
   sessionState.request.mockImplementation(async (action: string, input: Record<string, unknown>) => {
     if (action === 'mip.admin.branches.list') return { items: [{ id: 'branch-1', name: '上海服务器' }] }
     if (input.kind === 'TYPE') return { items: [{ key: 'type-1', name: '资源交流' }] }
-    return input.cursor ? { items: [{ id: 'tag-2', name: '集会' }] } : { items: [{ id: 'tag-1', name: '早会' }], nextCursor: 'next-page' }
+    return input.cursor ? { items: [{ id: 'tag-2', name: '集会' }] } : { items: [{ id: 'tag-1', name: '早会', backgroundColor: '#fcdf03', textColor: '#000000' }], nextCursor: 'next-page' }
   })
   render(<EventMobilePreviewWithData values={{ scopeType: 'BRANCH', branchId: 'branch-1', eventTypeKey: 'type-1', tagIds: ['tag-1', 'tag-2'] }} />)
-  expect(await screen.findByText('上海服务器')).toBeVisible()
-  expect(await screen.findByText('早会')).toBeVisible()
+  expect(screen.queryByText('上海服务器')).not.toBeInTheDocument()
+  expect(await screen.findByText('早会')).toHaveStyle({ backgroundColor: '#fcdf03', color: '#000000' })
   expect(await screen.findByText('集会')).toBeVisible()
-  expect(await screen.findByText('资源交流')).toBeVisible()
+  expect(screen.queryByText('资源交流')).not.toBeInTheDocument()
 })
