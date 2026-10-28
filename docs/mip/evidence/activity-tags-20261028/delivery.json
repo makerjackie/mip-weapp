@@ -1,0 +1,50 @@
+{
+  "recordedAt": "2026-10-28T15:36:23.258831+00:00",
+  "scope": "TEST business only; acceptance-site publication",
+  "sourceCommit": "91aaa0386ec1cc03a5538ca82ef4d730e5689731",
+  "businessRuntimeSourceCommit": "80ca8d83c80f22f66c73557f67ef912b9e15a418",
+  "miniProgram": {
+    "version": "1.2.12-test.1028",
+    "environment": "TEST",
+    "developmentUploadSucceeded": true,
+    "trialAssignmentVerified": false,
+    "reviewSubmitted": false,
+    "publicReleased": false,
+    "mainPackageBytes": 1817591
+  },
+  "acceptanceSite": {
+    "url": "https://miptest.01mvp.com/updates/2026-10-27/?v=tags-supplement-1028#feedback-1028-tags-supplement",
+    "deployment": "550a2bee",
+    "httpsFilesVerified": 652,
+    "allBytesAndMimeMatched": true,
+    "transientReadRetries": 4,
+    "browserChecks": [
+      {
+        "width": 1440,
+        "height": 1000,
+        "resultImages": 6,
+        "sourceImages": 5,
+        "feedbackCollapsed": true,
+        "modalPassed": true,
+        "relatedReports": 3,
+        "overflow": false
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "resultImages": 6,
+        "sourceImages": 5,
+        "feedbackCollapsed": true,
+        "modalPassed": true,
+        "relatedReports": 3,
+        "overflow": false
+      }
+    ]
+  },
+  "productionBusinessUpdated": false,
+  "limitations": [
+    "Phone verification remains pending",
+    "Trial assignment requires platform confirmation",
+    "Existing admin preview time-zone and participant-placeholder differences are not claimed fixed"
+  ]
+}

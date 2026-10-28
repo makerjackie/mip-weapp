@@ -1,0 +1,93 @@
+{
+  "recordedAt": "2026-10-28T15:21:39.558Z",
+  "sourceDocument": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc",
+  "revision": 430,
+  "sourceImages": [
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/source-feedback/source-1.png",
+      "sourceToken": "VJDLbi6KKo0Fedxw7IjcrX7mnqe",
+      "sha256": "d40b58ea5ad983f953bf8991375587587fa64c51e2283445443f0169301b61c5",
+      "unchanged": true
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/source-feedback/source-2.png",
+      "sourceToken": "Z4EbbWObBovE8dxf4Tdc2SPwn3f",
+      "sha256": "7d86a140df75936d0d98d165e036832a8a5438d1ee9fbfaa0d8414097b804aeb",
+      "unchanged": true
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/source-feedback/source-3.png",
+      "sourceToken": "VclkbFAgRoTRjXxhZa5cXsUGnhd",
+      "sha256": "59b4d1d64e374cc13bcd169d52cdc09e8688dc6ccc678361864dc76dafcfad04",
+      "unchanged": true
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/source-feedback/source-4.png",
+      "sourceToken": "KHnqbU1rmo2dyTxAAIJcGTGYnmh",
+      "sha256": "7e5472fcabd5d0dfe0c26bfc1674e845f146f5035c6b5f4b4e5b18bd3eb1d3df",
+      "unchanged": true
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/source-feedback/source-5.png",
+      "sourceToken": "X4Vzb5ZuKoHcHJxhq5Hcz5k4n8e",
+      "sha256": "ec57708e56074c75d975be1608aa8902f4ab790a3636c3590b803dd0e61cafa6",
+      "unchanged": true
+    }
+  ],
+  "shots": [
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/shots/before-detail.png",
+      "sha256": "d002f71462b928019a9425e46f0f86a14d78cdd29192e3765c2c95eb3f3529de",
+      "rawUnmodified": true
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/shots/after-detail.png",
+      "sha256": "b1ed10dc6552c847ac67e8c2694d8339efd4aefef9ebc7be92941f299d5f132f",
+      "rawUnmodified": true
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/shots/before-feed.png",
+      "sha256": "87f1379e7c213b2d115986729bc0eabd6526bb0ae5784fd9388b72f2b137ae70",
+      "rawUnmodified": true
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/shots/after-feed.png",
+      "sha256": "8cb31d3095f56182edaa75e809e496aff4db4db9e1610822de74525364ed8cc6",
+      "rawUnmodified": true
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/shots/after-admin-config.png",
+      "sha256": "6b1c9748647f46cc117448ffa8564d4f0f116175e18ab2c8f1e841237c213cd2",
+      "rawUnmodified": true
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/shots/after-admin-preview.png",
+      "sha256": "24ac6e416209af3b3880f5dff7454aee0455270a43e1303ca56ad8dfdd73d289",
+      "rawUnmodified": true
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/shots/after-catalog-colors.png",
+      "sourceSha256": "bd4db88662e15c9cabe3d4d688cbfca745c270c8e294952a9dbeaa0d99e0457c",
+      "crop": {
+        "left": 460,
+        "top": 100,
+        "width": 520,
+        "height": 531
+      },
+      "sha256": "d479839b7597e5b9ce98cb123b1e4ef80338a659b5472b9fabf47cb8047995f5",
+      "processing": "Crop only; no masks or repainting"
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/shots/create-colors.png",
+      "sourceSha256": "88133847fdf58c5caa18fcf151511cd19138dde125d1b1ec104e24bbd6d808e3",
+      "crop": {
+        "left": 460,
+        "top": 100,
+        "width": 520,
+        "height": 238
+      },
+      "sha256": "8c8f72bc3a8fd7b306510783408433bbf6ca8d3942e53fbeb66ddaa85b63e9aa",
+      "processing": "Crop only; no masks or repainting"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-28T15:08:37.486132+00:00",
+  "testOnly": true,
+  "checks": [
+    {
+      "function": "mip-t-admin-api",
+      "status": "Active",
+      "filesMatched": 170,
+      "configUnchanged": true,
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true
+    },
+    {
+      "function": "mip-t-events-api",
+      "status": "Active",
+      "filesMatched": 22,
+      "configUnchanged": true,
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true
+    },
+    {
+      "function": "mip-t-admin-web-api",
+      "status": "Active",
+      "filesMatched": 19,
+      "configUnchanged": true,
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true
+    }
+  ]
+}

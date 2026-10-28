@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-28T15:15:15.803Z",
+  "sourceSha": "91aaa0386ec1cc03a5538ca82ef4d730e5689731",
+  "version": "1.2.12-test.1028",
+  "testOnly": true,
+  "singleConfiguredTag": true,
+  "colorsMatchServer": true,
+  "legacyDtoCompatible": true,
+  "tasksOk": true
+}

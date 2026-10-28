@@ -129,7 +129,7 @@ function circleAttributes(cell) {
   }
   return ` data-image-circles="${escape(JSON.stringify(cell.circles))}"`
 }
-const panel = (cell, label) => `<section class="panel"><b>${label}</b><p>${escape(cell.caption)}</p>${cell.file ? `<button type="button" class="image-preview-button" aria-haspopup="dialog"><img loading="lazy"${imageDimensions(cell.file)}${circleAttributes(cell)} data-full-src="${escape(asset(cell.file))}" src="${escape(asset(cell.file))}" alt="${escape(cell.caption)}"></button><noscript><a href="${escape(asset(cell.file))}">查看原图</a></noscript>` : `<p class="placeholder">${escape(cell.reason)}</p>`}${cell.source ? `<p class="muted">来源：${escape(cell.source)}</p>` : ''}</section>`
+const panel = (cell, label) => `<section class="panel"><b>${cell.label ? escape(cell.label) : label}</b><p>${escape(cell.caption)}</p>${cell.file ? `<button type="button" class="image-preview-button" aria-haspopup="dialog"><img loading="lazy"${imageDimensions(cell.file)}${circleAttributes(cell)} data-full-src="${escape(asset(cell.file))}" src="${escape(asset(cell.file))}" alt="${escape(cell.caption)}"></button><noscript><a href="${escape(asset(cell.file))}">查看原图</a></noscript>` : `<p class="placeholder">${escape(cell.reason)}</p>`}${cell.source ? `<p class="muted">来源：${escape(cell.source)}</p>` : ''}</section>`
 const highlights = report => (report.highlights?.length ? report.highlights : [report.summary]).filter(Boolean)
 const comparisonId = (report, comparison) => `${report.id}-view-${sha(comparison.title).slice(0, 8)}`
 const visibleComparisons = report => report.uiChange === false ? [] : (report.comparisons || []).filter(c => c.before.file || c.after.file)

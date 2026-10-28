@@ -1,0 +1,75 @@
+{
+  "environment": "TEST",
+  "title": "1027标签与报名验收",
+  "colors": [
+    {
+      "backgroundColor": "#7acbff",
+      "textColor": "#000000",
+      "savedAndReread": true,
+      "version": 12
+    },
+    {
+      "backgroundColor": "#7acbff",
+      "textColor": "#ffffff",
+      "savedAndReread": true,
+      "version": 13
+    },
+    {
+      "backgroundColor": "#fcdf03",
+      "textColor": "#000000",
+      "savedAndReread": true,
+      "version": 14
+    },
+    {
+      "backgroundColor": "#fcdf03",
+      "textColor": "#ffffff",
+      "savedAndReread": true,
+      "version": 15
+    },
+    {
+      "backgroundColor": "#18e779",
+      "textColor": "#000000",
+      "savedAndReread": true,
+      "version": 16
+    },
+    {
+      "backgroundColor": "#18e779",
+      "textColor": "#ffffff",
+      "savedAndReread": true,
+      "version": 17
+    },
+    {
+      "backgroundColor": "#ff4d5e",
+      "textColor": "#000000",
+      "savedAndReread": true,
+      "version": 18
+    },
+    {
+      "backgroundColor": "#ff4d5e",
+      "textColor": "#ffffff",
+      "savedAndReread": true,
+      "version": 19
+    }
+  ],
+  "viewports": [
+    {
+      "width": 1280,
+      "height": 720,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    }
+  ],
+  "eventVersion": 5,
+  "previewSameLabelAndColor": true,
+  "errors": [],
+  "checkedAt": "2026-10-28T15:16:18.764Z"
+}
