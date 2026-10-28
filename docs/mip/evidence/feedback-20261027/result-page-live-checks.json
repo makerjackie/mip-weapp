@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-28T04:10:11.352Z",
+  "proof": [
+    {
+      "width": 1440,
+      "defaultFeedbackCollapsed": true,
+      "resultImagesDirectlyVisible": 8,
+      "tagResultImages": 2,
+      "allResultModalsPassed": true,
+      "tagCirclesPresent": true,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 390,
+      "defaultFeedbackCollapsed": true,
+      "resultImagesDirectlyVisible": 8,
+      "tagResultImages": 2,
+      "allResultModalsPassed": true,
+      "tagCirclesPresent": true,
+      "horizontalOverflow": false
+    }
+  ]
+}

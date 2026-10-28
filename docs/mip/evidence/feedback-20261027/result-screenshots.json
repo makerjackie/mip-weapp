@@ -1,0 +1,217 @@
+{
+  "capturedAt": "2026-10-28T03:57:37.472Z",
+  "environment": "TEST",
+  "runtime": "WeChat DevTools 390x844",
+  "version": "1.2.11-test.1027",
+  "buildSha": "2a22bdc96cc082cd5d190a2ba78a85b475803e9c",
+  "changes": "Acceptance evidence only; no business code or production changes.",
+  "checks": {
+    "adminConfiguredTagReadback": true,
+    "activityFeedTagShown": true,
+    "myActivitiesTagShown": true,
+    "nationwideTalents": 4,
+    "publishedRoleShown": true,
+    "publicProfileCardShown": true,
+    "separateVisitorStillPending": true,
+    "calendarSelectedThenCleared": true,
+    "copySuccessToastAndNativeClipboardVerified": true
+  },
+  "shots": [
+    {
+      "rawFilename": "tags-feed.png",
+      "originalSha256": "37501ec439931eb23f51925cca4b2183231622e1fb3f47b6b49b2989a6481f8f",
+      "file": "docs/mip/evidence/feedback-20261027/shots/tags-feed-after.png",
+      "sha256": "ec0dd0e73aa04519e7f538f30c57a0f7af7ba177ca42a06d64651574cd8cc499",
+      "crop": {
+        "left": 10,
+        "top": 530,
+        "width": 574,
+        "height": 625
+      },
+      "privacyRectangles": [
+        {
+          "left": 25,
+          "top": 795,
+          "width": 55,
+          "height": 55
+        }
+      ],
+      "originalRetainedPrivately": true,
+      "allOtherPixelsUnchanged": true
+    },
+    {
+      "rawFilename": "tags-mine.png",
+      "originalSha256": "9ad135459079b9314a8ab3fb39b88ef533b8294a249ccf21733fb9af30f037f6",
+      "file": "docs/mip/evidence/feedback-20261027/shots/tags-mine-after.png",
+      "sha256": "70c85e5d67a7b20d1326354e790847e64b71f4fe00f934c9eb0de727d0115943",
+      "crop": {
+        "left": 10,
+        "top": 200,
+        "width": 574,
+        "height": 940
+      },
+      "privacyRectangles": [
+        {
+          "left": 25,
+          "top": 864,
+          "width": 60,
+          "height": 65
+        }
+      ],
+      "originalRetainedPrivately": true,
+      "allOtherPixelsUnchanged": true
+    },
+    {
+      "rawFilename": "talents-list.png",
+      "originalSha256": "e6e260980eab12be7acda3bdfb84e4ed52d093f41f91f105a531dadbb51bdb18",
+      "file": "docs/mip/evidence/feedback-20261027/shots/talents-list-after.png",
+      "sha256": "ee9a19f530fb77538d359cfe72d9a1ea8d5992654cd7198a71618c3e44b99e46",
+      "crop": {
+        "left": 10,
+        "top": 110,
+        "width": 574,
+        "height": 1030
+      },
+      "privacyRectangles": [
+        {
+          "left": 25,
+          "top": 880,
+          "width": 105,
+          "height": 100
+        },
+        {
+          "left": 140,
+          "top": 880,
+          "width": 170,
+          "height": 39
+        },
+        {
+          "left": 140,
+          "top": 950,
+          "width": 170,
+          "height": 35
+        }
+      ],
+      "originalRetainedPrivately": true,
+      "allOtherPixelsUnchanged": true
+    },
+    {
+      "rawFilename": "talents-role.png",
+      "originalSha256": "f7674ad7fb75ae43ca6fa5fb3e27dff989fb3ea476ff15bd4874962dd04da3e6",
+      "file": "docs/mip/evidence/feedback-20261027/shots/cooperation-list-after.png",
+      "sha256": "fd463403d53c4e6d988ab703afec8e2b270300d4b40da305a957192cdf5d1117",
+      "crop": {
+        "left": 10,
+        "top": 850,
+        "width": 574,
+        "height": 280
+      },
+      "privacyRectangles": [
+        {
+          "left": 25,
+          "top": 880,
+          "width": 105,
+          "height": 100
+        },
+        {
+          "left": 140,
+          "top": 880,
+          "width": 170,
+          "height": 39
+        },
+        {
+          "left": 140,
+          "top": 950,
+          "width": 170,
+          "height": 35
+        }
+      ],
+      "originalRetainedPrivately": true,
+      "allOtherPixelsUnchanged": true
+    },
+    {
+      "rawFilename": "cooperation-public-profile-settled.png",
+      "originalSha256": "d260a5d3b99265086c5b3c05b3b48caf54080966388a2fe7fbfbe926b1c1b03e",
+      "file": "docs/mip/evidence/feedback-20261027/shots/cooperation-profile-after.png",
+      "sha256": "bb38d5f46c451bc08639164560882021e2760c99f05d7fcb9be4647d5847ff52",
+      "crop": {
+        "left": 10,
+        "top": 430,
+        "width": 574,
+        "height": 430
+      },
+      "privacyRectangles": [],
+      "originalRetainedPrivately": true,
+      "allOtherPixelsUnchanged": true
+    },
+    {
+      "rawFilename": "calendar-selected.png",
+      "originalSha256": "c7be9f8945bc49cb6d328e38b68460069a1f89f8fff4e157d77cb24d9d44fe6d",
+      "file": "docs/mip/evidence/feedback-20261027/shots/calendar-selected-after.png",
+      "sha256": "94cdc990eb3f994066129c693f805456012981220e9aafc905f4df9032c971e0",
+      "crop": {
+        "left": 10,
+        "top": 525,
+        "width": 574,
+        "height": 705
+      },
+      "privacyRectangles": [],
+      "originalRetainedPrivately": true,
+      "allOtherPixelsUnchanged": true
+    },
+    {
+      "rawFilename": "calendar-cleared.png",
+      "originalSha256": "50c9311624401482530d17de0fe4ff7b2cd048d14af26271f64481daf337bff5",
+      "file": "docs/mip/evidence/feedback-20261027/shots/calendar-cleared-after.png",
+      "sha256": "1b779016e8ebe837efe05426d2a3936720da9c11f9b79747eb590ee57e622b76",
+      "crop": {
+        "left": 10,
+        "top": 525,
+        "width": 574,
+        "height": 705
+      },
+      "privacyRectangles": [],
+      "originalRetainedPrivately": true,
+      "allOtherPixelsUnchanged": true
+    },
+    {
+      "rawFilename": "share-copy-success-settled.png",
+      "originalSha256": "c6eb9a7e180d369645a67af0cd61c0545d6f4d4c6ee4287e13e426daaf3161b3",
+      "file": "docs/mip/evidence/feedback-20261027/shots/share-copy-after.png",
+      "sha256": "6686a8651811767d27d572ffcf6fe97926c846430ec8e5225b4ef04a682e0483",
+      "crop": {
+        "left": 10,
+        "top": 450,
+        "width": 574,
+        "height": 215
+      },
+      "privacyRectangles": [],
+      "originalRetainedPrivately": true,
+      "allOtherPixelsUnchanged": true
+    }
+  ],
+  "acceptanceSiteLocalChecks": {
+    "checkedAt": "2026-10-28T03:59:05.825Z",
+    "proof": [
+      {
+        "width": 1440,
+        "defaultFeedbackCollapsed": true,
+        "resultImagesDirectlyVisible": 8,
+        "tagResultImages": 2,
+        "allResultModalsPassed": true,
+        "tagCirclesPresent": true,
+        "horizontalOverflow": false
+      },
+      {
+        "width": 390,
+        "defaultFeedbackCollapsed": true,
+        "resultImagesDirectlyVisible": 8,
+        "tagResultImages": 2,
+        "allResultModalsPassed": true,
+        "tagCirclesPresent": true,
+        "horizontalOverflow": false
+      }
+    ]
+  },
+  "acceptanceSiteTestsPassed": 18
+}

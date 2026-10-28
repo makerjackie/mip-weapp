@@ -1,7 +1,7 @@
 {
   "siteUrl": "https://miptest.01mvp.com/updates/2026-10-27/#feedback-20261027-v1",
-  "siteDeployment": "5c597570",
-  "publicHttpsFilesVerified": 608,
+  "siteDeployment": "5a08be3f",
+  "publicHttpsFilesVerified": 625,
   "desktopWidth": 1440,
   "mobileWidth": 390,
   "release": {
@@ -67,5 +67,15 @@
     "singleDocumentLinkAtTop": true,
     "all12ImagesVerifiedInLiveModalAtBothWidths": true,
     "rawPrivateImagesPublished": false
+  },
+  "resultEvidence": {
+    "screenshotsAdded": 8,
+    "tagScreenshots": 2,
+    "directlyVisibleOutsideOriginalFeedback": true,
+    "testVersion": "1.2.11-test.1027",
+    "testAppSourceSha": "2a22bdc96cc082cd5d190a2ba78a85b475803e9c",
+    "desktopAndMobileLiveChecksPassed": true,
+    "allResultImageModalsVerified": true,
+    "productionBusinessModified": false
   }
 }

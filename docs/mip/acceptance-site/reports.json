@@ -7,7 +7,7 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-27T09:41:39.856Z",
-    "updatedAt": "2026-10-28T03:40:43.761Z",
+    "updatedAt": "2026-10-28T03:57:37.471Z",
     "verifiedAt": "2026-10-27T10:27:30.505Z",
     "submittedAt": "2026-10-27T09:41:39.856Z",
     "reportDate": "2026-10-27",
@@ -49,7 +49,43 @@
               "source": "飞书甲方反馈截图 3/12，灰块为个人信息脱敏；非本批修改成果"
             }
           ]
-        }
+        },
+        "uiChange": true,
+        "evidenceTitle": "测试环境修复结果",
+        "evidenceImages": [
+          {
+            "file": "docs/mip/evidence/feedback-20261027/shots/tags-feed-after.png",
+            "caption": "修复后：活动列表展示后台配置的“沙龙”标签",
+            "source": "1.2.11-test.1027 · TEST真实服务 · 微信开发者工具390×844 · 本轮重新实拍",
+            "circles": [
+              {
+                "x": 73,
+                "y": 45,
+                "width": 12,
+                "height": 5
+              }
+            ]
+          },
+          {
+            "file": "docs/mip/evidence/feedback-20261027/shots/tags-mine-after.png",
+            "caption": "修复后：“我的活动”同步显示“沙龙”标签",
+            "source": "1.2.11-test.1027 · TEST真实服务 · 微信开发者工具390×844 · 本轮重新实拍",
+            "circles": [
+              {
+                "x": 73,
+                "y": 23,
+                "width": 12,
+                "height": 4
+              },
+              {
+                "x": 73,
+                "y": 73,
+                "width": 12,
+                "height": 4
+              }
+            ]
+          }
+        ]
       },
       {
         "id": "feedback-1027-talents",
@@ -65,7 +101,16 @@
           "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#O4QUd7iFAo6dOtxSEPFcY7OBntg",
           "note": "甲方原始反馈；该项在原文中未附截图。",
           "images": []
-        }
+        },
+        "uiChange": true,
+        "evidenceTitle": "测试环境修复结果",
+        "evidenceImages": [
+          {
+            "file": "docs/mip/evidence/feedback-20261027/shots/talents-list-after.png",
+            "caption": "“全国”下4位测试人才均显示；灰块遮盖真实账号信息",
+            "source": "1.2.11-test.1027 · TEST真实服务 · 微信开发者工具390×844 · 本轮重新实拍"
+          }
+        ]
       },
       {
         "id": "feedback-1027-cooperation",
@@ -103,7 +148,21 @@
               "source": "飞书甲方反馈截图 7/12，灰块为个人信息脱敏；非本批修改成果"
             }
           ]
-        }
+        },
+        "uiChange": true,
+        "evidenceTitle": "测试环境修复结果",
+        "evidenceImages": [
+          {
+            "file": "docs/mip/evidence/feedback-20261027/shots/cooperation-list-after.png",
+            "caption": "人才列表已显示已发布合作卡的“狗策划”标签",
+            "source": "1.2.11-test.1027 · TEST真实服务 · 微信开发者工具390×844 · 本轮重新实拍"
+          },
+          {
+            "file": "docs/mip/evidence/feedback-20261027/shots/cooperation-profile-after.png",
+            "caption": "公开档案页面已显示合作卡；当前测试账号打开，独立访客仍待手机复测",
+            "source": "1.2.11-test.1027 · TEST真实服务 · 微信开发者工具390×844 · 本轮重新实拍"
+          }
+        ]
       },
       {
         "id": "feedback-1027-unread",
@@ -162,7 +221,21 @@
               "source": "飞书甲方反馈截图 9/12；非本批修改成果"
             }
           ]
-        }
+        },
+        "uiChange": true,
+        "evidenceTitle": "测试环境修复结果",
+        "evidenceImages": [
+          {
+            "file": "docs/mip/evidence/feedback-20261027/shots/calendar-selected-after.png",
+            "caption": "同一测试版本：第一次点击，11月2日选中高亮",
+            "source": "1.2.11-test.1027 · TEST真实服务 · 微信开发者工具390×844 · 本轮重新实拍"
+          },
+          {
+            "file": "docs/mip/evidence/feedback-20261027/shots/calendar-cleared-after.png",
+            "caption": "再次点击11月2日，取消选中；确认后回到近期活动",
+            "source": "1.2.11-test.1027 · TEST真实服务 · 微信开发者工具390×844 · 本轮重新实拍"
+          }
+        ]
       },
       {
         "id": "feedback-1027-share",
@@ -184,7 +257,16 @@
               "source": "飞书甲方反馈截图 10/12，灰块为个人信息脱敏；非本批修改成果"
             }
           ]
-        }
+        },
+        "uiChange": true,
+        "evidenceTitle": "测试环境修复结果",
+        "evidenceImages": [
+          {
+            "file": "docs/mip/evidence/feedback-20261027/shots/share-copy-after.png",
+            "caption": "真实复制成功提示；原生剪贴板已核对为微信HTTPS活动链接，手机唤起仍待复测",
+            "source": "1.2.11-test.1027 · TEST真实服务 · 微信开发者工具390×844 · 本轮重新实拍"
+          }
+        ]
       },
       {
         "id": "feedback-1027-career",
@@ -308,7 +390,8 @@
       "docs/mip/evidence/feedback-20261027/shots/unread-after.png",
       "docs/mip/evidence/feedback-20261027/feedback-disclosure.json",
       "docs/mip/evidence/feedback-20261027/source-feedback/provenance.json",
-      "docs/mip/evidence/feedback-20261027/source-feedback/verification.json"
+      "docs/mip/evidence/feedback-20261027/source-feedback/verification.json",
+      "docs/mip/evidence/feedback-20261027/result-screenshots.json"
     ],
     "limitations": "微信内真实点击、消息角标及从复制链接唤起正确活动仍需手机复测；体验版未核实指派，未提审或正式发布。",
     "pendingSummary": "手机复测：复制链接唤起目标活动、消息角标与合作卡访客视角；开发版上传不等于已设体验版。生产等待本批验收确认。",
