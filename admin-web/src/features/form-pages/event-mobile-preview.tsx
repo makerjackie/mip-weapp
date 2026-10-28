@@ -258,17 +258,17 @@ export function EventMobilePreviewWithData({ values }: { values: Record<string, 
   const { request, demoMode } = useAdminSession()
   const tagIds = Array.isArray(values.tagIds) ? values.tagIds.map(id => String(id || '').trim()).filter(Boolean) : []
   const tagKey = tagIds.join(',')
-  const [catalog, setCatalog] = useState<Record<string, EventTagStyle>>({})
+  const [catalog, setCatalog] = useState<Record<string, EventTagStyle & { sortOrder: number }>>({})
   useEffect(() => {
     let active = true
     async function load() {
-      const result: Record<string, EventTagStyle> = {}
+      const result: Record<string, EventTagStyle & { sortOrder: number }> = {}
       let cursor = ''
       const seen = new Set<string>()
       do {
         const payload = await request<{ items: Array<Record<string, unknown>>, nextCursor?: string }>('mip.admin.events.catalog.list', { kind: 'TAG', selectable: true, ...(cursor ? { cursor } : {}) })
         for (const entry of payload.items || []) {
-          if (entry.id && entry.name) result[String(entry.id)] = eventTagStyle(String(entry.name), { backgroundColor: String(entry.backgroundColor || ''), textColor: String(entry.textColor || '') })
+          if (entry.id && entry.name) result[String(entry.id)] = { ...eventTagStyle(String(entry.name), { backgroundColor: String(entry.backgroundColor || ''), textColor: String(entry.textColor || '') }), sortOrder: Number(entry.sortOrder) || 0 }
         }
         cursor = String(payload.nextCursor || '')
         if (seen.has(cursor)) break
@@ -279,6 +279,13 @@ export function EventMobilePreviewWithData({ values }: { values: Record<string, 
     const timer = setTimeout(() => { if (!demoMode && tagKey) void load().catch(() => { if (active) setCatalog({}) }) }, 0)
     return () => { active = false; clearTimeout(timer) }
   }, [request, demoMode, tagKey])
-  const tags = tagIds.map(id => catalog[id] || (demoMode ? eventTagStyle(id) : null)).filter((tag): tag is EventTagStyle => Boolean(tag))
+  // Public events use catalog order, then name and ID; saved selection IDs have no display order.
+  const orderedIds = [...tagIds].sort((left, right) => {
+    const a = catalog[left], b = catalog[right]
+    return (a?.sortOrder || 0) - (b?.sortOrder || 0)
+      || ((a?.name || '') < (b?.name || '') ? -1 : (a?.name || '') > (b?.name || '') ? 1 : 0)
+      || (left < right ? -1 : left > right ? 1 : 0)
+  })
+  const tags = orderedIds.map(id => catalog[id] || (demoMode ? eventTagStyle(id) : null)).filter((tag): tag is EventTagStyle => Boolean(tag))
   return <EventMobilePreview values={values} tagLabels={tags.map(tag => tag.name)} tagStyles={tags} />
 }

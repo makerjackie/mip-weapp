@@ -165,11 +165,12 @@ it('resolves real nonempty catalog objects and subsequent pages into preview lab
   sessionState.request.mockImplementation(async (action: string, input: Record<string, unknown>) => {
     if (action === 'mip.admin.branches.list') return { items: [{ id: 'branch-1', name: '上海服务器' }] }
     if (input.kind === 'TYPE') return { items: [{ key: 'type-1', name: '资源交流' }] }
-    return input.cursor ? { items: [{ id: 'tag-2', name: '集会' }] } : { items: [{ id: 'tag-1', name: '早会', backgroundColor: '#fcdf03', textColor: '#000000' }], nextCursor: 'next-page' }
+    return input.cursor ? { items: [{ id: 'tag-2', name: '集会', sortOrder: 10 }] } : { items: [{ id: 'tag-1', name: '早会', sortOrder: 0, backgroundColor: '#fcdf03', textColor: '#000000' }], nextCursor: 'next-page' }
   })
-  render(<EventMobilePreviewWithData values={{ scopeType: 'BRANCH', branchId: 'branch-1', eventTypeKey: 'type-1', tagIds: ['tag-1', 'tag-2'] }} />)
+  const { container } = render(<EventMobilePreviewWithData values={{ scopeType: 'BRANCH', branchId: 'branch-1', eventTypeKey: 'type-1', tagIds: ['tag-2', 'tag-1'] }} />)
   expect(screen.queryByText('上海服务器')).not.toBeInTheDocument()
   expect(await screen.findByText('早会')).toHaveStyle({ backgroundColor: '#fcdf03', color: '#000000' })
   expect(await screen.findByText('集会')).toBeVisible()
+  expect(Array.from(container.querySelectorAll('.event-mobile-preview__chips span'), node => node.textContent)).toEqual(['早会', '集会'])
   expect(screen.queryByText('资源交流')).not.toBeInTheDocument()
 })
