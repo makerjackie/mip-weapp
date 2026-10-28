@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-28T04:22:33.626Z",
+  "proof": [
+    {
+      "width": 1440,
+      "defaultFeedbackCollapsed": true,
+      "resultImagesDirectlyVisible": 2,
+      "adminConfigurationThenAppResult": true,
+      "tagResultImages": 2,
+      "allResultModalsPassed": true,
+      "tagCirclesPresent": true,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 390,
+      "defaultFeedbackCollapsed": true,
+      "resultImagesDirectlyVisible": 2,
+      "adminConfigurationThenAppResult": true,
+      "tagResultImages": 2,
+      "allResultModalsPassed": true,
+      "tagCirclesPresent": true,
+      "horizontalOverflow": false
+    }
+  ]
+}

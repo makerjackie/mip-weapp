@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-28T04:20:04.038Z",
+  "testOnly": true,
+  "businessWrites": false,
+  "configuredTag": "沙龙",
+  "title": "1027标签与报名验收",
+  "configuredTagVisible": true,
+  "titleMatchesApp": true,
+  "queryActions": [
+    "mip.admin.session",
+    "mip.admin.events.get",
+    "mip.admin.events.drafts.get",
+    "mip.admin.branches.list",
+    "mip.admin.events.catalog.list"
+  ],
+  "presentation": "One TEST activity: actual saved admin configuration followed by Mini Program activity-card result. My Activities screenshot retained as source evidence, removed from this pair.",
+  "rawSha256": "f7e4da9e9e6b193369fbece8ef08ffb4b6340b53bc3d2598b44dbd1845ae64cb",
+  "publicSha256": "d9f5b6b23879f44161da4df3dbe0753b46645bc3d82b41297def15264a10aa25",
+  "crop": {
+    "left": 0,
+    "top": 0,
+    "width": 465,
+    "height": 455
+  },
+  "pixelsRepainted": false,
+  "miniProgramScreenshot": "shots/tags-feed-after.png"
+}
