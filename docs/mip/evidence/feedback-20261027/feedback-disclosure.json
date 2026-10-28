@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-10-28T03:11:57.017Z",
+  "proof": [
+    {
+      "width": 1440,
+      "feedbackCount": 9,
+      "collapsedByDefault": true,
+      "eachToggles": true,
+      "keyboardOperable": true,
+      "exactSourceLinks": true,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 390,
+      "feedbackCount": 9,
+      "collapsedByDefault": true,
+      "eachToggles": true,
+      "keyboardOperable": true,
+      "exactSourceLinks": true,
+      "horizontalOverflow": false
+    }
+  ],
+  "sourceRevision": 247,
+  "feedbackItems": 9,
+  "privateSourceImagesPublished": false,
+  "adminReadback": {
+    "environment": "TEST",
+    "readOnly": true,
+    "pendingRegistrationStatusFilterFound": true,
+    "unpaidOrderStatusFilterFound": true,
+    "orderPaidAtEmpty": true
+  },
+  "acceptanceSiteTestsPassed": 18,
+  "businessProductionModified": false,
+  "miniProgramVersionUnchanged": "1.2.11-test.1027"
+}

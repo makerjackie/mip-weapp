@@ -52,6 +52,20 @@ function fixture() {
   return { root, report, registry, write, run, image }
 }
 describe('公开验收报告的版本与时间规则', () => {
+  it('keeps original feedback collapsed, escaped, and linked to its exact source', () => {
+    const f = fixture()
+    f.write([{ ...f.report, sections: [{ id: 'feedback-one', title: '反馈一', highlights: ['修改成果'], originalFeedback: { quotes: ['原话 <script>alert(1)</script>'], note: '账号已脱敏', sourceUrl: 'https://zhihui-ai.feishu.cn/wiki/source#block-one' } }] }])
+    f.run('build')
+    for (const route of ['updates/2026-10-20', 'reports/first-v1']) {
+      const html = fs.readFileSync(path.join(f.root, '.tmp/mip-acceptance-site', route, 'index.html'), 'utf8')
+      expect(html).toContain('<details class="original-feedback"><summary>原始反馈</summary>')
+      expect(html).not.toContain('<details class="original-feedback" open')
+      expect(html).toContain('原话 &lt;script&gt;alert(1)&lt;/script&gt;')
+      expect(html).toContain('https://zhihui-ai.feishu.cn/wiki/source#block-one')
+      expect(html).toContain('账号已脱敏')
+    }
+  })
+
   it('publishes smaller previews while preserving original evidence and frozen hashes', async () => {
     const f = fixture()
     const original = await sharp({ create: { width: 1600, height: 10, channels: 3, background: '#202020' } }).png({ compressionLevel: 0 }).toBuffer()

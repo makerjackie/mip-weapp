@@ -7,7 +7,7 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-27T09:41:39.856Z",
-    "updatedAt": "2026-10-27T10:27:30.505Z",
+    "updatedAt": "2026-10-28T03:11:05.982Z",
     "verifiedAt": "2026-10-27T10:27:30.505Z",
     "submittedAt": "2026-10-27T09:41:39.856Z",
     "reportDate": "2026-10-27",
@@ -24,21 +24,46 @@
         "title": "1. 活动标签",
         "highlights": [
           "要求：后台设置的标签出现在活动卡片。结果：新标签优先展示，同步到“我的活动”；保存后离页重开、接口回读一致，不再重复旧类型。"
-        ]
+        ],
+        "originalFeedback": {
+          "quotes": [
+            "后台带的活动标签应在小程序列表活动卡片展示",
+            "备注：旧的活动标签和新的活动标签的代码没有统一。"
+          ],
+          "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#ML08dBrDIoHJY1x3NhIcX3SknZb",
+          "note": "原文摘录，备注署名已脱敏；原始截图见飞书文档（需访问权限）。"
+        }
       },
       {
         "id": "feedback-1027-talents",
         "title": "2. 人才合作名单",
         "highlights": [
           "要求：展示全部符合规则的玩家和嘉宾。结果：“全国”下已验证4位测试人才，超过原反馈的3位；地区筛选、隐私和屏蔽规则继续生效。"
-        ]
+        ],
+        "originalFeedback": {
+          "quotes": [
+            "人才合作展示所有玩家数据， 现在只展示了3个人，",
+            "备注：人才合作的这个列表显示的用户就只显示嘉宾和玩家。玩家总是显示。嘉宾还要加上一个条件是参与活动之后，填活动反馈选了“愿意加入MIP的花名册” "
+          ],
+          "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#O4QUd7iFAo6dOtxSEPFcY7OBntg",
+          "note": "原文摘录，备注署名已脱敏；原始截图见飞书文档（需访问权限）。"
+        }
       },
       {
         "id": "feedback-1027-cooperation",
         "title": "3. 合作卡保存后展示",
         "highlights": [
           "要求：保存后显示角色标签和公开合作卡。结果：点击“保存”即发布，人才列表与公开档案均已回读到；历史草稿需本人重新保存，返回自动暂存的草稿仍保持私密。"
-        ]
+        ],
+        "originalFeedback": {
+          "quotes": [
+            "人才合作-填写了合作卡，但是在人才合作列表、玩家档案没显示。",
+            "例如 [用户]设置了合作卡-狗策划，\n应该：\n1） 人才合作列表，显示她的狗策划标签",
+            "2）在玩家档案（访客视角下），显示她的合作卡"
+          ],
+          "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#OeSXd3Peoo7AFVx7XMRc63Lunyh",
+          "note": "原文摘录，账号名称已脱敏；原始截图见飞书文档（需访问权限）。"
+        }
       },
       {
         "id": "feedback-1027-unread",
@@ -62,21 +87,43 @@
               "source": "1.2.11 TEST开发者工具，服务端同时回读为0"
             }
           }
-        ]
+        ],
+        "originalFeedback": {
+          "quotes": [
+            "我的按钮右上角一直提示未读消息数， 阅读消息后需取消"
+          ],
+          "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#DITDdQritouD00x2bhEckOjdnHf",
+          "note": "甲方反馈原文摘录；原始截图见飞书文档（需访问权限）。"
+        }
       },
       {
         "id": "feedback-1027-calendar",
         "title": "5. 日期筛选取消",
         "highlights": [
           "要求：再次点击选中日期可取消。结果：已支持取消，点“确认”回到近期活动；直接关闭日历仍保留原筛选。"
-        ]
+        ],
+        "originalFeedback": {
+          "quotes": [
+            "日期筛选活动， 点击已选中日期可取消筛选(现在无法取消)"
+          ],
+          "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#XdmbdCeuUoX7P9xWP01c7jKpnZd",
+          "note": "甲方反馈原文摘录；原始截图见飞书文档（需访问权限）。"
+        }
       },
       {
         "id": "feedback-1027-share",
         "title": "6. 复制小程序链接",
         "highlights": [
           "要求：复制可打开小程序的活动链接。结果：已修复误拒微信新链接域名的问题，真实接口与原生剪贴板均通过；手机唤起目标活动待复测。"
-        ]
+        ],
+        "originalFeedback": {
+          "quotes": [
+            "活动分享-复制链接 不可用",
+            "点击复制链接，复制的是小程序的链接"
+          ],
+          "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#TjZLdDZ6vo0rbBxeB1EcH4Z1nxc",
+          "note": "甲方反馈原文摘录；原始截图见飞书文档（需访问权限）。"
+        }
       },
       {
         "id": "feedback-1027-career",
@@ -100,7 +147,14 @@
             }
           }
         ],
-        "uiChange": true
+        "uiChange": true,
+        "originalFeedback": {
+          "quotes": [
+            "我的-顶部资料-少一个字段“当前身份状态”"
+          ],
+          "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#QyMHdGYDXo5Sayx9tzPc7tGInnd",
+          "note": "甲方反馈原文摘录；原始截图见飞书文档（需访问权限）。"
+        }
       },
       {
         "id": "feedback-1027-industries",
@@ -129,13 +183,22 @@
             }
           }
         ],
-        "uiChange": true
+        "uiChange": true,
+        "originalFeedback": {
+          "quotes": [
+            "个人资料-行业标签缺失、没展示热门行业",
+            "ui未还原部分（标签管理里面勾选的热门标签显示在这里）："
+          ],
+          "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#RuQSdZewRoKllfxAXn7cyJcVnOh",
+          "note": "甲方反馈原文摘录；原始截图见飞书文档（需访问权限）。"
+        }
       },
       {
         "id": "feedback-1027-registration",
         "title": "9. 报名记录未显示",
         "highlights": [
-          "要求：核对报名在各入口的展示。结果：生产反馈记录实际为待支付，尚未完成报名；测试已验证待支付在“我的活动”和后台可查、付款前不进公开参与名单，正常报名在三处均可见。"
+          "要求：核对报名在各入口的展示。结果：生产反馈记录实际为待支付，尚未完成报名；测试已验证待支付在“我的活动”和后台可查、付款前不进公开参与名单，正常报名在三处均可见。",
+          "后台排查：活动管理 → 对应活动 → 参与人 → 报名状态“待支付”；也可在订单管理搜索姓名或活动，查看“待支付”及“支付处理中”。支付处理中不代表已经付款，需核对支付时间。"
         ],
         "evidenceImages": [
           {
@@ -143,7 +206,14 @@
             "caption": "测试样本：我的活动明确显示“待支付”",
             "source": "TEST合成待支付状态，未发起或伪造真实付款；截图只保留该条记录"
           }
-        ]
+        ],
+        "originalFeedback": {
+          "quotes": [
+            "[用户]的账号报名了活动，没展示"
+          ],
+          "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#RU8Vd0sHwoctn4xCybmc1jZVn0c",
+          "note": "原文摘录，账号名称已脱敏；原始截图见飞书文档（需访问权限）。"
+        }
       }
     ],
     "comparisons": [],
@@ -159,7 +229,8 @@
       "docs/mip/evidence/feedback-20261027/shots/profile-after.png",
       "docs/mip/evidence/feedback-20261027/shots/pending-registration.png",
       "docs/mip/evidence/feedback-20261027/shots/unread-before.png",
-      "docs/mip/evidence/feedback-20261027/shots/unread-after.png"
+      "docs/mip/evidence/feedback-20261027/shots/unread-after.png",
+      "docs/mip/evidence/feedback-20261027/feedback-disclosure.json"
     ],
     "limitations": "微信内真实点击、消息角标及从复制链接唤起正确活动仍需手机复测；体验版未核实指派，未提审或正式发布。",
     "pendingSummary": "手机复测：复制链接唤起目标活动、消息角标与合作卡访客视角；开发版上传不等于已设体验版。生产等待本批验收确认。"
