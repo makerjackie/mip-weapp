@@ -176,7 +176,9 @@ function reportContent(report) {
   const related = report.relatedReports?.length
     ? `<p class="downloads">${report.relatedReports.map((id) => {
       const target = reports.find(item => item.id === id)
-      if (!target) { throw new Error(`Unknown related report: ${id}`) }
+      if (!target) {
+        throw new Error(`Unknown related report: ${id}`)
+      }
       return `<a href="/reports/${escape(target.id)}/">${escape(target.indexTitle || target.title)}</a>`
     }).join(' ')}</p>`
     : ''
