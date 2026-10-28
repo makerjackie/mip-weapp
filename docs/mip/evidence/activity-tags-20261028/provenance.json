@@ -89,5 +89,49 @@
       "sha256": "8c8f72bc3a8fd7b306510783408433bbf6ca8d3942e53fbeb66ddaa85b63e9aa",
       "processing": "Crop only; no masks or repainting"
     }
+  ],
+  "supplementaryCaptures": [
+    {
+      "name": "background-options",
+      "sourceSha256": "ae300cfeb1f4d5e55f4ba6095fcd53bf09382b982a1c35567588e08994304ec8",
+      "crop": {
+        "left": 460,
+        "top": 100,
+        "width": 520,
+        "height": 531
+      },
+      "sha256": "1ff4108ad6b80db22605bd3cc1f5d98e55adb7d82003d4494a40c348b632a808",
+      "labels": [
+        "蓝色",
+        "黄色",
+        "绿色",
+        "红色"
+      ],
+      "file": "docs/mip/evidence/activity-tags-20261028/shots/background-options.png",
+      "capturedAt": "2026-10-28T16:32:02.433Z",
+      "environment": "TEST",
+      "readOnly": true,
+      "processing": "Crop only; no masks or repainting"
+    },
+    {
+      "name": "text-options",
+      "sourceSha256": "68c5cf0d0f5717e342bfd62135e5a70e05582c2dac415953cd4747cc5003634a",
+      "crop": {
+        "left": 460,
+        "top": 100,
+        "width": 520,
+        "height": 531
+      },
+      "sha256": "484c2de10a8f2eb5ceb0a203deeaa9c47bf4e0ec8da4c47d531f0c4edbc0fa0d",
+      "labels": [
+        "黑色",
+        "白色"
+      ],
+      "file": "docs/mip/evidence/activity-tags-20261028/shots/text-options.png",
+      "capturedAt": "2026-10-28T16:32:02.433Z",
+      "environment": "TEST",
+      "readOnly": true,
+      "processing": "Crop only; no masks or repainting"
+    }
   ]
 }

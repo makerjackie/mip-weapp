@@ -1,0 +1,109 @@
+{
+  "deployment": "e2f54fdc",
+  "updatedAt": "2026-10-28T16:35:35.585Z",
+  "scope": "Acceptance report content and two real TEST management screenshots",
+  "businessWrites": false,
+  "url": "https://miptest.01mvp.com/updates/2026-10-27/?v=management-shots-1028#feedback-1028-tags-supplement",
+  "https": {
+    "checkedAt": "2026-10-28T16:35:35.585Z",
+    "origin": "https://miptest.01mvp.com",
+    "passed": true,
+    "scope": "All changed files and report entrypoints checked live; unchanged source hashes matched prior complete HTTPS verification",
+    "checkedLive": [
+      {
+        "file": "image-optimization.json",
+        "bytes": 97,
+        "sha256": "0774f638765d18e0eff93607e3ff657990343549f58f3de7fbc180db13bc32c2",
+        "mime": "application/json"
+      },
+      {
+        "file": "index.html",
+        "bytes": 10226,
+        "sha256": "d5a1353977002dce4a72692bb84fe271def90f36df5478903571b766f9ac73b0",
+        "mime": "text/html; charset=utf-8"
+      },
+      {
+        "file": "reports.json",
+        "bytes": 145505,
+        "sha256": "04ca2bfee6ce9b9d52719bc699b605bdda708366dc3fbf8db2541f4abfd5821d",
+        "mime": "application/json"
+      },
+      {
+        "file": "assets/acceptance-reader/reader.css",
+        "bytes": 9070,
+        "sha256": "b899a636a6c369bcea37ffb7ddf00eebff5ecad1068e899b1aeb34aaa016e3b8",
+        "mime": "text/css; charset=utf-8"
+      },
+      {
+        "file": "assets/acceptance-reader/reader.js",
+        "bytes": 7864,
+        "sha256": "db04681189dae695a815515e0c4b7a14b2cec98b77ec703821bcfe5d3708650a",
+        "mime": "application/javascript"
+      },
+      {
+        "file": "assets/optimized-images/d72d8b5b4fc7a023d2060462.webp",
+        "bytes": 17844,
+        "sha256": "d72d8b5b4fc7a023d20604628779873a7dfb8b07d4cc4748e39a062b0f27742d",
+        "mime": "image/webp"
+      },
+      {
+        "file": "assets/optimized-images/f0850bcb3340503c5a7e1db9.webp",
+        "bytes": 19158,
+        "sha256": "f0850bcb3340503c5a7e1db9530178853d2be9ce1279f20328277b12acc084e0",
+        "mime": "image/webp"
+      },
+      {
+        "file": "reports/feedback-20261027-v1/index.html",
+        "bytes": 54766,
+        "sha256": "5753e4ed127e83d476bcf900c9f6ed9452e3e9bec3dc79a515575cf908c713d6",
+        "mime": "text/html; charset=utf-8"
+      },
+      {
+        "file": "updates/2026-10-27/index.html",
+        "bytes": 55205,
+        "sha256": "e2df2acfeb08d8ea67d6fff9f82e009e83f4f90695db797c6678bf26129eb12c",
+        "mime": "text/html; charset=utf-8"
+      },
+      {
+        "file": "evidence/activity-tags-20261028/shots/background-options.png",
+        "bytes": 41283,
+        "sha256": "1ff4108ad6b80db22605bd3cc1f5d98e55adb7d82003d4494a40c348b632a808",
+        "mime": "image/png"
+      },
+      {
+        "file": "evidence/activity-tags-20261028/shots/text-options.png",
+        "bytes": 44402,
+        "sha256": "484c2de10a8f2eb5ceb0a203deeaa9c47bf4e0ec8da4c47d531f0c4edbc0fa0d",
+        "mime": "image/png"
+      }
+    ],
+    "unchangedFilesMatchingPreviousVerification": 645,
+    "previousVerifiedAt": "2026-10-28T15:35:25.564Z"
+  },
+  "browser": {
+    "checkedAt": "2026-10-28T16:35:33.064Z",
+    "checks": [
+      {
+        "width": 1440,
+        "height": 1000,
+        "resultImages": 8,
+        "sourceImages": 5,
+        "feedbackCollapsed": true,
+        "modalPassed": true,
+        "relatedReports": 3,
+        "overflow": false
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "resultImages": 8,
+        "sourceImages": 5,
+        "feedbackCollapsed": true,
+        "modalPassed": true,
+        "relatedReports": 3,
+        "overflow": false
+      }
+    ],
+    "passed": true
+  }
+}
