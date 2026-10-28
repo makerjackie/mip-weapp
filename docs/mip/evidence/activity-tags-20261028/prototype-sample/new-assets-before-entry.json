@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-10-28T17:02:27.482Z",
+  "files": [
+    {
+      "file": "assets/ant-design-rFeoLOLM.js",
+      "sha256": "f0ecf22a6106986b7e61978053f6c89187f77098c02a92fd9d3295e8252e8723"
+    },
+    {
+      "file": "assets/charts-ipdpsvac.js",
+      "sha256": "965acef5f810cfd292764ef3f1dd786d5f71aa62641180ef07cd9eae62352d8f"
+    },
+    {
+      "file": "assets/index-C94-W67r.js",
+      "sha256": "271784169a64145d495921b8e5bfc3dcce0b1603003679300793acf6688eac6e"
+    },
+    {
+      "file": "assets/index-Dd_Rii21.css",
+      "sha256": "3c787cc40ffd4a36bd398bdbf674122c0fd36b8baeb422fe49af052636a1866f"
+    },
+    {
+      "file": "assets/overview-purchase-chart-C7BVZrkA.js",
+      "sha256": "4d423032dd6789c1f606b72802547096a81736b0722f8bd6fc09c7f73b00dce1"
+    },
+    {
+      "file": "assets/react-Mefe_Tge.js",
+      "sha256": "53e857905a9e3cb132c11c752fe0b44ef37aa2dcd686c0bcbe64bf8e02a58812"
+    },
+    {
+      "file": "assets/rolldown-runtime-hePW80VL.js",
+      "sha256": "580ad8c58061a4dde99bde0a56905e382f0568516ee2f5b84dbfb52085709021"
+    },
+    {
+      "file": "assets/router-query-C4zZBCHv.js",
+      "sha256": "bff0c71b4ab96d729ad553c06603a31aae80811d28f46c2d82b1768d80f0e93e"
+    },
+    {
+      "file": "assets/vendor-CUb-vo8-.js",
+      "sha256": "6819f8653409eded93645654688d56fdb501efc9db5b730d524a91fbd0e99ec1"
+    }
+  ],
+  "passed": true
+}

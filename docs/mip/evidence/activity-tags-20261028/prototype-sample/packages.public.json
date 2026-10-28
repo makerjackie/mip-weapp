@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-28T17:03:07.641812+00:00",
+  "testOnly": true,
+  "checks": [
+    {
+      "function": "mip-t-admin-web-api",
+      "status": "Active",
+      "filesMatched": 20,
+      "configUnchanged": true,
+      "permissionsUnchanged": true,
+      "triggersUnchanged": true
+    }
+  ]
+}

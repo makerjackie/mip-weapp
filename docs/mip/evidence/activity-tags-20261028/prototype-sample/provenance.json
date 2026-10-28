@@ -1,0 +1,80 @@
+{
+  "capturedAt": "2026-10-28T17:06:11.083Z",
+  "testOnly": true,
+  "title": "【测试】MIP玩家沙龙",
+  "is_demo": 1,
+  "accessType": "MEMBER_INCLUDED",
+  "tags": [
+    {
+      "name": "仅玩家",
+      "backgroundColor": "#fcdf03",
+      "textColor": "#000000"
+    },
+    {
+      "name": "沙龙",
+      "backgroundColor": "#7acbff",
+      "textColor": "#ffffff"
+    }
+  ],
+  "sourceSha": "d12dd2cb397b9c909d8c7167ed8120b54b7c0201",
+  "version": "1.2.13-test.1028",
+  "developmentUploadSucceeded": true,
+  "trialAssignmentVerified": false,
+  "productionUpdated": false,
+  "prototype": {
+    "file": "qqkbdlh4c4Swubum8S3F2f",
+    "node": "1819:17665",
+    "url": "https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f?node-id=1819-17665",
+    "scope": "当前活动列表封面及标签局部原图，不是完整活动卡片；业务封面使用1819:17667导出图片，不含标签或人数叠层。",
+    "paletteDifference": "当前可配置四色：黄#fcdf03、蓝#7acbff。Figma列表黄#fde530、蓝#428bff；只验黄黑/蓝白搭配，不声称色值或整页像素完全一致。"
+  },
+  "verification": {
+    "nativeListAndDetailReady": true,
+    "serverReadbackMatches": true,
+    "blackTextVisuallyChecked": true,
+    "adminPreviewOrderMatches": true,
+    "phonePending": true
+  },
+  "files": [
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/member-colors.png",
+      "sha256": "d6f5054e79a9a077f286ce20056f257f1370908b9ef3174f4f643e812df7aa64",
+      "bytes": 43385
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/salon-colors.png",
+      "sha256": "9d49a31629648964b5d5a822b15fb4856c5de07a0961cb2f29b8538e5f29e40b",
+      "bytes": 42982
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/admin-config.png",
+      "sha256": "d3a72240413835f4c0df51f3abdfc9f38aa86242ec63445ed310148b5ff5edeb",
+      "bytes": 102148
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/admin-preview.png",
+      "sha256": "a141e1653976042c30251debbddf511f97a44f3a7ff56ce2570e80f72bfc6f7e",
+      "bytes": 163681
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/prototype-detail.png",
+      "sha256": "995fbd23c1b948f7561e9765e9d6351cb9e92297d500b673003cab70f121a66a",
+      "bytes": 339808
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/prototype-feed.png",
+      "sha256": "0279133842ea93fe56b4dabd99ed7cfeda2642e589063d430d967a041a25d060",
+      "bytes": 392120
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/before-text-fix-detail.png",
+      "sha256": "ad9d25ba200751bb3750edd70f0ea3f3a6db9bd419e183d998b3af491e790eab",
+      "bytes": 339254
+    },
+    {
+      "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/prototype-card.png",
+      "sha256": "3bf0a3e4e84d7a3c2114c2aa2c8b0c041048d15ef37dc9aad2a73d6beb2ee532",
+      "bytes": 106170
+    }
+  ]
+}

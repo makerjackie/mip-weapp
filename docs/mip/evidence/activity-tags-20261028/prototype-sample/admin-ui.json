@@ -1,0 +1,39 @@
+{
+  "testOnly": true,
+  "title": "【测试】MIP玩家沙龙",
+  "viewports": [
+    {
+      "width": 1280,
+      "height": 720,
+      "overflow": false,
+      "tagsMatch": true
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "overflow": false,
+      "tagsMatch": true
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "overflow": false,
+      "tagsMatch": true
+    }
+  ],
+  "tags": [
+    {
+      "name": "仅玩家",
+      "backgroundColor": "#fcdf03",
+      "textColor": "#000000"
+    },
+    {
+      "name": "沙龙",
+      "backgroundColor": "#7acbff",
+      "textColor": "#ffffff"
+    }
+  ],
+  "userEntitlementEntryPreserved": true,
+  "checkedAt": "2026-10-28T17:04:32.723Z",
+  "passed": true
+}

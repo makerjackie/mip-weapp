@@ -1,0 +1,238 @@
+{
+  "checkedAt": "2026-10-28T17:11:36.495Z",
+  "sourceSha": "d12dd2cb397b9c909d8c7167ed8120b54b7c0201",
+  "testOnly": true,
+  "productionUpdated": false,
+  "release": {
+    "sourceSha": "d12dd2cb397b9c909d8c7167ed8120b54b7c0201",
+    "version": "1.2.13-test.1028",
+    "channel": "trial",
+    "targetDir": "envs/test",
+    "uploadedAt": "2026-10-28T17:01:23.207Z",
+    "developmentUploadSucceeded": true,
+    "trialAssignmentVerified": false,
+    "reviewSubmitted": false,
+    "publicReleased": false
+  },
+  "quality": {
+    "verifyAllPassed": true,
+    "rootTests": 1910,
+    "adminContractTests": 350,
+    "adminReactTests": 283,
+    "reportTests": 19,
+    "runtimePreflightPassed": true,
+    "mainPackageBytes": 1817582
+  },
+  "admin": {
+    "entry": "/assets/index-C94-W67r.js",
+    "httpsFilesMatched": 15,
+    "runtimeFilesMatched": 20,
+    "configurationUnchanged": true,
+    "permissionsUnchanged": true,
+    "triggersUnchanged": true,
+    "gatewayUnchanged": true,
+    "httpChecks": 68,
+    "modules": 14,
+    "userEntitlementEntryPreserved": true
+  },
+  "acceptanceSite": {
+    "deployment": "3b741dad",
+    "url": "https://miptest.01mvp.com/updates/2026-10-27/?v=prototype-data-1028#feedback-1028-tags-supplement",
+    "status": "draft",
+    "submittedAtUnchanged": true,
+    "https": {
+      "checkedAt": "2026-10-28T17:09:13.210Z",
+      "origin": "https://miptest.01mvp.com",
+      "passed": true,
+      "scope": "All changed files and report entrypoints checked live; unchanged source hashes matched prior complete HTTPS verification",
+      "checkedLive": [
+        {
+          "file": "image-optimization.json",
+          "bytes": 97,
+          "sha256": "0b29f24896546b4440b3f26d880f1a2673c16d8ae3f296bfc3b252d9d49b9c4d",
+          "mime": "application/json"
+        },
+        {
+          "file": "index.html",
+          "bytes": 10226,
+          "sha256": "d5a1353977002dce4a72692bb84fe271def90f36df5478903571b766f9ac73b0",
+          "mime": "text/html; charset=utf-8"
+        },
+        {
+          "file": "reports.json",
+          "bytes": 146330,
+          "sha256": "ef0b5a1bf5ab5fef53ea711c26e8cf03786af7f8a186642d00cd20048382f959",
+          "mime": "application/json"
+        },
+        {
+          "file": "assets/acceptance-reader/reader.css",
+          "bytes": 9070,
+          "sha256": "b899a636a6c369bcea37ffb7ddf00eebff5ecad1068e899b1aeb34aaa016e3b8",
+          "mime": "text/css; charset=utf-8"
+        },
+        {
+          "file": "assets/acceptance-reader/reader.js",
+          "bytes": 7864,
+          "sha256": "db04681189dae695a815515e0c4b7a14b2cec98b77ec703821bcfe5d3708650a",
+          "mime": "application/javascript"
+        },
+        {
+          "file": "assets/optimized-images/0a451c05693df07a5df016a9.webp",
+          "bytes": 68272,
+          "sha256": "0a451c05693df07a5df016a914dad09e2eb61d2f9a717e4bb506dc3c0c277426",
+          "mime": "image/webp"
+        },
+        {
+          "file": "assets/optimized-images/1321982ea7577aef4475c33b.webp",
+          "bytes": 68040,
+          "sha256": "1321982ea7577aef4475c33b7b53b33220dad37930482e18ab3ba90af8d22be4",
+          "mime": "image/webp"
+        },
+        {
+          "file": "assets/optimized-images/3af30fd9ffc50d810e28db9d.webp",
+          "bytes": 19576,
+          "sha256": "3af30fd9ffc50d810e28db9d3f21de44920ccd25a70a8e561b46811b863178e2",
+          "mime": "image/webp"
+        },
+        {
+          "file": "assets/optimized-images/40609f3ab1cd90b9131df7d3.webp",
+          "bytes": 37588,
+          "sha256": "40609f3ab1cd90b9131df7d3fce8e714b6a4fd2118a6066fc6cda9c84395b019",
+          "mime": "image/webp"
+        },
+        {
+          "file": "assets/optimized-images/6a4998f17ae009b9de54b9de.webp",
+          "bytes": 17604,
+          "sha256": "6a4998f17ae009b9de54b9ded919fe97f4c0835d3fc7475bba68a1298f42044a",
+          "mime": "image/webp"
+        },
+        {
+          "file": "assets/optimized-images/7e97d1d5b10cd10dbcc74f06.webp",
+          "bytes": 83772,
+          "sha256": "7e97d1d5b10cd10dbcc74f06a171df48a6a76e24ceac465c9ded731bcc27db12",
+          "mime": "image/webp"
+        },
+        {
+          "file": "assets/optimized-images/d72d8b5b4fc7a023d2060462.webp",
+          "bytes": 17844,
+          "sha256": "d72d8b5b4fc7a023d20604628779873a7dfb8b07d4cc4748e39a062b0f27742d",
+          "mime": "image/webp"
+        },
+        {
+          "file": "assets/optimized-images/dcba9f943d660d63d6235254.webp",
+          "bytes": 27060,
+          "sha256": "dcba9f943d660d63d6235254e1973989dc01ea743034135b2601d615fb02fb22",
+          "mime": "image/webp"
+        },
+        {
+          "file": "assets/optimized-images/f0850bcb3340503c5a7e1db9.webp",
+          "bytes": 19158,
+          "sha256": "f0850bcb3340503c5a7e1db9530178853d2be9ce1279f20328277b12acc084e0",
+          "mime": "image/webp"
+        },
+        {
+          "file": "reports/feedback-20261027-v1/index.html",
+          "bytes": 55974,
+          "sha256": "2c1f6ae7f0803f6c3c43cab97766f14d5a1fd9180109b4f019b11f950b7ea64e",
+          "mime": "text/html; charset=utf-8"
+        },
+        {
+          "file": "updates/2026-10-27/index.html",
+          "bytes": 56413,
+          "sha256": "541998e9201f9f4c2868aa5ff4d6983572a9800690ef796cc01c5ffa390369a1",
+          "mime": "text/html; charset=utf-8"
+        },
+        {
+          "file": "evidence/activity-tags-20261028/prototype-sample/admin-config.png",
+          "bytes": 102148,
+          "sha256": "d3a72240413835f4c0df51f3abdfc9f38aa86242ec63445ed310148b5ff5edeb",
+          "mime": "image/png"
+        },
+        {
+          "file": "evidence/activity-tags-20261028/prototype-sample/admin-preview.png",
+          "bytes": 163681,
+          "sha256": "a141e1653976042c30251debbddf511f97a44f3a7ff56ce2570e80f72bfc6f7e",
+          "mime": "image/png"
+        },
+        {
+          "file": "evidence/activity-tags-20261028/prototype-sample/before-text-fix-detail.png",
+          "bytes": 339254,
+          "sha256": "ad9d25ba200751bb3750edd70f0ea3f3a6db9bd419e183d998b3af491e790eab",
+          "mime": "image/png"
+        },
+        {
+          "file": "evidence/activity-tags-20261028/prototype-sample/member-colors.png",
+          "bytes": 43385,
+          "sha256": "d6f5054e79a9a077f286ce20056f257f1370908b9ef3174f4f643e812df7aa64",
+          "mime": "image/png"
+        },
+        {
+          "file": "evidence/activity-tags-20261028/prototype-sample/prototype-card.png",
+          "bytes": 106170,
+          "sha256": "3bf0a3e4e84d7a3c2114c2aa2c8b0c041048d15ef37dc9aad2a73d6beb2ee532",
+          "mime": "image/png"
+        },
+        {
+          "file": "evidence/activity-tags-20261028/prototype-sample/prototype-detail.png",
+          "bytes": 339808,
+          "sha256": "995fbd23c1b948f7561e9765e9d6351cb9e92297d500b673003cab70f121a66a",
+          "mime": "image/png"
+        },
+        {
+          "file": "evidence/activity-tags-20261028/prototype-sample/prototype-feed.png",
+          "bytes": 392120,
+          "sha256": "0279133842ea93fe56b4dabd99ed7cfeda2642e589063d430d967a041a25d060",
+          "mime": "image/png"
+        },
+        {
+          "file": "evidence/activity-tags-20261028/shots/background-options.png",
+          "bytes": 41283,
+          "sha256": "1ff4108ad6b80db22605bd3cc1f5d98e55adb7d82003d4494a40c348b632a808",
+          "mime": "image/png"
+        },
+        {
+          "file": "evidence/activity-tags-20261028/shots/text-options.png",
+          "bytes": 44402,
+          "sha256": "484c2de10a8f2eb5ceb0a203deeaa9c47bf4e0ec8da4c47d531f0c4edbc0fa0d",
+          "mime": "image/png"
+        }
+      ],
+      "unchangedFilesMatchingPreviousVerification": 633,
+      "previousVerifiedAt": "2026-10-28T15:35:25.564Z"
+    },
+    "browser": {
+      "checkedAt": "2026-10-28T17:08:44.052Z",
+      "checks": [
+        {
+          "width": 1440,
+          "height": 1000,
+          "resultImages": 9,
+          "sourceImages": 5,
+          "feedbackCollapsed": true,
+          "modalPassed": true,
+          "relatedReports": 3,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "resultImages": 9,
+          "sourceImages": 5,
+          "feedbackCollapsed": true,
+          "modalPassed": true,
+          "relatedReports": 3,
+          "overflow": false
+        }
+      ],
+      "passed": true
+    }
+  },
+  "boundaries": [
+    "TEST fixture; true MEMBER_INCLUDED eligibility; actual participant count 0/50",
+    "Four-color palette differs from exact Figma colors; no pixel-perfect claim",
+    "Initial post-rebuild screenshot had pending image hydration and was discarded; final captures waited for nonempty media and were visually checked",
+    "DevTools forced compile API returned unimplemented; auto-open loaded the rebuilt source, verified by the actual runtime build marker",
+    "Development package uploaded; platform trial assignment unverified; phone display pending",
+    "Existing browser-local timezone in admin preview remains outside this tag check; native event time is Beijing time"
+  ]
+}

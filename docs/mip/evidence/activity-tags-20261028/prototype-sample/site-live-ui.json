@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-28T17:08:44.052Z",
+  "checks": [
+    {
+      "width": 1440,
+      "height": 1000,
+      "resultImages": 9,
+      "sourceImages": 5,
+      "feedbackCollapsed": true,
+      "modalPassed": true,
+      "relatedReports": 3,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "resultImages": 9,
+      "sourceImages": 5,
+      "feedbackCollapsed": true,
+      "modalPassed": true,
+      "relatedReports": 3,
+      "overflow": false
+    }
+  ],
+  "passed": true
+}

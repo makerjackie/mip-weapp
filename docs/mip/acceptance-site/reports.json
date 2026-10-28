@@ -47,17 +47,17 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-27T09:41:39.856Z",
-    "updatedAt": "2026-10-28T16:32:49.800887+00:00",
-    "verifiedAt": "2026-10-28T15:21:39.558Z",
+    "updatedAt": "2026-10-28T17:06:11.085Z",
+    "verifiedAt": "2026-10-28T17:06:11.085Z",
     "submittedAt": "2026-10-27T09:41:39.856Z",
     "reportDate": "2026-10-27",
-    "commit": "91aaa0386ec1cc03a5538ca82ef4d730e5689731",
-    "commitAt": "2026-10-28T11:05:08-04:00",
+    "commit": "d12dd2cb397b9c909d8c7167ed8120b54b7c0201",
+    "commitAt": "2026-10-28T12:55:46-04:00",
     "environment": "TEST真实服务 · 10月28日标签补充验收 · 旧项保留原版本证据",
-    "summary": "补充验收：活动标签与颜色统一；测试开发版1.2.12-test.1028已上传，生产未更新。",
+    "summary": "补充验收：按原型配色配置测试样本，修复文字颜色与后台预览排序；测试开发版1.2.13-test.1028已上传，生产未更新。",
     "highlights": [
       "10月28日补充：活动列表、详情与后台预览统一使用后台选中的标签，支持四色背景与黑白文字。",
-      "测试开发版1.2.12-test.1028已上传；体验版指派与手机显示待核对，生产未更新。"
+      "测试开发版1.2.13-test.1028已上传；体验版指派与手机显示待核对，生产未更新。"
     ],
     "sections": [
       {
@@ -128,16 +128,17 @@
         "uiChange": true,
         "evidenceTitle": "测试环境补充验收",
         "highlights": [
-          "要求：后台选什么标签，活动列表、详情和后台预览就只显示这些标签。结果：同一测试活动均只显示“补充验收”，不再自动拼接类型、收费资格或分会标签；报名状态单独保留。",
-          "要求：标签支持蓝、黄、绿、红背景，黑或白文字。结果：颜色由后台手动配置并保存，不随机变化；8种组合已保存回读验证。入口：活动管理→活动设置→编辑标签，活动编辑页“新建标签”也支持选色。",
-          "要求：活动管理的预览同步调整。结果：预览已使用后台选中的标签和保存的配色；下方直接展示颜色编辑、完整选项及活动管理预览的真实截图。",
-          "测试开发版1.2.12-test.1028连接TEST；开发者工具与后台三尺寸通过，微信手机显示待复测。"
+          "要求：后台选什么标签，活动列表、详情和后台预览就只显示这些标签。结果：新的“【测试】MIP玩家沙龙”统一显示“仅玩家、沙龙”，不再自动拼接其他标签；报名资格也确实限制玩家。",
+          "要求：验收测试数据尽量贴近原型。结果：测试库“仅玩家”已设黄底黑字，“沙龙”已设蓝底白字，使用原型同款封面；人数保留真实0人，不模拟原型报名人数。配色采用现有四色配置，非整页像素还原。",
+          "要求：颜色可由后台配置，活动管理预览同步。结果：颜色固定保存，不随机变化；8种组合已有保存回读证据。本次另修复小程序文字色被覆盖、后台预览标签排序不同的问题；下方展示同一活动的后台配置、预览、列表与详情。",
+          "测试开发版1.2.13-test.1028已上传并连接TEST；后台三尺寸、开发者工具通过，设为体验版尚未核实，微信手机显示待复测。"
         ],
         "originalFeedback": {
           "quotes": [
             "应该是活动标签设了什么，活动列表和活动详情就显示什么。",
             "提供一个自定义标签背景颜色（固定蓝色、黄色、绿色、红色）和文字颜色（黑或者白）给他们自选搭配即可。",
-            "这里只需要显示test标签。活动管理的预览记得也同步调整。"
+            "这里只需要显示test标签。活动管理的预览记得也同步调整。",
+            "验收测试数据库里的效果尽量贴近原型，例如“仅玩家”默认应该是黄色。"
           ],
           "images": [
             {
@@ -170,48 +171,53 @@
         "comparisons": [
           {
             "title": "同一活动：后台选择 → 小程序列表",
-            "context": "TEST；1027标签与报名验收；后台实际选中一个标签，列表实际只显示该标签。",
+            "context": "同一TEST样本“【测试】MIP玩家沙龙”：后台选择→真实列表→当前权威原型的封面/标签局部。配色是现有四色配置中的黄黑、蓝白；原型具体色值与测试调色板略有差别。示例日期、地点、人数为真实测试配置，与原型不同。",
             "before": {
+              "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/admin-config.png",
               "label": "后台活动配置",
-              "file": "docs/mip/evidence/activity-tags-20261028/shots/after-admin-config.png",
-              "caption": "后台配置：只选中“补充验收”",
-              "source": "测试后台真实活动编辑页，保存后重新打开"
+              "caption": "同一测试活动：选中“仅玩家、沙龙”",
+              "source": "测试后台保存后新打开活动编辑页"
             },
             "after": {
+              "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/prototype-feed.png",
               "label": "小程序活动列表",
-              "file": "docs/mip/evidence/activity-tags-20261028/shots/after-feed.png",
-              "caption": "小程序列表：只显示“补充验收”，报名状态另列",
-              "source": "1.2.12-test.1028；TEST；微信开发者工具390×844"
+              "caption": "仅玩家黄底黑字，沙龙蓝底白字；同款封面",
+              "source": "1.2.13-test.1028；TEST；开发者工具390×844"
+            },
+            "prototype": {
+              "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/prototype-card.png",
+              "caption": "当前Figma：活动列表封面及标签局部原图",
+              "source": "https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f?node-id=1819-17665"
             }
           },
           {
             "title": "活动详情：补充修改前 → 修改后",
-            "context": "同一测试活动、相同视口；旧版标签为“新标签”，新版本为本轮验收改选“补充验收”，标签文本差异是测试配置变化。",
+            "context": "同一TEST活动、相同视口、相同标签配色配置：本次实拍发现文字色被内层样式覆盖，修复后按后台配置显示黑色。",
             "before": {
-              "file": "docs/mip/evidence/activity-tags-20261028/shots/before-detail.png",
-              "caption": "修改前：混入活动、免费活动和测试分会",
-              "source": "旧版1.2.11-test.1027；TEST真实画面"
+              "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/before-text-fix-detail.png",
+              "caption": "补充修复前：已配黑字，实际仍显示白字",
+              "source": "1.2.12-test.1028；TEST；本轮新测试样本"
             },
             "after": {
-              "file": "docs/mip/evidence/activity-tags-20261028/shots/after-detail.png",
-              "caption": "修改后：仅后台选中标签，蓝底白字",
-              "source": "1.2.12-test.1028；TEST真实画面"
+              "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/prototype-detail.png",
+              "caption": "补充修复后：仅玩家黄底黑字，沙龙蓝底白字",
+              "source": "1.2.13-test.1028；TEST；真实仅玩家资格，0/50人"
             }
           },
           {
             "title": "保存的颜色配置 → 后台手机预览",
-            "context": "同一标签“补充验收”：目录编辑重新读取蓝色背景、白色文字；后台预览与小程序采用相同颜色。 该表单预览时间随浏览器时区、参与人数为示意0，与小程序业务状态不同；此组仅验标签，时区问题保留在原后台待确认记录。",
+            "context": "同一TEST活动：目录保存黄底黑字→活动管理预览。标签名称、颜色与顺序均和小程序一致。表单预览时间随浏览器时区，人数为示意值；本次只验标签，旧时区待确认事项保留。",
             "before": {
+              "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/member-colors.png",
               "label": "后台标签目录",
-              "file": "docs/mip/evidence/activity-tags-20261028/shots/after-catalog-colors.png",
-              "caption": "后台已保存配置：补充验收／蓝色／白色",
-              "source": "测试后台目录编辑回填；只读打开未再次保存"
+              "caption": "仅玩家：黄色背景、黑色文字，重新打开回填",
+              "source": "测试后台→活动设置→编辑标签，真实保存回读"
             },
             "after": {
+              "file": "docs/mip/evidence/activity-tags-20261028/prototype-sample/admin-preview.png",
               "label": "后台手机预览",
-              "file": "docs/mip/evidence/activity-tags-20261028/shots/after-admin-preview.png",
-              "caption": "活动管理「预览」真实截图：同名标签、同一蓝底白字配色",
-              "source": "测试后台真实预览；1280／1440／390无整体横向溢出"
+              "caption": "同一活动预览：仅玩家在前、沙龙在后，配色一致",
+              "source": "测试后台真实预览；1280/1440/390通过"
             }
           },
           {
@@ -554,8 +560,8 @@
       "docs/mip/evidence/feedback-20261027/shots/tags-mine-after.png",
       "docs/mip/evidence/feedback-20261027/tag-config-chain.json"
     ],
-    "limitations": "手机复测：新标签颜色、复制链接唤起、消息角标与合作卡访客视角；1.2.12-test.1028仅确认开发版上传，体验版需平台指派。生产等待本批验收确认。",
-    "pendingSummary": "手机复测：新标签颜色、复制链接唤起、消息角标与合作卡访客视角；1.2.12-test.1028仅确认开发版上传，体验版需平台指派。生产等待本批验收确认。",
+    "limitations": "手机复测：新标签颜色、复制链接唤起、消息角标与合作卡访客视角；1.2.13-test.1028仅确认开发版上传，体验版需平台指派。生产等待本批验收确认。",
+    "pendingSummary": "手机复测：新标签颜色、复制链接唤起、消息角标与合作卡访客视角；1.2.13-test.1028仅确认开发版上传，体验版需平台指派。生产等待本批验收确认。",
     "feedbackSource": {
       "url": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc",
       "title": "MIP-1027问题",
