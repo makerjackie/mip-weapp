@@ -25,7 +25,7 @@ function input(relative) {
   return full
 }
 function referenced(report) {
-  return [...new Set([...(report.files || []), ...(report.roleIcons || []).flatMap(icon => [icon.file, icon.tagFile].filter(Boolean)), ...(report.downloads || []).map(item => item.file), ...[report.prototypePreview?.file].filter(Boolean), ...(report.comparisons || []).flatMap(item => [item.before?.file, item.after?.file, item.prototype?.file, ...(item.references || []).map(ref => ref.file)].filter(Boolean)), ...(report.evidenceImages || []).map(item => item.file), ...(report.sections || []).flatMap(referenced)])].sort()
+  return [...new Set([...(report.files || []), ...(report.originalFeedback?.images || []).map(item => item.file), ...(report.roleIcons || []).flatMap(icon => [icon.file, icon.tagFile].filter(Boolean)), ...(report.downloads || []).map(item => item.file), ...[report.prototypePreview?.file].filter(Boolean), ...(report.comparisons || []).flatMap(item => [item.before?.file, item.after?.file, item.prototype?.file, ...(item.references || []).map(ref => ref.file)].filter(Boolean)), ...(report.evidenceImages || []).map(item => item.file), ...(report.sections || []).flatMap(referenced)])].sort()
 }
 function fingerprint(report) {
   return sha(JSON.stringify({ report, files: referenced(report).map(file => [file, sha(fs.readFileSync(input(file)))]) }))
@@ -168,8 +168,8 @@ function comparisons(report) {
 }
 function reportContent(report) {
   const feedback = report.originalFeedback
-  const sourceUrl = feedback?.sourceUrl && /^https:\/\/zhihui-ai\.feishu\.cn\//.test(feedback.sourceUrl) ? feedback.sourceUrl : ''
-  const original = feedback?.quotes?.length ? `<details class="original-feedback"><summary>原始反馈</summary><div class="original-feedback-content">${feedback.quotes.map(quote => `<blockquote>${escape(quote)}</blockquote>`).join('')}${feedback.note ? `<p class="muted">${escape(feedback.note)}</p>` : ''}${sourceUrl ? `<a href="${escape(sourceUrl)}" target="_blank" rel="noopener noreferrer">查看飞书原文与截图</a>` : ''}</div></details>` : ''
+  const feedbackImages = feedback?.images || []
+  const original = feedback?.quotes?.length || feedbackImages.length ? `<details class="original-feedback"><summary>原始反馈${feedbackImages.length ? ` · ${feedbackImages.length}张截图` : ''}</summary><div class="original-feedback-content">${(feedback.quotes || []).map(quote => `<blockquote>${escape(quote)}</blockquote>`).join('')}${feedback.note ? `<p class="muted">${escape(feedback.note)}</p>` : ''}${feedbackImages.length ? `<div class="feedback-images">${feedbackImages.map(item => panel(item, '原始反馈截图')).join('')}</div>` : ''}</div></details>` : ''
   const icons = report.roleIcons?.length ? `<section class="role-gallery" id="role-icons">${heading(3, '六枚角色图标与原稿', 'role-icons')}<ul class="role-grid">${report.roleIcons.map(icon => `<li><span class="icon-mark"><img src="${escape(asset(icon.file))}" alt="${escape(icon.label)}图标"></span><b>${escape(icon.label)}</b><div><a href="${escape(asset(icon.file))}">图标 SVG</a>${icon.tagFile ? ` <a href="${escape(asset(icon.tagFile))}">完整标签</a>` : ''}</div></li>`).join('')}</ul></section>` : ''
   const preview = report.prototypePreview ? `<figure class="prototype-preview"><img${imageDimensions(report.prototypePreview.file)} data-full-src="${escape(asset(report.prototypePreview.file))}" src="${escape(asset(report.prototypePreview.file))}" alt="${escape(report.prototypePreview.caption)}"><figcaption>${escape(report.prototypePreview.caption)}${report.prototypePreview.source ? ` · <a href="${escape(report.prototypePreview.source)}" target="_blank" rel="noopener">查看原型来源</a>` : ''}</figcaption></figure>` : ''
   const downloads = report.downloads?.length ? `<p class="downloads">${report.downloads.map(d => `<a href="${escape(asset(d.file))}">${escape(d.label)}</a>`).join(' ')}</p>` : ''
@@ -178,6 +178,10 @@ function reportContent(report) {
   const points = highlights(report)
   return `${points.length ? `<ul>${points.map(h => `<li>${escape(h)}</li>`).join('')}</ul>` : ''}${original}${sections}${icons}${preview}${downloads}${comparisons(report)}${catalog}`
 }
+function feedbackSources(items) {
+  const urls = [...new Set(items.map(item => item.feedbackSource?.url).filter(url => /^https:\/\/zhihui-ai\.feishu\.cn\//.test(url || '')))]
+  return urls.length ? `<div class="feedback-sources"><span>甲方原始反馈</span>${urls.map(url => `<a href="${escape(url)}" target="_blank" rel="noopener noreferrer">查看飞书文档</a>`).join('')}</div>` : ''
+}
 for (const report of reports) {
   for (const file of referenced(report)) {
     const dest = path.join(out, asset(file).slice(1))
@@ -185,7 +189,7 @@ for (const report of reports) {
     fs.copyFileSync(input(file), dest)
   }
   // Preserve existing report URLs. The daily page is the public reading entry.
-  const details = `<section id="${escape(report.id)}">${heading(1, report.indexTitle || report.title, report.id)}${reportContent(report)}</section><section class="pending" id="pending">${heading(2, '待确认与复测', 'pending')}<p>${escape(report.pendingSummary || report.limitations)}</p></section>${report.previousVersion ? `<p><a href="../${escape(report.previousVersion)}/">查看上一版本</a></p>` : ''}`
+  const details = `${feedbackSources([report])}<section id="${escape(report.id)}">${heading(1, report.indexTitle || report.title, report.id)}${reportContent(report)}</section><section class="pending" id="pending">${heading(2, '待确认与复测', 'pending')}<p>${escape(report.pendingSummary || report.limitations)}</p></section>${report.previousVersion ? `<p><a href="../${escape(report.previousVersion)}/">查看上一版本</a></p>` : ''}`
   const dest = path.join(out, 'reports', report.id)
   fs.mkdirSync(dest, { recursive: true })
   fs.writeFileSync(path.join(dest, 'index.html'), shell(report.title, readerLayout([report], details, '验收详情'), true))
@@ -226,7 +230,7 @@ for (const [day, items] of dayEntries) {
     : items
   const pending = digest.pending || selected.map(r => r.pendingSummary || r.limitations)
   const otherUpdates = [digest.otherUpdates].flat().filter(Boolean)
-  const body = `<header class="day-intro"><p class="muted">${escape(day)}</p><h1>${escape(digest.title || `${dayLabel(day)}更新与验收`)}</h1>${digest.summary ? `<p>${escape(digest.summary)}</p>` : ''}</header>${dayBrief(day, digest)}${selected.map(r => `<section class="compact-section" id="${escape(r.id)}">${heading(2, r.indexTitle || r.title, r.id)}${reportContent(r)}</section>`).join('')}${dayAcceptance(day, digest)}<section class="pending" id="pending">${heading(2, '待确认与复测', 'pending')}<ul>${[...new Set(pending)].map(p => `<li>${escape(p)}</li>`).join('')}</ul></section>${otherUpdates.length ? `<section class="other-updates"><h2>其他改进</h2><ul>${otherUpdates.map(item => `<li>${escape(item)}</li>`).join('')}</ul></section>` : ''}`
+  const body = `<header class="day-intro"><p class="muted">${escape(day)}</p><h1>${escape(digest.title || `${dayLabel(day)}更新与验收`)}</h1>${digest.summary ? `<p>${escape(digest.summary)}</p>` : ''}${feedbackSources(selected)}</header>${dayBrief(day, digest)}${selected.map(r => `<section class="compact-section" id="${escape(r.id)}">${heading(2, r.indexTitle || r.title, r.id)}${reportContent(r)}</section>`).join('')}${dayAcceptance(day, digest)}<section class="pending" id="pending">${heading(2, '待确认与复测', 'pending')}<ul>${[...new Set(pending)].map(p => `<li>${escape(p)}</li>`).join('')}</ul></section>${otherUpdates.length ? `<section class="other-updates"><h2>其他改进</h2><ul>${otherUpdates.map(item => `<li>${escape(item)}</li>`).join('')}</ul></section>` : ''}`
   const dest = path.join(out, 'updates', day)
   fs.mkdirSync(dest, { recursive: true })
   fs.writeFileSync(path.join(dest, 'index.html'), shell(`${day} 验收`, readerLayout(selected, body, dayLabel(day)), true))

@@ -1,0 +1,375 @@
+{
+  "sourceRevision": 247,
+  "count": 12,
+  "processing": "Opaque privacy rectangles only; full original dimensions, issue annotations and all other decoded pixels preserved. Unredacted sources copied byte-for-byte.",
+  "images": [
+    {
+      "index": 1,
+      "sourceBlock": "QhAcdMaT0ofYWuxkT6wcNDNjnsh",
+      "originalSha256": "61bbec6ffbf7e311a6ad63a6b5c4080a504d2b0b9c48bb52bc726f9f15f21670",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-01.png",
+      "publicSha256": "61bbec6ffbf7e311a6ad63a6b5c4080a504d2b0b9c48bb52bc726f9f15f21670",
+      "width": 1796,
+      "height": 854,
+      "redactionRectangles": [],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 2,
+      "sourceBlock": "XETFd4UDko0Wibx0ZRecTptPnuh",
+      "originalSha256": "022873684e3d0887700f095b943eeb31e18c5957806cd1597712dcdcbd8fc814",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-02.png",
+      "publicSha256": "022873684e3d0887700f095b943eeb31e18c5957806cd1597712dcdcbd8fc814",
+      "width": 1093,
+      "height": 553,
+      "redactionRectangles": [],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 3,
+      "sourceBlock": "SjKOdEBpvoRTX8xB11jcySoznwm",
+      "originalSha256": "93fc8225d81b50376877f2d81f2b6ed6206ab7f2c45638822371808a7b6c0142",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-03.png",
+      "publicSha256": "a2e871eed25b0d3154c03f153597af3587febae0c4fbc3474d4031045273fd46",
+      "width": 1125,
+      "height": 2436,
+      "redactionRectangles": [
+        {
+          "left": 320,
+          "top": 34,
+          "width": 90,
+          "height": 86
+        },
+        {
+          "left": 45,
+          "top": 1546,
+          "width": 152,
+          "height": 110
+        }
+      ],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 4,
+      "sourceBlock": "SNf0dGk6AoECvZxKIwncyebFnDb",
+      "originalSha256": "608f41b63b393d2fb442302cc0d4a6aea01d67928c1c1194beebfb1a0296b553",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-04.png",
+      "publicSha256": "2354106cef5be1dff1881ecd82f39b6ef45236c1f5529ffefe3f36a66743f474",
+      "width": 1125,
+      "height": 2436,
+      "redactionRectangles": [
+        {
+          "left": 320,
+          "top": 34,
+          "width": 90,
+          "height": 86
+        },
+        {
+          "left": 348,
+          "top": 1753,
+          "width": 720,
+          "height": 208
+        }
+      ],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 5,
+      "sourceBlock": "KwVrdkLOmo9n70xUbK3c4CILnSd",
+      "originalSha256": "1ac744614684731cbbb1fa0c4f19bb54140830e416ec350dbc93c1822698ea24",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-05.png",
+      "publicSha256": "7bba7007fcd910df71ad8360855010ae93ad2487aae9400af3b2d0ffb7380ab9",
+      "width": 1125,
+      "height": 2436,
+      "redactionRectangles": [
+        {
+          "left": 320,
+          "top": 34,
+          "width": 90,
+          "height": 86
+        },
+        {
+          "left": 61,
+          "top": 833,
+          "width": 186,
+          "height": 208
+        },
+        {
+          "left": 264,
+          "top": 837,
+          "width": 158,
+          "height": 74
+        },
+        {
+          "left": 258,
+          "top": 967,
+          "width": 822,
+          "height": 64
+        },
+        {
+          "left": 61,
+          "top": 1249,
+          "width": 186,
+          "height": 212
+        },
+        {
+          "left": 264,
+          "top": 1254,
+          "width": 169,
+          "height": 74
+        },
+        {
+          "left": 258,
+          "top": 1386,
+          "width": 822,
+          "height": 64
+        },
+        {
+          "left": 61,
+          "top": 1666,
+          "width": 186,
+          "height": 212
+        },
+        {
+          "left": 264,
+          "top": 1673,
+          "width": 147,
+          "height": 76
+        },
+        {
+          "left": 258,
+          "top": 1805,
+          "width": 822,
+          "height": 69
+        }
+      ],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 6,
+      "sourceBlock": "ZoQKdRb7EorefwxrUioc16iBnif",
+      "originalSha256": "effabc628ea58631f9cfc1f14a118e305dc8c5c175929a41d46eecc1aea472a7",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-06.png",
+      "publicSha256": "173c7c862eaa5af477f3cfd97ddc3cb7f25432a59a8f4a46344ff36f2a8f1bbb",
+      "width": 2022,
+      "height": 2418,
+      "redactionRectangles": [
+        {
+          "left": 1265,
+          "top": 0,
+          "width": 757,
+          "height": 1596
+        },
+        {
+          "left": 1265,
+          "top": 1910,
+          "width": 757,
+          "height": 508
+        },
+        {
+          "left": 1265,
+          "top": 1595,
+          "width": 89,
+          "height": 315
+        },
+        {
+          "left": 1933,
+          "top": 1595,
+          "width": 89,
+          "height": 315
+        },
+        {
+          "left": 125,
+          "top": 691,
+          "width": 193,
+          "height": 196
+        },
+        {
+          "left": 347,
+          "top": 701,
+          "width": 166,
+          "height": 66
+        },
+        {
+          "left": 347,
+          "top": 836,
+          "width": 890,
+          "height": 63
+        },
+        {
+          "left": 125,
+          "top": 1102,
+          "width": 193,
+          "height": 242
+        },
+        {
+          "left": 347,
+          "top": 1129,
+          "width": 172,
+          "height": 66
+        },
+        {
+          "left": 347,
+          "top": 1286,
+          "width": 890,
+          "height": 63
+        },
+        {
+          "left": 125,
+          "top": 1583,
+          "width": 193,
+          "height": 204
+        },
+        {
+          "left": 347,
+          "top": 1591,
+          "width": 142,
+          "height": 66
+        },
+        {
+          "left": 347,
+          "top": 1724,
+          "width": 890,
+          "height": 63
+        },
+        {
+          "left": 163,
+          "top": 1864,
+          "width": 94,
+          "height": 54
+        }
+      ],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 7,
+      "sourceBlock": "RwkedEVTuorgh6xtJmPcCWnZnvt",
+      "originalSha256": "7c893f68b05409831df9e94dcbfc114c2cdf349099efb199d285b17a3fd54857",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-07.png",
+      "publicSha256": "6e4177238b45a220d81f87432187bee1d3feca6b12e379bd7d34d44841a97ff4",
+      "width": 1125,
+      "height": 2436,
+      "redactionRectangles": [
+        {
+          "left": 320,
+          "top": 34,
+          "width": 90,
+          "height": 86
+        },
+        {
+          "left": 33,
+          "top": 316,
+          "width": 732,
+          "height": 268
+        }
+      ],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 8,
+      "sourceBlock": "AcpLdpymDoCMAtxxmY0cXFySnxb",
+      "originalSha256": "c9ecff05d9feaae419285168430f1841bdd45104762ca4ec06c7e87dd2e418eb",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-08.png",
+      "publicSha256": "56eb70c7ea4090a554736776cbe1807bf540457460dbcbff18dac70be820a967",
+      "width": 1125,
+      "height": 2436,
+      "redactionRectangles": [
+        {
+          "left": 320,
+          "top": 34,
+          "width": 90,
+          "height": 86
+        },
+        {
+          "left": 33,
+          "top": 321,
+          "width": 732,
+          "height": 242
+        }
+      ],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 9,
+      "sourceBlock": "UPgodduBQo9qbux29m4c2GhKn4e",
+      "originalSha256": "d4163978ef107fd6658ca7b25d07329e58bde54936854c4f45a78f7ce5ced924",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-09.jpg",
+      "publicSha256": "d4163978ef107fd6658ca7b25d07329e58bde54936854c4f45a78f7ce5ced924",
+      "width": 1080,
+      "height": 2400,
+      "redactionRectangles": [],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 10,
+      "sourceBlock": "MwcGdbkHCo072CxaNDBc89MRnFh",
+      "originalSha256": "1e312db6abcb0f2a8bae970e7760051f5644f5cb207872a27af1cfcfe1290e64",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-10.png",
+      "publicSha256": "069c05027d8657cb6eb32705ef685caabb4058545b318eb1e021dd9361c74c40",
+      "width": 1125,
+      "height": 2436,
+      "redactionRectangles": [
+        {
+          "left": 320,
+          "top": 34,
+          "width": 90,
+          "height": 86
+        }
+      ],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 11,
+      "sourceBlock": "BzrOdE4BBoD20axXKG5cUbgFn2e",
+      "originalSha256": "85e74858cd0568f6d75cfd34a96a55997773d57b3e0abf6390770a2b66d77130",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-11.png",
+      "publicSha256": "f7673c6619a6e8486829c1df6aff447b8f2ccb0f52e898f4893d5a63f3fa7315",
+      "width": 738,
+      "height": 282,
+      "redactionRectangles": [
+        {
+          "left": 25,
+          "top": 22,
+          "width": 222,
+          "height": 223
+        },
+        {
+          "left": 273,
+          "top": 53,
+          "width": 104,
+          "height": 54
+        },
+        {
+          "left": 273,
+          "top": 183,
+          "width": 207,
+          "height": 37
+        }
+      ],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    },
+    {
+      "index": 12,
+      "sourceBlock": "GcOidBexKo691cxMrGpcrSbNn1f",
+      "originalSha256": "8f1d7ab78af2efcc7dc3d75f1869e2b0f759b1cec99f8e52436d9da14c93f9cc",
+      "publicFile": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-12.png",
+      "publicSha256": "8f1d7ab78af2efcc7dc3d75f1869e2b0f759b1cec99f8e52436d9da14c93f9cc",
+      "width": 542,
+      "height": 1326,
+      "redactionRectangles": [],
+      "unchangedOutsidePrivacyRectangles": true,
+      "originalRetainedPrivately": true
+    }
+  ]
+}

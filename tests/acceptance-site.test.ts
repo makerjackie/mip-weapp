@@ -52,18 +52,27 @@ function fixture() {
   return { root, report, registry, write, run, image }
 }
 describe('公开验收报告的版本与时间规则', () => {
-  it('keeps original feedback collapsed, escaped, and linked to its exact source', () => {
+  it('keeps original feedback collapsed and escaped, with screenshots and one top-level source link', () => {
     const f = fixture()
-    f.write([{ ...f.report, sections: [{ id: 'feedback-one', title: '反馈一', highlights: ['修改成果'], originalFeedback: { quotes: ['原话 <script>alert(1)</script>'], note: '账号已脱敏', sourceUrl: 'https://zhihui-ai.feishu.cn/wiki/source#block-one' } }] }])
+    f.write([{ ...f.report, feedbackSource: { url: 'https://zhihui-ai.feishu.cn/wiki/source' }, sections: [{ id: 'feedback-one', title: '反馈一', highlights: ['修改成果'], originalFeedback: { quotes: ['原话 <script>alert(1)</script>'], note: '账号已脱敏', sourceUrl: 'https://zhihui-ai.feishu.cn/wiki/source#block-one', images: [{ file: f.image, caption: '甲方原始截图' }] } }] }])
     f.run('build')
     for (const route of ['updates/2026-10-20', 'reports/first-v1']) {
       const html = fs.readFileSync(path.join(f.root, '.tmp/mip-acceptance-site', route, 'index.html'), 'utf8')
-      expect(html).toContain('<details class="original-feedback"><summary>原始反馈</summary>')
+      expect(html).toContain('<details class="original-feedback"><summary>原始反馈 · 1张截图</summary>')
       expect(html).not.toContain('<details class="original-feedback" open')
       expect(html).toContain('原话 &lt;script&gt;alert(1)&lt;/script&gt;')
-      expect(html).toContain('https://zhihui-ai.feishu.cn/wiki/source#block-one')
+      expect(html.match(/href="https:\/\/zhihui-ai\.feishu\.cn\/wiki\/source"/g)).toHaveLength(1)
+      expect(html).not.toContain('source#block-one')
+      expect(html.indexOf('class="feedback-sources"')).toBeLessThan(html.indexOf('class="original-feedback"'))
+      expect(html).toMatch(/class="feedback-images"[\s\S]+data-full-src="\/evidence\/example\/image.png"/)
       expect(html).toContain('账号已脱敏')
     }
+    expect(fs.existsSync(path.join(f.root, '.tmp/mip-acceptance-site/evidence/example/image.png'))).toBe(true)
+    // Images nested only inside source feedback must be published and frozen too.
+    f.write([{ ...f.report, files: [], comparisons: [], uiChange: false, sections: [{ id: 'feedback-only', title: '原图', originalFeedback: { images: [{ file: f.image, caption: '甲方原图' }] } }] }])
+    f.run('freeze', 'first-v1')
+    fs.appendFileSync(path.join(f.root, f.image), 'changed')
+    expect(() => f.run('build')).toThrow(/Frozen report changed/)
   })
 
   it('publishes smaller previews while preserving original evidence and frozen hashes', async () => {

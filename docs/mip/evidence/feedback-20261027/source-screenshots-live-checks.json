@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-10-28T03:43:31.934Z",
+  "proof": [
+    {
+      "width": 1440,
+      "topDocumentLinkCount": 1,
+      "feedbackCount": 9,
+      "sourceScreenshots": 12,
+      "bySection": [
+        3,
+        0,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0
+      ],
+      "collapsedByDefault": true,
+      "allImagesDecoded": true,
+      "allImagesOpenInSameSiteModal": true,
+      "imageClickStaysOpen": true,
+      "escapeAndOutsideClose": true,
+      "feedbackRemainsExpandedAfterModalClose": true,
+      "horizontalOverflow": false,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "topDocumentLinkCount": 1,
+      "feedbackCount": 9,
+      "sourceScreenshots": 12,
+      "bySection": [
+        3,
+        0,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0
+      ],
+      "collapsedByDefault": true,
+      "allImagesDecoded": true,
+      "allImagesOpenInSameSiteModal": true,
+      "imageClickStaysOpen": true,
+      "escapeAndOutsideClose": true,
+      "feedbackRemainsExpandedAfterModalClose": true,
+      "horizontalOverflow": false,
+      "pageErrors": 0
+    }
+  ],
+  "standaloneReportHasSameImagesAndOneTopLink": true
+}

@@ -7,7 +7,7 @@
     "version": "v1",
     "status": "draft",
     "createdAt": "2026-10-27T09:41:39.856Z",
-    "updatedAt": "2026-10-28T03:11:05.982Z",
+    "updatedAt": "2026-10-28T03:40:43.761Z",
     "verifiedAt": "2026-10-27T10:27:30.505Z",
     "submittedAt": "2026-10-27T09:41:39.856Z",
     "reportDate": "2026-10-27",
@@ -31,7 +31,24 @@
             "备注：旧的活动标签和新的活动标签的代码没有统一。"
           ],
           "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#ML08dBrDIoHJY1x3NhIcX3SknZb",
-          "note": "原文摘录，备注署名已脱敏；原始截图见飞书文档（需访问权限）。"
+          "note": "甲方原始反馈；截图中的个人信息已遮盖，原有问题标注保留。",
+          "images": [
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-01.png",
+              "caption": "后台的新活动标签",
+              "source": "飞书甲方反馈截图 1/12；非本批修改成果"
+            },
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-02.png",
+              "caption": "后台原有活动类型",
+              "source": "飞书甲方反馈截图 2/12；非本批修改成果"
+            },
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-03.png",
+              "caption": "活动卡片上的旧标签（甲方红圈标注）",
+              "source": "飞书甲方反馈截图 3/12，灰块为个人信息脱敏；非本批修改成果"
+            }
+          ]
         }
       },
       {
@@ -46,7 +63,8 @@
             "备注：人才合作的这个列表显示的用户就只显示嘉宾和玩家。玩家总是显示。嘉宾还要加上一个条件是参与活动之后，填活动反馈选了“愿意加入MIP的花名册” "
           ],
           "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#O4QUd7iFAo6dOtxSEPFcY7OBntg",
-          "note": "原文摘录，备注署名已脱敏；原始截图见飞书文档（需访问权限）。"
+          "note": "甲方原始反馈；该项在原文中未附截图。",
+          "images": []
         }
       },
       {
@@ -62,7 +80,29 @@
             "2）在玩家档案（访客视角下），显示她的合作卡"
           ],
           "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#OeSXd3Peoo7AFVx7XMRc63Lunyh",
-          "note": "原文摘录，账号名称已脱敏；原始截图见飞书文档（需访问权限）。"
+          "note": "甲方原始反馈；截图中的个人信息已遮盖，原有问题标注保留。",
+          "images": [
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-04.png",
+              "caption": "本人页面已填写合作卡",
+              "source": "飞书甲方反馈截图 4/12，灰块为个人信息脱敏；非本批修改成果"
+            },
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-05.png",
+              "caption": "人才列表未显示合作角色",
+              "source": "飞书甲方反馈截图 5/12，灰块为个人信息脱敏；非本批修改成果"
+            },
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-06.png",
+              "caption": "甲方标注：此处应显示合作角色标签",
+              "source": "飞书甲方反馈截图 6/12，灰块为个人信息脱敏；非本批修改成果"
+            },
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-07.png",
+              "caption": "访客视角下合作卡为空",
+              "source": "飞书甲方反馈截图 7/12，灰块为个人信息脱敏；非本批修改成果"
+            }
+          ]
         }
       },
       {
@@ -93,7 +133,14 @@
             "我的按钮右上角一直提示未读消息数， 阅读消息后需取消"
           ],
           "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#DITDdQritouD00x2bhEckOjdnHf",
-          "note": "甲方反馈原文摘录；原始截图见飞书文档（需访问权限）。"
+          "note": "甲方原始反馈；截图中的个人信息已遮盖，原有问题标注保留。",
+          "images": [
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-08.png",
+              "caption": "阅读消息后底部未读角标仍在（甲方红圈标注）",
+              "source": "飞书甲方反馈截图 8/12，灰块为个人信息脱敏；非本批修改成果"
+            }
+          ]
         }
       },
       {
@@ -107,7 +154,14 @@
             "日期筛选活动， 点击已选中日期可取消筛选(现在无法取消)"
           ],
           "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#XdmbdCeuUoX7P9xWP01c7jKpnZd",
-          "note": "甲方反馈原文摘录；原始截图见飞书文档（需访问权限）。"
+          "note": "甲方原始反馈；截图中的个人信息已遮盖，原有问题标注保留。",
+          "images": [
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-09.jpg",
+              "caption": "再次点击已选日期应取消（甲方文字标注）",
+              "source": "飞书甲方反馈截图 9/12；非本批修改成果"
+            }
+          ]
         }
       },
       {
@@ -122,7 +176,14 @@
             "点击复制链接，复制的是小程序的链接"
           ],
           "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#TjZLdDZ6vo0rbBxeB1EcH4Z1nxc",
-          "note": "甲方反馈原文摘录；原始截图见飞书文档（需访问权限）。"
+          "note": "甲方原始反馈；截图中的个人信息已遮盖，原有问题标注保留。",
+          "images": [
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-10.png",
+              "caption": "复制链接提示“链接暂不可用”",
+              "source": "飞书甲方反馈截图 10/12，灰块为个人信息脱敏；非本批修改成果"
+            }
+          ]
         }
       },
       {
@@ -153,7 +214,14 @@
             "我的-顶部资料-少一个字段“当前身份状态”"
           ],
           "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#QyMHdGYDXo5Sayx9tzPc7tGInnd",
-          "note": "甲方反馈原文摘录；原始截图见飞书文档（需访问权限）。"
+          "note": "甲方原始反馈；截图中的个人信息已遮盖，原有问题标注保留。",
+          "images": [
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-11.png",
+              "caption": "当前身份字段缺失位置（甲方红框标注）",
+              "source": "飞书甲方反馈截图 11/12，灰块为个人信息脱敏；非本批修改成果"
+            }
+          ]
         }
       },
       {
@@ -190,7 +258,14 @@
             "ui未还原部分（标签管理里面勾选的热门标签显示在这里）："
           ],
           "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#RuQSdZewRoKllfxAXn7cyJcVnOh",
-          "note": "甲方反馈原文摘录；原始截图见飞书文档（需访问权限）。"
+          "note": "甲方原始反馈；截图中的个人信息已遮盖，原有问题标注保留。",
+          "images": [
+            {
+              "file": "docs/mip/evidence/feedback-20261027/source-feedback/feedback-12.png",
+              "caption": "行业热门标签缺失位置（甲方提供的界面示意）",
+              "source": "飞书甲方反馈截图 12/12；非本批修改成果"
+            }
+          ]
         }
       },
       {
@@ -212,7 +287,8 @@
             "[用户]的账号报名了活动，没展示"
           ],
           "sourceUrl": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc#RU8Vd0sHwoctn4xCybmc1jZVn0c",
-          "note": "原文摘录，账号名称已脱敏；原始截图见飞书文档（需访问权限）。"
+          "note": "甲方原始反馈；该项在原文中未附截图。",
+          "images": []
         }
       }
     ],
@@ -230,10 +306,17 @@
       "docs/mip/evidence/feedback-20261027/shots/pending-registration.png",
       "docs/mip/evidence/feedback-20261027/shots/unread-before.png",
       "docs/mip/evidence/feedback-20261027/shots/unread-after.png",
-      "docs/mip/evidence/feedback-20261027/feedback-disclosure.json"
+      "docs/mip/evidence/feedback-20261027/feedback-disclosure.json",
+      "docs/mip/evidence/feedback-20261027/source-feedback/provenance.json",
+      "docs/mip/evidence/feedback-20261027/source-feedback/verification.json"
     ],
     "limitations": "微信内真实点击、消息角标及从复制链接唤起正确活动仍需手机复测；体验版未核实指派，未提审或正式发布。",
-    "pendingSummary": "手机复测：复制链接唤起目标活动、消息角标与合作卡访客视角；开发版上传不等于已设体验版。生产等待本批验收确认。"
+    "pendingSummary": "手机复测：复制链接唤起目标活动、消息角标与合作卡访客视角；开发版上传不等于已设体验版。生产等待本批验收确认。",
+    "feedbackSource": {
+      "url": "https://zhihui-ai.feishu.cn/wiki/DTHDw2usciY01VkGbbtcqIannuc",
+      "title": "MIP-1027问题",
+      "revision": 247
+    }
   },
   {
     "id": "event-cancel-entry-20261024-v1",

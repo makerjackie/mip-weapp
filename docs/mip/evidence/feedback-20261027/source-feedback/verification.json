@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-28T03:41:34.400Z",
+  "proof": [
+    {
+      "width": 1440,
+      "topDocumentLinkCount": 1,
+      "feedbackCount": 9,
+      "sourceScreenshots": 12,
+      "bySection": [
+        3,
+        0,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0
+      ],
+      "collapsedByDefault": true,
+      "allImagesDecoded": true,
+      "allImagesOpenInSameSiteModal": true,
+      "imageClickStaysOpen": true,
+      "escapeAndOutsideClose": true,
+      "feedbackRemainsExpandedAfterModalClose": true,
+      "horizontalOverflow": false,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "topDocumentLinkCount": 1,
+      "feedbackCount": 9,
+      "sourceScreenshots": 12,
+      "bySection": [
+        3,
+        0,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0
+      ],
+      "collapsedByDefault": true,
+      "allImagesDecoded": true,
+      "allImagesOpenInSameSiteModal": true,
+      "imageClickStaysOpen": true,
+      "escapeAndOutsideClose": true,
+      "feedbackRemainsExpandedAfterModalClose": true,
+      "horizontalOverflow": false,
+      "pageErrors": 0
+    }
+  ],
+  "standaloneReportHasSameImagesAndOneTopLink": true,
+  "sourceRevision": 247,
+  "sourceScreenshots": 12,
+  "publicRedactedCopies": 8,
+  "byteIdenticalSafeCopies": 4,
+  "pixelIntegrityVerifiedOutsidePrivacyRectangles": true,
+  "originalsRemainPrivate": true,
+  "productionBusinessChanged": false,
+  "testPackageUnchanged": "1.2.11-test.1027",
+  "siteTestsPassed": 18
+}
