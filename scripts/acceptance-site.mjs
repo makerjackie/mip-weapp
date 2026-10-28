@@ -173,11 +173,13 @@ function reportContent(report) {
   const icons = report.roleIcons?.length ? `<section class="role-gallery" id="role-icons">${heading(3, '六枚角色图标与原稿', 'role-icons')}<ul class="role-grid">${report.roleIcons.map(icon => `<li><span class="icon-mark"><img src="${escape(asset(icon.file))}" alt="${escape(icon.label)}图标"></span><b>${escape(icon.label)}</b><div><a href="${escape(asset(icon.file))}">图标 SVG</a>${icon.tagFile ? ` <a href="${escape(asset(icon.tagFile))}">完整标签</a>` : ''}</div></li>`).join('')}</ul></section>` : ''
   const preview = report.prototypePreview ? `<figure class="prototype-preview"><img${imageDimensions(report.prototypePreview.file)} data-full-src="${escape(asset(report.prototypePreview.file))}" src="${escape(asset(report.prototypePreview.file))}" alt="${escape(report.prototypePreview.caption)}"><figcaption>${escape(report.prototypePreview.caption)}${report.prototypePreview.source ? ` · <a href="${escape(report.prototypePreview.source)}" target="_blank" rel="noopener">查看原型来源</a>` : ''}</figcaption></figure>` : ''
   const downloads = report.downloads?.length ? `<p class="downloads">${report.downloads.map(d => `<a href="${escape(asset(d.file))}">${escape(d.label)}</a>`).join(' ')}</p>` : ''
-  const related = report.relatedReports?.length ? `<p class="downloads">${report.relatedReports.map(id => {
-    const target = reports.find(item => item.id === id)
-    if (!target) throw new Error(`Unknown related report: ${id}`)
-    return `<a href="/reports/${escape(target.id)}/">${escape(target.indexTitle || target.title)}</a>`
-  }).join(' ')}</p>` : ''
+  const related = report.relatedReports?.length
+    ? `<p class="downloads">${report.relatedReports.map((id) => {
+      const target = reports.find(item => item.id === id)
+      if (!target) { throw new Error(`Unknown related report: ${id}`) }
+      return `<a href="/reports/${escape(target.id)}/">${escape(target.indexTitle || target.title)}</a>`
+    }).join(' ')}</p>`
+    : ''
   const sections = (report.sections || []).map(section => `<section class="feature-section" id="${escape(section.id)}">${heading(3, section.title, section.id)}${reportContent(section)}</section>`).join('')
   const catalog = report.catalog ? `<section class="evidence" id="catalog">${heading(3, '完整行业目录（11类、121项）', 'catalog')}<p class="muted">${escape(report.catalog.caption)}</p><table class="catalog"><thead><tr><th>分类</th><th>可选行业</th></tr></thead><tbody>${report.catalog.rows.map(row => `<tr><th scope="row">${escape(row[0])}</th><td>${escape(row[1])}</td></tr>`).join('')}</tbody></table></section>` : ''
   const points = highlights(report)
