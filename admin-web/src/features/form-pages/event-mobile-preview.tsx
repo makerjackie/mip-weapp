@@ -286,6 +286,6 @@ export function EventMobilePreviewWithData({ values }: { values: Record<string, 
       || ((a?.name || '') < (b?.name || '') ? -1 : (a?.name || '') > (b?.name || '') ? 1 : 0)
       || (left < right ? -1 : left > right ? 1 : 0)
   })
-  const tags = orderedIds.map(id => catalog[id] || (demoMode ? eventTagStyle(id) : null)).filter((tag): tag is EventTagStyle => Boolean(tag))
+  const tags = orderedIds.map<EventTagStyle | null>(id => catalog[id] || (demoMode ? eventTagStyle(id) : null)).filter((tag): tag is EventTagStyle => Boolean(tag))
   return <EventMobilePreview values={values} tagLabels={tags.map(tag => tag.name)} tagStyles={tags} />
 }
