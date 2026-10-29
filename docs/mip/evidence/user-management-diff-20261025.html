@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用户管理：实现 vs 原型/PRD 差异报告 · 2026-10-25</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#ffffff; --ink:#1e293b; --muted:#64748b; --line:#e2e8f0;
+    --ok:#16a34a; --ok-bg:#ecfdf3; --ext:#2563eb; --ext-bg:#eff6ff;
+    --diff:#d97706; --diff-bg:#fffbeb; --miss:#dc2626; --miss-bg:#fef2f2; --ask:#7c3aed; --ask-bg:#f5f3ff;
+    --accent:#1769e0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;background:var(--bg);color:var(--ink);line-height:1.65;font-size:15px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px}
+  /* ---------- hero ---------- */
+  .hero{background:linear-gradient(135deg,#0f2a5c 0%,#1769e0 60%,#4f8ff7 100%);color:#fff;padding:44px 24px 84px;margin-bottom:-52px}
+  .hero-inner{max-width:1180px;margin:0 auto;padding:0 24px}
+  .hero h1{font-size:26px;font-weight:800;letter-spacing:.5px}
+  .hero .sub{margin-top:8px;font-size:14px;opacity:.92}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .chip{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:4px 14px;font-size:12.5px}
+  /* ---------- summary ---------- */
+  .summary{position:relative;z-index:2;display:grid;grid-template-columns:1.15fr 1fr;gap:18px;align-items:stretch}
+  @media(max-width:900px){.summary{grid-template-columns:1fr}}
+  .verdict{background:var(--card);border-radius:16px;box-shadow:0 10px 30px rgba(15,42,92,.10);padding:24px 26px}
+  .verdict h2{font-size:16px;color:var(--muted);font-weight:600;margin-bottom:10px}
+  .verdict p{font-size:14.5px}
+  .verdict b.hit{color:var(--ok)}
+  .verdict b.gap{color:var(--miss)}
+  .donut-card{background:var(--card);border-radius:16px;box-shadow:0 10px 30px rgba(15,42,92,.10);padding:20px 26px;display:flex;gap:22px;align-items:center}
+  .donut{width:132px;height:132px;border-radius:50%;position:relative;flex:none;background:conic-gradient(var(--ok) 0deg,#0000 0deg)}
+  .donut::after{content:"";position:absolute;inset:16px;background:var(--card);border-radius:50%}
+  .donut .num{position:absolute;inset:0;display:grid;place-items:center;z-index:1;font-size:22px;font-weight:800}
+  .legend{flex:1;display:grid;gap:6px;font-size:13px}
+  .legend .row{display:flex;align-items:center;gap:8px}
+  .legend .dot{width:10px;height:10px;border-radius:3px;flex:none}
+  .legend .cnt{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
+  /* ---------- nav ---------- */
+  nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin:26px -24px 26px;padding:0 24px}
+  nav .in{max-width:1180px;display:flex;gap:4px;overflow-x:auto}
+  nav a{white-space:nowrap;padding:12px 14px;font-size:13.5px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent}
+  nav a:hover{color:var(--accent)}
+  /* ---------- sections ---------- */
+  section{margin-top:34px}
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .sec-head h2{font-size:19px;font-weight:800}
+  .sec-head .en{font-size:12.5px;color:var(--muted)}
+  .sec-desc{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(15,42,92,.04)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{background:#f8fafc;text-align:left;padding:10px 14px;font-size:12.5px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
+  td{padding:12px 14px;border-bottom:1px solid #eef2f7;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.item{font-weight:600;white-space:nowrap}
+  td.src,td.impl{color:#334155;min-width:250px}
+  td.impl{background:#fafcff}
+  .colsrc{width:31%}.colimpl{width:34%}
+  .badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2.5px 11px;font-size:12px;font-weight:700;white-space:nowrap}
+  .b-ok{color:var(--ok);background:var(--ok-bg)}
+  .b-ext{color:var(--ext);background:var(--ext-bg)}
+  .b-diff{color:var(--diff);background:var(--diff-bg)}
+  .b-miss{color:var(--miss);background:var(--miss-bg)}
+  .b-ask{color:var(--ask);background:var(--ask-bg)}
+  .note{display:block;margin-top:4px;font-size:12px;color:var(--muted);font-weight:400}
+  code{background:#f1f5f9;border-radius:5px;padding:1px 6px;font-size:12px;color:#475569}
+  /* ---------- gap list ---------- */
+  .gaps{display:grid;gap:12px}
+  .gap{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;padding:14px 18px}
+  .gap.p1{border-left-color:var(--miss)}
+  .gap.p2{border-left-color:var(--diff)}
+  .gap h4{font-size:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .gap p{font-size:13px;color:#475569;margin-top:4px}
+  .pri{font-size:11px;font-weight:800;border-radius:5px;padding:1px 8px}
+  .pri1{color:#fff;background:var(--miss)}
+  .pri2{color:#fff;background:var(--diff)}
+  .ref{font-size:12px;color:var(--muted)}
+  /* ---------- visual compare ---------- */
+  .shots{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:960px){.shots{grid-template-columns:1fr}}
+  figure.shot{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(15,42,92,.05)}
+  figure.shot img{display:block;width:100%;height:auto;cursor:zoom-in}
+  figure.shot.zoomed{position:fixed;inset:3vh 3vw;z-index:200;overflow:auto;background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.35);cursor:zoom-out}
+  figure.shot.zoomed img{width:100%}
+  figcaption{padding:10px 14px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  figcaption .who{font-weight:700;font-size:13px}
+  .vis-note{font-size:13px;color:#5b6472;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:10px 14px;margin:10px 0 16px}
+  .foot{margin-top:52px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px}
+  .foot li{margin:3px 0 3px 18px}
+  @media(max-width:720px){td.item{white-space:normal}.colsrc,.colimpl{width:auto}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <h1>管理后台 · 用户管理 功能差异报告</h1>
+    <div class="sub">当前实现（admin-web）↔ HTML 原型 v1 ↔ PRD，逐项对比</div>
+    <div class="chips">
+      <span class="chip">📅 报告日期：2026-10-25</span>
+      <span class="chip">🧩 原型：MIpDev「MIP 小程序后台管理系统 原型 - v1.html」</span>
+      <span class="chip">📄 PRD：MIpDev「PRD - v1 (纯PRD).html」（文件名 v1，内部版本 V0.4 · 2026-08-22）</span>
+      <span class="chip">💻 实现：mip-weapp/admin-web main 分支</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ 总览 ============ -->
+  <div class="summary">
+    <div class="verdict">
+      <h2>总体结论</h2>
+      <p>用户管理是 admin-web 落地完成度最高的模块之一：<b class="hit">原型与 PRD 的核心要求基本全部落地</b>——列表 11 列、七类筛选、玩家权益四档状态、详情页「左看板 + 六页签」结构、社交影响力 8 项指标、合作卡 6 种固定卡型、勋章发放、冻结/解冻、操作记录等均已实现，且整体为<b class="hit">超集</b>（敏感导出工单、访问名单、变更服务器、开通权益、成长值冲正等增强）。</p>
+      <p style="margin-top:8px">主要缺口集中在 <b class="gap">4 处功能缺失/差异</b>（列表当前城市标签、「加入 MIP 年限」、分页跳转与每页 100 条、搜索范围）和一批<b style="color:var(--ask)">术语与口径待确认</b>（徽章/勋章、贡献值 K 格式、影响力空数据规则等），详见文末清单。</p>
+    </div>
+    <div class="donut-card">
+      <div class="donut" id="donut"><span class="num" id="donutTotal">–</span></div>
+      <div class="legend" id="legend">
+        <div class="row"><span class="dot" style="background:var(--ok)"></span>✅ 一致<span class="cnt" data-cnt="ok">0</span></div>
+        <div class="row"><span class="dot" style="background:var(--ext)"></span>🔵 实现更完整 / 扩展<span class="cnt" data-cnt="ext">0</span></div>
+        <div class="row"><span class="dot" style="background:var(--diff)"></span>⚠️ 有差异待对齐<span class="cnt" data-cnt="diff">0</span></div>
+        <div class="row"><span class="dot" style="background:var(--miss)"></span>❌ 缺失<span class="cnt" data-cnt="miss">0</span></div>
+        <div class="row"><span class="dot" style="background:var(--ask)"></span>❓ 待确认 / 待核对<span class="cnt" data-cnt="ask">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <nav><div class="in">
+    <a href="#visual">📸 界面对照</a>
+    <a href="#list">① 用户列表页</a>
+    <a href="#detail">② 用户详情页</a>
+    <a href="#tabs">③ 详情六页签逐项</a>
+    <a href="#prdonly">④ PRD 有 · 原型无</a>
+    <a href="#extra">⑤ 实现增强项</a>
+    <a href="#confirm">⑥ 待确认清单</a>
+  </div></nav>
+
+  <!-- ============ 📸 界面对照 ============ -->
+  <section id="visual">
+    <div class="sec-head"><h2>📸 界面对照：原型实际画面 vs 当前实现实际画面</h2></div>
+    <p class="sec-desc">左列 = MIpDev 原型 HTML 运行截图；右列 = 当前 admin-web 画面。点击图片可放大。</p>
+    <div class="vis-note">🖼 截图来源与口径：<b>原型列</b>为 MIpDev「原型 - v1.html」在浏览器中实际运行的帧；<b>实现列表页</b>为 admin-web 以<b>显式演示模式</b>（页面横幅已标注）运行的真实截图；<b>实现详情页</b>因本地演示环境未覆盖详情接口（真实后端需登录测试/生产环境，含真实个人信息不宜入库），按当前源码 <code>user-profile-page.tsx / admin-details.ts / user-profile-dashboard.ts</code> 1:1 还原布局、字段名与按钮（画面顶部有醒目黄条标识），人物为演示样例数据，<b>不代表运行截图</b>。</div>
+
+    <h3 style="margin:6px 0 12px">① 用户列表页</h3>
+    <div class="shots">
+      <figure class="shot"><img src="user-management-diff-20261025-assets/proto-users-list.png" alt="原型 用户管理列表"><figcaption><span class="who">原型 v1</span>筛选：搜索用户ID/昵称/手机号 + 服务器/当前角色/行业/当前身份/玩家权益状态/时间类型；11 列；贡献值 3.28K；页码「跳至 X 页」</figcaption></figure>
+      <figure class="shot"><img src="user-management-diff-20261025-assets/impl-users-list.png" alt="实现 用户管理列表"><figcaption><span class="who">当前实现（demo 运行截图）</span>11 列名称一致；筛选：搜索姓名/简介/城市 + 服务器/行业/职业身份/权益状态/时间类型；贡献值 3,280；导出用户+行业设置按钮</figcaption></figure>
+    </div>
+
+    <h3 style="margin:26px 0 12px">② 用户详情 · 左看板 + 基础信息</h3>
+    <div class="shots">
+      <figure class="shot"><img src="user-management-diff-20261025-assets/proto-user-detail-basic.png" alt="原型 用户详情"><figcaption><span class="who">原型 v1</span>左：头像/昵称/玩家/正常 + 社交影响力 8 指标「当前累计」；右：六页签；标题栏「返回列表 / 冻结」</figcaption></figure>
+      <figure class="shot"><img src="user-management-diff-20261025-assets/impl-user-detail-basic.png" alt="实现 用户详情（源码还原示意）"><figcaption><span class="who">当前实现（源码还原示意）</span>同构布局；8 指标口径一致；扩展：账号状态/手机状态/真实姓名/更新时间/后台角色 + 操作条（开通权益/编辑资料/变更服务器/访问控制/管理勋章/调整成长值）</figcaption></figure>
+    </div>
+
+    <h3 style="margin:26px 0 12px">③ 用户详情 · 成长信息（勋章 / 会员权益 / 邀请嘉宾 · 心动明细）</h3>
+    <div class="shots">
+      <figure class="shot"><img src="user-management-diff-20261025-assets/proto-user-detail-growth.png" alt="原型 成长信息"><figcaption><span class="who">原型 v1</span>加入MIP时间/年限、玩家到期时间、等级、经验值、贡献值、当前拥有徽章 + 内嵌「发放徽章」编辑器</figcaption></figure>
+      <figure class="shot"><img src="user-management-diff-20261025-assets/impl-user-detail-growth.png" alt="实现 成长信息（源码还原示意）"><figcaption><span class="who">当前实现（源码还原示意）</span>成长数据 4 指标（多 MIP 币）；勋章明细 + 页头「管理勋章」弹窗入口；会员权益 4 字段；下方 UserRelations 子页签承载 PRD 的邀请嘉宾/心动关系（原型未画）</figcaption></figure>
+    </div>
+
+    <h3 style="margin:26px 0 12px">④ 用户详情 · 职业信息 / 合作卡 / 超级案例 / 操作记录（原型画面）</h3>
+    <div class="shots">
+      <figure class="shot"><img src="user-management-diff-20261025-assets/proto-user-detail-career.png" alt="原型 职业信息"><figcaption><span class="who">原型 v1 · 职业信息</span>所属城市/行业/职业角色/公司/职位/一句话介绍 → 实现改为「职业身份 + 任职信息列表 + 标签」，城市在基础信息</figcaption></figure>
+      <figure class="shot"><img src="user-management-diff-20261025-assets/proto-user-detail-cards.png" alt="原型 合作卡"><figcaption><span class="who">原型 v1 · 合作卡</span>六卡型简写视图 + 查看详情展开 → 实现一致（卡头/查看详情/编辑，保存回读校验）</figcaption></figure>
+      <figure class="shot"><img src="user-management-diff-20261025-assets/proto-user-detail-cases.png" alt="原型 超级案例"><figcaption><span class="who">原型 v1 · 超级案例</span>案例卡列表（封面/项目名称/开始时间/职责…）→ 实现为列表 + 独立编辑页（demo 环境未覆盖，未截实现帧）</figcaption></figure>
+      <figure class="shot"><img src="user-management-diff-20261025-assets/proto-user-detail-records.png" alt="原型 操作记录"><figcaption><span class="who">原型 v1 · 操作记录</span>操作内容/操作类型/时间/操作人 → 实现为操作日志 + 资料历史版本 + 业务记录 5 区（超集）</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ============ ① 列表页 ============ -->
+  <section id="list">
+    <div class="sec-head"><h2>① 用户列表页（/users）</h2><span class="en">路由入口 navigation.tsx · 数据链路 mip.admin.users.list → MySQL mip_users 等 9 表</span></div>
+    <p class="sec-desc">对比范围：筛选器、表格列、行内格式、页头操作、分页交互。</p>
+
+    <div class="card">
+      <table>
+        <thead><tr><th style="width:15%">功能点</th><th class="colsrc">原型 / PRD 要求</th><th class="colimpl">当前实现</th><th style="width:13%">结论</th></tr></thead>
+        <tbody>
+          <tr><td class="item">关键词搜索</td>
+            <td class="src">占位文案「搜索用户 ID、昵称、手机号或档案关键词」，支持按档案关键词模糊搜<span class="note">PRD §2 用户列表规则</span></td>
+            <td class="impl">占位「搜索姓名、简介或城市」；服务端仅模糊匹配 昵称 / 简介 / 城市，<b>不支持按用户 ID、手机号搜索</b></td>
+            <td><span class="badge b-diff" data-status="diff">⚠️ 差异</span><span class="note">手机号搜索涉敏感信息，是否刻意收敛 → 待确认</span></td></tr>
+          <tr><td class="item">服务器筛选</td>
+            <td class="src">全部｜深圳｜北京｜上海；默认展示所属服务器数据，跨服务器需数据权限</td>
+            <td class="impl">远程授权服务器目录（<code>branches.list purpose=USER_FILTER</code>），数据范围按 capability + BRANCH/PLATFORM 收敛</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">当前角色</td>
+            <td class="src">全部｜普通用户｜嘉宾｜玩家</td>
+            <td class="impl">玩家｜嘉宾｜普通用户｜<b>匿名访客</b>（可清除）</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span><span class="note">多「匿名访客」为扩展</span></td></tr>
+          <tr><td class="item">行业筛选</td>
+            <td class="src">固定枚举：创意服务｜消费品牌｜人工智能｜文化传媒｜商业地产</td>
+            <td class="impl">动态字典（<code>mip_tags kind=INDUSTRY</code>），并提供「行业设置」维护页</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span><span class="note">静态枚举演进为可配置</span></td></tr>
+          <tr><td class="item">当前身份筛选</td>
+            <td class="src">固定 7 项：品牌主理人｜专业投资人｜大厂精英｜在读学生｜激情创业者｜自由探索者｜公司负责人</td>
+            <td class="impl">界面命名「<b>职业身份</b>」，选项动态取自档案 <code>identity_status</code> 去重值</td>
+            <td><span class="badge b-diff" data-status="diff">⚠️ 差异</span><span class="note">命名与枚举来源不同，实际字典值待核对</span></td></tr>
+          <tr><td class="item">玩家权益状态</td>
+            <td class="src">生效中｜本月到期｜下个月到期｜已到期未续费；非玩家展示「—」</td>
+            <td class="impl">四档文案完全一致（ACTIVE / EXPIRING_THIS_MONTH / NEXT_MONTH / EXPIRED），按到期日 30 日窗口 + 下个自然月自动分档；非玩家「—」；兼容旧枚举 CURRENT/FORMER/NEVER</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">时间类型 + 时间范围</td>
+            <td class="src">先选类型（用户注册时间｜玩家到期时间），再填日期和时刻；复用机会管理自定义组件，不混用两类时间</td>
+            <td class="impl">「注册时间｜会籍到期时间」二选一 + 分钟精度北京时间 RangePicker，切换类型自动清空</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span><span class="note">文案「会籍到期时间」vs「玩家到期时间」细微</span></td></tr>
+          <tr><td class="item">账号状态筛选</td>
+            <td class="src">未定义列表状态筛选</td>
+            <td class="impl">启用｜已限制｜已关闭</td>
+            <td><span class="badge b-ext" data-status="ext">🔵 扩展</span></td></tr>
+          <tr><td class="item">表格列（11 列）</td>
+            <td class="src">头像、昵称、手机号、当前角色、行业、当前身份、用户等级、贡献值、玩家权益状态、用户注册时间、玩家到期时间</td>
+            <td class="impl"><b>11 列名称完全一致</b>（admin-read-pages.ts 列定义逐字对齐）</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">手机号展示</td>
+            <td class="src">需脱敏展示</td>
+            <td class="impl"><code>xxx****xxxx</code> 脱敏；无 <code>users.phone.read</code> 权限时降级显示「已绑定 / 未绑定」</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span><span class="note">权限降级为增强</span></td></tr>
+          <tr><td class="item">用户等级格式</td>
+            <td class="src">仅展示 Lv. 级别数字，如「Lv.8」</td>
+            <td class="impl">服务端下发 <code>levelName</code>（Lv.x）原样展示</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">贡献值格式</td>
+            <td class="src">以 K 为单位，如「3.28K」</td>
+            <td class="impl">千分位数字格式，如「3,280」（<code>toLocaleString</code>）</td>
+            <td><span class="badge b-diff" data-status="diff">⚠️ 差异</span></td></tr>
+          <tr><td class="item">当前城市标签</td>
+            <td class="src">PRD 要求列表展示<b>当前城市标签</b>，且城市与服务器是两个独立字段</td>
+            <td class="impl">列表<b>无城市列/标签</b>（城市仅出现在搜索匹配与导出列中）</td>
+            <td><span class="badge b-miss" data-status="miss">❌ 缺失</span></td></tr>
+          <tr><td class="item">原型残留「账号状态」列</td>
+            <td class="src">原型 JS 残留 v0.5 的账号状态列渲染；v1 PRD 已把它移到详情左侧看板</td>
+            <td class="impl">列表无账号状态列（账号状态在详情页展示）</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 符合 v1</span></td></tr>
+          <tr><td class="item">导出</td>
+            <td class="src">支持导出当前筛选结果（原型点击后变「已导出当前筛选结果」）</td>
+            <td class="impl">「导出用户」走<b>敏感数据导出工单</b>：创建→就绪→预留→下载（SHA-256 + ZIP 头校验）→消费，≤10MB；「包含手机号」需 <code>users.phone.read</code></td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span><span class="note">实现为安全增强</span></td></tr>
+          <tr><td class="item">创建用户入口</td>
+            <td class="src">原型用户列表无「创建」按钮；v1 PRD 已删除 v0.5 的「添加用户」整节</td>
+            <td class="impl">无新建用户入口</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">批量操作</td>
+            <td class="src">全文未定义</td>
+            <td class="impl">无</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">分页交互</td>
+            <td class="src">全局分页组件：10/20/50/100 条每页 + 「跳至 X 页」页码跳转</td>
+            <td class="impl">游标式分页：上一页 / 第 N 页 / 下一页，<b>无页码跳转</b>；UI 提供 100 条/页但<b>服务端上限 50</b>，选 100 实际返回 ≤50</td>
+            <td><span class="badge b-diff" data-status="diff">⚠️ 差异</span><span class="note">100 条配置不一致属缺陷</span></td></tr>
+          <tr><td class="item">排序</td>
+            <td class="src">未定义</td>
+            <td class="impl">固定 <code>updated_at DESC, id DESC</code></td>
+            <td><span class="badge b-ok" data-status="ok">✅ 不冲突</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ ② 详情页布局 ============ -->
+  <section id="detail">
+    <div class="sec-head"><h2>② 用户详情页 · 布局与左侧看板</h2><span class="en">/users/$userId → UserProfilePage</span></div>
+    <p class="sec-desc">PRD「用户档案左侧-数据看板」+ 原型用户详情（张凌赫示例）逐项对比。</p>
+    <div class="card">
+      <table>
+        <thead><tr><th style="width:15%">功能点</th><th class="colsrc">原型 / PRD 要求</th><th class="colimpl">当前实现</th><th style="width:13%">结论</th></tr></thead>
+        <tbody>
+          <tr><td class="item">整体布局</td>
+            <td class="src">左侧数据看板（头像/昵称/身份/账号状态 + 社交影响力数据）＋ 右侧详情页签区</td>
+            <td class="impl">同构：左侧栏 + 右侧六页签</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">头像 / 昵称兜底</td>
+            <td class="src">无头像展示默认头像；无昵称展示「未设置昵称」</td>
+            <td class="impl">默认头像；昵称兜底「未设置昵称」</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">身份 + 账号状态标签</td>
+            <td class="src">身份：普通用户/嘉宾/玩家；账号状态枚举「正常、已冻结」（正常绿标签、冻结红标签）</td>
+            <td class="impl">同枚举，另支持「已注销」第三态</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span><span class="note">已注销为扩展</span></td></tr>
+          <tr><td class="item">社交影响力 8 项指标</td>
+            <td class="src">① 邀请嘉宾数（人）② 互动用户数（人）③ 我的心动数（次）④ 对我心动数（次）⑤ 主页访客「X 次 / Y 人」⑥ 活动参与「报名 N / 签到 M」⑦ 发布数（个）⑧ 想引荐数（次）；右上角固定「当前累计」；按用户维度累计不限时间</td>
+            <td class="impl"><b>8 项名称、单位、复合格式逐字一致</b>（含「当前累计」标识）；每项带口径 Tooltip；数据由云函数按 邀请归因/心动/访客/引荐意图等 8 类表聚合</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">空数据 / 失败规则</td>
+            <td class="src">无数据显示 <b>0</b> 并保留单位；加载失败显示「—」，不以 0 替代</td>
+            <td class="impl">缺失与失败一律显示「—」（保守策略，不区分「确认为 0」）</td>
+            <td><span class="badge b-diff" data-status="diff">⚠️ 差异</span></td></tr>
+          <tr><td class="item">冻结 / 解冻</td>
+            <td class="src">原型标题栏有「冻结」一键按钮（无解冻、无原因）；PRD 未定义入口，仅在账号状态枚举与操作类型示例中出现</td>
+            <td class="impl">「冻结用户 / 解冻用户」按状态切换；由服务端下发 <code>permissions.freeze / unfreeze</code> 控权；走「设置用户访问名单」弹窗，<b>操作原因必填</b>（ALLOWLIST/BLOCKLIST 机制）；禁止冻结自己</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 覆盖且更完整</span><span class="note">快捷冻结按钮预传 reason 为空、依赖弹窗补填，交互多一步</span></td></tr>
+          <tr><td class="item">返回列表</td>
+            <td class="src">有</td>
+            <td class="impl">有</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">其他页头操作</td>
+            <td class="src">无</td>
+            <td class="impl">复制档案链接、刷新、查看名片（跳名片库）、开通玩家权益、编辑资料、变更服务器、访问控制、管理勋章、调整成长值</td>
+            <td><span class="badge b-ext" data-status="ext">🔵 扩展</span></td></tr>
+          <tr><td class="item">页签结构</td>
+            <td class="src">6 个：基础信息 / 成长信息 / 职业信息 / 合作卡 / 超级案例 / 操作记录</td>
+            <td class="impl"><b>6 个页签名称完全一致</b>；另保留旧 Tab 键兼容映射（content/invitations/hearts/history/logs）</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ ③ 六页签 ============ -->
+  <section id="tabs">
+    <div class="sec-head"><h2>③ 详情页 · 六个页签逐项对比</h2><span class="en">基础信息 / 成长信息 / 职业信息 / 合作卡 / 超级案例 / 操作记录</span></div>
+
+    <div class="card" style="margin-bottom:18px">
+      <table>
+        <thead><tr><th style="width:15%">页签 · 功能点</th><th class="colsrc">原型 / PRD 要求</th><th class="colimpl">当前实现</th><th style="width:13%">结论</th></tr></thead>
+        <tbody>
+          <tr><td class="item">基础信息 · 字段</td>
+            <td class="src">PRD：用户 ID、手机号（脱敏）、绑定微信、用户身份、所属服务器、用户注册时间（精确到分）、玩家加入时间</td>
+            <td class="impl">PRD 7 字段<b>全部实现</b>；另扩展：账号状态、手机状态、真实姓名、城市、更新时间、「后台角色」子区（角色/作用范围/授权时间）</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 超集</span></td></tr>
+          <tr><td class="item">成长信息 · 成长数据</td>
+            <td class="src">当前等级、累计经验值、贡献值；「加入 MIP 年限」按首次加入时间计算；玩家到期时间（YYYY-MM-DD）</td>
+            <td class="impl">当前等级、经验值、贡献值、MIP 币；「会员权益」区：权益状态（生效中/待生效/已到期/—）、生效时间、到期时间、首次加入时间；<b>未见「加入 MIP 年限」</b></td>
+            <td><span class="badge b-miss" data-status="miss">❌ 缺一项</span><span class="note">加入 MIP 年限未直接展示</span></td></tr>
+          <tr><td class="item">成长信息 · 徽章（勋章）</td>
+            <td class="src">「当前拥有徽章」区内嵌徽章编辑器：从<b>已启用</b>徽章多选 → 必点「保存确认」→ 提示「徽章已保存」→ 已拥有默认选中、不重复发放；展示名称、图标、获得时间和状态</td>
+            <td class="impl">页头「管理勋章」按钮 → 弹窗多选 + 保存；必填「勋章调整原因」（≤300）；佩戴中勋章禁止撤销；grant/revoke 双动作；展示持有数与明细（佩戴中标记）。<b>交互位置从 Tab 内嵌改为页头弹窗</b>；获得时间/图标展示待核对；术语用「勋章」</td>
+            <td><span class="badge b-diff" data-status="diff">⚠️ 基本一致</span><span class="note">位置/术语/获得时间三处口径 → 待确认</span></td></tr>
+          <tr><td class="item">成长信息 · 邀请嘉宾</td>
+            <td class="src">PRD 独立页签（原型无）：嘉宾昵称、嘉宾 ID（可点击跳详情）、当前角色；停用账号保留记录、按权限展示</td>
+            <td class="impl">实现为「成长信息」Tab 内 <b>UserRelations 子页签「邀请嘉宾」</b>：搜索昵称、邀请来源筛选（活动邀请/会员邀请）、关联活动、发生时间、分页；数据来自邀请归因 + 会员邀请嘉宾表</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 覆盖</span><span class="note">位置调整至成长信息内</span></td></tr>
+          <tr><td class="item">成长信息 · 心动关系</td>
+            <td class="src">PRD 独立页签（原型无）：关系方向（我心动/对我心动/双向）、关联用户、关联活动、发生时间、状态（有效/已撤销/已失效）、按四维筛选；点击跳对方档案/活动</td>
+            <td class="impl">同位置子页签「心动明细」：状态（全部/有效/已撤销/已失效）+ 关系方向 + 关联活动 + 发生时间筛选，搜索昵称，分页</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 覆盖</span></td></tr>
+          <tr><td class="item">职业信息 · 字段</td>
+            <td class="src">所属城市、行业、职业角色、公司、职位、一句话介绍</td>
+            <td class="impl">行业、职业身份、一句话介绍、个人介绍 +「任职信息」列表（类型/名称/职位，支持多组公司）+「标签」；城市移至基础信息</td>
+            <td><span class="badge b-diff" data-status="diff">⚠️ 覆盖·组织不同</span><span class="note">「职业角色」→「职业身份」，公司/职位改为多组任职</span></td></tr>
+          <tr><td class="item">合作卡 · 六种卡型</td>
+            <td class="src">固定 6 卡型：皮条客、生意佬、暴发户、狗策划、死美工、老保姆（不用占位名）；各卡型独立 6 项评分与第三组字段（皮条客=常混迹的圈子，其余=本人的菜单）</td>
+            <td class="impl">服务端<b>强校验 6 卡型 + 6 评分项</b>；六角色展示名与小程序同口径（MIW-78 两端复原）；PIMP 卡第三组标题「常混迹的圈子」、其余「本人的菜单」</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">合作卡 · 简写视图与详情</td>
+            <td class="src">每卡展示卡型/我的目标/需要引荐三项；「查看详情」在当前卡片内展开，不跳转</td>
+            <td class="impl">「查看详情 / 收起详情」原地展开；详情字段含 姓名/游戏名、卡型说明、6 项特征打分（1–5 星）、目标、需要的支持或引荐、臭毛病（外显/内在/预防建议）、合作价值</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span></td></tr>
+          <tr><td class="item">合作卡 · 编辑与保存</td>
+            <td class="src">先查看再「编辑」；「保存」保存整卡并提示成功；记录修改人/时间/变更内容；停用后前台不展示、后台留史</td>
+            <td class="impl">编辑表单 + 「保存合作卡」；<b>保存后强制回读校验</b>；版本冲突提供「读取最新版本并保留我的修改」；未保存离开有拦截弹窗；状态 草稿/正常/已停用；查看与编辑需 <code>userContent.moderate</code>。修改人/时间的展示口径待核对</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 一致</span><span class="note">审计展示 ❓ 待核对</span></td></tr>
+          <tr><td class="item">超级案例</td>
+            <td class="src">一户多案例、按开始时间倒序；字段：案例封面、项目名称、一句话描述、开始时间、担任职责、主营城市、主营地区、项目类型、展开讲讲（全文不截断）；单案例编辑保存、记录版本；支持异常下架；公开未下架才进主页/搜索</td>
+            <td class="impl">案例卡列表 + 分页（返回最新/更早案例）；「编辑案例」跳独立编辑页（ARCHIVED 不可编辑）；权限不符行提示「无权查看此案例详情」；空态「暂无超级案例」。<b>编辑页 9 字段完整性与修改版本记录待逐项核对</b></td>
+            <td><span class="badge b-ask" data-status="ask">❓ 待核对</span></td></tr>
+          <tr><td class="item">操作记录</td>
+            <td class="src">按时间倒序；字段：操作内容、操作类型、时间、操作人（后台账号或小程序用户）；类型示例含 查看/编辑/冻结/解冻/发放徽章/保存合作卡/保存超级案例；记录不可修改删除；空态「暂无操作记录」</td>
+            <td class="impl">「用户操作日志」（操作/操作者/角色/来源/时间，取自审计日志）＋ <b>资料历史版本</b> ＋ 业务记录 5 区（活动报名、活动签到、订单、合作机会、合作卡、超级案例）＋ 发布的机会/报名活动/关联订单；双游标独立分页；空态「暂无记录 / 该用户在当前筛选下没有相关记录」</td>
+            <td><span class="badge b-ok" data-status="ok">✅ 超集</span><span class="note">「查看」是否入日志 ❓；空态文案细微差异</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ ④ PRD有原型无 ============ -->
+  <section id="prdonly">
+    <div class="sec-head"><h2>④ PRD 有 · 原型没画的功能 → 实现覆盖情况</h2><span class="en">PRD 与原型本身的两处差距，实现如何取舍</span></div>
+    <div class="card">
+      <table>
+        <thead><tr><th style="width:22%">PRD 要求（原型未画）</th><th class="colimpl">当前实现</th><th style="width:13%">结论</th></tr></thead>
+        <tbody>
+          <tr><td class="item">「邀请嘉宾」独立页签</td><td class="impl">并入「成长信息」Tab 下子页签，字段与筛选齐备</td><td><span class="badge b-ok" data-status="ok">✅ 覆盖</span></td></tr>
+          <tr><td class="item">「心动关系」独立页签（含四维筛选）</td><td class="impl">并入「成长信息」Tab 下子页签，方向/状态/活动/时间筛选齐备</td><td><span class="badge b-ok" data-status="ok">✅ 覆盖</span></td></tr>
+          <tr><td class="item">「名片管理」页签：用户名片 + 模板配置/启用/停用/排序/下架、历史版本</td><td class="impl">详情页<b>无此页签</b>；名片模板配置放在独立「名片管理」页面；详情页仅「查看名片」跳转 + 「编辑资料」走名片保存通道</td><td><span class="badge b-diff" data-status="diff">⚠️ 位置不同</span></td></tr>
+          <tr><td class="item">列表展示「当前城市标签」</td><td class="impl">列表无城市列</td><td><span class="badge b-miss" data-status="miss">❌ 缺失</span></td></tr>
+          <tr><td class="item">基础信息含「玩家加入时间」</td><td class="impl">已实现（另含首次加入时间于会员权益）</td><td><span class="badge b-ok" data-status="ok">✅ 覆盖</span></td></tr>
+          <tr><td class="item">玩家服务器变更保留 原服务器/目标服务器/时间/操作者</td><td class="impl">「变更服务器」操作（PLATFORM 权限 + 变更原因必填），写 <code>mip_users.primary_branch_id</code> 与服务器成员关系；历史记录展示待核对</td><td><span class="badge b-ask" data-status="ask">❓ 部分核对</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ ⑤ 实现增强 ============ -->
+  <section id="extra">
+    <div class="sec-head"><h2>⑤ 实现增强项（原型 / PRD 均未要求）</h2><span class="en">实现为超集的部分，评审时可确认是否符合预期边界</span></div>
+    <div class="card">
+      <table>
+        <thead><tr><th style="width:26%">增强能力</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="item">敏感数据导出工单</td><td class="impl">创建→就绪→预留→下载（SHA-256 + ZIP 头校验）→消费 全链路，≤10MB；手机号单独 <code>users.phone.read</code> 权限；导出列 18 列</td></tr>
+          <tr><td class="item">访问控制（ALLOWLIST / BLOCKLIST）</td><td class="impl">允许/限制名单 + 启停 + 必填原因，禁止冻结自己；冻结即 BLOCKLIST 的产品化</td></tr>
+          <tr><td class="item">开通玩家权益</td><td class="impl">PLATFORM 权限 <code>memberships.adjust</code> 手工发放会籍</td></tr>
+          <tr><td class="item">调整成长值</td><td class="impl"><code>growth.adjust</code> 人工冲正经验值/贡献值（对应成长体系「人工冲正」来源）</td></tr>
+          <tr><td class="item">编辑资料（名片通道）</td><td class="impl">真实姓名/昵称/简介/介绍/公司×5/组织×5/职业身份，乐观锁 + 冲突二选一（保留我的修改 / 采用服务端）</td></tr>
+          <tr><td class="item">后台角色绑定展示</td><td class="impl">基础信息「后台角色」子区：角色/作用范围/授权时间</td></tr>
+          <tr><td class="item">服务端筛选能力超集</td><td class="impl">手机号绑定状态、资料完整度、N 天内加入、经验值区间、名单类型等筛选已在云函数支持（UI 未全部暴露）</td></tr>
+          <tr><td class="item">影响力明细契约已备</td><td class="impl"><code>mip.admin.users.influence.list</code>（心动/访客/邀请分页明细）云函数与契约已实现，前端暂未接线（详情页用 users.get 内嵌汇总）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ ⑥ 待确认 ============ -->
+  <section id="confirm">
+    <div class="sec-head"><h2>⑥ 待确认清单</h2><span class="en">按优先级排列 · 确认前不擅自改口径</span></div>
+    <div class="gaps">
+      <div class="gap p1"><h4><span class="pri pri1">P1</span>列表搜索范围：是否需支持「用户 ID / 手机号」</h4><p>PRD 与原型均要求按用户 ID、昵称、手机号或档案关键词搜索；现实现只搜 昵称/简介/城市。若为合规刻意收敛（手机号涉敏感信息），建议在需求基线登记；否则需补服务端查询。</p><p class="ref">实现：<code>repositories/users.js:127-131</code> · PRD §2 用户列表规则</p></div>
+      <div class="gap p1"><h4><span class="pri pri1">P1</span>列表是否补「当前城市」标签列</h4><p>PRD 明确要求列表展示当前城市标签（与服务器独立两字段）；现列表 11 列无城市。可加列或并入昵称副标。</p><p class="ref">PRD §2 用户城市与服务器归属</p></div>
+      <div class="gap p1"><h4><span class="pri pri1">P1</span>分页：每页 100 条 UI 与服务端上限 50 不一致 + 无「跳至 X 页」</h4><p>UI 提供 100 条/页但云函数 <code>limit</code> 上限 50，选择后实际返回 50 条（静默不一致，属缺陷）；原型/PRD 的页码跳转在游标分页下未提供。建议二选一：服务端放开至 100，或 UI 收敛为 50 并评估补跳页。</p><p class="ref">实现：<code>core-list-pages.tsx</code> 每页选项 vs 云函数 <code>validation.js limit()</code></p></div>
+      <div class="gap p1"><h4><span class="pri pri1">P1</span>「加入 MIP 年限」未展示</h4><p>PRD 成长信息要求展示（按首次加入时间计算，如「3 年玩家」）；现实现有「首次加入时间」「玩家加入时间」但未折算年限。可前端计算补上。</p><p class="ref">PRD §2 玩家档案－成长信息</p></div>
+      <div class="gap p2"><h4><span class="pri pri2">P2</span>术语统一：「徽章」vs「勋章」</h4><p>PRD 用户管理节用「徽章」，其 13/14 节与首页仪表盘用「勋章」；实现全链路统一为「勋章」。建议与产品确认一个词，必要时同步 PRD 术语表。</p></div>
+      <div class="gap p2"><h4><span class="pri pri2">P2</span>贡献值 K 单位格式（3.28K）</h4><p>PRD 要求以 K 为单位展示；实现为千分位「3,280」。纯展示口径，确认后一行可改。</p></div>
+      <div class="gap p2"><h4><span class="pri pri2">P2</span>影响力「无数据 = 0」规则</h4><p>PRD：无数据显示 0 并保留单位、失败才显示「—」；实现缺失与失败统一「—」。是否需要对齐 PRD 口径？</p></div>
+      <div class="gap p2"><h4><span class="pri pri2">P2</span>勋章展示是否需「图标 + 获得时间」</h4><p>PRD 要求徽章展示名称、图标、获得时间和状态；现实现有名称与佩戴状态，图标与获得时间待核对补充。</p></div>
+      <div class="gap p2"><h4><span class="pri pri2">P2</span>操作日志是否记录「查看」行为</h4><p>PRD 操作类型示例含「查看」；审计日志通常只记变更。若需记录查看敏感档案，涉及审计量与隐私评估。</p></div>
+      <div class="gap p2"><h4><span class="pri pri2">P2</span>合作卡 / 超级案例的「修改人 · 修改时间 · 变更内容」展示</h4><p>PRD 要求编辑保存后记录并可追溯；实现有保存回读与版本冲突处理，但修改记录是否在界面可见待核对（资料历史目前覆盖名片类字段）。</p></div>
+      <div class="gap p2"><h4><span class="pri pri2">P2</span>超级案例编辑页 9 字段逐项核对</h4><p>案例封面、项目名称、一句话描述、开始时间、担任职责、主营城市、主营地区、项目类型、展开讲讲（全文不截断）——编辑页字段与 PRD 的一致性需逐项核对。</p></div>
+      <div class="gap p2"><h4><span class="pri pri2">P2</span>「当前身份」筛选枚举对齐</h4><p>PRD/原型固定 7 项（品牌主理人/专业投资人/大厂精英/在读学生/激情创业者/自由探索者/公司负责人）；实现从档案 <code>identity_status</code> 动态去重。需核对实际字典值是否覆盖 7 项、命名是否一致。</p></div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <b>对比方法与材料</b>
+    <ul>
+      <li>原型：<code>/Users/oudouglas/project/ame-project/mip-minip-dev/docs/管理后台的原型和PRD/MIP 小程序后台管理系统 原型 - v1.html</code>（交互式单文件原型，users 列表 + 用户详情六页签）</li>
+      <li>PRD：同目录「PRD - v1 (纯PRD).html」——注意文件名 v1，内部版本为 V0.4（2026-08-22，需求细化中）；另比对旧版「PRD -0825- v0.5」确认演进差异</li>
+      <li>实现：mip-weapp <code>admin-web/src/features/core-pages / user-profile / profile-cards</code>、<code>src/modules/admin-read-*</code>、BFF <code>admin-web/server/admin-bff.ts</code>、云函数 <code>cloudfunctions/mip-admin-api/domain/users.js</code> 等，报告内已标注关键文件行号</li>
+      <li>本报告为代码与文档的静态对比（功能盘点）；截图生成于 2026-10-26：原型帧来自原型 HTML 运行，实现列表页为显式演示模式真实运行截图（页面已标注演示数据），实现详情页因演示环境未覆盖详情接口，为按源码还原的界面示意（画面含黄条标识），待测试后台账号就绪后可替换为真实运行帧</li>
+      <li>状态图例：<span class="badge b-ok">✅ 一致</span> <span class="badge b-ext">🔵 实现更完整/扩展</span> <span class="badge b-diff">⚠️ 有差异</span> <span class="badge b-miss">❌ 缺失</span> <span class="badge b-ask">❓ 待确认</span></li>
+    </ul>
+  </div>
+</div>
+
+<script>
+(function(){
+  var counts={ok:0,ext:0,diff:0,miss:0,ask:0};
+  document.querySelectorAll('[data-status]').forEach(function(el){counts[el.dataset.status]++;});
+  var total=counts.ok+counts.ext+counts.diff+counts.miss+counts.ask;
+  document.querySelectorAll('[data-cnt]').forEach(function(el){el.textContent=counts[el.dataset.cnt];});
+  document.getElementById('donutTotal').textContent=total;
+  var order=[['ok','var(--ok)'],['ext','var(--ext)'],['diff','var(--diff)'],['miss','var(--miss)'],['ask','var(--ask)']];
+  var acc=0,parts=[];
+  order.forEach(function(it){
+    var v=counts[it[0]];if(!v)return;
+    var a0=acc/total*360,a1=(acc+v)/total*360;
+    parts.push(it[1]+' '+a0.toFixed(1)+'deg '+a1.toFixed(1)+'deg');
+    acc+=v;
+  });
+  document.getElementById('donut').style.background='conic-gradient('+parts.join(',')+')';
+})();
+/* 图片点击放大 / 缩小 */
+document.querySelectorAll('figure.shot img').forEach(function(img){
+  img.addEventListener('click', function(){ img.closest('figure').classList.toggle('zoomed'); });
+});
+</script>
+</body>
+</html>

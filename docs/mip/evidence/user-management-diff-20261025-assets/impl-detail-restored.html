@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>admin-web 用户详情 · 界面还原示意</title>
+<style>
+  :root{--blue:#1c4fd6;--blue-d:#133db0;--ink:#1f2329;--muted:#8a9099;--line:#e5e8ef;--pri:#1677ff;--bg:#eef1f6}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:14px;color:var(--ink);background:var(--bg)}
+  .restore-note{background:#fff7e6;border-bottom:1px solid #ffe7ba;color:#ad6800;padding:8px 20px;font-size:12.5px}
+  .app{display:flex;min-height:920px}
+  /* sidebar */
+  .side{width:216px;flex:none;background:linear-gradient(180deg,#2b5bdb,#1c3faa);color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:2px}
+  .brand{display:flex;gap:10px;align-items:center;margin-bottom:22px}
+  .logo{width:38px;height:38px;border-radius:10px;background:#fff;color:var(--blue-d);display:grid;place-items:center;font-weight:800;font-size:15px}
+  .brand b{font-size:17px;display:block;line-height:1.1}
+  .brand span{font-size:11px;opacity:.75}
+  .group{font-size:11.5px;opacity:.6;margin:14px 4px 6px}
+  .nav{padding:9px 12px;border-radius:9px;font-size:13.5px;opacity:.88}
+  .nav.on{background:#fff;color:var(--blue-d);font-weight:700;opacity:1}
+  .me{margin-top:auto;border-top:1px solid rgba(255,255,255,.2);padding-top:12px;display:flex;gap:9px;align-items:center}
+  .me .av{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.25);display:grid;place-items:center}
+  .me small{display:block;opacity:.7;font-size:11px}
+  /* main */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .topbar{background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:16px;height:52px}
+  .ptab{padding:0 18px;height:52px;display:flex;align-items:center;gap:8px;border-bottom:2px solid transparent}
+  .ptab.on{border-bottom-color:var(--pri);color:var(--pri);font-weight:600}
+  .ptab i{font-style:normal;color:#b8bec8;cursor:pointer}
+  .spacer{flex:1}
+  .demo-chip{background:#fff7e6;border:1px solid #ffd666;color:#ad6800;border-radius:6px;padding:3px 10px;font-size:12px}
+  .avatar-sm{width:30px;height:30px;border-radius:50%;background:#f0f2f5;display:grid;place-items:center;color:#8a9099}
+  .banner{background:#fffbe6;border:1px solid #ffe7ba;border-radius:8px;margin:14px 18px 0;padding:9px 14px;color:#614700;font-size:13px}
+  .content{padding:10px 18px 24px}
+  h1{font-size:21px;margin:6px 0 2px}
+  .sub{color:var(--muted);font-size:13px}
+  .head-row{display:flex;align-items:flex-start;justify-content:space-between}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .btn{border:1px solid #d9dce3;background:#fff;border-radius:7px;padding:7px 15px;font-size:13.5px;cursor:default}
+  .btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+  .layout{display:grid;grid-template-columns:300px 1fr;gap:16px;margin-top:14px;align-items:start}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px}
+  /* left */
+  .lft{text-align:center}
+  .bigav{width:88px;height:88px;border-radius:50%;background:#e8ebf2;color:#b3bac6;display:grid;place-items:center;font-size:30px;margin:6px auto 10px}
+  .nick{font-size:19px;font-weight:700}
+  .idrow{display:flex;gap:8px;justify-content:center;margin:8px 0 14px}
+  .tag{border-radius:5px;padding:2px 10px;font-size:12px}
+  .tag.player{background:#e6f0ff;color:#1c4fd6}
+  .tag.ok{background:#e8f7ed;color:#16a34a}
+  .infl{border:1px solid var(--line);border-radius:10px;padding:14px;text-align:left}
+  .infl h4{font-size:14px;display:flex;justify-content:space-between;align-items:baseline}
+  .infl h4 span{font-size:11.5px;color:var(--muted);font-weight:400}
+  .igrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+  .imet{border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+  .imet b{display:block;font-size:15.5px}
+  .imet span{font-size:11.5px;color:var(--muted)}
+  .viewcard{margin-top:14px;width:100%}
+  /* right */
+  .tabs{display:flex;gap:26px;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .tab{padding:10px 2px;color:#5b6472;cursor:default;font-size:14px;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--pri);border-bottom-color:var(--pri);font-weight:600}
+  .sec{margin-bottom:18px}
+  .sec h3{font-size:14.5px;margin-bottom:10px}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 28px}
+  .frow{display:flex;padding:7px 0;border-bottom:1px dashed #eef0f4;font-size:13.5px}
+  .frow label{width:110px;color:var(--muted);flex:none}
+  .frow b{font-weight:500}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .met{background:#f7f9fc;border:1px solid var(--line);border-radius:8px;padding:12px}
+  .met b{font-size:17px;display:block}
+  .met span{font-size:12px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:#f7f8fa;text-align:left;padding:8px 10px;color:#5b6472;font-weight:500;border-bottom:1px solid var(--line)}
+  td{padding:8px 10px;border-bottom:1px solid #f0f2f6}
+  .rels{border-top:1px dashed var(--line);margin-top:4px;padding-top:14px}
+  .rtabs{display:flex;gap:20px;margin-bottom:12px}
+  .rtab{padding:6px 2px;color:#5b6472;border-bottom:2px solid transparent}
+  .rtab.on{color:var(--pri);border-bottom-color:var(--pri);font-weight:600}
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+  .inp{border:1px solid #d9dce3;border-radius:7px;padding:7px 12px;color:#9aa1ab;background:#fff;font-size:13px}
+  .sel{border:1px solid #d9dce3;border-radius:7px;padding:7px 12px;background:#fff;color:#5b6472;font-size:13px;display:flex;gap:18px;align-items:center}
+  .sel::after{content:"▾";color:#b8bec8}
+  .lbl{color:#5b6472;font-size:13px}
+  /* cards */
+  .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .ccard{border:1px solid var(--line);border-radius:10px;padding:16px}
+  .chead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .cdot{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:700}
+  .chead b{font-size:15px}
+  .chead .st{margin-left:auto;background:#e8f7ed;color:#16a34a;border-radius:5px;padding:2px 9px;font-size:12px}
+  .cline{display:flex;font-size:13px;padding:5px 0}
+  .cline label{width:92px;color:var(--muted);flex:none}
+  .cbtns{display:flex;gap:10px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="restore-note">⚠️ 本页为<b>依据 admin-web 当前源码还原的界面示意</b>（本地演示环境的详情接口未覆盖，无法截到带数据的运行帧）：布局、页签、字段名、按钮均按 <code>user-profile-page.tsx / admin-details.ts / user-profile-dashboard.ts</code> 1:1 还原；人物为演示样例数据。</div>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="logo">MIP</div><div><b>MIP</b><span>管理后台</span></div></div>
+    <div class="group">工作台</div><div class="nav">网站概览</div>
+    <div class="group">人才与机会</div><div class="nav on">用户管理</div><div class="nav">机会管理</div>
+    <div class="group">运营中心</div><div class="nav">活动管理</div><div class="nav">Banner 管理</div><div class="nav">视频回顾</div><div class="nav">NPC任务</div><div class="nav">素材上传</div><div class="nav">战队管理</div>
+    <div class="group">成长体系</div><div class="nav">等级管理</div><div class="nav">经验值管理</div><div class="nav">贡献值管理</div>
+    <div class="me"><div class="av">演</div><div>演示运营账号<small>演示模式</small></div></div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="ptab on">用户管理 <i>×</i></div>
+      <div class="spacer"></div>
+      <span class="demo-chip">演示数据</span><span>🔔</span><span>⟳</span><div class="avatar-sm">演</div>
+    </div>
+    <div class="banner">当前为显式演示模式，页面数据不代表生产事实。</div>
+    <div class="content">
+      <div class="head-row">
+        <div><h1>用户详情</h1><div class="sub">查看用户档案与业务记录</div></div>
+        <div class="btns"><span class="btn">返回列表</span><span class="btn">⧉ 复制链接</span><span class="btn">⟳ 刷新</span></div>
+      </div>
+      <div class="layout">
+        <aside class="card lft">
+          <div class="bigav">林</div>
+          <div class="nick">林晓</div>
+          <div class="idrow"><span class="tag player">玩家</span><span class="tag ok">● 正常</span></div>
+          <div class="infl">
+            <h4>社交影响力数据<span>当前累计</span></h4>
+            <div class="igrid">
+              <div class="imet"><b>36 人</b><span>邀请嘉宾数</span></div>
+              <div class="imet"><b>128 人</b><span>互动用户数</span></div>
+              <div class="imet"><b>12 次</b><span>我的心动数</span></div>
+              <div class="imet"><b>19 次</b><span>对我心动数</span></div>
+              <div class="imet"><b>386 次 / 92 人</b><span>主页访客</span></div>
+              <div class="imet"><b>报名 28 / 签到 25</b><span>活动参与</span></div>
+              <div class="imet"><b>28 个</b><span>发布数</span></div>
+              <div class="imet"><b>16 次</b><span>想引荐数</span></div>
+            </div>
+          </div>
+          <button class="btn viewcard">查看名片</button>
+        </aside>
+        <section class="card">
+          <div class="btns" style="justify-content:flex-start;margin-bottom:12px">
+            <span class="btn pri">开通玩家权益</span><span class="btn">✎ 编辑资料</span><span class="btn">变更服务器</span><span class="btn">访问控制</span><span class="btn">管理勋章</span><span class="btn">调整成长值</span>
+          </div>
+          <div class="tabs" id="tabs">
+            <div class="tab on" data-t="basic">基础信息</div>
+            <div class="tab" data-t="growth">成长信息</div>
+            <div class="tab" data-t="cards">合作卡</div>
+            <div class="tab">职业信息</div>
+            <div class="tab">超级案例</div>
+            <div class="tab">操作记录</div>
+          </div>
+
+          <div id="v-basic">
+            <div class="sec"><h3>基本信息</h3>
+              <div class="fgrid">
+                <div class="frow"><label>用户 ID</label><b>USR-1001</b></div>
+                <div class="frow"><label>身份</label><b>玩家</b></div>
+                <div class="frow"><label>手机号</label><b>188****3403</b></div>
+                <div class="frow"><label>账号状态</label><b>正常</b></div>
+                <div class="frow"><label>手机状态</label><b>已绑定</b></div>
+                <div class="frow"><label>绑定微信</label><b>已绑定</b></div>
+                <div class="frow"><label>真实姓名</label><b>林晓</b></div>
+                <div class="frow"><label>所属服务器</label><b>深圳福田</b></div>
+                <div class="frow"><label>城市</label><b>深圳</b></div>
+                <div class="frow"><label>注册时间</label><b>2029-06-12 10:24</b></div>
+                <div class="frow"><label>更新时间</label><b>2030-03-02 09:12</b></div>
+                <div class="frow"><label>玩家加入时间</label><b>2029-06-12 10:31</b></div>
+              </div>
+            </div>
+            <div class="sec"><h3>后台角色</h3>
+              <table><thead><tr><th>角色</th><th>作用范围</th><th>授权时间</th></tr></thead>
+              <tbody><tr><td>平台管理员</td><td>平台</td><td>2029-06-20 11:02</td></tr></tbody></table>
+            </div>
+          </div>
+
+          <div id="v-growth" style="display:none">
+            <div class="sec"><h3>成长数据</h3>
+              <div class="metrics">
+                <div class="met"><b>Lv.8</b><span>当前等级</span></div>
+                <div class="met"><b>18,650</b><span>经验值</span></div>
+                <div class="met"><b>3,280</b><span>贡献值</span></div>
+                <div class="met"><b>1,200</b><span>MIP 币</span></div>
+              </div>
+            </div>
+            <div class="sec"><h3>勋章</h3>
+              <div class="metrics" style="grid-template-columns:repeat(4,1fr)">
+                <div class="met"><b>3</b><span>持有勋章</span></div>
+              </div>
+              <div class="frow" style="margin-top:8px"><label>勋章明细</label><b>资源链接者（佩戴中）、活动共创官（佩戴中）、社群贡献者</b></div>
+            </div>
+            <div class="sec"><h3>会员权益</h3>
+              <div class="fgrid">
+                <div class="frow"><label>权益状态</label><b>生效中</b></div>
+                <div class="frow"><label>生效时间</label><b>2029-06-12 10:31</b></div>
+                <div class="frow"><label>到期时间</label><b>2030-05-18 23:59</b></div>
+                <div class="frow"><label>首次加入时间</label><b>2029-06-12 10:31</b></div>
+              </div>
+            </div>
+            <div class="rels">
+              <div class="rtabs"><div class="rtab on">邀请嘉宾</div><div class="rtab">心动明细</div></div>
+              <div class="filters">
+                <span class="inp">🔍 搜索关联用户昵称</span>
+                <span class="sel">全部状态</span>
+                <span class="lbl">发生时间：</span><span class="inp">开始日期</span><span class="lbl">→</span><span class="inp">结束日期</span>
+                <span class="lbl">关系方向：</span><span class="sel">全部方向</span>
+                <span class="lbl">关联活动：</span><span class="sel">全部活动</span>
+                <span class="btn pri">筛 选</span><span class="btn">⟳</span>
+              </div>
+              <table><thead><tr><th>名称</th><th>状态</th><th>时间</th></tr></thead>
+              <tbody>
+                <tr><td>周宁（活动邀请）</td><td>有效</td><td>2029-08-01 19:20</td></tr>
+                <tr><td>陈默（会员邀请）</td><td>有效</td><td>2029-09-14 20:05</td></tr>
+              </tbody></table>
+              <div class="btns" style="justify-content:flex-start;margin-top:12px"><span class="btn" style="opacity:.5">返回最新</span><span class="btn">更早记录</span></div>
+            </div>
+          </div>
+
+          <div id="v-cards" style="display:none">
+            <div class="cgrid">
+              <div class="ccard"><div class="chead"><div class="cdot" style="background:#7c3aed">皮</div><b>皮条客</b><span class="st">正常</span></div>
+                <div class="cline"><label>我的目标</label><b>促成跨行业合作</b></div>
+                <div class="cline"><label>需要引荐</label><b>企业决策人与渠道资源</b></div>
+                <div class="cbtns"><span class="btn">查看详情</span><span class="btn">✎ 编辑</span></div></div>
+              <div class="ccard"><div class="chead"><div class="cdot" style="background:#d97706">生</div><b>生意佬</b><span class="st">正常</span></div>
+                <div class="cline"><label>我的目标</label><b>帮助合作伙伴跑通盈利模式</b></div>
+                <div class="cline"><label>需要引荐</label><b>渠道资源与项目线索</b></div>
+                <div class="cbtns"><span class="btn">查看详情</span><span class="btn">✎ 编辑</span></div></div>
+              <div class="ccard"><div class="chead"><div class="cdot" style="background:#b45309">暴</div><b>暴发户</b><span class="st">正常</span></div>
+                <div class="cline"><label>我的目标</label><b>链接品牌方与投资人</b></div>
+                <div class="cline"><label>需要引荐</label><b>消费品牌、产业园资源</b></div>
+                <div class="cbtns"><span class="btn">查看详情</span><span class="btn">✎ 编辑</span></div></div>
+              <div class="ccard"><div class="chead"><div class="cdot" style="background:#6d14ee">狗</div><b>狗策划</b><span class="st">正常</span></div>
+                <div class="cline"><label>我的目标</label><b>26 年接 3 个非标商业项目</b></div>
+                <div class="cline"><label>需要引荐</label><b>地产开发商与品牌方</b></div>
+                <div class="cbtns"><span class="btn">查看详情</span><span class="btn">✎ 编辑</span></div></div>
+              <div class="ccard"><div class="chead"><div class="cdot" style="background:#08a853">死</div><b>死美工</b><span class="st">草稿</span></div>
+                <div class="cline"><label>我的目标</label><b>寻找设计共创项目</b></div>
+                <div class="cline"><label>需要引荐</label><b>品牌视觉与内容需求</b></div>
+                <div class="cbtns"><span class="btn">查看详情</span><span class="btn">✎ 填写合作卡</span></div></div>
+              <div class="ccard"><div class="chead"><div class="cdot" style="background:#1676cc">老</div><b>老保姆</b><span class="st">已停用</span></div>
+                <div class="cline"><label>我的目标</label><b>参与长期项目的执行统筹</b></div>
+                <div class="cline"><label>需要引荐</label><b>成熟业务与项目管理需求</b></div>
+                <div class="cbtns"><span class="btn">查看详情</span><span class="btn">✎ 编辑</span></div></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+  document.getElementById('tabs').addEventListener('click', e => {
+    const t = e.target.dataset.t; if (!t) return
+    document.querySelectorAll('#tabs .tab').forEach(x => x.classList.toggle('on', x === e.target))
+    for (const v of ['basic','growth','cards']) document.getElementById('v-' + v).style.display = v === t ? '' : 'none'
+  })
+</script>
+</body>
+</html>

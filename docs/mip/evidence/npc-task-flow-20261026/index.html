@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NPC 任务全流程梳理与 PRD/实现核对 · 2026-10-26</title>
+<style>
+  :root {
+    --bg: #101014; --panel: #1a1a21; --panel-2: #22222b; --line: #33333f;
+    --ink: #f2f2f5; --muted: #9a9aa8; --brand: #ffd400; --brand-ink: #141400;
+    --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --blue: #60a5fa; --purple: #c084fc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.75 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; padding: 32px 20px 80px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 26px; margin-bottom: 6px; }
+  h2 { font-size: 20px; margin: 44px 0 14px; padding-left: 12px; border-left: 4px solid var(--brand); }
+  h3 { font-size: 16px; margin: 22px 0 10px; color: var(--brand); }
+  p { margin: 8px 0; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin: 12px 0; }
+  code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 12.5px; color: #d8d8e2; word-break: break-all; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 9px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--panel-2); color: var(--brand); white-space: nowrap; }
+  td { color: #dcdce4; }
+  .tag { display: inline-block; border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 600; margin-right: 6px; white-space: nowrap; }
+  .tag.ok { background: rgba(74,222,128,.15); color: var(--ok); }
+  .tag.warn { background: rgba(251,191,36,.15); color: var(--warn); }
+  .tag.bad { background: rgba(248,113,113,.15); color: var(--bad); }
+  .tag.info { background: rgba(96,165,250,.15); color: var(--blue); }
+  .tag.purple { background: rgba(192,132,252,.15); color: var(--purple); }
+
+  /* ===== 泳道流程图 ===== */
+  .lanes { display: flex; flex-direction: column; gap: 10px; }
+  .lane { display: grid; grid-template-columns: 148px 1fr; gap: 12px; align-items: stretch; }
+  .lane-name { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; justify-content: center; padding: 10px 12px; }
+  .lane-name b { font-size: 14px; }
+  .lane-name span { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  .lane-name.ln-admin { border-top: 3px solid var(--blue); }
+  .lane-name.ln-dispatch { border-top: 3px solid var(--purple); }
+  .lane-name.ln-player { border-top: 3px solid var(--brand); }
+  .lane-name.ln-review { border-top: 3px solid var(--warn); }
+  .lane-name.ln-server { border-top: 3px solid var(--ok); }
+  .steps { display: flex; align-items: center; gap: 0; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .step { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 12.5px; line-height: 1.55; min-width: 0; }
+  .step b { display: block; font-size: 13px; margin-bottom: 2px; }
+  .step small { color: var(--muted); font-size: 11.5px; }
+  .step.hl { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
+  .step.miss { border-style: dashed; border-color: var(--bad); }
+  .step.miss b::after { content: " ⚠"; color: var(--bad); }
+  .arrow { color: var(--muted); padding: 0 7px; font-size: 15px; white-space: nowrap; }
+  .arrow.down { color: var(--brand); }
+  .lane-note { grid-column: 1 / -1; margin-top: 8px; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 8px; }
+
+  /* ===== 状态机 ===== */
+  .fsm { display: flex; gap: 14px; flex-wrap: wrap; }
+  .fsm-col { flex: 1 1 300px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .fsm-col h4 { font-size: 14px; margin-bottom: 10px; color: var(--brand); }
+  .fsm-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 7px 0; font-size: 12.5px; }
+  .st { border-radius: 8px; padding: 3px 10px; background: var(--panel-2); border: 1px solid var(--line); white-space: nowrap; }
+  .st.brand { border-color: var(--brand); color: var(--brand); }
+  .st.ok { border-color: var(--ok); color: var(--ok); }
+  .st.bad { border-color: var(--bad); color: var(--bad); }
+  .st.warn { border-color: var(--warn); color: var(--warn); }
+  .st.blue { border-color: var(--blue); color: var(--blue); }
+  .cond { color: var(--muted); font-size: 11.5px; }
+
+  /* ===== 设计稿 ===== */
+  .frames { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .frame { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .frame img { width: 100%; display: block; }
+  .frame figcaption { padding: 8px 10px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .frame figcaption b { color: var(--ink); display: block; font-size: 12.5px; }
+  .frame .miss-tag { color: var(--warn); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } .lane { grid-template-columns: 1fr; } .lane-name { flex-direction: row; gap: 10px; align-items: baseline; } }
+  .toc { columns: 2; font-size: 13.5px; }
+  .toc li { margin: 3px 0 3px 18px; }
+  a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>NPC 任务全流程梳理与 PRD / 实现核对</h1>
+  <p class="meta">整理日期 2026-10-26 · 范围：管理后台 PRD（admin v1）第 9/14 章 + 小程序 PRD v1.1.0 #48–53 + 用户流程总览 J5 子流程（J7-A1/A2/A3）· 对照对象：mip-weapp 当前 main 分支代码 · 设计稿：Figma「我的」页 7 个 NPC 任务帧（已导出至本目录 <code>figma/</code>）</p>
+
+  <div class="card">
+    <b>结论速览</b>
+    <p>① 核心链路已闭环且与 admin v1 PRD 第 9 章「任务管理」高度一致：<b>后台配置任务卡 → 发布 → 派发（单次/批量/每周）→ 玩家在小程序完成 → 负责人审批 → 经验值/贡献值同事务入账</b>，幂等、审计、退回重提、奖励失败重试均已实现。</p>
+    <p>② 主要偏差 4 项（详见第 6 节，均需决策或排期）：<b>D1 派发/审核载体</b>（两份 PRD 口径相反，现实现走管理后台，Figma 的小程序 NPC 视角页未做）；<b>D2 奖金</b>只做线下发放记录，PRD 字面是「一次性发放」；<b>D3 附件/模板</b>仅支持图片（PRD/Figma 含 doc/pdf 与文件元数据）；<b>D4 任务消息</b>缺「收到任务 / 即将到期 / 被退回」3 类通知。</p>
+    <p>③ 另有两处弱约束与 PRD 不符（D5 负责人列表范围、D7 玩家门禁）与若干记录性小差异。</p>
+  </div>
+
+  <h2>目录</h2>
+  <ol class="toc">
+    <li><a href="#roles">角色与术语</a></li>
+    <li><a href="#flow">全景使用流程（泳道图）</a></li>
+    <li><a href="#fsm">状态机</a></li>
+    <li><a href="#figma">设计稿对照（Figma 7 帧）</a></li>
+    <li><a href="#aligned">PRD ↔ 代码：已对齐项</a></li>
+    <li><a href="#diff">PRD ↔ 代码：差异与待确认项</a></li>
+    <li><a href="#open">待用户/客户确认清单</a></li>
+    <li><a href="#sources">证据与来源</a></li>
+  </ol>
+
+  <h2 id="roles">1. 角色与术语</h2>
+  <div class="card">
+    <table>
+      <tr><th>角色 / 术语</th><th>定义（依据）</th><th>载体</th></tr>
+      <tr>
+        <td><b>玩家</b></td>
+        <td>付费会员（开通玩家后解锁 NPC 任务权益）；C 端只感知「接任务-做任务-领奖励」</td>
+        <td>微信小程序「我的 → NPC任务」</td>
+      </tr>
+      <tr>
+        <td><b>NPC / 笨笨老大</b></td>
+        <td>admin v1 PRD §14：NPC／笨笨作为<b>后台账号角色</b>，不作为小程序用户角色；按权限执行任务派发、任务验收和用户查询。每个任务必须关联一个「笨笨老大」，由其分配和审批</td>
+        <td>admin-web 管理后台（角色绑定 <code>tasks.manage</code> 等能力）</td>
+      </tr>
+      <tr>
+        <td><b>平台管理员</b></td>
+        <td>配置任务卡（内容/周期/负责人/范围/奖励/模板）、发布/下架，可跨负责人管理</td>
+        <td>admin-web</td>
+      </tr>
+      <tr>
+        <td><b>任务卡</b></td>
+        <td>任务模板：名称、星级（1–5）、目的、内容、完成标准、周期（开始/结束/每周交付时间）、关联笨笨老大、适用服务器、奖励配置（经验值/贡献值/奖金，至少启用一种）、是否必传附件、附件模板</td>
+        <td>admin-web 配置，小程序只读展示</td>
+      </tr>
+      <tr>
+        <td><b>派发 / 提交 / 审批</b></td>
+        <td>派发=把任务指派给成员（记录派发人、接收人、时间、方式、任务版本）；提交=用户上传附件/内容进入待审批；审批=关联笨笨老大通过或退回</td>
+        <td>派发与审批在 admin-web；提交在小程序</td>
+      </tr>
+    </table>
+  </div>
+
+  <h2 id="flow">2. 全景使用流程（泳道图）</h2>
+  <p class="meta">实线 = 已实现；红色虚线框 = PRD 有要求 / 设计稿有画面但当前缺失或不一致的环节。</p>
+
+  <div class="lanes">
+    <div class="lane">
+      <div class="lane-name ln-admin"><b>① 平台管理员</b><span>admin-web 任务管理<br>(tasks.manage)</span></div>
+      <div class="steps">
+        <div class="step"><b>创建任务卡</b><small>名称/星级/目的/内容/完成标准</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>配置约束</b><small>周期·负责人(笨笨老大)·适用服务器·可参与等级</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>配置奖励</b><small>经验值/贡献值/奖金（至少一种，幂等发放）</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>附件与模板</b><small>必传附件开关 + 模板图片</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>执行方式</b><small>直接完成 / 提交后审批；点击动作(跳页/分享)</small></div>
+        <span class="arrow">→</span>
+        <div class="step hl"><b>发布</b><small>已发布（可下架/软删除）</small></div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-name ln-dispatch"><b>② 派发</b><span>admin-web（管理员或有权 NPC/笨笨 账号）</span></div>
+      <div class="steps">
+        <div class="step"><b>选择任务</b><small>须为「指定成员」范围；须已关联负责人</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>选择接收人</b><small>按用户/角色/服务器/标签（≤100 人）</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>派发模式</b><small>单次 / 批量 / 每周周期（周送达时间）</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>写入派发记录</b><small>派发人·接收人·时间·方式·任务版本（可软撤销）</small></div>
+        <div class="step miss"><b>「收到任务」通知</b><small>PRD 消息类型要求，当前未实现</small></div>
+      </div>
+      <div class="lane-note">设计稿 1725:18634（NPC 视角·可派发）、1725:18736（任务分配列表·搜索成员·确认派发）为<b>小程序端</b>画面，当前未在小程序实现，改由本泳道承担（差异 D1）。</div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-name ln-player"><b>③ 玩家做任务</b><span>微信小程序 C 端<br>mip-tasks</span></div>
+      <div class="steps">
+        <div class="step"><b>我的 → NPC任务</b><small>登录门禁（无玩家身份校验，差异 D7）</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>我的任务</b><small>待完成 / 已结束 页签；星级·EXP·周期·完成条件</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>任务详情</b><small>任务目的/内容/完成标准/完成条件 四面板</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>下载模板</b><small>仅图片模板，保存到相册（差异 D3）</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>上传附件</b><small>仅图片 ≤10MB；必传附件须在详情提交</small></div>
+        <span class="arrow">→</span>
+        <div class="step hl"><b>提交</b><small>无附件任务可列表直接「完成」；toast「已提交，等待审批」</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>被退回</b><small>列表/详情显示退回原因 → 补充后重新提交</small></div>
+      </div>
+      <div class="lane-note">小程序顶部「派发任务」页签点击 → 弹窗「请在电脑端管理后台的任务管理中派发任务」。</div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-name ln-review"><b>④ 负责人审批</b><span>admin-web「NPC任务」页<br>(关联笨笨老大)</span></div>
+      <div class="steps">
+        <div class="step"><b>待审批列表</b><small>状态/星级/执行方式筛选；展示提交附件</small></div>
+        <span class="arrow">→</span>
+        <div class="step hl"><b>通过</b><small>按任务配置一次性发放经验值/贡献值（奖金线下，差异 D2）</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>退回</b><small>必填退回原因（≤500 字），不发奖励、保留提交</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>奖励失败重试</b><small>记录失败类型/原因与重试日志</small></div>
+      </div>
+      <div class="lane-note">设计稿 1725:18676（待审核·通过/不通过操作条）为<b>小程序端</b>画面，当前审批动作只在 admin-web（差异 D1）。</div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-name ln-server"><b>⑤ 服务端事实</b><span>mip-tasks-api<br>(MySQL 事务 + outbox)</span></div>
+      <div class="steps">
+        <div class="step"><b>资格校验</b><small>时间窗·适用服务器·可参与等级·附件 READY</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>同事务写入</b><small>完成事实 + 成长流水 + outbox；客户端不能提交奖励值</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>成长账本</b><small>经验值/贡献值入账；等级变更记录</small></div>
+        <span class="arrow">→</span>
+        <div class="step"><b>站内信</b><small>growth-changed / growth-level-up（≈经验值到账）</small></div>
+        <div class="step miss"><b>到期提醒 / 被退回通知</b><small>PRD 消息类型要求，task.* 事件当前不投影通知</small></div>
+      </div>
+      <div class="lane-note">完成流水（玩家ID·任务星级·负责人·提交时间·附件·审批结果·实际奖励·处理结果）可在 admin-web 查询与导出。</div>
+    </div>
+  </div>
+
+  <h2 id="fsm">3. 状态机</h2>
+  <div class="fsm">
+    <div class="fsm-col">
+      <h4>任务卡（admin 配置态）</h4>
+      <div class="fsm-row"><span class="st">未发布（新建/编辑）</span><span class="arrow down">→ 发布</span><span class="st brand">已发布</span></div>
+      <div class="fsm-row"><span class="st brand">已发布</span><span class="arrow down">→ 下架 / 软删除</span><span class="st">已下架 / 已删除</span></div>
+      <div class="fsm-row"><span class="cond">「已结束」不是独立状态：由 周期结束/截止时间/周派发结束 推导（PRD 任务状态含「已结束」✓ 语义覆盖）</span></div>
+    </div>
+    <div class="fsm-col">
+      <h4>任务提交（mip_task_completions）</h4>
+      <div class="fsm-row"><span class="st brand">pending_review 待审批</span><span class="arrow down">→ 审批通过</span><span class="st ok">approved 已通过（发放奖励）</span></div>
+      <div class="fsm-row"><span class="st brand">pending_review</span><span class="arrow down">→ 退回</span><span class="st bad">rejected 已退回</span><span class="arrow down">→ 用户补充重提</span><span class="st brand">pending_review</span></div>
+      <div class="fsm-row"><span class="st brand">pending_review</span><span class="arrow down">→ 发放异常</span><span class="st warn">reward_failed 奖励失败</span><span class="arrow down">→ 重试</span><span class="st ok">approved</span></div>
+      <div class="fsm-row"><span class="cond">PRD 8 态中的 待开始/进行中/待提交/已过期 未做独立提交态（差异 D6）</span></div>
+    </div>
+    <div class="fsm-col">
+      <h4>玩家视角任务列表态</h4>
+      <div class="fsm-row"><span class="st blue">NOT_STARTED 未开始</span><span class="arrow down">→</span><span class="st brand">AVAILABLE 待完成</span></div>
+      <div class="fsm-row"><span class="st brand">AVAILABLE</span><span class="arrow down">→ 提交</span><span class="st warn">PENDING_REVIEW 审批中</span></div>
+      <div class="fsm-row"><span class="st warn">PENDING_REVIEW</span><span class="arrow down">→ 通过</span><span class="st ok">COMPLETED</span><span class="cond">（rejected 显示退回原因，仍可重提）</span></div>
+      <div class="fsm-row"><span class="st">ENDED 已结束</span><span class="cond">时间推导，进「已结束」页签</span></div>
+    </div>
+  </div>
+
+  <h2 id="figma">4. 设计稿对照（Figma「我的」页 · 7 帧）</h2>
+  <p class="meta">导出自当前打开的 Figma 页面 69:4972（我的），scale 2x，原始 PNG 在本目录 <code>figma/</code>。来源节点编号与《里程碑1+2 用户流程总览》J7-A 步骤一一对应。</p>
+  <div class="frames">
+    <figure class="frame"><img src="figma/1725-18357-my-tasks-pending.png" alt="我的任务-待完成" /><figcaption><b>J7-A1 · 我的任务-待完成（玩家视角）</b>1725:18357 · 双页签+待完成/已结束 chips+卡片操作条（未完成|完成）→ 已实现（<code>src/packages/member/mip-tasks/index.wxml</code>）</figcaption></figure>
+    <figure class="frame"><img src="figma/1725-18445-my-tasks-ended.png" alt="我的任务-已结束" /><figcaption><b>J7-A1 · 我的任务-已结束（玩家视角）</b>1725:18445 · 已结束卡片无操作条 → 已实现</figcaption></figure>
+    <figure class="frame"><img src="figma/1725-18515-task-detail-ended-a.png" alt="任务详情-未上传附件" /><figcaption><b>J7-A1 · 任务详情（未上传附件）</b>1725:18515 · 四面板 + 完成条件黄色提示「请上传***大小的doc. png. jpg」+ 下载模板/上传附件 → 布局已实现；<span class="miss-tag">附件仅图片，doc/pdf 未支持（D3）</span></figcaption></figure>
+    <figure class="frame"><img src="figma/1725-18577-task-detail-ended-b.png" alt="任务详情-已上传附件" /><figcaption><b>J7-A1 · 任务详情（已上传附件）</b>1725:18577 · 附件卡（文件名+时间+删除）→ 布局已实现；<span class="miss-tag">附件文件名/时间后端未存储，附件卡实际不渲染、不可删除（D3）</span></figcaption></figure>
+    <figure class="frame"><img src="figma/1725-18634-dispatch-available-npc.png" alt="派发任务-可派发" /><figcaption><b>J7-A2 · 派发任务-可派发（NPC 视角）</b>1725:18634 · 小程序派发页签+「派发给」按钮 → <span class="miss-tag">小程序未实现该页，点击弹窗引导到管理后台（D1）</span></figcaption></figure>
+    <figure class="frame"><img src="figma/1725-18676-dispatch-pending-review.png" alt="派发任务-待审核" /><figcaption><b>J7-A3 · 派发任务-待审核</b>1725:18676 · 小程序审批操作条（不通过|通过）→ <span class="miss-tag">审批只在 admin-web（D1）</span></figcaption></figure>
+    <figure class="frame"><img src="figma/1725-18736-task-assignment-list.png" alt="任务分配列表" /><figcaption><b>J7-A3 · 任务分配列表</b>1725:18736 · 搜索姓名/行业/简介 + 成员卡多选 + 确认 → <span class="miss-tag">成员选择在 admin-web 完成成员/标签/角色/服务器选择（D1）</span></figcaption></figure>
+  </div>
+
+  <h2 id="aligned">5. PRD ↔ 代码：已对齐项</h2>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>PRD 要求（admin v1 §9 / 小程序 PRD #48–53）</th><th>实现证据</th></tr>
+      <tr><td>A1</td><td>任务配置字段：名称/星级(1–5)/目的/内容/完成标准/周期(开始·结束·每周交付)/关联笨笨老大/适用服务器/奖励/必传附件/附件模板</td><td><code>admin-web/src/features/form-pages/task-edit-form-page.tsx</code>、<code>cloudfunctions/mip-tasks-api/domain/repository.js</code> saveTask</td></tr>
+      <tr><td>A2</td><td>每个任务必须关联一个笨笨老大</td><td>服务端 <code>TASK_OWNER_REQUIRED</code>（workflow.js submit/assignTask、repository.js saveTask 校验负责人有效）</td></tr>
+      <tr><td>A3</td><td>支持按用户、角色、服务器或标签选择接收人；单次、批量和每周周期派发；记录派发人、接收人、派发时间、派发方式和任务版本</td><td><code>workflow.js</code> assignTask（userIds/roleIds/serverIds/tagIds ≤100、single/batch/weekly、mip_task_assignments 全字段）+ admin-web 派发弹窗</td></tr>
+      <tr><td>A4</td><td>所有 NPC 任务必须由该任务关联的笨笨老大审批；可填写审批备注</td><td><code>workflow.js</code> review → assertTaskOwner（负责人本人或 tasks.review.any）；remark ≤500 存 mip_task_submission_reviews</td></tr>
+      <tr><td>A5</td><td>审批退回时不发放任何奖励，保留原提交内容和附件</td><td>rejected 仅更新状态与备注；rejected 态允许重提（UPDATE 同一提交行、version+1）</td></tr>
+      <tr><td>A6</td><td>奖励使用任务提交记录做幂等校验，不得重复发放</td><td>grantRewards 按 source_event_type='task.completed'+submission.id 查重；全链路 idempotencyKey 事务内领取</td></tr>
+      <tr><td>A7</td><td>奖励失败时记录失败类型和原因，并支持按权限重试</td><td>reward_failed + retry_log_json + admin.retrySubmissionReward（仅 reward_failed 可重试）</td></tr>
+      <tr><td>A8</td><td>任务完成流水字段（玩家ID/任务星级/负责人/提交时间/附件/审批结果/实际奖励/处理结果）</td><td>admin.listCompletions / getCompletion / exportCompletions；admin-web 完成记录页 + 导出</td></tr>
+      <tr><td>A9</td><td>金额、奖励、完成状态由服务端决定（领域规则：会员/订单/资格不能由客户端计算）</td><td>提交与奖励值全部服务端事务写入，客户端仅传 taskId + attachmentAssetId</td></tr>
+      <tr><td>A10</td><td>审计日志记录任务派发和验收</td><td>assignTask / review 均写 writeAudit（task.assigned、task.submission.*）</td></tr>
+      <tr><td>A11</td><td>任务状态：已发布、已下架或已结束</td><td>PUBLISHED/UNPUBLISHED/DELETED + 时间推导 is_ended（列表/详情/完成三处一致校验）</td></tr>
+      <tr><td>A12</td><td>消息：经验值到账</td><td>growth.changed → outbox 投影 growth-changed / growth-level-up 站内信</td></tr>
+      <tr><td>A13</td><td>成长等级门槛（PRD §4.3 任务规则后台配置）</td><td>eligibleLevelIds + 完成时按服务端当前经验重验（TASK_LEVEL_NOT_ELIGIBLE），客户端不能提交等级</td></tr>
+      <tr><td>A14</td><td>小程序 #48 我的任务列表 / #49 待完成(操作完成/未完成)·已结束 / #50 详情·下载模板·上传附件</td><td><code>src/packages/member/mip-tasks/</code>（列表双页签+chips+操作条、详情四面板+模板+附件+提交），UI 对照 Figma 1725:18357/18445/18515/18577</td></tr>
+    </table>
+  </div>
+
+  <h2 id="diff">6. PRD ↔ 代码：差异与待确认项</h2>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>差异</th><th>PRD / 设计稿口径</th><th>当前实现</th><th>状态与建议</th></tr>
+      <tr>
+        <td><b>D1</b></td>
+        <td><b>派发与审核的端载体冲突</b></td>
+        <td>小程序 PRD #51（P0：成员列表、搜索、点击确认后派发）+ Figma 1725:18634/18676/18736 为小程序 NPC 视角页；admin v1 PRD §14 则定义 NPC／笨笨是后台账号角色、不作为小程序用户角色——<b>两份 PRD 自身口径相反</b></td>
+        <td>小程序「派发任务」页签点击弹窗引导到电脑端管理后台；派发（成员/标签/角色/服务器选择、单次/批量/每周）与审批（通过/退回/重试）全部在 admin-web；<code>docs/mip/FIGMA_MAP.md</code> 已声明「任务配置与派发只在 React Web 提供」</td>
+        <td><span class="tag warn">待客户确认</span>实现选择了后台口径且已闭环。需客户拍板：维持后台派发（更新小程序 PRD/设计稿口径），或补小程序 NPC 派发/审核页</td>
+      </tr>
+      <tr>
+        <td><b>D2</b></td>
+        <td><b>奖金发放方式</b></td>
+        <td>admin v1 §9：审批通过后按任务配置「一次性发放经验值、贡献值和奖金」；流水展示实际奖金</td>
+        <td>经验值/贡献值同事务入账；奖金仅写 <code>OFFLINE_PENDING</code> 线下发放记录，无线上支付；admin-web 表单也标注「奖励配置（奖金线下发放）」</td>
+        <td><span class="tag warn">待确认</span>与 PRD 字面不符（PRD 未写线下）。确认是更新 PRD 口径，还是需要补线上发放通道</td>
+      </tr>
+      <tr>
+        <td><b>D3</b></td>
+        <td><b>附件与模板只支持图片</b></td>
+        <td>Figma 完成条件提示「请上传***大小的doc. png. jpg」、附件卡示例 MIPBrand.pdf；admin v1 §9 模板「展示文件名称、格式、大小和上传时间」</td>
+        <td>附件仅接受本人 READY 图片素材（≤10MB，mip-media TASK_ATTACHMENT）；模板仅 TASK_TEMPLATE 图片、保存到相册；附件文件名/时间后端未存储 → 列表与详情的附件卡按当前契约恒不渲染、附件不可删除（代码内已注明「设计先行」占位）</td>
+        <td><span class="tag warn">待确认范围</span>确认是否必须支持 doc/pdf 与文件元数据、附件删除通道；否则更新 PRD/设计稿口径为图片</td>
+      </tr>
+      <tr>
+        <td><b>D4</b></td>
+        <td><b>任务消息通知缺失 3 类</b></td>
+        <td>admin v1 消息章节任务类通知：收到任务、即将到期、被退回、验收通过、经验值到账</td>
+        <td>派发动作不写 outbox（无「收到任务」）；退回不写通知（无「被退回」）；无「即将到期」提醒；task.completed/published/deleted/unpublished 四类事件在投影器列为无需投影；「经验值到账」经 growth-changed 站内信覆盖 ✓</td>
+        <td><span class="tag bad">功能缺口</span>需排期补 3 类通知（订阅消息/站内信通道已有，缺事件与模板）</td>
+      </tr>
+      <tr>
+        <td><b>D5</b></td>
+        <td><b>「笨笨老大仅见本人任务」未在服务端强制</b></td>
+        <td>admin v1 §9：笨笨老大的待分配任务列表仅展示与本人关联的任务</td>
+        <td>admin 任务列表的 assignedOwnerId 只是可选筛选；任何具备 tasks.manage 的账号可列全部任务。动作层有约束：审批需负责人本人或 tasks.review.any、派发需本人或 tasks.assign.any</td>
+        <td><span class="tag warn">弱约束</span>需确认是否按角色在服务端收紧列表范围（涉及权限模型，属安全边界）</td>
+      </tr>
+      <tr>
+        <td><b>D6</b></td>
+        <td><b>提交状态机粒度</b></td>
+        <td>PRD 8 态：待开始、进行中、待提交、待审批、已通过、已退回、已过期、奖励失败</td>
+        <td>提交层 4 态（pending_review/approved/rejected/reward_failed）+ 列表态 NOT_STARTED/AVAILABLE/ENDED；「进行中/待提交/已过期」由时间与派发状态隐式表达，过期后提交直接报「任务已截止」</td>
+        <td><span class="tag info">记录即可</span>语义覆盖，字段粒度不同；若运营需要按「已过期」筛选提交记录再补</td>
+      </tr>
+      <tr>
+        <td><b>D7</b></td>
+        <td><b>玩家专属门禁是软的</b></td>
+        <td>用户流程总览 §6.8：NPC 任务为玩家权益，嘉宾无入口</td>
+        <td>小程序入口仅登录门禁（VIEW_RESTRICTED_PROFILE），无玩家身份校验；服务端按「是否有派发记录」过滤（嘉宾未被派发则自然为空）；但派发接收人解析不过滤玩家身份——给嘉宾派发后嘉宾也能完成</td>
+        <td><span class="tag warn">待确认</span>确认派发范围是否应限定玩家身份（服务端加校验成本很低）</td>
+      </tr>
+      <tr>
+        <td><b>D8</b></td>
+        <td>记录性小差异</td>
+        <td>Figma 卡片周期文案「1–2月 每周固定每周五交付」；已结束详情仍显示上传附件按钮</td>
+        <td>periodText 仅「每周 X / 截止时间 / 不限」；详情仅 AVAILABLE 可上传附件（更严格，防无效提交）；列表星级缺省按经验值推导（仅兼容旧数据）</td>
+        <td><span class="tag info">记录即可</span>不影响主流程</td>
+      </tr>
+    </table>
+  </div>
+
+  <h2 id="open">7. 待用户/客户确认清单（按影响排序）</h2>
+  <div class="card">
+    <ol style="margin-left: 20px;">
+      <li><b>D1 派发/审核载体</b>：小程序派发/审核页不做（维持管理后台口径）是否定稿？定稿后建议在小程序 PRD 与需求清单中把 #51 标注为「迁移至管理后台」，冻结 Figma 三帧。</li>
+      <li><b>D3 附件格式</b>：任务附件/模板是否必须支持 doc/pdf？附件文件名、删除通道是否本期补齐（当前附件卡不渲染、不可删）？</li>
+      <li><b>D2 奖金</b>：奖金「线下发放」口径是否写入 PRD？是否需要线上发放（涉及微信支付，需真机验证）？</li>
+      <li><b>D4 通知</b>：收到任务/即将到期/被退回 3 类通知是否本期补齐（订阅消息模板需甲方在微信公众平台申请）？</li>
+      <li><b>D5 / D7 权限边界</b>：负责人任务列表是否按本人强制过滤？派发接收人是否限定玩家身份？</li>
+    </ol>
+    <p class="meta" style="margin-top:10px;">验收状态提醒：以上为文档/代码静态核对结论。按 <code>docs/mip/COVERAGE_MATRIX.md</code> T01–T05，批量和周期派发、真实附件、退回重提、重复审批的全旅程真机/联调验收仍未完成，本报告不改变其「待验证」状态。</p>
+  </div>
+
+  <h2 id="sources">8. 证据与来源</h2>
+  <div class="card">
+    <h3>PRD / 需求文档</h3>
+    <p>· 管理后台 PRD v1（第 9 章 任务管理、第 14 章 后台账号管理 NPC／笨笨身份、消息章节任务通知）：<code>docs/mip/sources/github/20260929-admin/admin-v1-prd.html</code>（同 <code>~/project/ame-project/mip-minip-dev/docs/管理后台的原型和PRD/MIP 小程序后台管理系统 PRD - v1 (纯PRD).html</code>）</p>
+    <p>· 小程序 PRD v1.1.0 #48–53： <code>docs/mip/sources/github/PRD-v1.1.0.md</code></p>
+    <p>· 用户流程总览 J5 子流程 NPC 任务（J7-A1/A2/A3）与 §6.8 边界： <code>~/project/ame-project/mip-minip-dev/docs/PRDs/里程碑1+2_用户流程总览_客户对齐版_V1.0.md</code></p>
+    <p>· 需求基线/覆盖矩阵： <code>docs/mip/REQUIREMENTS.md</code>（Q-ADMIN-05/13）、<code>docs/mip/COVERAGE_MATRIX.md</code>（T01–T05）、<code>docs/mip/FIGMA_MAP.md</code></p>
+    <h3>代码（main 分支）</h3>
+    <p>· 小程序页面： <code>src/packages/member/mip-tasks/index.ts|index.wxml</code>、<code>.../detail/index.ts|index.wxml</code>；入口 <code>src/pages/profile/index.ts:852</code></p>
+    <p>· 领域模块： <code>src/modules/mip-tasks/</code>（types/dto/module/gateway/cloudbase-gateway）</p>
+    <p>· 服务端： <code>cloudfunctions/mip-tasks-api/</code>（domain/workflow.js 状态机与奖励、domain/repository.js 列表与校验、domain/handler.js 动作表、README.md 边界）</p>
+    <p>· 管理后台： <code>admin-web/src/features/operations-pages/task-management-page.tsx</code>、<code>task-approval-page.tsx</code>、<code>admin-web/src/features/form-pages/task-edit-form-page.tsx</code>、<code>admin-web/src/modules/admin-task-management.ts</code></p>
+    <p>· 通知投影： <code>cloudfunctions/mip-outbox-worker/domain/projector.js</code>（task.* → NO_PROJECTION_REQUIRED；growth.changed → growth-changed/growth-level-up）</p>
+    <h3>设计稿</h3>
+    <p>· Figma 文件「我的」页（69:4972），节点 1725:18357 / 1725:18445 / 1725:18515 / 1725:18577 / 1725:18634 / 1725:18676 / 1725:18736，PNG 导出于本目录 <code>figma/</code>（2x）。</p>
+  </div>
+
+  <p class="meta" style="margin-top: 28px;">生成于 2026-10-26 · 静态核对报告（未修改任何业务代码；不涉及验收站发布）</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,62 @@
+{
+  "checkedAt": "2026-10-28T15:55:00+08:00",
+  "environment": "TEST",
+  "machine": "local (macOS, darwin arm64)",
+  "range": {
+    "before": "437734b625ad64352e4a7786cdf6dab71fd11d3a",
+    "after": "47e41191c57f4f9ba6aeb12e3af3c1ee8cacc127",
+    "commits": 15,
+    "files": 97,
+    "insertions": 2690,
+    "deletions": 39
+  },
+  "runtimeCodeIdentity": {
+    "claim": "deployed TEST package source equals HEAD runtime code",
+    "deployedSourceSha": "2a22bdc96cc082cd5d190a2ba78a85b475803e9c",
+    "diffCommands": ["git diff --stat 2a22bdc9..47e41191 -- src cloudfunctions packages admin-web"],
+    "result": "empty (zero difference)"
+  },
+  "localGate": {
+    "command": "pnpm verify:all",
+    "exitCode": 0,
+    "weappTests": { "files": 295, "tests": 1908, "failed": 0 },
+    "webTests": { "files": 42, "tests": 283, "failed": 0 },
+    "mainPackageBytes": 1365295,
+    "log": "verify-all-47e41191.log"
+  },
+  "runtimePreflight": {
+    "command": "pnpm runtime:preflight",
+    "ok": true,
+    "devtoolsLoggedIn": true,
+    "servicePort": 62842,
+    "appRoutesComplete": true
+  },
+  "testEnvironment": {
+    "cloudStatus": "env READY, management API key verified (pnpm cloud:status)",
+    "acceptanceSite": {
+      "home": "HTTP 200",
+      "oct27Page": "HTTP 200, 32172 bytes",
+      "markers": { "feedback-20261027-v1": 4, "原始反馈": 31, "沙龙": 5, "热门": 15, "未读": 5 }
+    },
+    "adminTestSite": "https://test.admin.mip.cool/ HTTP 200",
+    "redeploymentThisRound": false,
+    "reason": "runtime code identical to deployed 2a22bdc9; batch delivery evidence 2026-10-27 remains valid"
+  },
+  "findings": [
+    {
+      "id": "reader-css-lint",
+      "severity": "blocker-then-fixed",
+      "description": "scripts/acceptance-reader/reader.css had 11 prettier format errors; pnpm verify:all failed at lint on freshly pulled main",
+      "cause": "acceptance-site feature commits after 2a22bdc9 were merged without rerunning the full gate",
+      "fix": "pnpm exec eslint --fix scripts/acceptance-reader/reader.css; recheck clean",
+      "committed": false
+    }
+  ],
+  "pending": [
+    "real-device checks (share link native wake, guest view, payment, phone number)",
+    "trial assignment verification",
+    "production release awaits explicit user acceptance of this batch",
+    "commit and push the local reader.css formatting fix"
+  ],
+  "productionWrites": false
+}
