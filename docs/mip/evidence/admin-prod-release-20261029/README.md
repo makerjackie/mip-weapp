@@ -5,7 +5,7 @@
 ## 生产云函数（ops.mjs --target=production）
 
 - 首跑在 pre-apply backup 失败（`queryMysqlDatabase` MCP 错误，mcporter 守护进程劣化），按踩坑录 `npx mcporter daemon stop && start` 后续跑通过（日志 `.tmp/ops-prod-release-1602r2.log`）。
-- 稳定备份：154 表 / 6040 行，仓库外 `/Users/oudouglas/Backups/mip-weapp/ops-production-2026-10-29T080239-282Z`。
+- 稳定备份：154 表 / 6040 行，仓库外备份目录 `ops-production-2026-10-29T080239-282Z`（本机 Backups/mip-weapp 下）。
 - 迁移：`applied: mip_event_tag_colors 20261028010000`（迁移114，四色背景/黑白文字）。
 - 部署：16 个 `mip-*` 函数 verified（含本批变更的 mip-admin-api / mip-events-api / mip-opportunities-api），授权收敛 152 表，`cloud:verify` 全绿；未持久化任何密钥。
 
